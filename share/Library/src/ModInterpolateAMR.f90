@@ -3331,6 +3331,9 @@ contains
     ! Find grid cells surrounding the point Coord_D and interpolation weights.
     ! The subroutine uses ghost cells, 
     ! thus whole interpolation can be done ousing just one block
+    !\
+    ! INPUTS:
+    !/
     ! Xyz_D:     coordinates of the point
     ! XyzMin_D:  coordinates of the corner of the block containing the point
     ! DXyz_D:    cell size of this block
@@ -3350,32 +3353,58 @@ contains
     real,    intent(out):: Weight_I(2**nDim)
     logical, intent(out), optional:: IsSecondOrder
 
+    !\
+    ! Locals-----------
+    !/
     ! signature of which boundary of the block the point is close to (if it is)
     integer:: iDiscr_D(3)
-    integer:: iLevel_I(2**nDim)
-    integer:: iGrid, iSubGrid
+    !\
+    ! Input coordinates with respect to the block corner, expressed in
+    ! terms of grid size
+    !/
     real   :: Dimless_D(nDim)
-
     !\
     ! Cell index on coarser grid
     !/
     integer:: iCell2_D(nDim)
-
+    !\
+    ! grid number for the cell or subgrid to which Xyz_D point belongs
+    !/
+    integer:: iGridBasic
+    !\
     ! variables to call interpolate_extended_stencil
+    !/
     real   :: XyzGrid_DII(nDim, 0:2**nDim, 2**nDim)
     integer:: iCellIndexes_DII(nDim, 2**nDim, 2**nDim)
-    integer:: iIndexes_II(0:nDim, 2**nDim)
-    logical:: IsOut_I(2**nDim), IsSecondOrderLocal
-    real,    parameter:: DxyzInv_D(3) = (/0.5, 0.5, 0.5/)
     integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
+    integer:: iLevel_I(2**nDim)
+    logical:: IsOut_I(2**nDim)
+    real,    parameter:: DxyzInv_D(3) = (/0.5, 0.5, 0.5/)
+    integer:: iIndexes_II(0:nDim, 2**nDim)
     !\
-    !Number of points in a stencil
+    ! Number of subgrid points, for each point of coarser grid
+    !/
+    integer           :: nSubgrid_I(2**nDim)
+    !\
+    ! Misc-----------
+    !/
+    !\
+    ! Number of coarser grid points or finer subgrids in a stencil
+    ! (just 2**nDim)
     !/
     integer           :: nGrid  
+    !\
+    ! Loop variables
+    !/
+    integer:: iGrid, iSubGrid, iGridSeenFrom, iOrder 
     !--------------------------------------------------------------------    
     cTol2 = cTol**(nByteReal/4)
     Dimless_D = (Xyz_D - XyzMin_D)/DXyz_D
     nGrid = 2**nDim
+    !\
+    ! Initialize output arrays
+    !/
+    iCellOut_II = 0; Weight_I    = 0
 
     if( all(Dimless_D >= 0.50 .and. Dimless_D < nCell_D - 0.50) )then
        !\
@@ -3422,7 +3451,10 @@ contains
        do iGrid = 2, nGrid
           iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
        end do
-       ! find interpolation weights
+       !\
+       ! find interpolation weights. Dimensionless coordinate with
+       ! respect to the stencil corner:
+       !/
        Dimless_D = Dimless_D + 0.50 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
        if(present(IsSecondOrder))IsSecondOrder = .not. any(IsOut_I)
@@ -3458,7 +3490,7 @@ contains
     ! prepare input parameters for interpolation procedure
     !
     ! set grid 
-    XyzGrid_DII = 0 
+    XyzGrid_DII = 0; iCellIndexes_DII = 0
     ! set coordinates of supergrid: coincide with cell centers for Coarse,
     ! and is a corner between 2**nDim Fine cells
     !  __ __ _____
@@ -3474,10 +3506,30 @@ contains
     !\
     ! Decompose the block for coarser cells of the size of 2*DXyz.
     ! THIS IS ONLY POSSIBLE FOR ODD NUMBER OF CELLS IN THE BLOCK
-    ! Calculate coarser cell indexes 
+    ! Calculate indexes, which the coarser cell in the stencil corner 
+    ! would have
+    !  
     ! iCell2_D=floor((Xyz_D-XyzMin_D)/(2*DXyz_D)+0.5) 
     !/
     iCell2_D = floor(0.50*Dimless_D + 0.50) 
+    !\
+    !Its dimensionless coordinate would be 2*(iCell2_D - 0.5). Calculate
+    !dimensionless coordinates with respect to this point:
+    !/
+    XyzGrid_DII(:,0,1) = 2*(iCell2_D - 0.50)
+    Dimless_D = Dimless_D - 2*(iCell2_D - 0.50)
+    !\
+    ! The value of iGrid for the cell which includes the point Xyz_D:
+    !/
+    iDiscr_D = 0
+    iDiscr_D(1:nDim) = nint(0.50 + SIGN(0.50, Dimless_D - 1))
+    !This was iShift_DI(:,iGridBasic). From here, recover iGridBasic
+    iGridBasic = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) + 1
+    !\
+    ! Now, Dimless_D satisfies inequality 0<=Dimless<1. Strengthen it:
+    !/
+    Dimless_D = min(2 - cTol2,max(Dimless_D, cTol2 ))
+    Dimless_D = Dimless_D + XyzGrid_DII(:,0,1) 
     do iGrid = 1, nGrid
        ! supergrid
        ! XyzGrid are calculated with respect to the block corner
@@ -3487,18 +3539,37 @@ contains
        ! depending on resolution level of supergrid
        ! need to set 1 or 2**nDim subgrid cell centers
        if(iLevel_I(iGrid) == 0)then
-          ! a coarser neighbor
+          nSubgrid_I(iGrid) = 1
+          ! a coarser neighbor. We chose a subgrid point which is nearest to
+          ! the stencil center
           XyzGrid_DII(:,1,iGrid)  = XyzGrid_DII(:,0,iGrid) 
           iCellIndexes_DII(:,1,iGrid) = 2*iCell2_D + iShift_DI(1:nDim,iGrid)
-          CYCLE
-       end if
-       do iSubGrid = 1, nGrid
+       else
           ! neighbor at the same level
-          XyzGrid_DII(:,iSubGrid,iGrid) = XyzGrid_DII(:,0,iGrid) - 0.50 &
-               + iShift_DI(1:nDim,iSubGrid)
-          iCellIndexes_DII(:,iSubGrid,iGrid) = &
-               nint(XyzGrid_DII(:,iSubGrid,iGrid) + 0.50)
-       end do
+          if(iGrid==iGridBasic)then
+             !\
+             ! Determine, where Xyz point is located with respect to
+             ! the subgrid at basic grid node
+             !/
+             iDiscr_D = 0
+             iDiscr_D(1:nDim) = nint(&
+                  sign(0.50, Dimless_D - XyzGrid_DII(:,0,iGridBasic) + 0.50) +&
+                  sign(0.50, Dimless_D - XyzGrid_DII(:,0,iGridBasic) - 0.50))
+             iGridSeenFrom = &
+                  sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) + iGridBasic
+          else
+             iGridSeenFrom = iGridBasic
+          end if
+          nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
+               iLog2NDimOverNSubgrid_II(iGrid,iGridSeenFrom))
+          do iOrder = 1, nSubgrid_I(iGrid)
+             iSubGrid = iSubgridOrder_III(iOrder,iGrid,iGridSeenFrom)
+             XyzGrid_DII(:,iOrder,iGrid) = XyzGrid_DII(:,0,iGrid) - 0.50 &
+                  + iShift_DI(1:nDim,iSubGrid)
+             iCellIndexes_DII(:,iOrder,iGrid) = &
+                  nint(XyzGrid_DII(:,iOrder,iGrid) + 0.50)
+          end do
+       end if
     end do
 
     ! call interpolation routine 
@@ -3516,13 +3587,11 @@ contains
          nGridOut        = nCellOut, & 
          Weight_I        = Weight_I, & 
          iIndexes_II     = iIndexes_II, & 
-         IsSecondOrder   = IsSecondOrderLocal)
+         IsSecondOrder   = IsSecondOrder,&
+         nSubgridIn_I    = nSubgrid_I)
 
     ! store indices of cells in the final interpolation stencil
     iCellOut_II(:,1:nCellOut) = iIndexes_II(1:nDim,1:nCellOut)
-
-    ! if necessary, return value of IsSecondOrderLocal
-    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
   contains
     subroutine sort_out
       cTol2 = 2*cTol2
@@ -3660,52 +3729,73 @@ contains
     !the out-of-grid points
     !/
     logical, intent(out), optional:: IsSecondOrder  
-
+    !\
+    !Locals----------------
+    !/
     !\
     ! Coordinates of the input point may be recalculated within
-    ! routine; inverse of (/Dx, Dy, Dz/) is reused
+    ! routine
     !/
-    real, dimension(nDim)      :: Xyz_D, DxyzInv_D
+    real, dimension(nDim)      :: Xyz_D 
+    !\
+    ! The minimal coordinates of the block, to which XyzIn_D point belongs
+    !/ 
+    real, dimension(nDim) :: XyzBasicBlock_D
+    !\
+    ! Pe and iBlock numbers for this block
+    !/ 
+    integer:: iProcBasic, iBlockBasic
+    !\
+    ! Cell sizes (/Dx, Dy, Dz/) in this block, or, if this block is finer 
+    ! than its neihbors, DxyzBasic_D is redefine to be twice (/Dx, Dy, Dz/)
+    ! The grid size of the extended stencil. 
+    !/
+    real, dimension(nDim) :: DxyzBasic_D
+    !\
+    ! inverse of  DxyzBasic_D is reused
+    !/
+    real, dimension(nDim) :: DxyzInv_D
     !\
     ! The extended stencil in a structured form:
     ! A cubic 2*2*2 grid with 2*2*2 subgrids covering each vertex
     !/
     real       :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
-    integer, dimension(2**nDim):: iBlock_I  , iProc_I 
-    integer                    :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
-    integer, dimension(2**nDim):: iLevelSubgrid_I
-    logical, dimension(2**nDim):: IsOut_I
-
-    real, dimension(nDim) :: XyzBasicBlock_D, DxyzBasicBlock_D
-    logical               :: IsOutOfDomain
+    integer    :: iBlock_I(2**nDim), iProc_I(2**nDim) 
+    integer    :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+    integer    :: iLevelSubgrid_I(2**nDim)
+    logical    :: IsOut_I(2**nDim)
     !\
-    !Just 2**nDim
-    integer:: nGrid
+    ! (Reduced) number of points in finer subgrids
     !/
-
-    integer:: iGridOutOfBlock
-    ! grid cell of a physical block to be used if UseGhostCell == .true.
+    integer:: nSubgrid_I(2**nDim)
+    !\
+    ! grid number for a vertex known to belong to the block 
+    ! to be used for interpolation with ghost cells
+    !/
     integer:: iGridPhys
     !\
     !iGrid for the cell to which the point Xyz_D belongs
     !/
-    integer:: iGridBasic, iProcBasic, iBlockBasic
-    !\
-    ! Stored iProc and iBlock number
-    !/
-    integer:: iProcStored, iBlockStored
-    !\
-    !Reduced nSubgrid_I
-    !/
-    integer:: nSubgrid_I(2**nDim)
+    integer:: iGridBasic
     !\
     ! Logical for Using ghost cells in interpolation
     !/
     logical:: UseGhostCellLocal
     !\
-    ! Misc
+    ! Misc----------------
     !/
     integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
+    !\
+    ! Stored iProc and iBlock number
+    !/
+    integer:: iProcStored, iBlockStored
+    logical    :: IsOutOfDomain
+    !\
+    !Just 2**nDim
+    integer:: nGrid
+    !/
+
+    integer    :: iGridOutOfBlock
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -3735,7 +3825,7 @@ contains
     ! Find block to which the point belong
     !/ 
     call find(nDim, Xyz_D, iProcBasic, iBlockBasic, &
-         XyzBasicBlock_D, DxyzBasicBlock_D, IsOutOfDomain)
+         XyzBasicBlock_D, DxyzBasic_D, IsOutOfDomain)
     if(IsOutOfDomain)then
        !\
        ! The algorithm does not work for a point out of the computation
@@ -3804,7 +3894,7 @@ contains
       !------------------------------------
       iLevelSubgrid_I =  0
       iCellIndexes_DII = 0; XyzGrid_DII     = 0
-      DxyzInv_D = 1/DxyzBasicBlock_D
+      DxyzInv_D = 1/DxyzBasic_D
       XyzMisc_D = Xyz_D*DxyzInv_D + 0.50
       !\
       ! Find discriminator which determines the 
@@ -3839,11 +3929,11 @@ contains
          end do
          RETURN  !All interpolation is done, ready to exit
       end if
-      XyzGrid_DII(:,0,1) = DxyzBasicBlock_D*(iCellIndexes_DII(:,1,1) - 0.50)
+      XyzGrid_DII(:,0,1) = DxyzBasic_D*(iCellIndexes_DII(:,1,1) - 0.50)
       do iGrid = 2, nGrid
          iShift_D = iShift_DI(1:nDim,iGrid)
          XyzGrid_DII(:,0,iGrid) = &
-              XyzGrid_DII(:,0,1) + iShift_D*DxyzBasicBlock_D
+              XyzGrid_DII(:,0,1) + iShift_D*DxyzBasic_D
          !\
          !This grid point is out of block, mark it
          !/ 
@@ -3854,7 +3944,7 @@ contains
       ! these inequalities 
       !/
       XyzMisc_D = min(1 - cTol2,max(XyzMisc_D, cTol2 ))
-      Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*DxyzBasicBlock_D
+      Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*DxyzBasic_D
       !\
       ! The value of iGrid for the cell which includes the point Xyz_D:
       !/
@@ -4151,7 +4241,7 @@ contains
       !\
       ! Increase the mesh size for the basic grid
       !/
-      DxyzBasicBlock_D = 2*DxyzBasicBlock_D
+      DxyzBasic_D = 2*DxyzBasic_D
       DxyzInv_D        = 0.50*DxyzInv_D
       !\
       ! Recalculate coordinates of the origin point with respect to
@@ -4160,14 +4250,14 @@ contains
       XyzMisc_D       = Xyz_D*DxyzInv_D + 0.50
       iCellOrigin_D   = floor(XyzMisc_D)
       XyzMisc_D       = XyzMisc_D - iCellOrigin_D
-      XyzGridOrigin_D = DxyzBasicBlock_D*(iCellOrigin_D - 0.50)
+      XyzGridOrigin_D = DxyzBasic_D*(iCellOrigin_D - 0.50)
       !\ 
       ! 5. Now XyzMisc_D = (Xyz_D-XyzGridOrigin_D)/DXyzBasicBlock  
       ! satisfies inequalities: XyzMisc_D >= 0 and XyzMisc_D < 1.  
       ! Strengthen these inequalities 
       !/
       XyzMisc_D = min(1 - cTol2, max(XyzMisc_D, cTol2 ))
-      Xyz_D = XyzGridOrigin_D + XyzMisc_D*DxyzBasicBlock_D
+      Xyz_D = XyzGridOrigin_D + XyzMisc_D*DxyzBasic_D
       !\
       ! The value of iGrid for the cell which includes the point Xyz_D:
       !/
@@ -4190,7 +4280,7 @@ contains
       do iGrid = nGrid, 1, -1
          iShift_D = iShift_DI(1:nDim,iGrid)
          XyzGrid_DII(:,0,iGrid) = &
-              XyzGridOrigin_D + iShift_D*DxyzBasicBlock_D
+              XyzGridOrigin_D + iShift_D*DxyzBasic_D
          !Nothing to do for not assigned grid point
          if(iProc_I(iGrid)==-1)CYCLE
          if(IsOut_I(iGrid))    CYCLE
