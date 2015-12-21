@@ -501,6 +501,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
+          RhoInv = 1.0/State_VGB(rho_,i,j,k,iBlock)
           if(UseMultiIon)then
              ChargeDens_I = ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock) &
                   /MassIon_I
@@ -517,7 +518,6 @@ contains
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
                   -DivB1_GB(i,j,k,iBlock)*uPlus_D
           else
-             RhoInv = 1.0/State_VGB(rho_,i,j,k,iBlock)
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
                   -DivB1_GB(i,j,k,iBlock)* &
                   State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*RhoInv
@@ -529,6 +529,7 @@ contains
 
           Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
                - DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                - DivB1_GB(i,j,k,iBlock)* &
                sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*&
