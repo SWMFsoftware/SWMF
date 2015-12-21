@@ -4460,7 +4460,7 @@ contains
     ! and their actual values used may be found, if desired. 
     !/
     real,    intent(inout):: XyzGrid_DII(nDim,0:2**nDim,2**nDim) 
-    integer, intent(in):: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+    integer, intent(in):: iCellIndexes_DII(:,:,:)
     integer, intent(in), dimension(2**nDim):: iBlock_I, iProc_I
     integer, intent(inout):: iLevelSubgrid_I(2**nDim) 
     logical, intent(inout):: IsOut_I(2**nDim)
@@ -4533,7 +4533,13 @@ contains
     ! To improve the algorithm stability against roundoff errors
     !/
     real           :: cTol2
+    !\
+    ! !Number of integers in the cell index. Normally this is nDim
+    ! however, a flexibility to allow any other value is useful.
+    integer:: nCellId 
     !------------------------  
+    nCellId = UBOUND(iCellIndexes_DII,1)
+ 
     !\
     ! Initialize 
     !/
@@ -4558,7 +4564,7 @@ contains
           nGridOut = nGridOut + 1
           iIndexes_II(0,       nGridOut) = iProc_I( iGrid)
           iIndexes_II(nIndexes,nGridOut) = iBlock_I(iGrid)
-          iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,iGrid)
+          iIndexes_II(1:nCellId,  nGridOut) = iCellIndexes_DII(:,1,iGrid)
           Weight_I(nGridOut) = Weight_I(iGrid)
        end do
        if(present(IsSecondOrder))IsSecondOrder = .not.IsNearBoundary
@@ -4735,13 +4741,12 @@ contains
     subroutine generate_corner_stencil
       integer:: iGrid
       iLevel_I = iLevelSubgrid_I
-      ! IsOut_I = IsOut_I
       do iGrid = 1, nGrid
          iIndexes_II(0,        iGrid) =  iProc_I(iGrid)
          iIndexes_II(nIndexes, iGrid) = iBlock_I(iGrid)
          if(iLevel_I(iGrid)==Coarse_)then
             XyzGrid_DI(:,iGrid) = XyzGrid_DII(:,1,iGrid)
-            iIndexes_II(1:nDim,iGrid) = iCellIndexes_DII(:,1,iGrid)
+            iIndexes_II(1:nCellId,iGrid) = iCellIndexes_DII(:,1,iGrid)
          else
             if(present(nSubgridIn_I))then
                !\
@@ -4749,11 +4754,11 @@ contains
                !/
                XyzGrid_DI(:,iGrid) = &
                     XyzGrid_DII(:,nSubGrid_I(iGrid),iGrid)
-               iIndexes_II(1:nDim,iGrid) = &
+               iIndexes_II(1:nCellId,iGrid) = &
                     iCellIndexes_DII(:,nSubGrid_I(iGrid), iGrid)
             else
                XyzGrid_DI(:,iGrid) = XyzGrid_DII(:,9 - iGrid,iGrid)
-               iIndexes_II(1:nDim,iGrid) = &
+               iIndexes_II(1:nCellId,iGrid) = &
                     iCellIndexes_DII(:,9 - iGrid, iGrid)
             end if
          end if
@@ -4818,7 +4823,7 @@ contains
               iProc_I(iGrid_I(iPoint))
          iIndexes_II(nIndexes,iGrid) = &
               iBlock_I(iGrid_I(iPoint))
-         iIndexes_II(1:nDim,iGrid)   = &
+         iIndexes_II(1:nCellId,iGrid)   = &
               iCellIndexes_DII(:,iSubGrid_I(iPoint),iGrid_I(iPoint))
          iLevel_I(iGrid) = iLevelSubgrid_I(iGrid_I(iPoint))
          IsOut_I(iGrid) = IsOutSaved_I(iGrid_I(iPoint))

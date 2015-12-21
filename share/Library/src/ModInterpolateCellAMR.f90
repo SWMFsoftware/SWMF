@@ -78,12 +78,12 @@ contains
     !\
     ! To call the interpolation routine we need only one extended stencil
     !/
-    integer            :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+    integer            :: iCellIndexes_DII(nId,2**nDim,2**nDim)
     real               :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
     integer            :: iLevel_I(2**nDim)
     logical            :: IsOut_I(2**nDim)    
     real               :: DXyzInvInput_D(nDim)
-    integer            :: iIndexesExt_II(0:nDim,2**nDim)
+    integer            :: iIndexesExt_II(0:nId,2**nDim)
     integer, parameter :: iBlock_I(8) = -1, iProc_I(8) = 0!Unused
     !\
     ! To find octant the point Xyz_D belongs to.
@@ -115,7 +115,7 @@ contains
     call interpolate_extended_stencil(&
          nDim            = nDim, &
          Xyz_D           = Xyz_D, &
-         nIndexes        = nDim, &
+         nIndexes        = nId, &
          XyzGrid_DII     = XyzGrid_DII, &
          iCellIndexes_DII= iCellIndexes_DII, & 
          iBlock_I        = iBlock_I(1:nGrid),   & 
