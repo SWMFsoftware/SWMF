@@ -175,9 +175,6 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test.dat         \
 >>>output/test_CG-dust-test.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test.diff
 >>>@ls -l test_CG-dust-test.diff
-
->>>@cat test_CG-dust-test--H2O.diff test_CG-dust-test--DUST.diff >> test_CG-dust-test.diff
-
 <#
 
 #>
