@@ -215,6 +215,11 @@ function config_kernelfile(ARGS)
   updateSettings("kernelFile:", kernelFile)
 end
 
+function config_plt_result(ARGS)
+  pltStr = ARGS[2]
+  updateSettings("doPlotResult:", pltStr)
+end
+
 function config_clib(ARGS)
   clibFile = ARGS[2]
   tmpdir = get_tmp_dir()
@@ -398,6 +403,15 @@ elseif lowercase(ARGS[1]) == "--auto"
     else
       config_docheckshadow(["", arg])
     end
+
+    print("--doPlotResult ")
+    arg = parseCmdLineArg()
+    if length(arg) < 1
+      println(" - ...skipped")
+    else
+      config_pltResult(["", arg])
+    end
+
   end
 
 
