@@ -62,6 +62,9 @@ module ModUser
   real    :: LinearCoeffJet 
   real    :: PowerCoeffJet 
 
+  ! Multiply the collisionfrequencies by CollisionFactor
+  real :: CollisionFactor = 1.0
+
 contains 
   !============================================================================
   subroutine user_read_inputs
@@ -118,6 +121,9 @@ contains
           call read_var('ProfileExponentJet',ProfileExponentJet)
           call read_var('UmaxJet',UmaxJet)
           IsJetBC = .true.
+
+       case("#COLLISIONFACTOR")
+          call read_var('CollisionFactor', CollisionFactor)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -208,7 +214,7 @@ contains
           ReducedMass_II(iIon,jIon) = Mass_I(iIon)*Mass_I(jIon) &
                /(Mass_I(iIon) + Mass_I(jIon))
 
-          CollisionCoef_II(iIon,jIon) = CoulombLog &
+          CollisionCoef_II(iIon,jIon) = CollisionFactor*CoulombLog &
                *sqrt(ReducedMass_II(iIon,jIon)/cProtonMass)/Mass_I(iIon) &
                *(Charge_I(iIon)*Charge_I(jIon)*cElectronCharge**2/cEps)**2 &
                /(3*(cTwoPi*cBoltzmann)**1.5)
