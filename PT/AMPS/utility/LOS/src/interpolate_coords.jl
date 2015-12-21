@@ -32,7 +32,6 @@ function interpolate(nVars, coords, oct)
 end
 
 function save_results(nVars, result, coords, fileName="interp_output.dat")
-
   nPoints = size(result, 2)
   oFile = open(fileName, "w")
   for i=1:nPoints
@@ -46,6 +45,9 @@ function save_results(nVars, result, coords, fileName="interp_output.dat")
   end
 end
 
+################################################################################
+# START main
+################################################################################
 
 global const clib = parseUserFile("clibFile:")
 @show(clib)
@@ -77,7 +79,8 @@ dummyCell = Cell(zeros(3),
 oct.cells[1] = dummyCell
 
 println(" - nVars : ", nVars)
-coords = load_user_coordinates(coordFileName, 3)
+coords = load_user_coordinates(coordFileName, 6)
+coords = coords[4:6,:]
 
 @time result = interpolate(nVars, coords, oct)
 @time save_results(nVars, result, coords, "interp_output.H2O.dat")

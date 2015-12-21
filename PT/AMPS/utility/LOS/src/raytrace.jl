@@ -212,8 +212,6 @@ function reset_data!(nVars, data, dataNew, dataOld)
   end
 end
 
-
-
 function checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
                          r, r_hat_sun)
     if doCheckShadow == true
@@ -299,7 +297,6 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       distance = norm_vec(r)
       lMax = get_lMax(lMax, iTriangle, r, lIntersect, llMax)
       reset_data!(nVars, data, dataNew, dataOld)
-
 
       distFromStart = 0.0
       norm_rhat_sun = 0.0
@@ -411,7 +408,6 @@ function doIntegrationParallel(oct::Block, rPointing, rStart, nVars, allTriangle
       lMax = get_lMax(lMax, iTriangle, r, lIntersect, llMax)
       reset_data!(nVars, data, dataNew, dataOld)
 
-
       distFromStart = 0.0
       norm_rhat_sun = 0.0
       while (!is_out_of_bounds(oct, r) && (distFromStart <= lMax))
@@ -470,7 +466,6 @@ function doIntegrationParallel(oct::Block, rPointing, rStart, nVars, allTriangle
 end
 
 function dodo(iRays)
-
   doIntegrationParallel(oct, rPointing, rStart, nVars, allTriangles,
                          doCheckShadow_bool,iRays, et)
   end

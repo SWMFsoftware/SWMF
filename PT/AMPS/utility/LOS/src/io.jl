@@ -1,6 +1,98 @@
 using Triangles
 using DataFrames
 
+function save_result(ccd, mask, nVars, nPixelsX, nPixelsY)
+    prevDir = pwd()
+    cd(filePath)
+    cd("../output")
+    ccd = reshape(ccd, nVars, nPixelsX, nPixelsY)
+    ccd_sum = zeros(nPixelsX, nPixelsY)
+    if doBlankBody
+      mask = reshape(mask, nPixelsX, nPixelsY)
+      border_mask = get_border(mask)
+      custom_mask!(mask)
+    end
+    for i=1:nVars
+      ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
+      for ix = 1:nPixelsX
+        for iy = 1:nPixelsY
+           ccd_sum[ix, iy] += ccdPlt[ix, iy]
+         end
+       end
+      writedlm("ccd_" * varNames[i] * ".dat", ccdPlt)
+    end
+    cd(prevDir)
+end
+function plot_result(ccd, mask, nVars, nPixesX, nPixelsY)
+    # reshape ccd from a 1D array to nVar times 2D arrays.
+    ccd = reshape(ccd, nVars, nPixelsX, nPixelsY)
+    ccd_sum = zeros(nPixelsX, nPixelsY)
+    if doBlankBody
+      mask = reshape(mask, nPixelsX, nPixelsY)
+      border_mask = get_border(mask)
+      custom_mask!(mask)
+    end
+
+    cmap = ColorMap("hot")
+    if length(parseUserFile("pltColorMap:")) > 0
+      cmapUser = parseUserFile("pltColorMap:")
+      try
+        cmap = ColorMap(cmapUser)
+      catch
+        print_with_color(:red, " - your colormap was not found. using default 'hot'\n")
+        println(" - some valid choices are: afmhot, autumn, bone, cool")
+        println(" - copper, gist_heat, gray, pink, spring, summer, winter")
+        println(" - Blues, Greens, Oranges, Reds, YlGn, BuPu, Greys, YlGnBu")
+      end
+    end
+
+    nLevels = 32
+    if length(parseUserFile("pltLevels:")) > 0
+      nLevels = parse(Int, parseUserFile("pltLevels:"))
+    end
+
+    pltTitle = "I love Julia (by Valeriy T.)"
+    if length(parseUserFile("pltTitle:")) > 0
+      pltTitle = parseUserFile("pltTitle:")
+    end
+
+    fontSize = 12
+    if length(parseUserFile("pltFontSize:")) > 0
+      fontSize = parse(Int, parseUserFile("pltFontSize:"))
+    end
+
+    for i=1:nVars
+      figure()
+      ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
+      if minimum(ccdPlt) > 0.0
+        contourf(log10(ccdPlt), nLevels, cmap=cmap)
+      else
+        contourf(ccdPlt, nLevels, cmap=cmap)
+      end
+      colorbar()
+      if doBlankBody
+        contourf(mask, levels=[-0.1, 0.1], colors=("w"))
+        contourf(border_mask, levels=[0.9, 1.1], colors=("k"))
+      end
+      xlabel("Pixel number", size=fontSize)
+      ylabel("Pixel number", size=fontSize)
+      title(varNames[i], size=fontSize)
+      for ix = 1:nPixelsX
+        for iy = 1:nPixelsY
+           ccd_sum[ix, iy] += ccdPlt[ix, iy]
+         end
+       end
+
+      writedlm(joinpath(filePath, "ccd_" * varNames[i] * ".dat"), ccdPlt)
+    end
+    figure()
+    contourf(log10(ccd_sum), nLevels, cmap=cmap)
+    xlabel("Pixel number", size=fontSize)
+    ylabel("Pixel number", size=fontSize)
+    title("Sum", size=fontSize)
+    colorbar()
+    show()
+end
 
 function custom_mask!(mask)
   mask_original = deepcopy(mask)
@@ -62,7 +154,7 @@ function get_border(mask)
   return border_mask
 end
 
-function load_user_coordinates(fileName, nVars=3)
+function load_user_coordinates(fileName, nDims=3)
 
   iFile = open(fileName, "r")
   coords = Float64[]
@@ -73,8 +165,8 @@ function load_user_coordinates(fileName, nVars=3)
     end
   end
 
-  nPoints = Int(length(coords)/nVars)
-  coords = reshape(coords, nVars, nPoints)
+  nPoints = Int(length(coords)/nDims)
+  coords = reshape(coords, nDims, nPoints)
   return coords
 end
 
@@ -117,6 +209,7 @@ function load_AMPS_data(fileName::UTF8String)
   nHeaderRows = 2
 
   varIndexes = [1,2,3]
+  varNames = ASCIIString["x", "y", "z"]
   minSize = Float64[]
   maxSize = Float64[]
   while !eof(f)
@@ -128,7 +221,9 @@ function load_AMPS_data(fileName::UTF8String)
         isDustCase = false
       end
       line_split = split(line, ',')
-      println(" - nVars in header: ", length(line_split))
+      if myid() == 1
+        println(" - nVars in header: ", length(line_split))
+      end
       i=1
       for variable in line_split
         c1 = ismatch(r"Dust Number Density", variable)
@@ -136,10 +231,14 @@ function load_AMPS_data(fileName::UTF8String)
         c3 = ismatch(r"Number Density", variable)
         c4 = ismatch(r"Translational Temperature", variable)
         c5 = !ismatch(r"Dust", variable)
-        c6 = !ismatch(r"dust", modelType)
-        if (c1 & c2) | ((c3 | c4) & c5 & !isDustCase)
-          println(" - variable: " * variable)
+        c6 = ismatch(r"V[012]", variable)
+        c7 = ismatch(r"Speed", variable)
+        if (c1 & c2) | ((c3 | c4 | c6 | c7) & c5 & !isDustCase)
+          if myid() ==1
+            println(" - variable: " * variable)
+          end
           push!(varIndexes, i)
+          push!(varNames, replace(replace(variable, "\"", ""), " ", ""))
           if (c1 & c2) # dust case
             lower, upper = [parse(Float64, value) for value in matchall(r"(-?\d.\d+[eE][+-]\d+)", variable) ]
           else
@@ -155,8 +254,10 @@ function load_AMPS_data(fileName::UTF8String)
     if ismatch(r"ZONE ", line)
       nNodes, nCells = [parse(Int64, value) for value in matchall(r"(\d+)", line)]
       nBlocks = round(Int64, nCells / nCellsPerBlock)
-      println(" - nNodes: ", nNodes)
-      println(" - nCells: ", nCells)
+      if myid() ==1
+        println(" - nNodes: ", nNodes)
+        println(" - nCells: ", nCells)
+      end
       break
     end
   end
@@ -188,11 +289,13 @@ function load_AMPS_data(fileName::UTF8String)
   end
   close(f)
   return (nCells, nCellsPerBlock, nBlocks, nodeCoordinates, cubeIndices,
-         numberDensity, minSize, maxSize)
+         numberDensity, minSize, maxSize, varNames)
 end
 
 function load_ply_file(fileName::ASCIIString)
-  println(" - loading surface mesh...")
+  if myid() == 1
+    println(" - loading surface mesh...")
+  end
   nNodes::Int64 = 0
   nTriangles::Int64 = 0
   iHeader::Int64 = 0
@@ -211,10 +314,11 @@ function load_ply_file(fileName::ASCIIString)
     i += 1
   end
   close(iFile)
-
-  println("       nNodes     : ", nNodes)
-  println("       nTriangles : ", nTriangles)
-  println("       iHeader    : ", iHeader)
+  if myid() == 1
+    println("       nNodes     : ", nNodes)
+    println("       nTriangles : ", nTriangles)
+    println("       iHeader    : ", iHeader)
+  end
 
   nodeCoords = zeros(Float64, 3, nNodes)
   triIndices = zeros(Int64, 3, nTriangles)

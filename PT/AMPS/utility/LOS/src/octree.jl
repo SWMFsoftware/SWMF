@@ -307,12 +307,11 @@ function get_factor(minSize, maxSize, r)
   return f[]
 end
 
-function get_factor(coords)
-  C = 1000.0
-  radius_CG = 2000.0
+function get_excitation_rate(coords)
   dist = sqrt(coords[1]*coords[1] + coords[2]*coords[2] + coords[3]*coords[3])
-  eDensity = 1/(dist-radius_CG) * C
-  return eDensity
+  exRate = 5.53e-11 * (100.64*1000 / dist)
+  exRate = 5.53e-11
+  return exRate
 end
 
 function triLinearInterpolation!(cell::Cell, point, data,
@@ -334,8 +333,7 @@ function triLinearInterpolation!(cell::Cell, point, data,
     c = c0*(1-yd) + c1*yd
 
     if length(clib) > 1
-      #f = get_factor(minDustSize[i], maxDustSize[i], r)
-      f = get_factor(point)
+      f = get_excitation_rate(point)
     else
       f = 1.0
     end

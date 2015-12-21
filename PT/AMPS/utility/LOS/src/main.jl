@@ -41,6 +41,7 @@ end
 const fileName = parseUserFile("dataFile:")
 const meshFile = parseUserFile("meshFile:")
 const doCheckShadow = parseUserFile("doCheckShadow:")
+
 if contains(doCheckShadow, "y")
   doCheckShadow_bool = true
 else
@@ -88,10 +89,7 @@ for k=1:nPixelsX*nPixelsY
   rPointing[:,k] = rotMat * vec(rPointing[:,k])
 end
 
-
 oct, nVars, varNames = build_octree(filePath, fileNameBase)
-nVars = 1
-varNames = ["NumberDensity"]
 println(" - nVars : ", nVars)
 nTriangles, allTriangles, totalSurfaceArea = load_ply_file(meshFile)
 
@@ -100,76 +98,12 @@ assign_triangles!(oct, allTriangles)
 @time ccd, mask = doIntegration(oct, rPointing, rStart, nVars, allTriangles,
                           doCheckShadow_bool)
 
-ccd = reshape(ccd, nVars, nPixelsX, nPixelsY)
-ccd_sum = zeros(nPixelsX, nPixelsY)
-if doBlankBody
-  mask = reshape(mask, nPixelsX, nPixelsY)
-  border_mask = get_border(mask)
-  custom_mask!(mask)
+save_result(ccd, mask, nVars, nPixelsX, nPixelsY)
+try
+  plot_result(ccd, mask, nVars, nPixelsX, nPixelsY)
+catch
 end
-
-################################################################################
-# check if user set plotting options
-################################################################################
-cmap = ColorMap("hot")
-if length(parseUserFile("pltColorMap:")) > 0
-  cmapUser = parseUserFile("pltColorMap:")
-  try
-    cmap = ColorMap(cmapUser)
-  catch
-    print_with_color(:red, " - your colormap was not found. using default 'hot'\n")
-    println(" - some valid choices are: afmhot, autumn, bone, cool")
-    println(" - copper, gist_heat, gray, pink, spring, summer, winter")
-    println(" - Blues, Greens, Oranges, Reds, YlGn, BuPu, Greys, YlGnBu")
-  end
-end
-
-nLevels = 32
-if length(parseUserFile("pltLevels:")) > 0
-  nLevels = parse(Int, parseUserFile("pltLevels:"))
-end
-
-pltTitle = "I love Julia (by Valeriy T.)"
-if length(parseUserFile("pltTitle:")) > 0
-  pltTitle = parseUserFile("pltTitle:")
-end
-
-fontSize = 12
-if length(parseUserFile("pltFontSize:")) > 0
-  fontSize = parse(Int, parseUserFile("pltFontSize:"))
-end
-
-for i=1:nVars
-  figure()
-  ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
-  if minimum(ccdPlt) > 0.0
-    contourf(log10(ccdPlt), nLevels, cmap=cmap)
-  else
-    contourf(ccdPlt, nLevels, cmap=cmap)
-  end
-  colorbar()
-  if doBlankBody
-    contourf(mask, levels=[-0.1, 0.1], colors=("w"))
-    contourf(border_mask, levels=[0.9, 1.1], colors=("k"))
-  end
-  xlabel("Pixel number", size=fontSize)
-  ylabel("Pixel number", size=fontSize)
-  #title(pltTitle, size=fontSize)
-  title(varNames[i], size=fontSize)
-  for ix = 1:nPixelsX
-    for iy = 1:nPixelsY
-       ccd_sum[ix, iy] += ccdPlt[ix, iy]
-     end
-   end
-
-  writedlm(joinpath(filePath, "ccd_" * varNames[i] * ".dat"), ccdPlt)
-end
-figure()
-contourf(log10(ccd_sum), nLevels, cmap=cmap)
-xlabel("Pixel number", size=fontSize)
-ylabel("Pixel number", size=fontSize)
-title("Sum", size=fontSize)
-colorbar()
-show()
-
-writedlm(joinpath(filePath, "ccd.dat"), ccd)
+cd(filePath)
+cd("../output")
+writedlm("ccd.dat", ccd)
+#writedlm(joinpath(filePath, "ccd.dat"), ccd)

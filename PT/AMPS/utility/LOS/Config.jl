@@ -114,7 +114,7 @@ function get_tmp_dir()
   exit()
 end
 
-function config_data_file(ARGS)
+function config_data_file(ARGS, case="dataFile:")
   dataFile = ARGS[2]
   @show(dataFile)
   tmpdir = get_tmp_dir()
@@ -122,22 +122,19 @@ function config_data_file(ARGS)
     cp(dataFile, joinpath(tmpdir, "input/"*basename(dataFile)), remove_destination=true)
     updateSettings("dataFile:", joinpath(tmpdir, "input/"*basename(dataFile)))
   else
-    print(" - selected data file is not in HDF5 format. Build new .h5 file? (y/n) ")
-    answ = parseCmdLineArg()
-    if !contains(answ, "n")
-      println(" -  generating new file, this might take a few seconds.")
-      cd("src")
-      run(`julia prepareAmpsData.jl $dataFile`)
-      cd("..")
-      path = dirname(dataFile)
-      baseName = basename(dataFile)
-      ext = split(baseName, ".")[end]
-      newBase = baseName[1:end-(length(ext)+1)] * ".h5"
-      newDataFile = joinpath(path, newBase)
+    print(" - selected data file is not in HDF5 format. Building new .h5 file")
+    println(" -  generating new file, this might take a few seconds.")
+    cd("src")
+    run(`julia prepareAmpsData.jl $dataFile`)
+    cd("..")
+    path = dirname(dataFile)
+    baseName = basename(dataFile)
+    ext = split(baseName, ".")[end]
+    newBase = baseName[1:end-(length(ext)+1)] * ".h5"
+    newDataFile = joinpath(path, newBase)
 
-      mv(newDataFile, joinpath(tmpdir, "input/"*newBase), remove_destination=true)
-      updateSettings("dataFile:", joinpath(tmpdir, "input/"*newBase))
-    end
+    mv(newDataFile, joinpath(tmpdir, "input/"*newBase), remove_destination=true)
+    updateSettings(case, joinpath(tmpdir, "input/"*newBase))
   end
 
 end
@@ -164,18 +161,25 @@ function config_tmpdir(ARGS)
           rm(joinpath(rundir, "input"), recursive=true)
         catch
         end
+        try
+          rm(joinpath(rundir, "output"), recursive=true)
+        catch
+        end
         mkdir(joinpath(rundir, "lib"))
         mkdir(joinpath(rundir, "input"))
+        mkdir(joinpath(rundir, "output"))
       end
     else
-      println(" - create new directories 'lib' and 'input'")
+      println(" - create new directories 'lib', 'input' and 'output'")
       mkdir(joinpath(rundir, "lib"))
       mkdir(joinpath(rundir, "input"))
+      mkdir(joinpath(rundir, "output"))
     end
   else
     mkdir(rundir)
     mkdir(joinpath(rundir, "lib"))
     mkdir(joinpath(rundir, "input"))
+    mkdir(joinpath(rundir, "output"))
   end
   touch(".userSettings.conf")
   updateSettings("tmpDir:", rundir)
@@ -292,6 +296,12 @@ elseif lowercase(ARGS[1]) == "--docheckshadow"
 elseif lowercase(ARGS[1]) == "--datafile"
   config_data_file(ARGS)
 
+elseif lowercase(ARGS[1]) == "--datafiletestgas"
+  config_data_file(ARGS, "dataFileTestGas:")
+
+elseif lowercase(ARGS[1]) == "--datafiletestdust"
+  config_data_file(ARGS, "dataFileTestDust:")
+
 elseif lowercase(ARGS[1]) == "--clean"
   tmpdir = get_tmp_dir()
   previousDir = pwd()
@@ -334,7 +344,7 @@ elseif lowercase(ARGS[1]) == "--help"
     println("--help            show this message")
 
   else
-    println(" \U02668 Too bad, better luck next time...")
+    println(" \U0001f631 Too bad, better luck next time...")
   end
 elseif lowercase(ARGS[1]) == "--auto"
   println("START auto setup:")
