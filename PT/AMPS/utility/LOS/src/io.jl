@@ -91,7 +91,10 @@ function plot_result(ccd, mask, nVars, nPixesX, nPixelsY)
     ylabel("Pixel number", size=fontSize)
     title("Sum", size=fontSize)
     colorbar()
-    show()
+
+    if contains(parseUserFile("doPlotResult:"),"y")
+      show()
+    end
 end
 
 function custom_mask!(mask)
@@ -167,6 +170,8 @@ function load_user_coordinates(fileName, nDims=3)
 
   nPoints = Int(length(coords)/nDims)
   coords = reshape(coords, nDims, nPoints)
+
+  close(iFile)
   return coords
 end
 
@@ -181,6 +186,8 @@ function parseUserFile(keyword)
      return value
    end
  end
+
+ close(iFile)
  return value
 end
 
