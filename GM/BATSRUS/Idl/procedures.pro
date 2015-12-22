@@ -1160,8 +1160,8 @@ pro arr2arr,a,n
 on_error,2
 
 k = n_elements(a)
-if      k gt n then a = a(0:n-1) $                 ; truncate array
-else if k lt n then a = [a, a(k-1)+intarr(n-k) ]   ; extend array
+if      k gt n then a = a(0:n-1) $                    ; truncate array
+else if k lt n then for i = k, n-1 do a = [a, a(k-1)] ; extend array
 
 end
 ;===========================================================================
