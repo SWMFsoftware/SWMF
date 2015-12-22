@@ -202,5 +202,75 @@ Check=
 >>>@ls -l test_Europa-test1.diff
 <#
 
+#>
+Name=LOS(0+srbwks2014-0079) 
+Compile=
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --tmpDir ${MYDIR}/utility/LOS/Tmp
 
+Run=
+>>>@echo "test_LOS_run..." >> test_LOS.diff
+
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --kernelFile /Volumes/data/AMPS_DATA_TEST/LOS/kernels.tm
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFile /Volumes/data/AMPS_DATA_TEST/LOS/SHAP5_stefano.ply
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFileShadow /Volumes/data/AMPS_DATA_TEST/LOS/SHAP5_shadow.ply
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/data/AMPS_DATA_TEST/LOS/pic.DUST%0.s=2.out=11.dat
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow yes
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltLevels 30
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltColorMap afmhot
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltBlankBody yes 
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltAdditionalBorderPx 7
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doPlotResult yes
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --spicelib /Users/vtenishe/SPICE/Toolkit/cspice/lib
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --clib /Volumes/data/AMPS_DATA_TEST/LOS/cprog.c
+>>>cd ${MYDIR}/utility/LOS/ && echo "pltLevels:30" >> .userSettings.conf
+>>>cd ${MYDIR}/utility/LOS/ && echo "pltColorMap:afmhot" >> .userSettings.conf
+>>>cd ${MYDIR}/utility/LOS/ && echo "pltBlankBody:yes" >> .userSettings.conf
+>>>cd ${MYDIR}/utility/LOS/ && echo "pltAdditionalBorderPx:7" >> .userSettings.conf
+>>>cd ${MYDIR}/utility/LOS/ && echo "doPlotResult:no" >> .userSettings.conf
+
+>>>#run test case with dust with shadow 
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow yes
+>>>cd ${MYDIR}/utility/LOS/src/ && julia main.jl 2015-02-11T00:00:00 TEST 
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && cat *.dat > test_LOS-dust--shadow=yes.res
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && rm *.dat 
+
+>>>#run dust without shadow
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow no
+>>>cd ${MYDIR}/utility/LOS/src/ && julia main.jl 2015-02-11T00:00:00 TEST
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && cat *.dat > test_LOS-dust--shadow=no.res
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && rm *.dat
+
+>>>#run gas case with shadow
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/data/AMPS_DATA_TEST/LOS/pic.H2O.s=0.out=11.dat
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --clib ${MYDIR}/utility/LOS/src/cprog.c
+
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow yes
+>>>cd ${MYDIR}/utility/LOS/src/ && julia main.jl 2015-02-11T00:00:00 TEST
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && cat *.dat > test_LOS-gas--shadow=yes.res
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && rm *.dat
+
+>>>#run gas case without shadow
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow no 
+>>>cd ${MYDIR}/utility/LOS/src/ && julia main.jl 2015-02-11T00:00:00 TEST
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && cat *.dat > test_LOS-gas--shadow=no.res
+>>>cd ${MYDIR}/utility/LOS/Tmp/output && rm *.dat
+
+>>>@echo "test_LOS_run... done" >> test_LOS.diff
+
+Check=
+>>>@echo "test_LOS_check..." >> test_LOS.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=yes.res output/test_LOS-dust--shadow=yes.ref > test_LOS-dust--shadow=yes.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=no.res output/test_LOS-dust--shadow=no.ref > test_LOS-dust--shadow=no.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=yes.res output/test_LOS-gas--shadow=yes.ref > test_LOS-gas--shadow=yes.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=no.res output/test_LOS-gas--shadow=no.ref > test_LOS-gas--shadow=no.diff
+
+>>>cat test_LOS-dust--shadow=yes.diff test_LOS-dust--shadow=no.diff test_LOS-gas--shadow=yes.diff test_LOS-gas--shadow=no.diff > test_LOS.diff
+
+>>>@ls -l test_LOS-dust--shadow=yes.diff 
+>>>@ls -l test_LOS-dust--shadow=no.diff
+>>>@ls -l test_LOS-gas--shadow=yes.diff
+>>>@ls -l test_LOS-gas--shadow=no.diff
+>>>@ls -l test_LOS.diff
+<#
 
