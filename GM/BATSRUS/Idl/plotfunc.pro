@@ -52,19 +52,9 @@
    print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
          ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
         FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
-   if keyword_set(multiplot) then begin
-        siz=size(multiplot)
-        if siz(0) eq 0 then begin
-            if multiplot gt 0 then multiplot=[multiplot,1,1] $
-            else                   multiplot=[1,-multiplot,1]
-        endif
-        print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
-        ', fixaspect= ',fixaspect,$
-        FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
-   endif else $
-        print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
-              ', fixaspect= ',fixaspect,$
-              FORMAT='(a,a,a,i1)'
+   print,'multiplot=',multiplot
+   print,'axistype (coord/cells)=',axistype,', fixaspect= ',fixaspect,$
+            FORMAT='(a,a,a,i1)'
    print,'bottomline=',bottomline,', headerline=',headerline,$
         FORMAT='(a,i1,a,i1)'
 
@@ -103,9 +93,16 @@
    ;===== DO PLOTTING IN MULTIX * MULTIY MULTIPLE WINDOWS
 
    if keyword_set(multiplot) then begin
-      multix=multiplot(0)
-      multiy=multiplot(1)
-      !p.multi=[0,multix,multiy,0,multiplot(2)]
+      if n_elements(multiplot) eq 1 then begin
+         if multiplot gt 0 then       !p.multi=[0,multiplot,1 ,0,1] $
+         else if multiplot eq -1 then !p.multi=[0,1,nplot     ,0,1] $
+         else                         !p.multi=[0,1,-multiplot,0,1]
+      endif else if n_elements(multiplot) eq 5 then $
+         !p.multi = multiplot $
+      else $
+         !p.multi=[0,multiplot(0),multiplot(1),0,multiplot(2)]
+      multix=!p.multi(1)
+      multiy=!p.multi(2)
    endif else begin
       multix=long(sqrt(nplot-1)+1)
       multiy=long((nplot-1)/multix+1)
