@@ -207,6 +207,10 @@ Name=LOS(0+srbwks2014-0079)
 Compile=
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --tmpDir ${MYDIR}/utility/LOS/Tmp
 
+Rundir=
+>>>@echo "test_LOS_rundir..." >> test_LOS.diff
+>>>@echo "test_LOS_rundir... done" >> test_LOS.diff
+
 Run=
 >>>@echo "test_LOS_run..." >> test_LOS.diff
 
