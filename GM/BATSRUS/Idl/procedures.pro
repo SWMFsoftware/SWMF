@@ -2290,7 +2290,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
                                 ; Store x and y titles and tick names
 
-  newytitle  = ytitleorig ne !y.title
+  newytitle  = 0 ;;; ytitleorig ne !y.title
   xtitle     = !x.title
   ytitle     = !y.title
   xtickname  = !x.tickname
