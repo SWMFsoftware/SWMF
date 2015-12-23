@@ -162,8 +162,8 @@ T			  DoAddRhoU
 1.0                       ElectronPressureRatio
 
 #MULTIION
-1e-7			  LowDensityRatio
-1e-12			  LowPressureRatio
+1e-8			  LowDensityRatio
+1e-13			  LowPressureRatio
 F			  DoRestrictMultiIon
 3.0                       MachNumberMultiIon (read if DoRestrictMultiIon)
 0.25                      ParabolaWidthMultiIon (read if DoRestrictMultiIon)
