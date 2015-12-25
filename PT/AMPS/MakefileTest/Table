@@ -269,9 +269,12 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=yes.res output/test_LOS-gas--shadow=yes.ref > test_LOS-gas--shadow=yes.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=no.res output/test_LOS-gas--shadow=no.ref > test_LOS-gas--shadow=no.diff
 
+>>>cat test_LOS-dust--shadow=yes.diff test_LOS-dust--shadow=no.diff test_LOS-gas--shadow=yes.diff test_LOS-gas--shadow=no.diff > test_LOS.diff
+
 >>>@ls -l test_LOS-dust--shadow=yes.diff 
 >>>@ls -l test_LOS-dust--shadow=no.diff
 >>>@ls -l test_LOS-gas--shadow=yes.diff
 >>>@ls -l test_LOS-gas--shadow=no.diff
+>>>@ls -l test_LOS.diff
 <#
 
