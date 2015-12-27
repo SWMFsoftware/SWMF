@@ -190,6 +190,9 @@ namespace CutCell {
     double x0Face[3],x1Face[3],x2Face[3];
     double e0[3],e1[3],c00,c01,c11,c,e0Length,e1Length;
 
+    //orthogonal frame of reference related to the surface element
+    double e0Orthogonal[3],e1Orthogonal[3];
+
     double CharacteristicFaceSize;
 
     cTriangleFace *next,*prev;
@@ -282,6 +285,11 @@ namespace CutCell {
 
       CharacteristicFaceSize=0.3*(sqrt(l0)+sqrt(l1)+sqrt(l2));
 
+      //determine the orthogonal frame of reference related to the triangular element
+      l=Vector3D::Length(e0);
+      for (idim=0;idim<3;idim++) e0Orthogonal[idim]=e0[idim]/l;
+
+      Vector3D::CrossProduct(e1Orthogonal,ExternalNormal,e0Orthogonal);
     }
 
     inline void GetProjectedLocalCoordinates(double *xLocal,double *x) {
@@ -486,7 +494,7 @@ namespace CutCell {
 
     cTriangleFace() {
       SurfaceArea=0.0,CharacteristicFaceSize=0.0;
-      for (int i=0;i<3;i++) ExternalNormal[i]=0.0;
+      for (int i=0;i<3;i++) ExternalNormal[i]=0.0,e0Orthogonal[i]=0.0,e1Orthogonal[i]=0.0;
 
       pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
       pic__cosine_illumination_angle=0.0;
