@@ -235,7 +235,46 @@ namespace VectorRotation {
     memcpy(l,temp,2*sizeof(double));
   }
 }
- 
+
+
+//=========================================================
+//Vector Operations
+namespace Vector3D {
+  inline void CrossProduct(double *res,double *a,double *b) {
+    res[0]=a[1]*b[2]-a[2]*b[1];
+    res[1]=a[2]*b[0]-a[0]*b[2];
+    res[2]=a[0]*b[1]-a[1]*b[0];
+  }
+
+  inline double Length(double *x) {
+    return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+  }
+
+  //determine an ortogonal frame of rederence: z is input; e1 and e2 and orthogonal to z and form a right handed frame of reference
+  inline void GetNormFrame(double *e0,double *e1,double *z) {
+    double l,e[3];
+    int idim;
+
+    l=Length(z);
+    for (idim=0;idim<3;idim++) e[idim]=z[idim]/l;
+
+    //get e0
+    if (fabs(e[0])>1.0E-5) e0[0]=-e[1],e0[1]=e[0],e0[2]=0.0;
+    else e0[0]=0.0,e0[1]=e[2],e0[2]=-e[1];
+
+    l=Length(e0);
+    for (idim=0;idim<3;idim++) e0[idim]/=l;
+
+    //get e1: e1=z \times e0
+    CrossProduct(e1,z,e0);
+  }
+
+  inline void Normalize(double *x) {
+    double l=Length(x);
+
+    for (int idim=0;idim<3;idim++) x[idim]/=l;
+  }
+}
   
 
 #endif
