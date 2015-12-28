@@ -85,7 +85,7 @@ contains
     real :: QePerQtotal
 
     ! Variables for multi-ion MHD
-    real :: InvElectronDens, uPlus_D(3)
+    real :: InvElectronDens, uPlus_D(3), U_D(3)
     real, dimension(nIonFluid) :: &
          NumDens_I, ChargeDens_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I
 
@@ -501,7 +501,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          RhoInv = 1.0/State_VGB(rho_,i,j,k,iBlock)
+          RhoInv = 1.0/State_VGB(Rho_,i,j,k,iBlock)
           if(UseMultiIon)then
              ChargeDens_I = ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock) &
                   /MassIon_I
@@ -514,26 +514,26 @@ contains
              uPlus_D(x_) = InvElectronDens*sum(ChargeDens_I*Ux_I)
              uPlus_D(y_) = InvElectronDens*sum(ChargeDens_I*Uy_I)
              uPlus_D(z_) = InvElectronDens*sum(ChargeDens_I*Uz_I)
+             U_D = 0.5*(uPlus_D + RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
                   -DivB1_GB(i,j,k,iBlock)*uPlus_D
           else
+             U_D = RhoInv*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+
              Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
-                  -DivB1_GB(i,j,k,iBlock)* &
-                  State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*RhoInv
+                  -DivB1_GB(i,j,k,iBlock)*U_D
           end if
 
           if(.not. IsMhd) CYCLE
 
           ! -B1 div(B1)       - usual div B source
 
-          Source_VC(rhoUx_:rhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-               - DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+               -DivB1_GB(i,j,k,iBlock)*State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               - DivB1_GB(i,j,k,iBlock)* &
-               sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*&
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock))*RhoInv
+               -DivB1_GB(i,j,k,iBlock)*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*U_D)
        end do; end do; end do
 
        if(DoTestMe)call write_source('After divb source')
