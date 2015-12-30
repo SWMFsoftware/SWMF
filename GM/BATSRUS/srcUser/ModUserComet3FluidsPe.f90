@@ -1005,11 +1005,11 @@ contains
           end do
        end do
 
-       vAdd_I = 0.
-       do iNeutral=1,nNeutral
-          vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*&
-               NnNeutral_IG(iNeutral,i,j,k)
-       end do
+!       vAdd_I = 0.
+!       do iNeutral=1,nNeutral
+!          vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*&
+!               NnNeutral_IG(iNeutral,i,j,k)
+!       end do
 
        SPTerm_IIC(1,1:nIonFluid,i,j,k) = -(kinSub_I(1:nIonFluid)/Si2No_V(UnitT_)+ &                                  !! lost ions through charge exchange and recombination
             alpha_IC(1:nIonFluid,i,j,k)*nElec_C(i,j,k)/Si2No_V(UnitT_))*State_VGB(iPIon_I,i,j,k,iBlock)
@@ -1053,7 +1053,7 @@ contains
        SPTerm_IIC(6,1:nIonFluid,i,j,k) = 2./3.*fiiTot_I(1:nIonFluid)/Si2No_V(UnitT_)*Si2No_V(UnitN_)*Si2No_V(UnitU_)**2
        SPTerm_IIC(7,1:nIonFluid,i,j,k) = 2./3.*finTot_I(1:nIonFluid)/Si2No_V(UnitT_)*Si2No_V(UnitN_)*Si2No_V(UnitU_)**2
 
-
+       vAdd_I = 0.
        do iNeutral=1,nNeutral
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
                NnNeutral_IG(iNeutral,i,j,k)*uIonNeu2_IIC(1:nIonFluid,iNeutral,i,j,k)
