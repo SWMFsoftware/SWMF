@@ -3330,7 +3330,7 @@ contains
     use ModKind, ONLY: nByteReal
     ! Find grid cells surrounding the point Coord_D and interpolation weights.
     ! The subroutine uses ghost cells, 
-    ! thus whole interpolation can be done ousing just one block
+    ! thus whole interpolation can be done using just one block
     !\
     ! INPUTS:
     !/
@@ -3411,6 +3411,7 @@ contains
        ! point is far from the block's boundaries
        ! perform uniform interpolation and return
        if(present(IsSecondOrder))IsSecondOrder = .true.
+       IsOut_I = .false.
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.50)
        do iGrid = 2, nGrid
@@ -3419,7 +3420,7 @@ contains
        ! find interpolation weights
        Dimless_D = Dimless_D + 0.50 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I)
-       call sort_out      
+       call sort_out
        RETURN
     end if
 
@@ -3437,8 +3438,8 @@ contains
          (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
          (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
-    ! if < -1 => consider that there is no block, i.e. boundary of the domain
-    IsOut_I  = iLevel_I < -1
+    ! if not => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I /= -1 .and. iLevel_I /= 0
 
     if( all(iLevel_I == 0 .or. IsOut_I) )then
        !\
@@ -3483,7 +3484,7 @@ contains
          (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
-    IsOut_I  = iLevel_I < -1 
+    IsOut_I  = iLevel_I /= -1 .and. iLevel_I /= 0
     iLevel_I = iLevel_I + 1 ! so Coarse = 0, Fine = 1
 
     !\
@@ -3513,22 +3514,24 @@ contains
     !/
     iCell2_D = floor(0.50*Dimless_D + 0.50) 
     !\
-    !Its dimensionless coordinate would be 2*(iCell2_D - 0.5). Calculate
-    !dimensionless coordinates with respect to this point:
+    ! Its dimensionless coordinate would be 2*(iCell2_D - 0.5). Calculate
+    ! dimensionless coordinates with respect to this point (0 to 2):
     !/
     XyzGrid_DII(:,0,1) = 2*(iCell2_D - 0.50)
-    Dimless_D = Dimless_D - 2*(iCell2_D - 0.50)
+    Dimless_D = Dimless_D - XyzGrid_DII(:,0,1) 
     !\
     ! The value of iGrid for the cell which includes the point Xyz_D:
     !/
     iDiscr_D = 0
     iDiscr_D(1:nDim) = nint(0.50 + SIGN(0.50, Dimless_D - 1))
-    !This was iShift_DI(:,iGridBasic). From here, recover iGridBasic
+    ! iDiscr_D can be 0 or 1,
+    ! it equals iShift_DI(:,iGridBasic). From here, recover iGridBasic
     iGridBasic = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) + 1
     !\
-    ! Now, Dimless_D satisfies inequality 0<=Dimless<1. Strengthen it:
+    ! Now, Dimless_D satisfies inequality 0<=Dimless<2. Strengthen it:
     !/
     Dimless_D = min(2 - cTol2,max(Dimless_D, cTol2 ))
+    ! restore the original dimless coordinates
     Dimless_D = Dimless_D + XyzGrid_DII(:,0,1) 
     do iGrid = 1, nGrid
        ! supergrid
