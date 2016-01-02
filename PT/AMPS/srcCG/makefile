@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = Gravity.o Comet.o CometData.o main_lib.o OrbitCalculation.o ColumnIntegral.o SurfaceDataCG.o
+MAINLIBOBJ = Gravity.o Comet.o CometData.o main_lib.o OrbitCalculation.o ColumnIntegral.o SurfaceDataCG.o SampleSizeDistribution.o
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
