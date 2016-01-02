@@ -262,6 +262,58 @@ while ($line=<InputFile>) {
     }
   }
   
+  #dust initial velocity model
+  elsif ($InputLine eq "DUSTINITIALVELOCITY") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "MODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "CONSTANT") {
+        ampsConfigLib::ChangeValueOfVariable("int Comet::DustInitialVelocity::VelocityModelMode","Comet::DustInitialVelocity::Mode::ConstantVelocity","main/Comet.cpp");
+      }
+      elsif ($InputLine eq "ROTATIONBODY") {
+        ampsConfigLib::ChangeValueOfVariable("int Comet::DustInitialVelocity::VelocityModelMode","Comet::DustInitialVelocity::Mode::RotationBody","main/Comet.cpp");        
+      }
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    elsif ($InputLine eq "INJECTIONCONSTANTSPEED") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("double Comet::DustInitialVelocity::InjectionConstantVelocity","$InputLine","main/Comet.cpp");   
+    } 
+    elsif ($InputLine eq "ROTATIONPERIOD") {
+      my @all;
+      
+      $line=$LineOriginal;
+      chomp($line);
+      $line=~s/[=:!]/ /g;
+      
+      @all=split(' ',$line);
+      ampsConfigLib::ChangeValueOfVariable("double Comet::DustInitialVelocity::RotationPeriod","$all[2]","main/Comet.cpp");    
+    } 
+    elsif ($InputLine eq "ROTATIONAXIS") {
+      my @Axis;
+      my @t;
+      
+      $InputComment=~s/,/ /g;
+      @t=split(' ',$InputComment);
+      
+      #normalize the rotation axis vector
+      my $l=sqrt($t[0]*$t[0]+$t[1]*$t[1]+$t[2]*$t[2]);
+      
+      push(@Axis,$t[0]/$l);
+      push(@Axis,$t[1]/$l);
+      push(@Axis,$t[2]/$l);
+      
+      ampsConfigLib::ChangeValueOfArray("double Comet::DustInitialVelocity::RotationAxis\\[3\\]",\@Axis,"main/Comet.cpp");
+    }
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }     
+  }
+  
   #dust charging processes that will be modeled
   elsif ($InputLine eq "DUSTCHARGING") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
