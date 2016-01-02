@@ -256,7 +256,7 @@ sub shell{
     my $command = join(" ",@_);
     print "$command\n" if $Verbose;
     my $result = `$command`;
-    print $result if $Verbose;
+    print $result if $Verbose or $result =~ /error/i;
 }
 
 #############################################################
