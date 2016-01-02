@@ -67,6 +67,19 @@ namespace Comet {
 
   void GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
+  //initial velocity of the duts grains
+  namespace DustInitialVelocity {
+    namespace Mode {
+      const int ConstantVelocity=0,RotationBody=1;
+    }
+
+    extern int VelocityModelMode;
+    extern double RotationPeriod,RotationAxis[3];
+    extern double InjectionConstantVelocity;
+
+    void GetInitialVelocity(double *v,double *x,int iInjectionFace);
+  }
+
   namespace LossProcesses {
    extern double PhotolyticReactionRate,ElectronImpactRate,ElectronTemeprature;
 
@@ -138,6 +151,18 @@ namespace Comet {
      void SampleModelData();
      void PrintBrightnessMap(double halfAngleRange,int iTestPoint,int DataOutputFileNumber);
      void PrintBrightnessMap(int DataOutputFileNumber);
+
+     //sampling of the size distributino of the dust grains injected into the computational domain
+     namespace InjectedDustSizeDistribution {
+       const int SamplingBufferLength=1000;
+       extern double* SamplingBuffer;
+       extern double dLogRadius;
+
+       void Init();
+       void AddParticleData(double Radius,double Weight);
+       void OutputSampledData(int DataOutputFileNumber);
+       void EmptyParticleDataSamplingFunction();
+     }
   }
 
 }

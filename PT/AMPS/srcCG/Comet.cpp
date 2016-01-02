@@ -9,6 +9,7 @@
 
 #include "pic.h"
 #include "Dust.h"
+#include "Comet.h"
 
 //the object name and the names of the frames
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
@@ -19,6 +20,11 @@ int Comet::GravityFieldOffset=-1;
 
 char Comet::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
 
+//parameters of the initial dust velocity distribution
+int Comet::DustInitialVelocity::VelocityModelMode=Comet::DustInitialVelocity::Mode::ConstantVelocity;
+double Comet::DustInitialVelocity::RotationPeriod=1.0E10;
+double Comet::DustInitialVelocity::RotationAxis[3]={1.0,0.0,0.0};
+double Comet::DustInitialVelocity::InjectionConstantVelocity=0.001;
 
 /*
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
@@ -110,6 +116,9 @@ void Comet::Init_BeforeParser() {
   //set procedure that prints the column integrals
   //set up the model sampling procedure
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SampleModelData,Sampling::PrintBrightnessMap);
+
+  //init sampling of the dust size distribution
+  Comet::Sampling::InjectedDustSizeDistribution::Init();
 #endif
 
 
@@ -500,6 +509,9 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].UserData.InjectionFlux[spec]+=
       GrainWeightCorrection*PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup]/
       startNode->block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].SurfaceArea;
+
+  //sample the size distribution
+  Comet::Sampling::InjectedDustSizeDistribution::AddParticleData(GrainRadius,GrainWeightCorrection*PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup]);
 
 
   //inject the particle into the system                                                                             
@@ -1112,20 +1124,22 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  double r2Tang=0.0;;
-  double xFace[3];
-  double vDustInit=0.0001;
-  double angleVelocityNormal=asin(rnd());
+//  double r2Tang=0.0;;
+//  double xFace[3];
+//  double vDustInit=0.0001;
+//  double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
-  for (idim=0;idim<3;idim++){
+  /*for (idim=0;idim<3;idim++){
         v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
      
     }
     CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
+
+    DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
@@ -1310,13 +1324,14 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  double r2Tang=0.0;;
-  double xFace[3];
-  double vDustInit=0.0001;
-  double angleVelocityNormal=asin(rnd());
+//  double r2Tang=0.0;;
+//  double xFace[3];
+//  double vDustInit=0.0001;
+//  double angleVelocityNormal=asin(rnd());
 
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
+/*
     for (idim=0;idim<3;idim++){
       v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
     }
@@ -1324,7 +1339,9 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
     CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
+
+    DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
 
     if (ExternalNormal[0]*v_LOCAL_IAU_OBJECT[0]+ ExternalNormal[1]*v_LOCAL_IAU_OBJECT[1]+ ExternalNormal[2]*v_LOCAL_IAU_OBJECT[2]<0.0) {
       exit(__LINE__,__FILE__,"Error: the initial velocity of the grains is directed inside the nucleus");
@@ -1488,20 +1505,22 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  double r2Tang=0.0;
-  double xFace[3];
-  double vDustInit=0.0001;
-  double angleVelocityNormal=asin(rnd());
+//  double r2Tang=0.0;
+//  double xFace[3];
+//  double vDustInit=0.0001;
+//  double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
-  for (idim=0;idim<3;idim++){
+/*  for (idim=0;idim<3;idim++){
         v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
      
     }
     CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
+
+    DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
@@ -2306,3 +2325,31 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
 
   return (rnd()<1.0/NumericalLossRateIncrease) ? _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_ : _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
   }
+
+//distribute initial dust grain velocity
+void Comet::DustInitialVelocity::GetInitialVelocity(double *v,double *x,int iInjectionFace) {
+  double *ExternalNormal,*e0,*e1,sinTheta,cosTheta,phi,sinPhi,cosPhi;
+  int idim;
+
+  ExternalNormal=CutCell::BoundaryTriangleFaces[iInjectionFace].ExternalNormal;
+  e0=CutCell::BoundaryTriangleFaces[iInjectionFace].e0Orthogonal;
+  e1=CutCell::BoundaryTriangleFaces[iInjectionFace].e1Orthogonal;
+
+  cosTheta=rnd();
+  sinTheta=sqrt(1.0-cosTheta*cosTheta);
+  phi=2.0*Pi*rnd();
+  sinPhi=sin(phi);
+  cosPhi=cos(phi);
+
+  for (idim=0;idim<3;idim++) v[idim]=InjectionConstantVelocity*(cosTheta*ExternalNormal[idim]+sinTheta*(sinPhi*e0[idim]+cosPhi*e1[idim]));
+
+  if (VelocityModelMode==Mode::RotationBody) {
+    //add velocity due to rotation of the body
+    double vRot[3],c;
+
+    c=2.0*Pi/RotationPeriod;
+    Vector3D::CrossProduct(vRot,x,RotationAxis);
+
+    for (idim=0;idim<3;idim++) v[idim]+=c*vRot[idim];
+  }
+}
