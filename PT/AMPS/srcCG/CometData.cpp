@@ -124,7 +124,12 @@ void Comet::CometData::LoadBinaryFile(const char *fNameBase) {
   sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeOutputData.bin",PIC::CPLR::DATAFILE::path,PIC::Mesh::mesh.getMeshSignature(),fNameBase);
   fData=fopen(fname,"r");
 
-  if (fData==NULL) exit(__LINE__,__FILE__,"Error: The neutral binary file does not exist.");
+  if (fData==NULL) {
+    char msg[400];
+
+    sprintf(msg,"Error: The neutral binary file (%s) does not exist.",fname);
+    exit(__LINE__,__FILE__,msg);
+  }
 
   //read the number of the saved species
   fread(&nNeutrals,sizeof(int),1,fData);
