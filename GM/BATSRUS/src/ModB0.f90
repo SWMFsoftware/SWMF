@@ -83,7 +83,12 @@ contains
     select case(NameCommand)
     case("#USEB0")
        call read_var('UseB0', UseB0)
-
+       if(.not.UseB0)then
+          UseB0Source = .false.
+          UseCurlB0   = .false.
+          DoUpdateB0  = .false.
+          DtUpdateB0  = -1.0
+       end if
     case("#DIVBSOURCE")
        call read_var('UseB0Source', UseB0Source)
        
