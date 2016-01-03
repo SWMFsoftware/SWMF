@@ -262,7 +262,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
         ! Obtain some planet parameters
-        if(DipoleStrengthSi == 0.0 .and. .not. UseUserB0 )then
+        if(.not.UseB0 .or. &
+             (DipoleStrengthSi == 0.0 .and. .not. UseUserB0))then
            UseB0       = .false.
            UseB0Source = .false.
            UseCurlB0   = .false.
