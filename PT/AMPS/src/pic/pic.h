@@ -2443,11 +2443,27 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
+    namespace Sampling {
+      namespace Errors {
+         extern std::vector<int> RemovedModelParticles;
+         extern std::vector<double> ModelParticleRemovingRate;
+         extern std::vector<std::string> ErrorLineID;
+
+         extern int ErrorDetectionFlag;
+
+         void Init();
+         void PrintData();
+         void AddRemovedParticleData(double Rate, int spec, int line,const char *fname);
+         void AddRemovedParticleData(double Rate, int nRemovedParticles, int spec, std::string &FullLineID);
+         void AddRemovedParticleData(double Rate, int spec, std::string &ErrorID);
+      }
+    }
+
     namespace GuidingCenter{
 
       namespace Sampling {
-	extern PIC::Mesh::cDatumWeighted DatumTotalKineticEnergy;
-	void SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec);
+	      extern PIC::Mesh::cDatumWeighted DatumTotalKineticEnergy;
+	      void SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec);
       }
 
       void Init_BeforeParser();

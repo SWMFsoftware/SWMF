@@ -2044,8 +2044,6 @@ MovingLoop:
           xFinal[1]=xInit[1]+dtMin*vInit[1];
           xFinal[2]=xInit[2]+dtMin*vInit[2];
 
-
-
           if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
             dtMin*=(1.0-1.0E-3);
             ExitFlag=false;
@@ -2081,7 +2079,22 @@ MovingLoop:
         }
 
         if (ClosestFace==NULL) {
-          exit(__LINE__,__FILE__,"Error: cannot find a face to place the particle");
+          //cannot find the intersection face in the current block ->
+          if (_PIC_MOVER__UNKNOWN_ERROR_IN_PARTICLE_MOTION__STOP_EXECUTION_ == _PIC_MODE_ON_) {
+            exit(__LINE__,__FILE__,"Error: cannot find a face to place the particle");
+          }
+          else {
+            double Rate;
+
+            Rate=startNode->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr)/
+                startNode->block->GetLocalTimeStep(spec);
+
+            PIC::Mover::Sampling::Errors::AddRemovedParticleData(Rate,spec,__LINE__,__FILE__);
+
+            //remove the particle
+            PIC::ParticleBuffer::DeleteParticle(ptr);
+            return _PARTICLE_LEFT_THE_DOMAIN_;
+          }
         }
 
         for (int idim=0;idim<DIM;idim++) xInit[idim]+=minTimeOfFlight*ClosestFace->ExternalNormal[idim];

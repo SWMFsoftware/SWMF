@@ -921,6 +921,11 @@ void PIC::Sampling::Sampling() {
     CollectingSampleCounter=0;
     #endif // <-- #if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
 
+    //print the error messages accumulated by the Mover
+    if (_PIC_MOVER__UNKNOWN_ERROR_IN_PARTICLE_MOTION__STOP_EXECUTION_ == _PIC_MODE_OFF_) {
+      Mover::Sampling::Errors::PrintData();
+    }
+
     //print output file
     char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
 
