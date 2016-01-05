@@ -1,0 +1,79 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Solar wind propagation
+
+#USEB0
+F			UseB0
+
+#STARTTIME
+2014			iYear
+4			iMonth
+10			iDay
+0			iHour
+01			iMinute
+0			iSecond
+
+#SAVERESTART
+F			DoSaveRestart
+
+#GRID
+40			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
++31.                    xMin
++235.                   xMax
+ -1.                    yMin
+ +1.                    yMax
+ -1.                    zMin
+ +1.                    zMax
+
+#SOLARWINDFILE
+T			UseSolarWindFile
+IMF.dat			NameSolarWindFile
+
+#OUTERBOUNDARY
+outflow			TypeBc1
+inflow			TypeBc2
+
+#SCHEME
+5			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			BetaLimiter
+
+
+! Propagate Bx with the flow
+#DIVB
+T			UseDivbSource
+F			UseDivbDiffusion
+F			UseProjection
+F			UseConstrainB
+
+#TESTXYZ
+32.0			xTest
+0.0			yTest
+0.0			zTest
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR date		StringLogfile
+-1			DnSaveLogfile
+60.0			DtSaveLogfile
+BXPNT BYPNT BZPNT UXPNT UYPNT UZPNT RHOPNT TPNT
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1                       nPlotFiles
+1d MHD idl_ascii        StringPlot
+-1                      DnSavePlot
+60.			DtSavePlot
+0.0			DxSavePlot
+
+#STOP
+-1			MaxIteration
+3600.0			tSimulationMax
+
