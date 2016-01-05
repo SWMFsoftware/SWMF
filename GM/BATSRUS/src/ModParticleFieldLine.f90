@@ -17,7 +17,6 @@ module ModParticleFieldLine
        message_pass_particles, remove_undefined_particles, allocate_particles
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Bx_, By_, Bz_
-  use ModB0, ONLY: get_b0
   use ModMain, ONLY: Body1
   use ModPhysics, ONLY: rBody
 
@@ -230,7 +229,9 @@ contains
           !/
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field at original location
-             call get_b_dir(StateEnd_VI(x_:z_, iParticle), Dir_D)
+             call get_b_dir(Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+                  iBlock=iBlockEnd_I(iParticle),&
+                  Dir_D = Dir_D)
              ! find the step size
              if(FixSpaceStep)then
                 StateEnd_VI(Aux_, iParticle) = SpaceStep
@@ -267,7 +268,9 @@ contains
           !/
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field in the middle
-             call get_b_dir(StateEnd_VI(x_:z_, iParticle), Dir_D)
+             call get_b_dir(Xyz_D=StateEnd_VI(x_:z_, iParticle),&
+                  iBlock=iBlockEnd_I(iParticle),&
+                  Dir_D=Dir_D)
              ! get final location
              StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
                   iDirTrace * StateEnd_VI(Aux_, iParticle) * Dir_D
@@ -380,10 +383,13 @@ contains
       end do
     end subroutine copy_end_to_regular
     !========================================================================
-    subroutine get_b_dir(Xyz_D, Dir_D)
+    subroutine get_b_dir(Xyz_D, iBlock, Dir_D)
+      use ModMain, ONLY: UseB0
+      use ModB0, ONLY: get_b0
       ! returns the direction of magnetic field 
       ! as well as the block used for interpolation
       real,    intent(in) :: Xyz_D(MaxDim)
+      integer, intent(in) :: iBlock
       real,    intent(out):: Dir_D(MaxDim)
 
       ! magnetic field
@@ -393,16 +399,15 @@ contains
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim) = 1
-      integer:: iBlock
       !----------------------------------------------------------------------
+      Dir_D = 0; B_D = 0
       ! get potential part of the magnetic field at the current location
-      call get_b0(Xyz_D, B_D)
-      ! get the remaining part of the maagnetic field
-      call interpolate_grid_amr_gc(Xyz_D, nCell, iCell_II, Weight_I)
+      if(UseB0)call get_b0(Xyz_D, B_D)
+      ! get the remaining part of the magnetic field
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
       ! interpolate magnetic field value
       do iCell = 1, nCell
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
-         iBlock      = iCell_II(0, iCell)
          B_D = B_D + &
               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
       end do
