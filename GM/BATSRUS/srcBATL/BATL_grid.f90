@@ -27,7 +27,23 @@ module BATL_grid
   public :: interpolate_grid_amr_gc
   public :: check_interpolate_amr_gc
   public :: test_grid
-  
+
+  interface interpolate_grid_amr_gc
+     !\
+     ! Works only at the processor at which the
+     ! block is allocated suitable for interpolating
+     ! using ghost cell values. The Id of this block
+     ! is the required input parameter
+     !/
+     module procedure interpolate_grid_amr_gc_ib
+     !\
+     ! Parallel version similar to interpolate_grid_amr
+     ! Calculates iPe and iBlock for the block 
+     ! suitable for interpolating using ghost cell values.
+     ! Returns zero interpolation weights for all iProc/=iPe
+     !/ 
+     module procedure interpolate_grid_amr_gc_nob  
+  end interface interpolate_grid_amr_gc
   ! Coordinate limits and size of domain inherited from BATL_geometry
   public:: CoordMin_D, CoordMax_D, DomainSize_D
 
@@ -1386,8 +1402,13 @@ contains
   end subroutine interpolate_grid_amr
 
   !===========================================================================
-
-  subroutine interpolate_grid_amr_gc(XyzIn_D, nCell, iCell_II, Weight_I, &
+  !\
+  ! Parallel version similar to interpolate_grid_amr
+  ! Calculates iPe and iBlock for the block 
+  ! suitable for interpolating using ghost cell values.
+  ! Returns zero interpolation weights for all iProc/=iPe
+  !/ 
+  subroutine interpolate_grid_amr_gc_nob(XyzIn_D, nCell, iCell_II, Weight_I, &
        IsSecondOrder)
 
     use ModInterpolateAMR,    ONLY: interpolate_amr_gc
@@ -1408,7 +1429,6 @@ contains
 
     integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
     real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
-    logical:: IsSecondOrderLocal
     integer:: iBlockOut, iProcOut
     !-----------------------------------
     ! check number of AMR dimensions:
@@ -1451,14 +1471,72 @@ contains
     call interpolate_amr_gc(&
          nDim, Coord_D(1:nDim), CoordMin_D(1:nDim),&
          DCoord_D(1:nDim), nIJK_D(1:nDim), DiLevelNei_III, &
-         nCell, iCell_II(1:nDim,:), Weight_I, IsSecondOrderLocal)
+         nCell, iCell_II(1:nDim,:), Weight_I)
 
     ! return block number as well
     iCell_II(0,:) = iBlockOut
 
-    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
+  end subroutine interpolate_grid_amr_gc_nob
+  !==================================
+  subroutine interpolate_grid_amr_gc_ib(XyzIn_D, iBlock, nCell, iCell_II, Weight_I, &
+       IsSecondOrder)
 
-  end subroutine interpolate_grid_amr_gc
+    use ModInterpolateAMR,    ONLY: interpolate_amr_gc
+    use BATL_interpolate_amr, ONLY: find_block_to_interpolate_gc
+
+    ! Find the grid cells surrounding the point Xyz_D.
+    ! nCell returns the number of cells found on the processor.
+    ! iCell_II returns the block+cell indexes for each cell.
+    ! Weight_I returns the interpolation weights calculated 
+    !                                 using AMR interpolateion procedure
+    ! Interpolation is performed using cells (including ghost) of single block
+    real,    intent(in) :: XyzIn_D(MaxDim)
+    integer, intent(in) :: iBlock
+    integer, intent(out):: nCell
+    integer, intent(out):: iCell_II(0:nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+
+    logical, optional, intent(out):: IsSecondOrder
+
+    integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
+    real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
+    !-----------------------------------
+    ! check number of AMR dimensions:
+    ! if it is 0 or 1 => call a simpler interpolation function
+    if(nDimAmr <= 1)then
+       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       RETURN
+    end if
+    
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesianGrid)then
+       Coord_D = XyzIn_D
+    else
+       call xyz_to_coord(XyzIn_D, Coord_D)
+    end if
+
+
+    ! get corner coordinates and cel size of the block
+    CoordMin_D =  CoordMin_DB(:,iBlock)
+    DCoord_D   = (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) / nIJK_D
+
+    ! information about neighbors' resolution level relative to current block
+    ! NOTE: in the shared procedure difference is understood as follows:
+    !       +1 -> neighbor is finer
+    !       -1 -> neighbor is coarser
+    !       this is opposite to BATL's treatment, hence minus sign
+    DiLevelNei_III = DiLevelNei_IIIB(:, :, :, iBlock)
+    where(abs(DiLevelNei_III)==1)DiLevelNei_III = - DiLevelNei_III
+
+    ! call the wrapper for the shared AMR interpolation procedure
+    call interpolate_amr_gc(&
+         nDim, Coord_D(1:nDim), CoordMin_D(1:nDim),&
+         DCoord_D(1:nDim), nIJK_D(1:nDim), DiLevelNei_III, &
+         nCell, iCell_II(1:nDim,:), Weight_I, IsSecondOrder)
+
+    ! return block number as well
+    iCell_II(0,:) = iBlock
+  end subroutine interpolate_grid_amr_gc_ib
 
   !==================================
 
