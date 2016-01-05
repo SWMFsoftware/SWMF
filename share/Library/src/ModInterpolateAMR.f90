@@ -11,7 +11,7 @@ module ModInterpolateSimpleShape
   ! direction is passed trough a given point inside the body, 
   ! in the point of the ray intersects the body boundary, the value
   ! is interpolated over planar subface (traingle, trapezoid, 
-  ! ractangle), then the point value is weighted in accordance with
+  ! rectangle), then the point value is weighted in accordance with
   ! the distances from the given point to its intersections with the 
   ! body surface. Resolution_corner interpolates within the resolution 
   ! corner, which has "fine vertexes"  - grid points of finer 
@@ -3411,7 +3411,6 @@ contains
        ! point is far from the block's boundaries
        ! perform uniform interpolation and return
        if(present(IsSecondOrder))IsSecondOrder = .true.
-       IsOut_I = .false.
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.50)
        do iGrid = 2, nGrid
@@ -3438,8 +3437,8 @@ contains
          (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
          (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
-    ! if not => consider that there is no block, i.e. boundary of the domain
-    IsOut_I  = iLevel_I /= -1 .and. iLevel_I /= 0
+    ! if < -1 => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I < -1
 
     if( all(iLevel_I == 0 .or. IsOut_I) )then
        !\
@@ -3484,7 +3483,7 @@ contains
          (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
-    IsOut_I  = iLevel_I /= -1 .and. iLevel_I /= 0
+    IsOut_I  = iLevel_I < -1 
     iLevel_I = iLevel_I + 1 ! so Coarse = 0, Fine = 1
 
     !\
@@ -3518,7 +3517,7 @@ contains
     ! dimensionless coordinates with respect to this point (0 to 2):
     !/
     XyzGrid_DII(:,0,1) = 2*(iCell2_D - 0.50)
-    Dimless_D = Dimless_D - XyzGrid_DII(:,0,1) 
+    Dimless_D = Dimless_D - XyzGrid_DII(:,0,1)
     !\
     ! The value of iGrid for the cell which includes the point Xyz_D:
     !/
