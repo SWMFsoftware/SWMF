@@ -179,7 +179,8 @@ subroutine write_logfile(iSatIn, iFile)
            filename = trim(filename) // '.log'
 
            open(unit_log,file=filename,status="replace")
-           if (index(NameAll,'pnt')>0 .or. index(NameAll,'test')>0) then
+           if (index(NameAll,'pnt')>0 .or. index(NameAll,'PNT')>0 &
+                .or. index(NameAll,'test')>0) then
    	      if (coord_test) then
    		 write(unit_log,'(a,3es13.5)')  &
                       'test point (X,Y,Z): ',Xtest,Ytest,Ztest
@@ -192,6 +193,9 @@ subroutine write_logfile(iSatIn, iFile)
               write(unit_log,'(a)')'Volume averages, fluxes, etc'
            end if
            write(unit_log,'(a)') trim(NameAll)
+           ! Add #START line if variables contain PNT (capitalized)
+           ! so that the file can be read as IMF/satellite input file.
+           if (index(NameAll,'PNT')>0) write(unit_log,'(a)') '#START'
         endif
         iUnit = unit_log
      elseif (iSatIn >= 1) then
@@ -269,17 +273,18 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame,UseB0
-  use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OMEGABody
+  use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
+       ElectronPressureRatio
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
   use ModB0, ONLY:  B0_DGB, get_b0
-  use ModGeometry,   ONLY: R_BLK,x1,x2,y1,y2,z1,z2, &
-       DomainVolume
+  use ModGeometry,   ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
   use ModRaytrace,   ONLY: ray
   use ModSatelliteFile, ONLY: get_satellite_ray
   use ModSatelliteFile, ONLY: XyzSat_DI
   use ModIO, ONLY: write_myname, lNameLogVar
-  use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
+  use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, &
+       iRho, iP, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
 
   implicit none
 
@@ -647,6 +652,10 @@ contains
     case('ppnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = State_VGB(iP,iTest,jTest,kTest,BlkTest)
+    case('tpnt', 'temppnt')
+       if(iProc == ProcTest) LogVar_I(iVarTot) = &
+            State_VGB(iP,iTest,jTest,kTest,BlkTest)/(1+ElectronPressureRatio) &
+            *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,BlkTest)
     case('epnt')
        if(iProc == ProcTest) &
             LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,BlkTest,iFluid)
@@ -894,9 +903,6 @@ contains
   subroutine set_sat_var
 
     use ModUtilities, ONLY: lower_case
-    use ModPhysics, ONLY:  AverageIonCharge, ElectronTemperatureRatio
-    use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, iRho, iP, iRhoIon_I, &
-         MassIon_I
     use ModIO, ONLY : lNameLogVar
     
     integer :: jVar
@@ -942,8 +948,7 @@ contains
        
        ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
        if(NameLogVar /= 'n') LogVar_I(iVarTot) = &
-            StateSat_V(iP) / LogVar_I(iVarTot) &
-            /(1 + AverageIonCharge*ElectronTemperatureRatio)
+            StateSat_V(iP)/(1 + ElectronPressureRatio)/LogVar_I(iVarTot)
     case('p')
        LogVar_I(iVarTot) = StateSat_V(iP)
     case('pperp')
@@ -1066,7 +1071,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
      case('n')
         LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitN_)
-     case('t','temp')
+     case('t','temp','tpnt','temppnt')
         LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
 
 !!$! Ionosphere values                                
