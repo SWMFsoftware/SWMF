@@ -1444,7 +1444,8 @@ contains
     !       +1 -> neighbor is finer
     !       -1 -> neighbor is coarser
     !       this is opposite to BATL's treatment, hence minus sign
-    DiLevelNei_III = - DiLevelNei_IIIB(:, :, :, iBlockOut)
+    DiLevelNei_III = DiLevelNei_IIIB(:, :, :, iBlockOut)
+    where(abs(DiLevelNei_III)==1)DiLevelNei_III = - DiLevelNei_III
 
     ! call the wrapper for the shared AMR interpolation procedure
     call interpolate_amr_gc(&
