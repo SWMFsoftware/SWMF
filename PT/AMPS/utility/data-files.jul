@@ -99,7 +99,10 @@ module clib
     cwd = pwd()
   
    #copy and compiler the file
-   run(`cp $path/$fname $cwd`)
+   if (path != ".") 
+     run(`cp $path/$fname $cwd`)
+   end
+
    run(`gcc -c -fPIC $fname -o $fname.o`)
 
     #create a dynmic library
