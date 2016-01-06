@@ -1623,7 +1623,7 @@ test_cometCGfluids_check:
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGfluids.diff)
 	ls -l test_cometCGfluids.diff
 
-### TEST FOR 2D REGIONS ###############################################################
+### TEST FOR 2D REGIONS ######################################################
 
 test_region2d:
 	@echo "test_region2d_compile..." > test_region2d.diff
@@ -1679,4 +1679,35 @@ test_region2d_check:
 		>> test_region2d.diff)
 	ls -l test_region2d.diff
 
+### TEST FOR L1 to BC PROPAGATION ############################################
 
+test_L1toBC:
+	@echo "test_L1toBC_compile..." > test_L1toBC.diff
+	$(MAKE) test_L1toBC_compile
+	@echo "test_L1toBC_rundir..." >> test_L1toBC.diff
+	$(MAKE) test_L1toBC_rundir
+	@echo "test_L1toBC_run..." >> test_L1toBC.diff
+	$(MAKE) test_L1toBC_run
+	@echo "test_L1toBC_check..." >> test_L1toBC.diff
+	$(MAKE) test_L1toBC_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_L1toBC_compile:
+	./Config.pl -e=Mhd -u=Default -g=8,1,1,700,1 -ng=3
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_L1toBC_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/EARTH/PARAM.in.L1toBC PARAM.in
+	cd ${TESTDIR}; cp Param/EARTH/imf19980504.dat IMF.dat
+	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
+
+test_L1toBC_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_L1toBC_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
+		Param/EARTH/TestOutput/L1toBC.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_L1toBC.diff)
+	ls -l test_L1toBC.diff
