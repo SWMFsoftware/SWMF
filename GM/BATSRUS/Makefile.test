@@ -1246,6 +1246,9 @@ test_mercurysph_run:
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
+# Sort the files by numerical values of the first three columns (coordinates)
+SORT = sort -k1 -k2 -k3 -n
+
 test_mercurysph_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		Param/MERCURY/TestOutput/REFlog_n000000.log \
@@ -1496,31 +1499,25 @@ test_2bodyplot_run:
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
-# Sort the files by numerical values of the first three columns (coordinates)
-SORT = sort -k1 -k2 -k3 -n
-
 test_2bodyplot_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
-	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz | ${SORT} \
+	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.out \
+		${TESTDIR}/RESULTS/GM/ref_y=0.out >> test_2bodyplot.diff)
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
 	        | grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.dat
-	${SORT} ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.out \
-		> ${TESTDIR}/RESULTS/GM/y=0.out
 	gunzip -c ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz | ${SORT} \
 		| grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/y=0.dat
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/ref_y=0.out \
-		${TESTDIR}/RESULTS/GM/y=0.out >> test_2bodyplot.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/ref_y=0.dat \
 		${TESTDIR}/RESULTS/GM/y=0.dat >> test_2bodyplot.diff)
 	ls -l test_2bodyplot.diff
-
 
 ### ALFVEN WAVE TEST FOR SINGLE FLUID MHD WITH ANISOTROPIC PRESSURE ###
 
@@ -1658,31 +1655,28 @@ test_region2d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
 
-# Sort the files by numerical values of the first two columns (coordinates)
-## SORT = sort -k1 -k2 -n
-
 test_region2d_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b \
 		Param/REGION/TestOutput/ \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_region2d.diff)
-	gunzip -c Param/REGION/TestOutput/2d.out.gz | ${SORT} \
+	gunzip -c Param/REGION/TestOutput/2d.out.gz \
 		> ${TESTDIR}/RESULTS/2d/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl.out.gz | ${SORT} \
+	gunzip -c Param/REGION/TestOutput/cyl.out.gz \
 		> ${TESTDIR}/RESULTS/cyl/GM/ref.out
-	gunzip -c Param/REGION/TestOutput/cyl_lnr.out.gz | ${SORT} \
+	gunzip -c Param/REGION/TestOutput/cyl_lnr.out.gz \
 		> ${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out
-	${SORT} ${TESTDIR}/RESULTS/2d/GM/z*.out \
-		> ${TESTDIR}/RESULTS/2d/GM/sol.out
-	${SORT} ${TESTDIR}/RESULTS/cyl/GM/z*.out \
-		> ${TESTDIR}/RESULTS/cyl/GM/sol.out
-	${SORT} ${TESTDIR}/RESULTS/cyl_lnr/GM/z*.out \
-		> ${TESTDIR}/RESULTS/cyl_lnr/GM/sol.out
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/2d/GM/???.out > test_region2d.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/cyl/GM/???.out > test_region2d.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/cyl_lnr/GM/???.out > test_region2d.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+		${TESTDIR}/RESULTS/2d/GM/z*.out \
+		${TESTDIR}/RESULTS/2d/GM/ref.out \
+		> test_region2d.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+		${TESTDIR}/RESULTS/cyl/GM/z*.out \
+		${TESTDIR}/RESULTS/cyl/GM/ref.out \
+		>> test_region2d.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+		${TESTDIR}/RESULTS/cyl_lnr/GM/z*.out \
+		${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out \
+		>> test_region2d.diff)
 	ls -l test_region2d.diff
 
 
