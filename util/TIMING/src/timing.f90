@@ -273,6 +273,50 @@ function timing_func_d(func_name,iclock,name,parent_name)
 end function timing_func_d
 
 !==============================================================================
+subroutine timing_start_c(nameLen,nameIn) &
+     bind(c,name='timing_start_c')
+  ! Start timing for 'nameIn'. Called by C/C++.
+  ! nameLen: length of nameIn. 
+
+  use iso_c_binding
+  implicit none
+
+  integer(C_SIZE_T), intent(in) :: nameLen
+  character(kind=C_CHAR), dimension(*), intent(in) :: nameIn
+  character(LEN=nameLen):: name
+  integer i
+  !---------------------------------
+  
+  do i=1, nameLen
+     name(i:i)=nameIn(i)
+  end do
+  
+  call timing_start(name)
+end subroutine timing_start_c
+!==============================================================================
+
+subroutine timing_stop_c(nameLen,nameIn) &
+     bind(c,name='timing_stop_c')
+  ! Stop timing for 'nameIn'. Called by C/C++.
+  ! nameLen: length of nameIn. 
+
+  use iso_c_binding
+  implicit none
+
+  integer(C_SIZE_T), intent(in) :: nameLen
+  character(kind=C_CHAR), dimension(*), intent(in) :: nameIn
+  character(LEN=nameLen):: name
+  integer i
+  !---------------------------------
+  
+  do i=1, nameLen
+     name(i:i)=nameIn(i)
+  end do
+  
+  call timing_stop(name)
+end subroutine timing_stop_c
+
+!==============================================================================
 !BOP
 !ROUTINE: timing_start - start timing for 'name'
 !INTERFACE:
