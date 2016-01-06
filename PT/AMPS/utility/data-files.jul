@@ -1,0 +1,92 @@
+module DataFile1D
+function Read(fname)
+  println("Start reading data file:")
+
+  fin=open(fname)
+  nline=0
+  nVar=0
+
+  #anlyze the variable list
+  line = readline(fin)
+  line=replace(line,"VARIABLES=","")
+  line=replace(line,"\"","")
+  line=strip(line)
+
+  for element in split(line, ',')
+    element=strip(element)
+    nVar+=1
+  end
+
+  println("Number of variables: $nVar")
+
+  #define the data buffers
+  Var=Float64[]
+  X=Float64[]
+
+  #read data file
+  while !eof(fin)
+    line = readline(fin)
+    cnt=0
+
+    for element in split(line, ' ')
+      push!(Var, parse(Float64, element))
+
+      if cnt == 0
+        push!(X,parse(Float64, element))
+        cnt=1
+      end
+     end
+
+     nline += 1
+  end
+
+  data=Array(Float64,nline,nVar)
+  cnt=1
+
+  for i=1:nline
+    for j=1:nVar
+      data[i,j]=Var[cnt]
+      cnt+=1
+    end
+  end
+
+  println("done.")
+  nline,nVar,X,data
+end
+
+
+function Save(x,data,Varlist,fname)
+  print("Saving data file.....  ")
+  fout=open(fname,"w")
+  write(fout,"VARIABLES=$Varlist\n")
+
+  for nline=1:length(x)
+    r=x[nline]
+    d=data[nline,:]
+
+    write(fout,"$r")
+
+    for element in d
+      write(fout,"  $element")
+    end
+
+    write(fout,"\n")
+  end
+
+  println("done.")
+end
+
+end
+
+#Example:
+#Reading data file
+#(nl,nv,x,d)=DataFile1D.Read("Comet.InjectedDustSizeDistribution.out=9.dat")
+#println(x)
+#println(d)
+#println(nl)
+#println(nv)
+
+
+#Saving Datafile
+#Varlist="\"x\", \"y\"";
+#DataFile1D.Save(x,d,Varlist,"Result.dat")
