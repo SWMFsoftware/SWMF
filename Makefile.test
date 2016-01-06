@@ -1507,19 +1507,19 @@ test12_3d_run:
 test12_3d_check:
 	gunzip -c output/test12/x=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/x_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/x_n4.ref \
 		> test12_gmpc_3d.diff)
 	gunzip -c output/test12/y=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/y_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/y_n4.ref \
 		> test12_gmpc_3d.diff)
 	gunzip -c output/test12/z=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/z_n4.ref \
 		> test12_gmpc_3d.diff)
@@ -1558,7 +1558,7 @@ test12_iso_run:
 test12_iso_check:
 	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/GM/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 		${TESTDIR}/RESULTS/GM/z_n4.ref \
 		> test12_gmpc_iso.diff)
