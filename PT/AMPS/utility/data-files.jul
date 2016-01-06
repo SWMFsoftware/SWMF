@@ -90,3 +90,21 @@ end
 #Saving Datafile
 #Varlist="\"x\", \"y\"";
 #DataFile1D.Save(x,d,Varlist,"Result.dat")
+
+
+
+module clib
+
+  function compile_OSX(fname,path)
+    cwd = pwd()
+  
+   #copy and compiler the file
+   run(`cp $path/$fname $cwd`)
+   run(`gcc -c -fPIC $fname -o $fname.o`)
+
+    #create a dynmic library
+   run(`gcc -dynamiclib -lm $fname.o -o clib.dylib`)
+  end
+end
+  
+
