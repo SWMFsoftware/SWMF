@@ -8,11 +8,11 @@ Solar wind propagation
 F			UseB0
 
 #STARTTIME
-2014			iYear
-4			iMonth
-10			iDay
+1998			iYear
+5			iMonth
+4			iDay
 0			iHour
-01			iMinute
+45			iMinute
 0			iSecond
 
 #SAVERESTART
@@ -39,10 +39,9 @@ inflow			TypeBc2
 
 #SCHEME
 5			nOrder
-Rusanov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.5			BetaLimiter
-
 
 ! Propagate Bx with the flow
 #DIVB
