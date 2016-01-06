@@ -38,7 +38,7 @@ print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
       FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
 if keyword_set(multiplot) then begin
    siz=size(multiplot)
-                                ; scalar multiplot value is converted to a row (+) or a column (-)
+   ;; scalar multiplot value is converted to a row (+) or a column (-)
    if siz(0) eq 0 then begin
       if multiplot gt 0 then multiplot=[multiplot,1,1] $
       else                   multiplot=[1,-multiplot,1]
@@ -75,11 +75,11 @@ endif else $
    print, 'filetype(s)   =', filetypes
    print, 'npictinfile(s)=', npictinfiles
 
-   ; Extend firstpict and dpict into arrays of size nfile
+   ;; Extend firstpict and dpict into arrays of size nfile
    arr2arr,firstpict,nfile
    arr2arr,dpict,nfile
 
-   ;====== OPEN FILE(S) AND READ AND PRINT HEADER(S)
+   ;;====== OPEN FILE(S) AND READ AND PRINT HEADER(S)
 
    anygencoord=0
    for ifile=0,nfile-1 do begin
@@ -118,7 +118,7 @@ endif else $
             if npict eq 0 then nextpict=firstpict(ifile) $
             else               nextpict=dpict(ifile)
 
-            ; IPIC3D reader always counts from the beginning
+            ;; IPIC3D reader always counts from the beginning
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + npict*dpict(ifile)
 
@@ -177,7 +177,7 @@ endif else $
       retall
    endif
 
-   ;===== DO ANIMATION IN MULTIX * MULTIY MULTIPLE WINDOWS
+   ;;===== DO ANIMATION IN MULTIX * MULTIY MULTIPLE WINDOWS
 
    if keyword_set(multiplot) then begin
       multix=multiplot(0)
@@ -226,7 +226,7 @@ endif else $
       print,FORMAT='(i4,$)',ipict+1
 
       if n_elements(velpos) gt 1 and velrandom gt 0 then begin
-         ; reset a subset of the vector positions to a random value
+         ;; reset a subset of the vector positions to a random value
          ii = velrandom*indgen(velvector/velrandom) + (ipict mod velrandom)
          velpos(ii,0) = randomu(seed,n_elements(ii),/double)*1e6
          velpos(ii,1) = randomu(seed,n_elements(ii),/double)*1e6
@@ -239,7 +239,7 @@ endif else $
             if ipict eq 0 then nextpict=firstpict(ifile) $
             else               nextpict=dpict(ifile)
 
-            ; IPIC3D reader always counts from the beginning
+            ;; IPIC3D reader always counts from the beginning
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + ipict*dpict(ifile)
 
@@ -338,11 +338,9 @@ endif else $
    print
    !p.multi=0
    !p.title=''
-   ;!x.title=''
-   ;!y.title=''
    !z.title=''
    if savemovie eq 'ps' then set_plot,'X'
-   ; Restore velpos array
+   ;; Restore velpos array
    velpos=velpos0 & velpos0=0
    if doanimate then xinteranimate,5,/keep_pixmaps
 end
