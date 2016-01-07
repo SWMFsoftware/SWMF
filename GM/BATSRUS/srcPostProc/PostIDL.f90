@@ -54,7 +54,7 @@ program PostIDL
   integer:: nSum
   integer, allocatable :: iSort_I(:)
   real, allocatable :: Sort_I(:)
-  real, allocatable :: StateSum_V(:)
+  real, allocatable :: StateSum_V(:), CellSizeMin_D(:)
 
   integer :: idim, icutdim(3), nDim, nspecialpar
   real    :: specialpar(3)
@@ -487,14 +487,15 @@ program PostIDL
 
      ! Average out coinciding points
      if(nDim < 3) then
+        allocate(StateSum_V(nw), CellSizeMin_D(nDim))
+        CellSizeMin_D = dxyzmin(icutdim(1:nDim))
         i = 1
         k = 1
-        allocate(StateSum_V(nw))
         do while(i < nx)
            StateSum_V = State_VC(:,i,1,1)
            nSum       = 1
            j = i + 1
-           do while( all(Coord_DC(:,j,1,1)==Coord_DC(:,i,1,1)) )
+           do while( sum(abs(Coord_DC(:,j,1,1)-Coord_DC(:,i,1,1))/CellSizeMin_D) < 0.01)
               StateSum_V = StateSum_V + State_VC(:,j,1,1)
               nSum = nSum + 1
               j = j + 1
@@ -509,7 +510,7 @@ program PostIDL
            k = k + 1
            i = j 
         end do
-        deallocate(StateSum_V)
+        deallocate(StateSum_V, CellSizeMin_D)
 
         ! Special Judgement for the last point
         if(j == nx) then
