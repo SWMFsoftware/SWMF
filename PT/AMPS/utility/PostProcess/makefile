@@ -11,7 +11,7 @@ lib : $(MAINLIBOBJ)
 
 pproc :
 	rm -f *.o
-	mpicxx -g -c -I../../src/meshAMR -I../../src/general PostProcess.cpp
+	mpicxx -g -c -I../../src/meshAMR -I../../src/general PostProcess3D.cpp
 	mpicxx -g -c -I../../src/meshAMR -I../../src/general PostProcess3D_ColumnIntegration.cpp
 	mpicxx -g -c -I../../src/meshAMR -I../../src/general main.cpp
 	mpicxx -g -c -I../../src/meshAMR -I../../src/general ../../src/meshAMR/meshAMRcutcell.cpp
