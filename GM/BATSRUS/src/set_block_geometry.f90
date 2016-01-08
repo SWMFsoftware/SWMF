@@ -71,7 +71,7 @@ subroutine fix_block_geometry(iBlock)
   ! set true_cell array (seting IsBoundaryCell_GI)
   call set_boundary_cells(iBlock)
 
-  do iBoundary = MinFaceBoundary, min(MaxFaceBoundary,Body1_)
+  do iBoundary = MinFaceBoundary, max(MaxFaceBoundary,Body1_)
      IsBoundaryBlock_IB(iBoundary,iBlock) = &
           any(IsBoundaryCell_GI(:,:,:,iBoundary))
      true_cell(:,:,:,iBlock) = &
