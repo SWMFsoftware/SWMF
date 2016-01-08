@@ -8,6 +8,9 @@
  *      Author: vtenishe
  */
 
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "PostProcess3D.h"
 #include "ifileopr.h"
@@ -57,6 +60,8 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   char FullName[50000],str[50000],str1[50000];
   CiFileOperations ifile;
   int nvars=0,nline;
+  FILE *fBinaryIn=NULL,*fBinaryOut=NULL;
+
 
   //get the full name of the data file and open the file
   sprintf(FullName,"%s/%s",path,fname);
@@ -67,6 +72,37 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   }
 
   ifile.openfile(FullName);
+
+  //check whether the binary file that corresponds to the data file 'fname' exists. If the file exists -> compare the time
+  char BinaryFullName[5000];
+
+  sprintf(BinaryFullName,"%s.post-processing.tmp.bin",fname);
+
+  if (access(BinaryFullName,R_OK)==0) {
+    //the binary file exists: comapre the creation time
+    struct stat t_stat;
+    struct tm *timeinfo;
+    time_t BinaryFileCreationTime,DataFileCreationFile;
+
+    stat(BinaryFullName,&t_stat);
+    timeinfo = localtime(&t_stat.st_ctime);
+    BinaryFileCreationTime=mktime(timeinfo);
+
+    stat(FullName,&t_stat);
+    timeinfo = localtime(&t_stat.st_ctime);
+    DataFileCreationFile=mktime(timeinfo);
+
+    if (difftime(BinaryFileCreationTime,DataFileCreationFile)>0.0) {
+      //the binary files created later than the data file -> use the binary file
+      fBinaryIn=fopen(BinaryFullName,"r");
+    }
+  }
+
+  if (fBinaryIn==NULL) {
+    //the binary file either do not exists or created after after the data file -> create a new binary file
+    fBinaryOut=fopen(BinaryFullName,"w");
+  }
+
 
   //read the variable line
   ifile.GetInputStr(str,sizeof(str));
@@ -98,14 +134,24 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   //read the data
   data.InitDataBuffer(nNodes,nvars);
 
-  for (nline=0;nline<nNodes;nline++) {
-    ifile.GetInputStr(str,sizeof(str));
+  if (fBinaryIn==NULL) {
+    //read the data file
+    for (nline=0;nline<nNodes;nline++) {
+      ifile.GetInputStr(str,sizeof(str));
 
-    for (int i=0;i<nvars;i++) {
-      ifile.CutInputStr(str1,str);
-      data.data[nline][i]=atof(str1);
+      for (int i=0;i<nvars;i++) {
+        ifile.CutInputStr(str1,str);
+        data.data[nline][i]=atof(str1);
+      }
     }
+
+    //save the binary file
+    fwrite(data.data[0],sizeof(double),nNodes*nvars,fBinaryOut);
   }
+  else {
+    fread(data.data[0],sizeof(double),nNodes*nvars,fBinaryIn);
+  }
+
 
   //save the connectivity list and initialize blocks
   int nblock,cnt,iBlock,jBlock,kBlock;
@@ -120,8 +166,6 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   Block=new cBlock[nBlocks];
 
   for (nline=0;nline<nCells;nline++) {
-    ifile.GetInputStr(str,sizeof(str));
-
     if (nline%(nBlockCellX*nBlockCellY*nBlockCellZ)==0) {
       //new block;
       nblock=nline/(nBlockCellX*nBlockCellY*nBlockCellZ);
@@ -140,12 +184,26 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
     cnt++;
 
-    for (int i=0;i<8;i++) {
-      ifile.CutInputStr(str1,str);
-      ConnectivityList[nline].n[i]=strtol(str1,&endptr,10);
-      Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=strtol(str1,&endptr,10)-1;
+    if (fBinaryIn==NULL) {
+      ifile.GetInputStr(str,sizeof(str));
+
+      for (int i=0;i<8;i++) {
+        ifile.CutInputStr(str1,str);
+        ConnectivityList[nline].n[i]=strtol(str1,&endptr,10);
+        Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=strtol(str1,&endptr,10)-1;
+      }
+
+      fwrite(ConnectivityList[nline].n,sizeof(int),8,fBinaryOut);
+    }
+    else {
+      fread(ConnectivityList[nline].n,sizeof(int),8,fBinaryIn);
+      for (int i=0;i<8;i++) Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=ConnectivityList[nline].n[i]-1;
     }
   }
+
+  //close the binary files
+  if (fBinaryIn!=NULL) fclose(fBinaryIn);
+  if (fBinaryOut!=NULL) fclose(fBinaryOut);
 
 
   //find xmin amd xmax and dx for each block
