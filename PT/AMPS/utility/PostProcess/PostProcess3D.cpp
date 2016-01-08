@@ -1,0 +1,375 @@
+//$Id$
+//the library for reading of AMPS' output files
+
+/*
+ * PostProcess.cpp
+ *
+ *  Created on: Jan 7, 2016
+ *      Author: vtenishe
+ */
+
+
+#include "PostProcess3D.h"
+#include "ifileopr.h"
+
+//init the data buffer
+void cPostProcess3D::sDataStructure::InitDataBuffer(int nnodes,int nvars) {
+  nNodes=nnodes,nVariables=nvars;
+
+  //alllocate the memory
+  data=new double* [nNodes];
+  data[0]=new double [nNodes*nVariables];
+
+  for (int i=1;i<nNodes;i++) data[i]=data[i-1]+nVariables;
+}
+
+void cPostProcess3D::PrintVariableList() {
+  int i;
+
+  for (i=0;i<data.nVariables;i++) printf("%i:\t%s\n",i,data.VariableList[i].c_str());
+}
+
+void cPostProcess3D::sDataStructure::CopyVariable(int iTarget,sDataStructure* Source,int iSource) {
+  int i;
+
+  for (i=0;i<nNodes;i++) data[i][iTarget]=Source->data[i][iSource];
+}
+
+void cPostProcess3D::cBlock::Init(int nx,int ny,int nz) {
+  nCellX=nx,nCellY=ny,nCellZ=nz;
+
+  cell=new cPostProcess3D::cCell**[nCellX];
+  cell[0]=new cPostProcess3D::cCell* [nCellX*nCellY];
+  cell[0][0]=new cPostProcess3D::cCell[nCellX*nCellY*nCellZ];
+
+  int i,j,k,cnt;
+
+  for (i=1;i<nCellX;i++) cell[i]=cell[i-1]+nCellY;
+
+  for (cnt=0,i=0;i<nCellX;i++) for (j=0;j<nCellY;j++) {
+    cell[i][j]=cell[0][0]+cnt;
+    cnt+=nCellZ;
+  }
+}
+
+//load the data file
+void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
+  char FullName[50000],str[50000],str1[50000];
+  CiFileOperations ifile;
+  int nvars=0,nline;
+
+  //get the full name of the data file and open the file
+  sprintf(FullName,"%s/%s",path,fname);
+
+  if (access(FullName,R_OK)!=0) {
+     printf("Cannot find the file:%s\n",FullName);
+     exit(0);
+  }
+
+  ifile.openfile(FullName);
+
+  //read the variable line
+  ifile.GetInputStr(str,sizeof(str));
+  ifile.CutInputStr(str1,str);
+  ifile.CutInputStr(str1,str);
+
+  while (strcmp(str1,"")!=0) {
+    std::string var(str1);
+    data.VariableList.push_back(var);
+    nvars++;
+
+    ifile.CutInputStr(str1,str);
+  }
+
+  //read the number of the nodes and cells
+  char *endptr;
+  ifile.GetInputStr(str,sizeof(str));
+
+  ifile.CutInputStr(str1,str);
+  ifile.CutInputStr(str1,str);
+  ifile.CutInputStr(str1,str);
+  nNodes=strtol(str1,&endptr,10);
+
+
+  ifile.CutInputStr(str1,str);
+  ifile.CutInputStr(str1,str);
+  nCells=strtol(str1,&endptr,10);
+
+  //read the data
+  data.InitDataBuffer(nNodes,nvars);
+
+  for (nline=0;nline<nNodes;nline++) {
+    ifile.GetInputStr(str,sizeof(str));
+
+    for (int i=0;i<nvars;i++) {
+      ifile.CutInputStr(str1,str);
+      data.data[nline][i]=atof(str1);
+    }
+  }
+
+  //save the connectivity list and initialize blocks
+  int nblock,cnt,iBlock,jBlock,kBlock;
+  ConnectivityList=new cCell[nCells];
+
+  if (nCells%(nBlockCellX*nBlockCellY*nBlockCellZ)) {
+    printf("Error: somthing is wrong...\n");
+    exit(0);
+  }
+
+  nBlocks=nCells/(nBlockCellX*nBlockCellY*nBlockCellZ);
+  Block=new cBlock[nBlocks];
+
+  for (nline=0;nline<nCells;nline++) {
+    ifile.GetInputStr(str,sizeof(str));
+
+    if (nline%(nBlockCellX*nBlockCellY*nBlockCellZ)==0) {
+      //new block;
+      nblock=nline/(nBlockCellX*nBlockCellY*nBlockCellZ);
+      cnt=0;
+      Block[nblock].Init(nBlockCellX,nBlockCellY,nBlockCellZ);
+    }
+
+    //determine the coordinate of the cell in the block
+    int r;
+
+    kBlock=cnt/(nBlockCellX*nBlockCellY);
+
+    r=cnt%(nBlockCellX*nBlockCellY);
+    jBlock=r/nBlockCellX;
+    iBlock=r%nBlockCellX;
+
+    cnt++;
+
+    for (int i=0;i<8;i++) {
+      ifile.CutInputStr(str1,str);
+      ConnectivityList[nline].n[i]=strtol(str1,&endptr,10);
+      Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=strtol(str1,&endptr,10)-1;
+    }
+  }
+
+
+  //find xmin amd xmax and dx for each block
+  int i,j,k;
+
+  for (nblock=0;nblock<nBlocks;nblock++) {
+    for (i=0;i<3;i++) {
+      Block[nblock].xmin[i]=data.data[Block[nblock].cell[0][0][0].n[0]][i];
+      Block[nblock].xmax[i]=data.data[Block[nblock].cell[nBlockCellX-1][nBlockCellY-1][nBlockCellZ-1].n[6]][i];
+
+      if ((xmin[i]>Block[nblock].xmin[i]) || (nblock==0)) xmin[i]=Block[nblock].xmin[i];
+      if ((xmax[i]<Block[nblock].xmax[i]) || (nblock==0)) xmax[i]=Block[nblock].xmax[i];
+    }
+
+    //the size of the cells in the block
+    Block[nblock].dx[0]=(Block[nblock].xmax[0]-Block[nblock].xmin[0])/nBlockCellX;
+    Block[nblock].dx[1]=(Block[nblock].xmax[1]-Block[nblock].xmin[1])/nBlockCellY;
+    Block[nblock].dx[2]=(Block[nblock].xmax[2]-Block[nblock].xmin[2])/nBlockCellZ;
+
+    //the minimum size of the block in each dimension
+    for (i=0;i<3;i++) {
+      double l=Block[nblock].xmax[i]-Block[nblock].xmin[i];
+
+      if ((dxBlockMin[i]>l) || (nblock==0)) dxBlockMin[i]=l;
+    }
+  }
+
+  //Init Mesh
+  int nMeshX,nMeshY,nMeshZ;
+
+  nMeshX=(xmax[0]-xmin[0])/dxBlockMin[0];
+  nMeshY=(xmax[1]-xmin[1])/dxBlockMin[1];
+  nMeshZ=(xmax[2]-xmin[2])/dxBlockMin[2];
+
+  Mesh=new cBlock*** [nMeshX];
+  Mesh[0]=new cBlock** [nMeshX*nMeshY];
+  Mesh[0][0]=new cBlock* [nMeshX*nMeshY*nMeshZ];
+
+  for (i=1;i<nMeshX;i++) Mesh[i]=Mesh[i-1]+nMeshY;
+
+  for (cnt=0,i=0;i<nMeshX;i++) for (j=0;j<nMeshY;j++) {
+    Mesh[i][j]=Mesh[0][0]+cnt;
+    cnt+=nMeshZ;
+  }
+
+
+  //assign blocks to the Mesh elements
+  for (nblock=0;nblock<nBlocks;nblock++) {
+    int iMesh[3],idim,iCell,jCell,kCell,n[3];
+    double x[3];
+
+    for (i=0;i<3;i++) n[i]=Block[nblock].dx[i]/dxBlockMin[i];
+
+    for (iCell=0;iCell<n[0];iCell++) for (jCell=0;jCell<n[1];jCell++) for (kCell=0;kCell<n[2];kCell++) {
+      x[0]=(0.5+iCell)*Block[nblock].dx[0]/n[0]+Block[nblock].xmin[0];
+      x[1]=(0.5+jCell)*Block[nblock].dx[1]/n[1]+Block[nblock].xmin[1];
+      x[2]=(0.5+kCell)*Block[nblock].dx[2]/n[2]+Block[nblock].xmin[2];
+
+      for (i=0;i<3;i++) iMesh[i]=(x[i]-xmin[i])/dxBlockMin[i];
+    }
+  }
+
+  //create vector that containes only coordinated of the nodes
+  X.InitDataBuffer(nNodes,3);
+  for (i=0;i<3;i++) X.CopyVariable(i,&data,i);
+
+  //close the data file
+  ifile.closefile();
+
+  //init the procedure of the column integration
+  ColumnIntegral.Init(xmin,xmax);
+}
+
+//save the data file
+void cPostProcess3D::SaveDataFile(const char *fname, sDataStructure &dat) {
+  FILE *fout=fopen(fname,"w");
+
+  //save the variable list, and the number of the nodes and cells
+  int i,ncell,nnode=0;
+
+  fprintf(fout,"VARIABLES=");
+  for (std::vector<std::string>::iterator v=dat.VariableList.begin();v!=dat.VariableList.end();v++) {
+    if (nnode!=0) fprintf(fout,", ");
+    nnode++;
+
+    fprintf(fout,"\"%s\"",v->c_str());
+  }
+
+  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FEBRICK\n",nNodes,nCells);
+
+  //output the data
+  for (nnode=0;nnode<nNodes;nnode++) {
+    for (i=0;i<dat.nVariables;i++) fprintf(fout,"%e ",dat.data[nnode][i]);
+    fprintf(fout,"\n");
+  }
+
+  //output the connectovity list
+  for (ncell=0;ncell<nCells;ncell++) {
+    for (i=0;i<8;i++) fprintf(fout,"%i ",ConnectivityList[ncell].n[i]);
+    fprintf(fout,"\n");
+  }
+
+  //close the data file
+  fclose(fout);
+}
+
+//determine the block
+cPostProcess3D::cBlock* cPostProcess3D::GetBlock(double *x) {
+  int i,iMesh[3];
+
+  for (i=0;i<3;i++) iMesh[i]=(x[i]-xmin[i])/dxBlockMin[i];
+  return Mesh[iMesh[0]][iMesh[1]][iMesh[2]];
+}
+
+//characteristic size of the cell
+double cPostProcess3D::CharacteristicCellSize(double *x) {
+  cBlock* block;
+
+  block=GetBlock(x);
+  return sqrt(pow(block->dx[0],2)+pow(block->dx[1],2)+pow(block->dx[2],2));
+}
+
+//determine the interpolation stencil
+void cPostProcess3D::GetInterpolationStencil(double *x,cStencil* stencil) {
+  int i,j,k;
+  cBlock *block;
+
+  //determine the block
+  block=GetBlock(x);
+
+  //determine the cell in the block
+  int iCell[3];
+  double w[3],InterpolationWeight;
+
+  for (i=0;i<3;i++) {
+    iCell[i]=(x[i]-block->xmin[i])/block->dx[i];
+    w[i]=iCell[i]-(x[i]-block->xmin[i])/block->dx[i];
+  }
+
+  for (i=0;i<2;i++) for (j=0;j<2;j++) for (k=0;k<2;k++) {
+    switch (i+2*j+4*k) {
+    case 0+0*2+0*4:
+      InterpolationWeight=(1.0-w[0])*(1.0-w[1])*(1.0-w[2]);
+
+      stencil->Node[0]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[0];
+      stencil->Weight[0]=InterpolationWeight;
+
+      break;
+    case 1+0*2+0*4:
+      InterpolationWeight=w[0]*(1.0-w[1])*(1.0-w[2]);
+
+      stencil->Node[1]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[1];
+      stencil->Weight[1]=InterpolationWeight;
+
+      break;
+    case 0+1*2+0*4:
+      InterpolationWeight=(1.0-w[0])*w[1]*(1.0-w[2]);
+
+      stencil->Node[3]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[3];
+      stencil->Weight[3]=InterpolationWeight;
+
+      break;
+    case 1+1*2+0*4:
+      InterpolationWeight=w[0]*w[1]*(1.0-w[2]);
+
+      stencil->Node[2]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[2];
+      stencil->Weight[2]=InterpolationWeight;
+
+      break;
+
+    case 0+0*2+1*4:
+      InterpolationWeight=(1.0-w[0])*(1.0-w[1])*w[2];
+
+      stencil->Node[4]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[4];
+      stencil->Weight[4]=InterpolationWeight;
+
+      break;
+    case 1+0*2+1*4:
+      InterpolationWeight=w[0]*(1.0-w[1])*w[2];
+
+      stencil->Node[5]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[5];
+      stencil->Weight[5]=InterpolationWeight;
+
+      break;
+    case 0+1*2+1*4:
+      InterpolationWeight=(1.0-w[0])*w[1]*w[2];
+
+      stencil->Node[7]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[7];
+      stencil->Weight[7]=InterpolationWeight;
+
+      break;
+    case 1+1*2+1*4:
+      InterpolationWeight=w[0]*w[1]*w[2];
+
+      stencil->Node[6]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[6];
+      stencil->Weight[6]=InterpolationWeight;
+
+      break;
+    }
+
+  }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
