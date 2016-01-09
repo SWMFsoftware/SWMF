@@ -112,7 +112,7 @@ contains
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
-    logical :: oktest, oktest_me
+    logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='set_face_boundary'
     logical, allocatable :: IsBodyCell_G(:,:,:)
     !--------------------------------------------------------------------------
@@ -123,9 +123,9 @@ contains
     call timing_start(NameSub)
 
     if(iBlock==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, oktest,oktest_me)
+       call set_oktest(NameSub, DoTest,DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     endif
 
     ! set variables in module
@@ -133,7 +133,7 @@ contains
     DoResChangeOnly = DoResChangeOnlyIn
     iBlockBc        = iBlock
 
-    if(oktest_me)call write_face_state('Initial')
+    if(DoTestMe)call write_face_state('Initial')
 
     ! This call may be needed for moving bodies, but not in general
     !!! call set_boundary_cells(iBlockBc)
@@ -144,7 +144,7 @@ contains
 
     call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 
-    if(oktest_me)call write_face_state('Final')
+    if(DoTestMe)call write_face_state('Final')
 
     call timing_stop(NameSub)
 
@@ -215,6 +215,7 @@ contains
     !--------------------------------------------------------------------------
     if(iBlockBc==BLKtest.and.iProc==PROCtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
+       if(DoTestMe)write(*,*) NameSub,' starting'
     else
        DoTest = .false.; DoTestMe = .false.
     end if
@@ -437,10 +438,22 @@ contains
 
       ! Variables for the absorbing BC
       real:: UdotR, r2Inv
+
+      !logical:: DoTestCell
+      logical, parameter:: DoTestCell = .false.
+      character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
+
+      !DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
+
+      if(DoTestCell)write(*,*) NameSubSub,' starting with ijkTrue, ijkGhost=',&
+           iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
 
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
       TypeBc = TypeBc_I(iBoundary)
+
+      if(DoTestCell)write(*,*) NameSubSub,' iBoundary, TypeBc=', &
+           iBoundary, TypeBc
 
       ! User defined boundary conditions
       if( index(TypeBc, 'user') > 0 .or. &
@@ -484,6 +497,7 @@ contains
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
       case('inflow','vary')
+
          call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
