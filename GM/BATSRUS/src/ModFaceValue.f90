@@ -689,17 +689,18 @@ contains
 
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
-    ! The subroutine calculates right and left face values.
+    ! The subroutine calculates right and left face values (primitive
+    ! variables) LeftState_VX .. RightState_VZ for block iBlock from 
+    ! the cell centered State_VGB.
+    !
     ! If DoResChangeOnly is true, only facevalues next to a coarser 
     ! neighbor block are calculated.
-    ! To improve the code stability, ONLY those values are calculated, which
-    ! are actually used by the calc_facefluxes.
 
-    use ModMain,     ONLY: nOrder, nOrderProlong, BlkTest, UseB0, &
+    use ModMain,     ONLY: nOrder, nOrderProlong, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
-         UseHighResChange
+         UseHighResChange, iTest, jTest, kTest, BlkTest, DimTest, VarTest
 
     use ModGeometry, ONLY : true_cell, body_BLK
     use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
@@ -741,16 +742,40 @@ contains
     real:: Laplace_V(nVar), Laplace
 
     real:: State_V(nVar), Energy
+    integer:: iVarSmoothLast, iVarSmooth 
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
-
-    integer:: iVarSmoothLast, iVarSmooth 
     !-------------------------------------------------------------------------
     if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
        call set_oktest('calc_face_value', DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
+    end if
+
+    if(DotestMe)then
+       write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
+       if(DimTest==0 .or. DimTest==1)then
+          write(*,*)'TestVar(iTest-nG:iTest+nG)=', &
+               State_VGB(VarTest,iTest-nG:iTest+nG,jTest,kTest,BlkTest)
+          if(.not.all(true_cell(iTest-nG:iTest+nG,jTest,kTest,BlkTest))) &
+               write(*,*)'true_cell(iTest-nG:iTest+nG)=',&
+               true_cell(iTest-nG:iTest+nG,jTest,kTest,BlkTest)
+       end if
+       if(nDim > 1 .and. (DimTest==0 .or. DimTest==2))then
+          write(*,*)'TestVar(jTest-nG:jTest+nG)=', &
+               State_VGB(VarTest,iTest,jTest-nG:jTest+nG,kTest,BlkTest)
+          if(.not.all(true_cell(iTest,jTest-nG:jTest+nG,kTest,BlkTest))) &
+               write(*,*)'true_cell(jTest-nG:jTest+nG)=',&
+               true_cell(iTest,jTest-nG:jTest+nG,kTest,BlkTest)
+       end if
+       if(nDim > 2 .and. (DimTest==0 .or. DimTest==3)) then
+          write(*,*)'TestVar(kTest-nG:kTest+nG)=', &
+               State_VGB(VarTest,iTest,jTest,kTest-nG:kTest+nG,BlkTest)
+          if(.not.all(true_cell(iTest,jTest,kTest-nG:kTest+nG,BlkTest))) &
+               write(*,*)'true_cell(kTest-nG:kTest+nG)=', &
+               true_cell(iTest,jTest,kTest-nG:kTest+nG,BlkTest)
+       end if
     end if
 
     if(.not.allocated(Primitive_VG))&
@@ -1151,6 +1176,31 @@ contains
        end if
 
     end select  ! nOrder
+
+    if(DotestMe)then
+       write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
+       if(DimTest==0 .or. DimTest==1) &
+            write(*,*)'Left,Right(i-1/2),Left,Right(i+1/2)=', &
+            LeftState_VX(VarTest,iTest,jTest,kTest), &
+            RightState_VX(VarTest,iTest,jTest,kTest), &
+            LeftState_VX(VarTest,iTest+1,jTest,kTest), &
+            RightState_VX(VarTest,iTest+1,jTest,kTest)
+
+       if(nDim > 1 .and. (DimTest==0 .or. DimTest==2)) &
+            write(*,*)'Left,Right(j-1/2),Left,Right(j+1/2)=', &
+            LeftState_VY(VarTest,iTest,jTest,kTest), &
+            RightState_VY(VarTest,iTest,jTest,kTest), &
+            LeftState_VY(VarTest,iTest,jTest+1,kTest), &
+            RightState_VY(VarTest,iTest,jTest+1,kTest)
+
+       if(nDim > 2 .and. (DimTest==0 .or. DimTest==3)) &
+            write(*,*)'Left,Right(k-1/2),Left,Right(k+1/2)=', &
+            LeftState_VZ(VarTest,iTest,jTest,kTest), &
+            RightState_VZ(VarTest,iTest,jTest,kTest), &
+            LeftState_VZ(VarTest,iTest,jTest,kTest+1), &
+            RightState_VZ(VarTest,iTest,jTest,kTest+1)
+
+    end if
 
   contains
     !==========================================================================
