@@ -26,11 +26,19 @@ contains
 
     integer:: iBlock, iError
     real   :: CellSize1Root
+
+    logical:: DoTest, DotestMe
+    character(len=*), parameter:: NameSub = 'set_batsrus_grid'
     !-------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! Tell if the grid and/or the tree has changed
     if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
     if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
+
+    if(DoTestMe)write(*,*) NameSub, &
+         ' starting with IsNewDecomposition, IsNewTree, restart=', &
+         IsNewDecomposition, IsNewTree, restart
 
     if( IsNewDecomposition .or. IsNewTree .or. restart) then
 
