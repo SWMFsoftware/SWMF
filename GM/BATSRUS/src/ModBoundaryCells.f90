@@ -14,10 +14,6 @@ module ModBoundaryCells
   ! boundary index (body2_ = -2)
   integer, parameter :: domain_ = -10
 
-  ! The DomainOp sets the operator applied for boundary indexes
-  ! in ghost cells that are restricted. So the largest index is kept.
-  character(len=*), parameter :: DomainOp='max'
-
 contains
 
   !===========================================================================
@@ -41,7 +37,7 @@ subroutine fix_boundary_ghost_cells
 
   ! Recalculate true_cell information in ghost cells if grid changed. 
 
-  use ModBoundaryCells, ONLY: iBoundary_GB, DomainOp, domain_
+  use ModBoundaryCells, ONLY: iBoundary_GB, domain_
   use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
        body2_, BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
@@ -68,7 +64,7 @@ subroutine fix_boundary_ghost_cells
   call message_pass_cell(iBoundary_GB, &
        nProlongOrderIn=1, nCoarseLayerIn=2, &
        DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-       NameOperatorIn=DomainOp)
+       DoResChangeOnlyIn=.true., NameOperatorIn='max')
 
   if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
        iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
