@@ -142,7 +142,7 @@ bool cPostProcess3D::cColumnIntegral::FindIntegrationLimits(double *x0,double *l
 }
 
 //====================================================
-void cPostProcess3D::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *xStart,double *l,double IntegrationPathLength,void (*Integrand)(double*,int,double*)) {
+void cPostProcess3D::cColumnIntegral::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *xStart,double *l,double IntegrationPathLength,void (*Integrand)(double*,double*)) {
   double lNormalized[3],c,x[3],dl=0.0,IntegratedPath=0.0,a0[ResultVectorLength],a1[ResultVectorLength];
   int idim,i;
   int IntegrationFinished=false;
@@ -157,11 +157,16 @@ void cPostProcess3D::GetCoulumnIntegral(double *ResultVector,int ResultVectorLen
   for (c=sqrt(c),idim=0;idim<3;idim++) lNormalized[idim]=l[idim]/c;
 
   //get the first value of the integrand function
-  Integrand(a0,ResultVectorLength,x);
+  for (i=0;i<3;i++) {
+    if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-12*fabs(PostProcess3D->xmin[i]);
+    if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-12*fabs(PostProcess3D->xmax[i]);
+  }
+
+  Integrand(a0,x);
 
   //calculate the integral
   while ((IntegratedPath<IntegrationPathLength)&&(IntegrationFinished==false)) {
-    dl=IntegrationStep2CellSizeRatio*CharacteristicCellSize(x);
+    dl=IntegrationStep2CellSizeRatio*PostProcess3D->CharacteristicCellSize(x);
 
     if (dl>IntegrationPathLength-IntegratedPath) {
       dl=IntegrationPathLength-IntegratedPath;
@@ -170,7 +175,13 @@ void cPostProcess3D::GetCoulumnIntegral(double *ResultVector,int ResultVectorLen
 
     for (idim=0;idim<3;idim++) x[idim]+=dl*lNormalized[idim];
 
-    Integrand(a1,ResultVectorLength,x);
+ //   if (PostProcess3D->IsInsideDomain(x)==false) break;
+    for (i=0;i<3;i++) {
+      if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-12*fabs(PostProcess3D->xmin[i]);
+      if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-12*fabs(PostProcess3D->xmax[i]);
+    }
+
+    Integrand(a1,x);
 
     for (i=0;i<ResultVectorLength;i++) {
       ResultVector[i]+=0.5*(a0[i]+a1[i])*dl;
@@ -183,13 +194,92 @@ void cPostProcess3D::GetCoulumnIntegral(double *ResultVector,int ResultVectorLen
 }
 
 
-void cPostProcess3D::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *x0,double *l,void (*Integrand)(double*,int,double*)) {
+void cPostProcess3D::cColumnIntegral::GetCoulumnIntegral(double *ResultVector,int ResultVectorLength,double *x0,double *l,void (*Integrand)(double*,double*)) {
   double IntegrationPathLength,xStart[3],xFinish[3];
 
-  if (ColumnIntegral.FindIntegrationLimits(x0,l,IntegrationPathLength,xStart,xFinish,xmin,xmax)==false) {
+  if (FindIntegrationLimits(x0,l,IntegrationPathLength,xStart,xFinish,PostProcess3D->xmin,PostProcess3D->xmax)==false) {
     for (int i=0;i<ResultVectorLength;i++) ResultVector[i]=0.0;
     return;
   }
 
   return GetCoulumnIntegral(ResultVector,ResultVectorLength,xStart,l,IntegrationPathLength,Integrand);
 }
+
+//===========================================================
+//generate a circular column integral map
+void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double *PrimaryAxisDirection,double *SecondaryAxisDirection,double HalfMapAngle,int nAzimuthPoints,int nZenithPoints,const char *fname,cColumnIntegrationSet* IntegrationSet) {
+  int iZenithPoint,iAzimuthPoint,idim,i;
+  double e0[3],e1[3],e2[3],l[3],theta,phi;
+  double ZenithAngle,AzimuthAngle;
+  double cosPhi,sinPhi,sinTheta,cosTheta;
+
+  HalfMapAngle*=Pi/180.0;
+
+  const double dZenitAngle=2.0*HalfMapAngle/(nZenithPoints-1);
+  const double dAzimuthAngle=2.0*HalfMapAngle/(nAzimuthPoints-1);
+
+  //determine the frame of reference for the map capculation
+  for (i=0;i<3;i++) {
+    e0[i]=PrimaryAxisDirection[i]-xObservation[i];
+    e1[i]=SecondaryAxisDirection[i]-xObservation[i];
+  }
+
+  Vector3D::Normalize(e0);
+  Vector3D::Orthogonalize(e0,e1);
+  Vector3D::Normalize(e1);
+  Vector3D::CrossProduct(e2,e0,e1);
+
+  //create the output file and print the variable list
+  FILE *fout;
+
+  fout=fopen(fname,"w");
+  fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Cut-cell Projection\", ");
+  IntegrationSet->PrintVariableList(fout);
+
+  fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
+
+  //create the column integraion map
+  int StateVectorLength=IntegrationSet->IntegrantVectorLength();
+  double StateVector[StateVectorLength];
+
+
+  for (iZenithPoint=0;iZenithPoint<nZenithPoints;iZenithPoint++) {
+    ZenithAngle=HalfMapAngle-dZenitAngle*iZenithPoint;
+
+    for (iAzimuthPoint=0;iAzimuthPoint<nAzimuthPoints;iAzimuthPoint++) {
+      AzimuthAngle=HalfMapAngle-dAzimuthAngle*iAzimuthPoint;
+
+      cosPhi=cos(AzimuthAngle);
+      sinPhi=sin(AzimuthAngle);
+      sinTheta=sin(ZenithAngle);
+      cosTheta=cos(ZenithAngle);
+
+      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+sinTheta*e1[idim]+sinPhi*e2[idim];
+
+      //calculate and output of the column integral
+      ColumnIntegral->GetCoulumnIntegral(StateVector,StateVectorLength,xObservation,l,IntegrationSet->IntegrantVector);
+
+      //determine the cut-cell projection
+      double t,ProjectionCode=-1.0;
+      int iStartFace,iFinishFace;
+
+      iStartFace=0;
+      iFinishFace=CutCell::nBoundaryTriangleFaces;
+
+      for (i=iStartFace;i<iFinishFace;i++) {
+        if (CutCell::BoundaryTriangleFaces[i].RayIntersection(xObservation,l,t,0.0)==true) {
+          ProjectionCode=1.0;
+        }
+      }
+
+      //output value of the column integral
+      fprintf(fout,"%e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,ProjectionCode);
+      for (i=0;i<StateVectorLength;i++) fprintf(fout," %e ",StateVector[i]);
+      fprintf(fout,"\n");
+    }
+  }
+
+  //close the output file
+  fclose(fout);
+}
+
