@@ -28,6 +28,7 @@ void cPostProcess3D::sDataStructure::InitDataBuffer(int nnodes,int nvars) {
 
 void cPostProcess3D::PrintVariableList() {
   int i;
+  if (rank!=0) return;
 
   for (i=0;i<data.nVariables;i++) printf("%i:\t%s\n",i,data.VariableList[i].c_str());
 }
@@ -62,6 +63,8 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   int nvars=0,nline;
   FILE *fBinaryIn=NULL,*fBinaryOut=NULL;
 
+  //all slave processers will read the mesh only after the root processor finish reading
+  if (rank!=0) MPI_Barrier(MPI_COMM_WORLD);
 
   //get the full name of the data file and open the file
   sprintf(FullName,"%s/%s",path,fname);
@@ -100,7 +103,7 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
   if (fBinaryIn==NULL) {
     //the binary file either do not exists or created after after the data file -> create a new binary file
-    fBinaryOut=fopen(BinaryFullName,"w");
+    if (rank==0) fBinaryOut=fopen(BinaryFullName,"w");
   }
 
 
@@ -146,7 +149,7 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
     }
 
     //save the binary file
-    fwrite(data.data[0],sizeof(double),nNodes*nvars,fBinaryOut);
+    if (rank==0) fwrite(data.data[0],sizeof(double),nNodes*nvars,fBinaryOut);
   }
   else {
     fread(data.data[0],sizeof(double),nNodes*nvars,fBinaryIn);
@@ -195,7 +198,7 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
       }
 
       Block[nblock].id=nblock;
-      fwrite(ConnectivityList[nline].n,sizeof(int),8,fBinaryOut);
+      if (rank==0) fwrite(ConnectivityList[nline].n,sizeof(int),8,fBinaryOut);
     }
     else {
       Block[nblock].id=nblock;
@@ -208,6 +211,8 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   if (fBinaryIn!=NULL) fclose(fBinaryIn);
   if (fBinaryOut!=NULL) fclose(fBinaryOut);
 
+  //the root processor will read the mesh before all other processors
+  if (rank==0) MPI_Barrier(MPI_COMM_WORLD);
 
   //find xmin amd xmax and dx for each block
   int i,j,k;
@@ -270,6 +275,7 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
 //save the data file
 void cPostProcess3D::SaveDataFile(const char *fname, sDataStructure &dat) {
+  if (rank!=0) return;
   FILE *fout=fopen(fname,"w");
 
   //save the variable list, and the number of the nodes and cells
