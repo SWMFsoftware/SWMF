@@ -250,7 +250,34 @@ namespace Vector3D {
     return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
   }
 
-  //determine an ortogonal frame of rederence: z is input; e1 and e2 and orthogonal to z and form a right handed frame of reference
+  inline double DotProduct(double *a,double *b) {
+    int i;
+    double res=0.0;
+
+    for (i=0;i<3;i++) res+=a[i]*b[i];
+    return res;
+  }
+
+  inline void Orthogonalize(double *PrimaryVector,double *OrthogonalVector) {
+     double l2=0.0,c=0.0;
+     int i;
+
+     //get the dot products of the vectors 
+     for (i=0;i<3;i++) {
+        l2+=PrimaryVector[i]*PrimaryVector[i];
+        c+=PrimaryVector[i]*OrthogonalVector[i];
+     }
+
+     //get the orthogonal component of 'OrthogonalVector'
+     c/=l2;
+
+     for (i=0;i<3;i++) {
+       OrthogonalVector[i]-=c*PrimaryVector[i];
+      }
+   }
+ 
+
+  //determine an orthogonal frame of rederence: z is input; e1 and e2 and orthogonal to z and form a right handed frame of reference
   inline void GetNormFrame(double *e0,double *e1,double *z) {
     double l,e[3];
     int idim;
