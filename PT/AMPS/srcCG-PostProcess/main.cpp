@@ -161,7 +161,7 @@ int main(int argc,char **argv) {
   amps.SaveDataFile("Res.dat", amps.data);
 
 
-  amps.MPI_Finalize();
+  amps.FinalizeMPI();
   return 1;
 }
 
