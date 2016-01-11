@@ -68,7 +68,7 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
   if (access(FullName,R_OK)!=0) {
      printf("Cannot find the file:%s\n",FullName);
-     exit(0);
+     exit(__LINE__,__FILE__);
   }
 
   ifile.openfile(FullName);
@@ -154,12 +154,13 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
 
   //save the connectivity list and initialize blocks
-  int nblock,cnt,iBlock,jBlock,kBlock;
+  int nblock,iBlock,jBlock,kBlock;
+  unsigned long int cnt;
   ConnectivityList=new cCell[nCells];
 
   if (nCells%(nBlockCellX*nBlockCellY*nBlockCellZ)) {
     printf("Error: somthing is wrong...\n");
-    exit(0);
+    exit(__LINE__,__FILE__);
   }
 
   nBlocks=nCells/(nBlockCellX*nBlockCellY*nBlockCellZ);
@@ -193,9 +194,11 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
         Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=strtol(str1,&endptr,10)-1;
       }
 
+      Block[nblock].id=nblock;
       fwrite(ConnectivityList[nline].n,sizeof(int),8,fBinaryOut);
     }
     else {
+      Block[nblock].id=nblock;
       fread(ConnectivityList[nline].n,sizeof(int),8,fBinaryIn);
       for (int i=0;i<8;i++) Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=ConnectivityList[nline].n[i]-1;
     }
@@ -232,37 +235,25 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   }
 
   //Init Mesh
-  int nMeshX,nMeshY,nMeshZ;
 
-  nMeshX=(xmax[0]-xmin[0])/dxBlockMin[0];
-  nMeshY=(xmax[1]-xmin[1])/dxBlockMin[1];
-  nMeshZ=(xmax[2]-xmin[2])/dxBlockMin[2];
 
-  Mesh=new cBlock*** [nMeshX];
-  Mesh[0]=new cBlock** [nMeshX*nMeshY];
-  Mesh[0][0]=new cBlock* [nMeshX*nMeshY*nMeshZ];
-
-  for (i=1;i<nMeshX;i++) Mesh[i]=Mesh[i-1]+nMeshY;
-
-  for (cnt=0,i=0;i<nMeshX;i++) for (j=0;j<nMeshY;j++) {
-    Mesh[i][j]=Mesh[0][0]+cnt;
-    cnt+=nMeshZ;
-  }
-
+  dxBlockMin[0]=(xmax[0]-xmin[0])/_POST_PROCESS_MAP_SIZE_;
+  dxBlockMin[1]=(xmax[1]-xmin[1])/_POST_PROCESS_MAP_SIZE_;
+  dxBlockMin[2]=(xmax[2]-xmin[2])/_POST_PROCESS_MAP_SIZE_;
 
   //assign blocks to the Mesh elements
   for (nblock=0;nblock<nBlocks;nblock++) {
-    int iMesh[3],idim,iCell,jCell,kCell,n[3];
-    double x[3];
+    int imin[3],imax[3],i,j,k;
 
-    for (i=0;i<3;i++) n[i]=Block[nblock].dx[i]/dxBlockMin[i];
+    for (i=0;i<3;i++) {
+      imin[i]=(Block[nblock].xmin[i]-xmin[i])/dxBlockMin[i];
+      imax[i]=(Block[nblock].xmax[i]-xmin[i])/dxBlockMin[i];
+    }
 
-    for (iCell=0;iCell<n[0];iCell++) for (jCell=0;jCell<n[1];jCell++) for (kCell=0;kCell<n[2];kCell++) {
-      x[0]=(0.5+iCell)*Block[nblock].dx[0]/n[0]+Block[nblock].xmin[0];
-      x[1]=(0.5+jCell)*Block[nblock].dx[1]/n[1]+Block[nblock].xmin[1];
-      x[2]=(0.5+kCell)*Block[nblock].dx[2]/n[2]+Block[nblock].xmin[2];
-
-      for (i=0;i<3;i++) iMesh[i]=(x[i]-xmin[i])/dxBlockMin[i];
+    for (i=imin[0];i<=imax[0];i++) for (j=imin[1];j<=imax[1];j++) for (k=imin[2];k<=imax[2];k++) {
+      if ((i<_POST_PROCESS_MAP_SIZE_)&&(j<_POST_PROCESS_MAP_SIZE_)&&(k<_POST_PROCESS_MAP_SIZE_)) {
+        Mesh[i][j][k].push_back(Block+nblock);
+      }
     }
   }
 
@@ -310,12 +301,47 @@ void cPostProcess3D::SaveDataFile(const char *fname, sDataStructure &dat) {
   fclose(fout);
 }
 
+
+//getermine whether a point is within the domain
+bool cPostProcess3D::IsInsideDomain(double *x) {
+  for (int i=0;i<3;i++) if ((x[i]<xmin[i])||(xmax[i]<x[i])) return false;
+
+  return true;
+}
+
 //determine the block
 cPostProcess3D::cBlock* cPostProcess3D::GetBlock(double *x) {
-  int i,iMesh[3];
+  int i,j,k,n,idim,nblocks;
+  cBlock*  res=NULL;
 
-  for (i=0;i<3;i++) iMesh[i]=(x[i]-xmin[i])/dxBlockMin[i];
-  return Mesh[iMesh[0]][iMesh[1]][iMesh[2]];
+  i=(x[0]-xmin[0])/dxBlockMin[0];
+  j=(x[1]-xmin[1])/dxBlockMin[1];
+  k=(x[2]-xmin[2])/dxBlockMin[2];
+
+  if (i==_POST_PROCESS_MAP_SIZE_) i--;
+  if (j==_POST_PROCESS_MAP_SIZE_) j--;
+  if (k==_POST_PROCESS_MAP_SIZE_) k--;
+
+  nblocks=Mesh[i][j][k].size();
+
+  for (n=0;n<nblocks;n++) {
+    bool found=true;
+
+    for (idim=0;idim<3;idim++) if ((x[idim]<Mesh[i][j][k][n]->xmin[idim]) || (Mesh[i][j][k][n]->xmax[idim]<x[idim])) {
+      found=false;
+      goto ExitSearchLoop;
+    }
+
+ExitSearchLoop:
+    if (found==true) {
+      res=Mesh[i][j][k][n];
+      break;
+    }
+  }
+
+  if (res==NULL) exit(__LINE__,__FILE__,"Error: the block is not found");
+
+  return res;
 }
 
 //characteristic size of the cell
@@ -329,47 +355,55 @@ double cPostProcess3D::CharacteristicCellSize(double *x) {
 //determine the interpolation stencil
 void cPostProcess3D::GetInterpolationStencil(double *x,cStencil* stencil) {
   int i,j,k;
-  cBlock *block;
+  cBlock *bl;
 
   //determine the block
-  block=GetBlock(x);
+  bl=GetBlock(x);
 
   //determine the cell in the block
   int iCell[3];
   double w[3],InterpolationWeight;
 
   for (i=0;i<3;i++) {
-    iCell[i]=(x[i]-block->xmin[i])/block->dx[i];
-    w[i]=iCell[i]-(x[i]-block->xmin[i])/block->dx[i];
+    iCell[i]=(x[i]-bl->xmin[i])/bl->dx[i];
+    w[i]=(x[i]-bl->xmin[i])/bl->dx[i]-iCell[i];
   }
+
+/*  /////
+
+  for (i=0;i<8;i++) stencil->Weight[i]=0.0,stencil->Node[i]=0;
+  stencil->Node[0]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[0];
+  stencil->Weight[0]=1.0;
+  return;*/
+  ///
 
   for (i=0;i<2;i++) for (j=0;j<2;j++) for (k=0;k<2;k++) {
     switch (i+2*j+4*k) {
     case 0+0*2+0*4:
       InterpolationWeight=(1.0-w[0])*(1.0-w[1])*(1.0-w[2]);
 
-      stencil->Node[0]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[0];
+      stencil->Node[0]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[0];
       stencil->Weight[0]=InterpolationWeight;
 
       break;
     case 1+0*2+0*4:
       InterpolationWeight=w[0]*(1.0-w[1])*(1.0-w[2]);
 
-      stencil->Node[1]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[1];
+      stencil->Node[1]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[1];
       stencil->Weight[1]=InterpolationWeight;
 
       break;
     case 0+1*2+0*4:
       InterpolationWeight=(1.0-w[0])*w[1]*(1.0-w[2]);
 
-      stencil->Node[3]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[3];
+      stencil->Node[3]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[3];
       stencil->Weight[3]=InterpolationWeight;
 
       break;
     case 1+1*2+0*4:
       InterpolationWeight=w[0]*w[1]*(1.0-w[2]);
 
-      stencil->Node[2]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[2];
+      stencil->Node[2]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[2];
       stencil->Weight[2]=InterpolationWeight;
 
       break;
@@ -377,28 +411,28 @@ void cPostProcess3D::GetInterpolationStencil(double *x,cStencil* stencil) {
     case 0+0*2+1*4:
       InterpolationWeight=(1.0-w[0])*(1.0-w[1])*w[2];
 
-      stencil->Node[4]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[4];
+      stencil->Node[4]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[4];
       stencil->Weight[4]=InterpolationWeight;
 
       break;
     case 1+0*2+1*4:
       InterpolationWeight=w[0]*(1.0-w[1])*w[2];
 
-      stencil->Node[5]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[5];
+      stencil->Node[5]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[5];
       stencil->Weight[5]=InterpolationWeight;
 
       break;
     case 0+1*2+1*4:
       InterpolationWeight=(1.0-w[0])*w[1]*w[2];
 
-      stencil->Node[7]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[7];
+      stencil->Node[7]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[7];
       stencil->Weight[7]=InterpolationWeight;
 
       break;
     case 1+1*2+1*4:
       InterpolationWeight=w[0]*w[1]*w[2];
 
-      stencil->Node[6]=Block->cell[iCell[0]][iCell[1]][iCell[2]].n[6];
+      stencil->Node[6]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[6];
       stencil->Weight[6]=InterpolationWeight;
 
       break;
