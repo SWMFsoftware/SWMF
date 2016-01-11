@@ -5,16 +5,16 @@
 !==============================================================================
 subroutine fix_block_geometry(iBlock)
 
-  use ModMain, ONLY: body1_, body2_, ExtraBc_,&
-       UseExtraBoundary, ProcTest, BlkTest   
-  use ModMain, ONLY: UseBody2
+  use ModMain, ONLY: body1_, body2_, ExtraBc_, UseBody2, &
+       UseExtraBoundary, ProcTest, BlkTest, iTest, jTest, kTest
   use ModGeometry, ONLY: &
        MinFaceBoundary, MaxFaceBoundary, IsBoundaryBlock_IB, &
        IsBoundaryCell_GI, R2_BLK, Rmin2_BLK, Body_BLK, &
        far_field_BCs_BLK, true_blk, true_cell
   use ModPhysics, ONLY : xBody2,yBody2,zBody2
   use ModBoundaryCells
-  use BATL_lib, ONLY: iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+  use BATL_lib, ONLY: &
+       iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
        Xyz_DGB, CellSize_DB, &
        CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
 
@@ -56,6 +56,8 @@ subroutine fix_block_geometry(iBlock)
      write(*,*)NameSub,': CellSize_D = ',CellSize_DB(:,iBlock)
      write(*,*)NameSub,': CoordMin_D =', CoordMin_D
      write(*,*)NameSub,': CoordMax_D =', CoordMax_D
+     write(*,*)NameSub,': MinFaceBoundary, MaxFaceBoundary=',  &
+          MinFaceBoundary, MaxFaceBoundary
   end if
 
   !\
@@ -68,7 +70,7 @@ subroutine fix_block_geometry(iBlock)
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBlock) = UseExtraBoundary
 
-  ! set true_cell array (seting IsBoundaryCell_GI)
+  ! set IsBoundaryCell_GI to be used for true_cell
   call set_boundary_cells(iBlock)
 
   do iBoundary = MinFaceBoundary, max(MaxFaceBoundary,Body1_)
@@ -77,6 +79,10 @@ subroutine fix_block_geometry(iBlock)
      true_cell(:,:,:,iBlock) = &
           true_cell(:,:,:,iBlock) .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
   end do
+
+  if(DoTestMe)write(*,*) NameSub,&
+       ' after call set_boundary_cells: true_cell(iTest-nG:iTest+nG)=',&
+       true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
 
   IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
        UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
@@ -99,31 +105,51 @@ subroutine fix_block_geometry(iBlock)
   ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
   true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
 
+  if(DoTestMe)then
+     write(*,*) NameSub,&
+          ' finished with iBoundary_GB(iTest-nG:iTest+nG)=',&
+          iBoundary_GB(iTest-nG:iTest+nG,jTest,kTest,iBlock)
+     
+     write(*,*) NameSub,&
+          ' finished with true_cell(iTest-nG:iTest+nG)=',&
+          true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
+  end if
+
 end subroutine fix_block_geometry
 
 !=============================================================================
 
 subroutine set_boundary_cells(iBlock)
 
-  use ModProcMH
-  use ModMain
+  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, &
+       Body1, Body1_, UseBody2, Body2_, ExtraBc_
   use ModPhysics,  ONLY: Rbody
   use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI
   use ModPhysics,  ONLY: Rbody2
   use ModGeometry, ONLY: R2_BLK
-  use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2
-  use BATL_lib, ONLY: Xyz_DGB
+  use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
+  use BATL_lib,    ONLY: iProc, Xyz_DGB, x_, y_, z_, nG
   use ModUserInterface ! user_set_boundary_cells
 
   implicit none
   integer, intent(in)::iBlock
+
+  logical:: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='set_boundary_cells'
   !----------------------------------------------------------------------------
+  if(iBlock==BlkTest .and. iProc==ProcTest)then
+     call set_oktest(NameSub, DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
+
+  if(DoTestMe)write(*,*) NameSub,' IsBoundaryBlock_IB=', &
+       IsBoundaryBlock_IB(:,iBlock)
 
   IsBoundaryCell_GI=.false.  
 
   if(UseBody2 .and. IsBoundaryBlock_IB(Body2_,iBlock)) &
        IsBoundaryCell_GI(:,:,:,Body2_) = R2_BLK(:,:,:,iBlock) < rBody2  
-
 
   if(IsBoundaryBlock_IB(Body1_,iBlock)) &
        IsBoundaryCell_GI(:,:,:,Body1_) = &
@@ -144,6 +170,5 @@ subroutine set_boundary_cells(iBlock)
        IsBoundaryCell_GI(:,:,:,5)= Xyz_DGB(z_,:,:,:,iBlock) < z1
   if(IsBoundaryBlock_IB(6,iBlock)) &
        IsBoundaryCell_GI(:,:,:,6)= Xyz_DGB(z_,:,:,:,iBlock) > z2  
-
 
 end subroutine set_boundary_cells
