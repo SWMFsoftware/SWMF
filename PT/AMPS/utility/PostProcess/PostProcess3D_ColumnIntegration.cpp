@@ -158,8 +158,8 @@ void cPostProcess3D::cColumnIntegral::GetCoulumnIntegral(double *ResultVector,in
 
   //get the first value of the integrand function
   for (i=0;i<3;i++) {
-    if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-12*fabs(PostProcess3D->xmin[i]);
-    if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-12*fabs(PostProcess3D->xmax[i]);
+    if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-8*fabs(PostProcess3D->xmin[i]);
+    if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-8*fabs(PostProcess3D->xmax[i]);
   }
 
   Integrand(a0,x);
@@ -177,8 +177,8 @@ void cPostProcess3D::cColumnIntegral::GetCoulumnIntegral(double *ResultVector,in
 
  //   if (PostProcess3D->IsInsideDomain(x)==false) break;
     for (i=0;i<3;i++) {
-      if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-12*fabs(PostProcess3D->xmin[i]);
-      if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-12*fabs(PostProcess3D->xmax[i]);
+      if (x[i]<=PostProcess3D->xmin[i]) x[i]=PostProcess3D->xmin[i]+1.0E-8*fabs(PostProcess3D->xmin[i]);
+      if (x[i]>=PostProcess3D->xmax[i]) x[i]=PostProcess3D->xmax[i]-1.0E-8*fabs(PostProcess3D->xmax[i]);
     }
 
     Integrand(a1,x);
@@ -254,7 +254,7 @@ void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double
       sinTheta=sin(ZenithAngle);
       cosTheta=cos(ZenithAngle);
 
-      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+sinTheta*e1[idim]+sinPhi*e2[idim];
+      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+sinPhi*e1[idim]+sinTheta*e2[idim];
 
       //calculate and output of the column integral
       ColumnIntegral->GetCoulumnIntegral(StateVector,StateVectorLength,xObservation,l,IntegrationSet->IntegrantVector);

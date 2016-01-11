@@ -369,14 +369,6 @@ void cPostProcess3D::GetInterpolationStencil(double *x,cStencil* stencil) {
     w[i]=(x[i]-bl->xmin[i])/bl->dx[i]-iCell[i];
   }
 
-/*  /////
-
-  for (i=0;i<8;i++) stencil->Weight[i]=0.0,stencil->Node[i]=0;
-  stencil->Node[0]=bl->cell[iCell[0]][iCell[1]][iCell[2]].n[0];
-  stencil->Weight[0]=1.0;
-  return;*/
-  ///
-
   for (i=0;i<2;i++) for (j=0;j<2;j++) for (k=0;k<2;k++) {
     switch (i+2*j+4*k) {
     case 0+0*2+0*4:
