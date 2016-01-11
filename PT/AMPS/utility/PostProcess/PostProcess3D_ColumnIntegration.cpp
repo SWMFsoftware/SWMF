@@ -208,7 +208,7 @@ void cPostProcess3D::cColumnIntegral::GetCoulumnIntegral(double *ResultVector,in
 //===========================================================
 //generate a circular column integral map
 void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double *PrimaryAxisDirection,double *SecondaryAxisDirection,double HalfMapAngle,int nAzimuthPoints,int nZenithPoints,const char *fname,cColumnIntegrationSet* IntegrationSet) {
-  int iZenithPoint,iAzimuthPoint,idim,i;
+  int iZenithPoint,idim,i;
   double e0[3],e1[3],e2[3],l[3],theta,phi;
   double ZenithAngle,AzimuthAngle;
   double cosPhi,sinPhi,sinTheta,cosTheta;
@@ -231,22 +231,45 @@ void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double
 
   //create the output file and print the variable list
   FILE *fout;
+  int rank,size;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  MPI_Comm_size(MPI_COMM_WORLD,&size);
 
-  fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Cut-cell Projection\", ");
-  IntegrationSet->PrintVariableList(fout);
 
-  fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
+  if (rank==0) {
+    fout=fopen(fname,"w");
+    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Cut-cell Projection\", ");
+    IntegrationSet->PrintVariableList(fout);
+
+    fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
+  }
 
   //create the column integraion map
   int StateVectorLength=IntegrationSet->IntegrantVectorLength();
   double StateVector[StateVectorLength];
+  double DataBuffer[StateVectorLength*nAzimuthPoints];
+  double GlobalDataBuffer[StateVectorLength*nAzimuthPoints];
+  double ProjectionCodeBuffer[nAzimuthPoints];
+  double GlobalProjectionCodeBuffer[nAzimuthPoints];
 
 
   for (iZenithPoint=0;iZenithPoint<nZenithPoints;iZenithPoint++) {
     ZenithAngle=HalfMapAngle-dZenitAngle*iZenithPoint;
 
-    for (iAzimuthPoint=0;iAzimuthPoint<nAzimuthPoints;iAzimuthPoint++) {
+    int iAzimuthPoint;
+    int iAzimuthPointStart,iAzimuthPointFinish;
+    int nPointPerThread=nAzimuthPoints/size;
+
+    iAzimuthPointStart=rank*nPointPerThread;
+    iAzimuthPointFinish=iAzimuthPointStart+nPointPerThread-1;
+
+    if (rank==size-1) iAzimuthPointFinish=nAzimuthPoints-1;
+
+    //clean the data buffer
+    for (i=0;i<StateVectorLength*nAzimuthPoints;i++) DataBuffer[i]=0.0,GlobalDataBuffer[i]=0.0;
+    for (i=0;i<nAzimuthPoints;i++) ProjectionCodeBuffer[i]=0.0,GlobalProjectionCodeBuffer[i]=0.0;
+
+    for (iAzimuthPoint=iAzimuthPointStart;iAzimuthPoint<=iAzimuthPointFinish;iAzimuthPoint++) {
       AzimuthAngle=HalfMapAngle-dAzimuthAngle*iAzimuthPoint;
 
       cosPhi=cos(AzimuthAngle);
@@ -272,14 +295,28 @@ void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double
         }
       }
 
-      //output value of the column integral
-      fprintf(fout,"%e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,ProjectionCode);
-      for (i=0;i<StateVectorLength;i++) fprintf(fout," %e ",StateVector[i]);
-      fprintf(fout,"\n");
+      //save the state vector in the data buffer
+      memcpy(DataBuffer+iAzimuthPoint*StateVectorLength,StateVector,StateVectorLength*sizeof(double));
+      ProjectionCodeBuffer[iAzimuthPoint]=ProjectionCode;
     }
+
+   //collect output value of the column integral
+    MPI_Reduce(DataBuffer,GlobalDataBuffer,StateVectorLength*nAzimuthPoints,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+    MPI_Reduce(ProjectionCodeBuffer,GlobalProjectionCodeBuffer,nAzimuthPoints,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+    if (rank==0) {
+      for (iAzimuthPoint=0;iAzimuthPoint<nAzimuthPoints;iAzimuthPoint++) {
+        AzimuthAngle=HalfMapAngle-dAzimuthAngle*iAzimuthPoint;
+
+        fprintf(fout,"%e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,GlobalProjectionCodeBuffer[iAzimuthPoint]);
+        for (i=0;i<StateVectorLength;i++) fprintf(fout," %e ",GlobalDataBuffer[i+iAzimuthPoint*StateVectorLength]);
+        fprintf(fout,"\n");
+      }
+    }
+
   }
 
   //close the output file
-  fclose(fout);
+  if (rank==0) fclose(fout);
 }
 

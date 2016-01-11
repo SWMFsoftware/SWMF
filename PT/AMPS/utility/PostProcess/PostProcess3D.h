@@ -20,6 +20,7 @@
 
 #include "meshAMRcutcell.h"
 #include "specfunc.h"
+#include "global.h"
 
 #define _POST_PROCESS_MAP_SIZE_ (1<<8)
 
@@ -135,6 +136,20 @@ public:
 
   void SetBlockSize(int nx,int ny,int nz) {nBlockCellX=nx,nBlockCellY=ny,nBlockCellZ=nz;}
   void GetInterpolationStencil(double *x,cStencil* stencil);
+
+  //init MPI
+  int size,rank;
+
+  inline void InitMPI() {
+    MPI_Init(NULL,NULL);
+
+    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+    MPI_Comm_size(MPI_COMM_WORLD,&size);
+  }
+
+  inline void MPI_Finalize() {
+    MPI_Finalize();
+  }
 
 
 
