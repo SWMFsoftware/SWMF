@@ -1209,37 +1209,27 @@ void Collective::Print() {
   cout << "---------------------" << endl;
   cout << "Check Simulation Constraints" << endl;
   cout << "---------------------" << endl;
-  cout << "Accuracy Constraint:  " << endl;
-  for (int i = 0; i < ns; i++) {
-    cout << "u_th < dx/dt species " << i << ".....";
-    if (uth[i] < (dx / dt))
-      cout << "OK" << endl;
-    else
-      cout << "NOT SATISFIED. STOP THE SIMULATION." << endl;
-
-    cout << "v_th < dy/dt species " << i << "......";
-    if (vth[i] < (dy / dt))
-      cout << "OK" << endl;
-    else
-      cout << "NOT SATISFIED. STOP THE SIMULATION." << endl;
+  cout << "dt=" << dt << ", dx, dy, dx=" << dx << ", " << dy << ", " << dz << endl;
+  if( dt > 0.0){
+    cout << "Accuracy and Finite Grid Instability Constraints:  " << endl;
+    cout << "dx/dt, dy/dt, dz/dt=" << dx/dt << ", " << dy/dt << ", " << dz/dt << endl;
+    for (int is = 0; is < ns; is++) {
+      cout << "species " << is << " uth=" << uth[is] << endl;
+      cout << "uth*dx/dt, uth*dt/dy, uth*dt/dz (should be in [0.1 - 1])="
+	   << uth[is]*dt/dx << ", " << uth[is]*dt/dy << ", " << uth[is]*dt/dz << endl;
+    }
   }
-  cout << endl;
-  cout << "Finite Grid Stability Constraint:  ";
-  cout << endl;
-  for (int is = 0; is < ns; is++) {
-    if (uth[is] * dt / dx > .1)
-      cout << "OK u_th*dt/dx (species " << is << ") = " << uth[is] * dt / dx << " > .1" << endl;
-    else
-      cout << "WARNING. u_th*dt/dx (species " << is << ") = " << uth[is] * dt / dx << " < .1" << endl;
+  if(Case == "BATSRUS"){
+    cout << endl;
+    cout << "---------------------" << endl;
+    cout << "Check Coupling Params" << endl;
+    cout << "---------------------" << endl;
+    for (int i = 0; i < ns; i++)
+      cout << "Q/M[" << i << "] = " << qom[i]<<endl;
 
-    if (vth[is] * dt / dy > .1)
-      cout << "OK v_th*dt/dy (species " << is << ") = " << vth[is] * dt / dy << " > .1" << endl;
-    else
-      cout << "WARNING. v_th*dt/dy (species " << is << ") = " << vth[is] * dt / dy << " < .1"  << endl;
-
+    PrintInterfaceFluid();
+    cout << endl;
   }
-
-
 }
 /*! Print Simulation Parameters */
 void Collective::save() {
