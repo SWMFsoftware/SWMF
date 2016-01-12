@@ -9,15 +9,24 @@
 
 #include "PostProcess3D.h"
 #include "SpiceUsr.h"
+#include "DustScatteringEfficientcy.h"
 
 
 #define _DUST_MODE_  0
 #define _GAS_MODE_   1
 
-#define _MODE_ _GAS_MODE_
-//#define _MODE_  _DUST_MODE_
+//#define _MODE_ _GAS_MODE_
+#define _MODE_  _DUST_MODE_
 
+
+//header of the functions for calculating of the dust scattering efficientcy
+
+
+
+
+//post-processing object
 cPostProcess3D amps;
+
 
 //process the dust file
 struct cColumnIntegrationSet {
@@ -25,8 +34,6 @@ struct cColumnIntegrationSet {
   void (*IntegrantVector)(double* Data,double *Location);
   void (*PrintVariableList)(FILE* fout);
 };
-
-
 
 
 //=================================================
@@ -73,17 +80,18 @@ namespace DUST {
       {96,0.5*(5.011872E-05+1.000000E-04)}
   };
 
-  int IntegrantVectorLength() {return 1+nRadii;}
+  int IntegrantVectorLength() {return 2+2*nRadii;}
 
   void PrintVariableList(FILE* fout) {
-    fprintf(fout," \"Column Densty\"");
+    fprintf(fout," \"Column Densty\", \"Total Brightness\"");
 
-    for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\"",VariablePair[i].GrainRadius);
+    for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
   }
 
   void IntegrantVector(double *data,double *x) {
     cPostProcess3D::cStencil Stencil;
     int i,iRadius;
+    double GrainRadius,ScatteringEfficentcy,TotalBrightness=0.0;
 
     amps.GetInterpolationStencil(x,&Stencil);
 
@@ -91,9 +99,21 @@ namespace DUST {
 
     for (i=0;i<8;i++) data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46];
 
-    for (iRadius=0;iRadius<nRadii;iRadius++) for (i=0;i<8;i++) {
-      data[1+iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+    for (iRadius=0;iRadius<nRadii;iRadius++) {
+      GrainRadius=VariablePair[iRadius].GrainRadius;
+
+      ScatteringEfficentcy=
+        LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
+
+      for (i=0;i<8;i++) {
+        data[2+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+      }
+
+      data[2+2*iRadius+1]=ScatteringEfficentcy*data[2+2*iRadius];
+      TotalBrightness+=data[2+2*iRadius+1];
     }
+
+    data[1]=TotalBrightness;
   }
 
 }
@@ -157,7 +177,7 @@ int main(int argc,char **argv) {
     IntegrationSet.PrintVariableList=DUST::PrintVariableList;
   }
 
-  amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,1.5,100,100,"map.dat",&IntegrationSet);
+  amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,5,1000,1000,"map.dat",&IntegrationSet);
   amps.SaveDataFile("Res.dat", amps.data);
 
 
