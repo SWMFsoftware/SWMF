@@ -3,21 +3,19 @@ include ./Makefile.local
 
 OBJECTS = \
 	bc/BcFields3D.o \
-	bc/BcParticles.o \
-	communication/ComBasic3D.o\
-	communication/ComInterpNodes3D.o\
-	communication/ComNodes3D.o\
-	communication/ComParser3D.o\
-	communication/ComParticles3D.o\
+	communication/Com3DNonblk.o\
+	communication/VCtopology3D.o\
 	ConfigFile/src/ConfigFile.o\
-	fields/BCStructure.o\
+	fields/Moments.o\
 	fields/EMfields3D.o\
 	grids/Grid3DCU.o\
-	inputoutput/Collective.o\
 	inputoutput/phdf5.o\
 	inputoutput/ParallelIO.o\
-	inputoutput/Restart3D.o\
+	inputoutput/OutputWrapperFPP.o\
+	inputoutput/WriteOutputParallel.o\
 	main/iPic3Dlib.o\
+	main/Collective.o\
+	main/Parameters.o\
 	mathlib/EllipticF.o\
 	particles/Particles3D.o\
 	particles/Particles3Dcomm.o\
@@ -26,7 +24,12 @@ OBJECTS = \
 	solvers/CG.o\
 	solvers/GMRES.o\
 	utility/asserts.o\
-	utility/debug.o
+	utility/debug.o\
+	utility/IDgenerator.o\
+	utility/Basic.o\
+	utility/TimeTasks.o\
+	utility/MPIdata.o\
+	utility/errors.o
 
 OBJECTS_EXE = \
 	iPic3D.o
