@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !April 30, 2007 implementing MultiFluid
 !June 01, 2007 correcting normalization
@@ -18,19 +19,24 @@
 !July 20-WORKED! 
 !July 28-4 neutral fluids
 !September 28 - source terms as McNutt
-!March 25, 2015 - adapted to be solved with either multifluid neutrals or single 
-!ion MHD used for PT-OH coupling by A. Michael with help from  Gamma. Toth 
+!March 25, 2015 - adapted to be solved with either multifluid neutrals or single
+!ion MHD used for PT-OH coupling by A. Michael with help from G. Toth
+!July 2015 - trying not to have body at 30AU for the neutrals
+!September 2015 - A.Michael added time dependent code to user_update_states
+! in subroutine calc_time_dep_sw, it reads in file solarwind.dat
+!note TimeDep code was implemented without the Heliopause function
+!September 2015 - Added user_init_session
 !==============================================================================
 module ModUser
 
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBLK
   use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
-       nBlock, Unused_B
+       nBlock, Unused_B, Time_Simulation
   use ModPhysics,    ONLY: Gamma, GammaMinus1, UnitX_, Io2Si_V, Si2Io_V, No2Io_V, No2Si_V, & 
        Io2No_V,  NameTecUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
        UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, UnitTemperature_, &
-       UnitT_, UnitRhoU_, Si2No_V
-  use ModNumConst,      ONLY: cRadToDeg, cTwoPi
+       UnitT_, UnitRhoU_, Si2No_V, OmegaBody
+  use ModNumConst,      ONLY: cRadToDeg, cTwoPi, cDegToRad
   use ModConst,         ONLY: cBoltzmann, cProtonMass
   use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
   use ModGeometry,   ONLY: Xyz_DGB, r_BLK, true_cell
@@ -45,16 +51,18 @@ module ModUser
        RhoBcFactor_I, uBcFactor_I, select_fluid
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
-       IMPLEMENTED2  => user_set_face_boundary,                  &
+       IMPLEMENTED2  => user_set_face_boundary,         &
        IMPLEMENTED3  => user_normalization,             &
-       IMPLEMENTED4  => user_set_cell_boundary,              &
+       IMPLEMENTED4  => user_set_cell_boundary,         &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
+       IMPLEMENTED7  => user_update_states,                &
        IMPLEMENTED8  => user_action,                    & 
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
-       IMPLEMENTED12 => user_init_point_implicit
+       IMPLEMENTED12 => user_init_point_implicit,       &
+       IMPLEMENTED13 => user_init_session
 
 
   include 'user_module.h' !list of public methods
@@ -95,6 +103,8 @@ module ModUser
 
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
+
+  integer :: iTableSolarWind = -1 ! initialization is needed
 
   ! SWH variables.
   !/
@@ -276,7 +286,7 @@ contains
     use ModFaceBoundary, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBlockBc
 
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_sph, rot_matrix_z, rot_matrix_y
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -384,44 +394,10 @@ contains
 
        ! soft boundary for Pop I-IV
 
-       VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
-
-       ! PopII leaves the domain at a supersonic velocity 
-       ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-       ! For the transient case when it flows inward, we use a fraction of ions
-
-       if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne2_)
-          VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne2_)
-          VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-               uBcFactor_I(Ne2_)
-       else
-          VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
-       end if
-
-       ! Pop III has the velocity and temperature of the ions at inner boundary
-       ! the density is taken to be a fraction of the ions
-
-       if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne3_)
-          VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne3_)
-          VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-               uBcFactor_I(Ne3_)
-       else
-          VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
-       end if
-
-       ! Pop IV 
-
-       if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
-          VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne4_)
-          VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-               uBcFactor_I(Ne4_)
-       else
-          VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
-       end if
+       VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
+       
     endif
+    
     if(DoTestMe)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
        write(*,*) NameSub,' i,j,kFace=', iFace, jFace, kFace
@@ -493,15 +469,7 @@ contains
        ! PopIV is the one one coming with the ISW
        ! The separation between Pop IV and Pop I is arbitrary so
        ! we took the separation as Vlad in x=-1500AU
-       !
-       !!State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = 0.361*RhoNeutralsISW    
-       !!State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UxNeutralsISW    
-       !!State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UyNeutralsISW   
-       !!State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UzNeutralsISW    
-       !hydro run State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.3202*PNeutralsISW
-       !!State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.361*PNeutralsISW
-       
-       ! augst26 cond
+     
        State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = RhoNeutralsISW
        State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = RhoNeutralsISW*UxNeutralsISW
        State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = RhoNeutralsISW*UyNeutralsISW
@@ -540,7 +508,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModPhysics,  ONLY: rBody
-    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModCoordTransform, ONLY: rot_xyz_sph, rot_matrix_y, rot_matrix_z
 
     integer, intent(in) :: iBlock
 
@@ -556,6 +524,38 @@ contains
     ! real :: thetaN, sinthetaN, lambda, RhoSolarW
     ! real :: sin2Theta_fast_wind
 
+    ! tilted declarations
+    ! Magnetic field and velocity vectors in spherical coordinates
+    real :: bParker_D(3), vSolar_D(3)
+
+    ! Rotation matrix between solar (solar means tilted coordinates) and simulation coordinates
+    real, save :: RotMatrix_DD(3,3)
+
+    ! I included an extra matrix to rotate between tilted and intertial coordinates
+    real, save :: RotMatrixInv_DD(3,3)   !teste
+
+    ! Position vector in solar coordinates (merav) at the grid point 
+    real, dimension(3) :: XyzS_D
+    real, dimension(3) :: Xyz_D
+ 
+
+    ! The last time the rotation matrix was calculated
+    real :: TimeLast = -1.0
+
+    ! Initialize only once
+    logical :: IsUninitialized = .true.
+  
+    ! Velocity and magnetic field in Cartesian coordinates
+    real :: Vxyz_D(3), Bxyz_D(3)
+
+    ! Tilt of the rotation axis in degrees
+    real :: ThetaTiltDeg, THETAtilt, rot_period_dim
+
+    ! added in June 2010
+    real :: xt, yt, zt, rt
+
+    ! end of tilt declarations
+
     character(len=*), parameter:: NameSub = 'user_set_ics'
     logical :: DoTest, DoTestMe, DoTestCell
     !--------------------------------------------------------------------------
@@ -569,6 +569,61 @@ contains
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0)call set_omega_parker_tilt
 
+    if(IsUninitialized)then
+       ! Initialize some constants
+
+       THETAtiltDeg = 0.0
+       ! Convert to radians :
+       THETAtilt = cTwoPi*THETAtiltDeg/360.00
+       
+       ! Defining the rotation components of the Sun
+       rot_period_dim = 26.0*24.0                   ! rotation period in hours
+       OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+       
+       IsUninitialized = .false.
+    endif
+    if(Time_Simulation /= TimeLast)then
+       !      Calculate the rotation matrix for the current time
+       !      The order and the signs should be carefully checked and verified
+       
+       THETAtiltDeg = 0.0
+       ! Convert to radians :
+       THETAtilt = cTwoPi*THETAtiltDeg/360.00
+       
+       ! Defining the rotation components of the Sun
+       rot_period_dim = 26.0*24.0                   ! rotation period in hours
+       OmegaBody = cTwoPi/(rot_period_dim*3600.00)
+       
+       
+       ! to perform the negative rotation from TILTED -> INERTIAL
+       
+       !\
+       ! Merav's Original Code
+       !/
+       !RotMatrix_DD = matmul(&
+       !     rot_matrix_y(THETAtilt), &        ! rotate around y axis by tilt
+       !     rot_matrix_z(OMEGAbody*Time_Simulation))  ! rotate around z axis by rotation
+       !
+       !RotMatrixInv_DD = matmul(&
+       !     rot_matrix_y(-THETAtilt), &        ! rotate around y axis by tilt
+       !     rot_matrix_z(-OmegaBody*Time_Simulation))
+       !\
+       ! End Merav's Original Code
+       !/
+
+       ! Gabor's  Edits
+       RotMatrix_DD = matmul(&
+            rot_matrix_y(THETAtilt), &        ! rotate around y axis by tilt
+            rot_matrix_z(OMEGAbody*Time_Simulation))  ! rotate around z axis by rotation
+       
+       RotMatrixInv_DD = matmul(&
+            rot_matrix_z(-OmegaBody*Time_Simulation), &
+            rot_matrix_y(-THETAtilt))        ! rotate around y axis by tilt
+       ! end Gabor's edits
+
+       TimeLast = Time_Simulation
+    end if
+
     do i=MinI,MaxI; do j=MinJ,MaxJ; do k=MinK,MaxK
 
        if(.not. true_cell(i,j,k,iBlock)) CYCLE
@@ -580,55 +635,55 @@ contains
        z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
 
+       !june 2010
+       Xyz_D = matmul( (/x, y, z/), RotMatrix_DD)
+
+       xt = Xyz_D(1)
+       yt = Xyz_D(2)
+       zt = Xyz_D(3) 
+       rt = sqrt(xt**2+yt**2+zt**2)
+
        XyzSph_DD = rot_xyz_sph(x,y,z)
 
        ! theta is the angle measured from the pole
-       SinTheta = sqrt(x**2+y**2)/r
+       SinTheta = sqrt(xt**2+yt**2)/rt
 
-       ! for the neutrals thetaN angle is relative to the X axis
-       ! thetaN = atan(sqrt(y**2+z**2)/(x+cTiny))
-       ! sinThetaN=sqrt(y**2+z**2)/r
-       ! lambda = 4.0
-       !so pra iniciar eu fixei lambda como 4.0 
-       !(olha a expressao 3.53 da tese do Linde)
+       !2015
+       Vsph_D = (/ SWH_Ux, 0., 0. /)
+
+       vSolar_D(1) = vSph_D(1) !Radial velocity
+       vSolar_D(2) = vSph_D(2)
+       vSolar_D(3) = vSph_D(3) !VERIFY THAT!!
 
        !calculating the Parker B field spherical components Bsph_D
+
+       !2015
+       rBody = 30.
+       OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
+       ParkerTilt = OmegaSun*rBody/SWH_Ux
 
        ! good for polarity of 1997       SignZ = sign(1.0, z)
        SignZ = -sign(1.0,z)  ! good for 2005
 
-       Bsph_D(1) = SignZ*SWH_Bx*(rBody/r)**2  ! Br
+       ! dipole configuration
+       !Bsph_D(1) = SignZ*SWH_Bx*(rBody/rt)**2  ! Br
+       !Bsph_D(2) = 0.0                        ! Btheta
+       !Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) !Bphi
+
+       !monopole magnetic field
+       Bsph_D(1) = SWH_Bx*(rBody/rt)**2  ! Br
        Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/r) !Bphi
+       Bsph_D(3) = SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) !Bphi
 
-       ! wrong:   Vphi = OmegaSun*(6.96E5)*sin_theta/No2Io_V(UnitU_)
-       ! correct: Vphi = OmegaSun*sin_theta*rSun**2/r
-       ! rSun must be in normalized units, of course
-       ! Vphi is approximately 0. (30km/s at 1AU, 1km/s at 30AU)
+       ! tilted
+       bParker_D(1) = Bsph_D(1) !Radial component
+       bParker_D(2) = Bsph_D(2) !Theta component
+       bParker_D(3) = Bsph_D(3) !Phi component
 
-       Vsph_D = (/ SWH_Ux, 0., 0. /)
-
-       !! Introducing the Fast Solar Wind
-       !!    sin2Theta_fast_wind = 0.250000    ! 30 degrees
-       !!  sin2Theta_fast_wind = 0.1786062   ! 25 degrees
-       !!  sin2Theta_fast_wind = 0.116980    ! 20 degrees
-       !!  sin2Theta_fast_wind = 1.000000    ! 90 degrees
-       !!      if (sin_theta*sin_theta > sin2Theta_fast_wind) then
-       !!          !SLOW WIND
-       !!          VrS     = SWH_Ux
-       !!          RhoSolarW    = SWH_rho
-       !!       else
-       !!          ! FAST WIND
-       !!          VrS     =  SWfast_Ux
-       !!          RhoSolarW    =  SWfast_rho
-       !!      end if
-       !!
-       !! I still need to impemenet that the density 
-       !! varies between slow and fast solar wind
-       !!
+       bParker_D    = matmul(RotMatrixInv_DD, bParker_D)
 
        ! magnetic field components in cartesian coordinates
-       b_D = matmul(XyzSph_DD, Bsph_D)
+       b_D = matmul(XyzSph_DD, bParker_D)
 
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
@@ -648,8 +703,6 @@ contains
           !/
           State_VGB(NeuRho_,i,j,k,iBlock)  =  RhoNeutralsISW
           State_VGB(NeuP_,i,j,k,iBlock) =   PNeutralsISW
-          !!     State_VGB(NeuRhoUx_:NeuRhoUz_,i,j,k,iBlock) = &
-          !!          0.06*State_VGB(NeuRho_,i,j,k,iBlock)*v_D
           State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
           State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
           State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
@@ -666,10 +719,10 @@ contains
           ! The temperature is set to be 10^5K for this population.
           ! v_D is the plasma velocity, we take one quarter of that.
           !/
-          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
-          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW 
-          State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = &
-               0.25*State_VGB(Ne2Rho_,i,j,k,iBlock)*v_D
+          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 
+          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 
+          State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = 1.e-3
+          
           !\ 
           ! PopIII
           !/
@@ -741,6 +794,139 @@ contains
 
   !=====================================================================
 
+  subroutine user_update_states(iStage, iBlock)
+    
+    use ModAdvance, ONLY: StateOld_VCB, State_VGB, EnergyOld_CBI, Energy_GBI
+    use ModGeometry, ONLY: rMin_BLK
+
+    integer,intent(in):: iStage, iBlock
+
+    integer:: i, j, k
+    
+    !------------------------------------------------------------------
+    call update_states_MHD(iStage, iBlock)
+
+    ! No need to check blocks outside:
+    if(rMin_BLK(iBlock) > rBody) RETURN
+
+    do k=1, nK; do j=1, nJ; do i=1, nI
+       if(r_BLK(i,j,k,iBlock)  > rBody) CYCLE
+
+       if(iTableSolarwind > 0)then
+          ! Calculate the time dependent solar wind
+          call calc_time_dep_sw(i,j,k,iBlock)
+       else
+          ! Retain initial condition if time dependent solar wind is not used
+          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VCB(Rho_:p_,i,j,k,iBlock) 
+          Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1)
+       endif
+    
+    end do; end do; end do
+
+     contains
+       !======================================================================
+       subroutine calc_time_dep_sw(i,j,k,iBlock)
+
+         use BATL_lib,       ONLY: Xyz_DGB
+         use ModCoordTransform, ONLY: rot_xyz_sph
+         use ModLookupTable,    ONLY: interpolate_lookup_table
+         use ModEnergy,      ONLY: calc_energy
+         
+         integer,intent(in):: i, j, k, iBlock
+         
+         ! variables for Solar Cycle
+         real :: Rho, Ur, Temp, p, x, y, z, r, Latitude
+         real :: Bsph_D(3), Vsph_D(3)
+         
+         real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
+         
+         real, parameter:: LengthCycle = 662206313.647 ! length of solar cycle
+
+         real :: TimeCycle ! holds current time of the simulation
+         real :: Value_I(3)
+         real :: SinTheta
+         
+         !---------------------------------------------------------------------
+         
+         ! calculate the latitude of the cell
+         x = Xyz_DGB(1,i,j,k,iBlock)
+         y = Xyz_DGB(2,i,j,k,iBlock)
+         z = Xyz_DGB(3,i,j,k,iBlock)
+         r = r_BLK(i,j,k,iBlock)
+
+         XyzSph_DD = rot_xyz_sph(x,y,z)
+         
+         SinTheta = sqrt(x**2+y**2)/r
+         
+         ! calculating latitude of the cell
+         Latitude = cRadToDeg*asin(z/r)
+
+         ! calculating time relative to the solar cycle
+         TimeCycle = modulo(Time_Simulation, LengthCycle) 
+         
+         ! interpolating the value of Rho, Vr, and Temp 
+         ! at the cell from the lookup table
+         call interpolate_lookup_table(iTableSolarwind, Latitude, TimeCycle, &
+              Value_I)
+         
+         Ur  = Value_I(1)*Io2No_V(UnitU_)
+         Rho = Value_I(2)*Io2No_V(UnitRho_)
+         Temp= Value_I(3)*Io2No_V(UnitTemperature_)
+         p = 2.0*Rho*Temp
+
+         ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
+         Vsph_D    = (/ Ur, 0.0, 0.0 /)         
+         
+         !\
+         !monopole with By negative and a time varying B 
+         ! time-dependent behavior of B taken from Michael et al. 2015
+         !/  
+         Bsph_D(1) = (SQRT(0.5)/rBody**2)*(9.27638+ &
+              7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
+              0.144184*SIN(2.22823d-8*TimeCycle)+ &
+              47.7758*SIN(2.18788d-10*TimeCycle)+ &
+              83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
+         Bsph_D(2) =  0.0                             ! Btheta
+         Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
+         !Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+
+         !\
+         !for dipole with a time varying B
+         !/
+         !Bsph_D(1) = sign((SQRT(0.5)/rBody**2)*(9.27638+ &
+         !     7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
+         !     0.144184*SIN(2.22823d-8*TimeCycle)+ &
+         !     47.7758*SIN(2.18788d-10*TimeCycle)+ &
+         !     83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_), z) ! Br
+         !Bsph_D(2) =  0.0                             ! Btheta
+         !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+         !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
+         
+         ! Scale density, pressure, and magnetic field with radial distance
+         Rho = Rho*(rBody/r)**2
+         p     = p*(rBody/r)**(2*Gamma)
+         Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
+         Bsph_D(3) = Bsph_D(3)*(rBody/r)
+
+         ! Setting the state variables
+         State_VGB(Rho_,i,j,k,iBlock) = Rho
+         
+         ! Velocity converted to 3 components of momentum in Cartesian coords
+         State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = matmul(XyzSph_DD, Rho*Vsph_D)
+         
+         ! Spherical magnetic field converted to Cartesian components
+         State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
+
+         ! Sets pressure and energy only for the ion fluid
+         State_VGB(p_,i,j,k,iBlock) = p
+         call calc_energy(i, i, j, j, k, k, iBlock, 1, 1)
+
+       end subroutine calc_time_dep_sw
+
+  end subroutine user_update_states
+
+  !=====================================================================
+
   subroutine user_action(NameAction)
 
     character(len=*), intent(in):: NameAction
@@ -800,7 +986,7 @@ contains
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
     Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
     Io2Si_V(UnitB_)           = 1.0E-9                    ! nT 
-    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! Gamma/cm^2/s
+    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
     Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
     Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
     Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
@@ -1087,9 +1273,9 @@ contains
 
     ! Figure out which neutral population is produced at this point
     if(.not.IsPointImplPerturbed) call select_region(iBlock) 
-
+    
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
+       
        ! Extract conservative variables
        State_V = State_VGB(:, i, j, k, iBlock)
 
@@ -1466,8 +1652,10 @@ contains
 
        ! Apply full source except near the boundaries between regions
 !!!october11       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
-       if (MachPop4Limit**2 < MachMagneto2 .and. uPop1LimitDim**2 > U2Dim) then
+!!!       if (MachPop4Limit**2 < MachMagneto2 .and. uPop1LimitDim**2 > U2Dim) then
 !!!       if (MachPop4Limit**2 < MachAlfven2 .and. uPop1LimitDim**2 > U2Dim .and. MachPop3Limit**2 < Mach2) then
+!!!july12 use sonic Mach number - Berci
+       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then  
           !Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
        elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
@@ -1525,5 +1713,28 @@ contains
     IsPointImplMatrixSet = .false.
 
   end subroutine user_init_point_implicit
+
+  !=======================================================================
+
+  subroutine user_init_session
+
+    use ModProcMH,        ONLY: iProc
+    use ModReadParam,     ONLY: i_session_read
+    use ModIO,            ONLY: write_prefix
+    use ModAdvance,       ONLY: iUnitOut
+    use ModLookupTable,   ONLY: i_lookup_table
+
+    implicit none
+    
+    if(iProc == 0)then
+       call write_prefix; write(iUnitOut,*) ''
+       call write_prefix; write(iUnitOut,*) 'user_init_session:'
+       call write_prefix; write(iUnitOut,*) ''
+    end if
+    
+    ! Get index for the solar wind table holding time-dep. solar cycle values
+    iTableSolarwind = i_lookup_table('solarwind2d')
+    
+  end subroutine user_init_session
 
 end module ModUser
