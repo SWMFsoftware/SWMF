@@ -984,7 +984,13 @@ public:
 	BY  = weightedValue(_field->getBy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
 	BZ  = weightedValue(_field->getBz(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
 	
-
+	for (int i=0; i<nVar; i++){
+	  // The variable for hyperbolic clean, is not known by iPIC3D,
+	  // but it is needed to be passed back. So data_I need to be
+	  // initilized.
+	  data_I[n + i] = 0;
+	}
+	
 	data_I[n + _col->iBx] = BX; 
 	data_I[n + _col->iBy] = BY;
 	data_I[n + _col->iBz] = BZ;

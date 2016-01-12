@@ -1217,7 +1217,8 @@ class InterfaceFluid
 
     Si2No_V = new double[nVarCoupling];
     No2Si_V = new double[nVarCoupling];
-
+    for(int i =0; i<nVarCoupling; i++) Si2No_V[i] = 1;
+    
     n = 0; 
     for(int i =0; i<3; i++){
       INxRange_I[2*i]     = griddim[n++];      // Lmin
