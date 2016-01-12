@@ -1,7 +1,11 @@
-#!/usr/bin/perl -i
+#!/usr/bin/perl
 #  Copyright (C) 2002 Regents of the University of Michigan, 
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
+
+# Allow in-place editing
+$^I = "";
+
 use strict;
 
 # Default compiler per machine or OS
