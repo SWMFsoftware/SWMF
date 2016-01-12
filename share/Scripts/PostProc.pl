@@ -3,18 +3,18 @@
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-my $Help    = ($h or $H or $help);
-my $Verbose = ($v or $verbose);
-my $Gzip    = ($g or $gzip);
-my $Repeat  = ($r or $repeat);
-my $Stop    = ($s or $stop or 2);
-my $Concat  = ($c or $cat and not $Repeat);
-my $MakeMovie = ($m or $movie or $M or $MOVIE);
+my $Help          = ($h or $H or $help);
+my $Verbose       = ($v or $verbose);
+my $Gzip          = ($g or $gzip);
+my $Repeat        = ($r or $repeat);
+my $Stop          = ($s or $stop or 2);
+my $Concat        = ($c or $cat and not $Repeat);
+my $MakeMovie     = ($m or $movie or $M or $MOVIE);
 my $KeepMovieOnly = ($M or $MOVIE);
-my $nThread = ($n or 4);
-my $Rsync   = ($rsync or $sync);
-my $AllParam = ($param or $allparam);
-my $Pattern  = $p;
+my $nThread       = ($n or 4);
+my $Rsync         = ($rsync or $sync);
+my $AllParam      = ($param or $allparam);
+my $Pattern       = $p;
 
 use strict;
 use File::Find;
@@ -216,8 +216,11 @@ foreach my $Dir (sort keys %PlotDir){
 
 # Copy and move some input and output files if present
 if(-f $ParamIn){
-    print "$INFO: cp $ParamIn $NameOutput/\n";
-    `cp $ParamIn $NameOutput/`;
+    if($AllParam){
+	&shell_info("cp PARAM.* LAYOUT.* $NameOutput");
+    }else{
+	&shell_info("cp $ParamIn $NameOutput");
+    }
 }else{
     warn "$WARNING: no $ParamIn file was found\n";
 }
@@ -225,36 +228,34 @@ if(-f $ParamIn){
 &read_runlog;
 
 if(-f "runlog"){
-    print "$INFO: mv runlog $NameOutput/\n";
-    `mv runlog $NameOutput`;
+    &shell_info("mv runlog $NameOutput");
 }elsif(glob("runlog_[0-9]*")){
-    print "$INFO: mv runlog_[0-9]* $NameOutput/\n";
-    `mv runlog_[0-9]* $NameOutput`;
+    &shell_info("mv runlog_[0-9]* $NameOutput");
 }else{
     warn "$WARNING: no $RunLog file was found\n";
 }
 
-# Files used for IPIC3D coupled runs
-`cp IPIC.in $NameOutput/`    if -f "IPIC.in";
-`mv runlog.bats $NameOutput` if -f "runlog.bats";
-`mv runlog.ipic $NameOutput` if -f "runlog.ipic";
-
-print "$INFO: Restart.pl -o $NameOutput/RESTART\n";
-&shell("./Restart.pl -o $NameOutput/RESTART");
+&shell_info("./Restart.pl -o $NameOutput/RESTART");
 
 if($Rsync){
-    print "$INFO: rsync -avz $NameOutput $Rsync\n";
-    &shell("rsync -avz $NameOutput/ $Rsync");
+    &shell_info("rsync -avz $NameOutput/ $Rsync");
     print "$INFO: rsync is complete\n";
 }
 
 exit 0;
 
 #############################################################
-
 sub shell{
     my $command = join(" ",@_);
     print "$command\n" if $Verbose;
+    my $result = `$command`;
+    print $result if $Verbose or $result =~ /error/i;
+}
+
+#############################################################
+sub shell_info{
+    my $command = join(" ",@_);
+    print "$INFO: $command\n";
     my $result = `$command`;
     print $result if $Verbose or $result =~ /error/i;
 }
@@ -372,7 +373,7 @@ sub print_help{
 Usage:
 
    PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT [-s=STOP] | DIR] 
-               [-n=NTHREAD] [-p=PATTERN]
+               [-n=NTHREAD] [-p=PATTERN] [-param|-allparam]
 
    -h -help    Print help message and exit.
 
@@ -397,7 +398,8 @@ Usage:
 
    -p=PATTERN  Pass pattern to pIDL so it only processes the files that match.
 
-   -param      Will rsync PARAM.* and LAYOUT.* to rsync directory
+   -param      Copy and/or rsync PARAM.* and LAYOUT.* files.
+   -allparam   Same as -param.
 
    -rsync=TARGET Copy processed plot files into an other directory 
                (possibly on another machine) using rsync. The TARGET
@@ -427,9 +429,9 @@ PostProc.pl
 PostProc.pl -M -cat -n=8 RESULTS/run23
 
    Post-process the plot files, compress the ASCII files, rsync the results
-   to another machine and print verbose info:
+   and PARAM.* and LAYOUT.* files to another machine and print verbose info:
 
-PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
+PostProc.pl -g -param -rsync=ME@OTHERMACHINE:My/Results -v
 
    Repeat post-processing every 360 seconds for files matching "IO2/x=",
    pipe standard output and error into a log file and stop after 3 days:
@@ -437,9 +439,10 @@ PostProc.pl -g -rsync=ME@OTHERMACHINE:My/Results -v
 PostProc.pl -r=360 -s=3 -p=IO2/x= >& PostProc.log &
 
    Collect processed output into a directory tree named OUTPUT/New
-   and rsync it into the run/OUTPUT/New directory on another machine:
+   and rsync it together with the PARAM.* and LAYOUT.* files 
+   into the run/OUTPUT/New directory on another machine:
 
-PostProc.pl -rsync=ME@OTHERMACHINE:run/OUTPUT/New OUTPUT/New'
+PostProc.pl -allparam -rsync=ME@OTHERMACHINE:run/OUTPUT/New OUTPUT/New'
 
 #EOC
     ,"\n\n";
