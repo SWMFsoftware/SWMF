@@ -3,9 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine write_plot_particle(iFile)
 
-  ! Save field line particles
+  ! Save particle data
 
-  use ModProcMH,  ONLY: iComm, iProc
+  use ModProcMH,  ONLY: iComm, iProc, nProc
   use ModMain,    ONLY: n_step, time_accurate, time_simulation
   use ModIO,      ONLY: &
        StringDateOrTime, NamePlotDir, &
@@ -13,13 +13,15 @@ subroutine write_plot_particle(iFile)
        nLine_I, XyzStartLine_DII, Plot_
 
   use ModPlotFile,ONLY: save_plot_file
+
   use ModParticleFieldLine
+  
   implicit none
 
   integer, intent(in):: iFile
 
   character(len=100) :: NameFile, NameStart, NameVar
-
+  character (len=80) :: NameProc
   ! container for data
   real, pointer:: PlotVar_VI(:,:)
 
@@ -33,9 +35,6 @@ subroutine write_plot_particle(iFile)
 
   iPlotFile = iFile - Plot_
 
-!  call extract_particle_line(nLine_I(iPlotFile), &
-!       XyzStartLine_DII(:,:,iPlotFile))
-  
   ! Set the name of the variables based on plot form
   select case(plot_form(iFile))
   case('tec')
@@ -59,18 +58,24 @@ subroutine write_plot_particle(iFile)
 
   if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
   write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
-  
+
+  ! String containing the processor index
+  if(nProc < 10000) then
+     write(NameProc, '(a,i4.4,a)') "_pe", iProc
+  elseif(nProc < 100000) then
+     write(NameProc, '(a,i5.5,a)') "_pe", iProc
+  else
+     write(NameProc, '(a,i6.6,a)') "_pe", iProc
+  end if
+
+  NameFile = trim(NameFile) // trim(NameProc)
+
   if(IsIdl)then
      NameFile = trim(NameFile) // '.out'
   else
      NameFile = trim(NameFile) // '.dat'
   end if
 
-
-  ! Each processor writes its own file
-  !====================================
-  ! JUST 1 PROCESSOR FOR NOW
-  !====================================
   ! get the data on this processor
   call get_particle_data('xx yy zz fl id', &
        PlotVar_VI, nPlotVar, nParticle)
@@ -81,9 +86,9 @@ subroutine write_plot_particle(iFile)
        StringHeaderIn = "TEMPORARY", &
        TimeIn         = time_simulation, &
        nStepIn        = n_step, &
-       NameVarIn  = 'X Y Z FieldLine Index', &
-       IsCartesianIn= .false., &
-       CoordIn_I  = PlotVar_VI(1, :), &
-       VarIn_VI   = PlotVar_VI(2:,:))
-  
+       NameVarIn      = 'X Y Z FieldLine Index', &
+       IsCartesianIn  = .false., &
+       CoordIn_I      = PlotVar_VI(1, :), &
+       VarIn_VI       = PlotVar_VI(2:,:))
+
 end subroutine write_plot_particle

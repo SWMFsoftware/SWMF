@@ -28,7 +28,6 @@ module ModParticleFieldLine
   public:: read_particle_line_param
   public:: init_particle_line
   public:: extract_particle_line
-  public:: sort_particle_line
   public:: get_particle_data
 
 
@@ -91,7 +90,6 @@ contains
     character(len=100) :: StringSpaceStepMode
     integer:: iLine, iDim ! loop variables
     !------------------------------------------------------------------------
-    
     select case(NameCommand)
     case("#PARTICLELINE")
        call read_var('UseParticles', UseParticles)
@@ -174,18 +172,16 @@ contains
     real,    intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
 
     integer :: nLineThisProc ! number of new field lines initialized
-    integer :: iFieldLine ! loop variable
+    integer :: iFieldLine    ! loop variable
     integer :: iBlock
-    integer :: nParticleOld ! number of already existing regular particles
-    integer :: iParticle ! loop variable
-    logical :: IsCompleted_I(nFieldLineIn)
+    integer :: nParticleOld  ! number of already existing regular particles
+    integer :: iParticle     ! loop variable
 
     ! direction of the magnetic field
     real:: Dir_D(MaxDim)
 
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
-
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -261,7 +257,7 @@ contains
           call remove_undefined_particles(KindEnd_)
 
           ! check if all field lines have been completed
-          if(Particle_I(KindEnd_)%nParticle == 0) EXIT TRACE
+          if(is_complete()) EXIT TRACE
 
           !\
           ! Corrector step
@@ -289,7 +285,7 @@ contains
           call remove_undefined_particles(KindEnd_)
 
           ! check if all field lines have been completed
-          if(Particle_I(KindEnd_)%nParticle == 0) EXIT TRACE
+          if(is_complete()) EXIT TRACE
 
           ! increase particle index & copy to regular
           StateEnd_VI(Index_,1:Particle_I(KindEnd_)%nParticle) = &
@@ -301,15 +297,7 @@ contains
 
        ! if just finished backward tracing => return to initial particles
        if(iDirTrace < 0)then
-          ! first fix indices of particles along field lines
-          do iParticle = nParticleOld+1, Particle_I(KindReg_)%nParticle
-             iFieldLine = nint(StateReg_VI(fl_, iParticle))
-             StateReg_VI(Index_, iParticle) = &
-                  StateReg_VI(Index_, iParticle) + &
-                  nParticleFieldLine_I(iFieldLine)
-          end do
-
-          ! now copy initial points to KindEnd_:
+          ! copy initial points to KindEnd_:
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
@@ -321,9 +309,6 @@ contains
        end if
     end do
 
-    ! finally, sort particle list with respect to indices along field lines
-    call sort_particle_line
-
   contains
 
     subroutine start_line(XyzStart_D, iFieldLineIndex)
@@ -334,6 +319,11 @@ contains
       integer:: iProcOut, iBlockOut
       ! variables to call check_interpolate_amr_gc
       logical:: IsPossible, IsBoundary
+      ! container for error message 
+      character(len=100):: StringError
+
+      character(len=*), parameter :: &
+           NameSub = 'ModParticleFieldLine::extract_particle_line::start_line'
       !----------------------------------------------------------------------
       ! find block and processor suitable for interpolation
       call check_interpolate_amr_gc(XyzStart_D, &
@@ -341,7 +331,12 @@ contains
            iProcOut, iBlockOut, IsBoundary)
 
       ! check whether point is outside of the domain
-      if(IsBoundary) RETURN
+      if(IsBoundary)then
+         write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
+              "Start point for a field line is outside of the domain: X = ",&
+              XyzStart_D(1), " Y = ", XyzStart_D(2), " Z = ", XyzStart_D(3) 
+         call stop_mpi(NameSub //": "//StringError)
+      end if
 
       !\
       ! Assign particle to an appropriate processor
@@ -359,6 +354,20 @@ contains
       StateEnd_VI(Index_,Particle_I(KindEnd_)%nParticle) = 0
       iBlockEnd_I(Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
+    !========================================================================
+    function is_complete() result(IsCompleteOut)
+      use ModMpi
+      use BATL_mpi, ONLY: iComm
+      ! returns true if tracing is complete for all field line on all procs
+      logical:: IsComplete, IsCompleteOut
+      integer:: iError
+      !----------------------------------------------------------------------
+      if(Particle_I(KindEnd_)%nParticle < 0)STOP
+      IsComplete = Particle_I(KindEnd_)%nParticle == 0
+      ! reduce IsComplete variable from all processors
+      call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
+           MPI_LOGICAL, MPI_LAND, iComm, iError)               
+    end function is_complete
     !========================================================================
     subroutine copy_end_to_regular
       ! copies indicated variables of known end particles to regular particles
@@ -435,38 +444,6 @@ contains
 
   !========================================================================
 
-  subroutine sort_particle_line
-    ! the subroutine sorts particles in the increasing order 
-    integer, allocatable:: iOrder_I(:)
-    integer:: iFieldLine, iParticle
-    !----------------------------------------------------------------------
-    allocate(iOrder_I(Particle_I(KindReg_)%nParticle))
-    ! compute offsets (cumulutive sum) to different field lines
-    iParticleFieldLineOffset_I(1) = 0
-    do iFieldLine = 2, nFieldLine
-       iParticleFieldLineOffset_I(iFieldLine) = &
-            iParticleFieldLineOffset_I(iFieldLine-1) + &
-            nParticleFieldLine_I(iFieldLine-1)
-    end do
-    ! find the order of particles
-    do iParticle = 1, Particle_I(KindReg_)%nParticle
-       iFieldLine = nint(Particle_I(KindReg_)%State_VI(fl_, iParticle))
-       iOrder_I(iParticle) = &
-            iParticleFieldLineOffset_I(iFieldLine) + &
-            nint(Particle_I(KindReg_)%State_VI(Index_, iParticle))
-    end do
-    ! rearrange particles
-    Particle_I(KindReg_)%State_VI(:, iOrder_I) = &
-         Particle_I(KindReg_)%State_VI(:, 1:Particle_I(KindReg_)%nParticle)
-    Particle_I(KindReg_)%iBlock_I(   iOrder_I) = &
-         Particle_I(KindReg_)%iBlock_I(   1:Particle_I(KindReg_)%nParticle)
-
-    deallocate(iOrder_I)
-
-  end subroutine sort_particle_line
-
-  !========================================================================
-  
   subroutine get_particle_data(NameVar, DataOut_VI, nDataVar, nParticle)
     ! the subroutine gets variables specified in the string StringVar
     ! and writes them into DataOut_VI
@@ -514,7 +491,7 @@ contains
     end do
 
   contains
-    
+
     function is_var(Name) result(IsPresent)
       ! finds if var Name is present
       ! if yes => remove it from NameVarProc
