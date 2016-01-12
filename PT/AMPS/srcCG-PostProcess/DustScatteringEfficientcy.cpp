@@ -1,5 +1,7 @@
 
 #include <math.h>
+#include "constants.h"
+#include "DustScatteringEfficientcy.h"
 
 
   //available cases
@@ -88,60 +90,30 @@
   }
 
 
+//calcualte the scattering efficeintcy for the LK model
+double LK::GetScatteringEfficeintcy (double GrainRadius, const double ScatteringData[][2],int nScatteringDataPoints) {
+  int i;
+  double x=GrainRadius*1.0E6;
+  double res=ScatteringData[0][1];
+  int found=0;
 
-const double LK__Ice2Dust0_899999976__Porosity0_649122834[11][2]={
-  {0.100000001, 0.0922335312}, 
-  {0.199526235, 0.666842222}, 
-  {0.398107201, 2.35393715}, 
-  {0.794328272, 2.27319002}, 
-  {1.58489335, 1.52125061}, 
-  {3.16227818, 1.14077652}, 
-  {6.3095746, 1.11582184 }, 
-  {12.5892582, 1.10241592}, 
-  {25.1188698, 1.09419072 }, 
-  {50.1187286, 1.08739305 }, 
-  {100., 1.08209419}}; 
+  for (i=1;i<nScatteringDataPoints;i++) if (x<ScatteringData[i][0]) {
+    //determine the linear interpolation stencil between i-1 and i points
+    double l,a;
 
+    l=ScatteringData[i][0]-ScatteringData[i-1][0];
+    a=(x-ScatteringData[i-1][0])/l;
 
-void
-ColumnIntegrationFactor (double minSize,
-                         double maxSize,
-                         double r,
-                         double * result){
+    res=(1.0-a)*ScatteringData[i-1][1] +
+      a*ScatteringData[i][1];
 
-//result[0]=1.0;
+    found=1;
+    break;
+  }
 
-//Martin:
-//result[0]=pow(0.5*(minSize+maxSize),2)* Get(.5*(minSize+maxSize),1.095E-6,0); 
+  if (found==0) res=ScatteringData[10][1];
 
-//LK:
-int i;
-double x=0.5*(minSize+maxSize)*1.0E6;
-double res=LK__Ice2Dust0_899999976__Porosity0_649122834[0][1];
-int found=0;
-
-for (i=1;i<11;i++) if (x<LK__Ice2Dust0_899999976__Porosity0_649122834[i][0]) {
-  //determine the linear interpolation stencil between i-1 and i points 
-  double l,a;
-
-  l=LK__Ice2Dust0_899999976__Porosity0_649122834[i][0]-LK__Ice2Dust0_899999976__Porosity0_649122834[i-1][0];
-  a=(x-LK__Ice2Dust0_899999976__Porosity0_649122834[i-1][0])/l;
-
- // res=LK__Ice2Dust0_899999976__Porosity0_649122834[i-1][1];
-
-  res=(1.0-a)*LK__Ice2Dust0_899999976__Porosity0_649122834[i-1][1] +
-      a*LK__Ice2Dust0_899999976__Porosity0_649122834[i][1];
-
-  found=1;
-  break;
-}  
-
-if (found==0) res=LK__Ice2Dust0_899999976__Porosity0_649122834[10][1];
-
-result[0]=pow(x*1.0E-6,2.0)*res; 
-
-result[0]=res; //pow(x*1.0E-6,2.0);
-//result[0]=1.0;
-
+  return Pi*pow(x*1.0E-6,2.0)*res;
 }
+
 
