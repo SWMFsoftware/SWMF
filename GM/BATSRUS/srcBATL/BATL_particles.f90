@@ -141,7 +141,8 @@ contains
     call set_pointer_to_particles(iKindParticle, &
          State_VI, iBlock_I, nVar, nParticle, nParticleMax)
  
-    nUnset = count(iBlock_I==Unset_)
+    nUnset = count(iBlock_I(1:nParticle)==Unset_)
+    if(nUnset==0) RETURN
 
     do iVar = 1, nVar
        State_VI(iVar, 1:(nParticle-nUnset)) = PACK(&
