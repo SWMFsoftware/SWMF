@@ -43,11 +43,14 @@ module ModParticleFieldLine
        ! auxilary position, e.g. middle step in Runge-Kutta 2 method
        AuxX_ = 4, AuxY_ = 5, AuxZ_ = 6, & 
        ! auxilary field, e.g. stepsize
-       Aux_   = 7, & 
+       Aux_   = 7
+  
+  ! indices of a particle
+  integer, parameter:: &
        ! field line this particle lays on
-       fl_    = 8, &
+       fl_    = 1, &
        ! index of the particle along this field line
-       Index_ = 9
+       Index_ = 2
 
   ! mode of spatial step at the field line extraction
   logical:: FixSpaceStep = .false.
@@ -56,7 +59,10 @@ module ModParticleFieldLine
   real   :: SpaceStepMax = HUGE(SpaceStep)
 
   ! number of variables in the state vector
-  integer, parameter:: nVarParticle = 9
+  integer, parameter:: nVarParticle = 7
+
+  ! number of indices
+  integer, parameter:: nIndexParticle = 2
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
@@ -154,8 +160,10 @@ contains
     !------------------------------------------------------------------------
     Particle_I(KindReg_)%nParticleMax = 10000 * nLineInit
     Particle_I(KindEnd_)%nParticleMax = nLineInit
-    Particle_I(KindReg_)%nVar = nVarParticle
-    Particle_I(KindEnd_)%nVar = nVarParticle
+    Particle_I(KindReg_)%nVar   = nVarParticle
+    Particle_I(KindEnd_)%nVar   = nVarParticle
+    Particle_I(KindReg_)%nIndex = nIndexParticle
+    Particle_I(KindEnd_)%nIndex = nIndexParticle
     call allocate_particles
     ! extract initial field lines
     call extract_particle_line(nLineInit, XyzLineInit_DI)
@@ -185,21 +193,20 @@ contains
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
-    integer, pointer:: iBlockEnd_I(:)
+    integer, pointer:: iIndexEnd_II(:,:)
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
-    integer, pointer:: iBlockReg_I(:)
+    integer, pointer:: iIndexReg_II(:,:)
     !------------------------------------------------------------------------
     ! set a pointers to parameters of end particles
-    nullify(StateEnd_VI); nullify(iBlockEnd_I)
-    StateEnd_VI => Particle_I(KindEnd_)%State_VI
-    iBlockEnd_I => Particle_I(KindEnd_)%iBlock_I
+    nullify(StateEnd_VI); nullify(iIndexEnd_II)
+    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
+    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
     ! set a pointers to parameters of regular particles
-    nullify(StateReg_VI); nullify(iBlockReg_I)
-
-    StateReg_VI => Particle_I(KindReg_)%State_VI
-    iBlockReg_I => Particle_I(KindReg_)%iBlock_I
+    nullify(StateReg_VI); nullify(iIndexReg_II)
+    StateReg_VI  => Particle_I(KindReg_)%State_VI
+    iIndexReg_II => Particle_I(KindReg_)%iIndex_II
 
     !\
     ! Trace field lines
@@ -226,7 +233,7 @@ contains
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field at original location
              call get_b_dir(Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-                  iBlock=iBlockEnd_I(iParticle),&
+                  iBlock=iIndexEnd_II(0,iParticle),&
                   Dir_D = Dir_D)
              ! find the step size
              if(FixSpaceStep)then
@@ -235,7 +242,7 @@ contains
                 StateEnd_VI(Aux_, iParticle) = &
                      MIN(SpaceStepMax, MAX(SpaceStepMin,&
                      0.1*SQRT(&
-                     sum(CellSize_DB(1:nDim,iBlockEnd_I(iParticle))**2)&
+                     sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
                      )))
              end if
 
@@ -265,7 +272,7 @@ contains
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field in the middle
              call get_b_dir(Xyz_D=StateEnd_VI(x_:z_, iParticle),&
-                  iBlock=iBlockEnd_I(iParticle),&
+                  iBlock=iIndexEnd_II(0,iParticle),&
                   Dir_D=Dir_D)
              ! get final location
              StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
@@ -288,8 +295,8 @@ contains
           if(is_complete()) EXIT TRACE
 
           ! increase particle index & copy to regular
-          StateEnd_VI(Index_,1:Particle_I(KindEnd_)%nParticle) = &
-               StateEnd_VI(Index_,1:Particle_I(KindEnd_)%nParticle) + &
+          iIndexEnd_II(Index_,1:Particle_I(KindEnd_)%nParticle) = &
+               iIndexEnd_II(Index_,1:Particle_I(KindEnd_)%nParticle) + &
                iDirTrace
           call copy_end_to_regular
 
@@ -301,10 +308,10 @@ contains
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
-          StateEnd_VI(:, 1:nLineThisProc) = &
-               StateReg_VI(:, nParticleOld+1:nParticleOld+nLineThisProc)
-          iBlockEnd_I(   1:nLineThisProc) = &
-               iBlockReg_I(   nParticleOld+1:nParticleOld+nLineThisProc)
+          StateEnd_VI( :, 1:nLineThisProc) = &
+               StateReg_VI( :, nParticleOld+1:nParticleOld+nLineThisProc)
+          iIndexEnd_II(:, 1:nLineThisProc) = &
+               iIndexReg_II(:, nParticleOld+1:nParticleOld+nLineThisProc)
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
@@ -348,11 +355,11 @@ contains
       nLineThisProc = nLineThisProc + 1
 
       StateEnd_VI(x_:z_, Particle_I(KindEnd_)%nParticle) = XyzStart_D
-      StateEnd_VI(fl_,   Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
+      iIndexEnd_II(fl_,  Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
 
-      ! set index for initial particle to be 0 for now, it's fixed later
-      StateEnd_VI(Index_,Particle_I(KindEnd_)%nParticle) = 0
-      iBlockEnd_I(Particle_I(KindEnd_)%nParticle) = iBlockOut
+      ! set index for initial particle to be 0
+      iIndexEnd_II(Index_,Particle_I(KindEnd_)%nParticle) = 0
+      iIndexEnd_II(0,     Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
     !========================================================================
     function is_complete() result(IsCompleteOut)
@@ -371,22 +378,23 @@ contains
     !========================================================================
     subroutine copy_end_to_regular
       ! copies indicated variables of known end particles to regular particles
-      integer, parameter:: iVarCopy_I(5) = (/x_, y_, z_, fl_, Index_/)
+      integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
+      integer, parameter:: iIndexCopy_I(3) = (/0, fl_, Index_/)
       !----------------------------------------------------------------------
       StateReg_VI(iVarCopy_I,&
            Particle_I(KindReg_)%nParticle+1:&
            Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
            StateEnd_VI(iVarCopy_I, 1:Particle_I(KindEnd_)%nParticle)
-      iBlockReg_I(&
+      iIndexReg_II(iIndexCopy_I,&
            Particle_I(KindReg_)%nParticle+1:&
            Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
-           iBlockEnd_I(1:Particle_I(KindEnd_)%nParticle)
+           iIndexEnd_II(iIndexCopy_I, 1:Particle_I(KindEnd_)%nParticle)
       Particle_I(KindReg_)%nParticle = &
            Particle_I(KindReg_)%nParticle + &
            Particle_I(KindEnd_)%nParticle
       ! also update the counter of particles per field line
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         iFieldLine = nint(StateEnd_VI(fl_,iParticle))
+         iFieldLine = iIndexEnd_II(fl_,iParticle)
          nParticleFieldLine_I(iFieldLine) = &
               nParticleFieldLine_I(iFieldLine) + 1
       end do
@@ -438,29 +446,32 @@ contains
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(iKind)%nParticle
        if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) < rBody*rBody)&
-            Particle_I(iKind)%iBlock_I(iParticle) = Unset_
+            Particle_I(iKind)%iIndex_II(0, iParticle) = Unset_
     end do
   end subroutine check_inner_boundary_particle_line
 
   !========================================================================
 
-  subroutine get_particle_data(NameVar, DataOut_VI, nDataVar, nParticle)
+  subroutine get_particle_data(NameVar, DataOut_VI,   nDataOut, nParticle)
     ! the subroutine gets variables specified in the string StringVar
     ! and writes them into DataOut_VI
     character(len=*),   intent(in) :: NameVar
     real,  pointer,     intent(out):: DataOut_VI(:,:)
-    integer,            intent(out):: nDataVar
+    integer,            intent(out):: nDataOut
     integer,            intent(out):: nParticle
 
     ! mask for returning variables
     logical:: DoReturnVar_V(nVarParticle)
+    logical:: DoReturnIndex_I(0:nIndexParticle)
     ! string used for processing NameVar
     character(len=100):: NameVarProc
     integer:: nFullLen
+    integer:: nVarOut, nIndexOut
     integer:: iParticle ! loop variable
     !----------------------------------------------------------------------
     ! first, determine which variables will be returned
-    DoReturnVar_V = .false.
+    DoReturnVar_V   = .false.
+    DoReturnIndex_I = .false.
     NameVarProc =  trim(NameVar)
     nFullLen = len(NameVarProc)
 
@@ -471,9 +482,9 @@ contains
     if(is_var('zz'))&
          DoReturnVar_V(z_) = .true.
     if(is_var('fl'))&
-         DoReturnVar_V(fl_) = .true.
+         DoReturnIndex_I(fl_) = .true.
     if(is_var('id'))&
-         DoReturnVar_V(Index_) = .true.
+         DoReturnIndex_I(Index_) = .true.
 
     ! check if there is an invalid variable requested
     if(len_trim(NameVarProc) > 0)&
@@ -481,13 +492,18 @@ contains
 
     ! return data
     if(associated(DataOut_VI)) deallocate(DataOut_VI)
-    nDataVar  = count(DoReturnVar_V)
+    nVarOut   = count(DoReturnVar_V)
+    nIndexOut = count(DoReturnIndex_I)
+    nDataOut  = nIndexOut + nVarOut
     nParticle = Particle_I(KindReg_)%nParticle
-    allocate( DataOut_VI(nDataVar, nParticle) )
+    allocate( DataOut_VI(nDataOut, nParticle) )
     do iParticle = 1, nParticle
-       DataOut_VI(:, iParticle) = PACK(&
-            Particle_I(KindReg_)%State_VI(:,iParticle),&
+       DataOut_VI(1:nVarOut,         iParticle) = PACK(&
+            Particle_I(KindReg_)%State_VI( :,iParticle),&
             MASK = DoReturnVar_V)
+       DataOut_VI(nVarOut+1:nDataOut,iParticle) = PACK(&
+            Particle_I(KindReg_)%iIndex_II(:,iParticle),&
+            MASK = DoReturnIndex_I)
     end do
 
   contains

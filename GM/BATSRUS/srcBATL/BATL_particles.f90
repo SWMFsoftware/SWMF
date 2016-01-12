@@ -34,7 +34,8 @@ module BATL_particles
      ! The number of parameters which characterize the 'state' of
      ! the particles
      !/
-     integer:: nVar 
+     integer:: nVar   ! # of real    parameters
+     integer:: nIndex ! # of integer parameters
      !\
      ! The current number of particles at a given processor and
      ! the maximum allowed number of particles
@@ -49,11 +50,11 @@ module BATL_particles
      !M-FLAMPA
      real,    pointer  :: State_VI(:,:)
      !\
-     ! Array of the length of nParticleMax with the index enumerating
-     ! particles. It stores the number of block which posesses an 
-     ! information, sufficient to interpolate (with the possible use 
-     ! of ghost cells) an information 
-     integer,  pointer :: iBlock_I(:)
+     ! (nIndex+1)*nParticleMax array with the indices enumerating
+     ! particles. It ALWAYS stores the number of block (0th index) 
+     ! which posesses an information, sufficient to interpolate 
+     ! (with the possible use of ghost cells) an information 
+     integer,  pointer :: iIndex_II(:,:)
   end type ParticleType
 
   type(ParticleType):: Particle_I(nKindParticle)
@@ -70,17 +71,18 @@ contains
 
   !===========================================================================
   subroutine allocate_particles
-    integer:: iParticleKind, nVar, nParticleMax
+    integer:: iParticleKind, nVar, nIndex, nParticleMax
     !------------------------------------------------------------------------
     do iParticleKind = 1, nKindParticle
-       nVar = Particle_I(iParticleKind)%nVar
+       nVar         = Particle_I(iParticleKind)%nVar
+       nIndex       = Particle_I(iParticleKind)%nIndex
        nParticleMax = Particle_I(iParticleKind)%nParticleMax
-       nullify(Particle_I(iParticleKind)%State_VI)
+       nullify( Particle_I(iParticleKind)%State_VI)
        allocate(Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax))
        Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax) = 0.0
-       nullify(Particle_I(iParticleKind)%iBlock_I)
-       allocate(Particle_I(iParticleKind)%iBlock_I(1:nParticleMax))
-       Particle_I(iParticleKind)%iBlock_I(1:nParticleMax) = -1
+       nullify( Particle_I(iParticleKind)%iIndex_II)
+       allocate(Particle_I(iParticleKind)%iIndex_II(0:nIndex,1:nParticleMax))
+       Particle_I(iParticleKind)%iIndex_II(0:nIndex,1:nParticleMax) = -1
     end do
   end subroutine allocate_particles
   !===========================================================================
@@ -97,8 +99,9 @@ contains
     nBuffer = 0; nParticleMax = 0
     do iKindParticle = 1, nKindParticle
        ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
-       nBuffer = max(nBuffer, (Particle_I(iKindParticle)%nVar + 1)&
-            *Particle_I(iKindParticle)%nParticleMax)
+       nBuffer = max(nBuffer, &
+            (Particle_I(iKindParticle)%nVar+Particle_I(iKindParticle)%nIndex+&
+            1)*Particle_I(iKindParticle)%nParticleMax)
 
        nParticleMax = max(nParticleMax, Particle_I(iKindParticle)%nParticleMax)
     end do
@@ -111,18 +114,21 @@ contains
   end subroutine allocate_buffers
   !===========================================================================
   subroutine set_pointer_to_particles(&
-       iKindParticle, State_VI, iBlock_I, nVar, nParticle, nParticleMax)
+       iKindParticle, State_VI, iIndex_II, &
+       nVar, nIndex, nParticle, nParticleMax)
     integer,          intent(in)    :: iKindParticle
     real,    pointer, intent(inout) :: State_VI(:,:)
-    integer, pointer, intent(inout) :: iBlock_I(:)
+    integer, pointer, intent(inout) :: iIndex_II(:,:)
     integer,          intent(out)   :: nVar 
+    integer,          intent(out)   :: nIndex 
     integer,          intent(out)   :: nParticle
     integer,          intent(out)   :: nParticleMax
     !-----------------------------------------------------------------------
-    nullify(State_VI); nullify(iBlock_I)
+    nullify(State_VI); nullify(iIndex_II)
     State_VI     => Particle_I(iKindParticle)%State_VI
-    iBlock_I     => Particle_I(iKindParticle)%iBlock_I
+    iIndex_II    => Particle_I(iKindParticle)%iIndex_II
     nVar         =  Particle_I(iKindParticle)%nVar
+    nIndex       =  Particle_I(iKindParticle)%nIndex
     nParticle    =  Particle_I(iKindParticle)%nParticle
     nParticleMax =  Particle_I(iKindParticle)%nParticleMax
   end subroutine set_pointer_to_particles
@@ -130,28 +136,31 @@ contains
   subroutine remove_undefined_particles(iKindParticle)
     ! remove all particles with undefined block: iBlock_I == Unset_
     integer, intent(in) :: iKindParticle
-    integer :: iVar ! loop variable
+    integer :: iVar, iIndex ! loop variables
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
-    integer, pointer :: iBlock_I(:)    ! blocks having particles of this kind 
+    integer, pointer :: iIndex_II(:,:) ! indices   for particles of this kind 
     integer          :: nVar           ! # of variables including coordinates
+    integer          :: nIndex         ! # of indices including block number
     integer          :: nParticle      ! # of particles of this kind on proc
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     integer          :: nUnset         ! # of particles with undefined block
     !-------------------------------------------------------------------------
     call set_pointer_to_particles(iKindParticle, &
-         State_VI, iBlock_I, nVar, nParticle, nParticleMax)
+         State_VI, iIndex_II, nVar, nIndex, nParticle, nParticleMax)
  
-    nUnset = count(iBlock_I(1:nParticle)==Unset_)
+    nUnset = count(iIndex_II(0,1:nParticle)==Unset_)
     if(nUnset==0) RETURN
 
     do iVar = 1, nVar
        State_VI(iVar, 1:(nParticle-nUnset)) = PACK(&
             State_VI(iVar, 1:nParticle), &
-            iBlock_I(      1:nParticle)/=Unset_ )
+            iIndex_II(0,   1:nParticle)/=Unset_ )
     end do
-    iBlock_I(1:(nParticle-nUnset)) = PACK(&
-         iBlock_I(1:nParticle), &
-         iBlock_I(1:nParticle)/=Unset_ )
+    do iIndex = nIndex, 0, -1
+       iIndex_II(iIndex, 1:(nParticle-nUnset)) = PACK(&
+            iIndex_II(iIndex, 1:nParticle), &
+            iIndex_II(0,      1:nParticle)/=Unset_ )
+    end do
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
@@ -167,8 +176,9 @@ contains
 
     integer          :: iKindParticle  ! loop variable
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
-    integer, pointer :: iBlock_I(:)    ! blocks having particles of this kind 
+    integer, pointer :: iIndex_II(:,:) ! blocks having particles of this kind 
     integer          :: nVar           ! # of variables including coordinates
+    integer          :: nIndex         ! # of indices including block number
     integer          :: nParticle      ! # of particles of this kind on proc
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     ! number of particles to send to other procs
@@ -188,8 +198,8 @@ contains
           if(iKindParticle /= iKindParticleIn) CYCLE
        end if
        call set_pointer_to_particles(&
-            iKindParticle, State_VI, &
-            iBlock_I, nVar, nParticle, nParticleMax)
+            iKindParticle, State_VI, iIndex_II,&
+            nVar, nIndex, nParticle, nParticleMax)
        call pass_this_kind
        Particle_I(iKindParticle)%nParticle = nParticle
     end do
@@ -224,25 +234,25 @@ contains
       do iParticle = 1, nParticle
          Xyz_D = 0
          Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
-         iBlock = iBlock_I(iParticle)
+         iBlock = iIndex_II(0, iParticle)
          call check_interpolate(Xyz_D, iBlock, &
               IsPossible, iProcOut, iBlockOut, IsOut)
          
          if(IsPossible) CYCLE ! don't need to pass this particle
          
          if(IsOut)then ! particle is out of the domain, don't pass it
-            iBlock_I(iParticle) = Unset_
+            iIndex_II(0, iParticle) = Unset_
             CYCLE
          end if
 
          ! change the block 
-         iBlock_I(iParticle) = iBlockOut
+         iIndex_II(0, iParticle) = iBlockOut
          
          if(iProcOut == iProc) CYCLE ! particle stays on this proc
 
          ! prepare this particle to be passed
          iProcTo_I(    iParticle) = iProcOut
-         iSendOffset_I(iParticle) = nSend_P(iProcOut) * (nVar + 1)
+         iSendOffset_I(iParticle) = nSend_P(iProcOut) * (nVar + nIndex + 1)
          nSend_P(      iProcOut)  = nSend_P(iProcOut) + 1
       end do
 
@@ -285,12 +295,12 @@ contains
       iSendOffset_P(0) = 0
       do iProcTo = 1, nProc - 1
          iSendOffset_P(iProcTo) = &
-              iSendOffset_P(iProcTo-1) + nSend_P(iProcTo-1) * (nVar+1)
+              iSendOffset_P(iProcTo-1) + nSend_P(iProcTo-1)*(nVar+nIndex+1)
       end do
       iRecvOffset_P(0) = 0
       do iProcFrom = 1, nProc - 1
          iRecvOffset_P(iProcFrom) = &
-              iRecvOffset_P(iProcFrom-1) + nRecv_P(iProcFrom-1) * (nVar+1)
+              iRecvOffset_P(iProcFrom-1) + nRecv_P(iProcFrom-1)*(nVar+nIndex+1)
       end do
 
       ! fill the BufferSend and rearrange particle data
@@ -299,14 +309,16 @@ contains
          if(iProcTo_I(iParticle) == iProc)then
             ! particle stays on this proc
             nParticleStay = nParticleStay + 1
-            iBlock_I(  nParticleStay) = iBlock_I(  iParticle)
-            State_VI(:,nParticleStay) = State_VI(:,iParticle)
+            iIndex_II(:, nParticleStay) = iIndex_II(:, iParticle)
+            State_VI( :, nParticleStay) = State_VI( :, iParticle)
             CYCLE 
          end if
          iSendOffset = &
               iSendOffset_P(iProcTo_I(iParticle)) + iSendOffset_I(iParticle)
-         BufferSend_I(iSendOffset+1:iSendOffset+nVar) = State_VI(:,iParticle)
-         BufferSend_I(iSendOffset+nVar+1)             = iBlock_I(  iParticle)
+         BufferSend_I(iSendOffset+1:iSendOffset+nVar) = &
+              State_VI( :, iParticle)
+         BufferSend_I(iSendOffset+nVar+1:iSendOffset+nVar+nIndex+1) = &
+              iIndex_II(:, iParticle)
       end do
 
       ! transfer data
@@ -318,7 +330,7 @@ contains
             iTag = iProc
             call MPI_Irecv(&
                  BufferRecv_I(iRecvOffset_P(iProcFrom)+1), &
-                 nRecv_P(iProcFrom)*(nVar+1), MPI_REAL, &
+                 nRecv_P(iProcFrom)*(nVar+nIndex+1), MPI_REAL, &
                  iProcFrom, iTag, iComm, iRequest_I(iRequest), iError)
          end if
       end do
@@ -333,7 +345,7 @@ contains
                iTag = iProcTo
                call MPI_Rsend(&
                     BufferSend_I(iSendOffset_P(iProcTo)+1), &
-                    nSend_P(iProcTo)*(nVar+1), MPI_REAL, &
+                    nSend_P(iProcTo)*(nVar+nIndex+1), MPI_REAL, &
                     iProcTo, iTag, iComm, iError)
             end if
          end do
@@ -344,7 +356,7 @@ contains
                iRequest = iRequest + 1
                call MPI_Isend(&
                     BufferSend_I(iSendOffset_P(iProcTo)+1), &
-                    nSend_P(iProcTo)*(nVar+1), MPI_REAL, &
+                    nSend_P(iProcTo)*(nVar+nIndex+1), MPI_REAL, &
                     iProcTo, iTag, iComm, iRequest_I(iRequest), iError)
             end if
          end do
@@ -361,11 +373,11 @@ contains
       ! finally, put particles from buffer to storage
       iRecvOffset = 0
       do iParticle = 1, sum(nRecv_P)
-         State_VI(:, nParticleStay + iParticle) = &
+         State_VI( :, nParticleStay + iParticle) = &
               BufferRecv_I(iRecvOffset+1 : iRecvOffset+nVar)
-         iBlock_I(   nParticleStay + iParticle) = &
-              nint(BufferRecv_I(iRecvOffset+nVar+1))
-         iRecvOffset = iRecvOffset + nVar + 1
+         iIndex_II(:, nParticleStay + iParticle) = &
+              nint(BufferRecv_I(iRecvOffset+nVar+1:iRecvOffset+nVar+nIndex+1))
+         iRecvOffset = iRecvOffset + nVar + nIndex + 1
       end do
     end subroutine pass_this_kind
 
