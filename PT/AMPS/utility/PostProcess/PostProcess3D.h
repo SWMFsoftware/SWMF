@@ -147,7 +147,7 @@ public:
     MPI_Comm_size(MPI_COMM_WORLD,&size);
   }
 
-  inline void MPI_Finalize() {
+  inline void FinalizeMPI() {
     MPI_Finalize();
   }
 
