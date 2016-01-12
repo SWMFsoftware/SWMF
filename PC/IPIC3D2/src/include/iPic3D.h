@@ -13,8 +13,12 @@ class Timing;
 #endif
 #include "ipicfwd.h"
 #include "assert.h"
+#include <iostream>
 #include <string>
 using std::string;
+using std::stringstream;
+using std::cout;
+using std::endl;
 #ifndef NO_HDF5
 class OutputWrapperFPP;
 #endif
@@ -25,7 +29,7 @@ namespace iPic3D {
   public:
     ~c_Solver();
     c_Solver():
-      col(0),
+    col(0),
       vct(0),
       grid(0),
       EMf(0),
@@ -37,8 +41,11 @@ namespace iPic3D {
       momentum(0),
       Qremoved(0),
       my_clock(0)
-    {}
-    int Init(int argc, char **argv);
+	{}
+    int Init(int argc, char **argv, double inittime = 0.0,
+	     stringstream *param = NULL, int iIPIC = 0, int *paramint = NULL,
+	     double *griddim = NULL, double *paramreal = NULL,
+	     stringstream *ss = NULL, bool doCoupling=false);
     void CalculateMoments();
     void CalculateField(); //! calculate Efield
     bool ParticlesMover();
@@ -59,7 +66,7 @@ namespace iPic3D {
     int FirstCycle() { return (first_cycle); }
     int get_myrank() { return (myrank); }
     int LastCycle();
-
+    
   private:
     void pad_particle_capacities();
     void convertParticlesToSoA();
@@ -116,19 +123,36 @@ namespace iPic3D {
     int    pclbuffersize;
     float *testpclVel;
     MPI_File fh;
-  	MPI_Status*  status;
-  	float**** fieldwritebuffer;
-	MPI_Request fieldreqArr[4];//E+B+Je+Ji
-	MPI_File    fieldfhArr[4];
-	MPI_Status  fieldstsArr[4];
-	int fieldreqcounter;
+    MPI_Status*  status;
+    float**** fieldwritebuffer;
+    MPI_Request fieldreqArr[4];//E+B+Je+Ji
+    MPI_File    fieldfhArr[4];
+    MPI_Status  fieldstsArr[4];
+    int fieldreqcounter;
+    
+    float*** momentwritebuffer;
+    MPI_Request momentreqArr[14];//rho+PXX+PXY+PXZ++PYY+PYZ+PZZ for species0,1
+    MPI_File    momentfhArr[14];
+    MPI_Status  momentstsArr[14];
+    int momentreqcounter;
 
-  	float*** momentwritebuffer;
-	MPI_Request momentreqArr[14];//rho+PXX+PXY+PXZ++PYY+PYZ+PZZ for species0,1
-	MPI_File    momentfhArr[14];
-	MPI_Status  momentstsArr[14];
-	int momentreqcounter;
+#ifdef BATSRUS
+  public:
+    void SetParam(int *paramint, double *griddim, double *paramreal, stringstream *ss);
+    void SyncWithFluid(int cycle);
 
+    void GetNgridPnt(int *nPoint);
+    void GetGridPnt(double *Pos_I);
+    void setStateVar(std::stringstream *ss, int nVar, double *State_I, int *iPoint_I);
+    void getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar , string *NameVar);
+    void findProcForPoint(int nPoint, double *Xyz_I, int *iProc_I);    
+    double getDt();
+    double getSItime();
+    void setSIDt(double SIDt);
+    
+#endif
+
+    
   };
 
 }

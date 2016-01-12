@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "asserts.h" // for assert_ge
 #include "string.h"
+#include "BcParticles.h"
 
 // order must agree with Enum in Collective.h
 static const char *enumNames[] =
@@ -70,7 +71,7 @@ void Collective::ReadInput(string inputfile) {
     {
       cout<<" The fluid interface can not handle RESTART yet, aborting!\n"<<flush;
       abort();
-    }
+    }    
 #endif
 
     dt = config.read < double >("dt");
@@ -176,22 +177,13 @@ void Collective::ReadInput(string inputfile) {
   last_cycle = -1;
   c = config.read < double >("c",1.0);
 
-#ifdef BATSRUS
-  // set grid size and resolution based on the initial file from fluid code
-  Lx =  getFluidLx();
-  Ly =  getFluidLy();
-  Lz =  getFluidLz();
-  nxc = getFluidNxc();
-  nyc = getFluidNyc();
-  nzc = getFluidNzc();
-#else
   Lx = config.read < double >("Lx",10.0);
   Ly = config.read < double >("Ly",10.0);
   Lz = config.read < double >("Lz",10.0);
   nxc = config.read < int >("nxc",64);
   nyc = config.read < int >("nyc",64);
   nzc = config.read < int >("nzc",64);
-#endif
+
   XLEN = config.read < int >("XLEN",1);
   YLEN = config.read < int >("YLEN",1);
   ZLEN = config.read < int >("ZLEN",1);
@@ -1294,3 +1286,381 @@ void Collective::save() {
 
 }
 
+#ifdef BATSRUS
+/*! constructor */
+Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
+		       int *paramint, double *griddim, double *paramreal,
+		       stringstream *ss){
+  string Command;
+  
+  string defaultModel = "hallmhd";
+
+  setiRegion(iIPIC);
+
+  // default: do not restart.
+  restart_status = 0;
+  
+  // Set default parameters.
+  // #CASE 
+  Case               = "BATSRUS";
+  // FieldsInit         = "./data/Initial-Fields_000000.h5";
+  // PartInit           = "Maxwell";
+  wmethod            = "shdf5";
+  PoissonCorrection  = "no";
+  SimName            = "MHD-EPIC";
+  //  verbose            = 1;
+
+  //#NSYN
+  setnSync(1);
+  ncycles = 0;
+  
+  // #PARAMS
+  th          = 1.0;
+  c           = 1.0;
+  Smooth      = 0.5;
+  SmoothNiter = 0;
+  NpMaxNpRatio = 3.0;
+  delta = 0.5;
+
+  last_cycle = -1; 
+  
+  // Test particles. Not available for coupling so far. 
+  nstestpart = 0;
+
+  
+  // #SOLVER
+  CGtol      = 1.0e-8;
+  GMREStol   = 1.0e-8;
+  NiterMover = 3;
+
+  //------------------------------------------------
+  // #BCIPIC
+  // PHI Electrostatic Potential
+  //   0,1 = Dirichilet boundary condition ;
+  // 2   = Neumann boundary condition    
+  bcPHIfaceXright = 1; 
+  bcPHIfaceXleft  = 1;
+  bcPHIfaceYright = 1;
+  bcPHIfaceYleft  = 1;
+  bcPHIfaceZright = 1;
+  bcPHIfaceZleft  = 1;
+  //-----------------
+  // EM field boundary condition
+  // 0 = perfect conductor
+  // 1 = magnetic mirror
+  bcEMfaceXright  = 2;
+  bcEMfaceXleft   = 2;
+  bcEMfaceYright  = 2;
+  bcEMfaceYleft   = 2;
+  bcEMfaceZright  = 2;
+  bcEMfaceZleft   = 2;
+  //----------------
+  // Particles Boundary condition
+  // 0 = exit
+  // 1 = perfect mirror
+  // 2 = riemission
+  bcPfaceXright   = BCparticles::FLUID;
+  bcPfaceXleft    = BCparticles::FLUID;
+  bcPfaceYright   = BCparticles::FLUID;
+  bcPfaceYleft    = BCparticles::FLUID;
+  bcPfaceZright   = BCparticles::FLUID;
+  bcPfaceZleft    = BCparticles::FLUID;
+  //-----------------------------------------------
+
+  // #BCBATSRUS
+  setnOverlap(0);
+  setnOverlapP(0);
+  setnCharge(10);
+  setnIsotropic(0);
+  
+  // #RESTART
+  RESTART1 = false;    
+  RestartDirName = "PC/restartIN";
+
+  // Output
+  FieldOutputTag      = "Ball+Eall+Jsall";
+  MomentsOutputTag    = "rhos+pressure+rho";
+  ParticlesOutputTag  = "position+velocity+q";
+
+  // processors
+  XLEN = 1; YLEN = 1; ZLEN = 1; 
+  
+  while(*param){
+    get_next_command(param,&Command);
+    // if(      Command == "#CASE"){
+    //   read_var(param,"Simulation Case",   &Case);
+    //   read_var(param,"FieldsInit",        &FieldsInit);
+    //   read_var(param,"PartInit",          &PartInit);
+    //   read_var(param,"WriteMethod",       &wmethod);
+    //   read_var(param,"PoissonCorrection", &PoissonCorrection);
+    //   read_var(param,"SimulationName",    &SimName);
+    //   read_var(param,"verbose",           &verbose);
+    // }
+    if( Command == "#NSYNC" && Case == "BATSRUS"){
+      int tmp;
+      read_var(param,"nSync", &tmp);
+      setnSync(tmp);
+      ncycles = 0;
+    }
+    else if( Command == "#UNIFORMSTATE" && !RESTART1){
+      read_var(param,"B0x", &B0x);
+      read_var(param,"B0y", &B0y);
+      read_var(param,"B0z", &B0z);
+      read_var(param,"B1x", &B1x);
+      read_var(param,"B1y", &B1y);
+      read_var(param,"B1z", &B1z);
+
+    }
+    else if( Command == "#TIMESTEP" && Case != "BATSRUS"){
+      read_var(param,"dt", &dt);
+
+    }
+    else if( Command == "#INJECT" && !RESTART1){
+      read_var(param,"Vinj", &Vinj);
+
+    }
+    else if( Command == "#PARAMS"){
+      read_var(param,"th",           &th);
+      read_var(param,"c",            &c);
+      read_var(param,"Smooth",       &Smooth);
+      read_var(param,"nSmooth",      &SmoothNiter);
+      read_var(param,"NpMaxNpRatio", &NpMaxNpRatio);
+      read_var(param,"delta",        &delta);
+
+    }
+    else if( Command == "#GRID" && !RESTART1){
+      read_var(param,"nxc",       &nxc);
+      read_var(param,"nyc",       &nyc);
+      read_var(param,"nzc",       &nzc);
+      read_var(param,"Lx",        &Lx);
+      read_var(param,"Ly",        &Ly);
+      read_var(param,"Lz",        &Lz);
+      read_var(param,"x_center",  &x_center);
+      read_var(param,"y_center",  &y_center);
+      read_var(param,"z_center",  &z_center);
+      read_var(param,"L_square",  &L_square);
+
+    }
+    else if( Command == "#PROCESSORS" && !RESTART1){
+      read_var(param,"XLEN",       &XLEN);
+      read_var(param,"YLEN",       &YLEN);
+      read_var(param,"ZLEN",       &ZLEN);      
+    }
+    else if( Command == "#ELECTRON" && 
+	     Case == "BATSRUS" &&
+	     !RESTART1 ){
+      // iones info comes from BATSRUS
+      qom = new double[1];
+      read_var(param,"qom", &qom[0]);
+    }
+    else if( Command == "#PARTICLES" && 
+             Case    == "BATSRUS"  &&
+             !RESTART1 ){
+      int nCommand = 3; // Number of commands for each region.
+      skip_lines(param,nCommand*getiRegion());      
+
+      npcelx =          new int[1];
+      npcely =          new int[1];
+      npcelz =          new int[1];
+      read_var(param,"npcelx", &npcelx[0]);
+      read_var(param,"npcely", &npcely[0]);
+      read_var(param,"npcelz", &npcelz[0]);
+    }
+    // else if( Command == "#SPECIES" && !RESTART1){
+    //   read_var(param,"ns",                &ns);
+    //   npcelx =          new int[ns];
+    //   npcely =          new int[ns];
+    //   npcelz =          new int[ns];
+    //   qom =             new double[ns];
+    //   uth =             new double[ns];
+    //   vth =             new double[ns];
+    //   wth =             new double[ns];
+    //   u0  =             new double[ns];
+    //   v0  =             new double[ns];
+    //   w0  =             new double[ns];
+    //   rhoINIT =         new double[ns];
+    //   rhoINJECT =       new double[ns];
+    //   TrackParticleID = new bool[ns];
+    //   for(int is=0; is<ns; is++){
+    //     read_var(param,"npcelx",          &npcelx[is]);
+    //     read_var(param,"npcely",          &npcely[is]);
+    //     read_var(param,"npcelz",          &npcelz[is]);
+    //     read_var(param,"qom",             &qom[is]);
+    //     read_var(param,"uth",             &uth[is]);
+    //     read_var(param,"vth",             &vth[is]);
+    //     read_var(param,"wth",             &wth[is]);
+    //     read_var(param,"u0",              &u0[is]);
+    //     read_var(param,"v0",              &v0[is]);
+    //     read_var(param,"w0",              &w0[is]);
+    //     read_var(param,"rhoINIT",         &rhoINIT[is]);
+    //     read_var(param,"rhoINJECT",       &rhoINJECT[is]);
+    //     read_var(param,"TrackParticleID", &TrackParticleID[is]);
+
+    //   }
+    // }
+    else if( Command == "#SOLVER"){
+      read_var(param,"CGtol", &CGtol);
+      read_var(param,"GMREStol", &GMREStol);
+      read_var(param,"NiterMover", &NiterMover);
+
+    }
+    else if( Command == "#SAVEPLOT"){
+      read_var(param,"SaveDirName",            &SaveDirName);
+      /*
+        char* testptr=NULL;
+        int processorExist = system(testptr);
+        if(processorExist!=0){
+            FILE *fp = popen("mkdir ./PC;cd ./PC;mkdir ./plots;mkdir ./restartOUT;", "r");
+        }
+       */
+      read_var(param,"FieldOutputCycle",       &FieldOutputCycle);
+      read_var(param,"ParticlesOutputCycle",   &ParticlesOutputCycle);
+      read_var(param,"DiagnosticsOutputCycle", &DiagnosticsOutputCycle);
+      read_var(param,"FieldOutputCycleASCII",  &FieldOutputCycleASCII);
+      read_var(param,"SatelliteOutputCycle",   &SatelliteOutputCycle);
+      read_var(param,"OutputFormat[0=BATSRUS ASCII, 1=Runtime VTK]", &PicOutputFormat);
+        
+      
+        
+      if(Case != "BATSRUS")
+          read_var(param,"RestartOutputCycle",     &RestartOutputCycle);
+
+      // In "BATSRUS" mode restart is controled by the coupler
+      if(Case == "BATSRUS") RestartOutputCycle = 1; 
+
+    }
+    else if( Command == "#BCIPIC"){
+      read_var(param,"bcPHIfaceXright", &bcPHIfaceXright);
+      read_var(param,"bcPHIfaceXleft",  &bcPHIfaceXleft);
+      read_var(param,"bcPHIfaceYright", &bcPHIfaceYright);
+      read_var(param,"bcPHIfaceYleft",  &bcPHIfaceYleft);
+      read_var(param,"bcPHIfaceZright", &bcPHIfaceZright);
+      read_var(param,"bcPHIfaceZleft",  &bcPHIfaceZleft);
+      read_var(param,"bcEMfaceXright",  &bcEMfaceXright);
+      read_var(param,"bcEMfaceXleft",   &bcEMfaceXleft);
+      read_var(param,"bcEMfaceYright",  &bcEMfaceYright);
+      read_var(param,"bcEMfaceYleft",   &bcEMfaceYleft);
+      read_var(param,"bcEMfaceZright",  &bcEMfaceZright);
+      read_var(param,"bcEMfaceZleft",   &bcEMfaceZleft);
+      read_var(param,"bcPfaceXright",   &bcPfaceXright);
+      read_var(param,"bcPfaceXleftt",   &bcPfaceXleft);
+      read_var(param,"bcPfaceYright",   &bcPfaceYright);
+      read_var(param,"bcPfaceYleft",    &bcPfaceYleft);
+      read_var(param,"bcPfaceZright",   &bcPfaceZright);
+      read_var(param,"bcPfaceZleft",    &bcPfaceZleft);
+    }
+    else if( Command == "#BCBATSRUS"){
+      double tmp;
+      read_var(param,"nOverlap",   &tmp);
+      setnOverlap(tmp);
+      read_var(param,"nOverlapP",  &tmp);
+      setnOverlapP(tmp);
+      read_var(param,"nCharge",    &tmp);
+      setnCharge(tmp);
+      read_var(param,"nIsotropic", &tmp);
+      setnIsotropic(tmp);
+    }
+    else if( Command == "#RESTART"){
+      read_var(param,"doRestart", &RESTART1);
+      if(Case != "BATSRUS") 
+        read_var(param,"RestartDirName", &RestartDirName);
+      if(RESTART1) ReadRestart(RestartDirName);
+    }
+    //else
+    //  cout<<"Can not find Comand : "<<Command<<endl;
+  }
+
+
+  //verbose = false;
+  ReadFromGMinit(paramint, griddim, paramreal, ss);
+
+  // electron mass given by IPIC3D params while ion mass comes form BATSRUS
+  fixPARAM(qom, npcelx, npcely, npcelz, &ns);
+  TrackParticleID = new bool[ns];
+  uth =             new double[ns];
+  vth =             new double[ns];
+  wth =             new double[ns];
+  for(int is = 0; is < ns; is++){
+    TrackParticleID[is] =true;
+
+    //cout << "SetParamFromGM :: qom[" << is<< "]  =  " << qom[is] << endl;
+  }
+
+
+  //setGlobalStartIndex(NULL);
+  PostProcParam();
+  init_derived_parameters();
+}
+
+void Collective::FinilizeInit(){
+  // Seting thermal veloity to max of the domain
+  if(!RESTART1)
+    for(int is=0;is<ns;is++){
+      uth[is] = getMaxFluidUth(is,0);
+      vth[is] = getMaxFluidUth(is,1);
+      wth[is] = getMaxFluidUth(is,2);
+      //cout << "max uth[" << is << "] = " << uth[is] <<endl;
+    }
+
+  cout<<"dt = "<<getFluidDt()<<endl;
+  if(RESTART1 && getFluidDt() == 0.0) setNormDt(dt);
+  else dt  = getFluidDt();
+
+  if(!RESTART1) last_cycle=-1;
+}
+
+void Collective::PostProcParam() {
+  // Combine PostProcParam and FinilizeInit?? -Yuxi
+  for(int i=0; i < 6; i++){
+    bcEx[i] =2;
+    bcEy[i] =2;
+    bcEz[i] =2;
+    bcBx[i] =2;
+    bcBy[i] =2;
+    bcBz[i] =2;
+  }
+  // set grid size and resolution based on the initial file from fluid code
+  Lx =  getFluidLx();
+  Ly =  getFluidLy();
+  Lz =  getFluidLz();
+  nxc = getFluidNxc();
+  nyc = getFluidNyc();
+  nzc = getFluidNzc();
+
+  if(nxc == 1) {
+    PERIODICX = true; PERIODICX_P = PERIODICX;
+  }
+  if(nyc == 1) {
+    PERIODICY = true; PERIODICY_P = PERIODICY;
+  }
+  if(nzc == 1){
+    PERIODICZ = true; PERIODICZ_P = PERIODICZ;
+  }
+  
+
+  // These two variables are useless for coupling. 
+  rhoINJECT = new double[ns];
+  rhoINIT   = new double[ns]; 
+  for(int is=0; is < ns; is++){
+    rhoINIT[is] = 0;
+    rhoINJECT[is] = 0; 
+  }
+
+    // B field
+  B0x = 0; B0y = 0; B0z = 0;
+  B1x = 0; B1y = 0; B1z = 0; 
+
+ 
+  u0 = new double[ns];
+  v0 = new double[ns];
+  w0 = new double[ns];
+  for(int is=0; is < ns; ++is){
+    u0[is] = 0;
+    v0[is] = 0;
+    w0[is] = 0; 
+  }
+
+}
+
+
+#endif

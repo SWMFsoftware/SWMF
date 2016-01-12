@@ -9,7 +9,8 @@
 #include "ipicdefs.h"
 
 void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
-  const double *b, int m, int max_iter, double tol, Field * field)
+	   const double *b, int m, int max_iter, double tol,
+	   bool doSolveForChange, Field * field)
 {
   if (m > xkrylovlen) {
     // m need not be the same for all processes,
@@ -61,7 +62,7 @@ void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
   for (itr = 0; itr < max_iter; itr++)
   {
     // r = b - A*x
-    (field->*FunctionImage) (im, xkrylov);
+    (field->*FunctionImage) (im, xkrylov,doSolveForChange);
     sub(r, b, im, xkrylovlen);
     initial_error = normP(r, xkrylovlen);
 
@@ -88,7 +89,7 @@ void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
 
       // w= A*V(:,k)
       double *w = V[k+1];
-      (field->*FunctionImage) (w, V[k]);
+      (field->*FunctionImage) (w, V[k],doSolveForChange);
       // old code (many MPI_Allreduce calls)
       //
       //const double av = normP(w, xkrylovlen);

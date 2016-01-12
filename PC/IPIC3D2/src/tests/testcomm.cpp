@@ -36,7 +36,7 @@ void output_barrier()
 {
   fflush(stdout);
   cout << flush;
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_MYSIM);
 }
 int barrier_ret_nprocs()
 {
@@ -225,8 +225,8 @@ void test_particle_communication(
 void test_particle_communication()
 {
   //MPI_Init(&argc, &argv);
-  //MPI_Comm_rank(MPI_COMM_WORLD, &MPIrank);
-  //MPI_Comm_size(MPI_COMM_WORLD, &MPInumprocs);
+  //MPI_Comm_rank(MPI_COMM_MYSIM, &MPIrank);
+  //MPI_Comm_size(MPI_COMM_MYSIM, &MPInumprocs);
 
   // define separate communicators for opposite
   // directions of information flow
@@ -240,9 +240,9 @@ void test_particle_communication()
   const int UPWARD = 1;
   const int DNWARD = -1;
   // create a communicator for upward communication
-  MPI_Cart_create(MPI_COMM_WORLD, ndims, dims, periods, reorder, &up_comm);
+  MPI_Cart_create(MPI_COMM_MYSIM, ndims, dims, periods, reorder, &up_comm);
   // create a communicator for downward communication
-  MPI_Cart_create(MPI_COMM_WORLD, ndims, dims, periods, 0, &dn_comm);
+  MPI_Cart_create(MPI_COMM_MYSIM, ndims, dims, periods, 0, &dn_comm);
 
   int up_cart_rank;
   int dn_cart_rank;
@@ -259,8 +259,8 @@ void test_particle_communication()
   criticalout dprint(dn_coords[0]);
 
   //MPI_Comm_dup(up_comm, &dn_comm);
-  //MPI_Comm_dup(MPI_COMM_WORLD, &up_comm);
-  //MPI_Comm_dup(MPI_COMM_WORLD, &dn_comm);
+  //MPI_Comm_dup(MPI_COMM_MYSIM, &up_comm);
+  //MPI_Comm_dup(MPI_COMM_MYSIM, &dn_comm);
 
   // This does not actually do a shift; rather, it returns the
   // ranks of the neighbors that would be used to do this shift.

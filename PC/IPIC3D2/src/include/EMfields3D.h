@@ -36,10 +36,6 @@ class EMfields3D                // :public Field
     void initGEMDipoleLikeTailNoPert();
     /*! initialize GEM challenge with no Perturbation */
     void initGEMnoPert();
-#ifdef BATSRUS
-    /*! initialize from BATSRUS */
-    void initBATSRUS();
-#endif
     /*! Random initial field */
     void initRandomField();
     /*! Init Force Free (JxB=0) */
@@ -56,9 +52,9 @@ class EMfields3D                // :public Field
     /*! Calculate Electric field using the implicit Maxwell solver */
     void calculateE();
     /*! Image of Poisson Solver (for SOLVER) */
-    void PoissonImage(double *image, double *vector);
+    void PoissonImage(double *image, double *vector, bool doSolveForChange);
     /*! Image of Maxwell Solver (for Solver) */
-    void MaxwellImage(double *im, double *vector);
+    void MaxwellImage(double *im, double *vector, bool doSolveForChange);
     /*! Maxwell source term (for SOLVER) */
     void MaxwellSource(double *bkrylov);
     /*! Impose a constant charge inside a spherical zone of the domain */
@@ -568,6 +564,100 @@ class EMfields3D                // :public Field
     void OpenBoundaryInflowEImage(arr3_double imageX, arr3_double imageY, arr3_double imageZ,
       const_arr3_double vectorX, const_arr3_double vectorY, const_arr3_double vectorZ,
       int nx, int ny, int nz);
+
+
+
+
+#ifdef BATSRUS
+    /* Used for MHD-IPIC3D coupling. Begin */
+#define minval6(a,b,c,d,e,f) min(a,min(b,min(c,min(d,min(e,f)))))
+    
+ public:
+    /*! initialize from BATSRUS */
+    void initBATSRUS(VirtualTopology3D * vct, Grid * grid, Collective * col);
+
+    /*! Copy field form the fluid solution for boundary condition*/
+    void SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *vct);
+    /*! fix the E boundary when running with batsrus*/
+    void fixE_BATSRUS(arr3_double VecX, arr3_double VecY, arr3_double VecZ,bool doSolveForChange);
+
+    /* ! fix the B boundary when running with BATSRUS*/
+    void fixB_BATSRUS();
+    // Fix variables close to the boundary for BATSRUS, node values
+    inline void fixVarBCnode(arr4_double Var, 
+			     double (CollectiveIO::*fluidVar)(int,int,int,int)const, int nOverlap, int is);
+    /*  Fix variables close to the boundary for BATSRUS, cell centerd values */
+    inline void fixVarBCcell(arr3_double Var, 
+			     double (CollectiveIO::*fluidVar)(int,int,int,int)const, int nOverlap, int is);
+ private:
+    // *************************************
+    // ARRAY USED FOR BC WITH BATSRUS
+    // ************************************
+    /*! fluidExc: magnetic field Y-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidExc;
+    /*! fluidEyc: magnetic field Y-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidEyc;
+    /*! fluidEzc: magnetic field Z-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidEzc;
+    /*! fluidExn: magnetic field X-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidEx;
+    /*! fluidEyn: magnetic field Y-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidEy;
+    /*! fluidEzn: magnetic field Z-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidEz;
+    /*! fluidBxc: magnetic field X-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidBxc;
+    /*! fluidByc: magnetic field Y-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidByc;
+    /*! fluidBzc: magnetic field Z-component (indexX, indexY, indexZ), defined \
+      on central points between nodes form fluid solution*/
+    arr3_double fluidBzc;
+    /*! fluidBxn: magnetic field X-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidBxn;
+    /*! fluidByn: magnetic field Y-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidByn;
+    /*! fluidBzn: magnetic field Z-component (indexX, indexY, indexZ), defined \
+      on nodes form fluid solution*/
+    arr3_double fluidBzn;
+    
+    /*!  index of nodes containing unknows in implicit solver, start index X */
+    int inminsolve;
+    /*!  index of nodes containing unknows in implicit solver, end index X */
+    int inmaxsolve;
+    /*!  index of nodes containing unknows in implicit solver, start index Y */
+    int jnminsolve;
+    /*!  index of nodes containing unknows in implicit solver, end index Y */
+    int jnmaxsolve;
+    /*!  index of nodes containing unknows in implicit solver, start index Z */
+    int knminsolve;
+    /*!  index of nodes containing unknows in implicit solver, end index Z */
+    int knmaxsolve;
+    /*! number of unknown for cells */
+    int nSolveCell;
+    /*! number of unknown for nodes, 3 vector components */
+    int n3SolveNode;
+
+
+    
+    
+    /* Used for MHD-IPIC3D coupling. End */
+#endif
+    
+
+
+
+
+    
 };
 
 inline void EMfields3D::addRho(double weight[][2][2], int X, int Y, int Z, int is) {

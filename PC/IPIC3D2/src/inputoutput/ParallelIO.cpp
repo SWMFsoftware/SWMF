@@ -281,7 +281,7 @@ void ReadFieldsH5hut(int nspec, EMfields3D *EMf, Collective *col, VCtopology3D *
   infile.CloseFieldsFile();
 
   // initialize B on centers
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_MYSIM);
 
   // Comm ghost nodes for B-field
   communicateNodeBC(grid->getNXN(), grid->getNYN(), grid->getNZN(), EMf->getBx(), col->bcBx[0],col->bcBx[1],col->bcBx[2],col->bcBx[3],col->bcBx[4],col->bcBx[5], vct);
@@ -477,7 +477,11 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 
 		  ostringstream filename;
 		  filename << col->getSaveDirName() << "/" << col->getSimName() << "_"<< tags0[tagid] << "_" << cycle << ".vtk";
-		  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  const std::string filenmStr(filename.str());
+		  char *filenamechar;
+		  filenamechar = new char[filenmStr.size()+1];
+		  strcpy(filenamechar, filenmStr.c_str());
+		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -571,7 +575,11 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 
 		  ostringstream filename;
 		  filename << col->getSaveDirName() << "/" << col->getSimName() << "_rhoe_" << cycle << ".vtk";
-		  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  const std::string filenmStr(filename.str());
+		  char *filenamechar;
+		  filenamechar = new char[filenmStr.size()+1];
+		  strcpy(filenamechar, filenmStr.c_str());
+		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -616,7 +624,9 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 
 	      filename.str("");
 	      filename << col->getSaveDirName() << "/" << col->getSimName() << "_rhoi_" << cycle << ".vtk";
-	      MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+	      filenamechar = new char[filenmStr.size()+1];
+	      strcpy(filenamechar, filenmStr.c_str());            
+	      MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 	      MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -777,7 +787,11 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 
 	  ostringstream filename;
 	  filename << col->getSaveDirName() << "/" << col->getSimName() << "_"<< fieldtags[tagid] << "_" << cycle << ".vtk";
-	  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+	  const std::string filenmStr(filename.str());
+	  char *filenamechar;
+	  filenamechar = new char[filenmStr.size()+1];
+	  strcpy(filenamechar, filenmStr.c_str());
+	  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 	  if (vct->getCartesian_rank()==0){
 		  MPI_File_write(fh, header, nelem, MPI_BYTE, &status);
@@ -971,7 +985,11 @@ void WriteMomentsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopol
 
 		  ostringstream filename;
 		  filename << col->getSaveDirName() << "/" << col->getSimName() << "_" << momentstags[tagid] << ((si==0)?"e":"i") << "_" << cycle << ".vtk";
-		  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  const std::string filenmStr(filename.str());
+		  char *filenamechar;
+		  filenamechar = new char[filenmStr.size()+1];
+		  strcpy(filenamechar, filenmStr.c_str());
+		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_File_write(fh, header, nelem, MPI_BYTE, &status);
@@ -1119,7 +1137,11 @@ int WriteFieldsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCt
 
 		  ostringstream filename;
 		  filename << col->getSaveDirName() << "/" << col->getSimName() << "_"<< fieldtags[tagid] << "_" << cycle << ".vtk";
-		  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &(fhArr[counter]));
+		  const std::string filenmStr(filename.str());
+		  char *filenamechar;
+		  filenamechar = new char[filenmStr.size()+1];
+		  strcpy(filenamechar, filenmStr.c_str());
+		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &(fhArr[counter]));
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_Status   status;
@@ -1312,7 +1334,11 @@ int  WriteMomentsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, V
 
 		  ostringstream filename;
 		  filename << col->getSaveDirName() << "/" << col->getSimName() << "_" << momentstags[tagid] << ((si==0)?"e":"i") << "_" << cycle << ".vtk";
-		  MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fhArr[counter]);
+		  const std::string filenmStr(filename.str());
+		  char *filenamechar;
+		  filenamechar = new char[filenmStr.size()+1];
+		  strcpy(filenamechar, filenmStr.c_str());
+		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fhArr[counter]);
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_Status   status;
@@ -1541,7 +1567,11 @@ void WriteTestPclsVTK(int nspec, Grid3DCU *grid, Particles3D *testpart, EMfields
 
 	ostringstream filename;
 	filename << col->getSaveDirName() << "/" << col->getSimName() << "_testparticle"<< testpart[is].get_species_num() << "_cycle" << cycle << ".vtu";
-	MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, fh);
+	const std::string filenmStr(filename.str());
+	char *filenamechar;
+	filenamechar = new char[filenmStr.size()+1];
+	strcpy(filenamechar, filenmStr.c_str());
+	MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, fh);
 
 	MPI_File_set_view(*fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 	if (vct->getCartesian_rank()==0){

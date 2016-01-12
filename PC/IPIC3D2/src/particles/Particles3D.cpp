@@ -30,6 +30,15 @@ developers: Stefano Markidis, Giovanni Lapenta
 #include "debug.h"
 #include <complex>
 
+#ifdef BATSRUS
+#ifdef PSEUDRAND
+#include "RandNum.h"
+#define RANDNUM PseudoRand(&idum)
+#else
+#define RANDNUM rand()*invRandMax
+#endif
+#endif
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -123,56 +132,228 @@ void Particles3D::alt_maxwellian(Field * EMf) {
 
 #ifdef BATSRUS
 /** Maxellian random velocity and uniform spatial distribution */
-void Particles3D::MaxwellianFromFluid(Field* EMf,Collective *col, int is){
+void Particles3D::MaxwellianFromFluid(Field* EMf){
 
   /*
-   * Constuctiong the distrebution function from a Fluid model
+   * Constuctiong the distribution function from a Fluid model
    */
 
-  // loop over grid cells and set position, velociy and charge of all particles indexed by counter
+  /* initialize random generator with different seed on different processor */
+  #ifndef PSEUDRAND
+  srand (vct->getCartesian_rank()+1+ns+(int(MPI_Wtime()))%10000);
+  #endif
+
+  // loop over grid cells and set position, velociy and charge of
+  // all particles indexed by counter
   // there are multiple (27 or so) particles per grid cell.
-  int i,j,k,counter=0;
-  for (i=1; i< grid->getNXC()-1;i++)
-    for (j=1; j< grid->getNYC()-1;j++)
-      for (k=1; k< grid->getNZC()-1;k++)
-        MaxwellianFromFluidCell(col,is, i,j,k,counter,x,y,z,q,u,v,w,ParticleID);
+  int i, j, k;
+  for (i = 1; i < grid->getNXC() - 1; i++)
+    for (j = 1; j < grid->getNYC() - 1; j++)
+      for (k = 1; k < grid->getNZC() - 1; k++){
+	MaxwellianFromFluidCell(i, j, k);
+      }
 }
 
-void Particles3D::MaxwellianFromFluidCell(Collective *col, int is, int i, int j, int k, int &ip, double *x, double *y, double *z, double *q, double *vx, double *vy, double *vz, longid* ParticleID)
+inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 {
   /*
-   * grid           : local grid object (in)
-   * col            : collective (global) object (in)
-   * is             : species index (in)
    * i,j,k          : grid cell index on proc (in)
-   * ip             : particle number counter (inout)
-   * x,y,z          : particle position (out)
-   * q              : particle charge (out)
-   * vx,vy,vz       : particle velocity (out)
-   * ParticleID     : particle tracking ID (out)
    */
+  
+  double harvest;
+  double x0,y0,z0, u, v, w;
+  int ns0, iSample;
+  ns0 = ns; 
+  
+  // loop over particles inside grid cell i, j, k
+  for (int ii = 0; ii < npcelx; ii++)
+    for (int jj = 0; jj < npcely; jj++)
+      for (int kk = 0; kk < npcelz; kk++){
+	// Assign particle positions: uniformly spaced.
+	// x_cellnode + dx_particle*(0.5+index_particle)
+	#ifdef UNIFORM_X
+	const double x = (ii + .5)*(dx/npcelx) + grid->getXN(i, j, k);
+	const double y = (jj + .5)*(dy/npcely) + grid->getYN(i, j, k);
+	const double z = (kk + .5)*(dz/npcelz) + grid->getZN(i, j, k);
+	#else
+	harvest =   RANDNUM ;
+	const double x = (ii + harvest)*(dx/npcelx) + grid->getXN(i, j, k);
+	harvest =   RANDNUM ;
+	const double y = (jj + harvest)*(dy/npcely) + grid->getYN(i, j, k);
+	harvest =   RANDNUM ;
+	const double z = (kk + harvest)*(dz/npcelz) + grid->getZN(i, j, k);
+	#endif
+	// q = charge
+	x0=x; y0=y; z0=z;
+	const double q =  (qom/fabs(qom))*(col->getFluidRhoNum(x0, y0, z0, ns0)
+					   /npcel) * (1.0 / grid->getInvVOL());
 
-  // loop over particles inside grid cell i,j,k
-  for (int ii=0; ii < npcelx; ii++)
-    for (int jj=0; jj < npcely; jj++)
-      for (int kk=0; kk < npcelz; kk++){
-        // Assign particle positions: uniformly spaced. x_cellnode + dx_particle*(0.5+index_particle)
-        fetchX(ip) = (ii + .5)*(dx/npcelx) + grid->getXN(i,j,k);
-        fetchY(ip) = (jj + .5)*(dy/npcely) + grid->getYN(i,j,k);
-        fetchZ(ip) = (kk + .5)*(dz/npcelz) + grid->getZN(i,j,k);
-        // q = charge
-        fetchQ(ip) =  (qom/fabs(qom))*(col->getFluidRhoCenter(i,j,k,is)/npcel)*(1.0/grid->getInvVOL());
-        // u = X velocity
-        sample_maxwellian(
-          fetchU(ip),fetchV(ip),fetchW(ip),
-          col->getFluidUthx(i,j,k,is),
-          col->getFluidVthx(i,j,k,is),
-          col->getFluidWthx(i,j,k,is),
-          col->getFluidUx(i,j,k,is),
-          col->getFluidVx(i,j,k,is),
-          col->getFluidWx(i,j,k,is));
-        ip++ ;
+	iSample = 0;
+	u = 0;
+	v = 0;
+	w = 0;
+	//while(iSample==0 || u*u+v*v+w*w>1.0){
+	// Set particle velocity	
+	MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);
+	++iSample;
+	//}
+	create_new_particle(u,v,w,q,x,y,z);
       }
+}
+
+inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const double Y, const double Z,double *U, double *V, double *W)
+{
+  double harvest, prob, theta, Uth;
+
+  if(col->getUseAnisoP() && ns > 0){
+    double rand1, rand2, rand3, rand4;
+    rand1 = RANDNUM;
+    rand2 = RANDNUM;
+    rand3 = RANDNUM;
+    rand4 = RANDNUM;
+
+    col->setFluidansioUth(X, Y, Z, U, V, W, rand1, rand2, rand3, rand4, ns);
+    (*U) += col->getFluidUx(X, Y, Z, ns);
+    (*V) += col->getFluidUy(X, Y, Z, ns);
+    (*W) += col->getFluidUz(X, Y, Z, ns);
+  } else {
+    // u = X velocity
+    harvest =   RANDNUM;
+    prob  = sqrt(-2.0 * log(1.0 - .999999999 * harvest));
+    harvest =   RANDNUM;
+    theta = 2.0*M_PI*harvest;
+    Uth = col->getFluidUth(X, Y, Z, ns);
+    (*U) = col->getFluidUx(X, Y, Z, ns) + Uth * prob * cos(theta);
+    // v = Y velocity
+    (*V) = col->getFluidUy(X, Y, Z, ns) + Uth * prob * sin(theta);
+    // w = Z velocity
+    harvest =   RANDNUM;
+    prob  = sqrt(-2.0 * log(1.0 - .999999999 * harvest));
+    harvest =   RANDNUM;
+    theta = 2.0 * M_PI * harvest;
+    (*W) = col->getFluidUz(X, Y, Z, ns) + Uth * prob * cos(theta);
+  }
+}
+
+void Particles3D::print_particles(string tag){
+  int pidx = 0; 
+  cout<<tag<<endl<<" ns="<<ns;
+  while(pidx < getNOP()){
+    SpeciesParticle& pcl = _pcls[pidx];
+    printf("x= %f, y= %f, z= %f, \n",pcl.get_x(),pcl.get_y(),pcl.get_z());
+    pidx++;
+  }
+
+}
+
+void Particles3D::delete_outside_particles(){
+  using namespace BCparticles;
+
+    const bool fluidXleft = !vct->getPERIODICX_P() && vct->noXleftNeighbor_P() &&  bcPfaceXleft == FLUID;
+  const bool fluidYleft = !vct->getPERIODICY_P() && vct->noYleftNeighbor_P() &&  bcPfaceYleft == FLUID;
+  const bool fluidZleft = !vct->getPERIODICZ_P() && vct->noZleftNeighbor_P() &&  bcPfaceZleft == FLUID;
+
+  const bool fluidXright = !vct->getPERIODICX_P() && vct->noXrghtNeighbor_P() && bcPfaceXright == FLUID;
+  const bool fluidYright = !vct->getPERIODICY_P() && vct->noYrghtNeighbor_P() && bcPfaceYright == FLUID;
+  const bool fluidZright = !vct->getPERIODICZ_P() && vct->noZrghtNeighbor_P() && bcPfaceZright == FLUID;
+
+
+  
+  int pidx = 0; 
+  while(pidx < getNOP())
+  {
+    SpeciesParticle& pcl = _pcls[pidx];
+    // determine whether to delete the particle
+    const bool delete_pcl =
+      (fluidXleft   &&pcl.get_x() < 0)   ||
+      (fluidYleft   && pcl.get_y() < 0)  ||
+      (fluidZleft   && pcl.get_z() < 0)  ||
+      (fluidXright  && pcl.get_x() > Lx) ||
+      (fluidYright  && pcl.get_y() > Ly) ||
+      (fluidZright  && pcl.get_z() > Lz);    
+    if(delete_pcl){
+      //dprintf("delete particle x= %f, y=%f, z=%f \n",pcl.get_x(),pcl.get_y(),pcl.get_z());
+      delete_particle(pidx);
+    }
+    else
+      pidx++;
+  }
+}
+
+void Particles3D::set_fluid_BC()
+{
+#ifndef PSEUDRAND
+  srand (vct->getCartesian_rank()+1+ns+(int(MPI_Wtime()))%10000);
+#endif
+  // if this is not a boundary process then there is nothing to do
+  if(!vct->isBoundaryProcess_P()) return;
+
+  //The below is OpenBC outflow for all other boundaries
+  using namespace BCparticles;
+
+  const bool fluidXleft = !vct->getPERIODICX_P() && vct->noXleftNeighbor_P() &&  bcPfaceXleft == FLUID;
+  const bool fluidYleft = !vct->getPERIODICY_P() && vct->noYleftNeighbor_P() &&  bcPfaceYleft == FLUID;
+  const bool fluidZleft = !vct->getPERIODICZ_P() && vct->noZleftNeighbor_P() &&  bcPfaceZleft == FLUID;
+
+  const bool fluidXright = !vct->getPERIODICX_P() && vct->noXrghtNeighbor_P() && bcPfaceXright == FLUID;
+  const bool fluidYright = !vct->getPERIODICY_P() && vct->noYrghtNeighbor_P() && bcPfaceYright == FLUID;
+  const bool fluidZright = !vct->getPERIODICZ_P() && vct->noZrghtNeighbor_P() && bcPfaceZright == FLUID;
+
+  if(!fluidXleft && !fluidYleft && !fluidZleft && !fluidXright && !fluidYright && !fluidZright)  return;
+
+  assert_gt(nxc-2, (fluidXleft+fluidXright)*NG_P); //excluding 2 ghost cells, #of cells should be larger than total # of fluidBC layers
+  assert_gt(nyc-2, (fluidYleft+fluidYright)*NG_P);
+  assert_gt(nzc-2, (fluidZleft+fluidZright)*NG_P);
+
+  const double xLow = NG_P*dx;
+  const double yLow = NG_P*dy;
+  const double zLow = NG_P*dz;
+  const double xHgh = Lx-xLow;
+  const double yHgh = Ly-yLow;
+  const double zHgh = Lz-zLow;
+
+  const bool   apply_fluidBC[6]    = {fluidXleft, fluidXright,fluidYleft, fluidYright,fluidZleft, fluidZright};
+  const double delete_boundary[6] = {0, Lx,0, Ly,0, Lz};
+  const double fluid_boundary[6]   = {xLow, xHgh,yLow, yHgh,zLow, zHgh};
+  const int nxc = grid->getNXC(), nyc = grid->getNYC(), nzc = grid->getNZC();
+  const int iBegin[6] = {1,   nxc-1-NG_P, 1,   1,        1,      1 };
+  const int iEnd[6]   = {NG_P, nxc-2,   nxc-2, nxc-2,   nxc-2, nxc-2 };
+  const int jBegin[6] = {1,     1,       1,  nyc-1-NG_P, 1,     1};
+  const int jEnd[6]   = {nyc-2, nyc-2,  NG_P, nyc-2,   nyc-2,  nyc-2 };
+  const int kBegin[6] = {1,     1,       1,     1,      1,    nzc-1-NG_P};
+  const int kEnd[6]   = {nzc-2, nzc-2,  nzc-2,  nzc-2,  NG_P, nzc-2};
+  
+  int pidx = 0; 
+  while(pidx < getNOP())
+  {
+    SpeciesParticle& pcl = _pcls[pidx];
+    // determine whether to delete the particle
+    const bool delete_pcl =
+      (fluidXleft  && pcl.get_x() < xLow) ||
+      (fluidYleft  && pcl.get_y() < yLow) ||
+      (fluidZleft  && pcl.get_z() < zLow) ||
+      (fluidXright && pcl.get_x() > xHgh) ||
+      (fluidYright && pcl.get_y() > yHgh) ||
+      (fluidZright && pcl.get_z() > zHgh);
+    if(delete_pcl){
+      delete_particle(pidx);
+    }
+    else
+      pidx++;
+  }
+
+  //  return;
+  for (int iDir = 0; iDir < 6; ++iDir){
+    if(apply_fluidBC[iDir]){
+      for (int i = iBegin[iDir]; i<=iEnd[iDir]; ++i)
+	for(int j = jBegin[iDir]; j<=jEnd[iDir]; ++j)
+	  for (int k = kBegin[iDir]; k<=kEnd[iDir]; ++k){
+	    MaxwellianFromFluidCell(i,j,k);
+	    cout<<" i = "<<i<<" j = "<<j<<" k = "<<k<<endl;
+	  }
+    } // if apply_fluidBC
+  } // for iDir
+
 }
 #endif
 
@@ -536,7 +717,7 @@ void Particles3D::mover_PC(Field * EMf) {
     fetchV(pidx) = 2.0 * vavg - vorig;
     fetchW(pidx) = 2.0 * wavg - worig;
   }                             // END OF ALL THE PARTICLES
-}
+ }
 }
 
 void Particles3D::mover_PC_AoS(Field * EMf)
@@ -661,7 +842,13 @@ void Particles3D::mover_PC_AoS(Field * EMf)
     pcl->set_u(2.0 * uavg - uorig);
     pcl->set_v(2.0 * vavg - vorig);
     pcl->set_w(2.0 * wavg - worig);
-  }                             // END OF ALL THE PARTICLES
+
+    // cout<<"pidx = "<<pidx<<" x = "<<xorig+uavg*dt<<" y = "<<yorig+vavg*dt
+    // 	<<" z = "<<zorig+wavg*dt<<" u = "<<2.0*uavg-uorig<<" v = "
+    // 	<<2.0*vavg-vorig
+    // 	<<" w = "<<2.0*wavg-worig<<endl;
+
+  }                             // End OF ALL THE PARTICLES
 }
 }
 
@@ -712,7 +899,7 @@ void Particles3D::mover_PC_AoS_Relativistic(Field * EMf)
 		Byl += weights[c] * field_components[c][1];
 		Bzl += weights[c] * field_components[c][2];
 	  }
-	  const double B_mag= sqrt(Bxl*Bxl+Byl*Byl+Bzl*Bzl);
+	  const double B_mag= max(sqrt(Bxl*Bxl+Byl*Byl+Bzl*Bzl),1e-99);
 	  double dt_sub = M_PI*c/(4*abs(qom)*B_mag);
 	  const int sub_cycles = int(dt/dt_sub)+1;
 	  dt_sub = dt/double(sub_cycles);
@@ -727,7 +914,7 @@ void Particles3D::mover_PC_AoS_Relativistic(Field * EMf)
 	  for(int cyc_cnt=0;cyc_cnt<sub_cycles;cyc_cnt++)
 	  {
 
-		    const double xorig = pcl->get_x();
+	    const double xorig = pcl->get_x();
        	    const double yorig = pcl->get_y();
        	    const double zorig = pcl->get_z();
        	    const double uorig = pcl->get_u();
@@ -868,7 +1055,7 @@ void Particles3D::mover_PC_AoS_Relativistic(Field * EMf)
 	  localAvgArr[0]=local_subcycle;
 	  localAvgArr[1]=local_innter;
 	  double globalAvgArr[2];
-	  MPI_Reduce(&localAvgArr, &globalAvgArr, 2, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	  MPI_Reduce(&localAvgArr, &globalAvgArr, 2, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_MYSIM);
 	  if (MPIdata::get_rank() == 0)
 		  cout << "*** Relativistic AoS MOVER with Subcycling  species " << ns << " ***" 
 		  << globalAvgArr[0]/MPIdata::get_nprocs()  << " subcyles ***" << globalAvgArr[1]/MPIdata::get_nprocs()<< " ITERATIONS   ****" << endl;
@@ -1555,11 +1742,14 @@ void Particles3D::repopulate_particles()
 
   // if there are no reemission boundaries then no one has anything to do
   const bool repop_bndry_in_X = !vct->getPERIODICX_P() &&
-        (bcPfaceXleft == REEMISSION || bcPfaceXright == REEMISSION);
+    (bcPfaceXleft == REEMISSION || bcPfaceXright == REEMISSION ||
+     bcPfaceXleft == FLUID      || bcPfaceXright == FLUID);
   const bool repop_bndry_in_Y = !vct->getPERIODICY_P() &&
-        (bcPfaceYleft == REEMISSION || bcPfaceYright == REEMISSION);
+    (bcPfaceYleft == REEMISSION || bcPfaceYright == REEMISSION ||
+     bcPfaceYleft == FLUID      || bcPfaceYright == FLUID);
   const bool repop_bndry_in_Z = !vct->getPERIODICZ_P() &&
-        (bcPfaceZleft == REEMISSION || bcPfaceZright == REEMISSION);
+    (bcPfaceZleft == REEMISSION || bcPfaceZright == REEMISSION ||
+     bcPfaceZleft == FLUID      || bcPfaceZright == FLUID);
   const bool repopulation_boundary_exists =
         repop_bndry_in_X || repop_bndry_in_Y || repop_bndry_in_Z;
 
@@ -1568,12 +1758,24 @@ void Particles3D::repopulate_particles()
 
   // boundaries to repopulate
   //
-  const bool repopulateXleft = (vct->noXleftNeighbor_P() && bcPfaceXleft == REEMISSION);
-  const bool repopulateYleft = (vct->noYleftNeighbor_P() && bcPfaceYleft == REEMISSION);
-  const bool repopulateZleft = (vct->noZleftNeighbor_P() && bcPfaceZleft == REEMISSION);
-  const bool repopulateXrght = (vct->noXrghtNeighbor_P() && bcPfaceXright == REEMISSION);
-  const bool repopulateYrght = (vct->noYrghtNeighbor_P() && bcPfaceYright == REEMISSION);
-  const bool repopulateZrght = (vct->noZrghtNeighbor_P() && bcPfaceZright == REEMISSION);
+  const bool repopulateXleft = (vct->noXleftNeighbor_P() &&
+				(bcPfaceXleft == REEMISSION ||
+				 bcPfaceXleft == FLUID));
+  const bool repopulateYleft = (vct->noYleftNeighbor_P() &&
+				(bcPfaceYleft == REEMISSION ||
+				 bcPfaceYleft == FLUID));
+  const bool repopulateZleft = (vct->noZleftNeighbor_P() && 
+				(bcPfaceZleft == REEMISSION ||
+				 bcPfaceZleft == FLUID));
+  const bool repopulateXrght = (vct->noXrghtNeighbor_P() &&
+				(bcPfaceXright == REEMISSION ||
+				 bcPfaceXright == FLUID));
+  const bool repopulateYrght = (vct->noYrghtNeighbor_P() &&
+				(bcPfaceYright == REEMISSION ||
+				 bcPfaceYright == FLUID));
+  const bool repopulateZrght = (vct->noZrghtNeighbor_P() && 
+				(bcPfaceZright == REEMISSION ||
+				 bcPfaceZright == FLUID));
   const bool do_repopulate = 
        repopulateXleft || repopulateYleft || repopulateZleft
     || repopulateXrght || repopulateYrght || repopulateZrght;
@@ -1590,7 +1792,12 @@ void Particles3D::repopulate_particles()
   const int nxc = grid->getNXC();
   const int nyc = grid->getNYC(); const int nzc = grid->getNZC();
   // number of cell layers to repopulate at boundary
+  
+  #ifdef BATSRUS
+  const int num_layers = NG_P;
+  #else
   const int num_layers = 3;
+  #endif
   const double xLow = num_layers*dx;
   const double yLow = num_layers*dy;
   const double zLow = num_layers*dz;
@@ -1648,55 +1855,110 @@ void Particles3D::repopulate_particles()
     int zend = nzc-2;
     if (repopulateXleft)
     {
-      //cout << "*** Repopulate Xleft species " << ns << " ***" << endl;
+      cout << "*** Repopulate Xleft species " << ns << " ***" << endl;
       for (int i=1; i<= num_layers; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceXleft==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);	
       }
       // these have all been filled, so never touch them again.
-      xbeg += num_layers;
+      if(bcPfaceXleft!=FLUID)xbeg += num_layers; // The if statement only used for debug!!!!!!
     }
     if (repopulateXrght)
-    {      
+    {
       cout << "*** Repopulate Xright species " << ns << " ***" << endl;
       for (int i=upXstart; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceXright==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif	  
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	
       }
-      // these have all been filled, so never touch them again.
-      xend -= num_layers;
+      //these have all been filled, so never touch them again.
+      if(bcPfaceXright!=FLUID)xend -= num_layers;
     }
     if (repopulateYleft)
     {     
-      // cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
+      if(bcPfaceYleft==FLUID){
+	//ONLY FOR DEBUG
+	const int nop_orig = getNOP();
+	int pidx = 0;
+	while(pidx < getNOP())
+	  {
+	    SpeciesParticle& pcl = _pcls[pidx];
+	    // determine whether to delete the particle
+	    const bool delete_pcl =
+	      (repopulateYleft && pcl.get_y() < yLow);
+	    if(delete_pcl)
+	      delete_particle(pidx);
+	    else
+	      pidx++;
+	  }
+      }
+
+
+      cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=1; j<=num_layers; j++)
       for (int k=zbeg; k<=zend; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceYleft==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
       // these have all been filled, so never touch them again.
-      ybeg += num_layers;
+      if(bcPfaceYleft!=FLUID)ybeg += num_layers;
     }
     if (repopulateYrght)
-    {     
-      // cout << "*** Repopulate Yright species " << ns << " ***" << endl;
+      {
+	if(bcPfaceYright==FLUID){
+	  const int nop_orig = getNOP();
+	  int pidx = 0;
+	  while(pidx < getNOP())
+	    {
+	      SpeciesParticle& pcl = _pcls[pidx];
+	      // determine whether to delete the particle
+	      const bool delete_pcl =
+		(repopulateYrght && pcl.get_y() > yHgh);
+	      if(delete_pcl)
+		delete_particle(pidx);
+	      else
+		pidx++;
+	    }
+	}
+      
+      cout << "*** Repopulate Yright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=upYstart; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceYright==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
       // these have all been filled, so never touch them again.
-      yend -= num_layers;
+      if(bcPfaceYright!=FLUID)yend -= num_layers;
     }
     if (repopulateZleft)
     {   
@@ -1705,8 +1967,13 @@ void Particles3D::repopulate_particles()
       for (int j=ybeg; j<=yend; j++)
       for (int k=1; k<=num_layers; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceZleft==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
     }
     if (repopulateZrght)
@@ -1716,11 +1983,17 @@ void Particles3D::repopulate_particles()
       for (int j=ybeg; j<=yend; j++)
       for (int k=upZstart; k<=zend; k++)
       {
-        populate_cell_with_particles(i,j,k,q_per_particle,
-          dx_per_pcl, dy_per_pcl, dz_per_pcl);
+	if(bcPfaceZright==FLUID){
+#ifdef BATSRUS
+	  MaxwellianFromFluidCell(i,j,k);
+#endif
+	}else
+	  populate_cell_with_particles(i,j,k,q_per_particle,
+				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
     }
   }
+
   const int nop_final = getNOP();
   const int nop_deleted = nop_orig - nop_remaining;
   const int nop_created = nop_final - nop_remaining;

@@ -328,7 +328,6 @@ public:
     k_energy -> kinetic energy for each species
     B_energy -> energy of magnetic field
     E_energy -> energy of electric field
-
 */
 
   void output(const string & tag, int cycle) {
@@ -816,6 +815,318 @@ public:
       }
     }
   }
+
+
+#ifdef BATSRUS
+  double weightedValue(double ****V, const int ix, const int iy, const int iz, const int is,
+		       const double w000, const double w001, const double w010, const double w011, 
+		       const double w100, const double w101, const double w110, const double w111){
+    double tmp;
+    tmp =0.0;
+    
+    tmp += w000 * V[is][ix][iy][iz];
+    tmp += w001 * V[is][ix][iy][iz - 1];
+    tmp += w010 * V[is][ix][iy - 1][iz];
+    tmp += w011 * V[is][ix][iy - 1][iz - 1];
+    tmp += w100 * V[is][ix - 1][iy][iz];
+    tmp += w101 * V[is][ix - 1][iy][iz - 1];
+    tmp += w110 * V[is][ix - 1][iy - 1][iz];
+    tmp += w111 * V[is][ix - 1][iy - 1][iz - 1];
+    
+    return(tmp);
+  }
+  
+  
+  double weightedValue(double ***V, const int ix, const int iy, const int iz, 
+		       const double w000, const double w001, const double w010, const double w011, 
+		       const double w100, const double w101, const double w110, const double w111){
+    double tmp;
+    tmp =0.0;
+    
+    tmp += w000 * V[ix][iy][iz];
+    tmp += w001 * V[ix][iy][iz - 1];
+    tmp += w010 * V[ix][iy - 1][iz];
+    tmp += w011 * V[ix][iy - 1][iz - 1];
+    tmp += w100 * V[ix - 1][iy][iz];
+    tmp += w101 * V[ix - 1][iy][iz - 1];
+    tmp += w110 * V[ix - 1][iy - 1][iz];
+    tmp += w111 * V[ix - 1][iy - 1][iz - 1];
+     
+    return(tmp);
+  }
+
+  void getFluidSIatPoint(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVarIn, string *NameVar){
+
+    const int nVar             = _col->getnVarFluid();
+    const int nIon             = _col->getnIon();
+    const bool useAnisoP       = _col->getUseAnisoP();
+    const bool useMhdPe        = _col->getUseMhdPe();
+    const bool useMultiFluid   = _col->getUseMultiFluid();
+    const bool useMultiSpecies = _col->getUseMultiSpecies();
+          
+    assert_eq(nVar, nVarIn);
+
+    unsigned long n,i,j;	
+    double *localState_IV;
+    
+    double ****Pxx, ****Pyy,****Pzz, ****Pxy, ****Pxz, ****Pyz;
+    
+    double QoMi, Rhoi, Uxi, Uyi, Uzi, Pi;
+    double QoMe, Rhoe, Uxe, Uye, Uze, Pe;
+    double Rho, Trace;
+    double PeXX, PeYY, PeZZ, PeXY, PeXZ, PeYZ, PiXX, PiYY, PiZZ, PiXY, PiXZ, PiYZ;
+    double PtXX, PtYY, PtZZ, PtXY, PtXZ, PtYZ, BX, BY, BZ;
+    double PitXX, PitYY, PitZZ, PitXY, PitXZ, PitYZ;
+    double Mx, My, Mz; // Total momentum.
+    double Mix, Miy, Miz; // Momentum of i species.
+
+    double xmin, ymin, zmin;
+
+    const double nxn = _grid->getNXN();
+    const double nyn = _grid->getNYN();
+    const double nzn = _grid->getNZN();
+
+    const double xstart = _grid->getXstart();
+    const double ystart = _grid->getYstart();
+    const double zstart = _grid->getZstart();
+
+    const double dx = _grid->getDX();
+    const double dy = _grid->getDY();
+    const double dz = _grid->getDZ();
+
+    const double invVOL = _grid->getInvVOL();
+
+    double xp,yp,zp; 
+    //double ****node_coordinate = asgArr4(double, _grid->getNXN(), _grid->getNYN(), _grid->getNZN(), 3, _grid->getN());
+    
+    const double inv_dx = 1.0 / dx, inv_dy = 1.0 / dy, inv_dz = 1.0 / dz;
+    
+    Pxx = _field->getpXXsn();
+    Pyy = _field->getpYYsn();
+    Pzz = _field->getpZZsn();
+    Pxy = _field->getpXYsn();
+    Pxz = _field->getpXZsn();
+    Pyz = _field->getpYZsn();
+
+    xmin = _col->getPhyXMin(); 
+    ymin = _col->getPhyYMin();
+    zmin = _col->getPhyZMin();
+
+    for(int i = 0; i<nPoint*nDim; i++){
+      Xyz_I[i] *= _col->getSi2NoL();
+    }
+
+
+
+    for(int iPoint = 0; iPoint < nPoint; iPoint++){
+      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){	
+	xp = Xyz_I[iPoint*nDim] - xmin;
+	yp = (nDim > 1) ? Xyz_I[iPoint*nDim + 1] - ymin : 0.0;
+	zp = (nDim > 2) ? Xyz_I[iPoint*nDim + 2] - zmin : 0.0;
+	
+	const double ixd = floor((xp - xstart) * inv_dx);
+	const double iyd = floor((yp - ystart) * inv_dy);
+	const double izd = floor((zp - zstart) * inv_dz);
+	int ix = 2 + int (ixd);
+	int iy = 2 + int (iyd);
+	int iz = 2 + int (izd);
+	
+	if (ix < 1)
+	  ix = 1;
+	if (iy < 1)
+	  iy = 1;
+	if (iz < 1)
+	  iz = 1;
+	if (ix > nxn - 1)
+	  ix = nxn - 1;
+	if (iy > nyn - 1)
+	  iy = nyn - 1;
+	if (iz > nzn - 1)
+	  iz = nzn - 1;
+	
+	double xi[2];
+	double eta[2];
+	double zeta[2];
+	xi[0]   = xp - _grid->getXN(ix - 1, iy, iz);
+	eta[0]  = yp - _grid->getYN(ix, iy - 1, iz);
+	zeta[0] = zp - _grid->getZN(ix, iy, iz - 1);
+	xi[1]   = _grid->getXN(ix,iy,iz) - xp;
+	eta[1]  = _grid->getYN(ix,iy,iz) - yp;
+	zeta[1] = _grid->getZN(ix,iy,iz) - zp;
+	
+	const double w000 = xi[0] * eta[0] * zeta[0] * invVOL;
+	const double w001 = xi[0] * eta[0] * zeta[1] * invVOL;
+	const double w010 = xi[0] * eta[1] * zeta[0] * invVOL;
+	const double w011 = xi[0] * eta[1] * zeta[1] * invVOL;
+	const double w100 = xi[1] * eta[0] * zeta[0] * invVOL;
+	const double w101 = xi[1] * eta[0] * zeta[1] * invVOL;
+	const double w110 = xi[1] * eta[1] * zeta[0] * invVOL;
+	const double w111 = xi[1] * eta[1] * zeta[1] * invVOL;
+
+	n = iPoint*nVar;	
+
+	// Electron
+	QoMe = _col->getQOM(0);
+	Rhoe = weightedValue(_field->getRHOns(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe;
+	//cout<<"ix = "<<ix<<" iy = "<<iy<<" iz = "<<iz<<" rhoe = "<<Rhoe<<endl;
+	Uxe  = weightedValue(_field->getJxs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	Uye  = weightedValue(_field->getJys(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	Uze  = weightedValue(_field->getJzs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	PeXX  = weightedValue(Pxx,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uxe;
+	PeYY  = weightedValue(Pyy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uye*Uye;
+	PeZZ  = weightedValue(Pzz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uze*Uze;
+	Pe   = (PeXX + PeYY + PeZZ)/3.0;
+	PeXY = weightedValue(Pxy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uye;
+	PeXZ = weightedValue(Pxz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uze;
+	PeYZ = weightedValue(Pyz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uye*Uze;
+	
+	BX  = weightedValue(_field->getBx(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	BY  = weightedValue(_field->getBy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	BZ  = weightedValue(_field->getBz(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	
+
+	data_I[n + _col->iBx] = BX; 
+	data_I[n + _col->iBy] = BY;
+	data_I[n + _col->iBz] = BZ;
+	if(useMhdPe)data_I[n + _col->iPe] = Pe;
+	
+	Rho  = Rhoe;
+	PtXX = PeXX;
+	PtYY = PeYY;
+	PtZZ = PeZZ;
+	PtXY = PeXY;
+	PtXZ = PeXZ;
+	PtYZ = PeYZ;
+	Mx   = Rhoe*Uxe;
+	My   = Rhoe*Uye;
+	Mz   = Rhoe*Uze;
+	
+	int iSpecies;
+	for(int iIon=0; iIon<nIon; ++iIon){
+	  iSpecies = iIon + 1; // iSpecies = 0 is electron.	  
+	  QoMi = _col->getQOM(iSpecies);
+	  Rhoi = weightedValue(_field->getRHOns(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi;
+	  Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	  Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	  Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	  PiXX  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uxi;
+	  PiYY  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uyi*Uyi;
+	  PiZZ  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uzi*Uzi;
+	  Pi   = (PiXX + PiYY + PiZZ)/3.0;
+	  PiXY = weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uyi;
+	  PiXZ = weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uzi;
+	  PiYZ = weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uyi*Uzi;
+
+	  Mix = Rhoi*Uxi;
+	  Miy = Rhoi*Uyi;
+	  Miz = Rhoi*Uzi;
+
+	  // Sum to total density/pressure.
+	  Rho  += Rhoi;
+	  PtXX += PiXX;
+	  PtYY += PiYY;
+	  PtZZ += PiZZ;
+	  PtXY += PiXY;
+	  PtXZ += PiXZ;
+	  PtYZ += PiYZ;
+	  Mx   += Mix;
+	  My   += Miy;
+	  Mz   += Miz;
+
+	  // Density
+	  if(useMultiFluid || useMultiSpecies){
+	    data_I[n + _col->iRho_I[iIon]] = Rhoi;	  
+	  }else{
+	    // Only one ion species.Rho = Rhoi + Rhoe
+	    data_I[n + _col->iRho_I[iIon]] = Rho;	  
+	  }
+
+	  // Pressure.
+	  if(useMultiFluid){
+	    // ONLY works for iso pressure so far!!!!!
+	    data_I[n + _col->iP_I[iIon]] = Pi;
+	    if(useAnisoP) {
+	      cout<<"Multi-fluid model can not work with aniso pressure now!!"
+		  <<endl;
+	      abort();
+	    }
+	  }
+
+	  // Momentum.
+	  if(useMultiFluid){
+	    data_I[n + _col->iRhoUx_I[iIon]]  = Mix;
+	    data_I[n + _col->iRhoUy_I[iIon]]  = Miy;
+	    data_I[n + _col->iRhoUz_I[iIon]]  = Miz; 
+	  }
+	  
+	}// iIon
+
+	// Do not includes electron density. The total density passed
+	// in MHD side is useless, so it doesnot matter whether Rho include
+	// electron or not. -- Yuxi
+	if(useMultiSpecies)
+	  data_I[n + _col->iRhoTotal] = Rho - Rhoe; 
+	
+	// Momentum
+	if(!useMultiFluid){
+	  // Include electron momentum.
+	  data_I[n + _col->iRhoUx_I[0]]  = Mx;
+	  data_I[n + _col->iRhoUy_I[0]]  = My;
+	  data_I[n + _col->iRhoUz_I[0]]  = Mz; 
+	}
+
+
+	//Sum of ion pressure.
+	PitXX = PtXX - PeXX;
+	PitYY = PtYY - PeYY;
+	PitZZ = PtZZ - PeZZ;
+	PitXY = PtXY - PeXY;
+	PitXZ = PtXZ - PeXZ;
+	PitYZ = PtYZ - PeYZ;
+	
+	// Pressure
+	if(!useMultiFluid){
+	  // AnisoP
+	  if(useAnisoP){
+	    if(useMhdPe)
+	      data_I[n + _col->iPpar_I[0]]
+		= (BX*PitXX*BX + BY*PitYY*BY + BZ*PitZZ*BZ +
+		   2.0*BX*PitXY*BY + 2.0*BX*PitXZ*BZ +
+		   2.0*BY*PitYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);
+	    else
+	      data_I[n + _col->iPpar_I[0]]
+		= (BX*PtXX*BX + BY*PtYY*BY + BZ*PtZZ*BZ +
+		   2.0*BX*PtXY*BY + 2.0*BX*PtXZ*BZ +
+		   2.0*BY*PtYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);	    
+	  }// useAnisoP
+
+	  // Isotropic Pressure. 
+	  if(useMhdPe) data_I[n + _col->iP_I[0]]  = (PitXX + PitYY + PitZZ)/3;
+	  else data_I[n + _col->iP_I[0]]  = (PtXX + PtYY + PtZZ)/3;
+	}
+	
+      }
+
+    }
+    
+    // Convert to SI units
+    for(int iPoint = 0; iPoint < nPoint; iPoint++){
+      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){	
+	n = iPoint*nVar;
+	for (int iVar=0; iVar<nVar; ++iVar){
+	  data_I[n+iVar] *= _col->getNo2Si_V(iVar);
+	}
+      }
+    }
+
+    // if it used later (remove if it is useless)
+    for(int i = 0; i<nPoint*nDim; i++){
+      Xyz_I[i] *= _col->getNo2SiL();
+    }
+      
+  }
+#endif
+  
 
 };
 

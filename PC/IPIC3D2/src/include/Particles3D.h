@@ -95,9 +95,16 @@ class Particles3D:public Particles3Dcomm {
 
 #ifdef BATSRUS
     /*! Initial condition: given a fluid model (BATSRUS) */
-    void MaxwellianFromFluid(Field* EMf,Collective *col, int is);
+    void MaxwellianFromFluid(Field* EMf);
     /*! Initiate dist. func. for a single cell form a fluid model (BATSRUS) */
-    void MaxwellianFromFluidCell(Collective *col, int is, int i, int j, int k, int &ip, double *x, double *y, double *z, double *q, double *vx, double *vy, double *vz, longid* ParticleID);
+    inline void MaxwellianFromFluidCell(int i, int j, int k);
+    // Set the velocity of the particle from the fluid model
+    inline void MaxwellianVelocityFromFluidCell(const double X, const double Y,
+						const double Z,
+						double *U,double *V, double *W);
+    void set_fluid_BC();
+    void delete_outside_particles();
+    void print_particles(string tag);
 #endif
 
 };

@@ -5,6 +5,9 @@
 // Modified P. Henri 8 June 2011
 // corrected by Markidis
 
+#ifndef INPUT_ARRAY_H
+#define INPUT_ARRAY_H
+
 #include <iostream>
 #include <iosfwd>
 
@@ -125,3 +128,5 @@ inline std::istream & operator>>(std::istream & is, array_bool & t) {
   is >> t.a >> t.b >> t.c >> t.d >> t.e >> t.f >> t.g >> t.h >> t.i >> t.j >> t.k >> t.l;
   return is;
 }
+
+#endif

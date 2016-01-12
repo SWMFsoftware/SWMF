@@ -17,9 +17,9 @@ developers: Stefano Markidis, Giovanni Lapenta
 
 class EMfields3D;
 typedef EMfields3D Field;
-typedef void (Field::*FIELD_IMAGE) (double *, double *);
+typedef void (Field::*FIELD_IMAGE) (double *, double *, bool);
 typedef void (*GENERIC_IMAGE) (double *, double *);
 
-bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD_IMAGE FunctionImage, Field * field);
+bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD_IMAGE FunctionImage, bool doSolveForChange, Field * field);
 
 #endif

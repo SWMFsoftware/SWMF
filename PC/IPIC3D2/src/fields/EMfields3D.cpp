@@ -24,6 +24,9 @@
 
 #include <iostream>
 //#include <sstream>
+
+#define NG_F 1
+
 using std::cout;
 using std::endl;
 using namespace iPic3D;
@@ -145,6 +148,20 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   divC  (nxc, nyc, nzc),
   //arr (nxc-2,nyc-2,nzc-2),
   // B_ext and J_ext should not be allocated unless used.
+#ifdef BATSRUS
+  fluidBxc (nxc,nyc,nzc),
+  fluidByc (nxc,nyc,nzc),
+  fluidBzc (nxc,nyc,nzc),
+  fluidBxn (nxn,nyn,nzn),
+  fluidByn (nxn,nyn,nzn),
+  fluidBzn (nxn,nyn,nzn),
+  fluidExc (nxc,nyc,nzc),
+  fluidEyc (nxc,nyc,nzc),
+  fluidEzc (nxc,nyc,nzc),
+  fluidEx  (nxn,nyn,nzn),
+  fluidEy  (nxn,nyn,nzn),
+  fluidEz  (nxn,nyn,nzn),
+#endif
   Bx_ext(nxn,nyn,nzn),
   By_ext(nxn,nyn,nzn),
   Bz_ext(nxn,nyn,nzn),
@@ -153,7 +170,7 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Bz_tot(nxn,nyn,nzn),
   Jx_ext(nxn,nyn,nzn),
   Jy_ext(nxn,nyn,nzn),
-  Jz_ext(nxn,nyn,nzn) 
+  Jz_ext(nxn,nyn,nzn)
 {
   // External imposed fields
   //
@@ -214,6 +231,23 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   /*! Restart */
   restart1 = col->getRestart_status();
 
+
+
+  /** index of nodes containing unknows in implicit solver*/
+  inminsolve = 1;
+  inmaxsolve = nxn-2;
+  jnminsolve = 1;
+  jnmaxsolve = nyn-2;
+  knminsolve = 1;
+  knmaxsolve = nzn-2;
+
+  /** number of unknowns solved for in implicit solver*/
+  nSolveCell  = (nxc - 2) * (nyc - 2) * (nzc - 2);
+  n3SolveNode = 3
+    *       (inmaxsolve - inminsolve + 1)
+    *       (jnmaxsolve - jnminsolve + 1)
+    *       (knmaxsolve - knminsolve + 1);
+  
   if(Parameters::get_VECTORIZE_MOMENTS())
   {
     // In this case particles are sorted
@@ -809,7 +843,9 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
   // to the particles and then accumulate moments in smaller
   // subarrays.
   //#ifdef _OPENMP
-  #pragma omp parallel
+
+  
+#pragma omp parallel
   {
   for (int species_idx = 0; species_idx < ns; species_idx++)
   {
@@ -860,7 +896,7 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
       velmoments[9] = wwi;
 
       //
-      // compute the weights to distribute the moments
+      // Compute the weights to distribute the moments
       //
       const int ix = 2 + int (floor((pcl.get_x() - xstart) * inv_dx));
       const int iy = 2 + int (floor((pcl.get_y() - ystart) * inv_dy));
@@ -2024,12 +2060,24 @@ void solver2phys(arr3_double vectPhys, double *vectSolver, int nx, int ny, int n
 }
 /** method to convert a 1D field in a 3D field not considering guard cells*/
 void solver2phys(arr3_double vectPhys1, arr3_double vectPhys2, arr3_double vectPhys3, double *vectSolver, int nx, int ny, int nz) {
+  int count=0;
   for (register int i = 1; i < nx - 1; i++)
     for (register int j = 1; j < ny - 1; j++)
       for (register int k = 1; k < nz - 1; k++) {
         vectPhys1[i][j][k] = *vectSolver++;
         vectPhys2[i][j][k] = *vectSolver++;
-        vectPhys3[i][j][k] = *vectSolver++;
+	vectPhys3[i][j][k] = *vectSolver++;
+	}
+}
+/** method to convert a 3D field into a 1D field whithin given index range */
+void solver2phys(arr3_double vectPhys1, arr3_double vectPhys2, arr3_double vectPhys3, double *vectSolver,		 
+		 int iMin, int iMax , int jMin, int jMax, int kMin, int kMax){
+  for (register int i=iMin; i <= iMax; i++)
+    for (register int j=jMin; j <= jMax; j++)
+      for (register int k=kMin; k <= kMax; k++){
+	vectPhys1[i][j][k] = *vectSolver++;
+	vectPhys2[i][j][k] = *vectSolver++;
+	vectPhys3[i][j][k] = *vectSolver++;
       }
 }
 /** method to convert a 3D field in a 1D field not considering guard cells*/
@@ -2049,6 +2097,20 @@ void phys2solver(double *vectSolver, const arr3_double vectPhys1, const arr3_dou
         *vectSolver++ = vectPhys3.get(i,j,k);
       }
 }
+/** method to convert a 3D field into a 1D field whithin given index range */
+/** Necessary for MHD-IPIC coupling */
+void phys2solver(double* vectSolver, const arr3_double vectPhys1,
+		 const arr3_double vectPhys2,const arr3_double vectPhys3,
+		 int iMin, int iMax , int jMin, int jMax, int kMin, int kMax){
+  for (register int i=iMin; i <= iMax; i++)
+    for (register int j=jMin; j <= jMax; j++)
+      for (register int k=kMin; k <= kMax; k++){
+	*vectSolver++ =  vectPhys1.get(i,j,k);
+	*vectSolver++ =  vectPhys2.get(i,j,k);
+	*vectSolver++ =  vectPhys3.get(i,j,k);
+      }
+}
+
 /*! Calculate Electric field with the implicit solver: the Maxwell solver method is called here */
 void EMfields3D::calculateE()
 {
@@ -2059,27 +2121,37 @@ void EMfields3D::calculateE()
   if (vct->getCartesian_rank() == 0)
     cout << "*** E CALCULATION ***" << endl;
 
+  // Solve dE = E^{n+1} - E^{n} instead E^{n+1}
+  bool doSolveForChange = col->getCase()=="BATSRUS";
+  //doSolveForChange = false;
+  
   array3_double divE     (nxc, nyc, nzc);
   array3_double gradPHIX (nxn, nyn, nzn);
   array3_double gradPHIY (nxn, nyn, nzn);
   array3_double gradPHIZ (nxn, nyn, nzn);
 
-  double *xkrylov = new double[3 * (nxn - 2) * (nyn - 2) * (nzn - 2)];  // 3 E components
-  double *bkrylov = new double[3 * (nxn - 2) * (nyn - 2) * (nzn - 2)];  // 3 components
+  double *xkrylov = new double[n3SolveNode];  // 3 E components
+  double *bkrylov = new double[n3SolveNode];  // 3 components  
+  double *dxkrylov;
+  if(doSolveForChange)
+    dxkrylov = new double[n3SolveNode]; // 3 components  
   // set to zero all the stuff 
-  eqValue(0.0, xkrylov, 3 * (nxn - 2) * (nyn - 2) * (nzn - 2));
-
-  eqValue(0.0, bkrylov, 3 * (nxn - 2) * (nyn - 2) * (nzn - 2));
+  eqValue(0.0, xkrylov, n3SolveNode);
+  eqValue(0.0, bkrylov, n3SolveNode);
   eqValue(0.0, divE, nxc, nyc, nzc);
   eqValue(0.0, tempC, nxc, nyc, nzc);
   eqValue(0.0, gradPHIX, nxn, nyn, nzn);
   eqValue(0.0, gradPHIY, nxn, nyn, nzn);
   eqValue(0.0, gradPHIZ, nxn, nyn, nzn);
+
+  if(doSolveForChange)
+    eqValue(0.0, dxkrylov, n3SolveNode);
+  
   // Adjust E calculating laplacian(PHI) = div(E) -4*PI*rho DIVERGENCE CLEANING
   if (PoissonCorrection) {
-		double *xkrylovPoisson = new double[(nxc - 2) * (nyc - 2) * (nzc - 2)];
-		double *bkrylovPoisson = new double[(nxc - 2) * (nyc - 2) * (nzc - 2)];
-		eqValue(0.0, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2));
+		double *xkrylovPoisson = new double[nSolveCell];
+		double *bkrylovPoisson = new double[nSolveCell];
+		eqValue(0.0, xkrylovPoisson, nSolveCell);
 
 		if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING ***" << endl;
 
@@ -2089,11 +2161,11 @@ void EMfields3D::calculateE()
 		// move to krylov space
 		phys2solver(bkrylovPoisson, divE, nxc, nyc, nzc);
 		// use conjugate gradient first
-		if (!CG(xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2), bkrylovPoisson, 3000, CGtol, &Field::PoissonImage, this)) {
+		if (!CG(xkrylovPoisson, nSolveCell, bkrylovPoisson, 3000, CGtol, &Field::PoissonImage, false, this)) {
 		  if (vct->getCartesian_rank() == 0)
 			cout << "CG not Converged. Trying with GMRes. Consider to increase the number of the CG iterations" << endl;
-		  eqValue(0.0, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2));
-		  GMRES(&Field::PoissonImage, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2), bkrylovPoisson, 20, 200, GMREStol, this);
+		  eqValue(0.0, xkrylovPoisson, nSolveCell);
+		  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, 20, 200, GMREStol, false, this);
 		}
 		solver2phys(PHI, xkrylovPoisson, nxc, nyc, nzc);
 		communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
@@ -2111,14 +2183,31 @@ void EMfields3D::calculateE()
   if (vct->getCartesian_rank() == 0)
     cout << "*** MAXWELL SOLVER ***" << endl;
   // prepare the source 
-  MaxwellSource(bkrylov);
-  phys2solver(xkrylov, Ex, Ey, Ez, nxn, nyn, nzn);
-  // solver
-  GMRES(&Field::MaxwellImage, xkrylov, 3 * (nxn - 2) * (nyn - 2) * (nzn - 2),
-    bkrylov, 20, 200, GMREStol, this);
-  // move from krylov space to physical space
-  solver2phys(Exth, Eyth, Ezth, xkrylov, nxn, nyn, nzn);
 
+  MaxwellSource(bkrylov);
+  phys2solver(xkrylov,Ex,Ey,Ez,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+  
+  if(doSolveForChange){
+    MaxwellImage(dxkrylov,xkrylov,false);   // LHS at t_n  moved to RHS as we solve for the difference
+    addscale(-1.0,1.0,bkrylov,dxkrylov, n3SolveNode);    // Add to get the new b (RHS)
+    eqValue (0.0, xkrylov, n3SolveNode);              // x=0 as we solve for the change
+  }
+  
+  // solver
+  GMRES(&Field::MaxwellImage, xkrylov, n3SolveNode,
+	bkrylov, 20, 200, GMREStol,doSolveForChange, this);
+  // move from krylov space to physical space
+  solver2phys(Exth,Eyth,Ezth,xkrylov,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+
+  if(true && doSolveForChange){
+    // Add the change to the field value
+    addscale(1.0,Exth,Ex,nxn,nyn,nzn);
+    addscale(1.0,Eyth,Ey,nxn,nyn,nzn);
+    addscale(1.0,Ezth,Ez,nxn,nyn,nzn);
+  }
+
+  if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
+  
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ez, Ezth, nxn, nyn, nzn);
@@ -2134,13 +2223,16 @@ void EMfields3D::calculateE()
   communicateNodeBC(nxn, nyn, nzn, Ey,   col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
   communicateNodeBC(nxn, nyn, nzn, Ez,   col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
 
-  // OpenBC Inflow: this needs to be integrate to Halo Exchange BC
-  OpenBoundaryInflowE(Exth, Eyth, Ezth, nxn, nyn, nzn);
-  OpenBoundaryInflowE(Ex, Ey, Ez, nxn, nyn, nzn);
-
+  if(col->getCase()!="BATSRUS"){
+    // OpenBC Inflow: this needs to be integrate to Halo Exchange BC
+    OpenBoundaryInflowE(Exth, Eyth, Ezth, nxn, nyn, nzn);
+    OpenBoundaryInflowE(Ex, Ey, Ez, nxn, nyn, nzn);
+  }
+  
   // deallocate temporary arrays
   delete[]xkrylov;
   delete[]bkrylov;
+  if(doSolveForChange) delete[] dxkrylov;
 }
 
 /*! Calculate sorgent for Maxwell solver */
@@ -2170,16 +2262,18 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   if (get_col().getCase()=="ForceFree") fixBforcefree();
   if (get_col().getCase()=="GEM")       fixBgem();
   if (get_col().getCase()=="GEMnoPert") fixBgem();
-
+  if (get_col().getCase()=="BATSRUS")   fixB_BATSRUS();
+  
   // OpenBC:
-  OpenBoundaryInflowB(Bxc,Byc,Bzc,nxc,nyc,nzc);
+  if (get_col().getCase()!="BATSRUS")
+    OpenBoundaryInflowB(Bxc,Byc,Bzc,nxc,nyc,nzc);
 
   // prepare curl of B for known term of Maxwell solver: for the source term
   grid->curlC2N(tempXN, tempYN, tempZN, Bxc, Byc, Bzc);
   scale(temp2X, Jxh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Y, Jyh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Z, Jzh, -FourPI / c, nxn, nyn, nzn);
-
+  
   /* -- dipole SOURCE version using J_ext,This is not initialized, causing program crash over 2048 processes
   addscale(-FourPI/c,temp2X,Jx_ext,nxn,nyn,nzn);
   addscale(-FourPI/c,temp2Y,Jy_ext,nxn,nyn,nzn);
@@ -2195,7 +2289,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
 
   communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
   grid->gradC2N(tempX, tempY, tempZ, rhoh);
-
+  
   scale(tempX, -delt * delt * FourPI, nxn, nyn, nzn);
   scale(tempY, -delt * delt * FourPI, nxn, nyn, nzn);
   scale(tempZ, -delt * delt * FourPI, nxn, nyn, nzn);
@@ -2208,28 +2302,30 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   sum(tempY, temp2Y, nxn, nyn, nzn);
   sum(tempZ, temp2Z, nxn, nyn, nzn);
 
-  // Boundary condition in the known term
-  // boundary condition: Xleft
-  if (vct->getXleft_neighbor() == MPI_PROC_NULL && bcEMfaceXleft == 0)  // perfect conductor
-    perfectConductorLeftS(tempX, tempY, tempZ, 0);
-  // boundary condition: Xright
-  if (vct->getXright_neighbor() == MPI_PROC_NULL && bcEMfaceXright == 0)  // perfect conductor
-    perfectConductorRightS(tempX, tempY, tempZ, 0);
-  // boundary condition: Yleft
-  if (vct->getYleft_neighbor() == MPI_PROC_NULL && bcEMfaceYleft == 0)  // perfect conductor
-    perfectConductorLeftS(tempX, tempY, tempZ, 1);
-  // boundary condition: Yright
-  if (vct->getYright_neighbor() == MPI_PROC_NULL && bcEMfaceYright == 0)  // perfect conductor
-    perfectConductorRightS(tempX, tempY, tempZ, 1);
-  // boundary condition: Zleft
-  if (vct->getZleft_neighbor() == MPI_PROC_NULL && bcEMfaceZleft == 0)  // perfect conductor
-    perfectConductorLeftS(tempX, tempY, tempZ, 2);
-  // boundary condition: Zright
-  if (vct->getZright_neighbor() == MPI_PROC_NULL && bcEMfaceZright == 0)  // perfect conductor
-    perfectConductorRightS(tempX, tempY, tempZ, 2);
+  if (get_col().getCase()!="BATSRUS"){
+    // Boundary condition in the known term
+    // boundary condition: Xleft
+    if (vct->getXleft_neighbor() == MPI_PROC_NULL && bcEMfaceXleft == 0)  // perfect conductor
+      perfectConductorLeftS(tempX, tempY, tempZ, 0);
+    // boundary condition: Xright
+    if (vct->getXright_neighbor() == MPI_PROC_NULL && bcEMfaceXright == 0)  // perfect conductor
+      perfectConductorRightS(tempX, tempY, tempZ, 0);
+    // boundary condition: Yleft
+    if (vct->getYleft_neighbor() == MPI_PROC_NULL && bcEMfaceYleft == 0)  // perfect conductor
+      perfectConductorLeftS(tempX, tempY, tempZ, 1);
+    // boundary condition: Yright
+    if (vct->getYright_neighbor() == MPI_PROC_NULL && bcEMfaceYright == 0)  // perfect conductor
+      perfectConductorRightS(tempX, tempY, tempZ, 1);
+    // boundary condition: Zleft
+    if (vct->getZleft_neighbor() == MPI_PROC_NULL && bcEMfaceZleft == 0)  // perfect conductor
+      perfectConductorLeftS(tempX, tempY, tempZ, 2);
+    // boundary condition: Zright
+    if (vct->getZright_neighbor() == MPI_PROC_NULL && bcEMfaceZright == 0)  // perfect conductor
+      perfectConductorRightS(tempX, tempY, tempZ, 2);
+  }
 
   // physical space -> Krylov space
-  phys2solver(bkrylov, tempX, tempY, tempZ, nxn, nyn, nzn);
+  phys2solver(bkrylov, tempX, tempY, tempZ, inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
 }
 
 /*! Mapping of Maxwell image to give to solver */
@@ -2296,13 +2392,13 @@ void EMfields3D::MaxwellSource(double *bkrylov)
 // desired, to give duplicated nodes equal weight by
 // rescaling their values in these two methods.
 // 
-void EMfields3D::MaxwellImage(double *im, double* vector)
+void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
 {
   const Collective *col = &get_col();
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
 
-  eqValue(0.0, im, 3 * (nxn - 2) * (nyn - 2) * (nzn - 2));
+  eqValue(0.0, im, n3SolveNode);
   eqValue(0.0, imageX, nxn, nyn, nzn);
   eqValue(0.0, imageY, nxn, nyn, nzn);
   eqValue(0.0, imageZ, nxn, nyn, nzn);
@@ -2313,7 +2409,10 @@ void EMfields3D::MaxwellImage(double *im, double* vector)
   eqValue(0.0, Dy, nxn, nyn, nzn);
   eqValue(0.0, Dz, nxn, nyn, nzn);
   // move from krylov space to physical space
-  solver2phys(vectX, vectY, vectZ, vector, nxn, nyn, nzn);
+  solver2phys(vectX,vectY,vectZ,vector,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+
+  if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,doSolveForChange);
+
   grid->lapN2N(imageX, vectX,this);
   grid->lapN2N(imageY, vectY,this);
   grid->lapN2N(imageZ, vectZ,this);
@@ -2322,6 +2421,7 @@ void EMfields3D::MaxwellImage(double *im, double* vector)
   neg(imageZ, nxn, nyn, nzn);
   // grad(div(mu dot E(n + theta)) mu dot E(n + theta) = D
   MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
+
   grid->divN2C(divC, Dx, Dy, Dz);
   // communicate you should put BC 
   // think about the Physics 
@@ -2346,36 +2446,37 @@ void EMfields3D::MaxwellImage(double *im, double* vector)
   sum(imageX, Dx, nxn, nyn, nzn);
   sum(imageY, Dy, nxn, nyn, nzn);
   sum(imageZ, Dz, nxn, nyn, nzn);
+
   sum(imageX, vectX, nxn, nyn, nzn);
   sum(imageY, vectY, nxn, nyn, nzn);
   sum(imageZ, vectZ, nxn, nyn, nzn);
 
-  // boundary condition: Xleft
-  if (vct->getXleft_neighbor() == MPI_PROC_NULL && bcEMfaceXleft == 0)  // perfect conductor
-    perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 0);
-  // boundary condition: Xright
-  if (vct->getXright_neighbor() == MPI_PROC_NULL && bcEMfaceXright == 0)  // perfect conductor
-    perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 0);
-  // boundary condition: Yleft
-  if (vct->getYleft_neighbor() == MPI_PROC_NULL && bcEMfaceYleft == 0)  // perfect conductor
-    perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 1);
-  // boundary condition: Yright
-  if (vct->getYright_neighbor() == MPI_PROC_NULL && bcEMfaceYright == 0)  // perfect conductor
-    perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 1);
-  // boundary condition: Zleft
-  if (vct->getZleft_neighbor() == MPI_PROC_NULL && bcEMfaceZleft == 0)  // perfect conductor
-    perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 2);
-  // boundary condition: Zright
-  if (vct->getZright_neighbor() == MPI_PROC_NULL && bcEMfaceZright == 0)  // perfect conductor
-    perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 2);
+  if(col->getCase() !="BATSRUS"){
+    // boundary condition: Xleft
+    if (vct->getXleft_neighbor() == MPI_PROC_NULL && bcEMfaceXleft == 0)  // perfect conductor
+      perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 0);
+    // boundary condition: Xright
+    if (vct->getXright_neighbor() == MPI_PROC_NULL && bcEMfaceXright == 0)  // perfect conductor
+      perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 0);
+    // boundary condition: Yleft
+    if (vct->getYleft_neighbor() == MPI_PROC_NULL && bcEMfaceYleft == 0)  // perfect conductor
+      perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 1);
+    // boundary condition: Yright
+    if (vct->getYright_neighbor() == MPI_PROC_NULL && bcEMfaceYright == 0)  // perfect conductor
+      perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 1);
+    // boundary condition: Zleft
+    if (vct->getZleft_neighbor() == MPI_PROC_NULL && bcEMfaceZleft == 0)  // perfect conductor
+      perfectConductorLeft(imageX, imageY, imageZ, vectX, vectY, vectZ, 2);
+    // boundary condition: Zright
+    if (vct->getZright_neighbor() == MPI_PROC_NULL && bcEMfaceZright == 0)  // perfect conductor
+      perfectConductorRight(imageX, imageY, imageZ, vectX, vectY, vectZ, 2);
 
-  // OpenBC
-  OpenBoundaryInflowEImage(imageX, imageY, imageZ, vectX, vectY, vectZ, nxn, nyn, nzn);
+    // OpenBC
+    OpenBoundaryInflowEImage(imageX, imageY, imageZ, vectX, vectY, vectZ, nxn, nyn, nzn);
+  }
 
   // move from physical space to krylov space
-  phys2solver(im, imageX, imageY, imageZ, nxn, nyn, nzn);
-
-
+  phys2solver(im, imageX, imageY, imageZ,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
 }
 
 /*! Calculate PI dot (vectX, vectY, vectZ) */
@@ -2503,7 +2604,8 @@ void EMfields3D::smoothE()
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
-
+      if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,false);
+      
       /*
       if (icount % 2 == 1) {
     	  alpha = 0.;
@@ -2548,8 +2650,15 @@ void EMfields3D::smoothE()
           for (int k = 1; k < nzn - 1; k++)
             Ez[i][j][k] = temp[i][j][k];
 
+      if(col->getCase()=="BATSRUS"){
+	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+	fixE_BATSRUS(vectX,vectY,vectZ,false);
+      }
+      
   }
-  delArr3(temp, nxn, nyn);
+  delArr3(temp, nxn, nyn);  
 }
 
 /* SPECIES: Interpolation smoothing TO MAKE SMOOTH value as to be different from 1.0 type = 0 --> center based vector type = 1 --> node based vector */
@@ -2643,6 +2752,7 @@ void EMfields3D::adjustNonPeriodicDensities(int is)
         pZZsn[is][1][i][k] *= 2;
     }
   }
+  
   if (vct->getYleft_neighbor_P() == MPI_PROC_NULL) {
     for (int i = 1; i < nxn - 1; i++)
     for (int k = 1; k < nzn - 1; k++)
@@ -2988,9 +3098,11 @@ void EMfields3D::calculateB()
   if (get_col().getCase()=="ForceFree") fixBforcefree();
   if (get_col().getCase()=="GEM")       fixBgem();
   if (get_col().getCase()=="GEMnoPert") fixBgem();
-
+  if (get_col().getCase()=="BATSRUS")   fixB_BATSRUS();
+  
   // OpenBC:
-  OpenBoundaryInflowB(Bxc,Byc,Bzc,nxc,nyc,nzc);
+  if (get_col().getCase()!="BATSRUS")
+    OpenBoundaryInflowB(Bxc,Byc,Bzc,nxc,nyc,nzc);
 
   // interpolate C2N
   grid->interpC2N(Bxn, Bxc);
@@ -3000,6 +3112,8 @@ void EMfields3D::calculateB()
   communicateNodeBC(nxn, nyn, nzn, Bxn, col->bcBx[0],col->bcBx[1],col->bcBx[2],col->bcBx[3],col->bcBx[4],col->bcBx[5], vct, this);
   communicateNodeBC(nxn, nyn, nzn, Byn, col->bcBy[0],col->bcBy[1],col->bcBy[2],col->bcBy[3],col->bcBy[4],col->bcBy[5], vct, this);
   communicateNodeBC(nxn, nyn, nzn, Bzn, col->bcBz[0],col->bcBz[1],col->bcBz[2],col->bcBz[3],col->bcBz[4],col->bcBz[5], vct, this);
+
+  if (get_col().getCase()=="BATSRUS") fixB_BATSRUS();
 }
 
 /*! initialize EM field with transverse electric waves 1D and rotate anticlockwise (theta degrees) */
@@ -3087,11 +3201,27 @@ void EMfields3D::calculateHatFunctions()
 {
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
+  const Collective *col = &get_col();
   // smoothing
   smooth(rhoc, 0);
   // calculate j hat
 
-  for (int is = 0; is < ns; is++) {
+  if(get_col().getCase()=="BATSRUS")
+    for (int is=0; is < ns; is++){
+
+      // Pass Jxs[is] is better!! -Yuxi
+      fixVarBCnode(Jxs,&Collective::getFluidJx<int>,col->getnIsotropic(),is);
+      fixVarBCnode(Jys,&Collective::getFluidJy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(Jzs,&Collective::getFluidJz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pXXsn,&Collective::getFluidPxx<int>,col->getnIsotropic(),is);      
+      fixVarBCnode(pXYsn,&Collective::getFluidPxy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pXZsn,&Collective::getFluidPxz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pYYsn,&Collective::getFluidPyy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pYZsn,&Collective::getFluidPyz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pZZsn,&Collective::getFluidPzz<int>,col->getnIsotropic(),is);
+    }
+
+  for (int is=0; is < ns; is++){
     grid->divSymmTensorN2C(tempXC, tempYC, tempZC, pXXsn, pXYsn, pXZsn, pYYsn, pYZsn, pZZsn, is);
 
     scale(tempXC, -dt / 2.0, nxc, nyc, nzc);
@@ -3108,10 +3238,19 @@ void EMfields3D::calculateHatFunctions()
     sum(tempXN, Jxs, nxn, nyn, nzn, is);
     sum(tempYN, Jys, nxn, nyn, nzn, is);
     sum(tempZN, Jzs, nxn, nyn, nzn, is);
+
     // PIDOT
     PIdot(Jxh, Jyh, Jzh, tempXN, tempYN, tempZN, is);
 
   }
+  
+  if(get_col().getCase()=="BATSRUS"){
+    // Why do we need this? -Yuxi
+    communicateCenterBC_P(nxc, nyc, nzc, Jxh, 2, 2, 2, 2, 2, 2, vct,this);
+    communicateCenterBC_P(nxc, nyc, nzc, Jyh, 2, 2, 2, 2, 2, 2, vct,this);
+    communicateCenterBC_P(nxc, nyc, nzc, Jzh, 2, 2, 2, 2, 2, 2, vct,this);
+  }
+  
   // smooth j
   smooth(Jxh, 1);
   smooth(Jyh, 1);
@@ -3124,9 +3263,12 @@ void EMfields3D::calculateHatFunctions()
   eq(rhoh, tempXC, nxc, nyc, nzc);
   // communicate rhoh
   communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
+
+  if(get_col().getCase()=="BATSRUS")
+    fixVarBCcell(rhoh,&Collective::getFluidZero<int>,col->getnCharge(),0);
 }
 /*! Image of Poisson Solver */
-void EMfields3D::PoissonImage(double *image, double *vector)
+void EMfields3D::PoissonImage(double *image, double *vector, bool doSolveForChange)
 {
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
@@ -3134,7 +3276,7 @@ void EMfields3D::PoissonImage(double *image, double *vector)
   // allocate 2 three dimensional service vectors
   array3_double temp(nxc, nyc, nzc);
   array3_double im(nxc, nyc, nzc);
-  eqValue(0.0, image, (nxc - 2) * (nyc - 2) * (nzc - 2));
+  eqValue(0.0, image, nSolveCell);
   eqValue(0.0, temp, nxc, nyc, nzc);
   eqValue(0.0, im, nxc, nyc, nzc);
   // move from krylov space to physical space and communicate ghost cells
@@ -3169,7 +3311,6 @@ void EMfields3D::communicateGhostP2G(int ns)
   double ***moment8 = convert_to_arr3(pYZsn[ns]);
   double ***moment9 = convert_to_arr3(pZZsn[ns]);
   // add the values for the shared nodes
-
   // Call NonBlocking Halo Exchange + Interpolation
   communicateInterp(nxn, nyn, nzn, moment0, vct,this);
   communicateInterp(nxn, nyn, nzn, moment1, vct,this);
@@ -3183,9 +3324,6 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateInterp(nxn, nyn, nzn, moment9, vct,this);
   // calculate the correct densities on the boundaries
   adjustNonPeriodicDensities(ns);
-
-  // populate the ghost nodes
-
   //Call Nonblocking Halo Exchange
   communicateNode_P(nxn, nyn, nzn, moment0, vct, this);
   communicateNode_P(nxn, nyn, nzn, moment1, vct, this);
@@ -3370,41 +3508,475 @@ void EMfields3D::init()
 
 #ifdef BATSRUS
 /*! initiliaze EM for GEM challange */
-void EMfields3D::initBATSRUS()
+void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
+			     Collective * col)
 {
-  const Collective *col = &get_col();
-  const Grid *grid = &get_grid();
-  cout << "------------------------------------------" << endl;
-  cout << "         Initialize from BATSRUS          " << endl;
-  cout << "------------------------------------------" << endl;
+  if (vct->getCartesian_rank() == 0) {
+    cout << "------------------------------------------" << endl;
+    cout << "         Initialize EMfield from BATSRUS          " << endl;
+    cout << "------------------------------------------" << endl;
+  }
 
-  // loop over species and cell centers: fill in charge density
-  for (int is=0; is < ns; is++)
+  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX())
+    inminsolve = 1+NG_F;
+  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX())
+    inmaxsolve = nxn-2-NG_F;
+  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY())
+    jnminsolve = 1+NG_F;
+  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY())
+    jnmaxsolve = nyn-2-NG_F;
+  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ())
+    knminsolve = 1+NG_F;
+  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ())
+    knmaxsolve = nzn-2-NG_F;
+
+  /** number of unknowns solved for in implicit solver*/
+    n3SolveNode = 3
+      *       (inmaxsolve - inminsolve + 1)
+      *       (jnmaxsolve - jnminsolve + 1)
+      *       (knmaxsolve - knminsolve + 1);
+
+    // loop over species and cell centers: fill in charge density
+    for (int is=0; is < ns; is++)
+      for (int i=0; i < nxn; i++)
+	for (int j=0; j < nyn; j++)
+	  for (int k=0; k < nzn; k++)
+	    {
+	      // WARNING getFluidRho contains "case" statment
+	      rhons[is][i][j][k] = col->getFluidRhoNum(i,j,k,is);
+	    }
+
+    // interpolate from cell centers to nodes (corners of cells)
+    for (int is=0 ; is<ns; is++)
+      grid->interpN2Cfull(rhocs[is],rhons[is]);
+
+    // copy over Electric and Magnetic fields
+    SyncWithFluid(col,grid,vct);
+
     for (int i=0; i < nxc; i++)
       for (int j=0; j < nyc; j++)
-        for (int k=0; k < nzc; k++)
-        {
-          // WARNING getFluidRhoCenter contains "case" statment
-          rhocs[is][i][j][k] = col->getFluidRhoCenter(i,j,k,is);
-        }
+	for (int k=0; k < nzc; k++)
+	  {
+	    Bxc[i][j][k] = fluidBxc[i][j][k];
+	    Byc[i][j][k] = fluidByc[i][j][k];
+	    Bzc[i][j][k] = fluidBzc[i][j][k];
+	  }
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for (int k=0; k < nzn; k++)
+	  {
+	    Bxn[i][j][k] = fluidBxn[i][j][k];
+	    Byn[i][j][k] = fluidByn[i][j][k];
+	    Bzn[i][j][k] = fluidBzn[i][j][k];
+	    Ex[i][j][k]  = fluidEx[i][j][k];
+	    Ey[i][j][k]  = fluidEy[i][j][k];
+	    Ez[i][j][k]  = fluidEz[i][j][k];
+
+	    Bx_ext[i][j][k] = 0.0;
+	    By_ext[i][j][k] = 0.0;
+	    Bz_ext[i][j][k] = 0.0;
+	  }
+    
+}
+
+/*! Copy field form the fluid solution for boundary condition*/
+void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *vct)
+{
+  int minDn;
+  string funcName="EMfields3D::SyncWithFluid";
 
   // loop over cell centers and fill in magnetic and electric fields
-  for (int i=0; i < nxc; i++)
-    for (int j=0; j < nyc; j++)
-      for (int k=0; k < nzc; k++)
-      {
-        // WARNING getFluidRhoCenter contains "case" statment
-        col->setFluidFieldsCenter(&Ex[i][j][k],&Ey[i][j][k],&Ez[i][j][k],
-            &Bxc[i][j][k],&Byc[i][j][k],&Bzc[i][j][k],i,j,k);
-      }
-
+  for (int i=0; i < nxn; i++)
+    for (int j=0; j < nyn; j++)
+      for (int k=0; k < nzn; k++)
+	{
+	  col->setFluidFieldsNode(&fluidEx[i][j][k],&fluidEy[i][j][k],&fluidEz[i][j][k],
+				  &fluidBxn[i][j][k],&fluidByn[i][j][k],&fluidBzn[i][j][k],i,j,k);
+	}
+  for (int i=0; i < nxn; i++)
+    for (int j=0; j < nyn; j++)
+      for (int k=0; k < nzn; k++)
+	{
+	  // Distans from the boundary
+	  int ig = col->getGlobalStartIndex(0) + i; int nxg = col->getNxc()+3;
+	  int jg = col->getGlobalStartIndex(1) + j; int nyg = col->getNyc()+3;
+	  int kg = col->getGlobalStartIndex(2) + k; int nzg = col->getNzc()+3;
+          minDn = min(ig, nxg -ig -1);
+	  if(col->getnDim()>1) minDn = min(minDn, min(jg, nyg - jg - 1));
+	  if(col->getnDim()>2) minDn = min(minDn, min(kg, nzg - kg - 1));
+	  if(minDn < NG_F+col->getnOverlap())
+	    {
+	      Bxn[i][j][k] = fluidBxn[i][j][k];
+	      Byn[i][j][k] = fluidByn[i][j][k];
+	      Bzn[i][j][k] = fluidBzn[i][j][k];
+	      Ex[i][j][k] = fluidEx[i][j][k];
+	      Ey[i][j][k] = fluidEy[i][j][k];
+	      Ez[i][j][k] = fluidEz[i][j][k];
+	    }
+	}
   // interpolate from cell centers to nodes (corners of cells)
-  for (int is=0 ; is<ns; is++)
-    grid->interpC2N(rhons[is],rhocs[is]);
-  grid->interpC2N(Bxn,Bxc);
-  grid->interpC2N(Byn,Byc);
-  grid->interpC2N(Bzn,Bzc);
+  grid->interpN2Cfull(fluidExc,fluidEx);
+  grid->interpN2Cfull(fluidEyc,fluidEy);
+  grid->interpN2Cfull(fluidEzc,fluidEz);
+  grid->interpN2Cfull(fluidBxc,fluidBxn);
+  grid->interpN2Cfull(fluidByc,fluidByn);
+  grid->interpN2Cfull(fluidBzc,fluidBzn);
+
+  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+
+  // Get new timestep from fluid solver
+  dt  = col->getFluidDt();
+  delt = c * th * dt;
 }
+
+/** fix the E boundary when running with batsrus*/
+void EMfields3D::fixE_BATSRUS(arr3_double VecX, arr3_double VecY, arr3_double VecZ, bool doSolveForChange){
+  const VirtualTopology3D *vct = &get_vct();
+
+  double coeffBcE;
+
+  if(doSolveForChange)  coeffBcE=0.0;
+  else                  coeffBcE=1.0;
+
+  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    for (int i=0; i < nxn;i++)
+      for (int j=0; j < nyn;j++)
+	for (int k=0; k <= NG_F;k++){
+	  VecX[i][j][nzn-1-k] = fluidEx[i][j][nzn-1-k]*coeffBcE;
+	  VecY[i][j][nzn-1-k] = fluidEy[i][j][nzn-1-k]*coeffBcE;
+	  VecZ[i][j][nzn-1-k] = fluidEz[i][j][nzn-1-k]*coeffBcE;
+	}
+  }
+  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    for (int i=0; i < nxn;i++)
+      for (int j=0; j< nyn;j++)
+	for (int k=0; k <= NG_F;k++){
+	  VecX[i][j][k] = fluidEx[i][j][k]*coeffBcE;
+	  VecY[i][j][k] = fluidEy[i][j][k]*coeffBcE;
+	  VecZ[i][j][k] = fluidEz[i][j][k]*coeffBcE;
+	}
+  }
+  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    for (int i=0; i < nxn;i++)
+      for (int j=0;j<=NG_F;j++)
+	for (int k=0; k < nzn;k++){
+	  VecX[i][nyn-1-j][k] = fluidEx[i][nyn-1-j][k]*coeffBcE;
+	  VecY[i][nyn-1-j][k] = fluidEy[i][nyn-1-j][k]*coeffBcE;
+	  VecZ[i][nyn-1-j][k] = fluidEz[i][nyn-1-j][k]*coeffBcE;
+	}
+  }
+  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    for (int i=0; i < nxn;i++)
+      for (int j=0;j<=NG_F;j++)
+	for (int k=0; k < nzn;k++){
+	  VecX[i][j][k] = fluidEx[i][j][k]*coeffBcE;
+	  VecY[i][j][k] = fluidEy[i][j][k]*coeffBcE;
+	  VecZ[i][j][k] = fluidEz[i][j][k]*coeffBcE;
+	}
+  }
+  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    for (int i=0;i<=NG_F;i++)
+      for (int j=0; j < nyn;j++)
+	for (int k=0; k < nzn;k++){
+	  VecX[nxn-1-i][j][k] = fluidEx[nxn-1-i][j][k]*coeffBcE;
+	  VecY[nxn-1-i][j][k] = fluidEy[nxn-1-i][j][k]*coeffBcE;
+	  VecZ[nxn-1-i][j][k] = fluidEz[nxn-1-i][j][k]*coeffBcE;
+	}
+  }
+  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    for (int i=0;i<=NG_F;i++)
+      for (int j=0; j < nyn;j++)
+	for (int k=0; k < nzn;k++){
+	  VecX[i][j][k] = fluidEx[i][j][k]*coeffBcE;
+	  VecY[i][j][k] = fluidEy[i][j][k]*coeffBcE;
+	  VecZ[i][j][k] = fluidEz[i][j][k]*coeffBcE;
+	}
+  }
+}
+
+
+
+/** fix the B boundary when running with BATSRUS*/
+void EMfields3D::fixB_BATSRUS(){
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    // CELL
+    for (int i=0; i < nxc; i++)
+      for (int j=0; j < nyc; j++)
+	for(int ng=1;ng<=NG_F+1; ng++){
+	  Bxc[i][j][nzc-ng] = fluidBxc[i][j][nzc-ng];
+	  Byc[i][j][nzc-ng] = fluidByc[i][j][nzc-ng];
+	  Bzc[i][j][nzc-ng] = fluidBzc[i][j][nzc-ng];
+	}
+    // NODE
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for(int ng=1;ng<=NG_F+1; ng++){
+	  Bxn[i][j][nzn-ng] = fluidBxn[i][j][nzn-ng];
+	  Byn[i][j][nzn-ng] = fluidByn[i][j][nzn-ng];
+	  Bzn[i][j][nzn-ng] = fluidBzn[i][j][nzn-ng];
+	}
+  }
+
+  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    // CELL
+    for (int i=0; i < nxc; i++)
+      for (int j=0; j < nyc; j++)
+	for(int ng=0;ng<NG_F+1; ng++){
+	  Bxc[i][j][ng] = fluidBxc[i][j][ng];
+	  Byc[i][j][ng] = fluidByc[i][j][ng];
+	  Bzc[i][j][ng] = fluidBzc[i][j][ng];
+	}
+    // NODE
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for(int ng=0;ng<NG_F+1; ng++){
+	  Bxn[i][j][ng] = fluidBxn[i][j][ng];
+	  Byn[i][j][ng] = fluidByn[i][j][ng];
+	  Bzn[i][j][ng] = fluidBzn[i][j][ng];
+	}
+  }
+
+
+  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    // CELL
+    for (int i=0; i < nxc;i++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  Bxc[i][nyc-ng][k] = fluidBxc[i][nyc-ng][k];
+	  Byc[i][nyc-ng][k] = fluidByc[i][nyc-ng][k];
+	  Bzc[i][nyc-ng][k] = fluidBzc[i][nyc-ng][k];
+	}
+    // NODE
+    for (int i=0; i < nxn;i++)
+      for (int k=0; k < nzn;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  Bxn[i][nyn-ng][k] = fluidBxn[i][nyn-ng][k];
+	  Byn[i][nyn-ng][k] = fluidByn[i][nyn-ng][k];
+	  Bzn[i][nyn-ng][k] = fluidBzn[i][nyn-ng][k];
+	}
+  }
+
+  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    // CELL
+    for (int i=0; i < nxc;i++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  Bxc[i][ng][k] = fluidBxc[i][ng][k];
+	  Byc[i][ng][k] = fluidByc[i][ng][k];
+	  Bzc[i][ng][k] = fluidBzc[i][ng][k];
+	}
+    // NODE
+    for (int i=0; i < nxn;i++)
+      for (int k=0; k < nzn;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  Bxn[i][ng][k] = fluidBxn[i][ng][k];
+	  Byn[i][ng][k] = fluidByn[i][ng][k];
+	  Bzn[i][ng][k] = fluidBzn[i][ng][k];
+	}
+  }
+
+  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    // CELL
+    for (int j=0; j < nyc;j++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  Bxc[nxc-ng][j][k] = fluidBxc[nxc-ng][j][k];
+	  Byc[nxc-ng][j][k] = fluidByc[nxc-ng][j][k];
+	  Bzc[nxc-ng][j][k] = fluidBzc[nxc-ng][j][k];
+	}
+    // NODE
+    for (int j=0; j < nyn;j++)
+      for (int k=0; k < nzn;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  Bxn[nxn-ng][j][k] = fluidBxn[nxn-ng][j][k];
+	  Byn[nxn-ng][j][k] = fluidByn[nxn-ng][j][k];
+	  Bzn[nxn-ng][j][k] = fluidBzn[nxn-ng][j][k];
+	}
+  }
+
+  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    // CELL
+    for (int j=0; j < nyc;j++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  Bxc[ng][j][k] = fluidBxc[ng][j][k];
+	  Byc[ng][j][k] = fluidByc[ng][j][k];
+	  Bzc[ng][j][k] = fluidBzc[ng][j][k];
+	}
+    // NODE
+    for (int j=0; j < nyn;j++)
+      for (int k=0; k < nzn;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  Bxn[ng][j][k] = fluidBxn[ng][j][k];
+	  Byn[ng][j][k] = fluidByn[ng][j][k];
+	  Bzn[ng][j][k] = fluidBzn[ng][j][k];
+	}
+  }
+}
+
+
+inline void EMfields3D::fixVarBCcell(arr3_double Var, 
+				     double (CollectiveIO::*fluidVar)(const int, const int,const int, const int)const, int nOverlap, int is){
+
+  const Collective *col = &get_col();
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  
+  // total number of overlap+ghost cells
+  int nBC;
+
+  // Length of overlap+ghost region
+  double LXbc, LYbc, LZbc;
+
+  // distangs to left/right boundary
+  double LeftX,RightX,LeftY,RightY,LeftZ,RightZ;
+
+  // min distangs to boundary
+  double dist;
+
+  // grid positions
+  double x, y, z;
+  
+  // there is nothing to do for a fully periodic system
+  if(vct->getPERIODICX() && vct->getPERIODICY() && vct->getPERIODICZ()) return ;
+
+  if(nOverlap < 0) 
+    return; // do nothing
+  else if(nOverlap == 0)
+    nBC = NG_P; // only fix ghost cells
+  else
+    nBC = nOverlap +NG_P;
+  
+  LXbc = nBC*dx;
+  LYbc = nBC*dy;
+  LZbc = nBC*dz;
+
+  // If Periodic
+  LeftX = 2.0;
+  RightX = LeftX;
+  LeftY = 2.0;
+  RightY = LeftY;
+  LeftZ = 2.0;
+  RightZ = LeftZ;
+
+  for(int i=0;i<nxc;i++){
+    x = grid->getXC(i,1,1);
+    for (int j=0; j < nyc;j++){
+      y = grid->getYC(1,j,1);
+      for (int k=0; k < nzc;k++){
+	z = grid->getZC(1,1,k);
+
+	if(!vct->getPERIODICX()){
+	  LeftX  = x/LXbc;
+	  RightX = (Lx -x)/LXbc; 
+	}
+	
+	if(!vct->getPERIODICY()){	
+	  LeftY  = y/LYbc;
+	  RightY = (Ly-y)/LYbc;
+	}
+
+	if(!vct->getPERIODICZ()){	
+	  LeftZ  = z/LZbc;
+	  RightZ = (Lz-z)/LZbc;
+	}
+
+	dist = minval6(LeftX,RightX,LeftY,RightY,LeftZ,RightZ);
+
+	if(dist < 0.0) // we are in ghost cells
+	  Var[i][j][k] =  (col->*fluidVar)(i,j,k,is);
+	else if (dist < 1.0) // this is the overlap region
+	  Var[i][j][k] = Var[i][j][k]*dist + (col->*fluidVar)(i,j,k,is)*(1.0-dist);
+
+      }}}
+}
+
+/** fix the charge separation on the  boundary when running with batsrus*/
+inline void EMfields3D::fixVarBCnode(arr4_double Var, 
+				     double (CollectiveIO::*fluidVar)(int, int, int, int)const, int nOverlap, int is){
+
+  const Collective *col = &get_col();
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  
+  // total number of overlap+ghost cells
+  int nBC;
+
+  // Length of overlap+ghost region
+  double LXbc, LYbc, LZbc;
+
+  // distangs to left/right boundary
+  double LeftX,RightX,LeftY,RightY,LeftZ,RightZ;
+
+  // min distangs to boundary
+  double dist;
+
+  // grid positions
+  double x, y, z;
+		
+  // there is nothing to do for a fully periodic system
+  if(vct->getPERIODICX() && vct->getPERIODICY() && vct->getPERIODICZ()) return ;
+
+  if(nOverlap < 0) 
+    return; // do nothing
+  else if(nOverlap == 0)
+    nBC = NG_P; // only fix ghost nodes
+  else
+    nBC = nOverlap +NG_P;
+
+  LXbc = nBC*dx;
+  LYbc = nBC*dy;
+  LZbc = nBC*dz;
+
+  // If Periodic
+  LeftX = 2.0;
+  RightX = LeftX;
+  LeftY = 2.0;
+  RightY = LeftY;
+  LeftZ = 2.0;
+  RightZ = LeftZ;
+
+  for(int i=0;i<nxn;i++){
+    x = grid->getXN(i,1,1);
+    for (int j=0; j < nyn;j++){
+      y = grid->getYN(1,j,1);
+      for (int k=0; k < nzn;k++){
+	z = grid->getZN(1,1,k);
+
+	if(!vct->getPERIODICX()){
+	  LeftX  = x/LXbc;
+	  RightX = (Lx -x)/LXbc; 
+	}
+
+	if(!vct->getPERIODICY()){	
+	  LeftY  = y/LYbc;
+	  RightY = (Ly-y)/LYbc;
+	}
+
+	if(!vct->getPERIODICZ()){	
+	  LeftZ  = z/LZbc;
+	  RightZ = (Lz-z)/LZbc;
+	}
+
+	dist = minval6(LeftX,RightX,LeftY,RightY,LeftZ,RightZ);
+
+	if(dist < 0.0) // we are in ghost cells
+	  Var[is][i][j][k] =  (col->*fluidVar)(i,j,k,is);
+	else if (dist < 1.0 && nOverlap>0) // this is the overlap region
+	  Var[is][i][j][k] = Var[is][i][j][k]*dist + (col->*fluidVar)(i,j,k,is)*(1.0-dist);
+
+      }}}
+}
+
+
+
 #endif
 
 /*! initiliaze EM for GEM challange */
@@ -5132,7 +5704,7 @@ double EMfields3D::getEenergy(void) {
       for (int k = 1; k < nzn - 2; k++)
         localEenergy += .5 * dx * dy * dz * (Ex[i][j][k] * Ex[i][j][k] + Ey[i][j][k] * Ey[i][j][k] + Ez[i][j][k] * Ez[i][j][k]) / (FourPI);
 
-  MPI_Allreduce(&localEenergy, &totalEenergy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localEenergy, &totalEenergy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
   return (totalEenergy);
 
 }
@@ -5152,7 +5724,7 @@ double EMfields3D::getBenergy(void) {
         localBenergy += .5*dx*dy*dz*(Bxt*Bxt + Byt*Byt + Bzt*Bzt)/(FourPI);
       }
 
-  MPI_Allreduce(&localBenergy, &totalBenergy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localBenergy, &totalBenergy, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
   return (totalBenergy);
 }
 

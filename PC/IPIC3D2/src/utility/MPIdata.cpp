@@ -9,6 +9,11 @@
 #endif
 #include "ompdefs.h" // for omp_get_max_threads
 
+#include<iostream>
+
+using std::cout;
+using std::endl;
+
 // code to check that init() is called before instance()
 //
 // no need for this to have more than file scope
@@ -41,15 +46,45 @@ void MPIdata::init(int *argc, char ***argv) {
  #else // NO_MPI
   /* Initialize the MPI API */
   MPI_Init(argc, argv);
-
+  MPI_Comm_dup(MPI_COMM_WORLD, &MPI_COMM_MYSIM);
+  
   /* Set rank */
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_MYSIM, &rank);
 
   /* Set total number of processors */
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  MPI_Comm_size(MPI_COMM_MYSIM, &nprocs);
  #endif // NO_MPI
 
   MPIdata_is_initialized = true;
+}
+
+
+void MPIdata::init(MPI_Comm iComm, signed int* iProc, signed int* nProc) {
+  /* Initialize the MPI API */
+  int initialized;
+  int *intdummy = NULL;
+  char ***chardummy =NULL;
+  
+  MPI_Initialized(&initialized);
+
+  if (!initialized) {
+    MPI_Init(intdummy,chardummy);
+    cout<<"Did not init MPI from coupling !! do MPI_Init"<<endl;
+  }
+  
+  if(MPI_SUCCESS != MPI_Comm_dup(iComm, &MPI_COMM_MYSIM)){
+    cout<<"Can not set up comunicator!"<<endl;
+  }
+
+  /* Set rank */
+  MPI_Comm_rank(MPI_COMM_MYSIM, &rank);
+
+  /* Set total number of processors */
+  MPI_Comm_size(MPI_COMM_MYSIM, &nprocs);
+
+  MPIdata_is_initialized = true;
+    
+  //cout<<"MPIdata::init"<<" rank = "<<rank<<" nprocs = "<<nprocs<<endl;
 }
 
 void MPIdata::exit(int code) {

@@ -37,7 +37,7 @@ void output_barrier()
 {
   fflush(stdout);
   cout << flush;
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_MYSIM);
 }
 int barrier_ret_nprocs()
 {
@@ -75,7 +75,7 @@ void test_spawn(char**argv)
   const int UPWARD = 1;
   const int DNWARD = -1;
   // create a communicator for upward communication
-  MPI_Cart_create(MPI_COMM_WORLD, ndims, dims, periods, reorder, &comm);
+  MPI_Cart_create(MPI_COMM_MYSIM, ndims, dims, periods, reorder, &comm);
 
   int cart_rank;
   MPI_Comm_rank(comm, &cart_rank);
@@ -86,8 +86,8 @@ void test_spawn(char**argv)
   criticalout dprint(coords[0]);
 
   //MPI_Comm_dup(comm, &dn_comm);
-  //MPI_Comm_dup(MPI_COMM_WORLD, &up_comm);
-  //MPI_Comm_dup(MPI_COMM_WORLD, &dn_comm);
+  //MPI_Comm_dup(MPI_COMM_MYSIM, &up_comm);
+  //MPI_Comm_dup(MPI_COMM_MYSIM, &dn_comm);
 
   // This does not actually do a shift; rather, it returns the
   // ranks of the neighbors that would be used to do this shift.
@@ -137,7 +137,7 @@ void test_spawn(char**argv)
         nprocs,
         MPI_INFO_NULL,
         0,
-        MPI_COMM_WORLD,
+        MPI_COMM_MYSIM,
         &intercomm,
         MPI_ERRCODES_IGNORE);
     }
@@ -155,8 +155,8 @@ int main(int argc, char **argv)
 {
   MPIdata::init(&argc, &argv);
   //MPI_Init(&argc, &argv);
-  //MPI_Comm_rank(MPI_COMM_WORLD, &MPIrank);
-  //MPI_Comm_size(MPI_COMM_WORLD, &MPInumprocs);
+  //MPI_Comm_rank(MPI_COMM_MYSIM, &MPIrank);
+  //MPI_Comm_size(MPI_COMM_MYSIM, &MPInumprocs);
 
   test_spawn(argv);
 

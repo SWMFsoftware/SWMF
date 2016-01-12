@@ -8,11 +8,12 @@ module PC_wrapper
 
   implicit none
 
+  save
+
   private ! except
 
   public:: PC_set_param
   public:: PC_init_session
-  public:: PC_finilize_init_session
   public:: PC_run
   public:: PC_save_restart
   public:: PC_finalize
@@ -28,16 +29,15 @@ module PC_wrapper
   public:: PC_get_for_gm
 
   ! Local variables
-  integer :: nDim
-  integer, save :: iProc
-  real :: DtSi
+  integer:: nDim
+  integer:: iProc
+  real   :: DtSi
+
 contains
 
   !==========================================================================
   subroutine PC_set_param(CompInfo, TypeAction)
 
-    use CON_coupler, ONLY: PC_, set_coord_system, &
-         init_decomposition, done_dd_init
     use CON_comp_info
     use ModReadParam
 
@@ -48,10 +48,14 @@ contains
     ! The PARAM.in segment for IPIC3D
     character(len=lStringLine), allocatable :: StringLineF_I(:) 
 
-    character (len=*), parameter :: NameSub='PC_set_param'
-    integer, save :: iComm, nProc
+    integer:: iComm, nProc
 
+    logical:: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub='PC_set_param'
     !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTestMe) write(*,*)NameSub,': TypeAction: ',TypeAction
+
     select case(TypeAction)
     case('VERSION')
        call put(CompInfo,&
@@ -67,10 +71,6 @@ contains
        allocate(StringLineF_I(i_line_read()+1:n_line_read()))
        call read_text(StringLineF_I)
 
-if(iProc==0)then
-write(*,*)NameSub,': TypeAction: ',TypeAction
-end if
-
        if(n_line_read()-i_line_read()+1 > 0) then
           call pc_wrapper_c_read_param(StringLineF_I, &
                n_line_read()-i_line_read()+1, lStringLine,iProc)
@@ -80,19 +80,13 @@ end if
     case('FILEOUT')
 
     case('GRID')
-       ! Grid info depends on IPIC3D (BATSRUS)
-       ! Using this constrution to only communicate NameVar and nVar
-       if(.not.done_dd_init(PC_))then
-          call init_decomposition(PC_,PC_,3,.true.)
-          call set_coord_system(PC_,'GSM', 1.0, &
-               NameVar = "Variables given by coupled code!!!!", nVar=-1)
-       endif
+       ! Grid depends on BATSRUS
+
     case default
        call CON_stop(NameSub//': PC_ERROR: unknown Action='//TypeAction)
     end select
 
   end subroutine PC_set_param
-
 
   !============================================================================
 
@@ -109,16 +103,6 @@ end if
 
   end subroutine PC_init_session
 
-  !============================================================================
-
-  subroutine PC_finilize_init_session
-
-    character(len=*), parameter :: NameSub='PC_finilize_init_session'
-    !--------------------------------------------------------------------------
-
-    call pc_wrapper_c_finilize_init
-
-  end subroutine PC_finilize_init_session
   !============================================================================
 
   subroutine PC_finalize(TimeSimulation)
@@ -197,8 +181,7 @@ end if
 
     character(len=*), parameter :: NameSub = 'PC_get_grid_info'
     !--------------------------------------------------------------------------
-
-    !call pc_wrapper_c_get_ndim(nDim)
+    ! Report back GM's nDim to the point coupler
     nDimOut    = nDim
     if(IsFirstTime)then
        iGridOut   = 1
@@ -211,34 +194,33 @@ end if
 
   end subroutine PC_get_grid_info
   !============================================================================
-  subroutine PC_put_from_gm_dt(INDtSi)
+  subroutine PC_put_from_gm_dt(DtSiIn)
 
-    real,    intent(in) :: INDtSi
+    real,    intent(in) :: DtSiIn
 
     character(len=*), parameter :: NameSub = 'PC_put_from_gm_dt'
     !--------------------------------------------------------------------------
 
     ! Store the time step, set it when we do PC_run
-    DtSi = INDtSi
+    DtSi = DtSiIn
 
     call pc_wrapper_c_set_dt(DtSi)
 
   end subroutine PC_put_from_gm_dt
   !============================================================================
-  subroutine PC_put_from_gm_init(ParamInt_I, ParamReal_I, n, NameVar, nNameVar)
+  subroutine PC_put_from_gm_init(nParamInt, nParamReal, iParam_I, Param_I, &
+       NameVar)
 
-    integer, intent(in) :: n
-    integer, intent(in) :: ParamInt_I(3)
-    real,    intent(in) :: ParamReal_I(n)
-    character(len=*), intent(inout):: NameVar ! List of variables
-    integer, intent(in) :: nNameVar
+    integer, intent(in)         :: nParamInt, nParamReal! number of parameters
+    integer, intent(in)         :: iParam_I(nParamInt)  ! integer parameters
+    real,    intent(in)         :: Param_I(nParamReal)  ! real parameters
+    character(len=*), intent(in):: NameVar              ! names of variables
 
     character(len=*), parameter :: NameSub = 'PC_put_from_gm_init'
     !--------------------------------------------------------------------------
-    nDim = ParamInt_I(3)
-    call pc_wrapper_c_set_ndim(ParamInt_I(3))
-    call pc_wrapper_c_from_gm_init(ParamInt_I, ParamReal_I, n, NameVar, &
-         nNameVar) 
+    ! store GM's nDim, so it is reported as PC's nDim for the point coupler
+    nDim = iParam_I(1) 
+    call pc_wrapper_c_from_gm_init(iParam_I, Param_I, NameVar)
 
   end subroutine PC_put_from_gm_init
   !============================================================================
@@ -269,11 +251,17 @@ end if
     integer, intent(in), optional  :: iPoint_I(nPoint)! Order of data
     real, intent(out), allocatable, optional:: Pos_DI(:,:)  ! Position vectors
 
+    ! Finish the initialization after the first coupling
+    logical:: IsFirstTime = .true.
+
+    logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='PC_put_from_gm'
     !--------------------------------------------------------------------------
-
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(.not. present(Data_VI))then
        call pc_wrapper_c_get_ngridpoints(nPoint)
+
+       if(DoTest)write(*,*)NameSub,': iProc, nPoint = ', iProc, nPoint
 
        if(allocated(Pos_DI)) deallocate(Pos_DI)
        allocate(Pos_DI(nDim,nPoint))
@@ -285,12 +273,17 @@ end if
     call pc_wrapper_c_set_state_var(NameVar//char(0), len(NameVar//char(0)), &
          nVar, Data_VI, iPoint_I)
 
+    if(IsFirstTime)  then
+       IsFirstTime = .false.
+
+       ! Finishing the setup after the initial state is set from GM
+       call pc_wrapper_c_finalize_init
+    end if
+
   end subroutine PC_put_from_gm
   !============================================================================
   subroutine PC_get_for_gm(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
-
-    !use CON_coupler, ONLY: i_proc, PC_, n_proc
 
     logical,          intent(in):: IsNew   ! true for new point array
     character(len=*), intent(in):: NameVar ! List of variables
@@ -301,22 +294,11 @@ end if
     real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
     real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
 
-    !integer :: i
-
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
-
     call pc_wrapper_c_get_state_var( &
          nDimIn, nPoint, Xyz_DI, Data_VI, nVarIn, &
          NameVar//char(0), len(NameVar//char(0)));
-
-!!$    if(i_proc(PC_) == 0) then
-!!$       OPEN(UNIT=9, FILE="stat_for_pos_0.txt", ACTION="write") 
-!!$       do i=1,nPoint
-!!$          write(9,*) Xyz_DI(1,i),", ",Xyz_DI(2,i),", ",Data_VI(1,i),", ",i_proc(PC_) 
-!!$       end do
-!!$       CLOSE(9)
-!!$    end if
 
   end subroutine PC_get_for_gm
 

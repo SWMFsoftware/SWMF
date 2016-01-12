@@ -1,8 +1,12 @@
 #include <iomanip>
 #include "ipic3d_interface.h"
 #include "multi_ipic3d_domain.h"
+#include "MPIdata.h"
+#include <iostream>
+#include <cstdlib>
 
 using namespace iPic3D;
+using namespace std;
 
 int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc,signed int* nProc){
 
@@ -13,7 +17,7 @@ int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc,signed int* nProc){
   if(MPI_SUCCESS != MPI_Comm_dup(iComm, &ipic3dComm)){
     cout<<"IPIC3D_init_mpi :: Can not copy  MPI comunicator, arborting!"<<endl;
     cout.flush();
-    abort();
+    //abort();
   } 
   
   //std::cout<<"ipic3dComm init :: "<<ipic3dComm<<endl;
@@ -35,13 +39,7 @@ int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc,signed int* nProc){
   return(0);
 }
 
-int IPIC3D_read_paramin(std::stringstream *paramin){
-
-  if(myrank==0){
-      string tmp = paramin->str();
-      std::cout<<tmp<<std::endl;
-  }
-    
+int IPIC3D_read_paramin(std::stringstream *paramin){    
   param = paramin;
   iIPIC++;
 
@@ -66,32 +64,36 @@ int IPIC3D_init(double inittime){
 
 }
 
-int IPIC3D_from_gem_init(int *paramint, double *paramreal, int nparamreal,
-			 std::stringstream *ss, int nNameVar){
+int IPIC3D_from_gm_init(int *paramint, double *paramreal, std::stringstream *ss){
  
   char **dummy = NULL; // dummy argument
   int firstIPIC = nIPIC;
-  int ns = paramint[0];
-  
-  nIPIC +=paramint[1];
-  nDim = paramint[2];
-  
-  //std::cout<<"IPIC3D_from_gem_init"<<std::endl;
 
+  // number of dimensions in GM
+  nDim = paramint[0];
+
+  // number of PIC regions (added?)
+  nIPIC +=paramint[1];
+  
+  // the number of PIC fluids ns = nFluid + nSpecies - 1
+  int ns = paramint[3] + paramint[4] - 1;
+
+  MPIdata::init(ipic3dComm, &myrank, &numProc);
   for(int i = firstIPIC; i < nIPIC; i++){ 
     param->clear();
     param->seekg(0,param->beg);
     starttime[i] = timenow;
     SimRun[i]  = new iPic3D::c_Solver;
-    SimRun[i]->InitMpi(ipic3dComm, &myrank, &numProc);
-    SimRun[i]->Init(0, dummy, timenow, param, i, nDim); 
-    // ([ns, nRegions, ndim verbose], [min X, max X, dx, ....], [QoM*ns, NormX, NormU, NormM]
-    SimRun[i]->SetParam(paramint, &paramreal[(i - firstIPIC)*9], &paramreal[nparamreal - ns*3 - 3], ss, nNameVar);
+    SimRun[i]->Init(0, dummy, timenow, param, i, paramint,
+		    &paramreal[(i - firstIPIC)*9], 
+		    &paramreal[(nIPIC - firstIPIC)*9], ss,true);
+    // ([ndim, nRegions, nVar, nFluid, nSpecies...], [min X, max X, dx, ....], 
+    // [Charge*ns, Mass*ns, PePerPtotal, NormX, NormU, NormM]
   }
   return(0);
 }
 
-int IPIC3D_finilize_init(){
+int IPIC3D_finalize_init(){
 
   // This function is called by the coupler the first time 
   // it want to couple from GM -> PC. At this point we should have all
@@ -100,17 +102,13 @@ int IPIC3D_finilize_init(){
   char **dummy = NULL; // dummy argument
   
   // now we should have all the the infomation
-  for(int i = 0; i < nIPIC; i++){ 
-    if(SimRun[i] == NULL){
-      SimRun[i]  = new iPic3D::c_Solver;
-      SimRun[i]->InitMpi(ipic3dComm, &myrank, &numProc);
-    }
-    SimRun[i]->Init(0, dummy, starttime[i], param);
-    SimRun[i]->GatherMoments();
+  for(int i = 0; i < nIPIC; i++){     
+    SimRun[i]->Init(0, dummy, timenow);
+    SimRun[i]->CalculateMoments();
     SimRun[i]->WriteOutput(0);
     iSimCycle[i] = SimRun[i]->FirstCycle();
   }
-
+  return(0);
 }
 
 
@@ -147,17 +145,17 @@ int IPIC3D_run(double time){
    SimRun[i]->SyncWithFluid(iSimCycle[i]);
  
    SimRun[i]->CalculateField();
+   
+   b_err = SimRun[i]->ParticlesMover();
 
-    b_err = SimRun[i]->ParticlesMover();
-
-    if (!b_err) SimRun[i]->CalculateBField();
-    if (!b_err) SimRun[i]->GatherMoments();
+   if (!b_err) SimRun[i]->CalculateB();
+   if (!b_err) SimRun[i]->CalculateMoments();
 
     if (b_err) {
       iSimCycle[i] = SimRun[i]->LastCycle() + 1;
     }
 
-    SimRun[i]->WriteOutput(iSimCycle[i]+1);
+    SimRun[i]->WriteOutput(iSimCycle[i]);
     SimRun[i]->WriteConserved(iSimCycle[i]);
 
     iSimCycle[i]++;    
@@ -260,7 +258,8 @@ int IPIC3D_set_dt( double DtSi){
   
   for(int i = 0; i < nIPIC; i++)
     SimRun[i]->setSIDt(DtSi);
-  
+
+  cout<<"setdt = "<<DtSi<<endl;
   return(0);
 }
 

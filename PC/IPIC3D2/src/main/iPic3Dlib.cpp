@@ -29,6 +29,11 @@
 using namespace iPic3D;
 //MPIdata* iPic3D::c_Solver::mpi=0;
 
+MPI_Comm MPI_COMM_MYSIM;
+#ifdef BATSRUS
+bool isProc0;
+#endif
+
 c_Solver::~c_Solver()
 {
   delete col; // configuration parameters ("collectiveIO")
@@ -56,10 +61,13 @@ c_Solver::~c_Solver()
   delete my_clock;
 }
 
-int c_Solver::Init(int argc, char **argv) {
-  #if defined(__MIC__)
+int c_Solver::Init(int argc, char **argv, double inittime,
+		   stringstream *param, int iIPIC, int *paramint,
+		   double *griddim, double *paramreal, stringstream *ss,
+		   bool doCoupling){
+#if defined(__MIC__)
   assert_eq(DVECWIDTH,8);
-  #endif
+#endif
   // get MPI data
   //
   // c_Solver is not a singleton, so the following line was pulled out.
@@ -73,35 +81,67 @@ int c_Solver::Init(int argc, char **argv) {
   nprocs = MPIdata::get_nprocs();
   myrank = MPIdata::get_rank();
 
-  col = new Collective(argc, argv); // Every proc loads the parameters of simulation from class Collective
-  restart_cycle = col->getRestartOutputCycle();
-  SaveDirName = col->getSaveDirName();
-  RestartDirName = col->getRestartDirName();
-  restart_status = col->getRestart_status();
-  ns = col->getNs();            // get the number of particle species involved in simulation
-  first_cycle = col->getLast_cycle() + 1; // get the last cycle from the restart
-  // initialize the virtual cartesian topology
-  vct = new VCtopology3D(*col);
-  // Check if we can map the processes into a matrix ordering defined in Collective.cpp
-  if (nprocs != vct->getNprocs()) {
-    if (myrank == 0) {
-      cerr << "Error: " << nprocs << " processes cant be mapped into " << vct->getXLEN() << "x" << vct->getYLEN() << "x" << vct->getZLEN() << " matrix: Change XLEN,YLEN, ZLEN in method VCtopology3D.init()" << endl;
-      MPIdata::instance().finalize_mpi();
-      return (1);
-    }
-  }
-  // We create a new communicator with a 3D virtual Cartesian topology
-  vct->setup_vctopology(MPI_COMM_WORLD);
-  {
-    stringstream num_proc_ss;
-    num_proc_ss << vct->getCartesian_rank();
-    num_proc_str = num_proc_ss.str();
-  }
-  // initialize the central cell index
+  if(vct == NULL){
+    // For coupling, the initialization has two stages.
+    // First stage: initilize Collective and vct and get parameters
+    // from BATSRUS.
+    // Second stage: after get simulation parameters (dt, uth...) from BATSRUS,
+    // finish the initilization.
+    if(!doCoupling) col = new Collective(argc, argv); // Every proc loads the parameters of simulation from class Collective
 
 #ifdef BATSRUS
+    if(doCoupling){
+      if (myrank == 0){
+	cout << endl;cout << endl;cout << endl;
+	cout << "****************************************************" << endl;
+	cout << "               iPIC3D Input Parameters              " << endl;
+	cout << "****************************************************" << endl;
+      }
+      col = new Collective(argc, argv, param, iIPIC, paramint,griddim, paramreal, ss); // Every proc loads the parameters of simulation from class Collective
+      col->setSItime(inittime);
+    }
+#endif
+  
+    restart_cycle = col->getRestartOutputCycle();
+    SaveDirName = col->getSaveDirName();
+    RestartDirName = col->getRestartDirName();
+    restart_status = col->getRestart_status();
+    ns = col->getNs();            // get the number of particle species involved in simulation
+    first_cycle = col->getLast_cycle() + 1; // get the last cycle from the restart
+    // initialize the virtual cartesian topology
+    vct = new VCtopology3D(*col);
+    // Check if we can map the processes into a matrix ordering defined in Collective.cpp
+    if (nprocs != vct->getNprocs()) {
+      if (myrank == 0) {
+	cerr << "Error: " << nprocs << " processes cant be mapped into " << vct->getXLEN() << "x" << vct->getYLEN() << "x" << vct->getZLEN() << " matrix: Change XLEN,YLEN, ZLEN in method VCtopology3D.init()" << endl;
+	MPIdata::instance().finalize_mpi();
+	return (1);
+      }
+    }
+    // We create a new communicator with a 3D virtual Cartesian topology
+    vct->setup_vctopology(MPI_COMM_MYSIM);
+    {
+      stringstream num_proc_ss;
+      num_proc_ss << vct->getCartesian_rank();
+      num_proc_str = num_proc_ss.str();
+    }
+    // initialize the central cell index
+
+#ifdef BATSRUS
+    if(col->getCase()=="BATSRUS") {
+      col->setVCTpointer(vct);
+      // Why setGlobalStartIndex is called twice?? -Yuxi
+      col->setGlobalStartIndex(NULL);
+      return 0;
+    }
+#endif
+  }
+#ifdef BATSRUS
   // set index offset for each processor
-  col->setGlobalStartIndex(vct);
+  if(col->getCase()=="BATSRUS") {
+    col->FinilizeInit();
+    col->setGlobalStartIndex(vct);
+  }
 #endif
 
   // Print the initial settings to stdout and a file
@@ -119,7 +159,7 @@ int c_Solver::Init(int argc, char **argv) {
   else if (col->getCase()=="ForceFree") EMf->initForceFree();
   else if (col->getCase()=="GEM")       EMf->initGEM();
 #ifdef BATSRUS
-  else if (col->getCase()=="BATSRUS")   EMf->initBATSRUS();
+  else if (col->getCase()=="BATSRUS")   EMf->initBATSRUS(vct,grid,col);
 #endif
   else if (col->getCase()=="Dipole")    EMf->initDipole();
   else if (col->getCase()=="Dipole2D")    EMf->initDipole2D();
@@ -140,6 +180,15 @@ int c_Solver::Init(int argc, char **argv) {
     EMf->init();
   }
 
+#ifdef BATSRUS
+  string nameSub = "C_Solver::Init";
+  if(col->getCase()=="BATSRUS" && restart_status != 0){
+    EMf->init();
+    EMf->SyncWithFluid(col,grid,vct);
+  }
+#endif
+
+  
   // Allocation of particles
   part = (Particles3D*) malloc(sizeof(Particles3D)*ns);
   for (int i = 0; i < ns; i++)
@@ -153,7 +202,7 @@ int c_Solver::Init(int argc, char **argv) {
     {
       if      (col->getCase()=="ForceFree") part[i].force_free(EMf);
 #ifdef BATSRUS
-      else if (col->getCase()=="BATSRUS")   part[i].MaxwellianFromFluid(EMf,col,i);
+      else if (col->getCase()=="BATSRUS")   part[i].MaxwellianFromFluid(EMf);
 #endif
       else                                  part[i].maxwellian(EMf);
       part[i].reserve_remaining_particle_IDs();
@@ -325,8 +374,8 @@ bool c_Solver::ParticlesMover()
           part[i].mover_PC_AoS(EMf);
           break;
         case Parameters::AoS_Relativistic:
-        	part[i].mover_PC_AoS_Relativistic(EMf);
-        	break;
+	  part[i].mover_PC_AoS_Relativistic(EMf);
+	  break;
         case Parameters::AoSintr:
           part[i].mover_PC_AoS_vec_intr(EMf);
           break;
@@ -337,13 +386,20 @@ bool c_Solver::ParticlesMover()
           unsupported_value_error(Parameters::get_MOVER_TYPE());
       }
 
-	  //Should integrate BC into separate_and_send_particles
-	  part[i].openbc_particles_outflow();
-	  part[i].separate_and_send_particles();
+#ifdef BATSRUS
+    for (int i = 0; i < ns; i++)  // communicate each species
+      {
+	part[i].delete_outside_particles();
+      }
+#endif
 
+      
+      // part[i].print_particles("after move");
+      //Should integrate BC into separate_and_send_particles
+      part[i].openbc_particles_outflow();
+      part[i].separate_and_send_particles();
     }
-
-
+    
     for (int i = 0; i < ns; i++)  // communicate each species
     {
       //part[i].communicate_particles();
@@ -356,7 +412,7 @@ bool c_Solver::ParticlesMover()
   /* -------------------------------------- */
 
   for (int i=0; i < ns; i++) {
-    if (col->getRHOinject(i)>0.0)
+    if (col->getRHOinject(i)>0.0 || col->getCase()=="BATSRUS")
       part[i].repopulate_particles();
   }
 
@@ -704,8 +760,52 @@ void c_Solver::convertParticlesToSynched()
     testpart[i].convertParticlesToSynched();
 }
 
-
-
 int c_Solver::LastCycle() {
-    return (col->getNcycles() + first_cycle);
+  return (col->getNcycles() + first_cycle);
 }
+
+#ifdef BATSRUS
+void c_Solver::SyncWithFluid(int cycle){  
+  string nameSub="c_Solver::SyncWithFluid";
+  unsigned long iSyncTimeStep;
+  
+  // read in the new fluid variables, next step
+  iSyncTimeStep = col->doSyncWithFluid(cycle - first_cycle+1);
+  if(iSyncTimeStep > 0 ) EMf->SyncWithFluid(col,grid,vct);
+}
+
+void c_Solver::GetNgridPnt(int *nPoint){
+  col->GetNgridPnt(nPoint);
+}
+
+void c_Solver::GetGridPnt(double *Pos_I){
+  col->GetGridPnt(Pos_I);
+}
+
+void c_Solver::setStateVar(std::stringstream *ss, int nVar, double *State_I, int *iPoint_I){
+  col->setStateVar(ss, nVar, State_I, iPoint_I);
+}
+
+void c_Solver::getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar , string *NameVar){
+  string nameSub="getStateVar";
+  fetch_outputWrapperFPP().getFluidState(nDim, nPoint, Xyz_I, data_I, nVar, NameVar);
+}
+
+void c_Solver::findProcForPoint(int nPoint, double *Xyz_I, int *iProc_I){
+  col->findProcForPoint(vct, nPoint, Xyz_I, iProc_I);
+}
+
+double c_Solver::getDt(){
+  return(col->getDt());
+}
+
+double c_Solver::getSItime(){
+  return(col->getSItime());
+}
+
+void c_Solver::setSIDt(double SIDt){
+  col->setSIDt(SIDt);
+}
+    
+
+#endif

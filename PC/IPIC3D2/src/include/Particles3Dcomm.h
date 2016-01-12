@@ -355,7 +355,7 @@ protected:
   //
   /** buffers for communication */
   //
-  // communicator for this species (duplicated from MPI_COMM_WORLD)
+  // communicator for this species (duplicated from MPI_COMM_MYSIM)
   MPI_Comm mpi_comm;
   // send buffers
   //
@@ -423,6 +423,11 @@ protected:
   double umin;
   double vmin;
   double wmin;
+
+#ifdef BATSRUS
+  long int idum;
+#endif
+  
 };
 
 // find the particles with particular IDs and print them

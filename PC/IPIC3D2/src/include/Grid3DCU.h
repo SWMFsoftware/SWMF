@@ -107,6 +107,8 @@ public:
   void interpN2C(arr3_double vecFieldC, const_arr3_double vecFieldN)const;
   /** interpolate on central points from nodes */
   void interpN2C(arr4_double vecFieldC, int ns, const_arr4_double vecFieldN)const;
+  /** interpolate on central points from nodes including the ghost cells*/
+  void interpN2Cfull(double ***vecFieldC, double ***vecFieldN);
 
 private:
   void init_derived_parameters();

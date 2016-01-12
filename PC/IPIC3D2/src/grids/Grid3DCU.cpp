@@ -528,3 +528,17 @@ void Grid3DCU::interpN2C(arr4_double vecFieldC, int ns, const_arr4_double vecFie
 }
 
 
+// Necessary for MHD-IPIC coupling.
+/** interpolate on central points from nodes including the ghost cells*/
+void Grid3DCU::interpN2Cfull(double ***vecFieldC, double ***vecFieldN){
+  for (register int i=0;i < nxc;i++)
+    for (register int j=0;j < nyc;j++)
+      for (register int k=0;k < nzc;k++)
+	vecFieldC[i][j][k] =
+	  .125*(vecFieldN[i][j][k] + vecFieldN[i+1][j][k] +		\
+		vecFieldN[i][j+1][k] + vecFieldN[i][j][k+1] + \
+		vecFieldN[i+1][j+1][k] + vecFieldN[i+1][j][k+1] +
+		vecFieldN[i][j+1][k+1] + vecFieldN[i+1][j+1][k+1]);
+}
+
+

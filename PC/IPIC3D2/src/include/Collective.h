@@ -10,6 +10,7 @@
 
 #ifdef BATSRUS
 #include "InterfaceFluid.h"
+#include "ReadParam.h"
 #endif
 #include <string>
 #include "VCtopology3D.h"
@@ -87,7 +88,12 @@ class Collective
     double getDy()const{ return (dy); }
     double getDz()const{ return (dz); }
     double getC()const{ return (c); }
-    double getDt()const{ return (dt); }
+    double getDt()const{
+#ifdef BATSRUS
+      if(Case=="BATSRUS") return(getFluidDt());
+#endif
+      return (dt);
+    }
     double getTh()const{ return (th); }
     double getPushWithBatTime()const{ return PushWithBatTime; }
     double getPushWithEatTime()const{ return PushWithEatTime; }
@@ -394,6 +400,28 @@ class Collective
     int DiagnosticsOutputCycle;
     /*! Call Finalize() at end of program execution (true by default) */
     bool CallFinalize;
+
+
+#ifdef BATSRUS
+ public:    
+    Collective(int argc, char **argv, stringstream *param, int iIPIC,
+	       int *paramint, double *griddim, double *paramreal,
+	       stringstream *ss);
+    void PostProcParam();
+
+    void FinilizeInit();
+    
+ private:
+    int nSmooth;
+    int FieldOutputCycleASCII;
+    /*! Output for virtual satellites */
+    int SatelliteOutputCycle;
+    /*OutputFormat[0=BATSRUS ASCII, 1=Runtime VTK]*/
+    int PicOutputFormat;
+
+
+#endif
+    
 };
 typedef Collective CollectiveIO;
 

@@ -24,7 +24,7 @@ bool Parameters::get_VECTORIZE_MOMENTS() { return false; }
 // supported options: SoA AoS
 Parameters::Enum Parameters::get_MOMENTS_TYPE() { return AoS; }
 // supported options: SoA AoS AoSvec AoSintr AoS_vec_onesort SoA_vec_resort
-Parameters::Enum Parameters::get_MOVER_TYPE() { return AoS_Relativistic; }
+Parameters::Enum Parameters::get_MOVER_TYPE() { return AoS; }
 //********** derived parameters *********
 
 static bool SORTING_PARTICLES;

@@ -26,8 +26,8 @@ int pc_wrapper_c_init_(double *inittime){
   return(0);
 }
 
-int pc_wrapper_c_finilize_init_(){
-  IPIC3D_finilize_init();
+int pc_wrapper_c_finalize_init_(){
+  IPIC3D_finalize_init();
   return(0);
 }
 
@@ -56,12 +56,12 @@ int pc_wrapper_c_read_param_(char *param, int *nlines, int *ncharline, int *iPro
   return(0);
 }
 
-int pc_wrapper_c_from_gm_init_(int *paramint, double *paramreal, int *nparamreal, char *NameVar, int *nNameVar){
+int pc_wrapper_c_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
   std::stringstream  *ss;
   ss = new std::stringstream;
   //ss->write(NameVar, 1);
   (*ss)<<NameVar;
-  IPIC3D_from_gem_init(paramint, paramreal, *nparamreal, ss, *nNameVar);
+  IPIC3D_from_gm_init(paramint, paramreal, ss);
   return(0);
 }
 
@@ -80,16 +80,6 @@ int pc_wrapper_c_set_state_var_(char *NameVar, int *nNameVar, int *nVar, double 
   ss = new std::stringstream;
   ss->write(NameVar, *nNameVar); 
   IPIC3D_set_state_var(ss, *nVar, Data_VI, iPoint_I);
-  return(0);
-}
-
-int pc_wrapper_c_get_ndim_(int *nDimentins){
-  *nDimentins = nDim;
-  return(0);
-}
-
-int pc_wrapper_c_set_ndim_(int *nDimentins){
-  nDim = *nDimentins;
   return(0);
 }
 

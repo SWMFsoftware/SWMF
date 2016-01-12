@@ -21,7 +21,7 @@
 // one way is to compare the positions of the centroids, first in
 // the x direction, then in the y direction, and then in the z
 // direction.  One might use tag=1 for downward communication and
-// tag=2 for upward communication, and use MPI_COMM_WORLD for the
+// tag=2 for upward communication, and use MPI_COMM_MYSIM for the
 // group.
 //
 namespace Direction
@@ -63,14 +63,14 @@ class Connection
   Connection():
     _rank(0),
     _tag(0),
-    _comm(MPI_COMM_WORLD)
+    _comm(MPI_COMM_MYSIM)
   {}
-  Connection(int rank_, int tag_, MPI_Comm comm_ = MPI_COMM_WORLD)
+  Connection(int rank_, int tag_, MPI_Comm comm_ = MPI_COMM_MYSIM)
   {
     init(rank_,tag_,comm_);
   }
  private:
-  void init(int rank_, int tag_, MPI_Comm comm_ = MPI_COMM_WORLD)
+  void init(int rank_, int tag_, MPI_Comm comm_ = MPI_COMM_MYSIM)
   {
     _rank = rank_;
     _tag = tag_;

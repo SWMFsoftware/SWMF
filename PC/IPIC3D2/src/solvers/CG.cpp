@@ -13,7 +13,7 @@
  *
  */
 
-bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD_IMAGE FunctionImage, Field * field) {
+bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD_IMAGE FunctionImage, bool doSolveForChange, Field * field) {
   // allocate residual, image, p, b, calculated on central points
   double *r = new double[xkrylovlen];
   double *v = new double[xkrylovlen];
@@ -31,7 +31,7 @@ bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD
   // initial guess for x: all the components are equal to 0
   eqValue(0, xkrylov, xkrylovlen);
   // Compute r = b -Ax
-  (field->*FunctionImage) (im, xkrylov);
+  (field->*FunctionImage) (im, xkrylov, doSolveForChange);
   sub(r, b, im, xkrylovlen);
   // v = r
   eq(v, r, xkrylovlen);
@@ -43,7 +43,7 @@ bool CG(double *xkrylov, int xkrylovlen, double *b, int maxit, double tol, FIELD
   if (initial_error < 1E-16)
     return (true);
   while (i < maxit) {
-    (field->*FunctionImage) (z, v);
+    (field->*FunctionImage) (z, v, doSolveForChange);
     t = c / dotP(v, z, xkrylovlen);
     // x(i+1) = x + t*v
     addscale(t, xkrylov, v, xkrylovlen);

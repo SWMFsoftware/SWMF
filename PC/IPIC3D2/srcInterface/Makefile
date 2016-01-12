@@ -9,6 +9,8 @@ SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 SEARCH_C = -I../src/include -I./
 
+FLAGC_EXTRA = -DBATSRUS
+
 include ../Makefile.conf
 
 # OBJECT FILE FOR THE WRAPPER
@@ -19,7 +21,7 @@ OBJECTS = \
 	ipic3d_interface.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH_C} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH_C} ${OBJECTS} ${FLAGC_EXTRA}
 
 
 LIBIPIC3D = ../libIPIC3D/libIPIC3D.a

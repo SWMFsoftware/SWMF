@@ -26,8 +26,18 @@ void OutputWrapperFPP::init_output_files(
     SaveDirName = col->getSaveDirName();
     RestartDirName = col->getRestartDirName();
     int restart_status = col->getRestart_status();
-    output_file = SaveDirName + "/proc"   + num_proc_str + ".hdf";
-    restart_file= SaveDirName + "/restart"+ num_proc_str + ".hdf";
+
+    string iRegion;
+    if(col->getCase()=="BATSRUS"){
+      stringstream ss;
+      ss<<col->getiRegion();
+      iRegion = "_region"+ss.str();
+    }else{
+      iRegion="";
+    }
+    
+    output_file = SaveDirName + "/proc"   + num_proc_str + iRegion + ".hdf";
+    restart_file= SaveDirName + "/restart"+ num_proc_str + iRegion + ".hdf";
 
     // Initialize the output (simulation results and restart file)
     hdf5_agent.set_simulation_pointers(EMf, grid, vct, col);
@@ -44,7 +54,14 @@ void OutputWrapperFPP::init_output_files(
 
     if(col->getWriteMethod() == "shdf5"||(col->getWriteMethod()=="pvtk"&&!col->particle_output_is_off()) ){
         if (cartesian_rank == 0 && restart_status < 2) {
-          hdf5_agent.open(SaveDirName + "/settings.hdf");
+	  stringstream filename;
+
+	  if(col->getCase()=="BATSRUS")
+	    filename<<"/settings"<<"_region"<<col->getiRegion()<<".hdf";
+	  else
+	    filename<<"/settings.hdf";
+	  
+          hdf5_agent.open(SaveDirName + filename.str());
           output_mgr.output("collective + total_topology + proc_topology", 0);
           hdf5_agent.close();
         }
@@ -107,3 +124,11 @@ void OutputWrapperFPP::append_restart(int cycle)
 		hdf5_agent.close();
 #endif
 }
+
+#ifdef BATSRUS
+void OutputWrapperFPP::getFluidState(int nDim, int nPoint, double *Xyz_I,
+				     double *data_I,int nVar , string *NameVar){
+  hdf5_agent.getFluidSIatPoint(nDim, nPoint, Xyz_I, data_I, nVar, NameVar);
+}
+
+#endif

@@ -6,10 +6,9 @@
 #include <mpi.h>
 
 int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc, signed int* nProc); 
-int IPIC3D_from_gem_init(int *paramint, double *paramreal, int nparamreal,
-			 std::stringstream *ss, int nNameVar);
+int IPIC3D_from_gm_init(int *paramint, double *paramreal, std::stringstream *ss);
 int IPIC3D_init(double inittime); 
-int IPIC3D_finilize_init();
+int IPIC3D_finalize_init();
 int IPIC3D_run(double time); 
 int IPIC3D_save_restart();
 int IPIC3D_end(); 

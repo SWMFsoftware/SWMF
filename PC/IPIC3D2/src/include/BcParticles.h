@@ -24,7 +24,8 @@ namespace BCparticles
     PERFECT_MIRROR = 1,
     REEMISSION = 2,
     OPENBCOut = 3,
-    OPENBCIn = 4
+    OPENBCIn = 4,
+    FLUID    = 5
   };
 }
 

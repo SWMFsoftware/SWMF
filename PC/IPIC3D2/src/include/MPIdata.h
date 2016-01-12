@@ -10,6 +10,11 @@ email                : markidis@lanl.gov, lapenta@lanl.gov
 #ifndef MPIDATA_H
 #define MPIDATA_H
 
+#ifndef NO_MPI
+#include <mpi.h>
+#include "my_mpi.h"
+#endif
+
 /**
  * MPI Data Structure. This class contains:
  *
@@ -38,6 +43,8 @@ private:
 public:
   /** initialize MPI environment */
   static void init(int *, char ***);
+  /** Initialize for MHD-IPIC coupling */
+  static void init(MPI_Comm iComm, signed int* iProc, signed int* nProc);
   /** close MPI environment */
   static void finalize_mpi();
   /** finalize and exit with error code */

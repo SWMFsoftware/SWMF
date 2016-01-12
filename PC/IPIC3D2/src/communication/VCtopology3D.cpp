@@ -110,11 +110,11 @@ void VCtopology3D::setup_vctopology(MPI_Comm old_comm) {
 		  xleft_neighbor_P=cartesian_rank;
 		  xright_neighbor_P=cartesian_rank;
 	  }else if(xleft_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0]+XLEN-1, coordinates[1], coordinates[2]};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &xleft_neighbor_P);
+	    int tempcoord[]={coordinates[0]+XLEN-1, coordinates[1], coordinates[2]};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &xleft_neighbor_P);
 	  }else if(xright_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0]-XLEN+1, coordinates[1], coordinates[2]};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &xright_neighbor_P);
+	    int tempcoord[]={coordinates[0]-XLEN+1, coordinates[1], coordinates[2]};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &xright_neighbor_P);
 	  }
   }
   if(PERIODICY_P){
@@ -122,11 +122,11 @@ void VCtopology3D::setup_vctopology(MPI_Comm old_comm) {
 		  yleft_neighbor_P=cartesian_rank;
 		  yright_neighbor_P=cartesian_rank;
 	  }else if(yleft_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0], coordinates[1]+YLEN-1, coordinates[2]};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &yleft_neighbor_P);
+	    int tempcoord[]={coordinates[0], coordinates[1]+YLEN-1, coordinates[2]};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &yleft_neighbor_P);
 	  }else if(yright_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0], coordinates[1]-YLEN+1, coordinates[2]};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &yright_neighbor_P);
+	    int tempcoord[]={coordinates[0], coordinates[1]-YLEN+1, coordinates[2]};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &yright_neighbor_P);
 	  }
   }
   if(PERIODICZ_P){
@@ -134,11 +134,11 @@ void VCtopology3D::setup_vctopology(MPI_Comm old_comm) {
 		  zleft_neighbor_P = cartesian_rank;
 		  zright_neighbor_P= cartesian_rank;dprintf("zleft_neighbor_P=%d, zright_neighbor_P=%d",zleft_neighbor_P,zright_neighbor_P);
 	  }else if(zleft_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0], coordinates[1], coordinates[2]+ZLEN-1};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &zleft_neighbor_P);dprintf("zleft_neighbor_P=%d",zleft_neighbor_P);
+	    int tempcoord[]={coordinates[0], coordinates[1], coordinates[2]+ZLEN-1};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &zleft_neighbor_P);dprintf("zleft_neighbor_P=%d",zleft_neighbor_P);
 	  }else if(zright_neighbor_P==MPI_PROC_NULL){
-		  const int tempcoord[]={coordinates[0], coordinates[1], coordinates[2]-ZLEN+1};
-		  MPI_Cart_rank(CART_COMM, tempcoord, &zright_neighbor_P);dprintf("zright_neighbor_P=%d",zright_neighbor_P);
+	    int tempcoord[]={coordinates[0], coordinates[1], coordinates[2]-ZLEN+1};
+	    MPI_Cart_rank(CART_COMM, tempcoord, &zright_neighbor_P);dprintf("zright_neighbor_P=%d",zright_neighbor_P);
 	  }
   }
 

@@ -123,7 +123,7 @@ Particles3Dcomm::Particles3Dcomm(
 {
   // communicators for particles
   //
-  MPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm);
+  MPI_Comm_dup(MPI_COMM_MYSIM, &mpi_comm);
   //
   // define connections
   using namespace Direction;
@@ -309,6 +309,11 @@ if( !isTestParticle ){
     printf("species %d velocity cap: umax=%g,vmax=%g,wmax=%g\n",
       ns, umax,vmax,wmax);
   }
+
+#ifdef BATSRUS
+  idum = (long) vct->getCartesian_rank() + 1024*ns;
+#endif
+  
 }
 
 // pad capacities so that aligned vectorization
@@ -1048,7 +1053,7 @@ static long long mpi_global_sum(int in)
 {
   long long total;
   long long long_in = in;
-  MPI_Allreduce(&long_in, &total, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&long_in, &total, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
   return total;
 }
 
@@ -1090,6 +1095,8 @@ void Particles3Dcomm::apply_Xleft_BC(vector_SpeciesParticle& pcls, int start)
     case BCparticles::OPENBCIn:
     	break;
     case BCparticles::OPENBCOut:
+    	break;
+    case BCparticles::FLUID:
     	break;
   }
 }
@@ -1135,6 +1142,8 @@ void Particles3Dcomm::apply_Yleft_BC(vector_SpeciesParticle& pcls, int start)
     	break;
     case BCparticles::OPENBCOut:
     	break;
+    case BCparticles::FLUID:
+    	break;
   }
 }
 void Particles3Dcomm::apply_Zleft_BC(vector_SpeciesParticle& pcls, int start)
@@ -1171,6 +1180,8 @@ void Particles3Dcomm::apply_Zleft_BC(vector_SpeciesParticle& pcls, int start)
     case BCparticles::OPENBCIn:
     	break;
     case BCparticles::OPENBCOut:
+    	break;
+    case BCparticles::FLUID:
     	break;
   }
 }
@@ -1210,6 +1221,8 @@ void Particles3Dcomm::apply_Xrght_BC(vector_SpeciesParticle& pcls, int start)
     case BCparticles::OPENBCIn:
     	break;
     case BCparticles::OPENBCOut:
+    	break;
+    case BCparticles::FLUID:
     	break;
   }
 }
@@ -1255,6 +1268,8 @@ void Particles3Dcomm::apply_Yrght_BC(vector_SpeciesParticle& pcls, int start)
     	break;
     case BCparticles::OPENBCOut:
     	break;
+    case BCparticles::FLUID:
+    	break;
   }
 }
 void Particles3Dcomm::apply_Zrght_BC(vector_SpeciesParticle& pcls, int start)
@@ -1292,6 +1307,8 @@ void Particles3Dcomm::apply_Zrght_BC(vector_SpeciesParticle& pcls, int start)
     	break;
     case BCparticles::OPENBCOut:
     	break;
+    case BCparticles::FLUID:
+    	break;
   }
 }
 
@@ -1303,7 +1320,6 @@ int Particles3Dcomm::separate_and_send_particles()
   longid id_list[num_ids] = {0};
 
   //timeTasks_set_communicating();
-
   convertParticlesToAoS();
 
   // activate receiving
@@ -1340,7 +1356,7 @@ int Particles3Dcomm::separate_and_send_particles()
     // optimizer should assume that most particles are not sent
     if(__builtin_expect(was_sent,false))
     {
-      //dprintf("sent particle %d", np_current);
+      // dprintf("sent particle %d", np_current);
       delete_particle(np_current);
     }
     else
@@ -1500,7 +1516,7 @@ double Particles3Dcomm::getKe() {
     const double q = pcl.get_q();
     localKe += .5*(q/qom)*(u*u + v*v + w*w);
   }
-  MPI_Allreduce(&localKe, &totalKe, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localKe, &totalKe, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
   return (totalKe);
 }
 
@@ -1522,7 +1538,7 @@ double Particles3Dcomm::getP() {
     const double q = pcl.get_q();
     localP += (q/qom)*sqrt(u*u + v*v + w*w);
   }
-  MPI_Allreduce(&localP, &totalP, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&localP, &totalP, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
   return (totalP);
 }
 
@@ -1538,7 +1554,7 @@ double Particles3Dcomm::getMaxVelocity() {
     const double w = pcl.get_w();
     localVel = std::max(localVel, sqrt(u*u + v*v + w*w));
   }
-  MPI_Allreduce(&localVel, &maxVel, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&localVel, &maxVel, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_MYSIM);
   return (maxVel);
 }
 
@@ -1566,14 +1582,14 @@ long long *Particles3Dcomm::getVelocityDistribution(int nBins, double maxVel) {
     else
       f[bin] += 1;
   }
-  MPI_Allreduce(MPI_IN_PLACE, f, nBins, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, f, nBins, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
   // This way of summing is very inefficient
   //{
   //  long long localN = 0;
   //  long long totalN = 0;
   //  for (int i = 0; i < nBins; i++) {
   //    localN = f[i];
-  //    MPI_Allreduce(&localN, &totalN, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  //    MPI_Allreduce(&localN, &totalN, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
   //    f[i] = totalN;
   //  }
   //}

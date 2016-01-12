@@ -292,7 +292,7 @@ void TimeTasks::print_cycle_times(int cycle,
 static void reduce_doubles(int len, MPI_Op mpi_op, void* inbuff, void* outbuff)
 {
     MPI_Allreduce(inbuff,outbuff,
-      len,MPI_DOUBLE,mpi_op,MPI_COMM_WORLD);
+      len,MPI_DOUBLE,mpi_op,MPI_COMM_MYSIM);
 }
 
 void TimeTasks::print_cycle_times(int cycle, const char* reduce_mode)
@@ -393,7 +393,7 @@ TimeTasks_caller_to_set_main_task_for_scope::
   // assume that only one thread is active
   assert(!omp_get_thread_num());
 
-  //MPI_Barrier(MPI_COMM_WORLD);
+  //MPI_Barrier(MPI_COMM_MYSIM);
   timeTasks.end_main_task(task, start_time);
 }
 
