@@ -136,6 +136,11 @@ void cPostProcess3D::cSurfaceData::LoadDataFile(const char *fname,const char* pa
 
   //the root processor will read the mesh before all other processors
   if (PostProcess3D->rank==0) MPI_Barrier(MPI_COMM_WORLD);
+
+  //create the node balls'
+  NodeBall=new std::vector<int> [nNodes];
+
+  for (ncell=0;ncell<nCells;ncell++) for (nd=0;nd<3;nd++) NodeBall[ConnectivityList[ncell][nd]].push_back(ncell);
 }
 
 //=============================================================================
@@ -146,5 +151,10 @@ void cPostProcess3D::cSurfaceData::PrintVariableList() {
 
   for (int nvar=0;nvar<nVariables;nvar++) printf("%i:\t%s\n",nvar,VariableList[nvar].c_str());
   printf("Surface Data: Variable List: END\n\n");
+}
+
+void cPostProcess3D::cSurfaceData::PrintBall(int node) {
+  for (int i=0;i<NodeBall[node].size();i++) printf("%i\t",NodeBall[node][i]);
+  printf("\n");
 }
    
