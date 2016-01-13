@@ -1105,7 +1105,21 @@ void PIC::Sampling::Sampling() {
 
 
     //Finish the code execution if the walltime exeeds the limit
-    if (PIC::Alarm::WallTimeExeedsLimit==true) PIC::Alarm::FinishExecution();
+    if (PIC::Alarm::WallTimeExeedsLimit==true) {
+      //save the restart file
+      if (_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ == _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ON_) {
+        char fname[_MAX_STRING_LENGTH_PIC_];
+
+        if (Restart::ParticleDataRestartFileOverwriteMode==true) sprintf(fname,"%s",Restart::saveParticleDataRestartFileName);
+        else sprintf(fname,"%s.Final",Restart::saveParticleDataRestartFileName);
+
+        Restart::SaveParticleData(fname);
+        MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+      }
+
+      //finish exdcution
+      PIC::Alarm::FinishExecution();
+    }
 
 
     //increment the output file number
