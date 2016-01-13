@@ -23,6 +23,10 @@
 #define _USE_DUST_GRAIN_CHARGE_ _PIC_MODE_OFF_
 // Optional parameter: magnetic moment of a particle
 #define _USE_MAGNETIC_MOMENT_   _PIC_MODE_OFF_
+// Optional parameter: the number of the face where the particle was injected
+#define _USE_SAVE_INJECTION_FACE_ _PIC_MODE_OFF_
+// Optional parameter:the initial value of the particle total weight over the value of the local time step
+#define _USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_ _PIC_MODE_OFF_
 //-----------------------------------------------------------------------------
 
 
@@ -35,6 +39,12 @@
 #define _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ _PIC_MODE_OFF_ 
 #define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition_default(x,v, spec,ParticleData)
 #define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ 
+
+//save the face number where a particle is originated
+#define _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ _PIC_MODE_OFF_
+
+//save the quantaty Total Particle Weight over the Local Time Step -> the rate of the material injection associated with a given particle
+#define _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ _PIC_MODE_OFF_
 
 /* _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ and _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ are used when it is needed to 
 apply the particle trajectory tracking condition after the particle already has started its motion. The first is used after chemicsl reactions and the latter 

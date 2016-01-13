@@ -190,6 +190,16 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
 #endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
 
 
+  //save the number of the face where the particle was created
+#if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+  TrajectoryRecord->data.InjectionFaceNumber=PIC::ParticleBuffer::GetInjectionFaceNumber((PIC::ParticleBuffer::byte*)ParticleData);
+#endif
+
+  //save the ratio of the total particle weight over the local time step at the point of the particle injection
+#if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+  TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=PIC::ParticleBuffer::GetParticleWeightOverTimeStepRatio((PIC::ParticleBuffer::byte*)ParticleData);
+#endif
+
   //the counting number of the point along this trajectory
   TrajectoryRecord->offset=ParticleTrajectoryRecord->nSampledTrajectoryPoints;
 
@@ -339,6 +349,14 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
 
       #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
       fprintf(fout[spec],", \"Time Stamp\"");
+      #endif
+
+      #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+      fprintf(fout[spec],", \"Injection Face Number\"");
+      #endif
+
+      #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+      fprintf(fout[spec],", \"Particle Weight Over Time Step Ratio\"");
       #endif
 
       fprintf(fout[spec],"\n");
@@ -518,6 +536,14 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
 
           #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
           fprintf(trOut," %e ",TrajectoryData->TimeStamp);
+          #endif
+
+          #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+          fprintf(trOut," %i ",TrajectoryData->InjectionFaceNumber);
+          #endif
+
+          #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+          fprintf(trOut," %e ",TrajectoryData->ParticleWeightOverLocalTimeStepRatio);
           #endif
 
           fprintf(trOut,"\n");

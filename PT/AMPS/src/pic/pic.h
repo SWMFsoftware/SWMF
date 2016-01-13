@@ -568,6 +568,14 @@ namespace PIC {
       #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
       double KineticEnergy;
       #endif
+
+      #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+      int InjectionFaceNumber;
+      #endif
+
+      #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+      double ParticleWeightOverLocalTimeStepRatio;
+      #endif
     };
 
     struct cTrajectoryDataRecord {
@@ -1172,6 +1180,31 @@ namespace PIC {
     }
     //-------------------------------------------------------------------------
 
+    //-------------------------------------------------------------------------
+    //save/read the face number at which the particle was injected into the simulation
+    inline void SetInjectionFaceNumber(int nface,byte *ParticleDataStart) {
+      if (_USE_SAVE_INJECTION_FACE_ == _PIC_MODE_ON_) *((int*) (ParticleDataStart+_PIC_PARTICLE_DATA__INJECTION_FACE_OFFSET_))=nface;
+    }
+
+    inline int GetInjectionFaceNumber(byte *ParticleDataStart) {
+      if (_USE_SAVE_INJECTION_FACE_ == _PIC_MODE_ON_) return *((int*) (ParticleDataStart+_PIC_PARTICLE_DATA__INJECTION_FACE_OFFSET_));
+
+      return -1;
+    }
+    //-------------------------------------------------------------------------
+
+    //-------------------------------------------------------------------------
+    //save/read the initial value of the total particle weight over the local time step at the moment of the particle creation
+    inline void SetParticleWeightOverTimeStepRatio(double ratio,byte *ParticleDataStart) {
+      if (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_) *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_))=ratio;
+    }
+
+    inline double GetParticleWeightOverTimeStepRatio(byte *ParticleDataStart) {
+      if (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_)
+        return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_));
+
+      return 0.0;
+    }
 
     inline bool IsParticleAllocated(byte* ParticleDataStart) {
       unsigned char flag;
