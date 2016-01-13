@@ -146,16 +146,79 @@ int main(int argc,char **argv) {
 
   if (_MODE_==_GAS_MODE_) {
     amps.LoadDataFile("pic.H2O.s=0.out=10.dat",".");
+    amps.PrintVariableList();
   }
   else if (_MODE_==_DUST_MODE_) {
-    amps.LoadDataFile("pic.DUST%0.s=2.out=10.dat",".");
+    amps.LoadDataFile("pic.DUST%0.s=2.out=3.dat",".");
+    amps.PrintVariableList();
 
     //load the trajectory data file
-    amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=10.s=2.DUST%0.dat",".");
+    const int nTrajectoryFiles=4;
+    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=2.DUST%0.dat","amps.TrajectoryTracking.out=3.s=3.DUST%1.dat",
+        "amps.TrajectoryTracking.out=3.s=4.DUST%2.dat","amps.TrajectoryTracking.out=3.s=5.DUST%3.dat"
+    };
+
+    for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i],".");
+    amps.ParticleTrajectory.PrintVariableList();
+
+    //load the surface data
+    amps.SurfaceData.LoadDataFile("amps.cut-cell.surface-data.out=3.dat",".");
+    amps.SurfaceData.PrintVariableList();
+
+    //get the list of the faces that production rate above 85%
+    double MinSourceRate=-1.0,MaxSouceRate=-1.0,LimitSourceRate;
+    vector<int> FaceList;
+    int n,ncell;
+
+    for (n=0;n<amps.SurfaceData.nNodes;n++) {
+      if ((MinSourceRate<0.0)||(MinSourceRate>amps.SurfaceData.data[n][3])) MinSourceRate=amps.SurfaceData.data[n][3];
+      if ((MaxSouceRate<0.0)||(MaxSouceRate<amps.SurfaceData.data[n][3])) MaxSouceRate=amps.SurfaceData.data[n][3];
+    }
+
+    LimitSourceRate=MinSourceRate+0.85*(MaxSouceRate-MinSourceRate);
+
+    for (n=0;n<amps.SurfaceData.nNodes;n++) if (amps.SurfaceData.data[n][3]>LimitSourceRate) {
+      for (int i=0;i<amps.SurfaceData.NodeBall[n].size();i++) {
+        bool found=false;
+
+        ncell=amps.SurfaceData.NodeBall[n][i];
+        for (int ii=0;ii<FaceList.size();ii++) if (FaceList[ii]==ncell) {
+          found=true;
+          break;
+        }
+
+        if (found==false) FaceList.push_back(ncell);
+      }
+    }
+
+    printf("Face List begin:\n");
+    for (int i=0;i<FaceList.size();i++) printf("%i ",FaceList[i]);
+    printf("Face List end:\n");
+
+    //output the set of the trajectories emerged from the maximum source rate faces
+    int cnt=0;
+    amps.ParticleTrajectory.PrintDataFileHeader("maxSourceRateTrajectories.dat");
+
+    for (int n=0;n<amps.ParticleTrajectory.nTotalTrajectories;n++) {
+      int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[7+0*amps.ParticleTrajectory.nTrajectoryVariables];
+
+      for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
+        amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
+        cnt++;
+
+        break;
+      }
+
+    }
+
+
+
+
+
   }
 
 
-  amps.PrintVariableList();
+
 
   //load the nucleus mesh
   CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
