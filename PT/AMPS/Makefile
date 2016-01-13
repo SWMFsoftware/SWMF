@@ -131,6 +131,7 @@ tar:
 
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile 
+	./utility/CheckMacro.pl ${WSD} -in-place
 
 LIB: 
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
