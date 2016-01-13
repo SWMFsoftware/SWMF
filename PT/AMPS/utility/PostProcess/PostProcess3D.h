@@ -68,6 +68,46 @@ public:
     double Weight[8];
   };
 
+
+  //trajectories of the infividual particles
+  class cParticleTrajectory {
+  public:
+    cPostProcess3D *PostProcess3D;
+
+    //data for all trajectories
+    std::vector<std::string> VariableList;
+    int TrajectoryStartingFaceOffset;
+    int nTrajectoryVariables;
+    int nTotalTrajectories;
+
+    //Individual Particle Trajectory
+    class cIndividualTrajectoryData {
+    public:
+      double *Data;
+      int nDataPoints;
+    };
+
+    std::vector<cIndividualTrajectoryData> IndividualTrajectories;
+
+    //Load and output trajectory files
+    void LoadDataFile(const char* fname,const char* path);
+    void AddIndividualTrajectoryData(int& nDataPoints,std::vector<double>& data);
+
+    void PrintDataFileHeader(const char* fname);
+    void AddTrajectoryDataFile(cIndividualTrajectoryData* Trajectory,int TrajectoryNumber,const char* fname);
+
+    //plot the surface mesh showing averaged propserties of the trajectories
+    void PrintSurfaceData(const char *fname);
+
+    cParticleTrajectory() {
+      nTotalTrajectories=0,nTrajectoryVariables=0,TrajectoryStartingFaceOffset=-1;
+    }
+
+  };
+
+
+  cParticleTrajectory ParticleTrajectory;
+
   //column integration
   class cColumnIntegral {
   public:
@@ -156,7 +196,11 @@ public:
   //constructor
   cPostProcess3D() {
     data.nVariables=0,data.nNodes=0;
+
     ColumnIntegral.PostProcess3D=this;
     ColumnIntegral.Map.ColumnIntegral=&ColumnIntegral;
+
+    ParticleTrajectory.PostProcess3D=this;
+
   }
 };
