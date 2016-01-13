@@ -1893,7 +1893,11 @@ void Particles3D::repopulate_particles()
     if (repopulateYleft)
     {     
       if(bcPfaceYleft==FLUID){
-	//ONLY FOR DEBUG
+	/* Do delete again so that the algorithm is consistent with the iPIC3D1.
+	   But this is not efficient. Delete this while loop and delete lines 
+	   like 'if(bcPfaceXright!=FLUID)xend -= num_layers' after iPIC3D2
+	   coupling is proved to be correct. */
+	cout<<"Warning: The code here is not efficient!!--Yuxi"<<endl;
 	const int nop_orig = getNOP();
 	int pidx = 0;
 	while(pidx < getNOP())
@@ -1908,7 +1912,6 @@ void Particles3D::repopulate_particles()
 	      pidx++;
 	  }
       }
-
 
       cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
@@ -1962,6 +1965,22 @@ void Particles3D::repopulate_particles()
     }
     if (repopulateZleft)
     {   
+      if(bcPfaceZleft==FLUID){
+	const int nop_orig = getNOP();
+	int pidx = 0;
+	while(pidx < getNOP())
+	  {
+	    SpeciesParticle& pcl = _pcls[pidx];
+	    // determine whether to delete the particle
+	    const bool delete_pcl =
+	      (repopulateYrght && pcl.get_z() < zLow);
+	    if(delete_pcl)
+	      delete_particle(pidx);
+	    else
+	      pidx++;
+	  }
+      }
+
       //   cout << "*** Repopulate Zleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
@@ -1977,7 +1996,22 @@ void Particles3D::repopulate_particles()
       }
     }
     if (repopulateZrght)
-    {   
+    {
+      if(bcPfaceZright==FLUID){
+	  const int nop_orig = getNOP();
+	  int pidx = 0;
+	  while(pidx < getNOP())
+	    {
+	      SpeciesParticle& pcl = _pcls[pidx];
+	      // determine whether to delete the particle
+	      const bool delete_pcl =
+		(repopulateYrght && pcl.get_z() > zHgh);
+	      if(delete_pcl)
+		delete_particle(pidx);
+	      else
+		pidx++;
+	    }
+      }
       //   cout << "*** Repopulate Zright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
