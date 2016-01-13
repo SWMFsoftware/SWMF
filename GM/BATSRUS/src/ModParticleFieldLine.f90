@@ -53,10 +53,8 @@ module ModParticleFieldLine
        Index_ = 2
 
   ! mode of spatial step at the field line extraction
-  logical:: FixSpaceStep = .false.
-  real   :: SpaceStep    = 0.0
   real   :: SpaceStepMin = 0.0
-  real   :: SpaceStepMax = HUGE(SpaceStep)
+  real   :: SpaceStepMax = HUGE(SpaceStepMin)
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticle = 7
@@ -93,49 +91,27 @@ contains
          NameSub = 'ModParticleFieldLine::read_particle_line_param'
 
     character(len=100) :: StringInitMode
-    character(len=100) :: StringSpaceStepMode
     integer:: iLine, iDim ! loop variables
     !------------------------------------------------------------------------
     select case(NameCommand)
     case("#PARTICLELINE")
        call read_var('UseParticles', UseParticles)
        if(UseParticles)then
-          call read_var('SpaceStepMode', StringSpaceStepMode)
-          ! space step may be:
-          ! - chosen automatically(based on grid resolution)
-          ! - fixed and set from PARAM.in file
-          ! - restricted by min or max value or both
-          if(&
-               index(StringSpaceStepMode, 'fixed') > 0 .or.&
-               index(StringSpaceStepMode, 'FIXED') > 0 )then
-             FixSpaceStep = .true.
-             call read_var('SpaceStep', SpaceStep)
-          elseif(&
-               index(StringSpaceStepMode, 'fixedmin') > 0 .or.&
-               index(StringSpaceStepMode, 'FIXEDMIN') > 0 )then
-             call read_var('SpaceStepMin', SpaceStepMin)
-          elseif(&
-               index(StringSpaceStepMode, 'fixedmax') > 0 .or.&
-               index(StringSpaceStepMode, 'FIXEDMAX') > 0 )then
-             call read_var('SpaceStepMax', SpaceStepMax)
-          elseif(&
-               index(StringSpaceStepMode, 'fixedminmax') > 0 .or.&
-               index(StringSpaceStepMode, 'FIXEDMINMAX') > 0 )then
-             call read_var('SpaceStepMin', SpaceStepMin)
-             call read_var('SpaceStepMin', SpaceStepMax)
-          elseif(&
-               index(StringSpaceStepMode, 'auto') > 0 .or.&
-               index(StringSpaceStepMode, 'AUTO') > 0 )then
-             !do nothing
-          else
-             call stop_mpi(NameSub //": unknown space step mode")
-          end if
-          call read_var('InitMode', StringInitMode)
+          ! read min and max values for space step
+          ! based on their values space step may be
+          ! - both negative => automatic (defined by grid resolution)
+          ! - otherwise     => restricted by min and/or max
+          !                    whichever is positive
+          call read_var('SpaceStepMin', SpaceStepMin)
+          call read_var('SpaceStepMax', SpaceStepMax)
+          ! negative value means "undefined"
+          if(SpaceStepMin < 0) SpaceStepMin = 0
+          if(SpaceStepMax < 0) SpaceStepMax = HUGE(SpaceStepMin)
+          !--------------------------------------------------------------
+          call read_var('InitMode', StringInitMode, IsLowerCase=.true.)
           ! Initialization modes:
           ! - preset: starting points are set from PARAM.in file
-          if(&
-               index(StringInitMode, 'preset') > 0 .or.&
-               index(StringInitMode, 'PRESET') > 0 )then
+          if(index(StringInitMode, 'preset') > 0)then
              call read_var('nLineInit', nLineInit)
              if(nLineInit <= 0)&
                   call stop_mpi(NameSub // &
@@ -236,15 +212,11 @@ contains
                   iBlock=iIndexEnd_II(0,iParticle),&
                   Dir_D = Dir_D)
              ! find the step size
-             if(FixSpaceStep)then
-                StateEnd_VI(Aux_, iParticle) = SpaceStep
-             else
-                StateEnd_VI(Aux_, iParticle) = &
-                     MIN(SpaceStepMax, MAX(SpaceStepMin,&
-                     0.1*SQRT(&
-                     sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-                     )))
-             end if
+             StateEnd_VI(Aux_, iParticle) = &
+                  MIN(SpaceStepMax, MAX(SpaceStepMin,&
+                  0.1*SQRT(&
+                  sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
+                  )))
 
              ! get middle location
              StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
