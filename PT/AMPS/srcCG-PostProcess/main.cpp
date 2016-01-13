@@ -149,6 +149,9 @@ int main(int argc,char **argv) {
   }
   else if (_MODE_==_DUST_MODE_) {
     amps.LoadDataFile("pic.DUST%0.s=2.out=10.dat",".");
+
+    //load the trajectory data file
+    amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=10.s=2.DUST%0.dat",".");
   }
 
 
@@ -156,6 +159,7 @@ int main(int argc,char **argv) {
 
   //load the nucleus mesh
   CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
+  amps.ParticleTrajectory.PrintSurfaceData("surface.dat");
 
 
 //  for (int n=0;n<amps.data.nNodes;n++) amps.data.data[n][38]=sqrt(pow(amps.data.data[n][0],2)+pow(amps.data.data[n][1],2)+pow(amps.data.data[n][2],2));
@@ -177,7 +181,7 @@ int main(int argc,char **argv) {
     IntegrationSet.PrintVariableList=DUST::PrintVariableList;
   }
 
-  amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,5,1000,1000,"map.dat",&IntegrationSet);
+  amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
   amps.SaveDataFile("Res.dat", amps.data);
 
 
