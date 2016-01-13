@@ -90,12 +90,14 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
   ifile.CutInputStr(str1,str);
   ifile.CutInputStr(str1,str);
 
-  while (strcmp(str1,"")!=0) {
-    std::string var(str1);
-    VariableList.push_back(var);
-    nTrajectoryVariables++;
+  if (VariableList.size()==0) {
+    while (strcmp(str1,"")!=0) {
+      std::string var(str1);
+      VariableList.push_back(var);
+      nTrajectoryVariables++;
 
-    ifile.CutInputStr(str1,str);
+      ifile.CutInputStr(str1,str);
+    }
   }
 
   //read the trajectory information
@@ -169,7 +171,7 @@ void cPostProcess3D::cParticleTrajectory::PrintDataFileHeader(const char* fname)
   FILE *fout=fopen(fname,"w");
 
   fprintf(fout,"VARIABLES=\"%s\"",VariableList[0].c_str());
-  for (int nvar=1;nvar<VariableList.size();nvar++) fprintf(fout,", %s",VariableList[nvar].c_str());
+  for (int nvar=1;nvar<VariableList.size();nvar++) fprintf(fout,", \"%s\"",VariableList[nvar].c_str());
 
   fprintf(fout,"\n");
   fclose(fout);
@@ -178,7 +180,7 @@ void cPostProcess3D::cParticleTrajectory::PrintDataFileHeader(const char* fname)
 void cPostProcess3D::cParticleTrajectory::AddTrajectoryDataFile(cIndividualTrajectoryData* Trajectory,int TrajectoryNumber,const char* fname) {
   FILE *fout=fopen(fname,"a");
 
-  fprintf(fout,"ZONE T=\"Trajectory=%i\" F=POINT",TrajectoryNumber);
+  fprintf(fout,"\nZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryNumber);
 
   for (int nline=0;nline<Trajectory->nDataPoints;nline++) {
     for (int i=0;i<nTrajectoryVariables;i++) fprintf(fout," %e",Trajectory->Data[i+nline*nTrajectoryVariables]);
@@ -289,7 +291,15 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname) {
   fclose(fout);
 }
 
+//=============================================================================
+//print the variable list
+void cPostProcess3D::cParticleTrajectory::PrintVariableList() {
+  if (PostProcess3D->rank!=0) return;
+  printf("Particle Trajectory: Variable List: BEGIN\n");
 
+  for (int nvar=0;nvar<nTrajectoryVariables;nvar++) printf("%i:\t%s\n",nvar,VariableList[nvar].c_str());
+  printf("Particle Trajectory: Variable List: END\n\n");
+}
 
 
 
