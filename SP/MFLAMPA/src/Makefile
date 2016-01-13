@@ -1,0 +1,63 @@
+#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  For more information, see http://csem.engin.umich.edu/tools/swmf
+
+SHELL =/bin/sh
+include ../Makefile.def
+include ../Makefile.conf
+include Makefile.DEPEND
+
+
+OBJECTS = SP_main.o
+
+SEPEXE = ${BINDIR}/SEP.exe
+
+
+SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
+
+
+
+MY_LIB = libMFLAMPA.a
+
+DEPEND:
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
+		${MODULES} ${OBJECTS} SP_stand_alone.o
+
+SEP:		DEPEND
+		make ${SEPEXE}
+
+LIB:	DEPEND
+	make ${MY_LIB}
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
+
+${MY_LIB}: ${MODULES} ${OBJECTS} \
+	${MAKEFILE_COMP_SELECT}
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${OBJECTS}
+
+
+${SEPEXE}: ${MY_LIB} SP_stand_alone.o ${LIBDIR}/libSHARE.a
+	@(if [ ${OS} = "Darwin" ];         then make SEP_for_Darwin; \
+	else                                    make SEP_general; fi)
+
+SEP_general:
+	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o \
+		-L. -lMFLAMPA -L${LIBDIR} -lSHARE ${Lflag1}
+
+SEP_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_
+	cd Tmp_; \
+		ar -x ../${MY_LIB}; \
+		ar -x ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o Tmp_/*.o \
+		${Lflag1}
+	rm -rf Tmp_
+
+
+
+
+clean: cleanfiles
+
+distclean: clean
+	rm -f Makefile.DEPEND
