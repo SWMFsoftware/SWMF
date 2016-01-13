@@ -14,6 +14,7 @@
 #define _CHARGE_EXCHANGE_H_
 
 #include "pic.h"
+#include "ChargeExchange.dfn"
 
 
 namespace ChargeExchange {
