@@ -30,7 +30,9 @@ void cPostProcess3D::PrintVariableList() {
   int i;
   if (rank!=0) return;
 
+  printf("Variable List: BEGIN\n");
   for (i=0;i<data.nVariables;i++) printf("%i:\t%s\n",i,data.VariableList[i].c_str());
+  printf("Variable List: END\n\n");
 }
 
 void cPostProcess3D::sDataStructure::CopyVariable(int iTarget,sDataStructure* Source,int iSource) {
