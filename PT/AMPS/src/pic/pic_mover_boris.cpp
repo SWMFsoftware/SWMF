@@ -15,7 +15,7 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
    **********************************************************************/
   double accl_LOCAL[3]={0.0}, rotation_LOCAL[3]={0.0};
   
-#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
+//#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
   // find electro-magnetic field
   double E[3],B[3];
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
@@ -84,7 +84,7 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
       rotation_LOCAL[idim]-= Charge2Mass*B[idim];
     }
   }
-#endif//_FORCE_LORENTZ_MODE_
+//#endif//_FORCE_LORENTZ_MODE_
 
 
   //calculate the acceleration due to gravity where applied

@@ -3919,7 +3919,7 @@ namespace PIC {
 #endif
 
 //include headers for individual physical models
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE_ON_ 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_ 
 #include "Dust.h"
 #endif
 

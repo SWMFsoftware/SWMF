@@ -126,7 +126,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   double Vguide_perp_LOC[3]      ={0.0},ForceParal_LOC   =0.0;
   double BAbsoluteValue_LOC = 0.0, BDirection_LOC[3]={0.0};
   
-#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
+//#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
   // find electro-magnetic field
   double E[3],B[3],gradB[9], gradAbsB[3], AbsB;
   double b[3];
@@ -216,7 +216,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   //  Vguide_perp_LOC[0] = 0;  Vguide_perp_LOC[1] = 0;  Vguide_perp_LOC[2] = 0;
   //  ForceParal_LOC =0;
 
-#endif//_FORCE_LORENTZ_MODE_
+//#endif//_FORCE_LORENTZ_MODE_
       memcpy(Vguide_perp,    Vguide_perp_LOC,    3*sizeof(double));
       memcpy(BDirection,BDirection_LOC,3*sizeof(double));
       ForceParal     = ForceParal_LOC;
