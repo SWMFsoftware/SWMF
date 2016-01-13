@@ -2759,7 +2759,7 @@ if (  ((nd0->ghostNode==false)&&(nd1->ghostNode==false)&&(nd2->ghostNode==false)
 
 
           //increment the volume of the cell assiciated with the block
-          #if _USE_CELLS_ == _USE_CELLS_ON_
+//          #if _USE_CELLS_ == _USE_CELLS_ON_
           xt0ptr=nd0->meshNode->x;
           xt1ptr=nd1->meshNode->x;
           xt2ptr=nd2->meshNode->x;
@@ -2773,7 +2773,7 @@ if (  ((nd0->ghostNode==false)&&(nd1->ghostNode==false)&&(nd2->ghostNode==false)
 
           tVolume=fabs(xt1[0]*(xt2[1]*xt3[2]-xt2[2]*xt3[1])-xt1[1]*(xt2[0]*xt3[2]-xt2[2]*xt3[0])+xt1[2]*(xt2[0]*xt3[1]-xt2[1]*xt3[0]))/6.0;
 //          bl->cell->Volume+=tVolume;
-          #endif
+//          #endif
 
 
 
