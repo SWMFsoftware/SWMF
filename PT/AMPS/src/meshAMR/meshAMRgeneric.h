@@ -2594,7 +2594,7 @@ void checkMeshConsistency(cTreeNodeAMR<cBlockAMR> *startNode) {
 if ((AllowBlockAllocation==true)&&(startNode->block!=NULL)) {
      //check the neibours 
      for (k=kMin;k<kMax;k++) for (j=jMin;j<jMax;j++) for (i=iMin;i<iMax;i++)  if ((neibNode=getNeibNode(i,j,k,startNode))!=NULL) {
-       if (fabs(neibNode->RefinmentLevel-startNode->RefinmentLevel)>1) {
+       if (abs(neibNode->RefinmentLevel-startNode->RefinmentLevel)>1) {
          exit(__LINE__,__FILE__,"The resolution change exseeds the limit"); 
        }
 
