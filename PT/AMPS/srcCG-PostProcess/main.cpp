@@ -158,6 +158,10 @@ int main(int argc,char **argv) {
         "amps.TrajectoryTracking.out=3.s=4.DUST%2.dat","amps.TrajectoryTracking.out=3.s=5.DUST%3.dat"
     };
 
+/*    const int nTrajectoryFiles=1;
+    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=0.H2O.dat"
+    };*/
+
     for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i],".");
     amps.ParticleTrajectory.PrintVariableList();
 
@@ -165,7 +169,7 @@ int main(int argc,char **argv) {
     amps.SurfaceData.LoadDataFile("amps.cut-cell.surface-data.out=3.dat",".");
     amps.SurfaceData.PrintVariableList();
 
-    //get the list of the faces that production rate above 85%
+    //get the list of the faces that production rate above 65%
     double MinSourceRate=-1.0,MaxSouceRate=-1.0,LimitSourceRate;
     vector<int> FaceList;
     int n,ncell;
@@ -209,6 +213,14 @@ int main(int argc,char **argv) {
         break;
       }
 
+    }
+
+    //output location of the spacecraft
+    if (amps.rank==0) {
+      FILE *fSpacecraft=fopen("spacecraft-location.dat","w");
+      fprintf(fSpacecraft,"VARIABLES=\"X\", \"Y\", \"Z\"\n");
+      fprintf(fSpacecraft,"%e %e %e\n",xObservation[0],xObservation[1],xObservation[2]);
+      fclose(fSpacecraft);
     }
 
 
