@@ -586,9 +586,24 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //determine the surface element of the particle origin                                                            
   PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
+
+  //....start setting of the particle properties
   PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+  #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+  PIC::ParticleBuffer::SetInjectionFaceNumber(iInjectionFaceNASTRAN,(PIC::ParticleBuffer::byte*)tempParticleData);
+  #endif
+
+  #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleBuffer::SetParticleWeightOverTimeStepRatio(
+      ParticleWeightCorrection*PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]/
+      startNode->block->GetLocalTimeStep(spec),(PIC::ParticleBuffer::byte*)tempParticleData);
+  #endif
+
+  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+  //..... finish setting of the particle properties
 
   //apply condition of tracking the particle
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
@@ -596,7 +611,7 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
   #endif
 
-  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+
 
 
   newParticle=PIC::ParticleBuffer::GetNewParticle();
