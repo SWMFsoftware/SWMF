@@ -200,7 +200,7 @@ int main(int argc,char **argv) {
     amps.ParticleTrajectory.PrintDataFileHeader("maxSourceRateTrajectories.dat");
 
     for (int n=0;n<amps.ParticleTrajectory.nTotalTrajectories;n++) {
-      int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[7+0*amps.ParticleTrajectory.nTrajectoryVariables];
+      int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
 
       for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
         amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
