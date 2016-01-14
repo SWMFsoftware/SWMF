@@ -107,7 +107,7 @@ public:
     //Individual Particle Trajectory
     class cIndividualTrajectoryData {
     public:
-      double *Data;
+      double **Data;
       int nDataPoints;
     };
 

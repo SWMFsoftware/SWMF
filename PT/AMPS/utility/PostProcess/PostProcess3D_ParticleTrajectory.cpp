@@ -16,12 +16,15 @@
 //add trajectory data to the list of the trajectories
 void cPostProcess3D::cParticleTrajectory::AddIndividualTrajectoryData(int& nDataPoints,std::vector<double>& data) {
   cIndividualTrajectoryData t;
+  int i;
 
   if (nDataPoints!=0) {
     t.nDataPoints=nDataPoints;
-    t.Data=new double [nDataPoints*nTrajectoryVariables];
+    t.Data=new double* [nDataPoints];
+    t.Data[0]=new double [nDataPoints*nTrajectoryVariables];
 
-    for (int i=0;i<nDataPoints*nTrajectoryVariables;i++) t.Data[i]=data[i];
+    for (i=1;i<nDataPoints;i++) t.Data[i]=t.Data[i-1]+nTrajectoryVariables;
+    for (i=0;i<nDataPoints*nTrajectoryVariables;i++) t.Data[0][i]=data[i];
 
     //add the trajectory data
     IndividualTrajectories.push_back(t);
@@ -41,6 +44,7 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
   CiFileOperations ifile;
   FILE *fBinaryIn=NULL,*fBinaryOut=NULL;
   int nDataPoints=0;
+  int nLoadedTrajectories=0,nOriginalTrajectories=nTotalTrajectories;
 
   //all slave processers will read the mesh only after the root processor finish reading
   if (PostProcess3D->rank!=0) MPI_Barrier(MPI_COMM_WORLD);
@@ -108,7 +112,10 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
 
       if (strcmp(str1,"ZONE")==0) {
         //beginig of the new trajectory: close the previous trajectory and prepare the buffer for the new trajectory
-        AddIndividualTrajectoryData(nDataPoints,TrajectoryData);
+        if (nDataPoints!=0) {
+          AddIndividualTrajectoryData(nDataPoints,TrajectoryData);
+          nLoadedTrajectories++;
+        }
       }
       else {
         //the line is a trajectory point
@@ -123,31 +130,37 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
 
     //save the last trajectory
     AddIndividualTrajectoryData(nDataPoints,TrajectoryData);
+    nLoadedTrajectories++;
 
     //save the binary file with the trajectory data
-    fwrite(&nTotalTrajectories,sizeof(int),1,fBinaryOut);
+    fwrite(&nLoadedTrajectories,sizeof(int),1,fBinaryOut);
 
-    for (int nTrajectory=0;nTrajectory<nTotalTrajectories;nTrajectory++) {
-      cIndividualTrajectoryData t;
+    for (int nTrajectory=0;nTrajectory<nLoadedTrajectories;nTrajectory++) {
+      int n=IndividualTrajectories[nTrajectory+nOriginalTrajectories].nDataPoints;
+      double *d=IndividualTrajectories[nTrajectory+nOriginalTrajectories].Data[0];
 
-      t=IndividualTrajectories[nTrajectory];
-      fwrite(&t.nDataPoints,sizeof(int),1,fBinaryOut);
-      fwrite(t.Data,sizeof(double),t.nDataPoints*nTrajectoryVariables,fBinaryOut);
+      fwrite(&n,sizeof(int),1,fBinaryOut);
+      fwrite(d,sizeof(double),n*nTrajectoryVariables,fBinaryOut);
     }
 
     fclose(fBinaryOut);
   }
   else {
     //read the trajectory data from a binary file
-    fread(&nTotalTrajectories,sizeof(int),1,fBinaryIn);
+    int nReadTrajectories;
 
-    for (int nTrajectory=0;nTrajectory<nTotalTrajectories;nTrajectory++) {
+    fread(&nReadTrajectories,sizeof(int),1,fBinaryIn);
+    nTotalTrajectories+=nReadTrajectories;
+
+    for (int nTrajectory=0;nTrajectory<nReadTrajectories;nTrajectory++) {
       cIndividualTrajectoryData t;
 
       fread(&t.nDataPoints,sizeof(int),1,fBinaryIn);
-      t.Data=new double [t.nDataPoints*nTrajectoryVariables];
+      t.Data=new double* [t.nDataPoints];
+      t.Data[0]=new double [t.nDataPoints*nTrajectoryVariables];
+      for (int i=1;i<t.nDataPoints;i++) t.Data[i]=t.Data[i-1]+nTrajectoryVariables;
 
-      fread(t.Data,sizeof(double),t.nDataPoints*nTrajectoryVariables,fBinaryIn);
+      fread(t.Data[0],sizeof(double),t.nDataPoints*nTrajectoryVariables,fBinaryIn);
 
       IndividualTrajectories.push_back(t);
     }
@@ -168,6 +181,7 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
 //=====================================================================================
 //save trajectory data file
 void cPostProcess3D::cParticleTrajectory::PrintDataFileHeader(const char* fname) {
+  if (PostProcess3D->rank!=0) return;
   FILE *fout=fopen(fname,"w");
 
   fprintf(fout,"VARIABLES=\"%s\"",VariableList[0].c_str());
@@ -178,12 +192,13 @@ void cPostProcess3D::cParticleTrajectory::PrintDataFileHeader(const char* fname)
 }
 
 void cPostProcess3D::cParticleTrajectory::AddTrajectoryDataFile(cIndividualTrajectoryData* Trajectory,int TrajectoryNumber,const char* fname) {
+  if (PostProcess3D->rank!=0) return;
   FILE *fout=fopen(fname,"a");
 
   fprintf(fout,"\nZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryNumber);
 
   for (int nline=0;nline<Trajectory->nDataPoints;nline++) {
-    for (int i=0;i<nTrajectoryVariables;i++) fprintf(fout," %e",Trajectory->Data[i+nline*nTrajectoryVariables]);
+    for (int i=0;i<nTrajectoryVariables;i++) fprintf(fout," %e",Trajectory->Data[nline][i]);
     fprintf(fout,"\n");
   }
 
