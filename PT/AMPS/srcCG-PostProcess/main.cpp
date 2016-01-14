@@ -153,20 +153,30 @@ int main(int argc,char **argv) {
     amps.PrintVariableList();
 
     //load the trajectory data file
+    std::string out="1";
+
     const int nTrajectoryFiles=4;
-    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=2.DUST%0.dat","amps.TrajectoryTracking.out=3.s=3.DUST%1.dat",
-        "amps.TrajectoryTracking.out=3.s=4.DUST%2.dat","amps.TrajectoryTracking.out=3.s=5.DUST%3.dat"
-    };
+    std::string TrajectoryFileName[nTrajectoryFiles];
+
+    TrajectoryFileName[0]="amps.TrajectoryTracking.out="+out+".s=2.DUST%0.dat";
+    TrajectoryFileName[1]="amps.TrajectoryTracking.out="+out+".s=3.DUST%1.dat";
+    TrajectoryFileName[2]="amps.TrajectoryTracking.out="+out+".s=4.DUST%2.dat";
+    TrajectoryFileName[3]="amps.TrajectoryTracking.out="+out+".s=5.DUST%3.dat";
+
+
+/*    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=2.s=2.DUST%0.dat","amps.TrajectoryTracking.out=2.s=3.DUST%1.dat",
+        "amps.TrajectoryTracking.out=2.s=4.DUST%2.dat","amps.TrajectoryTracking.out=2.s=5.DUST%3.dat"
+    };*/
 
 /*    const int nTrajectoryFiles=1;
     char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=0.H2O.dat"
     };*/
 
-    for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i],".");
+    for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
     amps.ParticleTrajectory.PrintVariableList();
 
     //load the surface data
-    amps.SurfaceData.LoadDataFile("amps.cut-cell.surface-data.out=3.dat",".");
+    amps.SurfaceData.LoadDataFile("amps.cut-cell.surface-data.out=2.dat",".");
     amps.SurfaceData.PrintVariableList();
 
     //get the list of the faces that production rate above 65%
@@ -179,7 +189,7 @@ int main(int argc,char **argv) {
       if ((MaxSouceRate<0.0)||(MaxSouceRate<amps.SurfaceData.data[n][3])) MaxSouceRate=amps.SurfaceData.data[n][3];
     }
 
-    LimitSourceRate=MinSourceRate+0.85*(MaxSouceRate-MinSourceRate);
+    LimitSourceRate=MinSourceRate+0.25*(MaxSouceRate-MinSourceRate);
 
     for (n=0;n<amps.SurfaceData.nNodes;n++) if (amps.SurfaceData.data[n][3]>LimitSourceRate) {
       for (int i=0;i<amps.SurfaceData.NodeBall[n].size();i++) {
@@ -214,6 +224,9 @@ int main(int argc,char **argv) {
       }
 
     }
+
+    return 1;
+
 
     //output location of the spacecraft
     if (amps.rank==0) {
