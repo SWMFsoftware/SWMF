@@ -50,12 +50,12 @@ const double DebugRunMultiplier=4.0;
 const double rSphere=_RADIUS_(_TARGET_);
 
 //const double xMaxDomain=400.0; //modeling of the tail
-const double xMaxDomain=5; //modeling the vicinity of the planet
-const double yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+double xMaxDomain=5; //modeling the vicinity of the planet
+double yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
-const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
+double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
 double dxMinGlobal=1,dxMaxGlobal=1;
 
 
@@ -116,6 +116,9 @@ double localSphericalSurfaceResolution(double *x) {
     else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
       res/=4.1*2.1;
     }
+    else if (strcmp(Europa::Mesh::sign,"new")==0) { //reduced mesh
+      res=20.0E3/rSphere;
+    }
     else exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
 
@@ -159,6 +162,23 @@ double localResolution(double *x) {
     if (r<1.03*rSphere) return localSphericalSurfaceResolution(x);
 
     if (r>dxMinGlobal*rSphere && d > 1.2*rSphere) {
+      lnR=log(r);
+      res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
+    }
+    else res=dxMinGlobal;
+  }
+  else if (strcmp(Europa::Mesh::sign,"new")==0) { //reduced mesh
+    int idim;
+    double lnR,r=0.0;
+
+    for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
+
+    r=sqrt(r);
+
+    if (r<0.98*rSphere) return rSphere;
+    else if (r<1.05*rSphere) return localSphericalSurfaceResolution(x);
+
+    if (r>dxMinGlobal*rSphere) {
       lnR=log(r);
       res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
     }
@@ -810,9 +830,33 @@ void amps_init_mesh() {
   //set up the resolution levels of the mesh
   if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
    dxMinGlobal=1,dxMaxGlobal=1;
+
+    xMaxDomain=5; //modeling the vicinity of the planet
+    yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+
+
+   //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
+    dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
   }
   else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
     dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
+
+    xMaxDomain=5; //modeling the vicinity of the planet
+    yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+
+
+   //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
+    dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
+  }
+  else if (strcmp(Europa::Mesh::sign,"new")==0) { //full mesh
+    dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
+
+    xMaxDomain=1+200E3/_EUROPA__RADIUS_; //modeling the vicinity of the planet
+    yMaxDomain=1+200E3/_EUROPA__RADIUS_; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+
+
+   //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
+    dxMinSphere=20E3,dxMaxSphere=100E3;
   }
   else exit(__LINE__,__FILE__,"Error: unknown option");
 
