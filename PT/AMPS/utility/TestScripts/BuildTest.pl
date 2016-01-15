@@ -233,7 +233,7 @@ sub get_next_test{
 sub process_option{
     my $Machines;
     my $OptionName=$_[0];
-    if($OptionName =~ m/(.*)\t?\((.*)\)\n?/s){
+    if($OptionName =~ m/(.*)\t?@@\((.*)\)\n?/s){
 	# check if current machine is in the list of
 	$OptionName = $1;
 	$Machines   = $2;

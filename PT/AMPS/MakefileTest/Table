@@ -2,21 +2,21 @@ Table of all nightly AMPS tests.
 
 -------------------------------------------------------------------------------
 Format:
-Name=<APP>       (machines) - name of the test;                       required
-Keys=<APPKEYS>   (machines) - keys specific for <APP>;                optional
-Outs=<APPOUTFILE>(machines) - output files for <APP>, space-separated;optional
+Name=<APP>       @@(machines): name of the test;                       required
+Keys=<APPKEYS>   @@(machines): keys specific for <APP>;                optional
+Outs=<APPOUTFILE>@@(machines): output files for <APP>, space-separated;optional
 Compile=
 >>>target content
->>>target content(machines) - non-generic compile target;             optional
+>>>target content@@(machines): non-generic compile target;             optional
 Rundir=
 >>>target content
->>>target content(machines) - non-generic rundir target;              optional
+>>>target content@@(machines): non-generic rundir target;              optional
 Run=
 >>>target content
->>>target content(machines) - non-generic run target;                 optional
+>>>target content@@(machines): non-generic run target;                 optional
 Check=
 >>>target content
->>>target content(machines) - non-generic check target;               optional
+>>>target content@@(machines): non-generic check target;               optional
 -------------------------------------------------------------------------------
 Machines can be defined:
  absent              - the same for all machines
@@ -25,9 +25,6 @@ Machines can be defined:
 NOTE:
 Specifications (0+MACHINE_1) and (-MACHINE_2) don't contradict each other,
 parameters on MACHINE_1 will be affected by both
-IMPORTANT: 
-Parenthesis () are reserved for machine specification!!!
-If GNU Make variable is needed, use curly braces {}  !!!
 -------------------------------------------------------------------------------
 If Keys is absent or empty, no keys are used.
 -------------------------------------------------------------------------------
@@ -50,26 +47,26 @@ Compile=
 
 #>
 Name=Mars-ions 
-Keys=-cplr-data-path=/Volumes/data/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+srbwks2014-0079)
-Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+srbwks73465-01)
-Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+pleiades)
-Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+stampede)
+Keys=-cplr-data-path=/Volumes/data/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks2014-0079)
+Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks73465-01)
+Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+pleiades)
+Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+stampede)
 <#
 
 #>
 Name=Titan
-Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+srbwks2014-0079)
-Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+srbwks73465-01)
-Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+pleiades)
-Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+stampede)
+Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks2014-0079)
+Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks73465-01)
+Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
+Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+stampede)
 <#
 
 #>
 Name=CCMC
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC(0+srbwks2014-0079)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC(0+srbwks73465-01)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC(0+pleiades)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC(0+stampede)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC@@(0+srbwks2014-0079)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
 <#
 
 #>
@@ -89,19 +86,19 @@ Run=
 <#
 
 #>
-Name=test/ices-reader(0+srbwks2014-0079+srbwks73465-01) 
-Keys=-ices-path=/Users/vtenishe/ices/ICES/Models(0+srbwks2014-0079)
-Keys=-ices-path=/Users/dborovik/MyICES/ICES(0+srbwks73465-01)
+Name=test/ices-reader@@(0+srbwks2014-0079+srbwks73465-01) 
+Keys=-ices-path=/Users/vtenishe/ices/ICES/Models@@(0+srbwks2014-0079)
+Keys=-ices-path=/Users/dborovik/MyICES/ICES@@(0+srbwks73465-01)
 <#
 
 #>
-Name=test/tecplot-reader(0+srbwks2014-0079+srbwks73465-01+pleiades)  
+Name=test/tecplot-reader@@(0+srbwks2014-0079+srbwks73465-01+pleiades)  
 Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
 <#
 
 #>
-Name=test/kameleon-reader(0+srbwks2014-0079)
-Keys=-boost-path=/Users/vtenishe/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/KAMELEON (0+srbwks2014-0079)
+Name=test/kameleon-reader@@(0+srbwks2014-0079)
+Keys=-boost-path=/Users/vtenishe/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/KAMELEON @@(0+srbwks2014-0079)
 <#
 
 #>
@@ -115,10 +112,10 @@ Name=Rosetta
 
 #>
 Name=Mercury-test 
-Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+srbwks2014-0079)  
-Keys=-spice-path=/Users/dborovik/SPICE/cspice -spice-kernels=/Users/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+srbwks73465-01)  
-Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+pleiades)   
-Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+stampede)   
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase@@(0+srbwks2014-0079)  
+Keys=-spice-path=/Users/dborovik/SPICE/cspice -spice-kernels=/Users/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase@@(0+srbwks73465-01)  
+Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase@@(0+pleiades)   
+Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase@@(0+stampede)   
 <#
 
 #>
@@ -143,17 +140,17 @@ Run=
 <#
 
 #>
-Name=CG(0+srbwks2014-0079+pleiades+stampede)
-Keys=-model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
-Keys=-model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+pleiades)
-Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+stampede)
+Name=CG@@(0+srbwks2014-0079+pleiades+stampede)
+Keys=-model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+srbwks2014-0079)
+Keys=-model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 <#
 
 #>
-Name=CG-dust-test(0+srbwks2014-0079+pleiades+stampede)
-Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
-Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+pleiades)
-Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+stampede)
+Name=CG-dust-test@@(0+srbwks2014-0079+pleiades+stampede)
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+srbwks2014-0079)
+Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
 Check=
 >>>@echo "test_CG-dust-test_check..." >> test_CG-dust-test.diff
@@ -184,10 +181,10 @@ Name=test/model-dust
 #>
 Name=CCMC-Individual_Trajectories 
 Keys= -model-data-path=${MYDIR}/input  
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC(0+srbwks2014-0079)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC(0+srbwks73465-01)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC(0+pleiades)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC(0+stampede)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC@@(0+srbwks2014-0079)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/amps.TrajectoryTracking.out=1.s=0.O2_PLUS.dat         \
@@ -201,9 +198,9 @@ Check=
 
 #>
 Name=Europa-test1
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA(0+srbwks2014-0079) 
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/EUROPA(0+stampede) 
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA(0+pleiades) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA@@(0+srbwks2014-0079) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/EUROPA@@(0+stampede) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA@@(0+pleiades) 
 Check=
 >>>@echo "test_Europa-test1_check..." >> test_Europa-test1.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTEuropa-test1DIR}/PT/plots/test_Europa.dat         \
@@ -212,7 +209,7 @@ Check=
 <#
 
 #>
-Name=LOS(0+srbwks2014-0079) 
+Name=LOS@@(0+srbwks2014-0079) 
 Compile=
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --tmpDir ${MYDIR}/utility/LOS/Tmp
 
