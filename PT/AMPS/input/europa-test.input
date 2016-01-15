@@ -100,6 +100,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
 
 #block ../input/europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
+
+  MeshSignature=0x3030203cdedcf30 !the reduced resolution mesh
   
   !the location of the SPICE kernels 
   SpiceKernelPath=/Users/vtenishe/SPICE/Kernels
