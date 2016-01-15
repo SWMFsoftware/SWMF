@@ -1619,12 +1619,18 @@ void Collective::PostProcParam() {
 
   if(nxc == 1) {
     PERIODICX = true; PERIODICX_P = PERIODICX;
+  }else{
+    PERIODICX = false; PERIODICX_P = PERIODICX;
   }
   if(nyc == 1) {
     PERIODICY = true; PERIODICY_P = PERIODICY;
+  }else{
+    PERIODICY = false; PERIODICY_P = PERIODICY;
   }
   if(nzc == 1){
     PERIODICZ = true; PERIODICZ_P = PERIODICZ;
+  }else{
+    PERIODICZ = false; PERIODICZ_P = PERIODICZ;
   }
   
 
