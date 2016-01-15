@@ -3244,13 +3244,6 @@ void EMfields3D::calculateHatFunctions()
 
   }
   
-  if(get_col().getCase()=="BATSRUS"){
-    // Why do we need this? -Yuxi
-    communicateCenterBC_P(nxc, nyc, nzc, Jxh, 2, 2, 2, 2, 2, 2, vct,this);
-    communicateCenterBC_P(nxc, nyc, nzc, Jyh, 2, 2, 2, 2, 2, 2, vct,this);
-    communicateCenterBC_P(nxc, nyc, nzc, Jzh, 2, 2, 2, 2, 2, 2, vct,this);
-  }
-  
   // smooth j
   smooth(Jxh, 1);
   smooth(Jyh, 1);
@@ -3622,9 +3615,9 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
   grid->interpN2Cfull(fluidByc,fluidByn);
   grid->interpN2Cfull(fluidBzc,fluidBzn);
 
-  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
-  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
-  communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
+  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
 
   // Get new timestep from fluid solver
   dt  = col->getFluidDt();
