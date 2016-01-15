@@ -1454,62 +1454,9 @@ void amps_init() {
 #endif
 
 
-  //prepopulate the solar wind protons
-//  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
 
 
-  /*
-  //check the volume of local cells
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-  while (node!=NULL) {
-    int i,j,k,di,dj,dk,idim;
-    long int LocalCellNumber;
-    double r,rmin=0.0,rmax=0.0,rprobe[3]={0.0,0.0,0.0};
-    PIC::Mesh::cDataCenterNode *cell;
-
-    if (node->Temp_ID==1862) {
-      cout << __FILE__ << "@" << __LINE__ << endl;
-    }
-
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-          for (i=0;i<_BLOCK_CELLS_X_;i++) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-            cell=node->block->GetCenterNode(LocalCellNumber);
-            rmin=-1,rmax=-1;
-
-            if (cell->Measure<=0.0) {
-              for (dk=0;dk<=((DIM==3) ? 1 : 0);dk++) for (dj=0;dj<=((DIM>1) ? 1 : 0);dj++) for (di=0;di<=1;di++) {
-                node->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
-
-                for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-                r=sqrt(r);
-
-                if ((rmin<0.0)||(rmin>r)) rmin=r;
-                if ((rmax<0.0)||(rmax<r)) rmax=r;
-              }
-
-              if ((rmin<rSphere)&&(rmax>rSphere)) {
-                cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << endl;
-              }
-
-              PIC::Mesh::mesh.InitCellMeasure(node);
-
-            }
-
-
-          }
-       }
-    }
-
-    node=node->nextNodeThisThread;
-  }
-*/
-
-//  VT_TRACER("main");
-
-//  Mercury::Init_AfterMesh();
-
+/*
 #if _PIC_COUPLER_MODE_ ==       _PIC_COUPLER_MODE__ICES_
   //#ifdef _ICES_LOAD_DATA_
 //  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
@@ -1523,6 +1470,12 @@ void amps_init() {
   Exosphere::SourceProcesses::Init();
   PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
 #endif
+*/
+
+  //init the source model
+  Exosphere::SourceProcesses::Init();
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
+
 }
 
 
