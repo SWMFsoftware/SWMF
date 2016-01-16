@@ -55,7 +55,7 @@ namespace SEP3D {
 
       //......................................................................
       // calculate Lorentz force if needed
-#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
+//#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
       // find electro-magnetic field
       double E[3],B[3];
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
@@ -76,11 +76,11 @@ namespace SEP3D {
       accl_LOCAL_CLASSIC[0]+=ElCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
       accl_LOCAL_CLASSIC[1]+=ElCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
       accl_LOCAL_CLASSIC[2]+=ElCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
-#endif//_FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
+//#endif//_FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
       // calculate gravitational force if needed
-#if _FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
+//#if _FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
       // find the distance to the Sun's center, here it's {0, 0, 0} 
       double r, r2;
       r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
@@ -89,7 +89,7 @@ namespace SEP3D {
       for (int idim=0;idim<DIM;idim++) {
 	accl_LOCAL_CLASSIC[idim]-=GravityConstant*_SUN__MASS_/r2*x_LOCAL[idim]/r;
       }
-#endif//_FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
+//#endif//_FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
       // convert classic acceleration to relativistic
