@@ -5,6 +5,7 @@
 
 #include "pic.h"
 #include "MTGCM.h"
+#include "Mars.h"
 
 //collison cross section of the model particles with the background atmosphere
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionCrossSectionBackgoundAtmosphereParticle(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData,PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,double TranslationalEnergy,double cr2) {

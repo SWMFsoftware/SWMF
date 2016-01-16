@@ -1,27 +1,6 @@
 //========================================================================
 //$Id$
 //========================================================================
-/*
- * $Log$
- * Revision 1.5  2015/05/24 01:36:33  vtenishe
- * full names of the model input files are determined with PIC::UserModelInputDataPath
- *
- * Revision 1.4  2015/05/21 04:49:53  vtenishe
- * adapted for nightly tests
- *
- * Revision 1.3  2015/03/13 19:17:12  yunilee
- * Changes for Mars code initialization
- *
- * Revision 1.2  2014/11/25 04:52:40  vtenishe
- * few function calls are changed
- *
- * Revision 1.1  2014/10/27 16:32:04  yunilee
- * source files for mars simulation
- *
- * Revision 1.2  2013/03/06 21:43:21  ylee5
- * Spherical, COp density modification, WindRot turned on
- *
- */
 #ifndef _MARS_EXOSPEHRE_
 #define _MARS_EXOSPEHRE_
 
@@ -48,6 +27,7 @@
 #include "specfunc.h"
 #include "ifileopr.h"
 #include "MTGCM.h"
+#include "Mars.dfn"
 
 #include "quadrature.h"
 #include "SphericalVolumeMesh.h"
