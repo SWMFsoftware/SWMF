@@ -309,6 +309,8 @@ void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double
         AzimuthAngle=HalfMapAngle-dAzimuthAngle*iAzimuthPoint;
 
         fprintf(fout,"%e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,GlobalProjectionCodeBuffer[iAzimuthPoint]);
+        IntegrationSet->PostProcessColumnIntegralVector(GlobalDataBuffer);
+
         for (i=0;i<StateVectorLength;i++) fprintf(fout," %e ",GlobalDataBuffer[i+iAzimuthPoint*StateVectorLength]);
         fprintf(fout,"\n");
       }

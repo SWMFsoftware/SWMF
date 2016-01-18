@@ -154,6 +154,7 @@ public:
       int (*IntegrantVectorLength)();
       void (*IntegrantVector)(double* Data,double *Location);
       void (*PrintVariableList)(FILE* fout);
+      void (*PostProcessColumnIntegralVector)(double*);
     };
 
     class cMap {
