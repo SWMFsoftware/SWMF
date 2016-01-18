@@ -352,6 +352,19 @@ ExitSearchLoop:
   return res;
 }
 
+cPostProcess3D::cCell* cPostProcess3D::GetCell(double *x) {
+  cBlock* bl;
+  int iCell[3],i;
+
+  //get block
+  bl=GetBlock(x);
+
+  //get cell
+  for (i=0;i<3;i++) iCell[i]=(x[i]-bl->xmin[i])/bl->dx[i];
+
+  return bl->cell[iCell[0]][iCell[1]]+iCell[2];
+}
+
 //characteristic size of the cell
 double cPostProcess3D::CharacteristicCellSize(double *x) {
   cBlock* block;
