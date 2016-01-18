@@ -30,7 +30,7 @@ public:
   //methods for reading and reconstruction of the output file
   struct cCell {
     int n[8];
-    vector<int> Trajectories;
+    vector<int> TrajectoryPoints,IndividualTrajectories;
   };
 
   class cBlock {

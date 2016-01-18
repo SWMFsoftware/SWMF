@@ -86,7 +86,10 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
 
   if (fBinaryIn==NULL) {
     //the binary file either do not exists or created after after the data file -> create a new binary file
-    if (PostProcess3D->rank==0) fBinaryOut=fopen(BinaryFullName,"w");
+    if (PostProcess3D->rank==0) {
+      fBinaryOut=fopen(BinaryFullName,"w");
+      system("rm -f post-processing.trajectory-cell-distribution.tmp.bin"); //remove the file that assignes particle trajectories to the cells
+    }
   }
 
   //read the variable line
@@ -381,6 +384,40 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
   double dt=0.0,vmax=-1.0,dxCellMin=-1.0,dtIntegration=0.0;
   int iInterval,nTrajectory,iBlock;
 
+  //the root processor will go first through the function
+  if (rank!=0) MPI_Barrier(MPI_COMM_WORLD);
+
+  //check whether the binary file that corresponds to the data file 'fname' exists. If the file exists -> compare the time
+  if (access("post-processing.trajectory-cell-distribution.tmp.bin",R_OK)==0) {
+    //the binary file exists: read the trajectory assignement from that file
+    FILE *fBinaryIn=fopen("post-processing.trajectory-cell-distribution.tmp.bin","r"); //the file is removed when a new trajectory or a data file is read
+    int iBlock,i,j,k;
+    int nCellTrajectories,nTrajectory,n;
+
+    for (iBlock=0;iBlock<nBlocks;iBlock++) for (i=0;i<nBlockCellX;i++) for (j=0;j<nBlockCellY;j++) for (k=0;k<nBlockCellZ;k++) {
+
+      //read trajectory points in the cell
+      fread(&nCellTrajectories,sizeof(int),1,fBinaryIn);
+
+      for (nTrajectory=0;nTrajectory<nCellTrajectories;nTrajectory++) {
+        fread(&n,sizeof(int),1,fBinaryIn);
+        Block[iBlock].cell[i][j][k].TrajectoryPoints.push_back(n);
+      }
+
+      //read individual trajectories
+      fread(&nCellTrajectories,sizeof(int),1,fBinaryIn);
+
+      for (nTrajectory=0;nTrajectory<nCellTrajectories;nTrajectory++) {
+        fread(&n,sizeof(int),1,fBinaryIn);
+        Block[iBlock].cell[i][j][k].IndividualTrajectories.push_back(n);
+      }
+    }
+
+    fclose(fBinaryIn);
+    if (rank==0) MPI_Barrier(MPI_COMM_WORLD);
+    return;
+  }
+
   //determine the trajectory path integration time step -> determine the minimum cell size, and the maximum particle velocity
   //the minimum cell size:
   for (iBlock=0;iBlock<nBlocks;iBlock++) {
@@ -419,7 +456,7 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
     iInterval=1;
 
     //register the first point
-    GetCell(x0)->Trajectories.push_back(nTrajectory);
+    GetCell(x0)->TrajectoryPoints.push_back(nTrajectory);
 
     //get the information for the first segment
     for (i=0;i<3;i++) x1[i]=ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[1][i];
@@ -441,8 +478,20 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
         for (i=0;i<3;i++) xParticle[i]+=dtLeftIntegrationStep*ParticleSpeed*l[i];
 
         //the time integratio step is finished -> register the point
-        GetCell(xParticle)->Trajectories.push_back(nTrajectory);
+        cCell* cl=GetCell(xParticle);
+        cl->TrajectoryPoints.push_back(nTrajectory);
         dtLeftIntegrationStep=dtIntegration;
+
+        //determine whether the trajectory is already saved with in the cell
+        bool found=false;
+
+        for (i=0;i<cl->IndividualTrajectories.size();i++) if (cl->IndividualTrajectories[i]==nTrajectory) {
+          found=true;
+          break;
+        }
+
+        //if the trajectory is not saved in the cell yet than save it
+        if (found==false) cl->IndividualTrajectories.push_back(nTrajectory);
       }
       else {
         //the partice reached the end of the trajectory segment before the end of the time integraion step
@@ -473,6 +522,36 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
     }
     while (true);
   }
+
+  //output the trtajectory data into a file
+  //the binary file exists: read the trajectory assignement from that file
+  //ONLY THE ROOT PROCESSOR SHOULD COME TO THIS POINT!!!!!!
+  FILE *fBinaryOut=fopen("post-processing.trajectory-cell-distribution.tmp.bin","w");
+  int j,k;
+  int nCellTrajectories,n;
+
+  for (iBlock=0;iBlock<nBlocks;iBlock++) for (i=0;i<nBlockCellX;i++) for (j=0;j<nBlockCellY;j++) for (k=0;k<nBlockCellZ;k++) {
+    //save the trajectory points
+    nCellTrajectories=Block[iBlock].cell[i][j][k].TrajectoryPoints.size();
+    fwrite(&nCellTrajectories,sizeof(int),1,fBinaryOut);
+
+    for (nTrajectory=0;nTrajectory<nCellTrajectories;nTrajectory++) {
+      n=Block[iBlock].cell[i][j][k].TrajectoryPoints[nTrajectory];
+      fwrite(&n,sizeof(int),1,fBinaryOut);
+    }
+
+    //save the individual trajectories
+    nCellTrajectories=Block[iBlock].cell[i][j][k].IndividualTrajectories.size();
+    fwrite(&nCellTrajectories,sizeof(int),1,fBinaryOut);
+
+    for (nTrajectory=0;nTrajectory<nCellTrajectories;nTrajectory++) {
+      n=Block[iBlock].cell[i][j][k].IndividualTrajectories[nTrajectory];
+      fwrite(&n,sizeof(int),1,fBinaryOut);
+    }
+  }
+
+  fclose(fBinaryOut);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 

@@ -105,7 +105,10 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
   if (fBinaryIn==NULL) {
     //the binary file either do not exists or created after after the data file -> create a new binary file
-    if (rank==0) fBinaryOut=fopen(BinaryFullName,"w");
+    if (rank==0) {
+      fBinaryOut=fopen(BinaryFullName,"w");
+      system("rm -f post-processing.trajectory-cell-distribution.tmp.bin"); //remove the file that assign particle trajectories to the cells
+    }
   }
 
 
