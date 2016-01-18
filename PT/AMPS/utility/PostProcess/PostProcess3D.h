@@ -30,6 +30,7 @@ public:
   //methods for reading and reconstruction of the output file
   struct cCell {
     int n[8];
+    vector<int> Trajectories;
   };
 
   class cBlock {
@@ -141,6 +142,7 @@ public:
   #define _OUTPUT_MODE__UNIFORM_ 0
   #define _OUTPUT_MODE__FLUX_    1
   void PrintParticleTrajectory(int nTrajectories,int OutputMode,double (*TrajectoryAcceptableProbability)(int),const char* fname);
+  void AssignParticleTrajectoriesToCells();
 
   //column integration
   class cColumnIntegral {
@@ -200,6 +202,7 @@ public:
 
   //mesh operations
   cBlock* GetBlock(double *x);
+  cCell* GetCell(double *x);
   double CharacteristicCellSize(double *x);
   bool IsInsideDomain(double *x);
 
