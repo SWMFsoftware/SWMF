@@ -375,8 +375,105 @@ void cPostProcess3D::PrintParticleTrajectory(int nTrajectories,int OutputMode,do
   }
 }
 
+//=============================================================================
+//assign individual particle trajectories to the cells
+void cPostProcess3D::AssignParticleTrajectoriesToCells() {
+  double dt=0.0,vmax=-1.0,dxCellMin=-1.0,dtIntegration=0.0;
+  int iInterval,nTrajectory,iBlock;
 
+  //determine the trajectory path integration time step -> determine the minimum cell size, and the maximum particle velocity
+  //the minimum cell size:
+  for (iBlock=0;iBlock<nBlocks;iBlock++) {
+    cBlock* bl;
+    double l;
 
+    bl=Block+iBlock;
+    l=sqrt(pow(bl->xmax[0]-bl->xmin[0],2)+pow(bl->xmax[1]-bl->xmin[1],2)+pow(bl->xmax[2]-bl->xmin[2],2));
+    if ((dxCellMin<0.0)||(dxCellMin>l)) dxCellMin=l;
+  }
+
+  dxCellMin/=std::min(std::min(nBlockCellX,nBlockCellY),nBlockCellZ);
+
+  //the maximum particle speed
+  for (nTrajectory=0;nTrajectory<ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+    for (iInterval=0;iInterval<ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;iInterval++) {
+      if (vmax<ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[iInterval][4]) {
+        vmax=ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[iInterval][4];
+      }
+    }
+  }
+
+  dtIntegration=dxCellMin/vmax;
+
+  //distribute the trajectories
+  double x0[3],x1[3],xParticle[3],ParticleSpeed,TrajectoryIntervalLength,dtLeftIntegrationStep,IntervalTravelTime,l[3];
+  int i;
+
+  for (nTrajectory=0;nTrajectory<ParticleTrajectory.nTotalTrajectories;nTrajectory++) if (ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints!=1) {
+    for (i=0;i<3;i++) {
+      x0[i]=ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][i];
+      xParticle[i]=x0[i];
+    }
+
+    dtLeftIntegrationStep=dtIntegration;
+    iInterval=1;
+
+    //register the first point
+    GetCell(x0)->Trajectories.push_back(nTrajectory);
+
+    //get the information for the first segment
+    for (i=0;i<3;i++) x1[i]=ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[1][i];
+
+    TrajectoryIntervalLength=sqrt(pow(x1[0]-x0[0],2)+pow(x1[1]-x0[1],2)+pow(x1[2]-x0[2],2));
+    for (i=0;i<3;i++) l[i]=(x1[i]-x0[i])/TrajectoryIntervalLength;
+
+    ParticleSpeed=0.5*(ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][4]+
+        ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[1][4]);
+
+    IntervalTravelTime=TrajectoryIntervalLength/ParticleSpeed;
+
+    //start the integration loop
+    do {
+      if (IntervalTravelTime>dtLeftIntegrationStep) {
+        IntervalTravelTime-=dtLeftIntegrationStep;
+
+        //update the location of the particle and the remaining size of the interval
+        for (i=0;i<3;i++) xParticle[i]+=dtLeftIntegrationStep*ParticleSpeed*l[i];
+
+        //the time integratio step is finished -> register the point
+        GetCell(xParticle)->Trajectories.push_back(nTrajectory);
+        dtLeftIntegrationStep=dtIntegration;
+      }
+      else {
+        //the partice reached the end of the trajectory segment before the end of the time integraion step
+        dtLeftIntegrationStep-=IntervalTravelTime;
+
+        for (i=0;i<3;i++) xParticle[i]=x1[i];
+
+        //move to the next interval
+        iInterval++;
+        if (iInterval==ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints) {
+          //the integration has reached the end of the particle trajectory line -> stop the integration
+          break;
+        }
+
+        for (i=0;i<3;i++) {
+          x0[i]=x1[i];
+          x1[i]=ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[iInterval][i];
+        }
+
+        TrajectoryIntervalLength=sqrt(pow(x1[0]-x0[0],2)+pow(x1[1]-x0[1],2)+pow(x1[2]-x0[2],2));
+        for (i=0;i<3;i++) l[i]=(x1[i]-x0[i])/TrajectoryIntervalLength;
+
+        ParticleSpeed=0.5*(ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[iInterval-1][4]+
+            ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[iInterval][4]);
+
+        IntervalTravelTime=TrajectoryIntervalLength/ParticleSpeed;
+      }
+    }
+    while (true);
+  }
+}
 
 
 
