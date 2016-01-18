@@ -155,7 +155,7 @@ int IPIC3D_run(double time){
       iSimCycle[i] = SimRun[i]->LastCycle() + 1;
     }
 
-    SimRun[i]->WriteOutput(iSimCycle[i]);
+    SimRun[i]->WriteOutput(iSimCycle[i]+1);
     SimRun[i]->WriteConserved(iSimCycle[i]);
 
     iSimCycle[i]++;    
