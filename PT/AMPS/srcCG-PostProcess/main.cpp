@@ -27,6 +27,11 @@
 //post-processing object
 cPostProcess3D amps;
 
+//acceptance probability of a particle trajectory when printed into a file
+double AcceptParticleTrajectory(int nTrajectory) { 
+  return amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][8]/amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][4]; 
+}
+
 
 //process the dust file
 struct cColumnIntegrationSet {
@@ -80,10 +85,10 @@ namespace DUST {
       {96,0.5*(5.011872E-05+1.000000E-04)}
   };
 
-  int IntegrantVectorLength() {return 2+2*nRadii;}
+  int IntegrantVectorLength() {return 4+2*nRadii;}
 
   void PrintVariableList(FILE* fout) {
-    fprintf(fout," \"Column Densty\", \"Total Brightness\"");
+    fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\",");
 
     for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
   }
@@ -99,6 +104,12 @@ namespace DUST {
 
     for (i=0;i<8;i++) data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46];
 
+    //get the number of the trajectories
+    cPostProcess3D::cCell*  cl=amps.GetCell(x);
+    cPostProcess3D::cBlock* bl=amps.GetBlock(x);
+    data[2]=cl->TrajectoryPoints.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    data[3]=cl->IndividualTrajectories.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+
     for (iRadius=0;iRadius<nRadii;iRadius++) {
       GrainRadius=VariablePair[iRadius].GrainRadius;
 
@@ -106,10 +117,10 @@ namespace DUST {
         LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
 
       for (i=0;i<8;i++) {
-        data[2+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[4+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
       }
 
-      data[2+2*iRadius+1]=ScatteringEfficentcy*data[2+2*iRadius];
+      data[4+2*iRadius+1]=ScatteringEfficentcy*data[2+2*iRadius];
       TotalBrightness+=data[2+2*iRadius+1];
     }
 
@@ -153,7 +164,7 @@ int main(int argc,char **argv) {
     amps.PrintVariableList();
 
     //load the trajectory data file
-    std::string out="1";
+    std::string out="4";
 
     const int nTrajectoryFiles=4;
     std::string TrajectoryFileName[nTrajectoryFiles];
@@ -174,9 +185,11 @@ int main(int argc,char **argv) {
 
     for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
     amps.ParticleTrajectory.PrintVariableList();
+    amps.AssignParticleTrajectoriesToCells();
 
     //load the surface data
-    amps.SurfaceData.LoadDataFile("amps.cut-cell.surface-data.out=2.dat",".");
+    std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
+    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),".");
     amps.SurfaceData.PrintVariableList();
 
     //get the list of the faces that production rate above 65%
@@ -189,7 +202,7 @@ int main(int argc,char **argv) {
       if ((MaxSouceRate<0.0)||(MaxSouceRate<amps.SurfaceData.data[n][3])) MaxSouceRate=amps.SurfaceData.data[n][3];
     }
 
-    LimitSourceRate=MinSourceRate+0.25*(MaxSouceRate-MinSourceRate);
+    LimitSourceRate=MinSourceRate+0.85*(MaxSouceRate-MinSourceRate);
 
     for (n=0;n<amps.SurfaceData.nNodes;n++) if (amps.SurfaceData.data[n][3]>LimitSourceRate) {
       for (int i=0;i<amps.SurfaceData.NodeBall[n].size();i++) {
@@ -225,7 +238,11 @@ int main(int argc,char **argv) {
 
     }
 
-    return 1;
+
+    //print out the limitab trajectories number 
+    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.uniform.dat");
+    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.flux.dat"); 
+//    return 1;
 
 
     //output location of the spacecraft
@@ -270,7 +287,7 @@ int main(int argc,char **argv) {
   }
 
   amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
-  amps.SaveDataFile("Res.dat", amps.data);
+ // amps.SaveDataFile("Res.dat", amps.data);
 
 
   amps.FinalizeMPI();
