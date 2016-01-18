@@ -135,6 +135,13 @@ public:
 
   cParticleTrajectory ParticleTrajectory;
 
+  //print particle trajectories into a file
+  //nTrajectories -> the number of the trajectories that will be printed
+  //OutputMode -> weiting of the trajectories
+  #define _OUTPUT_MODE__UNIFORM_ 0
+  #define _OUTPUT_MODE__FLUX_    1
+  void PrintParticleTrajectory(int nTrajectories,int OutputMode,double (*TrajectoryAcceptableProbability)(int),const char* fname);
+
   //column integration
   class cColumnIntegral {
   public:

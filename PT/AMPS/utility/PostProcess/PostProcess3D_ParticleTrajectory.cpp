@@ -317,6 +317,89 @@ void cPostProcess3D::cParticleTrajectory::PrintVariableList() {
 }
 
 
+//=============================================================================
+//print particle trajectories
+void cPostProcess3D::PrintParticleTrajectory(int nTrajectories,int OutputMode,double (*TrajectoryAcceptableProbability)(int),const char* fname) {
+  int n;
+  double MaxProbability=-1.0;
+
+  if (rank!=0) return;
+
+  //determine the probability table of the chosing a particulat trajectory to be printed
+  double ProbabilityTable[ParticleTrajectory.nTotalTrajectories];
+
+  if (OutputMode==_OUTPUT_MODE__UNIFORM_) {
+    for (n=0;n<ParticleTrajectory.nTotalTrajectories;n++) ProbabilityTable[n]=1.0;
+    MaxProbability=1.0;
+  }
+  else if (OutputMode==_OUTPUT_MODE__FLUX_) {
+    if (TrajectoryAcceptableProbability==NULL) exit(__LINE__,__FILE__,"Error: TrajectoryAcceptableProbability must be defined");
+
+    //the weight is ~ ((w/td)/vel)
+    for (n=0;n<ParticleTrajectory.nTotalTrajectories;n++) {
+      ProbabilityTable[n]=TrajectoryAcceptableProbability(n);
+      if (MaxProbability<ProbabilityTable[n]) MaxProbability=ProbabilityTable[n];
+    }
+
+  }
+  else exit(__LINE__,__FILE__,"Error: the option is unknown");
+
+  //output the header of the trajectory file
+  ParticleTrajectory.PrintDataFileHeader(fname);
+
+  for (int i=0;i<nTrajectories;i++) {
+    //determine the trajectory to output
+    vector <int> PrintedTrajectories;
+    bool found=false;
+    int ii;
+
+    do {
+      found=false;
+
+      do {
+        n=rnd()*ParticleTrajectory.nTotalTrajectories;
+      }
+      while (ProbabilityTable[n]/MaxProbability<rnd());
+
+      //check whether the trajecory is not chosen already
+      for (ii=0;ii<PrintedTrajectories.size();ii++) if (PrintedTrajectories[ii]==n) {
+        found=true;
+        break;
+      }
+    }
+    while (found==true);
+
+    //print out new trajectory
+    PrintedTrajectories.push_back(n);
+    ParticleTrajectory.AddTrajectoryDataFile(&ParticleTrajectory.IndividualTrajectories[n],n,fname);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
