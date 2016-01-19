@@ -38,6 +38,7 @@ struct cColumnIntegrationSet {
   int (*IntegrantVectorLength)();
   void (*IntegrantVector)(double* Data,double *Location);
   void (*PrintVariableList)(FILE* fout);
+  void (*PostProcessColumnIntegralVector)(double*);
 };
 
 
@@ -62,6 +63,8 @@ namespace GAS {
       data[2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][42];
     }
   }
+
+  void PostProcessColumnIntegralVector(double* data) {}
 }
 
 namespace DUST {
@@ -85,12 +88,16 @@ namespace DUST {
       {96,0.5*(5.011872E-05+1.000000E-04)}
   };
 
-  int IntegrantVectorLength() {return 4+2*nRadii;}
+  int IntegrantVectorLength() {return 5+2*nRadii;}
 
   void PrintVariableList(FILE* fout) {
-    fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\",");
+    fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\", \"Mean Velocity\",");
 
     for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
+  }
+
+  void PostProcessColumnIntegralVector(double* data) {
+    if (data[0]>0.0) data[4]/=data[0];
   }
 
   void IntegrantVector(double *data,double *x) {
@@ -102,7 +109,10 @@ namespace DUST {
 
     for (i=0;i<IntegrantVectorLength();i++) data[i]=0.0;
 
-    for (i=0;i<8;i++) data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46];
+    for (i=0;i<8;i++) {
+      data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46];
+      data[4]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46]*amps.data.data[Stencil.Node[i]][50];
+    }
 
     //get the number of the trajectories
     cPostProcess3D::cCell*  cl=amps.GetCell(x);
@@ -117,11 +127,11 @@ namespace DUST {
         LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
 
       for (i=0;i<8;i++) {
-        data[4+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[5+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
       }
 
-      data[4+2*iRadius+1]=ScatteringEfficentcy*data[2+2*iRadius];
-      TotalBrightness+=data[2+2*iRadius+1];
+      data[5+2*iRadius+1]=ScatteringEfficentcy*data[5+2*iRadius];
+      TotalBrightness+=data[5+2*iRadius+1];
     }
 
     data[1]=TotalBrightness;
@@ -279,11 +289,13 @@ int main(int argc,char **argv) {
     IntegrationSet.IntegrantVector=GAS::IntegrantVector;
     IntegrationSet.IntegrantVectorLength=GAS::IntegrantVectorLength;
     IntegrationSet.PrintVariableList=GAS::PrintVariableList;
+    IntegrationSet.PostProcessColumnIntegralVector=GAS::PostProcessColumnIntegralVector;
   }
   else {
     IntegrationSet.IntegrantVector=DUST::IntegrantVector;
     IntegrationSet.IntegrantVectorLength=DUST::IntegrantVectorLength;
     IntegrationSet.PrintVariableList=DUST::PrintVariableList;
+    IntegrationSet.PostProcessColumnIntegralVector=DUST::PostProcessColumnIntegralVector;
   }
 
   amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
