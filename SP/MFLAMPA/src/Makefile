@@ -7,7 +7,7 @@ include ../Makefile.conf
 include Makefile.DEPEND
 
 
-OBJECTS = SP_main.o
+OBJECTS = ModSize.o ModMain.o
 
 SEPEXE = ${BINDIR}/SEP.exe
 
