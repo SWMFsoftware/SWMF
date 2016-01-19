@@ -139,7 +139,6 @@ contains
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
-       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     elseif (optimize_message_pass=='all') then
        ! If ShockSlope is not zero then even the first order scheme needs 
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
@@ -151,7 +150,6 @@ contains
             DoResChangeOnlyIn=DoResChangeOnlyIn, &
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
-       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     else
        ! Pass corners if necessary
        DoSendCorner = nOrder > 1 .and. UseAccurateResChange
@@ -167,8 +165,11 @@ contains
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
             UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
-       if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
+    ! If the grid changed, fix iBoundary_GB
+    ! This could/should be done where the grid is actually being changed,
+    ! for example in load_balance
+    if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
 
     if(IsPeriodicWedge)then
        do iBlock = 1, nBlock
