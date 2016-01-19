@@ -88,16 +88,21 @@ namespace DUST {
       {96,0.5*(5.011872E-05+1.000000E-04)}
   };
 
-  int IntegrantVectorLength() {return 5+2*nRadii;}
+  int IntegrantVectorLength() {return 5+3*nRadii;}
 
   void PrintVariableList(FILE* fout) {
     fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\", \"Mean Velocity\",");
 
-    for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
+    for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\", \"Velocity(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
   }
 
   void PostProcessColumnIntegralVector(double* data) {
+
+    //total speed
     if (data[0]>0.0) data[4]/=data[0];
+
+    //speed for individual dust groupls
+    for (int iRadius=0;iRadius<nRadii;iRadius++) if (data[5+3*iRadius]>0.0) data[5+3*iRadius+2]/=data[5+3*iRadius];
   }
 
   void IntegrantVector(double *data,double *x) {
@@ -127,11 +132,12 @@ namespace DUST {
         LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
 
       for (i=0;i<8;i++) {
-        data[5+2*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[5+3*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[5+3*iRadius+2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][4+VariablePair[iRadius].nVar]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
       }
 
-      data[5+2*iRadius+1]=ScatteringEfficentcy*data[5+2*iRadius];
-      TotalBrightness+=data[5+2*iRadius+1];
+      data[5+3*iRadius+1]=ScatteringEfficentcy*data[5+3*iRadius];
+      TotalBrightness+=data[5+3*iRadius+1];
     }
 
     data[1]=TotalBrightness;
