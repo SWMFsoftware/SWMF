@@ -5,8 +5,8 @@
 module ModLoadBalance
 
   use ModMain, ONLY: UseConstrainB, UseB0, UseIM
-  use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-
+  use BATL_size, ONLY: nI, nJ, nK, nIJK, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxIJK
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
@@ -41,22 +41,17 @@ contains
   !============================================================================
   subroutine init_load_balance
 
-    ! To be replaced with BATL_size variable !!!
-    integer, parameter:: nCellGhost = (MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)
-
-    !------------------------------------------------------------------------
     DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
 
     nBuffer = nScalarData
 
-    if(UseConstrainB) nBuffer = nBuffer + 3*nCellGhost
+    if(UseConstrainB) nBuffer = nBuffer + 3*MaxIJK
     if(DoSendRay) &
          nBuffer = nBuffer + 6*nIJK
     if(UseImplicit .and. UseBDF2 .and. n_prev > 0) &
          nBuffer = nBuffer + nVar*nIJK
     if(DoMoveExtraData)then
-       if(UseB0) &
-            nBuffer = nBuffer + 3*nCellGhost
+       if(UseB0) nBuffer = nBuffer + 3*MaxIJK
     end if
     if(MaxBlockData > 0) &
          nBuffer = nBuffer + MaxBlockData
@@ -111,7 +106,6 @@ contains
        end if
 
     end if ! DoMoveExtraData
-
 
     if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
