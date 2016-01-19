@@ -21,9 +21,10 @@ contains
 
   !============================================================================
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
-       iImplBlock, IsLinear)
+       iImplBlock, IsLinear, TypeBcIn)
 
-    ! Set ghost cells values in State_VG
+    ! Set ghost cells values in State_VG based on TypeBc_I.
+    ! TypeBcIn can override the boundary condition defined in TypeBc_I
 
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Hyp_, p_, iRho_I, DefaultState_V, &
          NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
@@ -57,9 +58,10 @@ contains
     integer, intent(in):: nVarState
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    ! Optional arguments when called by semi-implicit scheme
+    ! Optional arguments when called by semi-implicit scheme or something else
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
+    character(len=*), optional, intent(in):: TypeBcIn
 
     ! Type of boundary for one side
     character(len=30):: TypeBc
@@ -184,8 +186,12 @@ contains
        if(nK==1) kMin = 1
        if(nK==1) kMax = 1
 
-       TypeBc = TypeBc_I(iSide)
-       if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
+       if(present(TypeBcIn))then
+          TypeBc = TypeBcIn
+       else
+          TypeBc = TypeBc_I(iSide)
+          if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
+       end if
 
        !write(*,*)'! iSide, Type iMin..kMax=', iSide, TypeBc, &
        !     iMin, iMax, jMin, jMax, kMin, kMax
