@@ -1973,7 +1973,7 @@ void Particles3D::repopulate_particles()
 	    SpeciesParticle& pcl = _pcls[pidx];
 	    // determine whether to delete the particle
 	    const bool delete_pcl =
-	      (repopulateYrght && pcl.get_z() < zLow);
+	      (repopulateZleft && pcl.get_z() < zLow);
 	    if(delete_pcl)
 	      delete_particle(pidx);
 	    else
@@ -2005,7 +2005,7 @@ void Particles3D::repopulate_particles()
 	      SpeciesParticle& pcl = _pcls[pidx];
 	      // determine whether to delete the particle
 	      const bool delete_pcl =
-		(repopulateYrght && pcl.get_z() > zHgh);
+		(repopulateZrght && pcl.get_z() > zHgh);
 	      if(delete_pcl)
 		delete_particle(pidx);
 	      else
