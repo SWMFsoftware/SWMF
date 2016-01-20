@@ -31,7 +31,7 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   if (ParticleDataBuffer==NULL) {
     char msg[500];
 
-    sprintf(msg,"Error: cannot allocate the particle data buffer (%i byte). Decrease the total number of the reserved particles.",ParticleDataLength*MaxNPart);
+    sprintf(msg,"Error: cannot allocate the particle data buffer (%ld byte). Decrease the total number of the reserved particles.",ParticleDataLength*MaxNPart);
     exit(__LINE__,__FILE__,msg);
   }  
 

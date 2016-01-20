@@ -98,8 +98,8 @@ void PIC::Mover::Sampling::Errors::PrintData() {
         printf("$PREFIX: ERROR ID: %s\n",ErrorLineID[nerror].c_str());
 
         for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
-          printf("$PREFIX: %i\t%i\t%e\n",spec,
-              RemovedModelParticles[spec+nerror*PIC::nTotalSpecies]/PIC::LastSampleLength,
+          printf("$PREFIX: %i\t%e\t%e\n",spec,
+              double(RemovedModelParticles[spec+nerror*PIC::nTotalSpecies])/PIC::LastSampleLength,
               ModelParticleRemovingRate[spec+nerror*PIC::nTotalSpecies]/PIC::LastSampleLength);
         }
       }

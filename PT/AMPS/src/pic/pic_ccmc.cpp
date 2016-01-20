@@ -357,7 +357,7 @@ int PIC::CCMC::TraceParticles() {
   //continue simulation untill particles are in the system
   MPI_Allreduce(&PIC::ParticleBuffer::NAllPart,&nTotalParticles,PIC::nTotalSpecies,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-  if (PIC::ThisThread==0) printf("$PREFIX: Particle Tracking: The total number of tacked particle is %i\n",nTotalParticles);
+  if (PIC::ThisThread==0) printf("$PREFIX: Particle Tracking: The total number of tacked particle is %ld\n",nTotalParticles);
 
   int niter=0;
   const int nOutputStep=1000;
@@ -369,7 +369,7 @@ int PIC::CCMC::TraceParticles() {
     niter++;
 
     if (niter%nOutputStep==0) {
-      sprintf(fname,"%s/amps.TrajectoryTracking.out=%ld",OutputDataFileDirectory,nOutputStep/nOutputStep);
+      sprintf(fname,"%s/amps.TrajectoryTracking.out=%i",OutputDataFileDirectory,niter/nOutputStep);
       PIC::ParticleTracker::OutputTrajectory(fname);
     }
 

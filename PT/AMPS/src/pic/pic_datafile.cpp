@@ -154,16 +154,21 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
 
 //=============================================================================
 double PIC::CPLR::DATAFILE::MULTIFILE::GetFileTime(const char* FileName){
+  double res=-1.0;
+
   //the particular  reader
   switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
     exit(__LINE__,__FILE__,"TECPLOT reader mode is not able to extract time from the input data file");
     break;
   case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
-    return ARMS::GetFileTime(FileName);
+    res=ARMS::GetFileTime(FileName);
+    break;
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
+
+  return res; 
 }
 
 //=============================================================================
