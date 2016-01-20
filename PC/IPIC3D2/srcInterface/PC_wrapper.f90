@@ -158,9 +158,10 @@ contains
         DtSi =  Dt 
         ! set the right time step
         call pc_wrapper_c_set_dt(DtSi)
-    end if
+     end if
 
-    call pc_wrapper_c_run(Time)
+     if(DtSi>0) call pc_wrapper_c_run(Time)
+
     TimeSimulation = TimeSimulation + DtSi    
 
     if(DoTestMe)write(*,*) NameSub, &
