@@ -16,7 +16,7 @@ module ModCellGradient
   public:: calc_divergence
   public:: calc_gradient
 
-  real, allocatable:: iTrue_G(:,:,:)
+  integer, allocatable:: iTrue_G(:,:,:)
 
 contains
 
