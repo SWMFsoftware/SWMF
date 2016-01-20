@@ -1161,7 +1161,8 @@ contains
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       PlanckOut_W)
 
     ! The State_V vector is in normalized units
 
@@ -1188,6 +1189,8 @@ contains
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
          OpacityPlanckOut_W(nWave)                         ! [1/m]
+    real, optional, intent(out) :: &
+         OpacityEmissionOut_W(nWave)                       ! [1/m]
     real, optional, intent(out) :: &
          OpacityRosselandOut_W(nWave)                      ! [1/m]
 
@@ -1305,6 +1308,7 @@ contains
 
     if(present(NatomicOut)) NatomicOut = State_V(Rho_)*No2Si_V(UnitN_)
     if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
+    if(present(OpacityEmissionOut_W)) OpacityEmissionOut_W = 0.0
     if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 1e16
     if(present(PlanckOut_W)) &
          PlanckOut_W = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)

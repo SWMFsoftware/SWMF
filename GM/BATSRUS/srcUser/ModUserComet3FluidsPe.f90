@@ -1802,8 +1802,8 @@ contains
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut,   &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
-       EntropyOut)
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       PlanckOut_W, EntropyOut)
 
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, ExtraEInt_
@@ -1830,9 +1830,10 @@ contains
     real, optional, intent(out) :: GammaOut                     ! dimensionless
     real, optional, intent(out) :: HeatCondOut                  ! [W/(m*K)]   
     real, optional, intent(out) :: IonHeatCondOut               ! [W/(m*K)]
-    real, optional, intent(out) :: TeTiRelaxOut                 ! [1/s]  
-    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)    ! [1/m] 
-    real, optional, intent(out) :: OpacityRosselandOut_W(nWave) ! [1/m] 
+    real, optional, intent(out) :: TeTiRelaxOut                 ! [1/s]
+    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)    ! [1/m]
+    real, optional, intent(out) :: OpacityEmissionOut_W(nWave)  ! [1/m]
+    real, optional, intent(out) :: OpacityRosselandOut_W(nWave) ! [1/m]
     real, optional, intent(out) :: PlanckOut_W(nWave)           ! [J/m^3] 
     real, optional, intent(out) :: EntropyOut
 

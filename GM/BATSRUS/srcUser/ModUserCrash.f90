@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is the default user module which contains empty methods defined
@@ -2429,7 +2429,8 @@ contains
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       PlanckOut_W)
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -2469,6 +2470,8 @@ contains
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: &
          OpacityPlanckOut_W(nWave)                         ! [1/m]
+    real, optional, intent(out) :: &
+         OpacityEmissionOut_W(nWave)                       ! [1/m]
     real, optional, intent(out) :: &
          OpacityRosselandOut_W(nWave)                      ! [1/m]
 
@@ -2661,6 +2664,9 @@ contains
 
        end if
     end if
+
+    if(present(OpacityEmissionOut_W)) &
+         OpacityEmissionOut_W = OpacityPlanckOut_W
 
     if(present(PlanckOut_W))then
        do iWave = 1, nWave

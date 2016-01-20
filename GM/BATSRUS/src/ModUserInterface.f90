@@ -199,7 +199,8 @@ module ModUserInterface
           EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
           EinternalOut, TeOut, PressureOut, &
           CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-          OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+          OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+          PlanckOut_W)
 
        use ModAdvance,    ONLY: nWave
        use ModVarIndexes, ONLY: nVar
@@ -220,6 +221,8 @@ module ModUserInterface
        real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
        real, optional, intent(out) :: &
             OpacityPlanckOut_W(nWave)                         ! [1/m]
+       real, optional, intent(out) :: &
+            OpacityEmissionOut_W(nWave)                       ! [1/m]
        real, optional, intent(out) :: &
             OpacityRosselandOut_W(nWave)                      ! [1/m]
        real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]

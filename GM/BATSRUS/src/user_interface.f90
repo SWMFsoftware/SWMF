@@ -266,7 +266,8 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
      EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
      EinternalOut, TeOut, PressureOut, &
      CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-     OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+     OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+     PlanckOut_W)
 
   use ModVarIndexes, ONLY: nWave, nVar
   use ModUser, ONLY: user_sub => user_material_properties
@@ -296,6 +297,7 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
   real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
   real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
   real, optional, intent(out) :: OpacityPlanckOut_W(nWave)    ! [1/m]
+  real, optional, intent(out) :: OpacityEmissionOut_W(nWave)  ! [1/m]
   real, optional, intent(out) :: OpacityRosselandOut_W(nWave) ! [1/m]
 
   ! Multi-group specific interface. The variables are respectively:
@@ -306,6 +308,7 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       PlanckOut_W)
 
 end subroutine user_material_properties

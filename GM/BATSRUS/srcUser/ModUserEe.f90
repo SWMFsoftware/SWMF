@@ -714,8 +714,8 @@ contains
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut,   &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
-       EntropyOut)
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       PlanckOut_W, EntropyOut)
 
     use ModLookupTable,ONLY: interpolate_lookup_table
     use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitRho_, InvGammaMinus1
@@ -737,8 +737,9 @@ contains
     real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
     real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
     real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
-    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m] 
-    real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m] 
+    real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m]
+    real, optional, intent(out) :: OpacityEmissionOut_W(nWave)    ! [1/m]
+    real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m]
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
     real, optional, intent(out) :: EntropyOut
 
