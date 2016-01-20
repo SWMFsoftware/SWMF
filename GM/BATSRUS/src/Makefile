@@ -24,6 +24,7 @@ OBJECTS = \
 	ModBoundaryCells.o \
 	ModCalcSource.o \
 	ModCellBoundary.o \
+	ModCellGradient.o \
 	ModCharacteristic.o \
 	ModChromosphere.o \
 	ModCoarseAxis.o \

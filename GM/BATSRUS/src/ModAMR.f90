@@ -4,6 +4,8 @@
 
 module ModAMR
 
+  use ModCellGradient, ONLY: calc_gradient
+
   implicit none
   save
 
@@ -495,222 +497,6 @@ contains
 
   contains
     !==========================================================================
-    subroutine calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
-
-      ! This is an interface to cartesian or gencoord_gradient.
-
-      use BATL_lib, ONLY: IsCartesianGrid
-
-      integer, intent(in):: iBlock
-      real,    intent(in):: Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-      real, intent(out):: GradX_C(nI,nJ,nK), GradY_C(nI,nJ,nK), GradZ_C(nI,nJ,nK)
-      !------------------------------------------------------------------------
-      if(IsCartesianGrid)then
-         call cartesian_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
-      else
-         call gencoord_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)  
-      end if
-
-    end subroutine calc_gradient
-
-    !==========================================================================
-    subroutine cartesian_gradient(iBlock, Var_G, GradX_C,GradY_C,GradZ_C)
-
-      use ModGeometry, ONLY: body_blk, true_cell
-      use ModSize,  ONLY: x_, y_, z_
-      use BATL_lib, ONLY: CellFace_DB, CellVolume_GB
-
-      integer,intent(in) :: iBlock
-
-      real, intent(in) :: Var_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
-      real, intent(out):: GradX_C(nI,nJ,nK), GradY_C(nI,nJ,nK), GradZ_C(nI,nJ,nK)
-
-      real:: OneTrue_G(0:nI+1,0:nJ+1,0:nK+1)
-      real:: VInvHalf
-      integer :: i, j, k
-      !------------------------------------------------------------------------
-
-      if(.not.body_blk(iBlock)) then
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-
-            GradX_C(i,j,k) = CellFace_DB(x_,iBlock)*&
-                 (Var_G(i+1,j,k) - Var_G(i-1,j,k))*VInvHalf
-            if(nJ == 1)then
-               GradY_C(i,j,k) = 0.0
-            else
-               GradY_C(i,j,k) = CellFace_DB(y_,iBlock)*&
-                    (Var_G(i,j+1,k) - Var_G(i,j-1,k))*VInvHalf
-            end if
-            if(nK == 1)then
-               GradZ_C(i,j,k) = 0.0
-            else
-               GradZ_C(i,j,k) = CellFace_DB(z_,iBlock)*&
-                    (Var_G(i,j,k+1) - Var_G(i,j,k-1))*VInvHalf
-            end if
-         end do; end do; end do
-      else
-         where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
-            OneTrue_G = 1.0
-         elsewhere
-            OneTrue_G = 0.0
-         end where
-         !
-         !\
-         ! Where .not.true_cell, all the gradients are zero
-         ! In true_cell the input to gradient from the face neighbor
-         ! is ignored, if the face neighbor is .not.true_cell, the input
-         ! from the opposite cell is doubled in this case
-         !/
-         !
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-
-            GradX_C(i,j,k) = CellSize_DB(x_,iBlock)*&
-                 OneTrue_G(i,j,k)*(&
-                 (Var_G(i+1,j,k) - Var_G(i,j,k))*&
-                 OneTrue_G(i+1,j,k)*&
-                 (2.0 - OneTrue_G(i-1,j,k)) + &
-                 (Var_G(i,j,k)-Var_G(i-1,j,k))*&
-                 OneTrue_G(i-1,j,k)*&
-                 (2.0 - OneTrue_G(i+1,j,k)) )*VInvHalf
-
-            if(nJ==1)then
-               GradY_C(i,j,k) = 0.0
-            else
-               GradY_C(i,j,k) = CellSize_DB(y_,iBlock)*&
-                    OneTrue_G(i,j,k)*(&
-                    (Var_G(i,j+1,k) - Var_G(i,j,k))*&
-                    OneTrue_G(i,j+1,k)*&
-                    (2.0 - OneTrue_G(i,j-1,k))+&
-                    (Var_G(i,j,k)-Var_G(i,j-1,k))*&
-                    OneTrue_G(i,j-1,k)*&
-                    (2.0 - OneTrue_G(i,j+1,k)) )*VInvHalf
-            end if
-            if(nK == 1)then
-               GradZ_C(i,j,k) = 0.0
-            else
-               GradZ_C(i,j,k) = CellSize_DB(z_,iBlock)*&
-                    OneTrue_G(i,j,k)*(&
-                    (Var_G(i,j,k+1)-Var_G(i,j,k))*&
-                    OneTrue_G(i,j,k+1)*&
-                    (2.0 - OneTrue_G(i,j,k-1))+&
-                    (Var_G(i,j,k)-Var_G(i,j,k-1))*&
-                    OneTrue_G(i,j,k-1)*&
-                    (2.0 - OneTrue_G(i,j,k+1)) )*VInvHalf
-            end if
-         end do; end do; end do
-      end if
-
-    end subroutine cartesian_gradient
-    !==========================================================================
-    subroutine gencoord_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
-
-      use ModSize, ONLY: nI, nJ, nK, x_, y_, z_
-      use ModGeometry, ONLY: body_blk, true_cell
-      use BATL_lib, ONLY: CellVolume_GB, FaceNormal_DDFB
-
-      implicit none
-
-      integer,intent(in) :: iBlock
-
-      real, intent(in) :: &
-           Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-      real, intent(out):: &
-           GradX_C(nI,nJ,nK), GradY_C(nI,nJ,nK), GradZ_C(nI,nJ,nK)
-
-      real:: OneTrue_G(0:nI+1,0:nJ+1,0:nK+1)
-
-      integer :: i, j, k
-
-      real :: FaceArea_DS(3,6), Difference_S(6)
-
-      real::VInvHalf
-      !------------------------------------------------------------------------
-      if(.not.body_BLK(iBlock)) then
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-
-            FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBlock)
-            FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
-            FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
-
-            Difference_S(1) = -(Var_G(i-1,j,k) + Var_G(i,j,k))
-            Difference_S(2) = +(Var_G(i+1,j,k) + Var_G(i,j,k))
-            Difference_S(3) = -(Var_G(i,j-1,k) + Var_G(i,j,k))
-            Difference_S(4) = +(Var_G(i,j+1,k) + Var_G(i,j,k))
-            Difference_S(5) = -(Var_G(i,j,k-1) + Var_G(i,j,k))
-            Difference_S(6) = +(Var_G(i,j,k+1) + Var_G(i,j,k))
-
-            GradX_C(i,j,k) = sum(FaceArea_DS(x_,:)*Difference_S)*VInvHalf
-            GradY_C(i,j,k) = sum(FaceArea_DS(y_,:)*Difference_S)*VInvHalf
-            GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
-         end do; end do; end do
-      else
-         where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
-            OneTrue_G = 1.0
-         elsewhere
-            OneTrue_G = 0.0
-         end where
-         do k=1,nK;  do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock))then
-               GradX_C(i,j,k) = 0.0
-               GradY_C(i,j,k) = 0.0
-               GradZ_C(i,j,k) = 0.0
-               CYCLE
-            end if
-
-            FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBlock)
-            FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
-            FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
-
-            Difference_S(1) =  OneTrue_G(i-1,j,k)*&
-                 (Var_G(i,j,k)-Var_G(i-1,j,k))+&
-                 (1.0 - OneTrue_G(i-1,j,k))*&
-                 OneTrue_G(i+1,j,k)*&
-                 (Var_G(i+1,j,k)-Var_G(i,j,k))
-
-            Difference_S(2) =  OneTrue_G(i+1,j,k)*&
-                 (Var_G(i+1,j,k)-Var_G(i,j,k))+&
-                 (1.0 - OneTrue_G(i+1,j,k))*&
-                 OneTrue_G(i-1,j,k)*&
-                 (Var_G(i,j,k)-Var_G(i-1,j,k))
-
-            Difference_S(3)=  OneTrue_G(i,j-1,k)*&
-                 (Var_G(i,j,k)-Var_G(i,j-1,k))+&
-                 (1.0 - OneTrue_G(i,j-1,k))*&
-                 OneTrue_G(i,j+1,k)*&
-                 (Var_G(i,j+1,k)-Var_G(i,j,k))
-
-            Difference_S(4)=  OneTrue_G(i,j+1,k)*&
-                 (Var_G(i,j+1,k)-Var_G(i,j,k))+&
-                 (1.0 - OneTrue_G(i,j+1,k))*&
-                 OneTrue_G(i,j-1,k)*&
-                 (Var_G(i,j,k)-Var_G(i,j-1,k))
-
-            Difference_S(5)  =  OneTrue_G(i,j,k-1)*&
-                 (Var_G(i,j,k)-Var_G(i,j,k-1))+&
-                 (1.0 - OneTrue_G(i,j,k-1))*&
-                 OneTrue_G(i,j,k+1)*&
-                 (Var_G(i,j,k+1)-Var_G(i,j,k))
-
-            Difference_S(6)  =  OneTrue_G(i,j,k+1)*&
-                 (Var_G(i,j,k+1)-Var_G(i,j,k))+&
-                 (1.0 - OneTrue_G(i,j,k+1))*&
-                 OneTrue_G(i,j,k-1)*&
-                 (Var_G(i,j,k)-Var_G(i,j,k-1))
-
-            VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-
-            GradX_C(i,j,k) = sum(FaceArea_DS(x_,:)*Difference_S)*VInvHalf
-            GradY_C(i,j,k) = sum(FaceArea_DS(y_,:)*Difference_S)*VInvHalf
-            GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
-         end do; end do; end do
-      end if
-
-    end subroutine gencoord_gradient
-
-    !==========================================================================
 
     subroutine trace_transient(NameCrit,iCrit,iBlock,refine_crit)
 
@@ -868,8 +654,6 @@ contains
     ! This subroutine aims to restrict the refinement mainly along the ray 
     ! Sun-Earth, in a cone with a user-defined opening angle.
 
-    implicit none
-
     integer, intent(in) :: iBlock
     real, intent(in) :: xBLK,yBLK,zBLK
     real, intent(out) :: refine_profile
@@ -932,8 +716,6 @@ contains
 !!! The code below is WAY overcomplicated. To be removed.
 
     use ModPhysics, ONLY: rBody, xEarth, yEarth, zEarth, InvD2Ray
-
-    implicit none
 
     integer, intent(in) :: iBlock
     real, intent(in) :: xBLK,yBLK,zBLK
