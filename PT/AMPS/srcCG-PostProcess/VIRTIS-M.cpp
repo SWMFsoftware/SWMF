@@ -51,6 +51,7 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
 
   Vector3D::Normalize(e0);
   Vector3D::Orthogonalize(e0,e1);
+  Vector3D::Normalize(e1);
   Vector3D::CrossProduct(e2,e0,e1);
 
   //init the blocking by the nucleus
@@ -60,8 +61,20 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
       dj=j-nFieldOfViewPixels/2;
 
       //get the pointing direction
-      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*sin(di*dAnglePixel)+e2[idim]*sin(dj*dAnglePixel);
+      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*tan(di*dAnglePixel)+e2[idim]*tan(dj*dAnglePixel);
       Vector3D::Normalize(l);
+
+
+
+      double rr[3],rl=0.0,rros=sqrt(xRosetta[0]*xRosetta[0]+xRosetta[1]*xRosetta[1]+xRosetta[2]*xRosetta[2]);
+      for (idim=0;idim<3;idim++) {
+        rr[idim]=xRosetta[idim]+rros*l[i];
+        rl+=pow(rr[idim],2);
+      }
+
+      rl=sqrt(rl);
+
+
 
       //check if the direction is intersected with the surface of the nucleus
       //determine the intersection time with the triangulated surface (if any)
@@ -146,7 +159,8 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
         dj=j-nyVirtisBlockPixelRange/2;
 
         //get the pointing direction
-        for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*sin(di*dAnglePixel)+e2[idim]*sin(dj*dAnglePixel);
+        for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*tan(di*dAnglePixel)+e2[idim]*tan(dj*dAnglePixel);
+
         Vector3D::Normalize(l);
 
         //calculate the integral
