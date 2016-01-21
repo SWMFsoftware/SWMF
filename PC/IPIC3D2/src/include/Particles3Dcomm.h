@@ -424,10 +424,12 @@ protected:
   double vmin;
   double wmin;
 
+ public:
 #ifdef BATSRUS
   long int idum;
+  void setDt(double dtIn){dt=dtIn;}
 #endif
-  
+
 };
 
 // find the particles with particular IDs and print them

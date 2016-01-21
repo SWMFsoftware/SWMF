@@ -326,15 +326,25 @@ void c_Solver::CalculateMoments() {
   }
   // Set a constant charge in the OpenBC boundaries
   //EMf->ConstantChargeOpenBC();
+  
+#ifndef BATSRUS
+  // Calculate hat funciton in func CalculateField so that it is consistent
+  // with iPIC3D1. Changed it back in the future. --Yuxi
   // calculate densities on centers from nodes
   EMf->interpDensitiesN2C();
   // calculate the hat quantities for the implicit method
   EMf->calculateHatFunctions();
+  #endif
 }
 
 //! MAXWELL SOLVER for Efield
 void c_Solver::CalculateField() {
   timeTasks_set_main_task(TimeTasks::FIELDS);
+
+#ifdef BATSRUS
+  EMf->interpDensitiesN2C();
+  EMf->calculateHatFunctions();
+#endif
 
   // calculate the E field
   EMf->calculateE();
@@ -362,6 +372,9 @@ bool c_Solver::ParticlesMover()
 
     for (int i = 0; i < ns; i++)  // move each species
     {
+      #ifdef BATSRUS
+      part[i].setDt(col->getDt());
+      #endif
       // #pragma omp task inout(part[i]) in(grid) target_device(booster)
       // should merely pass EMf->get_fieldForPcls() rather than EMf.
       // use the Predictor Corrector scheme to move particles
@@ -806,6 +819,6 @@ double c_Solver::getSItime(){
 void c_Solver::setSIDt(double SIDt){
   col->setSIDt(SIDt);
 }
-    
+
 
 #endif
