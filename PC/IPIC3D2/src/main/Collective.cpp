@@ -1373,7 +1373,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   ParticlesOutputTag  = "position+velocity+q";
 
   // processors
-  XLEN = 1; YLEN = 1; ZLEN = 1; 
+  XLEN = 2; YLEN = 2; ZLEN = 1; 
   
   while(*param){
     get_next_command(param,&Command);
