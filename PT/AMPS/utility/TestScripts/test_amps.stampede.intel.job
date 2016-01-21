@@ -15,14 +15,6 @@
 #The next line is required if the user has more than one project
 #SBATCH -A TG-AST140002  # Allocation name to charge job against
 
-# run AMPS tests compiled with GNU
-cd GNU/AMPS
-module purge
-module load gcc/4.9.1
-module load mvapich2/2.1
-make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
-cd ../..
-
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
 module purge
@@ -30,3 +22,4 @@ module load intel/15.0.2
 module load mvapich2/2.1
 make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
 cd ../..
+touch ready_for_test_submission

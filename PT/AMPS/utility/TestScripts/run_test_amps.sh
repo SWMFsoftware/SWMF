@@ -67,10 +67,10 @@ cd ..
 #mkdir -p PGI;   cp -r AMPS PGI/;  <#
 
 # copy job files to the AMPS directory on supercomputers
-#>Pleiades #########################################################
-#cp AMPS/utility/TestScripts/test_amps.pleiades.job test_amps.job <#
-#>Stampede #########################################################
-#cp AMPS/utility/TestScripts/test_amps.stampede.job test_amps.job <#
+#>Pleiades ###############################################
+#cp AMPS/utility/TestScripts/test_amps.pleiades.*.job . <#
+#>Stampede ###############################################
+#cp AMPS/utility/TestScripts/test_amps.stampede.*.job . <#
 
 # install AMPS
 #>GNUAll ###################################################################
@@ -141,10 +141,24 @@ cd ..
 
 #>Pleiades ####################################
 #cd $WorkDir/Tmp_AMPS_test                    #
-#/PBS/bin/qsub test_amps.job                 <#
+#touch ready_for_test_submission              #
+#foreach job (test_amps.pleiades.*.job)       #
+#  while(! -f ready_for_test_submission)      #
+#  end                                        #
+#  rm -rf ready_for_test_submission           #
+#  sleep 60                                   #
+#  /PBS/bin/qsub $job                         #
+#end                                         <#
 #>Stampede ####################################
 #cd $WorkDir/Tmp_AMPS_test                    #
-#/usr/bin/sbatch test_amps.job               <#
+#touch ready_for_test_submission              #
+#foreach job (test_amps.stampede.*.job)       #
+#  while(! -f ready_for_test_submission)      #
+#  end                                        #
+#  rm -rf ready_for_test_submission           #
+#  sleep 60                                   #
+#  /usr/bin/sbatch $job                       #
+#end                                         <#
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
 

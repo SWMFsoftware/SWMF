@@ -8,11 +8,13 @@ chomp($hostname);
 
 # check hostname for supercomputers
 my $hostname_full = `hostname -f`;
+my $Stampede = 'stampede';
 if($hostname_full =~ m/stampede/){
-    $hostname = 'stampede';
+    $hostname = $Stampede;
 }
+my $Pleiades = 'pleiades';
 if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/){
-    $hostname = 'pleiades';
+    $hostname = $Pleiades;
 }
 
 #path to the Makefile.test source
@@ -50,6 +52,10 @@ my @FinalApps;
 my $Name;
 my $Keys;
 my $Outs;
+my $Time;
+my $TimeTotal = 0;
+my $TimeLimit = 110;
+my $iOvertime = 0;
 #non-generic targets of tests 
 my @Tars=('','','','');
 #additional parameter to take into account location of input file
@@ -60,13 +66,15 @@ my $PathName;
 while(@Table){
     my $refTable;
     my $refTars;
-    ($refTable,$Name,$Keys,$Outs,$refTars) = get_next_test(@Table);
+    ($refTable,$Name,$Time,$Keys,$Outs,$refTars) = get_next_test(@Table);
     @Table   = @$refTable;
     @Tars = @$refTars;
     $PathName=$Name;
     if($Name=~ m/(.*)\/(.*)$/){$Name=$2;}
     $Outs="test_$Name" unless($Outs);
     next unless($Name);
+    $TimeTotal+=$Time;
+    &check_overtime;
 
     for (my $i = 0; $i<=@Base-1; $i++){
 	# general part with all tests
@@ -114,7 +122,7 @@ push(@Final,@FinalApps);
 
 return 1;
 
-
+#------------------------------------------------------------------------------
 sub read_content {
     # read the content of a file
     open(my $fh,'<',$_[0]);
@@ -123,6 +131,7 @@ sub read_content {
     @lines;
 }
 
+#------------------------------------------------------------------------------
 sub write_content {
     # write the content of a file
     open(my $fh,'>',shift(@_));
@@ -130,14 +139,14 @@ sub write_content {
     close($fh);
 }
 
-
+#------------------------------------------------------------------------------
 sub get_next_test{
     #returns test description extracted from content of fTable
     my $IsTestBlock='';
     #number of lines to remove
     my $nRemove=0;
     #test description
-    my $Name=''; my $Keys=''; my $Outs='';
+    my $Name=''; my $Keys=''; my $Outs=''; my $Time=0;
     #target block flag
     my $iTar='';
     #non-generic target descriptions
@@ -149,6 +158,8 @@ sub get_next_test{
 	$line =~ s/\s*$//g;
 	if($line =~ m/<#$/){
 	    $IsTestBlock='0';
+	    # time for test MUST be set and be positive
+	    $ErrorRead='1' unless ($Time > 0);
 	    last;
 	}
 	if($IsTestBlock){
@@ -160,6 +171,7 @@ sub get_next_test{
 		    $ErrorRead='1';
 		}
 	    }
+	    elsif($line =~ m/Time=([0-9]+)/){$Time+=$1;}
 	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1,," if($1);}
 	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1,," if($1);}
 	    #non-generic target description header
@@ -222,14 +234,15 @@ sub get_next_test{
 	    }
 
 	}
-	(\@_,$Name,$Keys,$Outs,\@Tars);
+	(\@_,$Name,$Time,$Keys,$Outs,\@Tars);
     }
     else{
-	@Tars=('','','','');
+	@Tars=('',0,'','','');
 	(\@_,'','','',\@Tars);
     }
 }
 
+#------------------------------------------------------------------------------
 sub process_option{
     my $Machines;
     my $OptionName=$_[0];
@@ -253,4 +266,49 @@ sub process_option{
 	}
     }
     return($OptionName);
+}
+
+#------------------------------------------------------------------------------
+sub check_overtime{
+    # for supercomputers time in development queue is limited to 2 hours;
+    # check if test exceed the limit and create separate job-files in the case
+    #..........................................................................
+    # check if this is a supercomputer
+    return unless(
+	$hostname eq $Stampede ||
+	$hostname eq $Pleiades);
+
+    # check if went overtime
+    return if($TimeTotal < $TimeLimit);
+    
+    # number of this overtime case
+    $iOvertime++;
+    # reset time counter
+    $TimeTotal -= $TimeLimit;
+
+    # find line in final Makefile.test where to unsert a new target
+    for (my $i = 0; $i<=@Final-1; $i++){
+	next unless ($Final[$i] =~ m/^test_run:/);
+	# current line is the one with default target name
+	# append new target name at the next line
+	$Final[$i+1] .= "\ntest_run_OVERTIME$iOvertime:\n";	
+	last;
+    }
+
+    # create a new job file for overtimed tests for each compiler
+    # GNU
+    my $path = 'utility/TestScripts';
+    my @Compilers = ('gnu','intel','pgi');
+    foreach my $Comp (@Compilers){
+	my $original="$path/test_amps.$hostname.$Comp.job";
+	my $overtime="$path/test_amps.$hostname.$Comp.overtime$iOvertime.job";
+	if(-e $original){
+	    system("cp $original $overtime");
+	    my @lines = read_content("$overtime");
+	    foreach my $line (@lines){
+		$line =~ s/make test_run/make test_run_OVERTIME$iOvertime/;
+	    }
+	    &write_content($overtime, @lines);
+	}
+    }
 }
