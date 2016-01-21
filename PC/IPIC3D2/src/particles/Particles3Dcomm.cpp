@@ -297,9 +297,15 @@ if( !isTestParticle ){
 
   // set_velocity_caps()
   //
-  umax = 0.95*col->getLx()/col->getDt();
-  vmax = 0.95*col->getLy()/col->getDt();
-  wmax = 0.95*col->getLz()/col->getDt();
+  double dt0;
+  dt0 = col->getDt();
+#ifdef BATSRUS
+  // For MHD-EPIC, dt0 may be 0 for the first time step. 
+  if(dt0==0) dt0=1e-15;
+#endif
+  umax = 0.95*col->getLx()/dt0;
+  vmax = 0.95*col->getLy()/dt0;
+  wmax = 0.95*col->getLz()/dt0;
   umin = -umax;
   vmin = -vmax;
   wmin = -wmax;
