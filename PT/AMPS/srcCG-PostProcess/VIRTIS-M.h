@@ -26,7 +26,7 @@ public:
 
     class cMaskPixel {
     public:
-      bool **mask;
+      int **mask;
 
       void SetMask(int nx,int ny);
     };

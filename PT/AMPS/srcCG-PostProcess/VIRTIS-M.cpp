@@ -1,3 +1,5 @@
+//$Id$
+
 /*
  * VIRTIS-M.cpp
  *
@@ -17,8 +19,8 @@ const double cVirtisM::cBlockNucleus::dAnglePixel=AngularFieldOfView/nFieldOfVie
 void cVirtisM::cBlockNucleus::cMaskPixel::SetMask(int nx,int ny) {
   int i,j;
 
-  mask=new bool* [nx];
-  mask[0]=new bool[nx*ny];
+  mask=new int* [nx];
+  mask[0]=new int[nx*ny];
 
   for (i=1;i<nx;i++) mask[i]=mask[i-1]+ny;
 
@@ -36,6 +38,11 @@ void cVirtisM::cBlockNucleus::SetPixelLimits(int dxPix,int dyPix) {
 void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,CutCell::cTriangleFace *NucleusSurfaceFaces) {
   int i,j,idim,di,dj;
   double l[3];
+
+  //get the total number of the processors used in the calculations
+  int size,rank;
+  MPI_Comm_size(MPI_COMM_WORLD,&size);
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
   //init exis of the frame of the reference
   SpiceDouble StateRosetta[6],lt;
@@ -64,37 +71,37 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
       for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*tan(di*dAnglePixel)+e2[idim]*tan(dj*dAnglePixel);
       Vector3D::Normalize(l);
 
-
-
-      double rr[3],rl=0.0,rros=sqrt(xRosetta[0]*xRosetta[0]+xRosetta[1]*xRosetta[1]+xRosetta[2]*xRosetta[2]);
-      for (idim=0;idim<3;idim++) {
-        rr[idim]=xRosetta[idim]+rros*l[i];
-        rl+=pow(rr[idim],2);
-      }
-
-      rl=sqrt(rl);
-
-
-
       //check if the direction is intersected with the surface of the nucleus
       //determine the intersection time with the triangulated surface (if any)
-      int iStartFace,iFinishFace,iFace;
+      int iStartFace,iFinishFace,iFace,nFacesPerThread;
       double t;
 
       if (nNucleusSurfaceFaces!=0) {
-        iStartFace=0;
-        iFinishFace=nNucleusSurfaceFaces;
+        nFacesPerThread=nNucleusSurfaceFaces/size;
 
-        for (iFace=iStartFace;iFace<iFinishFace;iFace++) {
+        iStartFace=rank*nFacesPerThread;
+        iFinishFace=iStartFace+nFacesPerThread-1;
+
+        if (rank==size-1) iFinishFace=nNucleusSurfaceFaces-1;
+
+        //check intersection with the subset of the faces assigned to this processor
+        for (iFace=iStartFace;iFace<=iFinishFace;iFace++) {
           if (NucleusSurfaceFaces[iFace].RayIntersection(xRosetta,l,t,0.0)==true) {
             //there is intersection of the line of sight with the nucleus surface -> add it to the block mask
             NucleusMask.mask[i][j]=true;
+            break;
           }
         }
       }
 
     }
   }
+
+  //collect NucleusMask.mask from all processors
+  int tmpBuffer[nFieldOfViewPixels*nFieldOfViewPixels];
+
+  MPI_Allreduce(NucleusMask.mask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+  memcpy(NucleusMask.mask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels*sizeof(int));
 
   //set mask with the additional blocking pixels
   for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) VistisMask.mask[i][j]=NucleusMask.mask[i][j];
