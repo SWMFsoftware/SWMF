@@ -92,7 +92,7 @@ IMF.dat         	NameSolarWindFile
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
 
-INCLUDE
+#INCLUDE
 SATELLITES.in
 
 #MAGNETOMETER

@@ -143,7 +143,7 @@ T			DoAmr
 T			IsStrictAmr
 
 ! Satellite trajectories
-INCLUDE
+#INCLUDE
 SATELLITES.in
 
 #MAGNETOMETER
