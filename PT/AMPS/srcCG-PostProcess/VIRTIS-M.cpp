@@ -11,21 +11,9 @@
 #include "VIRTIS-M.h"
 
 //parameters of the field of view
-const double cVirtisM::cBlockNucleus::AngularFieldOfView=3.67/180.0*Pi;
-const int cVirtisM::cBlockNucleus::nFieldOfViewPixels=256;
-const double cVirtisM::cBlockNucleus::dAnglePixel=AngularFieldOfView/nFieldOfViewPixels;
-
-//set the mask matrix
-void cVirtisM::cBlockNucleus::cMaskPixel::SetMask(int nx,int ny) {
-  int i,j;
-
-  mask=new int* [nx];
-  mask[0]=new int[nx*ny];
-
-  for (i=1;i<nx;i++) mask[i]=mask[i-1]+ny;
-
-  for (i=0;i<nx;i++) for (j=0;j<ny;j++) mask[i][j]=false;
-}
+const double cVirtisM::AngularFieldOfView=3.67/180.0*Pi;
+const int cVirtisM::nFieldOfViewPixels=256;
+const double cVirtisM::dAnglePixel=AngularFieldOfView/nFieldOfViewPixels;
 
 //set the pixel limit
 void cVirtisM::cBlockNucleus::SetPixelLimits(int dxPix,int dyPix) {
@@ -33,6 +21,52 @@ void cVirtisM::cBlockNucleus::SetPixelLimits(int dxPix,int dyPix) {
   nyVirtisBlockPixelRange=dyPix;
 }
 
+
+void cVirtisM::SetFrameAxis(SpiceDouble et) {
+  SpiceDouble StateRosetta[6],lt;
+
+  //get the location of the spacecraft
+  spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateRosetta,&lt);
+  for (int i=0;i<3;i++) xRosetta[i]=1.0E3*StateRosetta[i];
+
+
+  //get the coordinate frame related to the instrument
+  int MAXBND=4;
+  int WDSIZE=32;
+
+  SpiceChar    frame  [WDSIZE];
+  SpiceChar    shape  [WDSIZE];
+
+  SpiceDouble  bounds [MAXBND][3];
+  SpiceDouble  bsight [3];
+  SpiceInt     n;
+
+  getfov_c ( -226210, MAXBND, WDSIZE, WDSIZE, shape, frame, bsight, &n, bounds );
+
+  SpiceDouble fmatrix[3][3];
+  pxform_c(frame,"67P/C-G_CK",et,fmatrix);
+
+  double e0V[3]={0.0,1.0,0.0},e1V[3]={1.0,0.0,0.0},e2V[3]={0.0,0.0,1};
+
+  mxv_c(fmatrix,e0V,e0);
+  mxv_c(fmatrix,e1V,e1);
+  mxv_c(fmatrix,e2V,e2);
+}
+
+void cVirtisM::GetNucleusPixelCoordinate(int &e0PixelNucleusCoordinate,int &e1PixelNucleusCoordinate,SpiceDouble et) {
+  double c0=0.0,c1=0.0,c2=0.0;
+  double e1PixelPosition,e0PixelPosition;
+  int idim;
+
+  SetFrameAxis(et);
+
+  for (idim=0,c0=0.0,c1=0.0;idim<3;idim++) c0-=xRosetta[idim]*e0[idim],c1-=xRosetta[idim]*e1[idim],c2-=xRosetta[idim]*e2[idim];
+
+  e0PixelNucleusCoordinate=(int)(atan(c0/c2)/dAnglePixel)+nFieldOfViewPixels/2;
+  e1PixelNucleusCoordinate=(int)(atan(c1/c2)/dAnglePixel)+nFieldOfViewPixels/2;
+
+  e0PixelNucleusCoordinate=120,e1PixelNucleusCoordinate=120;
+}
 
 //init the mask
 void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,CutCell::cTriangleFace *NucleusSurfaceFaces) {
@@ -44,32 +78,35 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
   MPI_Comm_size(MPI_COMM_WORLD,&size);
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
+
   //init exis of the frame of the reference
-  SpiceDouble StateRosetta[6],lt;
+  int imin,imax,jmin,jmax;
+  Virtis->GetNucleusPixelCoordinate(iCenter,jCenter,et);
 
-  spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateRosetta,&lt);
+  //the range of the veriation of the pixel indexes
+  imin=iCenter-nxVirtisBlockPixelRange/2;
+  if (imin<0) imin=0;
 
-  for (i=0;i<3;i++) {
-    xRosetta[i]=1.0E3*StateRosetta[i];
+  imax=iCenter+nxVirtisBlockPixelRange/2;
+  if (imax>=nFieldOfViewPixels) imax=nFieldOfViewPixels-1;
 
-    e0[i]=-xRosetta[i];
-    e1[i]=-1.0E3*StateRosetta[i+3];
-  }
+  jmin=jCenter-nyVirtisBlockPixelRange/2;
+  if (jmin<0) jmin=0;
 
-  Vector3D::Normalize(e0);
-  Vector3D::Orthogonalize(e0,e1);
-  Vector3D::Normalize(e1);
-  Vector3D::CrossProduct(e2,e0,e1);
+  jmax=jCenter+nyVirtisBlockPixelRange/2;
+  if (jmax>=nFieldOfViewPixels) jmax=nFieldOfViewPixels-1;
+
 
   //init the blocking by the nucleus
-  for (i=(nFieldOfViewPixels-nxVirtisBlockPixelRange)/2;i<(nFieldOfViewPixels+nxVirtisBlockPixelRange)/2;i++) {
-    for (j=(nFieldOfViewPixels-nyVirtisBlockPixelRange)/2;j<(nFieldOfViewPixels+nyVirtisBlockPixelRange)/2;j++) {
+  for (i=imin;i<=imax;i++) {
+    for (j=jmin;j<=jmax;j++) {
       di=i-nFieldOfViewPixels/2;
       dj=j-nFieldOfViewPixels/2;
 
       //get the pointing direction
-      for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*tan(di*dAnglePixel)+e2[idim]*tan(dj*dAnglePixel);
+      for (idim=0;idim<3;idim++) l[idim]=Virtis->e2[idim]+Virtis->e0[idim]*tan(di*dAnglePixel)+Virtis->e1[idim]*tan(dj*dAnglePixel);
       Vector3D::Normalize(l);
+      memcpy(InstrumentPointing[i][j],l,3*sizeof(double));
 
       //check if the direction is intersected with the surface of the nucleus
       //determine the intersection time with the triangulated surface (if any)
@@ -86,9 +123,9 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
 
         //check intersection with the subset of the faces assigned to this processor
         for (iFace=iStartFace;iFace<=iFinishFace;iFace++) {
-          if (NucleusSurfaceFaces[iFace].RayIntersection(xRosetta,l,t,0.0)==true) {
+          if (NucleusSurfaceFaces[iFace].RayIntersection(Virtis->xRosetta,l,t,0.0)==true) {
             //there is intersection of the line of sight with the nucleus surface -> add it to the block mask
-            NucleusMask.mask[i][j]=true;
+            NucleusMask[i][j]=true;
             break;
           }
         }
@@ -100,17 +137,17 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
   //collect NucleusMask.mask from all processors
   int tmpBuffer[nFieldOfViewPixels*nFieldOfViewPixels];
 
-  MPI_Allreduce(NucleusMask.mask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-  memcpy(NucleusMask.mask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels*sizeof(int));
+  MPI_Allreduce(NucleusMask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+  memcpy(NucleusMask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels*sizeof(int));
 
   //set mask with the additional blocking pixels
-  for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) VistisMask.mask[i][j]=NucleusMask.mask[i][j];
+  for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) VirtisMask[i][j]=NucleusMask[i][j];
 
   for (i=0;i<nFieldOfViewPixels;i++) {
     for (j=0;j<nFieldOfViewPixels;j++) {
-      if (NucleusMask.mask[i][j]==true) {
+      if (NucleusMask[i][j]==true) {
         //add additional blocking
-        for (di=-AdditionalBlockedPixels;di<AdditionalBlockedPixels;di++) VistisMask.mask[i+di][j]=true;
+        for (di=-AdditionalBlockedPixels;di<AdditionalBlockedPixels;di++) if ((i+di>=0)&&(i+di<nFieldOfViewPixels)) VirtisMask[i+di][j]=true;
       }
     }
   }
@@ -129,6 +166,37 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
   MPI_Comm_size(MPI_COMM_WORLD,&size);
 
 
+  //init exis of the frame of the reference
+  int imin,imax,jmin,jmax;
+
+  //the range of the veriation of the pixel indexes
+  imin=iCenter-nxVirtisBlockPixelRange/2;
+  if (imin<0) imin=0;
+
+  imax=iCenter+nxVirtisBlockPixelRange/2;
+  if (imax>=nFieldOfViewPixels) imax=nFieldOfViewPixels-1;
+
+  jmin=jCenter-nyVirtisBlockPixelRange/2;
+  if (jmin<0) jmin=0;
+
+  jmax=jCenter+nyVirtisBlockPixelRange/2;
+  if (jmax>=nFieldOfViewPixels) jmax=nFieldOfViewPixels-1;
+
+  //calculate the integral map
+  int jLocalMin,jLocalMax;
+  int StateVectorLength=IntegrationSet->IntegrantVectorLength();
+
+  double DataBuffer[nFieldOfViewPixels*StateVectorLength];
+  double GlobalDataBuffer[nFieldOfViewPixels*StateVectorLength];
+  double StateVector[StateVectorLength];
+
+  int nPointPerThread=(jmax-jmin+1)/size;
+
+  jLocalMin=jmin+rank*nPointPerThread;
+  jLocalMax=jLocalMin+nPointPerThread-1;
+
+  if (rank==size-1) jLocalMax=jmax-1;
+
   if (rank==0) {
     fout=fopen(fname,"w");
     fprintf(fout,"VARIABLES=\"xPixel\", \"jPixel\", \"Nucleus Projection\", \"Additional Virtis Block\" ");
@@ -138,57 +206,34 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
       IntegrationSet->PrintVariableList(fout);
     }
 
-    fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nxVirtisBlockPixelRange+1,nyVirtisBlockPixelRange);
+    fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",jmax-jmin+1,imax-imin+1);
   }
 
-  //calculate the integral map
-  int jGlobalMin=(nFieldOfViewPixels-nyVirtisBlockPixelRange)/2,jGlobalMax=(nFieldOfViewPixels+nxVirtisBlockPixelRange)/2,jLocalMin,jLocalMax;
-  int nHorizontalPoints=jGlobalMax-jGlobalMin+1;
-  int StateVectorLength=IntegrationSet->IntegrantVectorLength();
-
-  double DataBuffer[nHorizontalPoints*StateVectorLength];
-  double GlobalDataBuffer[nHorizontalPoints*StateVectorLength];
-  double StateVector[StateVectorLength];
-  int nPointPerThread=nHorizontalPoints/size;
-
-  jLocalMin=jGlobalMin+rank*nPointPerThread;
-  jLocalMax=jGlobalMin+jLocalMin+nPointPerThread-1;
-
-  if (rank==size-1) jLocalMax=jGlobalMax-1;
-
-
-  for (i=(nFieldOfViewPixels-nxVirtisBlockPixelRange)/2;i<(nFieldOfViewPixels+nxVirtisBlockPixelRange)/2;i++) {
-    for (j=0;j<nHorizontalPoints*StateVectorLength;j++) DataBuffer[j]=0.0,GlobalDataBuffer[j]=0.0;
+  for (i=imin;i<=imax;i++) {
+    for (j=0;j<nFieldOfViewPixels;j++) DataBuffer[j]=0.0,GlobalDataBuffer[j]=0.0;
 
     if (PostProcessor!=NULL) {
-      for (j=jLocalMin;j<=jLocalMax;j++) {
-        di=i-nxVirtisBlockPixelRange/2;
-        dj=j-nyVirtisBlockPixelRange/2;
-
-        //get the pointing direction
-        for (idim=0;idim<3;idim++) l[idim]=e0[idim]+e1[idim]*tan(di*dAnglePixel)+e2[idim]*tan(dj*dAnglePixel);
-
-        Vector3D::Normalize(l);
-
+      for (j=jLocalMin;i<=jLocalMax;j++) {
         //calculate the integral
-        PostProcessor->ColumnIntegral.GetCoulumnIntegral(StateVector,StateVectorLength,xRosetta,l,IntegrationSet->IntegrantVector);
+        memcpy(l,InstrumentPointing[i][j],3*sizeof(double));
+        PostProcessor->ColumnIntegral.GetCoulumnIntegral(StateVector,StateVectorLength,Virtis->xRosetta,l,IntegrationSet->IntegrantVector);
 
         //save the state vector in the data buffer
-        memcpy(DataBuffer+(j-jGlobalMin)*StateVectorLength,StateVector,StateVectorLength*sizeof(double));
+        memcpy(DataBuffer+j*StateVectorLength,StateVector,StateVectorLength*sizeof(double));
       }
 
       //collect output value of the column integral
-       MPI_Reduce(DataBuffer,GlobalDataBuffer,nHorizontalPoints*StateVectorLength,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+       MPI_Reduce(DataBuffer,GlobalDataBuffer,nFieldOfViewPixels*StateVectorLength,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
     }
 
      //output
      if (rank==0) {
-       for (j=jGlobalMin;j<=jGlobalMax;j++) {
-         fprintf(fout,"%i %i %i %i ",i,j,((NucleusMask.mask[i][j]==false) ? 1 : 0),((VistisMask.mask[i][j]==false) ? 1 : 0));
+       for (j=jmin;j<=jmax;j++) {
+         fprintf(fout,"%i %i %i %i ",i,j,((NucleusMask[i][j]==false) ? 1 : 0),((VirtisMask[i][j]==false) ? 1 : 0));
 
          if (PostProcessor!=NULL) {
-           IntegrationSet->PostProcessColumnIntegralVector(GlobalDataBuffer+(j-jGlobalMin)*StateVectorLength);
-           for (int ii=0;ii<StateVectorLength;ii++) fprintf(fout," %e ",GlobalDataBuffer[ii+(j-jGlobalMin)*StateVectorLength]);
+           IntegrationSet->PostProcessColumnIntegralVector(GlobalDataBuffer+j*StateVectorLength);
+           for (int k=0;k<StateVectorLength;k++) fprintf(fout," %e ",GlobalDataBuffer[k+j*StateVectorLength]);
          }
 
          fprintf(fout,"\n");
