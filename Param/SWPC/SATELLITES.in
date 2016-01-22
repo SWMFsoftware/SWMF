@@ -1,30 +1,290 @@
 #SATELLITE
-7			nSatellite
+72			nSatellite
 MHD time date		StringSatellite
 -1			DnOutput
-3.0			DtOutput
-Satellites/goes11.dat
+60.0			DtOutput
+sat01.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3.0			DtOutput
-Satellites/goes12.dat
+60.0			DtOutput
+sat02.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3  			DtOutput
-Satellites/lanl89.dat
+60.0			DtOutput
+sat03.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3  			DtOutput
-Satellites/lanl94.dat
+60.0			DtOutput
+sat04.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3  			DtOutput
-Satellites/lanl97.dat
+60.0			DtOutput
+sat05.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3  			DtOutput
-Satellites/lanl01.dat
+60.0			DtOutput
+sat06.dat		NameSatFile
 MHD time date		StringSatellite
 -1			DnOutput
-3  			DtOutput
-Satellites/lanl02.dat
+60.0			DtOutput
+sat07.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat08.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat09.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat10.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat11.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat12.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat13.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat14.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat15.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat16.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat17.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat18.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat19.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat20.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat21.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat22.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat23.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat24.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat25.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat26.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat27.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat28.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat29.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat30.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat31.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat32.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat33.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat34.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat35.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat36.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat37.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat38.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat39.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat40.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat41.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat42.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat43.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat44.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat45.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat46.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat47.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat48.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat49.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat50.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat51.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat52.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat53.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat54.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat55.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat56.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat57.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat58.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat59.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat60.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat61.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat62.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat63.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat64.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat65.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat66.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat67.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat68.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat69.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat70.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat71.dat		NameSatFile
+MHD time date		StringSatellite
+-1			DnOutput
+60.0			DtOutput
+sat72.dat		NameSatFile
