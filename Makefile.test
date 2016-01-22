@@ -545,6 +545,7 @@ test_swpc_rundir:
 	     ${TESTDIR}/PARAM.in_SWPC_init
 	cp ${TESTDIR}/PARAM.in_SWPC_init ${TESTDIR}/PARAM.in
 	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_restart
+	cd ${TESTDIR}; perl -e 'for ("02".."72"){`cp sat01.dat sat$$_.dat`}';
 
 test_swpc_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
