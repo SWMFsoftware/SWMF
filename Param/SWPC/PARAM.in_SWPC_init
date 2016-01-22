@@ -144,7 +144,7 @@ T			IsStrictAmr
 
 ! Satellite trajectories
 INCLUDE
-SATELLITE.in
+SATELLITES.in
 
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
