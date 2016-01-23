@@ -22,6 +22,10 @@
 #include "specfunc.h"
 #include "global.h"
 
+
+#ifndef _POST_PROCESS_3D_
+#define _POST_PROCESS_3D_
+
 #define _POST_PROCESS_MAP_SIZE_ (1<<8)
 
 class cPostProcess3D {
@@ -243,3 +247,5 @@ public:
 
   }
 };
+
+#endif //_POST_PROCESS_3D_
