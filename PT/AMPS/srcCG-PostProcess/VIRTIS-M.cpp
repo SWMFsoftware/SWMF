@@ -79,7 +79,7 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
   MPI_Comm_rank(MPI_COMM_WORLD,&rank);
 
 
-  //init exis of the frame of the reference
+  //set the limits of the search window
   int imin,imax,jmin,jmax;
   Virtis->GetNucleusPixelCoordinate(iCenter,jCenter,et);
 
@@ -95,6 +95,9 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
 
   jmax=jCenter+nyVirtisBlockPixelRange/2;
   if (jmax>=nFieldOfViewPixels) jmax=nFieldOfViewPixels-1;
+
+  //reset the nucleus block mask
+  for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) NucleusMask[i][j]=0;
 
 
   //init the blocking by the nucleus
@@ -125,7 +128,7 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
         for (iFace=iStartFace;iFace<=iFinishFace;iFace++) {
           if (NucleusSurfaceFaces[iFace].RayIntersection(Virtis->xRosetta,l,t,0.0)==true) {
             //there is intersection of the line of sight with the nucleus surface -> add it to the block mask
-            NucleusMask[i][j]=true;
+            NucleusMask[i][j]=1;
             break;
           }
         }
@@ -141,10 +144,13 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
   memcpy(NucleusMask[0],tmpBuffer,nFieldOfViewPixels*nFieldOfViewPixels*sizeof(int));
 
   //set mask with the additional blocking pixels
-  for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) VirtisMask[i][j]=NucleusMask[i][j];
+  for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) {
+    NucleusMask[i][j]=(NucleusMask[i][j]!=0) ? true : false;
+    VirtisMask[i][j]=NucleusMask[i][j];
+  }
 
-  for (i=0;i<nFieldOfViewPixels;i++) {
-    for (j=0;j<nFieldOfViewPixels;j++) {
+  for (j=0;j<nFieldOfViewPixels;j++) {
+    for (i=0;i<nFieldOfViewPixels;i++) {
       if (NucleusMask[i][j]==true) {
         //add additional blocking
         for (di=-AdditionalBlockedPixels;di<AdditionalBlockedPixels;di++) if ((i+di>=0)&&(i+di<nFieldOfViewPixels)) VirtisMask[i+di][j]=true;
