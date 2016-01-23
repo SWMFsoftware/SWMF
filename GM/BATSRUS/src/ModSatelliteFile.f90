@@ -426,6 +426,9 @@ contains
     if (DoTestMe) write(*,*) NameSub,' starting for iSat=', iSat
 
     call set_satellite_positions(iSat)
+
+    if(DoTestMe)write(*,*) NameSub,' DoTrackSatellite=', &
+         DoTrackSatellite_I(iSat)
     if(.not.DoTrackSatellite_I(iSat)) RETURN !Position is not defined
 
     call find_grid_block(XyzSat_DI(:,iSat), &
@@ -462,17 +465,25 @@ contains
 
           i = icurrent_satellite_position(iSat)
 
+          if(DoTestMe)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
+               nPointTraj_I(iSat), i, Time_Simulation, TimeSat_II(iSat,i)
+
           do while ((i < nPointTraj_I(iSat)) .and.   &
-               (TimeSat_II(iSat,i) < Time_Simulation))
+               (TimeSat_II(iSat,i) <= Time_Simulation))
              i = i + 1
           enddo
 
           icurrent_satellite_position(iSat) = i
 
+          if(DoTestMe)write(*,*) NameSub,' final iPoint=', i
+
           if (i == nPointTraj_I(iSat) .and. &
                TimeSat_II(iSat,i) <= Time_Simulation .or. i==1) then 
 
              DoTrackSatellite_I(iSat) = .false.
+             XyzSat_DI(:,iSat) = 0.0
+
+             if(DoTestMe)write(*,*) NameSub,' DoTrackSat=.false.'
 
           else
 
@@ -483,6 +494,8 @@ contains
 
              XyzSat_DI(:,iSat) = dTime * XyzSat_DII(:,iSat,i) + &
                   (1.0 - dTime) * XyzSat_DII(:,iSat,i-1) 
+
+             if(DoTestMe)write(*,*) NameSub,' XyzSat=', XyzSat_DI(:,iSat)
 
           endif
 
