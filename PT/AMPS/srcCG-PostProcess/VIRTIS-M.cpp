@@ -155,6 +155,35 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
       }
     }
   }
+
+  //calculate the limb
+  if (rank==0) {
+    FILE *fNucleus=fopen("nucleus.block.dat","w");
+    FILE *fVirtis=fopen("virtis.block.dat","w");
+
+    fprintf(fNucleus,"VARIABLES=\"xPixel\", \"jPixel\"\n");
+    fprintf(fVirtis,"VARIABLES=\"xPixel\", \"jPixel\"\n");
+
+    for (i=0;i<nFieldOfViewPixels;i++) for (j=0;j<nFieldOfViewPixels;j++) {
+      bool NucleusMaskBoundary=false,VirtisMaskBoundary=false;
+      int di,dj;
+
+      for (di=-1;di<=1;di+=2) if ((i+di>=0)&&(i+di<nFieldOfViewPixels)) {
+        for (dj=-1;dj<=1;dj+=2) if ((j+dj>=0)&&(j+dj<nFieldOfViewPixels)) {
+          if (NucleusMask[i][j]!=NucleusMask[i+di][j+dj]) NucleusMaskBoundary=true;
+          if (VirtisMask[i][j]!=VirtisMask[i+di][j+dj]) VirtisMaskBoundary=true;
+        }
+      }
+
+      if (NucleusMaskBoundary==true) fprintf(fNucleus,"%i %i\n",i,j);
+      if (VirtisMaskBoundary==true) fprintf(fVirtis,"%i %i\n",i,j);
+    }
+
+    fclose(fNucleus);
+    fclose(fVirtis);
+  }
+
+
 }
 
 //======================================================================
@@ -217,7 +246,7 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
     for (j=0;j<nFieldOfViewPixels;j++) DataBuffer[j]=0.0,GlobalDataBuffer[j]=0.0;
 
     if (PostProcessor!=NULL) {
-      for (j=jLocalMin;i<=jLocalMax;j++) {
+      for (j=jLocalMin;j<=jLocalMax;j++) {
         //calculate the integral
         memcpy(l,InstrumentPointing[i][j],3*sizeof(double));
         PostProcessor->ColumnIntegral.GetCoulumnIntegral(StateVector,StateVectorLength,Virtis->xRosetta,l,IntegrationSet->IntegrantVector);
