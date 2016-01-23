@@ -8,6 +8,7 @@
  */
 
 #include "PostProcess3D.h"
+#include "VIRTIS-M.h"
 #include "SpiceUsr.h"
 #include "DustScatteringEfficientcy.h"
 
@@ -161,6 +162,11 @@ int main(int argc,char **argv) {
   spkezr_c("SUN",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
 
 
+  cVirtisM v;
+
+  v.SetFrameAxis(et);
+
+
   for (i=0;i<3;i++) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
@@ -176,11 +182,12 @@ int main(int argc,char **argv) {
     amps.PrintVariableList();
   }
   else if (_MODE_==_DUST_MODE_) {
-    amps.LoadDataFile("pic.DUST%0.s=2.out=3.dat",".");
-    amps.PrintVariableList();
-
     //load the trajectory data file
-    std::string out="4";
+    std::string out="1";
+
+    std::string fDataFile="pic.DUST%0.s=2.out="+out+".dat";
+    amps.LoadDataFile(fDataFile.c_str(),".");
+    amps.PrintVariableList();
 
     const int nTrajectoryFiles=4;
     std::string TrajectoryFileName[nTrajectoryFiles];
@@ -255,6 +262,46 @@ int main(int argc,char **argv) {
     }
 
 
+    //==================================================================
+    //====== CORRECT VELOCITY OF THE DUST TRAJECTORIES: BEGING
+/*    if (_MODE_==_DUST_MODE_) {
+      int i,j;
+
+      for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) for (j=0;j<amps.ParticleTrajectory.IndividualTrajectories[i].nDataPoints;j++) {
+        if (amps.ParticleTrajectory.IndividualTrajectories[i].Data[j][4]>1.0) amps.ParticleTrajectory.IndividualTrajectories[i].Data[j][4]=1.0;
+      }
+    }*/
+
+/*    for (int i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) {
+      double a=2.0;
+      int n0,n1,n=amps.ParticleTrajectory.IndividualTrajectories[i].nDataPoints-1;
+      double l=0.0,t,s,v0,v1;
+
+      for (int j=1;j<amps.ParticleTrajectory.IndividualTrajectories[i].nDataPoints;j++) {
+        n0=j-1;
+        n1=j;
+
+        for (int ii=0;ii<3;ii++) l+=pow(amps.ParticleTrajectory.IndividualTrajectories[i].Data[n1][ii]-amps.ParticleTrajectory.IndividualTrajectories[i].Data[n0][ii],2);
+
+        l=sqrt(l);
+        v0=amps.ParticleTrajectory.IndividualTrajectories[i].Data[n0][4];
+        v1=amps.ParticleTrajectory.IndividualTrajectories[i].Data[n1][4];
+
+        t=(v1-v0)/a;
+        s=v0*t+a*t*t/2.0;
+
+        if (fabs((l-s)/l)>1.0E-5) {
+          std::cout << "Error: in the trajectory integration" << endl;
+        }
+      }
+    }*/
+
+
+
+    //====== CORRECT VELOCITY OF THE DUST TRAJECTORIES: END
+    //==================================================================
+
+
     //print out the limitab trajectories number 
     amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.uniform.dat");
     amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.flux.dat"); 
@@ -303,6 +350,17 @@ int main(int argc,char **argv) {
     IntegrationSet.PrintVariableList=DUST::PrintVariableList;
     IntegrationSet.PostProcessColumnIntegralVector=DUST::PostProcessColumnIntegralVector;
   }
+
+
+  //calculate the column integrals as seen by VIRTIS-M
+  cVirtisM VirtisM;
+
+  VirtisM.BlockNucleus.SetPixelLimits(200,240);
+  VirtisM.BlockNucleus.SetBlock(et,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces);
+
+  VirtisM.BlockNucleus.GetColumnIntegralMap("Virtis.map.dat",&IntegrationSet,&amps);
+
+
 
   amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
  // amps.SaveDataFile("Res.dat", amps.data);
