@@ -569,14 +569,12 @@ contains
     integer  :: i, j, k
 
     !--------------------------------------------------------------------------
+    
+    ! Initialize to zero
+    SatRayVar_I = 0.0
 
     ! Only use this if we're on the correct node.
-    if (iProc /= iProcSat_I(iSatIn)) then
-       do iDim=1,5
-          SatRayVar_I(iDim) = 0.0
-       enddo
-       RETURN
-    endif
+    if (iProc /= iProcSat_I(iSatIn)) RETURN
 
     iBLK = iBlockSat_I(iSatIn)
     if (iBLK == 0) RETURN
