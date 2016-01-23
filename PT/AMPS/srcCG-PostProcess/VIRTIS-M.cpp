@@ -64,8 +64,6 @@ void cVirtisM::GetNucleusPixelCoordinate(int &e0PixelNucleusCoordinate,int &e1Pi
 
   e0PixelNucleusCoordinate=(int)(atan(c0/c2)/dAnglePixel)+nFieldOfViewPixels/2;
   e1PixelNucleusCoordinate=(int)(atan(c1/c2)/dAnglePixel)+nFieldOfViewPixels/2;
-
-  e0PixelNucleusCoordinate=120,e1PixelNucleusCoordinate=120;
 }
 
 //init the mask
