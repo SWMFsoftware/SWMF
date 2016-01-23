@@ -206,7 +206,7 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/d
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
 
 Check=
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/amps.TrajectoryTracking.out=1.s=0.O2_PLUS.dat         \
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
 >>>output/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--output.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--output.diff
 
