@@ -32,9 +32,15 @@ class cPostProcess3D {
 public:
 
   //methods for reading and reconstruction of the output file
-  struct cCell {
+  class cCell {
+  public:
     int n[8];
     vector<int> TrajectoryPoints,IndividualTrajectories;
+    int LastTrajectoryProcessed;
+
+    cCell() {
+      LastTrajectoryProcessed=-1;
+    }
   };
 
   class cBlock {
@@ -106,7 +112,7 @@ public:
     //data for all trajectories
     std::vector<std::string> VariableList;
     int TrajectoryStartingFaceOffset;
-    int nTrajectoryVariables;
+    static int nTrajectoryVariables;
     int nTotalTrajectories;
 
     //Individual Particle Trajectory
@@ -114,6 +120,12 @@ public:
     public:
       double **Data;
       int nDataPoints;
+
+      cIndividualTrajectoryData() {
+        Data=NULL,nDataPoints=0;
+      }
+
+      void AllocateDataBuffer(int n);
     };
 
     std::vector<cIndividualTrajectoryData> IndividualTrajectories;
@@ -132,7 +144,7 @@ public:
     void PrintVariableList();
 
     cParticleTrajectory() {
-      nTotalTrajectories=0,nTrajectoryVariables=0,TrajectoryStartingFaceOffset=-1;
+      nTotalTrajectories=0,TrajectoryStartingFaceOffset=-1;
     }
 
   };

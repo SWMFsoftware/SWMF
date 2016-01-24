@@ -65,8 +65,8 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   int nvars=0,nline;
   FILE *fBinaryIn=NULL,*fBinaryOut=NULL;
 
-  //all slave processers will read the mesh only after the root processor finish reading
-  if (rank!=0) MPI_Barrier(MPI_COMM_WORLD);
+  //the slave processers open the files first
+  if (rank==0) MPI_Barrier(MPI_COMM_WORLD);
 
   //get the full name of the data file and open the file
   sprintf(FullName,"%s/%s",path,fname);
@@ -111,6 +111,8 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
     }
   }
 
+  //all processors are sincronize at this point
+  if (rank!=0) MPI_Barrier(MPI_COMM_WORLD);
 
   //read the variable line
   ifile.GetInputStr(str,sizeof(str));
@@ -147,11 +149,41 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
     for (nline=0;nline<nNodes;nline++) {
       ifile.GetInputStr(str,sizeof(str));
 
-      for (int i=0;i<nvars;i++) {
-        ifile.CutInputStr(str1,str);
-        data.data[nline][i]=atof(str1);
+      if (nline%size==rank) {
+        for (int i=0;i<nvars;i++) {
+          ifile.CutInputStr(str1,str);
+          data.data[nline][i]=atof(str1);
+        }
+      }
+      else for (int i=0;i<nvars;i++) data.data[nline][i]=0.0;
+    }
+
+    //collect data from all processors
+    int ExchangeBufferSize=(int)(20.0E6/(nvars*sizeof(double)));
+    int cnt,nline_tmpBuffer;
+    double *tmpBufferLocal=new double [ExchangeBufferSize*nvars];
+    double *tmpBufferGlobal=new double [ExchangeBufferSize*nvars];
+
+
+    for (cnt=0,nline_tmpBuffer=0,nline=0;nline<nNodes;nline++) {
+      //add new data line to the exchange buffer
+      for (int i=0;i<nvars;i++) tmpBufferLocal[i+nvars*cnt]=data.data[nline][i];
+      cnt++;
+
+      if ((cnt==ExchangeBufferSize)||(nline==nNodes-1)) {
+        //exchange the data
+        MPI_Allreduce(tmpBufferLocal,tmpBufferGlobal,cnt*nvars,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        cnt=0;
+
+        for (int k=nline_tmpBuffer;k<=nline;k++,cnt++) for (int i=0;i<nvars;i++) data.data[k][i]=tmpBufferGlobal[i+nvars*cnt];
+
+        //reset the line couter
+        cnt=0,nline_tmpBuffer=nline+1;
       }
     }
+
+    delete [] tmpBufferLocal;
+    delete [] tmpBufferGlobal;
 
     //save the binary file
     if (rank==0) fwrite(data.data[0],sizeof(double),nNodes*nvars,fBinaryOut);
@@ -199,11 +231,11 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
       for (int i=0;i<8;i++) {
         ifile.CutInputStr(str1,str);
         ConnectivityList[nline].n[i]=strtol(str1,&endptr,10);
-        Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=strtol(str1,&endptr,10)-1;
+        Block[nblock].cell[iBlock][jBlock][kBlock].n[i]=ConnectivityList[nline].n[i]-1;
       }
 
-      Block[nblock].id=nblock;
       if (rank==0) fwrite(ConnectivityList[nline].n,sizeof(int),8,fBinaryOut);
+      Block[nblock].id=nblock;
     }
     else {
       Block[nblock].id=nblock;
@@ -212,12 +244,11 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
     }
   }
 
+
   //close the binary files
   if (fBinaryIn!=NULL) fclose(fBinaryIn);
   if (fBinaryOut!=NULL) fclose(fBinaryOut);
 
-  //the root processor will read the mesh before all other processors
-  if (rank==0) MPI_Barrier(MPI_COMM_WORLD);
 
   //find xmin amd xmax and dx for each block
   int i,j,k;
