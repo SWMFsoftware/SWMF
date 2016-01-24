@@ -11,6 +11,18 @@
 #include "PostProcess3D.h"
 #include "ifileopr.h"
 
+int cPostProcess3D::cParticleTrajectory::nTrajectoryVariables=0;
+
+//allocate individual trajectory data buffer
+void cPostProcess3D::cParticleTrajectory::cIndividualTrajectoryData::AllocateDataBuffer(int n) {
+  nDataPoints=n;
+
+  if (nDataPoints!=0) {
+    Data=new double* [nDataPoints];
+    Data[0]=new double [nDataPoints*cPostProcess3D::cParticleTrajectory::nTrajectoryVariables];
+    for (int i=1;i<nDataPoints;i++) Data[i]=Data[i-1]+cPostProcess3D::cParticleTrajectory::nTrajectoryVariables;
+  }
+}
 
 //=============================================================
 //add trajectory data to the list of the trajectories
@@ -18,18 +30,12 @@ void cPostProcess3D::cParticleTrajectory::AddIndividualTrajectoryData(int& nData
   cIndividualTrajectoryData t;
   int i;
 
-  if (nDataPoints!=0) {
-    t.nDataPoints=nDataPoints;
-    t.Data=new double* [nDataPoints];
-    t.Data[0]=new double [nDataPoints*nTrajectoryVariables];
+  t.AllocateDataBuffer(nDataPoints);
+  for (i=0;i<nDataPoints*nTrajectoryVariables;i++) t.Data[0][i]=data[i];
 
-    for (i=1;i<nDataPoints;i++) t.Data[i]=t.Data[i-1]+nTrajectoryVariables;
-    for (i=0;i<nDataPoints*nTrajectoryVariables;i++) t.Data[0][i]=data[i];
-
-    //add the trajectory data
-    IndividualTrajectories.push_back(t);
-    nTotalTrajectories++;
-  }
+  //add the trajectory data
+  IndividualTrajectories.push_back(t);
+  nTotalTrajectories++;
 
   //clean the tamporaty data
   nDataPoints=0;
@@ -46,8 +52,9 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
   int nDataPoints=0;
   int nLoadedTrajectories=0,nOriginalTrajectories=nTotalTrajectories;
 
-  //all slave processers will read the mesh only after the root processor finish reading
-  if (PostProcess3D->rank!=0) MPI_Barrier(MPI_COMM_WORLD);
+
+  //the slave processers open the files first
+  if (PostProcess3D->rank==0) MPI_Barrier(MPI_COMM_WORLD);
 
   //get the full name of the data file and open the file
   sprintf(FullName,"%s/%s",path,fname);
@@ -107,27 +114,35 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
     }
   }
 
+  //all processors are sincronize at this point
+  if (PostProcess3D->rank!=0) MPI_Barrier(MPI_COMM_WORLD);
+
   //read the trajectory information
-  if (fBinaryOut!=NULL) {
+  if (fBinaryIn==NULL) {
+    bool StartFileReading=false;
+
     while (ifile.eof()==false) {
       ifile.GetInputStr(str,sizeof(str));
       ifile.CutInputStr(str1,str);
 
       if (strcmp(str1,"ZONE")==0) {
         //beginig of the new trajectory: close the previous trajectory and prepare the buffer for the new trajectory
-        if (nDataPoints!=0) {
+        if (StartFileReading==true) {
           AddIndividualTrajectoryData(nDataPoints,TrajectoryData);
           nLoadedTrajectories++;
         }
+        else StartFileReading=true;
       }
       else {
-        //the line is a trajectory point
-        for (int i=0;i<nTrajectoryVariables;i++) {
-          TrajectoryData.push_back(atof(str1));
-          ifile.CutInputStr(str1,str);
-        }
+        if (nLoadedTrajectories%PostProcess3D->size==PostProcess3D->rank) {
+          //the line is a trajectory point
+          for (int i=0;i<nTrajectoryVariables;i++) {
+            TrajectoryData.push_back(atof(str1));
+            ifile.CutInputStr(str1,str);
+          }
 
-        nDataPoints++;
+          nDataPoints++;
+        }
       }
     }
 
@@ -135,18 +150,35 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
     AddIndividualTrajectoryData(nDataPoints,TrajectoryData);
     nLoadedTrajectories++;
 
-    //save the binary file with the trajectory data
-    fwrite(&nLoadedTrajectories,sizeof(int),1,fBinaryOut);
-
-    for (int nTrajectory=0;nTrajectory<nLoadedTrajectories;nTrajectory++) {
-      int n=IndividualTrajectories[nTrajectory+nOriginalTrajectories].nDataPoints;
-      double *d=IndividualTrajectories[nTrajectory+nOriginalTrajectories].Data[0];
-
-      fwrite(&n,sizeof(int),1,fBinaryOut);
-      fwrite(d,sizeof(double),n*nTrajectoryVariables,fBinaryOut);
+    //collect the trajectory data stored on different processors
+    for (int n=0;n<nLoadedTrajectories;n++) {
+      if (n%PostProcess3D->size==PostProcess3D->rank) {
+        //send the trajectory data
+        MPI_Bcast(&IndividualTrajectories[n+nOriginalTrajectories].nDataPoints,1,MPI_INT,PostProcess3D->rank,MPI_COMM_WORLD);
+        MPI_Bcast(IndividualTrajectories[n+nOriginalTrajectories].Data[0],IndividualTrajectories[n+nOriginalTrajectories].nDataPoints*nTrajectoryVariables,MPI_DOUBLE,PostProcess3D->rank,MPI_COMM_WORLD);
+      }
+      else {
+        //recieve the trajectory data
+        MPI_Bcast(&nDataPoints,1,MPI_INT,n%PostProcess3D->size,MPI_COMM_WORLD);
+        IndividualTrajectories[n+nOriginalTrajectories].AllocateDataBuffer(nDataPoints);
+        MPI_Bcast(IndividualTrajectories[n+nOriginalTrajectories].Data[0],IndividualTrajectories[n+nOriginalTrajectories].nDataPoints*nTrajectoryVariables,MPI_DOUBLE,n%PostProcess3D->size,MPI_COMM_WORLD);
+      }
     }
 
-    fclose(fBinaryOut);
+    //save the binary file with the trajectory data
+    if (PostProcess3D->rank==0) {
+      fwrite(&nLoadedTrajectories,sizeof(int),1,fBinaryOut);
+
+      for (int nTrajectory=0;nTrajectory<nLoadedTrajectories;nTrajectory++) {
+        int n=IndividualTrajectories[nTrajectory+nOriginalTrajectories].nDataPoints;
+        double *d=IndividualTrajectories[nTrajectory+nOriginalTrajectories].Data[0];
+
+        fwrite(&n,sizeof(int),1,fBinaryOut);
+        fwrite(d,sizeof(double),n*nTrajectoryVariables,fBinaryOut);
+      }
+
+      fclose(fBinaryOut);
+    }
   }
   else {
     //read the trajectory data from a binary file
@@ -157,12 +189,10 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
 
     for (int nTrajectory=0;nTrajectory<nReadTrajectories;nTrajectory++) {
       cIndividualTrajectoryData t;
+      int nDataPoints;
 
-      fread(&t.nDataPoints,sizeof(int),1,fBinaryIn);
-      t.Data=new double* [t.nDataPoints];
-      t.Data[0]=new double [t.nDataPoints*nTrajectoryVariables];
-      for (int i=1;i<t.nDataPoints;i++) t.Data[i]=t.Data[i-1]+nTrajectoryVariables;
-
+      fread(&nDataPoints,sizeof(int),1,fBinaryIn);
+      t.AllocateDataBuffer(nDataPoints);
       fread(t.Data[0],sizeof(double),t.nDataPoints*nTrajectoryVariables,fBinaryIn);
 
       IndividualTrajectories.push_back(t);
@@ -172,9 +202,6 @@ void cPostProcess3D::cParticleTrajectory::LoadDataFile(const char *fname,const c
   //close the binary files
   if (fBinaryIn!=NULL) fclose(fBinaryIn);
   if (fBinaryOut!=NULL) fclose(fBinaryOut);
-
-  //the root processor will read the mesh before all other processors
-  if (PostProcess3D->rank==0) MPI_Barrier(MPI_COMM_WORLD);
 
   //close the trajectory data file and save the binary trajectory data
   ifile.closefile();
