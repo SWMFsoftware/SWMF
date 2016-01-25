@@ -1439,8 +1439,7 @@ test12_aniso:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
-	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1489,8 +1488,7 @@ test12_3d:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_3d_compile:
-	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
-	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=false,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
 	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1540,8 +1538,7 @@ test12_iso:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_iso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
-	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe
 	$(MAKE) SWMF
 	$(MAKE) PIDL
