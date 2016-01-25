@@ -32,13 +32,18 @@ void OutputWrapperFPP::init_output_files(
       stringstream ss;
       ss<<col->getiRegion();
       iRegion = "_region"+ss.str();
+      RestartDirName = "PC/restartOUT";
     }else{
       iRegion="";
     }
     
     output_file = SaveDirName + "/proc"   + num_proc_str + iRegion + ".hdf";
-    restart_file= SaveDirName + "/restart"+ num_proc_str + iRegion + ".hdf";
-
+    if(col->getCase()=="BATSRUS"){
+      restart_file= RestartDirName + "/restart"+ num_proc_str + iRegion + ".hdf";
+    }else{
+      restart_file= SaveDirName + "/restart"+ num_proc_str + iRegion + ".hdf";
+    }
+    
     // Initialize the output (simulation results and restart file)
     hdf5_agent.set_simulation_pointers(EMf, grid, vct, col);
 
@@ -78,9 +83,16 @@ void OutputWrapperFPP::init_output_files(
     if(col->getCallFinalize() || col->getRestartOutputCycle()>0){
 
         if (cartesian_rank == 0 && restart_status < 2) {
-  		  hdf5_agent.open(RestartDirName + "/settings.hdf");
-  		  output_mgr.output("collective + total_topology + proc_topology", 0);
-  		  hdf5_agent.close();
+	  stringstream filename;
+	  if(col->getCase()=="BATSRUS"){
+	    filename<<"/settings"<<"_region"<<col->getiRegion()<<".hdf";
+	  }else{
+	    filename<<"/settings.hdf"<<endl;
+	  }
+
+	  hdf5_agent.open(RestartDirName + filename.str());
+	  output_mgr.output("collective + total_topology + proc_topology", 0);
+	  hdf5_agent.close();
         }
 
     	if (restart_status == 0) {
@@ -115,13 +127,22 @@ void OutputWrapperFPP::append_output(const char* tag, int cycle, int sample)
 void OutputWrapperFPP::append_restart(int cycle)
 {
 #ifndef NO_HDF5
-		hdf5_agent.open_append(restart_file);
-		output_mgr.output("proc_topology ", cycle);
-		output_mgr.output("Eall + Ball + rhos + Js + pressure", cycle);
-		output_mgr.output("position + velocity + q ", cycle, 0);
-		output_mgr.output("testpartpos + testpartvel + testpartcharge", cycle, 0);
-		output_mgr.output("last_cycle", cycle);
-		hdf5_agent.close();
+  int cycle0=cycle;
+#ifdef BATSRUS
+  cycle0 = 0;
+#endif
+
+  hdf5_agent.open_append(restart_file);
+  output_mgr.output("proc_topology ", cycle0);  
+  output_mgr.output("Eall + Ball + rhos + Js + pressure", cycle0);
+  #ifdef BATSRUS
+  output_mgr.output("Bcall", cycle0);
+  output_mgr.output("pseudo_random_seed", cycle0,0);
+  #endif
+  output_mgr.output("position + velocity + q ", cycle0, 0);
+  output_mgr.output("testpartpos + testpartvel + testpartcharge", cycle0, 0);
+  output_mgr.output("last_cycle", cycle);
+  hdf5_agent.close();
 #endif
 }
 

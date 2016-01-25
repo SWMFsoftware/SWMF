@@ -428,6 +428,7 @@ protected:
 #ifdef BATSRUS
   long int idum;
   void setDt(double dtIn){dt=dtIn;}
+  long getPseudoRandomSeed(){return(idum);};
 #endif
 
 };

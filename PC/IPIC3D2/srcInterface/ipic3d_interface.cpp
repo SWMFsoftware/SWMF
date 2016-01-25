@@ -258,8 +258,6 @@ int IPIC3D_set_dt( double DtSi){
   
   for(int i = 0; i < nIPIC; i++)
     SimRun[i]->setSIDt(DtSi);
-
-  cout<<"setdt = "<<DtSi<<endl;
   return(0);
 }
 

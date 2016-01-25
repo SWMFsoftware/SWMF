@@ -2270,6 +2270,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
 
   // prepare curl of B for known term of Maxwell solver: for the source term
   grid->curlC2N(tempXN, tempYN, tempZN, Bxc, Byc, Bzc);
+
   scale(temp2X, Jxh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Y, Jyh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Z, Jzh, -FourPI / c, nxn, nyn, nzn);
@@ -2325,7 +2326,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   }
 
   // physical space -> Krylov space
-  phys2solver(bkrylov, tempX, tempY, tempZ, inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+  phys2solver(bkrylov, tempX, tempY, tempZ, inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);  
 }
 
 /*! Mapping of Maxwell image to give to solver */
@@ -3205,7 +3206,7 @@ void EMfields3D::calculateHatFunctions()
   // smoothing
   smooth(rhoc, 0);
   // calculate j hat
-
+  
   if(get_col().getCase()=="BATSRUS")
     for (int is=0; is < ns; is++){
 
@@ -3305,6 +3306,7 @@ void EMfields3D::communicateGhostP2G(int ns)
   double ***moment9 = convert_to_arr3(pZZsn[ns]);
   // add the values for the shared nodes
   // Call NonBlocking Halo Exchange + Interpolation
+
   communicateInterp(nxn, nyn, nzn, moment0, vct,this);
   communicateInterp(nxn, nyn, nzn, moment1, vct,this);
   communicateInterp(nxn, nyn, nzn, moment2, vct,this);
@@ -3457,7 +3459,7 @@ void EMfields3D::init()
   #ifdef NO_HDF5
     eprintf("restart requires compiling with HDF5");
   #else
-    col->read_field_restart(vct,grid,Bxn,Byn,Bzn,Ex,Ey,Ez,&rhons,ns);
+    col->read_field_restart(vct,grid,Bxn,Byn,Bzn,Bxc,Byc,Bzc,Ex,Ey,Ez,&rhons,ns);
 
     // communicate species densities to ghost nodes
     for (int is = 0; is < ns; is++) {
@@ -3478,10 +3480,12 @@ void EMfields3D::init()
     communicateNodeBC(nxn, nyn, nzn, Byn, col->bcBy[0],col->bcBy[1],col->bcBy[2],col->bcBy[3],col->bcBy[4],col->bcBy[5], vct, this);
     communicateNodeBC(nxn, nyn, nzn, Bzn, col->bcBz[0],col->bcBz[1],col->bcBz[2],col->bcBz[3],col->bcBz[4],col->bcBz[5], vct, this);
 
+#ifndef BATSRUS
     // initialize B on centers
     grid->interpN2C(Bxc, Bxn);
     grid->interpN2C(Byc, Byn);
     grid->interpN2C(Bzc, Bzn);
+#endif
 
     // communicate ghost
     communicateCenterBC(nxc, nyc, nzc, Bxc, col->bcBx[0],col->bcBx[1],col->bcBx[2],col->bcBx[3],col->bcBx[4],col->bcBx[5], vct,this);

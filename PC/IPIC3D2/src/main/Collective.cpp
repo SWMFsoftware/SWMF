@@ -488,8 +488,11 @@ int Collective::ReadRestart(string inputfile) {
   hid_t file_id;
   hid_t dataset_id;
   herr_t status;
+
+  stringstream ss1;
+  ss1<<"_region"<<getiRegion();
   // Open the setting file for the restart.
-  file_id = H5Fopen((inputfile + "/settings.hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  file_id = H5Fopen((inputfile + "/settings" + ss1.str() +".hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   if (file_id < 0) {
     cout << "couldn't open file: " << inputfile << endl;
     return -1;
@@ -759,8 +762,9 @@ int Collective::ReadRestart(string inputfile) {
 
 
   // read last cycle (not from settings, but from restart0.hdf)
-
-  file_id = H5Fopen((inputfile + "/restart0.hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  ss1<<"_region"<<getiRegion();
+  // Open the setting file for the restart.
+  file_id = H5Fopen((inputfile + "/restart0"+ss1.str()+".hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   if (file_id < 0) {
     cout << "couldn't open file: " << inputfile << endl;
     return -1;
@@ -784,6 +788,7 @@ void Collective::read_field_restart(
     const VCtopology3D* vct,
     const Grid* grid,
     arr3_double Bxn, arr3_double Byn, arr3_double Bzn,
+    arr3_double Bxc, arr3_double Byc, arr3_double Bzc,
     arr3_double Ex, arr3_double Ey, arr3_double Ez,
     array4_double* rhons_, int ns)const
 {
@@ -793,13 +798,18 @@ void Collective::read_field_restart(
     const int nxn = grid->getNXN();
     const int nyn = grid->getNYN();
     const int nzn = grid->getNZN();
+
+    const int nxc = grid->getNXC();
+    const int nyc = grid->getNYC();
+    const int nzc = grid->getNZC();
+
     if (vct->getCartesian_rank() == 0)
     {
       printf("LOADING EM FIELD FROM RESTART FILE in %s/restart.hdf\n",getRestartDirName().c_str());
     }
 
     stringstream ss;
-    ss << vct->getCartesian_rank();
+    ss << vct->getCartesian_rank()<<"_region"<<getiRegion();
     string name_file = getRestartDirName() + "/restart" + ss.str() + ".hdf";
 
     // hdf stuff
@@ -818,10 +828,64 @@ void Collective::read_field_restart(
 
     //find the last cycle
     int lastcycle=0;
-    dataset_id = H5Dopen2(file_id, "/last_cycle", H5P_DEFAULT); // HDF 1.8.8
-    status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &lastcycle);
+
+    if(Case!="BATSRUS"){
+      dataset_id = H5Dopen2(file_id, "/last_cycle", H5P_DEFAULT); // HDF 1.8.8
+      status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &lastcycle);
+      status = H5Dclose(dataset_id);
+    }
+
+
+#ifdef BATSRUS    
+    {
+    // Bxc
+    ss.str("");ss << "/fields/Bxc/cycle_" << lastcycle;
+    dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
+    datatype = H5Dget_type(dataset_id);
+    size = H5Tget_size(datatype);
+    dataspace = H5Dget_space(dataset_id);
+    status_n = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
+
+    double* temp_storage = new double[dims_out[0] * dims_out[1] * dims_out[2]];
+    status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, temp_storage);
+    int k = 0;
+    for (int i = 1; i < nxc - 1; i++)
+      for (int j = 1; j < nyc - 1; j++)
+        for (int jj = 1; jj < nzc - 1; jj++)
+          Bxc[i][j][jj] = temp_storage[k++];
+    
     status = H5Dclose(dataset_id);
 
+    // Byc
+    ss.str("");ss << "/fields/Byc/cycle_" << lastcycle;
+    dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
+    status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, temp_storage);
+    k = 0;
+    for (int i = 1; i < nxc - 1; i++)
+      for (int j = 1; j < nyc - 1; j++)
+        for (int jj = 1; jj < nzc - 1; jj++)
+          Byc[i][j][jj] = temp_storage[k++];
+
+    status = H5Dclose(dataset_id);
+
+    // Bzc
+    ss.str("");ss << "/fields/Bzc/cycle_" << lastcycle;
+    dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
+    status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, temp_storage);
+    k = 0;
+    for (int i = 1; i < nxc - 1; i++)
+      for (int j = 1; j < nyc - 1; j++)
+        for (int jj = 1; jj < nzc - 1; jj++)
+          Bzc[i][j][jj] = temp_storage[k++];
+
+    status = H5Dclose(dataset_id);
+    
+    // going form cell based to node based values     
+    delete[] temp_storage;
+    }
+#endif
+
+    
     // Bxn
     ss.str("");ss << "/fields/Bx/cycle_" << lastcycle;
     dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
@@ -830,7 +894,7 @@ void Collective::read_field_restart(
     dataspace = H5Dget_space(dataset_id);
     status_n = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
 
-    double *temp_storage = new double[dims_out[0] * dims_out[1] * dims_out[2]];
+    double* temp_storage = new double[dims_out[0] * dims_out[1] * dims_out[2]];
     status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, temp_storage);
     int k = 0;
     for (int i = 1; i < nxn - 1; i++)
@@ -866,7 +930,7 @@ void Collective::read_field_restart(
 
     status = H5Dclose(dataset_id);
 
-
+    
     // Ex
     ss.str("");ss << "/fields/Ex/cycle_" << lastcycle;
     dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
@@ -936,7 +1000,8 @@ void Collective::read_particles_restart(
     vector_double& x,
     vector_double& y,
     vector_double& z,
-    vector_double& t)const
+    vector_double& t,
+    long &idum)const
 {
 #ifdef NO_HDF5
   eprintf("Require HDF5 to read from restart file.");
@@ -947,7 +1012,7 @@ void Collective::read_particles_restart(
         getRestartDirName().c_str());
     }
     stringstream ss;
-    ss << vct->getCartesian_rank();
+    ss << vct->getCartesian_rank()<<"_region"<<getiRegion();
     string name_file = getRestartDirName() + "/restart" + ss.str() + ".hdf";
     // hdf stuff
     hid_t file_id, dataspace;
@@ -969,9 +1034,11 @@ void Collective::read_particles_restart(
 
     //find the last cycle
     int lastcycle=0;
-    dataset_id = H5Dopen2(file_id, "/last_cycle", H5P_DEFAULT); // HDF 1.8.8
-    status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &lastcycle);
-    status = H5Dclose(dataset_id);
+    if(Case != "BATSRUS"){
+      dataset_id = H5Dopen2(file_id, "/last_cycle", H5P_DEFAULT); // HDF 1.8.8
+      status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &lastcycle);
+      status = H5Dclose(dataset_id);
+    }
 
     stringstream species_name;
     species_name << species_number;
@@ -1053,6 +1120,15 @@ void Collective::read_particles_restart(
     status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &q[0]);
     status = H5Dclose(dataset_id);
 
+    idum=0;
+#ifdef BATSRUS 
+    // get idum, pseudo random seed
+    ss.str(""); ss<< "/particles/species_" << species_number << "/pseudo_random_seed";
+    dataset_id = H5Dopen(file_id, ss.str().c_str(), H5P_DEFAULT);  // HDF 1.8.8
+    status = H5Dread(dataset_id, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT,&idum);
+    status = H5Dclose(dataset_id);
+#endif
+
     // get ID
     if (false) {//TrackParticleID
 		ss.str("");ss << "/particles/species_" << species_number << "/ID/cycle_" << lastcycle;
@@ -1060,7 +1136,7 @@ void Collective::read_particles_restart(
 		status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, &t[0]);
 		status = H5Dclose(dataset_id);
     }
-
+    
     status = H5Fclose(file_id);
 #endif
 }
@@ -1592,7 +1668,6 @@ void Collective::FinilizeInit(){
       //cout << "max uth[" << is << "] = " << uth[is] <<endl;
     }
 
-  cout<<"dt = "<<getFluidDt()<<endl;
   if(RESTART1 && getFluidDt() == 0.0) setNormDt(dt);
   else dt  = getFluidDt();
 

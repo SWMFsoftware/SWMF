@@ -280,6 +280,10 @@ if( !isTestParticle ){
   
   assert_eq(sizeof(SpeciesParticle),64);
 
+#ifdef BATSRUS
+  idum = (long) vct->getCartesian_rank() + 1024*ns;
+#endif
+  
   // if RESTART is true initialize the particle in allocate method
   restart = col->getRestart_status();
   if (restart != 0)
@@ -290,7 +294,7 @@ if( !isTestParticle ){
     int species_number = get_species_num();
     // prepare arrays to receive particles
     particleType = ParticleType::SoA;
-    col->read_particles_restart(vct, species_number,u, v, w, q, x, y, z, t);
+    col->read_particles_restart(vct, species_number,u, v, w, q, x, y, z, t,idum);
     convertParticlesToAoS();
   #endif
   }
@@ -314,12 +318,7 @@ if( !isTestParticle ){
   {
     printf("species %d velocity cap: umax=%g,vmax=%g,wmax=%g\n",
       ns, umax,vmax,wmax);
-  }
-
-#ifdef BATSRUS
-  idum = (long) vct->getCartesian_rank() + 1024*ns;
-#endif
-  
+  }  
 }
 
 // pad capacities so that aligned vectorization

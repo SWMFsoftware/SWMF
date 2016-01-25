@@ -1815,7 +1815,7 @@ class InterfaceFluid
 
 
   void setiRegion(int i){iRegion = i;}
-  int getiRegion(){return(iRegion);}
+  int getiRegion()const{return(iRegion);}
   
   int getnDim(){return(INdim);}
 

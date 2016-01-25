@@ -444,6 +444,12 @@ public:
       delete[]coord;
     }
 
+    if (tag.find("Bcall", 0) != string::npos) {
+      this->output_adaptor.write("/fields/Bxc/cycle_" + cc.str(), PSK::Dimens(_grid->getNXC() - 2, _grid->getNYC() - 2, _grid->getNZC() - 2), _field->getBxc());
+      this->output_adaptor.write("/fields/Byc/cycle_" + cc.str(), PSK::Dimens(_grid->getNXC() - 2, _grid->getNYC() - 2, _grid->getNZC() - 2), _field->getByc());
+      this->output_adaptor.write("/fields/Bzc/cycle_" + cc.str(), PSK::Dimens(_grid->getNXC() - 2, _grid->getNYC() - 2, _grid->getNZC() - 2), _field->getBzc());
+    }
+    
     // Bfield is written without ghost cells and defined in nodes
     if (tag.find("Ball", 0) != string::npos) {
       this->output_adaptor.write("/fields/Bx/cycle_" + cc.str(), PSK::Dimens(_grid->getNXN() - 2, _grid->getNYN() - 2, _grid->getNZN() - 2), _field->getBxTot());//_field->getBx()
@@ -487,9 +493,6 @@ public:
     if (tag.find("phi", 0) != string::npos) {
       this->output_adaptor.write("/potentials/phi/cycle_" + cc.str(), PSK::Dimens(_grid->getNXC() - 2, _grid->getNYC() - 2, _grid->getNZC() - 2), _field->getPHI());
     }
-
-
-
 
     // J (current density) is written without ghost cells and defined in nodes
     if (tag.find("Jall", 0) != string::npos) {
@@ -623,6 +626,16 @@ public:
     const int ns = _col->getNs();
     const int nstestpart = _col->getNsTestPart();
 
+    /* Store the seed for the random number generator to be able to 
+       reproduce the same distribution on ghost particles*/
+    if (tag.find("pseudo_random_seed",0) != string::npos){
+      for ( int i=0; i<ns; ++i ){
+        stringstream ii;
+        ii << i;
+        this->output_adaptor.write ("/particles/species_"+ii.str()+"/pseudo_random_seed",_part[i]->getPseudoRandomSeed());
+      }    
+    }    
+    
     // Particle position
     if (tag.find("position", 0) != string::npos & sample == 0) {
       for (int i = 0; i < ns; ++i) {

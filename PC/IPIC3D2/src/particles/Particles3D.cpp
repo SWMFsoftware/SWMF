@@ -193,7 +193,7 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 	v = 0;
 	w = 0;
 	//while(iSample==0 || u*u+v*v+w*w>1.0){
-	// Set particle velocity	
+	// Set particle velocity
 	MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);
 	++iSample;
 	//}
@@ -349,7 +349,6 @@ void Particles3D::set_fluid_BC()
 	for(int j = jBegin[iDir]; j<=jEnd[iDir]; ++j)
 	  for (int k = kBegin[iDir]; k<=kEnd[iDir]; ++k){
 	    MaxwellianFromFluidCell(i,j,k);
-	    cout<<" i = "<<i<<" j = "<<j<<" k = "<<k<<endl;
 	  }
     } // if apply_fluidBC
   } // for iDir
@@ -1855,7 +1854,7 @@ void Particles3D::repopulate_particles()
     int zend = nzc-2;
     if (repopulateXleft)
     {
-      cout << "*** Repopulate Xleft species " << ns << " ***" << endl;
+      //cout << "*** Repopulate Xleft species " << ns << " ***" << endl;
       for (int i=1; i<= num_layers; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
@@ -1873,7 +1872,7 @@ void Particles3D::repopulate_particles()
     }
     if (repopulateXrght)
     {
-      cout << "*** Repopulate Xright species " << ns << " ***" << endl;
+      //cout << "*** Repopulate Xright species " << ns << " ***" << endl;
       for (int i=upXstart; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
@@ -1913,7 +1912,7 @@ void Particles3D::repopulate_particles()
 	  }
       }
 
-      cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
+      //cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=1; j<=num_layers; j++)
       for (int k=zbeg; k<=zend; k++)
@@ -1947,7 +1946,7 @@ void Particles3D::repopulate_particles()
 	    }
 	}
       
-      cout << "*** Repopulate Yright species " << ns << " ***" << endl;
+	//cout << "*** Repopulate Yright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=upYstart; j<=yend; j++)
       for (int k=zbeg; k<=zend; k++)
@@ -1981,7 +1980,7 @@ void Particles3D::repopulate_particles()
 	  }
       }
 
-      //   cout << "*** Repopulate Zleft species " << ns << " ***" << endl;
+      //cout << "*** Repopulate Zleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=1; k<=num_layers; k++)
@@ -2012,7 +2011,7 @@ void Particles3D::repopulate_particles()
 		pidx++;
 	    }
       }
-      //   cout << "*** Repopulate Zright species " << ns << " ***" << endl;
+      //cout << "*** Repopulate Zright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
       for (int k=upZstart; k<=zend; k++)
@@ -2034,9 +2033,9 @@ void Particles3D::repopulate_particles()
 
   //dprintf("change in # particles: %d - %d + %d = %d",nop_orig, nop_deleted, nop_created, nop_final);
 
-  //if (vct->getCartesian_rank()==0){
-  //  cout << "*** number of particles " << getNOP() << " ***" << endl;
-  //}
+  if (vct->getCartesian_rank()==0){
+    cout << "*** number of particles " << getNOP() << " ***" << endl;
+  }
 }
 
 // Open BC for particles: duplicate particles on the boundary,.

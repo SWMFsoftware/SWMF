@@ -482,7 +482,9 @@ bool c_Solver::ParticlesMover()
 void c_Solver::WriteOutput(int cycle) {
 
   WriteConserved(cycle);
-  WriteRestart(cycle);
+
+  // For MHD-EPIC, restart is controlled by coupler.
+  if(col->getCase()!="BATSRUS") WriteRestart(cycle);
 
   if(!Parameters::get_doWriteOutput())  return;
 
@@ -596,7 +598,7 @@ void c_Solver::WriteOutput(int cycle) {
 void c_Solver::WriteRestart(int cycle)
 {
 #ifndef NO_HDF5
-  if (restart_cycle>0 && cycle%restart_cycle==0){
+  if ((restart_cycle>0 && cycle%restart_cycle==0) || col->getCase()=="BATSRUS"){
 	  convertParticlesToSynched();
 	  fetch_outputWrapperFPP().append_restart(cycle);
   }
