@@ -18,6 +18,8 @@
 #include "meshAMRcutcell.h"
 #include "PostProcess3D.h"
 
+#include <omp.h>
+
 class cVirtisM {
 public:
 

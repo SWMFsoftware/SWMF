@@ -99,6 +99,7 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
 
 
   //init the blocking by the nucleus
+//#pragma omp parallel for
   for (i=imin;i<=imax;i++) {
     for (j=jmin;j<=jmax;j++) {
       di=i-nFieldOfViewPixels/2;
