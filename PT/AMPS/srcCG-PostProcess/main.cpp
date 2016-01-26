@@ -16,20 +16,8 @@
 #include "SpiceUsr.h"
 #include "DustScatteringEfficientcy.h"
 
-
-#define _DUST_MODE_  0
-#define _GAS_MODE_   1
-
-#define _DUST_CASE__1SPEC_1GROUP_   0
-#define _DUST_CASE__4SPEC_1GROUP_   1
-#define _DUST_CASE__1SPEC_10GROUP_  2
-#define _DUST_CASE__4SPEC_10GROUP_  4
-
-//#define _MODE_ _GAS_MODE_
-#define _MODE_  _DUST_MODE_
-#define _DUST_CASE_ _DUST_CASE__1SPEC_1GROUP_
-
-std::string OutputNumber="6";
+#include "config.dfn"
+#include "config.h"
 
 //header of the functions for calculating of the dust scattering efficientcy
 
@@ -71,7 +59,7 @@ namespace GAS {
     for (i=0;i<8;i++) {
       data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][6];
 
-      data[1]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][38];
+      data[1]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][38]/2.99151E-26;
       data[2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][42];
     }
   }
@@ -92,6 +80,30 @@ namespace DUST {
   cVariablePair VariablePair[]={
       {48,0.5*(1.000000E-07+1.000000E-04)}
   };
+#elif _DUST_CASE_ == _DUST_CASE__4SPEC_1GROUP_
+  int nRadii=1;
+  int MeanDensityOffset=46;
+
+  cVariablePair VariablePair[]={
+      {51,0.5*(1.000000E-07+1.000000E-04)}
+  };
+#elif _DUST_CASE_ == _DUST_CASE__1SPEC_10GROUP_
+  int nRadii=10;
+
+  int MeanDensityOffset=43;
+
+  cVariablePair VariablePair[]={
+        {48,0.5*(1.000000E-07+1.995262E-07)},
+        {53,0.5*(1.995262E-07+3.981072E-07)},
+        {58,0.5*(3.981072E-07+7.943282E-07)},
+        {63,0.5*(7.943282E-07+1.584893E-06)},
+        {68,0.5*(1.584893E-06+3.162278E-06)},
+        {73,0.5*(3.162278E-06+6.309573E-06)},
+        {78,0.5*(6.309573E-06+1.258925E-05)},
+        {83,0.5*(1.258925E-05+2.511886E-05)},
+        {88,0.5*(2.511886E-05+5.011872E-05)},
+        {93,0.5*(5.011872E-05+1.000000E-04)}
+    };
 #elif _DUST_CASE_ == _DUST_CASE__4SPEC_10GROUP_
   int nRadii=10;
 
@@ -203,23 +215,29 @@ int main(int argc,char **argv) {
 
 
   if (_MODE_==_GAS_MODE_) {
-    amps.LoadDataFile("pic.H2O.s=0.out=10.dat",".");
+    std::string out,DataFileName;
+    std::stringstream t;
+
+    t << _OUTPUT_FILE_NUMBER_;
+    out=t.str();
+
+    DataFileName="pic.H2O.s=0.out="+out+".dat";
+
+    amps.LoadDataFile(DataFileName.c_str(),".");
     amps.PrintVariableList();
   }
   else if (_MODE_==_DUST_MODE_) {
+    std::string TrajectoryFileName[_DUST_SPEC_NUMBER_];
+    std::string s,out;
+    std::stringstream t;
 
-    const int nTrajectoryFiles=1;
-    std::string out="6";
+    t << _OUTPUT_FILE_NUMBER_;
+    out=t.str();
 
-    const int nTrajectoryFileMax=10;
-    std::string TrajectoryFileName[nTrajectoryFileMax];
-
-    for (int i=0;i<nTrajectoryFileMax;i++) {
-      std::string s;
-      std::stringstream t;
-
-      t << 2+i;
+    for (int i=0;i<_DUST_SPEC_NUMBER_;i++) {
+      t << _GAS_SPEC_NUMBER_+i;
       s=t.str();
+
       TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%0.dat";
     }
 
@@ -236,7 +254,7 @@ int main(int argc,char **argv) {
     char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=0.H2O.dat"
     };*/
 
-    for (int i=0;i<nTrajectoryFiles;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
+    for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
     amps.ParticleTrajectory.PrintVariableList();
     amps.AssignParticleTrajectoriesToCells();
 
