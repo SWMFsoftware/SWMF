@@ -7,6 +7,10 @@
  *      Author: vtenishe
  */
 
+#include <string>       // std::string
+#include <iostream>     // std::cout
+#include <sstream>
+
 #include "PostProcess3D.h"
 #include "VIRTIS-M.h"
 #include "SpiceUsr.h"
@@ -16,9 +20,16 @@
 #define _DUST_MODE_  0
 #define _GAS_MODE_   1
 
+#define _DUST_CASE__1SPEC_1GROUP_   0
+#define _DUST_CASE__4SPEC_1GROUP_   1
+#define _DUST_CASE__1SPEC_10GROUP_  2
+#define _DUST_CASE__4SPEC_10GROUP_  4
+
 //#define _MODE_ _GAS_MODE_
 #define _MODE_  _DUST_MODE_
+#define _DUST_CASE_ _DUST_CASE__1SPEC_1GROUP_
 
+std::string OutputNumber="6";
 
 //header of the functions for calculating of the dust scattering efficientcy
 
@@ -69,25 +80,40 @@ namespace GAS {
 }
 
 namespace DUST {
-  int nRadii=10;
-
   struct cVariablePair {
     int nVar;
     double GrainRadius;
   };
 
+#if _DUST_CASE_ == _DUST_CASE__1SPEC_1GROUP_
+  int nRadii=1;
+  int MeanDensityOffset=43;
+
   cVariablePair VariablePair[]={
-      {51,0.5*(1.000000E-07+1.995262E-07)},
-      {56,0.5*(1.995262E-07+3.981072E-07)},
-      {61,0.5*(3.981072E-07+7.943282E-07)},
-      {66,0.5*(7.943282E-07+1.584893E-06)},
-      {71,0.5*(1.584893E-06+3.162278E-06)},
-      {76,0.5*(3.162278E-06+6.309573E-06)},
-      {81,0.5*(6.309573E-06+1.258925E-05)},
-      {86,0.5*(1.258925E-05+2.511886E-05)},
-      {91,0.5*(2.511886E-05+5.011872E-05)},
-      {96,0.5*(5.011872E-05+1.000000E-04)}
+      {48,0.5*(1.000000E-07+1.000000E-04)}
   };
+#elif _DUST_CASE_ == _DUST_CASE__4SPEC_10GROUP_
+  int nRadii=10;
+
+  int MeanDensityOffset=46;
+
+  cVariablePair VariablePair[]={
+        {51,0.5*(1.000000E-07+1.995262E-07)},
+        {56,0.5*(1.995262E-07+3.981072E-07)},
+        {61,0.5*(3.981072E-07+7.943282E-07)},
+        {66,0.5*(7.943282E-07+1.584893E-06)},
+        {71,0.5*(1.584893E-06+3.162278E-06)},
+        {76,0.5*(3.162278E-06+6.309573E-06)},
+        {81,0.5*(6.309573E-06+1.258925E-05)},
+        {86,0.5*(1.258925E-05+2.511886E-05)},
+        {91,0.5*(2.511886E-05+5.011872E-05)},
+        {96,0.5*(5.011872E-05+1.000000E-04)}
+    };
+#else
+#error "Dont know what is that"
+#endif
+
+
 
   int IntegrantVectorLength() {return 5+3*nRadii;}
 
@@ -116,8 +142,8 @@ namespace DUST {
     for (i=0;i<IntegrantVectorLength();i++) data[i]=0.0;
 
     for (i=0;i<8;i++) {
-      data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46];
-      data[4]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][46]*amps.data.data[Stencil.Node[i]][50];
+      data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][MeanDensityOffset];
+      data[4]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][MeanDensityOffset]*amps.data.data[Stencil.Node[i]][4+MeanDensityOffset];
     }
 
     //get the number of the trajectories
@@ -149,6 +175,10 @@ namespace DUST {
 
 int main(int argc,char **argv) {
 
+
+  amps.InitMPI();
+  amps.SetBlockSize(5,5,5);
+
   const char SimulationStartTimeString[]="2015-04-12T07:14:00";
 
   //init SPICE
@@ -161,12 +191,6 @@ int main(int argc,char **argv) {
   spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateRosetta,&lt);
   spkezr_c("SUN",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
 
-
-  cVirtisM v;
-
-  v.SetFrameAxis(et);
-
-
   for (i=0;i<3;i++) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
@@ -174,29 +198,35 @@ int main(int argc,char **argv) {
   }
 
 
-  amps.InitMPI();
-  amps.SetBlockSize(5,5,5);
+  std::cout << "Heliocentric Distance " << sqrt(StateSun[0]*StateSun[0]+StateSun[1]*StateSun[1]+StateSun[2]*StateSun[2])*1.0E3/_AU_ << std::endl;
+
+
 
   if (_MODE_==_GAS_MODE_) {
     amps.LoadDataFile("pic.H2O.s=0.out=10.dat",".");
     amps.PrintVariableList();
   }
   else if (_MODE_==_DUST_MODE_) {
-    //load the trajectory data file
-    std::string out="1";
 
+    const int nTrajectoryFiles=1;
+    std::string out="6";
+
+    const int nTrajectoryFileMax=10;
+    std::string TrajectoryFileName[nTrajectoryFileMax];
+
+    for (int i=0;i<nTrajectoryFileMax;i++) {
+      std::string s;
+      std::stringstream t;
+
+      t << 2+i;
+      s=t.str();
+      TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%0.dat";
+    }
+
+    //load the trajectory data file
     std::string fDataFile="pic.DUST%0.s=2.out="+out+".dat";
     amps.LoadDataFile(fDataFile.c_str(),".");
     amps.PrintVariableList();
-
-    const int nTrajectoryFiles=4;
-    std::string TrajectoryFileName[nTrajectoryFiles];
-
-    TrajectoryFileName[0]="amps.TrajectoryTracking.out="+out+".s=2.DUST%0.dat";
-    TrajectoryFileName[1]="amps.TrajectoryTracking.out="+out+".s=3.DUST%1.dat";
-    TrajectoryFileName[2]="amps.TrajectoryTracking.out="+out+".s=4.DUST%2.dat";
-    TrajectoryFileName[3]="amps.TrajectoryTracking.out="+out+".s=5.DUST%3.dat";
-
 
 /*    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=2.s=2.DUST%0.dat","amps.TrajectoryTracking.out=2.s=3.DUST%1.dat",
         "amps.TrajectoryTracking.out=2.s=4.DUST%2.dat","amps.TrajectoryTracking.out=2.s=5.DUST%3.dat"
