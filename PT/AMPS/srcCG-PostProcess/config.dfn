@@ -1,0 +1,18 @@
+//the dust model cases
+#define _DUST_CASE__1SPEC_1GROUP_   0
+#define _DUST_CASE__1SPEC_10GROUP_  1
+#define _DUST_CASE__4SPEC_1GROUP_   2
+#define _DUST_CASE__4SPEC_10GROUP_  3
+
+//the gas or dust mode
+#define _DUST_MODE_  0
+#define _GAS_MODE_   1
+
+//the default values of the reader 
+#define _DUST_SPEC_NUMBER_   2
+#define _DUST_GROUP_NUMBER_  1
+#define _GAS_SPEC_NUMBER_    2
+#define _OUTPUT_FILE_NUMBER_ 1
+
+#define _MODE_ _DUST_MODE_
+
