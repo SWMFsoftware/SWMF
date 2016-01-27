@@ -27,6 +27,9 @@
 //post-processing object
 cPostProcess3D amps;
 
+//location of the Sun in the frame of reference related to the surface model
+double xSun[3];
+
 //acceptance probability of a particle trajectory when printed into a file
 double AcceptParticleTrajectory(int nTrajectory) { 
   return amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][8]/amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][4]; 
@@ -41,6 +44,44 @@ struct cColumnIntegrationSet {
   void (*PostProcessColumnIntegralVector)(double*);
 };
 
+
+//=================================================
+//print the surface additional data
+namespace SURFACE {
+  void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\""); }
+  int GetVariableNumber() {return 2;}
+
+  void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
+    bool shadow=false;
+    double cosSolarZenithAngle;
+    double xCenter[3],*Normal,r2,l[3],t;
+    int i;
+
+    face->GetCenterPosition(xCenter);
+    Normal=face->ExternalNormal;
+
+    //get the solar zenith angle
+    for (i=0,r2=0.0,cosSolarZenithAngle=0.0;i<3;i++) {
+      l[i]=xSun[i]-xCenter[i];
+
+      r2+=pow(l[i],2),cosSolarZenithAngle+=l[i]*Normal[i];
+    }
+
+    cosSolarZenithAngle/=sqrt(r2);
+
+    //determine whether the face is in a shadow
+    if (cosSolarZenithAngle<=0.0) shadow=true;
+    else for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) if (i!=nface) {
+      if (CutCell::BoundaryTriangleFaces[i].RayIntersection(xCenter,l,t,0.0)==true) if (t>0.0) {
+        shadow=true;
+        break;
+      }
+    }
+
+    DataVector[0]=(shadow==false) ? 1 : 0;
+    DataVector[1]=cosSolarZenithAngle;
+  }
+}
 
 //=================================================
 //processing of the dust output file
@@ -207,6 +248,7 @@ int main(int argc,char **argv) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
     xSecondary[i]=1.0E3*StateSun[i];
+    xSun[i]=StateSun[i];
   }
 
 
@@ -375,13 +417,14 @@ int main(int argc,char **argv) {
 
   //load the nucleus mesh
   CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
-  amps.ParticleTrajectory.PrintSurfaceData("surface.dat");
+  amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
 
 //  for (int n=0;n<amps.data.nNodes;n++) amps.data.data[n][38]=sqrt(pow(amps.data.data[n][0],2)+pow(amps.data.data[n][1],2)+pow(amps.data.data[n][2],2));
 
 
-
+  //output surface data
+  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
 
   //process the gas output file
   cPostProcess3D::cColumnIntegral::cColumnIntegrationSet IntegrationSet;
