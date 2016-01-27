@@ -60,7 +60,7 @@ test_ipic3d:
 	$(MAKE) test_ipic3d_check
 
 test_ipic3d_compile:
-	./Config.pl -npx=2 -npy=2 -npz=1 -periodicx=true -periodicY=false -periodicZ=true -ng=3 -pseudrand=true 
+	./Config.pl -ng=1
 	$(MAKE) IPIC3D
 
 test_ipic3d_rundir:
