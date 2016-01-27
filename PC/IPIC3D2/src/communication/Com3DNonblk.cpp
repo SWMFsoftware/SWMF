@@ -112,18 +112,19 @@ void NBDerivedHaloComm(int nx, int ny, int nz, double ***vector,const VirtualTop
     if(sendcnt>0){
         MPI_Waitall(sendcnt,  &reqList[0], &stat[0]);
         bool stopFlag = false;
-        for(int si=0;si< sendcnt;si++){
-            int error_code = stat[si].MPI_ERROR;
-            if (error_code != MPI_SUCCESS) {
-                stopFlag = true;
-                char error_string[100];
-                int length_of_error_string, error_class;
-
-                MPI_Error_class(error_code, &error_class);
-                MPI_Error_string(error_class, error_string, &length_of_error_string);
-                dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
-            }
-        }
+	// The following code is useful for debug, but error_code
+	// will be always a random number on Pleiades (with mpt).            
+        // for(int si=0;si< sendcnt;si++){
+	//   int error_code = stat[si].MPI_ERROR;
+	// if (error_code != MPI_SUCCESS) {
+	//     stopFlag = true;
+	//     char error_string[100];
+	//     int length_of_error_string, error_class;		
+	//     MPI_Error_class(error_code, &error_class);
+	//     MPI_Error_string(error_class, error_string, &length_of_error_string);
+	//     dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
+	// }	
+        //}
         if(stopFlag) exit (EXIT_FAILURE);
     }
 
@@ -338,18 +339,21 @@ void NBDerivedHaloComm(int nx, int ny, int nz, double ***vector,const VirtualTop
 		if(sendcnt>0){
 			MPI_Waitall(sendcnt,&reqList[0],&stat[0]);
 			bool stopFlag = false;
-			for(int si=0;si< sendcnt;si++){
-				int error_code = stat[si].MPI_ERROR;
-				if (error_code != MPI_SUCCESS) {
-					stopFlag = true;
-					char error_string[100];
-					int length_of_error_string, error_class;
+			// The following code is useful for debug, but error_code
+			// will be always a random number on Pleiades (with mpt). 
+			// for(int si=0;si< sendcnt;si++){
+			// 	int error_code = stat[si].MPI_ERROR;
+			// 	if (error_code != MPI_SUCCESS) {
+			// 		stopFlag = true;
+			// 		char error_string[100];
+			// 		int length_of_error_string, error_class;
 
-					MPI_Error_class(error_code, &error_class);
-					MPI_Error_string(error_class, error_string, &length_of_error_string);
-					dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
-				}
-			}
+			// 		MPI_Error_class(error_code, &error_class);
+			// 		MPI_Error_string(error_class, error_string, &length_of_error_string);
+			// 		dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
+			// 	}
+			// }
+
 			if(stopFlag) exit (EXIT_FAILURE);;
 		}
 
@@ -445,18 +449,19 @@ void NBDerivedHaloComm(int nx, int ny, int nz, double ***vector,const VirtualTop
 		if(sendcnt>0){
 			MPI_Waitall(sendcnt,  &reqList[0], &stat[0]);
 			bool stopFlag = false;
-			for(int si=0;si< sendcnt;si++){
-				int error_code = stat[si].MPI_ERROR;
-				if (error_code != MPI_SUCCESS) {
-					stopFlag = true;
-					char error_string[100];
-					int length_of_error_string, error_class;
+			// for(int si=0;si< sendcnt;si++){
+			// 	int error_code = stat[si].MPI_ERROR;
+			// 	if (error_code != MPI_SUCCESS) {
+			// 		stopFlag = true;
+			// 		char error_string[100];
+			// 		int length_of_error_string, error_class;
 
-					MPI_Error_class(error_code, &error_class);
-					MPI_Error_string(error_class, error_string, &length_of_error_string);
-					dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
-				}
-			}
+			// 		MPI_Error_class(error_code, &error_class);
+			// 		MPI_Error_string(error_class, error_string, &length_of_error_string);
+			// 		dprintf("MPI_Waitall error at %d  %s\n",si, error_string);
+			// 	}
+			// }
+
 			if(stopFlag) exit (EXIT_FAILURE);
 		}
 	}
