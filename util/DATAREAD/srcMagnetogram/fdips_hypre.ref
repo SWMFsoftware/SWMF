@@ -1,8 +1,11 @@
-ModReadParam::read_file: read and broadcast nLine=  91 lines of text
+ModReadParam::read_file: read and broadcast nLine=  95 lines of text
 
 #MAGNETOGRAMFILE
 dipole11.out		NameFileIn
 3500.0			BrMax
+T			DoChangePolarField
+3.0			PolarFactor
+2.0			PolarExponent
 
 #DOMAIN
 1.0			rMin         (default is 1)
@@ -35,31 +38,31 @@ ascii			TypeFileField (ascii, real4 or real8)
 bxyz			TypeOutput    (field, bxyz, potential, or tecplot)
 fdips_bxyz.out		NameFileField		NameFileBxyz
 ascii			TypeFileField (ascii, real4 or real8)		TypeFileBxyz
- nTheta0, nPhi0, LongitudeShift:  180 360   0.0000000000000000
- nThetaLgr =  10 nThetaSml =  10
- nPhiLgr   =  10 nPhiSml   =  10
- Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
- Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
-L2 norm of b: 2.800150e+02
-Initial L2 norm of residual: 2.800150e+02
+ nTheta0, nPhi0, LongitudeShift:          180         360   0.0000000000000000     
+ nThetaLgr =           10 nThetaSml =           10
+ nPhiLgr   =           10 nPhiSml   =           10
+ Partitioning in nThetaAll gives:           20 Actual nThetaAll is:           20
+ Partitioning in nPhiAll gives:             20 Actual nPhiAll is:             20
+L2 norm of b: 4.093478e+02
+Initial L2 norm of residual: 4.093478e+02
 =============================================
 
 Iters     resid.norm     conv.rate  rel.res.norm
 -----    ------------    ---------- ------------
-    1    7.676689e+00    0.027415   2.741527e-02
-    2    1.635909e-01    0.021310   5.842218e-04
-    3    8.615397e-03    0.052664   3.076762e-05
-    4    2.612028e-04    0.030318   9.328169e-07
-    5    1.579717e-05    0.060479   5.641544e-08
-    6    1.592246e-06    0.100793   5.686288e-09
-    7    2.571713e-07    0.161515   9.184194e-10
-    8    7.541431e-09    0.029325   2.693224e-11
+    1    1.080272e+01    0.026390   2.639007e-02
+    2    2.319340e-01    0.021470   5.665940e-04
+    3    1.210333e-02    0.052184   2.956735e-05
+    4    5.397736e-04    0.044597   1.318619e-06
+    5    3.617385e-05    0.067017   8.836947e-08
+    6    3.376926e-06    0.093353   8.249527e-09
+    7    5.656783e-07    0.167513   1.381901e-09
+    8    2.472245e-08    0.043704   6.039473e-11
 
 
-Final L2 norm of residual: 7.541400e-09
+Final L2 norm of residual: 2.472247e-08
 
 
 
- nIter, Tolerance, iError= 10000   1.0000000000000000E-10 0
- max(abs(divb)) =    1.2952030559176819E-09
- nProcTheta, nProcPhi= 2 2
+ nIter, Tolerance, iError=       10000   1.0000000000000000E-010           0
+ max(abs(divb)) =    3.7496912241863356E-009
+ nProcTheta, nProcPhi=           2           2
