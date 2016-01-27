@@ -1,8 +1,11 @@
-ModReadParam::read_file: read and broadcast nLine=  91 lines of text
+ModReadParam::read_file: read and broadcast nLine=  95 lines of text
 
 #MAGNETOGRAMFILE
 dipole11.out		NameFileIn
 3500.0			BrMax
+T			DoChangePolarField
+3.0			PolarFactor
+2.0			PolarExponent
 
 #DOMAIN
 1.0			rMin         (default is 1)
@@ -40,6 +43,6 @@ ascii			TypeFileField (ascii, real4 or real8)		TypeFileBxyz
  nPhiLgr   =  10 nPhiSml   =  10
  Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
  Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
- nIter, Tolerance, iError= 68   9.5261732304070217E-11 0
- max(abs(divb)) =    6.6130554102184736E-09
+ nIter, Tolerance, iError= 68   5.8504823787545572E-11 0
+ max(abs(divb)) =    1.1343552907597041E-09
  nProcTheta, nProcPhi= 2 2
