@@ -151,13 +151,11 @@ cd ..
 #end                                         <#
 #>Stampede ####################################
 #cd $WorkDir/Tmp_AMPS_test                    #
-#touch ready_for_test_submission              #
+#@ delay = 0                                  #
 #foreach job (test_amps.stampede.*.job)       #
-#  while(! -f ready_for_test_submission)      #
-#  end                                        #
-#  rm -rf ready_for_test_submission           #
-#  sleep 60                                   #
-#  /usr/bin/sbatch $job                       #
+#  echo "/usr/bin/sbatch $job" | \            #
+#      at now + $delay minutes                #
+#  @ delay = $delay + 121                     #
 #end                                         <#
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
