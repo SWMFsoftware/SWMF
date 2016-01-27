@@ -31,6 +31,12 @@ module ModPotentialField
   logical           :: UseCosTheta  = .true. 
   real              :: BrMax = 3500.0               ! Saturation level of MDI
 
+  ! Optional enhancement of the polar magnetic field with a factor
+  !  1 + (PolarFactor-1)*abs(sin(Latitude))^PolarExponent
+  logical           :: DoChangePolarField = .false.
+  real              :: PolarFactor = 1.0
+  real              :: PolarExponent = 2.0
+
   ! output paramters
   logical           :: DoSaveBxyz   = .true.
   character(len=100):: NameFileBxyz = 'potentialBxyz'
@@ -133,6 +139,11 @@ contains
           IsNewMagnetogramStyle = .true.
           call read_var('NameFileIn' , NameFileIn)
           call read_var('BrMax'      , BrMax)
+          call read_var('DoChangePolarField', DoChangePolarField)
+          if(DoChangePolarField)then
+             call read_var('PolarFactor',   PolarFactor)
+             call read_var('PolarExponent', PolarExponent)
+          end if
        case("#MAGNETOGRAM")
           call read_var('NameFileIn' , NameFileIn)
           call read_var('UseCosTheta', UseCosTheta)
@@ -210,6 +221,7 @@ contains
 
     use ModIoUnit, ONLY: UnitTmp_
     use ModPlotFile, ONLY: read_plot_file
+    use ModNumConst, ONLY: cDegToRad
 
     ! Read the raw magnetogram file into a 2d array
 
@@ -220,7 +232,7 @@ contains
     real :: BrAverage, Weight
     character (len=100) :: String
 
-    real, allocatable:: Br0_II(:,:), Var_II(:,:), Phi0_I(:), Theta0_I(:)
+    real, allocatable:: Br0_II(:,:), Var_II(:,:), Phi0_I(:), Lat0_I(:)
     real:: Param_I(1)
 
     character(len=*), parameter:: NameSub = 'read_magnetogram'
@@ -235,18 +247,25 @@ contains
 
        write(*,*)'nTheta0, nPhi0, LongitudeShift: ', nTheta0, nPhi0, Param_I
 
-       allocate(Phi0_I(nPhi0), Theta0_I(nTheta0), Var_II(nPhi0,nTheta0), &
+       allocate(Phi0_I(nPhi0), Lat0_I(nTheta0), Var_II(nPhi0,nTheta0), &
             Br0_II(nTheta0,nPhi0))
        
        call read_plot_file(NameFileIn, &
-            Coord1Out_I=Phi0_I, Coord2Out_I=Theta0_I, VarOut_II = Var_II, &
+            Coord1Out_I=Phi0_I, Coord2Out_I=Lat0_I, VarOut_II = Var_II, &
             iErrorOut=iError)
 
        if(iError /= 0) call CON_stop(NameSub// &
-            ': could not read date from file'//trim(NameFileIn))
+            ': could not read data from file'//trim(NameFileIn))
 
-       ! Check if the theta coordinate is uniform or not
-       UseCosTheta = abs(Theta0_I(3) - 2*Theta0_I(2) + Theta0_I(1)) > 1e-6
+       if(DoChangePolarField)then
+          do iTheta = 1, nTheta0
+             Var_II(:,iTheta) = Var_II(:,iTheta) &
+                  *(1 + (PolarFactor-1)*abs(sin(cDegToRad*Lat0_I(iTheta)))**PolarExponent)
+          end do
+       end if
+
+       ! Check if the latitude coordinate is uniform or not
+       UseCosTheta = abs(Lat0_I(3) - 2*Lat0_I(2) + Lat0_I(1)) > 1e-6
 
        ! Convert Var_II(iLon,iLat) -> Br0_II(iTheta,iPhi)
        do iTheta = 1, nTheta0, 1
