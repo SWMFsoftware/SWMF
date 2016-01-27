@@ -140,21 +140,14 @@ cd ..
 # Super computers
 
 #>Pleiades ####################################
-#cd $WorkDir/Tmp_AMPS_test                    #
-#touch ready_for_test_submission              #
-#foreach job (test_amps.pleiades.*.job)       #
-#  while(! -f ready_for_test_submission)      #
-#  end                                        #
-#  rm -rf ready_for_test_submission           #
-#  sleep 60                                   #
-#  /PBS/bin/qsub $job                         #
-#end                                         <#
+#set submit = '/PBS/bin/qsub'                <#
 #>Stampede ####################################
+#set submit = '/usr/bin/sbatch'              <#
+#>Pleiades>Stampede ###########################
 #cd $WorkDir/Tmp_AMPS_test                    #
-#@ delay = 0                                  #
-#foreach job (test_amps.stampede.*.job)       #
-#  echo "/usr/bin/sbatch $job" | \            #
-#      at now + $delay minutes                #
+#@ delay = 2                                  #
+#foreach job (test_amps.*.job)                #
+#  echo "$submit $job"|at now+$delay minutes  #
 #  @ delay = $delay + 121                     #
 #end                                         <#
 #>Yellowstone #################################
