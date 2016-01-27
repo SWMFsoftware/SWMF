@@ -308,7 +308,6 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('2DTEC')
 
-     if (iBlock == 1) call set_nVarsUser2d
      nvars_to_write = 5
      call output_2dtec(iBlock)
 
