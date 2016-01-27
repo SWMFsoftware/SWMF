@@ -138,7 +138,7 @@ public:
     void AddTrajectoryDataFile(cIndividualTrajectoryData* Trajectory,int TrajectoryNumber,const char* fname);
 
     //plot the surface mesh showing averaged propserties of the trajectories
-    void PrintSurfaceData(const char *fname);
+    void PrintSurfaceData(const char *fname,int (*GetVariableNumber)(),void (*PrintVariableList)(FILE*),void (*GetFaceDataVector)(double*,CutCell::cTriangleFace*,int));
 
     //print the variable list
     void PrintVariableList();

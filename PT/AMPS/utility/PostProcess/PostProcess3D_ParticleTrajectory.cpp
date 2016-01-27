@@ -238,12 +238,11 @@ void cPostProcess3D::cParticleTrajectory::AddTrajectoryDataFile(cIndividualTraje
 
 //======================================================================================
 //print the surface data
-void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname) {
-
-  if (PostProcess3D->rank!=0) return;
-
-  FILE *fout=fopen(fname,"w");
+void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname,int (*GetVariableNumber)(),void (*PrintVariableList)(FILE*),void (*GetFaceDataVector)(double*,CutCell::cTriangleFace*,int)) {
+  FILE *fout=NULL;
   int i,nface;
+
+  if (PostProcess3D->rank==0) fout=fopen(fname,"w");
 
   struct cNodelInterpolationBase {
     double TotalInterpolationWeight;
@@ -253,7 +252,7 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname) {
 
   struct cFaceInterpolationStencil {
     double Weight;
-    double *SurfaceData;
+    int nface;
   };
 
   //prepare the list of the faces that contains the same node
@@ -287,8 +286,8 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname) {
     double weight=CutCell::BoundaryTriangleFaces[nface].SurfaceArea;
     int nnode=CutCell::BoundaryTriangleFaces[nface].node[i]->id;
 
-//    Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].UserData=&(BoundaryTriangleFaces[nface].UserData);
     Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].Weight=weight;
+    Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].nface=nface;
     InterpolationBase[nnode].TotalInterpolationWeight+=weight;
 
     InterpolationBase[nnode].StencilLength++;
@@ -300,40 +299,61 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname) {
   }
 
   //print the variable list
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"");
+  if (PostProcess3D->rank==0) {
+    fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"");
+    if (PrintVariableList!=NULL) PrintVariableList(fout);
 
-
-  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
+    fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
+  }
 
   //print the list of the data points
-  for (i=0;i<CutCell::nBoundaryTriangleNodes;i++) {
-    fprintf(fout,"%e %e %e ",CutCell::BoundaryTriangleNodes[i].x[0],CutCell::BoundaryTriangleNodes[i].x[1],CutCell::BoundaryTriangleNodes[i].x[2]);
+  int iMeshNode,iInterplationElement;
 
+  for (iMeshNode=0;iMeshNode<CutCell::nBoundaryTriangleNodes;iMeshNode++) {
+    if (PostProcess3D->rank==0)
+      fprintf(fout,"%e %e %e ",CutCell::BoundaryTriangleNodes[iMeshNode].x[0],CutCell::BoundaryTriangleNodes[iMeshNode].x[1],CutCell::BoundaryTriangleNodes[iMeshNode].x[2]);
 
-/*    //prepare and output averaged interpolated face data
+    if (GetVariableNumber!=NULL) {
+    //prepare and output averaged interpolated face data
+      int ivar,nvars=GetVariableNumber();
+      double data[nvars],InterpolatedDataLocal[nvars],InterpolatedDataGlobal[nvars];
 
-    //Prepare the interpolation stencil
-    for (nface=0;nface<InterpolationBase[i].StencilLength;nface++) {
-      InterpolationWeightList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].Weight;
-      InterpolationFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].UserData;
+      for (ivar=0;ivar<nvars;ivar++) InterpolatedDataLocal[ivar]=0.0;
+
+      //interpolate the data vector
+      for (iInterplationElement=0;iInterplationElement<InterpolationBase[iMeshNode].StencilLength;iInterplationElement++) if (iInterplationElement%PostProcess3D->size==PostProcess3D->rank) {
+        int nface=Stencil[InterpolationBase[iMeshNode].StencilOffset+iInterplationElement].nface;
+        double w=Stencil[InterpolationBase[iMeshNode].StencilOffset+iInterplationElement].Weight;
+
+        GetFaceDataVector(data,CutCell::BoundaryTriangleFaces+nface,nface);
+        for (ivar=0;ivar<nvars;ivar++) InterpolatedDataLocal[ivar]+=w*data[ivar];
+      }
+
+      //collect the interpolted data from all processors
+      MPI_Reduce(InterpolatedDataLocal,InterpolatedDataGlobal,nvars,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+      //print the data into a file
+      if (PostProcess3D->rank==0) {
+        for (ivar=0;ivar<nvars;ivar++) fprintf(fout," %e",InterpolatedDataGlobal[ivar]);
+        fprintf(fout,"\n");
+      }
     }
-
-    //output the user-defined surface data
-    BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,InterpolationBase[i].StencilLength);*/
-
-
-    fprintf(fout,"\n");
   }
 
-  //print the connectovoty list
-  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-    fprintf(fout,"%i %i %i\n",1+CutCell::BoundaryTriangleFaces[nface].node[0]->id,
-        1+CutCell::BoundaryTriangleFaces[nface].node[1]->id,
-        1+CutCell::BoundaryTriangleFaces[nface].node[2]->id);
-  }
+  //print the connectivity list
+  if (PostProcess3D->rank==0) {
+     for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++)
+       fprintf(fout,"%i %i %i\n",1+CutCell::BoundaryTriangleFaces[nface].node[0]->id,
+         1+CutCell::BoundaryTriangleFaces[nface].node[1]->id,
+         1+CutCell::BoundaryTriangleFaces[nface].node[2]->id);
 
 
-  fclose(fout);
+     fclose(fout);
+   }
+
+  //deallocate the fata buffers
+  delete [] InterpolationBase;
+  delete [] Stencil;
 }
 
 //=============================================================================
