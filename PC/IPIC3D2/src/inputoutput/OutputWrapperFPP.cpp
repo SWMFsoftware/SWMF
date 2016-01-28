@@ -148,8 +148,7 @@ void OutputWrapperFPP::append_restart(int cycle)
 
 #ifdef BATSRUS
 void OutputWrapperFPP::getFluidState(int nDim, int nPoint, double *Xyz_I,
-				     double *data_I,int nVar , string *NameVar){
-  hdf5_agent.getFluidSIatPoint(nDim, nPoint, Xyz_I, data_I, nVar, NameVar);
+				     double *data_I,int nVar){
+  hdf5_agent.getFluidSIatPoint(nDim, nPoint, Xyz_I, data_I, nVar);
 }
-
 #endif

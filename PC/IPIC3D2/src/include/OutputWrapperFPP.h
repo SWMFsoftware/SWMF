@@ -42,7 +42,7 @@ class OutputWrapperFPP
 
 #ifdef BATSRUS
   void getFluidState(int nDim, int nPoint, double *Xyz_I, double *data_I,
-		     int nVar , string *NameVar);
+		     int nVar);
 #endif
   
 };

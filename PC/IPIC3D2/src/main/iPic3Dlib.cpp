@@ -804,9 +804,9 @@ void c_Solver::setStateVar(double *State_I, int *iPoint_I){
   col->setStateVar(State_I, iPoint_I);
 }
 
-void c_Solver::getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar , string *NameVar){
+void c_Solver::getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar){
   string nameSub="getStateVar";
-  fetch_outputWrapperFPP().getFluidState(nDim, nPoint, Xyz_I, data_I, nVar, NameVar);
+  fetch_outputWrapperFPP().getFluidState(nDim, nPoint, Xyz_I, data_I, nVar);
 }
 
 void c_Solver::findProcForPoint(int nPoint, double *Xyz_I, int *iProc_I){

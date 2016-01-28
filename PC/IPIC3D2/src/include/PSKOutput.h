@@ -868,7 +868,7 @@ public:
     return(tmp);
   }
 
-  void getFluidSIatPoint(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVarIn, string *NameVar){
+  void getFluidSIatPoint(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVarIn){
 
     const int nVar             = _col->getnVarFluid();
     const int nIon             = _col->getnIon();
