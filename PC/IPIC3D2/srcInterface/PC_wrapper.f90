@@ -64,7 +64,7 @@ contains
             Version    = 1.0)
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-       call pc_wrapper_c_init_mpi(iComm, iProc, nProc)
+       call ipic3d_init_mpi(iComm, iProc, nProc)
     case('READ', 'CHECK')
 
        ! get section of PARAM.in that contains the PC module
@@ -72,7 +72,7 @@ contains
        call read_text(StringLineF_I)
 
        if(n_line_read()-i_line_read()+1 > 0) then
-          call pc_wrapper_c_read_param(StringLineF_I, &
+          call ipic3d_read_param(StringLineF_I, &
                n_line_read()-i_line_read()+1, lStringLine,iProc)
        end if
     case('STDOUT')
@@ -99,7 +99,7 @@ contains
     character(len=*), parameter :: NameSub='PC_init_session'
     !--------------------------------------------------------------------------
 
-    call pc_wrapper_c_init(TimeSimulation)
+    call ipic3d_init(TimeSimulation)
 
   end subroutine PC_init_session
 
@@ -113,7 +113,7 @@ contains
     character(len=*), parameter :: NameSub='PC_finalize'
     !-------------------------------------------------------------------------
 
-    ! call pc_wrapper_c_end()
+    ! call ipic3d_end()
 
   end subroutine PC_finalize
 
@@ -127,7 +127,7 @@ contains
     character(len=*), parameter :: NameSub='PC_save_restart'
     !--------------------------------------------------------------------------
 
-    call pc_wrapper_c_save_restart()
+    call ipic3d_save_restart()
 
   end subroutine PC_save_restart
 
@@ -157,10 +157,10 @@ contains
     if(DtSi > Dt .and. Dt >= 0.0 ) then 
         DtSi =  Dt 
         ! set the right time step
-        call pc_wrapper_c_set_dt(DtSi)
+        call ipic3d_set_dt(DtSi)
      end if
 
-     if(DtSi>0) call pc_wrapper_c_run(Time)
+     if(DtSi>0) call ipic3d_run(Time)
 
     TimeSimulation = TimeSimulation + DtSi    
 
@@ -205,7 +205,7 @@ contains
     ! Store the time step, set it when we do PC_run
     DtSi = DtSiIn
 
-    call pc_wrapper_c_set_dt(DtSi)
+    call ipic3d_set_dt(DtSi)
 
   end subroutine PC_put_from_gm_dt
   !============================================================================
@@ -221,7 +221,7 @@ contains
     !--------------------------------------------------------------------------
     ! store GM's nDim, so it is reported as PC's nDim for the point coupler
     nDim = iParam_I(1) 
-    call pc_wrapper_c_from_gm_init(iParam_I, Param_I, NameVar)
+    call ipic3d_from_gm_init(iParam_I, Param_I, NameVar)
 
   end subroutine PC_put_from_gm_init
   !============================================================================
@@ -238,7 +238,7 @@ contains
     character(len=*), parameter:: NameSub = 'PC_find_points'
     !--------------------------------------------------------------------------
 
-    call pc_wrapper_c_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+    call ipic3d_find_points(nPoint, Xyz_DI, iProc_I)
 
   end subroutine PC_find_points
   !============================================================================
@@ -260,24 +260,24 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(.not. present(Data_VI))then
-       call pc_wrapper_c_get_ngridpoints(nPoint)
+       call ipic3d_get_ngridpoints(nPoint)
 
        if(DoTest)write(*,*)NameSub,': iProc, nPoint = ', iProc, nPoint
 
        if(allocated(Pos_DI)) deallocate(Pos_DI)
        allocate(Pos_DI(nDim,nPoint))
 
-       call pc_wrapper_c_get_grid(Pos_DI,nDim*nPoint)
+       call ipic3d_get_grid(Pos_DI,nDim*nPoint)
        RETURN
     end if
 
-    call pc_wrapper_c_set_state_var(nVar, Data_VI, iPoint_I)
+    call ipic3d_set_state_var(Data_VI, iPoint_I)
 
     if(IsFirstTime)  then
        IsFirstTime = .false.
 
        ! Finishing the setup after the initial state is set from GM
-       call pc_wrapper_c_finalize_init
+       call ipic3d_finalize_init
     end if
 
   end subroutine PC_put_from_gm
@@ -294,11 +294,10 @@ contains
     real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
     real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
 
-    character(len=*), parameter :: NameSub='GM_get_for_pc'
+    character(len=*), parameter :: NameSub='PC_get_for_gm'
     !--------------------------------------------------------------------------
-    call pc_wrapper_c_get_state_var( &
-         nDimIn, nPoint, Xyz_DI, Data_VI, nVarIn, &
-         NameVar//char(0), len(NameVar//char(0)));
+    call ipic3d_get_state_var( &
+         nDimIn, nPoint, Xyz_DI, Data_VI, nVarIn)
 
   end subroutine PC_get_for_gm
 

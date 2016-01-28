@@ -1,27 +1,28 @@
 #include <iomanip>
+#include <iostream>
+#include <cstdlib>
 #include "ipic3d_interface.h"
 #include "multi_ipic3d_domain.h"
 #include "MPIdata.h"
-#include <iostream>
-#include <cstdlib>
 #include "timing_SWMF.h"
+#include "ReadParam.h"
 
 using namespace iPic3D;
 using namespace std;
 
-int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc,signed int* nProc){
+int ipic3d_init_mpi_(MPI_Fint *iComm,signed int* iProc,signed int* nProc){
+  // fortran communicator tranlated to C comunicator
+  MPI_Comm c_iComm = MPI_Comm_f2c(*iComm);
 
   // At this time we do not have a proper timstep 
   // so we only do steping internaly iSimCycle
   
-  //std::cout<<"ipic3dComm pre :: "<<ipic3dComm<<endl;
-  if(MPI_SUCCESS != MPI_Comm_dup(iComm, &ipic3dComm)){
+  if(MPI_SUCCESS != MPI_Comm_dup(c_iComm, &ipic3dComm)){
     cout<<"IPIC3D_init_mpi :: Can not copy  MPI comunicator, arborting!"<<endl;
     cout.flush();
     abort();
   } 
   
-  //std::cout<<"ipic3dComm init :: "<<ipic3dComm<<endl;
   myrank     = *iProc;
   numProc    = *nProc; 
   param      = NULL;
@@ -34,42 +35,63 @@ int IPIC3D_init_mpi(MPI_Comm iComm, signed int* iProc,signed int* nProc){
     firstcall[i] = true;
     starttime[i] = 0.0;
     SimRun[i]    = NULL;
-    //std::cout<<" SimRun["<<i<<"]  = "<<SimRun[i]<<std::endl;
   }
   
+  myProc = *iProc;
   return(0);
 }
 
-int IPIC3D_read_paramin(std::stringstream *paramin){    
-  param = paramin;
-  iIPIC++;
-
-  return(0);
-}
-
-
-int IPIC3D_init(double inittime){
-
+int ipic3d_init_(double *inittime){
   //  Called by  PC_init_session
   //  Not used as this time as 
   //  most of the grid are set up when
   //  we read PARAM.in, and the rest 
   //  when IPIC3D recive data for the 
   //  first time. 
-
-  //std::cout<<"IPIC3D_init"<<std::endl;
-
-  timenow = inittime;
-
+  timenow = *inittime;
   return(0);
-
 }
 
-int IPIC3D_from_gm_init(int *paramint, double *paramreal, std::stringstream *ss){
- 
+int ipic3d_finalize_init_(){
+
+  // This function is called by the coupler the first time 
+  // it want to couple from GM -> PC. At this point we should have all
+  // information to finnish the initialization of SimRun[i]
+
+  char **dummy = NULL; // dummy argument
+
+  string nameFunc="PC: ipic3d_finalize_init_";
+  timing_start(nameFunc);
+
+  // now we should have all the the infomation
+  for(int i = 0; i < nIPIC; i++){     
+    SimRun[i]->Init(0, dummy, timenow);
+    SimRun[i]->CalculateMoments();
+    SimRun[i]->WriteOutput(0);
+    iSimCycle[i] = SimRun[i]->FirstCycle();
+  }
+  timing_stop(nameFunc);
+  return(0);
+}
+
+int ipic3d_read_param_(char *paramIn, int *nlines, int *ncharline, int *iProc){
+  // convert character array to string stream object
+  myProc = *iProc;
+  std::stringstream  *ss;
+  ss = char_to_stringstream(paramIn, (*nlines)*(*ncharline), *ncharline, *iProc); 
+  param = ss;
+  iIPIC++;
+  return(0);
+}
+
+int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
+  std::stringstream  *ss;
+  ss = new std::stringstream;
+  (*ss)<<NameVar;
+
   char **dummy = NULL; // dummy argument
   int firstIPIC = nIPIC;
-  string nameFunc="PC: IPIC3D_from_gm_init";
+  string nameFunc="PC: ipic3d_from_gm_init";
   timing_start(nameFunc);
 
   // number of dimensions in GM
@@ -91,37 +113,16 @@ int IPIC3D_from_gm_init(int *paramint, double *paramreal, std::stringstream *ss)
 		    &paramreal[(i - firstIPIC)*9], 
 		    &paramreal[(nIPIC - firstIPIC)*9], ss,true);
   }
-  timing_stop(nameFunc);
-  return(0);
-}
-
-int IPIC3D_finalize_init(){
-
-  // This function is called by the coupler the first time 
-  // it want to couple from GM -> PC. At this point we should have all
-  // information to finnish the initialization of SimRun[i]
-
-  char **dummy = NULL; // dummy argument
-
-  string nameFunc="PC: IPIC3D_finalize_init";
-  timing_start(nameFunc);
-
-  // now we should have all the the infomation
-  for(int i = 0; i < nIPIC; i++){     
-    SimRun[i]->Init(0, dummy, timenow);
-    SimRun[i]->CalculateMoments();
-    SimRun[i]->WriteOutput(0);
-    iSimCycle[i] = SimRun[i]->FirstCycle();
-  }
-  timing_stop(nameFunc);
+  timing_stop(nameFunc);  
   return(0);
 }
 
 
-int IPIC3D_run(double time){
+
+int ipic3d_run_(double *time){
   bool b_err = false;
  
-  timenow = time;
+  timenow = *time;
   string nameFunc="PC: IPIC3D_run";
   timing_start(nameFunc);
 
@@ -162,12 +163,15 @@ int IPIC3D_run(double time){
 
     iSimCycle[i]++;    
   }
+  
+  // All simulations are in the same time zone
+  *time = SimRun[0]->getSItime();
   timing_stop(nameFunc);
   return(0);
 }
 
-int IPIC3D_save_restart(){
-  string nameFunc="PC: IPIC3D_save_restart";
+int ipic3d_save_restart_(){
+  string nameFunc="PC: ipic3d_save_restart";
   timing_start(nameFunc);
 
   for(int i = 0; i < nIPIC; i++) 
@@ -177,7 +181,69 @@ int IPIC3D_save_restart(){
   return(0);
 }
 
-int IPIC3D_end(){
+int ipic3d_get_ngridpoints_(int *nPoint){
+  
+  *nPoint = 0;
+  for(int i = 0; i < nIPIC; i++){
+    SimRun[i]->GetNgridPnt(&nGridPntSim[i]);
+    nShiftGridPntSim[i] = *nPoint;
+    *nPoint += nGridPntSim[i];
+  }
+  // Fortran operates on an 2D array [ndim,nPoint]
+  *nPoint = *nPoint/nDim;
+  return(0);
+}
+
+int ipic3d_get_grid_(double *Pos_DI, int *n){
+  for(int i = 0; i < nIPIC; i++)
+    SimRun[i]->GetGridPnt(&Pos_DI[nShiftGridPntSim[i]]);
+  
+  return(0);
+}
+
+int ipic3d_set_state_var_(double *Data_VI, int *iPoint_I){
+  string nameFunc="PC: ipic3d_set_state_var_";
+  timing_start(nameFunc);
+
+  // WARNING  iPoint_I is a reindexing of state var array.
+  
+  for(int i = 0; i < nIPIC; i++){
+    SimRun[i]->setStateVar(Data_VI,
+                           &iPoint_I[(nShiftGridPntSim[i]/nDim)]);
+  }
+  timing_stop(nameFunc);
+  return(0);
+}
+
+int ipic3d_get_state_var_(int *nDim, int *nPoint, double *Xyz_I, double *data_I, int *nVar){
+  string nameFunc="PC: IPIC3D_get_state_var";
+  timing_start(nameFunc);
+
+  for(int i = 0; i < nIPIC; i++){
+    SimRun[i]->getStateVar(*nDim, *nPoint, Xyz_I, data_I, *nVar);    
+  }
+  timing_stop(nameFunc);  
+  return(0);
+}
+
+int ipic3d_find_points_(int *nPoint, double *Xyz_I, int *iProc_I){
+  string nameFunc="PC: ipic3d_find_points_";
+  timing_start(nameFunc);
+  
+  for(int i = 0; i < nIPIC; i++){
+    SimRun[i]->findProcForPoint(*nPoint, Xyz_I, iProc_I);
+  }
+  timing_stop(nameFunc);
+  return(0);
+}
+
+int ipic3d_set_dt_( double *DtSi){  
+  for(int i = 0; i < nIPIC; i++)
+    SimRun[i]->setSIDt(*DtSi);
+  return(0);
+}
+
+int ipic3d_end_(){
   try {
     for(int i = 0; i < nIPIC; i++){
       SimRun[i]->Finalize();
@@ -193,79 +259,3 @@ int IPIC3D_end(){
   }
   return 0;
 }
-
-double IPIC3D_getSItime(){
-  
-  // All simulations are in the same time zone
-  return(SimRun[0]->getSItime());
-}
-
-int IPIC3D_get_ngridpoints(int *nPoint){
-  
-  *nPoint = 0;
-  for(int i = 0; i < nIPIC; i++){
-    SimRun[i]->GetNgridPnt(&nGridPntSim[i]);
-    nShiftGridPntSim[i] = *nPoint;
-    *nPoint += nGridPntSim[i];
-  }
-  // Fortran operates on an 2D array [ndim,nPoint]
-  *nPoint = *nPoint/nDim;
-  return(0);
-}
-
-int IPIC3D_get_grid(double *Pos_DI, int n){
-
-  for(int i = 0; i < nIPIC; i++)
-    SimRun[i]->GetGridPnt(&Pos_DI[nShiftGridPntSim[i]]);
-  
-  return(0);
-}
-
-int IPIC3D_set_state_var(double *Data_VI, int *iPoint_I){
-  string nameFunc="PC: IPIC3D_set_state_var";
-  timing_start(nameFunc);
-
-  // WARNING  iPoint_I is a reindexing of state var array.
-  
-  for(int i = 0; i < nIPIC; i++){
-    SimRun[i]->setStateVar(Data_VI,
-                           &iPoint_I[(nShiftGridPntSim[i]/nDim)]);
-  }
-  timing_stop(nameFunc);
-  return(0);
-}
-
-int IPIC3D_get_state_var(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar, string *NameVar){
-  string nameFunc="PC: IPIC3D_get_state_var";
-  timing_start(nameFunc);
-
-  for(int i = 0; i < nIPIC; i++){
-    SimRun[i]->getStateVar(nDim, nPoint, Xyz_I, data_I, nVar, NameVar);    
-  }
-  timing_stop(nameFunc);  
-  return(0);
-}
-
-int IPIC3D_find_point(int nPoint, double *Xyz_I, int *iProc_I){
-  string nameFunc="PC: IPIC3D_find_point";
-  timing_start(nameFunc);
-  
-  for(int i = 0; i < nIPIC; i++){
-    SimRun[i]->findProcForPoint(nPoint, Xyz_I, iProc_I);
-  }
-
-  timing_stop(nameFunc);
-  return(0);
-}
-
-
-
-int IPIC3D_set_dt( double DtSi){
-  
-  for(int i = 0; i < nIPIC; i++)
-    SimRun[i]->setSIDt(DtSi);
-  return(0);
-}
-
-
-

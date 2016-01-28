@@ -17,7 +17,6 @@ include ../Makefile.conf
 
 OBJECTS = \
 	PC_wrapper.o \
-	PC_wrapper_c.o \
 	ipic3d_interface.o
 
 DEPEND:
