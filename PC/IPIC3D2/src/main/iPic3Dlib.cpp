@@ -797,8 +797,8 @@ void c_Solver::GetGridPnt(double *Pos_I){
   col->GetGridPnt(Pos_I);
 }
 
-void c_Solver::setStateVar(std::stringstream *ss, int nVar, double *State_I, int *iPoint_I){
-  col->setStateVar(ss, nVar, State_I, iPoint_I);
+void c_Solver::setStateVar(double *State_I, int *iPoint_I){
+  col->setStateVar(State_I, iPoint_I);
 }
 
 void c_Solver::getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar , string *NameVar){

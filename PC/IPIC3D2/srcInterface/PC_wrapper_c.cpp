@@ -75,11 +75,8 @@ int pc_wrapper_c_get_grid_(double *Pos_DI, int *n){
   return(0);  
 }
 
-int pc_wrapper_c_set_state_var_(char *NameVar, int *nNameVar, int *nVar, double *Data_VI, int *iPoint_I){
-  std::stringstream  *ss;
-  ss = new std::stringstream;
-  ss->write(NameVar, *nNameVar); 
-  IPIC3D_set_state_var(ss, *nVar, Data_VI, iPoint_I);
+int pc_wrapper_c_set_state_var_(int *nVar, double *Data_VI, int *iPoint_I){
+  IPIC3D_set_state_var(Data_VI, iPoint_I);
   return(0);
 }
 

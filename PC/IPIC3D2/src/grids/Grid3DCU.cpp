@@ -13,6 +13,55 @@
 Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
   _vct(*vct)
 {
+  if(col->getCase()=="BATSRUS"){
+    /*Example: 18 cells (not include ghost cells) distributed on 4 processors 
+      in x direction. The number of cells on each processors are: 5, 5, 4, 4
+     */
+    nxc_r = col->getNxcLocal();      
+    nyc_r = col->getNycLocal();
+    nzc_r = col->getNzcLocal();
+
+    nxc = nxc_r + 2;
+    nyc = nyc_r + 2;
+    nzc = nzc_r + 2; 
+
+    dx = col->getDx();
+    dy = col->getDy();
+    dz = col->getDz();
+    assert(dx == col->getLx() / col->getNxc());
+    assert(dy == col->getLy() / col->getNyc());
+    assert(dz == col->getLz() / col->getNzc());
+
+    const int nxc_rr = ceiling_of_ratio(col->getNxc(), col->getXLEN());
+    const int nyc_rr = ceiling_of_ratio(col->getNyc(), col->getYLEN());
+    const int nzc_rr = ceiling_of_ratio(col->getNzc(), col->getZLEN());
+    num_cells_rr = nxc_rr*nyc_rr*nzc_rr;
+    
+    int nxcStart, nycStart, nzcStart;
+    bool isCrowdedX, isCrowdedY, isCrowdedZ;
+    isCrowdedX = (nxc_r==nxc_rr);
+    isCrowdedY = (nyc_r==nyc_rr);					    
+    isCrowdedZ = (nzc_r==nzc_rr);
+    
+    // nxc includes two ghost cells. 
+    nxcStart = (nxc-2)*vct->getCoordinates(0);
+    if(!isCrowdedX) nxcStart += col->getNxc() - (nxc-2)*vct->getXLEN();
+    xStart = col->getLx()*nxcStart / (double) col->getNxc();
+    xEnd = xStart + col->getLx()*(nxc-2) / (double) col->getNxc();
+  
+    nycStart = (nyc-2)*vct->getCoordinates(1);
+    if(!isCrowdedY) nycStart += col->getNyc() - (nyc-2)*vct->getYLEN();
+    yStart = col->getLy()*nycStart/ (double) col->getNyc();
+    yEnd = yStart + col->getLy()*(nyc-2) / (double) col->getNyc();
+
+    nzcStart = (nzc-2)*vct->getCoordinates(2);
+    if(!isCrowdedZ) nzcStart += col->getNzc() - (nzc-2)*vct->getZLEN();
+    zStart = col->getLz()*nzcStart / (double) col->getNzc();
+    zEnd = zStart + col->getLz()*(nzc-2) / (double) col->getNzc();    
+  }else{
+    /*Example: 18 cells (not include ghost cells) distributed on 4 processors 
+      in x direction. The number of cells on each processors are: 5, 5, 5, 3
+     */
   assert_le(col->getXLEN(),col->getNxc());
   assert_le(col->getYLEN(),col->getNyc());
   assert_le(col->getZLEN(),col->getNzc());
@@ -38,7 +87,7 @@ Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
   assert_lt(0,nxc_r); assert_le(nxc_r,nxc_rr);
   assert_lt(0,nyc_r); assert_le(nyc_r,nyc_rr);
   assert_lt(0,nzc_r); assert_le(nzc_r,nzc_rr);
-
+  
   // These restrictions should be removed.
   //
   // An objection to removing them is that the user can always
@@ -89,6 +138,7 @@ Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
   xEnd = xStart + xWidth - (nxc_rr-nxc_r)*dx;
   yEnd = yStart + yWidth - (nyc_rr-nyc_r)*dy;
   zEnd = zStart + zWidth - (nzc_rr-nzc_r)*dz;
+  }
 
   init_derived_parameters();
 }

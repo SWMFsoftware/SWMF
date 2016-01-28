@@ -1437,7 +1437,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   setnOverlap(0);
   setnOverlapP(0);
   setnCharge(10);
-  setnIsotropic(0);
+  setnIsotropic(-1);
   
   // #RESTART
   RESTART1 = false;    

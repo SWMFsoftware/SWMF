@@ -18,7 +18,7 @@ extern "C" {
   int pc_wrapper_c_from_gm_init_(int *paramint, double *paramreal, char *NameVar);
   int pc_wrapper_c_get_ngridpoints_(int *nPoint);
   int pc_wrapper_c_get_grid_(double *Pos_DI, int *n);
-  int pc_wrapper_c_set_state_var_(char *NameVar, int *nNameVar, int *nVar, double *Data_VI, int *iPoint_I);
+  int pc_wrapper_c_set_state_var_(int *nVar, double *Data_VI, int *iPoint_I);
   int pc_wrapper_c_set_dt_(double *DtSi);
   int pc_wrapper_c_find_points_(int *nDim, int *nPoint, double *Xyz_DI, int *iProc_I);
   int pc_wrapper_c_get_state_var_(int *nDim, int *nPoint, double *Xyz_I, double *data_I, int *nVar, char *NameVarChar, int *nChar);

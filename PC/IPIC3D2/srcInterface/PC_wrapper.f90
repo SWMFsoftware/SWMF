@@ -271,8 +271,7 @@ contains
        RETURN
     end if
 
-    call pc_wrapper_c_set_state_var(NameVar//char(0), len(NameVar//char(0)), &
-         nVar, Data_VI, iPoint_I)
+    call pc_wrapper_c_set_state_var(nVar, Data_VI, iPoint_I)
 
     if(IsFirstTime)  then
        IsFirstTime = .false.

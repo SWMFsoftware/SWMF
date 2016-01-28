@@ -143,7 +143,7 @@ namespace iPic3D {
 
     void GetNgridPnt(int *nPoint);
     void GetGridPnt(double *Pos_I);
-    void setStateVar(std::stringstream *ss, int nVar, double *State_I, int *iPoint_I);
+    void setStateVar(double *State_I, int *iPoint_I);
     void getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar , string *NameVar);
     void findProcForPoint(int nPoint, double *Xyz_I, int *iProc_I);    
     double getDt();

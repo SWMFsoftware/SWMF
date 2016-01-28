@@ -20,13 +20,12 @@ Writen by Lars Daldorff (daldorff@umich.edu) 15 Jan 2013
 #include <unistd.h>
 #include <stdio.h>
 #include <math.h>
-
 #include "ConfigFile.h"
 #include "input_array.h"
-
 #include "Alloc.h"
 #include "VCtopology3D.h"
 #include "asserts.h"
+#include "Grid3DCU.h"
 
 #ifdef BATSRUS
 #include "my_mpi.h"
@@ -109,6 +108,12 @@ class InterfaceFluid
 
   int iRegion;
 
+  // Do not include ghost cells.
+  int nxcLocal, nycLocal, nzcLocal;
+
+  // Nodes, include ghost cells.
+  int nxnLG, nynLG, nznLG;
+
  public:
   // These variables are also used in PSKOutput.h
   int *iRho_I, *iRhoUx_I, *iRhoUy_I, *iRhoUz_I, iBx,iBy,iBz,
@@ -186,7 +191,16 @@ class InterfaceFluid
       if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl;
     }
   }
-  
+
+  inline void getLocalIndex(int *i, int *j, int *k)const
+  {
+    *i = *i - StartIdx_D[0];
+      
+    // solution is constant across ignored dimensions indicated by nIJK_D == 1
+    if(nIJK_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1];
+    if(nIJK_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2];
+  }
+
   
   /** Convert from position to full domain index */
   inline void getGlobalIndex(const double x, const double y, const double  z,
@@ -204,7 +218,9 @@ class InterfaceFluid
 				   double *Var, int iVar)const
   {
     int i1,j1,k1;
-    getGlobalIndex(i,j,k,&i1,&j1,&k1);		
+    i1=i;j1=j;k1=k;
+    if(nIJK_D[1] == 1) j1=0;
+    if(nIJK_D[2] == 1) k1=0;
     *Var = State_GV[i1][j1][k1][iVar];
   }
   
@@ -224,7 +240,10 @@ class InterfaceFluid
     dx1 = x/INgridDx_D[0] - i1+1; dx2 = 1.0-dx1;	
     if(nIJK_D[1] == 1){dy1=0.5; dy2=0.5;} else{dy1 = y/INgridDx_D[1] - j1+1; dy2 = 1.0-dy1;}
     if(nIJK_D[2] == 1){dz1=0.5; dz2=0.5;} else{dz1 = z/INgridDx_D[2] - k1+1; dz2 = 1.0-dz1;}
-  	
+
+    getLocalIndex(&i1,&j1,&k1);
+    getLocalIndex(&i2,&j2,&k2);
+    
     *Var = dz2*(dy2*(dx2*State_GV[i1][j1][k1][iVar]
 		     +           dx1*State_GV[i2][j1][k1][iVar])
 		+      dy1*(dx2*State_GV[i1][j2][k1][iVar]
@@ -232,7 +251,7 @@ class InterfaceFluid
       + dz1*(dy2*(dx2*State_GV[i1][j1][k2][iVar]
 		  +           dx1*State_GV[i2][j1][k2][iVar])
 	     +      dy1*(dx2*State_GV[i1][j2][k2][iVar]
-			 +           dx1*State_GV[i2][j2][k2][iVar]));
+			 +           dx1*State_GV[i2][j2][k2][iVar]));    
   }
   
   
@@ -326,10 +345,9 @@ class InterfaceFluid
   void ReNormVariables()
   {
     // Convert all units to internal IPIC3D units
-  
-    for(int k=0;k<nIJK_D[2];k++)
-      for(int j=0;j<nIJK_D[1];j++)
-  	for(int i=0;i<nIJK_D[0];i++)
+    for(int i=0;i<nxnLG;i++)
+      for(int j=0;j<nynLG;j++)
+	for(int k=0;k<nznLG;k++)	  
   	  for(int iVar=0;iVar<=iJz;iVar++)
   	    State_GV[i][j][k][iVar] *= Si2No_V[iVar];  
   }
@@ -341,7 +359,7 @@ class InterfaceFluid
     if(INdim == 1) {
       k = 0;
       j  =0;
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
+      for(i = 0; i < nxnLG; i++){
 	if(useMultiSpecies){
 	  Rhot=0;
 	  for(int iIon=0; iIon<nIon; ++iIon){
@@ -364,8 +382,8 @@ class InterfaceFluid
     }
     else if (INdim == 2){
       k = 0;
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
-	for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++){
+      for(i = 0; i < nxnLG; i++){
+	for(j = 0; j < nynLG; j++){
 	  if(useMultiSpecies){
 	    Rhot=0;
 	    for(int iIon=0; iIon<nIon; ++iIon){
@@ -387,9 +405,9 @@ class InterfaceFluid
       }
     }
     else{ 
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
-	for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++){
-	  for(k = StartIdx_D[2]; k <=  EndIdx_D[2] + 2*NG; k++){	  
+      for(i = 0; i < nxnLG; i++){
+	for(j = 0; j < nynLG; j++){
+	  for(k = 0; k < nznLG; k++){	  
 	    if(useMultiSpecies){
 	      Rhot=0;
 	      for(int iIon=0; iIon<nIon; ++iIon){
@@ -442,11 +460,11 @@ class InterfaceFluid
     myfile.setf(ios::fixed,ios::floatfield);
     myfile.precision(10);
     myfile.width(10);
-    for(int k=0;k<nIJK_D[2];k++)
+    for(int k=0;k<nznLG;k++)
       {
-	for(int j=0;j<nIJK_D[1];j++)
+	for(int j=0;j<nynLG;j++)
 	  { 
-	    for(int i=0;i<nIJK_D[0];i++)
+	    for(int i=0;i<nxnLG; i++)
 	      { 
 		myfile<<setw(16)<<scientific<< i*INgridDx_D[0] + INxRange_I[0]<<" "<<j*INgridDx_D[1] + INxRange_I[2]<<"  ";
 		for(int iVar=0;iVar<INnPlotvar +3;iVar++)
@@ -528,8 +546,8 @@ class InterfaceFluid
     delete INVarName_V;
     delete MoMi_S;
     delete QoQi_S;
-    delArr4(State_GV,nIJK_D[0],nIJK_D[1],nIJK_D[2]);
-    delArr4(Bc_GD,nIJK_D[0],nIJK_D[1],nIJK_D[2]);
+    delArr4(State_GV,nxnLG,nynLG,nznLG);
+    delArr4(Bc_GD,nxnLG,nynLG,nznLG);
 
     delete iRho_I;
     delete iRhoUx_I;
@@ -626,26 +644,24 @@ class InterfaceFluid
     else 
       return(0);
   }
-  
+
   /** Finding the start index of each processors subdomain */
   void setGlobalStartIndex(VCtopology3D *vct)
   {
-    int nxcLocal, nycLocal, nzcLocal; 
     bool isCrowdedX, isCrowdedY, isCrowdedZ;
         
     // If vct == NULL it has bin set earlyer
     if( vct != NULL) _vct = vct;
 
-    nxcLocal=0;
-    nycLocal=0;
-    nzcLocal=0;
+    nxcLocal=1;
+    nycLocal=1;
+    nzcLocal=1;
     
     nxcLocal = getFluidNxc()/(double)_vct->getXLEN();
     if(INdim > 1) nycLocal = getFluidNyc()/(double)_vct->getYLEN();
     if(INdim > 2) nzcLocal = getFluidNzc()/(double)_vct->getZLEN();
 
     myrank = _vct-> getCartesian_rank();
-    //cout<<"setGlobalStartIndex :: "<<_vct->getCoordinates(0)<<", "<<getFluidNxc()<<", "<<_vct->getXLEN()<<endl;
 
     StartIdx_D[0] = _vct->getCoordinates(0)*nxcLocal;    
     StartIdx_D[1] = _vct->getCoordinates(1)*nycLocal;    
@@ -684,9 +700,12 @@ class InterfaceFluid
     EndIdx_D[0] += nxcLocal;    
     if(INdim > 1) EndIdx_D[1] += nycLocal;    
     if(INdim > 2) EndIdx_D[2] += nzcLocal;
-    
+
+    nxnLG = nxcLocal + 3;
+    nynLG = nycLocal + 3;
+    nznLG = nzcLocal + 3; 
   }	
-  
+
   /** find which processor have with dordinate */
   void findProcForPoint(VCtopology3D *vct, int nPoint, double *Xyz_I, int *iProc_I){
 
@@ -1121,7 +1140,9 @@ class InterfaceFluid
   				 const int ii,const int jj, const int kk)
   {
     int i,j,k;
-    getGlobalIndex(ii,jj,kk,&i,&j,&k);
+    i=ii;j=jj;k=kk;
+    if(nIJK_D[1] == 1) j=0;
+    if(nIJK_D[2] == 1) k=0;
 
     //cout<<"mhd: E = - Ue x B"<<endl;
     // Ue = Ui - J/ne
@@ -1331,33 +1352,31 @@ class InterfaceFluid
 
   }
 
-  void setStateVar(std::stringstream *ss, int nVar, double *State_I, int *iPoint_I){
+  void setStateVar(double *State_I, int *iPoint_I){
     const int x_=0, y_=1, z_=2;
     int i, j, k, iVar;
     int ii, jj, kk;
     int idx, Nx, Ny, Nz; 
-    // iPoint_I is a indexing translation from the original order of the points given by
-    // void GetGridPnt(double *Pos_I){  WARNING fortran indexes start with 1 !!!!!
-
-    // Input arguments ss and nVar are not necessary.!!!!!!!!!!!!!
 
     if(isFirstTime){
       InitData();
-
-      State_GV = newArr4(double,nIJK_D[0],nIJK_D[1],nIJK_D[2],nVarCoupling);
-      Bc_GD = newArr4(double,nIJK_D[0],nIJK_D[1],nIJK_D[2],3);
+      // Node values. 
+      State_GV = newArr4(double,nxnLG,nynLG,nznLG,nVarCoupling);
+      // Cell center values.
+      Bc_GD = newArr4(double,nxnLG-1,nynLG-1,nznLG-1,3);
     }
 
     Nx = EndIdx_D[0]-StartIdx_D[0]+1 + 2*NG;
     Ny = EndIdx_D[1]-StartIdx_D[1]+1 + 2*NG;
     Nz = EndIdx_D[2]-StartIdx_D[2]+1 + 2*NG;
 
+    // The order to loop through State_GV should be the same as the
+    // order to find out the posion, which is in GetGridPnt().
     if(INdim == 1) {
       k = 0;
       j  =0;
-      jj = 0;
       ii = 0;
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
+      for(i = 0; i < nxnLG; i++){
  	 for(iVar=0; iVar < nVarFluid; iVar++){
  	    // convert 3D index to 1D
  	    idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
@@ -1369,9 +1388,9 @@ class InterfaceFluid
     else if (INdim == 2){
       k = 0;
       jj = 0;
-      for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++){
+      for(j = 0; j < nynLG; j++){
         ii = 0;
-	for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
+	for(i = 0; i < nxnLG; i++){
 	  for(iVar=0; iVar < nVarFluid; iVar++){
 	    idx = iVar + nVarFluid*(iPoint_I[ii + jj*Nx] - 1);
 	    State_GV[i][j][k][iVar] = State_I[idx];
@@ -1383,11 +1402,11 @@ class InterfaceFluid
     }
     else{ 
       kk = 0;
-        for(k = StartIdx_D[2]; k <=  EndIdx_D[2] + 2*NG; k++){
+        for(k = 0; k < nznLG; k++){
           jj = 0;
-          for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++){
+          for(j = 0; j < nynLG; j++){
             ii = 0;
-    	    for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 2*NG; i++){
+    	    for(i = 0; i < nxnLG; i++){
     	      for(iVar=0; iVar < nVarFluid; iVar++){
     	        idx = iVar + nVarFluid*(iPoint_I[ii + Nx*(jj + kk*Ny)] - 1);
     	        State_GV[i][j][k][iVar] = State_I[idx];
@@ -1404,7 +1423,7 @@ class InterfaceFluid
     // Get magnetic field B in the cell center form node values   
 
     if(INdim == 1){
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 1; i++){
+      for(i = 0; i < nxnLG-1; i++){
            
 	Bc_GD[i][0][0][x_] = 0.5 *(State_GV[i][0][0][iBx] + State_GV[i+1][0][0][iBx]);
            
@@ -1414,8 +1433,8 @@ class InterfaceFluid
       } 
     }         
     else if(INdim == 2){
-      for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 1; j++)
-	for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 1; i++){
+      for(i = 0; i < nxnLG-1; i++)
+	for(j = 0; j < nynLG-1; j++){
 	  Bc_GD[i][j][0][x_] = 0.25 *(
 				      State_GV[i][j][0][iBx] + State_GV[i+1][j][0][iBx] +
 				      State_GV[i][j+1][0][iBx] + State_GV[i+1][j+1][0][iBx]);
@@ -1430,10 +1449,9 @@ class InterfaceFluid
 	}          
     }
     else if(INdim == 3){
-      for(k = StartIdx_D[2]; k <=  EndIdx_D[2] + 1; k++)
-        for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 1; j++)
-	  for(i = StartIdx_D[0]; i <=  EndIdx_D[0] + 1; i++){
-           
+      for(i = 0; i < nxnLG-1; i++)
+        for(j = 0; j < nynLG-1; j++)
+	  for(k = 0; k < nznLG-1; k++) {           
 	    Bc_GD[i][j][k][x_] = 0.125 *(
 					 State_GV[i][j][k][iBx] + State_GV[i+1][j][k][iBx] +
 					 State_GV[i][j+1][k][iBx] + State_GV[i+1][j+1][k][iBx] +
@@ -1467,7 +1485,7 @@ class InterfaceFluid
     if(INdim == 1){
       j = 0;
       k = 0;
-      for(i = StartIdx_D[0]; i <=  EndIdx_D[0]; i++){
+      for(i = 0; i < nxnLG-2; i++){
 
 	compZdx = invdx*( 
 			 Bc_GD[i+1][j  ][k  ][z_] - Bc_GD[i  ][j  ][k  ][z_]);
@@ -1481,19 +1499,19 @@ class InterfaceFluid
       }
 
       // fill in the ghost cell, constant value
+      // Only the "real" ghost cells, which are at the boundaries are useful.
       State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
       State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
       State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
 
-      State_GV[nIJK_D[x_]-1][j][k][iJx] = State_GV[nIJK_D[x_]-2][j][k][iJx];
-      State_GV[nIJK_D[x_]-1][j][k][iJy] = State_GV[nIJK_D[x_]-2][j][k][iJy];
-      State_GV[nIJK_D[x_]-1][j][k][iJz] = State_GV[nIJK_D[x_]-2][j][k][iJz];
+      State_GV[nxnLG-1][j][k][iJx] = State_GV[nynLG-2][j][k][iJx];
+      State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
+      State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
     }
     else if(INdim == 2){
-      k = 0;
-      for(j = StartIdx_D[1]; j <=  EndIdx_D[1]; j++)
-	for(i = StartIdx_D[0]; i <=  EndIdx_D[0]; i++){
-
+      k = 0;      
+      for(i = 0; i < nxnLG-2; i++)
+	for(j = 0; j < nynLG-2; j++){
 	  compZdy = 0.5*invdy*( 
 			       Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
 			       Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_]);
@@ -1517,32 +1535,31 @@ class InterfaceFluid
 	}
 
       // fill in the ghost cell, constant value
-      for(j=1;j<nIJK_D[y_]-1;j++){
+      for(j=1;j<nynLG-1;j++){
 	State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
 	State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
 	State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
 
-	State_GV[nIJK_D[x_]-1][j][k][iJx] = State_GV[nIJK_D[x_]-2][j][k][iJx];
-	State_GV[nIJK_D[x_]-1][j][k][iJy] = State_GV[nIJK_D[x_]-2][j][k][iJy];
-	State_GV[nIJK_D[x_]-1][j][k][iJz] = State_GV[nIJK_D[x_]-2][j][k][iJz];
+	State_GV[nxnLG-1][j][k][iJx] = State_GV[nxnLG-2][j][k][iJx];
+	State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
+	State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
       }
 
-      for(i=0;i<nIJK_D[x_];i++){
+      for(i=0;i<nxnLG;i++){
 	State_GV[i][0][k][iJx] = State_GV[i][1][k][iJx];
 	State_GV[i][0][k][iJy] = State_GV[i][1][k][iJy];
 	State_GV[i][0][k][iJz] = State_GV[i][1][k][iJz];
 
-	State_GV[i][nIJK_D[y_]-1][k][iJx] = State_GV[i][nIJK_D[y_]-2][k][iJx];
-	State_GV[i][nIJK_D[y_]-1][k][iJy] = State_GV[i][nIJK_D[y_]-2][k][iJy];
-	State_GV[i][nIJK_D[y_]-1][k][iJz] = State_GV[i][nIJK_D[y_]-2][k][iJz];
+	State_GV[i][nynLG-1][k][iJx] = State_GV[i][nynLG-2][k][iJx];
+	State_GV[i][nynLG-1][k][iJy] = State_GV[i][nynLG-2][k][iJy];
+	State_GV[i][nynLG-1][k][iJz] = State_GV[i][nynLG-2][k][iJz];
       }
   
     }
     else if(INdim == 3){
-      for(k = StartIdx_D[2]; k <=  EndIdx_D[2]; k++)
-        for(j = StartIdx_D[1]; j <=  EndIdx_D[1]; j++)
-	  for(i = StartIdx_D[0]; i <=  EndIdx_D[0]; i++){
-
+      for(i = 0; i < nxnLG-2; i++)
+        for(j = 0; j < nynLG-2; j++)
+	  for(k = 0; k < nznLG-2; k++){
 	    compZdy = 0.25*invdy*( 
 				  Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
 				  Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_] +
@@ -1586,38 +1603,38 @@ class InterfaceFluid
 
       // fill in the ghost cell, constant value
 
-      for(j=1;j<nIJK_D[y_]-1;j++)
-	for(i=1;i<nIJK_D[x_]-1;i++){
+      for(i=1;i<nxnLG-1;i++)
+	for(j=1;j<nynLG-1;j++){
 	  State_GV[i][j][0][iJx] = State_GV[i][j][1][iJx];
 	  State_GV[i][j][0][iJy] = State_GV[i][j][1][iJy];
 	  State_GV[i][j][0][iJz] = State_GV[i][j][1][iJz];
 
-	  State_GV[i][j][nIJK_D[z_]-1][iJx] = State_GV[i][j][nIJK_D[z_]-2][iJx];
-	  State_GV[i][j][nIJK_D[z_]-1][iJy] = State_GV[i][j][nIJK_D[z_]-2][iJy];
-	  State_GV[i][j][nIJK_D[z_]-1][iJz] = State_GV[i][j][nIJK_D[z_]-2][iJz];
+	  State_GV[i][j][nznLG-1][iJx] = State_GV[i][j][nznLG-2][iJx];
+	  State_GV[i][j][nznLG-1][iJy] = State_GV[i][j][nznLG-2][iJy];
+	  State_GV[i][j][nznLG-1][iJz] = State_GV[i][j][nznLG-2][iJz];
         }
 
-      for(k=0;k<nIJK_D[z_];k++)
-	for(i=1;i<nIJK_D[x_]-1;i++){
+      for(i=1;i<nxnLG-1;i++)
+	for(k=0;k<nznLG;k++){
 	  State_GV[i][0][k][iJx] = State_GV[i][1][k][iJx];
 	  State_GV[i][0][k][iJy] = State_GV[i][1][k][iJy];
 	  State_GV[i][0][k][iJz] = State_GV[i][1][k][iJz];
 
-	  State_GV[i][nIJK_D[y_]-1][k][iJx] = State_GV[i][nIJK_D[y_]-2][k][iJx];
-	  State_GV[i][nIJK_D[y_]-1][k][iJy] = State_GV[i][nIJK_D[y_]-2][k][iJy];
-	  State_GV[i][nIJK_D[y_]-1][k][iJz] = State_GV[i][nIJK_D[y_]-2][k][iJz];
+	  State_GV[i][nynLG-1][k][iJx] = State_GV[i][nynLG-2][k][iJx];
+	  State_GV[i][nynLG-1][k][iJy] = State_GV[i][nynLG-2][k][iJy];
+	  State_GV[i][nynLG-1][k][iJz] = State_GV[i][nynLG-2][k][iJz];
 	}
-
-      for(k=0;k<nIJK_D[z_];k++)
-        for(j=0;j<nIJK_D[y_];j++){
+      
+      for(j=0;j<nynLG;j++)
+	for(k=0;k<nznLG;k++){
 	  State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
 	  State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
 	  State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
 
-	  State_GV[nIJK_D[x_]-1][j][k][iJx] = State_GV[nIJK_D[x_]-2][j][k][iJx];
-	  State_GV[nIJK_D[x_]-1][j][k][iJy] = State_GV[nIJK_D[x_]-2][j][k][iJy];
-	  State_GV[nIJK_D[x_]-1][j][k][iJz] = State_GV[nIJK_D[x_]-2][j][k][iJz];
-	}
+	  State_GV[nxnLG-1][j][k][iJx] = State_GV[nxnLG-2][j][k][iJx];
+	  State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
+	  State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
+	}      
     }
 
     ReNormVariables();    
@@ -1824,7 +1841,12 @@ class InterfaceFluid
   int getnIon(){return(nIon);}
 
   double getSi2NoL(){return(Si2NoL);}
-  double getNo2SiL(){return(No2SiL);} 
+  double getNo2SiL(){return(No2SiL);}
+
+  int getNxcLocal(){return nxcLocal;}
+  int getNycLocal(){return nycLocal;}
+  int getNzcLocal(){return nzcLocal;}
+
 };
 
 
