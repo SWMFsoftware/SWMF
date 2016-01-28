@@ -114,11 +114,17 @@ class InterfaceFluid
   // Nodes, include ghost cells.
   int nxnLG, nynLG, nznLG;
 
+  // Unless it is the first step to initilize PC, otherwise, only boundary
+  // information is needed from GM. 
+  bool doNeedBCOnly;
+
  public:
   // These variables are also used in PSKOutput.h
   int *iRho_I, *iRhoUx_I, *iRhoUy_I, *iRhoUz_I, iBx,iBy,iBz,
     iPe,*iPpar_I,*iP_I,iJx,iJy,iJz, *iUx_I, *iUy_I, *iUz_I, iRhoTotal;
 
+  int nBCLayer;
+  
  private:
   
   /** Get nomal and pendicular vector to magnetic field */
@@ -360,30 +366,7 @@ class InterfaceFluid
       k = 0;
       j  =0;
       for(i = 0; i < nxnLG; i++){
-	if(useMultiSpecies){
-	  Rhot=0;
-	  for(int iIon=0; iIon<nIon; ++iIon){
-	    // Rho = sum(Rhoi) + Rhoe;
-	    Rhot +=
-	      State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
-	  }// iIon
-
-	  State_GV[i][j][k][iUx_I[0]] /= Rhot;
-	  State_GV[i][j][k][iUy_I[0]] /= Rhot;
-	  State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
-	}else{
-	  for(int iIon=0; iIon<nIon; ++iIon){
-	    State_GV[i][j][k][iUx_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	    State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	    State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	  }// iIon
-	} // else
-      } // i
-    }
-    else if (INdim == 2){
-      k = 0;
-      for(i = 0; i < nxnLG; i++){
-	for(j = 0; j < nynLG; j++){
+	if(doGetFromGM(i,0,0)){
 	  if(useMultiSpecies){
 	    Rhot=0;
 	    for(int iIon=0; iIon<nIon; ++iIon){
@@ -391,6 +374,7 @@ class InterfaceFluid
 	      Rhot +=
 		State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
 	    }// iIon
+
 	    State_GV[i][j][k][iUx_I[0]] /= Rhot;
 	    State_GV[i][j][k][iUy_I[0]] /= Rhot;
 	    State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
@@ -400,14 +384,15 @@ class InterfaceFluid
 	      State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
 	      State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
 	    }// iIon
-	  } // else	  
+	  } // else
 	}
-      }
+      } // i
     }
-    else{ 
+    else if (INdim == 2){
+      k = 0;
       for(i = 0; i < nxnLG; i++){
 	for(j = 0; j < nynLG; j++){
-	  for(k = 0; k < nznLG; k++){	  
+	  if(doGetFromGM(i,j,0)){
 	    if(useMultiSpecies){
 	      Rhot=0;
 	      for(int iIon=0; iIon<nIon; ++iIon){
@@ -415,7 +400,6 @@ class InterfaceFluid
 		Rhot +=
 		  State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
 	      }// iIon
-
 	      State_GV[i][j][k][iUx_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUy_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
@@ -426,12 +410,38 @@ class InterfaceFluid
 		State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
 	      }// iIon
 	    } // else
-
 	  }
 	}
       }
     }
-    
+    else{ 
+      for(i = 0; i < nxnLG; i++){
+	for(j = 0; j < nynLG; j++){
+	  for(k = 0; k < nznLG; k++){
+	    if(doGetFromGM(i,j,k)){
+	      if(useMultiSpecies){
+		Rhot=0;
+		for(int iIon=0; iIon<nIon; ++iIon){
+		  // Rho = sum(Rhoi) + Rhoe;
+		  Rhot +=
+		    State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
+		}// iIon
+
+		State_GV[i][j][k][iUx_I[0]] /= Rhot;
+		State_GV[i][j][k][iUy_I[0]] /= Rhot;
+		State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
+	      }else{
+		for(int iIon=0; iIon<nIon; ++iIon){
+		  State_GV[i][j][k][iUx_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
+		  State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
+		  State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
+		}// iIon
+	      } // else
+	    }
+	  }
+	}
+      }
+    }    
   }
    
    
@@ -538,7 +548,7 @@ class InterfaceFluid
     Unorm = 1.0;
    
     isFirstTime = true;
- 
+    doNeedBCOnly = false;
   }
   
   /** destructor */
@@ -1139,19 +1149,21 @@ class InterfaceFluid
   				 double *Bx, double *By, double *Bz, 
   				 const int ii,const int jj, const int kk)
   {
-    int i,j,k;
-    i=ii;j=jj;k=kk;
-    if(nIJK_D[1] == 1) j=0;
-    if(nIJK_D[2] == 1) k=0;
+    if(doGetFromGM(ii,jj,kk)){
+      int i,j,k;
+      i=ii;j=jj;k=kk;
+      if(nIJK_D[1] == 1) j=0;
+      if(nIJK_D[2] == 1) k=0;
 
-    //cout<<"mhd: E = - Ue x B"<<endl;
-    // Ue = Ui - J/ne
-    (*Ex) = (getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBy] - getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBz]);
-    (*Ey) = (getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBz] - getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBx]);
-    (*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] - getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);
-    (*Bx) = State_GV[i][j][k][iBx];
-    (*By) = State_GV[i][j][k][iBy];
-    (*Bz) = State_GV[i][j][k][iBz];
+      //cout<<"mhd: E = - Ue x B"<<endl;
+      // Ue = Ui - J/ne
+      (*Ex) = (getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBy] - getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBz]);
+      (*Ey) = (getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBz] - getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBx]);
+      (*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] - getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);
+      (*Bx) = State_GV[i][j][k][iBx];
+      (*By) = State_GV[i][j][k][iBy];
+      (*Bz) = State_GV[i][j][k][iBz];
+    }
   }
   
   
@@ -1309,13 +1321,49 @@ class InterfaceFluid
       abort();
     }    
   }
+
+  bool doGetFromGM(int i,int j,int k){
+    // 1) The first step initialize from GM: all nodes need information from GM;
+    // 2) During updates, only boundary nodes needs to be overwritten by GM.
+    // Input: i, j, k are the local indexes. 
+    bool doGetGM;
+    int minDn;
+    if(doNeedBCOnly){
+      doGetGM = false;
+      int ig = getGlobalStartIndex(0) + i; int nxg = getFluidNxc()+3;
+      int jg = getGlobalStartIndex(1) + j; int nyg = getFluidNyc()+3;
+      int kg = getGlobalStartIndex(2) + k; int nzg = getFluidNzc()+3;
+      minDn = min(ig, nxg -ig -1);
+      if(INdim>1) minDn = min(minDn, min(jg, nyg - jg - 1));
+      if(INdim>2) minDn = min(minDn, min(kg, nzg - kg - 1));
+      if(minDn <nBCLayer) doGetGM = true;
+    }else{
+      doGetGM = true;
+    }
+    return doGetGM;
+  }
   
   /** get the number of cordinate points used by the simulation. recived from GM */
   void GetNgridPnt(int *nPoint){
-    *nPoint = 1;
-    *nPoint *= EndIdx_D[0] - StartIdx_D[0] + 1 +2*NG;
-    if(nIJK_D[1] > 3*NG) *nPoint *= (EndIdx_D[1] - StartIdx_D[1] + 1 + 2*NG);
-    if(nIJK_D[2] > 3*NG) *nPoint *= (EndIdx_D[2] - StartIdx_D[2] + 1 + 2*NG);
+    int i,j,k;
+    *nPoint = 0;
+    if(INdim == 1) {
+      for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++)
+	if(doGetFromGM(i,0,0)) *nPoint +=1;
+    }
+    else if (INdim == 2){
+      for(j = 0; j <=  EndIdx_D[1] - StartIdx_D[1] + 2*NG; j++)
+	for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++){
+	  if(doGetFromGM(i,j,0)) *nPoint +=1;
+	}
+    }
+    else{
+      for(k = 0; k <=  EndIdx_D[2] - StartIdx_D[2] + 2*NG; k++)
+	for(j = 0; j <=  EndIdx_D[1] - StartIdx_D[1] + 2*NG; j++)
+	  for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++){
+	    if(doGetFromGM(i,j,k)) *nPoint +=1;
+	  }
+    }
     *nPoint *= INdim;
   }
 
@@ -1326,30 +1374,33 @@ class InterfaceFluid
     n=0;
     if(INdim == 1) {
       for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++)
-	Pos_I[i] = i*INgridDx_D[0]  + INxRange_I[0];
+	if(doGetFromGM(i-StartIdx_D[0],0,0))
+	  Pos_I[i] = i*INgridDx_D[0]  + INxRange_I[0];
     }
     else if (INdim == 2){
       for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++)
 	for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++){
-	  Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
-	  Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
+	  if(doGetFromGM(i-StartIdx_D[0],j-StartIdx_D[1],0)){
+	    Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
+	    Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
+	  }
 	}
     }
     else{ 
       for(k = StartIdx_D[2]; k <=  EndIdx_D[2] + 2*NG; k++)
         for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++)
 	  for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++){
-	    Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
-	    Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
-	    Pos_I[n++] = k*INgridDx_D[2] + INxRange_I[4];
+	    if(doGetFromGM(i-StartIdx_D[0],j-StartIdx_D[1],k-StartIdx_D[2])){
+	      Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
+	      Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
+	      Pos_I[n++] = k*INgridDx_D[2] + INxRange_I[4];
+	    }
 	  }
     }
-
     //to SI
     for(i = 0; i<n; i++){
       Pos_I[i] *= No2SiL;
     }
-
   }
 
   void setStateVar(double *State_I, int *iPoint_I){
@@ -1377,46 +1428,46 @@ class InterfaceFluid
       j  =0;
       ii = 0;
       for(i = 0; i < nxnLG; i++){
- 	 for(iVar=0; iVar < nVarFluid; iVar++){
+	if(doGetFromGM(i,0,0)){
+	  for(iVar=0; iVar < nVarFluid; iVar++){
  	    // convert 3D index to 1D
  	    idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
 	    State_GV[i][j][k][iVar] = State_I[idx];
 	  }
           ii++;
 	}
+      }
     }
     else if (INdim == 2){
       k = 0;
-      jj = 0;
+      ii = 0;
       for(j = 0; j < nynLG; j++){
-        ii = 0;
 	for(i = 0; i < nxnLG; i++){
-	  for(iVar=0; iVar < nVarFluid; iVar++){
-	    idx = iVar + nVarFluid*(iPoint_I[ii + jj*Nx] - 1);
-	    State_GV[i][j][k][iVar] = State_I[idx];
+	  if(doGetFromGM(i,j,0)){
+	    for(iVar=0; iVar < nVarFluid; iVar++){
+	      idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
+	      State_GV[i][j][k][iVar] = State_I[idx];
+	    }
+	    ii++;
 	  }
-          ii++;
 	}
-        jj++;
       }
     }
-    else{ 
-      kk = 0;
-        for(k = 0; k < nznLG; k++){
-          jj = 0;
-          for(j = 0; j < nynLG; j++){
-            ii = 0;
-    	    for(i = 0; i < nxnLG; i++){
-    	      for(iVar=0; iVar < nVarFluid; iVar++){
-    	        idx = iVar + nVarFluid*(iPoint_I[ii + Nx*(jj + kk*Ny)] - 1);
-    	        State_GV[i][j][k][iVar] = State_I[idx];
-    	      }
-              ii++;
-    	    }
-            jj++;
-          }
-          kk++; 
-       }
+    else{
+      ii = 0;
+      for(k = 0; k < nznLG; k++){
+	for(j = 0; j < nynLG; j++){           
+	  for(i = 0; i < nxnLG; i++){
+	    if(doGetFromGM(i,j,k)){
+	      for(iVar=0; iVar < nVarFluid; iVar++){
+		idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
+		State_GV[i][j][k][iVar] = State_I[idx];
+	      }
+	      ii++;
+	    }
+	  }
+	}
+      }
     }
 
 
@@ -1424,17 +1475,19 @@ class InterfaceFluid
 
     if(INdim == 1){
       for(i = 0; i < nxnLG-1; i++){
-           
+	if(doGetFromGM(i,0,0)){
 	Bc_GD[i][0][0][x_] = 0.5 *(State_GV[i][0][0][iBx] + State_GV[i+1][0][0][iBx]);
            
 	Bc_GD[i][0][0][y_] = 0.5 *(State_GV[i][0][0][iBy] + State_GV[i+1][0][0][iBy]);
            
 	Bc_GD[i][0][0][z_] = 0.5 *(State_GV[i][0][0][iBz] + State_GV[i+1][0][0][iBz]);
       } 
-    }         
+    }
+    }
     else if(INdim == 2){
       for(i = 0; i < nxnLG-1; i++)
 	for(j = 0; j < nynLG-1; j++){
+	  if(doGetFromGM(i,j,0)){
 	  Bc_GD[i][j][0][x_] = 0.25 *(
 				      State_GV[i][j][0][iBx] + State_GV[i+1][j][0][iBx] +
 				      State_GV[i][j+1][0][iBx] + State_GV[i+1][j+1][0][iBx]);
@@ -1448,10 +1501,12 @@ class InterfaceFluid
 				      State_GV[i][j+1][0][iBz] + State_GV[i+1][j+1][0][iBz]);
 	}          
     }
+    }
     else if(INdim == 3){
       for(i = 0; i < nxnLG-1; i++)
         for(j = 0; j < nynLG-1; j++)
-	  for(k = 0; k < nznLG-1; k++) {           
+	  for(k = 0; k < nznLG-1; k++) {
+	    if(doGetFromGM(i,j,k)){
 	    Bc_GD[i][j][k][x_] = 0.125 *(
 					 State_GV[i][j][k][iBx] + State_GV[i+1][j][k][iBx] +
 					 State_GV[i][j+1][k][iBx] + State_GV[i+1][j+1][k][iBx] +
@@ -1471,6 +1526,7 @@ class InterfaceFluid
 					 State_GV[i][j+1][k+1][iBz] + State_GV[i+1][j+1][k+1][iBz]);
 	  }          
     }
+    }
 
     // J = curl B/ mu0
     double invdx, invdy, invdz;
@@ -1486,7 +1542,7 @@ class InterfaceFluid
       j = 0;
       k = 0;
       for(i = 0; i < nxnLG-2; i++){
-
+	if(doGetFromGM(i,0,0)){
 	compZdx = invdx*( 
 			 Bc_GD[i+1][j  ][k  ][z_] - Bc_GD[i  ][j  ][k  ][z_]);
 
@@ -1497,7 +1553,7 @@ class InterfaceFluid
 	State_GV[i+1][j][k][iJy] =  - compZdx;
 	State_GV[i+1][j][k][iJz] =  compYdx;
       }
-
+      }
       // fill in the ghost cell, constant value
       // Only the "real" ghost cells, which are at the boundaries are useful.
       State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
@@ -1512,6 +1568,7 @@ class InterfaceFluid
       k = 0;      
       for(i = 0; i < nxnLG-2; i++)
 	for(j = 0; j < nynLG-2; j++){
+	  if(doGetFromGM(i,j,0)){
 	  compZdy = 0.5*invdy*( 
 			       Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
 			       Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_]);
@@ -1532,6 +1589,7 @@ class InterfaceFluid
 	  State_GV[i+1][j+1][k][iJy] = - compZdx;
 	  State_GV[i+1][j+1][k][iJz] =   compYdx - compXdy;
 	 
+	}
 	}
 
       // fill in the ghost cell, constant value
@@ -1560,6 +1618,7 @@ class InterfaceFluid
       for(i = 0; i < nxnLG-2; i++)
         for(j = 0; j < nynLG-2; j++)
 	  for(k = 0; k < nznLG-2; k++){
+	    if(doGetFromGM(i,j,k)){
 	    compZdy = 0.25*invdy*( 
 				  Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
 				  Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_] +
@@ -1599,8 +1658,8 @@ class InterfaceFluid
 	    State_GV[i+1][j+1][k+1][iJx] =  compZdy - compYdz;
 	    State_GV[i+1][j+1][k+1][iJy] =  compXdz - compZdx;
 	    State_GV[i+1][j+1][k+1][iJz] =  compYdx - compXdy;
-	  }   
-
+	    }   
+	  }
       // fill in the ghost cell, constant value
 
       for(i=1;i<nxnLG-1;i++)
@@ -1846,6 +1905,9 @@ class InterfaceFluid
   int getNxcLocal(){return nxcLocal;}
   int getNycLocal(){return nycLocal;}
   int getNzcLocal(){return nzcLocal;}
+
+  bool getdoNeedBCOnly(){return(doNeedBCOnly);};
+  void setdoNeedBCOnly(bool doBCOnly){doNeedBCOnly=doBCOnly;};
 
 };
 

@@ -186,9 +186,12 @@ int c_Solver::Init(int argc, char **argv, double inittime,
     EMf->init();
     EMf->SyncWithFluid(col,grid,vct);
   }
+
+  if(!col->getdoNeedBCOnly() && col->getCase()=="BATSRUS"){
+    col->setdoNeedBCOnly(true);
+  }
 #endif
 
-  
   // Allocation of particles
   part = (Particles3D*) malloc(sizeof(Particles3D)*ns);
   for (int i = 0; i < ns; i++)

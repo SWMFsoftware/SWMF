@@ -1450,7 +1450,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   // processors
   XLEN = 2; YLEN = 2; ZLEN = 1; 
-  
+
+  // Number of layers needed to set boundary.
+  nBCLayer=4;
+
   while(*param){
     get_next_command(param,&Command);
     // if(      Command == "#CASE"){
@@ -1630,12 +1633,18 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"doRestart", &RESTART1);
       if(Case != "BATSRUS") 
         read_var(param,"RestartDirName", &RestartDirName);
-      if(RESTART1) ReadRestart(RestartDirName);
+    }
+    else if( Command == "#BCSENDLAYER"){
+      read_var(param,"nBCLayer", &nBCLayer);
     }
     //else
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }
 
+  if(RESTART1){
+    ReadRestart(RestartDirName);
+    setdoNeedBCOnly(true);
+  }
 
   //verbose = false;
   ReadFromGMinit(paramint, griddim, paramreal, ss);
