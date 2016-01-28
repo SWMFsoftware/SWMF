@@ -48,10 +48,15 @@ struct cColumnIntegrationSet {
 //=================================================
 //print the surface additional data
 namespace SURFACE {
-  void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\""); }
-  int GetVariableNumber() {return 2;}
 
-  void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
+   //calcualte the surface exposure time
+   double *SurfaceExposureTime=NULL;
+
+  //print the surface data
+  void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\", \"Sun Exposure Time\""); }
+  int GetVariableNumber() {return 3;}
+
+  void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface,double *xLight) {
     bool shadow=false;
     double cosSolarZenithAngle;
     double xCenter[3],*Normal,r2,l[3],t;
@@ -62,7 +67,7 @@ namespace SURFACE {
 
     //get the solar zenith angle
     for (i=0,r2=0.0,cosSolarZenithAngle=0.0;i<3;i++) {
-      l[i]=xSun[i]-xCenter[i];
+      l[i]=xLight[i]-xCenter[i];
 
       r2+=pow(l[i],2),cosSolarZenithAngle+=l[i]*Normal[i];
     }
@@ -80,7 +85,100 @@ namespace SURFACE {
 
     DataVector[0]=(shadow==false) ? 1 : 0;
     DataVector[1]=cosSolarZenithAngle;
+    DataVector[2]=(SurfaceExposureTime!=NULL) ? SurfaceExposureTime[nface] : 0.0;
   }
+
+  void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
+    GetFaceDataVector(DataVector,face,nface,xSun);
+  }
+
+  //calculate the surface face exposure time
+  void CalculateSurfaceExposureTime(SpiceDouble et,double SearchTimeInterval,double SearchTimeIncrement) {
+    int nface;
+    double AccumulatedSearchTime=0.0;
+    double data[GetVariableNumber()];
+
+    //init the data buffer and the current illumination state
+    int FaceIlluminationMap[CutCell::nBoundaryTriangleFaces],tmpBuffer[CutCell::nBoundaryTriangleFaces];
+    double SunState[6],xLight[3];
+
+    if (SurfaceExposureTime==NULL) SurfaceExposureTime=new double [CutCell::nBoundaryTriangleFaces];
+    for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) FaceIlluminationMap[nface]=0;
+
+    for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if (nface%amps.size==amps.rank) {
+      GetFaceDataVector(data,CutCell::BoundaryTriangleFaces+nface,nface);
+      FaceIlluminationMap[nface]=(data[0]>0.5) ? true : false;
+    }
+
+    //exchange the illumination map
+    MPI_Allreduce(FaceIlluminationMap,tmpBuffer,CutCell::nBoundaryTriangleFaces,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    memcpy(FaceIlluminationMap,tmpBuffer,CutCell::nBoundaryTriangleFaces*sizeof(int));
+
+    //setup the exposure time table
+    for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) SurfaceExposureTime[nface]=(FaceIlluminationMap[nface]==true) ? SearchTimeInterval : -1.0;
+
+    //determine the exposure time
+    int nFaceChangedState,FaceChangedStateList[CutCell::nBoundaryTriangleFaces];
+    double ExposureTimeExchengeBuffer[CutCell::nBoundaryTriangleFaces];
+
+    while (AccumulatedSearchTime<SearchTimeInterval) {
+      AccumulatedSearchTime+=SearchTimeIncrement;
+      nFaceChangedState=0;
+
+      //get the location of the Sun
+      SpiceDouble StateSun[6],lt;
+      spkezr_c("SUN",et-AccumulatedSearchTime,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
+      for (int i=0;i<3;i++) xLight[i]=1.0E3*StateSun[i];
+
+      //determine the new faces that was not in a shadow in time 'et-AccumulatedSearchTime'
+      int cnt=0;
+
+      for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if (FaceIlluminationMap[nface]==true) {
+        if (cnt%amps.size==amps.rank) {
+          GetFaceDataVector(data,CutCell::BoundaryTriangleFaces+nface,nface,xLight);
+
+          if (data[0]<0.5) {
+            //the face was in shadow at time 'et-AccumulatedSearchTime'
+            FaceChangedStateList[nFaceChangedState++]=nface;
+            SurfaceExposureTime[nface]=AccumulatedSearchTime;
+            FaceIlluminationMap[nface]=false;
+          }
+        }
+
+        cnt++;
+      }
+
+      //collect the time information from all processors
+      int nFaceChangedStateGlobalList[amps.size];
+
+      MPI_Gather(&nFaceChangedState,1,MPI_INT,nFaceChangedStateGlobalList,1, MPI_INT,0,MPI_COMM_WORLD);
+
+      if (amps.rank==0) {
+         int n,thread,buffer[CutCell::nBoundaryTriangleFaces];
+         MPI_Status status;
+
+         //get the list of new faces coming into shadow
+         for (thread=1;thread<amps.size;thread++) {
+           MPI_Recv(buffer,nFaceChangedStateGlobalList[thread],MPI_INT,thread,0,MPI_COMM_WORLD,&status);
+
+           for (n=0;n<nFaceChangedStateGlobalList[thread];n++) {
+             FaceIlluminationMap[buffer[n]]=false;
+             SurfaceExposureTime[buffer[n]]=AccumulatedSearchTime;
+           }
+         }
+      }
+      else {
+        //the slave processor;
+        MPI_Send(FaceChangedStateList,nFaceChangedState,MPI_INT,0,0,MPI_COMM_WORLD);
+      }
+
+      MPI_Bcast(FaceIlluminationMap,CutCell::nBoundaryTriangleFaces,MPI_INT,0,MPI_COMM_WORLD);
+    }
+
+    //distribute the exposure time array
+    MPI_Bcast(SurfaceExposureTime,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  }
+
 }
 
 //=================================================
@@ -248,7 +346,7 @@ int main(int argc,char **argv) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
     xSecondary[i]=1.0E3*StateSun[i];
-    xSun[i]=StateSun[i];
+    xSun[i]=1.0E3*StateSun[i];
   }
 
 
@@ -424,7 +522,11 @@ int main(int argc,char **argv) {
 
 
   //output surface data
+  SURFACE::CalculateSurfaceExposureTime(et,6.0*3600.0,10.0*60);
   amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
+
+  MPI_Finalize();
+  return 1;
 
   //process the gas output file
   cPostProcess3D::cColumnIntegral::cColumnIntegrationSet IntegrationSet;
