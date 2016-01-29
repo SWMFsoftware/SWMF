@@ -1,7 +1,8 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program PROPACEOS
-  use  CRASH_ModAtomicNotation
+  use CRASH_ModAtomicNotation
   use CRASH_ModAtomicMass,ONLY: cAtomicMass_I
   use ModConst
   use ModPlotFile
@@ -218,23 +219,48 @@ program PROPACEOS
   !Save opacities
   !Swap indexes (Rho<=>Te), merge to a sigle table
   !Convert units: cm2/g=0.10 m2/kg
-  
+
   allocate(Value_VII(2*nFrequency,nDensity,nTemperature))
   do iTe = 1, nTemperature
      do iRho = 1, nDensity
-        Value_VII(1:nFrequency, iRho, iTe) = PlanckOpacity_III(:,iTe,iRho) * 0.10
-        Value_VII(1+nFrequency:2*nFrequency, iRho, iTe) = RossOpacity_III(:,iTe,iRho) * 0.10
+        Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
+        Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
+             RossOpacity_III(:,iTe,iRho)*0.1
      end do
   end do
 
   call save_plot_file( &
          NameMaterial//'_opac_PRISM.dat',                                &
          TypeFileIn     = 'real8',                     &
-         StringHeaderIn = 'PROPACEOS Opacity for'//NameMaterial, &
+         StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
          NameVarIn      = 'logRho logTe Planck(30) Ross(30) EvMin EvMax',&
          ParamIn_I      = (/0.1, 2.0e4/), &
          CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/),             &                             
          CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/),             &
+         VarIn_VII      = Value_VII)
+  deallocate(Value_VII)
+
+  !=== Opacities with Planck group emission opacity ===
+
+  allocate(Value_VII(3*nFrequency,nDensity,nTemperature))
+  do iTe = 1, nTemperature
+     do iRho = 1, nDensity
+        Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
+        Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
+             PlanckOpacEms_III(:,iTe,iRho)*0.1
+        Value_VII(1+2*nFrequency:3*nFrequency,iRho,iTe) = &
+             RossOpacity_III(:,iTe,iRho)*0.1
+     end do
+  end do
+
+  call save_plot_file( &
+         NameMaterial//'_opac_PRISM_NLTE.dat', &
+         TypeFileIn     = 'real8', &
+         StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
+         NameVarIn      = 'logRho logTe Planck(30) Ems(30) Ross(30) EvMin EvMax', &
+         ParamIn_I      = (/0.1, 2.0e4/), &
+         CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
+         CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
          VarIn_VII      = Value_VII)
   deallocate(Value_VII)
   
