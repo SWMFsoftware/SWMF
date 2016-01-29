@@ -221,6 +221,14 @@ module ModUser
   ! Logical for using ModInitialState
   logical:: UseInitialStateDefinition = .false.
 
+  ! Variables for NLTE tables
+  logical :: UseTableNLTE = .false.
+  logical :: UseTableNLTE_I(0:MaxMaterial-1) = .false.
+  real :: TeDim_NLTE = 100.0  ! eV
+  real :: NiDim_NLTE = 1.0e22 ! 1/cm3
+  real :: TeSi_NLTE, NiSi_NLTE
+  integer :: iTableOpacityNLTE_I(0:MaxMaterial-1) = -1
+
 contains
 
   !============================================================================
@@ -399,6 +407,12 @@ contains
 
        case("#NLTE")
           call read_nlte
+
+       case("#NLTETABLE")
+          ! If Te < Te_NLTE AND Ni > Ni_NLTE THEN use LTE
+          call read_var('UseTableNLTE', UseTableNLTE)
+          call read_var('TeDim_NLTE', TeDim_NLTE) ! eV
+          call read_var('NiDim_NLTE', NiDim_NLTE) ! 1/cm3
 
        case('#USERINPUTEND')
           EXIT
@@ -2165,8 +2179,8 @@ contains
     use ModVarIndexes,  ONLY: Rho_, UnitUser_V, Te0_
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: &
-         No2Io_V, UnitX_
-    use ModConst,       ONLY: cHPlanckEV
+         No2Io_V, UnitX_, Si2No_V, UnitN_, UnitTemperature_
+    use ModConst,       ONLY: cHPlanckEV, cEVToK
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, DoAdvectWaves
     use ModIo,          ONLY: restart
     use CRASH_ModMultiGroup, ONLY: nGroup, IsLogMultiGroupGrid
@@ -2288,6 +2302,23 @@ contains
 
     if(iTableSesame > 0) &
          call make_lookup_table(iTableSesame, calc_table_value, iComm)
+
+    if(UseTableNLTE)then
+       TeSi_NLTE = TeDim_NLTE*cEVToK
+       NiSi_NLTE = NiDim_NLTE*1e6
+
+       do iMaterial = 0, nMaterial - 1
+          iTableOpacityNLTE_I(iMaterial) = &
+               i_lookup_table(NameMaterial_I(iMaterial)//'_opac_NLTE')
+          if(iTableOpacityNLTE_I(iMaterial) > 0)then
+             call make_lookup_table(iTableOpacityNLTE_I(iMaterial), &
+                  calc_table_value, iComm)
+             UseTableNLTE_I(iMaterial) = .true.
+          end if
+       end do
+       if(iProc==0) write(*,*) NameSub, &
+            ' iTableOpacityNLTE_I = ', iTableOpacityNLTE_I
+    end if
 
   end subroutine user_init_session
 
@@ -2446,7 +2477,7 @@ contains
     use ModMain,       ONLY: nI, UseERadInput
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
-         InvGammaMinus1, UnitEnergyDens_
+         InvGammaMinus1, UnitEnergyDens_, cKToEV
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
@@ -2486,10 +2517,12 @@ contains
     ! Our gray opacity table are for three materials
     real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
+    real    :: OpacityNLTE_V(3*nWave), TeEV
     real, dimension(0:nMaterial-1) :: pPerRho_I, Weight_I
     real :: ePerRho
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
     real :: Level_I(3), LevelLeft, LevelRight
+    real :: NatomicSi
 
     ! multi-group variables
     integer :: iWave
@@ -2502,7 +2535,7 @@ contains
 
     if(present(EinternalIn)) EinternalSi = max(1e-30, EinternalIn)
     if(useNLTE.and..not.present(i))&
-            call CON_stop('i,j,k,iBlock should be passed to user_material...for NLTE=T')
+         call CON_stop('i,j,k,iBlock should be passed to user_material...for NLTE=T')
 
     ! The electron temperature may be needed for the opacities
     ! Initialize to negative value to see if it gets set
@@ -2552,13 +2585,13 @@ contains
     end if
 
     ! get the atomic concentration
-    if(present(NatomicOut))then
-       if(IsMix)then
-          NatomicOut = sum(RhoToARatioSi_I)/cAtomicMass
-       else
-          NatomicOut = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
-       end if
+    if(IsMix)then
+       NatomicSi = sum(RhoToARatioSi_I)/cAtomicMass
+    else
+       NatomicSi = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial))
     end if
+
+    if(present(NatomicOut)) NatomicOut = NatomicSi
 
     if(UseElectronPressure)then
        call get_electron_thermo
@@ -2568,105 +2601,123 @@ contains
 
     if(present(TeOut)) TeOut = TeSi
 
-    if(present(OpacityPlanckOut_W) .or. present(OpacityRosselandOut_W))then
+    if(present(OpacityPlanckOut_W) .or. present(OpacityEmissionOut_W) .or. &
+         present(OpacityRosselandOut_W))then
 
-       if(iTableOpacity > 0 .and. nWave == 1)then
-          if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
-               'Gray opacity(Rho,Te)', RhoSi, TeSi)
+       if(UseTableNLTE_I(iMaterial) .and. &
+            .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
 
-          call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
-               Opacity_V, DoExtrapolate = .false.)
+          TeEV = TeSi*cKToEV
+          call interpolate_lookup_table(iTableOpacityNLTE_I(iMaterial), &
+               RhoSi, TeEV, OpacityNLTE_V, DoExtrapolate = .false.)
 
-          Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
-               *PlanckScaleFactor_I(0:nMaterial-1)
-          Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
-               *RosselandScaleFactor_I(0:nMaterial-1)
-          if(UseVolumeFraction)then
-             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                  = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                  = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
-          else
-             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                  = Opacity_V(2*iMaterial + 1) * RhoSi
-             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                  = Opacity_V(2*iMaterial + 2) * RhoSi
-          end if
+          if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+               = OpacityNLTE_V(1:nWave)*RhoSi
+          if(present(OpacityEmissionOut_W)) OpacityEmissionOut_W &
+               = OpacityNLTE_V(nWave+1:2*nWave)*RhoSi
+          if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+               = OpacityNLTE_V(2*nWave+1:3*nWave)*RhoSi
 
-       elseif(all(iTableOpacity_I(0:nMaterial-1) > 0))then
-          if(UseVolumeFraction)then
-             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0
-             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0
-             do jMaterial = 0, nMaterial-1
+       else
+          if(iTableOpacity > 0 .and. nWave == 1)then
+             if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
+                  'Gray opacity(Rho,Te)', RhoSi, TeSi)
+
+             call interpolate_lookup_table(iTableOpacity, RhoSi, TeSi, &
+                  Opacity_V, DoExtrapolate = .false.)
+
+             Opacity_V(1:2*nMaterial:2) = Opacity_V(1:2*nMaterial:2) &
+                  *PlanckScaleFactor_I(0:nMaterial-1)
+             Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
+                  *RosselandScaleFactor_I(0:nMaterial-1)
+             if(UseVolumeFraction)then
+                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                     = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
+                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                     = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
+             else
+                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                     = Opacity_V(2*iMaterial + 1) * RhoSi
+                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                     = Opacity_V(2*iMaterial + 2) * RhoSi
+             end if
+
+          elseif(all(iTableOpacity_I(0:nMaterial-1) > 0))then
+             if(UseVolumeFraction)then
+                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0
+                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0
+                do jMaterial = 0, nMaterial-1
+
+                   if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
+                        'Group opacity(Rho,Te,jMaterial)', &
+                        RhoSi, TeSi, jMaterial)
+
+                   call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
+                        RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
+
+                   GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
+                        *PlanckScaleFactor_I(jMaterial)
+                   GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
+                        *RosselandScaleFactor_I(jMaterial)
+
+                   if(present(OpacityPlanckOut_W)) &
+                        OpacityPlanckOut_W = OpacityPlanckOut_W &
+                        + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
+                   if(present(OpacityRosselandOut_W)) &
+                        OpacityRosselandOut_W =  OpacityRosselandOut_W &
+                        + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
+                end do
+             else
 
                 if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
-                     'Group opacity(Rho,Te,jMaterial)', RhoSi, TeSi, jMaterial)
+                     'Group opacity(Rho,Te,iMaterial)', RhoSi, TeSi, iMaterial)
 
-                call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
+                call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
                      RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
 
                 GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
-                     *PlanckScaleFactor_I(jMaterial)
+                     *PlanckScaleFactor_I(iMaterial)
                 GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
-                     *RosselandScaleFactor_I(jMaterial)
+                     *RosselandScaleFactor_I(iMaterial)
 
-                if(present(OpacityPlanckOut_W)) &
-                     OpacityPlanckOut_W = OpacityPlanckOut_W &
-                     + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
-                if(present(OpacityRosselandOut_W)) &
-                     OpacityRosselandOut_W =  OpacityRosselandOut_W &
-                     + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
-             end do
+                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                     = GroupOpacity_W(1:nWave)*RhoSi
+                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                     = GroupOpacity_W(nWave+1:)*RhoSi
+             end if
           else
-
-             if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
-                  'Group opacity(Rho,Te,iMaterial)', RhoSi, TeSi, iMaterial)
-
-             call interpolate_lookup_table(iTableOpacity_I(iMaterial), &
-                  RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-
-             GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
-                  *PlanckScaleFactor_I(iMaterial)
-             GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
-                  *RosselandScaleFactor_I(iMaterial)
-
-             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                  = GroupOpacity_W(1:nWave)*RhoSi
-             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                  = GroupOpacity_W(nWave+1:)*RhoSi
-          end if
-       else
-          ! inline opacities
-          if(IsMix)then
-             call eos(RhoToARatioSi_I, TeIn=TeSi, &
-                  OpacityPlanckOut_I=OpacityPlanckOut_W, &
-                  OpacityRosselandOut_I=OpacityRosselandOut_W)
-          else
-             if(.not.UseNLTE)then
-                call eos(iMaterial, RhoSi, TeIn=TeSi, &
-                  OpacityPlanckOut_I=OpacityPlanckOut_W, &
-                  OpacityRosselandOut_I=OpacityRosselandOut_W)
-             else
-                !Direct EOS, use EOverB input
-                call NLTE_EOS(iMaterial, RhoSi, TeIn=TeSi, &
-                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
-                     OpacityPlanckOut_I=OpacityPlanckOut_W, & 
+             ! inline opacities
+             if(IsMix)then
+                call eos(RhoToARatioSi_I, TeIn=TeSi, &
+                     OpacityPlanckOut_I=OpacityPlanckOut_W, &
                      OpacityRosselandOut_I=OpacityRosselandOut_W)
+             else
+                if(.not.UseNLTE)then
+                   call eos(iMaterial, RhoSi, TeIn=TeSi, &
+                        OpacityPlanckOut_I=OpacityPlanckOut_W, &
+                        OpacityRosselandOut_I=OpacityRosselandOut_W)
+                else
+                   !Direct EOS, use EOverB input
+                   call NLTE_EOS(iMaterial, RhoSi, TeIn=TeSi, &
+                        EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
+                        OpacityPlanckOut_I=OpacityPlanckOut_W, & 
+                        OpacityRosselandOut_I=OpacityRosselandOut_W)
+                end if
+
+                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                     = OpacityPlanckOut_W*PlanckScaleFactor_I(iMaterial)
+
+                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                     = OpacityRosselandOut_W*RosselandScaleFactor_I(iMaterial)
+
              end if
 
-             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                  = OpacityPlanckOut_W*PlanckScaleFactor_I(iMaterial)
-
-             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                  = OpacityRosselandOut_W*RosselandScaleFactor_I(iMaterial)
-
           end if
-
        end if
-    end if
 
-    if(present(OpacityEmissionOut_W)) &
-         OpacityEmissionOut_W = OpacityPlanckOut_W
+       if(present(OpacityEmissionOut_W)) &
+            OpacityEmissionOut_W = OpacityPlanckOut_W
+    end if
 
     if(present(PlanckOut_W))then
        do iWave = 1, nWave
@@ -2706,15 +2757,15 @@ contains
             else
                if(.not.UseNLTE)then
                   call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
-                    pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                    GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                    HeatCond=HeatCondOut)
+                       pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                       GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                       HeatCond=HeatCondOut)
                else
                   !Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
                   if(UseERadInput) then
                      call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
                           EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                                    *No2Si_V(UnitEnergyDens_),&
+                          *No2Si_V(UnitEnergyDens_),&
                           pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
                           GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                           HeatCond=HeatCondOut, UseERadInput=UseERadInput)
@@ -2725,7 +2776,7 @@ contains
                           GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                           HeatCond=HeatCondOut, UseERadInput=UseERadInput)
                   end if
-                end if
+               end if
             end if
          end if
       elseif(present(TeIn))then
@@ -2739,16 +2790,16 @@ contains
          else
             if(.not.UseNLTE)then
                call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
-                 eTotalOut=EinternalOut, pTotalOut=pSi, &
-                 CvTotalOut=CvOut, GammaOut=GammaOut, &
-                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                    eTotalOut=EinternalOut, pTotalOut=pSi, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
                !Direct EOS, use EOverB input 
                call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
-                 EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                 eTotalOut=EinternalOut, pTotalOut=pSi, &
-                 CvTotalOut=CvOut, GammaOut=GammaOut, &
-                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                    eTotalOut=EinternalOut, pTotalOut=pSi, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             end if
          end if
       else
@@ -2782,7 +2833,7 @@ contains
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
                   if(UseNLTE)then
-                       ! call CON_stop('NLTE energy cannot be found from pressure')
+                     ! call CON_stop('NLTE energy cannot be found from pressure')
                      EinternalOut = pSi*InvGammaMinus1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
                           No2Si_V(UnitP_)
                      EInternalOut = max(EInternalOut,1e-30)
@@ -2790,7 +2841,7 @@ contains
                      if(UseERadInput)then
                         call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
                              EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                                    *No2Si_V(UnitEnergyDens_),&
+                             *No2Si_V(UnitEnergyDens_),&
                              TeOut=TeSi,        &
                              CvTotalOut=CvOut, GammaOut=GammaOut, &
                              zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
@@ -2805,9 +2856,9 @@ contains
                      end if
                   else
                      call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-                       EtotalOut=EinternalOut, TeOut=TeSi, &
-                       CvTotalOut=CvOut, GammaOut=GammaOut, &
-                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                          EtotalOut=EinternalOut, TeOut=TeSi, &
+                          CvTotalOut=CvOut, GammaOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                   end if
                end if
             end if
@@ -2862,9 +2913,9 @@ contains
             else
                if(.not.UseNLTE)then
                   call eos(iMaterial, RhoSi, pTotalIn=pSi, &
-                    eTotalOut = EinternalOut, TeOut=TeSi, &
-                    CvTotalOut=CvOut, GammaOut=GammaOut, &
-                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+                       eTotalOut = EinternalOut, TeOut=TeSi, &
+                       CvTotalOut=CvOut, GammaOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
                   EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
@@ -2873,12 +2924,12 @@ contains
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
                           EoBIn_I =  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                                    *No2Si_V(UnitEnergyDens_),&
+                          *No2Si_V(UnitEnergyDens_),&
                           TeOut=TeSi, &
                           CvTotalOut=CvOut, GammaOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                           UseERadInput=UseERadInput) 
-                     
+
                   else
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
                           EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
@@ -2924,9 +2975,9 @@ contains
             else
                if(.not.UseNLTE)then
                   call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
-                    pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+                       pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                       GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                       HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
                else
                   !Indirect EOS, either EOverB, or ERad may be used as inputs
                   if(UseERadInput)then
@@ -2960,18 +3011,18 @@ contains
          else
             if(.not.UseNLTE)then
                call eos(iMaterial, Rho=RhoSi, TeIn=TeIn, &
-                 eElectronOut=EinternalOut, &
-                 pElectronOut=pSi, CvElectronOut=CvOut, &
-                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+                    eElectronOut=EinternalOut, &
+                    pElectronOut=pSi, CvElectronOut=CvOut, &
+                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
                !Direct EOS, use EOverB as inputs
-              call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
-                 EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                 eElectronOut=EinternalOut, &
-                 pElectronOut=pSi, CvElectronOut=CvOut, &
-                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+               call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                    EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                    eElectronOut=EinternalOut, &
+                    pElectronOut=pSi, CvElectronOut=CvOut, &
+                    GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                    HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             end if
          end if
       else
@@ -3014,7 +3065,7 @@ contains
                      if(UseERadInput)then
                         call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
                              EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                                    *No2Si_V(UnitEnergyDens_),&
+                             *No2Si_V(UnitEnergyDens_),&
                              TeOut=TeSi, &
                              CvElectronOut=CvOut, GammaEOut=GammaOut, &
                              zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
@@ -3031,10 +3082,10 @@ contains
                      end if
                   else
                      call eos(iMaterial, RhoSi, pElectronIn=pSi, &
-                       eElectronOut=EinternalOut, TeOut=TeSi, &
-                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                       TeTiRelax=TeTiRelaxOut)
+                          eElectronOut=EinternalOut, TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut)
                   end if
                end if
             end if
@@ -3094,10 +3145,10 @@ contains
             else
                if(.not.UseNLTE)then
                   call eos(iMaterial, RhoSi, pElectronIn=pSi, &
-                    eElectronOut=EinternalOut, TeOut=TeSi, &
-                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                    TeTiRelax=TeTiRelaxOut)
+                       eElectronOut=EinternalOut, TeOut=TeSi, &
+                       CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                       zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                       TeTiRelax=TeTiRelaxOut)
                else
                   EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
@@ -3106,7 +3157,7 @@ contains
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
                           EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                                    *No2Si_V(UnitEnergyDens_),&
+                          *No2Si_V(UnitEnergyDens_),&
                           TeOut=TeSi, &
                           CvElectronOut=CvOut, GammaEOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
