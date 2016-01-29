@@ -329,7 +329,8 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,  ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
+    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest, &
+         iNewDecomposition
     use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
@@ -338,13 +339,33 @@ contains
     
     integer, intent(in) :: iBlock
 
-    logical :: oktest,oktest_me
+    integer :: iLastDecomposition=-100
+
+    logical :: DoTest,DoTestMe
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
     !------------------------------------------------------------------------  
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_calc_sources',oktest,oktest_me)
+       call set_oktest('user_calc_sources',DoTest,DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
+
+    if(DoTestMe)write(*,*) NameSub,&
+         ' starting for iBlock, iLastDecomposition, iNewDecomposition=', &
+         iBlock, iLastDecomposition, iNewDecomposition
+
+    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 &
+         .or. iLastDecomposition /= iNewDecomposition)then
+
+       if(DoTestMe)write(*,*) NameSub,' recalculating neutral density, iBlock=', iBlock
+
+       call set_neutral_density(iBlock)
+
+       if(iBlock == nBlock)then
+          iLastDecomposition = iNewDecomposition
+       end if
+    end if
+
     if(UsePointImplicit)&
          UsePointImplicit_B(iBlock) = &
          R_BLK(1,1,1,iBlock) <= rPointImplicit &
@@ -364,7 +385,7 @@ contains
        call user_expl_source(iBlock)
     end if
 
-    if(oktest_me)then
+    if(DoTestMe)then
        write(*,*)'After Source(rho, rhoSp)=', &
             Source_VC(rho_:8,iTest,jTest,kTest)
        write(*,*)'Source(rhoU)=', Source_VC(5:8,iTest,jTest,kTest)
@@ -388,13 +409,13 @@ contains
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest,oktest_me
+    logical :: DoTest,DoTestMe
     !--------------------------------------------------------------------
     
     if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_imp_sources',oktest,oktest_me)
+       call set_oktest('user_imp_sources',DoTest,DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
     
     Srho   = cZero
@@ -408,7 +429,7 @@ contains
     SP     = cZero
     SE     = cZero
 
-    if(oktest_me)then
+    if(DoTestMe)then
        !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)
     end if
@@ -441,29 +462,34 @@ contains
   end subroutine user_expl_source
 
   !========================================================================
-  !  SUBROUTINE USER_SOURCES
-  !========================================================================
-  !\
-  ! This subroutine is used to calculate sources for the MHD equations.  The
-  ! routine is called for each block separately so that the user would typically
-  ! need only to code the source term calculation for a single block (in other
-  ! words inside the the k,j,i loop below).  As with all user subroutines, the
-  ! variables declared in ModUser are available here.  Again, as with other
-  ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
-  ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
-  !
-  ! The user should load the global variables:
-  !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEw
-  !
-  ! Note that SE (energy) and SP (pressure) must both be loaded if the code is 
-  ! going to use both the primitive and the conservative MHD equation advance  
-  ! (see the USER MANUAL and the DESIGN document).  If using only primitive SP 
-  ! must be loaded.  If using only conservative SE must be loaded.  The safe
-  ! approach is to load both.
-  !/
+
   subroutine user_sources(iBlock)
 
-    use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
+    ! This subroutine is used to calculate sources for the MHD equations.  The
+    ! routine is called for each block separately so that the user would typically
+    ! need only to code the source term calculation for a single block (in other
+    ! words inside the the k,j,i loop below).  As with all user subroutines, the
+    ! variables declared in ModUser are available here.  Again, as with other
+    ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
+    ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
+    !
+    ! The user should load the global variables:
+    !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEw
+    !
+    ! Note that SE (energy) and SP (pressure) must both be loaded if the code is 
+    ! going to use both the primitive and the conservative MHD equation advance  
+    ! (see the USER MANUAL and the DESIGN document).  If using only primitive SP 
+    ! must be loaded.  If using only conservative SE must be loaded.  The safe
+    ! approach is to load both.
+
+    ! Variable meanings:
+    !   Srho: Source terms for the continuity equation
+    !   SE,SP: Source terms for the energy (conservative) and presure
+    !          (primative) equations
+    !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
+    !   SBx,SBy,SBz:  Souce terms for the magnetic field equations 
+
+    use ModMain,    ONLY: nI, nJ, nK, &
          PROCTEST,BLKTEST, iTest,jTest,kTest
 
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
@@ -471,7 +497,7 @@ contains
     use ModGeometry, ONLY:R_BLK
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1
-!    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
+    !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
 
@@ -482,37 +508,22 @@ contains
     real :: inv_rho, inv_rho2, uu2,Productrate,kTi,kTe
     real :: temp
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
-    logical:: oktest,oktest_me
     real :: SourceLossMax, vdtmin
-    integer :: iLastGrid=-100, iLastDecomposition=-100
 
-    !
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'user_sources'
     !---------------------------------------------------------------------------
-    !\
-    ! Variable meanings:
-    !   Srho: Source terms for the continuity equation
-    !   SE,SP: Source terms for the energy (conservative) and presure
-    !          (primative) equations
-    !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
-    !   SBx,SBy,SBz:  Souce terms for the magnetic field equations 
-    !/
-    !---------------------------------------------------------------------------
-    !
-    if( nDenNuSpecies_CBI(1, 1, 1, iBlock, 1) < 0.0 & 
-         .or. iLastGrid /= iNewGrid &
-         .or. iLastDecomposition /= iNewDecomposition)then
-       call set_neutral_density(iBlock)
-
-       if(iBlock == nBlock)then
-          iLastGrid          = iNewGrid
-          iLastDecomposition = iNewDecomposition
-       end if
+    if(iBlock == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.
+       DoTestMe = .false.
     end if
 
     if (iProc==PROCtest.and.iBlock==BLKtest) then
-       call set_oktest('user_sources',oktest,oktest_me)
+       call set_oktest('user_sources',DoTest,DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTestMe=.false.
     end if
 
     if (R_BLK(1,1,1,iBlock) > 3.0*Rbody) RETURN
@@ -856,15 +867,15 @@ contains
 
     real ::CosSZA
     integer :: i,j,k
-    logical::okTestMe=.false., okTest=.false.
+    logical::DoTestMe=.false., DoTest=.false.
     !-------------------------------------------------------------------------
     if(iBlock==BLKtest .and. iProc==PROCtest)then
-       call set_oktest('user_set_ics',oktest,oktestme)
+       call set_oktest('user_set_ics',DoTest,DoTestme)
     else
-       oktest=.false.; oktestme=.false.
+       DoTest=.false.; DoTestme=.false.
     endif
 
-    if(okTestMe)then
+    if(DoTestMe)then
        write(*,*)'BodynDenNuSpecies_I(:)=',&
             BodynDenNuSpecies_I(:)
        WRITE(*,*)''
@@ -876,7 +887,7 @@ contains
     
      call set_neutral_density(iBlock)
     
-    if(okTestMe)then
+    if(DoTestMe)then
        write(*,*)'usehoto=',UseHotO
        write(*,*)'nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,:)=',&
             nDenNuSpecies_CBI(itest,jtest,ktest,BLKtest,:) 
@@ -918,7 +929,7 @@ contains
        end if
     end do;end do; end do;
     
-    if(OkTestMe)&
+    if(DoTestMe)&
          write(*,*)'state_VGB(body1_)=',&
          CellState_VI(:,body1_),'cell_state_VI(:,1)=',CellState_VI(:,1)
     
@@ -973,7 +984,7 @@ contains
     
     time_BLK(:,:,:,iBlock) = 0.00
     
-    if(okTestMe)then
+    if(DoTestMe)then
        write(*,*)'initial set up'
        write(*,*)'Rate_I=',Rate_I
        write(*,*)''
@@ -1002,9 +1013,9 @@ contains
     use ModIO
     use ModPhysics
 
-    logical::oktest=.false., oktestme=.false.
+    logical::DoTest=.false., DoTestme=.false.
     !---------------------------------------------------------------
-    if(oktestme)then
+    if(DoTestme)then
        write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
             No2Io_V(UnitN_),No2Io_V(UnitT_)
        write(*,*)'No2Si_V(UnitX_), temperature=',&
@@ -1127,7 +1138,7 @@ contains
 
     T300 = T300_dim*Si2No_V(UnitTemperature_)
 
-    if(oktest)then
+    if(DoTest)then
        write(*,*)'Tnu_body=',kTn, TNu_body_dim
        write(*,*)'T300=', T300, T300_dim
        write(*,*)'Tp_body=', kTp0
@@ -1198,7 +1209,7 @@ contains
     Optdep =  sum(BodynDenNuSpecies_I*CrossSection_I*HNuSpecies_I)
     Productrate0 = max(exp(-Optdep), 1.0e-5)
 
-    if(oktest)then
+    if(DoTest)then
        write(*,*)'=======in set_multisp=============='
        write(*,*)'BodynDenNuSpecies_I=',BodynDenNuSpecies_I
        write(*,*)'HNuSpecies_I=',HNuSpecies_I
@@ -1225,7 +1236,7 @@ contains
     BodyRhoSpecies_I(:)=BodyRhoSpecies_I(:)*&
          MassSpecies_I(:)
     
-    if(oktest)then
+    if(DoTest)then
        write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
             BodyRhoSpecies_I(1:nSpecies)
        write(*,*)'neutral density=', &
@@ -1568,10 +1579,10 @@ contains
     real ::mass
     integer:: i,j,k,iBLK
     character (len=*), parameter :: Name='user_get_log_var'
-    logical:: oktest=.false.,oktest_me
+    logical:: DoTest=.false.,DoTestMe
     !-------------------------------------------------------------------
-    call set_oktest('user_get_log_var',oktest,oktest_me)
-    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
+    call set_oktest('user_get_log_var',DoTest,DoTestMe)
+    if(DoTest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
     select case(TypeVar)
     case('hpflx')
        mass=1.0
@@ -1655,7 +1666,7 @@ contains
     real:: xLat, xLong,xAlt
     integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: oktestme=.true.
+    logical:: DoTestme=.true.
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp ----- 
     
     dR=CellSize_DB(x_,iBlock)
@@ -1803,7 +1814,7 @@ contains
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
        
     end select
-    if(oktestme)then
+    if(DoTestme)then
        write(*,*)'Mars input end', &
             dR,dPhi,dTheta, iBlock, &
             maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&
@@ -1835,15 +1846,13 @@ contains
 
     real ::CosSZA
     integer:: i, j, k
-    character (len=*), parameter :: NameSub = 'set_neutral_density'
-    logical:: DoTest, DoTestMe, DoTestCell
 
     !Varibales for chapman function
     real Xp, chap_y, chap, sinSZA
 
-
+    logical:: DoTest, DoTestMe, DoTestCell
+    character (len=*), parameter :: NameSub = 'set_neutral_density'
     !--------------------------------------------------------------------------
-
     if(iProc==PROCtest.and. iBlock==BLKtest)then
        call set_oktest(NameSub,DoTest,DoTestMe)
     else
