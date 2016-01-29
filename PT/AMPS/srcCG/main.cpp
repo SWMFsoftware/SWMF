@@ -1033,20 +1033,6 @@ int main(int argc,char **argv) {
     //update the particle tracer counter
     Comet::TrajectoryTracking::UpdateParticleCounter();
 
-    if (PIC::ThisThread==0 && niter==1) {
-      //      char fname[_MAX_STRING_LENGTH_PIC_];
-      
-      //sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
-      //Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
-
-
-#if _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_ == _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__ON_
-      char fname3[_MAX_STRING_LENGTH_PIC_];
-
-      sprintf(fname3,"%s/SurfaceTriangulation_MaxLiftableSize.dat",PIC::OutputDataFileDirectory);
-      Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(fname3);
-#endif
-    }
 
 #if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
     //    if (PIC::Mesh::mesh.ThisThread==0) {

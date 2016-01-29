@@ -26,30 +26,26 @@ double Comet::DustInitialVelocity::RotationPeriod=1.0E10;
 double Comet::DustInitialVelocity::RotationAxis[3]={1.0,0.0,0.0};
 double Comet::DustInitialVelocity::InjectionConstantVelocity=0.001;
 
-/*
-int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
-int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_OFFSET_=-1;
-int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=-1;
-*/
+static bool probabilityFunctionDefinedUniformNASTRAN=false;
+static double *productionDistributionUniformNASTRAN,*cumulativeProductionDistributionUniformNASTRAN;
 
-static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false,probabilityFunctionDefinedWaist=false,probabilityFunctionDefinedHartley2=false,probabilityFunctionDefinedUniformNASTRAN=false;
-//static double productionDistributionJet[360][180],cumulativeProductionDistributionJet[360][180];
-static double productionDistributionJet[6000],cumulativeProductionDistributionJet[6000];
-static double productionDistributionWaist[6000],cumulativeProductionDistributionWaist[6000];
-static double productionDistributionHartley2[6000],cumulativeProductionDistributionHartley2[6000];
-static double productionDistributionUniformNASTRAN[200000],cumulativeProductionDistributionUniformNASTRAN[200000];
-
-static double productionDistributionJetNASTRAN[200000],cumulativeProductionDistributionJetNASTRAN[200000];
 static bool probabilityFunctionDefinedJetNASTRAN=false;
 
-static double productionDistribution[180],cumulativeProductionDistribution[180];
 static double angle;
 static double azimuthCenter;
 static double zenithCenter;
 static cInternalRotationBodyData* Nucleus;
 
+static double **productionDistributionNASTRAN,**cumulativeProductionDistributionNASTRAN;
+static double *BjornProductionANALYTICAL;
+static bool *definedFluxBjorn,*probabilityFunctionDefinedNASTRAN;
+static double **fluxBjorn;
+double *nightSideFlux;
+
+double HeliocentricDistance=3.5*_AU_;
 double subSolarPointAzimuth=0.0; //53.0*Pi/180;
 double subSolarPointZenith=0.0;
+double positionSun[3];
 
 double DustSizeMin=1.0e-7;
 double DustSizeMax=1.0e-2;
@@ -57,28 +53,15 @@ double DustTotalMassProductionRate=0.0;
 int DustSampleIntervals=10;
 double DustSizeDistribution=0.0;
 
-
-
-#if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
-static double ratioBjornSpec[13][200000];
-static double productionDistributionNASTRAN[13][200000],cumulativeProductionDistributionNASTRAN[13][200000],fluxBjornANALYTICAL[13][200000];
-static bool definedFluxBjorn[13],probabilityFunctionDefinedNASTRAN[13];
-static double BjornProductionANALYTICAL[13];
-double fluxBjorn[13][90];
-double nightSideFlux[13];
-#else
-static double productionDistributionNASTRAN[200000],cumulativeProductionDistributionNASTRAN[200000];
-static bool probabilityFunctionDefinedNASTRAN=false;
-static bool definedFluxBjorn=false;
-static double BjornProduction;
-double fluxBjorn[90];
-double nightSideFlux;
-#endif
-
-static double gravityAngle[200000];
-static bool gravityAngleInitialized=false;
-
 long int offsetSurfaceElement;
+
+  //Nucleus activity                                                                                                                                                        
+  const double  Activity[3][25]={
+    {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
+    {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
+    {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
+  };
+
 
 void Comet::Init_BeforeParser() {
   Exosphere::Init_SPICE();
@@ -126,14 +109,41 @@ void Comet::Init_BeforeParser() {
 
 void Comet::Init_AfterParser(const char *DataFilePath) {
 
-  /*  //set up the Chamberlen model
-  double ExosphereEscapeRate[PIC::nTotalSpecies],ExospehreTemsprature[PIC::nTotalSpecies];
+  //Memory allocation
+  productionDistributionNASTRAN=new double* [PIC::nTotalSpecies];
+  productionDistributionNASTRAN[0]=new double [PIC::nTotalSpecies*CutCell::nBoundaryTriangleFaces];
 
-  for (int spec=0;spec<PIC::nTotalSpecies;spec++) { 
-    ExosphereEscapeRate[spec]=1.0e25,ExospehreTemsprature[spec]=1000.0;
-    //ExosphereEscapeRate[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceRate[spec];
-    //ExospehreTemsprature[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceTemeprature[spec];
-    }*/
+  cumulativeProductionDistributionNASTRAN=new double* [PIC::nTotalSpecies];
+  cumulativeProductionDistributionNASTRAN[0]=new double [PIC::nTotalSpecies*CutCell::nBoundaryTriangleFaces];
+
+  for(int i=0;i<PIC::nTotalSpecies;i++) {
+    productionDistributionNASTRAN[i]=productionDistributionNASTRAN[0]+i*CutCell::nBoundaryTriangleFaces;
+    cumulativeProductionDistributionNASTRAN[i]=cumulativeProductionDistributionNASTRAN[0]+i*CutCell::nBoundaryTriangleFaces;
+    for(int j=0;j<CutCell::nBoundaryTriangleFaces;j++) {
+      productionDistributionNASTRAN[i][j]=0.0;
+      cumulativeProductionDistributionNASTRAN[i][j]=0.0;
+    }  
+  }
+
+  productionDistributionUniformNASTRAN=new double[CutCell::nBoundaryTriangleFaces];
+  cumulativeProductionDistributionUniformNASTRAN=new double[CutCell::nBoundaryTriangleFaces];
+  BjornProductionANALYTICAL=new double[PIC::nTotalSpecies];
+  definedFluxBjorn=new bool[PIC::nTotalSpecies];
+  probabilityFunctionDefinedNASTRAN=new bool[PIC::nTotalSpecies];
+  nightSideFlux=new double[PIC::nTotalSpecies];
+
+  fluxBjorn=new double* [PIC::nTotalSpecies];
+  fluxBjorn[0]=new double [PIC::nTotalSpecies*90];
+
+  for(int i=0;i<PIC::nTotalSpecies;i++) {
+    fluxBjorn[i]=fluxBjorn[0]+i*90;
+    for(int j=0;j<90;j++) fluxBjorn[i][j]=0.0;
+  }  
+
+  //Init Sun position
+  positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+  positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+  positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
@@ -153,9 +163,6 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
     PIC::Mesh::mesh.SaveCenterNodeAssociatedData("gravity",GravityVariableOffsets,nGravityVariables);
   }
 #endif
-
-  
-  //  Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
 
 }
 
@@ -730,13 +737,9 @@ double sphericalHarmonic(int i,double colatitude,double longitude){
 
 
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
-  double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
-  double positionSun[3],x[3],norm[3],xMiddle[3],lattitude,factor=1.0;
+  double c=0.0,X=0.0,totalProductionRate=0.0;
+  double x[3],norm[3],xMiddle[3],lattitude,factor=1.0;
   long int totalSurfaceElementsNumber,i,j;
-  double percentageActive=0.05;
-  const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
-  const double DistanceFromTheSun[6]={1.3,2.0,2.7,3.0,3.25,3.5};
-  double HeliocentricDistance=3.3*_AU_;
   int idim;
   double ProductionRateScaleFactor,TableTotalProductionRate=0.0,BjornTotalProductionRate;
   int angle;
@@ -744,16 +747,6 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
 
   int nDev=25;
 
-  //Nucleus activity                                                                                                                                                        
-  const double  Activity[3][25]={
-    {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
-    {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
-    {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
-  };
-
-#if _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ ==  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ANALYTICAL_
-
-#if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
   if (definedFluxBjorn[spec]==false) {
     if (spec==_H2O_SPEC_) {
       double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
@@ -804,68 +797,9 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
       nightSideFlux[spec]=Qmin;  
     }
   }
-#else //ONLY ONE SPECIES
-  if (definedFluxBjorn==false) {
-    double Qmin=5.0e17,Qmax=7.0e18;
-
-     for (i=0;i<90;i++) {
-       angle=(double) i;
-       fluxBjorn[i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
-     }
-     
-     nightSideFlux=Qmin;  
-  }
-#endif
-
-#else
-  if (definedFluxBjorn==false) {
-    if (Comet::ndist<5) {
-      for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-	TableTotalProductionRate+=ProductionRate[i][2+ndist];
-      }
-    }else{
-      for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-	angletemp=(double) i;
-	angletemp*=Pi/180.0;
-	angle=(int) (acos(pow(DistanceFromTheSun[4]/DistanceFromTheSun[ndist],2.0)*cos(angletemp))*180/Pi);
-	TableTotalProductionRate+=ProductionRate[angle][2+4]/ProductionRate[angle][1]*ProductionRate[i][1];
-      }
-    }
-    
-    ProductionRateScaleFactor=(1.0-2.0*NightSideProduction[Comet::ndist]);
-    
-    BjornTotalProductionRate=TableTotalProductionRate/ProductionRateScaleFactor;
-    
-    if (Comet::ndist<5) {
-      for (i=0;i<90;i++) {
-	fluxBjorn[i]=(ProductionRateScaleFactor/TableTotalProductionRate*BjornTotalProductionRate*ProductionRate[i][2+Comet::ndist]/ProductionRate[i][1]+2.0*NightSideProduction[Comet::ndist]*BjornTotalProductionRate/(4*Pi*rSphere*rSphere))*percentageActive;
-      }
-    }else{
-      for (i=0;i<90;i++) {
-	angletemp=(double) i;
-	angletemp*=Pi/180.0;
-	angle=(int) (acos(pow(DistanceFromTheSun[4]/DistanceFromTheSun[ndist],2.0)*cos(angletemp))*180/Pi);
-	fluxBjorn[i]=(ProductionRateScaleFactor/TableTotalProductionRate*BjornTotalProductionRate*ProductionRate[angle][2+4]/ProductionRate[angle][1]+2.0*NightSideProduction[Comet::ndist]*BjornTotalProductionRate/(4*Pi*rSphere*rSphere))*percentageActive;
-      }
-    }
-    
-    nightSideFlux=BjornTotalProductionRate*NightSideProduction[Comet::ndist]/(2*Pi*rSphere*rSphere)*percentageActive;
-  }
-#endif
-
-  
-
-#if _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ ==  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ON_
-  return Comet::Bjorn_SourceRate[spec];
-
-#else
 
 
-#if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
   if (definedFluxBjorn[spec]==false) {
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
     
@@ -925,46 +859,7 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
     definedFluxBjorn[spec]=true;
   }
   return BjornProductionANALYTICAL[spec];
-#else
-  if (definedFluxBjorn==false) {
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-    
-    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-    
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-      CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); //I had middle element on body rotation...
-      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-	c+=norm[idim]*(positionSun[idim]-x[idim]);
-	X+=pow(positionSun[idim]-x[idim],2.0);
-      }
-      
-      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
-	totalProductionRate+=nightSideFlux*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-      }else{
-	double angleProd;
-	int angleProdInt;
-	angleProd=acos(c/sqrt(X))*180/Pi;
-	angleProdInt=(int) angleProd;
-	totalProductionRate+=fluxBjorn[angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-      }
-    }
-    if (probabilityFunctionDefinedNASTRAN==false && PIC::ThisThread==0)  printf("spec=%i totalProductionRate=%e flux(0)=%e nightsideFlux=%e \n",spec,totalProductionRate,fluxBjorn[0],nightSideFlux);
-    BjornProduction=totalProductionRate;
-    definedFluxBjorn=true;
-  } 
-  
-  return BjornProduction;
-
-#endif
-
-#endif
-
 }
-
-#if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
 
 bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN) {
   double ExternalNormal[3]; 
@@ -972,8 +867,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
   const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
   double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3],xMiddle[3],factor=1.0,lattitude;
-  static double positionSun[3];
-  double HeliocentricDistance=3.5*_AU_;
   int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
   long int totalSurfaceElementsNumber,i,j;
   double rSphere=1980.0;
@@ -982,22 +875,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 
   int nDev=25;
 
-  const double  Activity[3][25]={
-    {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
-    {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
-    {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
-  };
-
-
-
   if (probabilityFunctionDefinedNASTRAN[spec]==false) {
-
-    if (spec>=13) exit(__LINE__,__FILE__,"Error: the max number of the species of 13 is hardwired into the comet model. Fix it!");
-    if (CutCell::nBoundaryTriangleFaces>=200000) exit(__LINE__,__FILE__,"Error: the max number of the surface elements of 200000 is hardwired into the comet model. Fix it!");
-
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
 
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
 
@@ -1078,26 +956,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 
     }
 
-    /*
-    FILE *out;
-    out = fopen("GasFlux.dat","w");
-    fprintf(out,"Angle Flux(m-2.s-1) \n");
-    for (i=0;i<90;i++) {
-      fprintf(out,"%e %e \n",ProductionRate[i][0],fluxBjorn[i]);
-    }
-    fclose(out);
-
-    FILE *fout;
-    fout = fopen("SurfTemp.dat","w");
-    fprintf(fout,"Angle Temp (K) \n");
-    double angletemp;
-    for (i=0;i<90;i++) {
-      angletemp=(double) i*Pi/180.0;
-      fprintf(fout,"%e %e \n",ProductionRate[i][0],Exosphere::GetSurfaceTemeprature(cos(angletemp),x));
-    }
-    fclose(fout);
-    
-    */
     probabilityFunctionDefinedNASTRAN[spec]=true;
   }
   
@@ -1115,7 +973,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0); //1e-4
 
   iInjectionFaceNASTRAN=i; //output the triangulation surface element number
 
@@ -1153,21 +1010,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-//  double r2Tang=0.0;;
-//  double xFace[3];
-//  double vDustInit=0.0001;
-//  double angleVelocityNormal=asin(rnd());
 
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
-  /*for (idim=0;idim<3;idim++){
-        v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
-     
-    }
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
-
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
     DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
@@ -1190,7 +1034,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 #endif
 
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
   v_LOCAL_SO_OBJECT[0]=
     (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
     (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
@@ -1222,217 +1065,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   
   return true;
 }
-
-
-#else
-bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData, int &iInjectionFaceNASTRAN) {
-  double ExternalNormal[3]; 
-  int idim;
-  double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
-  const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
-  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
-  static double positionSun[3];
-  double HeliocentricDistance=3.5*_AU_;
-  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
-  long int totalSurfaceElementsNumber,i;
-  double rSphere=1980.0;
-  double area;
-  double totalProdNightSide=0.0,totalProdDaySide=0.0,scalingFactor,scalingFactorDay,totalSurfaceInShadow=0.0,totalSurfaceInDayLight=0.0;
-
-
-  if (probabilityFunctionDefinedNASTRAN==false) {
-
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-
-    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-
-    total=0.0;
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-      CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS);
-      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-        c+=norm[idim]*(positionSun[idim]-x[idim]);
-        X+=pow(positionSun[idim]-x[idim],2.0);
-      }
-      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
-        productionDistributionNASTRAN[i]=nightSideFlux*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-        total+=productionDistributionNASTRAN[i];
-      }else{
-        double angleProd;
-        int angleProdInt;
-        angleProd=acos(c/sqrt(X))*180/Pi;
-        angleProdInt=(int) angleProd;
-        productionDistributionNASTRAN[i]=fluxBjorn[angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-        total+=productionDistributionNASTRAN[i];
-      }
-    }
-   
-    cumulativeProductionDistributionNASTRAN[0]=0.0;
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      if (i==0) {
-	cumulativeProductionDistributionNASTRAN[i]+=productionDistributionNASTRAN[i]/total;
-      }else{
-	cumulativeProductionDistributionNASTRAN[i]=cumulativeProductionDistributionNASTRAN[i-1]+productionDistributionNASTRAN[i]/total;
-      }
-      
-    }
-    /*
-    FILE *out;
-    out = fopen("GasFlux.dat","w");
-    fprintf(out,"Angle Flux(m-2.s-1) \n");
-    for (i=0;i<90;i++) {
-      fprintf(out,"%e %e \n",ProductionRate[i][0],fluxBjorn[i]);
-    }
-    fclose(out);
-
-    FILE *fout;
-    fout = fopen("SurfTemp.dat","w");
-    fprintf(fout,"Angle Temp (K) \n");
-    double angletemp;
-    for (i=0;i<90;i++) {
-      angletemp=(double) i*Pi/180.0;
-      fprintf(fout,"%e %e \n",ProductionRate[i][0],Exosphere::GetSurfaceTemeprature(cos(angletemp),x));
-    }
-    fclose(fout);
-    
-    */
-    probabilityFunctionDefinedNASTRAN=true;
-  }
-  
-  //Computation of the segment where the particle will be created
-  gamma=rnd();
-  i=0;
-  while (gamma>cumulativeProductionDistributionNASTRAN[i]){
-    i++;
-  }
-
-#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
-  Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
-#endif
-    
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0); //1e-4
-
-  iInjectionFaceNASTRAN=i; //output the surface element of the particle generation
-
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-  
-  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
-    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
-  }
-  cosSubSolarAngle=c/sqrt(X);
-  
-  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-  if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
-  SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-//  double r2Tang=0.0;;
-//  double xFace[3];
-//  double vDustInit=0.0001;
-//  double angleVelocityNormal=asin(rnd());
-
-
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
-/*
-    for (idim=0;idim<3;idim++){
-      v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
-    }
-
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
-
-    DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
-
-    if (ExternalNormal[0]*v_LOCAL_IAU_OBJECT[0]+ ExternalNormal[1]*v_LOCAL_IAU_OBJECT[1]+ ExternalNormal[2]*v_LOCAL_IAU_OBJECT[2]<0.0) {
-      exit(__LINE__,__FILE__,"Error: the initial velocity of the grains is directed inside the nucleus");
-    }
-  }
-  else {
-    for (idim=0;idim<3;idim++) ExternalNormal[idim]=-ExternalNormal[idim];
-
-    PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  }
-#else
-
-  #if _PIC_MODEL__RADIAL_VELOCITY_MODE_ == _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]=-ExternalNormal[idim];    
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  #else
-  double vInit=500;
-  for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vInit*ExternalNormal[idim];
-  #endif
-
-#endif
-  
-  //init the internal degrees of freedom if needed
-#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
-  PIC::IDF::InitRotTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
-  PIC::IDF::InitVibTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
-#endif
-
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-#endif
 
 double Comet::GetTotalProductionRateUniformNASTRAN(int spec){
   return Comet::Uniform_SourceRate[spec];
@@ -1441,26 +1073,19 @@ double Comet::GetTotalProductionRateUniformNASTRAN(int spec){
 bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN) {
   double ExternalNormal[3]; 
   int idim;
-  double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
-  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
-  static double positionSun[3];
-  double HeliocentricDistance=3.3*_AU_;
-  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
-  long int totalSurfaceElementsNumber,i;
-  double rSphere=1980.0;
-  double area;
+  double rate,TableTotalProductionRate,gamma,cosSubSolarAngle;
+  double x[3],c=0.0,X,total,xmin,xmax,norm[3],xMiddle[3],factor=1.0,lattitude;
+  long int i,j;
+
+  long int totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
+
+  int nDev=25;
 
   if (probabilityFunctionDefinedUniformNASTRAN==false) {       
     for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
       TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
     }
-    
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-    
-    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-    
+        
     total=0.0;      
     for (i=0;i<totalSurfaceElementsNumber;i++) {
       for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
@@ -1496,7 +1121,6 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
 
   iInjectionFaceNASTRAN=i; //output the triangulation surface element number
 
@@ -1534,21 +1158,7 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-//  double r2Tang=0.0;
-//  double xFace[3];
-//  double vDustInit=0.0001;
-//  double angleVelocityNormal=asin(rnd());
-
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
-/*  for (idim=0;idim<3;idim++){
-        v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
-     
-    }
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);*/
-
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { 
     DustInitialVelocity::GetInitialVelocity(v_LOCAL_IAU_OBJECT,x_LOCAL_IAU_OBJECT,i);
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
@@ -1570,7 +1180,6 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   PIC::IDF::InitVibTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
 #endif
 
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
   v_LOCAL_SO_OBJECT[0]=
     (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
@@ -1606,98 +1215,7 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
 
 
 double Comet::GetTotalProductionRateJetNASTRAN(int spec){
-  /*  double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
-  double positionSun[3],x[3],norm[3];
-  long int totalSurfaceElementsNumber,i;
-  double percentageActive=1.0;
-  const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
-  const double DistanceFromTheSun[6]={1.3,2.0,2.7,3.0,3.25,3.5};
-  double HeliocentricDistance=3.3*_AU_;
-  int idim;
-  double ProductionRateScaleFactor,TableTotalProductionRate=0.0,BjornTotalProductionRate;
-  int angle;
-  double angletemp;
-
-  if (Comet::ndist<5) {
-    for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-      TableTotalProductionRate+=ProductionRate[i][2+ndist];
-    }
-  }else{
-    for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-      angletemp=(double) i;
-      angletemp*=Pi/180.0;
-      angle=(int) (acos(pow(DistanceFromTheSun[4]/DistanceFromTheSun[ndist],2.0)*cos(angletemp))*180/Pi);
-      TableTotalProductionRate+=ProductionRate[angle][2+4]/ProductionRate[angle][1]*ProductionRate[i][1];
-    }
-  }
-
-  ProductionRateScaleFactor=(1.0-2.0*NightSideProduction[Comet::ndist]);
-
-  BjornTotalProductionRate=TableTotalProductionRate/ProductionRateScaleFactor;
-
-  if (Comet::ndist<5) {
-    for (i=0;i<90;i++) {
-      fluxBjorn[i]=(ProductionRateScaleFactor/TableTotalProductionRate*BjornTotalProductionRate*ProductionRate[i][2+Comet::ndist]/ProductionRate[i][1]+2.0*NightSideProduction[Comet::ndist]*BjornTotalProductionRate/(4*Pi*rSphere*rSphere))*percentageActive;
-    }
-  }else{
-    for (i=0;i<90;i++) {
-      angletemp=(double) i;
-      angletemp*=Pi/180.0;
-      angle=(int) (acos(pow(DistanceFromTheSun[4]/DistanceFromTheSun[ndist],2.0)*cos(angletemp))*180/Pi);
-      fluxBjorn[i]=(ProductionRateScaleFactor/TableTotalProductionRate*BjornTotalProductionRate*ProductionRate[angle][2+4]/ProductionRate[angle][1]+2.0*NightSideProduction[Comet::ndist]*BjornTotalProductionRate/(4*Pi*rSphere*rSphere))*percentageActive;
-    }
-  }
-
-  nightSideFlux=BjornTotalProductionRate*NightSideProduction[Comet::ndist]/(2*Pi*rSphere*rSphere)*percentageActive;
-
-
-  positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-  positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-  positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-
-  totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-
-  for (i=0;i<totalSurfaceElementsNumber;i++) {
-    for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-    //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); //I had middle element on body rotation...                                                                    
-    CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x);
-    if (gravityAngleInitialized==false) {
-      int nd,u,v,w;
-      double accl[3]={0.0,0.0,0.0};
-      double scalar=0.0,angle=0.0,normAcclVector=0.0;
-      nucleusGravity::gravity(accl,x);
-      for(idim=0;idim<3;idim++) {
-        scalar+=-accl[idim]*norm[idim];
-        normAcclVector+=pow(accl[idim],2.0);
-      }
-      normAcclVector=sqrt(normAcclVector);
-      angle=acos(scalar/normAcclVector)*180.0/Pi;
-      gravityAngle[i]=angle;
-    }
-    if(gravityAngle[i]>45.0) {
-      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-        c+=norm[idim]*(positionSun[idim]-x[idim]);
-        X+=pow(positionSun[idim]-x[idim],2.0);
-      }
-
-      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow                                                                    
-        totalProductionRate+=nightSideFlux*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-      }else{
-        double angleProd;
-        int angleProdInt;
-        angleProd=acos(c/sqrt(X))*180/Pi;
-        angleProdInt=(int) angleProd;
-        totalProductionRate+=fluxBjorn[angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-      }
-    }
-  }
-  if (gravityAngleInitialized==false) gravityAngleInitialized=true;
-  if (probabilityFunctionDefinedJetNASTRAN==false && PIC::ThisThread==0)  printf("totalProductionRate=%e flux(0)=%e nightsideFlux=%e \n",totalProductionRate,fluxBjorn[0],nightSideFlux);
-
-  return totalProductionRate;
-  */
   return Comet::Jet_SourceRate[spec];
-
 }
 
 
@@ -1786,183 +1304,9 @@ void Comet::StepOverTime() {
 #endif
 }
 
-void Comet::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
-  int nface,pnode,cnt;
-  bool flag;
-  double *xNode,*xFace;
-
-  list<CutCell::cNodeCoordinates> nodeCoordinates;
-  list<CutCell::cNodeCoordinates>::iterator nodeitr;
-  CutCell::cFaceNodeConnection *FaceNodeConnection=new CutCell::cFaceNodeConnection[nSurfaceTriangulation];
-
-  //reconstruct the node list
-  for (nface=0;nface<nSurfaceTriangulation;nface++) for (pnode=0;pnode<3;pnode++) {
-    flag=false;
-
-    switch (pnode) {
-    case 0:
-      xFace=(SurfaceTriangulation+nface)->x0Face;
-      break;
-    case 1:
-      xFace=(SurfaceTriangulation+nface)->x1Face;
-      break;
-    case 2:
-      xFace=(SurfaceTriangulation+nface)->x2Face;
-      break;
-    }
-
-    for (nodeitr=nodeCoordinates.begin();nodeitr!=nodeCoordinates.end();nodeitr++) {
-      xNode=nodeitr->x;
-
-      if (pow(xFace[0]-xNode[0],2)+pow(xFace[1]-xNode[1],2)+pow(xFace[2]-xNode[2],2)<EPS*EPS) {
-        flag=true;
-        FaceNodeConnection[nface].node[pnode]=nodeitr;
-        break;
-      }
-    }
-
-    if (flag==false) {
-      //the node is not found -> create new node    
-      CutCell::cNodeCoordinates nd;
-
-      nd.id=0;
-      nd.x=xFace;
-      nodeCoordinates.push_front(nd);
-
-      nd.pic__shadow_attribute=(productionDistributionJetNASTRAN[nface]>0)? 1:0;
-
-      nodeCoordinates.push_front(nd);
-
-      FaceNodeConnection[nface].node[pnode]=nodeCoordinates.begin();
-    }
-  }
-
-
-  //print the mesh
-  FILE *fout=fopen(fname,"w");
-  //  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",(int)nodeCoordinates.size(),nSurfaceTriangulation);
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Jet\"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",(int)nodeCoordinates.size(),nSurfaceTriangulation);
-
-  for (cnt=1,nodeitr=nodeCoordinates.begin();nodeitr!=nodeCoordinates.end();nodeitr++) {
-    nodeitr->id=cnt++;
-    //    fprintf(fout,"%e %e %e\n",nodeitr->x[0],nodeitr->x[1],nodeitr->x[2]);
-    fprintf(fout,"%e %e %e %i\n",nodeitr->x[0],nodeitr->x[1],nodeitr->x[2],nodeitr->pic__shadow_attribute);
-  }
-
-  for (nface=0;nface<nSurfaceTriangulation;nface++) {
-    fprintf(fout,"%i %i %i\n",FaceNodeConnection[nface].node[0]->id,FaceNodeConnection[nface].node[1]->id,FaceNodeConnection[nface].node[2]->id);
-  }
-
-  fclose(fout);
-  delete [] FaceNodeConnection;
-}
 
 void Comet::GetNucleusNastranInfo(cInternalNastranSurfaceData *CG) {
   Comet::CG=CG;
-}
-
-
-void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
-/*
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  const double minTemp[6]={172.0,163.0,150.0,145.0,139.0,133.0};
-  long int nface,nnode,pnode;
-
-  int rank;
-  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
-  if (rank!=0) return;
-
-  class cTempNodeData {
-  public:
-    double MaxLiftableSize;
-  };
-
-  cTempNodeData *TempNodeData=new cTempNodeData[CutCell::nBoundaryTriangleNodes];
-
-  double x[3],accl_LOCAL[3],normGravity;
-  int nd,i,j,k,idim;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL;
-  double GasNumberDensity,GasBulkVelocity[3],GasMass,cr2,numerator,denominator;
-
-  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-    normGravity=0.0,numerator=0.0;
-    for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]=0.0;
-    CutCell::BoundaryTriangleFaces[nface].GetCenterPosition(x);      
-
-#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
-    //the gravity force non spherical case
-    startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
-    nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
-    Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
-    nucleusGravity::gravity(accl_LOCAL,x);
-#else
-    //    the gravity force spherical case
-    double r2=x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-    double r=sqrt(r2);
-    double mass=1.0e13;
-    
-    for (idim=0;idim<DIM;idim++) {
-      accl_LOCAL[idim]=-GravityConstant*mass/r2*x[idim]/r;
-    }
-#endif
-    for (idim=0;idim<DIM;idim++) normGravity+=pow(accl_LOCAL[idim],2.0);
-    normGravity=sqrt(normGravity);
- 
-    denominator=4*ElectricallyChargedDust::MeanDustDensity*normGravity;
-
-    double norm[3],c=0.0,X=0.0,flux,surfaceTemp,v,positionSun[3];
-    double HeliocentricDistance=0.0;
-
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-
-    for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
-    CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x,PIC::Mesh::mesh.EPS);
-    for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-      c+=norm[idim]*(positionSun[idim]-x[idim]);
-      X+=pow(positionSun[idim]-x[idim],2.0);
-    }
-    if(c<0 || CutCell::BoundaryTriangleFaces[nface].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
-      flux=nightSideFlux;
-      surfaceTemp=minTemp[Comet::ndist];
-    }else{
-      double angleProd;
-      int angleProdInt;
-      angleProd=acos(c/sqrt(X))*180/Pi;
-      angleProdInt=(int) angleProd;
-      flux=fluxBjorn[angleProdInt];
-      surfaceTemp=Exosphere::GetSurfaceTemeprature(c/sqrt(X),x);
-    }
-    GasMass=PIC::MolecularData::GetMass(0);
-    v=sqrt(2*Kbol*surfaceTemp/(Pi*GasMass));
-    numerator=3*GasMass*flux*v;
-     
-   for (pnode=0;pnode<3;pnode++) {
-      nnode=CutCell::BoundaryTriangleFaces[nface].node[pnode]-CutCell::BoundaryTriangleNodes;
-      if ((nnode<0)||(nnode>=CutCell::nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
-
-      TempNodeData[nnode].MaxLiftableSize=numerator/denominator;
-    }
-  }
-
-  //print the mesh
-  FILE *fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"MaxLiftableSize (m)\"");
-  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
-
-  for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) {
-    fprintf(fout,"%e %e %e %e\n",CutCell::BoundaryTriangleNodes[nnode].x[0],CutCell::BoundaryTriangleNodes[nnode].x[1],CutCell::BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].MaxLiftableSize);
-  }
-
-  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-    fprintf(fout,"%ld %ld %ld\n",1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[0]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[1]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[2]-CutCell::BoundaryTriangleNodes));
-  }
-
-  fclose(fout);
-  delete [] TempNodeData;
-#endif
-*/
 }
 
 double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(double *v0,double *v1,int s0,int s1,PIC::Mesh::cDataBlockAMR *block,PIC::Mesh::cDataCenterNode *cell) {
@@ -2101,8 +1445,6 @@ double Comet::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec
 //  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
 
   PhotolyticReactionAllowedFlag=true;
-
-  double HeliocentricDistance=0.0;
 
   static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(HeliocentricDistance);
   static const double PhotolyticReactionRate_H2=PhotolyticReactions::H2::GetTotalReactionRate(HeliocentricDistance);
