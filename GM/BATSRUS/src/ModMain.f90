@@ -215,7 +215,7 @@ module ModMain
   logical:: DoWriteCallSequence = .false.
 
   ! A space separated list of words, typically names of subroutines.
-  character (len=100) :: test_string=''
+  character (len=200) :: test_string=''
 
   ! Location for test
   integer :: iTest=1, jTest=1, kTest=1, BLKtest=1, PROCtest=0, ITERtest=-1
