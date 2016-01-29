@@ -117,6 +117,9 @@ F                       IsPlotName_n
 F                       IsPlotName_t
 T                       IsPlotName_e
 
+#PLOTFILENAME
+date			TimeUnitMax
+
 #SAVELOGFILE
 T			DoSaveLo5Dgfile
 VAR step date		StringLogfile
@@ -325,7 +328,7 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-2                       nPlotFiles
+4                       nPlotFiles
 y=0 MHD idl             StringPlot
 -1                      DnSavePlot
 300.			DtSavePlot
@@ -334,6 +337,15 @@ z=0 MHD idl             StringPlot
 -1                      DnSavePlot
 300.			DtSavePlot
 -1.0			DxSavePlot
+sph MHD idl		StringPlot
+-1			DnSavePlot
+60.			DtSavePlot
+6.6			Radius
+lcb nul tec             StringPlot  !last closed field line plots with integrals
+-1                      DnSavePlot  !Tecplot (ONLY!)
+300.                    DtSavePlot
+5.                      Radius
+36                      nLon
 
 #BORIS
 T			UseBorisCorrection
