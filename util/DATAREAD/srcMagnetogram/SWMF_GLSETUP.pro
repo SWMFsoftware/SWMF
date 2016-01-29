@@ -2,7 +2,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
                   USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
                   GLRadius=GLRadius, SizeFactor=SizeFactor, $
                   nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed,$
-                  UseFits=UseFits,UseARSize=UseARSize,Help=Help
+                  UseFits=UseFits,UseARSize=UseARSize,$
+                  GLRadiusRange=GLRadiusRange,Help=Help
 
 ;-----------------------------------------------------------------------
 ; NAME:
@@ -52,7 +53,10 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;
 ;   UseARSize = if set (Default), the GL flux rope size will be calculated based
 ;   on AR Size.   
-;   
+;
+;   GLRadiusRange = 2-elements array to specify the range for GL
+;   Radius. Default is [0.2,2.0].   
+;
 ;   Help = If set, print all available keywords
 ;
 ; RESTRICTIONS:
@@ -94,16 +98,13 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;      Updated the empirical relationship based on the GONG
 ;      magnetogram with nsmooth = 5.
 ;      Added Warning information when the poloidal flux is negative.
-;      Fixed/introduced bugs.   
+;      Fixed/introduced bugs.
+;    01/29/2016 Added option to change GL Radius range.   
 ;------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
   device,decomposed=0
   !p.font=1
-
-;Setup some default parameters
-  GLRadius_MAX=2.0
-  GLRadius_MIN=0.2
 
 ;Setup common block for BATSRUS/Idl
   common file_head, $
@@ -124,6 +125,9 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;the pre-saved 2D data will be read instead
 ;of reading from 3D data which is much more time consuming
   if not keyword_set(DemoMode) then DemoMode=0
+
+;Setup default range for GL Radius
+  if not keyword_set(GLRadiusRange) then GLRadiusRange=[0.2,2.0]
 
 ;set default for UseFits
   if not keyword_set(UseFits) then UseFits=1
@@ -583,8 +587,8 @@ if not keyword_set(USEPIL) then USEPIL=1
 ;Use Active Region size to specify the GL flux rope Radius.
   if UseARSize  then begin
      GLRadius=0.8/280.*ARSize
-     if GLRadius gt GLRadius_MAX then GLRadius=GLRadius_MAX
-     if GLRadius lt GLRadius_MIN then GLRadius=GLRadius_MIN
+     if GLRadius gt GLRadiusRange[1] then GLRadius=GLRadiusRange[1]
+     if GLRadius lt GLRadiusRange[0] then GLRadius=GLRadiusRange[0]
   endif
 
 ;Relationship between the GL Poloidal flux and GL Bstrength.
