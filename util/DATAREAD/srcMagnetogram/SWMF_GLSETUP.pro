@@ -457,7 +457,7 @@ if not keyword_set(USEPIL) then USEPIL=1
   dismap[where(Discenter le Dis_threshold)]=1
 
 ;Calculate Active Region Size for determining the GL size.
-  AR_threshold=round(long(15)*nlon/360*Dis_Weight/13.6)
+  AR_threshold=round(long(12)*nlon/360*Dis_Weight/13.6)
   ARmap_p=fltarr(nlon,nlat)
   ARmap_n=fltarr(nlon,nlat)
   ARmap_p[where(br_field gt 20)]=1
@@ -496,12 +496,13 @@ if not keyword_set(USEPIL) then USEPIL=1
   NN=n_elements(showpoints)
   pillines=intarr(NN,2)
   bt_pil=0.0
-  RegionSize_ARMag=round(long(6)*nlon/360)
+  RegionSize_ARMag=round(long(4)*nlon/360)
+  DisMax=round(long(6)*nlon/360)
   for i=0,NN-1 do begin
      y_show=floor(showpoints[i]/nlon)
      x_show=showpoints[i]-(y_show*nlon)
      pillines[i,*]=[x_show,y_show]
-     if sqrt((ar_center[0]-x_show)^2+(ar_center[1]-y_show)^2) lt 6 then begin
+     if sqrt((ar_center[0]-x_show)^2+(ar_center[1]-y_show)^2) lt DisMax then begin
         bt_pil=bt_pil+bt_field[x_show,y_show]
      endif
   endfor
@@ -516,7 +517,7 @@ if not keyword_set(USEPIL) then USEPIL=1
   for i=0,NN-1 do begin
      y_show=floor(showpoints[i]/nlon)
      x_show=showpoints[i]-(y_show*nlon)
-     if sqrt((ar_center[0]-x_show)^2+(ar_center[1]-y_show)^2) lt 6 then begin
+     if sqrt((ar_center[0]-x_show)^2+(ar_center[1]-y_show)^2) lt DisMax then begin
         plots,x_show,y_show,psym=-1,color=200
      endif
   endfor
@@ -558,9 +559,9 @@ if not keyword_set(USEPIL) then USEPIL=1
 ;Calculate the poloidal flux needed for the observed CME velocity.
 ;These relationships are based on the GONG magnetogram with nsmooth = 5
   if ARMag eq 1 then begin
-     GL_poloidal=(CMESpeed*br_ar^0.51150881-3060.1387)/899.70203
+     GL_poloidal=(CMESpeed*br_ar^0.43989278-3043.9307)/565.05018
   endif else begin
-     GL_poloidal=(CMESpeed*bt_pil^0.84576293-4807.3617)/1025.7409
+     GL_poloidal=(CMESpeed*bt_pil^0.58148678-2814.1030)/507.60065
   endelse
   
 ;Print WARNING information is GL_Bstrength is negative                                               
@@ -660,13 +661,15 @@ if not keyword_set(USEPIL) then USEPIL=1
      x_show=x_show-(xProfile[index]-RegionSize/2)
      xcenter=ar_center[0]-(xProfile[index]-RegionSize/2)
      ycenter=ar_center[1]-(yProfile[index]-RegionSize/2)
-     if sqrt((xcenter-x_show)^2+(ycenter-y_show)^2) lt 6 then begin
+     if sqrt((xcenter-x_show)^2+(ycenter-y_show)^2) lt DisMax then begin
         plots,x_show,y_show,psym=-1,color=200,symsize=3,thick=3
      endif
   endfor
 
 ;Save data for testing purpose
   ;save,pillines,ar_center,filename='AR6.sav'
+;  save,pillines,ar_center,xPositiveWeight,yPositiveWeight,xNegativeWeight,yNegativeWeight,$
+;       sizemap_p,sizemap_n,filename='AR5_show.sav'
 
   !mouse.button=0
 end
