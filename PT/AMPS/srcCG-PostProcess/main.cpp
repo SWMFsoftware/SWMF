@@ -141,6 +141,9 @@ namespace SURFACE {
      void SetIlliminationMap(SpiceDouble et) {
        FILE *fInMap=NULL;
 
+       //init the data buffer if needed
+       if (IlluminationMap==NULL) InitDataBuffer();
+
        //check whether the binary file with the map exists
        fInMap=fopen("illumination-map.bin","r");
 
@@ -270,6 +273,9 @@ namespace SURFACE {
      void SetSurfaceExposureTime(SpiceDouble et,double SearchTimeInterval,double SearchTimeIncrement) {
        FILE *fInMap=NULL;
 
+       //init the data buffer if needed
+       if (IlluminationMap==NULL) InitDataBuffer();
+
        //check whether the binary file with the map exists
        fInMap=fopen("exposure-time-map.bin","r");
 
@@ -320,15 +326,26 @@ namespace SURFACE {
 
 
   //print the surface data
-  void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\", \"Sun Exposure Time\""); }
-  int GetVariableNumber() {return 3;}
+  void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\","
+      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\""); }
+  int GetVariableNumber() {return 6;}
 
   void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
     if (ILLUMINATION::IlluminationMap==NULL) exit(__LINE__,__FILE__,"Error: the illumination map need to be initalized first");
 
-    DataVector[0]=(ILLUMINATION::IlluminationMap[nface]==false) ? 1 : 0;
+    DataVector[0]=(ILLUMINATION::IlluminationMap[nface]==true) ? 1 : 0;
     DataVector[1]=ILLUMINATION::cosSolarZenithAngle[nface];
     DataVector[2]=ILLUMINATION::ExposureTime[nface];
+
+    double FaceSourceRate_H2O=0.0;
+    int i,nnode;
+
+    for (i=0;i<3;i++) FaceSourceRate_H2O+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3];
+
+    DataVector[3]=(ILLUMINATION::IlluminationMap[nface]==true) ? ILLUMINATION::cosSolarZenithAngle[nface]/ILLUMINATION::ExposureTime[nface] : -1;
+    DataVector[4]=(ILLUMINATION::IlluminationMap[nface]==true) ? FaceSourceRate_H2O/ILLUMINATION::ExposureTime[nface] : -1;
+
+    DataVector[5]=FaceSourceRate_H2O;
   }
 }
 
@@ -514,6 +531,11 @@ int main(int argc,char **argv) {
 
     amps.LoadDataFile(DataFileName.c_str(),".");
     amps.PrintVariableList();
+
+    //load the surface data
+    std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
+    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),".");
+    amps.SurfaceData.PrintVariableList();
   }
   else if (_MODE_==_DUST_MODE_) {
     std::string TrajectoryFileName[_DUST_SPEC_NUMBER_];
