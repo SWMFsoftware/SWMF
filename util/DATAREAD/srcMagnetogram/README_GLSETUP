@@ -5,27 +5,13 @@ The demo version IDL script can run on both Mac and PC computers with IDL and th
 2. Click (LEFT Button) the CME source region with the positive polarity.
 3. Click (RIGHT Button) the CME source region with the negative polarity.
 
-To run the code in DemoMode:
+To run the script with recommended options:
+SWMF_GLSETUP,file='fitsfile.fits',CMEspeed=InputSpeed
 
-SWMF_GLSETUP,/DEMOMODE
+To get help with available options:
+SWMF_GLSETUP,/help
 
-To specify the layers of magnetogram:
-
-SWMF_GLSETUP,PLOTRADIUS=1.03
-
-To calcuate the flux rope orientation based on the PIL:
-
-SWMF_GLSETUP,/USEPIL
-
-To use the 2D magnetogram as the input:
-
-SWMF_GLSETUP,/Mode2D
-
-To use the code without SSW package:
-
-SWMF_GLSETUP,/NoSSW
-
-Other options please refer to the header of the script.
+Please refer to the header of the script for further information.
 
 The recommended GL flux rope parameters will be calculated and shown.
 
