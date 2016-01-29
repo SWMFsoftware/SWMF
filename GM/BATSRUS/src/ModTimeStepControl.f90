@@ -117,16 +117,18 @@ contains
 
     integer, intent(in) :: iBlock
 
-    logical :: DoTest, DoTestMe
     integer :: i, j, k, Di, Dk
     real:: Vdt
 
     ! Variables for time step control due to loss terms
     real :: Einternal, Source, Dt_loss, Coef
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
 
     if(iBlock==BLKtest)then
-       call set_oktest('calc_timestep',DoTest,DoTestMe)
+       call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
     endif
@@ -233,13 +235,13 @@ contains
     end if
 
     if(DoTestMe)then
-       write(*,*)'VdtFace_x(iTest:iTest+1)=', &
+       write(*,*)NameSub,' VdtFace_x(iTest:iTest+1)=', &
             VdtFace_x(Itest:Itest+1,jTest,kTest)
-       if(nJ>1) write(*,*)'VdtFace_y(jTest:jTest+1)=', &
+       if(nJ>1) write(*,*) NameSub,' VdtFace_y(jTest:jTest+1)=', &
             VdtFace_y(Itest,Jtest:jTest+1,kTest)
-       if(nK>1) write(*,*)'VdtFace_z(kTest:kTest+1)=', &
+       if(nK>1) write(*,*) NameSub,' VdtFace_z(kTest:kTest+1)=', &
             VdtFace_z(Itest,Jtest,kTest:kTest+1)
-       write(*,*)'time_BLK=',time_BLK(Itest,Jtest,Ktest,iBlock)
+       write(*,*) NameSub,' time_BLK=',time_BLK(Itest,Jtest,Ktest,iBlock)
     end if
 
     !\
@@ -254,7 +256,7 @@ contains
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
     end if
 
-    if(DoTestMe)write(*,*)'Dt_BLK, loc=',Dt_BLK(iBlock),&
+    if(DoTestMe)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
