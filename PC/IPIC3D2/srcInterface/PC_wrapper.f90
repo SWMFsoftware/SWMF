@@ -113,7 +113,7 @@ contains
     character(len=*), parameter :: NameSub='PC_finalize'
     !-------------------------------------------------------------------------
 
-    ! call ipic3d_end()
+    call ipic3d_end()
 
   end subroutine PC_finalize
 

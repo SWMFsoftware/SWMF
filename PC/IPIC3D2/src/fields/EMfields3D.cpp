@@ -399,8 +399,8 @@ void EMfields3D::freeDataType(){
     MPI_Type_free(&zEdgetypeN2);
     MPI_Type_free(&cornertypeN);
 
-    MPI_Type_free(&procview);
-    MPI_Type_free(&xyzcomp);
+    //MPI_Type_free(&procview);
+    //MPI_Type_free(&xyzcomp);
 }
 
 // This was Particles3Dcomm::interpP2G()

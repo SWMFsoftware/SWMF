@@ -43,9 +43,7 @@ class InterfaceFluid
   // BATSRUS output header file name 
   string FilenameFluid,FilenameRoot;
   // variables to read data from header file
-  string TempString;
-  string *INVarName_V;
-  
+  string TempString;  
   int INnProc;      // number of processors in the fluid code
   int INnStep;      // iteration number
   int INnPlotvar;   // number of variables in the fluid file
@@ -118,12 +116,17 @@ class InterfaceFluid
   // information is needed from GM. 
   bool doNeedBCOnly;
 
+  int iCycle;
+  
  public:
   // These variables are also used in PSKOutput.h
   int *iRho_I, *iRhoUx_I, *iRhoUy_I, *iRhoUz_I, iBx,iBy,iBz,
     iPe,*iPpar_I,*iP_I,iJx,iJy,iJz, *iUx_I, *iUy_I, *iUz_I, iRhoTotal;
 
   int nBCLayer;
+  bool useRandomPerCell;
+  string test_funcs;
+  int iTest, jTest,kTest;
   
  private:
   
@@ -180,7 +183,7 @@ class InterfaceFluid
   
   
   /** Convert from local processor index to full domain index */
-  inline void getGlobalIndex(const int il, const int jl, const int kl,
+ public:  inline void getGlobalIndex(const int il, const int jl, const int kl,
                              int *ig, int *jg, int *kg)const
   {
     if(StartIdx_D[0] == -1){
@@ -198,7 +201,7 @@ class InterfaceFluid
     }
   }
 
-  inline void getLocalIndex(int *i, int *j, int *k)const
+ public:  inline void getLocalIndex(int *i, int *j, int *k)const
   {
     *i = *i - StartIdx_D[0];
       
@@ -209,7 +212,7 @@ class InterfaceFluid
 
   
   /** Convert from position to full domain index */
-  inline void getGlobalIndex(const double x, const double y, const double  z,
+ public: inline void getGlobalIndex(const double x, const double y, const double  z,
 			     int *ig, int *jg, int *kg)const
   {
     *ig = max(floor(x/INgridDx_D[0]),0.0);
@@ -553,7 +556,6 @@ class InterfaceFluid
   
   /** destructor */
   ~InterfaceFluid(){
-    delete INVarName_V;
     delete MoMi_S;
     delete QoQi_S;
     delArr4(State_GV,nxnLG,nynLG,nznLG);
@@ -800,13 +802,13 @@ class InterfaceFluid
   }
 
   /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNxc() { return(nIJK_D[0]-3*NG); }
+  inline double getFluidNxc() const{ return(nIJK_D[0]-3*NG); }
   
   /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNyc() { if(nIJK_D[1] > 3*NG) return(nIJK_D[1]-3*NG); else return(1); }
+  inline double getFluidNyc() const{ if(nIJK_D[1] > 3*NG) return(nIJK_D[1]-3*NG); else return(1); }
   
   /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNzc() { if(nIJK_D[2] > 3*NG) return(nIJK_D[2]-3*NG); else return(1); }
+  inline double getFluidNzc() const{ if(nIJK_D[2] > 3*NG) return(nIJK_D[2]-3*NG); else return(1); }
   
   /** nIJK_D includes 1 guard/ghost cell layer... */
   inline double getFluidNxn() { return(nIJK_D[0]-2*NG); }
@@ -1908,7 +1910,10 @@ class InterfaceFluid
 
   bool getdoNeedBCOnly(){return(doNeedBCOnly);};
   void setdoNeedBCOnly(bool doBCOnly){doNeedBCOnly=doBCOnly;};
-
+  void setCycle(int iCycleIn){iCycle=iCycleIn;};
+  int getCycle()const{return iCycle;};
+  bool getUseRandomPerCell()const{return useRandomPerCell;};
+  
 };
 
 

@@ -164,6 +164,20 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
   double x0,y0,z0, u, v, w;
   int ns0, iSample;
   ns0 = ns; 
+
+#ifndef PSEUDRAND
+  if(col->getUseRandomPerCell()){
+    int ig,jg,kg,nxcg,nycg,nzcg,iCycle,npcel,nRandom=7;
+    col->getGlobalIndex(i,j,k,&ig,&jg,&kg);
+    nxcg = col->getFluidNxc();
+    nycg = col->getFluidNyc();
+    nzcg = col->getFluidNzc();
+    iCycle = col->getCycle();
+    npcel = npcelx*npcely*npcelz;
+    // What if idum overflow?
+    idum = (ns+3)*nRandom*npcel*(nxcg*nycg*nzcg*iCycle + nycg*nzcg*ig + nzcg*jg + kg);
+  }
+#endif
   
   // loop over particles inside grid cell i, j, k
   for (int ii = 0; ii < npcelx; ii++)
@@ -1896,7 +1910,7 @@ void Particles3D::repopulate_particles()
 	   But this is not efficient. Delete this while loop and delete lines 
 	   like 'if(bcPfaceXright!=FLUID)xend -= num_layers' after iPIC3D2
 	   coupling is proved to be correct. */
-	cout<<"Warning: The code here is not efficient!!--Yuxi"<<endl;
+	if (vct->getCartesian_rank()==0)cout<<"Warning: The code here is not efficient!!--Yuxi"<<endl;
 	const int nop_orig = getNOP();
 	int pidx = 0;
 	while(pidx < getNOP())

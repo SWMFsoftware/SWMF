@@ -190,6 +190,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   if(!col->getdoNeedBCOnly() && col->getCase()=="BATSRUS"){
     col->setdoNeedBCOnly(true);
   }
+
 #endif
 
   // Allocation of particles
@@ -823,6 +824,10 @@ double c_Solver::getSItime(){
 
 void c_Solver::setSIDt(double SIDt){
   col->setSIDt(SIDt);
+}
+
+void c_Solver::SetCycle(int iCycle){
+  col->setCycle(iCycle);
 }
 
 

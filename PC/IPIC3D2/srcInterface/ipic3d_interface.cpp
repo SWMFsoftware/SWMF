@@ -68,7 +68,7 @@ int ipic3d_finalize_init_(){
     SimRun[i]->Init(0, dummy, timenow);
     SimRun[i]->CalculateMoments();
     SimRun[i]->WriteOutput(0);
-    iSimCycle[i] = SimRun[i]->FirstCycle();
+    iSimCycle[i] = SimRun[i]->FirstCycle();    
   }
   timing_stop(nameFunc);
   return(0);
@@ -112,6 +112,7 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
     SimRun[i]->Init(0, dummy, timenow, param, i, paramint,
 		    &paramreal[(i - firstIPIC)*9], 
 		    &paramreal[(nIPIC - firstIPIC)*9], ss,true);
+    SimRun[i]->SetCycle(0);
   }
   timing_stop(nameFunc);  
   return(0);
@@ -131,6 +132,8 @@ int ipic3d_run_(double *time){
    if (SimRun[i]->get_myrank() == 0)
        cout << " ======= Cycle " << iSimCycle[i] << ", dt=" << SimRun[i]->getDt() << " ======= " << endl;
 
+   SimRun[i]->SetCycle(iSimCycle[i]);
+   
    timing_start("PC: SyncWithFluid");  
    SimRun[i]->SyncWithFluid(iSimCycle[i]);
    timing_stop("PC: SyncWithFluid");
@@ -247,8 +250,8 @@ int ipic3d_end_(){
   try {
     for(int i = 0; i < nIPIC; i++){
       SimRun[i]->Finalize();
+      delete SimRun[i];
     }
-    delete[] param;
     delete[] SimRun;
     delete[] iSimCycle;
     delete param;    

@@ -1259,8 +1259,10 @@ Collective::~Collective() {
   delete[]rhoINIT;
   delete[]rhoINJECT;
 
-  delete[]pitch_angle;
-  delete[]energy;
+  if(nstestpart>0){
+    delete[]pitch_angle;
+    delete[]energy;
+  }
 }
 /*! Print Simulation Parameters */
 void Collective::Print() {
@@ -1454,6 +1456,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Number of layers needed to set boundary.
   nBCLayer=4;
 
+  useRandomPerCell=false;
+
   while(*param){
     get_next_command(param,&Command);
     // if(      Command == "#CASE"){
@@ -1637,6 +1641,18 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     else if( Command == "#BCSENDLAYER"){
       read_var(param,"nBCLayer", &nBCLayer);
     }
+    else if( Command == "#RANDOMPERCELL"){
+      read_var(param,"useRandomPerCell", &useRandomPerCell);
+    }
+    else if( Command == "#TEST"){
+      read_var(param,"test_funcs", &test_funcs);
+    }
+    else if( Command == "#TESTIJK"){
+      read_var(param,"iTest", &iTest);
+      read_var(param,"jTest", &jTest);
+      read_var(param,"kTest", &kTest);
+    }
+
     //else
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }

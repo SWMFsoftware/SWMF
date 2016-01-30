@@ -149,7 +149,7 @@ namespace iPic3D {
     double getDt();
     double getSItime();
     void setSIDt(double SIDt);
-    
+    void SetCycle(int iCycle);
 #endif
 
     
