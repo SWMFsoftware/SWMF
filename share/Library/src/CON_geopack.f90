@@ -203,10 +203,11 @@ contains
     !   SIN(TETA0)*COS(LAMBDA0), SIN(TETA0)*SIN(LAMBDA0), AND COS(TETA0)
     !         ST0 * CL0                ST0 * SL0                CT0
     !
-    SQR=G11**2+H11**2+G10**2
+    SQR = sqrt(G11**2 + H11**2 + G10**2)
     AxisMagGeo_D(3)=G10/SQR
     AxisMagGeo_D(1)=-G11/SQR
     AxisMagGeo_D(2)=-H11/SQR
+
   end subroutine CON_mag_axis
   !------------------------------------------------------------------------
   subroutine CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
