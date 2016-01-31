@@ -54,4 +54,6 @@ if ($OutputFileNumber{flag}==1) {
   `echo "#undef _OUTPUT_FILE_NUMBER_\n#define _OUTPUT_FILE_NUMBER_ "$OutputFileNumber{val}  >> config.h`;
 }
 
-`echo "\n" >> config.h`;
+if (! -e "config.h") { 
+  `echo "\n" >> config.h`;
+}
