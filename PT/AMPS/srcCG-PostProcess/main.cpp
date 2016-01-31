@@ -434,10 +434,10 @@ namespace DUST {
 
 
 
-  int IntegrantVectorLength() {return 5+3*nRadii;}
+  int IntegrantVectorLength() {return 7+3*nRadii;}
 
   void PrintVariableList(FILE* fout) {
-    fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\", \"Mean Velocity\",");
+    fprintf(fout," \"Column Densty\", \"Total Brightness\", \"Number of Trajectory points\", \"Number of Independent Trajectories\", \"Mean Velocity\", \"Corrected Column Densty\", \"Cortrected Total Brightness\",");
 
     for (int i=0;i<nRadii;i++) fprintf(fout,", \"Column Density(%e)\", \"Brightness(%e)\", \"Velocity(%e)\"",VariablePair[i].GrainRadius,VariablePair[i].GrainRadius,VariablePair[i].GrainRadius);
   }
@@ -448,7 +448,7 @@ namespace DUST {
     if (data[0]>0.0) data[4]/=data[0];
 
     //speed for individual dust groupls
-    for (int iRadius=0;iRadius<nRadii;iRadius++) if (data[5+3*iRadius]>0.0) data[5+3*iRadius+2]/=data[5+3*iRadius];
+    for (int iRadius=0;iRadius<nRadii;iRadius++) if (data[7+3*iRadius]>0.0) data[7+3*iRadius+2]/=data[7+3*iRadius];
   }
 
   void IntegrantVector(double *data,double *x) {
@@ -478,15 +478,46 @@ namespace DUST {
         LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
 
       for (i=0;i<8;i++) {
-        data[5+3*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
-        data[5+3*iRadius+2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][4+VariablePair[iRadius].nVar]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[7+3*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
+        data[7+3*iRadius+2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][4+VariablePair[iRadius].nVar]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
       }
 
-      data[5+3*iRadius+1]=ScatteringEfficentcy*data[5+3*iRadius];
-      TotalBrightness+=data[5+3*iRadius+1];
+      data[7+3*iRadius+1]=ScatteringEfficentcy*data[7+3*iRadius];
+      TotalBrightness+=data[7+3*iRadius+1];
     }
 
     data[1]=TotalBrightness;
+
+    //calculate the total column density (data[5]) and brightness (data[6]) corrected with the surface exposure time
+    int np,nt,nStatingFace;
+    double CorrectionFactor;
+
+    for (np=0;np<cl->TrajectoryPoints.size();np++) {
+      nt=cl->TrajectoryPoints[np];
+      nStatingFace=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][7];
+
+      double FaceSourceRate_H2O=0.0,c;
+      int i,nnode;
+
+      for (i=0;i<3;i++) FaceSourceRate_H2O+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nStatingFace][i]][3];
+
+      CorrectionFactor=SURFACE::ILLUMINATION::cosSolarZenithAngle[nStatingFace]/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
+      CorrectionFactor=FaceSourceRate_H2O/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
+
+      if (CorrectionFactor<0.0) CorrectionFactor=0.0;
+
+      c=CorrectionFactor*amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][8]/
+          (bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+
+      data[5]+=c;
+
+      //particle size
+      GrainRadius=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][6];
+      ScatteringEfficentcy=
+              LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
+
+      data[6]+=c*ScatteringEfficentcy;
+    }
   }
 
 }
@@ -546,10 +577,17 @@ int main(int argc,char **argv) {
     out=t.str();
 
     for (int i=0;i<_DUST_SPEC_NUMBER_;i++) {
+      std::string s1;
+
+      t.str("");
       t << _GAS_SPEC_NUMBER_+i;
       s=t.str();
 
-      TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%0.dat";
+      t.str("");
+      t << i;
+      s1=t.str();
+
+      TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%"+s1+".dat";
     }
 
     //load the trajectory data file
@@ -697,8 +735,8 @@ int main(int argc,char **argv) {
   SURFACE::ILLUMINATION::SetIlliminationMap(et);
   amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
 
-  MPI_Finalize();
-  return 1;
+//  MPI_Finalize();
+//  return 1;
 
   //process the gas output file
   cPostProcess3D::cColumnIntegral::cColumnIntegrationSet IntegrationSet;
