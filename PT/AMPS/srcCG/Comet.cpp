@@ -135,6 +135,19 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   fluxBjorn=new double* [PIC::nTotalSpecies];
   fluxBjorn[0]=new double [PIC::nTotalSpecies*90];
 
+
+  for(int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+    productionDistributionUniformNASTRAN[i]=0.0;
+    cumulativeProductionDistributionUniformNASTRAN[i]=0.0;
+  }
+
+  for(int i=0;i<PIC::nTotalSpecies;i++) {
+    BjornProductionANALYTICAL[i]=0.0;
+    definedFluxBjorn[i]=false;
+    probabilityFunctionDefinedNASTRAN[i]=false;
+    nightSideFlux[i]=false;
+  }
+
   for(int i=0;i<PIC::nTotalSpecies;i++) {
     fluxBjorn[i]=fluxBjorn[0]+i*90;
     for(int j=0;j<90;j++) fluxBjorn[i][j]=0.0;
