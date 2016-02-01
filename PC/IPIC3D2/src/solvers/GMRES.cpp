@@ -7,6 +7,7 @@
 #include "Alloc.h"
 #include "TimeTasks.h"
 #include "ipicdefs.h"
+#include "my_mpi.h"
 
 void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
 	   const double *b, int m, int max_iter, double tol,
@@ -107,7 +108,7 @@ void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
       {
         
         MPI_Allreduce(MPI_IN_PLACE, y, (k+2),
-          MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
       }
       for (int j = 0; j <= k; j++) {
         H[j][k] = y[j];
