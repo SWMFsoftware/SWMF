@@ -491,10 +491,16 @@ int Collective::ReadRestart(string inputfile) {
 
   stringstream ss1;
   ss1<<"_region"<<getiRegion();
+  string restartFile;
+  if(Case == "BATSRUS"){
+    restartFile = inputfile + "/settings" + ss1.str() +".hdf";
+  }else{
+    restartFile = inputfile;
+  }
   // Open the setting file for the restart.
-  file_id = H5Fopen((inputfile + "/settings" + ss1.str() +".hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  file_id = H5Fopen(restartFile.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   if (file_id < 0) {
-    cout << "couldn't open file: " << inputfile << endl;
+    cout << "couldn't open file: " << restartFile << endl;
     return -1;
   }
 
@@ -762,11 +768,15 @@ int Collective::ReadRestart(string inputfile) {
 
 
   // read last cycle (not from settings, but from restart0.hdf)
-  ss1<<"_region"<<getiRegion();
+  if(Case == "BATSRUS"){
+    restartFile = inputfile + "/restart0"+ss1.str()+".hdf";
+  }else{
+    restartFile = inputfile + "/restart0.hdf";
+  }
   // Open the setting file for the restart.
-  file_id = H5Fopen((inputfile + "/restart0"+ss1.str()+".hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+  file_id = H5Fopen(restartFile.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   if (file_id < 0) {
-    cout << "couldn't open file: " << inputfile << endl;
+    cout << "couldn't open file: " << restartFile << endl;
     return -1;
   }
 
