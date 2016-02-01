@@ -2206,7 +2206,9 @@ void EMfields3D::calculateE()
     addscale(1.0,Ezth,Ez,nxn,nyn,nzn);
   }
 
+  #ifdef BATSRUS
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
+  #endif BATSRUS
   
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);
@@ -2262,7 +2264,9 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   if (get_col().getCase()=="ForceFree") fixBforcefree();
   if (get_col().getCase()=="GEM")       fixBgem();
   if (get_col().getCase()=="GEMnoPert") fixBgem();
+  #ifdef BATSRUS
   if (get_col().getCase()=="BATSRUS")   fixB_BATSRUS();
+  #endif
   
   // OpenBC:
   if (get_col().getCase()!="BATSRUS")
@@ -2412,7 +2416,9 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   // move from krylov space to physical space
   solver2phys(vectX,vectY,vectZ,vector,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
 
+  #ifdef BATSRUS
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,doSolveForChange);
+  #endif
 
   grid->lapN2N(imageX, vectX,this);
   grid->lapN2N(imageY, vectY,this);
@@ -2605,7 +2611,9 @@ void EMfields3D::smoothE()
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+      #ifdef BATSRUS
       if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,false);
+      #endif 
       
       /*
       if (icount % 2 == 1) {
@@ -2655,7 +2663,9 @@ void EMfields3D::smoothE()
 	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
 	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
 	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+	#ifdef BATSRUS
 	fixE_BATSRUS(vectX,vectY,vectZ,false);
+	#endif
       }
       
   }
@@ -3099,7 +3109,9 @@ void EMfields3D::calculateB()
   if (get_col().getCase()=="ForceFree") fixBforcefree();
   if (get_col().getCase()=="GEM")       fixBgem();
   if (get_col().getCase()=="GEMnoPert") fixBgem();
+  #ifdef BATSRUS
   if (get_col().getCase()=="BATSRUS")   fixB_BATSRUS();
+  #endif
   
   // OpenBC:
   if (get_col().getCase()!="BATSRUS")
@@ -3114,7 +3126,9 @@ void EMfields3D::calculateB()
   communicateNodeBC(nxn, nyn, nzn, Byn, col->bcBy[0],col->bcBy[1],col->bcBy[2],col->bcBy[3],col->bcBy[4],col->bcBy[5], vct, this);
   communicateNodeBC(nxn, nyn, nzn, Bzn, col->bcBz[0],col->bcBz[1],col->bcBz[2],col->bcBz[3],col->bcBz[4],col->bcBz[5], vct, this);
 
+#ifdef BATSRUS
   if (get_col().getCase()=="BATSRUS") fixB_BATSRUS();
+#endif  
 }
 
 /*! initialize EM field with transverse electric waves 1D and rotate anticlockwise (theta degrees) */
@@ -3206,7 +3220,8 @@ void EMfields3D::calculateHatFunctions()
   // smoothing
   smooth(rhoc, 0);
   // calculate j hat
-  
+
+#ifdef BATSRUS
   if(get_col().getCase()=="BATSRUS")
     for (int is=0; is < ns; is++){
 
@@ -3221,7 +3236,8 @@ void EMfields3D::calculateHatFunctions()
       fixVarBCnode(pYZsn,&Collective::getFluidPyz<int>,col->getnIsotropic(),is);
       fixVarBCnode(pZZsn,&Collective::getFluidPzz<int>,col->getnIsotropic(),is);
     }
-
+#endif
+  
   for (int is=0; is < ns; is++){
     grid->divSymmTensorN2C(tempXC, tempYC, tempZC, pXXsn, pXYsn, pXZsn, pYYsn, pYZsn, pZZsn, is);
 
@@ -3257,9 +3273,10 @@ void EMfields3D::calculateHatFunctions()
   eq(rhoh, tempXC, nxc, nyc, nzc);
   // communicate rhoh
   communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
-
+  #ifdef BATSRUS
   if(get_col().getCase()=="BATSRUS")
     fixVarBCcell(rhoh,&Collective::getFluidZero<int>,col->getnCharge(),0);
+  #endif
 }
 /*! Image of Poisson Solver */
 void EMfields3D::PoissonImage(double *image, double *vector, bool doSolveForChange)
@@ -3503,6 +3520,7 @@ void EMfields3D::init()
   }
 }
 
+
 #ifdef BATSRUS
 /*! initiliaze EM for GEM challange */
 void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
@@ -3581,7 +3599,7 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
 {
   int minDn;
   string funcName="EMfields3D::SyncWithFluid";
-
+  
   // loop over cell centers and fill in magnetic and electric fields
   for (int i=0; i < nxn; i++)
     for (int j=0; j < nyn; j++)
@@ -3971,8 +3989,6 @@ inline void EMfields3D::fixVarBCnode(arr4_double Var,
 
       }}}
 }
-
-
 
 #endif
 

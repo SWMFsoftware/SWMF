@@ -14,6 +14,7 @@ Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
   _vct(*vct)
 {
   if(col->getCase()=="BATSRUS"){
+    #ifdef BATSRUS
     /*Example: 18 cells (not include ghost cells) distributed on 4 processors 
       in x direction. The number of cells on each processors are: 5, 5, 4, 4
      */
@@ -57,7 +58,8 @@ Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
     nzcStart = (nzc-2)*vct->getCoordinates(2);
     if(!isCrowdedZ) nzcStart += col->getNzc() - (nzc-2)*vct->getZLEN();
     zStart = col->getLz()*nzcStart / (double) col->getNzc();
-    zEnd = zStart + col->getLz()*(nzc-2) / (double) col->getNzc();    
+    zEnd = zStart + col->getLz()*(nzc-2) / (double) col->getNzc();
+    #endif
   }else{
     /*Example: 18 cells (not include ghost cells) distributed on 4 processors 
       in x direction. The number of cells on each processors are: 5, 5, 5, 3

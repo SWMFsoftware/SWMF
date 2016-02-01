@@ -425,12 +425,9 @@ protected:
   double wmin;
 
  public:
-#ifdef BATSRUS
   long int idum;
   void setDt(double dtIn){dt=dtIn;}
   long getPseudoRandomSeed(){return(idum);};
-#endif
-
 };
 
 // find the particles with particular IDs and print them

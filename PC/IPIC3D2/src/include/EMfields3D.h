@@ -566,12 +566,10 @@ class EMfields3D                // :public Field
       int nx, int ny, int nz);
 
 
-
-
-#ifdef BATSRUS
     /* Used for MHD-IPIC3D coupling. Begin */
 #define minval6(a,b,c,d,e,f) min(a,min(b,min(c,min(d,min(e,f)))))
-    
+
+#ifdef BATSRUS
  public:
     /*! initialize from BATSRUS */
     void initBATSRUS(VirtualTopology3D * vct, Grid * grid, Collective * col);
@@ -629,6 +627,10 @@ class EMfields3D                // :public Field
     /*! fluidBzn: magnetic field Z-component (indexX, indexY, indexZ), defined \
       on nodes form fluid solution*/
     arr3_double fluidBzn;
+
+#endif
+
+ private:
     
     /*!  index of nodes containing unknows in implicit solver, start index X */
     int inminsolve;
@@ -645,19 +647,8 @@ class EMfields3D                // :public Field
     /*! number of unknown for cells */
     int nSolveCell;
     /*! number of unknown for nodes, 3 vector components */
-    int n3SolveNode;
-
-
-    
-    
-    /* Used for MHD-IPIC3D coupling. End */
-#endif
-    
-
-
-
-
-    
+    int n3SolveNode;    
+    /* Used for MHD-IPIC3D coupling. End */    
 };
 
 inline void EMfields3D::addRho(double weight[][2][2], int X, int Y, int Z, int is) {

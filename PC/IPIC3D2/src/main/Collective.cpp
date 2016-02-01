@@ -1305,7 +1305,9 @@ void Collective::Print() {
     for (int i = 0; i < ns; i++)
       cout << "Q/M[" << i << "] = " << qom[i]<<endl;
 
+    #ifdef BATSRUS
     PrintInterfaceFluid();
+    #endif
     cout << endl;
   }
 }
