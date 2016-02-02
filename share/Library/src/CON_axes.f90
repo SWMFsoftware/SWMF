@@ -155,7 +155,7 @@ module CON_axes
        TimeEquinox, AngleEquinox, DoUpdateB0, DtUpdateB0
   use CON_geopack, ONLY: &
        HgiGse_DD, dLongitudeHgiDeg, dLongitudeHgi, &
-       CON_recalc, CON_sun, SunEMBDistance, JulianDay
+       geopack_recalc, geopack_sun, SunEMBDistance, JulianDay
   use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi, cTwoPi8, cUnit_DD, cTiny
   use ModConst, ONLY: rSun
   use ModPlanetConst
@@ -461,24 +461,24 @@ contains
     !=========================================================================
 
     subroutine set_hgi_gse_d_planet(tSimulation)
-      ! Calculate HgiGse matrix from CON_recalc in CON_geopack
+
+      ! Calculate HgiGse matrix from geopack_recalc in CON_geopack
+
       real, intent(in) :: tSimulation
 
       integer :: iTime_I(1:7)
       integer::iYear,iMonth,iDay,iHour,iMin,iSec,jDay
       real :: GSTime, SunLongitude, Obliq
-      
       !-----------------------------------------------------------------------
       call time_real_to_int(tStart + tSimulation, iTime_I)
       iYear=iTime_I(1);iMonth=iTime_I(2);iDay=iTime_I(3)
       iHour=iTime_I(4);iMin=iTime_I(5);iSec=iTime_I(6)
-      call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+      call geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
       jDay = JulianDay(iYear,iMonth,iDay)
-      call CON_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
+      call geopack_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
 
-      ! A negative dLongitudeHgi means that the planet should be in 
+      ! A negative dLongitudeHgi means that the planet should be
       ! in the -X,Z plane of the rotated HGI system.
-
       if(dLongitudeHgi < 0.0)then
          ! Figure out the longitude of the planet to offset the HGI system
          ! In GSE moved to the center of the Sun the planet is in the -1,0,0
@@ -490,7 +490,7 @@ contains
          dLongitudeHgi = modulo(atan2(HgiGse_DD(2,1), HgiGse_DD(1,1)), cTwoPi)
 
          ! Recalculate the HgiGse matrix with the new offset
-         call CON_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+         call geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
 
          ! Reset dLongitudeHgiDeg to be a valid but negative value
          dLongitudeHgiDeg = dLongitudeHgi*cRadToDeg - 360.0
@@ -512,7 +512,6 @@ contains
          dLongitudeHgrDeg = dLongitudeHgr*cRadToDeg - 360.0
 
       endif
-
 
     end subroutine set_hgi_gse_d_planet
 
