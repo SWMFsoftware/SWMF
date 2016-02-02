@@ -2,7 +2,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program test_geopack
 
-  use CON_geopack, ONLY: test => CON_test_geopack
+  use CON_geopack, ONLY: test => test_geopack
 
   implicit none
 
