@@ -7,7 +7,7 @@ module CON_geopack
 
   ! Contains some subroutine of the geopack code (by N.V.Tsyganenko), 
   ! rewritten as the .f90 module procedures. 
-  ! Added procedures: JulianDay(A.Ridley)and a  computation for 
+  ! Added procedures: JulianDay(A.Ridley) and a computation for 
   ! the coordinate transformation like HGI=>other systems
 
   real:: GeiGse_DD(3,3), HgiGse_DD(3,3), GeiGsm_DD(3,3), GsmGse_DD(3,3)
@@ -22,12 +22,8 @@ module CON_geopack
   !                                 the Earth-and-Moon barycentre
   real:: SunEMBDistance
 
-  interface CON_sun
-     module procedure geopack_sun
-  end interface
-  interface CON_recalc
-     module procedure geopack_recalc
-  end interface
+  public:: geopack_recalc ! recalculate all quantities as needed
+  public:: geopack_test   ! unit test
 
 contains
   !=======================================================================
@@ -306,6 +302,10 @@ contains
     ! For perihelion
     iMonth=1;iDay=3;iHour=5
     call geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
+    write(*,'(a,f14.4)')  'DipoleStrength=', DipoleStrength
+    write(*,'(a,3f14.10)')'AxisMagGeo_D=', AxisMagGeo_D
+    write(*,'(a,/,3f14.10,/,3f14.10,/,3f14.10)')'GsmGse_DD=', GsmGse_DD
+    
     write(*,'(a,f14.10,a)')'SunEMBDistance=',SunEMBDistance,&
          ', should be 0.98329'
     GeiHgi_DD=matmul(GeiGse_DD,transpose(HgiGse_DD))
@@ -313,7 +313,7 @@ contains
          'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
          GeiHgi_DD(:,3)
     write(*,'(a,3es16.8)')&
-         'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
+         'The vector calculated in terms of RightAsc=286.13,Declin=63.87',&
          cos(RightAscension)*cos(Declination),&
          sin(RightAscension)*cos(Declination),&
          sin(Declination)
@@ -328,7 +328,7 @@ contains
          'Solar rotation axis vector calculated as GeiHgi_DD(:,3)',&
          GeiHgi_DD(:,3)
     write(*,'(a,3es16.8)')&
-         'The vector calculated in terms of RightAss=286.13,Declin=63.87',&
+         'The vector calculated in terms of RightAsc=286.13,Declin=63.87',&
          cos(RightAscension)*cos(Declination),&
          sin(RightAscension)*cos(Declination),&
          sin(Declination)
