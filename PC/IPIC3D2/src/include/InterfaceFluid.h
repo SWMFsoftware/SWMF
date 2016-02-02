@@ -125,6 +125,7 @@ class InterfaceFluid
 
   int nBCLayer;
   bool useRandomPerCell;
+  bool doUseOldRestart;
   string test_funcs;
   int iTest, jTest,kTest;
   

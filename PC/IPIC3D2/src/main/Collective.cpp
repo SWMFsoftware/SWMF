@@ -553,11 +553,22 @@ int Collective::ReadRestart(string inputfile) {
   dataset_id = H5Dopen2(file_id, "/collective/Ns", H5P_DEFAULT); // HDF 1.8.8
   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &ns);
   status = H5Dclose(dataset_id);
+
+  bool doReadNsTestPart;
+  doReadNsTestPart = true;
+#ifdef BATSRUS
+  if(doUseOldRestart) {
+    doReadNsTestPart = false;
+    nstestpart = 0;
+  }
+#endif
+  if(doReadNsTestPart){
   //read number of test particles species
   dataset_id = H5Dopen2(file_id, "/collective/NsTestPart", H5P_DEFAULT); // HDF 1.8.8
   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &nstestpart);
   status = H5Dclose(dataset_id);
-
+  }
+  
   /*! Boundary condition information */
   // read EMfaceXleft
   dataset_id = H5Dopen2(file_id, "/collective/bc/EMfaceXleft", H5P_DEFAULT); // HDF 1.8.8
@@ -633,6 +644,16 @@ int Collective::ReadRestart(string inputfile) {
   dataset_id = H5Dopen2(file_id, "/collective/bc/PfaceZright", H5P_DEFAULT); // HDF 1.8.8
   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &bcPfaceZright);
   status = H5Dclose(dataset_id);
+#ifdef BATSRUS
+  if(doUseOldRestart){
+    bcPfaceXright   = BCparticles::FLUID;
+    bcPfaceXleft    = BCparticles::FLUID;
+    bcPfaceYright   = BCparticles::FLUID;
+    bcPfaceYleft    = BCparticles::FLUID;
+    bcPfaceZright   = BCparticles::FLUID;
+    bcPfaceZleft    = BCparticles::FLUID;
+  }
+#endif  
   // allocate fields depending on species
   npcelx = new int[ns+nstestpart];
   npcely = new int[ns+nstestpart];
@@ -1131,6 +1152,7 @@ void Collective::read_particles_restart(
     status = H5Dclose(dataset_id);
 
     idum=0;
+
 #ifdef BATSRUS 
     // get idum, pseudo random seed
     ss.str(""); ss<< "/particles/species_" << species_number << "/pseudo_random_seed";
@@ -1468,6 +1490,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Number of layers needed to set boundary.
   nBCLayer=4;
 
+  doUseOldRestart = false;
+
   useRandomPerCell=false;
 
   while(*param){
@@ -1655,6 +1679,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#RANDOMPERCELL"){
       read_var(param,"useRandomPerCell", &useRandomPerCell);
+    }
+    else if( Command == "#USEOLDRESTART"){
+      read_var(param,"doUseOldRestart", &doUseOldRestart);
     }
     else if( Command == "#TEST"){
       read_var(param,"test_funcs", &test_funcs);
