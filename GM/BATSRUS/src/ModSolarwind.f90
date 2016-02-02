@@ -95,7 +95,7 @@ contains
     use ModIoUnit, ONLY : UNITTMP_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
     use ModConst, ONLY: cDay => cSecondPerDay
-    use CON_geopack, ONLY: CON_recalc, HgiGse_DD, GsmGse_DD
+    use CON_geopack, ONLY: geopack_recalc, HgiGse_DD, GsmGse_DD
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModUtilities, ONLY: upper_case, lower_case, split_string
@@ -303,7 +303,7 @@ contains
 
           if (TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then 
 
-             call CON_recalc(&
+             call geopack_recalc(&
                   iTime_I(1), &
                   iTime_I(2), &
                   iTime_I(3), &
@@ -320,7 +320,7 @@ contains
 
              if(DoSetMatrix)then
                 DoSetMatrix=.false.
-                call CON_recalc( &
+                call geopack_recalc( &
                      iStartTime_I(1),& ! year
                      iStartTime_I(2),& ! month
                      iStartTime_I(3),& ! day
