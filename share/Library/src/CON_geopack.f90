@@ -23,7 +23,7 @@ module CON_geopack
   real:: SunEMBDistance
 
   public:: geopack_recalc ! recalculate all quantities as needed
-  public:: geopack_test   ! unit test
+  public:: test_geopack   ! unit test
 
 contains
   !=======================================================================
