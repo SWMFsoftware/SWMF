@@ -175,7 +175,7 @@ Check=
 >>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat 1000
 >>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat   
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=2.0E-13 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
 >>>output/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O.diff 
 >>>@ls -l test_CG-dust-test--H2O.diff
 
