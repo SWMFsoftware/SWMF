@@ -75,19 +75,17 @@ endif
 
 ifeq (${AMPSLINKER},${LINK.f90})
 
+ifeq ($(COMPILE.f90),${LINK.f90})
+	AMPSLINKER=mpif90
+endif
+
 ifeq ($(COMPILE.f90),pgf90)
 	AMPSLINKER+= -Mnomain
 else ifeq  ($(COMPILE.f90),ifort)
 	AMPSLINKER+= -nofor-main
 endif
-
 endif
 
-# This looks wrong
-ifeq ($(STANDALONE), NO)
-	AMPSLINKLIB+=${LIBDIR}/*
-	AMPSLINKER=${LINK.f90}
-endif
 
 ifneq ($(KAMELEON),nokameleon)
 	AMPSLINKLIB+=${KAMELEON}/lib/ccmc/libccmc.dylib 
@@ -137,8 +135,6 @@ LIB:
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
 	$(MAKE) ${WSD}
 	make LIB_after_build
-	(if [ "$(STANDALONE)" == "NO" ]; then \
-		cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"; fi)
 
 LIB_after_build: 
 ifeq ($(INTERFACE),on)
