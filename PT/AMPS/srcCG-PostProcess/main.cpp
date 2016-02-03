@@ -567,6 +567,20 @@ int main(int argc,char **argv) {
     std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
     amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),".");
     amps.SurfaceData.PrintVariableList();
+
+
+    //load particle trajectory file
+     std::string TrajectoryFileName;
+ 
+     t.str("");
+     t << _OUTPUT_FILE_NUMBER_;
+     out=t.str();
+ 
+     TrajectoryFileName="amps.TrajectoryTracking.out="+out+".s=0.H2O.dat";
+     amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName.c_str(),".");
+
+    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.gas.uniform.dat");
+    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.gas.flux.dat");
   }
   else if (_MODE_==_DUST_MODE_) {
     std::string TrajectoryFileName[_DUST_SPEC_NUMBER_];
