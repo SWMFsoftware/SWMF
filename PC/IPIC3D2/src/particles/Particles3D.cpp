@@ -165,7 +165,7 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
   int ns0, iSample;
   ns0 = ns; 
 
-#ifndef PSEUDRAND
+#ifdef PSEUDRAND
   if(col->getUseRandomPerCell()){
     int ig,jg,kg,nxcg,nycg,nzcg,iCycle,npcel,nRandom=7;
     col->getGlobalIndex(i,j,k,&ig,&jg,&kg);
