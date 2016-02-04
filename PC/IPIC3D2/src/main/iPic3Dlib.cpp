@@ -14,7 +14,6 @@
 #include "Particles3D.h"
 #include "Timing.h"
 #include "ParallelIO.h"
-//
 #ifndef NO_HDF5
 #include "WriteOutputParallel.h"
 #include "OutputWrapperFPP.h"
@@ -59,6 +58,10 @@ c_Solver::~c_Solver()
   delete [] momentum;
   delete [] Qremoved;
   delete my_clock;
+
+  #ifdef BATSRUS
+  finalize_debug_SWMF();    
+  #endif
 }
 
 int c_Solver::Init(int argc, char **argv, double inittime,
@@ -184,13 +187,15 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   string nameSub = "C_Solver::Init";
   if(col->getCase()=="BATSRUS" && restart_status != 0){
     EMf->init();
-    EMf->SyncWithFluid(col,grid,vct);
+    EMf->SyncWithFluid(col,grid,vct);    
   }
 
   if(!col->getdoNeedBCOnly() && col->getCase()=="BATSRUS"){
     col->setdoNeedBCOnly(true);
   }
 
+  init_debug_SWMF(col,grid,vct,col->getTestFunc(),col->getiTest(),
+		  col->getjTest(),col->getkTest());
 #endif
 
   // Allocation of particles

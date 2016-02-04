@@ -53,6 +53,25 @@ inline void read_var(std::stringstream *ss, std::string description, bool *var){
   }
 }
 
+inline void read_var(std::stringstream *ss, std::string description,
+		     string *var){
+  // Read input until \t or next line.
+  std::string text;
+  if(*ss) {
+    string temp;
+    std::getline(*ss,temp);
+    std::string delimiter = "\t";
+    (*var) = temp.substr(0, temp.find(delimiter));    
+    if(isProc0){
+      std::cout<<"PC: "<<std::left<<std::setw(40)<<(*var)<<description<<std::endl;
+      return;
+    }
+  } else {
+    std::cout<<" Can not find input parameter. Abort!"<<std::endl;
+    std::abort();
+  }
+}
+
 inline void get_next_command(std::stringstream *ss, std::string *id){
   *id = "";
   ss->ignore(INT_MAX, '#');

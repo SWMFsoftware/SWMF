@@ -1493,7 +1493,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   doUseOldRestart = false;
 
   useRandomPerCell=false;
-
+  
+  iTest = -1; jTest = -1; kTest = -1; 
+  
   while(*param){
     get_next_command(param,&Command);
     // if(      Command == "#CASE"){
@@ -1684,7 +1686,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"doUseOldRestart", &doUseOldRestart);
     }
     else if( Command == "#TEST"){
-      read_var(param,"test_funcs", &test_funcs);
+      read_var(param,"testFuncs", &testFuncs);
     }
     else if( Command == "#TESTIJK"){
       read_var(param,"iTest", &iTest);

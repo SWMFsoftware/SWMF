@@ -844,6 +844,37 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
   // subarrays.
   //#ifdef _OPENMP
 
+#ifdef BATSRUS
+  string nameFunc="sumMoments_AoS";
+  bool doTestFunc, doTestCell;
+  ofstream * outfile;
+  doTestFunc = do_test_func(outfile,nameFunc);
+  if(doTestFunc){
+    int ispecies=0;
+    const Particles3Dcomm& pcls = part[ispecies];
+    const int nop = pcls.getNOP();
+
+    for(int pidx=0; pidx < nop; pidx++){
+      const SpeciesParticle& pcl = pcls.get_pcl(pidx);
+      const double ui=pcl.get_u();
+      const double vi=pcl.get_v();
+      const double wi=pcl.get_w();
+      const double xi=pcl.get_x();
+      const double yi=pcl.get_y();
+      const double zi=pcl.get_z();
+
+      const int ix = 2 + int (floor((pcl.get_x() - xstart) * inv_dx));
+      const int iy = 2 + int (floor((pcl.get_y() - ystart) * inv_dy));
+      const int iz = 2 + int (floor((pcl.get_z() - zstart) * inv_dz));
+
+      doTestCell = do_test_cell(outfile,ix-1,iy-1,iz-1);
+      if(doTestCell){
+	(*outfile)<<xi<<"\t"<<yi<<"\t"<<zi<<"\t"
+		  <<ui<<"\t"<<vi<<"\t"<<wi<<"\t"<<"\n";
+      }
+    }
+  }
+#endif
   
 #pragma omp parallel
   {
@@ -2208,7 +2239,7 @@ void EMfields3D::calculateE()
 
   #ifdef BATSRUS
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
-  #endif BATSRUS
+  #endif
   
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);

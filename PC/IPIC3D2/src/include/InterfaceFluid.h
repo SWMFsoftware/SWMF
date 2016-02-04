@@ -126,7 +126,7 @@ class InterfaceFluid
   int nBCLayer;
   bool useRandomPerCell;
   bool doUseOldRestart;
-  string test_funcs;
+  string testFuncs;
   int iTest, jTest,kTest;
   
  private:
@@ -1914,7 +1914,10 @@ class InterfaceFluid
   void setCycle(int iCycleIn){iCycle=iCycleIn;};
   int getCycle()const{return iCycle;};
   bool getUseRandomPerCell()const{return useRandomPerCell;};
-  
+  string getTestFunc()const{return testFuncs;};
+  int getiTest()const{return iTest;};
+  int getjTest()const{return jTest;};
+  int getkTest()const{return kTest;};  
 };
 
 

@@ -130,3 +130,65 @@ void fprintf_fileLine(FILE * fptr,
   fflush(fptr);
 }
 
+
+#ifdef BATSRUS
+Collective * _col0;
+Grid3DCU * _grid0;
+VCtopology3D * _vct0;
+string testFuncs;
+int iTest,jTest,kTest;
+int iProc;
+ofstream outfile;
+string filename;
+
+void init_debug_SWMF(Collective *col, Grid3DCU *grid, VCtopology3D *vct,
+		     string testFuncsIn, int iTestIn, int jTestIn, int kTestIn){
+  _col0  = col;
+  _grid0 = grid;
+  _vct0  = vct;
+  testFuncs = testFuncsIn;
+  iTest = iTestIn;
+  jTest = jTestIn;
+  kTest = kTestIn;
+  iProc = vct->getCartesian_rank(); 
+
+  if(!testFuncsIn.empty()){
+    stringstream ss;
+    ss<<"debug_proc"<<iProc<<".txt";
+    filename = ss.str();
+    outfile.open(filename.c_str());
+    outfile.precision(12);
+  }
+}
+
+void finalize_debug_SWMF(){
+  if(outfile.is_open())
+    outfile.close();
+}
+
+
+bool do_test_func(ofstream *&outfileOut, string func){
+  bool doTestFunc;  
+  doTestFunc = testFuncs.find(func) != string::npos;
+  if(doTestFunc) outfileOut = &outfile;
+  return doTestFunc;
+}
+
+bool do_test_cell(ofstream *&outfileOut, int i, int j, int k){
+  /* i,j,k: cell center index. */
+  int nDim;
+  nDim = _col0->getnDim();
+  bool doTestCell = true;
+  if(i>=0 && j>=0 && k>=0){
+    int ig, jg,kg;
+    _col0->getGlobalIndex(i,j,k,&ig, &jg, &kg);
+    // For 2D, kg is always 0.
+    doTestCell = doTestCell && ig == iTest && jg == jTest;
+    if(nDim>2) doTestCell = doTestCell && kg==kTest;    
+  }
+
+  if(doTestCell) outfileOut = &outfile;
+  return doTestCell;
+}
+
+#endif
