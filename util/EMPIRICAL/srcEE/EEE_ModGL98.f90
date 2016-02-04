@@ -65,6 +65,13 @@ contains
     !   cme_r1   = distance of flux rope from sun center = 1.2
     !   cme_r0   = radius of flux rope
     !   cme_a1   = constant for setting pressure in flux rope
+    !
+    ! OrientationCME : The counter-clockwise angle between the fluxrope
+    !                  axis and the solar equator.
+    ! cme_a1 : The sign of cme_a1 (magnitude of the fluxrope field strength)
+    !          sets the helicity. Positive (negative) value results in
+    !          postive or left handed or sinistral (negative or right handed
+    !          or dextral) helicity.
     !\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\//////////////////////////////////
     !=====================================================================
     !\
@@ -122,7 +129,7 @@ contains
        ! Construct the rotational matrix RotateGL98_DD,
        !/
        RotateGL98_DD  = matmul( &
-            rot_matrix_z(OrientationCme*cDegToRad),&
+            rot_matrix_z(-OrientationCme*cDegToRad),&
             rot_matrix_y((LatitudeCme-90)*cDegToRad))
        RotateGL98_DD = matmul(RotateGL98_DD, &
             rot_matrix_z(-LongitudeCme*cDegToRad))
@@ -153,7 +160,7 @@ contains
        end if
     end if
 
-    a1scl   = cme_a1*Io2No_V(UnitB_)
+    a1scl   = abs(cme_a1)*Io2No_V(UnitB_)
     rho1scl = cme_rho1*Si2No_V(UnitRho_)
     rho2scl = cme_rho2*Si2No_V(UnitRho_)
     SSPscl  = 1.0
@@ -275,6 +282,12 @@ contains
     Br2     = dA2dth/(sin_theta2*r_2**2)
     Btheta2 = -dA2dr/(sin_theta2*r_2)
     Bphi2   = alpha0*A2/(sin_theta2*r_2)
+    
+    if(cme_a1 > 0.0) then   !helicity switch 
+      Br2 = -Br2
+      Btheta2 = -Btheta2
+    endif 
+
     !\
     ! Magnetic field components in the second cartesian coordinates
     ! X-COMPONENT OF MAGNETIC FIELD
