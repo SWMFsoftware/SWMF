@@ -135,6 +135,8 @@ LIB:
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
 	$(MAKE) ${WSD}
 	make LIB_after_build
+	(if [ "$(STANDALONE)" == "NO" ]; then \
+		cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"; fi)
 
 LIB_after_build: 
 ifeq ($(INTERFACE),on)
