@@ -90,8 +90,8 @@ contains
           Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
        end do
 
-       ! Orientation rotates clockwise
-       Rotate_DD = matmul(rot_matrix_x(OrientationCme*cDegToRad), &
+       ! Orientation rotates anti-clockwise
+       Rotate_DD = matmul(rot_matrix_x(-OrientationCme*cDegToRad), &
             rot_matrix_y(LatitudeCme*cDegToRad))
        Rotate_DD = matmul(Rotate_DD,rot_matrix_z(-LongitudeCme*cDegToRad))
     end if
