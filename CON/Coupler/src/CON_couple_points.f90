@@ -1326,7 +1326,7 @@ contains
           do iBuffer = 1, nBufferSource
              iProc = iProcSource_I(iBuffer)
              if(iProc < 0) CYCLE
-             if(iBuffer > iCoupleBuffer)then
+             do while (iBuffer > iCoupleBuffer)
                 iCouple = iCouple + 1
                 iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
                 ! iCoupleProcSource_I(iCouple) is the index of target proc for
@@ -1335,7 +1335,7 @@ contains
                 ! on the target component
                 iProcTargetLocal = iProcTargetLocal_P(&
                      iCoupleProcSource_I(iCouple))
-             end if
+             enddo
              ! iProcSource_I is the source processor index on source component
              iProcSourceLocal = iProcSourceLocal_P(iProc)
 
