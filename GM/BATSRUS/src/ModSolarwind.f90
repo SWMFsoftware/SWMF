@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSolarwind
 
@@ -87,8 +88,8 @@ contains
   subroutine read_solar_wind_file
 
     use ModProcMH
-    use ModMain, ONLY: lVerbose, StartTime, iStartTime_I, UseStrict, &
-         TypeCoordSystem
+    use ModMain, ONLY: lVerbose, StartTime, Time_Simulation, &
+         iStartTime_I, UseStrict, TypeCoordSystem
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim
 
@@ -346,7 +347,8 @@ contains
     close(UNITTMP_)
 
     ! Check if the start time is within 1 day of the input data
-    if (StartTime < Time_I(1)-cDay .or. StartTime > Time_I(nData)+cDay) then
+    if ( StartTime + Time_Simulation < Time_I(1) - cDay .or. &
+         StartTime > Time_I(nData)+cDay) then
        write(*,*) "**********************************************************"
        write(*,*) "*                                                        *"
        write(*,*) "*      Warning! Warning! Warning! Warning! Warning!      *"
