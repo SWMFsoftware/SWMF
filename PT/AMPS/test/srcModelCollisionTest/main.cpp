@@ -10,12 +10,12 @@ namespace H2O {
 }
 
 namespace O {
-  const double Density=1.0E10;
+  const double Density=1.0E15;
   const double Temperature=400.0;
 }
 
 namespace H2 {
-  const double Density=1.0E10;
+  const double Density=1.0E12;
   const double Temperature=800.0;
 }
 
@@ -34,6 +34,22 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CollFreqPerParticle=1.0E10*400.0*1.0E-20;
 
+  static bool initflag=false;
+  static double DensityTable[PIC::nTotalSpecies],SummDensity=0.0;
+
+  if (initflag==false) {
+    initflag=true;
+
+    DensityTable[_H2O_SPEC_]=H2O::Density;
+    DensityTable[_O_SPEC_]=O::Density;
+    DensityTable[_H2_SPEC_]=H2::Density;
+
+    for (int s=0;s<PIC::nTotalSpecies;s++) SummDensity+=DensityTable[s];
+  }
+
+  CollFreqPerParticle=SummDensity*400.0*1.0E-18;
+
+
   return 1.0/CollFreqPerParticle;
 }
 
@@ -45,6 +61,26 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
   return res;
 }
+
+//calculate the tital number of the simulation cells
+int GetTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int res=0.0;
+  int i;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    res+=_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      res+=GetTotalCellNumber(downNode);
+    }
+  }
+
+  return res;
+}
+
 
 //initialize AMPS
 void amps_init() {
@@ -113,9 +149,21 @@ void amps_init() {
 
   //init particle weight
   for (int s=0;s<PIC::nTotalSpecies;s++) {
-    double weight;
+    double weight,density;
 
-    weight=H2O::Density*pow(2.0*DomainLength/dxDomain,3)/nParticlePerCell;
+    switch(s) {
+    case _H2O_SPEC_ :
+      density=H2O::Density;
+      break;
+    case _O_SPEC_:
+      density=O::Density;
+      break;
+    case _H2_SPEC_:
+      density=H2::Density;
+      break;
+    }
+
+    weight=density*pow(2.0*DomainLength,3)/(GetTotalCellNumber(PIC::Mesh::mesh.rootTree)*nParticlePerCell);
     PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,weight,PIC::Mesh::mesh.rootTree);
   }
 
@@ -127,17 +175,74 @@ void amps_init() {
 }
 
 
+void GetTotalCollisionFreq(double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalSpecies],cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  double res=0.0;
+  int i,j,k,s0,s1;
+
+  if (PIC::Mesh::mesh.rootTree==startNode) {
+    for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++) CollisionFreq[s0][s1]=0.0;
+  }
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if (startNode->block!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      char* SamplingData=startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+
+          PIC::Mesh::collectingCellSampleDataPointerOffset;
+
+
+      for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++)  {
+        int CollFreqOffset=PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset+
+            sizeof(double)*PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::Offset(s0,s1);
+
+        CollisionFreq[s0][s1]+=*((double*)(SamplingData+CollFreqOffset)); //+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
+      }
+    }
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      GetTotalCollisionFreq(CollisionFreq,downNode);
+    }
+  }
+
+
+}
+
 int main(int argc,char **argv) {
   amps_init();
 
   //generate the new population of the model particles
   double v[3]={0.0,0.0,0.0};
+  int n,nTotalTestIterations=10;
 
-  PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
-  PIC::InitialCondition::PrepopulateDomain(_O_SPEC_,O::Density,v,O::Temperature);
-  PIC::InitialCondition::PrepopulateDomain(_H2_SPEC_,H2::Density,v,H2::Temperature);
+  for (n=0;n<nTotalTestIterations;n++) {
+    PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
+    PIC::InitialCondition::PrepopulateDomain(_O_SPEC_,O::Density,v,O::Temperature);
+    PIC::InitialCondition::PrepopulateDomain(_H2_SPEC_,H2::Density,v,H2::Temperature);
 
-  PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+    PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+  }
+
+  //collect the collision frequentcy from all processors and output into a file
+  double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalSpecies];
+
+  GetTotalCollisionFreq(CollisionFreq,PIC::Mesh::mesh.rootTree);
+
+  for (int s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (int s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+
+      tLocal=CollisionFreq[s0][s1];
+      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) cout << tGlobal/nTotalTestIterations/GetTotalCellNumber(PIC::Mesh::mesh.rootTree) << "  ";
+    }
+
+    if (PIC::ThisThread==0) cout << endl;
+  }
+
 
 
 
