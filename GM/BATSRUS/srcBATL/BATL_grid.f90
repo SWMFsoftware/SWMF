@@ -1547,14 +1547,14 @@ contains
     !\
     ! INPUTS:
     !/
-    real,    intent(in) :: Xyz_D(MaxDim) !Point coordinates
-    integer, intent(in) :: iBlockIn      !# of block
+    real,    intent(in) :: Xyz_D(MaxDim) !Point Cartesian coordinates
+    integer, intent(in) :: iBlockIn      !# of block assumed to be used
     !\
     ! OUTPUTS:
     !/
     integer, intent(out):: iPeOut, iBlockOut !else, Pe and Block to be used
     !\
-    !Generalized Coordinates
+    !Generalized Coordinates, for given Xyz_D
     !/
     real    :: Coord_D(MaxDim) 
     !\
@@ -1563,10 +1563,16 @@ contains
     integer :: iShift_D(MaxDim) 
     !\
     !/
-    logical :: DoSearch
+    logical :: DoSearch !If .true. find iPeOut and iBlockOut
+    !\
+    ! 
+    !/
     integer, parameter:: iShift_DI(3,8) = reshape((/&
          0,0,0, 1,0,0, 0,1,0, 1,1,0, &
          0,0,1, 1,0,1, 0,1,1, 1,1,1/),(/3,8/))
+    !\
+    ! For a search throughout the tree
+    !/
     real:: CoordTree_D(MaxDim)
     real:: CoordCentral_D(nDim), CoordGrid_DI(nDim, 2**nDim)
     real:: CoordBlockMin_D(nDim), CoordBlockMax_D(nDim)
@@ -1587,6 +1593,7 @@ contains
     !\
     ! For periodic boundary conditions fix the input coordinate if
     ! beyond the tree bounadaries
+    !/
     where(IsPeriodic_D(1:nDim)) Coord_D(1:nDim) = CoordMin_D(1:nDim) + &
          modulo(Coord_D(1:nDim) - CoordMin_D(1:nDim), DomainSize_D(1:nDim))
     !\
@@ -1599,6 +1606,9 @@ contains
     end if
     !\
     ! Decide whether need to perform search in the global tree structure
+    ! If the point is out of the first layer of ghostcells, neither iBlockIn
+    ! or its connectivity list can be used for interpolation
+    !/
     DoSearch = Unused_B(iBlockIn) .or. &
          any(&
          Coord_D(1:nDim) < CoordMin_DB(1:nDim,iBlockIn)  &
@@ -1607,7 +1617,7 @@ contains
          + CellSize_DB(1:nDim,iBlockIn))
 
     if(DoSearch)then
-       ! find a block that contains the point if necessary
+       ! find a block that contains the point
        !-----------------------------------------------------------------------
        ! Calculate normalized (to DomainSize_D) coordinates for tree search
        CoordTree_D = 0
@@ -1622,6 +1632,7 @@ contains
        call get_tree_position(iNode=iNode,&
             PositionMin_D=PositionMin_D,  &
             PositionMax_D=PositionMax_D )
+       !Convert from normalized by one coordinates
        CoordBlockMin_D(1:nDim) =  CoordMin_D(1:nDim) + &
             PositionMin_D(1:nDim) * DomainSize_D(1:nDim)
        CoordBlockMax_D(1:nDim) =  CoordMin_D(1:nDim) + &
@@ -1635,6 +1646,10 @@ contains
 
        ! Check if the block is suitable to interpolate with ghost cells
        iDiscr_D = 0
+       !\
+       ! Discriminator equals zero if the point is within the grid of
+       ! the physical cell centers, +- 1 otherwise
+       !/
        iDiscr_D(1:nDim) = floor(&
             (Coord_D(1:nDim) - CoordBlockMin_D  - 0.5*dCoord_D)*dCoordInv_D / &
             (nIJK_D(1:nDim) - 1))
@@ -1662,8 +1677,8 @@ contains
        iLevel_I = 0
        IsOut_I  = .false.
 
-       ! find the supergrid's coordinates
        do iGrid = 1, 2**nDim
+          ! find the supergrid's coordinates
           CoordGrid_DI(1:nDim, iGrid) = CoordCentral_D(1:nDim) + &
                (iShift_DI(1:nDim,iGrid) - 0.5)*dCoord_D(1:nDim)
 

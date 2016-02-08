@@ -3368,13 +3368,12 @@ contains
     integer:: iSlice_DI(3,2)
     !----------------------------------------------------
     ! recompute coordinates relative to the center of supergrid
-    XyzMisc_D = Xyz_D - sum(XyzGrid_DI(:,:), DIM=2)/2**nDim
+    XyzMisc_D = Xyz_D - (XyzGrid_DI(:,1) + XyzGrid_DI(:,2**nDim))*0.50
 
     ! determine shift from central point
     iShift_D = 0
-    where(XyzMisc_D > 0)
-       iShift_D = 1
-    end where
+    where(XyzMisc_D > 0)iShift_D = 1
+    
 
     ! candidate to be the reference block: the closest one
     iGridRef = 1 + sum(iShift_D * iPowerOf2_D(1:nDim))
