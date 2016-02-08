@@ -22,4 +22,4 @@ module load gcc/4.9.1
 module load mvapich2/2.1
 make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
 cd ../..
-touch ready_for_test_submission
+cat %j.out >> GNU/AMPS/test_amps.log
