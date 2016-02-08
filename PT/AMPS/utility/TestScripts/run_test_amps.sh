@@ -140,10 +140,17 @@ cd ..
 # Super computers
 
 #>Pleiades ####################################
-#set submit = '/PBS/bin/qsub'                <#
+#cd $WorkDir/Tmp_AMPS_test                    #
+#set time = "`date -d 'now + 1 minute'`"      #
+#foreach job (test_amps.*.job)                #
+#  while ("`date`" !~ "$time")                #
+#  end                                        #
+#  /PBS/bin/qsub $job                         #
+#  set time = "`date -d 'now + 121 minute'`"  #
+#end                                         <#
 #>Stampede ####################################
 #set submit = '/usr/bin/sbatch'              <#
-#>Pleiades>Stampede ###########################
+#>Stampede ####################################
 #cd $WorkDir/Tmp_AMPS_test                    #
 #@ delay = 2                                  #
 #foreach job (test_amps.*.job)                #

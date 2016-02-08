@@ -24,4 +24,3 @@ module load mpi-openmpi/1.6.5-gcc
 module load tecplot/360_2013
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
-touch ready_for_test_submission
