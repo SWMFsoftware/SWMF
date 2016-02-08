@@ -3366,7 +3366,10 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateInterp(nxn, nyn, nzn, moment8, vct,this);
   communicateInterp(nxn, nyn, nzn, moment9, vct,this);
   // calculate the correct densities on the boundaries
-  adjustNonPeriodicDensities(ns);
+  #ifdef BATSRUS
+  if(get_col().getCase()=="BATSRUS") setFluidBC_P(ns);
+  #endif
+  if(get_col().getCase()!="BATSRUS") adjustNonPeriodicDensities(ns);
   //Call Nonblocking Halo Exchange
   communicateNode_P(nxn, nyn, nzn, moment0, vct, this);
   communicateNode_P(nxn, nyn, nzn, moment1, vct, this);
@@ -3624,6 +3627,112 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
 	  }
     
 }
+
+
+void EMfields3D::setFluidBC_P(int is)
+{
+  const VirtualTopology3D *vct = &get_vct();
+  const Collective *col = &get_col();
+  const double signq = qom[is]/(fabs(qom[is]));
+  if (vct->getXleft_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nyn - 1; i++)
+      for (int k = 1; k < nzn - 1; k++)
+	{
+	  rhons[is][1][i][k] = signq*col->getFluidRhoNum(1,i,k,is);
+	  Jxs  [is][1][i][k] = col->getFluidJx(1,i,k,is);
+	  Jys  [is][1][i][k] = col->getFluidJy(1,i,k,is);
+	  Jzs  [is][1][i][k] = col->getFluidJz(1,i,k,is);
+	  pXXsn[is][1][i][k] = col->getFluidPxx(1,i,k,is);
+	  pXYsn[is][1][i][k] = col->getFluidPxy(1,i,k,is);
+	  pXZsn[is][1][i][k] = col->getFluidPxz(1,i,k,is);
+	  pYYsn[is][1][i][k] = col->getFluidPyy(1,i,k,is);
+	  pYZsn[is][1][i][k] = col->getFluidPyz(1,i,k,is);
+	  pZZsn[is][1][i][k] = col->getFluidPzz(1,i,k,is);
+	}
+  }
+  
+  if (vct->getYleft_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nxn - 1; i++)
+      for (int k = 1; k < nzn - 1; k++)
+	{
+	  rhons[is][i][1][k] = signq*col->getFluidRhoNum(i,1,k,is);
+	  Jxs  [is][i][1][k] = col->getFluidJx(i,1,k,is);
+	  Jys  [is][i][1][k] = col->getFluidJy(i,1,k,is);
+	  Jzs  [is][i][1][k] = col->getFluidJz(i,1,k,is);
+	  pXXsn[is][i][1][k] = col->getFluidPxx(i,1,k,is);
+	  pXYsn[is][i][1][k] = col->getFluidPxy(i,1,k,is);
+	  pXZsn[is][i][1][k] = col->getFluidPxz(i,1,k,is);
+	  pYYsn[is][i][1][k] = col->getFluidPyy(i,1,k,is);
+	  pYZsn[is][i][1][k] = col->getFluidPyz(i,1,k,is);
+	  pZZsn[is][i][1][k] = col->getFluidPzz(i,1,k,is);
+	}
+  }
+  if (vct->getZleft_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nxn - 1; i++)
+      for (int j = 1; j < nyn - 1; j++)
+	{
+	  rhons[is][i][j][1] = signq*col->getFluidRhoNum(i,j,1,is);
+	  Jxs  [is][i][j][1] = col->getFluidJx(i,j,1,is);
+	  Jys  [is][i][j][1] = col->getFluidJy(i,j,1,is);
+	  Jzs  [is][i][j][1] = col->getFluidJz(i,j,1,is);
+	  pXXsn[is][i][j][1] = col->getFluidPxx(i,j,1,is);
+	  pXYsn[is][i][j][1] = col->getFluidPxy(i,j,1,is);
+	  pXZsn[is][i][j][1] = col->getFluidPxz(i,j,1,is);
+	  pYYsn[is][i][j][1] = col->getFluidPyy(i,j,1,is);
+	  pYZsn[is][i][j][1] = col->getFluidPyz(i,j,1,is);
+	  pZZsn[is][i][j][1] = col->getFluidPzz(i,j,1,is);
+	}
+  }
+  if (vct->getXright_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nyn - 1; i++)
+      for (int k = 1; k < nzn - 1; k++)
+	{
+	  rhons[is][nxn - 2][i][k] = signq*col->getFluidRhoNum(nxn-2,i,k,is);
+	  Jxs  [is][nxn - 2][i][k] = col->getFluidJx(nxn-2,i,k,is);
+	  Jys  [is][nxn - 2][i][k] = col->getFluidJy(nxn-2,i,k,is);
+	  Jzs  [is][nxn - 2][i][k] = col->getFluidJz(nxn-2,i,k,is);
+	  pXXsn[is][nxn - 2][i][k] = col->getFluidPxx(nxn-2,i,k,is);
+	  pXYsn[is][nxn - 2][i][k] = col->getFluidPxy(nxn-2,i,k,is);
+	  pXZsn[is][nxn - 2][i][k] = col->getFluidPxz(nxn-2,i,k,is);
+	  pYYsn[is][nxn - 2][i][k] = col->getFluidPyy(nxn-2,i,k,is);
+	  pYZsn[is][nxn - 2][i][k] = col->getFluidPyz(nxn-2,i,k,is);
+	  pZZsn[is][nxn - 2][i][k] = col->getFluidPzz(nxn-2,i,k,is);
+	}
+  }
+  if (vct->getYright_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nxn - 1; i++)
+      for (int k = 1; k < nzn - 1; k++)
+	{
+	  rhons[is][i][nyn - 2][k] = signq*col->getFluidRhoNum(i,nyn-2,k,is);
+	  Jxs  [is][i][nyn - 2][k] = col->getFluidJx(i,nyn-2,k,is);
+	  Jys  [is][i][nyn - 2][k] = col->getFluidJy(i,nyn-2,k,is);
+	  Jzs  [is][i][nyn - 2][k] = col->getFluidJz(i,nyn-2,k,is);
+	  pXXsn[is][i][nyn - 2][k] = col->getFluidPxx(i,nyn-2,k,is);
+	  pXYsn[is][i][nyn - 2][k] = col->getFluidPxy(i,nyn-2,k,is);
+	  pXZsn[is][i][nyn - 2][k] = col->getFluidPxz(i,nyn-2,k,is);
+	  pYYsn[is][i][nyn - 2][k] = col->getFluidPyy(i,nyn-2,k,is);
+	  pYZsn[is][i][nyn - 2][k] = col->getFluidPyz(i,nyn-2,k,is);
+	  pZZsn[is][i][nyn - 2][k] = col->getFluidPzz(i,nyn-2,k,is);
+	}
+  }
+  if (vct->getZright_neighbor_P() == MPI_PROC_NULL) {
+    for (int i = 1; i < nxn - 1; i++)
+      for (int j = 1; j < nyn - 1; j++)
+	{
+	  rhons[is][i][j][nzn - 2] = signq*col->getFluidRhoNum(i,j,nzn-2,is);
+	  Jxs  [is][i][j][nzn - 2] = col->getFluidJx(i,j,nzn-2,is);
+	  Jys  [is][i][j][nzn - 2] = col->getFluidJy(i,j,nzn-2,is);
+	  Jzs  [is][i][j][nzn - 2] = col->getFluidJz(i,j,nzn-2,is);
+	  pXXsn[is][i][j][nzn - 2] = col->getFluidPxx(i,j,nzn-2,is);
+	  pXYsn[is][i][j][nzn - 2] = col->getFluidPxy(i,j,nzn-2,is);
+	  pXZsn[is][i][j][nzn - 2] = col->getFluidPxz(i,j,nzn-2,is);
+	  pYYsn[is][i][j][nzn - 2] = col->getFluidPyy(i,j,nzn-2,is);
+	  pYZsn[is][i][j][nzn - 2] = col->getFluidPyz(i,j,nzn-2,is);
+	  pZZsn[is][i][j][nzn - 2] = col->getFluidPzz(i,j,nzn-2,is);
+	}
+  }
+}
+
 
 /*! Copy field form the fluid solution for boundary condition*/
 void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *vct)

@@ -587,6 +587,9 @@ class EMfields3D                // :public Field
     /*  Fix variables close to the boundary for BATSRUS, cell centerd values */
     inline void fixVarBCcell(arr3_double Var, 
 			     double (CollectiveIO::*fluidVar)(int,int,int,int)const, int nOverlap, int is);
+
+    /* Set boundary for rhons, J*s, and p**sn from fluid.*/
+    void setFluidBC_P(int is);      
  private:
     // *************************************
     // ARRAY USED FOR BC WITH BATSRUS
