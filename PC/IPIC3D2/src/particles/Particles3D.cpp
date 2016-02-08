@@ -1882,7 +1882,7 @@ void Particles3D::repopulate_particles()
 				       dx_per_pcl, dy_per_pcl, dz_per_pcl);	
       }
       // these have all been filled, so never touch them again.
-      if(bcPfaceXleft!=FLUID)xbeg += num_layers; // The if statement only used for debug!!!!!!
+      xbeg += num_layers;
     }
     if (repopulateXrght)
     {
@@ -1901,31 +1901,10 @@ void Particles3D::repopulate_particles()
 	
       }
       //these have all been filled, so never touch them again.
-      if(bcPfaceXright!=FLUID)xend -= num_layers;
+      xend -= num_layers;
     }
     if (repopulateYleft)
     {     
-      if(bcPfaceYleft==FLUID){
-	/* Do delete again so that the algorithm is consistent with the iPIC3D1.
-	   But this is not efficient. Delete this while loop and delete lines 
-	   like 'if(bcPfaceXright!=FLUID)xend -= num_layers' after iPIC3D2
-	   coupling is proved to be correct. */
-	if (vct->getCartesian_rank()==0)cout<<"Warning: The code here is not efficient!!--Yuxi"<<endl;
-	const int nop_orig = getNOP();
-	int pidx = 0;
-	while(pidx < getNOP())
-	  {
-	    SpeciesParticle& pcl = _pcls[pidx];
-	    // determine whether to delete the particle
-	    const bool delete_pcl =
-	      (repopulateYleft && pcl.get_y() < yLow);
-	    if(delete_pcl)
-	      delete_particle(pidx);
-	    else
-	      pidx++;
-	  }
-      }
-
       //cout << "*** Repopulate Yleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=1; j<=num_layers; j++)
@@ -1940,26 +1919,10 @@ void Particles3D::repopulate_particles()
 				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
       // these have all been filled, so never touch them again.
-      if(bcPfaceYleft!=FLUID)ybeg += num_layers;
+      ybeg += num_layers;
     }
     if (repopulateYrght)
       {
-	if(bcPfaceYright==FLUID){
-	  const int nop_orig = getNOP();
-	  int pidx = 0;
-	  while(pidx < getNOP())
-	    {
-	      SpeciesParticle& pcl = _pcls[pidx];
-	      // determine whether to delete the particle
-	      const bool delete_pcl =
-		(repopulateYrght && pcl.get_y() > yHgh);
-	      if(delete_pcl)
-		delete_particle(pidx);
-	      else
-		pidx++;
-	    }
-	}
-      
 	//cout << "*** Repopulate Yright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=upYstart; j<=yend; j++)
@@ -1974,26 +1937,10 @@ void Particles3D::repopulate_particles()
 				       dx_per_pcl, dy_per_pcl, dz_per_pcl);
       }
       // these have all been filled, so never touch them again.
-      if(bcPfaceYright!=FLUID)yend -= num_layers;
+      yend -= num_layers;
     }
     if (repopulateZleft)
     {   
-      if(bcPfaceZleft==FLUID){
-	const int nop_orig = getNOP();
-	int pidx = 0;
-	while(pidx < getNOP())
-	  {
-	    SpeciesParticle& pcl = _pcls[pidx];
-	    // determine whether to delete the particle
-	    const bool delete_pcl =
-	      (repopulateZleft && pcl.get_z() < zLow);
-	    if(delete_pcl)
-	      delete_particle(pidx);
-	    else
-	      pidx++;
-	  }
-      }
-
       //cout << "*** Repopulate Zleft species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
@@ -2010,21 +1957,6 @@ void Particles3D::repopulate_particles()
     }
     if (repopulateZrght)
     {
-      if(bcPfaceZright==FLUID){
-	  const int nop_orig = getNOP();
-	  int pidx = 0;
-	  while(pidx < getNOP())
-	    {
-	      SpeciesParticle& pcl = _pcls[pidx];
-	      // determine whether to delete the particle
-	      const bool delete_pcl =
-		(repopulateZrght && pcl.get_z() > zHgh);
-	      if(delete_pcl)
-		delete_particle(pidx);
-	      else
-		pidx++;
-	    }
-      }
       //cout << "*** Repopulate Zright species " << ns << " ***" << endl;
       for (int i=xbeg; i<=xend; i++)
       for (int j=ybeg; j<=yend; j++)
