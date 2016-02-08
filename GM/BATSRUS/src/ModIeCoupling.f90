@@ -12,16 +12,17 @@ module ModIeCoupling
 
   private ! except
 
-  public:: init_ie_grid                 ! set the ionosphere grid
+  public:: init_ie_grid                ! set the ionosphere grid
   public:: clean_mod_ie_coupling       ! deallocate arrays
+  public:: read_ie_velocity_param      ! parameters for velocity nudging
+  public:: get_ie_potential            ! interpolate potential to x,y,z
   public:: logvar_ionosphere           ! get cross polar cap potential
   public:: calc_grad_ie_potential      ! calculate gradient of iono. potential
   public:: calc_inner_bc_velocity      ! get ExB/B^2 drift velocity at inner BC
+  public:: apply_ie_velocity           ! nudge MHD velocity in a volume
   public:: map_jouleheating_to_inner_bc! map iono. Joule heating to inner BC
   public:: get_inner_bc_jouleheating   ! get mapped Joule heating at inner BC
   public:: calc_ie_mag_perturb         ! calculate dB due to IE currents
-  public:: read_ie_velocity_param      ! parameters for velocity nudging
-  public:: apply_ie_velocity           ! nudge MHD velocity in a volume
 
   ! Ionosphere grid description
   integer, public              :: nThetaIono = -1, nPhiIono = -1
@@ -132,9 +133,51 @@ contains
   end subroutine get_ie_grid_index
 
   !============================================================================
+  subroutine get_ie_potential(Xyz_D, Potential)
+
+    use ModMain, ONLY: Time_Simulation, TypeCoordSystem
+    use ModInterpolate, ONLY: bilinear
+    use CON_planet_field, ONLY: map_planet_field
+    use ModCoordTransform, ONLY:  xyz_to_dir
+
+    ! Interpolate IE potential to Xyz_D location
+    ! Assume equipotential dipole field lines
+
+    real, intent(in) :: Xyz_D(3)
+    real, intent(out):: Potential
+
+    integer:: iHemisphere
+    real :: XyzIono_D(3)         ! Mapped point on the ionosphere
+    real :: Theta, Phi           ! Mapped point colatitude, longitude
+
+    logical, parameter :: DoTestMe = .false.
+    character(len=*), parameter :: NameSub = 'get_ie_potential'
+    !-------------------------------------------------------------------------
+    ! call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(.not.allocated(IonoPotential_II))then
+       Potential = 0.0
+       RETURN
+    end if
+
+    ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
+    call map_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM', &
+         rIonosphere, XyzIono_D, iHemisphere, DoNotConvertBack=.true.)
+
+    ! Calculate angular coordinates
+    call xyz_to_dir(XyzIono_D, Theta, Phi)
+
+    ! Interpolate the potential on the ionospheric grid
+    Potential = bilinear(IonoPotential_II, 1, nThetaIono, 1, nPhiIono, &
+         (/ Theta/dThetaIono+1, Phi/dPhiIono+1 /))
+
+  end subroutine get_ie_potential
+
+  !============================================================================
+
   subroutine calc_grad_ie_potential
 
-    ! Caclulate gradient of ionosphere potential on the IE grid
+    ! Calculate gradient of ionosphere potential on the IE grid
 
     integer, parameter :: Theta_=1, Phi_=2
     integer :: i, j
