@@ -33,7 +33,10 @@ module ModElectricField
 
   private ! except
 
-  public:: calc_inductive_e
+  public:: get_electric_field       ! Calculate E
+  public:: get_electric_field_block ! Calculate E for 1 block
+  public:: calc_div_e               ! Calculate div(E)
+  public:: calc_inductive_e         ! Calculate Eind
 
   ! Total, potential and inductive electric fields
   real, public, allocatable:: Efield_DGB(:,:,:,:,:)
@@ -43,8 +46,10 @@ module ModElectricField
   ! Electric potential
   real, public, allocatable:: Potential_GB(:,:,:,:)
 
+  ! Divergence of the electric field
+  real, public, allocatable:: DivE_CB(:,:,:,:)
+
   ! local variables
-  real, allocatable:: DivE_CB(:,:,:,:)
   real, allocatable:: Laplace_C(:,:,:)
 
   ! Default parameters for the linear solver
@@ -99,8 +104,10 @@ contains
     integer:: i, j, k
     real:: b_D(3), u_D(3)
     !----------------------------------------------------------------------
-    if(.not.allocated(Efield_DGB)) &
-         allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(Efield_DGB))then
+       allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       Efield_DGB = 0.0
+    end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock))then
@@ -140,12 +147,15 @@ contains
     ! fill ghost cells at the end
     call calc_potential
 
+    if(.not.allocated(Epot_DGB)) &
+         allocate(Epot_DGB(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
     ! Calculate Epot and Eind
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        ! Epot = grad(Potential)
-       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), nG, &
-            Epot_DGB(:,:,:,:,iBlock), UseBodyCell=.true.)
+       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), &
+            nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
 
        ! Eind = E - Epot
        Eind_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock) - &
@@ -173,7 +183,7 @@ contains
 
        ! Calculate DivE for this block (it has no ghost cells: nG=0)
        call calc_divergence(iBlock, Efield_DGB(:,:,:,:,iBlock), &
-            0, DivE_CB(:,:,:,iBlock), UseBodyCell=.true.)
+            0, DivE_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
 
   end subroutine calc_div_e
@@ -205,7 +215,7 @@ contains
     ! to get the RHS
     Potential_I = 0.0
     IsLinear = .false.
-    call matvec(Potential_I, Rhs_I, nVarAll)
+    call matvec_inductive_e(Potential_I, Rhs_I, nVarAll)
     Rhs_I = -Rhs_I
 
     ! Add div(E) to the RHS
@@ -247,7 +257,7 @@ contains
 
     ! Fill in ghost cells and boundary cells using true BCs
     IsLinear = .false.
-    call bound_phi
+    call bound_potential
 
     deallocate(Rhs_I, Potential_I)
 
@@ -255,9 +265,10 @@ contains
   !=========================================================================
   subroutine bound_potential
 
-    use ModGeometry, ONLY: body_blk, r_BLK
-    use ModPhysics,  ONLY: rBody
-    use BATL_lib, ONLY: Xyz_DGB
+    use ModGeometry,   ONLY: body_blk, r_BLK
+    use ModPhysics,    ONLY: rBody
+    use ModIeCoupling, ONLY: get_ie_potential
+    use BATL_lib,      ONLY: Xyz_DGB
 
     ! Fill in ghost cells and boundary cells for the potential
 
@@ -331,8 +342,8 @@ contains
     ! Calculate gradient of potential
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), nG, &
-            Epot_DGB(:,:,:,:,iBlock), UseBodyCell=.true.)
+       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), &
+            nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
 
     ! Fill in ghost cells
@@ -349,7 +360,7 @@ contains
             TypeBcIn = 'efield')
 
        call calc_divergence(iBlock, Epot_DGB(:,:,:,:,iBlock), 0, Laplace_C, &
-            UseBodyCell=.true.)
+            UseBodyCellIn=.true.)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
