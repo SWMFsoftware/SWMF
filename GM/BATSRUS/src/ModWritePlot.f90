@@ -24,6 +24,7 @@ subroutine write_plot_common(iFile)
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
+  use ModElectricField, ONLY: DivE_CB
   
   implicit none
 
@@ -325,6 +326,8 @@ subroutine write_plot_common(iFile)
           nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
   end if
+
+  if(allocated(DivE_CB)) deallocate(DivE_CB)
 
   do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
@@ -805,6 +808,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, &
        Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
+  use ModElectricField, ONLY: Efield_DGB, DivE_CB, &
+       get_electric_field_block, get_electric_field, calc_div_e
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
   use ModFaceValue, ONLY: iRegionLowOrder_I
@@ -1106,24 +1111,18 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('enumz')
         PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
      case('ex')
-        PlotVar(:,:,:,iVar)= &
-             ( State_VGB(iRhoUz,:,:,:,iBLK) &
-             * FullB_DG(y_,:,:,:) &
-             - State_VGB(iRhoUy,:,:,:,iBLK) &
-             * FullB_DG(z_,:,:,:) &
-             ) / State_VGB(iRho,:,:,:,iBLK)
+        call get_electric_field_block(iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(1,1:nI,1:nJ,1:nK,iBLK)
      case('ey')
-        PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUx,:,:,:,iBLK)* &
-             FullB_DG(z_,:,:,:) &
-             -State_VGB(iRhoUz,:,:,:,iBLK)* &
-             FullB_DG(x_,:,:,:))/ &
-             State_VGB(iRho,:,:,:,iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(2,1:nI,1:nJ,1:nK,iBLK)
      case('ez')
-        PlotVar(:,:,:,iVar)= ( State_VGB(iRhoUy,:,:,:,iBLK)* &
-             FullB_DG(x_,:,:,:) &
-             -State_VGB(iRhoUx,:,:,:,iBLK)* &
-             FullB_DG(y_,:,:,:))/ &
-             State_VGB(iRho,:,:,:,iBLK) 
+        PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(3,1:nI,1:nJ,1:nK,iBLK)
+     case('dive')
+        if(.not.allocated(DivE_CB))then
+           call get_electric_field
+           call calc_div_e
+        end if
+        PlotVar(1:nI,1:nJ,1:nK,iVar) = DivE_CB(:,:,:,iBLK)
      case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
              ( FullB_DG(x_,:,:,:)**2  &
