@@ -3366,9 +3366,6 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateInterp(nxn, nyn, nzn, moment8, vct,this);
   communicateInterp(nxn, nyn, nzn, moment9, vct,this);
   // calculate the correct densities on the boundaries
-  #ifdef BATSRUS
-  if(get_col().getCase()=="BATSRUS") setFluidBC_P(ns);
-  #endif
   if(get_col().getCase()!="BATSRUS") adjustNonPeriodicDensities(ns);
   //Call Nonblocking Halo Exchange
   communicateNode_P(nxn, nyn, nzn, moment0, vct, this);
@@ -3784,6 +3781,8 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
   // Get new timestep from fluid solver
   dt  = col->getFluidDt();
   delt = c * th * dt;
+
+  for(int is=0; is<ns;is++) setFluidBC_P(is);
 }
 
 /** fix the E boundary when running with batsrus*/
