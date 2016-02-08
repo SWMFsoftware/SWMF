@@ -3308,7 +3308,7 @@ module ModInterpolateAMR
        5,0,0,0,   5,6,0,0,    6,0,0,0,                                   &!-1, 1
        5,7,0,0,   5,6,7,8,    6,8,0,0,                                   &! 0, 1
        7,0,0,0,   7,8,0,0,    8,0,0,0/),(/4,3,3,3/))                       
-       !  -1    |    0     |     1   | iDiscr_I(x_)                  
+  !        -1    |    0     |     1   | iDiscr_I(x_)                  
   !\
   ! PUBLIC MEMBERS
   !/
@@ -3322,7 +3322,116 @@ module ModInterpolateAMR
   public:: interpolate_uniform
   !Interpolate on block-adaptive grid with predefined grid as input
   public:: interpolate_extended_stencil
+  !Get indicator of the block that can be used for AMR interpolaton with gc
+  public:: get_reference_block
+
 contains
+
+  subroutine get_reference_block(&
+       nDim, Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, iGridRef)
+    ! choose a reference block that will be used for 
+    ! interpolation with use of the ghost cells
+    !-----------------------------------------------
+    ! dimensionality
+    integer, intent(in) :: nDim
+    ! coordinates of point
+    real,    intent(in) :: Xyz_D(nDim)
+    ! coordinates of super grid (centers of subgrids);
+    !-------------------------------------------
+    ! Xyz_D MUST BE INSIDE RECTANGLE XyzGrid_DI 
+    !-------------------------------------------
+    real,    intent(in) :: XyzGrid_DI(nDim, 2**nDim)
+    ! resolution levels of subgrids
+    !------------------------------------------------------------
+    ! ONLY FOLLOWING VALUES ARE ACCEPTED WHERE IsOut_I==.false.:
+    ! 0 - Coarse, 1 - Fine
+    !------------------------------------------------------------
+    integer, intent(in) :: iLevel_I(2**nDim)
+    ! blocks outside of the domain
+    logical, intent(in) :: IsOut_I(2**nDim)
+    ! the result: index of reference block in the supergrid XyzGrid_DI
+    integer, intent(out):: iGridRef
+
+    ! various transformations of Xyz_D
+    real :: XyzMisc_D(nDim)
+    ! shift of Xyz_D relative to the central point
+    integer :: iShift_D(nDim)
+    ! loop vairable
+    integer :: iChoice
+    ! dimension of largest displacement from central point (see below)
+    integer :: iDim
+    ! subgrid binary enumaration
+    integer, parameter:: &
+         iGrid_III(0:1,0:1,0:1) = reshape((/ 1,2,3,4,5,6,7,8/),(/2,2,2/))
+    ! slice of iGrid_III that contains the reference block:
+    ! 2nd index: min and max limits of the slice
+    integer:: iSlice_DI(3,2)
+    !----------------------------------------------------
+    ! recompute coordinates relative to the center of supergrid
+    XyzMisc_D = Xyz_D - sum(XyzGrid_DI(:,:), DIM=2)/2**nDim
+
+    ! determine shift from central point
+    iShift_D = 0
+    where(XyzMisc_D > 0)
+       iShift_D = 1
+    end where
+
+    ! candidate to be the reference block: the closest one
+    iGridRef = 1 + sum(iShift_D * iPowerOf2_D(1:nDim))
+    ! if grid is unifrom or candidate is Fine, then this is the result
+    if( all(iLevel_I == Coarse_ .or. IsOut_I) .or. & ! unifrom grid
+         iLevel_I(iGridRef) == Fine_ )& ! candidate block is fine
+         RETURN
+
+    ! candidate is Coarse; this requires further consideration
+    !------------------------------------------------------------------------
+    ! algorithm for 3D case:
+    ! 1) find the closest face of the rectangular box composed of 
+    !    center of subgrids; 
+    !    if any subgrid at this face is Fine, then reference is one of the 4;
+    !    otherwise it is among subgrids at the opposite face
+    ! 2) on the chosen face find the closest side;
+    !    if any subgrid at this side is Fine, then reference is one of the 2;
+    !    otherwise it is among subgrids on the opposite side of the same face;
+    ! 3) on the chosen edge find the closest end;
+    !    if it is Fine, then this is the reference block;
+    !    otherwise it is the opposite one
+    !------------------------------------------------------------------------
+    ! need only absolute value of normalized coordinates:
+    ! the largest one is the largest displacement from central point,
+    ! it gives dimension defining the closest face,
+    ! the direction of displacement is stored in iShift_D;
+    ! compute normalized coords
+    XyzMisc_D = abs( XyzMisc_D / (XyzGrid_DI(:,2**nDim) - XyzGrid_DI(:,1)) )
+    ! reset slicing to include all 2**nDim subgrids
+    iSlice_DI(:,1) = (/0,0,0/)
+    iSlice_DI(:,2) = (/1,1,nDim-2/) ! (/1,1,0/) for nDim = 2
+    ! go through dimensions:
+    ! iChoice = 3 => choice of face
+    ! iChoice = 2 => choice of side/edge
+    ! iChoice = 1 => choice of vertex (final result)
+    do iChoice = nDim, 1, -1
+       ! find dimension of the largest displacement
+       iDim = maxloc(XyzMisc_D, 1)
+       ! mark it is processed
+       XyzMisc_D(iDim) = -1
+       ! correct slice accordingly
+       iSlice_DI(iDim,:) = iShift_D(iDim)
+       ! if face/side/vertex are all Coarse, need to choose the opposite one
+       if( all(iLevel_I(reshape(iGrid_III(&
+            iSlice_DI(1,1):iSlice_DI(1,2),&
+            iSlice_DI(2,1):iSlice_DI(2,2),&
+            iSlice_DI(3,1):iSlice_DI(3,2)),&
+            (/iPowerOf2_D(iChoice)/)))/=Fine_))then
+          ! invert choice of face/side/vertex
+          iShift_D( iDim) = 1 - iShift_D(iDim)
+          iSlice_DI(iDim,:) = iShift_D(iDim)
+       end if
+    end do
+    ! get the final result
+    iGridRef = 1 + sum(iShift_D * iPowerOf2_D(1:nDim))
+  end subroutine get_reference_block
+
   !=================================
   subroutine interpolate_amr_gc(&
        nDim, Xyz_D, XyzMin_D, DXyz_D, nCell_D, DiLevelNei_III, &
@@ -3396,7 +3505,7 @@ contains
     !\
     ! Loop variables
     !/
-    integer:: iGrid, iSubGrid, iGridSeenFrom, iOrder 
+    integer:: iGrid, iSubGrid, iGridSeenFrom, iOrder
     !--------------------------------------------------------------------    
     cTol2 = cTol**(nByteReal/4)
     Dimless_D = (Xyz_D - XyzMin_D)/DXyz_D
@@ -3771,11 +3880,6 @@ contains
     !/
     integer:: nSubgrid_I(2**nDim)
     !\
-    ! grid number for a vertex known to belong to the block 
-    ! to be used for interpolation with ghost cells
-    !/
-    integer:: iGridPhys
-    !\
     !iGrid for the cell to which the point Xyz_D belongs
     !/
     integer:: iGridBasic
@@ -3808,7 +3912,7 @@ contains
     !/
     iIndexes_II = 0; Weight_I    = 0
     nGridOut = -1; Xyz_D = XyzIn_D ; IsOut_I = .false.
-    iGridPhys = -1; iBlock_I = -1; iProc_I = -1
+    iBlock_I = -1; iProc_I = -1
     if(present(UseGhostCell))then
        UseGhostCellLocal = UseGhostCell
     else
@@ -3851,8 +3955,7 @@ contains
     end if
     call get_other_blocks(iGridOutOfBlock)
     !\
-    ! recalculate grid cells indexes with a reference block
-    ! being the one with subgrid iGridPhys
+    ! recalculate grid cells indexes for ghost cells
     !/
     if(UseGhostCellLocal)call get_ghost_cell_indexes
  
@@ -3953,7 +4056,6 @@ contains
       iDiscr1_D = 0
       iDiscr1_D(1:nDim) = nint(0.50 + SIGN(0.50, XyzMisc_D - 0.50))
       iGridBasic = sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + 1
-      iGridPhys = iGridBasic
       !\
       !Calculate other grid points, check if all points belong to 
       !the found block
@@ -4038,11 +4140,6 @@ contains
          call get_block(iGridOutOfBlock, XyzMisc_D)
       case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
          call get_fine_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
-         !\
-         ! if ghost cells will be used for interpolation
-         ! then a Finer block is the reference block
-         !/
-         if(iLevelSubGrid_I(iGridBasic)==Coarse_)iGridPhys = iGridStored
       end select
       call get_other_blocks(iGridOutOfBlock)
     end subroutine get_other_blocks
@@ -4266,7 +4363,6 @@ contains
       iDiscr1_D = 0
       iDiscr1_D(1:nDim) = nint(0.50 + SIGN(0.50, XyzMisc_D - 0.50))
       iGridBasic = sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + 1
-      iGridPhys = iGridBasic
       !\
       ! 6. Store the displacement of the grid origin and assign
       ! its coordinates 
@@ -4372,8 +4468,12 @@ contains
       !/ 
       integer, dimension(nDim) :: iShift_D
       !/
-      integer :: iGrid, iOrder
+      integer :: iGrid, iOrder, iGridPhys
       !------------------
+      call get_reference_block(&
+           nDim, Xyz_D, XyzGrid_DII(:,0,:), &
+           iLevelSubgrid_I, IsOut_I, iGridPhys)
+
       if(iLevelSubgrid_I(iGridPhys)/=Fine_)then
          !\
          ! Stencil is uniform

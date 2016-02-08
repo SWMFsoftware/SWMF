@@ -235,12 +235,12 @@ contains
          Xyz_D = 0
          Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
          iBlock = iIndex_II(0, iParticle)
-         call check_interpolate(Xyz_D, iBlock, &
-              IsPossible, iProcOut, iBlockOut, IsOut)
+         call check_interpolate(Xyz_D, iBlock, iProcOut, iBlockOut)
          
-         if(IsPossible) CYCLE ! don't need to pass this particle
-         
-         if(IsOut)then ! particle is out of the domain, don't pass it
+         if(iProc == iProcOut .and. iBlock==iBlockOut)&
+              CYCLE
+
+         if(iBlockOut == Unset_)then ! particle is out of domain, don't pass it
             iIndex_II(0, iParticle) = Unset_
             CYCLE
          end if

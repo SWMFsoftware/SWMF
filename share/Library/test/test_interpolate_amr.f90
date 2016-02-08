@@ -3,7 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !===========================TESTS============================================
 module ModTestInterpolateAMR
-  use ModInterpolateAMR, ONLY: interpolate_amr, interpolate_amr_gc
+  use ModInterpolateAMR, &
+       ONLY: interpolate_amr, interpolate_amr_gc, get_reference_block
   implicit none
   !\
   ! Shift of the iGrid point in the stencil with respect to the
@@ -24,15 +25,17 @@ module ModTestInterpolateAMR
   ! find_test routine
   !/
   integer:: iLevelTest_I(8)
+  integer,parameter:: Out_  = -100
   integer,parameter:: nCell = 2
-  integer,parameter:: nG    = 2
+  integer,parameter:: nG    = 1
 contains
   !==================================================================
-  subroutine test_interpolate_amr(nDim,nSample, UseGeneric)
+  subroutine test_interpolate_amr(nDim,nSample, UseGeneric, UseGhostCell)
     use ModRandomNumber, ONLY: random_real
 
     integer, intent(in)::nDim, nSample
     logical, intent(in)::UseGeneric
+    logical, optional, intent(in):: UseGhostCell
 
     integer :: iIndexes_II(0:nDim+1,2**nDim)
     logical :: IsSecondOrder, IsPossible, IsOut
@@ -52,7 +55,7 @@ contains
     real    :: Weight_I(2**nDim)
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
-    integer :: iProc, iBlockNei, iBoundary
+    integer :: iProc, iBlockNei
     integer :: nCell_D(3)  ! Cells per block
     integer :: iCellIndex_D(3)
     integer :: nIndexes
@@ -147,14 +150,15 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder)
+                  IsSecondOrder=IsSecondOrder,&
+                  UseGhostCell=UseGhostCell)
           else
              call find_test(nDim, Xyz_D, &
                   iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
              Xyz_D = XyzCorner_D + Xyz_D
              call check_interpolate_test(nDim, Xyz_D, iBlock, &
-                  IsPossible, iProc, iBlockNei, iBoundary)
-             if(.not. IsPossible) then
+                  iProc, iBlockNei)
+             if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
                 XyzCorner_D = Xyz_DGB(:,1,1,1,iBlock) - 0.5*DxyzFine_D
                 Dxyz_D = DxyzFine_D
@@ -233,14 +237,15 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder)
+                  IsSecondOrder=IsSecondOrder,&
+                  UseGhostCell=UseGhostCell)
           else
              call find_test(nDim, XyzCont_D, &
                   iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
              XyzCont_D = XyzCorner_D + XyzCont_D
              call check_interpolate_test(nDim, XyzCont_D, iBlock, &
-                  IsPossible, iProc, iBlockNei, iBoundary)
-             if(.not. IsPossible) then
+                  iProc, iBlockNei)
+             if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
                 XyzCorner_D = Xyz_DGB(:,1,1,1,iBlock) - 0.5*DxyzFine_D
                 Dxyz_D = DxyzFine_D
@@ -341,24 +346,24 @@ contains
   contains
     !============================
     subroutine check_interpolate_test(nDim, Xyz_D, iBlockIn, &
-         IsPossible, iProcOut, iBlockOut, iBoundary)
+         iProcOut, iBlockOut)
       integer, intent(in) :: nDim
       real,    intent(in) :: Xyz_D(nDim)
       integer, intent(in) :: iBlockIn
-      logical, intent(out):: IsPossible
       integer, intent(out):: iProcOut
       integer, intent(out):: iBlockOut
-      integer, intent(out):: iBoundary
 
+      integer:: iLevel_I(2**nDim)
+      logical:: IsOut_I(2**nDim)
       integer:: iDiscr_D(3)
-      integer:: iShift_D(3)
-      integer:: iBlock
+      real   :: XyzCentral_D(nDim)
       real   :: XyzNei_D(nDim), XyzCorner_D(nDim), Dxyz_D(nDim)
+      real   :: XyzGrid_DI(nDim, 2**nDim)
       logical:: IsOut
+      integer:: iGridRef, iGrid
+      integer:: iShiftRef_D(nDim)
       !------------------------------------------------------------
-      IsPossible = .true.
-      if(iBlockIn > 2**nDim) RETURN ! block is Fine
-
+      ! determine displacement of the point relative to the block's interior
       iDiscr_D = 0
       where(Xyz_D < Xyz_DGB(:,1,1,1,iBlockIn))
          iDiscr_D(1:nDim) = -1
@@ -366,27 +371,62 @@ contains
          iDiscr_D(1:nDim) =  1
       end where
 
-      if(all(iDiscr_D==0)) RETURN ! within coarse block and far from boundary
+      ! array of levels of neighbors
+      iLevel_I = reshape(DiLevelNei_IIIB(&
+           (/MIN(iDiscr_D(1),0), MAX(0,iDiscr_D(1))/), &
+           (/MIN(iDiscr_D(2),0), MAX(0,iDiscr_D(2))/), &
+           (/MIN(iDiscr_D(3),0), MAX(0,iDiscr_D(3))/), iBlockIn), (/2**nDim/))
 
-      if(any(DiLevelNei_IIIB(&
-           MIN(iDiscr_D(1),0):MAX(0,iDiscr_D(1)), &
-           MIN(iDiscr_D(2),0):MAX(0,iDiscr_D(2)), &
-           MIN(iDiscr_D(3),0):MAX(0,iDiscr_D(3)), &
-           iBlockIn) > 0) )then
-         IsPossible = .false.
-         do iBlock = 1, 2**nDim
-            iShift_D = iShift_DI(:,iBlock) - iShift_DI(:,iBlockIn)
-            if(iLevelTest_I(iBlock)==1.and. &
-                 all(iShift_D==iDiscr_D.or.iShift_D==0)) EXIT
-         end do
-         XyzNei_D = Xyz_D + DxyzFine_D*iShift_D(1:nDim)
-         call find_test(nDim, XyzNei_D, &
-            iProcOut, iBlockOut, XyzCorner_D, Dxyz_D, IsOut)
-         iBoundary = sum(iDiscr_D*(/1, 3, 9/))-3**nDim/2
-      end if
+      ! find those that are outside of the computational domain
+      IsOut_I = iLevel_I < -1
       
+      ! iLevel_I may contain -1's;
+      ! fix so there are only 0's (Coarser) and 1's (Finer)
+      if(any(iLevel_I == -1 .and. .not. IsOut_I))&
+           iLevel_I = iLevel_I + 1
+      
+      ! cell size of this block
+      if(iBlockIn > 2**nDim)then
+         Dxyz_D = DxyzFine_D   ! the block is Finer 
+      else
+         Dxyz_D = DxyzCoarse_D ! the block is Coarse
+      end if
+
+      ! coordinates of block's junction
+      where(    iDiscr_D == 1)
+         XyzCentral_D = Xyz_DGB(:,nCell,nCell,nCell,iBlockIn)  + 0.5 * Dxyz_D
+      elsewhere(iDiscr_D ==-1)
+         XyzCentral_D = Xyz_DGB(:,1,1,1,iBlockIn)  - 0.5 * Dxyz_D
+      elsewhere
+         XyzCentral_D = Xyz_D
+      end where
+
+      ! supergrid
+      do iGrid = 1, 2**nDim
+         XyzGrid_DI(:, iGrid) = XyzCentral_D + &
+              (iShift_DI(1:nDim, iGrid)-0.5) * DxyzCoarse_D
+      end do
+     
+      ! find the block that has enough information to perform interpolation
+      ! using only 1 layer of gc
+      call get_reference_block(&
+           nDim, Xyz_D, XyzGrid_DI, iLevel_I, IsOut_I, iGridRef)
+      ! displacement to this block
+      iShiftRef_D = iShift_DI(1:nDim,iGridRef)
+
+      ! check if it is the input block
+      if(all((iDiscr_D(1:nDim)-1)/2 == iShiftRef_D*ABS(iDiscr_D(1:nDim))))then
+         iBlockOut = iBlockIn
+         RETURN
+      end if
+
+      ! it is a different block, find it
+      XyzNei_D = XyzCentral_D + 0.5*DxyzFine_D*(iShiftRef_D-0.5)
+      call find_test(nDim, XyzNei_D, &
+           iProcOut, iBlockOut, XyzCorner_D, Dxyz_D, IsOut)
+
     end subroutine check_interpolate_test
-    !===========================
+    !===========================s
     subroutine get_level(Xyz_D, iLevel_I, iLevelOut) 
       ! gets refinement level at location Xyz_D
       real,    intent(in ):: Xyz_D(nDim)
@@ -397,7 +437,7 @@ contains
       integer, parameter:: nTwoPower_I(3) = (/1,2,4/)
       !-----------------------------------------------
       if(any(Xyz_D < 0) .or. any(Xyz_D >= DxyzDomain_D(1:nDim)))then
-         iLevelOut = -100
+         iLevelOut = Out_
          RETURN
       end if
       iGrid = 1 + SUM(nTwoPower_I(1:nDim), &
@@ -472,8 +512,8 @@ contains
       ! fill values
       do iBlock = 1, 2**(2*nDim)+2**nDim
          if(.not. Use_B(iBlock))CYCLE
-         do k = 1-nG, nCell_D(3)+nG 
-            do j = 1-nG, nCell_D(2)+nG 
+         do k = 1-nG, nCell_D(3)+nG
+            do j = 1-nG, nCell_D(2)+nG
                do i = 1-nG, nCell_D(1)+nG
                   iCellIndex_D = (/i,j,k/)
                   if(all(iCellIndex_D >= 1).and.all(iCellIndex_D <= nCell_D))&
@@ -547,7 +587,7 @@ contains
     !------------------- 
     DxyzDomain_D      = 2*nCell
     DxyzCoarseBlock_D = nCell
-    DxyzFineBlock_D   = 0.5*nCell 
+    DxyzFineBlock_D   = 0.5*nCell
     DxyzCoarse_D      = 1
     DxyzFine_D        = 0.5
     iProc = 0; iBlock=0; XyzCorner_D=0.0; Dxyz_D = 0.0
@@ -592,9 +632,11 @@ program test_interpolate_amr
 
   implicit none
 
-  call test(2,20000, .true.)
+  call test(2,20000, .true., .false.)
+  call test(2,20000, .true., .true.)
   call test(2,20000, .false.)
-  call test(3,20000, .true.)
+  call test(3,20000, .true., .false.)
+  call test(3,20000, .true., .true.)
   call test(3,20000, .false.)
 
 end program test_interpolate_amr

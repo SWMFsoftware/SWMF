@@ -8,15 +8,17 @@ module BATL_interpolate_amr
   use BATL_geometry, ONLY: CoordMin_D, DomainSize_D, IsPeriodic_D
 
   use ModInterpolateAMR, ONLY: cTol2, &
-       interpolate_amr_shared=>interpolate_amr, &
-       interpolate_extended_stencil_shared=>interpolate_extended_stencil
+       interpolate_amr_shared             =>interpolate_amr, &
+       interpolate_extended_stencil_shared=>interpolate_extended_stencil, &
+       get_reference_block_shared         =>get_reference_block
+  
 
   implicit none
 
   SAVE
   private ! except
 
-  public:: interpolate_amr, find_block_to_interpolate_gc
+  public:: interpolate_amr
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
@@ -428,157 +430,5 @@ contains
 
     nNodeFound = nNodeFound + 1
   end subroutine find
-  !===========================================================================
-  subroutine find_block_to_interpolate_gc(Coord_D, iPeOut, iBlockOut)
-
-    real,    intent(in)  :: Coord_D(MaxDim)
-    integer, intent(out) :: iPeOut, iBlockOut
-
-    real   :: CoordTree_D(MaxDim)    ! Normalized gen coords
-    integer:: iNode                  ! Tree node number
-    integer:: iDim                   ! Loop 
-    real   :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-    real   :: dCoord_D(nDim)         ! Cell size 
-    real   :: dCoordInv_D(nDim)      ! Cell size inv
-    real   :: CoordCorner_D(nDim)    ! Coords of the block left corner
-
-    !\
-    !Direction along which the point goes out of the block inner part
-    !/
-    integer :: iShift_D(nDim)
-    !\
-    ! Grid, consisting of Coord_D, displaced by +/- dCoord_D 
-    !/
-    real    :: GridCoord_DI(MaxDim,2**nDimAmr)
-    !\
-    ! The grid point belonging to the initially found block
-    !/
-    integer   :: iGridBlock
-    !\
-    ! Number of grid points:
-    !/
-    integer   :: nGrid
-    !\
-    ! Loop variable
-    !/
-    integer   :: iGrid
-    !\
-    ! Refinement level of the neighboring block
-    !/
-    integer   :: iLevel
-    !\
-    ! Dimension, along which there is AMR
-    !/
-    integer:: iDimAmr
-
-    character(LEN=*),parameter:: NameSub = 'find_block_to_interpolate_gc'
-    !--------------------------------------------------------------------------
-    !\
-    ! Calculate normalized (to DomainSize_D) coordinates for tree search
-    !/
-    CoordTree_D = 0
-    CoordTree_D(1:nDim) = &
-         ( Coord_D(1:nDim) - CoordMin_D(1:nDim) ) / DomainSize_D(1:nDim)
-    !\
-    ! call internal BATL find subroutine
-    !/
-    call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
-
-    !\
-    ! Check if the block is found
-    !/
-    if(iNode<=0) call CON_stop('Failure in '//NameSub)
-    !\
-    !position has been found
-    !/
-    iBlockOut = iTree_IA(Block_,iNode)
-    iPeOut    = iTree_IA(Proc_, iNode)
-    call get_tree_position(iNode=iNode,                &
-         PositionMin_D=PositionMin_D,&
-         PositionMax_D=PositionMax_D )
-    ! corner coordinates for the found block
-    CoordCorner_D =  CoordMin_D(1:nDim) + &
-         PositionMin_D(1:nDim) * DomainSize_D(1:nDim)
-
-    ! cell size for the found block
-    dCoord_D      =  (PositionMax_D(1:nDim) - PositionMin_D(1:nDim))&
-         *DomainSize_D(1:nDim)/nIjk_D(1:nDim)
-    dCoordInv_D = 1/dCoord_D 
-    !\
-    ! Check if the block is suitable to interpolate with ghost cells
-    !/
-
-    iShift_D = floor((Coord_D(1:nDim) - CoordCorner_D  - 0.5*dCoord_D)*&
-         dCoordInv_D/(nIJK_D(1:nDim) - 1))
-    if(all(iShift_D(1:nDim)==0))RETURN
-    !\
-    ! Fill in grid point coordinates
-    !/
-    iGridBlock = 1 ; nGrid = 1; GridCoord_DI(:,1) = Coord_D
-    do iDim = 1, nDim
-       if(iRatio_D(iDim) < 2 &            ! No AMR
-            .or. iShift_D(iDim) ==0)CYCLE ! No grid shift in this direction
-       iDimAmr = iDim
-       GridCoord_DI(:,nGrid+1:2*nGrid) = GridCoord_DI(:,1:nGrid)
-       if(iShift_D(iDim)==-1)then
-          GridCoord_DI(iDim,1:nGrid) =  &
-               GridCoord_DI(iDim,1:nGrid) - dCoord_D(iDim)
-          iGridBlock = iGridBlock + nGrid
-       else !iShift_D(iDim)==+1
-          GridCoord_DI(iDim,nGrid+1:2*nGrid) =  &
-               GridCoord_DI(iDim,nGrid+1:2*nGrid) + dCoord_D(iDim)
-       end if
-       nGrid = 2*nGrid
-    end do
-    do iGrid = 1, nGrid
-       if(iGrid==iGridBlock)CYCLE
-       !\
-       ! Find tree node into which the displaced grid point falls
-       !/
-       !\
-       ! Calculate normalized (to DomainSize_D) coordinates 
-       ! for tree search
-       !/
-       CoordTree_D(1:nDim) = &
-            ( GridCoord_DI(1:nDim, iGrid) - CoordMin_D(1:nDim) ) / &
-            DomainSize_D(1:nDim)
-
-       call fix_tree_coord(CoordTree_D)
-       !\
-       ! Check if the grid point is out of domain
-       !/
-       if(any(CoordTree_D < 0.0 .or. CoordTree_D >= 1.0))CYCLE
-       !\
-       ! call internal BATL find subroutine
-       !/
-       call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
-       !\
-       ! Check if the block is found
-       !/
-       if(iNode <= 0) call CON_stop('Failure in '//NameSub)
-
-       call get_tree_position(iNode=iNode,                &
-            PositionMin_D=PositionMin_D,&
-            PositionMax_D=PositionMax_D )
-
-       ! cell size for the found block
-       dCoord_D = (PositionMax_D(1:nDim) - PositionMin_D(1:nDim))&
-            *DomainSize_D(1:nDim)/nIjk_D(1:nDim)
-       iLevel = 1 - floor(dCoord_D(iDimAmr)*dCoordInv_D(iDimAmr) + 0.001)
-       !\                     ^
-       ! For expression above | equal to 2 , 1, 0.5 correspondingly
-       ! iLevel = -1, 0, 1, meaning that the neighboring block
-       ! is coarser, at the same resolution or finer than the basic 
-       ! one.
-       !/
-       if(iLevel==-1)RETURN ! Neighbor is coarser
-       if(iLevel==1)then    ! Finer neighbor is chosen
-          iBlockOut = iTree_IA(Block_,iNode)
-          iPeOut    = iTree_IA(Proc_, iNode)
-          RETURN
-       end if
-    end do
-
-  end subroutine find_block_to_interpolate_gc
 
 end module BATL_interpolate_amr
