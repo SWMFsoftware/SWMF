@@ -257,15 +257,16 @@ contains
     ! Advance semi-implicit terms
 
     use ModProcMH, ONLY: iComm
-    use ModMain, ONLY: NameThisComp, time_accurate, BlkTest, ProcTest
-    use ModAdvance, ONLY: DoFixAxis
+    use ModMain, ONLY: IsStandAlone, NameThisComp, time_accurate, &
+         BlkTest, ProcTest, iTest, jTest, kTest, VarTest
+    use ModAdvance, ONLY: DoFixAxis, State_VGB
+    use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: true_cell
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B
-
     use ModRadDiffusion,   ONLY: &
          get_impl_rad_diff_state, set_rad_diff_range, update_impl_rad_diff
     use ModHeatConduction, ONLY: &
@@ -280,10 +281,16 @@ contains
 
     character(len=20) :: NameSub = 'MH_advance_semi_impl'
     !--------------------------------------------------------------------------
-    NameSub(1:2) = NameThisComp
+    if(IsStandAlone)then
+       NameSub = 'advance_semi_impl'
+    else
+       NameSub(1:2) = NameThisComp
+    end if
     call set_oktest('krylov', DoTest, DoTestKrylov)
     call set_oktest(NameSub, DoTest, DoTestMe) 
-    if(DoTestMe) write(*,*)NameSub,' starting'
+    if(DoTestMe) write(*,*)NameSub,' starting with test var, B0=', &
+         State_VGB(VarTest,iTest,jTest,kTest,BlkTest), &
+         B0_DGB(:,iTest,jTest,kTest,BlkTest)
 
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
@@ -293,10 +300,6 @@ contains
           if(Unused_B(iBlock)) CYCLE
           nBlockSemi = nBlockSemi + 1
           iBlockFromSemi_B(nBlockSemi) = iBlock
-
-          ! Set the test block
-          if(iProc == ProcTest .and. iBlock == BlkTest) &
-               iBlockSemiTest = nBlockSemi
        end do
        DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0 
     else
@@ -321,6 +324,16 @@ contains
        call stop_mpi(NameSub//': no get_impl_state implemented for' &
             //TypeSemiImplicit)
     end select
+
+    ! Set the test block
+    if(iProc == ProcTest)then
+       do iBlockSemi = 1, nBlockSemi
+          if(BlkTest == iBlockFromSemi_B(iBlockSemi))then
+             iBlockSemiTest = iBlockSemi
+             EXIT
+          end if
+       end do
+    end if
 
     ! Re-initialize HYPRE preconditioner
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_initialize
@@ -394,14 +407,18 @@ contains
        end select
     end do
 
-
+    if(DoTestMe) write(*,*)NameSub,' after update test var=', &
+         State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
 
     if(DoFixAxis)call fix_axis_cells
     if(UseCoarseAxis)call coarsen_axis_cells
     ! Exchange messages, so ghost cells of all blocks are updated
-    if(UseFieldLineThreads) &
-         call advance_threads(Heat_)
+    if(UseFieldLineThreads) call advance_threads(Heat_)
     call exchange_messages
+
+    if(DoTestMe) write(*,*)NameSub,' final test var, B0=', &
+         State_VGB(VarTest,iTest,jTest,kTest,BlkTest), &
+         B0_DGB(:,iTest,jTest,kTest,BlkTest)
 
   end subroutine advance_semi_impl
 
@@ -438,15 +455,13 @@ contains
             //TypeSemiImplicit)
     end select
 
-
-    
   end subroutine get_semi_impl_rhs_block
   !============================================================================
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
 
     use ModAdvance,        ONLY: time_BLK
     use ModMain,           ONLY: time_accurate, dt, Cfl
-    use ModGeometry,       ONLY: far_field_BCs_BLK
+    use ModGeometry,       ONLY: far_field_BCs_BLK, Xyz_DGB, true_cell
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
     use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
@@ -461,8 +476,11 @@ contains
 
     real :: DtLocal
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
     !------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     ! Fill in SemiState so it can be message passed
     SemiState_VGB = 0.0
     do iBlockSemi = 1, nBlockSemi
@@ -544,7 +562,24 @@ contains
           end do; end do; end do
        enddo
     endif
-    
+
+    if(DoTestMe) then
+       do iBlockSemi = 1, nBlockSemi
+          iBlock = iBlockFromSemi_B(iBlockSemi)
+          if(iBlockSemi == iBlockSemiTest)then
+             write(*,*) NameSub, &
+                  ' iBlock, iBlockSemi, sum(Rhs**2)=', iBlock, iBlockSemi, &
+                  sum(RhsSemi_VCB(:,:,:,:,iBlockSemi)**2)
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                write(*,*) NameSub, &
+                     ' i,j,k,True,Xyz,Rhs=', &
+                     i, j, k, true_cell(i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock), &
+                     RhsSemi_VCB(:,i,j,k,iBlockSemi)
+             end do; end do; end do
+          end if
+       end do
+    end if
+
   end subroutine get_semi_impl_rhs
   !============================================================================
   subroutine semi_impl_matvec(x_I, y_I, MaxN)
