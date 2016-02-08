@@ -296,8 +296,6 @@ contains
 
       real   :: Coord_D(MaxDim) ! generalized coordinates
       integer:: iProcOut, iBlockOut
-      ! variables to call check_interpolate_amr_gc
-      logical:: IsPossible, IsBoundary
       ! container for error message 
       character(len=100):: StringError
 
@@ -306,11 +304,11 @@ contains
       !----------------------------------------------------------------------
       ! find block and processor suitable for interpolation
       call check_interpolate_amr_gc(XyzStart_D, &
-           1, IsPossible, & ! input block ID & output IsPossible don't matter
-           iProcOut, iBlockOut, IsBoundary)
+           1, & ! input block ID doesn't matter
+           iProcOut, iBlockOut)
 
       ! check whether point is outside of the domain
-      if(IsBoundary)then
+      if(iProcOut < 0)then
          write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
               "Start point for a field line is outside of the domain: X = ",&
               XyzStart_D(1), " Y = ", XyzStart_D(2), " Z = ", XyzStart_D(3) 
