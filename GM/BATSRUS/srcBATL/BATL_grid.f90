@@ -1487,6 +1487,11 @@ contains
     ! Weight_I returns the interpolation weights calculated 
     !                                 using AMR interpolateion procedure
     ! Interpolation is performed using cells (including ghost) of single block
+    !--------------------------------------------------------------------------
+    ! NOTE: it is assumed that iBlock is appropriate for interpolation
+    ! that utilizes only 1 layer of ghost cells, i.e. the call
+    !     call check_interpolate_amr_gc(XyzIn_D, iBlock, iPeOut, iBlockOut)
+    ! would result in iBlockOut==iBlock
     real,    intent(in) :: XyzIn_D(MaxDim)
     integer, intent(in) :: iBlock
     integer, intent(out):: nCell
@@ -1563,25 +1568,61 @@ contains
     integer :: iShift_D(MaxDim) 
     !\
     !/
-    logical :: DoSearch !If .true. find iPeOut and iBlockOut
+    logical :: DoSearch !If .true. find iPeOut and iBlockOut via tree search
     !\
-    ! 
+    ! Shifts to subgrids from the lower left corner
     !/
     integer, parameter:: iShift_DI(3,8) = reshape((/&
          0,0,0, 1,0,0, 0,1,0, 1,1,0, &
          0,0,1, 1,0,1, 0,1,1, 1,1,1/),(/3,8/))
     !\
+    ! Powers of 2
+    !/
+    integer, parameter:: iPowerOf2_D(3) = (/1,2,4/)  
+    !\
     ! For a search throughout the tree
     !/
     real:: CoordTree_D(MaxDim)
-    real:: CoordCentral_D(nDim), CoordGrid_DI(nDim, 2**nDim)
-    real:: CoordBlockMin_D(nDim), CoordBlockMax_D(nDim)
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-    integer:: iLevel_I(2**nDim), iNode_I(2**nDim)
-    logical:: IsOut_I(2**nDim), IsBoundary
+    integer:: iNode
+    !\
+    ! If can avoid tree search, copy parameters from indicated node
+    !/
+    integer:: iNodeCopy_I(2**nDim)
+    !\
+    ! Dimensionless coords of the point relative to the block's corner
+    !/
+    real:: Dimless_D(nDim)
+    !\
+    ! Corners of a block that contains the point
+    !/
+    real:: CoordBlockMin_D(nDim), CoordBlockMax_D(nDim)
+    !\
+    ! Discriminator for point's displacement relative to block's interior
+    !/
     integer:: iDiscr_D(MaxDim)
+    !\
+    ! Coordinates of the supergrid
+    !/
+    real:: CoordGrid_DI(nDim, 2**nDim)
+    !\
+    ! Parameters of the supergrid
+    !/
+    integer:: iLevel_I(2**nDim), iNode_I(2**nDim)
+    logical:: IsOut_I(2**nDim)
+    !\
+    ! Cell sizes
+    !/
     real:: dCoord_D(nDim), dCoordInv_D(nDim), dCoordNei_D(nDim)
-    integer:: iDimAmr = 1, iGridRef, iGrid, iNode
+    !\
+    ! Loop variable
+    !/
+    integer:: iGrid
+    !\
+    ! The reference block
+    !/
+    integer:: iGridRef
+    integer:: iDimAmr = 1
     character(len=*),parameter:: NameSub ='BATL_grid::check_interpolate_amr_gc'
     !--------------------------------------------------------------------------
     ! Convert to generalized coordinates if necessary
@@ -1597,10 +1638,10 @@ contains
     where(IsPeriodic_D(1:nDim)) Coord_D(1:nDim) = CoordMin_D(1:nDim) + &
          modulo(Coord_D(1:nDim) - CoordMin_D(1:nDim), DomainSize_D(1:nDim))
     !\
-    ! Figure out if the point goes out of the computational domain
-    IsBoundary = any(Coord_D(1:nDim) < CoordMin_D(1:nDim)&
-         .or. Coord_D(1:nDim) >= CoordMax_D(1:nDim))
-    if(IsBoundary)then
+    ! Figure out if the point falls out of the computational domain
+    !/
+    if(any(   Coord_D(1:nDim) <  CoordMin_D(1:nDim)&
+         .or. Coord_D(1:nDim) >= CoordMax_D(1:nDim)))then
        iPeOut = Unset_; iBlockOut = Unset_
        RETURN
     end if
@@ -1661,34 +1702,49 @@ contains
           RETURN
        end if
 
-       ! Fill in grid point coordinates
-       !---------------------------------------------
-       ! central point of the extended interpolation stencil
-       where(    iDiscr_D(1:nDim) == 1)
-          CoordCentral_D(1:nDim) = CoordBlockMax_D(1:nDim)
-       elsewhere(iDiscr_D(1:nDim) ==-1)
-          CoordCentral_D(1:nDim) = CoordBlockMin_D(1:nDim)
-       elsewhere
-          CoordCentral_D(1:nDim) = Coord_D(1:nDim)
-       end where
-
        ! reset arrays with info about interpolation stencil
        iNode_I  = iNode
        iLevel_I = 0
        IsOut_I  = .false.
 
-       do iGrid = 1, 2**nDim
-          ! find the supergrid's coordinates
-          CoordGrid_DI(1:nDim, iGrid) = CoordCentral_D(1:nDim) + &
-               (iShift_DI(1:nDim,iGrid) - 0.5)*dCoord_D(1:nDim)
+       !\
+       ! Fill in grid point coordinates
+       !/
+       ! first point can be found from dimless coordinates of the point
+       ! relative to block's corner:
+       Dimless_D = &
+            (Coord_D(1:nDim) - CoordBlockMin_D(1:nDim)) / &
+            dCoord_D(1:nDim)
+       CoordGrid_DI(:,1) = CoordBlockMin_D(1:nDim) +      &
+            dCoord_D(1:nDim) * (floor(0.50 + Dimless_D) - 0.50)
+       ! fill array that contains id of node to copy info from
+       ! if it is possible to avoid tree search
+       iNodeCopy_I(1) = 1
+       ! the rest of the supergrid can be found from the first one
+       ! and displacements towards them
+       do iGrid = 2, 2**nDim
+          CoordGrid_DI(:, iGrid) = CoordGrid_DI(:, 1) + &
+               dCoord_D(1:nDim) * iShift_DI(1:nDim, iGrid)
+          ! tree search can be avoided if iDiscr_Dis 0 at appropriate dimension
+          ! copy from node from smaller index to node with greater index
+          iNodeCopy_I(iGrid) = iGrid - &
+               sum(iPowerOf2_D(1:nDim)*iShift_DI(1:nDim,iGrid), &
+               MASK = iDiscr_D(1:nDim)==0)
+       end do
 
-          ! check if this subgrid is in the current Node
-          if(all(&
-               CoordGrid_DI(1:nDim,iGrid) >=CoordBlockMin_D(1:nDim) .and.&
-               CoordGrid_DI(1:nDim,iGrid) < CoordBlockMax_D(1:nDim))) CYCLE
-          
-          ! find node that contains this subgrid
-          !-------------------------------------
+       ! find node indices, refinement levels and mark subgrids
+       ! that fall out of the computational domain
+       do iGrid = 1, 2**nDim
+          ! some subgrids fall into the same nodes
+          ! skip tree search for them
+          if(iNodeCopy_I(iGrid) /= iGrid)then
+             iNode_I( iGrid) = iNode_I( iNodeCopy_I(iGrid))
+             IsOut_I( iGrid) = IsOut_I( iNodeCopy_I(iGrid))
+             iLevel_I(iGrid) = iLevel_I(iNodeCopy_I(iGrid))
+             CYCLE
+          end if
+
+          ! find node that contains this subgrid via tree search
           CoordTree_D(1:nDim) = &
                ( CoordGrid_DI(1:nDim,iGrid) - CoordMin_D(1:nDim) ) / &
                DomainSize_D(1:nDim)
@@ -1700,7 +1756,7 @@ contains
              IsOut_I(iGrid) = .true.
              CYCLE
           end if
-          ! determines its resolution level
+          ! determine its resolution level
           call get_tree_position(iNode=iNode,&
                PositionMin_D=PositionMin_D,  &
                PositionMax_D=PositionMax_D )
@@ -1744,21 +1800,22 @@ contains
        dCoord_D(1:nDim) = &
             (CoordMax_DB(1:nDim,iBlockIn) - CoordMin_DB(1:nDim,iBlockIn)) / &
             nIJK_D(1:nDim)
-       
-       ! find the supergrid
-       !-------------------
-       ! central point of the extended interpolation stencil
-       where(    iDiscr_D(1:nDim) == 1)
-          CoordCentral_D(1:nDim) = CoordMax_DB(1:nDim,iBlockIn)
-       elsewhere(iDiscr_D(1:nDim) ==-1)
-          CoordCentral_D(1:nDim) = CoordMin_DB(1:nDim,iBlockIn)
-       elsewhere
-          CoordCentral_D(1:nDim) = Coord_D(1:nDim)
-       end where
-       ! coordinates themselves
-       do iGrid = 1, 2**nDim
-          CoordGrid_DI(1:nDim, iGrid) = CoordCentral_D(1:nDim) + &
-               (iShift_DI(1:nDim,iGrid)-0.5)*dCoord_D(1:nDim)
+
+       !\
+       ! Fill in grid points coordinates
+       !/
+       ! first point can be found from dimless coordinates of the point
+       ! relative to block's corner:
+       Dimless_D = &
+            (Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlockIn)) / &
+            dCoord_D(1:nDim)
+       CoordGrid_DI(:,1) = CoordMin_DB(1:nDim,iBlockIn) +      &
+            dCoord_D(1:nDim) * (floor(0.50 + Dimless_D) - 0.50)
+       ! the rest of the supergrid can be found from the first one
+       ! and displacements towards them
+       do iGrid = 2, 2**nDim
+          CoordGrid_DI(:, iGrid) = CoordGrid_DI(:, 1) + &
+               dCoord_D(1:nDim) * iShift_DI(1:nDim, iGrid)
        end do
     end if
     
