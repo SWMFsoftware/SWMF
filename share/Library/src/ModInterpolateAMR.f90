@@ -3364,8 +3364,10 @@ contains
     integer, parameter:: &
          iGrid_III(0:1,0:1,0:1) = reshape((/ 1,2,3,4,5,6,7,8/),(/2,2,2/))
     ! slice of iGrid_III that contains the reference block:
-    ! 2nd index: min and max limits of the slice
-    integer:: iSlice_DI(3,2)
+    ! lower  limit of the slice
+    integer:: iSliceMin_D(3)
+    ! higher limit of the slice
+    integer:: iSliceMax_D(3)
     !----------------------------------------------------
     ! recompute coordinates relative to the center of supergrid
     XyzMisc_D = Xyz_D - (XyzGrid_DI(:,1) + XyzGrid_DI(:,2**nDim))*0.50
@@ -3403,8 +3405,8 @@ contains
     ! compute normalized coords
     XyzMisc_D = abs( XyzMisc_D / (XyzGrid_DI(:,2**nDim) - XyzGrid_DI(:,1)) )
     ! reset slicing to include all 2**nDim subgrids
-    iSlice_DI(:,1) = (/0,0,0/)
-    iSlice_DI(:,2) = (/1,1,nDim-2/) ! (/1,1,0/) for nDim = 2
+    iSliceMin_D = (/0,0,0/)
+    iSliceMax_D = (/1,1,nDim-2/) ! (/1,1,0/) for nDim = 2
     ! go through dimensions:
     ! iChoice = 3 => choice of face
     ! iChoice = 2 => choice of side/edge
@@ -3415,16 +3417,19 @@ contains
        ! mark it is processed
        XyzMisc_D(iDim) = -1
        ! correct slice accordingly
-       iSlice_DI(iDim,:) = iShift_D(iDim)
-       ! if face/side/vertex are all Coarse, need to choose the opposite one
+       iSliceMin_D(iDim) = iShift_D(iDim)
+       iSliceMax_D(iDim) = iShift_D(iDim)
+       ! if face/side/vertex are all Coarse or out of the domain,
+       ! need to choose the opposite one
        if( all(iLevel_I(reshape(iGrid_III(&
-            iSlice_DI(1,1):iSlice_DI(1,2),&
-            iSlice_DI(2,1):iSlice_DI(2,2),&
-            iSlice_DI(3,1):iSlice_DI(3,2)),&
-            (/iPowerOf2_D(iChoice)/)))/=Fine_))then
+            iSliceMin_D(1):iSliceMax_D(1),&
+            iSliceMin_D(2):iSliceMax_D(2),&
+            iSliceMin_D(3):iSliceMax_D(3)),&
+            (/iPowerOf2_D(iChoice)/)))/=Fine_ .or. IsOut_I))then
           ! invert choice of face/side/vertex
           iShift_D( iDim) = 1 - iShift_D(iDim)
-          iSlice_DI(iDim,:) = iShift_D(iDim)
+          iSliceMin_D(iDim) = iShift_D(iDim)
+          iSliceMax_D(iDim) = iShift_D(iDim)
        end if
     end do
     ! get the final result
