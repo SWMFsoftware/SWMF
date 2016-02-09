@@ -1313,30 +1313,45 @@ contains
             nProcUnion, nProcSource, nProcTarget,&
             iProcSourceLocal_P, iProcTargetLocal_P,     &
             iProcSourceUnion_P, iProcTargetUnion_P)
-       ! nPoint_PP is number of points to sent from Source to Target
+       ! nPoint_PP is number of points to send from Source to Target
        allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
 
-       ! build nPoint_PP
+       ! build nPoint_PP on the source processors
        ! each proc on Source has only part of the info, store it into nPoint_PP
        nPoint_PP = 0
        if(nCoupleSource > 0)then
+          ! iCouple is the sequential index (1:nCoupleSource) of the target processor
+          ! that this source proc is communicating with. Start the loop at iCouple=1
           iCouple = 1
+
+          ! iCoupleProcSource_I(iCouple) is the MPI rank of target proc for
+          ! union communicator that sent the request to this source proc.
+          ! iProcTargetLocal is the rank of target proc on the target component
           iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
+
+          ! iCoupleBuffer is the linear buffer index. Initialize with number of
+          ! points that were requested by the 1st target processor.
           iCoupleBuffer = nCouplePointSource_I(iCouple)
+
+          ! Loop over all points for which the inquiry was made
+          ! and set nPoint_PP indexed by owner and target local ranks.
           do iBuffer = 1, nBufferSource
+             ! Point indexed by iBuffer is owned by source proc iProc (rank on union)
              iProc = iProcSource_I(iBuffer)
+             ! Skip points that were not found (outside of source domain)
              if(iProc < 0) CYCLE
+
+             ! If iBuffer exceeds the iCoupleBuffer then jump to next target proc.
+             ! While loop is needed, because next target proc may not have inquired
+             ! about any points, so we need to proceed more than 1 target procs.
              do while (iBuffer > iCoupleBuffer)
                 iCouple = iCouple + 1
                 iCoupleBuffer = iCoupleBuffer + nCouplePointSource_I(iCouple)
-                ! iCoupleProcSource_I(iCouple) is the index of target proc for
-                ! union communicator that sent the request to this source 
-                ! processor. iProcTargetLocal is the index of taget processor 
-                ! on the target component
-                iProcTargetLocal = iProcTargetLocal_P(&
-                     iCoupleProcSource_I(iCouple))
+
+                ! Translate union rank to local rank for target proc
+                iProcTargetLocal = iProcTargetLocal_P(iCoupleProcSource_I(iCouple))
              enddo
-             ! iProcSource_I is the source processor index on source component
+             ! iProcSourceLocal is the MPI rank of this source proc on source component
              iProcSourceLocal = iProcSourceLocal_P(iProc)
 
              ! Count this point in the communication matrix
