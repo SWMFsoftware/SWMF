@@ -26,6 +26,8 @@ const int nParticlePerCell=25;
 const double DomainLength=10.0;
 const double dxDomain=1.0;
 
+double TimeStepMultiplierTable[PIC::nTotalSpecies]={1.0,1.0,1.0};
+
 //functions that returns the local resolution and time step
 double localResolution(double *x) {
   return dxDomain;
@@ -50,7 +52,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   CollFreqPerParticle=SummDensity*400.0*1.0E-18;
 
 
-  return 1.0/CollFreqPerParticle;
+  return TimeStepMultiplierTable[spec]/CollFreqPerParticle;
 }
 
 //distribute the blocks between processors
@@ -361,7 +363,7 @@ int main(int argc,char **argv) {
       double tLocal,tGlobal;
 
       tLocal=CollisionFreq[s0][s1];
-      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
       if (PIC::ThisThread==0) {
         cout << tGlobal/nTotalTestIterations/GetTotalCellNumber(PIC::Mesh::mesh.rootTree) << "  ";
@@ -400,8 +402,8 @@ int main(int argc,char **argv) {
       tLocal=RelativeSpeed[s0][s1];
       nLocal=RelativeSpeedCouter[s0][s1];
 
-      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-      MPI_Reduce(&nLocal,&nGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
       if (PIC::ThisThread==0) {
         cout << tGlobal/nGlobal << "\t";
@@ -434,8 +436,8 @@ int main(int argc,char **argv) {
     sprintf(fname,"%s/test_ModelCollisionTest--test2-1.dat",PIC::OutputDataFileDirectory);
     fout.open(fname,std::fstream::out);
 
-    cout << "Test 2: the relative before collisions: \ns\t";
-    fout << "Test 2: the relative before collisions: \ns\t";
+    cout << "\nTest 2: the relative before collisions: \ns\t";
+    fout << "\nTest 2: the relative before collisions: \ns\t";
 
     for (s0=0;s0<PIC::nTotalSpecies;s0++) {
       cout << "s=" << s0 << "\t";
@@ -457,8 +459,8 @@ int main(int argc,char **argv) {
       tLocal=RelativeSpeed[s0][s1];
       nLocal=RelativeSpeedCouter[s0][s1];
 
-      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-      MPI_Reduce(&nLocal,&nGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
       if (PIC::ThisThread==0) {
         cout << tGlobal/nGlobal << "\t";
@@ -507,8 +509,8 @@ int main(int argc,char **argv) {
       tLocal=RelativeSpeed[s0][s1];
       nLocal=RelativeSpeedCouter[s0][s1];
 
-      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-      MPI_Reduce(&nLocal,&nGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
       if (PIC::ThisThread==0) {
         cout << tGlobal/nGlobal << "\t";
@@ -529,6 +531,230 @@ int main(int argc,char **argv) {
 
   //======================= TEST 2 ENDS: RELATIVE VELOCITY AFTER MULTIPLE COLLISIONS WHEN INITAL TEMEPRATURE OF ALL SPECIES IS THE SAME =======
 
+
+  //======================= TEST 3 BEGINS: COLLISION FREQUENCY AND GENERATED MEAN RELATIVE VELOCITY (SPECIES DEPENDENT TIME STEP)  =============
+  //generate the new population of the model particles
+  TimeStepMultiplierTable[_O_SPEC_]=2.0;
+  TimeStepMultiplierTable[_H2_SPEC_]=4.0;
+
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalTimeStep[s]=-1.0;
+  PIC::ParticleWeightTimeStep::initTimeStep();
+
+  for (n=0;n<nTotalTestIterations;n++) {
+    //populate the domain with partiucles
+    PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
+    PIC::InitialCondition::PrepopulateDomain(_O_SPEC_,O::Density,v,O::Temperature);
+    PIC::InitialCondition::PrepopulateDomain(_H2_SPEC_,H2::Density,v,H2::Temperature);
+
+    //sample relative speed
+    if (n==0) {
+      //the relative velocity sampling length is sufficient even for a single iteration
+      SampleRelativeSpeed(RelativeSpeed,RelativeSpeedCouter,PIC::Mesh::mesh.rootTree);
+
+      sprintf(fname,"%s/test_ModelCollisionTest--test3.dat",PIC::OutputDataFileDirectory);
+      PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+    }
+
+    //callc particle collision model
+    PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+
+    //remove all particles
+    DeleteAllParticles(PIC::Mesh::mesh.rootTree);
+  }
+
+  //collect the collision frequentcy from all processors and output into a file
+  GetTotalCollisionFreq(CollisionFreq,PIC::Mesh::mesh.rootTree);
+
+  if (PIC::ThisThread==0) {
+    sprintf(fname,"%s/test_ModelCollisionTest--test3-1.dat",PIC::OutputDataFileDirectory);
+    fout.open(fname,std::fstream::out);
+
+    cout << "Test 3: collision frequency: \ns\t";
+    fout << "Test 3: collision frequency: \ns\t";
+
+    for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+      cout << "s=" << s0 << "\t";
+      fout << "s=" << s0 << "\t";
+    }
+
+    cout << endl;
+    fout << endl;
+  }
+
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+
+      tLocal=CollisionFreq[s0][s1];
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) {
+        cout << tGlobal/nTotalTestIterations/GetTotalCellNumber(PIC::Mesh::mesh.rootTree) << "  ";
+        fout << tGlobal/nTotalTestIterations/GetTotalCellNumber(PIC::Mesh::mesh.rootTree) << "  ";
+      }
+    }
+
+    if (PIC::ThisThread==0) {
+      cout << endl;
+      fout << endl;
+    }
+  }
+
+  if (PIC::ThisThread==0) {
+    cout << "\nTest 3: the relative speed generated by the domain prepopulation procedure: \ns\t";
+    fout << "\nTest 3: the relative speed generated by the domain prepopulation procedure: \ns\t";
+
+    for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+      cout << "s=" << s0 << "\t";
+      fout << "s=" << s0 << "\t";
+    }
+
+    cout << endl;
+    fout << endl;
+  }
+
+
+  //output the relative speed
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+      double nLocal,nGlobal;
+
+      tLocal=RelativeSpeed[s0][s1];
+      nLocal=RelativeSpeedCouter[s0][s1];
+
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) {
+        cout << tGlobal/nGlobal << "\t";
+        fout << tGlobal/nGlobal << "\t";
+      }
+    }
+
+    if (PIC::ThisThread==0) {
+      cout << endl;
+      fout << endl;
+    }
+  }
+
+  if (PIC::ThisThread==0) fout.close();
+
+  //======================= TEST 3 ENDS: COLLISION FREQUENCY AND GENERATED MEAN RELATIVE VELOCITY  (SPECIES DEPENDENT TIME STEP) ===============================
+
+
+  //======================= TEST 4 BEGINS: RELATIVE VELOCITY AFTER MULTIPLE COLLISIONS WHEN INITAL TEMEPRATURE OF ALL SPECIES IS THE SAME(SPECIES DEPENDENT TIME STEP)  =======
+  Temp=H2O::Temperature;
+
+  PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,Temp);
+  PIC::InitialCondition::PrepopulateDomain(_O_SPEC_,O::Density,v,Temp);
+  PIC::InitialCondition::PrepopulateDomain(_H2_SPEC_,H2::Density,v,Temp);
+
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++) RelativeSpeed[s0][s1]=0.0,RelativeSpeedCouter[s0][s1]=0;
+  SampleRelativeSpeed(RelativeSpeed,RelativeSpeedCouter,PIC::Mesh::mesh.rootTree);
+
+  if (PIC::ThisThread==0) {
+    sprintf(fname,"%s/test_ModelCollisionTest--test4-1.dat",PIC::OutputDataFileDirectory);
+    fout.open(fname,std::fstream::out);
+
+    cout << "\nTest 4: the relative before collisions: \ns\t";
+    fout << "\nTest 4: the relative before collisions: \ns\t";
+
+    for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+      cout << "s=" << s0 << "\t";
+      fout << "s=" << s0 << "\t";
+    }
+
+    cout << endl;
+    fout << endl;
+  }
+
+  //output the relative speed
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+      double nLocal,nGlobal;
+
+      tLocal=RelativeSpeed[s0][s1];
+      nLocal=RelativeSpeedCouter[s0][s1];
+
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) {
+        cout << tGlobal/nGlobal << "\t";
+        fout << tGlobal/nGlobal << "\t";
+      }
+    }
+
+    if (PIC::ThisThread==0) {
+      cout << endl;
+      fout << endl;
+    }
+  }
+
+  //collision loop
+  for (n=0;n<nTotalTestIterations;n++) {
+    PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+  }
+
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++) RelativeSpeed[s0][s1]=0.0,RelativeSpeedCouter[s0][s1]=0;
+  SampleRelativeSpeed(RelativeSpeed,RelativeSpeedCouter,PIC::Mesh::mesh.rootTree);
+
+  sprintf(fname,"%s/test_ModelCollisionTest--test4.dat",PIC::OutputDataFileDirectory);
+  PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+
+  if (PIC::ThisThread==0) {
+    cout << "\nTest 4: the relative after collisions: \ns\t";
+    fout << "\nTest 4: the relative after collisions: \ns\t";
+
+    for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+      cout << "s=" << s0 << "\t";
+      fout << "s=" << s0 << "\t";
+    }
+
+    cout << endl;
+    fout << endl;
+  }
+
+  //output the relative speed
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+      double nLocal,nGlobal;
+
+      tLocal=RelativeSpeed[s0][s1];
+      nLocal=RelativeSpeedCouter[s0][s1];
+
+      MPI_Reduce(&tLocal,&tGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) {
+        cout << tGlobal/nGlobal << "\t";
+        fout << tGlobal/nGlobal << "\t";
+      }
+    }
+
+    if (PIC::ThisThread==0) {
+      cout << endl;
+      fout << endl;
+    }
+  }
+
+  if (PIC::ThisThread==0) fout.close();
+
+  //remove all particles
+  DeleteAllParticles(PIC::Mesh::mesh.rootTree);
+
+  //======================= TEST 4 ENDS: RELATIVE VELOCITY AFTER MULTIPLE COLLISIONS WHEN INITAL TEMEPRATURE OF ALL SPECIES IS THE SAME (SPECIES DEPENDENT TIME STEP) =======
 
   //finish execution of the test
   MPI_Finalize();
