@@ -410,6 +410,9 @@ contains
     !------------------------------------------------------------------------
 
     select case(NameLogVar)
+    case('volume')
+       ! Total volume
+       LogVar_I(iVarTot) = DomainVolume/nProc
 
        ! MHD variables averaged over the computational domain
     case('e')
