@@ -298,6 +298,33 @@ void GetTotalCollisionFreq(double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalS
   }
 }
 
+void ResetTotalCollisionFreq(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int i,j,k,s0,s1;
+  char* SamplingData;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if (startNode->block!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      SamplingData=startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+
+        PIC::Mesh::collectingCellSampleDataPointerOffset;
+
+      for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++)  {
+        int CollFreqOffset=PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset+
+            sizeof(double)*PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::Offset(s0,s1);
+
+        (*((double*)(SamplingData+CollFreqOffset)))=0.0; //+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
+      }
+    }
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      ResetTotalCollisionFreq(downNode);
+    }
+  }
+}
+
+
 int main(int argc,char **argv) {
   int s0,s1;
   amps_init();
@@ -311,7 +338,7 @@ int main(int argc,char **argv) {
   double v[3]={0.0,0.0,0.0};
   char fname[400];
   std::fstream fout;
-  int n,nTotalTestIterations=50;
+  int n,nTotalTestIterations=100;
 
   for (n=0;n<nTotalTestIterations;n++) {
     //populate the domain with partiucles
@@ -539,6 +566,7 @@ int main(int argc,char **argv) {
 
   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalTimeStep[s]=-1.0;
   PIC::ParticleWeightTimeStep::initTimeStep();
+  ResetTotalCollisionFreq(PIC::Mesh::mesh.rootTree);
 
   for (n=0;n<nTotalTestIterations;n++) {
     //populate the domain with partiucles
