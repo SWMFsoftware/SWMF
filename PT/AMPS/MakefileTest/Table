@@ -305,3 +305,39 @@ Check=
 >>>@ls -l test_LOS.diff
 <#
 
+-------------------------------------------------------------------------------
+#>
+Name=test/Collision-Test 
+Time=5
+
+Check=
+>>>@echo "test_Collision-Test_check..." >> test_Collision-Test.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test1.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test1-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test2.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test2-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test3.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test3-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test4.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_ModelCollisionTest--test4-1.diff
+
+>>>cat test_ModelCollisionTest--test1.diff test_ModelCollisionTest--test1-1.diff   test_ModelCollisionTest--test2.diff test_ModelCollisionTest--test2-1.diff  test_ModelCollisionTest--test3.diff test_ModelCollisionTest--test3-1.diff  test_ModelCollisionTest--test4.diff test_ModelCollisionTest--test4-1.diff > test_ModelCollisionTest.diff
+
+>>>@ls -l test_ModelCollisionTest--test1.diff
+>>>@ls -l test_ModelCollisionTest--test1-1.diff
+
+>>>@ls -l test_ModelCollisionTest--test2.diff
+>>>@ls -l test_ModelCollisionTest--test2-1.diff
+
+>>>@ls -l test_ModelCollisionTest--test3.diff
+>>>@ls -l test_ModelCollisionTest--test3-1.diff
+
+>>>@ls -l test_ModelCollisionTest--test4.diff
+>>>@ls -l test_ModelCollisionTest--test4-1.diff
+
+>>>@ls -l test_ModelCollisionTest.diff
+
+<#
