@@ -81,11 +81,102 @@ int GetTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   return res;
 }
 
+//sample relative velocity
+void SampleRelativeSpeed(double RelativeSpeed[PIC::nTotalSpecies][PIC::nTotalSpecies],int RelativeSpeedCouter[PIC::nTotalSpecies][PIC::nTotalSpecies],cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int i,j,k,FirstCellParticle,p0,p1,s0,s1;
+  double v0[3],v1[3],cr;
+
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    //evaluate the mean relative speed
+    if (startNode->block!=NULL) {
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              FirstCellParticle=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+              for (p0=FirstCellParticle;p0!=-1;p0=PIC::ParticleBuffer::GetNext(p0)) {
+                s0=PIC::ParticleBuffer::GetI(p0);
+                PIC::ParticleBuffer::GetV(v0,p0);
+
+                for (p1=PIC::ParticleBuffer::GetNext(p0);p1!=-1;p1=PIC::ParticleBuffer::GetNext(p1)) {
+                  s1=PIC::ParticleBuffer::GetI(p1);
+                  PIC::ParticleBuffer::GetV(v1,p1);
+
+                  cr=sqrt(pow(v1[0]-v0[0],2)+pow(v1[1]-v0[1],2)+pow(v1[2]-v0[2],2));
+
+                  RelativeSpeed[s0][s1]+=cr;
+                  RelativeSpeedCouter[s0][s1]++;
+
+                  RelativeSpeed[s1][s0]+=cr;
+                  RelativeSpeedCouter[s1][s0]++;
+                }
+              }
+
+            }
+         }
+      }
+    }
+
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      SampleRelativeSpeed(RelativeSpeed,RelativeSpeedCouter,downNode);
+    }
+  }
+}
+
+//delete all particles
+void DeleteAllParticles(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int i,j,k,FirstCellParticle,p,pnext;
+  double v0[3],v1[3],cr;
+
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    //evaluate the mean relative speed
+    if (startNode->block!=NULL) {
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              FirstCellParticle=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+              if (FirstCellParticle!=-1) {
+                p=FirstCellParticle;
+
+                do {
+                  pnext=PIC::ParticleBuffer::GetNext(p);
+                  PIC::ParticleBuffer::DeleteParticle(p);
+                  p=pnext;
+                }
+                while (p!=-1);
+
+                startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+              }
+            }
+         }
+      }
+    }
+
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      DeleteAllParticles(downNode);
+    }
+  }
+
+}
 
 //initialize AMPS
 void amps_init() {
   PIC::InitMPI();
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  rnd_seed(-1);
 
   //init the particle solver
   PIC::Init_BeforeParser();
@@ -176,8 +267,8 @@ void amps_init() {
 
 
 void GetTotalCollisionFreq(double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalSpecies],cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double res=0.0;
   int i,j,k,s0,s1;
+  char* SamplingData;
 
   if (PIC::Mesh::mesh.rootTree==startNode) {
     for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++) CollisionFreq[s0][s1]=0.0;
@@ -185,15 +276,14 @@ void GetTotalCollisionFreq(double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalS
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     if (startNode->block!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      char* SamplingData=startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+
-          PIC::Mesh::collectingCellSampleDataPointerOffset;
-
+      SamplingData=startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+
+        PIC::Mesh::collectingCellSampleDataPointerOffset;
 
       for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++)  {
         int CollFreqOffset=PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset+
             sizeof(double)*PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::Offset(s0,s1);
 
-        CollisionFreq[s0][s1]+=*((double*)(SamplingData+CollFreqOffset)); //+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
+        CollisionFreq[s0][s1]+=(*((double*)(SamplingData+CollFreqOffset))); //+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
       }
     }
   }
@@ -204,23 +294,37 @@ void GetTotalCollisionFreq(double CollisionFreq[PIC::nTotalSpecies][PIC::nTotalS
       GetTotalCollisionFreq(CollisionFreq,downNode);
     }
   }
-
-
 }
 
 int main(int argc,char **argv) {
+  int s0,s1;
   amps_init();
+
+  double RelativeSpeed[PIC::nTotalSpecies][PIC::nTotalSpecies];
+  int RelativeSpeedCouter[PIC::nTotalSpecies][PIC::nTotalSpecies];
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) for (s1=0;s1<PIC::nTotalSpecies;s1++) RelativeSpeed[s0][s1]=0.0,RelativeSpeedCouter[s0][s1]=0;
 
   //generate the new population of the model particles
   double v[3]={0.0,0.0,0.0};
   int n,nTotalTestIterations=10;
 
   for (n=0;n<nTotalTestIterations;n++) {
+    //populate the domain with partiucles
     PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
     PIC::InitialCondition::PrepopulateDomain(_O_SPEC_,O::Density,v,O::Temperature);
     PIC::InitialCondition::PrepopulateDomain(_H2_SPEC_,H2::Density,v,H2::Temperature);
 
+    //sample relative speed
+    if (n==0) {
+      //the relative velocity sampling length is sufficient even for a single iteration
+      SampleRelativeSpeed(RelativeSpeed,RelativeSpeedCouter,PIC::Mesh::mesh.rootTree);
+    }
+
+    //callc particle collision model
     PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+
+    //remove all particles
+    DeleteAllParticles(PIC::Mesh::mesh.rootTree);
   }
 
   //collect the collision frequentcy from all processors and output into a file
@@ -228,10 +332,10 @@ int main(int argc,char **argv) {
 
   GetTotalCollisionFreq(CollisionFreq,PIC::Mesh::mesh.rootTree);
 
-  for (int s0=0;s0<PIC::nTotalSpecies;s0++) {
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
     if (PIC::ThisThread==0) cout << s0 << "  ";
 
-    for (int s1=0;s1<PIC::nTotalSpecies;s1++) {
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
       double tLocal,tGlobal;
 
       tLocal=CollisionFreq[s0][s1];
@@ -243,6 +347,26 @@ int main(int argc,char **argv) {
     if (PIC::ThisThread==0) cout << endl;
   }
 
+
+  //output the relative speed
+  for (s0=0;s0<PIC::nTotalSpecies;s0++) {
+    if (PIC::ThisThread==0) cout << s0 << "  ";
+
+    for (s1=0;s1<PIC::nTotalSpecies;s1++) {
+      double tLocal,tGlobal;
+      double nLocal,nGlobal;
+
+      tLocal=RelativeSpeed[s0][s1];
+      nLocal=RelativeSpeedCouter[s0][s1];
+
+      MPI_Reduce(&tLocal,&tGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Reduce(&nLocal,&nGlobal,PIC::nTotalThreads,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread==0) cout << tGlobal/nGlobal << "  ";
+    }
+
+    if (PIC::ThisThread==0) cout << endl;
+  }
 
 
 
