@@ -47,6 +47,10 @@ module IH_wrapper
   public:: IH_get_for_pt
   public:: IH_put_from_pt
 
+  ! Coupling with EE (for SC)
+  public:: IH_get_for_ee
+  public:: IH_put_from_ee
+
 contains
   !==========================================================================
 
@@ -206,7 +210,7 @@ contains
 
   end subroutine IH_run
 
-  !==============================================================================
+  !============================================================================
   subroutine IH_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     use IH_BATL_lib, ONLY: nDim
@@ -220,20 +224,20 @@ contains
 
     ! Return basic grid information useful for model coupling.
     ! The decomposition index increases with load balance and AMR.
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     nDimOut    = nDim
     iGridOut   = iNewGrid
     iDecompOut = iNewDecomposition
 
   end subroutine IH_get_grid_info
-  !==============================================================================
+  !============================================================================
   subroutine IH_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
     use IH_BATL_lib,   ONLY: MaxDim, find_grid_block
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_
 
-    integer, intent(in) :: nDimIn                ! dimension of position vectors
+    integer, intent(in) :: nDimIn                ! dimension of positions
     integer, intent(in) :: nPoint                ! number of positions
     real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
     integer, intent(out):: iProc_I(nPoint)       ! processor owning position
@@ -252,6 +256,120 @@ contains
     end do
 
   end subroutine IH_find_points
+
+  !===========================================================================
+  subroutine IH_get_point_data( &
+       iBlockCell_DI, Dist_DI, IsNew, &
+       NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, &
+       DoSendAllVar)
+    
+    ! Generic routine for providing point data to another component
+    ! If DoSendAllVar is true, send all variables in State_VGB
+    ! Otherwise send the variables defined by iVarSource_V
+
+    use IH_ModProcMH,  ONLY: iProc
+    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
+    use IH_ModVarIndexes, ONLY: nVar
+    use IH_ModB0,      ONLY: UseB0, get_b0
+    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use IH_ModIO, ONLY: iUnitOut
+    use CON_coupler,    ONLY: iVarSource_V
+    use ModInterpolate, ONLY: interpolate_vector
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    integer, allocatable, intent(inout):: iBlockCell_DI(:,:) ! interp. index
+    real,    allocatable, intent(inout):: Dist_DI(:,:)       ! interp. weight
+
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    logical, intent(in), optional:: DoSendAllVar
+
+    logical:: DoSendAll
+
+    real:: Xyz_D(MaxDim), B0_D(MaxDim)
+    real:: Dist_D(MaxDim), State_V(nVar)
+    integer:: iCell_D(MaxDim)
+
+    integer:: iPoint, iBlock, iProcFound, iVarBuffer, iVar
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='IH_get_point_data'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    DoSendAll = .false.
+    if(present(DoSendAllVar)) DoSendAll = DoSendAllVar
+
+    ! If nDim < MaxDim, make sure that all elements are initialized
+    Dist_D = -1.0
+    Xyz_D  =  0.0
+
+    if(IsNew)then
+       ! Find points and store cell indexes and weights
+
+       if(DoTest)write(iUnitOut,*) NameSub,': iProc, nPoint=', iProc, nPoint
+
+       if(allocated(iBlockCell_DI)) deallocate(iBlockCell_DI, Dist_DI)
+       allocate(iBlockCell_DI(0:nDim,nPoint), Dist_DI(nDim,nPoint))
+
+       do iPoint = 1, nPoint
+
+          Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+          call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
+               UseGhostCell = .true.)
+
+          if(iProcFound /= iProc)then
+             write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
+             call IH_stop_mpi(NameSub//' could not find position on this proc')
+          end if
+
+          ! Store block and cell indexes and distances for interpolation
+          iBlockCell_DI(0,iPoint)      = iBlock
+          iBlockCell_DI(1:nDim,iPoint) = iCell_D(1:nDim)
+          Dist_DI(:,iPoint)            = Dist_D(1:nDim)
+
+       end do
+    end if
+
+    ! Interpolate coupled variables to the point positions
+    do iPoint = 1, nPoint
+       Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+
+       ! Use stored block and cell indexes and distances
+       iBlock          = iBlockCell_DI(0,iPoint)
+       iCell_D(1:nDim) = iBlockCell_DI(1:nDim,iPoint)
+       Dist_D(1:nDim)  = Dist_DI(:,iPoint)
+
+       ! Interpolate
+       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+
+       ! Provide full B
+       if(UseB0)then
+          call get_b0(Xyz_D, B0_D)
+          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+       end if
+
+       ! Fill buffer with interpolated values converted to SI units
+       if(DoSendAll)then
+          Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
+       else
+          do iVarBuffer = 1, nVarIn
+             iVar = iVarSource_V(iVarBuffer)
+             Data_VI(iVarBuffer,iPoint) = &
+                  State_V(iVar)*No2Si_V(iUnitCons_V(iVar))
+          end do
+       end if
+    end do
+
+  end subroutine IH_get_point_data
 
   !============================================================================
   subroutine IH_set_buffer_grid(DD)
@@ -275,12 +393,14 @@ contains
   end subroutine IH_set_buffer_grid
   !============================================================================
   subroutine IH_set_grid
+
     use CON_comp_param
     use IH_domain_decomposition
     use CON_coupler
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
-    use IH_ModGeometry, ONLY : TypeGeometry, LogRGen_I
+    use IH_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
+    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D
     !--------------------------------------------------------------------------
 
     ! Here we should set the IH (MH) grid descriptor
@@ -291,20 +411,17 @@ contains
          nDim=3,     &
          IsTreeDecomposition=.true.)
 
-    ! Allocate array on non_IH processors (???why is this needed???)
-    if(.not.allocated(LogRGen_I))then
-       allocate(LogRGen_I(1))
-       LogRGen_I = 0.0
-    end if
-
+    ! Note: for Cartesian grid RadiusMin=xMin and RadiusMax=xMax
     call set_coord_system(&
-         GridID_=IH_,&
-         TypeCoord=TypeCoordSystem,&
-         UnitX=No2Si_V(UnitX_),&
-         TypeGeometry=TypeGeometry,&
-         Coord1_I=LogRGen_I, &
-         nVar = nVar, &
-         NameVar = NameVarCouple)
+         GridID_   = IH_,&
+         TypeCoord = TypeCoordSystem,&
+         UnitX     = No2Si_V(UnitX_),&
+         nVar      = nVar, &
+         NameVar   = NameVarCouple, &
+         TypeGeometry = TypeGeometry, &
+         Coord1_I = (/ RadiusMin, RadiusMax /), &
+         Coord2_I = (/ CoordMin_D(2), CoordMax_D(2) /), &
+         Coord3_I = (/ CoordMin_D(3), CoordMax_D(3) /)  )
 
     if(is_Proc(IH_))then
        !Initialize the local grid
@@ -1614,16 +1731,11 @@ contains
   !============================================================================
   subroutine IH_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
+    
+    ! This routine is actually for OH-PT coupling
 
-    ! Get magnetic field data from IH to PT
-
-    use IH_ModProcMH,  ONLY: iProc
-    use IH_ModPhysics, ONLY: Si2No_V, No2Si_V, iUnitCons_V, UnitX_
-    use IH_ModAdvance, ONLY: State_VGB, nVar, Bx_, Bz_
-    use IH_ModVarIndexes, ONLY: nVar
-    use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
-    use ModInterpolate, ONLY: trilinear
+    ! Interpolate Data_VI from OH at the list of positions Xyz_DI 
+    ! required by PT
 
     logical,          intent(in):: IsNew   ! true for new point array
     character(len=*), intent(in):: NameVar ! List of variables
@@ -1634,45 +1746,15 @@ contains
     real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
     real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
 
-    real:: Xyz_D(MaxDim), b_D(MaxDim)
-    real:: Dist_D(MaxDim), State_V(nVar)
-    integer:: iCell_D(MaxDim)
-
-    integer:: iPoint, iBlock, iProcFound
-
-    character(len=*), parameter :: NameSub='IH_get_for_pt'
-    !--------------------------------------------------------------------------
-
-    ! We should have second order accurate magnetic field in the ghost cells
-
-    do iPoint = 1, nPoint
-
-       Xyz_D = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-       call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
-            UseGhostCell = .true.)
-
-       if(iProcFound /= iProc)then
-          write(*,*)NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
-          call IH_stop_mpi(NameSub//' could not find position on this proc')
-       end if
-
-       State_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-            nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_D, &
-            iCell_D = iCell_D, Dist_D = Dist_D)
-
-       if(UseB0)then
-          call get_b0(Xyz_D, b_D)
-          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + b_D
-       else
-          b_D = 0.0
-       end if
-
-       Data_VI(:,iPoint) = State_V*No2Si_V(iUnitCons_V)
-
-    end do
+    ! Optimize search by storing indexes and distances
+    integer, allocatable, save:: iBlockCell_DI(:,:)
+    real,    allocatable, save:: Dist_DI(:,:)
+    !-----------------------------------------------------------------------
+    call IH_get_point_data(iBlockCell_DI, Dist_DI, IsNew, &
+         NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI, &
+         DoSendAllVar=.true.)
 
   end subroutine IH_get_for_pt
-
   !===========================================================================
   subroutine IH_put_from_pt( &
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
@@ -1766,5 +1848,263 @@ contains
          ExtraSource_ICB(:,iTest,jTest,kTest,BlkTest)
 
   end subroutine IH_put_from_pt
+  !===========================================================================
+  subroutine IH_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    ! Interpolate Data_VI from EE at the list of positions Xyz_DI 
+    ! required by SC
+
+    use IH_ModProcMH,  ONLY: iProc
+    use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
+    use IH_ModVarIndexes, ONLY: nVar
+    use IH_ModB0,      ONLY: UseB0, get_b0
+    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use IH_ModIO, ONLY: iUnitOut
+    use ModInterpolate, ONLY: interpolate_vector
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    real:: Xyz_D(MaxDim), B0_D(MaxDim)
+    real:: Dist_D(MaxDim), State_V(nVar)
+    integer:: iCell_D(MaxDim)
+
+    integer, allocatable, save:: iBlockCell_DI(:,:)
+    real,    allocatable, save:: Dist_DI(:,:)
+
+    integer:: iPoint, iBlock, iProcFound
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='IH_get_for_sc'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! If nDim < MaxDim, make sure that all elements are initialized
+    Dist_D = -1.0
+    Xyz_D  =  0.0
+
+    if(IsNew)then
+       if(DoTest)write(iUnitOut,*) NameSub,': iProc, nPoint=', iProc, nPoint
+
+       if(allocated(iBlockCell_DI)) deallocate(iBlockCell_DI, Dist_DI)
+       allocate(iBlockCell_DI(0:nDim,nPoint), Dist_DI(nDim,nPoint))
+
+       do iPoint = 1, nPoint
+
+          Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+          call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
+               UseGhostCell = .true.)
+
+          if(iProcFound /= iProc)then
+             write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
+             call IH_stop_mpi(NameSub//' could not find position on this proc')
+          end if
+
+          ! Store block and cell indexes and distances for interpolation
+          iBlockCell_DI(0,iPoint)      = iBlock
+          iBlockCell_DI(1:nDim,iPoint) = iCell_D(1:nDim)
+          Dist_DI(:,iPoint)            = Dist_D(1:nDim)
+
+       end do
+    end if
+
+    do iPoint = 1, nPoint
+
+       Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+
+       ! Use stored block and cell indexes and distances
+       iBlock          = iBlockCell_DI(0,iPoint)
+       iCell_D(1:nDim) = iBlockCell_DI(1:nDim,iPoint)
+       Dist_D(1:nDim)  = Dist_DI(:,iPoint)
+
+       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
+
+       if(UseB0)then
+          call get_b0(Xyz_D, B0_D)
+          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+       end if
+
+       Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
+
+    end do
+
+  end subroutine IH_get_for_sc
+  !============================================================================
+  subroutine IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI, Data_VI, &
+       iPoint_I)
+
+    ! This routine is actually for EE-SC coupling
+
+    ! This function will be called 3 times :
+    !
+    ! 1) Count grid cells to be overwritten by EE (except for extra variables)
+    !
+    ! 2) Return the Xyz_DGB coordinates of these cells
+    !
+    ! 3) Recieve Data_VI from SC and put them into State_VGB.
+    !    The indexing array iPoint_I is needed to maintain the same order as
+    !    the original position array Pos_DI was given in 2)
+
+    use IH_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
+         IsSpherical, nI, nJ, nK, CoordMin_DB, CellSize_DB
+    use IH_ModGeometry,  ONLY: r_BLK
+    use IH_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use IH_ModMain,      ONLY: UseB0
+    use IH_ModB0,        ONLY: B0_DGB
+    use IH_ModAdvance,   ONLY: State_VGB, Bx_, Bz_
+    use IH_ModMultiFluid,ONLY: nIonFluid
+    use IH_ModEnergy,    ONLY: calc_energy
+    use CON_coupler,     ONLY: Grid_C, EE_, iVarTarget_V
+    use ModNumConst,     ONLY: cPi, cTwoPi
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVarData! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    real, intent(inout), allocatable, optional :: Pos_DI(:,:)  ! Positions
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+
+    logical :: DoCountOnly
+    integer :: i, j, k, iBlock, iPoint, iVarBuffer, iVar
+    real    :: CoordMinEe_D(3), CoordMaxEe_D(3), Coord_D(3)
+
+    character(len=*), parameter :: NameSub='IH_get_ee_region'
+    !--------------------------------------------------------------------------
+    if(.not.IsSpherical) &
+         call CON_stop(NameSub//' works for spherical grid only')
+
+    DoCountOnly = nPoint < 1
+
+    CoordMinEe_D(1) = Grid_C(EE_)%Coord1_I(1)
+    CoordMinEe_D(2) = Grid_C(EE_)%Coord2_I(1)
+    CoordMinEe_D(3) = Grid_C(EE_)%Coord3_I(1)
+    CoordMaxEe_D(1) = Grid_C(EE_)%Coord1_I(2)
+    CoordMaxEe_D(2) = Grid_C(EE_)%Coord2_I(2)
+    CoordMaxEe_D(3) = Grid_C(EE_)%Coord3_I(2)
+
+    ! Find ghost cells in the SC domain
+    iPoint = 0
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          ! Set generalized coordinates (longitude and latitude)
+          Coord_D = &
+               CoordMin_DB(:,iBlock) + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
+
+          ! Overwrite first coordinate with true radius
+          Coord_D(1) = r_BLK(i,j,k,iBlock)
+
+          ! Fix longitude if min longitude of EE is negative
+          if(CoordMinEe_D(2) < 0.0 .and. Coord_D(2) > cPi) &
+               Coord_D(2) = Coord_D(2) - cTwoPi
+
+          ! Check if cell is inside EE domain
+          if(any(Coord_D < CoordMinEe_D)) CYCLE
+          if(any(Coord_D > CoordMaxEe_D)) CYCLE
+
+          ! Found a point to be set by EE
+          iPoint = iPoint + 1
+          if(DoCountOnly) CYCLE
+
+          if(present(Data_VI))then
+             ! Put Data_VI obtained from EE into State_VGB
+             ! Only a subset of variables are defined by EE
+             do iVarBuffer = 1, nVarData
+                iVar = iVarTarget_V(iVarBuffer)
+                State_VGB(iVar,i,j,k,iBlock) = &
+                     Data_VI(iVarBuffer,iPoint_I(iPoint)) &
+                     *Si2No_V(iUnitCons_V(iVar))
+             end do
+             if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+             call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
+          else
+             ! Provide position to EE
+             Pos_DI(:,iPoint) = Xyz_DGB(:,i,j,k,iBlock)*No2Si_V(UnitX_)
+          end if
+
+       end do; end do; end do
+    end do
+
+    if(DoCountOnly) nPoint = iPoint
+
+  end subroutine IH_get_ee_region
+
+  !===========================================================================
+  subroutine IH_put_from_ee( &
+       NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    ! This routine is actually for EE-SC coupling
+
+    use IH_BATL_lib,    ONLY: nDim
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVarData! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
+
+    character(len=*), parameter :: NameSub='IH_put_from_ee'
+    !--------------------------------------------------------------------------
+
+    if(.not. present(Data_VI))then
+       nPoint=0;
+       ! get nPoint
+       call IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI)
+
+       if(allocated(Pos_DI)) deallocate(Pos_DI)
+       allocate(Pos_DI(nDim,nPoint))
+
+       ! get Pos_DI
+       call IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI)
+
+       RETURN
+    end if
+
+    ! set State variables
+    call IH_get_ee_region(NameVar, nVarData, nPoint, Pos_DI, Data_VI, iPoint_I)
+
+  end subroutine IH_put_from_ee
+
+  !===========================================================================
+  subroutine IH_get_for_ee(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+    
+    ! This routine is actually for SC-EE coupling
+
+    ! Interpolate Data_VI from SC at the list of positions Xyz_DI 
+    ! required by EE
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    ! Optimize search by storing indexes and distances
+    integer, allocatable, save:: iBlockCell_DI(:,:)
+    real,    allocatable, save:: Dist_DI(:,:)
+    !-----------------------------------------------------------------------
+    call IH_get_point_data(iBlockCell_DI, Dist_DI, IsNew, &
+         NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
+
+  end subroutine IH_get_for_ee
+
 
 end module IH_wrapper
