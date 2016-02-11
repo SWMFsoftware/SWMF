@@ -114,10 +114,10 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer,parameter,public     :: nCoupleVarGroup = 8
+  integer, parameter, public     :: nCoupleVarGroup = 8
 
   ! named indices for variable groups for coupling
-  integer,parameter,public :: &
+  integer, parameter, public :: &
        Bfield_                = 1, &
        AnisoPressure_         = 2, &
        ElectronPressure_      = 3, &
@@ -131,11 +131,11 @@ module CON_coupler
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
-  ! no. of variable indices known to the coupler
-  integer,parameter, public  :: nVarIndexCouple = 13
+  ! number of variable types known to the coupler
+  integer, parameter, public  :: nVarIndexCouple = 13
 
   ! Fixed indices for mapping actual variable indices
-  integer,parameter,public ::     &
+  integer, parameter,public ::     &
        RhoCouple_           = 1,  &
        RhoUxCouple_         = 2,  &
        RhoUzCouple_         = 3,  &
@@ -154,8 +154,24 @@ module CON_coupler
   ! coupled component 
   integer, public  :: &
        iVar_V(nVarIndexCouple) = 0, &
-       iVar_VCC(nVarIndexCouple,MaxComp, MaxComp) = 0
+       iVar_VCC(nVarIndexCouple, MaxComp, MaxComp) = 0
 
+  ! Maximum number of variables passed between components
+  integer, parameter, public :: MaxVarBuffer = 100
+
+  
+  ! Number of variables sent between source and target and 
+  ! corresponding indexes in the source and target components
+  integer, public:: &
+       nVarBuffer, &
+       iVarSource_V(MaxVarBuffer), iVarTarget_V(MaxVarBuffer)
+
+  character(len=lNameVar), public:: NameVarBuffer = ''
+
+  ! Store above information for all couplings between registered components
+  ! The index ranges are (MaxVarBuffer,nComp,nComp)
+  integer, public, allocatable:: &
+       nVarBuffer_CC(:,:), iVarSource_VCC(:,:,:), iVarTarget_VCC(:,:,:)
 
   !PUBLIC MEMBER FUNCTIONS:
   public :: set_coord_system    ! Sets coordinate information for a component
@@ -191,7 +207,7 @@ module CON_coupler
 
   character(len=*), parameter, private :: NameMod='CON_coupler'
 contains
-  !===============================================================!
+  !===========================================================================
   subroutine set_coord_system( &
        GridID_,       &! Grid ID
        TypeCoord,     &! Coordinate system type (MAG,GEO,..)
@@ -569,8 +585,10 @@ contains
     integer      :: nPparSource, nPparTarget, nPparCouple
     integer      :: nWaveSource, nWaveTarget, nWaveCouple 
     integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
-    logical      :: DoTest, DoTestMe
 
+    integer:: lCompSource, lCompTarget
+
+    logical      :: DoTest, DoTestMe
     character(len=*), parameter    :: NameSub =NameMod//'::set_couple_var_info'
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -580,7 +598,8 @@ contains
 
     ! The following coupling flags are set to true if both source and target
     ! have the relevant state variables, see below. 
-    ! NOTE: If both components have multiple densities, all species/fluids state
+    ! NOTE: If both components have multiple densities, 
+    ! all species/fluids state
     ! variables should be coupled, hence a further check is made to ensure that
     ! the fluids/species in both components are identical.        
 
@@ -888,6 +907,38 @@ contains
     nVarCouple_CC(iCompSource,iCompTarget) = nVarCouple
     nVarCouple_CC(iCompTarget,iCompSource) = nVarCouple
 
+    if(.not.allocated(iVarSource_VCC))then
+       ! NOTE: these arrays are limited to the registered components
+       allocate( &
+            nVarBuffer_CC(nComp,nComp), &
+            iVarSource_VCC(MaxVarBuffer,nComp,nComp), &
+            iVarTarget_VCC(MaxVarBuffer,nComp,nComp) )
+       nVarBuffer_CC = 0
+       iVarSource_VCC = 0
+       iVarTarget_VCC = 0
+    end if
+
+    ! For the point coupler find variables that occur both in 
+    ! source and target components. Store source and target indexes.
+    nVarBuffer = 0
+    do iVarSource = 1, nVarSource
+       ! Look up source variable name in the target
+       do iVarTarget = 1, nVarTarget
+          if (NameVarSource_V(iVarSource) /= NameVarTarget_V(iVarTarget)) CYCLE
+          nVarBuffer = nVarBuffer + 1
+          NameVarBuffer = trim(NameVarBuffer)//' '//NameVarSource_V(iVarSource)
+          iVarSource_V(nVarBuffer) = iVarSource
+          iVarTarget_V(nVarBuffer) = iVarTarget             
+       end do
+    end do
+    ! Get rid of leading space
+    NameVarBuffer = NameVarBuffer(2:len(NameVarBuffer))
+
+    lCompSource = lComp_I(iCompSource)
+    lCompTarget = lComp_I(iCompTarget)
+    nVarBuffer_CC(lCompSource,lCompTarget)    = nVarBuffer
+    iVarSource_VCC(:,lCompSource,lCompTarget) = iVarSource_V
+    iVarTarget_VCC(:,lCompSource,lCompTarget) = iVarTarget_V
 
     if( i_proc() ==0 ) then
        write(*,*) '---------------------------------------------'
