@@ -16,9 +16,12 @@ module CON_couple_all
 
   !USES:
   use CON_comp_param
-  use CON_world,   ONLY: use_comp, is_proc, i_proc
+  use CON_world,   ONLY: use_comp, is_proc, i_proc, lComp_I
   use CON_coupler, ONLY: iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
-                         DoCoupleVar_V, DoCoupleVar_VCC
+                         DoCoupleVar_V, DoCoupleVar_VCC, &
+                         nVarBuffer, nVarBuffer_CC, &
+                         iVarSource_V, iVarSource_VCC, &
+                         iVarTarget_V, iVarTarget_VCC
 
   !^CMP IF GM BEGIN
   use CON_couple_ih_gm        !^CMP IF IH
@@ -129,6 +132,9 @@ contains
     ! 22Dec11 - R. Oran   added capability to use global mpi coupler.
     !EOP
 
+    ! indexes by component list
+    integer:: lCompSource, lCompTarget
+
     character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
 
     logical :: DoTest,DoTestMe
@@ -149,13 +155,19 @@ contains
     if(DoTest)write(*,*)NameSub,': coupling iProc=',i_proc(),' ',&
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
-
     call timing_start(NameComp_I(iCompSource)// &
          '_'//NameComp_I(iCompTarget)//'_couple')
 
     iVar_V        = iVar_VCC(:,iCompSource,iCompTarget)
     nVarCouple    = nVarCouple_CC(iCompSource,iCompTarget)
     DoCoupleVar_V = DoCoupleVar_VCC(:,iCompSource,iCompTarget)
+
+    lCompSource = lComp_I(iCompSource)
+    lCompTarget = lComp_I(iCompTarget)
+
+    nVarBuffer    = nVarBuffer_CC(lCompSource,lCompTarget)
+    iVarSource_V  = iVarSource_VCC(:,lCompSource,lCompTarget)
+    iVarTarget_V  = iVarTarget_VCC(:,lCompSource,lCompTarget)
 
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
