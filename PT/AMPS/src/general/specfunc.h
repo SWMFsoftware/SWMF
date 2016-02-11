@@ -12,6 +12,7 @@
 
 #include "global.h"
 #include "rnd.h"
+#include "constants.h"
 
 
 #define _STDOUT_ERRORLOG_MODE__ON_   0
@@ -300,6 +301,15 @@ namespace Vector3D {
     double l=Length(x);
 
     for (int idim=0;idim<3;idim++) x[idim]/=l;
+  }
+
+  //distribute the vector direction
+  namespace Distribution {
+    //uniform distribution of the
+    inline void Uniform(double *a) {
+      for (int i=0;i<3;i++) a[i]=sqrt(-log(rnd()))*cos(2.0*Pi*rnd());
+      Vector3D::Normalize(a);
+    }
   }
 }
   
