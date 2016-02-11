@@ -98,6 +98,9 @@ module  CON_world
 
   public :: check_i_comp    ! stop with error if component ID is out of range
   !                           this method is inherited from CON_comp_param
+  integer, public :: nComp=0 ! Number of registered components
+  integer, public, save :: &
+       lComp_I(MaxComp)      ! Convert named index to list index
 
   !LOCAL VARIABLES:
   integer :: iProcWorld=-1  ! global PE rank
@@ -106,9 +109,6 @@ module  CON_world
   integer :: iGroupWorld=-1 ! global group
   integer :: iProc0World=0
 
-  integer :: nComp=0        ! Number of registered components
-
-  integer, save :: lComp_I(MaxComp) ! Convert named index to list index
   integer, save :: iComp_C(MaxComp) ! Convert list index to named index
 
   type(CompInfoType), save, pointer :: CompInfo_C(:) ! Component info array
