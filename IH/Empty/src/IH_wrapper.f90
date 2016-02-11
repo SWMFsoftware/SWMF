@@ -47,6 +47,10 @@ module IH_wrapper
   public:: IH_get_for_pt
   public:: IH_put_from_pt
 
+  ! Coupling with EE (for SC)
+  public:: IH_get_for_ee
+  public:: IH_put_from_ee
+
 contains
   !==========================================================================
   subroutine IH_set_param(CompInfo, TypeAction)
@@ -364,5 +368,50 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_put_from_pt
+
+  !===========================================================================
+  subroutine IH_get_for_ee(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+    
+    ! This routine is actually for SC-EE coupling
+
+    ! Interpolate Data_VI from SC at the list of positions Xyz_DI 
+    ! required by EE
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter :: NameSub='IH_get_for_ee'
+
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_get_for_ee
+
+  !===========================================================================
+  subroutine IH_put_from_ee( &
+       NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    ! This routine is actually for EE-SC coupling
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVarData! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
+
+    character(len=*), parameter :: NameSub='IH_put_from_ee'
+
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_put_from_ee
+
 
 end module IH_wrapper
