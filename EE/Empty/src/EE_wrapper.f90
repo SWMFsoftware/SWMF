@@ -19,6 +19,14 @@ module EE_wrapper
   public:: EE_save_restart
   public:: EE_finalize
 
+  ! Point coupler interface
+  public:: EE_get_grid_info
+  public:: EE_find_points
+
+  ! EE-SC coupling
+  public:: EE_get_for_SC
+  public:: EE_put_from_sc
+
 contains
 
   !==========================================================================
@@ -100,5 +108,65 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_run
+
+  !============================================================================
+  subroutine EE_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+    integer, intent(in) :: nDimIn                ! dimension of positions
+    integer, intent(in) :: nPoint                ! number of positions
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+    integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+    character(len=*), parameter:: NameSub = 'EE_find_points'
+
+    call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
+
+  end subroutine EE_find_points
+  !============================================================================
+  subroutine EE_get_grid_info(nDimOut, iGridOut, iDecompOut)
+
+    integer, intent(out):: nDimOut    ! grid dimensionality
+    integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+    integer, intent(out):: iDecompOut ! decomposition index 
+
+    character(len=*), parameter :: NameSub='EE_get_grid_info'
+
+    call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
+
+  end subroutine EE_get_grid_info
+  !============================================================================
+  subroutine EE_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter:: NameSub='EE_get_for_sc'
+
+    call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
+
+  end subroutine EE_get_for_sc
+  !============================================================================
+  subroutine EE_put_from_sc( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
+
+    character(len=*), parameter :: NameSub='EE_put_from_sc'
+
+    call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
+
+  end subroutine EE_put_from_sc
 
 end module EE_wrapper
