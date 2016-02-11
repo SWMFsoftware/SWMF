@@ -159,10 +159,12 @@ contains
     use MH_domain_decomposition
     use CON_coupler
     use CON_test_global_message_pass
-    use ModMain,ONLY:TypeCoordSystem, NameVarCouple
-    use ModPhysics,ONLY:No2Si_V, UnitX_
-    use ModVarIndexes,ONLY: nVar
-    use CON_comp_param,ONLY:GM_
+    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple
+    use ModPhysics,      ONLY: No2Si_V, UnitX_
+    use ModVarIndexes,   ONLY: nVar
+    use CON_comp_param,  ONLY: GM_
+    use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
+    use BATL_lib,        ONLY: CoordMin_D, CoordMax_D
 
     !REVISION HISTORY:
     !23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
@@ -173,8 +175,17 @@ contains
     DoTest=.false.;DoTestMe=.false.
     if(done_dd_init(GM_))return
     call init_decomposition(GM_,GM_,3,.true.)
-    call set_coord_system(GM_,TypeCoordSystem,No2Si_V(UnitX_), &
-         NameVar = NameVarCouple, nVar=nVar)
+
+    ! Note: for Cartesian grid RadiusMin=xMin and RadiusMax=xMax
+    call set_coord_system(GM_, &
+         TypeCoord = TypeCoordSystem, &
+         UnitX     = No2Si_V(UnitX_), &
+         nVar      = nVar, &
+         NameVar   = NameVarCouple, &
+         TypeGeometry = TypeGeometry, &
+         Coord1_I     = (/ RadiusMin, RadiusMax /), &
+         Coord2_I     = (/ CoordMin_D(2), CoordMax_D(2) /), &
+         Coord3_I     = (/ CoordMin_D(3), CoordMax_D(3) /)  )
 
     if(is_proc(GM_))then
        call init_decomposition(&
