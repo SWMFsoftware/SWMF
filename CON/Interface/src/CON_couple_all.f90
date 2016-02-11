@@ -165,9 +165,11 @@ contains
     lCompSource = lComp_I(iCompSource)
     lCompTarget = lComp_I(iCompTarget)
 
-    nVarBuffer    = nVarBuffer_CC(lCompSource,lCompTarget)
-    iVarSource_V  = iVarSource_VCC(:,lCompSource,lCompTarget)
-    iVarTarget_V  = iVarTarget_VCC(:,lCompSource,lCompTarget)
+    if(allocated(iVarSource_VCC))then
+       nVarBuffer    = nVarBuffer_CC(lCompSource,lCompTarget)
+       iVarSource_V  = iVarSource_VCC(:,lCompSource,lCompTarget)
+       iVarTarget_V  = iVarTarget_VCC(:,lCompSource,lCompTarget)
+    end if
 
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
