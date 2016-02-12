@@ -23,6 +23,8 @@ module ModElectricField
        nBlock, MaxBlock, Unused_B, &
        iProc, iComm, message_pass_cell
 
+  use ModAdvance,      ONLY: Efield_DGB
+  use ModMain,         ONLY: n_step
   use ModGeometry,     ONLY: far_field_bcs_blk, true_cell
   use ModCellBoundary, ONLY: set_cell_boundary
   use ModCellGradient, ONLY: calc_gradient, calc_divergence
@@ -38,8 +40,10 @@ module ModElectricField
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
 
+  ! Make Efield available through this module too
+  public:: Efield_DGB
+
   ! Total, potential and inductive electric fields
-  real, public, allocatable:: Efield_DGB(:,:,:,:,:)
   real, public, allocatable:: Epot_DGB(:,:,:,:,:)
   real, public, allocatable:: Eind_DGB(:,:,:,:,:)
 
@@ -54,7 +58,7 @@ module ModElectricField
 
   ! Default parameters for the linear solver
   type(LinearSolverParamType):: SolverParam = LinearSolverParamType( &
-       .true.,      &! DoPrecond
+       .false.,     &! DoPrecond 
        'left',      &! TypePrecondSide
        'BILU',      &! TypePrecond
        0.0,         &! PrecondParam (Gustafsson for MBILU)
@@ -79,12 +83,29 @@ contains
   !=========================================================================
   subroutine get_electric_field
 
-    ! Fill in physical cells of Efield_DGB with electric field
+    ! Fill in all cells of Efield_DGB with electric field
+
     integer:: iBlock
+    integer:: nStepLast = -1
     !----------------------------------------------------------------------
+    if(nStepLast == n_step) RETURN
+    nStepLast = n_step
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        call get_electric_field_block(iBlock)
+    end do
+
+    ! Fill in ghost cells
+    call message_pass_cell(3, Efield_DGB)
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       ! Fill outer ghost cells with floating values
+       if(far_field_bcs_blk(iBlock)) &
+            call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
+            TypeBcIn = 'float')
     end do
 
   end subroutine get_electric_field
@@ -92,7 +113,9 @@ contains
   !=========================================================================
   subroutine get_electric_field_block(iBlock)
 
-    ! Fill in physical cells of Efield_DGB with electric field for block iBlock
+    ! Fill in all cells of Efield_DGB with electric field for block iBlock
+    ! Assumes that ghost cells are set
+    ! This will NOT work for Hall MHD
 
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModAdvance, ONLY: State_VGB
@@ -109,7 +132,7 @@ contains
        Efield_DGB = 0.0
     end if
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        if(.not. true_cell(i,j,k,iBlock))then
           Efield_DGB(:,i,j,k,iBlock) = 0.0
           CYCLE
@@ -134,12 +157,17 @@ contains
     ! Calculate the inductive part of the electric field Eind
 
     integer:: iBlock
-    !-----------------------------------------------------------------------
+    integer:: nStepLast = -1
+    !----------------------------------------------------------------------
+    if(nStepLast == n_step) RETURN
+    nStepLast = n_step
 
     nBlockUsed = nBlock - count(Unused_B(1:nBlock))
     nVarAll    = nBlockUsed*nIJK
 
     call get_electric_field
+
+    !write(*,*)'ExField=', Efield_DGB(1,:,1,1,1)
 
     call calc_div_e
 
@@ -147,16 +175,28 @@ contains
     ! fill ghost cells at the end
     call calc_potential
 
-    if(.not.allocated(Epot_DGB)) &
-         allocate(Epot_DGB(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(Eind_DGB)) &
+         allocate(Eind_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
+    ! Calculate Epot
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       ! Set outer boundary ghost cells with total E field
+       if(far_field_bcs_blk(iBlock)) &
+            Epot_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock)
+
+       ! Epot = grad(Potential)
+       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), &
+            nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
+    end do
+
+    ! Fill in ghost cells                                                                               
+    call message_pass_cell(3,Epot_DGB)
 
     ! Calculate Epot and Eind
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       ! Epot = grad(Potential)
-       call calc_gradient(iBlock, Potential_GB(:,:,:,iBlock), &
-            nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
-
        ! Eind = E - Epot
        Eind_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock) - &
             Epot_DGB(:,:,:,:,iBlock)
@@ -167,19 +207,15 @@ contains
   subroutine calc_div_e
 
     integer:: iBlock
+    integer:: nStepLast = -1
     !----------------------------------------------------------------------
-    if(.not.allocated(DivE_CB)) allocate(DivE_CB(nI,nJ,nK,nBlock))
+    if(nStepLast == n_step) RETURN
+    nStepLast = n_step
 
-    ! Fill in ghost cells
-    call message_pass_cell(3, Efield_DGB)
+    if(.not.allocated(DivE_CB)) allocate(DivE_CB(nI,nJ,nK,nBlock))
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-
-       ! Fill outer ghost cells with floating values
-       if(far_field_bcs_blk(iBlock)) &
-            call set_cell_boundary(nG, iBlock, 3, Efield_DGB(:,:,:,:,iBlock),&
-            TypeBcIn = 'float')
 
        ! Calculate DivE for this block (it has no ghost cells: nG=0)
        call calc_divergence(iBlock, Efield_DGB(:,:,:,:,iBlock), &
@@ -194,14 +230,21 @@ contains
 
     integer:: iBlock, i, j, k, n
 
-    logical:: DoTest, DoTestMe
+    integer:: nStepLast = -1
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'calc_potential'
-    !---------------------------------------------------------------------
+    !----------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(nStepLast == n_step) RETURN
+    nStepLast = n_step
 
     if(.not.allocated(Potential_GB)) &
          allocate(Potential_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
+    if(.not.allocated(Epot_DGB)) &
+         allocate(Epot_DGB(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     ! Make potential zero in unused cells
     Potential_GB(:,:,:,1:nBlock) = 0.0
@@ -211,12 +254,18 @@ contains
 
     allocate(Rhs_I(nVarAll), Potential_I(nVarAll))
 
+    !write(*,*)'nVarAll=', nVarAll
+    !write(*,*)'Ex=Expot=', Epot_DGB(1,:,1,1,1)
+    
+
     ! Substitute 0 into the Laplace operator WITH boundary conditions
     ! to get the RHS
     Potential_I = 0.0
     IsLinear = .false.
     call matvec_inductive_e(Potential_I, Rhs_I, nVarAll)
     Rhs_I = -Rhs_I
+
+    !write(*,*)'BC Rhs=',Rhs_I(1:nI)
 
     ! Add div(E) to the RHS
     n = 0
@@ -228,6 +277,8 @@ contains
           Rhs_I(n) = Rhs_I(n) + DivE_CB(i,j,k,iBlock)
        end do; end do; end do
     end do
+
+    !write(*,*)'Full Rhs=',Rhs_I(1:nI)
 
     ! Start the linear solve stage
     IsLinear = .true.
@@ -241,10 +292,13 @@ contains
          1, nDim, nI, nJ, nK, nBlockUsed, iComm, &
          matvec_inductive_e, Rhs_I, Potential_I, DoTestMe)
 
+
+    !write(*,*)'Solution Potential_I=', Potential_I(1:nI)
+
     if(SolverParam%iError /= 0 .and. iProc == 0) &
          write(*,*) NameSub,' failed in ModInductiveE'
 
-    ! Put solution x_I into Potential_GB
+    ! Put solution Potential_I into Potential_GB
     n = 0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -255,11 +309,15 @@ contains
        end do; end do; end do
     end do
 
+    !write(*,*)'Solution Potential_GB=', Potential_GB(1:nI,1,1,1)
+
     ! Fill in ghost cells and boundary cells using true BCs
     IsLinear = .false.
     call bound_potential
 
     deallocate(Rhs_I, Potential_I)
+
+    !write(*,*)'Bounded Potential_GB=', Potential_GB(:,1,1,1)
 
   end subroutine calc_potential
   !=========================================================================
@@ -283,7 +341,7 @@ contains
        ! In the linear stage use float BC that corresponds to E_normal=0
        TypeBc = 'float'
     else
-       ! Apply gradient = Enormal BC
+       ! Apply gradient(potential) = Enormal BC
        TypeBc = 'gradpot'
     end if
 
@@ -353,11 +411,6 @@ contains
     n = 0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-
-       ! Fill outer ghost cells with floating values
-       if(.not.IsLinear .and. far_field_bcs_blk(iBlock)) &
-            call set_cell_boundary(nG, iBlock, 3, Epot_DGB(:,:,:,:,iBlock),&
-            TypeBcIn = 'efield')
 
        call calc_divergence(iBlock, Epot_DGB(:,:,:,:,iBlock), 0, Laplace_C, &
             UseBodyCellIn=.true.)
