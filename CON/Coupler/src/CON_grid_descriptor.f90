@@ -160,6 +160,11 @@ Module CON_grid_descriptor
   type(GridDescriptorType) :: CellCenteredAMR
   integer, target :: iOne_D(3) = (/1, 1, 1/) 
   real,    target :: Null_D(3) = (/0.0, 0.0, 0.0/)
+
+  !local storage for a grid descriptor passed to interpolation_amr_gc;
+  !it is shared by interpolate_amr_gc and find_amr
+  type(GridDescriptorType) :: GridDescriptorAMR
+
   !\end{verbatim} 
   !EOP             
 contains
@@ -1221,6 +1226,82 @@ contains
        return
     end do DIRLOOP
   end function i_dir_of_only_reschange
+
+  !===============================================================!
+  !BOP
+  !IROUTINE: interpolation_amr_gc - continuous 2nd order interpolation on AMR
+  !utilizing ghost cells
+  !EOP
+  !BOP
+  !DESCRIPTION:
+  !This is a continuous amr interpolation using the grid points,        
+  !described with the grid descriptor. It utilizes ghost cells.
+  !EOP
+  !INTERFACE:
+  subroutine interpolation_amr_gc(&
+       nDim,&
+       Xyz_D,&
+       GridDescriptor,&
+       nIndexes,& 
+       iIndex_II,&
+       nImages,Weight_I)
+    use ModInterpolateAMR, ONLY: interpolate_amr
+    !INPUT ARGUMENTS:
+    integer,   intent(in)   :: nDim
+    type(GridDescriptorType):: GridDescriptor     
+    real,      intent(inout):: Xyz_D(nDim)
+    integer,   intent(in)   :: nIndexes
+    !OUTPUT ARGUMENTS
+    integer,   intent(out)  :: iIndex_II(0:nIndexes,2**nDim)
+    integer,   intent(out)  :: nImages
+    real,      intent(out)  :: Weight_I(2**nDim)
+    !EOP
+    !--------------------------------------------------------------------------
+    ! memorize grid descriptor by storing it in modular variable;
+    ! it is used by find_amr subroutine passed to shared interpolation routine
+    GridDescriptorAMR = GridDescriptor
+    ! call shared interpolation subroutine
+    call interpolate_amr(&
+         nDim        = nDim,&
+         XyzIn_D     = Xyz_D,&
+         nIndexes    = nIndexes,&
+         find        = find_amr,&
+         nCell_D     = GridDescriptorAMR%DD%Ptr%nCells_D,&
+         nGridOut    = nImages,&
+         Weight_I    = Weight_I,&
+         iIndexes_II = iIndex_II,&
+         UseGhostCell= .true.)
+  end subroutine interpolation_amr_gc
+
+  !===============================================================!
+
+  subroutine find_amr(nDim, Xyz_D, &
+       iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
+    integer, intent(in)   :: nDim
+    real,    intent(inout):: Xyz_D(nDim)
+    integer, intent(out)  :: iProc, iBlock 
+    real,    intent(out)  :: XyzCorner_D(nDim), Dxyz_D(nDim)
+    logical, intent(out)  :: IsOut
+    
+    integer:: iNode
+    !--------------------------------------------------------------------------
+    ! check if point's inside the domain
+    IsOut = &
+         any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D) .or. &
+         any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D)
+    if(IsOut) &
+         RETURN
+
+    ! call subroutine to find a node containing Xyz_D
+    ! this call changes Xyz_D to coords relative to block's corner as needed
+    call search_in(GridDescriptorAMR%DD%Ptr, Xyz_D, iNode)
+
+    ! now extract block's parameters
+    XyzCorner_D = GridDescriptorAMR%DD%Ptr%XyzBlock_DI(:, iNode)
+    Dxyz_D      = GridDescriptorAMR%DD%Ptr%DxyzBlock_DI(:, iNode)
+    iProc       = GridDescriptorAMR%DD%Ptr%iDecomposition_II(PE_, iNode) 
+    iBlock      = GridDescriptorAMR%DD%Ptr%iDecomposition_II(BLK_, iNode) 
+  end subroutine find_amr
 
   !==============================END==============================!
 end Module CON_grid_descriptor
