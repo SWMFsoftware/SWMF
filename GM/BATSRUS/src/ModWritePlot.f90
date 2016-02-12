@@ -24,7 +24,6 @@ subroutine write_plot_common(iFile)
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
-  use ModElectricField, ONLY: DivE_CB
   
   implicit none
 
@@ -326,8 +325,6 @@ subroutine write_plot_common(iFile)
           nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
   end if
-
-  if(allocated(DivE_CB)) deallocate(DivE_CB)
 
   do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
@@ -784,7 +781,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
-       Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B, UseElectronPressure
+       ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure
   use ModB0, ONLY: B0_DGB
   use ModGeometry
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
@@ -808,8 +805,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, &
        Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
-  use ModElectricField, ONLY: Efield_DGB, DivE_CB, &
-       get_electric_field_block, get_electric_field, calc_div_e
+  use ModElectricField, ONLY: Efield_DGB, DivE_CB, Potential_GB, &
+       Epot_DGB, Eind_DGB, &
+       get_electric_field_block, get_electric_field, &
+       calc_div_e, calc_inductive_e
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
   use ModFaceValue, ONLY: iRegionLowOrder_I
@@ -1105,11 +1104,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            end select
         end do; end do; end do
      case('enumx')
-        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ex_CB(:,:,:,iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= ExNum_CB(:,:,:,iBLK)
      case('enumy')
-        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ey_CB(:,:,:,iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= EyNum_CB(:,:,:,iBLK)
      case('enumz')
-        PlotVar(1:nI,1:nJ,1:nK,iVar)= Ez_CB(:,:,:,iBLK)
+        PlotVar(1:nI,1:nJ,1:nK,iVar)= EzNum_CB(:,:,:,iBLK)
      case('ex')
         call get_electric_field_block(iBLK)
         PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(1,1:nI,1:nJ,1:nK,iBLK)
@@ -1118,11 +1117,30 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('ez')
         PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(3,1:nI,1:nJ,1:nK,iBLK)
      case('dive')
-        if(.not.allocated(DivE_CB))then
-           call get_electric_field
-           call calc_div_e
-        end if
+        call get_electric_field
+        call calc_div_e
         PlotVar(1:nI,1:nJ,1:nK,iVar) = DivE_CB(:,:,:,iBLK)
+     case('pote')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Potential_GB(:,:,:,iBLK)
+     case('expot')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Epot_DGB(1,:,:,:,iBLK)
+     case('eypot')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Epot_DGB(2,:,:,:,iBLK)
+     case('ezpot')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Epot_DGB(3,:,:,:,iBLK)
+     case('exind')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Eind_DGB(1,:,:,:,iBLK)
+     case('eyind')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Eind_DGB(2,:,:,:,iBLK)
+     case('ezind')
+        call calc_inductive_e
+        PlotVar(:,:,:,iVar) = Eind_DGB(3,:,:,:,iBLK)
      case('pvecx')
         PlotVar(:,:,:,iVar) = ( &
              ( FullB_DG(x_,:,:,:)**2  &
@@ -1510,8 +1528,17 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
           'jxs','jys','jzs','jxn','jyn','jzn', &
           'jxb','jyb','jzb','jxt','jyt','jzt')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitJ_)
-     case('ex','ey','ez','er','enumx','enumy','enumz')
+     case('ex','ey','ez','er','enumx','enumy','enumz', &
+          'expot','eypot','ezpot','exind','eyind','ezind')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitElectric_)
+     case('pote')
+        ! Electric potential has SI units of V
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar) &
+             *No2Si_V(UnitElectric_)*No2Si_V(UnitX_)
+     case('dive')
+        ! Divergence of electric field has SI units of V/m^2
+        PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar) &
+             *No2Si_V(UnitElectric_)/No2Si_V(UnitX_)
      case('pvecx','pvecy','pvecz','pvecr','b2ur')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitPoynting_)
      case('divb','divb_cd','divb_ct','absdivb')
