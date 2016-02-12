@@ -5,12 +5,12 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 include Makefile.DEPEND
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
+SEARCHDIR = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 OBJECTS = SP_wrapper.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
 #	Making executables and libraries

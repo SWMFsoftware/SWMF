@@ -15,7 +15,9 @@ module ModMain
   private ! except
 
   public:: read_param, initialize, run, finalize
-  public:: iComm, iProc, nProc
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_
+  public:: LatMin, LatMax, LonMin, LonMax
+  public:: iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
 
   !\
   ! Logicals for actions
