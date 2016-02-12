@@ -63,7 +63,7 @@ module ModUser
   ! buoyancy_rope : amount of buoyancy in the central section
   !/
   logical :: UseRope = .false.
-  real    :: x2c_rope, x3c_rope,ra_rope,qfac_rope,lamb_rope,b0_rope, &
+  real    :: x2c_rope, x3c_rope, ra_rope, qfac_rope, lamb_rope, b0_rope, &
        buoyancy_rope
   !\
   ! Indexes of EOS tables, CHIANTI table, initial relaxed reference state
@@ -220,8 +220,7 @@ contains
     real :: p, ExtraEint
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
-    !-----------------------------------------------------------------------   
-    rasq = ra_rope*ra_rope
+    !-----------------------------------------------------------------------
     wdth = 2.0*1.5e5*Si2No_V(UnitX_)
 
     ! atmosphere parameters
@@ -298,6 +297,7 @@ contains
           ! If UseRope, Add flux rope in
           ! Set negative pressure to 1.e-10
           if(UseRope)then
+             rasq = ra_rope*ra_rope
              ! Flux rope does not yet have the toroidal curvature
              do k = 1, nK ; do j = 1, nJ
                 rsq = (Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)**2 + &
