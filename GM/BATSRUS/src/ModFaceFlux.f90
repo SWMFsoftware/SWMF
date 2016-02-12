@@ -4138,28 +4138,28 @@ subroutine calc_electric_field(iBlock)
 
   use ModSize,       ONLY: nI, nJ, nK
   use ModVarIndexes, ONLY: Bx_,By_,Bz_
-  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, Ex_CB, Ey_CB, Ez_CB
+  use ModAdvance,    ONLY: Flux_VX, Flux_VY, Flux_VZ, ExNum_CB, EyNum_CB, EzNum_CB
   use BATL_lib,      ONLY: CellFace_DB
 
   implicit none
   integer, intent(in) :: iBlock
   !------------------------------------------------------------------------
   ! E_x=(fy+fy-fz-fz)/4
-  Ex_CB(:,:,:,iBlock) = - 0.25*(                                    &
+  ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
        ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                            &
        + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / CellFace_DB(2,iBlock) - &
        ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                            &
        + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / CellFace_DB(3,iBlock) )
 
   ! E_y=(fz+fz-fx-fx)/4
-  Ey_CB(:,:,:,iBlock) = - 0.25*(                                    &
+  EyNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
        ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                            &
        + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / CellFace_DB(3,iBlock) - &
        ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                            &
        + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / CellFace_DB(1,iBlock) )
 
   ! E_z=(fx+fx-fy-fy)/4
-  Ez_CB(:,:,:,iBlock) = - 0.25*(                                    &
+  EzNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
        ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                            &
        + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / CellFace_DB(1,iBlock) - &
        ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                            &
