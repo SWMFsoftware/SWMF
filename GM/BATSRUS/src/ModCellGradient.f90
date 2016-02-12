@@ -40,7 +40,7 @@ contains
     integer, intent(in):: iBlock
     real, intent(in) :: Var_DG(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in):: nG ! number of ghost cells in Div_G
-    real, intent(out):: &
+    real, intent(inout):: &  ! preserve ghost cell values!
          Div_G(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
     logical, intent(in), optional:: UseBodyCellIn
 
@@ -54,8 +54,8 @@ contains
     UseBodyCell = .false.
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
-    if(IsCartesian)then
-       if(UseBodyCell .or. .not. body_blk(iBlock)) then
+    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+       if(IsCartesian)then
 
           ! Simple central differencing
 
@@ -73,24 +73,28 @@ contains
           end do; end do; end do
 
        else
-          ! One sided differences if the neighbor is inside a body          
+          call stop_mpi(NameSub//': non-cartesian to be implemented')
+       end if
+    else
+       ! One sided differences if the neighbor is inside a body          
 
-          InvDx = 1/CellSize_DB(1,iBlock)
-          InvDy = 1/CellSize_DB(2,iBlock)
-          InvDz = 1/CellSize_DB(3,iBlock)
+       ! Set iTrue_G to 1 in used cells and 0 in non-used cells
+       if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
+       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+          iTrue_G = 1
+       elsewhere
+          iTrue_G = 0
+       end where
 
-          ! Set iTrue_G to 1 in used cells and 0 in non-used cells
-          if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
-             iTrue_G = 1
-          elsewhere
-             iTrue_G = 0
-          end where
-
+       if(IsCartesian)then
           ! Where .not.true_cell, all the gradients are zero
           ! In true_cell the input to gradient from the face neighbor
           ! is ignored, if the face neighbor is .not.true_cell, the input
           ! from the opposite cell is doubled in this case
+
+          InvDx = 1/CellSize_DB(1,iBlock)
+          InvDy = 1/CellSize_DB(2,iBlock)
+          InvDz = 1/CellSize_DB(3,iBlock)
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Div_G(i,j,k) = 0.0
@@ -114,10 +118,9 @@ contains
                   InvDz*(Var_DG(Dim3_,i,j,kR) - Var_DG(Dim3_,i,j,kR))/(kR - kL)
 
           end do; end do; end do
+       else
+          call stop_mpi(NameSub//': non-cartesian to be implemented')
        end if
-
-    else
-       call stop_mpi(NameSub//': non-cartesian to be implemented')
     end if
 
   end subroutine calc_divergence
@@ -132,8 +135,8 @@ contains
 
     integer, intent(in) :: iBlock
     real,    intent(in) :: Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    integer, intent(in) :: nG
-    real,    intent(out):: &
+    integer, intent(in) :: nG  ! number of ghost cells in Grad_DG
+    real,    intent(inout):: & ! preserve ghost cell values
          Grad_DG(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
     logical, intent(in), optional:: UseBodyCellIn
 
@@ -147,8 +150,8 @@ contains
     UseBodyCell = .false. 
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
-    if(IsCartesian)then
-       if(UseBodyCell .or. .not. body_blk(iBlock)) then
+    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+       if(IsCartesian)then
 
           ! Simple central differencing
 
@@ -159,57 +162,72 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              Grad_DG(Dim1_,i,j,k) = &
                   InvDxHalf*(Var_G(i+1,j,k) - Var_G(i-1,j,k))
-             if(nJ > 1) Grad_DG(Dim2_,i,j,k) = Grad_DG(Dim2_,i,j,k) + &
+             if(nJ > 1) Grad_DG(Dim2_,i,j,k) = &
                   InvDyHalf*(Var_G(i,j+1,k) - Var_G(i,j-1,k))
-             if(nK > 1) Grad_DG(Dim3_,i,j,k) = Grad_DG(Dim3_,i,j,k) + &
+             if(nK > 1) Grad_DG(Dim3_,i,j,k) = &
                   InvDzHalf*(Var_G(i,j,k+1) - Var_G(i,j,k-1))
           end do; end do; end do
-
        else
-          ! One sided differences if the neighbor is inside a body
+          call stop_mpi(NameSub//': non-cartesian to be implemented')
+          !do k=1,nK; do j=1,nJ; do i=1,nI
+          !   VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
+          !
+          !   FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBlock)
+          !   FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
+          !   FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
+          !
+          !   Difference_S(1) = -(Var_G(i-1,j,k) + Var_G(i,j,k))
+          !   Difference_S(2) = +(Var_G(i+1,j,k) + Var_G(i,j,k))
+          !   Difference_S(3) = -(Var_G(i,j-1,k) + Var_G(i,j,k))
+          !   Difference_S(4) = +(Var_G(i,j+1,k) + Var_G(i,j,k))
+          !   Difference_S(5) = -(Var_G(i,j,k-1) + Var_G(i,j,k))
+          !   Difference_S(6) = +(Var_G(i,j,k+1) + Var_G(i,j,k))
+          !
+          !   GradX_C(i,j,k) = sum(FaceArea_DS(x_,:)*Difference_S)*VInvHalf
+          !   GradY_C(i,j,k) = sum(FaceArea_DS(y_,:)*Difference_S)*VInvHalf
+          !   GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
+          !end do; end do; end do
+       end if
+    else
+       ! One sided differences if the neighbor is inside a body
+       
+       ! Set iTrue_G to 1 in used cells and 0 in non-used cells
+       if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
+       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+          iTrue_G = 1
+       elsewhere
+          iTrue_G = 0
+       end where
 
+       if(IsCartesian)then
           InvDx = 1/CellSize_DB(1,iBlock)
           InvDy = 1/CellSize_DB(2,iBlock)
           InvDz = 1/CellSize_DB(3,iBlock)
-
-          ! Set iTrue_G to 1 in used cells and 0 in non-used cells
-          if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
-             iTrue_G = 1
-          elsewhere
-             iTrue_G = 0
-          end where
-
-          ! Where .not.true_cell, all the gradients are zero.
-          ! In true_cell the input to gradient from the face neighbor
-          ! is ignored, if the face neighbor is .not.true_cell, the input
-          ! from the opposite cell is doubled in this case.
 
           do k=1,nK; do j=1,nJ; do i=1,nI
              Grad_DG(:,i,j,k) = 0.0
              if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
              ! Shift to left and right if the neighbor is a true cell
-             iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
-
              ! If at least one neighbor is true, calculate derivative
+             iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
              if(iL /= iR) Grad_DG(Dim1_,i,j,k) = &
                   InvDx*(Var_G(iR,j,k) - Var_G(iL,j,k))/(iR - iL)
 
              if(nJ == 1) CYCLE
              jL = j - iTrue_G(i,j-1,k); jR = j + iTrue_G(i,j+1,k)
-             if(jL /= jR) Grad_DG(Dim2_,i,j,k) = Grad_DG(Dim2_,i,j,k) + &
+             if(jL /= jR) Grad_DG(Dim2_,i,j,k) = &
                   InvDy*(Var_G(i,jR,k) - Var_G(i,jL,k))/(jR - jL)
 
              if(nK == 1) CYCLE
              kL = k - iTrue_G(i,j,k-1); kR = k + iTrue_G(i,j,k+1)
-             if(kL /= kR) Grad_DG(Dim3_,i,j,k) = Grad_DG(Dim3_,i,j,k) + &
+             if(kL /= kR) Grad_DG(Dim3_,i,j,k) = &
                   InvDz*(Var_G(i,j,kR) - Var_G(i,j,kR))/(kR - kL)
 
           end do; end do; end do
+       else
+          call stop_mpi(NameSub//': non-cartesian to be implemented')
        end if
-    else
-       call stop_mpi(NameSub//': non-cartesian to be implemented')
     end if
 
   end subroutine calc_gradient1
