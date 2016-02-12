@@ -32,7 +32,7 @@ module ModUser
   !\
   ! UseVerticalDamping: adds damping to vertical velocity
   ! UseThinRadiation:   adds thin radiative cooling
-  ! InitialBr, InitialBt: initial magnetic field, added through
+  ! InitialBr, InitialBphi: initial magnetic field, added through
   !                      user_initial_perturbation
   ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0 
   !                      if rho> RhoThinCutoff)
@@ -47,7 +47,7 @@ module ModUser
   logical :: UseCoronalField = .false.
   logical :: UseEnergyPert = .false.
   logical :: UseAtmReset = .false.
-  real    :: InitialBr, InitialBt
+  real    :: InitialBr, InitialBphi
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: r_photo
   !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
