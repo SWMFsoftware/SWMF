@@ -2187,7 +2187,7 @@ contains
 
     ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
     ! left, symmetric and right preconditioning, respectively
-    call precond_right_multiblock(Param, &
+    if(Param%DoPrecond) call precond_right_multiblock(Param, &
          nVar, nDim, nI, nJ, nK, nBlock, Jac_VVCIB, x_I)
 
     if(DoTest)write(*,*)NameSub,&
