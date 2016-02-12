@@ -92,12 +92,15 @@ module ModAdvance
   real, allocatable :: tmp1_BLK(:,:,:,:)
   real, allocatable :: tmp2_BLK(:,:,:,:)
 
+
   real, allocatable :: time_BLK(:,:,:,:)
 
-  ! Arrays for the total electric field
-  real, allocatable :: Ex_CB(:,:,:,:)
-  real, allocatable :: Ey_CB(:,:,:,:)
-  real, allocatable :: Ez_CB(:,:,:,:)
+  ! Electric field including numerical flux
+  real, allocatable :: ExNum_CB(:,:,:,:)
+  real, allocatable :: EyNum_CB(:,:,:,:)
+  real, allocatable :: EzNum_CB(:,:,:,:)
+
+  real, public, allocatable:: Efield_DGB(:,:,:,:,:)
 
   ! Local cell-centered source terms and divB.
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
@@ -180,10 +183,10 @@ contains
   subroutine init_mod_advance
 
     ! These arrays may need allocation depending on the parameters
-    if(DoCalcElectricField .and. .not.allocated(Ex_CB))then
-       allocate(Ex_CB(nI,nJ,nK,MaxBlock))
-       allocate(Ey_CB(nI,nJ,nK,MaxBlock))
-       allocate(Ez_CB(nI,nJ,nK,MaxBlock))
+    if(DoCalcElectricField .and. .not.allocated(ExNum_CB))then
+       allocate(ExNum_CB(nI,nJ,nK,MaxBlock))
+       allocate(EyNum_CB(nI,nJ,nK,MaxBlock))
+       allocate(EzNum_CB(nI,nJ,nK,MaxBlock))
     end if
 
     if(UseStableImplicit) then
@@ -282,9 +285,10 @@ contains
     if(allocated(EDotFA_X))        deallocate(EDotFA_X)
     if(allocated(EDotFA_Y))        deallocate(EDotFA_Y)
     if(allocated(EDotFA_Z))        deallocate(EDotFA_Z)
-    if(allocated(Ex_CB))           deallocate(Ex_CB)
-    if(allocated(Ey_CB))           deallocate(Ey_CB)
-    if(allocated(Ez_CB))           deallocate(Ez_CB)
+    if(allocated(ExNum_CB))        deallocate(ExNum_CB)
+    if(allocated(EyNum_CB))        deallocate(EyNum_CB)
+    if(allocated(EzNum_CB))        deallocate(EzNum_CB)
+    if(allocated(Efield_DGB))      deallocate(Efield_DGB)
     if(allocated(Source_VCB))      deallocate(Source_VCB)
     if(allocated(FluxCenter_VGD))  deallocate(FluxCenter_VGD)
     if(allocated(Weight_IVX))      deallocate(Weight_IVX)
