@@ -197,6 +197,13 @@ contains
        !     iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBc)
+       case('gradpot')
+          ! set boundary condition for electric potential as
+          ! grad(potential) = E
+          if(nVarState /= 1) &
+               call stop_mpi(NameSub//': gradpot BC is for scalar variable only')
+          call set_gradpot_bc
+
        case('coupled')
           ! For SC-IH coupling the extra wave energy variable needs a BC
           if(NameThisComp == 'SC') call set_float_bc(ScalarFirst_, ScalarLast_)
@@ -365,6 +372,58 @@ contains
     deallocate(SymmCoeff_V)
 
   contains
+
+    !==========================================================================
+    subroutine set_gradpot_bc
+
+      ! Pot(ghost) = Pot(inside2) + (x_ghost - x_inside2).E_inside1
+
+      use ModAdvance, ONLY: Efield_DGB
+      use BATL_lib,   ONLY: Xyz_DGB, j2_, k2_, nJm1_, nKm1_
+
+      integer:: i, j, k
+      !----------------------------------------------------------------------
+
+      select case(iSide)
+      case(1)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,2,j,k) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,2,j,k,iBlock)) &
+                 *Efield_DGB(:,1,j,k,iBlock))
+         end do; end do; end do
+      case(2)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,nI-1,j,k) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,nI-1,j,k,iBlock)) &
+                 *Efield_DGB(:,nI,j,k,iBlock))
+         end do; end do; end do
+      case(3)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,i,j2_,k) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j2_,k,iBlock)) &
+                 *Efield_DGB(:,i,1,k,iBlock))
+         end do; end do; end do
+      case(4)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,i,nJm1_,k) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,nJm1_,k,iBlock)) &
+                 *Efield_DGB(:,i,nJ,k,iBlock))
+         end do; end do; end do
+      case(5)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,i,j,k2_) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,k2_,iBlock)) &
+                 *Efield_DGB(:,i,j,1,iBlock))
+         end do; end do; end do
+      case(6)
+         do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+            State_VG(1,i,j,k) = State_VG(1,i,j,nKm1_) + &
+                 sum( (Xyz_DGB(:,i,j,k,iBlock) - Xyz_DGB(:,i,j,nKm1_,iBlock)) &
+                 *Efield_DGB(:,i,j,nK,iBlock))
+         end do; end do; end do
+      end select
+
+    end subroutine set_gradpot_bc
 
     !==========================================================================
     subroutine set_float_bc(iVarMin, iVarMax)
