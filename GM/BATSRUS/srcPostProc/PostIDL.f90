@@ -32,6 +32,7 @@ program PostIDL
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
   real :: t
   real, allocatable :: Coord_DC(:,:,:,:), State_VC(:,:,:,:)
+  real, allocatable :: GenCoord_DI(:,:) ! gen. coords for unstructured grids
   real, allocatable :: w1(:), eqpar(:)
   real, allocatable :: Param_I(:)
 
@@ -274,14 +275,19 @@ program PostIDL
   dyperdx=dxyzmin(2)/dxyzmin(1); dzperdx=dxyzmin(3)/dxyzmin(1)
 
   ! Allocate State_VC and Coord_DC, the arrays of variables and coordinates
-  allocate(w1(nw),State_VC(nw,nx,ny,nz),Coord_DC(nDim,nx,ny,nz),STAT=iError)
+  allocate(w1(nw),State_VC(nw,nx,ny,nz), Coord_DC(nDim,nx,ny,nz), STAT=iError)
   if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate arrays'
+
+  if(.not.structured)then     
+     allocate(GenCoord_DI(nDim,nCell), STAT=iError)
+     if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate enCoord_DI'
+  end if
 
   if(read_binary.and.nByteRealRead==4) allocate(State4_V(nw))
   if(read_binary.and.nByteRealRead==8) allocate(State8_V(nw))
 
   
-  !Initialize State_VC 
+  ! Initialize State_VC and Coord_DC
   State_VC = 0.0
   Coord_DC = 0.0
 
@@ -333,11 +339,8 @@ program PostIDL
         countcell = countcell + 1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
-        if(TypeGeometry == 'cartesian' .or. filenamehead(1:3) == 'cut')then
-           XyzGen_D = Xyz_D
-        else
-           call set_gen_coord
-        end if
+        ! Set XyzGen_D, possibly modify Xyz_D too
+        call set_gen_coord
 
         if(.not.structured)then
 
@@ -348,6 +351,7 @@ program PostIDL
            State_VC(:,iCell,1,1) = w1
            do iDim = 1, nDim
               Coord_DC(iDim,iCell,1,1) = Xyz_D(icutdim(iDim))
+              GenCoord_DI(iDim,iCell)  = XyzGen_D(icutdim(iDim))
            end do
 
            ! We are finished with unstructured
@@ -462,7 +466,7 @@ program PostIDL
 
   ! Param_I is the combination of eqpar and specialpar
   allocate(Param_I(neqpar+nspecialpar))
-  do i=1,neqpar
+  do i = 1, neqpar
      Param_I(i)=eqpar(i)
   end do
   do i = 1, nSpecialPar
@@ -470,15 +474,15 @@ program PostIDL
   end do
   
   if(.not.structured)then
-     ! Sort points based on coordinates
+     ! Sort points based on (generalized) coordinates
 
      allocate(Sort_I(nx), iSort_I(nx), STAT=iError)
      if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate sort arrays'
 
-     ! Form sorting function
-     Sort_I = Coord_DC(1,:,1,1)
-     if(nDim > 1) Sort_I = Sort_I + exp(1.0)*Coord_DC(2,:,1,1)
-     if(nDim > 2) Sort_I = Sort_I + exp(2.0)*Coord_DC(3,:,1,1)
+     ! Form sorting function from the generalized coordinates
+     Sort_I = GenCoord_DI(1,:)
+     if(nDim > 1) Sort_I = Sort_I + exp(1.0)*GenCoord_DI(2,:)
+     if(nDim > 2) Sort_I = Sort_I + exp(2.0)*GenCoord_DI(3,:)
 
      ! Sort points according to the sorting function
      call sort_quick(nx, Sort_I, iSort_I)
@@ -487,6 +491,8 @@ program PostIDL
 
      ! Average out coinciding points
      if(nDim < 3) then
+        GenCoord_DI = GenCoord_DI(:,iSort_I)
+
         allocate(StateSum_V(nw), CellSizeMin_D(nDim))
         CellSizeMin_D = dxyzmin(icutdim(1:nDim))
         i = 1
@@ -495,7 +501,8 @@ program PostIDL
            StateSum_V = State_VC(:,i,1,1)
            nSum       = 1
            j = i + 1
-           do while( sum(abs(Coord_DC(:,j,1,1)-Coord_DC(:,i,1,1))/CellSizeMin_D) < 0.01)
+           do while( sum(abs(GenCoord_DI(:,j) - GenCoord_DI(:,i)) &
+                /CellSizeMin_D) < 0.01)
               StateSum_V = StateSum_V + State_VC(:,j,1,1)
               nSum = nSum + 1
               j = j + 1
@@ -510,7 +517,7 @@ program PostIDL
            k = k + 1
            i = j 
         end do
-        deallocate(StateSum_V, CellSizeMin_D)
+        deallocate(StateSum_V, CellSizeMin_D, GenCoord_DI)
 
         ! Special Judgement for the last point
         if(j == nx) then
@@ -542,10 +549,10 @@ program PostIDL
        CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
        VarIn_VIII = State_VC(:,1:nx,:,:))
 
-  deallocate(Coord_DC,State_VC,Param_I)
+  deallocate(Coord_DC, State_VC, Param_I)
   deallocate(w1, eqpar)
-  if(read_binary.and.nByteRealRead==4) deallocate(State4_V)
-  if(read_binary.and.nByteRealRead==8) deallocate(State8_V)
+  if(allocated(State4_V)) deallocate(State4_V)
+  if(allocated(State8_V)) deallocate(State8_V)
 
   write(*,'(a)')'PostIDL finished'
 
@@ -575,7 +582,9 @@ contains
 
   subroutine set_gen_coord
 
-    ! Calculate the generalized coordinates mostly for lookup
+    ! Calculate the generalized coordinates XyzGen_D from Xyz_D
+    ! mostly for lookup
+
     real:: rCyl ! distance from axis Z
 
     ! Toroidal variables
@@ -593,6 +602,12 @@ contains
     character(len=10), allocatable:: NameVar_V(:)
     character(len=10)             :: NameVar, NameVector
     !---------------------------------------------------------------------
+    if(TypeGeometry == 'cartesian' .or. filenamehead(1:3) == 'cut')then
+       XyzGen_D = Xyz_D
+       
+       RETURN
+    end if
+
     if(TypeGeometry(1:5)=='round')then
 
        XyzGen_D = sqrt(sum(Xyz_D**2))/maxval(abs(Xyz_D)) * Xyz_D
