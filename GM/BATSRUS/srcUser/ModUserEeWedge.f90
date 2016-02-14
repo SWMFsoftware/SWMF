@@ -422,7 +422,8 @@ contains
     case(1)
        select case(TypeBc)
        case('fixvalue')
-
+          ! This boundary condition needs additional entropy influx
+          ! to keep convection going
           do i = MinI, 0
              call interpolate_lookup_table(iTableInitialState, &
                   r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &

@@ -4,143 +4,102 @@ T			DoEcho
 #INCLUDE
 RESTART.in
 
-#PROGRESS
-10                      DnProgressShort
-100                     DnProgressLong
-
-#TIMING
-T			UseTiming
--2			DnTiming
--1			nDepthTiming
-tree			TypeTimingReport
-
-#SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-180.                    DtSaveRestart
-
 #TIMEACCURATE
-T                       DoTimeAccurate
+T			DoTimeAccurate 
 
-#BEGIN_COMP EE -------------------------------------------------------------
+#BEGIN_COMP EE --------------------------------------------------------------
 
 #INCLUDE
 EE/restartIN/restart.H
 
-#GRAVITY
-T			UseGravity
-3			GravityDir
--273.066667             GravitySi [m/s^2]
+#STAR
+1.0			RadiusStar
+1.0			MassStar
+0.0			RotationPeriodStar
+
+#FACEBOUNDARY
+6			MinFaceBoundary
+-2			MaxFaceBoundary
 
 #OUTERBOUNDARY
-reflect			TypeBcEast
-reflect			TypeBcWest
+fixvalue		TypeBcEast
+no_inflow		TypeBcWest
 reflect			TypeBcSouth
 reflect			TypeBcNorth
-fixvalue   	 	TypeBcBottom
-no_inflow   		TypeBcTop
-
-#NORMALIZATION
-READ			TypeNormalization
-1.5E05			No2SiUnitx
-6.4E03			No2SiUnitU
-2.7E-4			No2SiUnitRho
+reflect			TypeBcBottom
+reflect			TypeBcTop
 
 #USERFLAGS
-F                       UseUserInnerBcs
-T                       UseUserSource
-T                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchInput
-F                       UseUserB0
-T                       UseUserInitSession
-T                       UseUserUpdateStates
+F			UseUserInnerBcs
+T			UseUserSource
+T			UseUserPerturbation
+T			UseUserOuterBcs 
+T			UseUserICs
+F			UseUserSpecifyRefinement
+F			UseUserLogFiles
+T			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchInput
+F			UseUserB0
+T			UseUserInitSession
+T			UseUserUpdateStates
 
-#USERINPUTBEGIN -------------------
+#USERINPUTBEGIN
 
 #RADMHD
-0.0                     z_photo
-40.                     UnsignedFluxHeight
-T                       UseThinRadiation
-F                       UseCoronalField
-5.e-6                   RhoThinCutoff
-F                       UseVerticalDamping
-80.                     TimeVerticalDamping
-0.0                     TemperatureGradient
-0.5                     DtUpdateFlux
-F                       UseUniformInitialState
-F                       UseUniformT
-F                       UseEnergyPert
-5e-4                    InitialDensity
-6e4                     InitialTemperature
-0.                      InitialBx
-0.                      InitialBy
-0.                      InitialBz
-6.e8                    NumberDensFloor
+1.0			r_photo
+1.01			UnsignedFluxHeight
+T			UseThinRadiation
+F			UseCoronalField
+5.e-6			RhoThinCutoff
+F			UseVerticalDamping
+80.			TimeVerticalDamping
+F			UseAtmReset
+0.5			DtUpdateFlux
+F			UseEnergyPert
+0.			InitialBr
+0.			InitialBphi
+6e5			NumberDensFloor
 
 #ROPE
-T                       UseRope
-0                       x2c_rope
--66.67                  x3c_rope
-7.07                    ra_rope
--1.5                    qfac_rope
-4.e1                    lamb_rope
-1.                      buoyancy_rope
-3.6e1                   b0_rope_rope
+T			UseRope
+0.9714			x2c  Rs
+0.0128			x3c  Rs
+0.00806			ra   Rs
+1.0			qfac
+0.035			lamb Rs
+-0.031			x_buoyancy Rs
+1.0			buoyancy
+1.0e5			b0_rope Gauss
 
-#USERINPUTEND ---------------------
+#USERINPUTEND
 
-#LOOKUPTABLE
-RhoUzExtraEP(Z,Const)   NameTable
-load                    NameCommand
-InitialState.dat        NameFile
-ascii                   TypeFile
-
-#LOOKUPTABLE
-eos(T,rho)		NameTable
-load                    NameCommand
-EOS.dat                 NameFile
-ascii                   TypeFile
-
-#LOOKUPTABLE
-prl(T,Const)            NameTable
-load                    NameCommand
-chianti.dat             NameFile
-ascii                   TypeFile
-
-PLASMA
-1.23839			AverageIonMass [amu]
-1.08359			AverageIonCharge [e]
-1.0			ElectronTemperatureRatio
-
-#CORONALHEATING
-unsignedflux            TypeCoronalHeating
+CORONALHEATING
+unsignedflux		TypeCoronalHeating
 4640.			Decaylength
 1.			HeatNormalization
 
-#MESSAGEPASS
-dir			TypeMessagePass
+#LOOKUPTABLE
+RhoExtraEP(R)		NameTable
+load			NameCommand
+InitialStateSph.dat	NameFile
+ascii			TypeFile
 
-#AMR
--1			DnRefine
-F			DoAutoRefine
-0.0			PercentCoarsen
-50.0			PercentRefine
-100000   		MaxTotalBlocks
+#LOOKUPTABLE
+eos(T,rho)		NameTable
+load			NameCommand
+EOS.dat			NameFile
+ascii			TypeFile
 
-#AMRLEVELS
-0                       MinBlockLevel
-99                      MaxBlockLevel
-F			DoFixBodyLevel
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+SC/Param/RadCoolCorona.dat
+ascii			TypeFile
 
 #SCHEME
-2			nORDER
-Linde                   TypeFlux
+2			nOrder (1 or 2)
+Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
@@ -148,51 +107,36 @@ mc3			TypeLimiter
 2			nStage
 0.8			CflExpl
 
-#DIVB
-T			UseDivbSource
-F			UseDivbDiffusion
-F			UseProjection
-F			UseConstrainB
-
 #SAVERESTART
-T                       DoSaveRestart  
--1                      DnSaveRestart
-180.                    DtSaveRestart
+T			DoSaveRestart  
+-1			DnSaveRestart
+300.			DtSaveRestart
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR   			StringLog
+VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho Ux Uy Uz E Pmin Pmax        NameLogVars
-4.0  10.0		rLog
- 
-#IOUNITS
-HELIOSPHERIC            TypeIoUnit
+rho Ux Uy Uz E Pmin Pmax	NameLogVars
+4.0  10.0      	    	rLog
 
 #SAVEPLOT
-2                       nPlotfiles
-x=0 VAR tec             StringPlot
--1                      DnSavePlot
-10.                    	DtSavePlot
-rho Ux Uy Uz P tempe Bx By Bz       NameVars
-g eta                   NamePars
-cut VAR tec		StringPlot
+1			nPlotFiles
+x=0 VAR idl		StringPlot
 -1  			DnSavePlot
-10.			DtSavePlot
--35.			xMinCut
-35.			xMaxCut
--35.			yMinCut
-35.			yMaxCut
--17.4			zMinCut
--17.3			zMaxCut
-rho Uz P tempe Bx By Bz	NameVars
-g eta	    		NamePars
+10.0			DtSavePlot
+0			DxSavePlot
+rho ux uy uz bx by bz tempe p
+g rbody
 
 SAVEINITIAL
 T
 
-#END_COMP EE ---------------------------------------------------------------
+#END_COMP EE ----------------------------------------------------------------
+
+#COMPONENT
+SC			NameComp
+F			UseComp
 
 #STOP
 10			MaxIteration

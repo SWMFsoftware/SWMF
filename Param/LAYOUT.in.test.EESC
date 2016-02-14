@@ -1,0 +1,6 @@
+This layout is efficient to run EE and SC together.
+
+#COMPONENTMAP
+EE    0  9999    1
+SC    0  9999    1
+#END
