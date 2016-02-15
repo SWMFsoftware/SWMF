@@ -38,6 +38,7 @@ module IH_wrapper
 
   ! Coupling with SP
   public:: IH_get_for_sp
+  public:: IH_get_line
   public:: IH_get_a_line_point
 
   ! Coupling with GM
@@ -243,6 +244,17 @@ contains
 
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
+  !===================================================================!
+  subroutine IH_get_line(nLine, CoordOrigin_DI, NameVar, ParticleOut_II)
+    integer,              intent(in) :: nLine
+    real,                 intent(in) :: CoordOrigin_DI(3, 1)
+    character(len=*),     intent(in) :: NameVar
+    real,    pointer, intent(out):: ParticleOut_II(:,:)
+
+    character(len=*), parameter :: NameSub='IH_get_line'
+    !----------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_line
   !===================================================================!
   subroutine IH_get_a_line_point(&
        nPartial,iGetStart,Get,W,State_V,nVar)
