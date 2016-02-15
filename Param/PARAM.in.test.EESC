@@ -365,7 +365,7 @@ T			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
 
-#COUPLE1
+#COUPLE2
 EE			NameSource
 SC			NameTarget
 -1			DnCouple
