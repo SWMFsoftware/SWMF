@@ -1955,7 +1955,7 @@ contains
     !    the original position array Pos_DI was given in 2)
 
     use IH_BATL_lib,     ONLY: Xyz_DGB, nBlock, Unused_B, &
-         IsSpherical, nI, nJ, nK, CoordMin_DB, CellSize_DB
+         IsRLonLat, nI, nJ, nK, CoordMin_DB, CellSize_DB
     use IH_ModGeometry,  ONLY: r_BLK
     use IH_ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use IH_ModMain,      ONLY: UseB0
@@ -1980,7 +1980,7 @@ contains
 
     character(len=*), parameter :: NameSub='IH_get_ee_region'
     !--------------------------------------------------------------------------
-    if(.not.IsSpherical) &
+    if(.not.IsRLonLat) &
          call CON_stop(NameSub//' works for spherical grid only')
 
     DoCountOnly = nPoint < 1
