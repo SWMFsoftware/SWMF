@@ -111,13 +111,13 @@ contains
           call read_var('LatMin', LatMin)
           call read_var('LatMax', LatMax)
           if(LatMax <= LatMin)&
-               call MPI_stop('Origin surface grid is inconsistent:'//NameSub)
+               call CON_stop('Origin surface grid is inconsistent:'//NameSub)
           DLat = (LatMax - LatMin) / nLat
 
           call read_var('LonMin', LonMin)
           call read_var('LonMax', LonMax)
           if(LonMax <= LonMin)&
-               call MPI_stop('Origin surface grid is inconsistent:'//NameSub)
+               call CON_stop('Origin surface grid is inconsistent:'//NameSub)
           DLon = (LonMax - LonMin) / nLon
        case('#DORUN')
           call read_var('DoRun',DoRun)
@@ -151,6 +151,7 @@ contains
   !============================================================================
 
   subroutine initialize
+    use ModUtilities, ONLY: check_allocate
     ! allocate arrays used in this model
     integer:: iError
     !
@@ -161,15 +162,15 @@ contains
     ! distribute nodes between processors
     !/
     if(nNode < nProc)&
-         call MPI_stop('There are less processor than field lines:'//NameSub)
+         call CON_stop('There are less processor than field lines:'//NameSub)
     nBlock = ((iProc+1)*nNode) / nProc - (iProc*nNode) / nProc
     !\
     ! check consistency
     !/
     if(nLat <= 0 .or. nLon <= 0)&
-         call MPI_stop('Origin surface grid is invalid:'//NameSub)
+         call CON_stop('Origin surface grid is invalid:'//NameSub)
     if(iParticleMin > 0 .or. iParticleMax < 0)&
-         call MPI_stop('Origin surface is not included:'//NameSub)
+         call CON_stop('Origin surface is not included:'//NameSub)
     !\
     ! allocate data and grid containers
     !/

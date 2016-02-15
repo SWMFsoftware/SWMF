@@ -190,7 +190,7 @@ contains
        iParticleLast = iParticleMax
        do while(State_VIB(1, iParticleLast, iBlock) < 0)
           if(iParticleLast == iParticleMin)&
-               call MPI_stop(NameSub//': Line is not found')
+               call CON_stop(NameSub//': Line is not found')
           iParticleLast = iParticleLast - 1
        end do
        ! get its HGI coordinates
@@ -216,12 +216,12 @@ contains
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     do iParticle = 1, nParticle
-       iLine  = nint(ParticleData_II(1, iParticle))
-       iIndex = nint(ParticleData_II(2, iParticle))
+       iLine  = nint(ParticleData_II(4, iParticle))
+       iIndex = nint(ParticleData_II(5, iParticle))
        if(iGrid_IA(Proc_, iLine) /= iProc)&
-            call MPI_stop(NameSub//': Incorrect message pass')
+            call CON_stop(NameSub//': Incorrect message pass')
        State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)) = &
-            ParticleData_II(3:2+nDim, iParticle)
+            ParticleData_II(1:3, iParticle)
     end do
   end subroutine SP_put_line
 

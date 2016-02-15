@@ -20,6 +20,9 @@ module SP_wrapper
   public:: SP_get_line_param
   public:: SP_put_input_time
   public:: SP_put_from_mh
+  public:: SP_get_line_origin
+  public:: SP_get_interface
+  public:: SP_put_line
 
 contains
 
@@ -91,5 +94,20 @@ contains
     call CON_stop('Can not get line parameters from SP')
 
   end subroutine SP_get_line_param
-
+  !===================================================================
+  subroutine SP_get_line_origin (CoordOriginOut_DA)
+    real, intent(out):: CoordOriginOut_DA(3, 1)
+    call CON_stop('Can not get line origins from SP')
+  end subroutine SP_get_line_origin
+  !===================================================================
+  subroutine SP_get_interface(CoordInterfaceOut_DA)
+    real, intent(out):: CoordInterfaceOut_DA(3, 1)
+    call CON_stop('Can not get line interface from SP')
+  end subroutine SP_get_interface
+  !===================================================================
+  subroutine SP_put_line(nParticle, ParticleData_II)
+    integer, intent(in):: nParticle
+    real,    intent(in):: ParticleData_II(5, nParticle)
+    call CON_stop('Can not put line parameters from SP')
+  end subroutine SP_put_line
 end module SP_wrapper
