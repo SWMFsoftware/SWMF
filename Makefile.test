@@ -651,7 +651,7 @@ test5:
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
-	./Config.pl -o=EE:u=EeWedge,e=MhdEosRad
+	./Config.pl -o=EE:u=EeWedge,e=MhdEos
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -g=EE:10,10,10,500,1,SC:4,4,4,1200,1
 	${MAKE} SWMF
@@ -674,13 +674,24 @@ test5_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_restart; \
 	               mv runlog_restart RESULTS/run_restart
+	cd ${TESTDIR}; cp Param/PARAM.in.test.SC PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/run_SC
+	cd ${TESTDIR}; cp Param/PARAM.in.test.EESC PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/coupled
 
 test5_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b \
-		${TESTDIR}/RESULTS/run_restart/EE/log_n000011.log \
-		output/test5/EE_log_n000011.log \
+		${TESTDIR}/RESULTS/coupled/EE/log_n000010.log \
+		output/test5/EE.log \
 		> test5_ee.diff)
-	ls -l test5_ee.diff
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/RESULTS/coupled/SC/log_n000070.log \
+		output/test5/SC.log \
+		> test5_sc.diff)
+	ls -l test5_*.diff
 
 ### Test6: GM+IE+IM=CRCM ###
 
