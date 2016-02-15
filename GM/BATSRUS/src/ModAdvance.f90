@@ -125,7 +125,8 @@ module ModAdvance
   logical:: UseLowOrder     = .false.  ! some faces are low order
   logical, allocatable:: &
        UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
-
+  logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
+  
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
@@ -176,6 +177,17 @@ module ModAdvance
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
 
+  ! The index of block type features. 
+  integer, parameter :: &
+       iNotSkippedBlock     = 1, & ! Skipped block or not.
+       iTrueBlock           = 2, & ! True block or not.
+       iImplBlock           = 3, & ! Implicit or explicit.
+       iSemiImplBlock       = 4, & ! Semi-implicit or not.
+       iFieldLineThreadsBlock=5, & ! Threaded file line BC or not.
+       iPicBlock            = 6, & ! Overlaped with PIC or not.
+       iSteadyBlock         = 7, & ! Steady block or not.
+       iSteadyBoundBlock    = 8, & ! Surrounding the evolving blocks or not.
+       iHighOrderBlock      = 9    ! Use high-order scheme or not. 
 contains
 
   !============================================================================
@@ -244,6 +256,8 @@ contains
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
+    allocate(IsLowOrderOnly_B(MaxBlock))
+    
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
 
@@ -297,6 +311,7 @@ contains
     if(allocated(UseLowOrder_X))   deallocate(UseLowOrder_X)
     if(allocated(UseLowOrder_Y))   deallocate(UseLowOrder_Y)
     if(allocated(UseLowOrder_Z))   deallocate(UseLowOrder_Z)
+    if(allocated(IsLowOrderOnly_B))deallocate(IsLowOrderOnly_B)
     
     if(iProc==0)then
        call write_prefix
@@ -304,5 +319,7 @@ contains
     end if
 
   end subroutine clean_mod_advance
+
+  !============================================================================
 
 end module ModAdvance

@@ -16,7 +16,8 @@ module ModPIC
 
   public:: pic_read_param
   public:: pic_init_region
-
+  public:: pic_find_block
+  
   logical, public:: UsePic = .false.
 
   ! Local variables
@@ -37,6 +38,8 @@ module ModPIC
   real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
   real, public, allocatable:: XyzPic0_DI(:,:)
 
+  ! Is the block overlaped with PIC domain?
+  logical, public,allocatable:: isPicBlock_B(:)
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
@@ -198,5 +201,49 @@ contains
        end do
     end if
   end subroutine pic_init_region
+  !===========================================================================
+
+  subroutine pic_find_block()
+    ! Find out the blocks that overlaped with PIC region(s). 
+    use ModProcMH, ONLY: iProc
+    use BATL_lib,  ONLY: nDim, MaxDim, nBlock, MaxBlock, find_grid_block, &
+         x_, y_, z_
+    integer:: nIJK_D(1:MaxDim), ijk_D(1:MaxDim)
+    real:: Xyz_D(1:MaxDim)
+    integer:: iRegion, iBlock, i, j, k, iProcFound
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'pic_find_block'
+    !----------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' is called'
+
+    if(.not.allocated(isPicBlock_B)) allocate(isPicBlock_B(MaxBlock))
+    isPicBlock_B = .false.
+    nIJK_D = 1; Xyz_D = 0
+    
+    do iRegion = 1, nRegionPic
+       ! nIJK_D includes two ghost cells. 
+       nIJK_D(1:nDim) = int(&
+            (XyzMaxPic_DI(1:nDim,iRegion)- XyzMinPic_DI(1:nDim,iRegion)) &
+            /DxyzPic_DI(1:nDim,iRegion) + 0.5)
+
+       if(DoTestMe) write(*,*) NameSub,' iRegion = ',iRegion, &
+            ' nIJK_D = ',nIJK_D(1:nDim)
+
+       do k=1, nIJK_D(z_); do j=1, nIJK_D(y_); do i=1, nIJK_D(x_)
+          ! Loop through all the PIC node points. 
+          ijk_D(x_) = i - 1; ijk_D(y_) = j - 1; ijk_D(z_) = k - 1
+          Xyz_D(1:nDim) = XyzMinPic_DI(1:nDim,iRegion) &
+               + ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
+          call find_grid_block(Xyz_D, iProcFound, iBlock)
+          if(iProcFound==iProc) isPicBlock_B(iBlock) = .true.
+          !if(DoTestMe) write(*,*) 'i,j,k= ',ijk_D,' x,y,z= ',Xyz_D
+       enddo; enddo; enddo
+       
+    enddo
+    
+    if(DoTest) write(*,*)'iProc= ',iProc,' isPicBlock= ', isPicBlock_B(1:nBlock)
+  end subroutine pic_find_block
   !===========================================================================
 end module ModPIC

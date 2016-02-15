@@ -8,7 +8,7 @@ module ModFaceValue
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrderOnly, UseLowOrder, &
-       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
+       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z, IsLowOrderOnly_B
 
   implicit none
 
@@ -790,8 +790,14 @@ contains
 
     UseTrueCell = body_BLK(iBlock)
 
+
+    
     ! Set variables related to low vs. high order scheme
-    if(nOrder>2) call set_low_order_face
+    if(nOrder>2) then
+       call set_low_order_face
+    else
+       IsLowOrderOnly_B(iBlock) = .true.
+    endif
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
@@ -2880,7 +2886,7 @@ contains
       !-------------------------------------------------------------------
       UseLowOrderOnly = .false.
       UseLowOrder = UseTrueCell .or. allocated(iRegionLowOrder_I)
-
+      IsLowOrderOnly_B(iBlock) = .false.
       if(.not.UseLowOrder) RETURN
 
       if(.not.allocated(UseLowOrder_X)) then
@@ -2927,6 +2933,7 @@ contains
          end if
       end if
 
+      if(UseLowOrderOnly) IsLowOrderOnly_B(iBlock) = .true.
     end subroutine set_low_order_face
 
   end subroutine calc_face_value
