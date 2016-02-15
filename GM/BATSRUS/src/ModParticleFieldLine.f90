@@ -70,7 +70,7 @@ module ModParticleFieldLine
 
   ! keep track of number of particles per field line
   integer :: nParticleFieldLine_I(nFieldLineMax) = 0
-  integer :: iParticleFieldLineOffset_I(nFieldLineMax) = 0
+!  integer :: iParticleFieldLineOffset_I(nFieldLineMax) = 0
 
   !\
   ! initialization related info
@@ -120,6 +120,8 @@ contains
              do iLine = 1, nLineInit; do iDim = 1, MaxDim
                 call read_var('XyzLineInit_DI', XyzLineInit_DI(iDim, iLine))
              end do; end do
+          elseif(index(StringInitMode, 'import') > 0)then
+             ! do nothing: particles are imported from elsewhere
           else
              call stop_mpi(NameSub //": unknown initialization mode")
           end if
@@ -134,15 +136,16 @@ contains
     ! allocate containers for particles
     integer:: iLine ! loop variable
     !------------------------------------------------------------------------
-    Particle_I(KindReg_)%nParticleMax = 10000 * nLineInit
-    Particle_I(KindEnd_)%nParticleMax = nLineInit
+    Particle_I(KindReg_)%nParticleMax = 10000 * nFieldLineMax
+    Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
     Particle_I(KindReg_)%nVar   = nVarParticle
     Particle_I(KindEnd_)%nVar   = nVarParticle
     Particle_I(KindReg_)%nIndex = nIndexParticle
     Particle_I(KindEnd_)%nIndex = nIndexParticle
     call allocate_particles
-    ! extract initial field lines
-    call extract_particle_line(nLineInit, XyzLineInit_DI)
+    if(nLineInit > 0)&
+         ! extract initial field lines
+         call extract_particle_line(nLineInit, XyzLineInit_DI)
   end subroutine init_particle_line
 
   !==========================================================================
@@ -192,6 +195,8 @@ contains
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
     nFieldLine    = nFieldLine + nFieldLineIn
+    if(nFieldLine > nFieldLineMax)&
+         call CON_stop('Limit for number of particle field lines exceeded')
     do iFieldLine = 1, nFieldLineIn
        call start_line(XyzStart_DI(:, iFieldLine), iFieldLine)
     end do
