@@ -229,7 +229,7 @@ contains
 !    end if
 !    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
 
-  contains
+!  contains
   end subroutine couple_mh_sp_init
   !==================================================================!
   subroutine transform_to_sp_from(iComp)
