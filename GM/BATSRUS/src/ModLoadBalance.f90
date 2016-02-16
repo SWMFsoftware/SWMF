@@ -220,7 +220,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use BATL_lib,      ONLY: Unused_BP
   use ModParallel
   use ModMpi
-  use ModPIC, ONLY: UsePic, pic_find_block, isPicBlock_B, DoBalancePicBlock
+  use ModPIC, ONLY: UsePic, pic_find_node, IsPicNode_A, DoBalancePicBlock
   
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl, IsCartesianGrid, iNode_B
@@ -304,7 +304,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         if(TypeSemiImplicit(1:6) == 'resist' .and. nBlockSemi >= 0) &
              IsSemiImplBlock_B(iBlockFromSemi_B(1:nBlockSemi)) = .true.        
 
-        if(UsePic .and. DoBalancePicBlock) call pic_find_block()
+        if(UsePic .and. DoBalancePicBlock .and. IsNewBlock) call pic_find_node()
         do iBlock = 1, nBlock
            iType = 0
            ! 9 criterions are used to decide the type of a block.
@@ -352,7 +352,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
               ! PIC region
                iCrit = iPicBlock
                if(UsePic .and. DoBalancePicBlock) then
-                  if(IsPicBlock_B(iBlock)) iType = iType + 2**(iCrit-1)
+                  if(IsPicNode_A(iNode_B(iBlock))) iType = iType + 2**(iCrit-1)
                endif
 
               ! Steady block
