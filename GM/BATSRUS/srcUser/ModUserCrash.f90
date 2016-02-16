@@ -223,11 +223,13 @@ module ModUser
 
   ! Variables for NLTE tables
   logical :: UseTableNLTE = .false.
-  logical :: UseTableNLTE_I(0:MaxMaterial-1) = .false.
+  logical :: UseTableOpacNLTE_I(0:MaxMaterial-1) = .false.
+  logical :: UseTableEosNLTE_I(0:MaxMaterial-1) = .false.
+  integer :: iTableOpacNLTE_I(0:MaxMaterial-1) = -1
+  integer :: iTableEosNLTE_I(0:MaxMaterial-1) = -1
   real :: TeDim_NLTE = 100.0  ! eV
   real :: NiDim_NLTE = 1.0e22 ! 1/cm3
   real :: TeSi_NLTE, NiSi_NLTE
-  integer :: iTableOpacityNLTE_I(0:MaxMaterial-1) = -1
 
 contains
 
@@ -410,6 +412,7 @@ contains
 
        case("#NLTETABLE")
           ! If Te < Te_NLTE AND Ni > Ni_NLTE THEN use LTE
+          ! This does not work together with the #NLTE or #MIXEDCELL command
           call read_var('UseTableNLTE', UseTableNLTE)
           call read_var('TeDim_NLTE', TeDim_NLTE) ! eV
           call read_var('NiDim_NLTE', NiDim_NLTE) ! 1/cm3
@@ -2308,16 +2311,25 @@ contains
        NiSi_NLTE = NiDim_NLTE*1e6
 
        do iMaterial = 0, nMaterial - 1
-          iTableOpacityNLTE_I(iMaterial) = &
+          iTableOpacNLTE_I(iMaterial) = &
                i_lookup_table(NameMaterial_I(iMaterial)//'_opac_NLTE')
-          if(iTableOpacityNLTE_I(iMaterial) > 0)then
-             call make_lookup_table(iTableOpacityNLTE_I(iMaterial), &
+          if(iTableOpacNLTE_I(iMaterial) > 0)then
+             call make_lookup_table(iTableOpacNLTE_I(iMaterial), &
                   calc_table_value, iComm)
-             UseTableNLTE_I(iMaterial) = .true.
+             UseTableOpacNLTE_I(iMaterial) = .true.
+          end if
+          iTableEosNLTE_I(iMaterial) = &
+               i_lookup_table(NameMaterial_I(iMaterial)//'_eos_NLTE')
+          if(iTableEosNLTE_I(iMaterial) > 0)then
+             call make_lookup_table(iTableEosNLTE_I(iMaterial), &
+                  calc_table_value, iComm)
+             UseTableEosNLTE_I(iMaterial) = .true.
           end if
        end do
        if(iProc==0) write(*,*) NameSub, &
-            ' iTableOpacityNLTE_I = ', iTableOpacityNLTE_I
+            ' iTableOpacNLTE_I = ', iTableOpacNLTE_I
+       if(iProc==0) write(*,*) NameSub, &
+            ' iTableEosNLTE_I = ', iTableEosNLTE_I
     end if
 
   end subroutine user_init_session
@@ -2517,7 +2529,6 @@ contains
     ! Our gray opacity table are for three materials
     real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
-    real    :: OpacityNLTE_V(3*nWave), TeEV
     real, dimension(0:nMaterial-1) :: pPerRho_I, Weight_I
     real :: ePerRho
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
@@ -2604,20 +2615,12 @@ contains
     if(present(OpacityPlanckOut_W) .or. present(OpacityEmissionOut_W) .or. &
          present(OpacityRosselandOut_W))then
 
-       if(UseTableNLTE_I(iMaterial) .and. &
+       if(UseTableOpacNLTE_I(iMaterial) .and. &
             .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
-
-          TeEV = TeSi*cKToEV
-          call interpolate_lookup_table(iTableOpacityNLTE_I(iMaterial), &
-               RhoSi, TeEV, OpacityNLTE_V, DoExtrapolate = .false.)
-
-          if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-               = OpacityNLTE_V(1:nWave)*RhoSi
-          if(present(OpacityEmissionOut_W)) OpacityEmissionOut_W &
-               = OpacityNLTE_V(nWave+1:2*nWave)*RhoSi
-          if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-               = OpacityNLTE_V(2*nWave+1:3*nWave)*RhoSi
-
+          call opac_nlte_lookup(iMaterial, RhoSi, TeSi, &
+               OpacityPlanckOut_I=OpacityPlanckOut_W, &
+               OpacityEmissionOut_I=OpacityEmissionOut_W, &
+               OpacityRosselandOut_I=OpacityRosselandOut_W)
        else
           if(iTableOpacity > 0 .and. nWave == 1)then
              if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error(&
@@ -2713,10 +2716,9 @@ contains
              end if
 
           end if
+          if(present(OpacityEmissionOut_W)) &
+               OpacityEmissionOut_W = OpacityPlanckOut_W
        end if
-
-       if(present(OpacityEmissionOut_W)) &
-            OpacityEmissionOut_W = OpacityPlanckOut_W
     end if
 
     if(present(PlanckOut_W))then
@@ -2779,10 +2781,23 @@ contains
                end if
             end if
          end if
+         if(UseTableEosNLTE_I(iMaterial) .and. &
+              .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+            call eos_nlte_lookup(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                 pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                 GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut)
+         end if
       elseif(present(TeIn))then
          ! Calculate pressure from electron temperature
          TeSi = TeIn
-         if( IsMix ) then
+         if(UseTableEosNLTE_I(iMaterial) .and. &
+              .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+            call eos_nlte_lookup(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 eTotalOut=EinternalOut, pTotalOut=pSi, &
+                 CvTotalOut=CvOut, GammaOut=GammaOut, &
+                 zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+         elseif( IsMix ) then
             call eos(RhoToARatioSi_I, TeIn=TeIn, &
                  eTotalOut=EinternalOut, pTotalOut=pSi, &
                  CvTotalOut=CvOut, GammaOut=GammaOut, &
@@ -2862,6 +2877,13 @@ contains
                   end if
                end if
             end if
+            if(UseTableEosNLTE_I(iMaterial) .and. &
+                 .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+               call eos_nlte_lookup(iMaterial,RhoSi,pTotalIn=pSi, &
+                    EtotalOut=EinternalOut, TeOut=TeSi, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+            end if
          end if
       end if
 
@@ -2940,6 +2962,13 @@ contains
                   end if
                end if
             end if
+            if(UseTableEosNLTE_I(iMaterial) .and. &
+                 .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+               call eos_nlte_lookup(iMaterial, RhoSi, pTotalIn=pSi, &
+                    eTotalOut = EinternalOut, TeOut=TeSi, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
+            end if
          end if
       end if
 
@@ -2999,10 +3028,24 @@ contains
                end if
             end if
          end if
+         if(UseTableEosNLTE_I(iMaterial) .and. &
+              .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+            call eos_nlte_lookup(iMaterial,Rho=RhoSi, eElectronIn=EinternalIn,&
+                 pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+         end if
       elseif(present(TeIn))then
          ! Calculate electron pressure from electron temperature
          TeSi = TeIn
-         if(IsMix) then
+         if(UseTableEosNLTE_I(iMaterial) .and. &
+              .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+            call eos_nlte_lookup(iMaterial, Rho=RhoSi, TeIn=TeIn, &
+                 eElectronOut=EinternalOut, &
+                 pElectronOut=pSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+         elseif(IsMix) then
             call eos(RhoToARatioSi_I, TeIn=TeIn, &
                  eElectronOut=EinternalOut, &
                  pElectronOut=pSi, CvElectronOut=CvOut, &
@@ -3089,6 +3132,14 @@ contains
                   end if
                end if
             end if
+            if(UseTableEosNLTE_I(iMaterial) .and. &
+                 .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+               call eos_nlte_lookup(iMaterial, RhoSi, pElectronIn=pSi, &
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
+            end if
          end if
       end if
 
@@ -3172,6 +3223,14 @@ contains
                   end if
                end if
             end if
+            if(UseTableEosNLTE_I(iMaterial) .and. &
+                 .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+               call eos_nlte_lookup(iMaterial, RhoSi, pElectronIn=pSi, &
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
+            end if
          end if
       end if
 
@@ -3188,7 +3247,122 @@ contains
 
     end subroutine get_electron_thermo
 
-    !========================================================================
+    !==========================================================================
+
+    subroutine eos_nlte_lookup(iMaterial, Rho, &
+         TeIn, eTotalIn, pTotalIn, eElectronIn, pElectronIn,   &
+         TeOut, eTotalOut, pTotalOut, GammaOut, CvTotalOut,    &
+         eElectronOut, pElectronOut, GammaEOut, CvElectronOut, &
+         HeatCond, TeTiRelax, zAverageOut)
+
+      use CRASH_ModEos, ONLY: nVarEos, P_, E_, Pe_, Ee_, Cv_, Cve_, &
+           Gamma_, GammaE_, TeTi_, Cond_, Z_, cAtomicMassCRASH_I
+      use ModConst,     ONLY: cAtomicMass, cKToEV, cEV, cBoltzmann, cEVToK
+
+      integer, intent(in):: iMaterial     ! index of material
+      real,    intent(in):: Rho           ! mass density [kg/m^3]
+
+      real, optional, intent(in)  :: TeIn         ! temperature SI[K]
+      real, optional, intent(in)  :: eTotalIn     ! internal energy density
+      real, optional, intent(in)  :: pTotalIn     ! pressure
+      real, optional, intent(in)  :: eElectronIn  ! int energy dens of elec
+      real, optional, intent(in)  :: pElectronIn  ! pressure of electrons
+
+      real, optional, intent(out) :: TeOut        ! temperature
+
+      real, optional, intent(out) :: pTotalOut    ! pressure
+      real, optional, intent(out) :: eTotalOut    ! internal energy density
+      real, optional, intent(out) :: GammaOut     ! polytropic index
+      real, optional, intent(out) :: CvTotalOut   ! specific heat / unit volume
+
+      real, optional, intent(out) :: pElectronOut ! pressure
+      real, optional, intent(out) :: eElectronOut ! internal energy density
+      real, optional, intent(out) :: GammaEOut    ! polytropic index
+      real, optional, intent(out) :: CvElectronOut! specific heat / unit volume
+
+      real, optional, intent(out) :: zAverageOut  ! <z>
+      real, optional, intent(out) :: HeatCond     ! electron heat conductivity
+      real, optional, intent(out) :: TeTiRelax    ! elec-ion interactionrate
+
+      real :: Natomic
+      real :: TeEV, Value_V(1:nVarEos)
+      integer :: iTable
+      !------------------------------------------------------------------------
+      Natomic = Rho/(cAtomicMass*cAtomicMassCRASH_I(iMaterial))
+
+      iTable = iTableEosNLTE_I(iMaterial)
+
+      if(present(TeIn))then
+         TeEV = TeSi*cKToEV
+         call interpolate_lookup_table(iTable, &
+              TeEV, Natomic, Value_V, DoExtrapolate = .false.)
+      elseif(present(eTotalIn))then
+         call interpolate_lookup_table(iTable, E_, eTotalIn/(cEV*Natomic), &
+              Natomic, Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
+      elseif(present(pTotalIn))then
+         call interpolate_lookup_table(iTable, P_,  pTotalIn /(cEV*Natomic), &
+              Natomic, Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
+      elseif(present(eElectronIn))then
+         call interpolate_lookup_table(iTable, Ee_, eElectronIn/(cEV*Natomic),&
+              Natomic, Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
+      elseif(present(pElectronIn))then
+         call interpolate_lookup_table(iTable, Pe_, pElectronIn/(cEV*Natomic),&
+              Natomic, Value_V, Arg1Out = TeEV, DoExtrapolate=.false.)
+      end if
+
+      if(present(TeOut))      TeOut     = TeEV*cEVToK
+      if(present(eTotalOut))  eTotalOut = Natomic*cEV*Value_V(E_)
+      if(present(pTotalOut))  pTotalOut = Natomic*cEV*Value_V(P_)
+      if(present(eElectronOut)) eElectronOut = Natomic*cEV*Value_V(Ee_)
+      if(present(pElectronOut)) pElectronOut = Natomic*cEV*Value_V(Pe_)
+      if(present(GammaEOut))  GammaEOut = Value_V(GammaE_)
+      if(present(GammaOut))   GammaOut  = Value_V(Gamma_)
+      if(present(CvTotalOut)) CvTotalOut = (Natomic*cBoltzmann)*Value_V(Cv_)
+      if(present(CvElectronOut)) &
+           CvElectronOut = (Natomic*cBoltzmann)*Value_V(Cve_)
+      if(present(HeatCond))   HeatCond  = Value_V(Cond_)
+      if(present(TeTiRelax))  TeTiRelax = Value_V(TeTi_)
+      if(present(zAverageOut))zAverageOut = Value_V(Z_)
+
+    end subroutine eos_nlte_lookup
+
+    !==========================================================================
+
+    subroutine opac_nlte_lookup(iMaterial, Rho, Te, &
+         OpacityPlanckOut_I, OpacityEmissionOut_I, OpacityRosselandOut_I)
+
+      use CRASH_ModEos, ONLY: cAtomicMassCRASH_I
+      use ModConst,     ONLY: cAtomicMass, cKToEV
+
+      integer, intent(in):: iMaterial     ! index of material
+      real,    intent(in):: Rho           ! mass density [kg/m^3]
+      real,    intent(in):: Te            ! temperature SI[K]
+
+      real, optional, intent(out), dimension(nWave) :: & ! Opacities
+           OpacityPlanckOut_I, OpacityEmissionOut_I, OpacityRosselandOut_I
+
+      real :: Natomic
+      real :: TeEV, Opacity_V(1:3*nWave)
+      integer :: iTable
+      !------------------------------------------------------------------------
+      Natomic = Rho/(cAtomicMass*cAtomicMassCRASH_I(iMaterial))
+      TeEV = Te*cKToEV
+
+      iTable = iTableOpacNLTE_I(iMaterial)
+
+      call interpolate_lookup_table(iTable, &
+           Rho, TeEV, Opacity_V, DoExtrapolate = .false.)
+
+      if(present(OpacityPlanckOut_I)) OpacityPlanckOut_I &
+           = Opacity_V(1:nWave)*Rho
+      if(present(OpacityEmissionOut_I)) OpacityEmissionOut_I &
+           = Opacity_V(nWave+1:2*nWave)*Rho
+      if(present(OpacityRosselandOut_I)) OpacityRosselandOut_I &
+           = Opacity_V(2*nWave+1:3*nWave)*Rho
+
+    end subroutine opac_nlte_lookup
+
+    !==========================================================================
 
     subroutine lookup_error(String, Arg1, Arg2, iArg)
 
