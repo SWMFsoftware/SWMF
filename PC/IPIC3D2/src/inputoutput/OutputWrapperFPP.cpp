@@ -30,7 +30,9 @@ void OutputWrapperFPP::init_output_files(
     string iRegion;
     if(col->getCase()=="BATSRUS"){
       stringstream ss;
+#ifdef BATSRUS
       ss<<col->getiRegion();
+#endif
       iRegion = "_region"+ss.str();
       RestartDirName = "PC/restartOUT";
     }else{
@@ -61,10 +63,13 @@ void OutputWrapperFPP::init_output_files(
         if (cartesian_rank == 0 && restart_status < 2) {
 	  stringstream filename;
 
-	  if(col->getCase()=="BATSRUS")
+	  if(col->getCase()=="BATSRUS"){
+#ifdef BATSRUS
 	    filename<<"/settings"<<"_region"<<col->getiRegion()<<".hdf";
-	  else
+#endif
+	  }else{
 	    filename<<"/settings.hdf";
+	  }
 	  
           hdf5_agent.open(SaveDirName + filename.str());
           output_mgr.output("collective + total_topology + proc_topology", 0);
@@ -85,9 +90,11 @@ void OutputWrapperFPP::init_output_files(
         if (cartesian_rank == 0 && restart_status < 2) {
 	  stringstream filename;
 	  if(col->getCase()=="BATSRUS"){
+#ifdef BATSRUS
 	    filename<<"/settings"<<"_region"<<col->getiRegion()<<".hdf";
+#endif
 	  }else{
-	    filename<<"/settings.hdf"<<endl;
+	    filename<<"/settings.hdf";
 	  }
 
 	  hdf5_agent.open(RestartDirName + filename.str());

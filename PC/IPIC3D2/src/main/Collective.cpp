@@ -490,7 +490,9 @@ int Collective::ReadRestart(string inputfile) {
   herr_t status;
 
   stringstream ss1;
+#ifdef BATSRUS
   ss1<<"_region"<<getiRegion();
+#endif
   string restartFile;
   if(Case == "BATSRUS"){
     restartFile = inputfile + "/settings" + ss1.str() +".hdf";
@@ -840,7 +842,10 @@ void Collective::read_field_restart(
     }
 
     stringstream ss;
-    ss << vct->getCartesian_rank()<<"_region"<<getiRegion();
+    ss << vct->getCartesian_rank();
+#ifdef BATSRUS
+    ss<<"_region"<<getiRegion();
+#endif
     string name_file = getRestartDirName() + "/restart" + ss.str() + ".hdf";
 
     // hdf stuff
@@ -1043,7 +1048,10 @@ void Collective::read_particles_restart(
         getRestartDirName().c_str());
     }
     stringstream ss;
-    ss << vct->getCartesian_rank()<<"_region"<<getiRegion();
+    ss << vct->getCartesian_rank();
+#ifdef BATSRUS
+    ss<<"_region"<<getiRegion();
+#endif    
     string name_file = getRestartDirName() + "/restart" + ss.str() + ".hdf";
     // hdf stuff
     hid_t file_id, dataspace;
