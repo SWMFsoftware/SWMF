@@ -220,7 +220,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use BATL_lib,      ONLY: Unused_BP
   use ModParallel
   use ModMpi
-  use ModPIC, ONLY: UsePic, pic_find_block, isPicBlock_B
+  use ModPIC, ONLY: UsePic, pic_find_block, isPicBlock_B, DoBalancePicBlock
   
   use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, Used_,&
        regrid_batl, IsCartesianGrid, iNode_B
@@ -269,6 +269,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   ! Conversion from iTypeBalance to iType
   integer, allocatable:: iType_I(:)
+
+  logical, allocatable:: IsTypeExist_I(:)
   
   ! We should switch to these variables instead of _BP indexes !!!
   integer, allocatable:: iTypeAdvance_A(:), iTypeBalance_A(:), &
@@ -284,12 +286,12 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   character(len=*), parameter:: NameSub = 'load_balance'
   !---------------------------------------------------------------------------
   call set_oktest(NameSub, DoTest, DoTestMe)
+  call timing_start(NameSub)
   if(DoTestMe)write(*,*) NameSub, &
        ' starting with DoMoveCoord,DoMoveData,IsNewBlock=', &
        DoMoveCoord, DoMoveData, IsNewBlock
-
+ 
   call select_stepping(DoMoveCoord)
-  if(UsePic) call pic_find_block
 
   nCritBalance = 9
   if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1) then
@@ -302,6 +304,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         if(TypeSemiImplicit(1:6) == 'resist' .and. nBlockSemi >= 0) &
              IsSemiImplBlock_B(iBlockFromSemi_B(1:nBlockSemi)) = .true.        
 
+        if(UsePic .and. DoBalancePicBlock) call pic_find_block()
         do iBlock = 1, nBlock
            iType = 0
            ! 9 criterions are used to decide the type of a block.
@@ -347,23 +350,23 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
                    iType = iType + 2**(iCrit-1)
 
               ! PIC region
-              iCrit = iPicBlock
-              if(UsePic) then
-                 if(IsPicBlock_B(iBlock)) iType = iType + 2**(iCrit-1)
-              endif
+               iCrit = iPicBlock
+               if(UsePic .and. DoBalancePicBlock) then
+                  if(IsPicBlock_B(iBlock)) iType = iType + 2**(iCrit-1)
+               endif
 
               ! Steady block
               iCrit = iSteadyBlock
-              if(iTypeAdvance_B(iBlock)==SteadyBlock_)&
+              if(UsePartSteady .and. iTypeAdvance_B(iBlock)==SteadyBlock_)&
                    iType = iType + 2**(iCrit-1)
 
               ! SteadyBound block
               iCrit = iSteadyBoundBlock
-              if(iTypeAdvance_B(iBlock)==SteadyBoundBlock_)&
+              if(UsePartSteady .and. iTypeAdvance_B(iBlock)==SteadyBoundBlock_)&
                    iType = iType + 2**(iCrit-1)
 
               ! High-order scheme block: at least part of the faces use
-              ! high-order face values.
+              ! high-order face values. 
               iCrit = iHighOrderBlock
               if(.not.IsLowOrderOnly_B(iBlock)) &
                    iType = iType + 2**(iCrit-1)
@@ -371,7 +374,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            endif
            iTypeBalanceLocal_A(iNode_B(iBlock)) = iType
         enddo
-        
         ! Update iTypeAdvance_BP
         ! CHEATING: only indicate first index to circumvent ModMpiInterfaces
         ! Set displacement equal to MaxBlock so we get same behavior 
@@ -389,24 +391,31 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         do iNode = 1, nNode       
            if(iTree_IA(Status_,iNode) /= Used_) iTypeBalance_A(iNode) = -1
         enddo
-     end if
 
+     end if
      if(.not.allocated(iType_I)) allocate(iType_I(0:2**nCritBalance-1))     
-     
+     if(.not.allocated(IsTypeExist_I))&
+          allocate(IsTypeExist_I(0:2**nCritBalance-1))     
+     IsTypeExist_I = .false.
+     do iNode = 1, nNode
+        if(iTypeBalance_A(iNode)>=0)&
+             IsTypeExist_I(iTypeBalance_A(iNode)) = .true.        
+     enddo
+
      iType_I = -1
      ncount = 0
      ! Ignore iType=0, the skipped blocks. 
      do iType = 1, 2**nCritBalance-1
-        if(any(iTypeBalance_A==iType)) then
+        if(IsTypeExist_I(iType)) then
            ncount = ncount + 1
            iType_I(iType) = ncount
         endif
      enddo
      nType = ncount
 
+
      ! Convert from block/proc index to node index.
      allocate(iTypeAdvance_A(MaxNode))
-
      if(DoMoveCoord) then
         do iNode = 1, nNode       
            if(iTree_IA(Status_,iNode) /= Used_) CYCLE
@@ -448,7 +457,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
              iTypeAdvance_A(iNode)
      end do
      iTypeAdvance_B(1:nBlockMax)  = iTypeAdvance_BP(1:nBlockMax,iProc)
-
      if(DoTestMe .and. nType>0) then
         ! Create the table so that we can check the status of a block.
         if(.not.allocated(iTypeConvert_I)) allocate(iTypeConvert_I(nType))
@@ -466,10 +474,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
            nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode)) = &
                 nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode))+1
         end do
-        write(*,*) 'iTypeConvert= ',iTypeConvert_I
-        do i = 0,nProc-1
-           write(*,*) 'iProc= ', i, 'nBlock= ',nTypeProc_PI(i,:)
-        enddo
+        do i=1, nType
+           write(*,*) 'iType= ',iTypeConvert_I(i),' nCount= ',sum(nTypeProc_PI(:,i))
+        enddo       
         deallocate(nTypeProc_PI)
      endif ! DoTestMe
      
@@ -482,6 +489,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   call find_test_cell
 
+  if(allocated(iType_I))       deallocate(iType_I)
+  if(allocated(IsTypeExist_I)) deallocate(IsTypeExist_I)
+  call timing_stop(NameSub)
 end subroutine load_balance
 
 

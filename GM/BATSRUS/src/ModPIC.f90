@@ -19,6 +19,8 @@ module ModPIC
   public:: pic_find_block
   
   logical, public:: UsePic = .false.
+  
+  logical, public:: DoBalancePicBlock=.false.
 
   ! Local variables
 
@@ -58,7 +60,8 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-
+    case("#BALANCEPICBLOCK")
+       call read_var('DoBalancePicBlock', DoBalancePicBlock)       
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
        UsePic = nRegionPic > 0

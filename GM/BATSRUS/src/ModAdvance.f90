@@ -257,6 +257,7 @@ contains
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
     allocate(IsLowOrderOnly_B(MaxBlock))
+    IsLowOrderOnly_B = .true.
     
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
