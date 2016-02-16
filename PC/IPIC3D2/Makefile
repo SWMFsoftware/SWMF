@@ -60,8 +60,9 @@ test_ipic3d:
 	$(MAKE) test_ipic3d_check
 
 test_ipic3d_compile:
-	./Config.pl -ng=1
-	$(MAKE) IPIC3D
+	cd src; rm -f Makefile.local; touch Makefile.local
+	-$(MAKE) IPIC3D
+	cd src; cp -f Makefile.local.default Makefile.local
 
 test_ipic3d_rundir:
 	rm -rf ${TESTDIR}
@@ -69,15 +70,15 @@ test_ipic3d_rundir:
 
 test_ipic3d_run:
 	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 4 ${BINDIR}/IPIC3D.exe > runlog; \
+		cd ${TESTDIR}; mpiexec -np 4 ${BINDIR}/IPIC3D.exe IPIC.in > runlog; \
 	else \
-		cd ${TESTDIR}; mpirun -np 4 ${BINDIR}/IPIC3D.exe > runlog; \
+		cd ${TESTDIR}; mpirun -np 4 ${BINDIR}/IPIC3D.exe IPIC.in > runlog; \
 	fi;
 
 test_ipic3d_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7\
-		${TESTDIR}/PC/plots/ConservedQuantities_region0.txt \
-		${CHECKDIR}/ConservedQuantities.txt-GEM-PSEUDRAND\
+		${TESTDIR}/PC/plots/ConservedQuantities.txt \
+		${CHECKDIR}/ConservedQuantities.txt\
 		> test_ipic3d.diff)
 	@ls -l test_ipic3d.diff
 

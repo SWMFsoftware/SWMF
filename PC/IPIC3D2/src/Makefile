@@ -31,6 +31,8 @@ OBJECTS = \
 	utility/MPIdata.o\
 	utility/errors.o
 
+${OBJECTS}: Makefile.local
+
 OBJECTS_EXE = \
 	iPic3D.o
 
