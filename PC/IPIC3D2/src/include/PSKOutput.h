@@ -790,16 +790,12 @@ public:
     // Particle ID
     //
     // (why was this using "long")?
-
+    
     if (tag.find("ID", 0) != string::npos & sample == 0) {
       for (int i = 0; i < ns; ++i) {
         stringstream ii;
         ii << i;
-        if (_col->getTrackParticleID(i) == true)
-          this->output_adaptor.write("/particles/species_" + ii.str() + "/ID/cycle_" + cc.str(), PSK::Dimens(_part[i]->getNOP()), _part[i]->getParticleIDall());
-
-        else if (_vct->getCartesian_rank() == 0)
-          cout << "Can't write particle ID for species " + ii.str() + " because TrackParticleID is = false " << endl;
+        this->output_adaptor.write("/particles/species_" + ii.str() + "/ID/cycle_" + cc.str(), PSK::Dimens(_part[i]->getNOP()), _part[i]->getParticleIDall());
       }
     }
     // Test Particle ID
@@ -811,24 +807,21 @@ public:
       }
     }
     else if (tag.find("ID", 0) != string::npos & sample != 0) {
-      std::vector <longid>ID;
+      std::vector <double>ID;
       for (int i = 0; i < ns; ++i) {
         stringstream ii;
         ii << i;
-        const longid* pclID = _part[i]->getParticleIDall();
+        const double* pclID = _part[i]->getParticleIDall();
         const int num_samples = _part[i]->getNOP()/sample;
         ID.reserve(num_samples);
-        if (_col->getTrackParticleID(i) == true) {
-          for (int n = 0; n < _part[i]->getNOP(); n += sample)
-            ID.push_back(pclID[n]);
-          this->output_adaptor.write("/particles/species_" + ii.str() + "/ID/cycle_" + cc.str(), PSK::Dimens(ID.size()), &ID[0]);
-        }
-        else if (_vct->getCartesian_rank() == 0)
-          cout << "Can't write particle ID for species " + ii.str() + " because TrackParticleID is = false " << endl;
+
+        for (int n = 0; n < _part[i]->getNOP(); n += sample)
+          ID.push_back(pclID[n]);
+        this->output_adaptor.write("/particles/species_" + ii.str() + "/ID/cycle_" + cc.str(), PSK::Dimens(ID.size()), &ID[0]);
+
       }
     }
   }
-
 
 #ifdef BATSRUS
   double weightedValue(double ****V, const int ix, const int iy, const int iz, const int is,

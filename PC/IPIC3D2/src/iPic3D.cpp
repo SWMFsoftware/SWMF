@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
       printf(" ======= Cycle %d ======= \n",i);
 
     timeTasks.resetCycle();
-    KCode.CalculateField();
+    KCode.CalculateField(i);
     KCode.ParticlesMover();
     KCode.CalculateB();
     KCode.CalculateMoments();

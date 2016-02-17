@@ -40,6 +40,10 @@ class Particles3D:public Particles3Dcomm {
     void constantVelocity(double vel, int dim, Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity */
     void maxwellian(Field * EMf);
+    /** Initial condition: uniform in space and maxwellian in velocity with velocity from Null Point currents */
+    void maxwellianNullPoints(Field * EMf);
+    /** Maxellian velocity from currents and uniform spatial distribution */
+    void maxwellianDoubleHarris(Field * EMf);
     /** pitch_angle_energy initialization (Assume B on z only) for test particles */
     void pitch_angle_energy(Field * EMf);
     /** Force Free initialization (JxB=0) for particles */

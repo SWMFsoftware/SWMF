@@ -113,13 +113,15 @@ public:
   const int *getDims()const{ return dims; }
   int getPeriods(int dir)const{ return (periods[dir]); }
   MPI_Comm getComm()const{ return (CART_COMM); }
+  MPI_Comm getFieldComm()const{ return (CART_COMM); }
+  MPI_Comm getParticleComm()const{ return (CART_COMM_P); }
 
 
 private:
   /** New communicator with virtual cartesian topology */
   MPI_Comm CART_COMM;
   /** New communicator with virtual cartesian topology for Particles*/
-  //MPI_Comm CART_COMM_P;
+  MPI_Comm CART_COMM_P;
   /** MPI status during sending and receiving communication */
   MPI_Status status;
   /** Direction X for shift MPI_Cart_Shift*/
@@ -163,7 +165,7 @@ private:
   int dims[3]; // i.e. divisions
   /** periodicity */
   int periods[3];
-  //int periods_P[3];
+  int periods_P[3];
   /** coordinates on processors grid */
   int coordinates[3];
   /** cartesian rank */

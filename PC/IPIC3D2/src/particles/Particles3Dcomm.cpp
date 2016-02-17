@@ -123,7 +123,7 @@ Particles3Dcomm::Particles3Dcomm(
 {
   // communicators for particles
   //
-  MPI_Comm_dup(MPI_COMM_MYSIM, &mpi_comm);
+  MPI_Comm_dup(vct->getParticleComm(), &mpi_comm);
   //
   // define connections
   using namespace Direction;
@@ -165,12 +165,12 @@ if( !isTestParticle ){
   u0 = col->getU0(get_species_num());
   v0 = col->getV0(get_species_num());
   w0 = col->getW0(get_species_num());
-  TrackParticleID = col->getTrackParticleID(get_species_num());
+  //TrackParticleID = col->getTrackParticleID(get_species_num());
   Ninj = col->getRHOinject(get_species_num());
 }else{
 	pitch_angle = col->getPitchAngle(get_species_num()-col->getNs());
 	energy = col->getEnergy(get_species_num()-col->getNs());
-	TrackParticleID = true;
+	//TrackParticleID = true;
 }
   dt = col->getDt();
   Lx = col->getLx();
@@ -1054,14 +1054,6 @@ int Particles3Dcomm::handle_received_particles(int pclCommMode)
   return num_pcls_resent;
 }
 
-static long long mpi_global_sum(int in)
-{
-  long long total;
-  long long long_in = in;
-  MPI_Allreduce(&long_in, &total, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
-  return total;
-}
-
 // these methods should be made virtual
 // so that the user can override boundary conditions.
 //
@@ -1462,7 +1454,8 @@ void Particles3Dcomm::recommunicate_particles_until_done(int min_num_iterations)
   // global all-reduce of num_pcls_resent is zero, indicating
   // that there are no more particles to be received.
   //
-  long long total_num_pcls_sent = mpi_global_sum(num_pcls_sent);
+  long long total_num_pcls_sent;
+  MPI_Allreduce(&num_pcls_sent, &total_num_pcls_sent, 1, MPI_LONG_LONG, MPI_SUM, mpi_comm);
 
   //dprintf("spec %d pcls sent: %d, %d", ns, num_pcls_sent, total_num_pcls_sent);
 
@@ -1475,7 +1468,7 @@ void Particles3Dcomm::recommunicate_particles_until_done(int min_num_iterations)
   {
     if(comm_count>=(comm_max_times))
     {
-      dprintf("particles still uncommunicated:");
+      dprintf("spec %d particles still uncommunicated:",ns);
       flush_send();
       num_pcls_sent = handle_received_particles(PclCommMode::print_sent_pcls);
       eprintf("failed to finish up particle communication"
@@ -1486,9 +1479,11 @@ void Particles3Dcomm::recommunicate_particles_until_done(int min_num_iterations)
     flush_send();
     num_pcls_sent = handle_received_particles();
 
-    total_num_pcls_sent = mpi_global_sum(num_pcls_sent);
-    if(print_pcl_comm_counts)
+
+    MPI_Allreduce(&num_pcls_sent, &total_num_pcls_sent, 1, MPI_LONG_LONG, MPI_SUM, mpi_comm);
+    if(print_pcl_comm_counts){
       dprint(total_num_pcls_sent);
+    }
     comm_count++;
   }
 }
@@ -1521,7 +1516,7 @@ double Particles3Dcomm::getKe() {
     const double q = pcl.get_q();
     localKe += .5*(q/qom)*(u*u + v*v + w*w);
   }
-  MPI_Allreduce(&localKe, &totalKe, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
+  MPI_Allreduce(&localKe, &totalKe, 1, MPI_DOUBLE, MPI_SUM, mpi_comm);
   return (totalKe);
 }
 
@@ -1543,7 +1538,7 @@ double Particles3Dcomm::getP() {
     const double q = pcl.get_q();
     localP += (q/qom)*sqrt(u*u + v*v + w*w);
   }
-  MPI_Allreduce(&localP, &totalP, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_MYSIM);
+  MPI_Allreduce(&localP, &totalP, 1, MPI_DOUBLE, MPI_SUM, mpi_comm);
   return (totalP);
 }
 
@@ -1559,7 +1554,7 @@ double Particles3Dcomm::getMaxVelocity() {
     const double w = pcl.get_w();
     localVel = std::max(localVel, sqrt(u*u + v*v + w*w));
   }
-  MPI_Allreduce(&localVel, &maxVel, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_MYSIM);
+  MPI_Allreduce(&localVel, &maxVel, 1, MPI_DOUBLE, MPI_MAX, mpi_comm);
   return (maxVel);
 }
 
@@ -1587,17 +1582,7 @@ long long *Particles3Dcomm::getVelocityDistribution(int nBins, double maxVel) {
     else
       f[bin] += 1;
   }
-  MPI_Allreduce(MPI_IN_PLACE, f, nBins, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
-  // This way of summing is very inefficient
-  //{
-  //  long long localN = 0;
-  //  long long totalN = 0;
-  //  for (int i = 0; i < nBins; i++) {
-  //    localN = f[i];
-  //    MPI_Allreduce(&localN, &totalN, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_MYSIM);
-  //    f[i] = totalN;
-  //  }
-  //}
+  MPI_Allreduce(MPI_IN_PLACE, f, nBins, MPI_LONG_LONG, MPI_SUM, mpi_comm);
   return f;
 }
 

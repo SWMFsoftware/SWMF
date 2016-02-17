@@ -158,14 +158,17 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   grid = new Grid3DCU(col, vct);  // Create the local grid
   EMf = new EMfields3D(col, grid, vct);  // Create Electromagnetic Fields Object
 
-  if      (col->getCase()=="GEMnoPert") EMf->initGEMnoPert();
-  else if (col->getCase()=="ForceFree") EMf->initForceFree();
-  else if (col->getCase()=="GEM")       EMf->initGEM();
+  if      (col->getCase()=="GEMnoPert") 		EMf->initGEMnoPert();
+  else if (col->getCase()=="ForceFree") 		EMf->initForceFree();
+  else if (col->getCase()=="GEM")       		EMf->initGEM();
+  else if (col->getCase()=="GEMDoubleHarris")  	EMf->initGEMDoubleHarris();
 #ifdef BATSRUS
   else if (col->getCase()=="BATSRUS")   EMf->initBATSRUS(vct,grid,col);
 #endif
   else if (col->getCase()=="Dipole")    EMf->initDipole();
-  else if (col->getCase()=="Dipole2D")    EMf->initDipole2D();
+  else if (col->getCase()=="Dipole2D")  EMf->initDipole2D();
+  else if (col->getCase()=="NullPoints")EMf->initNullPoints();
+  else if (col->getCase()=="TaylorGreen")EMf->initTaylorGreen();
   else if (col->getCase()=="RandomCase") {
     EMf->initRandomField();
     if (myrank==0) {
@@ -213,6 +216,9 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 #ifdef BATSRUS
       else if (col->getCase()=="BATSRUS")   part[i].MaxwellianFromFluid(EMf);
 #endif
+      else if (col->getCase()=="NullPoints")    	part[i].maxwellianNullPoints(EMf);
+      else if (col->getCase()=="TaylorGreen")    	part[i].maxwellianNullPoints(EMf); // Flow is initiated from the current prescribed on the grid.
+      else if (col->getCase()=="GEMDoubleHarris")  	part[i].maxwellianDoubleHarris(EMf);
       else                                  part[i].maxwellian(EMf);
       part[i].reserve_remaining_particle_IDs();
     }
@@ -256,6 +262,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 	  }
   }
   Ke = new double[ns];
+  BulkEnergy = new double[ns];
   momentum = new double[ns];
   cq = SaveDirName + "/ConservedQuantities.txt";
   if (myrank == 0) {
@@ -347,7 +354,7 @@ void c_Solver::CalculateMoments() {
 }
 
 //! MAXWELL SOLVER for Efield
-void c_Solver::CalculateField() {
+void c_Solver::CalculateField(int cycle) {
   timeTasks_set_main_task(TimeTasks::FIELDS);
 
 #ifdef BATSRUS
@@ -356,7 +363,7 @@ void c_Solver::CalculateField() {
 #endif
 
   // calculate the E field
-  EMf->calculateE();
+  EMf->calculateE(cycle);
 }
 
 //! MAXWELL SOLVER for Bfield (assuming Efield has already been calculated)
@@ -504,9 +511,9 @@ void c_Solver::WriteOutput(int cycle) {
 		  if(!(col->getFieldOutputTag()).empty()){
 
 			  if(fieldreqcounter>0){
-				  MPI_Waitall(fieldreqcounter,&fieldreqArr[0],&fieldstsArr[0]);
+			    //MPI_Waitall(fieldreqcounter,&fieldreqArr[0],&fieldstsArr[0]);
 				  for(int si=0;si< fieldreqcounter;si++){
-					  int error_code = fieldstsArr[si].MPI_ERROR;
+				    int error_code = MPI_File_write_all_end(fieldfhArr[si],&fieldwritebuffer[si][0][0][0],&fieldstsArr[si]);//fieldstsArr[si].MPI_ERROR;
 					  if (error_code != MPI_SUCCESS) {
 						  char error_string[100];
 						  int length_of_error_string, error_class;
@@ -624,19 +631,57 @@ void c_Solver::WriteConserved(int cycle) {
     TOTmomentum = 0.0;
     for (int is = 0; is < ns; is++) {
       Ke[is] = part[is].getKe();
+      BulkEnergy[is] = EMf->getBulkEnergy(is);
       TOTenergy += Ke[is];
       momentum[is] = part[is].getP();
       TOTmomentum += momentum[is];
     }
-    if (myrank == 0) {
+    if (myrank == (nprocs-1)) {
       ofstream my_file(cq.c_str(), fstream::app);
-      if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << endl;
-
-      my_file << cycle << "\t" << "\t" << (Eenergy + Benergy + TOTenergy) << "\t" << TOTmomentum << "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy << endl;
+      if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << "\t" << "Kenergy(species)" << "\t" << "BulkEnergy(species)" << endl;
+      my_file << cycle << "\t" << "\t" << (Eenergy + Benergy + TOTenergy) << "\t" << TOTmomentum << "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
+      for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
+      for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];      
+      my_file << endl;
       my_file.close();
     }
   }
 }
+/* write the conserved quantities
+void c_Solver::WriteConserved(int cycle) {
+  if(col->getDiagnosticsOutputCycle() > 0 && cycle % col->getDiagnosticsOutputCycle() == 0)
+  {
+	if(cycle==0)buf_counter=0;
+    Eenergy[buf_counter] = EMf->getEenergy();
+    Benergy[buf_counter] = EMf->getBenergy();
+    Kenergy[buf_counter] = 0.0;
+    TOTmomentum[buf_counter] = 0.0;
+    for (int is = 0; is < ns; is++) {
+      Ke[is] = part[is].getKe();
+      Kenergy[buf_counter] += Ke[is];
+      momentum[is] = part[is].getP();
+      TOTmomentum[buf_counter] += momentum[is];
+    }
+    outputcycle[buf_counter] = cycle;
+    buf_counter ++;
+
+    //Flush out result if this is the last cycle or the buffer is full
+    if(buf_counter==OUTPUT_BUFSIZE || cycle==(LastCycle()-1)){
+    	if (myrank == (nprocs-1)) {
+    		ofstream my_file(cq.c_str(), fstream::app);
+    		stringstream ss;
+      //if(cycle/OUTPUT_BUFSIZE == 0)
+      //my_file  << "Cycle" << "\t" << "Total_Energy" 				 << "\t" << "Momentum" << "\t" << "Eenergy" <<"\t" << "Benergy" << "\t" << "Kenergy" << endl;
+    		for(int bufid=0;bufid<OUTPUT_BUFSIZE;bufid++)
+    			ss << outputcycle[bufid] << "\t" << (Eenergy[bufid]+Benergy[bufid]+Kenergy[bufid])<< "\t" << TOTmomentum[bufid] << "\t" << Eenergy[bufid] << "\t" << Benergy[bufid] << "\t" << Kenergy[bufid] << endl;
+
+    		my_file << ss;
+    		my_file.close();
+    	}
+    	buf_counter = 0;
+    }
+  }
+}*/
 
 void c_Solver::WriteVelocityDistribution(int cycle)
 {

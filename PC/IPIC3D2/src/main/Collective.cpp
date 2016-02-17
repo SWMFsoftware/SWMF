@@ -122,7 +122,8 @@ void Collective::ReadInput(string inputfile) {
     wmethod           = config.read<string>("WriteMethod");
     SimName           = config.read<string>("SimulationName");
     PoissonCorrection = config.read<string>("PoissonCorrection");
-
+    PoissonCorrectionCycle = config.read<int>("PoissonCorrectionCycle",10);
+    
     rhoINIT = new double[ns];
     array_double rhoINIT0 = config.read < array_double > ("rhoINIT");
     rhoINIT[0] = rhoINIT0.a;
@@ -440,12 +441,29 @@ void Collective::ReadInput(string inputfile) {
   bcPfaceZright = config.read < int >("bcPfaceZright",1);
   bcPfaceZleft  = config.read < int >("bcPfaceZleft",1);
 
-
+#ifndef NO_HDF5 
   if (RESTART1) {               // you are restarting
-    RestartDirName = config.read < string > ("RestartDirName","data");
-    ReadRestart(RestartDirName);
+    if(Case == "BATSRUS"){
+      RestartDirName = config.read < string > ("RestartDirName","data");
+      ReadRestart(RestartDirName);
+    }else{
+      RestartDirName = config.read < string > ("RestartDirName","data");
+      //ReadRestart(RestartDirName);
+      restart_status = 1;
+      hid_t file_id = H5Fopen((RestartDirName + "/restart0.hdf").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+      if (file_id < 0) {
+	cout << "couldn't open file: " << inputfile << endl;
+	return;
+      }
+      hid_t dataset_id = H5Dopen2(file_id, "/last_cycle", H5P_DEFAULT);  // HDF 1.8.8
+      herr_t status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &last_cycle);
+      status = H5Dclose(dataset_id);
+      status = H5Fclose(file_id);
+    }
   }
+#endif
 
+  /*
   TrackParticleID = new bool[ns];
   array_bool TrackParticleID0 = config.read < array_bool > ("TrackParticleID");
   TrackParticleID[0] = TrackParticleID0.a;
@@ -459,6 +477,7 @@ void Collective::ReadInput(string inputfile) {
     TrackParticleID[4] = TrackParticleID0.e;
   if (ns > 5)
     TrackParticleID[5] = TrackParticleID0.f;
+  */
 }
 
 bool Collective::field_output_is_off()const
@@ -1157,25 +1176,26 @@ void Collective::read_particles_restart(
     ss.str("");ss << "/particles/species_" << species_number << "/q/cycle_" << lastcycle;
     dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
     status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &q[0]);
+
+    //if ID is not saved, read in q as ID
+    status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &t[0]);
+
     status = H5Dclose(dataset_id);
 
-    idum=0;
+    /* get ID
+		ss.str("");ss << "/particles/species_" << species_number << "/ID/cycle_" << lastcycle;
+		dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
+		status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &t[0]);
+		status = H5Dclose(dataset_id);
+    */    
 
-#ifdef BATSRUS 
+    #ifdef BATSRUS 
     // get idum, pseudo random seed
     ss.str(""); ss<< "/particles/species_" << species_number << "/pseudo_random_seed";
     dataset_id = H5Dopen(file_id, ss.str().c_str(), H5P_DEFAULT);  // HDF 1.8.8
     status = H5Dread(dataset_id, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT,&idum);
     status = H5Dclose(dataset_id);
 #endif
-
-    // get ID
-    if (false) {//TrackParticleID
-		ss.str("");ss << "/particles/species_" << species_number << "/ID/cycle_" << lastcycle;
-		dataset_id = H5Dopen2(file_id, ss.str().c_str(), H5P_DEFAULT); // HDF 1.8.8
-		status = H5Dread(dataset_id, H5T_NATIVE_ULONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, &t[0]);
-		status = H5Dclose(dataset_id);
-    }
     
     status = H5Fclose(file_id);
 #endif
@@ -1294,7 +1314,7 @@ Collective::~Collective() {
   delete[]v0;
   delete[]w0;
 
-  delete[]TrackParticleID;
+  //delete[]TrackParticleID;
 
   delete[]rhoINIT;
   delete[]rhoINJECT;
@@ -1716,16 +1736,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   // electron mass given by IPIC3D params while ion mass comes form BATSRUS
   fixPARAM(qom, npcelx, npcely, npcelz, &ns);
-  TrackParticleID = new bool[ns];
   uth =             new double[ns];
   vth =             new double[ns];
   wth =             new double[ns];
-  for(int is = 0; is < ns; is++){
-    TrackParticleID[is] =true;
-
-    //cout << "SetParamFromGM :: qom[" << is<< "]  =  " << qom[is] << endl;
-  }
-
 
   //setGlobalStartIndex(NULL);
   PostProcParam();

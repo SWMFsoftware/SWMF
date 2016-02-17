@@ -48,7 +48,7 @@ void WriteOutputParallel(Grid3DCU *grid, EMfields3D *EMf, Particles3Dcomm *part,
   /* Declare and open the parallel HDF5 file */
   /* --------------------------------------- */
 
-  PHDF5fileClass outputfile(filename, 3, vct->getCoordinates(), vct->getComm());
+  PHDF5fileClass outputfile(filename, 3, vct->getCoordinates(), vct->getFieldComm());
 
   bp = false;
   if (col->getParticlesOutputCycle() > 0) bp = true;
@@ -112,7 +112,7 @@ void WriteFieldsH5hut(int nspec, Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *
 
   file.SetNameCycle(filename, cycle);
 
-  file.OpenFieldsFile("Node", nspec, col->getNxc()+1, col->getNyc()+1, col->getNzc()+1, vct->getCoordinates(), vct->getDims(), vct->getComm());
+  file.OpenFieldsFile("Node", nspec, col->getNxc()+1, col->getNyc()+1, col->getNzc()+1, vct->getCoordinates(), vct->getDims(), vct->getFieldComm());
 
   file.WriteFields(EMf->getEx(), "Ex", grid->getNXN(), grid->getNYN(), grid->getNZN());
   file.WriteFields(EMf->getEy(), "Ey", grid->getNXN(), grid->getNYN(), grid->getNZN());
@@ -132,7 +132,7 @@ void WriteFieldsH5hut(int nspec, Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *
 
 //--- SAVE FIELDS IN THE CELLS:
 //
-//  file.OpenFieldsFile("Cell", nspec, col->getNxc(), col->getNyc(), col->getNzc(), vct->getCoordinates(), vct->getDims(), vct->getComm());
+//  file.OpenFieldsFile("Cell", nspec, col->getNxc(), col->getNyc(), col->getNzc(), vct->getCoordinates(), vct->getDims(), vct->getFieldComm());
 //
 //  file.WriteFields(EMf->getExc(), "Exc", grid->getNXC(), grid->getNYC(), grid->getNZC());
 //  file.WriteFields(EMf->getEyc(), "Eyc", grid->getNXC(), grid->getNYC(), grid->getNZC());
@@ -177,7 +177,7 @@ void WritePartclH5hut(int nspec, Grid3DCU *grid, Particles3Dcomm *part, Collecti
   /* Write the particles */
   /* ------------------- */
 
-  file.OpenPartclFile(nspec, vct->getComm());
+  file.OpenPartclFile(nspec, vct->getFieldComm());
   for (int i=0; i<nspec; i++){
     // this is a hack
     part[i].convertParticlesToSynched();
@@ -189,7 +189,7 @@ void WritePartclH5hut(int nspec, Grid3DCU *grid, Particles3Dcomm *part, Collecti
                            part[i].getUall(),
                            part[i].getVall(),
                            part[i].getWall(),
-                           vct->getComm());
+                           vct->getFieldComm());
   }
   file.ClosePartclFile();
 
@@ -213,7 +213,7 @@ void ReadPartclH5hut(int nspec, Particles3Dcomm *part, Collective *col, VCtopolo
   infile.SetNameCycle(col->getinitfile(), col->getLast_cycle());
   infile.OpenPartclFile(nspec);
 
-  infile.ReadParticles(vct->getCartesian_rank(), vct->getNproc(), vct->getDims(), L, vct->getComm());
+  infile.ReadParticles(vct->getCartesian_rank(), vct->getNproc(), vct->getDims(), L, vct->getFieldComm());
 
   for (int s = 0; s < nspec; s++){
     part[s].allocate(s, infile.GetNp(s), col, vct, grid);
@@ -262,7 +262,7 @@ void ReadFieldsH5hut(int nspec, EMfields3D *EMf, Collective *col, VCtopology3D *
                                        col->getNzc()+1,
                                        vct->getCoordinates(),
                                        vct->getDims(),
-                                       vct->getComm());
+                                       vct->getFieldComm());
 
   infile.ReadFields(EMf->getEx(), "Ex", grid->getNXN(), grid->getNYN(), grid->getNZN());
   infile.ReadFields(EMf->getEy(), "Ey", grid->getNXN(), grid->getNYN(), grid->getNZN());
@@ -312,7 +312,7 @@ void ReadFieldsH5hut(int nspec, EMfields3D *EMf, Collective *col, VCtopology3D *
 //                                       col->getNzc(),
 //                                       vct->getCoordinates(),
 //                                       vct->getDims(),
-//                                       vct->getComm());
+//                                       vct->getFieldComm());
 //
 //  infile.ReadFields(EMf->getExc(), "Exc", grid->getNXC(), grid->getNYC(), grid->getNZC());
 //  infile.ReadFields(EMf->getEyc(), "Eyc", grid->getNXC(), grid->getNYC(), grid->getNZC());
@@ -481,7 +481,7 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 		  char *filenamechar;
 		  filenamechar = new char[filenmStr.size()+1];
 		  strcpy(filenamechar, filenmStr.c_str());
-		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -579,7 +579,7 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 		  char *filenamechar;
 		  filenamechar = new char[filenmStr.size()+1];
 		  strcpy(filenamechar, filenmStr.c_str());
-		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -626,7 +626,7 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 	      filename << col->getSaveDirName() << "/" << col->getSimName() << "_rhoi_" << cycle << ".vtk";
 	      filenamechar = new char[filenmStr.size()+1];
 	      strcpy(filenamechar, filenmStr.c_str());            
-	      MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+	      MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 	      MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 		  if (vct->getCartesian_rank()==0){
@@ -791,7 +791,7 @@ void WriteFieldsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopolo
 	  char *filenamechar;
 	  filenamechar = new char[filenmStr.size()+1];
 	  strcpy(filenamechar, filenmStr.c_str());
-	  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+	  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 	  if (vct->getCartesian_rank()==0){
 		  MPI_File_write(fh, header, nelem, MPI_BYTE, &status);
@@ -989,7 +989,7 @@ void WriteMomentsVTK(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCtopol
 		  char *filenamechar;
 		  filenamechar = new char[filenmStr.size()+1];
 		  strcpy(filenamechar, filenmStr.c_str());
-		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+		  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_File_write(fh, header, nelem, MPI_BYTE, &status);
@@ -1141,7 +1141,7 @@ int WriteFieldsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCt
 		  char *filenamechar;
 		  filenamechar = new char[filenmStr.size()+1];
 		  strcpy(filenamechar, filenmStr.c_str());
-		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &(fhArr[counter]));
+		  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &(fhArr[counter]));
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_Status   status;
@@ -1157,7 +1157,8 @@ int WriteFieldsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, VCt
               dprintf("Error in MPI_File_set_view: %s\n", error_string);
 	      }
 
-	      error_code = MPI_File_iwrite(fhArr[counter], fieldwritebuffer[0][0][0],(nxn-3)*(nyn-3)*(nzn-3),EMf->getXYZeType(), &(requestArr[counter]));
+	      error_code = MPI_File_write_all_begin(fhArr[counter],fieldwritebuffer[0][0][0],(nxn-3)*(nyn-3)*(nzn-3),EMf->getXYZeType());
+	      //error_code = MPI_File_iwrite(fhArr[counter], fieldwritebuffer[0][0][0],(nxn-3)*(nyn-3)*(nzn-3),EMf->getXYZeType(), &(requestArr[counter]));
 	      if(error_code!= MPI_SUCCESS){
               char error_string[100];
               int length_of_error_string, error_class;
@@ -1338,7 +1339,7 @@ int  WriteMomentsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, V
 		  char *filenamechar;
 		  filenamechar = new char[filenmStr.size()+1];
 		  strcpy(filenamechar, filenmStr.c_str());
-		  MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fhArr[counter]);
+		  MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fhArr[counter]);
 
 		  if (vct->getCartesian_rank()==0){
 			  MPI_Status   status;
@@ -1354,7 +1355,8 @@ int  WriteMomentsVTKNonblk(Grid3DCU *grid, EMfields3D *EMf, CollectiveIO *col, V
 			dprintf("Error in MPI_File_set_view: %s\n", error_string);
 		  }
 
-	      error_code = MPI_File_iwrite(fhArr[counter], momentswritebuffer[0][0],(nxn-3)*(nyn-3)*(nzn-3),MPI_FLOAT, &(requestArr[counter]));
+	      error_code = MPI_File_write_all_begin(fhArr[counter],momentswritebuffer[0][0],(nxn-3)*(nyn-3)*(nzn-3),MPI_FLOAT);
+	      //error_code = MPI_File_iwrite(fhArr[counter], momentswritebuffer[0][0],(nxn-3)*(nyn-3)*(nzn-3),MPI_FLOAT, &(requestArr[counter]));
 	      if(error_code != MPI_SUCCESS){
 	          char error_string[100];
 	          int length_of_error_string, error_class;
@@ -1421,7 +1423,7 @@ void WriteTestPclsVTK(int nspec, Grid3DCU *grid, Particles3D *testpart, EMfields
   	int  is=0;
 	ostringstream filename;
 	filename << col->getSaveDirName() << "/" << col->getSimName() << "_testparticle"<< testpart[is].get_species_num() << "_cycle" << cycle << ".vtu";
-	MPI_File_open(vct->getComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+	MPI_File_open(vct->getFieldComm(),filename.str().c_str(), MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 	MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 
 	  ofstream myfile;
@@ -1571,7 +1573,7 @@ void WriteTestPclsVTK(int nspec, Grid3DCU *grid, Particles3D *testpart, EMfields
 	char *filenamechar;
 	filenamechar = new char[filenmStr.size()+1];
 	strcpy(filenamechar, filenmStr.c_str());
-	MPI_File_open(vct->getComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, fh);
+	MPI_File_open(vct->getFieldComm(),filenamechar, MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, fh);
 
 	MPI_File_set_view(*fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
 	if (vct->getCartesian_rank()==0){

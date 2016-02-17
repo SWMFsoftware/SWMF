@@ -146,7 +146,7 @@ void OutputWrapperFPP::append_restart(int cycle)
   output_mgr.output("Bcall", cycle0);
   output_mgr.output("pseudo_random_seed", cycle0,0);
   #endif
-  output_mgr.output("position + velocity + q ", cycle0, 0);
+  output_mgr.output("position + velocity + q + ID ", cycle0, 0);
   output_mgr.output("testpartpos + testpartvel + testpartcharge", cycle0, 0);
   output_mgr.output("last_cycle", cycle);
   hdf5_agent.close();

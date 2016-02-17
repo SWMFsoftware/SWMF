@@ -156,25 +156,7 @@ public:
   const double *getXall()  const { assert(particlesAreSoA()); return &x[0]; }
   const double *getYall()  const { assert(particlesAreSoA()); return &y[0]; }
   const double *getZall()  const { assert(particlesAreSoA()); return &z[0]; }
-  static ID_field::Enum id_field()
-  {
-    return ID_field::Q; // q
-    return ID_field::T; // t
-  }
-  const longid*getParticleIDall() const
-  {
-    longid* ret;
-    switch(id_field())
-    {
-      default:
-        invalid_value_error(id_field());
-      case ID_field::Q:
-        ret = (longid*) &q[0];
-      case ID_field::T:
-        ret = (longid*) &t[0];
-    }
-    return ret;
-  }
+  const double *getParticleIDall() const{assert(particlesAreSoA());return &t[0];  }
   // accessors for particle with index indexPart
   //
   int getNOP()  const { return _pcls.size(); }
@@ -298,7 +280,7 @@ protected:
   // subcycle time
   vector_double t;
   // indicates whether this class is for tracking particles
-  bool TrackParticleID;
+  //bool TrackParticleID;
   bool isTestParticle;
   double pitch_angle;
   double energy;
@@ -355,7 +337,7 @@ protected:
   //
   /** buffers for communication */
   //
-  // communicator for this species (duplicated from MPI_COMM_MYSIM)
+  // communicator for this species
   MPI_Comm mpi_comm;
   // send buffers
   //

@@ -156,8 +156,7 @@ class Collective
     double getB1y()const{ return (B1y); }
     double getB1z()const{ return (B1z); }
     //bool getVerbose()const{ return (verbose); }
-    bool getTrackParticleID(int nspecies)const
-      { return (TrackParticleID[nspecies]); }
+    //bool getTrackParticleID(int nspecies)const{ return (TrackParticleID[nspecies]); }
     int getRestart_status()const{ return (restart_status); }
     string getSaveDirName()const{ return (SaveDirName); }
     string getRestartDirName()const{ return (RestartDirName); }
@@ -169,6 +168,7 @@ class Collective
     string getMomentsOutputTag()const{return MomentsOutputTag;}
     string getPclOutputTag()const{return ParticlesOutputTag;}
     string getPoissonCorrection()const{ return (PoissonCorrection); }
+    int getPoissonCorrectionCycle()const{ return (PoissonCorrectionCycle); }
     int getLast_cycle()const{ return (last_cycle); }
     double getVinj()const{ return (Vinj); }
     double getCGtol()const{ return (CGtol); }
@@ -306,9 +306,9 @@ class Collective
     string SimName;
     /*! Poisson correction flag */
     string PoissonCorrection;
-
+    int PoissonCorrectionCycle;
     /*! TrackParticleID */
-    bool *TrackParticleID;
+    //bool *TrackParticleID;
     /*! SaveDirName */
     string SaveDirName;
     /*! RestartDirName */

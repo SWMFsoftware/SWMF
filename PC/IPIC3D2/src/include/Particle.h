@@ -17,15 +17,6 @@ namespace ParticleType
   };
 }
 
-namespace ID_field
-{
-  enum Enum
-  {
-    Q = 3,
-    T = 7
-  };
-}
-
 template <class T>
 class Larray;
 // intended to occupy 64 bytes
