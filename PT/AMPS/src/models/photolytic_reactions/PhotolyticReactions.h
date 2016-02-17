@@ -410,6 +410,36 @@ namespace PhotolyticReactions {
     return res;
   }
 
+  //get the total reaction rate
+  inline double GetTotalReactionRate(int ParentSpec,double HeliocentricDistance) {
+    double res;
+
+    switch (ParentSpec) {
+    case _H2O_SPEC_ :
+      res=H2O::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    case _O2_SPEC_:
+      res=O2::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    case _H2_SPEC_:
+      res=H2::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    case _H_SPEC_:
+      res=H::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    case _OH_SPEC_:
+      res=OH::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    case _O_SPEC_:
+      res=O::GetTotalReactionRate(HeliocentricDistance);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+
+    return res;
+  }
+
   //return model for which species is available
   inline bool ModelAvailable(int spec) {
     bool res;
