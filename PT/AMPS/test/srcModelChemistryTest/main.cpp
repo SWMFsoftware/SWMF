@@ -234,6 +234,8 @@ void CountParticles(double *ParticleCouter,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
               FirstCellParticle=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
               for (p=FirstCellParticle;p!=-1;p=PIC::ParticleBuffer::GetNext(p)) {
+                if (PIC::ParticleBuffer::IsParticleAllocated(p)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");
+
                 ParticleCouter[PIC::ParticleBuffer::GetI(p)]+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(p);
               }
            }
@@ -300,7 +302,7 @@ double TheoreticalLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReact
   return res;
 }
 
-int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, double ReactionTimeInterval,double ReactionTimeIntervalLeft,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   int *ReactionProductsList,nReactionProducts;
   double *ReactionProductVelocity;
   int ReactionChannel;
@@ -395,11 +397,21 @@ int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,i
      exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
+//     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
+
+     ModelParticleInjectionRate=ParentParticleWeight/h2oTheoreticalLifeTime/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
 
      //inject the product particles
      if (ModelParticleInjectionRate>0.0) {
        TimeIncrement=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
+
+       //the time interval during which the nre partilces will be injected
+       double ProductInjectionTimeInterval,ProductTimeIntervalLeft;
+
+       ProductInjectionTimeInterval=ReactionTimeInterval*ProductTimeStep/ParentTimeStep;
+       ProductTimeIntervalLeft=ReactionTimeIntervalLeft*ProductTimeStep/ParentTimeStep;
+
+       TimeCounter=ProductTimeStep-ProductTimeIntervalLeft;
 
        while (TimeCounter+TimeIncrement<ProductTimeStep) {
          TimeCounter+=TimeIncrement;
@@ -456,7 +468,7 @@ int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,i
          memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
          node=PIC::Mesh::mesh.findTreeNode(x,node);
-         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,rnd()*ProductTimeStep,node);
+         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,ProductTimeStep-TimeCounter,node);
        }
      }
 
@@ -466,6 +478,267 @@ int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,i
   return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
 }
 
+
+void PhotochemicalModel(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+  int *ReactionProductsList,nReactionProducts;
+  double *ReactionProductVelocity;
+  int ReactionChannel,spec;
+  bool PhotolyticReactionRoute;
+  PIC::ParticleBuffer::byte *ParticleData;
+  double vParent[3],xParent[3];
+
+  //get the particle data
+  ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+  spec=PIC::ParticleBuffer::GetI(ParticleData);
+  PIC::ParticleBuffer::GetV(vParent,ParticleData);
+  PIC::ParticleBuffer::GetX(xParent,ParticleData);
+
+  bool PhotolyticReactionAllowedFlag;
+
+  TheoreticalLifeTime(NULL,spec,ptr,PhotolyticReactionAllowedFlag,node);
+
+  if (PhotolyticReactionAllowedFlag==false) {
+    //no reaction occurs -> add the particle to the list
+    //the particle is remain in the system
+    PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+    PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+    if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+    FirstParticleCell=ptr;
+    return;
+  }
+
+  //init the reaction tables
+  static bool initflag=false;
+  static double TotalProductYeld_PhotolyticReaction[PIC::nTotalSpecies*PIC::nTotalSpecies];
+  static double TotalProductYeld_ElectronImpact[PIC::nTotalSpecies*PIC::nTotalSpecies];
+
+  double HotElectronFraction=0.05;
+  static const double ThermalElectronTemeprature=20.0;
+  static const double HotElectronTemeprature=250.0;
+
+  if (initflag==false) {
+    int iParent,iProduct;
+
+    initflag=true;
+
+    for (iParent=0;iParent<PIC::nTotalSpecies;iParent++) for (iProduct=0;iProduct<PIC::nTotalSpecies;iProduct++) {
+      TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]=0.0;
+      TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies]=0.0;
+
+      if (PhotolyticReactions::ModelAvailable(iParent)==true) {
+        TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]=PhotolyticReactions::GetSpeciesReactionYield(iProduct,iParent);
+      }
+
+      if (ElectronImpact::ModelAvailable(iParent)==true) {
+        TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies]=
+            ElectronImpact::GetSpeciesReactionYield(iProduct,iParent,HotElectronTemeprature);
+      }
+
+      ProductionYieldTable[iParent][iProduct]=TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]+
+          TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies];
+    }
+  }
+
+  //determine the type of the reaction
+  double PhotolyticReactionRate=1.0,ElectronImpactRate=0.0;
+
+
+  PhotolyticReactionRoute=(rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) ? true : false;
+
+  //inject the products of the reaction
+  double ParentTimeStep,ParentParticleWeight;
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+#else
+  ParentParticleWeight=0.0;
+  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#else
+  ParentTimeStep=0.0;
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+
+  //account for the parent particle correction factor
+  ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+  //the particle buffer used to set-up the new particle data
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+  //copy the state of the initial parent particle into the new-daugher particle (just in case....)
+  PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
+
+  for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) {
+    double ProductTimeStep,ProductParticleWeight;
+    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+    int iProduct;
+    long int newParticle;
+    PIC::ParticleBuffer::byte *newParticleData;
+
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+     ProductParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[specProduct];
+#else
+     ProductParticleWeight=0.0;
+     exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
+#else
+     ProductTimeStep=0.0;
+     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+//     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
+
+     ModelParticleInjectionRate=ParentParticleWeight/h2oTheoreticalLifeTime/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
+
+     //inject the product particles
+     if (ModelParticleInjectionRate>0.0) {
+       TimeIncrement=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
+
+       while (TimeCounter+TimeIncrement<ProductTimeStep) {
+         TimeCounter+=TimeIncrement;
+         TimeIncrement=-log(rnd())/ModelParticleInjectionRate;
+
+         //generate model particle with spec=specProduct
+         bool flag=false;
+
+         do {
+           //generate a reaction channel
+           if (PhotolyticReactionRoute==true) {
+             PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+           }
+           else {
+             ElectronImpact::GenerateReactionProducts(spec,HotElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+           }
+
+           //check whether the products contain species with spec=specProduct
+           for (iProduct=0;iProduct<nReactionProducts;iProduct++) if (ReactionProductsList[iProduct]==specProduct) {
+             flag=true;
+             break;
+           }
+         }
+         while (flag==false);
+
+
+         //determine the velocity of the product specie
+         double x[3],v[3],c=rnd();
+
+         for (int idim=0;idim<3;idim++) {
+           x[idim]=xParent[idim];
+           v[idim]=vParent[idim]+ReactionProductVelocity[idim+3*iProduct];
+         }
+
+         //generate a particle
+         PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+         #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+         #endif
+
+         //apply condition of tracking the particle
+         #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+         PIC::ParticleTracker::InitParticleID(tempParticleData);
+         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,specProduct,tempParticleData);
+         #endif
+
+
+         //get and injection into the system the new model particle
+         newParticle=PIC::ParticleBuffer::GetNewParticle(FirstParticleCell);
+         newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+
+         PIC::ParticleBuffer::CloneParticle(newParticleData,(PIC::ParticleBuffer::byte *)tempParticleData);
+
+//         memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+       }
+     }
+
+  }
+
+  //determine whether the parent particle is removed
+  if (rnd()<exp(-ParentTimeStep/h2oTheoreticalLifeTime)) {
+    //the particle is remain in the system
+    PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+    PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+    if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+    FirstParticleCell=ptr;
+  }
+  else {
+    //the particle is removed from the system
+    PIC::ParticleBuffer::DeleteParticle(ptr);
+  }
+
+}
+
+void PhotochemicalModelWrapper(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int i,j,k;
+  double v0[3],v1[3],cr;
+  double static v[3]={0.0,0.0,0.0};
+  long int p,pnext,oldFirstCellParticle,newFirstCellParticle;
+
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    //evaluate the mean relative speed
+    if (startNode->block!=NULL) {
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              oldFirstCellParticle=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+              newFirstCellParticle=-1;
+
+              if (oldFirstCellParticle!=-1) {
+                p=oldFirstCellParticle;
+
+                while (p!=-1) {
+
+                static int cnt=0;
+
+                cnt++;
+
+                  if (PIC::ParticleBuffer::IsParticleAllocated(p)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");
+
+
+                  pnext=PIC::ParticleBuffer::GetNext(p);
+                  PhotochemicalModel(p,newFirstCellParticle,startNode);
+                  p=pnext;
+
+
+                  for (long int pp=newFirstCellParticle;pp!=-1;pp=PIC::ParticleBuffer::GetNext(pp)) {
+                    if (PIC::ParticleBuffer::IsParticleAllocated(pp)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");
+
+
+                  }
+                }
+
+                startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=newFirstCellParticle;
+              }
+           }
+         }
+      }
+    }
+
+  }
+  else {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      PhotochemicalModelWrapper(downNode);
+    }
+  }
+
+}
 
 //================================================================================================
 //test the chemistry model
@@ -498,8 +771,8 @@ int main(int argc,char **argv) {
     PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
     CountParticles(InitialParticleCounter,PIC::Mesh::mesh.rootTree);
 
-    //call the particle moving procedure
-    PIC::Mover::MoveParticles();
+    //apply the chemical model
+    PhotochemicalModelWrapper(PIC::Mesh::mesh.rootTree);
 
     //count and remove all particles
     CountParticles(ProductParticleCounter,PIC::Mesh::mesh.rootTree);
