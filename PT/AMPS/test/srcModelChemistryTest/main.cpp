@@ -517,6 +517,8 @@ void PhotochemicalModel(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PI
   static const double ThermalElectronTemeprature=20.0;
   static const double HotElectronTemeprature=250.0;
 
+  static double MeanLog=0.0;
+
   if (initflag==false) {
     int iParent,iProduct;
 
@@ -538,6 +540,11 @@ void PhotochemicalModel(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PI
       ProductionYieldTable[iParent][iProduct]=TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]+
           TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies];
     }
+
+
+    int ntest=1000000;
+    for (int i=0;i<ntest;i++) MeanLog+=log(rnd());
+    MeanLog/=ntest;
   }
 
   //determine the type of the reaction
@@ -574,7 +581,7 @@ void PhotochemicalModel(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PI
   //copy the state of the initial parent particle into the new-daugher particle (just in case....)
   PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
 
-  for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) {
+  for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) if (specProduct!=spec) {
     double ProductTimeStep,ProductParticleWeight;
     double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
     int iProduct;
@@ -600,11 +607,24 @@ void PhotochemicalModel(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PI
 
      ModelParticleInjectionRate=ParentParticleWeight/h2oTheoreticalLifeTime/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
 
+
+  //   ModelParticleInjectionRate=1.0/h2oTheoreticalLifeTime/MeanLog;
+
+
+
      //inject the product particles
      if (ModelParticleInjectionRate>0.0) {
        TimeIncrement=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
 
-       while (TimeCounter+TimeIncrement<ProductTimeStep) {
+//       while (TimeCounter+TimeIncrement<ProductTimeStep) {
+
+
+       double anpart=ProductionYieldTable[spec][specProduct]*(1.0-exp(-ProductTimeStep/h2oTheoreticalLifeTime))*ParentParticleWeight/ProductParticleWeight;
+       int npart=(int)anpart;
+       if (anpart-npart>rnd()) npart+=1;
+
+       for (int n=0;n<npart;n++) {
+
          TimeCounter+=TimeIncrement;
          TimeIncrement=-log(rnd())/ModelParticleInjectionRate;
 
@@ -761,7 +781,7 @@ int main(int argc,char **argv) {
   double v[3]={0.0,0.0,0.0};
   char fname[400];
   std::fstream fout;
-  int n,nTotalTestIterations=100;
+  int n,nTotalTestIterations=50;
 
   double ProductParticleCounter[PIC::nTotalSpecies],InitialParticleCounter[PIC::nTotalSpecies];
   for (s=0;s<PIC::nTotalSpecies;s++) ProductParticleCounter[s]=0.0,InitialParticleCounter[s]=0.0;
@@ -796,19 +816,25 @@ int main(int argc,char **argv) {
         log(GlobalProductParticleCounter[_H2O_SPEC_]/GlobalInitialParticleCounter[_H2O_SPEC_]);
 
 
-    cout << "Test 1: H2O descruction life time: Numerical\tTheoretical\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << endl << endl;
-    fout << "Test 1: H2O descruction life time: Numerical\tTheoretical\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << endl << endl;
+    cout << "Test 1: H2O lifetime: Numerical\tTheoretical\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << endl << endl;
+    fout << "Test 1: H2O lifetime: Numerical\tTheoretical\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << endl << endl;
 
     //get the source rate of the products
     double LossRateH2O,SourceRate;
 
     LossRateH2O=-(GlobalProductParticleCounter[_H2O_SPEC_]-GlobalInitialParticleCounter[_H2O_SPEC_])/PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_];
 
-    for (s=0;s<PIC::nTotalSpecies;s++) if (s!=_H2O_SPEC_) {
-      SourceRate=(GlobalProductParticleCounter[s]-GlobalInitialParticleCounter[s])/PIC::ParticleWeightTimeStep::GlobalTimeStep[s];
+    cout << "Test 1: H2O lifetime derived from the reaction daughter product: Numerical\nspec\tH2O LifeTime\n";
+    fout << "Test 1: H2O lifetime derived from the reaction daughter product: Numerical\nspec\tH2O LifeTime\n";
 
-      cout << "Test 1: Daughter product source rate: Numerical\tTheoretical\n" << SourceRate << "\t" << LossRateH2O*ProductionYieldTable[_H2O_SPEC_][s] << endl;
-      fout << "Test 1: Daughter product source rate: Numerical\tTheoretical\n" << SourceRate << "\t" << LossRateH2O*ProductionYieldTable[_H2O_SPEC_][s] << endl;
+
+    for (s=0;s<PIC::nTotalSpecies;s++) if (s!=_H2O_SPEC_) {
+      LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[s]/
+          log(1.0-GlobalProductParticleCounter[s]/GlobalInitialParticleCounter[_H2O_SPEC_]/ProductionYieldTable[_H2O_SPEC_][s]);
+
+      cout << s << "\t" << LifeTimeH2O << endl;
+      fout << s << "\t" << LifeTimeH2O << endl;
+
     }
 
     fout.close();
