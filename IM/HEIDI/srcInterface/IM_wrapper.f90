@@ -885,7 +885,7 @@ contains
     use ModProcHEIDI, ONLY: iProc
     use ModConst, ONLY: cProtonMass
     use ModHeidiCurrents, ONLY:eden, rnht
-    use ModHeidiSize,  ONLY:  nR, nT
+    use ModHeidiSize,  ONLY:  nR, nT, nS
 
     integer, intent(in)                                :: iSizeIn,jSizeIn,nVar
     real, dimension(iSizeIn,jSizeIn,nVar), intent(out) :: Buffer_IIV
