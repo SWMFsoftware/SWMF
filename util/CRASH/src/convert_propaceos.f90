@@ -17,38 +17,31 @@ program PROPACEOS
 
   integer,parameter::iUnit = 11, nDensity=201, nTemperature = 201
   integer,parameter::nFrequency=30
-  real,  &
-       dimension(nFrequency+1) :: hNu_I
+  real, dimension(nFrequency+1) :: hNu_I
 
-  real,  &
-       dimension(nTemperature,nDensity) :: &
-       zAvr_II, ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, EElectron_II, &
-       dEIonOverDT_II, dEElectronOverDT_II, pTotal_II,&
-       pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II,&
+  real, dimension(nTemperature,nDensity) :: &
+       zAvr_II, ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, &
+       EElectron_II, dEIonOverDT_II, dEElectronOverDT_II, pTotal_II, &
+       pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II, &
        dPTotalOverRho_II, dPElectronOverRho_II
   
-  real,  &
-       dimension(nTemperature,nDensity) :: &
-       RossOpacity_II, &
-       PlanckOpacity_II, PlanckOpacEms_II
+  real, dimension(nTemperature,nDensity) :: &
+       RossOpacity_II, PlanckOpacity_II, PlanckOpacEms_II
   
-  real,  &
-       dimension(nTemperature) :: &
+  real, dimension(nTemperature) :: &
        Temperature_I
-  real,  &
-       dimension(nDensity) :: &
+  real, dimension(nDensity) :: &
        Density_I, Rho_I     
   
-  real,  &
-       dimension(nFrequency,nTemperature,nDensity) :: &
+  real,  dimension(nFrequency,nTemperature,nDensity) :: &
        PlanckOpacity_III, RossOpacity_III, PlanckOpacEms_III
 
   real, allocatable:: Value_VII(:,:,:) 
 
   character(len=80)  :: StringHeader  
   integer::iString, iRho, iTe
-  character(LEN=13)::NameFile
-  character(LEN=2)::NameMaterial,NameMixture
+  character(LEN=13):: NameFile
+  character(LEN=2) :: NameMaterial, NameMixture
   integer:: iMix
   character(LEN=30)::NameToRead
 
@@ -83,7 +76,11 @@ program PROPACEOS
   ! integer,parameter:: iStringStart = -1, iStringLast = -1
  
   logical, parameter :: UseLogInterpolation = .true.
-  !--------------
+
+  logical :: DoLTE = .true.
+
+  character(len=100) :: NameFileEos
+  !----------------------------------------------------------------------------
 
   Population_II= 0.0; Concentration_I = 0.0
   nZ_I = 0
@@ -193,21 +190,22 @@ program PROPACEOS
   do iString =1,24
      read(11,'(a)')StringHeader
      write(*,'(a)')StringHeader
+     if(index(StringHeader,'NLTE') > 0) DoLTE = .false.
   end do
 
-     call read_eosopa_file_main ( iUnit, &  
-          nDensity, nTemperature, &
-          nFrequency, &                                        
-          hNu_I, zAvr_II, &
-          ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, &
-          EElectron_II, dEIonOverDT_II, dEElectronOverDT_II, &
-          pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II, &
-          RossOpacity_II, &
-          PlanckOpacity_II, &
-          PlanckOpacEms_II, &
-          Temperature_I, Density_I, &
-          PlanckOpacity_III, &
-          RossOpacity_III, PlanckOpacEms_III)
+  call read_eosopa_file_main ( iUnit, &
+       nDensity, nTemperature, &
+       nFrequency, &
+       hNu_I, zAvr_II, &
+       ETotal_II, dETotalOverDT_II, dETotalOverDRho_II, EIon_II, &
+       EElectron_II, dEIonOverDT_II, dEElectronOverDT_II, &
+       pIon_II, pElectron_II, dPIonOverDT_II, dPElectronOverDT_II, &
+       RossOpacity_II, &
+       PlanckOpacity_II, &
+       PlanckOpacEms_II, &
+       Temperature_I, Density_I, &
+       PlanckOpacity_III, &
+       RossOpacity_III, PlanckOpacEms_III)
 
   close(11)
   !Rescale Density array
@@ -220,50 +218,54 @@ program PROPACEOS
   !Swap indexes (Rho<=>Te), merge to a sigle table
   !Convert units: cm2/g=0.10 m2/kg
 
-  allocate(Value_VII(2*nFrequency,nDensity,nTemperature))
-  do iTe = 1, nTemperature
-     do iRho = 1, nDensity
-        Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
-        Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
-             RossOpacity_III(:,iTe,iRho)*0.1
+  if(DoLTE)then
+
+     allocate(Value_VII(2*nFrequency,nDensity,nTemperature))
+     do iTe = 1, nTemperature
+        do iRho = 1, nDensity
+           Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
+           Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
+                RossOpacity_III(:,iTe,iRho)*0.1
+        end do
      end do
-  end do
 
-  call save_plot_file( &
-         NameMaterial//'_opac_PRISM.dat',                                &
-         TypeFileIn     = 'real8',                     &
-         StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
-         NameVarIn      = 'logRho logTe Planck(30) Ross(30) EvMin EvMax',&
-         ParamIn_I      = (/0.1, 2.0e4/), &
-         CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/),             &                             
-         CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/),             &
-         VarIn_VII      = Value_VII)
-  deallocate(Value_VII)
+     call save_plot_file( &
+          NameMaterial//'_opac_PRISM.dat', &
+          TypeFileIn     = 'real8', &
+          StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
+          NameVarIn      = 'logRho logTe Planck(30) Ross(30) EGroup00 EGroup(30)', &
+          ParamIn_I      = hNu_I, &
+          CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
+          CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
+          VarIn_VII      = Value_VII)
+     deallocate(Value_VII)
 
-  !=== Opacities with Planck group emission opacity ===
+  else
+     !=== Opacities with Planck group emission opacity ===
 
-  allocate(Value_VII(3*nFrequency,nDensity,nTemperature))
-  do iTe = 1, nTemperature
-     do iRho = 1, nDensity
-        Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
-        Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
-             PlanckOpacEms_III(:,iTe,iRho)*0.1
-        Value_VII(1+2*nFrequency:3*nFrequency,iRho,iTe) = &
-             RossOpacity_III(:,iTe,iRho)*0.1
+     allocate(Value_VII(3*nFrequency,nDensity,nTemperature))
+     do iTe = 1, nTemperature
+        do iRho = 1, nDensity
+           Value_VII(1:nFrequency,iRho,iTe) = PlanckOpacity_III(:,iTe,iRho)*0.1
+           Value_VII(1+nFrequency:2*nFrequency,iRho,iTe) = &
+                PlanckOpacEms_III(:,iTe,iRho)*0.1
+           Value_VII(1+2*nFrequency:3*nFrequency,iRho,iTe) = &
+                RossOpacity_III(:,iTe,iRho)*0.1
+        end do
      end do
-  end do
 
-  call save_plot_file( &
-         NameMaterial//'_opac_PRISM_NLTE.dat', &
-         TypeFileIn     = 'real8', &
-         StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
-         NameVarIn      = 'logRho logTe Planck(30) Ems(30) Ross(30) EvMin EvMax', &
-         ParamIn_I      = (/0.1, 2.0e4/), &
-         CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
-         CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
-         VarIn_VII      = Value_VII)
-  deallocate(Value_VII)
-  
+     call save_plot_file( &
+          NameMaterial//'_opac_NLTE_PRISM.dat', &
+          TypeFileIn     = 'real8', &
+          StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
+          NameVarIn      = 'logRho logTe Planck(30) Ems(30) Ross(30) EGroup00 EGroup(30)', &
+          ParamIn_I      = hNu_I, &
+          CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
+          CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
+          VarIn_VII      = Value_VII)
+     deallocate(Value_VII)
+  end if
+
   !=========================EOS====================
   !Convert energy in J/g to J/kg, 1/g=10+3 1/kg
   
@@ -414,18 +416,27 @@ program PROPACEOS
      end do
   end do
 
+  if(DoLTE)then
+     NameFileEos = NameMaterial//'_eos_PRISM.dat'
+  else
+     NameFileEos = NameMaterial//'_eos_NLTE_PRISM.dat'
+  end if
+
   write(NameDescription,'(a,e13.7)')&
        'PROPACEOS EOS for '//NameMaterial//&
        'Atomic Mass = ',AtomicMass
+
   call save_plot_file( &
-       NameMaterial//'_eos_PRISM.dat',                                &
-       TypeFileIn     = 'real8',                     &
+       NameFileEos, &
+       TypeFileIn     = 'real8', &
        StringHeaderIn = trim(NameDEscription), &
        NameVarIn      = 'logTe logNa '//NameVarEos, &
-       CoordMinIn_D   = (/log10(Temperature_I(1)),log10(Density_I(1))/),             &                             
-       CoordMaxIn_D   = (/log10(Temperature_I(nTemperature)),log10(Density_I(nDensity))/),&
+       CoordMinIn_D   = (/log10(Temperature_I(1)), log10(Density_I(1))/), &
+       CoordMaxIn_D   = (/log10(Temperature_I(nTemperature)), log10(Density_I(nDensity))/), &
        VarIn_VII      = Value_VII)
+
   open(11,file='PARAM.'//NameMaterial//'.PRISM',status='replace')
+
   write(11,'(a)')'----------------EOS TABLE-------------'
   write(11,'(a)')'    '
   write(11,'(a)')'#LOOKUPTABLE'
