@@ -1423,7 +1423,7 @@ void Particles3Dcomm::recommunicate_particles_until_done(int min_num_iterations)
   // * to minimize unnecessary sends,
   // with the overall goal of minimizing time spent in communication
   //
-  int num_pcls_sent;
+  long long num_pcls_sent;
   for(int i=0;i<min_num_iterations;i++)
   {
     flush_send(); // flush sending of particles

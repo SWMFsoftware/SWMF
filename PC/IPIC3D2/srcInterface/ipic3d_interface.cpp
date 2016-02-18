@@ -139,7 +139,7 @@ int ipic3d_run_(double *time){
    timing_stop("PC: SyncWithFluid");
 
    timing_start("PC: CalculateField");  
-   SimRun[i]->CalculateField();
+   SimRun[i]->CalculateField(iSimCycle[i]);
    timing_stop("PC: CalculateField");
 
    timing_start("PC: ParticlesMover");  
