@@ -233,8 +233,9 @@ contains
   end subroutine SP_request_line
 
   !===================================================================
-  
-  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI)
+
+  subroutine SP_put_line(NameVar, nVar, &
+       nParticle, Data_VI, Convert_DD)
     use ModSize, ONLY: nDim, nNode
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm
@@ -245,6 +246,7 @@ contains
     integer,          intent(in):: nVar
     integer,          intent(in):: nParticle
     real,             intent(in):: Data_VI(nVar, nParticle)
+    real,             intent(in):: Convert_DD(nDim, nDim)
 
     ! loop variables
     integer:: iParticle, iBlock, iNode
@@ -265,8 +267,9 @@ contains
        iGrid_IA(Begin_, iLine) = MAX(iGrid_IA(Begin_,iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
+       ! convert and store data
        State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)) = &
-            Data_VI(1:nDim, iParticle)
+               matmul(Convert_DD, Data_VI(1:nDim, iParticle))
     end do
     !\
     ! Update begin/end points on all procs
