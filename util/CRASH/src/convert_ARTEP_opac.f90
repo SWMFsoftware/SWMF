@@ -86,7 +86,7 @@ program save_eos_table
          'Xe_opac.dat',                                                      &
          TypeFileIn     = 'real8',                                           &
          StringHeaderIn = 'ARTEP Opacity for Xe',                            &
-         NameVarIn      = 'logRho logTe Planck(44) Ross(44) EGropu00 EGroup(44)',&
+         NameVarIn      = 'logRho logTe Planck(44) Ross(44) EGroup00 EGroup(44)',&
          CoordMinIn_D   = (/log10(RhoMin), log10(TMin)/),        &
          CoordMaxIn_D   = (/log10(RhoMax), log10(TMax)/),        &
          ParamIn_I      = EGroup_I,                                     &
