@@ -208,12 +208,12 @@ contains
           ! recv data
           call MPI_recv(BuffRecv_I, nVar*nParticleRecv, MPI_DOUBLE,&
                iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
-          !!!!!!!!!!!!!!!!!!
-          ! CONVERSION HERE
-          !!!!!!!!!!!!!!!!!!
-          ! put data
+
+          ScToSp_DD = transform_matrix(tNow,&
+               Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
           call SP_put_line(NameVar, nVar, nParticleRecv,&
-               reshape(BuffRecv_I,(/nVar,nParticleRecv/)))
+               reshape(BuffRecv_I,(/nVar,nParticleRecv/)),&
+               ScToSp_DD)
        end do
     end if
 
