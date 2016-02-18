@@ -896,6 +896,7 @@ contains
 
     logical :: DoTest, DoTestMe
     character (len=*),parameter :: NameSub='IM_get_for_gm'
+    real    :: PressureToGM_III(nR,nT,nS),   DensityToGM_III(nR,nT,nS)
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     DoTestMe = DoTest .and. iProc == 0
@@ -915,7 +916,13 @@ contains
     end if
 
     Buffer_IIV = 0.0
-
+    
+    ! In HEIDI local time is measured from midnight eastward. We need to shift the indices 
+    ! in the pressure and density arrays by (nT-1)/2 so that the MLT is measured from noon westward.
+    
+    PressureToGM_III = cshift(eden, SHIFT=(nT-1)/2, DIM=2)
+    DensityToGM_III  = cshift(rnht, SHIFT=(nT-1)/2, DIM=2)
+    
     !Fill pressure and density
     do i=1,iSize
        do j=1,jSize
@@ -924,15 +931,15 @@ contains
           ! make sure pressure passed to GM is not lower than Pmin [Pa]
           ! to avoid too low GM pressure 
           
-          Pmin = minval(eden(i,j,:))
-          Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1.602 *1e-10
+          Pmin = minval(PressureToGM_III(i,j,:))
+          Buffer_IIV(i,j,pres_) = max(sum(PressureToGM_III(i,j,:)), Pmin)*1.602 *1e-10
           
           ! Add together density from H+, He+ and O+
           ! Convert from #/cc to kg/m3
           Buffer_IIV(i,j,dens_) = &
-               rnht(i,j,1)*1.0e6*cProtonMass * 4 + & ! He+
-               rnht(i,j,2)*1.0e6*cProtonMass + &     ! H+
-               rnht(i,j,4)*1.0e6*cProtonMass*16.0    ! O+
+               DensityToGM_III(i,j,1)*1.0e6*cProtonMass * 4 + & ! He+
+               DensityToGM_III(i,j,2)*1.0e6*cProtonMass + &     ! H+
+               DensityToGM_III(i,j,4)*1.0e6*cProtonMass*16.0    ! O+
 
           ! Only a not-a-number can be less than zero and larger than one
           if(  .not. Buffer_IIV(i,j,pres_) > 0 .and. &
@@ -959,7 +966,6 @@ contains
     ! EDEN("                ) = equatorial pressure (keV/cc) (*0.1602 = nPa)
 
   end subroutine IM_get_for_gm
-
   !============================================================================
 
   subroutine IM_init_session(iSession, TimeSimulation)
