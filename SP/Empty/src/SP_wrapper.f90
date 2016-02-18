@@ -20,9 +20,8 @@ module SP_wrapper
   public:: SP_get_line_param
   public:: SP_put_input_time
   public:: SP_put_from_mh
-  public:: SP_get_line_origin
-  public:: SP_get_interface
   public:: SP_put_line
+  public:: SP_request_line
 
 contains
 
@@ -95,19 +94,19 @@ contains
 
   end subroutine SP_get_line_param
   !===================================================================
-  subroutine SP_get_line_origin (CoordOriginOut_DA)
-    real, intent(out):: CoordOriginOut_DA(3, 1)
-    call CON_stop('Can not get line origins from SP')
-  end subroutine SP_get_line_origin
+  subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
+    character(len=*), intent(out):: NameVar
+    integer,          intent(out):: nVar
+    integer,          intent(in) :: iDirIn
+    real,             intent(in) :: CoordOut_DA(3,1)
+    call CON_stop('Can not request line')
+  end subroutine SP_request_line
   !===================================================================
-  subroutine SP_get_interface(CoordInterfaceOut_DA)
-    real, intent(out):: CoordInterfaceOut_DA(3, 1)
-    call CON_stop('Can not get line interface from SP')
-  end subroutine SP_get_interface
-  !===================================================================
-  subroutine SP_put_line(nParticle, ParticleData_II)
-    integer, intent(in):: nParticle
-    real,    intent(in):: ParticleData_II(5, nParticle)
-    call CON_stop('Can not put line parameters from SP')
+  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI)
+    character(len=*), intent(in):: NameVar
+    integer,          intent(in):: nVar
+    integer,          intent(in):: nParticle
+    real,             intent(in):: Data_VI(nVar, nParticle)
+    call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
 end module SP_wrapper

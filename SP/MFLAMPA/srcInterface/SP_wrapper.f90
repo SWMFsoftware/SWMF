@@ -19,9 +19,15 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_put_input_time
   public:: SP_put_from_mh
+  public:: SP_request_line
   public:: SP_put_line
-  public:: SP_get_line_origin
-  public:: SP_get_interface
+
+
+  ! variables requested via coupling: coordinates, 
+  ! field line and particles indexes
+  character(len=*), parameter:: NameVarRequest = 'xx yy zz fl id'
+  integer,          parameter:: nVarRequest = 5
+
 
 contains
 
@@ -159,70 +165,118 @@ contains
   end subroutine SP_set_grid
 
   !===================================================================
-  
-  subroutine SP_get_line_origin(CoordOriginOut_DA)
-    use ModSize, ONLY: nDim, nNode
-    use ModMain, ONLY: CoordOrigin_DA
-    real, intent(out):: CoordOriginOut_DA(nDim, nNode)
-    !------------------------------------------------
-    CoordOriginOut_DA = CoordOrigin_DA
-  end subroutine SP_get_line_origin
 
-  !===================================================================
-  
-  subroutine SP_get_interface(CoordInterfaceOut_DA)
-    use ModSize, ONLY: nDim, nNode, iParticleMin, iParticleMax
-    use ModMain, ONLY: State_VIB, iNode_B, nBlock
-    ! get the last points of the field lines;
-    ! called after recv'd lines extracted from SC,
-    ! thus last points are at interface between SC and IH
-    real, intent(out):: CoordInterfaceOut_DA(nDim, nNode)
-    ! loop variable
-    integer:: iBlock
-    ! index of the last on the current line
-    integer:: iParticleLast
-    character(len=*), parameter:: NameSub='SP_get_interface'
-    !------------------------------------------------
-    ! each proc fills its own part
-    CoordInterfaceOut_DA = 0.0
-    do iBlock = 1, nBlock
-       ! find the last particle on this line/block
-       iParticleLast = iParticleMax
-       do while(State_VIB(1, iParticleLast, iBlock) < 0)
-          if(iParticleLast == iParticleMin)&
-               call CON_stop(NameSub//': Line is not found')
-          iParticleLast = iParticleLast - 1
-       end do
-       ! get its HGI coordinates
-       CoordInterfaceOut_DA(:, iNode_B(iBlock)) = &
-            State_VIB(1:nDim, iParticleLast, iBlock)
-    end do
+  subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
+    use ModSize, ONLY: nDim, nNode, R_, Lat_, Lon_
+    use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
+         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock
+    use ModMpiOrig
+    ! request coordinates of field lines' beginning/origin/end
+    ! as well as names variables to be imported
+    !---------------------------------------------------------------
+    character(len=*), intent(out):: NameVar
+    integer,          intent(out):: nVar
+    integer,          intent(in) :: iDirIn
+    real,             intent(out):: CoordOut_DA(nDim, nNode)
 
-  end subroutine SP_get_interface
+    ! directions requested
+    integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
-  !===================================================================
-  
-  subroutine SP_put_line(nParticle, ParticleData_II)
-    use ModSize, ONLY: nDim
-    use ModMain, ONLY: iGrid_IA, State_VIB, Block_, Proc_, iProc
-    ! store field lines data extracted elsewhere
-    integer, intent(in):: nParticle
-    real,    intent(in):: ParticleData_II(nDim+2, nParticle)
-    
-    ! loop variable
-    integer:: iParticle
+    ! loop variables
+    integer:: iParticle, iBlock, iNode
     ! indices of the particle
     integer:: iLine, iIndex
+    integer:: iMin_A(nNode),iMax_A(nNode)
+    integer:: iError
+    character(len=*), parameter:: NameSub='SP_request_line'
+    !----------------------------------------------------------------
+    ! indicate variables requested
+    NameVar = NameVarRequest
+    nVar    = nVarRequest
+    ! each processor fills only its own nodes; reset all
+    CoordOut_DA = 0
+    select case(iDirIn)
+    case(iDirBegin_)
+       ! get coordinates of the 1st points on field lines
+       do iBlock = 1, nBlock
+          iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
+          CoordOut_DA(:, iNode) = &
+               State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+       end do
+    case(iDirOrigin_)
+       ! get coordinates of the origin points of field lines
+       do iBlock = 1, nBlock
+          CoordOut_DA(:, iNode_B(iBlock)) = &
+               State_VIB((/R_,Lat_,Lon_/), 0, iBlock)
+       end do
+    case(iDirEnd_)
+       ! get coordinates of the last points on field lines
+       do iBlock = 1, nBlock
+          iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
+          CoordOut_DA(:, iNode_B(iBlock)) = &
+               State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+       end do
+    case default
+       call CON_stop(NameSub//': invalid request of field line coordinates')
+    end select
+    !\
+    ! Collect all coords on the root
+    !/
+    if(iProc==0)then
+       call MPI_Reduce(MPI_IN_PLACE, CoordOut_DA, nDim*nNode, MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+    else
+       call MPI_Reduce(CoordOut_DA, CoordOut_DA, nDim*nNode, MPI_REAL, &
+            MPI_SUM, 0, iComm, iError)
+    end if
+
+  end subroutine SP_request_line
+
+  !===================================================================
+  
+  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI)
+    use ModSize, ONLY: nDim, nNode
+    use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
+         Proc_, Block_, Begin_, End_, iProc, iComm
+    use ModMpiOrig
+    ! store particle data extracted elsewhere
+    !---------------------------------------------------------------
+    character(len=*), intent(in):: NameVar
+    integer,          intent(in):: nVar
+    integer,          intent(in):: nParticle
+    real,             intent(in):: Data_VI(nVar, nParticle)
+
+    ! loop variables
+    integer:: iParticle, iBlock, iNode
+    ! indices of the particle
+    integer:: iLine, iIndex
+    integer:: iMin_A(nNode),iMax_A(nNode)
+    integer:: iError
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
+    ! check correctness
+    if(index(NameVar, NameVarRequest) == 0 .or. nVar /= nVarRequest)&
+         call CON_stop(NameSub//': a different set variables was requested')
+    ! store passed particles
     do iParticle = 1, nParticle
-       iLine  = nint(ParticleData_II(4, iParticle))
-       iIndex = nint(ParticleData_II(5, iParticle))
+       iLine  = nint(Data_VI(4, iParticle))
+       iIndex = nint(Data_VI(5, iParticle))
+       iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iIndex)
+       iGrid_IA(Begin_, iLine) = MAX(iGrid_IA(Begin_,iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)) = &
-            ParticleData_II(1:3, iParticle)
+            Data_VI(1:nDim, iParticle)
     end do
+    !\
+    ! Update begin/end points on all procs
+    !/
+    iMin_A = iGrid_IA(Begin_, :); iMax_A = iGrid_IA(End_,:)
+    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nDim*nNode, MPI_REAL, &
+         MPI_MIN, iComm, iError)
+    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nDim*nNode, MPI_REAL, &
+         MPI_MAX, iComm, iError)
+    iGrid_IA(Begin_, :) = iMin_A; iGrid_IA(End_,:) = iMax_A
   end subroutine SP_put_line
 
 end module SP_wrapper

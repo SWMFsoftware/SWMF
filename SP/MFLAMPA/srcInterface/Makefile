@@ -5,7 +5,7 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 include Makefile.DEPEND
 
-SEARCHDIR = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
+SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 OBJECTS = SP_wrapper.o
 

@@ -31,8 +31,8 @@ module CON_couple_mh_sp
   use CON_axes
 
   use SP_wrapper, ONLY: &
-       SP_put_from_mh, SP_put_input_time, SP_get_interface, &
-       SP_put_line, SP_get_line_origin
+       SP_put_from_mh, SP_put_input_time, &
+       SP_put_line, SP_request_line
 
   implicit none
 
@@ -77,7 +77,7 @@ contains
     integer::nLine
     integer,allocatable:: nParticleAtLine_I(:)
     real,        pointer:: CoordMisc_DI(:,:)
-    integer:: nVarSend, nVarRecv
+    integer:: nVar
     integer:: SP_iProcTo, SC_iProcFrom
     integer:: iProcTo_I(1), iProcFrom_I(1)
     integer:: nParticleThisProc, nParticleRecv, nParticleSend
@@ -85,6 +85,8 @@ contains
     real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
     integer:: iLine, iBuff, iParticle, iTag
     integer:: iStatus_I(MPI_STATUS_SIZE)
+    character(len=100):: NameVar
+    character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
     if(.not.DoInit)return
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -126,11 +128,14 @@ contains
 
     if(is_proc0(SP_))then
        call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-       call SP_get_line_origin(CoordMisc_DI)
+       call SP_request_line(NameVar, nVar, 0, CoordMisc_DI)
        nullify(CoordMisc_DI)
     end if
 
     call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
+    call MPI_bcast(NameVar, len(NameVar), MPI_CHARACTER, &
+         i_proc0(SP_), i_comm(), iError)
+    call MPI_bcast(nVar, 1, MPI_INTEGER, i_proc0(SP_), i_comm(), iError)
 
 
     if(is_proc(SC_))then
@@ -144,9 +149,8 @@ contains
           CoordMisc_DI(:,iLine) = matmul(SpToSc_DD, CoordMisc_DI(:,iLine))
        end do
        allocate(nParticleAtLine_I(nLine))
-       call SC_get_line(nLine, CoordMisc_DI, 'xx yy zz fl id', Particle_II)
+       call SC_get_line(nLine, CoordMisc_DI, NameVar, Particle_II)
        nullify(CoordMisc_DI)
-       nVarSend = 5
        do iLine = 1, nLine
           nParticleAtLine_I(iLine) = count(nint(Particle_II(4,:))==iLine)
        end do
@@ -171,16 +175,17 @@ contains
           if(nParticleSend == 0) CYCLE
           ! prepare data
           if(allocated(BuffSend_I)) deallocate(BuffSend_I)
-          allocate(BuffSend_I(nVarSend * nParticleSend))
+          allocate(BuffSend_I(nVar * nParticleSend))
           iBuff = 1
           do iParticle = 1, nParticleThisProc
              if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
                   nint(Particle_II(4,iParticle)))/=SP_iProcTo) CYCLE
-             BuffSend_I(iBuff:iBuff + nVarSend - 1) = Particle_II(:,iParticle)
-             iBuff = iBuff + nVarSend - 1
+
+             BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
+             iBuff = iBuff + nVar - 1
           end do
           ! transfer data
-          call MPI_send(BuffSend_I,nVarSend * nParticleSend, &
+          call MPI_send(BuffSend_I,nVar * nParticleSend, &
                MPI_DOUBLE, iProcTo_I(1), iTag, i_comm(), iError)
        end do
        
@@ -191,7 +196,6 @@ contains
        !\
        ! Recv data from SC
        !/
-       nVarRecv = 5
        do SC_iProcFrom = 0, n_proc(SC_)-1
           ! translate proc at SC to global
           call MPI_Group_translate_ranks(&
@@ -202,14 +206,14 @@ contains
                iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
           if(nParticleRecv==0)CYCLE
           ! recv data
-          call MPI_recv(BuffRecv_I, nVarRecv*nParticleRecv, MPI_DOUBLE,&
+          call MPI_recv(BuffRecv_I, nVar*nParticleRecv, MPI_DOUBLE,&
                iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
           !!!!!!!!!!!!!!!!!!
           ! CONVERSION HERE
           !!!!!!!!!!!!!!!!!!
           ! put data
-          call SP_put_line(nParticleRecv,&
-               reshape(BuffRecv_I,(/nVarRecv,nParticleRecv/)))
+          call SP_put_line(NameVar, nVar, nParticleRecv,&
+               reshape(BuffRecv_I,(/nVar,nParticleRecv/)))
        end do
     end if
 

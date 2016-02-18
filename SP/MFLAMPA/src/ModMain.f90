@@ -15,7 +15,7 @@ module ModMain
   private ! except
 
   public:: read_param, initialize, run, finalize
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, Begin_, End_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
 
@@ -43,45 +43,46 @@ module ModMain
   ! Containers for coordinates and data
   !----------------------------------------------------------------------------
   ! Size of angular grid, latitude and longitude, at origin surface R=RMin
-  !----------------------------------------------------------------------------
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
+  !----------------------------------------------------------------------------
   ! Said angular grids itself; each field line is identified by latitude
   ! and longitude of the origin point at surface R=RMin as it is set
   ! at the beginning of simulation;
   ! 1st index - three HGI coordinates (R is added for compliteness)
   ! 2nd index - node number (equivalent to line number)
-  !----------------------------------------------------------------------------
   real,    allocatable:: CoordOrigin_DA(:,:)
+  !----------------------------------------------------------------------------
   ! Node number based on the field line identified by 2 angular grid indices,
   ! latitude and longitude;
   ! 1st index - latitude index
   ! 2nd index - longitude index
-  !----------------------------------------------------------------------------
   integer, allocatable:: iNode_II(:,:)
-  ! Number of blocks on this processor
   !----------------------------------------------------------------------------
+  ! Number of blocks on this processor
   integer:: nBlock
+  !----------------------------------------------------------------------------
   ! Node number based on the local block number
   ! 1st index - block number
-  !----------------------------------------------------------------------------
   integer, allocatable:: iNode_B(:)
+  !----------------------------------------------------------------------------
   ! Various house-keeping information about the node/line;
   ! 1st index - identification of info field
   ! 2nd index - node number
-  !----------------------------------------------------------------------------
   integer, allocatable:: iGrid_IA(:,:)
-  ! Number of info fields per node and their identifications
   !----------------------------------------------------------------------------
-  integer, parameter:: nNodeIndexes = 2
+  ! Number of info fields per node and their identifications
+  integer, parameter:: nNodeIndexes = 4
   integer, parameter:: &
-       Proc_  = 1,&
-       Block_ = 2
+       Proc_  = 1, & ! Processor that has this line/node
+       Block_ = 2, & ! Block that has this line/node
+       Begin_ = 3, & ! Index of the 1st particle on this line/node
+       End_   = 4    ! Index of the last particle on this line/node
+  !----------------------------------------------------------------------------
   ! State vector;
   ! 1st index - identification of variable
-  ! 2nd index - particle line along the field line
+  ! 2nd index - particle index along the field line
   ! 3rd index - local block number
-  !----------------------------------------------------------------------------
   real,    allocatable:: State_VIB(:,:,:)
   !/
 contains
@@ -198,6 +199,8 @@ contains
           end if
           iGrid_IA(Proc_, iNode) = iProcNode
           iGrid_IA(Block_,iNode) = iBlock
+          iGrid_IA(Begin_,iNode) = 0
+          iGrid_IA(End_,  iNode) = 0
           if(iNode == ((iProcNode+1)*nNode)/nProc)then
              iBlock = 1
           else
@@ -221,6 +224,7 @@ contains
   end subroutine initialize
 
   !============================================================================
+
   subroutine get_cell(CoordIn_D, iCellOut_D)
     real,    intent(in) :: CoordIn_D(nDim)
     integer, intent(out):: iCellOut_D(nDim)
@@ -259,7 +263,6 @@ contains
   end subroutine convert_to_hgi
 
   !============================================================================
-  
 
   subroutine run
   end subroutine run
