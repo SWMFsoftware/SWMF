@@ -435,14 +435,26 @@ program PROPACEOS
        CoordMaxIn_D   = (/log10(Temperature_I(nTemperature)), log10(Density_I(nDensity))/), &
        VarIn_VII      = Value_VII)
 
-  open(11,file='PARAM.'//NameMaterial//'.PRISM',status='replace')
+  if(DoLTE)then
+     open(11,file='PARAM.'//NameMaterial//'.PRISM',status='replace')
+  else
+     open(11,file='PARAM.'//NameMaterial//'.NLTE.PRISM',status='replace')
+  end if
 
   write(11,'(a)')'----------------EOS TABLE-------------'
   write(11,'(a)')'    '
   write(11,'(a)')'#LOOKUPTABLE'
-  write(11,'(a)')NameMaterial//'_eos                     NameTable'
+  if(DoLTE)then
+     write(11,'(a)')NameMaterial//'_eos                     NameTable'
+  else
+     write(11,'(a)')NameMaterial//'_eos_NLTE                NameTable'
+  end if
   write(11,'(a)')'load                  NameCommand'
-  write(11,'(a)')'Tables/'//NameMaterial//'_eos_PRISM.dat'
+  if(DoLTE)then
+     write(11,'(a)')'Tables/'//NameMaterial//'_eos_PRISM.dat'
+  else
+     write(11,'(a)')'Tables/'//NameMaterial//'_eos_NLTE_PRISM.dat'
+  end if
   write(11,'(a)')'real8                 TypeFile'
   write(11,'(a)')'EOS(Te, Na) for '//NameMaterial
   write(11,'(a)')'logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
@@ -458,12 +470,24 @@ program PROPACEOS
   write(11,'(a)')'----------------OPACITY TABLE----------'
   write(11,'(a)')'  '
   write(11,'(a)')'#LOOKUPTABLE'
-  write(11,'(a)')NameMaterial//'_opac                   NameTable'
+  if(DoLTE)then
+     write(11,'(a)')NameMaterial//'_opac                   NameTable'
+  else
+     write(11,'(a)')NameMaterial//'_opac_NLTE              NameTable'
+  end if
   write(11,'(a)')'load                  NameCommand'
-  write(11,'(a)')'Tables/'//NameMaterial//'_opac_PRISM.dat'
+  if(DoLTE)then
+     write(11,'(a)')'Tables/'//NameMaterial//'_opac_PRISM.dat'
+  else
+     write(11,'(a)')'Tables/'//NameMaterial//'_opac_NLTE_PRISM.dat'
+  end if
   write(11,'(a)')'real8                 TypeFile'
   write(11,'(a)')'Opacity(rho,Te) for '//NameMaterial
-  write(11,'(a)')'logrho logT Planck(30) Ross(30)'
+  if(DoLTE)then
+     write(11,'(a)')'logrho logT Planck(30) Ross(30)'
+  else
+     write(11,'(a)')'logrho logT Planck(30) Ems(30) Ross(30)'
+  end if
   write(11,'(a)')'201                   nIndex1'
   write(11,'(e13.7,a)')Rho_I(1),        '                       Index1Min (kg/m3)'
   write(11,'(e13.7,a)')Rho_I(nDensity), '                       Index1Max (kg/m3)'
