@@ -1,8 +1,8 @@
-pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
+pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
                   USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
                   GLRadius=GLRadius, SizeFactor=SizeFactor, $
                   nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed,$
-                  UseFits=UseFits,UseARSize=UseARSize,$
+                  UseBATS=UseBATS,UseARSize=UseARSize,$
                   GLRadiusRange=GLRadiusRange,Help=Help
 
 ;-----------------------------------------------------------------------
@@ -19,11 +19,10 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ; OUTPUTS:
 ;   Recommended GL flux rope parameters.
 ;
-; KEYWORDS:
-;   DemoMode = If set, a pre-saved magnetogram data will be loaded.
+; KEYWORDS: 
 ;
 ;   PlotRadius = Set up the layer of the magnetogram for 3D input
-;   Cannot be used 2D file or with DemoMode. Default is 1.0.
+;   Cannot be used 2D file. Default is 1.0.
 ;
 ;   UsePIL = If set (default), the orientation of the flux rope will be
 ;   calculated according to the PIL direction.
@@ -49,7 +48,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;
 ;   CMESpeed = Observed CME speed in km/s.
 ;
-;   UseFITS = if set, will read FITS format. Default.
+;   UseBATS = if set, will read BATS-R-US format (2D or 3D). Default
+;   will read FITS format.
 ;
 ;   UseARSize = if set (Default), the GL flux rope size will be calculated based
 ;   on AR Size.   
@@ -99,7 +99,11 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;      magnetogram with nsmooth = 5.
 ;      Added Warning information when the poloidal flux is negative.
 ;      Fixed/introduced bugs.
-;    01/29/2016 Added option to change GL Radius range.   
+;    01/29/2016 Added option to change GL Radius range.
+;    02/18/2016 Deleted DemoMode; Orientation Angle changed according
+;    to the new definition; Seperate function for magnetogram reading;
+;    determine the flux rope helicity based on hemisphere 
+;    (North - Negative); improve code stability.   
 ;------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
@@ -114,23 +118,21 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;Setup help option
   if not keyword_set(help) then help=0
   if help then begin
-       PRINT,'Use:  IDL> SWMF_GLSETUP, [/DemoMode, PlotRadius=PlotRadius, /usepil, $ '
+       PRINT,'Use:  IDL> SWMF_GLSETUP, [PlotRadius=PlotRadius, /usepil, $ '
        PRINT,'                         /CMEGrid, ARMag=ARMag, GLRadius=GLRadius, $ '
        PRINT,'                         SizeFactor=SizeFactor, nSmooth=nSmooth, $ '
        PRINT,'                         File=File, CMEspeed=CMEspeed, /help] '
        RETURN
   endif
 
-;Turn on/off demo mode. With the demo mode on, 
-;the pre-saved 2D data will be read instead
-;of reading from 3D data which is much more time consuming
-  if not keyword_set(DemoMode) then DemoMode=0
-
 ;Setup default range for GL Radius
   if not keyword_set(GLRadiusRange) then GLRadiusRange=[0.2,2.0]
 
+;Setup default PlotRadius
+ if not keyword_set(PlotRadius) then PlotRadius=1.0
+
 ;set default for UseFits
-  if not keyword_set(UseFits) then UseFits=1
+  if not keyword_set(UseBATS) then UseBATS=0
 
 ;set default for UseARSize
   if not keyword_set(UseARSize) then UseARSize=1
@@ -158,114 +160,32 @@ if not keyword_set(USEPIL) then USEPIL=1
 ;If GLRadius is not given then it is set to PIL_length/SizeFactor
   if not keyword_set(SizeFactor) then SizeFactor = 26.25
 
-;Set DemoMode
-  if keyword_set(DemoMode) and keyword_set(PlotRadius) then begin
-     print,'DemoMode and PlotRadius Cannot be Used at the same time!'
-     print,'Play DemoMode...'
-     PlotRadius=1.03
-  endif
-
+;Input file name is not given
   if not keyword_set(file) then begin
      file=''
      read, prompt='Input file name (containing magnetic field data): ',file
   endif
 
-;Read the SWMF input magnetic field
-  if not DemoMode and not UseFits then begin
+;Read the magnetogram
+  mag_info=read_magnetogram(file,PlotRadius,UseBATS)
+  nlat=mag_info.nlat
+  nlon=mag_info.nlon
+  longitude=mag_info.longitude
+  latitude=mag_info.latitude
+  br_field=mag_info.br_field
+  btheta_field=mag_info.btheta_field
+  bphi_field=mag_info.bphi_field
+  
 
-     gettype, file, filetype, npictinfile
-     openfile, 10, file, filetype
-     get_pict, 10, file, filetype, 1, x, var, error 
-     close, 10
-     
-     if gencoord then begin
-        print, 'file '+file+' should contain a regular grid'
-        retall
-     endif
-
-     case ndim of
-        2:begin
-           if not keyword_set(PlotRadius) then  PlotRadius=1.00
-           if variables(0) ne "Longitude" or variables(1) ne "Latitude" or $
-              variables(2) ne 'Br' then begin
-              print, 'variables should be Longitude Latitude Br!'
-              retall
-           endif
-           longitude = x(*,*,0)*!dtor
-           latitude  = x(*,*,1)*!dtor
-           br_field = var(*,*,0)
-           bt_field = abs(br_field)
-           nlon = nx[0]
-           nlat = nx[1]
-           bphi_field = fltarr(nlon, nlat)
-           btheta_field = fltarr(nlon, nlat)
-        end
-
-        3:begin
-           if not keyword_set(PlotRadius) then  PlotRadius=1.00
-           if variables(0) ne "Radius" or variables(1) ne "Longitude" or $
-              variables(2) ne "Latitude" or variables(3) ne 'Br' then begin
-              print, 'variables should be Radius Longitude Latitude Br!'
-              retall
-           endif
-           radius    = x(*,0,0,0)    
-           longitude = x(0,*,*,1)
-           latitude  = x(0,*,*,2)
-           nlon = nx[1] - 1
-           nlat = nx[2]
-                                ; find index for the cut
-           d = abs(radius - PlotRadius)
-           icut = where( d eq min(d) )
-           br_field     = var(icut,*,*,0)
-           bphi_field   = var(icut,*,*,1)
-           btheta_field = var(icut,*,*,2)
-           bt_field = sqrt(br_field^2  + bphi_field^2 + btheta_field^2)
-
-           br_field = reform(br_field[0,0:nlon-1,*])
-           bphi_field = reform(bphi_field[0,0:nlon-1,*])
-           btheta_field = reform(btheta_field[0,0:nlon-1,*])
-           bt_field = reform(bt_field[0,0:nlon-1,*])
-           longitude = reform(longitude[0,0:nlon-1,*])
-           latitude = reform(latitude[0,0:nlon-1,*])
-        end
-        else: begin
-           print, 'ndim=', ndim, ' should be 2 or 3'
-           retall
-        end
-     endcase
-  endif
-    
-;Restore pre-saved 2D data for the demo mode
-  if DemoMode then begin
-     restore,'magneticfield_1.0.sav'
-  endif
-
-;Read FITS format files
-  if UseFits then begin
-     if not keyword_set(PlotRadius) then  PlotRadius=1.00
-     br_field=read_fits(file,index,/noscale)
-     btheta_field=br_field*0.
-     bphi_field=br_field*0.
-     s=size(br_field)
-     nlon=s[1]
-     nlat=s[2]
-     lat=findgen(nlat)*2./nlat
-     lat=asin(lat-lat[nlat-1]/2.)
-     lon=findgen(nlon)*!DPI*2./nlon 
-     latitude=fltarr(nlon,nlat)
-     longitude=fltarr(nlon,nlat)
-     for i=0,nlon-1 do begin
-        for j=0,nlat-1 do begin
-           latitude[i,j]=lat[j]
-           longitude[i,j]=lon[i]
-        endfor
-     endfor
-  endif
-
+;Smooth the image, NOTE: to get equivalent result in Python, please
+;use the following function:
+;
+; smoothed=scipy.ndimage.filters.uniform_filter(data,size=nsmooth)
+; 
   if nSmooth gt 1 then begin
-     br_field     = smooth(br_field, nsmooth)
-     btheta_field = smooth(btheta_field, nsmooth)
-     bphi_field   = smooth(bphi_field, nsmooth)
+     br_field     = smooth(br_field, nsmooth, /edge_truncate)
+     btheta_field = smooth(btheta_field, nsmooth, /edge_truncate)
+     bphi_field   = smooth(bphi_field, nsmooth, /edge_truncate)
   endif
 
   bt_field = sqrt(bphi_field^2+btheta_field^2+br_field^2)
@@ -360,7 +280,6 @@ if not keyword_set(USEPIL) then USEPIL=1
   Dis_Weight=sqrt((xNegativeWeight-xPositiveWeight)^2+(yNegativeWeight-yPositiveWeight)^2)
 
 ;Plot the weighted centers on the magnetogram.
-  
   device,decomposed=0
   loadct,0
   contour,br_field_show,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
@@ -372,9 +291,9 @@ if not keyword_set(USEPIL) then USEPIL=1
   plots,xNegativeWeight,yNegativeWeight,/data,psym=-2,color=50
 
 ;Calculate the GL flux rope orientation from the two weighted points.
-  r1=[xPositiveWeight-xNegativeWeight,yPositiveWeight-yNegativeWeight]
+  r1=[xNegativeWeight-xPositiveWeight,yNegativeWeight-yPositiveWeight]
   r1=r1/sqrt(r1[0]^2+r1[1]^2)
-  r2=[-1.0,0.0]
+  r2=[1.0,0.0]
   GL_Orientation=acos(r1[0]*r2[0]+r1[1]*r2[1])*180/!DPI
   if r1[1] lt 0 then begin
      GL_Orientation=360-GL_Orientation
@@ -382,16 +301,25 @@ if not keyword_set(USEPIL) then USEPIL=1
 
 ;Extract the profile along the two weighted centers in order to determine the 
 ;center of the flux rope.
-  aa=(yPositiveWeight-yNegativeWeight)/(xPositiveWeight-xNegativeWeight)
-  bb=yPositiveWeight-aa*xPositiveWeight
-  if abs(xPositiveWeight-xNegativeWeight) gt abs(yPositiveWeight-yNegativeWeight) then begin
-     xProfile=min([xPositiveWeight,xNegativeWeight])+indgen(round(abs(xPositiveWeight-xNegativeWeight))+1)
-     yProfile=round(aa*xProfile+bb)
-     xProfile=round(xProfile)
-  endif else begin
-     yProfile=min([yPositiveWeight,yNegativeWeight])+indgen(round(abs(yPositiveWeight-yNegativeWeight))+1)
-     xProfile=round((yProfile-bb)/aa)
+  if xPositiveWeight eq xNegativeWeight then begin
+     yProfile=min([yPositiveWeight,yNegativeWeight])+$
+              indgen(round(abs(yPositiveWeight-yNegativeWeight))+1)
+     xProfile=round(yProfile*0.+xPositiveWeight)
      yProfile=round(yProfile)
+  endif else begin
+     aa=(yPositiveWeight-yNegativeWeight)/(xPositiveWeight-xNegativeWeight)
+     bb=yPositiveWeight-aa*xPositiveWeight
+     if abs(xPositiveWeight-xNegativeWeight) gt abs(yPositiveWeight-yNegativeWeight) then begin
+        xProfile=min([xPositiveWeight,xNegativeWeight])+$
+                 indgen(round(abs(xPositiveWeight-xNegativeWeight))+1)
+        yProfile=round(aa*xProfile+bb)
+        xProfile=round(xProfile)
+     endif else begin
+        yProfile=min([yPositiveWeight,yNegativeWeight])+$
+                 indgen(round(abs(yPositiveWeight-yNegativeWeight))+1)
+        xProfile=round((yProfile-bb)/aa)
+        yProfile=round(yProfile)
+     endelse
   endelse
 
   nProfile=n_elements(xProfile)
@@ -407,7 +335,7 @@ if not keyword_set(USEPIL) then USEPIL=1
   GL_Longitude=Longitude[xProfile[index],yProfile[index]]
   GL_Latitude=GL_Latitude*180./!DPI
   GL_Longitude=GL_Longitude*180./!DPI
-  if ndim eq 2 then GL_Longitude = GL_Longitude + param 
+  if UseBATS and ndim eq 2 then GL_Longitude = GL_Longitude + param 
   ar_center=[xProfile[index],yProfile[index]]
 
 ;Calculate the gradient of the Br field
@@ -544,17 +472,35 @@ if not keyword_set(USEPIL) then USEPIL=1
      PIL_xx=PIL_x[sort(PIL_x)]
      PIL_yy=PIL_y[sort(PIL_x)]
      PIL_fit=ladfit(PIL_xx,PIL_yy,/double)  
-     aa_PIL=-1./PIL_fit[1]
-     if PIL_fit[1] eq 0 then aa_PIL=0.0
-
-     if r1[0] lt 0 then begin 
-        r3=[-1.,-aa_PIL]
+        
+     if PIL_fit[1] eq 0 then begin
+        if br_field(ar_center[0],ar_center[1]-2) lt 0 then r3=[0,-1] else r3=[0,1]
      endif else begin
-        r3=[1.,aa_PIL]
-     endelse
+        aa_PIL=-1./PIL_fit[1]
+        if abs(aa_PIL) le 1 then begin
+           bb_PIL=ar_center[1]-aa_PIL*ar_center[0]
+           xx=[ar_center[0]-2,ar_center[0]-3,ar_center[0]-4]
+           yy=aa_PIL*xx+bb_PIL
+           ave_field=(br_field(xx[0],yy[0])+br_field(xx[1],yy[1])+br_field(xx[2],yy[2]))/3.
+           if ave_field lt 0 then r3=[-1.,-aa_PIL] else r3=[1.,aa_PIL]
+        endif else begin
+           bb_PIL=ar_center[1]-aa_PIL*ar_center[0]
+           yy=[ar_center[1]-2,AR_center[1]-3,AR_Center[1]-4]
+           xx=floor((yy-bb_PIL)/aa_PIL)
+           ave_field=(br_field(xx[0],yy[0])+br_field(xx[1],yy[1])+br_field(xx[2],yy[2]))/3.
+           if ave_field lt 0 then r3=[-signum(aa_PIL),-signum(aa_PIL)*aa_PIL] $
+           else r3=[signum(aa_PIL),signum(aa_PIL)*aa_PIL]
+        endelse
+     endelse   
+        
+     if array_equal(PIL_xx,PIL_xx[0]) then begin
+        if br_field(ar_center[0]-2,ar_center[1]) lt 0 then r3=[-1,0] else r3=[1,0]
+     endif
+
      r3=r3/sqrt(r3[0]^2+r3[1]^2)
      GL_Orientation_s=acos(r3[0]*r2[0]+r3[1]*r2[1])*180/!DPI
-     if r1[1] lt 0 then begin
+
+     if r3[1] lt 0 then begin
         GL_Orientation_s=360-GL_Orientation_s
      endif
      GL_Orientation=GL_Orientation_s
@@ -592,8 +538,14 @@ if not keyword_set(USEPIL) then USEPIL=1
   endif
 
 ;Relationship between the GL Poloidal flux and GL Bstrength.
-  GL_Bstrength=GL_poloidal/(21.457435*GLRadius^4)
-  
+;Flux rope helicity is determined by the hemisphere, northern
+;hemisphere - negative helicity.
+  if GL_Latitude le 0 then begin 
+     GL_Bstrength=GL_poloidal/(21.457435*GLRadius^4)
+  endif else begin
+     GL_Bstrength=-GL_poloidal/(21.457435*GLRadius^4)
+  endelse
+
 ;Calculate the CME grid refinement parameters based on the flux rope
 ;location and size.                                                
   if keyword_set(CMEGrid) then begin
