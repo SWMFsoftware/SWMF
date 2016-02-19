@@ -363,12 +363,10 @@ void c_Solver::CalculateMoments() {
   // Set a constant charge in the OpenBC boundaries
   //EMf->ConstantChargeOpenBC();
   
-#ifndef BATSRUS
-  // Calculate hat funciton in func CalculateField so that it is consistent
-  // with iPIC3D1. Changed it back in the future. --Yuxi
-  // calculate densities on centers from nodes
   EMf->interpDensitiesN2C();
-  // calculate the hat quantities for the implicit method
+
+#ifndef BATSRUS
+    // calculate the hat quantities for the implicit method
   EMf->calculateHatFunctions();
   #endif
 }
@@ -378,7 +376,10 @@ void c_Solver::CalculateField(int cycle) {
   timeTasks_set_main_task(TimeTasks::FIELDS);
 
 #ifdef BATSRUS
-  EMf->interpDensitiesN2C();
+  // Hat functions calculation need the information at boundaries.
+  // For MH-iPIC3D, the boundary information is sent from MHD to
+  // iPIC at the beginning of each cycle, so it is better to calculate
+  // hat functions just before field calculation.
   EMf->calculateHatFunctions();
 #endif
 
