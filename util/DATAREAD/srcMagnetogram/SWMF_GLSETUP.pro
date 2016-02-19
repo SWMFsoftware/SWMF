@@ -2,7 +2,7 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
                   USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
                   GLRadius=GLRadius, SizeFactor=SizeFactor, $
                   nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed,$
-                  UseBATS=UseBATS,UseARSize=UseARSize,$
+                  UseBATS=UseBATS,ARSize_OFF=ARSize_OFF,$
                   GLRadiusRange=GLRadiusRange,Help=Help
 
 ;-----------------------------------------------------------------------
@@ -51,8 +51,8 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;   UseBATS = if set, will read BATS-R-US format (2D or 3D). Default
 ;   will read FITS format.
 ;
-;   UseARSize = if set (Default), the GL flux rope size will be calculated based
-;   on AR Size.   
+;   ARSize_OFF = if set, the GL flux rope size will be calculated based
+;   on PIL length. The default is to use Active region size.   
 ;
 ;   GLRadiusRange = 2-elements array to specify the range for GL
 ;   Radius. Default is [0.2,2.0].   
@@ -121,7 +121,8 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
        PRINT,'Use:  IDL> SWMF_GLSETUP, [PlotRadius=PlotRadius, /usepil, $ '
        PRINT,'                         /CMEGrid, ARMag=ARMag, GLRadius=GLRadius, $ '
        PRINT,'                         SizeFactor=SizeFactor, nSmooth=nSmooth, $ '
-       PRINT,'                         File=File, CMEspeed=CMEspeed, /help] '
+       PRINT,'                         File=File, CMEspeed=CMEspeed, /UseBATS, $ '
+       PRINT,'                         /ARSize_OFF, GLRadiusRange=[Rmin,Rmax], /help] '
        RETURN
   endif
 
@@ -134,8 +135,8 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;set default for UseFits
   if not keyword_set(UseBATS) then UseBATS=0
 
-;set default for UseARSize
-  if not keyword_set(UseARSize) then UseARSize=1
+;set default for ARSize_OFF
+  if not keyword_set(ARSize_OFF) then ARSize_OFF=0
 
 ;set default for nSmooth
   if not keyword_set(nSmooth) then nSmooth=5
@@ -176,8 +177,7 @@ if not keyword_set(USEPIL) then USEPIL=1
   btheta_field=mag_info.btheta_field
   bphi_field=mag_info.bphi_field
   
-
-;Smooth the image, NOTE: to get equivalent result in Python, please
+;Smooth the image, NOTE: to get equivalent result in Python, one can
 ;use the following function:
 ;
 ; smoothed=scipy.ndimage.filters.uniform_filter(data,size=nsmooth)
@@ -528,10 +528,10 @@ if not keyword_set(USEPIL) then USEPIL=1
 ;Relationship between the PIL length and the GL flux rope Radius.   
 ;This factor is now based on the 2011 March 7 CME. More tests  
 ;are needed in order to get a more precise value.  
-  if not keyword_set(GLRadius) and not UseARSize then GLRadius=PIL_Length/SizeFactor
+  if not keyword_set(GLRadius) and ARSize_OFF then GLRadius=PIL_Length/SizeFactor
 
 ;Use Active Region size to specify the GL flux rope Radius.
-  if UseARSize  then begin
+  if not ARSize_OFF  then begin
      GLRadius=0.8/280.*ARSize
      if GLRadius gt GLRadiusRange[1] then GLRadius=GLRadiusRange[1]
      if GLRadius lt GLRadiusRange[0] then GLRadius=GLRadiusRange[0]
@@ -598,34 +598,41 @@ if not keyword_set(USEPIL) then USEPIL=1
 
   device,decomposed=0
   loadct,0
-  contour,br_field_show[xProfile[index]-RegionSize/2:xProfile[index]+RegionSize/2,$
-                        yProfile[index]-RegionSize/2:yProfile[index]+RegionSize/2],$
+  
+  sub_x1=max([xProfile[index]-RegionSize/2,0])
+  sub_x2=min([xProfile[index]+RegionSize/2,nlon-1])
+  sub_y1=max([yProfile[index]-RegionSize/2,0])
+  sub_y2=min([yProfile[index]+RegionSize/2,nlat-1])
+
+  contour,br_field_show[sub_x1:sub_x2,sub_y1:sub_y2],$                        
           min=-20,max=20,charsize=3,title='CME Source Region (R ='$
           +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
           ytitle='Solar Latitude (Pixel)',/fill,nlevels=60,/iso,xstyle=1,ystyle=1
 
   loadct,39
-  plots,xPositiveWeight-(xProfile[index]-RegionSize/2),yPositiveWeight-(yProfile[index]-RegionSize/2),$
+  plots,xPositiveWeight-sub_x1,yPositiveWeight-sub_y1,$
         /data,psym=-2,color=250,symsize=3,thick=3
-  plots,xNegativeWeight-(xProfile[index]-RegionSize/2),yNegativeWeight-(yProfile[index]-RegionSize/2),$
+  plots,xNegativeWeight-sub_x1,yNegativeWeight-sub_y1,$
         /data,psym=-2,color=50,symsize=3,thick=3
-  plots,RegionSize/2,RegionSize/2,/data,psym=-2,color=150,symsize=3,thick=3
+  plots,xProfile[index]-sub_x1,yProfile[index]-sub_y1,/data,psym=-2,color=150,symsize=3,thick=3
   for i=0,NN-1 do begin
      y_show=floor(showpoints[i]/nlon)
      x_show=showpoints[i]-(y_show*nlon)
-     y_show=y_show-(yProfile[index]-RegionSize/2)
-     x_show=x_show-(xProfile[index]-RegionSize/2)
-     xcenter=ar_center[0]-(xProfile[index]-RegionSize/2)
-     ycenter=ar_center[1]-(yProfile[index]-RegionSize/2)
+     y_show=y_show-sub_y1
+     x_show=x_show-sub_x1
+     xcenter=ar_center[0]-sub_x1
+     ycenter=ar_center[1]-sub_y1
      if sqrt((xcenter-x_show)^2+(ycenter-y_show)^2) lt DisMax then begin
         plots,x_show,y_show,psym=-1,color=200,symsize=3,thick=3
      endif
   endfor
 
+;------------------------------
 ;Save data for testing purpose
+;------------------------------
   ;save,pillines,ar_center,filename='AR6.sav'
-;  save,pillines,ar_center,xPositiveWeight,yPositiveWeight,xNegativeWeight,yNegativeWeight,$
-;       sizemap_p,sizemap_n,filename='AR5_show.sav'
+  ;save,pillines,ar_center,xPositiveWeight,yPositiveWeight,xNegativeWeight,yNegativeWeight,$
+  ;     sizemap_p,sizemap_n,filename='AR5_show.sav'
 
   !mouse.button=0
 end
