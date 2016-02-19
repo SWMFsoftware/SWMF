@@ -2732,8 +2732,8 @@ void EMfields3D::fixBnGEM()
   const Grid *grid = &get_grid();
 
   if (vct->getYright_neighbor() == MPI_PROC_NULL) {
-    for (int i = 0; i < nxn; i++)
-      for (int k = 0; k < nzn; k++) {
+    for (int i = 0; i < nxc; i++)
+      for (int k = 0; k < nzc; k++) {
         Bxn[i][nyc - 1][k] = B0x * tanh((grid->getYC(i, nyc - 1, k) - Ly / 2) / delta);
         Bxn[i][nyc - 2][k] = Bxc[i][nyc - 1][k];
         Bxn[i][nyc - 3][k] = Bxc[i][nyc - 1][k];
