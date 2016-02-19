@@ -70,7 +70,6 @@ module ModParticleFieldLine
 
   ! keep track of number of particles per field line
   integer :: nParticleFieldLine_I(nFieldLineMax) = 0
-!  integer :: iParticleFieldLineOffset_I(nFieldLineMax) = 0
 
   !\
   ! initialization related info
@@ -427,77 +426,90 @@ contains
 
   !========================================================================
 
-  subroutine get_particle_data(NameVar, DataOut_VI,   nDataOut, nParticle)
+  subroutine get_particle_data(nData, NameVar, DataOut_VI, nParticle)
     ! the subroutine gets variables specified in the string StringVar
     ! and writes them into DataOut_VI
+    integer,            intent(in) :: nData
     character(len=*),   intent(in) :: NameVar
     real,  pointer,     intent(out):: DataOut_VI(:,:)
-    integer,            intent(out):: nDataOut
     integer,            intent(out):: nParticle
 
     ! mask for returning variables
     logical:: DoReturnVar_V(nVarParticle)
     logical:: DoReturnIndex_I(0:nIndexParticle)
-    ! string used for processing NameVar
-    character(len=100):: NameVarProc
-    integer:: nFullLen
+    ! number of variables/indices found in the request string
     integer:: nVarOut, nIndexOut
-    integer:: iParticle ! loop variable
+    ! loop variables
+    integer:: iParticle, iData
+    ! permutation of between data order of the request and order in which
+    ! data are checked to be present in the request
+    integer:: iDataPermutation_I(nData)
+
+    ! data that can be return
+    integer, parameter:: nVarAvail = 3, nIndexAvail = 2
+    character(len=2), parameter:: NameVarAvail_V(nVarAvail) = &
+         (/'xx', 'yy', 'zz'/)
+    character(len=2), parameter:: NameIndexAvail_I(nIndexAvail) = &
+         (/'fl', 'id'/)
+
+    character(len=*), parameter:: NameSub = 'get_particle_data'
     !----------------------------------------------------------------------
-    ! first, determine which variables will be returned
+    !\
+    ! first, determine which data are requested
+    !/
     DoReturnVar_V   = .false.
     DoReturnIndex_I = .false.
-    NameVarProc =  trim(NameVar)
-    nFullLen = len(NameVarProc)
-
-    if(is_var('xx'))&
-         DoReturnVar_V(x_) = .true.
-    if(is_var('yy'))&
-         DoReturnVar_V(y_) = .true.
-    if(is_var('zz'))&
-         DoReturnVar_V(z_) = .true.
-    if(is_var('fl'))&
-         DoReturnIndex_I(fl_) = .true.
-    if(is_var('id'))&
-         DoReturnIndex_I(Index_) = .true.
-
-    ! check if there is an invalid variable requested
-    if(len_trim(NameVarProc) > 0)&
-         call CON_stop("Requiesting an invalid variable for particle line")
-
-    ! return data
-    if(associated(DataOut_VI)) deallocate(DataOut_VI)
-    nVarOut   = count(DoReturnVar_V)
+    ! determine which variables are requested
+    nVarOut = 0
+    do iData = 1, nVarAvail
+       DoReturnVar_V(iData)   = is_var(NameVarAvail_V(iData))
+    end do
+    nVarOut = count(DoReturnVar_V)
+    ! determine which indices are requested
+    nIndexOut = 0
+    do iData = 1, nIndexAvail
+       DoReturnIndex_I(iData) = is_var(NameIndexAvail_I(iData))
+    end do
     nIndexOut = count(DoReturnIndex_I)
-    nDataOut  = nIndexOut + nVarOut
+    ! check that number of data found is the same as requested
+    if(nData /= nVarOut + nIndexOut)&
+         call CON_stop(NameSub//': incorrect number of data is requested')
+
+    !\
+    ! return data
+    !/
+    if(associated(DataOut_VI)) deallocate(DataOut_VI)
     nParticle = Particle_I(KindReg_)%nParticle
-    allocate( DataOut_VI(nDataOut, nParticle) )
+    allocate( DataOut_VI(nData, nParticle) )
     do iParticle = 1, nParticle
-       DataOut_VI(1:nVarOut,         iParticle) = PACK(&
+       ! store variables
+       DataOut_VI(1:nVarOut,      iParticle) = PACK(&
             Particle_I(KindReg_)%State_VI( :,iParticle),&
             MASK = DoReturnVar_V)
-       DataOut_VI(nVarOut+1:nDataOut,iParticle) = PACK(&
+       ! store indexes
+       DataOut_VI(nVarOut+1:nData,iParticle) = PACK(&
             Particle_I(KindReg_)%iIndex_II(:,iParticle),&
             MASK = DoReturnIndex_I)
     end do
+    ! permute data order so it corresponds to the order of the request
+    DataOut_VI(:, :) = DataOut_VI(iDataPermutation_I, :)
 
   contains
 
     function is_var(Name) result(IsPresent)
-      ! finds if var Name is present
-      ! if yes => remove it from NameVarProc
+      ! finds if datum Name is present
       character(len=*), intent(in):: Name
       logical:: IsPresent
-      integer:: i, nLen
+      integer:: i
       !--------------------------------------------------------------------
-      i = index(NameVarProc, Name)
+      i = index(NameVar, Name)
       if(i==0)then
          IsPresent = .false.
          RETURN
       end if
-      nLen = len(Name)
-      NameVarProc = trim(NameVarProc(1:i-1) // NameVarProc(i+nLen+1:nFullLen))
       IsPresent = .true.
+      ! save datum's order in the original request
+      iDataPermutation_I(i/3 + 1) = nVarOut + iData
     end function is_var
 
   end subroutine get_particle_data

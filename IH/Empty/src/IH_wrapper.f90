@@ -245,10 +245,13 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
   !===================================================================!
-  subroutine IH_get_line(nLine, CoordOrigin_DI, NameVar, ParticleOut_II)
-    integer,              intent(in) :: nLine
-    real,                 intent(in) :: CoordOrigin_DI(3, 1)
-    character(len=*),     intent(in) :: NameVar
+  subroutine IH_get_line(nLine, CoordOrigin_DI, nVar, NameVar, &
+       nParticleOut, ParticleOut_II)
+    integer,          intent(in) :: nLine
+    real,             intent(in) :: CoordOrigin_DI(3, 1)
+    integer,          intent(in) :: nVar
+    character(len=*), intent(in) :: NameVar
+    integer,          intent(out):: nParticleOut
     real,    pointer, intent(out):: ParticleOut_II(:,:)
 
     character(len=*), parameter :: NameSub='IH_get_line'

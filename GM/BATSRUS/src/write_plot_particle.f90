@@ -28,7 +28,7 @@ subroutine write_plot_particle(iFile)
   logical:: IsIdl
   integer:: iPlotFile
   integer:: iParticle ! loop variable
-  integer:: nPlotVar, nParticle
+  integer:: nParticle
 
   character(len=*), parameter :: NameSub = 'write_plot_particle'
   !------------------------------------------------------------------------
@@ -77,8 +77,7 @@ subroutine write_plot_particle(iFile)
   end if
 
   ! get the data on this processor
-  call get_particle_data('xx yy zz fl id', &
-       PlotVar_VI, nPlotVar, nParticle)
+  call get_particle_data(5, 'xx yy zz fl id', PlotVar_VI, nParticle)
 
   call save_plot_file(&
        NameFile, &
