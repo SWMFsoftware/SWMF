@@ -36,7 +36,6 @@
 #include "VCtopology3D.h"
 #include "Grid3DCU.h"
 #include "aligned_vector.h"
-//#include "CollectiveIO.h"
 class ConfigFile;
 using namespace std;
 

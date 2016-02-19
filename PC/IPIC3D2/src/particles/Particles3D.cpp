@@ -31,13 +31,9 @@ developers: Stefano Markidis, Giovanni Lapenta
 #include <limits.h>
 #include "asserts.h"
 
-#include "VirtualTopology3D.h"
 #include "VCtopology3D.h"
-#include "CollectiveIO.h"
 #include "Collective.h"
 #include "Basic.h"
-#include "BcParticles.h"
-#include "Grid.h"
 #include "Grid3DCU.h"
 #include "Field.h"
 #include "MPIdata.h"

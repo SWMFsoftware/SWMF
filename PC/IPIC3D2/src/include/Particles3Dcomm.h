@@ -27,7 +27,6 @@ developers: Stefano Markidis, Giovanni Lapenta
 #ifndef Part3DCOMM_H
 #define Part3DCOMM_H
 
-//#include "CollectiveIO.h"
 #include "ipicfwd.h"
 #include "Alloc.h"
 #include "Particle.h" // for ParticleType
@@ -36,6 +35,20 @@ developers: Stefano Markidis, Giovanni Lapenta
 #include "aligned_vector.h"
 #include "Larray.h"
 #include "IDgenerator.h"
+
+namespace BCparticles
+{
+    enum Enum
+    {
+        EXIT = 0,
+        PERFECT_MIRROR = 1,
+        REEMISSION = 2,
+        OPENBCOut = 3,
+        OPENBCIn = 4,
+	FLUID    = 5
+    };
+}
+
 /**
  * 
  * class for particles of the same species with communications methods

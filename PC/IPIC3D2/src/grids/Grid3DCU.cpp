@@ -21,9 +21,9 @@
 
 #include <mpi.h>
 #include "Grid3DCU.h"
+#include "Collective.h"
 #include "MPIdata.h"
 #include "Alloc.h"
-#include "CollectiveIO.h"
 #include "Com3DNonblk.h"
 #include "VirtualTopology3D.h"
 #include "debug.h"

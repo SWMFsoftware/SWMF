@@ -21,8 +21,6 @@
 
 #include "mpi.h"
 #include "OutputWrapperFPP.h"
-
-#include "CollectiveIO.h"
 #include "VCtopology3D.h"
 #include "Grid3DCU.h"
 #include "EMfields3D.h"

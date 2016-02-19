@@ -19,7 +19,7 @@
  */
 
 #include "Com3DNonblk.h"
-
+#include "my_mpi.h"
 
 //isCenterFlag: 1 communicateCenter; 0 communicateNode
 void NBDerivedHaloComm(int nx, int ny, int nz, double ***vector,const VirtualTopology3D * vct, EMfields3D *EMf,bool isCenterFlag, bool isFaceOnlyFlag, bool needInterp, bool isParticle)

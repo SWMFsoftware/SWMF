@@ -32,7 +32,7 @@
 #include "debug.h"
 #include "asserts.h" // for assert_ge
 #include "string.h"
-#include "BcParticles.h"
+#include "Particles3Dcomm.h"
 
 // order must agree with Enum in Collective.h
 static const char *enumNames[] =

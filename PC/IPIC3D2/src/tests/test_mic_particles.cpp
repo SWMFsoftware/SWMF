@@ -31,7 +31,6 @@
 #include "Alloc.h"
 #include "mic_particles.h"
 #include "Particle.h"
-#include "Grid.h"
 #include "../utility/debug.cpp"
 #include "../utility/asserts.cpp"
 #include "../utility/errors.cpp"

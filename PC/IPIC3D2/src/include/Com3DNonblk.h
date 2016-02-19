@@ -33,7 +33,6 @@ developers           : Stefano Markidis, Ivy Bo Peng
 #include "arraysfwd.h"
 #include "ipicfwd.h"
 #include "mpi.h"
-#include "my_mpi.h"
 #include "BcFields3D.h"
 #include "VCtopology3D.h"
 #include "TimeTasks.h"

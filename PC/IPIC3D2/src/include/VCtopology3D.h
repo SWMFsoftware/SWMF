@@ -132,7 +132,6 @@ public:
   const int *getCoordinates()const{ return (coordinates); }
   const int *getDims()const{ return dims; }
   int getPeriods(int dir)const{ return (periods[dir]); }
-  MPI_Comm getComm()const{ return (CART_COMM); }
   MPI_Comm getFieldComm()const{ return (CART_COMM); }
   MPI_Comm getParticleComm()const{ return (CART_COMM_P); }
 

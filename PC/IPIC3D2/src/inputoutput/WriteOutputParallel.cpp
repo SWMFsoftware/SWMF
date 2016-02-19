@@ -21,7 +21,6 @@
 
 #include <mpi.h>
 #include "WriteOutputParallel.h"
-#include "CollectiveIO.h"
 #include "Grid3DCU.h"
 #include "EMfields3D.h"
 #include "VCtopology3D.h"
