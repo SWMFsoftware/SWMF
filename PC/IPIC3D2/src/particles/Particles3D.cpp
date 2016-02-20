@@ -46,13 +46,11 @@ developers: Stefano Markidis, Giovanni Lapenta
 #include "debug.h"
 #include <complex>
 
-#ifdef BATSRUS
 #ifdef PSEUDRAND
 #include "RandNum.h"
 #define RANDNUM PseudoRand(&idum)
 #else
 #define RANDNUM rand()*invRandMax
-#endif
 #endif
 
 using std::cout;
@@ -409,10 +407,20 @@ void Particles3D::maxwellian(Field * EMf)
     for (int kk = 0; kk < npcelz; kk++)
     {
       double u,v,w;
+      #ifdef PSEUDRAND
+      // 1) The way to initial velocity below is not accurate,
+      // and the following three lines are only used for nightly test.
+      // 2) gcc and clang give different results when the intrinsic function
+      // rand()is used from sample_maxwellian().
+      u = u0 + uth*RANDNUM;
+      v = v0 + vth*RANDNUM;
+      w = w0 + wth*RANDNUM;
+      #else
       sample_maxwellian(
         u,v,w,
         uth, vth, wth,
         u0, v0, w0);
+      #endif
       // could also sample positions randomly as in repopulate_particles();
       const double x = (ii + .5) * (dx / npcelx) + grid->getXN(i, j, k);
       const double y = (jj + .5) * (dy / npcely) + grid->getYN(i, j, k);

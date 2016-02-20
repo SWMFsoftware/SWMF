@@ -296,7 +296,7 @@ if( !isTestParticle ){
   
   assert_eq(sizeof(SpeciesParticle),64);
 
-#ifdef BATSRUS
+#ifdef PSEUDRAND
   idum = (long) vct->getCartesian_rank() + 1024*ns;
 #endif
   

@@ -60,7 +60,9 @@ test_ipic3d:
 	$(MAKE) test_ipic3d_check
 
 test_ipic3d_compile:
-	cd src; rm -f Makefile.local; touch Makefile.local
+	cd src; rm -f Makefile.local; \
+	echo "FLAGC_LOCAL=" >Makefile.local
+	./Config.pl -pseudrand=true
 	-$(MAKE) IPIC3D
 	cd src; cp -f Makefile.local.default Makefile.local
 
