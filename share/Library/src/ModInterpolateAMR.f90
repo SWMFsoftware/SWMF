@@ -3356,6 +3356,8 @@ contains
     real :: XyzMisc_D(nDim)
     ! shift of Xyz_D relative to the central point
     integer :: iShift_D(nDim)
+    ! blocks of supergrid that are Coarse or out of the domain
+    logical :: IsNotFine_I(2**nDim)
     ! loop vairable
     integer :: iChoice
     ! dimension of largest displacement from central point (see below)
@@ -3404,6 +3406,10 @@ contains
     ! the direction of displacement is stored in iShift_D;
     ! compute normalized coords
     XyzMisc_D = abs( XyzMisc_D / (XyzGrid_DI(:,2**nDim) - XyzGrid_DI(:,1)) )
+    ! since the uniform case is excluded, the reference block is Fine
+    ! at this point blocks that are outside of the domain are
+    ! equivalent to Coarse
+    IsNotFine_I = iLevel_I==Coarse_ .or. IsOut_I
     ! reset slicing to include all 2**nDim subgrids
     iSliceMin_D = (/0,0,0/)
     iSliceMax_D = (/1,1,nDim-2/) ! (/1,1,0/) for nDim = 2
@@ -3421,11 +3427,11 @@ contains
        iSliceMax_D(iDim) = iShift_D(iDim)
        ! if face/side/vertex are all Coarse or out of the domain,
        ! need to choose the opposite one
-       if( all(iLevel_I(reshape(iGrid_III(&
+       if( all( IsNotFine_I(reshape(iGrid_III(&
             iSliceMin_D(1):iSliceMax_D(1),&
             iSliceMin_D(2):iSliceMax_D(2),&
             iSliceMin_D(3):iSliceMax_D(3)),&
-            (/iPowerOf2_D(iChoice)/)))/=Fine_ .or. IsOut_I))then
+            (/iPowerOf2_D(iChoice)/))) ) ) then
           ! invert choice of face/side/vertex
           iShift_D( iDim) = 1 - iShift_D(iDim)
           iSliceMin_D(iDim) = iShift_D(iDim)
