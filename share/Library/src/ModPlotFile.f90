@@ -354,7 +354,7 @@ contains
              if(present(CoordMinIn_D)) then
                 i_D = (/i, j, k/)
                 Coord = CoordMinIn_D(iDim) + (i_D(iDim)-1)* &
-                     ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/(n_D(iDim)-1))
+                     ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/max(1,n_D(iDim)-1))
              end if
              Coord_ID(n, iDim) = Coord
           end do; end do; end do; 
