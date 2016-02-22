@@ -45,6 +45,8 @@ module ModMain
   ! Size of angular grid, latitude and longitude, at origin surface R=RMin
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
+  ! Mark that grid has been set
+  logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
   ! Said angular grids itself; each field line is identified by latitude
   ! and longitude of the origin point at surface R=RMin as it is set
@@ -120,6 +122,7 @@ contains
           if(LonMax <= LonMin)&
                call CON_stop('Origin surface grid is inconsistent:'//NameSub)
           DLon = (LonMax - LonMin) / nLon
+          IsSetGrid = .true.
        case('#DORUN')
           call read_var('DoRun',DoRun)
           !       case('#SAVEMHDATA')
@@ -159,6 +162,11 @@ contains
     integer:: iLat, iLon, iNode, iBlock, iProcNode
     character(LEN=*),parameter:: NameSub='initialize'
     !--------------------------------------------------------------------------
+    !\
+    ! Check if everything's ready for initialization
+    !/
+    if(.not.IsSetGrid)&
+         call CON_stop(NameSub//': grid is not set in PARAM.in file')
     !\
     ! distribute nodes between processors
     !/
