@@ -234,8 +234,8 @@ contains
 
   !===================================================================
 
-  subroutine SP_put_line(NameVar, nVar, &
-       nParticle, Data_VI, Convert_DD)
+  subroutine SP_put_line(NameVar, nVar,&
+       nParticle, Data_VI, iDirIn, Convert_DD)
     use ModSize, ONLY: nDim, nNode
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm
@@ -246,23 +246,39 @@ contains
     integer,          intent(in):: nVar
     integer,          intent(in):: nParticle
     real,             intent(in):: Data_VI(nVar, nParticle)
+    integer,          intent(in):: iDirIn
     real,             intent(in):: Convert_DD(nDim, nDim)
+
+    ! directions where to put particles
+    integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
     ! loop variables
     integer:: iParticle, iBlock, iNode
     ! indices of the particle
     integer:: iLine, iIndex
-    integer:: iMin_A(nNode),iMax_A(nNode)
+    integer:: iMin_A(nNode),iMax_A(nNode), iOffset_A(nNode)
     integer:: iError
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     ! check correctness
     if(index(NameVar, NameVarRequest) == 0 .or. nVar /= nVarRequest)&
          call CON_stop(NameSub//': a different set variables was requested')
+    ! list of min/max index of active particles is needed if iDirIn /= 0,
+    ! i.e. need to add particle to the beginning/end of list
+    select case(iDirIn)
+    case(iDirBegin_)
+       iOffset_A = iGrid_IA(Begin_,:)
+    case(iDirOrigin_)
+       iOffset_A = 0
+    case(iDirEnd_)
+       iOffset_A = iGrid_IA(End_, :)
+    case default
+       call CON_stop(NameSub//': invalid call')
+    end select
     ! store passed particles
     do iParticle = 1, nParticle
        iLine  = nint(Data_VI(4, iParticle))
-       iIndex = nint(Data_VI(5, iParticle))
+       iIndex = nint(Data_VI(5, iParticle)) + iOffset_A(iLine)
        iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iIndex)
        iGrid_IA(Begin_, iLine) = MAX(iGrid_IA(Begin_,iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&

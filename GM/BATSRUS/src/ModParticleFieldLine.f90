@@ -149,13 +149,14 @@ contains
 
   !==========================================================================
 
-  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI)
+  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain
     !------------------------------------------------------------------------
-    integer, intent(in):: nFieldLineIn
-    real,    intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
+    integer,           intent(in):: nFieldLineIn
+    real,              intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
+    integer, optional, intent(in):: iTraceModeIn
 
     integer :: nLineThisProc ! number of new field lines initialized
     integer :: iFieldLine    ! loop variable
@@ -169,12 +170,17 @@ contains
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
 
+    ! mode of tracing (see description below)
+    integer:: iTraceMode
+
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
     integer, pointer:: iIndexEnd_II(:,:)
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
+
+    character(len=*), parameter:: NameSub='extract_particle_line'
     !------------------------------------------------------------------------
     ! set a pointers to parameters of end particles
     nullify(StateEnd_VI); nullify(iIndexEnd_II)
@@ -195,14 +201,30 @@ contains
     nParticleOld  = Particle_I(KindReg_)%nParticle
     nFieldLine    = nFieldLine + nFieldLineIn
     if(nFieldLine > nFieldLineMax)&
-         call CON_stop('Limit for number of particle field lines exceeded')
+         call CON_stop(NameSub//&
+         ': Limit for number of particle field lines exceeded')
     do iFieldLine = 1, nFieldLineIn
        call start_line(XyzStart_DI(:, iFieldLine), iFieldLine)
     end do
     call copy_end_to_regular
 
-    ! trace in both directions
-    do iDirTrace = -1, 1, 2
+    ! check if trace mode is specified
+    if(present(iTraceModeIn))then
+       if(abs(iTraceModeIn) > 1)&
+            call CON_stop(NameSub//': incorrect tracing mode')
+       iTraceMode = iTraceModeIn
+    else
+       iTraceMode = 0
+    end if
+
+    ! tracing modes are the following:,
+    ! -1 -> trace lines backward only
+    !       do iDirTrace = -1, -1, 2
+    !  0 -> trace lines in both directions
+    !       do iDirTrace = -1,  1, 2
+    ! +1 -> trace lines forward only
+    !       do iDirTracs =  1,  1, 2
+    do iDirTrace = 2*max(iTraceMode,0)-1, 2*min(iTraceMode,0)+1, 2
        TRACE: do
           ! copy last known coordinates to Auxilary 
           StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
@@ -278,8 +300,9 @@ contains
 
        end do TRACE
 
-       ! if just finished backward tracing => return to initial particles
-       if(iDirTrace < 0)then
+       ! if just finished backward tracing and need to trace in both dirs
+       ! => return to initial particles
+       if(iDirTrace < 0 .and. iTraceMode == 0)then
           ! copy initial points to KindEnd_:
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,

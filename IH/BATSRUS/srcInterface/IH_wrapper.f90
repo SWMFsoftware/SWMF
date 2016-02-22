@@ -1291,12 +1291,13 @@ contains
 
   !============================================================================
 
-  subroutine IH_get_line(nLine, CoordOrigin_DI, nVar, NameVar, &
+  subroutine IH_get_line(nLine, CoordOrigin_DI, iTraceMode, nVar, NameVar, &
        nParticleOut, ParticleOut_II)
     use IH_BATL_lib, ONLY: nDim, IsCartesian, coord_to_xyz, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: extract_particle_line, get_particle_data
     integer,          intent(in) :: nLine
     real,             intent(in) :: CoordOrigin_DI(nDim, nLine)
+    integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: nVar
     character(len=*), intent(in) :: NameVar
     integer,          intent(out):: nParticleOut
@@ -1317,7 +1318,7 @@ contains
     end if
 
     ! extract field lines starting at input points
-    call extract_particle_line(nLine, XyzOrigin_DI)
+    call extract_particle_line(nLine, XyzOrigin_DI, iTraceMode)
 
     ! get data at extracted field lines
     call get_particle_data(nVar, NameVar, ParticleOut_II, nParticleOut)

@@ -102,11 +102,12 @@ contains
     call CON_stop('Can not request line')
   end subroutine SP_request_line
   !===================================================================
-  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI, Convert_DD)
+  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI, iDirIn, Convert_DD)
     character(len=*), intent(in):: NameVar
     integer,          intent(in):: nVar
     integer,          intent(in):: nParticle
     real,             intent(in):: Data_VI(nVar, nParticle)
+    integer,          intent(in):: iDirIn
     real,             intent(in):: Convert_DD(3,3)
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line

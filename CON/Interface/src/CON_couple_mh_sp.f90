@@ -75,17 +75,12 @@ contains
 
     logical::DoneRestart
     integer::nLine
-    integer,allocatable:: nParticleAtLine_I(:)
-    real,        pointer:: CoordMisc_DI(:,:)
-    integer:: nVar
-    integer:: SP_iProcTo, SC_iProcFrom
-    integer:: iProcTo_I(1), iProcFrom_I(1)
-    integer:: nParticleThisProc, nParticleRecv, nParticleSend
-    real, pointer:: Particle_II(:,:)
-    real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
-    integer:: iLine, iBuff, iParticle, iTag, iFLIndex
-    integer:: iStatus_I(MPI_STATUS_SIZE)
-    character(len=100):: NameVar
+
+    ! available directions of interface between SP and MH 
+    ! (see subroutine exchange_lines below)
+    integer, parameter:: &
+         iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
+
     character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
     if(.not.DoInit)return
@@ -120,135 +115,172 @@ contains
 
 
     !\
-    ! Write origin points for field lines into a global vector
+    ! Allocate storage for field line requests
     !/
     nLine = SP_GridDescriptor%DD%Ptr%nBlockAll
     call allocate_vector('SP_Xyz_DI',&
          SP_GridDescriptor%DD%Ptr%nDim, nLine)
 
-    if(is_proc(SP_))then
-       call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-       call SP_request_line(NameVar, nVar, 0, CoordMisc_DI)
-       nullify(CoordMisc_DI)
-    end if
-
-    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-    call MPI_bcast(NameVar, len(NameVar), MPI_CHARACTER, &
-         i_proc0(SP_), i_comm(), iError)
-    call MPI_bcast(nVar, 1, MPI_INTEGER, i_proc0(SP_), i_comm(), iError)
-
     !\
-    ! determine which index corresponds to field line index
+    ! Extract and exchange initial data
     !/
-    iFLIndex = index(NameVar, 'fl')/3 + 1
-    if(iFLIndex == 0) call CON_stop(NameSub//&
-         ': set of variables requested is not sufficient for coupling')
+    call exchange_lines(iInterfaceOrigin, SC_, SC_GridDescriptor)
+!    call exchange_lines(iInterfaceEnd,    IH_, IH_GridDescriptor)
 
-    if(is_proc(SC_))then
-       !\
-       ! Extract field lines at SC
-       !/
-       call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-       SpToSc_DD = transform_matrix(tNow,&
-         Grid_C(SP_)%TypeCoord, Grid_C(SC_)%TypeCoord)
-       do iLine = 1, nLine
-          CoordMisc_DI(:,iLine) = matmul(SpToSc_DD, CoordMisc_DI(:,iLine))
-       end do
-       allocate(nParticleAtLine_I(nLine))
-       call SC_get_line(nLine, CoordMisc_DI, nVar, NameVar, &
-            nParticleThisProc, Particle_II)
-       nullify(CoordMisc_DI)
-       do iLine = 1, nLine
-          nParticleAtLine_I(iLine)=count(nint(Particle_II(iFLIndex,:))==iLine)
-       end do
-       !\
-       ! Send line to SP:
-       ! on SC by index fl_ can find recepient on SP 
-       ! (domain decomposition of SP is known everywhere)
-       !/
-       do SP_iProcTo = 0, n_proc(SP_)-1
-          ! count how many points will be sent
-          nParticleSend = sum(nParticleAtLine_I, &
-               MASK = &
-               SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == SP_iProcTo)
-          ! translate proc at SP to global
-          call MPI_Group_translate_ranks(&
-               i_group(SP_), 1, (/SP_iProcTo/), &
-               i_group(),            iProcTo_I, iError)
-          ! send number of particles to be transfered
-          call MPI_send(nParticleSend, 1, MPI_INTEGER, &
-               iProcTo_I(1), iTag, i_comm(),iError)
-          if(nParticleSend == 0) CYCLE
-          ! prepare data
-          if(allocated(BuffSend_I)) deallocate(BuffSend_I)
-          allocate(BuffSend_I(nVar * nParticleSend))
-          iBuff = 1
-          do iParticle = 1, nParticleThisProc
-             if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
-                  nint(Particle_II(iFLIndex,iParticle)))/=SP_iProcTo) CYCLE
+  contains
+    !================================================================    
+    subroutine exchange_lines(iInterfaceType, iMH, MH_GridDescriptor)
+      ! MH extracts and sends field lines requested by SP;
+      !----------------------------------------------------------------
+      ! direction interface between SP and MH component on field lines:
+      ! -1 -> the beginning of lines
+      !  0 -> origin points of lines as defined at SP
+      !  1 -> the end of lines
+      integer, intent(in):: iInterfaceType
+      !----------------------------------------------------------------
+      ! index of MH component
+      integer, intent(in):: iMH
+      !----------------------------------------------------------------
+      ! grid descriptor of MH component
+      type(GridDescriptorType), intent(in)::MH_GridDescriptor
 
-             BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
-             iBuff = iBuff + nVar - 1
-          end do
-          ! transfer data
-          call MPI_send(BuffSend_I,nVar * nParticleSend, &
-               MPI_DOUBLE, iProcTo_I(1), iTag, i_comm(), iError)
-       end do
-       
-    end if
+      ! conversion matrix between SP and MH coordinates
+      real:: Convert_DD(3,3)
+      ! request coordinates, one per line
+      real, pointer:: CoordMisc_DI(:,:)
+      ! number of particles per line
+      integer,allocatable:: nParticleAtLine_I(:)
+      ! requested variables
+      integer:: nVar
+      character(len=100):: NameVar
+      ! particle data
+      real, pointer:: Particle_II(:,:)
+      ! field line index in particle data
+      integer:: iFLIndex
+      ! MPI
+      integer:: MH_iProcFrom, SP_iProcTo
+      integer:: iProcTo_I(1), iProcFrom_I(1)
+      integer:: nParticleThisProc, nParticleRecv, nParticleSend 
+      integer:: iStatus_I(MPI_STATUS_SIZE)
+      integer:: iTag
+      real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
+      ! loop variables
+      integer:: iLine, iBuff, iParticle
+      !----------------------------------------------------------------
+      !\
+      ! SP requests field lines from MH specifying:
+      ! - direction of interface (begin/origin/end)variables
+      ! - number & names of variables
+      !/
+      if(is_proc(SP_))then
+         call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
+         call SP_request_line(NameVar, nVar, iInterfaceType, CoordMisc_DI)
+         nullify(CoordMisc_DI)
+      end if
+      call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
+      call MPI_bcast(NameVar, len(NameVar), MPI_CHARACTER, &
+           i_proc0(SP_), i_comm(), iError)
+      call MPI_bcast(nVar, 1, MPI_INTEGER, i_proc0(SP_), i_comm(), iError)
+      !\
+      ! determine which index corresponds to field line index
+      !/
+      iFLIndex = index(NameVar, 'fl')/3 + 1
+      if(iFLIndex == 0) call CON_stop(NameSub//&
+           ': set of variables requested is not sufficient for coupling')
+      !\
+      ! Extract field lines at MH and send to SP
+      !/
+      if(is_proc(iMH))then
+         ! get request locations
+         call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
+         Convert_DD = transform_matrix(tNow,&
+              Grid_C(SP_)%TypeCoord, Grid_C(iMH)%TypeCoord)
 
+         ! convert locations to MH coordinates
+         do iLine = 1, nLine
+            CoordMisc_DI(:,iLine) = matmul(Convert_DD, CoordMisc_DI(:,iLine))
+         end do
 
-    if(is_proc(SP_))then
-       !\
-       ! Recv data from SC
-       !/
-       do SC_iProcFrom = 0, n_proc(SC_)-1
-          ! translate proc at SC to global
-          call MPI_Group_translate_ranks(&
-               i_group(SC_), 1, (/SC_iProcFrom/), &
-               i_group(),            iProcFrom_I, iError)
-          ! recv # of particles to be received
-          call MPI_recv(nParticleRecv, 1, MPI_INTEGER,&
-               iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
-          if(nParticleRecv==0)CYCLE
-          ! recv data
-          call MPI_recv(BuffRecv_I, nVar*nParticleRecv, MPI_DOUBLE,&
-               iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
-          ! put data
-          ScToSp_DD = transform_matrix(tNow,&
-               Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-          call SP_put_line(NameVar, nVar, nParticleRecv,&
-               reshape(BuffRecv_I,(/nVar,nParticleRecv/)),&
-               ScToSp_DD)
-       end do
-    end if
+         ! extract field line data
+         allocate(nParticleAtLine_I(nLine))
+         select case(iMH)
+         case(SC_)
+            call SC_get_line(nLine, CoordMisc_DI, iInterfaceType,nVar, NameVar, &
+                 nParticleThisProc, Particle_II)
+         case(IH_)
+            call IH_get_line(nLine, CoordMisc_DI, iInterfaceType, nVar, NameVar, &
+                 nParticleThisProc, Particle_II)
+         case default
+            call CON_stop(NameSub//': incorrect MH component')
+         end select
+         nullify(CoordMisc_DI)
 
-    !\
-    ! find the interface points between SC and IH
-    !/
-!    if(is_proc(SP_))then
-!       call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-!       call SP_request_line(NameVar, nVar, 1, CoordMisc_DI)
-!       nullify(CoordMisc_DI)
-!    end if
-!    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-!    call MPI_bcast(NameVar, len(NameVar), MPI_CHARACTER, &
-!         i_proc0(SP_), i_comm(), iError)
-!    call MPI_bcast(nVar, 1, MPI_INTEGER, i_proc0(SP_), i_comm(), iError)
+         ! count number of particles per field line
+         do iLine = 1, nLine
+            nParticleAtLine_I(iLine)=count(nint(Particle_II(iFLIndex,:))==iLine)
+         end do
 
-!    if(is_proc(SP_))then
-!       call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-!       call SP_get_interface(CoordMisc_DI)
-!       ! collect all data on the SP root
-!       call MPI_Reduce(&
-!            CoordMisc_DI, CoordMisc_DI, SP_GridDescriptor%DD%Ptr%nDim*nLine, MPI_DOUBLE, &
-!         MPI_SUM, 0, i_comm(SP_), iError)!i_proc0(SP_), i_comm(SP_), iError)
+         ! Send line to SP: on MH by index fl_ can find recepient on SP 
+         do SP_iProcTo = 0, n_proc(SP_)-1
+            ! count how many points will be sent
+            nParticleSend = sum(nParticleAtLine_I, &
+                 MASK = &
+                 SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == SP_iProcTo)
+            ! translate proc at SP to global
+            call MPI_Group_translate_ranks(&
+                 i_group(SP_), 1, (/SP_iProcTo/), &
+                 i_group(),            iProcTo_I, iError)
+            ! send number of particles to be transfered
+            call MPI_send(nParticleSend, 1, MPI_INTEGER, &
+                 iProcTo_I(1), iTag, i_comm(),iError)
+            if(nParticleSend == 0) CYCLE
+            ! prepare data
+            allocate(BuffSend_I(nVar * nParticleSend))
+            iBuff = 1
+            do iParticle = 1, nParticleThisProc
+               if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
+                    nint(Particle_II(iFLIndex,iParticle)))/=SP_iProcTo) CYCLE
+               
+               BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
+               iBuff = iBuff + nVar - 1
+            end do
+            ! transfer data
+            call MPI_send(BuffSend_I,nVar * nParticleSend, &
+                 MPI_DOUBLE, iProcTo_I(1), iTag, i_comm(), iError)
+            deallocate(BuffSend_I)
+         end do
+         deallocate(nParticleAtLine_I)
+      end if
+      
+      
+      if(is_proc(SP_))then
+         !\
+         ! Recv data from MH
+         !/
+         do MH_iProcFrom = 0, n_proc(iMH)-1
+            ! translate proc at SC to global
+            call MPI_Group_translate_ranks(&
+                 i_group(iMH), 1, (/MH_iProcFrom/), &
+                 i_group(),            iProcFrom_I, iError)
+            ! recv # of particles to be received
+            call MPI_recv(nParticleRecv, 1, MPI_INTEGER,&
+                 iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
+            if(nParticleRecv==0)CYCLE
+            ! recv data
+            allocate(BuffRecv_I(nVar * nParticleRecv))
+            call MPI_recv(BuffRecv_I, nVar*nParticleRecv, MPI_DOUBLE,&
+                 iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
+            ! put data
+            Convert_DD = transform_matrix(tNow,&
+                 Grid_C(iMH)%TypeCoord, Grid_C(SP_)%TypeCoord)
+            call SP_put_line(NameVar, nVar, nParticleRecv,&
+                 reshape(BuffRecv_I,(/nVar,nParticleRecv/)),&
+                 iInterfaceType, Convert_DD)
+            deallocate(BuffRecv_I)
+         end do
+      end if
+    end subroutine exchange_lines
 
-!       nullify(CoordMisc_DI)
-!    end if
-!    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-
-!  contains
   end subroutine couple_mh_sp_init
   !==================================================================!
   subroutine transform_to_sp_from(iComp)
