@@ -36,6 +36,7 @@ contains
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
+    TimeSimulation = TimeSimulationLimit
     call run
   end subroutine SP_run
 
@@ -47,7 +48,12 @@ contains
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
+
+    logical, save:: IsInitialized = .false.
     !--------------------------------------------------------------------------
+    if(IsInitialized)&
+         RETURN
+    IsInitialized = .true.
     call initialize
   end subroutine SP_init_session
 
