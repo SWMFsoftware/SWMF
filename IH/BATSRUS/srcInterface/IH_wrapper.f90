@@ -1291,45 +1291,26 @@ contains
 
   !============================================================================
 
-  subroutine IH_get_line(nLine, CoordOrigin_DI, iTraceMode, nVar, NameVar, &
+  subroutine IH_get_line(nLine, XyzOrigin_DI, iTraceMode, nVar, NameVar, &
        nParticleOut, ParticleOut_II)
     use IH_BATL_lib, ONLY: nDim, IsCartesian, coord_to_xyz, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: extract_particle_line, get_particle_data
     integer,          intent(in) :: nLine
-    real,             intent(in) :: CoordOrigin_DI(nDim, nLine)
+    real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: nVar
     character(len=*), intent(in) :: NameVar
     integer,          intent(out):: nParticleOut
     real,    pointer, intent(out):: ParticleOut_II(:,:)
 
-    ! loop variables
-    integer:: iLine, iDim, iParticle
-    real   :: XyzOrigin_DI(nDim, nLine), CoordTmp_D(nDim)
     character(len=*), parameter:: NameSub='IH_get_line'
     !--------------------------------------------------------------------------
-    ! convert to cartesian if necessary
-    if(IsCartesian)then
-       XyzOrigin_DI = CoordOrigin_DI
-    else
-       do iLine = 1, nLine
-          call coord_to_xyz(CoordOrigin_DI(:,iLine), XyzOrigin_DI(:,iLine))
-       end do
-    end if
-
     ! extract field lines starting at input points
     call extract_particle_line(nLine, XyzOrigin_DI, iTraceMode)
 
     ! get data at extracted field lines
     call get_particle_data(nVar, NameVar, ParticleOut_II, nParticleOut)
 
-    ! convert back to generalized coordinates if necessary
-    if(IsCartesian)&
-         RETURN
-    do iParticle = 1, nParticleOut
-       call xyz_to_coord(ParticleOut_II(1:nDim, iParticle), CoordTmp_D)
-       ParticleOut_II(1:nDim, iParticle) = CoordTmp_D
-    end do
   end subroutine IH_get_line
 
   !============================================================================
