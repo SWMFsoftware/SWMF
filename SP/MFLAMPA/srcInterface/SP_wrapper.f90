@@ -175,7 +175,8 @@ contains
   subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
     use ModSize, ONLY: nDim, nNode, R_, Lat_, Lon_
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock
+         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock,&
+         convert_sph_to_cart
     use ModMpiOrig
     ! request coordinates of field lines' beginning/origin/end
     ! as well as names variables to be imported
@@ -188,6 +189,8 @@ contains
     ! directions requested
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
+    ! generalized (spherical) coordinates
+    real:: Coord_D(nDim)
     ! loop variables
     integer:: iParticle, iBlock, iNode
     ! indices of the particle
@@ -206,21 +209,22 @@ contains
        ! get coordinates of the 1st points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
-          CoordOut_DA(:, iNode) = &
-               State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
        end do
     case(iDirOrigin_)
        ! get coordinates of the origin points of field lines
        do iBlock = 1, nBlock
-          CoordOut_DA(:, iNode_B(iBlock)) = &
-               State_VIB((/R_,Lat_,Lon_/), 0, iBlock)
+          iNode = iNode_B(iBlock)
+          Coord_D = State_VIB((/R_,Lat_,Lon_/), 0, iBlock)
+          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
        end do
     case(iDirEnd_)
        ! get coordinates of the last points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
-          CoordOut_DA(:, iNode_B(iBlock)) = &
-               State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
        end do
     case default
        call CON_stop(NameSub//': invalid request of field line coordinates')
@@ -244,7 +248,8 @@ contains
        nParticle, Data_VI, iDirIn, Convert_DD)
     use ModSize, ONLY: nDim, nNode
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm
+         Proc_, Block_, Begin_, End_, iProc, iComm, &
+         convert_cart_to_sph
     use ModMpiOrig
     ! store particle data extracted elsewhere
     !---------------------------------------------------------------
@@ -258,6 +263,8 @@ contains
     ! directions where to put particles
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
+    ! cartesian coordinates
+    real:: Xyz_D(nDim)
     ! loop variables
     integer:: iParticle, iBlock, iNode
     ! indices of the particle
@@ -290,8 +297,9 @@ contains
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        ! convert and store data
-       State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)) = &
-               matmul(Convert_DD, Data_VI(1:nDim, iParticle))
+       Xyz_D = matmul(Convert_DD, Data_VI(1:nDim, iParticle))
+       call convert_cart_to_sph(Xyz_D, &
+            State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)))
     end do
     !\
     ! Update begin/end points on all procs
