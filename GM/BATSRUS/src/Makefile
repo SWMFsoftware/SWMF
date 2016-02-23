@@ -177,7 +177,7 @@ ${EXE}: ${OBJECTS_EXE}
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB} ${SPICELIB}
-	rm -rf Tmp_
+#	rm -rf Tmp_
 
 # Compilation of CRASH ############
 
@@ -207,7 +207,7 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 		ar -x ${LIBSHARE}
 	${LINK.f90} -o ${CRASHEXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${LBLAS} ${HDFLIB} ${Lflag1} ${HYPRELIB}
-	rm -rf Tmp_
+#	rm -rf Tmp_
 
 #########################################################################
 

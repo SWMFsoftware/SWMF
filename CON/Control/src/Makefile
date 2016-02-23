@@ -118,7 +118,6 @@ SWMFLIB:
 	make TMP_DIRS
 	rm -f ${SWMFLIB}
 	${AR} ${SWMFLIB} Tmp_*/*.o
-	@rm -rf Tmp_*
 	@echo
 	@echo SWMF library ${SWMFLIB} has been brought up to date.
 	@echo
@@ -140,7 +139,6 @@ SWMFEXE:
 	@$(MAKE) ${EXEOBJECT}
 	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1} \
 		${HYPRELIB} ${SPICELIB} ${CPPLIB} ${FORTRANLIB}
-	@rm -rf Tmp_*
 	@echo
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo
