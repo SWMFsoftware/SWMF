@@ -1745,6 +1745,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //else
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }
+  
+  if(XLEN*YLEN*ZLEN!=MPIdata::get_nprocs()){
+    divide_processors(XLEN,YLEN,ZLEN,MPIdata::get_nprocs());
+  }
 
   if(RESTART1){
     ReadRestart(RestartDirName);

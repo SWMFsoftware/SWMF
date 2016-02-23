@@ -1903,6 +1903,44 @@ class InterfaceFluid
     }
   }
 
+  inline void divide_processors(int &npx, int &npy, int &npz, int nprocs){
+    int divisor1, divisor2, divisor3, nprocs0, npmax, nDim;
+    nDim = INdim;
+
+    if(nDim<3){
+      divisor1 = 1;
+    }else{
+      npmax = (int) pow(nprocs,1./3);
+      for(int i = 1; i<=npmax; ++i){
+	if(nprocs % i == 0) divisor1 = i;
+
+      }
+    }
+
+    if(nDim == 1){
+      divisor2 = 1;
+      nprocs0 = nprocs;
+    }else{
+      nprocs0 = nprocs/divisor1;
+      npmax = (int) pow(nprocs0,0.5);
+      for(int i = 1; i<=npmax; ++i){
+	if(nprocs0 % i == 0) divisor2 = i;
+      }
+
+    }
+    divisor3 = nprocs0/divisor2;
+
+    // divisor3 is alway the largest one;
+    npx = divisor3;
+    npy = divisor1 > divisor2 ? divisor1 : divisor2;
+    npz = divisor1 < divisor2 ? divisor1 : divisor2;
+
+    if(myrank==0)
+      cout<<"Warning: Using "<<npx<<"x"<<npy<<"x"<<npz<<" processors"<<endl;
+
+    //cout<<"npx = "<<npx<<" npy = "<<npy<<" npz = "<<npz<<endl;
+  }
+  
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
   double getPhyXMin(){return(INxRange_I[0] + INgridDx_D[0]);}
