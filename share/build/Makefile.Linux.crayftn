@@ -34,7 +34,7 @@ DEBUG     =
 OPT0 = -O0
 OPT1 = -O1
 OPT2 = -O2
-OPT3 = -O3,fp3
+OPT3 = -O3
 OPT4 = -O4
 
 CFLAG = ${SEARCH} -c ${DEBUG}
