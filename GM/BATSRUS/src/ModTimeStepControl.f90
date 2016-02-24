@@ -17,6 +17,8 @@ module ModTimeStepControl
 
   logical, public:: UseTimeStepControl   = .false.
   real,    public:: TimeStepControlInit  = 1.0
+  logical, public:: UseMaxTimeStep      = .false. ! calculate max time step
+  real,    public:: DtMin = -1.0, DtMax = -1.0    ! values of min/max time steps
 
   ! Local variables
   integer             :: nVarControl = -1
@@ -298,12 +300,11 @@ contains
 
     integer :: iBlock
     integer :: iError, Ijk_D(3), i, j, k
-    real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
+    real    :: DtMinPe, DtMaxPe, Cmax, Cmax_C(nI,nJ,nK)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
-
     call set_oktest('calc_timestep',DoTest,DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
          TimeSimulationLimit
@@ -319,12 +320,17 @@ contains
           ! run
           DtMinPE = minval(Dt_BLK(1:nBlock),&
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
+          if(UseMaxTimeStep) DtMaxPe = maxval(Dt_BLK(1:nBlock),&
+               MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
        else
           DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
+          if(UseMaxTimeStep) DtMaxPe = &
+               maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
        end if
 
        ! Set Dt to minimum time step over all the PE-s
-       call MPI_allreduce(DtMinPE, Dt, 1, MPI_REAL, MPI_MIN, iComm, iError)
+       call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
+       Dt = DtMin
 
        if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
@@ -369,17 +375,40 @@ contains
           end do
        end if
 
+       if(UseMaxTimeStep)then
+          ! Calculate largest time step
+          call MPI_allreduce(&
+               DtMaxPe, DtMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
+
+          ! Make DtMax a power of 2 multiple of DtMin
+          DtMax = DtMin*2.0**floor(log(DtMax/DtMin)/log(2.0))
+          Dt = DtMax
+       end if
+
     end if
+
 
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
     ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
-    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit) &
-         Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
+    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
+       Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
+       if(UseMaxTimeStep)then
+          DtMax = Dt
+          DtMin = min(DtMin, Dt)
+          DtMin = DtMax/2.0**ceiling(log(DtMax/DtMin)/log(2.0))
+       end if
+    end if
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
-       time_BLK(:,:,:,iBlock) = Dt
+       if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
+          ! Make block time step a power of 2 multiple of DtMin that is < Dt_BLK
+          Dt_BLK(iBlock) = DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
+       else
+          time_BLK(:,:,:,iBlock) = Dt
+       end if
 
        ! Reset time step to zero inside body.
        if(.not.true_BLK(iBlock))then
@@ -391,6 +420,11 @@ contains
 
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
+
+    if(UseMaxTimeStep)then
+       DtMin = Cfl*DtMin
+       DtMax = Cfl*DtMax
+    end if
 
     if(DoTestMe)write(*,*) NameSub, ' finished with Dt=', Dt
 
