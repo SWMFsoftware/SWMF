@@ -1910,7 +1910,7 @@ class InterfaceFluid
     if(nDim<3){
       divisor1 = 1;
     }else{
-      npmax = (int) pow(nprocs,1./3);
+      npmax = (int) pow(nprocs+1,1./3);
       for(int i = 1; i<=npmax; ++i){
 	if(nprocs % i == 0) divisor1 = i;
 
