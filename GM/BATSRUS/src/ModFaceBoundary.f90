@@ -235,7 +235,7 @@ contains
 
 
     !\
-    ! Apply body boundary conditions as required.
+    ! Apply face boundary conditions as required.
     !/                            
 
     B0Face_D = 0.0
@@ -360,7 +360,7 @@ contains
                   IsBodyCell_G(i,j,k) .and. &
                   (.not.DoResChangeOnly .or. &
                   (k == nKFace .and. neiLtop(iBlockBc)==+1) .or. &
-                  (k == 1       .and. neiLbot(iBlockBc)==+1)) ) then
+                  (k == 1      .and. neiLbot(iBlockBc)==+1)) ) then
 
                 iSide = 6
 
@@ -379,7 +379,7 @@ contains
              if (IsTrueCell_G(i,j,k).and. &
                   IsBodyCell_G(i,j,k-1).and. &
                   (.not.DoResChangeOnly .or. &
-                  (k == 1         .and. neiLbot(iBlockBc)==+1) .or. &
+                  (k == 1      .and. neiLbot(iBlockBc)==+1) .or. &
                   (k == nKFace .and. neiLtop(iBlockBc)==+1))  ) then
 
                 iSide = 5
