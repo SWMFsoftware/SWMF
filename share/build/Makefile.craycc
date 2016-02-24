@@ -1,0 +1,20 @@
+# C language related part of Makefile.conf: Makefile.craycc
+C_COMPILER_NAME=CC
+
+COMPILE.c     = CC
+COMPILE.mpicc = CC
+COMPILE.mpicxx= CC
+
+CPPLIB = -lstdc++ -lmpi_cxx
+
+#DEBUGC = -g
+
+.SUFFIXES: .c .cpp
+
+FLAGC = ${SEARCH_C} ${FLAGC_EXTRA} -c ${OPT3} ${DEBUGC}
+
+.c.o:
+	${COMPILE.c} ${FLAGC} $< -o $@
+
+.cpp.o:
+	${COMPILE.mpicxx} ${FLAGC} $< -o $@
