@@ -5,6 +5,7 @@
 module ModLocalTimeStep
 
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
+  use ModTimeStepControl, ONLY: UseMaxTimeStep
 
   implicit none
 
@@ -12,8 +13,8 @@ module ModLocalTimeStep
 
   public:: advance_localstep    ! time accurate mode with subcycling
   public:: read_localstep_param ! read parameters for algorithm
-  logical, public :: UseLocalTimeStep    = .false.
-  logical, public :: UseLocalTimeStepNew = .false. ! if just switched on
+  logical, public:: UseLocalTimeStep    = .false.
+  logical, public:: UseLocalTimeStepNew = .false. ! if just switched on
 
   ! Local variables
   real:: DtMinSi, DtMaxSi
@@ -35,8 +36,9 @@ contains
        UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
 
        call read_var('UseLocalTimeStep', UseLocalTimeStep)
-       
-        ! Check if the local time stepping was just switched on
+       call read_var('UseMaxTimeStep',   UseMaxTimeStep)
+
+       ! Check if the local time stepping was just switched on
        UseLocalTimeStepNew = UseLocalTimeStepNew .and. UseLocalTimeStep
 
     case default
@@ -99,7 +101,7 @@ contains
 
     if(DoConserveFlux)then
        if(.not. allocated(Flux_VFD)) allocate(&
-            Flux_VFD(nFlux,1:nI+1,1:nJ+1,1:nK+1,nDim), &
+            Flux_VFD(nFlux,nI+1,nJ+1,nK+1,nDim), &
             Flux_VXB(nFlux,nJ,nK,2,MaxBlock), & ! Two sides of the block
             Flux_VYB(nFlux,nI,nK,2,MaxBlock), &
             Flux_VZB(nFlux,nI,nJ,2,MaxBlock)) 
