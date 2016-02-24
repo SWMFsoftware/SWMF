@@ -604,22 +604,21 @@ sub set_mpi_{
 sub set_hdf5_{
 
     $NewHdf5=$Hdf5 if $Install and not $NewHdf5;
-
     
-    if($NewHdf5 eq "yes" and $Compiler eq "ftn" and not `which h5dump`){
+    if($NewHdf5 eq "yes" and $Compiler eq "crayftn" and not `which h5dump`){
 	# On Bluewaters the HDF5 module does not load h5pfc or h5pcc
 	# It uses ftn and CC for compilation
 	print "Warning: h5dump is not in path. Load parallel hdf5 module!/\n";
 	return;
     }
     # Check if HDF5 module is loaded
-    if($NewHdf5 eq "yes" and $Compiler ne "ftn" and not `which $H5pfc`){
+    if($NewHdf5 eq "yes" and $Compiler ne "crayftn" and not `which $H5pfc`){
 	print "Warning: $H5pfc is not in path. ".
 	    "Load parallel hdf5 module!/\n";
 	return;
     }
 
-    if($NewHdf5 eq "yes" and $Compiler ne "ftn" and not `which $H5pcc`){
+    if($NewHdf5 eq "yes" and $Compiler ne "crayftn" and not `which $H5pcc`){
 	print "Warning: $H5pcc is not in path. Load parallel hdf5 module!/\n";
         return;
     }
@@ -641,7 +640,7 @@ sub set_hdf5_{
 	    if($Hdf5 eq "yes"){
 		# Modify linker definition to use h5pfc
 		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/
-		    unless /\#/ or $Compiler eq "ftn";
+		    unless /\#/ or $Compiler eq "crayftn";
 
 		# Add a comment about HDF5 being set
 		s/^(LINK\.f90.*)/$1\n\# HDF5=YES/;
@@ -652,7 +651,7 @@ sub set_hdf5_{
 
 		# Change the parallel C++ compiler too
 		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/
-		    unless /\#/ or $Compiler eq "CC";
+		    unless /\#/ or $CompilerC eq "craycc";
 
 		# Add the h5pfc include directory to search path for hdf5.mod
 		s/\s+$/$H5include\n/ if /^SEARCH\b/ and $H5include
