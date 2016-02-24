@@ -1922,7 +1922,7 @@ class InterfaceFluid
       nprocs0 = nprocs;
     }else{
       nprocs0 = nprocs/divisor1;
-      npmax = (int) pow(nprocs0,0.5);
+      npmax = (int) pow(nprocs0+1,0.5);
       for(int i = 1; i<=npmax; ++i){
 	if(nprocs0 % i == 0) divisor2 = i;
       }
