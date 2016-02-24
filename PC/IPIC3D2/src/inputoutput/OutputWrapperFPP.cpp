@@ -153,11 +153,14 @@ void OutputWrapperFPP::append_restart(int cycle)
 {
 #ifndef NO_HDF5
   int cycle0=cycle;
+  bool doEraseFile=false;
+  
 #ifdef BATSRUS
   cycle0 = 0;
+  doEraseFile = true;
 #endif
 
-  hdf5_agent.open_append(restart_file);
+  hdf5_agent.open_append(restart_file,doEraseFile);
   output_mgr.output("proc_topology ", cycle0);  
   output_mgr.output("Eall + Ball + rhos + Js + pressure", cycle0);
   #ifdef BATSRUS

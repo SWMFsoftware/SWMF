@@ -44,7 +44,7 @@ namespace PSK {
   public:
       HDF5OutputAdaptor(void) {}
       void open(const std::string & name);
-    void open_append(const std::string & name);
+      void open_append(const std::string & name, bool doEraseFile=false);
     void close(void);
 
     void write(const std::string & tag, int i_value);

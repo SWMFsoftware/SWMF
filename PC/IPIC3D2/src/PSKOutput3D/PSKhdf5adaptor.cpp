@@ -156,7 +156,7 @@ void HDF5OutputAdaptor::open(const std::string & name) {
 
 /* 
  * Opens an existing file */
-void HDF5OutputAdaptor::open_append(const std::string & name) {
+void HDF5OutputAdaptor::open_append(const std::string & name, bool doEraseFile) {
   /* HDF5 error handling code from http://hdf.ncsa.uiuc.edu/HDF5/doc/Errors.html */
   /* Save old error handler */
   // herr_t (*old_func)(void*); //HDF 1.6
@@ -164,11 +164,18 @@ void HDF5OutputAdaptor::open_append(const std::string & name) {
   void *old_client_data;
   H5Eget_auto2(H5E_DEFAULT, &old_func, &old_client_data);  // HDF 1.8
 
+  unsigned flag0;
+
+  if(doEraseFile){
+    flag0 = H5F_ACC_TRUNC;
+  }else{
+    flag0 = H5F_ACC_EXCL;
+  }
 
   /* Turn off error handling */
   // H5Eset_auto2(NULL, NULL); // HDF 1.6
   H5Eset_auto2(H5E_DEFAULT, 0, 0);
-  _hdf5_file_id = H5Fcreate(name.c_str(), H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
+  _hdf5_file_id = H5Fcreate(name.c_str(), flag0, H5P_DEFAULT, H5P_DEFAULT);
 
   /* Restore previous error handler */
   H5Eset_auto2(H5E_DEFAULT, old_func, old_client_data);  // HDF 1.8

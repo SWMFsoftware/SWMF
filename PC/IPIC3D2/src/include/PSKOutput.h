@@ -204,8 +204,8 @@ template < class Toa > class OutputAgent:public OutputAgentBase {
     void open(const std::string & outf) {
       output_adaptor.open(outf);
     }
-    void open_append(const std::string & outf) {
-      output_adaptor.open_append(outf);
+    void open_append(const std::string & outf, bool doEraseFile=false) {
+      output_adaptor.open_append(outf,doEraseFile);
     }
 
     void close(void) {
