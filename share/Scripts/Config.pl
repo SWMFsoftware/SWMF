@@ -27,7 +27,7 @@ my %Compiler = (
 		"jaguarpf-ext"        => "ifortftn",
                 "kraken-gsi"          => "ifortftn",
                 "yslogin"             => "ifortmpif90,iccmpicxx",
-                "h2ologin"            => "crayftn,cc",
+                "h2ologin"            => "crayftn,craycc",
                 "cetuslac"            => "mpixlf2008,mpixlc",
                 "miralac"             => "mpixlf2008,mpixlc",
 		);
@@ -322,7 +322,7 @@ sub get_settings_{
 	  $OS         = $1 if /^\s*OS\s*=\s*(\w+)/;
       }
       close(MAKEFILE);
-  }
+    }
 
     $Debug     = "no";
     $Mpi       = "yes";
@@ -353,7 +353,7 @@ sub get_settings_{
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
-	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*$H5pfc/;
+	  $Hdf5  = "yes" if /^\# HDF5=YES/;
 	  $Hypre = "yes" if /^\s*HYPRELIB/;
 	  $Fishpak = "yes" if /^\s*FISHPAKLIB/;
 	  $Spice = "$1"  if /^\s*SPICELIB\s*=\s*(\S*)/;
@@ -605,14 +605,22 @@ sub set_hdf5_{
 
     $NewHdf5=$Hdf5 if $Install and not $NewHdf5;
 
+    
+    if($NewHdf5 eq "yes" and $Compiler eq "ftn" and not `which h5dump`){
+	# On Bluewaters the HDF5 module does not load h5pfc or h5pcc
+	# It uses ftn and CC for compilation
+	print "Warning: h5dump is not in path. Load parallel hdf5 module!/\n";
+	return;
+    }
     # Check if HDF5 module is loaded
-    if($NewHdf5 eq "yes" and not `which $H5pfc`){
-        print "Warning: $H5pfc is not in path. Load parallel hdf5 module!/\n";
-        return;
+    if($NewHdf5 eq "yes" and $Compiler ne "ftn" and not `which $H5pfc`){
+	print "Warning: $H5pfc is not in path. ".
+	    "Load parallel hdf5 module!/\n";
+	return;
     }
 
-    if($NewHdf5 eq "yes" and not `which $H5pcc`){
-        print "Warning: $H5pcc is not in path. Load parallel hdf5 module!/\n";
+    if($NewHdf5 eq "yes" and $Compiler ne "ftn" and not `which $H5pcc`){
+	print "Warning: $H5pcc is not in path. Load parallel hdf5 module!/\n";
         return;
     }
 
@@ -633,7 +641,10 @@ sub set_hdf5_{
 	    if($Hdf5 eq "yes"){
 		# Modify linker definition to use h5pfc
 		s/^(LINK\.f90\s*=\s*\$\{CUSTOMPATH_\w+\})(.*)/$1$H5pfc \#$2/
-		    unless /\#/;
+		    unless /\#/ or $Compiler eq "ftn";
+
+		# Add a comment about HDF5 being set
+		s/^(LINK\.f90.*)/$1\n\# HDF5=YES/;
 
 		# For pgf90 the F90 compiler has to be changed too
 		s/^(COMPILE\.f90\s*=.*)(pgf90)/$1$H5pfc \#$2/
@@ -641,15 +652,16 @@ sub set_hdf5_{
 
 		# Change the parallel C++ compiler too
 		s/^(COMPILE\.mpicxx\s*=\s*)(.*)/$1$H5pcc \#$2/
-		    unless /\#/;
+		    unless /\#/ or $Compiler eq "CC";
 
-		# Add the h5pfc include directory to the search path for hdf5.mod
+		# Add the h5pfc include directory to search path for hdf5.mod
 		s/\s+$/$H5include\n/ if /^SEARCH\b/ and $H5include
 		    and not /$H5include/;
 	    }else{
 		# Undo the modifications
 		s/($H5pfc|$H5pcc) \#//;
 		s/$H5include// if $H5include;
+		s/^\# HDF5=YES\n//;
 	    }
 	    print;
 	}
