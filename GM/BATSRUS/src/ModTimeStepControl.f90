@@ -311,6 +311,10 @@ contains
 
     if(UseDtFixed)then
        Dt = DtFixed
+    elseif(n_step == 1)then
+       Dt = 0.0
+       DtMin = 0.0
+       DtMax = 0.0
     else
        !\
        ! Impose global time step for time-accurate calculations as required
@@ -420,11 +424,6 @@ contains
 
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
-
-    if(UseMaxTimeStep)then
-       DtMin = Cfl*DtMin
-       DtMax = Cfl*DtMax
-    end if
 
     if(DoTestMe)write(*,*) NameSub, ' finished with Dt=', Dt
 
