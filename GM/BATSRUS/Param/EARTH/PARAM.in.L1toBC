@@ -4,6 +4,9 @@ T			DoEcho
 #DESCRIPTION
 Solar wind propagation
 
+#COORDSYSTEM
+GSE			NameCoordSystem
+
 #USEB0
 F			UseB0
 
@@ -72,7 +75,15 @@ T			DoSaveInitial
 60.			DtSavePlot
 0.0			DxSavePlot
 
-#STOP
+#ENDTIME
+1998			iYear
+5			iMonth
+4			iDay
+1			iHour
+45			iMinute
+0			iSecond
+
+STOP
 -1			MaxIteration
 3600.0			tSimulationMax
 

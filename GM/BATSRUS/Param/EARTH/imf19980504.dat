@@ -4,6 +4,9 @@ Data taken from file : ac_h0_mfi_19980504_v04.cdf
 
 The number density was multiplied by (1.0 + 4.0*AlphaRatio)
 
+#COORD
+GSM
+
 #TIMEDELAY
       0.00000
 
