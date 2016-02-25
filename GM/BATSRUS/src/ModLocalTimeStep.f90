@@ -46,14 +46,14 @@ contains
     end select
 
   end subroutine read_localstep_param
-  !======================================================================
+  !===========================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, nStage
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
-         Flux_VX, Flux_VY, Flux_VZ
+         Flux_VX, Flux_VY, Flux_VZ, time_BLK
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
     use ModFaceBoundary, ONLY: set_face_boundary
@@ -61,7 +61,7 @@ contains
     use ModEnergy,     ONLY: calc_energy_ghost
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
     use ModCalcSource, ONLY: calc_source
-    use ModTimeStepControl, ONLY: calc_timestep
+    use ModTimeStepControl, ONLY: calc_timestep, DtMin, DtMax
     use ModBlockData,  ONLY: set_block_data
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
@@ -89,6 +89,8 @@ contains
     real   :: TimeStage, TimeEnd, DtSiTiny
     integer:: nTimeStage, iStage, iLevelMin, iStageBlock, iBlock
 
+    real:: DtBlkOld
+
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !-------------------------------------------------------------------------
@@ -96,8 +98,21 @@ contains
     if(DoTestMe)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
-    ! set global and local time steps
-    call set_local_time_step(TimeSimulationLimit)
+    if(UseMaxTimeStep)then
+       ! Flux conservation to be implemented for max time step algorithm!!!
+       DoConserveFlux = .false.
+       ! DtMin and DtMax are set by ModTimeStepControl::set_global_timestep
+       DtMinSi = DtMin*No2Si_V(UnitT_)*Cfl
+       DtMaxSi = DtMax*No2Si_V(UnitT_)*Cfl
+
+       if(DoTestMe)write(*,*) NameSub,' DtMinSi, DtMaxSi=', DtMinSi, DtMaxSi
+
+    else
+       ! set global and local time steps
+       call set_local_time_step(TimeSimulationLimit)
+       ! The total time step is the largest
+       Dt = DtMaxSi*Si2No_V(UnitT_)
+    end if
 
     if(DoConserveFlux)then
        if(.not. allocated(Flux_VFD)) allocate(&
@@ -118,9 +133,6 @@ contains
     TimeOld_B(1:nBlock) = Time_Simulation
     iStage_B(1:nBlock)  = 1
 
-    ! The total time step is the largest
-    Dt = DtMaxSi*Si2No_V(UnitT_)
-
     ! A small fraction of the smallest time step in SI units
     DtSiTiny = 1e-6*DtMinSi
 
@@ -138,6 +150,7 @@ contains
 
        ! Number of grid levels involved in this stage
        iLevelMin = min_tree_level(iStage)
+       if(UseMaxTimeStep) iLevelMin = 0 !!!
        if(DoTestMe)write(*,*)'iStage, iLevelMin=', iStage, iLevelMin
 
        call timing_start('message_pass_cell')
@@ -224,6 +237,34 @@ contains
           ! Calculate time step limit for next time step
           ! if the block has reached the end of the time step
           if(Time_B(iBlock) >= TimeEnd - DtSiTiny) call calc_timestep(iBlock)
+
+          ! STABILITY !!!
+          !!!if(iStageBlock == nStage)then
+          !!!   DtBlkOld = Dt_Blk(iBlock)
+          !!!   call calc_timestep(iBlock)
+          !!!   if(iBlock==127) then
+          !!!      write(*,*) &
+          !!!           '!!! iBlock, DtBlkOld, max(time), min(time), DtBlk/DtMin=', &
+          !!!           iBlock, DtBlkOld, maxval(time_BLK(:,:,:,iBlock)), &
+          !!!           minval(time_BLK(:,:,:,iBlock)), Dt_BLK(iBlock)/DtMin
+          !!!      write(*,*)'log2(Ratio)=', log(Dt_BLK(iBlock)/DtMin)/log(2.0)
+          !!!      write(*,*)'floor(log2(Ratio))=', &
+          !!!           floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          !!!      write(*,*)'2^floor(log2(Ratio))=', &
+          !!!           2.0**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          !!!   end if
+          !!!   Dt_BLK(iBlock) = &
+          !!!        DtMin*2.0**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          !!!   if(iBlock==127) write(*,*)'!!! DtMin, new DtBlk=', &
+          !!!        DtMin, Dt_BLK(iBlock)
+          !!!
+          !!!
+          !!!   if(DtBlkOld < Dt_Blk(iBlock)) Dt_BLK(iBlock) = DtBlkOld
+          !!!   time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
+          !!!   
+          !!!   if(iBlock==127)write(*,*)'!!! iBlock, DtBlkOld, DtBlk=', &
+          !!!        iBlock, DtBlkOld, Dt_BLK(iBlock)
+          !!!end if
 
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
