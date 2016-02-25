@@ -1933,7 +1933,7 @@ contains
     logical,          intent(out)  :: IsFound
 
     real    :: WaveEnergy
-    real    :: PiSi, TiSi, NatomicSi
+    real    :: PiSi, TiSi, NatomicSi, TeSi
     real    :: OpacityPlanckSi_W(nWave)
     real    :: OpacityRosselandSi_W(nWave)
     integer :: i, j, k, iMaterial, iLevel, iWave
@@ -2020,6 +2020,17 @@ contains
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, AverageIonChargeOut = PlotVar_G(i,j,k))
+       end do; end do; end do
+    case('nlte')
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               i, j, k, iBlock, TeOut = TeSi, NatomicOut=NatomicSi)
+          if(UseTableEosNLTE_I(iMaterial) .and. &
+               .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
+             PlotVar_G(i,j,k) = 1.0  ! NLTE EOS
+          else
+             PlotVar_G(i,j,k) = 0.0  ! LTE EOS
+          end if
        end do; end do; end do
     case('cond')
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
