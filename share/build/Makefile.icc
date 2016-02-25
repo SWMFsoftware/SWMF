@@ -8,7 +8,7 @@ COMPILE.mpicxx= icpc
 
 CPPLIB = -lstdc++ -lmpi_cxx
 
-#DEBUGC = -g
+#DEBUGC =  -g -traceback -ftrapuv -debug all
 
 .SUFFIXES: .c .cpp
 
