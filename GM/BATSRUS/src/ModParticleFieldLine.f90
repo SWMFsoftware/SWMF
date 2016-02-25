@@ -454,7 +454,7 @@ contains
     ! and writes them into DataOut_VI
     integer,            intent(in) :: nData
     character(len=*),   intent(in) :: NameVar
-    real,  pointer,     intent(out):: DataOut_VI(:,:)
+    real, allocatable,  intent(out):: DataOut_VI(:,:)
     integer,            intent(out):: nParticle
 
     ! mask for returning variables
@@ -501,7 +501,7 @@ contains
     !\
     ! return data
     !/
-    if(associated(DataOut_VI)) deallocate(DataOut_VI)
+    if(allocated(DataOut_VI)) deallocate(DataOut_VI)
     nParticle = Particle_I(KindReg_)%nParticle
     allocate( DataOut_VI(nData, nParticle) )
     do iParticle = 1, nParticle

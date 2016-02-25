@@ -293,7 +293,7 @@ contains
        iLine  = nint(Data_VI(4, iParticle))
        iIndex = nint(Data_VI(5, iParticle)) + iOffset_A(iLine)
        iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iIndex)
-       iGrid_IA(Begin_, iLine) = MAX(iGrid_IA(Begin_,iLine), iIndex)
+       iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        ! convert and store data

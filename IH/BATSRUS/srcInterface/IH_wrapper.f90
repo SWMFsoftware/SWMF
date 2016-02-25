@@ -1301,7 +1301,7 @@ contains
     integer,          intent(in) :: nVar
     character(len=*), intent(in) :: NameVar
     integer,          intent(out):: nParticleOut
-    real,    pointer, intent(out):: ParticleOut_II(:,:)
+    real,allocatable, intent(out):: ParticleOut_II(:,:)
 
     character(len=*), parameter:: NameSub='IH_get_line'
     !--------------------------------------------------------------------------

@@ -154,19 +154,26 @@ contains
       integer:: nVar
       character(len=100):: NameVar
       ! particle data
-      real, pointer:: Particle_II(:,:)
+      real, allocatable:: Particle_II(:,:)
       ! field line index in particle data
       integer:: iFLIndex
       ! MPI
       integer:: MH_iProcFrom, SP_iProcTo
       integer:: iProcTo_I(1), iProcFrom_I(1)
-      integer:: nParticleThisProc, nParticleRecv, nParticleSend 
-      integer:: iStatus_I(MPI_STATUS_SIZE)
-      integer:: iTag
+      integer:: nParticleThisProc
+      integer, allocatable:: nParticleRecv_I(:), nParticleSend_I(:)
+      integer, allocatable:: iStatus_II(:,:), iRequest_I(:)
+      integer:: nRequest
+      integer:: iTag = 0
       real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
       ! loop variables
       integer:: iLine, iBuff, iParticle
       !----------------------------------------------------------------
+      ! allocate arrays for non-blocking communcations
+      allocate(nParticleRecv_I(0:n_proc()-1))
+      allocate(nParticleSend_I(0:n_proc()-1))
+      allocate(iRequest_I(2*n_proc()))
+      allocate(iStatus_II(MPI_STATUS_SIZE, n_proc()))
       !\
       ! SP requests field lines from MH specifying:
       ! - direction of interface (begin/origin/end)variables
@@ -190,6 +197,7 @@ contains
       !\
       ! Extract field lines at MH and send to SP
       !/
+      nRequest = 0
       if(is_proc(iMH))then
          ! get request locations
          call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
@@ -200,62 +208,48 @@ contains
          do iLine = 1, nLine
             CoordMisc_DI(:,iLine) = matmul(Convert_DD, CoordMisc_DI(:,iLine))
          end do
-
          ! extract field line data
          allocate(nParticleAtLine_I(nLine))
          select case(iMH)
          case(SC_)
-            call SC_get_line(nLine, CoordMisc_DI, iInterfaceType,nVar, NameVar, &
+            call SC_get_line(nLine,CoordMisc_DI, iInterfaceType,nVar,NameVar, &
                  nParticleThisProc, Particle_II)
          case(IH_)
-            call IH_get_line(nLine, CoordMisc_DI, iInterfaceType, nVar, NameVar, &
+            call IH_get_line(nLine,CoordMisc_DI, iInterfaceType,nVar,NameVar, &
                  nParticleThisProc, Particle_II)
          case default
             call CON_stop(NameSub//': incorrect MH component')
          end select
          nullify(CoordMisc_DI)
-
          ! count number of particles per field line
          do iLine = 1, nLine
-            nParticleAtLine_I(iLine)=count(nint(Particle_II(iFLIndex,:))==iLine)
+            nParticleAtLine_I(iLine)=&                 
+                 count(nint(Particle_II(iFLIndex,:))==iLine)
          end do
 
-         ! Send line to SP: on MH by index fl_ can find recepient on SP 
+         !\
+         ! Send # of particles to SP: 
+         ! on MH by index fl_ can find recepient on SP 
+         !/
          do SP_iProcTo = 0, n_proc(SP_)-1
-            ! count how many points will be sent
-            nParticleSend = sum(nParticleAtLine_I, &
-                 MASK = &
-                 SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == SP_iProcTo)
             ! translate proc at SP to global
             call MPI_Group_translate_ranks(&
                  i_group(SP_), 1, (/SP_iProcTo/), &
                  i_group(),            iProcTo_I, iError)
+            ! count how many points will be sent
+            nParticleSend_I(SP_iProcTo) = sum(nParticleAtLine_I, &
+                 MASK = &
+                 SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == iProcTo_I(1))
             ! send number of particles to be transfered
-            call MPI_send(nParticleSend, 1, MPI_INTEGER, &
-                 iProcTo_I(1), iTag, i_comm(),iError)
-            if(nParticleSend == 0) CYCLE
-            ! prepare data
-            allocate(BuffSend_I(nVar * nParticleSend))
-            iBuff = 1
-            do iParticle = 1, nParticleThisProc
-               if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
-                    nint(Particle_II(iFLIndex,iParticle)))/=SP_iProcTo) CYCLE
-               
-               BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
-               iBuff = iBuff + nVar - 1
-            end do
-            ! transfer data
-            call MPI_send(BuffSend_I,nVar * nParticleSend, &
-                 MPI_DOUBLE, iProcTo_I(1), iTag, i_comm(), iError)
-            deallocate(BuffSend_I)
+            nRequest = nRequest + 1
+            call MPI_Isend(nParticleSend_I(SP_iProcTo), 1, MPI_INTEGER, &
+                 iProcTo_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
          end do
-         deallocate(nParticleAtLine_I)
       end if
-      
-      
+
       if(is_proc(SP_))then
          !\
-         ! Recv data from MH
+         ! Recv # of particles from MH
          !/
          do MH_iProcFrom = 0, n_proc(iMH)-1
             ! translate proc at SC to global
@@ -263,22 +257,85 @@ contains
                  i_group(iMH), 1, (/MH_iProcFrom/), &
                  i_group(),            iProcFrom_I, iError)
             ! recv # of particles to be received
-            call MPI_recv(nParticleRecv, 1, MPI_INTEGER,&
-                 iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
-            if(nParticleRecv==0)CYCLE
-            ! recv data
-            allocate(BuffRecv_I(nVar * nParticleRecv))
-            call MPI_recv(BuffRecv_I, nVar*nParticleRecv, MPI_DOUBLE,&
-                 iProcFrom_I(1), iTag, i_comm(), iStatus_I, iError)
-            ! put data
-            Convert_DD = transform_matrix(tNow,&
-                 Grid_C(iMH)%TypeCoord, Grid_C(SP_)%TypeCoord)
-            call SP_put_line(NameVar, nVar, nParticleRecv,&
-                 reshape(BuffRecv_I,(/nVar,nParticleRecv/)),&
-                 iInterfaceType, Convert_DD)
-            deallocate(BuffRecv_I)
+            nRequest = nRequest + 1
+            call MPI_Irecv(nParticleRecv_I(MH_iProcFrom), 1, MPI_INTEGER,&
+                 iProcFrom_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
          end do
       end if
+      ! finalize transfer
+      call MPI_waitall(nRequest, iRequest_I, iStatus_II, iError)
+      !\
+      ! send the actual data
+      !/
+      nRequest = 0
+      if(is_proc(iMH))then
+         do SP_iProcTo = 0, n_proc(SP_)-1
+            if(nParticleSend_I(SP_iProcTo) == 0) CYCLE
+            ! translate proc at SP to global
+            call MPI_Group_translate_ranks(&
+                 i_group(SP_), 1, (/SP_iProcTo/), &
+                 i_group(),            iProcTo_I, iError)
+            ! prepare data
+            allocate(BuffSend_I(nVar * nParticleSend_I(SP_iProcTo)))
+            iBuff = 1
+            do iParticle = 1, nParticleThisProc
+               if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
+                    nint(Particle_II(iFLIndex,iParticle)))/=iProcTo_I(1)) CYCLE
+               
+               BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
+               iBuff = iBuff + nVar
+            end do
+            ! transfer data
+            nRequest = nRequest + 1
+            call MPI_Isend(BuffSend_I, nVar * nParticleSend_I(SP_iProcTo), &
+                 MPI_REAL, &
+                 iProcTo_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+            deallocate(BuffSend_I)
+         end do
+         deallocate(nParticleAtLine_I)
+         deallocate(Particle_II)
+      end if
+      !\
+      ! recv the actual data
+      !/
+      if(is_proc(SP_))then
+         allocate(BuffRecv_I(nVar * sum(nParticleRecv_I)))
+         iBuff = 1
+         do MH_iProcFrom = 0, n_proc(iMH)-1
+            if(nParticleRecv_I(MH_iProcFrom)==0)CYCLE
+            ! translate proc at SC to global
+            call MPI_Group_translate_ranks(&
+                 i_group(iMH), 1, (/MH_iProcFrom/), &
+                 i_group(),            iProcFrom_I, iError)
+            ! recv data
+            nRequest = nRequest + 1
+            call MPI_Irecv(BuffRecv_I(iBuff),&
+                 nVar*nParticleRecv_I(MH_iProcFrom), &
+                 MPI_REAL,&
+                 iProcFrom_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+            iBuff = iBuff + nVar*nParticleRecv_I(MH_iProcFrom)
+            
+         end do
+      end if
+      ! finalize transfer
+      call MPI_waitall(nRequest, iRequest_I, iStatus_II, iError)
+     !\
+     ! put data
+     !/
+      if(is_proc(SP_))then
+         Convert_DD = transform_matrix(tNow,&
+              Grid_C(iMH)%TypeCoord, Grid_C(SP_)%TypeCoord)
+         call SP_put_line(NameVar, nVar, sum(nParticleRecv_I),&
+              reshape(BuffRecv_I,(/nVar, sum(nParticleRecv_I)/)),&
+              iInterfaceType, Convert_DD)
+         deallocate(BuffRecv_I)
+      end if
+
+      ! deallocate arrays for non-blocking communications
+      deallocate(nParticleRecv_I, stat=iError)
+      deallocate(nParticleSend_I)
+      deallocate(iRequest_I)
+      deallocate(iStatus_II)
     end subroutine exchange_lines
 
   end subroutine couple_mh_sp_init

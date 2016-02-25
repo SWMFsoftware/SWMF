@@ -10,7 +10,7 @@ subroutine write_plot_particle(iFile)
   use ModIO,      ONLY: &
        StringDateOrTime, NamePlotDir, &
        TypeFile_I, plot_type, plot_form, &
-       nLine_I, XyzStartLine_DII, Plot_
+       Plot_
 
   use ModPlotFile,ONLY: save_plot_file
 
@@ -23,7 +23,7 @@ subroutine write_plot_particle(iFile)
   character(len=100) :: NameFile, NameStart, NameVar
   character (len=80) :: NameProc
   ! container for data
-  real, pointer:: PlotVar_VI(:,:)
+  real, allocatable:: PlotVar_VI(:,:)
 
   logical:: IsIdl
   integer:: iPlotFile
@@ -56,7 +56,10 @@ subroutine write_plot_particle(iFile)
 
   NameFile = NameStart
 
-  if(time_accurate) NameFile = trim(NameFile)// "_t"//StringDateOrTime
+  if(time_accurate)then
+     call get_time_string
+     NameFile = trim(NameFile)// "_t"//StringDateOrTime
+  end if
   write(NameFile,'(a,i7.7,a)') trim(NameFile) // '_n',n_step
 
   ! String containing the processor index
@@ -89,5 +92,7 @@ subroutine write_plot_particle(iFile)
        IsCartesianIn  = .false., &
        CoordIn_I      = PlotVar_VI(1, :), &
        VarIn_VI       = PlotVar_VI(2:,:))
+
+  deallocate(PlotVar_VI)
 
 end subroutine write_plot_particle
