@@ -128,9 +128,13 @@ contains
 
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
-    if(is_proc(GM_)) call GM_get_for_pc_dt(DtSi)
-    call transfer_real(GM_,PC_,DtSi)
-    if(is_proc(PC_)) call PC_put_from_gm_dt(DtSi)
+    if(IsTightCouple_CC(GM_,PC_)) then 
+       if(is_proc(GM_)) call GM_get_for_pc_dt(DtSi)
+       call transfer_real(GM_,PC_,DtSi)
+       if(is_proc(PC_)) call PC_put_from_gm_dt(DtSi)
+    else 
+       if(is_proc(PC_)) call PC_put_from_gm_dt(Couple_CC(GM_,PC_)%Dt)
+    endif
 
     call couple_points(CouplerGMtoPC, GM_get_grid_info, GM_find_points, &
          GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
