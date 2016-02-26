@@ -255,11 +255,13 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   bool MovingTimeFinished=false;
 
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   double xInit[3];
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
   double xInit[3];
 #endif
+*/
   //=====================  DEBUG =========================
 
 
@@ -594,6 +596,7 @@ int iTemp,jTemp,kTemp;
     }
 
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //check if a photolytic reaction is possible and get the time interval before the transformation occures
     int PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(x,ptr,spec,dtMin,startNode);
@@ -602,15 +605,18 @@ int iTemp,jTemp,kTemp;
 
     int GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(x,v,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
 #endif
+*/
 
     //advance the particle's position
     for (idim=0;idim<3;idim++) {
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
       xInit[idim]=x[idim];
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
       xInit[idim]=x[idim];
 #endif
+*/
 
       x[idim]+=dtMin*v[idim];
     }
@@ -621,13 +627,14 @@ int iTemp,jTemp,kTemp;
     v[0]+=dtMin*accl[0],v[1]+=dtMin*accl[1],v[2]+=dtMin*accl[2];
 #endif
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
       //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,x,ptr,spec,ParticleData);
-      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,x,v,ptr,spec,ParticleData,startNode);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,x,v,ptr,spec,ParticleData,dtMin,dtTotal,startNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -671,6 +678,7 @@ int iTemp,jTemp,kTemp;
 //     ParticleIntersectionCode=_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_;
    }
 #endif
+*/
 
     //adjust the particle moving time
     dtTotal-=dtMin;
@@ -1055,6 +1063,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     //2. move the particle for the time interval before the reaction has occured
     //3. model the particle transformation
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //check if a photolytic reaction is possible and get the time interval before the transformation occures
     double dtInit;
@@ -1072,6 +1081,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(x,v,spec,ptr,ParticleData,dt,TransformationTimeStepLimitFlag,startNode);
     dtLeft-=dt;
 #endif
+*/
 
     //advance the particle positions
 
@@ -1082,13 +1092,14 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
     v[0]+=dt*accl[0],v[1]+=dt*accl[1],v[2]+=dt*accl[2];
     #endif
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTION_OCCURES_) {
       int specInit=spec;
 
 //      PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xinit,x,ptr,spec,ParticleData);
-      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xinit,x,v,ptr,spec,ParticleData,startNode);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xinit,x,v,ptr,spec,ParticleData,dt,dtLeft+dt,startNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -1127,6 +1138,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce(long int ptr,double dt,cTr
 
 
 #endif
+*/
 
 
 
@@ -1412,11 +1424,13 @@ int PIC::Mover::UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt
     }
     #endif
 
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
 exit(__LINE__,__FILE__,"not implemented");
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
 exit(__LINE__,__FILE__,"not implemented");
 #endif
+*/
 
     //prepare for the next pass of the loop
     startNode=newNode;
@@ -2465,13 +2479,14 @@ exit(__LINE__,__FILE__,"not implemented");
 
     //check the possible photolytic reactions
 ProcessPhotoChemistry:
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xFinal,ptr,spec,dtMin,newNode)==_PHOTOLYTIC_REACTION_OCCURES_) {
       int PhotolyticReactionsReturnCode,specInit=spec;
 
       //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
-      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,newNode);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,dtMin,dtMin+dtTotal,newNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
       switch (PhotolyticReactionsReturnCode) {
@@ -2534,6 +2549,7 @@ ProcessPhotoChemistry:
       #endif
     }
 #endif
+*/
 
 
 

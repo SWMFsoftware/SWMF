@@ -252,13 +252,14 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
  #endif
 
   //model of the chemical reactions
+/*
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     //model the photolytic transformation
     if (PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xFinal,ptr,spec,dtTotal,newNode)==_PHOTOLYTIC_REACTION_OCCURES_) {
       int PhotolyticReactionsReturnCode,specInit=spec;
 
       //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
-      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,newNode);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,dtTotal,dtTotal,newNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
       switch (PhotolyticReactionsReturnCode) {
@@ -299,6 +300,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
       }
     }
 #endif //_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+*/
 
 #if _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
