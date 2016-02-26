@@ -162,18 +162,22 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 
 }
 
-int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
-  //for one lost particle one new particle is generated
+void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
+  //as a result of the reaction only velocity of a particle is changed
   //----------------------------------------------------------------------
-  //inject the products of the reaction
-  double ParentTimeStep,ParentParticleWeight;
-  
-#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-  ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
-#else
-  ParentParticleWeight=0.0;
-  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
-#endif
+
+  //the life time of the original particle
+  int spec;
+  PIC::ParticleBuffer::byte *ParticleData;
+  double xParent[3],vParent[3],ParentLifeTime,ParentTimeStep;
+  bool ReactionOccurredFlag;
+
+  ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+  spec=PIC::ParticleBuffer::GetI(ParticleData);
+  PIC::ParticleBuffer::GetX(xParent,ParticleData);
+  PIC::ParticleBuffer::GetV(vParent,ParticleData);
+
+  ParentLifeTime=LifeTime(xParent,spec,ptr,ReactionOccurredFlag,node);
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
@@ -182,69 +186,74 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
+  if (ReactionOccurredFlag==true) {
+    //reaction is theoretically possible;
+    //determine whether the reaction has occurred by comparing the local time step with the partent particle life time
 
-  //account for the parent particle correction factor
-  ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
-
-  //the particle buffer used to set-up the new particle data
-  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
-
-  //copy the state of the initial parent particle into the new-daugher particle
-  PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
-
-  // injection time of the particle (after the beginning of AMPS' time step)
-  double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
-  ModelParticleInjectionRate=1.0/ParentTimeStep;
-  TimeIncrement=-log(rnd())/ModelParticleInjectionRate * rnd(); 
-  TimeCounter += TimeIncrement;
-  
-  //generate a particle
-  // new particle comes from solar wind and has velocity ~ plasma bulk velocity
-  double PlasmaBulkVelocity[3];
-  {
-    PIC::CPLR::InitInterpolationStencil(xFinal,node);
-    PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
-    
-    // charge exchange process transfers momentum and energy to plasma
-    PIC::Mesh::cDataCenterNode *CenterNode;
-    char *offset;
-
-    CenterNode=PIC::Mesh::Search::FindCell(xFinal); ///node->block->GetCenterNode(nd);
-    offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset; 
-    double v2 = 0.0, plasmav2 = 0.0;
-    double c = ParentParticleWeight 
-                   / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
-                   / CenterNode->Measure;
-    *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0; 
-    for(int idim=0; idim<3; idim++){
-      *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) += 
-	c*_MASS_(_H_)*(vFinal[idim]-PlasmaBulkVelocity[idim]); 
-      v2      +=vFinal[idim]*vFinal[idim];
-      plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
+    if (rnd()<exp(-ParentTimeStep/ParentLifeTime)) {
+      //the particle is remain in the system
+      ReactionOccurredFlag=false;
     }
-    *((double*)(offset+OH::Output::ohSourceEnergyOffset)) += 
-      c*0.5*_MASS_(_H_)*(v2-plasmav2); 
   }
 
-  PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
-  PIC::ParticleBuffer::SetV(PlasmaBulkVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);  
-  PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+  if (ReactionOccurredFlag==true) {
+    //inject the products of the reaction
+    double ParentTimeStep,ParentParticleWeight;
 
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-#endif
+  #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+  #else
+    ParentParticleWeight=0.0;
+    exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+  #endif
 
-  //get and injection into the system the new model particle
-  long int newParticle;
-  PIC::ParticleBuffer::byte *newParticleData;
-  newParticle=PIC::ParticleBuffer::GetNewParticle();
-  newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-  memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
-  
-  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ParentTimeStep-TimeCounter,node,true);
-  
-  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+    ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  #else
+    ParentTimeStep=0.0;
+    exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+  #endif
+
+
+    //account for the parent particle correction factor
+    ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+    // new particle comes from solar wind and has velocity ~ plasma bulk velocity
+    double PlasmaBulkVelocity[3];
+    {
+      PIC::CPLR::InitInterpolationStencil(xParent,node);
+      PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+
+      // charge exchange process transfers momentum and energy to plasma
+      PIC::Mesh::cDataCenterNode *CenterNode;
+      char *offset;
+
+      CenterNode=PIC::Mesh::Search::FindCell(xParent); ///node->block->GetCenterNode(nd);
+      offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
+      double v2 = 0.0, plasmav2 = 0.0;
+      double c = ParentParticleWeight
+                     / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
+                     / CenterNode->Measure;
+      *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0;
+      for(int idim=0; idim<3; idim++){
+        *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) +=
+    c*_MASS_(_H_)*(vParent[idim]-PlasmaBulkVelocity[idim]);
+        v2      +=vParent[idim]*vParent[idim];
+        plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
+      }
+      *((double*)(offset+OH::Output::ohSourceEnergyOffset)) +=
+        c*0.5*_MASS_(_H_)*(v2-plasmav2);
+    }
+
+    PIC::ParticleBuffer::SetV(PlasmaBulkVelocity,(PIC::ParticleBuffer::byte*)ParticleData);
+  }
+
+  //add the particle to the list of the particles exisoting in the system after reaction
+  PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+  PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+  if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+  FirstParticleCell=ptr;
 
 }
 
