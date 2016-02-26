@@ -10,7 +10,8 @@ EXOSPHEREOBJ = Exosphere.o \
 	Exosphere_Parallel.o \
 	Exosphere_ReferenceGroundBasedObservations.o \
 	Exosphere_ChamberlainExosphereModel.o \
-	Exosphere_BackgroundPlasmaSource.o
+	Exosphere_BackgroundPlasmaSource.o \
+	Exosphere_Chemistry.o
 
 exosphere : $(EXOSPHEREOBJ)
 	ar -src exosphere.a $(EXOSPHEREOBJ)
