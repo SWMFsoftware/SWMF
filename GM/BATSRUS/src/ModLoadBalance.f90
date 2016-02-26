@@ -307,70 +307,60 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         if(UsePic .and. DoBalancePicBlock .and. IsNewBlock) call pic_find_node()
         do iBlock = 1, nBlock
            iType = 0
-           ! 9 criterions are used to decide the type of a block.
-           ! Each criterion determins the value of one bit (0 or 1). For 9
-           ! criterions, the iType of block could be some values
-           ! between 0 and 2^9 - 1=511. Only part of the total 512 possibilities
-           ! exist.
-           ! 1st bit: NotSkippedBlock-> 1, otherwise -> 0
+           ! N criterions are used to decide the type of a block.
+           ! Each criterion determins the value of one bit (0 or 1). For N
+           ! criterions, the iType of a block could be -1 or a value
+           ! between 1 and 2^N-1 (the first bit SkippedBlock is special).
+           ! Only part of the total possibilities exist.
+           ! 1st bit: NotSkippedBlock-> 1, otherwise -> iType will be -1.
            ! 2nd bit: true_blk       -> 1, otherwise -> 0
            ! 3rd bit: implicit       -> 1, explicit  -> 0
            ! 4th bit: semi-implicit  -> 1, otherwise -> 0
            ! 5th bit: threaded field BC -> 1, otherwise -> 0
            ! 6th bit: pic-block      -> 1, otherwise -> 0
            ! 7th bit: steady block   -> 1, otherwise -> 0
-           ! 8th bit: steady bound block-> 1, otherwise -> 0
-           ! 9th bit: high-order scheme -> 1, otherwise -> 0
+           ! 8th bit: high-order scheme -> 1, otherwise -> 0
            
            if(iTypeAdvance_B(iBlock) ==SkippedBlock_) then              
-              ! If it is skipped block, then iType = 0.
+              ! If it is skipped block, then iType = -1.
+              iType = -1
               CYCLE
            else
-              iCrit = iNotSkippedBlock
-              iType = iType + 2**(iCrit-1)
+              iCrit = 1
+              iType = iType + iCrit
               
               ! true block 
-              iCrit = iTrueBlock
-              if(True_Blk(iBlock)) iType = iType + 2**(iCrit-1)
+              iCrit = 2*iCrit
+              if(True_Blk(iBlock)) iType = iType + iCrit
 
               ! implicit
-              iCrit = iImplBlock
-              if(iTypeAdvance_B(iBlock)==ImplBlock_) &
-                   iType = iType + 2**(iCrit-1)
+              iCrit = 2*iCrit
+              if(iTypeAdvance_B(iBlock)==ImplBlock_) iType = iType + iCrit
 
               ! semi-implicit
-              iCrit = iSemiImplBlock
-              if(IsSemiImplBlock_B(iBlock)) &
-                   iType = iType + 2**(iCrit-1)
+              iCrit = 2*iCrit
+              if(IsSemiImplBlock_B(iBlock)) iType = iType + iCrit
 
               ! threaded field line BC
-              iCrit = iFieldLineThreadsBlock
+              iCrit = 2*iCrit
               if(UseFieldLineThreads .and. far_field_BCs_Blk(iBlock) &
-                   .and. NeiLev(1,iBlock)==NOBLK) &
-                   iType = iType + 2**(iCrit-1)
+                   .and. NeiLev(1,iBlock)==NOBLK) iType = iType + iCrit
 
               ! PIC region
-               iCrit = iPicBlock
+              iCrit = 2*iCrit
                if(UsePic .and. DoBalancePicBlock) then
-                  if(IsPicNode_A(iNode_B(iBlock))) iType = iType + 2**(iCrit-1)
+                  if(IsPicNode_A(iNode_B(iBlock))) iType = iType + iCrit
                endif
 
               ! Steady block
-              iCrit = iSteadyBlock
+               iCrit = 2*iCrit
               if(UsePartSteady .and. iTypeAdvance_B(iBlock)==SteadyBlock_)&
-                   iType = iType + 2**(iCrit-1)
-
-              ! SteadyBound block
-              iCrit = iSteadyBoundBlock
-              if(UsePartSteady .and. iTypeAdvance_B(iBlock)==SteadyBoundBlock_)&
-                   iType = iType + 2**(iCrit-1)
+                   iType = iType + iCrit
 
               ! High-order scheme block: at least part of the faces use
               ! high-order face values. 
-              iCrit = iHighOrderBlock
-              if(.not.IsLowOrderOnly_B(iBlock)) &
-                   iType = iType + 2**(iCrit-1)
-              
+              iCrit = 2*iCrit
+              if(.not.IsLowOrderOnly_B(iBlock)) iType = iType + iCrit  
            endif
            iTypeBalanceLocal_A(iNode_B(iBlock)) = iType
         enddo
@@ -387,10 +377,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         ! is set to 0. While the skipped blocks are also 0.         
         call MPI_allreduce(iTypeBalanceLocal_A, iTypeBalance_A, MaxNode, &
              MPI_INTEGER, MPI_SUM, iComm, iError)
-
-        do iNode = 1, nNode       
-           if(iTree_IA(Status_,iNode) /= Used_) iTypeBalance_A(iNode) = -1
-        enddo
 
      end if
      if(.not.allocated(iType_I)) allocate(iType_I(0:2**nCritBalance-1))     
