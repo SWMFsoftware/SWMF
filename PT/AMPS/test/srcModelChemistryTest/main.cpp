@@ -896,8 +896,8 @@ void Test2(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
 
     }
 
-    cout << "Test 1: Particle Number:\n spec\tInitial Particle Number\tFinal Particle Number\tReaction Yield\n";
-    fout << "Test 1: Particle Number:\n spec\tInitial Particle Number\tFinal Particle Number\tReaction Yield\n";
+    cout << "Test 2: Particle Number:\n spec\tInitial Particle Number\tFinal Particle Number\tReaction Yield\n";
+    fout << "Test 2: Particle Number:\n spec\tInitial Particle Number\tFinal Particle Number\tReaction Yield\n";
 
     for (s=0;s<PIC::nTotalSpecies;s++) {
       cout << s << "\t" << GlobalInitialParticleCounter[s] << "\t" << GlobalProductParticleCounter[s] << "\t" << ReactionYieldTable[_H2O_SPEC_][s] << endl;
