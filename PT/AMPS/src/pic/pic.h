@@ -3565,10 +3565,11 @@ namespace PIC {
       void InitProductStatWeight();
 
       //the default function for processing the photolytic reactions -> the particle is removed if the reaction occured
-      inline int PhotolyticReactionProcessor_default(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+      void PhotolyticReactionProcessor_default(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+      /*{
         return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
       }
-
+*/
       //the manager of the photolytic reaction module
       //if the reaction has occured-> spes returns the species number of the transformed particles, TimeInterval return the time when the reaction had occured
 
@@ -3594,6 +3595,9 @@ namespace PIC {
 
         return code;
       }*/
+
+       //execute the photolytic chemistry model
+       void ExecutePhotochemicalModel();
 
     }
 
