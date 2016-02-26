@@ -788,7 +788,7 @@ void Test1(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
     LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
         log(GlobalProductParticleCounter[_H2O_SPEC_]/GlobalInitialParticleCounter[_H2O_SPEC_]);
 
-    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME__NEW_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
+    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
 
     cout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
     fout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
@@ -870,7 +870,7 @@ void Test2(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
     LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
         log(GlobalProductParticleCounter[_H2O_SPEC_]/GlobalInitialParticleCounter[_H2O_SPEC_]);
 
-    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME__NEW_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
+    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
 
     cout << "Test 2: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
     fout << "Test 2: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
@@ -990,7 +990,7 @@ int main(int argc,char **argv) {
     LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
         log(GlobalProductParticleCounter[_H2O_SPEC_]/GlobalInitialParticleCounter[_H2O_SPEC_]);
 
-    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME__NEW_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
+    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
 
     cout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
     fout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
