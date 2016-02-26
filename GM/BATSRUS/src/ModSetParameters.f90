@@ -2703,7 +2703,8 @@ contains
        boris_cLIGHT_factor = 1.0
     end if
 
-    if(boris_correction .and. UseHallResist .and. .not. UseSemiHallResist)then
+    if(boris_correction .and. UseHallResist .and. &
+         TypeSemiImplicit /= 'resisthall' .and. TypeSemiImplicit /= 'resistivity')then
        if(iProc==0)then
           write(*,'(a)') NameSub//&
                ' WARNING: Boris correction only works with semi-implicit Hall MHD!!!'
