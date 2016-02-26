@@ -190,9 +190,9 @@ CouplerMode=swmf !!off, ices, swmf
     n=60.0E6
 
 !----------------------------  Photolytic Reaction -------------------------------------------
-  PhotolyticReactions=on \\ ! on, off
-    ReactionProcessor=Moon::ExospherePhotoionizationReactionProcessor    \\
-    LifeTime=Moon::ExospherePhotoionizationLifeTime    
+! PhotolyticReactions=on \\ ! on, off
+!   ReactionProcessor=Moon::ExospherePhotoionizationReactionProcessor    \\
+!   LifeTime=Moon::ExospherePhotoionizationLifeTime    
 
 
 !----------------------------  Surface Density -------------------------------
