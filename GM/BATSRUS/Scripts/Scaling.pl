@@ -25,14 +25,16 @@ my $IsPfe;
 my $IsUbgl;
 my $IsJaguar;
 my $IsBlueWaters;
+my $IsYellowStone;
 
 $IsHera = 1  if $Machine eq "hera";
 $IsUbgl = 1  if $Machine eq "ubgl";
 $IsPfe  = 1  if $Machine eq "pfe";
 $IsJaguar = 1 if $Machine eq "jaguarpf-ext";
 $IsBlueWaters = 1 if $Machine eq "h2ologin";
+$IsYellowStone = 1 if $Machine eq "yslogin";
 
-die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl or $IsJaguar or $IsBlueWaters;
+die "Unknown machine=$Machine\n" unless $IsHera or $IsPfe or $IsUbgl or $IsJaguar or $IsBlueWaters or $IsYellowStone;
 
 # Number of nodes and cores to run on
 my $nNode;
@@ -189,6 +191,9 @@ sub make_rundir{
     &shell("make rundir RUNDIR=$Rundir");
     &shell("gunzip -c dataCRASH/input/$HyadesFile.gz > $Rundir/$HyadesFile");
     &shell("cp $ParamFile $Rundir/PARAM.in");
+    &shell("cp dataCRASH/LookupTables/Xe_eos_CRASH.dat $Rundir/Xe_eos_CRASH.dat");
+    &shell("cp dataCRASH/LookupTables/Be_eos_CRASH.dat $Rundir/Be_eos_CRASH.dat");
+    &shell("cp dataCRASH/LookupTables/Pl_eos_CRASH.dat $Rundir/Pl_eos_CRASH.dat");
 
     if($IsJaguar){
 	&shell("cp Param/CRASH/START.in $Rundir/START.in");
@@ -207,6 +212,7 @@ sub submit_run{
     my $job    = shift;
     &shell("cd $rundir; qsub $job") if $IsPfe or $IsJaguar or $IsBlueWaters;
     &shell("cd $rundir; msub $job | tail -1 > ${job}id") if $IsHera or $IsUbgl;
+    &shell("cd $rundir; bsub $job | tail -1 > ${job}id") if $IsYellowStone;
 }
 ###############################################################################
 sub edit_jobscript{
@@ -231,6 +237,8 @@ sub edit_jobscript{
 	    s/(^\#PBS -l nodes)=\d+/$1=$nNode/;
 	}elsif($IsJaguar){
 	    s/(^\#PBS -l size)=\d+/$1=$nCore/;
+	}elsif($IsYellowStone){
+	    s/(^\#BSUB -n )\d+/$1$nCore/;
 	}elsif($IsHera){
 	    my $nNode = int($nCore/16+0.99);
 	    s/(\#MSUB -l nodes)=\d+/$1=$nNode/;

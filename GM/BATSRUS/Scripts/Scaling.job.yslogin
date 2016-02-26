@@ -1,0 +1,16 @@
+#!/bin/csh
+
+# This job script should be copied and modified by Scaling.pl
+
+#BSUB -P P35201105            # project code
+#BSUB -W 0:10                 # wall-clock time (hrs:mins)
+#BSUB -n 32                   # number of tasks in job
+#BSUB -R "span[ptile=16]"     # run 16 MPI tasks per node
+#BSUB -J CRASH_hi             # job name
+#BSUB -o CRASH.%J.out         # output file name: %J is replaced by the job ID
+#BSUB -e CRASH.%J.err         # error file name: %J is replaced by the job ID
+#BSUB -q regular              # queue
+#BSUB -N                      # notify me when job is finished
+
+# run the executable
+mpirun.lsf ./CRASH.exe > runlog_`date +%y%m%d%H%M`
