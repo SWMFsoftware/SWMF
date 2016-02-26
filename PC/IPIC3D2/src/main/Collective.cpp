@@ -1373,7 +1373,7 @@ void Collective::Print() {
     cout << "dx/dt, dy/dt, dz/dt=" << dx/dt << ", " << dy/dt << ", " << dz/dt << endl;
     for (int is = 0; is < ns; is++) {
       cout << "species " << is << " uth=" << uth[is] << endl;
-      cout << "uth*dx/dt, uth*dt/dy, uth*dt/dz (should be in [0.1 - 1])="
+      cout << "uth*dt/dx, uth*dt/dy, uth*dt/dz (should be in [0.1 - 1])="
 	   << uth[is]*dt/dx << ", " << uth[is]*dt/dy << ", " << uth[is]*dt/dz << endl;
     }
   }
