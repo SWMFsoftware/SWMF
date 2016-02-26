@@ -305,14 +305,18 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
-    call set_oktest('calc_timestep',DoTest,DoTestMe)
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    ! if calc_timestep is tested, test this routine too
+    if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTestMe)
+
     if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
          TimeSimulationLimit
 
     if(UseDtFixed)then
        Dt = DtFixed
-    elseif(n_step == 1)then
-       Dt = 0.0
+    elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
+       Dt    = 0.0
        DtMin = 0.0
        DtMax = 0.0
     else
@@ -391,10 +395,10 @@ contains
 
     end if
 
-
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
     ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
-    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
+    if(TimeSimulationLimit > 0.0 .and. &
+         Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)then
        Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
        if(UseMaxTimeStep)then
           DtMax = Dt
