@@ -123,3 +123,48 @@ void PIC::ChemicalReactions::PhotolyticReactions::InitProductStatWeight() {
   //update the stat weight
   for (s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalParticleWeight[s]=StatWeight[s];
 }
+
+//=======================================================================================================
+//default photolytic reaction processor
+//by default particle will stay in the system
+void PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReactionProcessor_default(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+  PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+  PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+  if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+  FirstParticleCell=ptr;
+}
+
+//=======================================================================================================
+//execute the photolytic reaction model
+void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  int i,j,k;
+  long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    if (node->block!=NULL) {
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              oldFirstCellParticle=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+              newFirstCellParticle=-1;
+
+              if (oldFirstCellParticle!=-1) {
+                p=oldFirstCellParticle;
+
+                while (p!=-1) {
+                  pnext=PIC::ParticleBuffer::GetNext(p);
+                  _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(p,newFirstCellParticle,node);
+                  p=pnext;
+                }
+
+                node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=newFirstCellParticle;
+              }
+           }
+         }
+      }
+    }
+  }
+}
