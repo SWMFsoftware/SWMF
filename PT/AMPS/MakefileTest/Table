@@ -341,3 +341,22 @@ Check=
 >>>@ls -l test_Collision-Test.diff
 
 <#
+
+-------------------------------------------------------------------------------
+#>
+Name=test/Chemistry-Test
+Time=5
+
+Check=
+>>>@echo "test_Chemistry-Test_check..." >> test_Chemistry-Test.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test1.dat output/test_Chemistry-Test1.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test2.dat output/test_Chemistry-Test2.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test2.diff
+
+>>>cat test_Chemistry-Test1.diff test_Chemistry-Test2.diff  > test_Chemistry-Test.diff
+
+>>>@ls -l test_Chemistry-Test1.diff
+>>>@ls -l test_Chemistry-Test2.diff
+
+>>>@ls -l test_Chemistry-Test.diff
+
+<#
