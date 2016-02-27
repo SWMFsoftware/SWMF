@@ -782,7 +782,7 @@ void Test1(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
     double LifeTimeH2O;
     bool h2oRectionAllowedFlag;
 
-    sprintf(fname,"%s/test_ChemistryTest1.dat",PIC::OutputDataFileDirectory);
+    sprintf(fname,"%s/test_Chemistry-Test1.dat",PIC::OutputDataFileDirectory);
     fout.open(fname,std::fstream::out);
 
     LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
@@ -864,7 +864,7 @@ void Test2(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
     double LifeTimeH2O;
     bool h2oRectionAllowedFlag;
 
-    sprintf(fname,"%s/test_ChemistryTest2.dat",PIC::OutputDataFileDirectory);
+    sprintf(fname,"%s/test_Chemistry-Test2.dat",PIC::OutputDataFileDirectory);
     fout.open(fname,std::fstream::out);
 
     LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
@@ -936,11 +936,6 @@ int main(int argc,char **argv) {
       TotalProductYeld_PhotolyticReaction[iParent][iProduct]=PhotolyticReactions::GetSpeciesReactionYield(iProduct,iParent);
     }
 
-/*    if (ElectronImpact::ModelAvailable(iParent)==true) {
-      TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies]=
-          ElectronImpact::GetSpeciesReactionYield(iProduct,iParent,HotElectronTemeprature);
-    }*/
-
     ProductionYieldTable[iParent][iProduct]=TotalProductYeld_PhotolyticReaction[iParent][iProduct];
   }
 
@@ -949,80 +944,7 @@ int main(int argc,char **argv) {
   Test1(ProductionYieldTable);
   Test2(ProductionYieldTable);
 
-  //======================= TEST 1 BEGINS: TEST H2O -> H2 + O reaction rate; use the buldin particle moving procedust PIC::/mover::MoveParticles ========
-  //generate the new population of the model particles
-  double v[3]={0.0,0.0,0.0};
-  char fname[400];
-  std::fstream fout;
-  int n,nTotalTestIterations=100;
-
-  double ProductParticleCounter[PIC::nTotalSpecies],InitialParticleCounter[PIC::nTotalSpecies];
-  for (s=0;s<PIC::nTotalSpecies;s++) ProductParticleCounter[s]=0.0,InitialParticleCounter[s]=0.0;
-
-  for (n=0;n<nTotalTestIterations;n++) {
-    //populate the domain with partiucles
-    PIC::InitialCondition::PrepopulateDomain(_H2O_SPEC_,H2O::Density,v,H2O::Temperature);
-    CountParticles(InitialParticleCounter,PIC::Mesh::mesh.rootTree);
-
-    //apply the chemical model
-//    PhotochemicalModelWrapper(PIC::Mesh::mesh.rootTree);
-    PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
-
-    //count and remove all particles
-    CountParticles(ProductParticleCounter,PIC::Mesh::mesh.rootTree);
-    DeleteAllParticles(PIC::Mesh::mesh.rootTree);
-  }
-
-  //cpllecte the data from all processors and determine the lifetile
-  double GlobalProductParticleCounter[PIC::nTotalSpecies],GlobalInitialParticleCounter[PIC::nTotalSpecies];
-
-  MPI_Reduce(ProductParticleCounter,GlobalProductParticleCounter,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-  MPI_Reduce(InitialParticleCounter,GlobalInitialParticleCounter,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-
-  if (PIC::ThisThread==0) {
-    //H2O loss rate
-    double LifeTimeH2O;
-    bool h2oRectionAllowedFlag;
-
-    sprintf(fname,"%s/test_ChemistryTest1.dat",PIC::OutputDataFileDirectory);
-    fout.open(fname,std::fstream::out);
-
-    LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_]/
-        log(GlobalProductParticleCounter[_H2O_SPEC_]/GlobalInitialParticleCounter[_H2O_SPEC_]);
-
-    h2oTheoreticalLifeTime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(NULL,_H2O_SPEC_,-1,h2oRectionAllowedFlag,NULL);
-
-    cout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
-    fout << "Test 1: H2O lifetime: Numerical\tTheoretical\tRelative Error\n" << LifeTimeH2O << "\t" << h2oTheoreticalLifeTime << "\t" << fabs(LifeTimeH2O-h2oTheoreticalLifeTime)/max(LifeTimeH2O,h2oTheoreticalLifeTime) << endl << endl;
-
-    //get the source rate of the products
-    double LossRateH2O,SourceRate;
-
-    LossRateH2O=-(GlobalProductParticleCounter[_H2O_SPEC_]-GlobalInitialParticleCounter[_H2O_SPEC_])/PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_];
-
-    cout << "Test 1: H2O lifetime derived from the reaction daughter product: Numerical\nspec\tH2O LifeTime\n";
-    fout << "Test 1: H2O lifetime derived from the reaction daughter product: Numerical\nspec\tH2O LifeTime\n";
-
-
-    for (s=0;s<PIC::nTotalSpecies;s++) if (s!=_H2O_SPEC_) {
-      double ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_];
-      double ProductParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[s];
-
-      LifeTimeH2O=-PIC::ParticleWeightTimeStep::GlobalTimeStep[s]/
-          log(1.0-GlobalProductParticleCounter[s]/GlobalInitialParticleCounter[_H2O_SPEC_]/ProductionYieldTable[_H2O_SPEC_][s]*ProductParticleWeight/ParentParticleWeight);
-
-      cout << s << "\t" << LifeTimeH2O << endl;
-      fout << s << "\t" << LifeTimeH2O << endl;
-
-    }
-
-    fout.close();
-
-  }
-  //======================= TEST 1 END ====================================================================================
-
-
-  //finish execution of the test
+  //finish execution
   MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
