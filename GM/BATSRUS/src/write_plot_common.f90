@@ -49,8 +49,8 @@ subroutine write_plot_common(iFile)
   integer :: nplotvar
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
-  ! True for spherical plots
-  logical:: IsSphPlot
+  ! True for spherical/ geospherical plots
+  logical:: IsSphPlot, IsGeoPlot
 
   ! Equation parameters
   integer, parameter :: MaxParam = 100
@@ -199,7 +199,9 @@ subroutine write_plot_common(iFile)
      TypeForm = "formatted"
   end if
 
+  ! Spherical slices are special cases:
   IsSphPlot = index(plot_type1,'sph')>0
+  IsGeoPlot = index(plot_type1,'geo')>0
 
   if(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
@@ -225,7 +227,7 @@ subroutine write_plot_common(iFile)
            call stop_mpi(NameSub//' file open error 2')
         endif
      end if
-  elseif(plot_form(iFile)=='tec')then
+  elseif(plot_form(iFile)=='tec' .and. .not. IsGeoPlot)then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
@@ -244,7 +246,7 @@ subroutine write_plot_common(iFile)
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
      filename = trim(NameSnapshot)//".batl"
-  else
+  elseif(.not. IsGeoPlot) then
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
      open(unit_tmp, file=filename, status="replace", form=TypeForm, &
@@ -254,6 +256,9 @@ subroutine write_plot_common(iFile)
              ' iError=', iError
         call stop_mpi(NameSub//' file open error 5')
      endif
+  else
+     if(.not. IsGeoPlot) call CON_stop(NameSub// & 
+          ' No file opened for current plot.')
   end if
 
   if (IsSphPlot) then
@@ -277,6 +282,8 @@ subroutine write_plot_common(iFile)
   else
      IsNonCartesianPlot = .not.IsCartesianGrid
   end if
+
+  if (IsGeoPlot) IsNonCartesianPlot = .true.
 
   !Logical for hdf plots
 
@@ -347,6 +354,8 @@ subroutine write_plot_common(iFile)
            dyblk=180.0/real(ntheta-1)
         end if
         dzblk=360.0/real(nphi)
+     else if (IsGeoPlot) then
+        cycle
      else
         select case(plot_form(iFile))
         case('tec')
@@ -385,6 +394,10 @@ subroutine write_plot_common(iFile)
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
   end do ! iBLK
+
+  ! SphGeo plots are not made block-by-block:
+  if(IsGeoPlot) call write_plot_sphgeo(iFile, nplotvar, plotvar, &
+       trim(NameSnapshot)//'.out', plotvarnames)
 
   ! Write the HDF5 output file and return
   select case(plot_form(iFile))
@@ -453,9 +466,10 @@ subroutine write_plot_common(iFile)
      deallocate(PlotVarNodes_VNB)
   end if
 
-  if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0)then
+  if(plot_form(iFile) == 'idl' .and. .not. (IsSphPlot .or. IsGeoPlot) &
+       .and. nPeCells == 0)then
      close(unit_tmp, status = 'DELETE')
-  else
+  elseif(.not. IsGeoPlot)then
      close(unit_tmp)
   end if
 
@@ -488,7 +502,7 @@ subroutine write_plot_common(iFile)
   !! END IDL
 
   ! write header file
-  if(iProc==0)then
+  if(iProc==0 .and. .not. IsGeoPlot)then
 
      select case(plot_form(iFile))
      case('tec')
@@ -1595,7 +1609,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   !/
 
   ! Coordinate names and units
-  if(index(plot_type(iFile),'sph')>0) then
+  if(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
 
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
@@ -1864,7 +1878,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      RETURN
   end if
 
-  if(index(plot_type(iFile),'sph')>0) then
+  if(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
