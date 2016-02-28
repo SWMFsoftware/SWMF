@@ -773,6 +773,14 @@ subroutine MH_set_parameters(TypeAction)
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
+           elseif (index(plot_string,'geo')>0)then
+              plot_area='geo'
+              call read_var('radMin',plot_range(1,ifile))
+              call read_var('radMax',plot_range(2,ifile))
+              call read_var('lonMin',plot_range(3,ifile))
+              call read_var('lonMax',plot_range(4,ifile))
+              call read_var('latMin',plot_range(5,ifile))
+              call read_var('latMax',plot_range(6,ifile))
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
               ! Line of sight vector
@@ -840,6 +848,7 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'idl') >0 )then
               plot_form(ifile)='idl'
               if (       plot_area /= 'sph' &
+                   .and. plot_area /= 'geo' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &
@@ -848,6 +857,17 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'buf' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
 
+              ! Get geo spherical plot params:
+              if(index(plot_string, 'geo')>0) then
+                 plot_dx(:,ifile) = -1.0
+                 ! Read dx for each variable that has a nonzero range:
+                 if (plot_range(1, ifile) /= plot_range(2,ifile)) &
+                      call read_var('Radius',plot_dx(1,ifile))
+                 if (plot_range(3, ifile) /= plot_range(4,ifile)) &
+                      call read_var('dLon',  plot_dx(2,ifile))
+                 if (plot_range(5, ifile) /= plot_range(6,ifile)) &
+                      call read_var('dLat',  plot_dx(3,ifile))
+              end if
               ! Extract the type of idl plot file: default is real4
               TypeFile_I(iFile) = 'real4' 
               if(index(plot_string,'idl_real8') > 0) &
@@ -3080,6 +3100,12 @@ contains
                cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile) 
           if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
                cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
+       case('geo')
+          ! Cartesian grids only:
+          if(.not. IsCartesianGrid) call CON_stop(Namesub// &
+               ' geo plot type does not support non-cartesian grids yet.')
+          ! There is nothing else to do for geo area.
+          CYCLE PLOTFILELOOP
        case('sph')
           if(IsCartesianGrid)then
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
