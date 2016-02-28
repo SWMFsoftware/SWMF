@@ -315,37 +315,16 @@ namespace Moon {
 #endif
     }
     else if (spec==_NA_PLUS_SPEC_) { //the Lorentz force
-      long int nd;
-      char *offset;
-      int i,j,k;
-      PIC::Mesh::cDataCenterNode *CenterNode;
       double E[3],B[3];
-
-      exit(__LINE__,__FILE__,"check the numbers!");
-
-      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
-        exit(__LINE__,__FILE__,"Error: the cell is not found");
-      }
 
   #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
       if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
   #endif
 
-      CenterNode=startNode->block->GetCenterNode(nd);
-      offset=CenterNode->GetAssociatedDataBufferPointer();
+
 
       PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
       PIC::CPLR::GetBackgroundFieldsVector(E,B);
-
-
-/*      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-        memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
-        memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
-      }
-      else {
-        memcpy(E,swE_Typical,3*sizeof(double));
-        memcpy(B,swB_Typical,3*sizeof(double));
-      }*/
 
 
       accl_LOCAL[0]+=ElectronCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/_MASS_(_NA_);
@@ -451,9 +430,9 @@ namespace Moon {
 
   inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
-    if (_NA_PLUS_SPEC_>=0) {
+    if ((spec==_NA_SPEC_)&&(_NA_PLUS_SPEC_>=0)) {
       PIC::ParticleBuffer::SetI(_NA_PLUS_SPEC_,ParticleData);
-    //  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
+      return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
     }
 
     return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
