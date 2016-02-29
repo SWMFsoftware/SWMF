@@ -3390,7 +3390,7 @@ No magnetometer grid file is saved by default.
 		</if>
 	</for>
 #SAVEPLOT
-15			nPlotFile
+16			nPlotFile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -3503,6 +3503,18 @@ lcb int tec             StringPlot  !last closed field line plots with integrals
 -1.                     DtSavePlot
 6.			Radius
 36			nLon
+geo MHD idl	        StringPlot
+10  			DnSavePlot
+-1.			DtSavePlot
+5.6			RadiusMin
+7.6			RadiusMax
+0.			LonMin
+360.			LonMax
+-90.			LatMin
+90.			LatMax
+0.5                     dRad
+10.			dLon
+10.			dLat
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US. 
@@ -3552,6 +3564,7 @@ cut   - 3D, 2D or 1D cut along (curvilinear) coorinates (IDL)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
+geo   - spherical slice in geographic coordinates
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
@@ -3616,8 +3629,10 @@ from the parameter file in this order:
 \begin{verbatim}
  xMinCut ... zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
- RadiusMin RadiusMax     if PlotArea is 'eqr' or 'eqb'
- LonMin LonMax           if PlotArea is 'eqb'
+ RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'geo'
+ LonMin LonMax           if PlotArea is 'eqb' or 'geo'
+ LatMin LatMax           if PlotArea is 'geo'
+ dRadius, dLon, dLat     if PlotArea is 'geo' and associated range is nonzero.
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
  DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
