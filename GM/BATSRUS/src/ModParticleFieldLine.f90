@@ -425,6 +425,9 @@ contains
          B_D = B_D + &
               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
       end do
+      if(all(B_D==0))&
+           call CON_stop(NameSub//&
+           ': trying to extract line at region with zero magnetic field')
       ! normalize vector to unity
       Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
     end subroutine get_b_dir

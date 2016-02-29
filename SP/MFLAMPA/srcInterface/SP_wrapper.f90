@@ -305,9 +305,9 @@ contains
     ! Update begin/end points on all procs
     !/
     iMin_A = iGrid_IA(Begin_, :); iMax_A = iGrid_IA(End_,:)
-    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nDim*nNode, MPI_REAL, &
+    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nNode, MPI_REAL, &
          MPI_MIN, iComm, iError)
-    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nDim*nNode, MPI_REAL, &
+    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nNode, MPI_REAL, &
          MPI_MAX, iComm, iError)
     iGrid_IA(Begin_, :) = iMin_A; iGrid_IA(End_,:) = iMax_A
   end subroutine SP_put_line
