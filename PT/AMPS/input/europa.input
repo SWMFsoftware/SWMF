@@ -257,7 +257,7 @@ ParticleWeightCorrectionMode=on
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4,t5,t6) Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
+  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2) Exosphere::ChemicalModel::PhotochemicalModelProcessor(t0,t1,t2) ! Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
   define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Europa::LossProcesses::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
