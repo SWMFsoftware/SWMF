@@ -414,7 +414,7 @@ subroutine write_plot_sphgeo(iFile, nPlotvar, Plotvar, NameFileIn, &
         NameVar = trim(NameVar)  // ' ' // trim(NameVarIn_V(iVar))
      end do
      ! Create header string:
-     StringHeader = 'Testing the header'
+     StringHeader = 'Spherical slice in geographic coordinates.'
      ! Call save_plot_file to write data to disk.
      call save_plot_file(NameFileIn, &
           TypeFileIn=TypeFile_I(iFile), &
@@ -422,8 +422,8 @@ subroutine write_plot_sphgeo(iFile, nPlotvar, Plotvar, NameFileIn, &
           nStepIn=n_step, &
           TimeIn=time_simulation, &
           NameVarIn = NameVar, &
-          CoordMinIn_D = (/radMin, 180./cPi*latMin, 180./cPi*lonMin/), &
-          CoordMaxIn_D = (/radMax, 180./cPi*latMax, 180./cPi*lonMax/), &
+          CoordMinIn_D = (/radMin, 180./cPi*lonMin, 180./cPi*latMin/), &
+          CoordMaxIn_D = (/radMax, 180./cPi*lonMax, 180./cPi*latMax/), &
           VarIn_VIII = PlotVar_VIII)
   end if
 
