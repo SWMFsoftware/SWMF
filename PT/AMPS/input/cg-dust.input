@@ -171,8 +171,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   DustMeanDensity=0.05*1.0E3 
   DustDragCoefficient=2.5*2.0 
  
-  DustVelocityLimit::min=0.1
-  DustVelocityLimit::max=50.0 !150.0 !40.0 
+  DustVelocityLimit::min=10.0 
+  DustVelocityLimit::max=150.0 !150.0 !40.0 
 
 !  HeliocentricDistance=3.5*_AU_
 !  subSolarPointAzimuth=0.328671678 !! in rad 18.7961
