@@ -1,3 +1,6 @@
+//$Id$
+
+
 /*
  * Exosphere_Chemistry.cpp
  *
@@ -105,8 +108,7 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #else
-  ParentTimeStep=0.0;
-  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+  ParentTimeStep=node->block->GetLocalTimeStep(spec);
 #endif
 
 
@@ -138,8 +140,7 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
      ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
 #else
-     ProductTimeStep=0.0;
-     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+     ProductTimeStep=node->block->GetLocalTimeStep(specProduct);
 #endif
 
 
