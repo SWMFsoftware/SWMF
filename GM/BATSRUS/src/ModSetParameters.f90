@@ -688,6 +688,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('DnSavePlot',dn_output(ifile))
            call read_var('DtSavePlot',dt_output(ifile))
 
+           ! Default resolution (original AMR grid)
+           plot_dx(:,ifile) = -1.0
+
            ! Plotting area
            if(index(plot_string,'cut')>0)then
               plot_area='cut'
@@ -775,12 +778,21 @@ subroutine MH_set_parameters(TypeAction)
 	      call read_var('Radius',plot_range(1,ifile))
            elseif (index(plot_string,'geo')>0)then
               plot_area='geo'
-              call read_var('radMin',plot_range(1,ifile))
-              call read_var('radMax',plot_range(2,ifile))
-              call read_var('lonMin',plot_range(3,ifile))
-              call read_var('lonMax',plot_range(4,ifile))
-              call read_var('latMin',plot_range(5,ifile))
-              call read_var('latMax',plot_range(6,ifile))
+              call read_var('rMin',   plot_range(1,ifile))
+              call read_var('rMax',   plot_range(2,ifile))
+              call read_var('LonMin', plot_range(3,ifile))
+              call read_var('LonMax', plot_range(4,ifile))
+              call read_var('LatMin', plot_range(5,ifile))
+              call read_var('LatMax', plot_range(6,ifile))
+
+              ! Read resolution for each dimension that has a nonzero range
+              if (plot_range(1, ifile) /= plot_range(2,ifile)) &
+                   call read_var('dR',   plot_dx(1,ifile))
+              if (plot_range(3, ifile) /= plot_range(4,ifile)) &
+                   call read_var('dLon', plot_dx(2,ifile))
+              if (plot_range(5, ifile) /= plot_range(6,ifile)) &
+                   call read_var('dLat', plot_dx(3,ifile))
+
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
               ! Line of sight vector
@@ -844,8 +856,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
            ! Plot file format
-           plot_dx(1,ifile) = -1.0
-           if(index(plot_string,'idl') >0 )then
+           if(index(plot_string,'idl') > 0)then
               plot_form(ifile)='idl'
               if (       plot_area /= 'sph' &
                    .and. plot_area /= 'geo' &
@@ -857,17 +868,6 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'buf' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
 
-              ! Get geo spherical plot params:
-              if(index(plot_string, 'geo')>0) then
-                 plot_dx(:,ifile) = -1.0
-                 ! Read dx for each variable that has a nonzero range:
-                 if (plot_range(1, ifile) /= plot_range(2,ifile)) &
-                      call read_var('Radius',plot_dx(1,ifile))
-                 if (plot_range(3, ifile) /= plot_range(4,ifile)) &
-                      call read_var('dLon',  plot_dx(2,ifile))
-                 if (plot_range(5, ifile) /= plot_range(6,ifile)) &
-                      call read_var('dLat',  plot_dx(3,ifile))
-              end if
               ! Extract the type of idl plot file: default is real4
               TypeFile_I(iFile) = 'real4' 
               if(index(plot_string,'idl_real8') > 0) &
