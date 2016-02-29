@@ -215,7 +215,7 @@ ReferenceGroundBasedObservationTime= \\
 
 !----------------------------  Photolytic Reaction -------------------------------------------
   PhotolyticReactions=on \\ ! on, off
-    ReactionProcessor=Moon::ExospherePhotoionizationReactionProcessor    \\
+    ReactionProcessor=Exosphere::ChemicalModel::PhotochemicalModelProcessor \\ !Moon::ExospherePhotoionizationReactionProcessor    \\
     LifeTime=Moon::ExospherePhotoionizationLifeTime    
 
 
