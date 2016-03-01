@@ -24,6 +24,7 @@ subroutine write_plot_common(iFile)
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
+  use ModPlotShell
   
   implicit none
 
@@ -50,7 +51,7 @@ subroutine write_plot_common(iFile)
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
   ! True for spherical/ geospherical plots
-  logical:: IsSphPlot, IsGeoPlot
+  logical:: IsSphPlot, DoPlotShell
 
   ! Equation parameters
   integer, parameter :: MaxParam = 100
@@ -201,9 +202,11 @@ subroutine write_plot_common(iFile)
 
   ! Spherical slices are special cases:
   IsSphPlot = index(plot_type1,'sph')>0
-  IsGeoPlot = index(plot_type1,'geo')>0
+  DoPlotShell = index(plot_type1,'geo')>0
 
-  if(IsSphPlot)then
+  if(DoPlotShell)then
+     ! There is no file to be opened here, it is done by save_plot_file
+  elseif(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
      if(plot_form(iFile)=='hdf') then
@@ -227,7 +230,7 @@ subroutine write_plot_common(iFile)
            call stop_mpi(NameSub//' file open error 2')
         endif
      end if
-  elseif(plot_form(iFile)=='tec' .and. .not. IsGeoPlot)then
+  elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
@@ -246,7 +249,7 @@ subroutine write_plot_common(iFile)
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
      filename = trim(NameSnapshot)//".batl"
-  elseif(.not. IsGeoPlot) then
+  else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
      open(unit_tmp, file=filename, status="replace", form=TypeForm, &
@@ -256,9 +259,6 @@ subroutine write_plot_common(iFile)
              ' iError=', iError
         call stop_mpi(NameSub//' file open error 5')
      endif
-  else
-     if(.not. IsGeoPlot) call CON_stop(NameSub// & 
-          ' No file opened for current plot.')
   end if
 
   if (IsSphPlot) then
@@ -283,7 +283,7 @@ subroutine write_plot_common(iFile)
      IsNonCartesianPlot = .not.IsCartesianGrid
   end if
 
-  if (IsGeoPlot) IsNonCartesianPlot = .true.
+  if (DoPlotShell) IsNonCartesianPlot = .true.
 
   !Logical for hdf plots
 
@@ -354,8 +354,8 @@ subroutine write_plot_common(iFile)
            dyblk=180.0/real(ntheta-1)
         end if
         dzblk=360.0/real(nphi)
-     else if (IsGeoPlot) then
-        cycle
+     else if (DoPlotShell) then
+        call set_plot_shell(iFile, iBLK, nPlotvar, Plotvar)
      else
         select case(plot_form(iFile))
         case('tec')
@@ -376,7 +376,7 @@ subroutine write_plot_common(iFile)
         end select
      end if
 
-     if (plot_form(iFile)=='idl') then
+     if (plot_form(iFile)=='idl' .and. .not.DoPlotShell) then
    	! Update number of cells per processor
         if (IsSphPlot) then
       	   nPEcellsN = nPEcellsN + nBLKcellsN
@@ -395,10 +395,6 @@ subroutine write_plot_common(iFile)
 
   end do ! iBLK
 
-  ! SphGeo plots are not made block-by-block:
-  if(IsGeoPlot) call write_plot_sphgeo(iFile, nplotvar, plotvar, &
-       trim(NameSnapshot)//'.out', plotvarnames)
-
   ! Write the HDF5 output file and return
   select case(plot_form(iFile))
   case('hdf')
@@ -415,13 +411,20 @@ subroutine write_plot_common(iFile)
 
      RETURN
   case('tec')
-     call get_tec_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
+     call get_tec_variables(iFile, nplotvar, plotvarnames, unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
+     if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
+          plotvarnames, unitstr_TEC, trim(NameSnapshot)//'.dat')
   case('idl')
      call get_idl_units(iFile, nplotvar, plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
+     if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
+          plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
   end select
+
+  ! Done writing GEO plot
+  if(DoPlotShell) RETURN
 
   ! Write files for tecplot format
   if(plot_form(iFile)=='tec' .and. .not.IsSphPlot)then
@@ -466,10 +469,9 @@ subroutine write_plot_common(iFile)
      deallocate(PlotVarNodes_VNB)
   end if
 
-  if(plot_form(iFile) == 'idl' .and. .not. (IsSphPlot .or. IsGeoPlot) &
-       .and. nPeCells == 0)then
+  if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0) then
      close(unit_tmp, status = 'DELETE')
-  elseif(.not. IsGeoPlot)then
+  else
      close(unit_tmp)
   end if
 
@@ -502,7 +504,7 @@ subroutine write_plot_common(iFile)
   !! END IDL
 
   ! write header file
-  if(iProc==0 .and. .not. IsGeoPlot)then
+  if(iProc==0)then
 
      select case(plot_form(iFile))
      case('tec')
