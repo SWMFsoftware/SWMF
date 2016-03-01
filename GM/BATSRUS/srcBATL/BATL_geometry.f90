@@ -75,6 +75,10 @@ module BATL_geometry
 
   ! Rotation matrix from generalized to X,Y,Z coordinates
   real, public:: GridRot_DD(MaxDim,MaxDim)
+  real, public:: rRound0, rRound1
+
+  ! This is needed for the roundcube geometry
+  real, parameter:: SqrtNDim = sqrt(real(nDim))
 
 contains
 
@@ -208,7 +212,7 @@ contains
     real, intent(in) :: XyzIn_D(MaxDim)
     real, intent(out):: CoordOut_D(MaxDim)
 
-    real:: x, y, r2
+    real:: x, y, r2, Dist1, Dist2, Coef1, Coef2
 
     character(len=*), parameter:: NameSub = 'BATL_geometry::xyz_to_coord'
     !----------------------------------------------------------------------
@@ -233,8 +237,41 @@ contains
        CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
     elseif(IsRoundCube)then
        r2 = sum(XyzIn_D**2)
-       if(r2 > 0.0)then
-          CoordOut_D = sqrt(r2/maxval(XyzIn_D**2)) * XyzIn_D
+       if (r2 > 0.0) then
+          ! L1 and L2 distance
+          Dist1 = maxval(abs(XyzIn_D))
+          Dist2 = sqrt(r2)
+          if (rRound1 > rRound0 ) then
+             ! The rounded (distorted) grid is outside of the non-distorted part
+             if (Dist1 > rRound0) then
+                ! Outside the undistorted region
+                ! Assume Coord = w * Xyz and Replace Xyz in transformation Coord_to_Xyz
+                ! We have a quadratic equation of w. 
+                ! w^2-Coef1*w- 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1) =0
+
+                Coef1 = -1 + rRound0/(rRound1-rRound0)*(dist1*SqrtNDim/Dist2 - 1)
+                Coef2 = Coef1**2 + 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1)
+                CoordOut_D = XyzIn_D/(-Coef1 + sqrt(Coef2))*2
+             else
+                ! No distortion
+                CoordOut_D = XyzIn_D
+             end if
+         
+          else
+             ! The rounded (distorted) grid is inside of the non-distorted part
+             if (Dist2 < rRound1) then
+                ! Solving w^2-w+Coef1 = 0
+                Coef1 = Dist1/rRound1*(1 - Dist1/Dist2)
+                CoordOut_D = XyzIn_D / (1+sqrt(1-4*Coef1))*2
+             else
+                ! Solving w^2+Coef1*w+Coef2 = 0
+                Coef1 = -1 + (1 - Dist1/Dist2)/(rRound0-rRound1)*rRound0
+                Coef2 = -(1 - Dist1/Dist2)/(rRound0 - rRound1)*Dist1
+                Coef2 = (-Coef1 + sqrt(Coef1**2 - 4*Coef2))*0.5
+                CoordOut_D = XyzIn_D / Coef2
+             end if
+          end if
+           
        else
           CoordOut_D = 0.0
        end if
@@ -267,7 +304,7 @@ contains
     real, intent(in) :: CoordIn_D(MaxDim)
     real, intent(out):: XyzOut_D(MaxDim)
 
-    real:: r, r2, Phi, Coord_D(MaxDim)
+    real:: r, r2, Phi, Coord_D(MaxDim), Dist1, Dist2, Weight
 
     character(len=*), parameter:: NameSub = 'BATL_geometry::coord_to_xyz'
     !----------------------------------------------------------------------
@@ -300,8 +337,43 @@ contains
             XyzOut_D)
     elseif(IsRoundCube)then
        r2 = sum(CoordIn_D**2)
-       if(r2 > 0.0)then
-          XyzOut_D = maxval(abs(CoordIn_D))/sqrt(r2) * CoordIn_D
+       ! L1 and L2 distances from origin
+       ! L1 distance is constant on the surface of a cube
+       ! L2 distance is constant on the surface of a sphere
+       Dist1 = maxval(abs(CoordIn_D))
+       Dist2 = sqrt(r2)
+           
+       if (r2 > 0.0) then
+          if (rRound0 < rRound1) then
+             ! Non-distorted grid inside, round grid outside
+             Weight = (Dist1 - rRound0)/(rRound1 - rRound0)
+          elseif (Dist1 < rRound1) then
+             ! the rounded grid is inside and the point is inside rRound1
+             ! The distortion is 0 at the origin and maximum at Dist1=rRound1.
+             Weight = Dist1/rRound1
+          else
+             ! the rounded grid is inside and the point is outside rRound1
+             Weight = (rRound0 - Dist1)/(rRound0 - rRound1)
+          endif
+          ! Limit weight to be in the [0,1] interval
+          Weight = min(1., max(0.0, Weight))
+          
+          if (rRound0 < rRound1) then
+             ! Expand coordinate outward
+             ! For a fully rounded grid we expand the generalized coordinate
+             ! by Dist1*SqrtNDim/Dist2, so along the main diagonals there is 
+             ! no stretch and along the axes the expansion is SqrtNDim. 
+             ! For the partially rounded grid the expansion factor is reduced.
+             ! The minimum expansion factor is 1 in the non-distorted region.
+             XyzOut_D = (1 + Weight*(Dist1*SqrtNDim/Dist2 - 1)) * CoordIn_D
+          else
+             ! Contract coordinate inward
+             ! In this case the grid is contracted along
+             ! the main diagonals by a factor up to sqrt(nDim)
+             ! and there is no contraction along the axes
+             XyzOut_D = (1 + Weight*(Dist1/Dist2 - 1)) * CoordIn_D
+          end if
+
        else
           XyzOut_D = 0.0
        end if
@@ -573,20 +645,152 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for cubsedsphere'
-    Xyz_D  = (/3., 4., nDim-2.0/)
-    Good_D = sqrt(sum(Xyz_D**2))/4.0 * Xyz_D
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'
+    rRound0 = 200.0
+    rRound1 = 320.0
+
+    if (nDim == 3) then ! points along main axes with L1 = rRound1 are most distorted
+       Xyz_D  = (/554.2562584, 0., 0./) !Xyz = sqrt(3)*Coord
+       Good_D = (/320., 0., 0./)
+    elseif (nDim ==2) then
+       Xyz_D  = (/452.5483399,0., 0./) !Xyz = sqrt(2)*Coord       
+    end if
+    Good_D = (/320., 0., 0./)
+
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
-         write(*,*)'ERROR: xyz_to_coord failed for cubsedsphere, ', &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for cubsedsphere'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
-         write(*,*)'ERROR: coord_to_xyz failed for cubsedsphere, ', &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+    if (nDim == 3) then ! points along main diagonals are not distorted                                                   
+       Xyz_D  = (/300., 300., 300./)
+       Good_D = (/300., 300., 300./)
+    elseif (nDim ==2) then
+       Xyz_D  = (/300.,300., 0./)
+       Good_D = (/300.,300.,0./)
+    end if
+
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+    if (nDim == 3) then                                               
+       Xyz_D  = (/397.1825374147, 264.7883582764, 132.394179138/)
+       Good_D = (/300., 200., 100./)
+    elseif (nDim ==2) then
+       Xyz_D  = (/344.1742027,229.4494684, 0./)
+       Good_D = (/300.,200.,0./)
+    end if
+
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+
+
+    write(*,*)'Testing xyz_to_coord for roundcube'
+    Xyz_D  = (/100., 90., 0./)    ! Inside rRound0, points are not distorted
+    Good_D = (/100., 90., 0./)
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+    rRound0 = 1.0
+    rRound1 = 0.6
+
+    write(*,*)'Testing xyz_to_coord for roundcube'
+    if (nDim==2) then 
+       Xyz_D  = (/0.0964809, 0.1929618, 0./)
+       Good_D = (/0.1,0.2,0./)
+    else if (nDim == 3) then
+       Xyz_D  = (/0.09008918, 0.18017837, 0.2702675/)
+       Good_D = (/0.1,0.2,0.3/)
+    end if
+
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
+    write(*,*)'Testing xyz_to_coord for roundcube'    
+    if (nDim==2) then
+       Xyz_D  = (/0.5736097, 0.4916654, 0./)
+       Good_D = (/0.7, 0.6, 0./)
+    else if (nDim==3) then
+       Xyz_D  = (/0.52539750154, 0.450340715612, 0.37528392967/)
+       Good_D = (/0.7, 0.6, 0.5/)
+    endif
+
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+     write(*,*)'Testing xyz_to_coord for roundcube'
+    if (nDim==2) then !points along main axes are not distorted
+       Xyz_D  = (/0.7, 0., 0./) 
+       Good_D = (/0.7, 0., 0./)
+    else if (nDim==3) then
+       Xyz_D  = (/0.3, 0., 0./)
+       Good_D = (/0.3, 0., 0./)
+    endif
+
+    call xyz_to_coord(Xyz_D, Coord_D)
+    if(any(abs(Coord_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
+         'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
+
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    Good_D = Xyz_D
+    call coord_to_xyz(Coord_D, Xyz_D)
+    if(any(abs(Xyz_D - Good_D) > 1e-6)) &
+         write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
+         'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
+
 
     if(nDim < 3) RETURN
 
@@ -619,7 +823,7 @@ contains
          write(*,*)'ERROR: init_geometry failed, ', &
          'for TypeGeometry=', TypeGeometry,         &
          'nRgen=', nRgen,' should be ',size(Rgen_I)
-    
+
     if(.not.allocated(LogRgen_I)) &
          write(*,*)'ERROR: init_geometry failed, ', &
          'for TypeGeometry=', TypeGeometry,         &
