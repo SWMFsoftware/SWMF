@@ -4,7 +4,7 @@ Begin session: 1
 T                       DoEcho
 
 #DESCRIPTION
-Fast Whistler wave test			StringDescription
+Fast Whistler wave test. Hall term is only applied at part of the domain.		StringDescription
 
 #EQUATION
 MHD                    NameEquation
@@ -15,10 +15,10 @@ Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
 
 #CHECKGRIDSIZE
-      64                              nI
+       4                              nI
        2                              nJ
        2                              nK
-       4                     MinBlockALL
+       200                     MinBlockALL
 
 #PLANET
 NONE			NamePlanet
@@ -40,7 +40,7 @@ NONE			TypeNormalization
 1.0			P
 
 #GRID
-4                    	nRootBlockX
+86                    	nRootBlockX
 1                     	nRootBlockY
 1                     	nRootBlockZ
 -100.                 	xMin
@@ -124,7 +124,7 @@ Right slow Whistler
 #USERINPUTEND   ----------------
 
 #TEST
-init_hall_resist krylov			TestString
+init_hall_resist krylov load_balance			TestString
 
 #TESTXYZ
 2.0			xTest		(X coordinate of cell for testing)
@@ -163,14 +163,14 @@ mc		TypeLimiter
 T		UseSemiImplicit
 resistivity	TypeSemiImplicit
 
-FIXEDTIMESTEP
+#FIXEDTIMESTEP
 T		UseFixedTimeStep
-0.01		DtFixed
+0.0021405	DtFixed
 
-IMPLICIT
+#IMPLICIT
 F		UsePointImplicit
-F		UsePartImplicit
-T		UseFullImplicit
+T		UsePartImplicit
+F		UseFullImplicit
 1.0		CflImpl
 
 #KRYLOV
@@ -191,6 +191,23 @@ T			UseHallResistFlux
 35.10762213248		HallFactor (for historical reasons)
 0.0			HallCmaxFactor
 
+
+#REGION
+box1                NameRegion
+box tapered             NameHallRegion
+-75                      xMinBox
+-25                      yMinBox
+-1                      zMinBox
+25                       xMaxBox
+25                       yMaxBox
+1                       zMaxBox
+10                     Taper
+
+#HALLREGION
++box1			HallRegions
+0			HallSpeedTinyDim
+
+
 #SAVERESTART
 F			DoSaveRestart
 
@@ -202,20 +219,24 @@ raw			StringLog
 
 #SAVEPLOT
 2
-1d mhd idl_ascii       StringPlot
--1			DnOutput
+1d VAR idl_ascii       StringPlot
+1			DnOutput
 0.1			DtOutput
 0.			DxOutput
-z=0 mhd idl             StringPlot
--1			DnOutput
+rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall     NameVars
+g rbody                 NamePars
+z=0 VAR idl             StringPlot
+1			DnOutput
 0.1			DtOutput
 0.			DxOutput
+rho ux uy uz bx by bz p jx jy jz dt dtblk impl dx hall     NameVars
+g rbody                 NamePars
 
 Fast whistler wave period
 
 #STOP
--1			MaxIteration
-1.174097		tSimulationMax
+20			MaxIteration
+-1.174097		tSimulationMax
 
 1.99998			! Alfven wave + advection
 2.11333  		! slow Whistler wave (By,Bz same sign)
