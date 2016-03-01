@@ -135,10 +135,10 @@ contains
   !============================================================================
   subroutine get_ie_potential(Xyz_D, Potential)
 
-    use ModMain, ONLY: Time_Simulation, TypeCoordSystem
-    use ModInterpolate, ONLY: bilinear
-    use CON_planet_field, ONLY: map_planet_field
-    use ModCoordTransform, ONLY:  xyz_to_dir
+    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+    use ModInterpolate,    ONLY: bilinear
+    use CON_planet_field,  ONLY: map_planet_field
+    use ModCoordTransform, ONLY: xyz_to_dir
 
     ! Interpolate IE potential to Xyz_D location
     ! Assume equipotential dipole field lines
@@ -157,6 +157,7 @@ contains
 
     if(.not.allocated(IonoPotential_II))then
        Potential = 0.0
+!       Potential = sign(10.0, Xyz_D(2))
        RETURN
     end if
 
