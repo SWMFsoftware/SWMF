@@ -463,6 +463,18 @@ namespace DUST {
     for (i=0;i<8;i++) {
       data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][MeanDensityOffset];
       data[4]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][MeanDensityOffset]*amps.data.data[Stencil.Node[i]][4+MeanDensityOffset];
+
+
+      if ((data[0]<0.0)||(data[4]<0.0)) {
+        double t=234;
+        t+=30;
+
+        std::cout << amps.data.data[Stencil.Node[i]][0] << "  " << amps.data.data[Stencil.Node[i]][1] << "  " << amps.data.data[Stencil.Node[i]][2] << endl; 
+        std::cout << Stencil.Weight[i] << "  " << Stencil.Node[i] << "   " << MeanDensityOffset << "  " << amps.data.data[Stencil.Node[i]][MeanDensityOffset] << "  " << data[0] << endl;
+
+        printf("Error: a value that must be positive is negative\n");
+        exit(0);
+      }
     }
 
     //get the number of the trajectories
@@ -481,6 +493,14 @@ namespace DUST {
         data[7+3*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
         data[7+3*iRadius+2]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][4+VariablePair[iRadius].nVar]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
       }
+
+      if (data[7+3*iRadius]<0.0) {
+        double t=3435;
+        t+=4053;
+
+        printf("Error: a value that must be positive is negative\n");
+        exit(0);
+       } 
 
       data[7+3*iRadius+1]=ScatteringEfficentcy*data[7+3*iRadius];
       TotalBrightness+=data[7+3*iRadius+1];
@@ -525,9 +545,25 @@ namespace DUST {
 
 int main(int argc,char **argv) {
 
-
   amps.InitMPI();
   amps.SetBlockSize(5,5,5);
+
+
+/*
+//    amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=1.s=0.H2O.dat",".");
+
+//amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=1.s=2.DUST%0.dat",".");
+amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=5.s=5.DUST%3.dat",".");
+
+    amps.PrintParticleTrajectory(1200,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.gas.uniform.dat");
+    amps.PrintParticleTrajectory(1200,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.gas.flux.dat"); 
+
+MPI_Finalize();
+return 1;
+*/
+
+
+
 
   const char SimulationStartTimeString[]="2015-04-12T07:14:00";
 
