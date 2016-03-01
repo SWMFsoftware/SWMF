@@ -110,7 +110,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, SpeciesFirst_, &
        SpeciesLast_
   use BATL_lib, ONLY: Dim2_, Dim3_, &
-       create_grid, set_high_geometry, get_region_indexes
+       create_grid, set_high_geometry, get_region_indexes, &
+       rRound0, rRound1
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1572,6 +1573,10 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('NameGridFile',NameGridFile)
            call read_gen_radial_grid(NameGridFile)
         end if
+        if(TypeGeometry == 'round') then
+           call read_var('rRound0',rRound0)
+           call read_var('rRound1',rRound1)
+        end if        
         if(NameCommand == '#GRIDGEOMETRYLIMIT')then
            do iDim = 1, nDim
               call read_var('CoordDimMin_D', CoordDimMin_D(iDim))
@@ -2934,7 +2939,7 @@ contains
     ! have to be reset here
     if(.not.i_line_command("#GRIDGEOMETRYLIMIT", iSessionIn = 1) > 0) then
        select case(TypeGeometry)
-       case('cartesian', 'round', 'rotatedcartesian')
+       case('cartesian' ,'rotatedcartesian')
           XyzMin_D = (/x1, y1, z1/)
           XyzMax_D = (/x2, y2, z2/)
        case('rz')
@@ -2952,6 +2957,19 @@ contains
           !            R,   Phi, Z
           XyzMin_D = (/0.0, 0.0, z1/) 
           XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
+       case('round', 'roundcube')
+          if(nDim==2) then
+             XyzMax_D(1:2) = &
+                  min(abs(x1), abs(x2), abs(y1), abs(y2))/sqrt(2.0)
+             XyzMin_D(1:2) = -XyzMax_D(1:2)
+          end if
+          if(nDim==3) then 
+             XyzMax_D = &
+                  min(abs(x1), abs(x2), abs(y1), abs(y2), abs(z1), abs(z2))/sqrt(3.0)
+             XyzMin_D = -XyzMax_D
+          end if
+
+
        case default
           call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
        end select
@@ -2959,6 +2977,8 @@ contains
        if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
           XyzMin_D(1) = RadiusMin
           XyzMax_D(1) = RadiusMax
+          if(TypeGeometry(1:5) == 'round' .and. rRound1 > rRound0) &
+               XyzMax_D = RadiusMax/sqrt(real(nDim))
        else
           if(Body1 .and. rBody > 0.0)then
              ! Set inner boundary to match rBody for spherical coordinates
