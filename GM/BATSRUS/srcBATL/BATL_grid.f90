@@ -61,6 +61,7 @@ module BATL_grid
        CellMetrice_DDG(:,:,:,:,:), & ! Metrics at cell center. Like: dx/dXi.
        CellCoef_DDGB(:,:,:,:,:,:)    ! X,Y,Z to general coord transform coef
 
+ 
   ! If true, cell faces are assumed to be flat polygons formed by the nodes
   logical, public:: IsNodeBasedGrid = .true.
 
@@ -402,6 +403,7 @@ contains
                Xyz_DN(:,1:nINode,1:nJNode,1:nKNode))
        end if
 
+
        if(IsNodeBasedGrid)then
           ! Calculate face area vectors assuming flat faces
           if(nDim == 2)then
@@ -496,14 +498,28 @@ contains
           else
              ! Calculate cell volume as a sum of 6 tetrahedra
              ! The tips of the tetrahedra are at the min position of the cell
+             !
+             ! i,j+1,k+1   (6)------------(7) i+1,j+1,k+1
+             !            / |             /|
+             !           /  |            / |
+             !          /   |           /  |
+             ! i,j,k+1(4)---|---------(5) i+1,j,k+1
+             !         |    |          |   |
+             !         |   (3)-i,j+1,k----(8) i+1,j+1,k
+             !         |  /            |  /
+             !         | /             | /
+             !         |/              |/
+             !        (1)-i,j,k-------(2)-i+1,j,k
+             !
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                CellVolume_GB(i,j,k,iBlock) = &
-                     volume4(i,j,k, i+1,j  ,k  , i+1,j+1,k  , i+1,j  ,k+1) + &
-                     volume4(i,j,k, i+1,j+1,k+1, i+1,j  ,k+1, i+1,j+1,k  ) + &
-                     volume4(i,j,k, i  ,j+1,k  , i  ,j+1,k+1, i+1,j+1,k  ) + &
-                     volume4(i,j,k, i+1,j+1,k+1, i+1,j+1,k  , i  ,j+1,k+1) + &
-                     volume4(i,j,k, i  ,j  ,k+1, i+1,j  ,k+1, i  ,j+1,k+1) + &
-                     volume4(i,j,k, i+1,j+1,k+1, i  ,j+1,k+1, i+1,j  ,k+1)
+                CellVolume_GB(i,j,k,iBlock) = & ! nodes in right-hand order
+                     volume4(i  ,  j,  k, i+1,  j,k  ,  i,j+1,  k,  i,  j,k+1) + &! 1234
+                     volume4(i  ,  j,k+1, i+1,  j,k+1,i+1,  j,  k,  i,j+1,  k) + & ! 4523
+                     volume4(i  ,  j,k+1,   i,j+1,k+1,i+1,  j,k+1,  i,j+1,  k) + & ! 4653
+                     volume4(i+1,  j,  k, i+1,j+1,  k,  i,j+1,  k,i+1,j+1,k+1) + & ! 2837 
+                     volume4(i  ,j+1,k+1, i+1,j+1,k+1,i+1,  j,k+1,i+1,  j,  k) + & !6752
+                     volume4(i+1,j+1,k+1, i  ,j+1,k+1,  i,j+1,  k,i+1,  j,  k) !7632
+               
              end do; end do; end do
           end if
        elseif(.not.present(DoFaceOnly))then
@@ -776,6 +792,7 @@ contains
 
       ! Triple product divided by 6
       volume4 = cSixth*sum( b_D*cross_product(c_D, d_D) )
+
 
     end function volume4
 
@@ -2076,8 +2093,8 @@ contains
   subroutine test_grid
 
     use BATL_mpi, ONLY: iProc, nProc, iComm
-    use BATL_geometry, ONLY: init_geometry
-    use ModNumConst, ONLY: i_DD
+    use BATL_geometry, ONLY: init_geometry,rRound0,rRound1
+    use ModNumConst, ONLY: i_DD, cPi
     use ModMpi, ONLY: MPI_reduce, MPI_real, MPI_sum
 
     integer :: iBlock
@@ -2087,6 +2104,7 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= (/.true., .true., .false./)
     real:: DomainMin_D(MaxDim) = (/ 3.0, 2.0, 1.0 /)
     real:: DomainMax_D(MaxDim) = (/ 9.0, 6.0, 4.0 /)
+    !real, external :: integrate_BLK 
 
     ! number of points in each dimension to test interpolation
     integer, parameter:: &
@@ -2111,7 +2129,8 @@ contains
     real:: Radius, Phi, Xyz_D(MaxDim), Coord_D(MaxDim), Distance_D(MaxDim)
     real:: Good, Good_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
-
+    
+    real:: Volume
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_grid'
     !-----------------------------------------------------------------------
@@ -2326,7 +2345,7 @@ contains
           Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
                Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
                + Weight_I(iCell)*Xyz_D(1:nDim)
-                    
+
        end do
 
     end do; end do; end do
@@ -2415,10 +2434,10 @@ contains
              if(DiLevelNei_IIIB(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3),iBlock)==1)&
                   Xyz_D = Xyz_D + &
                   0.5 * (2*modulo(iCell_D, 2) - 1) * CellSize_DB(:,iBlock)
-             
-          ! if point is close to boundary => interpolation isn't of 2nd order
-          where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
-               Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
+
+             ! if point is close to boundary => interpolation isn't of 2nd order
+             where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
+                  Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
 
              Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
                   Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
@@ -2461,119 +2480,119 @@ contains
        end if
     end if
 
-       if(nDim == 2)then
-          if(DoTestMe) write(*,*)'Testing create_grid in RZ geometry'
+    if(nDim == 2)then
+       if(DoTestMe) write(*,*)'Testing create_grid in RZ geometry'
 
-        ! Store Cartesian values for checking
-        allocate(CellVolumeCart_B(MaxBlock), CellFaceCart_DB(MaxDim,MaxBlock))
-        CellFaceCart_DB = CellFace_DB
-        CellVolumeCart_B= CellVolume_B
+       ! Store Cartesian values for checking
+       allocate(CellVolumeCart_B(MaxBlock), CellFaceCart_DB(MaxDim,MaxBlock))
+       CellFaceCart_DB = CellFace_DB
+       CellVolumeCart_B= CellVolume_B
 
-          ! Clean Cartesian grid
-          call clean_grid
+       ! Clean Cartesian grid
+       call clean_grid
 
-          ! Initialize RZ grid
-          call init_geometry(TypeGeometryIn = 'rz')
-          call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
-          call create_grid
-          if(iProc==0)call show_grid_proc
+       ! Initialize RZ grid
+       call init_geometry(TypeGeometryIn = 'rz')
+       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
+       call create_grid
+       if(iProc==0)call show_grid_proc
 
-          ! Check relative to Cartesian
-          Tolerance = 1e-6
-          do iBlock = 1, nBlock
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                if(abs( CellVolume_GB(i,j,k,iBlock) &
-                     - abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock)) &
+       ! Check relative to Cartesian
+       Tolerance = 1e-6
+       do iBlock = 1, nBlock
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(abs( CellVolume_GB(i,j,k,iBlock) &
+                  - abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock)) &
+                  < Tolerance) CYCLE
+             write(*,*)NameSub,' ERROR: incorrect cell volume=', &
+                  CellVolume_GB(i,j,k,iBlock),' should be', &
+                  abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock), &
+                  ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+          end do; end do; end do
+          do iDim = 1, nDim
+             Di = i_DD(1,iDim); Dj = i_DD(2,iDim)
+             do k = 1, nK; do j = 1, nJ+Dj; do i = 1, nI+Di
+                Radius = 0.5*sum(abs(Xyz_DGB(2,i-Di:i,j-Dj:j,k,iBlock)))
+                if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - &
+                     Radius*CellFaceCart_DB(iDim,iBlock)) &
                      < Tolerance) CYCLE
-                write(*,*)NameSub,' ERROR: incorrect cell volume=', &
-                     CellVolume_GB(i,j,k,iBlock),' should be', &
-                     abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock), &
-                     ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+                write(*,*)NameSub,' ERROR: incorrect face area=', &
+                     CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
+                     Radius*CellFaceCart_DB(iDim,iBlock), &
+                     ' at iDim,i,j,k,iBlock,iProc=', &
+                     iDim, i, j, k, iBlock, iProc
+
              end do; end do; end do
-             do iDim = 1, nDim
-                Di = i_DD(1,iDim); Dj = i_DD(2,iDim)
-                do k = 1, nK; do j = 1, nJ+Dj; do i = 1, nI+Di
-                   Radius = 0.5*sum(abs(Xyz_DGB(2,i-Di:i,j-Dj:j,k,iBlock)))
-                   if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - &
-                        Radius*CellFaceCart_DB(iDim,iBlock)) &
-                        < Tolerance) CYCLE
-                   write(*,*)NameSub,' ERROR: incorrect face area=', &
-                        CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
-                        Radius*CellFaceCart_DB(iDim,iBlock), &
-                        ' at iDim,i,j,k,iBlock,iProc=', &
-                        iDim, i, j, k, iBlock, iProc
-
-                end do; end do; end do
-             end do
           end do
-       end if
+       end do
+    end if
 
-       if(nDim >= 2)then
-          if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
+    if(nDim >= 2)then
+       if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
 
-          ! Clean  grid
-          call clean_grid
+       ! Clean  grid
+       call clean_grid
 
-          ! Initialize cylindrical grid
-          call init_geometry(TypeGeometryIn = 'cylindrical')
+       ! Initialize cylindrical grid
+       call init_geometry(TypeGeometryIn = 'cylindrical')
 
-          DomainMin_D = (/1., 0., -0.5/)
-          DomainMax_D = (/3., 90., 0.5/)
+       DomainMin_D = (/1., 0., -0.5/)
+       DomainMax_D = (/3., 90., 0.5/)
 
-          ! This is temporary solution to keep the test working
-          IsNodeBasedGrid = .false.
-          call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
-          call create_grid
-          if(iProc==0)call show_grid_proc
+       ! This is temporary solution to keep the test working
+       IsNodeBasedGrid = .false.
+       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
+       call create_grid
+       if(iProc==0)call show_grid_proc
 
-          ! Check relative to generalized coordinate volumes and areas
-          Tolerance = 1e-6
-          do iBlock = 1, nBlock
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2)) &
-                     *CellVolume_B(iBlock)
-                if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
-                write(*,*)NameSub,' ERROR: incorrect cell volume=', &
-                     CellVolume_GB(i,j,k,iBlock),' should be', Good, &
-                     ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+       ! Check relative to generalized coordinate volumes and areas
+       Tolerance = 1e-6
+       do iBlock = 1, nBlock
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2)) &
+                  *CellVolume_B(iBlock)
+             if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
+             write(*,*)NameSub,' ERROR: incorrect cell volume=', &
+                  CellVolume_GB(i,j,k,iBlock),' should be', Good, &
+                  ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+          end do; end do; end do
+          do iDim = 1, nDim
+             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+                ! Calculate face center in generalized coordinates
+                Coord_D = CoordMin_DB(:,iBlock) + CellSize_DB(:,iBlock) &
+                     *(/i-0.5*(1+Di),j-0.5*(1+Dj),k-0.5*(1+Dk)/)
+
+                Good = CellFace_DB(iDim,iBlock)
+                if(iDim /= 2) Good = Good*Coord_D(1)
+                if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - Good) > Tolerance) &
+                     write(*,*)NameSub,' ERROR: incorrect face area=', &
+                     CellFace_DFB(iDim,i,j,k,iBlock),' should be', Good, &
+                     ' at iDim,i,j,k,iBlock,iProc=', &
+                     iDim, i, j, k, iBlock, iProc
+
+                Phi = Coord_D(2)
+                if(iDim == 1)then
+                   Good_D = (/ cos(Phi), sin(Phi), 0.0 /)
+                elseif(iDim == 2)then
+                   Good_D = (/ -sin(Phi), cos(Phi), 0.0 /)
+                else
+                   Good_D = (/ 0.0, 0.0, 1.0 /)
+                end if
+                ! Multiply by area (for now)
+                Good_D = Good_D*CellFace_DFB(iDim,i,j,k,iBlock)
+
+                if(any( Tolerance < abs(FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
+                     - Good_D(1:nDim)))) &
+                     write(*,*)NameSub,' ERROR: incorrect face area=', &
+                     FaceNormal_DDFB(:,iDim,i,j,k,iBlock),' should be',Good_D,&
+                     ' at iDim,i,j,k,iBlock,iProc=', &
+                     iDim, i, j, k, iBlock, iProc
+
              end do; end do; end do
-             do iDim = 1, nDim
-                Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-                do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-                   ! Calculate face center in generalized coordinates
-                   Coord_D = CoordMin_DB(:,iBlock) + CellSize_DB(:,iBlock) &
-                        *(/i-0.5*(1+Di),j-0.5*(1+Dj),k-0.5*(1+Dk)/)
-
-                   Good = CellFace_DB(iDim,iBlock)
-                   if(iDim /= 2) Good = Good*Coord_D(1)
-                   if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - Good) > Tolerance) &
-                        write(*,*)NameSub,' ERROR: incorrect face area=', &
-                        CellFace_DFB(iDim,i,j,k,iBlock),' should be', Good, &
-                        ' at iDim,i,j,k,iBlock,iProc=', &
-                        iDim, i, j, k, iBlock, iProc
-
-                   Phi = Coord_D(2)
-                   if(iDim == 1)then
-                      Good_D = (/ cos(Phi), sin(Phi), 0.0 /)
-                   elseif(iDim == 2)then
-                      Good_D = (/ -sin(Phi), cos(Phi), 0.0 /)
-                   else
-                      Good_D = (/ 0.0, 0.0, 1.0 /)
-                   end if
-                   ! Multiply by area (for now)
-                   Good_D = Good_D*CellFace_DFB(iDim,i,j,k,iBlock)
-
-                   if(any( Tolerance < abs(FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
-                        - Good_D(1:nDim)))) &
-                        write(*,*)NameSub,' ERROR: incorrect face area=', &
-                        FaceNormal_DDFB(:,iDim,i,j,k,iBlock),' should be',Good_D,&
-                        ' at iDim,i,j,k,iBlock,iProc=', &
-                        iDim, i, j, k, iBlock, iProc
-
-                end do; end do; end do
-             end do
           end do
-       end if
+       end do
+    end if
 
     if(nDim == 3)then
        if(DoTestMe) write(*,*)'Testing create_grid in spherical geometry'
