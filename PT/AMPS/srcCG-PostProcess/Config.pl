@@ -14,7 +14,7 @@ foreach (@ARGV) {
      print "The script sets the post processing code of the CG model\n";
      print "-mode=[gas,dust]\tsets the gas or dust\n";
      print "-out=[number]\t\tthe number of the output file that will be read\n"; 
-     print "-nndust=[number]\tthe number of the dust species\n"; 
+     print "-ndust=[number]\tthe number of the dust species\n"; 
      print "-ngas=[number]\t\tthe number of the gas species\n";
      print "-ngroup=[number]\tthe number of the dust size groups\n";
      
@@ -36,15 +36,15 @@ if ($mode{flag} == 1) {
   `echo "\n#undef _MODE_\n#define _MODE_ _"$mode{val}"_MODE_" >> config.h`;
 }
 
-if ($nDustSpec{flag}==1) {
+if (($nDustSpec{flag}==1) && ($nDustGroup{flag}==1)) {
   `echo "#undef _DUST_CASE_\n#define _DUST_CASE_ _DUST_CASE__"$nDustSpec{val}"SPEC_"$nDustGroup{val}"GROUP_" >> config.h`;
   `echo "#undef _DUST_SPEC_NUMBER_\n#define _DUST_SPEC_NUMBER_\ "$nDustSpec{val}"\n" >> config.h`;
 }
-
-if ($nDustGroup{flag}==1) {
-  `echo "#undef _DUST_CASE_\n#define _DUST_CASE_ _DUST_CASE__"$nDustSpec{val}"SPEC_"$nDustGroup{val}"GROUP_" >> config.h`;
-  `echo "#undef _DUST_GROUP_NUMBER_\n#define _DUST_GROUP_NUMBER_\ "$nDustGroup{val}"\n" >> config.h`;
+elsif (($nDustSpec{flag}==1) || ($nDustGroup{flag}==1)) {
+  print "Error: the number of the dust groups and the number of the dust species has to be defined at the same call of the Config.pl\n";
+  exit(0);
 }
+
 
 if ($nGasSpec{flag}==1) {
   `echo "#undef _GAS_SPEC_NUMBER_\n#define _GAS_SPEC_NUMBER_\ "$nGasSpec{val}"\n" >> config.h`;
