@@ -65,8 +65,8 @@ module ModElectricField
        'GMRES',     &! TypeKrylov
        'rel',       &! TypeStop
        1e-3,        &! ErrorMax
-       100,         &! MaxMatvec
-       100,         &! nKrylovVector
+       200,         &! MaxMatvec
+       200,         &! nKrylovVector
        .false.,     &! UseInitialGuess
        -1.0, -1, -1) ! Error, nMatvec, iError (return values)
 
@@ -158,7 +158,12 @@ contains
 
     integer:: iBlock
     integer:: nStepLast = -1
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'calc_inductive_e'
     !----------------------------------------------------------------------
+    if(DoTestMe)write(*,*) NameSub, ' starting'
+
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
 
@@ -166,8 +171,6 @@ contains
     nVarAll    = nBlockUsed*nIJK
 
     call get_electric_field
-
-    !write(*,*)'ExField=', Efield_DGB(1,:,1,1,1)
 
     call calc_div_e
 
@@ -201,6 +204,8 @@ contains
        Eind_DGB(:,:,:,:,iBlock) = Efield_DGB(:,:,:,:,iBlock) - &
             Epot_DGB(:,:,:,:,iBlock)
     end do
+
+    if(DoTestMe)write(*,*) NameSub, ' finished'
 
   end subroutine calc_inductive_e
   !=========================================================================
@@ -236,6 +241,8 @@ contains
     character(len=*), parameter:: NameSub = 'calc_potential'
     !----------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' starting at n_step, nStepLast=', &
+         n_step, nStepLast
 
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
@@ -254,10 +261,6 @@ contains
 
     allocate(Rhs_I(nVarAll), Potential_I(nVarAll))
 
-    !write(*,*)'nVarAll=', nVarAll
-    !write(*,*)'Ex=Expot=', Epot_DGB(1,:,1,1,1)
-    
-
     ! Substitute 0 into the Laplace operator WITH boundary conditions
     ! to get the RHS
     Potential_I = 0.0
@@ -265,7 +268,8 @@ contains
     call matvec_inductive_e(Potential_I, Rhs_I, nVarAll)
     Rhs_I = -Rhs_I
 
-    !write(*,*)'BC Rhs=',Rhs_I(1:nI)
+    if(DoTestMe)write(*,*) NameSub,' min,max(BC Rhs)=', &
+         minval(Rhs_I), maxval(Rhs_I)
 
     ! Add div(E) to the RHS
     n = 0
@@ -278,7 +282,8 @@ contains
        end do; end do; end do
     end do
 
-    !write(*,*)'Full Rhs=',Rhs_I(1:nI)
+    if(DoTestMe)write(*,*) NameSub,' min,max(Full Rhs)=', &
+         minval(Rhs_I), maxval(Rhs_I)
 
     ! Start the linear solve stage
     IsLinear = .true.
@@ -292,11 +297,11 @@ contains
          1, nDim, nI, nJ, nK, nBlockUsed, iComm, &
          matvec_inductive_e, Rhs_I, Potential_I, DoTestMe)
 
-
-    !write(*,*)'Solution Potential_I=', Potential_I(1:nI)
-
     if(SolverParam%iError /= 0 .and. iProc == 0) &
-         write(*,*) NameSub,' failed in ModInductiveE'
+         write(*,*) NameSub,' failed in ModElectricField'
+
+    if(DoTestMe)write(*,*) NameSub,' min,max(Potential_I)=', &
+          minval(Potential_I), maxval(Potential_I)
 
     ! Put solution Potential_I into Potential_GB
     n = 0
@@ -309,15 +314,15 @@ contains
        end do; end do; end do
     end do
 
-    !write(*,*)'Solution Potential_GB=', Potential_GB(1:nI,1,1,1)
-
     ! Fill in ghost cells and boundary cells using true BCs
     IsLinear = .false.
     call bound_potential
 
     deallocate(Rhs_I, Potential_I)
 
-    !write(*,*)'Bounded Potential_GB=', Potential_GB(:,1,1,1)
+    if(DoTestMe)write(*,*) NameSub,' min,max(Potential_GB)=', &
+          minval(Potential_GB(:,:,:,1:nBlock)), &
+          maxval(Potential_GB(:,:,:,1:nBlock))
 
   end subroutine calc_potential
   !=========================================================================
@@ -417,7 +422,11 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           n = n + 1
-          y_I(n) = Laplace_C(i,j,k)
+          if(true_cell(i,j,k,iBlock))then
+             y_I(n) = Laplace_C(i,j,k)
+          else
+             y_I(n) = 0.0
+          end if
        end do; end do; end do
     end do
 
