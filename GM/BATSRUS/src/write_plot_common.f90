@@ -1760,6 +1760,30 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('ez')                                 
         NameTecVar = 'E_z'
         NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('expot')
+        NameTecVar = 'Epot_x'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('eypot')
+        NameTecVar = 'Epot_y'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('ezpot')                                 
+        NameTecVar = 'Epot_z'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('exind')
+        NameTecVar = 'Eind_x'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('eyind')
+        NameTecVar = 'Eind_y'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('ezind')                                 
+        NameTecVar = 'Eind_z'
+        NameUnit   = NameTecUnit_V(UnitElectric_)
+     case('pote')
+        NameTecVar = 'PotE'
+        NameUnit   = 'V'
+     case('dive')
+        NameTecVar = 'div(E)'
+        NameUnit   = 'V/m^2'
      case('er')                                 
         NameTecVar = 'E_r'
         NameUnit   = NameTecUnit_V(UnitElectric_)
@@ -1914,8 +1938,13 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
           'jxs','jys','jzs','jxn','jyn','jzn', &
           'jxb','jyb','jzb','jxt','jyt','jzt')
         NameUnit = NameIdlUnit_V(UnitJ_)
-     case('ex','ey','ez','er','enumx','enumy','enumz')
+     case('ex','ey','ez','er','enumx','enumy','enumz', &
+          'expot', 'eypot', 'ezpot', 'exind', 'eyind', 'ezind')
         NameUnit = NameIdlUnit_V(UnitElectric_)
+     case('pote')
+        NameUnit = 'V'
+     case('dive')
+        NameUnit = 'V/m2'
      case('pvecx','pvecy','pvecz','pvecr','b2ur')
         NameUnit = NameIdlUnit_V(UnitPoynting_)
      case('divb','divb_cd','divb_ct','absdivb')
