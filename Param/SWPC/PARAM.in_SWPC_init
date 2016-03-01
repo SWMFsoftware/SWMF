@@ -328,7 +328,7 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-4                       nPlotFiles
+5                       nPlotFiles
 y=0 MHD idl             StringPlot
 -1                      DnSavePlot
 300.			DtSavePlot
@@ -346,6 +346,18 @@ lcb nul tec             StringPlot  !last closed field line plots with integrals
 300.                    DtSavePlot
 5.                      Radius
 36                      nLon
+geo MHD idl_ascii	StringPlot
+-1  			DnSavePlot
+60.			DtSavePlot
+6.6			radMin
+6.6			radMax
+0.			LonMin
+360.			LonMax
+0.			LatMin
+0.			LatMax
+10.			dLon
+
+
 
 #BORIS
 T			UseBorisCorrection

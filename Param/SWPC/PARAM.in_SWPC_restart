@@ -175,7 +175,7 @@ dt rho mx my mz p bx by bz pmin pmax dst dstflx
 3.0			StringRFlux
 
 #SAVEPLOT
-4                       nPlotFiles
+5                       nPlotFiles
 y=0 MHD idl             StringPlot
 -1                      DnSavePlot
 300.			DtSavePlot
@@ -193,6 +193,16 @@ lcb nul tec             StringPlot  !last closed field line plots with integrals
 300.                    DtSavePlot
 5.                      Radius
 36                      nLon
+geo MHD idl_ascii	StringPlot
+-1  			DnSavePlot
+60.			DtSavePlot
+6.6			RadiusMin
+6.6			RadiusMax
+0.			LonMin
+360.			LonMax
+0.			LatMin
+0.			LatMax
+10.			dLon
 
 #SCHEME
 2			nORDER
