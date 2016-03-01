@@ -18,15 +18,7 @@
 void PIC::CPLR::DATAFILE::ARMS::Init() {
 
   //reserve place for the interpolated data
-  /*  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
-
-  PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
-  */
+  PIC::CPLR::DATAFILE::Offset::MagneticFluxFunction.allocate=true;
 }
 
 //extract time from ARMS datafile
@@ -60,12 +52,16 @@ double PIC::CPLR::DATAFILE::ARMS::GetFileTime(const char *fname){
 //read ARMS' output file
 void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode){
 
+  //namespace alias
+  namespace Offset = PIC::CPLR::DATAFILE::Offset;
+
+
   // size of the uniform grid
   static int nX = -1, nZ = -1;
   // container for the data and grid
-  const int nvar = 22;
+  const int nvar = 23;
   //original data
-  const int b_ = 0, v_ = 3, n_ = 6, t_ = 7, p_ = 8; 
+  const int b_ = 0, v_ = 3, n_ = 6, t_ = 7, p_ = 8, flux_ = 9;
 
   static double *Xpos, *Zpos;
   static double ***Data;
@@ -149,6 +145,8 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 			if((strcmp("#B_THETA",str1)==0)){offset=b_+1;convert=1E-4;}
 			else//         B_PHI [Gauss]
 			  if((strcmp("#B_PHI",str1)==0)){offset=b_+2;convert=1E-4;}
+			  else//         FLUX [arbitrary units]
+			    if((strcmp("#FLUX",str1)==0)){offset=flux_;convert=1;}
 	  if(offset >= 0)
 	    for(int iZ = 0; iZ < nZ; iZ++){
 	      for(int iX = 0; iX < nX; iX++){
@@ -158,8 +156,8 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    }
 	}
     }
-    // now the data has been read -----------------------------------------------
-    //convert velocity and magnetic field vectors to cartesian coordinates ------
+    // now the data has been read ---------------------------------------------
+    //convert velocity and magnetic field vectors to cartesian coordinates ----
     for(int iZ = 0; iZ < nZ; iZ++){
       for(int iX = 0; iX < nX; iX++){
 	double tmp;
@@ -175,7 +173,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	}
       }
     }
-    //conversion is finished ----------------------------------------------------
+    //conversion is finished --------------------------------------------------
   }
   // perform the interpolation
   {
@@ -244,25 +242,44 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
   
 	    //locate the cell
 	    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-	    if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
-	    offset = CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
+	    if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL)
+	      continue;
+	    offset = 
+	      CenterNode->GetAssociatedDataBufferPointer() + 
+	      MULTIFILE::CurrDataFileOffset;
 
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
-	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))        =DataInterp[b_+idim];
-	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))   =DataInterp[v_+idim];
+	      *(idim+(double*)(offset+Offset::MagneticField.offset)) =
+		DataInterp[b_+idim];
+
+	      *(idim+(double*)(offset+Offset::PlasmaBulkVelocity.offset)) =
+		DataInterp[v_+idim];
 	    }
 	    // E = -VxB
-	    *(0+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
-	      DataInterp[b_+1]*DataInterp[v_+2] - DataInterp[b_+2]*DataInterp[v_+1];
-	    *(1+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
-	      DataInterp[b_+2]*DataInterp[v_+0] - DataInterp[b_+0]*DataInterp[v_+2];
-	    *(2+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
-	      DataInterp[b_+0]*DataInterp[v_+1] - DataInterp[b_+1]*DataInterp[v_+0];
+	    *(0+(double*)(offset+Offset::ElectricField.offset)) =
+	      DataInterp[b_+1]*DataInterp[v_+2] - 
+	      DataInterp[b_+2]*DataInterp[v_+1];
+
+	    *(1+(double*)(offset+Offset::ElectricField.offset)) =
+	      DataInterp[b_+2]*DataInterp[v_+0] - 
+	      DataInterp[b_+0]*DataInterp[v_+2];
+
+	    *(2+(double*)(offset+Offset::ElectricField.offset)) =
+	      DataInterp[b_+0]*DataInterp[v_+1] - 
+	      DataInterp[b_+1]*DataInterp[v_+0];
     
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))     =DataInterp[p_];
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))   =DataInterp[n_];
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))     =DataInterp[t_];
+	    *((double*)(offset+Offset::PlasmaIonPressure.offset)) =
+	      DataInterp[p_];
+
+	    *((double*)(offset+Offset::PlasmaNumberDensity.offset)) =
+	      DataInterp[n_];
+
+	    *((double*)(offset+Offset::PlasmaTemperature.offset)) =
+	      DataInterp[t_];
+
+	    *((double*)(offset+Offset::MagneticFluxFunction.offset)) =
+	      DataInterp[flux_];
 	  }
     }
     else {

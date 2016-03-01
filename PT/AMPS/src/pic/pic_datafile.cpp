@@ -216,6 +216,8 @@ PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::ElectricField={
 
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient={false,false,9,"\"dBx/dx\", \"dBx/dy\", \"dBx/dz\", \"dBy/dx\", \"dBy/dy\", \"dBy/dz\", \"dBz/dx\", \"dBz/dy\", \"dBz/dz\"",-1};
 
+PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFluxFunction={false,false,1,"\"FluxFunction\"",-1};
+
 
 //load new data file
 //IMPORTANT! The list of the data that are loaded has to be indicated before PIC::Init_BeforeParser
@@ -374,12 +376,22 @@ void PIC::CPLR::DATAFILE::Init() {
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldGradient.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::MagneticFieldGradient.nVars;
+  }
+
+  if (Offset::MagneticFluxFunction.allocate==true) {
+    Offset::MagneticFluxFunction.active=true;
+    Offset::MagneticFluxFunction.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFluxFunction.nVars*sizeof(double);
+    nTotalBackgroundVariables+=Offset::MagneticFluxFunction.nVars;
+  }
+
 
 #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
     // double the reserved memory for time inteprolation mode
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  }
+  
 
 
 
@@ -597,6 +609,7 @@ void PIC::CPLR::DATAFILE::PrintVariableList(FILE* fout,int DataSetNumber) {
   if (Offset::MagneticField.active) fprintf(fout,", %s",Offset::MagneticField.VarList);
   if (Offset::ElectricField.active) fprintf(fout,", %s",Offset::ElectricField.VarList);
   if (Offset::MagneticFieldGradient.active) fprintf(fout,", %s",Offset::MagneticFieldGradient.VarList);
+  if (Offset::MagneticFluxFunction.active) fprintf(fout,", %s",Offset::MagneticFluxFunction.VarList);
 }
 
 void PIC::CPLR::DATAFILE::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {

@@ -2934,6 +2934,7 @@ namespace PIC {
         extern cOffsetElement MagneticField;
         extern cOffsetElement ElectricField;
         extern cOffsetElement MagneticFieldGradient;
+	extern cOffsetElement MagneticFluxFunction;
 
 
         inline void SetAllocate(bool flag,cOffsetElement* offset) {

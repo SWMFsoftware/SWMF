@@ -45,7 +45,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
 TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
-CouplerMode= file(arms=dataARMS.t=*.dat) !ices !swmf !!!ices !!off, ices, swmf
+CouplerMode= file(arms, MASK=dataARMS.t=*.dat) !ices !swmf !!!ices !!off, ices, swmf
 MoverIntegratorMode=GuidingCenter
 
 #endmain

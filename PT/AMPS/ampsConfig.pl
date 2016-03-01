@@ -546,7 +546,7 @@ sub ReadMainBlock {
 
 	#check if mask for input files is provided is given 
 	my $Mask='';
-	if($line =~ m/\(\s*$s0\s*=\s*(.*)\s*\)/i){$Mask = $1;}
+	if($line =~ m/\(\s*$s0\s*,\s*mask\s*=\s*(.*)\s*\)/i){$Mask = $1;}
 	if($Mask){
 	    if(-e "$CPLRDATA\/Schedule"){
 		print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
