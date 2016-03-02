@@ -346,16 +346,17 @@ lcb nul tec             StringPlot  !last closed field line plots with integrals
 300.                    DtSavePlot
 5.                      Radius
 36                      nLon
-geo MHD idl_ascii	StringPlot
+shl MHD idl_ascii	StringPlot
 -1  			DnSavePlot
 60.			DtSavePlot
-6.6			radMin
-6.6			radMax
+GEO			TypeCoordPlot
+6.6			rMin
+6.6			rMax
 0.			LonMin
 360.			LonMax
+10.			dLon
 0.			LatMin
 0.			LatMax
-10.			dLon
 
 
 
