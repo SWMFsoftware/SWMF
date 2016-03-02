@@ -1367,7 +1367,7 @@ void Collective::Print() {
   cout << "---------------------" << endl;
   cout << "Check Simulation Constraints" << endl;
   cout << "---------------------" << endl;
-  cout << "dt=" << dt << ", dx, dy, dx=" << dx << ", " << dy << ", " << dz << endl;
+  cout << "dt=" << dt << ", dx, dy, dz=" << dx << ", " << dy << ", " << dz << endl;
   if( dt > 0.0){
     cout << "Accuracy and Finite Grid Instability Constraints:  " << endl;
     cout << "dx/dt, dy/dt, dz/dt=" << dx/dt << ", " << dy/dt << ", " << dz/dt << endl;
@@ -1538,9 +1538,13 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Number of layers needed to set boundary.
   nBCLayer=4;
 
+  // When Yingjuan does not need to restart from output of IPIC3D1,
+  // remove this command. 
   doUseOldRestart = false;
 
-  useRandomPerCell=false;
+  // Each cell generate random numbers indenpendtly, so that the results
+  // are the same no matter how many processors are used. 
+  useRandomPerCell=true;
   
   iTest = -1; jTest = -1; kTest = -1; 
   
