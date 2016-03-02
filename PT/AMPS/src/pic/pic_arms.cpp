@@ -146,7 +146,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 			else//         B_PHI [Gauss]
 			  if((strcmp("#B_PHI",str1)==0)){offset=b_+2;convert=1E-4;}
 			  else//         FLUX [arbitrary units]
-			    if((strcmp("#FLUX",str1)==0)){offset=flux_;convert=1;}
+			    if((strcmp("#FLUX",str1)==0)){offset=flux_;convert=1E+3;}
 	  if(offset >= 0)
 	    for(int iZ = 0; iZ < nZ; iZ++){
 	      for(int iX = 0; iX < nX; iX++){

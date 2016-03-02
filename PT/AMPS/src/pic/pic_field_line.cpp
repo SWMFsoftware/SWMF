@@ -272,53 +272,39 @@ namespace PIC{
     }
 
     //=========================================================================
-    void InitLoop2D(double *xStart,   //start loop here
-		    double DArc //increment in the angle of arc 
+    void InitLoop2D(double *xStart,  //start loop here
+		    double DArc      //increment in the angle of arc 
 		    ){
-      // in 2D case (e.g. cylindrical symmetry) generate a magnetic field-line
-      // based on the background data
+      // in 2D case (e.g. cylindrical symmetry) generate a magnetic field line;
+      // magnetic flux function, psi, is utilized:
+      // loop is a line of constant value
+      //-----------------------------------------------------------------------
+      // check correctness
 #if _PIC_SYMMETRY_MODE_ != _PIC_SYMMETRY_MODE__AXIAL_
       exit(__LINE__, __FILE__,"ERROR: implemented only for axial symmetry!");
 #endif
-
+      // check for limit of number of field lines allowed
       if(nFieldLine == nFieldLineMax)
 	exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
 
-      //increase counter of field lines
-      nFieldLine++;
-
+      // list of variables utilized
+      //.......................................................................
+      // current location
       double x[3] = {xStart[0], xStart[1], xStart[2]};
-#if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-      //rotate to the y=0 plane
-      x[1] = 0;
-      x[0] = pow(x[0]*x[0] + x[1]*x[1], 0.5) * ( (x[0]>0) ? 1 : -1);
-#endif
-      double xFirst[3] = {x[0],x[1],x[2]};
-
+      // candidate location
+      //      double xNew[3] = {0.0, 0.0, 0.0};
+      // the first location; used to close the loop
+      double xFirst[3] = {xStart[0], xStart[1], xStart[2]};;
       // min value resolved for magnetic field (squared)
       const double epsB2 = 1E-30;
       const double epsB  = 1E-15;
-
-      //magnetic field
+      // magnetic field vector, unit vector and magnitude
+      // NOTE: y-component is ignored!!!
       double B[3] = {0.0, 0.0, 0.0};
       double b[3] = {0.0, 0.0, 0.0};
       double absB =  0.0;
-      CPLR::InitInterpolationStencil(x);
-      CPLR::GetBackgroundMagneticField(B);
-
-#if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-      // need to have non-zero components in x-z plane
-      if(B[0]*B[0] + B[2]*B[2] < epsB2)
-	exit(__LINE__,__FILE__, 
-	     "ERROR: magnetic field magnitude is below min resolved value");
-      absB = pow(B[0]*B[0]+B[2]*B[2],0.5);
-      b[0] = B[0]/absB; b[1] = 0; b[2] = B[2]/absB;
-#endif
-      
-      //add the initial vertex
-      FieldLinesAll[nFieldLine-1].Add(x);
-      FieldLinesAll[nFieldLine-1].SetMagneticField(B,0);
-
+      // flux function
+      double Psi0 = 0.0, Psi = 0.0;
       //housekeeping for controlling loop's generation
       // Arc = curvature * Length
       double Arc = 0.0;
@@ -327,93 +313,134 @@ namespace PIC{
       // angle swiped by the loop so far
       double Angle = 0.0;
       // estimate for the next segment's length
-      double Length = 1E3;
+      static double Length = 1E3;
       // position and magnetic field and next candidate vertex
       double xNew[3] = {0.0,0.0,0.0};
       double BNew[3] = {0.0,0.0,0.0};
       double bNew[3] = {0.0,0.0,0.0};
       double absBNew;
-      //generate the loop; new vertices are added until:
+      //.......................................................................
+
+      //increase counter of field lines
+      nFieldLine++;
+
+      //rotate to the y=0 plane
+      x[0] = pow(x[0]*x[0] + x[1]*x[1], 0.5) * ( (x[0]>0) ? 1 : -1);
+      x[1] = 0.0;
+
+      // get magnetic field at the current location
+      CPLR::InitInterpolationStencil(x);
+      CPLR::GetBackgroundMagneticField(B);
+      absB = pow(B[0]*B[0]+B[2]*B[2],0.5);
+      b[0] = B[0]/absB; b[1] = 0; b[2] = B[2]/absB;
+
+      // target value of the flux function
+      Psi0 = CPLR::GetBackgroundMagneticFluxFunction();
+
+      // check correctness: need to have non-zero components in x-z plane
+      if(B[0]*B[0] + B[2]*B[2] < epsB2)
+	exit(__LINE__,__FILE__, 
+	     "ERROR: magnetic field magnitude is below min resolved value");
+      
+      //add the initial vertex
+      FieldLinesAll[nFieldLine-1].Add(x);
+      FieldLinesAll[nFieldLine-1].SetMagneticField(B,0);
+
+      //generate the loop
+      //......................................................................
+      // new vertices are added until:
       // - 2*Pi angle is swiped AND 
-      //   candidate vertex is spatially close to the first one ANR
-      //   directions of the first and last segments are close => SUCCESS
+      //   candidate vertex is spatially close to the first one => SUCCESS
       // - 4*Pi angle is swiped => FAILURE
       // - exited the domain => FAILURE
+      //......................................................................
+      // new point is generated in 2 steps
+      // 1) make the first guess, x_0, in the direction of B
+      // 2) iterate towards point with same value of FLUX via gradient descent
+      //......................................................................
       
-      while(Angle < 4*Pi){
+      while(fabs(Angle) < 4*Pi){
 
-	// to control inner while loop
-	static int countIn;
-	const  int countInMax = 100;
-	countIn = 0;
-	do{
-	  countIn++;
+	// get the first guess
+	//------------------------------------------------------------------
+	// control inner while loop
+	int count;
+	const  int countMax = 100;
+	count = 0;
+	//predictor
+	while(true){
+	  count++;
+	  if(count > countMax)
+	    exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
+	  // get new location
+	  xNew[0] = x[0] + Length * b[0];
+	  xNew[2] = x[2] + Length * b[2];
 
-	  // new location - predictor
-	  for(int idim=0; idim<DIM; idim++)
-	    xNew[idim] = x[idim] + Length * b[idim];
-	  
 	  // get magnetic field at this location
 	  CPLR::InitInterpolationStencil(xNew);
 	  CPLR::GetBackgroundMagneticField(BNew);
-#if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-	  // need to have non-zero components in x-z plane
-	  if(BNew[0]*BNew[0] + BNew[2]*BNew[2] < epsB2)
+	  absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
+	  // need to have non-zero field 
+	  if(absBNew < epsB)
 	    exit(__LINE__,__FILE__, 
 		 "ERROR: magnetic field magnitude is below min resolved");
-	  absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
 	  bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
-#endif
-	  
-	  //find Arc = (curvature * Length)
-	  Arc = 0.0;
-	  for(int idim=0; idim<DIM; idim++)
-	    Arc+= pow(BNew[idim]-B[idim], 2);
-	  Arc = pow(Arc, 0.5);
-	  Arc/= 0.5 * (absB + absBNew);
-	  
+	  // find angle of arc to the new location
+	  Arc = fabs(b[0]*bNew[2] - b[2]*bNew[0]);
 	  //check condition to exit loop
 	  if(Arc < 0.5 * DArc || Arc > DArc)
-	    // too small or too large step; factor -> 1 as countIn grows
+	    // too small or too large step; factor -> 1 as count grows
 	    // to avoid reaching stationary points and infinite loop
-	    Length *= 1. + (0.75 * DArc / Arc - 1.) / (1 + countIn);
+	    Length *= 1. + (0.75 * DArc / max(Arc, 0.075*DArc) - 1.) / count;
 	  else
 	    break;
-	  
-	  if(countIn > countInMax)
-	    exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
-	  
-	}while(true);
+	}
 	
-	//compute the final direction
-#if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-	Dir[0] = 0.5*(BNew[0]+B[0]);
-	Dir[1] = 0;
-	Dir[2] = 0.5*(BNew[2]+B[2]);
-	double misc = pow(Dir[0]*Dir[0] + Dir[2]*Dir[2], 0.5);
-	Dir[0]/= misc; Dir[2]/= misc;
-#endif
-	//new vertex location
-	for(int idim=0; idim<DIM; idim++)
-	  xNew[idim] = x[idim] +  Length * Dir[idim];
-	
-	//get magnetic field at this location
+	// corrector
+	{
+	  Dir[0] = 0.5*(BNew[0]+B[0]);
+	  Dir[1] = 0;
+	  Dir[2] = 0.5*(BNew[2]+B[2]);
+	  double misc = pow(Dir[0]*Dir[0] + Dir[2]*Dir[2], 0.5);
+	  Dir[0]/= misc; Dir[2]/= misc;
+	  //new vertex location
+	  xNew[0] = x[0] +  Length * Dir[0];
+	  xNew[2] = x[2] +  Length * Dir[2];
+	}	
+	//------------------------------------------------------------------
+
+	// iterate towards location with needed value of flux function
+	//------------------------------------------------------------------
+	//get magnetic field at the candidate location
 	CPLR::InitInterpolationStencil(xNew);
 	CPLR::GetBackgroundMagneticField(BNew);
-#if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-	// need to have non-zero components in x-z plane
-	if(BNew[0]*BNew[0] + BNew[2]*BNew[2] < epsB2)
+	// need to have non-zero field
+	if(BNew[0]*BNew[0]+BNew[2]*BNew[2] < epsB2)
 	  exit(__LINE__,__FILE__, 
 	       "ERROR: magnetic field magnitude is below min resolved");
+	// flux function
+	Psi = CPLR::GetBackgroundMagneticFluxFunction();
+
+	// correct the initial guess until flux function is close enough
+	// to the original value
+	//------------------------------------------------------------------
+	while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5){
+	  double misc = BNew[0]*BNew[0] + BNew[2]*BNew[2];
+	  xNew[0]+=-0.001 * (Psi-Psi0) * BNew[2] / misc;
+	  xNew[2]+= 0.001 * (Psi-Psi0) * BNew[0] / misc;
+	  CPLR::InitInterpolationStencil(xNew);
+	  CPLR::GetBackgroundMagneticField(BNew);
+	  Psi = CPLR::GetBackgroundMagneticFluxFunction();
+	}
+	//------------------------------------------------------------------
+
+	// next vertex is found;
+	// add it to the field line and update information
 	absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
 	bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
-#endif
 
 	//housekeeping
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	// INCORRECT!!!!! FIX THIS!!!!!
-	Angle += acos(b[0]*bNew[0] + b[1]*bNew[1] + b[2]*bNew[2]);
-	// ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	Angle += asin(b[0]*bNew[2] - b[2]*bNew[0]);
 	
 	//add this vertex
 	FieldLinesAll[nFieldLine-1].Add(xNew);
@@ -423,17 +450,14 @@ namespace PIC{
 	cFieldLineSegment* First=FieldLinesAll[nFieldLine-1].GetFirstSegment();
 	cFieldLineSegment* Last =FieldLinesAll[nFieldLine-1].GetLastSegment();
 	double Dist = 0.0; //distance between last and first verticies
-	double DAngle = 0.0; //angle between last and first segments
 	double DirFirst[3], DirLast[3];
 	First->GetDir(DirFirst); Last->GetDir(DirLast);
 	for(int idim=0; idim<DIM; idim++){
 	  Dist  += pow(xNew[idim]-xFirst[idim], 2);
-	  DAngle+= DirLast[idim] * DirFirst[idim];
 	}
 	Dist   = pow(Dist, 0.5);
-	DAngle = acos(DAngle);
-	if( fabs( 0.5*Angle/Pi - 1) < 0.1 &&
-	    Dist < Length && DAngle < Pi/12){
+	if( fabs( 0.5*fabs(Angle)/Pi - 1) < 0.1 &&
+	    Dist < Length){
 	  cFieldLineVertex* LastEnd = Last->GetEnd();
 	  LastEnd->SetX(xFirst);
 	  Last->SetNext(First);
@@ -445,12 +469,8 @@ namespace PIC{
 	b[0] = bNew[0]; b[1] = bNew[1]; b[2] = bNew[2];
 	B[0] = BNew[0]; B[1] = BNew[1]; B[2] = BNew[2];
 	absB = absBNew;
-
-	  
       }
-      
-      //      exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
-      
+      exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
     }
     
     //=========================================================================

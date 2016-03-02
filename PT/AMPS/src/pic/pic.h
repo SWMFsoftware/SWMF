@@ -3051,11 +3051,18 @@ namespace PIC {
 			   Offset::MagneticFieldGradient.offset, cell, Time);
       }
 
-
       inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell, double Time) {
 	GetBackgroundValue(vel, 
 			   Offset::PlasmaBulkVelocity.nVars,
 			   Offset::PlasmaBulkVelocity.offset, cell, Time);
+      }
+
+      inline double GetBackgroundMagneticFluxFunction(PIC::Mesh::cDataCenterNode *cell, double Time) {
+	double ff;
+	GetBackgroundValue(&ff, 
+			   Offset::MagneticFluxFunction.nVars,
+			   Offset::MagneticFluxFunction.offset, cell, Time);
+	return ff;
       }
 
       inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell, double Time) {
@@ -3366,6 +3373,20 @@ namespace PIC {
 
          for (idim=0;idim<3;idim++) vel[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
        }
+     }
+
+     inline double GetBackgroundMagneticFluxFunction(double Time = NAN) {
+       double res=0.0;
+       int iStencil;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         res+=DATAFILE::GetBackgroundMagneticFluxFunction(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
+       return res;
      }
 
      inline double GetBackgroundPlasmaPressure(double Time = NAN) {
