@@ -439,9 +439,9 @@ contains
                OpacityEmissionOut_W = OpacityEmissionSi_W)
 
           RelaxCoef_VCB(1,i,j,k,iBlock) = &
-               OpacityPlanckSi_W(1)*cLightSpeed/Si2No_V(UnitT_)
-          RelaxCoef2_VCB(1,i,j,k,iBlock) = &
                OpacityEmissionSi_W(1)*cLightSpeed/Si2No_V(UnitT_)
+          RelaxCoef2_VCB(1,i,j,k,iBlock) = &
+               OpacityPlanckSi_W(1)*cLightSpeed/Si2No_V(UnitT_)
        end if
 
        call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -671,23 +671,23 @@ contains
           case('radiation')
              if(nWave == 1)then
                 ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
-                PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
-                     /(1 + SemiImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
-                PointCoef2_VCB(1,i,j,k,iBlock) = Clight*OpacityEmission_W(1) &
-                     /(1 + SemiImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
+                PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityEmission_W(1) &
+                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) / Cv)
+                PointCoef2_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
+                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) / Cv)
 
                 ! This is just the Planck function at time level * saved
                 PointImpl_VCB(:,i,j,k,iBlock) = Planck
              elseif(UseSplitSemiImplicit)then
                 ! Store information for Opacity_g*(Erad_g - B_g) term
-                PointCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
-                PointCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                PointCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                PointCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PointImpl_VCB(:,i,j,k,iBlock) = Planck_W
              else
                 ! Unsplit multigroup
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
-                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
-                RelaxCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                RelaxCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
              end if
 
@@ -708,9 +708,9 @@ contains
 
                 ! The radiation-material energy exchange is point-implicit
                 PointCoef_VCB(iTrImplFirst:,i,j,k,iBlock) &
-                     = Clight*OpacityPlanck_W
-                PointCoef2_VCB(iTrImplFirst:,i,j,k,iBlock) &
                      = Clight*OpacityEmission_W
+                PointCoef2_VCB(iTrImplFirst:,i,j,k,iBlock) &
+                     = Clight*OpacityPlanck_W
                 PointImpl_VCB(iTrImplFirst:,i,j,k,iBlock) &
                      = Planck_W
              else
@@ -726,8 +726,8 @@ contains
                 end if
 
                 ! The radiation-material energy exchange is semi-implicit
-                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
-                RelaxCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
+                RelaxCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
              end if
 
