@@ -201,8 +201,8 @@ subroutine write_plot_common(iFile)
   end if
 
   ! Spherical slices are special cases:
-  IsSphPlot = index(plot_type1,'sph')>0
-  DoPlotShell = index(plot_type1,'geo')>0
+  IsSphPlot   = index(plot_type1,'sph')>0
+  DoPlotShell = index(plot_type1,'shl')>0
 
   if(DoPlotShell)then
      ! There is no file to be opened here, it is done by save_plot_file
@@ -423,7 +423,7 @@ subroutine write_plot_common(iFile)
           plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
   end select
 
-  ! Done writing GEO plot
+  ! Done writing shell plot
   if(DoPlotShell) RETURN
 
   ! Write files for tecplot format
