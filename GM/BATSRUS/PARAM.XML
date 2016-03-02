@@ -3248,6 +3248,7 @@ No magnetometer grid file is saved by default.
 				<option name="y=0" default="T" />
 				<option name="z=0" />
 				<option name="sphere" value="sph" />
+				<option name="shell"  value="shl" />
 				<option name="los" />
 				<option name="rfr" />
 				<option name="line" value="lin" />
@@ -3382,8 +3383,20 @@ No magnetometer grid file is saved by default.
 			<parameter name="Radius"  type="integer" min="0." default="6."/>
 			<parameter name="nLon"    type="real"    min="4"  default="36"/>
 		</if>
+		<if expr="$plotarea =~ /\bshl\b/">
+			<parameter name="TypeCoord" type="string" length="3" default="GEO"/>
+			<parameter name="rMin"   type="real" min="0"                 default="6.6"/>
+			<parameter name="rMax"   type="real" min="$rMin"             default="6.6"/>
+			<parameter name="dR"     type="real" min="0" if="$rMin   != $rMax"/>
+			<parameter name="LonMin" type="real" min="0"                 default="0"/>
+			<parameter name="LonMax" type="real" min="$LonMin" max="360" default="360"/>
+			<parameter name="dLon"   type="real" min="0" if="$LonMin != $LonMax"/>
+			<parameter name="LatMin" type="real" min="-90"               default="-90"/>
+			<parameter name="LatMax" type="real" min="$LatMin" max="90"  default="90"/>
+			<parameter name="dLat"   type="real" min="0" if="$LatMin != $LatMax"/>
+		</if>		
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr|eqb)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -3503,18 +3516,19 @@ lcb int tec             StringPlot  !last closed field line plots with integrals
 -1.                     DtSavePlot
 6.			Radius
 36			nLon
-geo MHD idl	        StringPlot
+shl MHD idl	        StringPlot
 10  			DnSavePlot
 -1.			DtSavePlot
-5.6			RadiusMin
-7.6			RadiusMax
+GEO			TypeCoordPlot
+5.6			rMin
+7.6			rMax
+0.5                     dRad    ! only read if rMin /= rMax
 0.			LonMin
 360.			LonMax
+10.			dLon    ! only read if LonMin /= LonMax
 -90.			LatMin
 90.			LatMax
-0.5                     dRad
-10.			dLon
-10.			dLat
+10.			dLat    ! only read if LatMin /= LatMax
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US. 
@@ -3564,7 +3578,7 @@ cut   - 3D, 2D or 1D cut along (curvilinear) coorinates (IDL)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
-geo   - spherical slice in geographic coordinates
+shl   - spherical shell in given coordinate system (1, 2 or 3D)
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
@@ -3629,10 +3643,11 @@ from the parameter file in this order:
 \begin{verbatim}
  xMinCut ... zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
- RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'geo'
- LonMin LonMax           if PlotArea is 'eqb' or 'geo'
- LatMin LatMax           if PlotArea is 'geo'
- dRadius, dLon, dLat     if PlotArea is 'geo' and associated range is nonzero.
+ TypeCoordPlot           if PlotArea is 'shl'
+ RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
+ LonMin LonMax           if PlotArea is 'eqb' or 'shl'
+ LatMin LatMax           if PlotArea is 'shl'
+ dRadius, dLon, dLat     if PlotArea is 'shl' and associated range is nonzero.
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
  DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
@@ -3793,6 +3808,15 @@ The line of sight integration produces TecPlot and IDL files directly:
  IO2/los_PlotVar_PlotNumber_TIMESTAMP.extension
 \end{verbatim}
 where extension is 'dat' for TecPlot and 'out' for IDL file formats.
+
+The shell plot area ('shl') can be used to extract a spherical shell
+defined by radius, longitude and latitude ranges in the coordinate
+system given by TypeCoordPlot. If the range has extent zero in 
+one or two coordinates, the shell becomes a 2D or 1D slice
+(for example 2D Lon-Lat, r-Lon, r-Lat surfaces, or 1D circle at fixed latitude,
+or a radial line with fixed longitude and latitude).
+The output is a sinlge file in IDL or Tecplot format.
+This capability is to replace the 'sph' plot type. 
 
 Default is nPlotFile=0, so no plot files are saved.
 </command>
