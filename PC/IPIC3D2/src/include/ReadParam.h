@@ -97,7 +97,8 @@ inline void get_next_command(std::stringstream *ss, std::string *id){
   ss->ignore(INT_MAX, '#');
   ss->unget();
   *ss >> *id;
-  if(isProc0) std::cout<<"\n"<<"PC: "<<*id<<std::endl;
+  if(isProc0 && id->find('#')!=std::string::npos)
+    std::cout<<"\n"<<"PC: "<<*id<<std::endl;
   ss->ignore(INT_MAX, '\n');
 }
 
