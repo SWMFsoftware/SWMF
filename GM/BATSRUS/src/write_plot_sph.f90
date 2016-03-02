@@ -1,11 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 module ModPlotShell
 
   use ModIO
-  use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi, cZero, cOne
+  use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
 
   implicit none
   save
@@ -20,232 +19,185 @@ module ModPlotShell
 
   ! Ranges for current plot:
   real :: dR, dLat, dLon
-  real :: radMin, radMax, lonMin, lonMax, latMin, latMax
+  real :: rMin, rMax, LonMin, LonMax, LatMin, LatMax
 
   ! Local results container:
   ! Array of values written to file:
-    real, allocatable :: PlotVarLocal_VIII(:,:,:,:)
+  real, allocatable :: PlotVar_VIII(:,:,:,:)
+
+  ! Coordinate conversion matrix
+  real:: PlotToGm_DD(3,3)
 
 contains
-  !=============================================================================
-  real function minmod(x,y)
-    real, intent(in) :: x,y
-    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+  !============================================================================
+  real function minmod(x, y)
+    real, intent(in) :: x, y
+    minmod = max(0.0, min(abs(x), sign(1.0,x)*y))
   end function minmod
 
-  !=============================================================================
-  subroutine set_plot_shell(iFile, iBLK, nPlotvar, Plotvar)
-    ! Save all cells within plotting range, for each processor, for a GeoSphere
-    ! plot type.  iFile is the identifying integer for the file and is used to
-    ! obtain the plot range and resolution.  iBlk is the number of the current
-    ! block from which values are obtained.  nPlotVar PlotVar give the number
-    ! of variables to save and an IxJxKxnPlotVar array of those values within 
-    ! the block. 
+  !============================================================================
+  subroutine set_plot_shell(iFile, iBlock, nPlotvar, Plotvar_GV)
+
+    ! Interpolate the plot variables for block iBlock
+    ! onto the spherical shell of the plot area of plot file iFile.
     
     use ModMain,        ONLY: time_simulation, TypeCoordSystem
     use CON_axes,       ONLY: transform_matrix
-    use ModGeometry,    ONLY: nI,nJ,nK, Xyz_DGB, CellSize_DB 
+    use ModGeometry,    ONLY: rMin_BLK
     use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
-    implicit none
+    use BATL_lib,       ONLY: &
+         CoordMin_DB, nIjk_D, nI, nJ, nK, CellSize_DB, xyz_to_coord
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
-    integer, intent(in) :: iFile, iBLK
+    integer, intent(in) :: iFile, iBlock
     integer, intent(in) :: nPlotvar
-    real,    intent(in) :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+    real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     
     ! Local variables
     integer :: i, j, k, iVar
     
-    real :: rNow, lonNow, latNow
-    real :: x,y,z,xNorm, yNorm, zNorm, dxblk
-    real :: xBlkMin,xBlkMax,yBlkMin,yBlkMax,zBlkMin,zBlkMax, minRblk,maxRblk
-    real :: XyzGeo_D(3), XyzGm_D(3), GmToGeo_DD(3,3)
-    
-    character(len=200) :: NameVar, StringHeader
+    real :: r, Lon, Lat
+    real :: XyzPlot_D(3), XyzGm_D(3)
+    real :: Coord_D(3), CoordNorm_D(3)
     
     character(len=*), parameter :: NameSub='set_plot_shell'
-    logical :: DoTest, DoTestMe, oktest, oktest_me
-    !---------------------------------------------------------------------------
-    ! Check testing for subroutine:
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    
-    ! Check testing for blocks:
-    if(iBLK == BlkTest)then
-       call set_oktest(NameSub,oktest,oktest_me)
+    logical :: DoTest, DoTestMe
+    !--------------------------------------------------------------------------
+    ! Check testing for block
+    if(iBlock == BlkTest)then
+       call CON_set_do_test(NameSub, DoTest, DoTestMe)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest = .false.; DoTestMe = .false.
     end if
     
-    ! Get plot area info from ModIO arrays:
-    dR     = abs(plot_dx(1, iFile))
-    dLon   = plot_dx(2, iFile) * cDegtoRad
-    dLat   = plot_dx(3, iFile) * cDegtoRad
-    radMin = plot_range(1, iFile)
-    radMax = plot_range(2, iFile)
-    lonMin = plot_range(3, iFile) * cDegtoRad
-    lonMax = plot_range(4, iFile) * cDegtoRad
-    latMin = plot_range(5, iFile) * cDegtoRad
-    latMax = plot_range(6, iFile) * cDegtoRad
+    ! Allocate results array and set up all the spherical shell
+    if(.not.allocated(PlotVar_VIII)) then
+       ! Get plot area info from ModIO arrays:
+       dR     = abs(plot_dx(1, iFile))
+       dLon   = plot_dx(2, iFile) * cDegtoRad
+       dLat   = plot_dx(3, iFile) * cDegtoRad
+       rMin   = plot_range(1, iFile)
+       rMax   = plot_range(2, iFile)
+       LonMin = plot_range(3, iFile) * cDegtoRad
+       LonMax = plot_range(4, iFile) * cDegtoRad
+       LatMin = plot_range(5, iFile) * cDegtoRad
+       LatMax = plot_range(6, iFile) * cDegtoRad
     
+       ! Set number of points:
+       nRad = nint((rMax - rMin)/dR)       + 1
+       nLon = nint((LonMax - LonMin)/dLon) + 1
+       nLat = nint((LatMax - LatMin)/dLat) + 1
+    
+       ! Ensure dR, dLon and dLat are compatible with the ranges
+       dR   = (rMax - rMin)/max(1, nRad - 1)
+       dLon = (LonMax - LonMin)/max(1, nLon - 1)
+       dLat = (LatMax - LatMin)/max(1, nLat - 1)
+
+       allocate(PlotVar_VIII(nPlotVar, nRad, nLon, nLat))
+       PlotVar_VIII = 0.0
+
+       ! Get coordinate transformation matrix:
+       PlotToGm_DD = transform_matrix(Time_Simulation, &
+            TypeCoordPlot_I(iFile), TypeCoordSystem)
+    end if
+     
     if (DoTestMe) then
-       write(*,*) NameSub//' Called for iBlk=      ', iBLK
+       write(*,*) NameSub//' Called for iBlock=      ', iBlock
        write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
        write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
        write(*,*) NameSub//' dR, dLon, dLat =      ', dR, dLon, dLat
-       write(*,*) NameSub//' rad, Lon, Lat range = ',  &
-            radMin, radMax, lonMin,lonMax,latMin,latMax
-    end if
-    
-    ! Ensure good choices of dR, dLon, and dLat.
-    if(mod(radMax-radMin, dR)  >1E-5) &
-         call CON_stop(NameSub//': radius range not evenly divisible by dR')
-    if(mod(lonMax-lonMin, dLon)>1E-5) &
-         call CON_stop(NameSub//': Longitude range not evenly divisible by dLon')
-    if(mod(latMax-latMin, dLat)>1E-5) &
-         call CON_stop(NameSub//': Latitude range not evenly divisible by dLat')
-    
-    ! Set number of points:
-    nRad = (radMax-radMin) / dR   + 1
-    nLon = (lonMax-lonMin) / dLon + 1
-    nLat = (latMax-latMin) / dLat + 1
-    
-    if(DoTestMe) write(*,*) NameSub//' nRad, nLon, nLat = ', nRad, nLon, nLat
-    
-    ! Allocate local & global results array:
-    if(.not.allocated(PlotVarLocal_VIII)) then
-       allocate(PlotVarLocal_VIII(nPlotVar, nRad, nLon, nLat))
-       PlotVarLocal_VIII = 0.0
-    end if
-    
-    ! Get coordinate transformation matrix:
-    GmToGeo_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'GEO')
-    
-    ! get the max and min radial distance for this block so that we can check
-    ! whether or not this block can to contibute to the plot.
-    xBlkMin = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBLK)+Xyz_DGB(x_,   1,   1  , 1,iBLK))
-    xBlkMax = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBLK)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBLK))
-    yBlkMin = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBLK)+Xyz_DGB(y_,   1,   1,   1,iBLK))
-    yBlkMax = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBLK)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBLK))
-    zBlkMin = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBLK)+Xyz_DGB(z_,   1,   1,   1,iBLK))
-    zBlkMax = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBLK)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBLK))
-
-    if(DoTestMe) then
-       write(*,*)NameSub//' limits of current block:'
-       write(*,*)'      x:', xBlkMin, xBlkMax
-       write(*,*)'      y:', xBlkMin, xBlkMax
-       write(*,*)'      z:', xBlkMin, xBlkMax
-       write(*,*)'cell sizes = ', CellSize_DB(x_:z_, iBlk)
+       write(*,*) NameSub//' r, Lon, Lat range = ',  &
+            rMin, rMax, LonMin,LonMax,LatMin,LatMax
+       write(*,*) NameSub,' nRad, nLon, nLat, dR, dLon, dLat = ', &
+            nRad, nLon, nLat, dR, dLon, dLat
     end if
 
-    do i=1, nRad
-       ! Set current radius:
-       rNow = radMin+(i-1)*dR
-       
-       minRblk = sqrt(minmod(xBlkMin,xBlkMax)**2 + &
-            minmod(yBlkMin,yBlkMax)**2 + &
-            minmod(zBlkMin,zBlkMax)**2)
-       maxRblk = sqrt((max(abs(xBlkMin),abs(xBlkMax)))**2 + &
-            (max(abs(yBlkMin),abs(yBlkMax)))**2 + &
-            (max(abs(zBlkMin),abs(zBlkMax)))**2)
-       
-       ! If the block does not intersect the sphere that we are plotting, cycle.
-       ! This reduces unnecessary calculations.
-       if(minRblk>rNow .or. maxRblk<rNow) cycle
-       
-       do j=1,nlon
-          ! Current lat value:
-          lonNow = (j-1)*dlon
-          
-          do k=1,nlat
-             ! Current lon value:
-             latNow = (k-1)*dlat
-             
-             if(DoTestMe) write(*,*)NameSub//': i,j,k = ',i,j,k
-             
-             ! get the cartesian coordinate from the spherical coordinates
-             XyzGeo_D = (/&
-                  rNow*cos(latNow)*cos(lonNow), &
-                  rNow*cos(latNow)*sin(lonNow), &
-                  rNow*sin(latNow)/)
-             
-             ! Convert from geographic coordinates to BATSRUS grid:
-             XyzGm_D = matmul(GmToGeo_DD, XyzGeo_D)
-             x = XyzGm_D(1)
-             y = XyzGm_D(2)
-             z = XyzGm_D(3)
-             
-             ! If point outside of this block, cycle.
-             if ( x<xBlkMin .or. x>=xBlkMax .or. &
-                  y<yBlkMin .or. y>=yBlkMax .or. &
-                  z<zBlkMin .or. z>=zBlkMax) cycle
-             
-             if(DoTestMe) then
-                write(*,*) 'rlatlon = ', rNow, lonNow, latNow
-                write(*,*) 'geoxyz  = ', XyzGeo_D
-                write(*,*) 'BATSxyz = ', x, y, z
-             end if
-             
-             ! Get point in normalized coordinates, for speed:
-             xNorm = (x-Xyz_DGB(x_,1,1,1,iBLK)) / CellSize_DB(x_,iBLK) +1.
-             yNorm = (y-Xyz_DGB(y_,1,1,1,iBLK)) / CellSize_DB(y_,iBLK) +1.
-             zNorm = (z-Xyz_DGB(z_,1,1,1,iBLK)) / CellSize_DB(z_,iBLK) +1.
-             
-             if(DoTestMe) write(*,*) 'NORM VARIABLES: ', xNorm, yNorm, zNorm
+    ! Loop through shell points and interpolate PlotVar
+    do i = 1, nRad
+       r = rMin + (i-1)*dR
 
-             !compute the interpolated values at the current location.
+       if(r < rMin_BLK(iBlock)) CYCLE
+       ! if(r > rMax_B(iBlock)) CYCLE
+
+       do j = 1, nLon
+          Lon = LonMin + (j-1)*dLon
+          do k = 1, nLat
+             Lat = LatMin + (k-1)*dLat
+
+             ! Convert to Cartesian coordinates
+             call rlonlat_to_xyz(r,Lon,Lat,XyzPlot_D)
+
+             ! Convert from plot coordinates to BATSRUS grid:
+             XyzGm_D = matmul(PlotToGm_DD, XyzPlot_D)
+
+             write(*,*)'i,j,k,r,Lon,Lat,Xyz=',i,j,k,r,Lon,Lat,XyzGm_D
+
+             ! Convert to generalized coordinates
+             call xyz_to_coord(XyzGm_D, Coord_D)
+
+             ! Normalize to block coordinates
+             CoordNorm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+
+             write(*,*)'Coord,CoordNorm=', Coord_D, CoordNorm_D
+
+             ! Check if point is inside block
+             if(any(CoordNorm_D < 0.5)) CYCLE
+             if(any(CoordNorm_D > nIjk_D + 0.5)) CYCLE
+
+             ! compute the interpolated values at the current location
              do iVar=1, nPlotVar
                 ! Interpolate up to ghost cells.
-                PlotVarLocal_VIII(iVar, i,j,k) = trilinear(PlotVar(:,:,:,iVar),&
-                     0,nI+1, 0,nJ+1, 0,nK+1, (/xNorm, yNorm, zNorm/))
+                PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
+                     MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
              end do
              
-          end do !lon loop
-       end do    !lat loop
-    end do       !rad loop
+          end do ! lon loop
+       end do    ! lat loop
+    end do       ! r loop
 
   end subroutine set_plot_shell
 
-  !=============================================================================
+  !============================================================================
   subroutine write_plot_shell(iFileIn, nPlotVarIn, NameVarIn_V, &
        NameUnitIn, NameFileIn)
+
     ! Collect results from all blocks and write to single output file.
     use ModMpi
     use ModMain,     ONLY: time_simulation, n_step
     use ModProcMH,   ONLY: iProc, nProc, iComm
     use ModPlotFile, ONLY: save_plot_file
 
-    implicit none
-
     integer,          intent(in) :: iFileIn, nPlotvarIn
-    character(len=*), intent(in) :: NameFileIn,NameUnitIn,NameVarIn_V(nPlotVarIn)
+    character(len=*), intent(in) :: NameFileIn, NameUnitIn, &
+         NameVarIn_V(nPlotVarIn)
 
     ! Array of values written to file:
-    real, allocatable :: PlotVar_VIII(:,:,:,:)
+    real, allocatable :: PlotVarLocal_VIII(:,:,:,:)
 
     integer :: iVar, iError
     character(len=200) :: NameVar
 
     logical :: DoTest,DoTestMe
     character(len=*), parameter :: NameSub='write_plot_shell'
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! This subroutine does not support HDF output.
     if(plot_form(iFileIn) == 'hdf') call CON_stop(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
     
-    ! Allocate final result array:
-    if(iProc==0) allocate(PlotVar_VIII(nPlotVarIn, nRad, nLon, nLat))
-
-    ! Collapse results on to head node:
-    if(nProc>1)then
+    ! Collect results to head node
+    if(nProc > 1)then
+       allocate(PlotVarLocal_VIII(nPlotVarIn, nRad, nLon, nLat))
+       PlotVarLocal_VIII = PlotVar_VIII
        call MPI_reduce(PlotVarLocal_VIII, PlotVar_VIII, &
             nPlotVarIn * nRad * nLon * nLat,            &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-    else
-       PlotVar_VIII = PlotVarLocal_VIII
+       deallocate(PlotVarLocal_VIII)
     end if
     
-    ! Save results to disk:
+    ! Save results to disk
     if(iProc==0) then
        ! Build a single-line list of variable names.
        NameVar = 'r lon lat'
@@ -260,18 +212,17 @@ contains
             nStepIn=n_step, &
             TimeIn=time_simulation, &
             NameVarIn = NameVar, &
-            CoordMinIn_D = (/radMin, cRadtoDeg*lonMin, cRadtoDeg*latMin/), &
-            CoordMaxIn_D = (/radMax, cRadtoDeg*lonMax, cRadtoDeg*latMax/), &
+            CoordMinIn_D = (/rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin/), &
+            CoordMaxIn_D = (/rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax/), &
             VarIn_VIII = PlotVar_VIII)
     end if
     
     ! Deallocate results arrays:.
-    deallocate(PlotVarLocal_VIII)
-    if(iProc==0) deallocate(PlotVar_VIII)
+    deallocate(PlotVar_VIII)
     
   end subroutine write_plot_shell
 
-  !=============================================================================
+  !============================================================================
   subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
        nTheta,nPhi,rPlot,plotvarnames,H5Index,nBlkCellsN,nBlkCellsS)
     ! CANDIDATE FOR REMOVAL.  SHELL PLOTTING TOOLS PREFERRED.
@@ -281,7 +232,6 @@ contains
     use ModGeometry, ONLY: nI,nJ,nK, Xyz_DGB, CellSize_DB 
     use ModMain,     ONLY: BlkTest
     use ModHdf5, ONLY: write_sph_var_hdf5
-    implicit none
     
     integer, parameter:: lNameVar = 10
     ! Arguments
@@ -305,8 +255,7 @@ contains
     real :: PointVar(nPlotvarMax)
 
     logical :: oktest,oktest_me
-    !---------------------------------------------------------------------------
-    
+    !--------------------------------------------------------------------------
     if(iBLK == BlkTest)then
        call set_oktest('write_plot_sph',oktest,oktest_me)
     else
