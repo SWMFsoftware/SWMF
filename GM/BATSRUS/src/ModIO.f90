@@ -96,10 +96,12 @@ Module ModIO
   ! Frequency of writing progress reports in terms of time steps
   integer :: dn_progress1=10, dn_progress2=100
 
-  character (LEN=10) :: plot_type(MaxFile), plot_type1
-  character (LEN=3)  :: plot_form(MaxFile)
-  character (LEN=3) :: log_form
-  character (LEN=10) :: TypeFile_I(MaxFile)
+  character(LEN=10) :: plot_type(MaxFile), plot_type1
+  character(LEN=3)  :: plot_form(MaxFile)
+  character(LEN=3)  :: log_form
+  character(LEN=10) :: TypeFile_I(MaxFile)
+
+  character(LEN=3)  :: TypeCoordPlot_I(MaxFile)
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,MaxFile) :: plot_range=0. 
