@@ -777,22 +777,21 @@ subroutine MH_set_parameters(TypeAction)
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
 	      call read_var('Radius',plot_range(1,ifile))
-           elseif (index(plot_string,'geo')>0)then
-              plot_area='geo'
-              call read_var('rMin',   plot_range(1,ifile))
-              call read_var('rMax',   plot_range(2,ifile))
-              call read_var('LonMin', plot_range(3,ifile))
-              call read_var('LonMax', plot_range(4,ifile))
-              call read_var('LatMin', plot_range(5,ifile))
-              call read_var('LatMax', plot_range(6,ifile))
-
-              ! Read resolution for each dimension that has a nonzero range
-              if (plot_range(1, ifile) /= plot_range(2,ifile)) &
-                   call read_var('dR',   plot_dx(1,ifile))
-              if (plot_range(3, ifile) /= plot_range(4,ifile)) &
-                   call read_var('dLon', plot_dx(2,ifile))
-              if (plot_range(5, ifile) /= plot_range(6,ifile)) &
-                   call read_var('dLat', plot_dx(3,ifile))
+           elseif (index(plot_string, 'shl')>0)then
+              plot_area = 'shl'
+              call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+              call read_var('rMin',   plot_range(1,iFile))
+              call read_var('rMax',   plot_range(2,iFile))
+              if (plot_range(1, iFile) /= plot_range(2,iFile)) &
+                   call read_var('dR',   plot_dx(1,iFile))
+              call read_var('LonMin', plot_range(3,iFile))
+              call read_var('LonMax', plot_range(4,iFile))
+              if (plot_range(3, iFile) /= plot_range(4,iFile)) &
+                   call read_var('dLon', plot_dx(2,iFile))
+              call read_var('LatMin', plot_range(5,iFile))
+              call read_var('LatMax', plot_range(6,iFile))
+              if (plot_range(5, iFile) /= plot_range(6,iFile)) &
+                   call read_var('dLat', plot_dx(3,iFile))
 
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
@@ -860,7 +859,7 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'idl') > 0)then
               plot_form(ifile)='idl'
               if (       plot_area /= 'sph' &
-                   .and. plot_area /= 'geo' &
+                   .and. plot_area /= 'shl' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &
@@ -3104,12 +3103,11 @@ contains
 
        if(DoTestMe)write(*,*)'iFile, plot_area=',iFile, plot_area
 
-       ! Don't do anything to plot_type for specific plots.
-       if(plot_area == 'lcb')CYCLE
-       if(plot_area(1:2) == 'eq') CYCLE
-
-       ! Fix plot range for sph, x=0, y=0, z=0 areas
+       ! Fix plot range for various plot areas
        select case(plot_area)
+       case('shl', 'eqb', 'eqr', 'lcb')
+          ! These plot areas read all ranges from PARAM.in
+          CYCLE PLOTFILELOOP
        case('cut')
           if(IsLogRadius) plot_range(1:2,iFile) = log(plot_range(1:2,iFile))
           if(IsGenRadius) then
@@ -3120,12 +3118,6 @@ contains
                cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile) 
           if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
                cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
-       case('geo')
-          ! Cartesian grids only:
-          if(.not. IsCartesianGrid) call CON_stop(Namesub// &
-               ' geo plot type does not support non-cartesian grids yet.')
-          ! There is nothing else to do for geo area.
-          CYCLE PLOTFILELOOP
        case('sph')
           if(IsCartesianGrid)then
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
