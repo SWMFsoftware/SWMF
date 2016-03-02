@@ -55,19 +55,21 @@ module ModGroundMagPerturb
   logical, public :: DoWriteIndices = .false.
   logical, public :: IsFirstCalc=.true., IsSecondCalc=.true.
   integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_II
-  integer, public, parameter    :: nKpMag = 24.
+  integer, public, parameter    :: nKpMag = 24, nAeMag = 24
   real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
 
   ! Private geomagnetic indices variables:
-  logical :: DoCalcKp = .false.
+  logical :: DoCalcKp = .false., DoCalcAe = .false.
   integer :: nIndexMag = 0  ! Total number of mags required by indices.
   integer :: iUnitIndices   ! File IO unit for indices file.
   real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
+  real, parameter    :: AeLat = 70.0           ! Synthetic AE geomag. latitude.
   real               :: k9 = 600.0             ! Scaling of standard K.
-  real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of index files
-  real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
-  real               :: Kp=0.0
-  integer            :: kIndex_I(nKpMag)
+  real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
+  real               :: XyzKp_DI(3, nKpMag)    ! Locations of Kp mags, SMG.
+  real               :: XyzAe_DI(3, nAeMag)    ! Locations of AE mags, SMG.
+  real               :: Kp=0.0, AeIndex_I(4)   ! Resulting indices.
+  integer            :: kIndex_I(nKpMag)       ! Local k-index.
 
   ! K-index is evaluated over a rolling time window, typically three hours.
   ! It may be desirable to reduce this window, changing the Kp index so
@@ -91,6 +93,7 @@ module ModGroundMagPerturb
   character(len=*), parameter :: NameKpVars = &
        'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
        'K_00 K_01 K_02 K_03 K_04 K_05 K_06 K_07 K_08 K_09 K_10 K_11 '
+  character(len=*), parameter :: NameAeVars = 'AL AU AE AO '
 
 contains
 
@@ -131,6 +134,7 @@ contains
     case('#GEOMAGINDICES')
        DoWriteIndices = .true. ! Activiate geoindices output file.
        DoCalcKp = .true.       ! Kp calculated (no others available.)
+       DoCalcAe = .true.       ! Ae calculated (always on with Kp).
        call read_var('nKpWindow', nKpMins)
        call read_var('DtOutput' , dtWriteIndices)
        dt_output(indexfile_) = dtWriteIndices
@@ -273,6 +277,7 @@ contains
 
     ! Set number of shared magnetometers.
     if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
+    if(DoCalcAe)  nIndexMag = nIndexMag+nAeMag
     !if(DoCalcDst) nIndexMag = nIndexMag+nDstMag !Not yet implemented..
     ! ...etc.
 
@@ -290,9 +295,22 @@ contains
        XyzKp_DI(1,i) = RadXY * cos(phi)
        XyzKp_DI(2,i) = RadXY * sin(phi)
        if(iProc==0 .and. DoTestMe) &
-            write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
+            write(*,'(a, 3(1x, e13.3))') 'Kp Coords = ', XyzKp_DI(:,i)
        LatIndex_I(i) = KpLat
        LonIndex_I(i) = phi
+    end do
+
+    ! Initialize Ae grid and arrays, similar to above.
+    XyzAe_DI(3,:) = sin(AeLat * cDegToRad) ! SMG Z for all stations.
+    RadXY         = cos(AeLat * cDegToRad) ! radial dist. from z-axis.
+    do i=1, nAeMag
+       Phi = cTwoPi * (i-1)/24.0
+       XyzAe_DI(1,i) = RadXY * cos(phi)
+       XyzAe_DI(2,i) = RadXY * sin(phi)
+       if(iProc==0 .and. DoTestMe) &
+            write(*,'(a, 3(1x, e13.3))') 'AE Coords = ', XyzAe_DI(:,i)
+       LatIndex_I(i+nKpMag) = AeLat
+       LonIndex_I(i+nKpMag) = phi
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
@@ -322,6 +340,7 @@ contains
        write(iUnitIndices, '(a)', advance='NO') &
             'it year mo dy hr mn sc msc '
        if (DoCalcKp) write(iUnitIndices, '(a)', advance='NO') NameKpVars
+       if (DoCalcAe) write(iUnitIndices, '(a)', advance='NO') NameAeVars
        write(iUnitIndices, '(a)') '' ! Close header line.
        call flush_unit(iUnitIndices)
     end if
@@ -642,6 +661,76 @@ contains
     call timing_stop(NameSub)
   end subroutine calc_kp
 
+  !===========================================================================
+  subroutine calc_ae
+
+    use ModProcMH,     ONLY: iProc, nProc, iComm
+    use CON_axes,      ONLY: transform_matrix
+    use ModPhysics,    ONLY: No2Io_V, UnitB_
+    use ModMain,       ONLY: time_simulation,TypeCoordSystem
+    use ModIeCoupling, ONLY: calc_ie_mag_perturb
+    use ModMpi
+
+    integer :: i, iError
+    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
+    real, dimension(3,nAeMag):: &
+         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
+
+    real :: dB_I(2)
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='calc_ae'
+    !------------------------------------------------------------------------
+    call timing_start(NameSub)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+       ! Obtain locations in correct (GSM) coordinates.
+    SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
+    XyzGm_DI = matmul(SmgToGm_DD, XyzAe_DI)
+
+    ! Obtain geomagnetic pertubations in SMG coordinates
+    call ground_mag_perturb(    nAeMag, XyzGm_DI, dBmag_DI)
+    call ground_mag_perturb_fac(nAeMag, XyzAe_DI, dBfac_DI)
+    call calc_ie_mag_perturb(   nAeMag, XyzAe_DI, dBHall_DI, dBPedersen_DI)
+
+    ! Add up contributions and convert to IO units (nT)
+    dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
+         *No2Io_V(UnitB_)
+
+    ! Convert from SMG components to North-East-Down components
+    do i=1, nAeMag
+
+       ! Rotation matrix from Cartesian to spherical coordinates
+       XyzSph_DD = rot_xyz_sph(XyzAe_DI(:,i))
+
+       ! Rotation matrix from Cartesian to North-East-Down components
+       ! North = -Theta
+       XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+       ! East = Phi
+       XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+       ! Down = -R
+       XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+
+       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  XyzNed_DD)
+    end do
+
+    ! MPI Reduce to head node.
+    if(nProc>1) then
+       dBmag_DI = dBsum_DI
+       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nKpMag, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+    end if
+
+    ! Now, calculate AE indices on head node only.
+    if(iProc==0) then
+       AeIndex_I(1) = minval(dBsum_DI(:,1))          !AL Index
+       AeIndex_I(2) = maxval(dBsum_DI(:,1))          !AU Index
+       AeIndex_I(3) = AeIndex_I(2)-AeIndex_I(1)      !AE Index
+       AeIndex_I(4) = (AeIndex_I(2)+AeIndex_I(1))/2. !AO Index
+    end if
+
+    call timing_stop(NameSub)
+  end subroutine calc_ae
   !================================================================
   subroutine check_mag_input_file
     ! Set number of magnetometers listed in the input file: 
@@ -883,6 +972,7 @@ contains
 
     ! Calculate indices on all nodes.
     if(DoCalcKp) call calc_kp
+    if(DoCalcAe) call calc_ae
     !if(DoCalcDst) call calc_dst ...etc...
 
     if(iProc > 0) RETURN ! Write only on head node.
@@ -894,14 +984,12 @@ contains
 
     !if(DoCalcDst) write(..., ADVANCE='NO') dst
 
-    if(DoCalcKp)then
-       ! Write out KP with newline
-       ! Using ADVANE='NO' resulted in occasional newlines by pgf90
-       write(iUnitIndices, '(f5.2,100i2)') Kp, kIndex_I
-    else
-       ! Add newline
-       write(iUnitIndices, *)
-    end if
+    if(DoCalcKp) &
+         write(iUnitIndices, '(f5.2,100i2)', ADVANCE='NO') Kp, kIndex_I
+    if(DoCalcAe) &
+         write(iUnitIndices, '(4(1x,f7.2))', ADVANCE='NO') AeIndex_I
+    ! Add newline
+    write(iUnitIndices, *)
  
     call flush_unit(iUnitIndices)
 
