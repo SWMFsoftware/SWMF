@@ -62,18 +62,27 @@ namespace TRAJECTORY_FILTER {
     cVirtisM Virtis;
 
     //the trajectory acceptance corridor
-    double x0PixelCorridor=80;
+    struct cCorridor {
+      double x0,y0;
+      double x1,y1;
+    };
+
+/*    double x0PixelCorridor=80;
     double y0PixelCorridor=170.0;
 
     double x1PixelCorridor=90;
-    double y1PixelCorridor=160.0;
+    double y1PixelCorridor=160.0;*/
+
+
+    cCorridor IncludeCorridor={80,170.0,90,160.0};
+    cCorridor ExcludeCorridor={180,94,190,83};
+
 
     double dyPixel=20.0;
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
-    lCorridor[0]=x1PixelCorridor-x0PixelCorridor;
-    lCorridor[1]=y1PixelCorridor-y0PixelCorridor;
+
 
     ProcessTrajectoriesInitFlag=true;
 
@@ -83,7 +92,10 @@ namespace TRAJECTORY_FILTER {
     SelectedFaceTable=new bool [amps.SurfaceData.nCells];
     for (i=0;i<amps.SurfaceData.nCells;i++) SelectedFaceTable[i]=false;
 
-    //scan through all trajectories
+    //add surface faces into the allowed list
+    lCorridor[0]=IncludeCorridor.x1-IncludeCorridor.x0;
+    lCorridor[1]=IncludeCorridor.y1-IncludeCorridor.y0;
+
     for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
       for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
         for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
@@ -101,17 +113,49 @@ namespace TRAJECTORY_FILTER {
         jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
 
         //Trajectory is accepted is it has a point that falls into the corridor
-        double r=(iPixel-x0PixelCorridor)/lCorridor[0]*lCorridor[1]+y0PixelCorridor;
+        double r=(iPixel-IncludeCorridor.x0)/lCorridor[0]*lCorridor[1]+IncludeCorridor.y0;
 
-        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=x0PixelCorridor)  && (iPixel<=x1PixelCorridor)) {
+        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=IncludeCorridor.x0)  && (iPixel<=IncludeCorridor.x1)) {
           //trajectory falls within the corridor
           //add the face into the list of the faces from which the dust ejection is allowed
           SelectedTrajectoriesTable[nTrajectory]=true;
           SelectedFaceTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=true;
         }
       }
-
     }
+
+    //exclude faces that produses jets seen on the reverse side
+    lCorridor[0]=ExcludeCorridor.x1-ExcludeCorridor.x0;
+    lCorridor[1]=ExcludeCorridor.y1-ExcludeCorridor.y0;
+
+    for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+      for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
+        for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
+
+        //determine projection of 'x' as would be seen by VIRTIS-M
+        for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
+          c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
+          c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
+          l+=pow(x[i]-Virtis.xRosetta[i],2);
+        }
+
+        l=sqrt(l);
+
+        iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+        jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+
+        //Trajectory is accepted is it has a point that falls into the corridor
+        double r=(iPixel-ExcludeCorridor.x0)/lCorridor[0]*lCorridor[1]+ExcludeCorridor.y0;
+
+        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=ExcludeCorridor.x0)  && (iPixel<=ExcludeCorridor.x1)) {
+          //trajectory falls within the corridor
+          //add the face into the list of the faces from which the dust ejection is allowed
+          SelectedTrajectoriesTable[nTrajectory]=false;
+          SelectedFaceTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=false;
+        }
+      }
+    }
+
   }
 
   //output selected trajectories
