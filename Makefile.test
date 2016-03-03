@@ -1427,14 +1427,6 @@ test12:
 	$(MAKE) test12_iso
 	$(MAKE) test12_3d
 
-# Run on 4 procs with mpirun or max number of procs with mpiexec
-test12_run1:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec ./SWMF.exe | tee runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe | tee runlog; \
-	fi;
-
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
 
 test12_aniso:
@@ -1461,24 +1453,24 @@ test12_aniso_rundir:
 	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
 
 test12_aniso_run:
-	$(MAKE) test12_run1
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/4step
 	cp Param/PARAM.in.test.GMPC.start.2step.aniso ${TESTDIR}/PARAM.in
-	$(MAKE) test12_run1
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2step
 	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
 	cp Param/PARAM.in.test.GMPC.restart.2step.aniso ${TESTDIR}/PARAM.in
-	$(MAKE) test12_run1
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_check:
 	gunzip -c output/test12/z=0_var.out.ref.aniso.gz \
 	        > ${TESTDIR}/RESULTS/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2.0e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
 		${TESTDIR}/RESULTS/z_n4.ref \
 		> test12_gmpc_aniso.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2.0e-9 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
 		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out\
 		${TESTDIR}/RESULTS/z_n4.ref \
 		>> test12_gmpc_aniso.diff)
@@ -1510,7 +1502,7 @@ test12_3d_rundir:
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_3d_run:
-	$(MAKE) test12_run1
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_3d_check:
@@ -1528,7 +1520,7 @@ test12_3d_check:
 		> test12_gmpc_3d.diff)
 	gunzip -c output/test12/z=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/z_n4.ref \
 		> test12_gmpc_3d.diff)
@@ -1560,13 +1552,13 @@ test12_iso_rundir:
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_iso_run:
-	$(MAKE) test12_run1
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_iso_check:
 	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/GM/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 		${TESTDIR}/RESULTS/GM/z_n4.ref \
 		> test12_gmpc_iso.diff)
