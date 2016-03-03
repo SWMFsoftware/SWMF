@@ -1571,7 +1571,12 @@ Default value is 0, i.e. the true HGI system is used.
 		<option name="spherical"		/>
 		<option name="spherical_lnr"		/>
 		<option name="spherical_genr"		/>
+		<option name="roundcube"		/>
 	</parameter>
+	<if expr="$TypeGeometry=~/roundcube/">
+	    <parameter name="rRound0" type="real" min="0"/>
+	    <parameter name="rRound1" type="real" min="0"/>
+	</if>
 	<if expr="$TypeGeometry =~ /_genr/">
 	    <parameter name="NameGridFile" type="string"/>
 	    <rule expr="-f $NameGridFile">
@@ -1583,13 +1588,25 @@ Default value is 0, i.e. the true HGI system is used.
 spherical_genr			TypeGeometry
 Param/CORONA/grid_TR.dat	NameGridFile (read if TypeGeometry is _genr)
 		
+#GRIDGEOMETRY
+roundcube			TypeGeometry
+200.0				rRound0  ! only read for roundcube geometry
+320.0				rRound1  ! only read for roundcube geometry
+
+Note: The #LIMITRADIUS command can be used to set the radial extent of the
+cylindrical, spherical and roundcube grids. The #GRIDGEOMETRYLIMIT
+command provides even more control.
+
 This command determines the geometry of the grid. Possible values are
-Cartesian, rotated Cartesian, RZ geometry, cylindrical and spherical.
+Cartesian, rotated Cartesian, RZ geometry, cylindrical, spherical and
+roundcube.
 The cylindrical and spherical grids can have logarithmic
 (cylindrical_lnr and spherical_lnr) or arbitrarily stretched
 (spherical_genr, cylindrical_genr) radial coordinates.
 For the latter case the radial stretching is read from the 
-NameGridFile file.
+NameGridFile file. The roundcube geometry is a radially stretched 
+Cartesian grid. The stretching is controlled by the rRound0 
+and rRound1 parameters.
 
 The "RZ" geometry is a 2D grid with axial symmetry.
 In our particular implementation the "X" axis is the axis of symmetry, 
@@ -1598,6 +1615,25 @@ and the "Y" axis is used for the radial direction.
 The spherical coordinates are ordered as r, longitude, latitude. The longitude
 is between 0 and 360 degrees, the latitude is between -90 and 90 degrees. The
 cylindrical coordinates are r, phi, z with phi between 0 and 360 degrees. 
+
+The roundcube grid can be used to make the inner or outer boundary 
+spherical without a singularity. It works in 2D and 3D. The rRound0
+parameter indicates the distance where no stretching is applied, 
+so the grid is Cartesian. The rRound1 parameter indicates the distance
+where full stretching is applied, so the grid becomes round and the grid
+cells will lie on a circle in 2D, or a spherical surface in 3D. 
+When rRound0 is less than rRound1, the grid is Cartesian up to rRound0.
+Outside rRound0 the grid is stretched outward so that it becomes perfectly 
+round at rRound1 and remains round at the outer boundary. 
+For this case the transformation does not affect the
+main diagonals and the maximum stretching is applied along the main axes. 
+If rRound1 is larger than rRound1 then the grid is 
+contracted inwards. At the origin there is no distortion. Moving outward
+the distortion is increased so that at rRound1 the grid becomes round.
+From rRound1 to rRound0 the grid becomes Cartesian again. This can 
+be useful to create a sphere shaped inner boundary without any 
+singularities. For this case the grid is not contracted along the main axes
+and it is maximally contracted along the diagonals.
 
 The rotated Cartesian geometry can be used for debugging the generalized
 coordinate code. It allows setting up a Cartesian test on a rotated
@@ -1622,7 +1658,12 @@ The default is Cartesian geometry.
 		<option name="spherical"		/>
 		<option name="spherical_lnr"		/>
 		<option name="spherical_genr"		/>
+		<option name="roundcube"		/>
 	</parameter>
+	<if expr="$TypeGeometry=~/roundcube/">
+	    <parameter name="rRound0" type="real" min="0"/>
+	    <parameter name="rRound1" type="real" min="0"/>
+	</if>
 	<if expr="$TypeGeometry =~ /_genr/">
 	    <parameter name="NameGridFile" type="string"/>
 	    <rule expr="-f $NameGridFile">
@@ -1662,26 +1703,22 @@ Default is Cartesian grid.
  10.0			rMin
 100.0			rMax
 
-Note: 
-for the #LIMITRADIUS command the linear radii can and should be given even
-if TypeGeometry is 'spherical_lnr' with a logarithmic radius 
-(see command #GRIDGEOMETRY). 
+Note: the #GRIDGEOMETRYLIMIT command provides even more control.
 
-This command allows setting the mimimum and maximum values for the 
-first generalized coordinate (usually the radius). Setting rMin to
-a positive value excludes the origin of a spherical grid, 
-or the axis of the cylindrical grid. 
+This command allows setting the mimimum and maximum radial extent of 
+the grid. Setting rMin to a positive value excludes the origin of 
+a spherical grid, or the axis of the cylindrical grid. 
 
 The rMax parameter can be used to choose a spherical or cylinrical domain 
 instead of the brick defined by the #GRID. To achieve this, rMax has to be
 set to a radius that fits inside the brick defined by #GRID.
 
 By default the inner radius is set to the radius of the inner body 
-(if it is present, see the #BODY command) and the outer radius is set 
+if it is present (see the #BODY command) and the outer radius is set 
 to the largest radial distance of the eight corners of the domain defined 
 by the #GRID command. If there is no inner body, the default inner radius
-is set to 0.0 for spherical and cylindrical grids, 
-and to 1.0 for logarithmic spherical grid.
+is set to 0.0 for regular spherical and cylindrical grids, 
+and to 1.0 for logarithmic and stretched radius grids.
 </command>
 
 <command name="UNIFORMAXIS" if="$_IsFirstSession">
