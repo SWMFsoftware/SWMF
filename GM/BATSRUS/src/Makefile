@@ -65,6 +65,7 @@ OBJECTS = \
 	ModPartSteady.o \
 	ModPIC.o \
 	ModPhysics.o \
+	ModPlotShell.o \
 	ModPointImplicit.o \
 	ModProcMH.o \
 	ModProject.o \
@@ -113,7 +114,6 @@ OBJECTS = \
 	write_plot_idl.o \
 	write_plot_tec.o \
 	write_plot_los.o \
-	write_plot_sph.o \
 	write_plot_particle.o \
 	write_plot_radiowave.o \
 	write_progress.o
