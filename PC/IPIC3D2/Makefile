@@ -72,9 +72,9 @@ test_ipic3d_rundir:
 
 test_ipic3d_run:
 	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 4 ${BINDIR}/IPIC3D.exe IPIC.in > runlog; \
+		cd ${TESTDIR}; mpiexec -np 4 ./IPIC3D.exe IPIC.in > runlog; \
 	else \
-		cd ${TESTDIR}; mpirun -np 4 ${BINDIR}/IPIC3D.exe IPIC.in > runlog; \
+		cd ${TESTDIR}; mpirun -np 4 ./IPIC3D.exe IPIC.in > runlog; \
 	fi;
 
 test_ipic3d_check:
