@@ -20,7 +20,7 @@ $MaxImplBlock == 1
 	${COMPILE.f90}  ${Cflag0} ModPartImplicit.f90
 
 #Special rule to compile HDF5 code
-$Hdf5 eq "yes" and $Compiler ne "crayftn"
+$Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 	h5pfc ${Cflag2} ModHdf5.f90
 
 # Field line thread module works with 0 optimization only
