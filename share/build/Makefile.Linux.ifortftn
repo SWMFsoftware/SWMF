@@ -11,8 +11,8 @@ FORTRAN_COMPILER_NAME=ifortftn
 #	Intel Fortran (ifort) Compiler with FTN for linking
 #
 
-COMPILE.f77     = ${CUSTOMPATH_F}ifort
-COMPILE.f90     = ${CUSTOMPATH_F}ifort
+COMPILE.f77     = ${CUSTOMPATH_F}ftn
+COMPILE.f90     = ${CUSTOMPATH_F}ftn
 LINK.f90	= ${CUSTOMPATH_MPI}ftn
 
 # To compile main C code with Fortran libraries
