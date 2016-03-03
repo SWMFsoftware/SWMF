@@ -1572,7 +1572,7 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('NameGridFile',NameGridFile)
            call read_gen_radial_grid(NameGridFile)
         end if
-        if(TypeGeometry == 'round') then
+        if(TypeGeometry == 'roundcube') then
            call read_var('rRound0',rRound0)
            call read_var('rRound1',rRound1)
         end if        
@@ -2956,7 +2956,7 @@ contains
           !            R,   Phi, Z
           XyzMin_D = (/0.0, 0.0, z1/) 
           XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
-       case('round', 'roundcube')
+       case('roundcube')
           if(nDim==2) then
              XyzMax_D(1:2) = &
                   min(abs(x1), abs(x2), abs(y1), abs(y2))/sqrt(2.0)
@@ -2976,7 +2976,7 @@ contains
        if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
           XyzMin_D(1) = RadiusMin
           XyzMax_D(1) = RadiusMax
-          if(TypeGeometry(1:5) == 'round' .and. rRound1 > rRound0) &
+          if(TypeGeometry == 'roundcube' .and. rRound1 > rRound0) &
                XyzMax_D = RadiusMax/sqrt(real(nDim))
        else
           if(Body1 .and. rBody > 0.0)then
