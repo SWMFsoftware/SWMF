@@ -645,50 +645,49 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'
+    if(DoTestMe) write(*,*)'Testing roundcube with rRound0=200 rRound1=320'
     rRound0 = 200.0
     rRound1 = 320.0
 
-    if (nDim == 3) then ! points along main axes with L1 = rRound1 are most distorted
-       Xyz_D  = (/554.2562584, 0., 0./) !Xyz = sqrt(3)*Coord
-       Good_D = (/320., 0., 0./)
-    elseif (nDim ==2) then
-       Xyz_D  = (/452.5483399,0., 0./) !Xyz = sqrt(2)*Coord       
-    end if
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
+
+    ! points along main axes with L1 = rRound1 are most distorted
     Good_D = (/320., 0., 0./)
+    Xyz_D  = sqrt(real(nDim))*Good_D
 
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if (nDim == 3) then ! points along main diagonals are not distorted                                                   
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along diagonal'
+    if (nDim == 3) then 
        Xyz_D  = (/300., 300., 300./)
-       Good_D = (/300., 300., 300./)
     elseif (nDim ==2) then
        Xyz_D  = (/300.,300., 0./)
-       Good_D = (/300.,300.,0./)
     end if
+    Good_D = Xyz_D
 
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along diagonal'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for arbitrary point'
     if (nDim == 3) then                                               
        Xyz_D  = (/397.1825374147, 264.7883582764, 132.394179138/)
        Good_D = (/300., 200., 100./)
@@ -702,34 +701,33 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for arbitrary point'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-
-
-    write(*,*)'Testing xyz_to_coord for roundcube'
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube inside rRound0'
     Xyz_D  = (/100., 90., 0./)    ! Inside rRound0, points are not distorted
-    Good_D = (/100., 90., 0./)
+    Good_D = Xyz_D
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube inside rRound0'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
+    if(DoTestMe) write(*,*)'Testing roundcube with rRound0=1, rRound1=0.6'
     rRound0 = 1.0
     rRound1 = 0.6
 
-    write(*,*)'Testing xyz_to_coord for roundcube'
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'
     if (nDim==2) then 
        Xyz_D  = (/0.0964809, 0.1929618, 0./)
        Good_D = (/0.1,0.2,0./)
@@ -750,7 +748,7 @@ contains
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    write(*,*)'Testing xyz_to_coord for roundcube'    
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'    
     if (nDim==2) then
        Xyz_D  = (/0.5736097, 0.4916654, 0./)
        Good_D = (/0.7, 0.6, 0./)
@@ -770,27 +768,26 @@ contains
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
-     write(*,*)'Testing xyz_to_coord for roundcube'
-    if (nDim==2) then !points along main axes are not distorted
+
+    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
+    if (nDim==2) then 
        Xyz_D  = (/0.7, 0., 0./) 
-       Good_D = (/0.7, 0., 0./)
     else if (nDim==3) then
        Xyz_D  = (/0.3, 0., 0./)
-       Good_D = (/0.3, 0., 0./)
     endif
+    Good_D = Xyz_D
 
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(abs(Coord_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
-
 
     if(nDim < 3) RETURN
 
