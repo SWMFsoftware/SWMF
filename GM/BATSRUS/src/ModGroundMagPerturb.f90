@@ -235,8 +235,9 @@ contains
     ! Add IndexMag info to share to IE:
     if(DoCalcKp)then
        iMag = nMagnetometer+nGridMag
-       PosMagnetometer_II(1, iMag+1:iMag+nKpMag) = KpLat
-       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex_I*cRadToDeg
+       PosMagnetometer_II(1, iMag+1       :iMag+nKpMag)        = KpLat
+       PosMagnetometer_II(1, iMag+nKpMag+1:iMag+nKpMag+nAeMag) = AeLat
+       PosMagnetometer_II(2, iMag+1:iMag+nKpMag+nAeMag) = LonIndex_I*cRadToDeg
        MagName_I(iMag+1:iMag+nKpMag) = 'KP_'
     end if
 
