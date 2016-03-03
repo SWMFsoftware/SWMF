@@ -518,7 +518,9 @@ test_lookup_table:
 OBJ_UTILITIES = \
 	test_utilities.o \
 	../src/ModIoUnit.o \
+	../src/ModKind.o \
 	../src/ModMpi.o \
+	../src/ModMpiOrig.o \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtility.o \
 	../src/ModUtility_c.o
