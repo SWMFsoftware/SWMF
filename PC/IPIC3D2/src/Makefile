@@ -69,11 +69,11 @@ LIB:    DEPEND
 ${MY_LIB}: ${OBJECTS} 
 	${AR} ${MY_LIB} ${OBJECTS}
 
-
 IPIC3D:
 	$(MAKE) LIB
 	$(MAKE) ${OBJECTS_EXE}
-	h5pcc -o ${EXE} ${MY_LIB} ${OBJECTS_EXE} ${CPPLIB} 
+	${COMPILE.mpicxx} -o ${EXE} ${MY_LIB} ${OBJECTS_EXE} \
+		-L../libIPIC3D/ -lIPIC3D ${CPPLIB} 
 	@echo ' '
 	@echo Program IPIC3D has been brought up to date.
 	@echo ' '       
