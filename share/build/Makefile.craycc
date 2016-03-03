@@ -1,5 +1,8 @@
 # C language related part of Makefile.conf: Makefile.craycc
-C_COMPILER_NAME=CC
+C_COMPILER_NAME=craycc
+
+# On Bluewaters all C compilers are named cc and CC (for C++).
+# The Cray C compiller can be selected with the Cray programming environment
 
 COMPILE.c     = cc
 COMPILE.mpicc = CC
