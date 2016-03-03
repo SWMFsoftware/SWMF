@@ -225,7 +225,21 @@ int main(int argc,char **argv) {
     break;
 
   case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
-    PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted-reduced.plt");
+    //the same source file are used to test 1) extracting of the data into AMPS' mesh, and 2) saving and rading of the
+    //binary data file
+
+    //test_tecplot-reader is used to extract data from a TECPLOT data file;
+    //test-binary-load is executed in two passes: 1. data is extracted from a TECPLOT file and saved in a binary format, and 2.
+    //AMPS started again and reads created binary file
+
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("BINARY-TEST")==true)  {
+       PIC::CPLR::DATAFILE::LoadBinaryFile("BINARY-TEST");
+    }
+    else {
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted-reduced.plt");
+      PIC::CPLR::DATAFILE::SaveBinaryFile("BINARY-TEST");
+    }
+
     sprintf(TestFileName,"%s/test_tecplot-reader.dat",PIC::OutputDataFileDirectory);
     break;
 
