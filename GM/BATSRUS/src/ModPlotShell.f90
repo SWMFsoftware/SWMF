@@ -182,6 +182,8 @@ contains
     logical :: DoTest,DoTestMe
     character(len=*), parameter :: NameSub='write_plot_shell'
     !--------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     ! This subroutine does not support HDF output.
     if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
