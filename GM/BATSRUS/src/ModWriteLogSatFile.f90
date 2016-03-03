@@ -283,7 +283,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModSatelliteFile, ONLY: get_satellite_ray
   use ModSatelliteFile, ONLY: XyzSat_DI
   use ModIO, ONLY: write_myname, lNameLogVar
-  use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, &
+  use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
        iRho, iP, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
 
   implicit none
