@@ -113,8 +113,19 @@ Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid
 Run=
 >>>@echo "test_binary_reader_run..." >> test_binary-reader.diff
 >>>cd ${TESTbinary-readerDIR}; ${MPIRUN} ./amps
+>>>rm ${TESTbinary-readerDIR}/PT/plots/test_tecplot-reader.dat
 >>>cd ${TESTbinary-readerDIR}; ${MPIRUN} ./amps
 >>>@echo "test_binary_reader_run... done" >> test_binary-reader.diff
+
+
+
+
+Check=
+>>>@echo "test_binary_reader_check..." >> test_binary_reader.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary_reader.diff 
+
+>>>@ls -l test_binary_reader.diff 
+
 <#
 -------------------------------------------------------------------------------
 #>
