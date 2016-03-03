@@ -2025,6 +2025,7 @@ contains
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeOut = TeSi, NatomicOut=NatomicSi)
+          iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1) - 1
           if(UseTableEosNLTE_I(iMaterial) .and. &
                .not.(TeSi<TeSi_NLTE .and. NatomicSi>NiSi_NLTE))then
              PlotVar_G(i,j,k) = 1.0  ! NLTE EOS
