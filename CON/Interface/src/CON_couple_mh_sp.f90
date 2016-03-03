@@ -125,7 +125,7 @@ contains
     ! Extract and exchange initial data
     !/
     call exchange_lines(iInterfaceOrigin, SC_, SC_GridDescriptor)
-!    call exchange_lines(iInterfaceEnd,    IH_, IH_GridDescriptor)
+    call exchange_lines(iInterfaceEnd,    IH_, IH_GridDescriptor)
 
   contains
     !================================================================    
@@ -162,8 +162,8 @@ contains
       integer:: iProcTo_I(1), iProcFrom_I(1)
       integer:: nParticleThisProc
       integer, allocatable:: nParticleRecv_I(:), nParticleSend_I(:)
-      integer, allocatable:: iStatus_II(:,:), iRequest_I(:)
-      integer:: nRequest
+      integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
+      integer:: nRequestS, nRequestR
       integer:: iTag = 0
       real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
       ! loop variables
@@ -172,7 +172,8 @@ contains
       ! allocate arrays for non-blocking communcations
       allocate(nParticleRecv_I(0:n_proc()-1))
       allocate(nParticleSend_I(0:n_proc()-1))
-      allocate(iRequest_I(2*n_proc()))
+      allocate(iRequestS_I(n_proc()))
+      allocate(iRequestR_I(n_proc()))
       allocate(iStatus_II(MPI_STATUS_SIZE, n_proc()))
       !\
       ! SP requests field lines from MH specifying:
@@ -197,7 +198,8 @@ contains
       !\
       ! Extract field lines at MH and send to SP
       !/
-      nRequest = 0
+      nRequestS = 0
+      nRequestR = 0
       if(is_proc(iMH))then
          ! get request locations
          call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
@@ -241,9 +243,9 @@ contains
                  MASK = &
                  SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == iProcTo_I(1))
             ! send number of particles to be transfered
-            nRequest = nRequest + 1
+            nRequestS = nRequestS + 1
             call MPI_Isend(nParticleSend_I(SP_iProcTo), 1, MPI_INTEGER, &
-                 iProcTo_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+                 iProcTo_I(1), iTag, i_comm(), iRequestS_I(nRequestS), iError)
          end do
       end if
 
@@ -257,17 +259,19 @@ contains
                  i_group(iMH), 1, (/MH_iProcFrom/), &
                  i_group(),            iProcFrom_I, iError)
             ! recv # of particles to be received
-            nRequest = nRequest + 1
+            nRequestR = nRequestR + 1
             call MPI_Irecv(nParticleRecv_I(MH_iProcFrom), 1, MPI_INTEGER,&
-                 iProcFrom_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+                 iProcFrom_I(1), iTag, i_comm(), iRequestR_I(nRequestR),iError)
          end do
       end if
       ! finalize transfer
-      call MPI_waitall(nRequest, iRequest_I, iStatus_II, iError)
+      call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
+      call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
       !\
       ! send the actual data
       !/
-      nRequest = 0
+      nRequestS = 0
+      nRequestR = 0
       if(is_proc(iMH))then
          do SP_iProcTo = 0, n_proc(SP_)-1
             if(nParticleSend_I(SP_iProcTo) == 0) CYCLE
@@ -286,10 +290,10 @@ contains
                iBuff = iBuff + nVar
             end do
             ! transfer data
-            nRequest = nRequest + 1
+            nRequestS = nRequestS + 1
             call MPI_Isend(BuffSend_I, nVar * nParticleSend_I(SP_iProcTo), &
                  MPI_REAL, &
-                 iProcTo_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+                 iProcTo_I(1), iTag, i_comm(), iRequestS_I(nRequestS), iError)
             deallocate(BuffSend_I)
          end do
          deallocate(nParticleAtLine_I)
@@ -308,17 +312,18 @@ contains
                  i_group(iMH), 1, (/MH_iProcFrom/), &
                  i_group(),            iProcFrom_I, iError)
             ! recv data
-            nRequest = nRequest + 1
+            nRequestR = nRequestR + 1
             call MPI_Irecv(BuffRecv_I(iBuff),&
                  nVar*nParticleRecv_I(MH_iProcFrom), &
                  MPI_REAL,&
-                 iProcFrom_I(1), iTag, i_comm(), iRequest_I(nRequest), iError)
+                 iProcFrom_I(1), iTag, i_comm(), iRequestR_I(nRequestR),iError)
             iBuff = iBuff + nVar*nParticleRecv_I(MH_iProcFrom)
             
          end do
       end if
       ! finalize transfer
-      call MPI_waitall(nRequest, iRequest_I, iStatus_II, iError)
+      call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
+      call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
      !\
      ! put data
      !/
@@ -332,9 +337,10 @@ contains
       end if
 
       ! deallocate arrays for non-blocking communications
-      deallocate(nParticleRecv_I, stat=iError)
+      deallocate(nParticleRecv_I)
       deallocate(nParticleSend_I)
-      deallocate(iRequest_I)
+      deallocate(iRequestS_I)
+      deallocate(iRequestR_I)
       deallocate(iStatus_II)
     end subroutine exchange_lines
 
