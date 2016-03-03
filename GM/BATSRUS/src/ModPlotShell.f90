@@ -16,7 +16,7 @@ module ModPlotShell
   public:: write_plot_shell
   
   ! Size of current plot:
-  integer :: nRad, nLon, nLat
+  integer :: nR, nLon, nLat
 
   ! Ranges for current plot:
   real :: dR, dLat, dLon
@@ -47,8 +47,7 @@ contains
     use ModGeometry,    ONLY: rMin_BLK
     use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: &
-         CoordMin_DB, nIjk_D, nI, nJ, nK, CellSize_DB, xyz_to_coord
+    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
@@ -75,6 +74,7 @@ contains
     
     ! Allocate results array and set up all the spherical shell
     if(.not.allocated(PlotVar_VIII)) then
+
        ! Get plot area info from ModIO arrays:
        dR     = abs(plot_dx(1, iFile))
        dLon   = plot_dx(2, iFile) * cDegtoRad
@@ -87,16 +87,18 @@ contains
        LatMax = plot_range(6, iFile) * cDegtoRad
     
        ! Set number of points:
-       nRad = nint((rMax - rMin)/dR)       + 1
+       nR   = nint((rMax - rMin)/dR)       + 1
        nLon = nint((LonMax - LonMin)/dLon) + 1
        nLat = nint((LatMax - LatMin)/dLat) + 1
     
        ! Ensure dR, dLon and dLat are compatible with the ranges
-       dR   = (rMax - rMin)/max(1, nRad - 1)
+       dR   = (rMax - rMin)/max(1, nR - 1)
        dLon = (LonMax - LonMin)/max(1, nLon - 1)
        dLat = (LatMax - LatMin)/max(1, nLat - 1)
 
-       allocate(PlotVar_VIII(nPlotVar, nRad, nLon, nLat))
+       ! The 0 element is to count the number of blocks that
+       ! contribute to a plot variable.
+       allocate(PlotVar_VIII(0:nPlotVar,nR,nLon,nLat))
        PlotVar_VIII = 0.0
 
        ! Get coordinate transformation matrix:
@@ -111,12 +113,12 @@ contains
        write(*,*) NameSub//' dR, dLon, dLat =      ', dR, dLon, dLat
        write(*,*) NameSub//' r, Lon, Lat range = ',  &
             rMin, rMax, LonMin,LonMax,LatMin,LatMax
-       write(*,*) NameSub,' nRad, nLon, nLat, dR, dLon, dLat = ', &
-            nRad, nLon, nLat, dR, dLon, dLat
+       write(*,*) NameSub,' nR, nLon, nLat, dR, dLon, dLat = ', &
+            nR, nLon, nLat, dR, dLon, dLat
     end if
 
     ! Loop through shell points and interpolate PlotVar
-    do i = 1, nRad
+    do i = 1, nR
        r = rMin + (i-1)*dR
 
        if(r < rMin_BLK(iBlock)) CYCLE
@@ -133,8 +135,6 @@ contains
              ! Convert from plot coordinates to BATSRUS grid:
              XyzGm_D = matmul(PlotToGm_DD, XyzPlot_D)
 
-             write(*,*)'i,j,k,r,Lon,Lat,Xyz=',i,j,k,r,Lon,Lat,XyzGm_D
-
              ! Convert to generalized coordinates
              call xyz_to_coord(XyzGm_D, Coord_D)
 
@@ -142,13 +142,12 @@ contains
              CoordNorm_D = &
                   (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
 
-             write(*,*)'Coord,CoordNorm=', Coord_D, CoordNorm_D
-
              ! Check if point is inside block
-             if(any(CoordNorm_D <= 0.5)) CYCLE
+             if(any(CoordNorm_D < 0.5)) CYCLE
              if(any(CoordNorm_D > nIjk_D + 0.5)) CYCLE
 
              ! compute the interpolated values at the current location
+             PlotVar_VIII(0,i,j,k) = 1.0
              do iVar=1, nPlotVar
                 ! Interpolate up to ghost cells.
                 PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
@@ -162,8 +161,8 @@ contains
   end subroutine set_plot_shell
 
   !============================================================================
-  subroutine write_plot_shell(iFileIn, nPlotVarIn, NameVarIn_V, &
-       NameUnitIn, NameFileIn)
+  subroutine write_plot_shell(iFile, nPlotVar, NameVar_V, &
+       NameUnit, NameFile)
 
     ! Collect results from all blocks and write to single output file.
     use ModMpi
@@ -171,30 +170,28 @@ contains
     use ModProcMH,   ONLY: iProc, nProc, iComm
     use ModPlotFile, ONLY: save_plot_file
 
-    integer,          intent(in) :: iFileIn, nPlotvarIn
-    character(len=*), intent(in) :: NameFileIn, NameUnitIn, &
-         NameVarIn_V(nPlotVarIn)
+    integer,          intent(in) :: iFile, nPlotvar
+    character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
 
     ! Array of values written to file:
     real, allocatable :: PlotVarLocal_VIII(:,:,:,:)
 
-    integer :: iVar, iError
-    character(len=200) :: NameVar
+    integer :: iVar, iR, iLon, iLat, iError
+    character(len=500) :: NameVar
 
     logical :: DoTest,DoTestMe
     character(len=*), parameter :: NameSub='write_plot_shell'
     !--------------------------------------------------------------------------
     ! This subroutine does not support HDF output.
-    if(plot_form(iFileIn) == 'hdf') call CON_stop(NameSub// &
+    if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
     
     ! Collect results to head node
     if(nProc > 1)then
-       allocate(PlotVarLocal_VIII(nPlotVarIn, nRad, nLon, nLat))
+       allocate(PlotVarLocal_VIII(0:nPlotVar,nR,nLon,nLat))
        PlotVarLocal_VIII = PlotVar_VIII
        call MPI_reduce(PlotVarLocal_VIII, PlotVar_VIII, &
-            nPlotVarIn * nRad * nLon * nLat,            &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
+            size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
        deallocate(PlotVarLocal_VIII)
     end if
     
@@ -202,20 +199,27 @@ contains
     if(iProc==0) then
        ! Build a single-line list of variable names.
        NameVar = 'r lon lat'
-       do iVar=1, nPlotVarIn
-          NameVar = trim(NameVar)  // ' ' // trim(NameVarIn_V(iVar))
+       do iVar=1, nPlotVar
+          NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
 
+       do iR = 1, nR; do iLon = 1, nLon; do iLat = 1, nLat
+          if(PlotVar_VIII(0,iR,iLon,iLat) <= 1.0) CYCLE
+          PlotVar_VIII(1:nPlotVar,iR,iLon,iLat) = &
+               PlotVar_VIII(1:nPlotVar,iR,iLon,iLat) &
+               / PlotVar_VIII(0,iR,iLon,iLat)
+       end do; end do; end do
+
        ! Call save_plot_file to write data to disk.
-       call save_plot_file(NameFileIn, &
-            TypeFileIn=TypeFile_I(iFileIn), &
-            StringHeaderIn=NameUnitIn, &
+       call save_plot_file(NameFile, &
+            TypeFileIn=TypeFile_I(iFile), &
+            StringHeaderIn=NameUnit, &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
             NameVarIn = NameVar, &
             CoordMinIn_D = (/rMin, cRadtoDeg*LonMin, cRadtoDeg*LatMin/), &
             CoordMaxIn_D = (/rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax/), &
-            VarIn_VIII = PlotVar_VIII)
+            VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
     
     ! Deallocate results arrays:.
