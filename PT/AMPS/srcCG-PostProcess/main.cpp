@@ -44,6 +44,110 @@ struct cColumnIntegrationSet {
   void (*PostProcessColumnIntegralVector)(double*);
 };
 
+//================================================
+//filter trajectories that are not consistent with the observations
+//and determine the set of the surface faces the dust injection from which will be taken into account
+namespace TRAJECTORY_FILTER {
+  bool ProcessTrajectoriesInitFlag=false;
+  bool *SelectedFaceTable=NULL;
+  bool *SelectedTrajectoriesTable=NULL;
+
+  double GetFaceCorrectionFactor(int nface) {
+    return (SelectedFaceTable[nface]==true) ? 1.0 : 0.0;
+  }
+
+  void ProcessTrajectories(SpiceDouble et) {
+    int nTrajectory,n,i,iPixel,jPixel;
+    double x[3],c0,c1,l,lCorridor[2];
+    cVirtisM Virtis;
+
+    //the trajectory acceptance corridor
+    double x0PixelCorridor=80;
+    double y0PixelCorridor=170.0;
+
+    double x1PixelCorridor=90;
+    double y1PixelCorridor=160.0;
+
+    double dyPixel=20.0;
+
+    //set orientation of the axis of VIRTIS
+    Virtis.SetFrameAxis(et);
+    lCorridor[0]=x1PixelCorridor-x0PixelCorridor;
+    lCorridor[1]=y1PixelCorridor-y0PixelCorridor;
+
+    ProcessTrajectoriesInitFlag=true;
+
+    SelectedTrajectoriesTable=new bool [amps.ParticleTrajectory.nTotalTrajectories];
+    for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) SelectedTrajectoriesTable[i]=false;
+
+    SelectedFaceTable=new bool [amps.SurfaceData.nCells];
+    for (i=0;i<amps.SurfaceData.nCells;i++) SelectedFaceTable[i]=false;
+
+    //scan through all trajectories
+    for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+      for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
+        for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
+
+        //determine projection of 'x' as would be seen by VIRTIS-M
+        for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
+          c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
+          c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
+          l+=pow(x[i]-Virtis.xRosetta[i],2);
+        }
+
+        l=sqrt(l);
+
+        iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+        jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+
+        //Trajectory is accepted is it has a point that falls into the corridor
+        double r=(iPixel-x0PixelCorridor)/lCorridor[0]*lCorridor[1]+y0PixelCorridor;
+
+        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=x0PixelCorridor)  && (iPixel<=x1PixelCorridor)) {
+          //trajectory falls within the corridor
+          //add the face into the list of the faces from which the dust ejection is allowed
+          SelectedTrajectoriesTable[nTrajectory]=true;
+          SelectedFaceTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=true;
+        }
+      }
+
+    }
+  }
+
+  //output selected trajectories
+  void PrintSelectedTrajectories(int nPrintedTrajectories,const char *fname) {
+    int i,nt,cnt;
+    vector<int> PrintedTrajectoriesTable;
+
+    //output the header of the trajectory file
+    amps.ParticleTrajectory.PrintDataFileHeader(fname);
+
+    //output trajectories
+    for (cnt=0;cnt<nPrintedTrajectories;cnt++) {
+      bool foundflag=false;
+
+      do {
+        foundflag=false;
+
+        do {
+          nt=(int)(rnd()*amps.ParticleTrajectory.nTotalTrajectories);
+        }
+        while (SelectedTrajectoriesTable[nt]==false);
+
+        for (i=0;i<PrintedTrajectoriesTable.size();i++) if (PrintedTrajectoriesTable[i]==nt) {
+          foundflag=true;
+          break;
+        }
+      }
+      while (foundflag==true);
+
+      PrintedTrajectoriesTable.push_back(nt);
+      amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[nt],nt,fname);
+    }
+  }
+
+}
+
 
 //=================================================
 //print the surface additional data
@@ -524,6 +628,9 @@ namespace DUST {
       CorrectionFactor=SURFACE::ILLUMINATION::cosSolarZenithAngle[nStatingFace]/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
       CorrectionFactor=FaceSourceRate_H2O/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
 
+      CorrectionFactor*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nStatingFace);
+//      if (TRAJECTORY_FILTER::SelectedTrajectoriesTable[nt]==false) CorrectionFactor=0.0;
+
       if (CorrectionFactor<0.0) CorrectionFactor=0.0;
 
       c=CorrectionFactor*amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][8]/
@@ -804,6 +911,10 @@ return 1;
     IntegrationSet.PostProcessColumnIntegralVector=DUST::PostProcessColumnIntegralVector;
   }
 
+
+  //process all trajectories: select those that falls into the jet corridor
+  TRAJECTORY_FILTER::ProcessTrajectories(et);
+  TRAJECTORY_FILTER::PrintSelectedTrajectories(500,"selected-trajectories.dat");
 
   //calculate the column integrals as seen by VIRTIS-M
   cVirtisM VirtisM;
