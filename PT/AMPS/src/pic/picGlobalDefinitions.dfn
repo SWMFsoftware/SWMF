@@ -216,6 +216,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_MOVER_INTEGRATOR_MODE__DIRECT_         0
 #define _PIC_MOVER_INTEGRATOR_MODE__BORIS_          1
 #define _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_ 2
+#define _PIC_MOVER_INTEGRATOR_MODE__FIELD_LINE_     3
 
 
 

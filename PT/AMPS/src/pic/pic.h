@@ -1205,6 +1205,53 @@ namespace PIC {
 
       return 0.0;
     }
+    //-------------------------------------------------------------------------
+
+
+    // Operations related to the field line particle sits on                    
+    //-------------------------------------------------------------------------
+    inline int GetFieldLineId(long int ptr){
+      return *(int*)(ParticleDataBuffer + ptr*ParticleDataLength +
+                     _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    }
+    //.........................................................................
+    inline int GetFieldLineId(byte *ParticleDataStart){
+      return *(int*)(ParticleDataStart +
+                     _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    }
+    //.........................................................................
+    inline void SetFieldLineId(int FieldLineId, long int ptr){
+      *(int*)(ParticleDataBuffer +ptr*ParticleDataLength +
+	      _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
+    }
+    //.........................................................................
+    inline void SetFieldLineId(int FieldLineId,
+                               byte* ParticleDataStart){
+      *(int*)(ParticleDataStart +
+	      _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
+    }
+    //.........................................................................
+    inline double GetFieldLineCoord(long int ptr){
+      return *(double*)(ParticleDataBuffer + ptr*ParticleDataLength +
+                        _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
+    }
+    //.........................................................................
+    inline double GetFieldLineCoord(byte *ParticleDataStart){
+      return *(double*)(ParticleDataStart +
+			_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
+    }
+    //.........................................................................
+    inline void SetFieldLineCoord(double FieldLineCoord, long int ptr){
+      *(double*)(ParticleDataBuffer +ptr*ParticleDataLength +
+                 _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
+    }
+    //.........................................................................
+    inline void SetFieldLineCoord(double FieldLineCoord,
+                                  byte* ParticleDataStart){
+      *(double*)(ParticleDataStart +
+                 _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
+    }
+    //-------------------------------------------------------------------------
 
     inline bool IsParticleAllocated(byte* ParticleDataStart) {
       unsigned char flag;

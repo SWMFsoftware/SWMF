@@ -507,15 +507,21 @@ sub ReadMainBlock {
 	($s0,$s1)=split(' ',$s1,2);
 	if(   $s0 eq "DIRECT") {
 	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__DIRECT_';
-	    $MoverIntegrator='PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder';#(ptr,LocalTimeStep,node)';
+	    $MoverIntegrator='PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder';
 	}
 	elsif($s0 eq "BORIS"){
 	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
-	    $MoverIntegrator='PIC::Mover::Boris';#(ptr,LocalTimeStep,node)';
+	    $MoverIntegrator='PIC::Mover::Boris';
 	}
 	elsif($s0 eq "GUIDINGCENTER"){
 	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
-	    $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';#(ptr,LocalTimeStep,node)';
+	    $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
+	}
+	elsif($s0 eq "FIELDLINE"){
+            $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__FIELD_LINE_';
+            $MoverIntegrator='PIC::Mover::FieldLine::Mover_SecondOrder';
+	    ampsConfigLib::RedefineMacro("_PIC_FIELD_LINE_MODE_",
+					 "_PIC_MODE_ON_","pic/picGlobal.dfn");
 	}
 	else{
 	    die "UNRECOGNIZED/UNDEFINED integrator mode $s0!\n";
