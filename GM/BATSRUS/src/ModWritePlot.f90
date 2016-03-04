@@ -21,7 +21,8 @@ subroutine write_plot_common(iFile)
   use ModUtilities, ONLY: split_string, join_string
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
-       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
+       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim, &
+       rRound0, rRound1, SqrtNDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
   use ModPlotShell
@@ -576,6 +577,11 @@ subroutine write_plot_common(iFile)
            if(index(TypeGeometry,'genr') > 0)then
               write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)
               write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
+           end if
+           if(TypeGeometry == 'roundcube')then
+              write(Unit_tmp,'(es13.5," rRound0")') rRound0
+              write(Unit_tmp,'(es13.5," rRound1")') rRound1
+              write(Unit_tmp,'(es13.5," SqrtNDim")') SqrtNDim
            end if
            write(unit_tmp,'(a)')TypeFile_I(iFile)
 
