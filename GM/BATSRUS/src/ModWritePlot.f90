@@ -824,8 +824,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
   use ModWaves, ONLY: UseWavePressure
   use ModLaserHeating, ONLY: LaserHeating_CB
-  use BATL_lib, ONLY: AmrCrit_IB, nAmrCrit, IsCartesian, &
-       Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
   use ModElectricField, ONLY: Efield_DGB, DivE_CB, Potential_GB, &
        Epot_DGB, Eind_DGB, &
@@ -834,7 +832,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
   use ModFaceValue, ONLY: iRegionLowOrder_I
-  use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B
+  use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
+       AmrCrit_IB, nAmrCrit, IsCartesian, &
+       Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
 
   use ModUserInterface ! user_set_plot_var
 
@@ -1371,6 +1371,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
      case('amrlevel')
         PlotVar(:,:,:,iVar) = iTree_IA(Level_,iNode_B(iBLK))
+     case('dvol')
+        PlotVar(:,:,:,iVar) = CellVolume_GB(:,:,:,iBLK)
      case('dx')
         PlotVar(:,:,:,iVar) = CellSize_DB(x_,iBLK)
      case('dy')
