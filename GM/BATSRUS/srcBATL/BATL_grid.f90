@@ -2629,6 +2629,24 @@ contains
        call create_grid
        if(iProc==0)call show_grid_proc
 
+       ! Initialize roundcube grid                                                                      
+       call init_geometry(TypeGeometryIn = 'round')
+
+       rRound0 = 2.
+       rRound1 = 3.2
+
+       DomainMin_D = (/-3.2, -3.2, -3.2/)
+       DomainMax_D = (/ 3.2,  3.2, 3.2/)
+
+       call init_grid( DomainMin_D, DomainMax_D )
+       call create_grid
+
+       Volume = sum(CellVolume_GB(1:nI,1:nJ,1:nK,1:nBlock))
+
+       write(*,*) 'Testing roundcube grid'
+       if(iProc==0)call show_grid_proc
+       write(*,*) 'total volume is:',Volume
+       write(*,*) 'The analytic solution of volume is:', 4/3.*cPi*(sqrt(3.)*rRound1)**3
     end if
 
     if(DoTestMe) write(*,*)'Testing clean_grid'
