@@ -73,7 +73,7 @@ module BATL_lib
   public:: xyz_to_coord, coord_to_xyz, radius_to_gen, gen_to_radius
   public:: Xi_, Eta_, Zeta_
   public:: UseHighFDGeometry, set_high_geometry
-  public:: rRound0, rRound1, IsRoundCube
+  public:: rRound0, rRound1, IsRoundCube, SqrtNDim
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, DomainSize_D
   public:: CoordMin_DB, CoordMax_DB, CellSize_DB
