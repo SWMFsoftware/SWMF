@@ -80,7 +80,7 @@ program PostIDL
   character (len=79) :: TypeGeometry='cartesian', TypeGeometryRead
   logical            :: UseDoubleCut = .false.
 
-  !Toroidal geometry
+  ! Toroidal geometry
   integer:: iPoint, nPoint
   real :: rTorusSmall, rTorusLarge
   real, allocatable:: TorusSurface_I(:)
@@ -92,6 +92,11 @@ program PostIDL
   logical:: IsGenRadius = .false.
   integer:: nRgen = -1
   real, allocatable:: LogRgen_I(:)
+
+  ! Roundcube parameters
+  real:: rRound0    ! fully Cartesian distance
+  real:: rRound1    ! fully round distance
+  real:: SqrtNDim   ! sqrt 2 or sqrt 3
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-) starting'
@@ -152,6 +157,12 @@ program PostIDL
   TypeGeometry = TypeGeometryRead
 3 continue
   write(*,*)'TypeGeometry = ',trim(TypeGeometry)
+  if(TypeGeometry == 'roundcube')then
+     read(*,*) rRound0
+     read(*,*) rRound1
+     read(*,*) SqrtNDim
+  endif
+
   if(index(TypeGeometry,'torus')>0)then
      open(unit_tmp,file='torus.dat',status='old')
      read(unit_tmp,*)nPoint, rTorusSmall, rTorusLarge
@@ -351,7 +362,7 @@ program PostIDL
            State_VC(:,iCell,1,1) = w1
            do iDim = 1, nDim
               Coord_DC(iDim,iCell,1,1) = Xyz_D(icutdim(iDim))
-              GenCoord_DI(iDim,iCell)  = XyzGen_D(icutdim(iDim))
+              GenCoord_DI(iDim,iCell)  = XyzGen_D(iCutDim(iDim))
            end do
 
            ! We are finished with unstructured
@@ -601,6 +612,9 @@ contains
     integer:: iVector, iVar, MaxWord, nWord, l
     character(len=10), allocatable:: NameVar_V(:)
     character(len=10)             :: NameVar, NameVector
+
+    ! Variables for roundcube coordinate transformation
+    real :: r2, Dist1, Dist2, Coef1, Coef2
     !---------------------------------------------------------------------
     if(TypeGeometry == 'cartesian' .or. filenamehead(1:3) == 'cut')then
        XyzGen_D = Xyz_D
@@ -608,10 +622,46 @@ contains
        RETURN
     end if
 
-    if(TypeGeometry(1:5)=='round')then
+    if(TypeGeometry == 'roundcube')then
 
-       XyzGen_D = sqrt(sum(Xyz_D**2))/maxval(abs(Xyz_D)) * Xyz_D
-
+       r2 = sum(Xyz_D**2)
+       if (r2 > 0.0) then
+          ! L1 and L2 distance
+          Dist1 = maxval(abs(Xyz_D))
+          Dist2 = sqrt(r2)
+          if (rRound1 > rRound0 ) then
+             ! The rounded (distorted) grid is outside of the non-distorted part
+             if (Dist1 > rRound0) then
+                ! Outside the undistorted region
+                ! Assume Coord = w * Xyz and Replace Xyz in transformation Coord_to_Xyz
+                ! We have to solve a quadratic equation of w. 
+                ! w^2 - Coef1*w- Coef2 = 0
+                Coef1 = -1 + rRound0/(rRound1-rRound0)*(dist1*SqrtNDim/Dist2 - 1)
+                Coef2 = Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1)
+                XyzGen_D = Xyz_D/(-Coef1 + sqrt(Coef1**2 + 4*Coef2))*2
+             else
+                ! No distortion
+                XyzGen_D = Xyz_D
+             end if
+         
+          else
+             ! The rounded (distorted) grid is inside of the non-distorted part
+             if (Dist2 < rRound1) then
+                ! Solving w^2 - w + Coef1 = 0
+                Coef1 = Dist1/rRound1*(1 - Dist1/Dist2)
+                XyzGen_D = Xyz_D / (1 + sqrt(1-4*Coef1))*2
+             else
+                ! Solving w^2 + Coef1*w + Coef2 = 0
+                Coef1 = -1 + (1 - Dist1/Dist2)/(rRound0-rRound1)*rRound0
+                Coef2 = -(1 - Dist1/Dist2)/(rRound0 - rRound1)*Dist1
+                Coef2 = (-Coef1 + sqrt(Coef1**2 - 4*Coef2))*0.5
+                XyzGen_D = Xyz_D / Coef2
+             end if
+          end if
+           
+       else
+          XyzGen_D = 0.0
+       end if
        RETURN
     end if
 
