@@ -283,7 +283,8 @@ contains
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
          iProc, MaxDim, MaxBlock, nBlock, Unused_B, Xyz_DGB, &
-         iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid, IsCartesian
+         iTree_IA, MaxLevel_, BetaProlong, IsNodeBasedGrid, IsCartesian, &
+         rRound0, rRound1
 
     use BATL_amr, ONLY: UseSimpleRefinement
     use BATL_geometry, ONLY: GridRot_DD, IsRotatedCartesian, x_, y_, z_
@@ -321,6 +322,10 @@ contains
           end do
        case("#GRIDGEOMETRY")
           call read_var('TypeGeometry', TypeGeometry)
+          if(TypeGeometry == 'roundcube') then
+             call read_var('rRound0',rRound0)
+             call read_var('rRound1',rRound1)
+          end if
        case("#UNIFORMAXIS")
           call read_var('UseUniformaxis', UseUniformAxis)
        case("#GRIDTYPE")
@@ -550,7 +555,8 @@ contains
          iComm, nProc, iProc, iNode_B, &
          TypeGeometry, IsCylindrical, IsSpherical, IsRLonLat, IsGenRadius, &
          Phi_, nDimAmr, CoordMin_D, CoordMax_D, nRgen, LogRgen_I, &
-         CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB
+         CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB, &
+         rRound0, rRound1, SqrtNDim
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
     use ModIoUnit, ONLY: UnitTmp_
@@ -714,6 +720,11 @@ contains
              write(UnitTmp_,'(a)')     'spherical'//TypeGeometry(8:20)
           else
              write(UnitTmp_,'(a)')     TypeGeometry
+          end if
+          if(TypeGeometry == 'roundcube')then
+             write(UnitTmp_,'(es13.5," rRound0")') rRound0
+             write(UnitTmp_,'(es13.5," rRound1")') rRound1
+             write(UnitTmp_,'(es13.5," SqrtNDim")') SqrtNDim
           end if
           if(IsGenRadius)then
              write(UnitTmp_,'(i8,a)')   nRgen,        ' nRgen'
