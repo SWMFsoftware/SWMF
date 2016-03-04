@@ -121,10 +121,10 @@ Run=
 
 
 Check=
->>>@echo "test_binary_reader_check..." >> test_binary_reader.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary_reader.diff 
+>>>@echo "test_binary_reader_check..." >> test_binary-reader.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary-reader.diff 
 
->>>@ls -l test_binary_reader.diff 
+>>>@ls -l test_binary-reader.diff 
 
 <#
 -------------------------------------------------------------------------------
