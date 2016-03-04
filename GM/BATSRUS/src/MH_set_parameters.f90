@@ -2957,17 +2957,20 @@ contains
           XyzMin_D = (/0.0, 0.0, z1/) 
           XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
        case('roundcube')
-          if(nDim==2) then
-             XyzMax_D(1:2) = &
-                  min(abs(x1), abs(x2), abs(y1), abs(y2))/sqrt(2.0)
-             XyzMin_D(1:2) = -XyzMax_D(1:2)
-          end if
-          if(nDim==3) then 
-             XyzMax_D = &
-                  min(abs(x1), abs(x2), abs(y1), abs(y2), abs(z1), abs(z2))/sqrt(3.0)
+          if(rRound0 > rRound1)then
+             ! Cartesian outside, so use x1..z2
+             XyzMin_D = (/x1, y1, z1/)
+             XyzMax_D = (/x2, y2, z2/)
+          else
+             ! Round outside, so fit this inside x1..z2
+             if(nDim==2) XyzMax_D = &
+                  min(abs(x1), abs(x2), abs(y1), abs(y2)) &
+                  /sqrt(2.0)
+             if(nDim==3) XyzMax_D = &
+                  min(abs(x1), abs(x2), abs(y1), abs(y2), abs(z1), abs(z2)) &
+                  /sqrt(3.0)
              XyzMin_D = -XyzMax_D
           end if
-
 
        case default
           call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
