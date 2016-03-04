@@ -78,7 +78,7 @@ module BATL_geometry
   real, public:: rRound0, rRound1
 
   ! This is needed for the roundcube geometry
-  real, parameter:: SqrtNDim = sqrt(real(nDim))
+  real, public, parameter:: SqrtNDim = sqrt(real(nDim))
 
 contains
 
