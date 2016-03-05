@@ -91,6 +91,7 @@ test_help:
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
 	@echo "    test_hyades2d              (run Hyades2D test)"
+	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_laserpackage          (run CRASH laser package test)"
 	@echo "    test_levelset              (run levelset test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
