@@ -615,6 +615,10 @@ void PIC::ParticleTracker::StopParticleTrajectoryTracking(void *ParticleData) {
 
 //the default particle trajectory tracking condition
 bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData) {
+
+  //start particle trackeing only after the data output number has reached that requesterd by the user
+  if (PIC::DataOutputFileNumber<_PIC_PARTICLE_TRACKER__BEGIN_TRACKING_FILE_OUTPUT_NUMBER_) return false;
+
   if ((maxSampledTrajectoryNumber>totalSampledTrajectoryNumber[spec])&&(maxSampledTrajectoryNumber>threadSampledTrajectoryNumber[spec])) {
     return true;
   }

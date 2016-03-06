@@ -44,6 +44,9 @@
 #define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition_default(x,v, spec,ParticleData)
 #define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ 
 
+//delay beginig of the particle trajectory tracking
+#define _PIC_PARTICLE_TRACKER__BEGIN_TRACKING_FILE_OUTPUT_NUMBER_ 0
+
 //save the face number where a particle is originated
 #define _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ _PIC_MODE_OFF_
 
