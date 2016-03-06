@@ -20,7 +20,7 @@ module ModPIC
   
   logical, public:: UsePic = .false.
   
-  logical, public:: DoBalancePicBlock=.false.
+  logical, public:: DoBalancePicBlock=.true.
 
   ! Local variables
 
@@ -43,7 +43,7 @@ module ModPIC
   ! Is the node overlaped with PIC domain?
   logical, public,allocatable:: IsPicNode_A(:)
 
-  logical :: IsPicRegionInitilized = .false.
+  logical :: IsPicRegionInitialized = .false.
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
@@ -62,7 +62,7 @@ contains
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
-    case("#BALANCEPICBLOCK")
+    case("#PICBALANCE")
        call read_var('DoBalancePicBlock', DoBalancePicBlock)       
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
@@ -163,10 +163,10 @@ contains
     !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2 
 
     ! iPIC3D does not suppor multi-sessions now. If the pic region related
-    ! parameters has been initilized, then skip this subroutine in
+    ! parameters has been initialized, then skip this subroutine in
     ! the following sessions. 
-    if(IsPicRegionInitilized) return
-    IsPicRegionInitilized = .true.
+    if(IsPicRegionInitialized) RETURN
+    IsPicRegionInitialized = .true.
     IonMassPerChargeSi = IonMassPerCharge* &
          No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
