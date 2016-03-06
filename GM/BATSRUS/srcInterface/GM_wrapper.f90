@@ -13,6 +13,8 @@ module GM_wrapper
   use GM_couple_pw          !^CMP IF PW
   use GM_couple_pc          !^CMP IF PC
 
+  use ModProcMH, ONLY: iProc, nProc, iComm
+
   implicit none
 
   private ! except
@@ -84,7 +86,6 @@ contains
   subroutine GM_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
-    use ModProcMH
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use ModMain, ONLY : CodeVersion, NameThisComp, &
@@ -159,20 +160,24 @@ contains
     use MH_domain_decomposition
     use CON_coupler
     use CON_test_global_message_pass
-    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple
+    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, test_string
     use ModPhysics,      ONLY: No2Si_V, UnitX_
     use ModVarIndexes,   ONLY: nVar
     use CON_comp_param,  ONLY: GM_
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D
 
+    logical:: DoTest,DoTestMe
+    character(len=*), parameter:: NameSub = 'GM_set_grid'
+    !----------------------------------------------------------
     !REVISION HISTORY:
     !23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
     !03Sep03 G.Toth    <gtoth@umich.edu> - removed test_message_pass
     !                                      call synchronize_refinement directly
     !EOP
-    logical ::DoTest,DoTestMe
+
     DoTest=.false.;DoTestMe=.false.
+
     if(done_dd_init(GM_))return
     call init_decomposition(GM_,GM_,3,.true.)
 
@@ -186,6 +191,11 @@ contains
          Coord1_I     = (/ RadiusMin, RadiusMax /), &
          Coord2_I     = (/ CoordMin_D(2), CoordMax_D(2) /), &
          Coord3_I     = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+
+    if(index(test_string,'NOCOUPLINGTOOLKIT') > 0)then
+       if(iProc==0) write(*,*) NameSub, ': NOCOUPLINGTOOLKIT !'
+       RETURN
+    end if
 
     if(is_proc(GM_))then
        call init_decomposition(&
@@ -212,7 +222,6 @@ contains
   subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
     !USES:
-    use ModProcMH
     use MH_domain_decomposition
     use CON_comp_param,ONLY:GM_
     !INPUT ARGUMENTS:
@@ -280,7 +289,6 @@ contains
 
   subroutine GM_init_session(iSession, TimeSimulation)
 
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY: UseIe, UsePw, TypeBC_I, body1_
     use ModMain,     ONLY: UseIM
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
