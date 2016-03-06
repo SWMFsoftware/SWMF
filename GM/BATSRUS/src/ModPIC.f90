@@ -42,6 +42,8 @@ module ModPIC
 
   ! Is the node overlaped with PIC domain?
   logical, public,allocatable:: IsPicNode_A(:)
+
+  logical :: IsPicRegionInitilized = .false.
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
@@ -160,13 +162,18 @@ contains
     ! 
     !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2 
 
+    ! iPIC3D does not suppor multi-sessions now. If the pic region related
+    ! parameters has been initilized, then skip this subroutine in
+    ! the following sessions. 
+    if(IsPicRegionInitilized) return
+    IsPicRegionInitilized = .true.
     IonMassPerChargeSi = IonMassPerCharge* &
          No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
     if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
-
+    
     if(iProc==0)then
        write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
        write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi

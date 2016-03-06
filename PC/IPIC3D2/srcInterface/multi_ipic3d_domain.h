@@ -19,6 +19,8 @@ int *iSimCycle;
 // first time for region
 bool firstcall[nmaxIPIC];
 
+bool isFirstSession, isInitilized;
+
 // pointer to all IPIC3D 
 iPic3D::c_Solver **SimRun;
 

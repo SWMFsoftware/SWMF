@@ -30,7 +30,9 @@ int ipic3d_init_mpi_(MPI_Fint *iComm,signed int* iProc,signed int* nProc){
   iIPIC      = 0;
   SimRun  = new iPic3D::c_Solver *[nmaxIPIC];
   iSimCycle = new int[nmaxIPIC];
-  
+
+  isFirstSession = true;
+  isInitilized   = false;
   for(int i = 0; i < nmaxIPIC; i++){
     firstcall[i] = true;
     starttime[i] = 0.0;
@@ -38,6 +40,9 @@ int ipic3d_init_mpi_(MPI_Fint *iComm,signed int* iProc,signed int* nProc){
   }
   
   myProc = *iProc;
+  
+  MPIdata::init(ipic3dComm, &myrank, &numProc);
+    
   return(0);
 }
 
@@ -75,16 +80,21 @@ int ipic3d_finalize_init_(){
 }
 
 int ipic3d_read_param_(char *paramIn, int *nlines, int *ncharline, int *iProc){
+  // So far, iPIC3D does not support multi sessions.
+  if(!isFirstSession) return(0);
+
   // convert character array to string stream object
   myProc = *iProc;
   std::stringstream  *ss;
   ss = char_to_stringstream(paramIn, (*nlines)*(*ncharline), *ncharline, *iProc); 
   param = ss;
   iIPIC++;
+  isFirstSession = false;
   return(0);
 }
 
 int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
+  if(isInitilized) return(0);
   std::stringstream  *ss;
   ss = new std::stringstream;
   (*ss)<<NameVar;
@@ -103,7 +113,6 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
   // the number of PIC fluids ns = nFluid + nSpecies - 1
   int ns = paramint[3] + paramint[4] - 1;
 
-  MPIdata::init(ipic3dComm, &myrank, &numProc);
   for(int i = firstIPIC; i < nIPIC; i++){ 
     param->clear();
     param->seekg(0,param->beg);
@@ -114,7 +123,8 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
 		    &paramreal[(nIPIC - firstIPIC)*9], ss,true);
     SimRun[i]->SetCycle(0);
   }
-  timing_stop(nameFunc);  
+  timing_stop(nameFunc);
+  isInitilized = true;
   return(0);
 }
 
