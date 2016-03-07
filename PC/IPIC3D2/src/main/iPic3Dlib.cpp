@@ -518,10 +518,11 @@ bool c_Solver::ParticlesMover()
 
 void c_Solver::WriteOutput(int cycle) {
 
-  WriteConserved(cycle);
-
-  // For MHD-EPIC, restart is controlled by coupler.
-  if(col->getCase()!="BATSRUS") WriteRestart(cycle);
+  if(col->getCase()!="BATSRUS"){
+    // For MHD-EPIC, the following outputs are controlled by coupler.
+    WriteConserved(cycle);
+    WriteRestart(cycle);
+  }
 
   if(!Parameters::get_doWriteOutput())  return;
 
