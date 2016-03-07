@@ -1934,11 +1934,6 @@ class InterfaceFluid
     npx = divisor3;
     npy = divisor1 > divisor2 ? divisor1 : divisor2;
     npz = divisor1 < divisor2 ? divisor1 : divisor2;
-
-    if(myrank==0)
-      cout<<"Warning: Using "<<npx<<"x"<<npy<<"x"<<npz<<" processors"<<endl;
-
-    //cout<<"npx = "<<npx<<" npy = "<<npy<<" npz = "<<npz<<endl;
   }
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
