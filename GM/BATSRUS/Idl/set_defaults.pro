@@ -12,9 +12,6 @@ noerase=0
 ;               1 - use coordinates, other values - set aspect ratio
 fixaspect=1
 
-; Randomize vector/streamline start positions
-velrandom=0
-
 ; Array subtracted from w during animation
 wsubtract=0
 
@@ -24,17 +21,15 @@ timediff=0
 ; Keep original size of fits image
 noresize=0
 
-; File descriptors
-logfilename=''
-filename=''
+; Parameters for .r getpict
+filename='' ; space separated string of filenames. May contain *, []
+npict=0     ; index of snapshot to be read
 
-; Parameters for the functions to be plotted
-func=''
-logfunc=''
-plotmode='plot'
-plottitle='default'
-
-plottitles_file=''; array of plottitle strings per file
+; Parameters for .r plotfunc
+func=''           ; space separated list of functions to be plotted
+plotmode='plot'     ; space separated list of plot modes
+plottitle='default' ; semicolon separated list of titles
+plottitles_file=''  ; array of plottitle strings per file
 
 timetitle=''     ; set to format string to plot time as title for time series
 timetitleunit=0  ; set to number of seconds in time unit
@@ -60,32 +55,32 @@ az=30
 contourlevel=30
 
 ; Parameters for the vector plots and stream lines
-velvector=200
-velspeed =5
-velpos   =0
+velvector=200 ; number of vectors/stream lines per plot
+velpos   =0   ; 2 x velvector array with start positions 
+velrandom=0   ; if 1 use random start positions for each frame of animation
+velspeed =5   ; speed of moving vectors during animation
 
 ; Animation parameters for the movie
-firstpict=1
-dpict=1
-npictmax=500
-npict=0
-
-; Slicing parameters
-firstslice=1
-dslice=1
-nslicemax=500
-slicedir=0
-dyslicelabel=0.98 ; position of bottom label (?)
+firstpict=1   ; a scalar or array (per file) of the index of first frame
+dpict=1       ; a scalar or array (per file) of distance between frames
+npictmax=500  ; maximum number of frames in an animation
 
 ; Parameters for saving the movie into ps/png/tiff/bmp/jpeg files
-savemovie='n'
+savemovie='n'     ; 'ps', 'png', 'tiff' ...
 
-; Transformation parameters for irregular grids
-transform='n'
-dotransform='n'
-nxreg=[0,0]
-xreglimits=0
-symmtri=0
+; Parameters for .r slice
+firstslice=1      ; index of first slice
+dslice=1          ; stride between slices
+nslicemax=500     ; maximum number of slices shown
+slicedir=0        ; 
+dyslicelabel=0.98 ; position of bottom label (?)
+
+; Transformation parameters for irregular grids 
+dotransform='n'   ; do transform with .r plotfunc?
+transform='n'     ; transformation 'none', 'regular', 'my', 'polar', 'unpolar'
+nxreg=[0,0]       ; size of transformed grid
+xreglimits=0      ; limits of transformed grid [xmin, ymin, xmax, ymax]
+symmtri=0         ; use symmetric triangulation during transformation?
 
 ; Define the variables that are vectors for grid transformation
 nvector=0 ; number of vector variables
@@ -96,7 +91,11 @@ grid=0    ; index array for the whole grid
 cut=0     ; index array for the cut
 rcut=-1.0 ; Radius of cutting out inner part
 
+; Parameters for getlog
+logfilename='' ; space separated string of filenames. May contain *, []
+
 ; Parameters for plotlog
+logfunc=''   ; space separated list of log variables in wlogname(s)
 title=0      ; set to a string with the title
 xtitle=0     ; set to a string with the time title
 ytitles=0    ; set to a string array with the function names
