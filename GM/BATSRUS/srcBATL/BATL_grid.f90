@@ -1320,9 +1320,9 @@ contains
             kHi = min(nK,kHi)
 
        if(DoTest)then
-          write(*,*)'!!! iProc, iBlock, iCell_D, Coord_D=', &
+          write(*,*) NameSub,' iProc, iBlock, iCell_D, Coord_D=', &
                iProc, iBlock, iCell_D, Coord_D(1:nDim)
-          write(*,*)'!!! iLo, iHi, jLo, jHi=',iLo, iHi, jLo, jHi
+          write(*,*) NameSub,' iLo, iHi, jLo, jHi=',iLo, iHi, jLo, jHi
        end if
 
        ! Calculate the weights and store it together with index information
@@ -1363,7 +1363,7 @@ contains
              iCell_II(0,nCell) = iBlock
              iCell_II(1:nDim,nCell) = iCell_D(1:nDim)
           end if
-          if(DoTest)write(*,*)'!!! nCell, CoordCell, Weight=', &
+          if(DoTest)write(*,*) NameSub,' nCell, CoordCell, Weight=', &
                nCell, CoordCell_D(1:nDim), Weight
 
        end do; end do; end do
@@ -2104,7 +2104,6 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= (/.true., .true., .false./)
     real:: DomainMin_D(MaxDim) = (/ 3.0, 2.0, 1.0 /)
     real:: DomainMax_D(MaxDim) = (/ 9.0, 6.0, 4.0 /)
-    !real, external :: integrate_BLK 
 
     ! number of points in each dimension to test interpolation
     integer, parameter:: &
@@ -2129,8 +2128,8 @@ contains
     real:: Radius, Phi, Xyz_D(MaxDim), Coord_D(MaxDim), Distance_D(MaxDim)
     real:: Good, Good_D(MaxDim)
     real, allocatable:: CellVolumeCart_B(:), CellFaceCart_DB(:,:)
-    
-    real:: Volume
+    real:: Volume, VolumeAll
+
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_grid'
     !-----------------------------------------------------------------------
@@ -2255,13 +2254,6 @@ contains
                Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
                + Weight_I(iCell)*Xyz_D(1:nDim)
 
-          if(.false..and.iPoint==7.and.jPoint==1) write(*,*) &
-               '!!!iProc,ijkPoint,iCell,iCell_D,iBlock,Weight,Xyz,Point=',&
-               iProc, iPoint_D(1:nDim), iCell, iCell_D(1:nDim), &
-               iBlock, Weight_I(iCell), &
-               Xyz_DGB(1:nDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock), &
-               Point_VIII(1:nDim,iPoint,jPoint,kPoint)
-
        end do
     end do; end do; end do
 
@@ -2338,7 +2330,7 @@ contains
                   Xyz_D(iDim) = Xyz_D(iDim) +  DomainSize_D(iDim)
           end do
 
-          ! if point is close to boundary => interpolation isn't of 2nd order
+          ! if point is close to boundary then interpolation isn't 2nd order
           where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
                Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
 
@@ -2435,7 +2427,7 @@ contains
                   Xyz_D = Xyz_D + &
                   0.5 * (2*modulo(iCell_D, 2) - 1) * CellSize_DB(:,iBlock)
 
-             ! if point is close to boundary => interpolation isn't of 2nd order
+             ! if point is close to boundary then interpolation isn't 2nd order
              where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
                   Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
 
@@ -2543,6 +2535,7 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
        call create_grid
+
        if(iProc==0)call show_grid_proc
 
        ! Check relative to generalized coordinate volumes and areas
@@ -2600,7 +2593,7 @@ contains
        ! Clean  grid
        call clean_grid
 
-       ! Initialize cylindrical grid
+       ! Initialize spherical grid
        call init_geometry(TypeGeometryIn = 'spherical')
 
        DomainMin_D = (/1.,  45.0,  0.0 /)
@@ -2610,6 +2603,7 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
+
        if(iProc==0)call show_grid_proc
 
        if(DoTestMe) write(*,*)'Testing create_grid in rlonlat geometry'
@@ -2617,7 +2611,7 @@ contains
        ! Clean  grid
        call clean_grid
 
-       ! Initialize cylindrical grid
+       ! Initialize r-lon-lat grid
        call init_geometry(TypeGeometryIn = 'rlonlat')
 
        DomainMin_D = (/1.,  0.0, -45.0 /)
@@ -2627,26 +2621,45 @@ contains
        IsNodeBasedGrid = .false.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
+
        if(iProc==0)call show_grid_proc
 
-       ! Initialize roundcube grid                                                                      
-       call init_geometry(TypeGeometryIn = 'round')
+       if(DoTestMe) write(*,*)'Testing create_grid in roundcube geometry'
 
-       rRound0 = 2.
+       ! Clean  grid
+       call clean_grid
+
+       ! Initialize roundcube grid
+       call init_geometry(TypeGeometryIn = 'roundcube')
+
+       rRound0 = 2.0
        rRound1 = 3.2
 
        DomainMin_D = (/-3.2, -3.2, -3.2/)
-       DomainMax_D = (/ 3.2,  3.2, 3.2/)
+       DomainMax_D = (/ 3.2,  3.2,  3.2/)
 
+       IsNodeBasedGrid = .true.
        call init_grid( DomainMin_D, DomainMax_D )
        call create_grid
 
-       Volume = sum(CellVolume_GB(1:nI,1:nJ,1:nK,1:nBlock))
-
-       write(*,*) 'Testing roundcube grid'
        if(iProc==0)call show_grid_proc
-       write(*,*) 'total volume is:',Volume
-       write(*,*) 'The analytic solution of volume is:', 4/3.*cPi*(sqrt(3.)*rRound1)**3
+
+       ! Check total volume. 
+       ! It should be approximately the volume of a sphere of radius 3.2
+       Volume = sum(CellVolume_GB(1:nI,1:nJ,1:nK,1:nBlock))
+       if(nProc > 1)then
+          call MPI_reduce(Volume, VolumeAll, 1, MPI_REAL, MPI_SUM, 0, iComm, iError)
+          Volume = VolumeAll
+       end if
+
+       if(iProc==0)then
+          ! Analytic volume of the sphere
+          VolumeAll = 4./3.*cPi*(sqrt(3.)*rRound1)**3
+
+          if(abs(VolumeAll-Volume)/VolumeAll > 0.02) &
+               write(*,*) 'ERROR: total volume numerical vs analytic:', &
+               Volume, VolumeAll
+       end if
     end if
 
     if(DoTestMe) write(*,*)'Testing clean_grid'
