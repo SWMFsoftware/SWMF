@@ -506,8 +506,8 @@ pro get_pict_hdf, filename, npict, x, w, error, getdata
 
   idims = where(nxyz_D GT 1, ndim)
   nx = nxyz_D(idims)
-  ;; Bx By Bz Ex Ey Ez ........
-  nw =7 + Param.COLLECTIVE.NS._DATA(0)*10
+  ;; Bx By Bz Ex Ey Ez + [rho] + [Jx,Jy,Jz]. rho, Jx, Jy, Jz are optional.
+  nw =10 + Param.COLLECTIVE.NS._DATA(0)*10
 
   eqpar = [Param.COLLECTIVE.BX0._DATA(0),Param.COLLECTIVE.BY0._DATA(0),$
            Param.COLLECTIVE.BZ0._DATA(0)]
@@ -673,30 +673,15 @@ pro get_pict_hdf, filename, npict, x, w, error, getdata
 
      ;; Get all moments of the distribution function
      group_id = H5G_OPEN(file_id, '/moments')
-     nSpecie = H5G_GET_NUM_OBJS(group_id)
+     nVarable = H5G_GET_NUM_OBJS(group_id)     
 
-     ;; First species is sum of charge densities Rho
-     get_hdf_pict,group_id,0,SortIdx_I(npict-1),nxyz_D,$
-                  -1,pict,varname,getdata
-     if getdata then begin
-        case ndim of
-           1:w(iMin:iMax,iw) = pict
-           2:w(iMin:iMax,jMin:jMax,iw) = pict
-           3:w(iMin:iMax,jMin:jMax,kMin:kMax,iw) = pict
-        endcase
-     end
-     variables(ndim+iw) = varname
-     iw = iw +1
-
-     ;; LOOP over species and return density, pressure and currents
-     ;; for each
-     for iSpecie=1,nSpecie-1 do begin
-        SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecie)
-        Moment_id = H5G_OPEN(group_id, SpeciesName)
-        nMoment = H5G_GET_NUM_OBJS(Moment_id)
-        for iMoment=0, nMoment-1 do begin
-           get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict-1),nxyz_D,$
-                        iSpecie-1,pict,varname,getdata
+     iSpecies = 0
+     for iVar=0,nVarable-1 do begin
+                                ; Read rho Jx Jy Jz...
+        VarName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iVar)
+        if strmid(VarName,0,7) ne 'species' then begin
+           get_hdf_pict,group_id,iVar,SortIdx_I(npict-1),nxyz_D,$
+                        -1,pict,varname,getdata           
            if getdata then begin
               case ndim of
                  1:w(iMin:iMax,iw) = pict
@@ -706,14 +691,31 @@ pro get_pict_hdf, filename, npict, x, w, error, getdata
            end
            variables(ndim+iw) = varname
            iw = iw +1
-        endfor
-        h5G_CLOSE, Moment_id  
+        endif else begin
+           SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iVar)
+           Moment_id = H5G_OPEN(group_id, SpeciesName)
+           nMoment = H5G_GET_NUM_OBJS(Moment_id)
+           for iMoment=0, nMoment-1 do begin
+              get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict-1),nxyz_D,$
+                           iSpecies,pict,varname,getdata
+              if getdata then begin
+                 case ndim of
+                    1:w(iMin:iMax,iw) = pict
+                    2:w(iMin:iMax,jMin:jMax,iw) = pict
+                    3:w(iMin:iMax,jMin:jMax,kMin:kMax,iw) = pict
+                 endcase
+              end
+              variables(ndim+iw) = varname
+              iw = iw +1
+           endfor
+           iSpecies = iSpecies + 1
+           h5G_CLOSE, Moment_id  
+        endelse 
      endfor
      h5G_CLOSE, group_id  
-
      H5F_CLOSE, file_id
   endfor
-end
+end 
 
 ;=============================================================================
 pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
