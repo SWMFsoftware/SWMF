@@ -81,7 +81,7 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
   ! automatic arrays
 !!$  real, dimension(Weight_:nState, nPoint) :: State_VI, StateAll_VI
-  real, dimension(:,:), allocatable :: State_VI, StateAll_VI
+  real, dimension(:,:), allocatable :: State_VI
 
   ! Temporary variables
   real    :: Weight
@@ -96,8 +96,7 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
   if(DoTestMe)write(*,*)NameSub,' old Xyz_DI=',Xyz_DI
 
   ! Allocate arrays that used to be automatic
-  allocate(State_VI(Weight_:nState,nPoint), &
-       StateAll_VI(Weight_:nState,nPoint), stat=iError)
+  allocate(State_VI(Weight_:nState,nPoint), stat=iError)
   call alloc_check(iError,"advect_points1 arrays")
 
   ! Get weight, density and momentum on local PE for all points
@@ -108,9 +107,8 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
   ! Add up contributions from all the processors
   if(nProc > 1)then
-     call MPI_allreduce(State_VI, StateAll_VI, (1+nState)*nPoint, &
+     call MPI_allreduce(MPI_IN_PLACE, State_VI, (1+nState)*nPoint, &
           MPI_REAL, MPI_SUM, iComm, iError)
-     State_VI = StateAll_VI
   end if
 
   ! Get velocities
@@ -146,7 +144,7 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 !!! to be implemented
 
   ! Deallocate arrays that used to be utomatic
-  deallocate(State_VI, StateAll_VI)
+  deallocate(State_VI)
 
 end subroutine advect_points1
 
