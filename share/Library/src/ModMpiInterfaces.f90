@@ -83,13 +83,22 @@ module ModMPiInterfaces
     mpi_allreduce_i0, &
     mpi_allreduce_i1, &
     mpi_allreduce_i2, &
+    mpi_allreduce_i1_in_place, &
+    mpi_allreduce_i2_in_place, &
     mpi_allreduce_r0, &
     mpi_allreduce_r1, &
     mpi_allreduce_r2, &
     mpi_allreduce_r3, &
     mpi_allreduce_r4, &
+    mpi_allreduce_r0_in_place, &
+    mpi_allreduce_r1_in_place, &
+    mpi_allreduce_r2_in_place, &
+    mpi_allreduce_r3_in_place, &
+    mpi_allreduce_r4_in_place, &
     mpi_allreduce_l0, &
-    mpi_allreduce_l1
+    mpi_allreduce_l1, &
+    mpi_allreduce_l0_in_place, &
+    mpi_allreduce_l1_in_place
   end interface
 
   interface
@@ -349,13 +358,22 @@ module ModMPiInterfaces
     mpi_reduce_i0, &
     mpi_reduce_i1, &
     mpi_reduce_i2, &
+    mpi_reduce_i1_in_place, &
+    mpi_reduce_i2_in_place, &
     mpi_reduce_r0, &
     mpi_reduce_r1, &
     mpi_reduce_r2, &
     mpi_reduce_r3, &
     mpi_reduce_r4, &
+    mpi_reduce_r0_in_place, &
+    mpi_reduce_r1_in_place, &
+    mpi_reduce_r2_in_place, &
+    mpi_reduce_r3_in_place, &
+    mpi_reduce_r4_in_place, &
     mpi_reduce_l0, &
-    mpi_reduce_l1
+    mpi_reduce_l1, &
+    mpi_reduce_l0_in_place, &
+    mpi_reduce_l1_in_place
   end interface
 
   interface mpi_rsend
@@ -833,6 +851,38 @@ contains
      end subroutine mpi_allreduce_i2
 
 
+     subroutine mpi_allreduce_i1_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       integer, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_i1_in_place
+
+
+     subroutine mpi_allreduce_i2_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       integer, intent(out) :: recvbuf(:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_i2_in_place
+
+
      subroutine mpi_allreduce_r0(sendbuf, recvbuf, count, datatype,  &
           op, comm, ierror) 
        real, intent(in) :: sendbuf
@@ -913,6 +963,86 @@ contains
      end subroutine mpi_allreduce_r4
 
 
+     subroutine mpi_allreduce_r0_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_r0_in_place
+
+
+     subroutine mpi_allreduce_r1_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_r1_in_place
+
+
+     subroutine mpi_allreduce_r2_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_r2_in_place
+
+
+     subroutine mpi_allreduce_r3_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_r3_in_place
+
+
+     subroutine mpi_allreduce_r4_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:,:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_r4_in_place
+
+
      subroutine mpi_allreduce_l0(sendbuf, recvbuf, count, datatype,  &
           op, comm, ierror) 
        logical, intent(in) :: sendbuf
@@ -943,6 +1073,38 @@ contains
        call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
           op, comm, ierror)
      end subroutine mpi_allreduce_l1
+
+
+     subroutine mpi_allreduce_l0_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       logical, intent(out) :: recvbuf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_l0_in_place
+
+
+     subroutine mpi_allreduce_l1_in_place(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       logical, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_allreduce
+
+       call mpi_allreduce(sendbuf, recvbuf, count, datatype,  &
+          op, comm, ierror)
+     end subroutine mpi_allreduce_l1_in_place
 
 
      subroutine mpi_bcast_i0(buffer, count, datatype, root, comm, ierror) 
@@ -2338,6 +2500,40 @@ contains
      end subroutine mpi_reduce_i2
 
 
+     subroutine mpi_reduce_i1_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       integer, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_i1_in_place
+
+
+     subroutine mpi_reduce_i2_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       integer, intent(out) :: recvbuf(:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_i2_in_place
+
+
      subroutine mpi_reduce_r0(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf
@@ -2423,6 +2619,91 @@ contains
      end subroutine mpi_reduce_r4
 
 
+     subroutine mpi_reduce_r0_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_r0_in_place
+
+
+     subroutine mpi_reduce_r1_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_r1_in_place
+
+
+     subroutine mpi_reduce_r2_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_r2_in_place
+
+
+     subroutine mpi_reduce_r3_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_r3_in_place
+
+
+     subroutine mpi_reduce_r4_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       real, intent(out) :: recvbuf(:,:,:,:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_r4_in_place
+
+
      subroutine mpi_reduce_l0(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        logical, intent(in) :: sendbuf
@@ -2455,6 +2736,40 @@ contains
        call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror)
      end subroutine mpi_reduce_l1
+
+
+     subroutine mpi_reduce_l0_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       logical, intent(out) :: recvbuf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_l0_in_place
+
+
+     subroutine mpi_reduce_l1_in_place(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror) 
+       integer, intent(in) :: sendbuf
+       logical, intent(out) :: recvbuf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: op
+       integer, intent(in) :: root
+       integer, intent(in) :: comm
+       integer, intent(out) :: ierror
+          external mpi_reduce
+
+       call mpi_reduce(sendbuf, recvbuf, count, datatype, op, &
+          root, comm, ierror)
+     end subroutine mpi_reduce_l1_in_place
 
 
      subroutine mpi_rsend_i0(buf, count, datatype, dest, tag, comm, ierror) 
