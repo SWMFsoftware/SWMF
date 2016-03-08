@@ -44,8 +44,12 @@ if($Sub){
 	my $Sub;
 	my $Types;
 	my $DoInPlace;
-	($Sub, $Types, $DoInPlace) = split(' ',$_,3);
-	$DoInPlace = (lc($DoInPlace) eq 'inplace');
+	($Sub, $Types) = split(' ',$_,2);
+	if($Sub =~ m/mpi_\w*reduce/i ||$Sub =~ m/mpi_\w*gather/i){
+	    $DoInPlace = 'sendbuf';}
+	elsif($Sub =~ m/mpi_\w*scatter/i){
+	    $DoInPlace = 'recvbuf';}
+	else{$DoInPlace = '';}
 	$Sub   = lc($Sub);
 	$Types = lc($Types);
 	print "Sub=$Sub\n" if $Verbose;
@@ -111,8 +115,8 @@ foreach $Routine ( sort keys %Sub ) {
     $Procedure .= "  interface $Routine\n    module procedure \&\n";
 
     my @Modes = ('');
-    push @Modes, '_in_place' if($DoInPlace{$Routine});
-
+    push @Modes, ('_in_place','_in_place_array') if($DoInPlace{$Routine});
+    my $DoInPlace = $DoInPlace{$Routine};
     my $Types = ($Types{$Routine} or $DefaultTypes);
     my $TypeDims;
     foreach $TypeDims (split(/,/,$Types)) {
@@ -129,7 +133,14 @@ foreach $Routine ( sort keys %Sub ) {
 	    
 	    # Create template for this variable type
 	    my $TemplateType = $Template;
-	    $TemplateType =~ s/<type>/integer/ if($Mode);
+	    $TemplateType =~ 
+		s/<type>(.*?\().*?(\).*$DoInPlace)/integer$1in$2/ 
+		if($Mode eq '_in_place');
+	    $TemplateType =~ 
+		s/<type>(.*?\().*?(\).*$DoInPlace)/integer$1in$2\(*\)/ 
+		if($Mode eq '_in_place_array');
+	    $TemplateType =~ 
+		s/(<type>,\s*intent\()out\)/$1inout\)/ if($Mode);
 	    $TemplateType =~ s/<type>/$TypeName{$Type}/g;
 	    $TemplateType =~ s/$Routine/$RoutineType/g;
 	    
@@ -142,8 +153,8 @@ foreach $Routine ( sort keys %Sub ) {
 	    
 	    my $nDim;
 	    foreach $nDim (0..$Dims) {
-		# to avoid ambiguity for scalar integer buffers
-		next if( $nDim==0 && $Mode && $Type eq 'i');
+		# to avoid ambiguity for integer buffers
+		next if( $nDim<=1 && not($Mode) && $DoInPlace && $Type eq 'i');
 
 		my $Dim1=$Dims[$nDim];
 		my $Dim2=$Dims[$nDim+1];
@@ -153,7 +164,7 @@ foreach $Routine ( sort keys %Sub ) {
 		print "RoutineTypeDim=$RoutineTypeDim\n" if $Verbose;
 		
 		my $TemplateTypeDim = $TemplateType;
-		$TemplateTypeDim =~ s/\(dim1\)//i if($Mode);
+		$TemplateTypeDim =~ s/($DoInPlace.*)\(dim\d\)/$1/i if($Mode);
 		$TemplateTypeDim =~ s/\(dim1\)/$Dim1/ig;
 		$TemplateTypeDim =~ s/\(dim2\)/$Dim2/ig;
 		$TemplateTypeDim =~ s/$RoutineType/$RoutineTypeDim/g;
