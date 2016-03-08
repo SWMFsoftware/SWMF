@@ -65,7 +65,7 @@ contains
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
        call ipic3d_init_mpi(iComm, iProc, nProc)
-    case('READ', 'CHECK')
+    case('READ')
 
        ! get section of PARAM.in that contains the PC module
        allocate(StringLineF_I(i_line_read()+1:n_line_read()))
@@ -75,6 +75,8 @@ contains
           call ipic3d_read_param(StringLineF_I, &
                n_line_read()-i_line_read()+1, lStringLine,iProc)
        end if
+    case('CHECK')
+       
     case('STDOUT')
 
     case('FILEOUT')
