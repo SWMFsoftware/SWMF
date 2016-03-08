@@ -1750,10 +1750,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }
   
-  if(XLEN*YLEN*ZLEN!=MPIdata::get_nprocs()){
-    divide_processors(XLEN,YLEN,ZLEN,MPIdata::get_nprocs());
-  }
-
   if(RESTART1){
     ReadRestart(RestartDirName);
     setdoNeedBCOnly(true);
@@ -1762,6 +1758,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   //verbose = false;
   ReadFromGMinit(paramint, griddim, paramreal, ss);
 
+  if(XLEN*YLEN*ZLEN!=MPIdata::get_nprocs()){
+    divide_processors(XLEN,YLEN,ZLEN,MPIdata::get_nprocs());
+  }
+  
   // electron mass given by IPIC3D params while ion mass comes form BATSRUS
   fixPARAM(qom, npcelx, npcely, npcelz, &ns);
   uth =             new double[ns];

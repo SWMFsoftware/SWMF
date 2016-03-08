@@ -1933,7 +1933,7 @@ class InterfaceFluid
     // divisor3 is alway the largest one;
     npx = divisor3;
     npy = divisor1 > divisor2 ? divisor1 : divisor2;
-    npz = divisor1 < divisor2 ? divisor1 : divisor2;
+    npz = divisor1 > divisor2 ? divisor2 : divisor1;
   }
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
