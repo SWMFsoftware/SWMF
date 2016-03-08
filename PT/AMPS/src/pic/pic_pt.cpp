@@ -628,7 +628,7 @@ bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double 
 
 //apply the particle tracking condition to a particle
 void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
-  bool flag;
+  bool flag=false;
   cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
@@ -636,7 +636,10 @@ void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,
   if (DataRecord->TrajectoryTrackingFlag==true) return;
   #endif
 
-  flag=_PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData);
+
+  if (PIC::DataOutputFileNumber>=_PIC_PARTICLE_TRACKER__BEGIN_TRACKING_FILE_OUTPUT_NUMBER_) {
+    flag=_PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData);
+  }
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   DataRecord->TrajectoryTrackingFlag=flag;
