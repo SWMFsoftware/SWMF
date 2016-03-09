@@ -1808,9 +1808,9 @@ contains
        IsOut_I = iLevel_I == -Unset_
        ! node ids
        iNode_I = reshape(iNodeNei_IIIB(&
-            (/min(1,iDiscr_D(1)+1),max(2,iDiscr_D(1)+2)/),&
-            (/min(1,iDiscr_D(2)+1),max(2,iDiscr_D(2)+2)/),&
-            (/min(1,iDiscr_D(3)+1),max(2,iDiscr_D(3)+2)/), iBlockIn),&
+            (/iDiscr_D(1)+1,iDiscr_D(1)+2/),&
+            (/iDiscr_D(2)+1,iDiscr_D(2)+2/),&
+            (/iDiscr_D(3)+1,iDiscr_D(3)+2/), iBlockIn),&
             (/2**nDim/))
 
        ! cell size
