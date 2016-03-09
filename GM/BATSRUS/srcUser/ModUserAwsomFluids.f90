@@ -724,7 +724,7 @@ contains
 
              ! BC with reflected velocity for each cell 
              ! (relative to the surface)
-              do i = MinI, 0
+             do i = MinI, 0
 
                 ! Calculate velocity in cell 1-i                           
                 u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
