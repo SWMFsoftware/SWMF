@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 # Read optional switches -type, -data, -sub
@@ -38,25 +39,25 @@ if($Sub){
 }else{
     open(IN,$DataFile) or die "Could not open data file $DataFile\n";
     while(<IN>){
-	next if /^#/;
+	next if /^\#/;
 	next if /^$/;
 	chop;
 	my $Sub;
 	my $Types;
 	my $DoInPlace;
 	($Sub, $Types) = split(' ',$_,2);
-	if($Sub =~ m/mpi_\w*reduce/i ||$Sub =~ m/mpi_\w*gather/i){
-	    $DoInPlace = 'sendbuf';}
-	elsif($Sub =~ m/mpi_\w*scatter/i){
-	    $DoInPlace = 'recvbuf';}
-	else{$DoInPlace = '';}
 	$Sub   = lc($Sub);
 	$Types = lc($Types);
+	if($Sub =~ /mpi_\w*(reduce|gather)/){
+	    $DoInPlace{$Sub} = 'sendbuf';
+	}elsif($Sub =~ /mpi_\w*scatter/){
+	    $DoInPlace{$Sub} = 'recvbuf';
+	}
 	print "Sub=$Sub\n" if $Verbose;
+	print "DoInPlace=$DoInPlace{$Sub}\n" if $Verbose and $DoInPlace{$Sub};
 	push(@Sub, $Sub);
 	$Types = $DefaultTypes unless $Types;
 	$Types{$Sub}=$Types;
-	$DoInPlace{$Sub}=$DoInPlace;
     }
     close IN;
 }
@@ -115,7 +116,7 @@ foreach $Routine ( sort keys %Sub ) {
     $Procedure .= "  interface $Routine\n    module procedure \&\n";
 
     my @Modes = ('');
-    push @Modes, ('_in_place','_in_place_array') if($DoInPlace{$Routine});
+    push @Modes, ('_in_place','_in_place_array') if $DoInPlace{$Routine};
     my $DoInPlace = $DoInPlace{$Routine};
     my $Types = ($Types{$Routine} or $DefaultTypes);
     my $TypeDims;
@@ -135,12 +136,12 @@ foreach $Routine ( sort keys %Sub ) {
 	    my $TemplateType = $Template;
 	    $TemplateType =~ 
 		s/<type>(.*?\().*?(\).*$DoInPlace)/integer$1in$2/ 
-		if($Mode eq '_in_place');
+		if $Mode eq '_in_place';
 	    $TemplateType =~ 
 		s/<type>(.*?\().*?(\).*$DoInPlace)/integer$1in$2\(*\)/ 
-		if($Mode eq '_in_place_array');
+		if $Mode eq '_in_place_array';
 	    $TemplateType =~ 
-		s/(<type>,\s*intent\()out\)/$1inout\)/ if($Mode);
+		s/(<type>,\s*intent\()out\)/$1inout\)/ if $Mode;
 	    $TemplateType =~ s/<type>/$TypeName{$Type}/g;
 	    $TemplateType =~ s/$Routine/$RoutineType/g;
 	    
@@ -154,7 +155,7 @@ foreach $Routine ( sort keys %Sub ) {
 	    my $nDim;
 	    foreach $nDim (0..$Dims) {
 		# to avoid ambiguity for integer buffers
-		next if( $nDim<=1 && not($Mode) && $DoInPlace && $Type eq 'i');
+		next if $nDim<=1 and not $Mode and $DoInPlace and $Type eq 'i';
 
 		my $Dim1=$Dims[$nDim];
 		my $Dim2=$Dims[$nDim+1];
@@ -164,7 +165,7 @@ foreach $Routine ( sort keys %Sub ) {
 		print "RoutineTypeDim=$RoutineTypeDim\n" if $Verbose;
 		
 		my $TemplateTypeDim = $TemplateType;
-		$TemplateTypeDim =~ s/($DoInPlace.*)\(dim\d\)/$1/i if($Mode);
+		$TemplateTypeDim =~ s/($DoInPlace.*)\(dim\d\)/$1/i if $Mode;
 		$TemplateTypeDim =~ s/\(dim1\)/$Dim1/ig;
 		$TemplateTypeDim =~ s/\(dim2\)/$Dim2/ig;
 		$TemplateTypeDim =~ s/$RoutineType/$RoutineTypeDim/g;
