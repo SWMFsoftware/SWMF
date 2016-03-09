@@ -24,6 +24,10 @@ module CON_geopack
 
   public:: geopack_recalc ! recalculate all quantities as needed
   public:: test_geopack   ! unit test
+  
+  interface geopack_recalc
+     module procedure geopack_recalc_array, geopack_recalc
+  end interface
 
 contains
   !=======================================================================
@@ -207,10 +211,27 @@ contains
     AxisMagGeo_D = Dipole_D/DipoleStrength
 
   end subroutine geopack_mag_axis
-  !------------------------------------------------------------------------
+  !===========================================================================
+  subroutine geopack_recalc_array(iTimeIn_I)
+
+    ! Allow calling geopack_recalc with an array argument.
+    ! Elements of iTimeIn_I are year, month, day, hour, min, sec, ...
+    ! Elements beyond second are ignored. Missing elements are set to 0.
+
+    integer, intent(in):: iTimeIn_I(:)
+    integer:: iTime_I(6), n
+    !------------------------------------------------------------------------
+    iTime_I=0
+    n = min(6,size(iTimeIn_I))
+    iTime_I(1:n) = iTimeIn_I(1:6)
+    call geopack_recalc(iTime_I(1), iTime_I(2), iTime_I(3), &
+         iTime_I(4), iTime_I(5), iTime_I(6))
+
+  end subroutine geopack_recalc_array
+  !===========================================================================
   subroutine geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
 
-    use ModCoordTransform,ONLY:rot_matrix_z,rot_matrix_x
+    use ModCoordTransform, ONLY: rot_matrix_z, rot_matrix_x
 
     ! Updates matrices for the coordinate transformations
     ! Computations for GeiGse_DD and GeiGsm_DD are from the subroutine
@@ -222,7 +243,8 @@ contains
     !                    which was 180 degrees off. 
     !                    NOTE: the GeiHgi_DD is only defined in the test.
 
-    integer,intent(in)::iYear,iMonth,iDay,iHour,iMin,iSec
+    integer,intent(in):: iYear, iMonth, iDay, iHour, iMin, iSec
+
     integer::jDay
     real::AxisMagGei_D(3),GSTime,SunLongitude,Obliq
     real,parameter :: cLongAscNodeSolEquator = 75.77*cDegToRad
