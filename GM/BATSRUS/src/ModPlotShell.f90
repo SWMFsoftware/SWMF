@@ -173,9 +173,6 @@ contains
     integer,          intent(in) :: iFile, nPlotvar
     character(len=*), intent(in) :: NameFile, NameVar_V(nPlotVar), NameUnit
 
-    ! Array of values written to file:
-    real, allocatable :: PlotVarLocal_VIII(:,:,:,:)
-
     integer :: iVar, iR, iLon, iLat, iError
     character(len=500) :: NameVar
 
@@ -189,14 +186,9 @@ contains
          ': HDF file type not supported for Geo Sphere output.')
     
     ! Collect results to head node
-    if(nProc > 1)then
-       allocate(PlotVarLocal_VIII(0:nPlotVar,nR,nLon,nLat))
-       PlotVarLocal_VIII = PlotVar_VIII
-       call MPI_reduce(PlotVarLocal_VIII, PlotVar_VIII, &
-            size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
-       deallocate(PlotVarLocal_VIII)
-    end if
-    
+    if(nProc > 1) call MPI_reduce(MPI_IN_PLACE, PlotVar_VIII, &
+         size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
+
     ! Save results to disk
     if(iProc==0) then
        ! Build a single-line list of variable names.
