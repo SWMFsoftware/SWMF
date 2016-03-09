@@ -91,7 +91,8 @@ contains
     use ModMain, ONLY: lVerbose, StartTime, Time_Simulation, &
          iStartTime_I, UseStrict, TypeCoordSystem
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
-         SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim
+         SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
+         nVectorVar, iVectorVar_I
 
     use ModIoUnit, ONLY : UNITTMP_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
@@ -101,11 +102,9 @@ contains
     use ModTimeConvert, ONLY: time_int_to_real
     use ModUtilities, ONLY: upper_case, lower_case, split_string
 
-    implicit none
-
     character(len=500):: StringInputVar
 
-    integer :: iError, i , iVar, jVar, iYear
+    integer :: iError, i , iVar, jVar, iYear, iVectorVar
     logical :: UseZeroBx
 
     ! One line of input
@@ -304,36 +303,39 @@ contains
 
           if (TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then 
 
-             call geopack_recalc(&
-                  iTime_I(1), &
-                  iTime_I(2), &
-                  iTime_I(3), &
-                  iTime_I(4), &
-                  iTime_I(5), &
-                  iTime_I(6))
+             call geopack_recalc(iTime_I)
 
-             Solarwind_VI(Bx_:Bz_, nData)=&
-                  matmul(GsmGse_DD, Solarwind_VI(Bx_:Bz_, nData))
-             Solarwind_VI(Ux_:Uz_, nData)=&
-                  matmul(GsmGse_DD, Solarwind_VI(Ux_:Uz_, nData))
+             do iVectorVar = 1, nVectorVar
+                iVar = iVectorVar_I(iVectorVar)
+                Solarwind_VI(iVar:iVar+2, nData)=&
+                     matmul(GsmGse_DD, Solarwind_VI(iVar:iVar+2,nData))
+             end do
+
+          elseif (TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then 
+
+             call geopack_recalc(iTime_I)
+
+             do iVectorVar = 1, nVectorVar
+                iVar = iVectorVar_I(iVectorVar)
+                Solarwind_VI(iVar:iVar+2,nData)=&
+                     matmul(Solarwind_VI(iVar:iVar+2,nData), GsmGse_DD)
+             end do
 
           elseif(TypeCoordSystem == 'HGI' .and. NameInputCoord == 'GSM') then
 
              if(DoSetMatrix)then
                 DoSetMatrix=.false.
-                call geopack_recalc( &
-                     iStartTime_I(1),& ! year
-                     iStartTime_I(2),& ! month
-                     iStartTime_I(3),& ! day
-                     iStartTime_I(4),& ! hour
-                     iStartTime_I(5),& ! minute
-                     iStartTime_I(6))  ! second
-                HgiGsm_DD = matmul(HgiGse_DD,transpose(GsmGse_DD))
+                call geopack_recalc(iStartTime_I)
+                HgiGsm_DD = matmul(HgiGse_DD, transpose(GsmGse_DD))
              end if
-             Solarwind_VI(Bx_:Bz_, nData) = &
-                  matmul(HgiGsm_DD, Solarwind_VI(Bx_:Bz_, nData))
-             Solarwind_VI(Ux_:Uz_, nData)=&
-                  matmul(HgiGsm_DD, Solarwind_VI(Ux_:Uz_, nData))
+
+             ! Shouldn't we add the orbital velocity of the Earth here ?!!!
+             do iVectorVar = 1, nVectorVar
+                iVar = iVectorVar_I(iVectorVar)
+                Solarwind_VI(iVar:iVar+2, nData)=&
+                     matmul(HgiGsm_DD, Solarwind_VI(iVar:iVar+2,nData))
+             end do
+             
           else
              write(*,*) 'Transformation between input ',&
                   ' coordinate system=',NameInputCoord,&
