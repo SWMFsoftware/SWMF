@@ -1700,7 +1700,7 @@ test_L1toBC_compile:
 
 test_L1toBC_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/EARTH/PARAM.in.L1toBC PARAM.in
-	cd ${TESTDIR}; cp Param/EARTH/imf19980504.dat IMF.dat
+	cd ${TESTDIR}; cp Param/EARTH/imf19980504.dat ACE.dat
 	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_L1toBC.diff
 
 test_L1toBC_run:

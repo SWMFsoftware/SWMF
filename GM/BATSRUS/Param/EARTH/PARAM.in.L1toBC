@@ -34,7 +34,7 @@ F			DoSaveRestart
 
 #SOLARWINDFILE
 T			UseSolarWindFile
-IMF.dat			NameSolarWindFile
+ACE.dat			NameSolarWindFile
 
 #OUTERBOUNDARY
 outflow			TypeBc1
