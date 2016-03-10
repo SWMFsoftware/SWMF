@@ -25,7 +25,8 @@ subroutine write_plot_common(iFile)
        rRound0, rRound1, SqrtNDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
-  use ModPlotShell
+  use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell,&
+       write_plot_sph
   
   implicit none
 
@@ -206,7 +207,8 @@ subroutine write_plot_common(iFile)
   DoPlotShell = index(plot_type1,'shl')>0
 
   if(DoPlotShell)then
-     ! There is no file to be opened here, it is done by save_plot_file
+     ! Initialize the shell grid for this file
+     call init_plot_shell(iFile, nPlotVar)
   elseif(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
@@ -356,7 +358,7 @@ subroutine write_plot_common(iFile)
         end if
         dzblk=360.0/real(nphi)
      else if (DoPlotShell) then
-        call set_plot_shell(iFile, iBLK, nPlotvar, Plotvar)
+        call set_plot_shell(iBLK, nPlotvar, Plotvar)
      else
         select case(plot_form(iFile))
         case('tec')
