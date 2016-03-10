@@ -26,6 +26,7 @@ $Compiler eq "nagfor"
 # the same MPI routines are called with different argument types
 $Compiler eq "f95" or $Compiler eq "nagfor"
 	${COMPILE.f90} ${Cflag0} -dusty ModMpiInterfaces.f90
+	${COMPILE.f90} ${Cflag0} -dusty ModMpi.f90
 
 # Use LINK.f90 (usually mpif90) so the mpif.h header file can be included
 1
