@@ -4096,7 +4096,7 @@ contains
      subroutine mpi_reduce_i2(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        integer, intent(in) :: sendbuf(:,:)
-       integer, intent(out) :: recvbuf(:,:)
+       integer, intent(inout) :: recvbuf(:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4215,7 +4215,7 @@ contains
      subroutine mpi_reduce_r0(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf
-       real, intent(out) :: recvbuf
+       real, intent(inout) :: recvbuf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4232,7 +4232,7 @@ contains
      subroutine mpi_reduce_r1(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf(:)
-       real, intent(out) :: recvbuf(:)
+       real, intent(inout) :: recvbuf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4249,7 +4249,7 @@ contains
      subroutine mpi_reduce_r2(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf(:,:)
-       real, intent(out) :: recvbuf(:,:)
+       real, intent(inout) :: recvbuf(:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4266,7 +4266,7 @@ contains
      subroutine mpi_reduce_r3(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf(:,:,:)
-       real, intent(out) :: recvbuf(:,:,:)
+       real, intent(inout) :: recvbuf(:,:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4283,7 +4283,7 @@ contains
      subroutine mpi_reduce_r4(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        real, intent(in) :: sendbuf(:,:,:,:)
-       real, intent(out) :: recvbuf(:,:,:,:)
+       real, intent(inout) :: recvbuf(:,:,:,:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4470,7 +4470,7 @@ contains
      subroutine mpi_reduce_l0(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        logical, intent(in) :: sendbuf
-       logical, intent(out) :: recvbuf
+       logical, intent(inout) :: recvbuf
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
@@ -4487,7 +4487,7 @@ contains
      subroutine mpi_reduce_l1(sendbuf, recvbuf, count, datatype, op, &
           root, comm, ierror) 
        logical, intent(in) :: sendbuf(:)
-       logical, intent(out) :: recvbuf(:)
+       logical, intent(inout) :: recvbuf(:)
        integer, intent(in) :: count
        integer, intent(in) :: datatype
        integer, intent(in) :: op
