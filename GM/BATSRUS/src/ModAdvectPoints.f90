@@ -106,10 +106,8 @@ subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
   end do
 
   ! Add up contributions from all the processors
-  if(nProc > 1)then
-     call MPI_allreduce(MPI_IN_PLACE, State_VI, (1+nState)*nPoint, &
-          MPI_REAL, MPI_SUM, iComm, iError)
-  end if
+  if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, State_VI, size(State_VI), &
+       MPI_REAL, MPI_SUM, iComm, iError)
 
   ! Get velocities
   do iPoint = 1, nPoint
