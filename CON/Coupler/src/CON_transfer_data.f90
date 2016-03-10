@@ -191,8 +191,6 @@ contains
 
     integer, parameter:: iTag = 1001
 
-    integer, allocatable:: iDataLocal_I(:)
-
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
@@ -202,16 +200,13 @@ contains
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     if(DoSourceSum)then
-       allocate(iDataLocal_I(nData))
-       iDataLocal_I = iData_I
        if(UseAllReduce)then
-          call MPI_allreduce(iDataLocal_I, iData_I, nData, MPI_INTEGER, &
+          call MPI_allreduce(MPI_IN_PLACE, iData_I, nData, MPI_INTEGER, &
                MPI_SUM, i_comm(iCompSource), iError)
        else
-          call MPI_reduce(iDataLocal_I, iData_I, nData, MPI_INTEGER, &
-               MPI_SUM, 0, i_comm(iCompSource), iError)
+          call MPI_reduce_integer_array(iData_I, nData, &
+               MPI_SUM, 0, i_proc(iCompSource), i_comm(iCompSource), iError)
        end if
-       deallocate(iDataLocal_I)
     end if
 
     if(DoRootTransfer)then
@@ -276,8 +271,6 @@ contains
 
     integer, parameter:: iTag = 1002
 
-    integer:: iDataLocal
-
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
@@ -287,13 +280,12 @@ contains
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     if(DoSourceSum)then
-       iDataLocal = iData
        if(UseAllReduce)then
-          call MPI_allreduce(iDataLocal, iData, 1, MPI_INTEGER, &
+          call MPI_allreduce(MPI_IN_PLACE, iData, 1, MPI_INTEGER, &
                MPI_SUM, i_comm(iCompSource), iError)
        else
-          call MPI_reduce(iDataLocal, iData, 1, MPI_INTEGER, &
-               MPI_SUM, 0, i_comm(iCompSource), iError)
+          call MPI_reduce_integer_scalar(iData, &
+               MPI_SUM, 0, i_proc(iCompSource), i_comm(iCompSource), iError)
        end if
     end if
 
@@ -323,24 +315,19 @@ contains
     logical, optional, intent(in):: &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
-    real, allocatable:: DataLocal_I(:)
-
     integer, parameter:: iTag = 1003
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     if(DoSourceSum)then
-       allocate(DataLocal_I(nData))
-       DataLocal_I = Data_I
        if(UseAllReduce)then
-          call MPI_allreduce(DataLocal_I, Data_I, nData, MPI_REAL, MPI_SUM, &
+          call MPI_allreduce(MPI_IN_PLACE, Data_I, nData, MPI_REAL, MPI_SUM, &
                i_comm(iCompSource), iError)
        else
-          call MPI_reduce(DataLocal_I, Data_I, nData, MPI_REAL, MPI_SUM, &
-               0, i_comm(iCompSource), iError)
+          call MPI_reduce_real_array(Data_I, nData, MPI_SUM, &
+               0, i_proc(iCompSource), i_comm(iCompSource), iError)
        end if
-       deallocate(DataLocal_I)
     end if
 
     if(DoRootTransfer)then
@@ -368,21 +355,18 @@ contains
     logical, optional, intent(in):: &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
-    real:: DataLocal
-
     integer, parameter:: iTag = 1004
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     if(DoSourceSum)then
-       DataLocal = Data
        if(UseAllReduce)then
-          call MPI_allreduce(DataLocal, Data, 1, MPI_REAL, MPI_SUM, &
+          call MPI_allreduce(MPI_IN_PLACE, Data, 1, MPI_REAL, MPI_SUM, &
                i_comm(iCompSource), iError)
        else
-          call MPI_reduce(DataLocal, Data, 1, MPI_REAL, MPI_SUM, 0, &
-               i_comm(iCompSource), iError)
+          call MPI_reduce_real_scalar(Data, MPI_SUM, 0, &
+               i_comm(iCompSource), i_proc(iCompSource), iError)
        end if
     end if
 
