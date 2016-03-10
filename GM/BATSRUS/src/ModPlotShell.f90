@@ -202,15 +202,8 @@ contains
          ': HDF file type not supported for Geo Sphere output.')
     
     ! Collect results to head node
-    if(nProc > 1)then
-       if(iProc == 0)then
-          call MPI_reduce(MPI_IN_PLACE, PlotVar_VIII, &
-               size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
-       else
-          call MPI_reduce(PlotVar_VIII, PlotVar_VIII, &
-               size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
-       end if
-    end if
+    if(nProc > 1) call MPI_reduce_real_array(PlotVar_VIII, size(PlotVar_VIII),&
+         MPI_SUM, 0, iProc, iComm, iError)
 
     ! Save results to disk
     if(iProc==0) then
