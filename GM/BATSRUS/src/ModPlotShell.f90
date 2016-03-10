@@ -8,12 +8,15 @@ module ModPlotShell
   use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
 
   implicit none
-  save
+
+  SAVE
 
   private   ! except
-  public:: write_plot_sph
+  public:: init_plot_shell
   public:: set_plot_shell
   public:: write_plot_shell
+
+  public:: write_plot_sph  ! obsolete spherical plot code
   
   ! Size of current plot:
   integer :: nR, nLon, nLat
@@ -30,20 +33,76 @@ module ModPlotShell
   real:: PlotToGm_DD(3,3)
 
 contains
-  !============================================================================
-  real function minmod(x, y)
-    real, intent(in) :: x, y
-    minmod = max(0.0, min(abs(x), sign(1.0,x)*y))
-  end function minmod
+  !==========================================================================
+  subroutine init_plot_shell(iFile, nPlotVar)
+
+    ! set up the shell grid for this plot file
+
+    use ModMain,           ONLY: time_simulation, TypeCoordSystem
+    use CON_axes,          ONLY: transform_matrix
+    use ModCoordTransform, ONLY: show_rot_matrix
+
+    integer, intent(in):: iFile, nPlotVar
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'init_plot_shell'
+    !-----------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    ! Allocate results array and set up all the spherical shell
+    if(allocated(PlotVar_VIII)) RETURN
+
+    ! Get plot area info from ModIO arrays:
+    dR     = abs(plot_dx(1, iFile))
+    dLon   = plot_dx(2, iFile) * cDegtoRad
+    dLat   = plot_dx(3, iFile) * cDegtoRad
+    rMin   = plot_range(1, iFile)
+    rMax   = plot_range(2, iFile)
+    LonMin = plot_range(3, iFile) * cDegtoRad
+    LonMax = plot_range(4, iFile) * cDegtoRad
+    LatMin = plot_range(5, iFile) * cDegtoRad
+    LatMax = plot_range(6, iFile) * cDegtoRad
+    
+    ! Set number of points:
+    nR   = nint((rMax - rMin)/dR)       + 1
+    nLon = nint((LonMax - LonMin)/dLon) + 1
+    nLat = nint((LatMax - LatMin)/dLat) + 1
+    
+    ! Ensure dR, dLon and dLat are compatible with the ranges
+    dR   = (rMax - rMin)/max(1, nR - 1)
+    dLon = (LonMax - LonMin)/max(1, nLon - 1)
+    dLat = (LatMax - LatMin)/max(1, nLat - 1)
+
+    ! The 0 element is to count the number of blocks that
+    ! contribute to a plot variable.
+    allocate(PlotVar_VIII(0:nPlotVar,nR,nLon,nLat))
+    PlotVar_VIII = 0.0
+
+    ! Get coordinate transformation matrix:
+    PlotToGm_DD = transform_matrix(Time_Simulation, &
+         TypeCoordPlot_I(iFile), TypeCoordSystem)
+
+    if (DoTestMe) then
+       write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
+       write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
+       write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
+       write(*,*) NameSub//' dR, dLon, dLat =      ', dR, dLon, dLat
+       write(*,*) NameSub//' r, Lon, Lat range = ',  &
+            rMin, rMax, LonMin,LonMax,LatMin,LatMax
+       write(*,*) NameSub,' nR, nLon, nLat, dR, dLon, dLat = ', &
+            nR, nLon, nLat, dR, dLon, dLat
+       write(*,*) NameSub,' PlotToGm_DD:'
+       call show_rot_matrix(PlotToGm_DD)
+    end if
+
+  end subroutine init_plot_shell
 
   !============================================================================
-  subroutine set_plot_shell(iFile, iBlock, nPlotvar, Plotvar_GV)
+  subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
-    ! onto the spherical shell of the plot area of plot file iFile.
+    ! onto the spherical shell of the plot area.
     
-    use ModMain,        ONLY: time_simulation, TypeCoordSystem
-    use CON_axes,       ONLY: transform_matrix
     use ModGeometry,    ONLY: rMin_BLK
     use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
@@ -51,7 +110,7 @@ contains
     use ModCoordTransform, ONLY: rlonlat_to_xyz
 
     ! Arguments
-    integer, intent(in) :: iFile, iBlock
+    integer, intent(in) :: iBlock
     integer, intent(in) :: nPlotvar
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
     
@@ -71,51 +130,8 @@ contains
     else
        DoTest = .false.; DoTestMe = .false.
     end if
-    
-    ! Allocate results array and set up all the spherical shell
-    if(.not.allocated(PlotVar_VIII)) then
-
-       ! Get plot area info from ModIO arrays:
-       dR     = abs(plot_dx(1, iFile))
-       dLon   = plot_dx(2, iFile) * cDegtoRad
-       dLat   = plot_dx(3, iFile) * cDegtoRad
-       rMin   = plot_range(1, iFile)
-       rMax   = plot_range(2, iFile)
-       LonMin = plot_range(3, iFile) * cDegtoRad
-       LonMax = plot_range(4, iFile) * cDegtoRad
-       LatMin = plot_range(5, iFile) * cDegtoRad
-       LatMax = plot_range(6, iFile) * cDegtoRad
-    
-       ! Set number of points:
-       nR   = nint((rMax - rMin)/dR)       + 1
-       nLon = nint((LonMax - LonMin)/dLon) + 1
-       nLat = nint((LatMax - LatMin)/dLat) + 1
-    
-       ! Ensure dR, dLon and dLat are compatible with the ranges
-       dR   = (rMax - rMin)/max(1, nR - 1)
-       dLon = (LonMax - LonMin)/max(1, nLon - 1)
-       dLat = (LatMax - LatMin)/max(1, nLat - 1)
-
-       ! The 0 element is to count the number of blocks that
-       ! contribute to a plot variable.
-       allocate(PlotVar_VIII(0:nPlotVar,nR,nLon,nLat))
-       PlotVar_VIII = 0.0
-
-       ! Get coordinate transformation matrix:
-       PlotToGm_DD = transform_matrix(Time_Simulation, &
-            TypeCoordPlot_I(iFile), TypeCoordSystem)
-    end if
      
-    if (DoTestMe) then
-       write(*,*) NameSub//' Called for iBlock=      ', iBlock
-       write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
-       write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
-       write(*,*) NameSub//' dR, dLon, dLat =      ', dR, dLon, dLat
-       write(*,*) NameSub//' r, Lon, Lat range = ',  &
-            rMin, rMax, LonMin,LonMax,LatMin,LatMax
-       write(*,*) NameSub,' nR, nLon, nLat, dR, dLon, dLat = ', &
-            nR, nLon, nLat, dR, dLon, dLat
-    end if
+    if (DoTestMe) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
@@ -186,8 +202,15 @@ contains
          ': HDF file type not supported for Geo Sphere output.')
     
     ! Collect results to head node
-    if(nProc > 1) call MPI_reduce(MPI_IN_PLACE, PlotVar_VIII, &
-         size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
+    if(nProc > 1)then
+       if(iProc == 0)then
+          call MPI_reduce(MPI_IN_PLACE, PlotVar_VIII, &
+               size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
+       else
+          call MPI_reduce(PlotVar_VIII, PlotVar_VIII, &
+               size(PlotVar_VIII), MPI_REAL, MPI_SUM, 0, iComm, iError)
+       end if
+    end if
 
     ! Save results to disk
     if(iProc==0) then
@@ -220,6 +243,12 @@ contains
     deallocate(PlotVar_VIII)
     
   end subroutine write_plot_shell
+
+  !============================================================================
+  real function minmod(x, y)
+    real, intent(in) :: x, y
+    minmod = max(0.0, min(abs(x), sign(1.0,x)*y))
+  end function minmod
 
   !============================================================================
   subroutine write_plot_sph(iFile,iBLK,nPlotvar,Plotvar, &
