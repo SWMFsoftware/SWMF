@@ -655,13 +655,14 @@ contains
     use IH_ModVarIndexes,     ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar
+    use IH_ModBuffer, ONLY:iVar_V, DoCoupleVar_V, nVarCouple
     use CON_coupler,       ONLY: &
-         iVar_V, DoCoupleVar_V, RhoCouple_, RhoUxCouple_,&
+         RhoCouple_, RhoUxCouple_,&
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
          PeCouple_, PparCouple_, WaveFirstCouple_,  &
          WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
          AnisoPressure_, ElectronPressure_,&
-         CollisionlessHeatFlux_, nVarCouple
+         CollisionlessHeatFlux_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,          ONLY: xyz_to_coord, CoordMin_DB, CellSize_DB, nDim

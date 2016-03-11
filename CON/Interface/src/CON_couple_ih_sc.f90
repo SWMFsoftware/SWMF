@@ -29,6 +29,16 @@ module CON_couple_ih_sc
        IH_set_buffer_grid_get_info, &
        IH_save_global_buffer
 
+  use IH_ModBuffer, ONLY: &
+       IH_nVarCouple    => nVarCouple, &
+       IH_iVar_V        => iVar_V, &
+       IH_DoCoupleVar_V => DoCoupleVar_V
+
+  use SC_ModBuffer, ONLY: &
+       SC_nVarCouple    => nVarCouple, &
+       SC_iVar_V        => iVar_V, &
+       SC_DoCoupleVar_V => DoCoupleVar_V
+
   implicit none
   private !except
   !
@@ -76,8 +86,15 @@ contains
 
     if(DoTest) write(*,*) NameSub, ' started'
 
-    ! Determine which state variables should be coupled
+    ! Determine which state variables should be coupled,
+    ! pass this info to SC and IH
     call set_couple_var_info(SC_,IH_)
+    IH_nVarCouple    = nVarCouple_CC(SC_, IH_) 
+    IH_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
+    IH_iVar_V        = iVar_VCC(:,SC_, IH_)
+    SC_nVarCouple    = nVarCouple_CC(SC_, IH_) 
+    SC_DoCoupleVar_V = DoCoupleVar_VCC(:,SC_, IH_)
+    SC_iVar_V        = iVar_VCC(:,SC_, IH_)
 
     ! Set buffer grid location and size in IH, and retrieve them for coupler
     if(is_proc(IH_)) then

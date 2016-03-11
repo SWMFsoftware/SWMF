@@ -431,3 +431,14 @@ contains
 
 
 end module IH_wrapper
+
+!==============================================================================
+
+module IH_ModBuffer
+
+  use CON_coupler, ONLY:nVarIndexCouple, nCoupleVarGroup
+  integer, public:: nVarCouple
+  integer, public:: iVar_V(nVarIndexCouple)
+  logical, public:: DoCoupleVar_V(nCoupleVarGroup)
+
+end module IH_ModBuffer

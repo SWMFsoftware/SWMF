@@ -8,7 +8,7 @@ module ModBuffer
        bilinear_interpolation, DomainDecompositionType, is_proc0, &
        init_decomposition, get_root_decomposition, complete_grid, &
        set_standard_grid_descriptor, bcast_decomposition
-  use CON_coupler,         ONLY: SC_, IH_
+  use CON_coupler,         ONLY: SC_, IH_, nVarIndexCouple, nCoupleVarGroup
   implicit none
   save
 
@@ -24,6 +24,10 @@ module ModBuffer
   integer::nVarBuff=-1
   logical::DoInit =.true.
   real,dimension(:),allocatable::Buffer_V
+
+  integer, public:: nVarCouple
+  integer, public:: iVar_V(nVarIndexCouple)
+  logical, public:: DoCoupleVar_V(nCoupleVarGroup)  
 
 contains
   !==========================================================================
@@ -78,7 +82,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
        UseMultiSpecies, SignB_, Ehot_
   use CON_coupler,   ONLY: &
-       Grid_C, DoCoupleVar_V, iVar_V, nVarCouple,&
+       Grid_C, &
        Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
        MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, &
        RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
