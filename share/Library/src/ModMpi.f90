@@ -14,8 +14,9 @@
 ! If ModMpi is used, it should be compiled with the same precision as the F90
 ! code using it.
 !
-! This module also provides simple interfaces to MPI_reduce with MPI_IN_PLACE
-! option for real and integer scalars and arrays.
+! This module also provides simple interfaces to 
+! MPI\_reduce with MPI\_IN\_PLACE option for real and integer 
+! scalars and arrays.
 !
 !REVISION HISTORY:
 ! 07/02/2003 G. Toth <gtoth@umich.edu> - initial version of ModMpi
