@@ -18,10 +18,10 @@ module CON_main
   use CON_time
   use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
   use CON_session
-  use ModMpi
   use ModIoUnit, ONLY: UNITTMP_
   use ModPlanetConst, ONLY: init_planet_const
   use CON_planet,     ONLY: set_planet_defaults
+  use ModMpi, ONLY: MPI_WTIME, MPI_allreduce, MPI_INTEGER, MPI_MIN
 
   implicit none
 
