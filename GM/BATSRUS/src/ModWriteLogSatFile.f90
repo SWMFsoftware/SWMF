@@ -257,7 +257,7 @@ subroutine write_logfile(iSatIn, iFile)
           write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
 
      ! Finally write out the data variables
-     write(iUnit,'(100es13.5)') LogVar_I(1:nLogTot)
+     write(iUnit,'(100es14.5e3)') LogVar_I(1:nLogTot)
 
      call flush_unit(iUnit)
   end if
@@ -386,6 +386,9 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
         call set_log_var
      end if
   end do
+
+
+
 
 contains
   !============================================================================
