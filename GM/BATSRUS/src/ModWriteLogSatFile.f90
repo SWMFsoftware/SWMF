@@ -266,13 +266,13 @@ subroutine write_logfile(iSatIn, iFile)
         if(DoWritePosition) Xyz_D = matmul(Convert_DD, Xyz_D)
 
         ! Try to recognize vectors by name and convert them
-        do iVar = 1, nLogTot
+        do iVar = 1, nLogTot-2
            call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
            select case(NameLogVar)
               case('ux', 'rhoux', 'bx', 'b0x', 'b1x', 'jx', &
-                   'uxpnt', 'rhouxpnt', 'bxpnt', 'b1xpnt')
-                 if(iVar+2 <= nLogTot) &
-                      LogVar_I(iVar:iVar+2) = matmul(Convert_DD, LogVar_I(iVar:iVar+2))
+                   'uxpnt', 'rhouxpnt', 'bxpnt', 'b1xpnt', 'jxpnt')
+                 LogVar_I(iVar:iVar+2) = &
+                      matmul(Convert_DD, LogVar_I(iVar:iVar+2))
               end select
         end do
 
