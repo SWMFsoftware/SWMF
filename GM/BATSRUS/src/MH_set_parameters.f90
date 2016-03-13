@@ -666,10 +666,21 @@ subroutine MH_set_parameters(TypeAction)
                    //' time'
            end if
 
+           ! Recognize coordinate system names
+           if (index(log_string,'GEO') > 0) TypeCoordPlot_I(logfile_) = 'GEO'
+           if (index(log_string,'GSE') > 0) TypeCoordPlot_I(logfile_) = 'GSE'
+           if (index(log_string,'GSM') > 0) TypeCoordPlot_I(logfile_) = 'GSM'
+           if (index(log_string,'MAG') > 0) TypeCoordPlot_I(logfile_) = 'MAG'
+           if (index(log_string,'SMG') > 0) TypeCoordPlot_I(logfile_) = 'SMG'
+           if (index(log_string,'HGR') > 0) TypeCoordPlot_I(logfile_) = 'HGR'
+           if (index(log_string,'HGI') > 0) TypeCoordPlot_I(logfile_) = 'HGI'
+           if (index(log_string,'HGC') > 0) TypeCoordPlot_I(logfile_) = 'HGC'
+
            ! If any flux variables are used - input a list of radii
            ! at which to calculate the flux
            if (index(log_vars,'flx')>0) &
                 call read_var('log_R_str',log_R_str)
+
         end if
 
      case("#SAVEINITIAL")

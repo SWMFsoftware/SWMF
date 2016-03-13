@@ -73,7 +73,7 @@ contains
 
     use ModProcMH,    ONLY: iProc
     use ModIO,        ONLY: nFile, MaxFile, Satellite_, plot_dimensional, &
-         Dn_Output, Dt_Output, plot_type, NamePlotDir
+         Dn_Output, Dt_Output, plot_type, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
     use ModVarIndexes,ONLY: NamePrimitiveVar
     use ModReadParam, ONLY: read_var
@@ -169,6 +169,16 @@ contains
              if(index(StringSatellite,'time')>0) &
                   TimeSat_I(iSat) = trim(TimeSat_I(iSat))//' time'
           end if
+
+          ! Recognize coordinate system name if present
+          if (index(StringSatellite,'GEO') > 0) TypeCoordPlot_I(iFile) = 'GEO'
+          if (index(StringSatellite,'GSE') > 0) TypeCoordPlot_I(iFile) = 'GSE'
+          if (index(StringSatellite,'GSM') > 0) TypeCoordPlot_I(iFile) = 'GSM'
+          if (index(StringSatellite,'MAG') > 0) TypeCoordPlot_I(iFile) = 'MAG'
+          if (index(StringSatellite,'SMG') > 0) TypeCoordPlot_I(iFile) = 'SMG'
+          if (index(StringSatellite,'HGR') > 0) TypeCoordPlot_I(iFile) = 'HGR'
+          if (index(StringSatellite,'HGI') > 0) TypeCoordPlot_I(iFile) = 'HGI'
+          if (index(StringSatellite,'HGC') > 0) TypeCoordPlot_I(iFile) = 'HGC'
 
        end do
     case('#STEADYSTATESATELLITE')
