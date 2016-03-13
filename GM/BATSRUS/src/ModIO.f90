@@ -101,7 +101,7 @@ Module ModIO
   character(LEN=3)  :: log_form
   character(LEN=10) :: TypeFile_I(MaxFile)
 
-  character(LEN=3)  :: TypeCoordPlot_I(MaxFile)
+  character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,MaxFile) :: plot_range=0. 
