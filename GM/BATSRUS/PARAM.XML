@@ -8,6 +8,7 @@ List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 <set name="nI"           type="integer" value="$_GridSize[0]" />
 <set name="nJ"           type="integer" value="$_GridSize[1]" />
 <set name="nK"           type="integer" value="$_GridSize[2]" />
+<set name="nDim"         type="integer" value="3-($nJ==1)-($nK==1)"/>
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
 <set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
 
@@ -1048,8 +1049,8 @@ so this command is always present in the current restart header files.
 </command>
 
 <command name="OUTERBOUNDARY">
-	<foreach name="Side" values="TypeBc1,TypeBc2,TypeBc3,TypeBc4,TypeBc5,TypeBc6">
-		<parameter name="$Side" type="string" input="select">
+	<for name="iSide" from="1" to="2*$nDim">
+		<parameter name="TypeBc$iSide" type="string" input="select">
 			<option name="coupled" />
 			<option name="periodic"/>
 			<option name="float"          default="T"/>
@@ -1063,7 +1064,7 @@ so this command is always present in the current restart header files.
 			<option name="none" />
 			<option name="user"/>
 		</parameter>
-	</foreach>
+	</for>
 	<rule
 	expr="not($TypeBc1 eq 'periodic' xor $TypeBc2 eq 'periodic')">
 		 First and second BCs must be both periodic or neither
@@ -2609,7 +2610,7 @@ be used after the #SEMIKRYLOV command (if present).
 
 The commands in this group only work in stand alone mode.
 
-<command name="STOP" required="$_IsStandAlone" if="$_IsStandAlone">
+<command name="STOP" if="$_IsStandAlone">
 	<parameter name="MaxIteration" type="integer" min="-1" default="-1" />
 	<parameter name="tSimulationMax" type="real"  min="-1" default="-1" />
 
@@ -2628,9 +2629,39 @@ relative to the initial time determined by the #STARTTIME command.
 If tSimulation reaches this value the session is finished.
 
 Using a negative value for either variables means that the
-corresponding condition is  not checked. The default values
-are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
-must be used in every session.
+corresponding condition is  not checked. 
+
+Either the #STOP or the #ENDTIME command must be used in every session.
+</command>
+
+<command name="ENDTIME" if="$_IsStandAlone">
+	<parameter name="iYear"   type="integer" default="2000" />
+	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
+	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
+
+#ENDTIME
+2000			iYear
+   3			iMonth
+  22			iDay
+  10			iHour
+  45			iMinute
+   0			iSecond
+
+This command can only be used in time accurate mode and in the final session.
+
+The #ENDTIME command sets the date and time in Greenwich Mean Time
+(GMT) or Universal Time (UT) when the simulation should be ended.
+This is an alternative to the #STOP command in the final session.
+This time is stored in the final restart file as the start time for
+the restarted run, and the tSimulation parameter of the #TIMESIMULATION 
+and the nStep parameter of the #NSTEP commands are set to zero.
+This avoids accumulation of tSimulation or nStep for continuously
+restarted runs.
+
+There is no default value.
 </command>
 
 <command name="CHECKSTOPFILE" if="$_IsStandAlone">
@@ -2772,7 +2803,7 @@ Default value is "GM/IO2".
 <command name="SAVELOGFILE">
 	<parameter name="DoSaveLogfile" type="logical" default="F" />
 	<if expr="$DoSaveLogfile">
-		<parameter name="StringLog" type="strings" min="1" max="4">
+		<parameter name="StringLog" type="strings" min="1" max="5">
 			<part name="StringLogVar" type="string" input="select"
 							required="T">
 				<option name="MHD variables"     value="MHD"
@@ -2784,6 +2815,17 @@ Default value is "GM/IO2".
 				<option name="Raw vars. scaled"  value="raw" />
 				<option name="Set variables"     value="VAR" />
 				<option name="Set vars. scaled"  value="var" />
+			</part>
+			<part name="NameCoord" type="string" input="select"
+			        required="F">
+				<option name="GEO"/>
+				<option name="GSE"/>
+				<option name="GSM"/>
+				<option name="MAG"/>
+				<option name="SMG"/>
+				<option name="HGR"/>
+				<option name="HGI"/>
+				<option name="HGC"/>
 			</part>
 			<part name="StringLogTime" type="string" input="select"
 				required="F" multiple="T">
@@ -2807,10 +2849,10 @@ Default value is "GM/IO2".
 	</if>
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
-VAR step date           StringLog
+VAR step date GSE       StringLog
 100                     DnSaveLogfile
 -1.                     DtSaveLogfile [sec]
-rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
+rho p ux uy uz rhoflx   NameLogVars (read if StrigLog is 'var' or 'VAR')
 4.0  10.0               rLog  (radii for the flux. Read if vars include 'flx')
 
 If DoSaveLogFile is set to true then an ASCII logfile containing
@@ -2836,6 +2878,7 @@ The StringLog parameter can contain the following parts in arbitrary order:
 StringLogVar  = 'mhd', 'raw', 'flx' or 'var' - normalized units
 StringLogVar  = 'MHD', 'RAW', 'FLX' or 'VAR' - I/O units
 StringLogTime = 'none', 'step', 'time', and/or 'date'
+NameCoord     = 'GEO', 'GSE', 'GSM', 'MAG', 'SMG', 'HGR', 'HGI' or 'HGC'
 \end{verbatim}
 The StringLogVar part is required and it determines the list
 of variables to be saved into the logile.
@@ -2881,7 +2924,7 @@ Phi1 Phi2 Status    - average of longitude and status of fieldline (for testing)
 VARpnt              - point value of VAR (listed in NameVar_V) at the test cell
 Uxpnt Uypnt Uzpnt   - point value of velocity at test cell
 B1xpnt B1ypnt B1zpnt- point value of B1 field at test cell
-Jxpint Jypnt Jzpnt  - point value of current density
+Jxpnt Jypnt Jzpnt   - point value of current density
 Theta1pnt Theta2pnt - point value of colatitude of fieldline mapping
 Phi1pnt Phi2pnt     - point value of longitude  of fieldline mapping
 Statuspnt           - point value of status of fieldline tracing from test cell:
@@ -2917,6 +2960,11 @@ The rLog parameter is only read when there is at least one 'flx' variable.
 The logfile will contain the name of the flx variable combined with
 the radial value, for example 'dstflx_R=3.0 dstflx_R=3.5 dstflx_R=5.0'.
 
+If the optional NameCoord part is set, the output position, velocity,
+magnetic field or current density vector variables will be written out in 
+the NameCoord coordinate system instead of the coordinate system of the 
+component. In the list of log variables the X, Y and Z components of a
+given vector have to be all present and following each other in this order.
 
 The default is DoSaveLogFile false.
 </command>
@@ -2925,7 +2973,7 @@ The default is DoSaveLogFile false.
 	<parameter name="nSatellite" type="integer" min="0" default="0" />
 	<for from="1" to="$nSatellite">
 		<parameter name="StringSatellite" type="strings"
-							min="1" max="5">
+							min="1" max="6">
 			<part name="NameSatelliteVar" type="string" 
 						 input="select" required="T">
 				<option name="MHD variables"    value="MHD"
@@ -2935,6 +2983,17 @@ The default is DoSaveLogFile false.
 				<option name="All vars. scaled" value="ful" />
 				<option name="Set variables"    value="VAR" />
 				<option name="Set vars. scaled" value="var" />
+			</part>
+			<part name="NameCoord" type="string" input="select"
+			        required="F">
+				<option name="GEO"/>
+				<option name="GSE"/>
+				<option name="GSM"/>
+				<option name="MAG"/>
+				<option name="SMG"/>
+				<option name="HGR"/>
+				<option name="HGI"/>
+				<option name="HGC"/>
 			</part>
 			<part name="OptionalVar" type="string" input="select"
 						required="F" multiple="T">
@@ -2963,11 +3022,11 @@ MHD ray                 StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
-VAR step date           StringSatellite
+VAR step date SMG       StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite2.dat          NameTrajectoryFile
-rho p                   NameSatelliteVars ! Read if StringSatellite 
+rho p ux uy uz          NameSatelliteVars ! Read if StringSatellite 
                                           ! contains 'var' or 'VAR'
 
 The numerical solution can be extracted along one or more satellite
@@ -2980,6 +3039,7 @@ The StringSatellite can contain the following parts in arbitrary order
 \begin{verbatim}
 SatelliteVar   = 'mhd', 'ful' or 'var' (normalized units)
                  'MHD', 'FUL' or 'VAR' (I/O units)
+NameCoord      = 'GEO', 'GSE', 'GSM', 'MAG', 'SMG', 'HGR', 'HGI' or 'HGC'
 OptionalVar    = 'ray', 'none', 'step', 'time', and/or 'date'
 \end{verbatim}
 The SatelliteVar part is required and determines the list
@@ -3009,6 +3069,12 @@ Phi1, Phi2                   - longitude  of mapped field line along B and -B
 Status                       - field line topology 
         (0: open, 1: closed along B, 2: closed along -B 3: fully closed)
 \end{verbatim}
+If the optional NameCoord part is set, the output position, velocity,
+magnetic field or current density vector variables will be written out in 
+the NameCoord coordinate system instead of the coordinate system of the 
+component. In the list of log variables the X, Y and Z components of a
+given vector have to be all present and following each other in this order.
+
 If the optional OptionalVar part contains 'ray' then the ray (fieldline)
 tracing variables  'Theta1 Phi1 Theta2 Phi2 Status' are saved as well. 
 The strings 'step', 'time' and 'date' define the corresponding
@@ -3109,8 +3175,8 @@ example), the start and end times should be set for all of them.
 </command>
 
 <command name="GEOMAGINDICES">
-	 <parameter name="nSizeKpWindow" type="integer" min="15" default="180"/>
-	 <parameter name="DtOutput" type="real" min="-1" default="60"/>
+	<parameter name="nSizeKpWindow" type="integer" min="15" default="180"/>
+	<parameter name="DtOutput" type="real" min="-1" default="60"/>
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
 60.0			DtOutput      [sec]
