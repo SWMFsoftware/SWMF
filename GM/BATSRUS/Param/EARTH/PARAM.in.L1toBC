@@ -60,7 +60,7 @@ F			UseConstrainB
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR date		StringLogfile
+VAR date GSM		StringLogfile
 -1			DnSaveLogfile
 60.0			DtSaveLogfile
 BXPNT BYPNT BZPNT UXPNT UYPNT UZPNT RHOPNT TPNT
