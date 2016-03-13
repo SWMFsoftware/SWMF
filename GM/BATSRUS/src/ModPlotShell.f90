@@ -203,7 +203,7 @@ contains
     
     ! Collect results to head node
     if(nProc > 1) call MPI_reduce_real_array(PlotVar_VIII, size(PlotVar_VIII),&
-         MPI_SUM, 0, iProc, iComm, iError)
+         MPI_SUM, 0, iComm, iError)
 
     ! Save results to disk
     if(iProc==0) then
