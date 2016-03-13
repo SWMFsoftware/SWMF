@@ -13,8 +13,9 @@ subroutine write_logfile(iSatIn, iFile)
   use ModUtilities, ONLY: flush_unit, split_string
   use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
        iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
-  use ModMpi
   use BATL_lib, ONLY: Xyz_DGB
+  use CON_axes, ONLY: transform_matrix
+  use ModMpi
 
   implicit none
 
@@ -29,11 +30,12 @@ subroutine write_logfile(iSatIn, iFile)
   ! Logfile variables
   integer, parameter :: MaxLogVar=40
   integer, parameter :: MaxLogR = 10
-  real :: LogVar_I(MaxLogVar), LogVarSum_I(MaxLogVar)
+  real :: LogVar_I(MaxLogVar)
   character (len=lNameLogVar) :: NameLogVar_I(MaxLogVar)
+  character (len=lNameLogVar) :: NameLogVar
   character (len=10) :: NameLogR_I(MaxLogR)
   real :: LogR_I(MaxLogR)
-  integer :: nLogVar, nLogR, nLogTot, i,j,iSat
+  integer :: nLogVar, nLogR, nLogTot, i, j, iSat
   integer :: nFluxVar       ! number of flux variables used
   integer :: iUnit          ! local unit number
   real :: Xyz_D(3)
@@ -41,16 +43,21 @@ subroutine write_logfile(iSatIn, iFile)
   character (LEN=100) :: StringTime
 
   logical :: DoWritePosition
-  logical :: DoTest, DoTestMe
   real :: pmin, pmax
-  real, external :: maxval_loc_BLK, minval_loc_BLK
   integer :: loc(5)
   integer :: iTime_I(7) ! integer time: year,month,day,hour,minute,sec,msec
   integer :: iError
 
+  ! Coordinate system transformation
+  real:: Convert_DD(3,3)
+  integer:: iVar
+
   ! Event date for filename
   character(len=19) :: EventDateTime
 
+  real, external :: maxval_loc_BLK, minval_loc_BLK
+
+  logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'write_logfile'
   !---------------------------------------------------------------------------
   call set_oktest(NameSub, DoTest, DoTestMe)
@@ -159,7 +166,7 @@ subroutine write_logfile(iSatIn, iFile)
   if(iProc==0) then
      if (iSatIn==0) then
 
-        if(unit_log<0)then
+        if(unit_log < 0)then
            unit_log = io_unit_new()
            filename = trim(NamePlotDir) // 'log'
 
@@ -211,23 +218,21 @@ subroutine write_logfile(iSatIn, iFile)
 
   call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
 
-  ! this write statement seems to be necessary for NAG compiler in debugging mode
+  ! this write statement seems to be necessary for 
+  ! NAG compiler in debugging mode
   if(DoTestMe) &
        write(*,*) NameSub, ' set_logvar finished'
 
-  if(nProc > 0)then
-     ! Collect LogVar_I from all processors
-     call MPI_reduce(LogVar_I, LogVarSum_I, nLogTot, MPI_REAL, MPI_SUM, 0, &
-          iComm, iError)
-     if(iProc == 0)LogVar_I = LogVarSum_I
-  end if
+  ! Collect LogVar_I from all processors
+  if(nProc > 1) call MPI_reduce_real_array(LogVar_I, nLogTot, MPI_SUM, 0, &
+       iComm, iError)
 
   ! WRITE OUT THE LINE INTO THE LOGFILE OR THE SATELLITE FILE
   if(iProc==0) then
 
      if (plot_dimensional(iFile))  &
-          call normalize_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I, &
-          nLogTot,LogVar_I)
+          call normalize_logvar(nLogVar,NameLogVar_I, nLogR, LogR_I, &
+          nLogTot, LogVar_I)
 
      ! first output the appropriate time data
      if(index(StringTime,'none')>0) then
@@ -252,6 +257,27 @@ subroutine write_logfile(iSatIn, iFile)
         end if
      end if
 
+     if(TypeCoordPlot_I(iFile) /= '???' &
+          .and. TypeCoordPlot_I(iFile) /= TypeCoordSystem)then
+
+        Convert_DD = transform_matrix(Time_Simulation, &
+             TypeCoordSystem, TypeCoordPlot_I(iFile))
+
+        if(DoWritePosition) Xyz_D = matmul(Convert_DD, Xyz_D)
+
+        ! Try to recognize vectors by name and convert them
+        do iVar = 1, nLogTot
+           call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
+           select case(NameLogVar)
+              case('ux', 'rhoux', 'bx', 'b0x', 'b1x', 'jx', &
+                   'uxpnt', 'rhouxpnt', 'bxpnt', 'b1xpnt')
+                 if(iVar+2 <= nLogTot) &
+                      LogVar_I(iVar:iVar+2) = matmul(Convert_DD, LogVar_I(iVar:iVar+2))
+              end select
+        end do
+
+     end if
+
      ! Now write the position of the test point or satellite if desired
      if(DoWritePosition) &
           write(iUnit,'(3es13.5)',ADVANCE='NO') Xyz_D
@@ -265,7 +291,8 @@ subroutine write_logfile(iSatIn, iFile)
 end subroutine write_logfile
 
 !==============================================================================
-subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
+subroutine set_logvar( &
+     nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
   use ModProcMH
   use ModNumConst, ONLY: cPi
