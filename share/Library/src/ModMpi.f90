@@ -48,18 +48,19 @@ module ModMpi
 
 contains
   !============================================================================
-  subroutine mpi_reduce_real_array(&
-       Buffer_I, nSize, iOp, iRoot, iRank, iComm, iError)
+  subroutine mpi_reduce_real_array(Buffer_I, nSize, iOp, iRoot, iComm, iError)
 
     real, intent(inout):: Buffer_I(*)
     integer, intent(in):: nSize
     integer, intent(in):: iOp
     integer, intent(in):: iRoot
-    integer, intent(in):: iRank
     integer, intent(in):: iComm
-    integer, intent(in):: iError
+    integer, intent(out):: iError
 
     external MPI_reduce
+    integer:: iRank
+    !------------------------------------------------------------------------
+    call MPI_comm_rank(iComm, iRank, iError)
 
     if(iRoot == iRank)then
        call MPI_reduce(MPI_IN_PLACE, Buffer_I, nSize, MPI_REAL, iOp, &
@@ -71,16 +72,18 @@ contains
 
   end subroutine mpi_reduce_real_array
   !============================================================================
-  subroutine mpi_reduce_real_scalar(Value, iOp, iRoot, iRank, iComm, iError)
+  subroutine mpi_reduce_real_scalar(Value, iOp, iRoot, iComm, iError)
 
     real, intent(inout):: Value
     integer, intent(in):: iOp
     integer, intent(in):: iRoot
-    integer, intent(in):: iRank
     integer, intent(in):: iComm
-    integer, intent(in):: iError
+    integer, intent(out):: iError
 
     external MPI_reduce
+    integer:: iRank
+    !------------------------------------------------------------------------
+    call MPI_comm_rank(iComm, iRank, iError)
 
     if(iRoot == iRank)then
        call MPI_reduce(MPI_IN_PLACE, Value, 1, MPI_REAL, iOp, &
@@ -93,17 +96,19 @@ contains
   end subroutine mpi_reduce_real_scalar
   !============================================================================
   subroutine mpi_reduce_integer_array(&
-       iBuffer_I, nSize, iOp, iRoot, iRank, iComm, iError)
+       iBuffer_I, nSize, iOp, iRoot, iComm, iError)
 
     integer, intent(inout):: iBuffer_I(*)
     integer, intent(in):: nSize
     integer, intent(in):: iOp
     integer, intent(in):: iRoot
-    integer, intent(in):: iRank
     integer, intent(in):: iComm
-    integer, intent(in):: iError
+    integer, intent(out):: iError
 
     external MPI_reduce
+    integer:: iRank
+    !------------------------------------------------------------------------
+    call MPI_comm_rank(iComm, iRank, iError)
 
     if(iRoot == iRank)then
        call MPI_reduce(MPI_IN_PLACE, iBuffer_I, nSize, MPI_INTEGER, &
@@ -115,17 +120,18 @@ contains
 
   end subroutine mpi_reduce_integer_array
   !============================================================================
-  subroutine mpi_reduce_integer_scalar(&
-       iValue, iOp, iRoot, iRank, iComm, iError)
+  subroutine mpi_reduce_integer_scalar(iValue, iOp, iRoot, iComm, iError)
 
     integer, intent(inout):: iValue
     integer, intent(in):: iOp
     integer, intent(in):: iRoot
-    integer, intent(in):: iRank
     integer, intent(in):: iComm
-    integer, intent(in):: iError
+    integer, intent(out):: iError
 
     external MPI_reduce
+    integer:: iRank
+    !------------------------------------------------------------------------
+    call MPI_comm_rank(iComm, iRank, iError)
 
     if(iRoot == iRank)then
        call MPI_reduce(MPI_IN_PLACE, iValue, 1, MPI_INTEGER, &
