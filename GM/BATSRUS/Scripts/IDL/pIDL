@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 my $Help          = ($h or $help or $H or $HELP);
@@ -12,6 +13,10 @@ my $Ccmc          = ($CCMC or $ccmc);
 my $Input         = ($i or $input);
 my $nThread       = ($n or 4);
 my $Sleep         = ($s or $sleep);
+my $Format        = ($f or $format);
+
+# Allow in-place editing
+$^I = "";
 
 use strict;
 
@@ -181,6 +186,15 @@ sub system{
 sub process_file{
     my $HeaderFile = shift;
     my $BaseFile = $HeaderFile; $BaseFile =~ s/\.h$//;
+
+    if($Format){
+	@ARGV = ("$HeaderFile");
+	while(<>){
+	    s/ascii|real4|real8|tec/$Format/;
+	    print;
+	}
+    }
+
     print "PostIDL.exe < $HeaderFile\n" unless $Quiet;
     my $OutFile = "$BaseFile.out";
     my $Output= `$PostIdl < $HeaderFile` unless -s $OutFile and $Ccmc;
@@ -190,6 +204,7 @@ sub process_file{
     print $Output if $Verbose or $Error;
     die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
     die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
+    rename $OutFile, "$BaseFile.dat" if $Format eq "tec";
     unless($Keep){
 	if($BaseFile =~ /[23]d_/ or $BaseFile =~ /1d_/ and $Input){
 	    # Keep header file if file name is 2d_ or 3d_, or 1d_ and -i is set.
@@ -216,7 +231,8 @@ Purpose:
    Create .outs movies from the .out files if requested.
 
 Usage:
-   pIDL [-h] [-v] [-q] [-i] [-k] [-ccmc] [-m|M] [-n=NUMBER] [BASENAME]
+   pIDL [-h] [-v] [-q] [-i] [-k] [-ccmc] [-f=ascii|real4|real8|tec]
+        [-m|M] [-n=NUMBER] [BASENAME]
 
    -h -help    - print this help message
    -v -verbose - print verbose information
@@ -225,6 +241,8 @@ Usage:
                  so that the IDL file can be used as input for READAMR.
    -k -keep    - keep the .h and .idl files. Default is to delete them.
    -ccmc       - keep the .h file for 3d_ files. This is needed by CCMC.
+   -f=FORM     - overwrite the output format with FORM that has the following
+   -format=FORM  options: ascii, real4, real8, tec
    -m -movie   - create movie from the .out files and keep the .out files
    -M -MOVIE   - create movie from the .out files and delete the .out files
    -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 4.
@@ -250,8 +268,9 @@ pIDL -k -m Plots/
    Process all files in IO2, rename .h to .info and keep .tree files:
 pIDL -i
 
-   Process files starting with Plots/y=0 and print verbose information:
-pIDL -v Plots/y=0
+   Process files starting with Plots/y=0, convert to tecplot format (only
+   works with uniform resolution only!) and print verbose information:
+pIDL -v -f=tec Plots/y=0
 ";
    exit 0;
 }
