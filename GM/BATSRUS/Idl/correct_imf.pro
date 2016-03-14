@@ -35,12 +35,7 @@ endif
 ; Calculate the time in seconds measured from the beginning of the month
 iyr=0 & imo=1 & idy = 2 & ihr = 3 & imn = 4 & isc = 5 & ims = 6
 
-Time = $
-  w(*,idy)*86400. + $
-  w(*,ihr)* 3600. + $
-  w(*,imn)*   60. + $
-  w(*,isc)        + $
-  w(*,ims)*    0.001
+Time = log_time(w,['year','mo','dy','hr','mn','sc','msc'],'s')
 
 ; Calculate the time delay
 iux = 10
@@ -81,8 +76,16 @@ for i=1,nPoint-1 do begin
     if index(0) ge 0 then NewTime(index) = -1
 endfor
 
+print,'nPoint=',nPoint
+
 ; Print out corrected IMF file
 close,1
+
+print,'writing into output file=', outputfile
+help,NewTime
+print,NewTime(0:10)
+print,'min/max NewTime=', min(NewTime),max(NewTime)
+
 openw,1,outputfile
 printf,1,'Corrected IMF based on ',inputfile
 printf,1,'yr mo dy hr mn sc ms bx by bz ux uy uz rho T'
