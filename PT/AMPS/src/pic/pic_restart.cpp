@@ -298,6 +298,30 @@ void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
             ptr=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
 
             PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*) PIC::ParticleBuffer::GetParticleDataPointer(ptr),(PIC::ParticleBuffer::byte*) tempParticleData);
+
+            //in case when particle tracking is on -> apply the particle tracking conditions if needed
+            if (_PIC_PARTICLE_TRACKER_MODE_ ==_PIC_MODE_ON_) {
+              PIC::ParticleBuffer::byte *ParticleData;
+              PIC::ParticleTracker::cParticleData *DataRecord;
+
+              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+              DataRecord=(PIC::ParticleTracker::cParticleData*)(PIC::ParticleTracker::ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
+              DataRecord->TrajectoryTrackingFlag=false;
+
+
+              if (_PIC_PARTICLE_TRACKER__RESTART_LOADED_PARTICLES__APPLY_TRACKING_CONDITION_MODE_==_PIC_MODE_ON_) {
+                //apply the particle tracking condition if needed
+                double x[3],v[3];
+                int spec;
+
+                PIC::ParticleBuffer::GetX(x,ParticleData);
+                PIC::ParticleBuffer::GetV(v,ParticleData);
+                spec=PIC::ParticleBuffer::GetI(ParticleData);
+
+                PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,(void *)ParticleData);
+              }
+
+            }
           }
         }
 
