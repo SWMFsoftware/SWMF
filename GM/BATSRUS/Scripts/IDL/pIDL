@@ -190,6 +190,7 @@ sub process_file{
     if($Format){
 	@ARGV = ("$HeaderFile");
 	while(<>){
+	    s/(\s*\-1\.0*E\+0*){3}/0.0 0.0 0.0/ if /plot_dx/;
 	    s/ascii|real4|real8|tec/$Format/;
 	    print;
 	}
@@ -268,8 +269,8 @@ pIDL -k -m Plots/
    Process all files in IO2, rename .h to .info and keep .tree files:
 pIDL -i
 
-   Process files starting with Plots/y=0, convert to tecplot format (only
-   works with uniform resolution only!) and print verbose information:
+   Process files starting with Plots/y=0, convert to tecplot format
+   (with uniform resolution!) and print verbose information:
 pIDL -v -f=tec Plots/y=0
 ";
    exit 0;
