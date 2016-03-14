@@ -378,8 +378,10 @@ class InterfaceFluid
     for(int i=0;i<nxnLG;i++)
       for(int j=0;j<nynLG;j++)
 	for(int k=0;k<nznLG;k++)	  
-  	  for(int iVar=0;iVar<=iJz;iVar++)
-  	    State_GV[i][j][k][iVar] *= Si2No_V[iVar];  
+	  if(doGetFromGM(i,j,k)){
+	    for(int iVar=0;iVar<=iJz;iVar++)
+	      State_GV[i][j][k][iVar] *= Si2No_V[iVar];  
+	  }
   }
 
   void Moment2Velocity(){
@@ -1612,7 +1614,7 @@ class InterfaceFluid
 	  State_GV[i+1][j+1][k][iJy] = - compZdx;
 	  State_GV[i+1][j+1][k][iJz] =   compYdx - compXdy;
 	 
-	}
+	  }
 	}
 
       // fill in the ghost cell, constant value
