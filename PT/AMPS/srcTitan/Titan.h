@@ -1,4 +1,4 @@
-/*
+ /*
  * Titan.h
  *
  *  Created on: Jun 21, 2012
@@ -29,6 +29,231 @@
 
 namespace Titan {
   using namespace Exosphere;
+
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  namespace InjectWeightedMaxwellian{
+
+
+    inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+      static bool initflag=false;
+      static double ProductionRateTable[PIC::nTotalSpecies];
+
+
+      if (initflag==false) {
+        initflag=true;
+
+        for (int s=0;s<PIC::nTotalSpecies;s++) ProductionRateTable[s]=0.0;
+
+        //init the table
+        ProductionRateTable[_N2_SPEC_]=4.266e29;
+      }
+
+      //catch undefined species (exepd iona injected from the boundary)
+      if (spec!=_O_PLUS_SPEC_) {
+        if (ProductionRateTable[spec]<1.0) exit(__LINE__,__FILE__,"Error: the species injectino rate is not defined");
+      }
+
+
+      return ProductionRateTable[spec];  ///Total Flux
+    }    
+
+
+
+    inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+                                           double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
+                                           double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,
+                                           int BoundaryElementType,void *BoundaryElement) {
+
+      unsigned int idim;
+      int el;
+      double r,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
+      //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+      double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
+
+
+
+
+      SpiceDouble xform[6][6];
+      
+      
+      memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
+      
+      
+      //Geenrate new particle position
+      r=0.0;
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+        r+=pow(ExternalNormal[idim],2);
+      }
+      r=sqrt(r);
+
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]/=r;
+        x_LOCAL_IAU_OBJECT[idim]=sphereX0[idim] - sphereRadius*ExternalNormal[idim];
+      }
+      
+      x_LOCAL_SO_OBJECT[0]=xform[0][0]*x_LOCAL_IAU_OBJECT[0]+xform[0][1]*x_LOCAL_IAU_OBJECT[1]+xform[0][2]*x_LOCAL_IAU_OBJECT[2];
+
+      x_LOCAL_SO_OBJECT[1]=xform[1][0]*x_LOCAL_IAU_OBJECT[0]+xform[1][1]*x_LOCAL_IAU_OBJECT[1]+xform[1][2]*x_LOCAL_IAU_OBJECT[2];
+
+      x_LOCAL_SO_OBJECT[2]=xform[2][0]*x_LOCAL_IAU_OBJECT[0]+xform[2][1]*x_LOCAL_IAU_OBJECT[1]+xform[2][2]*x_LOCAL_IAU_OBJECT[2];
+      
+      //determine if the particle belongs to this processor
+      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
+      if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+      
+      const double SourceTemperature = 161.0, NumericalTemperature = 161.0*2.5, _N2__MASS_ = 28.0*ProtonMass;
+      double speed=0.0, ParticleWeightCorrection=0.0;
+      
+      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,NumericalTemperature,ExternalNormal,spec);
+      for (idim=0;idim<DIM;idim++) {
+	speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
+      }
+      speed=sqrt(speed);
+
+      //correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and
+      ParticleWeightCorrection=pow((1.0/SourceTemperature)/(1.0/NumericalTemperature),0.5)*exp(-_N2__MASS_*speed*speed/2.0/Kbol/SourceTemperature)/exp(-_N2__MASS_*speed*speed/2.0/Kbol/NumericalTemperature);
+      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+      //cout << ParticleWeightCorrection << "\t"<<speed<<endl;
+
+      //transform the velocity vector to the coordinate frame 'MSGR_SO'
+      v_LOCAL_SO_OBJECT[0]=xform[3][0]*x_LOCAL_IAU_OBJECT[0]+xform[3][1]*x_LOCAL_IAU_OBJECT[1]+xform[3][2]*x_LOCAL_IAU_OBJECT[2]+
+        xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      v_LOCAL_SO_OBJECT[1]=xform[4][0]*x_LOCAL_IAU_OBJECT[0]+xform[4][1]*x_LOCAL_IAU_OBJECT[1]+xform[4][2]*x_LOCAL_IAU_OBJECT[2]+
+        xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      v_LOCAL_SO_OBJECT[2]=xform[5][0]*x_LOCAL_IAU_OBJECT[0]+xform[5][1]*x_LOCAL_IAU_OBJECT[1]+xform[5][2]*x_LOCAL_IAU_OBJECT[2]+
+        xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
+      memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+      
+      //set up the intermal energy if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__TR_RELAXATION_MODE_  == _PIC_MODE_ON_
+      PIC::IDF::InitRotTemp(ImpactVaporization_SourceTemeprature[spec],tempParticleData);
+#endif
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  == _PIC_MODE_ON_
+      exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+
+#endif
+
+      return true;
+      
+    } 
+  }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  namespace UniformExosphere {
+    const double SourceTemperature = 161.0;
+    inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+      //return 4.266e29;  ///Total Flux
+      //return 4.067e27; ///vmn = 800
+      //return 1.974e24; ///vmn = 1200
+      return 1.148e23; ///vmn = 1400
+    }
+    
+
+    inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+					   double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
+					   double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, 
+					   int BoundaryElementType,void *BoundaryElement) {
+      
+      unsigned int idim;
+      int el;
+      double r,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
+      //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+      double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
+      SpiceDouble xform[6][6];
+      
+      
+      memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
+      
+
+      //Geenrate new particle position
+      r=0.0;
+      for (idim=0;idim<DIM;idim++) {
+	ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+	r+=pow(ExternalNormal[idim],2);
+      }
+      r=sqrt(r);
+      
+      for (idim=0;idim<DIM;idim++) {
+	ExternalNormal[idim]/=r;
+	x_LOCAL_IAU_OBJECT[idim]=sphereX0[idim]-sphereRadius*ExternalNormal[idim];
+      }
+      //transfer the position into the coordinate frame related to the rotting coordinate frame 'MSGR_SO'
+      x_LOCAL_SO_OBJECT[0]=xform[0][0]*x_LOCAL_IAU_OBJECT[0]+xform[0][1]*x_LOCAL_IAU_OBJECT[1]+xform[0][2]*x_LOCAL_IAU_OBJECT[2];
+      x_LOCAL_SO_OBJECT[1]=xform[1][0]*x_LOCAL_IAU_OBJECT[0]+xform[1][1]*x_LOCAL_IAU_OBJECT[1]+xform[1][2]*x_LOCAL_IAU_OBJECT[2];
+      x_LOCAL_SO_OBJECT[2]=xform[2][0]*x_LOCAL_IAU_OBJECT[0]+xform[2][1]*x_LOCAL_IAU_OBJECT[1]+xform[2][2]*x_LOCAL_IAU_OBJECT[2];
+      
+      
+      //determine if the particle belongs to this processor
+      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
+      if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+      
+      //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+       
+      //Switch statement used to implement numerical velocity distribution for better statistics
+      double speed = 0.0;
+      //const double min_speed = 700.0;
+      //const double min_speed = 1200.0;
+      const double min_speed = 1400.0;
+      
+      
+      speed = 0.0;
+      while(speed < min_speed){
+      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SourceTemperature,ExternalNormal,spec);
+      for (idim=0;idim<DIM;idim++) {
+	speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
+      }
+      }
+      //transform the velocity vector to the coordinate frame 'MSGR_SO'
+      v_LOCAL_SO_OBJECT[0]=xform[3][0]*x_LOCAL_IAU_OBJECT[0]+xform[3][1]*x_LOCAL_IAU_OBJECT[1]+xform[3][2]*x_LOCAL_IAU_OBJECT[2]+
+	xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      v_LOCAL_SO_OBJECT[1]=xform[4][0]*x_LOCAL_IAU_OBJECT[0]+xform[4][1]*x_LOCAL_IAU_OBJECT[1]+xform[4][2]*x_LOCAL_IAU_OBJECT[2]+
+	xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      v_LOCAL_SO_OBJECT[2]=xform[5][0]*x_LOCAL_IAU_OBJECT[0]+xform[5][1]*x_LOCAL_IAU_OBJECT[1]+xform[5][2]*x_LOCAL_IAU_OBJECT[2]+
+	xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
+      
+      memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
+      memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+      
+      //set up the intermal energy if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+      
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__TR_RELAXATION_MODE_  == _PIC_MODE_ON_
+      PIC::IDF::InitRotTemp(ImpactVaporization_SourceTemeprature[spec],tempParticleData);
+#endif
+      
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  == _PIC_MODE_ON_
+      exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+      
+#endif
+    
+      return true;
+    }
+  }
+  
+  
+  
+  
+  
+
+
 
   namespace tgitm_exobase {
 	
@@ -101,7 +326,7 @@ namespace Titan {
 		double speed=0.0;
 		PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 		/*switch (spec) {
-		case _N2_SPEC_:
+		  case _N2_SPEC_:
 		
 				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,Tnum,ExternalNormal,spec);
 				for (idim=0;idim<DIM;idim++) {
@@ -133,14 +358,14 @@ namespace Titan {
 
 		//transform the velocity vector to the coordinate frame 'MSGR_SO'
 		v_LOCAL_SO_OBJECT[0]=xform[3][0]*x_LOCAL_IAU_OBJECT[0]+xform[3][1]*x_LOCAL_IAU_OBJECT[1]+xform[3][2]*x_LOCAL_IAU_OBJECT[2]+
-			xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
-
+		  xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
+		
 		v_LOCAL_SO_OBJECT[1]=xform[4][0]*x_LOCAL_IAU_OBJECT[0]+xform[4][1]*x_LOCAL_IAU_OBJECT[1]+xform[4][2]*x_LOCAL_IAU_OBJECT[2]+
-          xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
-
+		  xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
+		
 		v_LOCAL_SO_OBJECT[2]=xform[5][0]*x_LOCAL_IAU_OBJECT[0]+xform[5][1]*x_LOCAL_IAU_OBJECT[1]+xform[5][2]*x_LOCAL_IAU_OBJECT[2]+
-			xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
-
+		  xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
+		
 		memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
 		memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
 		memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
