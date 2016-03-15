@@ -161,6 +161,7 @@ module ModUser
   real, dimension(32,MaxSpecies)::Impact_ION_dim=0.0 
   real, dimension(32):: Temp_dim
   logical :: UseChargeEx=.true.
+  logical ::  UseChapman = .false.
 
   integer,parameter::NLong=73, NLat=36, MaxAlt=21
   real :: Long_I(NLong), Lat_I(NLat), Alt_I(MaxAlt)
@@ -268,7 +269,10 @@ contains
              read(15,*)Temp_dim(i),Impact_ION_dim(i,Op_),Impact_ION_dim(i,Hp_)
           end do
           close(15)
-          
+
+       case('#USECHAPMAN')
+          call read_var('UseChapman',UseChapman)
+         
        case("#UseMarsAtm")
           call read_var('UseMarsAtm',UseMarsAtm)
           if(UseMarsAtm)then
@@ -1881,18 +1885,63 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
-            Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
-            +5.0e-4
-       Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
-            CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
-            6.0e-3)/cosSZA
-       if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
-          Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
+       if(.not.UseChapman)then  
+          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+               Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
+               +5.0e-4
+          Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
+               CrossSection_I(1:MaxNuSpecies)*HNuSpecies_I(1:MaxNuSpecies)),&
+               6.0e-3)/cosSZA
+          if( Optdep<11.5 .and. Xyz_DGB(x_,i,j,k,iBlock) > 0.0) then 
+             Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-5)
+          else
+             Productrate_CB(i,j,k,iBlock) = 1.0e-5
+          end if
        else
-          Productrate_CB(i,j,k,iBlock) = 1.0e-5
-       end if
+          Optdep=HNuSpecies_I(CO2_)*nDenNuSpecies_CBI(i,j,k,iBlock,CO2_)*&
+               CrossSection_I(CO2_)
+          cosSZA = Xyz_DGB(x_,i,j,k,iBlock) /R_BLK(i,j,k,iBlock)
+          if(Optdep > 13.8) then 
+             Productrate_CB(i,j,k,iBlock) = 1.0e-6*&
+                  max(cosSZA, 1.0e-6)                
+          else
+             Xp=R_BLK(i,j,k,iBlock)/HNuSpecies_I(1)
+             chap_y= sqrt(0.5*Xp)*abs(cosSZA)
+             if(cosSZA .gt.0.0)then   !SZA<90 deg (equation 13)
+                if(chap_y<8.0)then
+                   chap = sqrt(3.1415926/2.0*Xp)*&
+                        (1.0606963+0.5564383*chap_y)/&
+                        (1.0619896+1.7245609*chap_y+chap_y*chap_y)
+                elseif(chap_y<100.0)then
+                   chap = sqrt(3.1415926/2.0*Xp)*&
+                        0.56498823/(0.6651874+chap_y)
+                else
+                   chap=0.0
+                end if
+             elseif(cosSZA > -0.5) then
+                ! 120 >SZA > 90 deg (equation 15) Smith and Smith, 1972
+                sinSZA = sqrt(1.0 - cosSZA**2)
+                if(chap_y<8.0)then
+                   chap =sqrt(2.0*3.1415926*Xp)* &
+                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
+                        -0.5*(1.0606963+0.5564383*chap_y)/ &
+                        (1.0619896+1.7245609*chap_y+chap_y*chap_y))
+                elseif(chap_y<100.0)then
+                   chap =sqrt(2.0*3.1415926*Xp)* &
+                        (sqrt(sinSZA)*exp(Xp*(1.0-sinSZA)) &
+                        -0.5*0.56498823/(0.6651874+chap_y))
+                else
+                   chap =0.0
+                end if
+             else
+                chap =1.0e10
+             end if
+             
+             Optdep=Optdep*chap      
+             Productrate_CB(i,j,k,iBlock) = max(exp(-Optdep), 1.0e-6)
 
+          end if
+       end if
     end do; end do; end do
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(UseHotO) then
