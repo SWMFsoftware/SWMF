@@ -15,7 +15,6 @@ module ModMain
   private ! except
 
   public:: read_param, initialize, run, finalize
-  public:: convert_cart_to_sph, convert_sph_to_cart
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_, Begin_, End_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
@@ -270,35 +269,6 @@ contains
     CoordOut_D((/R_, Lat_, Lon_/)) = &
          State_VIB((/R_,Lat_,Lon_/), iCell_D(Particle_), iBlock)
   end subroutine convert_to_hgi
-
-  !============================================================================
-
-  subroutine convert_sph_to_cart(CoordIn_D, XyzOut_D)
-    real, intent(in) :: CoordIn_D(nDim)
-    real, intent(out):: XyzOut_D(nDim)
-
-    integer, parameter:: x_ = 1, y_ = 2, z_ = 3
-    !--------------------------------------------------------------------------
-    XyzOut_D(x_) = CoordIn_D(R_) * cos(CoordIn_D(Lat_)) * cos(CoordIn_D(Lon_))
-    XyzOut_D(y_) = CoordIn_D(R_) * cos(CoordIn_D(Lat_)) * sin(CoordIn_D(Lon_))
-    XyzOut_D(z_) = CoordIn_D(R_) * sin(CoordIn_D(Lat_))
-  end subroutine convert_sph_to_cart
-
-  !============================================================================
-
-  subroutine convert_cart_to_sph(XyzIn_D, CoordOut_D)
-    real, intent(in) :: XyzIn_D(nDim)
-    real, intent(out):: CoordOut_D(nDim)
-
-    real:: Rho 
-    integer, parameter:: x_ = 1, y_ = 2, z_ = 3
-    real, parameter:: cTol = 1E-8
-    !--------------------------------------------------------------------------
-    Rho              = sqrt(sum(XyzIn_D(x_:y_)**2))
-    CoordOut_D(R_)   = sqrt(sum(XyzIn_D(x_:z_)**2))
-    CoordOut_D(Lat_) = asin(XyzIn_D(z_) / (CoordOut_D(R_) + cTol))
-    CoordOut_D(Lon_) = asin(XyzIn_D(y_) / (Rho            + cTol))
-  end subroutine convert_cart_to_sph
 
   !============================================================================
 

@@ -3,8 +3,10 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================!
 module SP_wrapper
-  
-  implicit none
+ 
+  use ModNumConst, ONLY: cHalfPi
+ 
+ implicit none
 
   save
 
@@ -21,7 +23,8 @@ module SP_wrapper
   public:: SP_put_from_mh
   public:: SP_request_line
   public:: SP_put_line
-
+  public:: SP_get_grid_descriptor_param
+  public:: SP_get_line_all
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -175,9 +178,9 @@ contains
   subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
     use ModSize, ONLY: nDim, nNode, R_, Lat_, Lon_
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock,&
-         convert_sph_to_cart
-    use ModMpiOrig
+         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModMpi
     ! request coordinates of field lines' beginning/origin/end
     ! as well as names variables to be imported
     !---------------------------------------------------------------
@@ -210,21 +213,24 @@ contains
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
           Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
+          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
+               CoordOut_DA(:, iNode))
        end do
     case(iDirOrigin_)
        ! get coordinates of the origin points of field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock)
           Coord_D = State_VIB((/R_,Lat_,Lon_/), 0, iBlock)
-          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
+          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
+               CoordOut_DA(:, iNode))
        end do
     case(iDirEnd_)
        ! get coordinates of the last points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
           Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-          call convert_sph_to_cart(Coord_D, CoordOut_DA(:, iNode))
+          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
+               CoordOut_DA(:, iNode))
        end do
     case default
        call CON_stop(NameSub//': invalid request of field line coordinates')
@@ -246,11 +252,11 @@ contains
 
   subroutine SP_put_line(NameVar, nVar,&
        nParticle, Data_VI, iDirIn, Convert_DD)
-    use ModSize, ONLY: nDim, nNode
+    use ModSize, ONLY: nDim, nNode, iParticleMin, iParticleMax, Lat_
     use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, &
-         convert_cart_to_sph
-    use ModMpiOrig
+         Proc_, Block_, Begin_, End_, iProc, iComm
+    use ModCoordTransform, ONLY: xyz_to_sph
+    use ModMpi
     ! store particle data extracted elsewhere
     !---------------------------------------------------------------
     character(len=*), intent(in):: NameVar
@@ -292,24 +298,72 @@ contains
     do iParticle = 1, nParticle
        iLine  = nint(Data_VI(4, iParticle))
        iIndex = nint(Data_VI(5, iParticle)) + iOffset_A(iLine)
+       if(iIndex < iParticleMin)&
+            call CON_stop(NameSub//': particle index is below limit')
+       if(iIndex > iParticleMax)&
+            call CON_stop(NameSub//': particle index is above limit')
        iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iIndex)
        iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        ! convert and store data
        Xyz_D = matmul(Convert_DD, Data_VI(1:nDim, iParticle))
-       call convert_cart_to_sph(Xyz_D, &
+       call xyz_to_sph(Xyz_D, &
             State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)))
+       State_VIB(Lat_, iIndex, iGrid_IA(Block_,iLine)) = &
+            cHalfPi - State_VIB(Lat_, iIndex, iGrid_IA(Block_,iLine))
     end do
     !\
     ! Update begin/end points on all procs
     !/
     iMin_A = iGrid_IA(Begin_, :); iMax_A = iGrid_IA(End_,:)
-    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nNode, MPI_REAL, &
+    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nNode, MPI_INTEGER, &
          MPI_MIN, iComm, iError)
-    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nNode, MPI_REAL, &
+    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nNode, MPI_INTEGER, &
          MPI_MAX, iComm, iError)
     iGrid_IA(Begin_, :) = iMin_A; iGrid_IA(End_,:) = iMax_A
   end subroutine SP_put_line
+
+  !===================================================================
+
+  subroutine SP_get_grid_descriptor_param(&
+       iGridMin_D, iGridMax_D, Displacement_D)
+    use ModSize, ONLY: nDim, iParticleMin, iParticleMax
+    integer, intent(out):: iGridMin_D(nDim)
+    integer, intent(out):: iGridMax_D(nDim)
+    real,    intent(out):: Displacement_D(nDim)
+    !-----------------------------------------
+    iGridMin_D = (/iParticleMin, 1, 1/)
+    iGridMax_D = (/iParticleMax, 1, 1/)
+    Displacement_D = 0.0
+  end subroutine SP_get_grid_descriptor_param
+
+  !===================================================================
+
+  subroutine SP_get_line_all(Xyz_DI)
+    use ModSize, ONLY: nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
+    use ModMain, ONLY: iProc, iComm, Block_, Proc_, iGrid_IA, State_VIB
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModMpiOrig
+    real, pointer:: Xyz_DI(:, :)
+
+    integer:: iNode, iParticle, iBlock, iError
+    real:: Coord_D(nDim)
+    !-----------------------------------------
+    Xyz_DI = 0
+    do iNode = 1, nNode
+       if(iGrid_IA(Proc_, iNode) /= iProc)&
+            CYCLE
+       iBlock = iGrid_IA(Block_, iNode)
+       do iParticle = iParticleMin, iParticleMax
+          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_), &
+               Xyz_DI(:, (iNode-1)*nParticle+iParticle-iParticleMin+1) )
+       end do
+    end do
+    call MPI_Allreduce(MPI_IN_PLACE, Xyz_DI, nParticle*nNode*nDim, MPI_REAL, &
+         MPI_SUM, iComm, iError)
+
+ end subroutine SP_get_line_all
 
 end module SP_wrapper

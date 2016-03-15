@@ -22,6 +22,8 @@ module SP_wrapper
   public:: SP_put_from_mh
   public:: SP_put_line
   public:: SP_request_line
+  public:: SP_get_grid_descriptor_param
+  public:: SP_get_line_all
 
 contains
 
@@ -111,4 +113,23 @@ contains
     real,             intent(in):: Convert_DD(3,3)
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
+  !===================================================================
+
+  subroutine SP_get_grid_descriptor_param(&
+       iGridMin_D, iGridMax_D, Displacement_D)
+    integer, intent(out):: iGridMin_D(3)
+    integer, intent(out):: iGridMax_D(3)
+    real,    intent(out):: Displacement_D(3)
+    !-----------------------------------------
+    call CON_stop('Can not get grid descriptor parameters')
+  end subroutine SP_get_grid_descriptor_param
+
+  !===================================================================
+
+  subroutine SP_get_line_all(Xyz_DI)
+    real, pointer:: Xyz_DI(:, :)
+    !-----------------------------------------
+    call CON_stop('Can not get field lines')
+  end subroutine SP_get_line_all
+
 end module SP_wrapper
