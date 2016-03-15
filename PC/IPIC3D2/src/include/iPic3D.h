@@ -172,6 +172,7 @@ namespace iPic3D {
     double getSItime();
     void setSIDt(double SIDt);
     void SetCycle(int iCycle);
+    void checkConstraint();
 #endif
 
     

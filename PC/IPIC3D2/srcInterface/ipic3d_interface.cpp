@@ -173,7 +173,9 @@ int ipic3d_run_(double *time){
     timing_stop("PC: WriteOutput");
     
     SimRun[i]->WriteConserved(iSimCycle[i]);
-
+    
+    SimRun[i]->checkConstraint();
+    
     iSimCycle[i]++;    
   }
   

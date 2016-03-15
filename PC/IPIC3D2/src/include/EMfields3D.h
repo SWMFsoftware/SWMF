@@ -618,7 +618,10 @@ class EMfields3D                // :public Field
 			     double (CollectiveIO::*fluidVar)(int,int,int,int)const, int nOverlap, int is);
 
     /* Set boundary for rhons, J*s, and p**sn from fluid.*/
-    void setFluidBC_P(int is);      
+    void setFluidBC_P(int is);
+
+    /* Check the accuraty condition */
+    void checkConstraint(double dx, double dy, double dz, double dt);
  private:
     // *************************************
     // ARRAY USED FOR BC WITH BATSRUS

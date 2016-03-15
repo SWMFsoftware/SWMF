@@ -4169,6 +4169,28 @@ inline void EMfields3D::fixVarBCnode(arr4_double Var,
       }}}
 }
 
+void EMfields3D::checkConstraint(double dx, double dy, double dz, double dt){
+  double uthLocal, p0, rho0;
+  for(int is=0; is<ns; is++){
+    uthLocal = 0;
+    for (int i=1; i<nxn-1; i++)
+      for (int j=1; j<nyn-1; j++)
+	for(int k=1; k<nzn-1; k++){
+	  p0 = (pXXsn[is][i][j][k] + pYYsn[is][i][j][k] + pZZsn[is][i][j][k])/3;
+	  rho0 = rhons[is][i][j][k];
+	  uthLocal = max(uthLocal, sqrt(p0/rho0));
+	}
+
+    double uth;          
+    MPI_Reduce(&uthLocal, &uth, 1, MPI_DOUBLE, MPI_MAX, 0 , MPI_COMM_MYSIM);
+
+    if(get_vct().getCartesian_rank() == 0){
+      cout<<"is= "<<is<<" uth= "<<uth<<" uth*dt/dx= "<<uth*dt/dx
+	  <<" uth*dt/dy= "<<uth*dt/dy<<" uth*dt/dz= "<<uth*dt/dz<<endl;
+    }
+  }
+}
+
 #endif
 
 /*! initiliaze EM for GEM challange */
@@ -6146,6 +6168,8 @@ double EMfields3D::getBulkEnergy(int is) {
   MPI_Allreduce(&localBenergy, &totalBenergy, 1, MPI_DOUBLE, MPI_SUM, (&get_vct())->getFieldComm());
   return (totalBenergy);
 }
+
+
 
 /*! Print info about electromagnetic field */
 void EMfields3D::print(void) const {

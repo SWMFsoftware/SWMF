@@ -364,11 +364,10 @@ void c_Solver::CalculateMoments() {
   //EMf->ConstantChargeOpenBC();
   
   EMf->interpDensitiesN2C();
-
 #ifndef BATSRUS
     // calculate the hat quantities for the implicit method
   EMf->calculateHatFunctions();
-  #endif
+#endif
 }
 
 //! MAXWELL SOLVER for Efield
@@ -902,5 +901,7 @@ void c_Solver::SetCycle(int iCycle){
   col->setCycle(iCycle);
 }
 
-
+void c_Solver:: checkConstraint(){  
+  EMf->checkConstraint(col->getDx(), col->getDy(), col->getDz(), col->getDt());
+}
 #endif
