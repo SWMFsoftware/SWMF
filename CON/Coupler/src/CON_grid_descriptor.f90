@@ -1298,7 +1298,7 @@ contains
 
     ! now extract block's parameters
     XyzCorner_D = GridDescriptorAMR%DD%Ptr%XyzBlock_DI(:, iNode)
-    Dxyz_D      = GridDescriptorAMR%DD%Ptr%DxyzBlock_DI(:, iNode)
+    Dxyz_D      = GridDescriptorAMR%DD%Ptr%DxyzCell_DI(:, iNode)
     iProc       = GridDescriptorAMR%DD%Ptr%iDecomposition_II(PE_, iNode) 
     iBlock      = GridDescriptorAMR%DD%Ptr%iDecomposition_II(BLK_, iNode) 
   end subroutine find_amr
