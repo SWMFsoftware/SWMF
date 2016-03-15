@@ -3708,6 +3708,16 @@ namespace PIC {
     }
   }
 
+
+  //process model particles with a user-defined functions
+  namespace UserParticleProcessing {
+    void Processing_default(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+
+    //call the processing function
+    void Processing();
+  }
+
+
   namespace BC {
 
     //the list of blocks that are connected to the bounding box, where the injection boundary conditions are applied

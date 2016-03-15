@@ -66,6 +66,10 @@ at the end of each time step
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  2000
 
+//user-defined processing functions for processing of the model particles 
+#define _PIC_USER_PARTICLE_PROCESSING__MODE_  _PIC_MODE_OFF_
+#define _PIC_USER_PARTICLE_PROCESSING__FUNCTION_(ptr,FirstParticleCell,node)   PIC::UserParticleProcessing::Processing_default(ptr,FirstParticleCell,node)
+
 //debugger mode
 #define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
 #define _PIC_DEBUGGER_MODE__MOVER__CALCULATED_PARTICLE_COORDINATES_ _PIC_DEBUGGER_MODE_OFF_
