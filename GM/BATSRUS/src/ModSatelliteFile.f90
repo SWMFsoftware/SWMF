@@ -3,7 +3,6 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModSatelliteFile
-  use ModSize,   ONLY: MaxBlock
 
   implicit none
   save
@@ -466,8 +465,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_satellite_positions'
     !--------------------------------------------------------------------------
-    if (iProc==0) &
-         call set_oktest('set_satellite_positions',DoTest, DoTestMe)
+    call set_oktest('set_satellite_positions',DoTest, DoTestMe)
 
     if (UseSatFile_I(iSat)) then
 
