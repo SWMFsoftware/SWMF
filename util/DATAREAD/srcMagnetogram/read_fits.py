@@ -21,7 +21,7 @@ def readf(NameFile,BMax):
     """
     NameFile - FITS file containing original magnetogram (include path)
     """
-
+    cPi = np.pi
     TypeMag = 'unknown'
     g = fits.open(NameFile)
     try:
@@ -59,7 +59,7 @@ def readf(NameFile,BMax):
 
     #Uniform in sinLat and longitude grid
     LatSin_I = np.arcsin(np.linspace(-1. + 1./2/nLat,1. - 1./2/nLat,nLat))
-    Long_I = 2.*np.pi*np.linspace(0.,1. - 1./nLong, nLong)
+    Long_I = 2.*cPi*np.linspace(0.,1. - 1./nLong, nLong)
     BrTransp_II = np.zeros([nLong,nLat])
  
     FileId = open('CRLong.dat','w')
@@ -94,15 +94,17 @@ def readf(NameFile,BMax):
     
     for k in np.arange(nLat):
          for l in np.arange(nLong):
-             Name0 = str(Long_I[l]) + '   ' + str(LatSin_I[k]) + '   ' + str(max([-BMax,min([BMax,Br_II[k,l]])])) + ' \n'
-             FileId.write(Name0)
+              FileId.write(str(Long_I[l]*(180./cPi)) + '   ' + str(
+                      LatSin_I[k]*(180./cPi)) + '   ' + str(
+                      max([-BMax,min([BMax,Br_II[k,l]])])) + ' \n')
     FileId.close()
    
     return(BrTransp_II,Long0,nLat,nLong,LatSin_I,Long_I)
         
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="""
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter, description="""
     pre-processes the FITS format magnetograms 
     into ASCII files. The script can read the following types of magnetograms:
 
@@ -113,7 +115,8 @@ if __name__ == '__main__':
     map it is.
     """)
     parser.add_argument('NameFile', help='Input FITS file name including path')
-    parser.add_argument('-BMax',type=float, default=1900., help='Max BrFieldAmplitude')
+    parser.add_argument(
+        '-BMax',type=float, default=1900., help='Max BrFieldAmplitude')
 
     args = parser.parse_args()
 
