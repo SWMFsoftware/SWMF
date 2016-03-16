@@ -223,7 +223,7 @@ contains
        ! Call save_plot_file to write data to disk.
        call save_plot_file(NameFile, &
             TypeFileIn=TypeFile_I(iFile), &
-            StringHeaderIn=NameUnit, &
+            StringHeaderIn=" ", &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
             NameVarIn = NameVar, &
@@ -231,6 +231,7 @@ contains
             CoordMaxIn_D = (/rMax, cRadtoDeg*LonMax, cRadtoDeg*LatMax/), &
             VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
+
     
     ! Deallocate results arrays:.
     deallocate(PlotVar_VIII)
