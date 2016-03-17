@@ -3,6 +3,10 @@
 FUNCTION read_magnetogram, file, PlotRadius, UseBATS
 
   if UseBATS then begin
+  ;Setup common block for BATSRUS/Idl
+  common file_head, $
+     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+     rbody
 
      gettype, file, filetype, npictinfile
      openfile, 10, file, filetype

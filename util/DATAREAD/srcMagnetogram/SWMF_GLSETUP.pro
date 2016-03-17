@@ -110,11 +110,6 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
   device,decomposed=0
   !p.font=1
 
-;Setup common block for BATSRUS/Idl
-  common file_head, $
-     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-     rbody
-
 ;Setup help option
   if not keyword_set(help) then help=0
   if help then begin
