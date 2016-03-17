@@ -1,9 +1,8 @@
-pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
-                  USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
-                  GLRadius=GLRadius, SizeFactor=SizeFactor, $
-                  nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed,$
-                  UseBATS=UseBATS,ARSize_OFF=ARSize_OFF,$
-                  GLRadiusRange=GLRadiusRange,Help=Help
+pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
+                  nSmooth=nSmooth, CMEspeed=CMEspeed, USEPIL=USEPIL,   $
+                  CMEGrid=CMEGrid, ARMag=ARMag, ARSize_OFF=ARSize_OFF, $
+                  GLRadius=GLRadius, SizeFactor=SizeFactor,            $
+                  GLRadiusRange=GLRadiusRange, Help=Help
 
 ;-----------------------------------------------------------------------
 ; NAME:
@@ -21,13 +20,18 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;
 ; KEYWORDS: 
 ;
+;   FILE = input magnetogram file (can be FITS or SWMF format).
+;   UseBATS = if set, will read BATS-R-US format (2D or 3D). Default
+;             will read FITS format.
 ;   PlotRadius = Set up the layer of the magnetogram for 3D input
-;   Cannot be used 2D file. Default is 1.0.
+;         Cannot be used 2D file, requires /UseBATS. Default is 1.0.
+;   nSmooth = If nSmooth is ODD integer larger than 1, apply boxcar smoothing on the 
+;             magnetic field. This can help finding the PIL. Default
+;             is 5.   
+;   CMESpeed = Observed CME speed in km/s.
 ;
-;   UsePIL = If set the orientation of the flux rope will be
-;   calculated according to the PIL direction. Otherwise, in terms
-;   of direction of the line connecting positive to negative charge 
-;   centers. 
+;   UsePIL = If set (default), the orientation of the flux rope will be
+;   calculated according to the PIL direction.
 ;
 ;   CMEGrid = If set, the grid refinement parameters for CME will be
 ;   calculated.
@@ -38,27 +42,26 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;   along the PIL. The corresponding empirical relationships will be
 ;   used accordingly. The default is 1.
 ;
-;   GLRadius = Sets the GL flux rope radius (before shift). No default.
+;   =================This group of paramaters serves to find GLRadius
+;   There are three ways to set GLRadius:
+;   1. Explicitly: 
+; 
+;      /ARSize_OFF , GLRadius = GLRadius
 ;
-;   SizeFactor = If GLRadius is not set, the flux rope size is set to
-;                the PIL length divided by SizeFactor. Default is 26.25.
+;   2. In terms of Polarity Inversion Line length:
 ;
-;   nSmooth = If nSmooth is larger than 1, apply boxcar smoothing on the 
-;             magnetic field. This can help finding the PIL. Default
-;             is 5.
-;   FILE = input magnetogram file (can be FITS or SWMF format).
+;      /ARSize_OFF[,SizeFactor=SizeFactor]
 ;
-;   CMESpeed = Observed CME speed in km/s.
+;      In this case the formula, GLRadius=PILLength/SizeFactor is
+;      applied.  Default SizeFactor is 26.25.
+;   3.  In terms ofthe Active Region size (do not use /ARSize_OFF): 
 ;
-;   UseBATS = if set, will read BATS-R-US format (2D or 3D). Default
-;   will read FITS format.
+;      [GLRadiusRange=GLRadiusRange]
 ;
-;   ARSize_OFF = if set, the GL flux rope size will be calculated based
-;   on PIL length. The default is to use Active region size.   
-;
-;   GLRadiusRange = 2-elements array to specify the range for GL
-;   Radius. Default is [0.2,2.0].   
-;
+;       In this case GL is limited, using
+;       GLRadiusRange = 2-elements array to specify the range for GL
+;           Radius. Default is [0.2,2.0].
+;   ==================
 ;   Help = If set, print all available keywords
 ;
 ; RESTRICTIONS:
@@ -105,7 +108,8 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;    02/18/2016 Deleted DemoMode; Orientation Angle changed according
 ;    to the new definition; Seperate function for magnetogram reading;
 ;    determine the flux rope helicity based on hemisphere 
-;    (North - Negative); improve code stability.   
+;    (North - Negative); improve code stability.
+;    03/16/2016 Igor Sokolov - edit the list of input parameters   
 ;------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
@@ -115,28 +119,42 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;Setup help option
   if not keyword_set(help) then help=0
   if help then begin
-       PRINT,'Use:  IDL> SWMF_GLSETUP, [PlotRadius=PlotRadius, /usepil, $ '
-       PRINT,'                         /CMEGrid, ARMag=ARMag, GLRadius=GLRadius, $ '
-       PRINT,'                         SizeFactor=SizeFactor, nSmooth=nSmooth, $ '
-       PRINT,'                         File=File, CMEspeed=CMEspeed, /UseBATS, $ '
-       PRINT,'                         /ARSize_OFF, GLRadiusRange=[Rmin,Rmax], /help] '
+       PRINT,'Use:  '
+       PRINT,'IDL> SWMF_GLSETUP, FILE=FILE, /UseBATS, PlotRadius=PlotRadius,        $ '
+       PRINT,'                    nSmooth=nSmooth, CMEspeed=CMEspeed, /usepil,      $ '
+       PRINT,'                    /CMEGrid, ARMag=ARMag, /ARSize_OFF,               $ '
+       PRINT,'                    GLRadius=GLRadius, SizeFactor=SizeFactor,         $ ' 
+       PRINT,'                    GLRadiusRange=[Rmin,Rmax], /help                    '
+       PRINT,'All parameters are optional, any order is allowed'
        RETURN
   endif
-
-;Setup default range for GL Radius
-  if not keyword_set(GLRadiusRange) then GLRadiusRange=[0.2,2.0]
-
-;Setup default PlotRadius
- if not keyword_set(PlotRadius) then PlotRadius=1.0
+;Input file name is not given
+  if not keyword_set(file) then begin
+     file=''
+     if(not keyword_set(UseBATS))then begin
+        read, prompt= $
+              'Input magnetogram fits file name: ', file
+     endif else begin
+        read, prompt= $
+              'Input magnetogram BATSRUS file name: ', file
+     endelse
+  endif
 
 ;set default for UseFits
   if not keyword_set(UseBATS) then UseBATS=0
 
-;set default for ARSize_OFF
-  if not keyword_set(ARSize_OFF) then ARSize_OFF=0
+;Setup default PlotRadius
+ if not keyword_set(PlotRadius) then PlotRadius=1.0
+
 
 ;set default for nSmooth
   if not keyword_set(nSmooth) then nSmooth=5
+
+;Read Observed CME speed.
+  if not keyword_set(CMESpeed) then begin
+     CMESpeed=0.0
+     read,prompt='Please Input the Observed CME Speed (km/s): ',CMESpeed
+  endif
 
 ;set default option for ARMag
   if not keyword_set(ARMag) then ARMag=1
@@ -146,20 +164,33 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
      ARMag=1
   endif
 
-;Read Observed CME speed.
-  if not keyword_set(CMESpeed) then begin
-     CMESpeed=0.0
-     read,prompt='Please Input the Observed CME Speed (km/s): ',CMESpeed
-  endif
+;set default for ARSize_OFF
+  if not keyword_set(ARSize_OFF) then begin
+     ARSize_OFF=0
+     if keyword_set(GLRadius) then begin
+        print, $
+        'To set GLRadius explicitly, use /ARSize_OFF' 
+        RETURN
+     endif
+     if keyword_set(SizeFactor) then begin
+        print, $
+        'To set SizeFactor  explicitly, use /ARSize_OFF'
+        RETURN
+     endif
+  endif else begin
+      if keyword_set(GLRadiusRange) then begin
+         print, $
+        'To set GLRadiusRange, do not use use /ARSize_OFF'
+        RETURN
+     endif
+   endelse
+         
+;Setup default range for GL Radius
+  if not keyword_set(GLRadiusRange) then GLRadiusRange=[0.2,2.0]
 
 ;If GLRadius is not given then it is set to PIL_length/SizeFactor
   if not keyword_set(SizeFactor) then SizeFactor = 26.25
 
-;Input file name is not given
-  if not keyword_set(file) then begin
-     file=''
-     read, prompt='Input file name (containing magnetic field data): ',file
-  endif
 
 ;Read the magnetogram
   mag_info=read_magnetogram(file,PlotRadius,UseBATS)
@@ -522,14 +553,15 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;Relationship between the PIL length and the GL flux rope Radius.   
 ;This factor is now based on the 2011 March 7 CME. More tests  
 ;are needed in order to get a more precise value.  
-  if not keyword_set(GLRadius) and ARSize_OFF then GLRadius=PIL_Length/SizeFactor
+  if  ARSize_OFF then begin
+     if not keyword_set(GLRadius) then GLRadius=PIL_Length/SizeFactor
 
 ;Use Active Region size to specify the GL flux rope Radius.
-  if not ARSize_OFF  then begin
+  endif else begin
      GLRadius=0.8/280.*ARSize
      if GLRadius gt GLRadiusRange[1] then GLRadius=GLRadiusRange[1]
      if GLRadius lt GLRadiusRange[0] then GLRadius=GLRadiusRange[0]
-  endif
+  endelse
 
 ;Relationship between the GL Poloidal flux and GL Bstrength.
 ;Flux rope helicity is determined by the hemisphere, northern
@@ -539,13 +571,6 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
   endif else begin
      GL_Bstrength=-GL_poloidal/(21.457435*GLRadius^4)
   endelse
-
-;Calculate the CME grid refinement parameters based on the flux rope
-;location and size.                                                
-  if keyword_set(CMEGrid) then begin
-     CMEbox_Start=[1.1,GL_Longitude-40.*GLRadius,GL_Latitude-20.*GLRadius]
-     CMEbox_End=[20.0,GL_Longitude+40.*GLRadius,GL_Latitude+20.*GLRadius]
-  endif
 
 ;Recommended GL flux rope parameters
   Distance = 1.8
@@ -569,6 +594,12 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
   print,'-----------------------------------------'
 
   if keyword_set(CMEGrid) then begin
+;Calculate the CME grid refinement parameters based on the flux rope
+;location and size.                                                
+
+     CMEbox_Start=[1.1,GL_Longitude-40.*GLRadius,GL_Latitude-20.*GLRadius]
+     CMEbox_End=[20.0,GL_Longitude+40.*GLRadius,GL_Latitude+20.*GLRadius]
+
      print,'=========================================='
      print,'The Recommended Grid Refinement Parameters'
      print,'=========================================='
