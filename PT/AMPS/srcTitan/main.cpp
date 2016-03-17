@@ -65,7 +65,7 @@ int main(int argc,char **argv) {
 
      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
        PIC::RequiredSampleLength*=2;
-       if (PIC::RequiredSampleLength>40000) PIC::RequiredSampleLength=40000;
+       if (PIC::RequiredSampleLength>100000) PIC::RequiredSampleLength=100000;
 
 
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
