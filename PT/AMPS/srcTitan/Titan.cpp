@@ -13,6 +13,8 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Titan";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_TITAN";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="MSGR_MSO";
 
+char Titan::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
+
 
 //sticking probability
 double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& ReemissionParticleFraction,double Temp) {
@@ -120,4 +122,96 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
   return GetTAA("TITAN","Sun",_MASS_(_SUN_),EphemerisTime);
+}
+
+//extract "hot" particles from the "thermal" population
+void Titan::SpeciesEnergySeparation::Process(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+  int spec;
+
+  spec=PIC::ParticleBuffer::GetI(ptr);
+
+  if (spec==_N2_SPEC_) {
+    //process only N2 thermal particles;
+    //when a N2 model particle that is too energyzed is determined move it to the "hot" species
+
+    double v[3],speed;
+
+    PIC::ParticleBuffer::GetV(v,ptr);
+    speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+
+    //the "hot" criterion: the particle speed is 3 times of the escape speed
+    if (speed>=3.0*2.0E3) {
+      //the particle is "hot" -> move it to the "hot" category
+      double ThermalWeight,ThermalTimeStep,HotTimeStep,HotWeight;
+      double nHotParticles;
+
+      #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+      ThermalWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+      HotWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_N2_HOT_SPEC_];
+      #else
+      ThermalWeight=0.0;
+      HotWeight=0.0;
+      exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+      #endif
+
+      #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+      ThermalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+      HotTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_N2_HOT_SPEC_];
+      #else
+      ThermalTimeStep=0.0;
+      HotTimeStep=0.0;
+      exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+      #endif
+
+      nHotParticles=ThermalWeight/ThermalTimeStep*HotTimeStep/ThermalWeight;
+
+      if ((nHotParticles<1.0)&&(_INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_)) {
+        //change the species ID of the particle and update the weoght correction factor
+        PIC::ParticleBuffer::SetI(_N2_HOT_SPEC_,ptr);
+        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(nHotParticles,ptr);
+
+        //add the paricle to the new particle list
+        PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+        PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+        if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+        FirstParticleCell=ptr;
+
+      } else {
+        //generate new "hot" paritlces and remove the original "thernal" particle
+        int nGeneratedParticles,np;
+        long int newptr;
+
+        nGeneratedParticles=(int)nHotParticles;
+        if (rnd()<nHotParticles-nGeneratedParticles) nGeneratedParticles++;
+
+        for (np=0;np<nGeneratedParticles;np++) {
+          PIC::ParticleBuffer::GetNewParticle(FirstParticleCell);
+          PIC::ParticleBuffer::CloneParticle(newptr,ptr);
+
+          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newptr);
+          PIC::ParticleBuffer::SetI(_N2_HOT_SPEC_,ptr);
+        }
+
+        //remove the original thermal particle
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+      }
+    }
+    else {
+      //no transformation with the particle is parformed -> just add to the list of the new particles
+      PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+      PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+      if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+      FirstParticleCell=ptr;
+    }
+  }
+  else {
+    //particle is not _N2_SPEC_ -> all it the list of the new particles
+    PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+    PIC::ParticleBuffer::SetPrev(-1,ptr);
+
+    if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+    FirstParticleCell=ptr;
+  }
 }
