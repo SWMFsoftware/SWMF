@@ -175,10 +175,10 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 #endif
 
     //calculate the extra user defined source rate
-    if (UserDefinedExtraSourceRate!=NULL) ParticleInjection+=UserDefinedExtraSourceRate(spec);
+    if (UserDefinedExtraSourceRate!=NULL) ParticleInjection+=UserDefinedExtraSourceRate(spec)*GetGlobalTimeStep(spec);
 
     //calculate the extra souce rate that is due to the exosphere model
-    if (ExosphereModelExtraSourceRate!=NULL) ParticleInjection+=ExosphereModelExtraSourceRate(spec);
+    if (ExosphereModelExtraSourceRate!=NULL) ParticleInjection+=ExosphereModelExtraSourceRate(spec)*GetGlobalTimeStep(spec);
 
     //calculate the particle weight
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
@@ -468,7 +468,17 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantDensity(int spec,do
   SetGlobalParticleWeight(spec,GlobalParticleWeight,PIC::Mesh::mesh.rootTree);
 }
 
+//====================================================
+//return the value of the 'global' time step
+double PIC::ParticleWeightTimeStep::GetGlobalTimeStep(int spec) {
+  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  return  PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  #else
+  exit(__LINE__,__FILE__,"Function cannot ne used in this mode");
+  #endif
 
+  return -1.0;
+}
 
 
 
