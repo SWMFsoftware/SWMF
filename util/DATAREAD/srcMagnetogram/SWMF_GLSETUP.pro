@@ -24,8 +24,10 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
 ;   PlotRadius = Set up the layer of the magnetogram for 3D input
 ;   Cannot be used 2D file. Default is 1.0.
 ;
-;   UsePIL = If set (default), the orientation of the flux rope will be
-;   calculated according to the PIL direction.
+;   UsePIL = If set the orientation of the flux rope will be
+;   calculated according to the PIL direction. Otherwise, in terms
+;   of direction of the line connecting positive to negative charge 
+;   centers. 
 ;
 ;   CMEGrid = If set, the grid refinement parameters for CME will be
 ;   calculated.
@@ -143,9 +145,6 @@ pro SWMF_GLSETUP, PlotRadius=PlotRadius, $
      print, 'Use Default option: ARMag = 1'
      ARMag=1
   endif
-
-;set default option for USEPIL
-if not keyword_set(USEPIL) then USEPIL=1
 
 ;Read Observed CME speed.
   if not keyword_set(CMESpeed) then begin
