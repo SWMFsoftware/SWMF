@@ -31,6 +31,16 @@ namespace Titan {
   using namespace Exosphere;
 
 
+  //separatethermal and "hot" neutral species
+  namespace SpeciesEnergySeparation {
+    void Process(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+  }
+
+  //the mesh parameters
+  namespace Mesh {
+    extern char sign[_MAX_STRING_LENGTH_PIC_];
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   namespace InjectWeightedMaxwellian{
 
@@ -47,10 +57,11 @@ namespace Titan {
 
         //init the table
         ProductionRateTable[_N2_SPEC_]=4.266e29;
+//        if (_N2_HOT_SPEC_>=0) ProductionRateTable[_N2_HOT_SPEC_]=ProductionRateTable[_N2_SPEC_];
       }
 
       //catch undefined species (exepd iona injected from the boundary)
-      if (spec!=_O_PLUS_SPEC_) {
+      if ((spec!=_O_PLUS_SPEC_)&&(spec!=_N2_HOT_SPEC_)) {
         if (ProductionRateTable[spec]<1.0) exit(__LINE__,__FILE__,"Error: the species injectino rate is not defined");
       }
 
@@ -106,14 +117,16 @@ namespace Titan {
       const double SourceTemperature = 161.0, NumericalTemperature = 161.0*2.5, _N2__MASS_ = 28.0*ProtonMass;
       double speed=0.0, ParticleWeightCorrection=0.0;
       
-      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,NumericalTemperature,ExternalNormal,spec);
-      for (idim=0;idim<DIM;idim++) {
-	speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
-      }
-      speed=sqrt(speed);
+      do {
+        PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,NumericalTemperature,ExternalNormal,spec);
+        for (speed=0.0,idim=0;idim<DIM;idim++)	speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
+        speed=sqrt(speed);
 
-      //correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and
-      ParticleWeightCorrection=pow((1.0/SourceTemperature)/(1.0/NumericalTemperature),0.5)*exp(-_N2__MASS_*speed*speed/2.0/Kbol/SourceTemperature)/exp(-_N2__MASS_*speed*speed/2.0/Kbol/NumericalTemperature);
+        //correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and
+        ParticleWeightCorrection=pow((1.0/SourceTemperature)/(1.0/NumericalTemperature),0.5)*exp(-_N2__MASS_*speed*speed/2.0/Kbol/SourceTemperature)/exp(-_N2__MASS_*speed*speed/2.0/Kbol/NumericalTemperature);
+      } while (ParticleWeightCorrection<1.0E-4);
+
+
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 
       //cout << ParticleWeightCorrection << "\t"<<speed<<endl;
