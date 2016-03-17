@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -34,16 +32,19 @@
 
 //the parameters of the domain and the sphere
 
-const double DebugRunMultiplier=4.0;
-const double rSphere=4025000.0;
+double DebugRunMultiplier=4.0;
+const double rSphere=_TITAN__RADIUS_;
 
 
-const double xMaxDomain=3.0;
-const double yMaxDomain=3.0; 
+double xMaxDomain=1.5;
+double yMaxDomain=1.5;
 
-const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
+
+double dxMaxGlobal=DebugRunMultiplier*10.0;
+double dxMinGlobal=DebugRunMultiplier*2.0;
 //const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
-const double dxMinSphere=0.025,dxMaxSphere=0.25; //Units of planetary radii
+double dxMinSphere=0.25;
+double dxMaxSphere=0.25; //Units of planetary radii
 
 
 
@@ -103,13 +104,16 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
   switch (spec) {
   case _N2_SPEC_: case _CH4_SPEC_:
-    CharacteristicSpeed=1.0E3;
+    CharacteristicSpeed=2.0E3;
+    break;
+  case _N2_HOT_SPEC_:
+    CharacteristicSpeed=100.0E3;
     break;
   case _H2_SPEC_:
     CharacteristicSpeed=2.0E3;
     break;
   case _O_PLUS_SPEC_:
-    CharacteristicSpeed=2.0E6;
+    CharacteristicSpeed=100.0E3;
     break;
   default:
     exit(__LINE__,__FILE__,"Error: the species is unknown");
@@ -500,14 +504,48 @@ void amps_init() {
 
 
   //SetUp the alarm
-//  PIC::Alarm::SetAlarm(2000);
+  PIC::Alarm::SetAlarm(72*60*60-30*60);
 
 
   rnd_seed();
   MPI_Barrier(MPI_COMM_WORLD);
 
+  //init parameters of the mesh
+  if (strcmp(Titan::Mesh::sign,"0x1010303a9958cfd")==0) { //reduced mesh
+     DebugRunMultiplier=4.0;
 
-  Titan::tgitm_exobase::read_tgitm();
+
+    xMaxDomain=1.5;
+    yMaxDomain=1.5;
+
+    dxMinGlobal=DebugRunMultiplier*2.0;
+    dxMaxGlobal=DebugRunMultiplier*10.0;
+    dxMinSphere=0.25,dxMaxSphere=0.25; //Units of planetary radii
+  }
+  else if (strcmp(Titan::Mesh::sign,"0x102f10d9447")==0) {
+    DebugRunMultiplier=4.0;
+
+    xMaxDomain=8;
+    yMaxDomain=8;
+
+    dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
+    dxMinSphere=0.025,dxMaxSphere=0.25; //Units of planetary radii
+  }
+  else {
+    DebugRunMultiplier=2.0;
+
+
+   xMaxDomain=5;
+   yMaxDomain=5;
+
+   dxMinGlobal=DebugRunMultiplier*2.0;
+   dxMaxGlobal=DebugRunMultiplier*10.0;
+   dxMinSphere=0.05,dxMaxSphere=0.05; //Units of planetary radii
+  }
+
+
+
+  //Titan::tgitm_exobase::read_tgitm();
   Titan::Init_BeforeParser();
   PIC::Init_BeforeParser();
   Titan::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
@@ -709,7 +747,7 @@ void amps_init() {
       PIC::CPLR::DATAFILE::LoadBinaryFile("TITAN-BATSRUS");
     }
     else {
-      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
+      double xminTECPLOT[3]={-10.1,-10.1,-10.1},xmaxTECPLOT[3]={10.1,10.1,10.1};
 
       double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
 
@@ -721,13 +759,13 @@ void amps_init() {
 
       PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_TITAN__RADIUS_;
       PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
-      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,10.0);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,15.0);
 
       PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
       PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(12,1.0E3);//(var num, scal_fac)
       PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(18,1.0E-9);
       PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(15,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(6,71428.5714286);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.2E5);
       PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
       PIC::CPLR::DATAFILE::TECPLOT::ImportData("2007GRL_3D_T9.plt");
 
@@ -761,7 +799,12 @@ void amps_init() {
   //set up the particle weight
 //  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
 //  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_N2_SPEC_);
-  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s); 
+  for (int s=0;s<PIC::nTotalSpecies;s++) if (s!=_N2_HOT_SPEC_) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+
+  if (_N2_HOT_SPEC_>=0) {
+    PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_N2_HOT_SPEC_,_N2_SPEC_,
+        PIC::ParticleWeightTimeStep::GlobalTimeStep[_N2_HOT_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[_N2_SPEC_]);
+  }
 
   //copy the weight and time step from Na neutra to Na ions
   ////////////////////////////////Change lines below for new weighting scheme OJ////////////////////
