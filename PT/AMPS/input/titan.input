@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=N2,CH4,H2,O_plus
+SpeciesList=N2,N2_hot,O_plus !!CH4,H2,O_plus
 !settings of the directories
 !update the following variables in the makefile 
 
@@ -50,7 +50,7 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=100
+  InitialSampleLength=1000
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -71,6 +71,9 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
  
  !define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 
+ define _PIC_USER_PARTICLE_PROCESSING__MODE_  _PIC_MODE_ON_ 
+ define _PIC_USER_PARTICLE_PROCESSING__FUNCTION_(ptr,FirstParticleCell,node)   Titan::SpeciesEnergySeparation::Process(ptr,FirstParticleCell,node)
+
 #endGeneral
 
 #ParticleCollisions 
@@ -79,11 +82,15 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
 
   CollisionCrossSection=const \\ !const, function 
     const (N2,N2)= 5.462884E-19 \\     
-    const (CH4,CH4)= 7.3289901E-19 \\
-    const (H2,H2)= 2.6786476E-19 \\
-    const (N2,CH4)= 6.3617251E-19 \\
-    const (N2,H2)= 3.9980473E-19 \\
-    const (CH4,H2)= 4.7175977-19 
+    const (N2,N2_hot)= 5.462884E-19 \\
+    const (O_plus,O_plus) = 2.45E-19 \\
+    const (O_plus,N2) = 4.0E-19 \\ 
+    const (O_plus,N2_hot) = 4.0E-19 
+  ! const (CH4,CH4)= 7.3289901E-19 \\
+  ! const (H2,H2)= 2.6786476E-19 \\
+  ! const (N2,CH4)= 6.3617251E-19 \\
+  ! const (N2,H2)= 3.9980473E-19 \\
+  ! const (CH4,H2)= 4.7175977-19 
 #endParticleCollisions
 
 
@@ -109,6 +116,11 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
   TemperatureIndex(N2,N2)=1.0
 #endIDF
 
+
+#block ../input/titan.input.pl !process the settings of the Europa's model
+  !the signature of the mesh that is used in the simulation
+  MeshSignature=0x102f10d9447  
+#endblock
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
@@ -145,12 +157,18 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
     !SourceRate(H2)=4.662794E+029, SourceTemperature(H2)=118.0   
     
     
-  Source:UserDefined=on \\ !on,off
+  Source:UserDefined=off \\ !on,off
     SourceProcessCode=VenticalSource \\
     SourceRate=Titan::tgitm_exobase::GetTotalProductionRate \\
     GenerateParticleProperties=Titan::tgitm_exobase::GenerateParticleProperties \\
     ModifySurfaceSpeciesAbundance=false !!!true,false
 !   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
+
+  Source:UserDefined=on \\ !on,off
+    SourceProcessCode=WeightedMaxwellian \\
+    SourceRate=Titan::InjectWeightedMaxwellian::GetTotalProductionRate \\
+    GenerateParticleProperties=Titan::InjectWeightedMaxwellian::GenerateParticleProperties \\
+    ModifySurfaceSpeciesAbundance=false !!!true,false
 
 
 #endblock
