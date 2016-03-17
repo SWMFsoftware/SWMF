@@ -1133,7 +1133,7 @@ namespace PIC {
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
       *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-      //do nothing
+      exit(__LINE__,__FILE__,"Error: SetIndividualStatWeightCorrection cannot be used with _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_");
     #else
       exit(__LINE__,__FILE__,"Error: unknown option");
     #endif
@@ -2621,6 +2621,8 @@ namespace PIC {
 
     void initParticleWeight(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
     void SetGlobalParticleWeight(int spec,double GlobalParticleWeight,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
+    double GetGlobalTimeStep(int spec);
 
     void initParticleWeight_ConstantWeight();
     void initParticleWeight_ConstantWeight(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
