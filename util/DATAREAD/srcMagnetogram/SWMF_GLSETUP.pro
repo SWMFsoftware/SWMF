@@ -18,6 +18,13 @@ pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
 ; OUTPUTS:
 ;   Recommended GL flux rope parameters.
 ;
+; SYSTEM REQUIREMENTS:
+; 1. Mouse with left and right button
+; 2. You may need to reset preferences in your XQuartz/X11 system:  see
+; http://www.exelisvis.com/Support/HelpArticles/TabId/185/ArtMID/800/ArticleID/5223/(continued)
+; The-CURSOR-procedure-fails-or-GUI-interface-loses-focus-on-Mac-OS-X-107-and-later.aspx
+;
+;
 ; KEYWORDS: 
 ;
 ;   FILE = input magnetogram file (can be FITS or SWMF format).
@@ -120,7 +127,7 @@ pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
   if not keyword_set(help) then help=0
   if help then begin
        PRINT,'Use:  '
-       PRINT,'IDL> SWMF_GLSETUP, FILE=FILE, /UseBATS, PlotRadius=PlotRadius,        $ '
+       PRINT,"IDL> SWMF_GLSETUP, FILE='FILE', /UseBATS, PlotRadius=PlotRadius,      $ "
        PRINT,'                    nSmooth=nSmooth, CMEspeed=CMEspeed, /usepil,      $ '
        PRINT,'                    /CMEGrid, ARMag=ARMag, /ARSize_OFF,               $ '
        PRINT,'                    GLRadius=GLRadius, SizeFactor=SizeFactor,         $ ' 
@@ -360,7 +367,10 @@ pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
   GL_Longitude=Longitude[xProfile[index],yProfile[index]]
   GL_Latitude=GL_Latitude*180./!DPI
   GL_Longitude=GL_Longitude*180./!DPI
-  if UseBATS and ndim eq 2 then GL_Longitude = GL_Longitude + param 
+
+;Bug: neither ndim nor param is defined
+;if UseBATS and ndim eq 2 then GL_Longitude = GL_Longitude + param
+
   ar_center=[xProfile[index],yProfile[index]]
 
 ;Calculate the gradient of the Br field
