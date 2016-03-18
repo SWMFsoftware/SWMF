@@ -186,6 +186,9 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
 
 #block ../cg.pl !process settings of the moon module
+
+  define _NUCLEUS_SHAPE__MODE_  _SHAP5_
+
   Gravity3D=off !on,off
 
   HeliocentricDistance=1.88*_AU_
