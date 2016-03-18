@@ -674,6 +674,112 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,const char *pat
   ReadNastranSurfaceMeshLongFormat(fullname);
 }
 
+void CutCell::ReadNastranSurfaceMeshLongFormat_km(const char *fname) {
+  CiFileOperations ifile;
+  char str[10000],dat[10000],*endptr;
+  long int i,j,idim,nnodes=0,nfaces=0;
+
+  if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
+
+
+  cNASTRANnode node;
+  vector<cNASTRANnode> nodes;
+
+  cNASTRANface face;
+  vector<cNASTRANface> faces;
+
+  ifile.openfile(fname);
+  ifile.GetInputStr(str,sizeof(str));
+
+  //read nodes from the file
+
+  ifile.GetInputStr(str,sizeof(str));
+  ifile.CutInputStr(dat,str);
+
+  //load the nodes
+  while (strcmp("GRID*",dat)==0) {
+    ifile.CutInputStr(dat,str);
+    node.id=strtol(dat,&endptr,10);
+
+    ifile.CutInputStr(dat,str);
+    ifile.CutInputStr(dat,str);
+    node.x[0]=strtod(dat,&endptr)*1.0e3;
+
+    ifile.CutInputStr(dat,str);
+    node.x[1]=strtod(dat,&endptr)*1.0e3;
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+
+    ifile.CutInputStr(dat,str);
+    node.x[2]=strtod(dat,&endptr)*1.0e3;
+
+    nodes.push_back(node);
+    nnodes++;
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+  //find the beginig for the face information
+  while (strcmp("CBAR",dat)==0) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+  //read the face information
+  while (strcmp("CTRIA3",dat)==0) {
+    ifile.CutInputStr(dat,str);
+
+    ifile.CutInputStr(dat,str);
+    face.faceat=strtol(dat,&endptr,10);
+
+    for (idim=0;idim<3;idim++) {
+      ifile.CutInputStr(dat,str);
+      face.node[idim]=strtol(dat,&endptr,10)-1;
+    }
+
+    nfaces++;
+    faces.push_back(face);
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+
+
+  //create the surface triangulation array
+  long int nd,nfc,id;
+
+  nBoundaryTriangleFaces=nfaces;
+  BoundaryTriangleFaces=new cTriangleFace[nfaces];
+
+  nBoundaryTriangleNodes=nnodes;
+  BoundaryTriangleNodes=new cNASTRANnode[nnodes];
+
+  //copy nodes and faces into the array
+  for (nd=0;nd<nnodes;nd++) {
+    BoundaryTriangleNodes[nd]=nodes[nd];
+    for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+  }
+
+  for (nfc=0;nfc<nfaces;nfc++) {
+    BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+
+    for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
+    BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
+  }
+
+}
+
+void CutCell::ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path) {
+  char fullname[STRING_LENGTH];
+
+  sprintf(fullname,"%s/%s",path,fname);
+  ReadNastranSurfaceMeshLongFormat_km(fullname);
+}
+
+
 
 //calcualte the size limit of the surface mesh
 void CutCell::GetSurfaceSizeLimits(double* xmin,double *xmax) {

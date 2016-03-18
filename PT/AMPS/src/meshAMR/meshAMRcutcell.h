@@ -534,6 +534,9 @@ namespace CutCell {
   void ReadNastranSurfaceMeshLongFormat(const char *fname);
   void ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path);
 
+  void ReadNastranSurfaceMeshLongFormat_km(const char *fname);
+  void ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path);
+
   void GetSurfaceSizeLimits(double* xmin,double *xmax);
 
   typedef bool (*fCheckPointInsideDomain)(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
