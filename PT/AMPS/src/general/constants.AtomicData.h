@@ -65,4 +65,7 @@
 
 /*-------------------------  END CO  ------------------------------*/
 
+#define _N2__MASS_ (28*_AMU_)
+#define _N__MASS_ (14*_AMU_)
+
 #endif /* CONSTANTS_ATOMICDATA_H_ */
