@@ -26,6 +26,7 @@
 
 #define _READ_NEUTRALS_FROM_BINARY_MODE_ _READ_NEUTRALS_FROM_BINARY_MODE_OFF_
 
+#define _NUCLEUS_SHAPE__MODE_  _SHAP5_
 
 
 //define fources that are accounted for in comet dust modeling 

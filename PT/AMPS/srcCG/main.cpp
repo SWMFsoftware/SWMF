@@ -515,7 +515,11 @@ int main(int argc,char **argv) {
 
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
+#if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
+#elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
+#endif
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -548,15 +552,8 @@ int main(int argc,char **argv) {
   CGSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
   CG=(cInternalNastranSurfaceData*) CGSurfaceDescriptor.BoundaryElement;
 
-//  CG->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
-//  CG->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
-
   CG->InjectionRate=Comet::GetTotalProduction;
   CG->faceat=0;
-//  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
-//  CG->InjectionBoundaryCondition=CG::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
-//  Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
-  //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
   Comet::GetNucleusNastranInfo(CG);
 
