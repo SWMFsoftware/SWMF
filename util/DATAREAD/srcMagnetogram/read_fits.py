@@ -65,8 +65,8 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
     if (Long0>0):
         if(TypeOut=='old'):
             FileId = open('CR_Long.txt','w')
-            FileId.write(CRNumber + '\n')  
-            FileId.write(str(Long0) + '\n')
+            FileId.write("%4d \n"%(CRNumber))  
+            FileId.write("%03d \n"%(Long0))
             FileId.close()
         LongEarth = Long0 + 60
         
@@ -110,7 +110,7 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
         FileId.write('#START\n')
         for k in np.arange(nLat):
             for l in np.arange(nLong):
-                FileId.write(str(Br_II[k,l]) + '\n')
+                FileId.write("%14.6e\n"%(Br_II[k,l]) )
         FileId.close()
     elif (TypeOut=='new'):
         FileId = open('fitsfile_idl.out','w')
@@ -123,9 +123,9 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
     
         for k in np.arange(nLat):
             for l in np.arange(nLong):
-                FileId.write(str(Long_I[l]*(180./cPi)) + '   ' + str(
-                        LatSin_I[k]*(180./cPi)) + '   ' + str(
-                        max([-BMax,min([BMax,Br_II[k,l]])])) + ' \n')
+                FileId.write("{0:6.1f}  {1:14.6e} {2:14.6e}\n".format(
+                        Long_I[l]*(180./cPi), LatSin_I[k]*(180./cPi),
+                        max([-BMax,min([BMax,Br_II[k,l]])] ) ))
         FileId.close()
    
     return(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
@@ -268,9 +268,9 @@ def remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
     
     for k in np.arange(nLat):
          for l in np.arange(nLong):
-             FileId.write(str((180./cPi)*Long_I[l]) + '   ' + str(
-                     (180./cPi)*LatUniform_I[k]) + '   ' + str(
-                 max([-BMax,min([BMax,BrUniform_II[k,l]])])) + ' \n')
+             FileId.write("{0:6.1f} {1:6.1f} {2:14.6e}\n".format(
+                     (180./cPi)*Long_I[l],(180./cPi)*LatUniform_I[k],
+                 max([-BMax,min([BMax,BrUniform_II[k,l]])])))
     
     FileId.close() 
     return(BrUniform_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
