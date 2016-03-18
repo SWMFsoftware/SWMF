@@ -531,8 +531,8 @@ namespace CutCell {
   void PrintSurfaceData(const char *fname);
 
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
-  void ReadNastranSurfaceMeshLongFormat(const char *fname);
-  void ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path);
+  void ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor=1.0);
+  void ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path,double UnitConversitonFactor=1.0);
 
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname);
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path);
