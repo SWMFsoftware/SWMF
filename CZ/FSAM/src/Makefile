@@ -4,6 +4,7 @@ include Makefile.DEPEND
 include Makefile.RULES
 
 MODULES = \
+	ModFish.o \
 	ModFSAM.o \
 	ModPar.o \
 	ModSolar.o \
@@ -28,8 +29,7 @@ MODULES = \
 	ModRHS.o \
 	ModIteration.o \
 	ModUserSetup.o \
-	ModInitialization.o \
-	ModFish.o
+	ModInitialization.o
 
 OBJ = main.o
 
