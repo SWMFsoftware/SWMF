@@ -31,10 +31,7 @@ FSAM_LIB = ../src/libFSAM.a
 
 ${MY_LIB}: ${FSAM_LIB} ${OBJECTS}
 	cp -f ${FSAM_LIB} ${MY_LIB}
-	cp ../input/libfishpak.a .
-	ar -x libfishpak.a
 	${AR} ${MY_LIB} ${OBJECTS} *.o
-	rm -f libfishpak.a *.o
 
 clean: cleanfiles
 
