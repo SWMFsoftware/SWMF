@@ -92,6 +92,7 @@ IMF.dat         	NameSolarWindFile
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
 
+! Satellite trajectories
 #INCLUDE
 SATELLITES.in
 
