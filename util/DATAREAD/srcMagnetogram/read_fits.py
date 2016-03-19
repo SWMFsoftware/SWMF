@@ -273,7 +273,7 @@ def remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
                  max([-BMax,min([BMax,BrUniform_II[k,l]])])))
     
     FileId.close() 
-    return(BrUniform_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
+    return(BrUniform_II,Long0,LongEarth,nLat,nLong,LatUniform_I,Long_I)
 
 if __name__ == '__main__':
 
