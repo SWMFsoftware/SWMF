@@ -19,10 +19,8 @@ pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
 ;   Recommended GL flux rope parameters.
 ;
 ; SYSTEM REQUIREMENTS:
-; 1. Mouse with left and right button
-; 2. You may need to reset preferences in your XQuartz/X11 system:  see
-; http://www.exelisvis.com/Support/HelpArticles/TabId/185/ArtMID/800/ArticleID/5223/(continued)
-; The-CURSOR-procedure-fails-or-GUI-interface-loses-focus-on-Mac-OS-X-107-and-later.aspx
+; Mouse with left and right button. See GLSETUP_README about
+; possible issues with cursor in Mac OS.
 ;
 ;
 ; KEYWORDS: 
