@@ -424,8 +424,7 @@ pro SWMF_GLSETUP, FILE=FILE, UseBATS=UseBATS, PlotRadius=PlotRadius,   $
 ;Distance cut-off for determining the PIL.
 ; round(8.*(nLon/360.)*DisWeight/13.6) for calculating PIL_Length
 ; round(6.*(nLon/360.))                for calculating bt_pil
-; min(3, round(8.*(nLon/360.)*DisWeight/13.6) for calculating PIL
-;                                              orientation)
+; 3 for calculating PIL  orientation)
 ; round(6.*(nLon/360.))                for vizualization
   Dis_threshold=round(long(8)*nlon/360*Dis_Weight/13.6)
   DisMax=round(long(6)*nlon/360)
