@@ -31,7 +31,7 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
         
     nLong = g[0].header['NAXIS1'] # number of longitude points
     nLat = g[0].header['NAXIS2']  #           latitude      
-    Br_II = g[0].data 
+    Br_C = g[0].data 
 
     if NameTelescope.find('NSO-GONG') > -1 :
         TypeMag = 'GONG Synoptic'
@@ -84,21 +84,21 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
     if (nSmooth>2):
         nSmooth2 = nSmooth//2
         Coef    = 1./(nSmooth*nSmooth)
-        BrOrig_II = np.zeros([nLat,nLong+2*nSmooth2])
+        BrOrig_G = np.zeros([nLat,nLong+2*nSmooth2])
         for iLat in np.arange(nLat):
-            BrOrig_II[iLat,:] = np.hstack((
-                Br_II[iLat,nLong-nSmooth2:nLong],
-                Br_II[iLat,:],Br_II[iLat,0:nSmooth2]))
-        Br_II=np.zeros([nLat,nLong])
+            BrOrig_G[iLat,:] = np.hstack((
+                Br_C[iLat,nLong-nSmooth2:nLong],
+                Br_C[iLat,:],Br_C[iLat,0:nSmooth2]))
+        Br_C=np.zeros([nLat,nLong])
         for iLat in np.arange(nLat):
             for iLong in np.arange(nLong):
                 for iSubLat in np.arange(nSmooth):
                     iLatExt  = iLat  + iSubLat  - nSmooth2
                     iLatExt  = max([-iLatExt-1,min(
                                 [iLatExt, 2*nLat-1-iLatExt])])
-                    Br_II[iLat,iLong] += np.sum(
-                        BrOrig_II[iLatExt,iLong:iLong+nSmooth])
-                Br_II[iLat,iLong]  *= Coef
+                    Br_C[iLat,iLong] += np.sum(
+                        BrOrig_G[iLatExt,iLong:iLong+nSmooth])
+                Br_C[iLat,iLong]  *= Coef
     if (TypeOut=='old'):
         FileId = open('fitsfile.dat','w')
         
@@ -110,7 +110,7 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
         FileId.write('#START\n')
         for k in np.arange(nLat):
             for l in np.arange(nLong):
-                FileId.write("%14.6e\n"%(Br_II[k,l]) )
+                FileId.write("%14.6e\n"%(Br_C[k,l]) )
         FileId.close()
     elif (TypeOut=='new'):
         FileId = open('fitsfile_idl.out','w')
@@ -125,22 +125,22 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
             for l in np.arange(nLong):
                 FileId.write("{0:6.1f}  {1:14.6e} {2:14.6e}\n".format(
                         Long_I[l]*(180./cPi), LatSin_I[k]*(180./cPi),
-                        max([-BMax,min([BMax,Br_II[k,l]])] ) ))
+                        max([-BMax,min([BMax,Br_C[k,l]])] ) ))
         FileId.close()
    
-    return(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
+    return(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
         
 
 #Remap from iniform in sin(Latitude) magnetogram to that uniform in latitude.
 #        - by  Richard A. Frazin July 2014 - February 2015
 #        - by  Igor Sokolov, 2016/March:get rid of scipy dependency. 
 #          Speed up is by a factor of about 100
-def remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
-    #Transpose Br_II Matrix
-    BrTransp_II = np.zeros([nLong,nLat])
+def remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
+    #Transpose Br_C Matrix
+    BrTransp_C = np.zeros([nLong,nLat])
     for k in np.arange(nLat):
         for l in np.arange(nLong):
-            BrTransp_II[l,k] = Br_II[k,l]
+            BrTransp_C[l,k] = Br_C[k,l]
     #
     # Centers of the bins for uniform latitude grid:
     #
@@ -251,11 +251,11 @@ def remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
             l,0:lMax_I[l]-lMin_I[l]+1]/(
             SinBinBound_I[l+1] - SinBinBound_I[l])
     
-    BrUniform_II  = np.zeros([nLat,nLong])
+    BrUniform_C  = np.zeros([nLat,nLong])
     for iLong in np.arange(nLong):
         for iLat in np.arange(nLat):
-            BrUniform_II[iLat,iLong]=np.sum(
-                Weight_II[iLat,0:lMax_I[iLat]-lMin_I[iLat]+1]*BrTransp_II[
+            BrUniform_C[iLat,iLong]=np.sum(
+                Weight_II[iLat,0:lMax_I[iLat]-lMin_I[iLat]+1]*BrTransp_C[
                 iLong,lMin_I[iLat]:lMax_I[iLat]+1])
   
     FileId = open('uniform_idl.out','w')
@@ -270,10 +270,10 @@ def remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
          for l in np.arange(nLong):
              FileId.write("{0:6.1f} {1:6.1f} {2:14.6e}\n".format(
                      (180./cPi)*Long_I[l],(180./cPi)*LatUniform_I[k],
-                 max([-BMax,min([BMax,BrUniform_II[k,l]])])))
+                 max([-BMax,min([BMax,BrUniform_C[k,l]])])))
     
     FileId.close() 
-    return(BrUniform_II,Long0,LongEarth,nLat,nLong,LatUniform_I,Long_I)
+    return(BrUniform_C,Long0,LongEarth,nLat,nLong,LatUniform_I,Long_I)
 
 if __name__ == '__main__':
 
@@ -305,7 +305,7 @@ if __name__ == '__main__':
 
  
     cc = readf(args.NameFile,args.TypeOut,args.nSmooth,args.BMax)
-    Br_II      = cc[0]
+    Br_C      = cc[0]
     Long0      = cc[1]
     LongEarth    = cc[2]
     nLat       = cc[3]
@@ -313,4 +313,4 @@ if __name__ == '__main__':
     LatSin_I   = cc[5]
     Long_I     = cc[6]
     if(args.TypeOut=='remap'):
-            remap(Br_II,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,args.BMax)
+            remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,args.BMax)
