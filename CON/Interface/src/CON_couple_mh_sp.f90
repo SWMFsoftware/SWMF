@@ -324,6 +324,8 @@ contains
       nRequestS = 0
       nRequestR = 0
       if(is_proc(iMH))then
+         allocate(BuffSend_I(nVar * nParticleThisProc))
+         iBuff = 1
          do SP_iProcTo = 0, n_proc(SP_)-1
             if(nParticleSend_I(SP_iProcTo) == 0) CYCLE
             ! translate proc at SP to global
@@ -331,21 +333,19 @@ contains
                  i_group(SP_), 1, (/SP_iProcTo/), &
                  i_group(),            iProcTo_I, iError)
             ! prepare data
-            allocate(BuffSend_I(nVar * nParticleSend_I(SP_iProcTo)))
-            iBuff = 1
             do iParticle = 1, nParticleThisProc
                if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
                     nint(Particle_II(iFLIndex,iParticle)))/=iProcTo_I(1)) CYCLE
-               
                BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
                iBuff = iBuff + nVar
             end do
+            iBuff = iBuff - nVar*nParticleSend_I(SP_iProcTo)
             ! transfer data
             nRequestS = nRequestS + 1
-            call MPI_Isend(BuffSend_I, nVar * nParticleSend_I(SP_iProcTo), &
+            call MPI_Isend(BuffSend_I(iBuff),nVar*nParticleSend_I(SP_iProcTo),&
                  MPI_REAL, &
                  iProcTo_I(1), iTag, i_comm(), iRequestS_I(nRequestS), iError)
-            deallocate(BuffSend_I)
+            iBuff = iBuff + nVar*nParticleSend_I(SP_iProcTo)
          end do
          deallocate(nParticleAtLine_I)
          deallocate(Particle_II)
@@ -369,25 +369,28 @@ contains
                  MPI_REAL,&
                  iProcFrom_I(1), iTag, i_comm(), iRequestR_I(nRequestR),iError)
             iBuff = iBuff + nVar*nParticleRecv_I(MH_iProcFrom)
-            
+
          end do
       end if
       ! finalize transfer
       call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
       call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-     !\
-     ! put data
-     !/
+      !\
+      ! put data
+      !/
       if(is_proc(SP_))then
          Convert_DD = transform_matrix(tNow,&
               Grid_C(iMH)%TypeCoord, Grid_C(SP_)%TypeCoord)
          call SP_put_line(NameVar, nVar, sum(nParticleRecv_I),&
               reshape(BuffRecv_I,(/nVar, sum(nParticleRecv_I)/)),&
               iInterfaceType, Convert_DD)
-         deallocate(BuffRecv_I)
       end if
 
       ! deallocate arrays for non-blocking communications
+      if(is_proc(SP_))&
+           deallocate(BuffRecv_I)
+      if(is_proc(iMH))&
+           deallocate(BuffSend_I)
       deallocate(nParticleRecv_I)
       deallocate(nParticleSend_I)
       deallocate(iRequestS_I)
