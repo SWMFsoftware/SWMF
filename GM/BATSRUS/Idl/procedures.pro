@@ -4263,15 +4263,15 @@ else                                    title0=' '
 
 ; Define default xtitle
 if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
-else if timeunit eq '1' then xtitle0='Time' $
-else if dofft then xtitle0='Frequency [1/'+timeunit+']' $
-else xtitle0='Time ['+timeunit+']'
+else if timeunit eq '1' then xtitle0="!5"+'Time' $
+else if dofft then xtitle0="!5"+'Frequency [1/'+timeunit+']' $
+else xtitle0="!5"+'Time ['+timeunit+']'
 
 ; Define default ytitles
 if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
   ytitles0=ytitles $
-else if dofft then ytitles0 = 'Power spectrum of '+funcs $
-else ytitles0=funcs
+else if dofft then ytitles0 = "!5"+'Power spectrum of '+funcs $
+else ytitles0 = "!5" + funcs
 
 if !p.thick eq 0 then begin
    if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
