@@ -24,7 +24,7 @@ module ModRestartFile
   use ModGroundMagPerturb, ONLY: DoWriteIndices
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
-       IsCartesian, IsCartesianGrid, IsGenRadius, &
+       IsCartesian, IsCartesianGrid, IsGenRadius, IsRoundCube, rRound0, rRound1, &
        nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
 
@@ -454,6 +454,10 @@ contains
        endif
        write(UnitTmp_,'(a20,a20)')TypeGeometry, 'TypeGeometry'
        if(IsGenRadius) write(UnitTmp_,'(a100)')NameGridFile
+       if(IsRoundCube) then
+          write(UnitTmp_,'(es22.15,a18)') rRound0,'rRound0'
+          write(UnitTmp_,'(es22.15,a18)') rRound1,'rRound1'
+       endif
        if(IsLimitedGeometry) then
           do iDim = 1, nDim
              write(UnitTmp_,'(es22.15,a18)') &
