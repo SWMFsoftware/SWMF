@@ -43,7 +43,7 @@ module ModParticleFieldLine
        ! auxilary position, e.g. middle step in Runge-Kutta 2 method
        AuxX_ = 4, AuxY_ = 5, AuxZ_ = 6, & 
        ! auxilary field, e.g. stepsize
-       Aux_   = 7
+       Aux_  = 7
   
   ! indices of a particle
   integer, parameter:: &
@@ -52,9 +52,13 @@ module ModParticleFieldLine
        ! index of the particle along this field line
        Index_ = 2
 
-  ! mode of spatial step at the field line extraction
+  ! spatial step limits at the field line extraction
   real   :: SpaceStepMin = 0.0
   real   :: SpaceStepMax = HUGE(SpaceStepMin)
+
+  ! ordering mode of particles along field lines
+  integer:: iOrderMode = -1
+  integer, parameter:: Field_ = 0, Radius_  = 1
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticle = 7
@@ -90,6 +94,7 @@ contains
          NameSub = 'ModParticleFieldLine::read_particle_line_param'
 
     character(len=100) :: StringInitMode
+    character(len=100) :: StringOrderMode
     integer:: iLine, iDim ! loop variables
     !------------------------------------------------------------------------
     select case(NameCommand)
@@ -124,9 +129,20 @@ contains
           else
              call stop_mpi(NameSub //": unknown initialization mode")
           end if
+          !--------------------------------------------------------------
+          call read_var('OrderMode', StringOrderMode, IsLowerCase=.true.)
+          ! Ordering modes, particle index increases with:
+          ! - radius:  distance from the center
+          ! - field: along the direction of the magnetic field
+          if(    index(StringOrderMode, 'field') > 0)then
+             iOrderMode = Field_
+          elseif(index(StringOrderMode, 'radius' ) > 0)then
+             iOrderMode = Radius_
+          else
+             call CON_stop(NameSub //": unknown ordering mode")
+          end if
        end if
     end select
-
   end subroutine read_particle_line_param
 
   !==========================================================================
@@ -165,10 +181,15 @@ contains
     integer :: iParticle     ! loop variable
 
     ! direction of the magnetic field
-    real:: Dir_D(MaxDim)
+    real:: Dir1_D(MaxDim), Dir2_D(MaxDim)
 
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
+
+    ! alignment of particle numbering with direction of B field:
+    ! ( -1 -> reversed, +1 -> aligned)
+    ! for radial ordering when magnetic field general direction may be inward
+    integer:: iAlignment_I(nFieldLine+1: nFieldLine+nFieldLineIn)
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
@@ -179,6 +200,9 @@ contains
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
+
+    ! constant in Ralston's method
+    real, parameter:: cTwoThird = 2.0 / 3.0
 
     character(len=*), parameter:: NameSub='extract_particle_line'
     !------------------------------------------------------------------------
@@ -199,13 +223,15 @@ contains
     Particle_I(KindEnd_)%nParticle = 0
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
+    do iFieldLine = 1, nFieldLineIn
+       call start_line(XyzStart_DI(:, iFieldLine), nFieldLine + iFieldLine)
+    end do
+    call get_alignment()
+
     nFieldLine    = nFieldLine + nFieldLineIn
     if(nFieldLine > nFieldLineMax)&
          call CON_stop(NameSub//&
          ': Limit for number of particle field lines exceeded')
-    do iFieldLine = 1, nFieldLineIn
-       call start_line(XyzStart_DI(:, iFieldLine), iFieldLine)
-    end do
     call copy_end_to_regular
 
     ! check if trace mode is specified
@@ -230,13 +256,14 @@ contains
           StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
                StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
           !\
-          ! predictor step
+          ! First stage of Ralston's method
           !/
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field at original location
-             call get_b_dir(Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+             call get_b_dir(&
+                  Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                   iBlock=iIndexEnd_II(0,iParticle),&
-                  Dir_D = Dir_D)
+                  Dir_D = Dir1_D)
              ! find the step size
              StateEnd_VI(Aux_, iParticle) = &
                   MIN(SpaceStepMax, MAX(SpaceStepMin,&
@@ -246,7 +273,9 @@ contains
 
              ! get middle location
              StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-                  0.5 * iDirTrace * StateEnd_VI(Aux_, iParticle) * Dir_D
+                  iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+                  cTwoThird * Dir1_D * &
+                  iAlignment_I(iIndexEnd_II(fl_, iParticle))
           end do
           !\
           ! Message pass: some particles may have moved to different procs
@@ -265,16 +294,19 @@ contains
           if(is_complete()) EXIT TRACE
 
           !\
-          ! Corrector step
+          ! Second stage of Ralston's method
           !/
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field in the middle
-             call get_b_dir(Xyz_D=StateEnd_VI(x_:z_, iParticle),&
+             call get_b_dir(&
+                  Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                   iBlock=iIndexEnd_II(0,iParticle),&
-                  Dir_D=Dir_D)
+                  Dir_D = Dir2_D)
              ! get final location
              StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
-                  iDirTrace * StateEnd_VI(Aux_, iParticle) * Dir_D
+                  iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+                  (0.25 * Dir1_D + 0.75 * Dir2_D) * &
+                  iAlignment_I(iIndexEnd_II(fl_, iParticle))
           end do
           !\
           ! Message pass: some particles may have moved to different procs
@@ -358,6 +390,32 @@ contains
       iIndexEnd_II(Index_,Particle_I(KindEnd_)%nParticle) = 0
       iIndexEnd_II(0,     Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
+    !========================================================================
+    subroutine get_alignment()
+      use ModMpi
+      use BATL_mpi, ONLY: iComm
+      ! determine alignment of particle indexing with direction 
+      ! of the magnetic field
+      integer:: iParticle, iError
+      real:: Dir_D(MaxDim)
+      !------------------------------------------------------------------------
+      if(iOrderMode == Field_)then
+         iAlignment_I = 1
+         RETURN
+      end if
+
+      iAlignment_I = 0
+      do iParticle = 1, Particle_I(KindEnd_)%nParticle
+         call get_b_dir(&
+              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+              iBlock=iIndexEnd_II(0,iParticle),&
+              Dir_D = Dir_D)
+         iAlignment_I(iIndexEnd_II(fl_, iParticle)) = &
+              nint( SIGN(1.0, sum(Dir_D*StateEnd_VI(x_:z_,iParticle))) )
+      end do
+      call MPI_Allreduce(MPI_IN_PLACE, iAlignment_I, nFieldLineIn, &
+           MPI_INTEGER, MPI_SUM, iComm, iError)
+    end subroutine get_alignment
     !========================================================================
     function is_complete() result(IsCompleteOut)
       use ModMpi
