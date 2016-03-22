@@ -1,0 +1,32 @@
+#main
+
+SpeciesList=H2O 
+
+makefile  SOURCES=src
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+ProjectSourceDirectory=srcExtractTrajectories  
+
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
+SourceDirectory=src
+
+!PT/plots
+ErrorLog=PT/amps_error.log
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+#endmain
+
+#include species.input
+
+#General
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+#endGeneral
+
+
+#block ../exosphere.pl !process the data block with the setting of the exospehre model 
+  define _TARGET_ _CG_
+#endblock
+
