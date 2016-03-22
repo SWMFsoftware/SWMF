@@ -100,8 +100,6 @@ contains
     ! Initialize routers
     !/
     call SP_get_grid_descriptor_param(iGridMin_D, iGridMax_D, Disp_D)
-!    call set_standard_grid_descriptor(SP_,GridDescriptor=&
-!         SP_GridDescriptor)
     call set_grid_descriptor_id(SP_,&
          nDim = 3, &
          iGridPointMin_D = iGridMin_D, &
@@ -147,20 +145,6 @@ contains
     call associate_with_global_vector(CoordMisc_DI, 'SP_Xyz_DI')
     if(is_proc(SP_))&
          call SP_get_line_all(CoordMisc_DI)
-!    if(is_proc0(SP_))then
-!       ! convert from cartesian coordinates if necessary
-!       TypeGeometry = &
-!            Grid_C(SP_)%TypeGeometry
-!       call lower_case(TypeGeometry)
-!       if( index(TypeGeometry, 'spherical_lnr') > 0 )then
-!          do iParticle = 1, product(SP_GridDescriptor%DD%Ptr%nCells_D)*nLine
-!             Rho        = sqrt(sum(Xyz_D(1:2)**2))
-!             Coord_D(1) = sqrt(sum(Xyz_D(1:3)**2))
-!             Coord_D(2) = asin(Xyz_D(2) / (Rho        + cTol))
-!             Coord_D(3) = asin(Xyz_D(3) / (Coord_D(1) + cTol))
-!          end do
-!       end if
-!    end if
     nullify(CoordMisc_DI)
     call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
 
@@ -451,11 +435,6 @@ contains
                Grid_C(SP_)%TypeCoord)
           call sph_to_xyz(Coord_DI(1,iParticle), &
                cHalfPi-Coord_DI(3,iParticle), Coord_DI(2,iParticle), Coord_D)
-!          Coord_D(1) = Coord_DI(1, iParticle) * &
-!               cos(Coord_DI(3, iParticle))*cos(Coord_DI(2, iParticle))
-!          Coord_D(2) = Coord_DI(1, iParticle) * &
-!               cos(Coord_DI(3, iParticle))*sin(Coord_DI(2, iParticle))
-!          Coord_D(3) = Coord_DI(1, iParticle) * sin(Coord_DI(3, iParticle))
           Coord_DI(:,iParticle) = Coord_D
           Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
        end do
@@ -499,46 +478,45 @@ contains
     real,intent(in)::DataInputTime
     real,dimension(3)::Xyz_D
     !-------------------------------------------------------------------------
-!
-!    if(.not.RouterIhSp%IsProc)return
-!
-!    tNow=DataInputTime
-!    IhToSp_DD=transform_matrix(tNow,&
-!         Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-!    ScToIh_DD=transform_matrix(tNow,&                   !^CMP IF SC
-!         Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)  !^CMP IF SC
-!
-!
-!    call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
-!         RouterIhSp%iCommUnion)
-!    call bcast_global_vector('SP_Xyz_DI',&
-!         RouterIhSp%iProc0Source,&
-!         RouterIhSp%iCommUnion,&
-!         'SP_IsInIH')
-!    call transform_from_cartesian(IH_)
-!    call set_router(& 
-!         GridDescriptorSource=IH_GridDescriptor,&
-!         GridDescriptorTarget=SP_GridDescriptor,&
-!         Router=RouterIhSp,&
-!         NameMappingVector='SP_Xyz_DI',&
-!         NameMask='SP_IsInIH',&
-!         interpolate=interpolation_amr_gc)
-!!         interpolate=interpolation_fix_reschange)
-!    call transform_to_cartesian(IH_)
-!    if(is_proc(SP_))then
-!!       call SP_put_input_time(DataInputTime)
-!       call transform_to_sp_from(IH_)
-!    end if
-!
-!    call global_message_pass(RouterIhSp,&
-!         nVar=8,&
-!         fill_buffer=IH_get_for_sp_and_transform,&
-!         apply_buffer=SP_put_from_mh)
-!    !^CMP IF SC BEGIN
-!    !This coupler is performed after SC-SP coupling, so that 
-!    !on SP the updated coordinates are available for those
-!    !points which passed from SC to IH
-!
+    if(.not.RouterIhSp%IsProc)return
+
+    tNow=DataInputTime
+    IhToSp_DD=transform_matrix(tNow,&
+         Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+    ScToIh_DD=transform_matrix(tNow,&                   !^CMP IF SC
+         Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)  !^CMP IF SC
+
+
+    call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
+         RouterIhSp%iCommUnion)
+    call bcast_global_vector('SP_Xyz_DI',&
+         RouterIhSp%iProc0Source,&
+         RouterIhSp%iCommUnion,&
+         'SP_IsInIH')
+    call transform_from_cartesian(IH_)
+    call set_router(& 
+         GridDescriptorSource=IH_GridDescriptor,&
+         GridDescriptorTarget=SP_GridDescriptor,&
+         Router=RouterIhSp,&
+         NameMappingVector='SP_Xyz_DI',&
+         NameMask='SP_IsInIH',&
+         interpolate=interpolation_amr_gc)
+
+    call transform_to_cartesian(IH_)
+    if(is_proc(SP_))then
+!       call SP_put_input_time(DataInputTime)
+       call transform_to_sp_from(IH_)
+    end if
+
+    call global_message_pass(RouterIhSp,&
+         nVar=8,&
+         fill_buffer=IH_get_for_sp_and_transform,&
+         apply_buffer=SP_put_from_mh)
+    !^CMP IF SC BEGIN
+    !This coupler is performed after SC-SP coupling, so that 
+    !on SP the updated coordinates are available for those
+    !points which passed from SC to IH
+
 !    if(use_comp(SC_))then              
 !       if(is_proc0(SP_))then
 !          !Check the points which passed from SC to IH:

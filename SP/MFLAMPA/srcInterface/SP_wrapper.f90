@@ -245,10 +245,6 @@ contains
        call MPI_Reduce(CoordOut_DA, CoordOut_DA, nDim*nNode, MPI_REAL, &
             MPI_SUM, 0, iComm, iError)
     end if
-    write(*,*)NameSub//'======================'
-    do iBlock = 1, nBlock
-       write(*,*) CoordOut_DA(:,iBlock)
-    end do
     
   end subroutine SP_request_line
 
