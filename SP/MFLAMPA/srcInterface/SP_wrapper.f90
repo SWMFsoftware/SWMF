@@ -342,20 +342,24 @@ contains
 
   subroutine SP_get_line_all(Xyz_DI)
     use ModSize, ONLY: nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
-    use ModMain, ONLY: iProc, iComm, Block_, Proc_, iGrid_IA, State_VIB
+    use ModMain, ONLY: iProc, iComm, Block_, Proc_, Begin_, End_,&
+         iGrid_IA, State_VIB
     use ModCoordTransform, ONLY: sph_to_xyz
-    use ModMpiOrig
+    use ModMpi
     real, pointer:: Xyz_DI(:, :)
 
     integer:: iNode, iParticle, iBlock, iError
     real:: Coord_D(nDim)
     !-----------------------------------------
-    Xyz_DI = 0
+    Xyz_DI = 0.0
     do iNode = 1, nNode
        if(iGrid_IA(Proc_, iNode) /= iProc)&
             CYCLE
        iBlock = iGrid_IA(Block_, iNode)
        do iParticle = iParticleMin, iParticleMax
+          if(  iParticle < iGrid_IA(Begin_, iNode) .or. &
+               iParticle > iGrid_IA(End_,   iNode)) &
+               CYCLE
           Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
           call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_), &
                Xyz_DI(:, (iNode-1)*nParticle+iParticle-iParticleMin+1) )
