@@ -63,7 +63,7 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
     Long_I = 2.*cPi*np.linspace(0.5/nLong,1. - 0.5/nLong, nLong)
     LongEarth = -1
     if (Long0>0):
-        if(TypeOut=='old'):
+        if(any(Type=='old' for Type in TypeOut)):
             FileId = open('CR_Long.txt','w')
             FileId.write("%4d \n"%(CRNumber))  
             FileId.write("%03d \n"%(Long0))
@@ -82,24 +82,8 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
     # Conservative smoothing. Boundary condition: 
     # Periodic in Longitude, reflect in Latitude.
     if (nSmooth>2):
-        nSmooth2 = nSmooth//2
-        Coef    = 1./(nSmooth*nSmooth)
-        BrOrig_G = np.zeros([nLat,nLong+2*nSmooth2])
-        for iLat in np.arange(nLat):
-            BrOrig_G[iLat,:] = np.hstack((
-                Br_C[iLat,nLong-nSmooth2:nLong],
-                Br_C[iLat,:],Br_C[iLat,0:nSmooth2]))
-        Br_C=np.zeros([nLat,nLong])
-        for iLat in np.arange(nLat):
-            for iLong in np.arange(nLong):
-                for iSubLat in np.arange(nSmooth):
-                    iLatExt  = iLat  + iSubLat  - nSmooth2
-                    iLatExt  = max([-iLatExt-1,min(
-                                [iLatExt, 2*nLat-1-iLatExt])])
-                    Br_C[iLat,iLong] += np.sum(
-                        BrOrig_G[iLatExt,iLong:iLong+nSmooth])
-                Br_C[iLat,iLong]  *= Coef
-    if (TypeOut=='old'):
+        Br_C=smooth(nLong,nLat,nSmooth,Br_C)
+    if (any(Type=='old' for Type in TypeOut)):
         FileId = open('fitsfile.dat','w')
         
         FileId.write('#nMax\n')
@@ -112,30 +96,54 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
             for l in np.arange(nLong):
                 FileId.write("%14.6e\n"%(Br_C[k,l]) )
         FileId.close()
-    elif (TypeOut=='new'):
-        FileId = open('fitsfile_idl.out','w')
-    
+    if (any(Type=='new' for Type in TypeOut)):
+        FileId = open('fitsfile.out','w')
+        
         FileId.write('sin(lat) grid, '+TypeMag+', MapDate = '+MapDate+', Br['+BUnit+']'+'\n')
         FileId.write('       0      0.00000       2       2       1 \n')
         FileId.write('      '+str(nLong)+'     '+str(nLat)+'\n')
         FileId.write(str(Long0)+'     '+str(LongEarth)+'\n') 
         FileId.write('Longitude Latitude Br Long0 LongEarth \n')
-    
+        
         for k in np.arange(nLat):
             for l in np.arange(nLong):
                 FileId.write("{0:6.1f}  {1:14.6e} {2:14.6e}\n".format(
                         Long_I[l]*(180./cPi), LatSin_I[k]*(180./cPi),
                         max([-BMax,min([BMax,Br_C[k,l]])] ) ))
         FileId.close()
-   
-    return(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I)
-        
-
+    nParam = 2
+    Param_I = np.zeros(nParam)
+    Param_I[0] = Long0
+    Param_I[1] = LongEarth
+    return(nLong, nLat, nParam, Param_I, Long_I, LatSin_I, Br_C)
+###########################SMOOTHING###########################
+###############CONSERVATIVE (ON SIN(THETA) UNIFORM GRID######## 
+def smooth(nLong, nLat, nSmooth, Br_C):
+    nSmooth2 = nSmooth//2
+    Coef    = 1./(nSmooth*nSmooth)
+    BrOrig_G = np.zeros([nLat,nLong+2*nSmooth2])
+    for iLat in np.arange(nLat):
+        BrOrig_G[iLat,:] = np.hstack((
+                Br_C[iLat,nLong-nSmooth2:nLong],
+                Br_C[iLat,:],Br_C[iLat,0:nSmooth2]))
+    Br_C=np.zeros([nLat,nLong])
+    for iLat in np.arange(nLat):
+        for iLong in np.arange(nLong):
+            for iSubLat in np.arange(nSmooth):
+                iLatExt  = iLat  + iSubLat  - nSmooth2
+                iLatExt  = max([-iLatExt-1,min(
+                            [iLatExt, 2*nLat-1-iLatExt])])
+                Br_C[iLat,iLong] += np.sum(
+                    BrOrig_G[iLatExt,iLong:iLong+nSmooth])
+            Br_C[iLat,iLong]  *= Coef
+    return(Br_C)
 #Remap from iniform in sin(Latitude) magnetogram to that uniform in latitude.
 #        - by  Richard A. Frazin July 2014 - February 2015
 #        - by  Igor Sokolov, 2016/March:get rid of scipy dependency. 
 #          Speed up is by a factor of about 100
-def remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
+def remap(nLong,nLat,nParam,Param_I,Long_I,LatSin_I,Br_C,BMax):
+    Long0 = Param_I[0]
+    LongEarth = Param_I[1]
     #Transpose Br_C Matrix
     BrTransp_C = np.zeros([nLong,nLat])
     for k in np.arange(nLat):
@@ -258,7 +266,7 @@ def remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
                 Weight_II[iLat,0:lMax_I[iLat]-lMin_I[iLat]+1]*BrTransp_C[
                 iLong,lMin_I[iLat]:lMax_I[iLat]+1])
   
-    FileId = open('uniform_idl.out','w')
+    FileId = open('uniform.out','w')
     
     FileId.write('Uniform, non-smoothed magnetogram Br[Gauss]'+'\n')
     FileId.write('       0      0.00000       2       2       1 \n')
@@ -273,7 +281,7 @@ def remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,BMax):
                  max([-BMax,min([BMax,BrUniform_C[k,l]])])))
     
     FileId.close() 
-    return(BrUniform_C,Long0,LongEarth,nLat,nLong,LatUniform_I,Long_I)
+    return(nLong,nLat,nParam,Param_I,Long_I,LatUniform_I,BrUniform_C)
 
 if __name__ == '__main__':
 
@@ -292,7 +300,8 @@ if __name__ == '__main__':
        for example, with MacPorts.
        """)
     parser.add_argument('NameFile', help='Input FITS file name including path')
-    parser.add_argument('-TypeOut',choices=['old','new','none','remap'],default='new',help=
+    parser.add_argument('-Out',choices=['old','new','none','remap'],
+                        action='append', dest='TypeOut',default=['new'],help=
           """
           Output file: fitsfile.dat+CR_Long.txt (old), BATSRUS standard of .out file (new),
           or remapped from uniform in sin(latitude) grid to uniform in latitude one (remap) 
@@ -302,15 +311,16 @@ if __name__ == '__main__':
     parser.add_argument(
             '-BMax',type=float, default=1900.,help='Max BrFieldAmplitude')  
     args = parser.parse_args()
-
+    TypeOut = args.TypeOut
  
     cc = readf(args.NameFile,args.TypeOut,args.nSmooth,args.BMax)
-    Br_C      = cc[0]
-    Long0      = cc[1]
-    LongEarth    = cc[2]
-    nLat       = cc[3]
-    nLong      = cc[4]
+    nLong      = cc[0]
+    nLat       = cc[1]
+    nParam     = cc[2]
+    Param_I    = cc[3]
+    Long_I     = cc[4]
     LatSin_I   = cc[5]
-    Long_I     = cc[6]
-    if(args.TypeOut=='remap'):
-            remap(Br_C,Long0,LongEarth,nLat,nLong,LatSin_I,Long_I,args.BMax)
+    Br_C       = cc[6]
+   
+    if(any(Type=='remap' for Type in TypeOut)):
+            remap(nLong,nLat,nParam,Param_I,Long_I,LatSin_I,Br_C,args.BMax)
