@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O 
+SpeciesList=H2O CO2 DUST DUST DUST DUST
 
 makefile  SOURCES=src
 makefile  RUNDIR=run
@@ -23,6 +23,10 @@ OutputDirectory=PT/plots
 #General
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
+
+  define _PIC_MODEL__DUST__MODE_  _PIC_MODEL__DUST__MODE__ON_
+  define _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_  _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_  _PIC_MODE_ON_
 #endGeneral
 
 
