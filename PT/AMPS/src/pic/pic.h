@@ -614,6 +614,7 @@ namespace PIC {
 
     //create the output trigectory file
     void OutputTrajectory(const char *fname);
+    void CreateTrajectoryOutputFiles(const char *fname,const char *OutputDataFileDirectory,int TrajectoryPointBufferLength);
 
     void StartParticleTrajectoryTracking(void *ParticleData);
     void StopParticleTrajectoryTracking(void *ParticleData);

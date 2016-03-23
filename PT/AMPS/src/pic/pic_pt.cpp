@@ -316,256 +316,328 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //get the number of the trajectory list and data files, and the total number of the sampled trajectories
-  unsigned long nTrajectoryListFiles[PIC::nTotalThreads],nTrajectoryDataFiles[PIC::nTotalThreads],nTotalSampledTrajectories[PIC::nTotalThreads];
+  unsigned long int nTrajectoryListFiles[PIC::nTotalThreads],nTrajectoryDataFiles[PIC::nTotalThreads],nTotalSampledTrajectories[PIC::nTotalThreads];
 
   MPI_Gather(&TrajectoryList::nfile,1,MPI_UNSIGNED_LONG,nTrajectoryListFiles,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
   MPI_Gather(&TrajectoryData::nfile,1,MPI_UNSIGNED_LONG,nTrajectoryDataFiles,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
   MPI_Gather(&SampledTrajectoryCounter,1,MPI_UNSIGNED_LONG,nTotalSampledTrajectories,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
-  //output trajectories
+
+  //save data needed for unpacking of the trajecotry files in postprocessing
   if (PIC::ThisThread==0) {
-    //open sampled trajectory output files
-    FILE *fout[PIC::nTotalSpecies];
-    unsigned int spec, TrajectoryCounter[PIC::nTotalSpecies];
+    FILE *fTrajectoryDataSet;
 
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    sprintf(str,"%s.TrajectoryDataSet.pt",fname);
+    fTrajectoryDataSet=fopen(str,"w");
+
+    int nspec=PIC::nTotalSpecies;
+    int nthreads=PIC::nTotalThreads;
+
+    fwrite(&nspec,sizeof(int),1,fTrajectoryDataSet);
+    fwrite(&nthreads,sizeof(int),1,fTrajectoryDataSet);
+
+    fwrite(nTrajectoryListFiles,sizeof(unsigned long int),PIC::nTotalThreads,fTrajectoryDataSet);
+    fwrite(nTrajectoryDataFiles,sizeof(unsigned long int),PIC::nTotalThreads,fTrajectoryDataSet);
+    fwrite(nTotalSampledTrajectories,sizeof(unsigned long int),PIC::nTotalThreads,fTrajectoryDataSet);
+
+    //save the species chemical symbols
+    for (int spec=0;spec<nTotalSpecies;spec++) {
       char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
-
-      TrajectoryCounter[spec]=0;
-
       PIC::MolecularData::GetChemSymbol(ChemSymbol,spec);
-      sprintf(str,"%s.s=%i.%s.dat",fname,spec,ChemSymbol);
 
-      fout[spec]=fopen(str,"w");
-      fprintf(fout[spec],"VARIABLES=\"x\", \"y\", \"z\", \"spec\", \"Speed\"");
-
-      #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-      fprintf(fout[spec],", \"Electric Charge\", \"Particle Size\"");
-      #endif
-
-      #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-      fprintf(fout[spec],", \"Total kinetic energy [J]\"");
-      #endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-
-      #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
-      fprintf(fout[spec],", \"Time Stamp\"");
-      #endif
-
-      #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
-      fprintf(fout[spec],", \"Injection Face Number\"");
-      #endif
-
-      #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
-      fprintf(fout[spec],", \"Particle Weight Over Time Step Ratio\"");
-      #endif
-
-      fprintf(fout[spec],"\n");
+      fwrite(ChemSymbol,sizeof(char),_MAX_STRING_LENGTH_PIC_,fTrajectoryDataSet);
     }
 
-    //Create the array of sampled trajectory points for all trajectories (used also as a flag to determine trajectories that was already processed)
-    long int nTotalTracedTrajectories=0;
-    long int TrajectoryCounterOffset[PIC::nTotalThreads]; //the "global" trajectory number is TrajectoryCounterOffset[TrajectoryStartingThread]+ trajectory counting number at partuculat processor
+    fclose(fTrajectoryDataSet);
+  }
 
-    for (thread=0;thread<PIC::nTotalThreads;thread++) {
-      TrajectoryCounterOffset[thread]=nTotalTracedTrajectories;
-      nTotalTracedTrajectories+=nTotalSampledTrajectories[thread];
+
+  //create the trajectory files
+  if (_PIC_PARTICLE_TRAKER__RUNTIME_OUTPUT_==_PIC_MODE_ON_) {
+    int TrajectoryPointBufferLength=10000000;
+
+    if (PIC::ThisThread==0) {
+      CreateTrajectoryOutputFiles(fname,PIC::OutputDataFileDirectory,TrajectoryPointBufferLength);
     }
-
-    //2. Read the table of the sampled trajectory numbers
-    int nfile;
-    FILE *fTrajectoryList;
-    PIC::ParticleTracker::cTrajectoryID Trajectory;
-    unsigned long int i,length,nReadTrajectoryNumber=0;
-
-    int *nSampledTrajectoryPoints=new int [nTotalTracedTrajectories];
-    int *SampledTrajectoryDataOffset=new int [nTotalTracedTrajectories];
-    int *nReadSampledTrajectoryPoints=new int [nTotalTracedTrajectories];
-
-    for (thread=0;thread<PIC::nTotalThreads;thread++) for (nfile=0;nfile<nTrajectoryListFiles[thread]+1;nfile++) {
-      //scroll through all trajectory lists inclusing the temporary lists that contain the trajectory information regarding particles that are still in the simulation
-      if (nfile<nTrajectoryListFiles[thread]) {
-        sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,thread,nfile);
-      }
-      else {
-        sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.TemporaryTrajectoryList.pt",PIC::OutputDataFileDirectory,thread);
-      }
-
-      fTrajectoryList=fopen(str,"r");
-      fread(&length,sizeof(unsigned long int),1,fTrajectoryList);
-
-      for (i=0;i<length;i++) {
-        cTrajectoryListRecord Record;
-        int el;
-
-        fread(&Record,sizeof(PIC::ParticleTracker::cTrajectoryListRecord),1,fTrajectoryList);
-
-        el=Record.Trajectory.id+TrajectoryCounterOffset[Record.Trajectory.StartingThread];
-        if ((el<0)||(el>=nTotalTracedTrajectories)) exit(__LINE__,__FILE__,"Error: out of range");
-
-        nSampledTrajectoryPoints[el]=Record.nSampledTrajectoryPoints;
-        nReadTrajectoryNumber++;
-       }
-
-      fclose(fTrajectoryList);
-    }
-
-    if (nReadTrajectoryNumber!=nTotalTracedTrajectories) {
-      exit(__LINE__,__FILE__,"Error: the number of the read trajectories is different from the total number of the sampled trajectories");
-    }
-
-    //2. Read the particle trajectories
-    nReadTrajectoryNumber=0;
-
-    static const int TrajectoryPointBufferLength=10000000;
-    cTrajectoryPhysicalData *TempTrajectoryBuffer=new cTrajectoryPhysicalData[TrajectoryPointBufferLength];
-    int UsedTrajectoryPointBuffer,StartTrajectoryNumber;
-
-    while (nReadTrajectoryNumber!=nTotalTracedTrajectories) {
-      UsedTrajectoryPointBuffer=0;
-      StartTrajectoryNumber=nReadTrajectoryNumber;
-
-      //reset the offset array
-      for (i=0;i<nTotalTracedTrajectories;i++) SampledTrajectoryDataOffset[i]=-1,nReadSampledTrajectoryPoints[i]=0;
-
-      while (UsedTrajectoryPointBuffer+std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints)<=TrajectoryPointBufferLength) {
-        SampledTrajectoryDataOffset[nReadTrajectoryNumber]=UsedTrajectoryPointBuffer;
-        UsedTrajectoryPointBuffer+=std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints);
-        nReadTrajectoryNumber++;
-
-        if (nReadTrajectoryNumber==nTotalTracedTrajectories) break;
-      }
-
-      //scroll throught all trajectory files and locate all points that corresponds to this trajectories
-      FILE *fTrajectoryData;
-      cTrajectoryDataRecord TrajectoryRecord;
-      int GlobalTrajectoryNumber,ReadTrajectoryPoints=0;
-      int TrajectoryRecordLength=sizeof(cTrajectoryDataRecord);
-
-      for (thread=0;thread<PIC::nTotalThreads;thread++) {
-        for (nfile=0;nfile<nTrajectoryDataFiles[thread];nfile++) {
-          sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,thread,nfile);
-
-          fTrajectoryData=NULL;
-          fTrajectoryData=fopen(str,"r");
-          if (fTrajectoryData==NULL) exit(__LINE__,__FILE__,"Error: cannot open file");
-
-          if (fread(&length,sizeof(unsigned long int),1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
-
-          for (i=0;i<length;i++) {
-            if (fread(&TrajectoryRecord,TrajectoryRecordLength,1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
-            GlobalTrajectoryNumber=TrajectoryRecord.Trajectory.id+TrajectoryCounterOffset[TrajectoryRecord.Trajectory.StartingThread];
-
-            if (GlobalTrajectoryNumber>=nTotalTracedTrajectories) exit(__LINE__,__FILE__,"Error: out of range");
-
-            if (SampledTrajectoryDataOffset[GlobalTrajectoryNumber]!=-1) {
-              int el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset;
-
-              //if the total number of the sampled trajectory points exeeeds 'nMaxSavedSignleTrajectoryPoints' -> scale 'el' accordinaly
-              if (nSampledTrajectoryPoints[GlobalTrajectoryNumber]>=nMaxSavedSignleTrajectoryPoints) {
-                int Step=1+nSampledTrajectoryPoints[GlobalTrajectoryNumber]/nMaxSavedSignleTrajectoryPoints;
-
-                if (TrajectoryRecord.offset%Step!=0) continue;
-
-                el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset/Step;
-                if ((el<0.0)||(el>=TrajectoryPointBufferLength)||(TrajectoryRecord.offset/Step>=nMaxSavedSignleTrajectoryPoints)) exit(__LINE__,__FILE__,"Error: out of range");
-              }
-
-              TempTrajectoryBuffer[el]=TrajectoryRecord.data;
-              ++nReadSampledTrajectoryPoints[GlobalTrajectoryNumber];
-              ++ReadTrajectoryPoints;
-
-              if (nReadSampledTrajectoryPoints[GlobalTrajectoryNumber]>nSampledTrajectoryPoints[GlobalTrajectoryNumber]) {
-                exit(__LINE__,__FILE__,"Error: the number of the read trajectory number is out of range");
-              }
-            }
-          }
-
-          fclose(fTrajectoryData);
-
-          //if all points are found stop reading the trajectory files
-          if (ReadTrajectoryPoints==UsedTrajectoryPointBuffer) {
-            break;
-          }
-        }
-      }
-
-      //save the found trajectories
-      long int tr,offset;
-      int StartTrajectorySpec;
-      cTrajectoryPhysicalData *TrajectoryData;
-      FILE *trOut;
-
-      for (tr=StartTrajectoryNumber;tr<nReadTrajectoryNumber;tr++) {
-        offset=SampledTrajectoryDataOffset[tr];
-        StartTrajectorySpec=-1;
-
-        for (i=0;i<nReadSampledTrajectoryPoints[tr];i++) {
-          TrajectoryData=TempTrajectoryBuffer+offset+i;
-
-          #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
-          if (StartTrajectorySpec==-1) {
-            trOut=fout[TrajectoryData->spec];
-
-            //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryData->spec]);
-            ++TrajectoryCounter[TrajectoryData->spec];
-            StartTrajectorySpec=TrajectoryData->spec;
-          }
-          #elif _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_
-          if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=TrajectoryData->spec)) {
-            trOut=fout[TrajectoryData->spec];
-
-            //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryData->spec]);
-            ++TrajectoryCounter[TrajectoryData->spec];
-            StartTrajectorySpec=TrajectoryData->spec;
-          }
-          #else
-          exit(__LINE__,__FILE__,"Error: unknown option");
-          #endif
-
-          fprintf(trOut,"%e  %e  %e  %i  %e",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->spec,TrajectoryData->Speed);
-
-          #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-          fprintf(trOut," %e  %e ",TrajectoryData->ElectricCharge,TrajectoryData->ParticleSize);
-          #endif
-
-          #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-          fprintf(trOut," %e ",TrajectoryData->KineticEnergy);
-          #endif //#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-
-          #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
-          fprintf(trOut," %e ",TrajectoryData->TimeStamp);
-          #endif
-
-          #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
-          fprintf(trOut," %i ",TrajectoryData->InjectionFaceNumber);
-          #endif
-
-          #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
-          fprintf(trOut," %e ",TrajectoryData->ParticleWeightOverLocalTimeStepRatio);
-          #endif
-
-          fprintf(trOut,"\n");
-        }
-      }
-
-    }
-
-    //close all open files and deallocate the temporatry data buffers
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-      fclose(fout[spec]);
-      fout[spec]=NULL;
-    }
-
-    delete [] TempTrajectoryBuffer;
-    delete [] nSampledTrajectoryPoints;
-    delete [] SampledTrajectoryDataOffset;
-    delete [] nReadSampledTrajectoryPoints;
   }
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
+
+//===================================================================================================
+//output trajectory files
+void PIC::ParticleTracker::CreateTrajectoryOutputFiles(const char *fname,const char *OutputDataFileDirectory,int TrajectoryPointBufferLength) {
+  int thread;
+  char str[_MAX_STRING_LENGTH_PIC_];
+  int nTotalThreads,nTotalSpecies;
+  unsigned long int *nTrajectoryListFiles,*nTrajectoryDataFiles,*nTotalSampledTrajectories;
+
+  //read the trajectory set file
+  FILE *fTrajectoryDataSet=NULL;
+
+  sprintf(str,"%s.TrajectoryDataSet.pt",fname);
+  fTrajectoryDataSet=fopen(str,"r");
+  if (fTrajectoryDataSet==NULL) exit(__LINE__,__FILE__,"Error: cannot open the trajectory swtting file");
+
+  fread(&nTotalSpecies,sizeof(int),1,fTrajectoryDataSet);
+  fread(&nTotalThreads,sizeof(int),1,fTrajectoryDataSet);
+
+  nTrajectoryListFiles=new unsigned long int[nTotalThreads];
+  nTrajectoryDataFiles=new unsigned long int[nTotalThreads];
+  nTotalSampledTrajectories=new unsigned long int[nTotalThreads];
+
+  fread(nTrajectoryListFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
+  fread(nTrajectoryDataFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
+  fread(nTotalSampledTrajectories,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
+
+
+
+  //open sampled trajectory output files
+  FILE *fout[nTotalSpecies];
+  unsigned int spec, TrajectoryCounter[nTotalSpecies];
+
+  for (spec=0;spec<nTotalSpecies;spec++) {
+    char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+
+    TrajectoryCounter[spec]=0;
+    fread(ChemSymbol,sizeof(char),_MAX_STRING_LENGTH_PIC_,fTrajectoryDataSet);
+
+    sprintf(str,"%s.s=%i.%s.dat",fname,spec,ChemSymbol);
+
+    fout[spec]=fopen(str,"w");
+    fprintf(fout[spec],"VARIABLES=\"x\", \"y\", \"z\", \"spec\", \"Speed\"");
+
+    #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    fprintf(fout[spec],", \"Electric Charge\", \"Particle Size\"");
+    #endif
+
+    #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+    fprintf(fout[spec],", \"Total kinetic energy [J]\"");
+    #endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
+    #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+    fprintf(fout[spec],", \"Time Stamp\"");
+    #endif
+
+    #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+    fprintf(fout[spec],", \"Injection Face Number\"");
+    #endif
+
+    #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+    fprintf(fout[spec],", \"Particle Weight Over Time Step Ratio\"");
+    #endif
+
+    fprintf(fout[spec],"\n");
+  }
+
+  //Create the array of sampled trajectory points for all trajectories (used also as a flag to determine trajectories that was already processed)
+  long int nTotalTracedTrajectories=0;
+  long int TrajectoryCounterOffset[nTotalThreads]; //the "global" trajectory number is TrajectoryCounterOffset[TrajectoryStartingThread]+ trajectory counting number at partuculat processor
+
+  for (thread=0;thread<nTotalThreads;thread++) {
+    TrajectoryCounterOffset[thread]=nTotalTracedTrajectories;
+    nTotalTracedTrajectories+=nTotalSampledTrajectories[thread];
+  }
+
+  //2. Read the table of the sampled trajectory numbers
+  int nfile;
+  FILE *fTrajectoryList;
+  PIC::ParticleTracker::cTrajectoryID Trajectory;
+  unsigned long int i,length,nReadTrajectoryNumber=0;
+
+  int *nSampledTrajectoryPoints=new int [nTotalTracedTrajectories];
+  int *SampledTrajectoryDataOffset=new int [nTotalTracedTrajectories];
+  int *nReadSampledTrajectoryPoints=new int [nTotalTracedTrajectories];
+
+  for (thread=0;thread<nTotalThreads;thread++) for (nfile=0;nfile<nTrajectoryListFiles[thread]+1;nfile++) {
+    //scroll through all trajectory lists inclusing the temporary lists that contain the trajectory information regarding particles that are still in the simulation
+    if (nfile<nTrajectoryListFiles[thread]) {
+      sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,thread,nfile);
+    }
+    else {
+      sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.TemporaryTrajectoryList.pt",PIC::OutputDataFileDirectory,thread);
+    }
+
+    if ((fTrajectoryList=fopen(str,"r"))==NULL) exit(__LINE__,__FILE__,"Error: cannot open file");
+    fread(&length,sizeof(unsigned long int),1,fTrajectoryList);
+
+    for (i=0;i<length;i++) {
+      cTrajectoryListRecord Record;
+      int el;
+
+      fread(&Record,sizeof(PIC::ParticleTracker::cTrajectoryListRecord),1,fTrajectoryList);
+
+      el=Record.Trajectory.id+TrajectoryCounterOffset[Record.Trajectory.StartingThread];
+      if ((el<0)||(el>=nTotalTracedTrajectories)) exit(__LINE__,__FILE__,"Error: out of range");
+
+      nSampledTrajectoryPoints[el]=Record.nSampledTrajectoryPoints;
+      nReadTrajectoryNumber++;
+     }
+
+    fclose(fTrajectoryList);
+  }
+
+  if (nReadTrajectoryNumber!=nTotalTracedTrajectories) {
+    exit(__LINE__,__FILE__,"Error: the number of the read trajectories is different from the total number of the sampled trajectories");
+  }
+
+  //2. Read the particle trajectories
+  nReadTrajectoryNumber=0;
+
+  cTrajectoryPhysicalData *TempTrajectoryBuffer=new cTrajectoryPhysicalData[TrajectoryPointBufferLength];
+  int UsedTrajectoryPointBuffer,StartTrajectoryNumber;
+
+  while (nReadTrajectoryNumber!=nTotalTracedTrajectories) {
+    UsedTrajectoryPointBuffer=0;
+    StartTrajectoryNumber=nReadTrajectoryNumber;
+
+    //reset the offset array
+    for (i=0;i<nTotalTracedTrajectories;i++) SampledTrajectoryDataOffset[i]=-1,nReadSampledTrajectoryPoints[i]=0;
+
+    while (UsedTrajectoryPointBuffer+std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints)<=TrajectoryPointBufferLength) {
+      SampledTrajectoryDataOffset[nReadTrajectoryNumber]=UsedTrajectoryPointBuffer;
+      UsedTrajectoryPointBuffer+=std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints);
+      nReadTrajectoryNumber++;
+
+      if (nReadTrajectoryNumber==nTotalTracedTrajectories) break;
+    }
+
+    //scroll throught all trajectory files and locate all points that corresponds to this trajectories
+    FILE *fTrajectoryData;
+    cTrajectoryDataRecord TrajectoryRecord;
+    int GlobalTrajectoryNumber,ReadTrajectoryPoints=0;
+    int TrajectoryRecordLength=sizeof(cTrajectoryDataRecord);
+
+    for (thread=0;thread<nTotalThreads;thread++) {
+      for (nfile=0;nfile<nTrajectoryDataFiles[thread];nfile++) {
+        sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,thread,nfile);
+
+        fTrajectoryData=NULL;
+        fTrajectoryData=fopen(str,"r");
+        if (fTrajectoryData==NULL) exit(__LINE__,__FILE__,"Error: cannot open file");
+
+        if (fread(&length,sizeof(unsigned long int),1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
+
+        for (i=0;i<length;i++) {
+          if (fread(&TrajectoryRecord,TrajectoryRecordLength,1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
+          GlobalTrajectoryNumber=TrajectoryRecord.Trajectory.id+TrajectoryCounterOffset[TrajectoryRecord.Trajectory.StartingThread];
+
+          if (GlobalTrajectoryNumber>=nTotalTracedTrajectories) exit(__LINE__,__FILE__,"Error: out of range");
+
+          if (SampledTrajectoryDataOffset[GlobalTrajectoryNumber]!=-1) {
+            int el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset;
+
+            //if the total number of the sampled trajectory points exeeeds 'nMaxSavedSignleTrajectoryPoints' -> scale 'el' accordinaly
+            if (nSampledTrajectoryPoints[GlobalTrajectoryNumber]>=nMaxSavedSignleTrajectoryPoints) {
+              int Step=1+nSampledTrajectoryPoints[GlobalTrajectoryNumber]/nMaxSavedSignleTrajectoryPoints;
+
+              if (TrajectoryRecord.offset%Step!=0) continue;
+
+              el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset/Step;
+              if ((el<0.0)||(el>=TrajectoryPointBufferLength)||(TrajectoryRecord.offset/Step>=nMaxSavedSignleTrajectoryPoints)) exit(__LINE__,__FILE__,"Error: out of range");
+            }
+
+            TempTrajectoryBuffer[el]=TrajectoryRecord.data;
+            ++nReadSampledTrajectoryPoints[GlobalTrajectoryNumber];
+            ++ReadTrajectoryPoints;
+
+            if (nReadSampledTrajectoryPoints[GlobalTrajectoryNumber]>nSampledTrajectoryPoints[GlobalTrajectoryNumber]) {
+              exit(__LINE__,__FILE__,"Error: the number of the read trajectory number is out of range");
+            }
+          }
+        }
+
+        fclose(fTrajectoryData);
+
+        //if all points are found stop reading the trajectory files
+        if (ReadTrajectoryPoints==UsedTrajectoryPointBuffer) {
+          break;
+        }
+      }
+    }
+
+    //save the found trajectories
+    long int tr,offset;
+    int StartTrajectorySpec;
+    cTrajectoryPhysicalData *TrajectoryData;
+    FILE *trOut;
+
+    for (tr=StartTrajectoryNumber;tr<nReadTrajectoryNumber;tr++) {
+      offset=SampledTrajectoryDataOffset[tr];
+      StartTrajectorySpec=-1;
+
+      for (i=0;i<nReadSampledTrajectoryPoints[tr];i++) {
+        TrajectoryData=TempTrajectoryBuffer+offset+i;
+
+        #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
+        if (StartTrajectorySpec==-1) {
+          trOut=fout[TrajectoryData->spec];
+
+          //print the header of the new trajectory
+          fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryData->spec]);
+          ++TrajectoryCounter[TrajectoryData->spec];
+          StartTrajectorySpec=TrajectoryData->spec;
+        }
+        #elif _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_
+        if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=TrajectoryData->spec)) {
+          trOut=fout[TrajectoryData->spec];
+
+          //print the header of the new trajectory
+          fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryData->spec]);
+          ++TrajectoryCounter[TrajectoryData->spec];
+          StartTrajectorySpec=TrajectoryData->spec;
+        }
+        #else
+        exit(__LINE__,__FILE__,"Error: unknown option");
+        #endif
+
+        fprintf(trOut,"%e  %e  %e  %i  %e",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->spec,TrajectoryData->Speed);
+
+        #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+        fprintf(trOut," %e  %e ",TrajectoryData->ElectricCharge,TrajectoryData->ParticleSize);
+        #endif
+
+        #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+        fprintf(trOut," %e ",TrajectoryData->KineticEnergy);
+        #endif //#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
+        #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+        fprintf(trOut," %e ",TrajectoryData->TimeStamp);
+        #endif
+
+        #if _PIC_PARTICLE_TRACKER__INJECTION_FACE_MODE_ ==  _PIC_MODE_ON_
+        fprintf(trOut," %i ",TrajectoryData->InjectionFaceNumber);
+        #endif
+
+        #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+        fprintf(trOut," %e ",TrajectoryData->ParticleWeightOverLocalTimeStepRatio);
+        #endif
+
+        fprintf(trOut,"\n");
+      }
+    }
+
+  }
+
+  //close all open files and deallocate the temporatry data buffers
+  for (spec=0;spec<nTotalSpecies;spec++) {
+    fclose(fout[spec]);
+    fout[spec]=NULL;
+  }
+
+  delete [] TempTrajectoryBuffer;
+  delete [] nSampledTrajectoryPoints;
+  delete [] SampledTrajectoryDataOffset;
+  delete [] nReadSampledTrajectoryPoints;
+
+  delete [] nTrajectoryListFiles;
+  delete [] nTrajectoryDataFiles;
+  delete [] nTotalSampledTrajectories;
+
+  fclose(fTrajectoryDataSet);
+}
+
+
 
 //set up the default tracking flag to all particles
 void PIC::ParticleTracker::SetDefaultParticleTrackingFlag(void* StartNodeVoid) {
