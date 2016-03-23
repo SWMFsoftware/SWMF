@@ -10,6 +10,7 @@
 #include <string>       // std::string
 #include <iostream>     // std::cout
 #include <sstream>
+#include <vector>
 
 #include "PostProcess3D.h"
 #include "VIRTIS-M.h"
@@ -49,11 +50,20 @@ struct cColumnIntegrationSet {
 //and determine the set of the surface faces the dust injection from which will be taken into account
 namespace TRAJECTORY_FILTER {
   bool ProcessTrajectoriesInitFlag=false;
-  bool *SelectedFaceTable=NULL;
+  double *FaceFluxCorrectionTable=NULL;
   bool *SelectedTrajectoriesTable=NULL;
 
+  //the trajectory acceptance corridor
+  struct cCorridor {
+    double x0,y0;
+    double x1,y1;
+    bool IncludeFlag;
+    double PixelWidth;
+    double AcceptanceProbability;
+  };
+
   double GetFaceCorrectionFactor(int nface) {
-    return (SelectedFaceTable[nface]==true) ? 1.0 : 0.0;
+    return FaceFluxCorrectionTable[nface];
   }
 
   void ProcessTrajectories(SpiceDouble et) {
@@ -61,24 +71,13 @@ namespace TRAJECTORY_FILTER {
     double x[3],c0,c1,l,lCorridor[2];
     cVirtisM Virtis;
 
-    //the trajectory acceptance corridor
-    struct cCorridor {
-      double x0,y0;
-      double x1,y1;
-    };
+    cCorridor Include1={80,170.0,90,160.0,true,20,1.0};
+    cCorridor Exclude1={180,94,190,83,false,20,0.25};
 
-/*    double x0PixelCorridor=80;
-    double y0PixelCorridor=170.0;
+    vector<cCorridor> CorridorTable;
 
-    double x1PixelCorridor=90;
-    double y1PixelCorridor=160.0;*/
-
-
-    cCorridor IncludeCorridor={80,170.0,90,160.0};
-    cCorridor ExcludeCorridor={180,94,190,83};
-
-
-    double dyPixel=20.0;
+    CorridorTable.push_back(Include1);
+    CorridorTable.push_back(Exclude1);
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
@@ -89,72 +88,65 @@ namespace TRAJECTORY_FILTER {
     SelectedTrajectoriesTable=new bool [amps.ParticleTrajectory.nTotalTrajectories];
     for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) SelectedTrajectoriesTable[i]=false;
 
-    SelectedFaceTable=new bool [amps.SurfaceData.nCells];
-    for (i=0;i<amps.SurfaceData.nCells;i++) SelectedFaceTable[i]=false;
+    FaceFluxCorrectionTable=new double [amps.SurfaceData.nCells];
+    for (i=0;i<amps.SurfaceData.nCells;i++) FaceFluxCorrectionTable[i]=0.0;
 
-    //add surface faces into the allowed list
-    lCorridor[0]=IncludeCorridor.x1-IncludeCorridor.x0;
-    lCorridor[1]=IncludeCorridor.y1-IncludeCorridor.y0;
+    //go therough all corridor settings
+    for (int npass=0;npass<2;npass++) {
+      //during the first pass add all wanted trajectories
+      //during the second pass remove all aunwonted trajectories
 
-    for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
-      for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
-        for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
-
-        //determine projection of 'x' as would be seen by VIRTIS-M
-        for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
-          c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
-          c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
-          l+=pow(x[i]-Virtis.xRosetta[i],2);
+      for (int nCor=0;nCor<CorridorTable.size();nCor++) {
+        if (npass==0) {
+          if (CorridorTable[nCor].IncludeFlag==false) continue;
+        }
+        else {
+          if (CorridorTable[nCor].IncludeFlag==true) continue;
         }
 
-        l=sqrt(l);
+        //add surface faces into the allowed list
+        lCorridor[0]=CorridorTable[nCor].x1-CorridorTable[nCor].x0;
+        lCorridor[1]=CorridorTable[nCor].y1-CorridorTable[nCor].y0;
 
-        iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
-        jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+        for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+          for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
+            for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
 
-        //Trajectory is accepted is it has a point that falls into the corridor
-        double r=(iPixel-IncludeCorridor.x0)/lCorridor[0]*lCorridor[1]+IncludeCorridor.y0;
+            //determine projection of 'x' as would be seen by VIRTIS-M
+            for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
+              c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
+              c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
+              l+=pow(x[i]-Virtis.xRosetta[i],2);
+            }
 
-        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=IncludeCorridor.x0)  && (iPixel<=IncludeCorridor.x1)) {
-          //trajectory falls within the corridor
-          //add the face into the list of the faces from which the dust ejection is allowed
-          SelectedTrajectoriesTable[nTrajectory]=true;
-          SelectedFaceTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=true;
-        }
-      }
-    }
+            l=sqrt(l);
 
-    //exclude faces that produses jets seen on the reverse side
-    lCorridor[0]=ExcludeCorridor.x1-ExcludeCorridor.x0;
-    lCorridor[1]=ExcludeCorridor.y1-ExcludeCorridor.y0;
+            iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+            jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
 
-    for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
-      for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
-        for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
+            //Trajectory is accepted is it has a point that falls into the corridor
+            double r=(iPixel-CorridorTable[nCor].x0)/lCorridor[0]*lCorridor[1]+CorridorTable[nCor].y0;
 
-        //determine projection of 'x' as would be seen by VIRTIS-M
-        for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
-          c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
-          c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
-          l+=pow(x[i]-Virtis.xRosetta[i],2);
-        }
+            if ((fabs(jPixel-r)<CorridorTable[nCor].PixelWidth) && (iPixel>=CorridorTable[nCor].x0)  && (iPixel<=CorridorTable[nCor].x1)) {
+              //trajectory falls within the corridor
+              //add the face into the list of the faces from which the dust ejection is allowed
+              if (rnd()<CorridorTable[nCor].AcceptanceProbability) {
+                if (CorridorTable[nCor].IncludeFlag==true) {
+                  SelectedTrajectoriesTable[nTrajectory]=true;
+                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
+                }
+                else {
+                  SelectedTrajectoriesTable[nTrajectory]=false;
+                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
+                }
+              }
 
-        l=sqrt(l);
-
-        iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
-        jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
-
-        //Trajectory is accepted is it has a point that falls into the corridor
-        double r=(iPixel-ExcludeCorridor.x0)/lCorridor[0]*lCorridor[1]+ExcludeCorridor.y0;
-
-        if ((fabs(jPixel-r)<dyPixel) && (iPixel>=ExcludeCorridor.x0)  && (iPixel<=ExcludeCorridor.x1)) {
-          //trajectory falls within the corridor
-          //add the face into the list of the faces from which the dust ejection is allowed
-          SelectedTrajectoriesTable[nTrajectory]=false;
-          SelectedFaceTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=false;
+            }
+          }
         }
       }
     }
+
 
   }
 
@@ -970,7 +962,7 @@ return 1;
 
 
 
-  amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
+ // amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,2,200,200,"map.dat",&IntegrationSet);
  // amps.SaveDataFile("Res.dat", amps.data);
 
 
