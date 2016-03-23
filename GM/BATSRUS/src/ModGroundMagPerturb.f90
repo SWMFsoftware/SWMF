@@ -988,7 +988,7 @@ contains
     if(DoCalcKp) &
          write(iUnitIndices, '(f5.2,100i2)', ADVANCE='NO') Kp, kIndex_I
     if(DoCalcAe) &
-         write(iUnitIndices, '(4(1x,f7.2))', ADVANCE='NO') AeIndex_I
+         write(iUnitIndices, '(4(1x,f9.2))', ADVANCE='NO') AeIndex_I
     ! Add newline
     write(iUnitIndices, *)
  
