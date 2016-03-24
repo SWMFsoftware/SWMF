@@ -6,6 +6,9 @@
  */
 /*
  * $Log$
+ * Revision 1.9  2015/10/23 18:51:23  dborovik
+ * reverting to the previous versions
+ *
  * Revision 1.7  2015/05/26 14:56:27  vtenishe
  * a bug in the loop limits is fixed
  *
@@ -61,7 +64,7 @@ double newMars::GetSampledVariableSphericalSamplingMesh(int var,double* x,int el
     
     switch (var) {
         case 0:
-            res=ProductionRateCaluclation(x);
+            res=0.0;//ProductionRateCaluclation(x);
             break;
         case 1:
             res=O2p.Interpolate(x);
@@ -170,8 +173,14 @@ void newMars::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Cent
   cBackgroundDensityBuffer BackgroundDensityBuffer[nBackgroundSpecies];
 
   if (pipe->ThisThread==CenterNodeThread) {
-    buffer.TheoreticalLocalInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,CenterNode);
-    buffer.NumericalLocalInjectionRate=*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
+      if (_C_SPEC_>=0) {
+          buffer.TheoreticalLocalInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,CenterNode);
+          buffer.NumericalLocalInjectionRate=*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
+      }
+      if (_O_SPEC_>=0) {
+          buffer.TheoreticalLocalInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,CenterNode);
+          buffer.NumericalLocalInjectionRate=*(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
+      }
 
     buffer.maxTheoreticalLocalInjectionRate=*((double*)(maxLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()));
     buffer.minTheoreticalLocalInjectionRate=*((double*)(minLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()));
@@ -218,23 +227,51 @@ void newMars::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double 
   for (i=0;i<nInterpolationCoeficients;i++) {
     c=InterpolationCoeficients[i];
 
-    InterpoaltedLocalOxigenProductionRate+=c*(*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer())));
-    TheoreticalOxigenInjectionRate+=c*PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,InterpolationList[i])/InterpolationList[i]->Measure;
-
+      if (_C_SPEC_>=0) {
+          InterpoaltedLocalOxigenProductionRate+=c*(*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer())));
+          TheoreticalOxigenInjectionRate+=c*PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,InterpolationList[i])/InterpolationList[i]->Measure;
+      }
+      if (_O_SPEC_>=0) {
+          InterpoaltedLocalOxigenProductionRate+=c*(*(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer())));
+          TheoreticalOxigenInjectionRate+=c*PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,InterpolationList[i])/InterpolationList[i]->Measure;
+      }
+      
     if (maxTheoreticalLocalInjectionRate<*((double*)(maxLocalCellOxigenProductionRateOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()))) {
       maxTheoreticalLocalInjectionRate=*((double*)(maxLocalCellOxigenProductionRateOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()));
     }
   }
 
   //stored the interpolated data in the associated data buffer
-  *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedLocalOxigenProductionRate;
-  *(_C_SPEC_+(double*)(PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=TheoreticalOxigenInjectionRate;
+    if (_C_SPEC_>=0) {
+        *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedLocalOxigenProductionRate;
+        *(_C_SPEC_+(double*)(PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=TheoreticalOxigenInjectionRate;
+    }
+    if (_O_SPEC_>=0) {
+        *(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedLocalOxigenProductionRate;
+        *(_O_SPEC_+(double*)(PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=TheoreticalOxigenInjectionRate;
+    }
 
   *((double*)(maxLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=maxTheoreticalLocalInjectionRate;
 }
 
 //PRODUCTION RATE
 void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  int spec;
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    bool SingleSpeciesInjectionFlag;
+    double SingleSpeciesProductionRate;
+
+    SpeciesProductionRateCaluclation(spec,SingleSpeciesInjectionFlag,SingleSpeciesProductionRate,iCellIndex,jCellIndex,kCellIndex,cell,node);
+
+    InjectionFlag[spec]=SingleSpeciesInjectionFlag;
+    Rate[spec]=SingleSpeciesProductionRate;
+  }
+
+}
+
+
+void newMars::SpeciesProductionRateCaluclation(int spec,bool &InjectionFlag,double &Rate, int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   double xCenter[3]={0.0,0.0,0.0},dx[3]={0.0,0.0,0.0},xmin[3],xmax[3];
   int iLevel,i,LastLevel=0;
   double LastResult=0.0,res;
@@ -243,8 +280,8 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
 
 
   if (node==NULL) {
-    InjectionFlag[0]=false;
-    Rate[0]=0.0;
+    InjectionFlag=false;
+    Rate=0.0;
     return;
   }
 
@@ -259,9 +296,20 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
 
   for (iLevel=1;iLevel<iLevelMax;iLevel*=2) {
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-    res=Quadrature::Gauss::Cube::GaussLegendre(DIM,iLevel,ProductionRateCaluclation,xmin,xmax);
+    switch (spec) {
+    case _C_SPEC_:
+      res=Quadrature::Gauss::Cube::GaussLegendre(DIM,iLevel,ProductionRateCaluclation_HotC,xmin,xmax);
+      break;
+    case _O_SPEC_:
+      res=Quadrature::Gauss::Cube::GaussLegendre(DIM,iLevel,ProductionRateCaluclation_HotO,xmin,xmax);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: unknown species");
+    }
+
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
     res=Quadrature::Gauss::Cube::GaussLegendre(DIM,iLevel,MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalOInjectionRate,xmin,xmax);
+    exit(__LINE__,__FILE__,"Error: the block is not generalized for multimple species");
 #else
         exit(__LINE__,__FILE__,"Error: the option is not defined");
 #endif
@@ -313,9 +361,19 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
         x[2]=xCenter[2]+(double(k)/double(iLevel-1)-0.5)*dx[2];
 
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-        c=ProductionRateCaluclation(x);
+        switch (spec) {
+        case _C_SPEC_:
+	 c=ProductionRateCaluclation_HotC(x);
+          break;
+        case _O_SPEC_:
+	 c=ProductionRateCaluclation_HotO(x);
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error: unknown species");
+        }
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
         c=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalOInjectionRate(x);
+        exit(__LINE__,__FILE__,"Error: the block is not generalized for multimple species");
 #else
         exit(__LINE__,__FILE__,"Error: the option is not defined");
 #endif
@@ -335,8 +393,8 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
 
 //    LastResult/=dx[0]*dx[1]*dx[2];
 
-  InjectionFlag[0]=true;
-  Rate[0]=LastResult;
+  InjectionFlag=true;
+  Rate=LastResult;
 }
 
 //BOUNDARY CONDITIONS
@@ -349,9 +407,11 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
   spec=PIC::ParticleBuffer::GetI(ParticleData);
   rate=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*startNode->block->GetLocalParticleWeight(spec)/startNode->block->GetLocalTimeStep(spec);
 
-#if _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ == _MARS_ESCAPE_PARTICLES_COUNTING_MODE__COUNT_ALL_
+/*#if _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ == _MARS_ESCAPE_PARTICLES_COUNTING_MODE__COUNT_ALL_
   SampledEscapeRate[spec]+=rate;
 #elif  _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ == _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_
+*/
+#if  _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ == _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_
   double x[3],v[3];
 
   PIC::ParticleBuffer::GetX(x,ParticleData);
@@ -367,7 +427,7 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
 }
 //HOT OXIGEN BLOCK
 
-     long int newMars::HotOxygen::HotOProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+long int newMars::HotOxygen::HotOProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        long int nInjectedParticles=0;
 
 
@@ -380,7 +440,7 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
        double ModelParticleInjectionRate,TimeCounter=0.0,LocalTimeStep;
        long int newParticle;
        PIC::ParticleBuffer::byte *newParticleData;
-       double LocalParticleWeight=node->block->GetLocalParticleWeight(_C_SPEC_);
+       double LocalParticleWeight=node->block->GetLocalParticleWeight(_O_SPEC_);
 
        /*
        ProductionRateCaluclation(InjectionFlag,Rate,iCellIndex,jCellIndex,kCellIndex,cell,node);
@@ -389,8 +449,8 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
 
 
        //two O particles will be produce ar the same time
-       ModelParticleInjectionRate=0.5*PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,cell)/LocalParticleWeight;
-       LocalTimeStep=node->block->GetLocalTimeStep(_C_SPEC_);
+       ModelParticleInjectionRate=0.5*PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,cell)/LocalParticleWeight;
+       LocalTimeStep=node->block->GetLocalTimeStep(_O_SPEC_);
 
 
 
@@ -444,7 +504,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
         PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
       } while (Ti.DataValueDefined(x)==false);
 
-      p=ProductionRateCaluclation(x)/maxInjectionRate;
+      p=ProductionRateCaluclation_HotO(x)/maxInjectionRate;
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
       PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
       p=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalOInjectionRate(x)/maxInjectionRate;
@@ -467,17 +527,17 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     //Determine the energy for new hot O
     double BrRatio=rnd(); //Branch Ratio for 4 channels from dissociative recombination Kella et al. ['97]
     double speed;
-/*
+
     if      (BrRatio<.22) {speed=sqrt(KineticEnergy4/massO);}
     else if (BrRatio<.64) {speed=sqrt(KineticEnergy3/massO);}
     else if (BrRatio<.95) {speed=sqrt(KineticEnergy2/massO);}
     else                  {speed=sqrt(KineticEnergy1/massO);}
-*/
+/*
     //Determine the energy for new hot C, Branch Ration for 3 channels from dissociative recombination Rosen et al. ['98]
     if      (BrRatio<.761) {speed=sqrt((KineticEnergy1)/((massC*massO+massC*massC)/(2*massO)));}
     else if (BrRatio<.906) {speed=sqrt((KineticEnergy2)/((massC*massO+massC*massC)/(2*massO)));}
     else                   {speed=sqrt((KineticEnergy3)/((massC*massO+massC*massC)/(2*massO)));}
-
+*/
 //=======================  DEBUG =============
 //test the particle injection with particular energy
 //speed=sqrt(3.0*eV2J*2.0/massO);
@@ -491,18 +551,8 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
 
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-	if (Altitude>200.0E3 && Altitude<=300.0E3) {//Dr.Bougher provided Ti eqn, Fox93 Nitrogen paper
-	   betaO2=massCO/(2*k*(pow(10,(2.243+((Altitude/1000)-180)/95))));
-	   BGMeanFlowVelocity(bulkVelocity,x);
-	   }
-	else if (Altitude>300.0E3) { //Ti=Te above 300km
-	   betaO2=massCO/(2*k*(4200-3750*exp((180-(Altitude/1000))/89.6)));
-	   BGMeanFlowVelocity(bulkVelocity,x);
-	   }
-	else {
-	   betaO2=massCO/(2*k*Ti.Interpolate(x));
-	   BGMeanFlowVelocity(bulkVelocity,x);
-	   }
+           betaO2=massO2/(2*k*Ti.Interpolate(x));
+           BGMeanFlowVelocity(bulkVelocity,x);
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
     betaO2=massCO/(2*k*MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetNeutralTemeprature(x));
 #endif
@@ -542,6 +592,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
     for (idim=0;idim<3;idim++) {
       velocityO1[idim]=vparent[idim]+speed*Randomposition[idim];
+      velocityO2[idim]=vparent[idim]+speed*(-Randomposition[idim]);
 
       #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
       if (!isfinite(velocityO1[idim])) {
@@ -561,12 +612,12 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
 
     nInjectedParticles++;
-    PIC::BC::nInjectedParticles[_C_SPEC_]++;
-    PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+    PIC::BC::nInjectedParticles[_O_SPEC_]++;
+    PIC::BC::ParticleProductionRate[_O_SPEC_]+=LocalParticleWeight/LocalTimeStep;
 
     PIC::ParticleBuffer::SetX(x,newParticleData);
     PIC::ParticleBuffer::SetV(velocityO1,newParticleData);
-    PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
+    PIC::ParticleBuffer::SetI(_O_SPEC_,newParticleData);
 
 
     //TEST!!!!!!!
@@ -579,19 +630,19 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     //inject the particle into the system
     //PIC::Mover::MoveParticleBoundaryInjection[0](newParticle,LocalTimeStep-TimeCounter,node,true);
     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,LocalTimeStep-TimeCounter,node,true);
-/*
+
     //particle TWO
     newParticle=PIC::ParticleBuffer::GetNewParticle();
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
     PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
 
     nInjectedParticles++;
-    PIC::BC::nInjectedParticles[_C_SPEC_]++;
-    PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+    PIC::BC::nInjectedParticles[_O_SPEC_]++;
+    PIC::BC::ParticleProductionRate[_O_SPEC_]+=LocalParticleWeight/LocalTimeStep;
 
     PIC::ParticleBuffer::SetX(x,newParticleData);
     PIC::ParticleBuffer::SetV(velocityO2,newParticleData);
-    PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
+    PIC::ParticleBuffer::SetI(_O_SPEC_,newParticleData);
 
 
     //TEST!!!!!!!
@@ -606,15 +657,15 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     //inject the particle into the system
     //PIC::Mover::MoveParticleBoundaryInjection[0](newParticle,LocalTimeStep-TimeCounter,node,true);
     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,LocalTimeStep-TimeCounter,node,true);
-*/
+
     //increment the source rate counter
-    PIC::VolumeParticleInjection::SourceRate[_C_SPEC_]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
-    *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep/cell->Measure;
+    PIC::VolumeParticleInjection::SourceRate[_O_SPEC_]+=2.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep;
+    *(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=2.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep/cell->Measure;
          
          //sample production rate on the spherical mesh
          int el=SphericalSamplingMesh.GetSamplingElementNumber(x);
          if (el!=-1) {
-             SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
+             SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el]+=2.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep;
              
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
              if (!isfinite(SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el])) {
@@ -628,14 +679,279 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
     return nInjectedParticles;
   }
+long int newMars::HotCarbon::HotCProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+    long int nInjectedParticles=0;
+    
+    
+    //      return 0;
+    
+    
+    //get the productino rate
+    //       bool InjectionFlag[PIC::nTotalSpecies];
+    //       double Rate[PIC::nTotalSpecies];
+    double ModelParticleInjectionRate,TimeCounter=0.0,LocalTimeStep;
+    long int newParticle;
+    PIC::ParticleBuffer::byte *newParticleData;
+    double LocalParticleWeight=node->block->GetLocalParticleWeight(_C_SPEC_);
+    
+    /*
+     ProductionRateCaluclation(InjectionFlag,Rate,iCellIndex,jCellIndex,kCellIndex,cell,node);
+     ModelParticleInjectionRate=Rate[0]*cell->Measure/node->block->GetLocalParticleWeight(0);
+     */
+    
+    
+    //two O particles will be produce ar the same time
+    ModelParticleInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,cell)/LocalParticleWeight;
+    LocalTimeStep=node->block->GetLocalTimeStep(_C_SPEC_);
+    
+    
+    
+    //      return 0;
+    
+    
+    
+    //=======================  DEBUG =============
+    /*
+     //test the particle injection at a particular altitude
+     double xTest[3]={0.0,0.0,200.0E3+_RADIUS_(_TARGET_)};
+     static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *testNode=PIC::Mesh::mesh.findTreeNode(xTest);
+     
+     if (testNode!=node) return 0;
+     ModelParticleInjectionRate=0.1/LocalTimeStep;
+     */
+    //=======================  END DEBUG =============
+    
+    
+    
+    if (ModelParticleInjectionRate<=0.0) return 0;
+    
+    while ((TimeCounter+=-log(rnd())/ModelParticleInjectionRate)<LocalTimeStep) {
+        
+        //Calculate the velocity for each hot O (2 hot O's moving oppositely to each other)
+        //Assigin random position of the new hot O on the sphere
+        double r=0.0, Randomposition[3], x[3];
+        int idim;
+        
+        //get particle position
+#if _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE__UNIFORM_
+        
+        //distribute randomly the initial positino of a particle in a cell
+#if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM
+        do {
+            PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
+        } while (Ti.DataValueDefined(x)==false);
+#elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
+        PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
+#else
+        exit(__LINE__,__FILE__,"Error: the option is net recognized");
+#endif
+        
+#elif _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE__RATE_DEPENDENT_
+        //distribute initial particle position according to the local production within the cell
+        double p,maxInjectionRate=*((double*)(maxLocalCellOxigenProductionRateOffset+cell->GetAssociatedDataBufferPointer()));
+        
+        do {
+#if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
+            do {
+                PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
+            } while (Ti.DataValueDefined(x)==false);
+            
+            p=ProductionRateCaluclation_HotC(x)/maxInjectionRate;
+#elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
+            PIC::VolumeParticleInjection::GetRandomCellPosition(x,iCellIndex,jCellIndex,kCellIndex,node);
+            p=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalOInjectionRate(x)/maxInjectionRate;
+#else
+            exit(__LINE__,__FILE__,"Error: the option is not defined");
+#endif
+            
+        }
+        while (p<rnd());
+#endif
+        
+        
+        
+        for (idim=0;idim<3;idim++) {
+            Randomposition[idim]=sqrt(-2.0*log(rnd()))*cos(2*Pi*rnd());
+            r+=Randomposition[idim]*Randomposition[idim];}
+        r=sqrt(r);
+        for (idim=0;idim<3;idim++) {Randomposition[idim]/=r;}
+        
+        //Determine the energy for new hot O
+        double BrRatio=rnd(); //Branch Ratio for 4 channels from dissociative recombination Kella et al. ['97]
+        double speed;
+        /*
+         if      (BrRatio<.22) {speed=sqrt(KineticEnergy4/massO);}
+         else if (BrRatio<.64) {speed=sqrt(KineticEnergy3/massO);}
+         else if (BrRatio<.95) {speed=sqrt(KineticEnergy2/massO);}
+         else                  {speed=sqrt(KineticEnergy1/massO);}
+         
+        //Determine the energy for new hot C, Branch Ration for 3 channels from dissociative recombination Rosen et al. ['98]
+        if      (BrRatio<.761) {speed=sqrt((KineticEnergy1)/((massC*massO+massC*massC)/(2*massO)));}
+        else if (BrRatio<.906) {speed=sqrt((KineticEnergy2)/((massC*massO+massC*massC)/(2*massO)));}
+        else                   {speed=sqrt((KineticEnergy3)/((massC*massO+massC*massC)/(2*massO)));}*/
+        
+        //Determine the energy for new hot C from photodissociation of CO, Huebner[92]
+        speed=sqrt((KineticEnergy)/((massC*massO+massC*massC)/(2*massO)));
+        
+        
+        //=======================  DEBUG =============
+        //test the particle injection with particular energy
+        //speed=sqrt(3.0*eV2J*2.0/massO);
+        //=======================  END DEBUG =============
+        
+        //Speed of the parent molecule (O2+)
+        double vparent[3],bulkVelocity[3]={0.0,0.0,0.0},c;
+        double betaO2;
+        double rr=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        double Altitude=rr-_RADIUS_(_TARGET_);
+        
+        
+#if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
+        betaO2=massCO/(2*k*Tn.Interpolate(x));
+        BGMeanFlowVelocity(bulkVelocity,x);
+#elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
+        betaO2=massCO/(2*k*MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetNeutralTemeprature(x));
+#endif
+        
+        
+        
+        for (idim=0;idim<3;idim++) {
+            c=sqrt(-log(rnd())/betaO2);
+            //      vparent[idim]=c*Randomposition[idim]+bulkVelocity[idim];
+            
+            vparent[idim]=cos(2*Pi*rnd())*c+bulkVelocity[idim];
+            
+            
+        }
+        
+        
+        
+        //TEST!!!!!!
+        //        for (idim=0;idim<3;idim++) vparent[idim]=0.0; //,Randomposition[idim]=0.0;
+        //        Randomposition[2]=1.0;
+        
+        //=============
+        
+        
+        /*--------- Take Energy distribution from J. Fox distribution -----------*/
+        //        memcpy(x,xTest,3*sizeof(double));
+        
+        
+        
+        //        double KineticEnergy=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetInjectionEnergy(x)*eV2J;
+        //        speed=sqrt(2.0*KineticEnergy/massO);
+        
+        
+        
+        //Calculate velocity (vector) for new hot O
+        double velocityO1[3],velocityO2[3];
+        
+        for (idim=0;idim<3;idim++) {
+            velocityO1[idim]=vparent[idim]+speed*Randomposition[idim];
+            
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            if (!isfinite(velocityO1[idim])) {
+                exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+            }
+#endif
+        }
+        
+        // for (idim=0;idim<3;idim++) {velocityO2[idim]=  /*vparent[idim]+*/    speed*(-Randomposition[idim]);}
+        
+        //generate new particles
+        
+        
+        //particle ONE
+        newParticle=PIC::ParticleBuffer::GetNewParticle();
+        newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+        PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
+        
+        nInjectedParticles++;
+        PIC::BC::nInjectedParticles[_C_SPEC_]++;
+        PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+        
+        PIC::ParticleBuffer::SetX(x,newParticleData);
+        PIC::ParticleBuffer::SetV(velocityO1,newParticleData);
+        PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
+        
+        
+        //TEST!!!!!!!
+        //    PIC::ParticleBuffer::SetX(xTest,newParticleData);
+        //TEST END
+        
+        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+        
+        
+        //inject the particle into the system
+        //PIC::Mover::MoveParticleBoundaryInjection[0](newParticle,LocalTimeStep-TimeCounter,node,true);
+        _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,LocalTimeStep-TimeCounter,node,true);
+        /*
+         //particle TWO
+         newParticle=PIC::ParticleBuffer::GetNewParticle();
+         newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+         PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
+         
+         nInjectedParticles++;
+         PIC::BC::nInjectedParticles[_C_SPEC_]++;
+         PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+         
+         PIC::ParticleBuffer::SetX(x,newParticleData);
+         PIC::ParticleBuffer::SetV(velocityO2,newParticleData);
+         PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
+         
+         
+         //TEST!!!!!!!
+         //    PIC::ParticleBuffer::SetX(xTest,newParticleData);
+         //TEST END
+         
+         
+         
+         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+         
+         
+         //inject the particle into the system
+         //PIC::Mover::MoveParticleBoundaryInjection[0](newParticle,LocalTimeStep-TimeCounter,node,true);
+         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,LocalTimeStep-TimeCounter,node,true);
+         */
+        //increment the source rate counter
+        PIC::VolumeParticleInjection::SourceRate[_C_SPEC_]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
+        *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep/cell->Measure;
+        
+        //sample production rate on the spherical mesh
+        int el=SphericalSamplingMesh.GetSamplingElementNumber(x);
+        if (el!=-1) {
+            SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
+            
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            if (!isfinite(SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el])) {
+                exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+            }
+#endif
+        }
+        
+        
+    }
+    
+    return nInjectedParticles;
+}
 
-//  double LocalTimeStepSize(double m) {
-
-   double newMars::HotOxygen::LocalTimeStep(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+   double newMars::LocalTimeStep(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
 
     //Find maximum velocity of new hot O (need for determining local time step size)
-    double Vmax=sqrt((2*KineticEnergy1)/massC);
+   //double Vmax=sqrt((2*KineticEnergy1)/massC);
+       double Vmax;
+       if (spec==_O_SPEC_) {
+           Vmax=sqrt((newMars::HotOxygen::KineticEnergy)/massO);}
+       
+       
+       else if (spec==_C_SPEC_) {
+           Vmax=sqrt((2*newMars::HotCarbon::KineticEnergy)/massC);}
+       
+       else {
+           exit(__LINE__,__FILE__,"Error: species is not defined");
+       }
+       
 
     TimeStepLimitationImposed=true;
 
@@ -660,11 +976,51 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
      double r=sqrt(r2);
      int idim;
 
+       if (spec==_O_SPEC_) {
      for (idim=0;idim<DIM;idim++) {
        accl[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x[idim]/r;
      }
+	}
 
+       else if (spec==_C_SPEC_) {
+     for (idim=0;idim<DIM;idim++) {
+       accl[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x[idim]/r;
+     }
+	}
+       else {
+           exit(__LINE__,__FILE__,"Error: species is not defined");
+       }
 
 
    }
+
+//wrapper function
+long int newMars::HotAtomProduction_wrapper(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node){
+    long int O_nInjectedParticles=0;
+    long int C_nInjectedParticles=0;
+    
+    if (_O_SPEC_>=0) {
+        
+        O_nInjectedParticles=newMars::HotOxygen::HotOProduction(iCellIndex,jCellIndex,kCellIndex,cell,node);
+        
+    }
+    
+    if (_C_SPEC_>=0) {
+        
+        C_nInjectedParticles=newMars::HotCarbon::HotCProduction(iCellIndex,jCellIndex,kCellIndex,cell,node);
+        
+    }
+   /* 
+    if (_O_SPEC_>=0 &&_C_SPEC_>=0) {
+        
+        O_nInjectedParticles=newMars::HotOxygen::HotOProduction(iCellIndex,jCellIndex,kCellIndex,cell,node);
+        C_nInjectedParticles=newMars::HotCarbon::HotCProduction(iCellIndex,jCellIndex,kCellIndex,cell,node);
+        
+    }*/
+    
+    //sum up the outputs from the hotXProduction functions
+    return O_nInjectedParticles+C_nInjectedParticles;
+    
+    
+}
 

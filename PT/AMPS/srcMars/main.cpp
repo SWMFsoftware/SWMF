@@ -21,7 +21,7 @@
 #include <sys/resource.h>
 
 //the species
-unsigned int _C_SPEC_=0;
+//unsigned int _C_SPEC_=0;
 
 //forward scattering cross section
 #include "ForwardScatteringCrossSection.h"
@@ -217,7 +217,7 @@ int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &
 
 
 void OxigenTGCM() {
-cDataSetMTGCM O,COp;
+/*cDataSetMTGCM O,COp;
 
  O.PlanetRadius=3396.0E3;
  O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
@@ -265,7 +265,7 @@ cDataSetMTGCM O,COp;
 
  fclose(fout);
 }
-  //  exit(__LINE__,__FILE__,"test");
+  //  exit(__LINE__,__FILE__,"test");*/
 
 }
 
@@ -444,8 +444,9 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 
-    PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotOxygen::HotOProduction,newMars::HotOxygen::LocalTimeStep);
-
+  //  PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotOxygen::HotOProduction,newMars::LocalTimeStep);
+//    PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotCarbon::HotCProduction,newMars::LocalTimeStep);
+    PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotAtomProduction_wrapper,newMars::LocalTimeStep);
 
   /*
   //init the interpolation procedure
@@ -483,13 +484,18 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   if (PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber>5000) PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500; //50000;
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=NULL;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_C_SPEC_);
-
+    if (_C_SPEC_>=0) {
+        PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_C_SPEC_);
+    }
+   
+    if (_O_SPEC_>=0) {
+        PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
+    }
 
 
 
 //  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",_C_SPEC_);
+//  PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",_C_SPEC_);
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
@@ -512,12 +518,20 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
   //the total theoretical injection rate of hot oxigen
-  double rate=PIC::VolumeParticleInjection::GetTotalInjectionRate(_C_SPEC_);
-  if (PIC::ThisThread==0) {
-    printf("Total theoretical injection rate of hot oxige: %e (%s@%i)\n",rate,__FILE__,__LINE__);
-    printf("Integrated DR rate from Fox modes: %e\n",MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalO2PlusDissociativeRecombinationRate());
-  }
-
+    if (_C_SPEC_>=0) {
+        double rate=PIC::VolumeParticleInjection::GetTotalInjectionRate(_C_SPEC_);
+        if (PIC::ThisThread==0) {
+            printf("Total theoretical injection rate of hot %s: %e (%s@%i)\n",PIC::MolecularData::GetChemSymbol(_C_SPEC_),rate,__FILE__,__LINE__);
+            printf("Integrated DR rate from Fox modes: %e\n",MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalO2PlusDissociativeRecombinationRate());
+        }
+    }
+    if (_O_SPEC_>=0) {
+        double rate=PIC::VolumeParticleInjection::GetTotalInjectionRate(_O_SPEC_);
+        if (PIC::ThisThread==0) {
+            printf("Total theoretical injection rate of hot %s: %e (%s@%i)\n",PIC::MolecularData::GetChemSymbol(_O_SPEC_),rate,__FILE__,__LINE__);
+            printf("Integrated DR rate from Fox modes: %e\n",MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalO2PlusDissociativeRecombinationRate());
+        }
+    }
 
 
 
@@ -562,9 +576,8 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   //output the particle statistics for the nightly tests 
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
     char fname[400];
-
-    sprintf(fname,"%s/test_Mars.dat",PIC::OutputDataFileDirectory);
-    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+          sprintf(fname,"%s/test_Mars.dat",PIC::OutputDataFileDirectory);
+          PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
 
 

@@ -38,21 +38,21 @@
 //the forward scattering cross section
 #include "Kharchenko-2000-fig-3.h"
 
-/*
+
 //List of types of O2+ DR coefficients
 #define Hodges 0
 #define Mehr 1
 #define Peverall 2
 
 #define DR Mehr
-*/
+/*
 //List of types of CO+ DR coefficients
 #define Rosen 0
 #define Cloutier 1
 #define Mitchell 2
 
 #define DR Rosen
-
+*/
 using namespace std;
 
 const double massO=26.56E-27; //kg 
@@ -304,147 +304,85 @@ inline void ReadMTGCM() {
 
   }
 	
-	inline double ProductionRateCaluclation(double *x) {
-		double production_rate=0.0;
-		double t=0.0;
-        //	bool validAlt = false;
-		double z0 = 200E3;
-        //	while (validAlt == false) {
-		if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
-        /*
-         #if DR == Hodges //Hodges [2000]
-         production_rate=1.6E-7*pow(300/Te.Interpolate(x),0.55)*O2p.Interpolate(x)*E.Interpolate(x); 
-         #endif
-         #if DR == Mehr //Mehr and Biondi [1969]
-         if (Te.Interpolate(x)<=1200.0) {production_rate=1.95E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);}
-         else if (Te.Interpolate(x)>1200.0) {production_rate=0.75E-7*pow(1200/Te.Interpolate(x),0.56)*O2p.Interpolate(x)*E.Interpolate(x);}
-         #endif
-         #if DR == Peverall //Peverall [2001]
-         production_rate=2.4E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);
-         #endif
-         */	
-		double Altitude;
-		double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-		double r=sqrt(r2);
-    //	Altitude = r-_RADIUS_(_TARGET_);	
+inline double ProductionRateCaluclation_HotO(double *x) {
+//inline double ProductionRateCaluclation(double *x) {
         
-/*		bool validt=false;
-		while (validt==false) {
-        // Hot Carbon
-            double COpScaleHeight=53.8E3;//50.2E3; //Solar Min
-        //	double COpScaleHeight=72.6E3;//102.1E3; //Solar Max
-            double peak=210.0E3;//solar min
-        //  double peak=240.0E3;//solar max
-            
-            double vectop2[3]={0.0,0.0,0.0},vectop[3]={0.0,0.0,0.0};
-        //	double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-        //	double r=sqrt(r2);
-            int idim;
-            //for (idim=0;idim<DIM;idim++) {Altitudevec[idim]=x[idim]*(x[idim]/r);}
-            for (idim=0;idim<DIM;idim++) {
-                vectop[idim] = (3396.0E3+z0)*(x[idim]/r);
-                vectop2[idim]= (3396.0E3+(z0-10E3))*(x[idim]/r);
-            }
-            Altitude = r-_RADIUS_(_TARGET_);
-            
-            double localH=10E3/(log(COp.Interpolate(vectop)/COp.Interpolate(vectop2)));
-            bool isnan(localH);
-            if (localH<COpScaleHeight/3) {
-                localH=COpScaleHeight/2;
-            }
-            else if (isnan(localH)==true) {
-                localH=COpScaleHeight;
-            }
-            else if (localH>COpScaleHeight) {
-                localH=COpScaleHeight;
-            }
-            
-            if (Altitude>=135.0E3 && Altitude<z0){t=COp.Interpolate(x);}
-            else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/localH);}
-            // else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/COpScaleHeight);}
-            else if (Altitude>=peak){t=(COp.Interpolate(vectop)*exp((peak-z0)/localH))*exp(-(Altitude-peak)/COpScaleHeight);}
-            
-            //	if (nz>100E3){exit(__LINE__,__FILE__,"Error");} 
-            bool isnan(t);
-            bool isinf(t);
-            
-            double nz=1E3,tt=0.0;
-            while (isnan(t)==true) {
-                if (nz>=Altitude) {t=1.0;}
-                for (idim=0;idim<DIM;idim++) {vectop2[idim]= (3396.0E3+(Altitude-nz))*(x[idim]/r);}
-                t=COp.Interpolate(vectop2);
-                nz+=1E3;
-            }
-            
-  */          /*	if (z0<135.0E3) {
-             validt=true;
-             t=0.0;}
-             else {*/
-    /*        if (Altitude>=1500E3) {
-                if (t>1E10) {z0-=1E3;}
-                else {validt=true;}
-            }
-            
-            else {
-                if (t>1E10 || t<1E-20) {z0-=1E3;}
-                else {validt=true;}
-            }
-            if (z0<135.0E3) {
-                t=1.0;
-                validt=true;}
-        }
+    double production_rate=0.0;
+    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
         
-		if (Altitude>200.0E3) {
-    #if DR == Rosen //Rosen [1998]
-			production_rate=2.75E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.55)*t*E.Interpolate(x);
-    #endif
-    #if DR == Cloutier //Cloutier and Daniell [1979]
-			production_rate=6.47E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.53)*t*E.Interpolate(x);
-    #endif
-    #if DR == Mitchell //Mitchell and Hus [1985]
-			production_rate=2.0E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.48)*t*E.Interpolate(x);
-    #endif
-            }
-		else {*/
-t=O2p.Interpolate(x);
-    #if DR == Rosen //Rosen [1998]
-			production_rate=2.75E-7*pow(300/Te.Interpolate(x),0.55)*t*E.Interpolate(x);
-    #endif
-    #if DR == Cloutier //Cloutier and Daniell [1979]
-			production_rate=6.47E-7*pow(300/Te.Interpolate(x),0.53)*t*E.Interpolate(x);
-    #endif
-    #if DR == Mitchell //Mitchell and Hus [1985]
-			production_rate=2.0E-7*pow(300/Te.Interpolate(x),0.48)*t*E.Interpolate(x);
-    #endif
-    //        }
-        /*
-         //Photodissociation of CO
-         double frequency=(2.81E-7)/pow(Semimajoraxis,2); //s^-1, Solar low, Huebner et al.[92]	
-         double frequency=(6.60E-7)/pow(Semimajoraxis,2); //s^-1, Solar High, Huebner et al.[92]
-         double X=x[0];
-         double Y=x[1];
-         double Z=x[2];
-         double YY=sqrt(Y*Y+Z*Z);
-         if ((X>0.0)&&(YY<_RADIUS_(_TARGET_))) frequency=0.0; //No reaction on Nightside
-         production_rate=CO.Interpolate(x)*frequency;
-         */
+    //Hot Oxygen O2+ DR reaction
+        #if DR == Hodges //Hodges [2000]
+        production_rate=1.6E-7*pow(300/Te.Interpolate(x),0.55)*O2p.Interpolate(x)*E.Interpolate(x);
+        #endif
+        #if DR == Mehr //Mehr and Biondi [1969]
+        if (Te.Interpolate(x)<=1200.0) {production_rate=1.95E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);}
+        else if (Te.Interpolate(x)>1200.0) {production_rate=0.75E-7*pow(1200/Te.Interpolate(x),0.56)*O2p.Interpolate(x)*E.Interpolate(x);}
+        #endif
+        #if DR == Peverall //Peverall [2001]
+        production_rate=2.4E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);
+        #endif
         
-//       cout<<Altitude<<"  "<<production_rate<<endl;
-//	exit(__LINE__,__FILE__);
- 
-        // if (production_rate>=1E3){z0-=1E3;}// {cout << Altitude <<"  "<< production_rate << endl;
-        //	exit(__LINE__,__FILE__);}
-        // else
-        // validAlt = true;
-        // }
-        return production_rate*1.0e6;
-       // return 1*1.0e6;
-	}
-    
+    return production_rate*1.0e6;
+}
 
+inline double ProductionRateCaluclation_HotC(double *x) {
+//inline double ProductionRateCaluclation(double *x) {
+        
+    double production_rate=0.0;
+    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
+    
+        
+    //Hot Carbon Photodissociation of CO
+            
+        //Photodissociation of CO
+        double frequency=(4.4E-7)/pow(Semimajoraxis,2); //s^-1, Solar low, Fox[89] //Huebner et al.[92]
+        //double frequency=(1.21E-6)/pow(Semimajoraxis,2); //s^-1, Solar High, Fox[89] // Huebner et al.[92]
+            
+        //determine the positon of subsolar point (tile angle = 25.19 deg)
+        double Lat,Lon,xsun[3],xunit[3],x_proj;
+        Lat=0.0*Pi/180; //Aphelion=25.19, Perihelion=-25.19, Equinox=0.0
+        Lon=180.0*Pi/180;
+    
+        //unit vector for anti-subsolar point
+        xunit[0]=-cos(Lat)*cos(Lon);
+        xunit[1]=-cos(Lat)*sin(Lon);
+        xunit[2]=-sin(Lat);
+    
+        //x_proj_to_anti-subsolar=unit_vec(unit_vec.x)
+        xsun[0]=xunit[0]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+        xsun[1]=xunit[1]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+        xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    
+        x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
+    
+        if (((xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2])>0.0)&&(x_proj<_RADIUS_(_TARGET_))) frequency=0.0; //No photodissociation on the nightside
+            
+        production_rate=CO.Interpolate(x)*frequency;
+            
+        
+    return production_rate*1.0e6;
+}
+    
+  /*  //Species needs to be identified for the production rate calculation function
+   inline  double SpeciesAssignment(double *x,int spec) {
+        double production_rate=0.0;
+
+        if (spec==_O_SPEC_) {//Hot Oxygen O2+ DR reaction
+            production_rate=ProductionRateCaluclation_HotO(x);
+        }
+        else if (spec==_C_SPEC_) {//Hot Carbon
+            production_rate=ProductionRateCaluclation_HotC(x);
+        }
+        else {
+            exit(__LINE__,__FILE__,"Error: species is not defined");}
+        
+        return production_rate;
+    }
+*/
 
 	void ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-	
+	void SpeciesProductionRateCaluclation(int spec,bool &InjectionFlag,double &Rate, int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
 
 
   //print the model parameters
@@ -480,7 +418,7 @@ t=O2p.Interpolate(x);
 				x[1]=R*cos(Lat)*sin(Lon);
 				x[2]=R*sin(Lat);
 								
-				production=ProductionRateCaluclation(x);
+				production=ProductionRateCaluclation_HotO(x);
 				O2pdensity=O2p.Interpolate(x);
 				Tneutral=Tn.Interpolate(x);
 				Edensity=E.Interpolate(x);
@@ -567,27 +505,43 @@ t=O2p.Interpolate(x);
 namespace HotOxygen {
 
 		//KE = (eV from each channel) * (eV to J) 
-		/*
+		
 		const float KineticEnergy1=0.83*1.60217653E-19;
 		const float KineticEnergy2=3.05*1.60217653E-19;
 		const float KineticEnergy3=5.02*1.60217653E-19;
-		const float KineticEnergy4=6.98*1.60217653E-19;*/
-		
-		//Hot Carbon DR
-		
-		const float KineticEnergy1=2.90*1.60217653E-19;
-		const float KineticEnergy2=1.64*1.60217653E-19;
-		const float KineticEnergy3=0.94*1.60217653E-19;
+		const float KineticEnergy4=6.98*1.60217653E-19;
+    
+        const float KineticEnergy=KineticEnergy4;
 
-		//Hot Carbon Photodissociation
-	//	const float KineticEnergy=2.56*1.60217652E-19; //solar low	
-//		const float KineticEnergy=2.58*1.60217652E-19; //solar high	
-//	void HotOProduction() {
+
 		 long int HotOProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-  	 double LocalTimeStep(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
 
-}}
+}
+namespace HotCarbon {
+    
+    //Hot Carbon DR
+    
+   /* const float KineticEnergy1=2.90*1.60217653E-19;
+    const float KineticEnergy2=1.64*1.60217653E-19;
+    const float KineticEnergy3=0.94*1.60217653E-19;
+    */
+    //Hot Carbon Photodissociation
+            const float KineticEnergy=2.56*1.60217652E-19; //solar low
+    //		const float KineticEnergy=2.58*1.60217652E-19; //solar high
+    
+    
+    long int HotCProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+}
+    
+    double LocalTimeStep(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+    //wrapper function
+    long int HotAtomProduction_wrapper(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+    
+    
+    
+}
 
 
 
