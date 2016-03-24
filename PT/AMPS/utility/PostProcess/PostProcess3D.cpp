@@ -254,6 +254,10 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
   int i,j,k;
 
   for (nblock=0;nblock<nBlocks;nblock++) {
+
+    if (Block[nblock].cell[0][0][0].n[0]==-1) exit(__LINE__,__FILE__,"Error: the offset is not defined");
+    if (Block[nblock].cell[nBlockCellX-1][nBlockCellY-1][nBlockCellZ-1].n[6]==-1) exit(__LINE__,__FILE__,"Error: the offset is not defined");
+
     for (i=0;i<3;i++) {
       Block[nblock].xmin[i]=data.data[Block[nblock].cell[0][0][0].n[0]][i];
       Block[nblock].xmax[i]=data.data[Block[nblock].cell[nBlockCellX-1][nBlockCellY-1][nBlockCellZ-1].n[6]][i];
