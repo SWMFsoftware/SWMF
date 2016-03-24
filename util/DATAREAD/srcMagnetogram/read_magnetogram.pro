@@ -40,11 +40,16 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
                        latitude:fltarr(nlon,nlat),$
                        br_field:fltarr(nlon,nlat),$
                        bphi_field:fltarr(nlon,nlat),$
-                       btheta_field:fltarr(nlon,nlat)}
+                       btheta_field:fltarr(nlon,nlat),$
+                       neqpar:neqpar,$
+                       eqpar:fltarr(neqpar)}
 
            mag_info.longitude = x(*,*,0)*!dtor
            mag_info.latitude  = x(*,*,1)*!dtor
-           mag_info.br_field = var(*,*,0)           
+           mag_info.br_field = var(*,*,0)
+           mag_info.eqpar    = eqpar
+           if nw ge 2 then mag_info.bphi_field = var(*,*,1)
+           if nw ge 3 then mag_info.btheta_field = var(*,*,2)
            
         end
 
@@ -64,7 +69,9 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
                        latitude:fltarr(nlon,nlat),$
                        br_field:fltarr(nlon,nlat),$
                        bphi_field:fltarr(nlon,nlat),$
-                       btheta_field:fltarr(nlon,nlat)}
+                       btheta_field:fltarr(nlon,nlat),$
+                       neqpar:neqpar,$
+                       eqpar:fltarr(neqpar)}
 
            radius = x(*,0,0,0)
            longitude = x(0,*,*,1)
@@ -104,7 +111,8 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
                        latitude:fltarr(nlon,nlat),$
                        br_field:fltarr(nlon,nlat),$
                        bphi_field:fltarr(nlon,nlat),$
-                       btheta_field:fltarr(nlon,nlat)}
+                       btheta_field:fltarr(nlon,nlat),$
+                       neqpar:0, eqpar:fltarr(1)}
 
      lat=findgen(nlat)*2./nlat
      lat=asin(lat-lat[nlat-1]/2.)
