@@ -127,7 +127,7 @@ CouplerMode=off !!!ices !!off, ices, swmf
   
 #endblock
 
-#block ../mars.pl !process settings of the mars module
+#block ../input/mars.pl !process settings of the mars module
 
 Case=MTGCM_equinox_SL
 
