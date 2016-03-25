@@ -185,7 +185,7 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
        //apply condition of tracking the particle
        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
        PIC::ParticleTracker::InitParticleID(tempParticleData);
-       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,specProduct,tempParticleData);
+       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,specProduct,tempParticleData,(void*)node);
        #endif
 
 

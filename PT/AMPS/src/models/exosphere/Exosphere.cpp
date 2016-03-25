@@ -2213,7 +2213,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    //apply condition of tracking the particle
    #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
    PIC::ParticleTracker::InitParticleID(tempParticleData);
-   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData,(void*)startNode);
    #endif
 
    //save the information od the particle origin: the particle origin will be sampled in SO coordinate frame

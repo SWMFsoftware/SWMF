@@ -354,7 +354,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
         //apply condition of tracking the particle
         #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
         PIC::ParticleTracker::InitParticleID(newParticleData);
-        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
+        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)node);
         #endif
 
          //inject the particle into the system
