@@ -560,7 +560,7 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
     //apply the particle tracking condition
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::InitParticleID(newParticleData);
-    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)startNode);
     #endif
 
     //inject the particle into the system
