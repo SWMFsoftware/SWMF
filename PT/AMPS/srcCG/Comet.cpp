@@ -540,7 +540,7 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   //apply condition of tracking the particle
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::InitParticleID(tempParticleData);
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData,(void*)startNode);
   #endif
 
 
@@ -645,7 +645,7 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //apply condition of tracking the particle
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::InitParticleID(tempParticleData);
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData,(void*)startNode);
   #endif
 
 
@@ -1711,7 +1711,7 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
          //apply condition of tracking the particle
          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
          PIC::ParticleTracker::InitParticleID(tempParticleData);
-         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
+         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData,(void*)node);
          #endif
 
 

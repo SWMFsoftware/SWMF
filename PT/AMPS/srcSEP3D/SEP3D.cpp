@@ -145,7 +145,7 @@ int SEP3D::Physics::Mover_Axisymmetric_SecondOrder(long int ptr, double dtTotal,
 
     //save the trajectory point
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-    PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData);
+    PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData,(void*)newNode);
 #endif
 
 

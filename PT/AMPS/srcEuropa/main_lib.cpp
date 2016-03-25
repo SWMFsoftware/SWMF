@@ -671,7 +671,7 @@ long int DustInjection(int spec) {
     //apply condition of tracking the particle
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::InitParticleID(newParticleData);
-    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,newParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,newParticleData,(void*)startNode);
 #endif
 
     //inject the particle into the system                                                                             

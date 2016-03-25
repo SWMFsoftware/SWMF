@@ -135,7 +135,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
           //apply condition of tracking the particle
           #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
           PIC::ParticleTracker::InitParticleID(newParticleData);
-          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
+          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)startNode);
           #endif
 
           //generate particles' velocity
