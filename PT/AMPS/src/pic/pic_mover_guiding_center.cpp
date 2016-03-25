@@ -447,7 +447,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   
   //save the trajectory point
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData);
+  PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData,(void*)startNode);
 #endif
   
   
@@ -455,7 +455,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
 #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData,(void*)startNode);
 #endif
 #endif
   

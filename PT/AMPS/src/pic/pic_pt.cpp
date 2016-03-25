@@ -30,6 +30,7 @@ int *PIC::ParticleTracker::totalSampledTrajectoryNumber=NULL;
 unsigned int PIC::ParticleTracker::SampledTrajectoryCounter=0;
 
 int PIC::ParticleTracker::nMaxSavedSignleTrajectoryPoints=1000;
+bool PIC::ParticleTracker::AllowRecordingParticleTrajectoryPoints[PIC::nTotalSpecies];
 
 
 //init the particle tracker
@@ -44,7 +45,7 @@ void PIC::ParticleTracker::Init() {
   //init the trajectory counter
   threadSampledTrajectoryNumber=new int [PIC::nTotalSpecies];
   totalSampledTrajectoryNumber=new int [PIC::nTotalSpecies];
-  for (int s=0;s<PIC::nTotalSpecies;s++) threadSampledTrajectoryNumber[s]=0,totalSampledTrajectoryNumber[s]=0;
+  for (int s=0;s<PIC::nTotalSpecies;s++) threadSampledTrajectoryNumber[s]=0,totalSampledTrajectoryNumber[s]=0,AllowRecordingParticleTrajectoryPoints[s]=true;
 
   //remove old and create new directory for temporary files
   if (PIC::ThisThread==0) {
@@ -60,6 +61,12 @@ void PIC::ParticleTracker::Init() {
 //update the total number of samples trajectories
 void PIC::ParticleTracker::UpdateTrajectoryCounter() {
   MPI_Allreduce(threadSampledTrajectoryNumber,totalSampledTrajectoryNumber,PIC::nTotalSpecies,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+  if (_PIC_PARTICLE_TRACKER__STOP_RECORDING_TRAJECTORY_POINTS_WHEN_TRAJECTORY_NUMBER_REACHES_MAXIMUM_VALUE__MODE_==_PIC_MODE_ON_) {
+    for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+      if (maxSampledTrajectoryNumber<totalSampledTrajectoryNumber[spec]) AllowRecordingParticleTrajectoryPoints[spec]=false;
+    }
+  }
 }
 
 //init the particle trajecotry record
@@ -114,9 +121,14 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
   }
 }
 
-void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData) {
+void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData,void *nodeIn) {
   cParticleData *ParticleTrajectoryRecord;
   cTrajectoryDataRecord *TrajectoryRecord;
+
+  //the particle trajectory will be recorded if allowed
+  if (_PIC_PARTICLE_TRACKER__STOP_RECORDING_TRAJECTORY_POINTS_WHEN_TRAJECTORY_NUMBER_REACHES_MAXIMUM_VALUE__MODE_==_PIC_MODE_ON_) {
+    if (AllowRecordingParticleTrajectoryPoints[spec]==false) return;
+  }
 
   //save the data buffer if full
   if (TrajectoryData::CurrentPosition==TrajectoryData::Size) TrajectoryData::flush();
@@ -128,10 +140,25 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   //the trajectory is traced only if the particle trajecotry tracking flag is set 'true'
   if (ParticleTrajectoryRecord->TrajectoryTrackingFlag==false) return;
 
+  //convert pinter to the block
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *)nodeIn;
+
+
   //save physical data
   memcpy(TrajectoryRecord->data.x,x,3*sizeof(double));
   TrajectoryRecord->data.Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   TrajectoryRecord->data.spec=spec;
+
+  #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+  if (node!=NULL) {
+    if (node->block!=NULL) {
+      TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=node->block->GetLocalParticleWeight(spec)/node->block->GetLocalTimeStep(spec)*
+          PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte *)ParticleData);
+    }
+    else TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=1.0;
+  }
+  else TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=1.0;
+  #endif  //_PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
 
   //save the time stamp of the trajectory point
   #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
@@ -195,10 +222,12 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   TrajectoryRecord->data.InjectionFaceNumber=PIC::ParticleBuffer::GetInjectionFaceNumber((PIC::ParticleBuffer::byte*)ParticleData);
 #endif
 
+/*
   //save the ratio of the total particle weight over the local time step at the point of the particle injection
 #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
   TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=PIC::ParticleBuffer::GetParticleWeightOverTimeStepRatio((PIC::ParticleBuffer::byte*)ParticleData);
 #endif
+*/
 
   //the counting number of the point along this trajectory
   TrajectoryRecord->offset=ParticleTrajectoryRecord->nSampledTrajectoryPoints;
@@ -353,7 +382,7 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
 
 
   //create the trajectory files
-  if (_PIC_PARTICLE_TRAKER__RUNTIME_OUTPUT_==_PIC_MODE_ON_) {
+  if (_PIC_PARTICLE_TRACKER__RUNTIME_OUTPUT_==_PIC_MODE_ON_) {
     int TrajectoryPointBufferLength=10000000;
 
     if (PIC::ThisThread==0) {
@@ -699,7 +728,7 @@ bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double 
 }
 
 //apply the particle tracking condition to a particle
-void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData,void *nodeIn) {
   bool flag=false;
   cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
 
@@ -721,7 +750,7 @@ void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,
     DataRecord->Trajectory.StartingThread=PIC::ThisThread;
     DataRecord->Trajectory.id=SampledTrajectoryCounter;
 
-    RecordTrajectoryPoint(x,v,spec,ParticleData);
+    RecordTrajectoryPoint(x,v,spec,ParticleData,nodeIn);
 
     //increment the trajectory counter
     ++threadSampledTrajectoryNumber[spec];
@@ -761,7 +790,7 @@ void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(void* StartNodeVoid)
         PIC::ParticleBuffer::GetX(x,ParticleData);
         PIC::ParticleBuffer::GetV(v,ParticleData);
 
-        ApplyTrajectoryTrackingCondition(x,v,spec,ParticleData);
+        ApplyTrajectoryTrackingCondition(x,v,spec,ParticleData,StartNode);
 
         ptr=PIC::ParticleBuffer::GetNext(ptr);
       }

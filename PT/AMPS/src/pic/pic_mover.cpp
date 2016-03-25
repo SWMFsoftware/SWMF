@@ -2651,7 +2651,7 @@ ProcessPhotoChemistry:
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData,(void*)newNode);
   #endif
   #endif
 
@@ -2794,7 +2794,7 @@ ProcessPhotoChemistry:
 
   //save the trajectory point
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData);
+  PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData,(void*)startNode);
   #endif
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_

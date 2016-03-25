@@ -318,7 +318,7 @@ void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
                 PIC::ParticleBuffer::GetV(v,ParticleData);
                 spec=PIC::ParticleBuffer::GetI(ParticleData);
 
-                PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,(void *)ParticleData);
+                PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,(void *)ParticleData,(void*)node);
               }
 
             }

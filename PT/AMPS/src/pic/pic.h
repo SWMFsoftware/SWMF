@@ -540,6 +540,8 @@ namespace PIC {
 
     extern int nMaxSavedSignleTrajectoryPoints; //the maximum number of the trajectory points saved in the output trajectory file for each particle trajectory
 
+    extern bool AllowRecordingParticleTrajectoryPoints[PIC::nTotalSpecies]; //the array of flags that controls recording of the particle trajectory points
+
     struct cTrajectoryID {
       unsigned int StartingThread; //the thread where the trajectory has been originated
       unsigned int id; //the counting number of the trajecory on the processor where it was originated
@@ -609,7 +611,7 @@ namespace PIC {
     void UpdateTrajectoryCounter(); //calculate the total number of the trajectories sampled on all processors
 
     void InitParticleID(void *ParticleData);
-    void RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData);
+    void RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData,void *node);
     void FinilazeParticleRecord(void *ParticleData);
 
     //create the output trigectory file
@@ -620,7 +622,7 @@ namespace PIC {
     void StopParticleTrajectoryTracking(void *ParticleData);
 
     void ApplyTrajectoryTrackingCondition(void *StartNodeVoid=NULL); //search all particles to start tracking those that met the search condition
-    void ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData); //apply the particle tracking conditions to the particle 'ParticleData'
+    void ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData,void *nodeIn); //apply the particle tracking conditions to the particle 'ParticleData'
     bool TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData); //the default tracking criterion -> return false for all particles
     void SetDefaultParticleTrackingFlag(void *StartNodeVoid=NULL); //set the value of 'TrajectoryTrackingFlag' to 'false' for all particles in a current simulation; used to re-set the trajectory sampling after output of the trajectory data file
   }

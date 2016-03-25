@@ -338,7 +338,7 @@ void PIC::CCMC::LoadParticles() {
       //apply condition of tracking the particle
       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
       PIC::ParticleTracker::InitParticleID(newParticleData);
-      PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
+      PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)node);
       #endif
 
       _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,0.0,node,true);

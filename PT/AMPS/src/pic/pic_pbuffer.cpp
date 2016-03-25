@@ -446,7 +446,7 @@ int PIC::ParticleBuffer::InitiateParticle(double *x,double *v,double *WeightCorr
   //apply the particle tracking condition
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::InitParticleID(ptrData);
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,ptrSpec,ptrData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,ptrSpec,ptrData,node);
   #endif
 
   //check if mover guiding center motion integration is used
