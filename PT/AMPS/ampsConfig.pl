@@ -878,7 +878,7 @@ sub UserDefinitions {
         ampsConfigLib::RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__DISABLED_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }
     elsif ($InputLine eq "MESH") {
@@ -891,7 +891,7 @@ sub UserDefinitions {
         ampsConfigLib::RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__OFF_","meshAMR/meshAMRdef.h");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }
       
@@ -1096,7 +1096,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     } 
     
@@ -1133,7 +1133,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }    
     elsif ($InputLine eq "SAVEPARTICLERESTARTFILE") {
@@ -1192,7 +1192,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     } 
     
@@ -1237,7 +1237,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_AMR_ENFORCE_CELL_RESOLUTION_MODE_","_AMR_ENFORCE_CELL_RESOLUTION_MODE_OFF_","meshAMR/meshAMRdef.h");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }
   
@@ -1251,7 +1251,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }  
 
@@ -1265,7 +1265,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_PARTICLE_TRACKER_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown ($line)\n";
       }
     }
     elsif ($InputLine eq "MAXSAMPLEDTRAJECTORYNUMBER") {
@@ -1283,7 +1283,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_","_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_OFF_","meshAMR/meshAMRdef.h");
       }
       else {
-        die "The option is unknown\n";
+        die "The option is unknown($line)\n";
       }
     }      
     
@@ -1308,7 +1308,7 @@ sub ReadGeneralBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
-        print "Keyword $InputLine is unknown\n";
+        print "Keyword $InputLine is unknown ($line)\n";
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
