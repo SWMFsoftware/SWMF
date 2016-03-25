@@ -31,7 +31,7 @@
 
 template <class T>
 class cSingleVariableDiscreteDistribution {
-private:
+public:
   int xMin,xMax;
   int nCumulativeDistributionIntervals;
 
@@ -85,6 +85,53 @@ public:
 
   }
 
+  void InitArray(double *ProbabilityArray,int nProbabilityArray,int nintervals) {
+    double F;
+    int i,j,jStart=0,jFinish=0,iDeltaJmax=-1,DeltaJmax=-1,DeltaJ;
+
+    //allocate the cumulative distribution table
+    xMin=0;
+    xMax=nProbabilityArray-1;
+    nCumulativeDistributionIntervals=nintervals;
+
+    if (CumulativeDistributionTable!=NULL) delete [] CumulativeDistributionTable;
+    CumulativeDistributionTable=new int [nCumulativeDistributionIntervals];
+
+    //normalize the distribution function
+    double norm=0.0,summ=0.0;
+    for (i=xMin;i<=xMax;i++) norm+=ProbabilityArray[i];
+
+    if (norm<=0.0) {
+      exit(__LINE__,__FILE__,"Error: the distribution norm must be positive");
+    }
+
+    //initialize the cumulative distribution function
+    for (F=0.0,i=xMin;i<=xMax;i++) {
+      summ+=ProbabilityArray[i];
+      F=summ/norm; //to minimize the effect of the round error, F is calculated the same way as 'norm' to garantee that the final value of F is 1
+      jFinish=(int)(F*nCumulativeDistributionIntervals);
+
+      for (DeltaJ=0;jStart<=std::min(jFinish,nCumulativeDistributionIntervals-1);jStart++) {
+        CumulativeDistributionTable[jStart]=i;
+        DeltaJ++;
+      }
+
+      if (DeltaJmax<DeltaJ) DeltaJmax=DeltaJ,iDeltaJmax=i;
+      if (jStart>=nCumulativeDistributionIntervals) break;
+    }
+
+    //finish the rest of the cumulative distribution table
+    if (jStart<nCumulativeDistributionIntervals) {
+      if (jStart==0) {
+        exit(__LINE__,__FILE__,"Error: the table is empty");
+      }
+      else {
+        cout << "AMPS:: there is an empty element at the end of the cumulative distribution function table (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+      }
+
+      for (;jStart<nCumulativeDistributionIntervals;jStart++) CumulativeDistributionTable[jStart]=iDeltaJmax;
+    }
+  }
 
 
   cSingleVariableDiscreteDistribution(int xmin,int xmax,int nintervals,fProbabilityDistrvidution pfunc) {
