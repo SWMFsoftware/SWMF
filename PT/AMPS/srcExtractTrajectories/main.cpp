@@ -32,5 +32,10 @@
 int main(int argc,char **argv) {
   PIC::InitMPI(); 
 
+  int TrajectoryPointBufferLength=10000000;
+  char fname[500]="PT/plots/amps.TrajectoryTracking.out=2";
+
+  PIC::ParticleTracker::CreateTrajectoryOutputFiles(fname,PIC::OutputDataFileDirectory,TrajectoryPointBufferLength);
+
   return EXIT_SUCCESS;
 }
