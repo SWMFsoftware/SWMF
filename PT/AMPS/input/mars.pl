@@ -22,13 +22,13 @@ use ampsConfigLib;
 
 #print "Process the exospehre model input:\n";
 
-
-my $InputFileName="mars.input.Assembled.Block";   #$ARGV[0];
-my $SpeciesFileName="mars.input.Assembled.Species";
-my $WorkingSourceDirectory="srcTemp";  #$ARGV[1];
+my $InputFileName=$ARGV[0]; #"europa.input.Assembled.Block"; #$ARGV[0];  # moon.input.Assembled.Block";
+my $SpeciesFileName=$InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
+my $WorkingSourceDirectory=$ARGV[1];   #"srcTemp"; #$ARGV[1];   # srcTemp
 my $InputDirectory=$ARGV[2];  #the location of the data files that will be used in the model run
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
+
 
 my $line;
 my $LineOriginal;
