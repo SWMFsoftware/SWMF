@@ -39,15 +39,6 @@ i.e. ">>>" is empty (see Mars test), but ">>>\n>>>" is non-empty
 ===============================================================================
 
 #>
-Name=Mars
-Time=2
-Keys=
-Outs=
-Compile=
->>>
-<#
--------------------------------------------------------------------------------
-#>
 Name=Mars-ions 
 Time=2
 Keys=-cplr-data-path=/Volumes/data/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks2014-0079)
@@ -383,3 +374,27 @@ Check=
 >>>@ls -l test_Chemistry-Test.diff
 
 <#
+
+/------------------------------------------------------------------------------
+#>
+Name=test/Mars-Hot-Oxygen
+Time=7
+
+Compile=
+>>>@echo "test_Mars-Hot-Oxygen_compile..." > test_Mars-Hot-Oxygen.diff
+>>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on -cplr-data-path=${MYDIR}/data/input/Mars -model-data-path=${MYDIR}/data/input/Mars 
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen.diff
+
+Check=
+>>>@echo "test_Mars-Hot-Oxygen_check..." >> test_Mars-Hot-Oxygen.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-OxygenDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO.ref_np`ls $(TESTMars-Hot-OxygenDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Oxygen.diff
+
+>>>@ls -l test_Mars-Hot-Oxygen.diff
+
+
+
+
+
+
