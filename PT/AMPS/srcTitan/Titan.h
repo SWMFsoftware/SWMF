@@ -114,7 +114,7 @@ namespace Titan {
       startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
       if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
       
-      const double SourceTemperature = 161.0, NumericalTemperature = 161.0*2.5, _N2__MASS_ = 28.0*ProtonMass;
+      const double SourceTemperature = 161.0, NumericalTemperature = 161.0*5.0;
       double speed=0.0, ParticleWeightCorrection=0.0;
       
       do {
@@ -123,7 +123,7 @@ namespace Titan {
         speed=sqrt(speed);
 
         //correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and
-        ParticleWeightCorrection=pow((1.0/SourceTemperature)/(1.0/NumericalTemperature),0.5)*exp(-_N2__MASS_*speed*speed/2.0/Kbol/SourceTemperature)/exp(-_N2__MASS_*speed*speed/2.0/Kbol/NumericalTemperature);
+        ParticleWeightCorrection=exp(-_N2__MASS_*speed*speed/2.0/Kbol/SourceTemperature)/exp(-_N2__MASS_*speed*speed/2.0/Kbol/NumericalTemperature);
       } while (ParticleWeightCorrection<1.0E-4);
 
 
@@ -297,7 +297,6 @@ namespace Titan {
 		double pol,azi,rrr,r4,r3;
 		double  flx=0.0, ParticleWeight;
 		double ParticleWeightCorrection=1.0;
-		const double _N2__MASS_ = 4.64950898e-26;
 
 		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
