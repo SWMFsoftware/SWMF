@@ -536,7 +536,7 @@ namespace PIC {
     extern int maxSampledTrajectoryNumber; //tha maximum number of the particle trajectories that will be sampled for each species
     extern int *threadSampledTrajectoryNumber; //the number of trajectories sampled by the current processor for each species
     extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species
-    extern unsigned int SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
+    extern unsigned long int SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
 
     extern int nMaxSavedSignleTrajectoryPoints; //the maximum number of the trajectory points saved in the output trajectory file for each particle trajectory
 

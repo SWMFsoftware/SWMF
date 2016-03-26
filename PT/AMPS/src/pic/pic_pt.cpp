@@ -27,7 +27,7 @@ unsigned long int PIC::ParticleTracker::TrajectoryList::nfile=0;
 int PIC::ParticleTracker::maxSampledTrajectoryNumber=-1;
 int *PIC::ParticleTracker::threadSampledTrajectoryNumber=NULL;
 int *PIC::ParticleTracker::totalSampledTrajectoryNumber=NULL;
-unsigned int PIC::ParticleTracker::SampledTrajectoryCounter=0;
+unsigned long int PIC::ParticleTracker::SampledTrajectoryCounter=0;
 
 int PIC::ParticleTracker::nMaxSavedSignleTrajectoryPoints=1000;
 bool PIC::ParticleTracker::AllowRecordingParticleTrajectoryPoints[PIC::nTotalSpecies];
@@ -415,9 +415,9 @@ void PIC::ParticleTracker::CreateTrajectoryOutputFiles(const char *fname,const c
   nTrajectoryDataFiles=new unsigned long int[nTotalThreads];
   nTotalSampledTrajectories=new unsigned long int[nTotalThreads];
 
-  fread(nTrajectoryListFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
-  fread(nTrajectoryDataFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
-  fread(nTotalSampledTrajectories,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet);
+  if (fread(nTrajectoryListFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet)!=nTotalThreads) exit(__LINE__,__FILE__,"Error: file reading error");
+  if (fread(nTrajectoryDataFiles,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet)!=nTotalThreads) exit(__LINE__,__FILE__,"Error: file reading error");
+  if (fread(nTotalSampledTrajectories,sizeof(unsigned long int),nTotalThreads,fTrajectoryDataSet)!=nTotalThreads) exit(__LINE__,__FILE__,"Error: file reading error");
 
 
 
