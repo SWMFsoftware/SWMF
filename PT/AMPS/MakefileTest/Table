@@ -408,7 +408,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mars-Hot-Carbon_check..." >> test_Mars-Hot-Carbon.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_Mars-HotC-PDCO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
 
 >>>@ls -l test_Mars-Hot-Carbon.diff
 <#
