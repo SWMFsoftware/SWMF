@@ -3,7 +3,7 @@
 SpeciesList=O
 
 DebuggerMode=on !on,off
-ForceRepeatableSimulationPath=off ! on,off 
+ForceRepeatableSimulationPath=on ! on,off 
 
 
 makefile  SOURCES=src
