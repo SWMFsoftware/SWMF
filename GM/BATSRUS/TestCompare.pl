@@ -154,7 +154,7 @@ TEST: foreach $test (sort @test){
 	my $error = join(" ",<ERR>);
 	close(ERR);
 	if(length($error)>0 and 
-	   $error !~ /underflow|floating invalid|RLIMIT_MEMLOCK|Array temporary/i){
+	   $error !~ /underflow|floating invalid|RLIMIT_MEMLOCK|Array temporary|vsetenv|Max supported/i){
 	    &report("$test: $errorfile=",$error);
 	    $anyerror=1;
 	}
