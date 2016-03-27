@@ -702,7 +702,7 @@ contains
           write(UnitTmp_,'(a)') '#HEADFILE'
           write(UnitTmp_,'(a)') NameFile
           write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
-          write(UnitTmp_,'(l8,a18)') .true.,' save_binary'
+          write(UnitTmp_,'(l8,a18)') .true.,' DoSaveBinary'
           write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
 
           write(UnitTmp_,'(a)') '#NSTEP'
@@ -713,7 +713,6 @@ contains
           write(UnitTmp_,'(1pe18.10,a18)')Time, 'TimeSimulation'
           write(UnitTmp_,*)        
 
-
           write(UnitTmp_,'(a)') '#PLOTRANGE'
           do iDim = 1, nDim
              write(c0,'(i1)') iDim
@@ -723,7 +722,6 @@ contains
                   PlotMax_D(iDim), 'Coord'//c0//'Max'
           enddo
           write(UnitTmp_,*)
-
 
           write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
           do iDim = 1, nDim
@@ -745,7 +743,6 @@ contains
           write(UnitTmp_,'(i10,a18)') nCellAll, 'nCellPlot'
           write(UnitTmp_,*)
 
-
           write(UnitTmp_,'(a)') '#PLOTVARIABLE'
           write(UnitTmp_,'(i8,a18)') 2*nVar+7, 'nPlotVar'
           write(UnitTmp_,'(a)') &
@@ -753,15 +750,6 @@ contains
                'node proc block none' 
           write(UnitTmp_,'(a)')   '1 1 1'        ! units
           write(UnitTmp_,*)
-
-          write(UnitTmp_,'(a)') '#SCALARPARAM'
-          write(UnitTmp_,'(i8,a18)') 1, 'nParam'          
-          write(UnitTmp_,'(es13.5,a18)') 0.0, 'Param1'
-          write(UnitTmp_,'(es13.5,a18)') -1.0, 'cLight'
-          write(UnitTmp_,'(es13.5,a18)') -1.0, 'ThetaTild'
-          write(UnitTmp_,'(es13.5,a18)') -1.0,'rBody'
-          write(UnitTmp_,*)
-
 
           write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
           if(IsRLonLat)then
@@ -776,7 +764,7 @@ contains
              write(UnitTmp_,'(es13.5," SqrtNDim")') SqrtNDim
           end if
           if(IsGenRadius)then
-             write(UnitTmp_,'(i8,a)')   nRgen,        ' nRgen'
+             write(UnitTmp_,'(i8,a)')  nRgen, ' nRgen'
              write(UnitTmp_,'(es13.5," LogRgen")') LogRgen_I
           end if
           write(UnitTmp_,*)
