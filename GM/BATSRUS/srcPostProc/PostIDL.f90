@@ -81,11 +81,6 @@ program PostIDL
   character (len=79) :: TypeGeometry='cartesian'
   logical            :: UseDoubleCut = .false.
 
-  ! Toroidal geometry
-  integer:: iPoint, nPoint
-  real :: rTorusSmall, rTorusLarge
-  real, allocatable:: TorusSurface_I(:)
-
   ! Logarithmic radial coordinate
   logical:: IsLogRadius = .false.
 
@@ -101,8 +96,7 @@ program PostIDL
 
   integer :: nDimSim ! Dimension of simulation domain.
 
-  ! Parameters read from head file, but not used for this subroutine.
-  real:: cLight, ThetaTilt, rBody
+  ! Periodicity of the simulation domain. Not needed here
   logical:: IsPeriodic_D(3)
   
   character (len=lStringLine) :: NameCommand, StringLine
@@ -110,13 +104,12 @@ program PostIDL
 
   write(*,'(a)')'PostIDL (G.Toth 2000-) starting'
 
-
-  call read_file()
-  call read_init()
-
+  call read_file ! No file name given, so read from the header file from STDIN
+  call read_init ! Initialize ModReadParam
   
   call read_echo_set(.true.)
 
+  ! Read the information from the header file
   READPARAM: do
      if(.not.read_line(StringLine) )then
         EXIT READPARAM
@@ -129,14 +122,10 @@ program PostIDL
         call read_var('HeadFileName', filenamehead)
         call read_var('nProc',nProc)
         call read_var('SaveBinary', DoReadBinary)
-        nByteRealRead = -1
         if(DoReadBinary) then
            call read_var('nByteReal', nByteRealRead)
            if(nByteRealRead==nByteReal)then
               write(*,*)'nByteReal=',nByteReal
-           else if(nByteRealRead==-1)then
-              write(*,*)'!!! Warning: PostIDL was compiled with ',&
-                   nByteReal,' byte reals but nByteReal is not given in file !!'
            else if(nByteRealRead < nByteReal)then
               write(*,*)'!!! Warning: PostIDL was compiled with ',&
                    nByteReal,' byte reals but file contains nByteReal=', &
@@ -149,39 +138,39 @@ program PostIDL
              index(filenamehead,'/',BACK=.true.)+1:len(filenamehead))
 
      case('#NDIM')
-        call read_var('nDimSim',nDimSim)
+        call read_var('nDimSim', nDimSim)
 
      case('#NSTEP')
-        call read_var('nStep',it)
+        call read_var('nStep', it)
 
      case('#TIMESIMULATION')
-        call read_var('TimeSimulation',t)
+        call read_var('TimeSimulation', t)
 
      case('#PLOTRANGE')
         xyzmin = 0; xyzmax = 0        
         do i = 1, nDimSim
-           call read_var('CoordMin',xyzmin(i))
-           call read_var('CoordMax',xyzmax(i))
+           call read_var('CoordMin', xyzmin(i))
+           call read_var('CoordMax', xyzmax(i))
         enddo
 
      case('#PLOTRESOLUTION')
         do i = 1, nDimSim
-           call read_var('DxSavePlot',CellSizePlot_D(i))
+           call read_var('CellSizePlot', CellSizePlot_D(i))
         enddo
 
      case('#CELLSIZE')
         dxyzmin = 1
         do i = 1, nDimSim
-           call read_var('CellSizeMin',dxyzmin(i))
+           call read_var('CellSizeMin', dxyzmin(i))
         enddo
 
      case('#NCELL')
-        call read_var('nCellPlot',ncell)
+        call read_var('nCellPlot', ncell)
 
      case('#PLOTVARIABLE')
         call read_var('nPlotVar', nw)
-        call read_var('VarNames',varnames)
-        call read_var('Unit',unitnames)
+        call read_var('NameVar',  varnames)
+        call read_var('NameUnit', unitnames)
 
      case('#SCALARPARAM')
         call read_var('nParam', nEqPar)
@@ -189,9 +178,6 @@ program PostIDL
         do i = 1, nEqPar
            call read_var('Param',EqPar_I(i))
         enddo
-        call read_var('cLight',cLight)
-        call read_var('ThetaTild',ThetaTilt)
-        call read_var('rBody',rBody)
 
      case('#GRIDGEOMETRYLIMIT')
         call read_var('TypeGeometry', TypeGeometry)
@@ -217,7 +203,7 @@ program PostIDL
         enddo
         
      case('#OUTPUTFORMAT')
-        call read_var('OutPutFormat',TypeFile)
+        call read_var('TypeOutPutFormat', TypeFile)
         
      case default
         write(*,*) 'WARNING: unknow command ', NameCommand
@@ -249,7 +235,7 @@ program PostIDL
   IsStructured = dxyz(1) >= 0.0
 
   ! If dx<=0. use the smallest cell as resolution
-  if(dxyz(1)<1.e-6) dxyz = dxyzmin
+  if(dxyz(1) < 1.e-6) dxyz = dxyzmin
 
   ! Calculate structured grid size
   nxyz = max(1, nint((xyzmax - xyzmin)/dxyz))
@@ -632,10 +618,9 @@ contains
     ! Calculate the generalized coordinates XyzGen_D from Xyz_D
     ! mostly for lookup
 
-    real:: rCyl ! distance from axis Z
+    real:: rCyl ! distance from axis 
 
     ! Toroidal variables
-    real:: PoloidalAngle, r, z, StretchCoef, dAngle, Residual, WallRadius
 
     ! Rotation matrix for rotated Cartesian grid
     real, allocatable, save:: GridRot_DD(:,:)
@@ -820,33 +805,6 @@ contains
        if(UseDoubleCut .and. Xyz_D(1) < 0.0) & 
             XyzGen_D(3) = XyzGen_D(3) + xmax2 - xmin2
 
-    case('axial_torus')
-
-       !This is x=0 or y=0 plane
-       if(nDim==2 .and. idim0==2) Xyz_D(1) = rCyl
-
-       r = rCyl - rTorusLarge
-       z = Xyz_D(3)
-       if(.not.(z==0.0 .and. r==0.0))then
-          PoloidalAngle = modulo(atan2(Z,R), cTwoPi)
-
-          ! Use linear interpolation to obtain the distance to the wall
-          dAngle = cTwoPi/nPoint
-          iPoint = modulo(int(PoloidalAngle/dAngle), nPoint)
-          Residual = PoloidalAngle - iPoint*dAngle
-          WallRadius = &
-               (1-Residual)*TorusSurface_I(iPoint  ) &
-               +  Residual*TorusSurface_I(iPoint+1)
-
-          StretchCoef = rTorusSmall/ &
-               (WallRadius * max(abs(r), abs(z))/sqrt(r**2 + z**2))
-
-          r = r*StretchCoef
-          z = z*StretchCoef
-       end if
-       XyzGen_D(3) = z
-       XyzGen_D(1) = r + rTorusLarge
-
     case default
        write(*,*)'Unknown TypeGeometry='//TypeGeometry
        stop
@@ -917,15 +875,3 @@ subroutine MPI_Bcast(Buffer, Count, Datatype, Root, iComm, iError)
 end subroutine MPI_Bcast
 
 !=============================================================================
-
-! subroutine MPI_Bcast(Buffer, Count, Datatype, Root, iComm, iError)
-!   character(len=*), intent(in) :: Buffer(:) ! Do not allow changing buffer!!
-!   integer, intent(in) :: Count
-!   integer, intent(in) :: Datatype
-!   integer, intent(in) :: Root
-!   integer, intent(in) :: iComm
-!   integer, intent(out) :: iError
-
-!   write(*,*) 'I am MPI_Bcast'
-  
-! end subroutine MPI_Bcast
