@@ -38,18 +38,18 @@ module ModIoUnit
 
   !PUBLIC DATA MEMBERS:
 
-  public :: UNITTMP_       ! For open read/write close without intervening open
-  public :: STDOUT_        ! Fortran unit number for standard output
+  integer, parameter, public :: StdIn_   = 5  ! Standard input
+  integer, parameter, public :: StdOut_  = 6  ! Standard output
 
-  integer, parameter :: STDOUT_       = 6     ! Standard output
-  integer, parameter :: UNITTMP_      = 9     ! Temporary unit number
+  ! For open read/write close without intervening open
+  integer, parameter, public :: UnitTmp_ = 9  ! Temporary unit number
 
   !LOCAL VARIABLES:
 
   integer, parameter :: MinUnitNumber = 20    ! Smallest allowed unit number
   integer, parameter :: MaxUnitNumber = 1000  ! Largest allowed unit number
 
-  integer :: iUnitMax = UNITTMP_              ! The largest unit number used
+  integer :: iUnitMax = UnitTmp_              ! The largest unit number used
 
   !REVISION HISTORY:
   ! 01Aug03  Gabor Toth <gtoth@umich.edu> - initial prototype/prolog/code
