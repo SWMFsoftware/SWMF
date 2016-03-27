@@ -756,10 +756,10 @@ contains
 
           write(UnitTmp_,'(a)') '#SCALARPARAM'
           write(UnitTmp_,'(i8,a18)') 1, 'nParam'          
-          write(UnitTmp_,'(es13.5,a18)') 0, 'Param1'
-          write(UnitTmp_,'(es13.5,a18)') -1, 'cLight'
-          write(UnitTmp_,'(es13.5,a18)') -1, 'ThetaTild'
-          write(UnitTmp_,'(es13.5,a18)') -1,'rBody'
+          write(UnitTmp_,'(es13.5,a18)') 0.0, 'Param1'
+          write(UnitTmp_,'(es13.5,a18)') -1.0, 'cLight'
+          write(UnitTmp_,'(es13.5,a18)') -1.0, 'ThetaTild'
+          write(UnitTmp_,'(es13.5,a18)') -1.0,'rBody'
           write(UnitTmp_,*)
 
 
