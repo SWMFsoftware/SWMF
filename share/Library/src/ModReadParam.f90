@@ -138,7 +138,7 @@ module ModReadParam
 
   !USES:
   use ModMpi
-  use ModIoUnit, ONLY: io_unit_new, STDOUT_
+  use ModIoUnit, ONLY: io_unit_new, StdIn_, StdOut_
 
   implicit none
 
@@ -248,11 +248,8 @@ contains
        iComm = MPI_COMM_WORLD
     end if
 
-    if(present(NameFile)) then
-       DoReadStdin = .false.
-    else
-       DoReadStdin = .true.
-    endif
+    ! If no file name is given, read from STDIN
+    DoReadStdIn = .not. present(NameFile)
     
     ! Get processor rank
     call MPI_comm_rank(iComm,iProc,iError)
@@ -264,7 +261,7 @@ contains
        iFile=1
        nLine=0
        if(DoReadStdin) then
-          iUnit_I(iFile)=5 ! 5 is stdin
+          iUnit_I(iFile) = StdIn_
        else 
           inquire(file=NameFile,EXIST=IsFound)
           if(.not.IsFound)call CON_stop(NameSub//' SWMF_ERROR: '//&
@@ -296,8 +293,11 @@ contains
                 write(*,*) NameSub,&
                      " ERROR: could not read logical after #RESTART command",&
                      " at line ",nLine+1
-                if(.not. DoReadStdin) &
-                     call CON_stop("Correct "//trim(NameFile))
+                if(DoReadStdIn)then
+                   call CON_stop("Correct input")
+                else
+                   call CON_stop("Correct "//trim(NameFile))
+                end if
              end if
              if(DoInclude)then
                 StringLine = NameRestartFile
@@ -386,7 +386,7 @@ contains
     ! Set command counter to zero for a new session
     if(iSessionNew > iSession) iCommand = 0
 
-    iSession     = iSessionNew
+    iSession = iSessionNew
 
     if(present(NameCompIn))then
        NameComp = NameCompIn
@@ -402,9 +402,9 @@ contains
     if(present(iIoUnitIn))then
        iIoUnit   = iIoUnitIn
     else
-       iIoUnit   = STDOUT_
+       iIoUnit   = StdOut_
     end if
-    if(iIoUnit==STDOUT_ .and. len_trim(NameComp)>0 )then
+    if(iIoUnit == StdOut_ .and. len_trim(NameComp) > 0)then
        StringPrefix = NameComp//': '
     else
        StringPrefix = ''
