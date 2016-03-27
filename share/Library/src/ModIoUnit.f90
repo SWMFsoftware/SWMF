@@ -10,11 +10,12 @@
 ! In particular independently developped components can use the 
 ! io\_unit\_new() function to obtain an unused IO unit for extended use.
 ! 
-! The unit number in UNITTMP\_ is a safe unit number to open and close a file 
-! if no other file is opened between the open and close and all programs
-! use ModIoUnit to obtain unit numbers.
+! The unit number in UnitTmp\_ and UnitTmp2\_ are safe unit numbers 
+! to open and close one or two files if no other file is opened between 
+! the open and close and all programs use ModIoUnit to obtain unit numbers.
 !
-! Standard output has unit number STDOUT\_=6. This constant is easier to read.
+! Standard output has unit number StdIn\_=5. This constant is easier to read.
+! Standard output has unit number StdOut\_=6. This constant is easier to read.
 !
 ! The io\_unit\_clean subroutine closes all open IO units and deletes the
 ! empty files.
@@ -42,7 +43,8 @@ module ModIoUnit
   integer, parameter, public :: StdOut_  = 6  ! Standard output
 
   ! For open read/write close without intervening open
-  integer, parameter, public :: UnitTmp_ = 9  ! Temporary unit number
+  integer, parameter, public :: UnitTmp_  = 9  ! 1st Temporary unit number
+  integer, parameter, public :: UnitTmp2_ = 8  ! 2nd Temporary unit number
 
   !LOCAL VARIABLES:
 
