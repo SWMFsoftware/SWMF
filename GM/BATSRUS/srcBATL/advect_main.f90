@@ -556,7 +556,7 @@ contains
          TypeGeometry, IsCylindrical, IsSpherical, IsRLonLat, IsGenRadius, &
          Phi_, nDimAmr, CoordMin_D, CoordMax_D, nRgen, LogRgen_I, &
          CellVolume_GB, CellSize_DB, Xyz_DGB, CoordMin_DB, CoordMax_DB, &
-         rRound0, rRound1, SqrtNDim
+         rRound0, rRound1, SqrtNDim, nDim
 
     use ModMpi,    ONLY: MPI_REAL, MPI_INTEGER, MPI_MIN, MPI_SUM, MPI_reduce
     use ModIoUnit, ONLY: UnitTmp_
@@ -569,6 +569,7 @@ contains
     real:: PlotMax_D(MaxDim), PlotMin_D(MaxDim)
     integer :: iDim, iBlock, i, j, k, iError
     integer :: nCell, nCellAll, nPlotDim, iPlot, nPlot, iXyz
+    character (len=1) :: c0
     !-----------------------------------------------------------------------
 
     ! Calculate minimum cell size
@@ -588,10 +589,10 @@ contains
 
     ! uncomment "if" to create sturctured grids if there is no AMR
     ! if(MaxLevel > 0)then 
-       ! Indicates to PostIDL that there is AMR in first element
-       CellSizePlot_D(1) = -1.0
-       ! Indicate full AMR by setting all values to -1
-       if(nDimAmr == nDim) CellSizePlot_D = -1.0
+    ! Indicates to PostIDL that there is AMR in first element
+    CellSizePlot_D(1) = -1.0
+    ! Indicate full AMR by setting all values to -1
+    if(nDimAmr == nDim) CellSizePlot_D = -1.0
     ! end if
 
     nPlot = 1
@@ -698,29 +699,77 @@ contains
 
           NameFile = trim(NameSnapshot)//'.h'
           open(UnitTmp_,file=NameFile,status="replace")
-          write(UnitTmp_,'(a)')         NameFile
-          write(UnitTmp_,'(i8,a)')      nProc,        ' nProc'
-          write(UnitTmp_,'(i8,a)')      iStep,        ' n_step'
-          write(UnitTmp_,'(1pe13.5,a)') Time,         ' t'
-          write(UnitTmp_,'(6(1pe18.10),a)') &
-               (PlotMin_D(iDim),PlotMax_D(iDim),iDim=1,MaxDim),' plot_range'
-          write(UnitTmp_,'(6(1pe18.10),i10,a)') &
-               CellSizePlot_D, &
-               CellSizeMinAll_D, nCellAll,            ' plot_dx, dxmin, ncell'
-          write(UnitTmp_,'(i8,a)')     2*nVar + 7,    ' nplotvar'
-          write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
-          write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
-          write(UnitTmp_,'(a)')        &
+          write(UnitTmp_,'(a)') '#HEADFILE'
+          write(UnitTmp_,'(a)') NameFile
+          write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
+          write(UnitTmp_,'(l8,a18)') .true.,' save_binary'
+          write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
+
+          write(UnitTmp_,'(a)') '#NSTEP'
+          write(UnitTmp_,'(i8,a18)')iStep, 'nStep'
+          write(UnitTmp_,*)
+
+          write(UnitTmp_,'(a)') '#TIMESIMULATION'
+          write(UnitTmp_,'(1pe18.10,a18)')Time, 'TimeSimulation'
+          write(UnitTmp_,*)        
+
+
+          write(UnitTmp_,'(a)') '#PLOTRANGE'
+          do iDim = 1, nDim
+             write(c0,'(i1)') iDim
+             write(UnitTmp_,'(1pe18.10,a18)') &
+                  PlotMin_D(iDim), 'Coord'//c0//'Min'
+             write(UnitTmp_,'(1pe18.10,a18)') &
+                  PlotMax_D(iDim), 'Coord'//c0//'Max'
+          enddo
+          write(UnitTmp_,*)
+
+
+          write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
+          do iDim = 1, nDim
+             write(c0,'(i1)') iDim
+             write(UnitTmp_,'(1pe18.10,a18)') &
+                  CellSizePlot_D(iDim), 'DxSavePlot'//c0
+          enddo
+          write(UnitTmp_,*)
+
+          write(UnitTmp_,'(a)') '#CELLSIZE'
+          do iDim = 1, nDim
+             write(c0,'(i1)') iDim
+             write(UnitTmp_,'(1pe18.10,a18)') &
+                  CellSizeMinAll_D(iDim), 'CellSizeMin'//c0
+          enddo
+          write(UnitTmp_,*)
+
+          write(UnitTmp_,'(a)') '#NCELL'
+          write(UnitTmp_,'(i10,a18)') nCellAll, 'nCellPlot'
+          write(UnitTmp_,*)
+
+
+          write(UnitTmp_,'(a)') '#PLOTVARIABLE'
+          write(UnitTmp_,'(i8,a18)') 2*nVar+7, 'nPlotVar'
+          write(UnitTmp_,'(a)') &
                'coord1 coord2 coord3 rho lin rhoexact linexact volume '// &
                'node proc block none' 
-          write(UnitTmp_,'(a)')        '1 1 1'        ! units
-          write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
-          write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
+          write(UnitTmp_,'(a)')   '1 1 1'        ! units
+          write(UnitTmp_,*)
+
+          write(UnitTmp_,'(a)') '#SCALARPARAM'
+          write(UnitTmp_,'(i8,a18)') 1, 'nParam'          
+          write(UnitTmp_,'(es13.5,a18)') 0, 'Param1'
+          write(UnitTmp_,'(es13.5,a18)') -1, 'cLight'
+          write(UnitTmp_,'(es13.5,a18)') -1, 'ThetaTild'
+          write(UnitTmp_,'(es13.5,a18)') -1,'rBody'
+          write(UnitTmp_,*)
+
+
+          write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
           if(IsRLonLat)then
-             write(UnitTmp_,'(a)')     'spherical'//TypeGeometry(8:20)
+             write(UnitTmp_,'(a,a18)') 'spherical'//TypeGeometry(8:20), &
+                  'TypeGeometry'
           else
-             write(UnitTmp_,'(a)')     TypeGeometry
-          end if
+             write(UnitTmp_,'(a,a18)')TypeGeometry, 'TypeGeometry'
+          end if       
           if(TypeGeometry == 'roundcube')then
              write(UnitTmp_,'(es13.5," rRound0")') rRound0
              write(UnitTmp_,'(es13.5," rRound1")') rRound1
@@ -730,7 +779,12 @@ contains
              write(UnitTmp_,'(i8,a)')   nRgen,        ' nRgen'
              write(UnitTmp_,'(es13.5," LogRgen")') LogRgen_I
           end if
-          write(UnitTmp_,'(a)')        'real4'        ! type of .out file
+          write(UnitTmp_,*)
+
+          write(UnitTmp_,'(a)') '#OUTPUTFORMAT'
+          write(UnitTmp_,'(a)') 'real4'
+          write(UnitTmp_,*)
+
           close(UnitTmp_)
        end if
     end do

@@ -27,7 +27,7 @@ subroutine write_plot_common(iFile)
   use ModVarIndexes, ONLY: SignB_
   use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell,&
        write_plot_sph
-  
+
   implicit none
 
   ! Arguments
@@ -90,13 +90,15 @@ subroutine write_plot_common(iFile)
   integer :: nPEcellsN,nPEcellsS,nBLKcellsN, nBLKcellsS
   integer :: nGLOBALcellsN,nGLOBALcellsS
 
-  integer :: iTime_I(7)
+  integer :: iTime_I(7), i0
 
   character(len=10) :: NamePlotVar
 
   ! Event date for filename
   character (len=80) :: format
   character (len=19) :: eventDateTime
+
+  character (len=1) :: c0
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
@@ -329,7 +331,7 @@ subroutine write_plot_common(iFile)
   ! Find the processor and block indexes for the 'blk' plot
   if(plot_type1(1:3)=='blk') &
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
- 
+
   if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot) then
      call init_hdf5_plot(iFile, plot_type1(1:3),  &
           nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
@@ -436,7 +438,7 @@ subroutine write_plot_common(iFile)
         allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
         PlotVarNodes_VNB = 0.0
      end if
-     
+
      ! Pass and average the plot variables
      call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
           NameOperatorIn='Mean')
@@ -543,12 +545,12 @@ subroutine write_plot_common(iFile)
            call stop_mpi(NameSub//' file open error 6')
         endif
 
-        write(unit_tmp,'(a)')filename
-        write(unit_tmp,'(i8,a)')nProc,' nProc'
-        write(unit_tmp,'(i8,a)')n_step,' n_step'
-        write(unit_tmp,'(1pe18.10,a)')time_simulation,' t'
         select case(plot_form(iFile))
         case('tec')
+           write(unit_tmp,'(a)')filename
+           write(unit_tmp,'(i8,a)')nProc,' nProc'
+           write(unit_tmp,'(i8,a)')n_step,' n_step'
+           write(unit_tmp,'(1pe18.10,a)')time_simulation,' t'
            write(unit_tmp,'(a)')trim(unitstr_TEC)
            if(IsSphPlot)  &
                 write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,iFile),' plot_dx'
@@ -562,20 +564,35 @@ subroutine write_plot_common(iFile)
               if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
            end if
         case('idl')
-           write(unit_tmp,'(6(1pe18.10),a)') &
-                PlotRange_I*CoordUnit,' plot_range'
-           write(unit_tmp,'(6(1pe18.10),i10,a)') &
-                plot_dx(:,iFile)*CoordUnit, &
-                dxGLOBALmin*CoordUnit, nGLOBALcells,&
-                ' plot_dx, dxmin, ncell'
-           write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
-           write(unit_tmp,'(i8,a)')nParam,' neqpar'
-           write(unit_tmp,'(10es13.5)')Param_I(1:nParam)
-           write(unit_tmp,'(a)')trim(allnames)
-           write(unit_tmp,'(a)')trim(unitstr_IDL)
-           write(unit_tmp,'(l8,a)') IsBinary,' save_binary'
-           if(IsBinary)write(unit_tmp,'(i8,a)')nByteReal,' nByteReal'
-           write(unit_tmp,'(a)')TypeGeometry
+           write(Unit_tmp,'(a)') '#HEADFILE'
+           write(unit_tmp,'(a)') filename
+           write(unit_tmp,'(i8,a18)') nProc, 'nProc'        
+           write(unit_tmp,'(l8,a18)') IsBinary,' save_binary'
+           if(IsBinary) &
+                write(unit_tmp,'(i8,a18)')nByteReal,' nByteReal'
+           write(Unit_tmp,*)
+
+           write(Unit_tmp,'(a)') '#NDIM'
+           write(unit_tmp,'(i8,a18)') nDim, 'nDim'        
+           write(Unit_tmp,*)
+           
+           write(unit_tmp,'(a)') '#GRIDBLOCKSIZE'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(i8,a18)') nIJK_D(i0), 'BlockSize'//c0
+           enddo
+           write(Unit_tmp,*)
+
+           write(unit_tmp,'(a)') '#ROOTBLOCK'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(i8,a18)') nRoot_D(i0), 'nRootBlock'//c0
+           enddo
+           write(Unit_tmp,*)
+
+
+           write(unit_tmp,'(a)') '#GRIDGEOMETRYLIMIT'
+           write(unit_tmp,'(a,a18)')TypeGeometry, 'TypeGeometry'
            if(index(TypeGeometry,'genr') > 0)then
               write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)
               write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
@@ -585,15 +602,82 @@ subroutine write_plot_common(iFile)
               write(Unit_tmp,'(es13.5," rRound1")') rRound1
               write(Unit_tmp,'(es13.5," SqrtNDim")') SqrtNDim
            end if
-           write(unit_tmp,'(a)')TypeFile_I(iFile)
+           ! Need CoorMin,CoordMax...
+           write(Unit_tmp,*)
 
-           ! Extra information for READAMR
-           write(unit_tmp,'(3i8,a)') nRoot_D,' nRoot_D'
-           write(unit_tmp,'(3i8,a)') nIJK_D,' nIJK_D'
-           write(unit_tmp,'(3l8,a)') IsPeriodic_D,' IsPeriodic_D'
-           write(unit_tmp,'(3es13.5,a)') cLight*No2Io_V(UnitU_), &
-                ThetaTilt*cRadToDeg, rBody*No2Io_V(UnitX_), &
-                ' cLight, ThetaTilt, rBody'
+           write(unit_tmp,'(a)') '#PERIODIC'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(l8,a18)') IsPeriodic_D(i0), 'IsPeriodic'//c0
+           enddo
+           write(Unit_tmp,*)
+
+           write(Unit_tmp,'(a)') '#NSTEP'
+           write(unit_tmp,'(i8,a18)')n_step, 'nStep'
+           write(Unit_tmp,*)
+
+           write(Unit_tmp,'(a)') '#TIMESIMULATION'
+           write(unit_tmp,'(1pe18.10,a18)')time_simulation, 'TimeSimulation'
+           write(Unit_tmp,*)        
+
+           write(unit_tmp,'(a)') '#NCELL'
+           write(unit_tmp,'(i10,a18)') nGLOBALcells, 'nCellPlot'
+           write(Unit_tmp,*)
+
+           write(Unit_tmp,'(a)') '#CELLSIZE'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(1pe18.10,a18)') &
+                   dxGLOBALmin(i0)*CoordUnit, 'CellSizeMin'//c0
+           enddo
+           write(Unit_tmp,*)
+
+
+           write(Unit_tmp,'(a)') '#PLOTRANGE'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(1pe18.10,a18)') &
+                   PlotRange_I(2*i0-1)*CoordUnit, 'Coord'//c0//'Min'
+              write(unit_tmp,'(1pe18.10,a18)') &
+                   PlotRange_I(2*i0)*CoordUnit, 'Coord'//c0//'Max'
+           enddo
+           write(Unit_tmp,*)
+
+
+           write(Unit_tmp,'(a)') '#PLOTRESOLUTION'
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(1pe18.10,a18)') &
+                   plot_dx(i0,iFile)*CoordUnit, 'DxSavePlot'//c0
+           enddo
+           write(Unit_tmp,*)
+
+           write(unit_tmp,'(a)') '#SCALARPARAM'
+           write(unit_tmp,'(i8,a18)') nParam, 'nParam'
+           do i0 = 1, nParam
+              write(c0,'(i1)') i0
+              write(unit_tmp,'(es13.5,a18)')Param_I(i0), 'Param'//c0
+           enddo
+           write(unit_tmp,'(es13.5,a18)') cLight*No2Io_V(UnitU_), 'cLight'
+           write(unit_tmp,'(es13.5,a18)') ThetaTilt*cRadToDeg, 'ThetaTild'
+           write(unit_tmp,'(es13.5,a18)') rBody*No2Io_V(UnitX_),'rBody'
+           write(Unit_tmp,*)
+
+
+           write(unit_tmp,'(a)') '#PLOTVARIABLE'
+           write(unit_tmp,'(i8,a18)') nplotvar, 'nPlotVar'
+           write(unit_tmp,'(a)')trim(allnames)
+           if(trim(unitstr_IDL)=='') then
+              write(unit_tmp,'(a)')'unknown unit'
+           else
+              write(unit_tmp,'(a)')trim(unitstr_IDL)
+           endif
+           write(Unit_tmp,*)
+
+           write(unit_tmp,'(a)') '#OUTPUTFORMAT'
+           write(unit_tmp,'(a)')TypeFile_I(iFile)
+           write(Unit_tmp,*)
+
         end select
         close(unit_tmp)
      end do
@@ -1908,6 +1992,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   ! the appropriate string of unit values
   !/
 
+  
   if(.not.plot_dimensional(iFile))then
      NamePlotUnit_V = 'normalized'
      StringUnitIdl = 'normalized variables'

@@ -214,12 +214,13 @@ contains
   subroutine read_file(NameFile, iCommIn, NameRestartFile)
 
     !INPUT ARGUMENTS:
-    character (len=*), intent(in):: NameFile ! Name of the base param file
+    ! Name of the base param file
+    character (len=*), optional, intent(in):: NameFile 
     integer, optional, intent(in):: iCommIn  ! MPI communicator for broadcast
 
     ! Name of the restart file to be read if a #RESTART command is found
-    character (len=*), intent(in), optional :: NameRestartFile 
-
+    character (len=*), intent(in), optional :: NameRestartFile
+    
     !EOP
     integer, parameter :: MaxNestedFile = 10
 
@@ -233,6 +234,9 @@ contains
 
     logical :: IsFound
 
+    ! If true, then read for stdin.
+    logical:: DoReadStdin
+    
     logical :: Done=.false., DoInclude
     !-----------------------------------------------------------------------
     if(Done)call CON_stop(NameSub//&
@@ -244,6 +248,12 @@ contains
        iComm = MPI_COMM_WORLD
     end if
 
+    if(present(NameFile)) then
+       DoReadStdin = .false.
+    else
+       DoReadStdin = .true.
+    endif
+    
     ! Get processor rank
     call MPI_comm_rank(iComm,iProc,iError)
 
@@ -251,13 +261,17 @@ contains
     ! Read all input file(s) into memory and broadcast
     !/
     if(iProc==0)then
-       nLine=0
-       inquire(file=NameFile,EXIST=IsFound)
-       if(.not.IsFound)call CON_stop(NameSub//' SWMF_ERROR: '//&
-            trim(NameFile)//" cannot be found")
        iFile=1
-       iUnit_I(iFile)=io_unit_new()
-       open(iUnit_I(iFile),file=NameFile,status="old")
+       nLine=0
+       if(DoReadStdin) then
+          iUnit_I(iFile)=5 ! 5 is stdin
+       else 
+          inquire(file=NameFile,EXIST=IsFound)
+          if(.not.IsFound)call CON_stop(NameSub//' SWMF_ERROR: '//&
+               trim(NameFile)//" cannot be found")
+          iUnit_I(iFile)=io_unit_new()
+          open(iUnit_I(iFile),file=NameFile,status="old")
+       endif
        do
           read(iUnit_I(iFile),'(a)',ERR=100,END=100) StringLine
           NameCommand=StringLine
@@ -282,7 +296,8 @@ contains
                 write(*,*) NameSub,&
                      " ERROR: could not read logical after #RESTART command",&
                      " at line ",nLine+1
-                call CON_stop("Correct "//trim(NameFile))
+                if(.not. DoReadStdin) &
+                     call CON_stop("Correct "//trim(NameFile))
              end if
              if(DoInclude)then
                 StringLine = NameRestartFile

@@ -14,7 +14,8 @@ program PostIDL
   use ModCoordTransform, ONLY: rot_matrix_z
   use ModUtilities,      ONLY: lower_case, split_string, join_string
   use ModSort,     ONLY: sort_quick
-
+  use ModReadParam
+  
   implicit none
 
   ! This is copied from ModKind, because PostIDL.exe may be compiled with
@@ -26,14 +27,14 @@ program PostIDL
   ! Global variables
 
   integer, parameter :: unit_tmp=99
-  character(len=20) :: TypeFile='real4',TypeFileRead
+  character(len=20) :: TypeFile='real4'
   !TypeFile = 'ascii', 'real8', 'real4'
 
-  integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
+  integer :: nxyz(3), icell, countcell, ncell, nw, nEqPar, nProc, it
   real :: t
   real, allocatable :: Coord_DC(:,:,:,:), State_VC(:,:,:,:)
   real, allocatable :: GenCoord_DI(:,:) ! gen. coords for unstructured grids
-  real, allocatable :: w1(:), eqpar(:)
+  real, allocatable :: w1(:), EqPar_I(:)
   real, allocatable :: Param_I(:)
 
   real(Real4_)              :: DxCell4, Xyz4_D(3)
@@ -62,7 +63,7 @@ program PostIDL
   character(len=5):: NameCoord_D(3) = (/'x    ','y    ','z    '/)
   character(len=5):: NameCoordPlot_D(3)
 
-  logical :: structured, read_binary=.false.
+  logical :: IsStructured, DoReadBinary=.false.
   character (len=100) :: filename, filenamehead, coordnames
   character (len=500) :: varnames, unitnames
   integer :: l, me
@@ -77,7 +78,7 @@ program PostIDL
   integer            :: nByteRealRead
 
   ! Variables for generalized coordinates
-  character (len=79) :: TypeGeometry='cartesian', TypeGeometryRead
+  character (len=79) :: TypeGeometry='cartesian'
   logical            :: UseDoubleCut = .false.
 
   ! Toroidal geometry
@@ -97,82 +98,133 @@ program PostIDL
   real:: rRound0    ! fully Cartesian distance
   real:: rRound1    ! fully round distance
   real:: SqrtNDim   ! sqrt 2 or sqrt 3
+
+  integer :: nDimSim ! Dimension of simulation domain.
+
+  ! Parameters read from head file, but not used for this subroutine.
+  real:: cLight, ThetaTilt, rBody
+  logical:: IsPeriodic_D(3)
+  
+  character (len=lStringLine) :: NameCommand, StringLine
   !---------------------------------------------------------------------------
 
   write(*,'(a)')'PostIDL (G.Toth 2000-) starting'
 
-  ! Read information from STDIN
-  read(*,'(a)')filenamehead
 
-  ! Get rid of the directory part
-  filenamehead = filenamehead( &
-       index(filenamehead,'/',BACK=.true.)+1:len(filenamehead))
+  call read_file()
+  call read_init()
 
-  read(*,*)numprocs
-  write(*,*)trim(filenamehead),', numprocs=',numprocs
-  read(*,*)it
-  read(*,*)t
-  write(*,*)'n_step=',it,' time_simulation=',t
-  read(*,*)(xyzmin(i),xyzmax(i),i=1,3)
-  write(*,*)'xyzmin=',xyzmin
-  write(*,*)'xyzmax=',xyzmax
-  read(*,*) CellSizePlot_D, dxyzmin, ncell
-  write(*,*)'CellSizePlot_D=', CellSizePlot_D
-  write(*,*)'CellSizeMin_D =', dxyzmin
-  write(*,*)'nCell         =', nCell
-  read(*,*)nw
-  read(*,*)neqpar
-  allocate(eqpar(neqpar))
-  read(*,*)eqpar
-  write(*,*)'nvar=',nw,' neqpar=',neqpar,' eqpar=',eqpar
-  read(*,'(a)')varnames
-  write(*,*)'varnames =',trim(varnames)
-  read(*,'(a)')unitnames
-  write(*,*)'unitnames=',trim(unitnames)
-  if(unitnames=='')unitnames='normalized units'
+  
+  call read_echo_set(.true.)
 
-  read_binary = .false.
-  read(*,'(l8)',err=1,end=1) read_binary
-1 continue
-  write(*,*)'binary   =', read_binary
-
-  if(read_binary)then
-     nByteRealRead = -1
-     read(*,'(i8)',err=2,end=2)nByteRealRead
-2    continue
-     if(nByteRealRead==nByteReal)then
-        write(*,*)'nByteReal=',nByteReal
-     else if(nByteRealRead==-1)then
-        write(*,*)'!!! Warning: PostIDL was compiled with ',&
-             nByteReal,' byte reals but nByteReal is not given in file !!!'
-     else if(nByteRealRead < nByteReal)then
-        write(*,*)'!!! Warning: PostIDL was compiled with ',&
-             nByteReal,' byte reals but file contains nByteReal=',nByteRealRead
+  READPARAM: do
+     if(.not.read_line(StringLine) )then
+        EXIT READPARAM
      end if
-     write(*,*)'nByteReal=',nByteRealRead
-  end if
 
-  ! Read TypeGeometry, if possible
-  read(*,'(a)',err=3,end=3) TypeGeometryRead
-  TypeGeometry = TypeGeometryRead
-3 continue
-  write(*,*)'TypeGeometry = ',trim(TypeGeometry)
-  if(TypeGeometry == 'roundcube')then
-     read(*,*) rRound0
-     read(*,*) rRound1
-     read(*,*) SqrtNDim
-  endif
+     if(.not.read_command(NameCommand)) CYCLE READPARAM
 
-  if(index(TypeGeometry,'torus')>0)then
-     open(unit_tmp,file='torus.dat',status='old')
-     read(unit_tmp,*)nPoint, rTorusSmall, rTorusLarge
-     allocate(TorusSurface_I(0:nPoint))
-     do i=0,nPoint
-        read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
-     end do
-  end if
+     select case(NameCommand)
+     case('#HEADFILE')
+        call read_var('HeadFileName', filenamehead)
+        call read_var('nProc',nProc)
+        call read_var('SaveBinary', DoReadBinary)
+        nByteRealRead = -1
+        if(DoReadBinary) then
+           call read_var('nByteReal', nByteRealRead)
+           if(nByteRealRead==nByteReal)then
+              write(*,*)'nByteReal=',nByteReal
+           else if(nByteRealRead==-1)then
+              write(*,*)'!!! Warning: PostIDL was compiled with ',&
+                   nByteReal,' byte reals but nByteReal is not given in file !!'
+           else if(nByteRealRead < nByteReal)then
+              write(*,*)'!!! Warning: PostIDL was compiled with ',&
+                   nByteReal,' byte reals but file contains nByteReal=', &
+                   nByteRealRead
+           end if
+        endif
+        
+        ! Get rid of the directory part
+        filenamehead = filenamehead( &
+             index(filenamehead,'/',BACK=.true.)+1:len(filenamehead))
 
-  ! Set coordinate names different from default x, y, z
+     case('#NDIM')
+        call read_var('nDimSim',nDimSim)
+
+     case('#NSTEP')
+        call read_var('nStep',it)
+
+     case('#TIMESIMULATION')
+        call read_var('TimeSimulation',t)
+
+     case('#PLOTRANGE')
+        xyzmin = 0; xyzmax = 0        
+        do i = 1, nDimSim
+           call read_var('CoordMin',xyzmin(i))
+           call read_var('CoordMax',xyzmax(i))
+        enddo
+
+     case('#PLOTRESOLUTION')
+        do i = 1, nDimSim
+           call read_var('DxSavePlot',CellSizePlot_D(i))
+        enddo
+
+     case('#CELLSIZE')
+        dxyzmin = 1
+        do i = 1, nDimSim
+           call read_var('CellSizeMin',dxyzmin(i))
+        enddo
+
+     case('#NCELL')
+        call read_var('nCellPlot',ncell)
+
+     case('#PLOTVARIABLE')
+        call read_var('nPlotVar', nw)
+        call read_var('VarNames',varnames)
+        call read_var('Unit',unitnames)
+
+     case('#SCALARPARAM')
+        call read_var('nParam', nEqPar)
+        allocate(EqPar_I(nEqPar))
+        do i = 1, nEqPar
+           call read_var('Param',EqPar_I(i))
+        enddo
+        call read_var('cLight',cLight)
+        call read_var('ThetaTild',ThetaTilt)
+        call read_var('rBody',rBody)
+
+     case('#GRIDGEOMETRYLIMIT')
+        call read_var('TypeGeometry', TypeGeometry)
+        IsLogRadius = index(TypeGeometry,'lnr')  > 0
+        IsGenRadius = index(TypeGeometry,'genr') > 0
+        if(IsGenRadius)then
+           read(*,*) nRgen
+           allocate(LogRgen_I(nRgen))
+           do i = 1, nRgen
+              read(*,*) LogRgen_I(i)
+           end do
+        end if
+
+        if(TypeGeometry == 'roundcube')then
+           call read_var('rRound0', rRound0)
+           call read_var('rRound1', rRound1)
+           call read_var('SqrtNDim',SqrtNDim)
+        endif
+
+     case('#PERIODIC')
+        do i = 1, nDimSim
+           call read_var('IsPeriodic',IsPeriodic_D(i))
+        enddo
+        
+     case('#OUTPUTFORMAT')
+        call read_var('OutPutFormat',TypeFile)
+        
+     case default
+        write(*,*) 'WARNING: unknow command ', NameCommand
+     end select
+
+  enddo READPARAM
+  
   if(filenamehead(1:3) == 'sph')then
      NameCoord_D    = (/'r    ','theta','phi  '/)
   elseif(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
@@ -190,27 +242,11 @@ program PostIDL
      end select
   end if
 
-  IsLogRadius = index(TypeGeometry,'lnr')  > 0
-  IsGenRadius = index(TypeGeometry,'genr') > 0
-  if(IsGenRadius)then
-     read(*,*) nRgen
-     allocate(LogRgen_I(nRgen))
-     do i = 1, nRgen
-        read(*,*) LogRgen_I(i)
-     end do
-  end if
-
-  ! Read TypeFile for idl plot, if possible
-  read(*,'(a)',err=4,end=4) TypeFileRead
-  TypeFile = TypeFileRead
-4 continue
-  write(*,*)'TypeFile=', TypeFile
-
   ! Save input CellSizePlot_D into dxyz that may get overwritten
   dxyz = CellSizePlot_D
 
   ! Unstructured grid has negative dx
-  structured = dxyz(1) >= 0.0
+  IsStructured = dxyz(1) >= 0.0
 
   ! If dx<=0. use the smallest cell as resolution
   if(dxyz(1)<1.e-6) dxyz = dxyzmin
@@ -264,7 +300,7 @@ program PostIDL
 
         ! Do not attempt to use structured grid for double cuts
         if(UseDoubleCut)then
-           structured = .false.
+           IsStructured = .false.
            CellSizePlot_D = -1.0
         end if
      end if
@@ -272,7 +308,7 @@ program PostIDL
   endif
 
   ! For unstructured grid make the Coord_DC and State_VC arrays linear
-  if(.not.structured)then
+  if(.not.IsStructured)then
      nxyz(1)=ncell
      nxyz(2:3)=1
   end if
@@ -289,13 +325,13 @@ program PostIDL
   allocate(w1(nw),State_VC(nw,nx,ny,nz), Coord_DC(nDim,nx,ny,nz), STAT=iError)
   if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate arrays'
 
-  if(.not.structured)then     
+  if(.not.IsStructured)then     
      allocate(GenCoord_DI(nDim,nCell), STAT=iError)
      if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate enCoord_DI'
   end if
 
-  if(read_binary.and.nByteRealRead==4) allocate(State4_V(nw))
-  if(read_binary.and.nByteRealRead==8) allocate(State8_V(nw))
+  if(DoReadBinary.and.nByteRealRead==4) allocate(State4_V(nw))
+  if(DoReadBinary.and.nByteRealRead==8) allocate(State8_V(nw))
 
   
   ! Initialize State_VC and Coord_DC
@@ -309,19 +345,19 @@ program PostIDL
   icell=0
   countcell=0
   l=len_trim(filenamehead)
-  do me=0,numprocs-1
-     if(    numprocs > 100000)then
+  do me=0,nProc-1
+     if(    nProc > 100000)then
         write(filename,'(a,i6.6,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
-     elseif(numprocs > 10000)then
+     elseif(nProc > 10000)then
         write(filename,'(a,i5.5,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
      else
         write(filename,'(a,i4.4,a)')filenamehead(1:l-2)//"_pe",me,'.idl'
      end if
 
      if(me==0)write(*,*)'reading files=',trim(filename),&
-          '...',numprocs-1,'.idl'
+          '...',nProc-1,'.idl'
 
-     if(read_binary)then
+     if(DoReadBinary)then
         open(unit_tmp, file=filename, status='old', form='unformatted', &
              iostat=iError)
      else
@@ -335,7 +371,7 @@ program PostIDL
      do
         !Debug
         !write(*,*)'START READING'
-        if(read_binary)then
+        if(DoReadBinary)then
            if(nByteRealRead == 4)then
               read(unit_tmp,ERR=999,END=999) DxCell4, Xyz4_D, State4_V
               DxCell = DxCell4; Xyz_D = Xyz4_D; w1 = State4_V
@@ -353,7 +389,7 @@ program PostIDL
         ! Set XyzGen_D, possibly modify Xyz_D too
         call set_gen_coord
 
-        if(.not.structured)then
+        if(.not.IsStructured)then
 
            ! Simply put data into array. 
            ! Sorting and averaging will be done at the end.
@@ -427,7 +463,7 @@ program PostIDL
   if(countcell/=ncell)&
        write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
 
-  if(structured)then
+  if(IsStructured)then
      volume=product(real(nxyz))
      if(ndim==1 .and. abs(total/volume-4.0)<0.0001)then
         State_VC = 0.25*State_VC
@@ -476,15 +512,15 @@ program PostIDL
   write(*,*)'writing file =',trim(filename)
 
   ! Param_I is the combination of eqpar and specialpar
-  allocate(Param_I(neqpar+nspecialpar))
-  do i = 1, neqpar
-     Param_I(i)=eqpar(i)
+  allocate(Param_I(nEqPar+nspecialpar))
+  do i = 1, nEqPar
+     Param_I(i)=EqPar_I(i)
   end do
   do i = 1, nSpecialPar
      Param_I(i+nEqPar) = SpecialPar(i)
   end do
   
-  if(.not.structured)then
+  if(.not.IsStructured)then
      ! Sort points based on (generalized) coordinates
 
      allocate(Sort_I(nx), iSort_I(nx), STAT=iError)
@@ -555,13 +591,13 @@ program PostIDL
        nStepIn = it, TimeIn = t, &
        ParamIn_I = Param_I, &
        NameVarIn = varnames, &
-       IsCartesianIn = TypeGeometry=='cartesian' .and. structured,&
+       IsCartesianIn = TypeGeometry=='cartesian' .and. IsStructured,&
        nDimIn = nDim,&
        CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
        VarIn_VIII = State_VC(:,1:nx,:,:))
 
   deallocate(Coord_DC, State_VC, Param_I)
-  deallocate(w1, eqpar)
+  deallocate(w1, EqPar_I)
   if(allocated(State4_V)) deallocate(State4_V)
   if(allocated(State8_V)) deallocate(State8_V)
 
@@ -675,7 +711,7 @@ contains
           GridRot_DD = rot_matrix_z(0.6,0.8)
 
           ! Find vectors
-          MaxWord = nDim + nW + nEqpar
+          MaxWord = nDim + nW + nEqPar
           allocate(NameVar_V(MaxWord))
           call split_string(varnames, MaxWord, NameVar_V, nWord)
 
@@ -856,3 +892,40 @@ double precision function MPI_WTIME()
 
 end function MPI_WTIME
 
+!=============================================================================
+
+subroutine MPI_comm_rank(iComm, iProc, iError)
+  integer, intent(in)  :: iComm
+  integer, intent(out) :: iProc, iError
+  iProc = 0
+  iError = 0
+  write(*,*) 'I am MPI_comm_rank'
+end subroutine MPI_comm_rank
+
+!=============================================================================
+
+subroutine MPI_Bcast(Buffer, Count, Datatype, Root, iComm, iError)
+  integer, intent(in) :: Buffer ! Do not allow changing buffer!!
+  integer, intent(in) :: Count
+  integer, intent(in) :: Datatype
+  integer, intent(in) :: Root
+  integer, intent(in) :: iComm
+  integer, intent(out) :: iError
+
+  write(*,*) 'I am MPI_Bcast'
+  
+end subroutine MPI_Bcast
+
+!=============================================================================
+
+! subroutine MPI_Bcast(Buffer, Count, Datatype, Root, iComm, iError)
+!   character(len=*), intent(in) :: Buffer(:) ! Do not allow changing buffer!!
+!   integer, intent(in) :: Count
+!   integer, intent(in) :: Datatype
+!   integer, intent(in) :: Root
+!   integer, intent(in) :: iComm
+!   integer, intent(out) :: iError
+
+!   write(*,*) 'I am MPI_Bcast'
+  
+! end subroutine MPI_Bcast
