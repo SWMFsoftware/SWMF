@@ -11,11 +11,11 @@ subroutine write_plot_common(iFile)
   use ModMain
   use ModGeometry, ONLY: &
        XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
-  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, cLight, UnitU_
+  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
        init_sph_hdf5_plot,init_hdf5_plot
-  use ModIoUnit, ONLY: io_unit_new
+  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: split_string, join_string
@@ -221,14 +221,13 @@ subroutine write_plot_common(iFile)
         filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
         filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
         ! open the files
-        unit_tmp2 = io_unit_new()
-        open(unit_tmp , file=filename_n, status="replace", form=TypeForm, &
+        open(UnitTmp_ , file=filename_n, status="replace", form=TypeForm, &
              IOSTAT=iError)
         if(iError /= 0)then
            write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
            call stop_mpi(NameSub//' file open error 1')
         endif
-        open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, &
+        open(UnitTmp2_, file=filename_s, status="replace", form=TypeForm, &
              IOSTAT=iError)
         if(iError /= 0)then
            write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
@@ -239,13 +238,12 @@ subroutine write_plot_common(iFile)
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
-     unit_tmp2 = io_unit_new()
-     open(unit_tmp , file=filename_n, status="replace", IOSTAT=iError)
+     open(UnitTmp_ , file=filename_n, status="replace", IOSTAT=iError)
      if(iError /= 0)then
         write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
         call stop_mpi(NameSub//' file open error 3')
      endif
-     open(unit_tmp2, file=filename_s, status="replace", IOSTAT=iError)
+     open(UnitTmp2_, file=filename_s, status="replace", IOSTAT=iError)
      if(iError /= 0)then
         write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
         call stop_mpi(NameSub//' file open error 4')
@@ -257,7 +255,7 @@ subroutine write_plot_common(iFile)
   else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
-     open(unit_tmp, file=filename, status="replace", form=TypeForm, &
+     open(UnitTmp_, file=filename, status="replace", form=TypeForm, &
           IOSTAT=iError)
      if(iError /= 0)then
         write(*,*) 'Error opening ',trim(filename),' form=', TypeForm, &
@@ -411,7 +409,8 @@ subroutine write_plot_common(iFile)
              unitstr_IDL)       
         call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
              NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-             IsSphPlot, plot_dimensional(iFile), xmin, xmax, ymin, ymax, zmin, zmax)
+             IsSphPlot, plot_dimensional(iFile), &
+             xmin, xmax, ymin, ymax, zmin, zmax)
      end if
 
      RETURN
@@ -475,12 +474,12 @@ subroutine write_plot_common(iFile)
   end if
 
   if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0) then
-     close(unit_tmp, status = 'DELETE')
+     close(UnitTmp_, status = 'DELETE')
   else
-     close(unit_tmp)
+     close(UnitTmp_)
   end if
 
-  if(IsSphPlot .or. plot_form(iFile)=='tec') close(unit_tmp2)
+  if(IsSphPlot .or. plot_form(iFile)=='tec') close(UnitTmp2_)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
@@ -539,7 +538,7 @@ subroutine write_plot_common(iFile)
               nGLOBALcells = nGLOBALcellsS
            end if
         end if
-        open(unit_tmp,file=filename,status="replace", IOSTAT=iError)
+        open(UnitTmp_,file=filename,status="replace", IOSTAT=iError)
         if(iError /= 0)then
            write(*,*) 'Error opening ',trim(filename),' iError=',iError
            call stop_mpi(NameSub//' file open error 6')
@@ -547,144 +546,140 @@ subroutine write_plot_common(iFile)
 
         select case(plot_form(iFile))
         case('tec')
-           write(unit_tmp,'(a)')filename
-           write(unit_tmp,'(i8,a)')nProc,' nProc'
-           write(unit_tmp,'(i8,a)')n_step,' n_step'
-           write(unit_tmp,'(1pe18.10,a)')time_simulation,' t'
-           write(unit_tmp,'(a)')trim(unitstr_TEC)
+           write(UnitTmp_,'(a)')filename
+           write(UnitTmp_,'(i8,a)')nProc,' nProc'
+           write(UnitTmp_,'(i8,a)')n_step,' n_step'
+           write(UnitTmp_,'(1pe18.10,a)')time_simulation,' t'
+           write(UnitTmp_,'(a)')trim(unitstr_TEC)
            if(IsSphPlot)  &
-                write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,iFile),' plot_dx'
+                write(UnitTmp_,'(2(1pe13.5),a)') plot_dx(2:3,iFile),' plot_dx'
            call get_date_time(iTime_I)
-           write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
-           write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
+           write(UnitTmp_,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
+           write(UnitTmp_,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
                 ' thetatilt[deg] phitilt[deg]'
            if (IsSphPlot) then
-              write(unit_tmp,'(es13.5,a)')rplot,' rplot'
-              if (i==1) write(unit_tmp,'(a)')'Northern Hemisphere'
-              if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
+              write(UnitTmp_,'(es13.5,a)')rplot,' rplot'
+              if (i==1) write(UnitTmp_,'(a)')'Northern Hemisphere'
+              if (i==2) write(UnitTmp_,'(a)')'Southern Hemisphere'
            end if
         case('idl')
-           write(Unit_tmp,'(a)') '#HEADFILE'
-           write(unit_tmp,'(a)') filename
-           write(unit_tmp,'(i8,a18)') nProc, 'nProc'        
-           write(unit_tmp,'(l8,a18)') IsBinary,' save_binary'
+           write(UnitTmp_,'(a)') '#HEADFILE'
+           write(UnitTmp_,'(a)') filename
+           write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
+           write(UnitTmp_,'(l8,a18)') IsBinary,' save_binary'
            if(IsBinary) &
-                write(unit_tmp,'(i8,a18)')nByteReal,' nByteReal'
-           write(Unit_tmp,*)
+                write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
+           write(UnitTmp_,*)
 
-           write(Unit_tmp,'(a)') '#NDIM'
-           write(unit_tmp,'(i8,a18)') nDim, 'nDim'        
-           write(Unit_tmp,*)
+           write(UnitTmp_,'(a)') '#NDIM'
+           write(UnitTmp_,'(i8,a18)') nDim, 'nDim'        
+           write(UnitTmp_,*)
            
-           write(unit_tmp,'(a)') '#GRIDBLOCKSIZE'
+           write(UnitTmp_,'(a)') '#GRIDBLOCKSIZE'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(i8,a18)') nIJK_D(i0), 'BlockSize'//c0
+              write(UnitTmp_,'(i8,a18)') nIJK_D(i0), 'BlockSize'//c0
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-           write(unit_tmp,'(a)') '#ROOTBLOCK'
+           write(UnitTmp_,'(a)') '#ROOTBLOCK'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(i8,a18)') nRoot_D(i0), 'nRootBlock'//c0
+              write(UnitTmp_,'(i8,a18)') nRoot_D(i0), 'nRootBlock'//c0
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
 
-           write(unit_tmp,'(a)') '#GRIDGEOMETRYLIMIT'
-           write(unit_tmp,'(a,a18)')TypeGeometry, 'TypeGeometry'
+           write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
+           write(UnitTmp_,'(a,a18)')TypeGeometry, 'TypeGeometry'
            if(index(TypeGeometry,'genr') > 0)then
-              write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)
-              write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
+              write(UnitTmp_,'(i8,    " nRgen"  )') size(LogRGen_I)
+              write(UnitTmp_,'(es13.5," LogRgen")') LogRGen_I
            end if
            if(TypeGeometry == 'roundcube')then
-              write(Unit_tmp,'(es13.5," rRound0")') rRound0
-              write(Unit_tmp,'(es13.5," rRound1")') rRound1
-              write(Unit_tmp,'(es13.5," SqrtNDim")') SqrtNDim
+              write(UnitTmp_,'(es13.5," rRound0")') rRound0
+              write(UnitTmp_,'(es13.5," rRound1")') rRound1
+              write(UnitTmp_,'(es13.5," SqrtNDim")') SqrtNDim
            end if
            ! Need CoorMin,CoordMax...
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-           write(unit_tmp,'(a)') '#PERIODIC'
+           write(UnitTmp_,'(a)') '#PERIODIC'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(l8,a18)') IsPeriodic_D(i0), 'IsPeriodic'//c0
+              write(UnitTmp_,'(l8,a18)') IsPeriodic_D(i0), 'IsPeriodic'//c0
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-           write(Unit_tmp,'(a)') '#NSTEP'
-           write(unit_tmp,'(i8,a18)')n_step, 'nStep'
-           write(Unit_tmp,*)
+           write(UnitTmp_,'(a)') '#NSTEP'
+           write(UnitTmp_,'(i8,a18)')n_step, 'nStep'
+           write(UnitTmp_,*)
 
-           write(Unit_tmp,'(a)') '#TIMESIMULATION'
-           write(unit_tmp,'(1pe18.10,a18)')time_simulation, 'TimeSimulation'
-           write(Unit_tmp,*)        
+           write(UnitTmp_,'(a)') '#TIMESIMULATION'
+           write(UnitTmp_,'(1pe18.10,a18)')time_simulation, 'TimeSimulation'
+           write(UnitTmp_,*)        
 
-           write(unit_tmp,'(a)') '#NCELL'
-           write(unit_tmp,'(i10,a18)') nGLOBALcells, 'nCellPlot'
-           write(Unit_tmp,*)
+           write(UnitTmp_,'(a)') '#NCELL'
+           write(UnitTmp_,'(i10,a18)') nGLOBALcells, 'nCellPlot'
+           write(UnitTmp_,*)
 
-           write(Unit_tmp,'(a)') '#CELLSIZE'
+           write(UnitTmp_,'(a)') '#CELLSIZE'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(1pe18.10,a18)') &
+              write(UnitTmp_,'(1pe18.10,a18)') &
                    dxGLOBALmin(i0)*CoordUnit, 'CellSizeMin'//c0
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
 
-           write(Unit_tmp,'(a)') '#PLOTRANGE'
+           write(UnitTmp_,'(a)') '#PLOTRANGE'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(1pe18.10,a18)') &
+              write(UnitTmp_,'(1pe18.10,a18)') &
                    PlotRange_I(2*i0-1)*CoordUnit, 'Coord'//c0//'Min'
-              write(unit_tmp,'(1pe18.10,a18)') &
+              write(UnitTmp_,'(1pe18.10,a18)') &
                    PlotRange_I(2*i0)*CoordUnit, 'Coord'//c0//'Max'
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
 
-           write(Unit_tmp,'(a)') '#PLOTRESOLUTION'
+           write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
-              write(unit_tmp,'(1pe18.10,a18)') &
+              write(UnitTmp_,'(1pe18.10,a18)') &
                    plot_dx(i0,iFile)*CoordUnit, 'DxSavePlot'//c0
            enddo
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-           write(unit_tmp,'(a)') '#SCALARPARAM'
-           write(unit_tmp,'(i8,a18)') nParam, 'nParam'
+           write(UnitTmp_,'(a)') '#SCALARPARAM'
+           write(UnitTmp_,'(i8,a18)') nParam, 'nParam'
            do i0 = 1, nParam
               write(c0,'(i1)') i0
-              write(unit_tmp,'(es13.5,a18)')Param_I(i0), 'Param'//c0
+              write(UnitTmp_,'(es13.5,a18)')Param_I(i0), 'Param'//c0
            enddo
-           write(unit_tmp,'(es13.5,a18)') cLight*No2Io_V(UnitU_), 'cLight'
-           write(unit_tmp,'(es13.5,a18)') ThetaTilt*cRadToDeg, 'ThetaTild'
-           write(unit_tmp,'(es13.5,a18)') rBody*No2Io_V(UnitX_),'rBody'
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-
-           write(unit_tmp,'(a)') '#PLOTVARIABLE'
-           write(unit_tmp,'(i8,a18)') nplotvar, 'nPlotVar'
-           write(unit_tmp,'(a)')trim(allnames)
+           write(UnitTmp_,'(a)') '#PLOTVARIABLE'
+           write(UnitTmp_,'(i8,a18)') nplotvar, 'nPlotVar'
+           write(UnitTmp_,'(a)')trim(allnames)
            if(trim(unitstr_IDL)=='') then
-              write(unit_tmp,'(a)')'unknown unit'
+              write(UnitTmp_,'(a)')'unknown unit'
            else
-              write(unit_tmp,'(a)')trim(unitstr_IDL)
+              write(UnitTmp_,'(a)')trim(unitstr_IDL)
            endif
-           write(Unit_tmp,*)
+           write(UnitTmp_,*)
 
-           write(unit_tmp,'(a)') '#OUTPUTFORMAT'
-           write(unit_tmp,'(a)')TypeFile_I(iFile)
-           write(Unit_tmp,*)
+           write(UnitTmp_,'(a)') '#OUTPUTFORMAT'
+           write(UnitTmp_,'(a)')TypeFile_I(iFile)
+           write(UnitTmp_,*)
 
         end select
-        close(unit_tmp)
+        close(UnitTmp_)
      end do
 
   end if
 
-  ! Save tree information for 3D IDL file
+  ! Save tree information for nDim dimensional IDL file
   if(plot_form(iFile) == 'idl' .and.               &
        (    plot_type1(1:3) == '3d_'               &
        .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
@@ -698,6 +693,7 @@ subroutine write_plot_common(iFile)
 contains
   !=========================================================================
   subroutine plotvar_to_plotvarnodes
+
     integer :: ii,jj,kk
     integer :: nCell_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
     real    :: PlotVar_NV(nI+1,nJ+1,nK+1,nPlotvarMax)
@@ -772,7 +768,7 @@ subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
   use ModResistivity, ONLY: Eta0Si
   use ModIO
   use ModMain, ONLY: dt
-  use ModMultiFluid, ONLY: iFluid, nFluid, MassFluid_I, IonFirst_
+  use ModMultiFluid, ONLY: nFluid, MassFluid_I, IonFirst_
   use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
   use ModUtilities, ONLY: split_string, lower_case
 
@@ -1984,15 +1980,13 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   character (len=10), intent(out) :: NamePlotUnit_V(nPlotVar)
   character (len=500),intent(out) :: StringUnitIdl
 
+  ! set the unit description strings based on the plot variable names
+  ! for plot  file iFile
+
   character (len=10) :: String, NamePlotVar, NameVar, NameUnit
   integer            :: iPlotVar, iVar
+  !---------------------------------------------------------------------------
 
-  !\
-  ! This routine takes the plot_var information and loads the header file with
-  ! the appropriate string of unit values
-  !/
-
-  
   if(.not.plot_dimensional(iFile))then
      NamePlotUnit_V = 'normalized'
      StringUnitIdl = 'normalized variables'
