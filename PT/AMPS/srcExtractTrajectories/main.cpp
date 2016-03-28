@@ -35,7 +35,12 @@ int main(int argc,char **argv) {
   int TrajectoryPointBufferLength=10000000;
   char fname[500]="PT/plots/amps.TrajectoryTracking.out=2";
 
+  printf("Extracting particle trajectories....  ");
+
   PIC::ParticleTracker::CreateTrajectoryOutputFiles(fname,PIC::OutputDataFileDirectory,TrajectoryPointBufferLength);
+
+  printf("done.\n");
+  MPI_Finalize();
 
   return EXIT_SUCCESS;
 }
