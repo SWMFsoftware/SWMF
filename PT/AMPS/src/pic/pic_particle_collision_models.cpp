@@ -117,7 +117,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
 
   //simulate particle's collisions
-  while (node!=NULL) {
+//  while (node!=NULL) {
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
     memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
@@ -403,7 +404,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
     StartTime=EndTime;
 #endif
 
-    node=node->nextNodeThisThread;
+//    node=node->nextNodeThisThread;
 
   }
 

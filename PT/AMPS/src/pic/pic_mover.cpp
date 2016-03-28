@@ -101,8 +101,8 @@ void PIC::Mover::MoveParticles() {
 #endif
 
   //move existing particles
-  while (node!=NULL) {
-
+//  while (node!=NULL) {
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
     memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
@@ -142,7 +142,7 @@ void PIC::Mover::MoveParticles() {
     StartTime=EndTime;
 #endif
 
-    node=node->nextNodeThisThread;
+//    node=node->nextNodeThisThread;
   }
 
 
@@ -191,48 +191,13 @@ void PIC::Mover::MoveParticles() {
 
     if (node==NULL) continue;
 
-    while (node!=NULL) {
-
-/*
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-            for (i=0;i<_BLOCK_CELLS_X_;i++) {
-
-              //LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-
-              FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
-            }
-         }
-      }
-      */
-
+//    while (node!=NULL) {
+    for (;node!=NULL;node=node->nextNodeThisThread) {
       block=node->block;
       memcpy(block->FirstCellParticleTable,block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
       memcpy(block->tempParticleMovingListTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
-
-
-
-      /*
-      {
-        {
-//          for (LocalCellNumber=nStartCenterNodeIndex,centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;LocalCellNumber+=centerNodeIndexIncrement[centerNodeIndexCounter++]) {
-
-          for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
-
-              LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
-              cell=node->block->GetCenterNode(LocalCellNumber);
-
-              cell->FirstCellParticle=cell->tempParticleMovingList;
-              cell->tempParticleMovingList=-1;
-            }
-         }
-      }
-
-
-      */
-
-      node=node->nextNodeThisThread;
+//      node=node->nextNodeThisThread;
     }
   }
 

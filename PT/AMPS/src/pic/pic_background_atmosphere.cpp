@@ -544,7 +544,8 @@ static long int nCall=0;
 */
 //--------------------------   END DEBUg -----------------------
 
-  while (node!=NULL) {
+//  while (node!=NULL) {
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
 
 //--------------------------   DEBUG --------------------------
@@ -823,7 +824,7 @@ _StartParticleCollisionLoop_:
     StartTime=EndTime;
 #endif
 
-    node=node->nextNodeThisThread;
+//    node=node->nextNodeThisThread;
   }
 
   //delete the temporary particle representing the background atmosphere
