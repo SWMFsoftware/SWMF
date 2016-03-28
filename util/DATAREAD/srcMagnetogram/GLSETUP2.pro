@@ -123,9 +123,9 @@ pro GLSETUP2, FILE=FILE, UseBATS=UseBATS
   for i=0, nPIL-1 do begin
      plots,xPIL_I(i)-sub_x1,yPIL_I(i)-sub_y1,psym=-1,color=200,symsize=3,thick=3
   endfor
-  wait,10
+  wait,2
   wdelete,2
-  wait,10
-  wdelete, 3
+  wait,3
+  wdelete,3
   exit
 end
