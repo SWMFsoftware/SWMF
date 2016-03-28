@@ -44,7 +44,9 @@ pro GLSETUP2, FILE=FILE, UseBATS=UseBATS
   xPIL_I = eqpar[8:7+nPIL]
   yPIL_I = eqpar[8+nPIL:7+2*nPIL]
 
- 
+  ;Read the magnetogram
+  mag1_info=read_magnetogram('FRMagnetogram.out',PlotRadius,UseBATS)
+  gl_field=mag1_info.br_field
 
   br_field_show=br_field
   index=where(br_field lt -20)
@@ -87,7 +89,8 @@ pro GLSETUP2, FILE=FILE, UseBATS=UseBATS
 ; Showing positive and negative spots
   contour,sizemap_p,/overplot,c_color=100
   contour,abs(sizemap_n),/overplot,c_color=100
-  wait, 2
+  contour,gl_field,/overplot,min=-10,max=10,nlevels=20,c_colors=indgen(20)*long(10)+long(25)
+  wait, 5
 ;The region size is used to cover the whole area of active region in
 ;order to show a zoom-in image. Shorter RegionSize for near-Limb
 ;regions when needed.
@@ -115,6 +118,7 @@ pro GLSETUP2, FILE=FILE, UseBATS=UseBATS
 ;Showing positive and negative spots
   contour,sizemap_p[sub_x1:sub_x2,sub_y1:sub_y2],/overplot,c_color=100
   contour,abs(sizemap_n[sub_x1:sub_x2,sub_y1:sub_y2]),/overplot,c_color=100
+  contour,gl_field[sub_x1:sub_x2,sub_y1:sub_y2],/overplot,min=-10,max=10,nlevels=20,c_colors=indgen(20)*long(10)+long(25)
   plots,xPositive-sub_x1,yPositive-sub_y1,$
         /data,psym=-2,color=250,symsize=3,thick=3
   plots,xNegative-sub_x1,yNegative-sub_y1,$
@@ -123,9 +127,9 @@ pro GLSETUP2, FILE=FILE, UseBATS=UseBATS
   for i=0, nPIL-1 do begin
      plots,xPIL_I(i)-sub_x1,yPIL_I(i)-sub_y1,psym=-1,color=200,symsize=3,thick=3
   endfor
-  wait,2
+  wait,5
   wdelete,2
-  wait,3
+  wait,10
   wdelete,3
   exit
 end

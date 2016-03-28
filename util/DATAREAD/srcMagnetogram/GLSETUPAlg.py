@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
+import os
+import subprocess
 BMax = 1900.0
 
 cPi = np.pi
@@ -311,6 +313,7 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
    FileId.write(" \n")
    FileId.write("#END \n")
    FileId.close()
+   
 
    if UseCMEGrid:
       #Calculate the CME grid refinement parameters based on the flux rope
@@ -342,6 +345,18 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
       FileId.write(" \n")
       FileId.write("#END \n")
       FileId.close()
+   #For comparison, make magnetogram of a flux rope field
+   FileId=open('RunFRM','w')
+   FileId.write('%-3d \n'%Long0)
+   if abs(Lat_I[2]-2*Lat_I[1]+Lat_I[0])<1.0e-5:
+      FileId.write('uniform latitude \n')
+   else:
+      FileId.write('sin(latitude) \n')
+   FileId.close()
+   FileId=open('RunFRM','r')
+   subprocess.call('../../../bin/FRMAGNETOGRAM.exe',stdin=FileId)
+   FileId.close()
+   
    if(Br_C[iYARCenter,iXARCenter]>0):
       iYPIL_I,iXPIL_I=np.where(PILMap_C>0)
    else:
@@ -354,9 +369,9 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
          XyARCenter_D[0],XyARCenter_D[1]]
    Param_I[8:8+nPIL]=iXPIL_I
    Param_I[8+nPIL:8+2*nPIL]=iYPIL_I
-   FileId = open('uniform.out','w')
+   FileId = open('AfterGLSETUP.out','w')
     
-   FileId.write('Uniform, non-smoothed magnetogram Br[Gauss]'+'\n')
+   FileId.write('After GLSETUP: Br[Gauss]'+'\n')
    FileId.write(
       '       0      0.00000       2      %2d       3 \n'% nParam)
    FileId.write('      '+str(nLong)+'     '+str(nLat)+'\n')

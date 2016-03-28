@@ -15,7 +15,7 @@ if __name__ == '__main__':
    parser.add_argument('NameFile', help='Input FITS file name including path')
    parser.add_argument('-Out',choices=[
          'old','new','remap','none'],action='append',dest='TypeOut',
-                       default=['new'],help=
+                       default=['none'],help=
                        """
           BATSRUS standard of .out file (new),
           or remapped  to uniform in latitude one (remap) 
@@ -116,8 +116,14 @@ if __name__ == '__main__':
    print 'Then select negative region with the right button'
    FileId=open('runidl','w')
    FileId.write(';\n;\n')
-   FileId.write("      GLSETUP1,file='uniform.out',/UseBATS,CMESpeed=%5.1f  "%
-                (CMESpeed))
+   if(any(Type=='remap' for Type in TypeOut)):
+      FileId.write(
+         "      GLSETUP1,file='uniform.out',/UseBATS,CMESpeed=%-5.1f  "%
+         CMESpeed)
+   else:
+      FileId.write(
+         "      GLSETUP1,file='fitsfile.out',/UseBATS,CMESpeed=%-5.1f  "%
+         CMESpeed)
    FileId.close()
    ########SHOW MAGNETOGRAM##########################
    ls = subprocess.Popen(["idl", "runidl"],stdout=subprocess.PIPE,
@@ -174,10 +180,10 @@ if __name__ == '__main__':
    NSizeMap   =  CC[8]
    FileId=open('runidl','w')
    FileId.write(';\n;\n')
-   FileId.write("GLSETUP2, file='uniform.out',/UseBATS")
+   FileId.write("GLSETUP2, file='AfterGLSETUP.out',/UseBATS \n")
    FileId.close()
    ###FINAL SESSION: SHOW MAGNETOGRAM AND BIPOLAR STRUCTURE OF AR
-   subprocess.call(['idl','run2_GLSETUP'])#'runidl'])
+   subprocess.call(['idl','runidl'])
    ###IF THE MASTER SCRIPT IS IN PYTHON, AND A CHILD PROCESS IS IN IDL
    #(1) THE TIME OF IDL SESSION SHOULD BE LIMITED (30 seconds or so) 
    #(2) WINDOWS SHOULD BE CLOSED 
