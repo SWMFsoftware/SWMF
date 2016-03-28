@@ -59,7 +59,7 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
         print "Magnetogram Date="+MapDate
 
     #Uniform in sinLat and longitude grid
-    LatSin_I = np.arcsin(np.linspace(-1. + 1./2/nLat,1. - 1./2/nLat,nLat))
+    LatSin_I = np.arcsin(np.linspace(-1. + 1./nLat,1. - 1./nLat,nLat))
     Long_I = 2.*cPi*np.linspace(0.5/nLong,1. - 0.5/nLong, nLong)
     LongEarth = -1
     if (Long0>0):
