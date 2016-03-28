@@ -293,25 +293,55 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
       2*GLRadius/Distance*Rad2Deg)
    print ' Poloidal flux [1E21 Mx]: %6.2f'%(GL_poloidal)
    print '-----------------------------------------'
+   FileId=open('CME.in','w')
+   FileId.write("#CME \n")
+   FileId.write("T                   UseCme \n")
+   FileId.write("T                   DoAddFluxRope \n")
+   FileId.write("%-10.2f          LongitudeCme \n"% GL_Longitude)
+   FileId.write("%-10.2f          LatitudeCme \n"% GL_Latitude)
+   FileId.write("%-10.2f          OrientationCme \n"% GL_Orientation)
+   FileId.write("GL                  TypeCme \n")
+   FileId.write("%-10.2f          Stretch \n"% Stretch)
+   FileId.write("%-10.2f          Distance \n"% Distance)
+   FileId.write("%-10.2f          Radius \n"% GLRadius)
+   FileId.write("%-10.2f          BStrength \n"% GL_Bstrength)
+   FileId.write("0.0                 Density \n")
+   FileId.write("1.0                 ModulationRho \n")
+   FileId.write("1.0                 ModulationP \n")
+   FileId.write(" \n")
+   FileId.write("#END \n")
+   FileId.close()
 
    if UseCMEGrid:
       #Calculate the CME grid refinement parameters based on the flux rope
       #location and size.                                                
 
-      CMEbox_Start=[1.1,GL_Longitude-40.*GLRadius,GL_Latitude-20.*GLRadius]
-      CMEbox_End=[20.0,GL_Longitude+40.*GLRadius,GL_Latitude+20.*GLRadius]
+      CMEbox_Start=[1.15,GL_Longitude-40.*GLRadius,GL_Latitude-20.*GLRadius]
+      CMEbox_End=[22.0,GL_Longitude+40.*GLRadius,GL_Latitude+20.*GLRadius]
       
       print '=========================================='
       print 'The Recommended Grid Refinement Parameters'
       print '=========================================='
-      print '              R_Start: %6.2f'% (CMEbox_start[0])
-      print '                R_End: %6.2f'% (CMEbox_end[0])
-      print '      Longitude_Start: %6.2f'% ( CMEbox_start[1])
-      print '        Longitude_End: %6.2f'% ( CMEbox_end[1])
-      print '       Latitude_Start: %6.2f'% ( CMEbox_start[2])
-      print '         Latitude_End: %6.2f'% ( CMEbox_end[2])
+      print '              R_Start: %6.2f'% (CMEbox_Start[0])
+      print '                R_End: %6.2f'% (CMEbox_End[0])
+      print '      Longitude_Start: %6.2f'% ( CMEbox_Start[1])
+      print '        Longitude_End: %6.2f'% ( CMEbox_End[1])
+      print '       Latitude_Start: %6.2f'% ( CMEbox_Start[2])
+      print '         Latitude_End: %6.2f'% ( CMEbox_End[2])
       print '-----------------------------------------'
-   
+      FileId=open('CME_AMR.in','w')
+      FileId.write("#AMRREGION \n")
+      FileId.write("CMEbox              NameRegion \n")
+      FileId.write("box_gen             StringShape \n")
+      FileId.write("%-10.2f          XyzMinBox Radius \n"% CMEbox_Start[0])
+      FileId.write("%-10.2f          XyzMinBox Longitude \n"%  CMEbox_Start[1])
+      FileId.write("%-10.2f          XyzMinBox Latitude \n"% CMEbox_Start[2])
+      FileId.write("%-10.2f          XyzMaxBox Radius \n"% CMEbox_End[0])
+      FileId.write("%-10.2f          XyzMaxBox Longitude \n"%  CMEbox_End[1])
+      FileId.write("%-10.2f          XyzMaxBox Latitude \n"% CMEbox_End[2])
+      FileId.write(" \n")
+      FileId.write("#END \n")
+      FileId.close()
    if(Br_C[iYARCenter,iXARCenter]>0):
       iYPIL_I,iXPIL_I=np.where(PILMap_C>0)
    else:
