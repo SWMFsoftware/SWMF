@@ -22,18 +22,47 @@ OBJECTS = \
 	EEE_ModShearFlow.o \
 	EEE_ModCms.o
 
+OBJECTS_EXE= flux_rope_magnetogram.o
+
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS} ${OBJECTS_EXE}
 
 LIB:	DEPEND
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
+	make FRM
 
 ${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
+
+LIBSHARE  = ${LIBDIR}/libSHARE.a
+LIBTIMING = ${LIBDIR}/libTIMING.a
+LIBMAGNETOGRAM = ${LIBDIR}/libMAGNETOGRAM.a
+
+flux_rope_magnetogram.o : ${LIBSHARE} ${LIBTIMING} ${LIBMAGNETOGRAM} ${MY_LIB}
+
+FRM:	DEPEND
+	make ${BINDIR}/FRMAGNETOGRAM.exe
+
+${BINDIR}/FRMAGNETOGRAM.exe: flux_rope_magnetogram.o
+			@(if [ ${OS} = "Darwin" ];   then make FRM_for_Darwin; \
+			else                         make FRM_general; fi)
+
+FRM_general:
+	${LINK.f90} -o ${BINDIR}/FRMAGNETOGRAM.exe flux_rope_magnetogram.o \
+		-L${LIBDIR} -lEMPIRICALEEE  -lSHARE -lTIMING -lMAGNETOGRAM \
+		${Lflag1}
+
+FRM_for_Darwin:
+	rm -rf Tmp_; mkdir Tmp_ ;
+	cd Tmp_; ar -x ${MY_LIB}; ar -x ${LIBTIMING}; ar -x ${LIBSHARE}; \
+	ar -x ${LIBMAGNETOGRAM}; 
+	${LINK.f90} -o ${BINDIR}/FRMAGNETOGRAM.exe flux_rope_magnetogram.o \
+	Tmp_/*.o ${Lflag1}    ; 
+	rm -rf Tmp_
 
 clean: cleanfiles
 
