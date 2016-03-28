@@ -257,7 +257,7 @@ program PostIDL
         varnames=trim(varnames)//' cut'//trim(NameCoord_D(i))
      end if
   end do
-  
+
   if(nDim==2)then
      ! Make a lookup table to check coinciding cells
      idim1=icutdim(1)
@@ -500,7 +500,7 @@ program PostIDL
   ! Param_I is the combination of eqpar and specialpar
   allocate(Param_I(nEqPar+nspecialpar))
   do i = 1, nEqPar
-     Param_I(i)=EqPar_I(i)
+     Param_I(i) = EqPar_I(i)
   end do
   do i = 1, nSpecialPar
      Param_I(i+nEqPar) = SpecialPar(i)
@@ -583,7 +583,8 @@ program PostIDL
        VarIn_VIII = State_VC(:,1:nx,:,:))
 
   deallocate(Coord_DC, State_VC, Param_I)
-  deallocate(w1, EqPar_I)
+  deallocate(w1)
+  if(allocated(EqPar_I))  deallocate(EqPar_I)
   if(allocated(State4_V)) deallocate(State4_V)
   if(allocated(State8_V)) deallocate(State8_V)
 
