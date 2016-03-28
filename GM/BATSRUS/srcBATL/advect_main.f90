@@ -704,7 +704,12 @@ contains
           write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
           write(UnitTmp_,'(l8,a18)') .true.,' DoSaveBinary'
           write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
+          write(UnitTmp_,*)
 
+          write(UnitTmp_,'(a)') '#NDIM'
+          write(UnitTmp_,'(i8,a18)') nDim, 'nDim'
+          write(UnitTmp_,*)
+           
           write(UnitTmp_,'(a)') '#NSTEP'
           write(UnitTmp_,'(i8,a18)')iStep, 'nStep'
           write(UnitTmp_,*)
