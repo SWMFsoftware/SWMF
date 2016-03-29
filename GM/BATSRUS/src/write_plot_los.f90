@@ -57,6 +57,7 @@ subroutine write_plot_los(iFile)
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
+  use ModIoUnit, ONLY: UnitTmp_
   use ModAdvance, ONLY : State_VGB
   use ModNumConst, ONLY : cTiny, cUnit_DD, cTolerance
   use ModMpi
@@ -427,12 +428,12 @@ subroutine write_plot_los(iFile)
      ! write header file
 
      if(plot_form(ifile)=='tec') then
-        open(unit_tmp,file=filename,status="replace",IOSTAT = iError)
+        open(UnitTmp_,file=filename,status="replace",IOSTAT = iError)
         if(iError /= 0)call stop_mpi(NameSub//" ERROR opening "//filename)
 
-        write(unit_tmp,*) 'TITLE="BATSRUS: Synthetic Image"'
-        write(unit_tmp,'(a)')trim(unitstr_TEC)
-        write(unit_tmp,*) 'ZONE T="LOS Image"', &
+        write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
+        write(UnitTmp_,'(a)')trim(unitstr_TEC)
+        write(UnitTmp_,*) 'ZONE T="LOS Image"', &
              ', I=',nPix,', J=',nPix,', K=1, F=POINT'
 
 
@@ -449,26 +450,26 @@ subroutine write_plot_los(iFile)
            write(TextDateTime ,FormatTime) iTime_I
 
            !TIMEEVENT
-           write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
+           write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
 
            !TIMEEVENTSTART
-           write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
+           write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
 
            !TIMESECONDSABSOLUTE     ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
            write(StringTmp,'(E20.13)')StartTime+Time_Simulation
-           write(unit_tmp,'(a,a,a)') &
+           write(UnitTmp_,'(a,a,a)') &
                 'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
            !ITER
            write(StringTmp,'(i12)')n_step
-           write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
+           write(UnitTmp_,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
            !NAMELOSTABLE
-           write(unit_tmp,'(a,a,a)') 'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
+           write(UnitTmp_,'(a,a,a)') 'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
 
            !HGIXYZ
            write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
-           write(unit_tmp,'(a,a,a)') 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
+           write(UnitTmp_,'(a,a,a)') 'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
 
         endif
 
@@ -479,16 +480,16 @@ subroutine write_plot_los(iFile)
               bPix = (jPix - 1) * SizePix - rSizeImage
 
               if (plot_dimensional(ifile)) then
-                 write(unit_tmp,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
+                 write(UnitTmp_,fmt="(30(E14.6))") aPix*No2Io_V(UnitX_), &
                       bPix*No2Io_V(UnitX_), Image_VII(1:nPlotVar,iPix,jPix)
               else
-                 write(unit_tmp,fmt="(30(E14.6))") aPix, bPix, &
+                 write(UnitTmp_,fmt="(30(E14.6))") aPix, bPix, &
                       Image_VII(1:nPlotVar,iPix,jPix)
               end if
 
            end do
         end do
-        close(unit_tmp)
+        close(UnitTmp_)
      else
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals'

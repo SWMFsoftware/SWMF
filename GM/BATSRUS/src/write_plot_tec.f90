@@ -19,6 +19,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
        ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, Gamma_I
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModIO
+  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
   use ModNumConst, ONLY : cRadToDeg
   use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat, &
@@ -81,26 +82,26 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
      call find_grid_block(plot_point(:,iFile), iPE, iBlk)
      if(iPE /= iProc) RETURN
            
-     write(unit_tmp,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
-     write(unit_tmp,'(a)')trim(unitstr_TEC)
-     write(unit_tmp,'(a,i8,a,i8,a,i8,a)') &
+     write(UnitTmp_,'(a)')'TITLE="BATSRUS: BLK Only, '//textDateTime//'"'
+     write(UnitTmp_,'(a)')trim(unitstr_TEC)
+     write(UnitTmp_,'(a,i8,a,i8,a,i8,a)') &
           'ZONE T="BLK Only '//textNandT//'", I=',nI+4,&
           ', J=',nJ+4,', K=',nK+4,', F=POINT'
      call write_auxdata
      !DEBUGBLK
      write(stmp,'(i12)')iBLK
-     write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
+     write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGBLK="',trim(adjustl(stmp)),'"'
      !DEBUGPROC
      write(stmp,'(i12)')iProc
-     write(unit_tmp,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
+     write(UnitTmp_,'(a,a,a)') 'AUXDATA DEBUGPROC="',trim(adjustl(stmp)),'"'
      ! Write cell values
      do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
         if (plot_dimensional(ifile)) then
-           write(unit_tmp,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(30(E14.6))") &
                 Xyz_DGB(:,i,j,k,iBLK)*No2Io_V(UnitX_), &
                 PlotVarBlk(i,j,k,1:nPlotVar)
         else
-           write(unit_tmp,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(30(E14.6))") &
                 Xyz_DGB(:,i,j,k,iBLK), &
                 PlotVarBlk(i,j,k,1:nPlotVar)
         end if
@@ -108,9 +109,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   case('1d_')
      if(iProc==0)then
         ! Write file header
-        write(unit_tmp,'(a)')'TITLE="BATSRUS: 1D Block Data, '//textDateTime//'"'
-        write(unit_tmp,'(a)')trim(unitstr_TEC)
-        write(unit_tmp,'(a,a,i8,a,a)') &
+        write(UnitTmp_,'(a)')'TITLE="BATSRUS: 1D Block Data, '//textDateTime//'"'
+        write(UnitTmp_,'(a)')trim(unitstr_TEC)
+        write(UnitTmp_,'(a,a,i8,a,a)') &
              'ZONE T="1D   '//textNandT//'"', &
              ', I=',nBlockALL,', J=1, K=1,', &
              ', ZONETYPE=ORDERED, DATAPACKING=POINT'
@@ -124,7 +125,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         if(iProc==iPE)then
            ! Write point values
            call fill_NodeXYZ
-           write(unit_tmp,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(30(E14.6))") &
                 (NodeXYZ_DN(1,1,1,1)+NodeXYZ_DN(1,nI+1,1,1))/2., &
                 (NodeXYZ_DN(2,1,1,1)+NodeXYZ_DN(2,1,nJ+1,1))/2., &
                 (NodeXYZ_DN(3,1,1,1)+NodeXYZ_DN(3,1,1,nK+1))/2., &
@@ -134,9 +135,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   case('3d_')
      if(iProc==0)then
         ! Write file header
-        write(unit_tmp,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
-        write(unit_tmp,'(a)')trim(unitstr_TEC)
-        write(unit_tmp,'(a,a,i8,a,i8,a)') &
+        write(UnitTmp_,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+        write(UnitTmp_,'(a)')trim(unitstr_TEC)
+        write(UnitTmp_,'(a,a,i8,a,i8,a)') &
              'ZONE T="3D   '//textNandT//'"', &
              ', N=',nNodeALL, &
              ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
@@ -150,13 +151,13 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         call fill_NodeXYZ
         do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
            if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
-              write(unit_tmp,fmt="(30(E14.6))") &
+              write(UnitTmp_,fmt="(30(E14.6))") &
                    NodeXYZ_DN(1:3,i,j,k),PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBLK)
            end if
         end do; end do; end do
         ! Write point connectivity
         do k=1,nK; do j=1,nJ; do i=1,nI
-           write(unit_tmp2,'(8(i8,1x))') &
+           write(UnitTmp2_,'(8(i8,1x))') &
                 NodeNumberGlobal_NB(i  ,j  ,k  ,iBLK), &
                 NodeNumberGlobal_NB(i+1,j  ,k  ,iBLK), &
                 NodeNumberGlobal_NB(i+1,j+1,k  ,iBLK), &
@@ -195,9 +196,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            end do
            if(iProc==0)then
               ! Write file header
-              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
-              write(unit_tmp,'(a)')trim(unitstr_TEC)
-              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
+              write(UnitTmp_,'(a)')trim(unitstr_TEC)
+              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
                    'ZONE T="2D X '//textNandT//'"', &
                    ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nJ  )*(nK  )), &
@@ -227,7 +228,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do j=1,1+nJ
-                       write(unit_tmp,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,cut1,j,k)+ &
                             factor2*NodeXYZ_DN(1:3,cut2,j,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,cut1,j,k,iBLK)+ &
@@ -235,7 +236,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do j=1,nJ
-                       write(unit_tmp2,'(4(i8,1x))') &
+                       write(UnitTmp2_,'(4(i8,1x))') &
                             ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j, &
                             ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k-1)*(nJ+1)+j+1, &
                             ((BlockCut(iBlockALL)-1)*(nJ+1)*(nK+1)) + (k  )*(nJ+1)+j+1, &
@@ -261,9 +262,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            end do
            if(iProc==0)then
               ! Write file header
-              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
-              write(unit_tmp,'(a)')trim(unitstr_TEC)
-              write(unit_tmp,'(a,a,i8,a,i8,a)')       &
+              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
+              write(UnitTmp_,'(a)')trim(unitstr_TEC)
+              write(UnitTmp_,'(a,a,i8,a,i8,a)')       &
                    'ZONE T="2D X '//textNandT//'"',   &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -293,7 +294,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ                    
                     do k=1,1+nK; do i=1,1+nI
-                       write(unit_tmp,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -301,7 +302,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
-                       write(unit_tmp2,'(4(i8,1x))') &
+                       write(UnitTmp2_,'(4(i8,1x))') &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
@@ -333,9 +334,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            end do
            if(iProc==0)then
               ! Write file header
-              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
-              write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
+              write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
                    'ZONE T="2D Y '//textNandT//'"', &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -365,7 +366,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do i=1,1+nI
-                       write(unit_tmp,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -373,7 +374,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
-                       write(unit_tmp2,'(4(i8,1x))') &
+                       write(UnitTmp2_,'(4(i8,1x))') &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
@@ -399,9 +400,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            end do
            if(iProc==0)then
               ! Write file header
-              write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
-              write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-              write(unit_tmp,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
+              write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
                    'ZONE T="2D Y '//textNandT//'"', &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -431,7 +432,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do i=1,1+nI
-                       write(unit_tmp,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(30(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -439,7 +440,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     end do; end do
                     ! Write point connectivity
                     do k=1,nK; do i=1,nI
-                       write(unit_tmp2,'(4(i8,1x))') &
+                       write(UnitTmp2_,'(4(i8,1x))') &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k-1)*(nI+1)+i+1, &
                             ((BlockCut(iBlockALL)-1)*(nI+1)*(nK+1)) + (k  )*(nI+1)+i+1, &
@@ -470,9 +471,9 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         end do
         if(iProc==0)then
            ! Write file header
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Cut Z Data, '//textDateTime//'"'
-           write(unit_tmp,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-           write(unit_tmp,'(a,a,i8,a,i8,a)') &
+           write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Z Data, '//textDateTime//'"'
+           write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
+           write(UnitTmp_,'(a,a,i8,a,i8,a)') &
                 'ZONE T="2D Z '//textNandT//'"', &
                 ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
                 ', E=',nBlockCuts*((nI  )*(nJ  )), &
@@ -502,7 +503,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                  ! Write point values
                  call fill_NodeXYZ
                  do j=1,1+nJ; do i=1,1+nI
-                    write(unit_tmp,fmt="(30(E14.6))") &
+                    write(UnitTmp_,fmt="(30(E14.6))") &
                          (factor1*NodeXYZ_DN(1:3,i,j,cut1)+ &
                          factor2*NodeXYZ_DN(1:3,i,j,cut2)), &
                          (factor1*PlotVarNodes_VNB(1:nPlotVar,i,j,cut1,iBLK)+ &
@@ -510,7 +511,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                  end do; end do
                  ! Write point connectivity
                  do j=1,nJ; do i=1,nI
-                    write(unit_tmp2,'(4(i8,1x))') &
+                    write(UnitTmp2_,'(4(i8,1x))') &
                          ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) + (j-1)*(nI+1)+i, &
                          ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) + (j-1)*(nI+1)+i+1, &
                          ((BlockCut(iBlockALL)-1)*(nI+1)*(nJ+1)) + (j  )*(nI+1)+i+1, &
@@ -566,16 +567,16 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
      ! Write file header
      if(iProc==0)then
         if (plot_type1(1:3)=='slc')then
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
-           write(unit_tmp,'(a)')trim(unitstr_TEC)
-           write(unit_tmp,'(a,i8,a)') &
+           write(UnitTmp_,'(a)')'TITLE="BATSRUS: Slice, '//textDateTime//'"'
+           write(UnitTmp_,'(a)')trim(unitstr_TEC)
+           write(UnitTmp_,'(a,i8,a)') &
                 'ZONE T="Slice '//textNandT//'", I=', nCutsTotal,&
                 ', J=1, K=1, F=POINT'
         else
-           write(unit_tmp,'(a)')'TITLE="BATSRUS: Dipole Cut, '// &
+           write(UnitTmp_,'(a)')'TITLE="BATSRUS: Dipole Cut, '// &
                 textDateTime//'"'
-           write(unit_tmp,'(a)')trim(unitstr_TEC)
-           write(unit_tmp,'(a,i8,a)') &
+           write(UnitTmp_,'(a)')trim(unitstr_TEC)
+           write(UnitTmp_,'(a,i8,a)') &
                 'ZONE T="Dipole Cut '//textNandT//'", I=', nCutsTotal,&
                 ', J=1, K=1, F=POINT'
         end if
@@ -649,7 +650,7 @@ contains
                 factor2=(Xp-PlotXYZNodes_DNB(1,ic1,jc,kc,iBLK))/ &
                      (PlotXYZNodes_DNB(1,ic2,jc,kc,iBLK)-PlotXYZNodes_DNB(1,ic1,jc,kc,iBLK))
                 factor1=1.-factor2
-                write(unit_tmp,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic1,jc,kc)+ &
                      factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBLK)+ &
@@ -682,7 +683,7 @@ contains
                 factor2=(Yp-PlotXYZNodes_DNB(2,ic,jc1,kc,iBLK))/ &
                      (PlotXYZNodes_DNB(2,ic,jc2,kc,iBLK)-PlotXYZNodes_DNB(2,ic,jc1,kc,iBLK))
                 factor1=1.-factor2
-                write(unit_tmp,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc1,kc)+ &
                      factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBLK)+ &
@@ -715,7 +716,7 @@ contains
                 factor2=(Zp-PlotXYZNodes_DNB(3,ic,jc,kc1,iBLK))/ &
                      (PlotXYZNodes_DNB(3,ic,jc,kc2,iBLK)-PlotXYZNodes_DNB(3,ic,jc,kc1,iBLK))
                 factor1=1.-factor2
-                write(unit_tmp,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(30(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc,kc1)+ &
                      factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBLK)+ &
@@ -735,11 +736,11 @@ contains
 
     !BLOCKS
     write(stmp,'(i12,3(a,i2))')nBlockALL,'  ',nI,' x',nJ,' x',nK
-    write(unit_tmp,'(a,a,a)') 'AUXDATA BLOCKS="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA BLOCKS="',trim(adjustl(stmp)),'"'
 
     !BODYDENSITY
     write(stmp,'(f12.2)')BodyNDim_I(IonFirst_)
-    write(unit_tmp,'(a,a,a)') &
+    write(UnitTmp_,'(a,a,a)') &
          'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
 
 
@@ -749,28 +750,28 @@ contains
     else
        write(stmp,'(a)')'F'
     end if
-    write(unit_tmp,'(a,a,a)') 'AUXDATA BORIS="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA BORIS="',trim(adjustl(stmp)),'"'
 
 
     !BTHETATILT
     write(stmp,'(f12.4)')ThetaTilt*cRadToDeg
-    write(unit_tmp,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(adjustl(stmp)),'"'
 
     !CELLS
     write(stmp,'(i12)')nBlockALL*nI*nJ*nK
-    write(unit_tmp,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
 
     !CELLSUSED
     write(stmp,'(i12)')nTrueCellsALL
-    write(unit_tmp,'(a,a,a)') 'AUXDATA CELLSUSED="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA CELLSUSED="',trim(adjustl(stmp)),'"'
 
     !CODEVERSION
     write(stmp,'(a,f5.2)')'BATSRUS',CodeVersion
-    write(unit_tmp,'(a,a,a)') 'AUXDATA CODEVERSION="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA CODEVERSION="',trim(adjustl(stmp)),'"'
 
     !COORDSYSTEM
     write(stmp,'(a)')TypeCoordSystem
-    write(unit_tmp,'(a,a,a)') 'AUXDATA COORDSYSTEM="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA COORDSYSTEM="',trim(adjustl(stmp)),'"'
 
     !COROTATION
     if(UseRotatingBc)then
@@ -778,23 +779,23 @@ contains
     else
        write(stmp,'(a)')'F'
     end if
-    write(unit_tmp,'(a,a,a)') 'AUXDATA COROTATION="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA COROTATION="',trim(adjustl(stmp)),'"'
 
     !FLUXTYPE
     write(stmp,'(a)')FluxType
-    write(unit_tmp,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
 
     !GAMMA
     write(stmp,'(100(f14.6))')Gamma_I(1)
-    write(unit_tmp,'(a,a,a)') 'AUXDATA GAMMA="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA GAMMA="',trim(adjustl(stmp)),'"'
 
     !ITER
     write(stmp,'(i12)')n_step
-    write(unit_tmp,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA ITER="',trim(adjustl(stmp)),'"'
 
     !NPROC
     write(stmp,'(i12)')nProc
-    write(unit_tmp,'(a,a,a)') 'AUXDATA NPROC="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA NPROC="',trim(adjustl(stmp)),'"'
 
     !ORDER
     if(nOrder > 1)then
@@ -803,26 +804,26 @@ contains
     else
        write(stmp,'(i12)') nOrder
     end if
-    write(unit_tmp,'(a,a,a)') 'AUXDATA ORDER="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA ORDER="',trim(adjustl(stmp)),'"'
 
     !RBODY
     write(stmp,'(f12.2)')rBody
-    write(unit_tmp,'(a,a,a)') 'AUXDATA RBODY="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA RBODY="',trim(adjustl(stmp)),'"'
 
     !SAVEDATE
     call Date_and_time (real_date, real_time)
     write(stmp,'(a11,a4,a1,a2,a1,a2, a4,a2,a1,a2,a1,a2)') &
          'Save Date: ', real_date(1:4),'/',real_date(5:6),'/',real_date(7:8), &
          ' at ',  real_time(1:2),':',real_time(3:4),':',real_time(5:6)
-    write(unit_tmp,'(a,a,a)') 'AUXDATA SAVEDATE="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA SAVEDATE="',trim(adjustl(stmp)),'"'
 
     !TIMEEVENT
     write(stmp,'(a)')textDateTime
-    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMEEVENT="',trim(adjustl(stmp)),'"'
 
     !TIMEEVENTSTART
     write(stmp,'(a)')textDateTime0
-    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMEEVENTSTART="',trim(adjustl(stmp)),'"'
 
     !TIMESIM
     if(time_accurate)then
@@ -833,7 +834,7 @@ contains
     else
        write(stmp,'(a)')'T= N/A'
     end if
-    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMESIM="',trim(adjustl(stmp)),'"'
 
     !TIMESIMSHORT
     if(time_accurate)then
@@ -843,7 +844,7 @@ contains
     else
        write(stmp,'(a)')'T= SS'
     end if
-    write(unit_tmp,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
+    write(UnitTmp_,'(a,a,a)') 'AUXDATA TIMESIMSHORT="',trim(adjustl(stmp)),'"'
 
   end subroutine write_auxdata
 

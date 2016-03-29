@@ -18,6 +18,7 @@ subroutine write_plot_radiowave(iFile)
   use ModNumConst
   use ModConst
   use ModIO
+  use ModIoUnit, ONLY: UnitTmp_
 
   implicit none
 
@@ -237,23 +238,23 @@ subroutine write_plot_radiowave(iFile)
 
      write(*,*) 'filename = ', filename
 
-     open(unit_tmp, file=filename, status="replace", err=999) !OPEN OPEN
+     open(UnitTmp_, file=filename, status="replace", err=999) !OPEN OPEN
 
      !
      ! Write the file header
      !
      select case(plot_form(ifile))
      case('tec')
-        write(unit_tmp,*) 'TITLE="BATSRUS: Radiotelescope Image"'
-        write(unit_tmp,'(a)') trim(unitstr_TEC)
-        write(unit_tmp,*) 'ZONE T="RFR Image"', &
+        write(UnitTmp_,*) 'TITLE="BATSRUS: Radiotelescope Image"'
+        write(UnitTmp_,'(a)') trim(unitstr_TEC)
+        write(UnitTmp_,*) 'ZONE T="RFR Image"', &
              ', I=',nXPixel,', J=',nYPixel,', F=POINT'
         ! Write point values
         do iPixel = 1, nXPixel
            XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
            do jPixel = 1, nYPixel
               YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
-              write(unit_tmp,fmt="(30(E14.6))") XPixel, YPixel, &
+              write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
                    Intensity_III(jPixel,iPixel,1:nFreq)
            end do
         end do
@@ -261,34 +262,34 @@ subroutine write_plot_radiowave(iFile)
      case('idl')
         ! description of file contains units, physics and dimension
         StringHeadLine = 'RFR Radiorelescope Image'
-        write(unit_tmp,"(a)") StringHeadLine
+        write(UnitTmp_,"(a)") StringHeadLine
 
         ! 2 in the next line means 2 dimensional plot, 1 in the next line
         !  is for a 2D cut, in other words one dimension is left out)
-        write(unit_tmp,"(i7,1pe13.5,3i3)") &
+        write(UnitTmp_,"(i7,1pe13.5,3i3)") &
              n_step, time_simulation, 2, neqpar, nplotvar
 
         ! Grid size
-        write(unit_tmp,"(2i4)") nXPixel, nYPixel
+        write(UnitTmp_,"(2i4)") nXPixel, nYPixel
 
         ! Equation parameters
-        ! write(unit_tmp,"(100(1pe13.5))") eqpar(1:neqpar)
+        ! write(UnitTmp_,"(100(1pe13.5))") eqpar(1:neqpar)
 
         ! Coordinate, variable and equation parameter names
-        write(unit_tmp,"(a)") allnames
+        write(UnitTmp_,"(a)") allnames
 
         ! Data
         do iPixel = 1, nXPixel
            XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
            do jPixel = 1, nYPixel
               YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
-              write(unit_tmp,fmt="(30(1pe13.5))") &
+              write(UnitTmp_,fmt="(30(1pe13.5))") &
                    XPixel, YPixel, Intensity_III(jPixel,iPixel,1:nFreq)
            end do
         end do
      end select
 
-     close(unit_tmp)  !CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE
+     close(UnitTmp_)  !CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE
 
   end if  !iProc ==0
 

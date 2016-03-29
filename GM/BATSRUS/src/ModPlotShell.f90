@@ -5,6 +5,7 @@
 module ModPlotShell
 
   use ModIO
+  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
 
   implicit none
@@ -391,16 +392,16 @@ contains
                 nBLKcellsN=nBLKcellsN+1
                 select case(plot_form(ifile))
                 case('tec')
-                   write(unit_tmp,'(i7,i7, 30(E14.6))')&
+                   write(UnitTmp_,'(i7,i7, 30(E14.6))')&
                         i,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar)
                 case('idl')
                    dxblk = 1.0  ! just chosen to get the scaling right.  
                    ! since this is R and R is constant.
                    if(save_binary)then
-                      write(unit_tmp)&
+                      write(UnitTmp_)&
                            dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                    else
-                      write(unit_tmp,'(20(1pe13.5))')&
+                      write(UnitTmp_,'(20(1pe13.5))')&
                            dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                    endif
                 case('hdf')
@@ -415,16 +416,16 @@ contains
                 nBLKcellsS=nBLKcellsS+1
                 select case(plot_form(ifile))
                 case('tec')
-                   write(unit_tmp2,'(i7,i7, 30(E14.6))')&
+                   write(UnitTmp2_,'(i7,i7, 30(E14.6))')&
                         ntheta-i+1,j,x,y,z,theta_out,phi_out,PointVar(1:nplotvar)
                 case('idl')
                    dxblk = 1.0  ! just chosen to get the scaling right.  
                    ! since this is R and R is constant.
                    if(save_binary)then
-                      write(unit_tmp2)&
+                      write(UnitTmp2_)&
                            dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                    else
-                      write(unit_tmp2,'(20(1pe13.5))')&
+                      write(UnitTmp2_,'(20(1pe13.5))')&
                            dxblk,rplot_out,theta_out,phi_out,PointVar(1:nplotvar)
                    endif
                 case('hdf')

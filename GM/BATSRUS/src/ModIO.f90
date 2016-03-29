@@ -5,7 +5,7 @@
 Module ModIO
 
   use ModSize
-  use ModIoUnit, ONLY: unit_tmp => UNITTMP_, STDOUT_
+  use ModIoUnit, ONLY: UnitTmp_, STDOUT_
   use ModVarIndexes, ONLY: nVar
 
   implicit none
@@ -53,8 +53,8 @@ Module ModIO
   logical :: save_restart_file=.true., &
        save_plots_amr=.false.,save_logfile=.false.,save_binary=.true.
 
-  ! Unit numbers for the log file and the second SPH plot file
-  integer :: unit_log = -1, unit_tmp2 = -1
+  ! Unit numbers for the log file
+  integer :: unit_log = -1
 
   ! variables for the line of sight integration plots
   character (LEN=10) :: TypeLosImage

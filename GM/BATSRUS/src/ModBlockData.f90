@@ -705,7 +705,7 @@ contains
   subroutine write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
-    use ModIO,   ONLY: Unit_Tmp
+    use ModIOUnit, ONLY: UnitTmp_
 
     character(len=*), intent(in) :: NameRestartOutDir
     logical,          intent(in) :: UseRestartOutSeries
@@ -734,10 +734,10 @@ contains
           CYCLE
        end if
 
-       open(unit_tmp, file=NameBlockFile, status="replace", form='UNFORMATTED')
-       write(Unit_tmp) nData_B(iBlock)
-       write(Unit_tmp) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
-       close(unit_tmp)
+       open(UnitTmp_, file=NameBlockFile, status="replace", form='UNFORMATTED')
+       write(UnitTmp_) nData_B(iBlock)
+       write(UnitTmp_) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
+       close(UnitTmp_)
     end do
 
     if(DoTestMe)then
@@ -755,7 +755,7 @@ contains
   subroutine read_block_restart_files(NameRestartInDir, UseRestartInSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
-    use ModIO,   ONLY: Unit_Tmp
+    use ModIO,   ONLY: UnitTmp_
 
     character(len=*), intent(in) :: NameRestartInDir
     logical,          intent(in) :: UseRestartInSeries
@@ -782,7 +782,7 @@ contains
        call get_block_restart_namefile(iBlock, &
             NameRestartInDir, UseRestartInSeries, NameBlockFile)
 
-       open(unit_tmp, file=NameBlockFile, status='old', form='UNFORMATTED',&
+       open(UnitTmp_, file=NameBlockFile, status='old', form='UNFORMATTED',&
             iostat = iError)
 
        ! Missing block data files (should be blocks without any block data)
@@ -792,12 +792,12 @@ contains
        end if
 
        ! Read the number of data elements
-       read(unit_tmp, iostat = iError) nData
+       read(UnitTmp_, iostat = iError) nData
        if(iError /= 0) call stop_mpi(NameSub// &
             ' could not read data from '//trim(NameBlockFile))
 
        ! Read the data array
-       read(unit_tmp, iostat = iError) DataTmp_I(1:nData)
+       read(UnitTmp_, iostat = iError) DataTmp_I(1:nData)
        if(iError /= 0) call stop_mpi(NameSub// &
             ' could not read data from '//trim(NameBlockFile))
 
@@ -807,7 +807,7 @@ contains
        call put_block_data(iBlock, nData, DataTmp_I(1:nData))
        call set_block_data(iBlock)
 
-       close(unit_tmp)
+       close(UnitTmp_)
     end do
 
     if(DoTestMe)then
