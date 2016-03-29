@@ -188,6 +188,7 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModPhysics, ONLY: SW_N_DIM, SW_T_DIM
+    use ModIoUnit, ONLY: UnitTmp_
 
     character (len=100) :: NameCommand
     !    character (len=100) :: line
@@ -195,7 +196,6 @@ contains
     character (len=100) :: fileH, fileM, fileL, &
          fileNeuDen, fileSZA, fileIonDen60deg
     integer:: i, j
-    integer:: unit_tmp = 15
     real:: tmp_ne,tmp_alt
     !--------------------------------------------------------------------------
 
@@ -279,14 +279,14 @@ contains
              fileIonDen60deg="TitanInput/TIondenSZ060_Apr11.dat"
              fileNeuDen ="TitanInput/NeuDen_Apr11.dat"
 
-             open(unit_tmp,file="TitanInput/TIondenAl725_Apr11.dat",status="old")
-             read(unit_tmp,'(a)')linetitan
+             open(UnitTmp_,file="TitanInput/TIondenAl725_Apr11.dat",status="old")
+             read(UnitTmp_,'(a)')linetitan
             ! write(*,*)'linetitan',linetitan
              do i=1,NumSZA+1
-                read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
+                read(UnitTmp_,*)tmp_alt,SZABTitan_I(i),&
                      (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
              end do
-             close(unit_tmp)
+             close(UnitTmp_)
  
           case("CassiniTA")                        
              NumSZA = 12
@@ -301,93 +301,93 @@ contains
              end if
              fileNeuDen ="TitanInput/NEUTRALDENSITYJan05.dat"
 
-             open(unit_tmp,file="TitanInput/IondenAlt725.dat",status="old")
-             read(unit_tmp,'(a)')linetitan
+             open(UnitTmp_,file="TitanInput/IondenAlt725.dat",status="old")
+             read(UnitTmp_,'(a)')linetitan
 
              do i=1,NumSZA+1
-                read(unit_tmp,*)tmp_alt,SZABTitan_I(i),&
+                read(UnitTmp_,*)tmp_alt,SZABTitan_I(i),&
                      (BodyRhoSpecies_dim_II(j,i),j=1,7),tmp_ne
              end do
-             close(unit_tmp)
+             close(UnitTmp_)
           case default
              if(iProc==0) call stop_mpi('wrong solar condtion!')
           end select
 
           !read in SZA list
-          open(unit_tmp, file =fileSZA,status="old")              
-          read(unit_tmp,'(a)')linetitan
-          read(unit_tmp,*) (SZATitan_I(j),j=1,NumSZA)  
-          close(unit_tmp)
+          open(UnitTmp_, file =fileSZA,status="old")              
+          read(UnitTmp_,'(a)')linetitan
+          read(UnitTmp_,*) (SZATitan_I(j),j=1,NumSZA)  
+          close(UnitTmp_)
 
           !read in photoionzation rates of H, M and L
-          open(unit_tmp,file=fileH,status="old")
-          read(unit_tmp,'(a)')linetitan
-          read(unit_tmp,'(a)')linetitan
+          open(UnitTmp_,file=fileH,status="old")
+          read(UnitTmp_,'(a)')linetitan
+          read(UnitTmp_,'(a)')linetitan
           do i=1,num_Ri
-             read(unit_tmp,*) tmp_hR(i),(tmp_RH0(j,i),j=1,NumSZA)              
+             read(UnitTmp_,*) tmp_hR(i),(tmp_RH0(j,i),j=1,NumSZA)              
           end do
-          close(unit_tmp)
+          close(UnitTmp_)
 
-          open(unit_tmp,file=fileM,status="old")
-          read(unit_tmp,'(a)')linetitan
-          read(unit_tmp,'(a)')linetitan
+          open(UnitTmp_,file=fileM,status="old")
+          read(UnitTmp_,'(a)')linetitan
+          read(UnitTmp_,'(a)')linetitan
           do i=1,num_Ri
-             read(unit_tmp,*) tmp_hR(i),(tmp_RM0(j,i),j=1,NumSZA)
+             read(UnitTmp_,*) tmp_hR(i),(tmp_RM0(j,i),j=1,NumSZA)
           end do
-          close(unit_tmp)
+          close(UnitTmp_)
 
-          open(unit_tmp,file=fileL,status="old")
-          read(unit_tmp,'(a)')linetitan
-          read(unit_tmp,'(a)')linetitan
+          open(UnitTmp_,file=fileL,status="old")
+          read(UnitTmp_,'(a)')linetitan
+          read(UnitTmp_,'(a)')linetitan
           do i=1,num_Ri
-             read(unit_tmp,*)tmp_hR(i),(tmp_RL0(j,i),j=1,NumSZA)
+             read(UnitTmp_,*)tmp_hR(i),(tmp_RL0(j,i),j=1,NumSZA)
           end do
-          close(unit_tmp)
+          close(UnitTmp_)
 
           !read in ion density at lower boudnary
-          open(unit_tmp,file=fileIonDen60deg,status="old") 
-          read(unit_tmp,'(a)')linetitan
-          read(unit_tmp,'(a)')linetitan
+          open(UnitTmp_,file=fileIonDen60deg,status="old") 
+          read(UnitTmp_,'(a)')linetitan
+          read(UnitTmp_,'(a)')linetitan
           do i=1,num_Ri
-             read(unit_tmp,*)tmp_hR(i),(tmp_ion(j,i),j=1,7)
+             read(UnitTmp_,*)tmp_hR(i),(tmp_ion(j,i),j=1,7)
           end do
-          close(unit_tmp)    
+          close(UnitTmp_)    
 
           !read in neutral density
-          open(unit_tmp,file=fileNeuDen,status="old")  
-          read(unit_tmp,'(a)')linetitan
+          open(UnitTmp_,file=fileNeuDen,status="old")  
+          read(UnitTmp_,'(a)')linetitan
           !write(*,*)linetitan
           do i=1,num_nu
-             read(unit_tmp,*)tmp_hn(i),(tmp_n(j,i),j=1,10)
+             read(UnitTmp_,*)tmp_hn(i),(tmp_n(j,i),j=1,10)
           end do
-          close(unit_tmp)
+          close(UnitTmp_)
 
           !for impact ionization
           if(UseImpact)then
-             open(unit_tmp,file="TitanInput/magnetopara100evTatoub.txt",&
+             open(UnitTmp_,file="TitanInput/magnetopara100evTatoub.txt",&
                   status="old")
-             read(unit_tmp,'(a)')linetitan
+             read(UnitTmp_,'(a)')linetitan
              do i=1,num_Ri
-                read(unit_tmp,*)tmp_hR(i),IMPACT_L(i),IMPACT_M(i),IMPACT_H(i)
+                read(UnitTmp_,*)tmp_hR(i),IMPACT_L(i),IMPACT_M(i),IMPACT_H(i)
              end do
-             close(unit_tmp)
+             close(UnitTmp_)
           end if
 
           !for electron temperature
-          open(unit_tmp,file="TitanInput/T_e.dat",status="old")
-          read(unit_tmp,*) (tmp_hT(i),tmp_Te(i),i=1,num_Te)
-          close(unit_tmp)
+          open(UnitTmp_,file="TitanInput/T_e.dat",status="old")
+          read(UnitTmp_,*) (tmp_hT(i),tmp_Te(i),i=1,num_Te)
+          close(UnitTmp_)
 
           !for resistivity
           nu_en(:,:)=0.0
-          open(unit_tmp,file="TitanInput/e_n_collision.dat",&
+          open(UnitTmp_,file="TitanInput/e_n_collision.dat",&
                status="old")             
-          read(unit_tmp,'(a)')linetitan
+          read(UnitTmp_,'(a)')linetitan
           !write(*,*)linetitan
           do i=1,num_en
-             read(unit_tmp,*)nu_Te(i),(nu_en(i,j),j=1,3)
+             read(UnitTmp_,*)nu_Te(i),(nu_en(i,j),j=1,3)
           end do
-          close(unit_tmp)
+          close(UnitTmp_)
 
           if(iproc==0)then
              write(*,*)'tmp_hR(num_Ri)',tmp_hR(num_Ri)
