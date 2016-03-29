@@ -29,7 +29,7 @@ namespace PIC{
     cDatumDerived DatumTangentialTranslationalTemperature(1, "\"Tangential Translational Temperature [K]\"", true);
 
     // vector of active sampling data
-    vector<cDatumSampled*> DataSampledCenterNodeActive;
+    vector<PIC::Datum::cDatumSampled*> DataSampledCenterNodeActive;
     // vector of active derived data
     vector<cDatumDerived*> DataDerivedCenterNodeActive;
   }
@@ -78,7 +78,7 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
 
 void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber) {
   // printe sampled data names
-  vector<cDatumSampled*>::iterator ptrDatumSampled;
+  vector<PIC::Datum::cDatumSampled*>::iterator ptrDatumSampled;
   for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
       ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
     if((*ptrDatumSampled)->doPrint) (*ptrDatumSampled)->PrintName(fout);
@@ -111,52 +111,60 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
   static bool IsFirstCall=true;
   static double* OutputData;
 
+  static vector<cDatumTimed*>    DataTimedPrint;
+  static vector<cDatumWeighted*> DataWeightedPrint;
+  static vector<cDatumDerived*>  DataDerivedPrint;
+
   // find size of message at the first call
   if(IsFirstCall){
     // include sampled data
-    vector<cDatumSampled*>::iterator ptrDatumSampled;
-    for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
-	ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
-      if((*ptrDatumSampled)->doPrint) nOutput+=(*ptrDatumSampled)->length;
+    vector<PIC::Datum::cDatumSampled*>::iterator itrDatumSampled;
+    cDatumTimed*    ptrDatumTimed;
+    cDatumWeighted* ptrDatumWeighted;
+    for(itrDatumSampled = DataSampledCenterNodeActive.begin();
+	itrDatumSampled!= DataSampledCenterNodeActive.end();itrDatumSampled++){
+      if((*itrDatumSampled)->doPrint) {
+	nOutput+=(*itrDatumSampled)->length;
+	if((*itrDatumSampled)->type == PIC::Datum::cDatumSampled::Timed_){
+	  ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatumSampled));
+	  DataTimedPrint.push_back(ptrDatumTimed);
+	}
+	else {
+	  ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatumSampled));
+	  DataWeightedPrint.push_back(ptrDatumWeighted);
+	}
+      }
+    }
     // include derived data
-    vector<cDatumDerived*>::iterator ptrDatumDerived;
-    for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
-	ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
-      if((*ptrDatumDerived)->doPrint) nOutput+=(*ptrDatumDerived)->length;
+    vector<cDatumDerived*>::iterator itrDatumDerived;
+    for(itrDatumDerived = DataDerivedCenterNodeActive.begin();
+	itrDatumDerived!= DataDerivedCenterNodeActive.end(); itrDatumDerived++)
+      if((*itrDatumDerived)->doPrint) {
+	nOutput+=(*itrDatumDerived)->length;
+	DataDerivedPrint.push_back((*itrDatumDerived));
+      }
+    // allocate memory for output
     OutputData = new double[nOutput];
+    // mark exit from the first (initializing) call
     IsFirstCall=false;
   }
   
   if (pipe->ThisThread==CenterNodeThread) {
     // compose a message
     int iOutput=0;
-    cDatumTimed* pDatumTimed;
-    cDatumWeighted* pDatumWeighted;
-    // sampled data values
-    vector<cDatumSampled*>::iterator ptrDatumSampled;
-    for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
-	ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
-      if((*ptrDatumSampled)->doPrint) {
-	// cDatumSampled has 2 derived types: cDatumTimed & cDatumWeighted:
-	// each is averaged differently => need to downcast them first
-	if((*ptrDatumSampled)->type == PIC::Mesh::Timed_){
-	  pDatumTimed = static_cast<cDatumTimed*> ((*ptrDatumSampled));
-	  GetDatumAverage(*pDatumTimed,&OutputData[iOutput], DataSetNumber);
-	}
-	else{
-	  pDatumWeighted = static_cast<cDatumWeighted*> ((*ptrDatumSampled));
-	  GetDatumAverage(*pDatumWeighted,&OutputData[iOutput], DataSetNumber);
-	}
-	iOutput += (*ptrDatumSampled)->length;
-      }
-    //derived data values
-    vector<cDatumDerived*>::iterator ptrDatumDerived;
-    for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
-	ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
-      if((*ptrDatumDerived)->doPrint) {
-	(this->*(*ptrDatumDerived)->GetValue)(&OutputData[iOutput],DataSetNumber);
-	iOutput += (*ptrDatumDerived)->length;
-      }
+    // timed data values
+    vector<cDatumTimed*>::iterator itrDatumTimed;
+    for(itrDatumTimed = DataTimedPrint.begin();
+	itrDatumTimed!= DataTimedPrint.end(); itrDatumTimed++)
+      GetDatumAverage(*(*itrDatumTimed),&OutputData[iOutput], DataSetNumber);
+    vector<cDatumWeighted*>::iterator itrDatumWeighted;
+    for(itrDatumWeighted = DataWeightedPrint.begin();
+	itrDatumWeighted!= DataWeightedPrint.end(); itrDatumWeighted++)
+      GetDatumAverage(*(*itrDatumWeighted),&OutputData[iOutput],DataSetNumber);
+    vector<cDatumDerived*>::iterator itrDatumDerived;
+    for(itrDatumDerived = DataDerivedPrint.begin();
+	itrDatumDerived!= DataDerivedPrint.end(); itrDatumDerived++)
+      GetDatumAverage(*(*itrDatumDerived),&OutputData[iOutput], DataSetNumber);
   }
 
   
@@ -218,7 +226,7 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
 #endif
 
     // interpolate all sampled data
-    vector<cDatumSampled*>::iterator ptrDatum;
+    vector<PIC::Datum::cDatumSampled*>::iterator ptrDatum;
     for(ptrDatum = DataSampledCenterNodeActive.begin();
     	ptrDatum!= DataSampledCenterNodeActive.end(); ptrDatum++)
       InterpolateDatum(**ptrDatum,

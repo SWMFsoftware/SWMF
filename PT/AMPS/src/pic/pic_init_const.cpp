@@ -16,7 +16,7 @@ vector<PIC::IndividualModelSampling::fPrintVariableList> PIC::IndividualModelSam
 vector<PIC::IndividualModelSampling::fInterpolateCenterNodeData> PIC::IndividualModelSampling::InterpolateCenterNodeData;
 vector<PIC::IndividualModelSampling::fPrintSampledData> PIC::IndividualModelSampling::PrintSampledData;
 vector<PIC::IndividualModelSampling::fRequestStaticCellData> PIC::IndividualModelSampling::RequestStaticCellData;
-vector<PIC::Mesh::cDatumSampled*>PIC::IndividualModelSampling::DataSampledList;
+vector<PIC::Datum::cDatumSampled*>PIC::IndividualModelSampling::DataSampledList;
 
 //generic particle transformation
 //PIC::ChemicalReactions::GenericParticleTranformation::fTransformationIndicator *PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator=NULL;

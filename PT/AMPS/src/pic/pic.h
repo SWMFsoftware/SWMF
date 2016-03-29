@@ -154,6 +154,70 @@ namespace PIC {
 
   }
 
+  namespace Datum {
+    class cDatumSampled{
+      // class with information about data being sampled/printed:
+      // - offset in the node's buffer
+      // - length of the datum in units sizeof(double)
+      // - name of the physical parameter
+      // - type of datum (sampled with given averaging or derived)
+      // - flag whether to print to the output file
+      // also contains generic methods:
+      // - activation of datum
+      // - printing name to a file
+    public:
+      static const int Unset_    = 0;
+      static const int Timed_    = 1;
+      static const int Weighted_ = 2;
+      static const int Derived_  = 3;
+
+      long int offset;
+      int length;
+      char name[_MAX_STRING_LENGTH_PIC_];
+      int type;
+      bool doPrint;
+      
+      // activation procedures:
+      // appart from the offset in the data buffer,
+      // a storage for data info to keep track of data being sampled
+      // at nodes of different type
+      //......................................................................
+      inline bool is_active(){return offset >= 0;}
+      inline void activate(long int& offsetInOut, 
+			   vector<cDatumSampled*>* DatumVector){
+	if(is_active()) 
+	  exit(__LINE__,__FILE__,
+	       "ERROR: trying to activate datum a second time");
+	// set offset to the variable
+	offset       = offsetInOut;
+	// return info about length of the variable
+	offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
+	// add this datum to the provided cDatumSampled vector
+	DatumVector->push_back(this);
+      }
+
+      // print variables' name to file
+      //......................................................................
+      inline void PrintName(FILE* fout){fprintf(fout, ", %s", name);}
+
+      // constructor
+      //......................................................................
+      cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true){
+	// nameIn must be in the format acceptable for printing output:
+	//   "\"var_1\", \"var_2\""
+	length = lengthIn;
+	sprintf(name, "%s", nameIn);
+	// mark as inactive by default
+	offset = -1;
+	type   = Unset_; 
+	doPrint= doPrintIn;
+      }
+    };
+    // class cDatumSampled ----------------------------------------------------
+
+  } 
+  // namespace Datum ----------------------------------------------------------
+
   //field line
   namespace FieldLine{
 
@@ -1345,77 +1409,19 @@ namespace PIC {
     class cDataCenterNode;
 
     //-------------------------------------------------------------------------
-    const int Unset_    = 0;
-    const int Timed_    = 1;
-    const int Weighted_ = 2;
-    const int Derived_  = 3;
-    class cDatumSampled{
-      // class with information about data being sampled/printed:
-      // - offset in the node's buffer
-      // - length of the datum in units sizeof(double)
-      // - name of the physical parameter
-      // - type of datum (sampled with given averaging or derived)
-      // - flag whether to print to the output file
-      // also contains generic methods:
-      // - activation of datum
-      // - printing name to a file
-    public:
-      long int offset;
-      int length;
-      char name[_MAX_STRING_LENGTH_PIC_];
-      int type;
-      bool doPrint;
-     
-      // activation procedures:
-      // appart from the offset in the data buffer,
-      // a storage for data info to keep track of data being sampled
-      // at nodes of different type
-      //......................................................................
-      inline bool is_active(){return offset >= 0;}
-      inline void activate(long int& offsetInOut, 
-			   vector<cDatumSampled*>* DatumVector=NULL){
-	if(is_active()) 
-	  exit(__LINE__,__FILE__,
-	       "ERROR: trying to activate datum a second time");
-	// set offset to the variable
-	offset       = offsetInOut;
-	// return info about length of the variable
-	offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
-	// add this datum to the provided cDatumSampled vector
-	if(DatumVector!=NULL) DatumVector->push_back(this);
-      }
-
-      // print variables' name to file
-      //......................................................................
-      inline void PrintName(FILE* fout){fprintf(fout, ", %s", name);}
-
-      // constructor
-      //......................................................................
-      cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true){
-	// nameIn must be in the format acceptable for printing output:
-	//   "\"var_1\", \"var_2\""
-	length = lengthIn;
-	sprintf(name, "%s", nameIn);
-	// mark as inactive by default
-	offset = -1;
-	type   = Unset_; 
-	doPrint= doPrintIn;
-      }
-    };
-    // class cDatumSampled ----------------------------------------------------
-
     // the following 2 classes have no additional methods or members
+    // compared to cDatumSampled
     // however they are treated differently at the sampling:
     // - cDatumTimed    is averaged over time
     // - cDatumWeighted is averaged over particle weight on this node
     //-------------------------------------------------------------------------
-    class cDatumTimed : public cDatumSampled {
+    class cDatumTimed : public Datum::cDatumSampled {
     public:
       // constructor is inherited as well
     cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) 
       : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Timed_;}
     };
-    class cDatumWeighted : public cDatumSampled {
+    class cDatumWeighted : public Datum::cDatumSampled {
     public:
       // constructor is inherited as well
     cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) 
@@ -1426,33 +1432,33 @@ namespace PIC {
     // the following class isn't sampled directly
     // values are derived from sampled variables
     //-------------------------------------------------------------------------
-    class cDatumDerived : public cDatumSampled{
+    class cDatumDerived : public Datum::cDatumSampled{
     public:
-      // function to find a value derived from other variables;
+      // function to find an averaged value derived from other variables;
       // CURRENTLY WORKS ONLY FOR CELL-CENTERED DATA
-      void (cDataCenterNode::*GetValue)(double*, int);
+      void (cDataCenterNode::*GetAverage)(double*, int);
       //.......................................................................
-      inline bool is_active(){return GetValue != NULL;}
-      inline void activate(void (cDataCenterNode::*GetValueIn)(double*, int), 
-			   vector<cDatumDerived*>* DatumVector=NULL){
+      inline bool is_active(){return GetAverage != NULL;}
+      inline void activate(void (cDataCenterNode::*GetAverageIn)(double*, int),
+			   vector<cDatumDerived*>* DatumVector){
 	if(is_active()) 
 	  exit(__LINE__,__FILE__,
 	       "ERROR: trying to activate datum a second time");
-	GetValue = GetValueIn;
+	GetAverage = GetAverageIn;
 	// add this datum to the provided cDatumSampled vector
-	if(DatumVector!=NULL) DatumVector->push_back(this);
+	DatumVector->push_back(this);
       }
       // constructor is inherited as well
       //.......................................................................
     cDatumDerived(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatumSampled(lengthIn, nameIn, doPrintIn){
-	type = Derived_; GetValue=NULL;
+      : Datum::cDatumSampled(lengthIn, nameIn, doPrintIn){
+	type = Derived_; GetAverage=NULL;
       }
     };
     // class cDatumDerived ----------------------------------------------------
 
     //vector of active sampling data
-    extern vector<cDatumSampled*> DataSampledCenterNodeActive;
+    extern vector<Datum::cDatumSampled*> DataSampledCenterNodeActive;
     //vector of active derived data
     extern vector<cDatumDerived*> DataDerivedCenterNodeActive;
     
@@ -1550,15 +1556,15 @@ namespace PIC {
       // - for array
       // - for scalars
       //-----------------------------------------------------------------------
-      inline void SampleDatum(cDatumSampled Datum, double* In, int spec, 
-			      double weight=1.0){
+      inline void SampleDatum(Datum::cDatumSampled Datum, 
+			      double* In, int spec, double weight=1.0){
 	for(int i=0; i<Datum.length; i++)
 	  *(i + Datum.length * spec + 
 	    (double*)(associatedDataPointer + 
 		      collectingCellSampleDataPointerOffset+
 		      Datum.offset))+= In[i] * weight;
       }
-      inline void SampleDatum(cDatumSampled Datum, double In, int spec, 
+      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec, 
 			      double weight=1.0){
 	*(spec + 
 	  (double*)(associatedDataPointer + 
@@ -1566,7 +1572,7 @@ namespace PIC {
 		    Datum.offset))+= In * weight;
       }
       //.......................................................................
-      inline void SetDatum(cDatumSampled Datum, double* In, int spec){
+      inline void SetDatum(Datum::cDatumSampled Datum, double* In, int spec){
 	for(int i=0; i<Datum.length; i++)
 	  *(i + Datum.length * spec + 
 	    (double*)(associatedDataPointer + 
@@ -1576,7 +1582,7 @@ namespace PIC {
 
       //get accumulated data
       //.......................................................................
-      inline void GetDatumCumulative(cDatumSampled Datum, 
+      inline void GetDatumCumulative(Datum::cDatumSampled Datum, 
 				     double* Out, int spec){
 	for(int i=0; i<Datum.length; i++)
 	  Out[i] = *(i + Datum.length * spec + 
@@ -1584,7 +1590,7 @@ namespace PIC {
 			       completedCellSampleDataPointerOffset+
 			       Datum.offset));
       }
-      inline double GetDatumCumulative(cDatumSampled Datum, int spec){
+      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec){
 	return *(spec + 
 		 (double*)(associatedDataPointer + 
 			   completedCellSampleDataPointerOffset+
@@ -1633,6 +1639,11 @@ namespace PIC {
 			     Datum.offset)) / TotalWeight;
 	else return 0.0;
       }
+      //get average for derived data
+      //.......................................................................
+      inline void GetDatumAverage(cDatumDerived Datum, double* Out, int spec){
+        (this->*Datum.GetAverage)(Out,spec);
+      }
       //-----------------------------------------------------------------------
 
       //backward compatible access
@@ -1653,7 +1664,7 @@ namespace PIC {
 
       // data interpolation
       //-----------------------------------------------------------------------
-      inline void InterpolateDatum(cDatumSampled Datum, 
+      inline void InterpolateDatum(Datum::cDatumSampled Datum, 
 				   cDataCenterNode** InterpolationList,
 				   double *InterpolationCoefficients,
 				   int nInterpolationCoefficients, 
@@ -2245,7 +2256,7 @@ namespace PIC {
     typedef void (*fPrintVariableList)(FILE* fout,int nDataSet);
     extern vector<fPrintVariableList> PrintVariableList;
 
-    extern vector<PIC::Mesh::cDatumSampled*> DataSampledList;
+    extern vector<PIC::Datum::cDatumSampled*> DataSampledList;
 
     //interpolate center node data
     typedef void (*fInterpolateCenterNodeData)(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode* cell);
