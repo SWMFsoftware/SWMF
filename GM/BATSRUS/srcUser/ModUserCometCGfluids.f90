@@ -135,6 +135,19 @@ module ModUser
   real :: TminSi, Tmin, rHelio, vHI, uHaser
   real, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: ne20eV_GB = 0.
 
+  !! logical variable to determine whether to use an artifical perturbed solar
+  !! wind at beyond a certain xPerturbedSwIO
+  logical :: UsePerturbedSW = .false.
+  real :: xPerturbedSwMinIO = 1.5e4, xPerturbedSwMaxIO = 1.6e4
+  real :: PerturbedSwNIO = 10.0
+  real :: PerturbedSwUxIO = 400.0, PerturbedSwUyIO = 0.0, PerturbedSwUzIO = 0.0
+  real :: PerturbedSwTIO = 1.5e5
+  real :: PerturbedSwBxIO = 5.0, PerturbedSwByIO = 0.0, PerturbedSwBzIO = 0.0
+  real :: xPerturbedSwMin, xPerturbedSwMax, PerturbedSwN, PerturbedSwT
+  real :: PerturbedSwUx, PerturbedSwUy, PerturbedSwUz
+  real :: PerturbedSwBx, PerturbedSwBy, PerturbedSwBz
+  real :: PerturbedSwRho
+
   character (len=6), parameter, public :: NameNeutral_I(nNeuFluid) = &
        (/ 'Neu1  ' /)
 
@@ -221,6 +234,18 @@ contains
           call read_var('DoEnhanceNeu',  DoEnhanceNeu)
           call read_var('EnhancedRatio', EnhancedRatio)
           call read_var('DecadeDn',      DecadeDn)
+       Case('#USEPERTURBEDSW')
+          call read_var('UsePerturbedSW',    UsePerturbedSW)
+          call read_var('xPerturbedSwMinIO', xPerturbedSwMinIO)
+          call read_var('xPerturbedSwMaxIO', xPerturbedSwMaxIO)
+          call read_var('PerturbedSwNIO',    PerturbedSwNIO)
+          call read_var('PerturbedSwTIO',    PerturbedSwTIO)
+          call read_var('PerturbedSwUxIO',   PerturbedSwUxIO)
+          call read_var('PerturbedSwUyIO',   PerturbedSwUyIO)
+          call read_var('PerturbedSwUzIO',   PerturbedSwUzIO)
+          call read_var('PerturbedSwBxIO',   PerturbedSwBxIO)
+          call read_var('PerturbedSwByIO',   PerturbedSwByIO)
+          call read_var('PerturbedSwBzIO',   PerturbedSwBzIO)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -241,7 +266,7 @@ contains
     use ModMain, ONLY: Time_Simulation, n_step
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
          UnitU_, UnitTemperature_, UnitT_, &
-         UnitN_, UnitX_
+         UnitN_, UnitX_, UnitB_
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -342,6 +367,18 @@ contains
     Tmin       = TminSi*Si2NO_V(UnitTemperature_)
     TempNeuMin = TempNeuMinSi*Si2NO_V(UnitTemperature_)
 
+    xPerturbedSwMin   = xPerturbedSwMinIO*Io2NO_V(UnitX_)
+    xPerturbedSwMax   = xPerturbedSwMaxIO*Io2NO_V(UnitX_)
+    PerturbedSwN      = PerturbedSwNIO*Io2NO_V(UnitN_)
+    PerturbedSwUx     = PerturbedSwUxIO*Io2NO_V(UnitU_)
+    PerturbedSwUy     = PerturbedSwUyIO*Io2NO_V(UnitU_)
+    PerturbedSwUz     = PerturbedSwUzIO*Io2NO_V(UnitU_)
+    PerturbedSwT      = PerturbedSwTIO*Io2NO_V(UnitTemperature_)
+    PerturbedSwBx     = PerturbedSwBxIO*Io2NO_V(UnitB_)
+    PerturbedSwBy     = PerturbedSwByIO*Io2NO_V(UnitB_)
+    PerturbedSwBz     = PerturbedSwBzIO*Io2NO_V(UnitB_)
+    PerturbedSwRho    = PerturbedSwN*MassIon_I(1)
+
     if (restart) then
        nStepSave_B          = n_step
        TimeSimulationSave_B = Time_Simulation
@@ -390,6 +427,28 @@ contains
        write(*,*)'NormalSun_D                =', NormalSun_D
        write(*,*)'TminSi, Tmin               =', TminSi, Tmin
        write(*,*)'nStepEnhanceNeu            =', nStepEnhanceNeu
+       if (UsePerturbedSW) then
+          write(*,*) 'xPerturbedSwMinIO, xPerturbedSwMin   =', &
+               xPerturbedSwMinIO, xPerturbedSwMin
+          write(*,*) 'xPerturbedSwMaxIO, xPerturbedSwMax   =', &
+               xPerturbedSwMaxIO, xPerturbedSwMax
+          write(*,*) 'PerturbedSwNIO, PerturbedSwN   =', &
+               PerturbedSwNIO, PerturbedSwN
+          write(*,*) 'PerturbedSwTIO, PerturbedSwT   =', &
+               PerturbedSwTIO, PerturbedSwT
+          write(*,*) 'PerturbedSwUxIO, PerturbedSwUx =', &
+               PerturbedSwUxIO, PerturbedSwUx
+          write(*,*) 'PerturbedSwUyIO, PerturbedSwUy =', &
+               PerturbedSwUyIO, PerturbedSwUy
+          write(*,*) 'PerturbedSwUzIO, PerturbedSwUz =', &
+               PerturbedSwUzIO, PerturbedSwUz
+          write(*,*) 'PerturbedSwBxIO, PerturbedSwBx =', &
+               PerturbedSwUzIO, PerturbedSwUz
+          write(*,*) 'PerturbedSwByIO, PerturbedSwBy =', &
+               PerturbedSwByIO, PerturbedSwBy
+          write(*,*) 'PerturbedSwBzIO, PerturbedSwBz =', &
+               PerturbedSwBzIO, PerturbedSwBz
+       end if
     end if
   end subroutine user_init_session
   !===========================================================================
@@ -3898,7 +3957,7 @@ contains
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: SW_rho, SW_Ux, SW_Uy, SW_Uz, SW_p, &
          LowDensityRatio, ElectronPressureRatio, SW_Bx, SW_By, SW_Bz
-    use ModGeometry, ONLY: true_cell, r_BLK
+    use ModGeometry, ONLY: true_cell, r_BLK, Xyz_DGB
     use ModEnergy,   ONLY: calc_energy_cell
 
     integer :: i, j, k, iBlock
@@ -3919,73 +3978,74 @@ contains
        RhoSw = SW_rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
 
        TempNeu1_C = State_VGB(Neu1P_,1:nI,1:nJ,1:nK,iBlock)* &
-         MassFluid_I(nFluid)/State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock)
+            MassFluid_I(nFluid)/State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock)
        nNeu1_C    = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) / &
             MassFluid_I(nFluid)
-       
+
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
           if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
-          if (r_BLK(i,j,k,iBlock) <= R0Perturbed) then
-             ! Near the comet, set the ions density = ratioPerturbed * nNeu1
-             ! and the u = uNeu1, Ti = Tneu
+          if (.not. UsePerturbedSW) then
+             if (r_BLK(i,j,k,iBlock) <= R0Perturbed) then
+                ! Near the comet, set the ions density = ratioPerturbed * nNeu1
+                ! and the u = uNeu1, Ti = Tneu
 
-             ! Cometary heavy ion
-             State_VGB(H2OpRho_,i,j,k,iBlock)    = &
-                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed
-             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed
-             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed
-             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed
-             State_VGB(H2OpP_,i,j,k,iBlock)   = &
-                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed
+                ! Cometary heavy ion
+                State_VGB(H2OpRho_,i,j,k,iBlock)    = &
+                     State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed
+                State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed
+                State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed
+                State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed
+                State_VGB(H2OpP_,i,j,k,iBlock)   = &
+                     State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed
 
-             ! Solar wind, assuming that ratioPerturbedSw is small enough
-!             ratioPerturbedSw = ratioPerturbed*LowDensityRatio
-!
-!             State_VGB(SwRho_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw
-!             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw
-!             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw
-!             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw
-!             State_VGB(SwP_,i,j,k,iBlock)= &
-!                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw
-!
-!             ! Magnetic field
-!             State_VGB(Bx_,i,j,k,iBlock) = 0
-!             State_VGB(By_,i,j,k,iBlock) = 0
-!             State_VGB(Bz_,i,j,k,iBlock) = 0
+ ! Solar wind, assuming that ratioPerturbedSw is small enough
+ !             ratioPerturbedSw = ratioPerturbed*LowDensityRatio
+ !
+ !             State_VGB(SwRho_,i,j,k,iBlock) = &
+ !                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw
+ !             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
+ !                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw
+ !             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
+ !                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw
+ !             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
+ !                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw
+ !             State_VGB(SwP_,i,j,k,iBlock)= &
+ !                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw
+ !
+ !             ! Magnetic field
+ !             State_VGB(Bx_,i,j,k,iBlock) = 0
+ !             State_VGB(By_,i,j,k,iBlock) = 0
+ !             State_VGB(Bz_,i,j,k,iBlock) = 0
 
-          else if (r_BLK(i,j,k,iBlock) <= R1Perturbed) then
-             alpha = (r_BLK(i,j,k,iBlock)-R0Perturbed) / &
-                  (R1Perturbed-R0Perturbed)
-             beta  = 1-alpha
-             ! Transition region from near the comet to far away from the
-             ! comet.
-             ! The ion profile is set to be a linear combination between
-             ! the near comet region and far away region. 
-             State_VGB(H2OpRho_,i,j,k,iBlock)    = &
-                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                  SW_rho*LowDensityRatio*alpha
-             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                  SW_rho*LowDensityRatio*SW_Ux*alpha
-             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                  SW_rho*LowDensityRatio*SW_Uy*alpha
-             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                  SW_rho*LowDensityRatio*SW_Uz*alpha
-             State_VGB(H2OpP_,i,j,k,iBlock)   = &
-                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed*beta + &
-                  SW_p*LowDensityRatio*alpha
+             else if (r_BLK(i,j,k,iBlock) <= R1Perturbed) then
+                alpha = (r_BLK(i,j,k,iBlock)-R0Perturbed) / &
+                     (R1Perturbed-R0Perturbed)
+                beta  = 1-alpha
+                ! Transition region from near the comet to far away from the
+                ! comet.
+                ! The ion profile is set to be a linear combination between
+                ! the near comet region and far away region. 
+                State_VGB(H2OpRho_,i,j,k,iBlock)    = &
+                     State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbed*beta + &
+                     SW_rho*LowDensityRatio*alpha
+                State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbed*beta + &
+                     SW_rho*LowDensityRatio*SW_Ux*alpha
+                State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbed*beta + &
+                     SW_rho*LowDensityRatio*SW_Uy*alpha
+                State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
+                     State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbed*beta + &
+                     SW_rho*LowDensityRatio*SW_Uz*alpha
+                State_VGB(H2OpP_,i,j,k,iBlock)   = &
+                     State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed*beta + &
+                     SW_p*LowDensityRatio*alpha
 
-             ! Solar wind
+! Solar wind
 !             State_VGB(SwRho_,i,j,k,iBlock) = &
 !                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
 !                  RhoSw*alpha
@@ -4008,25 +4068,38 @@ contains
 !             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz*alpha
 
 
+             else
+                ! Far away from the comet, both ions are the same as the
+                ! solar wind conditions
+                State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
+                State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
+                State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
+                State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
+                State_VGB(SwP_,i,j,k,iBlock)       = &
+                     SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
+
+                State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_rho*LowDensityRatio
+                State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Ux
+                State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uy
+                State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uz
+                State_VGB(H2OpP_,i,j,k,iBlock)     = SW_p*LowDensityRatio
+
+                State_VGB(Bx_,i,j,k,iBlock) = SW_Bx
+                State_VGB(By_,i,j,k,iBlock) = SW_By
+                State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
+             end if
           else
-             ! Far away from the comet, both ions are the same as the
-             ! solar wind conditions
-             State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
-             State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
-             State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
-             State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
-             State_VGB(SwP_,i,j,k,iBlock)       = &
-                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
-
-             State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_rho*LowDensityRatio
-             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Ux
-             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uy
-             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uz
-             State_VGB(H2OpP_,i,j,k,iBlock)     = SW_p*LowDensityRatio
-
-             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx
-             State_VGB(By_,i,j,k,iBlock) = SW_By
-             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
+             if (Xyz_DGB(x_,i,j,k,iBlock) >= xPerturbedSwMin .and. &
+                  Xyz_DGB(x_,i,j,k,iBlock) <= xPerturbedSwMax) then
+                State_VGB(SwRho_,i,j,k,iBlock)   = PerturbedSwRho
+                State_VGB(SwRhoUx_,i,j,k,iBlock) = PerturbedSwUx*PerturbedSwRho
+                State_VGB(SwRhoUy_,i,j,k,iBlock) = PerturbedSwUy*PerturbedSwRho
+                State_VGB(SwRhoUz_,i,j,k,iBlock) = PerturbedSwUz*PerturbedSwRho
+                State_VGB(SwP_,i,j,k,iBlock)     = PerturbedSwN*PerturbedSwT
+                State_VGB(Bx_,i,j,k,iBlock) = PerturbedSwBx
+                State_VGB(By_,i,j,k,iBlock) = PerturbedSwBy
+                State_VGB(Bz_,i,j,k,iBlock) = PerturbedSwBz
+             end if
           end if
 
           ! Total fluid
@@ -4037,7 +4110,7 @@ contains
           State_VGB(RhoUy_,i,j,k,iBlock)     = &
                sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
           State_VGB(RhoUz_,i,j,k,iBlock)     = &
-                      sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+               sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
 
           ! Electron pressure
           if(UseElectronPressure) then
