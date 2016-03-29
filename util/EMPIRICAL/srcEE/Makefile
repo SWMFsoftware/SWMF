@@ -32,7 +32,6 @@ LIB:	DEPEND
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
-	make FRM
 
 ${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
