@@ -53,7 +53,7 @@ ${BINDIR}/FRMAGNETOGRAM.exe: flux_rope_magnetogram.o
 
 FRM_general:
 	${LINK.f90} -o ${BINDIR}/FRMAGNETOGRAM.exe flux_rope_magnetogram.o \
-		-L${LIBDIR} -lEMPIRICALEEE  -lSHARE -lTIMING -lMAGNETOGRAM \
+		-L${LIBDIR} -lEMPIRICALEE  -lSHARE -lTIMING -lMAGNETOGRAM \
 		${Lflag1}
 
 FRM_for_Darwin:
