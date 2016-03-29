@@ -34,9 +34,9 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 2.0
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
+       'CG Comet, Z. Huang & G. Toth, 2016'
 
   character (len=100) :: NameShapeFile
 
@@ -123,6 +123,10 @@ module ModUser
   ! If this variable is set .true., then use the Haser neutral background
   ! Only for testing purpose
   logical :: DoUseNeuBackground = .false.
+
+  logical :: DoUseFieldlineFile = .true.
+  character (len=100) :: NameFieldlineFile
+  real, allocatable::    XyzFieldline_DI(:,:)
 
   integer, parameter, public :: nNeuFluid = 1
   integer, parameter :: Neu1_  =  1
@@ -246,6 +250,9 @@ contains
           call read_var('PerturbedSwBxIO',   PerturbedSwBxIO)
           call read_var('PerturbedSwByIO',   PerturbedSwByIO)
           call read_var('PerturbedSwBzIO',   PerturbedSwBzIO)
+       case('#USEFIELDLINEFILE')
+          call read_var('DoUseFieldlineFile', DoUseFieldlineFile)
+          call read_var('NameFieldlineFile',  NameFieldlineFile)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -309,6 +316,11 @@ contains
        if (iProc ==0) &
             write(*,*) NameSub, ': using spherical body: rSphericalBodySi =', &
             rSphericalBodySi
+    end if
+
+    if (DoUseFieldlineFile) then
+       call read_fieldline_file
+       write (*,*) NameSub, ': reading field line data.'
     end if
 
     rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
@@ -590,6 +602,67 @@ contains
     close(UnitTmp_)
 
   end subroutine read_shape_file
+
+  !=========================================================================
+  subroutine read_fieldline_file
+
+    use ModPhysics, ONLY: Si2No_V, UnitX_
+    use ModIoUnit, ONLY: UnitTmp_
+
+    logical :: DoReadFieldlineFile = .true.
+
+    integer:: nPoint, nVar, iPoint, iFileHeader, iZoneHeader, i
+
+    real, allocatable:: State_VI(:,:)
+
+    character(len=100):: String1, String2, String3, String4
+
+    character(len=*), parameter:: NameSub = 'read_fieldline_file'
+
+    !-----------------------------------------------------------------------
+    if(.not.DoReadFieldlineFile) RETURN
+    DoReadFieldlineFile = .false.
+
+    nVar = 29
+
+    open(UnitTmp_, file=NameFieldlineFile)
+
+    ! Read the header info for the whole file
+    do iFileHeader = 1, nVar+3+1
+       read(UnitTmp_,'(a)') String1
+    end do
+
+    !!--------------------------------------------------------------------
+    !! Read the header for each zone
+    !! Read 'ZONE T="Streamtrace"'
+    read(UnitTmp_,'(a)') String1
+
+    !! Read ' STRANDID=0, SOLUTIONTIME=0'
+    read(UnitTmp_,'(a)') String1
+    !! Read ' I=*, J=1, K=1, ZONETYPE=Ordered'
+    read(UnitTmp_,*)     String1, String2, String3, String4
+    i = index(String1,'=')
+    String1 = String1(i+1:100)
+    read (string1,*) nPoint
+
+    !! Read ' DATAPACKING=POINT'
+    read(UnitTmp_,'(a)') String1
+    !! Read ' DT=(SINGLE SINGLE SINGLE ...)'
+    read(UnitTmp_,'(a)') String1
+    !!--------------------------------------------------------------------
+
+    allocate(XyzFieldline_DI(3,nPoint), State_VI(nVar,nPoint))
+
+    ! Read the points along a field line
+    do iPoint = 1, nPoint
+       read(UnitTmp_,*) XyzFieldline_DI(:,iPoint), State_VI(:,iPoint)
+    end do
+
+    XyzFieldline_DI = XyzFieldline_DI*1e3*Si2NO_V(UnitX_)
+
+    deallocate(State_VI)
+
+  end subroutine read_fieldline_file
 
   !=========================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -1213,6 +1286,7 @@ contains
     use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, &
          n_step, iTest, ProcTest
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
+    use ModPhysics, ONLY:  Si2No_V, UnitX_
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -1249,6 +1323,9 @@ contains
     logical :: IsIntersectedShape
 
     real    :: nTmp
+
+    real    :: Distance2Fieldline = -1.0
+    logical :: DoWriteVeIncreaseOnce = .true.
 
     character(len=*), parameter:: NameSub = 'user_calc_rates'
     !-----------------------------------------------------------------
@@ -1406,6 +1483,19 @@ contains
          (log10Te-((n-1.0)*0.0415+4.45053516))/0.0415* &
          (ElImpRate_I(Neu1_,n+1)-ElImpRate_I(Neu1_,n))+ElImpRate_I(Neu1_,n) ),&
          0.0)
+
+    if (DoUseFieldlineFile) then
+       Distance2Fieldline = minval( sqrt( &
+            (Xyz_DGB(1,i,j,k,iBlock)-XyzFieldline_DI(1,:))**2 + &
+            (Xyz_DGB(2,i,j,k,iBlock)-XyzFieldline_DI(2,:))**2 + &
+            (Xyz_DGB(3,i,j,k,iBlock)-XyzFieldline_DI(3,:))**2 ))
+       if (Distance2Fieldline < 1.0e3*Si2No_V(UnitX_)) then
+          ve_II(Neu1_,H2Op_) = ve_II(Neu1_,H2Op_) * 10
+          if (DoWriteVeIncreaseOnce) then
+             write(*,*) 've_II is increased by a factor of 10 here!'
+          end if
+       end if
+    end if
 
     ! v_II is the total ionization rate, photons and electrons!
     v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) + ve_II(Neu1_,H2Op_)
