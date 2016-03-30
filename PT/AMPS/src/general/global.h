@@ -15,7 +15,7 @@ extern MPI_Comm MPI_GLOBAL_COMMUNICATOR;
 #endif
 
 //compilation mode
-#define _COMPILATION_MODE_ _COMPILATION_MODE__HYBRID_
+#define _COMPILATION_MODE_ _COMPILATION_MODE__MPI_
 
 //inlcude settings of the general block
 #include "../../.general.conf"
