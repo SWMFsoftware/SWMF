@@ -184,10 +184,10 @@ program PostIDL
         IsLogRadius = index(TypeGeometry,'lnr')  > 0
         IsGenRadius = index(TypeGeometry,'genr') > 0
         if(IsGenRadius)then
-           read(*,*) nRgen
+           call read_var('nRgen', nRGen)
            allocate(LogRgen_I(nRgen))
            do i = 1, nRgen
-              read(*,*) LogRgen_I(i)
+              call read_var('LogRgen', LogRgen_I(i))
            end do
         end if
 
