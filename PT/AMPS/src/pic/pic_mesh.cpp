@@ -155,16 +155,22 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
     // timed data values
     vector<cDatumTimed*>::iterator itrDatumTimed;
     for(itrDatumTimed = DataTimedPrint.begin();
-	itrDatumTimed!= DataTimedPrint.end(); itrDatumTimed++)
+	itrDatumTimed!= DataTimedPrint.end();  itrDatumTimed++){
       GetDatumAverage(*(*itrDatumTimed),&OutputData[iOutput], DataSetNumber);
+      iOutput += (*itrDatumTimed)->length;
+    }
     vector<cDatumWeighted*>::iterator itrDatumWeighted;
-    for(itrDatumWeighted = DataWeightedPrint.begin();
-	itrDatumWeighted!= DataWeightedPrint.end(); itrDatumWeighted++)
+    for(itrDatumWeighted =DataWeightedPrint.begin();
+	itrDatumWeighted!=DataWeightedPrint.end();  itrDatumWeighted++){
       GetDatumAverage(*(*itrDatumWeighted),&OutputData[iOutput],DataSetNumber);
+      iOutput += (*itrDatumWeighted)->length;
+    }
     vector<cDatumDerived*>::iterator itrDatumDerived;
     for(itrDatumDerived = DataDerivedPrint.begin();
-	itrDatumDerived!= DataDerivedPrint.end(); itrDatumDerived++)
+	itrDatumDerived!= DataDerivedPrint.end();  itrDatumDerived++){
       GetDatumAverage(*(*itrDatumDerived),&OutputData[iOutput], DataSetNumber);
+      iOutput += (*itrDatumDerived)->length;
+    }
   }
 
   
