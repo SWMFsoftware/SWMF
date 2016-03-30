@@ -34,9 +34,9 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 2.0
+  real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, Z. Huang & G. Toth, 2016'
+       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
 
   character (len=100) :: NameShapeFile
 
@@ -126,6 +126,7 @@ module ModUser
 
   logical :: DoUseFieldlineFile = .true.
   character (len=100) :: NameFieldlineFile
+  real :: radiusTube
   real, allocatable::    XyzFieldline_DI(:,:)
 
   integer, parameter, public :: nNeuFluid = 1
@@ -253,6 +254,7 @@ contains
        case('#USEFIELDLINEFILE')
           call read_var('DoUseFieldlineFile', DoUseFieldlineFile)
           call read_var('NameFieldlineFile',  NameFieldlineFile)
+          call read_var('radiusTube',         radiusTube)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -320,7 +322,8 @@ contains
 
     if (DoUseFieldlineFile) then
        call read_fieldline_file
-       write (*,*) NameSub, ': reading field line data.'
+       if (iProc == 0) &
+            write (*,*) NameSub, ': reading field line data.'
     end if
 
     rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
@@ -1489,10 +1492,14 @@ contains
             (Xyz_DGB(1,i,j,k,iBlock)-XyzFieldline_DI(1,:))**2 + &
             (Xyz_DGB(2,i,j,k,iBlock)-XyzFieldline_DI(2,:))**2 + &
             (Xyz_DGB(3,i,j,k,iBlock)-XyzFieldline_DI(3,:))**2 ))
-       if (Distance2Fieldline < 1.0e3*Si2No_V(UnitX_)) then
-          ve_II(Neu1_,H2Op_) = ve_II(Neu1_,H2Op_) * 10
+       if (Distance2Fieldline < radiusTube*Si2No_V(UnitX_)) then
+          v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * 10
           if (DoWriteVeIncreaseOnce) then
-             write(*,*) 've_II is increased by a factor of 10 here!'
+             write(*,*) 've_II is increased by a factor of 10 at ', &
+                  Xyz_DGB(:,i,j,k,iBlock), 've from ', ve_II(Neu1_,H2Op_)/10, &
+                  ' to ', ve_II(Neu1_,H2Op_), ' ,total v: ', &
+                  v_II(Neu1_,H2Op_) + ve_II(Neu1_,H2Op_)
+             DoWriteVeIncreaseOnce = .false.
           end if
        end if
     end if
