@@ -22,10 +22,14 @@
 #include <fstream>
 #include <signal.h>
 
-
-
 #include <sys/time.h>
 #include <sys/resource.h>
+
+#include "global.h"
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#include <omp.h>
+#endif //_PIC_COMPILATION_MODE_ == _PIC_COMPILATION_MODE__HYBRID_
 
 using namespace std;
 
@@ -1009,6 +1013,13 @@ namespace PIC {
 
     //check the total particles number
     void CheckParticleList();
+
+    //the namespace contains data used in case when OpenMP is used
+    namespace Thread {
+      extern int NTotalThreads;
+      extern long int *AvailableParticleListLength,*FirstPBufferParticle;
+      void RebalanceParticleList();
+    }
 
     //add the new particle to the simulation
     //argument 'node' should be type of cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*. but this make the compiler unhappy.
