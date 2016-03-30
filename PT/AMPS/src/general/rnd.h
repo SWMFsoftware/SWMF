@@ -15,18 +15,39 @@
 
 #include "global.h"
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#include <omp.h>
+#endif //_PIC_COMPILATION_MODE_ == _PIC_COMPILATION_MODE__HYBRID_
+
 namespace RandomNumberGenerator {
   extern unsigned long int rndLastSeed;
+  extern unsigned long int *rndLastSeedArray;
+
 }
 
 void rnd_seed(int seed=-1);
 
 inline double rnd() {
+  double res;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   RandomNumberGenerator::rndLastSeed*=48828125;
   RandomNumberGenerator::rndLastSeed&=2147483647; // pow(2,31) - 1
   if (RandomNumberGenerator::rndLastSeed==0) RandomNumberGenerator::rndLastSeed=1;
+  res=double(RandomNumberGenerator::rndLastSeed/2147483648.0); //(pow(2,31) - 1) + 1
 
-  return double(RandomNumberGenerator::rndLastSeed/2147483648.0); //(pow(2,31) - 1) + 1
+  #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int thread=omp_get_thread_num();
+  RandomNumberGenerator::rndLastSeedArray[thread]*=48828125;
+  RandomNumberGenerator::rndLastSeedArray[thread]&=2147483647; // pow(2,31) - 1
+  if (RandomNumberGenerator::rndLastSeedArray[thread]==0) RandomNumberGenerator::rndLastSeedArray[thread]=1;
+  res=double(RandomNumberGenerator::rndLastSeedArray[thread]/2147483648.0); //(pow(2,31) - 1) + 1
+
+  #else
+  #error Unknown option
+  #endif //_COMPILATION_MODE_
+
+  return res;
 }
 
 

@@ -2,3 +2,8 @@
 #define no_symmetry           0
 #define cylindrical_symmetry  1
 #define spherical_symmetry    2
+
+
+//Compilation mode (pure MPI or MPI+OpenMP)
+#define _COMPILATION_MODE__MPI_     0
+#define _COMPILATION_MODE__HYBRID_  1

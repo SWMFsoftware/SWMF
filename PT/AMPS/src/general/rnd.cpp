@@ -9,8 +9,12 @@
 
 #include "rnd.h"
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#include <omp.h>
+#endif //_PIC_COMPILATION_MODE_ == _PIC_COMPILATION_MODE__HYBRID_
 
 unsigned long int RandomNumberGenerator::rndLastSeed=0;
+unsigned long int *RandomNumberGenerator::rndLastSeedArray=NULL;
 
 void rnd_seed(int seed) {
   int thread;
@@ -19,4 +23,21 @@ void rnd_seed(int seed) {
   if (seed==-1) seed=thread;
 
   RandomNumberGenerator::rndLastSeed=seed;
+
+  //init the seed array in case OpenMP is used
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    int nThreadsOpenMP,i;
+
+    #pragma omp parallel private(i,nThreadsOpenMP)
+    {
+      #pragma omp single
+      {
+        nThreadsOpenMP=omp_get_num_threads();
+
+        RandomNumberGenerator::rndLastSeedArray=new unsigned long int[nThreadsOpenMP];
+        for (i=0;i<nThreadsOpenMP;i++) RandomNumberGenerator::rndLastSeedArray[i]=i+thread*nThreadsOpenMP;
+      }
+    }
+  #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
 }

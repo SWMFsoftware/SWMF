@@ -5,9 +5,17 @@
 
 #include "mpi.h"
 
+#include "global.dfn"
+
 #ifndef _GLOBAL_VARIABLES_
 #define _GLOBAL_VARIABLES_
 
 extern MPI_Comm MPI_GLOBAL_COMMUNICATOR;
 
 #endif
+
+//compilation mode
+#define _COMPILATION_MODE_ _COMPILATION_MODE__HYBRID_
+
+//inlcude settings of the general block
+#include "../../.general.conf"
