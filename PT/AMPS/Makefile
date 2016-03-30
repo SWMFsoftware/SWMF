@@ -6,6 +6,7 @@ DEFAULT_TARGET : amps
 SOURCES=src
 WSD=srcTemp
 SPICE=nospice
+OPENMP=off
 
 #Compiling with the CCMC's Kameleon
 KAMELEON=nokameleon
@@ -67,6 +68,12 @@ ifeq ($(INTERFACE),on)
 	AMPSLINKER=${LINK.f90}
 	AMPSLINKLIB+=${WSD}/interface/interface.a	
 endif 
+
+#when OpenMP is used add the appropriate compiler flag and library
+ifeq ($(OPENMP),on)
+	SEARCH_C+=-openmp
+	AMPSLINKLIB+=-openmp
+endif
 
 
 # when linking mixed C/C++ and FORTRAN code mpif90 is used for linking
