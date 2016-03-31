@@ -83,18 +83,6 @@ $MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION$
 #include "meshAMRinternalSurface.h"
 
 
-
-
-/*
-#define Kbol 1.3806503E-23
-#define ElectronCharge 1.602176565E-19
-#define ElectronMass 9.10938291E-31
-#define ProtonMass 1.67262158E-27
-#define eV2J ElectronCharge
-*/
-
-
-
 namespace PIC {
 
   //Global constants of the PIC solver
@@ -159,8 +147,8 @@ namespace PIC {
   }
 
   namespace Datum {
-    class cDatumSampled{
-      // class with information about data being sampled/printed:
+    class cDatum{
+      // class with information about data being stored/sampled/printed:
       // - offset in the node's buffer
       // - length of the datum in units sizeof(double)
       // - name of the physical parameter
@@ -170,10 +158,12 @@ namespace PIC {
       // - activation of datum
       // - printing name to a file
     public:
-      static const int Unset_    = 0;
-      static const int Timed_    = 1;
-      static const int Weighted_ = 2;
-      static const int Derived_  = 3;
+      static const int Unset_    = 0; // basic datum
+      static const int Stored_   = 1; // stored, NOT sampled
+      static const int Sampled_  = 2; // sampled, averaging is not yet defined
+      static const int Timed_    = 3; // sampled, averaged over time
+      static const int Weighted_ = 4; // sampled, averaged over particle weight
+      static const int Derived_  = 5; // derived from other types
 
       long int offset;
       int length;
@@ -181,10 +171,64 @@ namespace PIC {
       int type;
       bool doPrint;
       
+      // print variables' name to file
+      //......................................................................
+      inline void PrintName(FILE* fout){fprintf(fout, ", %s", name);}
+
+      // constructor
+      //......................................................................
+      cDatum(int lengthIn, const char* nameIn, bool doPrintIn = true){
+	// nameIn must be in the format acceptable for printing output:
+	//   "\"var_1\", \"var_2\""
+	length = lengthIn;
+	sprintf(name, "%s", nameIn);
+	// mark as inactive by default
+	offset = -1;
+	type = Unset_;
+	doPrint= doPrintIn;
+      }
+    };
+    // class cDatum -----------------------------------------------------------
+
+    //-------------------------------------------------------------------------
+    // the following classes are treated differently at the calls/sampling
+    // and activation:
+    // - cDatumStored    is stored, but NOT sampled
+    // - cDatumSampled   is a parent of the following 2:
+    // -- cDatumTimed    is averaged over time
+    // -- cDatumWeighted is averaged over particle weight on this node
+    //-------------------------------------------------------------------------
+    class cDatumStored : public cDatum {
+    public:
       // activation procedures:
       // appart from the offset in the data buffer,
       // a storage for data info to keep track of data being sampled
-      // at nodes of different type
+      // at different buffers
+      //......................................................................
+      inline bool is_active(){return offset >= 0;}
+      inline void activate(long int& offsetInOut, 
+			   vector<cDatumStored*>* DatumVector){
+	if(is_active()) 
+	  exit(__LINE__,__FILE__,
+	       "ERROR: trying to activate datum a second time");
+	// set offset to the variable
+	offset       = offsetInOut;
+	// return info about length of the variable
+	offsetInOut += length*sizeof(double);
+	// add this datum to the provided cDatum vector
+	DatumVector->push_back(this);
+      }
+      // constructor is inherited
+    cDatumStored(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatum(lengthIn, nameIn, doPrintIn){type = Stored_;}
+    };
+
+    class cDatumSampled : public cDatum {
+    public:
+      // activation procedures:
+      // appart from the offset in the data buffer,
+      // a storage for data info to keep track of data being sampled
+      // at different buffers
       //......................................................................
       inline bool is_active(){return offset >= 0;}
       inline void activate(long int& offsetInOut, 
@@ -195,29 +239,29 @@ namespace PIC {
 	// set offset to the variable
 	offset       = offsetInOut;
 	// return info about length of the variable
+	// RESERVE SPACE FOR ALL SPECIES
 	offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
-	// add this datum to the provided cDatumSampled vector
+	// add this datum to the provided cDatum vector
 	DatumVector->push_back(this);
       }
-
-      // print variables' name to file
-      //......................................................................
-      inline void PrintName(FILE* fout){fprintf(fout, ", %s", name);}
-
-      // constructor
-      //......................................................................
-      cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true){
-	// nameIn must be in the format acceptable for printing output:
-	//   "\"var_1\", \"var_2\""
-	length = lengthIn;
-	sprintf(name, "%s", nameIn);
-	// mark as inactive by default
-	offset = -1;
-	type   = Unset_; 
-	doPrint= doPrintIn;
-      }
+      // constructor is inherited
+    cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatum(lengthIn, nameIn, doPrintIn){type = Sampled_;}
     };
-    // class cDatumSampled ----------------------------------------------------
+
+    class cDatumTimed : public cDatumSampled {
+    public:
+      // constructor is inherited as well
+    cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Timed_;}
+    };
+    class cDatumWeighted : public cDatumSampled {
+    public:
+      // constructor is inherited as well
+    cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Weighted_;}
+    };
+    //-------------------------------------------------------------------------
 
   } 
   // namespace Datum ----------------------------------------------------------
@@ -234,11 +278,35 @@ namespace PIC {
     const int Hanging_   =-2;                   // yes     yes      no  
     //zero length
     const int Collapsed_ =-3;                   // no      yes      no
-    //unpredicatble error
+    //unpredictable error
     const int Error_     =-4;                   // no      yes      yes
     //error in connectivity
     const int Broken_    =-5;                   // no      no       yes
     //-----------------------------------------------------------------
+
+    // alias
+    typedef PIC::Datum::cDatum         cDatum;
+    typedef PIC::Datum::cDatumStored   cDatumStored;
+    typedef PIC::Datum::cDatumSampled  cDatumSampled;
+    typedef PIC::Datum::cDatumTimed    cDatumTimed;
+    typedef PIC::Datum::cDatumWeighted cDatumWeighted;
+
+    // standard set of data that is stored/sampled
+    extern cDatumStored DatumAtVertexElectricField;
+    extern cDatumStored DatumAtVertexMagneticField;
+    extern cDatumStored DatumAtVertexPlasmaVelocity;
+    extern cDatumStored DatumAtVertexPlasmaDensity;
+    extern cDatumStored DatumAtVertexPlasmaTemperature;
+    extern cDatumStored DatumAtVertexPlasmaPressure;
+    extern cDatumTimed  DatumAtVertexParticleWeight;
+    extern cDatumTimed  DatumAtVertexParticleNumber;
+    extern cDatumTimed  DatumAtVertexNumberDensity;
+
+
+
+    // vectors with active data
+    extern vector<cDatumStored*> DataStoredAtVertex;
+    extern vector<cDatumSampled*> DataSampledAtVertex;
 
     class cFieldLineVertex{
     private:
@@ -246,90 +314,192 @@ namespace PIC {
       char IsSet;
       //coordinates of the vertex
       double x[DIM];
-      //fields and plasma parameters
-      double ElectricField[DIM];
-      double MagneticField[DIM];
-      double PlasmaVelocity[DIM];
-      double PlasmaDensity;
-      double PlasmaTemperature;
-      double PlasmaPressure;
+      // data buffer length
+      static int AssociatedDataLength_;
+      // sampling offsets
+      static int CollectingSamplingOffset;
+      static int CompletedSamplingOffset;
+      // pinter to the data buffer itself
+      char* AssociatedDataPointer;
       //neighboring vertices
       cFieldLineVertex* prev;
       cFieldLineVertex* next;
     public:
-
+      long int Temp_ID;
       cFieldLineVertex(){
 	IsSet = 0;
 	for(int idim=0; idim<DIM; idim++) x[idim]=0;
 	prev = (next = NULL);
+	Temp_ID = 0;
       }
-
+      //.......................................................................
+      // interface with stack functionality
+      inline int AssociatedDataLength(){
+	return AssociatedDataLength_;
+      }
+      inline char* GetAssociatedDataBufferPointer(){
+	return AssociatedDataPointer;
+	}
+      inline void SetAssociatedDataBufferPointer(char* ptr){
+	AssociatedDataPointer=ptr;
+      }
+      inline void cleanDataBuffer(){}
+      inline static void SetDataOffsets(int SamplingOffset, int SampleDataLength){
+	CollectingSamplingOffset = SamplingOffset;
+	CompletedSamplingOffset  = SamplingOffset +   SampleDataLength;
+	AssociatedDataLength_    = SamplingOffset + 2*SampleDataLength;
+      }
+      //.......................................................................
       //check status of vertex
       inline int status(){
 	if(IsSet == 0)                   return Unset_;
 	if(prev == NULL && next == NULL) return Hanging_;
 	return OK_;
       }
-
+      //.......................................................................
       //status of vertex as a string
       inline void status(char* res){
 	if(IsSet == 0)                  {sprintf(res,"%s","Unset");  return;}
 	if(prev == NULL && next == NULL){sprintf(res,"%s","Hanging");return;}
 	sprintf(res,"%s","OK"); return;
       }
-
-
+      //.......................................................................
       //access to coordinates
       inline void SetX(double* xIn){
 	IsSet = 1;
 	for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];}
       inline void GetX(double* xOut){
 	for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];}
-
-      //set individual variables
+      //.......................................................................
+      //set individual stored variables
+      inline void SetDatum(cDatumStored Datum, double* In){
+	memcpy(AssociatedDataPointer+Datum.offset, In, 
+	       Datum.length * sizeof(double));
+      }
+      inline void SetDatum(cDatumStored Datum, double In){
+	memcpy(AssociatedDataPointer+Datum.offset, &In, sizeof(double));
+      }
       inline void SetElectricField(double* ElectricFieldIn){
-	memcpy(ElectricField,  ElectricFieldIn, DIM*sizeof(double));}
+	SetDatum(DatumAtVertexElectricField, ElectricFieldIn);}
       inline void SetMagneticField(double* MagneticFieldIn){
-	memcpy(MagneticField,  MagneticFieldIn, DIM*sizeof(double));}
+	SetDatum(DatumAtVertexMagneticField, MagneticFieldIn);}
       inline void SetPlasmaVelocity(double* PlasmaVelocityIn){
-	memcpy(PlasmaVelocity, PlasmaVelocityIn,DIM*sizeof(double));}
+	SetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityIn);}
       inline void SetPlasmaDensity(double  PlasmaDensityIn){
-	PlasmaDensity     = PlasmaDensityIn;}
+	SetDatum(DatumAtVertexPlasmaDensity, PlasmaDensityIn);}
       inline void SetPlasmaTemperature(double  PlasmaTemperatureIn){
-	PlasmaTemperature = PlasmaTemperatureIn;}
+	SetDatum(DatumAtVertexPlasmaTemperature, PlasmaTemperatureIn);}
       inline void SetPlasmaPressure(double  PlasmaPressureIn){
-	PlasmaPressure    = PlasmaPressureIn;}
-
-      //set whole state vector
-      void SetStateVector(double* ElectricFieldIn,
-			  double* MagneticFieldIn,
-			  double* PlasmaVelocityIn,
-			  double  PlasmaDensityIn,
-			  double  PlasmaTemperatureIn,
-			  double  PlasmaPressureIn);
-
-      //set individual variables
+	SetDatum(DatumAtVertexPlasmaPressure, PlasmaPressureIn);}
+      //.......................................................................
+      //set individual sampled variables
+      inline void SetDatum(cDatumSampled Datum, double* In, int spec){
+	memcpy(AssociatedDataPointer + CompletedSamplingOffset +
+	       Datum.offset + Datum.length * spec * sizeof(double),
+	       In, Datum.length * sizeof(double));
+      }
+      inline void SetDatum(cDatumSampled Datum, double In, int spec){
+	memcpy(AssociatedDataPointer + CompletedSamplingOffset +
+	       Datum.offset + Datum.length * spec * sizeof(double),
+	       &In, sizeof(double));
+      }
+      //.......................................................................
+      // sample data
+      inline void SampleDatum(PIC::Datum::cDatumSampled Datum,
+                              double* In, int spec, double weight=1.0){
+        for(int i=0; i<Datum.length; i++)
+          *(i + Datum.length * spec +
+            (double*)(AssociatedDataPointer +
+                      CollectingSamplingOffset+
+                      Datum.offset))+= In[i] * weight;
+      }
+      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec,
+                              double weight=1.0){
+        *(spec +
+          (double*)(AssociatedDataPointer +
+                    CollectingSamplingOffset+
+                    Datum.offset))+= In * weight;
+      }
+      //.......................................................................
+      //get individual stored variables
+      inline void GetDatum(cDatumStored Datum, double* Out){
+	memcpy(Out, AssociatedDataPointer+Datum.offset,
+	       Datum.length * sizeof(double));
+      }
+      inline void GetDatum(cDatumStored Datum, double& Out){
+	Out = *(double*)(AssociatedDataPointer+Datum.offset);
+      }
       inline void GetElectricField(double* ElectricFieldOut){
-	memcpy(ElectricFieldOut,  ElectricField, DIM*sizeof(double));}
+	GetDatum(DatumAtVertexElectricField, ElectricFieldOut);}
       inline void GetMagneticField(double* MagneticFieldOut){
-	memcpy(MagneticFieldOut,  MagneticField, DIM*sizeof(double));}
+	GetDatum(DatumAtVertexMagneticField, MagneticFieldOut);}
       inline void GetPlasmaVelocity(double* PlasmaVelocityOut){
-	memcpy(PlasmaVelocityOut, PlasmaVelocity,DIM*sizeof(double));}
+	GetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityOut);}
       inline void GetPlasmaDensity(double& PlasmaDensityOut){
-	PlasmaDensityOut     = PlasmaDensity;}
+	GetDatum(DatumAtVertexPlasmaDensity, &PlasmaDensityOut);}
       inline void GetPlasmaTemperature(double& PlasmaTemperatureOut){
-	PlasmaTemperatureOut = PlasmaTemperature;}
+	GetDatum(DatumAtVertexPlasmaTemperature, &PlasmaTemperatureOut);}
       inline void GetPlasmaPressure(double& PlasmaPressureOut){
-	PlasmaPressureOut    = PlasmaPressure;}
-
-      //get whole state vector
-      void GetStateVector(double* ElectricFieldOut,
-				 double* MagneticFieldOut,
-				 double* PlasmaVelocityOut,
-				 double& PlasmaDensityOut,
-				 double& PlasmaTemperatureOut,
-				 double& PlasmaPressureOut);
-
+	GetDatum(DatumAtVertexPlasmaPressure, &PlasmaPressureOut);}
+      //get accumulated data
+      //.......................................................................
+      inline void GetDatumCumulative(Datum::cDatumSampled Datum, 
+				     double* Out, int spec){
+	for(int i=0; i<Datum.length; i++)
+	  Out[i] = *(i + Datum.length * spec + 
+		     (double*)(AssociatedDataPointer + 
+			       CompletedSamplingOffset+
+			       Datum.offset));
+      }
+      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec){
+	return *(spec + 
+		 (double*)(AssociatedDataPointer + 
+			   CompletedSamplingOffset+
+			   Datum.offset));
+      }
+      //get data averaged over time
+      //.......................................................................
+      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec){
+	if(PIC::LastSampleLength > 0)
+	  for(int i=0; i<Datum.length; i++)
+	    Out[i] = *(i + Datum.length * spec + 
+		       (double*)(AssociatedDataPointer + 
+				 CompletedSamplingOffset+
+				 Datum.offset)) / PIC::LastSampleLength;
+	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      }
+      inline double GetDatumAverage(cDatumTimed Datum, int spec){
+	if(PIC::LastSampleLength > 0)
+	  return *(spec + 
+		   (double*)(AssociatedDataPointer + 
+			     CompletedSamplingOffset+
+			     Datum.offset)) / PIC::LastSampleLength;
+	else return 0.0;
+      }
+      //get data averaged over sampled weight
+      //.......................................................................
+      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec){
+	double TotalWeight=0.0;
+	GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
+	if(TotalWeight > 0)
+	  for(int i=0; i<Datum.length; i++)
+	    Out[i] = *(i + Datum.length * spec +
+		       (double*)(AssociatedDataPointer + 
+				 CompletedSamplingOffset+
+				 Datum.offset)) / TotalWeight;
+	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      }
+      inline double GetDatumAverage(cDatumWeighted Datum, int spec){
+	double TotalWeight=0.0;
+	GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
+	if(TotalWeight > 0)
+	  return *(spec +
+		   (double*)(AssociatedDataPointer + 
+			     CompletedSamplingOffset+
+			     Datum.offset)) / TotalWeight;
+	else return 0.0;
+      }
+      //.......................................................................
       //access to neighbors
       inline void SetPrev(cFieldLineVertex* prevIn){prev=prevIn;}
       inline void SetNext(cFieldLineVertex* nextIn){next=nextIn;}
@@ -358,13 +528,21 @@ namespace PIC {
       cFieldLineVertex* begin;
       cFieldLineVertex* end;
     public:
+      long int Temp_ID;
 
       cFieldLineSegment(){
+	Temp_ID = 0;
 	IsSet=0, length=0.0;
 	prev  = (next = NULL);
 	begin = (end  = NULL);
       }
-      
+      //.......................................................................
+      // interface with stack functionality
+      inline void cleanDataBuffer(){}
+      inline int AssociatedDataLength(){return 0;}
+      inline char* GetAssociatedDataBufferPointer(){return NULL;}
+      inline void SetAssociatedDataBufferPointer(char* ptr){}
+      //.......................................................................
       //check status of segment
       inline int status(){
 	if(IsSet == 0)                return Unset_;
@@ -373,7 +551,7 @@ namespace PIC {
 	if(length < 0.0)              return Error_;	
 	return OK_;
       }
-
+      //.......................................................................
       //status of segment as string
       inline void status(char* res){
 	if(IsSet == 0)               {sprintf(res,"%s","Unset");    return;}
@@ -382,11 +560,11 @@ namespace PIC {
 	if(length < 0.0)             {sprintf(res,"%s","Error");    return;}
 	sprintf(res,"%s","OK"); return;
       }
-
+      //.......................................................................
       //set the segment
       inline void SetVertices(cFieldLineVertex* beginIn,
 			      cFieldLineVertex* endIn){
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+        #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 	if(beginIn->status() != OK_ || endIn->status() != OK_){
 	  char msg[600];
 	  char statusBegin[10],statusEnd[10];
@@ -395,7 +573,7 @@ namespace PIC {
 		  statusBegin, statusEnd);
 	  exit(__LINE__,__FILE__, msg);
 	}
-#endif//_PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+        #endif//_PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 	IsSet=1;
 	if(beginIn!=NULL) begin = beginIn;
 	if(endIn  !=NULL) end   = endIn;  
@@ -412,24 +590,24 @@ namespace PIC {
 	}
 	else IsSet = 0;
       }
+      //.......................................................................
       //access segment's vertices
       inline void GetBegin(cFieldLineVertex* beginOut){beginOut = begin;}
       inline void GetEnd(  cFieldLineVertex* endOut  ){endOut   = end;}
       inline cFieldLineVertex* GetBegin(){return begin;}
       inline cFieldLineVertex* GetEnd(){  return end;}
-
+      //.......................................................................
       //access segment's length and and directoon at its beginning
       inline double GetLength(){return length;}
       inline void GetDir(double* DirOut){memcpy(DirOut,Dir,DIM*sizeof(double));}
-
+      //.......................................................................
       //access segment's statistical weight
       inline double GetWeight(int spec){return weight[spec];}
       inline void   SetWeight(double* weightIn){
 	memcpy(weight, weightIn, PIC::nTotalSpecies*sizeof(double));}
       inline void   SetWeight(double weightIn, int spec){
 	weight[spec] = weightIn;}
-
-
+      //.......................................................................
       //access segment's neighbors
       inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
       inline void SetNext(cFieldLineSegment* nextIn){next = nextIn;}
@@ -437,7 +615,7 @@ namespace PIC {
       inline void GetNext(cFieldLineSegment* nextOut){nextOut = next;}
       inline cFieldLineSegment* GetPrev(){return prev;}
       inline cFieldLineSegment* GetNext(){return next;}
-      
+      //.......................................................................
       //interpolate whole state vector from vertices to a point on the segment
       void GetStateVector(double  S, //position 0<=s<=1 on the segment
 			  double* ElectricFieldOut,
@@ -446,7 +624,7 @@ namespace PIC {
 			  double& PlasmaDensityOut,
 			  double& PlasmaTemperatureOut,
 			  double& PlasmaPressureOut);
-      
+      //.......................................................................
       //interpolate individual variables from vertices to point on the segment
       inline void GetElectricField(double  S, //position 0<=s<=1 on the segment
 				   double* ElectricFieldOut){
@@ -577,8 +755,8 @@ namespace PIC {
     extern long int nFieldLine;
 
     extern cFieldLine* FieldLinesAll;
-    extern cStack<cFieldLineVertex> VerticesAll;
-    extern cStack<cFieldLineSegment> SegmentsAll;
+    extern cAssociatedDataAMRstack<cFieldLineVertex> VerticesAll;
+    extern cAssociatedDataAMRstack<cFieldLineSegment> SegmentsAll;
 
     // initialize field line data structure
     void Init();
@@ -1419,26 +1597,9 @@ namespace PIC {
   namespace Mesh {
     class cDataCenterNode;
 
-    //-------------------------------------------------------------------------
-    // the following 2 classes have no additional methods or members
-    // compared to cDatumSampled
-    // however they are treated differently at the sampling:
-    // - cDatumTimed    is averaged over time
-    // - cDatumWeighted is averaged over particle weight on this node
-    //-------------------------------------------------------------------------
-    class cDatumTimed : public Datum::cDatumSampled {
-    public:
-      // constructor is inherited as well
-    cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Timed_;}
-    };
-    class cDatumWeighted : public Datum::cDatumSampled {
-    public:
-      // constructor is inherited as well
-    cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Weighted_;}
-    };
-    //-------------------------------------------------------------------------
+    // aliases
+    typedef PIC::Datum::cDatumTimed    cDatumTimed;
+    typedef PIC::Datum::cDatumWeighted cDatumWeighted;
 
     // the following class isn't sampled directly
     // values are derived from sampled variables

@@ -4,60 +4,29 @@
 
 #include "pic.h"
 
-cStack<PIC::FieldLine::cFieldLineVertex>  PIC::FieldLine::VerticesAll;
-cStack<PIC::FieldLine::cFieldLineSegment> PIC::FieldLine::SegmentsAll;
-PIC::FieldLine::cFieldLine *PIC::FieldLine::FieldLinesAll = NULL;
-
-long int PIC::FieldLine::nFieldLine=0;
-
 namespace PIC{
   namespace FieldLine{
-    //=========================================================================
-    //set whole state vector on vertex
-    void cFieldLineVertex::SetStateVector(double* ElectricFieldIn,
-					  double* MagneticFieldIn,
-					  double* PlasmaVelocityIn,
-					  double  PlasmaDensityIn,
-					  double  PlasmaTemperatureIn,
-					  double  PlasmaPressureIn){
-      SetElectricField(ElectricFieldIn);
-      SetMagneticField(MagneticFieldIn);
-      SetPlasmaVelocity(PlasmaVelocityIn);
-      SetPlasmaDensity(PlasmaDensityIn);
-      SetPlasmaTemperature(PlasmaTemperatureIn);
-      SetPlasmaPressure(PlasmaPressureIn);
-    }
-    //=========================================================================
-    //get whole state vector on vertex
-    void cFieldLineVertex::GetStateVector(double* ElectricFieldOut,
-					  double* MagneticFieldOut,
-					  double* PlasmaVelocityOut,
-					  double& PlasmaDensityOut,
-					  double& PlasmaTemperatureOut,
-					  double& PlasmaPressureOut){
-      GetElectricField(ElectricFieldOut);
-      GetMagneticField(MagneticFieldOut);
-      GetPlasmaVelocity(PlasmaVelocityOut);
-      GetPlasmaDensity(PlasmaDensityOut);
-      GetPlasmaTemperature(PlasmaTemperatureOut);
-      GetPlasmaPressure(PlasmaPressureOut);
-    }
-    //=========================================================================
-    //get whole state vector on segment
-    void cFieldLineSegment::GetStateVector(double  S, //position 0<=S<=1
-					   double* ElectricFieldOut,
-					   double* MagneticFieldOut,
-					   double* PlasmaVelocityOut,
-					   double& PlasmaDensityOut,
-					   double& PlasmaTemperatureOut,
-					   double& PlasmaPressureOut){
-      GetElectricField(    S, ElectricFieldOut);
-      GetMagneticField(    S, MagneticFieldOut);
-      GetPlasmaVelocity(   S, PlasmaVelocityOut);
-      GetPlasmaDensity(    S, PlasmaDensityOut);
-      GetPlasmaTemperature(S, PlasmaTemperatureOut);
-      GetPlasmaPressure(   S, PlasmaPressureOut);
-    }
+
+    cDatumStored DatumAtVertexElectricField(3,"\"Ex [V/m]\",\"Ey [V/m]\",\"Ez [V/m]\",",true);
+    cDatumStored DatumAtVertexMagneticField(3,"\"Bx [nT]\",\"By [nT]\",\"Bz [nT]\",",true);
+    cDatumStored DatumAtVertexPlasmaVelocity(3,"\"Plasma Vx [m/s]\",\"Plasma Vy [m/s]\",\"Plasma Vz [m/s]\"",true);
+    cDatumStored DatumAtVertexPlasmaDensity(1,"\"Plasma number density [1/m^3]\"", true);
+    cDatumStored DatumAtVertexPlasmaTemperature(1,"\"Plasma Temperature [K]\"", true);
+    cDatumStored DatumAtVertexPlasmaPressure(1,"\"Plasma pressure [Pa]\"", true);
+
+    cDatumTimed DatumAtVertexParticleWeight(1,"\"Particle Weight\"",false);
+    cDatumTimed DatumAtVertexParticleNumber(1,"\"Particle Number\"",true);
+    cDatumTimed DatumAtVertexNumberDensity(1,"\"Number Density[1/m^3]\"",true);
+
+    vector<cDatumStored*> DataStoredAtVertex;
+    vector<cDatumSampled*> DataSampledAtVertex;
+
+    cAssociatedDataAMRstack<cFieldLineVertex>  VerticesAll;
+    cAssociatedDataAMRstack<cFieldLineSegment> SegmentsAll;
+    cFieldLine *FieldLinesAll = NULL;
+    
+    long int nFieldLine=0;
+
     //=========================================================================
     bool cFieldLine::is_broken(){
       int count;
@@ -237,9 +206,26 @@ namespace PIC{
       if(PIC::nTotalThreads > 1)
 	exit(__LINE__, __FILE__,"Not implemented for multiple processors");
       
-      //allocate container for field lines
+      // allocate container for field lines
       FieldLinesAll = new cFieldLine [nFieldLineMax];
-      
+
+      // activate data storage
+      long int Offset = 0;
+      // activate data that are stored but NOT sampled
+      DatumAtVertexMagneticField.    activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexElectricField.    activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaVelocity.   activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaDensity.    activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaTemperature.activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaPressure.   activate(Offset, &DataStoredAtVertex);
+      // activate data that is sampled
+      long int SamplingOffset = Offset; Offset = 0;
+      DatumAtVertexParticleWeight.activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexParticleNumber.activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexNumberDensity. activate(Offset, &DataSampledAtVertex);
+
+      // assign offsets and data length
+      cFieldLineVertex::SetDataOffsets(SamplingOffset, Offset);
     }
     
     //=========================================================================
