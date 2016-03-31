@@ -87,6 +87,9 @@ cd ..
 
 # GNU compiler
 
+#>Valeriy ######################################################################
+#source $WorkDir/Tmp_AMPS_test/AMPS/utility/CompilerSetup/set_mpi_gnu.valeriy <#
+
 #>Pleiades>Yellowstone>Stampede ###############
 #module purge;                               <#
 
@@ -103,6 +106,9 @@ cd ..
 #make test_compile >>& test_amps.log         <#
 
 # Intel compiler 
+
+#>Valeriy ########################################################################
+#source $WorkDir/Tmp_AMPS_test/AMPS/utility/CompilerSetup/set_mpi_intel.valeriy <#
 
 #>Pleiades>Yellowstone>Stampede ###############
 #module purge;                               <#

@@ -17,6 +17,10 @@ if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/){
     $hostname = $Pleiades;
 }
 
+if($hostname_full =~ m/srbwks2014-0079.engin.umich.edu/){
+    $hostname = "valeriy";
+}
+
 #path to the Makefile.test source
 my $path="MakefileTest";
 

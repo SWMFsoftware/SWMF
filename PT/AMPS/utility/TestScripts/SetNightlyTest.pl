@@ -88,7 +88,8 @@ my %Blocks = (
     "PGIOther"     => "0",
     "Pleiades"     => "0",
     "Yellowstone"  => "0",
-    "Stampede"     => "0"
+    "Stampede"     => "0",
+    "Valeriy"      => "0"
     );
 
 # fill the hash table %Blocks
@@ -118,6 +119,11 @@ elsif($hostname =~ m/login(.).stampede.tacc.utexas.edu/){
     $Blocks{"Stampede"} = "1";
     $TestName = "stampede"
 }
+elsif($hostname =~ m/srbwks2014-0079.engin.umich.edu/){
+    # Valeriy
+    $Blocks{"Valeriy"} = "1";
+    $TestName = "valeriy"
+}
 
 # set hashes for compilers (already converted to lower case)
 if($Compilers[0] eq "all"){
@@ -125,6 +131,7 @@ if($Compilers[0] eq "all"){
 	$Blocks{$CompilerSupported."All"  } = "1";
 	unless($Blocks{"Pleiades"} or 
 	       $Blocks{"Yellowstone"} or
+	       $Blocks{"Valeriy"} or
 	       $Blocks{"Stampede"}){
 	    $Blocks{$CompilerSupported."Other"  } = "1";
 	}
@@ -138,6 +145,7 @@ else{
 		$Blocks{$CompilerSupported."All"  } = "1";
 		unless($Blocks{"Pleiades"} or 
 		       $Blocks{"Yellowstone"} or
+		       $Blocks{"Valeriy"} or
 		       $Blocks{"Stampede"}){
 		    $Blocks{$CompilerSupported."Other"  } = "1";
 		}
