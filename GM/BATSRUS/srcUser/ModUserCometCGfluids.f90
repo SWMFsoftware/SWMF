@@ -124,7 +124,7 @@ module ModUser
   ! Only for testing purpose
   logical :: DoUseNeuBackground = .false.
 
-  logical :: DoUseFieldlineFile = .true.
+  logical :: DoUseFieldlineFile = .false.
   character (len=100) :: NameFieldlineFile
   real :: radiusTube
   real, allocatable::    XyzFieldline_DI(:,:)
