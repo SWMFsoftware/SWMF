@@ -5,6 +5,9 @@
 
 #include "mpi.h"
 
+#ifndef _GLOBAL_H_
+#define _GLOBAL_H_
+
 #include "global.dfn"
 
 #ifndef _GLOBAL_VARIABLES_
@@ -19,3 +22,7 @@ extern MPI_Comm MPI_GLOBAL_COMMUNICATOR;
 
 //inlcude settings of the general block
 #include "../../.general.conf"
+
+
+#endif
+
