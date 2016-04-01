@@ -15,7 +15,8 @@ my $nThread       = ($n or 4);
 my $Rsync         = ($rsync or $sync);
 my $AllParam      = ($param or $allparam);
 my $Pattern       = $p;
-
+my $Format        = ($f or $format);
+    
 use strict;
 use File::Find;
 
@@ -121,8 +122,10 @@ REPEAT:{
 		&shell("./pION");
 	    }
             &concat_sat_log if $Concat;
+	}elsif( $Dir =~ /^PC$/ ){
+	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern $Format");
 	}elsif( $Dir =~ /^SC|IH|OH|GM|EE$/ ){
-	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern");
+	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern $Format");
 	    if($Gzip){
 		&shell("./pTEC A g");
 	    }else{
@@ -381,6 +384,9 @@ Usage:
 
    -c -cat     Concatenate series of satellite, log and magnetometer output
                files into one file. Cannot be used with the -r(epeat) option
+
+   -f=FORM     - overwrite the output format for pIDL with FORM that has the 
+   -format=FORM  following options: ascii, real4, real8, tec
 
    -g -gzip    Gzip the big ASCII files.
 
