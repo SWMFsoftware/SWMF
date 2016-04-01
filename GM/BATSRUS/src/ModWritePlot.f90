@@ -1002,6 +1002,16 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
      select case(String)
 
+        ! Cartesian coordinates for non-Cartesian plots
+     case('x')
+        PlotVar(:,:,:,iVar) = Xyz_DGB(1,:,:,:,iBLK)
+     case('y')
+        PlotVar(:,:,:,iVar) = Xyz_DGB(2,:,:,:,iBLK)
+     case('z')
+        PlotVar(:,:,:,iVar) = Xyz_DGB(3,:,:,:,iBLK)
+     case('r')
+        PlotVar(:,:,:,iVar) = r_BLK(:,:,:,iBLK)
+
         ! BASIC MHD variables
      case('rho')
         PlotVar(:,:,:,iVar)=State_VGB(iRho,:,:,:,iBLK)
@@ -1653,7 +1663,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! GRID INFORMATION
      case('dt','dtblk')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitT_)
-     case('dx','dy','dz','req1','req2')
+     case('x','y','z','r','dx','dy','dz','req1','req2')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitX_)
 
         ! DEFAULT CASE
@@ -1913,9 +1923,12 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'Status'
      case('f1x','f1y','f1z','f2x','f2y','f2z')
         NameTecVar = NamePlotVar
-     case('dx','dy','dz','req1','req2')
+     case('x','y','z','r','dx','dy','dz','req1','req2')
         NameTecVar = String
         NameUnit   = NameTecUnit_V(UnitX_)
+     case('dvol')
+        NameTecVar = 'dvol'
+        NameUnit   = trim(NameTecUnit_V(UnitX_))//'^3'
      case('dt')
         NameTecVar = 'dt'
         NameUnit   = NameTecUnit_V(UnitT_)
@@ -2049,8 +2062,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = '1'
      case('dt', 'dtblk')
         NameUnit = NameIdlUnit_V(UnitT_)
-     case('dx','dy','dz','req1','req2')
+     case('x','y','z','r','dx','dy','dz','req1','req2')
         NameUnit = NameIdlUnit_V(UnitX_)
+     case('dvol')
+        NameUnit = trim(NameIdlUnit_V(UnitX_))//'3'
      case default
         ! Set default or user defined unit
         NameUnit = NameUnitUserIdl_I(iPlotVar)
