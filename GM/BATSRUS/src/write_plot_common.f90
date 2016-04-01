@@ -663,7 +663,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(i8,a18)') nplotvar, 'nPlotVar'
            write(UnitTmp_,'(a)')trim(allnames)
            if(trim(unitstr_IDL)=='') then
-              write(UnitTmp_,'(a)')'unknown unit'
+              write(UnitTmp_,'(a)')'normalized units'
            else
               write(UnitTmp_,'(a)')trim(unitstr_IDL)
            endif
