@@ -186,6 +186,11 @@ int PIC::TimeStep() {
   PIC::Parallel::ExchangeParticleData();
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
+  //incase OpenMP is used: rebalance the list of the available particles between OpenMP threads
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  PIC::ParticleBuffer::Thread::RebalanceParticleList();
+  #endif
+
   //particle photochemistry model
   #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   PhotoChemistryTime=MPI_Wtime();
