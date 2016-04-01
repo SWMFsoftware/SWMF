@@ -158,6 +158,9 @@ rundir:
 	cd ${RUNDIR}/PC; \
 		mkdir restartIN restartOUT plots;
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		cd ${RUNDIR}/PC; \
+			ln -s ${BINDIR}/PostIDL.exe .; \
+			cp    ${SCRIPTDIR}/pIDL .;
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/IPIC3D.exe .; \
 			cp ${PWDIR}/input/IPIC.in .; \
