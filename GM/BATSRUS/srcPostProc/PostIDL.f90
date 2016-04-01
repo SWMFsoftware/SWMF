@@ -497,7 +497,11 @@ program PostIDL
 
   endif
 
-  filename = filenamehead(1:l-2)//'.out'
+  if(TypeFile == 'tec')then
+     filename = filenamehead(1:l-2)//'.dat'
+  else
+     filename = filenamehead(1:l-2)//'.out'
+  end if
   write(*,*)'writing file =',trim(filename)
 
   ! Param_I is the combination of eqpar and specialpar
