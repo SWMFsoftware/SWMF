@@ -1,23 +1,3 @@
-/* iPIC3D was originally developed by Stefano Markidis and Giovanni Lapenta. 
- * This release was contributed by Alec Johnson and Ivy Bo Peng.
- * Publications that use results from iPIC3D need to properly cite  
- * 'S. Markidis, G. Lapenta, and Rizwan-uddin. "Multi-scale simulations of 
- * plasma with iPIC3D." Mathematics and Computers in Simulation 80.7 (2010): 1509-1519.'
- *
- *        Copyright 2015 KTH Royal Institute of Technology
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at 
- *
- *         http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 /*******************************************************
 InterfaceFluid_H handels all interaction between
 a fluid model (BATSRUS/SWMF) and the particle model
@@ -137,6 +117,18 @@ class InterfaceFluid
   bool doNeedBCOnly;
 
   int iCycle;
+
+ protected:
+  // Variables for IDL format output.
+  static const int nDimMax=3;
+  int nPlotFile;
+  int *dnOutput_I;
+  double *dtOutput_I, *plotDx_I;
+  //The second dimension: xmin, xmax, ymin, ymax, zmin, zmax. 
+  double **plotRange_ID; 
+  string *plotString_I;
+  string *plotVar_I;
+
   
  public:
   // These variables are also used in PSKOutput.h
@@ -592,7 +584,16 @@ class InterfaceFluid
     delete iUy_I;
     delete iUz_I;
     delete iPpar_I;
-    delete iP_I; 
+    delete iP_I;
+
+    if(nPlotFile>0){
+      delete [] dnOutput_I;
+      delete [] dtOutput_I;
+      delete [] plotDx_I;
+      delete [] plotString_I;
+      delete [] plotVar_I;
+      delArr2(plotRange_ID,2*nDimMax);
+    }
   }
 
   /** return min X for fluid grid without ghostcell */
@@ -1951,7 +1952,7 @@ class InterfaceFluid
   void setiRegion(int i){iRegion = i;}
   int getiRegion()const{return(iRegion);}
   
-  int getnDim(){return(INdim);}
+  int getnDim()const{return(INdim);}
 
   int getnVarFluid(){return(nVarFluid);}
 
@@ -1972,7 +1973,19 @@ class InterfaceFluid
   string getTestFunc()const{return testFuncs;};
   int getiTest()const{return iTest;};
   int getjTest()const{return jTest;};
-  int getkTest()const{return kTest;};  
+  int getkTest()const{return kTest;};
+
+  // IDL format output.
+  int getnPlotFile()const{return nPlotFile;};
+  int getdnOutput(int i)const{return dnOutput_I[i];};
+  double getdtOutput(int i)const{return dtOutput_I[i];};
+  string getplotString(int i)const{return plotString_I[i];};
+  double getplotDx(int i)const{return plotDx_I[i];};
+  string getplotVar(int i)const{return plotVar_I[i];};
+  double getplotRange(int iPlot,int i)const{
+    // plotRange_ID is only set from PARAM.in for 'cut'!!!!
+    return plotRange_ID[iPlot][i];
+  };
 };
 
 

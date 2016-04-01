@@ -173,6 +173,28 @@ namespace iPic3D {
     void setSIDt(double SIDt);
     void SetCycle(int iCycle);
     void checkConstraint();
+
+    // IDL output. Begin-----------------
+    static const int nDimMax=3;
+    int nPlotFile;
+    double **plotRange_ID;
+    int **plotIndexRange_ID; // Local index range.
+    string *nameSnapshot_I;
+    static const int nVarMax = 50; 
+    string **Var_II;
+    int *nVar_I;
+    long *nCell_I;
+    bool IsBinary;
+    int nByte;
+    long nGlobalNode;
+
+    
+    void write_plot_idl(int cycle);
+    void write_plot_init();
+    void write_plot_header(int iPlot, int cycle);
+    void write_plot_data(int iPlot, int cycle);
+    
+    // IDL output. End-----------------
 #endif
 
     

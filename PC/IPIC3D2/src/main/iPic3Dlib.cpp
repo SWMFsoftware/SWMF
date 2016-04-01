@@ -42,6 +42,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 #include "Moments.h" // for debugging
 
@@ -80,7 +81,16 @@ c_Solver::~c_Solver()
   delete my_clock;
 
   #ifdef BATSRUS
-  finalize_debug_SWMF();    
+  finalize_debug_SWMF();
+
+  if(nPlotFile>0){
+    delArr2(plotRange_ID,2*nDimMax);
+    delArr2(plotIndexRange_ID, 2*nDimMax);
+    delArr2(Var_II, nVarMax);
+    delete [] nVar_I;
+    delete [] nCell_I;
+    delete [] nameSnapshot_I;
+  }
   #endif
 }
 
@@ -219,6 +229,9 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 
   init_debug_SWMF(col,grid,vct,col->getTestFunc(),col->getiTest(),
 		  col->getjTest(),col->getkTest());
+
+  IsBinary = false;    
+  write_plot_init();
 #endif
 
   // Allocation of particles
@@ -523,6 +536,10 @@ void c_Solver::WriteOutput(int cycle) {
     WriteRestart(cycle);
   }
 
+#ifdef BATSRUS
+  write_plot_idl(cycle);
+#endif
+  
   if(!Parameters::get_doWriteOutput())  return;
 
 
@@ -904,4 +921,392 @@ void c_Solver::SetCycle(int iCycle){
 void c_Solver:: checkConstraint(){  
   EMf->checkConstraint(col->getDx(), col->getDy(), col->getDz(), col->getDt());
 }
+
+
+void c_Solver:: write_plot_idl(int cycle){
+  string nameSub = "write_plot_idl";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //---------------------------------------------
+  
+  if(doTestFunc) cout<<"Start "<<nameSub<<endl;
+
+  if(nPlotFile<=0) return;
+
+  for(int iPlot=0; iPlot<nPlotFile; iPlot++){
+    int dnOutput;
+    dnOutput = col->getdnOutput(iPlot);
+    if(cycle % dnOutput==0 ){
+      write_plot_header(iPlot, cycle);
+      write_plot_data(iPlot,cycle);
+    }
+  }
+  
+
+  if(doTestFunc) cout<<"Finish "<<nameSub<<endl;
+}
+
+void c_Solver:: write_plot_init(){
+  string nameSub = "write_plot_init";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //-------------------
+
+  nPlotFile = col->getnPlotFile();
+  if(nPlotFile<=0) return;
+  
+  plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
+  plotIndexRange_ID = newArr2(int, nPlotFile, 2*nDimMax);
+  nameSnapshot_I = new string[nPlotFile];
+  Var_II = newArr2(string, nPlotFile, nVarMax);
+  nVar_I = new int[nPlotFile];
+  nCell_I = new long[nPlotFile];
+  
+  string plotString;
+  string subString;
+  string::size_type pos;
+  double dxSave;  
+  for(int iPlot=0; iPlot<nPlotFile; iPlot++){
+    plotString = col->getplotString(iPlot);
+
+    // Find the first sub-string: 'x=0',or 'y=1.2'.....
+    pos = plotString.find_first_not_of(' ');
+    plotString.erase(0,pos);
+    pos = plotString.find_first_of(" \t\n");
+    if(pos !=string::npos){
+      subString = plotString.substr(0,pos);
+      //plotString.erase(0,pos);
+    }else if(plotString.size()>0){
+      subString = plotString;
+    }
+    nameSnapshot_I[iPlot] = SaveDirName + "/" + subString;
+
+    // plotRange_ID is the range of the whole plot domain, it can be larger
+    // than the simulation domain on this processor.
+    stringstream ss;
+    if(subString.substr(0,2)=="x="){
+      subString.erase(0,2);
+      ss<<subString;
+      ss>>plotRange_ID[iPlot][0];
+      plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0]+1e-10;
+      plotRange_ID[iPlot][2] = -0.5*col->getDy();
+      plotRange_ID[iPlot][3] = col->getLy() + 0.5*col->getDy();
+      plotRange_ID[iPlot][4] = -0.5*col->getDz();
+      plotRange_ID[iPlot][5] = col->getLz() + 0.5*col->getDz();
+    }else if(subString.substr(0,2)=="y="){
+      subString.erase(0,2);
+      ss<<subString;
+      plotRange_ID[iPlot][0] = -0.5*col->getDx();
+      plotRange_ID[iPlot][1] = col->getLx() + 0.5*col->getDx();
+      ss>>plotRange_ID[iPlot][2];
+      plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2]+1e-10;
+      plotRange_ID[iPlot][4] = -0.5*col->getDz();
+      plotRange_ID[iPlot][5] = col->getLz() + 0.5*col->getDz();
+    }else if(subString.substr(0,2)=="z="){
+      subString.erase(0,2);
+      ss<<subString;
+      plotRange_ID[iPlot][0] = -0.5*col->getDx();
+      plotRange_ID[iPlot][1] = col->getLx() + 0.5*col->getDx();
+      plotRange_ID[iPlot][2] = -0.5*col->getDy();
+      plotRange_ID[iPlot][3] = col->getLy() + 0.5*col->getDy();
+      ss>>plotRange_ID[iPlot][4];
+      plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4]+1e-10;
+    }else if(subString.substr(0,3)=="cut"){
+      for(int iDim=0; iDim<nDimMax; iDim++){
+	plotRange_ID[iPlot][iDim*2] = col->getplotRange(iPlot,iDim*2);
+	plotRange_ID[iPlot][iDim*2+1] = col->getplotRange(iPlot,iDim*2+1);	
+      }
+      
+    }else{
+      cout<<"Unknown input plotString: "<<plotString<<endl;
+      abort();
+    }
+
+    /* Assume there are two processors in X-direction.
+       
+       proc 1 
+      _________________
+      |   |   |   |   |
+      |___|___|___|___|
+      |   |   |   |   | 
+      |___|___|___|___|
+      |   |   |   |   |
+      |___|___|___|___|
+      0   1   2   3      global node index
+        0   1   2        global cell index
+      0   1   2   3   4  local node index
+        0   1   2   3    local cell index
+
+	proc 2
+      _________________
+      |   |   |   |   |
+      |___|___|___|___|
+      |   |   |   |   | 
+      |___|___|___|___|
+      |   |   |   |   |
+      |___|___|___|___|
+          3   4   5   6   global node index
+            3   4   5     global cell index
+      0   1   2   3   4   local node index
+        0   1   2   3     local cell index
+
+	In X-directoin, assume the global cell index is 0 - 6, then the 
+	global node index is 0 - 6. 
+
+	
+	In a global view, cell 0 and 5 are ghost cells. For MHD-IPIC, cell
+	1 and 4 are also behave like ghost cells: particles are repopulated
+	in cell 1 and 4 when boundary conditions are applied from MHD, and
+	electric field solver solve field for nodes from 2 to 4. (all the 
+	indexes are global index.)
+
+	In a local view, the cells with local index 0 and 3 are ghost cells. 
+	1) Global node 3 is on bothe proc 1 and proc 2. So the information on 
+	   this node only needs saved once. We choose to save on proc 2 (local
+	   node index 1), and the local nodes 3 and 4 are not saved. 
+	2) If the local node 3 is close to boundary, then save the information.
+
+	So, for this example, nodes with local node index 1 or 2 on proc 1, 
+	and nodes with local node index 1, 2 or 3 on proc 2 are saved.        
+     */
+
+    // Calcualte plotIndexRange_ID, which is the local index, based on
+    // plot range.
+    
+    plotIndexRange_ID[iPlot][0]= 30000;
+    plotIndexRange_ID[iPlot][1]=-30000;
+
+    int iEnd;
+    iEnd = grid->getNXN()-2;
+    if(vct->getXright_neighbor()==MPI_PROC_NULL) iEnd++;
+    
+    for(int i=1; i<iEnd; i++){
+      if(grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
+	 grid->getXN(i)<plotRange_ID[iPlot][1] + 0.5*col->getDx()){
+	if(i<plotIndexRange_ID[iPlot][0]) plotIndexRange_ID[iPlot][0] = i;
+	if(i>plotIndexRange_ID[iPlot][1]) plotIndexRange_ID[iPlot][1] = i;
+      }
+    }
+
+    plotIndexRange_ID[iPlot][2]= 30000;
+    plotIndexRange_ID[iPlot][3]=-30000;
+
+    iEnd = grid->getNYN()-2;
+    if(vct->getYright_neighbor()==MPI_PROC_NULL) iEnd++;
+
+    for(int i=1; i<iEnd; i++){
+      if(grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
+	 grid->getYN(i)<plotRange_ID[iPlot][3] + 0.5*col->getDy()){
+	if(i<plotIndexRange_ID[iPlot][2]) plotIndexRange_ID[iPlot][2] = i;
+	if(i>plotIndexRange_ID[iPlot][3]) plotIndexRange_ID[iPlot][3] = i;
+      }
+    }
+    
+    plotIndexRange_ID[iPlot][4]= 30000;
+    plotIndexRange_ID[iPlot][5]=-30000;
+
+    iEnd = grid->getNZN()-2;
+    if(vct->getZright_neighbor()==MPI_PROC_NULL) iEnd++;
+
+    for(int i=1; i<iEnd; i++){
+      if(grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
+	 grid->getZN(i)<plotRange_ID[iPlot][5] + 0.5*col->getDz()){
+	if(i<plotIndexRange_ID[iPlot][4]) plotIndexRange_ID[iPlot][4] = i;
+	if(i>plotIndexRange_ID[iPlot][5]) plotIndexRange_ID[iPlot][5] = i;
+      }
+    }
+    
+    if(col->getnDim()==2) {
+      // When IPIC3D coupled with MHD, the 2D plane is always XY plane.
+      plotIndexRange_ID[iPlot][4] = 1;
+      plotIndexRange_ID[iPlot][5] = 1;
+    }
+
+    long nCellLocal;
+    nCellLocal =
+      (plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4]+1)*
+      (plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2]+1)*
+      (plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0]+1);
+
+    if(nCellLocal<0) nCellLocal=0;
+    
+    MPI_Reduce(&nCellLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+    
+    // Analyze plot variables.
+    string plotVar;
+    plotVar = col->getplotVar(iPlot);
+    string::size_type pos1, pos2;
+    pos1=0; pos2=0;
+    nVar_I[iPlot] = 0;
+    int count=0;
+    while(pos1 !=string::npos){
+      pos1 = plotVar.find_first_not_of(' ',pos2);
+      pos2 = plotVar.find_first_of(" \t\n",pos1);
+      if(pos1 !=string::npos){
+	Var_II[iPlot][count]=plotVar.substr(pos1,pos2-pos1);
+	nVar_I[iPlot]++;
+	count++;
+      }
+    }
+
+    
+    if(doTestFunc){
+      cout<<"subString= "<<subString<<" plotstring= "<<plotString<<endl;
+      cout<<"length sub = "<<subString.size()
+	  <<" length plotstring= "<<plotString.size()<<endl;
+      cout<<"iplot = "<<iPlot<<"\n"
+	  <<" plotRange0 = "<<plotRange_ID[iPlot][0]
+	  <<" plotRange1 = "<<plotRange_ID[iPlot][1]<<"\n"
+	  <<" plotRange2 = "<<plotRange_ID[iPlot][2]
+	  <<" plotRange3 = "<<plotRange_ID[iPlot][3]<<"\n"
+	  <<" plotRange4 = "<<plotRange_ID[iPlot][4]
+	  <<" plotRange5 = "<<plotRange_ID[iPlot][5]<<"\n"
+	  <<" plotIndexRange0 = "<<plotIndexRange_ID[iPlot][0]
+	  <<" plotIndexRange1 = "<<plotIndexRange_ID[iPlot][1]<<"\n"
+	  <<" plotIndexRange2 = "<<plotIndexRange_ID[iPlot][2]
+	  <<" plotIndexRange3 = "<<plotIndexRange_ID[iPlot][3]<<"\n"
+	  <<" plotIndexRange4 = "<<plotIndexRange_ID[iPlot][4]
+	  <<" plotIndexRange5 = "<<plotIndexRange_ID[iPlot][5]
+	  <<endl;
+      for(int i=0; i<nVar_I[iPlot]; i++){
+	cout<<"i= "<<i<<" var= "<<Var_II[iPlot][i]<<endl;
+      }
+    }      
+  }        
+}
+
+
+void c_Solver:: write_plot_header(int iPlot, int cycle){
+  string nameSub = "write_plot_header";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //-------------------
+
+  stringstream ss;
+  int time;
+  time = getSItime(); // double to int.
+
+  ss<<"_t"<<setfill('0')<<setw(8)<<time
+    <<"_n"<<setfill('0')<<setw(8)<<cycle
+    <<".h";
+  if(myrank==0){
+    string filename;
+    filename = nameSnapshot_I[iPlot] +ss.str();
+    ofstream outFile;
+    outFile.open(filename.c_str(),fstream::out | fstream::trunc);
+    outFile.precision(12);
+    outFile<<"#HEADFILE\n";
+    outFile<<filename<<"\n";
+    outFile<<nprocs<<"\t"<<"nProc\n";
+    outFile<<(IsBinary? 'T':'F')<<"\t save_binary\n";
+    if(IsBinary)
+      outFile<<nByte<<"\t nByte\n";
+    outFile<<"\n";
+
+    outFile<<"#NDIM\n";
+    outFile<<col->getnDim()<<"\t nDim\n";
+    outFile<<"\n";
+    
+    outFile<<"#GRIDGEOMETRYLIMIT\n";
+    outFile<<"cartesian\n";
+    outFile<<"\n";
+    
+    outFile<<"#NSTEP\n";
+    outFile<<cycle<<"\t nStep\n";
+    outFile<<"\n";
+
+    outFile<<"#TIMESIMULATION\n";
+    outFile<<getSItime()<<"\t TimeSimulation\n";
+    outFile<<"\n";
+
+    outFile<<"#PLOTRANGE\n";
+    for(int i=0; i<col->getnDim();i++){
+      outFile<<plotRange_ID[iPlot][2*i]<<"\t coord"<<i<<"Min\n";
+      outFile<<plotRange_ID[iPlot][2*i+1]<<"\t coord"<<i<<"Max\n";
+    }
+    outFile<<"\n";
+
+    outFile<<"#CELLSIZE\n";
+    outFile<<col->getDx()<<"\t dx\n";
+    outFile<<col->getDy()<<"\t dy\n";
+    outFile<<col->getDz()<<"\t dz\n";
+    outFile<<"\n";
+
+    outFile<<"#NCELL\n";
+    outFile<<nCell_I[iPlot]<<"\t nCell\n";
+    outFile<<"\n";
+
+    outFile<<"#SCALARPARAM\n";
+    outFile<<0<<"\t nParam\n";
+    outFile<<"\n";
+       
+    outFile<<"#PLOTRESOLUTION\n";
+    for(int i=0; i<col->getnDim();i++){
+      outFile<<col->getplotDx(iPlot)<<"\t plotDx\n";
+    }
+    outFile<<"\n";
+          
+    string plotVar;
+    plotVar = col->getplotVar(iPlot);
+    outFile<<"#PLOTVARIABLE\n";
+    outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
+    outFile<<plotVar<<"\n";
+    outFile<<"unknown unit\n"; // Should be 'PIC normalized' or 'SI'
+    outFile<<"\n";
+
+    outFile<<"#OUTPUTFORMAT\n";
+    outFile<<"ascii\n";
+    outFile<<"\n";
+
+    
+    
+    if(outFile.is_open()) outFile.close();
+    if(doTestFunc) {
+      cout<<nameSub<<" :filename = "<<filename<<endl;      
+    }
+    
+
+    
+  }
+}
+  
+
+void c_Solver:: write_plot_data(int iPlot, int cycle){
+  string nameSub = "write_plot_data";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //-------------------
+
+  string filename;
+  stringstream ss;
+  int time;
+  time = getSItime(); // double to int.
+  int nLength;
+  if(nprocs>10000){
+    nLength=5;
+  }else if(nprocs>100000){
+    nLength=5;
+  }else{
+    nLength = 4;
+  }
+    
+  
+  ss<<"_t"<<setfill('0')<<setw(8)<<time
+    <<"_n"<<setfill('0')<<setw(8)<<cycle
+    <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
+    <<".idl";
+  filename = nameSnapshot_I[iPlot] +ss.str();
+
+  EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
+			plotIndexRange_ID[iPlot][0],
+			plotIndexRange_ID[iPlot][1],
+			plotIndexRange_ID[iPlot][2],
+			plotIndexRange_ID[iPlot][3],
+			plotIndexRange_ID[iPlot][4],
+			plotIndexRange_ID[iPlot][5]);
+  
+
+  
+}
+
 #endif

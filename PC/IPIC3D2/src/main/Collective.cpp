@@ -1546,7 +1546,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // are the same no matter how many processors are used. 
   useRandomPerCell=true;
   
-  iTest = -1; jTest = -1; kTest = -1; 
+  iTest = -1; jTest = -1; kTest = -1;
+
+  // Variables for plot.
+  nPlotFile = 0;
   
   while(*param){
     get_next_command(param,&Command);
@@ -1669,13 +1672,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#SAVEPLOT"){
       read_var(param,"SaveDirName",            &SaveDirName);
-      /*
-        char* testptr=NULL;
-        int processorExist = system(testptr);
-        if(processorExist!=0){
-            FILE *fp = popen("mkdir ./PC;cd ./PC;mkdir ./plots;mkdir ./restartOUT;", "r");
-        }
-       */
       read_var(param,"FieldOutputCycle",       &FieldOutputCycle);
       read_var(param,"ParticlesOutputCycle",   &ParticlesOutputCycle);
       read_var(param,"DiagnosticsOutputCycle", &DiagnosticsOutputCycle);
@@ -1692,6 +1688,87 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       if(Case == "BATSRUS") RestartOutputCycle = 1; 
 
     }
+    else if( Command == "#SAVEIDL"){
+      /*
+	1) The command name should be #SAVEPLOT
+	2) Each pic region should has its own parameters.
+
+	Example: 
+	#SAVEIDL
+	4                       nPlotFile
+	z=0 var ascii           StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	0.                      DxOutput
+	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
+	x=0 var idl_ascii       StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	0.                      DxOutput
+	rhoS0 rhoS1 bx by pxx          PlotVar
+	y=0 all real4           StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	0.                      DxOutput
+	cut all real8           StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	0                       xMin
+	1                       xMax
+	2                       yMin
+	3                       yMax
+	4                       zMin
+	5                       zMax
+	0.                      DxOutput
+
+	Note:
+	1) 'real4' and 'real8' have not been implemented now. 
+	2) 'cut' has not been fully tested.
+	3) Do not support control output by DtOutPut now.
+	4) Check available output variables in EMfields3D.cpp::getVar().
+      */
+
+      
+      string::size_type pos;
+      read_var(param, "nPlotFile", &nPlotFile);
+
+      if(nPlotFile>0){
+	dnOutput_I   = new int[nPlotFile];
+	dtOutput_I   = new double[nPlotFile];
+	plotDx_I     = new double[nPlotFile];
+	plotString_I = new string[nPlotFile];
+	plotVar_I    = new string[nPlotFile];
+	plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
+	}
+      
+      for(int iPlot=0; iPlot<nPlotFile; iPlot++){
+	read_var(param, "plotString", &plotString_I[iPlot]);	
+	read_var(param, "dnSavePlot", &dnOutput_I[iPlot]);
+	read_var(param, "dtSavePlot", &dtOutput_I[iPlot]);
+	
+	pos = plotString_I[iPlot].find_first_not_of(' ');
+	if(pos !=string::npos) plotString_I[iPlot].erase(0,pos);
+	if(plotString_I[iPlot].substr(0,3)=="cut"){
+	  for(int i=0; i<nDimMax; i++){
+	    // Always read 3 dimension. 
+	    read_var(param, "CoordMin", &plotRange_ID[iPlot][2*i]);
+	    read_var(param, "CoordMax", &plotRange_ID[iPlot][2*i+1]);
+	  }
+	}
+	
+	read_var(param, "dxSavePlot", &plotDx_I[iPlot]);
+
+	pos = plotString_I[iPlot].find("var");
+	if(pos !=string::npos){
+	  read_var(param, "plotVar", &plotVar_I[iPlot]);
+	}else{
+	  plotVar_I[iPlot] =
+	    "rhoS0 rhoS1 Bx By Bz Ex Ey Ez pXXS0 pYYS0 pZZS0 pXXS1 pYYS1 pZZS1 JxS0 JyS0 JzS0 JxS1 JyS1 JzS1";
+	}
+	
+      }      			        
+  }
+
     else if( Command == "#BCIPIC"){
       read_var(param,"bcPHIfaceXright", &bcPHIfaceXright);
       read_var(param,"bcPHIfaceXleft",  &bcPHIfaceXleft);
@@ -1844,8 +1921,7 @@ void Collective::PostProcParam() {
     u0[is] = 0;
     v0[is] = 0;
     w0[is] = 0; 
-  }
-
+  }  
 }
 
 

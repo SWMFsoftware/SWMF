@@ -27,7 +27,9 @@
 #include "ipicfwd.h"
 #include "Alloc.h"
 #include "Basic.h"
+#include <string>
 
+using std::string;
 
 /*! Electromagnetic fields and sources defined for each local grid, and for an implicit maxwell's solver @date May 2008 @par Copyright: (C) 2008 KUL @author Stefano Markidis, Giovanni Lapenta. @version 3.0 */
 
@@ -622,6 +624,12 @@ class EMfields3D                // :public Field
 
     /* Check the accuraty condition */
     void checkConstraint(double dx, double dy, double dz, double dt);
+
+    /* Write fields to IDL format files*/
+    void write_plot_field(string filename, string *plotVar, int nVar,
+			  int minI, int maxI, int minJ, int maxJ,
+			  int minK, int maxK);
+    double getVar(string var, int i, int j, int k);
  private:
     // *************************************
     // ARRAY USED FOR BC WITH BATSRUS

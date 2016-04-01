@@ -3405,8 +3405,16 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateInterp(nxn, nyn, nzn, moment7, vct,this);
   communicateInterp(nxn, nyn, nzn, moment8, vct,this);
   communicateInterp(nxn, nyn, nzn, moment9, vct,this);
-  // calculate the correct densities on the boundaries
-  if(get_col().getCase()!="BATSRUS") adjustNonPeriodicDensities(ns);
+  if(get_col().getCase()=="BATSRUS"){
+    // setFluidBC_P is already called at the beginning of each iteration
+    // to set BC for IPIC3D. Here, at the end of iteration, it is called
+    // again to correcto the boundary nodes so that the output can have
+    // the right values.
+    //setFluidBC_P(ns);
+  }else{
+    // calculate the correct densities on the boundaries
+    adjustNonPeriodicDensities(ns);
+  }
   //Call Nonblocking Halo Exchange
   communicateNode_P(nxn, nyn, nzn, moment0, vct, this);
   communicateNode_P(nxn, nyn, nzn, moment1, vct, this);
@@ -3671,7 +3679,7 @@ void EMfields3D::setFluidBC_P(int is)
   const VirtualTopology3D *vct = &get_vct();
   const Collective *col = &get_col();
   const double signq = qom[is]/(fabs(qom[is]));
-  if (vct->getXleft_neighbor_P() == MPI_PROC_NULL) {
+  if (vct->getXleft_neighbor_P() == MPI_PROC_NULL ) {
     for (int i = 1; i < nyn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
 	{
@@ -4191,6 +4199,176 @@ void EMfields3D::checkConstraint(double dx, double dy, double dz, double dt){
   }
 }
 
+void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
+				   int minI, int maxI, int minJ, int maxJ,
+				   int minK, int maxK){
+  string nameSub = "write_plot_field";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //---------------------
+  if(doTestFunc){
+    cout<<nameSub<<" start"<<endl;
+  }
+    
+  const Collective *col = &get_col();
+  const Grid *grid = &get_grid();
+  
+  // Find out the output variables.
+  
+  ofstream outFile;
+  outFile.open(filename.c_str(),fstream::out | fstream::trunc);
+  outFile<<std::scientific;
+  outFile.precision(7);
+  for(int i=minI; i<= maxI; i++)
+    for(int j=minJ; j<=maxJ; j++)
+      for(int k=minK; k<=maxK; k++){
+	outFile<<dx
+	       <<"\t"<<grid->getXN(i)
+	       <<"\t"<<grid->getYN(j)
+	       <<"\t"<<(col->getnDim()==2? 0:grid->getZN(k));
+	for(int iVar=0; iVar<nVar; iVar++){
+	  outFile<<"\t"<<getVar(var_I[iVar],i,j,k);
+	}	
+	outFile<<"\n";
+      }
+
+
+  if(outFile.is_open()) outFile.close();
+}
+
+double EMfields3D:: getVar(string var, int i, int j, int k){
+  double value;
+  if(var.substr(0,3)=="rho"){
+    // "rho", "rhoS0", "rhoS1"...
+    if(var.size()==3){
+      // "rho"
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += rhons[is][i][j][k];
+      }      
+    }else{
+      // "rhoS0"...
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = rhons[is][i][j][k];
+    }
+  }else if(var.substr(0,3)=="pXX"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	// Is this meanful?? check!!!!! -Yuxi
+	value += pXXsn[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = pXXsn[is][i][j][k];
+    }
+    
+  }else if(var.substr(0,3)=="pYY"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += pYYsn[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = pYYsn[is][i][j][k];
+    }
+
+  }else if(var.substr(0,3)=="pZZ"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += pZZsn[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = pZZsn[is][i][j][k];
+    }
+  }else if(var.substr(0,2)=="Jx"){
+    if(var.size()==2){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	// Check!!!!! --Yuxi
+	value += Jxs[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jxs[is][i][j][k];
+    }
+  }else if(var.substr(0,2)=="Jy"){
+    if(var.size()==2){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	// Check!!!!! --Yuxi
+	value += Jys[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jys[is][i][j][k];
+    }   
+  }else if(var.substr(0,2)=="Jz"){
+    if(var.size()==2){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	// Check!!!!! --Yuxi
+	value += Jzs[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jzs[is][i][j][k];
+    }   
+  }else if(var.substr(0,2)=="Ex"){
+    value = Ex[i][j][k];
+  }else if(var.substr(0,2)=="Ey"){
+    value = Ey[i][j][k];
+  }else if(var.substr(0,2)=="Ez"){
+    value = Ez[i][j][k];
+  }else if(var.substr(0,2)=="Bx"){
+    value = Bxn[i][j][k];
+  }else if(var.substr(0,2)=="By"){
+    value = Byn[i][j][k];
+  }else if(var.substr(0,2)=="Bz"){
+    value = Bzn[i][j][k];
+  }else{
+    value = 0;
+  }
+  return value;
+}
 #endif
 
 /*! initiliaze EM for GEM challange */
