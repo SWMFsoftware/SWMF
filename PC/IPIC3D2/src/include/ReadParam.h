@@ -80,8 +80,12 @@ inline void read_var(std::stringstream *ss, std::string description,
   if(*ss) {
     string temp;
     std::getline(*ss,temp);
-    std::string delimiter = "\t";
-    (*var) = temp.substr(0, temp.find(delimiter));    
+    std::string delimiter = "\t\n"; // Not include space ' '. 
+    std::string::size_type pos;
+    pos = temp.find_first_of(delimiter);
+    if(pos!=std::string::npos) temp.erase(pos);        
+    std::string char0 = "abcdefghijklmnopqrstuvwxyz0123456789_=+-.~&*[]|{}@!#$%^()/?<>,;:"; // Do not have '\'.
+    (*var) = temp.substr(0, temp.find_last_of(char0)+1);    
     if(isProc0){
       std::cout<<"PC: "<<std::left<<std::setw(40)<<(*var)<<description<<std::endl;
       return;
@@ -91,6 +95,8 @@ inline void read_var(std::stringstream *ss, std::string description,
     std::abort();
   }
 }
+
+
 
 inline void get_next_command(std::stringstream *ss, std::string *id){
   *id = "";
