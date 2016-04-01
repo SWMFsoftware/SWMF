@@ -215,7 +215,8 @@ sub process_file{
     print "$Warning\n" if $Warning and not ($Quiet or $Error);
     print $Output if $Verbose or $Error;
     die "$ERROR: error found in the output of $PostIdl\n" if $Error; 
-    die "$ERROR: no out file $OutFile was produced\n" unless -s $OutFile;
+    die "$ERROR: no out file $OutFile was produced\n" 
+	unless -s $OutFile or -s "$BaseFile.dat";
     rename $OutFile, "$BaseFile.dat" if $Format eq "tec";
     unless($Keep){
 	if($BaseFile =~ /[23]d_/ or $BaseFile =~ /1d_/ and $Input){
