@@ -156,11 +156,10 @@ test_ipic3d_vtk_check:
 rundir:
 	mkdir -p ${RUNDIR}/PC
 	cd ${RUNDIR}/PC; \
-		mkdir restartIN restartOUT plots;
+		mkdir restartIN restartOUT plots;\
+		ln -s ${BINDIR}/PostIDL.exe .; \
+		cp    ${SCRIPTDIR}/pIDL .;
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cd ${RUNDIR}/PC; \
-			ln -s ${BINDIR}/PostIDL.exe .; \
-			cp    ${SCRIPTDIR}/pIDL .;
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/IPIC3D.exe .; \
 			cp ${PWDIR}/input/IPIC.in .; \
