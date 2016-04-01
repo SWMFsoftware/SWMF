@@ -32,7 +32,7 @@ rundir: check_src
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
-		cp    ${DIR}/GM/BATSRUS/Scripts/IDL/pIDL .; \
+		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
 		ln -s ${DIR}/GM/BATSRUS/Param/HELIOSPHERE Param
 

@@ -154,7 +154,7 @@ rundir:
 		mkdir restartIN restartOUT IO2; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
-		cp    ${GMDIR}/Scripts/IDL/pIDL .; \
+		cp    ${SCRIPTDIR}/pIDL .; \
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
