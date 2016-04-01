@@ -414,16 +414,20 @@ contains
        if(nDim == 3) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
        if(nDim >= 2) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
        write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
-       call join_string(NameVar_I(1:nDim+nVar), NameVar, '", "')
-       write(UnitTmp_, "(a)") '"'//trim(NameVar)//'"'
+       if(StringHeader(1:11)=="VARIABLES =")then
+          write(UnitTmp_, "(a)") StringHeader(12:len_trim(StringHeader))
+       else
+          call join_string(NameVar_I(1:nDim+nVar), NameVar, '", "')
+          write(UnitTmp_, "(a)") '"'//trim(NameVar)//'"'
+       end if
        write(UnitTmp_,'(a,i6,a,i6,a,i6,a)') &
-            'ZONE T="'//trim(StringHeader)// &
-            '", I=',n1,', J=',n2,', K=',n3,', F=POINT'
+            'ZONE T="STRUCTURED GRID", I=', &
+            n1,', J=',n2,', K=',n3,', F=POINT'
        write(UnitTmp_,'(a,i8,a)') 'AUXDATA ITER="', nStep, '"'
        write(UnitTmp_,'(a,es18.10,a)') 'AUXDATA TIMESIM="', Time, '"'
        do i = 1, nParam
-          write(UnitTmp_,'(a,100es18.10,a)') &
-               'AUXDATA '//trim(NameVar_I(nDim+nVar+i))//'="', Param_I(i)
+          write(UnitTmp_,'(a,es18.10,a)') &
+               'AUXDATA '//trim(NameVar_I(nDim+nVar+i))//'="', Param_I(i), '"'
        end do
        select case(nDim)
        case(1)
