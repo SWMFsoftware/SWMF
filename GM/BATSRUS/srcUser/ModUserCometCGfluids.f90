@@ -34,9 +34,9 @@ module ModUser
   ! Here you must define a user routine Version number and a 
   ! descriptive string.
   !/
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 1.4
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
+       'CG Comet, Z. Huang and G. Toth'
 
   character (len=100) :: NameShapeFile
 
@@ -124,9 +124,10 @@ module ModUser
   ! Only for testing purpose
   logical :: DoUseNeuBackground = .false.
 
+  ! Increase ionization near a field line
   logical :: DoUseFieldlineFile = .false.
   character (len=100) :: NameFieldlineFile
-  real :: radiusTube
+  real :: RadiusTube, IonizationFactor=10.0
   real, allocatable::    XyzFieldline_DI(:,:)
 
   integer, parameter, public :: nNeuFluid = 1
@@ -254,7 +255,8 @@ contains
        case('#USEFIELDLINEFILE')
           call read_var('DoUseFieldlineFile', DoUseFieldlineFile)
           call read_var('NameFieldlineFile',  NameFieldlineFile)
-          call read_var('radiusTube',         radiusTube)
+          call read_var('RadiusTube',         RadiusTube)
+          call read_var('IonizationFactor',   IonizationFactor)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -1492,13 +1494,13 @@ contains
             (Xyz_DGB(1,i,j,k,iBlock)-XyzFieldline_DI(1,:))**2 + &
             (Xyz_DGB(2,i,j,k,iBlock)-XyzFieldline_DI(2,:))**2 + &
             (Xyz_DGB(3,i,j,k,iBlock)-XyzFieldline_DI(3,:))**2 ))
-       if (Distance2Fieldline < radiusTube*Si2No_V(UnitX_)) then
-          v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * 10
+       if (Distance2Fieldline < RadiusTube*Si2No_V(UnitX_)) then
+          v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * IonizationFactor
           if (DoWriteVeIncreaseOnce) then
-             write(*,*) 've_II is increased by a factor of 10 at ', &
-                  Xyz_DGB(:,i,j,k,iBlock), 've from ', ve_II(Neu1_,H2Op_)/10, &
-                  ' to ', ve_II(Neu1_,H2Op_), ' ,total v: ', &
-                  v_II(Neu1_,H2Op_) + ve_II(Neu1_,H2Op_)
+             write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
+                  ' at ', Xyz_DGB(:,i,j,k,iBlock), &
+                  ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
+                  ' to ', v_II(Neu1_,H2Op_)
              DoWriteVeIncreaseOnce = .false.
           end if
        end if
