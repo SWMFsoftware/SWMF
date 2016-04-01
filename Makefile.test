@@ -650,7 +650,7 @@ test5:
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
-	./Config.pl -o=EE:u=EeWedge,e=MhdEos
+	./Config.pl -o=EE:u=Swarm,e=MhdEos
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -g=EE:10,10,10,500,1,SC:4,4,4,1200,1
 	${MAKE} SWMF
