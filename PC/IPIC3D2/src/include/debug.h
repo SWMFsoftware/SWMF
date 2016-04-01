@@ -67,6 +67,7 @@ void init_debug_SWMF(Collective *col, Grid3DCU *grid,
 			    string testFuncsIn,
 			    int iTestIn, int jTestIn, int kTestIn);
 void finalize_debug_SWMF();
+bool do_test_func(string func);
 bool do_test_func(ofstream *&outfileOut, string func);
 bool do_test_cell(ofstream *&outfileOut,
 			 int i=-1, int j=-1, int k=-1);

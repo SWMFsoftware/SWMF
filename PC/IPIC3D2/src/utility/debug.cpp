@@ -186,6 +186,13 @@ void finalize_debug_SWMF(){
     outfile.close();
 }
 
+bool do_test_func(string func){
+  bool doTestFunc;  
+  doTestFunc = testFuncs.find(func) != string::npos;
+  doTestFunc = doTestFunc && iProc==0;
+  return doTestFunc;
+}
+
 
 bool do_test_func(ofstream *&outfileOut, string func){
   bool doTestFunc;  
