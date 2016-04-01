@@ -25,6 +25,8 @@ include Makefile.local
 #the default value of the c++ compiler flags
 SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/interface -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
+SEARCH_C_GENERAL=
+
 #define the "compile kameleon' flag only when KAMELEON is used (to exclude including of the KAMELEON headers on machimes where KAMELEON is not installed) 
 ifneq ($(KAMELEON),nokameleon)   
 	SEARCH_C+=-D _PIC_COMPILE__KAMELEON_ 
@@ -72,6 +74,7 @@ endif
 #when OpenMP is used add the appropriate compiler flag and library
 ifeq ($(OPENMP),on)
 	SEARCH_C+=-openmp
+	SEARCH_C_GENERAL+=-openmp
 	AMPSLINKLIB+=-openmp
 endif
 
@@ -149,7 +152,7 @@ LIB_after_build:
 ifeq ($(INTERFACE),on)
 	cd ${WSD}/interface; make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 endif
-	cd ${WSD}/general;                     make SEARCH_C=
+	cd ${WSD}/general;                     make SEARCH_C="${SEARCH_C_GENERAL}" 
 	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
