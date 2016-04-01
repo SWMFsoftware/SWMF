@@ -224,7 +224,7 @@ contains
        ! Call save_plot_file to write data to disk.
        call save_plot_file(NameFile, &
             TypeFileIn=TypeFile_I(iFile), &
-            StringHeaderIn=" ", &
+            StringHeaderIn=NameUnit, &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
             NameVarIn = NameVar, &
