@@ -662,7 +662,11 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(a)') '#PLOTVARIABLE'
            write(UnitTmp_,'(i8,a18)') nplotvar, 'nPlotVar'
            write(UnitTmp_,'(a)')trim(allnames)
-           if(trim(unitstr_IDL)=='') then
+           if(TypeFile_I(iFile) == 'tec')then
+              call get_tec_variables(iFile, nplotvar, plotvarnames, &
+                   unitstr_TEC)
+              write(UnitTmp_,'(a)')trim(unitstr_TEC)
+           elseif( unitstr_IDL == '') then
               write(UnitTmp_,'(a)')'normalized units'
            else
               write(UnitTmp_,'(a)')trim(unitstr_IDL)
