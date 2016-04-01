@@ -885,6 +885,8 @@ subroutine MH_set_parameters(TypeAction)
                    TypeFile_I(iFile) = 'real8'
               if(index(plot_string,'idl_ascii') > 0) &
                    TypeFile_I(iFile) = 'ascii'
+              if(index(plot_string,'idl_tec') > 0) &
+                   TypeFile_I(iFile) = 'tec'
            elseif(index(plot_string, 'hdf') > 0) then
               ! With these values VisIt recognises the files as timesteps
               ! with the general defaults it does not. 
