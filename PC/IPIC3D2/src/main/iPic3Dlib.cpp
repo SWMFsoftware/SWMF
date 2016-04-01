@@ -86,7 +86,12 @@ c_Solver::~c_Solver()
   if(nPlotFile>0){
     delArr2(plotRange_ID,2*nDimMax);
     delArr2(plotIndexRange_ID, 2*nDimMax);
-    delArr2(Var_II, nVarMax);
+
+    for(int i=0;i<nPlotFile;i++){
+      delete [] Var_II[i];
+    }
+    delete [] Var_II;
+
     delete [] nVar_I;
     delete [] nCell_I;
     delete [] nameSnapshot_I;
@@ -958,7 +963,12 @@ void c_Solver:: write_plot_init(){
   plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
   plotIndexRange_ID = newArr2(int, nPlotFile, 2*nDimMax);
   nameSnapshot_I = new string[nPlotFile];
-  Var_II = newArr2(string, nPlotFile, nVarMax);
+
+  Var_II = new std::string*[nPlotFile];
+  for(int i=0;i<nPlotFile;i++){
+    Var_II[i]=new std::string[nVarMax];
+  }
+
   nVar_I = new int[nPlotFile];
   nCell_I = new long[nPlotFile];
   
@@ -1143,7 +1153,7 @@ void c_Solver:: write_plot_init(){
       pos1 = plotVar.find_first_not_of(' ',pos2);
       pos2 = plotVar.find_first_of(" \t\n",pos1);
       if(pos1 !=string::npos){
-	Var_II[iPlot][count]=plotVar.substr(pos1,pos2-pos1);
+	Var_II[iPlot][count] = plotVar.substr(pos1,pos2-pos1);
 	nVar_I[iPlot]++;
 	count++;
       }
