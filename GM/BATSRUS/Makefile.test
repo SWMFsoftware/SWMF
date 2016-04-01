@@ -81,6 +81,7 @@ test_help:
 	@echo "    test_cometfluids_start     (run first 3-fluid+Pe comet test)" 
 	@echo "    test_cometfluids_restart   (run 3-fluid+Pe comet restart test)"
 	@echo "    test_cometCGhd             (run comet CG hd test)"
+	@echo "    test_cometCfluids          (run comet CG fluids test)"
 	@echo "    test_corona                (run solar corona test)"
 	@echo "    test_coronasph             (run spherical corona test)"
 	@echo "    test_chromo                (run Chromo - Solar Corona test)"
