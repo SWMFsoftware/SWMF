@@ -315,7 +315,7 @@ namespace PIC {
       //coordinates of the vertex
       double x[DIM];
       // data buffer length
-      static int AssociatedDataLength_;
+      static int totalAssociatedDataLength;
       // sampling offsets
       static int CollectingSamplingOffset;
       static int CompletedSamplingOffset;
@@ -335,7 +335,7 @@ namespace PIC {
       //.......................................................................
       // interface with stack functionality
       inline int AssociatedDataLength(){
-	return AssociatedDataLength_;
+	return totalAssociatedDataLength;
       }
       inline char* GetAssociatedDataBufferPointer(){
 	return AssociatedDataPointer;
@@ -347,7 +347,7 @@ namespace PIC {
       inline static void SetDataOffsets(int SamplingOffset, int SampleDataLength){
 	CollectingSamplingOffset = SamplingOffset;
 	CompletedSamplingOffset  = SamplingOffset +   SampleDataLength;
-	AssociatedDataLength_    = SamplingOffset + 2*SampleDataLength;
+	totalAssociatedDataLength= SamplingOffset + 2*SampleDataLength;
       }
       //.......................................................................
       //check status of vertex
