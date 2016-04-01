@@ -204,6 +204,9 @@ program PostIDL
         
      case('#OUTPUTFORMAT')
         call read_var('TypeOutPutFormat', TypeFile)
+
+     case('#ROOTBLOCK', '#GRIDBLOCKSIZE')
+        ! Ignore these commands
         
      case default
         write(*,*) 'WARNING: unknow command ', NameCommand
