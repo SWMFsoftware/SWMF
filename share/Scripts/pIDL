@@ -28,8 +28,19 @@ my $WARNING = "WARNING in pIDL";
 my $Pwd     = `pwd`; chop $Pwd;
 my $PostIdl = "$Pwd/PostIDL.exe";
 
-my $Pattern = "IO2/";
-$Pattern = $ARGV[0] if $ARGV[0];
+# Set default pattern
+my $Pattern;
+if($ARGV[0]){
+    $Pattern = $ARGV[0];
+}else{
+    foreach ("IO2", "plots", "output", "Output"){
+	next unless -d $_;
+	$Pattern = $_."/";
+	last;
+    }
+}
+
+die "No directory/pattern was set\n" unless $Pattern;
 
 # Split $Pattern into a directory and the basename for the files
 my $Dir;
