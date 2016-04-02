@@ -127,8 +127,9 @@ module ModUser
   ! Increase ionization near a field line
   logical :: DoUseFieldlineFile = .false.
   character (len=100) :: NameFieldlineFile
-  real :: RadiusTube, IonizationFactor=10.0
-  real, allocatable::    XyzFieldline_DI(:,:)
+  integer :: nVarFieldlineFile
+  real    :: RadiusTube, IonizationFactor=10.0
+  real, allocatable::  XyzFieldline_DI(:,:)
 
   integer, parameter, public :: nNeuFluid = 1
   integer, parameter :: Neu1_  =  1
@@ -153,6 +154,11 @@ module ModUser
   real :: PerturbedSwUx, PerturbedSwUy, PerturbedSwUz
   real :: PerturbedSwBx, PerturbedSwBy, PerturbedSwBz
   real :: PerturbedSwRho
+
+  !! Make the photo- and electron impact ionization rate global arrays for
+  !! user_set_plot_var
+  real, dimension(1:nNeuFluid,1:nIonFluid, &
+       MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: v_IIGB, ve_IIGB
 
   character (len=6), parameter, public :: NameNeutral_I(nNeuFluid) = &
        (/ 'Neu1  ' /)
@@ -255,6 +261,7 @@ contains
        case('#USEFIELDLINEFILE')
           call read_var('DoUseFieldlineFile', DoUseFieldlineFile)
           call read_var('NameFieldlineFile',  NameFieldlineFile)
+          call read_var('nVarFieldlineFile',  nVarFieldlineFile)
           call read_var('RadiusTube',         RadiusTube)
           call read_var('IonizationFactor',   IonizationFactor)
        case('#USERINPUTEND')
@@ -616,7 +623,7 @@ contains
 
     logical :: DoReadFieldlineFile = .true.
 
-    integer:: nPoint, nVar, iPoint, iFileHeader, iZoneHeader, i
+    integer:: nPoint, iPoint, iFileHeader, iZoneHeader, i
 
     real, allocatable:: State_VI(:,:)
 
@@ -628,12 +635,10 @@ contains
     if(.not.DoReadFieldlineFile) RETURN
     DoReadFieldlineFile = .false.
 
-    nVar = 29
-
     open(UnitTmp_, file=NameFieldlineFile)
 
     ! Read the header info for the whole file
-    do iFileHeader = 1, nVar+3+1
+    do iFileHeader = 1, nVarFieldlineFile+3+1
        read(UnitTmp_,'(a)') String1
     end do
 
@@ -656,7 +661,7 @@ contains
     read(UnitTmp_,'(a)') String1
     !!--------------------------------------------------------------------
 
-    allocate(XyzFieldline_DI(3,nPoint), State_VI(nVar,nPoint))
+    allocate(XyzFieldline_DI(3,nPoint), State_VI(nVarFieldlineFile,nPoint))
 
     ! Read the points along a field line
     do iPoint = 1, nPoint
@@ -1677,8 +1682,6 @@ contains
     real, dimension(            1:nNeuFluid, 1:nI,1:nJ,1:nK) :: &
          fen_IC, uNeuElec2_IC
 
-    real, dimension(1:nNeuFluid,1:nIonFluid, 1:nI,1:nJ,1:nK) :: v_IIC, ve_IIC
-
     real, dimension(1:nNeuFluid,1:nIonFluid) :: Qexc_II, Qion_II
 
     real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, &
@@ -1883,8 +1886,8 @@ contains
             fii_IIC(1:nIonFluid,1:nIonFluid,i,j,k),fie_IC(1:nIonFluid,i,j,k),&
             alpha_IC(1:nIonFluid,i,j,k), &
             kin_IIIIC(1:nIonFluid,1:nNeuFluid,1:nNeuFluid,1:nIonFluid,i,j,k),&
-            v_IIC(1:nNeuFluid,1:nIonFluid,i,j,k), &
-            ve_IIC(1:nNeuFluid,1:nIonFluid,i,j,k),&
+            v_IIGB(1:nNeuFluid,1:nIonFluid,i,j,k,iBlock), &
+            ve_IIGB(1:nNeuFluid,1:nIonFluid,i,j,k,iBlock),&
             uElec_DC(1:3,i,j,k),uIon_DIC(1:3,1:nIonFluid,i,j,k),&
             Qexc_II(1:nNeuFluid,1:nIonFluid),Qion_II(1:nNeuFluid,1:nIonFluid),&
             DoCalcShading, IsIntersectedShapeR_III(i,j,k))
@@ -1917,7 +1920,7 @@ contains
        vAdd_I = 0.
        do iNeuFluid=1,nNeuFluid
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)
+               v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)
        end do
 
        ! Sources divideded into the terms 
@@ -1960,7 +1963,7 @@ contains
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)*&
                (uNeu1_DC(1,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k)* nNeu1_C(i,j,k)* &
+               v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)* nNeu1_C(i,j,k)* &
                (uNeu1_DC(1,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
        end do
 
@@ -2036,7 +2039,7 @@ contains
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)*&
                (uNeu1_DC(2,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)*&
+               v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)*&
                (uNeu1_DC(2,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
        end do
 
@@ -2113,7 +2116,7 @@ contains
                fin_IIC(1:nIonFluid,iNeuFluid,i,j,k)*&
                (uNeu1_DC(3,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k) * nNeu1_C(i,j,k)*&
+               v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock) * nNeu1_C(i,j,k)*&
                (uNeu1_DC(3,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
        end do
 
@@ -2281,7 +2284,7 @@ contains
        vAdd_I = 0.
        do iNeuFluid=1,nNeuFluid
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)* &
+               v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)* &
                uIonNeu2_IIC(1:nIonFluid,iNeuFluid,i,j,k)
        end do
 
@@ -2314,7 +2317,7 @@ contains
           vAdd_I(1:nIonFluid) = 0.
           do iNeuFluid=1,nNeuFluid
              vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-                  v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)* &
+                  v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)*nNeu1_C(i,j,k)* &
                   uNeuElec2_IC(iNeuFluid,i,j,k)
           end do
 
@@ -2361,10 +2364,10 @@ contains
           vAdd_I(1:nIonFluid) = 0.
           do iNeuFluid=1,nNeuFluid
              vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-                  ((v_IIC(iNeuFluid,1:nIonFluid,i,j,k) - &
-                  ve_IIC(iNeuFluid,1:nIonFluid,i,j,k)) * &
+                  ((v_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock) - &
+                  ve_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock)) * &
                   Qexc_II(iNeuFluid,1:nIonFluid) - &
-                  ve_IIC(iNeuFluid,1:nIonFluid,i,j,k) * &
+                  ve_IIGB(iNeuFluid,1:nIonFluid,i,j,k,iBlock) * &
                   Qion_II(iNeuFluid,1:nIonFluid))*ChargeIon_I(1:nIonFluid) * &
                   nNeu1_C(i,j,k)
           end do
@@ -3008,9 +3011,9 @@ contains
           do iNeuFluid=1,nNeuFluid
              write(*,*)NameFluid_I(iIonFluid+1), '&  ',NameNeutral_I(iNeuFluid)
              write(*,123)' v_phio   = ', &
-                  v_IIC(iNeuFluid,iIonFluid,i,j,k)," [1/s]"
+                  v_IIGB(iNeuFluid,iIonFluid,i,j,k,iBlock)," [1/s]"
              write(*,123)' v_eio    = ', &
-                  ve_IIC(iNeuFluid,iIonFluid,i,j,k)," [1/s]"
+                  ve_IIGB(iNeuFluid,iIonFluid,i,j,k,iBlock)," [1/s]"
              write(*,123)' fin      = ', &
                   fin_IIC(iIonFluid,iNeuFluid,i,j,k)," [1/s]"
              write(*,123)' |u_imn|  = ', &
@@ -3740,6 +3743,26 @@ contains
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           PlotVar_G(i,j,k) = ne20eV_GB(i,j,k,iBlock)
        end do; end do; end do
+
+    case('vPhotoH2Op')
+       NameIdlUnit = '1/s'
+       NameTecUnit = '[1/s]'
+       PlotVar_G(:,:,:) = v_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+
+    case('vPhotoSw')
+       NameIdlUnit = '1/s'
+       NameTecUnit = '[1/s]'
+       PlotVar_G(:,:,:) = v_IIGB(Neu1_,SW_,i,j,k,iBlock)
+
+    case('vElectronH2Op')
+       NameIdlUnit = '1/s'
+       NameTecUnit = '[1/s]'
+       PlotVar_G(:,:,:) = ve_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+
+    case('vElectronSw')
+       NameIdlUnit = '1/s'
+       NameTecUnit = '[1/s]'
+       PlotVar_G(:,:,:) = ve_IIGB(Neu1_,SW_,i,j,k,iBlock)
 
        ! case('testarray1')
        !    NameIdlUnit = ' '   
