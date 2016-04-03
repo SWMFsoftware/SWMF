@@ -24,9 +24,22 @@ bool PIC::Debugger::InfiniteLoop(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startN
 
   if (startNode->block!=NULL) {
     //the block is allocated; check the particle lists associated with the block
+    int nTotalThreads_OpenMP=1,thread_OpenMP;
 
-    for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    nTotalThreads_OpenMP=omp_get_thread_num();
+#endif
+
+
+    for (thread_OpenMP=0;thread_OpenMP<nTotalThreads_OpenMP;thread_OpenMP++) for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
       ptr=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      ptr=*(startNode->block->GetTempParticleMovingListTableThread(thread_OpenMP,i,j,k));
+#else
+#error The option is unknown
+#endif
 
       while (ptr!=-1) {
         ptr=PIC::ParticleBuffer::GetNext(ptr);
@@ -115,8 +128,23 @@ void PIC::Debugger::FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBl
   if (startNode->block!=NULL) {
     //the block is allocated; check the particle lists associated with the block
 
-    for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (int npass=0;npass<2;npass++) {
-      ptr=(npass==0) ? startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : startNode->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+    int nTotalThreads_OpenMP=1,thread_OpenMP;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    nTotalThreads_OpenMP=omp_get_thread_num();
+  #endif
+
+    for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (int npass=0;npass<2;npass++)  for (thread_OpenMP=0;thread_OpenMP<((npass==0) ? 1 : nTotalThreads_OpenMP);thread_OpenMP++) {
+      if (npass==0) ptr=startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+      else {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+        ptr=startNode->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+        ptr=(*startNode->block->GetTempParticleMovingListTableThread(thread_OpenMP,i,j,k));
+#endif
+      }
+
+//      ptr=(npass==0) ? startNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : startNode->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
       if (ptr!=-1) {
         if ((ParticleAllocationTable[ptr]&1)==0) {
