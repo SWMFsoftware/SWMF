@@ -1204,6 +1204,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     filename = nameSnapshot_I[iPlot] +ss.str();
     ofstream outFile;
     outFile.open(filename.c_str(),fstream::out | fstream::trunc);
+    outFile<<std::scientific;
     outFile.precision(12);
     outFile<<"#HEADFILE\n";
     outFile<<filename<<"\n";
@@ -1219,6 +1220,10 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     
     outFile<<"#GRIDGEOMETRYLIMIT\n";
     outFile<<"cartesian\n";
+    for(int i=0; i<col->getnDim();i++){
+      outFile<<0.0<<"\t XyzMin"<<i<<"\n";
+      outFile<<col->getFluidLx()<<"\t XyzMax"<<i<<"\n";
+    }
     outFile<<"\n";
     
     outFile<<"#NSTEP\n";

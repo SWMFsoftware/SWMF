@@ -601,7 +601,11 @@ subroutine write_plot_common(iFile)
               write(UnitTmp_,'(es13.5," rRound1")') rRound1
               write(UnitTmp_,'(es13.5," SqrtNDim")') SqrtNDim
            end if
-           ! Need CoorMin,CoordMax...
+           do i0 = 1, nDim
+              write(c0,'(i1)') i0
+              write(UnitTmp_,'(es13.5,a18)') XyzMin_D(i0), 'XyzMin'//c0
+              write(UnitTmp_,'(es13.5,a18)') XyzMax_D(i0), 'XyzMax'//c0
+           enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#PERIODIC'
