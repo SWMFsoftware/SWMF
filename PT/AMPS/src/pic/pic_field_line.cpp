@@ -4,6 +4,11 @@
 
 #include "pic.h"
 
+//static variables of class cFieldLineVertex
+int PIC::FieldLine::cFieldLineVertex::totalAssociatedDataLength=-1;
+int PIC::FieldLine::cFieldLineVertex::CollectingSamplingOffset=-1;
+int PIC::FieldLine::cFieldLineVertex::CompletedSamplingOffset=-1;
+
 namespace PIC{
   namespace FieldLine{
 
