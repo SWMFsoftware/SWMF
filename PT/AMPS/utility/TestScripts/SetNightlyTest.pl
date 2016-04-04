@@ -131,7 +131,6 @@ if($Compilers[0] eq "all"){
 	$Blocks{$CompilerSupported."All"  } = "1";
 	unless($Blocks{"Pleiades"} or 
 	       $Blocks{"Yellowstone"} or
-	       $Blocks{"Valeriy"} or
 	       $Blocks{"Stampede"}){
 	    $Blocks{$CompilerSupported."Other"  } = "1";
 	}
@@ -145,7 +144,6 @@ else{
 		$Blocks{$CompilerSupported."All"  } = "1";
 		unless($Blocks{"Pleiades"} or 
 		       $Blocks{"Yellowstone"} or
-		       $Blocks{"Valeriy"} or
 		       $Blocks{"Stampede"}){
 		    $Blocks{$CompilerSupported."Other"  } = "1";
 		}
