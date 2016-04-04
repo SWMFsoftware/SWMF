@@ -76,9 +76,12 @@ cd ..
 #>GNUAll ###################################################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
 #./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    <#
-#>IntelAll ##################################################################
+#>IntelAll #################################################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #./Config.pl -install -compiler=ifortmpif90,iccmpicxx >& test_amps.log    <#
+#>Valeriy ##################################################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
+#./Config.pl -install -compiler=ifort,iccmpicxx >& test_amps.log          <#
 #>PGIAll ###################################################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
