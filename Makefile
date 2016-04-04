@@ -221,7 +221,7 @@ PSPH:	ENV_CHECK
 	@echo ' '
 
 PIDL:	ENV_CHECK
-	cd GM/BATSRUS; $(MAKE) PIDL
+	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
 
 SNAPSHOT: ENV_CHECK
