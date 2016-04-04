@@ -81,7 +81,7 @@ cd ..
 #./Config.pl -install -compiler=ifortmpif90,iccmpicxx >& test_amps.log    <#
 #>Valeriy ##################################################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
-#./Config.pl -install -compiler=ifort,iccmpicxx >& test_amps.log          <#
+#./Config.pl -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log<#
 #>PGIAll ###################################################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
@@ -173,11 +173,17 @@ cd ..
 
 # GNU compiled tests
 
+#>Valeriy ########################################################################
+#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
+
 #>GNUOther ####################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
 #make test_run >>& test_amps.log             <#
 
 # Intel compiled tests
+
+#>Valeriy ########################################################################
+#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
 
 #>IntelOther ##################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #

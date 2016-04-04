@@ -87,7 +87,7 @@ foreach (@Arguments) {
      print "-rm-test\/comp\t\t\tremove nightly tests\n";
      print "-amps-test=[on,off]\t\ttells the code that a nightly test is executed\n";
      print "-openmp=[on,off]\t\twhen \"on\" use OpenMP and MPI libraries for compiling AMPS\n";
-     
+     print "-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker\n";
      exit;
    }
    
@@ -237,6 +237,19 @@ foreach (@Arguments) {
       next}; 
 
   if (/^-rm-test$/i)      {require "./utility/TestScripts/RemoveNightlyTest.pl";     next}; 
+  if(/^-link-option=(.*)$/){
+      my $options=$1; $options =~ s/,/ /g;
+      open(my $fh,'<',"Makefile"); my @lines = <$fh>; close($fh);
+      open(my $fh,'>',"Makefile");
+      foreach my $line (@lines){
+	  if($line =~ m/^EXTRALINKEROPTIONS=/){
+	      $line = "EXTRALINKEROPTIONS=$options\n";
+	  }
+	  print $fh $line;
+      }
+      close($fh);
+      next;
+  };
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }

@@ -42,8 +42,9 @@ CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
 AMPSLINKER=${CC}
 
-
 AMPSLINKLIB= 
+
+EXTRALINKEROPTIONS=
 
 #include BATL-related libraries for linking
 ifneq ($(BATL),nobatl)	
@@ -187,7 +188,7 @@ amps_after_build: LIB_after_build
 
 amps_link:
 	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
-		${CPPLIB} ${AMPSLINKLIB}
+		${CPPLIB} ${AMPSLINKLIB} ${EXTRALINKEROPTIONS}
 
 .PHONY: test
 test:
