@@ -50,7 +50,8 @@ MODULES = \
 	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
-	CON_ray_trace.o
+	CON_ray_trace.o\
+	PostIDL.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${MODULES}
@@ -78,6 +79,12 @@ LIB_NO_C:DEPEND
 LIB_NO_C_: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
+
+${BINDIR}/PostIDL.exe: PostIDL.o ${MY_LIB}
+	${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o -L${LIBDIR} -lSHARE ${Lflag2}
+
+PIDL: DEPEND
+	make ${BINDIR}/PostIDL.exe
 
 clean: cleanfiles
 

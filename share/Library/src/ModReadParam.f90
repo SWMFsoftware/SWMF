@@ -230,7 +230,7 @@ contains
 
     integer :: iUnit_I(MaxNestedFile)
 
-    integer :: iFile, i, iError, iProc, iComm
+    integer :: iFile, i, iError, iProc, nProc, iComm
 
     logical :: IsFound
 
@@ -251,15 +251,19 @@ contains
     ! If no file name is given, read from STDIN
     DoReadStdIn = .not. present(NameFile)
     
-    ! Get processor rank
-    call MPI_comm_rank(iComm,iProc,iError)
+    ! Get processor rank and number of processors
+    if(iComm == MPI_COMM_SELF)then
+       iProc = 0
+       nProc = 1
+    else
+       call MPI_comm_rank(iComm, iProc, iError)
+       call MPI_comm_size(iComm, nProc, iError)
+    end if
 
-    !\
     ! Read all input file(s) into memory and broadcast
-    !/
-    if(iProc==0)then
-       iFile=1
-       nLine=0
+    if(iProc == 0)then
+       iFile = 1
+       nLine = 0
        if(DoReadStdin) then
           iUnit_I(iFile) = StdIn_
        else 
@@ -341,17 +345,20 @@ contains
        if(nLine==0)call CON_stop(NameSub// &
             " SWMF_ERROR: no lines of input read")
     end if
-    ! Broadcast the number of lines and the text itself to all processors
-    call MPI_Bcast(nLine,1,MPI_INTEGER,0,iComm,iError)
+    
+    if(nProc > 1)then
+       ! Broadcast the number of lines and the text itself to all processors
+       call MPI_Bcast(nLine,1,MPI_INTEGER,0,iComm,iError)
 
-    if(iError>0)call CON_stop(NameSub// &
-         " MPI_ERROR: number of lines could not be broadcast")
+       if(iError>0)call CON_stop(NameSub// &
+            " MPI_ERROR: number of lines could not be broadcast")
 
-    call MPI_Bcast(StringLine_I,lStringLine*nLine,MPI_CHARACTER,&
-         0,iComm,iError)
+       call MPI_Bcast(StringLine_I,lStringLine*nLine,MPI_CHARACTER,&
+            0,iComm,iError)
 
-    if(iError>0)call CON_stop(NameSub// &
-         " MPI_ERROR: text could not be broadcast")
+       if(iError>0)call CON_stop(NameSub// &
+            " MPI_ERROR: text could not be broadcast")
+    end if
 
     if(iProc==0)write(*,'(a,i4,a)') NameSub// &
          ': read and broadcast nLine=',nLine,' lines of text'
