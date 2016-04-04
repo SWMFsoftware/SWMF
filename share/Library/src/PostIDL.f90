@@ -72,7 +72,7 @@ program post_idl
 
   logical :: IsStructured, DoReadBinary=.false.
   character (len=100) :: NameFile, NameFileHead, NameCoord
-  character (len=500) :: NameVar, NameUnit
+  character (len=500) :: VarNames, NameUnit
   integer :: l, iProc
 
   ! Variables for the 2D lookup table
@@ -180,7 +180,7 @@ program post_idl
 
      case('#PLOTVARIABLE')
         call read_var('nPlotVar', nPlotVar)
-        call read_var('NameVar',  NameVar)
+        call read_var('NameVar',  VarNames)
         call read_var('NameUnit', NameUnit)
 
      case('#SCALARPARAM')
@@ -272,7 +272,7 @@ program post_idl
         iDimCut_D(3) = iDim
         nParamExtra = nParamExtra + 1
         ParamExtra_I(nParamExtra) = 0.5*(CoordMax_D(iDim) + CoordMin_D(iDim))
-        NameVar=trim(NameVar)//' cut'//trim(NameCoord_D(iDim))
+        VarNames=trim(VarNames)//' cut'//trim(NameCoord_D(iDim))
      end if
   end do
 
@@ -343,7 +343,7 @@ program post_idl
 
   ! Create complete space separated list of "variable" names
   call join_string(NameCoordPlot_D(1:nDim), NameCoord)
-  NameVar = trim(NameCoord)//' '//trim(NameVar)
+  VarNames = trim(NameCoord)//' '//trim(VarNames)
 
   ! Collect info from all files and put it into PlotVar_VC and Coord_DC
   VolumeCheck = 0.0
@@ -605,7 +605,7 @@ program post_idl
        StringHeaderIn = NameUnit, &
        nStepIn = nStep, TimeIn = t, &
        ParamIn_I = Param_I, &
-       NameVarIn = NameVar, &
+       NameVarIn = VarNames, &
        IsCartesianIn = TypeGeometry=='cartesian' .and. IsStructured,&
        nDimIn = nDim,&
        CoordIn_DIII = Coord_DC(:,1:n1,:,:), & 
@@ -707,7 +707,7 @@ contains
 
           ! Find vectors
           allocate(NameVar_V(nDim + nPlotVar + nParamPlot))
-          call split_string(NameVar, NameVar_V)
+          call split_string(VarNames, NameVar_V)
 
           ! Make this array large enough
           allocate(iVarVector_I(nPlotVar/3))
