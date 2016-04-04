@@ -108,8 +108,7 @@ NOMPI:
 	cd util/NOMPI/src; $(MAKE) LIB
 
 PIDL:
-	cd ${SHAREDIR}; $(MAKE) LIB
-	cd srcPostProc; make PIDL
+	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
