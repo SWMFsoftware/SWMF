@@ -72,7 +72,7 @@ program post_idl
 
   logical :: IsStructured, DoReadBinary=.false.
   character (len=100) :: NameFile, NameFileHead, NameCoord
-  character (len=500) :: VarNames, NameUnit
+  character (len=500) :: NameVar, NameUnit
   integer :: l, iProc
 
   ! Variables for the 2D lookup table
@@ -180,7 +180,7 @@ program post_idl
 
      case('#PLOTVARIABLE')
         call read_var('nPlotVar', nPlotVar)
-        call read_var('NameVar',  VarNames)
+        call read_var('NameVar',  NameVar)
         call read_var('NameUnit', NameUnit)
 
      case('#SCALARPARAM')
@@ -272,7 +272,7 @@ program post_idl
         iDimCut_D(3) = iDim
         nParamExtra = nParamExtra + 1
         ParamExtra_I(nParamExtra) = 0.5*(CoordMax_D(iDim) + CoordMin_D(iDim))
-        VarNames=trim(VarNames)//' cut'//trim(NameCoord_D(iDim))
+        NameVar=trim(NameVar)//' cut'//trim(NameCoord_D(iDim))
      end if
   end do
 
@@ -343,7 +343,7 @@ program post_idl
 
   ! Create complete space separated list of "variable" names
   call join_string(NameCoordPlot_D(1:nDim), NameCoord)
-  VarNames = trim(NameCoord)//' '//trim(VarNames)
+  NameVar = trim(NameCoord)//' '//trim(NameVar)
 
   ! Collect info from all files and put it into PlotVar_VC and Coord_DC
   VolumeCheck = 0.0
@@ -605,7 +605,7 @@ program post_idl
        StringHeaderIn = NameUnit, &
        nStepIn = nStep, TimeIn = t, &
        ParamIn_I = Param_I, &
-       NameVarIn = VarNames, &
+       NameVarIn = NameVar, &
        IsCartesianIn = TypeGeometry=='cartesian' .and. IsStructured,&
        nDimIn = nDim,&
        CoordIn_DIII = Coord_DC(:,1:n1,:,:), & 
@@ -642,7 +642,7 @@ contains
     ! Temporary variables to process the variable name string
     integer:: iVector, iVar, l
     character(len=10), allocatable:: NameVar_V(:)
-    character(len=10)             :: NameVar, NameVector
+    character(len=10)             :: NameVector1, NameVector
 
     ! Variables for roundcube coordinate transformation
     real :: r2, Dist1, Dist2, Coef1, Coef2
@@ -707,7 +707,7 @@ contains
 
           ! Find vectors
           allocate(NameVar_V(nDim + nPlotVar + nParamPlot))
-          call split_string(VarNames, NameVar_V)
+          call split_string(NameVar, NameVar_V)
 
           ! Make this array large enough
           allocate(iVarVector_I(nPlotVar/3))
@@ -715,25 +715,25 @@ contains
           NameVector = ' '
           do iVar = 1, nPlotVar - 2
              ! Add nDim to skip the coordinate names
-             NameVar = NameVar_V(nDim+iVar)
-             call lower_case(NameVar)
+             NameVector1 = NameVar_V(nDim+iVar)
+             call lower_case(NameVector1)
 
-             l = len_trim(NameVar)
+             l = len_trim(NameVector1)
 
              ! Identify vectors as 3 strings ending with x, y, z
-             if(NameVar(l:l) /= 'x') CYCLE
+             if(NameVector1(l:l) /= 'x') CYCLE
 
              ! Prospective vector component
-             NameVector = NameVar(1:l-1)
+             NameVector = NameVector1(1:l-1)
 
              ! Check the next two names
-             NameVar = NameVar_V(nDim+iVar+1)
-             call lower_case(NameVar)
-             if(NameVar /= trim(NameVector)//'y') CYCLE
+             NameVector1 = NameVar_V(nDim+iVar+1)
+             call lower_case(NameVector1)
+             if(NameVector1 /= trim(NameVector)//'y') CYCLE
 
-             NameVar = NameVar_V(nDim+iVar+2)
-             call lower_case(NameVar)
-             if(NameVar /= trim(NameVector)//'z') CYCLE
+             NameVector1 = NameVar_V(nDim+iVar+2)
+             call lower_case(NameVector1)
+             if(NameVector1 /= trim(NameVector)//'z') CYCLE
 
              nVector = nVector + 1
              iVarVector_I(nVector) = iVar
