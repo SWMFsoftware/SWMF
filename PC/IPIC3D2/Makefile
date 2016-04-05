@@ -8,6 +8,7 @@ help:
 	@echo
 	@echo 'make                        - compile IPIC3D.exe'
 	@echo 'make LIB                    - compile libPW.a for SWMF'
+	@echo 'make PIDL                   - compile PostIDL.exe for post processing'
 	@echo 'make run                    - create run directory'
 	@echo 'make test                   - test IPIC3D in stand alone mode'
 	@echo 'make clean                  - remove object files'
@@ -32,6 +33,8 @@ IPIC3D:
 	./Config.pl -hdf5
 	cd src; $(MAKE) IPIC3D
 
+PIDL:
+	cd ${SHAREDIR}; $(MAKE) PIDL
 
 nompirun: IPIC3D
 	cd ${RUNDIR}; ./IPIC3D.exe IPIC.in
