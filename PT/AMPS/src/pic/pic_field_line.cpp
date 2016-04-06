@@ -22,6 +22,7 @@ namespace PIC{
     cDatumTimed DatumAtVertexParticleWeight(1,"\"Particle Weight\"",false);
     cDatumTimed DatumAtVertexParticleNumber(1,"\"Particle Number\"",true);
     cDatumTimed DatumAtVertexNumberDensity(1,"\"Number Density[1/m^3]\"",true);
+    cDatumWeighted DatumAtVertexParticleEnergy(1,"\"Kinetic energy [J]\"",true);
 
     vector<cDatumStored*> DataStoredAtVertex;
     vector<cDatumSampled*> DataSampledAtVertex;
@@ -180,7 +181,23 @@ namespace PIC{
 	exit(__LINE__, __FILE__, "ERROR: invalid index of vertex");
       Vertex->SetMagneticField(BIn);
     }
-    
+    //=========================================================================
+    void cFieldLine::GetMagneticField(double* BOut, double S){
+      // check correctness
+      if(S < 0.0 || S > nSegment)
+	exit(__LINE__,__FILE__,
+	     "ERROR: trying to get magnetic field at an invalid location");
+
+      // interpolate the magnetic field at the location S:
+      //  floor(S) is the number of the segment,
+      //  S - floor(S) is the location along segment (between 0 & 1)
+      //-----------------------------------------------------------------------
+      // number of the begin vertex
+      int iSegment = (int) S;
+      cFieldLineSegment* Segment = GetSegment(iSegment);
+      Segment->GetMagneticField(S - iSegment, BOut);
+    }    
+
     //=========================================================================
     void cFieldLine::Output(FILE* fout, bool GeometryOnly=false){
       
@@ -228,6 +245,7 @@ namespace PIC{
       DatumAtVertexParticleWeight.activate(Offset, &DataSampledAtVertex);
       DatumAtVertexParticleNumber.activate(Offset, &DataSampledAtVertex);
       DatumAtVertexNumberDensity. activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexParticleEnergy.activate(Offset, &DataSampledAtVertex);
 
       // assign offsets and data length
       cFieldLineVertex::SetDataOffsets(SamplingOffset, Offset);
@@ -254,6 +272,70 @@ namespace PIC{
       
       fclose(fout);
       
+    }
+
+    //=========================================================================
+    void Sampling(long int ptr, double Weight){
+      // namespace alias
+      namespace PB = PIC::ParticleBuffer;
+
+      // find the field line and location along it
+      int iFieldLine = PB::GetFieldLineId(ptr);
+      double S = PB::GetFieldLineCoord(ptr);
+
+      // weights of vertices
+      double w = S - (int)S;
+
+      //magnetic field
+      double B[3];
+      FieldLinesAll[iFieldLine].GetMagneticField(B,S);
+      double AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5);
+
+      //magnetic moment, mass, velocity and energy
+      double mu = PB::GetMagneticMoment(ptr);
+      int spec = PB::GetI(ptr);
+      double v[3];
+      double x[3];
+      PB::GetV(v, ptr);
+      PB::GetX(x, ptr);
+      double m0= PIC::MolecularData::GetMass(spec);
+      double absv=pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], 0.5);
+      double E = mu*AbsB + 0.5 * m0 * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+
+      // volume
+      double volume = FieldLinesAll[iFieldLine].GetSegment(S)->GetLength();
+      const double R0 = 10 *_SUN__RADIUS_;
+      const double B0 = 1.83E-6;
+
+
+
+
+
+      // FIX LATER=====================================
+      // take gyroradius of electron with 10^7 m/s speed at B0 (~30 m)
+      volume *= 3.14 * 900 * (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]) / (R0*R0);
+      // FIX LATER=====================================
+
+
+
+
+
+      //sample to vertices
+      cFieldLineVertex* V=FieldLinesAll[iFieldLine].GetSegment(S)->GetBegin();
+      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume, (1-w));
+      V->SampleDatum(DatumAtVertexParticleWeight,Weight,(1-w));
+      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,(1-w));
+      //      V->SampleDatum(EnergyFlux(Weight*E*absv/volume*(1-w));
+      V = V->GetNext();
+      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume, (w));
+      V->SampleDatum(DatumAtVertexParticleWeight,Weight,(w));
+      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,w);
+//
+//      V->SampleNumberDensity(Weight/volume * w);
+//      V->SampleParticleWeight(Weight*w);
+//      V->SampleParticleEnergy(E*Weight*w);
+      //      V->SampleEnergyFlux(E*Weight*absv/volume*w);      
+
     }
 
     //=========================================================================

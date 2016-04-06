@@ -292,15 +292,16 @@ namespace PIC {
     typedef PIC::Datum::cDatumWeighted cDatumWeighted;
 
     // standard set of data that is stored/sampled
-    extern cDatumStored DatumAtVertexElectricField;
-    extern cDatumStored DatumAtVertexMagneticField;
-    extern cDatumStored DatumAtVertexPlasmaVelocity;
-    extern cDatumStored DatumAtVertexPlasmaDensity;
-    extern cDatumStored DatumAtVertexPlasmaTemperature;
-    extern cDatumStored DatumAtVertexPlasmaPressure;
-    extern cDatumTimed  DatumAtVertexParticleWeight;
-    extern cDatumTimed  DatumAtVertexParticleNumber;
-    extern cDatumTimed  DatumAtVertexNumberDensity;
+    extern cDatumStored   DatumAtVertexElectricField;
+    extern cDatumStored   DatumAtVertexMagneticField;
+    extern cDatumStored   DatumAtVertexPlasmaVelocity;
+    extern cDatumStored   DatumAtVertexPlasmaDensity;
+    extern cDatumStored   DatumAtVertexPlasmaTemperature;
+    extern cDatumStored   DatumAtVertexPlasmaPressure;
+    extern cDatumTimed    DatumAtVertexParticleWeight;
+    extern cDatumTimed    DatumAtVertexParticleNumber;
+    extern cDatumTimed    DatumAtVertexNumberDensity;
+    extern cDatumWeighted DatumAtVertexParticleEnergy;
 
 
 
@@ -343,7 +344,11 @@ namespace PIC {
       inline void SetAssociatedDataBufferPointer(char* ptr){
 	AssociatedDataPointer=ptr;
       }
-      inline void cleanDataBuffer(){}
+      inline void cleanDataBuffer(){
+        int i,length=totalAssociatedDataLength/sizeof(double);
+        double *p;
+        for (i=0,p=(double*)AssociatedDataPointer;i<length;i++,p++) *p=0.0;
+      }
       inline static void SetDataOffsets(int SamplingOffset, int SampleDataLength){
 	CollectingSamplingOffset = SamplingOffset;
 	CompletedSamplingOffset  = SamplingOffset +   SampleDataLength;
@@ -616,15 +621,6 @@ namespace PIC {
       inline cFieldLineSegment* GetPrev(){return prev;}
       inline cFieldLineSegment* GetNext(){return next;}
       //.......................................................................
-      //interpolate whole state vector from vertices to a point on the segment
-      void GetStateVector(double  S, //position 0<=s<=1 on the segment
-			  double* ElectricFieldOut,
-			  double* MagneticFieldOut,
-			  double* PlasmaVelocityOut,
-			  double& PlasmaDensityOut,
-			  double& PlasmaTemperatureOut,
-			  double& PlasmaPressureOut);
-      //.......................................................................
       //interpolate individual variables from vertices to point on the segment
       inline void GetElectricField(double  S, //position 0<=s<=1 on the segment
 				   double* ElectricFieldOut){
@@ -707,17 +703,81 @@ namespace PIC {
       //check whether the line is a loop
       inline bool is_loop(){return LastVertex==FirstVertex;}
 
+      // Segment access
+      //-----------------------------------------------------------------------
       //access first/last segment
-      cFieldLineSegment* GetFirstSegment(){return FirstSegment;}
-      cFieldLineSegment* GetLastSegment(){ return LastSegment;}
-      void GetFirstSegment(cFieldLineSegment* Out){Out=FirstSegment;}
-      void GetLastSegment( cFieldLineSegment* Out){Out=LastSegment;}
+      inline cFieldLineSegment* GetFirstSegment(){return FirstSegment;}
+      inline cFieldLineSegment* GetLastSegment(){ return LastSegment;}
+      inline void GetFirstSegment(cFieldLineSegment* Out){Out=FirstSegment;}
+      inline void GetLastSegment( cFieldLineSegment* Out){Out=LastSegment;}
+      //access an arbitrary segment
+      inline cFieldLineSegment* GetSegment(int iSegment){
+	cFieldLineSegment* Segment;
+	if(iSegment > 0.5*nSegment && iSegment < nSegment){
+          Segment = LastSegment;
+          for(int i=nSegment-1; i > iSegment; i--)
+	    Segment = Segment->GetPrev();
+          return Segment;
+        }
+        if(iSegment >= 0){
+          Segment = FirstSegment;
+          for(int i=0; i < iSegment; i++)
+            Segment = Segment->GetNext();
+          return Segment;
+        }
+        exit(__LINE__,__FILE__, "ERROR: invalid index of a segment");
+      }
+      inline cFieldLineSegment* GetSegment(double S){
+        // check correctness
+        if(S < 0.0 || S > nSegment)
+          return NULL;
+        //  floor(S) is the index of the segment
+        int iSegment = (int) S;
+        return GetSegment(iSegment);
+      };
+      inline double GetSegmentLength(double S){
+        return GetSegment(S)->GetLength();
+      }
+      inline void GetSegmentDirection(double* Dir, double S){
+        GetSegment(S)->GetDir(Dir);
+      }
+      //-----------------------------------------------------------------------
 
-      //access first/last vertex
-      cFieldLineVertex* GetFirstVertex(){return FirstVertex;}
-      cFieldLineVertex* GetLastVertex(){ return LastVertex;}
-      void GetFirstVertex(cFieldLineVertex* Out){Out=FirstVertex;}
-      void GetLastVertex( cFieldLineVertex* Out){Out=LastVertex;}
+      // Vertex access
+      //-----------------------------------------------------------------------
+      // access first/last vertex
+      inline cFieldLineVertex* GetFirstVertex(){return FirstVertex;}
+      inline cFieldLineVertex* GetLastVertex(){ return LastVertex;}
+      inline void GetFirstVertex(cFieldLineVertex* Out){Out=FirstVertex;}
+      inline void GetLastVertex( cFieldLineVertex* Out){Out=LastVertex;}
+      // access an arbitrary vertex
+      inline cFieldLineVertex* GetVertex(int iVertex){
+        cFieldLineVertex* Vertex;
+        if(iVertex > 0.5*nSegment && iVertex <= nSegment){
+          Vertex = LastVertex;
+          for(int i=nSegment; i > iVertex; i--)
+            Vertex = Vertex->GetPrev();
+          return Vertex;
+        }
+        if(iVertex >= 0){
+          Vertex = FirstVertex;
+          for(int i=0; i < iVertex; i++)
+            Vertex = Vertex->GetNext();
+          return Vertex;
+        }
+        exit(__LINE__,__FILE__, "ERROR: invalid index of a vertex");
+      }
+      //-----------------------------------------------------------------------
+
+      //get cartesian coordinats of the location
+      inline void GetCartesian(double* xOut, double S){
+        cFieldLineSegment* Segment = GetSegment(S);
+        double w = S - (int)S;
+        double xBegin[3], xEnd[3];
+        Segment->GetBegin()->GetX(xBegin);
+        Segment->GetEnd()  ->GetX(xEnd);
+        for(int i=0; i<3; i++) xOut[i] = (1-w) * xBegin[i] + w * xEnd[i];
+      }
 
       // add vertex with given coordinates
       void Add(double* xIn);
@@ -729,6 +789,13 @@ namespace PIC {
 			    int spec);
       // set magnetic field at a given vertex (last by default)
       void SetMagneticField(double* BIn, int iVertex=-1);
+      // get background data at a given 1D coordinate along the field line
+      //-----------------------------------------------------------------------
+      // get magnetic field
+      void   GetMagneticField(double* BOut, double S);
+      // get directional derivative of magnetic field
+      //-----------------------------------------------------------------------
+
       // print data stored on the field line
       void Output(FILE* fout, bool GeometryOnly);
     };
@@ -772,7 +839,9 @@ namespace PIC {
 
     //functions for computing field-line segment weight
     void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment);
-    
+
+    // sample data from a particle
+    void Sampling(long int ptr, double Weight);
   }
 
 
