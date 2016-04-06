@@ -413,6 +413,20 @@ Check=
 >>>@ls -l test_Mars-Hot-Carbon.diff
 <#
 
+-------------------------------------------------------------------------------
+#>
+Name=test/InterpolateAMR-test
+Time=5
+Run=
+>>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
+>>>cd ${TESTInterpolateAMR-testDIR}; ./amps
+>>>@echo "test_InterpolateAMR-test_run... done" >> test_InterpolateAMR-test.diff
+Check=
+>>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
+>>>@ls -l test_InterpolateAMR-test.diff 
+
+<#
 
 
 
