@@ -801,19 +801,6 @@ namespace PIC {
     };
     //class cFieldLine --------------------------------------------------------
 
-    namespace Mover {
-      
-      // use this namespace for inheriting nethods associated with 
-      // magnetic moment, total kinetic energy etc.
-      //      using namespace PIC::Mover::GuidingCenter;
-     
-
-      // offsets to additional data fields needed to keep track of particles
-      extern int FieldLineIdOffset;    // field line particle is currently on
-      extern int FieldLineCoordOffest; // 1D coordinate along the field line
-      
-    }
-
 
     // max number of field line in the simulation
     const long int nFieldLineMax=100;
@@ -2792,6 +2779,18 @@ namespace PIC {
          void AddRemovedParticleData(double Rate, int nRemovedParticles, int spec, std::string &FullLineID);
          void AddRemovedParticleData(double Rate, int spec, std::string &ErrorID);
       }
+    }
+
+    namespace FieldLine {
+
+      // procedure that returns parameters of the guiding center motion
+      void GuidingCenterMotion(double *Vguide_perp,    double &ForceParal,
+                               double &BAbsoluteValue, double *BDirection,
+                               double *PParal,
+			       int spec,long int ptr,double *x,double *v);
+      //mover itself
+      int Mover_SecondOrder(long int ptr, double Dt,
+                            cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     }
 
     namespace GuidingCenter{

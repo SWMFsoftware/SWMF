@@ -635,5 +635,241 @@ namespace PIC{
     }
     
   }
+
+  //---------------------------------------------------------------------------
+
+namespace Mover{
+namespace FieldLine{
+  // procedure that returns parameters of the guiding center motion
+  void GuidingCenterMotion(double& ForceParal, 
+			   double& AbsB,
+			   int spec,long int ptr,
+			   int   iFieldLine,
+			   double FieldLineCoord){
+    /* function returns guiding center velocity in direction perpendicular
+     * to the magnetic field and the force parallel to it
+     * for Lorentz force (considered here)
+     *
+     * v_{guide_perp} = 
+     *  E\times B / B^2 + 
+     *  \mu/(q\gamma) B\times\nabla B / B^2 +
+     *  (p_{\parallel}^2)/(q\gamma m_0) B\times(B\cdot\nabla)B/B^4
+     *
+     * dp_{\parallel}/dt=
+     *  q E_{\parallel} - \mu/\gamma \nabla_{\parallel}B
+     *
+     * \mu = p_{\perp}^2/(2m_0B)
+     *
+     * \gamma = 1/\sqrt{1-v^2/c^2}
+     *********************************************************************/
+
+    // namespace alias
+    namespace FL = PIC::FieldLine;
+
+    double ForceParal_LOC = 0.0;
+    double AbsB_LOC       = 0.0;
+    
+    //#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
+    
+    double E[3],B[3],B0[3],B1[3], AbsBDeriv;
+    double mu     = PIC::ParticleBuffer::GetMagneticMoment(ptr);
+    double q      = PIC::MolecularData::GetElectricCharge(spec);
+    FL::FieldLinesAll[iFieldLine].GetMagneticField(B0, (int)FieldLineCoord);
+    FL::FieldLinesAll[iFieldLine].GetMagneticField(B,       FieldLineCoord);
+    FL::FieldLinesAll[iFieldLine].GetMagneticField(B1, (int)FieldLineCoord+1-1E-7);
+    AbsB_LOC   = pow(B[0]*B[0] + B[1]*B[1] + B[2]*B[2], 0.5);
+    AbsBDeriv = (pow(B1[0]*B1[0] + B1[1]*B1[1] + B1[2]*B1[2], 0.5) -
+		 pow(B0[0]*B0[0] + B0[1]*B0[1] + B0[2]*B0[2], 0.5)) / 
+      FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoord);
+    
+    //parallel force
+#if _PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+    // in this case E = - V \cross B => E_{\paral} = E*b = 0
+    ForceParal_LOC = - mu * AbsBDeriv;
+#else
+    exit(__LINE__, __FILE__, "not implemented");
+#endif//_PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+    
+    
+    //#endif//_FORCE_LORENTZ_MODE_
+    
+    ForceParal = ForceParal_LOC;
+    AbsB       = AbsB_LOC;
+    
+  }
+  
+  // mover itself
+  int Mover_SecondOrder(long int ptr, double dtTotal, 
+			cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode){
+    //aliases
+    namespace FL = PIC::FieldLine;
+    namespace PB = PIC::ParticleBuffer;
+
+
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
+    double dtTemp;
+    PIC::ParticleBuffer::byte *ParticleData;
+    double AbsBInit=0.0, bInit[3]={0.0};
+    double vInit[  3]={0.0}, pInit  =0.0, xInit[  3]={0.0}, gammaInit;
+    double AbsBMiddle=0.0, bMiddle[3]={0.0};
+    double vMiddle[3]={0.0}, pMiddle=0.0, xMiddle[3]={0.0}, gammaMiddle;
+    double vFinal[ 3]={0.0}, pFinal =0.0, xFinal[ 3]={0.0}, gammaFinal;
+    double c2 = SpeedOfLight*SpeedOfLight;
+    double xminBlock[3],xmaxBlock[3];
+    int   iFieldLine = -1;
+    double FieldLineCoordInit   = -1.0;
+    double FieldLineCoordMiddle = -1.0;
+    double FieldLineCoordFinal  = -1.0;
+    int idim;
+    
+    double ForceParalInit=0.0, ForceParalMiddle=0.0;
+    double dirInit[3]={0.0,0.0,0.0};
+    double vparInit=0.0, vparMiddle=0.0, vparFinal=0.0;
+
+    long int LocalCellNumber;
+    int i,j,k,spec;
+    
+    PIC::Mesh::cDataCenterNode *cell;
+    bool MovingTimeFinished=false;
+    
+    double xmin,xmax;
+    
+    double misc;
+	
+    ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+    PIC::ParticleBuffer::GetV(vInit,ParticleData);
+    PIC::ParticleBuffer::GetX(xInit,ParticleData);
+    spec=PIC::ParticleBuffer::GetI(ParticleData);
+    double m0 = PIC::MolecularData::GetMass(spec);
+    double mu = PIC::ParticleBuffer::GetMagneticMoment(ptr);
+    iFieldLine = PIC::ParticleBuffer::GetFieldLineId(ptr);
+    FieldLineCoordInit = PIC::ParticleBuffer::GetFieldLineCoord(ptr);
+    static long int nCall=0;
+    nCall++;
+    
+    //  memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
+    //  memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
+    
+    MovingTimeFinished=true;
+    
+    // predictor step
+#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
+    
+    GuidingCenterMotion(ForceParalInit,
+			AbsBInit,
+			spec,ptr,iFieldLine,FieldLineCoordInit);
+    
+#endif
+    
+    FL::FieldLinesAll[iFieldLine].GetSegmentDirection(dirInit, FieldLineCoordInit);
+    vparInit = vInit[0]*dirInit[0]+vInit[1]*dirInit[1]+vInit[2]*dirInit[2];
+    
+    
+    dtTemp=dtTotal/2.0;
+    // advance coordinates half-step
+    FieldLineCoordMiddle = FieldLineCoordInit + 
+      dtTemp * vparInit  / FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoordInit);
+    // advance momentum half-step
+    vparMiddle = vparInit + 
+      dtTemp * ForceParalInit/m0; 
+    
+    
+    
+    // check if a particle has left the domain
+    if (FL::FieldLinesAll[iFieldLine].GetSegment(FieldLineCoordMiddle)==NULL) { 
+      //the particle left the computational domain
+      int code=_PARTICLE_DELETED_ON_THE_FACE_;
+      
+      //call the function to processes particles that left the domain
+      switch(code){
+      case _PARTICLE_DELETED_ON_THE_FACE_:
+	PIC::ParticleBuffer::DeleteParticle(ptr);
+	return _PARTICLE_LEFT_THE_DOMAIN_;
+	break;
+      default:
+	exit(__LINE__,__FILE__,"Error: not implemented");
+      }
+      
+    }
+    
+    
+    // corrector step
+    
+#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
+    GuidingCenterMotion(ForceParalMiddle,
+			AbsBMiddle,
+			spec,ptr,iFieldLine,FieldLineCoordMiddle);
+#endif
+    
+
+    //    FL::FieldLinesAll[iFieldLine].GetSegmentDirection(dirInit, FieldLineCoordMiddle);
+    
+    
+
+
+
+  // advance coordinates full-step
+    FieldLineCoordFinal = FieldLineCoordInit + 
+      dtTotal * vparMiddle / FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoordMiddle);
+    // advance momentum full-step
+    vparFinal =vparInit + dtTotal * ForceParalMiddle/m0; 
+
+   
+    //advance the particle's position and velocity
+    //interaction with the faces of the block and internal surfaces
+  
+    if (FL::FieldLinesAll[iFieldLine].GetSegment(FieldLineCoordFinal)==NULL) {
+      
+      //the particle left the computational domain
+      int code=_PARTICLE_DELETED_ON_THE_FACE_;
+      
+      //call the function that process particles that leaved the coputational domain
+      switch(code){
+      case _PARTICLE_DELETED_ON_THE_FACE_:
+	PIC::ParticleBuffer::DeleteParticle(ptr);
+	return _PARTICLE_LEFT_THE_DOMAIN_;
+      break;
+      default:
+      exit(__LINE__,__FILE__,"Error: not implemented");
+      }
+      
+    }
+
+    FL::FieldLinesAll[iFieldLine].GetSegmentDirection(vFinal, FieldLineCoordFinal);
+    vFinal[0]*=vparFinal;vFinal[1]*=vparFinal;vFinal[2]*=vparFinal;
+    FL::FieldLinesAll[iFieldLine].GetCartesian(xFinal, FieldLineCoordFinal);
+    
+    newNode=PIC::Mesh::Search::FindBlock(xFinal);
+    
+
+    PIC::ParticleBuffer::SetV(vFinal,ParticleData);
+    PIC::ParticleBuffer::SetX(xFinal,ParticleData);
+    PB::SetFieldLineCoord(FieldLineCoordFinal, ParticleData);
+  
+    //adjust the value of 'startNode'
+    startNode=newNode;
+    
+    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+    
+    
+    PIC::Mesh::cDataBlockAMR *block=startNode->block;
+    long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+    
+    PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
+    PIC::ParticleBuffer::SetPrev(-1,ParticleData);
+    
+    if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
+    block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
+    
+    
+    return _PARTICLE_MOTION_FINISHED_;
+
+  
+  }
+
+}
+}
+  //namespace Mover -----------------------------------------------------------
+
 }
 
