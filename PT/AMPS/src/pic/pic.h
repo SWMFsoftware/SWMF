@@ -829,6 +829,12 @@ namespace PIC {
 
     // sample data from a particle
     void Sampling(long int ptr, double Weight);
+
+    // inject particle onto the field line:
+    // 1st function is a wrapper in the case
+    // there is a user-defined procedure
+    long int InjectParticle(int spec);
+    long int InjectParticle_default(int spec);
   }
 
 

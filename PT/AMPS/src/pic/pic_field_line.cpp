@@ -163,6 +163,95 @@ namespace PIC{
     }
     
     //=========================================================================
+    long int InjectParticle(int spec){
+      // this is a wrapper that can call either the default injection procedure
+      // or a user-defined procedure
+      return InjectParticle_default(spec);
+    }
+    
+    //=========================================================================
+    long int InjectParticle_default(int spec){
+      //namespace alias
+      namespace PB = PIC::ParticleBuffer;
+      // pointer particle to the particle to be injected
+      long int ptr;
+      PB::byte* ptrData;
+      ptrData = new PB::byte[PB::GetParticleDataLength()];
+      
+      //default settings
+      PB::SetIndividualStatWeightCorrection(1.0,ptrData);
+      
+      
+      PB::SetI(spec, ptrData);
+      
+      // pick a random field line
+      int iFieldLine = (int)(nFieldLine * rnd());
+      PB::SetFieldLineId(iFieldLine, ptrData);
+      // inject particle onto this field line
+      
+      int iSegment;
+      double WeightCorrection;
+      //    FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,
+      //					       WeightCorrection, spec);
+      
+      //Inject at the beginning of the field line FOR PARKER SPIRAL
+      iSegment = 0;
+      
+      
+      cFieldLineSegment* Segment=FieldLinesAll[iFieldLine].GetSegment(iSegment);
+      double S = iSegment + rnd();
+      PB::SetFieldLineCoord(S, ptrData);
+      double x[3], v[3];
+      FieldLinesAll[iFieldLine].GetCartesian(x, S);
+      PB::SetX(x, ptrData);
+      
+      // fix kintic energy and pitch angle far now
+      //    double cosPhi=pow(2,-0.5);
+      //    double vpar = 1e6 * cosPhi;
+      //    double KinEnergyPerp=5E-17*(1-cosPhi*cosPhi);
+      //direction of velocity: INJECT ALONG HE FIELD LINE FOR PARKER SPIRAL
+      //    vpar*=(rnd()<0.5)?1:-1;
+      
+      // inject power law, 
+      // see Numerical Studies of the Solar Energetic Particle 
+      // Transport and Acceleration, Tenishev et al.
+      int q=3;
+      double vmin=1e6, vmax=1e7;
+      double pvmin = pow(vmin, 1-q), pvmax = pow(vmax, 1-q);
+      double r= rnd();
+      double absv = pow( (1-r)*pvmin + r*pvmax, 1.0/(1-q));
+      //direction of velocity: INJECT ALONG HE FIELD LINE FOR PARKER SPIRAL
+      double cosPhi = 1 - rnd();
+      double vpar = absv*cosPhi;
+      double KinEnergyPerp = 9.1E-31 * 0.5 * (absv*absv - vpar*vpar);
+      
+      
+      //velocity is paral to the field line
+      Segment->GetDir(v);
+      for(int i=0; i<3; i++)v[i]*=vpar;
+      PB::SetV(v, ptrData);
+      
+      //magnetic field
+      double B[3], AbsB;
+      Segment->GetMagneticField(S, B);
+      AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5)+1E-15;
+      
+      //magnetic moment
+      PB::SetMagneticMoment(KinEnergyPerp/AbsB, ptrData);
+
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+      node=PIC::Mesh::mesh.findTreeNode(x);
+      
+      long int res=PB::InitiateParticle(x,NULL,NULL,NULL,
+					ptrData,
+					_PIC_INIT_PARTICLE_MODE__ADD2LIST_,
+					(void*)node);
+      delete [] ptrData;
+      double misc = PB::GetFieldLineCoord(res);
+      return res;
+    }
+
+    //=========================================================================
     void cFieldLine::SetMagneticField(double *BIn, int iVertex){
       cFieldLineVertex *Vertex;
       if(iVertex == -1)
