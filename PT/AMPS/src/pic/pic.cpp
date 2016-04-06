@@ -796,6 +796,10 @@ void PIC::Sampling::Sampling() {
 	      PIC::Mover::GuidingCenter::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
 #endif //_PIC_MOVER_INTEGRATOR_MODE_ 
 
+#if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+	      PIC::FieldLine::Sampling(ptr,LocalParticleWeight);
+#endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_ 
+
               //call user defined particle sampling procedure
 #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
               _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s);
@@ -970,6 +974,14 @@ void PIC::Sampling::Sampling() {
       //print sampled particle trajectories
       sprintf(fname,"%s/amps.TrajectoryTracking.out=%ld",OutputDataFileDirectory,DataOutputFileNumber);
       PIC::ParticleTracker::OutputTrajectory(fname);
+      #endif
+
+      #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+      //print sampled data along field lines
+      sprintf(fname,
+              "%s/amps.FieldLines.out=%ld.dat",
+              OutputDataFileDirectory,DataOutputFileNumber);
+      PIC::FieldLine::Output(fname, false);
       #endif
 
       //print the macroscopic parameters of the flow
