@@ -3637,15 +3637,15 @@ if keyword_set(fd) then case ndim of
 endcase else case ndim of
    1: begin
       result = dblarr(nx(0)/n(0))
-      for ix=0,(nx(0)-1)/n(0) do $
+      for ix=0,nx(0)/n(0)-1 do $
         for i=0,n(0)-1 do $
            result(ix)=result(ix) + a(ix*n(0)+i)
       result=result/n(0)
    end
    2: begin
       result = dblarr(nx(0)/n(0),nx(1)/n(1))
-      for ix=0,(nx(0)-1)/n(0) do $
-      for iy=0,(nx(1)-1)/n(1) do $
+      for ix=0,nx(0)/n(0)-1 do $
+      for iy=0,nx(1)/n(1)-1 do $
         for i=0,n(0)-1 do $
         for j=0,n(1)-1 do $
            result(ix,iy) = result(ix,iy) + a(ix*n(0)+i,iy*n(1)+j)
@@ -3653,9 +3653,9 @@ endcase else case ndim of
    end
    3: begin
       result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
-      for ix=0,(nx(0)-1)/n(0) do $
-      for iy=0,(nx(1)-1)/n(1) do $
-      for iz=0,(nx(2)-1)/n(2) do $
+      for ix=0,nx(0)/n(0)-1 do $
+      for iy=0,nx(1)/n(1)-1 do $
+      for iz=0,nx(2)/n(2)-1 do $
         for i=0,n(0)-1 do $
         for j=0,n(1)-1 do $
         for k=0,n(2)-1 do $
@@ -3665,10 +3665,10 @@ endcase else case ndim of
    end
    4: begin
       result = dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2),nx(3)/n(3))
-      for ix=0,(nx(0)-1)/n(0) do $
-      for iy=0,(nx(1)-1)/n(1) do $
-      for iz=0,(nx(2)-1)/n(2) do $
-      for iw=0,(nx(3)-1)/n(3) do $
+      for ix=0,nx(0)/n(0)-1 do $
+      for iy=0,nx(1)/n(1)-1 do $
+      for iz=0,nx(2)/n(2)-1 do $
+      for iw=0,nx(3)/n(3)-1 do $
         for i=0,n(0)-1 do $
         for j=0,n(1)-1 do $
         for k=0,n(2)-1 do $
