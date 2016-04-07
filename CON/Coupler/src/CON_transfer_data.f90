@@ -194,8 +194,10 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(n_proc()<=1)RETURN
+
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -273,8 +275,10 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(n_proc()<=1)RETURN
+
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -316,9 +320,11 @@ contains
 
     integer, parameter:: iTag = 1003
     !-------------------------------------------------------------------------
+    if(n_proc()<=1)RETURN
+
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
-    if(n_proc()<=1)RETURN
+
     if(DoSourceSum)then
        if(UseAllReduce)then
           call MPI_allreduce(MPI_IN_PLACE, Data_I, nData, MPI_REAL, MPI_SUM, &
@@ -356,9 +362,11 @@ contains
 
     integer, parameter:: iTag = 1004
     !-------------------------------------------------------------------------
+    if(n_proc()<=1)RETURN
+
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
-    if(n_proc()<=1)RETURN
+
     if(DoSourceSum)then
        if(UseAllReduce)then
           call MPI_allreduce(MPI_IN_PLACE, Data, 1, MPI_REAL, MPI_SUM, &
@@ -399,9 +407,10 @@ contains
 
     integer, parameter:: iTag = 1005
     !-------------------------------------------------------------------------
+    if(n_proc()<=1)RETURN
+
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-    if(n_proc()<=1)RETURN
     nData = nString*len(String_I(1))
 
     if(DoRootTransfer)then
@@ -432,9 +441,10 @@ contains
 
     integer, parameter:: iTag = 1006
     !-------------------------------------------------------------------------
+    if(n_proc()<=1)RETURN
+
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-    if(n_proc()<=1)RETURN
     nData = len(String)
 
     if(DoRootTransfer)then
