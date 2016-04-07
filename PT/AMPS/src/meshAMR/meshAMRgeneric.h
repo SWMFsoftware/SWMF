@@ -9318,6 +9318,10 @@ nMPIops++;
       #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
       res=startNode->ParallelLoadMeasure;
 
+      //check whether the node load measure is normalized
+      if (isfinite(res)==false) exit(__LINE__,__FILE__,"Error: the parallel load measure is not normalized");
+
+
       if (ThisThread==0) {
         double t;
 
@@ -9360,6 +9364,9 @@ nMPIops++;
 
       #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
       startNode->ParallelLoadMeasure/=Norm;
+
+      //check whether the node load measure is normalized
+      if (isfinite(startNode->ParallelLoadMeasure)==false) exit(__LINE__,__FILE__,"Error: the parallel load measure is not normalized");
 
       //add the load to all parent nodes
       cTreeNodeAMR<cBlockAMR>* upNode=startNode->upNode;
