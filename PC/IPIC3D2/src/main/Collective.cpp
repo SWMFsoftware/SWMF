@@ -1701,12 +1701,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	-0.05                   DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
-	x=0 var idl_ascii       StringPlot
+	x=0 var ascii       StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 bx by pxx          PlotVar
-	y=0 all real4           StringPlot
+	3d all real4           StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0.                      DxOutput
@@ -1723,9 +1723,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
 	Note:
 	1) 'real4' and 'real8' have not been implemented now. 
-	2) 'cut' has not been fully tested.
-	3) Do not support control output by DtOutPut now.
-	4) Check available output variables in EMfields3D.cpp::getVar().
+	2) Do not support control output by DtOutPut now.
+	3) Available output variables are listed in EMfields3D.cpp::getVar().
+	4) DxOutput is not functional now.
       */
 
       

@@ -999,28 +999,35 @@ void c_Solver:: write_plot_init(){
       ss<<subString;
       ss>>plotRange_ID[iPlot][0];
       plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0]+1e-10;
-      plotRange_ID[iPlot][2] = -0.5*col->getDy();
-      plotRange_ID[iPlot][3] = col->getLy() + 0.5*col->getDy();
-      plotRange_ID[iPlot][4] = -0.5*col->getDz();
-      plotRange_ID[iPlot][5] = col->getLz() + 0.5*col->getDz();
+      plotRange_ID[iPlot][2] = 0;
+      plotRange_ID[iPlot][3] = col->getLy();
+      plotRange_ID[iPlot][4] = 0;
+      plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,2)=="y="){
       subString.erase(0,2);
       ss<<subString;
-      plotRange_ID[iPlot][0] = -0.5*col->getDx();
-      plotRange_ID[iPlot][1] = col->getLx() + 0.5*col->getDx();
+      plotRange_ID[iPlot][0] = 0;
+      plotRange_ID[iPlot][1] = col->getLx();
       ss>>plotRange_ID[iPlot][2];
       plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2]+1e-10;
-      plotRange_ID[iPlot][4] = -0.5*col->getDz();
-      plotRange_ID[iPlot][5] = col->getLz() + 0.5*col->getDz();
+      plotRange_ID[iPlot][4] = 0;
+      plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,2)=="z="){
       subString.erase(0,2);
       ss<<subString;
-      plotRange_ID[iPlot][0] = -0.5*col->getDx();
-      plotRange_ID[iPlot][1] = col->getLx() + 0.5*col->getDx();
-      plotRange_ID[iPlot][2] = -0.5*col->getDy();
-      plotRange_ID[iPlot][3] = col->getLy() + 0.5*col->getDy();
+      plotRange_ID[iPlot][0] = 0;
+      plotRange_ID[iPlot][1] = col->getLx();
+      plotRange_ID[iPlot][2] = 0;
+      plotRange_ID[iPlot][3] = col->getLy();
       ss>>plotRange_ID[iPlot][4];
       plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4]+1e-10;
+    }else if(subString.substr(0,2)=="3d"){
+      plotRange_ID[iPlot][0] = 0;
+      plotRange_ID[iPlot][1] = col->getLx();
+      plotRange_ID[iPlot][2] = 0;
+      plotRange_ID[iPlot][3] = col->getLy();
+      plotRange_ID[iPlot][4] = 0;
+      plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,3)=="cut"){
       for(int iDim=0; iDim<nDimMax; iDim++){
 	plotRange_ID[iPlot][iDim*2] = col->getplotRange(iPlot,iDim*2);
@@ -1141,6 +1148,64 @@ void c_Solver:: write_plot_init(){
     if(nCellLocal<0) nCellLocal=0;
     
     MPI_Reduce(&nCellLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+
+
+    {
+      // Correct PlotRange_ID based on PlotIndexRange_ID-----begin
+      
+      double xMinL_I[nDimMax], xMaxL_I[nDimMax],
+	xMinG_I[nDimMax], xMaxG_I[nDimMax];
+
+      // x
+      if(plotIndexRange_ID[iPlot][1]>=plotIndexRange_ID[iPlot][0]){
+	xMinL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][0]);
+	xMaxL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][1]);
+      }else{
+	// This processor does not output any node.
+	xMinL_I[0] = 2*col->getLx();
+	xMaxL_I[0] = -1;
+      }
+
+      // y
+      if(plotIndexRange_ID[iPlot][3]>=plotIndexRange_ID[iPlot][2]){
+	xMinL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][2]);
+	xMaxL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][3]);
+      }else{
+	// This processor does not output any node.
+	xMinL_I[1] = 2*col->getLy();
+	xMaxL_I[1] = -1;
+      }
+
+      // z
+      if(plotIndexRange_ID[iPlot][5]>=plotIndexRange_ID[iPlot][4]){
+      xMinL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][4]);
+      xMaxL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][5]);
+      }else{
+	// This processor does not output any node.
+	xMinL_I[2] = 2*col->getLz();
+	xMaxL_I[2] = -1;
+      }
+      
+      MPI_Reduce(xMinL_I, xMinG_I,nDimMax,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_MYSIM);
+      MPI_Reduce(xMaxL_I, xMaxG_I,nDimMax,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_MYSIM);
+
+      // if(doTestFunc){
+      // 	for(int i=0; i<nDimMax; i++){
+      // 	  cout<<"i= "<<i
+      // 	      <<" min= "<<xMinG_I[i]
+      // 	      <<" max= "<<xMaxG_I[i]
+      // 	      <<endl;
+      // 	}
+      // }
+      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx();
+      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx();
+      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy();
+      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy();
+      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz();
+      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz();
+      
+      // Correct PlotRange_ID based on PlotIndexRange_ID-----end
+    }
     
     // Analyze plot variables.
     string plotVar;
