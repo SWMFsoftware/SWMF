@@ -1,0 +1,5 @@
+run*
+Makefile.conf
+Makefile.def
+test_*
+
