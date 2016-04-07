@@ -281,12 +281,22 @@ void amps_init(){
   
   //init the particle buffer
   PIC::ParticleBuffer::Init(10000000);
-
+#if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+  {  // create field lines and inject particles
+    PIC::FieldLine::Init();
+    double xStart[3] = {9.2E+8,0.0,0.0};
+    for(xStart[0] = 9.2E+8; xStart[0]>=9.17E+8; xStart[0]-=0.005E+8)
+      PIC::FieldLine::InitLoop2D(xStart,0.1);
+  for(int i=0; i<1000; i++)
+    PIC::FieldLine::InjectParticle(0);
+    }
+#else
   {  // prepopulate the domain
     double NDensity=1.0E+10, Temperature=6000, Velocity[3]={1.0E6,0.0,0.0};
     for (int s=0;s<PIC::nTotalSpecies;s++)
       PIC::InitialCondition::PrepopulateDomain(s,NDensity, Velocity, Temperature);
   }
+#endif
     
   PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 
