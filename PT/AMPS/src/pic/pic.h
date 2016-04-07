@@ -317,6 +317,7 @@ namespace PIC {
       double x[DIM];
       // data buffer length
       static int totalAssociatedDataLength;
+      static int sampleDataLength;
       // sampling offsets
       static int CollectingSamplingOffset;
       static int CompletedSamplingOffset;
@@ -349,10 +350,30 @@ namespace PIC {
         double *p;
         for (i=0,p=(double*)AssociatedDataPointer;i<length;i++,p++) *p=0.0;
       }
-      inline static void SetDataOffsets(int SamplingOffset, int SampleDataLength){
+      //.......................................................................
+      // offset manipulation
+      inline static void SetDataOffsets(int SamplingOffset, int SampleDataLengthIn){
 	CollectingSamplingOffset = SamplingOffset;
-	CompletedSamplingOffset  = SamplingOffset +   SampleDataLength;
-	totalAssociatedDataLength= SamplingOffset + 2*SampleDataLength;
+	CompletedSamplingOffset  = SamplingOffset +   SampleDataLengthIn;
+	totalAssociatedDataLength= SamplingOffset + 2*SampleDataLengthIn;
+	sampleDataLength         = SampleDataLengthIn;
+      }
+      inline void flushCompletedSamplingBuffer(){
+	int i,length=sampleDataLength/sizeof(double);
+	double *ptr;
+	for(i=0,ptr=(double*)(AssociatedDataPointer+CompletedSamplingOffset);
+	    i<length;i++,ptr++) *ptr=0.0;
+      }
+      inline void flushCollectingSamplingBuffer(){
+	int i,length=sampleDataLength/sizeof(double);
+	double *ptr;
+	for(i=0,ptr=(double*)(AssociatedDataPointer+CollectingSamplingOffset);
+	    i<length;i++,ptr++) *ptr=0.0;
+      }
+      inline static void swapSamplingBuffers(){
+	int tempOffset = CollectingSamplingOffset;
+	CollectingSamplingOffset = CompletedSamplingOffset;
+	CompletedSamplingOffset = tempOffset;
       }
       //.......................................................................
       //check status of vertex

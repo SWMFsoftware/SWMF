@@ -6,6 +6,7 @@
 
 //static variables of class cFieldLineVertex
 int PIC::FieldLine::cFieldLineVertex::totalAssociatedDataLength=-1;
+int PIC::FieldLine::cFieldLineVertex::sampleDataLength=-1;
 int PIC::FieldLine::cFieldLineVertex::CollectingSamplingOffset=-1;
 int PIC::FieldLine::cFieldLineVertex::CompletedSamplingOffset=-1;
 
@@ -306,7 +307,27 @@ namespace PIC{
 	Vertex->GetMagneticField(B);
 	for(int idim=0; idim<DIM; idim++) {fprintf(fout, "%e ", B[idim]);}
 
+	vector<cDatumSampled*>::iterator itrDatum;
+	double* Value;
+	for(itrDatum = DataSampledAtVertex.begin();
+	    itrDatum!= DataSampledAtVertex.end();  itrDatum++)
+	  if((*itrDatum)->doPrint){
+	    cDatumTimed*    ptrDatumTimed;
+	    cDatumWeighted* ptrDatumWeighted;
+	    if((*itrDatum)->type == PIC::Datum::cDatumSampled::Timed_){
+	      ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatum));
+	      Vertex->GetDatumAverage(*ptrDatumTimed, Value, 0);}
+	    else {
+	      ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatum));
+	      Vertex->GetDatumAverage(*ptrDatumWeighted, Value, 0);}
+	    for(int i=0; i<(*itrDatum)->length; i++){
+	      fprintf(fout, "%e ", Value[i]);}
+	  }
+	
+
 	fprintf(fout,"\n");
+	//flush completed sampling buffer
+	Vertex->flushCollectingSamplingBuffer();
 	Vertex = Vertex->GetNext();
       }
     }
@@ -342,6 +363,9 @@ namespace PIC{
     
     //=========================================================================
     void Output(char* fname, bool GeometryOnly){
+
+      //swap sampling offsets
+      cFieldLineVertex::swapSamplingBuffers();
       
       FILE* fout;
       fout = fopen(fname,"w");
@@ -349,7 +373,14 @@ namespace PIC{
       fprintf(fout, "TITLE=\"Field line geometry\"");
       
 #if DIM == 3 
-      fprintf(fout,"VARIABLES=\"x\",\"y\",\"z\",\"Bx\",\"By\",\"Bz\"\n");
+      fprintf(fout,"VARIABLES=\"x\",\"y\",\"z\",\"Bx\",\"By\",\"Bz\"");
+      vector<cDatumSampled*>::iterator itrDatum;
+      double* Value;
+      for(itrDatum = DataSampledAtVertex.begin();
+	  itrDatum!= DataSampledAtVertex.end();  itrDatum++)
+	if((*itrDatum)->doPrint)
+	  (*itrDatum)->PrintName(fout);
+      fprintf(fout,"\n");
 #else 
       exit(__LINE__,__FILE__,"not implemented");
 #endif
