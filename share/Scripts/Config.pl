@@ -580,6 +580,13 @@ sub set_mpi_{
 		s/^\s*M/\#M/ if /lNOMPI/ eq ($Mpi eq "yes");
 		s/^\#\s*M/M/ if /lNOMPI/ eq ($Mpi eq "no");
 	    }
+	    
+	    # Always compile with the NOMPI library if code is installed
+	    # without MPI (so that PostIDL compiles).
+	    if(/^Lflag2\s+=/){
+		s/=\s*(.*)/= \$\{Lflag1} \# $1/ if $Mpi eq "no";
+		s/= \$\{Lflag1} \#/=/        if $Mpi eq "yes";
+	    }
 
 	    # Comment/uncomment mpi_cxx library
 	    if(/mpi_cxx/){
