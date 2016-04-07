@@ -195,7 +195,7 @@ contains
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
+    if(n_proc()<=1)RETURN
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -247,7 +247,6 @@ contains
        nData = 4
        iData_I(4) = iData4
     end if
-
     call transfer_integer_array(iCompSource, iCompTarget, nData, iData_I, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -275,7 +274,7 @@ contains
     character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
+    if(n_proc()<=1)RETURN
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
@@ -319,7 +318,7 @@ contains
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
-
+    if(n_proc()<=1)RETURN
     if(DoSourceSum)then
        if(UseAllReduce)then
           call MPI_allreduce(MPI_IN_PLACE, Data_I, nData, MPI_REAL, MPI_SUM, &
@@ -359,7 +358,7 @@ contains
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
-
+    if(n_proc()<=1)RETURN
     if(DoSourceSum)then
        if(UseAllReduce)then
           call MPI_allreduce(MPI_IN_PLACE, Data, 1, MPI_REAL, MPI_SUM, &
@@ -402,7 +401,7 @@ contains
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-
+    if(n_proc()<=1)RETURN
     nData = nString*len(String_I(1))
 
     if(DoRootTransfer)then
@@ -435,7 +434,7 @@ contains
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-
+    if(n_proc()<=1)RETURN
     nData = len(String)
 
     if(DoRootTransfer)then
