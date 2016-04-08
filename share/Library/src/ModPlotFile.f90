@@ -411,9 +411,9 @@ contains
        if(iError /= 0)call CON_stop(NameSub // &
             ' could not open tecplot file=' // trim(NameFile))
        write(UnitTmp_, "(a)", ADVANCE="NO") 'VARIABLES='
-       if(nDim == 3) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
-       if(nDim >= 2) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
-       write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
+       if(n3 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
+       if(n2 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
+       if(n1 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
        if(StringHeader(1:11)=="VARIABLES =")then
           write(UnitTmp_, "(a)") StringHeader(12:len_trim(StringHeader))
        else
@@ -429,25 +429,17 @@ contains
           write(UnitTmp_,'(a,es18.10,a)') &
                'AUXDATA '//trim(NameVar_I(nDim+nVar+i))//'="', Param_I(i), '"'
        end do
-       select case(nDim)
-       case(1)
-          do i = 1, n1
-             write(UNITTMP_,'(i8,100es18.10)') &
-                  i, Coord_ID(i,:), Var_IV(i,:)
-          end do
-       case(2)
-          do j = 1, n2; do i = 1, n1
-             n = i + n1*(j-1)
-             write(UNITTMP_,'(2i6,100es18.10)') &
-                  j, i, Coord_ID(n,:), Var_IV(n, :)
-          end do; end do
-       case(3)
-          do k = 1, n3; do j = 1, n2; do i = 1, n1
-             n = i + n1*(j-1) + n1*n2*(k-1)
-             write(UNITTMP_,'(3i6,100es18.10)') &
-                  k, j, i, Coord_ID(n,:), Var_IV(n, :)
-          end do; end do; end do
-       end select
+
+       ! write out coordinates and variables line by line
+       n = 0
+       do k = 1, n3; do j = 1, n2; do i = 1, n1
+          if(n3 > 1)write(UnitTmp_, "(i6)", ADVANCE="NO") k
+          if(n2 > 1)write(UnitTmp_, "(i6)", ADVANCE="NO") j
+          if(n1 > 1)write(UnitTmp_, "(i8)", ADVANCE="NO") i
+          n = n + 1
+          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
+       end do; end do; end do
+
        close(UnitTmp_)
     case('formatted', 'ascii')
        open(UnitTmp_, file=NameFile, &
