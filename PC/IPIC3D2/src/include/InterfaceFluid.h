@@ -128,7 +128,7 @@ class InterfaceFluid
   double **plotRange_ID; 
   string *plotString_I;
   string *plotVar_I;
-
+  bool doSaveBinary;
   
  public:
   // These variables are also used in PSKOutput.h
@@ -1986,6 +1986,7 @@ class InterfaceFluid
     // plotRange_ID is only set from PARAM.in for 'cut'!!!!
     return plotRange_ID[iPlot][i];
   };
+  bool getdoSaveBinary()const{return doSaveBinary;};
 };
 
 

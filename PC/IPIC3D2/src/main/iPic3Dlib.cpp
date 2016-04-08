@@ -235,7 +235,6 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   init_debug_SWMF(col,grid,vct,col->getTestFunc(),col->getiTest(),
 		  col->getjTest(),col->getkTest());
 
-  IsBinary = false;    
   write_plot_init();
 #endif
 
@@ -959,6 +958,8 @@ void c_Solver:: write_plot_init(){
 
   nPlotFile = col->getnPlotFile();
   if(nPlotFile<=0) return;
+
+  IsBinary = col->getdoSaveBinary();
   
   plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
   plotIndexRange_ID = newArr2(int, nPlotFile, 2*nDimMax);
@@ -1276,6 +1277,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<nprocs<<"\t"<<"nProc\n";
     outFile<<(IsBinary? 'T':'F')<<"\t save_binary\n";
     if(IsBinary)
+      nByte = sizeof(double);
       outFile<<nByte<<"\t nByte\n";
     outFile<<"\n";
 
@@ -1337,8 +1339,6 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<"#OUTPUTFORMAT\n";
     outFile<<"ascii\n";
     outFile<<"\n";
-
-    
     
     if(outFile.is_open()) outFile.close();
     if(doTestFunc) {

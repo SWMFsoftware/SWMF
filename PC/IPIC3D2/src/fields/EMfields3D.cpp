@@ -43,6 +43,7 @@
 #endif
 
 #include <iostream>
+#include <stdio.h>
 //#include <sstream>
 
 #define NG_F 1
@@ -4212,28 +4213,65 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
     
   const Collective *col = &get_col();
   const Grid *grid = &get_grid();
+  const bool isBinary = col->getdoSaveBinary();
   
-  // Find out the output variables.
-  
-  ofstream outFile;
-  outFile.open(filename.c_str(),fstream::out | fstream::trunc);
-  outFile<<std::scientific;
-  outFile.precision(7);
-  for(int i=minI; i<= maxI; i++)
-    for(int j=minJ; j<=maxJ; j++)
-      for(int k=minK; k<=maxK; k++){
-	outFile<<dx
-	       <<"\t"<<grid->getXN(i)
-	       <<"\t"<<grid->getYN(j)
-	       <<"\t"<<(col->getnDim()==2? 0:grid->getZN(k));
-	for(int iVar=0; iVar<nVar; iVar++){
-	  outFile<<"\t"<<getVar(var_I[iVar],i,j,k);
-	}	
-	outFile<<"\n";
-      }
+  if(isBinary){
+    FILE *outFile;
+    int nRecord, nSizeDouble, nSizeInt;
+    nSizeInt = sizeof(int);
+    assert_eq(nSizeInt,4);
+    nSizeDouble = sizeof(double);
+    nRecord = (nVar+4)*nSizeDouble;
+    if(doTestFunc){
+      cout<<"size of int is "<<sizeof(int)
+	  <<"size of double is "<<sizeof(double)
+	  <<endl;
+    }
+    outFile = fopen(filename.c_str(),"wb");
 
+    double data0;
+    for(int i=minI; i<= maxI; i++)
+      for(int j=minJ; j<=maxJ; j++)
+	for(int k=minK; k<=maxK; k++){
+	  // The PostIDL.f90 is designed for Fortran output. In order to
+	  // use PostIDL.f90, we should follow the format of Fortran
+	  // binary output. Here, each line is a record. Before and after
+	  // each record, use 4 byte to save the length of this record. 
+	  fwrite(&nRecord, nSizeInt, 1, outFile);
+	  fwrite(&dx, nSizeDouble, 1, outFile);
+	  data0 = grid->getXN(i);
+	  fwrite(&data0, nSizeDouble, 1, outFile);
+	  data0 = grid->getYN(j);
+	  fwrite(&data0, nSizeDouble, 1, outFile);
+	  data0 = (col->getnDim()==2? 0:grid->getZN(k));
+	  fwrite(&data0, nSizeDouble, 1, outFile);
+	  for(int iVar=0; iVar<nVar; iVar++){
+	    data0 = getVar(var_I[iVar],i,j,k);
+	    fwrite(&data0, nSizeDouble, 1, outFile);
+	  }
+	  fwrite(&nRecord, nSizeInt, 1, outFile);
+	}
+    fclose(outFile);
+  }else{
+    ofstream outFile;
+    outFile.open(filename.c_str(),fstream::out | fstream::trunc);
+    outFile<<std::scientific;
+    outFile.precision(7);
+    for(int i=minI; i<= maxI; i++)
+      for(int j=minJ; j<=maxJ; j++)
+	for(int k=minK; k<=maxK; k++){
+	  outFile<<dx
+		 <<"\t"<<grid->getXN(i)
+		 <<"\t"<<grid->getYN(j)
+		 <<"\t"<<(col->getnDim()==2? 0:grid->getZN(k));
+	  for(int iVar=0; iVar<nVar; iVar++){
+	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k);
+	  }	
+	  outFile<<"\n";
+	}
+    if(outFile.is_open()) outFile.close(); 
+  }
 
-  if(outFile.is_open()) outFile.close();
 }
 
 double EMfields3D:: getVar(string var, int i, int j, int k){

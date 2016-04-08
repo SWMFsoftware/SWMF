@@ -1550,6 +1550,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   // Variables for plot.
   nPlotFile = 0;
+  doSaveBinary = true;
   
   while(*param){
     get_next_command(param,&Command);
@@ -1687,6 +1688,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       // In "BATSRUS" mode restart is controled by the coupler
       if(Case == "BATSRUS") RestartOutputCycle = 1; 
 
+    }
+    else if( Command == "#SAVEBINARY"){
+      read_var(param,"doSaveBinary", &doSaveBinary);
     }
     else if( Command == "#SAVEIDL"){
       /*
