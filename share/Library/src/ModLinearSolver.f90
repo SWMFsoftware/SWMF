@@ -924,7 +924,7 @@ contains
     real, parameter :: Ratio = 1e-8
 
     integer :: i, n, iError
-    real :: Limit, Maximum, MaximumAll, a 
+    real :: Limit, Maximum, a 
     real :: Part_I(nPart), SumPart_I(nPart), SumAllPart_I(nPart)
     !---------------------------------------------------------------
     n = size(a_I)
@@ -937,11 +937,8 @@ contains
           Maximum = max(Maximum, abs(a_I(i)*b_I(i)))
        end do
        if(present(iComm))then
-          if(iComm /= MPI_COMM_SELF)then
-             call MPI_allreduce(Maximum, MaximumAll, 1, MPI_REAL, MPI_MAX, &
-                  iComm, iError)
-             Maximum = MaximumAll
-          end if
+          if(iComm /= MPI_COMM_SELF) call MPI_allreduce( &
+               MPI_IN_PLACE, Maximum, 1, MPI_REAL, MPI_MAX, iComm, iError)
        endif
        ! Formulate an integer power of 2 near Ratio*Maximum
        Limit = 2.0**exponent(Ratio*Maximum)
