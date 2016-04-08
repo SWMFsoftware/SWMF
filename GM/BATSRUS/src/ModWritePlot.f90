@@ -1696,7 +1696,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
-  use ModIO,         ONLY: plot_type,plot_dimensional
+  use ModIO,         ONLY: plot_type, plot_dimensional, plot_type1
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
@@ -1718,8 +1718,18 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   ! the appropriate string of variable names and units
   !/
 
+  write(*,*)'!!! iFile, plot_type1=', iFile, plot_type1
+
   ! Coordinate names and units
-  if(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
+  if(plot_type1(1:3) == 'shl')then
+     if (plot_dimensional(iFile)) then
+        StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
+             // '", "Lon [deg]", "Lat [deg]'
+     else
+        StringVarTec = 'VARIABLES ="R", "Lon", "Lat'
+     end if
+
+  elseif(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
 
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
