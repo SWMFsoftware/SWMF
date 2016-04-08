@@ -18,4 +18,8 @@
 #define _DUST__CHARGING_MODE__TIME_DEPENDENT_  1
 #define _DUST__CHARGING_MODE__EQUILIBRIUM_     2
 
+//the types of the numberical dust size distributions
+#define _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE__LOG_    0
+#define _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE_LINEAR_  1
+
 

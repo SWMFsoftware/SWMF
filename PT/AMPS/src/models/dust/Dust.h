@@ -307,8 +307,17 @@ namespace ElectricallyChargedDust {
     }
 
     inline void GenerateGrainRandomRadius(double& newRadius,double &WeightCorrectionFactor) {
-      newRadius=minDustRadius*exp(rnd()*(LogMaxDustGrainRadius-LogMinDustGrainRadius));
-      WeightCorrectionFactor=pow(newRadius,1.0-PowerIndex)/maxValue__non_normalized;
+      if (_DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE_ == _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE__LOG_) {
+        newRadius=minDustRadius*exp(rnd()*(LogMaxDustGrainRadius-LogMinDustGrainRadius));
+        WeightCorrectionFactor=pow(newRadius,1.0-PowerIndex)/maxValue__non_normalized;
+      }
+      else if (_DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE_ == _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE_LINEAR_) {
+        static double norm=pow(minDustRadius,-PowerIndex);
+
+        newRadius=minDustRadius+rnd()*(maxDustRadius-minDustRadius);
+        WeightCorrectionFactor=pow(newRadius,-PowerIndex)/norm;
+      }
+      else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
   }
 

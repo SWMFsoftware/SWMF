@@ -29,5 +29,7 @@
 #define _DUST__FORCE__LORENTZ_FORCE__MODE_       _PIC_MODE_OFF_  
 #define _DUST__FORCE__DRAG_FORCE__MODE_          _PIC_MODE_OFF_  
 
+//the type of the NUMERICAL dust grain size distribution
+#define _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE_ _DUST_NUMERICAL_SIZE_DISTRIBUTION_MODE__LOG_
 
 #endif
