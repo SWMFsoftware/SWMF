@@ -105,6 +105,9 @@ program post_idl
 
   ! Periodicity of the simulation domain. Not needed here
   logical:: IsPeriodic_D(3)
+
+  ! Control verbose output
+  logical:: IsVerbose = .false.
   
   character (len=lStringLine) :: NameCommand, StringLine
   !---------------------------------------------------------------------------
@@ -129,6 +132,8 @@ program post_idl
      if(.not.read_command(NameCommand)) CYCLE READPARAM
 
      select case(NameCommand)
+     case('#VERBOSE')
+        call read_var('IsVerbose', IsVerbose)
      case('#HEADFILE')
         call read_var('HeadNameFile', NameFileHead)
         call read_var('nProc',nProc)
@@ -260,7 +265,7 @@ program post_idl
 
   write(*,*)'plot area size=', nCell_D
 
-  ! Calculate dimensionality of the cut and add ParamExtra_Iameters if needed
+  ! Calculate dimensionality of the cut and add parameters if needed
   nDim=0
   nParamExtra=0
   iDimCut_D=0
@@ -276,7 +281,15 @@ program post_idl
      end if
   end do
 
-  if(nDim==2)then
+  if(IsVerbose)then
+     write(*,*) 'dCoordPlot_D=', dCoordPlot_D
+     write(*,*) 'IsStructured=', IsStructured
+     write(*,*) 'NameCoord_D =', NameCoord_D
+     write(*,*) 'nDim        =', nDim
+     write(*,*) 'iDimCut_D   =', iDimCut_D
+  end if
+
+  if(nDim==2 .and. NameFileHead(1:3) /= 'cut')then
      ! For double cut 
      iDim1 = iDimCut_D(1)
      iDim2 = iDimCut_D(2)
@@ -301,6 +314,12 @@ program post_idl
            IsStructured = .false.
            CellSizePlot_D = -1.0
         end if
+     end if
+
+     if(IsVerbose)then
+        write(*,*) 'iDim1, iDim2, iDim0=', iDim1, iDim2, iDim0
+        write(*,*) 'CoordShift1, Shift2=', CoordShift1, CoordShift2
+        write(*,*) 'UseDoubleCut       =', UseDoubleCut
      end if
 
   endif
@@ -414,8 +433,6 @@ program post_idl
 
         endif
 
-        !x = GenCoord_D(1); y = GenCoord_D(2); z = GenCoord_D(3)
-
         if(CellSize1 < dCoord1Plot + 1.e-6)then
            ! Cell has the correct size or finer
            Ijk_D = max(1, nint(( GenCoord_D - CoordMin_D)/dCoordPlot_D + 0.5))
@@ -469,7 +486,10 @@ program post_idl
 
      close(UnitTmp_)
   end do ! me
-  
+
+  if(IsVerbose)write(*,*)'nCellCheck=', nCellCheck, &                  
+       ' nCellPlot=', nCellPlot
+
   if(nCellCheck /= nCellPlot)&
        write(*,*)'!!! Discrepancy: nCellCheck=', nCellCheck, &
        ' nCellPlot=', nCellPlot,' !!!'
@@ -534,7 +554,12 @@ program post_idl
   do i = 1, nParamExtra
      Param_I(i + nParamPlot) = ParamExtra_I(i)
   end do
-  
+
+  if(IsVerbose)then
+     write(*,*)'nParamPlot, nParamExtra=', nParamPlot, nParamExtra
+     write(*,*)' Param_I=',  Param_I
+  end if
+
   if(.not.IsStructured)then
      ! Sort points based on (generalized) coordinates
 
@@ -596,6 +621,15 @@ program post_idl
      end if
   
      deallocate(Sort_I, iSort_I)
+
+     if(IsVerbose)then
+        write(*,*)'After sorting and averaging n1=', n1
+     end if
+  end if
+
+  if(IsVerbose)then
+     write(*,*)'shape(Coord_DC)  =', shape(Coord_DC)
+     write(*,*)'shape(PlotVar_VC)=', shape(PlotVar_VC)
   end if
 
   ! the sizes of Coord_DC and PlotVar_VC may be modified by cell averaging 
