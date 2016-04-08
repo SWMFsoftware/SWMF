@@ -3794,27 +3794,7 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
 	  col->setFluidFieldsNode(&fluidEx[i][j][k],&fluidEy[i][j][k],&fluidEz[i][j][k],
 				  &fluidBxn[i][j][k],&fluidByn[i][j][k],&fluidBzn[i][j][k],i,j,k);
 	}
-  for (int i=0; i < nxn; i++)
-    for (int j=0; j < nyn; j++)
-      for (int k=0; k < nzn; k++)
-	{
-	  // Distans from the boundary
-	  int ig = col->getGlobalStartIndex(0) + i; int nxg = col->getNxc()+3;
-	  int jg = col->getGlobalStartIndex(1) + j; int nyg = col->getNyc()+3;
-	  int kg = col->getGlobalStartIndex(2) + k; int nzg = col->getNzc()+3;
-          minDn = min(ig, nxg -ig -1);
-	  if(col->getnDim()>1) minDn = min(minDn, min(jg, nyg - jg - 1));
-	  if(col->getnDim()>2) minDn = min(minDn, min(kg, nzg - kg - 1));
-	  if(minDn < NG_F+col->getnOverlap())
-	    {
-	      Bxn[i][j][k] = fluidBxn[i][j][k];
-	      Byn[i][j][k] = fluidByn[i][j][k];
-	      Bzn[i][j][k] = fluidBzn[i][j][k];
-	      Ex[i][j][k] = fluidEx[i][j][k];
-	      Ey[i][j][k] = fluidEy[i][j][k];
-	      Ez[i][j][k] = fluidEz[i][j][k];
-	    }
-	}
+
   // interpolate from cell centers to nodes (corners of cells)
   grid->interpN2Cfull(fluidExc,fluidEx);
   grid->interpN2Cfull(fluidEyc,fluidEy);
@@ -3822,10 +3802,6 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
   grid->interpN2Cfull(fluidBxc,fluidBxn);
   grid->interpN2Cfull(fluidByc,fluidByn);
   grid->interpN2Cfull(fluidBzc,fluidBzn);
-
-  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
-  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
-  // communicateCenterBC(nxc,nyc,nzc,fluidBxc,-2,-2,-2,-2,-2,-2,vct,this);
 
   // Get new timestep from fluid solver
   dt  = col->getFluidDt();
