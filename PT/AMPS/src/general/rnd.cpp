@@ -34,8 +34,8 @@ void rnd_seed(int seed) {
       {
         nThreadsOpenMP=omp_get_num_threads();
 
-        RandomNumberGenerator::rndLastSeedArray=new unsigned long int[nThreadsOpenMP];
-        for (i=0;i<nThreadsOpenMP;i++) RandomNumberGenerator::rndLastSeedArray[i]=i+thread*nThreadsOpenMP;
+        if (RandomNumberGenerator::rndLastSeedArray==NULL) RandomNumberGenerator::rndLastSeedArray=new unsigned long int[nThreadsOpenMP];
+        for (i=0;i<nThreadsOpenMP;i++) RandomNumberGenerator::rndLastSeedArray[i]=abs(seed)+i+thread*nThreadsOpenMP;
       }
     }
   #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
