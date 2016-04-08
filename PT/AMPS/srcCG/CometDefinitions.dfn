@@ -40,5 +40,9 @@
 #define _READ_NEUTRALS_FROM_BINARY_MODE_ON_ 1
 #define _READ_NEUTRALS_FROM_BINARY_MODE_OFF_ 0
 
+//the type of the boundary conditions for the gas at the surface
+#define _COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE__UNIFORM_     0
+#define _COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE__MAXWELLIAN_  1
+
 #define _SHAP5_ 0
 #define _SHAP5_1_ 1
