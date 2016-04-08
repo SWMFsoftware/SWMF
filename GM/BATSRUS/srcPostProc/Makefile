@@ -15,12 +15,6 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 # Post processing executables
 #
 
-${BINDIR}/PostIDL.exe: ${LIBSHARE} PostIDL.o
-	${LINK.f90} -o ${BINDIR}/PostIDL.exe PostIDL.o -L${LIBDIR} -lSHARE ${Lflag2}
-
-PIDL:
-	make ${BINDIR}/PostIDL.exe
-
 ${BINDIR}/PostSPH.exe:	PostSPH.o
 	${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
 
