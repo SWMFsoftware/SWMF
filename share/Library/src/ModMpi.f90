@@ -35,6 +35,8 @@ module ModMpi
   use ModMpiOrig, &
        MPI_REAL_ORIG => MPI_REAL, MPI_COMPLEX_ORIG => MPI_COMPLEX
 
+  implicit none
+
   ! iRealPrec = 1 if the code is compiled with 8 byte reals and 0 otherwise
   integer, parameter :: iRealPrec = (1.00000000011 - 1.0)*10000000000.0
 
@@ -59,6 +61,7 @@ contains
 
     external MPI_reduce
     integer:: iRank
+    real:: Recv_I(1)
     !------------------------------------------------------------------------
     call MPI_comm_rank(iComm, iRank, iError)
 
@@ -66,7 +69,7 @@ contains
        call MPI_reduce(MPI_IN_PLACE, Buffer_I, nSize, MPI_REAL, iOp, &
             iRoot, iComm, iError)
     else
-       call MPI_reduce(Buffer_I, Buffer_I, nSize, MPI_REAL, iOp, &
+       call MPI_reduce(Buffer_I, Recv_I, nSize, MPI_REAL, iOp, &
             iRoot, iComm, iError)
     end if
 
@@ -82,6 +85,7 @@ contains
 
     external MPI_reduce
     integer:: iRank
+    real :: Recv
     !------------------------------------------------------------------------
     call MPI_comm_rank(iComm, iRank, iError)
 
@@ -89,7 +93,7 @@ contains
        call MPI_reduce(MPI_IN_PLACE, Value, 1, MPI_REAL, iOp, &
             iRoot, iComm, iError)
     else
-       call MPI_reduce(Value, Value, 1, MPI_REAL, iOp, &
+       call MPI_reduce(Value, Recv, 1, MPI_REAL, iOp, &
             iRoot, iComm, iError)
     end if
     
@@ -106,7 +110,7 @@ contains
     integer, intent(out):: iError
 
     external MPI_reduce
-    integer:: iRank
+    integer:: iRank, iRecv_I(1)
     !------------------------------------------------------------------------
     call MPI_comm_rank(iComm, iRank, iError)
 
@@ -114,7 +118,7 @@ contains
        call MPI_reduce(MPI_IN_PLACE, iBuffer_I, nSize, MPI_INTEGER, &
             iOp, iRoot, iComm, iError)
     else
-       call MPI_reduce(Buffer_I, iBuffer_I, nSize, MPI_INTEGER, &
+       call MPI_reduce(iBuffer_I, iRecv_I, nSize, MPI_INTEGER, &
             iOp, iRoot, iComm, iError)
     end if
 
@@ -129,7 +133,7 @@ contains
     integer, intent(out):: iError
 
     external MPI_reduce
-    integer:: iRank
+    integer:: iRank, iRecv
     !------------------------------------------------------------------------
     call MPI_comm_rank(iComm, iRank, iError)
 
@@ -137,7 +141,7 @@ contains
        call MPI_reduce(MPI_IN_PLACE, iValue, 1, MPI_INTEGER, &
             iOp, iRoot, iComm, iError)
     else
-       call MPI_reduce(Buffer_I, iValue, 1, MPI_INTEGER, &
+       call MPI_reduce(iValue, iRecv, 1, MPI_INTEGER, &
             iOp, iRoot, iComm, iError)
     end if
 
