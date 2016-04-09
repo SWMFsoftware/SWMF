@@ -205,8 +205,8 @@ subroutine write_plot_common(iFile)
   end if
 
   ! Spherical slices are special cases:
-  IsSphPlot   = index(plot_type1,'sph')>0
-  DoPlotShell = index(plot_type1,'shl')>0
+  IsSphPlot   = plot_type1(1:3) == 'sph'
+  DoPlotShell = plot_type1(1:3) == 'shl'
 
   if(DoPlotShell)then
      ! Initialize the shell grid for this file
@@ -1696,7 +1696,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
-  use ModIO,         ONLY: plot_type, plot_dimensional, plot_type1
+  use ModIO,         ONLY: plot_dimensional, plot_type1
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
@@ -1718,8 +1718,6 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   ! the appropriate string of variable names and units
   !/
 
-  write(*,*)'!!! iFile, plot_type1=', iFile, plot_type1
-
   ! Coordinate names and units
   if(plot_type1(1:3) == 'shl')then
      if (plot_dimensional(iFile)) then
@@ -1729,7 +1727,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         StringVarTec = 'VARIABLES ="R", "Lon", "Lat'
      end if
 
-  elseif(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
+  elseif(plot_type1(1:3) == 'sph') then
 
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
@@ -1999,7 +1997,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
 
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
-  use ModIO,         ONLY: plot_type, plot_dimensional, NameUnitUserIdl_I
+  use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserIdl_V
   use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
@@ -2024,7 +2022,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      RETURN
   end if
 
-  if(index(plot_type(iFile),'sph')>0 .or. index(plot_type(iFile),'geo')>0) then
+  if(plot_type1(1:3)=='sph' .or. plot_type1(1:3) == 'shl') then
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
