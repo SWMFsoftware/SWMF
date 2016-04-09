@@ -298,6 +298,7 @@ namespace PIC {
     extern cDatumStored   DatumAtVertexPlasmaDensity;
     extern cDatumStored   DatumAtVertexPlasmaTemperature;
     extern cDatumStored   DatumAtVertexPlasmaPressure;
+    extern cDatumStored   DatumAtVertexMagneticFluxFunction;
     extern cDatumTimed    DatumAtVertexParticleWeight;
     extern cDatumTimed    DatumAtVertexParticleNumber;
     extern cDatumTimed    DatumAtVertexNumberDensity;
@@ -801,7 +802,7 @@ namespace PIC {
       }
 
       // add vertex with given coordinates
-      void Add(double* xIn);
+      cFieldLineVertex* Add(double* xIn);
       // assign statistical weights to segments and normalize them
       void ResetSegmentWeights();
       // get random segment
@@ -829,6 +830,9 @@ namespace PIC {
     //current number of field lines
     extern long int nFieldLine;
 
+    //time of last update
+    extern double TimeLastUpdate;
+
     extern cFieldLine* FieldLinesAll;
     extern cAssociatedDataAMRstack<cFieldLineVertex> VerticesAll;
     extern cAssociatedDataAMRstack<cFieldLineSegment> SegmentsAll;
@@ -841,7 +845,9 @@ namespace PIC {
 
     //create a 2D field-line loop based on the background field
     void InitLoop2D(double *xStart, double DArc=1E-2);
+    void Update();
     
+
     // output data
     void Output(char* fname, bool GeometryOnly);
 

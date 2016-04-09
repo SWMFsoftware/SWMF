@@ -13,12 +13,13 @@ int PIC::FieldLine::cFieldLineVertex::CompletedSamplingOffset=-1;
 namespace PIC{
   namespace FieldLine{
 
-    cDatumStored DatumAtVertexElectricField(3,"\"Ex [V/m]\",\"Ey [V/m]\",\"Ez [V/m]\",",true);
+    cDatumStored DatumAtVertexElectricField(3,"\"Ex [V/m]\",\"Ey [V/m]\",\"Ez [V/m]\",",false);
     cDatumStored DatumAtVertexMagneticField(3,"\"Bx [nT]\",\"By [nT]\",\"Bz [nT]\",",true);
     cDatumStored DatumAtVertexPlasmaVelocity(3,"\"Plasma Vx [m/s]\",\"Plasma Vy [m/s]\",\"Plasma Vz [m/s]\"",true);
-    cDatumStored DatumAtVertexPlasmaDensity(1,"\"Plasma number density [1/m^3]\"", true);
-    cDatumStored DatumAtVertexPlasmaTemperature(1,"\"Plasma Temperature [K]\"", true);
-    cDatumStored DatumAtVertexPlasmaPressure(1,"\"Plasma pressure [Pa]\"", true);
+    cDatumStored DatumAtVertexPlasmaDensity(1,"\"Plasma number density [1/m^3]\"", false);
+    cDatumStored DatumAtVertexPlasmaTemperature(1,"\"Plasma Temperature [K]\"", false);
+    cDatumStored DatumAtVertexPlasmaPressure(1,"\"Plasma pressure [Pa]\"", false);
+    cDatumStored DatumAtVertexMagneticFluxFunction(1,"\"MagneticFluxFunction [nT*m]\"", true);
 
     cDatumTimed DatumAtVertexParticleWeight(1,"\"Particle Weight\"",false);
     cDatumTimed DatumAtVertexParticleNumber(1,"\"Particle Number\"",true);
@@ -33,6 +34,8 @@ namespace PIC{
     cFieldLine *FieldLinesAll = NULL;
     
     long int nFieldLine=0;
+
+    double TimeLastUpdate = -1;
 
     //=========================================================================
     bool cFieldLine::is_broken(){
@@ -69,7 +72,7 @@ namespace PIC{
     }
     
     //=========================================================================
-    void cFieldLine::Add(double *xIn){
+    cFieldLineVertex* cFieldLine::Add(double *xIn){
       // check if field lineis unset
       if(IsSet == 0){
 	if(FirstVertex==NULL){
@@ -90,7 +93,7 @@ namespace PIC{
 	  LastSegment->SetVertices(LastVertex->GetPrev(), LastVertex);
 	  nSegment++; TotalLength+= LastSegment->GetLength(); IsSet = 1;
 	}
-	return;
+	return LastVertex;
       }
       
       //allocate vertex
@@ -120,6 +123,8 @@ namespace PIC{
       //update house-keeping data
       nSegment++;
       TotalLength += LastSegment->GetLength();
+
+      return LastVertex;
     }
 
     //=========================================================================
@@ -302,13 +307,18 @@ namespace PIC{
 	Vertex->GetX(x);
 	for(int idim=0; idim<DIM; idim++) {fprintf(fout, "%e ", x[idim]);}
 
-	//print magnetic field
-	double B[DIM];
-	Vertex->GetMagneticField(B);
-	for(int idim=0; idim<DIM; idim++) {fprintf(fout, "%e ", B[idim]);}
+	double Value[3];
 
+	vector<cDatumStored*>::iterator itrDatumStored;
+	for(itrDatumStored = DataStoredAtVertex.begin();
+	    itrDatumStored!= DataStoredAtVertex.end();  itrDatumStored++)
+	  if((*itrDatumStored)->doPrint){
+	    Vertex->GetDatum(*(*itrDatumStored), Value);
+	    for(int i=0; i<(*itrDatumStored)->length; i++){
+	      fprintf(fout, "%e ", Value[i]);}
+	  }
+      
 	vector<cDatumSampled*>::iterator itrDatum;
-	double* Value;
 	for(itrDatum = DataSampledAtVertex.begin();
 	    itrDatum!= DataSampledAtVertex.end();  itrDatum++)
 	  if((*itrDatum)->doPrint){
@@ -344,12 +354,13 @@ namespace PIC{
       // activate data storage
       long int Offset = 0;
       // activate data that are stored but NOT sampled
-      DatumAtVertexMagneticField.    activate(Offset, &DataStoredAtVertex);
-      DatumAtVertexElectricField.    activate(Offset, &DataStoredAtVertex);
-      DatumAtVertexPlasmaVelocity.   activate(Offset, &DataStoredAtVertex);
-      DatumAtVertexPlasmaDensity.    activate(Offset, &DataStoredAtVertex);
-      DatumAtVertexPlasmaTemperature.activate(Offset, &DataStoredAtVertex);
-      DatumAtVertexPlasmaPressure.   activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexMagneticField.       activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexElectricField.       activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaVelocity.      activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaDensity.       activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaTemperature.   activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexPlasmaPressure.      activate(Offset, &DataStoredAtVertex);
+      DatumAtVertexMagneticFluxFunction.activate(Offset, &DataStoredAtVertex);
       // activate data that is sampled
       long int SamplingOffset = Offset; Offset = 0;
       DatumAtVertexParticleWeight.activate(Offset, &DataSampledAtVertex);
@@ -373,9 +384,14 @@ namespace PIC{
       fprintf(fout, "TITLE=\"Field line geometry\"");
       
 #if DIM == 3 
-      fprintf(fout,"VARIABLES=\"x\",\"y\",\"z\",\"Bx\",\"By\",\"Bz\"");
+      fprintf(fout,"VARIABLES=\"x\",\"y\",\"z\"");//,\"Bx\",\"By\",\"Bz\"");
+      vector<cDatumStored*>::iterator itrDatumStored;
       vector<cDatumSampled*>::iterator itrDatum;
-      double* Value;
+      //      double* Value;
+      for(itrDatumStored = DataStoredAtVertex.begin();
+	  itrDatumStored!= DataStoredAtVertex.end();  itrDatumStored++)
+	if((*itrDatumStored)->doPrint)
+	  (*itrDatumStored)->PrintName(fout);
       for(itrDatum = DataSampledAtVertex.begin();
 	  itrDatum!= DataSampledAtVertex.end();  itrDatum++)
 	if((*itrDatum)->doPrint)
@@ -491,6 +507,8 @@ namespace PIC{
       // min value resolved for magnetic field (squared)
       const double epsB2 = 1E-30;
       const double epsB  = 1E-15;
+      // plasma velocity, stored at vertex
+      double V[3] = {0.0, 0.0, 0.0};
       // magnetic field vector, unit vector and magnitude
       // NOTE: y-component is ignored!!!
       double B[3] = {0.0, 0.0, 0.0};
@@ -512,6 +530,8 @@ namespace PIC{
       double BNew[3] = {0.0,0.0,0.0};
       double bNew[3] = {0.0,0.0,0.0};
       double absBNew;
+      // new vertex
+      cFieldLineVertex *Vertex;
       //.......................................................................
 
       //increase counter of field lines
@@ -536,8 +556,12 @@ namespace PIC{
 	     "ERROR: magnetic field magnitude is below min resolved value");
       
       //add the initial vertex
-      FieldLinesAll[nFieldLine-1].Add(x);
-      FieldLinesAll[nFieldLine-1].SetMagneticField(B,0);
+      Vertex = FieldLinesAll[nFieldLine-1].Add(x);
+      //      FieldLinesAll[nFieldLine-1].SetMagneticField(B,0);
+      Vertex -> SetMagneticField(B);
+      Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
+      CPLR::GetBackgroundPlasmaVelocity(V);
+      Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
 
       //generate the loop
       //......................................................................
@@ -636,8 +660,12 @@ namespace PIC{
 	Angle += asin(b[0]*bNew[2] - b[2]*bNew[0]);
 	
 	//add this vertex
-	FieldLinesAll[nFieldLine-1].Add(xNew);
-	FieldLinesAll[nFieldLine-1].SetMagneticField(BNew);
+	Vertex = FieldLinesAll[nFieldLine-1].Add(xNew);
+	//	FieldLinesAll[nFieldLine-1].SetMagneticField(BNew);
+	Vertex -> SetMagneticField(BNew);
+	Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
+	CPLR::GetBackgroundPlasmaVelocity(V);
+	Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
 
 	//check conditions for completing the loop
 	cFieldLineSegment* First=FieldLinesAll[nFieldLine-1].GetFirstSegment();
@@ -665,7 +693,34 @@ namespace PIC{
       }
       exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
     }
-    
+
+    //=========================================================================
+    // update field lines 
+    void Update(){
+      cFieldLineVertex*  Vertex;
+      cFieldLineSegment* Segment;
+      double dt = PIC::SimulationTime::Get() - TimeLastUpdate;
+      for(int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++){
+	for(Vertex = FieldLinesAll[iFieldLine].GetFirstVertex() ;
+	    Vertex!= NULL; Vertex = Vertex->GetNext()){
+	  double X[3], V[3];
+	  Vertex->GetX(X);
+	  Vertex->GetPlasmaVelocity(V);
+	  for(int i=0; i<DIM; i++) X[i] += V[i] * dt;
+         #if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
+	  // rotate to the y=0 plane
+	  X[0] = pow(X[0]*X[0]+X[1]*X[1], 0.5);
+	  X[1] = 0.0;
+         #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_ 
+	  Vertex->SetX(X);
+	}
+	for(Segment= FieldLinesAll[iFieldLine].GetFirstSegment();
+	    Segment!= NULL; Segment = Segment->GetNext())
+	  Segment->SetVertices(Segment->GetBegin(),
+			       Segment->GetEnd());
+      }
+    }
+
     //=========================================================================
     void InitSimpleParkerSpiral(double *xStart){
       
