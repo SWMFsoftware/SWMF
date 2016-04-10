@@ -496,6 +496,9 @@ namespace PIC{
       if(nFieldLine == nFieldLineMax)
 	exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
 
+      // mark time of extraction
+      TimeLastUpdate = PIC::SimulationTime::Get();
+
       // list of variables utilized
       //.......................................................................
       // current location
@@ -700,10 +703,15 @@ namespace PIC{
       cFieldLineVertex*  Vertex;
       cFieldLineSegment* Segment;
       double dt = PIC::SimulationTime::Get() - TimeLastUpdate;
+      TimeLastUpdate += dt;
       for(int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++){
+	int cnt = 0;
+	bool done = false;
 	for(Vertex = FieldLinesAll[iFieldLine].GetFirstVertex() ;
-	    Vertex!= NULL; Vertex = Vertex->GetNext()){
-	  double X[3], V[3];
+	    !done;
+	    Vertex = Vertex->GetNext(), cnt++){
+	    done = Vertex==FieldLinesAll[iFieldLine].GetLastVertex() && cnt!=0;
+	  double X[3],B[3],V[3];
 	  Vertex->GetX(X);
 	  Vertex->GetPlasmaVelocity(V);
 	  for(int i=0; i<DIM; i++) X[i] += V[i] * dt;
@@ -712,12 +720,43 @@ namespace PIC{
 	  X[0] = pow(X[0]*X[0]+X[1]*X[1], 0.5);
 	  X[1] = 0.0;
          #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_ 
+         #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+	  // flux function
+	  CPLR::InitInterpolationStencil(X);
+	  CPLR::GetBackgroundMagneticField(B);
+	  double Psi = CPLR::GetBackgroundMagneticFluxFunction();
+	  double Psi0;
+	  Vertex->GetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
+
+	  // correct the initial guess until flux function is close enough
+	  // to the original value
+	  //------------------------------------------------------------------
+	  while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5){
+	    double misc = B[0]*B[0] + B[2]*B[2];
+	    X[0]+=-0.001 * (Psi-Psi0) * B[2] / misc;
+	    X[2]+= 0.001 * (Psi-Psi0) * B[0] / misc;
+	    CPLR::InitInterpolationStencil(X);
+	    CPLR::GetBackgroundMagneticField(B);
+	    Psi = CPLR::GetBackgroundMagneticFluxFunction();
+	  }
+	  //------------------------------------------------------------------
+         #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
 	  Vertex->SetX(X);
+	  // update background data
+	  PIC::CPLR::InitInterpolationStencil(X);
+	  PIC::CPLR::GetBackgroundMagneticField(B);
+	  PIC::CPLR::GetBackgroundPlasmaVelocity(V);
+	  Vertex->SetDatum(DatumAtVertexMagneticField, B);
+	  Vertex->SetDatum(DatumAtVertexPlasmaVelocity,V);
 	}
-	for(Segment= FieldLinesAll[iFieldLine].GetFirstSegment();
-	    Segment!= NULL; Segment = Segment->GetNext())
+	cnt = 0; done = false;
+	for(Segment = FieldLinesAll[iFieldLine].GetFirstSegment();
+	    !done; 
+	    Segment = Segment->GetNext(), cnt++){
+	  done = Segment==FieldLinesAll[iFieldLine].GetLastSegment()&&cnt!=0;
 	  Segment->SetVertices(Segment->GetBegin(),
 			       Segment->GetEnd());
+	}
       }
     }
 

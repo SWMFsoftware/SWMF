@@ -225,8 +225,13 @@ int PIC::TimeStep() {
     else //load data file
       PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
   }
-#endif
-#endif
+#if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+  // update field lines
+  PIC::FieldLine::Update();
+#endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+  
+#endif//_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#endif//_PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
 
   struct cExchangeStatisticData {
     double TotalInterationRunTime;
