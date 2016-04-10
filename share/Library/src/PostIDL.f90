@@ -65,7 +65,7 @@ program post_idl
   real, allocatable :: Sort_I(:)
   real, allocatable :: StateSum_V(:), CellSizeMin_D(:)
 
-  integer :: iDim, iDimCut_D(3), nDim, nParamExtra
+  integer :: iDim, iDimCut_D(3), nDim, nParamExtra, l1, l2, l3, l4
   real    :: ParamExtra_I(3)
   character(len=5):: NameCoord_D(3) = (/'x    ','y    ','z    '/)
   character(len=5):: NameCoordPlot_D(3)
@@ -239,7 +239,7 @@ program post_idl
      select case(TypeGeometry(1:5))
      case('spher')
         ! In reality this is the r-lon-lat coordinate system
-        NameCoord_D = (/'r    ','phi  ','lat  '/)
+        NameCoord_D = (/'r    ','lon  ','lat  '/)
      case('cylin')
         NameCoord_D = (/'r    ','phi  ','z    '/)
      case('round')
@@ -364,6 +364,36 @@ program post_idl
   call join_string(NameCoordPlot_D(1:nDim), NameCoord)
   NameVar = trim(NameCoord)//' '//trim(NameVar)
 
+  ! For Tecplot format NameUnit contains coordinate and variable names
+  ! The coordinate names have to be fixed (except for 3D cartesian)
+
+  if(NameUnit(1:11) == 'VARIABLES =')then
+
+     l1 = index(NameUnit, '[')  ! start of dist unit for "X"
+     l2 = index(NameUnit, ']')  ! end of dist unit for "X"
+     l3 = index(NameUnit, '"Z') ! last coordinate is "Z"
+
+     if(l3 > 11)then
+        l4 = index(NameUnit(l3:len(NameUnit)), ',') + l3 ! end of coord names
+
+        ! Reconstruct coordinate names in Tecplot format
+        NameCoord = 'VARIABLES ="'
+        do iDim = 1, nDim
+           NameCoord = trim(NameCoord)//trim(NameCoordPlot_D(iDim))
+           select case(NameCoordPlot_D(iDim))
+           case('x', 'y', 'z', 'r')
+              if(l1 > 1 .and. l2 > l1) &
+                   NameCoord = trim(NameCoord)//NameUnit(l1-1:l2)
+           case('theta', 'phi', 'lon', 'lat')
+              NameCoord = trim(NameCoord)//' [deg]'
+           end select
+           NameCoord = trim(NameCoord)//'", "'
+        end do
+
+        NameUnit=NameCoord(1:len_trim(NameCoord)-2)//NameUnit(l4:len(NameUnit))
+     end if
+  end if
+
   ! Collect info from all files and put it into PlotVar_VC and Coord_DC
   VolumeCheck = 0.0
   iCell = 0
@@ -393,8 +423,6 @@ program post_idl
 
      ! Read file
      do
-        !Debug
-        !write(*,*)'START READING'
         if(DoReadBinary)then
            if(nByteRealRead == 4)then
               read(UnitTmp_,ERR=999,END=999) DxCell4, Xyz4_D, PlotVar4_V
@@ -485,7 +513,7 @@ program post_idl
 999  continue
 
      close(UnitTmp_)
-  end do ! me
+  end do ! iProc
 
   if(IsVerbose)write(*,*)'nCellCheck=', nCellCheck, &                  
        ' nCellPlot=', nCellPlot
@@ -606,7 +634,7 @@ program post_idl
         end do
         deallocate(StateSum_V, CellSizeMin_D, GenCoord_DI)
 
-        ! Special Judgement for the last point
+        ! Special judgement for the last point
         if(j == n1) then
            iSort_I(k) = j
            n1 = k
