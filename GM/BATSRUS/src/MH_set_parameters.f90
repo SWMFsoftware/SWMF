@@ -3090,7 +3090,7 @@ contains
     integer :: iFile
     real    :: Ratio, PlotRes_D(3)
 
-    real    :: CellSizeMax_D(3)
+    real    :: CellSizeMax_D(3), Cut
     real    :: SmallSize_D(3)   ! Used for 2D plot areas
 
     character(len=*), parameter:: NameSub = 'correct_plot_range'
@@ -3134,6 +3134,16 @@ contains
                cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile) 
           if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
                cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
+          do iDim = 1, nDim
+             if(plot_range(2*iDim-1,iFile) < plot_range(2*iDim,iFile)) CYCLE
+             Cut = 0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim-1,iFile))
+             plot_range(2*iDim-1,iFile) = Cut - SmallSize_D(iDim)
+             plot_range(2*iDim,iFile)   = Cut + SmallSize_D(iDim)
+          end do
+          do iDim = nDim+1, MaxDim
+             plot_range(2*iDim-1,iFile) = 0.0
+             plot_range(2*iDim,iFile)   = 0.0
+          end do
        case('sph')
           if(IsCartesianGrid)then
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
