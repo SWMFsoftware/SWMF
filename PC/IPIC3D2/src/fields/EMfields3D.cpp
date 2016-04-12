@@ -3409,9 +3409,9 @@ void EMfields3D::communicateGhostP2G(int ns)
   if(get_col().getCase()=="BATSRUS"){
     // setFluidBC_P is already called at the beginning of each iteration
     // to set BC for IPIC3D. Here, at the end of iteration, it is called
-    // again to correcto the boundary nodes so that the output can have
-    // the right values.
-    //setFluidBC_P(ns);
+    // again to correcto the boundary nodes so that the output and the
+    // hat values (see calculatehatfunctions()) can have the right values. 
+    setFluidBC_P(ns);
   }else{
     // calculate the correct densities on the boundaries
     adjustNonPeriodicDensities(ns);
