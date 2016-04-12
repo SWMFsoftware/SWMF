@@ -16,11 +16,12 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   use ModNumConst, ONLY: cPi, cTwoPi
   use ModKind,     ONLY: nByteReal
   use ModIoUnit,   ONLY: UnitTmp_
-  use BATL_size,   ONLY: nGI, nGJ, nGK
+  use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
   use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, IsCartesianGrid, &
        CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        Xyz_DGB, x_, y_, z_, Phi_
+  use ModUtilities, ONLY: greatest_common_divisor
 
   implicit none
 
@@ -206,22 +207,23 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   else
      ! Block is finer then required resolution
      ! Calculate restriction factor
-     nRestrict = min(nI, nint(Dx/DxBlock))
+     nRestrict = greatest_common_divisor(nint(Dx/DxBlock), iMax-iMin+1)
+     if(nDim > 1) nRestrict = greatest_common_divisor(nRestrict, jMax-jMin+1)
+     if(nDim > 2) nRestrict = greatest_common_divisor(nRestrict, kMax-kMin+1)
 
-     ! Calclulate restricted cell size
-     DxBlock    = nRestrict*DxBlock
-     DyBlock    = nRestrict*DyBlock
-     DzBlock    = nRestrict*DzBlock
+     nRestrictX = nRestrict
+     nRestrictY = 1; if(nDim > 1) nRestrictY = nRestrict
+     nRestrictZ = 1; if(nDim > 2) nRestrictZ = nRestrict
 
-     ! Restriction is limited by the width of the plotting region
-     nRestrictX = min(iMax-iMin+1, nRestrict)
-     nRestrictY = min(jMax-jMin+1, nRestrict)
-     nRestrictZ = min(kMax-kMin+1, nRestrict)
+     ! Calculate restricted cell size
+     DxBlock    = nRestrictX*DxBlock
+     DyBlock    = nRestrictY*DyBlock
+     DzBlock    = nRestrictZ*DzBlock
 
      ! Factor for taking the average
-     Restrict = 1./(nRestrictX*nRestrictY*nRestrictZ)
+     Restrict = 1./(nRestrict**nDim)
 
-     if(DoTestMe) write(*,*) NameSub, 'nRestrict, X, Y, Z,Restrict=',&
+     if(DoTestMe) write(*,*) NameSub,': nRestrict, X, Y, Z, Restrict=',&
           nRestrict, nRestrictX, nRestrictY, nRestrictZ, Restrict
 
      ! Loop for the nRestrictX*nRestrictY*nRestrictZ bricks inside the cut
