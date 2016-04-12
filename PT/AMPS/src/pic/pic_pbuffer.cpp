@@ -14,6 +14,10 @@ long int PIC::ParticleBuffer::MaxNPart=0;
 long int PIC::ParticleBuffer::NAllPart=0;
 long int PIC::ParticleBuffer::FirstPBufferParticle=-1;
 
+int PIC::ParticleBuffer::Thread::NTotalThreads=0;
+long int *PIC::ParticleBuffer::Thread::AvailableParticleListLength=NULL,*PIC::ParticleBuffer::Thread::FirstPBufferParticle=NULL;
+
+
 //==========================================================
 //init the buffer
 void PIC::ParticleBuffer::Init(long int BufrerLength) {
@@ -44,7 +48,41 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   SetNext(-1,MaxNPart-1);
   SetParticleDeleted(MaxNPart-1);
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   FirstPBufferParticle=0;
+
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  //allocate the Thread::FirstPBufferParticle array and distribute particles between processes
+  #pragma omp parallel
+  {
+    #pragma omp single
+    {
+      long int thread,nParticlePerThread;
+
+      Thread::NTotalThreads=omp_get_num_threads();
+
+      Thread::AvailableParticleListLength=new long int [Thread::NTotalThreads];
+      Thread::FirstPBufferParticle=new long int [Thread::NTotalThreads];
+
+      nParticlePerThread=MaxNPart/Thread::NTotalThreads;
+
+      for (thread=0;thread<Thread::NTotalThreads;thread++) {
+        long int nStartPart,ListLength;
+
+        nStartPart=nParticlePerThread*thread;
+        ListLength=(thread!=Thread::NTotalThreads-1) ? nParticlePerThread : MaxNPart-nParticlePerThread*(Thread::NTotalThreads-1);
+
+        SetPrev(-1,nStartPart);
+        if (nStartPart!=0) SetNext(-1,nStartPart-1);
+
+        Thread::AvailableParticleListLength[thread]=ListLength;
+        Thread::FirstPBufferParticle[thread]=nStartPart;
+      }
+    }
+  }
+#else
+  #error The mode is unknown
+#endif //_COMPILATION_MODE_
 
 }
 
@@ -67,24 +105,63 @@ PIC::ParticleBuffer::byte *PIC::ParticleBuffer::GetParticleDataPointer(long int 
 //==========================================================
 //the functions that controls the particle buffer
 long int PIC::ParticleBuffer::GetMaxNPart() {return MaxNPart;}
-long int PIC::ParticleBuffer::GetAllPartNum() {return NAllPart;}
+
+long int PIC::ParticleBuffer::GetAllPartNum() {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+  return NAllPart;
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int nTotalParticles=0;
+
+  #pragma omp parallel default(none) shared(Thread::AvailableParticleListLength,MaxNPart,nTotalParticles,PIC::nTotalThreadsOpenMP)
+  {
+    #pragma omp single
+    {
+      int threadOpenMP,nTotalAvailableParticles=0;
+
+      for (threadOpenMP=0;threadOpenMP<PIC::nTotalThreadsOpenMP;threadOpenMP++) nTotalAvailableParticles+=Thread::AvailableParticleListLength[threadOpenMP];
+
+      nTotalParticles=MaxNPart-nTotalAvailableParticles;
+    }
+  }
+
+  return nTotalParticles;
+#else
+  #error The mode is unknown
+#endif //_COMPILATION_MODE_
+}
+
 long int PIC::ParticleBuffer::GetParticleDataLength() {return ParticleDataLength;}
 
 long int PIC::ParticleBuffer::GetNewParticle() {
   long int newptr;
   byte *pdataptr;
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   if (MaxNPart==NAllPart) exit(__LINE__,__FILE__,"The particle buffer is full");
 
   NAllPart++;
   newptr=FirstPBufferParticle;
   pdataptr=GetParticleDataPointer(newptr);
+  FirstPBufferParticle=GetNext(pdataptr);
+
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int thread=omp_get_thread_num();
+  if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
+
+  Thread::AvailableParticleListLength[thread]--;
+  newptr=Thread::FirstPBufferParticle[thread];
+  pdataptr=GetParticleDataPointer(newptr);
+  Thread::FirstPBufferParticle[thread]=GetNext(pdataptr);
+
+#else
+  #error The mode is unknown
+#endif //_COMPILATION_MODE_
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::InitParticleID(pdataptr);
   #endif
 
-  FirstPBufferParticle=GetNext(pdataptr);
+
   SetPrev(-1,pdataptr);
   SetNext(-1,pdataptr);
 
@@ -100,17 +177,31 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
   long int newptr;
   byte *pdataptr;
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   if (MaxNPart==NAllPart) exit(__LINE__,__FILE__,"The particle buffer is full");
 
   NAllPart++;
   newptr=FirstPBufferParticle;
   pdataptr=GetParticleDataPointer(newptr);
+  FirstPBufferParticle=GetNext(pdataptr);
+
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int thread=omp_get_thread_num();
+  if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
+
+  Thread::AvailableParticleListLength[thread]--;
+  newptr=Thread::FirstPBufferParticle[thread];
+  pdataptr=GetParticleDataPointer(newptr);
+  Thread::FirstPBufferParticle[thread]=GetNext(pdataptr);
+
+#else
+  #error The mode is unknown
+#endif //_COMPILATION_MODE_
+
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::InitParticleID(pdataptr);
   #endif
-
-  FirstPBufferParticle=GetNext(pdataptr);
 
   if (ListFirstParticle>=0) {
     byte *listFirstPData=GetParticleDataPointer(ListFirstParticle);
@@ -123,6 +214,7 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
     SetPrev(ListFirstParticle,pdataptr);
     SetNext(ListFirstParticle,pdataptr);
   }
+
 
 //#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
   if (IsParticleAllocated(pdataptr)==true) exit(__LINE__,__FILE__,"Error: the particle is re-allocated");
@@ -169,9 +261,19 @@ void PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(long int p
   SetParticleDeleted(ptr);
 //#endif
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   NAllPart--;
   SetNext(FirstPBufferParticle,ptr);
   FirstPBufferParticle=ptr;
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int thread=omp_get_thread_num();
+
+  Thread::AvailableParticleListLength[thread]++;
+  SetNext(Thread::FirstPBufferParticle[thread],ptr);
+  Thread::FirstPBufferParticle[thread]=ptr;
+#else
+  #error The mode is unknown
+#endif //_COMPILATION_MODE_
 }
 
 
@@ -347,7 +449,20 @@ void PIC::ParticleBuffer::CheckParticleList() {
 
 
   //the tables of the first particles in the cells
-  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_]; //,tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+
+  int nTotalThreads_OpenMP=1,thread_OpenMP;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  #pragma omp parallel default(none) shared(nTotalThreads_OpenMP)
+  {
+    #pragma omp single
+    {
+      nTotalThreads_OpenMP=omp_get_num_threads();
+    }
+  }
+#endif
 
 
   for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
@@ -360,42 +475,75 @@ void PIC::ParticleBuffer::CheckParticleList() {
     double EndTime,StartTime=MPI_Wtime();
   #endif
 
-
     while (node!=NULL) {
 
       memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
-      memcpy(tempParticleMovingListTable,node->block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+//      memcpy(tempParticleMovingListTable,node->block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              /*LocalCellNumber=*/   PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+              PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
 
-/*
-      memcpy(&block,node->block,sizeof(PIC::Mesh::cDataBlockAMR));
+                //check the tempoparyly particle lists
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+                if (node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+                for (thread_OpenMP=0;thread_OpenMP<nTotalThreads_OpenMP;thread_OpenMP++) {
+                  if (*(node->block->GetTempParticleMovingListTableThread(thread_OpenMP,i,j,k))!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
+                }
+#else
+#error The option is unknown
+#endif
 
-      {
-        {
-          for (centerNodeIndexCounter=0;centerNodeIndexCounter<nTotalCenterNodes;centerNodeIndexCounter++) {
-              LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
-              cell=block.GetCenterNode(LocalCellNumber);
-
-//              cell=node->block->GetCenterNode(LocalCellNumber);
- */
-
-//              if (cell!=NULL) {
-                if (tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
-
+                //count the number and allocation flag of the active particles
                 ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
                 while (ParticleList!=-1) {
+                  double *x=PIC::ParticleBuffer::GetX(ParticleList);
+                  int idim;
+
+                  for (idim=0;idim<3;idim++) if ((x[idim]<node->xmin[idim])||(node->xmax[idim]<x[idim])) {
+                    exit(__LINE__,__FILE__,"Error: a particle is outside of the block limit");
+                  }
+
+                  if (PIC::ParticleBuffer::IsParticleAllocated(ParticleList)==false) {
+                    exit(__LINE__,__FILE__,"Error: a particle in the list is not allocated");
+                  }
+
                   ++nTotalListParticles;
                   ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
 
-                  if (nTotalListParticles>NAllPart) exit(__LINE__,__FILE__,"Error: the list particles' number exeeds the total number of particles stored in the buffer");
+                  if (nTotalListParticles>MaxNPart) exit(__LINE__,__FILE__,"Error: the list particles' number exeeds the maximum number of particles that can be stored in the buffer");
                 }
-//              }
+
+/*
+                //check the allocation flags of the not-active particles
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+                ParticleList=FirstPBufferParticle;
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel default(none) private(ParticleList) shared(Thread::FirstPBufferParticle)
+                {
+                int thread;
+
+                thread=omp_get_thread_num();
+                ParticleList=Thread::FirstPBufferParticle[thread];
+
+#endif //_COMPILATION_MODE_
+
+                while (ParticleList!=-1) {
+                  if (PIC::ParticleBuffer::IsParticleAllocated(ParticleList)==true) {
+                     exit(__LINE__,__FILE__,"Error: a NON-active particle is marked as allocated");
+                  }
+
+                  ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+                }
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+                }
+#endif //_COMPILATION_MODE_
+*/
             }
 
             if (DIM==1) break;
@@ -414,7 +562,18 @@ void PIC::ParticleBuffer::CheckParticleList() {
     }
   }
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   if (nTotalListParticles!=NAllPart) exit(__LINE__,__FILE__,"Error: the total number of particles stored in the lists is different from that stored in the particle buffer");
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  //calculate the total number of the particles available in the particle buffer
+  long int nTotalAvialableParticles=0;
+
+  for (thread_OpenMP=0;thread_OpenMP<nTotalThreads_OpenMP;thread_OpenMP++) nTotalAvialableParticles+=Thread::AvailableParticleListLength[thread_OpenMP];
+
+  if (nTotalAvialableParticles+nTotalListParticles!=MaxNPart) exit(__LINE__,__FILE__,"Error: the total number of particles stored in the lists is different from that stored in the particle buffer");
+#else
+#error The option is unknown
+#endif
 }
 
 //==========================================================
@@ -483,4 +642,45 @@ int PIC::ParticleBuffer::InitiateParticle(double *x,double *v,double *WeightCorr
   }
 
   return ptr;
+}
+
+
+//==========================================================
+//rebalance the particle lists
+void PIC::ParticleBuffer::Thread::RebalanceParticleList() {
+  int SendThread=0,RecvThread=0,ExchangeListLength=0;
+  long int ExchangeListBegin=-1,ExchangeListEnd=-1;
+  int thread,nParticlePerThread,i;
+
+  for (thread=0,nParticlePerThread=0;thread<NTotalThreads;thread++) nParticlePerThread+=AvailableParticleListLength[thread];
+  nParticlePerThread/=NTotalThreads;
+
+  //redistribute available particle slots netween threads on the same node
+  do {
+    if ((AvailableParticleListLength[SendThread]>nParticlePerThread+NTotalThreads)&&(nParticlePerThread-NTotalThreads>AvailableParticleListLength[RecvThread])) {
+      //exchange particles between threads SendThread and RecvThread
+      ExchangeListLength=min(AvailableParticleListLength[SendThread]-(nParticlePerThread+NTotalThreads),
+          nParticlePerThread-NTotalThreads-AvailableParticleListLength[RecvThread]);
+
+      ExchangeListBegin=FirstPBufferParticle[SendThread];
+      ExchangeListEnd=FirstPBufferParticle[SendThread];
+
+      for (i=0;i<ExchangeListLength-1;i++) ExchangeListEnd=PIC::ParticleBuffer::GetNext(ExchangeListEnd);
+
+      //remove the particle list from SendThread
+      FirstPBufferParticle[SendThread]=PIC::ParticleBuffer::GetNext(ExchangeListEnd);
+      AvailableParticleListLength[SendThread]-=ExchangeListLength;
+
+      //add the particle list to RecvThread
+      PIC::ParticleBuffer::SetNext(FirstPBufferParticle[RecvThread],ExchangeListEnd);
+      FirstPBufferParticle[RecvThread]=ExchangeListBegin;
+      AvailableParticleListLength[RecvThread]+=ExchangeListLength;
+    }
+
+    //advance SendThread and RecvThread numbers if needed
+    if (AvailableParticleListLength[SendThread]<=nParticlePerThread+NTotalThreads) SendThread++;
+    if (AvailableParticleListLength[RecvThread]>=nParticlePerThread-NTotalThreads) RecvThread++;
+  }
+  while ((SendThread<NTotalThreads)&&(RecvThread<NTotalThreads));
+
 }

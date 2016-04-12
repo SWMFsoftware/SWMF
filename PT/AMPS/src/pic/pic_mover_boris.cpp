@@ -328,7 +328,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
   
   //finish the trajectory integration procedure
   PIC::Mesh::cDataBlockAMR *block;
-  long int tempFirstCellParticle;
+  long int tempFirstCellParticle,*tempFirstCellParticlePtr;
 
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
 
@@ -336,7 +336,15 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
     exit(__LINE__,__FILE__,"Error: the block is empty. Most probably hte tiime step is too long");
   }
   
-  tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+  tempFirstCellParticlePtr=block->tempParticleMovingListTable+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  tempFirstCellParticlePtr=block->GetTempParticleMovingListTableThread(omp_get_thread_num(),i,j,k);
+#else
+#error The option is unknown
+#endif
+
+  tempFirstCellParticle=(*tempFirstCellParticlePtr);
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
@@ -345,7 +353,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 
   if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
-  block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
+  *tempFirstCellParticlePtr=ptr;
 
   return _PARTICLE_MOTION_FINISHED_;
 }

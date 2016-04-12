@@ -39,10 +39,16 @@ namespace PIC{
 int PIC::Mesh::cDataBlockAMR::LocalTimeStepOffset=0;
 int PIC::Mesh::cDataBlockAMR::LocalParticleWeightOffset=0;
 int PIC::Mesh::cDataBlockAMR::totalAssociatedDataLength=0;
+bool PIC::Mesh::cDataBlockAMR::InternalDataInitFlag=false;
+int PIC::Mesh::cDataBlockAMR::UserAssociatedDataOffset=0;
 
 //init the cells' global data
 int PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=0;
 int PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset=0;
+
+//in case OpenMP is used: tempParticleMovingListTableThreadOffset is the offset in the associatedDataPointer vector to the position when the temporary particle list begins
+int PIC::Mesh::cDataBlockAMR::tempParticleMovingListTableThreadOffset=-1;
+int PIC::Mesh::cDataBlockAMR::tempParticleMovingListTableThreadLength=0;
 
 //the offsets to the sampled data stored in 'center nodes'
 int PIC::Mesh::completedCellSampleDataPointerOffset=0,PIC::Mesh::collectingCellSampleDataPointerOffset=0;
@@ -52,6 +58,11 @@ int PIC::Mesh::sampledParticleVelocityRelativeOffset=0,PIC::Mesh::sampledParticl
 int PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset=0,PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset=0;
 int PIC::Mesh::sampledExternalDataRelativeOffset=0;
 int PIC::Mesh::sampleSetDataLength=0;
+
+//domain block decomposition used in OpenMP loops
+unsigned int PIC::DomainBlockDecomposition::nLocalBlocks=0;
+int PIC::DomainBlockDecomposition::LastMeshModificationID=-1;
+cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> **PIC::DomainBlockDecomposition::BlockTable=NULL;
 
 //the mesh parameters
 double PIC::Mesh::xmin[3]={0.0,0.0,0.0},PIC::Mesh::xmax[3]={0.0,0.0,0.0};
@@ -155,19 +166,24 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
     // timed data values
     vector<cDatumTimed*>::iterator itrDatumTimed;
     for(itrDatumTimed = DataTimedPrint.begin();
-	itrDatumTimed!= DataTimedPrint.end();  itrDatumTimed++){
+	    itrDatumTimed!= DataTimedPrint.end(); itrDatumTimed++){
+
       GetDatumAverage(*(*itrDatumTimed),&OutputData[iOutput], DataSetNumber);
       iOutput += (*itrDatumTimed)->length;
     }
+
     vector<cDatumWeighted*>::iterator itrDatumWeighted;
-    for(itrDatumWeighted =DataWeightedPrint.begin();
-	itrDatumWeighted!=DataWeightedPrint.end();  itrDatumWeighted++){
+    for(itrDatumWeighted = DataWeightedPrint.begin();
+	    itrDatumWeighted!= DataWeightedPrint.end(); itrDatumWeighted++){
+
       GetDatumAverage(*(*itrDatumWeighted),&OutputData[iOutput],DataSetNumber);
       iOutput += (*itrDatumWeighted)->length;
     }
+
     vector<cDatumDerived*>::iterator itrDatumDerived;
     for(itrDatumDerived = DataDerivedPrint.begin();
-	itrDatumDerived!= DataDerivedPrint.end();  itrDatumDerived++){
+      itrDatumDerived!= DataDerivedPrint.end(); itrDatumDerived++){
+
       GetDatumAverage(*(*itrDatumDerived),&OutputData[iOutput], DataSetNumber);
       iOutput += (*itrDatumDerived)->length;
     }
@@ -254,12 +270,12 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
 
 void PIC::Mesh::initCellSamplingDataBuffer() {
 
-  if (cDataBlockAMR::totalAssociatedDataLength!=0) exit(__LINE__,__FILE__,"Error: reinitialization of the blocks associated data offsets");
+//  if (cDataBlockAMR::totalAssociatedDataLength!=0) exit(__LINE__,__FILE__,"Error: reinitialization of the blocks associated data offsets");
 
   //local time step
   #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   if (PIC::ThisThread==0) cout << "$PREFIX:Time step mode: specie dependent local time step" << endl;
-  cDataBlockAMR::LocalTimeStepOffset=0;
+  cDataBlockAMR::LocalTimeStepOffset=cDataBlockAMR::totalAssociatedDataLength;
   cDataBlockAMR::totalAssociatedDataLength+=sizeof(double)*PIC::nTotalSpecies;
   #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   //do nothing for _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
@@ -405,7 +421,7 @@ void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
     pipe->send(cell->Measure);
   }
 
-  pipe->send(associatedDataPointer,totalAssociatedDataLength);
+  pipe->send(associatedDataPointer+UserAssociatedDataOffset,totalAssociatedDataLength-UserAssociatedDataOffset);
 }
 
 void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe) {
@@ -489,7 +505,7 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
     pipe->recv(cell->Measure,From);
   }
 
-  pipe->recv(associatedDataPointer,totalAssociatedDataLength,From);
+  pipe->recv(associatedDataPointer+UserAssociatedDataOffset,totalAssociatedDataLength-UserAssociatedDataOffset,From);
 }
 
 //recieve all blocks' data when the blocks is moved to another processo
@@ -540,3 +556,27 @@ void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,
 //  delete [] buffer;
 }
 
+//===============================================================================================================
+//update the domain decomposition table
+void PIC::DomainBlockDecomposition::UpdateBlockTable() {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+
+  if (LastMeshModificationID==PIC::Mesh::mesh.nMeshModificationCounter) return; //no modification of the mesh is made
+
+  //calculate the new number of the blocks
+  for (nLocalBlocks=0,node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    nLocalBlocks++;
+  }
+
+  //deallocate and allocat the block pointe buffer
+  if (BlockTable!=NULL) delete [] BlockTable;
+  BlockTable=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nLocalBlocks];
+
+  //populate the block pointer buffer
+  for (nLocalBlocks=0,node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    BlockTable[nLocalBlocks++]=node;
+  }
+
+  //update the domain decomposition table ID
+  LastMeshModificationID=PIC::Mesh::mesh.nMeshModificationCounter;
+}

@@ -78,8 +78,6 @@ void PIC::MolecularCollisions::ParticleCollisionModel::Init() {
 
 //Non-time Counter collision procedure
 void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
-  int s,s0,s1,i,j,k;
-
   const int SigmaCrMax_nTest=100;
   const double SigmaCrMax_SafetyMargin=1.3;
 
@@ -90,6 +88,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
   };
 
 
+  int s,s0,s1,i,j,k;
+
   int nParticleNumber[PIC::nTotalSpecies],nMaxSpecParticleNumber,cnt;
   long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],FirstCellParticle,ptr;
   double cellMeasure;
@@ -98,27 +98,48 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
   PIC::Mesh::cDataBlockAMR *block;
 
   //sample the processor load
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
   double EndTime,StartTime=MPI_Wtime();
-#endif
+//#endif
 
   //particle lists
   int ParticleDataListLength=100;
-  cParticleDataList *s0ParticleDataList=new cParticleDataList[ParticleDataListLength];
-  cParticleDataList *s1ParticleDataList=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
+  cParticleDataList *s0ParticleDataList; //=new cParticleDataList[ParticleDataListLength];
+  cParticleDataList *s1ParticleDataList; //=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
   cParticleDataList *s0List=NULL,*s1List=NULL; //s0List and s1List are used to access s0ParticleDataList and s1ParticleDataList
 
   //sampling data
   PIC::Mesh::cDataCenterNode *cell;
 
-#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
+//#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
   char *SamplingData;
+//#endif
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel default(none) private (s,s0,s1,i,j,k,nParticleNumber,nMaxSpecParticleNumber,cnt,FirstCellParticleTable,FirstCellParticle,ptr,PIC::Mesh::mesh,block, \
+      EndTime,StartTime,s0ParticleDataList,s1ParticleDataList,cell,SamplingData,cellMeasure) \
+  firstprivate(ParticleDataListLength,s0List,s1List,node) \
+  shared(SigmaCrMax_nTest,SigmaCrMax_SafetyMargin,DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable, \
+      PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::ParticleWeightTimeStep::LocalTimeStep,PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset)
+
+  {
 #endif
+
+    s0ParticleDataList=new cParticleDataList[ParticleDataListLength];
+    s1ParticleDataList=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
+
 
 
   //simulate particle's collisions
 //  while (node!=NULL) {
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+//  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp for schedule(dynamic,1)
+#endif
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    StartTime=MPI_Wtime();
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
     block=node->block;
     memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
@@ -410,4 +431,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
   delete [] s1ParticleDataList;
   delete [] s0ParticleDataList;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  }
+#endif
 }

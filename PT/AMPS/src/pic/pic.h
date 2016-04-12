@@ -92,6 +92,9 @@ namespace PIC {
   //The currect and total number of processors used in the simulation
   extern int ThisThread,nTotalThreads;
 
+  //the total number of the OpenMP threads (when OpneMP is used in the model run)
+  extern int nTotalThreadsOpenMP;
+
   //The path to the input data of the user-defined physical models
   extern char UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_];
 
@@ -135,8 +138,6 @@ namespace PIC {
   //the list of functions used to exchenge the execution statiscics
   typedef void (*fExchangeExecutionStatistics) (CMPI_channel*,long int);
   extern vector<fExchangeExecutionStatistics> ExchangeExecutionStatisticsFunctions;
-
-
 
   //structural elements of the solver
   namespace Parser {
@@ -869,9 +870,9 @@ namespace PIC {
   namespace ParticleTracker {
     extern long int ParticleDataRecordOffset; //the offset of the trajecotry specific informaion within the particle data
     extern int maxSampledTrajectoryNumber; //tha maximum number of the particle trajectories that will be sampled for each species
-    extern int *threadSampledTrajectoryNumber; //the number of trajectories sampled by the current processor for each species
-    extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species
-    extern unsigned long int SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
+    extern int **threadSampledTrajectoryNumber; //the number of trajectories sampled by the current processor for each species. Format: [spec][threadOpenMP]
+    extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species. Format: [spec]
+    extern unsigned long int *SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
 
     extern int nMaxSavedSignleTrajectoryPoints; //the maximum number of the trajectory points saved in the output trajectory file for each particle trajectory
 
@@ -926,21 +927,35 @@ namespace PIC {
       unsigned int nSampledTrajectoryPoints; //the number of the points of the particle trajectory
     };
 
-    namespace TrajectoryData {
-      extern PIC::ParticleTracker::cTrajectoryDataRecord *buffer;
-      extern unsigned long int Size,CurrentPosition,nfile;
+    struct cTrajectoryData {
+      PIC::ParticleTracker::cTrajectoryDataRecord *buffer;
+      unsigned long int CurrentPosition,nfile;
+      static unsigned long int Size;
 
       void flush(); //save in a file the trajecotry information
       inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
-    }
 
-    namespace TrajectoryList {
-      extern unsigned long int Size,CurrentPosition,nfile;
-      extern PIC::ParticleTracker::cTrajectoryListRecord *buffer;
+      cTrajectoryData() {
+        buffer=NULL,CurrentPosition=0,nfile=0;
+      }
+    };
+
+    extern cTrajectoryData *TrajectoryDataTable;
+
+    struct cTrajectoryList {
+      unsigned long int CurrentPosition,nfile;
+      static unsigned long int Size;
+      PIC::ParticleTracker::cTrajectoryListRecord *buffer;
 
       void flush(); //save in a file the list of the trajectories
       inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
-    }
+
+      cTrajectoryList() {
+        buffer=NULL,CurrentPosition=0,nfile=0;
+      }
+    };
+
+    extern cTrajectoryList *TrajectoryListTable;
 
     void Init();
     void UpdateTrajectoryCounter(); //calculate the total number of the trajectories sampled on all processors
@@ -2028,7 +2043,29 @@ namespace PIC {
       static int LocalTimeStepOffset,LocalParticleWeightOffset,totalAssociatedDataLength;
       char *associatedDataPointer;
 
-      long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+    private:
+      static int tempParticleMovingListTableThreadOffset,tempParticleMovingListTableThreadLength; //the offset and length of the tempParticleMovingListTable for each
+
+    public:
+      static int UserAssociatedDataOffset;
+      long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+
+      //the flag defined whether all internal data is allocated
+      static bool InternalDataInitFlag;
+
+
+      //get pointer to element of tempParticleMovingListTableThread when OpenMP is in use
+      long int *GetTempParticleMovingListTableThread(int thread,int i,int j,int k) {
+        return ((long int*) (associatedDataPointer+tempParticleMovingListTableThreadOffset))+
+            thread*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+      }
+
+      //tempParticleMovingListTable is used only when _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+      //when _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_ tempParticleMovingListTableThreadOffset is used instead
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+      long int tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+      #endif
 
       int AssociatedDataLength() {
         return totalAssociatedDataLength;
@@ -2046,6 +2083,32 @@ namespace PIC {
 
       cDataBlockAMR () : cBasicBlockAMR<cDataCornerNode,cDataCenterNode> () {
         associatedDataPointer=NULL;
+
+        if (InternalDataInitFlag==false) {
+          totalAssociatedDataLength=0;
+
+          //init the tempParticleMovingListTable when OpenMP is in use
+          #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+          int nThreadsOpenMP;
+
+          #pragma omp parallel default (none) shared(nThreadsOpenMP)
+          {
+            #pragma omp single
+            {
+              nThreadsOpenMP=omp_get_num_threads();
+            }
+          }
+
+          tempParticleMovingListTableThreadOffset=totalAssociatedDataLength;
+          tempParticleMovingListTableThreadLength=nThreadsOpenMP*sizeof(long int)*_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
+
+          totalAssociatedDataLength+=tempParticleMovingListTableThreadLength;
+          UserAssociatedDataOffset+=tempParticleMovingListTableThreadLength;
+          #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
+          //set up the init flag
+          InternalDataInitFlag=true;
+        }
       }
 
     
@@ -2059,18 +2122,27 @@ namespace PIC {
 
       //clean the sampling buffers
       void cleanDataBuffer() {
-        int i,length=totalAssociatedDataLength/sizeof(double);
+        int i,length=(totalAssociatedDataLength-UserAssociatedDataOffset)/sizeof(double);
         double *ptr;
 
         //clean the associated data buffers
-        for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
+        for (i=0,ptr=(double*)(associatedDataPointer+UserAssociatedDataOffset);i<length;i++,ptr++) *ptr=0.0;
 
         //clean the base class' data
         cBasicBlockAMR<cDataCornerNode,cDataCenterNode>::cleanDataBuffer();
 
         //clean the Particle Tables
         length=_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
-        for (i=0;i<length;i++) FirstCellParticleTable[i]=-1,tempParticleMovingListTable[i]=-1;
+        for (i=0;i<length;i++) FirstCellParticleTable[i]=-1;
+
+ #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+        for (i=0;i<length;i++) tempParticleMovingListTable[i]=-1;
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+        length*=omp_get_max_threads();
+        for (i=0;i<length;i++) *(i+(long int *)(associatedDataPointer+tempParticleMovingListTableThreadOffset))=-1;
+#else
+#error The option is unknown
+#endif
       }
 
 
@@ -2663,6 +2735,15 @@ namespace PIC {
     double InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,const double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
   }
 
+  //the namespace contained the domain decomposition information used for loop parallelization in OpenMP
+  namespace DomainBlockDecomposition {
+    extern unsigned int nLocalBlocks;
+    extern int LastMeshModificationID;
+    extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> **BlockTable;
+
+    void UpdateBlockTable();
+  }
+
   //the mode of the internal degrees of freedom
   namespace IDF {
 
@@ -2951,6 +3032,25 @@ namespace PIC {
 
   namespace Debugger {
     //contains functions that are used for debugging the code
+
+    //catch variation of a variable located at a particular address
+    //MatchMode == true -> print when the match is found; MatchMode == false -> print when the variables are not match
+    template <typename  T>
+    inline void Catch(T val,T* ptr,int nline,const char *fname,bool MatchMode) {
+      if (ptr!=NULL) {
+        if (MatchMode==true) {
+          if (*ptr==val) {
+            printf("PIC::Debugger::Catch: Match is found (line=%i,file=%s)\n",nline,fname);
+          }
+        }
+
+        if (MatchMode==false) {
+          if (*ptr!=val) {
+            cout << "PIC::Debugger::Catch: NO Match is found. [Val=" << *ptr << ", ref=" << val << " (line=" << nline << ", file=" << fname << ")\n";
+          }
+        }
+      }
+    }
 
     //InfiniteLoop==false ==> no problem found; InfiniteLoop==true => the actual number of particles does not consider the that in teh particle buffer
     bool InfiniteLoop(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);

@@ -33,6 +33,9 @@ int PIC::TimeStep() {
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
    double UserDefinedParticleProcessingTime=0.0;
 
+   //update the local block list
+   DomainBlockDecomposition::UpdateBlockTable();
+
    //recover the sampling data from the sampling data restart file, print the TECPLOT files and quit
    if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_==_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_) {
      static bool RestartFileReadFlag=false;
@@ -266,7 +269,7 @@ int PIC::TimeStep() {
 
     localRunStatisticData.TotalInterationRunTime=MPI_Wtime()-StartTime;
     localRunStatisticData.IterationExecutionTime=IterationExecutionTime;
-    localRunStatisticData.TotalParticlesNumber=PIC::ParticleBuffer::NAllPart;
+    localRunStatisticData.TotalParticlesNumber=PIC::ParticleBuffer::GetAllPartNum();
     localRunStatisticData.ParticleExchangeTime=ParticleExchangeTime;
     localRunStatisticData.SamplingTime=SamplingTime;
     localRunStatisticData.ParticleCollisionTime=ParticleCollisionTime;
@@ -326,11 +329,26 @@ int PIC::TimeStep() {
 //      fprintf(PIC::DiagnospticMessageStream,"Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\t %e\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
-            ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,ExchangeBuffer[thread].PhotoChemistryTime,
-            ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
-            ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles/((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1),
-            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,ExchangeBuffer[thread].ParticleCollisionTime,ExchangeBuffer[thread].BackgroundAtmosphereCollisionTime,
+        fprintf(PIC::DiagnospticMessageStream,"$PREFIX: \
+            %i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t \
+            %ld\t %ld\t %e\t %e\t %e\t %e\t %e\n",
+            thread,
+            ExchangeBuffer[thread].TotalParticlesNumber,
+            ExchangeBuffer[thread].TotalInterationRunTime,
+            ExchangeBuffer[thread].IterationExecutionTime,
+            ExchangeBuffer[thread].SamplingTime,
+            ExchangeBuffer[thread].InjectionBoundaryTime,
+            ExchangeBuffer[thread].ParticleMovingTime,
+            ExchangeBuffer[thread].PhotoChemistryTime,
+            ExchangeBuffer[thread].ParticleExchangeTime,
+            ExchangeBuffer[thread].Latency,
+            ExchangeBuffer[thread].sendParticleCounter,
+
+            ExchangeBuffer[thread].recvParticleCounter,
+            ExchangeBuffer[thread].nInjectedParticles/double(((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1)),
+            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,
+            ExchangeBuffer[thread].ParticleCollisionTime,
+            ExchangeBuffer[thread].BackgroundAtmosphereCollisionTime,
             ExchangeBuffer[thread].UserDefinedParticleProcessingTime);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
@@ -468,6 +486,7 @@ int PIC::TimeStep() {
 
       PIC::Mesh::mesh.CreateNewParallelDistributionLists(_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_);
       PIC::Parallel::IterationNumberAfterRebalancing=0,PIC::Parallel::CumulativeLatency=0.0;
+      PIC::DomainBlockDecomposition::UpdateBlockTable();
 
       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
@@ -532,11 +551,11 @@ void PIC::Sampling::Sampling() {
 
 
   //parallel efficientcy measure
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
   long int TreeNodeTotalParticleNumber;
-#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+//#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
   double TreeNodeProcessingTime;
-#endif
+//#endif
 
   //the table of cells' particles
   long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
@@ -545,7 +564,23 @@ void PIC::Sampling::Sampling() {
 #if _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
   //go through the 'local nodes'
 //  while (node!=NULL) {
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic,1) reduction(+:nTotalSampledParticles) default(none) \
+  private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,sampledVelocityOffset,node, \
+    sampledVelocity2Offset,tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeProcessingTime,TreeNodeTotalParticleNumber)  \
+  shared (PIC::Mesh::mesh,sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset,sampledParticleVelocityRelativeOffset, \
+     DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable,sampledParticleVelocity2RelativeOffset,sampleSetDataLength,sampledParticleSpeedRelativeOffset,collectingCellSampleDataPointerOffset,ParticleDataLength, \
+     PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
+     PIC::Mesh::DatumParticleParallelVelocity2,PIC::Mesh::DatumParticleParallelVelocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
+     PIC::Mesh::DatumNumberDensity,PIC::Mesh::DatumParticleNumber,PIC::Mesh::DatumParticleWeight, PIC::Sampling::constNormalDirection__SampleParallelTangentialTemperature, \
+     PIC::IDF::nTotalVibtationalModes, cout)
+
+#endif //_COMPILATION_MODE_
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+
+//  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
     
     memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
@@ -596,7 +631,7 @@ void PIC::Sampling::Sampling() {
             //===================    DEBUG ==============================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
             if (cell->Measure<=0.0) {
-              cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
+              cout << "$PREFIX:" << __FILE__<< __LINE__ << std::endl;
               exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
             }
 
@@ -1177,6 +1212,7 @@ void PIC::Sampling::Sampling() {
 
       PIC::Mesh::mesh.CreateNewParallelDistributionLists(_PIC_DYNAMIC_BALANCE_SEND_RECV_MESH_NODE_EXCHANGE_TAG_);
       PIC::Parallel::IterationNumberAfterRebalancing=0,PIC::Parallel::CumulativeLatency=0.0;
+      PIC::DomainBlockDecomposition::UpdateBlockTable();
 
       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
       PIC::Parallel::RebalancingTime=MPI_Wtime()-PIC::Parallel::RebalancingTime;
@@ -1268,7 +1304,17 @@ void PIC::InitMPI() {
   MPI_Initialized(&initialized);
 
   if (!initialized) {
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
     MPI_Init(NULL, NULL);
+
+    #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    int provided;
+    MPI_Init_thread(NULL,NULL,MPI_THREAD_FUNNELED,&provided);
+
+    #else
+    #error Unknown option
+    #endif //_COMPILATION_MODE_
+
     MPI_GLOBAL_COMMUNICATOR=MPI_COMM_WORLD;
   }
 
@@ -1278,6 +1324,24 @@ void PIC::InitMPI() {
 
   ::ThisThread=ThisThread;
   ::TotalThreadsNumber=nTotalThreads;
+
+  //determine the total number of the OpenMP threads
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int nThreadsOpenMP,i;
+
+  #pragma omp parallel shared(nThreadsOpenMP)
+  {
+    #pragma omp single
+    {
+      nTotalThreadsOpenMP=omp_get_num_threads();
+    }
+  }
+#endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
+  if (ThisThread==0) {
+    printf("The total number of the MPI threads=%i\n",nTotalThreads);
+    printf("The total number of the OpenMP threads per each MPI thread=%i\n",nTotalThreadsOpenMP);
+  }
 }
 
 //init the particle solver
@@ -1285,6 +1349,8 @@ void PIC::Init_BeforeParser() {
 
   //initiate MPI
   InitMPI();
+
+
 
   //set up the DiagnospticMessageStream
   if (strcmp(PIC::DiagnospticMessageStreamName,"stdout")!=0) {

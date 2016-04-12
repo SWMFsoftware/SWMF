@@ -141,8 +141,15 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   int i,j,k;
   long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
+  double StartTime;
 
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext,StartTime)  \
+  shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks)
+#endif
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    StartTime=MPI_Wtime();
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
     if (node->block!=NULL) {
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
@@ -165,6 +172,11 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
            }
          }
       }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+#endif
+
     }
   }
 }

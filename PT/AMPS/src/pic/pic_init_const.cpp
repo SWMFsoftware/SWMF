@@ -1,9 +1,11 @@
 //  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 //  For more information, see http://csem.engin.umich.edu/tools/swmf
+//$Id$ 
 
 #include "pic.h"
 
 //int PIC::nTotalSpecies=0;
+int PIC::nTotalThreadsOpenMP=1;
 int PIC::ThisThread=0,PIC::nTotalThreads=1;
 
 //the list containing the functions used to exchange the run time execution statistics
