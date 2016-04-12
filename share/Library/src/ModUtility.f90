@@ -34,6 +34,7 @@ module ModUtilities
   public:: char_array_to_string
   public:: sleep
   public:: check_allocate
+  public:: greatest_common_divisor
   public:: test_mod_utility
 
   logical, public :: DoFlush = .true.
@@ -616,6 +617,21 @@ contains
   end subroutine check_allocate
 
   !============================================================================
+  recursive function greatest_common_divisor(i, j) result(kGCD)
+    ! Calculate the greatest common divisor of i and j
+    ! with Euclid's algorithm
+
+    integer, intent(in):: i, j
+    integer:: kGCD
+    !-------------------------------------------------------------------------
+    if(j == 0)then
+       kGCD = i
+    else
+       kGCD = greatest_common_divisor(j, mod(i, j))
+    end if
+
+  end function greatest_common_divisor
+  !============================================================================
   subroutine test_mod_utility
 
     use iso_c_binding, ONLY: c_null_char
@@ -716,6 +732,23 @@ contains
     write(*,'(a,a)')    'Fortran string   : ', trim(String)
     if(String /= "it's a string") &
          write(*,*)'Error: incorrect conversion to Fortran String'
+
+    write(*,'(/,a)') 'testing greatest_common_divisor'
+    l = greatest_common_divisor(36, 26)
+    if(l /= 2) &
+         write(*,*)'Error: greatest_common_divisor(36,26)=', l,' should be 2'
+
+    l = greatest_common_divisor(26, 36)
+    if(l /= 2) &
+         write(*,*)'Error: greatest_common_divisor(26,36)=', l,' should be 2'
+
+    l = greatest_common_divisor(36, 12)
+    if(l /= 12) &
+         write(*,*)'Error: greatest_common_divisor(36,12)=', l,' should be 12'
+
+    l = greatest_common_divisor(12, 36)
+    if(l /= 12) &
+         write(*,*)'Error: greatest_common_divisor(12,36)=', l,' should be 12'
 
   end subroutine test_mod_utility
 

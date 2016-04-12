@@ -58,3 +58,5 @@ C character array: it's a string
 
 testing char_array_to_string
 Fortran string   : it's a string
+
+testing greatest_common_divisor
