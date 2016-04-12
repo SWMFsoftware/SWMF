@@ -28,7 +28,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'Flux emergence in a wedge'
+       'Spherical Wedge Active Region Model (SWARM)'
   !\
   ! UseVerticalDamping: adds damping to vertical velocity
   ! UseThinRadiation:   adds thin radiative cooling
@@ -403,7 +403,7 @@ contains
 
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, r_BLK, RadiusMin
     use ModLookupTable, ONLY: interpolate_lookup_table
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
          UnitEnergyDens_, UnitX_
@@ -422,17 +422,17 @@ contains
     case(1)
        select case(TypeBc)
        case('fixvalue')
-          ! This boundary condition needs additional entropy influx
-          ! to keep convection going
+          ! The lower boundary is intentionally low order accurate in the
+          ! thermodynamical quantities to keep convection going
+          call interpolate_lookup_table(iTableInitialState, &
+               RadiusMin*No2Si_V(UnitX_), InitialState_V, &
+               DoExtrapolate = .false.)
+
+          Rho       = InitialState_V(1)*Si2No_V(UnitRho_)
+          ExtraEint = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
+          p         = InitialState_V(3)*Si2No_V(UnitP_)
+
           do i = MinI, 0
-             call interpolate_lookup_table(iTableInitialState, &
-                  r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
-                  DoExtrapolate = .false.)
-
-             Rho       = InitialState_V(1)*Si2No_V(UnitRho_)
-             ExtraEint = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
-             p         = InitialState_V(3)*Si2No_V(UnitP_)
-
              do k = MinK, MaxK; do j = MinJ, MaxJ
 
                 State_VGB(Rho_,i,j,k,iBlock) = Rho
