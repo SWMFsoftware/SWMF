@@ -50,6 +50,11 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _SAMPLING_DISTRIBUTION_FUNCTION_OFF_   0
 
 
+//in case OpenMP is used: set individual particles, cells, or blocks to separate processors
+#define _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_   0
+#define _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_      1
+#define _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_       2
+ 
 //the modes of the parallel dynamic load balancing
 #define _PIC_DYNAMIC_LOAD_BALANCING_OFF_              0
 #define _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_   1 
