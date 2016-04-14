@@ -1572,9 +1572,6 @@ contains
       real :: sL, CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
 
-      integer, parameter :: ScalarMax_ = max(ScalarFirst_, ScalarLast_)
-      ! real :: Scalar_V(ScalarFirst_:ScalarMax_)
-      ! integer :: iVar
       !-----------------------------------------------------------------------
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
@@ -1661,9 +1658,6 @@ contains
          ! Density and scalars for left intermediate states
          InvSLUn = 1.0/(sL-Un)
          Rho     = DsRhoL*InvSLUn
-         !do iVar = ScalarFirst_, ScalarLast_
-         !   Scalar_V(iVar) = StateLeft_V(iVar)*DsL*InvSLUn
-         !end do
 
          ! Tangential velocity and magnetic field 
          ! for the outer intermediate left state
@@ -1734,9 +1728,6 @@ contains
          ! Density and scalars for right intermediate states
          InvSRUn = 1.0/(sR-Un)
          Rho     = DsRhoR*InvSRUn
-         !do iVar = ScalarFirst_, ScalarLast_
-         !   Scalar_V(iVar) = StateRight_V(iVar)*DsR*InvSRUn
-         !end do
 
          ! Tangential velocity and magnetic field 
          ! for the outer intermediate right state
@@ -3096,7 +3087,7 @@ contains
     subroutine get_mhd_speed
 
       use ModB0,       ONLY: UseCurlB0
-      use ModPhysics,  ONLY: Gamma, Inv_C2Light, ElectronPressureRatio, &
+      use ModPhysics,  ONLY: Inv_C2Light, ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
@@ -3425,11 +3416,10 @@ contains
               write(*,*)NameSub,' GammaElectron, State_V(Pe_)=',&
               GammaElectron,State_V(Pe_)
 
-         write(*,*)NameSub,' rho, p(left) =', &
-              State_VGB( (/Rho_,p_/),iLeft,jLeft,kLeft,iBlockFace)
-         write(*,*)NameSub,' rho, p(right)=', &
-              State_VGB( (/Rho_,p_/),iRight,jRight,kRight,iBlockFace)
-
+         write(*,*)NameSub,' State(left cell) =', &
+              State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
+         write(*,*)NameSub,' State(right cell)=', &
+              State_VGB(:,iRight,jRight,kRight,iBlockFace)
 
          write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
               iDimFace, iFace, jFace, kFace, iBlockFace, iProc
