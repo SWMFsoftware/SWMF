@@ -114,6 +114,11 @@ at the end of each time step
 #define _PIC_EMERGENCY_LOAD_REBALANCING_MODE_ _PIC_MODE_ON_
 #define _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ _PIC_MODE_ON_
 
+//the number of the iteration, and the time interval between output of the run-time statistcs
+#define _PIC_RUNTIME_STAT_OUTPUT__MIN_ITERATION_NUMBER_     5
+#define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_   500
+#define _PIC_RUNTIME_STAT_OUTPUT__TIME_INTERVAL_          120
+
 //the modes of using the ICES
 #define _PIC_ICES_SWMF_MODE_ _PIC_ICES_MODE_ON_
 #define _PIC_ICES_DSMC_MODE_ _PIC_ICES_MODE_OFF_

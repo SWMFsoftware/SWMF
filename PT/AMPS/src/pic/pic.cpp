@@ -96,7 +96,7 @@ int PIC::TimeStep() {
 
 
    //Collect and exchange the run's statictic information
-   static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
+//   static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
    static long int nTotalIterations=0,nInteractionsAfterRunStatisticExchange=0;
    static int nExchangeStatisticsIterationNumberSteps=10;
 
@@ -405,14 +405,14 @@ int PIC::TimeStep() {
 
       //determine the new value for the interation number between exchanging of the run stat data
       if (localRunStatisticData.TotalInterationRunTime>0.0) {
-        nExchangeStatisticsIterationNumberSteps=(int)(nRunStatisticExchangeTime/localRunStatisticData.TotalInterationRunTime);
-        if (nExchangeStatisticsIterationNumberSteps<nRunStatisticExchangeIterationsMin) nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMin;
-        if (nExchangeStatisticsIterationNumberSteps>nRunStatisticExchangeIterationsMax) nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMax;
+        nExchangeStatisticsIterationNumberSteps=(int)(_PIC_RUNTIME_STAT_OUTPUT__TIME_INTERVAL_/localRunStatisticData.TotalInterationRunTime);
+        if (nExchangeStatisticsIterationNumberSteps<_PIC_RUNTIME_STAT_OUTPUT__MIN_ITERATION_NUMBER_) nExchangeStatisticsIterationNumberSteps=_PIC_RUNTIME_STAT_OUTPUT__MIN_ITERATION_NUMBER_;
+        if (nExchangeStatisticsIterationNumberSteps>_PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_) nExchangeStatisticsIterationNumberSteps=_PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_;
       }
-      else nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMin;
+      else nExchangeStatisticsIterationNumberSteps=_PIC_RUNTIME_STAT_OUTPUT__MIN_ITERATION_NUMBER_;
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-      nExchangeStatisticsIterationNumberSteps=nRunStatisticExchangeIterationsMax;
+      nExchangeStatisticsIterationNumberSteps=_PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_;
 #endif
 
       cStatExchangeControlParameters StatExchangeControlParameters;
