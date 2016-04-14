@@ -1066,6 +1066,7 @@ namespace FieldLine{
     if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
     
     
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
     PIC::Mesh::cDataBlockAMR *block=startNode->block;
     long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
     
@@ -1074,11 +1075,12 @@ namespace FieldLine{
     
     if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
     block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
+#else
+    exit(__LINE__,__FILE__,"Error: the block need to be generalized to the case when _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_");
+#endif
     
     
     return _PARTICLE_MOTION_FINISHED_;
-
-  
   }
 
 }
