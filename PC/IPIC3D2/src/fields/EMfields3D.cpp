@@ -4179,8 +4179,13 @@ void EMfields3D::checkConstraint(double dx, double dy, double dz, double dt){
 }
 
 void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
-				   int minI, int maxI, int minJ, int maxJ,
-				   int minK, int maxK){
+				   const int minI, const int maxI,
+				   const int minJ, const int maxJ,
+				   const int minK, const int maxK,
+				   const double No2OutL, const double No2OutV,
+				   const double No2OutB, const double No2OutRho,
+				   const double No2OutP, const double No2OutJ){
+
   string nameSub = "write_plot_field";
   bool doTestFunc;
   doTestFunc = do_test_func(nameSub);
@@ -4224,7 +4229,8 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 	  data0 = (col->getnDim()==2? 0:grid->getZN(k));
 	  fwrite(&data0, nSizeDouble, 1, outFile);
 	  for(int iVar=0; iVar<nVar; iVar++){
-	    data0 = getVar(var_I[iVar],i,j,k);
+	    data0 = getVar(var_I[iVar],i,j,k, No2OutL, No2OutV, No2OutB,
+			   No2OutRho, No2OutP, No2OutJ);
 	    fwrite(&data0, nSizeDouble, 1, outFile);
 	  }
 	  fwrite(&nRecord, nSizeInt, 1, outFile);
@@ -4243,7 +4249,8 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 		 <<"\t"<<grid->getYN(j)
 		 <<"\t"<<(col->getnDim()==2? 0:grid->getZN(k));
 	  for(int iVar=0; iVar<nVar; iVar++){
-	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k);
+	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k,No2OutL, No2OutV,
+				  No2OutB, No2OutRho, No2OutP, No2OutJ);
 	  }	
 	  outFile<<"\n";
 	}
@@ -4252,18 +4259,20 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 
 }
 
-double EMfields3D:: getVar(string var, int i, int j, int k){
+double EMfields3D:: getVar(string var, int i, int j, int k,
+			   const double No2OutL, const double No2OutV,
+			   const double No2OutB, const double No2OutRho,
+			   const double No2OutP, const double No2OutJ){
   double value;
-  if(var.substr(0,3)=="rho"){
-    // "rho", "rhoS0", "rhoS1"...
-    if(var.size()==3){
-      // "rho"
+  if(var.substr(0,1)=="q"){
+    // "q", "qS0", "qS1"...
+    if(var.size()==1){
       value = 0;
       for(int is=0; is<ns; is++){
 	value += rhons[is][i][j][k];
       }      
     }else{
-      // "rhoS0"...
+      // "qS0"...
       string::size_type pos;
       stringstream ss;
       int is;
@@ -4272,44 +4281,17 @@ double EMfields3D:: getVar(string var, int i, int j, int k){
       ss>>is;
       value = rhons[is][i][j][k];
     }
-  }else if(var.substr(0,3)=="pXX"){
-    if(var.size()==3){
-      value = 0;
-      for(int is=0; is<ns; is++){
-	// Is this meanful?? check!!!!! -Yuxi
-	value += pXXsn[is][i][j][k];
-      }      
-    }else{
-      string::size_type pos;
-      stringstream ss;
-      int is;
-      pos = var.find_first_of("0123456789");
-      ss<<var.substr(pos);
-      ss>>is;
-      value = pXXsn[is][i][j][k];
-    }
-    
-  }else if(var.substr(0,3)=="pYY"){
-    if(var.size()==3){
-      value = 0;
-      for(int is=0; is<ns; is++){
-	value += pYYsn[is][i][j][k];
-      }      
-    }else{
-      string::size_type pos;
-      stringstream ss;
-      int is;
-      pos = var.find_first_of("0123456789");
-      ss<<var.substr(pos);
-      ss>>is;
-      value = pYYsn[is][i][j][k];
-    }
 
-  }else if(var.substr(0,3)=="pZZ"){
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!
+    // Change density is not converted to SI or planet unit
+    // !!!!!!!!!!!!!!!!!!!!!!!
+
+  }else if(var.substr(0,3)=="rho"){
+    // "rho", "rhoS0", "rhoS1"...
     if(var.size()==3){
       value = 0;
       for(int is=0; is<ns; is++){
-	value += pZZsn[is][i][j][k];
+	value += rhons[is][i][j][k]/qom[is];
       }      
     }else{
       string::size_type pos;
@@ -4318,9 +4300,77 @@ double EMfields3D:: getVar(string var, int i, int j, int k){
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = pZZsn[is][i][j][k];
+      value = rhons[is][i][j][k]/qom[is];
     }
-  }else if(var.substr(0,2)=="Jx"){
+    value *= No2OutRho;
+  }else if(var.substr(0,2)=="pS"){
+    // pS0, pS1...
+    bool isFluidP = true;
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = (calPxx(is,i,j,k,isFluidP) +
+	     calPyy(is,i,j,k,isFluidP) +
+	     calPzz(is,i,j,k,isFluidP)) /3.0;
+    value *= No2OutP;
+  }else if(var.substr(0,3)=="pXX" || var.substr(0,3) == "kXX"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPxx(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPxx(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP;
+  }else if(var.substr(0,3)=="pYY" || var.substr(0,3) == "kYY"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPyy(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPyy(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP; 
+  }else if(var.substr(0,3)=="pZZ" || var.substr(0,3) == "kZZ"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPzz(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPzz(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP;
+  }else if(var.substr(0,2)=="jx"){
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
@@ -4336,7 +4386,8 @@ double EMfields3D:: getVar(string var, int i, int j, int k){
       ss>>is;
       value = Jxs[is][i][j][k];
     }
-  }else if(var.substr(0,2)=="Jy"){
+    value *= No2OutJ;
+  }else if(var.substr(0,2)=="jy"){
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
@@ -4351,8 +4402,9 @@ double EMfields3D:: getVar(string var, int i, int j, int k){
       ss<<var.substr(pos);
       ss>>is;
       value = Jys[is][i][j][k];
-    }   
-  }else if(var.substr(0,2)=="Jz"){
+    }
+    value *= No2OutJ;
+  }else if(var.substr(0,2)=="jz"){
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
@@ -4367,24 +4419,92 @@ double EMfields3D:: getVar(string var, int i, int j, int k){
       ss<<var.substr(pos);
       ss>>is;
       value = Jzs[is][i][j][k];
-    }   
+    }
+    value *= No2OutJ;
+  }else if(var.substr(0,2)=="ux"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = Jxs[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
+  }else if(var.substr(0,2)=="uy"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = Jys[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
+  }else if(var.substr(0,2)=="uz"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = Jzs[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
   }else if(var.substr(0,2)=="Ex"){
     value = Ex[i][j][k];
+    // !!!!!!! how to convert E ???????????
   }else if(var.substr(0,2)=="Ey"){
     value = Ey[i][j][k];
   }else if(var.substr(0,2)=="Ez"){
     value = Ez[i][j][k];
   }else if(var.substr(0,2)=="Bx"){
-    value = Bxn[i][j][k];
+    value  = Bxn[i][j][k];
+    value *= No2OutB;
   }else if(var.substr(0,2)=="By"){
     value = Byn[i][j][k];
+    value *= No2OutB;
   }else if(var.substr(0,2)=="Bz"){
     value = Bzn[i][j][k];
+    value *= No2OutB;
   }else{
     value = 0;
   }
   return value;
 }
+
+double EMfields3D:: calPxx(const int is, const int i, const int j, const int k, const bool isFluidP){
+  // pXXsn also includes the energy from bulk motion. This function calculates
+  // 'real' pXX.
+  if(not isFluidP){
+    return pXXsn[is][i][j][k];
+  }
+  double ux, rhoMass, pxx;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
+  pxx = pXXsn[is][i][j][k]/qom[is] - rhoMass*ux*ux;
+  return pxx;
+}
+
+double EMfields3D:: calPyy(const int is, const int i, const int j, const int k, const bool isFluidP){
+  if(not isFluidP){
+    return pYYsn[is][i][j][k];
+  }
+  double uy, rhoMass, pyy;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
+  pyy = pYYsn[is][i][j][k]/qom[is] - rhoMass*uy*uy;
+  return pyy;
+}
+
+double EMfields3D:: calPzz(const int is, const int i, const int j, const int k, const bool isFluidP){
+  if(not isFluidP){
+    return pZZsn[is][i][j][k];
+  }
+  double uz, rhoMass, pzz;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
+  pzz = pZZsn[is][i][j][k]/qom[is] - rhoMass*uz*uz;
+  return pzz;
+}
+
 #endif
 
 /*! initiliaze EM for GEM challange */

@@ -1960,6 +1960,11 @@ class InterfaceFluid
 
   double getSi2NoL(){return(Si2NoL);}
   double getNo2SiL(){return(No2SiL);}
+  double getNo2SiRho(){return(1./Si2NoRho);}
+  double getNo2SiV(){return(1./Si2NoV);}
+  double getNo2SiB(){return(1./Si2NoB);}
+  double getNo2SiP(){return(1./Si2NoP);}
+  double getNo2SiJ(){return(1./Si2NoJ);}
 
   int getNxcLocal(){return nxcLocal;}
   int getNycLocal(){return nycLocal;}

@@ -95,6 +95,9 @@ c_Solver::~c_Solver()
     delete [] nVar_I;
     delete [] nCell_I;
     delete [] nameSnapshot_I;
+    delete [] outputFormat_I;
+    delete [] outputUnit_I;
+    delete [] plotVar_I;
   }
   #endif
 }
@@ -961,32 +964,37 @@ void c_Solver:: write_plot_init(){
 
   IsBinary = col->getdoSaveBinary();
   
-  plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
+  plotRange_ID      = newArr2(double, nPlotFile, 2*nDimMax);
   plotIndexRange_ID = newArr2(int, nPlotFile, 2*nDimMax);
-  nameSnapshot_I = new string[nPlotFile];
+  nameSnapshot_I    = new string[nPlotFile];
+  nVar_I            = new int[nPlotFile];
+  nCell_I           = new long[nPlotFile];
+  outputFormat_I    = new std::string[nPlotFile];
+  outputUnit_I      = new std::string[nPlotFile];  
+  plotVar_I         = new std::string[nPlotFile];  
 
   Var_II = new std::string*[nPlotFile];
   for(int i=0;i<nPlotFile;i++){
     Var_II[i]=new std::string[nVarMax];
   }
-
-  nVar_I = new int[nPlotFile];
-  nCell_I = new long[nPlotFile];
   
   string plotString;
   string subString;
   string::size_type pos;
   double dxSave;  
   for(int iPlot=0; iPlot<nPlotFile; iPlot++){
+    // plotString = plot range, plot variables, save format, output unit
+    // Example:
+    //   plotString =  'x=0 all real si'
+    //   plotString =  '3d var ascii pic'
+    //   plotString =  'cut var real planet'
     plotString = col->getplotString(iPlot);
-
+    
     // Find the first sub-string: 'x=0',or 'y=1.2'.....
     pos = plotString.find_first_not_of(' ');
-    plotString.erase(0,pos);
     pos = plotString.find_first_of(" \t\n");
     if(pos !=string::npos){
       subString = plotString.substr(0,pos);
-      //plotString.erase(0,pos);
     }else if(plotString.size()>0){
       subString = plotString;
     }
@@ -1036,7 +1044,60 @@ void c_Solver:: write_plot_init(){
       }
       
     }else{
-      cout<<"Unknown input plotString: "<<plotString<<endl;
+      if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
+      abort();
+    }
+
+    // Find out plot variables.
+    if(plotString.find("all") !=string::npos){
+      // Only include two species.
+      plotVar_I[iPlot] = "qS0 qS1 Bx By Bz Ex Ey Ez pXXS0 pYYS0 pZZS0 pXXS1 pYYS1 pZZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1";
+    }else if(plotString.find("var") !=string::npos){
+      plotVar_I[iPlot] = col->getplotVar(iPlot);    
+    }else if(plotString.find("fluid") !=string::npos){
+      // Only include two species.
+      plotVar_I[iPlot] = "rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1";
+    }else {
+      if(myrank==0)cout<<"Unknown plot variables!! plotString = "<<plotString<<endl;
+      abort();
+    }
+
+    // Analyze plot variables.
+    string::size_type pos1, pos2;
+    pos1=0; pos2=0;
+    nVar_I[iPlot] = 0;
+    int count=0;
+    while(pos1 !=string::npos){
+      pos1 = plotVar_I[iPlot].find_first_not_of(' ',pos2);
+      pos2 = plotVar_I[iPlot].find_first_of(" \t\n",pos1);
+      if(pos1 !=string::npos){
+	Var_II[iPlot][count] = plotVar_I[iPlot].substr(pos1,pos2-pos1);
+	nVar_I[iPlot]++;
+	count++;
+      }
+    }
+
+    // Find out output format.
+    if(plotString.find("ascii") !=string::npos){
+      outputFormat_I[iPlot] = "ascii";
+    }else if(plotString.find("real4") !=string::npos){
+      outputFormat_I[iPlot] = "real4";
+    }else if(plotString.find("real8") !=string::npos){
+      outputFormat_I[iPlot] = "real8";    
+    }else {
+      if(myrank==0)cout<<"Unknown plot output format!! plotString = "<<plotString<<endl;
+      abort();
+    }
+    
+    // Find out output unit.
+    if(plotString.find("si") !=string::npos){
+      outputUnit_I[iPlot] = "SI";
+    }else if(plotString.find("pic") !=string::npos){
+      outputUnit_I[iPlot] = "PIC normalized";
+    }else if(plotString.find("planet") !=string::npos){
+      outputUnit_I[iPlot] = "Planet unit";
+    }else {
+      if(myrank==0)cout<<"Unknown plot output unit!! plotString = "<<plotString<<endl;
       abort();
     }
 
@@ -1206,28 +1267,10 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz();
       
       // Correct PlotRange_ID based on PlotIndexRange_ID-----end
-    }
-    
-    // Analyze plot variables.
-    string plotVar;
-    plotVar = col->getplotVar(iPlot);
-    string::size_type pos1, pos2;
-    pos1=0; pos2=0;
-    nVar_I[iPlot] = 0;
-    int count=0;
-    while(pos1 !=string::npos){
-      pos1 = plotVar.find_first_not_of(' ',pos2);
-      pos2 = plotVar.find_first_of(" \t\n",pos1);
-      if(pos1 !=string::npos){
-	Var_II[iPlot][count] = plotVar.substr(pos1,pos2-pos1);
-	nVar_I[iPlot]++;
-	count++;
-      }
-    }
-
+    }    
     
     if(doTestFunc){
-      cout<<"subString= "<<subString<<" plotstring= "<<plotString<<endl;
+      cout<<" plotstring= "<<plotString<<endl;
       cout<<"length sub = "<<subString.size()
 	  <<" length plotstring= "<<plotString.size()<<endl;
       cout<<"iplot = "<<iPlot<<"\n"
@@ -1243,10 +1286,14 @@ void c_Solver:: write_plot_init(){
 	  <<" plotIndexRange3 = "<<plotIndexRange_ID[iPlot][3]<<"\n"
 	  <<" plotIndexRange4 = "<<plotIndexRange_ID[iPlot][4]
 	  <<" plotIndexRange5 = "<<plotIndexRange_ID[iPlot][5]
-	  <<endl;
+	  <<endl;      
+      cout<<"\n plot variables:"<<endl;
       for(int i=0; i<nVar_I[iPlot]; i++){
 	cout<<"i= "<<i<<" var= "<<Var_II[iPlot][i]<<endl;
       }
+      cout<<"\n output format: "<<outputFormat_I[iPlot]
+	  <<"\n output unit: "<<outputUnit_I[iPlot]
+	  <<endl;
     }      
   }        
 }
@@ -1262,7 +1309,8 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
   int time;
   time = getSItime(); // double to int.
 
-  ss<<"_t"<<setfill('0')<<setw(8)<<time
+  ss<<"_"<<iPlot
+    <<"_t"<<setfill('0')<<setw(8)<<time
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<".h";
   if(myrank==0){
@@ -1328,16 +1376,14 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     }
     outFile<<"\n";
           
-    string plotVar;
-    plotVar = col->getplotVar(iPlot);
     outFile<<"#PLOTVARIABLE\n";
     outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
-    outFile<<plotVar<<"\n";
-    outFile<<"unknown unit\n"; // Should be 'PIC normalized' or 'SI'
+    outFile<<plotVar_I[iPlot]<<"\n";    
+    outFile<<outputUnit_I[iPlot]<<"\n"; // Should be 'PIC normalized' or 'SI'
     outFile<<"\n";
 
     outFile<<"#OUTPUTFORMAT\n";
-    outFile<<"ascii\n";
+    outFile<<outputFormat_I[iPlot]<<"\n";
     outFile<<"\n";
     
     if(outFile.is_open()) outFile.close();
@@ -1369,24 +1415,62 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
   }else{
     nLength = 4;
   }
-    
+
+
+  double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
+
+  if(outputUnit_I[iPlot]=="SI" || outputUnit_I[iPlot]=="Planet unit"){
+    No2OutL   = col->getNo2SiL();
+    No2OutV   = col->getNo2SiV();
+    No2OutB   = col->getNo2SiB();
+    No2OutRho = col->getNo2SiRho();
+    No2OutP   = col->getNo2SiP();
+    No2OutJ   = col->getNo2SiJ();
+
+    if(outputUnit_I[iPlot]=="Planet unit") {
+      double massProton = 1.6726219e-27; //unit: kg
+      No2OutL   *= 1; // it should be No2OutL *= 1/rPlanet
+      No2OutV    = No2OutV;
+      No2OutB   *= 1e9; // T -> nT
+      No2OutRho *=  1./massProton*1e-6; // kg/m^3 -> amu/cm^3
+      No2OutP   *= 1e9; // Pa -> nPa
+      No2OutJ   *= 1; // ?????????????????????? what should it be??????
+    }
+  }else if(outputUnit_I[iPlot]=="PIC normalized"){
+    No2OutL = 1; No2OutV = 1; No2OutB = 1;
+    No2OutRho = 1; No2OutP = 1; No2OutJ = 1; 
+  }else{
+    if(myrank==0)cout<<"Unknown unit!! unit = "<<outputUnit_I[iPlot]<<endl;
+      abort();
+  }
+
+  if(doTestFunc){
+    cout<<"iPlot= "<<iPlot<<":\n"
+	<<"No2OutL = "<<No2OutL<<"\n"
+	<<"No2OutV = "<<No2OutV<<"\n"
+	<<"No2OutB = "<<No2OutB<<"\n"
+	<<"No2OutRho = "<<No2OutRho<<"\n"
+	<<"No2OutP = "<<No2OutP<<"\n"
+	<<"No2OutJ = "<<No2OutJ
+	<<endl;
+  }
   
-  ss<<"_t"<<setfill('0')<<setw(8)<<time
+  ss<<"_"<<iPlot
+    <<"_t"<<setfill('0')<<setw(8)<<time
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
     <<".idl";
   filename = nameSnapshot_I[iPlot] +ss.str();
-
+  
   EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
 			plotIndexRange_ID[iPlot][0],
 			plotIndexRange_ID[iPlot][1],
 			plotIndexRange_ID[iPlot][2],
 			plotIndexRange_ID[iPlot][3],
 			plotIndexRange_ID[iPlot][4],
-			plotIndexRange_ID[iPlot][5]);
-  
+			plotIndexRange_ID[iPlot][5],
+			No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ);
 
-  
 }
 
 #endif

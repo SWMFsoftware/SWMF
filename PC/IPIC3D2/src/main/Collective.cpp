@@ -1765,13 +1765,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	pos = plotString_I[iPlot].find("var");
 	if(pos !=string::npos){
 	  read_var(param, "plotVar", &plotVar_I[iPlot]);
-	}else{
-	  plotVar_I[iPlot] =
-	    "rhoS0 rhoS1 Bx By Bz Ex Ey Ez pXXS0 pYYS0 pZZS0 pXXS1 pYYS1 pZZS1 JxS0 JyS0 JzS0 JxS1 JyS1 JzS1";
-	}
-	
-      }      			        
-  }
+	}	
+      } // iPlot  			        
+    } // Command
 
     else if( Command == "#BCIPIC"){
       read_var(param,"bcPHIfaceXright", &bcPHIfaceXright);

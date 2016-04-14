@@ -187,7 +187,9 @@ namespace iPic3D {
     bool IsBinary;
     int nByte;
     long nGlobalNode;
-
+    string *outputFormat_I;
+    string *outputUnit_I;
+    string *plotVar_I;
     
     void write_plot_idl(int cycle);
     void write_plot_init();

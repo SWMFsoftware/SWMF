@@ -627,9 +627,20 @@ class EMfields3D                // :public Field
 
     /* Write fields to IDL format files*/
     void write_plot_field(string filename, string *plotVar, int nVar,
-			  int minI, int maxI, int minJ, int maxJ,
-			  int minK, int maxK);
-    double getVar(string var, int i, int j, int k);
+			  const int minI, const int maxI,
+			  const int minJ, const int maxJ,
+			  const int minK, const int maxK,
+			  const double No2OutL, const double No2OutV,
+			  const double No2OutB, const double No2OutRho,
+			  const double No2OutP, const double No2OutJ);
+    double getVar(string var, int i, int j, int k,
+		  const double No2OutL, const double No2OutV,
+		  const double No2OutB, const double No2OutRho,
+		  const double No2OutP, const double No2OutJ);
+
+    double calPxx(const int is, const int i, const int j, const int k, const bool isFluidP);
+    double calPyy(const int is, const int i, const int j, const int k, const bool isFluidP);
+    double calPzz(const int is, const int i, const int j, const int k, const bool isFluidP);
  private:
     // *************************************
     // ARRAY USED FOR BC WITH BATSRUS
