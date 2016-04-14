@@ -324,16 +324,18 @@ int PIC::TimeStep() {
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:17:\t User Defined Particle Processing Time\n");
 
 
-      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\t\t 15\t 16\t 17\n");
+//      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\t\t 15\t 16\t 17\n");
 
-//      fprintf(PIC::DiagnospticMessageStream,"Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
+
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX: ");
+      for (int i=1;i<=17;i++) fprintf(PIC::DiagnospticMessageStream,"%12d ",i);
+      fprintf(PIC::DiagnospticMessageStream,"\n");
+
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        fprintf(PIC::DiagnospticMessageStream,"$PREFIX: \
-            %i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t \
-            %ld\t %ld\t %e\t %e\t %e\t %e\t %e\n",
+        fprintf(PIC::DiagnospticMessageStream,"$PREFIX: %12d %12d %10e %10e %10e %10e %10e %10e %10e %10e %12d %12d %10e %10e %10e %10e %10e\n",
             thread,
-            ExchangeBuffer[thread].TotalParticlesNumber,
+            (int)ExchangeBuffer[thread].TotalParticlesNumber,
             ExchangeBuffer[thread].TotalInterationRunTime,
             ExchangeBuffer[thread].IterationExecutionTime,
             ExchangeBuffer[thread].SamplingTime,
@@ -342,9 +344,9 @@ int PIC::TimeStep() {
             ExchangeBuffer[thread].PhotoChemistryTime,
             ExchangeBuffer[thread].ParticleExchangeTime,
             ExchangeBuffer[thread].Latency,
-            ExchangeBuffer[thread].sendParticleCounter,
 
-            ExchangeBuffer[thread].recvParticleCounter,
+            (int)ExchangeBuffer[thread].sendParticleCounter,
+            (int)ExchangeBuffer[thread].recvParticleCounter,
             ExchangeBuffer[thread].nInjectedParticles/double(((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1)),
             ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,
             ExchangeBuffer[thread].ParticleCollisionTime,
