@@ -944,6 +944,7 @@ void c_Solver:: write_plot_idl(int cycle){
     int dnOutput;
     dnOutput = col->getdnOutput(iPlot);
     if(cycle % dnOutput==0 ){
+      set_output_unit(iPlot);
       write_plot_header(iPlot, cycle);
       write_plot_data(iPlot,cycle);
     }
@@ -1259,12 +1260,12 @@ void c_Solver:: write_plot_init(){
       // 	      <<endl;
       // 	}
       // }
-      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx();
-      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx();
-      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy();
-      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy();
-      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz();
-      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz();
+      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx() + col->getFluidStartX();
+      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx() + col->getFluidStartX();
+      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy() + col->getFluidStartY();
+      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy() + col->getFluidStartY();
+      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz() + col->getFluidStartZ();
+      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz() + col->getFluidStartZ();
       
       // Correct PlotRange_ID based on PlotIndexRange_ID-----end
     }    
@@ -1351,15 +1352,15 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
 
     outFile<<"#PLOTRANGE\n";
     for(int i=0; i<col->getnDim();i++){
-      outFile<<plotRange_ID[iPlot][2*i]<<"\t coord"<<i<<"Min\n";
-      outFile<<plotRange_ID[iPlot][2*i+1]<<"\t coord"<<i<<"Max\n";
+      outFile<<plotRange_ID[iPlot][2*i]*No2OutL<<"\t coord"<<i<<"Min\n";
+      outFile<<plotRange_ID[iPlot][2*i+1]*No2OutL<<"\t coord"<<i<<"Max\n";
     }
     outFile<<"\n";
 
     outFile<<"#CELLSIZE\n";
-    outFile<<col->getDx()<<"\t dx\n";
-    outFile<<col->getDy()<<"\t dy\n";
-    outFile<<col->getDz()<<"\t dz\n";
+    outFile<<col->getDx()*No2OutL<<"\t dx\n";
+    outFile<<col->getDy()*No2OutL<<"\t dy\n";
+    outFile<<col->getDz()*No2OutL<<"\t dz\n";
     outFile<<"\n";
 
     outFile<<"#NCELL\n";
@@ -1389,10 +1390,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     if(outFile.is_open()) outFile.close();
     if(doTestFunc) {
       cout<<nameSub<<" :filename = "<<filename<<endl;      
-    }
-    
-
-    
+    }        
   }
 }
   
@@ -1415,9 +1413,31 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
   }else{
     nLength = 4;
   }
+  
+  ss<<"_"<<iPlot
+    <<"_t"<<setfill('0')<<setw(8)<<time
+    <<"_n"<<setfill('0')<<setw(8)<<cycle
+    <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
+    <<".idl";
+  filename = nameSnapshot_I[iPlot] +ss.str();
+  
+  EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
+			plotIndexRange_ID[iPlot][0],
+			plotIndexRange_ID[iPlot][1],
+			plotIndexRange_ID[iPlot][2],
+			plotIndexRange_ID[iPlot][3],
+			plotIndexRange_ID[iPlot][4],
+			plotIndexRange_ID[iPlot][5],
+			No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ);
 
+}
 
-  double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
+// Set the values of No2Out.
+void c_Solver:: set_output_unit(int iPlot){
+  string nameSub = "write_plot_data";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //-------------------
 
   if(outputUnit_I[iPlot]=="SI" || outputUnit_I[iPlot]=="Planet unit"){
     No2OutL   = col->getNo2SiL();
@@ -1429,8 +1449,8 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
 
     if(outputUnit_I[iPlot]=="Planet unit") {
       double massProton = 1.6726219e-27; //unit: kg
-      No2OutL   *= 1; // it should be No2OutL *= 1/rPlanet
-      No2OutV    = No2OutV;
+      No2OutL   *= 1./col->getrPlanet(); // it should be No2OutL *= 1/rPlanet
+      No2OutV   *= 1e-3; // m/s -> km/s
       No2OutB   *= 1e9; // T -> nT
       No2OutRho *=  1./massProton*1e-6; // kg/m^3 -> amu/cm^3
       No2OutP   *= 1e9; // Pa -> nPa
@@ -1454,23 +1474,6 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
 	<<"No2OutJ = "<<No2OutJ
 	<<endl;
   }
-  
-  ss<<"_"<<iPlot
-    <<"_t"<<setfill('0')<<setw(8)<<time
-    <<"_n"<<setfill('0')<<setw(8)<<cycle
-    <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
-    <<".idl";
-  filename = nameSnapshot_I[iPlot] +ss.str();
-  
-  EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
-			plotIndexRange_ID[iPlot][0],
-			plotIndexRange_ID[iPlot][1],
-			plotIndexRange_ID[iPlot][2],
-			plotIndexRange_ID[iPlot][3],
-			plotIndexRange_ID[iPlot][4],
-			plotIndexRange_ID[iPlot][5],
-			No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ);
 
 }
-
 #endif

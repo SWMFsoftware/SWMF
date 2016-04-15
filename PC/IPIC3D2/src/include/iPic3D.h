@@ -190,11 +190,13 @@ namespace iPic3D {
     string *outputFormat_I;
     string *outputUnit_I;
     string *plotVar_I;
+    double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
     
     void write_plot_idl(int cycle);
     void write_plot_init();
     void write_plot_header(int iPlot, int cycle);
     void write_plot_data(int iPlot, int cycle);
+    void set_output_unit(int iPlot);
     
     // IDL output. End-----------------
 #endif

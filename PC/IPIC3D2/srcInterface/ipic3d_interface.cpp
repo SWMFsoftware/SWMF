@@ -100,15 +100,15 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
   (*ss)<<NameVar;
 
   char **dummy = NULL; // dummy argument
-  int firstIPIC = nIPIC;
+  int firstIPIC;
   string nameFunc="PC: ipic3d_from_gm_init";
   timing_start(nameFunc);
 
   // number of dimensions in GM
   nDim = paramint[0];
 
-  // number of PIC regions (added?)
-  nIPIC +=paramint[1];
+  firstIPIC = 0; 
+  nIPIC =paramint[1];
   
   // the number of PIC fluids ns = nFluid + nSpecies - 1
   int ns = paramint[3] + paramint[4] - 1;

@@ -71,7 +71,9 @@ class InterfaceFluid
 
   bool useAnisoP;  // Use anisotripic pressure
 
-  bool useMhdPe; 
+  bool useMhdPe;
+
+  double rPlanetSi; 
   
   double dt;            // scaled time step from fluid model
   double ParamDt;       // dt read in from input file
@@ -597,16 +599,16 @@ class InterfaceFluid
   }
 
   /** return min X for fluid grid without ghostcell */
-  inline double getFluidStartX(){return(INxRange_I[0]+INgridDx_D[0]);}
-  
+  inline double getFluidStartX()const{return(INxRange_I[0]+INgridDx_D[0]);}
   
   /** return min Y for fluid grid without ghostcell */
-  inline double getFluidStartY(){return(INxRange_I[2]+INgridDx_D[1]);}
-  
+  inline double getFluidStartY()const{return(INxRange_I[2]+INgridDx_D[1]);}
   
   /** return min Z for fluid grid without ghostcell */
-  inline double getFluidStartZ(){return(INxRange_I[4]+INgridDx_D[2]);}
-  
+  inline double getFluidStartZ()const{return(INxRange_I[4]+INgridDx_D[2]);}
+
+  // return planet radius in SI unit.
+  inline double getrPlanet()const{return(rPlanetSi);}
   
   /** Average over nodes in ignored dimentions. Used by the original 2D file coupling. */
   inline double getValueNode(double ****vec, int i, int j, int k, int si)
@@ -1306,10 +1308,11 @@ class InterfaceFluid
       MoMi_S[i] = paramreal[n++];
     }
     // Electron pressure ratio: Pe/Ptotal
-    PeRatio = paramreal[n++];
-    Lnorm   = paramreal[n++]; 	
-    Unorm   = paramreal[n++];	
-    Mnorm   = paramreal[n++];
+    PeRatio   = paramreal[n++];
+    Lnorm     = paramreal[n++]; 	
+    Unorm     = paramreal[n++];	
+    Mnorm     = paramreal[n++];
+    rPlanetSi = paramreal[n++];
     /** Do not change the order of above lines. */
  
     // Normalization units converted [SI] -> [cgs]

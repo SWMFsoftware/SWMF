@@ -4221,12 +4221,14 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 	  // binary output. Here, each line is a record. Before and after
 	  // each record, use 4 byte to save the length of this record. 
 	  fwrite(&nRecord, nSizeInt, 1, outFile);
-	  fwrite(&dx, nSizeDouble, 1, outFile);
-	  data0 = grid->getXN(i);
+	  data0 = dx*No2OutL;
 	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = grid->getYN(j);
+	  data0 = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
 	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = (col->getnDim()==2? 0:grid->getZN(k));
+	  data0 = (grid->getYN(j) + col->getFluidStartY())*No2OutL;
+	  fwrite(&data0, nSizeDouble, 1, outFile);
+	  data0 = col->getnDim()==2?
+			  0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL;
 	  fwrite(&data0, nSizeDouble, 1, outFile);
 	  for(int iVar=0; iVar<nVar; iVar++){
 	    data0 = getVar(var_I[iVar],i,j,k, No2OutL, No2OutV, No2OutB,
@@ -4244,10 +4246,11 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
     for(int i=minI; i<= maxI; i++)
       for(int j=minJ; j<=maxJ; j++)
 	for(int k=minK; k<=maxK; k++){
-	  outFile<<dx
-		 <<"\t"<<grid->getXN(i)
-		 <<"\t"<<grid->getYN(j)
-		 <<"\t"<<(col->getnDim()==2? 0:grid->getZN(k));
+	  outFile<<dx*No2OutL
+		 <<"\t"<<(grid->getXN(i) + col->getFluidStartX())*No2OutL
+		 <<"\t"<<(grid->getYN(j) + col->getFluidStartY())*No2OutL
+		 <<"\t"<<(col->getnDim()==2?
+			  0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL);
 	  for(int iVar=0; iVar<nVar; iVar++){
 	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k,No2OutL, No2OutV,
 				  No2OutB, No2OutRho, No2OutP, No2OutJ);

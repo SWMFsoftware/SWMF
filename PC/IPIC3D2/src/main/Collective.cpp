@@ -1726,12 +1726,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	0.                      DxOutput
 
 	Note:
-	1) 'real4' and 'real8' have not been implemented now. 
-	2) Do not support control output by DtOutPut now.
-	3) Available output variables are listed in EMfields3D.cpp::getVar().
-	4) DxOutput is not functional now.
+	1) Do not support control output by DtOutPut now.
+	2) Available output variables are listed in EMfields3D.cpp::getVar().
+	3) DxOutput is not functional now.
+	4) The position for "cut", "x=", "y="... is in PIC unit.
       */
-
       
       string::size_type pos;
       read_var(param, "nPlotFile", &nPlotFile);

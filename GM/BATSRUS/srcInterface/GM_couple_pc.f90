@@ -41,7 +41,7 @@ contains
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iRhoUxIon_I, iPparIon_I, iPIon_I
     use ModAdvance,    ONLY: nSpecies
-    use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal
+    use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
     use BATL_lib,      ONLY: x_, y_, z_, nDim
@@ -65,7 +65,8 @@ contains
        ! XyzMin_D, XyzMax_D, Dxzy_D for each region
        ! PePerPtotal
        ! xUnitPicSi, uUnitPicSi, mUnitPicSi
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*9 + 4
+       ! rPlanet
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*9 + 5
 
        RETURN
     end if
@@ -129,7 +130,9 @@ contains
     ! Units
     Param_I(n) = xUnitPicSi; n = n+1
     Param_I(n) = uUnitPicSi; n = n+1
-    Param_I(n) = mUnitPicSi
+    Param_I(n) = mUnitPicSi; n = n+1
+    Param_I(n) = rPlanetSi
+    
 
   end subroutine GM_get_for_pc_init
   !============================================================================
