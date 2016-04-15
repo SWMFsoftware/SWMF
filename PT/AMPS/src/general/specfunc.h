@@ -48,7 +48,7 @@ void exit(long int,const char*,const char* =NULL);
 void PrintLineMark(long int,char*,char* =NULL);
 
 template<class T>
-void PrintLineMark(long int nline ,char* fname ,T code) {
+void PrintLineMark(long int nline ,char* fname ,T code,const char *msg=NULL) {
   long thread;
   char *buffer=new char[sizeof(T)*TotalThreadsNumber];
 
@@ -62,7 +62,10 @@ void PrintLineMark(long int nline ,char* fname ,T code) {
 #endif
 
   if (ThisThread==0) {
-    std::cout << "linemark: line=" << nline << ", file=" << fname << ", code=";
+    std::cout << "linemark: line=" << nline << ", file=" << fname;
+    if (msg!=NULL) std::cout << ", msg=" << msg;
+    std::cout << ": code=";
+
     for (thread=0;thread<TotalThreadsNumber;thread++) std::cout << "  " << ((T*)buffer)[thread]; 
 
     std::cout << std::endl;
