@@ -158,7 +158,7 @@ VCtopology3D * _vct0;
 string testFuncs;
 int iTest,jTest,kTest;
 int iProc;
-ofstream outfile;
+ofstream outfile0;
 string filename;
 
 void init_debug_SWMF(Collective *col, Grid3DCU *grid, VCtopology3D *vct,
@@ -176,14 +176,14 @@ void init_debug_SWMF(Collective *col, Grid3DCU *grid, VCtopology3D *vct,
     stringstream ss;
     ss<<"debug_proc"<<iProc<<".txt";
     filename = ss.str();
-    outfile.open(filename.c_str());
-    outfile.precision(12);
+    outfile0.open(filename.c_str());
+    outfile0.precision(12);
   }
 }
 
 void finalize_debug_SWMF(){
-  if(outfile.is_open())
-    outfile.close();
+  if(outfile0.is_open())
+    outfile0.close();
 }
 
 bool do_test_func(string func){
@@ -197,7 +197,7 @@ bool do_test_func(string func){
 bool do_test_func(ofstream *&outfileOut, string func){
   bool doTestFunc;  
   doTestFunc = testFuncs.find(func) != string::npos;
-  if(doTestFunc) outfileOut = &outfile;
+  if(doTestFunc) outfileOut = &outfile0;
   return doTestFunc;
 }
 
@@ -214,7 +214,23 @@ bool do_test_cell(ofstream *&outfileOut, int i, int j, int k){
     if(nDim>2) doTestCell = doTestCell && kg==kTest;    
   }
 
-  if(doTestCell) outfileOut = &outfile;
+  if(doTestCell) outfileOut = &outfile0;
+  return doTestCell;
+}
+
+bool do_test_cell(const int i, const int j, const int k){
+  /* i,j,k: cell center index. */
+  int nDim;
+  nDim = _col0->getnDim();
+  bool doTestCell = true;
+  if(i>=0 && j>=0 && k>=0){
+    int ig, jg,kg;
+    _col0->getGlobalIndex(i,j,k,&ig, &jg, &kg);
+    // For 2D, kg is always 0.
+    doTestCell = doTestCell && ig == iTest && jg == jTest;
+    if(nDim>2) doTestCell = doTestCell && kg==kTest;    
+  }
+
   return doTestCell;
 }
 

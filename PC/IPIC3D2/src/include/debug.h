@@ -53,13 +53,14 @@ declare_dprintvar_fileLine(const char *);
 declare_dprintvar_fileLine(const void *);
 
 #ifdef BATSRUS
+using namespace std;
 extern Collective * _col0;
 extern Grid3DCU * _grid0;
 extern VCtopology3D * _vct0;
 extern string testFuncs;
 extern int iTest,jTest,kTest;
 extern int iProc;
-extern ofstream outfile;
+extern ofstream outfile0;
 extern string filename;
 
 void init_debug_SWMF(Collective *col, Grid3DCU *grid,
@@ -71,6 +72,7 @@ bool do_test_func(string func);
 bool do_test_func(ofstream *&outfileOut, string func);
 bool do_test_cell(ofstream *&outfileOut,
 			 int i=-1, int j=-1, int k=-1);
+bool do_test_cell(const int i, const int j, const int k);
 #endif
 
 #endif
