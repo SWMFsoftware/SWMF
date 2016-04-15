@@ -96,13 +96,224 @@ void PIC::Mover::MoveParticles() {
 
   //move existing particles
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#if _PIC__OPENMP_THREAD_SPLIT_MODE_  == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_  //OpenMP + job splitting over blocks
+//**************************  OpenMP + MPI + block's splitting *********************************
 #pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,StartTime,EndTime,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh)
-#endif
   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
-//  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      StartTime=MPI_Wtime();
+#endif
+
+    block=node->block;
+    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+ //           /*LocalCellNumber=*/  PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+            ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+            while (ParticleList!=-1) {
+              ptr=ParticleList;
+              ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+              s=PIC::ParticleBuffer::GetI(ptr);
+              LocalTimeStep=block->GetLocalTimeStep(s);
+
+              _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
+            }
+
+          }
+       }
+    }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+    node->ParallelLoadMeasure+=EndTime-StartTime;
+#endif
+}
+
+#elif _PIC__OPENMP_THREAD_SPLIT_MODE_  == _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_  //OpenMP with job splitting over sells
+//**************************  OpenMP + MPI + cell's splitting *********************************
+  //reset the balancing counters
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+    if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+node->block->LoadBalancingMeasureOffset))=0.0;
+   }
+
+  int LoadBalancingMeasureOffset=PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset;
+
+  //loop through all particles
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,block,StartTime,EndTime,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
+  shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh,LoadBalancingMeasureOffset)
+  for (int cnt=0;cnt<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;cnt++) {
+    int nLocalNode,ii=cnt;
+
+    nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    k=ii/(_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=k*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    j=ii/_BLOCK_CELLS_X_;
+    ii-=j*_BLOCK_CELLS_X_;
+
+    i=ii;
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      StartTime=MPI_Wtime();
+#endif
+
+    block=node->block;
+    ParticleList=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+    while (ParticleList!=-1) {
+      ptr=ParticleList;
+      ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+      s=PIC::ParticleBuffer::GetI(ptr);
+      LocalTimeStep=block->GetLocalTimeStep(s);
+
+      _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
+    }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+
+    int thread=omp_get_thread_num();
+    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=EndTime-StartTime;
+#endif
+}
+
+  //sum-up the balancing measure
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+    node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+node->block->LoadBalancingMeasureOffset));
+  }
+#elif _PIC__OPENMP_THREAD_SPLIT_MODE_  == _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
+  //**************************  OpenMP + MPI + particle's splitting *********************************
+
+
+
+
+
+
+
+
+
+   class cThreadParticleList {
+   public:
+     long int ptr;
+     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+     PIC::Mesh::cDataBlockAMR *block;
+
+     static void ProcessList(cThreadParticleList *list,int length) {
+       long int ptr;
+       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+       PIC::Mesh::cDataBlockAMR *block;
+       int s;
+       double LocalTimeStep,EndTime,StartTime;
+
+       for (int np=0;np<length;np++) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+         StartTime=MPI_Wtime();
+#endif
+
+         ptr=list[np].ptr;
+         node=list[np].node;
+         block=list[np].block;
+
+         s=PIC::ParticleBuffer::GetI(ptr);
+         LocalTimeStep=block->GetLocalTimeStep(s);
+
+         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+         EndTime=MPI_Wtime();
+
+         int thread=omp_get_thread_num();
+         *(thread+(double*)(block->GetAssociatedDataBufferPointer()+block->LoadBalancingMeasureOffset))+=EndTime-StartTime;
+       }
+#endif
+     }
+   };
+
+   //reset the balancing counters
+   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+     node=DomainBlockDecomposition::BlockTable[nLocalNode];
+     if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+node->block->LoadBalancingMeasureOffset))=0.0;
+    }
+
+   int ListLength=0;
+   cThreadParticleList ThreadParticleList[_PIC__OPENMP_THREAD_SPLIT_MODE_PARTICLE__PARTICLE_BUFFER_LENGTH_];
+
+#pragma omp parallel default(none)  shared(PIC::DomainBlockDecomposition::BlockTable,PIC::DomainBlockDecomposition::nLocalBlocks) \
+  private (ThreadParticleList,ListLength,node,block,i,j,k,FirstCellParticleTable,ParticleList,ptr)
+   {
+#pragma omp single
+     {
+
+     ListLength=0;
+
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+
+      block=node->block;
+      memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+              ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+              while (ParticleList!=-1) {
+                ptr=ParticleList;
+                ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+
+                //send the particle buffer to a thread when the buffer if full
+                if (ListLength==_PIC__OPENMP_THREAD_SPLIT_MODE_PARTICLE__PARTICLE_BUFFER_LENGTH_) {
+                  #pragma omp task default (none) firstprivate (ThreadParticleList,ListLength)
+                  cThreadParticleList::ProcessList(ThreadParticleList,ListLength);
+
+                  ListLength=0;
+                }
+
+                //add new particle to the buffer
+                ThreadParticleList[ListLength].ptr=ptr;
+                ThreadParticleList[ListLength].node=node;
+                ThreadParticleList[ListLength].block=block;
+
+                ListLength++;
+              }
+
+            }
+         }
+      }
+    }
+
+    //process those particle that was not sent for a task
+    cThreadParticleList::ProcessList(ThreadParticleList,ListLength);
+     }
+   }
+
+   //sum-up the balancing measure
+   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+     node=DomainBlockDecomposition::BlockTable[nLocalNode];
+     node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+node->block->LoadBalancingMeasureOffset));
+   }
+
+
+#else  //_PIC__OPENMP_THREAD_SPLIT_MODE_
+#error Option is unknown
+#endif  //_PIC__OPENMP_THREAD_SPLIT_MODE_
+
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_  //MPI Mode
+//************************** MPI ONLY  *********************************
+  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
       StartTime=MPI_Wtime();
 #endif
@@ -133,9 +344,10 @@ void PIC::Mover::MoveParticles() {
     EndTime=MPI_Wtime();
     node->ParallelLoadMeasure+=EndTime-StartTime;
 #endif
-
 }
-
+#else
+#error Option is unknown
+#endif // _COMPILATION_MODE_
 
   //update the particle lists (The connecting and local processors)
   for (k=0;k<_BLOCK_CELLS_Z_;k++) {
