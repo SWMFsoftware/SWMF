@@ -50,6 +50,8 @@ int PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset=0;
 int PIC::Mesh::cDataBlockAMR::tempParticleMovingListTableThreadOffset=-1;
 int PIC::Mesh::cDataBlockAMR::tempParticleMovingListTableThreadLength=0;
 
+int PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset=0;
+
 //the offsets to the sampled data stored in 'center nodes'
 int PIC::Mesh::completedCellSampleDataPointerOffset=0,PIC::Mesh::collectingCellSampleDataPointerOffset=0;
 

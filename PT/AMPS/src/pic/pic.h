@@ -2047,6 +2047,7 @@ namespace PIC {
       static int tempParticleMovingListTableThreadOffset,tempParticleMovingListTableThreadLength; //the offset and length of the tempParticleMovingListTable for each
 
     public:
+      static int LoadBalancingMeasureOffset;
       static int UserAssociatedDataOffset;
       long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
@@ -2104,6 +2105,10 @@ namespace PIC {
 
           totalAssociatedDataLength+=tempParticleMovingListTableThreadLength;
           UserAssociatedDataOffset+=tempParticleMovingListTableThreadLength;
+
+          LoadBalancingMeasureOffset=totalAssociatedDataLength;
+          totalAssociatedDataLength+=nThreadsOpenMP*sizeof(double);
+          UserAssociatedDataOffset+=nThreadsOpenMP*sizeof(double);
           #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 
           //set up the init flag
