@@ -32,6 +32,7 @@ int PIC::TimeStep() {
    double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,PhotoChemistryTime=0.0,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
    double UserDefinedParticleProcessingTime=0.0;
+   static double summIterationExecutionTime=0.0;
 
    //update the local block list
    DomainBlockDecomposition::UpdateBlockTable();
@@ -165,6 +166,13 @@ int PIC::TimeStep() {
   BackgroundAtmosphereCollisionTime=MPI_Wtime()-BackgroundAtmosphereCollisionTime;
 #endif
 
+  //particle photochemistry model
+  #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+  PhotoChemistryTime=MPI_Wtime();
+  ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
+  PhotoChemistryTime=MPI_Wtime()-PhotoChemistryTime;
+  #endif  //_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+
   //perform user-define processing of the model particles
 #if _PIC_USER_PARTICLE_PROCESSING__MODE_ == _PIC_MODE_ON_
   UserDefinedParticleProcessingTime=MPI_Wtime();
@@ -183,6 +191,7 @@ int PIC::TimeStep() {
 #endif
 
   IterationExecutionTime=MPI_Wtime()-StartTime;
+  summIterationExecutionTime+=IterationExecutionTime;
 
   //syncrinie processors and exchnge particle data
   ParticleExchangeTime=MPI_Wtime();
@@ -194,12 +203,6 @@ int PIC::TimeStep() {
   PIC::ParticleBuffer::Thread::RebalanceParticleList();
   #endif
 
-  //particle photochemistry model
-  #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  PhotoChemistryTime=MPI_Wtime();
-  ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
-  PhotoChemistryTime=MPI_Wtime()-PhotoChemistryTime;
-  #endif  //_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
 
   //update the total number of the sampled trajecotries
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
@@ -482,7 +485,16 @@ int PIC::TimeStep() {
     if (EmergencyLoadRebalancingFlag==true) {
       if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"Load Rebalancing.....  begins\n");
 
+      //correct the node's load balancing measure
+      #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      if (summIterationExecutionTime>0.0)  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+        DomainBlockDecomposition::BlockTable[nLocalNode]->ParallelLoadMeasure*=summIterationExecutionTime;
+      }
 
+      summIterationExecutionTime=0.0;
+      #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+
+      //start the rebalancing procedure
       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
       PIC::Parallel::RebalancingTime=MPI_Wtime();
 
