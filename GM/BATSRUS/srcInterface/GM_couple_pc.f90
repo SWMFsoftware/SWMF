@@ -236,11 +236,13 @@ contains
          nI, nJ, nK
     use ModPIC,       ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
          nRegionPic, nGhostPic
-    use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V, &
+         RhoMin_I, pMin_I, PeMin
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
-    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_
-    use ModMultiFluid,ONLY: nIonFluid
+    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_, UseAnisoPressure, Pe_, &
+         UseElectronPressure
+    use ModMultiFluid,ONLY: nIonFluid, iRho_I, iP_I, iPparIon_I, nFluid, IsIon_I
     use ModEnergy,    ONLY: calc_energy
     !use ModProcMH,   ONLY: iProc
 
@@ -253,7 +255,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
     logical :: DoCountOnly
-    integer :: i, j, k, iBlock, iPoint, iRegion, iVar
+    integer :: i, j, k, iBlock, iPoint, iRegion, iVar, iFluid
     real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
 
     character(len=*), parameter :: NameSub='GM_get_regions'
@@ -311,6 +313,38 @@ contains
                 end do
                 if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+
+                ! Set minimum density.
+                if(any(RhoMin_I > 0.0))then
+                   do iFluid = 1, nFluid
+                      if(RhoMin_I(iFluid) < 0) CYCLE
+                      iVar = iRho_I(iFluid)
+                      State_VGB(iVar,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+                           State_VGB(iVar,i,j,k,iBlock))
+                   end do
+                end if
+
+                ! Set minimum ion pressure.
+                if(any(pMin_I > 0.0))then
+                   do iFluid = 1, nFluid
+                      if(pMin_I(iFluid) < 0) CYCLE
+                      iVar = iP_I(iFluid)
+                      State_VGB(iVar,i,j,k,iBlock) = max(pMin_I(iFluid), &
+                           State_VGB(iVar,i,j,k,iBlock))
+
+                      if(UseAnisoPressure .and. IsIon_I(iFluid))&
+                           State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                           max(pMin_I(iFluid), &
+                           State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
+                   end do
+                end if
+
+                ! Set minimum electron pressure.
+                if(UseElectronPressure .and. PeMin > 0.0) then
+                   State_VGB(Pe_,i,j,k,iBlock) = &
+                        max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
+                endif
+                
                 call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
              else
                 ! Provide position to PC
