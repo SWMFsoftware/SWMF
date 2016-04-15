@@ -173,6 +173,8 @@ void amps_init() {
   PIC::Init_AfterParser();
   PIC::Mover::Init();
 
+  //init the block domain decomposition table
+  PIC::DomainBlockDecomposition::UpdateBlockTable();
 
   //set up the time step
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
