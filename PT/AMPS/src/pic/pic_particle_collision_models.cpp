@@ -78,8 +78,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::Init() {
 
 //Non-time Counter collision procedure
 void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
-  const int SigmaCrMax_nTest=100;
-  const double SigmaCrMax_SafetyMargin=1.3;
+  int SigmaCrMax_nTest=100;
+  double SigmaCrMax_SafetyMargin=1.3;
 
   struct cParticleDataList {
     double vel[3];
@@ -91,7 +91,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
   int s,s0,s1,i,j,k;
 
   int nParticleNumber[PIC::nTotalSpecies],nMaxSpecParticleNumber,cnt;
-  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],FirstCellParticle,ptr;
+//  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],
+  long int FirstCellParticle,ptr;
   double cellMeasure;
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
@@ -115,12 +116,16 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
   char *SamplingData;
 //#endif
 
+  int LoadBalancingMeasureOffset=PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset;
+
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel default(none) private (s,s0,s1,i,j,k,nParticleNumber,nMaxSpecParticleNumber,cnt,FirstCellParticleTable,FirstCellParticle,ptr,PIC::Mesh::mesh,block, \
+#pragma omp parallel default(none) private (s,s0,s1,i,j,k,nParticleNumber,nMaxSpecParticleNumber,cnt,FirstCellParticle,ptr,PIC::Mesh::mesh,block, \
       EndTime,StartTime,s0ParticleDataList,s1ParticleDataList,cell,SamplingData,cellMeasure) \
   firstprivate(ParticleDataListLength,s0List,s1List,node) \
   shared(SigmaCrMax_nTest,SigmaCrMax_SafetyMargin,DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable, \
-      PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::ParticleWeightTimeStep::LocalTimeStep,PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset)
+      PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::ParticleWeightTimeStep::LocalTimeStep, \
+      PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset, \
+      LoadBalancingMeasureOffset,PIC::nTotalThreadsOpenMP)
 
   {
 #endif
@@ -135,18 +140,48 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 //  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    //reset the balancing counters
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))=0.0;
+    }
+#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+
+#if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
+#pragma omp for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_)
+#else
 #pragma omp for schedule(dynamic,1)
-#endif
-  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+#endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
+
+#endif  //_COMPILATION_MODE_
+//  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+  for (int CellCounter=0;CellCounter<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;CellCounter++) {
+    int nLocalNode,ii=CellCounter;
+
+    nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    k=ii/(_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=k*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    j=ii/_BLOCK_CELLS_X_;
+    ii-=j*_BLOCK_CELLS_X_;
+
+    i=ii;
+
     StartTime=MPI_Wtime();
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     block=node->block;
-    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+//    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-          for (i=0;i<_BLOCK_CELLS_X_;i++) {
-            FirstCellParticle=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+//    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+//       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+//          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+
+    {{{
+
+            FirstCellParticle=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
             cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
             cellMeasure=cell->Measure;
@@ -421,9 +456,19 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     EndTime=MPI_Wtime();
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
     node->ParallelLoadMeasure+=EndTime-StartTime;
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    int thread=omp_get_thread_num();
+    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=EndTime-StartTime;
+#else
+#error The option is unknown
+#endif // _COMPILATION_MODE_
+
+
     StartTime=EndTime;
-#endif
+#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_
 
 //    node=node->nextNodeThisThread;
 
@@ -433,6 +478,13 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
   delete [] s0ParticleDataList;
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      //sum-up the balancing measure
+      for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+        node=DomainBlockDecomposition::BlockTable[nLocalNode];
+        node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
+      }
+#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
   }
-#endif
+#endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 }
