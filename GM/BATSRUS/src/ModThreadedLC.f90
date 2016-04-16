@@ -5,6 +5,7 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
+       DLogLambdaOverLogT_,                                      &
        RadCool2Si, DoInit_, Done_, Enthalpy_, Heat_, iStage
   !\
   !   Hydrostatic equilibrium in an isothermal corona: 
@@ -278,7 +279,7 @@ contains
     !\
     ! Arrays needed to use lookup table
     !/ 
-    real    :: Value_V(4), ValCooling(1)
+    real    :: Value_V(5), ValCooling(1)
     !\
     !---------Used in 1D numerical model------------------------
     !/

@@ -126,11 +126,12 @@ module ModFieldLineThread
   !/
   integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
   integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
+  integer,public,parameter:: DLogLambdaOverLogT_ = 5
   !\
   ! Global arrays used in calculating the tables
   !/
-  real,dimension(1:500):: &
-       TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
+  real,dimension(1:500):: TeSi_I, LambdaSi_I, &
+       LPe_I, UHeat_I, dFluxXLengthOverDU_I, DLogLambdaOverLogT_I 
 
   public:: set_threads       !(Re)Sets threads in the inner boundary blocks
 
@@ -742,14 +743,15 @@ contains
             NameTable = 'TR',                                       &
             NameCommand = 'save',                                   &
             NameVar =                                               &
-            'logTe logNe LPe UHeat FluxXLength dFluxXLegthOverDU',  &
+            'logTe logNe '//                                        &
+            'LPe UHeat FluxXLength dFluxXLegthOverDU dLogLambdaOverDLogT',&
             nIndex_I = (/500,2/),                                   &
             IndexMin_I =(/1.0e4, 1.0e8/),                           &
             IndexMax_I =(/1.0e8, 1.0e18/),                          &
             NameFile = 'TR.dat',                                    &
             TypeFile = TypeFile,                                    &
             StringDescription = &
-            'Model for transition region: [K] [1/m3] [N/m] [m/s] [W/m]')
+            'Model for transition region: [K] [1/m3] [N/m] [m/s] [W/m] [1]')
 
        iTable = i_lookup_table('TR')
 
@@ -835,10 +837,22 @@ contains
 
        LPe_I = LPe_I*HeatCondParSi
        UHeat_I(1) = 0.0
+       !\
+       ! Calculate dLogLambda/DLogTe
+       !/
+       DLogLambdaOverLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
+            DeltaLogTe
+       do iTe = 2,499
+          DLogLambdaOverLogT_I(iTe) = log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/&
+            (2*DeltaLogTe)
+       end do
+       DLogLambdaOverLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
+            DeltaLogTe
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V(LengthPAvrSi_:DHeatFluxXOverU_) = (/ LPe_I(iTe), UHeat_I(iTe), &
-         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe)/)
+    Value_V(LengthPAvrSi_:DLogLambdaOverLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
+         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe),                  &
+         DLogLambdaOverLogT_I(iTe)/)
   end subroutine calc_tr_table
   !=============================
   subroutine advance_threads(iAction,iStageIn)
