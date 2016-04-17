@@ -144,6 +144,10 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   double StartTime;
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
+  exit(__LINE__,__FILE__,"Error: extend the module for the case of the block and cell load splitting");
+
+
 #pragma omp parallel for schedule(dynamic,1) default (none) private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext,StartTime)  \
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks)
 #endif
