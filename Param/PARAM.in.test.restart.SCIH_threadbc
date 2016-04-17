@@ -19,9 +19,8 @@ T                       DoTimeAccurate
 0.0			FracSecond
 
 #SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-60                      DtSaveRestart
+F                       DoSaveRestart
+
 
 #INCLUDE
 RESTART.in
