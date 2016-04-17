@@ -2040,11 +2040,12 @@ namespace PIC {
 
     class cDataBlockAMR : public cBasicBlockAMR<cDataCornerNode,cDataCenterNode> {
     public:
-      static int LocalTimeStepOffset,LocalParticleWeightOffset,totalAssociatedDataLength;
+      static int LocalTimeStepOffset,LocalParticleWeightOffset;
       char *associatedDataPointer;
 
     private:
       static int tempParticleMovingListTableThreadOffset,tempParticleMovingListTableThreadLength; //the offset and length of the tempParticleMovingListTable for each
+      static int totalAssociatedDataLength;
 
     public:
       static int LoadBalancingMeasureOffset;
@@ -2082,9 +2083,7 @@ namespace PIC {
       }
 
 
-      cDataBlockAMR () : cBasicBlockAMR<cDataCornerNode,cDataCenterNode> () {
-        associatedDataPointer=NULL;
-
+      static void InitInternalData() {
         if (InternalDataInitFlag==false) {
           totalAssociatedDataLength=0;
 
@@ -2114,6 +2113,20 @@ namespace PIC {
           //set up the init flag
           InternalDataInitFlag=true;
         }
+      }
+
+      static int RequestInternalBlockData(int length) {
+        if (InternalDataInitFlag==false) InitInternalData();
+
+        int res=totalAssociatedDataLength;
+        totalAssociatedDataLength+=length;
+
+        return res;
+      }
+
+
+      cDataBlockAMR () : cBasicBlockAMR<cDataCornerNode,cDataCenterNode> () {
+        if (InternalDataInitFlag==false) InitInternalData();
       }
 
     
