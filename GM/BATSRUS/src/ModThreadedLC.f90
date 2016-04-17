@@ -5,8 +5,8 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       DLogLambdaOverLogT_,                                      &
-       RadCool2Si, DoInit_, Done_, Enthalpy_, Heat_, iStage
+       LambdaSi_, DLogLambdaOverLogT_,                           &
+       DoInit_, Done_, Enthalpy_, Heat_, iStage
   !\
   !   Hydrostatic equilibrium in an isothermal corona: 
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -65,7 +65,7 @@ module ModThreadedLC
   !\
   ! Table numbers needed to use lookup table
   !/ 
-  integer :: iTableTR, iTableRadcool  
+  integer :: iTableTR
   !\
   !Control parameters: minimum temerature  and two logicals with 
   !self-explained names
@@ -80,10 +80,9 @@ module ModThreadedLC
   !/
   real:: LimMin = 0.0, LimMax = 1
   !\
-  ! 1. Coef to express radiation losses in terms of pressure (not density)
-  ! 2. Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
+  ! Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
   !/
-  real           :: cCoolingPerPe2, RhoNoDimCoef 
+  real           ::  RhoNoDimCoef 
   !\
   ! Misc
   !/
@@ -181,8 +180,6 @@ contains
     call check_tr_table
     iTableTR = i_lookup_table('TR')
     if(iTableTR<=0)call CON_stop('TR table is not set')
-    iTableRadCool = i_lookup_table('radcool')
-    if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
 
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
 
@@ -201,12 +198,6 @@ contains
     !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
     !/
     GravHydroDyn  = cGravPot*MassIon_I(1)/Z
-    !\
-    ! With this constant, the volumetric radiative cooling rate is
-    ! the table value multiplied by cCoolingPerPe2*(PeSi/TeSi)**2
-    !/
-    cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*Z)
-
     !\
     ! With this constant, the dimensionless density 
     ! equals RhoNoDimCoef*PeSi/TeSi
@@ -279,7 +270,7 @@ contains
     !\
     ! Arrays needed to use lookup table
     !/ 
-    real    :: Value_V(5), ValCooling(1)
+    real    :: Value_V(6)
     !\
     !---------Used in 1D numerical model------------------------
     !/
@@ -697,11 +688,12 @@ contains
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
             call CON_stop('Stop!!!')
          end if
-         call interpolate_lookup_table(iTableRadCool,&
-              TeSi_I(iPoint), 1.0e2, ValCooling)
+         call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 1.0e8, &
+              Value_V, &
+           DoExtrapolate=.false.)
          ResCooling_I(iPoint) = &
               -BoundaryThreads_B(iBlock)%DsOverBSi_III(iPoint-nPoint,j,k)&
-              *ValCooling(1)*cCoolingPerPe2*&
+              *Value_V(LambdaSI_)/Z*&
               (PeSi_I(iPoint)/TeSi_I(iPoint))**2
       end do
     end subroutine get_cooling

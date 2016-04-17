@@ -126,7 +126,7 @@ module ModFieldLineThread
   !/
   integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
   integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
-  integer,public,parameter:: DLogLambdaOverLogT_ = 5
+  integer,public,parameter:: LambdaSi_=5, DLogLambdaOverLogT_ = 6
   !\
   ! Global arrays used in calculating the tables
   !/
@@ -744,7 +744,7 @@ contains
             NameCommand = 'save',                                   &
             NameVar =                                               &
             'logTe logNe '//                                        &
-            'LPe UHeat FluxXLength dFluxXLegthOverDU dLogLambdaOverDLogT',&
+            'LPe UHeat FluxXLength dFluxXLegthOverDU Lambda dLogLambdaOverDLogT',&
             nIndex_I = (/500,2/),                                   &
             IndexMin_I =(/1.0e4, 1.0e8/),                           &
             IndexMax_I =(/1.0e8, 1.0e18/),                          &
@@ -851,8 +851,8 @@ contains
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
     Value_V(LengthPAvrSi_:DLogLambdaOverLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
-         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe),                  &
-         DLogLambdaOverLogT_I(iTe)/)
+         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
+         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverLogT_I(iTe)/)
   end subroutine calc_tr_table
   !=============================
   subroutine advance_threads(iAction,iStageIn)
