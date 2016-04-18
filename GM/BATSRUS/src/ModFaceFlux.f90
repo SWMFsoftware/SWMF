@@ -29,6 +29,7 @@ module ModFaceFlux
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
+       UseEfield, &                      ! electric field
        UseFDFaceFlux, FluxCenter_VGD, &
        UseLowOrderOnly, UseLowOrder, &
        UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
@@ -1826,7 +1827,7 @@ contains
       if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
 
       if(Eta > 0.0)then
-         ! Add flux corresponding to curl Eta.J to induction equation
+         ! Add flux corresponding to -curl Eta.J to induction equation
          FluxBx = NormalY*EtaJz - NormalZ*EtaJy
          FluxBy = NormalZ*EtaJx - NormalX*EtaJz
          FluxBz = NormalX*EtaJy - NormalY*EtaJx
@@ -2130,8 +2131,14 @@ contains
           call get_burgers_flux
        else
           ! If there is no MHD fluid, calculate fluxes for magnetic field
-          ! together with hydro fluxes for the first fluid
-          if(UseB .and. iFluid == 1)call get_magnetic_flux
+          ! (and electric field) together with hydro fluxes for the first fluid
+          if(iFluid == 1 .and. UseB)then
+             if(UseEfield)then
+                call get_electro_magnetic_flux
+             else
+                call get_magnetic_flux
+             end if
+          end if
 
           ! Calculate HD flux for individual ion and neutral fluids
           call get_hd_flux
@@ -2614,6 +2621,28 @@ contains
     end subroutine get_magnetic_flux
 
     !==========================================================================
+
+    subroutine get_electro_magnetic_flux
+
+      use ModPhysics, ONLY: C2light
+
+      real:: Ex, Ey, Ez
+      !----------------------------------------------------------------------
+      Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
+
+      ! dB/dt + div F = 0
+      ! div F = curl E = sum(Normal x E)/Volume
+      Flux_V(Bx_) = NormalY*Ez - NormalZ*Ey
+      Flux_V(By_) = NormalZ*Ex - NormalX*Ez
+      Flux_V(Bz_) = NormalX*Ey - NormalY*Ex
+
+      ! dE/dt + c^2(J - curl B) = 0   (curl B0 is assumed to be zero for now)
+      Flux_V(Ex_) = -C2light*(NormalY*Bz - NormalZ*By)
+      Flux_V(Ey_) = -C2light*(NormalZ*Bx - NormalX*Bz)
+      Flux_V(Ez_) = -C2light*(NormalX*By - NormalY*Bx)
+
+    end subroutine get_electro_magnetic_flux
+    !==========================================================================
     subroutine get_hd_flux
 
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
@@ -2901,9 +2930,10 @@ contains
        UseAwSpeedIn)
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUz, iP
-    use ModMain, ONLY: Climit
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
          GammaWave, UseAlfvenWaves
+    use ModMain, ONLY: Climit
+    use ModPhysics, ONLY: Clight
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -2918,6 +2948,16 @@ contains
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
     !--------------------------------------------------------------------------
+    if(UseEfield)then
+       if(present(Cleft_I))  Cleft_I  = -cLight
+       if(present(CRight_I)) Cright_I = cLight
+       if(present(Cmax_I))   Cmax_I   = cLight
+       CmaxDt_I = cLight
+       CmaxDt =   cLight
+
+       RETURN
+    end if
+
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
