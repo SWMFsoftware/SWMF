@@ -106,7 +106,11 @@ subroutine set_physics_constants
   !\
   ! set the (corrected) speed of light and get normalization
   !/
-  Clight      = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
+  if(ClightDim > 0.0)then
+     Clight   = ClightDim * Si2No_V(UnitU_)
+  else
+     Clight   = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
+  end if
   C2light     = cLIGHT**2
   InvClight   = cOne/cLight
   Inv_C2light = cOne/c2LIGHT

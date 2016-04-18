@@ -47,6 +47,9 @@ module ModPhysics
   ! thermal/total energy ratio limits for correctP
   real    :: Pratio_lo=0.01, Pratio_hi=0.1
 
+  ! Artificial speed of light set by #LIGHTSPEED
+  real:: ClightDim = -1.0
+
   ! speed of light, inverse, square, inverse of square, boris correction
   real :: Clight, InvClight, C2light, Inv_C2light
   real :: Boris_Clight_Factor = 1.0
