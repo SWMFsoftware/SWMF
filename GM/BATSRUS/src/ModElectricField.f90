@@ -117,8 +117,8 @@ contains
     ! Assumes that ghost cells are set
     ! This will NOT work for Hall MHD
 
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ex_, Ez_
+    use ModAdvance, ONLY: State_VGB, UseEfield
     use ModB0, ONLY: UseB0, B0_DGB
     use ModCoordTransform, ONLY: cross_product
 
@@ -130,6 +130,11 @@ contains
     if(.not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
+    end if
+
+    if(UseEfield)then
+       Efield_DGB(:,:,:,:,iBlock) = State_VGB(Ex_:Ez_,:,:,:,iBlock)
+       RETURN
     end if
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
