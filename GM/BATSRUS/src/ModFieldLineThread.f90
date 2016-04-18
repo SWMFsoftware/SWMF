@@ -169,13 +169,6 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   !/
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-  !\
-  !energy flux needed to raise the mass flux rho*u to the heliocentric 
-  !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-  !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
-  !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
-  !/
-  real,public :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
 contains
   !=============================================================================
   subroutine read_threads(iSession)
