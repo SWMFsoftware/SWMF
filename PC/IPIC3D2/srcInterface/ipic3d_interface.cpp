@@ -57,28 +57,6 @@ int ipic3d_init_(double *inittime){
   return(0);
 }
 
-int ipic3d_finalize_init_(){
-
-  // This function is called by the coupler the first time 
-  // it want to couple from GM -> PC. At this point we should have all
-  // information to finnish the initialization of SimRun[i]
-
-  char **dummy = NULL; // dummy argument
-
-  string nameFunc="PC: ipic3d_finalize_init_";
-  timing_start(nameFunc);
-
-  // now we should have all the the infomation
-  for(int i = 0; i < nIPIC; i++){     
-    SimRun[i]->Init(0, dummy, timenow);
-    SimRun[i]->CalculateMoments();
-    SimRun[i]->WriteOutput(0);
-    iSimCycle[i] = SimRun[i]->FirstCycle();    
-  }
-  timing_stop(nameFunc);
-  return(0);
-}
-
 int ipic3d_read_param_(char *paramIn, int *nlines, int *ncharline, int *iProc){
   // So far, iPIC3D does not support multi sessions.
   if(!isFirstSession) return(0);
@@ -128,7 +106,27 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
   return(0);
 }
 
+int ipic3d_finalize_init_(){
 
+  // This function is called by the coupler the first time 
+  // it want to couple from GM -> PC. At this point we should have all
+  // information to finnish the initialization of SimRun[i]
+
+  char **dummy = NULL; // dummy argument
+
+  string nameFunc="PC: ipic3d_finalize_init_";
+  timing_start(nameFunc);
+
+  // now we should have all the the infomation
+  for(int i = 0; i < nIPIC; i++){     
+    SimRun[i]->Init(0, dummy, timenow);
+    SimRun[i]->CalculateMoments();
+    SimRun[i]->WriteOutput(0);
+    iSimCycle[i] = SimRun[i]->FirstCycle();    
+  }
+  timing_stop(nameFunc);
+  return(0);
+}
 
 int ipic3d_run_(double *time){
   bool b_err = false;
@@ -165,9 +163,11 @@ int ipic3d_run_(double *time){
    timing_stop("PC: GatherMoments");  
    
     if (b_err) {
-      iSimCycle[i] = SimRun[i]->LastCycle() + 1;
+      iSimCycle[i] = SimRun[i]->LastCycle() + 1;      
     }
 
+    SimRun[i]->updateSItime();
+    
     timing_start("PC: WriteOutput");  
     SimRun[i]->WriteOutput(iSimCycle[i]+1);
     timing_stop("PC: WriteOutput");

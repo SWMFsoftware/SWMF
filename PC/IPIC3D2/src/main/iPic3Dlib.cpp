@@ -921,6 +921,10 @@ void c_Solver::setSIDt(double SIDt){
   col->setSIDt(SIDt);
 }
 
+void c_Solver::updateSItime(){
+  col->updateSItime();
+}
+
 void c_Solver::SetCycle(int iCycle){
   col->setCycle(iCycle);
 }

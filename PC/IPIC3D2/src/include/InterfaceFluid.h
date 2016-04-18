@@ -1893,9 +1893,13 @@ class InterfaceFluid
   /** set SI dt */
   void setSIDt(double SIDt){
     INdt = SIDt;
-    SItime += INdt;
     dt      = INdt*(Si2NoL/Si2NoV);
   }
+
+  void updateSItime(){
+    SItime += INdt;
+  }
+  
   
   /** get fluid time step in IPIC3D units */
   double getFluidDt() const{
