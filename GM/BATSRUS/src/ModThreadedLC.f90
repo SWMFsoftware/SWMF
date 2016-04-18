@@ -49,8 +49,8 @@ module ModThreadedLC
   !/
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
        TeSi_I, TeSiOld_I, PeSi_I, Xi_I, Cons_I, &
-       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, ResEnthalpy_I,&
-       ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I
+       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDT_I, &
+       ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I
   !\
   ! We apply ADI to solve state vector, the components of the state
   ! being temperature and log pressure. 
@@ -132,6 +132,7 @@ contains
 
     allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
     allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
+    allocate(DResCoolingOverDT_I(nPointThreadMax)); DResCoolingOverDT_I = 0.0
     allocate(ResEnthalpy_I(nPointThreadMax));ResEnthalpy_I = 0.0
     allocate(ResHeatCond_I(nPointThreadMax));ResHeatCond_I = 0.0
     allocate( ResGravity_I(nPointThreadMax)); ResGravity_I = 0.0
@@ -659,20 +660,8 @@ contains
       L_VVI(LogP_,LogP_,2:nPoint-1) = -1.0
 
       call get_cooling(nLast=nPoint-1)
-      M_VVI(Cons_,LogP_,2:nPoint-1) = &
-              -2*ResCooling_I(2:nPoint-1) !=-dCooling/dLogPe
-      !\
-      ! For the first cell to improve the stability the term
-      ! is added to diagonal, by expressing DeltaLogP in terms of DeltaCons
-      ! In this way we correct the temperature derivative near the TR
-      ! due to the pressure dependence of radiative cooling rate, 
-      ! the pressure near the TR beibg the (tabulated) function
-      ! of the temperature near TR
-      ! Contribution to dPe/dCons = -dCooling/dPe*dPe/dCons
-      !                   = -2Cooling/Pe*Pe/(Pe*L*UHeat(T))
-      !/
-      M_VVI(Cons_,Cons_,1) =  M_VVI(Cons_,Cons_,1) + &
-           2*ResCooling_I(1)*M_VVI(LogP_,Cons_,1)
+      M_VVI(Cons_,LogP_,1:nPoint-1) = &
+              -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
     end subroutine get_heat_cond
     !===========================
     subroutine get_cooling(nLast)
@@ -695,6 +684,8 @@ contains
               -BoundaryThreads_B(iBlock)%DsOverBSi_III(iPoint-nPoint,j,k)&
               *Value_V(LambdaSI_)/Z*&
               (PeSi_I(iPoint)/TeSi_I(iPoint))**2
+         DResCoolingOverDT_I(iPoint) = &
+              ResCooling_I(iPoint)*(Value_V(DLogLambdaOverLogT_) - 2)
       end do
     end subroutine get_cooling
     !======================
@@ -752,63 +743,62 @@ contains
          ! Add enthalpy correction
          !/
          if(IsTimeAccurate)then
-         if(USiIn>0)then
-            FluxConst    = USiIn * PeSi_I(nPoint)/&
-                 (TeSiIn*PoyntingFluxPerBSi*&
-                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-            EnthalpyFlux = FluxConst/Z& 
-                 *(InvGammaMinus1 +1)*(1 + Z)
-            ResEnthalpy_I(2:nPoint-1) = &
-                 EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-            ResEnthalpy_I(1)   = 0.0
-            L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
-                  - EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
-            M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
-                  + EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
-         elseif(USiIn<0.and.IsTimeAccurate)then
-            FluxConst    = USiIn * PeSi_I(nPoint)/&
-                 (TeSiIn*PoyntingFluxPerBSi*&
-                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-            EnthalpyFlux = FluxConst/Z& !5/2*U*Pi
-                 *(InvGammaMinus1 +1)*(1 + Z)
-            ResEnthalpy_I(1:nPoint-1) = &
-                 -EnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
-            U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
-                + EnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
-            M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
-                - EnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
-         end if
-         !==========Add Gravity Source================================
-         !\
-         !cGravPot = cGravitation*mSun*cAtomicMass/&
-         !/   (cBoltzmann*rSun)
-         !GravHydroDyn = cGravPot*MassIon_I(1)/Z
-         !\
-         !energy flux needed to raise the mass flux rho*u to the heliocentric 
-         !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-         !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-         !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
-         !/
-         if(UseGravity)then
-            ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
-                 - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
-                 + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-            ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(     &
-                 - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
-                 + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
-            ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
-                 ResGravity_I(1:nPoint-1) 
-         end if
-         end if
-         !\
-         ! For the time accurate mode, account for the time derivative
-         ! The specific heat should be modified, because the conservative
-         ! variable is flux-by-length, not the temperature
-         !/
-         M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-              DtInv*SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)/   &
-              (3.50*Cons_I(1:nPoint-1))
-         
+            if(USiIn>0)then
+               FluxConst    = USiIn * PeSi_I(nPoint)/&
+                    (TeSiIn*PoyntingFluxPerBSi*&
+                    BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+               EnthalpyFlux = FluxConst/Z& 
+                    *(InvGammaMinus1 +1)*(1 + Z)
+               ResEnthalpy_I(2:nPoint-1) = &
+                    EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+               ResEnthalpy_I(1)   = 0.0
+               L_VVI(Cons_,Cons_,2:nPoint-1) =  L_VVI(Cons_,Cons_,2:nPoint-1)&
+                    - EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
+               M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
+                    + EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
+            elseif(USiIn<0)then
+               FluxConst    = USiIn * PeSi_I(nPoint)/&
+                    (TeSiIn*PoyntingFluxPerBSi*&
+                    BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+               EnthalpyFlux = FluxConst/Z& !5/2*U*Pi
+                    *(InvGammaMinus1 +1)*(1 + Z)
+               ResEnthalpy_I(1:nPoint-1) = &
+                    -EnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
+               U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
+                    + EnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
+               M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
+                    - EnthalpyFlux*TeSi_I(1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
+            end if
+            !==========Add Gravity Source================================
+            !\
+            !cGravPot = cGravitation*mSun*cAtomicMass/&
+            !/   (cBoltzmann*rSun)
+            !GravHydroDyn = cGravPot*MassIon_I(1)/Z
+            !\
+            !energy flux needed to raise the mass flux rho*u to the  
+            !heliocentric distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+            !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+            !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
+            !/
+            if(UseGravity)then
+               ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
+                    - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
+                    + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+               ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(     &
+                    - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
+                    + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
+               ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
+                    ResGravity_I(1:nPoint-1) 
+            end if
+            !\
+            ! For the time accurate mode, account for the time derivative
+            ! The specific heat should be modified, because the conservative
+            ! variable is flux-by-length, not the temperature
+            !/
+            M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
+                 DtInv*SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)/   &
+                 (3.50*Cons_I(1:nPoint-1))
+         end if         
          Res_VI(Cons_,1:nPoint-1) = -DeltaEnergy_I(1:nPoint-1) +      &
               ResHeating_I(1:nPoint-1) +  ResCooling_I(1:nPoint-1) +&
               ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1)
