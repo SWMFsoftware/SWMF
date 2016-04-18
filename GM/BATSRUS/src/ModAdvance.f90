@@ -33,6 +33,7 @@ module ModAdvance
   logical, parameter:: UseElectronPressure = Pe_ > 1
   logical, parameter:: UseAnisoPressure    = iPparIon_I(IonFirst_) > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
+  logical, parameter:: UseEfield = Ex_ > 1
 
   logical:: UseElectronEntropy = .false.
 

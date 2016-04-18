@@ -12,6 +12,9 @@ module ModExtraVariables
   integer, parameter :: Te0_   = 1
   integer, parameter :: Ehot_ = 1
 
+  ! Electric field
+  integer, parameter :: Ex_ = 1, Ey_ = 1, Ez_ = 1
+
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
