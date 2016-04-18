@@ -1281,6 +1281,9 @@ subroutine MH_set_parameters(TypeAction)
      case('#CLIMIT')
         call face_flux_set_parameters(NameCommand)
 
+     case('#LIGHTSPEED')
+        call read_var('ClightDim', ClightDim)
+
      case("#BORIS")
         if(.not.UseB)CYCLE READPARAM
         call read_var('UseBorisCorrection', boris_correction)   
