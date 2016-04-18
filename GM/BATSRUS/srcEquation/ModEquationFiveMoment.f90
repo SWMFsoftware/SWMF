@@ -12,7 +12,7 @@ module ModVarIndexes
   save
 
   ! This equation module contains the standard MHD equations.
-  character (len=*), parameter :: NameEquation='Multi-ion MHD'
+  character (len=*), parameter :: NameEquation='Five Moment Closure'
 
   integer, parameter :: nVar = 16
 
