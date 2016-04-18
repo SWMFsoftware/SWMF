@@ -652,7 +652,7 @@ contains
       !\
       ! For other points we satisfy the hydrostatic equilibrium condition
       ! LogPe^{i-1}=LogPe^i+TGrav/Te^i
-      ! dLogPe^i - dCons^i(TGrav/(Te^i)^2)*dTe/dCons
+      ! dLogPe^i - dCons^i(TGrav/(Te^i)^2)*dTe/dCons -dLogPe^{i-1}=0
       !/
       M_VVI(LogP_,Cons_,2:nPoint-1) = -&
            BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
@@ -661,7 +661,11 @@ contains
 
       call get_cooling(nLast=nPoint-1)
       M_VVI(Cons_,LogP_,1:nPoint-1) = &
-              -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
+           -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
+      M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1)&
+           -DResCoolingOverDT_I(1:nPoint-1)/&
+           (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
+           
     end subroutine get_heat_cond
     !===========================
     subroutine get_cooling(nLast)
