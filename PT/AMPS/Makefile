@@ -87,15 +87,15 @@ endif
 ifeq (${AMPSLINKER},${LINK.f90})
 
 ifeq ($(COMPILE.f90),${LINK.f90})
-	AMPSLINKER=mpif90 -lc++ 
+	AMPSLINKER=mpif90  
 endif
 
 ifeq ($(COMPILE.f90),pgf90)
 	AMPSLINKER+= -Mnomain 
 else ifeq  ($(COMPILE.f90),ifort)
-	AMPSLINKER+= -nofor-main -lc++ 
+	AMPSLINKER+= -nofor-main  
 else ifeq  ($(COMPILE.f90),gfortran)
-	AMPSLINKER+= -lc++
+	AMPSLINKER+= 
 endif
 endif
 
