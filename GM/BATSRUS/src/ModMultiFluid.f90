@@ -9,7 +9,7 @@ module ModMultiFluid
   save
 
   ! Convenient parameters for the ion fluids
-  logical, parameter :: UseMultiIon = IonLast_ > IonFirst_
+  logical, parameter :: UseMultiIon = IonLast_ > IonFirst_ .and. Ex_ == 1
 
   ! Logical for signaling neutral fluid(s)
   logical, parameter :: UseNeutralFluid = nFluid > IonLast_ .or. B_ == U_
