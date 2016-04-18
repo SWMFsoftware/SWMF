@@ -1,0 +1,134 @@
+#ECHO
+T                       DoEcho
+
+#DESCRIPTION
+Five-moment test	StringDescription
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.30			VersionUserModule
+
+#CHECKGRIDSIZE
+      10                              nI
+       1                              nJ
+       1                              nK
+      10                     MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#LIGHTSPEED
+100.0			cLightDim
+
+#PLASMA
+1.0			IonMass
+1.0			ElectronMass
+1.0			IonCharge
+1.0			ElectronCharge
+1.0			ElectronTemperatureRatio
+
+#UNIFORMSTATE
+1.0			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+1.0			P
+1.0/1836.0		eRho
+0.0			eUx
+0.0			eUy
+0.0			eUz
+1.0			eP
+
+#GRID
+4                    	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-100.                 	xMin
+ 100.                 	xMax
+-1.                   	yMin
+ 1.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+6			By_
+1000.0			Width
+10.0			Amplitude
+100.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+Ez =  c*By (left going wave)
+Ez = -c*By (right going wave)
+
+#WAVE
+10			Ez_
+1000.0			Width
+-1000.0			Amplitude
+100.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+
+#USERINPUTEND   ----------------
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+1d mhd idl_ascii       StringPlot
+1			DnOutput
+-1.0			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+2.0			tSimulationMax
+
