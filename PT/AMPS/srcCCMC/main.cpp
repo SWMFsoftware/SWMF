@@ -119,6 +119,9 @@ int main(int argc,char **argv) {
 
     break;
   case _CCMC_CALCULATION_MODE__INDIVIDUAL_PARTICLES_ONLY_:
+   //update the local block list
+   PIC::DomainBlockDecomposition::UpdateBlockTable();
+
     PIC::CCMC::Parser::LoadControlFile();
     PIC::CCMC::TraceParticles();
 
