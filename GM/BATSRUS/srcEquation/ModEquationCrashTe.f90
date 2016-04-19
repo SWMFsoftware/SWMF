@@ -129,12 +129,4 @@ module ModVarIndexes
   integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
   integer, parameter :: iP_I(nFluid)     = (/p_/)
 
-contains
-
-  subroutine init_mod_equation
-
-    call init_mhd_variables
-
-  end subroutine init_mod_equation
-
 end module ModVarIndexes

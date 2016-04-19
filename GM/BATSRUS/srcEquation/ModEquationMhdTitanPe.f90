@@ -125,12 +125,4 @@ module ModVarIndexes
   real:: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = &
        (/1.0,14.0,29.0,28.0,44.0,70.0,74.0/)
 
-contains
-
-  subroutine init_mod_equation
-
-    call init_mhd_variables
-
-  end subroutine init_mod_equation
-
 end module ModVarIndexes

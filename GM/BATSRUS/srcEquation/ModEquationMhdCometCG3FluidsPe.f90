@@ -179,14 +179,5 @@ module ModVarIndexes
   integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
   real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
-contains
-
-  subroutine init_mod_equation
-
-    ! Initialize user units and names for the MHD variables
-    call init_mhd_variables
-
-  end subroutine init_mod_equation
-
 end module ModVarIndexes
 

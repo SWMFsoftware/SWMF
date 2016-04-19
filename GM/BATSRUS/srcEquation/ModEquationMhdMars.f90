@@ -111,12 +111,4 @@ module ModVarIndexes
   ! Molecular mass of species H, O2, O, CO2 in AMU:
   real:: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = (/1.0, 32.0, 16.0, 44.0/)
 
-contains
-
-  subroutine init_mod_equation
-
-    call init_mhd_variables
-
-  end subroutine init_mod_equation
-
 end module ModVarIndexes

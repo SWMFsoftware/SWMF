@@ -112,12 +112,4 @@ module ModVarIndexes
   ! Molecular mass of solarwind, H2O and N species in AMU:
   real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = (/ 1.0, 16.6, 14.0 /)
 
-contains
-
-  subroutine init_mod_equation
-
-    call init_mhd_variables
-
-  end subroutine init_mod_equation
-
 end module ModVarIndexes
