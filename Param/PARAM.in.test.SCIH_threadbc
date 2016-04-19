@@ -36,8 +36,8 @@ HGR			TypeCoordSystem
 
 #FIELDLINETHREAD
 T                       UseFieldLineThreads
-45                      nPointInThreadMax
-3.0e-3                  DsThreadMin
+400                      nPointInThreadMax
+1.0e-3                  DsThreadMin
 
 #THREADEDBC
 T	  UseAlignedVelocity
@@ -140,11 +140,6 @@ load			NameCommand
 SC/Param/TR.dat
 ascii			TypeFile
 
-#LOOKUPTABLE
-AW_TR			NameTable
-load			NameCommand
-SC/Param/AW_TR.dat
-ascii			TypeFile
 
 ---------------------------------------------------
 #GRIDGEOMETRY
@@ -163,7 +158,7 @@ spherical_lnr
  100.0			zMax
 
 #LIMITRADIUS
-1.05			rMin
+1.15			rMin
 24.0			rMax
 
 ----------------------------------------------------
