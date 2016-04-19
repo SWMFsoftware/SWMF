@@ -31,6 +31,7 @@ contains
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
+    use ModIonElectron,   ONLY: add_ion_electron_source
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
@@ -707,14 +708,15 @@ contains
        end if
     end if
 
-    ! Add JxB term for nonconservativ MHD scheme (like LFM)
-    if(UseB .and. .not.IsMhd .and. .not.UseMultiIon)then
+    if(UseEfield)then
+       ! q(E + u x B) momentum and qE.u energy source terms
+       call add_ion_electron_source(iBlock)
+    elseif(UseB .and. .not.IsMhd .and. .not.UseMultiIon)then
+       ! Add JxB term for nonconservative MHD scheme (like LFM)
        call multi_ion_source_expl(iBlock)
 
        if(DoTestMe) call write_source('After JxB term')
     end if
-
-
 
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)

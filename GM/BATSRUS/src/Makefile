@@ -53,6 +53,7 @@ OBJECTS = \
 	ModHeatFluxCollisionless.o \
 	ModIeCoupling.o \
 	ModIO.o \
+	ModIonElectron.o \
 	ModLaserHeating.o \
 	ModLocalTimeStep.o \
 	ModMain.o \
@@ -105,7 +106,6 @@ OBJECTS = \
 	rotate.o \
 	set_block_geometry.o \
 	set_ICs.o \
-	set_physics.o \
 	update_states.o \
 	update_states_MHD.o \
 	user_interface.o \

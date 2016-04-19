@@ -310,7 +310,7 @@ subroutine MH_set_parameters(TypeAction)
      call set_extra_parameters
 
      ! initialize ModEqution (e.g. variable units)
-     call init_mod_equation
+     call init_mhd_variables
 
      if(UseResistivity)call init_mod_resistivity
      if(UseViscosity) call viscosity_init

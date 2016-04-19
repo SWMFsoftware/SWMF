@@ -93,6 +93,9 @@ subroutine set_physics_constants
           *Si2No_V(UnitMass_)/Si2No_V(UnitCharge_)
   end if
 
+  ! Set the charge for electron fluid to -1.0
+  if(UseEfield) ChargeIon_I(nIonFluid) = -1.0
+
   ! Electron charge in normalized units (actually it is proton charge/mass)
   ! This is useful in formulas like n_s q_s (u_s - u_+) x B 
   ! in the multi-ion momentum equation. It is used in some user modules,
