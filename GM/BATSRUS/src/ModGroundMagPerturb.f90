@@ -677,7 +677,6 @@ contains
     real, dimension(3,nAeMag):: &
          dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
 
-    real :: dB_I(2)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='calc_ae'
@@ -718,15 +717,15 @@ contains
     ! MPI Reduce to head node.
     if(nProc>1) then
        dBmag_DI = dBsum_DI
-       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nKpMag, &
+       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nAeMag, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
     end if
 
     ! Now, calculate AE indices on head node only.
     if(iProc==0) then
-       AeIndex_I(1) = minval(dBsum_DI(:,1))          !AL Index
-       AeIndex_I(2) = maxval(dBsum_DI(:,1))          !AU Index
-       AeIndex_I(3) = AeIndex_I(2)-AeIndex_I(1)      !AE Index
+       AeIndex_I(1) = minval(dBsum_DI(1,:))          !AL Index
+       AeIndex_I(2) = maxval(dBsum_DI(1,:))          !AU Index
+       AeIndex_I(3) = AeIndex_I(2) - AeIndex_I(1)    !AE Index
        AeIndex_I(4) = (AeIndex_I(2)+AeIndex_I(1))/2. !AO Index
     end if
 
