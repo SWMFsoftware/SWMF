@@ -597,8 +597,6 @@ contains
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
          
       end if
-      EnthalpyFlux = FluxConst/Z& !5/2*U*Pi*(Z+1)
-           *(InvGammaMinus1 +1)*(1 + Z)
       !\
       ! Calculate flux to TR and its temperature derivative
       !/ 
@@ -617,6 +615,8 @@ contains
          !\
          ! Add enthalpy correction
          !/
+         EnthalpyFlux = FluxConst/Z& !5/2*U*Pi*(Z+1)
+              *(InvGammaMinus1 +1)*(1 + Z)
          if(USiIn>0)then
             ResEnthalpy_I(2:nPoint-1) = &
                  EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
@@ -704,6 +704,14 @@ contains
          !/
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
+         if(USiIn>0)then
+            !\
+            ! Reduce outgoing flux if the temperature drops
+            !/
+            FluxConst    = min(FluxConst,USiIn * PeSi_I(nPoint)/&
+                 (TeSiIn*PoyntingFluxPerBSi*&
+                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)))
+         end if
          !\
          ! Check convergence
          !/
