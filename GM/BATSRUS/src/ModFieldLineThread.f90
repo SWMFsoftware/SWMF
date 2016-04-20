@@ -700,7 +700,7 @@ contains
       use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
-      real :: HeatFluxXLength, Value_V(4)
+      real :: HeatFluxXLength, Value_V(6)
       integer:: iTable
       !---------------------------------------------------------------------
       iTable = i_lookup_table('TR')
