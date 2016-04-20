@@ -2,11 +2,13 @@ module ModIonElectron
 
   use ModVarIndexes
   use ModAdvance, ONLY: State_VGB, Source_VC
+  use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,&
        ChargePerMass_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
+  
 
   implicit none
 
@@ -46,6 +48,13 @@ contains
             ( State_V(iRhoIon_I)*State_V(Ez_)  &
             + State_V(iRhoUxIon_I)*b_D(y_)     &
             - State_V(iRhoUyIon_I)*b_D(x_) )
+
+       Source_VC(Ex_,i,j,k) = &
+            -C2light*sum(ChargePerMass_I * State_V(iRhoUxIon_I))
+       Source_VC(Ey_,i,j,k) = &
+            -C2light*sum(ChargePerMass_I * State_V(iRhoUyIon_I))
+       Source_VC(Ez_,i,j,k) = &
+            -C2light*sum(ChargePerMass_I * State_V(iRhoUzIon_I))
 
     end do; end do; end do
 
