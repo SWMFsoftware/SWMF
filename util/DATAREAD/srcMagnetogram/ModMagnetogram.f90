@@ -1014,5 +1014,6 @@ contains
     if(tLastUpdate>=tMax)RETURN
     B_DN = ( (tMax - tNow     )/(tMax - tLastUpdate) )*B_DN + &
          ( (tNow - tLastUpdate)/(tMax - tLastUpdate) )*BNew_DN
+    tLastUpdate = tNow
   end subroutine update_magnetogram
 end module ModMagnetogram
