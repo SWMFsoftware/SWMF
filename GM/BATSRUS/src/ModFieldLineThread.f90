@@ -327,6 +327,9 @@ contains
   end subroutine set_threads
   !========================================================================
   subroutine set_threads_b(iBlock)
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use ModMain,       ONLY: n_step, iteration_number, time_simulation
     use ModGeometry, ONLY: Xyz_DGB
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
                            UnitTemperature_, UnitX_, UnitB_
@@ -363,12 +366,17 @@ contains
     !Coordinates and magnetic field in the midpoint 
     !within the framework of the Runge-Kutta scheme
     real :: XyzAux_D(3), B0Aux_D(3)
+    !\
+    ! CME parameters, if needed
+    !/
+    real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
     !Aux
     real :: ROld, Aux, CoefXi
     real :: DirB_D(3), DirR_D(3), XyzOld_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
     integer, parameter::nCoarseMax = 2
+    
     !---------------------------------------------------------------------
     call set_oktest('set_threads_b', DoTest, DoTestMe)
 
@@ -410,6 +418,11 @@ contains
        ! Calculate a field in the starting point
        !/
        call get_b0(XyzStart_D, B0Start_D)
+       if(UseCME)then
+          call EEE_get_state_BC(XyzStart_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+               time_simulation, n_step, iteration_number)
+          B0Start_D = B0Start_D + Bcme_D
+       end if
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
 
@@ -455,6 +468,11 @@ contains
 
              !2. Magnetic field in this point:
              call get_b0(XyzAux_D, B0Aux_D)
+             if(UseCME)then
+                call EEE_get_state_BC(XyzAux_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+                     time_simulation, n_step, iteration_number)
+                B0Aux_D = B0Aux_D + Bcme_D
+             end if
              DirB_D = SignBr*B0Aux_D/max(&
                   sqrt(sum(B0Aux_D**2)), cTolerance**2)
              if(nTrial==nCoarseMax)call limit_cosBR
@@ -469,6 +487,11 @@ contains
              XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call get_b0(Xyz_D, B0_D)
+             if(UseCME)then
+                call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
+                     time_simulation, n_step, iteration_number)
+                B0_D = B0_D + Bcme_D
+             end if
              B0 = sqrt( sum( B0_D**2 ) )
              BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
           end do POINTS

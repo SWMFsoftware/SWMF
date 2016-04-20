@@ -1066,6 +1066,9 @@ contains
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
+    use EEE_ModCommonVariables, ONLY: UseCme
+    use EEE_ModMain,            ONLY: EEE_get_state_BC
+    use ModMain,       ONLY: n_step, iteration_number, time_simulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use BATL_size,ONLY:  nJ, nK
@@ -1100,6 +1103,10 @@ contains
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: RhoNoDimOut, UAbsMax
+    !\
+    ! CME parameters, if needed
+    !/
+    real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -1243,6 +1250,17 @@ contains
           !/ 
           B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
           State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
+          if(UseCME)then
+             !\
+             ! Maintain the normal component of the superimposed 
+             ! CME magnetic configuration
+             !/
+             call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
+                  RhoCme, Ucme_D, Bcme_D, pCme, &
+                  time_simulation, n_step, iteration_number)
+             State_VG(Bx_:Bz_, i, j, k) = &
+                  State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*Bcme_D)
+          end if
           !\
           !Gnost cell value of velocity: keep the velocity projection
           !onto the magnetic field, if UseAlignedVelocity=.true.
