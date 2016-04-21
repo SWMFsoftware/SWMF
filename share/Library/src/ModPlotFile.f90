@@ -739,8 +739,8 @@ contains
             allocate(Param_I(nParam), Param4_I(nParam))
             read(iUnit, ERR=77, END=77) Param4_I
             Param_I = Param4_I
+            deallocate(Param4_I)
          end if
-         deallocate(Param4_I)
          read(iUnit, ERR=77, END=77) NameVar
       case default
          call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
