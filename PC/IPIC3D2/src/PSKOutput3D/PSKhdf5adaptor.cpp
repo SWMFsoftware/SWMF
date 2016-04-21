@@ -141,7 +141,7 @@ void HDF5OutputAdaptor::open(const std::string & name) {
   _hdf5_file_id = H5Fcreate(name.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   if (_hdf5_file_id <= 0) {
-    eprintf("H5FCreate fails");
+    eprintf("H5FCreate fails for <%s>",name.c_str());
     //PSK::OutputException e("H5FCreate fails", "HDF5OutputAdaptor::open2()");
 
     // if using H5F_ACC_EXCL
