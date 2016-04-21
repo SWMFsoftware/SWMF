@@ -32,7 +32,9 @@ void amps_init();
 void amps_time_step();
 
 int main(int argc,char **argv) {
-
+  
+  clock_t runtime =-clock();
+  
   amps_init();
 
 
@@ -72,6 +74,12 @@ int main(int argc,char **argv) {
 
 //  cout << "End of the run:" << PIC::nTotalSpecies << endl;
   MPI_Finalize();
+
+  runtime+=clock();
+  
+  if(PIC::Mesh::mesh.ThisThread==0)
+    cout << "Total AMPS runtime is "
+	 << (double)runtime / CLOCKS_PER_SEC << endl;
 
   return EXIT_SUCCESS;
 }
