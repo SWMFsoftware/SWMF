@@ -13,7 +13,7 @@ module ModExtraVariables
   integer, parameter :: Ehot_ = 1
 
   ! Electric field
-  integer, parameter :: Ex_ = 1, Ey_ = 1, Ez_ = 1
+  integer, parameter :: Ex_ = 1, Ey_ = 2, Ez_ = 3
 
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 1
