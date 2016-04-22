@@ -144,11 +144,7 @@ def smooth(nLong, nLat, nSmooth, Br_C):
 def remap(nLong,nLat,nParam,Param_I,Long_I,LatSin_I,Br_C,BMax):
     Long0 = Param_I[0]
     LongEarth = Param_I[1]
-    #Transpose Br_C Matrix
-    BrTransp_C = np.zeros([nLong,nLat])
-    for k in np.arange(nLat):
-        for l in np.arange(nLong):
-            BrTransp_C[l,k] = Br_C[k,l]
+    BrTransp_C =  np.transpose(Br_C)
     #
     # Centers of the bins for uniform latitude grid:
     #
@@ -301,7 +297,7 @@ if __name__ == '__main__':
        """)
     parser.add_argument('NameFile', help='Input FITS file name including path')
     parser.add_argument('-Out',choices=['old','new','none','remap'],
-                        action='append', dest='TypeOut',default=['new'],help=
+                        action='append', dest='TypeOut',default=['none'],help=
           """
           Output file: fitsfile.dat+CR_Long.txt (old), BATSRUS standard of .out file (new),
           or remapped from uniform in sin(latitude) grid to uniform in latitude one (remap) 
