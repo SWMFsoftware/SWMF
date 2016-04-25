@@ -5,8 +5,8 @@ module ModIonElectron
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
-  use ModMultiFluid, ONLY: iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,&
-       ChargePerMass_I
+  use ModMultiFluid, ONLY: nIonFluid, &
+       iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, ChargePerMass_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
   
   implicit none
@@ -82,7 +82,8 @@ contains
             -C2light*sum(ChargePerMass_I * State_V(iRhoUzIon_I))
 
        ! de_s/dt += j_s.E = (q/m)_s*rhou_s.E 
-       Source_VC(Energy_:,i,j,k) = Source_VC(Energy_:,i,j,k) &
+       Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k) =              &
+            Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)           &
             + ChargePerMass_I * (State_V(iRhoUxIon_I)*State_V(Ex_) &
             +                    State_V(iRhoUyIon_I)*State_V(Ey_) &
             +                    State_V(iRhoUzIon_I)*State_V(Ez_) )
@@ -147,7 +148,8 @@ contains
        ! The energy update is explicit even for the electrons
        ! since there is no feed back from energy to E or ElRhoU
        ! de_s/dt += j_s.E = (q/m)_s*rhou_s.E 
-       Source_VC(Energy_:,i,j,k) = Source_VC(Energy_:,i,j,k) &
+       Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k) =              &
+            Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)           &
             + ChargePerMass_I * (State_V(iRhoUxIon_I)*State_V(Ex_) &
             +                    State_V(iRhoUyIon_I)*State_V(Ey_) &
             +                    State_V(iRhoUzIon_I)*State_V(Ez_) )
