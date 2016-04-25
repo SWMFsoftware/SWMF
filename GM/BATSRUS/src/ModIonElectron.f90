@@ -16,7 +16,7 @@ module ModIonElectron
   ! Index of electron fluid
   integer, parameter:: El_ = IonLast_
   ! Index of the last TRUE (=heavy) ion
-  integer, parameter:: i_ = El_ - 1
+  integer, parameter:: i_ = max(1,El_ - 1)
 
 contains
   !===========================================================================
