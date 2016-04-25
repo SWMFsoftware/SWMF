@@ -276,7 +276,7 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer        :: nPoint, iPoint 
-    integer        :: nIter = 20
+    integer        :: nIter = 10
     !\
     ! Corrrect density and pressure values in the ghost 
     !/
@@ -449,11 +449,11 @@ contains
     !     BoundaryThreads_B(iBlock) % TMax_II(j,k)))
     !No2Si_V(UnitTemperature_)
  
-    GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)*              &
+    GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/max(          &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )                       &  
-         /(Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
-         BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))**2
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),0.1*                  &  
+         Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
+         BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
 
     DeltaTeFactor = TeSi_I(nPoint)/max(TeSiMin, TeSi_I(nPoint) + &
          max(TeSi_I(nPoint  ) - TeSi_I(nPoint-1),0.0)*GhostCellCorr)
@@ -492,11 +492,22 @@ contains
     PeSiOut     = Limiter*(SecondOrderPeSi - FirstOrderPeSi) + &
          FirstOrderPeSi
     if(RhoNoDimOut>1e8.or.RhoNoDimOut<1e-8)then
+       write(*,*)'TeSiMax=       ',TeSiMax
+       write(*,*)'iAction=',iAction
        write(*,*)'Xyz_DGB(:,1,j,k)',Xyz_DGB(:,1,j,k,iBlock)
        write(*,*)'RhoNoDimOut=', RhoNoDimOut,' PeSiOut=',PeSiOut
        write(*,*)'USiIn=', USiIn
        write(*,*)'PeSiIn=',PeSiIn
        write(*,*)'TeSiIn=',TeSiIn
+       write(*,*)'First order Rho, PSi=',FirstOrderRho, FirstOrderPeSi
+       write(*,*)'Second order Rho, PSi=',SecondOrderRho, SecondOrderPeSi
+       write(*,*)'BarometricFactor=',BarometricFactor
+       write(*,*)'DeltaTeFactor=',DeltaTeFactor
+       do iPoint=1,nPoint
+          write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+               BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+               PeSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
+       end do
        call CON_stop('Failure')
     end if
     if(DoTestMe)then
@@ -587,6 +598,7 @@ contains
       ! Turbulent heating and mass flux are not iterated
       !/
       call get_res_heating(nIterIn=nIter)
+      if(.not.IsTimeAccurate)ResHeating_I=0.0
       if(USiIn>0)then
          FluxConst    = USiIn * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
@@ -597,6 +609,8 @@ contains
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
          
       end if
+      EnthalpyFlux = FluxConst/Z& !5/2*U*Pi*(Z+1)
+           *(InvGammaMinus1 +1)*(1 + Z)
       !\
       ! Calculate flux to TR and its temperature derivative
       !/ 
@@ -615,8 +629,8 @@ contains
          !\
          ! Add enthalpy correction
          !/
-         EnthalpyFlux = FluxConst/Z& !5/2*U*Pi*(Z+1)
-              *(InvGammaMinus1 +1)*(1 + Z)
+         if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
+               0.50*HeatFlux2TR/TeSi_I(1)),FluxConst)
          if(USiIn>0)then
             ResEnthalpy_I(2:nPoint-1) = &
                  EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
@@ -704,14 +718,6 @@ contains
          !/
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
-         if(USiIn>0)then
-            !\
-            ! Reduce outgoing flux if the temperature drops
-            !/
-            FluxConst    = min(FluxConst,USiIn * PeSi_I(nPoint)/&
-                 (TeSiIn*PoyntingFluxPerBSi*&
-                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)))
-         end if
          !\
          ! Check convergence
          !/
@@ -1218,7 +1224,8 @@ contains
           ! Solve equation: -(TeGhost-TeTrue)/DeltaR = 
           ! dTe/ds*(b . DirR)
           !/
-          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs*sum(BDir_D*DirR_D)*&
+          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&                
+               sum(BDir_D*DirR_D),0.1)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           !\
           ! Version Easter 2015 Limit TeGhost
