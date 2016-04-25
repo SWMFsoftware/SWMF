@@ -110,7 +110,7 @@ module ModFieldLineThread
   !/
   real, public :: HeatCondParSi
 
-  real, parameter:: TeGlobalMaxSi = 1.80e6
+  real, parameter:: TeGlobalMaxSi = 1.80e7
 
 
   !\
