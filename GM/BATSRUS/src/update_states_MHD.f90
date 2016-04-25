@@ -27,6 +27,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
   use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
   use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
+  use ModIonElectron, ONLY: add_impl_electron_source
   
   implicit none
 
@@ -229,6 +230,12 @@ subroutine update_states_MHD(iStage,iBlock)
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
 
+  if(UseEfield)then
+     call add_impl_electron_source(iBlock)
+     if(DoTestMe)write(*,*) NameSub,' after impl electron source=', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+          Energy_GBI(iTest,jTest,kTest,iBlock,:)
+  end if
 
   if(UseStableImplicit) call deduct_expl_source
   if(use_buffer_grid())then

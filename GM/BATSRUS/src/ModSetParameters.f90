@@ -87,6 +87,7 @@ subroutine MH_set_parameters(TypeAction)
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
   use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
+  use ModIonElectron, ONLY: read_ion_electron_param
   use ModFaceBoundary, ONLY: read_face_boundary_param
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
@@ -536,6 +537,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('RelativeEps',RelativeEps_V(iVar))
            call read_var('AbsoluteEps',AbsoluteEps_V(iVar))
         end do
+
+     case("#IMPLIONELECTRON")
+        call read_ion_electron_param(NameCommand)
 
      case("#POINTIMPLICIT")
         call read_point_implicit_param
