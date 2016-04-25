@@ -4373,6 +4373,60 @@ double EMfields3D:: getVar(string var, int i, int j, int k,
       value = calPzz(is,i,j,k,isFluidP);
     }
     value *= No2OutP;
+  }else if(var.substr(0,3)=="pXY" || var.substr(0,3) == "kXY"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPxy(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPxy(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP;
+  }else if(var.substr(0,3)=="pXZ" || var.substr(0,3) == "kXZ"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPxz(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPxz(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP;
+  }else if(var.substr(0,3)=="pYZ" || var.substr(0,3) == "kYZ"){
+    bool isFluidP;
+    isFluidP = var.substr(0,1)=="p";
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += calPyz(is,i,j,k,isFluidP);
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = calPyz(is,i,j,k,isFluidP);
+    }
+    value *= No2OutP;
   }else if(var.substr(0,2)=="jx"){
     if(var.size()==2){
       value = 0;
@@ -4506,6 +4560,42 @@ double EMfields3D:: calPzz(const int is, const int i, const int j, const int k, 
   uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
   pzz = pZZsn[is][i][j][k]/qom[is] - rhoMass*uz*uz;
   return pzz;
+}
+
+double EMfields3D:: calPxy(const int is, const int i, const int j, const int k, const bool isFluidP){
+  if(not isFluidP){
+    return pXYsn[is][i][j][k];
+  }
+  double ux, uy, rhoMass, pxy;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
+  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
+  pxy = pXYsn[is][i][j][k]/qom[is] - rhoMass*ux*uy;
+  return pxy;
+}
+
+double EMfields3D:: calPxz(const int is, const int i, const int j, const int k, const bool isFluidP){
+  if(not isFluidP){
+    return pXZsn[is][i][j][k];
+  }
+  double ux, uz, rhoMass, pxz;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
+  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
+  pxz = pXZsn[is][i][j][k]/qom[is] - rhoMass*ux*uz;
+  return pxz;
+}
+
+double EMfields3D:: calPyz(const int is, const int i, const int j, const int k, const bool isFluidP){
+  if(not isFluidP){
+    return pYZsn[is][i][j][k];
+  }
+  double uy, uz, rhoMass, pyz;
+  rhoMass = rhons[is][i][j][k]/qom[is];
+  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
+  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
+  pyz = pYZsn[is][i][j][k]/qom[is] - rhoMass*uy*uz;
+  return pyz;
 }
 
 #endif

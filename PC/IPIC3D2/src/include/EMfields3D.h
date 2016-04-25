@@ -641,6 +641,10 @@ class EMfields3D                // :public Field
     double calPxx(const int is, const int i, const int j, const int k, const bool isFluidP);
     double calPyy(const int is, const int i, const int j, const int k, const bool isFluidP);
     double calPzz(const int is, const int i, const int j, const int k, const bool isFluidP);
+    double calPxy(const int is, const int i, const int j, const int k, const bool isFluidP);
+    double calPxz(const int is, const int i, const int j, const int k, const bool isFluidP);
+    double calPyz(const int is, const int i, const int j, const int k, const bool isFluidP);
+
  private:
     // *************************************
     // ARRAY USED FOR BC WITH BATSRUS
