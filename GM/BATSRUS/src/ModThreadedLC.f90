@@ -44,7 +44,7 @@ module ModThreadedLC
   ! Arrays for 1D distributions
   !/
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
-       TeSi_I, TeSiOld_I, PeSi_I, Xi_I, Cons_I, &
+       TeSi_I, TeSiOld_I, TeSiStart_I, PeSi_I, Xi_I, Cons_I, &
        VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDT_I, &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I
   !\
@@ -120,6 +120,7 @@ contains
 
     allocate(   TeSi_I(nPointThreadMax));     TeSi_I = 0.0
     allocate(TeSiOld_I(nPointThreadMax));  TeSiOld_I = 0.0
+    allocate(TeSiStart_I(nPointThreadMax));  TeSiStart_I = 0.0
     allocate(   Cons_I(nPointThreadMax));     Cons_I = 0.0
     allocate( PeSi_I(nPointThreadMax));   PeSi_I = 0.0
 
@@ -503,9 +504,11 @@ contains
        write(*,*)'Second order Rho, PSi=',SecondOrderRho, SecondOrderPeSi
        write(*,*)'BarometricFactor=',BarometricFactor
        write(*,*)'DeltaTeFactor=',DeltaTeFactor
+       write(*,*)&
+            'iPoint TeSiOld TeSi TeSiStart PeSi ResHeating ResEnthalpy'
        do iPoint=1,nPoint
           write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
-               BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+               TeSiStart_I(iPoint),&
                PeSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
        end do
        call CON_stop('Failure')
@@ -589,9 +592,11 @@ contains
       !\
       ! Initialization
       !/
+      TeSiStart_I(1:nPoint) = TeSi_I(1:nPoint)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = InvGammaMinus1*(1 + Z)/Z*             &
-           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
+           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
+           PeSi_I(1:nPoint-1)/TeSiStart_I(1:nPoint-1)
       DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0 
       PressureTRCoef = 1.0; FluxConst = 0.0 
       !\
@@ -670,11 +675,12 @@ contains
             
          !\
          ! For the time accurate mode, account for the time derivative
-         ! The specific heat should be modified, because the conservative
-         ! variable is flux-by-length, not the temperature
+         ! The contribution to the Jacobian be modified although the specific
+         ! heat should not,  because the conservative variable is 
+         ! flux-by-length, not the temperature
          !/
          M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-              DtInv*SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)/   &
+              DtInv*SpecHeat_I(1:nPoint-1)*TeSi_I(1:nPoint-1)/   &
               (3.50*Cons_I(1:nPoint-1))
          !   PressureTRCoef = sqrt(max(&
          !        1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))        
@@ -697,15 +703,18 @@ contains
          !\
          ! Apply DeltaCons
          !/
-         DeltaEnergy_I(1:nPoint-1) = DeltaEnergy_I(1:nPoint-1) + &
-              DtInv*SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)*         &
-              DCons_VI(Cons_,1:nPoint-1)/(3.50*Cons_I(1:nPoint-1))
          Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_VI(Cons_,1:nPoint-1)
          !\
          ! Recover temperature
          !/
          TeSi_I(1:nPoint-1) = &
               (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+         !\
+         ! Change in the internal energy (to correct the energy source 
+         ! for the time-accurate mode):
+         !/
+         DeltaEnergy_I(1:nPoint-1) = DtInv*SpecHeat_I(1:nPoint-1)* &
+              (TeSi_I(1:nPoint-1) - TeSiStart_I)
          !\
          ! Calculate TR pressure
          ! For next iteration calculate TR heat flux and 
