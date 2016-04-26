@@ -472,8 +472,9 @@ contains
        FaceState_VI(Bz_,  1:6) = SW_Bz
        FaceState_VI(P_,   1:6) = SW_p
 
-       if(UseElectronPressure) FaceState_VI(Pe_, 1:6) = SW_p
-
+       if(UseElectronPressure) &
+            FaceState_VI(Pe_, 1:6) = SW_p*ElectronPressureRatio
+       
        if(UseAnisoPressure) FaceState_VI(Ppar_, 1:6) = SW_p
 
        if (UseMultiSpecies) then
