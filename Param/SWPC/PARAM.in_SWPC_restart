@@ -68,6 +68,11 @@ F			DoCoupleOnTime
 #INCLUDE
 GM/restartIN/restart.H
 
+! reset the step counter to avoid accumulation to large numbers
+#NSTEP
+10                      nStep
+
+
 #OUTERBOUNDARY
 outflow			TypeBc1
 vary			TypeBc2
