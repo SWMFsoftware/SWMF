@@ -2873,7 +2873,8 @@ subroutine lcb_plot(iFile)
   use ModNumConst,       ONLY: cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
-  use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
+  use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type, &
+       IsPlotName_n
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, InvB_,RhoInvB_,pInvB_
   use ModNumConst,       ONLY: i_DD
   use ModMpi
@@ -2924,7 +2925,8 @@ subroutine lcb_plot(iFile)
         call get_time_string
         FileName = trim(FileName) // "_t" // StringDateOrTime
      end if
-     write(FileName,'(a,i7.7,a)') trim(FileName)//"_n",n_step,".dat"
+     if(IsPlotName_n) &
+          write(FileName,'(a,i7.7,a)') trim(FileName)//"_n",n_step,".dat"
 
      open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
