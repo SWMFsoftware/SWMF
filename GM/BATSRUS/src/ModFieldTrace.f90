@@ -2925,8 +2925,8 @@ subroutine lcb_plot(iFile)
         call get_time_string
         FileName = trim(FileName) // "_t" // StringDateOrTime
      end if
-     if(IsPlotName_n) &
-          write(FileName,'(a,i7.7,a)') trim(FileName)//"_n",n_step,".dat"
+     if(IsPlotName_n) write(FileName,'(a,i7.7)') trim(FileName)//"_n",n_step
+     FileName = trim(FileName)//".dat"
 
      open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
