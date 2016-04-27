@@ -725,7 +725,7 @@ contains
          ! for the time-accurate mode):
          !/
          DeltaEnergy_I(1:nPoint-1) = DtInv*SpecHeat_I(1:nPoint-1)* &
-              (TeSi_I(1:nPoint-1) - TeSiStart_I)
+              (TeSi_I(1:nPoint-1) - TeSiStart_I(1:nPoint-1))
          !\
          ! Calculate TR pressure
          ! For next iteration calculate TR heat flux and 
