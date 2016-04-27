@@ -47,7 +47,7 @@ contains
        IsNewDecomposition = .false.
        IsNewTree          = .false.
 
-       call MPI_ALLREDUCE(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
+       call MPI_allreduce(nBlock, nBlockMax, 1, MPI_INTEGER, MPI_MAX, &
             iComm, iError)
 
        if(.not.UsePartSteady)then
