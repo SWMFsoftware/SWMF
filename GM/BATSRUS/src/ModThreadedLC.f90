@@ -1192,16 +1192,6 @@ contains
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
-       if(UseCME)then
-          !\
-          ! Maintain the normal component of the superimposed 
-          ! CME magnetic configuration
-          !/
-          call EEE_get_state_BC(Xyz_DGB(:,1,j,k,iBlock), &
-               RhoCme, Ucme_D, Bcme_D, pCme, &
-               time_simulation, n_step, iteration_number)
-          BDir_D = BDir_D +Bcme_D
-       end if
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
        DirR_D = Xyz_DGB(:,1,j,k,iBlock)  
        DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
