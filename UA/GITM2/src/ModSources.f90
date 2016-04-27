@@ -87,6 +87,10 @@ module ModSources
   real, allocatable :: IonPrecipIonRateS(:,:,:,:,:)
   real, allocatable :: IonPrecipHeatingRate(:,:,:,:)
   real :: ChemicalHeatingRate(nLons, nLats, nAlts)
+  real :: ChemicalHeatingRateIon(nLons, nLats, nAlts)
+  real :: ChemicalHeatingRateEle(nLons, nLats, nAlts)
+
+  
 
   real :: HorizontalTempSource(nLons, nLats, nAlts)
 

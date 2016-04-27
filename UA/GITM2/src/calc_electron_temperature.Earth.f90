@@ -1028,7 +1028,8 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   eHeatingm  = Qphe + Qencm + Qeicm + Qrotm + Qf + Qexc + Qvib_o2 + Qvib_n2 + Qaurora + QprecipIon + Qenc_v + Qeic_v &
        + Qeconhm
   eHeatingp  = Qencp + Qeicp + Qrotp + Qeconhp
-  iHeatingm = Qiecm + Qinc_tm + Qinc_v + Qiconhm
+  iHeatingm = Qiecm + Qinc_tm + Qinc_v + Qiconhm 
+  iHeatingm(1:nLons,1:nLats,1:nAlts) = iHeatingm(1:nLons,1:nLats,1:nAlts) + ChemicalHeatingRateIon
   iHeatingp = Qiecp + Qinc_tp + Qiconhp
   iHeating = Qiec+ Qinc_t + Qinc_v
 
