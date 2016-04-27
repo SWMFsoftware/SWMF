@@ -213,7 +213,7 @@ module ModInputs
   logical :: UseVerAdvectionT  = .true.
 
   logical :: UseCO2Cooling = .true.
-  real    :: CO2ppm = 320.0
+  real    :: CO2ppm = 225.0
 
 !! New Turbulent (Eddy) Conduction Routines
   logical :: UseTurbulentCond = .false.
