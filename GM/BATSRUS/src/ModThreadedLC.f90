@@ -270,6 +270,10 @@ contains
     !/ 
     real    :: Value_V(6)
     !\
+    ! Limited Speed
+    !/
+    real    :: USi
+    !\
     !---------Used in 1D numerical model------------------------
     !/
     !\
@@ -305,6 +309,13 @@ contains
     !/
     PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+    USi = USiIn
+    if(USi>0)then
+       USi = min(USi,0.1*Value_V(UHeat_))
+    else
+       USi = max(USi, -0.1*Value_V(HeatFluxLength_)/&
+            (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)*PeSiIn))
+    end if
     RhoNoDimOut    = RhoNoDimCoef*PeSiOut/TeSiIn
     AMajorOut      = 1.0
     TeSiMax        = &
@@ -318,7 +329,7 @@ contains
           write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
           write(*,*)'Dimensionless density (input)=',RhoNoDimCoef*PeSiIn/TeSiIn
           write(*,*)'AMinorIn=     ', AMinorIn
-          write(*,*)'USiIn=        ',USiIn,' m/s'
+          write(*,*)'USiIn,USi=        ',USiIn,' ',USi,' m/s'
           write(*,*)'Thread Length=', &
                BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
                ,' m = ',  Si2No_V(UnitX_)*&
@@ -450,10 +461,10 @@ contains
     !     BoundaryThreads_B(iBlock) % TMax_II(j,k)))
     !No2Si_V(UnitTemperature_)
  
-    GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/max(          &
+    GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/min(          &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),0.1*                  &  
-         Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),-0.7*                 &  
+         Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) -   &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
 
     DeltaTeFactor = TeSi_I(nPoint)/max(TeSiMin, TeSi_I(nPoint) + &
@@ -497,7 +508,7 @@ contains
        write(*,*)'iAction=',iAction
        write(*,*)'Xyz_DGB(:,1,j,k)',Xyz_DGB(:,1,j,k,iBlock)
        write(*,*)'RhoNoDimOut=', RhoNoDimOut,' PeSiOut=',PeSiOut
-       write(*,*)'USiIn=', USiIn
+       write(*,*)'USiIn, USi=', USiIn,' ',USi
        write(*,*)'PeSiIn=',PeSiIn
        write(*,*)'TeSiIn=',TeSiIn
        write(*,*)'First order Rho, PSi=',FirstOrderRho, FirstOrderPeSi
@@ -604,12 +615,12 @@ contains
       !/
       call get_res_heating(nIterIn=nIter)
       if(.not.IsTimeAccurate)ResHeating_I=0.0
-      if(USiIn>0)then
-         FluxConst    = USiIn * PeSi_I(nPoint)/&
+      if(USi>0)then
+         FluxConst    = USi * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-      elseif(USiIn<0)then
-         FluxConst    = USiIn * PeSiIn/&
+      elseif(USi<0)then
+         FluxConst    = USi * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
          
@@ -636,7 +647,7 @@ contains
          !/
          if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
                0.50*HeatFlux2TR/TeSi_I(1)),FluxConst)
-         if(USiIn>0)then
+         if(USi>0)then
             ResEnthalpy_I(2:nPoint-1) = &
                  EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
             ResEnthalpy_I(1)   = 0.0
@@ -644,7 +655,7 @@ contains
                  - EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
             M_VVI(Cons_,Cons_,2:nPoint-1) =  M_VVI(Cons_,Cons_,2:nPoint-1)&
                  + EnthalpyFlux*TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
-         elseif(USiIn<0)then
+         elseif(USi<0)then
             ResEnthalpy_I(1:nPoint-1) = &
                  -EnthalpyFlux*(TeSi_I(2:nPoint) - TeSi_I(1:nPoint-1))
             U_VVI(Cons_,Cons_,1:nPoint-1) = U_VVI(Cons_,Cons_,1:nPoint-1)&
@@ -754,8 +765,9 @@ contains
          write(*,'(a,es15.6,a,3es15.6)')'Error =',maxval(&
               abs(DCons_VI(Cons_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
               ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-         write(*,'(a,3es15.6)')'Input parameters: TeSiIn,USiIn,PeSiIn,PCoef=',&
-              TeSiIn,USiIn,PeSiIn,PressureTRCoef
+         write(*,'(a,3es15.6)')&
+              'Input parameters: TeSiIn,USiIn,USi,PeSiIn,PCoef=',&
+              TeSiIn,USiIn,USi,PeSiIn,PressureTRCoef
          call CON_stop('Algorithm failure in advance_thread')
       end if
     end subroutine advance_thread
@@ -1180,6 +1192,16 @@ contains
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
+       if(UseCME)then
+          !\
+          ! Maintain the normal component of the superimposed 
+          ! CME magnetic configuration
+          !/
+          call EEE_get_state_BC(Xyz_DGB(:,1,j,k,iBlock), &
+               RhoCme, Ucme_D, Bcme_D, pCme, &
+               time_simulation, n_step, iteration_number)
+          BDir_D = BDir_D +Bcme_D
+       end if
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
        DirR_D = Xyz_DGB(:,1,j,k,iBlock)  
        DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
@@ -1234,7 +1256,7 @@ contains
           ! dTe/ds*(b . DirR)
           !/
           Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&                
-               sum(BDir_D*DirR_D),0.1)*&
+               sum(BDir_D*DirR_D),0.7)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           !\
           ! Version Easter 2015 Limit TeGhost
