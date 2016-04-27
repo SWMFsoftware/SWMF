@@ -13,8 +13,8 @@ module ModIonElectron
 
   real:: BetaImpl = 1.0
 
-  ! Index of electron fluid
-  integer, parameter:: El_ = IonLast_
+  ! Index of electrons among the ions (always the last one)
+  integer, parameter:: El_ = nIonFluid
   ! Index of the last TRUE (=heavy) ion
   integer, parameter:: i_ = max(1,El_ - 1)
 
