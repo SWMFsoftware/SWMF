@@ -185,7 +185,7 @@ contains
     use ModMain
     use ModProcMH,     ONLY: iProc
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
-    use ModAdvance,    ONLY: UseAnisoPressure, &
+    use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
     use ModParallel,   ONLY: &
@@ -581,9 +581,12 @@ contains
             ! Apply CPCP dependent density if required
             if(UseCpcpBc .and. UseIe) VarsGhostFace_V(Rho_) = RhoCpcp
 
-            ! Set pressures now  (what about electron pressure?)
+            ! Set pressures, including electron pressure, to float.
             VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
-            if(UseAnisoPressure) VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_)
+            if(UseAnisoPressure) VarsGhostFace_V(iPparIon_I) = &
+                 VarsTrueFace_V(iPparIon_I)
+            if(UseElectronPressure) VarsGhostFace_V(Pe_) = &
+                 VarsTrueFace_V(Pe_)
 
             ! Change sign for velocities (plasma frozen into dipole field)
             VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
