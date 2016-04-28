@@ -614,7 +614,7 @@ contains
       ! Turbulent heating and mass flux are not iterated
       !/
       call get_res_heating(nIterIn=nIter)
-      if(.not.IsTimeAccurate)ResHeating_I=0.0
+      if(.not.IsTimeAccurate.and.TeSi_I(nPoint)>1.0e6)ResHeating_I=0.0
       if(USi>0)then
          FluxConst    = USi * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
@@ -1108,7 +1108,7 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use BATL_size,ONLY:  nJ, nK
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_, InvGammaElectronMinus1
+         UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
     use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
@@ -1294,6 +1294,7 @@ contains
              call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
                   RhoCme, Ucme_D, Bcme_D, pCme, &
                   time_simulation, n_step, iteration_number)
+             Bcme_D = Bcme_D*Si2No_V(UnitB_)
              State_VG(Bx_:Bz_, i, j, k) = &
                   State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*Bcme_D)
           end if

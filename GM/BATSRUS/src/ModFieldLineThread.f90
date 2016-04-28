@@ -421,6 +421,7 @@ contains
        if(UseCME)then
           call EEE_get_state_BC(XyzStart_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                time_simulation, n_step, iteration_number)
+          Bcme_D = Bcme_D*Si2No_V(UnitB_)
           B0Start_D = B0Start_D + Bcme_D
        end if
 
@@ -471,6 +472,7 @@ contains
              if(UseCME)then
                 call EEE_get_state_BC(XyzAux_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                      time_simulation, n_step, iteration_number)
+                Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0Aux_D = B0Aux_D + Bcme_D
              end if
              DirB_D = SignBr*B0Aux_D/max(&
@@ -490,6 +492,7 @@ contains
              if(UseCME)then
                 call EEE_get_state_BC(Xyz_D, RhoCme, Ucme_D, Bcme_D, pCme, &
                      time_simulation, n_step, iteration_number)
+                Bcme_D = Bcme_D*Si2No_V(UnitB_)
                 B0_D = B0_D + Bcme_D
              end if
              B0 = sqrt( sum( B0_D**2 ) )
