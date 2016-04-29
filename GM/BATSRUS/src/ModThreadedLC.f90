@@ -442,25 +442,18 @@ contains
     !/
     BarometricFactor = exp(&
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
+    !\
+    ! Limit Barometric factor
+    !/
+    BarometricFactor=min(BarometricFactor,2.0)
+
     SecondOrderPeSi  = PeSiIn*BarometricFactor
     !\
     ! In the ghost cell value of density in addition to the 
     ! barometric factor the temperature gradient is accounted for,
     ! which is cotrolled by the heat flux derived from the TFL model:
     !/
-    !\
-    ! Solve equation: -(TeGhost-TeTrue)/DeltaR = 
-    ! dTe/ds*(b . DirR)
-    !/
-    !TeGhost = TeSiIn - DTeOverDsSi*sum(BDir_D*DirR_D)*&
-    !     BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
-    !\
-    ! Version Easter 2015 Limit TeGhost
-    !/
-    !Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
-    !     BoundaryThreads_B(iBlock) % TMax_II(j,k)))
-    !No2Si_V(UnitTemperature_)
- 
+   
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/min(          &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),-0.7*                 &  
@@ -469,6 +462,10 @@ contains
 
     DeltaTeFactor = TeSi_I(nPoint)/max(TeSiMin, TeSi_I(nPoint) + &
          max(TeSi_I(nPoint  ) - TeSi_I(nPoint-1),0.0)*GhostCellCorr)
+    !\
+    ! Limit DeltaTeFactor
+    !/
+    DeltaTeFactor = min(DeltaTeFactor,2.0)
     !\
     ! Approximately TeSiGhost = TeSiIn/DeltaTeFactor, so that:
     !/
@@ -708,9 +705,9 @@ contains
          !\
          ! limit DeltaCons
          !/
-         DCons_VI(Cons_,1:nPoint-1) = max(min(DCons_VI(Cons_,1:nPoint-1), &
-              ConsMax - Cons_I(    1:nPoint-1)),  &
-              ConsMin - Cons_I(    1:nPoint-1))
+         DCons_VI(Cons_,1:nPoint-1) = max(min(DCons_VI(Cons_, 1:nPoint-1), &
+              ConsMax - Cons_I(    1:nPoint-1),        Cons_I(1:nPoint-1)),&
+              ConsMin - Cons_I(    1:nPoint-1),   -0.5*Cons_I(1:nPoint-1))
          !\
          ! Apply DeltaCons
          !/
