@@ -1,7 +1,7 @@
 module ModIonElectron
 
   use ModVarIndexes
-  use ModAdvance, ONLY: State_VGB, Source_VC
+  use ModAdvance, ONLY: StateOld_VCB, State_VGB, Source_VC, time_BLK
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
@@ -12,11 +12,6 @@ module ModIonElectron
   implicit none
 
   real:: BetaImpl = 1.0
-
-  ! Index of electrons among the ions (always the last one)
-  integer, parameter:: El_ = nIonFluid
-  ! Index of the last TRUE (=heavy) ion
-  integer, parameter:: i_ = max(1,El_ - 1)
 
 contains
   !===========================================================================
@@ -37,19 +32,30 @@ contains
 
   end subroutine read_ion_electron_param
   !===========================================================================
-  subroutine add_ion_electron_source_expl(iBlock)
+  subroutine add_ion_electron_source(iBlock, UseOld)
 
-    integer, intent(in):: iBlock
+    ! Add electron, ion and electric field source terms to Source_VC
+    ! If UseOld is present, use StateOld_VCB, otherwise State_VGB
+
+    integer, intent(in)          :: iBlock
+    logical, intent(in), optional:: UseOld
 
     real:: State_V(nVar), b_D(3)
 
     integer:: i, j, k
     !-----------------------------------------------------------------------
 
+    ! For point-implicit scheme don't add explicit source at all
+    if(BetaImpl > 0.0 .and. .not.present(UseOld)) RETURN
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       State_V = State_VGB(:,i,j,k,iBlock)
+       if(BetaImpl > 0.0)then
+          State_V = StateOld_VCB(:,i,j,k,iBlock)
+       else
+          State_V = State_VGB(:,i,j,k,iBlock)
+       end if
 
        b_D = State_V(Bx_:Bz_)
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
@@ -90,146 +96,105 @@ contains
 
     end do; end do; end do
 
-  end subroutine add_ion_electron_source_expl
-
-  !===========================================================================
-  subroutine add_ion_electron_source(iBlock)
-
-    integer, intent(in):: iBlock
-
-    real:: State_V(nVar), b_D(3)
-
-    integer:: i, j, k
-    !-----------------------------------------------------------------------
-
-    if(BetaImpl <= 0.0) then
-       call add_ion_electron_source_expl(iBlock)
-       RETURN
-    end if
-
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-       State_V = State_VGB(:,i,j,k,iBlock)
-
-       b_D = State_V(Bx_:Bz_)
-       if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
-
-       ! d(rhou)/dt += q/m*(rho*E + rhou x B)
-       Source_VC(iRhoUxIon_I(1:i_),i,j,k) =          &
-            Source_VC(iRhoUxIon_I(1:i_),i,j,k)       &
-            + ChargePerMass_I(1:i_) *                &
-            ( State_V(iRhoIon_I(1:i_))*State_V(Ex_)  &
-            + State_V(iRhoUyIon_I(1:i_))*b_D(z_)     &
-            - State_V(iRhoUzIon_I(1:i_))*b_D(y_) )
-
-       Source_VC(iRhoUyIon_I(1:i_),i,j,k) =          &
-            Source_VC(iRhoUyIon_I(1:i_),i,j,k)       &
-            + ChargePerMass_I(1:i_) *                &
-            ( State_V(iRhoIon_I(1:i_))*State_V(Ey_)  &
-            + State_V(iRhoUzIon_I(1:i_))*b_D(x_)     &
-            - State_V(iRhoUxIon_I(1:i_))*b_D(z_) )
-
-       Source_VC(iRhoUzIon_I(1:i_),i,j,k) =          &
-            Source_VC(iRhoUzIon_I(1:i_),i,j,k)       &
-            + ChargePerMass_I(1:i_) *                &
-            ( State_V(iRhoIon_I(1:i_))*State_V(Ez_)  &
-            + State_V(iRhoUxIon_I(1:i_))*b_D(y_)     &
-            - State_V(iRhoUyIon_I(1:i_))*b_D(x_) )
-
-       ! electric field is updated later ?!
-       Source_VC(Ex_,i,j,k) = &
-            -C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUxIon_I(1:i_)))
-       Source_VC(Ey_,i,j,k) = &
-            -C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUyIon_I(1:i_)))
-       Source_VC(Ez_,i,j,k) = &
-            -C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUzIon_I(1:i_)))
-
-       ! The energy update is explicit even for the electrons
-       ! since there is no feed back from energy to E or ElRhoU
-       ! de_s/dt += j_s.E = (q/m)_s*rhou_s.E 
-       Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k) =              &
-            Source_VC(Energy_:Energy_+nIonFluid-1,i,j,k)           &
-            + ChargePerMass_I * (State_V(iRhoUxIon_I)*State_V(Ex_) &
-            +                    State_V(iRhoUyIon_I)*State_V(Ey_) &
-            +                    State_V(iRhoUzIon_I)*State_V(Ez_) )
-
-    end do; end do; end do
-
   end subroutine add_ion_electron_source
+
   !===========================================================================
-  subroutine add_impl_electron_source(iBlock)
+  subroutine update_impl_ion_electron(iBlock)
 
     use ModCoordTransform, ONLY: cross_product
-    use ModMain, ONLY: Dt
+    use ModMain, ONLY: Cfl
+    use ModEnergy, ONLY: calc_energy
 
     integer, intent(in):: iBlock
 
+    ! Solve for ion and electron momenta and electric field update implicitly
 
-    ! Solve for electron momentum and electric field sources implicitly
+    integer:: i, j, k, iIon, iRho, iRhoUx, iRhoUz
 
-    integer:: i, j, k, iRhoEl, iRhoUxEl, iRhoUzEl
+    ! Fluid density and full magnetic field (time centered)
+    real:: Rho, b_D(3)
 
-    real:: DtQeMe, a
-    real:: Rho, RhoU_D(3), b_D(3), e_D(3), Rhs_D(3)
+    ! Time step for the cell
+    real:: Dt
+
+    ! Coefficients of linear equation a*dM + BetaB x dM = Rhs
+    real:: BetaDtQPerM, a, BetaB_D(3), Rhs_D(3)  
+
+    ! Change in momentum and electric field
     real:: dRhoU_D(3), dE_D(3)
     !------------------------------------------------------------------------
-
     if(BetaImpl <= 0.0) RETURN
 
-    DtQeMe = dt*ChargePerMass_I(El_)
+    ! Set the Source as the explicit multi-stage RHS
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       Source_VC(1:nVar,i,j,k) = &
+            (State_VGB(:,i,j,k,iBlock) - StateOld_VCB(:,i,j,k,iBlock)) &
+            /(Cfl*time_BLK(i,j,k,iBlock))
+    end do; end do; end do
 
-    iRhoEl   = iRhoIon_I(El_)
-    iRhoUxEl = iRhoUxIon_I(El_)
-    iRhoUzEl = iRhoUzIon_I(El_)
+    ! Add the stiff sources at old time level
+    call add_ion_electron_source(iBlock, UseOld=.true.)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       ! Electron density and momentum
-       Rho    = State_VGB(iRhoEl,i,j,k,iBlock)
-       RhoU_D = State_VGB(iRhoUxEl:iRhoUzEl,i,j,k,iBlock)
+       ! Time step for this cell
+       Dt = Cfl*time_BLK(i,j,k,iBlock)
 
-       ! Full magnetic field
-       b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       ! Time centered full magnetic field
+       b_D = 0.5*(State_VGB(Bx_:Bz_,i,j,k,iBlock) +StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
-       ! Electric field
-       e_D = State_VGB(Ex_:Ez_,i,j,k,iBlock)
+       ! RHS for electric field
+       dE_D = Dt*Source_VC(Ex_:Ez_,i,j,k)
 
-       ! Add ion current contribution explicitly
-!       e_D(x_) = e_D(x_) &
-!            -Dt*C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUxIon_I(1:i_)))
-!       e_D(y_) = e_D(y_) &
-!            -Dt*C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUyIon_I(1:i_)))
-!       e_D(z_) = e_D(z_) &
-!            -Dt*C2light*sum(ChargePerMass_I(1:i_) * State_V(iRhoUzIon_I(1:i_)))
+       ! do point-implicit update for each fluid one-by-one (including electrons)
+       do iIon = 1, nIonFluid
 
-       ! Rhs_D = dt*(Explicit source - extra term)
-       Rhs_D = DtQeMe*( Rho*e_D + cross_product(RhoU_D, b_D)) &
-            - BetaImpl*DtQeMe**2*Rho*C2light*RhoU_D
+          ! Set indexes
+          iRho   = iRhoIon_I(iIon)
+          iRhoUx = iRhoUxIon_I(iIon)
+          iRhoUz = iRhoUzIon_I(iIon)
 
-       ! Multiply the B field with Beta*DtQeMe as it only occurs together
-       b_D = b_D*BetaImpl*DtQeMe
+          BetaDtQPerM = BetaImpl*Dt*ChargePerMass_I(iIon)
 
-       ! Scalar coefficient in the vector equation below
-       a = 1 + (BetaImpl*DtQeMe)**2 * C2light * Rho
+          ! time centered ion/electron density at time level n
+          Rho = 0.5*(State_VGB(iRho,i,j,k,iBlock) + StateOld_VCB(iRho,i,j,k,iBlock))
 
-       ! Analytic solution of A*dRhoU + B x dRhoU = Rhs 
-       dRhoU_D = (a*Rhs_D - cross_product(b_D, Rhs_D) + b_D*sum(b_D*Rhs_D)/a)&
-            /(a**2 + sum(b_D**2))
+          ! Rhs_D = Dt*Rhs(momentum) + Beta*Dt*Q/M*Dt*Rhs(Efield)
+          Rhs_D = Dt*Source_VC(iRhoUx:iRhoUz,i,j,k) + BetaDtQPerM*Rho*dE_D
 
-       ! Change in electric field due to implicit electron current
-       dE_D = -C2light*DtQeMe*(BetaImpl*dRhoU_D + RhoU_D)
+          ! Magnetic field multiplied with Beta*DtQeMe
+          BetaB_D = BetaDtQPerM*b_D
 
-       ! Update electron momentum
-       State_VGB(iRhoUxEl:iRhoUzEl,i,j,k,iBlock) = RhoU_D + dRhoU_D
+          ! Scalar coefficient in the vector equation below
+          a = 1 + BetaDtQPerM**2 * C2light * Rho
 
-       ! Update electric field
-       State_VGB(Ex_:Ez_,i,j,k,iBlock) = e_D + dE_D
+          ! Analytic solution of A*dRhoU + BetaB x dRhoU = Rhs 
+          dRhoU_D = (a*Rhs_D - cross_product(BetaB_D, Rhs_D) &
+               + BetaB_D*sum(BetaB_D*Rhs_D)/a)&
+               /(a**2 + sum(BetaB_D**2))
+
+          ! Change in electric field due to implicit electron current
+          dE_D = dE_D - C2light*BetaDtQPerM*dRhoU_D
+
+
+          ! Update ion/electron momentum
+          State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+               State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) + dRhoU_D
+
+       end do ! Ion loop
+
+       ! Update electric field with all the fluid contributions
+       State_VGB(Ex_:Ez_,i,j,k,iBlock) = &
+            State_VGB(Ex_:Ez_,i,j,k,iBlock)+ dE_D
 
     end do; end do; end do
+
+    ! Update energy since momentum changed
+    call calc_energy(1,nI,1,nJ,1,nK,iBlock,IonFirst_,IonLast_)
     
-  end subroutine add_impl_electron_source
+  end subroutine update_impl_ion_electron
   !===========================================================================
 end module ModIonElectron
