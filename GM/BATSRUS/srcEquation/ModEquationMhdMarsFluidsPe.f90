@@ -76,7 +76,7 @@ module ModVarIndexes
        iRhoUz_I(nFluid)=(/RhoUz_, HpRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_/),&
        iP_I(nFluid)    =(/p_,     HpP_,     O2pP_,     OpP_ ,    CO2pP_ /)
 
-  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = 1
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2,3,4/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
