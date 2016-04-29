@@ -16,7 +16,7 @@ module ModProcessVarName
   
 
   integer, parameter:: nVarMax = 100   ! maximum number of state variables
-  integer, parameter:: nSubstance = 33 ! number of distinct fluids/species
+  integer, parameter:: nSubstance = 34 ! number of distinct fluids/species
 
   ! Number of state variables associated with each substance to be standardized
   integer, parameter:: nVarPerSubstance = 7
@@ -25,7 +25,7 @@ module ModProcessVarName
   integer, parameter:: nSynonym = 3
 
   ! State variables not associated with a specific fluid/ specie
-  integer,parameter  :: nVarExtra = 11
+  integer,parameter  :: nVarExtra = 14
 
   ! Named indices for all substances (species or fluids)
   integer, parameter :: &
@@ -60,8 +60,9 @@ module ModProcessVarName
        Pui1_ = 29, & 
        Pui2_ = 30, & 
        Pui3_ = 31, &
-       Pui4_ = 32, &       
-       Main_ = 33 ! main component, MHD/HD
+       Pui4_ = 32, &
+       El_   = 33, &
+       Main_ = 34 ! main component, MHD/HD
 
   ! String array storing the standard names of all substances
   character(len=6):: NameSubstance_I(nSubstance) = (/ &
@@ -97,6 +98,7 @@ module ModProcessVarName
        'Pui2',  &
        'Pui3',  &
        'Pui4',  &
+       'El  ',  &
        '    '  /) ! main component, MHD / HD 
           
   ! named indices for basic state variables associated with a substance
@@ -124,6 +126,9 @@ module ModProcessVarName
        'bx   ', &
        'by   ', &
        'bz   ', &
+       'ex   ', &
+       'ey   ', &
+       'ez   ', &
        'pe   ', &
        'te0  ', &
        'ew   ', &
@@ -137,6 +142,9 @@ module ModProcessVarName
        'Bx   ', &
        'By   ', &
        'Bz   ', &
+       'Ex   ', &
+       'Ey   ', &
+       'Ez   ', &
        'Pe   ', &
        'Te0  ', &
        'Ew   ', &
