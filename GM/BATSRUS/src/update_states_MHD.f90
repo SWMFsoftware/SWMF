@@ -27,8 +27,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
   use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
   use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
-  use ModIonElectron, ONLY: add_impl_electron_source
-  
+  use ModIonElectron, ONLY: update_impl_ion_electron
+
   implicit none
 
   integer, intent(in) :: iStage, iBlock
@@ -46,6 +46,8 @@ subroutine update_states_MHD(iStage,iBlock)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
+  if(time_accurate .and. Dt == 0.0) RETURN
+
   if(iBlock==BLKtest .and. iProc==PROCtest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
   else
@@ -231,7 +233,7 @@ subroutine update_states_MHD(iStage,iBlock)
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
 
   if(UseEfield)then
-     call add_impl_electron_source(iBlock)
+     call update_impl_ion_electron(iBlock)
      if(DoTestMe)write(*,*) NameSub,' after impl electron source=', &
           State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
