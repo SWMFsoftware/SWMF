@@ -46,8 +46,6 @@ subroutine update_states_MHD(iStage,iBlock)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
-  if(time_accurate .and. Dt == 0.0) RETURN
-
   if(iBlock==BLKtest .and. iProc==PROCtest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
   else
@@ -64,6 +62,9 @@ subroutine update_states_MHD(iStage,iBlock)
           State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
      EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
   end if
+
+  ! Nothing to do if time step is zero
+  if(time_accurate .and. Dt == 0.0) RETURN
 
   ! Add Joule heating: dPe/dt or dP/dt += (gamma-1)*eta*j**2
   ! also dE/dt += eta*j**2 for semi-implicit scheme (UseResistiveFlux=F)
