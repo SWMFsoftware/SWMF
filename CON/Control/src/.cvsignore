@@ -3,3 +3,4 @@
 Makefile.DEPEND
 Makefile.RULES
 *.protex
+Tmp*
