@@ -1,0 +1,7 @@
+Makefile.def
+Makefile.conf
+Makefile.local
+test_*
+run*
+bin
+libIPIC3D
