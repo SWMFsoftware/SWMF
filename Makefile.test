@@ -692,6 +692,13 @@ test5_check:
 		> test5_sc.diff)
 	ls -l test5_*.diff
 
+test5_update:
+	cp -f ${TESTDIR}/RESULTS/coupled/EE/log_n000010.log \
+		output/test5/EE.log 	
+	cp -f ${TESTDIR}/RESULTS/coupled/SC/log_n000070.log \
+		output/test5/SC.log 
+	${MAKE} test5_check
+
 ### Test6: GM+IE+IM=CRCM ###
 
 test6:
@@ -996,6 +1003,13 @@ test9th_check:
 		output/test9th/IH_log_n000000.log \
 		> test9th_ih.diff)
 	ls -l test9th_*.diff
+
+test9th_update:
+	cp -f ${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test9th/SC_log_n000000.log 
+	cp -f ${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test9th/IH_log_n000000.log
+	${MAKE} test9th_check
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 
