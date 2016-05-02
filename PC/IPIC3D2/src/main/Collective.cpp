@@ -1700,21 +1700,21 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	Example: 
 	#SAVEIDL
 	4                       nPlotFile
-	z=0 var ascii           StringPlot
+	z=0 var ascii si        StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
-	x=0 var ascii       StringPlot
+	x=0 var ascii pic       StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 bx by pxx          PlotVar
-	3d all real4           StringPlot
+	3d all real4  planet    StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0.                      DxOutput
-	cut all real8           StringPlot
+	cut all real8 si        StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0                       xMin
@@ -1724,12 +1724,28 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	4                       zMin
 	5                       zMax
 	0.                      DxOutput
+	cut particles real4 si  StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	0                       xMin
+	1                       xMax
+	2                       yMin
+	3                       yMax
+	4                       zMin
+	5                       zMax
+	1.            DxOutput: output one particle of every DxOutput particles.
+	3d particles real4 si   StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	10.          DxOutput: output one particle of every DxOutput particles.
+
 
 	Note:
 	1) Do not support control output by DtOutPut now.
 	2) Available output variables are listed in EMfields3D.cpp::getVar().
 	3) DxOutput is not functional now.
 	4) The position for "cut", "x=", "y="... is in PIC unit.
+	5) Output variable 'particles' only works for 'cut' and '3d'.
       */
       
       string::size_type pos;

@@ -26,8 +26,10 @@ developers: Stefano Markidis, Giovanni Lapenta.
 
 #include <mpi.h>
 #include <iostream>
+#include <stdio.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 #include "asserts.h"
 #include <algorithm> // for swap, std::max
 #include "VCtopology3D.h"
@@ -2025,3 +2027,109 @@ void Particles3Dcomm::convertParticlesToSoA()
   particleType = ParticleType::SoA;
 }
 
+#ifdef BATSRUS
+void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
+					   long& nCount,
+					   const double xMin, const double xMax,
+					   const double yMin, const double yMax,
+					   const double zMin, const double zMax,
+					   const double No2OutL,
+					   const double No2OutV
+					   ){
+  string nameSub = "write_plot_particles";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //---------------------
+  if(doTestFunc){
+    cout<<nameSub<<" start"<<endl;
+  }
+
+  const long nop = _pcls.size();
+  const bool isBinary = col->getdoSaveBinary();
+  const int nDim = col->getnDim();
+  const int nVar = 4; //'ux uy uz weight'
+  bool doOutput;
+  double x, y, z; 
+
+  if(isBinary){    
+    FILE *outFile;
+    int nRecord, nSizeDouble, nSizeInt;
+    nSizeInt = sizeof(int);
+    assert_eq(nSizeInt,4);
+    nSizeDouble = sizeof(double);
+    nRecord = (nVar+4)*nSizeDouble;
+    if(doTestFunc){
+      cout<<"size of int is "<<sizeof(int)
+	  <<"size of double is "<<sizeof(double)
+	  <<endl;
+    }
+    outFile = fopen(filename.c_str(),"wb");
+
+    double data0;
+    for(long pidx=0; pidx<nop; pidx += dnOutput){
+      const SpeciesParticle& pcl = _pcls[pidx];
+      x = pcl.get_x();
+      y = pcl.get_y();
+      z = nDim>2? pcl.get_z():0;
+      doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
+      if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
+
+      if(doOutput){
+	// The PostIDL.f90 is designed for Fortran output. In order to
+	// use PostIDL.f90, we should follow the format of Fortran
+	// binary output. Here, each line is a record. Before and after
+	// each record, use 4 byte to save the length of this record. 
+	fwrite(&nRecord, nSizeInt, 1, outFile);
+	data0 = 1.0;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = x*No2OutL;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = y*No2OutL;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = z*No2OutL;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = pcl.get_u()*No2OutV;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = pcl.get_v()*No2OutV;
+	fwrite(&data0, nSizeDouble, 1, outFile);
+	data0 = pcl.get_w()*No2OutV;
+	fwrite(&data0, nSizeDouble, 1, outFile);	  
+	data0 = pcl.get_q();
+	fwrite(&data0, nSizeDouble, 1, outFile);	  
+	fwrite(&nRecord, nSizeInt, 1, outFile);
+	nCount++;
+      } // doOutput
+    } // pidx
+    fclose(outFile);
+    
+  }else{
+    ofstream outFile;
+    outFile.open(filename.c_str(),fstream::out | fstream::trunc);
+    outFile<<std::scientific;
+    outFile.precision(7);
+    for(long pidx=0; pidx<nop; pidx += dnOutput){
+      const SpeciesParticle& pcl = _pcls[pidx];
+      x = pcl.get_x();
+      y = pcl.get_y();
+      z = nDim>2? pcl.get_z():0;
+      doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
+      if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
+
+      if(doOutput){
+	outFile<<1.0<<"\t" 
+	       <<pcl.get_x()*No2OutL<<"\t"
+	       <<pcl.get_y()*No2OutL<<"\t"
+	       <<pcl.get_z()*No2OutL<<"\t"
+	       <<pcl.get_u()*No2OutV<<"\t"
+	       <<pcl.get_v()*No2OutV<<"\t"
+	       <<pcl.get_w()*No2OutV<<"\t"
+	       <<pcl.get_q()<<"\n";
+	nCount++;
+      }
+    }
+    if(outFile.is_open()) outFile.close();
+  }
+}
+
+
+#endif

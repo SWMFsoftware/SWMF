@@ -443,6 +443,17 @@ protected:
   long int idum;
   void setDt(double dtIn){dt=dtIn;}
   long getPseudoRandomSeed(){return(idum);};
+
+#ifdef BATSRUS
+  void write_plot_particles(string filename, const int DnOutput,
+			    long& nCount,
+			    const double xMin, const double xMax,
+			    const double yMin, const double yMax,
+			    const double zMin, const double zMax,
+			    const double No2OutL,
+			    const double No2OutV);
+#endif
+  
 };
 
 // find the particles with particular IDs and print them

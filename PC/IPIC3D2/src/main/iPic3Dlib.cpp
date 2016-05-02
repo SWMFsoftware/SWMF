@@ -98,6 +98,7 @@ c_Solver::~c_Solver()
     delete [] outputFormat_I;
     delete [] outputUnit_I;
     delete [] plotVar_I;
+    delete [] doOutputParticles_I;
   }
   #endif
 }
@@ -949,8 +950,11 @@ void c_Solver:: write_plot_idl(int cycle){
     dnOutput = col->getdnOutput(iPlot);
     if(cycle % dnOutput==0 ){
       set_output_unit(iPlot);
-      write_plot_header(iPlot, cycle);
       write_plot_data(iPlot,cycle);
+
+      // For particle output, header file needs the number of output
+      // particles. So write header after write data. 
+      write_plot_header(iPlot, cycle);
     }
   }
   
@@ -976,11 +980,17 @@ void c_Solver:: write_plot_init(){
   nCell_I           = new long[nPlotFile];
   outputFormat_I    = new std::string[nPlotFile];
   outputUnit_I      = new std::string[nPlotFile];  
-  plotVar_I         = new std::string[nPlotFile];  
+  plotVar_I         = new std::string[nPlotFile];
+  doOutputParticles_I=new bool[nPlotFile];
+  iSpeciesOutput_I  = new int[nPlotFile];
 
   Var_II = new std::string*[nPlotFile];
   for(int i=0;i<nPlotFile;i++){
-    Var_II[i]=new std::string[nVarMax];
+    Var_II[i]=new std::string[nVarMax];    
+  }
+
+  for(int i=0;i<nPlotFile;i++){
+    doOutputParticles_I[i] = false;
   }
   
   string plotString;
@@ -996,7 +1006,6 @@ void c_Solver:: write_plot_init(){
     plotString = col->getplotString(iPlot);
     
     // Find the first sub-string: 'x=0',or 'y=1.2'.....
-    pos = plotString.find_first_not_of(' ');
     pos = plotString.find_first_of(" \t\n");
     if(pos !=string::npos){
       subString = plotString.substr(0,pos);
@@ -1057,12 +1066,33 @@ void c_Solver:: write_plot_init(){
     if(plotString.find("all") !=string::npos){
       // Only include two species.
       plotVar_I[iPlot] = "qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1";
+      nameSnapshot_I[iPlot] += "_all";
     }else if(plotString.find("var") !=string::npos){
-      plotVar_I[iPlot] = col->getplotVar(iPlot);    
+      plotVar_I[iPlot] = col->getplotVar(iPlot);
+      nameSnapshot_I[iPlot] += "_var";
     }else if(plotString.find("fluid") !=string::npos){
       // Only include two species.
       plotVar_I[iPlot] = "rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
-    }else {
+      nameSnapshot_I[iPlot] += "_fluid";
+    }else if(plotString.find("particles") !=string::npos){
+      doOutputParticles_I[iPlot] = true;
+      plotVar_I[iPlot] = "ux uy uz weight"; // what is 'weight'? q, mass, qom?
+      
+      string subString0; 
+      pos = plotString.find("particles");
+      subString0 = plotString.substr(pos);
+      pos = subString0.find_first_of(" \t\n");
+      subString0 = subString0.substr(0,pos);
+      nameSnapshot_I[iPlot] += "_";
+      nameSnapshot_I[iPlot] += subString0;     
+
+      // Find out the output species.
+      subString0.erase(0,9);
+      stringstream ss0;
+      ss0<<subString0<<endl;
+      ss0>>iSpeciesOutput_I[iPlot];
+      
+    }else{
       if(myrank==0)cout<<"Unknown plot variables!! plotString = "<<plotString<<endl;
       abort();
     }
@@ -1206,20 +1236,25 @@ void c_Solver:: write_plot_init(){
       plotIndexRange_ID[iPlot][5] = 1;
     }
 
-    long nCellLocal;
-    nCellLocal =
-      (plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4]+1)*
-      (plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2]+1)*
-      (plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0]+1);
+    if(!doOutputParticles_I[iPlot]){
+      long nCellLocal;
+      nCellLocal =
+	(plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4]+1)*
+	(plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2]+1)*
+	(plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0]+1);
 
-    if(nCellLocal<0) nCellLocal=0;
+      if(nCellLocal<0) nCellLocal=0;
     
-    MPI_Reduce(&nCellLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+      MPI_Reduce(&nCellLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+    }
 
-
-    {
+    
+    // Do not correct plot range for 'particles'. Because the position of
+    // particle does not depend on grid. But plotIndexRange_ID may be useful.
+    // It can give us some feelings about where the output particles are. 
+    if(!doOutputParticles_I[iPlot]){
       // Correct PlotRange_ID based on PlotIndexRange_ID-----begin
-      
+           
       double xMinL_I[nDimMax], xMaxL_I[nDimMax],
 	xMinG_I[nDimMax], xMaxG_I[nDimMax];
 
@@ -1290,8 +1325,13 @@ void c_Solver:: write_plot_init(){
 	  <<" plotIndexRange2 = "<<plotIndexRange_ID[iPlot][2]
 	  <<" plotIndexRange3 = "<<plotIndexRange_ID[iPlot][3]<<"\n"
 	  <<" plotIndexRange4 = "<<plotIndexRange_ID[iPlot][4]
-	  <<" plotIndexRange5 = "<<plotIndexRange_ID[iPlot][5]
-	  <<endl;      
+	  <<" plotIndexRange5 = "<<plotIndexRange_ID[iPlot][5]<<"\n"
+	  <<" namesnapshot = "<<nameSnapshot_I[iPlot]
+	  <<endl;
+      cout<<"doOutputParticles = "<<doOutputParticles_I[iPlot]<<endl;
+      if(doOutputParticles_I[iPlot]){
+	cout<<"iSpeciesOutput = "<<iSpeciesOutput_I[iPlot]<<endl;
+      }
       cout<<"\n plot variables:"<<endl;
       for(int i=0; i<nVar_I[iPlot]; i++){
 	cout<<"i= "<<i<<" var= "<<Var_II[iPlot][i]<<endl;
@@ -1377,14 +1417,18 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
        
     outFile<<"#PLOTRESOLUTION\n";
     for(int i=0; i<col->getnDim();i++){
-      outFile<<col->getplotDx(iPlot)<<"\t plotDx\n";
+      if(doOutputParticles_I[iPlot]){
+	outFile<<(-1)<<"\t plotDx\n"; // Save particles as unstructured.
+      }else{
+	outFile<<col->getplotDx(iPlot)<<"\t plotDx\n";
+      }
     }
     outFile<<"\n";
           
     outFile<<"#PLOTVARIABLE\n";
     outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
     outFile<<plotVar_I[iPlot]<<"\n";    
-    outFile<<outputUnit_I[iPlot]<<"\n"; // Should be 'PIC normalized' or 'SI'
+    outFile<<outputUnit_I[iPlot]<<"\n"; 
     outFile<<"\n";
 
     outFile<<"#OUTPUTFORMAT\n";
@@ -1424,15 +1468,43 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
     <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
     <<".idl";
   filename = nameSnapshot_I[iPlot] +ss.str();
-  
-  EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
-			plotIndexRange_ID[iPlot][0],
-			plotIndexRange_ID[iPlot][1],
-			plotIndexRange_ID[iPlot][2],
-			plotIndexRange_ID[iPlot][3],
-			plotIndexRange_ID[iPlot][4],
-			plotIndexRange_ID[iPlot][5],
-			No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ);
+
+  if(doOutputParticles_I[iPlot]){
+    int iSpecies;
+    iSpecies = iSpeciesOutput_I[iPlot];
+    
+    long nPartOutputLocal;
+    nPartOutputLocal = 0;
+    int dnOutput;
+    dnOutput = col->getplotDx(iPlot);
+    if(dnOutput<1) {
+      if(myrank==1) cout<<" Error: dnOutput = "<<dnOutput<<" which should be an positive integer !!!!!!!"<<endl;
+      abort();
+    }
+    part[iSpecies].write_plot_particles(filename,dnOutput,
+					nPartOutputLocal,
+					plotRange_ID[iPlot][0],
+					plotRange_ID[iPlot][1],
+					plotRange_ID[iPlot][2],
+					plotRange_ID[iPlot][3],
+					plotRange_ID[iPlot][4],
+					plotRange_ID[iPlot][5],
+					No2OutL, No2OutV
+					);
+    
+    MPI_Reduce(&nPartOutputLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+
+  }else{
+    EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
+			  plotIndexRange_ID[iPlot][0],
+			  plotIndexRange_ID[iPlot][1],
+			  plotIndexRange_ID[iPlot][2],
+			  plotIndexRange_ID[iPlot][3],
+			  plotIndexRange_ID[iPlot][4],
+			  plotIndexRange_ID[iPlot][5],
+			  No2OutL, No2OutV, No2OutB, No2OutRho,
+			  No2OutP, No2OutJ);
+  }
 
 }
 

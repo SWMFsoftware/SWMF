@@ -191,6 +191,8 @@ namespace iPic3D {
     string *outputFormat_I;
     string *outputUnit_I;
     string *plotVar_I;
+    bool *doOutputParticles_I;
+    int *iSpeciesOutput_I;
     double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
     
     void write_plot_idl(int cycle);
