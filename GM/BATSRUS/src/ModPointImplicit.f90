@@ -114,11 +114,12 @@ contains
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature
-    use ModMultiFluid, ONLY: UseMultiIon
+    use ModMultiFluid, ONLY: UseMultiIon, iRho_I, nFluid
     use ModGeometry,ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V
     use ModEnergy, ONLY: calc_energy_cell
+    use ModPhysics, ONLY: RhoMin_I
 
     integer, intent(in) :: iBlock
     interface
@@ -130,7 +131,7 @@ contains
        end subroutine init_point_implicit
     end interface
 
-    integer :: i, j, k, iVar, jVar, iIVar, iJVar
+    integer :: i, j, k, iVar, jVar, iIVar, iJVar, iFluid
     real :: DtCell, BetaStage, Norm_C(nI,nJ,nK), Epsilon_C(nI,nJ,nK)
     real :: StateExpl_VC(nVar,nI,nJ,nK)
     real :: Source0_VC(nVar,nI,nJ,nK), Source1_VC(nVar,nI,nJ,nK)
@@ -366,6 +367,14 @@ contains
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           State_VGB(iVar,i,j,k,iBlock) =&
                StateOld_VCB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
+       end do
+
+       ! Set minimum density.                                          
+       do iFluid = 1, nFluid
+          if(RhoMin_I(iFluid) < 0) CYCLE
+          iVar = iRho_I(iFluid)
+          State_VGB(iVar,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+               State_VGB(iVar,i,j,k,iBlock))
        end do
 
        if(UseMultispecies)then
