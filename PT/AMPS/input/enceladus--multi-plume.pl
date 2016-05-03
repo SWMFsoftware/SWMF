@@ -70,24 +70,16 @@ close (PIC_H);
 
 open (InputFile,"<","$InputFileName") || die "Cannot find file \"$InputFileName\"\n";
 
-#define structures describing TigerStripes and individual plumes
-struct cTigerStripe => {
-  ID => '$',
-  ActiveFlag => '$',
-  TemparatureTable => '@',
-  BulkVelocityTable => '@',
-  SourceRateTable => '@'
-};
-
 #allocate a Tiger Stripe table and object
-my @TigerStripeTable;
-#%my $TigerStripe=cTigerStripe->new();
-
 my %TigerStripe;
 my $TigerStripeLine;
 my $TigerStripeID;
-my $nActiveTigerStripes=0;
+my $nTotalTigerStripes=0;
 
+
+my %Plume;
+my $PlumeLine;
+my $nTotalPlumes=0;
 
 $TigerStripe{ID}="";
 $TigerStripe{ActiveFlag}=0;
@@ -95,26 +87,11 @@ $TigerStripe{TemperatureTable}=[((0)x$TotalSpeciesNumber)]; ##@UniformSourceRate
 $TigerStripe{BulkVelocityTable}=[((0)x$TotalSpeciesNumber)];
 $TigerStripe{SourceRateTable}=[((0)x$TotalSpeciesNumber)];
 
-
-#$TigerStripe{TemparatureTable}[2]=314111;
-
-#print"2:: $TigerStripe{TemparatureTable}[2]\n";
-
-#$TigerStripe->ID("");
-#$TigerStripe->ActiveFlag(0);
-#$TigerStripe->{TemparatureTable}=((0)x$TotalSpeciesNumber);
-#$TigerStripe->{BulkVelocityTable}=((0)x$TotalSpeciesNumber);
-#$TigerStripe->{SourceRateTable}=((0)x$TotalSpeciesNumber);
-
-
-
-
-my $t=1;
-
-#$TigerStripe->TemparatureTable(0,2);
-
-print "PASS INIT LINE\n";
-#print "1: @{TigerStripe->TemparatureTable}->[0]\n";
+$Plume{ID}="";
+$Plume{ActiveFlag}=0;
+$Plume{TemperatureTable}=[((0)x$TotalSpeciesNumber)]; ##@UniformSourceRate]; #((0)x$TotalSpeciesNumber);
+$Plume{BulkVelocityTable}=[((0)x$TotalSpeciesNumber)];
+$Plume{SourceRateTable}=[((0)x$TotalSpeciesNumber)];
 
 while ($line=<InputFile>) {
   #re-init the Tiger Stripe and individual plume objects
@@ -140,9 +117,7 @@ while ($line=<InputFile>) {
   $InputLine=~s/[=():]/ /g;
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
-  
-  
-  
+   
   #begin parcing of the input file
   #Tiger Stripe  
   if ($InputLine eq "TIGERSTRIPE") {
@@ -160,9 +135,16 @@ while ($line=<InputFile>) {
         
         if ($InputLine eq "ON") {
           $TigerStripe{ActiveFlag}=1;
+          
+          print "!!! TIGER STRIPE ON - $TigerStripe{ActiveFlag}\n";
+          
         }
         elsif ($InputLine eq "OFF") {
           $TigerStripe{ActiveFlag}=0;
+          
+          
+          print "!!! TIGER STRIPE OFF\n";
+          
         }
       }
       elsif ($InputLine eq "TEMPERATURE") {
@@ -177,7 +159,7 @@ while ($line=<InputFile>) {
           
           $id=getSpeciesNumber($InputLine);
           ($InputLine,$InputComment)=split(' ',$InputComment,2);
-          $TigerStripe{TemparatureTable}[$id]=$InputLine;
+          $TigerStripe{TemperatureTable}[$id]=$InputLine;
         }
       }
       elsif ($InputLine eq "BULKVELOCITY") {
@@ -223,13 +205,13 @@ while ($line=<InputFile>) {
     }
     
     #add the data entry to the Tiger Stripe line
-    if ($nActiveTigerStripes!=0) {
+    if ($nTotalTigerStripes!=0) {
       $TigerStripeLine=$TigerStripeLine.", ";
     }
     
       
-    $TigerStripeID=$TigerStripeID."\n#undef _$TigerStripe{ID}__ID_\n#define _$TigerStripe{ID}__ID_ $nActiveTigerStripes\n";
-    $nActiveTigerStripes++;
+    $TigerStripeID=$TigerStripeID."\n#undef _$TigerStripe{ID}__ID_\n#define _$TigerStripe{ID}__ID_ $nTotalTigerStripes\n";
+    $nTotalTigerStripes++;
       
     $TigerStripeLine=$TigerStripeLine."{&TigerStripe_$TigerStripe{ID},{";
  
@@ -268,7 +250,7 @@ while ($line=<InputFile>) {
     #output ID and the Active Flag    
     $TigerStripeLine=$TigerStripeLine."},\"$TigerStripe{ID}\"";
     
-    if ($TigerStripe{Active}==1) {
+    if ($TigerStripe{ActiveFlag}==1) {
       $TigerStripeLine=$TigerStripeLine.",true}";
     }
     else {
@@ -277,10 +259,156 @@ while ($line=<InputFile>) {
     
     
     print "LINE:::::\n $TigerStripeID\n";
-    print "LINE:::::\n $TigerStripeLine\n";
+    print "LINE  STRIPE:::::\n $TigerStripeLine\n";
     
   }
+  
+  #read the plume section
+  elsif ($InputLine eq "PLUME") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    $InputLine=~s/ //g;
+    
+    
+    while (defined $InputLine) {
+      if ($InputLine eq "ID") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $Plume{ID}=$InputLine;
+      }
+      elsif ($InputLine eq "ACTIVE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "ON") {
+          $Plume{ActiveFlag}=1;
+        }
+        elsif ($InputLine eq "OFF") {
+          $Plume{ActiveFlag}=0;
+        }
+      }
+      elsif ($InputLine eq "TEMPERATURE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "ALL") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{TemperatureTable}=[(($InputLine)x$TotalSpeciesNumber)];
+        }
+        else {
+          my $id;
+          
+          $id=getSpeciesNumber($InputLine);
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{TemperatureTable}[$id]=$InputLine;
+        }
+      }
+      elsif ($InputLine eq "BULKVELOCITY") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "ALL") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{BulkVelocityTable}=[(($InputLine)x$TotalSpeciesNumber)];
+        }
+        else {
+          my $id;
+          
+          $id=getSpeciesNumber($InputLine);
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{BulkVelocityTable}[$id]=$InputLine;
+        }
+      }
+      elsif ($InputLine eq "SOURCERATE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "ALL") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{SourceRateTable}=[(($InputLine)x$TotalSpeciesNumber)];
+        }
+        else {
+          my $id;
+          
+          $id=getSpeciesNumber($InputLine);
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $Plume{SourceRateTable}[$id]=$InputLine;
+        }
+      }  
+      elsif ($InputLine eq "LAT") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $Plume{Lat}=$InputLine;
+      }      
+      elsif ($InputLine eq "WLON") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $Plume{wLon}=$InputLine;
+      }      
+      elsif ($InputLine eq "TILTANGLE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $Plume{TiltAngle}=$InputLine;
+      }
+      elsif ($InputLine eq "AZIMUTHANGLE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $Plume{AzimuthAngle}=$InputLine;
+      }                 
+      else {
+        die "The option ($InputLine) is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
+      }          
+      
+      if (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      }
+      else {
+        last;
+      }      
+    }
 
+    #add the data entry to the plume line   
+    if ($nTotalPlumes!=0) {
+      $PlumeLine=$PlumeLine.", ";
+    }
+          
+    $nTotalPlumes++;
+    $PlumeLine=$PlumeLine."{\"$Plume{ID}\",{";
+ 
+    #output the source rate
+    for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+      if ($i!=0) {
+        $PlumeLine=$PlumeLine.", ";
+      }
+      
+      $PlumeLine=$PlumeLine."$Plume{SourceRateTable}[$i]";
+    }
+    
+    #output temeprature 
+    $PlumeLine=$PlumeLine."},{";
+
+    for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+      if ($i!=0) {
+        $PlumeLine=$PlumeLine.", ";
+      }
+      
+      $PlumeLine=$PlumeLine."$Plume{TemperatureTable}[$i]";
+    }
+
+    #output bulk speed 
+    $PlumeLine=$PlumeLine."},{";
+
+    for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+      if ($i!=0) {
+        $PlumeLine=$PlumeLine.", ";
+      }
+      
+      $PlumeLine=$PlumeLine."$Plume{BulkVelocityTable}[$i]";
+    }
+
+    #output Lat,wLon,TiltAngle, and AzimuthAngle
+    $PlumeLine=$PlumeLine."},$Plume{Lat},$Plume{wLon},$Plume{TiltAngle},$Plume{AzimuthAngle},{0.0,0.0,0.0},{0.0,0.0,0.0}";
+           
+    if ($Plume{ActiveFlag}==1) {
+      $PlumeLine=$PlumeLine.",true}";
+    }
+    else {
+      $PlumeLine=$PlumeLine.",false}";
+    }
+    
+    
+    print "LINE   PLUME:::::\n $PlumeLine\n";
+  }
 
   #end statment of the block
   elsif ($InputLine eq "#ENDBLOCK") {
