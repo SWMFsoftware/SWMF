@@ -36,6 +36,14 @@ contains
 
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
+    !Array index is the coordinate of the gridpoint with +1/2 being
+    !approximated as 1. By x the physical cells are marked below
+    !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
+    !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+    !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
+    !       _!_!_!                x!x!_!_        Phys Face Values: 
+    !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+    !       -2                             Ghost values: Ex(-1,1,1),Ey(0,1,1)..
     real, intent(inout) :: Field_FDB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
          1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock)
 
@@ -71,7 +79,7 @@ contains
     integer :: MaxBufferS = -1, MaxBufferR = -1
     integer:: iRequestR, iRequestS, iError
  
-    character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_field'
+    character(len=*), parameter:: NameSub = 'BATL_pass_face_field'
 
     integer:: iBlock
 
@@ -383,14 +391,34 @@ contains
     subroutine set_range
 
       integer:: iDim
+      !Array index is the coordinate of the gridpoint with +1/2 being
+      !approximated as 1. By x the physical cells are marked below
+      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
+      !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+      !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
+      !       _!_!_!                x!x!_!_        Phys Face Values: 
+      !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+      !       -2                           Ghost values: Ex(-1,1,1),Ey(0,1,1)..
       !------------------------------------------------------------------------
-
-      ! Indexed by iDir/jDir/kDir for sender = -1,0,1
+      !\
+      ! For x_, y_, z_ direction (the first index), the receiving block is at
+      ! negative displcement with respect to the sending one
+      !/
+      !\
+      ! 1. Send faces 1:nWidth
+      !/
       iS_DIID(:,-1,Min_,:) = 1
       iS_DIID(:,-1,Max_,:) = nWidth
       do iDim = 1,MaxDim
+         !\
+         ! 2. Receive faces nIjk_D + 1:nIjk_D + nWidth
+         !/
          iR_DIID(:,-1,Min_,iDim) = nIjk_D + 1
          iR_DIID(:,-1,Max_,iDim) = nIjk_D + nWidth
+         !\
+         ! !EXCEPT!!
+         ! nIJK+nWidth face at which the iDim component is assigned
+         ! is not used. Specifiaclly for nWidth=1 this face is not sent. 
          iS_DIID(iDim,-1,Max_,iDim) = iS_DIID(iDim,-1,Max_,iDim) - 1
          iR_DIID(iDim,-1,Max_,iDim) = iR_DIID(iDim,-1,Max_,iDim) - 1
       end do
