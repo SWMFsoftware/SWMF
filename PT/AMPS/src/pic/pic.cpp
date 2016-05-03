@@ -851,7 +851,7 @@ void PIC::Sampling::Sampling() {
 #endif //_PIC_MOVER_INTEGRATOR_MODE_ 
 
 #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
-	      PIC::FieldLine::Sampling(ptr,LocalParticleWeight);
+	      PIC::FieldLine::Sampling(ptr,LocalParticleWeight, SamplingData);
 #endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_ 
 
               //call user defined particle sampling procedure

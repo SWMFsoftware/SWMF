@@ -26,6 +26,8 @@ namespace PIC{
     cDatumTimed DatumAtVertexNumberDensity(1,"\"Number Density[1/m^3]\"",true);
     cDatumWeighted DatumAtVertexParticleEnergy(1,"\"Kinetic energy [J]\"",true);
 
+    cDatumWeighted DatumAtGridParticleEnergy(1,"\"Kinetic energy [J]\"",true);
+
     vector<cDatumStored*> DataStoredAtVertex;
     vector<cDatumSampled*> DataSampledAtVertex;
 
@@ -147,7 +149,7 @@ namespace PIC{
     }
 
     //=========================================================================
-    void cFieldLine::GetSegmentRandom(cFieldLineSegment *SegmentOut,
+    void cFieldLine::GetSegmentRandom(int& iSegment,//cFieldLineSegment *SegmentOut,
 				      double& WeightCorrectionFactor,
 				      int spec){
       // choose a random segment on field line and return pointer SegmentOut;
@@ -156,16 +158,17 @@ namespace PIC{
       //-----------------------------------------------------------------------
       // choose uniformly a segment, i.e. weight_uniform = 1.0 / nSegment
       int iSegmentChoice = (int)(nSegment * rnd());
+      iSegment = iSegmentChoice;
       // cycle through segment until get the chosen one
-      SegmentOut = FirstSegment;
-      for(int iSegment=0; iSegment < iSegmentChoice; iSegment++)
-	SegmentOut = SegmentOut->GetNext();
+      //      SegmentOut = FirstSegment;
+      //      for(int iSegment=0; iSegment < iSegmentChoice; iSegment++)
+      //	SegmentOut = SegmentOut->GetNext();
 
       // SegmentOut now is a pointer to a uniformly chosen segment;
       // find the correction factor: weight_segment / weight_uniform
       //-----------------------------------------------------------------------
-      WeightCorrectionFactor = 
-	SegmentOut->GetWeight(spec) / TotalWeight[spec] * nSegment;
+      //      WeightCorrectionFactor = 
+      //      	SegmentOut->GetWeight(spec) / TotalWeight[spec] * nSegment;
     }
     
     //=========================================================================
@@ -202,9 +205,12 @@ namespace PIC{
       
       //Inject at the beginning of the field line FOR PARKER SPIRAL
       iSegment = 0;
+      FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,
+						 WeightCorrection, spec);
       
       
       cFieldLineSegment* Segment=FieldLinesAll[iFieldLine].GetSegment(iSegment);
+
       double S = iSegment + rnd();
       PB::SetFieldLineCoord(S, ptrData);
       double x[3], v[3];
@@ -222,7 +228,7 @@ namespace PIC{
       // see Numerical Studies of the Solar Energetic Particle 
       // Transport and Acceleration, Tenishev et al.
       int q=3;
-      double vmin=1e6, vmax=1e7;
+      double vmin=1e6, vmax=1e6;
       double pvmin = pow(vmin, 1-q), pvmax = pow(vmax, 1-q);
       double r= rnd();
       double absv = pow( (1-r)*pvmin + r*pvmax, 1.0/(1-q));
@@ -370,6 +376,8 @@ namespace PIC{
 
       // assign offsets and data length
       cFieldLineVertex::SetDataOffsets(SamplingOffset, Offset);
+      
+      PIC::IndividualModelSampling::DataSampledList.push_back(&DatumAtGridParticleEnergy);
     }
     
     //=========================================================================
@@ -411,7 +419,7 @@ namespace PIC{
     }
 
     //=========================================================================
-    void Sampling(long int ptr, double Weight){
+    void Sampling(long int ptr, double Weight, char* CellSamplingBuffer){
       // namespace alias
       namespace PB = PIC::ParticleBuffer;
 
@@ -471,6 +479,10 @@ namespace PIC{
 //      V->SampleParticleWeight(Weight*w);
 //      V->SampleParticleEnergy(E*Weight*w);
       //      V->SampleEnergyFlux(E*Weight*absv/volume*w);      
+
+      //.........................
+      *((double*)(CellSamplingBuffer+DatumAtGridParticleEnergy.offset))+=Weight*E;
+	
 
     }
 

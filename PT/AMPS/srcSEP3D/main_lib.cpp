@@ -199,6 +199,11 @@ void amps_init_mesh() {
 
 	PIC::Mover::Init_BeforeParser();
 
+#if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+	// initialize field lines
+	PIC::FieldLine::Init();
+#endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
 
@@ -283,11 +288,11 @@ void amps_init(){
   PIC::ParticleBuffer::Init(10000000);
 #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
   {  // create field lines and inject particles
-    PIC::FieldLine::Init();
+    //    PIC::FieldLine::Init();
     double xStart[3] = {9.2E+8,0.0,0.0};
     for(xStart[0] = 9.2E+8; xStart[0]>=9.17E+8; xStart[0]-=0.005E+8)
       PIC::FieldLine::InitLoop2D(xStart,0.1);
-  for(int i=0; i<1000; i++)
+  for(int i=0; i<100000; i++)
     PIC::FieldLine::InjectParticle(0);
     }
 #else

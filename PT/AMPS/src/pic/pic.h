@@ -304,6 +304,7 @@ namespace PIC {
     extern cDatumTimed    DatumAtVertexParticleNumber;
     extern cDatumTimed    DatumAtVertexNumberDensity;
     extern cDatumWeighted DatumAtVertexParticleEnergy;
+    extern cDatumWeighted DatumAtGridParticleEnergy;
 
 
 
@@ -807,7 +808,7 @@ namespace PIC {
       // assign statistical weights to segments and normalize them
       void ResetSegmentWeights();
       // get random segment
-      void GetSegmentRandom(cFieldLineSegment* SegmentOut,
+      void GetSegmentRandom(int& iSegment,//cFieldLineSegment* SegmentOut,
 			    double& WeightCorrectionFactor,
 			    int spec);
       // set magnetic field at a given vertex (last by default)
@@ -856,7 +857,7 @@ namespace PIC {
     void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment);
 
     // sample data from a particle
-    void Sampling(long int ptr, double Weight);
+    void Sampling(long int ptr, double Weight, char* SamplingBuffer);
 
     // inject particle onto the field line:
     // 1st function is a wrapper in the case
