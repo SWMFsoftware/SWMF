@@ -60,10 +60,12 @@ program post_idl
   integer:: IjkMin_D(3), IjkMax_D(3), iMin, iMax, jMin, jMax, kMin, kMax
 
   ! Variables related to sorting and averaging unstructured data
-  integer:: nSum
-  integer, allocatable :: iSort_I(:)
-  real, allocatable :: Sort_I(:)
-  real, allocatable :: StateSum_V(:), CellSizeMin_D(:)
+  logical:: DoSort3D = .false.           ! do sort unstructured 3D files?
+  integer, allocatable :: iSort_I(:)     ! indirect index for sorting
+  real, allocatable :: Sort_I(:)         ! sorting criterion
+  integer:: nSum                         ! number of points averaged
+  real, allocatable :: StateSum_V(:)     ! sum of states
+  real, allocatable :: CellSizeMin_D(:)  ! min distance among different points
 
   integer :: iDim, iDimCut_D(3), nDim, nParamExtra, l1, l2, l3, l4
   real    :: ParamExtra_I(3)
@@ -134,6 +136,10 @@ program post_idl
      select case(NameCommand)
      case('#VERBOSE')
         call read_var('IsVerbose', IsVerbose)
+
+     case('#SORT3D')
+        call read_var('DoSort3D', DoSort3D)
+
      case('#HEADFILE')
         call read_var('HeadNameFile', NameFileHead)
         call read_var('nProc',nProc)
@@ -588,7 +594,7 @@ program post_idl
      write(*,*)' Param_I=',  Param_I
   end if
 
-  if(.not.IsStructured)then
+  if(.not.IsStructured .and. (nDim < 3 .or. DoSort3D))then
      ! Sort points based on (generalized) coordinates
 
      allocate(Sort_I(n1), iSort_I(n1), STAT=iError)
