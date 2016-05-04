@@ -64,9 +64,9 @@ my @UniformSourceRate=(0)x$TotalSpeciesNumber;
 my @JetSourceRate=(0)x$TotalSpeciesNumber;
 
 #add the model header to the pic.h
-open (PIC_H,">>$WorkingSourceDirectory/pic/pic.h") || die "Cannot open $WorkingSourceDirectory/pic/pic.h";
-print PIC_H "#include \"Comet.h\"\n";
-close (PIC_H);
+#open (PIC_H,">>$WorkingSourceDirectory/pic/pic.h") || die "Cannot open $WorkingSourceDirectory/pic/pic.h";
+#print PIC_H "#include \"Comet.h\"\n";
+#close (PIC_H);
 
 open (InputFile,"<","$InputFileName") || die "Cannot find file \"$InputFileName\"\n";
 
@@ -398,8 +398,8 @@ while ($line=<InputFile>) {
   #end statment of the block
   elsif ($InputLine eq "#ENDBLOCK") {
     #update settings of the EnceladusMultiPlume Model
-    ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalTigerStripes",$nTotalTigerStripes,"main/EnceladusMultiPlume_SourceLocation.cpp");
-    ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalIndividualPlumes",$nTotalPlumes,"main/EnceladusMultiPlume_SourceLocation.cpp");
+    ampsConfigLib::ChangeValueOfVariable("const int nTotalTigerStripes",$nTotalTigerStripes,"main/EnceladusMultiPlume.h");
+    ampsConfigLib::ChangeValueOfVariable("const int nTotalIndividualPlumes",$nTotalPlumes,"main/EnceladusMultiPlume.h");
     
     ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cTigerStripe EnceladusMultiPlume::TigerStripeTable\\[EnceladusMultiPlume::nTotalTigerStripes\\]","{".$TigerStripeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
     ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cIndividualPlume EnceladusMultiPlume::IndividualPlumeTable\\[EnceladusMultiPlume::nTotalIndividualPlumes\\]","{".$PlumeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
