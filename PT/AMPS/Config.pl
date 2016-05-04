@@ -158,6 +158,7 @@ foreach (@Arguments) {
       next};
   if (/^-kameleon-path=(.*)$/i)       {
       add_line_amps_conf("KAMELEON=$1");
+      `echo KAMELEON=$1 >> Makefile.local`;
       next};
       
       
