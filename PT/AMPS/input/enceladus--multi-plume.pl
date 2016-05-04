@@ -418,6 +418,13 @@ while ($line=<InputFile>) {
   else {
     die "Option ($InputLine) is unknown, line=$InputFileLineNumber ($InputFileName)\n";
   }
+  
+  #update settings of the EnceladusMultiPlume Model
+  ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalTigerStripes",$nTotalTigerStripes,"main/EnceladusMultiPlume_SourceLocation.cpp");
+  ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalIndividualPlumes",$nTotalPlumes,"main/EnceladusMultiPlume_SourceLocation.cpp");
+    
+  ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cTigerStripe EnceladusMultiPlume::TigerStripeTable\\[EnceladusMultiPlume::nTotalTigerStripes\\]","{".$TigerStripeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
+  ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cIndividualPlume EnceladusMultiPlume::IndividualPlumeTable\\[EnceladusMultiPlume::nTotalIndividualPlumes\\]","{".$PlumeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
 }
 
 
