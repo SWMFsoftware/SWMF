@@ -206,7 +206,7 @@ while ($line=<InputFile>) {
     $TigerStripeID=$TigerStripeID."\n#undef _$TigerStripe{ID}__ID_\n#define _$TigerStripe{ID}__ID_ $nTotalTigerStripes\n";
     $nTotalTigerStripes++;
       
-    $TigerStripeLine=$TigerStripeLine."{&TigerStripe_$TigerStripe{ID},{";
+    $TigerStripeLine=$TigerStripeLine."{&EnceladusMultiPlume::TigerStripeGeometry__$TigerStripe{ID},{";
  
     #output the source rate
     for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
@@ -404,9 +404,7 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cTigerStripe EnceladusMultiPlume::TigerStripeTable\\[EnceladusMultiPlume::nTotalTigerStripes\\]","{".$TigerStripeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
     ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cIndividualPlume EnceladusMultiPlume::IndividualPlumeTable\\[EnceladusMultiPlume::nTotalIndividualPlumes\\]","{".$PlumeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
 
-
     ampsConfigLib::AddLine2File($TigerStripeID,"main/EnceladusMultiPlume.dfn");
-
 
     last;
   }
