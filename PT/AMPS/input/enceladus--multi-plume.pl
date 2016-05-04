@@ -135,16 +135,9 @@ while ($line=<InputFile>) {
         
         if ($InputLine eq "ON") {
           $TigerStripe{ActiveFlag}=1;
-          
-          print "!!! TIGER STRIPE ON - $TigerStripe{ActiveFlag}\n";
-          
         }
         elsif ($InputLine eq "OFF") {
           $TigerStripe{ActiveFlag}=0;
-          
-          
-          print "!!! TIGER STRIPE OFF\n";
-          
         }
       }
       elsif ($InputLine eq "TEMPERATURE") {
@@ -256,11 +249,6 @@ while ($line=<InputFile>) {
     else {
       $TigerStripeLine=$TigerStripeLine.",false}";
     }
-    
-    
-    print "LINE:::::\n $TigerStripeID\n";
-    print "LINE  STRIPE:::::\n $TigerStripeLine\n";
-    
   }
   
   #read the plume section
@@ -404,14 +392,22 @@ while ($line=<InputFile>) {
     }
     else {
       $PlumeLine=$PlumeLine.",false}";
-    }
-    
-    
-    print "LINE   PLUME:::::\n $PlumeLine\n";
+    } 
   }
 
   #end statment of the block
   elsif ($InputLine eq "#ENDBLOCK") {
+    #update settings of the EnceladusMultiPlume Model
+    ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalTigerStripes",$nTotalTigerStripes,"main/EnceladusMultiPlume_SourceLocation.cpp");
+    ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalIndividualPlumes",$nTotalPlumes,"main/EnceladusMultiPlume_SourceLocation.cpp");
+    
+    ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cTigerStripe EnceladusMultiPlume::TigerStripeTable\\[EnceladusMultiPlume::nTotalTigerStripes\\]","{".$TigerStripeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
+    ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cIndividualPlume EnceladusMultiPlume::IndividualPlumeTable\\[EnceladusMultiPlume::nTotalIndividualPlumes\\]","{".$PlumeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
+
+
+    ampsConfigLib::AddLine2File($TigerStripeID,"main/EnceladusMultiPlume.dfn");
+
+
     last;
   }
    
@@ -419,12 +415,7 @@ while ($line=<InputFile>) {
     die "Option ($InputLine) is unknown, line=$InputFileLineNumber ($InputFileName)\n";
   }
   
-  #update settings of the EnceladusMultiPlume Model
-  ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalTigerStripes",$nTotalTigerStripes,"main/EnceladusMultiPlume_SourceLocation.cpp");
-  ampsConfigLib::ChangeValueOfVariable("int EnceladusMultiPlume::nTotalIndividualPlumes",$nTotalPlumes,"main/EnceladusMultiPlume_SourceLocation.cpp");
-    
-  ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cTigerStripe EnceladusMultiPlume::TigerStripeTable\\[EnceladusMultiPlume::nTotalTigerStripes\\]","{".$TigerStripeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
-  ampsConfigLib::ChangeValueOfVariable("EnceladusMultiPlume::cIndividualPlume EnceladusMultiPlume::IndividualPlumeTable\\[EnceladusMultiPlume::nTotalIndividualPlumes\\]","{".$PlumeLine."}","main/EnceladusMultiPlume_SourceLocation.cpp");
+
 }
 
 
