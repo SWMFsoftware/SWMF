@@ -422,22 +422,46 @@ contains
          iS_DIID(iDim,-1,Max_,iDim) = iS_DIID(iDim,-1,Max_,iDim) - 1
          iR_DIID(iDim,-1,Max_,iDim) = iR_DIID(iDim,-1,Max_,iDim) - 1
       end do
+      !\
+      ! For x_, y_, z_ direction (the first index), the receiving block is at
+      ! zero displcement with respect to the sending one
+      !/
+      !\
+      ! 1. Send and receive faces are from 1 to nIJK_D
+      !/
       iS_DIID(:, 0,Min_,:) = 1
       iR_DIID(:, 0,Min_,:) = 1
       do iDim = 1,MaxDim
          iS_DIID(:, 0,Max_,iDim) = nIjk_D
          iR_DIID(:, 0,Max_,iDim) = nIjk_D
+         !\
+         ! !EXCEPT!!! For the iDim component of the field
+         ! Send and receive faces are from 0 to nIJK_D
+         !/
          iS_DIID(iDim,0,Min_,iDim) = 0
          iR_DIID(iDim,0,Min_,iDim) = 0
       end do
-
+      !\
+      ! For x_, y_, z_ direction (the first index), the receiving block is at
+      ! positive displcement with respect to the sending one
+      !/
+      !\
+      ! 1. Recv  faces are from 1-nWidth to 0
+      !/
       iR_DIID(:, 1,Min_,:) = 1 - nWidth
       iR_DIID(:, 1,Max_,:) = 0
       do iDim = 1,MaxDim
+         !\
+         ! Send faces are from nIjk_D + 1 - nWidth to nIjk_D
+         !/
          iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1 - nWidth
          iS_DIID(:, 1,Max_,iDim) = nIjk_D
-         iS_DIID(iDim,1,Max_,iDim) = iS_DIID(iDim,1,Max_,iDim) - 1
-         iR_DIID(iDim,1,Max_,iDim) = iR_DIID(iDim,1,Max_,iDim) - 1
+         !\
+         ! !EXCEPT!!! For the iDim component of the field
+         ! Recv faces are up to -1 (0 face is physical)
+         !/
+         iS_DIID(iDim,1,Max_,iDim) = nIjk_D(iDim) - 1
+         iR_DIID(iDim,1,Max_,iDim) =  - 1
       end do
 
 
@@ -799,7 +823,18 @@ contains
       integer:: iDim
       !------------------------------------------------------------------------
 
-      ! Indexed by iDir/jDir/kDir for sender = -1,0,1
+            !Array index is the coordinate of the gridpoint with +1/2 being
+      !approximated as 1. By x the physical cells are marked below
+      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
+      !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+      !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
+      !       _!_!_!                x!x!_!_        Phys Face Values: 
+      !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+      !       -2                           Ghost values: Ex(-1,1,1),Ey(0,1,1)..
+      !------------------------------------------------------------------------
+      !\
+      ! For x_, y_, z_ direction (the first index), the receiving block is at
+      ! negative displcement with respect to the sending one
       iS_DIID(:,-1,Min_,:) = 1
       iS_DIID(:,-1,Max_,:) = nWidth
       do iDim = 1,MaxDim
