@@ -608,10 +608,9 @@ program post_idl
 
      ! Sort points according to the sorting function
      call sort_quick(n1, Sort_I, iSort_I)
-     ! WORK-AROUND FOR IFORT BUG !
-     !Coord_DC(:,:,1,1) = Coord_DC(:,iSort_I,1,1)
-     !PlotVar_VC(:,:,1,1) = PlotVar_VC(:,iSort_I,1,1)
-     call sort_coord_plotvar
+
+     Coord_DC(:,:,1,1) = Coord_DC(:,iSort_I,1,1)
+     PlotVar_VC(:,:,1,1) = PlotVar_VC(:,iSort_I,1,1)
 
      if(IsVerbose)write(*,*)'Sorting is done'
 
@@ -657,10 +656,8 @@ program post_idl
         end if
         
         ! move the elements after finding out all the coinciding ones 
-        ! WORK AROUND FOR IFORT BUG
-        !Coord_DC(:,1:n1,1,1) = Coord_DC(:,iSort_I(1:n1),1,1)
-        !PlotVar_VC(:,1:n1,1,1) = PlotVar_VC(:,iSort_I(1:n1),1,1)
-        call sort_coord_plotvar
+        Coord_DC(:,1:n1,1,1) = Coord_DC(:,iSort_I(1:n1),1,1)
+        PlotVar_VC(:,1:n1,1,1) = PlotVar_VC(:,iSort_I(1:n1),1,1)
      
         if(IsVerbose)write(*,*)'Averaging done'
      end if
@@ -698,40 +695,7 @@ program post_idl
   write(*,'(a)')'PostIDL finished'
 
 contains
-
   !===========================================================================
-  subroutine sort_coord_plotvar
-
-    real, allocatable:: Copy_IC(:,:,:,:), Copy_DI(:,:)
-    integer:: i, iError
-    !------------------------------------------------------------------------
-    allocate(Copy_IC(nDim,nCellPlot,1,1), STAT=iError)
-    if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate coord copy'
-    Copy_IC = Coord_DC
-    do i = 1, n1
-       Coord_DC(:,i,1,1) = Copy_IC(:,iSort_I(i),1,1)
-    end do
-    deallocate(Copy_IC)
-
-    allocate(Copy_IC(nPlotVar,nCellPlot,1,1), STAT=iError)
-    if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate plotvar copy'
-    Copy_IC = PlotVar_VC
-    do i = 1, n1
-       PlotVar_VC(:,i,1,1) = Copy_IC(:,iSort_I(i),1,1)
-    end do
-    deallocate(Copy_IC)
-
-    if(.not. allocated(GenCoord_DI) .or. nDim < 3) RETURN
-    allocate(Copy_DI(nDim,nCellPlot), STAT=iError)
-    Copy_DI = GenCoord_DI
-    do i = 1, n1
-       GenCoord_DI(:,i) = Copy_DI(:,iSort_I(i))
-    end do
-    deallocate(Copy_DI)
-
-  end subroutine sort_coord_plotvar
-  !===========================================================================
-
   subroutine set_gen_coord
 
     ! Calculate the generalized coordinates GenCoord_D from Xyz_D
