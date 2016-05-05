@@ -21,7 +21,7 @@ the SWMF and create the user manual please follow the instructions below.
 
 /csem1/SWMF_data 
 
-# If it is not availble through the shared disk, the SWMF_data repository 
+# If it is not available through the shared disk, the SWMF_data repository 
 # can be put into the home directory or into the SWMF directory.
 
 # Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
@@ -93,6 +93,15 @@ Config.pl -install -compiler=mpxlf90,mpxlc
 Config.pl -install -nompi -compiler=....
 
 # This will only allow serial execution, of course.
+
+# The ifort compiler (and possibly others too) use the stack for temporary arrays,
+# so the stack size should be large. For csh/tcsh add the following to .cshrc:
+
+unlimit stacksize
+
+# For bash/ksh add the following to .bashrc or equivalent initialization file:
+
+ulimit -s unlimited
 
 ######################
 # Create the manuals #

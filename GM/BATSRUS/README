@@ -97,6 +97,15 @@ Config.pl -instal -nompi -compiler=....
 
 # This will only allow serial execution, of course.
 
+# The ifort compiler (and possibly others too) use the stack for temporary arrays,
+# so the stack size should be large. For csh/tcsh add the following to .cshrc:
+
+unlimit stacksize
+
+# For bash/ksh add the following to .bashrc or equivalent initialization file:
+
+ulimit -s unlimited
+
 ######################
 # Create the manuals #
 ######################
