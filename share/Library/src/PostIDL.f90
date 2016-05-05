@@ -617,9 +617,7 @@ program post_idl
      ! Average out coinciding points
      if(nDim < 3) then
         if(IsVerbose)write(*,*)'Averaging coinciding points'
-
-        ! WORK-AROUND FOR IFORT BUG !
-        !GenCoord_DI = GenCoord_DI(:,iSort_I)
+        GenCoord_DI = GenCoord_DI(:,iSort_I)
 
         allocate(StateSum_V(nPlotVar), CellSizeMin_D(nDim))
         CellSizeMin_D = dCoordMin_D(iDimCut_D(1:nDim))
