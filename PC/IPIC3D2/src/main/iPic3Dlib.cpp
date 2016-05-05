@@ -1021,6 +1021,7 @@ void c_Solver:: write_plot_init(){
       subString.erase(0,2);
       ss<<subString;
       ss>>plotRange_ID[iPlot][0];
+      plotRange_ID[iPlot][0] = plotRange_ID[iPlot][0]*col->getMhdNo2NoL() - col->getFluidStartX();
       plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0]+1e-10;
       plotRange_ID[iPlot][2] = 0;
       plotRange_ID[iPlot][3] = col->getLy();
@@ -1032,6 +1033,7 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][0] = 0;
       plotRange_ID[iPlot][1] = col->getLx();
       ss>>plotRange_ID[iPlot][2];
+      plotRange_ID[iPlot][2] = plotRange_ID[iPlot][2]*col->getMhdNo2NoL() - col->getFluidStartY();
       plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2]+1e-10;
       plotRange_ID[iPlot][4] = 0;
       plotRange_ID[iPlot][5] = col->getLz();
@@ -1043,6 +1045,7 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][2] = 0;
       plotRange_ID[iPlot][3] = col->getLy();
       ss>>plotRange_ID[iPlot][4];
+      plotRange_ID[iPlot][4] = plotRange_ID[iPlot][4]*col->getMhdNo2NoL() - col->getFluidStartZ();
       plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4]+1e-10;
     }else if(subString.substr(0,2)=="3d"){
       plotRange_ID[iPlot][0] = 0;
@@ -1052,11 +1055,12 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][4] = 0;
       plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,3)=="cut"){
-      for(int iDim=0; iDim<nDimMax; iDim++){
-	plotRange_ID[iPlot][iDim*2] = col->getplotRange(iPlot,iDim*2);
-	plotRange_ID[iPlot][iDim*2+1] = col->getplotRange(iPlot,iDim*2+1);	
-      }
-      
+      plotRange_ID[iPlot][0] = col->getplotRange(iPlot,0)*col->getMhdNo2NoL() - col->getFluidStartX();
+      plotRange_ID[iPlot][1] = col->getplotRange(iPlot,1)*col->getMhdNo2NoL() - col->getFluidStartX();
+      plotRange_ID[iPlot][2] = col->getplotRange(iPlot,2)*col->getMhdNo2NoL() - col->getFluidStartY();
+      plotRange_ID[iPlot][3] = col->getplotRange(iPlot,3)*col->getMhdNo2NoL() - col->getFluidStartY();
+      plotRange_ID[iPlot][4] = col->getplotRange(iPlot,4)*col->getMhdNo2NoL() - col->getFluidStartZ();
+      plotRange_ID[iPlot][5] = col->getplotRange(iPlot,5)*col->getMhdNo2NoL() - col->getFluidStartZ();
     }else{
       if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
       abort();

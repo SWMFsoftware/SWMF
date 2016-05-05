@@ -1741,10 +1741,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
 
 	Note:
-	1) Do not support control output by DtOutPut now.
+	1) Do not support controlling output by DtOutPut now.
 	2) Available output variables are listed in EMfields3D.cpp::getVar().
-	3) DxOutput is not functional now.
-	4) The position for "cut", "x=", "y="... is in PIC unit.
+	3) DxOutput is only functional for particles output now.
+	4) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
 	5) Output variable 'particles' only works for 'cut' and '3d'.
       */
       
@@ -1769,7 +1769,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	if(pos !=string::npos) plotString_I[iPlot].erase(0,pos);
 	if(plotString_I[iPlot].substr(0,3)=="cut"){
 	  for(int i=0; i<nDimMax; i++){
-	    // Always read 3 dimension. 
+	    // Always read 3 dimension.
+	    // plotRange_ID should be in normalized BATSRUS unit.
 	    read_var(param, "CoordMin", &plotRange_ID[iPlot][2*i]);
 	    read_var(param, "CoordMax", &plotRange_ID[iPlot][2*i+1]);
 	  }

@@ -84,6 +84,7 @@ class InterfaceFluid
   double *No2Si_V; // array storing inverse unit conversion factors
   double Si2NoM, Si2NoV, Si2NoRho, Si2NoB, Si2NoP, Si2NoJ, Si2NoL;
   double No2SiV, No2SiL;
+  double MhdNo2SiL; // Length in BATSRUS normalized unit -> Si
   double Lnorm, Unorm, Mnorm, Qnorm; // normalization units for length, velocity, mass and charge
                                      // Normalized q/m ==1 for proton in CGS units  
   long    nS; // number of particle species
@@ -609,6 +610,12 @@ class InterfaceFluid
 
   // return planet radius in SI unit.
   inline double getrPlanet()const{return(rPlanetSi);}
+
+  // return MhdNo2SiL
+  inline double getMhdNo2SiL()const{return(MhdNo2SiL);}
+
+  // BATSRUS normalized unit -> PIC normalized unit;
+  inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
   
   /** Average over nodes in ignored dimentions. Used by the original 2D file coupling. */
   inline double getValueNode(double ****vec, int i, int j, int k, int si)
@@ -1313,6 +1320,7 @@ class InterfaceFluid
     Unorm     = paramreal[n++];	
     Mnorm     = paramreal[n++];
     rPlanetSi = paramreal[n++];
+    MhdNo2SiL = paramreal[n++];
     /** Do not change the order of above lines. */
  
     // Normalization units converted [SI] -> [cgs]

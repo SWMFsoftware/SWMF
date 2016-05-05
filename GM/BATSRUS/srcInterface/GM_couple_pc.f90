@@ -65,8 +65,8 @@ contains
        ! XyzMin_D, XyzMax_D, Dxzy_D for each region
        ! PePerPtotal
        ! xUnitPicSi, uUnitPicSi, mUnitPicSi
-       ! rPlanet
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*9 + 5
+       ! rPlanet, No2Si_V(UnitX_)
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*9 + 6
 
        RETURN
     end if
@@ -131,9 +131,9 @@ contains
     Param_I(n) = xUnitPicSi; n = n+1
     Param_I(n) = uUnitPicSi; n = n+1
     Param_I(n) = mUnitPicSi; n = n+1
-    Param_I(n) = rPlanetSi
+    Param_I(n) = rPlanetSi;  n = n+1
+    Param_I(n) = No2Si_V(UnitX_)
     
-
   end subroutine GM_get_for_pc_init
   !============================================================================
 
