@@ -2079,6 +2079,9 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
 	// use PostIDL.f90, we should follow the format of Fortran
 	// binary output. Here, each line is a record. Before and after
 	// each record, use 4 byte to save the length of this record. 
+	x = (pcl.get_x() + col->getFluidStartX())*No2OutL;
+	y = (pcl.get_y() + col->getFluidStartY())*No2OutL;
+	z = (pcl.get_z() + col->getFluidStartZ())*No2OutL;
 	fwrite(&nRecord, nSizeInt, 1, outFile);
 	data0 = 1.0;
 	fwrite(&data0, nSizeDouble, 1, outFile);
@@ -2116,10 +2119,14 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
       if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
 
       if(doOutput){
+	x = (pcl.get_x() + col->getFluidStartX())*No2OutL;
+	y = (pcl.get_y() + col->getFluidStartY())*No2OutL;
+	z = (pcl.get_z() + col->getFluidStartZ())*No2OutL;
+
 	outFile<<1.0<<"\t" 
-	       <<pcl.get_x()*No2OutL<<"\t"
-	       <<pcl.get_y()*No2OutL<<"\t"
-	       <<pcl.get_z()*No2OutL<<"\t"
+	       <<x*No2OutL <<"\t"
+	       <<y*No2OutL<<"\t"
+	       <<z*No2OutL<<"\t"
 	       <<pcl.get_u()*No2OutV<<"\t"
 	       <<pcl.get_v()*No2OutV<<"\t"
 	       <<pcl.get_w()*No2OutV<<"\t"
