@@ -1,6 +1,6 @@
 
 #main
-SpeciesList=DUST DUST 
+SpeciesList=H2O, DUST DUST 
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=off ! on,off 
@@ -13,7 +13,7 @@ makefile  MPIRUN=mpirun -np 4
 
 makefile ExternalModules=models/exosphere
 
-ProjectSourceDirectory=srcEnceladus 
+ProjectSourceDirectory=srcEnceladus--multi-plume 
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
 SourceDirectory=src
@@ -112,7 +112,7 @@ CouplerMode=file(ices) !!off, ices, swmf
 
 #include species.input
 
-#block input/enceladus--multi-plume.pl
+#block ../input/enceladus--multi-plume.pl
 
 TigerStripe \\ 
   ID=Alexandria \\ 
@@ -178,7 +178,7 @@ Plume \\
   ID=I \\ 
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -190,7 +190,7 @@ Plume \\
   ID=II \\ 
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -201,7 +201,7 @@ Plume  \\
   ID=III \\
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -212,7 +212,7 @@ Plume \\
   ID=IV \\ 
   Active=on \\  
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -223,7 +223,7 @@ Plume \\
   ID=V \\ 
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -234,7 +234,7 @@ Plume \\
   ID=VI \\ 
   Active=on \\  
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -245,7 +245,7 @@ Plume \\
   ID=VII \\ 
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
@@ -256,19 +256,43 @@ Plume \\
   ID=VIII \\
   Active=on \\ 
   SourceRate(H2O)=100 \\ 
-  Temeprature(all)=100 \\ 
+  Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
   Lat=-81.5 \\ 
   wLon=31.2 \\ 
   TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7 \\ 
+  AzimuthAngle=228.7 
 
+#endblock
 
 #block ../exosphere.pl
   define _TARGET_ _ENCELADUS_
 
-  SPICE=off 
-  addPhysicalModelHeader=Enceladus.h
+  !simulation time that corresponds to a particular observation
+  SimulationStartTime=2009-01-24T00:00:00 
+
+  SPICE=on 
+  SpiceKernels= \\ 
+    "../NAIF/naif0010.tls", "../NAIF/de430.bsp", "../NAIF/pck00010.tpc", \\
+    "100514BP_SCPSE_10134_10145.bsp", "10134_10139ra.bc", "cas_uvis_v06.ti", "cpck20May2010.tpc", "cpck20May2010_Nav.tpc \\ 
+    "cas_v40.tf", "cas00155.tsc", \\ 
+    "050825R_SCPSE_05186_05205.bsp", "05192_05197ra.bc", "cpck05Jul2005.tpc", "cpck05Jul2005_Nav.tpc" \\  !! E2: UVIS 
+    "08072_08077ra.bc", "080306AP_SE_08050_08076.bsp", "080228AP_SCPSE_08050_08076.bsp", "cpck10Mar2008.tpc", "cpck10Mar2008_Nav.tpc", \\ !!E3: 2008-03-12T19:06:12 
+    "08292_08297ra.bc", "081010AP_SCPSE_08282_08315.bsp", "081010AP_SE_08282_08315.bsp", "cpck31Oct2008.tpc", "cpck31Oct2008_Nav.tpc", \\ !!E5: 2008-10-9T19:06:43 
+     "cpck07Oct2009.tpc","cpck16Sep2008.tpc", "cpck16Sep2008_Nav.tpc", \\ 
+     "09305_09307ra.bc", "091104AP_SCPSE_09305_09329.bsp", "cpck18Nov2009.tpc", "cpck18Nov2009_Nav.tpc", "cpck07Oct2009_Nav.tpc" \\ !!E7: 2009-11-2T7:42:00 
+     "07297_07297ra.bc", "cpck18Oct2007.tpc", "cpck18Oct2007_Nav.tpc", "071015AP_SCPSE_07288_07328.bsp","07297_07302ra.bc" !!UVIS occultation 24 Oct 2007 
+
+
+
+  addPhysicalModelHeader=EnceladusMultiPlume.h
+
+
+  Source:UserDefined=on \\ !on,off
+    SourceProcessCode=TigerStripeAndIndividualPlume \\
+    SourceRate=EnceladusMultiPlume::SourceModel::GetTotalProductionRate \\ 
+    GenerateParticleProperties=EnceladusMultiPlume::SourceModel::GenerateParticleProperties \\
+    ModifySurfaceSpeciesAbundance=false !!!true,false
 
   
 #endblock
