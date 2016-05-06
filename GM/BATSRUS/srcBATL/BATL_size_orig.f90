@@ -127,4 +127,7 @@ module BATL_size
   ! Largest used block index on a processor at any given time
   integer :: nBlock = 0
 
+  ! Number of different kinds of particles
+  integer, parameter:: nKindParticle = 2
+
 end module BATL_size

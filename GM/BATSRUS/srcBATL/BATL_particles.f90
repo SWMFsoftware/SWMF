@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_particles
 
-  use BATL_size, ONLY: nDim, MaxDim
+  use BATL_size, ONLY: nDim, MaxDim, nKindParticle
   use BATL_tree, ONLY: Unset_
   use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc
 
@@ -19,11 +19,6 @@ module BATL_particles
 
   SAVE
   logical  ::UseParticles = .false.
-  !\
-  ! Number of different kinds of particles
-  !/ 
-  integer, parameter:: nKindParticle = 2
-
   !\
   ! Use the pair RSend + IRecv or ISend + IRecv
   !/
