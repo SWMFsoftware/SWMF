@@ -39,6 +39,7 @@ module CON_coupler
      character (len=lTypeGeometry) :: TypeGeometry
      integer                       :: nVar
      character (len=lNameVar)      :: NameVar
+     real, pointer                 :: State_VGB(:,:,:,:,:) ! For BATSRUS
      real                          :: UnitX
   end type CoordSystemType
 
