@@ -78,7 +78,7 @@ module ModAdvance
   !\
   ! Block cell-centered MHD solution
   !/
-  real, allocatable :: State_VGB(:,:,:,:,:)
+  real, allocatable, target :: State_VGB(:,:,:,:,:)
   real, allocatable :: Energy_GBI(:,:,:,:,:)
 
   !\
