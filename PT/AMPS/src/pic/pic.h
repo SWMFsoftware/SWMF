@@ -312,7 +312,16 @@ namespace PIC {
     extern vector<cDatumStored*> DataStoredAtVertex;
     extern vector<cDatumSampled*> DataSampledAtVertex;
 
-    class cFieldLineVertex{
+    class cFieldLineVertex;
+    class cFieldLineSegment;
+    class cFieldLine;
+  
+    extern cFieldLine* FieldLinesAll;
+    extern cAssociatedDataAMRstack<cFieldLineVertex> VerticesAll;
+    extern cAssociatedDataAMRstack<cFieldLineSegment> SegmentsAll;
+    
+
+  class cFieldLineVertex{
     private:
       //flag whether coords of vertex have been set
       char IsSet;
@@ -725,8 +734,59 @@ namespace PIC {
       }
 
       //check whether the line is a loop
+      inline void close_loop(){
+	VerticesAll.deleteElement(LastVertex);
+	LastVertex = FirstVertex;
+	LastVertex->SetPrev(LastSegment->GetBegin());
+	LastSegment->GetBegin()->SetNext(LastVertex);
+	TotalLength -= LastSegment->GetLength();
+	LastSegment->SetVertices(LastSegment->GetBegin(), LastVertex);
+	TotalLength += LastSegment->GetLength();
+	LastSegment->SetNext(FirstSegment);
+	FirstSegment->SetPrev(LastSegment);
+      }
       inline bool is_loop(){return LastVertex==FirstVertex;}
-
+      inline void fix_coord(double& Coord){
+	while(Coord < 0)       Coord += nSegment;
+	while(Coord >=nSegment)Coord -= nSegment;
+      }
+      inline double move(double SInit, double Increment){
+	double res = SInit;
+	cFieldLineSegment *Segment = GetSegment(SInit);
+	double Length = Segment->GetLength();
+	double remain;
+	if(Increment>0) {
+	  remain = (int)(SInit+1) - SInit;
+	  for(Segment = GetSegment(SInit);
+	      true;
+	      Segment = Segment->GetNext()){
+	    Length = Segment->GetLength();
+	    if(Increment < remain*Length){
+	      res += Increment / Length;
+	      break;
+	    }
+	    Increment -= remain*Length;
+	    res += remain;
+	    remain = 1.0;
+	  }
+	}
+	else {
+	  remain = SInit - (int)(SInit) ;
+	  for(Segment = GetSegment(SInit);
+	      true;
+	      Segment = Segment->GetPrev()){
+	    Length = Segment->GetLength();
+	    if(-Increment < remain*Length){
+	      res += Increment / Length;
+	      break;
+	    }
+	    Increment += remain*Length;
+	    res -= remain;
+	    remain = 1.0;
+	  }
+	}
+	return res;
+      }
       // Segment access
       //-----------------------------------------------------------------------
       //access first/last segment
@@ -835,10 +895,6 @@ namespace PIC {
     //time of last update
     extern double TimeLastUpdate;
 
-    extern cFieldLine* FieldLinesAll;
-    extern cAssociatedDataAMRstack<cFieldLineVertex> VerticesAll;
-    extern cAssociatedDataAMRstack<cFieldLineSegment> SegmentsAll;
-
     // initialize field line data structure
     void Init();
 
@@ -846,7 +902,7 @@ namespace PIC {
     void InitSimpleParkerSpiral(double *xStart);
 
     //create a 2D field-line loop based on the background field
-    void InitLoop2D(double *xStart, double DArc=1E-2);
+    void InitLoop2D(double *xStart, double DArc, double DMin, double DMax);
     void Update();
     
 

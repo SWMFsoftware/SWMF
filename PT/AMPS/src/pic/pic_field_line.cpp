@@ -26,6 +26,7 @@ namespace PIC{
     cDatumTimed DatumAtVertexNumberDensity(1,"\"Number Density[1/m^3]\"",true);
     cDatumWeighted DatumAtVertexParticleEnergy(1,"\"Kinetic energy [J]\"",true);
 
+
     cDatumWeighted DatumAtGridParticleEnergy(1,"\"Kinetic energy [J]\"",true);
 
     vector<cDatumStored*> DataStoredAtVertex;
@@ -210,7 +211,6 @@ namespace PIC{
       
       
       cFieldLineSegment* Segment=FieldLinesAll[iFieldLine].GetSegment(iSegment);
-
       double S = iSegment + rnd();
       PB::SetFieldLineCoord(S, ptrData);
       double x[3], v[3];
@@ -233,11 +233,12 @@ namespace PIC{
       double r= rnd();
       double absv = pow( (1-r)*pvmin + r*pvmax, 1.0/(1-q));
       //direction of velocity: INJECT ALONG HE FIELD LINE FOR PARKER SPIRAL
-      double cosPhi = 1 - rnd();
+      double cosPhi =  1 - 2*rnd();
+
       double vpar = absv*cosPhi;
       double KinEnergyPerp = 9.1E-31 * 0.5 * (absv*absv - vpar*vpar);
-      
-      
+
+
       //velocity is paral to the field line
       Segment->GetDir(v);
       for(int i=0; i<3; i++)v[i]*=vpar;
@@ -245,7 +246,7 @@ namespace PIC{
       
       //magnetic field
       double B[3], AbsB;
-      Segment->GetMagneticField(S, B);
+      Segment->GetMagneticField(S-(int)S, B);
       AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5)+1E-15;
       
       //magnetic moment
@@ -254,7 +255,7 @@ namespace PIC{
       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
       node=PIC::Mesh::mesh.findTreeNode(x);
       
-      long int res=PB::InitiateParticle(x,NULL,NULL,NULL,
+      long int res=PB::InitiateParticle(x,v,NULL,NULL,
 					ptrData,
 					_PIC_INIT_PARTICLE_MODE__ADD2LIST_,
 					(void*)node);
@@ -266,9 +267,10 @@ namespace PIC{
     //=========================================================================
     void cFieldLine::SetMagneticField(double *BIn, int iVertex){
       cFieldLineVertex *Vertex;
+      int nVertex = (is_loop()) ? nSegment : nSegment+1;
       if(iVertex == -1)
 	Vertex = LastVertex;
-      else if(iVertex > 0.5*nSegment && iVertex <= nSegment){
+      else if(iVertex > 0.5*nSegment && iVertex <= nVertex){
 	Vertex = LastVertex;
 	for(int i=nSegment; i>iVertex; i--)
 	  Vertex = Vertex->GetPrev();
@@ -306,7 +308,8 @@ namespace PIC{
 	exit(__LINE__, __FILE__,"Not implemented for multiple processors");
       
       cFieldLineVertex *Vertex=FirstVertex;
-      for(int iVertex=0; iVertex<=nSegment; iVertex++){
+      int nVertex = (is_loop()) ? nSegment : nSegment+1;
+      for(int iVertex=0; iVertex<=nVertex; iVertex++){
 
 	//print coordinates
 	double x[DIM];
@@ -369,10 +372,10 @@ namespace PIC{
       DatumAtVertexMagneticFluxFunction.activate(Offset, &DataStoredAtVertex);
       // activate data that is sampled
       long int SamplingOffset = Offset; Offset = 0;
-      DatumAtVertexParticleWeight.activate(Offset, &DataSampledAtVertex);
-      DatumAtVertexParticleNumber.activate(Offset, &DataSampledAtVertex);
-      DatumAtVertexNumberDensity. activate(Offset, &DataSampledAtVertex);
-      DatumAtVertexParticleEnergy.activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexParticleWeight.  activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexParticleNumber.  activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexNumberDensity.   activate(Offset, &DataSampledAtVertex);
+      DatumAtVertexParticleEnergy.  activate(Offset, &DataSampledAtVertex);
 
       // assign offsets and data length
       cFieldLineVertex::SetDataOffsets(SamplingOffset, Offset);
@@ -466,24 +469,19 @@ namespace PIC{
 
       //sample to vertices
       cFieldLineVertex* V=FieldLinesAll[iFieldLine].GetSegment(S)->GetBegin();
-      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume, (1-w));
-      V->SampleDatum(DatumAtVertexParticleWeight,Weight,(1-w));
-      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,(1-w));
-      //      V->SampleDatum(EnergyFlux(Weight*E*absv/volume*(1-w));
+      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume, spec, (1-w));
+      V->SampleDatum(DatumAtVertexParticleWeight,Weight,spec, (1-w));
+      V->SampleDatum(DatumAtVertexParticleNumber,1.0,spec, (1-w));
+      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,spec, (1-w));
+
       V = V->GetNext();
-      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume, (w));
-      V->SampleDatum(DatumAtVertexParticleWeight,Weight,(w));
-      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,w);
-//
-//      V->SampleNumberDensity(Weight/volume * w);
-//      V->SampleParticleWeight(Weight*w);
-//      V->SampleParticleEnergy(E*Weight*w);
-      //      V->SampleEnergyFlux(E*Weight*absv/volume*w);      
+      V->SampleDatum(DatumAtVertexNumberDensity,Weight/volume,spec,  (w));
+      V->SampleDatum(DatumAtVertexParticleWeight,Weight,spec, (w));
+      V->SampleDatum(DatumAtVertexParticleNumber,1.0,spec, (w));
+      V->SampleDatum(DatumAtVertexParticleEnergy,Weight*E,spec, w);
 
       //.........................
       *((double*)(CellSamplingBuffer+DatumAtGridParticleEnergy.offset))+=Weight*E;
-	
-
     }
 
     //=========================================================================
@@ -494,7 +492,9 @@ namespace PIC{
 
     //=========================================================================
     void InitLoop2D(double *xStart,  //start loop here
-		    double DArc      //increment in the angle of arc 
+		    double DArc,     //increment in the angle of arc 
+		    double DMin,     //min allowed length of the arc
+		    double DMax      //max allowed length of the arc
 		    ){
       // in 2D case (e.g. cylindrical symmetry) generate a magnetic field line;
       // magnetic flux function, psi, is utilized:
@@ -539,7 +539,7 @@ namespace PIC{
       // angle swiped by the loop so far
       double Angle = 0.0;
       // estimate for the next segment's length
-      static double Length = 1E3;
+      double Length = 0.5*(DMin + DMax);
       // position and magnetic field and next candidate vertex
       double xNew[3] = {0.0,0.0,0.0};
       double BNew[3] = {0.0,0.0,0.0};
@@ -600,6 +600,7 @@ namespace PIC{
 	const  int countMax = 100;
 	count = 0;
 	//predictor
+	bool DoBreak = false;
 	while(true){
 	  count++;
 	  if(count > countMax)
@@ -619,6 +620,7 @@ namespace PIC{
 	  bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
 	  // find angle of arc to the new location
 	  Arc = fabs(b[0]*bNew[2] - b[2]*bNew[0]);
+	  if(DoBreak) break;
 	  //check condition to exit loop
 	  if(Arc < 0.5 * DArc || Arc > DArc)
 	    // too small or too large step; factor -> 1 as count grows
@@ -626,6 +628,8 @@ namespace PIC{
 	    Length *= 1. + (0.75 * DArc / max(Arc, 0.075*DArc) - 1.) / count;
 	  else
 	    break;
+	  if(Length < DMin) {Length = DMin; DoBreak = true;}
+	  if(Length > DMax) {Length = DMax; DoBreak = true;}
 	}
 	
 	// corrector
@@ -694,9 +698,7 @@ namespace PIC{
 	Dist   = pow(Dist, 0.5);
 	if( fabs( 0.5*fabs(Angle)/Pi - 1) < 0.1 &&
 	    Dist < Length){
-	  cFieldLineVertex* LastEnd = Last->GetEnd();
-	  LastEnd->SetX(xFirst);
-	  Last->SetNext(First);
+	  FieldLinesAll[nFieldLine-1].close_loop();
 	  return;
 	}
 
@@ -993,13 +995,15 @@ namespace FieldLine{
     
     dtTemp=dtTotal/2.0;
     // advance coordinates half-step
-    FieldLineCoordMiddle = FieldLineCoordInit + 
-      dtTemp * vparInit  / FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoordInit);
+    FieldLineCoordMiddle = 
+      FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, 
+					 dtTemp * vparInit);
     // advance momentum half-step
     vparMiddle = vparInit + 
       dtTemp * ForceParalInit/m0; 
     
-    
+    if(FL::FieldLinesAll[iFieldLine].is_loop())
+      FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordMiddle);
     
     // check if a particle has left the domain
     if (FL::FieldLinesAll[iFieldLine].GetSegment(FieldLineCoordMiddle)==NULL) { 
@@ -1028,17 +1032,16 @@ namespace FieldLine{
 #endif
     
 
-    //    FL::FieldLinesAll[iFieldLine].GetSegmentDirection(dirInit, FieldLineCoordMiddle);
-    
-    
+    // advance coordinates full-step
+    FieldLineCoordFinal = 
+      FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, 
+					 dtTotal * vparMiddle);
 
-
-
-  // advance coordinates full-step
-    FieldLineCoordFinal = FieldLineCoordInit + 
-      dtTotal * vparMiddle / FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoordMiddle);
     // advance momentum full-step
     vparFinal =vparInit + dtTotal * ForceParalMiddle/m0; 
+
+    if(FL::FieldLinesAll[iFieldLine].is_loop())
+      FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordFinal);
 
    
     //advance the particle's position and velocity
@@ -1074,7 +1077,20 @@ namespace FieldLine{
   
     //adjust the value of 'startNode'
     startNode=newNode;
-    
+
+  //save the trajectory point
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData,(void*)startNode);
+#endif
+
+
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+#if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData,(void*)startNode);
+#endif
+#endif
+
+
     if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
     
     

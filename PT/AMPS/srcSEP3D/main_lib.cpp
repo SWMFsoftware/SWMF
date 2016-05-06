@@ -290,10 +290,10 @@ void amps_init(){
   {  // create field lines and inject particles
     //    PIC::FieldLine::Init();
     double xStart[3] = {9.2E+8,0.0,0.0};
-    for(xStart[0] = 9.2E+8; xStart[0]>=9.17E+8; xStart[0]-=0.005E+8)
-      PIC::FieldLine::InitLoop2D(xStart,0.1);
-  for(int i=0; i<100000; i++)
-    PIC::FieldLine::InjectParticle(0);
+    for(xStart[0] = 9.2E+8; xStart[0]> 9.17E+8; xStart[0]-=0.0025E+8)
+      PIC::FieldLine::InitLoop2D(xStart,0.1,1e+5,3e+5);
+    for(int i=0; i<100000; i++)
+      PIC::FieldLine::InjectParticle(0);
     }
 #else
   {  // prepopulate the domain
