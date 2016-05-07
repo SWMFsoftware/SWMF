@@ -273,7 +273,7 @@ Plume \\
 
   SPICE=on 
   SpiceKernels= \\ 
-    "../NAIF/naif0010.tls", "../NAIF/de430.bsp", "../NAIF/pck00010.tpc", \\
+    "../NAIF/naif0010.tls", "../NAIF/de432s.bsp", "../NAIF/sat375.bsp", "../NAIF/pck00010.tpc"   \\
     "100514BP_SCPSE_10134_10145.bsp", "10134_10139ra.bc", "cas_uvis_v06.ti", "cpck20May2010.tpc", "cpck20May2010_Nav.tpc \\ 
     "cas_v40.tf", "cas00155.tsc", \\ 
     "050825R_SCPSE_05186_05205.bsp", "05192_05197ra.bc", "cpck05Jul2005.tpc", "cpck05Jul2005_Nav.tpc" \\  !! E2: UVIS 
