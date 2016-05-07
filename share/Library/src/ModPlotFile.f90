@@ -50,7 +50,9 @@ module ModPlotFile
   public:: save_plot_file
   public:: test_plot_file
 
-  integer, parameter :: MaxDim = 3
+  integer, parameter, public:: lStringPlotFile = 500
+
+  integer, parameter:: MaxDim = 3
 
 contains
 
@@ -105,8 +107,8 @@ contains
     character(len=10)  :: TypeStatus
     character(len=20), allocatable  :: NameVar_I(:)
     character(len=20)  :: TypeFile
-    character(len=500) :: StringHeader
-    character(len=500) :: NameVar,NameUnits
+    character(len=lStringPlotFile) :: StringHeader
+    character(len=lStringPlotFile) :: NameVar,NameUnits
     integer :: nStep, nDim, nParam, nVar, n1, n2, n3
     integer :: nCellsPerBlock(3), iBlk, nBlocks
     integer :: nBlocksXYZ(3), iG,jG,kG
@@ -574,8 +576,8 @@ contains
     integer            :: iUnit
     character(len=20)  :: TypeFile
     logical            :: DoReadHeader = .true.
-    character(len=500) :: StringHeader
-    character(len=500) :: NameVar
+    character(len=lStringPlotFile) :: StringHeader
+    character(len=lStringPlotFile) :: NameVar
     integer            :: nStep, nDim, nParam, nVar, n1, n2, n3, n_D(MaxDim)
     real               :: Time, Coord
     real(Real4_)       :: Time4
