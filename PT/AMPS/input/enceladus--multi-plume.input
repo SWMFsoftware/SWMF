@@ -192,10 +192,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7  
+  Lat=-79.2 \\ 
+  wLon=313.2 \\ 
+  TiltAngle=6.8  \\ 
+  AzimuthAngle=93.8   
 
 Plume  \\  
   ID=III \\
@@ -203,10 +203,10 @@ Plume  \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7  
+  Lat=-81.2 \\ 
+  wLon=294.2 \\ 
+  TiltAngle=30.2 \\ 
+  AzimuthAngle=83.2 
 
 Plume \\ 
   ID=IV \\ 
@@ -214,10 +214,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7
+  Lat=-73.2 \\ 
+  wLon=148.4 \\ 
+  TiltAngle=3.7 \\ 
+  AzimuthAngle=110.0 
 
 Plume \\ 
   ID=V \\ 
@@ -225,10 +225,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7
+  Lat=-78.7 \\ 
+  wLon=72.6 \\ 
+  TiltAngle=6.0 \\ 
+  AzimuthAngle=229.8 
 
 Plume \\ 
   ID=VI \\ 
@@ -236,10 +236,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7
+  Lat=-87.1 \\ 
+  wLon=237.0 \\ 
+  TiltAngle=10.2 \\ 
+  AzimuthAngle=187.6 
 
 Plume \\ 
   ID=VII \\ 
@@ -247,10 +247,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7
+  Lat=-74.7 \\ 
+  wLon=28.9 \\ 
+  TiltAngle=20.8  \\ 
+  AzimuthAngle=352.5 
 
 Plume \\
   ID=VIII \\
@@ -258,10 +258,10 @@ Plume \\
   SourceRate(H2O)=100 \\ 
   Temperature(all)=100 \\ 
   BulkVelocity(all)=600 \\ 
-  Lat=-81.5 \\ 
-  wLon=31.2 \\ 
-  TiltAngle=9.7 \\ 
-  AzimuthAngle=228.7 
+  Lat=-82.1 \\ 
+  wLon=115.5 \\ 
+  TiltAngle=6.8  \\ 
+  AzimuthAngle=127.7  
 
 #endblock
 
