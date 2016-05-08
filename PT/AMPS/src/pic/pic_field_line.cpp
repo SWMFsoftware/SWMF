@@ -159,6 +159,7 @@ namespace PIC{
       //-----------------------------------------------------------------------
       // choose uniformly a segment, i.e. weight_uniform = 1.0 / nSegment
       int iSegmentChoice = (int)(nSegment * rnd());
+      WeightCorrectionFactor = 1.0;
       iSegment = iSegmentChoice;
       // cycle through segment until get the chosen one
       //      SegmentOut = FirstSegment;
@@ -176,7 +177,8 @@ namespace PIC{
     long int InjectParticle(int spec){
       // this is a wrapper that can call either the default injection procedure
       // or a user-defined procedure
-      return InjectParticle_default(spec);
+      //      return InjectParticle_default(spec);
+      return _PIC_INJECT_PARTICLE_ONTO_FIELD_LINE_(spec);
     }
     
     //=========================================================================
@@ -524,6 +526,8 @@ namespace PIC{
       const double epsB  = 1E-15;
       // plasma velocity, stored at vertex
       double V[3] = {0.0, 0.0, 0.0};
+      //plasma velocity
+      double T = 0;
       // magnetic field vector, unit vector and magnitude
       // NOTE: y-component is ignored!!!
       double B[3] = {0.0, 0.0, 0.0};
@@ -577,6 +581,8 @@ namespace PIC{
       Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
       CPLR::GetBackgroundPlasmaVelocity(V);
       Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
+      T = CPLR::GetBackgroundPlasmaTemperature();
+      Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);	
 
       //generate the loop
       //......................................................................
@@ -685,6 +691,8 @@ namespace PIC{
 	Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
 	CPLR::GetBackgroundPlasmaVelocity(V);
 	Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
+	T = CPLR::GetBackgroundPlasmaTemperature();
+	Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);	
 
 	//check conditions for completing the loop
 	cFieldLineSegment* First=FieldLinesAll[nFieldLine-1].GetFirstSegment();
@@ -762,6 +770,9 @@ namespace PIC{
 	  PIC::CPLR::GetBackgroundPlasmaVelocity(V);
 	  Vertex->SetDatum(DatumAtVertexMagneticField, B);
 	  Vertex->SetDatum(DatumAtVertexPlasmaVelocity,V);
+	  double T = CPLR::GetBackgroundPlasmaTemperature();
+	  Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);	
+
 	}
 	cnt = 0; done = false;
 	for(Segment = FieldLinesAll[iFieldLine].GetFirstSegment();

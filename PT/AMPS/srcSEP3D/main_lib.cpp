@@ -38,8 +38,12 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& Reemi
 //===============================================================================================
 
 static double DomainDX = 2E6;
-static double DomainXMin[3]={8.76E8,-0.5*DomainDX,-1.3E7};
-static double DomainXMax[3]={9.40E8, 0.5*DomainDX, 1.3E7};
+static double DomainXMin[3]={8.760E8,-0.5*DomainDX,-1.3E7};
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+static double DomainXMax[3]={9.400E8, 0.5*DomainDX, 1.3E7};
+#else
+static double DomainXMax[3]={9.445E8, 0.5*DomainDX, 1.3E7};
+#endif
 
 double localResolution(double *x) {
 
@@ -70,125 +74,12 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 	return res;
 }
-/*
-bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  bool ExternalFaces[6];
-  double ExternalNormal[3],ModelParticlesInjectionRate;
-  int nface;
-
-  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      ModelParticlesInjectionRate=-NDensity*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
-
-      if (ModelParticlesInjectionRate>0.0) return true;
-    }
-  }
-
-  return false;
-}
-
-//injection of model particles through the faces of the bounding box
-long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  bool ExternalFaces[6];
-  double ParticleWeight,LocalTimeStep,TimeCounter,ExternalNormal[3],x[3],x0[3],e0[3],e1[3],c0,c1;
-  int nface,idim;
-  long int newParticle;
-  PIC::ParticleBuffer::byte *newParticleData;
-  long int nInjectedParticles=0;
-
-  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
-
-  double ModelParticlesInjectionRate;
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
-    LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
-
-
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      TimeCounter=0.0;
-
-      ModelParticlesInjectionRate=-NDensity*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
-
-
-      if (ModelParticlesInjectionRate>0.0) {
-        ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
-
-        PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
-
-        while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
-          //generate the new particle position on the face
-          for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
-
-          //generate a particle
-          newParticle=PIC::ParticleBuffer::GetNewParticle();
-          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-          nInjectedParticles++;
-
-          //apply condition of tracking the particle
-          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-          PIC::ParticleTracker::InitParticleID(newParticleData);
-          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
-          #endif
-
-          //generate particles' velocity
-          PIC::ParticleBuffer::SetX(x,newParticleData);
-          PIC::ParticleBuffer::SetV(v,newParticleData);
-          PIC::ParticleBuffer::SetI(spec,newParticleData);
-          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
-
-          //inject the particle into the system
-          _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
-        }
-      }
-
-
-    }
-  }
-
-  return nInjectedParticles;
-}
-
-long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  long int nInjectedParticles=0;
-
-  for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
-
-  return nInjectedParticles;
-}
-
-double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-
-  bool ExternalFaces[6];
-  double ExternalNormal[3],BlockSurfaceArea;
-  int nface;
-
-
-  double ModelParticlesInjectionRate=0.0;
-  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
-
-      if (v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]<0.0) {
-        ModelParticlesInjectionRate+=-NDensity*BlockSurfaceArea*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
-      }
-    }
-  }
-
-  return ModelParticlesInjectionRate;
-}
-*/
 
 bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
   return false;
 }
+
+
 
 void amps_init_mesh() {
   PIC::InitMPI();
@@ -257,7 +148,7 @@ void amps_init_mesh() {
 	if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)
 	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,33);
 	else
-	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,20);
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,15);
 }
 
 void amps_init(){
@@ -289,8 +180,8 @@ void amps_init(){
 #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
   {  // create field lines and inject particles
     //    PIC::FieldLine::Init();
-    double xStart[3] = {9.2E+8,0.0,0.0};
-    for(xStart[0] = 9.2E+8; xStart[0]> 9.17E+8; xStart[0]-=0.0025E+8)
+    double xStart[3] = {0.0,0.0,-1.3e+6};
+    for(xStart[0] = 9.435E+8; xStart[0]> 9.42E+8; xStart[0]-=0.0025E+8)
       PIC::FieldLine::InitLoop2D(xStart,0.1,1e+5,3e+5);
     for(int i=0; i<100000; i++)
       PIC::FieldLine::InjectParticle(0);
@@ -306,8 +197,6 @@ void amps_init(){
   PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 
 }
-
-
 
 
 

@@ -109,6 +109,120 @@ namespace SEP3D {
       memcpy(accl,accl_LOCAL_RELATIVISTIC,3*sizeof(double));
     }
   }
+  
+
+  inline long int inject_particle_onto_field_line(int spec){
+    //namespace aliases
+    namespace PB = PIC::ParticleBuffer;
+    namespace FL = PIC::FieldLine;
+    // pointer to the particle to be injected
+    long int ptr;
+    PB::byte* ptrData;
+    ptrData = new PB::byte[PB::GetParticleDataLength()];
+    
+    // set species
+    PB::SetI(spec, ptrData);
+
+    // particle mass
+    double m0 = PIC::MolecularData::GetMass(spec);
+    
+    // pick a random field line and set field line id
+    int iFieldLine = (int)(FL::nFieldLine * rnd());
+    PB::SetFieldLineId(iFieldLine, ptrData);
+    
+    // get a segment to inject particle
+    int iSegment;
+    double WeightCorrection;
+    FL::FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,
+						   WeightCorrection, spec);
+    FL::cFieldLineSegment* Segment = 
+      FL::FieldLinesAll[iFieldLine].GetSegment(iSegment);
+
+    // particle is injected onto random location along the segment
+    double S = iSegment + rnd();
+    PB::SetFieldLineCoord(S, ptrData);
+
+    // set the cartesian coordinate for the particle
+    double x[3], v[3];
+    FL::FieldLinesAll[iFieldLine].GetCartesian(x, S);
+    PB::SetX(x, ptrData);
+    
+    
+    // the numerical approach used in this simulation (guiding motion center)
+    // applies to energetic particles only;
+    // inject particles with Maxwellain velocity but cut center out
+    
+    // envelope distribution is uniform on a spherical shell
+    const double SpeedMin  = 5e+5;
+    const double SpeedMin3 = pow(SpeedMin,3);
+    const double SpeedMax  = 1.2e+6;
+    const double SpeedMax3 = pow(SpeedMax,3);
+    
+    // generate random speed
+    double Speed = pow(SpeedMin3 + rnd() * (SpeedMax3-SpeedMin3), 1.0/3);
+    
+    // random direction
+    double cosTheta =  1 - 2*rnd();
+    double sinTheta =  pow(1-cosTheta*cosTheta, 0.5);
+    double Phi = 2 * Pi * rnd();
+    
+    // the full initial speed
+    v[0] = Speed * sinTheta * cos(Phi);
+    v[1] = Speed * sinTheta * sin(Phi);
+    v[2] = Speed * cosTheta;
+    
+    // characteristic temperature
+    double Tc = 6e+3;
+
+    // local plasma parameters (temperature and velocity)
+    double T;
+    Segment->GetPlasmaTemperature(S-(int)S, T);
+    double U[3];
+    Segment->GetPlasmaVelocity(S-(int)S, U);
+
+    // compute the weight correction
+    double misc = 0;
+    for(int i=0; i<3; i++) misc += (v[i]-U[i])*(v[i]-U[i]);
+    double omega = 
+      pow(Tc/T, 1.5) *
+      exp( m0 / (2*Kbol*Tc) * SpeedMin*SpeedMin - m0 / (2*Kbol*T) * misc);
+
+    WeightCorrection *= omega;
+    PB::SetIndividualStatWeightCorrection(WeightCorrection,ptrData);
+    
+    // find component of the velocity parallel to the B field
+    double dir[3];
+    Segment->GetDir(dir);
+    double vpar = v[0] * dir[0] + v[1] * dir[1] + v[2] * dir[2];
+    for(int i=0; i<3; i++) v[i] = vpar * dir[i];
+    
+    // set only parallel component
+    PB::SetV(v, ptrData);
+    
+    // perpendicular motiion is characterized by particles mag moment
+    double KinEnergyPerp = 0.5 * m0 * (Speed*Speed - vpar*vpar);      
+
+    //magnetic field
+    double B[3], AbsB;
+    Segment->GetMagneticField(S-(int)S, B);
+    AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5)+1E-15;
+    
+    //magnetic moment
+    PB::SetMagneticMoment(KinEnergyPerp/AbsB, ptrData);
+    
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    node=PIC::Mesh::mesh.findTreeNode(x);
+    
+    long int res=PB::InitiateParticle(x,v,NULL,NULL,
+				      ptrData,
+				      _PIC_INIT_PARTICLE_MODE__ADD2LIST_,
+				      (void*)node);
+
+    delete [] ptrData;
+    // double misc =    PB::GetFieldLineCoord(res);
+    return res;
+    
+  }
 }
 
 #endif//_SEP3D_H_

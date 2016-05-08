@@ -273,6 +273,9 @@ at the end of each time step
 // field line mode
 #define _PIC_FIELD_LINE_MODE_ _PIC_MODE_OFF_
 
+//function for particle injection onto field lines
+#define _PIC_INJECT_PARTICLE_ONTO_FIELD_LINE_(spec) PIC::FieldLine::InjectParticle_default(spec)
+
 //function to set fieldline segments weights
 #define _FIELDLINE_SEGMENT_WEIGHT_(w, Segment) PIC::FieldLine::FieldLineWeight_Uniform(w, Segment)
 
