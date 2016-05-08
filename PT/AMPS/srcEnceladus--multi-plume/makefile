@@ -6,7 +6,8 @@ include ../../Makefile.conf
 
 MAINLIBOBJ = EnceladusMultiPlume_SourceLocation.o main_lib.o \
 	EnceladusMultiPlume_TigerStripes3D.o EnceladusMultiPlume.o \
-	EnceladusMultiPlume_SourceIndividualPlumes.o EnceladusMultiPlume_SourceTigerStripe.o EnceladusMultiPlume_SourceModel.o
+	EnceladusMultiPlume_SourceIndividualPlumes.o EnceladusMultiPlume_SourceTigerStripe.o EnceladusMultiPlume_SourceModel.o \
+	EnceladusMultiPlume_ColumnIntegral.o
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
