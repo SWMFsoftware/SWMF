@@ -132,6 +132,17 @@ contains
 
   end subroutine GM_find_points
 
+  !============================================================================
+  subroutine GM_use_pointer(iComp, tSimulation)
+
+    integer, intent(in):: iComp
+    real,    intent(in):: tSimulation
+
+    character(len=*), parameter:: NameSub = 'GM_use_pointer'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_use_pointer
   !==============================================================================
 
   subroutine GM_synchronize_refinement(iProc0,iCommUnion)
