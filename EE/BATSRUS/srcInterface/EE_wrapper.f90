@@ -24,6 +24,9 @@ module EE_wrapper
   public:: EE_get_for_SC
   public:: EE_put_from_sc
 
+  ! Pointer coupling
+  public:: EE_use_pointer
+
 contains
   !============================================================================
   subroutine EE_set_param(CompInfo, TypeAction)
@@ -98,6 +101,7 @@ contains
     use CON_comp_param, ONLY: EE_
     use EE_domain_decomposition
     use EE_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
+    use EE_ModAdvance, ONLY: State_VGB
     use EE_ModPhysics, ONLY: No2Si_V, UnitX_
     use EE_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
     use EE_BATL_lib, ONLY: CoordMin_D, CoordMax_D
@@ -123,6 +127,8 @@ contains
          Coord1_I = (/ RadiusMin, RadiusMax /), &
          Coord2_I = (/ CoordMin_D(2), CoordMax_D(2) /), &
          Coord3_I = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+
+    if(is_proc(EE_)) Grid_C(EE_)%State_VGB => State_VGB
 
     if(is_proc(EE_))then
        ! Initialize the local grid
@@ -505,5 +511,31 @@ contains
     call EE_get_sc_region(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
   end subroutine EE_put_from_sc
+
+  !============================================================================
+  subroutine EE_use_pointer(iComp, tSimulation)
+
+    use CON_coupler, ONLY: NameComp_I, Grid_C
+    use EE_ModMain, ONLY: nVarComp2, NameVarComp2, StateComp2_VGB
+
+    integer, intent(in):: iComp
+    real,    intent(in):: tSimulation
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'EE_use_pointer'
+    !------------------------------------------------------------------------
+    nVarComp2      =  Grid_C(iComp)%nVar
+    NameVarComp2   =  Grid_C(iComp)%NameVar
+    StateComp2_VGB => Grid_C(iComp)%State_VGB
+
+    if(DoTestMe)then
+       write(*,*) NameSub,' called from component    =', NameComp_I(iComp)
+       write(*,*) NameSub,' nVarComp2, NameVarComp2  =',  nVarComp2, trim(NameVarComp2)
+!!!       write(*,*) NameSub,' StateComp2_VGB(:,1,1,1,1)=', StateComp2_VGB(:,1,1,1,1)
+    end if
+
+    call EE_user_action('POINTERCOUPLING_'//NameComp_I(iComp))
+
+  end subroutine EE_use_pointer
 
 end module EE_wrapper
