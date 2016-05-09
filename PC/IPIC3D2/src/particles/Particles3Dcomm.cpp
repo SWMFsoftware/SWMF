@@ -2119,9 +2119,9 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
       if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
 
       if(doOutput){
-	x = (pcl.get_x() + col->getFluidStartX())*No2OutL;
-	y = (pcl.get_y() + col->getFluidStartY())*No2OutL;
-	z = (pcl.get_z() + col->getFluidStartZ())*No2OutL;
+	x = (pcl.get_x() + col->getFluidStartX());
+	y = (pcl.get_y() + col->getFluidStartY());
+	z = (pcl.get_z() + col->getFluidStartZ());
 
 	outFile<<1.0<<"\t" 
 	       <<x*No2OutL <<"\t"
