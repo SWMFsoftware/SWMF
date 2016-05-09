@@ -325,4 +325,10 @@ module ModMain
 
   ! use particles in the simulation
   logical:: UseParticles = .false.
+
+  ! Variables related to another component coupled directly with pointers                             
+  integer           :: nVarComp2
+  character(len=200):: NameVarComp2
+  real, pointer     :: StateComp2_VGB(:,:,:,:,:)
+
 end module ModMain
