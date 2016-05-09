@@ -24,6 +24,7 @@ module CON_couple_all
                          iVarTarget_V, iVarTarget_VCC
 
   !^CMP IF GM BEGIN
+  use CON_couple_ee_gm        !^CMP IF EE
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
@@ -87,6 +88,7 @@ contains
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
     if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
     if(use_comp(GM_).and.use_comp(PC_))call couple_gm_pc_init  !^CMP IF PC
+    if(use_comp(EE_).and.use_comp(GM_))call couple_ee_gm_init  !^CMP IF EE
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
     if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
@@ -174,6 +176,8 @@ contains
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
        select case(iCompTarget)               
+       case(GM_)                              !^CMP IF GM
+          call couple_ee_gm(TimeSimulation)   !^CMP IF GM
        case(SC_)                              !^CMP IF SC
           call couple_ee_sc(TimeSimulation)   !^CMP IF SC
        case default                           
@@ -214,6 +218,8 @@ contains
        end select                                  !^CMP END OH
     case(GM_)                                 !^CMP IF GM BEGIN
        select case(iCompTarget)
+       case(EE_)                                   !^CMP IF EE
+          call couple_gm_ee(TimeSimulation)        !^CMP IF EE
        case(IE_)                                   !^CMP IF IE
           call couple_gm_ie(TimeSimulation)        !^CMP IF IE
        case(IM_)                                   !^CMP IF IM
