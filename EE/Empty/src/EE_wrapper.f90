@@ -27,6 +27,9 @@ module EE_wrapper
   public:: EE_get_for_SC
   public:: EE_put_from_sc
 
+  ! Pointer coupling
+  public:: EE_use_pointer
+
 contains
 
   !==========================================================================
@@ -134,6 +137,17 @@ contains
     call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
 
   end subroutine EE_get_grid_info
+  !============================================================================
+  subroutine EE_use_pointer(iComp, tSimulation)
+
+    integer, intent(in):: iComp
+    real,    intent(in):: tSimulation
+
+    character(len=*), parameter:: NameSub = 'EE_use_pointer'
+    
+    call CON_stop(NameSub//': EE_ERROR: empty version cannot be used!')
+
+  end subroutine EE_use_pointer
   !============================================================================
   subroutine EE_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
