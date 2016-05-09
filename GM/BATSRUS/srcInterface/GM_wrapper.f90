@@ -33,6 +33,9 @@ module GM_wrapper
   public:: GM_get_grid_info
   public:: GM_find_points
 
+  ! Pointer coupling
+  public:: GM_use_pointer
+
   !^CMP IF IE BEGIN
   public:: GM_get_for_ie
   public:: GM_put_from_ie
@@ -163,6 +166,7 @@ contains
     use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, test_string
     use ModPhysics,      ONLY: No2Si_V, UnitX_
     use ModVarIndexes,   ONLY: nVar
+    use ModAdvance,      ONLY: State_VGB
     use CON_comp_param,  ONLY: GM_
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D
@@ -191,6 +195,8 @@ contains
          Coord1_I     = (/ RadiusMin, RadiusMax /), &
          Coord2_I     = (/ CoordMin_D(2), CoordMax_D(2) /), &
          Coord3_I     = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+
+    if(is_proc(GM_)) Grid_C(GM_)%State_VGB => State_VGB
 
     if(index(test_string,'NOCOUPLINGTOOLKIT') > 0)then
        if(iProc==0) write(*,*) NameSub, ': NOCOUPLINGTOOLKIT !'
@@ -407,5 +413,33 @@ contains
     if(DoTestMe)write(*,*)NameSub,' finished with tSim=', TimeSimulation
 
   end subroutine GM_run
+
+  !============================================================================
+  subroutine GM_use_pointer(iComp, tSimulation)
+
+    use CON_coupler, ONLY: NameComp_I, Grid_C
+    use ModMain, ONLY: nVarComp2, NameVarComp2, StateComp2_VGB
+
+    integer, intent(in):: iComp
+    real,    intent(in):: tSimulation
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'GM_use_pointer'
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    nVarComp2      =  Grid_C(iComp)%nVar
+    NameVarComp2   =  Grid_C(iComp)%NameVar
+    StateComp2_VGB => Grid_C(iComp)%State_VGB
+
+    if(DoTestMe)then
+       write(*,*) NameSub,' called from component    =', NameComp_I(iComp)
+       write(*,*) NameSub,' nVarComp2, NameVarComp2  =',  nVarComp2, trim(NameVarComp2)
+!!!       write(*,*) NameSub,' StateComp2_VGB(:,1,1,1,1)=', StateComp2_VGB(:,1,1,1,1)
+    end if
+
+    call user_action('POINTERCOUPLING_'//NameComp_I(iComp))
+
+  end subroutine GM_use_pointer
 
 end module GM_wrapper
