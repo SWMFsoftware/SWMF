@@ -1253,7 +1253,7 @@ void c_Solver:: write_plot_init(){
     }
 
     
-    // Do not correct plot range for 'particles'. Because the position of
+    // Do not correct plot range for 'particles' now. Because the position of
     // particle does not depend on grid. But plotIndexRange_ID may be useful.
     // It can give us some feelings about where the output particles are. 
     if(!doOutputParticles_I[iPlot]){
@@ -1295,14 +1295,9 @@ void c_Solver:: write_plot_init(){
       MPI_Reduce(xMinL_I, xMinG_I,nDimMax,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_MYSIM);
       MPI_Reduce(xMaxL_I, xMaxG_I,nDimMax,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_MYSIM);
 
-      // if(doTestFunc){
-      // 	for(int i=0; i<nDimMax; i++){
-      // 	  cout<<"i= "<<i
-      // 	      <<" min= "<<xMinG_I[i]
-      // 	      <<" max= "<<xMaxG_I[i]
-      // 	      <<endl;
-      // 	}
-      // }
+
+      // Change plotRange_ID into MHD coordinates. The field outputs are also
+      // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
       plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx() + col->getFluidStartX();
       plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx() + col->getFluidStartX();
       plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy() + col->getFluidStartY();
@@ -1398,10 +1393,17 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<getSItime()<<"\t TimeSimulation\n";
     outFile<<"\n";
 
-    outFile<<"#PLOTRANGE\n";
+    outFile<<"#PLOTRANGE\n";      
     for(int i=0; i<col->getnDim();i++){
-      outFile<<plotRange_ID[iPlot][2*i]*No2OutL<<"\t coord"<<i<<"Min\n";
-      outFile<<plotRange_ID[iPlot][2*i+1]*No2OutL<<"\t coord"<<i<<"Max\n";
+      double x0=0;
+      if(doOutputParticles_I[iPlot]){
+	// For field output, plotRange_ID is already in MHD coordinates.
+	if(i==0) x0 = col->getFluidStartX();
+	if(i==1) x0 = col->getFluidStartY();
+	if(i==2) x0 = col->getFluidStartZ();
+      }
+      outFile<<(plotRange_ID[iPlot][2*i]+x0)*No2OutL<<"\t coord"<<i<<"Min\n";
+      outFile<<(plotRange_ID[iPlot][2*i+1]+x0)*No2OutL<<"\t coord"<<i<<"Max\n";
     }
     outFile<<"\n";
 
