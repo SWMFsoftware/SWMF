@@ -7,7 +7,7 @@ include ../Makefile.conf
 include Makefile.DEPEND
 
 
-OBJECTS = ModSize.o ModMain.o
+OBJECTS = ModSize.o ModMain.o ModWrite.o ModGrid.o
 
 SEPEXE = ${BINDIR}/SEP.exe
 

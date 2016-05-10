@@ -35,12 +35,12 @@ module SP_wrapper
 contains
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
-    use ModMain, ONLY: run
+    use ModMain, ONLY: advance
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
     TimeSimulation = TimeSimulationLimit
-    call run
+    call advance
   end subroutine SP_run
 
   !========================================================================
@@ -75,7 +75,7 @@ contains
 
   subroutine SP_set_param(CompInfo,TypeAction)
     use CON_comp_info
-    use ModMain, ONLY: read_param, iComm, iProc, nProc
+    use ModMain, ONLY: check, read_param, iComm, iProc, nProc
 
     type(CompInfoType),intent(inout):: CompInfo
     character(len=*),  intent(in)   :: TypeAction
@@ -93,7 +93,7 @@ contains
     case('STDOUT')
        ! placeholder
     case('CHECK')
-       ! placeholder
+       call check
     case('READ')
        call read_param(TypeAction)
     case('GRID')
@@ -142,10 +142,11 @@ contains
     use CON_world,      ONLY: is_proc0
     use CON_comp_param, ONLY: SP_
     use ModConst,       ONLY: rSun
-    use ModSize,        ONLY: nDim, nLat, nLon, &
+    use ModMain,        ONLY: &
+         LatMin, LatMax, LonMin, LonMax, &
+         iGrid_IA, Block_, Proc_, &
+         nDim, nLat, nLon, &
          iParticleMin, iParticleMax, nParticle
-    use ModMain,        ONLY: LatMin, LatMax, LonMin, LonMax, &
-         iGrid_IA, Block_, Proc_
 
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
@@ -176,9 +177,10 @@ contains
   !===================================================================
 
   subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
-    use ModSize, ONLY: nDim, nNode, R_, Lat_, Lon_
-    use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock
+    use ModMain, ONLY: &
+         iGrid_IA, State_VIB, iNode_B,&
+         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock, &
+         nDim, nNode, R_, Lat_, Lon_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModMpi
     ! request coordinates of field lines' beginning/origin/end
@@ -252,9 +254,10 @@ contains
 
   subroutine SP_put_line(NameVar, nVar,&
        nParticle, Data_VI, iDirIn, Convert_DD)
-    use ModSize, ONLY: nDim, nNode, iParticleMin, iParticleMax, Lat_
-    use ModMain, ONLY: iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm
+    use ModMain, ONLY: &
+         iGrid_IA, State_VIB, iNode_B,&
+         Proc_, Block_, Begin_, End_, iProc, iComm, &
+         nDim, nNode, iParticleMin, iParticleMax, Lat_
     use ModCoordTransform, ONLY: xyz_to_sph
     use ModMpi
     ! store particle data extracted elsewhere
@@ -328,7 +331,7 @@ contains
 
   subroutine SP_get_grid_descriptor_param(&
        iGridMin_D, iGridMax_D, Displacement_D)
-    use ModSize, ONLY: nDim, iParticleMin, iParticleMax
+    use ModMain, ONLY: nDim, iParticleMin, iParticleMax
     integer, intent(out):: iGridMin_D(nDim)
     integer, intent(out):: iGridMax_D(nDim)
     real,    intent(out):: Displacement_D(nDim)
@@ -341,9 +344,9 @@ contains
   !===================================================================
 
   subroutine SP_get_line_all(Xyz_DI)
-    use ModSize, ONLY: nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
     use ModMain, ONLY: iProc, iComm, Block_, Proc_, Begin_, End_,&
-         iGrid_IA, State_VIB
+         iGrid_IA, State_VIB, &
+         nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModMpi
     real, pointer:: Xyz_DI(:, :)
