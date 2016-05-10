@@ -1436,10 +1436,10 @@ contains
     ! Weight_I returns the interpolation weights calculated 
     !                                 using AMR interpolateion procedure
     ! Interpolation is performed using cells (including ghost) of single block
-    real,    intent(in) :: XyzIn_D(MaxDim)
-    integer, intent(out):: nCell
-    integer, intent(out):: iCell_II(0:nDim,2**nDim)
-    real,    intent(out):: Weight_I(2**nDim)
+    real,    intent(inout):: XyzIn_D(MaxDim)
+    integer, intent(out)  :: nCell
+    integer, intent(out)  :: iCell_II(0:nDim,2**nDim)
+    real,    intent(out)  :: Weight_I(2**nDim)
 
     logical, optional, intent(out):: IsSecondOrder
 
@@ -1569,8 +1569,8 @@ contains
     !\
     ! INPUTS:
     !/
-    real,    intent(in) :: Xyz_D(MaxDim) !Point Cartesian coordinates
-    integer, intent(in) :: iBlockIn      !# of block assumed to be used
+    real,    intent(inout):: Xyz_D(MaxDim) !Point Cartesian coordinates
+    integer, intent(in)   :: iBlockIn      !# of block assumed to be used
     !\
     ! OUTPUTS:
     !/
@@ -1654,6 +1654,15 @@ contains
     !/
     where(IsPeriodic_D(1:nDim)) Coord_D(1:nDim) = CoordMin_D(1:nDim) + &
          modulo(Coord_D(1:nDim) - CoordMin_D(1:nDim), DomainSize_D(1:nDim))
+
+    !\
+    ! Fix coordinates for periodic boundary conditions
+    !/
+    if(IsCartesianGrid .and. any(IsPeriodic_D(1:nDim))) &
+         Xyz_D = Coord_D
+    if((IsCylindrical.or.IsRzGeometry) .and. IsPeriodic_D(nDim)) &
+         Xyz_D(nDim) = Coord_D(nDim)
+
     !\
     ! Figure out if the point falls out of the computational domain
     !/
