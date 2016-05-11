@@ -3402,7 +3402,11 @@ namespace PIC {
 	extern bool ReachedLastFile;
         //check whether it is time to load the next file
         inline bool IsTimeToUpdate(){
-          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].Time;
+#if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext-1].Time;
+#else
+          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].  Time;
+#endif
         }
         //initialize
         void Init(bool BreakAtLastFileIn = true, 
