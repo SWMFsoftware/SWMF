@@ -20,7 +20,7 @@
 namespace EnceladusMultiPlume {
   using namespace ElectricallyChargedDust;
 
-  //definitions of the Tifer Stripes and Individual plume classes
+  //definitions of the Tiger Stripes and Individual plume classes
   class cPoint3D {
   public:
     double x[3];
@@ -59,7 +59,7 @@ namespace EnceladusMultiPlume {
 
 
   //the total number of the Tiger Stripes and Individual Plumes
-  const int nTotalTigerStripes=1;
+  static const int nTotalTigerStripes=1;
   const int nTotalIndividualPlumes=1;
 
   //definition of array of the TigerStriped and Individual plumes
@@ -75,9 +75,49 @@ namespace EnceladusMultiPlume {
   extern cTigerStripeGeometry TigerStripeGeometry__DAMASCUSHOT;
   extern cTigerStripeGeometry TigerStripeGeometry__DAMASCUS;
 
+  //convert the (Lat, wLon) location of the plumes into Cartesian coordinates
+  void RecalculateSourceLocations();
+
+  //source model of the Enceladus' exosphere
+  namespace SourceModel {
+
+    void Init();
+
+    namespace IndividualPlumes {
+      extern double TotalSourceRateTable[PIC::nTotalSpecies];
+//      extern double TotalPlumeSourceRateTable[nTotalIndividualPlumes][PIC::nTotalSpecies];
+      extern double maxTotalPlumeSourceRateTable[PIC::nTotalSpecies];
+
+      bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+          double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,
+          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement);
+    }
+
+    namespace TigerStripes {
+      extern double TotalSourceRateTable[PIC::nTotalSpecies];
+//      extern double TotalTigerStripeSourceRateTable[nTotalTigerStripes][PIC::nTotalSpecies];
+      extern double maxTotalTigerStripeSourceRateTable[PIC::nTotalSpecies];
+
+      //Information needed for distribution of the injeciton location on a Tiger Stripe
+      extern int *TigerStripeSegmentsNumberTable;
+      extern double **TigerStripeSegmentsLengthTable;
+      extern double *maxTigerStripeSegmentsLengthTable;
+
+      bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+          double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,
+          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement);
+    }
+
+    //interface to AMPS
+    double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
+    bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+        double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement);
+  }
 
 
-
+  //Acceleration of the particles
+  void TotalAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
 
   //the boundary conditions on the sphere
   double sphereInjectionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
@@ -93,36 +133,9 @@ namespace EnceladusMultiPlume {
   void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
 
-  inline void Init_BeforeParser() {
-
-    //init the dust model
-    ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
-    ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
-
-    ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
-
-    ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=100.0;
-    ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=600000.0;
-
-
-    ElectricallyChargedDust::Init_BeforeParser();
-  }
-
-  inline void Init_AfterParser() {
-    PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
-    PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
-    PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
-
-    //init the dust model
-    ElectricallyChargedDust::TotalMassDustProductionRate=180.0;
-    ElectricallyChargedDust::GenerateNewDustGrainInternalProperties=GenerateInitialGrainParameters;
-
-    ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
-
-
-
-    ElectricallyChargedDust::Init_AfterParser();
-  }
+  //Init MultiPlume Model
+  void Init_BeforeParser();
+  void Init_AfterParser();
 
 }
 
