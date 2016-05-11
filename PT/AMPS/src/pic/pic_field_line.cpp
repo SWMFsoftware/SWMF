@@ -730,9 +730,10 @@ namespace PIC{
 	int cnt = 0;
 	bool done = false;
 	for(Vertex = FieldLinesAll[iFieldLine].GetFirstVertex() ;
-	    !done;
+	    true;
 	    Vertex = Vertex->GetNext(), cnt++){
-	    done = Vertex==FieldLinesAll[iFieldLine].GetLastVertex() && cnt!=0;
+	  done = Vertex==FieldLinesAll[iFieldLine].GetLastVertex() && cnt!=0;
+	  if(done) break;
 	  double X[3],B[3],V[3];
 	  Vertex->GetX(X);
 	  Vertex->GetPlasmaVelocity(V);
