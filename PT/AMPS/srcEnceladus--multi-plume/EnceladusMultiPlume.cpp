@@ -7,7 +7,83 @@
 
 //$Id$
 
+#include "pic.h"
 #include "EnceladusMultiPlume.h"
+
+//the nessesary variables and functions to use SPICE functions of namespace Exosphere
+char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="ENCELADUS";
+char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_ENCELADUS";
+char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_ENCELADUS";
+double Exosphere::OrbitalMotion::GetTAA(double t) {return 0.0;}
+
+
+//Acceleration of the model particles
+void EnceladusMultiPlume::TotalAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+
+  //copy to local variables
+  double accl_LOCAL[3]={0.0,0.0,0.0},x_LOCAL[3],v_LOCAL[3];
+
+  memcpy(x_LOCAL,x,3*sizeof(double));
+  memcpy(v_LOCAL,v,3*sizeof(double));
+
+  //the gravity force
+  double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
+  double r=sqrt(r2);
+  int idim;
+
+  for (idim=0;idim<DIM;idim++) {
+    accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
+  }
+
+
+  //copy the local value of the acceleration to the global one
+  memcpy(accl,accl_LOCAL,3*sizeof(double));
+
+}
+
+//initialization of the Enceladus MultiPlume model
+void EnceladusMultiPlume::Init_BeforeParser() {
+
+  //load SPICE kernels
+  Exosphere::Init_SPICE();
+
+  //init the dust model
+  ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
+  ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
+
+  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
+
+  ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=100.0;
+  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=600000.0;
+
+
+  ElectricallyChargedDust::Init_BeforeParser();
+
+
+  //init the Enceladus Multi-Plume model modules
+  RecalculateSourceLocations();
+  SourceModel::Init();
+
+}
+
+void EnceladusMultiPlume::Init_AfterParser() {
+  PIC::Mesh::AddVaraibleListFunction(PrintVariableList);
+  PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+
+  //init the dust model
+  ElectricallyChargedDust::TotalMassDustProductionRate=180.0;
+  ElectricallyChargedDust::GenerateNewDustGrainInternalProperties=GenerateInitialGrainParameters;
+
+  ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
+
+
+  if (_PIC_MODEL__DUST__MODE_==_PIC_MODEL__DUST__MODE__ON_) {
+    ElectricallyChargedDust::Init_AfterParser();
+  }
+}
+
+
 
 
 /*---------------------------------    SURFACE BOUNDARY CONDITIONS     ------------------------------------*/
@@ -209,7 +285,7 @@ bool EnceladusMultiPlume::GenerateInitialGrainParameters(double *x,double *v,dou
 
 //functions that output the data file
 void EnceladusMultiPlume::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,", \"Local Atmosphere number density [m^{-3}]\"");
+//  fprintf(fout,", \"Local Atmosphere number density [m^{-3}]\"");
 }
 
 
