@@ -194,6 +194,10 @@ contains
     ! mode of tracing (see description below)
     integer:: iTraceMode
 
+    ! starting point of a field line 
+    ! (to satisfy intent INOUT for check_interpolate_amr_gc)
+    real:: XyzStart_D(MaxDim)
+
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
     integer, pointer:: iIndexEnd_II(:,:)
@@ -224,7 +228,8 @@ contains
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
     do iFieldLine = 1, nFieldLineIn
-       call start_line(XyzStart_DI(:, iFieldLine), nFieldLine + iFieldLine)
+       XyzStart_D = XyzStart_DI(:, iFieldLine) 
+       call start_line(XyzStart_D, nFieldLine + iFieldLine)
     end do
     call get_alignment()
 
@@ -350,8 +355,8 @@ contains
   contains
 
     subroutine start_line(XyzStart_D, iFieldLineIndex)
-      real,    intent(in) :: XyzStart_D(MaxDim)
-      integer, intent(in) :: iFieldLineIndex
+      real,    intent(inout):: XyzStart_D(MaxDim)
+      integer, intent(in)   :: iFieldLineIndex
 
       real   :: Coord_D(MaxDim) ! generalized coordinates
       integer:: iProcOut, iBlockOut
