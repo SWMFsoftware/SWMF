@@ -292,12 +292,17 @@ if n_elements(DYNAMIC)  eq 0 then dynamic = 0
 ; Derived parameters and derived defaults
 ;
 xmin=min(XX) & xmax=max(XX)
+
+limitrange=0
 if !x.range(0) ne !x.range(1) then begin
    xmin = max([xmin, min(!x.range)]) & xmax = min([xmax, max(!x.range)])
+   limitrange=1
 endif
+
 ymin=min(YY) & ymax=max(YY)
 if !y.range(0) ne !y.range(1) then begin
    ymin = max([ymin, min(!y.range)]) & ymax = min([ymax, max(!y.range)])
+   limitrange=1
 endif
 xdel=xmax-xmin & ydel=ymax-ymin
 
@@ -333,7 +338,7 @@ if not irregular then $
          min(yy(*,1:ny-1)-yy(*,0:ny-2)) lt ydel/(ny-0.99999d0) then $
            irregular = 1
 
-if not irregular then begin
+if not (irregular or limitrange) then begin
    ureg=u
    vreg=v
 endif else begin
