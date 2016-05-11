@@ -156,6 +156,27 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   double dt;
 
 
+
+  if ((_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_)&&(_DUST_SPEC_<=spec) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
+    if (ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode)==false) exit(__LINE__,__FILE__,"Error: not only the dust species are present in the system");
+  }
+  else {
+    double CellSize;
+    double CharacteristicSpeed;
+
+    switch (spec) {
+    case _H2O_SPEC_:
+      CharacteristicSpeed=1.0E3;
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+
+    CellSize=startNode->GetCharacteristicCellSize();
+    dt=0.5*CellSize/CharacteristicSpeed;
+  }
+
+
   /*
   const double TimeStepMinValue=minParticleMovingInterval/CharacteristicSpeed_NA;
 
@@ -190,7 +211,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 */
 
   //get the local "geometrical" time step
-  if (ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode)==false) exit(__LINE__,__FILE__,"Error: not only the dust species are present in the system");
+//  if (ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode)==false) exit(__LINE__,__FILE__,"Error: not only the dust species are present in the system");
 
   return dt;
 }
@@ -218,19 +239,19 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 }
 
 int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer)  {
-  double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+/*  double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
   double c=v[0]*x[0]/r+v[1]*x[1]/r+v[2]*x[2]/r;
 
   v[0]-=2.0*c*x[0]/r;
   v[1]-=2.0*c*x[1]/r;
   v[2]-=2.0*c*x[2]/r;
 
-  return _PARTICLE_REJECTED_ON_THE_FACE_;
+  return _PARTICLE_REJECTED_ON_THE_FACE_;*/
 
-  /*
+
    //delete all particles that was not reflected on the surface
-   PIC::ParticleBuffer::DeleteParticle(ptr);
-   return _PARTICLE_DELETED_ON_THE_FACE_;*/
+//   PIC::ParticleBuffer::DeleteParticle(ptr);
+   return _PARTICLE_DELETED_ON_THE_FACE_;
 }
 
 
@@ -284,11 +305,11 @@ int main(int argc,char **argv) {
   Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
   Sphere->SetSphereGeometricalParameters(sx0,rSphere);
 
-/*  Sphere->localResolution=localSphericalSurfaceResolution;
-  Sphere->InjectionRate=Enceladus::sphereInjectionRate;
+//  Sphere->localResolution=localSphericalSurfaceResolution;
+  Sphere->InjectionRate=EnceladusMultiPlume::SourceModel::GetTotalProductionRate;
   Sphere->faceat=0;
-  Sphere->ParticleSphereInteraction=Enceladus::ParticleSphereInteraction;
-  Sphere->InjectionBoundaryCondition=Enceladus::DustInjection__Sphere;*/
+  Sphere->ParticleSphereInteraction=ParticleSphereInteraction; //Enceladus::ParticleSphereInteraction;
+  Sphere->InjectionBoundaryCondition=Exosphere::SourceProcesses::InjectionBoundaryModel;
 
   Sphere->PrintSurfaceMesh("Sphere.dat");
   Sphere->PrintSurfaceData("SpheraData.dat",0);
@@ -496,7 +517,56 @@ int main(int argc,char **argv) {
 //============================== END DEBUG ====================================
 
 
-/*-------------------------  ICES --------------------------------*/
+
+//Load background data file
+
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("before.loaded.SavedCellData.dat",0);
+
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  //TECPLOT
+  //read the background data
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("ENCELADUS-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("ENCELADUS-BATSRUS");
+    }
+    else {
+      double xminTECPLOT[3]={-4.1*_ENCELADUS__RADIUS_,-4.1*_ENCELADUS__RADIUS_,-4.1*_ENCELADUS__RADIUS_},xmaxTECPLOT[3]={4.1*_ENCELADUS__RADIUS_,4.1*_ENCELADUS__RADIUS_,4.1*_ENCELADUS__RADIUS_};
+
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=1.0; //_TITAN__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+//      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,15.0);
+
+//      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_XYZ;
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(19,1.0);//(var num, scal_fac)
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(22,1.0);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(16,1.0);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(24,1.0);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=28;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("pic.DUST.s=0.out=5..plt");
+
+      PIC::CPLR::DATAFILE::SaveBinaryFile("ENCELADUS-BATSRUS");
+    }
+
+#else
+    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
+#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
+#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+
+
+    PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+
+
+/*-------------------------  ICES --------------------------------
   //Load the plasma parameters from ICES
   //init ICES
 
@@ -525,7 +595,7 @@ int main(int argc,char **argv) {
 
 
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
-/*-------------------------  END ICES --------------------------------*/
+-------------------------  END ICES --------------------------------*/
 
   //create the reference file with the extracted data
   #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
