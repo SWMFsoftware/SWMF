@@ -31,7 +31,7 @@ contains
     use ModMultiFluid
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
-    use ModIonElectron,   ONLY: add_ion_electron_source
+    use ModIonElectron,   ONLY: ion_electron_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
@@ -708,10 +708,13 @@ contains
        end if
     end if
 
-    if(UseEfield)then
-       ! q(E + u x B) momentum and qE.u energy source terms
-       call add_ion_electron_source(iBlock)
-    elseif(UseB .and. .not.IsMhd .and. .not.UseMultiIon)then
+    if(UseEfield .and. .not.UsePointImplicit)then
+       ! Explicit evaluation of these source terms is for code development only
+       call ion_electron_source_impl(iBlock)
+       if(DoTestMe) call write_source('After IonElectron sources implicit')
+    end if
+
+    if(UseB .and. .not.IsMhd .and. .not.(UseMultiIon .or. UseEfield))then
        ! Add JxB term for nonconservative MHD scheme (like LFM)
        call multi_ion_source_expl(iBlock)
 

@@ -52,14 +52,16 @@ module ModPointImplicit
   !EOP
   use ModSize, ONLY: nBLK
   use ModMultiFluid, ONLY: UseMultiIon
+  use ModAdvance, ONLY: UseEfield
   implicit none
 
   save
 
   private ! except
 
-  logical, public :: UsePointImplicit = UseMultiIon ! Use point impl scheme?
-  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon ! per block
+  ! Default is true for multi-ion and ion-electron equations
+  logical, public :: UsePointImplicit = UseMultiIon .or. UseEfield 
+  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon .or. UseEfield 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)                        ! Indexes of point impl. vars
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source

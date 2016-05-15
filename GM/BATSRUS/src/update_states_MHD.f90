@@ -27,7 +27,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
   use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
   use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
-  use ModIonElectron, ONLY: update_impl_ion_electron
+  use ModIonElectron, ONLY: ion_electron_source_impl, ion_electron_init_point_impl
 
   implicit none
 
@@ -209,7 +209,10 @@ subroutine update_states_MHD(iStage,iBlock)
 
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBlock))then
-     if(UseMultiIon .and. .not.UseSingleIonVelocity)then
+     if(UseEfield)then
+        call update_point_implicit(iBlock, ion_electron_source_impl, &
+             ion_electron_init_point_impl)
+     elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
         call update_point_implicit(iBlock, multi_ion_source_impl, &
              multi_ion_init_point_impl)
      elseif(UseUserSource) then
@@ -232,13 +235,6 @@ subroutine update_states_MHD(iStage,iBlock)
   if(UseHyperbolicDivb .and. HypDecay > 0) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
-
-  if(UseEfield)then
-     call update_impl_ion_electron(iBlock)
-     if(DoTestMe)write(*,*) NameSub,' after impl electron source=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-          Energy_GBI(iTest,jTest,kTest,iBlock,:)
-  end if
 
   if(UseStableImplicit) call deduct_expl_source
   if(use_buffer_grid())then
