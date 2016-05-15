@@ -753,7 +753,7 @@ contains
        end if
     end if
 
-    ! All ion momenta and pressures are implicit
+    ! All ion momenta are implicit
     IsPointImpl_V(iRhoUxIon_I) = .true.
     IsPointImpl_V(iRhoUyIon_I) = .true.
     IsPointImpl_V(iRhoUzIon_I) = .true.
