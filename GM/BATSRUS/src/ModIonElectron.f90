@@ -23,7 +23,7 @@ module ModIonElectron
   public:: read_ion_electron_param
   
   ! calculate analytic Jacobian for point-implicit scheme
-  logical, parameter:: IsAnalyticJacobian = .false.
+  logical, parameter:: IsAnalyticJacobian = .true.
 
 contains
   !===========================================================================
@@ -54,6 +54,8 @@ contains
 
     real:: State_V(nVar), b_D(3)
     integer:: i, j, k
+    integer:: iIon, iRhoUx, iRhoUy, iRhoUz
+    real:: ChargePerMass
     logical :: DoTest, DoTestMe, DotestCell
     character(len=*), parameter :: NameSub = 'ion_electron_source_impl'
     !-----------------------------------------------------------------------
@@ -112,9 +114,38 @@ contains
 
        ! Set corresponding matrix elements
        if (IsAnalyticJacobian .and. UsePointImplicit) then
-       !!!   DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
-       !!!        + ForceCoeff*SignedB*InvRho_I(iIon)
-       !!!
+          DsDu_VVC(iRhoUxIon_I,Ex_,i,j,k) = DsDu_VVC(iRhoUxIon_I,Ex_,i,j,k) &
+               + ChargePerMass_I * State_V(iRhoIon_I)
+          DsDu_VVC(iRhoUyIon_I,Ey_,i,j,k) = DsDu_VVC(iRhoUyIon_I,Ey_,i,j,k) &
+               + ChargePerMass_I * State_V(iRhoIon_I)
+          DsDu_VVC(iRhoUzIon_I,Ez_,i,j,k) = DsDu_VVC(iRhoUzIon_I,Ez_,i,j,k) &
+               + ChargePerMass_I * State_V(iRhoIon_I)
+
+          DsDu_VVC(Ex_,iRhoUxIon_I,i,j,k) = DsDu_VVC(Ex_,iRhoUxIon_I,i,j,k) &
+               - C2light*ChargePerMass_I
+          DsDu_VVC(Ey_,iRhoUyIon_I,i,j,k) = DsDu_VVC(Ey_,iRhoUyIon_I,i,j,k) &
+               - C2light*ChargePerMass_I
+          DsDu_VVC(Ez_,iRhoUzIon_I,i,j,k) = DsDu_VVC(Ez_,iRhoUzIon_I,i,j,k) &
+               - C2light*ChargePerMass_I
+
+          do iIon = 1, nIonFluid
+             iRhoUx = iRhoUxIon_I(iIon)
+             iRhoUy = iRhoUyIon_I(iIon)
+             iRhoUz = iRhoUzIon_I(iIon)
+             ChargePerMass = ChargePerMass_I(iIon)
+             DsDu_VVC(iRhoUx,iRhoUy,i,j,k) = DsDu_VVC(iRhoUx,iRhoUy,i,j,k) &
+                  + ChargePerMass*b_D(z_)
+             DsDu_VVC(iRhoUx,iRhoUz,i,j,k) = DsDu_VVC(iRhoUx,iRhoUz,i,j,k) &
+                  - ChargePerMass*b_D(y_)
+             DsDu_VVC(iRhoUy,iRhoUz,i,j,k) = DsDu_VVC(iRhoUy,iRhoUz,i,j,k) &
+                  + ChargePerMass*b_D(x_)
+             DsDu_VVC(iRhoUy,iRhoUx,i,j,k) = DsDu_VVC(iRhoUy,iRhoUx,i,j,k) &
+                  - ChargePerMass*b_D(z_)
+             DsDu_VVC(iRhoUz,iRhoUx,i,j,k) = DsDu_VVC(iRhoUz,iRhoUx,i,j,k) &
+                  + ChargePerMass*b_D(y_)
+             DsDu_VVC(iRhoUz,iRhoUy,i,j,k) = DsDu_VVC(iRhoUz,iRhoUy,i,j,k) &
+                  - ChargePerMass*b_D(x_)
+          end do
        end if
 
     end do; end do; end do
