@@ -128,8 +128,10 @@ module ModUser
   logical :: DoUseFieldlineFile = .false.
   character (len=100) :: NameFieldlineFile
   integer :: nVarFieldlineFile
-  real    :: RadiusTube, IonizationFactor=10.0
+  real    :: RadiusTubeSI, RadiusTube, IonizationFactor=10.0
   real, allocatable::  XyzFieldline_DI(:,:)
+  real    :: TimeEnhanceStartSI = 180.0, TimeEnhanceEndSI = 240.0
+  real    :: TimeEnhanceStart, TimeEnhanceEnd
 
   integer, parameter, public :: nNeuFluid = 1
   integer, parameter :: Neu1_  =  1
@@ -140,7 +142,7 @@ module ModUser
 
   real :: Qprod = 1e22
   real :: TminSi, Tmin, rHelio, vHI, uHaser
-  real, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: ne20eV_GB = 0.
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: ne20eV_GB = 0.
 
   !! logical variable to determine whether to use an artifical perturbed solar
   !! wind at beyond a certain xPerturbedSwIO
@@ -158,7 +160,7 @@ module ModUser
   !! Make the photo- and electron impact ionization rate global arrays for
   !! user_set_plot_var
   real, dimension(1:nNeuFluid,1:nIonFluid, &
-       MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: v_IIGB, ve_IIGB
+       MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: v_IIGB, ve_IIGB
 
   character (len=6), parameter, public :: NameNeutral_I(nNeuFluid) = &
        (/ 'Neu1  ' /)
@@ -262,8 +264,10 @@ contains
           call read_var('DoUseFieldlineFile', DoUseFieldlineFile)
           call read_var('NameFieldlineFile',  NameFieldlineFile)
           call read_var('nVarFieldlineFile',  nVarFieldlineFile)
-          call read_var('RadiusTube',         RadiusTube)
+          call read_var('RadiusTubeSI',       RadiusTubeSI)
           call read_var('IonizationFactor',   IonizationFactor)
+          call read_var('TimeEnhanceStartSI', TimeEnhanceStartSI)
+          call read_var('TimeEnhanceEndSI',   TimeEnhanceEndSI)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -330,9 +334,21 @@ contains
     end if
 
     if (DoUseFieldlineFile) then
+       TimeEnhanceStart = TimeEnhanceStartSI*SI2NO_V(UnitT_)
+       TimeEnhanceEnd   = TimeEnhanceEndSI*SI2NO_V(UnitT_)
+       RadiusTube       = RadiusTubeSI*SI2NO_V(UnitX_)
        call read_fieldline_file
-       if (iProc == 0) &
-            write (*,*) NameSub, ': reading field line data.'
+
+       if (iProc == 0) then
+            write (*,*) NameSub, ': reading field line data from ', &
+                 NameFieldlineFile
+            write(*,*) 'TimeEnhanceStartSI, TimeEnhanceStart = ', &
+                 TimeEnhanceStartSI, TimeEnhanceStart
+            write(*,*) 'TimeEnhanceEndSI, TimeEnhanceEnd=    = ', &
+                 TimeEnhanceEndSI, TimeEnhanceEnd
+            write(*,*) 'RadiusTubeSI, RadiusTube = ', RadiusTubeSI, RadiusTube
+            write(*,*) 'IonizationFactor = ', IonizationFactor
+         end if
     end if
 
     rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
@@ -381,9 +397,10 @@ contains
     ! Maximum amount of data to be stored in ModBlockData
     ! In practice this is a rather generous overestimate.
     ! The first 8 variables: 5 are needed to store the neu1 face B.C. and
-    ! 3 are used to store the face normal. The last 1 is for the shading
-    ! in the photoionization.
-    MaxBlockData = 11*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
+    ! 3 are used to store the face normal. The last second is for the shading
+    ! in the photoionization. The last one is for the enhancement of the
+    ! photo ionization rate at the ring.
+    MaxBlockData = 11*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK + nI*nJ*nK
 
     R0Perturbed = R0PerturbedSi*Si2NO_V(UnitX_)
     R1Perturbed = R1PerturbedSi*Si2NO_V(UnitX_)
@@ -669,6 +686,9 @@ contains
     end do
 
     XyzFieldline_DI = XyzFieldline_DI*1e3*Si2NO_V(UnitX_)
+
+    ! Temporarily set XyzFieldline_DI(3,*) = 0 for testing purpose
+    XyzFieldline_DI(3,:) = 0.0
 
     deallocate(State_VI)
 
@@ -1288,15 +1308,19 @@ contains
   !========================================================================
   subroutine user_calc_rates(Ti_I,Te,i,j,k,iBlock,nElec,nIon_I,fin_II,fii_II, &
        fie_I,alpha_I,kin_IIII,v_II, ve_II,uElec_D,uIon_DI,Qexc_II,Qion_II, &
-       DoCalcShading, IsIntersectedShapeR)
+       DoCalcShading, IsIntersectedShapeR, &
+       DoCalcDistance2Fieldline,IsWithinTheRingR)
 
     ! calculate all rates not involving electron collisions
 
     use ModConst,    ONLY: cElectronMass, cProtonMass
     use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, &
-         n_step, iTest, ProcTest
+         n_step, iTest, ProcTest, Time_Simulation
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
     use ModPhysics, ONLY:  Si2No_V, UnitX_
+    use ModBlockData, ONLY: use_block_data, clean_block_data, &
+         get_block_data, put_block_data
+
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -1306,6 +1330,7 @@ contains
     real,intent(in)    :: uElec_D(3)
     real,intent(in)    :: uIon_DI(3,nIonFluid)
     logical,intent(in) :: DoCalcShading
+    logical,intent(in) :: DoCalcDistance2Fieldline
     real,intent(out)   :: fin_II(nIonFluid,nNeuFluid)
     real,intent(out)   :: fii_II(nIonFluid,nIonFluid)
     real,intent(out)   :: fie_I(nIonFluid)
@@ -1316,6 +1341,7 @@ contains
     real,intent(out)   :: Qexc_II(nNeuFluid,nIonFluid)
     real,intent(out)   :: Qion_II(nNeuFluid,nIonFluid)
     real,intent(inout) :: IsIntersectedShapeR
+    real,intent(inout) :: IsWithinTheRingR
 
     real :: Tred, Mred
     real :: DistProjection2, CosAngleTmp, NCol, sigma, J3, log10Te, sqrtTe
@@ -1494,20 +1520,35 @@ contains
          (ElImpRate_I(Neu1_,n+1)-ElImpRate_I(Neu1_,n))+ElImpRate_I(Neu1_,n) ),&
          0.0)
 
-    if (DoUseFieldlineFile) then
+    if (DoCalcDistance2Fieldline) then
        Distance2Fieldline = minval( sqrt( &
             (Xyz_DGB(1,i,j,k,iBlock)-XyzFieldline_DI(1,:))**2 + &
             (Xyz_DGB(2,i,j,k,iBlock)-XyzFieldline_DI(2,:))**2 + &
             (Xyz_DGB(3,i,j,k,iBlock)-XyzFieldline_DI(3,:))**2 ))
-       if (Distance2Fieldline < RadiusTube*Si2No_V(UnitX_)) then
-          v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * IonizationFactor
-          if (DoWriteVeIncreaseOnce) then
-             write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
-                  ' at ', Xyz_DGB(:,i,j,k,iBlock), &
-                  ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
-                  ' to ', v_II(Neu1_,H2Op_)
-             DoWriteVeIncreaseOnce = .false.
-          end if
+       if (Distance2Fieldline < RadiusTube) then
+          IsWithinTheRingR = 1.0
+       else
+          IsWithinTheRingR = -1.0
+       end if
+    end if
+
+    If (IsWithinTheRingR == 1.0 .and. Time_Simulation >  TimeEnhanceStart &
+         .and. Time_Simulation < TimeEnhanceEnd) then
+       v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * IonizationFactor
+       if (DoWriteVeIncreaseOnce) then
+          write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
+               ' at ', Xyz_DGB(:,i,j,k,iBlock), &
+               ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
+               ' to ', v_II(Neu1_,H2Op_)
+          DoWriteVeIncreaseOnce = .false.
+       end if
+       if (DoTestMe) then
+          write(*,*) 'Distance2Fieldline =', Distance2Fieldline
+          write(*,*) 'RadiusTube         =', RadiusTube*Si2No_V(UnitX_)
+!          write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
+!               ' at ', Xyz_DGB(:,i,j,k,iBlock), &
+!               ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
+!               ' to ', v_II(Neu1_,H2Op_)
        end if
     end if
 
@@ -1617,7 +1658,7 @@ contains
     ! Schmidt et al., Comput. Phys. Commun. (1988)
     !alpha_I(SW_)   = 1E-6*3.5E-12*(Te/300)**(-0.7)
 
-    if (DoTestMe) then
+    if (DoTestMe .and. .false.) then
        write(*,*) NameSub
        write(*,*) ' fin_II   =', fin_II
        write(*,*) ' fii_II   =', fii_II
@@ -1697,6 +1738,9 @@ contains
     logical :: DoCalcShading = .false.
     integer, save :: iBlockLast = -100
     real,    save :: IsIntersectedShapeR_III(nI,nJ,nK) = -1.0
+
+    logical :: DoCalcDistance2Fieldline = .false.
+    real,    save :: IsWithinTheRingR_III(nI,nJ,nK) = -1.0
 
     character(len=*), parameter:: NameSub='user_calc_sources'
     !----------------------------------------------------------------------
@@ -1849,19 +1893,19 @@ contains
        end do; end do; end do
     end if
 
-    if (DoUseCGShape) then
-       ! Need to calculate the shading for the photoionization behind
-       ! the body for the first source term of the point-implicit solver.
-       if (iBlock /= iBlockLast) then
-          iBlocklast = iBlock
-          if (use_block_data(iBlock)) then
-             call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
-             DoCalcShading = .false.
-          else
-             DoCalcShading = .true.
-          end if
-       else
+    if (iBlock /= iBlockLast) then
+       iBlocklast = iBlock
+       if (use_block_data(iBlock)) then
+          call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
           DoCalcShading = .false.
+
+          call get_block_data(iBlock,nI,nJ,nK, IsWithinTheRingR_III)
+          DoCalcDistance2Fieldline = .false.
+       else
+          DoCalcShading = .true.
+          DoCalcDistance2Fieldline = .true.
+          if (iProc == 1 .and. iBlock ==1) &
+               write(*,*) 'Calculating the distance to the field line.'
        end if
     end if
 
@@ -1890,7 +1934,8 @@ contains
             ve_IIGB(1:nNeuFluid,1:nIonFluid,i,j,k,iBlock),&
             uElec_DC(1:3,i,j,k),uIon_DIC(1:3,1:nIonFluid,i,j,k),&
             Qexc_II(1:nNeuFluid,1:nIonFluid),Qion_II(1:nNeuFluid,1:nIonFluid),&
-            DoCalcShading, IsIntersectedShapeR_III(i,j,k))
+            DoCalcShading, IsIntersectedShapeR_III(i,j,k), &
+            DoCalcDistance2Fieldline,IsWithinTheRingR_III(i,j,k))
 
        ! Zeroth moment
        ! Sources separated into the terms by 
@@ -2479,8 +2524,11 @@ contains
        end if
     end do;  end do;  end do
 
-    if (DoCalcShading .and. DoUseCGShape) then
+    if (DoCalcShading) then
        call put_block_data(iBlock,nI,nJ,nK,IsIntersectedShapeR_III)
+    end if
+    if (DoCalcDistance2Fieldline) then
+       call put_block_data(iBlock,nI,nJ,nK,IsWithinTheRingR_III)
     end if
 
     if(DoTestMe) then
@@ -3735,7 +3783,9 @@ contains
     case('dt')
        NameIdlUnit = 's'
        NameTecUnit = '[s]'
-       PlotVar_G(:,:,:) = time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)
+       end do; end do; end do
 
     case('ns')
        NameIdlUnit = ' '   
@@ -3744,25 +3794,33 @@ contains
           PlotVar_G(i,j,k) = ne20eV_GB(i,j,k,iBlock)
        end do; end do; end do
 
-    case('vPhotoH2Op')
+    case('v11')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       PlotVar_G(:,:,:) = v_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = v_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+       end do; end do; end do
 
-    case('vPhotoSw')
+    case('v12')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       PlotVar_G(:,:,:) = v_IIGB(Neu1_,SW_,i,j,k,iBlock)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = v_IIGB(Neu1_,SW_,i,j,k,iBlock)
+       end do; end do; end do
 
-    case('vElectronH2Op')
+    case('v21')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       PlotVar_G(:,:,:) = ve_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = ve_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
+       end do; end do; end do
 
-    case('vElectronSw')
+    case('v22')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       PlotVar_G(:,:,:) = ve_IIGB(Neu1_,SW_,i,j,k,iBlock)
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = ve_IIGB(Neu1_,SW_,i,j,k,iBlock)
+       end do; end do; end do
 
        ! case('testarray1')
        !    NameIdlUnit = ' '   
