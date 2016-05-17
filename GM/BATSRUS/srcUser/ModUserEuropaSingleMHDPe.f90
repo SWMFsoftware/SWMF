@@ -227,7 +227,7 @@ contains
     use ModIO,         ONLY: iUnitOut
 
     integer,intent(in) :: iBlock
-    logical :: DoTest, DoTestMe=.true., init=.true.
+    logical :: DoTest=.false., DoTestMe=.false., init=.true.
     real :: theta, cos_theta, Dir_length, term
     real, dimension(3) :: Dir_I
     integer :: i, j, k
