@@ -121,7 +121,9 @@ foreach (@Arguments) {
     #default values
     add_line_amps_conf("TESTMODE=off");
     add_line_amps_conf("BATL=nobatl");
+
     add_line_amps_conf("KAMELEON=nokameleon");
+    `echo KAMELEON=nokameleon >> Makefile.local`;
     
     `cp -f input/$application.* input/species.input .`;
 
