@@ -501,6 +501,13 @@ int main(int argc,char **argv) {
 
   //init the particle solver
   PIC::InitMPI();
+
+
+  //seed the random number generatore
+  if (_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_) {
+    rnd_seed(100); 
+  }
+
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
 
