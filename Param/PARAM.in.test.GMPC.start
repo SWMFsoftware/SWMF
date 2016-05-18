@@ -15,10 +15,15 @@ T			DoTimeAccurate
 1			DnShowProgressLong
 
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T			DoCouple
+-1			DnCouple
+0.7			DtCouple
+
+#COUPLETIME
+GM                      NameComp
+F                       DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -255,6 +260,12 @@ z=0 all idl_ascii       StringPlot
 
 #ELECTRON
 -100.0                                  Charge/mass ratio (qom)
+
+
+#TIMESTEPPING
+F					UseSWMFDt
+F					UseFixedDt
+0.5					CflLimit
 
 #PARTICLES
 10					Particles per cell in X
