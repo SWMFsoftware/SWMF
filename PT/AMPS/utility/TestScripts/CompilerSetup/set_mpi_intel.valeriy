@@ -1,3 +1,1 @@
-alias mpicxx "/usr/local/openmpi-1.4.2-intel16/bin/mpicxx"
-alias mpif90 "/usr/local/openmpi-1.4.2-intel16/bin/mpif90"
-alias mpirun "/usr/local/openmpi-1.4.2-intel16/bin/mpirun"
+set path=(/usr/local/mpi-intel/bin /usr/local/mpi-intel/lib ${path})
