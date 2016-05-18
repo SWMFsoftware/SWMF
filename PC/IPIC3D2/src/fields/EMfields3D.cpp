@@ -4156,8 +4156,11 @@ inline void EMfields3D::fixVarBCnode(arr4_double Var,
       }}}
 }
 
-void EMfields3D::checkConstraint(double dx, double dy, double dz, double dt){
+double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
+  /* Calculate max dt that satisfies the accuracy condition: max(uth*dt/dx) < 1.  */
+  const Collective *col = &get_col();
   double uthLocal, p0, rho0;
+  double dtMax=1e10; 
   for(int is=0; is<ns; is++){
     uthLocal = 0;
     for (int i=1; i<nxn-1; i++)
@@ -4169,13 +4172,18 @@ void EMfields3D::checkConstraint(double dx, double dy, double dz, double dt){
 	}
 
     double uth;          
-    MPI_Reduce(&uthLocal, &uth, 1, MPI_DOUBLE, MPI_MAX, 0 , MPI_COMM_MYSIM);
+    MPI_Allreduce(&uthLocal, &uth, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_MYSIM);
 
+    dtMax = min(dtMax, min(dx/uth, min(dy/uth, dz/uth)));
+    
     if(get_vct().getCartesian_rank() == 0){
-      cout<<"is= "<<is<<" uth= "<<uth<<" uth*dt/dx= "<<uth*dt/dx
-	  <<" uth*dt/dy= "<<uth*dt/dy<<" uth*dt/dz= "<<uth*dt/dz<<endl;
+      cout<<"is= "<<is<<" uth= "<<uth<<" dx/uth= "<<dx/uth
+	  <<" dy/uth= "<<dy/uth<<" dz/uth= "<<dz/uth<<endl;
+
     }
-  }
+  }// is
+
+  return dtMax;
 }
 
 void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,

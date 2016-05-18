@@ -170,10 +170,10 @@ namespace iPic3D {
     void findProcForPoint(int nPoint, double *Xyz_I, int *iProc_I);    
     double getDt();
     double getSItime();
-    void setSIDt(double SIDt);
+    void setSIDt(double SIDt, bool isSWMFDt);
+    double calSIDt();
     void updateSItime();
     void SetCycle(int iCycle);
-    void checkConstraint();
 
     // IDL output. Begin-----------------
     static const int nDimMax=3;

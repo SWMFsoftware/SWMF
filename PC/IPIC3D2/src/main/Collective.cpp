@@ -1551,6 +1551,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Variables for plot.
   nPlotFile = 0;
   doSaveBinary = true;
+
+  // Time step
+  useSWMFDt = true;
+  useFixedDt = false;
+  maxDt    = -1; 
+  cflLimit = 0.6;
   
   while(*param){
     get_next_command(param,&Command);
@@ -1578,13 +1584,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"B1z", &B1z);
 
     }
-    else if( Command == "#TIMESTEP" && Case != "BATSRUS"){
-      read_var(param,"dt", &dt);
-
-    }
     else if( Command == "#INJECT" && !RESTART1){
       read_var(param,"Vinj", &Vinj);
-
     }
     else if( Command == "#PARAMS"){
       read_var(param,"th",           &th);
@@ -1691,6 +1692,17 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#SAVEBINARY"){
       read_var(param,"doSaveBinary", &doSaveBinary);
+    }
+    else if( Command == "#TIMESTEPPING"){
+      read_var(param, "useSWMFDt", &useSWMFDt);
+      if(!useSWMFDt){
+	read_var(param, "useFixedDt", &useFixedDt);
+	if(useFixedDt){
+	  read_var(param, "fixedDt", &fixedDt); // In SI unit
+	}else{
+	  read_var(param, "CFL", &cflLimit);
+	}
+      }
     }
     else if( Command == "#SAVEIDL"){
       /*

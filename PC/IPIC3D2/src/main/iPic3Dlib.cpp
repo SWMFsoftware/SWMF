@@ -918,8 +918,16 @@ double c_Solver::getSItime(){
   return(col->getSItime());
 }
 
-void c_Solver::setSIDt(double SIDt){
-  col->setSIDt(SIDt);
+void c_Solver::setSIDt(double SIDt, bool isSWMFDt){
+  col->setSIDt(SIDt, isSWMFDt);
+}
+
+double c_Solver::calSIDt(){
+  double dtMax;
+  dtMax = EMf->calDtMax(col->getDx(), col->getDy(), col->getDz(), col->getDt());
+  col->setmaxDt(dtMax);
+  
+  return col->calSIDt();
 }
 
 void c_Solver::updateSItime(){
@@ -929,11 +937,6 @@ void c_Solver::updateSItime(){
 void c_Solver::SetCycle(int iCycle){
   col->setCycle(iCycle);
 }
-
-void c_Solver:: checkConstraint(){  
-  EMf->checkConstraint(col->getDx(), col->getDy(), col->getDz(), col->getDt());
-}
-
 
 void c_Solver:: write_plot_idl(int cycle){
   string nameSub = "write_plot_idl";

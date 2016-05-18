@@ -154,14 +154,16 @@ contains
          ' starting with TimeSimulation, TimeSimulationLimit=', &
          TimeSimulation, TimeSimulationLimit
 
+    call ipic3d_cal_dt(DtSi)
+    
     !! Sync timestep with the wrapper
     Dt = TimeSimulationLimit - TimeSimulation
     if(DtSi > Dt .and. Dt >= 0.0 ) then 
         DtSi =  Dt 
-        ! set the right time step
-        call ipic3d_set_dt(DtSi)
      end if
-
+     ! set the right time step
+     call ipic3d_set_dt(DtSi)
+     
      if(DtSi>0) call ipic3d_run(Time)
 
     TimeSimulation = TimeSimulation + DtSi    
@@ -204,10 +206,19 @@ contains
     character(len=*), parameter :: NameSub = 'PC_put_from_gm_dt'
     !--------------------------------------------------------------------------
 
+    ! How the IPIC3D time step is determined?
+    ! 1) PC_put_from_gm_dt calls ipic3d_set_swmf_dt to send the dt (SWMFDt),
+    !    which is decided by SWMF coupling frequency, to IPIC3D.
+    ! 2) PC_run calls ipic3d_cal_dt, which calculate dt (PICDt) based on PC command
+    !    #TIMESTEPPING. If useSWMFDt (see InterfaceFluid.h) is true, PICDt equals to
+    !    SWMFDt.
+    ! 3) Inside PC_run, correct PICDt to satisfy the time limit. Call
+    !    ipic3d_set_dt to set the corrected dt for PIC. 
+
     ! Store the time step, set it when we do PC_run
     DtSi = DtSiIn
 
-    call ipic3d_set_dt(DtSi)
+    call ipic3d_set_swmf_dt(DtSi)
 
   end subroutine PC_put_from_gm_dt
   !============================================================================

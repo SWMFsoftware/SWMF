@@ -173,9 +173,7 @@ int ipic3d_run_(double *time){
     timing_stop("PC: WriteOutput");
     
     SimRun[i]->WriteConserved(iSimCycle[i]);
-    
-    SimRun[i]->checkConstraint();
-    
+ 
     iSimCycle[i]++;    
   }
   
@@ -252,9 +250,29 @@ int ipic3d_find_points_(int *nPoint, double *Xyz_I, int *iProc_I){
   return(0);
 }
 
+int ipic3d_set_swmf_dt_( double *DtSi){  
+  for(int i = 0; i < nIPIC; i++)
+    SimRun[i]->setSIDt(*DtSi,true);
+  return(0);
+}
+
 int ipic3d_set_dt_( double *DtSi){  
   for(int i = 0; i < nIPIC; i++)
-    SimRun[i]->setSIDt(*DtSi);
+    SimRun[i]->setSIDt(*DtSi,false);
+  return(0);
+}
+
+int ipic3d_cal_dt_(double *dtOut){
+  // Each PIC domain should be treated seperately in the future. Now, all the
+  // domains use the same time step.
+
+  double dt = 1e10, dt0;
+  
+  for(int i = 0; i < nIPIC; i++){
+    dt0 = SimRun[i]->calSIDt();
+    if(dt0 < dt) dt = dt0;
+  }
+  *dtOut = dt;
   return(0);
 }
 

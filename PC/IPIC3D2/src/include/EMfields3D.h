@@ -622,8 +622,8 @@ class EMfields3D                // :public Field
     /* Set boundary for rhons, J*s, and p**sn from fluid.*/
     void setFluidBC_P(int is);
 
-    /* Check the accuraty condition */
-    void checkConstraint(double dx, double dy, double dz, double dt);
+    /* Calculate dt based on the accuracy condition. */
+    double calDtMax(double dx, double dy, double dz, double dt);
 
     /* Write fields to IDL format files*/
     void write_plot_field(string filename, string *plotVar, int nVar,

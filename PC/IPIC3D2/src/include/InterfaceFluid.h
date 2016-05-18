@@ -132,6 +132,18 @@ class InterfaceFluid
   string *plotString_I;
   string *plotVar_I;
   bool doSaveBinary;
+
+  // 'CFL' condition: uth*dt/dx < 1 needs to be satisfied for all species.
+  double cflLimit;
+  double maxDt; // maxDt = min(dxi/uth, dyi/uth, dzi/uth), i=0...nspecies-1
+
+  // 1) If useSWMFDt is true, use the dt given by coupling frequency.
+  // 2) If useSWMFDt is false and useFixedDt is true, use fixedDt, which is set with
+  //    command #TIMESTEP.
+  // 3) If both useSWMFDt and useFixedDt are false, calculate dt using the
+  // 'CFL' condition.
+  bool useSWMFDt, useFixedDt;
+  double fixedDt; // In SI unit
   
  public:
   // These variables are also used in PSKOutput.h
@@ -1897,15 +1909,34 @@ class InterfaceFluid
     SItime += INdt;
   }
   
-  /** get fluid time step in IPIC3D units */
   /** set SI dt */
-  void setSIDt(double SIDt){
+  void setSIDt(double SIDt, bool isSWMFDt){
+    if(isSWMFDt && !useSWMFDt) return;
+    
     INdt = SIDt;
-    dt      = INdt*(Si2NoL/Si2NoV);
+    dt   = INdt*(Si2NoL/Si2NoV);
+    return;
   }
 
+  double calSIDt(){
+    double dt0; 
+    if(useSWMFDt){
+      dt0 = INdt;
+    }else{
+      if(useFixedDt){
+	dt0 = fixedDt;
+      }else{
+	dt0 = maxDt*cflLimit;
+      }
+    }
+    return dt0;
+  }
+  
   void updateSItime(){
     SItime += INdt;
+    if(myrank==0) {
+      cout<<"SItime = "<<SItime<<" INdt = "<<INdt<<endl;
+    }	
   }
   
   
@@ -2007,6 +2038,8 @@ class InterfaceFluid
     return plotRange_ID[iPlot][i];
   };
   bool getdoSaveBinary()const{return doSaveBinary;};
+
+  void setmaxDt(double dt){maxDt = dt;};
 };
 
 

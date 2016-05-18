@@ -19,6 +19,8 @@ extern "C" {
   int ipic3d_get_grid_(double *Pos_DI, int *n);
   int ipic3d_set_state_var_(double *Data_VI, int *iPoint_I);
   int ipic3d_set_dt_(double *DtSi);
+  int ipic3d_set_swmf_dt_(double *DtSi);
+  int ipic3d_cal_dt_(double *dt);
   int ipic3d_find_points_(int *nPoint, double *Xyz_DI, int *iProc_I);
   int ipic3d_get_state_var_(int *nDim, int *nPoint, double *Xyz_I, double *data_I, int *nVar);
 }
