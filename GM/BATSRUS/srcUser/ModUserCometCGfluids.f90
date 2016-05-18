@@ -1520,7 +1520,7 @@ contains
          (ElImpRate_I(Neu1_,n+1)-ElImpRate_I(Neu1_,n))+ElImpRate_I(Neu1_,n) ),&
          0.0)
 
-    if (DoCalcDistance2Fieldline) then
+    if (DoCalcDistance2Fieldline .and. DoUseFieldlineFile) then
        Distance2Fieldline = minval( sqrt( &
             (Xyz_DGB(1,i,j,k,iBlock)-XyzFieldline_DI(1,:))**2 + &
             (Xyz_DGB(2,i,j,k,iBlock)-XyzFieldline_DI(2,:))**2 + &
@@ -1530,6 +1530,8 @@ contains
        else
           IsWithinTheRingR = -1.0
        end if
+    else
+       IsWithinTheRingR = -1.0
     end if
 
     If (IsWithinTheRingR == 1.0 .and. Time_Simulation >  TimeEnhanceStart &
@@ -1895,13 +1897,13 @@ contains
 
     if (iBlock /= iBlockLast) then
        iBlocklast = iBlock
-       if (use_block_data(iBlock)) then
-          call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
-          DoCalcShading = .false.
+       if (use_block_data(iBlock) .and. .not. DoCalcShading) &
+            call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
 
-          call get_block_data(iBlock,nI,nJ,nK, IsWithinTheRingR_III)
-          DoCalcDistance2Fieldline = .false.
-       else
+       if (use_block_data(iBlock) .and. .not.  DoCalcDistance2Fieldline) &
+            call get_block_data(iBlock,nI,nJ,nK, IsWithinTheRingR_III)
+
+       if (.not. use_block_data(iBlock)) then
           DoCalcShading = .true.
           DoCalcDistance2Fieldline = .true.
           if (iProc == 1 .and. iBlock ==1) &
@@ -2526,9 +2528,11 @@ contains
 
     if (DoCalcShading) then
        call put_block_data(iBlock,nI,nJ,nK,IsIntersectedShapeR_III)
+       DoCalcShading = .false.
     end if
     if (DoCalcDistance2Fieldline) then
        call put_block_data(iBlock,nI,nJ,nK,IsWithinTheRingR_III)
+       DoCalcDistance2Fieldline = .false.
     end if
 
     if(DoTestMe) then
