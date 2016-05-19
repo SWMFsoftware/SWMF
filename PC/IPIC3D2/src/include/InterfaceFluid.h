@@ -1935,7 +1935,8 @@ class InterfaceFluid
   void updateSItime(){
     SItime += INdt;
     if(myrank==0) {
-      cout<<"SItime = "<<SItime<<" INdt = "<<INdt<<endl;
+      cout<<"SItime = "<<SItime<<" dt (s) = "<<INdt
+	  <<" , normalized dt = "<<INdt*(Si2NoL/Si2NoV)<<endl;
     }	
   }
   
@@ -2039,7 +2040,7 @@ class InterfaceFluid
   };
   bool getdoSaveBinary()const{return doSaveBinary;};
 
-  void setmaxDt(double dt){maxDt = dt;};
+  void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
 };
 
 

@@ -924,6 +924,7 @@ void c_Solver::setSIDt(double SIDt, bool isSWMFDt){
 
 double c_Solver::calSIDt(){
   double dtMax;
+  // dtMax is in normalized unit. 
   dtMax = EMf->calDtMax(col->getDx(), col->getDy(), col->getDz(), col->getDt());
   col->setmaxDt(dtMax);
   
