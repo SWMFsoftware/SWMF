@@ -42,7 +42,10 @@ def readf(NameFile,TypeOut,nSmooth,BMax):
         except KeyError, er:
             Long0 = - 1
 
-    CRNumber = g[0].header['CAR_ROT']
+    try:
+        CRNumber = g[0].header['CAR_ROT'] #for newer magnetograms
+    except KeyError, er:
+        CRNumber = g[0].header['CARROT']  #for older magnetograms
 
     if TypeMag.find('GONG') > -1:
         MapDate = g[0].header['DATE'] #works for GONG
