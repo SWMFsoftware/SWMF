@@ -235,8 +235,8 @@ void PIC::Mover::MoveParticles() {
 
          int thread=omp_get_thread_num();
          *(thread+(double*)(block->GetAssociatedDataBufferPointer()+block->LoadBalancingMeasureOffset))+=EndTime-StartTime;
-       }
 #endif
+       }
      }
    };
 
