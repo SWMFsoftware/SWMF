@@ -1,6 +1,6 @@
 ;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-pro close_device, pdf=pdf, delete=delete
+pro close_device, pdf=pdf, delete=delete, verbose=verbose
 
   closedevice
 
@@ -21,7 +21,7 @@ pro close_device, pdf=pdf, delete=delete
   Command = Convert + ' ' + NameFile + ' ' + PdfFile
   if keyword_set(delete) then Command = Command + '; /bin/rm ' + NameFile
 
-  print,'Command = ', Command
+  if keyword_set(verbose) then print,'Command = ', Command
 
   spawn, Command
 
