@@ -3143,13 +3143,9 @@ contains
                cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
           do iDim = 1, nDim
              if(plot_range(2*iDim-1,iFile) < plot_range(2*iDim,iFile)) CYCLE
-             Cut = 0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim-1,iFile))
+             Cut = 0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim,iFile))
              plot_range(2*iDim-1,iFile) = Cut - SmallSize_D(iDim)
              plot_range(2*iDim,iFile)   = Cut + SmallSize_D(iDim)
-          end do
-          do iDim = nDim+1, MaxDim
-             plot_range(2*iDim-1,iFile) = 0.0
-             plot_range(2*iDim,iFile)   = 0.0
           end do
        case('sph')
           if(IsCartesianGrid)then
