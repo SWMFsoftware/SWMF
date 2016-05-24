@@ -32,10 +32,14 @@ if n_elements(x) ne nPoint then begin
     retall
 endif
 
-; Calculate the time in seconds measured from the beginning of the month
+; Calculate the time in seconds measured from the beginning of the day
 iyr=0 & imo=1 & idy = 2 & ihr = 3 & imn = 4 & isc = 5 & ims = 6
 
 Time = log_time(w,['year','mo','dy','hr','mn','sc','msc'],'s')
+
+; calculate epoch0 from initial year, month, day 
+; number of msec from 01-Jan-0000 00:00:00.000
+cdf_epoch, epoch0, w(0,iyr), w(0,imo), w(0,idy), /compute
 
 ; Calculate the time delay
 iux = 10
@@ -89,17 +93,14 @@ print,'min/max NewTime=', min(NewTime),max(NewTime)
 openw,1,outputfile
 printf,1,'Corrected IMF based on ',inputfile
 printf,1,'yr mo dy hr mn sc ms bx by bz ux uy uz rho T'
+printf,1,'#START'
 for i=0,nPoint-1 do begin
     ; Skip entries marked with negative times
     if(NewTime(i) ge 0)then begin
         ; Calculate integer times
-        t = NewTime(i)
-        day  = fix(t/86400.) & t = t - day *86400.
-        hour = fix(t/3600.)  & t = t - hour*3600.
-        min  = fix(t/60.)    & t = t - min*60.
-        sec  = fix(t)        & t = t - sec
-        msc  = fix(1000.*t)
-        printf,1,w(i,iyr),w(i,imo),day,hour,min,sec,msc,w(i,ibx:nVar-1),$
+        epoch = epoch0 + NewTime(i)*1d3
+        cdf_epoch, epoch, year, month, day, hour, min, sec, msc, /break
+        printf,1,year,month,day,hour,min,sec,msc,w(i,ibx:nVar-1),$
           format='(i5,5i3,i4,7f11.2,f13.2)'
     endif
 endfor
