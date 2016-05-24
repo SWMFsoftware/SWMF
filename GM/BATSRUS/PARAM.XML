@@ -8371,12 +8371,4 @@ The default is to use a single PARAM.in file.
 	explicit and implicit blocks!
 </rule>
 
-<rule expr="-d $NameRestartOutDir or not $_IsFirstSession">
-	Output restart directory $NameRestartOutDir should exist!
-</rule>
-
-<rule expr="-d $NamePlotDir or not $_IsFirstSession">
-	Plot directory $NamePlotDir should exist!
-</rule>
-
 </commandList>
