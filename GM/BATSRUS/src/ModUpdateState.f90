@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-subroutine update_states_MHD(iStage,iBlock)
+subroutine update_states_MHD(iBlock)
 
   use ModProcMH
   use ModMain
@@ -25,13 +25,12 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
-  use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
-  use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
+  use ModMessagePass, ONLY: fix_buffer_grid
   use ModIonElectron, ONLY: ion_electron_source_impl, ion_electron_init_point_impl
 
   implicit none
 
-  integer, intent(in) :: iStage, iBlock
+  integer, intent(in) :: iBlock
 
   integer :: i, j, k
 
@@ -41,7 +40,7 @@ subroutine update_states_MHD(iStage,iBlock)
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
        Rho, RhoInv, eCorr
-  real:: DtLocal, DtFactor, Coeff, Ne
+  real:: DtLocal, DtFactor, Coeff
   real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
@@ -192,18 +191,10 @@ subroutine update_states_MHD(iStage,iBlock)
   end if
 
   ! The point implicit update and other stuff below are only done in last stage
-  if(iStage < nStage)then
-     if(use_buffer_grid())then
-        !\
-        ! Do not update solution in the domain covered by the buffer grid
-        !/
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
-           State_VGB(:,i,j,k,iBlock) = &
-                StateOld_VCB(:,i,j,k,iBlock)
-           Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
-        end do; end do; end do
-     end if
+  ! except for ion-electron equations where the point implicit has to be done
+  ! in every stage.
+  if(.not.UseEfield .and. iStage < nStage)then
+     if(UseBufferGrid) call fix_buffer_grid(iBlock)
      RETURN
   end if
 
@@ -232,19 +223,15 @@ subroutine update_states_MHD(iStage,iBlock)
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
-  if(UseHyperbolicDivb .and. HypDecay > 0) &
+  ! The parabolic div B decay is only done in the last stage.
+  if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage < nStage) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
 
   if(UseStableImplicit) call deduct_expl_source
-  if(use_buffer_grid())then
-     do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
-        State_VGB(:,i,j,k,iBlock) = &
-             StateOld_VCB(:,i,j,k,iBlock)
-        Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
-     end do; end do; end do
-  end if
+
+  if(UseBufferGrid) call fix_buffer_grid(iBlock)
+
   if(DoTestMe)write(*,*) NameSub, ' final state=', &
        State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
        Energy_GBI(iTest,jTest,kTest,iBlock,:)
