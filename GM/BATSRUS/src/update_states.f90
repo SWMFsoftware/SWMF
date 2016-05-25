@@ -50,7 +50,7 @@ subroutine update_states(iBlock)
   end if
 
   if(UseUserUpdateStates)then
-     call user_update_states(iStage,iBlock)
+     call user_update_states(iBlock)
   else
      call update_states_mhd(iBlock)
   end if
