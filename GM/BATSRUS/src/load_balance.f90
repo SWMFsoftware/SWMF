@@ -282,7 +282,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         if(UsePic .and. DoBalancePicBlock .and. IsNewBlock) call pic_find_node()
         do iBlock = 1, nBlock
            iType = 0
-           ! N criterions are used to decide the type of a block.
+           iCrit = 1
+
+           ! N criteria are used to decide the type of a block.
            ! Each criterion determines the value of one bit (0 or 1). 
            ! For N criteria, the iType of a block could be -1 or a value
            ! between 1 and 2^N-1 (the first bit SkippedBlock is special).
@@ -299,7 +301,6 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
            if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
 
-           iCrit = 1
            iType = iType + iCrit
 
            ! true block 
