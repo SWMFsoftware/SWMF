@@ -2615,6 +2615,9 @@ contains
     if(any(TypeBc_I(3:4)=='periodic')) TypeBc_I(3:4)='periodic'
     if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
 
+    ! Set UseBufferGrid logical 
+    UseBufferGrid = any(TypeBc_I=='buffergrid')
+
     if(UseConstrainB .and. .not.time_accurate)then
        if(iProc==0)then
           write(*,'(a)')NameSub//&
