@@ -32,7 +32,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
   logical, intent(in) :: DoCalcTimestep
   integer, intent(in) :: iStageMax ! advance only part way
-  integer :: iStage, iBlock
+  integer :: iBlock
 
   character (len=*), parameter :: NameSub = 'advance_expl'
 
@@ -145,7 +145,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
         ! Update solution state in each cell.
         call timing_start('update_states')
-        call update_states(iStage,iBlock)
+        call update_states(iBlock)
         call timing_stop('update_states')
 
         if(DoCalcElectricField .and. iStage == nStage) &
