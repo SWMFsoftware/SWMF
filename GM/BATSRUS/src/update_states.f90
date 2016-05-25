@@ -2,20 +2,19 @@
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-subroutine update_states(iStage,iBlock)
+subroutine update_states(iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModB0, ONLY: B0_DGB
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use BATL_lib, ONLY: Xyz_DGB
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        update_heatflux_collisionless
   use ModUserInterface ! user_update_states
-  use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
+  use ModMessagePass, ONLY: fix_buffer_grid
   implicit none
 
-  integer, intent(in) :: iStage,iBlock
+  integer, intent(in) :: iBlock
   integer :: i,j,k, iVar
 
   logical :: oktest, oktest_me
@@ -53,19 +52,12 @@ subroutine update_states(iStage,iBlock)
   if(UseUserUpdateStates)then
      call user_update_states(iStage,iBlock)
   else
-     call update_states_mhd(iStage,iBlock)
+     call update_states_mhd(iBlock)
   end if
 
   if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
      call update_heatflux_collisionless(iBlock)
-     if(use_buffer_grid())then
-        do k=1,nK; do j=1,nJ; do i=1,nI
-           if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
-           State_VGB(:,i,j,k,iBlock) = &
-                StateOld_VCB(:,i,j,k,iBlock)
-           Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
-        end do; end do; end do
-     end if
+     if(UseBufferGrid) call fix_buffer_grid(iBlock)
   end if
   if(index(test_string,'fixrho ')>0) &
        State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
@@ -152,7 +144,7 @@ subroutine update_te0
 end subroutine update_te0
 
 !============================================================================
-subroutine update_check(iStage)
+subroutine update_check
 
   ! Check updated values for allowed change in density or pressure
 
@@ -171,8 +163,6 @@ subroutine update_check(iStage)
   use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
-
-  integer,intent(in) :: iStage
 
   integer, parameter :: max_checks=25
   integer :: i,j,k, iVar, iBlock,num_checks, iError
