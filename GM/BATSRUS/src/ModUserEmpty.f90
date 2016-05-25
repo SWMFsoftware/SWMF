@@ -217,9 +217,9 @@ contains
   end subroutine user_get_b0
 
   !=====================================================================
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
-    integer,intent(in)::iStage,iBlock
+    integer,intent(in):: iBlock
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !-------------------------------------------------------------------
