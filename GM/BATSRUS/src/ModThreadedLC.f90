@@ -6,7 +6,7 @@ module ModThreadedLC
        BoundaryThreads, BoundaryThreads_B, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
        LambdaSi_, DLogLambdaOverLogT_,                           &
-       DoInit_, Done_, Enthalpy_, Heat_, iStage
+       DoInit_, Done_, Enthalpy_, Heat_
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: Z => AverageIonCharge
@@ -236,7 +236,7 @@ contains
     ! USE:
     !/
     use ModFieldLineThread, ONLY: HeatCondParSi
-    use ModPhysics,      ONLY: InvGammaMinus1, Gamma, GammaMinus1,&
+    use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
     use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
@@ -1106,8 +1106,7 @@ contains
     use BATL_size,ONLY:  nJ, nK
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
-    use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
-    use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
+    use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
     use ModImplicit,     ONLY: iTeImpl
     use ModB0,           ONLY: B0_DGB
