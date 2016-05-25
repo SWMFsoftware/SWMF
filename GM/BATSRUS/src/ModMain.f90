@@ -43,7 +43,7 @@ module ModMain
   !\
   ! Time stepping parameters and values.
   !/
-  integer :: n_step, nOrder, nStage, iteration_number=0, nOrderOld
+  integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
 
   real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(nBLK)
@@ -62,6 +62,7 @@ module ModMain
   ! Model Coupling variables
   !/
   ! Dimensions of the buffer grid between SC and IH
+  logical :: UseBufferGrid    = .false.
   logical :: UseHelioBuffer3D = .false.
   integer :: nPhiBuff = 90,   nThetaBuff = 45, nRBuff = 2
   real    :: dSphBuff_D(3)
