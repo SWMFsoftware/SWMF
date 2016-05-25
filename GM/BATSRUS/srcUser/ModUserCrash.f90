@@ -1735,8 +1735,9 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
 
+    use ModMain,     ONLY: iStage
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
@@ -1748,7 +1749,7 @@ contains
     use ModSize, ONLY:MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
 
-    integer, intent(in):: iStage,iBlock
+    integer, intent(in):: iBlock
 
     integer:: i, j, k, iP, iGroup
     real   :: PressureSi, EinternalSi, Te0Si, PlanckSi
@@ -1788,7 +1789,7 @@ contains
     end if
 
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     iP = p_
     if(UseElectronPressure) iP = Pe_

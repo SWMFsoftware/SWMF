@@ -740,17 +740,17 @@ contains
 
   !=====================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModAdvance, ONLY: StateOld_VCB, State_VGB, EnergyOld_CBI, Energy_GBI
     use ModGeometry, ONLY: rMin_BLK
 
-    integer,intent(in):: iStage, iBlock
+    integer,intent(in):: iBlock
 
     integer:: i, j, k
 
     !------------------------------------------------------------------
-    call update_states_MHD(iStage, iBlock)
+    call update_states_MHD(iBlock)
 
     ! No need to check blocks outside:
     if(rMin_BLK(iBlock) > rBody) RETURN

@@ -352,7 +352,7 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModVarIndexes
     use ModSize
@@ -363,11 +363,11 @@ contains
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS,Rs_PFSSM
 
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer:: i,j,k
     real:: DensCell,PresCell,GammaCell
     !------------------------------------------------------------------------
-    call update_states_MHD(iStage, iBlock)
+    call update_states_MHD(iBlock)
 
     ! Update pressure and relaxation energy
 

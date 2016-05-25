@@ -1268,17 +1268,17 @@ contains
 
   end subroutine user_set_resistivity
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModPhysics
     use ModEnergy
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer:: i,j,k
     real :: kTe
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     !\
     ! Begin update check of temperature::

@@ -296,7 +296,7 @@ contains
 
   !===========================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
@@ -307,7 +307,7 @@ contains
     use ModEnergy,  ONLY: calc_energy_cell
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer, intent(in):: iStage,iBlock
+    integer, intent(in):: iBlock
 
     integer:: i, j, k
     real   :: PressureSi, EinternalSi, GammaEos, DivU
@@ -331,7 +331,7 @@ contains
        end do; end do; end do
     end if
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI

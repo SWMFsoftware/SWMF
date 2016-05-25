@@ -16,7 +16,7 @@ module ModUser
        NameUserModule = 'HYDRO + IONIZATION EQUILIBRIUM'
 contains
 !============================================================================
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
     use ModAdvance,   ONLY: State_VGB
@@ -25,15 +25,14 @@ contains
     use ModEnergy,    ONLY: calc_energy_cell
     use CRASH_ModEos, ONLY: eos
 
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer:: i,j,k
     real:: PressureSI,EInternal,EInternalSI,RhoSI
     !------------------------------------------------------------------------
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
     !\
     ! Begin update of pressure and relaxation energy::
     !/
-    !  if (iStage/=nStage) return
     do k=1,nK; do j=1,nJ; do i=1,nI
        !Total external energy, ExtraEInt + P/(\gamma -1),
        ! transformed to SI

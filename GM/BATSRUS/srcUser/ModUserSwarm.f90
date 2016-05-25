@@ -604,14 +604,14 @@ contains
 
   !==========================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
          UnitEnergyDens_, cProtonMass, InvGammaMinus1
     use ModEnergy,     ONLY: calc_energy_cell
 
-    integer, intent(in) :: iStage,iBlock
+    integer, intent(in) :: iBlock
 
     integer:: i, j, k
     real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi
@@ -623,7 +623,7 @@ contains
     MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
     EnergyFloor    = MassDensFloor*No2Si_V(UnitRho_)/rstari*2000.
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! check if the density or pressure is below the minimum value

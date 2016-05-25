@@ -1561,14 +1561,14 @@ contains
 
   !========================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: SW_N, LowDensityRatio, cBoltzmann, ElectronPressureRatio, Si2No_V, &
          No2Si_V, UnitN_, UnitP_!, UnitB_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: r_BLK
 
-    integer,intent(in) :: iStage, iBlock
+    integer,intent(in) :: iBlock
     integer :: i,j,k,iIonFluid
 
     real:: nElec_C(nI,nJ,nK)
@@ -1576,7 +1576,7 @@ contains
 
     !----------------------------------------------------------------------
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     ! Enforce minimum temperature (pressure), Tmin, if temperatures Ti_IC or Te_C are below
 

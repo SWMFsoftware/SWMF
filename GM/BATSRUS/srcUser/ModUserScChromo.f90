@@ -1166,11 +1166,11 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
 
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     !--------------------------------------------------------------------------
 
     if(UseSteady)then
@@ -1179,7 +1179,7 @@ contains
           true_BLK(iBlock) = .false.
        end if
     end if
-    call update_states_MHD(iStage, iBlock)
+    call update_states_MHD(iBlock)
 
   end subroutine user_update_states
 

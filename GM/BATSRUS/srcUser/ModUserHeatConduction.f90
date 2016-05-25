@@ -242,7 +242,7 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          State_VGB, UseElectronPressure
@@ -252,7 +252,7 @@ contains
     use ModPhysics,    ONLY: InvGammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
     use ModVarIndexes, ONLY: Pe_, ExtraEint_
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real :: Ee, EeSi, PeSi
@@ -261,7 +261,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! No call to update_states_MHD to nullify the effect of the hydro solver
-    ! call update_states_MHD(iStage,iBlock)
+    ! call update_states_MHD(iBlock)
     if(TypeProblem == 'parcond' .and. .not.UseSemiImplicit)then
        if(UseElectronPressure)then
           Flux_VX(1:Pe_-1,:,:,:) = 0.0; Flux_VX(Pe_+1:nVar+1,:,:,:) = 0.0
@@ -274,11 +274,11 @@ contains
           Flux_VZ(1:nVar,:,:,:) = 0.0
           Source_VC(1:nVar,:,:,:) = 0.0
        end if
-       call update_states_MHD(iStage,iBlock)
+       call update_states_MHD(iBlock)
     end if
 
     if(TypeProblem == 'lowrie')then
-       call update_states_MHD(iStage,iBlock)
+       call update_states_MHD(iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! At this point Pe=(Gamma-1)*Ee with the ideal gamma Gamma.

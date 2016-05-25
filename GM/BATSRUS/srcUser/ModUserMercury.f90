@@ -212,7 +212,7 @@ contains
 
   !===========================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: R_BLK, Rmin_BLK
@@ -220,14 +220,14 @@ contains
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_
     use ModEnergy,     ONLY: calc_energy_cell
 
-    integer,intent(in) :: iStage, iBlock
+    integer,intent(in) :: iBlock
 
     !! real :: r_D(3), dRhoUr_D(3), RhoUr
     integer :: i, iG, j, k
     character (len=*), parameter :: NameSub = 'user_set_ics'
     !----------------------------------------------------------------------
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     if(Rmin_BLK(iBlock) <= PlanetRadius) then
        do i = 1, nI

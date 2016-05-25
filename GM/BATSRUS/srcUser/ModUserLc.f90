@@ -589,12 +589,12 @@ contains
   end subroutine user_calc_sources
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
 
-    call update_states_MHD(iStage, iBlock)
+    call update_states_MHD(iBlock)
 
     ! REB model calls face gradient calculation, reset block logical
     ! so that the Te block will be re-calculated next pass

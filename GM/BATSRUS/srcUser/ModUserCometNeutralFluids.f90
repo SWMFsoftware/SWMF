@@ -1457,19 +1457,19 @@ subroutine read_shape_file
   end function is_segment_intersected
 
  !=================================================================================
-subroutine user_update_states(iStage,iBlock)
+subroutine user_update_states(iBlock)
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: cBoltzmann, Si2No_V, &
          No2Si_V, UnitN_, UnitP_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: r_BLK
 
-    integer,intent(in) :: iStage, iBlock
+    integer,intent(in) :: iBlock
 
 
     !----------------------------------------------------------------------                                                                                
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     ! Enforce a constant Ht pressure                                                                                                                       
 

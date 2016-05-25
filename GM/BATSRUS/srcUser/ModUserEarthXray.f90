@@ -155,14 +155,14 @@ contains
   end subroutine user_set_cell_boundary
 
   !===========================================================================
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModMain,    ONLY: nStage, time_simulation, dt
     use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
 
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer :: iBlockLast = -1
 
     !--------------------------------------------------------------------------
@@ -170,7 +170,7 @@ contains
     !\
     ! do the normal update states
     !/
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     !\
     ! Now compute the sum of the state variables (we will divide by the number of

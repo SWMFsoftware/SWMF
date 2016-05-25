@@ -855,18 +855,18 @@ endif
   end subroutine user_impl_source
 
   !========================================================================
-  !  SUBROUTINE user_update_states(iStage,iBlock)
+  !  SUBROUTINE user_update_states(iBlock)
   !========================================================================
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModPhysics
     use ModEnergy
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer:: i,j,k
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     !\
     ! Begin update check of temperature::

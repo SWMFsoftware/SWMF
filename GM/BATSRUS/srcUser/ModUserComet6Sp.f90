@@ -539,9 +539,9 @@ contains
 
 
   !========================================================================
-  !  SUBROUTINE user_update_states(iStage,iBlock)
+  !  SUBROUTINE user_update_states(iBlock)
   !========================================================================
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
@@ -552,11 +552,11 @@ contains
     use ModGeometry,ONLY: Xyz_DGB
     use ModProcMH
 
-    integer,intent(in):: iStage,iBlock
+    integer,intent(in):: iBlock
     integer:: i,j,k
     real :: Pthmin_VC
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
     !\
     ! Begin update check of temperature::
     !/

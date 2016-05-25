@@ -42,15 +42,15 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
 
-    integer, intent(in) :: iStage, iBlock
+    integer, intent(in) :: iBlock
 
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
 
     ! No call to update_states_MHD to nullify the effect of the hydro solver
-    ! call update_states_MHD(iStage,iBlock)
+    ! call update_states_MHD(iBlock)
 
   end subroutine user_update_states
 

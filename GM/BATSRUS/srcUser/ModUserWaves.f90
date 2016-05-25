@@ -1298,11 +1298,11 @@ contains
 
   !============================================================================
 
-  subroutine user_update_states(iStage, iBlock)
+  subroutine user_update_states(iBlock)
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
     use ModVarIndexes
 
-    integer,intent(in)::iStage,iBlock
+    integer,intent(in)::iBlock
     integer :: iVar
 
     character(len=*), parameter :: NameSub = 'user_update_states'
@@ -1319,7 +1319,7 @@ contains
        end if
     end do
 
-    call update_states_MHD(iStage, iBlock)
+    call update_states_MHD(iBlock)
 
   end subroutine user_update_states
 

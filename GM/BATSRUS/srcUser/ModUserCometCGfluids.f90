@@ -3098,7 +3098,7 @@ contains
 
   !========================================================================
 
-  subroutine user_update_states(iStage,iBlock)
+  subroutine user_update_states(iBlock)
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
     use ModPhysics,  ONLY: SW_Rho, Sw_N, LowDensityRatio, &
          cBoltzmann, ElectronPressureRatio, &
@@ -3107,7 +3107,7 @@ contains
     use ModGeometry, ONLY: true_cell, r_BLK, xyz_DGB
     use ModMain,     ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
 
-    integer,intent(in) :: iStage, iBlock
+    integer,intent(in) :: iBlock
 
     integer :: i,j,k, iIonFluid, iMajorIon
     real    :: nElec, TempNeu1
@@ -3128,7 +3128,7 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
 
     if (DoTestMe) &
          write(*,*) NameSub, ' before user term =', &

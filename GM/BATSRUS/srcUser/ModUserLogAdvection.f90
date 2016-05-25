@@ -118,13 +118,13 @@ contains
 
   end subroutine user_set_ics
   !============================================================================
-   subroutine user_update_states(iStage,iBlock)
+   subroutine user_update_states(iBlock)
      use ModVarIndexes
      use ModSize
      use ModAdvance
      use ModWaves,   ONLY: UseWavePressure
 
-    integer,intent(in)           :: iStage,iBlock
+    integer,intent(in)           :: iBlock
     real                         :: DensCell,PresCell,GammaCell,Beta,WavePres
     character(len=*),parameter   :: NameSub='user_update_states'
     !--------------------------------------------
@@ -139,7 +139,7 @@ contains
     if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
        write(*,*) NameSub,' : negative wave energy before MHD'
     end if
-    call update_states_MHD(iStage,iBlock)
+    call update_states_MHD(iBlock)
     if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
        write(*,*) NameSub, ': negative wave energy after MHD'
     end if
