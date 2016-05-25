@@ -112,7 +112,7 @@ contains
 
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
-    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, nStage, time_accurate, &
+    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature
@@ -216,11 +216,13 @@ contains
     end if
 
     ! The beta parameter is always one in the first stage
-    if(nStage == 1 .or. .not. time_accurate)then
+    if(iStage == 1 .or. .not. time_accurate)then
        BetaStage = 1.0
     else
        BetaStage = BetaPointImpl
     end if
+
+    !call timing_start('pointimplinit')
 
     ! Store explicit update
     StateExpl_VC = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
@@ -236,6 +238,10 @@ contains
     ! Multi-ion may set its elements while the user uses numerical Jacobean.
     Source_VC = 0.0
     DsDu_VVC  = 0.0
+
+    !call timing_stop('pointimplinit')
+
+    !call timing_start('pointimplsrc')
 
     call calc_point_impl_source(iBlock)
 
@@ -317,6 +323,7 @@ contains
        IsPointImplPerturbed = .false.
 
     end if
+    !call timing_stop('pointimplsrc')
 
     if(DoTestMe)then
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
@@ -335,7 +342,8 @@ contains
        ! Do not update body cells
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DtCell = Cfl*time_BLK(i,j,k,iBlock)
+       !call timing_start('pointimplmatrix')
+       DtCell = Cfl*time_BLK(i,j,k,iBlock)*iStage/real(nStage)
 
        ! The right hand side is Uexpl - Uold + Sold
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
@@ -347,13 +355,14 @@ contains
        ! The matrix to be solved for is A = (I - beta*Dt*dS/dU)
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           do iJVar = 1, nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
-             Matrix_II(iIVar, iJVar) = - BetaStage*DtCell* &
-                  DsDu_VVC( iVar, jVar, i, j, k)
+             Matrix_II(iIVar,iJVar) = - BetaStage*DtCell* &
+                  DsDu_VVC(iVar,jVar,i,j,k)
           end do
           ! Add unit matrix
           Matrix_II(iIVar,iIVar) = Matrix_II(iIVar,iIVar) + 1.0
 
        end do
+       !call timing_stop('pointimplmatrix')
 
        if (DoTestCell) then
           write(*,*) NameSub,': Matrix_II  ='
@@ -362,8 +371,13 @@ contains
           end do
        end if
 
+       
        ! Solve the A.dU = RHS equation
+       !call timing_start('pointimplsolve')
        call linear_equation_solver(nVarPointImpl, Matrix_II, Rhs_I)
+       !call timing_stop('pointimplsolve')
+
+       !call timing_start('pointimplupdate')
 
        ! Update: U^n+1 = U^n + dU
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
@@ -389,14 +403,18 @@ contains
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
        end if
 
+       !call timing_stop('pointimplupdate')
+
     end do; end do; end do
 
     ! Make ion velocities and/or temperatures equal if requested
     if(UseMultiIon .and. (UseSingleIonVelocity.or.UseSingleIonTemperature)) &
          call fix_multi_ion_update(iBlock)
 
+    !call timing_start('pointimplenergy')
     ! Make sure that energy is consistent
     call calc_energy_cell(iBlock)
+    !call timing_stop('pointimplenergy')
 
     if(DoTestMe)then
        write(*,*) NameSub, ': StateOld=',&
