@@ -14,8 +14,7 @@ module ModMessagePass
   private ! except
 
   public:: exchange_messages   ! fill ghost cells and (re)calculate energies
-  public:: use_buffer_grid     ! returns true if there is a buffer grid
-  public:: is_buffered_point   ! true if a cell is inside the buffer grid
+  public:: fix_buffer_grid     ! restore old values in the buffer grid
   public:: fill_in_from_buffer ! set cells of the block covered by buffer grid
 
   ! True if it is sufficient to fill in the fine ghost cells with a single
@@ -33,7 +32,7 @@ contains
          time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
-         UseHighResChange
+         UseHighResChange, UseBufferGrid
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -196,7 +195,7 @@ contains
             .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
                nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-          if(time_loop.and.use_buffer_grid())&
+          if(time_loop.and.UseBufferGrid)&
                call fill_in_from_buffer(iBlock)
        end if
 
@@ -210,19 +209,35 @@ contains
 
   end subroutine exchange_messages
   !===========================================================================
-  logical function use_buffer_grid()
-    use ModMain, ONLY: TypeBc_I
-    use_buffer_grid = any(TypeBc_I=='buffergrid')
-  end function use_buffer_grid
-  !===========================================================================
   logical function is_buffered_point(i,j,k,iBlock)
     use ModGeometry,ONLY: R_BLK
     use ModMain,    ONLY: BufferMin_D, BufferMax_D
     integer, intent(in):: i, j, k, iBlock
     !------------------------------------------------------------------------
-    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) .and. &
-            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
+         .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
   end function is_buffered_point
+  !===========================================================================
+  subroutine fix_buffer_grid(iBlock)
+
+    ! Do not update solution in the domain covered by the buffer grid
+
+    use ModAdvance, ONLY: State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI
+    use BATL_lib, ONLY: nI, nJ, nK
+
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k
+    !------------------------------------------------------------------------
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
+       State_VGB(:,i,j,k,iBlock) = &
+            StateOld_VCB(:,i,j,k,iBlock)
+       Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
+    end do; end do; end do
+
+  end subroutine fix_buffer_grid
   !===========================================================================
   subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
@@ -243,8 +258,7 @@ contains
     end if
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(.not.is_buffered_point(i, j, k, iBlock))&
-            CYCLE
+       if(.not.is_buffered_point(i, j, k, iBlock)) CYCLE
 
        ! Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
