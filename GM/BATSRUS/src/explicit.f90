@@ -180,7 +180,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then
         call timing_start('update_check')
-        call update_check(iStage)
+        call update_check
         call timing_stop('update_check')
 
         if(DoTestMe)write(*,*)NameSub,' done update check'
