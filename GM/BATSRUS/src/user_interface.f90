@@ -217,14 +217,14 @@ subroutine user_get_b0(x, y, z, B0_D)
 end subroutine user_get_b0
 
 !=====================================================================
-subroutine user_update_states(iStage, iBlock)
+subroutine user_update_states(iBlock)
 
   use ModUser, ONLY: user_sub => user_update_states
   implicit none
 
-  integer,intent(in):: iStage, iBlock
+  integer,intent(in):: iBlock
   !-------------------------------------------------------------------
-  call user_sub(iStage, iBlock)
+  call user_sub(iBlock)
 
 end subroutine user_update_states
 
