@@ -213,7 +213,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      endif
 
      if(iStage < nStage)then
-        if(UseFieldLineThreads) call advance_threads(Enthalpy_,iStage)
+        if(UseFieldLineThreads) call advance_threads(Enthalpy_)
         call exchange_messages
      end if
 
