@@ -874,8 +874,10 @@ contains
        case('e', 'ew', 'ehot', 'eint')
           iUnitCons_V(iVar) = UnitEnergyDens_
           iUnitPrim_V(iVar) = UnitEnergyDens_
+       case('ex', 'ey', 'ez')
+          iUnitCons_V(iVar) = UnitElectric_
        case default
-          if(WaveFirst_ >= iVar .and. iVar <= WaveLast_)then
+          if(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
              iUnitPrim_V(iVar) = UnitEnergyDens_
           else
