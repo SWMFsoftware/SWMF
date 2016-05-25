@@ -224,7 +224,7 @@ subroutine update_states_MHD(iBlock)
   end if
 
   ! The parabolic div B decay is only done in the last stage.
-  if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage < nStage) &
+  if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage == nStage) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
 
