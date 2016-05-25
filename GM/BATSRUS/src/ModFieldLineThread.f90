@@ -154,12 +154,6 @@ module ModFieldLineThread
   !/
   integer, parameter:: nIntervalTR = 2 
   !\
-  ! Determines, if the thread bc is called at the first stage of the 
-  ! multistage loop in explicit.f90
-  !/
-  integer, public   :: iStage = 0
-
-  !\
   !   Hydrostatic equilibrium in an isothermal corona: 
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
@@ -872,23 +866,25 @@ contains
     Value_V(LengthPAvrSi_:DLogLambdaOverLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
          LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverLogT_I(iTe)/)
+
   end subroutine calc_tr_table
-  !=============================
-  subroutine advance_threads(iAction,iStageIn)
-    use ModMain,     ONLY: MaxBlock, Unused_B, nStage
+  !============================================================================
+  subroutine advance_threads(iAction)
+
+    use BATL_lib, ONLY: nBlock, Unused_B
+
     integer, intent(in)::iAction
-    integer, optional, intent(in) :: iStageIn
+
     integer:: iBlock
-    !------------------------------------
-    iStage = nStage
-    if(present(iStageIn))iStage=iStageIn
-    do iBlock = 1, MaxBlock
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
-       if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
+       if(BoundaryThreads_B(iBlock)%iAction /= Done_)&
             call CON_stop('An attempt to readvance not advanced threads')
        BoundaryThreads_B(iBlock)%iAction = iAction
     end do
+
   end subroutine advance_threads
   !=====================
 end module ModFieldLineThread
