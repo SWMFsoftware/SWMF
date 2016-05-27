@@ -78,8 +78,8 @@ module BATL_amr_criteria
   ! for geometric refinement: cell size (1) and AMR level (2)
   integer, public :: nGeoCrit = 2
 
-  ! compatible with BATSRUS way of doing AMR
-  logical:: IsBatsrusAmr = .true. 
+  ! compatible with simple AMR (using #GRIDLEVEL / #GRIDRESOLUTION)
+  logical:: IsSimpleAmr = .true. 
 
   ! Storing all the AMR criteria
   integer, public:: nAmrCrit = 0
@@ -366,15 +366,19 @@ contains
     end if
 
     TypeAmr = 'all'
-    if(present(TypeAmrIn)) TypeAmr = TypeAmrIn 
+    if(present(TypeAmrIn))then
+       TypeAmr = TypeAmrIn 
+       if(DoTest) write(*,*) NameSub,' TypeAmrIn =', TypeAmrIn
+    end if
 
-    ! Compatible with old BATSRUS AMR behavior
-    if(IsBatsrusAmr .and.  TypeAmr=='all') then
+    ! Compatible with simple AMR using #GRIDLEVEL/#GRIDRESOLUTION
+    if(IsSimpleAmr .and.  TypeAmr=='all') then
        if(nPhysCritUsed > 0) then
           TypeAmr = 'phy'
        else
           TypeAmr = 'geo' 
        end if
+       if(DoTest) write(*,*) NameSub,' nPhysCritUsed, TypeAmr =', TypeAmr
     end if
 
     ! add external criteria into the list of all criteria
@@ -1018,11 +1022,11 @@ contains
     integer:: iBlock, iCrit, iVarCrit
     ! number of blocks set out for refining and coarsning
     logical :: DoCoarsen
+    logical:: DoChangeBlock
 
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'apply_unsorted_criteria'
     !----------------------------------------------------------------------
-
     BLOCK3:do iBlock = 1, nBlock
 
        if(Unused_B(iBlock)) CYCLE
@@ -1035,6 +1039,9 @@ contains
        ! Assume that block can be coarsened
        DoCoarsen = .true.
 
+       ! Simple AMR allows blocks to be coarsened anywhere
+       DoChangeBlock = IsSimpleAmr
+
        ! Check each AMR criteria applicable
        do iCrit = iStartCrit, iEndCrit
 
@@ -1043,6 +1050,9 @@ contains
 
           ! Criteria used in this block 
           if(.not.UseCrit_IB(iCrit,iBlock)) CYCLE
+
+          ! Block is evaluated by this criteria so it can change
+          DoChangeBlock = .true.
 
           ! Index of the criteria "variable" used (e.g. density gradient)
           ! For geometric refinement it can also be grid level or dx.
@@ -1083,9 +1093,10 @@ contains
 
        end do
 
-       if(DoCoarsen) iStatusNew_A(iNode_B(iBlock)) =  Coarsen_ 
-
-       if(DoTest .and. DoCoarsen) write(*,*) NameSub, ' coarsen block'
+       if(DoChangeBlock .and. DoCoarsen)then
+          iStatusNew_A(iNode_B(iBlock)) =  Coarsen_ 
+          if(DoTest) write(*,*) NameSub, ' coarsen block'
+       end if
 
     end do BLOCK3
 
@@ -1178,9 +1189,9 @@ contains
           idxMaxGeoCritPhys_I = 1
        end if
 
-       ! Turn off old BATSRUS behavior when using 
-       ! #AMRCRITERIALEVELg
-       IsBatsrusAmr = .not.( IsLevel .or. IsRes)
+       ! Turn off simple AMR behavior when using 
+       ! #AMRCRITERIALEVELS / #AMRCRITERIARESOLUTION
+       IsSimpleAmr = .not.( IsLevel .or. IsRes)
 
        nIntCrit = 1
        nCritInOut = 0
