@@ -1530,9 +1530,9 @@ contains
        else
           IsWithinTheRingR = -1.0
        end if
-    else
-       IsWithinTheRingR = -1.0
     end if
+
+    if (.not. DoUseFieldlineFile)  IsWithinTheRingR = -1.0
 
     If (IsWithinTheRingR == 1.0 .and. Time_Simulation >  TimeEnhanceStart &
          .and. Time_Simulation < TimeEnhanceEnd) then
