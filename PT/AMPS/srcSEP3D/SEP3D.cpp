@@ -181,3 +181,125 @@ int SEP3D::Physics::Mover_Axisymmetric_SecondOrder(long int ptr, double dtTotal,
 
   
 }
+
+
+double SEP3D::GlobalEnergyDistribution::Distribution[nBin];
+
+void SEP3D::GlobalEnergyDistribution::sample() {
+  // go through all particles in the domain and sample energy distribution
+  
+  //aliases
+  namespace PB = PIC::ParticleBuffer;
+  namespace MD = PIC::MolecularData;
+  namespace MS = PIC::Mesh;
+  
+  // reset the distribution
+  for(int iBin=0; iBin<nBin; iBin++) Distribution[iBin] = 0.0;
+  
+  // go through all particles
+  for (long int ptr=0;ptr<PB::MaxNPart;ptr++) {
+    PB::byte *PData = PB::GetParticleDataPointer(ptr); 
+    
+    // skip if particle is not used
+    if (!PB::IsParticleAllocated(PData))
+      continue;
+    
+    // the particle is used, sample;
+    // first, find the weight of a particle
+    double x[3];
+    cTreeNodeAMR<MS::cDataBlockAMR> *node=NULL;
+    PIC::ParticleBuffer::GetX(x,(PB::byte*)PData);
+    node=MS::Search::FindBlock(x);
+    int spec  = PB::GetI(ptr);
+    double Weight=node->block->GetLocalParticleWeight(spec);
+    Weight*=PB::GetIndividualStatWeightCorrection((PB::byte*)PData);
+    
+    // second, find its total kinetic energy
+    double m0 = MD::GetMass(spec);
+    
+    double mu = PB::GetMagneticMoment(ptr);
+    double v[3];PB::GetV(v, ptr);
+    
+    double B[3];
+    PIC::CPLR::InitInterpolationStencil(x,node);
+    PIC::CPLR::GetBackgroundMagneticField(B);
+    double AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5);
+    
+    double E = mu*AbsB + 0.5 * m0 * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    
+    
+    
+    //third, determine which bin it falls into; sample
+    if(E >= EnergyMin && E < EnergyMax){
+      int iBin = (int) (nBin * (E - EnergyMin) / (EnergyMax - EnergyMin));
+      Distribution[iBin] += Weight;
+    }
+  } 
+}
+
+//---------------------------------------------------------------------------
+    
+//print the distribution function into a file
+void SEP3D::GlobalEnergyDistribution::print(char *fname,int spec) {
+
+  //aliases
+  namespace MS = PIC::Mesh;
+  
+  long int idim,nProbe,i,nVariable,thread,offset;
+  FILE *fout=NULL;
+  CMPI_channel pipe(1000000);
+  double norm=0.0,dInterval=0.0;
+  char str[_MAX_STRING_LENGTH_PIC_];
+  
+  if (MS::mesh.ThisThread==0) pipe.openRecvAll();
+  else pipe.openSend(0);
+  
+  
+  if (MS::mesh.ThisThread==0) {
+    sprintf(str,"%s.dat",fname,nProbe);
+    fout=fopen(str,"w");
+    
+    fprintf(fout,"TITLE=\"Global energy distribution function\"\n");
+    fprintf(fout,"VARIABLES=\"Energy\",\"f\"\n");
+    
+    //collect the sampled information from other processors
+    for (thread=1;thread<MS::mesh.nTotalThreads;thread++) 
+      for (int iBin=0; iBin<nBin; iBin++) 
+	Distribution[iBin]+=pipe.recv<double>(thread);
+    
+    //normalize the distribution functions
+    double norm = 0.0;
+    for (int iBin=0; iBin<nBin; iBin++)
+      norm += Distribution[iBin] * (EnergyMax-EnergyMin)/nBin;
+    
+    if (fabs(norm)>0.0) 
+      for (int iBin=0; iBin<nBin; iBin++)
+	Distribution[iBin]/=norm;
+    
+    //print the output file
+    for (int iBin=0; iBin<nBin; iBin++) {
+      double E = EnergyMin + iBin * ((EnergyMax - EnergyMin) / nBin);
+      fprintf(fout,"%e ",E);
+      fprintf(fout,"  %e\n",Distribution[iBin]);
+    }
+    
+    //close the output file
+    fclose(fout);
+  }
+  else {
+    for (int iBin=0; iBin<nBin;iBin++) {
+      pipe.send(Distribution[iBin]);
+      Distribution[iBin]=0.0;
+    }
+    
+  }
+  
+  
+  if (PIC::Mesh::mesh.ThisThread==0) pipe.closeRecvAll();
+  else pipe.closeSend();
+  
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+}
+
+
+

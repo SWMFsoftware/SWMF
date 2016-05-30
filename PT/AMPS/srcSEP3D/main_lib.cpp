@@ -148,7 +148,7 @@ void amps_init_mesh() {
 	if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)
 	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,33);
 	else
-	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,15);
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,300);//15
 }
 
 void amps_init(){
@@ -181,10 +181,12 @@ void amps_init(){
   {  // create field lines and inject particles
     //    PIC::FieldLine::Init();
     double xStart[3] = {0.0,0.0,-1.3e+6};
-    for(xStart[0] = 9.435E+8; xStart[0]> 9.42E+8; xStart[0]-=0.0025E+8)
+    for(xStart[0] = 9.435E+8; xStart[0]> 9.40E+8; xStart[0]-=0.0025E+8)
       PIC::FieldLine::InitLoop2D(xStart,0.1,1e+5,3e+5);
-    for(int i=0; i<100000; i++)
+    for(int i=0; i<2000000; i++)
       PIC::FieldLine::InjectParticle(0);
+    SEP3D::GlobalEnergyDistribution::sample();
+    SEP3D::GlobalEnergyDistribution::print("EnergyDistribution.000000",0);
     }
 #else
   {  // prepopulate the domain
@@ -202,6 +204,20 @@ void amps_init(){
 
 int amps_time_step () {
 
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+#else
+  static int cnt=0;
+  static int file=0;
+  cnt++;
+  if(cnt==10){
+    file++;
+    cnt = 0;
+    char Name[100];
+    sprintf(Name,"EnergyDistribution.%06d", file);
+    SEP3D::GlobalEnergyDistribution::sample();
+    SEP3D::GlobalEnergyDistribution::print(Name,0);
+  }
+#endif
   return PIC::TimeStep();
   
 }

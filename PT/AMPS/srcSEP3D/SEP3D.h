@@ -24,8 +24,26 @@ namespace SEP3D {
   //particle tracking condition
   namespace ParticleTracker {
     inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+      //aliases
+      namespace PB = PIC::ParticleBuffer;
+      namespace MD = PIC::MolecularData;
+
       //only those particles are traced, which are close to the magnetic island
       if (x[0]<9.0E8||x[2]>0.8E7||x[2]<-0.8E7) return false;
+
+      if (x[0]<9.0E8||x[2]>1.5E6||x[2]<-3.8E6) return false;
+
+      double m0 = MD::GetMass(spec);
+      double mu = PB::GetMagneticMoment((PB::byte*)ParticleData);
+      double AbsVSq = v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+      double B[3];
+      PIC::CPLR::InitInterpolationStencil(x);
+      PIC::CPLR::GetBackgroundMagneticField(B);
+      double AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5);
+
+      double tanThetaSq = 2*mu*AbsB / (m0*AbsVSq);
+      
+      if(tanThetaSq < 3) return false;
 
       return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
     }
@@ -110,7 +128,7 @@ namespace SEP3D {
     }
   }
   
-
+  //---------------------------------------------------------------------------
   inline long int inject_particle_onto_field_line(int spec){
     //namespace aliases
     namespace PB = PIC::ParticleBuffer;
@@ -153,9 +171,9 @@ namespace SEP3D {
     // inject particles with Maxwellain velocity but cut center out
     
     // envelope distribution is uniform on a spherical shell
-    const double SpeedMin  = 5e+5;
+    const double SpeedMin  = 5e+6;
     const double SpeedMin3 = pow(SpeedMin,3);
-    const double SpeedMax  = 1.2e+6;
+    const double SpeedMax  = 1.2e+7;
     const double SpeedMax3 = pow(SpeedMax,3);
     
     // generate random speed
@@ -219,9 +237,25 @@ namespace SEP3D {
 				      (void*)node);
 
     delete [] ptrData;
-    // double misc =    PB::GetFieldLineCoord(res);
     return res;
     
+  }
+
+  //===========================================================================
+
+  namespace GlobalEnergyDistribution {
+
+    const int nBin = 100;
+    const double EnergyMin  = 9.1e-31 *   5e+6 *   5e+6 / 2;
+    const double EnergyMax  = 9.1e-31 * 1.2e+7 * 1.2e+7 / 2;
+
+    extern double Distribution[nBin];
+
+    void sample();
+    // sample the distributin function
+    
+    //print the distribution function into a file
+    void print(char *fname,int spec);
   }
 }
 
