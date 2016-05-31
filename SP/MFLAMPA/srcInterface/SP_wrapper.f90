@@ -35,12 +35,13 @@ module SP_wrapper
 contains
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
-    use ModMain, ONLY: advance
+    use ModMain, ONLY: advance, TimeGlobal
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
-    TimeSimulation = TimeSimulationLimit
+    TimeGlobal = TimeSimulation
     call advance
+    TimeSimulation = TimeSimulationLimit
   end subroutine SP_run
 
   !========================================================================

@@ -11,7 +11,7 @@ module ModGrid
 
   private ! except
 
-  public:: set_grid_param, init_grid
+  public:: set_grid_param, init_grid, get_node_indexes
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_, Begin_, End_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
@@ -171,6 +171,18 @@ contains
        end do
     end do
   end subroutine init_grid
+
+  !============================================================================
+
+  subroutine get_node_indexes(iNodeIn, iLonOut, iLatOut)
+    ! return angular grid's indexes corresponding to this node
+    integer, intent(in) :: iNodeIn
+    integer, intent(out):: iLonOut
+    integer, intent(out):: iLatOut
+    !---------------------------------------------------------
+    iLatOut = 1 + (iNodeIn-1) / nLon
+    iLonOut = iNodeIn - nLon * (iLatOut-1)
+  end subroutine get_node_indexes
 
   !============================================================================
 

@@ -7,7 +7,12 @@ module ModWrite
        RMin, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
 
-  use ModGrid, ONLY: nBlock, State_VIB
+  use ModGrid, ONLY: &
+       get_node_indexes, &
+       nBlock, State_VIB, iGrid_IA, iNode_B, &
+       Proc_, Begin_, End_
+
+  use ModPlotFile, ONLY: save_plot_file
 
   use ModIoUnit, ONLY: UnitTmp_
 
@@ -51,7 +56,8 @@ contains
     elseif(index(StringPlot,'all') > 0)then
        OutputData = All_
     else
-       call CON_stop(NameSub//': output data mode was not set in PARAM.in')
+       OutputData = All_
+!       call CON_stop(NameSub//': output data mode was not set in PARAM.in')
     end if
 
     ! the type of output file must be set
@@ -66,10 +72,14 @@ contains
 
   !============================================================================
 
-  subroutine write_output
+  subroutine write_output(Time, iIter)
     ! write the output data
     use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: sph_to_xyz
+    ! current time and iteration
+    real,    intent(in):: Time
+    integer, intent(in):: iIter
+
     ! file name
     character(len=100) :: NameFile, NameVar
     ! file counter
@@ -87,6 +97,11 @@ contains
     character(len=*), parameter:: NameVarMesh = '"R", "Lat", "Lon"'
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
+    if(OutputFormat == Idl_)then
+       call write_idl
+       RETURN
+    end if
+
     ! name of output file
     write(NameFile,'(a,i6.6)') &
          trim(NamePlotDir)//'lines_n',iPlotFile
@@ -140,6 +155,62 @@ contains
 
     ! update the file counter
     iPlotFile = iPlotFile + 1
+
+  contains
+
+    subroutine write_idl
+      ! write output file in the format to be read by IDL;
+      ! separate fiel is created for each field line, name format is
+      ! MH_data_<iLat>_<iLon>_n<iIter>.out
+      !------------------------------------------------------------------------
+      ! name of the output file
+      character(len=100):: NameFile
+      ! loop variables
+      integer:: iBlock, iParticle
+      ! indexes of corresponding node, latitude and longitude
+      integer:: iNode, iLat, iLon
+      ! index of first/last particle on the field line
+      real:: PFirst
+      real:: PLast
+      ! coordinates in spherical coordinates
+      real:: Coord_D(nDim)
+      ! storage for output data
+      real:: DataOut_VI(nDim,nParticle)
+      !------------------------------------------------------------------------
+      do iBlock = 1, nBlock
+         iNode = iNode_B(iBlock)
+         call get_node_indexes(iNode, iLon, iLat)
+
+         ! set the file name
+         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,'.out'
+
+         ! get min and max particle indexes on this field line
+         PFirst = iGrid_IA(Begin_, iNode)
+         PLast  = iGrid_IA(End_,   iNode)
+
+         ! convert coordinates to cartesian before output
+         do iParticle = int(PFirst), int(PLast)
+            Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
+            call sph_to_xyz(&
+                 Coord_D(R_),cHalfPi-Coord_D(Lat_),Coord_D(Lon_), &
+                 DataOut_VI(1:nDim,iParticle))
+         end do
+
+         ! print data to file
+         call save_plot_file(&
+              NameFile     = NameFile, &
+              nDimIn       = 1, &
+              TimeIn       = Time, &
+              nStepIn      = iIter, &
+              CoordMinIn_D = (/PFirst/), &
+              CoordMaxIn_D = (/PLast/), &
+              NameVarIn    = 'ParticleIndex X Y Z', &
+              VarIn_VI     = DataOut_VI(1:nDim, int(PFirst):int(PLast))&
+              )
+      end do
+      
+    end subroutine write_idl
 
   end subroutine write_output
 

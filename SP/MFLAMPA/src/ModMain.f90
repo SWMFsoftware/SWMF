@@ -25,7 +25,9 @@ module ModMain
   private ! except
 
   ! Methods and variables from this module 
-  public:: read_param, initialize, advance, finalize, check
+  public:: &
+       read_param, initialize, advance, finalize, check,&
+       TimeGlobal, iIterGlobal
 
   ! Methods and variables from ModSize
   public:: &
@@ -52,6 +54,13 @@ module ModMain
   logical:: DoRestart = .false.
   ! perform initialization
   logical:: DoInit = .true.
+  !/
+
+  !\
+  ! Global interation and time
+  !-----------------------------
+  real   :: TimeGlobal  = -1.0
+  integer:: iIterGlobal = -1
   !/
 
 contains
@@ -99,11 +108,13 @@ contains
     integer:: iLat, iLon, iNode, iBlock, iProcNode
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
+    iIterGlobal = 0
     call init_grid
   end subroutine initialize
 
   subroutine advance
-    call write_output
+    iIterGlobal = iIterGlobal + 1
+    call write_output(TimeGlobal, iIterGlobal)
   end subroutine advance
 
   !============================================================================
