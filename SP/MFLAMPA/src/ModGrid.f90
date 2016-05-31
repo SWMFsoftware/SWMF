@@ -36,7 +36,7 @@ module ModGrid
   ! Said angular grids itself; each field line is identified by latitude
   ! and longitude of the origin point at surface R=RMin as it is set
   ! at the beginning of simulation;
-  ! 1st index - three HGI coordinates (R is added for compliteness)
+  ! 1st index - three spherical coordinates (R is added for completeness)
   ! 2nd index - node number (equivalent to line number)
   real,    allocatable:: CoordOrigin_DA(:,:)
   !----------------------------------------------------------------------------

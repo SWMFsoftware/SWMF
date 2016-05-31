@@ -39,11 +39,13 @@ module ModMain
   public:: &
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       LatMin, LatMax, LonMin, LonMax, &
+       TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, &
        iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
 
   ! Methods and variables from ModWrite
 
+  ! Coordinate system
+  character(len=3) :: TypeCoordSystem = 'HGI'
 
   !\
   ! Logicals for actions
@@ -93,6 +95,8 @@ contains
        case('#SAVEPLOT')
           call read_var('StringPlot', StringPlot)
           call set_write_param(StringPlot)
+       case("#COORDSYSTEM")
+          call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select

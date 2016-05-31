@@ -147,7 +147,8 @@ contains
          LatMin, LatMax, LonMin, LonMax, &
          iGrid_IA, Block_, Proc_, &
          nDim, nLat, nLon, &
-         iParticleMin, iParticleMax, nParticle
+         iParticleMin, iParticleMax, nParticle,&
+         TypeCoordSystem
 
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
@@ -171,7 +172,7 @@ contains
     ! with length measured in solar radii
     call set_coord_system(&
          GridID_   = SP_, &
-         TypeCoord ='HGI',&
+         TypeCoord =TypeCoordSystem,&
          UnitX     = rSun)
   end subroutine SP_set_grid
 

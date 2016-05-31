@@ -31,9 +31,9 @@ module ModSize
 
   ! Indices of variables in state vector
   integer, parameter:: &
-       R_   = 1,    & ! HGI coord
-       Lat_ = 2,    & ! HGI coord
-       Lon_ = 3       ! HGI coord
+       R_   = 1,    & ! Radial coordinate
+       Lat_ = 2,    & ! Latitude
+       Lon_ = 3       ! Longitude
        
 
   ! Min and Max possible index of a particle along a field line,
