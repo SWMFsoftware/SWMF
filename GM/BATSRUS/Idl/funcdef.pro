@@ -119,8 +119,8 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['rgeSI'    , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)*xSI'     ], $ ; electron gyro radius in SI
                 ['dinertial', 'di0/sqrt(rho)'                           ], $ ; inertial length
                 ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $ ; ion inertial length in SI
-                ['skindepth',' di0/sqrt(rho)*me/mi'                     ], $ ; electron skin depth
-                ['deSI'     ,' di0/sqrt(rho)*me/mi*xSI'                 ], $ ; electron skin depth in SI
+                ['skindepth',' di0/sqrt(rho*mi/me)'                     ], $ ; electron skin depth
+                ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $ ; electron skin depth in SI
                 ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
                 ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
                                      ]))
