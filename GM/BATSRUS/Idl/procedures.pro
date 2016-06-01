@@ -1961,7 +1961,7 @@ end
 ;===========================================================================
 pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
 
-  ;; Is type is given as 
+  ;; If type is given as 
   ;; 'SI', 'CGS', 'NORMALIZED', 'PIC', 'PLANETARY', or 'SOLAR',
   ;; set typeunit = type otherwise try to guess from the fileheader.
 
