@@ -26,7 +26,6 @@ test:
 	-@($(MAKE) test_mhdnoncons)
 	-@($(MAKE) test_eosgodunov)
 	-@($(MAKE) test_levelset)
-	-@($(MAKE) test_hyades2d)
 	./Config.pl -nohdf5
 	-@($(MAKE) test_laserpackage)
 	-@($(MAKE) test_graydiffusion)
@@ -91,7 +90,6 @@ test_help:
 	@echo "    test_func                  (run functionality tests)"
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
-	@echo "    test_hyades2d              (run Hyades2D test)"
 	@echo "    test_L1toBC                (run L1 to BC propagation test)"
 	@echo "    test_laserpackage          (run CRASH laser package test)"
 	@echo "    test_levelset              (run levelset test)"
@@ -562,81 +560,6 @@ test_eosgodunov_check:
 	  Param/CRASH/TestOutput/eosgodunov.out \
 	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff)
 	ls -l test_eosgodunov.diff
-
-### LEVELSET TEST ###
-
-test_levelset:
-	@echo "test_levelset_compile..." > test_levelset.diff
-	$(MAKE) test_levelset_compile
-	@echo "test_levelset_rundir..." >> test_levelset.diff
-	$(MAKE) test_levelset_rundir DEFAULT_EXE=CRASH.exe
-	@echo "test_levelset_run..." >> test_levelset.diff
-	$(MAKE) test_levelset_run
-	@echo "test_levelset_check..." >> test_levelset.diff
-	$(MAKE) test_levelset_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_levelset_compile:
-	./Config.pl -e=HdCrash -u=Crash -g=4,4,1,2000,1 -nMaterial=3
-	$(MAKE) CRASH
-	make PIDL
-
-test_levelset_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.levelset PARAM.in
-	cp dataCRASH/input/hyades_1.1ns.out ${TESTDIR}
-
-test_levelset_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_levelset_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=3e-7 \
-		Param/CRASH/TestOutput/log_levelset.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_levelset.diff)
-	ls -l test_levelset.diff
-
-### HYADES2D TEST ###
-
-test_hyades2d:
-	@echo "test_hyades2d_compile..." > test_hyades2d.diff
-	$(MAKE) test_hyades2d_compile
-	@echo "test_hyades2d_rundir..." >> test_hyades2d.diff
-	$(MAKE) test_hyades2d_rundir DEFAULT_EXE=CRASH.exe
-	@echo "test_hyades2d_run..." >> test_hyades2d.diff
-	$(MAKE) test_hyades2d_run
-	@echo "test_hyades2d_restart..." >> test_hyades2d.diff
-	$(MAKE) test_hyades2d_restart
-	@echo "test_hyades2d_check..." >> test_hyades2d.diff
-	$(MAKE) test_hyades2d_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1 -nMaterial=3
-	./Config.pl -hdf5
-	$(MAKE) CRASH
-	make PIDL
-
-test_hyades2d_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d PARAM.in
-	gunzip -c dataCRASH/input/hyades2d_1.1ns.out.gz \
-		> ${TESTDIR}/hyades2d_1.1ns.out
-	gunzip -c dataCRASH/input/opacities.out.gz \
-	        > ${TESTDIR}/table_opacities.out
-
-test_hyades2d_run:
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test_hyades2d_restart:
-	cd ${TESTDIR}; cp Param/CRASH/PARAM.in.hyades2d.restart PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./CRASH.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
-
-test_hyades2d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-5 -t \
-		Param/CRASH/TestOutput/log_hyades2d.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_hyades2d.diff)
-	ls -l test_hyades2d.diff
 
 ### LASER PACKAGE TEST ###
 

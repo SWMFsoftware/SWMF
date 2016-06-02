@@ -111,55 +111,6 @@ module ModUser
   real, allocatable :: CoordRead_DC(:,:)         ! coords of input file
   real, allocatable :: StateRead_VC(:,:)         ! state  of input file
 
-  ! Variables for Hyades file
-  logical           :: UseDelaunay     = .false. ! use Delaunay triangulation?
-  logical           :: UseHyadesFile   = .false. ! read Hyades file?
-  character(len=100):: NameHyadesFile            ! name of hyades file
-  integer           :: nDimHyades      = -1      ! number of dimensions 
-  real              :: xBeHyades       = -1.0    ! position of Be-Xe interface
-
-  ! mesh coordinates: ux and ur are always defined on these coordinates
-  integer           :: nCellHyadesMesh      = -1 ! number of mesh points
-  integer           :: nCellHyadesMesh_D(3) = -1 ! no. mesh cells per dimension
-  integer           :: nVarHyadesMesh       = -1 ! number of variables
-  real, allocatable :: CoordHyadesMesh_DC(:,:)   ! mesh centered Hyades coords
-  real, allocatable :: DataHyadesMesh_VC(:,:)    ! mesh centered Hyades data
-  integer           :: iXHyadesMesh         = -1 ! index of x coordinate
-  integer           :: iRHyadesMesh         = -1 ! index of r coordinate
-  integer           :: iUxHyades            = -1 ! index of x velocity
-  integer           :: iUrHyades            = -1 ! index of r velocity
-  integer           :: iCellLastHyadesMesh  = -1 ! cell with maximum X and r=0
-
-  ! center of mass coordinates of the zone:
-  ! if these coordinates are present all variables except velocities are on
-  ! these coordinates, otherwise they are interpolated to the mesh points
-  integer           :: nCellHyades          = -1 ! number of mesh points
-  integer           :: nCellHyades_D(3)     = -1 ! no. mesh cells per dimension
-  integer           :: nVarHyades           = -1 ! number of variables
-  real, allocatable :: CoordHyades_DC(:,:)       ! cell centered Hyades coords
-  real, allocatable :: DataHyades_VC(:,:)        ! cell centered Hyades data
-  integer           :: iXHyades             = -1 ! index of x coordinate
-  integer           :: iRHyades             = -1 ! index of r coordinate
-  integer           :: iRhoHyades           = -1 ! index of density
-  integer           :: iPHyades             = -1 ! index of pressure
-  integer           :: iZHyades             = -1 ! index of ionization level
-  integer           :: iTeHyades            = -1 ! index of electron temper.
-  integer           :: iTiHyades            = -1 ! index of ion temperature
-  integer           :: iTrHyades            = -1 ! index of rad. temperature
-  integer           :: iMaterialHyades      = -1 ! index of material type
-  real, allocatable :: LevelHyades_VC(:,:)       ! level set functions
-  integer           :: iCellLastHyades      = -1 ! cell with maximum X and r=0
-
-  ! if we detect xcm as a HYADES variable, all variables except for the
-  ! velocities are defined on the zone centers
-  ! Default is that these variables are interpolated to the mesh points
-  logical :: UseZoneCenter = .false.
-
-  ! Variables for Hyades multi-group file
-  logical           :: UseHyadesGroupFile = .false.! read Hyades multi-group ?
-  character(len=100):: NameHyadesGroupFile         ! name of multi-group file
-  real, allocatable :: EradHyades_VC(:,:)          ! Hyades group energies
-
   ! Opacity scale factor for sensitivity studies on opacities (UQ only !)
   real :: RosselandScaleFactor_I(0:MaxMaterial-1) = 1.0
   real :: PlanckScaleFactor_I(0:MaxMaterial-1) = 1.0
@@ -167,9 +118,6 @@ module ModUser
   ! Gamma law per material (UQ only !)
   logical :: UseGammaLaw = .false.
   real :: GammaMaterial_I(0:MaxMaterial-1) = 5.0/3.0
-
-  ! Factor to suppress the A.S.S.
-  real :: AssFactor = -1.0
 
   ! Indexes for lookup tables
   integer:: iTablePPerRho = -1, iTableThermo = -1
@@ -192,14 +140,9 @@ module ModUser
   real    :: xEndWave   = +100.0
   real    :: DpWave     =  100.0
 
-  ! electron and ion temperatures read from Hyades input
-  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-  ! Temperature limit for cold plastic (30,000K is a good limit)
-  real:: TeMaxColdPlSi = -1.0
-
-  ! Assume equal electron/ion temperature in plastic and gold at Hyades handoff
-  logical :: UseEqualTemperatureHyades = .false.
+  ! electron and ion temperatures
+  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+       Ti_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
   ! AMR parameters
   real:: RhoMinAmrDim = 20.0   ! kg/m3
@@ -259,7 +202,7 @@ contains
     UseUserUpdateStates = .true. ! for internal energy
     UseUserSource       = .true. ! for non-cons levelset and pressure equation
     UseUserInitSession  = .true. ! to set units for level set variables
-    UseUserIcs          = .true. ! to read in Hyades file
+    UseUserIcs          = .true. ! to read in 2D CRASH file
     !                              and initialize the level set variables
 
     do
@@ -271,21 +214,15 @@ contains
           call join_string(nVar, NameVar_V(1:nVar), StringVar)
           call init_initial_state(StringVar, MaterialFirst_, nMaterial)
           call read_initial_state_param(NameCommand)
+
        case("#STATEINTERFACE")
           call read_initial_state_param(NameCommand)
+
        case("#CRASH2D")
           call read_var('UseCrash2DFile',  UseCrash2DFile)
           call read_var('NameCrash2DFile', NameCrash2DFile)
           call read_var('TypeCrash2DFile', TypeCrash2DFile)
           call read_var('TimeCrash2D'    , TimeCrash2D)
-
-       case("#HYADES")
-          call read_var('UseHyadesFile', UseHyadesFile)
-          call read_var('NameHyadesFile',NameHyadesFile)
-
-       case("#HYADESGROUP")
-          call read_var('UseHyadesGroupFile', UseHyadesGroupFile)
-          call read_var('NameHyadesGroupFile',NameHyadesGroupFile)
 
        case("#OPACITY")
           call read_opacity_parameters
@@ -361,8 +298,6 @@ contains
              end do
           end if
 
-       case("#THREEDIM")
-          ! Not needed anymore
        case("#NOZZLE")
           call read_var('UseNozzle', UseNozzle)
           if(UseNozzle)then
@@ -371,6 +306,7 @@ contains
              call read_var('yRatioNozzle', yRatioNozzle)
              call read_var('zRatioNozzle', zRatioNozzle)
           end if
+
        case("#WAVE")
           call read_var('UseWave',    UseWave)
           if(UseWave)then
@@ -389,19 +325,9 @@ contains
           call read_var('nLevelAuInterface', nLevelAuInterface)
           call read_var('nLevelBeryllium', nLevelBeryllium)
 
-       case("#PLASTIC")
-          call read_var('TeMaxColdPlSi',  TeMaxColdPlSi)
-
-       case("#TEMPERATUREHYADES")
-          call read_var('UseEqualTemperatureHyades', UseEqualTemperatureHyades)
-
        case("#RADIATIONSCALEFACTOR")
           ! Multiply the initial radiation by RadiationScaleFactor
           call read_var('RadiationScaleFactor', RadiationScaleFactor)
-
-       case("#ASS")
-          ! Multiply plastic pressure and negative Uy/Ur by AssFactor
-          call read_var('AssFactor', AssFactor)
 
        case("#MAXRESISTIVITY")
           ! Maximum allowed value of the inverse magnetic Reynolds number
@@ -466,19 +392,6 @@ contains
 
     call timing_start(NameSub)
 
-    if(UseHyadesFile)then
-
-       call timing_start('interpolate_hyades')
-       ! interpolate Hyades output
-       if(nDimHyades == 1)then
-          call interpolate_hyades1d(iBlock)
-       else
-          call interpolate_hyades2d(iBlock)
-       end if
-       call timing_stop('interpolate_hyades')
-
-    end if
-
     if(UseElectronPressure .and. UseTube)then
        call stop_mpi(NameSub //" electron energy does not yet work " &
             //"with plastic tube or gold washer")
@@ -508,25 +421,15 @@ contains
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
 
              call set_small_radiation_energy
-             if(nDimHyades == 2)then
-                State_VGB(LevelPl_,i,j,k,iBlock) =  DxyPl
-                State_VGB(LevelXe_,i,j,k,iBlock) =  &
-                     max(State_VGB(LevelBe_,i,j,k,iBlock), r - rOuterTube)
-             end if
           end if
 
           ! Set pressure and speed outside the tube. 
-          ! For 1D Hyades input do not overwrite values left of xEndTube
-          if(r > rOuterTube .and. (nDimHyades == 1 .or. x > xEndTube) ) then
+          ! do not overwrite values left of xEndTube
+          if(r > rOuterTube .and. x > xEndTube) then
              State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
              State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
              call set_small_radiation_energy
-             if(nDimHyades == 2)then
-                State_VGB(LevelXe_,i,j,k,iBlock) =  &
-                     min(r - rOuterTube,x - xEndTube) 
-                State_VGB(LevelPl_,i,j,k,iBlock) =  rOuterTube - r
-             end if
           end if
 
           ! Set the Xe state inside the tube for x > xUniformXe if it is set
@@ -544,54 +447,40 @@ contains
             Io2No_V(UnitP_)*DpWave &
             *sin( cPi*(x - xStartWave)/(xEndWave - xStartWave) )**2
 
-       if(nDimHyades /= 2)then
+       ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
+       xBe = ShockPosition - ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)
 
-          if(UseHyadesFile)then
-             ! Be - Xe interface is given by Hyades file
-             xBe = xBeHyades
-          else
-             ! Be - Xe interface is at the shock defined by #SHOCKPOSITION
-             xBe = ShockPosition - ShockSlope*Xyz_DGB(y_,i,j,k,iBlock)
-          end if
+       ! Distance from Be disk: positive for x < xBe
+       DxBe = xBe - x
 
-          ! Distance from Be disk: positive for x < xBe
-          DxBe = xBe - x
+       ! Add a plastic tube if required
+       if(UseTube)then
+          ! Distance from plastic wall: 
+          ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
+          DxyPl = min(r - rInnerTube, rOuterTube - r, x - xEndTube)
 
-          ! Add a plastic tube if required
-          if(UseTube)then
-             ! Distance from plastic wall: 
-             ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
-             DxyPl = min(r - rInnerTube, rOuterTube - r, x - xEndTube)
+          ! Berylium is left of xBe inside rInnerTube 
+          ! and it is left of xEndTube outside
+          State_VGB(LevelBe_,i,j,k,iBlock) = &
+               max(xEndTube - x, min(DxBe, rInnerTube - r))
 
-             ! Berylium is left of xBe inside rInnerTube 
-             ! and it is left of xEndTube outside
-             State_VGB(LevelBe_,i,j,k,iBlock) = &
-                  max(xEndTube - x, min(DxBe, rInnerTube - r))
+          ! Xenon is right of xBe inside rInnerTube and 
+          ! right of xEndTube outside rOuterTube
+          State_VGB(LevelXe_,i,j,k,iBlock) = max( &
+               min( x - xEndTube, r - rOuterTube), &
+               min( -DxBe, rInnerTube - r) )
 
-             ! Xenon is right of xBe inside rInnerTube and 
-             ! right of xEndTube outside rOuterTube
-             State_VGB(LevelXe_,i,j,k,iBlock) = max( &
-                  min( x - xEndTube, r - rOuterTube), &
-                  min( -DxBe, rInnerTube - r) )
+          ! Plastic 
+          State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
+       else
+          ! If there is no plastic tube, things are easy
+          State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
+          State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
+          do iMaterial = Plastic_, nMaterial - 1
+             State_VGB(LevelXe_+iMaterial,i,j,k,iBlock) = -1e30
+          end do
+       end if
 
-             ! Plastic 
-             State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
-          else
-             ! If there is no plastic tube, things are easy
-             State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
-             State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
-             do iMaterial = Plastic_, nMaterial - 1
-                State_VGB(LevelXe_+iMaterial,i,j,k,iBlock) = -1e30
-             end do
-          end if
-
-       end if ! nDimHyades /= 2
-       !When the hyades file is used for Xe, and the actual material is
-       !different, rescale the density of xenon:
-       !if(UseHyadesFile.and.&
-       !maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)==1)&
-       !State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*&
-       !RhoDimInside/RhoHe
        if(UseMixedCell)then
           if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
                "are not yet supported in the mixed cell approach")
@@ -641,41 +530,17 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeIn=TeSi, &
                PressureOut=PeSi, NatomicOut=NatomicSi, EinternalOut=EinternalSi)
- 
+
           State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
           ! Calculate internal energy
-  
+
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
                - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
 
-          if(UsePl .and. UseEqualTemperatureHyades .and. .not.UseMixedCell &
-               .and. any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
-             ! equal electron/ion temperature for plastic and gold
-             iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1)-1
-             RhoSi = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
-             pSi   = State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_)
-             call eos(iMaterial, RhoSi, PtotalIn=pSi, TeOut=TeSi,&
-                  ETotalOut=EinternalSi)
-             State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - InvGammaMinus1*State_VGB(p_,i,j,k,iBlock))
-             Te = TeSi*Si2No_V(UnitTemperature_)
-             Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
-                  *Si2No_V(UnitN_)
-             p = Natomic*Te
-             State_VGB(Pe_,i,j,k,iBlock) = &
-                  max(PeMin,State_VGB(p_,i,j,k,iBlock) - p)
-             State_VGB(p_,i,j,k,iBlock) = p
-          else if(UsePl .and. State_VGB(LevelPl_,i,j,k,iBlock) > 0.0 &
-               .and. TeSi < TeMaxColdPlSi)then
-             ! Subtract electron pressure from the total pressure
-             State_VGB(p_,i,j,k,iBlock)  = max(PeMin, &
-                  State_VGB(p_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
-          else
-             Natomic = NatomicSi*Si2No_V(UnitN_)
-             State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
-          end if
+          Natomic = NatomicSi*Si2No_V(UnitN_)
+          State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
+
           if(State_VGB(Pe_,i,j,k,iBlock).le.PeMin)then
              !Correct ExtraEInt, otherwise it will be corrected at the next 
              !timespep, breaking the time control
@@ -687,25 +552,24 @@ contains
              call eos(iMaterial, RhoSi, PElectronIn=PeSi,&
                   EElectronOut=EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
+                  EinternalSi*Si2No_V(UnitEnergyDens_) &
+                  - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
           end if
        else
           if(UseNLTE)call stop_mpi('No NLTE EOS with pressure input')
           ! Calculate internal energy
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, EinternalOut=EinternalSi)
-          
+
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
                - InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock))
        end if
 
-
-
        if(UseRadDiffusion) &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
+
        if(UseNlte)then
           !Calculate actual Te without assuming EOverB=1:
           UseERadInput=.true.
@@ -713,11 +577,11 @@ contains
                i,j,k,iBlock, TeOut=Te0SI)
           UseERadInput=.false.
           State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
-       
+
           !Calculate "E_rad"
           EOverB_VGB(:,i,j,k,iBlock) = No2Si_V(UnitEnergyDens_)* &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-             
+
           !Calculate "over B"
           Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
           do iGroup = 1, nWave
@@ -729,7 +593,7 @@ contains
                 EOverB_VGB(iGroup,i,j,k,iBlock)=0.0
              end if
           end do
-          
+
 
           !EInternalSI = (State_VGB(iP,i,j,k,iBlock)*InvGammaMinus1+&
           !       State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
@@ -738,10 +602,10 @@ contains
           !     PressureOut=PeSi)
 
           !State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
-    
+
 
           ! Calculate internal energy
-          
+
           !State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
           !     EinternalSi*Si2No_V(UnitEnergyDens_) &
           !     - InvGammaMinus1*State_VGB(iP,i,j,k,iBlock))
@@ -964,9 +828,6 @@ contains
             CoordRead_DC, StateRead_VC)
        if(allocated(iNodeTriangle_II)) deallocate( &
             iNodeTriangle_II, nTriangle_C, iTriangle_IC)
-       if(allocated(DataHyadesMesh_VC)) deallocate( &
-            DataHyadesMesh_VC, DataHyades_VC, &
-            CoordHyades_DC, CoordHyadesMesh_DC)
 
        if(UseInitialStateDefinition)then
           call clean_initial_state
@@ -975,763 +836,6 @@ contains
     end select
 
   end subroutine user_action
-
-  !============================================================================
-
-  subroutine read_hyades_file
-
-    use ModAdvance,    ONLY: UseElectronPressure
-    use ModPhysics,    ONLY: Si2No_V, Io2No_V, UnitX_, UnitRho_, UnitU_, &
-         UnitP_, UnitTemperature_, UnitEnergyDens_
-    use ModPlotFile,   ONLY: read_plot_file
-    use ModUtilities,  ONLY: split_string
-    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
-    use ModConst,      ONLY: cKevToK, cHPlanckEV
-    use ModMain,       ONLY: UseRadDiffusion, Time_Simulation
-    use ModVarIndexes, ONLY: nWave
-    use ModWaves,      ONLY: FreqMinSi, FreqMaxSi
-
-    integer :: nVarHyadesAll
-    integer :: iVarZone, iVarMesh, iVar, iCellMesh, j
-    integer, allocatable :: iVarZone_I(:), iVarMesh_I(:)
-
-    real                :: TimeHyades
-    real, allocatable   :: Hyades2No_V(:)
-    character(len=100)  :: NameVarHyades
-
-    ! Variables for variable names
-    integer, parameter:: MaxString = 20
-    character(len=10) :: String_I(MaxString)
-    integer           :: nString
-
-    ! Variables for reading in coordinates and variables
-    real, allocatable:: Var_VI(:,:)
-
-    ! Variables for setting level set functions
-    integer :: i, iCell, iMaterial, jMaterial
-    real    :: x, r
-    integer, allocatable:: iMaterial_C(:)
-    real,    allocatable:: Distance2_C(:)
-
-    ! variables for HYADES multi-group
-    integer, parameter :: nGroupMax = 100
-    integer :: nGroupHyades, nGroup
-    integer :: iGroup, iGroupFirst, iGroupLast
-    real :: EnergyGroupHyades_I(0:nGroupMax) ! Photon energy (unit of keV)
-    real :: EnergyGroupMin, EnergyGroupMax   ! unit of keV
-    real :: DeltaLogEnergy
-
-    character(len=*), parameter :: NameSub = "ModUser::read_hyades_file"
-    !-------------------------------------------------------------------------
-
-    nCellHyades_D = 1
-    nCellHyadesMesh_D = 1
-    call read_plot_file(NameHyadesFile, &
-         TimeOut = TimeHyades, nDimOut = nDimHyades, nVarOut = nVarHyadesAll, &
-         nOut_D = nCellHyadesMesh_D, NameVarOut = NameVarHyades)
-
-    ! reset simulation time to HYADES time
-    Time_Simulation = TimeHyades
-
-    ! extract coordinate, variable and eqpar names
-    call split_string(NameVarHyades, MaxString, String_I, nString)
-
-    ! total number of mesh cells
-    nCellHyadesMesh = product(nCellHyadesMesh_D)
-
-    ! Do not use zone centers unless xcm is in the variable list
-    UseZoneCenter = index(NameVarHyades,'xcm') > 0
-
-    if(UseZoneCenter)then
-       nCellHyades_D(1:nDimHyades) = nCellHyadesMesh_D(1:nDimHyades) - 1
-       nCellHyades   = product(nCellHyades_D)
-    else
-       ! The zone centered HYADES variables are interpolated to the mesh center
-       nCellHyades_D = nCellHyadesMesh_D
-       nCellHyades   = nCellHyadesMesh
-    end if
-
-    iVarMesh = 0
-    iVarZone = 0
-
-    allocate( &
-         iVarMesh_I(nDimHyades + nVarHyadesAll), &
-         iVarZone_I(nDimHyades + nVarHyadesAll) )
-
-    ! Find the columns for the coordinates and variables
-    do i = 1, nDimHyades + nVarHyadesAll
-       ! The first nDimHyades strings are for the coordinates
-       select case(String_I(i))
-       case('x', 'y', 'r', 'ux', 'uy', 'ur')
-          ! Staggered mesh variables
-          iVarMesh = iVarMesh + 1
-          iVarMesh_I(iVarMesh) = i
-          select case(String_I(i))
-          case('x')
-             iXHyadesMesh = iVarMesh
-             ! if zone centers are not used, this means that the variables are
-             ! interpolated to the mesh centers
-             if(.not.UseZoneCenter)then
-                iVarZone = iVarZone + 1
-                iVarZone_I(iVarZone) = i
-                iXHyades = iVarZone
-             end if
-          case('y', 'r')
-             iRHyadesMesh = iVarMesh
-             if(.not.UseZoneCenter)then
-                iVarZone = iVarZone + 1
-                iVarZone_I(iVarZone) = i
-                iRHyades = iVarZone
-             end if
-          case('ux')
-             iUxHyades  = iVarMesh
-          case('uy', 'ur')
-             iUrHyades  = iVarMesh
-          end select
-
-       case default
-          ! zone centered mesh variables
-          iVarZone = iVarZone + 1
-          iVarZone_I(iVarZone) = i
-          select case(String_I(i))
-          case('xcm')
-             iXHyades   = iVarZone
-          case('rcm')
-             iRHyades   = iVarZone
-          case('rho')
-             iRhoHyades = iVarZone
-          case('p')
-             iPHyades   = iVarZone
-          case('te')
-             iTeHyades  = iVarZone
-          case('ti')
-             iTiHyades  = iVarZone
-          case('tr')
-             iTrHyades  = iVarZone
-          case('z')
-             iZHyades   = iVarZone
-          case('material')
-             iMaterialHyades = iVarZone
-          end select
-       end select
-    end do
-
-    nVarHyades = iVarZone - nDimHyades
-    nVarHyadesMesh = iVarMesh - nDimHyades
-
-    ! Check if every coordinate/variable has been found
-    if(iRhoHyades < 0)call stop_mpi(NameSub// &
-         ' could not find rho in '//trim(NameVarHyades))
-
-    if(iPHyades < 0)call stop_mpi(NameSub// &
-         ' could not find p in '//trim(NameVarHyades))
-
-    if(iUxHyades < 0)call stop_mpi(NameSub// &
-         ' could not find ux in '//trim(NameVarHyades))
-
-    if(iZHyades < 0 .and. iMaterialHyades < 0) call stop_mpi(NameSub// &
-         ' could not find neither z nor material in '//trim(NameVarHyades))
-
-    if(nDimHyades > 1)then
-       ! y, uy and material are needed in 2D
-       if(iRHyadesMesh < 0) call stop_mpi(NameSub// &
-            ' could not find y/r in '//trim(NameVarHyades))
-       if(UseZoneCenter .and. iRHyades < 0) call stop_mpi(NameSub// &
-            ' could not find rcm in '//trim(NameVarHyades))
-       if(iUrHyades < 0) call stop_mpi(NameSub// &
-            ' could not find uy/ur in '//trim(NameVarHyades))
-       if(iMaterialHyades < 0) call stop_mpi(NameSub// &
-            ' could not find material in '//trim(NameVarHyades))
-    end if
-
-    ! Set conversion from Hyades units to normalized units
-    allocate(Hyades2No_V(nDimHyades + nVarHyadesAll))
-    Hyades2No_V = 1.0
-    Hyades2No_V(iVarZone_I(iXHyades))  = 0.01*Si2No_V(UnitX_)   !cm    -> m
-    Hyades2No_V(iVarZone_I(iRhoHyades))= 1e3 *Si2No_V(UnitRho_) !Gamma/cm3 -> kg/m3
-    Hyades2No_V(iVarZone_I(iPHyades))  = 0.1 *Si2No_V(UnitP_)   !dyne  -> Pa
-
-    Hyades2No_V(iVarMesh_I(iXHyadesMesh)) = 0.01*Si2No_V(UnitX_) ! cm    -> m
-    Hyades2No_V(iVarMesh_I(iUxHyades))    = 0.01*Si2No_V(UnitU_) ! cm/s  -> m/s
-
-    if(UseRadDiffusion .or. UseElectronPressure)then
-       if(iTeHyades < 0) call stop_mpi(NameSub// &
-            ' could not find electron temperature in '//trim(NameVarHyades))
-
-       Hyades2No_V(iVarZone_I(iTeHyades)) = &
-            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
-    end if
-
-    if(UseRadDiffusion)then
-       if(iTrHyades < 0) call stop_mpi(NameSub// &
-            ' could not find radiation temperature in '//trim(NameVarHyades))
-
-       Hyades2No_V(iVarZone_I(iTrHyades)) = &
-            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
-    end if
-
-    if(UseElectronPressure)then
-       if(iTiHyades < 0) call stop_mpi(NameSub// &
-            ' could not find ion temperature in '//trim(NameVarHyades))
-
-       Hyades2No_V(iVarZone_I(iTiHyades)) = &
-            cKevToK*Si2No_V(UnitTemperature_) ! KeV   -> K
-    end if
-
-    if(nDimHyades > 1)then
-       Hyades2No_V(iVarZone_I(iRHyades)) = 0.01*Si2No_V(UnitX_)  ! cm    -> m
-
-       Hyades2No_V(iVarMesh_I(iRHyadesMesh)) = &
-            0.01*Si2No_V(UnitX_)  ! cm    -> m
-       Hyades2No_V(iVarMesh_I(iUrHyades)) = &
-            0.01*Si2No_V(UnitU_)  ! cm/s  -> m/s
-    end if
-
-    ! Read in the data
-    allocate( &
-         DataHyadesMesh_VC(nDimHyades + nVarHyadesMesh, nCellHyadesMesh), &
-         DataHyades_VC(nDimHyades + nVarHyades, nCellHyades), &
-         CoordHyades_DC(nDimHyades,nCellHyades), &
-         CoordHyadesMesh_DC(nDimHyades,nCellHyadesMesh), &
-         Var_VI(nVarHyadesAll,nCellHyadesMesh) )
-
-    call read_plot_file(NameHyadesFile, &
-         CoordOut_DI = CoordHyadesMesh_DC, VarOut_VI = Var_VI)
-
-    iCell = 0
-    iCellMesh = 0
-    do j = 1, nCellHyadesMesh_D(2); do i = 1, nCellHyadesMesh_D(1)
-       iCellMesh = iCellMesh + 1
-
-       ! Convert from CGS to normalized units and store in DataHyadesMesh_VC
-       DataHyadesMesh_VC(:nDimHyades,iCellMesh) = &
-            CoordHyadesMesh_DC(:,iCellMesh)*Hyades2No_V(:nDimHyades)
-       ! the staggered velocity components
-       do iVar = nDimHyades + 1, nDimHyades + nVarHyadesMesh
-          DataHyadesMesh_VC(iVar,iCellMesh) = &
-               Var_VI(iVarMesh_I(iVar)-nDimHyades,iCellMesh) &
-               *Hyades2No_V(iVarMesh_I(iVar))
-       end do
-
-       ! The first rows in HYADES only contains mesh data
-       if(UseZoneCenter .and. (i == 1 .or. j == 1)) CYCLE
-
-       iCell = iCell + 1
-
-       if(UseZoneCenter)then
-          do iVar = 1, nDimHyades
-             DataHyades_VC(iVar,iCell) = &
-                  Var_VI(iVarZone_I(iVar)-nDimHyades,iCellMesh) &
-                  *Hyades2No_V(iVarZone_I(iVar))
-          end do
-       else
-          DataHyades_VC(:nDimHyades,iCell) = &
-               DataHyadesMesh_VC(:nDimHyades,iCell)
-       end if
-       ! zone centered variables
-       do iVar = nDimHyades + 1, nDimHyades + nVarHyades
-          DataHyades_VC(iVar,iCell) = &
-               Var_VI(iVarZone_I(iVar)-nDimHyades,iCellMesh) &
-               *Hyades2No_V(iVarZone_I(iVar))
-       end do
-    end do; end do
-
-    deallocate(Var_VI)
-
-    if(iMaterialHyades > 0)then
-       ! Vacuum (5) --> Polyimid
-       where(nint(DataHyades_VC(iMaterialHyades, :)) == 5) &
-            DataHyades_VC(iMaterialHyades, :) = Plastic_
-       if(.not.UseAy)then
-          ! Acrylic (4) --> Polyimid
-          where(nint(DataHyades_VC(iMaterialHyades, :)) == Ay_) &
-               DataHyades_VC(iMaterialHyades, :) = Plastic_
-       end if
-       if(.not.UseAu)then
-          ! Gold (3) --> Polyimid
-          where(nint(DataHyades_VC(iMaterialHyades, :)) == Au_) &
-               DataHyades_VC(iMaterialHyades, :) = Plastic_
-       end if
-    end if
-
-    if(nDimHyades == 1)then
-
-       ! Locate the Be-Xe interface in 1D 
-       do iCell = 2, nCellHyades
-          if(iMaterialHyades > 0)then
-             ! Check if material changes from Be to Xe
-             if(  nint(DataHyades_VC(iMaterialHyades, iCell-1)) == Be_ .and. &
-                  nint(DataHyades_VC(iMaterialHyades, iCell  )) == Xe_) EXIT
-          else
-             ! Check if ionization level jumps through 5
-             if(  DataHyades_VC(iZHyades, iCell-1) < 5.0 .and.  &
-                  DataHyades_VC(iZHyades, iCell)   > 5.0 ) EXIT
-          end if
-       end do
-       if(iCell > nCellHyades)call stop_mpi(NameSub // &
-            ' could not find Be/Xe interface')
-
-       xBeHyades = 0.5* &
-            ( DataHyades_VC(iXHyades, iCell-1) &
-            + DataHyades_VC(iXHyades, iCell))
-
-    else
-
-       ! Fix the pressure where it is set to some very small value
-       where(DataHyades_VC(iPHyades, :) < 1e-10) &
-            DataHyades_VC(iPHyades, :) = pDimOutside*Io2No_V(UnitP_)
-
-       ! Find cell with maximum X coordinate along the symmetry axis
-       iCellLastHyades     = nCellHyades_D(1)
-       iCellLastHyadesMesh = nCellHyadesMesh_D(1)
-
-       ! Calculate level set functions on the Hyades grid using 
-       ! the minimum distance between cells of different materials
-       allocate(LevelHyades_VC(0:nMaterial-1, nCellHyades))
-
-       if(UseMixedCell)then
-          ! Simply set 1.0 the levelset function corresponding to the material
-          LevelHyades_VC = -1.0
-          do iCell = 1, nCellHyades
-             LevelHyades_VC(nint(DataHyades_VC(iMaterialHyades,iCell)),iCell) &
-                  = 1.0
-          end do
-       else
-          ! Determine distance functions
-          allocate(Distance2_C(nCellHyades), iMaterial_C(nCellHyades))
-          do iCell = 1, nCellHyades
-             x         = DataHyades_VC(iXHyades, iCell)
-             r         = DataHyades_VC(iRHyades, iCell)
-             iMaterial = DataHyades_VC(iMaterialHyades, iCell)
-
-             ! Distance squared from all other points
-             Distance2_C = (x - DataHyades_VC(iXHyades,:))**2       &
-                  +        (r - DataHyades_VC(iRHyades,:))**2
-
-             ! Integer value of material in Hyades grid
-             iMaterial_C = DataHyades_VC(iMaterialHyades,:)
-
-             ! For each cell set 3 (or 4) level set functions
-             do jMaterial = 0, nMaterial-1
-                if(iMaterial == jMaterial)then
-                   ! Level is the smallest distance to a different material
-                   LevelHyades_VC(jMaterial, iCell) =  sqrt(minval &
-                        ( Distance2_C, MASK=iMaterial_C /= jMaterial))
-                else
-                   ! Level is -1 times the smallest distance to same material
-                   LevelHyades_VC(jMaterial, iCell) = - sqrt(minval &
-                        ( Distance2_C, MASK=iMaterial_C == jMaterial))
-                end if
-             end do
-          end do
-          deallocate(Distance2_C, iMaterial_C)
-       end if
-    end if
-
-
-    if(.not.UseHyadesGroupFile) RETURN
-
-    ! read HYADES multi-group file
-    call read_plot_file(NameHyadesGroupFile, nVarOut = nGroupHyades, &
-         ParamOut_I = EnergyGroupHyades_I)
-
-    ! Read in the data
-    ! The HYADES file contains monochromatic radiation energy density
-    allocate(Var_VI(nGroupHyades,nCellHyades))
-
-    call read_plot_file(NameHyadesGroupFile, VarOut_VI = Var_VI)
-
-    ! Convert the monochromatic radiation energy density to
-    ! radiation energy density and convert from CGS to normalized units
-    do iCell = 1, nCellHyades
-       Var_VI(:,iCell) = Var_VI(:,iCell) &
-            *(EnergyGroupHyades_I(1:nGroupHyades) &
-            - EnergyGroupHyades_I(0:nGroupHyades-1)) &
-            *0.1*Si2No_V(UnitEnergyDens_)   ! erg/cm^3 -> J/m^3
-    end do
-
-    ! Based on FreqMinSi and FreqMaxSi determine which Hyades groups
-    ! are to be used.
-    ! Initial minimum and maximum photon energy is in keV
-    EnergyGroupMin = FreqMinSi*cHPlanckEV*1e-3
-    EnergyGroupMax = FreqMaxSi*cHPlanckEV*1e-3
-
-    ! Reset the minimum group energy (minimum group energy of HYADES does
-    ! not follow a logarithmic scale)
-    DeltaLogEnergy = &
-         (log(EnergyGroupHyades_I(nGroupHyades))-log(EnergyGroupHyades_I(1))) &
-         /(nGroupHyades - 1)
-    EnergyGroupHyades_I(0) = &
-         exp(log(EnergyGroupHyades_I(nGroupHyades)) &
-         -   DeltaLogEnergy*nGroupHyades)
-
-    ! Truncate the number of groups supplied by HYADES depending
-    ! on the user supplied FreqMaxSi.
-    ! Find maximum group index for which EnergyGroupHyades_I(nGroup)
-    ! < EnergyGroupMax (units of keV)
-    do iGroup = 1, nGroupHyades
-       if(EnergyGroupHyades_I(iGroup) > EnergyGroupMax)then
-          iGroupLast = iGroup - 1
-          EXIT
-       end if
-       iGroupLast = iGroup
-    end do
-
-    ! Truncate from below according to FreqMinSi
-    do iGroup = iGroupLast, 1, -1
-       if(EnergyGroupHyades_I(iGroup-1) < EnergyGroupMin)then
-          iGroupFirst = iGroup + 1
-          EXIT
-       end if
-       iGroupFirst = iGroup
-    end do
-
-    nGroup = iGroupLast - iGroupFirst + 1
-
-    if(nGroup /= nWave)then
-       write(*,*)NameSub, 'nWave should be reset to ', nGroup
-       call stop_mpi(NameSub//' reconfigure and recompile !')
-    end if
-
-    allocate(EradHyades_VC(nGroup,nCellHyades))
-
-    do iCell = 1, nCellHyades
-       EradHyades_VC(:,iCell) = Var_VI(iGroupFirst:iGroupLast,iCell)
-    end do
-
-    deallocate(Var_VI)
-
-    ! convert minimum and maximum photon energy in keV to frequencies in Herz
-    FreqMinSi = EnergyGroupHyades_I(iGroupFirst-1)*1e3/cHPlanckEV
-    FreqMaxSi = EnergyGroupHyades_I(iGroupLast)*1e3/cHPlanckEV
-
-  end subroutine read_hyades_file
-
-  !============================================================================
-
-  subroutine interpolate_hyades1d(iBlock)
-
-    use BATL_size,           ONLY: nJ, nK, MinI, MaxI
-    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
-    use ModAdvance,    ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Erad_, UseElectronPressure
-    use ModGeometry,   ONLY: Xyz_DGB
-    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         cRadiationNo, UnitEnergyDens_
-    use ModMain,       ONLY: UseRadDiffusion
-    use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
-
-    integer, intent(in) :: iBlock
-
-    integer :: i, j, k, iCell, iWave
-    real :: x, Weight1, Weight2
-    real :: Tr
-    real :: TrSi, EgSi
-    character(len=*), parameter :: NameSub='interpolate_hyades1d'
-    !-------------------------------------------------------------------------
-    do i = MinI, MaxI
-       ! Find the Hyades points around this position
-       x = Xyz_DGB(x_,i,1,1,iBlock)
-
-       do iCell=1, nCellHyades
-          if(DataHyades_VC(iXHyades, iCell) >= x) EXIT
-       end do
-       if (iCell == 1) call stop_mpi(NameSub // &
-            " Hyades solution does not cover the left boundary")
-
-       if(iCell > nCellHyades)then
-          ! Cell is beyond the last point of Hyades output: use last cell
-          iCell   = nCellHyades
-          Weight1 = 0.0
-          Weight2 = 1.0
-       else
-          ! Assign weights for linear interpolation between iCell-1, iCell
-          Weight1 = (DataHyades_VC(iXHyades, iCell) - x) &
-               /    (DataHyades_VC(iXHyades, iCell) &
-               -     DataHyades_VC(iXHyades, iCell-1))
-          Weight2 = 1.0 - Weight1
-       end if
-
-       do k = 1, nK; do j = 1, nJ
-          ! Interpolate density, momentum and pressure
-
-          State_VGB(Rho_,i,j,k,iBlock) = &
-               ( Weight1*DataHyades_VC(iRhoHyades, iCell-1) &
-               + Weight2*DataHyades_VC(iRhoHyades, iCell) )
-
-          State_VGB(RhoUx_,i,j,k,iBlock) =  State_VGB(Rho_,i,j,k,iBlock) * &
-               ( Weight1*DataHyadesMesh_VC(iUxHyades, iCell-1) &
-               + Weight2*DataHyadesMesh_VC(iUxHyades, iCell) )
-
-          if(UseElectronPressure)then
-             Te_G(i,j,k) = ( Weight1*DataHyades_VC(iTeHyades, iCell-1) &
-                  +          Weight2*DataHyades_VC(iTeHyades, iCell) )
-             Ti_G(i,j,k) = ( Weight1*DataHyades_VC(iTiHyades, iCell-1) &
-                  +          Weight2*DataHyades_VC(iTiHyades, iCell) )
-          end if
-
-          State_VGB(p_,i,j,k,iBlock) = &
-               ( Weight1*DataHyades_VC(iPHyades, iCell-1) &
-               + Weight2*DataHyades_VC(iPHyades, iCell) )
-
-          ! Set transverse momentum to zero
-          State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = 0.0
-
-          if(UseRadDiffusion)then
-             if(UseHyadesGroupFile)then
-                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
-                     ( Weight1*EradHyades_VC(:,iCell-1) &
-                     + Weight2*EradHyades_VC(:,iCell) )
-             else
-                ! Start from hyades radiation temperature
-                ! Total radiation energy = cRadiation*Trad**4
-                Tr = ( Weight1*DataHyades_VC(iTrHyades, iCell-1) &
-                     + Weight2*DataHyades_VC(iTrHyades, iCell) )
-
-                if(nWave ==1)then
-                   State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
-                else
-                   TrSi = Tr*No2Si_V(UnitTemperature_)
-                   do iWave = 1, nWave
-                      call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
-                      State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
-                           EgSi*Si2No_V(UnitEnergyDens_)
-                   end do
-                end if
-             end if
-          end if
-
-       end do; end do
-    end do
-
-  end subroutine interpolate_hyades1d
-
-  !============================================================================
-
-  subroutine interpolate_hyades2d(iBlock)
-
-    ! Use triangulation to interpolate Hyades grid onto CRASH grid
-
-    use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
-    use ModSize,        ONLY: nI, nJ, nK
-    use ModAdvance,     ONLY: State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_, p_, &
-         Erad_, UseElectronPressure
-    use ModGeometry,    ONLY: Xyz_DGB, y2
-    use ModTriangulate, ONLY: calc_triangulation, mesh_triangulation, &
-         find_triangle
-    use ModMain,        ONLY: UseRadDiffusion
-    use ModPhysics,     ONLY: cRadiationNo, No2Si_V, Si2No_V, &
-         UnitTemperature_, UnitEnergyDens_
-    use ModVarIndexes,  ONLY: nWave, WaveFirst_, WaveLast_
-
-    integer, intent(in) :: iBlock
-
-    integer, save              :: nTriangle, nTriangleMesh
-    integer, allocatable, save :: &
-         iNodeTriangle_II(:,:), iNodeTriangleMesh_II(:,:), &
-         nTriangle_C(:,:), nTriangleMesh_C(:,:)
-    integer, pointer, save     :: iTriangle_IC(:,:,:), iTriangleMesh_IC(:,:,:)
-    real, allocatable,    save :: DataHyades_V(:), DataHyadesMesh_V(:)
-    real                       :: LevelHyades_V(0:nMaterial-1)
-    real                       :: EradHyades_V(nWave)
-
-    integer :: i, j, k, iNode1, iNode2, iNode3, iWave
-    real    :: x, y, z, r, Weight1, Weight2, Weight3
-    real    :: WeightNode_I(3), WeightMaterial_I(0:nMaterial-1), Weight
-    real    :: TrSi, EgSi
-
-    integer :: iMaterial, iMaterialNode_I(3)
-
-    character(len=*), parameter :: NameSub='interpolate_hyades2d'
-    !-------------------------------------------------------------------------
-    if(.not.allocated(iNodeTriangle_II))then
-       ! allocate variables and do triangulation
-       allocate(iNodeTriangle_II(3,2*nCellHyades))
-       allocate(DataHyades_V(nDimHyades + nVarHyades))
-
-       CoordHyades_DC = DataHyades_VC( (/iXHyades, iRHyades/),:)
-       ! Make CoordHyadesMesh_DC dimensionless
-       if(UseZoneCenter) CoordHyadesMesh_DC = DataHyadesMesh_VC(:nDimHyades,:)
-
-       if(UseDelaunay)then
-          call calc_triangulation( &
-               nCellHyades, CoordHyades_DC, iNodeTriangle_II, nTriangle)
-       else
-          call mesh_triangulation(nCellHyades_D(1), nCellHyades_D(2), &
-               CoordHyades_DC, iNodeTriangle_II, nTriangle)
-       end if
-       ! Use a uniform mesh for fast search algorithm
-       allocate(nTriangle_C(nCellHyades_D(1),nCellHyades_D(2)))
-       nTriangle_C(1,1) = -1
-
-       allocate(DataHyadesMesh_V(nDimHyades + nVarHyadesMesh))
-       if(UseZoneCenter)then
-          allocate(iNodeTriangleMesh_II(3,2*nCellHyadesMesh))
-          if(UseDelaunay)then
-             call calc_triangulation( nCellHyadesMesh, CoordHyadesMesh_DC, &
-                  iNodeTriangleMesh_II, nTriangleMesh)
-          else
-             call mesh_triangulation( &
-                  nCellHyadesMesh_D(1), nCellHyadesMesh_D(2), &
-                  CoordHyadesMesh_DC, iNodeTriangleMesh_II, nTriangleMesh)
-          end if
-          allocate( &
-               nTriangleMesh_C(nCellHyadesMesh_D(1),nCellHyadesMesh_D(2)))
-          nTriangleMesh_C(1,1) = -1
-       end if
-    end if
-
-    ! Interpolate points 
-    do j = 1, nJ; do i = 1, nI; do k = 1, nk
-
-       x = Xyz_DGB(x_,i,j,k,iBlock)
-       y = Xyz_DGB(y_,i,j,k,iBlock)
-       z = Xyz_DGB(z_,i,j,k,iBlock)
-
-       call set_yzr(x, y, z, r, rMax=y2)
-
-       ! Check if we are at the end of the Hyades grid
-       if(x >= DataHyades_VC(iXHyades,iCellLastHyades))then
-          iNode1 = iCellLastHyades;  Weight1 = 1.0
-          iNode2 = 1;                Weight2 = 0.0
-          iNode3 = 1;                Weight3 = 0.0
-       else
-          ! Find the Hyades triangle around this position
-          call find_triangle(&
-               nCellHyades, nTriangle, &
-               (/x, r/), CoordHyades_DC, &
-               iNodeTriangle_II, &
-               iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
-               nTriangle_C=nTriangle_C, iTriangle_IC=iTriangle_IC)
-       end if
-
-       ! Check if the 3 points consist of the same material or not
-       ! If the materials are different use the points with the
-       ! material that has the largest total weight
-
-       ! Weight and material of the 3 nodes of the triangle
-       WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
-       iMaterialNode_I = DataHyades_VC(iMaterialHyades, &
-            (/iNode1, iNode2, iNode3/) )
-
-       if(maxval(iMaterialNode_I) /= minval(iMaterialNode_I))then
-
-          ! Add up the weights for all materials
-          do iMaterial = 0, nMaterial - 1
-             WeightMaterial_I(iMaterial) = sum(WeightNode_I, &
-                  MASK = (iMaterialNode_I == iMaterial) )
-          end do
-
-          ! Find the dominant material
-          iMaterial   = maxloc(WeightMaterial_I, 1) - 1
-          Weight      = WeightMaterial_I(iMaterial)
-
-          where(iMaterialNode_I == iMaterial) 
-             ! Reset weights so they add up to 1 for the dominant material
-             WeightNode_I = WeightNode_I / Weight
-          elsewhere
-             ! Other materials get zero weight
-             WeightNode_I = 0.0
-          end where
-
-       end if
-
-       DataHyades_V = &
-            WeightNode_I(1)*DataHyades_VC(:, iNode1) + &
-            WeightNode_I(2)*DataHyades_VC(:, iNode2) + &
-            WeightNode_I(3)*DataHyades_VC(:, iNode3)
-
-       LevelHyades_V = &
-            WeightNode_I(1)*LevelHyades_VC(:, iNode1) + &
-            WeightNode_I(2)*LevelHyades_VC(:, iNode2) + &
-            WeightNode_I(3)*LevelHyades_VC(:, iNode3)
-
-       if(UseHyadesGroupFile)then
-          EradHyades_V = &
-               WeightNode_I(1)*EradHyades_VC(:,iNode1) + &
-               WeightNode_I(2)*EradHyades_VC(:,iNode2) + &
-               WeightNode_I(3)*EradHyades_VC(:,iNode3)
-       end if
-
-       if(UseZoneCenter)then
-          ! Check if we are at the end of the Hyades grid
-          if(x >= DataHyadesMesh_VC(iXHyadesMesh, iCellLastHyadesMesh))then
-             iNode1 = iCellLastHyadesMesh;  Weight1 = 1.0
-             iNode2 = 1;                    Weight2 = 0.0
-             iNode3 = 1;                    Weight3 = 0.0
-          else
-             ! Find the Hyades triangle around this position
-             call find_triangle(&
-                  nCellHyadesMesh, nTriangleMesh, (/x, r/), &
-                  CoordHyadesMesh_DC, &
-                  iNodeTriangleMesh_II, &
-                  iNode1, iNode2, iNode3, Weight1, Weight2, Weight3, &
-                  nTriangle_C=nTriangleMesh_C, &
-                  iTriangle_IC=iTriangleMesh_IC)
-          end if
-          ! Weight of the 3 nodes of the triangle
-          WeightNode_I    = (/ Weight1, Weight2, Weight3 /)
-       end if
-       DataHyadesMesh_V = &
-            WeightNode_I(1)*DataHyadesMesh_VC(:, iNode1) + &
-            WeightNode_I(2)*DataHyadesMesh_VC(:, iNode2) + &
-            WeightNode_I(3)*DataHyadesMesh_VC(:, iNode3)
-
-       ! Interpolate density, momentum and pressure
-
-       State_VGB(Rho_,i,j,k,iBlock)  = DataHyades_V(iRhoHyades)
-
-       State_VGB(RhoUx_,i,j,k,iBlock) = &
-            DataHyades_V(iRhoHyades) * DataHyadesMesh_V(iUxHyades)
-
-       State_VGB(RhoUy_:RhoUz_,i,j,k,iBlock) = (/y, z/)/r * &
-            DataHyades_V(iRhoHyades) * DataHyadesMesh_V(iUrHyades)
-
-       ! Interpolate level set functions
-       State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = LevelHyades_V
-
-       if(UseElectronPressure)then
-          Te_G(i,j,k) = DataHyades_V(iTeHyades)
-          Ti_G(i,j,k) = DataHyades_V(iTiHyades)
-       end if
-       State_VGB(p_,i,j,k,iBlock)  = DataHyades_V(iPHyades)
-
-       if(UsePl .and. AssFactor > 0.0)then
-          ! Reduce plastic pressure
-          if(State_VGB(LevelPl_,i,j,k,iBlock)>0. .or. &
-               UseAy .and. State_VGB(LevelAy_,i,j,k,iBlock)>0.) &
-               State_VGB(p_,i,j,k,iBlock) &
-               = AssFactor*State_VGB(p_,i,j,k,iBlock)
-
-          ! Reduce inward velocity
-          if(State_VGB(RhoUy_,i,j,k,iBlock)<0.0) &
-               State_VGB(RhoUy_,i,j,k,iBlock) &
-               = AssFactor*State_VGB(RhoUy_,i,j,k,iBlock)
-       end if
-
-       if(UseRadDiffusion)then
-          if(UseHyadesGroupFile)then
-             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = EradHyades_V
-          else
-             ! Start from hyades radiation temperature
-             ! Total radiation energy = cRadiation*Trad**4
-             if(nWave == 1)then
-                State_VGB(Erad_,i,j,k,iBlock) = &
-                     cRadiationNo * DataHyades_V(iTrHyades)**4
-             else
-                TrSi = DataHyades_V(iTrHyades)*No2Si_V(UnitTemperature_)
-                do iWave = 1, nWave
-                   call get_energy_g_from_temperature(iWave, TrSi, EgSI = EgSi)
-                   State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
-                        EgSi*Si2No_V(UnitEnergyDens_)
-                end do
-             end if
-          end if
-       end if
-
-    end do; end do; end do
-
-  end subroutine interpolate_hyades2d
 
   !============================================================================
 
@@ -2261,9 +1365,6 @@ contains
        !Reset the maximum photon energy to be 10 keV
        FreqMaxSI = 10000.0 /cHPlanckEV
     end if
-
-    ! Read in Hyades output
-    if(UseHyadesFile .and. .not. restart) call read_hyades_file
 
     ! Read in 2D CRASH output
     if(UseCrash2DFile .and. .not. restart) call read_crash2d_file
