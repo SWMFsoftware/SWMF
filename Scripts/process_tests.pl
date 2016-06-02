@@ -62,9 +62,7 @@ my %WeightTest = (
 
     "CRASH:GM/BATSRUS/test_eosgodunov"    => "1.0",
     "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
-    "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
     "CRASH:GM/BATSRUS/test_laserpackage"  => "1.0",
-    "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
 
     );
 
