@@ -119,15 +119,6 @@ module ModUser
   logical :: UseGammaLaw = .false.
   real :: GammaMaterial_I(0:MaxMaterial-1) = 5.0/3.0
 
-  ! Indexes for lookup tables
-  integer:: iTablePPerRho = -1, iTableThermo = -1
-  ! If UseElectronPressure is true (Pe_>1) then nThermo=6, otherwise it is 5
-  integer, parameter:: nThermo=4+min(2,Pe_)
-  ! Named indices for thermo lookup table
-  ! If UseElectronPressure is false, default TeTi_ to Cond_ to keep
-  ! the compiler happy
-  integer, parameter:: Te_=1, Cv_=2, Gamma_=3, Zavg_=4, Cond_=5, TeTi_=nThermo
-
   integer:: iTableOpacity = -1
   integer:: iTableOpacity_I(0:MaxMaterial-1) = -1
 
@@ -1387,8 +1378,6 @@ contains
     if(.not.IsLogMultigroupGrid) DoAdvectWaves = .false.
 
     ! these EOS tables (if used) combine multiple materials
-    iTablePPerRho   = i_lookup_table('pPerRho(e/rho,rho)')
-    iTableThermo    = i_lookup_table('Thermo(rho,p/rho)')
     iTableOpacity   = i_lookup_table('Opacity(rho,T)')
 
     ! another form of opacity tables
@@ -1401,14 +1390,9 @@ contains
     iTableSesame = i_lookup_table('Sesame(rho,T)')
 
     if(iProc==0) write(*,*) NameSub, &
-         ' iTablePPerRho, Thermo, Opacity, Opacity_I, iTableSesame = ', &
-         iTablePPerRho, iTableThermo, iTableOpacity, &
-         iTableOpacity_I, iTableSesame
+         ' Opacity, Opacity_I, iTableSesame = ', &
+         iTableOpacity, iTableOpacity_I, iTableSesame
 
-    if(iTablePPerRho > 0) &
-         call make_lookup_table(iTablePPerRho, calc_table_value, iComm)
-    if(iTableThermo > 0) &
-         call make_lookup_table(iTableThermo, calc_table_value, iComm)
     if(iTableOpacity > 0) &
          call make_lookup_table(iTableOpacity, calc_table_value, iComm)
     do iMaterial = 0, nMaterial-1
@@ -1468,64 +1452,7 @@ contains
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
     !-----------------------------------------------------------------------
 
-    if(iTable == iTablePPerRho)then
-       ! Calculate p/e for Xe_, Be_ and Plastic_ for given Rho and e/Rho
-       ! Au_ and Ay_ are optional
-       Rho = Arg2
-       e   = Arg1*Rho
-       do iMaterial = 0, nMaterial-1
-          if(UseElectronPressure)then
-             call eos(iMaterial, Rho, eElectronIn=e, pElectronOut=p)
-          else
-             call eos(iMaterial, Rho, EtotalIn=e, pTotalOut=p)
-          end if
-
-          ! Material index starts from 0 :-( hence the +1
-          Value_V(iMaterial+1) = p/Rho
-       end do
-    elseif(iTable == iTableThermo)then
-       ! Calculate cV, gamma, HeatCond and Te for Xe_, Be_ and Plastic_ 
-       ! for given Rho and p/Rho
-       ! Au_ and Ay_ are optional
-       Rho = Arg1
-       p   = Arg2*Rho
-       do iMaterial = 0, nMaterial-1
-          if(UseElectronPressure)then
-             call eos(iMaterial, Rho, pElectronIn=p, &
-                  TeOut=Te, CvElectronOut=Cv, GammaEOut=GammaEOS, zAverageOut=Zavg, &
-                  HeatCond=HeatCond, TeTiRelax=TeTiRelax)
-
-             Value_V(Te_   +iMaterial*nThermo) = Te
-             Value_V(Cv_   +iMaterial*nThermo) = Cv
-             Value_V(Gamma_+iMaterial*nThermo) = GammaEOS
-             Value_V(Zavg_ +iMaterial*nThermo) = Zavg
-             Value_v(Cond_ +iMaterial*nThermo) = HeatCond
-             Value_V(TeTi_ +iMaterial*nThermo) = TeTiRelax
-          else
-
-             call eos(iMaterial, Rho, PtotalIn=p, &
-                  TeOut=Te, CvTotalOut=Cv, GammaOut=GammaEOS, zAverageOut=Zavg, &
-                  HeatCond=HeatCond)
-
-             ! Note that material index starts from 0
-             if(Te > 0.0)then
-                Value_V(Te_   +iMaterial*nThermo) = Te
-                Value_V(Cv_   +iMaterial*nThermo) = Cv
-                Value_V(Gamma_+iMaterial*nThermo) = GammaEOS
-                Value_V(Zavg_ +iMaterial*nThermo) = Zavg
-                Value_V(Cond_ +iMaterial*nThermo) = HeatCond
-             else
-                ! The eos() function returned impossible values, take ideal gas
-                Value_V(Te_   +iMaterial*nThermo) = &
-                     p/Rho*cProtonMass/cBoltzmann
-                Value_V(Cv_   +iMaterial*nThermo) = 1.5*Rho
-                Value_V(Gamma_+iMaterial*nThermo) = 5./3.
-                Value_V(Zavg_ +iMaterial*nThermo) = 0.0
-                Value_V(Cond_ +iMaterial*nThermo) = 0.0
-             end if
-          end if
-       end do
-    elseif(iTable == iTableOpacity)then
+    if(iTable == iTableOpacity)then
        ! Calculate gray specific opacities for all materials
        ! for given Rho and Te
        ! Au_ and Ay_ are optional
@@ -1639,12 +1566,10 @@ contains
     logical :: IsMix
     integer :: iMaterial, jMaterial
     real    :: pSi, RhoSi, TeSi, EinternalSi, LevelSum
-    real    :: Value_V(nMaterial*nThermo)
     ! Our gray opacity table are for three materials
     real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
-    real, dimension(0:nMaterial-1) :: pPerRho_I, Weight_I
-    real :: ePerRho
+    real, dimension(0:nMaterial-1) :: Weight_I
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
     real :: Level_I(3), LevelLeft, LevelRight
     real :: NatomicSi
@@ -1853,45 +1778,33 @@ contains
       ! Obtain the pressure from EinternalIn or TeIn or State_V
       ! Do this for various cases: mixed cell or not, lookup tables or not
       if(present(EinternalIn))then
-         ! Obtain the pressure from EinternalIn
-         if(iTablePPerRho > 0)then
-            ! Use lookup table
-            if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
-                 'pPerRho(Rho,Einternal)', RhoSi, EinternalSi)
-
-            call interpolate_lookup_table(iTablePPerRho, &
-                 EinternalSi/RhoSi, RhoSi, pPerRho_I, DoExtrapolate = .false.)
-            ! Use a number density weighted average
-            pSi = RhoSi*sum(Weight_I*pPerRho_I)
+         ! Use EOS function
+         if(IsMix)then
+            call eos(RhoToARatioSi_I, eTotalIn=EinternalIn, &
+                 pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                 GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut)
          else
-            ! Use EOS function
-            if(IsMix)then
-               call eos(RhoToARatioSi_I, eTotalIn=EinternalIn, &
+            if(.not.UseNLTE)then
+               call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
                     pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
                     GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut)
             else
-               if(.not.UseNLTE)then
-                  call eos(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+               !Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
+               if(UseERadInput) then
+                  call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                       EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                       *No2Si_V(UnitEnergyDens_),&
                        pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
                        GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                       HeatCond=HeatCondOut)
+                       HeatCond=HeatCondOut, UseERadInput=UseERadInput)
                else
-                  !Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
-                  if(UseERadInput) then
-                     call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
-                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                          *No2Si_V(UnitEnergyDens_),&
-                          pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                          GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                          HeatCond=HeatCondOut, UseERadInput=UseERadInput)
-                  else
-                     call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
-                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                          pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
-                          GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                          HeatCond=HeatCondOut, UseERadInput=UseERadInput)
-                  end if
+                  call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
+                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                       pTotalOut=pSi, TeOut=TeSi, CvTotalOut=CvOut, &
+                       GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                       HeatCond=HeatCondOut, UseERadInput=UseERadInput)
                end if
             end if
          end if
@@ -1937,58 +1850,39 @@ contains
          if(present(EinternalOut))then
             ! Obtain the internal energy from pressure
             ! Use the reversed lookup procedure
-            if(iTablePPerRho > 0)then
-
-               if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                    'PPerRho(p/Rho,Rho,E/Rho_out)', pSi, RhoSi)
-
-               EinternalOut = 0.0
-               do jMaterial = 0, nMaterial-1
-                  if(Weight_I(jMaterial) < 1e-6) CYCLE
-                  call interpolate_lookup_table(iTablePPerRho, &
-                       iVal=jMaterial+1, &
-                       ValIn=pSi/RhoSi, Arg2In=RhoSi, &
-                       Value_V=pPerRho_I, Arg1Out=ePerRho, &
-                       DoExtrapolate = .false.)
-                  ! Use a number density weighted average
-                  EinternalOut = EinternalOut &
-                       + Weight_I(jMaterial)*ePerRho*RhoSi
-               end do
+            if(IsMix)then
+               call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+                    EtotalOut=EinternalOut, TeOut=TeSi, &
+                    CvTotalOut=CvOut, GammaOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
-               if(IsMix)then
-                  call eos(RhoToARatioSi_I, pTotalIn=pSi, &
+               if(UseNLTE)then
+                  ! call CON_stop('NLTE energy cannot be found from pressure')
+                  EinternalOut = pSi*InvGammaMinus1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
+                       No2Si_V(UnitP_)
+                  EInternalOut = max(EInternalOut,1e-30)
+                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  if(UseERadInput)then
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
+                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                          *No2Si_V(UnitEnergyDens_),&
+                          TeOut=TeSi,        &
+                          CvTotalOut=CvOut, GammaOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          UseERadInput=UseERadInput) 
+                  else
+                     call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
+                          TeOut=TeSi,        &
+                          CvTotalOut=CvOut, GammaOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          UseERadInput=UseERadInput)
+                  end if
+               else
+                  call eos(iMaterial,RhoSi,pTotalIn=pSi, &
                        EtotalOut=EinternalOut, TeOut=TeSi, &
                        CvTotalOut=CvOut, GammaOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
-               else
-                  if(UseNLTE)then
-                     ! call CON_stop('NLTE energy cannot be found from pressure')
-                     EinternalOut = pSi*InvGammaMinus1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
-                          No2Si_V(UnitP_)
-                     EInternalOut = max(EInternalOut,1e-30)
-                     !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
-                     if(UseERadInput)then
-                        call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
-                             EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                             *No2Si_V(UnitEnergyDens_),&
-                             TeOut=TeSi,        &
-                             CvTotalOut=CvOut, GammaOut=GammaOut, &
-                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                             UseERadInput=UseERadInput) 
-                     else
-                        call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
-                             EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
-                             TeOut=TeSi,        &
-                             CvTotalOut=CvOut, GammaOut=GammaOut, &
-                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                             UseERadInput=UseERadInput)
-                     end if
-                  else
-                     call eos(iMaterial,RhoSi,pTotalIn=pSi, &
-                          EtotalOut=EinternalOut, TeOut=TeSi, &
-                          CvTotalOut=CvOut, GammaOut=GammaOut, &
-                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
-                  end if
                end if
             end if
             if(UseTableEosNLTE_I(iMaterial) .and. &
@@ -2009,37 +1903,7 @@ contains
            present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W))then
 
-         if(iTableThermo > 0)then
-
-            if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                 'thermo(Rho,p)', RhoSi, pSi)
-
-            call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
-                 Value_V, DoExtrapolate = .false.)
-
-            if(UseVolumeFraction)then
-               TeSi = sum(Weight_I*Value_V(Te_   :nMaterial*nThermo:nThermo))
-               if(present(CvOut))  CvOut  &
-                    = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
-               if(present(GammaOut)) GammaOut &
-                    = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
-               if(present(AverageIonChargeOut)) AverageIonChargeOut &
-                    = sum(Weight_I*Value_V(Zavg_ :nMaterial*nThermo:nThermo))
-               if(present(HeatCondOut)) HeatCondOut &
-                    = sum(Weight_I*Value_V(Cond_ :nMaterial*nThermo:nThermo))
-            else
-               TeSi = Value_V(Te_   +iMaterial*nThermo)
-               if(present(CvOut))  CvOut &
-                    = Value_V(Cv_   +iMaterial*nThermo)
-               if(present(GammaOut)) GammaOut &
-                    = Value_V(Gamma_+iMaterial*nThermo)
-               if(present(AverageIonChargeOut)) AverageIonChargeOut &
-                    = Value_V(Zavg_ +iMaterial*nThermo)
-               if(present(HeatCondOut)) HeatCondOut &
-                    = Value_V(Cond_ +iMaterial*nThermo)
-            end if
-
-         elseif(TeSi < 0.0) then
+         if(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pTotalIn=pSi, &
@@ -2098,47 +1962,34 @@ contains
       ! Do this for mixed cell or not, lookup tables or not
       if(present(EinternalIn))then
          ! Obtain electron pressure from the true electron internal energy
-         if(iTablePPerRho > 0)then
-            ! Use lookup table
-            if(RhoSi <= 0 .or. EinternalSi <= 0) call lookup_error( &
-                 'pPerRho_e(Rho,Eint)', RhoSi, EinternalSi)
-
-            call interpolate_lookup_table(iTablePPerRho, &
-                 EinternalSi/RhoSi, RhoSi, pPerRho_I, DoExtrapolate = .false.)
-
-            ! Use a number density weighted average
-            pSi = RhoSi*sum(Weight_I*pPerRho_I)
+         if(IsMix)then
+            call eos(RhoToARatioSi_I, eElectronIn=EinternalIn, &
+                 pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                 GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                 HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
          else
-            ! Use inline electron EOS
-            if(IsMix)then
-               call eos(RhoToARatioSi_I, eElectronIn=EinternalIn, &
+            if(.not.UseNLTE)then
+               call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
                     pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               if(.not.UseNLTE)then
-                  call eos(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+               !Indirect EOS, either EOverB, or ERad may be used as inputs
+               if(UseERadInput)then
+                  call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                       EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                       *No2Si_V(UnitEnergyDens_),&
                        pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
                        GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                       HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
+                       HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
+                       UseERadInput=UseERadInput)
                else
-                  !Indirect EOS, either EOverB, or ERad may be used as inputs
-                  if(UseERadInput)then
-                     call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
-                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                          *No2Si_V(UnitEnergyDens_),&
-                          pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                          GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                          HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
-                          UseERadInput=UseERadInput)
-                  else
-                     call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
-                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                          pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
-                          GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
-                          HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
-                          UseERadInput=UseERadInput)
-                  end if
+                  call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
+                       EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                       pElectronOut=pSi, TeOut=TeSi, CvElectronOut=CvOut, &
+                       GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
+                       HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut,&
+                       UseERadInput=UseERadInput)
                end if
             end if
          end if
@@ -2187,63 +2038,43 @@ contains
          ! Use this pressure to calculate the true electron internal energy
          pSi = State_V(Pe_)*No2Si_V(UnitP_)
          if(present(EinternalOut))then
-            if(iTablePPerRho > 0)then
-
-               if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                    'PPerRho_e(p/Rho,Rho,E/Rho_out)', pSi, RhoSi)
-
-               EinternalOut = 0.0
-               do jMaterial = 0, nMaterial-1
-                  if(Weight_I(jMaterial) < 1e-6) CYCLE
-                  call interpolate_lookup_table(iTablePPerRho, &
-                       iVal=jMaterial+1, &
-                       ValIn=pSi/RhoSi, Arg2In=RhoSi, &
-                       Value_V=pPerRho_I, Arg1Out=ePerRho, &
-                       DoExtrapolate = .false.)
-                  ! Use a number density weighted average
-                  EinternalOut = EinternalOut &
-                       + Weight_I(jMaterial)*ePerRho*RhoSi
-
-               end do
+            if(IsMix)then
+               call eos(RhoToARatioSi_I, pElectronIn=pSi, &
+                    eElectronOut=EinternalOut, TeOut=TeSi, &
+                    CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                    zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                    TeTiRelax=TeTiRelaxOut)
             else
-               if(IsMix)then
-                  call eos(RhoToARatioSi_I, pElectronIn=pSi, &
+               if(UseNLTE)then
+                  !call CON_stop('NLTE energy cannot be found from pressure')
+                  EInternalOut = pSi*InvGammaMinus1+&
+                       State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
+                  EInternalOut = max(EInternalOut,1e-30)
+                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  if(UseERadInput)then
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
+                          EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
+                          *No2Si_V(UnitEnergyDens_),&
+                          TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut,&
+                          UseERadInput=UseERadInput)
+                  else
+                     call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
+                          EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
+                          TeOut=TeSi, &
+                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
+                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
+                          TeTiRelax=TeTiRelaxOut,&
+                          UseERadInput=UseERadInput)
+                  end if
+               else
+                  call eos(iMaterial, RhoSi, pElectronIn=pSi, &
                        eElectronOut=EinternalOut, TeOut=TeSi, &
                        CvElectronOut=CvOut, GammaEOut=GammaOut, &
                        zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                        TeTiRelax=TeTiRelaxOut)
-               else
-                  if(UseNLTE)then
-                     !call CON_stop('NLTE energy cannot be found from pressure')
-                     EInternalOut = pSi*InvGammaMinus1+&
-                          State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
-                     EInternalOut = max(EInternalOut,1e-30)
-                     !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
-                     if(UseERadInput)then
-                        call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
-                             EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
-                             *No2Si_V(UnitEnergyDens_),&
-                             TeOut=TeSi, &
-                             CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                             TeTiRelax=TeTiRelaxOut,&
-                             UseERadInput=UseERadInput)
-                     else
-                        call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
-                             EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
-                             TeOut=TeSi, &
-                             CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                             zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                             TeTiRelax=TeTiRelaxOut,&
-                             UseERadInput=UseERadInput)
-                     end if
-                  else
-                     call eos(iMaterial, RhoSi, pElectronIn=pSi, &
-                          eElectronOut=EinternalOut, TeOut=TeSi, &
-                          CvElectronOut=CvOut, GammaEOut=GammaOut, &
-                          zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                          TeTiRelax=TeTiRelaxOut)
-                  end if
                end if
             end if
             if(UseTableEosNLTE_I(iMaterial) .and. &
@@ -2266,40 +2097,7 @@ contains
            present(OpacityRosselandOut_W) .or. &
            present(PlanckOut_W))then
 
-         if(iTableThermo > 0)then
-            if(RhoSi <= 0 .or. pSi <= 0) call lookup_error( &
-                 'thermo_e(Rho,p)', RhoSi, pSi)
-
-            call interpolate_lookup_table(iTableThermo, RhoSi, pSi/RhoSi, &
-                 Value_V, DoExtrapolate = .false.)
-
-            if(UseVolumeFraction)then
-               TeSi = sum(Weight_I*Value_V(Te_   :nMaterial*nThermo:nThermo))
-               if(present(CvOut))  CvOut  &
-                    = sum(Weight_I*Value_V(Cv_   :nMaterial*nThermo:nThermo))
-               if(present(GammaOut)) GammaOut &
-                    = sum(Weight_I*Value_V(Gamma_:nMaterial*nThermo:nThermo))
-               if(present(AverageIonChargeOut)) AverageIonChargeOut &
-                    = sum(Weight_I*Value_V(Zavg_ :nMaterial*nThermo:nThermo))
-               if(present(HeatCondOut)) HeatCondOut &
-                    = sum(Weight_I*Value_V(Cond_ :nMaterial*nThermo:nThermo))
-               if(present(TeTiRelaxOut)) TeTiRelaxOut &
-                    = sum(Weight_I*Value_V(TeTi_ :nMaterial*nThermo:nThermo))
-            else
-               TeSi = Value_V(Te_   +iMaterial*nThermo)
-               if(present(CvOut)) CvOut &
-                    = Value_V(Cv_   +iMaterial*nThermo)
-               if(present(GammaOut)) GammaOut &
-                    = Value_V(Gamma_+iMaterial*nThermo)
-               if(present(AverageIonChargeOut)) AverageIonChargeOut &
-                    = Value_V(Zavg_ +iMaterial*nThermo)
-               if(present(HeatCondOut)) HeatCondOut &
-                    = Value_V(Cond_ +iMaterial*nThermo)
-               if(present(TeTiRelaxOut)) TeTiRelaxOut &
-                    = Value_V(TeTi_ +iMaterial*nThermo)
-            end if
-
-         elseif(TeSi < 0.0) then
+         if(TeSi < 0.0) then
             ! If TeSi is not set yet then we need to calculate things here
             if(IsMix) then
                call eos(RhoToARatioSi_I, pElectronIn=pSi, &
