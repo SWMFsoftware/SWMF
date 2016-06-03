@@ -110,7 +110,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['uth'      , 'sqrt(cs0*p/rho)'                         ], $ ; ion thermal speed
                 ['uthe'     , 'sqrt(cs0*{pe}/rho*mi/me)'                ], $ ; electron thermal speed
                 ['omegapi'  , 'op0*sqrt(rho)'                           ], $ ; ion plasma frequency
-                ['omegape'  , 'op0*sqrt(rho)*mi/me'                     ], $ ; electron plasma freq.
+                ['omegape'  , 'op0*sqrt(rho*mi/me)'                     ], $ ; electron plasma freq.
                 ['omegaci'  , 'oc0*b'                                   ], $ ; ion gyro frequency
                 ['omegace'  , 'oc0*b*mi/me'                             ], $ ; electron gyro freq.
                 ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'               ], $ ; gyro radius  
