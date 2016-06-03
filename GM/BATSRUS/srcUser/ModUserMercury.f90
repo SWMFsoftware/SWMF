@@ -122,7 +122,7 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case("#RESISTIVEPLANET")
-          UseResisPlanet = .true.
+          UseResistivePlanet = .true.
           call read_var('PlanetDensitySi'       , PlanetDensitySi)
           call read_var('PlanetPressureSi'      , PlanetPressureSi)
           call read_var('PlanetRadius'        , PlanetRadius)

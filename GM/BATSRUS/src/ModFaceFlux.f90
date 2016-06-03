@@ -2048,7 +2048,7 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
-    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2, UseResisPlanet
+    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy
     use ModWaves
@@ -2144,7 +2144,7 @@ contains
           call get_hd_flux
        end if
 
-       if(UseResisPlanet .and. iFluid == 1)then
+       if(UseResistivePlanet .and. iFluid == 1)then
           ! Do not evolve magnetic field inside the body
           if(r_BLK(iLeft,jLeft,kLeft,iBlockFace)  < 1.0 .and. &
                r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
