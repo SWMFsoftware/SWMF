@@ -544,8 +544,14 @@ contains
   !==================================================================
   logical function is_in_ih(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
-    is_in_ih=dot_product(Xyz_D,Xyz_D)>=rBoundIh**2.and.&
-         all(Xyz_D<=xyz_max_d(IH_)).and.all(Xyz_D>=xyz_min_d(IH_))
+    real,save:: RIHMin2 = -1
+    real,save:: RIHMax2 = -1
+    real:: R2
+    if(RIHMin2 == -1) RIHMin2 = dot_product(xyz_min_d(IH_),(/1,0,0/))**2
+    if(RIHMax2 == -1) RIHMax2 = dot_product(xyz_max_d(IH_),(/1,0,0/))**2
+    R2 = dot_product(Xyz_D,Xyz_D)
+    is_in_ih=R2>=rBoundIh**2.and.&
+         R2<=RIHMax2.and.R2>=RIHMin2
   end function is_in_ih
   !==================================================================!        
   subroutine IH_get_for_sp_and_transform(&
@@ -615,13 +621,17 @@ contains
   logical function is_in_sc(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
     real::R2
+    real,save:: RSCMin2 = -1
+    real,save:: RSCMax2 = -1
+    if(RSCMin2 == -1) RSCMin2 = dot_product(xyz_min_d(SC_),(/1,0,0/))**2
+    if(RSCMax2 == -1) RSCMax2 = dot_product(xyz_max_d(SC_),(/1,0,0/))**2
     R2=dot_product(Xyz_D,Xyz_D)
     if(use_comp(IH_))then            !^CMP IF IH BEGIN
        is_in_sc=R2>=rBoundSc**2.and.R2<rBoundIh**2.and.&
-            all(Xyz_D<xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
+            R2<RSCMax2.and.R2>=RSCMin2
     else                             !^CMP END IH
        is_in_sc=R2>=rBoundSc**2.and.&
-            all(Xyz_D<xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
+            R2<RSCMax2.and.R2>=RSCMin2
     end if                           !^CMP IF IH
   end function is_in_sc
   !--------------------------------------------------------------------------
