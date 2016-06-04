@@ -18,7 +18,7 @@ Waves and GEM, Yingjuan Ma
        4                              nI
        2                              nJ
        2                              nK
-       200                     MinBlockALL
+       100                     MinBlockALL
 
 #PLANET
 NONE			NamePlanet
