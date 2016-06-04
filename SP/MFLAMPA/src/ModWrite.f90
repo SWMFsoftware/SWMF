@@ -175,7 +175,7 @@ contains
       ! coordinates in spherical coordinates
       real:: Coord_D(nDim)
       ! storage for output data
-      real:: DataOut_VI(nDim,nParticle)
+      real:: DataOut_VI(nDim,iParticleMin:iParticleMax)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)

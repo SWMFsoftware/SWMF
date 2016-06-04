@@ -10,8 +10,11 @@ SEP:
 SHELL =/bin/sh
 include Makefile.def 
 
-install: Makefile.def.orig
+install: Makefile.def.orig src/ModSize.f90
 	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
+
+src/ModSize.f90: src/ModSize_orig.f90
+	cp -f src/ModSize_orig.f90 src/ModSize.f90
 
 Makefile.def.orig:
 	mv Makefile.def Makefile.def.orig

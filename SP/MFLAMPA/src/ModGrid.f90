@@ -77,19 +77,29 @@ contains
   
   subroutine set_grid_param
     use ModReadParam, ONLY: read_var
+    use ModNumConst, ONLY: cPi
     character(len=*), parameter:: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
-    call read_var('LatMin', LatMin)
-    call read_var('LatMax', LatMax)
-    if(LatMax <= LatMin)&
-         call CON_stop('Origin surface grid is inconsistent:'//NameSub)
-    DLat = (LatMax - LatMin) / nLat
-
     call read_var('LonMin', LonMin)
     call read_var('LonMax', LonMax)
     if(LonMax <= LonMin)&
          call CON_stop('Origin surface grid is inconsistent:'//NameSub)
+    ! convert angels from degrees to radians
+    LonMax = LonMax * cPi / 180
+    LonMin = LonMin * cPi / 180
+    ! angular grid's step
     DLon = (LonMax - LonMin) / nLon
+
+    call read_var('LatMin', LatMin)
+    call read_var('LatMax', LatMax)
+    if(LatMax <= LatMin)&
+         call CON_stop('Origin surface grid is inconsistent:'//NameSub)
+    ! convert angels from degrees to radians
+    LatMax = LatMax * cPi / 180
+    LatMin = LatMin * cPi / 180
+    ! angular grid's step
+    DLat = (LatMax - LatMin) / nLat
+
     IsSetGrid = .true.
   end subroutine set_grid_param
 

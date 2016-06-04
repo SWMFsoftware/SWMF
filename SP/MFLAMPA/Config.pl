@@ -82,7 +82,7 @@ sub set_grid_size{
     $GridSize = $NewGridSize if $NewGridSize;
 
     if($GridSize =~ /^[0-9]\d*,[0-9]\d*,[1-9]\d*,[1-9]\d*$/){
-	($nP,$iPMax,$nLat,$nLon) = split(',', $GridSize);
+	($nP,$iPMax,$nLon,$nLat) = split(',', $GridSize);
     }elsif($GridSize){
 	die "$ERROR -g=$GridSize must be 4 integers\n";
     }
@@ -117,11 +117,11 @@ sub print_help{
     print "
 Additional options for MFLAMPA/Config.pl:
 
--g=nP,iPMax,nLat,nLon 
+-g=nP,iPMax,nLon,nLat 
                 Set grid size. 
                 nP is maximum number of particles per field line,
                 iPMax is the maximum allowed particle index,
-                nLat, nLon are the grid size at the origin surface.
+                nLon, nLat are the grid size at the origin surface.
 \n";
     exit 0;
 }

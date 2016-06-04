@@ -26,14 +26,14 @@ module ModSize
   ! Indices of internal cooridnates
   integer, parameter:: &
        Particle_  = 1, & ! Index along  field line
-       OriginLat_ = 2, & ! Longitude of field line origin
-       OriginLon_ = 3    ! Latitude  of field line origin
+       OriginLon_ = 2, & ! Latitude of field line origin
+       OriginLat_ = 3    ! Longitude  of field line origin
 
   ! Indices of variables in state vector
   integer, parameter:: &
        R_   = 1,    & ! Radial coordinate
-       Lat_ = 2,    & ! Latitude
-       Lon_ = 3       ! Longitude
+       Lon_ = 2,    & ! Longitude
+       Lat_ = 3       ! Latitude
        
 
   ! Min and Max possible index of a particle along a field line,
@@ -43,8 +43,8 @@ module ModSize
   integer, parameter:: iParticleMax = iParticleMin + nParticle - 1
 
   ! angular grid at origin surface
-  integer, parameter:: nLat  = 4
   integer, parameter:: nLon  = 4
+  integer, parameter:: nLat  = 4
   integer, parameter:: nNode = nLat * nLon
 
 end module ModSize
