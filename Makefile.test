@@ -682,7 +682,7 @@ test5_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/coupled
 
 test5_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -a=1.3e-17 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -a=2e-17 \
 		${TESTDIR}/RESULTS/coupled/EE/log_n000010.log \
 		output/test5/EE.log \
 		> test5_ee.diff)
