@@ -998,6 +998,7 @@ contains
              ! offset ray away from central ray for testing purpose
              yDistance = 0.0
              zDistance = 3.0
+             rDistance = zDistance
           else
 
              ! We neglect exp(-2.25)\approx0.1 and chose the beam margin
