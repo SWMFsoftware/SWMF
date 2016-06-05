@@ -183,7 +183,7 @@ contains
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, nBlock, &
          nDim, nNode, R_, Lat_, Lon_
-    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModMpi
     ! request coordinates of field lines' beginning/origin/end
     ! as well as names variables to be imported
@@ -196,7 +196,7 @@ contains
     ! directions requested
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
-    ! generalized (spherical) coordinates
+    ! radius-lon-lat coordinates
     real:: Coord_D(nDim)
     ! loop variables
     integer:: iParticle, iBlock, iNode
@@ -216,25 +216,22 @@ contains
        ! get coordinates of the 1st points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
-          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
-               CoordOut_DA(:, iNode))
+          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
        end do
     case(iDirOrigin_)
        ! get coordinates of the origin points of field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock)
-          Coord_D = State_VIB((/R_,Lat_,Lon_/), 0, iBlock)
-          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
-               CoordOut_DA(:, iNode))
+          Coord_D = State_VIB((/R_,Lon_,Lat_/), 0, iBlock)
+          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
        end do
     case(iDirEnd_)
        ! get coordinates of the last points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
-          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_),&
-               CoordOut_DA(:, iNode))
+          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
        end do
     case default
        call CON_stop(NameSub//': invalid request of field line coordinates')
@@ -259,8 +256,8 @@ contains
     use ModMain, ONLY: &
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, &
-         nDim, nNode, iParticleMin, iParticleMax, Lat_
-    use ModCoordTransform, ONLY: xyz_to_sph
+         nDim, nNode, iParticleMin, iParticleMax, Lat_, Lon_, R_
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
     use ModMpi
     ! store particle data extracted elsewhere
     !---------------------------------------------------------------
@@ -276,6 +273,8 @@ contains
 
     ! cartesian coordinates
     real:: Xyz_D(nDim)
+    ! radius-lon-lat coordinates
+    real:: Coord_D(nDim)
     ! loop variables
     integer:: iParticle, iBlock, iNode
     ! indices of the particle
@@ -313,10 +312,9 @@ contains
             call CON_stop(NameSub//': Incorrect message pass')
        ! convert and store data
        Xyz_D = matmul(Convert_DD, Data_VI(1:nDim, iParticle))
-       call xyz_to_sph(Xyz_D, &
-            State_VIB(1:nDim, iIndex, iGrid_IA(Block_,iLine)))
-       State_VIB(Lat_, iIndex, iGrid_IA(Block_,iLine)) = &
-            cHalfPi - State_VIB(Lat_, iIndex, iGrid_IA(Block_,iLine))
+       call xyz_to_rlonlat(Xyz_D, Coord_D)
+       State_VIB((/R_, Lon_, Lat_/), iIndex, iGrid_IA(Block_,iLine)) = &
+            Coord_D
     end do
     !\
     ! Update begin/end points on all procs
@@ -349,11 +347,12 @@ contains
     use ModMain, ONLY: iProc, iComm, Block_, Proc_, Begin_, End_,&
          iGrid_IA, State_VIB, &
          nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
-    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModMpi
     real, pointer:: Xyz_DI(:, :)
 
     integer:: iNode, iParticle, iBlock, iError
+    ! radius-lon-lat coordinates
     real:: Coord_D(nDim)
     !-----------------------------------------
     Xyz_DI = 0.0
@@ -365,8 +364,8 @@ contains
           if(  iParticle < iGrid_IA(Begin_, iNode) .or. &
                iParticle > iGrid_IA(End_,   iNode)) &
                CYCLE
-          Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-          call sph_to_xyz(Coord_D(R_), cHalfPi-Coord_D(Lat_), Coord_D(Lon_), &
+          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+          call rlonlat_to_xyz(Coord_D, &
                Xyz_DI(:, (iNode-1)*nParticle+iParticle-iParticleMin+1) )
        end do
     end do

@@ -386,7 +386,7 @@ contains
   !==================================================================!
 
   subroutine transform_from_cartesian(iComp)
-    use ModCoordTransform, ONLY: xyz_to_sph
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
     integer,intent(in)::iComp
     real,pointer,dimension(:,:)::Coord_DI
     character(len=100) :: TypeGeometry
@@ -405,17 +405,15 @@ contains
                Grid_C(SP_)%TypeCoord,&
                Grid_C(iComp)%TypeCoord)
           Coord_D(:) = matmul(SpToMh_DD, Coord_DI(:,iParticle))
-          call xyz_to_sph(Coord_D, Coord_DI(1,iParticle), &
-               Coord_DI(3,iParticle), Coord_DI(2,iParticle))
+          call xyz_to_rlonlat(Coord_D, Coord_DI(1:3,iParticle))
        end do
-          Coord_DI(3,:) = cHalfPi - Coord_DI(3,:)
     end if
     nullify(Coord_DI)
   end subroutine transform_from_cartesian
 
   !==================================================================!
   subroutine transform_to_cartesian(iComp)
-    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     integer,intent(in)::iComp
     real,pointer,dimension(:,:)::Coord_DI
     character(len=100) :: TypeGeometry
@@ -433,8 +431,7 @@ contains
           MhToSp_DD=transform_matrix(tNow,&
                Grid_C(iComp)%TypeCoord,&
                Grid_C(SP_)%TypeCoord)
-          call sph_to_xyz(Coord_DI(1,iParticle), &
-               cHalfPi-Coord_DI(3,iParticle), Coord_DI(2,iParticle), Coord_D)
+          call rlonlat_to_xyz(Coord_DI(1:3,iParticle), Coord_D)
           Coord_DI(:,iParticle) = Coord_D
           Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
        end do
