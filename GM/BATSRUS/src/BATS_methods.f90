@@ -63,6 +63,7 @@ contains
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
+    use ModLoadBalance, ONLY: load_balance
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -118,9 +119,9 @@ contains
 
     ! Move coordinates around except for restart because the
     ! coordinate info is in the .rst files and not in the octree (1st).
-    ! Do not move the data, it is not yet set (2nd false).
-    ! There are new blocks (3rd true).
-    call load_balance(.not.restart, .false., .true.)
+    ! Do not move the data, it is not yet set. There are new blocks.
+    call load_balance(DoMoveCoord=.not.restart, DoMoveData=.false., &
+         IsNewBlock=.true.)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        call set_amr_geometry(iBlock)
@@ -147,6 +148,8 @@ contains
     use ModB0,          ONLY: set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use ModAMR,         ONLY: do_amr
+    use ModLoadBalance, ONLY: load_balance
+
     use ModUserInterface ! user_initial_perturbation, user_action
 
     ! Set intial conditions for solution in each block.
@@ -182,7 +185,9 @@ contains
 
        ! Move coordinates, but not data (?), there are new blocks
        call timing_start('amr_ics_balance')
-       call load_balance(.true.,.false.,.true.)
+       call load_balance(DoMoveCoord=.true.,DoMoveData=.false., &
+            IsNewBlock=.true.)
+
        call timing_stop('amr_ics_balance')
 
        call timing_stop('amr_ics')
@@ -213,8 +218,9 @@ contains
                n_step,Time_Simulation
        end if
        ! Load balance for the inner blocks:
-       ! move coords, move data, there are new blocks
-       call load_balance(.true.,.true.,.true.)
+       call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
+            IsNewBlock=.true.)
+
 
        ! Redo the AMR level constraints for fixed body level
        ! The coordinates of the blocks are only known now
@@ -280,6 +286,7 @@ subroutine BATS_init_session
   use ModLocalTimestep, ONLY: UseLocalTimeStepNew
   use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: init_amr_criteria
+  use ModLoadBalance, ONLY: load_balance, select_stepping
 
   implicit none
 
@@ -291,7 +298,8 @@ subroutine BATS_init_session
      if(iProc == 0)write(*,*) &
           NameSub,': redo load balance for time accurate local timestepping'
      ! move coordinates and data, there are no new blocks  
-     call load_balance(.true.,.true.,.false.)
+     call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
+          IsNewBlock=.false.)
      UseLocalTimeStepNew = .false.
   end if
 
@@ -308,7 +316,7 @@ subroutine BATS_init_session
 
   ! Set number of explicit and implicit blocks
   ! Partially implicit/local selection will be done in each time step
-  call select_stepping(.false.)
+  call select_stepping(DoPartSelect=.false.)
 
   ! Transform velocities from a rotating system to the HGI system if required
   if(iSignRotationIC /= 0)then
@@ -639,6 +647,9 @@ subroutine BATS_select_blocks
   use ModProcMH
   use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
+  use ModTimeStepControl, ONLY: UseMaxTimeStep
+  use ModLoadBalance, ONLY: load_balance
+
   implicit none
 
   !LOCAL VARIABLES:
@@ -647,12 +658,15 @@ subroutine BATS_select_blocks
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   !--------------------------------------------------------------------------
 
-  ! Select and load balance blocks for partially implicit/steady scheme
-  if( UsePartImplicit .or. UsePartSteady .and. IsNewSteadySelect .or. &
-       nBlockSemi >= 0 .and. DoBalanceSemiImpl) then
+  ! Select and load balance blocks
+  if(  UseMaxTimeStep .or. &                         ! subcycling scheme
+       UsePartImplicit .or. &                        ! part implicit scheme
+       UsePartSteady .and. IsNewSteadySelect .or. &  ! part steady scheme
+       nBlockSemi >= 0 .and. DoBalanceSemiImpl) then ! semi-implicit scheme
 
-     ! Redo load balancing: move coordinates and data, there are no new blocks
-     call load_balance(.true.,.true.,.false.)
+     ! Redo load balancing
+     call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
+          IsNewBlock=.false.)
 
      IsNewSteadySelect = .false.
 
