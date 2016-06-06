@@ -55,6 +55,7 @@ OBJECTS = \
 	ModIO.o \
 	ModIonElectron.o \
 	ModLaserHeating.o \
+	ModLoadBalance.o \
 	ModLocalTimeStep.o \
 	ModMain.o \
 	ModMessagePass.o \
@@ -96,7 +97,6 @@ OBJECTS = \
 	fix_axis_cells.o \
 	get_im_pressure.o \
 	library.o \
-	load_balance.o \
 	project_B.o \
 	proj_bicgstab.o \
 	proj_cg.o \
