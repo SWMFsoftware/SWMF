@@ -178,17 +178,6 @@ module ModAdvance
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
 
-  ! The index of block type features. 
-  integer :: &
-       iNotSkippedBlock     =  1, & ! Skipped block or not.
-       iTrueBlock           =  2, & ! True block or not.
-       iPartImplBlock       = -1, & ! Implicit or explicit.
-       iSemiImplBlock       = -1, & ! Semi-implicit or not.
-       iFieldLineThreadBlock= -1, & ! Threaded file line BC or not.
-       iPicBlock            = -1, & ! Overlaped with PIC or not.
-       iSteadyBlock         = -1, & ! Steady block or not.
-       iHighOrderBlock      = -1    ! Use high-order scheme or not. 
-
 contains
 
   !============================================================================
