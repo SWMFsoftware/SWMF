@@ -24,6 +24,7 @@ module ModLoadBalance
 
   public:: init_load_balance
   public:: load_balance
+  public:: load_balance_blocks
   public:: select_stepping
 
   ! Upper estimate on the size of buffer to be sent or received
@@ -685,6 +686,38 @@ contains
             minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
     end if
   end subroutine select_stepping
+  !==========================================================================
+  subroutine load_balance_blocks
+
+    use ModProcMH
+    use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
+    use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
+    use ModTimeStepControl, ONLY: UseMaxTimeStep
+
+    !LOCAL VARIABLES:
+    logical:: DoBalanceSemiImpl = .true.
+
+    character(len=*), parameter :: NameSub = 'load_balance_blocks'
+    !--------------------------------------------------------------------------
+
+    ! Select and load balance blocks
+    if(  UseMaxTimeStep .or. &                         ! subcycling scheme
+         UsePartImplicit .or. &                        ! part implicit scheme
+         UsePartSteady .and. IsNewSteadySelect .or. &  ! part steady scheme
+         nBlockSemi >= 0 .and. DoBalanceSemiImpl) then ! semi-implicit scheme
+
+       ! Redo load balancing
+       call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
+            IsNewBlock=.false.)
+
+       IsNewSteadySelect = .false.
+
+       ! Repeated semi implicit load balancing is only needed if the
+       ! semi-implicit condition is changing dynamically. 
+       DoBalanceSemiImpl = IsDynamicSemiImpl
+    end if
+
+  end subroutine load_balance_blocks
 
 end module ModLoadBalance
 !=============================================================================

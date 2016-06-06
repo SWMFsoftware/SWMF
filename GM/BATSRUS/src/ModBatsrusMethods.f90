@@ -392,6 +392,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPartImplicit, ONLY: advance_part_impl
   use ModHeatConduction, ONLY: calc_ei_heat_exchange
   use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_
+  use ModLoadBalance, ONLY: load_balance_blocks
   implicit none
 
   !INPUT ARGUMENTS:
@@ -424,7 +425,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   call BATS_save_files('BEGINSTEP')
 
   ! Select block types and load balance blocks
-  call BATS_select_blocks
+  call load_balance_blocks
 
   ! Switch off steady blocks to reduce calculation
   if(UsePartSteady) call part_steady_switch(.true.)
@@ -434,6 +435,9 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
+
+  ! Select block types and load balance blocks
+!!!  call load_balance_blocks
 
   call timing_start('advance')
 
@@ -638,44 +642,6 @@ subroutine BATS_init_constrain_b
   end if
 
 end subroutine BATS_init_constrain_b
-
-
-
-!============================================================================
-subroutine BATS_select_blocks
-
-  use ModProcMH
-  use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
-  use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
-  use ModTimeStepControl, ONLY: UseMaxTimeStep
-  use ModLoadBalance, ONLY: load_balance
-
-  implicit none
-
-  !LOCAL VARIABLES:
-  logical:: DoBalanceSemiImpl = .true.
-
-  character(len=*), parameter :: NameSub = 'BATS_select_blocks'
-  !--------------------------------------------------------------------------
-
-  ! Select and load balance blocks
-  if(  UseMaxTimeStep .or. &                         ! subcycling scheme
-       UsePartImplicit .or. &                        ! part implicit scheme
-       UsePartSteady .and. IsNewSteadySelect .or. &  ! part steady scheme
-       nBlockSemi >= 0 .and. DoBalanceSemiImpl) then ! semi-implicit scheme
-
-     ! Redo load balancing
-     call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
-          IsNewBlock=.false.)
-
-     IsNewSteadySelect = .false.
-
-     ! Repeated semi implicit load balancing is only needed if the
-     ! semi-implicit condition is changing dynamically. 
-     DoBalanceSemiImpl = IsDynamicSemiImpl
-  end if
-
-end subroutine BATS_select_blocks
 
 !===========================================================================
 
