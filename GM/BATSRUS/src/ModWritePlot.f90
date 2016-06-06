@@ -894,6 +894,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModAdvance, ONLY : time_BLK, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
        ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure
+  use ModLoadBalance, ONLY: iTypeBalance_A
   use ModB0, ONLY: B0_DGB
   use ModGeometry
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
@@ -1497,6 +1498,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
         if(UsePointImplicit_B(iBLK))&
              PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)+0.5
+     case('balance')
+        if(allocated(iTypeBalance_A)) &
+             PlotVar(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlk))
      case('loworder')
         if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
              iRegionLowOrder_I, iBlk, size(PlotVar(:,:,:,iVar)), 'ghost', &
