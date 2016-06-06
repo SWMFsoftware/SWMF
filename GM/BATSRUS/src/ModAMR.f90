@@ -69,6 +69,7 @@ contains
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
          SkippedBlock_ !!!
+    use ModLoadBalance, ONLY: load_balance
     use ModRaytrace, ONLY: ray
     use ModBlockData, ONLY: clean_block_data
     use ModIO, ONLY : write_prefix, iUnitOut
@@ -216,9 +217,8 @@ contains
     if(DoProfileAmr) call timing_stop('amr::set_batsrus_state')
 
     ! Update iTypeAdvance, and redo load balancing if necessary
-    ! Load balance: move coords, data, and there are new blocks
     if(DoProfileAmr) call timing_start('amr::load_balance')
-    call load_balance(.true.,.true.,.true.)
+    call load_balance(DoMoveCoord=.true., DoMoveData=.true., IsNewBlock=.true.)
     if(DoProfileAmr) call timing_stop('amr::load_balance')
     ! redo message passing
     if(DoProfileAmr) call timing_start('amr::exchange_false')
