@@ -18,7 +18,7 @@ module ModTimeStepControl
   logical, public:: UseTimeStepControl   = .false.
   real,    public:: TimeStepControlInit  = 1.0
   logical, public:: UseMaxTimeStep      = .false. ! calculate max time step
-  real,    public:: DtMin = -1.0, DtMax = -1.0    ! values of min/max time steps
+  real,    public:: DtMin = -1.0, DtMax = -1.0    ! value of min/max time steps
 
   ! Local variables
   integer             :: nVarControl = -1
@@ -411,7 +411,7 @@ contains
        if (Unused_B(iBlock)) CYCLE
 
        if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
-          ! Make block time step a power of 2 multiple of DtMin that is < Dt_BLK
+          ! Make block time step power of 2 multiple of DtMin that is < Dt_BLK
           Dt_BLK(iBlock) = DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
