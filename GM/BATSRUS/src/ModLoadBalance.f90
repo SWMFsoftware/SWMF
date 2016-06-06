@@ -47,9 +47,10 @@ module ModLoadBalance
   logical:: DoSendRay
 
   ! The index of block type features. 
-  integer :: &
+  integer, parameter:: &
        iNotSkippedBlock     =  1, & ! Skipped block or not.
-       iTrueBlock           =  2, & ! True block or not.
+       iTrueBlock           =  2    ! True block or not.
+  integer :: &
        iPartImplBlock       = -1, & ! Implicit or explicit.
        iSemiImplBlock       = -1, & ! Semi-implicit or not.
        iFieldLineThreadBlock= -1, & ! Threaded file line BC or not.
@@ -360,10 +361,10 @@ contains
              if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
 
              ! used block has 1st bit set
-             iType = 1
+             iType = iNotSkippedBlock
 
              ! true block has second bit set
-             if(True_Blk(iBlock)) iType = iType + 2
+             if(True_Blk(iBlock)) iType = iType + iTrueBlock
 
              if(UsePartImplicit)then
                 if(iTypeAdvance_B(iBlock)==ImplBlock_) &
@@ -400,10 +401,11 @@ contains
                      *max(0,floor(alog(dt_BLK(iBlock)/DtMin) / alog(2.0)))
 
                 if(iType > iTypeMax)then
-                   write(*,*)'!!! iType, iTypeMax =', iType, iTypeMax
-                   write(*,*)'!!! iSubCycleBlock=', iSubCycleBlock
-                   write(*,*)'!!! dt_BLK, DtMin=', dt_BLK(iBlock), DtMin
-                   write(*,*)'!!! time level   =', &
+                   write(*,*) NameSub,' ERROR: iType, iTypeMax =', &
+                        iType, iTypeMax
+                   write(*,*)NameSub,' iSubCycleBlock=', iSubCycleBlock
+                   write(*,*)NameSub,' dt_BLK, DtMin=', dt_BLK(iBlock), DtMin
+                   write(*,*)NameSub,' time level   =', &
                         nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
                 end if
              end if
@@ -514,7 +516,7 @@ contains
           deallocate(nTypeProc_PI)
        endif ! DoTestMe
 
-       deallocate(iTypeAdvance_A) !!!, iTypeBalance_A)
+       deallocate(iTypeAdvance_A)
     end if
 
     ! When load balancing is done Skipped and Unused blocks coincide
