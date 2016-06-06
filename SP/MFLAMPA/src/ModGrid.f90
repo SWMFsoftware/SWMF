@@ -134,7 +134,7 @@ contains
     !\
     ! allocate data and grid containers
     !/
-    allocate(iNode_II(nLat, nLon), stat=iError)
+    allocate(iNode_II(nLon, nLat), stat=iError)
     call check_allocate(iError, NameSub//'iNode_II')
     allocate(iNode_B(nBlock), stat=iError)
     call check_allocate(iError, NameSub//'iNode_B')
@@ -151,7 +151,7 @@ contains
     do iLat = 1, nLat
        do iLon = 1, nLon
           iNode = iLon + nLon * (iLat-1)
-          iNode_II(iLat, iLon) = iNode
+          iNode_II(iLon, iLat) = iNode
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
@@ -173,11 +173,12 @@ contains
     State_VIB = -1
     do iLat = 1, nLat
        do iLon = 1, nLon
-          iNode = iNode_II(iLat, iLon)
+          iNode = iNode_II(iLon, iLat)
           CoordOrigin_DA(:, iNode) = &
-               (/RMin, LatMin + (iLat-0.5)*DLat, LonMin + (iLon-0.5)*DLon/)
+               (/RMin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGrid_IA(Block_, iNode)
-          State_VIB(1:nDim,0,iBlock) = CoordOrigin_DA(:,iNode)
+          if(iProc == iGrid_IA(Proc_, iNode))&
+               State_VIB(1:nDim,0,iBlock) = CoordOrigin_DA(:,iNode)
        end do
     end do
   end subroutine init_grid
@@ -215,7 +216,7 @@ contains
     !--------------------------------------------------------------------------
     iLat = nint((CoordIn_D(OriginLat_)-LatMin)/DLat + 0.5)
     iLon = nint((CoordIn_D(OriginLon_)-LonMin)/DLon + 0.5)
-    iNodeOut = iNode_II(iLat, iLon)
+    iNodeOut = iNode_II(iLon, iLat)
   end subroutine get_node
 
   !============================================================================
@@ -228,7 +229,7 @@ contains
     !--------------------------------------------------------------------------
     call get_cell(CoordIn_D, iCell_D)
     iBlock = &
-         iGrid_IA(Block_, iNode_II(iCell_D(OriginLat_), iCell_D(OriginLon_)))
+         iGrid_IA(Block_, iNode_II(iCell_D(OriginLon_), iCell_D(OriginLat_)))
     CoordOut_D((/R_, Lat_, Lon_/)) = &
          State_VIB((/R_,Lat_,Lon_/), iCell_D(Particle_), iBlock)
   end subroutine convert_to_hgi

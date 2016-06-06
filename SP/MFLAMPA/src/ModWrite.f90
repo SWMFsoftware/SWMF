@@ -75,7 +75,7 @@ contains
   subroutine write_output(Time, iIter)
     ! write the output data
     use ModNumConst, ONLY: cHalfPi
-    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
     ! current time and iteration
     real,    intent(in):: Time
     integer, intent(in):: iIter
@@ -161,7 +161,7 @@ contains
     subroutine write_idl
       ! write output file in the format to be read by IDL;
       ! separate fiel is created for each field line, name format is
-      ! MH_data_<iLat>_<iLon>_n<iIter>.out
+      ! MH_data_<iLon>_<iLat>_n<iIter>.out
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -191,10 +191,8 @@ contains
 
          ! convert coordinates to cartesian before output
          do iParticle = int(PFirst), int(PLast)
-            Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-            call sph_to_xyz(&
-                 Coord_D(R_),cHalfPi-Coord_D(Lat_),Coord_D(Lon_), &
-                 DataOut_VI(1:nDim,iParticle))
+            Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+            call rlonlat_to_xyz(Coord_D, DataOut_VI(1:nDim,iParticle))
          end do
 
          ! print data to file
