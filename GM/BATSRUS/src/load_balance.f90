@@ -405,7 +405,8 @@ contains
                    write(*,*) NameSub,' ERROR: iType, iTypeMax =', &
                         iType, iTypeMax
                    write(*,*)NameSub,' iSubCycleBlock=', iSubCycleBlock
-                   write(*,*)NameSub,' dt_BLK, DtMin=', dt_BLK(iBlock), DtMin
+                   write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
+                   write(*,*)NameSub,' dt_BLK      =', dt_BLK(iBlock)
                    write(*,*)NameSub,' time level   =', &
                         nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
                 end if
