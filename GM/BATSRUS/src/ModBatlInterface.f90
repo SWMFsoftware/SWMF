@@ -278,14 +278,16 @@ contains
   !============================================================================
   subroutine calc_other_vars(iBlock)
 
-    use ModAdvance,  ONLY: State_VGB, nVar
+    use ModAdvance,  ONLY: State_VGB, nVar, time_BLK
     use ModB0,       ONLY: set_b0_cell
     use ModPhysics,  ONLY: CellState_VI, rBody2
-    use ModGeometry, ONLY: body_BLK, true_cell, R2_BLK
-    use ModMain,     ONLY: TypeBC_I, body1_, UseB0, UseBody2, body2_
+    use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
+    use ModMain,     ONLY: TypeBC_I, body1_, UseB0, UseBody2, body2_, &
+         dt_BLK, time_accurate
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
-    use BATL_size, ONLY: nI, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+
+    use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iBlock
 
@@ -318,6 +320,16 @@ contains
        State_VGB(:,nI+1,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
        State_VGB(:,nI+2,:,:,iBlock) = State_VGB(:,nI,:,:,iBlock)
     endif
+
+    if(time_accurate)then
+       time_BLK(:,:,:,iBlock) = dt_BLK(iBlock)
+
+       ! Reset time step to zero inside body.
+       if(.not.true_BLK(iBlock))then
+          where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+               time_BLK(:,:,:,iBlock) = 0.0
+       end if
+    end if
 
   end subroutine calc_other_vars
 
