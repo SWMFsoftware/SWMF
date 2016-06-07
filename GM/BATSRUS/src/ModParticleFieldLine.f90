@@ -16,7 +16,7 @@ module ModParticleFieldLine
        Particle_I, CellSize_DB, &
        message_pass_particles, remove_undefined_particles, allocate_particles
   use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Bx_, By_, Bz_
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_
   use ModMain, ONLY: Body1
   use ModPhysics, ONLY: rBody
 
@@ -28,6 +28,7 @@ module ModParticleFieldLine
   public:: read_particle_line_param
   public:: init_particle_line
   public:: extract_particle_line
+  public:: advect_particle_line
   public:: get_particle_data
 
 
@@ -496,6 +497,90 @@ contains
     end subroutine get_b_dir
 
   end subroutine extract_particle_line
+
+  !========================================================================
+
+  subroutine advect_particle_line
+    ! advect particles with the local plasma velocity
+    use ModMain, ONLY: time_accurate, Dt, nStage
+    ! parameters of particles
+    real,    pointer:: State_VI(:,:)
+    integer, pointer:: iIndex_II(:,:)
+
+    ! local plasma velocity
+    real:: VLocal_D(MaxDim)
+    !loop variable
+    integer:: iParticle
+
+    character(len=*),parameter::NameSub='advect_particle_line'
+    !----------------------------------------------------------------------
+    ! particles can be advected only in the time accurate run
+    if(.not.time_accurate) &
+         RETURN
+
+    ! set a pointers to parameters of particles
+    nullify(State_VI); nullify(iIndex_II)
+    State_VI  => Particle_I(KindReg_)%State_VI
+    iIndex_II => Particle_I(KindReg_)%iIndex_II
+    !\
+    ! go over the list of particles and advect them
+    !/
+    do iParticle = 1, Particle_I(KindReg_)%nParticle
+       !\
+       ! simple advection (Euler integration)
+       !/ 
+       ! get the local velocity
+       call get_v(&
+            Xyz_D = State_VI(x_:z_, iParticle),&
+            iBlock=iIndex_II(0,iParticle),&
+            V_D = VLocal_D)
+       ! update particle location
+       State_VI(x_:z_, iParticle) = State_VI(x_:z_, iParticle) + &
+            Dt * VLocal_D
+    end do
+    !\
+    ! Message pass: some particles may have moved to different procs
+    !/
+    call message_pass_particles(KindReg_)
+    call remove_undefined_particles(KindReg_)
+
+  contains
+
+    subroutine get_v(Xyz_D, iBlock, V_D)
+      ! get local plasma velocity
+      real,   intent(in) :: Xyz_D(MaxDim)
+      integer,intent(in) :: iBlock
+      real,   intent(out):: V_D(MaxDim)
+
+
+      ! variables for AMR interpolation
+      integer:: nCell, iCell_II(0:nDim, 2**nDim)
+      real   :: Weight_I(2**nDim)
+      integer:: iCell ! loop variable
+      integer:: i_D(MaxDim) = 1
+      !------------------------------------
+      ! reset the interpoalted values
+      V_D = 0!; Rho = 0; M_D = 0
+      ! get the velocity
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+      ! interpolate the local density and momentum
+      do iCell = 1, nCell
+         i_D(1:nDim) = iCell_II(1:nDim, iCell)
+         if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
+              call CON_stop(NameSub//": zero or negative plasma density")
+         ! convert momentum to velocity
+         V_D = V_D + &
+              State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock) / &
+              State_VGB(Rho_,         i_D(1),i_D(2),i_D(3),iBlock) * &
+              Weight_I(iCell)
+      end do
+      ! check of there is plasma at the location
+!      if(Rho==0)&
+!           call CON_stop(NameSub//&
+!           ': trying to advect particle line at region with no plasma')
+!      V_D = M_D / Rho
+    end subroutine get_v
+  end subroutine advect_particle_line
 
   !========================================================================
 
