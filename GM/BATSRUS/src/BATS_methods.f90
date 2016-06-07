@@ -380,7 +380,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
   use ModSemiImplicit, ONLY: advance_semi_impl
   use ModIeCoupling, ONLY: apply_ie_velocity
-  use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
+  use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step, &
+       UseMaxTimeStep
   use ModLaserHeating,    ONLY: add_laser_heating
   use ModVarIndexes, ONLY: Te0_
   use ModMessagePass, ONLY: exchange_messages
@@ -424,20 +425,19 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! Some files should be saved at the beginning of the time step
   call BATS_save_files('BEGINSTEP')
 
+  n_step = n_step + 1
+  iteration_number = iteration_number+1
+
+  if(time_accurate) call set_global_timestep(TimeSimulationLimit)
+
   ! Select block types and load balance blocks
   call load_balance_blocks
 
   ! Switch off steady blocks to reduce calculation
   if(UsePartSteady) call part_steady_switch(.true.)
 
-  n_step = n_step + 1
-  iteration_number = iteration_number+1
-
   ! Calculate time step dt
-  if (time_accurate) call set_global_timestep(TimeSimulationLimit)
-
-  ! Select block types and load balance blocks
-!!!  call load_balance_blocks
+  !if (time_accurate) call set_global_timestep(TimeSimulationLimit)
 
   call timing_start('advance')
 
