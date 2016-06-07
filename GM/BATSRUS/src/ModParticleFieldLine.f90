@@ -212,12 +212,10 @@ contains
     character(len=*), parameter:: NameSub='extract_particle_line'
     !------------------------------------------------------------------------
     ! set a pointers to parameters of end particles
-    nullify(StateEnd_VI); nullify(iIndexEnd_II)
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
     ! set a pointers to parameters of regular particles
-    nullify(StateReg_VI); nullify(iIndexReg_II)
     StateReg_VI  => Particle_I(KindReg_)%State_VI
     iIndexReg_II => Particle_I(KindReg_)%iIndex_II
 
@@ -519,7 +517,6 @@ contains
          RETURN
 
     ! set a pointers to parameters of particles
-    nullify(State_VI); nullify(iIndex_II)
     State_VI  => Particle_I(KindReg_)%State_VI
     iIndex_II => Particle_I(KindReg_)%iIndex_II
     !\
