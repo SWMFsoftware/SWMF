@@ -38,8 +38,17 @@ my $nP;
 # Read previous grid size
 &get_settings;
 
+foreach (@Arguments){
+    if(/^-s$/)                {$Show=1;                        next};
+    warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
+}
+
+
 # Set new grid size
-&set_grid_size if ($NewGridSize ne $GridSize);
+&set_grid_size if ($NewGridSize and $NewGridSize ne $GridSize);
+
+# Show current settings
+my $Settings = &current_settings; print $Settings if $Show;
 
 exit 0;
 
@@ -125,3 +134,17 @@ Additional options for MFLAMPA/Config.pl:
 \n";
     exit 0;
 }
+
+#############################################################################
+
+sub current_settings{
+
+    $Settings .= 
+	"Number of particles per line   : nParticle=$nP\n";
+    $Settings .= 
+	"Min. particle index            : iParticleMin=$iPMin\n";
+    $Settings .=
+	"Size of grid on source surface : nLon=$nLon, nLat=$nLat\n";
+
+}
+
