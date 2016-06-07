@@ -300,7 +300,7 @@ contains
 
     integer :: iBlock
     integer :: iError, Ijk_D(3), i, j, k
-    real    :: DtMinPe, DtMaxPe, Cmax, Cmax_C(nI,nJ,nK)
+    real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_global_timestep'
@@ -328,11 +328,11 @@ contains
           ! run
           DtMinPE = minval(Dt_BLK(1:nBlock),&
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
-          if(UseMaxTimeStep) DtMaxPe = maxval(Dt_BLK(1:nBlock),&
+          if(UseMaxTimeStep) DtMax = maxval(Dt_BLK(1:nBlock),&
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
        else
           DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
-          if(UseMaxTimeStep) DtMaxPe = &
+          if(UseMaxTimeStep) DtMax = &
                maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
        end if
 
@@ -385,11 +385,12 @@ contains
 
        if(UseMaxTimeStep)then
           ! Calculate largest time step
-          call MPI_allreduce(&
-               DtMaxPe, DtMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
+          if(nProc > 1) call MPI_allreduce(&
+               MPI_IN_PLACE, DtMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
 
           ! Make DtMax a power of 2 multiple of DtMin
           DtMax = DtMin*2.0**floor(log(DtMax/DtMin)/log(2.0))
+
           Dt = DtMax
        end if
 
@@ -412,7 +413,9 @@ contains
 
        if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
           ! Make block time step power of 2 multiple of DtMin that is < Dt_BLK
-          Dt_BLK(iBlock) = DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          ! Limit by DtMax in case DtMax was limited by TimeSimulationLimit
+          Dt_BLK(iBlock) = min(DtMax, &
+               DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0)))
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
           time_BLK(:,:,:,iBlock) = Dt
