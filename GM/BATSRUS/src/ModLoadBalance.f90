@@ -170,7 +170,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'unpack_load_balance'
     !------------------------------------------------------------------------
-
     ! Amount of user defined data for this block
     nDynamicData = nint(Buffer_I(1))
 
@@ -399,15 +398,15 @@ contains
 
              if(UseMaxTimeStep .and. DtMax > DtMin .and. DtMin > 0)then
                 iType = iType + iSubCycleBlock &
-                     *max(0,floor(alog(dt_BLK(iBlock)/DtMin) / alog(2.0)))
+                     *nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
 
                 if(iType > iTypeMax)then
-                   write(*,*) NameSub,' ERROR: iType, iTypeMax =', &
-                        iType, iTypeMax
-                   write(*,*)NameSub,' iSubCycleBlock=', iSubCycleBlock
-                   write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
-                   write(*,*)NameSub,' dt_BLK      =', dt_BLK(iBlock)
-                   write(*,*)NameSub,' time level   =', &
+                   write(*,*) NameSub,' ERROR for iBlock, iProc=', iBlock, iProc
+                   write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
+                   write(*,*) NameSub,' iSubCycleBlock =', iSubCycleBlock
+                   write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
+                   write(*,*) NameSub,' dt_BLK         =', dt_BLK(iBlock)
+                   write(*,*) NameSub,' time level     =', &
                         nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
                 end if
              end if
