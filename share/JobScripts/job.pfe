@@ -50,11 +50,8 @@
 # set the number of MPI processes by changing select and ncpus:
 # nProc = select*ncpus
 
-# To run on the 12-core Westmere nodes (2GB/core)
-#PBS -lselect=16:ncpus=12:model=wes
-
 # To run on the 16-core Sandy Bridge nodes (2GB/core)
-### PBS -lselect=16:ncpus=16:model=san
+#PBS -lselect=16:ncpus=16:model=san
 
 # To run on the 20-core Ivy Bridge nodes (3.2GB/core)
 ### PBS -l select=16:ncpus=20:model=ivy

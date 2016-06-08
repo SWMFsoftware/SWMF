@@ -13,8 +13,8 @@ Submit generic job script to multiple machine types.
 Use a unique NAME argument to identify the jobs.
 Only the first four characters of the NAME are used. Default NAME is the 
 last 4 characters of the directory name where the job is submitted from.
-If no machine is specified, 5 jobs will be submitted for the 5 machine
-types (Westmere, IvyBridge, SandyBridge, Haswell, Broadwell). Otherwise,
+If no machine is specified, 4 jobs will be submitted for the 4 machine
+types (IvyBridge, SandyBridge, Haswell, Broadwell). Otherwise,
 the job will be submitted for the listed machines.
 Only the first three characters of the machine types are used.
 Use watch.pl to make sure that when any of the jobs start to run, 
@@ -34,7 +34,7 @@ watch.pfe.pl Mars >& watch.log &
 ($name) = (`pwd` =~ /(....)$/) if not $name;
 
 # Default for machine types
-@machine = ('Ivy', 'San', 'Has', 'Wes', 'Bro') if not @machine;
+@machine = ('Ivy', 'San', 'Has', 'Bro') if not @machine;
 
 # Read original script into $text
 print "qsub.pfe.pl reading $script\n";
