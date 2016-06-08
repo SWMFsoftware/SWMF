@@ -33,7 +33,7 @@ int main(int argc,char **argv) {
   PIC::InitMPI(); 
 
   int TrajectoryPointBufferLength=200000000;
-  char fname[500]="PT/plots/amps.TrajectoryTracking.out=2";
+  char fname[]="PT/plots/amps.TrajectoryTracking.out=2";
 
   printf("Extracting particle trajectories....  ");
 
