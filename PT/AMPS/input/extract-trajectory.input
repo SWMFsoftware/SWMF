@@ -30,6 +30,11 @@ OutputDirectory=PT/plots
 #endGeneral
 
 
+#block ../extract-trajectory.input.pl !read specific settings of the trajectory extracting utility
+  file=PT/plots/amps.TrajectoryTracking.out=2
+  TrajectoryPointBufferLength=200000000
+#endblock
+
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
   define _TARGET_ _CG_
 #endblock
