@@ -1570,7 +1570,7 @@ contains
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitU_, UnitB_, UnitX_
     use CON_router
-    use IH_BATL_lib, ONLY: Xyz_DGB
+    use IH_BATL_lib, ONLY: Xyz_DGB, xyz_to_coord, coord_to_xyz, IsCartesianGrid
     use IH_ModMain,  ONLY: UseB0
 
     !INPUT ARGUMENTS:
@@ -1581,6 +1581,7 @@ contains
 
     integer::iGet, i, j, k, iBlock
     real :: Weight
+    real :: Coord_D(3), Xyz_D(3)
     !The meaning of state intdex in buffer and in model can be 
     !different. Below are the conventions for buffer:
     integer,parameter::&
@@ -1611,7 +1612,13 @@ contains
        State_V(BuffBx_:BuffBz_)= Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
     end if
     State_V(BuffP_)= Weight*State_VGB(P_,i,j,k,iBlock)
-    State_V(BuffX_:BuffZ_) = Xyz_DGB(:,i,j,k,iBlock)*Weight
+
+    if(IsCartesianGrid)then
+       Coord_D = Xyz_DGB(:,i,j,k,iBlock)
+    else
+       call xyz_to_coord(Xyz_DGB(:,i,j,k,iBlock), Coord_D)
+    end if
+    State_V(BuffX_:BuffZ_) = Coord_D * Weight
 
     do iGet=iGetStart+1,iGetStart+nPartial-1
        i      = Get%iCB_II(1,iGet)
@@ -1633,9 +1640,21 @@ contains
        end if
        State_V(BuffP_)= State_V(BuffP_) + &
             Weight*State_VGB(P_,i,j,k,iBlock)
-       State_V(BuffX_:BuffZ_) = State_V(BuffX_:BuffZ_) + &
-            Xyz_DGB(:,i,j,k,iBlock)*Weight     
+
+       if(IsCartesianGrid)then
+          Coord_D = Xyz_DGB(:,i,j,k,iBlock)
+       else
+          call xyz_to_coord(Xyz_DGB(:,i,j,k,iBlock), Coord_D)
+       end if
+       State_V(BuffX_:BuffZ_) = State_V(BuffX_:BuffZ_) + Coord_D*Weight     
     end do
+
+    if(IsCartesianGrid)then
+    else
+       call coord_to_xyz(State_V(BuffX_:BuffZ_),Xyz_D)
+       State_V(BuffX_:BuffZ_) = Xyz_D
+    end if
+
     ! Convert momentum to velocity and convert everything to SI units
     State_V(BuffUx_:BuffUz_) = State_V(BuffUx_:BuffUz_)  *No2Si_V(UnitU_)
     State_V(1)               = State_V(1)                *No2Si_V(UnitRho_)

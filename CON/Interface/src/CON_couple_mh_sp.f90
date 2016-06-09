@@ -399,13 +399,22 @@ contains
     call associate_with_global_vector(Coord_DI, 'SP_Xyz_DI')
     ! convert from cartesian coordinates if necessary                        
     TypeGeometry = Grid_C(iComp)%TypeGeometry
+    SpToMh_DD=transform_matrix(tNow,&
+         Grid_C(SP_)%TypeCoord,&
+         Grid_C(iComp)%TypeCoord)
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
        do iParticle = 1, nU_I(2)
-          SpToMh_DD=transform_matrix(tNow,&
-               Grid_C(SP_)%TypeCoord,&
-               Grid_C(iComp)%TypeCoord)
+          ! rotate cartesian
           Coord_D(:) = matmul(SpToMh_DD, Coord_DI(:,iParticle))
           call xyz_to_rlonlat(Coord_D, Coord_DI(1:3,iParticle))
+          ! convert radius to log(radius)
+          if(Coord_DI(1,iParticle) > 0)&
+               Coord_DI(1,iParticle) = log(Coord_DI(1,iParticle))
+       end do
+    elseif(index(TypeGeometry, 'cartesian') > 0 )then
+       do iParticle = 1, nU_I(2)
+          ! rotate cartesian
+          Coord_DI(:,iParticle) = matmul(SpToMh_DD, Coord_DI(:,iParticle))
        end do
     end if
     nullify(Coord_DI)
@@ -426,13 +435,22 @@ contains
     call associate_with_global_vector(Coord_DI, 'SP_Xyz_DI')
     ! convert from cartesian coordinates if necessary                        
     TypeGeometry = Grid_C(iComp)%TypeGeometry
+    MhToSp_DD=transform_matrix(tNow,&
+         Grid_C(iComp)%TypeCoord,&
+         Grid_C(SP_)%TypeCoord)
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
        do iParticle = 1, nU_I(2)
-          MhToSp_DD=transform_matrix(tNow,&
-               Grid_C(iComp)%TypeCoord,&
-               Grid_C(SP_)%TypeCoord)
+          ! convert log(radius) to radius
+          if(Coord_DI(1,iParticle) > 0)&
+               Coord_DI(1,iParticle) = exp(Coord_DI(1,iParticle))
           call rlonlat_to_xyz(Coord_DI(1:3,iParticle), Coord_D)
+          ! rotate cartesian
           Coord_DI(:,iParticle) = Coord_D
+          Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
+       end do
+    elseif(index(TypeGeometry, 'cartesian') > 0 )then
+       do iParticle = 1, nU_I(2)
+          ! rotate cartesian
           Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
        end do
     end if
@@ -506,7 +524,7 @@ contains
     end if
 
     call global_message_pass(RouterIhSp,&
-         nVar=8,&
+         nVar=11,&
          fill_buffer=IH_get_for_sp_and_transform,&
          apply_buffer=SP_put_from_mh)
     !^CMP IF SC BEGIN
@@ -541,14 +559,10 @@ contains
   !==================================================================
   logical function is_in_ih(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
-    real,save:: RIHMin2 = -1
-    real,save:: RIHMax2 = -1
     real:: R2
-    if(RIHMin2 == -1) RIHMin2 = dot_product(xyz_min_d(IH_),(/1,0,0/))**2
-    if(RIHMax2 == -1) RIHMax2 = dot_product(xyz_max_d(IH_),(/1,0,0/))**2
     R2 = dot_product(Xyz_D,Xyz_D)
     is_in_ih=R2>=rBoundIh**2.and.&
-         R2<=RIHMax2.and.R2>=RIHMin2
+         all(Xyz_D < xyz_max_d(IH_)).and.all(Xyz_D >= xyz_min_d(IH_))
   end function is_in_ih
   !==================================================================!        
   subroutine IH_get_for_sp_and_transform(&
@@ -558,21 +572,23 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    real,dimension(nVar+3)::State3_V
     integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
          BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call IH_get_for_sp(&
-         nPartial,iGetStart,Get,w,State3_V,nVar+3)
-    State_V=State3_V(1:nVar)
+         nPartial,iGetStart,Get,w,State_V,nVar)
 
     State_V(Ux_:Uz_)=&
          transform_velocity(tNow,&
          State_V(Ux_:Uz_),&
-         State3_V(BuffX_:BuffZ_),&
+         State_V(BuffX_:BuffZ_),&
          Grid_C(IH_)%TypeCoord,Grid_C(SP_)%TypeCoord)
 
     State_V(Bx_:Bz_)=matmul(IhToSp_DD,State_V(Bx_:Bz_))
+
+    ! transfrom coordinates
+    State_V(9:11) =matmul(IhToSp_DD,State_V(9:11))
+
   end subroutine IH_get_for_sp_and_transform
   !^CMP END IH
   !=========================================================================
@@ -609,7 +625,7 @@ contains
        call transform_to_sp_from(SC_)
     end if
     call global_message_pass(RouterScSp,&
-         nVar=8,&
+         nVar=11,&
          fill_buffer=SC_get_for_sp_and_transform,&
          apply_buffer=SP_put_from_mh)
     call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
@@ -620,8 +636,8 @@ contains
     real::R2
     real,save:: RSCMin2 = -1
     real,save:: RSCMax2 = -1
-    if(RSCMin2 == -1) RSCMin2 = dot_product(xyz_min_d(SC_),(/1,0,0/))**2
-    if(RSCMax2 == -1) RSCMax2 = dot_product(xyz_max_d(SC_),(/1,0,0/))**2
+    if(RSCMin2 == -1) RSCMin2 = dot_product(exp(xyz_min_d(SC_)),(/1,0,0/))**2
+    if(RSCMax2 == -1) RSCMax2 = dot_product(exp(xyz_max_d(SC_)),(/1,0,0/))**2
     R2=dot_product(Xyz_D,Xyz_D)
     if(use_comp(IH_))then            !^CMP IF IH BEGIN
        is_in_sc=R2>=rBoundSc**2.and.R2<rBoundIh**2.and.&
@@ -639,21 +655,22 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    real,dimension(nVar+3)::State3_V
     integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
          BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call SC_get_for_sp(&
-         nPartial,iGetStart,Get,w,State3_V,nVar+3)
-    State_V=State3_V(1:nVar)
+         nPartial,iGetStart,Get,w,State_V,nVar)
 
     State_V(Ux_:Uz_)=&
          transform_velocity(tNow,&
          State_V(Ux_:Uz_),&
-         State3_V(BuffX_:BuffZ_),&
+         State_V(BuffX_:BuffZ_),&
          Grid_C(SC_)%TypeCoord,Grid_C(SP_)%TypeCoord)
 
     State_V(Bx_:Bz_)=matmul(ScToSp_DD,State_V(Bx_:Bz_))
+
+    ! transform coordinates
+    State_V(9:11) =matmul(ScToSp_DD,State_V(9:11))
   end subroutine SC_get_for_sp_and_transform
   !=========================================================================
   !^CMP END SC

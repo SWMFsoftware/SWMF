@@ -124,13 +124,39 @@ contains
 
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     use CON_router, ONLY: IndexPtrType, WeightPtrType
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
+    use ModMain, ONLY: State_VIB
+    use ModConst, ONLY: rSun
 
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
+
+    real:: Xyz_D(3), Coord_D(3)
+    
+    
+
+    integer:: i, j, k, iBlock
     !------------------------------------------------------------
+    i      = Put%iCB_II(1,iPutStart)
+    j      = Put%iCB_II(2,iPutStart)
+    k      = Put%iCB_II(3,iPutStart)
+    iBlock = Put%iCB_II(4,iPutStart)
+
+    Xyz_D = Buff_I((nVar-2):nVar)
+
+    ! convert from SI
+    Xyz_D = Xyz_D / rSun 
+
+    call xyz_to_rlonlat(Xyz_D, Coord_D)
+    if(DoAdd)then
+       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
+    else
+       State_VIB((/1,2,3/),i,iBlock) = Coord_D
+    end if
+
   end subroutine SP_put_from_mh
 
   !===================================================================
