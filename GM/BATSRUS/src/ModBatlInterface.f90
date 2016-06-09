@@ -283,7 +283,7 @@ contains
     use ModPhysics,  ONLY: CellState_VI, rBody2
     use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
     use ModMain,     ONLY: TypeBC_I, body1_, UseB0, UseBody2, body2_, &
-         dt_BLK, time_accurate
+         dt_BLK, time_accurate, UseDtFixed, Dt
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
 
@@ -322,7 +322,11 @@ contains
     endif
 
     if(time_accurate)then
-       time_BLK(:,:,:,iBlock) = dt_BLK(iBlock)
+       if(UseDtFixed)then
+          time_BLK(:,:,:,iBlock) = Dt
+       else
+          time_BLK(:,:,:,iBlock) = dt_BLK(iBlock)
+       end if
 
        ! Reset time step to zero inside body.
        if(.not.true_BLK(iBlock))then
