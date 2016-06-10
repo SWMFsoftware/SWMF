@@ -40,6 +40,7 @@ my $nP;
 
 foreach (@Arguments){
     if(/^-s$/)                {$Show=1;                        next};
+    if(/^-g$/)                {$ShowGridSize=1;                next};
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
@@ -49,6 +50,9 @@ foreach (@Arguments){
 
 # Show current settings
 my $Settings = &current_settings; print $Settings if $Show;
+
+# Show grid
+print "$GridSize\n" if $ShowGridSize;
 
 exit 0;
 
@@ -80,7 +84,7 @@ sub get_settings{
 	unless length($nLon);                         
 
     $iPMax = '' . (-1 + $nP + $iPMin);
-    $GridSize = "$nP,$iPMax,$nLat,$nLon";
+    $GridSize = "$nP,$iPMax,$nLon,$nLat";
 
 }
 
@@ -142,7 +146,7 @@ sub current_settings{
     $Settings .= 
 	"Number of particles per line   : nParticle=$nP\n";
     $Settings .= 
-	"Min. particle index            : iParticleMin=$iPMin\n";
+	"Max. particle index            : iParticleMax=$iPMax\n";
     $Settings .=
 	"Size of grid on source surface : nLon=$nLon, nLat=$nLat\n";
 
