@@ -71,13 +71,35 @@ namespace TRAJECTORY_FILTER {
     double x[3],c0,c1,l,lCorridor[2];
     cVirtisM Virtis;
 
+
     cCorridor Include1={80,170.0,90,160.0,true,20,1.0};
-    cCorridor Exclude1={180,94,190,83,false,20,0.25};
+    cCorridor Exclude1={177,100,190,88,false,15,0.00005};
+    cCorridor Exclude2={115,155,119,146, false,7,0.5};
+    cCorridor Exclude3={108,164,117,160, false,4,0.5};
+    cCorridor Exclude4={86,189,93,177,false,4,0.5};
+    cCorridor Exclude5={71,170,78,160,false,4,0.5};
+    cCorridor Exclude6={106,150,112,140,false,4,0.5};
+    cCorridor Exclude7={88,144,94,133,false,4,0.5};
+
+    cCorridor Exclude8={126,172,125,204,false,40,0.5};
+    cCorridor Exclude9={50,163,77,131,false,25,0.5};
+    cCorridor Exclude10={118,197,175,189,false,25,0.1};
 
     vector<cCorridor> CorridorTable;
 
     CorridorTable.push_back(Include1);
     CorridorTable.push_back(Exclude1);
+    CorridorTable.push_back(Exclude2);
+    CorridorTable.push_back(Exclude3);
+    CorridorTable.push_back(Exclude4);
+    CorridorTable.push_back(Exclude5);
+    CorridorTable.push_back(Exclude6);
+    CorridorTable.push_back(Exclude7);
+
+    CorridorTable.push_back(Exclude8);
+    CorridorTable.push_back(Exclude9);
+    CorridorTable.push_back(Exclude10);
+
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
@@ -130,14 +152,14 @@ namespace TRAJECTORY_FILTER {
             if ((fabs(jPixel-r)<CorridorTable[nCor].PixelWidth) && (iPixel>=CorridorTable[nCor].x0)  && (iPixel<=CorridorTable[nCor].x1)) {
               //trajectory falls within the corridor
               //add the face into the list of the faces from which the dust ejection is allowed
-              if (rnd()<CorridorTable[nCor].AcceptanceProbability) {
+              if (true) { //(rnd()<CorridorTable[nCor].AcceptanceProbability) {
                 if (CorridorTable[nCor].IncludeFlag==true) {
                   SelectedTrajectoriesTable[nTrajectory]=true;
                   FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
                 }
                 else {
                   SelectedTrajectoriesTable[nTrajectory]=false;
-                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
+                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]*=CorridorTable[nCor].AcceptanceProbability;
                 }
               }
 
@@ -576,7 +598,7 @@ namespace DUST {
 #elif _DUST_CASE_ == _DUST_CASE__4SPEC_10GROUP_
   int nRadii=10;
 
-  int MeanDensityOffset=46;
+/*  int MeanDensityOffset=46;
 
   cVariablePair VariablePair[]={
         {51,0.5*(1.000000E-07+1.995262E-07)},
@@ -589,7 +611,24 @@ namespace DUST {
         {86,0.5*(1.258925E-05+2.511886E-05)},
         {91,0.5*(2.511886E-05+5.011872E-05)},
         {96,0.5*(5.011872E-05+1.000000E-04)}
-    };
+    };*/
+
+
+  int MeanDensityOffset=38;
+
+  cVariablePair VariablePair[]={
+      {43,0.5*(1.000000E-07+2.511886E-07)},
+      {48,0.5*(2.511886E-07+6.309573E-07)},
+      {53,0.5*(6.309573E-07+1.584893E-06)},
+      {58,0.5*(1.584893E-06+3.981072E-06)},
+      {63,0.5*(3.981072E-06+1.000000E-05)},
+      {68,0.5*(1.000000E-05+2.511886E-05)},
+      {73,0.5*(2.511886E-05+6.309573E-05)},
+      {78,0.5*(6.309573E-05+1.584893E-04)},
+      {83,0.5*(1.584893E-04+3.981072E-04)},
+      {88,0.5*(3.981072E-04+1.000000E-03)}
+  };
+
 #else
 #error "Dont know what is that"
 #endif
@@ -936,7 +975,7 @@ return 1;
 
 
   //load the nucleus mesh
-  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
+  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/home3/vtenishe");
   amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
 
