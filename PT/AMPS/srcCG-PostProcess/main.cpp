@@ -243,14 +243,23 @@ namespace SURFACE {
        for (int i=0;i<3;i++) xSunLocation[i]=1.0E3*StateSun[i];
 
        //init the solar zenith angle and illumination map tables
+#pragma omp parallel
+   {
+#pragma omp single
+     {
        for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if (nface%amps.size==amps.rank) {
-         double cosSZA;
-         int IlluminationFlag;
+#pragma omp task default(none) firstprivate(nface) shared(xSunLocation,cosSolarZenithAngle,IlluminationMap)
+          {
+           double cosSZA;
+           int IlluminationFlag;
 
-         GetIlliminationMapElement(nface,cosSZA,IlluminationFlag,xSunLocation);
-         cosSolarZenithAngle[nface]=cosSZA;
-         IlluminationMap[nface]=IlluminationFlag;
+           GetIlliminationMapElement(nface,cosSZA,IlluminationFlag,xSunLocation);
+           cosSolarZenithAngle[nface]=cosSZA;
+           IlluminationMap[nface]=IlluminationFlag;
+          }
        }
+     }
+   }
 
        //exchange the table between all processors
        if (amps.rank==0) {
@@ -361,8 +370,16 @@ namespace SURFACE {
          //determine the new faces that was not in a shadow in time 'et-AccumulatedSearchTime'
          int cnt=0;
 
+#pragma omp parallel
+   {
+#pragma omp single
+     {
          for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if (localFaceIlluminationMap[nface]==true) {
            if (cnt%amps.size==amps.rank) {
+#pragma omp task default(none) firstprivate(nface) shared(xLight,FaceChangedStateList,ExposureTime,localFaceIlluminationMap,AccumulatedSearchTime,nFaceChangedState)
+             {
+
+
              double cosSZA;
              int IlluminationFlag;
 
@@ -370,14 +387,19 @@ namespace SURFACE {
 
              if (IlluminationFlag==false) {
                //the face was in shadow at time 'et-AccumulatedSearchTime'
+#pragma omp critical
                FaceChangedStateList[nFaceChangedState++]=nface;
+
                ExposureTime[nface]=AccumulatedSearchTime;
                localFaceIlluminationMap[nface]=false;
              }
            }
+           }
 
            cnt++;
          }
+     }
+   }
 
          //collect the time information from all processors
          int nFaceChangedStateGlobalList[amps.size];
@@ -612,8 +634,7 @@ namespace DUST {
         std::cout << amps.data.data[Stencil.Node[i]][0] << "  " << amps.data.data[Stencil.Node[i]][1] << "  " << amps.data.data[Stencil.Node[i]][2] << endl; 
         std::cout << Stencil.Weight[i] << "  " << Stencil.Node[i] << "   " << MeanDensityOffset << "  " << amps.data.data[Stencil.Node[i]][MeanDensityOffset] << "  " << data[0] << endl;
 
-        printf("Error: a value that must be positive is negative\n");
-        exit(0);
+        exit(__LINE__,__FILE__,"Error: a value that must be positive is negative");
       }
     }
 
@@ -638,8 +659,7 @@ namespace DUST {
         double t=3435;
         t+=4053;
 
-        printf("Error: a value that must be positive is negative\n");
-        exit(0);
+        exit(__LINE__,__FILE__,"Error: a value that must be positive is negative");
        } 
 
       data[7+3*iRadius+1]=ScatteringEfficentcy*data[7+3*iRadius];
@@ -967,6 +987,7 @@ return 1;
 
 
   amps.FinalizeMPI();
+  printf("done.\n");
   return 1;
 }
 
