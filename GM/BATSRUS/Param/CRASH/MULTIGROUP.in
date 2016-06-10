@@ -13,7 +13,7 @@ T                       DoStateElimination
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radiationsplit          TypeSemiImplicit
+radiation		TypeSemiImplicit
 
 #SEMIKRYLOV
 CG                      TypeKrylov

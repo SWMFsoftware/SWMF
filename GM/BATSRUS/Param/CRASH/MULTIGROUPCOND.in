@@ -13,7 +13,7 @@ T                       DoStateElimination
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radcondsplit            TypeSemiImplicit
+radcond			TypeSemiImplicit
 
 #SEMIKRYLOV
 CG                      TypeKrylov

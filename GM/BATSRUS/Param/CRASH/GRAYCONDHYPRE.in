@@ -6,7 +6,7 @@ ascii                   TypeFile
 
 #SEMIIMPLICIT
 T                       UseSemiImplicit
-radcondsplit            TypeSemiImplicit
+radcond			TypeSemiImplicit
 
 #SEMIKRYLOV
 GMRES                   TypeKrylov

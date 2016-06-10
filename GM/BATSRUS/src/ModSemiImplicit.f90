@@ -64,20 +64,12 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    integer :: i
     character(len=*), parameter:: NameSub = 'read_semi_impl_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
     case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
-       if(UseSemiImplicit)then
-          call read_var('TypeSemiImplicit', TypeSemiImplicit)
-          i = index(TypeSemiImplicit,'split')
-          UseSplitSemiImplicit = i > 0
-          if(UseSplitSemiImplicit) &
-               TypeSemiImplicit = TypeSemiImplicit(1:i-1)
-       end if
-
+       if(UseSemiImplicit) call read_var('TypeSemiImplicit', TypeSemiImplicit)
 
     case("#SEMIIMPLICITSTABLE")
        call read_var('UseStableImplicit',UseStableImplicit)
@@ -88,7 +80,7 @@ contains
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
        if(SemiParam%DoPrecond)then
-          call read_var('TypePrecond', SemiParam%TypePrecond, IsUpperCase=.true.)
+          call read_var('TypePrecond',SemiParam%TypePrecond,IsUpperCase=.true.)
           select case(SemiParam%TypePrecond)
           case('HYPRE')
           case('JACOBI')
@@ -148,19 +140,16 @@ contains
 
     select case(TypeSemiImplicit)
     case('radiation')
-       if(nWave == 1 .or. UseSplitSemiImplicit)then
-          ! Radiative transfer with point implicit temperature: I_w
-          nVarSemiAll = nWave
-       else
-          ! Radiative transfer: (electron) temperature and waves
-          nVarSemiAll = 1 + nWave
-       end if
+       ! Radiative transfer with point implicit temperature: I_w
+       nVarSemiAll = nWave
+       if(nWave > 1) UseSplitSemiImplicit = .true.
     case('cond', 'parcond')
        ! Heat conduction: T
        nVarSemiAll = 1
     case('radcond')
        ! Radiative transfer and heat conduction: I_w and T
        nVarSemiAll = nWave + 1
+       UseSplitSemiImplicit = .true.
     case('resistivity', 'resist', 'resisthall')
        ! (Hall) resistivity: magnetic field
        UseSemiHallResist  = UseHallResist .and.TypeSemiImplicit /= 'resist'
