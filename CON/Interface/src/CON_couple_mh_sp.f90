@@ -520,7 +520,7 @@ contains
     call transform_to_cartesian(IH_)
     if(is_proc(SP_))then
 !       call SP_put_input_time(DataInputTime)
-       call transform_to_sp_from(IH_)
+!       call transform_to_sp_from(IH_)
     end if
 
     call global_message_pass(RouterIhSp,&
@@ -597,7 +597,7 @@ contains
     use CON_global_message_pass
 
    real,intent(in)::DataInputTime
-
+   !-------------------------------------------------------
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
@@ -622,8 +622,9 @@ contains
     call transform_to_cartesian(SC_)
     if(is_proc(SP_))then
 !       call SP_put_input_time(DataInputTime)  
-       call transform_to_sp_from(SC_)
+!       call transform_to_sp_from(SC_)
     end if
+
     call global_message_pass(RouterScSp,&
          nVar=11,&
          fill_buffer=SC_get_for_sp_and_transform,&
