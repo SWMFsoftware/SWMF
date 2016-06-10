@@ -99,7 +99,7 @@ void cVirtisM::cBlockNucleus::SetBlock(SpiceDouble et,int nNucleusSurfaceFaces,C
 
 
   //init the blocking by the nucleus
-//#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic,1) default(none) private(i,j,di,dj,l,idim) shared(imin,imax,jmin,jmax,nNucleusSurfaceFaces,NucleusSurfaceFaces,size,rank)
   for (i=imin;i<=imax;i++) {
     for (j=jmin;j<=jmax;j++) {
       di=i-nFieldOfViewPixels/2;
@@ -247,6 +247,7 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
     for (j=0;j<nFieldOfViewPixels;j++) DataBuffer[j]=0.0,GlobalDataBuffer[j]=0.0;
 
     if (PostProcessor!=NULL) {
+#pragma omp parallel for schedule(dynamic,1) default(none) private(l,j,StateVector) shared(i,jLocalMin,jLocalMax,DataBuffer,StateVectorLength,PostProcessor,IntegrationSet)
       for (j=jLocalMin;j<=jLocalMax;j++) {
         //calculate the integral
         memcpy(l,InstrumentPointing[i][j],3*sizeof(double));
