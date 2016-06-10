@@ -17,7 +17,7 @@ module ModParticleFieldLine
        message_pass_particles, remove_undefined_particles, allocate_particles
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_
-  use ModMain, ONLY: Body1
+  use ModMain, ONLY: Body1, NameThisComp
   use ModPhysics, ONLY: rBody
 
   implicit none
@@ -140,7 +140,7 @@ contains
           elseif(index(StringOrderMode, 'radius' ) > 0)then
              iOrderMode = Radius_
           else
-             call CON_stop(NameSub //": unknown ordering mode")
+             call CON_stop(NameThisComp//':'//NameSub //": unknown ordering mode")
           end if
        end if
     end select
@@ -234,14 +234,14 @@ contains
 
     nFieldLine    = nFieldLine + nFieldLineIn
     if(nFieldLine > nFieldLineMax)&
-         call CON_stop(NameSub//&
+         call CON_stop(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
     call copy_end_to_regular
 
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
        if(abs(iTraceModeIn) > 1)&
-            call CON_stop(NameSub//': incorrect tracing mode')
+            call CON_stop(NameThisComp//':'//NameSub//': incorrect tracing mode')
        iTraceMode = iTraceModeIn
     else
        iTraceMode = 0
@@ -475,6 +475,7 @@ contains
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim) = 1
+      character(len=200):: StringError
       !----------------------------------------------------------------------
       Dir_D = 0; B_D = 0
       ! get potential part of the magnetic field at the current location
@@ -487,9 +488,14 @@ contains
          B_D = B_D + &
               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
       end do
-      if(all(B_D==0))&
-           call CON_stop(NameSub//&
-           ': trying to extract line at region with zero magnetic field')
+      if(all(B_D==0))then
+         write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
+              NameThisComp//':'//NameSub//&
+              ': trying to extract line at region with zero magnetic field'//&
+              ' at location X = ', &
+              Xyz_D(1), ' Y = ', Xyz_D(2), ' Z = ', Xyz_D(3) 
+         call CON_stop(StringError)
+      end if
       ! normalize vector to unity
       Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
     end subroutine get_b_dir
