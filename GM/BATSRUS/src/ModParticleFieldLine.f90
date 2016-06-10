@@ -44,7 +44,9 @@ module ModParticleFieldLine
        ! auxilary position, e.g. middle step in Runge-Kutta 2 method
        AuxX_ = 4, AuxY_ = 5, AuxZ_ = 6, & 
        ! auxilary field, e.g. stepsize
-       Aux_  = 7
+       Aux_  = 7, &
+       ! auxilary vector, used on End particles at extraction 
+       AuxVx_ = 8, AuxVy_ = 9, AuxVz_ = 10 
   
   ! indices of a particle
   integer, parameter:: &
@@ -62,7 +64,8 @@ module ModParticleFieldLine
   integer, parameter:: Field_ = 0, Radius_  = 1
 
   ! number of variables in the state vector
-  integer, parameter:: nVarParticle = 7
+  integer, parameter:: nVarParticleReg = 7
+  integer, parameter:: nVarParticleEnd = 10
 
   ! number of indices
   integer, parameter:: nIndexParticle = 2
@@ -154,8 +157,8 @@ contains
     !------------------------------------------------------------------------
     Particle_I(KindReg_)%nParticleMax = 10000 * nFieldLineMax
     Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
-    Particle_I(KindReg_)%nVar   = nVarParticle
-    Particle_I(KindEnd_)%nVar   = nVarParticle
+    Particle_I(KindReg_)%nVar   = nVarParticleReg
+    Particle_I(KindEnd_)%nVar   = nVarParticleEnd
     Particle_I(KindReg_)%nIndex = nIndexParticle
     Particle_I(KindEnd_)%nIndex = nIndexParticle
     call allocate_particles
@@ -274,7 +277,8 @@ contains
                   0.1*SQRT(&
                   sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
                   )))
-
+             ! save direction for the second stage
+             StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir1_D
              ! get middle location
              StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                   iDirTrace * StateEnd_VI(Aux_, iParticle) * &
@@ -306,6 +310,8 @@ contains
                   Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                   iBlock=iIndexEnd_II(0,iParticle),&
                   Dir_D = Dir2_D)
+             ! direction at the 1st stage
+             Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
              ! get final location
              StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
                   iDirTrace * StateEnd_VI(Aux_, iParticle) * &
@@ -612,7 +618,7 @@ contains
     integer,            intent(out):: nParticle
 
     ! mask for returning variables
-    logical:: DoReturnVar_V(nVarParticle)
+    logical:: DoReturnVar_V(nVarParticleReg)
     logical:: DoReturnIndex_I(0:nIndexParticle)
     ! number of variables/indices found in the request string
     integer:: nVarOut, nIndexOut
