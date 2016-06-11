@@ -389,6 +389,10 @@ contains
       !/
       if(iProc /= iProcOut) RETURN
 
+      ! Exclude particles that are in the zero magnetic field region
+      if(do_exclude(XyzStart_D, iBlockOut))&
+           RETURN
+
       Particle_I(KindEnd_)%nParticle = &
            Particle_I(KindEnd_)%nParticle + 1         
       nLineThisProc = nLineThisProc + 1
@@ -400,6 +404,37 @@ contains
       iIndexEnd_II(Index_,Particle_I(KindEnd_)%nParticle) = 0
       iIndexEnd_II(0,     Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
+    !========================================================================
+    function do_exclude(Xyz_D, iBlock) result(DoExcludeOut)
+      use ModMain, ONLY: UseB0
+      use ModB0, ONLY: get_b0
+      ! determine if the starting point and therefore the whole field line
+      ! should be excluded; criterion: zero magnetic field
+      real,    intent(in):: Xyz_D(MaxDim)
+      integer, intent(in):: iBlock
+      logical:: DoExcludeOut
+      
+      ! interpolated magnetic field
+      real   :: B_D(MaxDim) = 0.0
+      ! interpolation data: number of cells, cell indices, weights
+      integer:: nCell, iCell_II(0:nDim, 2**nDim)
+      real   :: Weight_I(2**nDim)
+      integer:: iCell ! loop variable
+      integer:: i_D(MaxDim) = 1
+      !----------------------------------------------------------------------
+      B_D = 0
+      ! get potential part of the magnetic field at the current location
+      if(UseB0)call get_b0(Xyz_D, B_D)
+      ! get the remaining part of the magnetic field
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+      ! interpolate magnetic field value
+      do iCell = 1, nCell
+         i_D(1:nDim) = iCell_II(1:nDim, iCell)
+         B_D = B_D + &
+              State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+      end do
+      DoExcludeOut = all(B_D==0)
+    end function do_exclude
     !========================================================================
     subroutine get_alignment()
       use ModMpi
@@ -476,7 +511,7 @@ contains
 
       ! magnetic field
       real   :: B_D(MaxDim) = 0.0
-      ! inteprolation data: number of cells, cell indices, weights
+      ! interpolation data: number of cells, cell indices, weights
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
