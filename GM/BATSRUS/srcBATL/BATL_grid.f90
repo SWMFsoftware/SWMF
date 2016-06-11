@@ -1619,6 +1619,11 @@ contains
     !/
     integer:: iDiscr_D(MaxDim)
     !\
+    ! Discriminator for point's displacement beyond centers of cells
+    ! of the 1st layer of ghost cells
+    !/
+    integer:: iDiscr2_D(MaxDim)
+    !\
     ! Coordinates of the supergrid
     !/
     real:: CoordGrid_DI(nDim, 2**nDim)
@@ -1830,18 +1835,29 @@ contains
        !\
        ! Fill in grid points coordinates
        !/
+       ! discriminator for points displaced beyond cell centers of 
+       ! the 1st layer of ghost cells; those require corretions further:
+       ! iDiscr2_D provides control for the supergrid's center not 
+       ! leaving boundaries of the input block iBlockIn
+       iDiscr2_D = 0
+       iDiscr2_D(1:nDim) = floor(&
+            (Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlockIn)&
+            + 0.50*CellSize_DB(1:nDim,iBlockIn) ) / &
+            ( CellSize_DB(1:nDim,iBlockIn) * (nIJK_D(1:nDim) + 1) ))
        ! first point can be found from dimless coordinates of the point
        ! relative to block's corner:
        Dimless_D = &
             (Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlockIn)) / &
             dCoord_D(1:nDim)
-       CoordGrid_DI(:,1) = CoordMin_DB(1:nDim,iBlockIn) +      &
-            dCoord_D(1:nDim) * (floor(0.50 + Dimless_D) - 0.50)
+       CoordGrid_DI(:,1) = CoordMin_DB(1:nDim,iBlockIn) + &
+            dCoord_D(1:nDim) * &
+            (floor(0.50 + Dimless_D) - 0.50 - iDiscr2_D(1:nDim))
        ! the rest of the supergrid can be found from the first one
        ! and displacements towards them
        do iGrid = 2, 2**nDim
           CoordGrid_DI(:, iGrid) = CoordGrid_DI(:, 1) + &
-               dCoord_D(1:nDim) * iShift_DI(1:nDim, iGrid)
+               dCoord_D(1:nDim) * &
+               (iShift_DI(1:nDim, iGrid) - iDiscr2_D(1:nDim))
        end do
     end if
     
