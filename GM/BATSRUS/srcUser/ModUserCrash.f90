@@ -472,6 +472,11 @@ contains
           end do
        end if
 
+       if(UseInitialStateDefinition)then
+          call get_initial_state( (/x, r/), State_VGB(:,i,j,k,iBlock) )
+          call set_initial_temperature
+       end if
+
        if(UseMixedCell)then
           if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
                "are not yet supported in the mixed cell approach")
@@ -493,11 +498,6 @@ contains
                   1./MassMaterial_I(0:nMaterial-1)
           end if
 
-       end if
-
-       if(UseInitialStateDefinition)then
-          call get_initial_state( (/x, y/), State_VGB(:,i,j,k,iBlock) )
-          call set_initial_temperature
        end if
 
        ! Multiply level set functions with density unless the 
