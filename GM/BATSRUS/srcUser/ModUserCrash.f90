@@ -633,18 +633,20 @@ contains
       Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
       Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
 
-      if (nWave == 1) then
-         ! Set small initial radiation-energy density everywhere.
-         State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Tr**4
-      else
-         TrSi = 11600.
+      if(WaveFirst_ > 1)then
+         if (nWave == 1) then
+            ! Set small initial radiation-energy density everywhere.
+            State_VGB(WaveFirst_,i,j,k,iBlock) = cRadiationNo*Tr**4
+         else
+            TrSi = 11600.
 
-         do iWave = 1, nWave
-            call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
-            State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
-                 EgSi*Si2No_V(UnitEnergyDens_)
-         enddo
-      endif
+            do iWave = 1, nWave
+               call get_energy_g_from_temperature(iWave, TrSi,EgSI=EgSi)
+               State_VGB(WaveFirst_+iWave-1,i,j,k,iBlock) = &
+                    EgSi*Si2No_V(UnitEnergyDens_)
+            enddo
+         endif
+      end if
 
     end subroutine set_initial_temperature
 
