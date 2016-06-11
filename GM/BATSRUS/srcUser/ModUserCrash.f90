@@ -65,24 +65,6 @@ module ModUser
   real    :: yRatioNozzle = 0.0
   real    :: zRatioNozzle = 0.0
 
-  ! Wall parameters
-  logical:: UseTube = .false.
-  real :: xEndTube   =   40.0    ! x coordinate of tube ending
-  real :: rInnerTube =  287.5    ! inner radius [micron]
-  real :: rOuterTube =  312.5    ! outer radius [micron]
-  real :: RhoDimTube = 1430.0    ! density      [kg/m3]
-  real :: RhoDimOutside = 6.5    ! density  of Xe outside tube [kg/m3]
-  real :: pDimOutside   = 1.1e5  ! pressure of Xe outside tube [Pa]
-  logical:: UseTubeRadius=.false.! true if tube radius is explicitly set
-
-  !Gas parameters:
-
-  real :: RhoDimInside = 6.5 ! density  of Xe inside tube [kg/m3]
-
-
-  ! Allow overwriting the Xe state inside the tube for x > xUniformXe > 0
-  real :: xUniformXe = -1.0
-
   ! Use conservative or non-conservative levelsets
   logical :: UseNonConsLevelSet = .true.
 
@@ -224,25 +206,6 @@ contains
           FreqMinSi = EnergyPhotonMin/cHPlanckEV
           FreqMaxSi = EnergyPhotonMax/cHPlanckEV
 
-       case("#TUBE")
-          UseTube = .true.
-          call read_var('xEndTube',   xEndTube)
-          call read_var('rInnerTube', rInnerTube)
-          call read_var('rOuterTube', rOuterTube)
-          call read_var('RhoDimTube', RhoDimTube)
-          call read_var('RhoDimOutside', RhoDimOutside)
-          call read_var('pDimOutside',   pDimOutside)
-          call read_var('xUniformXe',    xUniformXe)
-          UseTubeRadius = .true.
-
-       case("#TUBEDIAMETER")
-          call read_var('rInnerTube', rInnerTube)
-          call read_var('rOuterTube', rOuterTube)
-          UseTubeRadius = .true.
-
-       case('#RHOINSIDE')
-          call read_var('RhoDimInside',RhoDimInside)
-
        case("#LEVELSET")
           call read_var('UseNonConsLevelSet', UseNonConsLevelSet)
 
@@ -383,11 +346,6 @@ contains
 
     call timing_start(NameSub)
 
-    if(UseElectronPressure .and. UseTube)then
-       call stop_mpi(NameSub //" electron energy does not yet work " &
-            //"with plastic tube or gold washer")
-    end if
-
     ! Set level set functions, internal energy, and other values
     do k=1, nK; do j=1, nJ; do i=1, nI 
 
@@ -396,41 +354,6 @@ contains
        z = Xyz_DGB(z_,i,j,k,iBlock)
 
        call set_yzr(x, y, z, r)
-
-       if(UseTube)then
-          ! Distance from plastic wall: 
-          ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
-          DxyPl = &
-               min(r - rInnerTube, rOuterTube - r, x - xEndTube)
-
-          ! Set plastic tube state
-          if(DxyPl > 0.0)then
-
-             ! Use the density and pressure given by the #TUBE command
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimTube*Io2No_V(UnitRho_)
-             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-
-             call set_small_radiation_energy
-          end if
-
-          ! Set pressure and speed outside the tube. 
-          ! do not overwrite values left of xEndTube
-          if(r > rOuterTube .and. x > xEndTube) then
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimOutside*Io2No_V(UnitRho_)
-             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             call set_small_radiation_energy
-          end if
-
-          ! Set the Xe state inside the tube for x > xUniformXe if it is set
-          if(xUniformXe > 0.0 .and. x > xUniformXe .and. r < rInnerTube)then
-             State_VGB(Rho_,i,j,k,iBlock) = RhoDimInside*Io2No_V(UnitRho_)
-             State_VGB(p_  ,i,j,k,iBlock) = pDimOutside*Io2No_V(UnitP_)
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-             call set_small_radiation_energy
-          end if
-       end if ! UseTube
 
        ! Create sound wave by making a pressure hump (for testing)
        if(UseWave .and. x > xStartWave .and. x < xEndWave) &
@@ -444,33 +367,11 @@ contains
        ! Distance from Be disk: positive for x < xBe
        DxBe = xBe - x
 
-       ! Add a plastic tube if required
-       if(UseTube)then
-          ! Distance from plastic wall: 
-          ! positive for rInnerTube < |y| < rOuterTube and x > xEndTube only
-          DxyPl = min(r - rInnerTube, rOuterTube - r, x - xEndTube)
-
-          ! Berylium is left of xBe inside rInnerTube 
-          ! and it is left of xEndTube outside
-          State_VGB(LevelBe_,i,j,k,iBlock) = &
-               max(xEndTube - x, min(DxBe, rInnerTube - r))
-
-          ! Xenon is right of xBe inside rInnerTube and 
-          ! right of xEndTube outside rOuterTube
-          State_VGB(LevelXe_,i,j,k,iBlock) = max( &
-               min( x - xEndTube, r - rOuterTube), &
-               min( -DxBe, rInnerTube - r) )
-
-          ! Plastic 
-          State_VGB(LevelPl_,i,j,k,iBlock) = DxyPl
-       else
-          ! If there is no plastic tube, things are easy
-          State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
-          State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
-          do iMaterial = Plastic_, nMaterial - 1
-             State_VGB(LevelXe_+iMaterial,i,j,k,iBlock) = -1e30
-          end do
-       end if
+       State_VGB(LevelBe_,i,j,k,iBlock) =  DxBe
+       State_VGB(LevelXe_,i,j,k,iBlock) = -DxBe
+       do iMaterial = Plastic_, nMaterial - 1
+          State_VGB(LevelXe_+iMaterial,i,j,k,iBlock) = -1e30
+       end do
 
        if(UseMixedCell)then
           if(nMaterial>3) call stop_mpi(NameSub // " Gold and Acrylic "// &
@@ -2440,20 +2341,6 @@ contains
        z0 = z
        y  = y0/(1 + Factor*(yRatioNozzle-1))
        z  = z0/(1 + Factor*(zRatioNozzle-1))
-
-       if(nK > 1 .and. zRatioNozzle > 0.99 .and. UseTubeRadius &
-            .and. Factor > 0.0)then
-          ! Keep tube width 
-          ! Radial distance of stretched position
-          r = sqrt(y**2 + z**2)
-          if(r > rInnerTube)then
-             r0     = sqrt(y0**2 + z0**2) ! original radial distance
-             rInner = rInnerTube*r0/r     ! rInnerTube shrinks to rInner
-             r = rInnerTube + r0 - rInner ! radius shifted instead of stretched
-             y = r/r0 * y0                ! corresponding Y coordinate
-             z = r/r0 * z0                ! corresponding Z coordinate
-          end if
-       end if
     end if
 
     if(nK > 1)then
