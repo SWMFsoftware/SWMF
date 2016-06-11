@@ -122,7 +122,7 @@ contains
     ! distribute nodes between processors
     !/
     if(nNode < nProc)&
-         call CON_stop('There are less processor than field lines:'//NameSub)
+         call CON_stop('There are more processors than field lines:'//NameSub)
     nBlock = ((iProc+1)*nNode) / nProc - (iProc*nNode) / nProc
     !\
     ! check consistency
