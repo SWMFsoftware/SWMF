@@ -454,6 +454,12 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
     }
 
     fclose(fTrajectoryDataSet);
+
+    //print the total number of saved trajectories
+    int nTotal=0;
+
+    for (int thread=0;thread<PIC::nTotalThreads*PIC::nTotalThreadsOpenMP;thread++) nTotal+=nTotalSampledTrajectories[thread];
+    printf("$PREFIX: The total number of sanpled trajectories: %i\n",nTotal);
   }
 
 
