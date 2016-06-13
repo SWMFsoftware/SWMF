@@ -85,6 +85,13 @@ namespace TRAJECTORY_FILTER {
     cCorridor Exclude9={50,163,77,131,false,25,0.5};
     cCorridor Exclude10={118,197,175,189,false,25,0.1};
 
+    //after
+    cCorridor Exclude11={178,170,223,189,false,25,0.1};
+    cCorridor Exclude12={200,158,216,92,false,25,0.1};
+    cCorridor Exclude13={34,150,53,54,false,25,0.1};
+    cCorridor Exclude14={63,50,218,64,false,25,0.1};
+    cCorridor Exclude15={96,158,118,198,false,2,0.1};
+
     vector<cCorridor> CorridorTable;
 
     CorridorTable.push_back(Include1);
@@ -100,6 +107,13 @@ namespace TRAJECTORY_FILTER {
     CorridorTable.push_back(Exclude9);
     CorridorTable.push_back(Exclude10);
 
+    //after 
+    CorridorTable.push_back(Exclude11);
+    CorridorTable.push_back(Exclude12);
+    CorridorTable.push_back(Exclude13);
+    CorridorTable.push_back(Exclude14); 
+    CorridorTable.push_back(Exclude15); 
+
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
@@ -111,7 +125,7 @@ namespace TRAJECTORY_FILTER {
     for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) SelectedTrajectoriesTable[i]=false;
 
     FaceFluxCorrectionTable=new double [amps.SurfaceData.nCells];
-    for (i=0;i<amps.SurfaceData.nCells;i++) FaceFluxCorrectionTable[i]=0.0;
+    for (i=0;i<amps.SurfaceData.nCells;i++) FaceFluxCorrectionTable[i]=1.0;
 
     //go therough all corridor settings
     for (int npass=0;npass<2;npass++) {
@@ -511,8 +525,8 @@ namespace SURFACE {
 
   //print the surface data
   void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\","
-      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\""); }
-  int GetVariableNumber() {return 6;}
+      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\",\"Source Rate Correction Factor\""); }
+  int GetVariableNumber() {return 7;}
 
   void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
     if (ILLUMINATION::IlluminationMap==NULL) exit(__LINE__,__FILE__,"Error: the illumination map need to be initalized first");
@@ -530,6 +544,9 @@ namespace SURFACE {
     DataVector[4]=(ILLUMINATION::IlluminationMap[nface]==true) ? FaceSourceRate_H2O/ILLUMINATION::ExposureTime[nface] : -1;
 
     DataVector[5]=FaceSourceRate_H2O;
+
+    //source rate correctior factor
+    DataVector[6]=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);  
   }
 }
 
@@ -723,7 +740,7 @@ namespace DUST {
       CorrectionFactor=SURFACE::ILLUMINATION::cosSolarZenithAngle[nStatingFace]/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
       CorrectionFactor=FaceSourceRate_H2O/SURFACE::ILLUMINATION::ExposureTime[nStatingFace];
 
-      CorrectionFactor*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nStatingFace);
+      CorrectionFactor=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nStatingFace);
 //      if (TRAJECTORY_FILTER::SelectedTrajectoriesTable[nt]==false) CorrectionFactor=0.0;
 
       if (CorrectionFactor<0.0) CorrectionFactor=0.0;
@@ -975,7 +992,7 @@ return 1;
 
 
   //load the nucleus mesh
-  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/home3/vtenishe");
+  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
   amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
 
@@ -985,7 +1002,7 @@ return 1;
   //output surface data
   SURFACE::ILLUMINATION::SetSurfaceExposureTime(et,6.0*3600.0,10.0*60);
   SURFACE::ILLUMINATION::SetIlliminationMap(et);
-  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
+//  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
 
 //  MPI_Finalize();
 //  return 1;
@@ -1010,6 +1027,9 @@ return 1;
   //process all trajectories: select those that falls into the jet corridor
   TRAJECTORY_FILTER::ProcessTrajectories(et);
   TRAJECTORY_FILTER::PrintSelectedTrajectories(500,"selected-trajectories.dat");
+
+  //output surface data 
+  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
 
   //calculate the column integrals as seen by VIRTIS-M
   cVirtisM VirtisM;
