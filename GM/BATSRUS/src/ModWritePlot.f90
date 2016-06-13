@@ -137,7 +137,7 @@ subroutine write_plot_common(iFile)
 
      ! Save generalized coordinates for cuts out of non-Cartesian grids
      DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
-     if(DoSaveGenCoord)then
+     if(DoSaveGenCoord .or. .not.plot_dimensional(iFile))then
         CoordUnit = 1.0
      else
         CoordUnit = No2Io_V(UnitX_)
