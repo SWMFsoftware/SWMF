@@ -42,6 +42,7 @@ test_help:
 	@echo "    test12                     (run GM-PC tests)"
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test14                     (run OH-PT test)"
+	@echo "    test15                     (run SC-IH-SP test)"
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
@@ -71,6 +72,7 @@ test:
 	-@(${MAKE} test12)
 	-@(${MAKE} test13)
 	-@(${MAKE} test14)
+	-@(${MAKE} test15)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
@@ -1192,6 +1194,48 @@ test14_check:
 		${TESTDIR}/RESULTS/PT/amps.ref \
 		> test14_ohpt.diff)
 		ls -l test14*.diff
+
+### test15: SP/MFLAMPA model coupled with SC and IH models
+
+test15:
+	@echo "test15_compile..." > test15_scihsp.diff
+	${MAKE} test15_compile
+	@echo "test15_rundir..." >> test15_scihsp.diff
+	${MAKE} test15_rundir
+	@echo "test15_run..." >> test15_scihsp.diff
+	${MAKE} test15_run
+	@echo "test15_check..." >> test1_scihsp.diff
+	${MAKE} test15_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test15_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000,1800,4,4
+	${MAKE} SWMF
+	make PIDL
+
+test15_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIHSP ${TESTDIR}/LAYOUT.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+
+test15_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test15_check:
+	cp output/test15/MH_data.ref ${TESTDIR}/SP/IO2/MH_data.ref
+	cat ${TESTDIR}/SP/IO2/MH_data_*_*_n000001.out > \
+	    ${TESTDIR}/SP/IO2/MH_data.out
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-8 -b \
+		${TESTDIR}/SP/IO2/MH_data.out \
+		${TESTDIR}/SP/IO2/MH_data.ref \
+		> test15_scihsp.diff)
+		ls -l test15*.diff
 
 ### ESMF test ###
 #
