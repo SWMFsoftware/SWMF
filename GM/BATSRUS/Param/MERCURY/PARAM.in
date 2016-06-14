@@ -96,7 +96,7 @@ F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
 T                       UseUserInitSession
-T                       UseUserUpdateStates
+F                       UseUserUpdateStates
 
 #SCHEME
 2			nOrder
