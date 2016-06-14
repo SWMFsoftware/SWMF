@@ -382,6 +382,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModIeCoupling, ONLY: apply_ie_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step, &
        UseMaxTimeStep
+  use ModParticleFieldLine, ONLY: advect_particle_line
   use ModLaserHeating,    ONLY: add_laser_heating
   use ModVarIndexes, ONLY: Te0_
   use ModMessagePass, ONLY: exchange_messages
@@ -510,11 +511,15 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   call advect_all_points
 
+  if(UseParticles) &
+       call advect_particle_line
+
+
   call timing_stop('advance')
 
-  if(time_accurate)&
-       call update_lagrangian_grid(&
-       Time_Simulation - Dt*No2Si_V(UnitT_),Time_Simulation)
+!  if(time_accurate)&
+!       call update_lagrangian_grid(&
+!       Time_Simulation - Dt*No2Si_V(UnitT_),Time_Simulation)
 
   if(DoTest)write(*,*)NameSub,' iProc,new n_step,Time_Simulation=',&
        iProc,n_step,Time_Simulation
