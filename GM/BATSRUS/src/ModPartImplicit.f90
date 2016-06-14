@@ -92,6 +92,9 @@ module ModPartImplicit
   real, allocatable :: Rhs_I(:)
   real, allocatable :: x_I(:)
 
+  ! Implicit cell or not.
+  logical, allocatable :: IsImplCell_CB(:,:,:,:)
+
   ! Update check
   real :: &
        RejectStepLevel   = 0.3, RejectStepFactor   = 0.50, &
@@ -227,6 +230,8 @@ contains
   !============================================================================
   subroutine init_mod_part_impl
 
+    use ModSize, ONLY: MaxBlock
+    
     character(len=*), parameter:: NameSub = 'init_mod_part_impl'
     !----------------------------------------------------------------------
     if(allocated(Impl_VGB)) return
@@ -246,6 +251,8 @@ contains
     allocate(Rhs0_I(MaxImplVar))
     allocate(Rhs_I(MaxImplVar))
     allocate(x_I(MaxImplVar))
+
+    allocate(IsImplCell_CB(nI,nJ,nK,MaxBlock))
 
     if(iProc==0)then
        call write_prefix
@@ -268,6 +275,7 @@ contains
     deallocate(Rhs0_I)
     deallocate(Rhs_I)
     deallocate(x_I)
+    deallocate(IsImplCell_CB)
 
     if(iProc==0)then
        call write_prefix
@@ -844,6 +852,16 @@ contains
 
     endif
 
+    do iBlockImpl = 1, nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+       do iVar = 1, nVar
+          n=n+1
+          if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl))) then
+             Rhs_I(n) = 0 ! Do the same thing for Rhs0_I ?
+          endif
+       end do
+    end do; enddo; enddo; enddo
+
+
     if(UseNewton .or. UseConservativeImplicit)then
        ! Calculate RHS0 used for RHS when nIterNewton > 1
        n=0
@@ -939,7 +957,6 @@ contains
     ! Update Impl_VGB(k+1) = Impl_VGB(k) + x_I
 
     use ModProcMH
-    use ModGeometry, ONLY : true_cell
     use ModMpi
 
     real,    intent(out):: NormX
@@ -971,7 +988,7 @@ contains
     do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
        do iVar = 1, nVar
           n=n+1
-          if(true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl)))&
+          if(IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)))&
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Impl_VGB(iVar,i,j,k,iBlockImpl) &
                + x_I(n)*Norm_V(iVar)
@@ -993,7 +1010,6 @@ contains
     ! Replace the final Newton iterate Impl_VGB with a flux based 
     ! conservative update
 
-    use ModGeometry, ONLY : true_cell
     integer :: i, j, k, iVar, n, iBlockImpl, iBlock
     !--------------------------------------------------------------------------
 
@@ -1015,7 +1031,7 @@ contains
        iBlock = iBlockFromImpl_B(iBlockImpl)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVar
           n=n+1
-          if(true_cell(i,j,k,iBlock)) &
+          if(IsImplCell_CB(i,j,k,iBlock)) &
                Impl_VGB(iVar,i,j,k,iBlockImpl) = &
                Rhs0_I(n)*Norm_V(iVar) &
                + ImplCoeff*DtCoeff*ResImpl_VCB(iVar,i,j,k,iBlockImpl)
@@ -1161,6 +1177,9 @@ contains
        y_I(n) = Coef1*x_I(n) - Coef2*(ImplEps_VCB(iVar,i,j,k,iBlock) &
             - Impl_VGB(iVar,i,j,k,iBlock) &
             - ResImpl_VCB(iVar,i,j,k,iBlock))/Norm_V(iVar)
+       if(.not. IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlock))) then          
+          y_I(n) = Rhs_I(n)
+       endif
     enddo; enddo; enddo; enddo; enddo
 
     call timing_stop(NameSub)
@@ -1233,7 +1252,6 @@ contains
          add_jacobian_hall_resist
     use ModHallResist, ONLY: UseHallResist, HallFactor_C, HallJ_CD, &
          set_hall_factor_cell
-    use ModGeometry, ONLY: true_cell
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
          FaceNormal_DDFB, CellSize_DB, CellVolume_GB
 
@@ -1511,7 +1529,7 @@ contains
     ! Multiply JAC by the implicit timestep dt, ImplCoeff, Norm_V, and -1
     if(time_accurate)then
        do iStencil = 1, nStencil; do k=1,nK; do j=1,nJ; do i=1,nI
-          if(true_cell(i,j,k,iBlock))then
+          if(IsImplCell_CB(i,j,k,iBlock))then
              do jVar=1,nVar; do iVar=1,nVar
                 Jac_VVCI(iVar,jVar,i,j,k,iStencil) = &
                      -Jac_VVCI(iVar,jVar,i,j,k,iStencil) &
@@ -1806,8 +1824,11 @@ contains
 
     use ModMain
     use ModAdvance, ONLY: iTypeAdvance_B, ImplBlock_
+    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModSize, ONLY: nI, nJ, nK
 
     integer :: iBlock, iBlockImpl
+    integer :: i, j, k
     !--------------------------------------------------------------------------
 
     ! Fix parameters if needed
@@ -1846,6 +1867,21 @@ contains
        endif
     end do
 
+
+    IsImplCell_CB = .false.
+    do iBlockImpl = 1, nBlockImpl; do k=1, nK; do j=1, nJ; do i=1, nI
+       IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = &
+            true_cell(i,j,k,iBlockFromImpl_B(iBlockImpl))
+    enddo; enddo; enddo; enddo
+
+    if(UseResistivePlanet) then
+       do iBlockImpl = 1, nBlockImpl; do k=1, nK; do j=1, nJ; do i=1, nI
+          if(r_BLK(i,j,k,iBlockFromImpl_B(iBlockImpl)) < 1.0) &
+               IsImplCell_CB(i,j,k,iBlockFromImpl_B(iBlockImpl)) = .false.
+       enddo; enddo; enddo; enddo
+    endif
+    
+
     ! The index of the test variable in the linear array
     nTest = &
          VARtest+nVar*(Itest-1+nI*(Jtest-1+nJ*(Ktest-1+nK*(iBlockImplTest-1))))
@@ -1859,12 +1895,13 @@ contains
 
     use ModMain
     use ModAdvance, ONLY : State_VGB, Energy_GBI
-    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
+    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, iRho_I
+    use ModSize, ONLY: nG, nI, nJ, nK
 
     integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
     real,  intent(out):: Var_VGB(nVar,iMin:iMax,jMin:jMax,kMin:kMax,MaxImplBLK)
 
-    integer :: iBlockImpl, iBlock
+    integer :: iBlockImpl, iBlock, i, j, k
     logical :: DoTest, DoTestMe
 
     character(len=*), parameter:: NameSub = 'explicit2implicit'
@@ -1891,6 +1928,23 @@ contains
        end if
     end do
 
+
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
+       ! The max velocity at each face is calculated later in get_cmax_face(),
+       ! which is calculated block-by-block. If a cell is not a implicit cell
+       ! and is not a 'ghost' cell of a implicit cell, then set the
+       ! density to 1 and all the other variables to 0, so that the maximum
+       ! velocity at these faces is 0. 
+       iBlock=iBlockFromImpl_B(iBlockImpl)       
+       if(.not. any(IsImplCell_CB(max(1,i-nG):min(nI,i+nG),&
+            max(1,j-nG):min(nJ,j+nG),max(1,k-nG):min(nK,k+nG),iBlock))) then
+          Var_VGB(:,i,j,k,iBlockImpl) = 0
+          Var_VGB(iRho_I,i,j,k,iBlockImpl) = 1.0
+       endif
+       
+    enddo; enddo; enddo; enddo
+
+    
     call timing_stop('expl2impl')
 
     if(DoTestMe .and. nBlockImpl > 0) &
@@ -1910,7 +1964,6 @@ contains
     use ModEnergy,     ONLY: calc_pressure_cell, calc_energy_cell
     use ModMultiFluid, ONLY: iFluid, nFluid, iRho, iRho_I, iP_I, iP
     use ModPhysics,    ONLY: RhoMin_I
-    use ModGeometry,   ONLY: true_cell
 
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
@@ -1919,7 +1972,7 @@ contains
     call timing_start('impl2expl')
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       if(.not.true_cell(i,j,k,iBlock)) CYCLE
+       if(.not.IsImplCell_CB(i,j,k,iBlock)) CYCLE
        State_VGB(1:nVar,i,j,k,iBlock) = Var_VC(1:nVar,i,j,k)
     end do; end do; end do
 
@@ -1936,7 +1989,7 @@ contains
        do iFluid = 1, nFluid
           iP = iP_I(iFluid)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             if(.not.IsImplCell_CB(i,j,k,iBlock)) CYCLE
              Energy_GBI(i,j,k,iBlock,iFluid) = Var_VC(iP,i,j,k)
           end do; end do; end do
        end do
@@ -1988,7 +2041,6 @@ contains
 
     use ModMain
     use ModAdvance, ONLY : FluxType,time_BLK
-    use ModGeometry, ONLY : true_cell
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
 
@@ -2001,6 +2053,8 @@ contains
     real    :: CflTmp
     integer :: nOrderTmp, nStageTmp, iBlockImpl, iBlock
     character (len=10) :: TypeFluxTmp
+
+    integer :: i, j, k
 
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
@@ -2026,7 +2080,7 @@ contains
        do iBlockImpl=1,nBlockImpl
           iBlock=iBlockFromImpl_B(iBlockImpl)
           time_BLK(:,:,:,iBlock)=0.0
-          where(true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+          where(IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(1:nI,1:nJ,1:nK,iBlock) = DtExpl
        end do
     else
@@ -2046,6 +2100,14 @@ contains
     if(DoTestMe .and. nBlockImpl > 0)write(*,*)'get_residual Res_VCB:',&
          Res_VCB(VARtest,Itest,Jtest,Ktest,iBlockImplTest)
 
+
+    do iBlockImpl=1,nBlockImpl; do k=1,nK; do j=1, nJ; do i=1, nI
+       iBlock=iBlockFromImpl_B(iBlockImpl)
+       if(.not. IsImplCell_CB(i,j,k,iBlock)) then
+          Res_VCB(:,i,j,k,iBlockImpl) =0; 
+       endif          
+    enddo; enddo; enddo; enddo
+    
     ! Restore global variables
     nStage      = nStageTmp
     if(IsLowOrder)then
@@ -2218,7 +2280,7 @@ contains
 
        DoTestCell = DoTestMe .and. &
             iFace==iTest .and. jFace==jTest .and. kFace==kTest
-
+       
        Primitive_V = Var_VF(:,iFace, jFace, kFace)
 
        call conservative_to_primitive(Primitive_V)
@@ -2282,7 +2344,7 @@ contains
     use ModProcMH
     use ModMain
     use ModB0,  ONLY: B0_DGB
-    use ModGeometry, ONLY: true_cell, true_BLK
+    use ModGeometry, ONLY: true_BLK
     use ModMpi
     use ModHallResist, ONLY: UseHallResist, set_hall_factor_face
     use BATL_lib, ONLY: CellVolume_GB
@@ -2320,7 +2382,7 @@ contains
                B0_DC, nI, nJ, nK, iDim, iBlock, Cmax_C)
 
           if(.not.true_BLK(iBlock))then
-             where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) Cmax_C = 0.0
+             where(.not.IsImplCell_CB(1:nI,1:nJ,1:nK,iBlock)) Cmax_C = 0.0
           end if
 
           DtLocal = max(DtLocal, &
