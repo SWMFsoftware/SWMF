@@ -10,9 +10,9 @@ module ModUser
   use ModUserEmpty,                          &
        IMPLEMENTED1 => user_init_session,    &
        IMPLEMENTED2 => user_set_ics,         &
-       IMPLEMENTED3 => user_update_states,   &
-       IMPLEMENTED4 => user_set_resistivity, &
-       IMPLEMENTED5 => user_read_inputs
+       IMPLEMENTED3 => user_set_resistivity, &
+       IMPLEMENTED4 => user_read_inputs,     &
+       IMPLEMENTED5 => user_set_cell_boundary
 
   include 'user_module.h' !list of public methods
 
@@ -211,24 +211,30 @@ contains
   end subroutine user_set_ics
 
   !===========================================================================
-
-  subroutine user_update_states(iBlock)
+  
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: R_BLK, Rmin_BLK
     use ModSize,       ONLY: nI, nJ, nK, nG
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_, Bx_, Bz_
     use ModEnergy,     ONLY: calc_energy_cell
+    use BATL_lib,      ONLY: Xyz_DGB
+    use ModMain,       ONLY: UseResistivePlanet
 
-    integer,intent(in) :: iBlock
 
-    !! real :: r_D(3), dRhoUr_D(3), RhoUr
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=*), intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+    
+
+    real :: r_D(3), dRhoUr_D(3), RhoUr, u_D(3)
     integer :: i, iG, j, k
-    character (len=*), parameter :: NameSub = 'user_set_ics'
-    !----------------------------------------------------------------------
+    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'    
+    !-------------------------------------------------------------------
 
-    call update_states_MHD(iBlock)
-
+    if(.not. UseResistivePlanet .or. TypeBc .ne. 'ResistivePlanet') return;
+    
     if(Rmin_BLK(iBlock) <= PlanetRadius) then
        do i = 1, nI
           if(R_BLK(i+nG,1,1,iBlock) >= PlanetRadius) CYCLE
@@ -248,52 +254,52 @@ contains
              EXIT
           end do
           do k = MinK, MaxK; do j = MinJ, MaxJ
-          
-             !! Get radial momentum
-             !r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
-             !RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock), r_D)
-             !
-             !! Set nG cells inside the planet as a boundary condition
-             !if(RhoUr < 0.0) then
-             !   ! If flow is into the planet, flow is absorbed
-             !	do iG = i-nG, i-1
-             !     State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-             !     State_VGB(P_,iG,j,k,iBlock)   = State_VGB(P_,i,j,k,iBlock)
-	     !     State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-             !          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             !   end do
-             !else
-             !   ! If flow is out of the planet, 
-             !   ! set the density and pressure to body values
-             !   do iG = i-nG, i-1
-             !     State_VGB(Rho_,iG,j,k,iBlock) = BodyRho_I(1)
-	     !     State_VGB(P_,iG,j,k,iBlock) = BodyP_I(1)
-             !     State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-             !          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             !   end do
-             !end if
-             !
-             !! Get radial velocity
-             !r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
-             !
-             !RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
-             !if(RhoUr > 0.0) then
-             !   ! If flow is out of the planet, remove the radial component 
-             !   ! of the momentum so that the flow is tangential
-             !   dRhoUr_D = -r_D*RhoUr
-             !else
-             !   ! If flow is into the planet the flow is absorbed
-             !  dRhoUr_D = 0.0
-             !end if
+             ! Get radial velocity
+             r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
+             
+             RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
+             if(RhoUr > 0.0) then
+               ! If flow is out of the planet, remove the radial component 
+               ! of the momentum so that the flow is tangential                
+               dRhoUr_D = -r_D*RhoUr
+             else
+               ! If flow is into the planet the flow is absorbed
+              dRhoUr_D = 0.0
+             end if
           
              ! Set nG cells inside the planet 
              ! with zero gradient boundary condition
-             do iG = i-nG, i-1
-                State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-	        State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
-                State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-                     State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)  !! + dRhoUr_D
-             end do
+             
+             if(RhoUr>0) then
+                do iG = i-nG, i-1
+                   State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
+                   u_D = State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock)/ &
+                        State_VGB(Rho_,iG,j,k,iBlock) 
+
+                   ! Based on my (Yuxi) experience, the time-accurate 
+                   ! part-implicit run will crash if fixed density and
+                   ! pressure are used.
+                   
+                   !State_VGB(Rho_,iG,j,k,iBlock) = 1.0
+                   !State_VGB(P_,iG,j,k,iBlock) = PlanetPressure
+
+                    ! float BC for Pressure & density
+                    State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+                    State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
+
+                    State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                         u_D*State_VGB(Rho_,iG,j,k,iBlock)              
+                end do
+             else
+                ! Float BC
+                do iG = i-nG, i-1
+                   State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+                   State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
+                   State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+                end do
+             endif
           end do; end do
 
        end if
@@ -302,7 +308,8 @@ contains
 
     call calc_energy_cell(iBlock)
 
-  end subroutine user_update_states
+    
+  end subroutine user_set_cell_boundary
 
   !===========================================================================
 

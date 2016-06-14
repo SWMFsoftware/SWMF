@@ -32,7 +32,7 @@ contains
          time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
-         UseHighResChange, UseBufferGrid
+         UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -72,7 +72,7 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
     call set_oktest('time_exchange', DoTime, DoTimeMe)
-
+    
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
     ! But it works for a number of simple but useful applications.
@@ -200,6 +200,10 @@ contains
        end if
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
+
+       if(UseResistivePlanet) &
+            call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',.true.)
+       
     end do
 
     call timing_stop('exch_msgs')
