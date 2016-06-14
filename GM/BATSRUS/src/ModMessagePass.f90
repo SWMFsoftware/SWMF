@@ -62,6 +62,8 @@ contains
 
     logical :: UseHighResChangeNow
 
+    logical :: IsFound
+
     !!! TO BE GENERALIZED
     logical:: IsPeriodicWedge = .false.
     integer:: iVector, iVar, i, j, k
@@ -202,7 +204,7 @@ contains
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
 
        if(UseResistivePlanet) &
-            call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',.true.)
+            call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
        
     end do
 
