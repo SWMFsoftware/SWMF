@@ -66,6 +66,19 @@ namespace TRAJECTORY_FILTER {
     return FaceFluxCorrectionTable[nface];
   }
 
+  void SaveFluxCorrectionTable() {
+    char fname[]="DustInjectionRateCorrection.bin";
+    FILE *fout;
+
+    fout=fopen(fname,"w");
+
+    int nTotalFaces=amps.SurfaceData.nCells;
+    fwrite(&nTotalFaces,sizeof(int),1,fout);
+    fwrite(FaceFluxCorrectionTable,sizeof(double),nTotalFaces,fout);
+
+    fclose(fout);
+  }
+
   void ProcessTrajectories(SpiceDouble et) {
     int nTrajectory,n,i,iPixel,jPixel;
     double x[3],c0,c1,l,lCorridor[2];
@@ -92,6 +105,19 @@ namespace TRAJECTORY_FILTER {
     cCorridor Exclude14={63,50,218,64,false,25,0.1};
     cCorridor Exclude15={96,158,118,198,false,2,0.1};
 
+    cCorridor Exclude16={121,175,172,180,false,2,0.1};
+    cCorridor Exclude17={52,101,64,172,false,2,0.1};
+    cCorridor Exclude18={67,204,84,205,false,2,0.1};
+    cCorridor Exclude19={68,142,85,142,false,2,0.1};
+
+    cCorridor Exclude20={109,62,223,62,false,2,0.1};
+    cCorridor Exclude21={200,135,230,135,false,20,0.1};
+    cCorridor Exclude22={186,110,204,114,false,2,0.1};
+    cCorridor Exclude23={177,170,190,170,false,2,0.1};
+
+    cCorridor Exclude24={67,126,88,130,false,2,0.1};
+    cCorridor Exclude25={105,165,125,176,false,2,0.1};
+
     vector<cCorridor> CorridorTable;
 
     CorridorTable.push_back(Include1);
@@ -114,6 +140,18 @@ namespace TRAJECTORY_FILTER {
     CorridorTable.push_back(Exclude14); 
     CorridorTable.push_back(Exclude15); 
 
+    CorridorTable.push_back(Exclude16);
+    CorridorTable.push_back(Exclude17);
+    CorridorTable.push_back(Exclude18);
+    CorridorTable.push_back(Exclude19);
+    CorridorTable.push_back(Exclude20);
+    CorridorTable.push_back(Exclude21);
+    CorridorTable.push_back(Exclude22);
+    CorridorTable.push_back(Exclude23);
+
+    CorridorTable.push_back(Exclude24);
+    CorridorTable.push_back(Exclude25);
+
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
@@ -130,7 +168,7 @@ namespace TRAJECTORY_FILTER {
     //go therough all corridor settings
     for (int npass=0;npass<2;npass++) {
       //during the first pass add all wanted trajectories
-      //during the second pass remove all aunwonted trajectories
+      //during the second pass remove all unwanted trajectories
 
       for (int nCor=0;nCor<CorridorTable.size();nCor++) {
         if (npass==0) {
@@ -139,6 +177,12 @@ namespace TRAJECTORY_FILTER {
         else {
           if (CorridorTable[nCor].IncludeFlag==true) continue;
         }
+
+        //in a pass process a face only ones
+        int nface;
+        bool FaceInjectionRateModifiedFlag[amps.SurfaceData.nCells];
+
+        for (nface=0;nface<amps.SurfaceData.nCells;nface++) FaceInjectionRateModifiedFlag[nface]=false;
 
         //add surface faces into the allowed list
         lCorridor[0]=CorridorTable[nCor].x1-CorridorTable[nCor].x0;
@@ -169,11 +213,25 @@ namespace TRAJECTORY_FILTER {
               if (true) { //(rnd()<CorridorTable[nCor].AcceptanceProbability) {
                 if (CorridorTable[nCor].IncludeFlag==true) {
                   SelectedTrajectoriesTable[nTrajectory]=true;
-                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
+
+                  nface=(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7];
+                  if (FaceInjectionRateModifiedFlag[nface]==false) {
+                    FaceInjectionRateModifiedFlag[nface]=true;
+                    FaceFluxCorrectionTable[nface]=CorridorTable[nCor].AcceptanceProbability;
+                  }
+
+                  //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
                 }
                 else {
                   SelectedTrajectoriesTable[nTrajectory]=false;
-                  FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]*=CorridorTable[nCor].AcceptanceProbability;
+
+                  nface=(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7];
+                  if (FaceInjectionRateModifiedFlag[nface]==false) {
+                    FaceInjectionRateModifiedFlag[nface]=true;
+                    FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
+                  }
+
+                  //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]*=CorridorTable[nCor].AcceptanceProbability;
                 }
               }
 
@@ -1046,6 +1104,11 @@ return 1;
 
 
   amps.FinalizeMPI();
+
+  //output of the flux correction table
+  if (amps.rank==0) TRAJECTORY_FILTER::SaveFluxCorrectionTable();
+
+  //finish the execution with success
   printf("done.\n");
   return 1;
 }
