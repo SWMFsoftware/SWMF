@@ -1133,12 +1133,12 @@ void c_Solver:: write_plot_init(){
     }
     
     // Find out output unit.
-    if(plotString.find("si") !=string::npos){
+    if(plotString.find("si") !=string::npos || plotString.find("SI") !=string::npos){
       outputUnit_I[iPlot] = "SI";
-    }else if(plotString.find("pic") !=string::npos){
-      outputUnit_I[iPlot] = "PIC normalized";
-    }else if(plotString.find("planet") !=string::npos){
-      outputUnit_I[iPlot] = "Planet unit";
+    }else if(plotString.find("pic") !=string::npos || plotString.find("PIC") !=string::npos){
+      outputUnit_I[iPlot] = "PIC";
+    }else if(plotString.find("planet") !=string::npos || plotString.find("PLANET") !=string::npos){
+      outputUnit_I[iPlot] = "PLANETARY";
     }else {
       if(myrank==0)cout<<"Unknown plot output unit!! plotString = "<<plotString<<endl;
       abort();
@@ -1525,7 +1525,7 @@ void c_Solver:: set_output_unit(int iPlot){
   doTestFunc = do_test_func(nameSub);
   //-------------------
 
-  if(outputUnit_I[iPlot]=="SI" || outputUnit_I[iPlot]=="Planet unit"){
+  if(outputUnit_I[iPlot]=="SI" || outputUnit_I[iPlot]=="PLANETARY"){
     No2OutL   = col->getNo2SiL();
     No2OutV   = col->getNo2SiV();
     No2OutB   = col->getNo2SiB();
@@ -1533,7 +1533,7 @@ void c_Solver:: set_output_unit(int iPlot){
     No2OutP   = col->getNo2SiP();
     No2OutJ   = col->getNo2SiJ();
 
-    if(outputUnit_I[iPlot]=="Planet unit") {
+    if(outputUnit_I[iPlot]=="PLANETARY") {
       double massProton = 1.6726219e-27; //unit: kg
       No2OutL   *= 1./col->getrPlanet(); // it should be No2OutL *= 1/rPlanet
       No2OutV   *= 1e-3; // m/s -> km/s
@@ -1542,7 +1542,7 @@ void c_Solver:: set_output_unit(int iPlot){
       No2OutP   *= 1e9; // Pa -> nPa
       No2OutJ   *= 1; // ?????????????????????? what should it be??????
     }
-  }else if(outputUnit_I[iPlot]=="PIC normalized"){
+  }else if(outputUnit_I[iPlot]=="PIC"){
     No2OutL = 1; No2OutV = 1; No2OutB = 1;
     No2OutRho = 1; No2OutP = 1; No2OutJ = 1; 
   }else{
