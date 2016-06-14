@@ -10,7 +10,7 @@ module ModSize
        nDim, nVar, &
        RMin, &
        Particle_, OriginLat_, OriginLon_, &
-       R_, Lat_, Lon_, &
+       R_, Lat_, Lon_, Bx_, By_, Bz_, &
        nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle
 
@@ -18,7 +18,7 @@ module ModSize
   integer, parameter:: nDim = 3
 
   ! Number of variables in the state vector
-  integer, parameter:: nVar = 3
+  integer, parameter:: nVar = 6
 
   ! Starting position of field lines in Rs
   real, parameter:: RMin = 2.5
@@ -33,7 +33,10 @@ module ModSize
   integer, parameter:: &
        R_   = 1,    & ! Radial coordinate
        Lon_ = 2,    & ! Longitude
-       Lat_ = 3       ! Latitude
+       Lat_ = 3,    & ! Latitude
+       Bx_  = 4,    & !
+       By_  = 5,    & ! Magnetic field
+       Bz_  = 6       !
        
 
   ! Min and Max possible index of a particle along a field line,

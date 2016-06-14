@@ -5,7 +5,7 @@ module ModWrite
   use ModSize, ONLY: &
        nDim, nVar, nLat, nLon, nNode, &
        RMin, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
+       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
 
   use ModGrid, ONLY: &
        get_node_indexes, &
@@ -174,8 +174,10 @@ contains
       real:: PLast
       ! coordinates in spherical coordinates
       real:: Coord_D(nDim)
+      ! magnetic field
+      real:: B_D(nDim)
       ! storage for output data
-      real:: DataOut_VI(nDim,iParticleMin:iParticleMax)
+      real:: DataOut_VI(nVar,iParticleMin:iParticleMax)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
@@ -189,10 +191,13 @@ contains
          PFirst = iGrid_IA(Begin_, iNode)
          PLast  = iGrid_IA(End_,   iNode)
 
-         ! convert coordinates to cartesian before output
          do iParticle = int(PFirst), int(PLast)
+            ! convert coordinates to cartesian before output
             Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
             call rlonlat_to_xyz(Coord_D, DataOut_VI(1:nDim,iParticle))
+            ! magnetic field
+            DataOut_VI((/Bx_,By_,Bz_/),iParticle) = &
+                 State_VIB((/Bx_,By_,Bz_/), iParticle, iBlock)
          end do
 
          ! print data to file
@@ -203,8 +208,8 @@ contains
               nStepIn      = iIter, &
               CoordMinIn_D = (/PFirst/), &
               CoordMaxIn_D = (/PLast/), &
-              NameVarIn    = 'ParticleIndex X Y Z', &
-              VarIn_VI     = DataOut_VI(1:nDim, int(PFirst):int(PLast))&
+              NameVarIn    = 'ParticleIndex X Y Z Bx By Bz', &
+              VarIn_VI     = DataOut_VI(1:nVar, int(PFirst):int(PLast))&
               )
       end do
       

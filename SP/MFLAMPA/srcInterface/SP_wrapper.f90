@@ -135,8 +135,7 @@ contains
     real,dimension(nVar),intent(in)::Buff_I
 
     real:: Xyz_D(3), Coord_D(3)
-    
-    
+    real:: B_D(3)
 
     integer:: i, j, k, iBlock
     !------------------------------------------------------------
@@ -147,14 +146,19 @@ contains
 
     Xyz_D = Buff_I((nVar-2):nVar)
 
+    B_D = Buff_I(5:7)
+
     ! convert from SI
     Xyz_D = Xyz_D / rSun 
-
     call xyz_to_rlonlat(Xyz_D, Coord_D)
+
+
     if(DoAdd)then
        State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
+       State_VIB(4:6,i,iBlock) = State_VIB(4:6,i,iBlock) + B_D
     else
        State_VIB((/1,2,3/),i,iBlock) = Coord_D
+       State_VIB((/4,5,6/),i,iBlock) = B_D
     end if
 
   end subroutine SP_put_from_mh
