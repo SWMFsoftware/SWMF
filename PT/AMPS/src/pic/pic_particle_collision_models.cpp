@@ -69,7 +69,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::Init() {
   PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
 
   //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+  PIC::Mesh::AddVaraibleListFunction(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
 #endif
@@ -94,6 +94,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 //  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],
   long int FirstCellParticle,ptr;
   double cellMeasure;
+  int thread;
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::Mesh::cDataBlockAMR *block;
@@ -105,8 +106,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
   //particle lists
   int ParticleDataListLength=100;
-  cParticleDataList *s0ParticleDataList; //=new cParticleDataList[ParticleDataListLength];
-  cParticleDataList *s1ParticleDataList; //=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
+  cParticleDataList *s0ParticleDataList[PIC::nTotalThreadsOpenMP]; //=new cParticleDataList[ParticleDataListLength];
+  cParticleDataList *s1ParticleDataList[PIC::nTotalThreadsOpenMP]; //=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
   cParticleDataList *s0List=NULL,*s1List=NULL; //s0List and s1List are used to access s0ParticleDataList and s1ParticleDataList
 
   //sampling data
@@ -118,6 +119,12 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
   int LoadBalancingMeasureOffset=PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset;
 
+  for (thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    s0ParticleDataList[thread]=new cParticleDataList[ParticleDataListLength];
+    s1ParticleDataList[thread]=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
+  }
+
+/*
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel default(none) private (s,s0,s1,i,j,k,nParticleNumber,nMaxSpecParticleNumber,cnt,FirstCellParticle,ptr,PIC::Mesh::mesh,block, \
       EndTime,StartTime,s0ParticleDataList,s1ParticleDataList,cell,SamplingData,cellMeasure) \
@@ -132,6 +139,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
     s0ParticleDataList=new cParticleDataList[ParticleDataListLength];
     s1ParticleDataList=new cParticleDataList[ParticleDataListLength];  //s0ParticleDataList,s1ParticleDataList are used to store the actual data
+*/
 
 
 
@@ -149,10 +157,18 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
-#pragma omp for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_)
+#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (ParticleDataListLength,SigmaCrMax_nTest,SigmaCrMax_SafetyMargin) \
+    private (k,j,i,node,block,thread,StartTime,FirstCellParticle,cell,cellMeasure,SamplingData,s,nParticleNumber,ptr,nMaxSpecParticleNumber,s0,s1,s0List,s1List,cnt,EndTime) \
+    shared (DomainBlockDecomposition::nLocalBlocks,s0ParticleDataList,s1ParticleDataList,PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,PIC::ParticleWeightTimeStep::LocalTimeStep,PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset,LoadBalancingMeasureOffset)
 #else
-#pragma omp for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (ParticleDataListLength,SigmaCrMax_nTest,SigmaCrMax_SafetyMargin) \
+private (k,j,i,node,block,thread,StartTime,FirstCellParticle,cell,cellMeasure,SamplingData,s,nParticleNumber,ptr,nMaxSpecParticleNumber,s0,s1,s0List,s1List,cnt,EndTime) \
+shared (DomainBlockDecomposition::nLocalBlocks,s0ParticleDataList,s1ParticleDataList,PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,PIC::ParticleWeightTimeStep::LocalTimeStep,PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset,LoadBalancingMeasureOffset)
 #endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
+
+
+
+
 
 #endif  //_COMPILATION_MODE_
 //  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
@@ -173,6 +189,14 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
     StartTime=MPI_Wtime();
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     block=node->block;
+    if (block==NULL) continue;
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    thread=omp_get_thread_num();
+    #else
+    thread=0;
+    #endif
+
 //    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
 //    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
@@ -199,12 +223,12 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
               //re-allocate the particle list if needed
               if (nMaxSpecParticleNumber>ParticleDataListLength) {
-                delete [] s1ParticleDataList;
-                delete [] s0ParticleDataList;
+                delete [] s1ParticleDataList[thread];
+                delete [] s0ParticleDataList[thread];
 
                 ParticleDataListLength=std::max(1.2*nMaxSpecParticleNumber,2.0*ParticleDataListLength);
-                s0ParticleDataList=new cParticleDataList[ParticleDataListLength];
-                s1ParticleDataList=new cParticleDataList[ParticleDataListLength];
+                s0ParticleDataList[thread]=new cParticleDataList[ParticleDataListLength];
+                s1ParticleDataList[thread]=new cParticleDataList[ParticleDataListLength];
               }
 
 
@@ -222,14 +246,14 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                 sumWeightCorrection_s0=0.0;
 
                 //populate the particle list
-                s0List=s0ParticleDataList;
+                s0List=s0ParticleDataList[thread];
 
                 for (cnt=0,ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) if (PIC::ParticleBuffer::GetI(ptr)==(unsigned)s0) {
                   ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
-                  PIC::ParticleBuffer::GetV(s0ParticleDataList[cnt].vel,ParticleData);
-                  s0ParticleDataList[cnt].ParticleData=ParticleData;
-                  s0ParticleDataList[cnt].ValueChangedFlag=false;
+                  PIC::ParticleBuffer::GetV(s0ParticleDataList[thread][cnt].vel,ParticleData);
+                  s0ParticleDataList[thread][cnt].ParticleData=ParticleData;
+                  s0ParticleDataList[thread][cnt].ValueChangedFlag=false;
 
                   #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
                   double wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
@@ -256,14 +280,14 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                   //populate the list
                   if (s0==s1) s1List=s0List,minParticleWeightCorrection_s1=minParticleWeightCorrection_s0,sumWeightCorrection_s1=sumWeightCorrection_s0;
                   else {
-                    s1List=s1ParticleDataList;
+                    s1List=s1ParticleDataList[thread];
 
                     for (cnt=0,ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) if (PIC::ParticleBuffer::GetI(ptr)==(unsigned)s1) {
                       ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
-                      PIC::ParticleBuffer::GetV(s1ParticleDataList[cnt].vel,ParticleData);
-                      s1ParticleDataList[cnt].ParticleData=ParticleData;
-                      s1ParticleDataList[cnt].ValueChangedFlag=false;
+                      PIC::ParticleBuffer::GetV(s1ParticleDataList[thread][cnt].vel,ParticleData);
+                      s1ParticleDataList[thread][cnt].ParticleData=ParticleData;
+                      s1ParticleDataList[thread][cnt].ValueChangedFlag=false;
 
                       #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
                       double wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
@@ -474,8 +498,10 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
   }
 
-  delete [] s1ParticleDataList;
-  delete [] s0ParticleDataList;
+  for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    delete [] s1ParticleDataList[thread];
+    delete [] s0ParticleDataList[thread];
+  }
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
@@ -485,6 +511,6 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
         node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
       }
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  }
+//  }
 #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 }
