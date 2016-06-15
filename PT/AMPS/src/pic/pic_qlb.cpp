@@ -57,7 +57,7 @@ void PIC::IDF::qLB::Init() {
   PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
 
   //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+  PIC::Mesh::AddVaraibleListFunction(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
 }
