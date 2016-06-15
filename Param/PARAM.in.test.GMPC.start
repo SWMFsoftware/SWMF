@@ -277,6 +277,24 @@ F					UseFixedDt
 1.0e-6					GMREStol : GMRES solver stopping criterium tolerance
 3					NiterMover : mover predictor corrector iteration
 
+
+#SAVEIDL
+2
+z=0 fluid ascii si			StringPlot
+4   	  				DnOutput
+-1					DtOutput
+0					DxOutput
+cut particles1 ascii planet		StringPlot
+4   	       	     			DnOutput
+-1					DtOutput
+-1					xMin
+3					xMax
+0					yMin
+2					yMax
+-1					zMin
+1					zMax
+3
+
 #SAVEPLOT
 PC/plots				SaveDirName
 1					FieldOutputCycle
