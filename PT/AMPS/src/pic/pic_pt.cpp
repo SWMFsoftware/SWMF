@@ -21,6 +21,7 @@ int PIC::ParticleTracker::maxSampledTrajectoryNumber=-1;
 int **PIC::ParticleTracker::threadSampledTrajectoryNumber=NULL;
 int *PIC::ParticleTracker::totalSampledTrajectoryNumber=NULL;
 unsigned long int *PIC::ParticleTracker::SampledTrajectoryCounter=NULL;
+unsigned long int *PIC::ParticleTracker::SampledTrajectoryPointCounter=NULL;
 
 int PIC::ParticleTracker::nMaxSavedSignleTrajectoryPoints=1000;
 bool PIC::ParticleTracker::AllowRecordingParticleTrajectoryPoints[PIC::nTotalSpecies];
@@ -49,8 +50,9 @@ void PIC::ParticleTracker::Init() {
   totalSampledTrajectoryNumber=new int [PIC::nTotalSpecies];
   threadSampledTrajectoryNumber[0]=new int [PIC::nTotalSpecies*PIC::nTotalThreadsOpenMP];
   SampledTrajectoryCounter=new unsigned long int [PIC::nTotalThreadsOpenMP];
+  SampledTrajectoryPointCounter=new unsigned long int [PIC::nTotalThreadsOpenMP];
 
-  for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) SampledTrajectoryCounter[thread]=0;
+  for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) SampledTrajectoryCounter[thread]=0,SampledTrajectoryPointCounter[thread]=0;
 
   for (int s=1;s<PIC::nTotalSpecies;s++) {
     threadSampledTrajectoryNumber[s]=threadSampledTrajectoryNumber[s-1]+PIC::nTotalThreadsOpenMP;
@@ -288,6 +290,9 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
 
   //update the trajectory data buffer pointer
   TrajectoryDataTable[threadOpenMP].CurrentPosition++;
+
+  //increment the sample point counter
+  SampledTrajectoryPointCounter[threadOpenMP]++;
 }
 
 void PIC::ParticleTracker::FinilazeParticleRecord(void *ParticleData) {
@@ -425,6 +430,12 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
   MPI_Gather(tmpTrajectoryDataFiles,PIC::nTotalThreadsOpenMP,MPI_UNSIGNED_LONG,nTrajectoryDataFiles,PIC::nTotalThreadsOpenMP,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
   MPI_Gather(SampledTrajectoryCounter,PIC::nTotalThreadsOpenMP,MPI_UNSIGNED_LONG,nTotalSampledTrajectories,PIC::nTotalThreadsOpenMP,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
+  //get the total number of the sampled trajectory points
+  unsigned long int threadTrajectoryPointCounter=0,totalTrajectoryPointCounter=0;
+
+  for (thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) threadTrajectoryPointCounter+=SampledTrajectoryPointCounter[thread];
+
+  MPI_Reduce(&threadTrajectoryPointCounter,&totalTrajectoryPointCounter,1,MPI_UNSIGNED_LONG,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
   //save data needed for unpacking of the trajecotry files in postprocessing
   if (PIC::ThisThread==0) {
@@ -455,11 +466,13 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
 
     fclose(fTrajectoryDataSet);
 
-    //print the total number of saved trajectories
-    int nTotal=0;
+    //print the total number of saved trajectories and saved trajectory points
+    int nTotalSavedTrajectories=0,nTotalSavedTrajectoryPoints=0;
 
-    for (int thread=0;thread<PIC::nTotalThreads*PIC::nTotalThreadsOpenMP;thread++) nTotal+=nTotalSampledTrajectories[thread];
-    printf("$PREFIX: The total number of sampled trajectories: %i\n",nTotal);
+
+    for (int thread=0;thread<PIC::nTotalThreads*PIC::nTotalThreadsOpenMP;thread++) nTotalSavedTrajectories+=nTotalSampledTrajectories[thread];
+    printf("$PREFIX: The total number of sampled trajectories: %i\n",nTotalSavedTrajectories);
+    printf("$PREFIX: The total number of sampled trajectory points: %i\n",totalTrajectoryPointCounter);
   }
 
 
