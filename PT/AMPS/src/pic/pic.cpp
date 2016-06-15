@@ -399,6 +399,9 @@ int PIC::TimeStep() {
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Iteration Execution Time: min=%e, max=%e\n",MinExecutionTime,MaxExecutionTime);
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Latency: max=%e,mean=%e;CumulativeLatency=%e,Iterations after rebalabcing=%ld,Rebalancing Time=%e\n",MaxLatency,MeanLatency,PIC::Parallel::CumulativeLatency,PIC::Parallel::IterationNumberAfterRebalancing,PIC::Parallel::RebalancingTime);
 
+      //flush the stream
+      fflush(PIC::DiagnospticMessageStream);
+
       //check the elapsed walltime for the alarm
       if (PIC::Alarm::AlarmInitialized==true) {
         if (MPI_Wtime()-PIC::Alarm::StartTime>PIC::Alarm::RequestedExecutionWallTime) PIC::Alarm::WallTimeExeedsLimit=true;
