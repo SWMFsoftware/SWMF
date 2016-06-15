@@ -83,6 +83,10 @@ vector<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCent
 vector<PIC::Mesh::fPrintDataCenterNode> PIC::Mesh::PrintDataCenterNode;
 vector<PIC::Mesh::fInterpolateCenterNode> PIC::Mesh::InterpolateCenterNode;
 
+void PIC::Mesh::AddVaraibleListFunction(fPrintVariableListCenterNode f) {
+  PrintVariableListCenterNode.push_back(f);
+} 
+
 
 
 void PIC::Mesh::SetCellSamplingDataRequest() {
