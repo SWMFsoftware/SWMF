@@ -1845,6 +1845,8 @@ namespace PIC {
     extern vector<fPrintVariableListCenterNode> PrintVariableListCenterNode;
     extern vector<fPrintDataCenterNode> PrintDataCenterNode;
     extern vector<fInterpolateCenterNode> InterpolateCenterNode;
+
+    void AddVaraibleListFunction(fPrintVariableListCenterNode f);
     
     //the class defining the 'central node' that contains the sampling data
     class cDataCenterNode : public cBasicCenterNode {
