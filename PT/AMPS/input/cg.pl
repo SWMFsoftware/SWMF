@@ -174,7 +174,16 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("double GrainDragCoefficient",$InputLine,"main/Comet.h");
   } 
 
-  
+
+  #type of the gas velocity distribution at the nucleus 
+  elsif ($InputLine eq "INITIALGASVELOCITYDISTRIBUTION") { 
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+     if ($InputLine eq "UNIFORM") { 
+       ampsConfigLib::RedefineMacro("_COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE_","_COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE__UNIFORM_","main/Comet.dfn");
+     }
+  }
+
   #forces that will be accounted during the simulation
   elsif ($InputLine eq "FORCES") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
