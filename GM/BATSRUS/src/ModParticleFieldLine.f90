@@ -349,10 +349,10 @@ contains
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
-          StateEnd_VI( :, 1:nLineThisProc) = &
-               StateReg_VI( :, nParticleOld+1:nParticleOld+nLineThisProc)
-          iIndexEnd_II(:, 1:nLineThisProc) = &
-               iIndexReg_II(:, nParticleOld+1:nParticleOld+nLineThisProc)
+          StateEnd_VI(x_:z_, 1:nLineThisProc) = &
+               StateReg_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
+          iIndexEnd_II( :,   1:nLineThisProc) = &
+               iIndexReg_II( :,   nParticleOld+1:nParticleOld+nLineThisProc)
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
