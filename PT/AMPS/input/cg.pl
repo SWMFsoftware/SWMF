@@ -81,7 +81,7 @@ while ($line=<InputFile>) {
   $InputLine=uc($InputLine);
   chomp($InputLine);
  
-  $InputLine=~s/[=():]/ /g;
+  $InputLine=~s/[=():,]/ /g;
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
   
@@ -636,6 +636,39 @@ while ($line=<InputFile>) {
       $InputLine=~s/ //g;
       ampsConfigLib::ChangeValueOfVariable("double DustSizeDistribution","$InputLine","main/Comet.cpp");
   }
+  
+  
+  #dust surface injection corection mode
+  elsif ($InputLine eq "DUSTINJECTIONCORRECTIONMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      
+      print "$InputLine\n";
+      
+      if (($InputLine eq "INJECTIONRATE") || ($InputLine eq "CORRECTIONFLUXRELATIVEH2O")) {
+        if  ($InputLine eq "INJECTIONRATE") {
+          ampsConfigLib::RedefineMacro("_DUST_INJECTION_RATE_CORRECTION_MODE_","_DUST_INJECTION_RATE_CORRECTION_MODE__INJECTION_RATE_ ","main/Comet.dfn");
+        }
+        elsif ($InputLine eq "CORRECTIONFLUXRELATIVEH2O") {
+          ampsConfigLib::RedefineMacro("_DUST_INJECTION_RATE_CORRECTION_MODE_","_DUST_INJECTION_RATE_CORRECTION_MODE__RELATIVE_TO_H2O_ ","main/Comet.dfn");
+        }
+        
+        #get the file name 
+        my ($s1,$s2,$s3,$s4,$s5);
+ 
+        $LineOriginal=~s/[=():,]/ /g;
+        ($s1,$s2,$s3,$s4,$s5)=split(' ',$LineOriginal,5);
+        chomp($LineOriginal);
+        
+        ampsConfigLib::ChangeValueOfVariable("char DustInjectionRateCorrectionFactorFileName\\[\\]","\"".$s4."\"","main/Comet.cpp");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_DUST_INJECTION_RATE_CORRECTION_MODE_","_DUST_INJECTION_RATE_CORRECTION_MODE__OFF_ ","main/Comet.dfn");
+      }
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+  }   
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
   }
