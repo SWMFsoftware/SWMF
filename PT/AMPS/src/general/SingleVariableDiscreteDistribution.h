@@ -39,6 +39,8 @@ public:
   fProbabilityDistrvidution ProbabilityDistributionFunction;
 
   int *CumulativeDistributionTable;
+  double *ProbabilityDensityTable;
+  int ProbabilityDensityTableLength;
 
 public:
   void Init(T* t) {
@@ -97,6 +99,10 @@ public:
     if (CumulativeDistributionTable!=NULL) delete [] CumulativeDistributionTable;
     CumulativeDistributionTable=new int [nCumulativeDistributionIntervals];
 
+    if (ProbabilityDensityTable!=NULL) delete [] ProbabilityDensityTable;
+    ProbabilityDensityTable=new double [nProbabilityArray];
+    ProbabilityDensityTableLength=nProbabilityArray;
+
     //normalize the distribution function
     double norm=0.0,summ=0.0;
     for (i=xMin;i<=xMax;i++) norm+=ProbabilityArray[i];
@@ -110,6 +116,8 @@ public:
       summ+=ProbabilityArray[i];
       F=summ/norm; //to minimize the effect of the round error, F is calculated the same way as 'norm' to garantee that the final value of F is 1
       jFinish=(int)(F*nCumulativeDistributionIntervals);
+
+      ProbabilityDensityTable[i]=ProbabilityArray[i]/norm;
 
       for (DeltaJ=0;jStart<=std::min(jFinish,nCumulativeDistributionIntervals-1);jStart++) {
         CumulativeDistributionTable[jStart]=i;
@@ -138,18 +146,21 @@ public:
     xMin=xmin,xMax=xmax,nCumulativeDistributionIntervals=nintervals;
     ProbabilityDistributionFunction=pfunc;
     CumulativeDistributionTable=new int [nCumulativeDistributionIntervals];
+    ProbabilityDensityTableLength=0,ProbabilityDensityTable=NULL;
   }
 
   cSingleVariableDiscreteDistribution(int xmin,int xmax,fProbabilityDistrvidution pfunc) {
     xMin=xmin,xMax=xmax,nCumulativeDistributionIntervals=_SINGLE_VARIABLE_DISTRIBUTION__DEFAULT__CUMULATIVE_DISTRIBUTION_INTERVAL_;
     ProbabilityDistributionFunction=pfunc;
     CumulativeDistributionTable=new int [nCumulativeDistributionIntervals];
+    ProbabilityDensityTableLength=0,ProbabilityDensityTable=NULL;
   }
 
   cSingleVariableDiscreteDistribution() {
     xMin=0,xMax=0,nCumulativeDistributionIntervals=_SINGLE_VARIABLE_DISTRIBUTION__DEFAULT__CUMULATIVE_DISTRIBUTION_INTERVAL_;
     ProbabilityDistributionFunction=NULL;
     CumulativeDistributionTable=NULL;
+    ProbabilityDensityTableLength=0,ProbabilityDensityTable=NULL;
   }
 
   void SetLimits(int xmin,int xmax,fProbabilityDistrvidution pfunc) {
