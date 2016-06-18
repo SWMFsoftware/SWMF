@@ -1204,7 +1204,7 @@ test15:
 	${MAKE} test15_rundir
 	@echo "test15_run..." >> test15_scihsp.diff
 	${MAKE} test15_run
-	@echo "test15_check..." >> test1_scihsp.diff
+	@echo "test15_check..." >> test15_scihsp.diff
 	${MAKE} test15_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 

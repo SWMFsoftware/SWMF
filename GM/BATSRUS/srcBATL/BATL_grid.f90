@@ -1856,8 +1856,7 @@ contains
        ! and displacements towards them
        do iGrid = 2, 2**nDim
           CoordGrid_DI(:, iGrid) = CoordGrid_DI(:, 1) + &
-               dCoord_D(1:nDim) * &
-               (iShift_DI(1:nDim, iGrid) - iDiscr2_D(1:nDim))
+               dCoord_D(1:nDim) * iShift_DI(1:nDim, iGrid)
        end do
     end if
     
