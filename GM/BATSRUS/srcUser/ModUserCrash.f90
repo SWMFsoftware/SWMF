@@ -68,9 +68,6 @@ module ModUser
   ! Use conservative or non-conservative levelsets
   logical :: UseNonConsLevelSet = .true.
 
-  ! Use volume fraction method at the material interface
-  logical :: UseVolumeFraction = .false.
-
   ! Treat cells near material interface as a mixture
   logical :: UseMixedCell = .false.
 
@@ -208,9 +205,6 @@ contains
 
        case("#LEVELSET")
           call read_var('UseNonConsLevelSet', UseNonConsLevelSet)
-
-       case("#VOLUMEFRACTION")
-          call read_var('UseVolumeFraction', UseVolumeFraction)
 
        case("#MIXEDCELL")
           call read_var('UseMixedCell', UseMixedCell)
@@ -1210,10 +1204,9 @@ contains
     character (len=*), parameter :: NameSub = 'user_init_session'
     !-------------------------------------------------------------------
 
-    if(UseGammaLaw .and. (UseMixedCell .or. UseVolumeFraction)) &
-         call stop_mpi(NameSub// &
-         " can not use gamma-law with mixed cell or volume fraction")
-    
+    if(UseGammaLaw .and. UseMixedCell) call stop_mpi(NameSub// &
+         " can not use gamma-law with mixed cell")
+
     ! Pass number of materials and waves=groups to the CRASH EOS library
     nMaterialEos = nMaterial
     nGroup       = nWave
@@ -1467,14 +1460,12 @@ contains
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
     logical :: IsMix
-    integer :: iMaterial, jMaterial
+    integer :: iMaterial
     real    :: pSi, RhoSi, TeSi, EinternalSi, LevelSum
     ! Our gray opacity table are for three materials
     real    :: Opacity_V(2*max(3,nMaterial))
     real    :: GroupOpacity_W(2*nWave)
-    real, dimension(0:nMaterial-1) :: Weight_I
     real :: RhoToARatioSi_I(0:Plastic_) = 0.0
-    real :: Level_I(3), LevelLeft, LevelRight
     real :: NatomicSi
 
     ! multi-group variables
@@ -1497,43 +1488,16 @@ contains
     ! Find maximum level set value. 
     iMaterial   = maxloc(State_V(LevelXe_:LevelMax), 1) - 1
 
-    ! By default use weight 1 for the material with maximum level
     IsMix               = .false.
-    Weight_I            = 0.0
-    Weight_I(iMaterial) = 1.0
-
-    ! Calculate the weights
-    if(UseVolumeFraction)then
-       if(present(i) .and. .not. present(iDir))then
-          ! This implementation is for 1D only !!!
-          if(i>=0.and.i<=nI+1)then
-             ! Divide by density to get actual levelset function
-             Level_I = State_VGB(LevelXe_,i-1:i+1,j,k,iBlock) &
-                  /    State_VGB(Rho_    ,i-1:i+1,j,k,iBlock)
-             ! Calculate face values for the level set function
-             LevelLeft  = 0.5*(Level_I(1)+Level_I(2))
-             LevelRight = 0.5*(Level_I(2)+Level_I(3))
-             ! Cell is mixed if face values change signs
-             IsMix = LevelLeft*LevelRight < 0
-             if(IsMix)then
-                ! Make weight proportional to the cell volume fraction
-                Weight_I(Xe_)      = max(LevelLeft,  LevelRight) &
-                     /               abs(LevelLeft - LevelRight)
-                Weight_I(Be_)      = 1 - Weight_I(Xe_)
-                if(UsePl) Weight_I(Plastic_:nMaterial-1) = 0.0
-             end if
-          end if
-       end if
-    elseif(UseMixedCell)then
+    if(UseMixedCell)then
        ! Shall we use mixed material cells?
        LevelSum = sum(State_V(LevelXe_:LevelMax))
        IsMix = maxval(State_V(LevelXe_:LevelMax)) < MixLimit*LevelSum 
 
        if(IsMix)then
-          ! Use number densities for eos() or weights in look up tables.
+          ! Use number densities for eos()
           if(UsePl) RhoToARatioSi_I = &
                State_V(LevelXe_:LevelXe_+Plastic_)*No2Si_V(UnitRho_)
-          Weight_I = State_V(LevelXe_:LevelMax)/LevelSum
        end if
     end if
 
@@ -1575,45 +1539,12 @@ contains
                   *PlanckScaleFactor_I(0:nMaterial-1)
              Opacity_V(2:2*nMaterial:2) = Opacity_V(2:2*nMaterial:2) &
                   *RosselandScaleFactor_I(0:nMaterial-1)
-             if(UseVolumeFraction)then
-                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                     = sum(Weight_I*Opacity_V(1:2*nMaterial:2)) * RhoSi
-                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                     = sum(Weight_I*Opacity_V(2:2*nMaterial:2)) * RhoSi
-             else
-                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
-                     = Opacity_V(2*iMaterial + 1) * RhoSi
-                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
-                     = Opacity_V(2*iMaterial + 2) * RhoSi
-             end if
+             if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W &
+                  = Opacity_V(2*iMaterial + 1) * RhoSi
+             if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
+                  = Opacity_V(2*iMaterial + 2) * RhoSi
 
           elseif(all(iTableOpacity_I(0:nMaterial-1) > 0))then
-             if(UseVolumeFraction)then
-                if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0
-                if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W = 0
-                do jMaterial = 0, nMaterial-1
-
-                   if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
-                        'Group opacity(Rho,Te,jMaterial)', &
-                        RhoSi, TeSi, jMaterial)
-
-                   call interpolate_lookup_table(iTableOpacity_I(jMaterial), &
-                        RhoSi, TeSi, GroupOpacity_W, DoExtrapolate = .false.)
-
-                   GroupOpacity_W(1:nWave) = GroupOpacity_W(1:nWave) &
-                        *PlanckScaleFactor_I(jMaterial)
-                   GroupOpacity_W(nWave+1:) = GroupOpacity_W(nWave+1:) &
-                        *RosselandScaleFactor_I(jMaterial)
-
-                   if(present(OpacityPlanckOut_W)) &
-                        OpacityPlanckOut_W = OpacityPlanckOut_W &
-                        + Weight_I(jMaterial)*GroupOpacity_W(1:nWave) * RhoSi
-                   if(present(OpacityRosselandOut_W)) &
-                        OpacityRosselandOut_W =  OpacityRosselandOut_W &
-                        + Weight_I(jMaterial)*GroupOpacity_W(nWave+1:)*RhoSi
-                end do
-             else
-
                 if(RhoSi <= 0 .or. TeSi <= 0) call lookup_error( &
                      'Group opacity(Rho,Te,iMaterial)', RhoSi, TeSi, iMaterial)
 
@@ -1629,7 +1560,7 @@ contains
                      = GroupOpacity_W(1:nWave)*RhoSi
                 if(present(OpacityRosselandOut_W)) OpacityRosselandOut_W &
                      = GroupOpacity_W(nWave+1:)*RhoSi
-             end if
+
           else
              ! inline opacities
              if(IsMix)then
