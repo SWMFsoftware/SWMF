@@ -2293,7 +2293,9 @@ accurate in time only. The default value is 1.
 	input="select">	    
 	    <option name="Rusanov" value="RUSANOV/2" default="T"/>
 	    <option name="Linde"   value="LINDE"/>
-	    <option name="Sokolov" value="SOKOLOV"/> 
+	    <option name="Sokolov" value="SOKOLOV"/>
+	    <option name="LFDW"                   /> 
+	    <option name="HLLDW"                  /> 
 	    <option name="HLLD"                   /> 
 	    <option name="Roe"     value="ROE"/>
 	    <option name="RoeOld"  value="ROEOLD"/>
@@ -5085,6 +5087,8 @@ all the blocks limited by the minimum and maximum levels only
 	    <option name="Rusanov" value="RUSANOV" default="T"/>
 	    <option name="Linde"   value="LINDE"  />
 	    <option name="Sokolov" value="SOKOLOV"/>
+	    <option name="LFDW"                   /> 
+	    <option name="HLLDW"                  /> 
 	    <option name="HLLD"                   />
 	    <option name="Roe"     value="ROE"    />
 	    <option name="RoeOld"  value="ROEOLD" />
@@ -5132,12 +5136,17 @@ Possible values for TypeFlux:
  'Rusanov'     - Rusanov or Lax-Friedrichs flux
  'Linde'       - Linde's HLLEL flux
  'Sokolov'     - Sokolov's Local Artificial Wind flux
+ 'LFDW'	       - Lax-Friedrichs + Dominant-Wave (Andrea Mignone)
+ 'HLLDW'       - HLLE + Dominant-Wave           (Andrea Mignone)
+ 'HLLD'        - Miyoshi and Kusano's HLLD flux
  'Roe'         - Roe's approximate Riemann flux (new)
  'RoeOld'      - Roe's approximate Riemann flux (old)
- 'HLLD'        - Miyoshi and Kusano's HLLD flux
  'Godunov'     - Godunov flux with exact Riemann solver
  'Simple'      - Physical fluxes are applied without any Riemann solver.
 \end{verbatim}
+The Rusanov, Linde, Sokolov, LFDW and HLLDW schemes are general for any 
+equation set. The Rusanov scheme is the most diffusive (and robust),
+the HLLDW scheme is the least diffusive.
 The Godunov flux is only implemented for (multi-material) hydrodynamics.
 The Roe and HLLD schemes are implemented for ideal MHD only 
 (single fluid, non-relativistic, no Hall term).
