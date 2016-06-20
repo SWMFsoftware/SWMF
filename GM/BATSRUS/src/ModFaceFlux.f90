@@ -72,8 +72,9 @@ module ModFaceFlux
   character(len=10):: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
-  logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe
-  logical :: DoLfNeutral, DoHllNeutral, DoAwNeutral, DoGodunovNeutral
+  logical :: DoSimple, DoLf, DoHll, DoHlldw, DoHlld, DoAw, DoRoeOld, DoRoe
+  logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoAwNeutral, &
+       DoGodunovNeutral
 
   ! 1D burgers equation, works for Hd  equations. 
   logical:: DoBurgers = .false.
@@ -391,6 +392,7 @@ contains
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
     DoHll    = TypeFlux == 'Linde'
+    DoHlldw  = TypeFlux == 'HLLDW'
     DoHlld   = TypeFlux == 'HLLD'
     DoAw     = TypeFlux == 'Sokolov'
     DoRoeOld = TypeFlux == 'RoeOld'
@@ -398,13 +400,14 @@ contains
 
     DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
     DoHllNeutral     = TypeFluxNeutral == 'Linde'
+    DoHlldwNeutral   = TypeFluxNeutral == 'HLLDW'
     DoAwNeutral      = TypeFluxNeutral == 'Sokolov'
     DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
     UseLindeFix = UseB .and. &
-         (UseHyperbolicDivb .or. DoHll .or. DoHllD .or. DoAw)
+         (UseHyperbolicDivb .or. DoHll .or. DoHlldw .or. DoHllD .or. DoAw)
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -1244,8 +1247,9 @@ contains
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
 
-    if(DoLf .or. DoHll .or. DoAw .or. DoRoe .or. DoRoeOld &
-         .or. DoLfNeutral .or. DoHllNeutral .or. DoAwNeutral)then
+    if(DoLf .or. DoHll .or. DoHlldw .or. DoAw .or. DoRoe .or. DoRoeOld &
+         .or. DoLfNeutral .or. DoHllNeutral .or. DoHlldwNeutral .or. &
+         DoAwNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
@@ -1289,6 +1293,8 @@ contains
           call lax_friedrichs_flux
        elseif(DoHll)then
           call harten_lax_vanleer_flux
+       elseif(DoHlldw)then
+          call hlldw_flux
        elseif(DoHlld)then
           call hlld_flux
        elseif(DoAw)then
@@ -1331,6 +1337,8 @@ contains
           call lax_friedrichs_flux
        elseif(DoHllNeutral)then
           call harten_lax_vanleer_flux
+       elseif(DoHlldwNeutral)then
+          call hlldw_flux
        elseif(DoAwNeutral)then
           call artificial_wind
        elseif(DoGodunovNeutral)then
@@ -1482,6 +1490,129 @@ contains
       end if
 
     end subroutine harten_lax_vanleer_flux
+    !==========================================================================
+    subroutine hlldw_flux
+      use ModPhysics,  ONLY: Gamma_I
+
+      real, dimension(nFluid):: CleftStateLeft_I, CleftStateHat_I, &
+           Cmax_I, CrightStateRight_I, CrightStateHat_I
+
+      real:: DeltaCons_V(nVar), DeltaFlux_V(nVar)
+      real:: Cleft, Cright
+      real:: WeightLeft=0.0, WeightRight=0.0, Diffusion=0.0, DiffusionDw
+      real:: Nu1, Nu2, Nu, CsoundL, CsoundR
+      !-----------------------------------------------------------------------
+      ! Get the max, left and right speeds for HLL (and DW?)
+      call get_speed_max(State_V, B0x, B0y, B0z, &
+           Cmax_I = Cmax_I, &
+           Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
+      Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
+
+      ! Andrea Mignone's hybridization parameters
+      ! Pressure jump detector
+      Nu1 = 1.0 - min(StateLeft_V(p_), StateRight_V(p_)) &
+           /max(StateLeft_V(p_), StateRight_V(p_))
+
+      ! Maybe the max speed from get_speed_max is better
+      CsoundL = sqrt(Gamma_I(1)*StateLeft_V(p_)/StateLeft_V(Rho_))
+      CsoundR = sqrt(Gamma_I(1)*StateRight_V(p_)/StateRight_V(Rho_))
+
+      ! Rarefaction (and shock) detector ?!
+      Nu2 = min(0.5*abs(UnRight_I(1) - UnLeft_I(1)) &
+           /(CsoundL + CsoundR), 1.0)
+
+      ! HLLE flux weight is Nu, dominant wave flux has weight (1-Nu)
+      Nu = max(Nu1, Nu2)
+
+      ! Round to 0 or 1 if close
+      if(Nu < 1e-6)   Nu = 0.0
+      if(Nu > 1-1e-6) Nu = 1.0
+
+      if(Nu > 0.0)then
+         ! HLLE scheme is needed
+         call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+              Cleft_I =CleftStateLeft_I)
+
+         call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+              Cright_I=CrightStateRight_I)
+
+         Cleft  =min(0.0, &
+              minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
+              minval(CleftStateHat_I(iFluidMin:iFluidMax)))
+         Cright =max(0.0, &
+              maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
+              maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
+
+         ! HLLE weights and diffusion
+         WeightLeft  = Cright/(Cright - Cleft)
+         WeightRight = 1.0 - WeightLeft
+         Diffusion   = Cright*WeightRight
+      end if
+
+      if(Nu < 1.0)then
+         ! DW scheme is needed
+         ! Jump in conservative variables
+         DeltaCons_V(iVarMin:iVarMax) = &
+              StateRightCons_V(iVarMin:iVarMax) - &
+              StateLeftCons_V(iVarMin:iVarMax)
+
+         ! Overwrite pressure with energy
+         DeltaCons_V(iP_I(iFluidMin:iFluidMax)) = &
+              StateRightCons_V(iEnergyMin:iEnergyMax) - &
+              StateLeftCons_V(iEnergyMin:iEnergyMax)
+
+         ! Jump in flux
+         DeltaFlux_V(iVarMin:iVarMax) = &
+              FluxRight_V(iVarMin:iVarMax) - &
+              FluxLeft_V( iVarMin:iVarMax)
+
+         DeltaFlux_V(iP_I(iFluidMin:iFluidMax)) = &
+              FluxRight_V(iEnergyMin:iEnergyMax) - &
+              FluxLeft_V(iEnergyMin:iEnergyMax)
+
+         ! Dominant wave diffusion coefficient 0.5*dF.dU/||dU||
+         DiffusionDw = 0.5*abs(dot_product(DeltaFlux_V(iVarMin:iVarMax), &
+              DeltaCons_V(iVarMin:iVarMax)) &
+              / max(sum(DeltaCons_V(iVarMin:iVarMax)**2), 1e-30))
+
+         ! Combine HLLE and DW weights and diffusion
+         WeightLeft  = Nu*WeightLeft  + (1-Nu)*0.5
+         WeightRight = Nu*WeightRight + (1-Nu)*0.5
+         Diffusion   = Nu*Diffusion   + (1-Nu)*DiffusionDw
+      end if
+
+      ! HLL-DW flux
+      Flux_V(iVarMin:iVarMax) = &
+           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
+           -            StateLeftCons_V(iVarMin:iVarMax)) )
+
+      ! Energy flux
+      Flux_V(iEnergyMin:iEnergyMax) = &
+           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
+           -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
+
+      ! Weighted average of the normal speed
+      Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
+
+      ! These quantities should be calculated with the ion fluxes
+      if(iFluidMin == 1)then
+         Enormal = WeightRight*EnRight + WeightLeft*EnLeft
+         if(UseElectronPressure) Unormal_I(eFluid_) = &
+              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseMultiIon)then
+            Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            if(UseWavePressure) &
+                 Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+         end if
+      end if
+
+    end subroutine hlldw_flux
     !==========================================================================
     subroutine artificial_wind
 

@@ -2508,6 +2508,8 @@ contains
        FluxType='Rusanov'
     case('LINDE','HLLEL','Linde')
        FluxType='Linde'
+    case('HLLDW')
+       FluxType = 'HLLDW'
     case('SOKOLOV','AW','Sokolov')
        FluxType='Sokolov'
     case('HLLD')
@@ -2528,7 +2530,7 @@ contains
     select case(TypeFluxNeutral)
     case('default')
        select case(FluxType)
-       case('Rusanov', 'Linde', 'Sokolov', 'Godunov')
+       case('Rusanov', 'Linde', 'Sokolov', 'Godunov','HLLDW')
           TypeFluxNeutral = FluxType
        case default
           TypeFluxNeutral = 'Linde'
@@ -2537,6 +2539,8 @@ contains
        TypeFluxNeutral = 'Rusanov'
     case('LINDE','HLLE','Linde')
        TypeFluxNeutral = 'Linde'
+    case('HLLDW')
+       TypeFluxNeutral = 'HLLDW'
     case('SOKOLOV','AW','Sokolov')
        TypeFluxNeutral = 'Sokolov'
     case('GODUNOV','Godunov')
@@ -2564,6 +2568,8 @@ contains
        FluxTypeImpl='Rusanov'
     case('LINDE','HLLEL','Linde')
        FluxTypeImpl='Linde'
+    case('HLLDW')
+       FluxTypeImpl='HLLDW'
     case('SOKOLOV','AW','Sokolov')
        FluxTypeImpl='Sokolov'
     case('HLLD')
