@@ -72,11 +72,12 @@ module ModFaceFlux
   character(len=10):: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
-  logical :: DoSimple, DoLf, DoHll, DoHlldw, DoHlld, DoAw, DoRoeOld, DoRoe
-  logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoAwNeutral, &
-       DoGodunovNeutral
+  logical :: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
+       DoAw, DoRoeOld, DoRoe
+  logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
+       DoAwNeutral, DoGodunovNeutral
 
-  ! 1D burgers equation, works for Hd  equations. 
+  ! 1D Burgers' equation, works for Hd equations. 
   logical:: DoBurgers = .false.
 
   logical :: UseLindeFix
@@ -392,6 +393,7 @@ contains
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
     DoHll    = TypeFlux == 'Linde'
+    DoLfdw   = TypeFlux == 'LFDW'
     DoHlldw  = TypeFlux == 'HLLDW'
     DoHlld   = TypeFlux == 'HLLD'
     DoAw     = TypeFlux == 'Sokolov'
@@ -400,6 +402,7 @@ contains
 
     DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
     DoHllNeutral     = TypeFluxNeutral == 'Linde'
+    DoLfdwNeutral    = TypeFluxNeutral == 'LFDW'
     DoHlldwNeutral   = TypeFluxNeutral == 'HLLDW'
     DoAwNeutral      = TypeFluxNeutral == 'Sokolov'
     DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
@@ -407,7 +410,8 @@ contains
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
     UseLindeFix = UseB .and. &
-         (UseHyperbolicDivb .or. DoHll .or. DoHlldw .or. DoHllD .or. DoAw)
+         (UseHyperbolicDivb .or. DoHll .or. DoLfdw .or. DoHlldw &
+         .or. DoHlld .or. DoAw)
 
     ! Make sure that Hall MHD recalculates the magnetic field 
     ! in the current block that will be used for the Hall term
@@ -1247,9 +1251,10 @@ contains
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
 
-    if(DoLf .or. DoHll .or. DoHlldw .or. DoAw .or. DoRoe .or. DoRoeOld &
-         .or. DoLfNeutral .or. DoHllNeutral .or. DoHlldwNeutral .or. &
-         DoAwNeutral)then
+    if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
+         DoRoe .or. DoRoeOld .or. &
+         DoLfNeutral .or. DoHllNeutral .or. &
+         DoLfdwNeutral .or. DoHlldwNeutral .or. DoAwNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
@@ -1293,8 +1298,8 @@ contains
           call lax_friedrichs_flux
        elseif(DoHll)then
           call harten_lax_vanleer_flux
-       elseif(DoHlldw)then
-          call hlldw_flux
+       elseif(DoLfdw .or. DoHlldw)then
+          call dominant_wave_flux(DoLfdw)
        elseif(DoHlld)then
           call hlld_flux
        elseif(DoAw)then
@@ -1337,8 +1342,8 @@ contains
           call lax_friedrichs_flux
        elseif(DoHllNeutral)then
           call harten_lax_vanleer_flux
-       elseif(DoHlldwNeutral)then
-          call hlldw_flux
+       elseif(DoLfdwNeutral .or. DoHlldwNeutral)then
+          call dominant_wave_flux(DoLfdwNeutral)
        elseif(DoAwNeutral)then
           call artificial_wind
        elseif(DoGodunovNeutral)then
@@ -1491,8 +1496,10 @@ contains
 
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
-    subroutine hlldw_flux
+    subroutine dominant_wave_flux(DoLf)
       use ModPhysics,  ONLY: Gamma_I
+
+      logical, intent(in):: DoLf
 
       real, dimension(nFluid):: CleftStateLeft_I, CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
@@ -1529,24 +1536,30 @@ contains
       if(Nu > 1-1e-6) Nu = 1.0
 
       if(Nu > 0.0)then
-         ! HLLE scheme is needed
-         call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-              Cleft_I =CleftStateLeft_I)
+         ! LF or HLLE scheme is needed
+         if(DoLf)then
+            WeightLeft  = 0.5
+            WeightRight = 0.5
+            Diffusion   = 0.5*Cmax
+         else
+            call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+                 Cleft_I =CleftStateLeft_I)
 
-         call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-              Cright_I=CrightStateRight_I)
+            call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+                 Cright_I=CrightStateRight_I)
 
-         Cleft  =min(0.0, &
-              minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
-              minval(CleftStateHat_I(iFluidMin:iFluidMax)))
-         Cright =max(0.0, &
-              maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
-              maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
+            Cleft  =min(0.0, &
+                 minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
+                 minval(CleftStateHat_I(iFluidMin:iFluidMax)))
+            Cright =max(0.0, &
+                 maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
+                 maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
 
-         ! HLLE weights and diffusion
-         WeightLeft  = Cright/(Cright - Cleft)
-         WeightRight = 1.0 - WeightLeft
-         Diffusion   = Cright*WeightRight
+            ! HLLE weights and diffusion
+            WeightLeft  = Cright/(Cright - Cleft)
+            WeightRight = 1.0 - WeightLeft
+            Diffusion   = Cright*WeightRight
+         end if
       end if
 
       if(Nu < 1.0)then
@@ -1581,7 +1594,7 @@ contains
          Diffusion   = Nu*Diffusion   + (1-Nu)*DiffusionDw
       end if
 
-      ! HLL-DW flux
+      ! LF-DW or HLL-DW flux
       Flux_V(iVarMin:iVarMax) = &
            ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
            + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
@@ -1612,7 +1625,7 @@ contains
          end if
       end if
 
-    end subroutine hlldw_flux
+    end subroutine dominant_wave_flux
     !==========================================================================
     subroutine artificial_wind
 
