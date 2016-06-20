@@ -500,19 +500,9 @@ contains
     end do; end do; end do
 
     call timing_stop(NameSub)
+
   contains
-    !==========================================================================
-    subroutine set_small_radiation_energy
 
-      use ModMain,ONLY: UseRadDiffusion
-      use ModPhysics,ONLY: cRadiationNo, Si2No_V, UnitTemperature_
-      !----------------------------------------------------------------------
-      if(.not.UseRadDiffusion)RETURN
-
-      State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo * &
-           (500.0 * Si2No_V(UnitTemperature_))**4
-
-    end subroutine set_small_radiation_energy
     !========================================================================
     subroutine set_initial_temperature
 
