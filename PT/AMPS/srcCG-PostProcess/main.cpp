@@ -249,15 +249,25 @@ namespace TRAJECTORY_FILTER {
     int i,nt,cnt;
     vector<int> PrintedTrajectoriesTable;
 
+    int LoopCounter=0;
+    int maxLoopCounterLimit=10000;
+    bool ExitFlag=false;
+
     //output the header of the trajectory file
     amps.ParticleTrajectory.PrintDataFileHeader(fname);
 
     //output trajectories
-    for (cnt=0;cnt<nPrintedTrajectories;cnt++) {
+    for (cnt=0;(ExitFlag==false)&&(cnt<nPrintedTrajectories);cnt++) {
       bool foundflag=false;
 
       do {
         foundflag=false;
+
+        LoopCounter++;
+        if (LoopCounter>maxLoopCounterLimit*nPrintedTrajectories) {
+          ExitFlag=true;
+          break;
+        } 
 
         do {
           nt=(int)(rnd()*amps.ParticleTrajectory.nTotalTrajectories);
@@ -270,6 +280,8 @@ namespace TRAJECTORY_FILTER {
         }
       }
       while (foundflag==true);
+
+      if (ExitFlag==true) break;
 
       PrintedTrajectoriesTable.push_back(nt);
       amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[nt],nt,fname);
@@ -583,8 +595,8 @@ namespace SURFACE {
 
   //print the surface data
   void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\","
-      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\",\"Source Rate Correction Factor\""); }
-  int GetVariableNumber() {return 7;}
+      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\",\"Source Rate Correction Factor\", \"Corrected Dust Mass Production Rate\""); }
+  int GetVariableNumber() {return 8;}
 
   void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
     if (ILLUMINATION::IlluminationMap==NULL) exit(__LINE__,__FILE__,"Error: the illumination map need to be initalized first");
@@ -605,6 +617,53 @@ namespace SURFACE {
 
     //source rate correctior factor
     DataVector[6]=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);  
+
+    //evalaute the corrected dust mass production rate
+    double DustMassSourceRate=0.0;
+
+    for(int iDust=0;iDust<_DUST_SPEC_NUMBER_;iDust++) {
+      DustMassSourceRate+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3+2*_GAS_SPEC_NUMBER_+_DUST_SPEC_NUMBER_+iDust];
+    }
+
+    DataVector[7]=DustMassSourceRate*TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
+  }
+
+  void SaveCorrectedSourceRate() {
+    char fnameH2O[]="CorrectedFluxRelativeH2O.bin";
+    char fnameDUST[]="CorrectedFluxRelativeDUST.bin";
+    FILE *foutH2O,*foutDUST;
+
+    foutH2O=fopen(fnameH2O,"w");
+    foutDUST=fopen(fnameDUST,"w");
+
+    int nTotalFaces=amps.SurfaceData.nCells;
+    fwrite(&nTotalFaces,sizeof(int),1,foutH2O);
+    fwrite(&nTotalFaces,sizeof(int),1,foutDUST);
+
+
+    for (int nface=0;nface<nTotalFaces;nface++) {
+      double FaceSourceRate_H2O=0.0;
+      double DustMassSourceRate=0.0;
+      int i,nnode;
+
+      for (i=0;i<3;i++) {
+
+        FaceSourceRate_H2O+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3];
+
+        for(int iDust=0;iDust<_DUST_SPEC_NUMBER_;iDust++) {
+          DustMassSourceRate+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3+2*_GAS_SPEC_NUMBER_+_DUST_SPEC_NUMBER_+iDust];
+        }
+      }
+
+      FaceSourceRate_H2O*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
+      DustMassSourceRate*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
+
+      fwrite(&FaceSourceRate_H2O,sizeof(double),1,foutH2O);
+      fwrite(&DustMassSourceRate,sizeof(double),1,foutDUST);
+    }
+
+    fclose(foutH2O);
+    fclose(foutDUST);
   }
 }
 
@@ -1106,7 +1165,11 @@ return 1;
   amps.FinalizeMPI();
 
   //output of the flux correction table
-  if (amps.rank==0) TRAJECTORY_FILTER::SaveFluxCorrectionTable();
+  if (amps.rank==0) {
+    TRAJECTORY_FILTER::SaveFluxCorrectionTable();
+    SURFACE::SaveCorrectedSourceRate();
+  }
+
 
   //finish the execution with success
   printf("done.\n");
