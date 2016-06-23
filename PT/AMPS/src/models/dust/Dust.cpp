@@ -195,7 +195,7 @@ void ElectricallyChargedDust::Init_AfterParser() {
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SampleModelData,OutputSampledModelData);
 
   //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+  PIC::Mesh::AddVaraibleListFunction(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
 
