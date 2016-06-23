@@ -1598,6 +1598,9 @@ void PIC::Init_AfterParser() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataBlockAMR *block;
 
+  //intialize the interpolation module
+  InterpolationRoutines::Init();
+
   //flush the sampling buffers
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
