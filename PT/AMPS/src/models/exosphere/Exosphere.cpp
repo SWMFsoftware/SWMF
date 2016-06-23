@@ -203,7 +203,7 @@ void Exosphere::Init_BeforeParser() {
   PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::RequestSamplingData);
 
   //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(Sampling::OutputDataFile::PrintVariableList);
+  PIC::Mesh::AddVaraibleListFunction(Sampling::OutputDataFile::PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(Sampling::OutputDataFile::PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Sampling::OutputDataFile::Interpolate);
 
@@ -2175,7 +2175,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
    PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-   if (startNode->block->GetLocalTimeStep(_NA_SPEC_)/LocalTimeStep<rnd()) continue;
+   if (startNode->block->GetLocalTimeStep(spec)/LocalTimeStep<rnd()) continue;
 #endif
 
 
@@ -2190,12 +2190,12 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    int el;
 
 #if _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ == _PIC_MODE_ON_
-   if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+   if ((BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_)&&(Exosphere::Planet!=NULL)) {
      Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
      //check is the injection of the particle will not make the surface aboundance negative
-     if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true){
+     if ((Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true)&&(Exosphere::Planet->SurfaceElementPopulation!=NULL)) {
        if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
      }
    }
@@ -2217,15 +2217,15 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    #endif
 
    //save the information od the particle origin: the particle origin will be sampled in SO coordinate frame
-   if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+   if ((BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_)&&(Exosphere::Planet!=NULL)) {
      Sphere->GetSurfaceElementProjectionIndex(x_SO_OBJECT,nZenithElement,nAzimuthalElement);
      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-     Exosphere::Planet->SampleSpeciesSurfaceSourceRate[spec][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
+     if (Exosphere::Planet->SampleSpeciesSurfaceSourceRate!=NULL) Exosphere::Planet->SampleSpeciesSurfaceSourceRate[spec][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
 
      //sample particle injection velocity
-     Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[spec][el]+=ParticleWeight*ParticleWeightCorrection;
-     Exosphere::Planet->SampleInjectedFluxBulkSpeed[spec][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
+     if (Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux!=NULL) Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+     if (Exosphere::Planet->SampleInjectedFluxBulkSpeed!=NULL) Exosphere::Planet->SampleInjectedFluxBulkSpeed[spec][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
    }
    else el=0;
 
@@ -2244,7 +2244,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
        Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
        el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-       Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+       if (Sphere->SurfaceElementDesorptionFluxUP!=NULL) Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;
      }
    }
 
@@ -2257,6 +2257,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    if ((startNode->Thread!=PIC::ThisThread)||(startNode->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is not defined");
 #endif
 
+   PIC::ParticleBuffer::SetParticleAllocated(newParticle);
    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
  }
 
