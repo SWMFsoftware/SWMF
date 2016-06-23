@@ -3246,7 +3246,7 @@ namespace PIC {
         cStencil() {flush();}
       };
 
-      extern cStencil Stencil;
+      extern cStencil* StencilTable;
 
       //types of the cell ceneterd interpolating rourines implemented in AMPS
       namespace Constant {
@@ -3274,6 +3274,8 @@ namespace PIC {
       }
 
     }
+
+    void Init();
   }
 
   //namespace CPLR contains definitions of all couplers used in AMPS
@@ -3820,86 +3822,121 @@ namespace PIC {
     inline void GetBackgroundElectricField(double *E, double Time = NAN) {
       double t[3];
       int idim,iStencil;
+      PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
       for (idim=0;idim<3;idim++) E[idim]=0.0;
 
-      for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+      #else
+      memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+      #endif
+
+      for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-        SWMF::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+        SWMF::GetBackgroundElectricField(t,Stencil.cell[iStencil]);
         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-        DATAFILE::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
+        DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
         #else
         exit(__LINE__,__FILE__,"not implemented");
         #endif
 
-        for (idim=0;idim<3;idim++) E[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+        for (idim=0;idim<3;idim++) E[idim]+=Stencil.Weight[iStencil]*t[idim];
       }
     }
 
      inline void GetBackgroundMagneticField(double *B, double Time = NAN) {
        double t[3];
        int idim,iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
        for (idim=0;idim<3;idim++) B[idim]=0.0;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         SWMF::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         SWMF::GetBackgroundMagneticField(t,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
+         DATAFILE::GetBackgroundMagneticField(t,Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
-         for (idim=0;idim<3;idim++) B[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+         for (idim=0;idim<3;idim++) B[idim]+=Stencil.Weight[iStencil]*t[idim];
        }
      }
 
      inline void GetBackgroundMagneticFieldGradient(double *gradB, double Time = NAN) {
        double t[DATAFILE::Offset::MagneticFieldGradient.nVars];
        int idim,iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
        for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=0.0;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          exit(__LINE__,__FILE__,"not implemented");
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundMagneticFieldGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
+         DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
-         for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+         for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=Stencil.Weight[iStencil]*t[idim];
        }
      }
 
      inline void GetBackgroundPlasmaVelocity(double *vel, double Time = NAN) {
        double t[3];
        int idim,iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
        for (idim=0;idim<3;idim++) vel[idim]=0.0;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         SWMF::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         SWMF::GetBackgroundPlasmaVelocity(t,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
+         DATAFILE::GetBackgroundPlasmaVelocity(t,Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
-         for (idim=0;idim<3;idim++) vel[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+         for (idim=0;idim<3;idim++) vel[idim]+=Stencil.Weight[iStencil]*t[idim];
        }
      }
 
      inline double GetBackgroundMagneticFluxFunction(double Time = NAN) {
        double res=0.0;
        int iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundMagneticFluxFunction(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundMagneticFluxFunction(Stencil.cell[iStencil], Time)*Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3910,12 +3947,19 @@ namespace PIC {
      inline double GetBackgroundPlasmaPressure(double Time = NAN) {
        double res=0.0;
        int iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         res+=SWMF::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=SWMF::GetBackgroundPlasmaPressure(Stencil.cell[iStencil])*Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaPressure(Stencil.cell[iStencil], Time)*Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3927,12 +3971,19 @@ namespace PIC {
      inline double GetBackgroundElectronPlasmaPressure(double Time = NAN) {
        double res=0.0;
        int iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          exit(__LINE__,__FILE__,"Error: not implemented");
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundElectronPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundElectronPlasmaPressure(Stencil.cell[iStencil], Time)*Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3944,12 +3995,19 @@ namespace PIC {
      inline double GetBackgroundPlasmaNumberDensity(double Time = NAN) {
        double res=0.0;
        int iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         res+=SWMF::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=SWMF::GetBackgroundPlasmaNumberDensity(Stencil.cell[iStencil])*Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaNumberDensity(Stencil.cell[iStencil], Time)*Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3961,12 +4019,19 @@ namespace PIC {
      inline double GetBackgroundPlasmaTemperature(double Time = NAN) {
        double res=0.0;
        int iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         res+=SWMF::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=SWMF::GetBackgroundPlasmaTemperature(Stencil.cell[iStencil])*Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaTemperature(Stencil.cell[iStencil], Time)*Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3978,21 +4043,28 @@ namespace PIC {
      inline void GetBackgroundFieldsVector(double *E,double *B, double Time = NAN) {
        double tE[3],tB[3];
        int idim,iStencil;
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
+
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
 
        for (idim=0;idim<3;idim++) E[idim]=0.0,B[idim]=0.0;
 
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         SWMF::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         SWMF::GetBackgroundFieldsVector(tE,tB,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
+         DATAFILE::GetBackgroundFieldsVector(tE,tB,Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
          for (idim=0;idim<3;idim++) {
-           E[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*tE[idim];
-           B[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*tB[idim];
+           E[idim]+=Stencil.Weight[iStencil]*tE[idim];
+           B[idim]+=Stencil.Weight[iStencil]*tB[idim];
          }
        }
      }

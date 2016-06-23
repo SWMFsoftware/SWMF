@@ -10,7 +10,7 @@
 
 #include "pic.h"
 
-PIC::InterpolationRoutines::CellCentered::cStencil PIC::InterpolationRoutines::CellCentered::Stencil;
+PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::StencilTable=NULL;
 int PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurrent=0;
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::nBlockFoundMax];
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::last=NULL;
@@ -26,14 +26,27 @@ extern "C"{
 #endif//_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 
 
+//initialize the interpolation module
+void PIC::InterpolationRoutines::Init() {
+
+  //init the stencil table
+  CellCentered::StencilTable=new CellCentered::cStencil[PIC::nTotalThreadsOpenMP];
+}
+
 //determine stencil for the cell centered piecewise constant interpolation
 PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int i,j,k;
   long int nd;
   PIC::Mesh::cDataCenterNode *cell;
 
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int ThreadOpenMP=omp_get_thread_num();
+  #else
+  int ThreadOpenMP=0;
+  #endif
+
   //flush the stencil
-  PIC::InterpolationRoutines::CellCentered::Stencil.flush();
+  PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].flush();
 
   //find the block
   if (node==NULL) {
@@ -48,13 +61,26 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
   cell=node->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
 
   //add the cell to the stencil
-  if (cell!=NULL) PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(1.0,cell);
+  if (cell!=NULL) {
+    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(1.0,cell);
+  }
+  else exit(__LINE__,__FILE__,"Error: cell is not initialized");
 
-  return &PIC::InterpolationRoutines::CellCentered::Stencil;
+  return PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
 }
 
 //determine the stencil for the cell centered linear interpolation using interpolation library from ../share/Library/src/
 PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(double *XyzIn_D,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int ThreadOpenMP=omp_get_thread_num();
+  exit(__LINE__,__FILE__,"Error: the procedure is not adapted fro using with OpenMP: INTERFACE::BlockFound... need to be converted into an array as PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP] ");
+  #else
+  int ThreadOpenMP=0;
+  #endif
+
+
+
   // macro switch is needed in the case some other interpolation is used
   // and interface function is not compiled
 #if _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
@@ -84,7 +110,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
   INTERFACE::iBlockFoundCurrent=0;
   for(int iBlock = 0; iBlock < INTERFACE::nBlockFoundMax; iBlock++ ) INTERFACE::BlockFound[iBlock] = NULL;
 
-  PIC::InterpolationRoutines::CellCentered::Stencil.flush();
+  PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].flush();
   INTERFACE::last=node;
 
   //prepare the call of FORTRAN interpolate_amr subroutine
@@ -131,13 +157,13 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
       return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);
     }
 
-    PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
+    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
   }
 #else
   exit(__LINE__,__FILE__,"ERROR: cell centered linear interpolation is currently available only through interface, add corresponding block to the input file!");
 #endif//_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 
-  return &PIC::InterpolationRoutines::CellCentered::Stencil;
+  return PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
 }
 
 //triliniar interpolation used inside blocks
@@ -148,8 +174,14 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   block=node->block;
   if (block==NULL) exit(__LINE__,__FILE__,"Error: the block is node allocated");
 
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int ThreadOpenMP=omp_get_thread_num();
+  #else
+  int ThreadOpenMP=0;
+  #endif
+
   //flush the stencil
-  PIC::InterpolationRoutines::CellCentered::Stencil.flush();
+  PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].flush();
 
   //determine the aray of the cell's pointer that will be used in the interpolation stencil
   double w[3],InterpolationWeight,totalInterpolationWeight=0.0;
@@ -200,21 +232,21 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
         exit(__LINE__,__FILE__,"Error: the option is not defined");
       }
 
-      PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(InterpolationWeight,cell);
+      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(InterpolationWeight,cell);
       totalInterpolationWeight+=InterpolationWeight;
     }
   }
 
-  if (PIC::InterpolationRoutines::CellCentered::Stencil.Length==0) {
+  if (PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length==0) {
     //no cell have been found -> use a canstarnt interpolation stencil
     return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(x,node);
   }
-  else if (PIC::InterpolationRoutines::CellCentered::Stencil.Length!=8) {
+  else if (PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length!=8) {
     //the interpolated stencil containes less that 8 elements -> the interpolation weights have to be renormalized
-    for (int i=0;i<PIC::InterpolationRoutines::CellCentered::Stencil.Length;i++) {
-      PIC::InterpolationRoutines::CellCentered::Stencil.Weight[i]/=totalInterpolationWeight;
+    for (int i=0;i<PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length;i++) {
+      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Weight[i]/=totalInterpolationWeight;
     }
   }
 
-  return &PIC::InterpolationRoutines::CellCentered::Stencil;
+  return PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
 }
