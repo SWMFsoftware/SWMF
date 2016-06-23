@@ -150,6 +150,7 @@ void CutCell::PrintSurfaceData(const char *fname) {
     struct cFaceInterpolationStencil {
       double Weight;
       cTriangleFaceUserData_internal *UserData;
+      int nface;
     };
 
     //prepare the list of the faces that contains the same node
@@ -185,8 +186,9 @@ void CutCell::PrintSurfaceData(const char *fname) {
 
       Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].UserData=&(BoundaryTriangleFaces[nface].UserData);
       Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].Weight=weight;
-      InterpolationBase[nnode].TotalInterpolationWeight+=weight;
+      Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].nface=nface;
 
+      InterpolationBase[nnode].TotalInterpolationWeight+=weight;
       InterpolationBase[nnode].StencilLength++;
     }
 
@@ -197,6 +199,7 @@ void CutCell::PrintSurfaceData(const char *fname) {
 
     double *InterpolationWeightList=new double [maxStencilLength];
     cTriangleFaceUserData_internal **InterpolationFaceList=new cTriangleFaceUserData_internal* [maxStencilLength];
+    int SurfaceFaceList[maxStencilLength];
 
     //print the variable list
     fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"");
@@ -211,10 +214,11 @@ void CutCell::PrintSurfaceData(const char *fname) {
       for (nface=0;nface<InterpolationBase[i].StencilLength;nface++) {
         InterpolationWeightList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].Weight;
         InterpolationFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].UserData;
+        SurfaceFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].nface;
       }
 
       //output the user-defined surface data
-      BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,InterpolationBase[i].StencilLength);
+      BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,SurfaceFaceList,InterpolationBase[i].StencilLength);
       fprintf(fout,"\n");
     }
 
