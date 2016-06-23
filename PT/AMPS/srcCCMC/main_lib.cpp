@@ -331,7 +331,15 @@ void amps_init() {
   else {
 
     #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
-	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
+    char BackgroundDataFileName[]="amps.Background.data.cdf";
+
+    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+      //substitute the file name on that used in tests
+      sprintf(BackgroundDataFileName,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
+    }
+
+	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(BackgroundDataFileName);
+
 	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
    #else
 	  exit(__LINE__,__FILE__,"Error: the background data file is not found");
