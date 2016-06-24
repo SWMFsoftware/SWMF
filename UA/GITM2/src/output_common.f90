@@ -314,7 +314,7 @@ subroutine output(dir, iBlock, iOutputType)
   case('1DALL')
 
      nGCs = 0
-     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons+nSpecies+5
+     nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons !+nSpecies+5
      call output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iOutputUnit_)
 
   case ('0DALL')
@@ -618,21 +618,21 @@ contains
 
        if (cType(3:5) == "ALL") then
 
-          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "N2 Mixing Ratio"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "CH4 Mixing Ratio"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Ar Mixing Ratio"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "HCN Mixing Ratio"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "H2 Mixing Ratio"
-
-!       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "15N2 Mixing Ratio"
-!       write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "13CH4 Mixing Ratio"
-
-          iOff = iOff + nSpecies
-          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Heat Balance Total"
-          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Heaing Efficiency"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "N2 Mixing Ratio"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "CH4 Mixing Ratio"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Ar Mixing Ratio"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "HCN Mixing Ratio"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "H2 Mixing Ratio"
+!
+!!       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "15N2 Mixing Ratio"
+!!       write(iOutputUnit_,"(I7,A1,a)") iOff+7, " ", "13CH4 Mixing Ratio"
+!
+!          iOff = iOff + nSpecies
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+1, " ", "RadCooling"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+2, " ", "EuvHeating"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+3, " ", "Conduction"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "Heat Balance Total"
+!          write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Heaing Efficiency"
 
        else
 
@@ -719,12 +719,11 @@ contains
     write(iOutputUnit_,"(I7,A1,a)") iOff+4, " ", "V!Di!N (north)"
     write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "V!Di!N (up)"
 
-    iOff = iOff + 5
-    do iSpecies = 1, nSpecies
-       write(iOutputUnit_,"(I7,A1,a)")  iOff+iSpecies, " ", &
-            " "//cSpecies(iSpecies)//"Mixing Ratio"
-    enddo
-
+!    iOff = iOff + 5
+!    do iSpecies = 1, nSpecies
+!       write(iOutputUnit_,"(I7,A1,a)")  iOff+iSpecies, " ", &
+!            " "//cSpecies(iSpecies)//"Mixing Ratio"
+!    enddo
 
     write(iOutputUnit_,*) ""
 
@@ -902,13 +901,10 @@ subroutine output_3dall(iBlock)
   integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, i
 
   do iAlt=-1,nAlts+2
-     !!! Why ???
      iiAlt = max(min(iAlt,nAlts),1)
      do iLat=-1,nLats+2
-        !!! Why ???
         iiLat = min(max(iLat,1),nLats)
         do iLon=-1,nLons+2
-           !!! Why ???
            iiLon = min(max(iLon,1),nLons)
            write(iOutputUnit_)       &
                 Longitude(iLon,iBlock), &
@@ -996,7 +992,8 @@ subroutine output_3dion(iBlock)
 		je2(iLon,iLat,iAlt), &
                 mLatitude(iLon,iLat,iAlt,iBlock), &
                 mLongitude(iLon,iLat,iAlt,iBlock), &
-                B0(iLon,iLat,iAlt,:,iBlock), &  !Geomagnetic B0(nLons,nLats,nAlts,4[iEast_,iNorth_,iUp_,iMag_],nBlocks)
+                !Geomagnetic B0(nLons,nLats,nAlts,4[iEast_,iNorth_,iUp_,iMag_],nBlocks)
+                B0(iLon,iLat,iAlt,:,iBlock), &  
                 potential(iLon,iLat,iAlt,iBlock), &
                 EField(iLon,iLat,iAlt,:), &  ! EField(Lon,lat,alt,3)
                 sqrt(sum(EField(iLon,iLat,iAlt,:)**2)), & ! magnitude of E.F.
@@ -1421,7 +1418,6 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
 
      iiAlt = max(min(iAlt,nAlts),1)
 
-
      Vars(1) = &
           rLon*Longitude(iiLon,iBlock)+(1-rLon)*Longitude(iiLon+1,iBlock)
      Vars(2) = &
@@ -1435,7 +1431,6 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      iOff = 4
      do iSpecies = 1, nSpeciesTotal
         Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)
-!        Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)/NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
         Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
      enddo
 
@@ -1469,51 +1464,44 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
      Tmp = iTemperature(0:nLons+1,0:nLats+1,iAlt,iBlock)
      Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-!     do iDir = 1, 3
-!        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iDir,iBlock)
-!        Vars(iOff+iDir) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-!     enddo
+     iOff = iOff + 1
+     Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iEast_,iBlock)
+     Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iEast_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+     iOff = iOff + 1
+     Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iNorth_,iBlock)
+     Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iNorth_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+     iOff = iOff + 1
+     Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iUp_,iBlock)
+     Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        iOff = iOff + 1
-        Tmp = IVelocity(0:nLons+1,0:nLats+1,iAlt,iUp_,iBlock)
-        Vars(iOff) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        do iSpecies = 1, nSpecies
-           Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)/NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
-           Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-        enddo
-
-!        iOff = iOff + 1
-!        Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock)/NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
+!     do iSpecies = 1, nSpecies
+!        Tmp = NDensityS(0:nLons+1,0:nLats+1,iAlt,iSpecies,iBlock) / &
+!             NDensity(0:nLons+1,0:nLats+1,iAlt,iBlock)
 !        Vars(iOff+iSpecies) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-! AGB: Fixed this to use interpolation like all the other variables.
-!      Also the porper lat and lon
-        iOff = iOff + nSpecies
-        Tmp = Dt*RadCooling(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
-             TempUnit(0:nLons+1,0:nLats+1,iAlt)
-        Vars(iOff+1) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        Tmp = Dt*EuvHeating(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
-             TempUnit(0:nLons+1,0:nLats+1,iAlt)
-        Vars(iOff+2) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-
-        Tmp(1:nLons,1:nLats) = Conduction(1:nLons,1:nLats,iAlt) * &
-             TempUnit(1:nLons,1:nLats,iAlt)
-        Vars(iOff+3) = inter(Tmp,iiLon,iiLat,rlon,rlat)
- 
-        Vars(iOff+4) = Vars(iOff+2) - Vars(iOff+1) + Vars(iOff+3)
-
-        Tmp = HeatingEfficiency_CB(0:nLons+1,0:nLats+1,iAlt,iBlock)
-        Vars(iOff+5) = inter(Tmp,iiLon,iiLat,rlon,rlat)
-! AGB: End of corrections
+!     enddo
+!
+!! AGB: Fixed this to use interpolation like all the other variables.
+!!      Also the porper lat and lon
+!     iOff = iOff + nSpecies
+!     Tmp = Dt*RadCooling(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
+!          TempUnit(0:nLons+1,0:nLats+1,iAlt)
+!     Vars(iOff+1) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+!
+!     Tmp = Dt*EuvHeating(0:nLons+1,0:nLats+1,iAlt,iBlock) * &
+!          TempUnit(0:nLons+1,0:nLats+1,iAlt)
+!     Vars(iOff+2) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+!
+!     Tmp(1:nLons,1:nLats) = Conduction(1:nLons,1:nLats,iAlt) * &
+!          TempUnit(1:nLons,1:nLats,iAlt)
+!     Vars(iOff+3) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+! 
+!     Vars(iOff+4) = Vars(iOff+2) - Vars(iOff+1) + Vars(iOff+3)
+!
+!     Tmp = HeatingEfficiency_CB(0:nLons+1,0:nLats+1,iAlt,iBlock)
+!     Vars(iOff+5) = inter(Tmp,iiLon,iiLat,rlon,rlat)
+!! AGB: End of corrections
 
      write(iOutputUnit_) Vars
 
