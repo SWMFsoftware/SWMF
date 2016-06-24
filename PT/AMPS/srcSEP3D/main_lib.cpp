@@ -83,6 +83,10 @@ bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData
 
 void amps_init_mesh() {
   PIC::InitMPI();
+  
+  //init the interpolation routines
+  PIC::InterpolationRoutines::Init();
+
 	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 	//init the particle solver
