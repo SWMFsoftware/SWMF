@@ -46,3 +46,8 @@
 
 #define _SHAP5_ 0
 #define _SHAP5_1_ 1
+
+//dust injection correction factors
+#define _DUST_INJECTION_RATE_CORRECTION_MODE__OFF_              0
+#define _DUST_INJECTION_RATE_CORRECTION_MODE__RELATIVE_TO_H2O_  1
+#define _DUST_INJECTION_RATE_CORRECTION_MODE__INJECTION_RATE_   2
