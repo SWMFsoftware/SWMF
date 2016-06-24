@@ -13,60 +13,365 @@ subroutine advance_vertical_1d
   use ModInputs, only: UseBarriers, iDebugLevel
   implicit none
   !-----------------------------------------------------------
+  integer :: iError, iAlt
+  !!!!! Variables for the Runga-Kutta 4th Order Time-stepping
+  real :: OrigLogNS(-1:nAlts+2,1:nSpecies)
+  real :: OrigLogINS(-1:nAlts+2,1:nIons)
+  real :: OrigLogRho(-1:nAlts+2)
+  real :: OrigVel_GD(-1:nAlts+2,1:3)
+  real :: OrigTemp(-1:nAlts+2)
+  real :: OrigVS(-1:nAlts+2,1:nSpecies)
 
-  integer :: iError
+  real :: UpdatedLogNS(-1:nAlts+2,1:nSpecies)
+  real :: UpdatedLogINS(-1:nAlts+2,1:nIons)
+  real :: UpdatedLogRho(-1:nAlts+2)
+  real :: UpdatedVel_GD(-1:nAlts+2,1:3)
+  real :: UpdatedTemp(-1:nAlts+2)
+  real :: UpdatedVS(-1:nAlts+2,1:nSpecies)
+
+  real :: FinalLogNS(-1:nAlts+2,1:nSpecies)
+  real :: FinalLogINS(-1:nAlts+2,1:nIons)
+  real :: FinalLogRho(-1:nAlts+2)
+  real :: FinalVel_GD(-1:nAlts+2,1:3)
+  real :: FinalTemp(-1:nAlts+2)
+  real :: FinalVS(-1:nAlts+2,1:nSpecies)
+
+!!! RK-4 Coefficients
+  real :: K1LogNS(-1:nAlts+2,1:nSpecies)
+  real :: K1LogINS(-1:nAlts+2,1:nIons)
+  real :: K1LogRho(-1:nAlts+2)
+  real :: K1Vel_GD(-1:nAlts+2,1:3)
+  real :: K1Temp(-1:nAlts+2)
+  real :: K1VS(-1:nAlts+2,1:nSpecies)
+
+  real :: K2LogNS(-1:nAlts+2,1:nSpecies)
+  real :: K2LogINS(-1:nAlts+2,1:nIons)
+  real :: K2LogRho(-1:nAlts+2)
+  real :: K2Vel_GD(-1:nAlts+2,1:3)
+  real :: K2Temp(-1:nAlts+2)
+  real :: K2VS(-1:nAlts+2,1:nSpecies)
+
+  real :: K3LogNS(-1:nAlts+2,1:nSpecies)
+  real :: K3LogINS(-1:nAlts+2,1:nIons)
+  real :: K3LogRho(-1:nAlts+2)
+  real :: K3Vel_GD(-1:nAlts+2,1:3)
+  real :: K3Temp(-1:nAlts+2)
+  real :: K3VS(-1:nAlts+2,1:nSpecies)
+
+  real :: K4LogNS(-1:nAlts+2,1:nSpecies)
+  real :: K4LogINS(-1:nAlts+2,1:nIons)
+  real :: K4LogRho(-1:nAlts+2)
+  real :: K4Vel_GD(-1:nAlts+2,1:3)
+  real :: K4Temp(-1:nAlts+2)
+  real :: K4VS(-1:nAlts+2,1:nSpecies)
+
+  real :: DtOriginal
 
   if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
   if (iDebugLevel > 6) write(*,*) "=======> vertical bcs 1", iproc
 
-  ! Fill in ghost cells
-  call set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp,LogINS,IVel,VertVel)
+  DtOriginal = Dt  !!! Store this so that it doesn't change
 
-  ! Copy input state into New state
+!!! =================
+!!! General RK4 Update:
+!!! Y(n+1) = Y(n) + Dt/6*(k1 + 2k2 + 2k3 + k4)
+!!! Time(n+1) = Time(n) + Dt
+!!! 
+!!! k1 = f(tn,yn)
+!!! k2 = f(tn + Dt/2, Yn + Dt/2*k1)
+!!! k3 = f(tn + Dt/2, Yn + Dt/2*k2)
+!!! k4 = f(tn + Dt, Yn + Dt*k3)
+!!! =================
+
+  ! Step 1, Fill in Ghost Cells
+  call set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp,LogINS,IVel,VertVel)
+  ! Store our original time step from GITM (CFL-limited).
+
+!!! Set the Original State -> Orig = Y(n)
+   OrigLogNS(-1:nAlts+2,1:nSpecies)    =   LogNS(-1:nAlts+2,1:nSpecies)
+  OrigLogINS(-1:nAlts+2,1:nIons) =  LogINS(-1:nAlts+2,1:nIons)
+  OrigLogRho(-1:nAlts+2)               =  LogRho(-1:nAlts+2)
+  OrigVel_GD(-1:nAlts+2,1:3)           =  Vel_GD(-1:nAlts+2,1:3)
+    OrigTemp(-1:nAlts+2)               =    Temp(-1:nAlts+2)
+      OrigVS(-1:nAlts+2,1:nSpecies)    = VertVel(-1:nAlts+2,1:nSpecies)
+
+  NewLogNS = LogNS
+  NewLogINS = LogINS
+  NewLogRho = LogRho
+  NewVel_GD = Vel_GD
+  NewTemp = Temp
+  NewVertVel = VertVel
+
+
+!!! Now calculate, k1 = f(tn, yn)
+  call advance_vertical_1stage(&
+       LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
+       LogINS, NewLogINS, IVel, VertVel, NewVertVel)
+
+!!! note that Stage 1 -> updated by a 1/2 step
+!!! (NewLogNS - LogNS) = f(tn + Dt/2, yn + dt/2)
+
+!      Dt = DtOriginal/2.0
+
+       K1LogNS(-1:nAlts+2,1:nSpecies)      = &
+     (NewLogNS(-1:nAlts+2,1:nSpecies) - LogNS(-1:nAlts+2,1:nSpecies))
+
+      K1LogINS(-1:nAlts+2,1:nIons)  = &
+    (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+      K1LogRho(-1:nAlts+2)                = &
+    (NewLogRho(-1:nAlts+2) - LogRho(-1:nAlts+2))
+
+      K1Vel_GD(-1:nAlts+2,1:3)            = & 
+    (NewVel_GD(-1:nAlts+2,1:3) - Vel_GD(-1:nAlts+2,1:3))
+
+        K1Temp(-1:nAlts+2)                  = &
+      (NewTemp(-1:nAlts+2) -  Temp(-1:nAlts+2))
+
+          K1VS(-1:nAlts+2,1:nSpecies)      = &
+   (NewVertVel(-1:nAlts+2,1:nSpecies) - VertVel(-1:nAlts+2,1:nSpecies))
+
+  !!! Now Calculate the Next Update Stage
+  !!! We need Y(Updated) = Y(n) + 0.5*K1
+
+   UpdatedVel_GD(-1:nAlts+2,1:3) = &
+      OrigVel_GD(-1:nAlts+2,1:3) + &
+        0.5*K1Vel_GD(-1:nAlts+2,1:3) 
+
+    UpdatedLogNS(-1:nAlts+2,1:nSpecies) = &
+       OrigLogNS(-1:nAlts+2,1:nSpecies) +  &
+         0.5*K1LogNS(-1:nAlts+2,1:nSpecies)
+
+   UpdatedLogINS(-1:nAlts+2,1:nIons) = &
+      OrigLogINS(-1:nAlts+2,1:nIons) + &
+        0.5*K1LogINS(-1:nAlts+2,1:nIons) 
+
+   UpdatedLogRho(-1:nAlts+2) = &
+      OrigLogRho(-1:nAlts+2) + &
+        0.5*K1LogRho(-1:nAlts+2) 
+
+     UpdatedTemp(-1:nAlts+2) = &
+        OrigTemp(-1:nAlts+2) + &
+         0.5*K1Temp(-1:nAlts+2) 
+
+       UpdatedVS(-1:nAlts+2,1:nSpecies) = &
+          OrigVS(-1:nAlts+2,1:nSpecies)   + &
+            0.5*K1VS(-1:nAlts+2,1:nSpecies) 
+
+!!! UpdateStage 1 Upper Boundary
+  call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
+                        UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
+
+   LogNS  = UpdatedLogNS
+   LogINS = UpdatedLogINS
+   LogRho = UpdatedLogRho
+   Vel_GD = UpdatedVel_GD
+     Temp = UpdatedTemp
+  VertVel = UpdatedVS
+
   NewLogNS  = LogNS
   NewLogINS = LogINS
   NewLogRho = LogRho
   NewVel_GD = Vel_GD
-  NewTemp   = Temp
+     NewTemp = Temp
   NewVertVel = VertVel
 
-  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-  if (iDebugLevel > 7) write(*,*) "========> stage 1", iproc
+!!!!! Calculate K2
 
-  ! Do the half step: U^n+1/2 = U^n + (Dt/2) * R(U^n)
-!  Dt = Dt/2
-!
-!  write(*,*) "vv, before av1s 1: ", VertVel(3, :),LogNS(3,1)
-!
-!  call advance_vertical_1stage(&
-!       LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
-!       LogINS, NewLogINS, IVel, VertVel, NewVertVel)
-!
-!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!  if (iDebugLevel > 7) write(*,*) "========> vertical bcs 2", iproc
-!
-!  ! Fill in ghost cells for U^n+1/2 state
-!  call set_vertical_bcs(NewLogRho, NewLogNS, NewVel_GD, NewTemp,NewLogINS, &
-!       IVel, NewVertVel)
-!
-!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!  if (iDebugLevel > 7) write(*,*) "========> stage 2", iproc
-!
-!  write(*,*) "vv, before av1s 2: ", NewVertVel(3, :),NewLogNS(3,1)
-!
-!  ! Do full step U^n+1 = U^n + Dt * R(U^n+1/2)
-!  Dt = 2*Dt
   call advance_vertical_1stage(&
-       NewLogRho, NewLogNS, NewVel_GD, NewTemp, LogRho, LogNS, Vel_GD, Temp, &
-       NewLogINS, LogINS, IVel, NewVertVel, VertVel)
+       LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
+       LogINS, NewLogINS, IVel, VertVel, NewVertVel)
+
+!!! K2 Coefficients for RK-4
+       K2LogNS(-1:nAlts+2,1:nSpecies)      = &
+     (NewLogNS(-1:nAlts+2,1:nSpecies) - LogNS(-1:nAlts+2,1:nSpecies))
+
+      K2LogINS(-1:nAlts+2,1:nIons)  = &
+    (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+      K2LogRho(-1:nAlts+2)                = &
+    (NewLogRho(-1:nAlts+2) - LogRho(-1:nAlts+2))
+
+      K2Vel_GD(-1:nAlts+2,1:3)            = & 
+    (NewVel_GD(-1:nAlts+2,1:3) - Vel_GD(-1:nAlts+2,1:3))
+
+        K2Temp(-1:nAlts+2)                  = &
+      (NewTemp(-1:nAlts+2) -  Temp(-1:nAlts+2))
+
+          K2VS(-1:nAlts+2,1:nSpecies)      = &
+   (NewVertVel(-1:nAlts+2,1:nSpecies) - VertVel(-1:nAlts+2,1:nSpecies))
+
+  !!! Now we want Y(Updated) = Y(n) + 0.5*K2
+
+   UpdatedVel_GD(-1:nAlts+2,1:3) = &
+      OrigVel_GD(-1:nAlts+2,1:3) + &
+    0.5*K2Vel_GD(-1:nAlts+2,1:3) 
+
+    UpdatedLogNS(-1:nAlts+2,1:nSpecies) = &
+       OrigLogNS(-1:nAlts+2,1:nSpecies) +  &
+     0.5*K2LogNS(-1:nAlts+2,1:nSpecies)
+
+   UpdatedLogINS(-1:nAlts+2,1:nIons) = &
+      OrigLogINS(-1:nAlts+2,1:nIons) + &
+    0.5*K2LogINS(-1:nAlts+2,1:nIons) 
+
+   UpdatedLogRho(-1:nAlts+2) = &
+      OrigLogRho(-1:nAlts+2) + &
+    0.5*K2LogRho(-1:nAlts+2) 
+
+     UpdatedTemp(-1:nAlts+2) = &
+        OrigTemp(-1:nAlts+2) + &
+     0.5*K2Temp(-1:nAlts+2) 
+
+       UpdatedVS(-1:nAlts+2,1:nSpecies) = &
+          OrigVS(-1:nAlts+2,1:nSpecies)   + &
+        0.5*K2VS(-1:nAlts+2,1:nSpecies) 
+
+
+!! Update Boundary Conditions
+  call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
+                          UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
+!
+  LogNS  = UpdatedLogNS
+  LogINS = UpdatedLogINS
+  LogRho = UpdatedLogRho
+  Vel_GD = UpdatedVel_GD
+  Temp = UpdatedTemp
+  VertVel = UpdatedVS
+
+  NewLogNS = LogNS
+  NewLogINS = LogINS
+  NewLogRho = LogRho
+  NewVel_GD = Vel_GD
+  NewTemp = Temp
+  NewVertVel = VertVel
+!
+!
+!!!!!! Calculate K3
+!
+  call advance_vertical_1stage(&
+       LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
+       LogINS, NewLogINS, IVel, VertVel, NewVertVel)
+!
+!!!! K3 Coefficients for RK-4
+  K3LogNS(-1:nAlts+2,1:nSpecies)      = &
+     (NewLogNS(-1:nAlts+2,1:nSpecies) - LogNS(-1:nAlts+2,1:nSpecies))
+
+  K3LogINS(-1:nAlts+2,1:nIons)  = &
+     (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+  K3LogRho(-1:nAlts+2)                = &
+      (NewLogRho(-1:nAlts+2) - LogRho(-1:nAlts+2))
+
+  K3Vel_GD(-1:nAlts+2,1:3)            = & 
+  (NewVel_GD(-1:nAlts+2,1:3) - Vel_GD(-1:nAlts+2,1:3))
+
+  K3Temp(-1:nAlts+2)                  =  &
+    (NewTemp(-1:nAlts+2) -  Temp(-1:nAlts+2))
+
+  K3VS(-1:nAlts+2,1:nSpecies)      = &
+     (NewVertVel(-1:nAlts+2,1:nSpecies) - VertVel(-1:nAlts+2,1:nSpecies))
+  !!! Now we want Y(Updated) = Y(n) + K3
+
+
+   UpdatedVel_GD(-1:nAlts+2,1:3) = &
+      OrigVel_GD(-1:nAlts+2,1:3) + &
+        K3Vel_GD(-1:nAlts+2,1:3) 
+
+    UpdatedLogNS(-1:nAlts+2,1:nSpecies) = &
+       OrigLogNS(-1:nAlts+2,1:nSpecies) +  &
+         K3LogNS(-1:nAlts+2,1:nSpecies)
+
+   UpdatedLogINS(-1:nAlts+2,1:nIons) = &
+      OrigLogINS(-1:nAlts+2,1:nIons) + &
+        K3LogINS(-1:nAlts+2,1:nIons) 
+
+   UpdatedLogRho(-1:nAlts+2) = &
+      OrigLogRho(-1:nAlts+2) + &
+        K3LogRho(-1:nAlts+2) 
+
+     UpdatedTemp(-1:nAlts+2) = &
+        OrigTemp(-1:nAlts+2) + &
+         K3Temp(-1:nAlts+2) 
+
+       UpdatedVS(-1:nAlts+2,1:nSpecies) = &
+          OrigVS(-1:nAlts+2,1:nSpecies)   + &
+            K3VS(-1:nAlts+2,1:nSpecies) 
+
+!!!! Update Boundary Conditions
+  call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
+                          UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
+
+  LogNS  = UpdatedLogNS
+  LogINS = UpdatedLogINS
+  LogRho = UpdatedLogRho
+  Vel_GD = UpdatedVel_GD
+  Temp = UpdatedTemp
+  VertVel = UpdatedVS
+
+  NewLogNS = LogNS
+  NewLogINS = LogINS
+  NewLogRho = LogRho
+  NewVel_GD = Vel_GD
+  NewTemp = Temp
+  NewVertVel = VertVel
   
-!  write(*,*) "vv, after av1s 2: ", VertVel(3, :),LogNS(3,1)
+!! Calculate K4 (Final Coefficient)
 
-  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-  if (iDebugLevel > 7) write(*,*) "========> vertical bcs 3", iproc
+  call advance_vertical_1stage(&
+       LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
+       LogINS, NewLogINS, IVel, VertVel, NewVertVel)
+  
+!!! K4 Coefficients for RK-4
+  K4LogNS(-1:nAlts+2,1:nSpecies)      = &
+     (NewLogNS(-1:nAlts+2,1:nSpecies) - LogNS(-1:nAlts+2,1:nSpecies))
 
-  ! Fill in ghost cells for updated U^n+1 state
-  call set_vertical_bcs(LogRho, LogNS, Vel_GD, Temp, LogINS, IVel, VertVel)
+  K4LogINS(-1:nAlts+2,1:nIons)  = &
+     (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+  K4LogRho(-1:nAlts+2)                = &
+      (NewLogRho(-1:nAlts+2) - LogRho(-1:nAlts+2))
+
+  K4Vel_GD(-1:nAlts+2,1:3)            = & 
+  (NewVel_GD(-1:nAlts+2,1:3) - Vel_GD(-1:nAlts+2,1:3))
+
+  K4Temp(-1:nAlts+2)                  = &
+    (NewTemp(-1:nAlts+2) -  Temp(-1:nAlts+2))
+
+  K4VS(-1:nAlts+2,1:nSpecies)      = &
+     (NewVertVel(-1:nAlts+2,1:nSpecies) - VertVel(-1:nAlts+2,1:nSpecies))
+!!!!! END Update Cycle ========================================
+
+!!! Set the Updated State:  Stage 2
+  FinalLogNS  = OrigLogNS + &
+     (1.0/6.0)*(K1LogNS  + 2.0*K2LogNS  + 2.0*K3LogNS + K4LogNS)
+
+  FinalLogINS  = OrigLogINS + &
+     (1.0/6.0)*(K1LogINS  + 2.0*K2LogINS  + 2.0*K3LogINS + K4LogINS)
+
+  FinalLogRho  = OrigLogRho + &
+     (1.0/6.0)*( K1LogRho  + 2.0*K2LogRho  + 2.0*K3LogRho + K4LogRho)
+
+  FinalVel_GD  = OrigVel_GD + &
+      (1.0/6.0)*(K1Vel_GD  + 2.0*K2Vel_GD  + 2.0*K3Vel_GD + K4Vel_GD)
+
+  FinalTemp  = OrigTemp + &
+    (1.0/6.0)*(K1Temp  + 2.0*K2Temp  + 2.0*K3Temp + K4Temp)
+
+  FinalVS  = OrigVS + &
+  (1.0/6.0)*(K1VS  + 2.0*K2VS  + 2.0*K3VS + K4VS)
+
+  call set_vertical_bcs(FinalLogRho, FinalLogNS, FinalVel_GD, &
+                          FinalTemp, FinalLogINS, IVel, FinalVS)
+
+!!! Set the Updated State:  Stage 2
+
+   LogNS = FinalLogNS
+  LogINS = FinalLogINS
+  LogRho = FinalLogRho
+  Vel_GD = FinalVel_GD
+    Temp = FinalTemp
+ VertVel = FinalVS
 
   if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
   if (iDebugLevel > 7) &
@@ -88,7 +393,7 @@ subroutine advance_vertical_1stage( &
   use ModVertical, only : &
        Heating, EddyCoef_1D, ViscCoef_1d,Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
-       Gravity_G, Altitude_G,Cv_1D
+       Gravity_G, Altitude_G,Cv_1D, dAlt_F
   use ModTime
   use ModInputs
   use ModConstants
@@ -139,7 +444,6 @@ subroutine advance_vertical_1stage( &
 
 !! WAVEDRAG Heating  Hickey et al [2000]
   real, dimension(1:nAlts)    :: StressHeating
-
 !\
 ! Parameters Used for the Sponge
 ! This Sponge is useful to dampen out spurious modes
@@ -147,6 +451,23 @@ subroutine advance_vertical_1stage( &
 
   integer :: nAltsSponge = 12
   real :: kSP, NuSP, AmpSP
+
+  ! JMB:  Adding Eddy Diffusion Variables here
+  ! Note:  These are used in the calc_neutral_friction
+  !--------------------------------------------------------------------------
+  !! Eddy Diffusion Variables
+  real, dimension(1:nAlts,nSpecies)    :: GradLogConS
+  real, dimension(-1:nAlts+2,nSpecies)    :: ConS, LogConS
+  real, dimension(1:nAlts,nSpecies)    :: EddyCoefRatio_1d
+  !--------------------------------------------------------------------------
+  ! 4th Order Gradients on a Non-Uniform Mesh (5-point Stencil)
+  ! Used for calculating the d(ln[Chi])/dr -> Log of the concentration gradient
+  !--------------------------------------------------------------------------
+  real :: h1, h2, h3, h4
+  real :: MeshH1, MeshH2, MeshH3, MeshH4
+  real :: MeshCoef0, MeshCoef1, &
+          MeshCoef2, MeshCoef3, &
+          MeshCoef4
 
 
   !--------------------------------------------------------------------------
@@ -196,6 +517,61 @@ subroutine advance_vertical_1stage( &
      GradLogINS(:,iSpecies) = GradTmp
      DiffLogINS(:,iSpecies) = DiffTmp
   enddo
+
+  !! -------- Check the Method for Eddy Diffusion 
+  if (UseBoquehoAndBlelly) then
+     !! Boqueho And Blelly [2005] Method
+     !! Analytical Approximation to the Concentration gradient
+     do iAlt = 1, nAlts
+        do iSpecies = 1, nSpecies
+            GradLogConS(iAlt,iSpecies) = &
+                 -1.0*Gravity_G(iAlt)*&
+                 (1.0 -  (MeanMajorMass_1d(iAlt)/Mass(iSpecies)) )
+        enddo
+     enddo
+  else 
+     ! Use Colegrove Method
+     ! Step 1:  Calculate Ln(rho_{s}/Rho)
+     do iSpecies = 1, nSpecies
+       LogConS(-1:nAlts+2,iSpecies) = &
+            alog(Mass(iSpecies)*NS(-1:nAlts+2,iSpecies)/Rho(-1:nAlts+2))
+     enddo 
+
+     do iAlt = 1, nAlts
+
+        ! 4th Order Concentration Gradient
+        ! On Non-Uniform Mesh requires 5-pt Stencil
+        h1 = dAlt_F(iAlt-1)
+        h2 = dAlt_F(iAlt+0)
+        h3 = dAlt_F(iAlt+1)
+        h4 = dAlt_F(iAlt+2)
+
+        MeshH2 = h2 + h1
+        MeshH3 = h3 + h2 + h1
+        MeshH4 = h4 + h3 + h2 + h1
+
+        MeshCoef0 = (h2*h3*(h3+h4))/(h1*MeshH2*MeshH3*MeshH4)
+        MeshCoef1 = -1.0*(MeshH2*h3*(h3 + h4))/(h1*h2*(h2+h3)*(h2+h3+h4))
+        MeshCoef3 = MeshH2*h2*(h4 + h3)/(MeshH3*(h2+h3)*h3*h4) 
+        MeshCoef4 = -1.0*MeshH2*h2*h3/(MeshH4*(h2+h3+h4)*(h3+h4)*h4)
+
+        MeshCoef2 = (h2*h3*(h3+h4) + &
+                     MeshH2*h3*(h3+h4) - &
+                     MeshH2*h2*(h3+h4) - &
+                     MeshH2*h2*h3)/&
+                     (MeshH2*h2*h3*(h3+h4))
+
+        do iSpecies = 1, nSpecies
+           GradLogConS(iAlt,iSpecies) =  &
+             MeshCoef0*LogConS(iAlt-2,iSpecies)&
+          +  MeshCoef1*LogConS(iAlt-1,iSpecies)&
+          +  MeshCoef2*LogConS(iAlt  ,iSpecies)&
+          +  MeshCoef3*LogConS(iAlt+1,iSpecies)&
+          +  MeshCoef4*LogConS(iAlt+2,iSpecies)
+        enddo  ! iSpecies Loop
+
+    enddo ! iAlt Loop
+  endif ! End Check for Boqueho And Blelly 
 
 
   AmpSP = (1.0/(10.0*Dt))
@@ -274,6 +650,18 @@ subroutine advance_vertical_1stage( &
      enddo
 
   enddo
+
+  ! Add Neutral Friction Between Species
+  ! Needed for each increment in the RK-4 Solver
+  if (UseNeutralFriction) then
+     nVel(-1:nAlts+2,1:nSpecies) = NewVertVel(-1:nAlts+2,1:nSpecies)
+     call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
+                  EddyCoef_1d(1:nAlts), NT(1:nAlts), &
+                           NS(1:nAlts,1:nSpecies), &
+                  GradLogConS(1:nAlts,1:nSpecies), &
+                         Temp(1:nAlts))
+     NewVertVel(1:nAlts,1:nSpecies) = nVel(1:nAlts,1:nSpecies)
+  endif 
 
   do iAlt = 1, nAlts
 

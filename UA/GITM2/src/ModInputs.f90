@@ -164,14 +164,11 @@ module ModInputs
   character (len=iCharLen_) :: IonIonizationFilename
   character (len=iCharLen_) :: IonHeatingRateFilename
 
-  logical :: UseEddyInSolver = .false.
-  logical :: UseNeutralFrictionInSolver = .false.
-  real    :: MaximumVerticalVelocity = 1000.0
   logical :: UseDamping = .false.
 
 !! EddyVelocity Terms
   logical :: UseBoquehoAndBlelly = .false.
-  logical :: UseEddyCorrection = .false.
+  real    :: MaximumVerticalVelocity = 1000.0
 
   !\
   ! These are logicals to turn off and on forcing terms:

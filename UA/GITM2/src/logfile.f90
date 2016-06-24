@@ -443,14 +443,11 @@ subroutine write_code_information(dir)
      write(iCodeInfoFileUnit_,*) ""
 
      write(iCodeInfoFileUnit_,*) "#VERTICALSOURCES"
-     write(iCodeInfoFileUnit_,*) UseEddyInSolver
-     write(iCodeInfoFileUnit_,*) UseNeutralFrictionInSolver
      write(iCodeInfoFileUnit_,*) MaximumVerticalVelocity
      write(iCodeInfoFileUnit_,*) ""
 
      write(iCodeInfoFileUnit_,*) "#EDDYVELOCITY"
      write(iCodeInfoFileUnit_,*) UseBoquehoAndBlelly
-     write(iCodeInfoFileUnit_,*) UseEddyCorrection
      write(iCodeInfoFileUnit_,*) ""
 
      write(iCodeInfoFileUnit_,*) "#WAVEDRAG"

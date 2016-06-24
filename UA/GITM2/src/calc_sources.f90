@@ -18,12 +18,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: tmp3(nLons, nLats, 0:nAlts+1)
   real :: RhoI(nLons, nLats, nAlts)
   real :: ScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
-
-  real :: nVel(1:nAlts, nSpecies)
-  real :: NF_Eddy(1:nAlts), NF_NDen(1:nAlts), NF_Temp(1:nAlts)
-  real :: NF_NDenS(1:nAlts,1:nSpecies), NF_EddyRatio(1:nAlts,1:nSpecies)
-  real :: NF_Gravity(1:nAlts)
-  real :: NF_GradLogCon(1:nAlts,1:nSpecies)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
 ! Potential Temperature
@@ -59,76 +53,6 @@ subroutine calc_GITM_sources(iBlock)
 
   RhoI = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
        MeanIonMass(1:nLons,1:nLats,1:nAlts)
-
-  !\
-  ! ---------------------------------------------------------------
-  ! These terms are for Vertical Neutral Wind drag
-  ! ---------------------------------------------------------------
-  !/
-
-  if (UseNeutralFriction .and. .not.UseNeutralFrictionInSolver) then
-
-!     if (UseBoquehoAndBlelly) then
-!
-     do iLat = 1, nLats
-        do iLon = 1, nLons
-           do iAlt = 1, nAlts
-              do iSpecies = 1, nSpecies
-
-                 GradLogConS(iLon,iLat,iAlt,iSpecies) = &
-                      -1.0*Gravity_GB(iLon,iLat,iAlt,iBlock)*&
-                      (1.0 -  (MeanMajorMass(iLon,iLat,iAlt)/Mass(iSpecies)) )
-
-              enddo
-           enddo
-        enddo
-     enddo
-     
-     do iLat = 1, nLats
-        do iLon = 1, nLons
-
-           do iAlt = 1, nAlts
-              NF_NDen(iAlt) = NDensity(iLon,iLat,iAlt,iBlock)
-              NF_Temp(iAlt) = Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
-              NF_Eddy(iAlt) = KappaEddyDiffusion(iLon,iLat,iAlt,iBlock)
-              NF_Gravity(iAlt) = Gravity_GB(iLon,iLat,iAlt,iBlock)
-
-              do iSpecies = 1, nSpecies
-                 nVel(iAlt,iSpecies) = VerticalVelocity(iLon,iLat,iAlt,iSpecies,iBlock)
-                 NF_NDenS(iAlt,iSpecies) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
-                 NF_EddyRatio(iAlt,iSpecies) = 0.0
-                 NF_GradLogCon(iAlt,iSpecies) = GradLogConS(iLon,iLat,iAlt,iSpecies)
-              enddo !iSpecies = 1, nSpecies
-             
-           enddo !iAlt = 1, nAlts
-
-           call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
-                                      NF_Eddy(1:nAlts), &
-                                      NF_NDen(1:nAlts), &
-                                      NF_NDenS(1:nAlts,1:nSpecies), &
-                                      NF_GradLogCon(1:nAlts,1:nSpecies), &
-                                      NF_EddyRatio(1:nAlts,1:nSpecies), &
-                                      NF_Temp(1:nAlts), NF_Gravity(1:nAlts) )
-
-           do iAlt = 1, nAlts
-              NeutralFriction(iLon, iLat, iAlt, 1:nSpecies) = 0.0
-              VerticalVelocity(iLon,iLat,iAlt,1:nSpecies,iBlock) = nVel(iAlt,1:nSpecies)
-
-           enddo
-
-        enddo
-     enddo
-
-  else
-
-     NeutralFriction = 0.0
-
-  endif
-!     write(*,*) '==========> Now Exiting Neutral Friction Calculation!!'
-
-  !\
-  ! Gravity is a source term which is calculated in initialize.f90
-  !/
 
   !\
   ! ---------------------------------------------------------------
