@@ -7,9 +7,10 @@
 class cSurfaceDataCG {
 public:
   double InjectionFlux[_TOTAL_SPECIES_NUMBER_];
+  double MassInjectionFlux[_TOTAL_SPECIES_NUMBER_];
 
   void PrintVarableList(FILE* fout);  
-  void Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int StencilLength); 
+  void Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int *Stencil,int StencilLength);
   void Flush();  
   void Gather(CMPI_channel* pipe);
 }; 
