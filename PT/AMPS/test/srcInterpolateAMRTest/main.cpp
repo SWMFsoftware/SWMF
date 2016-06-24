@@ -116,6 +116,9 @@ int main(int argc,char **argv) {
   // alias
   namespace Interpolation = PIC::InterpolationRoutines::CellCentered;
 
+  //init the interpolation routines
+  PIC::InterpolationRoutines::Init();
+
   // output file name
   char fname[400];
   sprintf(fname,"%s/test_InterpolateAMR-test.dat",
