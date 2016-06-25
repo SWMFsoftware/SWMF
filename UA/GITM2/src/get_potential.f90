@@ -300,7 +300,7 @@ subroutine get_potential(iBlock)
 !           call stop_gitm("Stopping in get_potential")
         endif
 
-        if (UseDynamo) then
+        if (UseDynamo .and. .not. Is1D) then
            dynamo = 0.0
            call get_dynamo_potential( &
                 MLongitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), &
