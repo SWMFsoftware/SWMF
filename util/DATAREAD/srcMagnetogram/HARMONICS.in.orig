@@ -16,3 +16,12 @@ harmonics11uniform.dat		NameFileOut
 ! Default is true
 #CHEBYSHEV
 F				UseChebyshevNode
+
+
+! Default Scaling4SmallB0 = 1.0, B0Min = 0.0
+! The observed magnetic field is scaled as 
+! Br=sign(BrObserved,min(Scaling4SmallB0*BrObserved, B0Min + BrObserved))
+#SCALINGB0
+3.75        Scaling4SmallB0
+5.0          B0Min
+
