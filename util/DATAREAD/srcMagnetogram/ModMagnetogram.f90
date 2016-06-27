@@ -167,6 +167,8 @@ contains
           write(*,*) prefix, 'PhiOffset=',Shift
        end if
     end if
+    if(Shift<0.0)call CON_stop(&
+         'Did not find central meridian longitude')
   end subroutine get_hlcmm
 
   !============================================================================

@@ -550,7 +550,7 @@ contains
 
     write ( iUnit, '(a19,I3,a10,I4,a4)' ) &
          'Coefficients order=',nHarmonics, &
-         ' center=CT',CarringtonRotation,':180'
+         ' Central=CT',CarringtonRotation,':180'
     write ( iUnit, '(a)' ) 'Observation time'
     write ( iUnit, '(a45,I3)' ) &
          'B0 angle & Nmax:        0          ',nHarmonics
