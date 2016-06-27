@@ -4275,7 +4275,7 @@ namespace PIC {
     //the number of injected particles and injection rate
     extern long int nTotalInjectedParticles;
     extern long int *nInjectedParticles;
-    extern double *ParticleProductionRate;
+    extern double *ParticleProductionRate,*ParticleMassProductionRate;
 
     void InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
 

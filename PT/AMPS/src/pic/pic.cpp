@@ -269,6 +269,7 @@ int PIC::TimeStep() {
     cExchangeStatisticData *ExchangeBuffer=NULL;
     long int nInjectedParticleExchangeBuffer[PIC::nTotalThreads];
     double ParticleProductionRateExchangeBuffer[PIC::nTotalThreads];
+    double ParticleMassProductionRateExchangeBuffer[PIC::nTotalThreads];
 
     localRunStatisticData.TotalInterationRunTime=MPI_Wtime()-StartTime;
     localRunStatisticData.IterationExecutionTime=IterationExecutionTime;
@@ -372,25 +373,28 @@ int PIC::TimeStep() {
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Total number of particles: %ld\n",nTotalModelParticles);
 
       //exchange statistics of the particle production
-      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\n");
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\tMassProductionRate\n");
 
       for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
         double c=0.0;
 
         MPI_Gather(PIC::BC::nInjectedParticles+spec,1,MPI_LONG,nInjectedParticleExchangeBuffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
         MPI_Gather(PIC::BC::ParticleProductionRate+spec,1,MPI_DOUBLE,ParticleProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Gather(PIC::BC::ParticleMassProductionRate+spec,1,MPI_DOUBLE,ParticleMassProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
         for (thread=1;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
           nInjectedParticleExchangeBuffer[0]+=nInjectedParticleExchangeBuffer[thread];
           ParticleProductionRateExchangeBuffer[0]+=ParticleProductionRateExchangeBuffer[thread];
+          ParticleMassProductionRateExchangeBuffer[0]+=ParticleMassProductionRateExchangeBuffer[thread];
         }
 
         if (nExchangeStatisticsIterationNumberSteps!=0) {
           c=double(nInjectedParticleExchangeBuffer[0])/nExchangeStatisticsIterationNumberSteps;
           ParticleProductionRateExchangeBuffer[0]/=nExchangeStatisticsIterationNumberSteps;
+          ParticleMassProductionRateExchangeBuffer[0]/=nExchangeStatisticsIterationNumberSteps;
         }
 
-        fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0]);
+        fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%e\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0],ParticleMassProductionRateExchangeBuffer[0]);
 
         PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
       }
@@ -441,8 +445,9 @@ int PIC::TimeStep() {
       for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
         MPI_Gather(PIC::BC::nInjectedParticles+spec,1,MPI_LONG,nInjectedParticleExchangeBuffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
         MPI_Gather(PIC::BC::ParticleProductionRate+spec,1,MPI_DOUBLE,ParticleProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Gather(PIC::BC::ParticleMassProductionRate+spec,1,MPI_DOUBLE,ParticleMassProductionRateExchangeBuffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
-        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0,PIC::BC::ParticleMassProductionRate[spec]=0.0;
       }
 
 
@@ -1627,8 +1632,12 @@ void PIC::Init_AfterParser() {
   //init the counter of the injected particles and the injection rates
   PIC::BC::nInjectedParticles=new long int[PIC::nTotalSpecies];
   PIC::BC::ParticleProductionRate=new double [PIC::nTotalSpecies];
+  PIC::BC::ParticleMassProductionRate=new double [PIC::nTotalSpecies];
 
-  for (int spec=0;spec<PIC::nTotalSpecies;spec++) PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+    PIC::BC::ParticleMassProductionRate[spec]=0.0;
+  }
 
   //init the model of volume particle injections
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_

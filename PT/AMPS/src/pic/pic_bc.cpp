@@ -15,6 +15,7 @@ PIC::BC::fBlockInjectionBC PIC::BC::userDefinedBoundingBlockInjectionFunction=NU
 list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > PIC::BC::boundingBoxInjectionBlocksList;
 long int* PIC::BC::nInjectedParticles=NULL;
 double *PIC::BC::ParticleProductionRate=NULL;
+double *PIC::BC::ParticleMassProductionRate=NULL;
 long int PIC::BC::nTotalInjectedParticles=0;
 PIC::BC::fUserDefinedParticleInjectionFunction PIC::BC::UserDefinedParticleInjectionFunction=NULL;
 
