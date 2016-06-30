@@ -469,20 +469,29 @@ contains
 
   end subroutine message_pass_field
   !===========================
-  subroutine add_ghost_face_field(nG, Field_FDB, Counter_FDB, nWidthIn)
+  subroutine add_ghost_face_field(nG, Current_FDB, Counter_FDB, nWidthIn)
     use ModMpi
 
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     real, intent(inout), dimension(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-         1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock):: Field_FDB, Counter_FDB
+         1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock):: Current_FDB, Counter_FDB
+    !Array index is the coordinate of the gridpoint with +1/2 being
+    !approximated as 1. By x the physical cells are marked below
+    !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)    
+    !       _!_!x!x               _!_!_!_n+2     Not used: Jx (nX+2,:,:)
+    !       _!_!x!x               _!_!_!_                  Jy (:,nY+2,:)
+    !       _!_!_!                x!x!_!_        Phys Face Values: 
+    !    -2  ! ! !                x!x!_!_        Jx(0,1,1),Jx(nI,1,1)...
+    !       -2                           Ghost values: Jx(-1,1,1),Jy(0,1,1)..
+    !------------------------------------------------------------------------
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
     
     logical :: DoSendCorner
 
-    ! Fill in the nVar variables in the ghost cells of Field_FDB.
+    ! Fill in the nVar variables in the ghost cells of Current_FDB.
     !
     ! nWidthIn is the number of ghost cell layers to be set. Default is all.
 
@@ -509,7 +518,7 @@ contains
     integer :: MaxBufferS = -1, MaxBufferR = -1
     integer:: iRequestR, iRequestS, iError
  
-    character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_field'
+    character(len=*), parameter:: NameSub = 'BATL_pass::add_ghost_face_field'
 
     integer:: iBlock
 
@@ -682,7 +691,7 @@ contains
     !======================================================================
     subroutine buffer_to_state
 
-      ! Copy buffer into recv block of Field_FDB
+      ! Copy buffer into recv block of Current_FDB
 
       integer:: iBufferR, i, j, k, iDim
       !------------------------------------------------------------------------
@@ -709,7 +718,8 @@ contains
                
                do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
                   iBufferR = iBufferR + 1
-                  Field_FDB(i,j,k,iDim,iBlockRecv) = &
+                  Counter_FDB(i,j,k,iDim,iBlockRecv) =      &
+                       Counter_FDB(i,j,k,iDim,iBlockRecv) + &
                        BufferR_I(iBufferR)
                end do; end do; end do
             end do
@@ -774,9 +784,9 @@ contains
             kSMax = iS_DIID(3,kDir,Max_,iDim)
             if((iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)==0)CYCLE
          
-            Field_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim, &
-                 iBlockRecv)= Field_FDB(iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,&
-                 iDim,iBlockSend)
+            Counter_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim,iBlockRecv) =    &
+                 Counter_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim,iBlockRecv) &
+                 + Current_FDB(iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iDim,iBlockSend)
          end do
       else
             ! Put data into the send buffer
@@ -807,7 +817,7 @@ contains
 
                do k = kSMin,kSmax; do j = jSMin,jSMax; do i = iSMin,iSmax
                   iBufferS = iBufferS + 1
-                  BufferS_I(iBufferS) = Field_FDB(i,j,k,iDim,iBlockSend)
+                  BufferS_I(iBufferS) = Current_FDB(i,j,k,iDim,iBlockSend)
                end do; end do; end do
             end do
             iBufferS_P(iProcRecv) = iBufferS
