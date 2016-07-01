@@ -91,9 +91,8 @@ T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
-0.18			StochasticAmplitude
+uniform			TypeHeatPartitioning
+0.6			QionRatio
 
 
 #HEATCONDUCTION
