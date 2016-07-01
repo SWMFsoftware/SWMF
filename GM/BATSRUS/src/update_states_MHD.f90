@@ -801,6 +801,7 @@ subroutine update_b0
   use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
   use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
   use ModMagnetogram,   ONLY: update_magnetogram
+  use ModMessagePass, ONLY: exchange_messages
   implicit none
 
   character(len=*), parameter :: NameSub = 'update_b0'
@@ -859,6 +860,7 @@ subroutine update_b0
   if(UseFieldLineThreads)then
      DoThreads_B = .true.
      call set_threads
+     call exchange_messages
   end if
   call timing_stop(NameSub)
 
