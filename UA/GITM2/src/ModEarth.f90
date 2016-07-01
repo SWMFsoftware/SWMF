@@ -214,8 +214,11 @@ contains
   subroutine init_planet
 
     use ModTime
+    use ModInputs, only: UseBoquehoAndBlelly
 
     integer :: itime(7)
+
+    UseBoquehoAndBlelly = .true.
 
     Mass(iH_)    = 1.0 * AMU
     Mass(iHe_)   = 4.0 * AMU
