@@ -259,7 +259,7 @@ module ModMain
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   ! The only exeption is t_Max. It may be also used in the SWMF mode to control
-  ! eveloving B0 field with the use of two magnetograms, one at tSimulation=0,
+  ! evolving B0 field with the use of two magnetograms, one at tSimulation=0,
   ! the other at tSimulation=t_Max.
   !/
   real    :: t_Max = -1.0, cputime_max = -1.0
