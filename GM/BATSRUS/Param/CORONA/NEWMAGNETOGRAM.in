@@ -1,0 +1,18 @@
+
+#NEWMAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+SC/newmf.dat		NameMagnetogramFile
+12			nHeaderLine
+-1.0			PhiShift
+1.0			UnitB
+
+#HELIOUPDATEB0
+3600.0
+
+#INCLUDE
+FINALTIME.in
+
+#END
