@@ -21,15 +21,6 @@ Comment out this command if the run does not restart from the previously saved s
 #INCLUDE
 RESTART.in
 
-!   CCMC version with the included start time file
-!Overwrite time and nStep
-INCLUDE
-IH/TIME.in
-
-NSTEP
-0
-
-
 
 
 #SAVERESTART
@@ -43,15 +34,6 @@ T			DoSaveRestart
 Comment this out if the run does not restart from the previously saved state.
 #INCLUDE
 SC/restartIN/restart.H   
-
-!   CCMC version with the included start time file
-!Overwrite time and nStep
-INCLUDE
-IH/TIME.in
-
-NSTEP
-0
-
 
 
 #COORDSYSTEM
@@ -86,9 +68,6 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 0.0			PhiShift
 2.0			UnitB
 
-!CCMC version with included magnetogram file
-INCLUDE
-SC/MAGNETOGRAM.in
 
 #USECURLB0
 T			UseCurlB0
@@ -117,18 +96,11 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
-!---CCMC version
-INCLUDE
-CORONALHEATING.in
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
-0.18			StochasticAmplitude
+uniform			TypeHeatPartitioning
+0.6			QionRatio
 
-!----CCMC version
-INCLUDE
-PARTITION.in
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -143,9 +115,6 @@ T			UseHeatFluxRegion
 T            UseHeatFluxCollisionless
 1.05            CollisionlessAlpha  
 
-#HEATFLUXCOLLISIONLESS
-T            UseHeatFluxCollisionless
-1.05            CollisionlessAlpha  
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -293,13 +262,6 @@ F			DoSaveInitial
 #INCLUDE
 IH/restartIN/restart.H
 
-!   CCMC version with the included start time file
-!Overwrite time and nStep
-INCLUDE
-IH/TIME.in
-
-NSTEP
-0
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -402,12 +364,6 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
-
-
-!------CCMC version: instead of TWO previous commands use
-
-INCLUDE
-CORONALHEATING.in
 
 #RESISTIVITY
 T			UseResistivity

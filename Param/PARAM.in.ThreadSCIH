@@ -72,9 +72,6 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 0.0			PhiShift
 2.0			UnitB
 
-!CCMC version with included magnetogram file
-INCLUDE
-SC/MAGNETOGRAM.in
 
 #USECURLB0
 T			UseCurlB0
@@ -103,18 +100,11 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
-!---CCMC version
-INCLUDE
-CORONALHEATING.in
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
-0.18			StochasticAmplitude
+uniform         	TypeHeatPartitioning
+0.6			QionRatio
 
-!----CCMC version
-INCLUDE
-PARTITION.in
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -370,11 +360,6 @@ T                       UseWaveReflection
 
 
 
-!------CCMC version: instead of TWO previous commands use
-
-INCLUDE
-CORONALHEATING.in
-
 #RESISTIVITY
 T			UseResistivity
 user			TypeResistivity
@@ -424,10 +409,6 @@ T
 -1.			DtSavePlot
 -1                      DxSavePlot
 
-!-----CCMC version of satellite files
-
-INCLUDE
-IH/Param/PARAM.sat.CR
 
 #END_COMP IH ---------------------------------------------------------------
 
