@@ -342,7 +342,10 @@ contains
 
     dTAurora = 120.0
     
-    if (IsEarth) PhotoElectronHeatingEfficiency = 0.06
+    if (IsEarth) then 
+       PhotoElectronHeatingEfficiency = 0.06
+       UseBoquehoAndBlelly = .true.
+    endif
 
     tSimulation = 0.0
 
