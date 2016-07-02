@@ -1106,7 +1106,7 @@ void PIC::Sampling::Sampling() {
 
          if (PIC::ThisThread==0) {
            for (int thread=1;thread<PIC::nTotalThreads;thread++) for (s=0;s<PIC::nTotalSpecies;s++) buffer[s]+=buffer[thread*PIC::nTotalSpecies+s];
-           fprintf(PIC::DiagnospticMessageStream,"Total sources rate by volume production injection models: \n Specie \t Soruce rate [s^{-1}]\n");
+           fprintf(PIC::DiagnospticMessageStream,"Total sources rate by volume production injection models: \n Species \t Source rate [s^{-1}]\n");
 
            for (s=0;s<PIC::nTotalSpecies;s++) {
              PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
