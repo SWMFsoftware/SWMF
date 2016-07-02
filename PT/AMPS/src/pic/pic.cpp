@@ -396,7 +396,7 @@ int PIC::TimeStep() {
 
         fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%e\t%e\t%e\n",spec,c,ParticleProductionRateExchangeBuffer[0],ParticleMassProductionRateExchangeBuffer[0]);
 
-        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
+        PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0,PIC::BC::ParticleMassProductionRate[spec]=0.0;
       }
 
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Total number of injected particles: %e\n",nTotalInjectedParticels);
