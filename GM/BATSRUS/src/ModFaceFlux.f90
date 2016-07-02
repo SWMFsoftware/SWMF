@@ -1507,13 +1507,26 @@ contains
       real:: DeltaCons_V(nVar), DeltaFlux_V(nVar)
       real:: Cleft, Cright
       real:: WeightLeft=0.0, WeightRight=0.0, Diffusion=0.0, DiffusionDw
-      real:: Nu1, Nu2, Nu, CsoundL, CsoundR
+      real:: Nu1, Nu2, Nu, CsoundL, CsoundR, Cdw
       !-----------------------------------------------------------------------
       ! Get the max, left and right speeds for HLL (and DW?)
       call get_speed_max(State_V, B0x, B0y, B0z, &
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
       Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
+
+      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+           Cleft_I =CleftStateLeft_I)
+
+      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+           Cright_I=CrightStateRight_I)
+
+      Cleft  =min(0.0, &
+           minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
+           minval(CleftStateHat_I(iFluidMin:iFluidMax)))
+      Cright =max(0.0, &
+           maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
+           maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
 
       ! Andrea Mignone's hybridization parameters
       ! Pressure jump detector
@@ -1542,19 +1555,6 @@ contains
             WeightRight = 0.5
             Diffusion   = 0.5*Cmax
          else
-            call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-                 Cleft_I =CleftStateLeft_I)
-
-            call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-                 Cright_I=CrightStateRight_I)
-
-            Cleft  =min(0.0, &
-                 minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
-                 minval(CleftStateHat_I(iFluidMin:iFluidMax)))
-            Cright =max(0.0, &
-                 maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
-                 maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
-
             ! HLLE weights and diffusion
             WeightLeft  = Cright/(Cright - Cleft)
             WeightRight = 1.0 - WeightLeft
@@ -1584,9 +1584,11 @@ contains
               FluxLeft_V(iEnergyMin:iEnergyMax)
 
          ! Dominant wave diffusion coefficient 0.5*dF.dU/||dU||
-         DiffusionDw = 0.5*abs(dot_product(DeltaFlux_V(iVarMin:iVarMax), &
+         Cdw = dot_product(DeltaFlux_V(iVarMin:iVarMax), &
               DeltaCons_V(iVarMin:iVarMax)) &
-              / max(sum(DeltaCons_V(iVarMin:iVarMax)**2), 1e-30))
+              / max(sum(DeltaCons_V(iVarMin:iVarMax)**2), 1e-30)
+         ! Dominant wave speed is limited between Cleft and Cright
+         DiffusionDw = 0.5*abs(max(Cleft, min(Cright, Cdw)))
 
          ! Combine HLLE and DW weights and diffusion
          WeightLeft  = Nu*WeightLeft  + (1-Nu)*0.5
