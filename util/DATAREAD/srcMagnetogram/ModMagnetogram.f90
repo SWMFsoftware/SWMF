@@ -167,8 +167,6 @@ contains
           write(*,*) prefix, 'PhiOffset=',Shift
        end if
     end if
-    if(Shift<0.0)call CON_stop(&
-         'Did not find central meridian longitude')
   end subroutine get_hlcmm
 
   !============================================================================
@@ -311,6 +309,8 @@ contains
           end if
           if(PhiOffset<0.0)call get_hlcmm(Head_PFSSM,PhiOffset)
        enddo
+       if(PhiOffset<0.0)call CON_stop(&
+            'Did not find central meridian longitude')
     endif
     nR=max(nR,N_PFSSM)
     nPhi=max(nPhi,N_PFSSM)
