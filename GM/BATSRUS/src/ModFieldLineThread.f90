@@ -810,7 +810,7 @@ contains
           TeSi_I(iTe) = TeSi_I(iTe-1)*exp(DeltaLogTe) 
        end do
 
-       do iTe = 1,500
+       do iTe = 2,500
           call interpolate_lookup_table(iTable,&
                TeSi_I(iTe), 1.0e2, LambdaCgs_V)
           LambdaSi_I(iTe) = LambdaCgs_V(1)*Radcool2Si
@@ -825,7 +825,7 @@ contains
        UHeat_I = sqrt(HeatCondParSi*UHeat_I)/cBoltzmann
 
        !\
-       ! Temporal fix to avoid a singularity in the first point
+       ! Temporary fix to avoid a singularity in the first point
        !/
        UHeat_I(1) = UHeat_I(2)
        do iTe = 2,500
@@ -835,6 +835,9 @@ contains
           LPe_I(iTe) = LPe_I(iTe-1) + 0.5*DeltaLogTe* &
                ( TeSi_I(iTe-1)**3.50/UHeat_I(iTe-1) + &
                TeSi_I(iTe)**3.50/UHeat_I(iTe) )
+          !\
+          ! Not multiplied by \lappa_0
+          !/
        end do
        dFluxXLengthOverDU_I(1) = &
             (LPe_I(2)*UHeat_I(2) - LPe_I(1)*UHeat_I(1))/&
