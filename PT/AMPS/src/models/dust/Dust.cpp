@@ -1574,6 +1574,89 @@ void ElectricallyChargedDust::Sampling::SampleParticleData(char *ParticleData,do
 #endif
 }
 
+//===============================================================================================================================
+//re-sort dust grains over appropriate velocity groups
+void ElectricallyChargedDust::GrainVelocityGroup::AdjustParticleVelocityGroup() {
+  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  PIC::Mesh::cDataBlockAMR *block;
+
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+  //sample the processor load
+//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  double EndTime,StartTime=MPI_Wtime();
+//#endif
+
+  //move existing particles
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+//**************************  OpenMP + MPI + block's splitting *********************************
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,StartTime,EndTime,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
+  shared (PIC::DomainBlockDecomposition::BlockTable,PIC::DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh)
+#endif
+  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    int i,j,k,s;
+    long int ptr,ParticleList;
+    double LocalTimeStep;
+
+    node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+      StartTime=MPI_Wtime();
+#endif
+
+    block=node->block;
+    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+            ParticleList=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+            while (ParticleList!=-1) {
+              ptr=ParticleList;
+              ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
+              s=PIC::ParticleBuffer::GetI(ptr);
+
+              if ((_DUST_SPEC_<=s) && (s<_DUST_SPEC_+nGroups)) {
+                //this is a dust particle
+                int VelocityGroup_Initial,VelocityGroup_Final;
+
+                //determine the velocity goups
+                VelocityGroup_Initial=s-_DUST_SPEC_;
+                VelocityGroup_Final=GetGroupNumber(PIC::ParticleBuffer::GetV(ptr));
+
+                if (VelocityGroup_Initial!=VelocityGroup_Final) {
+                  //the dust particle have moved from one velocity group into another:
+                  //adjust the particle weight and move the particle to the new group
+
+                  double c=block->GetLocalTimeStep(_DUST_SPEC_+VelocityGroup_Final)/block->GetLocalTimeStep(_DUST_SPEC_+VelocityGroup_Initial)*
+                      block->GetLocalParticleWeight(_DUST_SPEC_+VelocityGroup_Initial)/block->GetLocalParticleWeight(_DUST_SPEC_+VelocityGroup_Final);
+
+                  if (_INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_) {
+                    c*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+
+                    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(c,ptr);
+                    PIC::ParticleBuffer::SetI(_DUST_SPEC_+VelocityGroup_Final,ptr);
+                  }
+                  else {
+                    exit(__LINE__,__FILE__,"Error: the function is not implemented for the case when _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ != _INDIVIDUAL_PARTICLE_WEIGHT_ON_. Here need to implement cloning or removing o the dust particles depending of the probability in the variable 'c'");
+                  }
+
+                }
+              }
+            }
+
+          }
+       }
+    }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+    node->ParallelLoadMeasure+=EndTime-StartTime;
+#endif
+  }
+}
 
 
 

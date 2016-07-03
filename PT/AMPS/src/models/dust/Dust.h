@@ -117,6 +117,8 @@ namespace ElectricallyChargedDust {
       logMaxGrainVelocity=log(maxGrainVelocity);
       dLogGrainVelocity=(logMaxGrainVelocity-logMinGrainVelocity)/nGroups;
     }
+
+    void AdjustParticleVelocityGroup();
   }
 
   //sampling disfferent size ranges of dust macrospchpic parameters
