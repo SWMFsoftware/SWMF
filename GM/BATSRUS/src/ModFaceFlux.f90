@@ -1515,19 +1515,6 @@ contains
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
       Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
 
-      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
-           Cleft_I =CleftStateLeft_I)
-
-      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
-           Cright_I=CrightStateRight_I)
-
-      Cleft  =min(0.0, &
-           minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
-           minval(CleftStateHat_I(iFluidMin:iFluidMax)))
-      Cright =max(0.0, &
-           maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
-           maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
-
       ! Andrea Mignone's hybridization parameters
       ! Pressure jump detector
       Nu1 = 1.0 - min(StateLeft_V(p_), StateRight_V(p_)) &
@@ -1547,6 +1534,21 @@ contains
       ! Round to 0 or 1 if close
       if(Nu < 1e-6)   Nu = 0.0
       if(Nu > 1-1e-6) Nu = 1.0
+
+      if(Nu < 1.0 .or. (Nu > 0.0 .and. .not.DoLf))then
+         call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+              Cleft_I =CleftStateLeft_I)
+
+         call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+              Cright_I=CrightStateRight_I)
+
+         Cleft  =min(0.0, &
+              minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
+              minval(CleftStateHat_I(iFluidMin:iFluidMax)))
+         Cright =max(0.0, &
+              maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
+              maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
+      end if
 
       if(Nu > 0.0)then
          ! LF or HLLE scheme is needed
