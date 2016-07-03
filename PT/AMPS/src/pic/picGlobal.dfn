@@ -168,6 +168,9 @@ at the end of each time step
 //the build in injection dust model
 #define _PIC_MODEL__DUST__INJECTION_MODEL__MODE_  _PIC_MODEL__DUST__INJECTION_MODEL__MODE__OFF_ 
 
+//adjust the dust particle in the velocity groups
+#define _PIC_MODEL__DUST__ADJUST_VELOCITY_GROUP__MODE_ _PIC_MODE_OFF_
+
 //include the user defined headers for the physical models
 #ifndef _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_
 #define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__OFF_

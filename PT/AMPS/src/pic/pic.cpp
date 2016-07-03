@@ -198,6 +198,13 @@ int PIC::TimeStep() {
   PIC::Parallel::ExchangeParticleData();
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
+  //in case the dust model is turned on: re-distribute the dust particles in the velocity groups
+  #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    if (_PIC_MODEL__DUST__ADJUST_VELOCITY_GROUP__MODE_ == _PIC_MODE_ON_) {
+      ElectricallyChargedDust::GrainVelocityGroup::AdjustParticleVelocityGroup();
+    }
+  #endif //_PIC_MODEL__DUST__MODE_
+
   //incase OpenMP is used: rebalance the list of the available particles between OpenMP threads
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   PIC::ParticleBuffer::Thread::RebalanceParticleList();
