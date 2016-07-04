@@ -685,7 +685,6 @@ test_coronasph_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
 	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.spherical PARAM.in
-	cd ${TESTDIR}; cp Param/CORONA/CR1935_WSO.dat .
 
 test_coronasph_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
