@@ -387,7 +387,7 @@ subroutine advance_vertical_1stage( &
   ! With fluxes and sources based on LogRho..Temp, update NewLogRho..NewTemp
 
   use ModGITM, only: &
-       Dt, iEast_, iNorth_, iUp_
+       Dt, iEast_, iNorth_, iUp_, ThermalDiffCoefS
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
@@ -469,9 +469,7 @@ subroutine advance_vertical_1stage( &
           MeshCoef2, MeshCoef3, &
           MeshCoef4
 
-
   !--------------------------------------------------------------------------
-
   NS = exp(LogNS)
   Rho = exp(LogRho)
   LogNum = alog(sum(NS,dim=2))
@@ -646,6 +644,14 @@ subroutine advance_vertical_1stage( &
                 Centrifugal / InvRadialDistance_C(iAlt) + &
                 Coriolis * Vel_GD(iAlt,iEast_))
         endif
+
+        ! Thermal Diffusion Effects (For Light Species H2, H, and He) 
+        ! ThermalDiffCoefS is set in calc_rates
+        ! Note:  ThermalDiffCoefS is < 0.0 for light species
+        ! This forces light species into hot zones and heavy species into cold zones
+           NewVertVel(iAlt,iSpecies) = NewVertVel(iAlt,iSpecies) - &
+             Dt*(ThermalDiffCoefS(iSpecies)*Boltzmanns_Constant*&
+                GradTemp(iAlt))/Mass(iSpecies)
 
      enddo
 

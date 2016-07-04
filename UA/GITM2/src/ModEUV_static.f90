@@ -82,6 +82,7 @@ module ModEUV
        PhotoAbs_CO, PhotoIon_CO2, PhotoIon_CO,        &
        PhotoAbs_CH4, PhotoAbs_H2, PhotoAbs_HCN,                     &
        PhotoIon_CH4, PhotoIon_H2, PhotoIon_HCN,                     &
+       PhotoAbs_He, &
        BranchingRatio_CO2_to_CO2Plus,BranchingRatio_CO2_to_OPlus,&
        BranchingRatio_CO2_to_COPlus,BranchingRatio_N2_to_N2Plus,&
 !!
@@ -376,6 +377,22 @@ module ModEUV
        2.17e-17, 1.64e-17, 1.69e-17, 1.39e-17, 1.17e-17, 1.17e-17,  &
        1.05e-17, 1.09e-17, 1.02e-17, 8.39e-18, 4.96e-18, 2.26e-18,  &
        7.20e-19/
+
+!!  JMB:  06/24/2016
+!! Helium Absorption Cross Sections:
+!! Assume that He only has one reaction:  He + hv -> He+
+!! Schunk and Nagy (2000)
+  data PhotoAbs_He /                                           &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18,    &
+       0.958e-18, 7.208e-18, 6.563e-18, 5.447e-18, 4.142e-18, 4.268e-18,    &
+       3.544e-18, 2.962e-18, 2.953e-18, 2.320e-18, 2.595e-18, 2.121e-18,    &
+       1.601e-18, 1.157e-18, 0.479e-18, 0.144e-18, 0.000e-18, 0.000e-18,    &
+       0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18, 0.000e-18/
 
 ! sigeuv(1,*):
   data PhotoAbs_O2 /                                                  &

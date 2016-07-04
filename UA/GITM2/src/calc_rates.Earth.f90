@@ -58,6 +58,9 @@ subroutine calc_rates(iBlock)
 
   do iAlt = 0, nAlts+1
      
+     ! JMB: 06/24/2016:  Added He Conduction contribution
+     ! kT = 3.736e-03 and s = 0.648
+
      KappaTemp(:,:,iAlt,iBlock) = &
           (NDensityS(1:nLons,1:nLats,iAlt,iO2_,iBlock) / &
           NDensity(1:nLons,1:nLats,iAlt,iBlock) + &
@@ -68,13 +71,23 @@ subroutine calc_rates(iBlock)
           (NDensityS(1:nLons,1:nLats,iAlt,iO_3P_,iBlock)/&
           NDensity(1:nLons,1:nLats,iAlt,iBlock)*ThermalConduction_AO) * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-          TempUnit(1:nLons,1:nLats,iAlt))**ThermalConduction_s
-        
+          TempUnit(1:nLons,1:nLats,iAlt))**ThermalConduction_s + &
+          (NDensityS(1:nLons,1:nLats,iAlt,iHe_,iBlock)/&
+            NDensity(1:nLons,1:nLats,iAlt,iBlock)*(3.736e-03)) * &
+          (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
+          TempUnit(1:nLons,1:nLats,iAlt))**0.648
+     
+
      ViscCoef(1:nLons,1:nLats,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
           TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
 
   enddo
+
+  ! Thermal Diffusion is zero for all but the lightest species
+  ! Banks and Kockarts suggest Alpha_T = -0.38 for He
+  ThermalDiffCoefS(1:nSpecies) = 0.0 
+  ThermalDiffCoefS(iHe_) = -0.38
 
   call end_timing("calc_rates")
 

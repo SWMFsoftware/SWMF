@@ -73,6 +73,9 @@ real, allocatable :: SpeciesDensityOld(:,:,:,:,:)
   real, allocatable :: Ke(:,:,:,:)
   real, allocatable :: dKe(:,:,:,:)
 
+  ! JMB:  06/24/2016
+  real, dimension(nSpecies) :: ThermalDiffCoefS
+
   real, dimension(nLons, nLats, nBlocksMax) :: &
        SurfaceAlbedo, SurfaceTemp,SubsurfaceTemp, tinertia, &
        dSubsurfaceTemp, dSurfaceTemp

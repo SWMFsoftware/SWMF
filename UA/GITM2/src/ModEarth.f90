@@ -8,18 +8,18 @@ module ModPlanet
 
   implicit none
 
-  integer, parameter :: iO_3P_  = 1
-  integer, parameter :: iO2_ = 2
-  integer, parameter :: iN2_ = 3
-  integer, parameter :: iN_4S_ =  4
-  integer, parameter :: iNO_   =  5
-  integer, parameter :: nSpecies = 5
+  integer, parameter :: iO_3P_   = 1
+  integer, parameter :: iO2_     = 2
+  integer, parameter :: iN2_     = 3
+  integer, parameter :: iN_4S_   = 4
+  integer, parameter :: iNO_     = 5
+  integer, parameter :: iHe_     = 6
+  integer, parameter :: nSpecies = 6
 
-  integer, parameter :: iN_2D_ =  6
-  integer, parameter :: iN_2P_ =  7
-  integer, parameter :: iH_    =  8
-  integer, parameter :: iHe_   =  9
-!  integer, parameter :: iAr_   = 10
+  integer, parameter :: iN_2D_ = 7
+  integer, parameter :: iN_2P_ = 8
+  integer, parameter :: iH_    = 9
+!  integer, parameter :: iAr_  = 10
   integer, parameter :: iCO2_  = 10
   integer, parameter :: iO_1D_ = 11
   integer, parameter :: nSpeciesTotal = 11
@@ -129,25 +129,30 @@ module ModPlanet
   ! These are for the neutral friction routine...
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
+  ! JMB: Updated the Diff0 and DiffExp to be dynamic use (nspecies, nspecies)
+  ! in the shape of the array
 
-  real, parameter, dimension(5, 5) :: Diff0 = 1.0e17 * reshape( (/ &
-       !   0       02      N2       N      NO
-       !--------------------------------------+
-       0.000,   0.969,  0.969,  0.969,  0.715,&              ! O
-       0.969,   0.000,  0.715,  0.969,  0.715,&              ! O2
-       0.969,   0.715,  0.000,  0.969,  0.527,&              ! N2
-       0.969,   0.969,  0.969,  0.000,  0.969, &             ! N
-       0.715,   0.715,  0.527,  0.969,  0.000 /), (/5,5/) )  ! NO
+!  ! 5-Species version (Omitting Helium)
+!  real, parameter, dimension(nSpecies, nSpecies) :: Diff0 = 1.0e17 * reshape( (/ &
+!       !   0       02      N2       N      NO
+!       !--------------------------------------+
+!       0.000,   0.969,  0.969,  0.969,  0.715,&              ! O
+!       0.969,   0.000,  0.715,  0.969,  0.715,&              ! O2
+!       0.969,   0.715,  0.000,  0.969,  0.527,&              ! N2
+!       0.969,   0.969,  0.969,  0.000,  0.969, &             ! N
+!       0.715,   0.715,  0.527,  0.969,  0.000 /), &
+!       (/nSpecies,nSpecies/) )  ! NO
 
-  ! These are the exponents
-  real, parameter, dimension(5, 5) :: DiffExp = reshape( (/ &
-       !   0      02      N2      N     NO
-       !---------------------------------+
-       0.000,  0.774,  0.774, 0.774,  0.750, &              ! O
-       0.774,  0.000,  0.750, 0.774,  0.750, &              ! O2
-       0.774,  0.750,  0.000, 0.774,  0.810, &              ! N2
-       0.774,  0.774,  0.774, 0.000,  0.774, &              ! N
-       0.750,  0.750,  0.810, 0.774,  0.000  /), (/5,5/) )  ! NO
+!  ! These are the exponents
+!  real, parameter, dimension(nSpecies, nSpecies) :: DiffExp = reshape( (/ &
+!       !   0      02      N2      N     NO
+!       !---------------------------------+
+!       0.000,  0.774,  0.774, 0.774,  0.750, &              ! O
+!       0.774,  0.000,  0.750, 0.774,  0.750, &              ! O2
+!       0.774,  0.750,  0.000, 0.774,  0.810, &              ! N2
+!       0.774,  0.774,  0.774, 0.000,  0.774, &              ! N
+!       0.750,  0.750,  0.810, 0.774,  0.000  /), &
+!       (/nSpecies,nSpecies/) )  ! NO
 
 ! Unknowns!!!!
 !  real, parameter, dimension(5, 5) :: Diff0 = 1.0e17 * reshape( (/ &
@@ -209,6 +214,36 @@ module ModPlanet
 
 !!!!!!!  real,  AltMinIono=100.0 ! in km
 
+  ! JMB:  Updated 06/24/2016
+  ! 5-Species version (Omitting Helium)
+  ! Updated the N2-O based upon Massman [1998] recommended values
+  ! Assumed N-He and  NO-He were the same as N2-He (just a guess)
+  real, parameter, dimension(nSpecies, nSpecies) :: Diff0 = 1.0e17 * reshape( (/ &
+       !-------------------------------------------+
+       !   0       02      N2    N      NO     He
+       !-------------------------------------------+
+       0.000,   0.969,  0.969,  0.969,  0.715, 3.440, & ! O
+       0.969,   0.000,  0.715,  0.969,  0.715, 3.208, & ! O2
+       0.969,   0.715,  0.000,  0.969,  0.527, 2.939, & ! N2
+       0.969,   0.969,  0.969,  0.000,  0.969, 2.939, & ! N
+       0.715,   0.715,  0.527,  0.969,  0.000, 2.939, & ! NO
+       3.440,   3.208,  2.939,  2.939,  2.939, 0.000  /), & !He
+       (/nSpecies,nSpecies/) ) 
+
+
+  ! These are the exponents
+  real, parameter, dimension(nSpecies, nSpecies) :: DiffExp = reshape( (/ &
+       !------------------------------------------+
+       !   0      02   N2     N       NO      He
+       !------------------------------------------+
+       0.000,  0.774,  0.774, 0.774,  0.750, 0.749, &      ! O
+       0.774,  0.000,  0.750, 0.774,  0.750, 0.710, &      ! O2
+       0.774,  0.750,  0.000, 0.774,  0.810, 0.718, &      ! N2
+       0.774,  0.774,  0.774, 0.000,  0.774, 0.718, &      ! N
+       0.750,  0.750,  0.810, 0.774,  0.000, 0.718, &      ! NO
+       0.749,  0.710,  0.718, 0.718,  0.718, 0.000  /), &  ! He
+       (/nSpecies,nSpecies/) )  
+
 contains
 
   subroutine init_planet
@@ -257,6 +292,7 @@ contains
     Vibration(iN2_)   = 7.0
     if (nSpecies > 3) Vibration(iN_4S_) = 5.0
     if (nSpecies > 4) Vibration(iNO_)   = 7.0
+    if (nSpecies > 5) Vibration(iHe_)   = 5.0
 
     MassI(iO_4SP_) = Mass(iO_3P_)
     MassI(iO_2DP_) = Mass(iO_3P_)

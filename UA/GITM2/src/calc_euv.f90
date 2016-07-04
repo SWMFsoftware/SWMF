@@ -699,8 +699,9 @@ enddo
      PhotoAbs_O       = PhotoAbs_O   / 10000.0
      PhotoAbs_N2      = PhotoAbs_N2  / 10000.0
      PhotoAbs_CH4     = PhotoAbs_CH4 / 10000.0
-     PhotoAbs_CO2      = PhotoAbs_CO2        / 10000.0
-     PhotoAbs_CO      = PhotoAbs_CO        / 10000.0
+     PhotoAbs_CO2      = PhotoAbs_CO2/ 10000.0
+     PhotoAbs_CO      = PhotoAbs_CO  / 10000.0
+     PhotoAbs_He       = PhotoAbs_He / 10000.0
 
      PhotoIon_O2      = PhotoIon_O2        / 10000.0
      PhotoIon_CO2      = PhotoIon_CO2        / 10000.0

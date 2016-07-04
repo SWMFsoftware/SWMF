@@ -17,8 +17,8 @@ subroutine fill_photo(photoion, photoabs, photodis)
   implicit none
 
   real, intent(out) :: photoion(Num_WaveLengths_High, nIons-1)
-  real, intent(out) :: photoabs(Num_WaveLengths_High, nSpecies)
-  real, intent(out) :: photodis(Num_WaveLengths_High, nSpecies)
+  real, intent(out) :: photoabs(Num_WaveLengths_High, nSpeciesTotal)
+  real, intent(out) :: photodis(Num_WaveLengths_High, nSpeciesTotal)
 
   integer :: iSpecies, iWave
 
@@ -26,7 +26,7 @@ subroutine fill_photo(photoion, photoabs, photodis)
   PhotoIon = 0.0
   PhotoDis = 0.0
 
-  photoabs(:,iO_3P_)     = PhotoAbs_O
+  photoabs(:,iO_3P_)  = PhotoAbs_O
   photoabs(:,iO2_)    = PhotoAbs_O2
 
   if (nSpecies > 2) then
@@ -38,6 +38,13 @@ subroutine fill_photo(photoion, photoabs, photodis)
      photoabs(:,min(iSpecies,nSpecies))    = PhotoIon_N
   endif
 
+  ! JMB:  06/25/2016
+  if (nSpecies > 5) then
+     iSpecies = iHe_
+     photoabs(:,min(iSpecies,nSpecies))    = PhotoAbs_He
+  endif
+
+
   ! This may need to be as defined below....
   photoion(:,iN2P_)   = PhotoIon_N2
   photoion(:,iO2P_)   = PhotoIon_O2
@@ -45,6 +52,7 @@ subroutine fill_photo(photoion, photoabs, photodis)
   photoion(:,iO_4SP_) = PhotoIon_OPlus4S
   photoion(:,iO_2DP_) = PhotoIon_OPlus2D
   photoion(:,iO_2PP_) = PhotoIon_OPlus2P
+  photoion(:,iHeP_)   = PhotoAbs_He
 
   do iWave = 1, Num_WaveLengths_High
      if (waves(iWave) >= 1250.0 .and. wavel(iWave) <= 1750.0) then

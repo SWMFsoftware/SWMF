@@ -62,6 +62,10 @@ real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: 
   real, dimension(nLons, nLats, 0:nAlts+1, nBlocksMax) :: &
        KappaTemp, Ke,dKe
 
+  ! JMB:  06/24/2016
+  real, dimension(1:nSpecies) :: &
+       ThermalDiffCoefS
+
   real, dimension(nLons, nLats, nBlocksMax) :: &
        SurfaceAlbedo, SurfaceTemp,SubsurfaceTemp, tinertia, &
        dSubsurfaceTemp, dSurfaceTemp
