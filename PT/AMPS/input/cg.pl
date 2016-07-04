@@ -643,7 +643,7 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
       
-      print "$InputLine\n";
+#     print "$InputLine\n";
       
       if (($InputLine eq "INJECTIONRATE") || ($InputLine eq "CORRECTIONFLUXRELATIVEH2O")) {
         if  ($InputLine eq "INJECTIONRATE") {
