@@ -107,7 +107,7 @@ contains
     use ModLookupTable,  ONLY: i_lookup_table
     use ModMultiFluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, & 
-         nPointThreadMax, HeatCondParSi
+         nPointThreadMax, HeatCondParSi, cExchangeRateSi
     use ModPhysics,            ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,         ONLY: Pe_, p_

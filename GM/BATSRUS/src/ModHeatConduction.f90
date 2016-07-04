@@ -244,7 +244,7 @@ contains
          *(2*cElectronMass/cProtonMass)    !*energy exchange per ei collision
     !\
     ! While used, this should be divided by TeSi**1.5 and multipled by
-    ! mass density, N_i in SI. We will apply dimensionless density
+    ! atomic density, N_i in SI. We will apply dimensionless density
     ! so that the transformation coefficient shoule be multiplied by 
     ! No2Si_V(UnitN_). We will employ dimensionless Te, therefore, we should 
     ! divide by No2Si_V(UnitTemperature_)**1.5. We also need to convert the 
