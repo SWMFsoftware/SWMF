@@ -285,6 +285,11 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 			  fetch_outputWrapperFPP().init_output_files(col,vct,grid,EMf,part,ns,testpart,nstestpart);
 		}
 		#endif
+#ifdef BATSRUS
+		if(col->getPicOutputFormat()==1 && col->getFieldOutputCycle()>0){
+		  fieldwritebuffer = newArr4(float,(grid->getNZN()-3),grid->getNYN()-3,grid->getNXN()-3,3);
+		}
+#else
 	  if(!col->field_output_is_off()){
 		  if(col->getWriteMethod()=="pvtk"){
 			  if(!(col->getFieldOutputTag()).empty())
@@ -301,6 +306,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 				  momentwritebuffer=newArr3(float,(grid->getNZN()-3)*14, grid->getNYN()-3, grid->getNXN()-3);
 		  }
 	  }
+#endif
   }
   Ke = new double[ns];
   BulkEnergy = new double[ns];
@@ -537,22 +543,21 @@ bool c_Solver::ParticlesMover()
 }
 
 void c_Solver::WriteOutput(int cycle) {
-
-  if(col->getCase()!="BATSRUS"){
-    // For MHD-EPIC, the following outputs are controlled by coupler.
-    WriteConserved(cycle);
-    WriteRestart(cycle);
-  }
-
 #ifdef BATSRUS
   write_plot_idl(cycle);
-#endif
+
+  if(col->getPicOutputFormat()==1){
+    if(col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
+      WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
+    }
+  }
+#else
+
+    WriteConserved(cycle);
+    WriteRestart(cycle);
   
-  if(!Parameters::get_doWriteOutput())  return;
-
-
-  if (col->getWriteMethod() == "nbcvtk"){//Non-blocking collective MPI-IO
-
+    if(!Parameters::get_doWriteOutput())  return;
+    if (col->getWriteMethod() == "nbcvtk"){//Non-blocking collective MPI-IO
 	  if(!col->field_output_is_off() && (cycle%(col->getFieldOutputCycle()) == 0 || cycle == first_cycle) ){
 		  if(!(col->getFieldOutputTag()).empty()){
 
@@ -654,7 +659,8 @@ void c_Solver::WriteOutput(int cycle) {
 			  invalid_value_error(col->getWriteMethod().c_str());
 			}
 		#endif
-  	  }
+    }
+#endif
 }
 
 void c_Solver::WriteRestart(int cycle)

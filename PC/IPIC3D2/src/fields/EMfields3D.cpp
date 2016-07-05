@@ -367,7 +367,7 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     MPI_Type_indexed(4, blocklengthN, displacementsN, MPI_DOUBLE, &cornertypeN);
     MPI_Type_commit(&cornertypeN);
 
-    if (col->getWriteMethod() == "pvtk" || col->getWriteMethod() == "nbcvtk"){
+    if (col->getWriteMethod() == "pvtk" || col->getWriteMethod() == "nbcvtk"  || col->getPicOutputFormat()==1){
     	//test Endian
     	int TestEndian = 1;
     	lEndFlag =*(char*)&TestEndian;
