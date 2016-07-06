@@ -113,6 +113,7 @@ public:
     std::vector<std::string> VariableList;
     int TrajectoryStartingFaceOffset;
     static int nTrajectoryVariables;
+    static int ParticleWeightOverTimeStepOffset;
     int nTotalTrajectories;
 
     //Individual Particle Trajectory
@@ -235,13 +236,25 @@ public:
   int size,rank;
 
   inline void InitMPI() {
-    //MPI_Init(NULL,NULL);
 
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+    MPI_Init(NULL, NULL);
+
+    #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
     int provided;
     MPI_Init_thread(NULL,NULL,MPI_THREAD_FUNNELED,&provided);
 
+    #else
+    #error Unknown option
+    #endif //_COMPILATION_MODE_
+
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
     MPI_Comm_size(MPI_COMM_WORLD,&size);
+
+    MPI_GLOBAL_COMMUNICATOR=MPI_COMM_WORLD;
+
+    //seed rnd generator
+    rnd_seed(100);
   }
 
   inline void FinalizeMPI() {
