@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+#select individual particle trajectories from AMPS' trajectory data file
+#$Id$
+
 print "File name=$ARGV[0]\n";
 
 open (FILE,"<$ARGV[0]") or die $!;
