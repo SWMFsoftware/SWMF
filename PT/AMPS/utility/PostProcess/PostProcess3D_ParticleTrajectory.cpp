@@ -12,6 +12,7 @@
 #include "ifileopr.h"
 
 int cPostProcess3D::cParticleTrajectory::nTrajectoryVariables=0;
+int cPostProcess3D::cParticleTrajectory::ParticleWeightOverTimeStepOffset=-1;
 
 //allocate individual trajectory data buffer
 void cPostProcess3D::cParticleTrajectory::cIndividualTrajectoryData::AllocateDataBuffer(int n) {
