@@ -146,17 +146,26 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
   if (fBinaryIn==NULL) {
     //read the data file
-    for (nline=0;nline<nNodes;nline++) {
-      ifile.GetInputStr(str,sizeof(str));
+#pragma omp parallel
+   {
+#pragma omp single
+     {
+      for (nline=0;nline<nNodes;nline++) {
+        ifile.GetInputStr(str,sizeof(str));
 
-      if (nline%size==rank) {
-        for (int i=0;i<nvars;i++) {
-          ifile.CutInputStr(str1,str);
-          data.data[nline][i]=atof(str1);
+        if (nline%size==rank) {
+#pragma omp task default(none) firstprivate(str,nline) private (str1) shared(nvars,ifile)
+          {
+            for (int i=0;i<nvars;i++) {
+              ifile.CutInputStr(str1,str);
+              data.data[nline][i]=atof(str1);
+            }
+          }
         }
+        else for (int i=0;i<nvars;i++) data.data[nline][i]=0.0;
       }
-      else for (int i=0;i<nvars;i++) data.data[nline][i]=0.0;
-    }
+     }
+   }
 
     //collect data from all processors
     int ExchangeBufferSize=(int)(20.0E6/(nvars*sizeof(double)));
