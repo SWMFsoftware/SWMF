@@ -52,6 +52,7 @@ namespace TRAJECTORY_FILTER {
   bool ProcessTrajectoriesInitFlag=false;
   double *FaceFluxCorrectionTable=NULL;
   bool *SelectedTrajectoriesTable=NULL;
+  bool *AcceptedTrajectoryFootprint=NULL;
 
   //the trajectory acceptance corridor
   struct cCorridor {
@@ -75,6 +76,14 @@ namespace TRAJECTORY_FILTER {
     int nTotalFaces=amps.SurfaceData.nCells;
     fwrite(&nTotalFaces,sizeof(int),1,fout);
     fwrite(FaceFluxCorrectionTable,sizeof(double),nTotalFaces,fout);
+
+    fclose(fout);
+
+    //save the accepted trajectory footprint table
+    fout=fopen("AcceptedTrajectoryFootrintTable.bin","w");
+
+    fwrite(&nTotalFaces,sizeof(int),1,fout);
+    fwrite(AcceptedTrajectoryFootprint,sizeof(bool),nTotalFaces,fout);
 
     fclose(fout);
   }
@@ -118,6 +127,15 @@ namespace TRAJECTORY_FILTER {
     cCorridor Exclude24={67,126,88,130,false,2,0.1};
     cCorridor Exclude25={105,165,125,176,false,2,0.1};
 
+    //Added on 06/20/16
+    cCorridor Exclude26={64,60,200,44,false,2,0.1};
+    cCorridor Exclude27={35,84,57,87,false,20,0.1};
+    cCorridor Exclude28={80,201,208,203,false,2,0.1};
+
+    //Added on 06/24/16
+    cCorridor Exclude29={91,132,05,132,true,2,0.1};
+
+
     vector<cCorridor> CorridorTable;
 
     CorridorTable.push_back(Include1);
@@ -152,6 +170,13 @@ namespace TRAJECTORY_FILTER {
     CorridorTable.push_back(Exclude24);
     CorridorTable.push_back(Exclude25);
 
+    //Added on 06/20/16
+    CorridorTable.push_back(Exclude26);
+    CorridorTable.push_back(Exclude27);
+    CorridorTable.push_back(Exclude28);
+
+    //Added on 06/20/16
+    CorridorTable.push_back(Exclude29);
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
@@ -165,6 +190,9 @@ namespace TRAJECTORY_FILTER {
     FaceFluxCorrectionTable=new double [amps.SurfaceData.nCells];
     for (i=0;i<amps.SurfaceData.nCells;i++) FaceFluxCorrectionTable[i]=1.0;
 
+    AcceptedTrajectoryFootprint=new bool [amps.ParticleTrajectory.nTotalTrajectories];
+    for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) AcceptedTrajectoryFootprint[i]=false;
+
     //go therough all corridor settings
     for (int npass=0;npass<2;npass++) {
       //during the first pass add all wanted trajectories
@@ -177,6 +205,13 @@ namespace TRAJECTORY_FILTER {
         else {
           if (CorridorTable[nCor].IncludeFlag==true) continue;
         }
+
+
+        time_t TimeValue=time(NULL);
+        tm *ct=localtime(&TimeValue);
+
+        printf(": (%i/%i %i:%i:%i), Pass=%i,Corridor Table Element=%i\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,npass,nCor);
+
 
         //in a pass process a face only ones
         int nface;
@@ -217,7 +252,7 @@ namespace TRAJECTORY_FILTER {
                   nface=(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7];
                   if (FaceInjectionRateModifiedFlag[nface]==false) {
                     FaceInjectionRateModifiedFlag[nface]=true;
-                    FaceFluxCorrectionTable[nface]=CorridorTable[nCor].AcceptanceProbability;
+                    FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
                   }
 
                   //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
@@ -237,6 +272,9 @@ namespace TRAJECTORY_FILTER {
 
             }
           }
+
+
+          if (SelectedTrajectoriesTable[nTrajectory]==true) AcceptedTrajectoryFootprint[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=true;
         }
       }
     }
@@ -248,46 +286,24 @@ namespace TRAJECTORY_FILTER {
   void PrintSelectedTrajectories(int nPrintedTrajectories,const char *fname) {
     int i,nt,cnt;
     vector<int> PrintedTrajectoriesTable;
+    vector<int> UnprocessedTrajectoryList;
 
-    int LoopCounter=0;
-    int maxLoopCounterLimit=10000;
-    bool ExitFlag=false;
+    //init the trajectory table
+    for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) if (SelectedTrajectoriesTable[i]==true) UnprocessedTrajectoryList.push_back(i);
 
     //output the header of the trajectory file
     amps.ParticleTrajectory.PrintDataFileHeader(fname);
 
     //output trajectories
-    for (cnt=0;(ExitFlag==false)&&(cnt<nPrintedTrajectories);cnt++) {
-      bool foundflag=false;
-
-      do {
-        foundflag=false;
-
-        LoopCounter++;
-        if (LoopCounter>maxLoopCounterLimit*nPrintedTrajectories) {
-          ExitFlag=true;
-          break;
-        } 
-
-        do {
-          nt=(int)(rnd()*amps.ParticleTrajectory.nTotalTrajectories);
-        }
-        while (SelectedTrajectoriesTable[nt]==false);
-
-        for (i=0;i<PrintedTrajectoriesTable.size();i++) if (PrintedTrajectoriesTable[i]==nt) {
-          foundflag=true;
-          break;
-        }
-      }
-      while (foundflag==true);
-
-      if (ExitFlag==true) break;
+    for (cnt=0;(cnt<nPrintedTrajectories)&&(UnprocessedTrajectoryList.size()!=0);cnt++) {
+      i=(int)(rnd()*UnprocessedTrajectoryList.size());
+      nt=UnprocessedTrajectoryList[i];
+      UnprocessedTrajectoryList.erase (UnprocessedTrajectoryList.begin()+i);
 
       PrintedTrajectoriesTable.push_back(nt);
       amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[nt],nt,fname);
     }
   }
-
 }
 
 
@@ -595,8 +611,9 @@ namespace SURFACE {
 
   //print the surface data
   void PrintVariableList(FILE *fout) {fprintf(fout," \"Shadow Flag\", \"cos(Solar Zenith Angle)\","
-      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\",\"Source Rate Correction Factor\", \"Corrected Dust Mass Production Rate\""); }
-  int GetVariableNumber() {return 8;}
+      " \"Sun Exposure Time\", \"cosSZA/Exposure Time\", \"H2O Source Rate/Exposure Time\", \"H2O Source Rate\",\"Source Rate Correction Factor\", \"Corrected Dust Mass Production Rate\","
+      " \"FootPrint flag\""); }
+  int GetVariableNumber() {return 9;}
 
   void GetFaceDataVector(double *DataVector,CutCell::cTriangleFace *face,int nface) {
     if (ILLUMINATION::IlluminationMap==NULL) exit(__LINE__,__FILE__,"Error: the illumination map need to be initalized first");
@@ -626,9 +643,10 @@ namespace SURFACE {
     }
 
     DataVector[7]=DustMassSourceRate*TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
+    DataVector[8]=(TRAJECTORY_FILTER::AcceptedTrajectoryFootprint[nface]==true) ? 1 : 0;
   }
 
-  void SaveCorrectedSourceRate() {
+  void SaveCorrectedSourceRate(double DustMassProductionLowLimit) {
     char fnameH2O[]="CorrectedFluxRelativeH2O.bin";
     char fnameDUST[]="CorrectedFluxRelativeDUST.bin";
     FILE *foutH2O,*foutDUST;
@@ -657,6 +675,9 @@ namespace SURFACE {
 
       FaceSourceRate_H2O*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
       DustMassSourceRate*=TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
+
+      //if ((DustMassSourceRate<DustMassProductionLowLimit)||(TRAJECTORY_FILTER::AcceptedTrajectoryFootprint[nface]==false)) DustMassSourceRate=0.0;
+      if (TRAJECTORY_FILTER::AcceptedTrajectoryFootprint[nface]==false) DustMassSourceRate=0.0;
 
       fwrite(&FaceSourceRate_H2O,sizeof(double),1,foutH2O);
       fwrite(&DustMassSourceRate,sizeof(double),1,foutDUST);
@@ -883,6 +904,9 @@ int main(int argc,char **argv) {
 
   amps.InitMPI();
   amps.SetBlockSize(5,5,5);
+
+  MPI_GLOBAL_COMMUNICATOR=MPI_COMM_WORLD;
+  rnd_seed(100);
 
 
 /*
@@ -1162,16 +1186,18 @@ return 1;
  // amps.SaveDataFile("Res.dat", amps.data);
 
 
-  amps.FinalizeMPI();
+//  amps.FinalizeMPI();
 
   //output of the flux correction table
   if (amps.rank==0) {
     TRAJECTORY_FILTER::SaveFluxCorrectionTable();
-    SURFACE::SaveCorrectedSourceRate();
+    SURFACE::SaveCorrectedSourceRate(2.0E-6);
   }
 
 
   //finish the execution with success
+  MPI_Barrier(MPI_COMM_WORLD);
+  amps.FinalizeMPI();
   printf("done.\n");
   return 1;
 }
