@@ -101,7 +101,7 @@ endif
 
 
 ifneq ($(KAMELEON),nokameleon)
-	AMPSLINKLIB+=${KAMELEON}/lib/ccmc/libccmc.dylib 
+	AMPSLINKLIB+=/Users/ccmc/miniconda2/envs/kameleon/lib/ccmc/libccmc.dylib  
 endif
 
 ifneq ($(SPICE),nospice)
