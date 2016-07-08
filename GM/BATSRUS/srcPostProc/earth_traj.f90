@@ -22,32 +22,22 @@ program earth_traj
 
   implicit none
 
-  real :: R, msec
+  real :: R, Xyz_D(3)
   real :: StartTimeRel=0.0, EndTimeRel=0.0, TimeStep=0.0
-  real(Real8_) :: StartTime, EndTime, CurrentTime
-  character(len=128), allocatable, dimension(:)  :: arg
-  integer, allocatable, dimension(:) :: len_arg
+  real :: StartTime, EndTime, CurrentTime
   character(len=32) :: NameCommand
   character(len=32) :: NameFile
   character(len=3)  :: CoordSys
-  character(len=32) :: cDate
-  character(len=32) :: cTimeLoop
   integer, dimension(7) :: iStartTime, iCT
-  integer :: i, j, k, iFile
-  integer ::  ios, ic1, ic2
-  integer iarg, errno, argc, oUnit
- 
-
-  !
-  ! Command line argument processing
-  !
-
+  integer :: i, iFile
+  integer :: oUnit
+  !-----------------
 
   !
   ! Parse the command line arguments
   !
-  NameFile='EARTH_TRAJ.in'
   iFile = 10
+  NameFile='EARTH_TRAJ.in'
   open(iFile,file=NameFile,status='old')
   READPARAM: do 
      read(iFile,'(a)',end=9000,err=9000) NameCommand
@@ -116,7 +106,6 @@ program earth_traj
 
   CurrentTime = StartTime + StartTimeRel
   EndTime = StartTime + EndTimeRel
-
   do while(CurrentTime <= EndTime)
      call time_real_to_int(CurrentTime, iCT)
      call CON_recalc(iCT(1), iCT(2), iCT(3), iCT(4), iCT(5), iCT(6))
@@ -126,7 +115,8 @@ program earth_traj
      case('HGI')
         write(oUnit,'(7i4,3f12.2)') iCT, Sun2EarthDirHgi_D*SunEMBDistance*R
      case('HGR')
-        write(oUnit,'(7i4,3f12.2)') iCT,  matmul(HgrHgi_DD,Sun2EarthDirHgi_D)*SunEMBDistance*R
+        Xyz_D =  matmul(HgrHgi_DD,Sun2EarthDirHgi_D)
+        write(oUnit,'(7i4,3f12.2)') iCT, Xyz_D*SunEMBDistance*R
      end select
      CurrentTime = CurrentTime + TimeStep
   end do
