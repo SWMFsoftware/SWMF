@@ -71,7 +71,7 @@ module ModFieldLineThread
      !\
      !  Thread solution: temperature and pressure SI
      !/
-     real,pointer :: TSi_III(:,:,:),PSi_III(:,:,:)
+     real,pointer :: TeSi_III(:,:,:),TiSi_III(:,:,:),PSi_III(:,:,:)
      !\
      ! number of points
      !/
@@ -214,7 +214,8 @@ contains
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
     nullify(BoundaryThreads_B(iBlock) % TGrav_III)
-    nullify(BoundaryThreads_B(iBlock) % TSi_III)
+    nullify(BoundaryThreads_B(iBlock) % TeSi_III)
+    nullify(BoundaryThreads_B(iBlock) % TiSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
@@ -231,7 +232,8 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
     deallocate(BoundaryThreads_B(iBlock) % TGrav_III)    
-    deallocate(BoundaryThreads_B(iBlock) % TSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % TeSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % TiSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
@@ -287,7 +289,9 @@ contains
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
-          allocate(BoundaryThreads_B(iBlock) % TSi_III(&
+          allocate(BoundaryThreads_B(iBlock) % TeSi_III(&
+               -nPointThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % TiSi_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
@@ -388,7 +392,8 @@ contains
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
     BoundaryThreads_B(iBlock) % TGrav_III = 0.0
-    BoundaryThreads_B(iBlock) % TSi_III = -1.0
+    BoundaryThreads_B(iBlock) % TeSi_III = -1.0
+    BoundaryThreads_B(iBlock) % TiSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
@@ -777,8 +782,12 @@ contains
          CoulombLog/sqrt(cElectronMass)*  &!\
          ( cElectronCharge**2 / cEps)**2 /&!effective ei collision frequency
          ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
-         *(2*cElectronMass/cProtonMass)    !*energy exchange per ei collision
-
+         *(2*cElectronMass/cProtonMass)  /&!*energy exchange per ei collision
+         cBoltzmann
+    !\
+    ! an ultimate energy density equals 
+    ! Z/(\gamma -1)*cExchangeRateSi*(Te -Ti)/Te^{7/2}Pe^2
+    !/
 
 
     iTable =  i_lookup_table('TR')
