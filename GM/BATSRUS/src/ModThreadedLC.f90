@@ -293,7 +293,7 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer        :: nPoint, iPoint 
-    integer        :: nIter = 20
+    integer        :: nIter = 40
     !\
     ! Corrrect density and pressure values in the ghost 
     !/
@@ -680,7 +680,7 @@ contains
          !/
          if(FluxConst/=0.0)EnthalpyFlux = sign(min(abs(EnthalpyFlux),&
                0.50*HeatFlux2TR/TeSi_I(1)),FluxConst)
-         ElectronEnthalpyFlux = EnthalpyFlux
+         ElectronEnthalpyFlux = EnthalpyFlux*Z/(1 + Z)
          if(USi>0)then
             ResEnthalpy_I(2:nPoint-1) = &
                  ElectronEnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
@@ -729,8 +729,8 @@ contains
               (3.50*Cons_I(1:nPoint-1))
          M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
               DtInv*SpecIonHeat_I(1:nPoint-1)
-         !   PressureTRCoef = sqrt(max(&
-         !        1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))        
+         PressureTRCoef = sqrt(max(&
+              1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))        
          Res_VI(Cons_,1:nPoint-1) = -DeltaEnergy_I(1:nPoint-1) +      &
               ResHeating_I(1:nPoint-1)*QeRatio +  ResCooling_I(1:nPoint-1) +&
               ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1) +&
