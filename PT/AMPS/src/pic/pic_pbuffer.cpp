@@ -132,7 +132,8 @@ long int PIC::ParticleBuffer::GetAllPartNum() {
 
 long int PIC::ParticleBuffer::GetParticleDataLength() {return ParticleDataLength;}
 
-long int PIC::ParticleBuffer::GetNewParticle() {
+//option RandomThreadOpenMP==true can be used ONLY when the code is outside of any OpenMP sections
+long int PIC::ParticleBuffer::GetNewParticle(bool RandomThreadOpenMP) {
   long int newptr;
   byte *pdataptr;
 
@@ -145,7 +146,9 @@ long int PIC::ParticleBuffer::GetNewParticle() {
   FirstPBufferParticle=GetNext(pdataptr);
 
 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  int thread=omp_get_thread_num();
+  int thread; //=omp_get_thread_num();
+
+  thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
   if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
 
   Thread::AvailableParticleListLength[thread]--;
@@ -173,7 +176,8 @@ long int PIC::ParticleBuffer::GetNewParticle() {
   return newptr;
 }
 
-long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
+//option RandomThreadOpenMP==true can be used ONLY when the code is outside of any OpenMP sections
+long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle,bool RandomThreadOpenMP) {
   long int newptr;
   byte *pdataptr;
 
@@ -186,7 +190,9 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
   FirstPBufferParticle=GetNext(pdataptr);
 
 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  int thread=omp_get_thread_num();
+  int thread; //=omp_get_thread_num();
+
+  thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
   if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
 
   Thread::AvailableParticleListLength[thread]--;
@@ -254,7 +260,9 @@ void PIC::ParticleBuffer::DeleteParticle(long int ptr) {
   DeleteParticle_withoutTrajectoryTermination(ptr);
 }
 
-void PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(long int ptr) {
+
+//option RandomThreadOpenMP==true can be used ONLY when the code is outside of any OpenMP sections
+void PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(long int ptr,bool RandomThreadOpenMP) {
 
 //#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
   if (IsParticleAllocated(ptr)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");
@@ -266,8 +274,9 @@ void PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(long int p
   SetNext(FirstPBufferParticle,ptr);
   FirstPBufferParticle=ptr;
 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  int thread=omp_get_thread_num();
+  int thread; //=omp_get_thread_num();
 
+  thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
   Thread::AvailableParticleListLength[thread]++;
   SetNext(Thread::FirstPBufferParticle[thread],ptr);
   Thread::FirstPBufferParticle[thread]=ptr;

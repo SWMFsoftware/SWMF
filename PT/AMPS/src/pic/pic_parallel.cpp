@@ -384,7 +384,7 @@ void PIC::Parallel::ExchangeParticleData() {
               sendParticleCounter++;
 
               NextParticle=PIC::ParticleBuffer::GetNext(Particle);
-              PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(Particle);
+              PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(Particle,true);
               Particle=NextParticle;
             }
 
@@ -484,7 +484,7 @@ void PIC::Parallel::ExchangeParticleData() {
 //         newParticle=PIC::ParticleBuffer::GetNewParticle(recvNode->block->GetCenterNode(LocalCellNumber)->FirstCellParticle);
 //         newParticle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
 
-         newParticle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]);
+         newParticle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)],true);
 
 
          PIC::ParticleBuffer::UnPackParticleData(buffer+offset,newParticle);

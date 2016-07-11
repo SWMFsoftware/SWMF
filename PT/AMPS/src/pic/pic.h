@@ -1726,8 +1726,8 @@ namespace PIC {
     long int GetAllPartNum();
     long int GetParticleDataLength();
 
-    long int GetNewParticle();
-    long int GetNewParticle(long int&);
+    long int GetNewParticle(bool RandomThreadOpenMP=false);
+    long int GetNewParticle(long int&,bool RandomThreadOpenMP=false);
 
     /*DeleteParticle_withoutTrajectoryTermination() acts as  DeleteParticle() when _PIC_PARTICLE_TRACKER_MODE_  == _PIC_MODE_OFF_;
      if _PIC_PARTICLE_TRACKER_MODE_  == _PIC_MODE_ON_ DeleteParticle_withoutTrajectoryTermination() does not terminate sampling of the particle trajectory; the function should be used only
@@ -1735,7 +1735,7 @@ namespace PIC {
     */
     void DeleteParticle(long int);
     void DeleteParticle(long int,long int&);
-    void DeleteParticle_withoutTrajectoryTermination(long int);
+    void DeleteParticle_withoutTrajectoryTermination(long int,bool RandomThreadOpenMP=false);
 
     void CloneParticle(long int,long int);
     void CloneParticle(byte*,byte*);
