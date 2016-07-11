@@ -1,6 +1,0 @@
-
-#INNERBOUNDARY
-float			innerBCtype 
-float			InnerBCTypeBody2  !This is read only if UseBody2=.true.
-
-#END
