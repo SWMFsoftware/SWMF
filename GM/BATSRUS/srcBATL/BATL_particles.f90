@@ -222,8 +222,8 @@ contains
       !-----------------------------------------------------------------------
       ! reset parameters of the message_pass for this kind of particles
       nSend_P       = 0; nRecv_P = 0
-      iSendOffset_I =-1
-      iProcTo_I     = iProc
+      iSendOffset_I(1:nParticle) =-1
+      iProcTo_I(    1:nParticle) = iProc
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle

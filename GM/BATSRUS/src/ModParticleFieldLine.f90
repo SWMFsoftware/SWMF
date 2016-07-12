@@ -51,9 +51,13 @@ module ModParticleFieldLine
   ! indices of a particle
   integer, parameter:: &
        ! field line this particle lays on
-       fl_    = 1, &
+       fl_        = 1, &
        ! index of the particle along this field line
-       Index_ = 2
+       id_        = 2, &
+       ! alignment of particle numbering with direction of B field:
+       ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
+       ! when magnetic field general direction may be inward
+       Alignment_ = 3
 
   ! spatial step limits at the field line extraction
   real   :: SpaceStepMin = 0.0
@@ -68,16 +72,14 @@ module ModParticleFieldLine
   integer, parameter:: nVarParticleEnd = 10
 
   ! number of indices
-  integer, parameter:: nIndexParticle = 2
+  integer, parameter:: nIndexParticleReg = 2
+  integer, parameter:: nIndexParticleEnd = 3
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
 
   ! number of active field lines
   integer:: nFieldLine = 0
-
-  ! keep track of number of particles per field line
-  integer :: nParticleFieldLine_I(nFieldLineMax) = 0
 
   !\
   ! initialization related info
@@ -159,8 +161,8 @@ contains
     Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
     Particle_I(KindReg_)%nVar   = nVarParticleReg
     Particle_I(KindEnd_)%nVar   = nVarParticleEnd
-    Particle_I(KindReg_)%nIndex = nIndexParticle
-    Particle_I(KindEnd_)%nIndex = nIndexParticle
+    Particle_I(KindReg_)%nIndex = nIndexParticleReg
+    Particle_I(KindEnd_)%nIndex = nIndexParticleEnd
     call allocate_particles
     if(nLineInit > 0)&
          ! extract initial field lines
@@ -172,13 +174,17 @@ contains
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
-    ! and backward up until it reaches boundaries of the domain
+    ! and backward up until it reaches boundaries of the domain;
+    ! requested coordinates may be different for different processor,
+    ! if a certain line can't be started on a given processor, it is
+    ! ignored, thus duplicates are avoided
     !------------------------------------------------------------------------
     integer,           intent(in):: nFieldLineIn
     real,              intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
     integer, optional, intent(in):: iTraceModeIn
 
-    integer :: nLineThisProc ! number of new field lines initialized
+    integer :: nLineThisProc ! number of new field lines initialized locally
+    integer :: nLineAllProc  ! number of new field lines initialized globally
     integer :: iFieldLine    ! loop variable
     integer :: iBlock
     integer :: nParticleOld  ! number of already existing regular particles
@@ -189,11 +195,6 @@ contains
 
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
-
-    ! alignment of particle numbering with direction of B field:
-    ! ( -1 -> reversed, +1 -> aligned)
-    ! for radial ordering when magnetic field general direction may be inward
-    integer:: iAlignment_I(nFieldLine+1: nFieldLine+nFieldLineIn)
 
     ! mode of tracing (see description below)
     integer:: iTraceMode
@@ -233,9 +234,11 @@ contains
        XyzStart_D = XyzStart_DI(:, iFieldLine) 
        call start_line(XyzStart_D, nFieldLine + iFieldLine)
     end do
-    call get_alignment()
 
-    nFieldLine    = nFieldLine + nFieldLineIn
+    ! how many lines have been started on all processors
+    call count_new_lines()
+
+    nFieldLine    = nFieldLine + nLineAllProc
     if(nFieldLine > nFieldLineMax)&
          call CON_stop(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
@@ -244,7 +247,8 @@ contains
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
        if(abs(iTraceModeIn) > 1)&
-            call CON_stop(NameThisComp//':'//NameSub//': incorrect tracing mode')
+            call CON_stop(&
+            NameThisComp//':'//NameSub//': incorrect tracing mode')
        iTraceMode = iTraceModeIn
     else
        iTraceMode = 0
@@ -258,6 +262,10 @@ contains
     ! +1 -> trace lines forward only
     !       do iDirTracs =  1,  1, 2
     do iDirTrace = 2*max(iTraceMode,0)-1, 2*min(iTraceMode,0)+1, 2
+
+       ! fix alignment of particle indexing with B field direction
+       call get_alignment()
+
        TRACE: do
           ! copy last known coordinates to Auxilary 
           StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
@@ -283,7 +291,7 @@ contains
              StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                   iDirTrace * StateEnd_VI(Aux_, iParticle) * &
                   cTwoThird * Dir1_D * &
-                  iAlignment_I(iIndexEnd_II(fl_, iParticle))
+                  iIndexEnd_II(Alignment_, iParticle)
           end do
           !\
           ! Message pass: some particles may have moved to different procs
@@ -316,7 +324,7 @@ contains
              StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
                   iDirTrace * StateEnd_VI(Aux_, iParticle) * &
                   (0.25 * Dir1_D + 0.75 * Dir2_D) * &
-                  iAlignment_I(iIndexEnd_II(fl_, iParticle))
+                  iIndexEnd_II(Alignment_, iParticle)
           end do
           !\
           ! Message pass: some particles may have moved to different procs
@@ -335,8 +343,8 @@ contains
           if(is_complete()) EXIT TRACE
 
           ! increase particle index & copy to regular
-          iIndexEnd_II(Index_,1:Particle_I(KindEnd_)%nParticle) = &
-               iIndexEnd_II(Index_,1:Particle_I(KindEnd_)%nParticle) + &
+          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
                iDirTrace
           call copy_end_to_regular
 
@@ -351,8 +359,8 @@ contains
           ! i.e. occupy positions from (nParticleOld+1)
           StateEnd_VI(x_:z_, 1:nLineThisProc) = &
                StateReg_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
-          iIndexEnd_II( :,   1:nLineThisProc) = &
-               iIndexReg_II( :,   nParticleOld+1:nParticleOld+nLineThisProc)
+          iIndexEnd_II(0:id_,1:nLineThisProc) = &
+               iIndexReg_II(0:id_,nParticleOld+1:nParticleOld+nLineThisProc)
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
@@ -401,7 +409,7 @@ contains
       iIndexEnd_II(fl_,  Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
 
       ! set index for initial particle to be 0
-      iIndexEnd_II(Index_,Particle_I(KindEnd_)%nParticle) = 0
+      iIndexEnd_II(id_,Particle_I(KindEnd_)%nParticle) = 0
       iIndexEnd_II(0,     Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
     !========================================================================
@@ -436,30 +444,36 @@ contains
       DoExcludeOut = all(B_D==0)
     end function do_exclude
     !========================================================================
-    subroutine get_alignment()
+    subroutine count_new_lines()
+      ! gather information from all processors on how many new field lines
+      ! have been started
       use ModMpi
       use BATL_mpi, ONLY: iComm
+      integer:: iError
+      !------------------------------------------------------------------------
+      call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
+           MPI_INTEGER, MPI_SUM, iComm, iError)
+    end subroutine count_new_lines
+    !========================================================================
+    subroutine get_alignment()
       ! determine alignment of particle indexing with direction 
       ! of the magnetic field
-      integer:: iParticle, iError
+      integer:: iParticle
       real:: Dir_D(MaxDim)
       !------------------------------------------------------------------------
       if(iOrderMode == Field_)then
-         iAlignment_I = 1
+         iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
          RETURN
       end if
 
-      iAlignment_I = 0
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
          call get_b_dir(&
               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
               iBlock=iIndexEnd_II(0,iParticle),&
               Dir_D = Dir_D)
-         iAlignment_I(iIndexEnd_II(fl_, iParticle)) = &
+         iIndexEnd_II(Alignment_, iParticle) = &
               nint( SIGN(1.0, sum(Dir_D*StateEnd_VI(x_:z_,iParticle))) )
       end do
-      call MPI_Allreduce(MPI_IN_PLACE, iAlignment_I, nFieldLineIn, &
-           MPI_INTEGER, MPI_SUM, iComm, iError)
     end subroutine get_alignment
     !========================================================================
     function is_complete() result(IsCompleteOut)
@@ -479,7 +493,7 @@ contains
     subroutine copy_end_to_regular
       ! copies indicated variables of known end particles to regular particles
       integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
-      integer, parameter:: iIndexCopy_I(3) = (/0, fl_, Index_/)
+      integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
       !----------------------------------------------------------------------
       StateReg_VI(iVarCopy_I,&
            Particle_I(KindReg_)%nParticle+1:&
@@ -495,8 +509,6 @@ contains
       ! also update the counter of particles per field line
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
          iFieldLine = iIndexEnd_II(fl_,iParticle)
-         nParticleFieldLine_I(iFieldLine) = &
-              nParticleFieldLine_I(iFieldLine) + 1
       end do
     end subroutine copy_end_to_regular
     !========================================================================
@@ -654,7 +666,7 @@ contains
 
     ! mask for returning variables
     logical:: DoReturnVar_V(nVarParticleReg)
-    logical:: DoReturnIndex_I(0:nIndexParticle)
+    logical:: DoReturnIndex_I(0:nIndexParticleReg)
     ! number of variables/indices found in the request string
     integer:: nVarOut, nIndexOut
     ! loop variables
