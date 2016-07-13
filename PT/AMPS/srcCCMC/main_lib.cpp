@@ -261,9 +261,11 @@ void amps_init() {
 	}*/
 
 	//read the domain size from the data file
+  char BackgroundDataFileName[]="amps.Background.data.cdf";
+
 #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
   #ifndef _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
-	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
+	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,BackgroundDataFileName);
   #endif //_CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
 
 	if (PIC::ThisThread==0) {
@@ -331,12 +333,12 @@ void amps_init() {
   else {
 
     #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
-    char BackgroundDataFileName[]="amps.Background.data.cdf";
+/*    char BackgroundDataFileName[]="amps.Background.data.cdf";
 
     if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
       //substitute the file name on that used in tests
       sprintf(BackgroundDataFileName,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
-    }
+    }*/
 
 	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(BackgroundDataFileName);
 
