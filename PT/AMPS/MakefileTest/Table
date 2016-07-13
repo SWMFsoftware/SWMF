@@ -244,7 +244,7 @@ Run=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run..." >> test_CCMC-Individual_Trajectories--KAMELEON.diff
 >>>cp /Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/amps.Background.data.cdf
 >>>cp input/ccmc.InjectionLocation.dat ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}
->>>cd ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}; ${MPIRUN} -np 4 ./amps
+>>>cd ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}; ${MPIRUN}  ./amps
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run... done" >> test_CCMC-Individual_Trajectories--KAMELEON.diff
 
 Check=
