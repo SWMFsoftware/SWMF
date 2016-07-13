@@ -230,6 +230,34 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
+Name=CCMC-Individual_Trajectories--KAMELEON@@(0+valeriy)
+Time=3
+
+Compile=
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile..." > test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>./Config.pl -application=CCMC-Individual_Trajectories--kameleon -cplr-data-path=. -model-data-path=.  -boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -link-option=-lc++  -amps-test=on -cplr-data-path=./ -model-data-path=./
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile... done" >> test_CCMC-Individual_Trajectories--KAMELEON.diff
+
+Run=
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run..." >> test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>cp /Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/amps.Background.data.cdf
+>>>cp input/ccmc.InjectionLocation.dat ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}
+>>>cd ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}; ${MPIRUN} -np 4 ./amps
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run... done" >> test_CCMC-Individual_Trajectories--KAMELEON.diff
+
+Check=
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
+>>>output/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON--output.diff
+>>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON--output.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
+>>>output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON.diff
+<#
+-------------------------------------------------------------------------------
+#>
 Name=Europa-test1
 Time=2
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
