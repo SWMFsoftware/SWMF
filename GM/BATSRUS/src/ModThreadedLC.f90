@@ -293,7 +293,7 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer        :: nPoint, iPoint 
-    integer        :: nIter = 40
+    integer        :: nIter = 20
     !\
     ! Corrrect density and pressure values in the ghost 
     !/
@@ -437,16 +437,16 @@ contains
     ! in with the solution of the threaded field line equation at the 
     ! end point.
     !/
-    FirstOrderRho   = RhoNoDimCoef*PSi_I(nPoint)/&
+    FirstOrderRho   = RhoNoDimCoef*PSi_I(nPoint)*Z/&
          (Z*TeSi_I(nPoint) + TiSi_I(nPoint))
-    FirstOrderPeSi  = PSi_I(nPoint)*TeSi_I(nPoint)/&
+    FirstOrderPeSi  = PSi_I(nPoint)*TeSi_I(nPoint)*Z/&
          (Z*TeSi_I(nPoint) + TiSi_I(nPoint))
 
     !\
     ! Second order solution consists of two contributions, the first of them
     ! being the correction of true cell values. Calculate the true density:
     !/
-    RhoTrueCell = RhoNoDimCoef*PeSiIn/(Z*TeSiIn)
+    RhoTrueCell = RhoNoDimCoef*PeSiIn/TeSiIn
 
     ! The pressure in the ghost cell should be corrected corrected for
     ! a barometric scale factor, as a consequence of the hydrostatic 
@@ -579,8 +579,8 @@ contains
       !GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
       do iPoint = 2, nPoint
          PSi_I(iPoint) = PSi_I(iPoint-1)*&
-            exp( -2*BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k)&
-            /(TeSi_I(iPoint)+TiSi_I(iPoint)))
+            exp( -BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k)*&
+           (Z + 1)/(Z*TeSi_I(iPoint) + TiSi_I(iPoint)))
       end do
     end subroutine set_pressure
  !======================
@@ -969,20 +969,22 @@ contains
       ! We satisfy the equation, d(LogP) = d(Cons)*(dPAvr/dCons)_{TR}/PAvr
       !/
       M_VVI(LogP_,Cons_,1) = -1/&
-              Value_V(HeatFluxLength_)
+              Value_V(HeatFluxLength_) + TiSi_I(1)/&
+              (3.5*Cons_I(1)*(Z*TeSi_I(1) + TiSi_I(1)))
+      M_VVI(LogP_,Ti_,1)   = -1/(Z*TeSi_I(1) + TiSi_I(1))
 
       !\
       ! For other points we satisfy the hydrostatic equilibrium condition
       ! LogPe^{i-1}=LogPe^i+TGrav/Te^i
       ! dLogPe^i - dCons^i(TGrav/(Te^i)^2)*dTe/dCons -dLogPe^{i-1}=0
       !/
-      M_VVI(LogP_,Cons_,2:nPoint-1) = -2*&
+      M_VVI(LogP_,Cons_,2:nPoint-1) = -(Z + 1)*Z*&
            BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
-           (TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2*&
+           (Z*TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2*&
            TeSi_I(2:nPoint-1)/(3.50*Cons_I(2:nPoint-1))
-      M_VVI(LogP_,Ti_,2:nPoint-1) = -2*&
+      M_VVI(LogP_,Ti_,2:nPoint-1)   = -(Z + 1)*&
            BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
-           (TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2
+           (Z*TeSi_I(2:nPoint-1) + TiSi_I(2:nPoint-1))**2
 
       L_VVI(LogP_,LogP_,2:nPoint-1) = -1.0
 
@@ -991,11 +993,11 @@ contains
            -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
       M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
            (-DResCoolingOverDT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
-           (TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*TeSi_I(1:nPoint-1))/&
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*TeSi_I(1:nPoint-1))/&
            (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
       M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
            2*ResCooling_I(1:nPoint-1)/&
-           (TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/dCons
+           (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/dCons
            
     end subroutine get_heat_cond
     !===========================
