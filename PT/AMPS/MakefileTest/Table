@@ -63,6 +63,13 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
+
+Compile=
+>>>@echo "test_CCMC_compile..." > test_CCMC.diff
+>>>./Config.pl -application=test/ccmc-test -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/CCMC  -amps-test=on $(TESTCCMCKEYS) 
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_CCMC_compile... done" >> test_CCMC.diff
 <#
 -------------------------------------------------------------------------------
 #>
