@@ -499,17 +499,23 @@ int main(int argc,char **argv) {
   //init reading of the electron pressure data from the BATSRUS TECPLOT data file
 //  PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.allocate=true;
 
+ // PIC::nRunStatisticExchangeIterationsMax=20.0; 
+
+
   //init the particle solver
   PIC::InitMPI();
-
-
-  //seed the random number generatore
-  if (_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_) {
-    rnd_seed(100); 
-  }
-
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
+
+  PIC::Alarm::SetAlarm(8*3600-5*60);
+
+  //seed the random number generator
+  rnd_seed(100);
+
+
+/*#pragma omp parallel for
+  for (int i=0;i<20;i++) printf("%e\n",rnd());*/
+
 
   double xmin[3]={0.0,-1.0,1.0};
   double xmax[3]={1.0,1.0,2.0};
@@ -522,11 +528,7 @@ int main(int argc,char **argv) {
 
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
-#if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
-#elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
-#endif
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -559,8 +561,15 @@ int main(int argc,char **argv) {
   CGSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
   CG=(cInternalNastranSurfaceData*) CGSurfaceDescriptor.BoundaryElement;
 
+//  CG->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
+//  CG->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
+
   CG->InjectionRate=Comet::GetTotalProduction;
   CG->faceat=0;
+//  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
+//  CG->InjectionBoundaryCondition=CG::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+//  Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
+  //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
   Comet::GetNucleusNastranInfo(CG);
 
@@ -899,13 +908,18 @@ int main(int argc,char **argv) {
     }
 #endif  
 
+  //scale the particle weight of the dust species
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+    PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*=100;
+  }
+
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(2000000);
+  PIC::ParticleBuffer::Init(50000000);
  
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -950,7 +964,7 @@ int main(int argc,char **argv) {
   int LastDataOutputFileNumber=-1;
 
   //the total number of iterations 
-  int nTotalIterations=5400;
+  int nTotalIterations=540000;
 
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=10; //50
 
@@ -1103,7 +1117,7 @@ int main(int argc,char **argv) {
       time_t TimeValue=time(NULL);
       tm *ct=localtime(&TimeValue);
 
-      printf(": (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+      printf(": (%i/%i %i:%i:%i), Iteration: %ld  (current sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
     }
 
 

@@ -62,14 +62,12 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     t=0.0;
 
-/*
     if (Comet::BjornNASTRAN::SurfaceInjectionProbability[spec].ProbabilityDensityTable!=NULL) {
       for (i=0;i<StencilLength;i++) {
         nface=Stencil[i];
         t+=InterpolationWeightList[i]*Comet::BjornNASTRAN::SurfaceInjectionProbability[spec].ProbabilityDensityTable[nface]/CutCell::BoundaryTriangleFaces[nface].SurfaceArea;
       }
     }
-*/
 
     fprintf(fout," %e",t);
   }
