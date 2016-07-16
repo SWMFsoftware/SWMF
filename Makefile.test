@@ -972,10 +972,10 @@ test9th:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test9th_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS_share,GM/BATSRUS
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=GM:u=ScChromo,e=MhdWavesPeSignB
-	./Config.pl -g=SC:4,4,4,1200,1,GM:4,4,4,6800,1
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
 
