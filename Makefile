@@ -478,8 +478,6 @@ IH/BATSRUS/src/Makefile:
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
-		IH/BATSRUS/srcInterface/IH_wrapper.f90
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -529,7 +527,7 @@ OH/BATSRUS/src/Makefile:
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../OH/BATSRUS/
 	cd OH/BATSRUS/src; rm -f main.f90
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
 
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
@@ -577,7 +575,7 @@ SC/BATSRUS/src/Makefile:
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90
 	cd SC/BATSRUS/srcInterface/; \
 	perl -i -pe \
