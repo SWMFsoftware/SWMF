@@ -1039,6 +1039,40 @@ namespace PIC {
   //the interface used to use AMPS as a particle tracker in CCMC
   namespace CCMC {
 
+  extern char BackgroundDataFileName[_MAX_STRING_LENGTH_PIC_];
+
+  //size of the computational domain
+  namespace Domain {
+    extern double xmin[3],xmax[3];
+
+    //Local Cell Resolution
+    namespace Resolution {
+
+      //types of the resolution mode
+      namespace TYPE {
+        const int Constant=0;
+        const int BackgroundFieldVariation=1;
+        const int Logarithmic=2;
+      }
+
+      extern int mode;
+      extern double BackgroundParameterVariationLimit;
+
+      //the limits of the computational domain relative to its size
+      extern double dxMin,dxMax;
+
+      //location of dxMin,dxMax in case Logarithmic resolution is used
+      extern double rXmin,rXmax;
+
+      //get local resolution
+      double GetlocalResolution(double *x);
+    }
+  }
+
+  //characteristic speed of traced particles
+  extern double *ParticleCharacteristicSpeedTable;
+  double GetParticleCharacteristicSpeed(int spec);
+
   //constants
   namespace DEF {
     namespace SOURCE {
@@ -1158,6 +1192,12 @@ namespace PIC {
            void Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
            void Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
          }
+
+         //read limits of the computational domain
+         void DomainLimits(CiFileOperations&);
+
+         //read chracteristic speed table
+         void CharacteristicSpeedTable(CiFileOperations&);
 
       }
     }

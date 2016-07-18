@@ -15,8 +15,23 @@
 
 
 vector<PIC::CCMC::ParticleInjection::cInjectionDescriptor> PIC::CCMC::ParticleInjection::InjectionDescriptorList;
-char PIC::CCMC::Parser::ControlFileName[_MAX_STRING_LENGTH_PIC_]="ccmc.dat";
+char PIC::CCMC::Parser::ControlFileName[_MAX_STRING_LENGTH_PIC_]="ccmc.InjectionLocation.dat";
+char PIC::CCMC::BackgroundDataFileName[_MAX_STRING_LENGTH_PIC_]="amps.Background.data.cdf";
 
+//characteristic speed of traced particles
+double *PIC::CCMC::ParticleCharacteristicSpeedTable=NULL;
+
+//computational domain limits
+double PIC::CCMC::Domain::xmax[3]={2.070575000000000e+08, 2.994370000000000e+08, 2.994370000000000e+08};
+double PIC::CCMC::Domain::xmin[3]={-1.599121000000000e+09,-2.994370000000000e+08,-2.994370000000000e+08};
+
+//resoluton of the computational domain
+int PIC::CCMC::Domain::Resolution::mode=-1;
+double PIC::CCMC::Domain::Resolution::BackgroundParameterVariationLimit=0.0;
+double PIC::CCMC::Domain::Resolution::dxMax=-1.0;
+double PIC::CCMC::Domain::Resolution::dxMin=-1.0;
+double PIC::CCMC::Domain::Resolution::rXmax=-1.0;
+double PIC::CCMC::Domain::Resolution::rXmin=-1.0;
 
 //read the control file
 void PIC::CCMC::Parser::LoadControlFile() {
@@ -69,6 +84,13 @@ void PIC::CCMC::Parser::LoadControlFile() {
       else if (strcmp("CONSTANT",str1)==0) Read::VelocityDistribution::Constant(InjectionBlock,ifile);
       else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
+    else if (strcmp("#DOMAIN",str1)==0) {
+      Read::DomainLimits(ifile);
+    }
+    else if (strcmp("#CHARACTERISTICSPEED",str1)==0) {
+      PIC::CCMC::Parser::Read::CharacteristicSpeedTable(ifile);
+    }
+
     else if (strcmp("",str1)==0) {
       //do nothing -> move to the next line
     }
@@ -77,6 +99,125 @@ void PIC::CCMC::Parser::LoadControlFile() {
 
   //close the file
   ifile.closefile();
+}
+
+//Read individual section of the input file
+void PIC::CCMC::Parser::Read::DomainLimits(CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("XMIN",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        PIC::CCMC::Domain::xmin[i]=atof(str1);
+      }
+    }
+    else if (strcmp("XMAX",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        PIC::CCMC::Domain::xmax[i]=atof(str1);
+      }
+    }
+    else if (strcmp("DXMAX",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::Domain::Resolution::dxMax=atof(str1);
+    }
+    else if (strcmp("DXMIN",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::Domain::Resolution::dxMin=atof(str1);
+    }
+    else if (strcmp("RXMIN",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::Domain::Resolution::rXmin=atof(str1);
+    }
+    else if (strcmp("RXMAX",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::Domain::Resolution::rXmax=atof(str1);
+    }
+    else if (strcmp("LOCALRESOLUTIONMODE",str1)==0) {
+      ifile.CutInputStr(str1,str);
+
+      if (strcmp("CONSTANT",str1)==0) {
+        PIC::CCMC::Domain::Resolution::mode=PIC::CCMC::Domain::Resolution::TYPE::Constant;
+      }
+      else if (strcmp("BACKGROUNDFIELDVARIATION",str1)==0) {
+        PIC::CCMC::Domain::Resolution::mode=PIC::CCMC::Domain::Resolution::TYPE::BackgroundFieldVariation;
+      }
+      else if (strcmp("LOGARITHMIC",str1)==0) {
+        PIC::CCMC::Domain::Resolution::mode=PIC::CCMC::Domain::Resolution::TYPE::Logarithmic;
+      }
+      else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+    }
+    else if (strcmp("BACKGROUNDFIELDVARIATIONLIMIT",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::Domain::Resolution::BackgroundParameterVariationLimit=atof(str1);
+    }
+    else if (strcmp("#ENDDOMAIN",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
+}
+
+//calculate the requested local resolution
+double PIC::CCMC::Domain::Resolution::GetlocalResolution(double *x) {
+  double res=0.0;
+
+  switch (mode) {
+  case TYPE::Constant:
+    res=0.5*(dxMin+dxMax);
+    break;
+
+  case TYPE::Logarithmic:
+    res=log(dxMin)+(log(dxMax)-log(dxMin))/(rXmax-rXmin)*(sqrt(pow(x[0],2)+pow(x[1],2)+pow(x[2],2))-rXmin);
+    if (res<dxMin) res=dxMin;
+    if (res>dxMax) res=dxMax;
+    break;
+
+  case TYPE::BackgroundFieldVariation:
+    exit(__LINE__,__FILE__,"Error: not implemented");
+    break;
+
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is not found");
+  }
+
+  return res;
+}
+
+//return the characteristic particle speed
+void PIC::CCMC::Parser::Read::CharacteristicSpeedTable(CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  int spec;
+
+  if (PIC::CCMC::ParticleCharacteristicSpeedTable==NULL) {
+    PIC::CCMC::ParticleCharacteristicSpeedTable=new double [PIC::nTotalSpecies];
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) PIC::CCMC::ParticleCharacteristicSpeedTable[spec]=-1.0;
+  }
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("V",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      spec=PIC::MolecularData::GetSpecieNumber(str1);
+
+      if (spec==-1) {
+        char msg[100];
+
+        sprintf(msg,"Error: species %s is not defined in the input file",str1);
+        exit(__LINE__,__FILE__,msg);
+      }
+
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::ParticleCharacteristicSpeedTable[spec]=atof(str1);
+    }
+
+    else if (strcmp("#ENDCHARACTERISTICSPEED",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
 }
 
 void PIC::CCMC::Parser::Read::SourceRegion::Sphere(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
@@ -393,4 +534,19 @@ int PIC::CCMC::TraceParticles() {
 
 
   return _PIC_TIMESTEP_RETURN_CODE__SUCCESS_;
+}
+
+//================================================
+//return characteristic particle speed
+double PIC::CCMC::GetParticleCharacteristicSpeed(int spec) {
+  if (ParticleCharacteristicSpeedTable==NULL) exit(__LINE__,__FILE__,"Error: PIC::CCMC::ParticleCharacteristicSpeedTable is not initialized");
+
+  if (ParticleCharacteristicSpeedTable[spec]<0.0) {
+    char msg[200];
+
+    sprintf(msg,"Characteristic speed for species %s is not defined",PIC::MolecularData::GetChemSymbol(spec));
+    exit(__LINE__,__FILE__,msg);
+  }
+
+  return ParticleCharacteristicSpeedTable[spec];
 }
