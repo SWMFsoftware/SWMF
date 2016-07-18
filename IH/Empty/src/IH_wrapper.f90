@@ -38,7 +38,8 @@ module IH_wrapper
 
   ! Coupling with SP
   public:: IH_get_for_sp
-  public:: IH_get_line
+  public:: IH_extract_line
+  public:: IH_get_scatter_line
   public:: IH_get_a_line_point
 
   ! Coupling with GM
@@ -245,20 +246,27 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
   !===================================================================!
-  subroutine IH_get_line(nLine, CoordOrigin_DI, iTraceMode, nVar, NameVar, &
-       nParticleOut, ParticleOut_II)
+  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode)
     integer,          intent(in) :: nLine
     real,             intent(in) :: CoordOrigin_DI(3, 1)
     integer,          intent(in) :: iTraceMode
-    integer,          intent(in) :: nVar
-    character(len=*), intent(in) :: NameVar
-    integer,          intent(out):: nParticleOut
-    real,allocatable, intent(out):: ParticleOut_II(:,:)
 
-    character(len=*), parameter :: NameSub='IH_get_line'
+    character(len=*), parameter :: NameSub='IH_extract_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_get_line
+  end subroutine IH_extract_line
+  !============================================================================
+
+  subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)
+    integer,              intent(out):: nParticle
+    integer,              intent(out):: nCoord
+    real,    allocatable, intent(out):: Coord_II(:,:)
+    integer, allocatable, intent(out):: iIndex_II(:,:)
+    character(len=*), parameter :: NameSub='IH_get_scatter_line'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_scatter_line
+
   !===================================================================!
   subroutine IH_get_a_line_point(&
        nPartial,iGetStart,Get,W,State_V,nVar)

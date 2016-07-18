@@ -96,21 +96,19 @@ contains
 
   end subroutine SP_get_line_param
   !===================================================================
-  subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
-    character(len=*), intent(out):: NameVar
-    integer,          intent(out):: nVar
-    integer,          intent(in) :: iDirIn
-    real,             intent(in) :: CoordOut_DA(3,1)
+  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II)
+    integer,              intent(in) :: iDirIn
+    integer,              intent(out):: nLine
+    real,    allocatable, intent(out):: CoordOut_DI(:, :)
+    integer, allocatable, intent(out):: iIndexOut_II(:,:)
     call CON_stop('Can not request line')
   end subroutine SP_request_line
   !===================================================================
-  subroutine SP_put_line(NameVar, nVar, nParticle, Data_VI, iDirIn, Convert_DD)
-    character(len=*), intent(in):: NameVar
-    integer,          intent(in):: nVar
-    integer,          intent(in):: nParticle
-    real,             intent(in):: Data_VI(nVar, nParticle)
-    integer,          intent(in):: iDirIn
-    real,             intent(in):: Convert_DD(3,3)
+  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II, iDirIn)
+    integer, intent(in):: nParticle
+    real,    intent(in):: Coord_DI( 3, nParticle)
+    integer, intent(in):: iIndex_II(4, nParticle)
+    integer, intent(in):: iDirIn
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
   !===================================================================

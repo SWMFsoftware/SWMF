@@ -1531,7 +1531,6 @@ contains
     ! how much data is to be requested from them
     !/
     if(is_proc(iCompTarget))then
-
        ! get the data locations on Target as well as corresponding indices
        call get_request_target(nData, nCoordTarget, Coord_II, iIndex_II)
 
@@ -1606,6 +1605,8 @@ contains
              Router%nPut_P( iProcTo) = Router%nPut_P( iProcTo) + 1
 
              ! indices of the location where data has to be put
+             ! NOTE: PE id is last entry here, but in router it is 0th
+             iCB_II(1+nIndexTarget, iBuffer) = iProc
              iCB_II(1:nIndexTarget, iBuffer) = iIndex_II(:,iData)
              ! whether the image is the 1st
              DoAdd_I(iBuffer) = iImage /= 1
@@ -1664,6 +1665,9 @@ contains
           Router%iPut_P( iProcTo) % &
                iCB_II(1:nIndexTarget,      1:Router%nPut_P(iProcTo)) =  & 
                iCB_II(1:nIndexTarget, iStart:iEnd )
+          Router%iPut_P( iProcTo) % &
+               iCB_II(0,                   1:Router%nPut_P(iProcTo)) =  & 
+               iCB_II(1+nIndexTarget, iStart:iEnd )
           Router%DoAdd_P(iProcTo) % &
                DoAdd_I(1:Router%nPut_P(iProcTo)) = DoAdd_I(iStart:iEnd)
           Router%Put_P( iProcTo) % &
@@ -1751,11 +1755,9 @@ contains
     ! Finalize transfer                                                       
     call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-    
 
     ! prcoess the data that has been received
     if(is_proc(iCompSource) .and. (nBufferR > 0) )then
-
        ! prepare containers for router information of Source side
        do iProcTarget = 1, nProcTarget
           iProcFrom = iProcTargetTranslated_I(iProcTarget)
@@ -1768,13 +1770,18 @@ contains
        do iProcTarget = 1, nProcTarget
           iProcFrom = iProcTargetTranslated_I(iProcTarget)
           iStart = nRecvCumSum + 1
-          iEnd = nRecvCumSum + Router%nGet_P(iProcFrom)
+          iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
+          if(iEnd < iStart)&
+               CYCLE
           ! indices 
-          Router%iGet_P(iProcFrom) % iCB_II(:,1:Router%nGet_P(iProcFrom)) = &
-                  nint( BufferR_II(1:nIndexSource, iStart:iEnd) )
+          Router%iGet_P(iProcFrom) % &
+               iCB_II(0,1:Router%nGet_P(iProcFrom)) = iProc
+          Router%iGet_P(iProcFrom) % &
+               iCB_II(1:nIndexSource,1:Router%nGet_P(iProcFrom)) = &
+               nint( BufferR_II(1:nIndexSource, iStart:iEnd) )
           ! interpolation weights
-          Router%Get_P(iProcFrom) % Weight_I( 1:Router%nGet_P(iProcFrom)) = &
-                  BufferR_II(iVarWeight, iStart:iEnd)
+          Router%Get_P(iProcFrom) % Weight_I(1:Router%nGet_P(iProcFrom)) = &
+               BufferR_II(iVarWeight, iStart:iEnd)
           ! increment the offset
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
@@ -1783,12 +1790,13 @@ contains
        if(DoPutRequestSource)then
           call check_size(1, (/nBufferR/), iBuffer_I = iUnique_I)
           ! identify unique data location: some may have many images
-          nData = 0; iData = -1
+          nData = 0
           nRecvCumSum = 0
           do iProcTarget = 1, nProcTarget
              iProcFrom = iProcTargetTranslated_I(iProcTarget)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
+             iData  = -1
              do iBuffer = iStart, iEnd
                 if(nint(BufferR_II(iVarData, iBuffer))/=iData)then
                    iData = nint(BufferR_II(iVarData, iBuffer))
@@ -1799,12 +1807,14 @@ contains
              ! increment the offest
              nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
           end do
+
           ! put these data locations
           call put_request_source(&
                nData, nDimSource,  &
                BufferR_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
                nIndexSource,&
                nint(BufferR_II(1:nIndexSource, iUnique_I(1:nData))))
+
        end if
     end if
 
@@ -2272,7 +2282,10 @@ contains
              Router%nGet_P( iProcTo) = Router%nGet_P( iProcTo) + 1
 
              ! indices of the location where data has to be fetched from
-             iCB_II(1:nIndexSource, iBuffer) = iIndexGet_II(:,iImageSource)
+             ! NOTE: PE id is last entry here, but in router it is 0th
+             iCB_II(1+nIndexSource, iBuffer) = iProc
+             iCB_II(1:nIndexSource, iBuffer) = &
+                  iIndexGet_II(1:nIndexSource,iImageSource)
 
              ! store processor id for later use
              iProcImage_I(iBuffer) = iProcTo
@@ -2328,6 +2341,9 @@ contains
           Router%iGet_P( iProcTo) % &
                iCB_II(1:nIndexSource,       1:Router%nGet_P(iProcTo)) =  & 
                iCB_II(1:nIndexSource, iStart:iEnd )
+          Router%iGet_P( iProcTo) % &
+               iCB_II(0,                   1:Router%nGet_P(iProcTo)) =  & 
+               iCB_II(1+nIndexSource, iStart:iEnd )
           Router%Get_P( iProcTo) % &
                Weight_I(1:Router%nGet_P(iProcTo)) =  1.0 
           nSendCumSum = nSendCumSum + Router%nGet_P(iProcTo)
@@ -2416,7 +2432,7 @@ contains
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
     
     ! process the data that has been received
-    if(is_proc(iCompTarget) .and. (nBufferR > 0) )then
+    if(is_proc(iCompTarget))then
 
        ! prepare containers for router information of Target side
        do iProcSource = 1, nProcSource
@@ -2431,8 +2447,13 @@ contains
           iProcFrom = iProcSourceTranslated_I(iProcSource)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
+          if(iEnd < iStart) &
+               CYCLE
           ! indices
-          Router%iPut_P(iProcFrom) % iCB_II(:,  1:Router%nPut_P(iProcFrom)) = &
+          Router%iPut_P(iProcFrom) % &
+               iCB_II(0,  1:Router%nPut_P(iProcFrom)) = iProc
+          Router%iPut_P(iProcFrom) % &
+               iCB_II(1:nIndexTarget,  1:Router%nPut_P(iProcFrom)) = &
                nint( BufferR_II(1:nIndexTarget, iStart:iEnd) )
           ! interpolation weights
           Router% Put_P(iProcFrom) % Weight_I(1:Router%nPut_P(iProcFrom)) = &
@@ -2443,16 +2464,18 @@ contains
           ! increment the offest
           nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
        end do
+
        ! put scatter coordinates
        if(DoPutScatterTarget)then
           call check_size(1, (/nBufferR/), iBuffer_I = iUnique_I)
           ! identify unique data location: some may have many images
-          nData = 0; iData = -1
+          nData = 0 
           nRecvCumSum = 0
           do iProcSource = 1, nProcSource
              iProcFrom = iProcSourceTranslated_I(iProcSource)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
+             iData  = -1
              do iBuffer = iStart, iEnd
                 if(nint(BufferR_II(iVarData, iBuffer))/=iData)then
                    iData = nint(BufferR_II(iVarData, iBuffer))

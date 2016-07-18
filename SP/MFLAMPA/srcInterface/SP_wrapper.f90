@@ -201,27 +201,27 @@ contains
     ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
     ! with length measured in solar radii
     call set_coord_system(&
-         GridID_   = SP_, &
-         TypeCoord =TypeCoordSystem,&
-         UnitX     = rSun)
+         GridID_      = SP_, &
+         TypeCoord    = TypeCoordSystem, &
+         TypeGeometry = 'spherical', &
+         UnitX        = rSun)
   end subroutine SP_set_grid
 
   !===================================================================
 
-  subroutine SP_request_line(NameVar, nVar, iDirIn, CoordOut_DA)
+  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II)
     use ModMain, ONLY: &
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, nBlock, &
-         nDim, nNode, R_, Lat_, Lon_
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use ModMpi
-    ! request coordinates of field lines' beginning/origin/end
-    ! as well as names variables to be imported
+         nDim, nNode, R_, Lat_, Lon_, &
+         get_node_indexes
+    ! request coordinates & indices of field lines' beginning/origin/end
+    ! for the current processor
     !---------------------------------------------------------------
-    character(len=*), intent(out):: NameVar
-    integer,          intent(out):: nVar
-    integer,          intent(in) :: iDirIn
-    real,             intent(out):: CoordOut_DA(nDim, nNode)
+    integer,              intent(in) :: iDirIn
+    integer,              intent(out):: nLine
+    real,    allocatable, intent(out):: CoordOut_DI(:, :)
+    integer, allocatable, intent(out):: iIndexOut_II(:,:)
 
     ! directions requested
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
@@ -236,67 +236,69 @@ contains
     integer:: iError
     character(len=*), parameter:: NameSub='SP_request_line'
     !----------------------------------------------------------------
-    ! indicate variables requested
-    NameVar = NameVarRequest
-    nVar    = nVarRequest
-    ! each processor fills only its own nodes; reset all
-    CoordOut_DA = 0
+    ! number of lines on this processor
+    nLine = nBlock
+
+    ! prepare containers to hold the request
+    if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)
+    allocate(CoordOut_DI(nDim, nBlock))
+    if(allocated(iIndexOut_II)) deallocate(iIndexOut_II)
+    allocate(iIndexOut_II(nDim+1, nBlock))! 3 cell + 1 block index
+
+    ! each processor fills only its own nodes
     select case(iDirIn)
     case(iDirBegin_)
        ! get coordinates of the 1st points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
-          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
+          CoordOut_DI(:, iBlock) = &
+               State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+          iIndexOut_II(1, iBlock) = iParticle
+          call get_node_indexes(iNode, &
+               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
+          iIndexOut_II(4, iBlock) = iBlock
        end do
     case(iDirOrigin_)
        ! get coordinates of the origin points of field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock)
-          Coord_D = State_VIB((/R_,Lon_,Lat_/), 0, iBlock)
-          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
+          CoordOut_DI(:, iBlock) = &
+               State_VIB((/R_,Lon_,Lat_/), 0, iBlock)
+          iIndexOut_II(1, iBlock) = 0
+          call get_node_indexes(iNode, &
+               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
+          iIndexOut_II(4, iBlock) = iBlock
        end do
     case(iDirEnd_)
        ! get coordinates of the last points on field lines
        do iBlock = 1, nBlock
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
-          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          call rlonlat_to_xyz(Coord_D, CoordOut_DA(:, iNode))
+          CoordOut_DI(:, iBlock) = &
+               State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+          iIndexOut_II(1, iBlock) = 0
+          call get_node_indexes(iNode, &
+               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
+          iIndexOut_II(4, iBlock) = iBlock
        end do
     case default
        call CON_stop(NameSub//': invalid request of field line coordinates')
     end select
-    !\
-    ! Collect all coords on the root
-    !/
-    if(iProc==0)then
-       call MPI_Reduce(MPI_IN_PLACE, CoordOut_DA, nDim*nNode, MPI_REAL, &
-            MPI_SUM, 0, iComm, iError)
-    else
-       call MPI_Reduce(CoordOut_DA, CoordOut_DA, nDim*nNode, MPI_REAL, &
-            MPI_SUM, 0, iComm, iError)
-    end if
-    
   end subroutine SP_request_line
 
   !===================================================================
 
-  subroutine SP_put_line(NameVar, nVar,&
-       nParticle, Data_VI, iDirIn, Convert_DD)
+  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II, iDirIn)
     use ModMain, ONLY: &
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, &
          nDim, nNode, iParticleMin, iParticleMax, Lat_, Lon_, R_
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
     use ModMpi
-    ! store particle data extracted elsewhere
+    ! store particle coordinates extracted elsewhere
     !---------------------------------------------------------------
-    character(len=*), intent(in):: NameVar
-    integer,          intent(in):: nVar
-    integer,          intent(in):: nParticle
-    real,             intent(in):: Data_VI(nVar, nParticle)
-    integer,          intent(in):: iDirIn
-    real,             intent(in):: Convert_DD(nDim, nDim)
+    integer, intent(in):: nParticle
+    real,    intent(in):: Coord_DI( nDim,   nParticle)
+    integer, intent(in):: iIndex_II(nDim+1, nParticle)
+    integer, intent(in):: iDirIn
 
     ! directions where to put particles
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
@@ -313,9 +315,6 @@ contains
     integer:: iError
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
-    ! check correctness
-    if(index(NameVar, NameVarRequest) == 0 .or. nVar /= nVarRequest)&
-         call CON_stop(NameSub//': a different set variables was requested')
     ! list of min/max index of active particles is needed if iDirIn /= 0,
     ! i.e. need to add particle to the beginning/end of list
     select case(iDirIn)
@@ -330,8 +329,8 @@ contains
     end select
     ! store passed particles
     do iParticle = 1, nParticle
-       iLine  = nint(Data_VI(4, iParticle))
-       iIndex = nint(Data_VI(5, iParticle)) + iOffset_A(iLine)
+       iLine  = iIndex_II(4, iParticle)
+       iIndex = iIndex_II(1, iParticle) + iOffset_A(iLine)
        if(iIndex < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
        if(iIndex > iParticleMax)&
@@ -340,11 +339,9 @@ contains
        iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
-       ! convert and store data
-       Xyz_D = matmul(Convert_DD, Data_VI(1:nDim, iParticle))
-       call xyz_to_rlonlat(Xyz_D, Coord_D)
+       ! store data
        State_VIB((/R_, Lon_, Lat_/), iIndex, iGrid_IA(Block_,iLine)) = &
-            Coord_D
+            Coord_DI(1:nDim, iParticle)
     end do
     !\
     ! Update begin/end points on all procs

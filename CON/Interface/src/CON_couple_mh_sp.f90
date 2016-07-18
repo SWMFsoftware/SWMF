@@ -22,10 +22,12 @@ module CON_couple_mh_sp
   use CON_coupler
 
   use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
-       IH_get_line, IH_get_for_sp, IH_get_a_line_point      !^CMP IF IH
+       IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
+       IH_get_scatter_line                                  !^CMP IF IH
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
-       SC_get_line, SC_get_for_sp, SC_get_a_line_point      !^CMP IF SC
+       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
+       SC_get_scatter_line                                  !^CMP IF SC
 
   use CON_global_message_pass
   use CON_axes
@@ -51,7 +53,7 @@ module CON_couple_mh_sp
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
 
   logical,save::DoInit=.true.
-  real,allocatable,dimension(:,:)::XyzTemp_DI
+  real,allocatable,dimension(:,:)::XyzStored_DI
 
   real,dimension(:,:),pointer ::Xyz_DI
   logical,dimension(:),pointer :: Is_I
@@ -63,6 +65,11 @@ module CON_couple_mh_sp
   real::DsResolution,XyzLine_D(3)
   real,save::rBoundIh=21.0                !^CMP IF IH
   real,save::rBoundSc=1.20                !^CMP IF SC
+
+  ! available directions of interface between SP and MH 
+  integer, parameter:: &
+       iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
+  
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real,dimension(3,3)::ScToIh_DD,ScToSp_DD,IhToSp_DD,SpToSc_DD
@@ -128,17 +135,14 @@ contains
     ! Allocate storage for field line requests
     !/
     nLine = SP_GridDescriptor%DD%Ptr%nBlockAll
-    call allocate_vector('SP_Xyz_DI',&
-         SP_GridDescriptor%DD%Ptr%nDim, nLine)
 
     !\
     ! Extract and exchange initial data
     !/
-    call exchange_lines(iInterfaceOrigin, SC_, SC_GridDescriptor)
-    call exchange_lines(iInterfaceEnd,    IH_, IH_GridDescriptor)
+    call exchange_lines(SC_)
+    call exchange_lines(IH_)
 
     ! reserve memeory for SP grid
-    call deallocate_vector('SP_Xyz_DI')
     call allocate_vector('SP_Xyz_DI', &
                   SP_GridDescriptor%DD%Ptr%nDim, &
                   product(SP_GridDescriptor%DD%Ptr%nCells_D)*nLine)
@@ -164,20 +168,12 @@ contains
     
   contains
     !================================================================    
-    subroutine exchange_lines(iInterfaceType, iMH, MH_GridDescriptor)
+    subroutine exchange_lines(iMHComp)
       ! MH extracts and sends field lines requested by SP;
       !----------------------------------------------------------------
-      ! direction interface between SP and MH component on field lines:
-      ! -1 -> the beginning of lines
-      !  0 -> origin points of lines as defined at SP
-      !  1 -> the end of lines
-      integer, intent(in):: iInterfaceType
-      !----------------------------------------------------------------
       ! index of MH component
-      integer, intent(in):: iMH
+      integer, intent(in):: iMHComp
       !----------------------------------------------------------------
-      ! grid descriptor of MH component
-      type(GridDescriptorType), intent(in)::MH_GridDescriptor
 
       ! conversion matrix between SP and MH coordinates
       real:: Convert_DD(3,3)
@@ -204,187 +200,278 @@ contains
       ! loop variables
       integer:: iLine, iBuff, iParticle
       !----------------------------------------------------------------
-      ! allocate arrays for non-blocking communcations
-      allocate(nParticleRecv_I(0:n_proc()-1))
-      allocate(nParticleSend_I(0:n_proc()-1))
-      allocate(iRequestS_I(n_proc()))
-      allocate(iRequestR_I(n_proc()))
-      allocate(iStatus_II(MPI_STATUS_SIZE, n_proc()))
-      !\
-      ! SP requests field lines from MH specifying:
-      ! - direction of interface (begin/origin/end)variables
-      ! - number & names of variables
-      !/
-      if(is_proc(SP_))then
-         call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-         call SP_request_line(NameVar, nVar, iInterfaceType, CoordMisc_DI)
-         nullify(CoordMisc_DI)
-      end if
-      call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-      call MPI_bcast(NameVar, len(NameVar), MPI_CHARACTER, &
-           i_proc0(SP_), i_comm(), iError)
-      call MPI_bcast(nVar, 1, MPI_INTEGER, i_proc0(SP_), i_comm(), iError)
-      !\
-      ! determine which index corresponds to field line index
-      !/
-      iFLIndex = index(NameVar, 'fl')/3 + 1
-      if(iFLIndex == 0) call CON_stop(NameSub//&
-           ': set of variables requested is not sufficient for coupling')
-      !\
-      ! Extract field lines at MH and send to SP
-      !/
-      nRequestS = 0
-      nRequestR = 0
-      if(is_proc(iMH))then
-         ! get request locations
-         call associate_with_global_vector(CoordMisc_DI,'SP_Xyz_DI')
-         Convert_DD = transform_matrix(tNow,&
-              Grid_C(SP_)%TypeCoord, Grid_C(iMH)%TypeCoord)
-
-         ! convert locations to MH coordinates
-         do iLine = 1, nLine
-            CoordMisc_DI(:,iLine) = matmul(Convert_DD, CoordMisc_DI(:,iLine))
-         end do
-         ! extract field line data
-         allocate(nParticleAtLine_I(nLine))
-         select case(iMH)
-         case(SC_)
-            call SC_get_line(nLine,CoordMisc_DI, iInterfaceType,nVar,NameVar, &
-                 nParticleThisProc, Particle_II)
-         case(IH_)
-            call IH_get_line(nLine,CoordMisc_DI, iInterfaceType,nVar,NameVar, &
-                 nParticleThisProc, Particle_II)
-         case default
-            call CON_stop(NameSub//': incorrect MH component')
-         end select
-         nullify(CoordMisc_DI)
-         ! count number of particles per field line
-         do iLine = 1, nLine
-            nParticleAtLine_I(iLine)=&                 
-                 count(nint(Particle_II(iFLIndex,:))==iLine)
-         end do
-
-         !\
-         ! Send # of particles to SP: 
-         ! on MH by index fl_ can find recepient on SP 
-         !/
-         do SP_iProcTo = 0, n_proc(SP_)-1
-            ! translate proc at SP to global
-            call MPI_Group_translate_ranks(&
-                 i_group(SP_), 1, (/SP_iProcTo/), &
-                 i_group(),            iProcTo_I, iError)
-            ! count how many points will be sent
-            nParticleSend_I(SP_iProcTo) = sum(nParticleAtLine_I, &
-                 MASK = &
-                 SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,:) == iProcTo_I(1))
-            ! send number of particles to be transfered
-            nRequestS = nRequestS + 1
-            call MPI_Isend(nParticleSend_I(SP_iProcTo), 1, MPI_INTEGER, &
-                 iProcTo_I(1), iTag, i_comm(), iRequestS_I(nRequestS), iError)
-         end do
-      end if
-
-      if(is_proc(SP_))then
-         !\
-         ! Recv # of particles from MH
-         !/
-         do MH_iProcFrom = 0, n_proc(iMH)-1
-            ! translate proc at SC to global
-            call MPI_Group_translate_ranks(&
-                 i_group(iMH), 1, (/MH_iProcFrom/), &
-                 i_group(),            iProcFrom_I, iError)
-            ! recv # of particles to be received
-            nRequestR = nRequestR + 1
-            call MPI_Irecv(nParticleRecv_I(MH_iProcFrom), 1, MPI_INTEGER,&
-                 iProcFrom_I(1), iTag, i_comm(), iRequestR_I(nRequestR),iError)
-         end do
-      end if
-      ! finalize transfer
-      call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-      call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-      !\
-      ! send the actual data
-      !/
-      nRequestS = 0
-      nRequestR = 0
-      if(is_proc(iMH))then
-         allocate(BuffSend_I(nVar * nParticleThisProc))
-         iBuff = 1
-         do SP_iProcTo = 0, n_proc(SP_)-1
-            if(nParticleSend_I(SP_iProcTo) == 0) CYCLE
-            ! translate proc at SP to global
-            call MPI_Group_translate_ranks(&
-                 i_group(SP_), 1, (/SP_iProcTo/), &
-                 i_group(),            iProcTo_I, iError)
-            ! prepare data
-            do iParticle = 1, nParticleThisProc
-               if(SP_GridDescriptor%DD%Ptr%iDecomposition_II(PE_,&
-                    nint(Particle_II(iFLIndex,iParticle)))/=iProcTo_I(1)) CYCLE
-               BuffSend_I(iBuff:iBuff + nVar - 1) = Particle_II(:,iParticle)
-               iBuff = iBuff + nVar
-            end do
-            iBuff = iBuff - nVar*nParticleSend_I(SP_iProcTo)
-            ! transfer data
-            nRequestS = nRequestS + 1
-            call MPI_Isend(BuffSend_I(iBuff),nVar*nParticleSend_I(SP_iProcTo),&
-                 MPI_REAL, &
-                 iProcTo_I(1), iTag, i_comm(), iRequestS_I(nRequestS), iError)
-            iBuff = iBuff + nVar*nParticleSend_I(SP_iProcTo)
-         end do
-         deallocate(nParticleAtLine_I)
-         deallocate(Particle_II)
-      end if
-      !\
-      ! recv the actual data
-      !/
-      if(is_proc(SP_))then
-         allocate(BuffRecv_I(nVar * sum(nParticleRecv_I)))
-         iBuff = 1
-         do MH_iProcFrom = 0, n_proc(iMH)-1
-            if(nParticleRecv_I(MH_iProcFrom)==0)CYCLE
-            ! translate proc at SC to global
-            call MPI_Group_translate_ranks(&
-                 i_group(iMH), 1, (/MH_iProcFrom/), &
-                 i_group(),            iProcFrom_I, iError)
-            ! recv data
-            nRequestR = nRequestR + 1
-            call MPI_Irecv(BuffRecv_I(iBuff),&
-                 nVar*nParticleRecv_I(MH_iProcFrom), &
-                 MPI_REAL,&
-                 iProcFrom_I(1), iTag, i_comm(), iRequestR_I(nRequestR),iError)
-            iBuff = iBuff + nVar*nParticleRecv_I(MH_iProcFrom)
-
-         end do
-      end if
-      ! finalize transfer
-      call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
-      call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-      !\
-      ! put data
-      !/
-      if(is_proc(SP_))then
-         Convert_DD = transform_matrix(tNow,&
-              Grid_C(iMH)%TypeCoord, Grid_C(SP_)%TypeCoord)
-         call SP_put_line(NameVar, nVar, sum(nParticleRecv_I),&
-              reshape(BuffRecv_I,(/nVar, sum(nParticleRecv_I)/)),&
-              iInterfaceType, Convert_DD)
-      end if
-
-      ! deallocate arrays for non-blocking communications
-      if(is_proc(SP_))&
-           deallocate(BuffRecv_I)
-      if(is_proc(iMH))&
-           deallocate(BuffSend_I)
-      deallocate(nParticleRecv_I)
-      deallocate(nParticleSend_I)
-      deallocate(iRequestS_I)
-      deallocate(iRequestR_I)
-      deallocate(iStatus_II)
+      select case(iMHComp)
+      case(SC_)
+         call set_router_from_target_2_stage(&
+              GridDescriptorSource = SC_GridDescriptor, &
+              GridDescriptorTarget = SP_GridDescriptor, &
+              Router               = RouterScSp, &
+              get_request_target   = SP_get_request_for_sc, &
+              transform            = transform_sp_to_sc, &
+              interpolate_source   = interpolation_amr_gc, &
+              put_request_source   = SC_put_request)
+         if(is_proc(SC_))&
+              call SC_extract_line(&
+              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceOrigin)
+         call set_router_from_source_2_stage(&
+              GridDescriptorSource = SC_GridDescriptor, &
+              GridDescriptorTarget = SP_GridDescriptor, &
+              Router               = RouterScSp, &
+              get_scatter_source   = SC_get_scatter_line, &
+              transform            = transform_sc_to_sp, &
+              interpolate_source   = interpolation_amr_gc, &
+              interpolate_target   = interpolate_sp, &
+              put_scatter_target   = SP_put_scatter_from_sc)
+         call global_message_pass(RouterScSp, &
+              nVar = 11, &
+              fill_buffer = SC_get_for_sp_and_transform, &
+              apply_buffer= SP_put_from_mh)
+      case(IH_)
+         call set_router_from_target_2_stage(&
+              GridDescriptorSource = IH_GridDescriptor, &
+              GridDescriptorTarget = SP_GridDescriptor, &
+              Router               = RouterIhSp, &
+              get_request_target   = SP_get_request_for_ih, &
+              transform            = transform_sp_to_ih, &
+              interpolate_source   = interpolation_amr_gc, &
+              put_request_source   = IH_put_request)
+         if(is_proc(IH_))&
+              call IH_extract_line(&
+              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceEnd)
+         call set_router_from_source_2_stage(&
+              GridDescriptorSource = IH_GridDescriptor, &
+              GridDescriptorTarget = SP_GridDescriptor, &
+              Router               = RouterIhSp, &
+              get_scatter_source   = IH_get_scatter_line, &
+              transform            = transform_ih_to_sp, &
+              interpolate_source   = interpolation_amr_gc, &
+              interpolate_target   = interpolate_sp, &
+              put_scatter_target   = SP_put_scatter_from_ih)
+         call global_message_pass(RouterIhSp, &
+              nVar = 11, &
+              fill_buffer = IH_get_for_sp_and_transform, &
+              apply_buffer= SP_put_from_mh)
+      end select
     end subroutine exchange_lines
 
   end subroutine couple_mh_sp_init
   !==================================================================!
 
+  subroutine transform(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
+    ! transform from generalized coordinates in CompIn 
+    ! to generalized coordinates in CompOut
+    use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
+    integer, intent(in) :: iCompIn
+    integer, intent(in) :: iCompOut
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: CoordIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+
+    character(len=100):: TypeGeometryIn, TypeGeometryOut
+    real:: XyzTemp_D(nDimOut), CoordTemp_D(nDimIn)
+    real:: Convert_DD(nDimIn, nDimOut)
+    character(len=*), parameter:: NameSub='CON_couple_mh_sp:transform'
+    !------------------------------------------------------------
+    if(nDimIn /= 3 .or. nDimOut /= 3)&
+         call CON_stop(NameSub//': MH or SP component is not 3D')
+    ! convert from geometry input type
+    TypeGeometryIn = Grid_C(iCompIn)%TypeGeometry
+    if(index(TypeGeometryIn, 'spherical_lnr') > 0 )then
+       ! convert log(radius) to radius first
+       CoordTemp_D = CoordIn_D
+       CoordTemp_D(1) = exp(CoordTemp_D(1))
+       call rlonlat_to_xyz(CoordTemp_D, XyzTemp_D)
+    elseif( index(TypeGeometryIn, 'spherical') > 0 )then
+       call rlonlat_to_xyz(CoordIn_D, XyzTemp_D)
+    elseif(index(TypeGeometryIn, 'cartesian') > 0 )then
+       XyzTemp_D = CoordIn_D
+    else
+       call CON_stop(NameSub//&
+            ': unkown type of geometry '//trim(TypeGeometryIn))
+    end if
+
+    ! matrix for cartesian transform  between components
+    Convert_DD = transform_matrix(tNow, &
+         Grid_C(iCompIn)%TypeCoord,  Grid_C(iCompOut)%TypeCoord)
+
+    ! geometry of iCompOut component
+    TypeGeometryOut = Grid_C(iCompOut)%TypeGeometry
+    ! rotate cartesian
+    XyzTemp_D = matmul(Convert_DD, XyzTemp_D)
+    ! convert to geometry output type
+    if( index(TypeGeometryOut, 'spherical_lnr') > 0 )then
+       call xyz_to_rlonlat(XyzTemp_D, CoordOut_D)
+       ! convert radius to log(radius)
+       if(CoordOut_D(1) > 0) CoordOut_D(1) = log(CoordOut_D(1))
+    elseif( index(TypeGeometryOut, 'spherical') > 0 )then
+       call xyz_to_rlonlat(XyzTemp_D, CoordOut_D)
+    elseif(index(TypeGeometryOut, 'cartesian') > 0 )then
+       CoordOut_D = XyzTemp_D
+    else
+       call CON_stop(NameSub//&
+            ': unkown type of geometry '//trim(TypeGeometryOut))
+    end if
+  end subroutine transform
+
+  !==================================================================!
+  subroutine transform_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: XyzIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+    !------------------------------------------
+    call transform(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine transform_sp_to_sc
+  !==================================================================!
+  subroutine transform_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: XyzIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+    !------------------------------------------
+    call transform(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine transform_sp_to_ih
+  !==================================================================!
+  subroutine transform_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: XyzIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+    !------------------------------------------
+    call transform(SC_, SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine transform_sc_to_sp
+  !==================================================================!
+  subroutine transform_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: XyzIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+    !------------------------------------------
+    call transform(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine transform_ih_to_sp
+  !==================================================================!
+  subroutine SP_get_request_for_sc(nData, nCoord, Coord_II, iIndex_II)
+    integer,            intent(out):: nData
+    integer,            intent(out):: nCoord
+    real,   allocatable,intent(out):: Coord_II(:,:)
+    integer,allocatable,intent(out):: iIndex_II(:,:)
+    !------------------------------------------------------------
+    nCoord = SP_GridDescriptor%nDim
+    call SP_request_line(iInterfaceOrigin, nData, Coord_II, iIndex_II)
+  end subroutine SP_get_request_for_sc
+  !==================================================================!
+  subroutine SP_get_request_for_ih(nData, nCoord, Coord_II, iIndex_II)
+    integer,            intent(out):: nData
+    integer,            intent(out):: nCoord
+    real,   allocatable,intent(out):: Coord_II(:,:)
+    integer,allocatable,intent(out):: iIndex_II(:,:)
+    !------------------------------------------------------------
+    nCoord = SP_GridDescriptor%nDim
+    call SP_request_line(iInterfaceEnd, nData, Coord_II, iIndex_II)
+  end subroutine SP_get_request_for_ih
+  !==================================================================!
+  subroutine put_request(iComp, nData, nDim, Coord_DI, nIndex, iIndex_II)
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    integer, intent(in):: iComp
+    integer, intent(in):: nData
+    integer, intent(in):: nDim
+    real,    intent(in):: Coord_DI(nDim, nData)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nData)
+    integer:: iData
+    real:: Xyz_D(nDim)
+    character(len=100):: TypeGeometry
+    character(len=*),parameter::NameSub='CON_couple_mh_sp:put_request'
+    !----------------------------------------------------------
+    if(allocated(XyzStored_DI)) deallocate(XyzStored_DI)
+    allocate(XyzStored_DI(nDim, nData))
+    if(nData==0)&
+         RETURN
+
+    XyzStored_DI = Coord_DI
+    ! perform transformations based on the type of geometry
+    TypeGeometry = Grid_C(iComp)%TypeGeometry
+    if( index(TypeGeometry, 'spherical_lnr') > 0 )then
+       ! convert to radius from log(radius)
+       XyzStored_DI(1,:) = exp(XyzStored_DI(1,:))
+       do iData = 1, nData
+          call rlonlat_to_xyz(XyzStored_DI(:, iData), Xyz_D)
+          XyzStored_DI(:, iData) = Xyz_D
+       end do
+    elseif(index(TypeGeometry, 'cartesian') > 0 )then
+       ! do nothing
+    else
+       call CON_stop(NameSub//': unkown type of geometry '//trim(TypeGeometry))
+    end if
+  end subroutine put_request
+  !==================================================================!
+  subroutine SC_put_request(nData, nDim, Coord_DI, nIndex, iIndex_II)
+    integer, intent(in):: nData
+    integer, intent(in):: nDim
+    real,    intent(in):: Coord_DI(nDim, nData)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nData)
+    !----------------------------------------------------------
+    call put_request(SC_, nData, nDim, Coord_DI, nIndex, iIndex_II)
+  end subroutine SC_put_request
+  !==================================================================!
+  subroutine IH_put_request(nData, nDim, Coord_DI, nIndex, iIndex_II)
+    integer, intent(in):: nData
+    integer, intent(in):: nDim
+    real,    intent(in):: Coord_DI(nDim, nData)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nData)
+    !----------------------------------------------------------
+    call put_request(IH_, nData, nDim, Coord_DI, nIndex, iIndex_II)
+  end subroutine IH_put_request
+  !==================================================================!
+  subroutine SP_put_scatter_from_sc(nData, nDim, Coord_DI, nIndex, iIndex_II)
+    integer, intent(in):: nDim
+    integer, intent(in):: nData
+    real,    intent(in):: Coord_DI(nDim, nData)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nData)
+    !--------------------------------------------------------
+    call SP_put_line(nData, Coord_DI, iIndex_II, iInterfaceOrigin)
+  end subroutine SP_put_scatter_from_sc
+  !==================================================================!
+  subroutine SP_put_scatter_from_ih(nData, nDim, Coord_DI, nIndex, iIndex_II)
+    integer, intent(in):: nDim
+    integer, intent(in):: nData
+    real,    intent(in):: Coord_DI(nDim, nData)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nData)
+    !--------------------------------------------------------
+    call SP_put_line(nData, Coord_DI, iIndex_II, iInterfaceEnd)
+  end subroutine SP_put_scatter_from_ih
+  !==================================================================!
+  subroutine interpolate_sp(&
+       nCoord, Coord_I, GridDescriptor, &
+       nIndex, iIndex_II, nImage, Weight_I)
+    use CON_grid_descriptor
+    ! number of indices per data entry
+    integer, intent(in):: nCoord
+    ! data location on Source
+    real,    intent(inout):: Coord_I(nCoord)
+    ! grid descriptor
+    type(GridDescriptorType):: GridDescriptor
+    integer, intent(in) :: nIndex
+    integer, intent(out):: iIndex_II(0:nIndex,2**nCoord)
+    integer, intent(out):: nImage
+    real,    intent(out):: Weight_I(2**nCoord)
+    integer:: iLine
+    !--------------------------
+    nImage = 1
+    Weight_I(1) = 1.0
+    iLine = nint(Coord_I(4))
+    iIndex_II(0,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(PE_,iLine)
+    iIndex_II(1,  1) = nint(Coord_I(5))
+    iIndex_II(2:3,1) = (/1,1/)
+    iIndex_II(4,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(BLK_,iLine)
+  end subroutine interpolate_sp
+
+  !==================================================================!
   subroutine transform_from_cartesian(iComp)
     use ModCoordTransform, ONLY: xyz_to_rlonlat
     integer,intent(in)::iComp

@@ -38,7 +38,8 @@ module IH_wrapper
 
   ! Coupling with SP
   public:: IH_get_for_sp
-  public:: IH_get_line
+  public:: IH_extract_line
+  public:: IH_get_scatter_line
   public:: IH_get_a_line_point
 
   ! Coupling with GM
@@ -1292,27 +1293,51 @@ contains
 
   !============================================================================
 
-  subroutine IH_get_line(nLine, XyzOrigin_DI, iTraceMode, nVar, NameVar, &
-       nParticleOut, ParticleOut_II)
-    use IH_BATL_lib, ONLY: nDim, IsCartesian, coord_to_xyz, xyz_to_coord
-    use IH_ModParticleFieldLine, ONLY: extract_particle_line, get_particle_data
+  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode)
+    use IH_BATL_lib, ONLY: nDim
+    use IH_ModParticleFieldLine, ONLY: extract_particle_line
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
-    integer,          intent(in) :: nVar
-    character(len=*), intent(in) :: NameVar
-    integer,          intent(out):: nParticleOut
-    real,allocatable, intent(out):: ParticleOut_II(:,:)
 
-    character(len=*), parameter:: NameSub='IH_get_line'
+    character(len=*), parameter:: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
     ! extract field lines starting at input points
     call extract_particle_line(nLine, XyzOrigin_DI, iTraceMode)
 
-    ! get data at extracted field lines
-    call get_particle_data(nVar, NameVar, ParticleOut_II, nParticleOut)
+  end subroutine IH_extract_line
 
-  end subroutine IH_get_line
+  !============================================================================
+
+  subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)
+    use IH_BATL_lib, ONLY: nDim, xyz_to_coord
+    use IH_ModParticleFieldLine, ONLY: get_particle_data
+    integer,              intent(out):: nParticle
+    integer,              intent(out):: nCoord
+    real,    allocatable, intent(out):: Coord_II(:,:)
+    integer, allocatable, intent(out):: iIndex_II(:,:)
+
+    integer:: iParticle
+    real:: Coord_D(nDim)
+    character(len=*), parameter:: NameSub='IH_get_scatter_line'
+    !--------------------------------------------------------------------------
+    ! return cordinates, line id and indices of particles along field lines
+    nCoord = nDim + 2
+
+    if(allocated(Coord_II)) deallocate(Coord_II)
+    ! Coord_II is allocated inside the next call
+    call get_particle_data(nCoord, 'xx yy zz fl id', Coord_II, nParticle)
+
+    ! indices to get state vector are not available yet,
+    ! they should be determined outside of this subroutine
+    if(allocated(iIndex_II)) deallocate(iIndex_II)
+
+    ! transform to generalized coordinates
+    do iParticle = 1, nParticle
+       call xyz_to_coord(Coord_II(1:nDim, iParticle), Coord_D)
+       Coord_II(1:nDim, iParticle) = Coord_D
+    end do
+  end subroutine IH_get_scatter_line
 
   !============================================================================
 

@@ -16,7 +16,7 @@ module ModMain
        Proc_, Block_, Begin_, End_,&
        LatMin, LatMax, LonMin, LonMax, &
        iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA, &
-       set_grid_param, init_grid
+       set_grid_param, init_grid, get_node_indexes
   
   implicit none
 
@@ -40,7 +40,8 @@ module ModMain
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
        TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, &
-       iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
+       iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA, &
+       get_node_indexes
 
   ! Methods and variables from ModWrite
 
