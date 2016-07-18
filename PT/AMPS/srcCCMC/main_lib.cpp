@@ -37,8 +37,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& Reemi
 const double DomainLength[3]={1.0E8,1.0E8,1.0E8},DomainCenterOffset[3]={0.0,0.0,0.0};
 
 double localResolution(double *x) {
-
-	return 0.1*DomainLength[0];
+  return PIC::CCMC::Domain::Resolution::GetlocalResolution(x);
 }
 
 //set up the local time step
@@ -46,7 +45,7 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CharacteristicSpeed;
 
-  switch (spec) {
+/*  switch (spec) {
   case _O2_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
@@ -55,7 +54,15 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
-   }
+   }*/
+
+  CharacteristicSpeed=PIC::CCMC::GetParticleCharacteristicSpeed(spec);
+  if (CharacteristicSpeed<0.0) {
+    char msg[200];
+
+    sprintf(msg,"Characteristic speed for species %s is not defined",PIC::MolecularData::GetChemSymbol(spec));
+    exit(__LINE__,__FILE__,msg);
+  }
 
   return 0.3*startNode->GetCharacteristicCellSize()/CharacteristicSpeed;
 }
@@ -248,11 +255,13 @@ void amps_init() {
 	PIC::Init_BeforeParser();
 	CCMC::Init_AfterParser();
 
+	//load the control file
+	PIC::CCMC::Parser::LoadControlFile();
+
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
 
 	//init the mesh
-	double xmax[3]={2.070575000000000e+08, 2.994370000000000e+08, 2.994370000000000e+08},xmin[3]={-1.599121000000000e+09,-2.994370000000000e+08,-2.994370000000000e+08};
 	int idim;
 
 /*	for (idim=0;idim<DIM;idim++) {
@@ -261,16 +270,30 @@ void amps_init() {
 	}*/
 
 	//read the domain size from the data file
-  char BackgroundDataFileName[]="amps.Background.data.cdf";
-
 #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
   #ifndef _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
-	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,BackgroundDataFileName);
+	double xminKAMELEON[3],xmaxKAMELEON[3];
+	bool DomainSizeChangeFlag=false;
+
+	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xminKAMELEON,xmaxKAMELEON,PIC::CCMC::BackgroundDataFileName);
+	for (idim=0;idim<3;idim++) {
+	  if (PIC::CCMC::Domain::xmin[idim]<xminKAMELEON[idim]) PIC::CCMC::Domain::xmin[idim]=xminKAMELEON[idim],DomainSizeChangeFlag=true;
+	  if (PIC::CCMC::Domain::xmax[idim]>xmaxKAMELEON[idim]) PIC::CCMC::Domain::xmax[idim]=xmaxKAMELEON[idim],DomainSizeChangeFlag=true;
+	}
+
+	if (PIC::ThisThread==0) {
+	  if (DomainSizeChangeFlag==true) printf("$PREFIX: WARNING: the domain size is changed to be consistent with that of the KAMELEON background data file");
+
+	  printf("$PREFIX: Kameleon domain size: xmin=%e %e %e, xmax=%e %e %e\n",xminKAMELEON[0],xminKAMELEON[1],xminKAMELEON[2],xmaxKAMELEON[0],xmaxKAMELEON[1],xmaxKAMELEON[2]);
+	  printf("$PREFIX: Particle tracking domain size : xmin=%e %e %e, xmax=%e %e %e\n",PIC::CCMC::Domain::xmin[0],PIC::CCMC::Domain::xmin[1],PIC::CCMC::Domain::xmin[2],
+	      PIC::CCMC::Domain::xmax[0],PIC::CCMC::Domain::xmax[1],PIC::CCMC::Domain::xmax[2]);
+	}
+
   #endif //_CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
 
 	if (PIC::ThisThread==0) {
-	  cout << "xmin=" << xmin[0] << ", " << xmin[1] << ", " << xmin[2] << endl;
-	  cout << "xmax=" << xmax[0] << ", " << xmax[1] << ", " << xmax[2] << endl;
+	  cout << "xmin=" << PIC::CCMC::Domain::xmin[0] << ", " << PIC::CCMC::Domain::xmin[1] << ", " << PIC::CCMC::Domain::xmin[2] << endl;
+	  cout << "xmax=" << PIC::CCMC::Domain::xmax[0] << ", " << PIC::CCMC::Domain::xmax[1] << ", " << PIC::CCMC::Domain::xmax[2] << endl;
 	}
 #endif //_CCMC_TEST__NO_KAMELEON_CALLS_
 
@@ -278,16 +301,16 @@ void amps_init() {
 	for (idim=0;idim<3;idim++) {
 	  double xCenter,dx;
 
-	  xCenter=0.5*(xmax[idim]+xmin[idim]);
-	  dx=0.8*(xmax[idim]-xmin[idim]);
+	  xCenter=0.5*(PIC::CCMC::Domain::xmax[idim]+PIC::CCMC::Domain::xmin[idim]);
+	  dx=0.8*(PIC::CCMC::Domain::xmax[idim]-PIC::CCMC::Domain::xmin[idim]);
 
-	  xmin[idim]=xCenter-0.5*dx;
-	  xmax[idim]=xCenter+0.5*dx;
+	  PIC::CCMC::Domain::xmin[idim]=xCenter-0.5*dx;
+	  PIC::CCMC::Domain::xmax[idim]=xCenter+0.5*dx;
 	}
 
 	//generate only the tree
 	PIC::Mesh::mesh.AllowBlockAllocation=false;
-	PIC::Mesh::mesh.init(xmin,xmax,localResolution);
+	PIC::Mesh::mesh.init(PIC::CCMC::Domain::xmin,PIC::CCMC::Domain::xmax,localResolution);
 	PIC::Mesh::mesh.memoryAllocationReport();
 
 	if (PIC::Mesh::mesh.ThisThread==0) {
@@ -340,7 +363,7 @@ void amps_init() {
       sprintf(BackgroundDataFileName,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
     }*/
 
-	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(BackgroundDataFileName);
+	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CCMC::BackgroundDataFileName);
 
 	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
    #else

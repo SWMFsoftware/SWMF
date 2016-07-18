@@ -50,6 +50,7 @@ int main(int argc,char **argv) {
 
 
 
+
 	//time step
   //determine the total number of the iterations to perform
   //in the test-mode run 100 iterations and than output the particle data statistics
@@ -122,7 +123,7 @@ int main(int argc,char **argv) {
    //update the local block list
    PIC::DomainBlockDecomposition::UpdateBlockTable();
 
-    PIC::CCMC::Parser::LoadControlFile();
+//    PIC::CCMC::Parser::LoadControlFile();
     PIC::CCMC::TraceParticles();
 
     break;
