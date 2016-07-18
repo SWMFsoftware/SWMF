@@ -1,4 +1,26 @@
 
+#Domain
+  xmax=2.070575000000000e+08, 2.994370000000000e+08, 2.994370000000000e+08   
+  xmin=-1.599121000000000e+09,-2.994370000000000e+08,-2.994370000000000e+08  
+
+  LocalResolutionMode=Constant
+  dxmin=1.0E7 
+  dxmax=1.0E7 
+
+  LocalResolutionMode=BackgroundFieldVariation
+  BackgroundFieldVariationLimit=0.1
+
+  LocalResolutionMode=Logarithmic
+  
+  LocalResolutionMode=Constant
+  rXmin=2.0E8
+  rXmax=1.0E9 
+
+#endDomain
+
+#CharacteristicSpeed
+  v(O2_PLUS)=5.0e6 
+#endCharacteristicSpeed
 
 #Tracking (10) 
   StartTime=0
