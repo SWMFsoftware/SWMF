@@ -1757,7 +1757,7 @@ contains
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
 
     ! prcoess the data that has been received
-    if(is_proc(iCompSource) .and. (nBufferR > 0) )then
+    if(is_proc(iCompSource))then
        ! prepare containers for router information of Source side
        do iProcTarget = 1, nProcTarget
           iProcFrom = iProcTargetTranslated_I(iProcTarget)
