@@ -1618,18 +1618,19 @@ test12_iso_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 		${TESTDIR}/RESULTS/GM/z_n4.ref \
-		> test12_gmpc_iso.diff)
+		> test12_gm_iso.diff)
 	gunzip -c output/test12/z=0_fluid.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/PC/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/PC/z=0_fluid_0_t00000001_n00000004.out \
 		${TESTDIR}/RESULTS/PC/z_n4.ref \
-		> test12_gmpc_iso.diff)
+		> test12_pc_iso.diff)
 	gunzip -c output/test12/cut_particles1.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/PC/cut_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/PC/cut_particles1_1_t00000001_n00000004.out \
 		${TESTDIR}/RESULTS/PC/cut_n4.ref \
-		> test12_gmpc_iso.diff)
-	ls -l test12_gmpc_iso.diff
+		>> test12_pc_iso.diff)
+	ls -l test12_??_iso.diff
+
 
