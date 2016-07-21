@@ -46,7 +46,14 @@ namespace Comet {
   void PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   
   double GetTotalProductionRateBjornNASTRAN(int spec);
-  bool GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
+
+  namespace BjornNASTRAN{
+    extern cSingleVariableDiscreteDistribution<int> *SurfaceInjectionProbability;
+    extern int nDev;
+
+    bool GenerateParticle(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
+    void Init();
+  }
 
   double GetTotalProductionRateUniformNASTRAN(int spec);
   bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
@@ -142,6 +149,12 @@ namespace Comet {
   namespace Sampling {
      //sample particle data
      extern int SamplingDataOffset;
+
+     //Sampling the dust mass escape rate
+     extern double DustMassEscapeRate;
+
+     //output the dust mass escape rate with the diagnostic message
+     void OutputDiagnosticMessage(CMPI_channel*,long int);
 
      //sample particle data
      void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);

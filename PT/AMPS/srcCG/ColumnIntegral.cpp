@@ -156,6 +156,8 @@ void Comet::Sampling::PrintBrightnessMap(int DataOutputFileNumber) {
   double halfAngleRange,r,theta;
   int iTestPoint,idim,iMap;
 
+  if (_COMET_PRINT_BRIGHTNESS_MAP_MODE_==_PIC_MODE_OFF_) return;
+
   const int nCalcualtedMaps=4;
 
   for (iTestPoint=0;iTestPoint<ElectricallyChargedDust::Sampling::FluxMap::SampleLocations.size();iTestPoint++) {

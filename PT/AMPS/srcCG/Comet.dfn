@@ -38,3 +38,11 @@
 #define _CG_DUST_FORCE_MODE__DRAG_FORCE__TANGENTIAL_COMPONENT_ _PIC_MODE_OFF_
 
 
+//print brightness map during the run-time
+#define _COMET_PRINT_BRIGHTNESS_MAP_MODE_   _PIC_MODE_OFF_
+
+//the gas injection velocity distribution
+#define _COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE_ _COMET_GAS_INJECTION_VELOCITY_DIRECTION_MODE__UNIFORM_
+
+//load the dust rate correction injection correction factor
+#define _DUST_INJECTION_RATE_CORRECTION_MODE_ _DUST_INJECTION_RATE_CORRECTION_MODE__OFF_
