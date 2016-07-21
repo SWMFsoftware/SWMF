@@ -5,8 +5,6 @@
 \usepackage{alltt}
 \usepackage{amsmath}
 \usepackage{epsfig}
-%\usepackage{fancyhdr}
-%\usepackage{graphicx}
 \usepackage{html}
 
 \newcommand{\SWMFVERSION}{2.4}
@@ -14,10 +12,8 @@
 \newcommand{\SWMFLOGO}{\includegraphics*[height=1in]{SWMF_logo.eps}}
 \newcommand{\CSEMLOGO}{\includegraphics*[height=1in]{CSEM_logo.eps}}
 \newcommand{\SWMFLOGOVERSION}{
-       \begin{latexonly}
        \CSEMLOGO \SWMFLOGO \\
        \hfill \\
-       \end{latexonly}
        \large Code Version \SWMFVERSION}
 
 % use these lengths for a format for an offset margin
@@ -54,21 +50,7 @@
 
 \begin{document}
 
-%\pagestyle{fancy}
-%\lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
-%\rhead[\fancyplain{}{\bfseries\leftmark}]{\fancyplain{}{\bfseries\thepage}}
-%\cfoot{}
-\pagestyle{headings} % if fancy heading does not work
-
-%This command allows using auto_navigation flag (see makefile) to put
-%a bottom navigation bar on any page with more words than defined
-% below.  
-%\HTMLset{WORDS_IN_PAGE}{1000}
-
-\htmladdtonavigation{\htmladdnormallink
-   {\htmladdimg[align=right, valign=top, alt='SWMF Home Page @ CSEM']{SWMF_logo_small.png}}{http://csem.engin.umich.edu/swmf}}
-\htmladdtonavigation{\htmladdnormallink
-   {\htmladdimg[align=right, valign=top, alt='CSEM Home Page']{CSEM_logo_small.png}}{http://csem.engin.umich.edu}}
+\pagestyle{headings}
 
 \maketitle
 
@@ -79,8 +61,6 @@
 
 \newpage
 
-\begin{latexonly}
 \tableofcontents
-\end{latexonly}
 
 \newpage
