@@ -1252,9 +1252,9 @@ contains
     real,      intent(inout):: Xyz_D(nDim)
     integer,   intent(in)   :: nIndexes
     !OUTPUT ARGUMENTS
-    integer,   intent(out)  :: iIndex_II(0:nIndexes,2**nDim)
+    integer,   intent(out)  :: iIndex_II(0:nIndexes,2**GridDescriptor%nDim)
     integer,   intent(out)  :: nImages
-    real,      intent(out)  :: Weight_I(2**nDim)
+    real,      intent(out)  :: Weight_I(2**GridDescriptor%nDim)
     !EOP
     !--------------------------------------------------------------------------
     ! memorize grid descriptor by storing it in modular variable;

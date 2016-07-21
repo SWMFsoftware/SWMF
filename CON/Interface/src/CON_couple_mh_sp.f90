@@ -457,9 +457,9 @@ contains
     ! grid descriptor
     type(GridDescriptorType):: GridDescriptor
     integer, intent(in) :: nIndex
-    integer, intent(out):: iIndex_II(0:nIndex,2**nCoord)
+    integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
     integer, intent(out):: nImage
-    real,    intent(out):: Weight_I(2**nCoord)
+    real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
     integer:: iLine
     !--------------------------
     nImage = 1
