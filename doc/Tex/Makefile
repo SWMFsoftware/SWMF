@@ -16,20 +16,10 @@ help:
 	@echo "Targets:"
 	@echo ""
 	@echo "PDF          - produces PDF manuals in the ../ directory"
-	@#^CMP IF DOCHTML BEGIN
-	@echo ""
-	@echo "HTML         - produces online manuals in ../HTML directory"
-	@#^CMP END DOCHTML
 	@echo ""
 	@echo "clean        - remove temporary files"
 	@echo ""
 	@echo "cleanpdf     - clean + remove PDF manuals"
-	@#^CMP IF DOCHTML BEGIN
-	@echo ""
-	@echo "cleanhtml    - clean + remove HTML manuals"
-	@echo ""
-	@echo "cleanall     - clean + remove PDF and HTML manuals"
-	@#^CMP END DOCHTML
 #EOC
 
 #^CMP IF GM BEGIN
@@ -130,29 +120,6 @@ SWMFREF = \
 	${UTILDIR}/TIMING/src/ModTiming.protex \
 	${UTILDIR}/TIMING/src/timing.protex
 
-#^CMP IF DOCHTML BEGIN
-.tex.html:
-	touch $*.ind $*.idx
-	latex $*
-	latex $*
-	makeindex $*.idx
-	latex2html -image_type gif -local_icons \
-		  -address "(c) 2003 University of Michigan" \
-		  -prev_url   "../../index.html"  \
-		  -up_url     "../../index.html" \
-		  -up_title   "SWMF Documents" \
-		  -prev_title "SWMF Documents" \
-		  -noauto_navigation \
-		  -top_navigation \
-		  $*
-	cd $*; \
-	perl -pi -e 's/^\[\]//' $*.html index.html; \
-	cp ../../HTML/*.png ./ ; \
-	rm -f $*.ind $*.idx $*.ilg
-	rm -rf ../HTML/$*
-	mv $* ../HTML
-#^CMP END DOCHTML
-
 #
 # Rules for files without a standard extension
 #
@@ -232,16 +199,6 @@ PDF_FILES = SWMF.pdf SWPC.pdf TESTING.pdf REFERENCE.pdf \
 
 PDF: ${PDF_FILES}
 
-#^CMP IF DOCHTML BEGIN
-HTML_FILES = SWMF.html REFERENCE.html
-HTML_DIRS  = SWMF REFERENCE
-
-SWMF.html: SWMFXML
-REFERENCE.html: SWMFREF.tex
-HTML: cleanhtml
-	make ${HTML_FILES}
-#^CMP END DOCHTML
-
 clean:
 	rm -f *.out *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
 	rm -f SWMFREF.tex SWMFXML.tex SWPC.XML SWPCXML.tex BATSRUS_SCRIPTS.tex
@@ -250,10 +207,3 @@ clean:
 
 cleanpdf: clean
 	cd ..; rm -f ${PDF_FILES}
-
-#^CMP IF DOCHTML BEGIN
-cleanhtml: clean
-	cd ../HTML;rm -rf ${HTML_DIRS}
-
-cleanall: cleanpdf cleanhtml
-#^CMP END DOCHTML
