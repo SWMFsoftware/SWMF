@@ -28,7 +28,7 @@ user manual please follow the instructions below.
 
 # Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
 # are in the CRASH_data repository. On many machines at the UofM this is 
-# alread available through a shared disk as
+# already available through a shared disk as
 
 /csem1/CRASH_data
 
@@ -93,7 +93,7 @@ Config.pl -install -compiler=mpxlf90,mpxlc
 
 # For machines with no MPI library, use
 
-Config.pl -instal -nompi -compiler=....
+Config.pl -install -nompi -compiler=....
 
 # This will only allow serial execution, of course.
 
@@ -110,19 +110,21 @@ ulimit -s unlimited
 # Create the manuals #
 ######################
 
-# Please note that creating both the PDF and HTML versions require 
-# that LaTex and ps2pdf be installed on your system.  
-# In addition, creating the HTML version requires the latex2html utility 
+# Please note that creating the PDF manuals requires 
+# that LaTex and ps2pdf be installed on your system.
 
-# To create the PDF versions of the manuals type
+# To create the PDF manuals type
 make PDF
 
 # in the BATSRUS directory. The manuals will be in the Doc/ directory.
 
-# To create the HTML version of the manuals type
-make HTML
+# Cleaning the documentation
+cd doc/Tex
+make clean
 
-# in the BATSRUS directory. The HTML manuals will be in the Doc/HTML directory.
+# To remove all the created documentation type
+cd doc/Tex
+make cleanpdf
 
 ####################
 # Read the manuals #
@@ -143,12 +145,22 @@ Doc/USERMANUAL.pdf
 
 # You can try running the standard test suite by typing
 
-make test
+make -j test
 
-# in the main directory. This requires a machine where mpirun is available.
-# The tests run on 2 CPU cores by default. To run on (up to 4) cores use
-
-make test MPIRUN='mpirun -np 4'
-
-# the results of the tests are summarized in test_swmf.res
+# in the main directory. The -j flag allows parallel compilation.
+# This requires a machine where mpirun is available.
+# The tests run on 2 CPU cores by default. 
 # Successful passing of the test is indicated by empty *.diff files.
+
+# To run the tests on more (up to 8) cores use
+
+make -j test MPIRUN='mpirun -np 4'
+
+# You can also run an individual test. The list of available SWMF tests
+# can be listed with
+
+make test_help
+
+# For example, to run test_shocktube on a single core use
+
+make -j test_shocktube MPIRUN=

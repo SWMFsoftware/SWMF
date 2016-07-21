@@ -107,19 +107,13 @@ ulimit -s unlimited
 # Create the manuals #
 ######################
 
-# Please note that creating both the PDF and HTML versions require 
-# that LaTex and ps2pdf be installed on your system.  
-# In addition, creating the HTML version requires the latex2html utility 
+# Please note that creating the PDF manuals requires
+# that LaTex and ps2pdf be installed on your system.
 
-# To create the PDF versions of the manuals type
+# To create the PDF manuals type
 make PDF
 
 # in the SWMF directory. The manuals will be in the doc/ directory.
-
-# To create the HTML version of the manuals type
-make HTML
-
-# in the SWMF directory. The HTML manuals will be in the doc/HTML directory.
 
 # Cleaning the documentation
 cd doc/Tex
@@ -127,7 +121,7 @@ make clean
 
 # To remove all the created documentation type
 cd doc/Tex
-make cleanall
+make cleanpdf
 
 ####################
 # Read the manuals #
