@@ -190,6 +190,12 @@ Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vten
 Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
+Run=
+>>>@echo "test_CG-dust-test_run..." >> test_CG-dust-test.diff
+>>>cp ${MYDIR}/srcCG/ModelData/CorrectedFluxRelativeDUST.bin  ${TESTCG-dust-testDIR}
+>>>cd ${TESTCG-dust-testDIR}; ${MPIRUN}  ./amps
+>>>@echo "test_CG-dust-test_run... done" >> test_CG-dust-test.diff
+
 Check=
 >>>@echo "test_CG-dust-test_check..." >> test_CG-dust-test.diff
 
