@@ -924,7 +924,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(50000000);
+  PIC::ParticleBuffer::Init(5000000);
  
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
