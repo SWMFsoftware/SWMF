@@ -1487,13 +1487,13 @@ test12:
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
 
 test12_aniso:
-	@echo "test12_aniso_compile..." > test12_gmpc_aniso.diff
+	@echo "test12_aniso_compile..." > test12_aniso_gmpc.diff
 	$(MAKE) test12_aniso_compile
-	@echo "test12_aniso_rundir..." > test12_gmpc_aniso.diff
+	@echo "test12_aniso_rundir..." > test12_aniso_gmpc.diff
 	$(MAKE) test12_aniso_rundir
-	@echo "test12_aniso_run..." > test12_gmpc_aniso.diff
+	@echo "test12_aniso_run..." > test12_aniso_gmpc.diff
 	$(MAKE) test12_aniso_run
-	@echo "test12_aniso_check..." > test12_gmpc_aniso.diff
+	@echo "test12_aniso_check..." > test12_aniso_gmpc.diff
 	$(MAKE) test12_aniso_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -1526,23 +1526,23 @@ test12_aniso_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
 		${TESTDIR}/RESULTS/z_n4.ref \
-		> test12_gmpc_aniso.diff)
+		> test12_aniso_gmpc.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
 		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out\
 		${TESTDIR}/RESULTS/z_n4.ref \
-		>> test12_gmpc_aniso.diff)
-	ls -l test12_gmpc_aniso.diff
+		>> test12_aniso_gmpc.diff)
+	ls -l test12_aniso_gmpc.diff
 
 #### test IPIC3D.exe coupled with GM/BATSRUS using 3D reconetion #########
 
 test12_3d:
-	@echo "test12_3d_compile..." > test12_gmpc_3d.diff
+	@echo "test12_3d_compile..." > test12_3d_gmpc.diff
 	$(MAKE) test12_3d_compile
-	@echo "test12_3d_rundir..." > test12_gmpc_3d.diff
+	@echo "test12_3d_rundir..." > test12_3d_gmpc.diff
 	$(MAKE) test12_3d_rundir
-	@echo "test12_3d_run..." > test12_gmpc_3d.diff
+	@echo "test12_3d_run..." > test12_3d_gmpc.diff
 	$(MAKE) test12_3d_run
-	@echo "test12_3d_check..." > test12_gmpc_3d.diff
+	@echo "test12_3d_check..." > test12_3d_gmpc.diff
 	$(MAKE) test12_3d_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -1568,31 +1568,31 @@ test12_3d_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/x_n4.ref \
-		> test12_gmpc_3d.diff)
+		> test12_3d_gmpc.diff)
 	gunzip -c output/test12/y=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/y_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/y_n4.ref \
-		> test12_gmpc_3d.diff)
+		>> test12_3d_gmpc.diff)
 	gunzip -c output/test12/z=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/z_n4.ref \
-		> test12_gmpc_3d.diff)
-	ls -l test12_gmpc_3d.diff
+		>> test12_3d_gmpc.diff)
+	ls -l test12_3d_gmpc.diff
 
 #### test IPIC3D.exe coupled with GM/BATSRUS using isotropic MHD #########
 
 test12_iso:
-	@echo "test12_iso_compile..." > test12_gmpc_iso.diff
+	@echo "test12_iso_compile..." > test12_iso_gm.diff
 	$(MAKE) test12_iso_compile
-	@echo "test12_iso_rundir..." > test12_gmpc_iso.diff
+	@echo "test12_iso_rundir..." > test12_iso_gm.diff
 	$(MAKE) test12_iso_rundir
-	@echo "test12_iso_run..." > test12_gmpc_iso.diff
+	@echo "test12_iso_run..." > test12_iso_gm.diff
 	$(MAKE) test12_iso_run
-	@echo "test12_iso_check..." > test12_gmpc_iso.diff
+	@echo "test12_iso_check..." > test12_iso_gm.diff
 	$(MAKE) test12_iso_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -1618,19 +1618,19 @@ test12_iso_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 		${TESTDIR}/RESULTS/GM/z_n4.ref \
-		> test12_gm_iso.diff)
+		> test12_iso_gm.diff)
 	gunzip -c output/test12/z=0_fluid.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/PC/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/PC/z=0_fluid_0_t00000001_n00000004.out \
 		${TESTDIR}/RESULTS/PC/z_n4.ref \
-		> test12_pc_iso.diff)
+		> test12_iso_pc.diff)
 	gunzip -c output/test12/cut_particles1.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/PC/cut_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/PC/cut_particles1_1_t00000001_n00000004.out \
 		${TESTDIR}/RESULTS/PC/cut_n4.ref \
-		>> test12_pc_iso.diff)
-	ls -l test12_??_iso.diff
+		>> test12_iso_pc.diff)
+	ls -l test12_iso*.diff
 
 
