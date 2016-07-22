@@ -470,6 +470,22 @@ contains
     iIndex_II(2:3,1) = (/1,1/)
     iIndex_II(4,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(BLK_,iLine)
   end subroutine interpolate_sp
+  !==================================================================!
+  subroutine interpolation_amr_gc_old_interface(&
+       nDim, Coord_D, GridDescriptor, &
+       nIndex, iIndex_II, nImage, Weight_I)
+    use CON_grid_descriptor
+    integer, intent(in):: nDim
+    real,    intent(inout):: Coord_D(nDim)
+    type(GridDescriptorType):: GridDescriptor
+    integer, intent(in) :: nIndex
+    integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
+    integer, intent(out):: nImage
+    real,    intent(out):: Weight_I(2**nDim)
+    !--------------------------
+    call interpolaton_amr_gc(nDim, Coord_D, GridDescriptor, &
+         nIndex, iIndex_II, nImage, Weight_I)
+  end subroutine interpolation_amr_gc_old_interface
 
   !==================================================================!
   subroutine transform_from_cartesian(iComp)
@@ -602,7 +618,7 @@ contains
          Router=RouterIhSp,&
          NameMappingVector='SP_Xyz_DI',&
          NameMask='SP_IsInIH',&
-         interpolate=interpolation_amr_gc)
+         interpolate=interpolation_amr_gc_old_interface)
 
     call transform_to_cartesian(IH_)
     if(is_proc(SP_))then
@@ -704,7 +720,7 @@ contains
          Router=RouterScSp,&
          NameMappingVector='SP_Xyz_DI',&
          NameMask='SP_IsInSC',&
-         interpolate=interpolation_amr_gc)
+         interpolate=interpolation_amr_gc_old_interface)
     
     call transform_to_cartesian(SC_)
     if(is_proc(SP_))then
