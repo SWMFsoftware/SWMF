@@ -705,7 +705,7 @@ contains
     end if
     FullB = sqrt(sum(FullB_D**2))
 
-    Coef = sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
+    Coef = 2.0*sqrt(FullB/State_VGB(Rho_,i,j,k,iBlock))/LperpTimesSqrtB
 
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)

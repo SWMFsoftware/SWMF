@@ -93,7 +93,7 @@ F			UseUserUpdateStates
 
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
-7.5e4			LperpTimesSqrtBSi
+1.5e5			LperpTimesSqrtBSi
 0.04			Crefl
 
 HYPERBOLICDIVB
@@ -371,7 +371,7 @@ F			UseUserUpdateStates
 
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
-7.5e4			LperpTimesSqrtBSi
+1.5e5			LperpTimesSqrtBSi
 0.04			Crefl
 
 #RESISTIVITY
