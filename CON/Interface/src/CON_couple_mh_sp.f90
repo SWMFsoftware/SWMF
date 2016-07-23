@@ -465,6 +465,7 @@ contains
     nImage = 1
     Weight_I(1) = 1.0
     iLine = nint(Coord_I(4))
+
     iIndex_II(0,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(PE_,iLine)
     iIndex_II(1,  1) = nint(Coord_I(5))
     iIndex_II(2:3,1) = (/1,1/)
@@ -475,6 +476,7 @@ contains
        nDim, Coord_D, GridDescriptor, &
        nIndex, iIndex_II, nImage, Weight_I)
     use CON_grid_descriptor
+
     integer, intent(in):: nDim
     real,    intent(inout):: Coord_D(nDim)
     type(GridDescriptorType):: GridDescriptor
@@ -483,7 +485,7 @@ contains
     integer, intent(out):: nImage
     real,    intent(out):: Weight_I(2**nDim)
     !--------------------------
-    call interpolaton_amr_gc(nDim, Coord_D, GridDescriptor, &
+    call interpolation_amr_gc(nDim, Coord_D, GridDescriptor, &
          nIndex, iIndex_II, nImage, Weight_I)
   end subroutine interpolation_amr_gc_old_interface
 
