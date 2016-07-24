@@ -300,7 +300,7 @@ sub add_line_makefile_local{
 #	    print "==========>$_";
 	    $_ = $_[0]; chomp($_); $_ = "$_\n";
 	    $IsPresent = 1;
-	    last;
+#    last;
 	}
     }
     
@@ -1286,6 +1286,11 @@ sub ReadGeneralBlock {
         die "The option is unknown($line)\n";
       }
     }      
+    
+    elsif ($InputLine eq "REQUESTEDPARTICLEBUFFERLENGTH") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("const int RequestedParticleBufferLength",$InputLine,"pic/pic.cpp");      
+    }
     
     elsif ($InputLine eq "DEFINE") {
       my ($macro,$value,$s0,$s1);
