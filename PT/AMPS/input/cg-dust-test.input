@@ -4,6 +4,7 @@
 
 #General
   ReferenceInjectionParticleNumber=2000
+  RequestedParticleBufferLength=1500000
 #endGeneral
 
 

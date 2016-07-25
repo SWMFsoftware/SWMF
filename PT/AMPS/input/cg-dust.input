@@ -50,6 +50,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 #General
 
+   RequestedParticleBufferLength=150000000
+
 
   define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 15
   define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5

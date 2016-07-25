@@ -53,6 +53,8 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 #endUserDefinitions
 
 #General
+  RequestedParticleBufferLength=1500000
+
   ReferenceInjectionParticleNumber=60000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
