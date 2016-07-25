@@ -515,7 +515,7 @@ int main(int argc,char **argv) {
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
 
-  PIC::Alarm::SetAlarm(8*3600-5*60);
+  PIC::Alarm::SetAlarm(8*3600-10*60);
 
   //seed the random number generator
   rnd_seed(100);
@@ -923,8 +923,10 @@ int main(int argc,char **argv) {
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
+/*
   //init the particle buffer
   PIC::ParticleBuffer::Init(5000000);
+*/
  
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
