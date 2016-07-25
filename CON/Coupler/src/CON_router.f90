@@ -1605,8 +1605,8 @@ contains
              Router%nPut_P( iProcTo) = Router%nPut_P( iProcTo) + 1
 
              ! indices of the location where data has to be put
-             ! NOTE: PE id is last entry here, but in router it is 0th
-             iCB_II(1+nIndexTarget, iBuffer) = iProc
+             ! NOTE:number of images is last entry here,but in router it is 0th
+             iCB_II(1+nIndexTarget, iBuffer) = 1
              iCB_II(1:nIndexTarget, iBuffer) = iIndex_II(:,iData)
              ! whether the image is the 1st
              DoAdd_I(iBuffer) = iImage /= 1
@@ -1775,7 +1775,7 @@ contains
                CYCLE
           ! indices 
           Router%iGet_P(iProcFrom) % &
-               iCB_II(0,1:Router%nGet_P(iProcFrom)) = iProc
+               iCB_II(0,1:Router%nGet_P(iProcFrom)) = 1
           Router%iGet_P(iProcFrom) % &
                iCB_II(1:nIndexSource,1:Router%nGet_P(iProcFrom)) = &
                nint( BufferR_II(1:nIndexSource, iStart:iEnd) )
@@ -2259,7 +2259,8 @@ contains
                 write(StringErrorMessage,StringErrorFormat)&
                      NameSub//': some images of a scatter location', &
                      Coord_II(1:nDimSource, iData),&
-                     'are not on the processor that provided it, iProc=',iProc
+                     ' are not on the processor that provided it, iProc=', &
+                     iProc
                 call CON_stop(StringErrorMessage)
              end if
           else
@@ -2282,8 +2283,8 @@ contains
              Router%nGet_P( iProcTo) = Router%nGet_P( iProcTo) + 1
 
              ! indices of the location where data has to be fetched from
-             ! NOTE: PE id is last entry here, but in router it is 0th
-             iCB_II(1+nIndexSource, iBuffer) = iProc
+             ! NOTE:number if images is last entry here,but in router it is 0th
+             iCB_II(1+nIndexSource, iBuffer) = 1
              iCB_II(1:nIndexSource, iBuffer) = &
                   iIndexGet_II(1:nIndexSource,iImageSource)
 
@@ -2451,7 +2452,7 @@ contains
                CYCLE
           ! indices
           Router%iPut_P(iProcFrom) % &
-               iCB_II(0,  1:Router%nPut_P(iProcFrom)) = iProc
+               iCB_II(0,  1:Router%nPut_P(iProcFrom)) = 1
           Router%iPut_P(iProcFrom) % &
                iCB_II(1:nIndexTarget,  1:Router%nPut_P(iProcFrom)) = &
                nint( BufferR_II(1:nIndexTarget, iStart:iEnd) )

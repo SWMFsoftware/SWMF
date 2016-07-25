@@ -160,7 +160,6 @@ contains
        State_VIB((/1,2,3/),i,iBlock) = Coord_D
        State_VIB((/4,5,6/),i,iBlock) = B_D
     end if
-
   end subroutine SP_put_from_mh
 
   !===================================================================
@@ -329,7 +328,8 @@ contains
     end select
     ! store passed particles
     do iParticle = 1, nParticle
-       iLine  = iIndex_II(4, iParticle)
+       iBlock  = iIndex_II(4, iParticle)
+       iLine = iNode_B(iBlock)
        iIndex = iIndex_II(1, iParticle) + iOffset_A(iLine)
        if(iIndex < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
@@ -340,7 +340,7 @@ contains
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        ! store data
-       State_VIB((/R_, Lon_, Lat_/), iIndex, iGrid_IA(Block_,iLine)) = &
+       State_VIB((/R_, Lon_, Lat_/), iIndex, iBlock) = &
             Coord_DI(1:nDim, iParticle)
     end do
     !\

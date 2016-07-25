@@ -120,6 +120,8 @@ contains
             SC_GridDescriptor)
        call init_router(SC_GridDescriptor,SP_GridDescriptor,&
             RouterScSp)
+       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
+            RouterScSp%iCommUnion)
     end if
 
     if(use_comp(IH_))then
@@ -128,6 +130,8 @@ contains
             IH_GridDescriptor)
        call init_router(IH_GridDescriptor,SP_GridDescriptor,&
             RouterIhSp)
+       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
+            RouterIhSp%iCommUnion)
     end if
 
 
