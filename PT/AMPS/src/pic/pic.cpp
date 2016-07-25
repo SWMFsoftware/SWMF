@@ -1379,12 +1379,14 @@ void PIC::Init_BeforeParser() {
   //initiate MPI
   InitMPI();
 
+/*
   //init the particle buffer
   //the default value of 'RequestedParticleBufferLength' is -1, which can be chganged by ampsConfig.pl
   //if 'RequestedParticleBufferLength' is -1 than the particle buffer is not initialized
   const int RequestedParticleBufferLength=-1;
 
   if (RequestedParticleBufferLength!=-1) PIC::ParticleBuffer::Init(RequestedParticleBufferLength);
+*/
 
 
   //set up the DiagnospticMessageStream
@@ -1676,6 +1678,13 @@ void PIC::Init_AfterParser() {
 #if _PIC_PITCH_ANGLE_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::PitchAngleDistributionSample::Init();
 #endif
+
+  //init the particle buffer
+  //the default value of 'RequestedParticleBufferLength' is -1, which can be chganged by ampsConfig.pl
+  //if 'RequestedParticleBufferLength' is -1 than the particle buffer is not initialized
+  const int RequestedParticleBufferLength=-1;
+
+  if (RequestedParticleBufferLength!=-1) PIC::ParticleBuffer::Init(RequestedParticleBufferLength);
 
 }
 
