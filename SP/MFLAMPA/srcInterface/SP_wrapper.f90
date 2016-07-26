@@ -154,10 +154,10 @@ contains
 
 
     if(DoAdd)then
-       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
+!       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
        State_VIB(4:6,i,iBlock) = State_VIB(4:6,i,iBlock) + B_D
     else
-       State_VIB((/1,2,3/),i,iBlock) = Coord_D
+!       State_VIB((/1,2,3/),i,iBlock) = Coord_D
        State_VIB((/4,5,6/),i,iBlock) = B_D
     end if
   end subroutine SP_put_from_mh

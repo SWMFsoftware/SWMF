@@ -2223,7 +2223,7 @@ contains
                nIndex         = nIndexTarget, &
                iIndex_II      = iIndexPut_II, &
                nImage         = nImageTarget, &
-               Weight_I       = WeightSource_I)
+               Weight_I       = WeightTarget_I)
 
           ! check if interpolation has succeeded
           if(nImageTarget < 1)then

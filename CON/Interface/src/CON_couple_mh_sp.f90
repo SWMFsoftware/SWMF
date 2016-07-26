@@ -122,6 +122,8 @@ contains
             RouterScSp)
        call SC_synchronize_refinement(RouterScSp%iProc0Source,&
             RouterScSp%iCommUnion)
+       ScToSp_DD=transform_matrix(tNow,&                 
+            Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     end if
 
     if(use_comp(IH_))then
@@ -132,6 +134,8 @@ contains
             RouterIhSp)
        call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
             RouterIhSp%iCommUnion)
+       IhToSp_DD=transform_matrix(tNow,&                 
+            Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     end if
 
 
@@ -143,8 +147,10 @@ contains
     !\
     ! Extract and exchange initial data
     !/
-    call exchange_lines(SC_)
-    call exchange_lines(IH_)
+    if(use_comp(SC_))&
+         call exchange_lines(SC_)
+    if(use_comp(IH_))&
+         call exchange_lines(IH_)
 
     ! reserve memeory for SP grid
     call allocate_vector('SP_Xyz_DI', &
@@ -710,7 +716,7 @@ contains
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
-    ScToSP_DD=transform_matrix(tNow,&
+    ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
 
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
