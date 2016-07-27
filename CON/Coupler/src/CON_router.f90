@@ -1350,20 +1350,23 @@ contains
 
     interface
        subroutine get_request_target(&
-            nData, nCoord,  &
-            Coord_II, iIndex_II)
+            nData, nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
          ! this subroutine returns info that identifies location of the data
          ! in the domain, may be as generic as needed, i.e. Coord_II need NOT
          ! to be the actual coordinates
          implicit none
          ! number of data entries
-         integer,       intent(out):: nData
+         integer,              intent(out):: nData
          ! number of coordinates per data entry
-         integer,       intent(out):: nCoord
+         integer,              intent(out):: nCoord
          ! data locations themselves
          real,    allocatable, intent(out):: Coord_II(:,:)
          ! indices to access the data locations on Target
          integer, allocatable, intent(out):: iIndex_II(:,:)
+         ! number of auxilary variables
+         integer,              intent(out):: nAux
+         ! auxilary variables themselves
+         real,    allocatable, intent(out):: Aux_VI(:,:)
        end subroutine get_request_target
        !----------------------------------------------------------------------!
        subroutine transform(nDimIn, CoordIn_D, nDimOut, CoordOut_D)
@@ -1395,7 +1398,8 @@ contains
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
        end subroutine interpolate_source
        !----------------------------------------------------------------------!
-       subroutine put_request_source(nData, nDim, Coord_DI, nIndex, iIndex_II)
+       subroutine put_request_source(nData, &
+            nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
          ! via this subroutine user can process transferred coordinates
          ! on the Source component
          implicit none
@@ -1403,6 +1407,8 @@ contains
          real,    intent(in):: Coord_DI(nDim, nData)
          integer, intent(in):: nIndex
          integer, intent(in):: iIndex_II(nIndex, nData)
+         integer, intent(in):: nAux
+         real,    intent(in):: Aux_VI(nAux, nData)
        end subroutine put_request_source
     end interface
     optional:: get_request_target
@@ -1452,10 +1458,14 @@ contains
     ! aux variables to go through a buffer
     integer:: iStart, iEnd
     ! variable indices
-    integer:: iVarWeight, iVarDimStart, iVarDimEnd, iVarData
+    integer:: iVarWeight, iVarDimStart, iVarDimEnd, iVarData, &
+         iAuxStart, iAuxEnd
+    ! number of auxilary variables passed via request
+    integer:: nAux
     ! storage for requests
     real,    allocatable:: Coord_II(:,:) 
     integer, allocatable:: iIndex_II(:,:)
+    real,    allocatable:: Aux_VI(:,:) 
     ! aux array that hold router information on Target
     integer, allocatable:: iCB_II(:,:)
     logical, allocatable:: DoAdd_I(:)
@@ -1514,6 +1524,8 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nVar = nIndexSource + 1
+    ! by default no auxilary variables are passed
+    nAux = 0
     ! indices of variables
     iVarWeight = nIndexSource + 1
     ! coordinates may be sent: nDimSource variables plus
@@ -1523,6 +1535,8 @@ contains
        iVarDimStart= nIndexSource + 2
        iVarDimEnd  = nIndexSource + 1 + nDimSource
        iVarData    = nIndexSource + 2 + nDimSource
+       iAuxStart= 0
+       iAuxEnd  =-1
     end if
 
     !\
@@ -1532,7 +1546,19 @@ contains
     !/
     if(is_proc(iCompTarget))then
        ! get the data locations on Target as well as corresponding indices
-       call get_request_target(nData, nCoordTarget, Coord_II, iIndex_II)
+       call get_request_target(nData, nCoordTarget, Coord_II, iIndex_II, &
+            nAux, Aux_VI)
+
+       ! if auxilary data are sent, correct size of the buffer
+       if(nAux > 0)then
+          nVar = nVar + nAux
+          iAuxStart = iVarData + 1
+          iAuxEnd   = iVarData + nAux
+          ! check correctness
+          if(.not.allocated(Aux_VI))&
+               call CON_stop(NameSub//&
+               ": trying to pass auxilary data but buffer is not allocated")
+       end if
 
        ! find the correct number of coordinates to be used on Source
        nCoordSource = nCoordTarget - nDimTarget + nDimSource
@@ -1631,6 +1657,10 @@ contains
                      Coord_I(1:nDimSource)
                 ! index of request location for current target processor
                 BufferS_II(iVarData, iBuffer) = iData
+                ! auxilary data
+                if(nAux > 0)&
+                     BufferS_II(iAuxStart:iAuxEnd, iBuffer) = &
+                     Aux_VI(1:nAux, iData)
              end if
           end do
        end do
@@ -1674,6 +1704,17 @@ contains
                Weight_I(1:Router%nPut_P(iProcTo)) =  1.0 
           nRecvCumSum = nRecvCumSum + Router%nPut_P(iProcTo)
        end do
+    end if
+
+    ! synchronize number of auxilary variables passed during the request
+    call MPI_Bcast(nAux, 1, MPI_INTEGER, &
+         Router%iProc0Target, Router%iComm, iError)
+
+    ! adjust relevant info outside of Target
+    if(.not.is_proc(iCompTarget) .and. nAux > 0)then
+       nVar = nVar + nAux
+       iAuxStart = iVarData + 1
+       iAuxEnd   = iVarData + nAux
     end if
 
     !\
@@ -1720,6 +1761,7 @@ contains
     if(is_proc(iCompSource))then
        ! size of the recv buffer
        nBufferR = sum(Router%nSend_P)
+
        call check_size(2, (/nVar, nBufferR/), Buffer_II=BufferR_II)
        BufferR_II = 0
 
@@ -1813,8 +1855,9 @@ contains
                nData, nDimSource,  &
                BufferR_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
                nIndexSource,&
-               nint(BufferR_II(1:nIndexSource, iUnique_I(1:nData))))
-
+               nint(BufferR_II(1:nIndexSource, iUnique_I(1:nData))),&
+               nAux, &
+               BufferR_II(iAuxStart:iAuxEnd, iUnique_I(1:nData)))
        end if
     end if
 

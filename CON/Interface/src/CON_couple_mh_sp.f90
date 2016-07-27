@@ -53,7 +53,8 @@ module CON_couple_mh_sp
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
 
   logical,save::DoInit=.true.
-  real,allocatable,dimension(:,:)::XyzStored_DI
+  real,   allocatable:: XyzStored_DI(:,:)
+  integer,allocatable:: iAuxStored_I(:)
 
   real,dimension(:,:),pointer ::Xyz_DI
   logical,dimension(:),pointer :: Is_I
@@ -361,27 +362,36 @@ contains
     call transform(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine transform_ih_to_sp
   !==================================================================!
-  subroutine SP_get_request_for_sc(nData, nCoord, Coord_II, iIndex_II)
+  subroutine SP_get_request_for_sc(nData, &
+       nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
     integer,            intent(out):: nData
     integer,            intent(out):: nCoord
     real,   allocatable,intent(out):: Coord_II(:,:)
     integer,allocatable,intent(out):: iIndex_II(:,:)
+    integer,            intent(out):: nAux
+    real,   allocatable,intent(out):: Aux_VI(:,:)
     !------------------------------------------------------------
     nCoord = SP_GridDescriptor%nDim
-    call SP_request_line(iInterfaceOrigin, nData, Coord_II, iIndex_II)
+    call SP_request_line(iInterfaceOrigin, nData, Coord_II, iIndex_II, &
+         nAux, Aux_VI)
   end subroutine SP_get_request_for_sc
   !==================================================================!
-  subroutine SP_get_request_for_ih(nData, nCoord, Coord_II, iIndex_II)
+  subroutine SP_get_request_for_ih(nData, &
+       nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
     integer,            intent(out):: nData
     integer,            intent(out):: nCoord
     real,   allocatable,intent(out):: Coord_II(:,:)
     integer,allocatable,intent(out):: iIndex_II(:,:)
+    integer,            intent(out):: nAux
+    real,   allocatable,intent(out):: Aux_VI(:,:)
     !------------------------------------------------------------
     nCoord = SP_GridDescriptor%nDim
-    call SP_request_line(iInterfaceEnd, nData, Coord_II, iIndex_II)
+    call SP_request_line(iInterfaceEnd, nData, Coord_II, iIndex_II, &
+         nAux, Aux_VI)
   end subroutine SP_get_request_for_ih
   !==================================================================!
-  subroutine put_request(iComp, nData, nDim, Coord_DI, nIndex, iIndex_II)
+  subroutine put_request(iComp, nData, &
+       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
     use ModCoordTransform, ONLY: rlonlat_to_xyz
     integer, intent(in):: iComp
     integer, intent(in):: nData
@@ -389,6 +399,8 @@ contains
     real,    intent(in):: Coord_DI(nDim, nData)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nData)
+    integer, intent(in):: nAux
+    real,    intent(in):: Aux_VI(nAux,nData)
     integer:: iData
     real:: Xyz_D(nDim)
     character(len=100):: TypeGeometry
@@ -396,6 +408,9 @@ contains
     !----------------------------------------------------------
     if(allocated(XyzStored_DI)) deallocate(XyzStored_DI)
     allocate(XyzStored_DI(nDim, nData))
+    if(allocated(iAuxStored_I)) deallocate(iAuxStored_I)
+    allocate(iAuxStored_I(nData))
+
     if(nData==0)&
          RETURN
 
@@ -416,24 +431,32 @@ contains
     end if
   end subroutine put_request
   !==================================================================!
-  subroutine SC_put_request(nData, nDim, Coord_DI, nIndex, iIndex_II)
+  subroutine SC_put_request(nData, &
+       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
     integer, intent(in):: nData
     integer, intent(in):: nDim
     real,    intent(in):: Coord_DI(nDim, nData)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nData)
+    integer, intent(in):: nAux
+    real,    intent(in):: Aux_VI(nAux, nData)
     !----------------------------------------------------------
-    call put_request(SC_, nData, nDim, Coord_DI, nIndex, iIndex_II)
+    call put_request(SC_, nData, nDim, Coord_DI, nIndex, iIndex_II, &
+         nAux, Aux_VI)
   end subroutine SC_put_request
   !==================================================================!
-  subroutine IH_put_request(nData, nDim, Coord_DI, nIndex, iIndex_II)
+  subroutine IH_put_request(nData, &
+       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
     integer, intent(in):: nData
     integer, intent(in):: nDim
     real,    intent(in):: Coord_DI(nDim, nData)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nData)
+    integer, intent(in):: nAux
+    real,    intent(in):: Aux_VI(nAux, nData)
     !----------------------------------------------------------
-    call put_request(IH_, nData, nDim, Coord_DI, nIndex, iIndex_II)
+    call put_request(IH_, nData, nDim, Coord_DI, nIndex, iIndex_II, &
+         nAux, Aux_VI)
   end subroutine IH_put_request
   !==================================================================!
   subroutine SP_put_scatter_from_sc(nData, nDim, Coord_DI, nIndex, iIndex_II)

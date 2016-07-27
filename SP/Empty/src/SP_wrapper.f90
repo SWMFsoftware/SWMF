@@ -96,11 +96,14 @@ contains
 
   end subroutine SP_get_line_param
   !===================================================================
-  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II)
+  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II,&
+       nAux, AuxOut_VI)
     integer,              intent(in) :: iDirIn
     integer,              intent(out):: nLine
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
+    integer,              intent(out):: nAux
+    real,    allocatable, intent(out):: AuxOut_VI(:,:)
     call CON_stop('Can not request line')
   end subroutine SP_request_line
   !===================================================================

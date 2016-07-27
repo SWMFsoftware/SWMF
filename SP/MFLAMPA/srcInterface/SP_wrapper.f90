@@ -208,7 +208,8 @@ contains
 
   !===================================================================
 
-  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II)
+  subroutine SP_request_line(iDirIn, &
+       nLine, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     use ModMain, ONLY: &
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, nBlock, &
@@ -221,6 +222,8 @@ contains
     integer,              intent(out):: nLine
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
+    integer,              intent(out):: nAux
+    real,    allocatable, intent(out):: AuxOut_VI(:,:)
 
     ! directions requested
     integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
@@ -236,13 +239,16 @@ contains
     character(len=*), parameter:: NameSub='SP_request_line'
     !----------------------------------------------------------------
     ! number of lines on this processor
-    nLine = nBlock
+    nLine   = nBlock
+    nAux = 1
 
     ! prepare containers to hold the request
     if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)
     allocate(CoordOut_DI(nDim, nBlock))
     if(allocated(iIndexOut_II)) deallocate(iIndexOut_II)
     allocate(iIndexOut_II(nDim+1, nBlock))! 3 cell + 1 block index
+    if(allocated(AuxOut_VI)) deallocate(AuxOut_VI)
+    allocate(AuxOut_VI(1, nBlock))
 
     ! each processor fills only its own nodes
     select case(iDirIn)
@@ -256,6 +262,7 @@ contains
           call get_node_indexes(iNode, &
                iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
           iIndexOut_II(4, iBlock) = iBlock
+          AuxOut_VI(1, iBlock) = real(iParticle)
        end do
     case(iDirOrigin_)
        ! get coordinates of the origin points of field lines
@@ -267,6 +274,7 @@ contains
           call get_node_indexes(iNode, &
                iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
           iIndexOut_II(4, iBlock) = iBlock
+          AuxOut_VI(1, iBlock) = 0.0
        end do
     case(iDirEnd_)
        ! get coordinates of the last points on field lines
@@ -274,10 +282,11 @@ contains
           iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
           CoordOut_DI(:, iBlock) = &
                State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          iIndexOut_II(1, iBlock) = 0
+          iIndexOut_II(1, iBlock) = iParticle
           call get_node_indexes(iNode, &
                iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
           iIndexOut_II(4, iBlock) = iBlock
+          AuxOut_VI(1, iBlock) = real(iParticle)
        end do
     case default
        call CON_stop(NameSub//': invalid request of field line coordinates')
