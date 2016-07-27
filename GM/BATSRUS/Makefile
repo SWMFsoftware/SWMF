@@ -23,9 +23,6 @@ help:
 	@#	^CFG IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
 	@echo '    PDF          (Make PDF version of the documentation)'
-	@#		^CFG IF DOCHTML BEGIN
-	@echo '    HTML         (Make HTML version of the documentation)'
-	@#		^CFG END DOCHTML
 	@#	^CFG END REMOVEDOCTEX
 	@#^CFG END DOC
 	@#^CFG IF TESTING BEGIN
@@ -197,12 +194,6 @@ PDF:
 
 CLEAN1 = cleanpdf #				^CFG IF NOT MAKEPDF
 
-#	Create HTML documentation		^CFG IF DOCHTML BEGIN
-HTML:
-	@cd Doc/Tex; $(MAKE) cleanhtml; $(MAKE) HTML
-
-CLEAN2 = cleanhtml #				    ^CFG IF NOT MAKEHTML
-#						^CFG END DOCHTML
 #					    ^CFG END REMOVEDOCTEX
 #					^CFG END DOC
 
@@ -231,7 +222,7 @@ allclean:
 	cd srcTest; $(MAKE) distclean
 	@				#^CFG IF DOC BEGIN
 	@					#^CFG IF NOT REMOVEDOCTEX BEGIN
-	cd Doc/Tex; $(MAKE) clean ${CLEAN1} ${CLEAN2}
+	cd Doc/Tex; $(MAKE) clean ${CLEAN1}
 	@					#^CFG END REMOVEDOCTEX
 	@				#^CFG END DOC
 
