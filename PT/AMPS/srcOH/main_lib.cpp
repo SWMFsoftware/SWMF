@@ -197,7 +197,8 @@ void amps_init_mesh(){
   PIC::Mesh::initCellSamplingDataBuffer();
   
   //init the mesh
-  cout << "Init the mesh" << endl;
+  if (PIC::Mesh::mesh.ThisThread==0){
+    cout << "Init the mesh" << endl;}
   
   int maxBlockCellsnumber,minBlockCellsnumber,idim;
   
@@ -263,7 +264,7 @@ void amps_init_mesh(){
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
   
-  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
+  //  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
   
   PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
   
