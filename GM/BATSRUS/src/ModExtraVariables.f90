@@ -6,14 +6,16 @@ module ModExtraVariables
 
   ! Set impossible value for indexes
   integer, parameter :: Pe_ = 1, Ppar_ = 1, iPparIon_I(1) = 1
-  integer, parameter :: Hyp_ = 1, Erad_ = 1, ExtraEint_ = 1
+  integer, parameter :: Hyp_ = 1
+  integer, parameter :: Erad_ = 1, ExtraEint_ = 1
   integer, parameter :: Ew_  = 1
   integer, parameter :: SignB_ = 1
   integer, parameter :: Te0_   = 1
   integer, parameter :: Ehot_ = 1
 
-  ! Electric field
+  ! Electric field and hyperbolic scalar field
   integer, parameter :: Ex_ = 1, Ey_ = 2, Ez_ = 3
+  integer, parameter :: HypE_ = 1
 
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 1

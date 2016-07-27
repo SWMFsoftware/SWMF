@@ -839,7 +839,8 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModVarIndexes
     use ModMultiFluid
-    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
+         UseEfield
     use ModMain,    ONLY: UseB
     use ModUtilities, ONLY: lower_case
 
@@ -895,6 +896,12 @@ contains
        UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
        NameUnitUserTec_V(Bx_:Bz_) = NameTecUnit_V(UnitB_)
        NameUnitUserIdl_V(Bx_:Bz_) = NameIdlUnit_V(UnitB_)
+    end if
+
+    if(UseEfield)then
+       UnitUser_V(Ex_:Ez_)        = No2Io_V(UnitElectric_)
+       NameUnitUserTec_V(Ex_:Ez_) = NameTecUnit_V(UnitElectric_)
+       NameUnitUserIdl_V(Ex_:Ez_) = NameIdlUnit_V(UnitElectric_)
     end if
 
     do iFluid = 1, nFluid
@@ -964,6 +971,16 @@ contains
 
        NameUnitUserIdl_V(Hyp_) = &
             trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
+    end if
+
+    if(HypE_ > 1)then
+       ! Set the scalar field Psi used in hyperbolic constraint of electric field
+       UnitUser_V(HypE_) = No2Io_V(UnitElectric_)*No2Io_V(UnitU_)
+       NameUnitUserTec_V(HypE_) = &
+            trim(NameTecUnit_V(UnitElectric_)) // trim(NameTecUnit_V(UnitU_))
+
+       NameUnitUserIdl_V(HypE_) = &
+            trim(NameIdlUnit_V(UnitElectric_)) // trim(NameIdlUnit_V(UnitU_))
     end if
 
     if(SignB_ > 1)then

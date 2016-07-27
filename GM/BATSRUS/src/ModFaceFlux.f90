@@ -2789,6 +2789,9 @@ contains
       Flux_V(Ey_) = -C2light*(NormalZ*Bx - NormalX*Bz)
       Flux_V(Ez_) = -C2light*(NormalX*By - NormalY*Bx)
 
+      Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Normal_D*State_V(HypE_)
+      Flux_V(HypE_) = C2light*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
+
     end subroutine get_electro_magnetic_flux
     !==========================================================================
     subroutine get_hd_flux
@@ -3359,7 +3362,7 @@ contains
       FullBz = State_V(Bz_) + B0z
       if(UseAwSpeed)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
-         ! the average field squared (Bright+Bleft)^2/4 results is
+         ! the average field squared (Bright+Bleft)^2/4 results in
          ! an upper estimate of the left and right Alfven speeds 
          ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
          !
