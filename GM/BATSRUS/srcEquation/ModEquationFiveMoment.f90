@@ -5,7 +5,8 @@ module ModVarIndexes
 
   use ModExtraVariables, &
        Redefine1 => iPparIon_I, &
-       Redefine2 => Ex_,  Redefine3 => Ey_, Redefine4 => Ez_
+       Redefine2 => Ex_,  Redefine3 => Ey_, Redefine4 => Ez_, &
+       Redefine5 => HypE_
 
   implicit none
 
@@ -14,7 +15,7 @@ module ModVarIndexes
   ! This equation module contains the standard MHD equations.
   character (len=*), parameter :: NameEquation='Five Moment Closure'
 
-  integer, parameter :: nVar = 16
+  integer, parameter :: nVar = 17
 
   ! There are two ion fluids but no total ion fluid
   integer, parameter :: nFluid    = 2
@@ -40,12 +41,13 @@ module ModVarIndexes
        Ex_        =  8, &
        Ey_        =  9, &
        Ez_        = 10, &
-       p_         = 11, &
-       eRho_      = 12, &
-       eRhoUx_    = 13, &
-       eRhoUy_    = 14, &
-       eRhoUz_    = 15, &
-       eP_        = 16, &
+       HypE_      = 11, &
+       p_         = 12, &
+       eRho_      = 13, &
+       eRhoUx_    = 14, &
+       eRhoUy_    = 15, &
+       eRhoUz_    = 16, &
+       eP_        = 17, &
        Energy_    = nVar+1, &
        eEnergy_   = nVar+2
 
@@ -75,6 +77,7 @@ module ModVarIndexes
        0.0, & ! Ex_
        0.0, & ! Ey_
        0.0, & ! Ez_
+       0.0, & ! HypE_
        1.0, & ! p_
        1.0, & ! eRho_
        0.0, & ! eRhoUx_
@@ -96,6 +99,7 @@ module ModVarIndexes
        'Ex   ', & ! Ex_
        'Ey   ', & ! Ey_
        'Ez   ', & ! Ez_
+       'HypE ', & ! HypE_
        'P    ', & ! p_
        'ElRho', & ! eRho_
        'ElMx ', & ! eRhoUx_
@@ -107,16 +111,16 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz Ex Ey Ez E ElRho ElMx ElMy ElMz ElE'
+       'Rho Mx My Mz Bx By Bz Ex Ey Ez HypE E ElRho ElMx ElMy ElMz ElE'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz Ex Ey Ez P ElRho ElUx ElUy ElUz ElP'
+       'Rho Ux Uy Uz Bx By Bz Ex Ey Ez HypE P ElRho ElUx ElUy ElUz ElP'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r^H^+", "U_x^H^+", "U_y^H^+", "U_z^H^+", "B_x", "B_y", "B_z", ' // &
-       '"E_x", "E_y", "E_z", "p", ' // &
+       '"E_x", "E_y", "E_z", "HypE", "p", ' // &
        '"`r^e^-", "U_x^e^-", "U_y^e^-", "U_z^e^-", "P^e^-"'
 
   ! Names of the user units for IDL and TECPlot output
