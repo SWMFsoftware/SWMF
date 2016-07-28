@@ -4,11 +4,13 @@ program pw
 
   use ModPwom
   use ModFieldLine
+  use ModCommonPlanet,only:NamePlanet
   use ModMpi
   use ModReadParam
-  use CON_planet, ONLY: init_planet_const, set_planet_defaults
+  use CON_planet, ONLY: init_planet_const, set_planet_defaults,is_planet_init
   implicit none
 
+  logical :: IsPlanetSet
   !****************************************************************************
   ! Initiallize MPI and get number of processors and rank of given processor
   !****************************************************************************
@@ -32,18 +34,34 @@ program pw
   call PW_set_parameters('READ')
   ! call PW_set_parameters('CHECK')
 
+
   !\
   ! Initialize the planetary constant library and set Earth
   ! as the default planet.
   !/
+  write(*,*) 'Initiallizing Planet'
+
   call init_planet_const
-  call set_planet_defaults
+
+  if (NamePlanet == 'EARTH') then
+     call set_planet_defaults
+     IsPlanetSet = .true.
+  else
+     write(*,*) NamePlanet
+     IsPlanetSet = is_planet_init(NamePlanet)
+  endif
+  
+  if (.not.IsPlanetSet) then
+     call CON_stop('Planet not set. Stopping PWOM')
+  endif
+
 
   call PW_initialize
 
   !****************************************************************************
   ! Move the flux tube, solve each fieldline, and advance the time
   !****************************************************************************
+
   if (DoTimeAccurate) then
      TIMELOOP:do
         if (Time >= Tmax) exit TIMELOOP
@@ -57,11 +75,12 @@ program pw
         call PW_get_electrodynamics
 
         do iLine=1,nLine
-
+           
            ! move_line moves the flux tube, then we can use the angular
            !position to get the lat and lon
            
            call move_line
+           
            !  Call the flux tube to be solved
            
            call PW_advance_line

@@ -34,7 +34,6 @@ subroutine PW_read_restart
      endif
 
      ThetaLine_I (iLine) = (90.0-GeoMagLat_I(iLine)) * cDegToRad
-     
      PhiLine_I   (iLine) = GeoMagLon_I(iLine)        * cDegToRad
      
      do iIon=1,nIon

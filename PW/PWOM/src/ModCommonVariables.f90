@@ -41,7 +41,7 @@ module ModCommonVariables
   !scaling reference for peak topside heat flux  in aurora during quiet times
   real, parameter  :: EtopAurora = 2.0e-3, EfluxRef = 7.0  
   real, parameter  :: EtopMin = 5e-4   !minimum heat flux (due to polar rain)
-  real, parameter  :: EtopPhotoElectrons = 2.0e-3   !Peak Heat Flux from photoelectrons
+  real, parameter  :: EtopPhotoElectrons = 1e-3   !Peak Heat Flux from photoelectrons
   Logical :: UsePhotoElectronHeatFlux = .true., UseAuroralHeatFlux = .true., &
              UseCuspHeatFlux = .true.
 
@@ -65,17 +65,16 @@ module ModCommonVariables
   real :: DrBnd =2.0e6
 
   REAL  GAMMA,GMIN1,GMIN2,GPL1,GPL2,GM12,GRAR,GREC
-  REAL  CPO,CPH,CPHE,CPE,CVO,CVH,CVHE,CVE
   REAL  XAMU
   real :: Mass_I(nIon),MassElecIon_I(nIon-1),RGAS_I(nIon)
   INTEGER NDIM,NDIM1,NSTEP,NPRINT,NSTPMX,NDIM2,NDIMM
   REAL  DT,DTMX,TIME,TMAX,DTX1,DTX2
   INTEGER NPT1,NPT2,NPT3,NPT4,NPT5,NPT6,NCL,NTS
-  REAL  H0,H1E1,H1O1,H1H1,H1E2,H1O2,H1H2,H2,H3,H4 &
-       ,HLPE,HLPE0,HLPO,HLPH,HLPHE
+  REAL  H0,H1E1,H1O1,H1H1,H1E2,H1O2,H1H2,H2,H3,H4
   Logical :: UseStaticAtmosphere=.false.
   INTEGER :: IYD=76183,IART=1
-  REAL    ::UT,SEC,GLAT,GLONG,STL,F107A=60.,F107=60.,GMLAT,GMLONG
+  REAL    :: UT,SEC,GLAT,GLONG,GLAT2,GLONG2,GMLAT,GMLON,STL,F107A=60.,F107=60.
+  REAL    :: SmLat,SmLon
   real    :: AP(7)=(/4.,4.,4.,4.,4.,4.,4./)
   REAL  IonRateO_C(MaxGrid)
 !  REAL  TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0, &
@@ -91,6 +90,4 @@ module ModCommonVariables
   real :: FricHeatCoef_II(nIon, nSpecies)
   real :: MassFracCoef_II(nIon, nSpecies)
 
-
-       
 end module ModCommonVariables

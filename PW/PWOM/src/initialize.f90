@@ -7,11 +7,18 @@ subroutine PW_initialize
   use ModIoUnit, ONLY: io_unit_new,UnitTmp_
   use ModPwom
   use ModCommonPlanet,ONLY: nIon,iRho_I,iU_I,iP_I,iT_I
-  use ModCommonVariables, ONLY:IYD
+  use ModCommonVariables, ONLY:IYD,ALTD
   use ModTimeConvert, ONLY: time_int_to_real
   use ModPwTime
   use ModAurora, ONLY: init_aurora
   use ModPwWaves,ONLY: wave_init
+  use ModCouplePWOMtoSE, ONLY: init_pwom_se_coupling
+  use ModPhotoelectron, ONLY: PrecipEnergyMin, PrecipEnergyMax, &
+       PrecipEnergyMean, PrecipEnergyFlux, UseFixedPrecip, DoCoupleSE,&
+       PolarRainEMin, PolarRainEMax, &
+       PolarRainEMean, PolarRainEFlux, UsePolarRain, IsVerboseSE
+  use ModOvation, ONLY: UseOvation, StartTimeOvation=>StartTime, &
+       OvationEmin,OvationEmax
   use CON_axes,         ONLY: init_axes
   implicit none
 
@@ -53,6 +60,9 @@ subroutine PW_initialize
   call time_int_to_real(iStartTime,CurrentTime)
   StartTime=CurrentTime
   
+  !make ovation starttime match simulation start time
+  if (UseOvation) StartTimeOvation=StartTime
+
   !\
   ! Set axes for coord transform when in standalone mode
   !/
@@ -79,7 +89,7 @@ subroutine PW_initialize
        Dt_I(nLine))
   
   call wave_init(nAlt)
-
+  
   !**************************************************************************
   !  Define file names and unit numbers, and open for reading and writing.
   !***************************************************************************
@@ -182,6 +192,40 @@ subroutine PW_initialize
 
   if (UseAurora) call init_aurora
 
+  ! initialize the SE model (note cannot use fix precip and ovation 
+  ! simultaneously)
+  if(DoCoupleSE) then
+     if(UseFixedPrecip .and. UsePolarRain .and. .not.UseOvation) then
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD,&
+             PrecipEminPwIn=PrecipEnergyMin,PrecipEmaxPwIn=PrecipEnergyMax, &
+             PrecipEmeanPwIn=PrecipEnergyMean,PrecipEfluxPwIn=PrecipEnergyFlux,&
+             PolarRainEminPwIn=PolarRainEMin,PolarRainEmaxPwIn=PolarRainEMax, &
+             PolarRainEmeanPwIn=PolarRainEMean,&
+             PolarRainEfluxPwIn=PolarRainEFlux)
+     elseif(.not.UseFixedPrecip .and. UsePolarRain .and. UseOvation) then
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD,&
+             PolarRainEminPwIn=PolarRainEMin,PolarRainEmaxPwIn=PolarRainEMax, &
+             PolarRainEmeanPwIn=PolarRainEMean,&
+             PolarRainEfluxPwIn=PolarRainEFlux,&
+             OvationEminPwIn=OvationEmin,      &
+             OvationEmaxPwIn=OvationEmax)
+     elseif(UseFixedPrecip) then
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD,&
+             PrecipEminPwIn=PrecipEnergyMin,PrecipEmaxPwIn=PrecipEnergyMax, &
+             PrecipEmeanPwIn=PrecipEnergyMean,PrecipEfluxPwIn=PrecipEnergyFlux)
+     elseif(UsePolarRain) then
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD,&
+             PolarRainEminPwIn=PolarRainEMin,PolarRainEmaxPwIn=PolarRainEMax, &
+             PolarRainEmeanPwIn=PolarRainEMean,&
+             PolarRainEfluxPwIn=PolarRainEFlux)
+     elseif(UseOvation) then
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD,&
+             OvationEminPwIn=OvationEmin,      &
+             OvationEmaxPwIn=OvationEmax)
+     else
+        call init_pwom_se_coupling(IsVerboseSE,nAlt,nLine,iLineGlobal,ALTD)
+     end if
+  end if
 end subroutine PW_initialize
 
 !=============================================================================

@@ -2,8 +2,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 Module ModCommonPlanet
   use ModParameters
-  character(6) NamePlanet
-  parameter (NamePlanet = 'Earth ')
+!  character(6) NamePlanet
+  character(len=100),parameter :: NamePlanet = 'EARTH'
 
   integer,parameter :: nVar=16
   real,   parameter :: rLowerBoundary  = 6.55677E8
@@ -40,6 +40,8 @@ Module ModCommonPlanet
        CMHEO2,CMHEHE,CMHEO,CMHEH,CMHEOX,CMHEHD,CMHEEL,CMELN2,CMELO2,&
        CMELHE,CMELO,CMELH,CMELOX,CMELHL,CMELHD
   
+  REAL HLPE,HLPE0,HLPO,HLPH,HLPHE
+
   ! Neutral parameters,densities,pressures
   integer, parameter :: nNeutral = 5, O_=1, O2_=2, N2_=3, H_=4, He_=5
   real :: NDensity_CI(MaxGrid,nNeutral),NeutralPressure_C(MaxGrid)
@@ -77,6 +79,10 @@ Module ModCommonPlanet
   integer, parameter :: nPlotVar = 20
   character(len=79), parameter :: NamePlotVar= &
  'r Lat Lon uO uH uHe ue lgnO lgnH lgnHe lgne TO TH THe Te MO MH MHe Me Ef Pe g'
+  integer, parameter :: nPlotVarNeutral = 7
+  character(len=79), parameter :: NamePlotVarNeutral= &
+ 'r Lat Lon [O] [O2] [N2] [H] [He] g'
+
 
 end Module ModCommonPlanet
     

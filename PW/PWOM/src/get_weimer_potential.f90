@@ -61,12 +61,10 @@ subroutine get_weimer_potential
      Lines_I(10) = ""
      Lines_I(11) = "#END"
 
-     
+
      call EIE_set_inputs(Lines_I)
 
-
      call EIE_Initialize(iError)
-
      if (iError /= 0) call &
           con_stop('PW_ERROR: EIE_Initialize failed at get_weimer_potential')
 

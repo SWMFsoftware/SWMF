@@ -9,6 +9,8 @@ RUNDIR    = ${PWDIR}/run
 BINDIR    = ${PWDIR}/bin
 INCLDIR   = ${DIR}/share/include
 SHAREDIR  = ${PWDIR}/share/Library/src
+STETDIR   = ${PWDIR}/srcSTET
+TWOSTREAMDIR   = ${PWDIR}/srcTWOSTREAM
 
 TIMINGDIR = ${PWDIR}/util/TIMING/src
 EMPIRICALIEDIR = ${PWDIR}/util/EMPIRICAL/srcIE

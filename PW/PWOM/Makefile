@@ -19,7 +19,12 @@ bin:
 
 INSTALLFILES =  src/Makefile.DEPEND \
 		src/Makefile.RULES \
-		srcInterface/Makefile.DEPEND
+		srcInterface/Makefile.DEPEND\
+		srcSTET/Makefile.DEPEND\
+		srcSTET/Makefile.RULES\
+		srcTWOSTREAM/Makefile.DEPEND\
+		srcTWOSTREAM/Makefile.RULES
+
 
 install: bin
 	touch ${INSTALLFILES}
@@ -28,9 +33,36 @@ PWOM:
 	cd ${SHAREDIR};           make LIB
 	cd ${TIMINGDIR};          make LIB
 	cd ${EMPIRICALIEDIR};     make LIB
-	cd ${EMPIRICALUADIR};    make  LIB
+	cd ${EMPIRICALUADIR};     make  LIB
 	cd ${DATAREADINDICESDIR}; make LIB
-	cd src;                  make PWOM
+	cd ${TWOSTREAMDIR};	  make LIB
+	cd src;                   make PWOM
+
+PWOMSTET:
+	cd ${SHAREDIR};           make LIB
+	cd ${TIMINGDIR};          make LIB
+	cd ${EMPIRICALIEDIR};     make LIB
+	cd ${EMPIRICALUADIR};     make  LIB
+	cd ${DATAREADINDICESDIR}; make LIB
+	cd ${STETDIR}; 		  make LIB
+	cd src;                   make PWOM
+
+STET:
+	cd ${SHAREDIR};           make LIB
+	cd ${TIMINGDIR};          make LIB
+	cd ${EMPIRICALIEDIR};     make LIB
+	cd ${EMPIRICALUADIR};     make  LIB
+	cd ${DATAREADINDICESDIR}; make LIB
+	cd srcSTET;               make STET
+
+TWOSTREAM:
+	cd ${SHAREDIR};           make LIB
+	cd ${TIMINGDIR};          make LIB
+	cd ${EMPIRICALIEDIR};     make LIB
+	cd ${EMPIRICALUADIR};     make  LIB
+	cd ${DATAREADINDICESDIR}; make LIB
+	cd ${TWOSTREAMDIR};       make TWOSTREAM
+
 
 nompirun: PWOM
 	cd ${RUNDIR}; ./PWOM.exe
@@ -38,6 +70,7 @@ nompirun: PWOM
 LIB:
 	cd src; make LIB
 	cd srcInterface; make LIB
+	cd srcSTET; make LIB
 
 TESTDIR = run_test
 
@@ -45,6 +78,7 @@ MPIRUN = mpirun -np 2
 
 test:
 	-@(make test_saturn)
+	-@(make test_jupiter)
 	-@(make test_restart)
 	-@(make test_earth)
 	-@(make test_restart)
@@ -69,6 +103,17 @@ test_saturn:
 	@echo "test_run..." >> test_Saturn.diff
 	make test_run
 	@echo "test_check..." >> test_Saturn.diff
+	make test_check
+
+test_jupiter:
+	@echo "starting..." > test_Jupiter_plots.diff
+	@echo "test_compile..." > test_Jupiter.diff
+	make test_compile PLANET=Jupiter
+	@echo "test_rundir..." >> test_Jupiter.diff
+	make test_rundir
+	@echo "test_run..." >> test_Jupiter.diff
+	make test_run
+	@echo "test_check..." >> test_Jupiter.diff
 	make test_check
 
 test_compile:
@@ -156,7 +201,10 @@ rundir:
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
 		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
-		cp ${PWDIR}/data/input/${PLANET}/North.dat .
+		cp ${PWDIR}/data/input/${PLANET}/North.dat .;\
+		cp -r ${PWDIR}/srcSTET/IRI_DATA .;\
+		cp ${PWDIR}/srcSTET/nightside_fluxes/*dat .
+		cp ${PWDIR}/srcTWOSTREAM/*dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
@@ -178,6 +226,8 @@ PDF:
 clean:
 	@touch ${INSTALLFILES}
 	cd src; make clean
+	cd srcSTET; make clean
+	cd srcTWOSTREAM; make clean
 	cd srcInterface; make clean
 	cd doc/Tex; make clean
 	cd srcPostProc; make clean

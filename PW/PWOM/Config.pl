@@ -44,6 +44,7 @@ $NewPlanet = "Earth" if $Install;
 
 foreach (@Arguments){
     if(/^-saturn$/i)          {$NewPlanet="Saturn";            next};
+    if(/^-jupiter$/i)          {$NewPlanet="Jupiter";            next};
     if(/^-earth$/i)           {$NewPlanet="Earth";             next};
     if(/^-s$/)                {$Show=1;                        next};
 
@@ -91,10 +92,16 @@ sub set_planet{
 	$outfile =~ s/\.f$/_planet\.f/;
 	&shell_command("cp $file $outfile");
     }
-    my $Files = "$Dir/PLANET $Dir/Makefile.planet $Dir/ModCommonPlanet.f90".
-	" $Dir/upper_heat_conduction.f90";
-    $Files .= " $Dir/get_rate.f90" if $Planet eq "Saturn";
-    $Files .= " $Dir/ModGlow.f90"  if $Planet eq "Earth";
+
+    my @file90 = glob("$Dir/*.f90");
+    for $file (@file90){
+	my $outfile = $file;
+	$outfile =~ s/^$Dir/src/;
+	$outfile =~ s/\.f90$/_planet\.f90/;
+	&shell_command("cp $file $outfile");
+    }
+    my $Files = "$Dir/PLANET $Dir/Makefile.planet";
+
     &shell_command("cp $Files src/");
 
     &shell_command("echo PLANET=$Planet > Makefile.planet");
@@ -114,6 +121,8 @@ sub print_help{
 -Earth      Configure PWOM for Earth. This flag is case insensitive.
 
 -Saturn     Configure PWOM for Saturn. This flag is case insensitive.
+
+-Jupiter    Configure PWOM for Jupiter. This flag is case insensitive.
 
 -s          Show current planet.
 

@@ -18,6 +18,10 @@ subroutine set_vertical_grid
   ! RAD=radial distance of cell centers?      
   ! RBOUND=radial distance of lower boundary of cell     
   ! ALTD = same as RAD but distance is from surface, not center of planet
+  ! Despite the names, rLowerBoundary (set in common planet)
+  !     appears to be a ghost cell? rLower is the lower boundary 
+  !     of the first altitude step, with cell center at ALTD(1) altitide or
+  !     RAD(1) radius
   rLower=rLowerBoundary+0.5*DrBnd
   do iAlt=1,nAlt+1
      RBOUND(iAlt)=rLower+(iAlt-1)*DrBnd

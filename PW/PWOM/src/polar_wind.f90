@@ -22,7 +22,9 @@ subroutine polar_wind
   use ModCommonVariables
   use ModFieldLine
   use ModPwImplicit, only: PW_implicit_update
-  use ModPwPlots, ONLY: PW_print_plot
+  use ModPwPlots, ONLY: PW_print_plot,DoPlotNeutral,plot_neutral_pw
+  use ModOvation, ONLY:DoPlotOvation,plot_ovation_polar
+
   INTEGER NOTP(100)
   
   !     define the output files and attaching units
@@ -34,7 +36,7 @@ subroutine polar_wind
   !-----------------------------------------------------------------------
   nDim = nAlt
   call get_field_line(nDim,State_GV(1:nDim,:),                       &
-       GMLAT,GMLONG,Jr,wHorizontal,uJoule2=uJoule2,                &
+       SmLat,SmLon,Jr,wHorizontal,uJoule2=uJoule2,                &
        iUnitOutput=iUnitOutput,       &
        NameRestart=NameRestart,                                    &
        iLine=iLine, Time=Time,MaxLineTime=Tmax,                    &
@@ -62,14 +64,16 @@ subroutine polar_wind
   NDIM2=NDIM-1
   NDIM1=NDIM+1
   NDIMM=NDIM+2
-  
+
   CALL STRT
   
   if (IsFirstCall .and. DoSavePlot) then
      CALL PW_print_plot
+     if (DoPlotNeutral) call plot_neutral_pw
+     if (DoPlotOvation) call plot_ovation_polar
      if(iLine == nLine) IsFirstCall = .false.
   endif
-  
+
   !***************************************************************************
   ! This is the start of a while loop that carries out the main steps of
   ! the simulation
@@ -92,7 +96,7 @@ subroutine polar_wind
         CALL PW_set_upper_bc
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
-        
+
      endif
 
      NSTEP=NSTEP+1
@@ -100,14 +104,17 @@ subroutine polar_wind
      StateOld_GV=State_GV
      if (DoTimeAccurate)then
         TIME=TIME+DT
-        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
-             CALL PW_print_plot
+        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )then 
+           CALL PW_print_plot
+           if (DoPlotNeutral) call plot_neutral_pw
+           if (DoPlotOvation) call plot_ovation_polar
+        endif
      else if (mod(nStep,DnOutput) == 0) then
         CALL PW_print_plot
+        if (DoPlotNeutral) call plot_neutral_pw
      end if
      !       Reverse order of advection and implicit temperature update
      
- 
      If (IsFullyImplicit) then
         call PW_implicit_update
      else
@@ -117,6 +124,7 @@ subroutine polar_wind
         CALL PW_set_upper_bc
         CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
         CALL PW_calc_efield(nDim,State_GV(-1:nDim+2,:))         
+      
      endif
 
      !    finish update by calculating boundaries, collision source 
@@ -127,30 +135,35 @@ subroutine polar_wind
      if (IsVariableDt) call calc_dt
      if (DoTimeAccurate)then
         TIME=TIME+DT
-        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )& 
-             CALL PW_print_plot
+        if (floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-DT)/DToutput) )then 
+           CALL PW_print_plot
+           if (DoPlotNeutral) call plot_neutral_pw
+           if (DoPlotOvation) call plot_ovation_polar
+        endif
         IF (IsStandAlone .and. &
              floor((Time+1.0e-5)/DToutput)/=floor((Time+1.0e-5-2.0*DT)/DToutput) )&
              call PW_write_restart(&
-             nDim,RAD(1:nDim),GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+             nDim,RAD(1:nDim),SmLat,SmLon,Time,DT,nStep,NameRestart, &    
              State_GV(1:nDim,:))                  
         IF (TIME+1.0e-5 >= TMAX) Then 
            Call put_field_line(nDim,State_GV(1:nDim,:),    &
-                GMLAT,GMLONG,Jr,wHorizontal,&
+                SmLat,SmLon,Jr,wHorizontal,&
                 Time=Time,nStep=nStep,r_C=RAD   ) 
            RETURN
         endif
      else 
         if (mod(nStep,DnOutput) == 0 .or. mod(nStep-1,DnOutput) == 0) then
            CALL PW_print_plot
+           if (DoPlotNeutral) call plot_neutral_pw
+           if (DoPlotOvation) call plot_ovation_polar
            IF (IsStandAlone)&
                 call PW_write_restart(&
-                nDim,RAD(1:nDim),GmLat,GmLong,Time,DT,nStep,NameRestart, &    
+                nDim,RAD(1:nDim),SmLat,SmLon,Time,DT,nStep,NameRestart, &    
                 State_GV(1:nDim,:))             
         endif
         IF (nStep >= MaxStep) Then 
            Call put_field_line(nDim,State_GV(1:nDim,:),    &
-                GMLAT,GMLONG,Jr,wHorizontal,&
+                SmLat,SmLon,Jr,wHorizontal,&
                 Time=Time,nStep=nStep,r_C=RAD   ) 
            RETURN
         end if
@@ -161,6 +174,57 @@ contains
   !============================================================================
   
   subroutine advect
+    use ModPhotoElectron
+    use ModCouplePWOMtoSE, only: get_se_for_pwom
+    use ModPwTime,ONLY: StartTime, Hour_,Minute_, Second_, iCurrentTime_I, &
+         CurrentTime
+    use ModTimeConvert, ONLY: time_real_to_int
+    use ModOvation, ONLY: UseOvation,get_ovation_point,read_ovation_all, &
+         OvationEmin,OvationEmax
+    
+    real :: EMeanDiff,EFluxDiff,EMeanWave,EFluxWave,EMeanMono,EFluxMono
+    real :: UTsec
+    !--------------------------------------------------------------------------
+
+    !get the SE fluxes from SE first
+    if (.not.allocated(SeDens_C)) allocate(SeDens_C(nDim))
+    if (.not.allocated(SeFlux_C)) allocate(SeFlux_C(nDim))
+    if (.not.allocated(SeHeat_C)) allocate(SeHeat_C(nDim))
+
+    if ((floor((Time+1.0e-5)/DtGetSe)/=floor((Time+1.0e-5-DT)/DtGetSe))&
+         .and.DoCoupleSE) then
+       !get UT for current time
+       CurrentTime=StartTime+Time
+       call time_real_to_int(CurrentTime,iCurrentTime_I)
+       UTsec = iCurrentTime_I(Hour_)*3600.0+iCurrentTime_I(Minute_)*60.0 &
+            +iCurrentTime_I(Second_)
+
+       If (UseOvation) then
+          call read_ovation_all(Time)
+          call get_ovation_point(SmLat,SmLon,EMeanDiff,EFluxDiff,&
+               EMeanWave,EFluxWave,EMeanMono,EFluxMono)
+          call get_se_for_pwom(Time,UTsec,iLine,(/min(GmLat,88.0),GmLon/),&
+               (/GLAT,GLONG/),(/GLAT2,GLONG2/),                   &
+               State_GV(1:nDim,RhoE_)/Mass_I(nIon),State_GV(1:nDim,Te_),&
+               Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C,&
+               EMeanDiffPW=EMeanDiff,EFluxDiffPW=EFluxDiff, &
+               EMeanWavePW=EMeanWave,EFluxWavePW=EFluxWave, &
+               EMeanMonoPW=EMeanMono,EFluxMonoPW=EFluxMono)
+       else
+          call get_se_for_pwom(Time,UTsec,iLine,(/min(GmLat,88.0),GmLon/),&
+            (/GLAT,GLONG/),(/GLAT2,GLONG2/),                   &
+            State_GV(1:nDim,RhoE_)/Mass_I(nIon),State_GV(1:nDim,Te_),&
+            Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C)
+       endif
+
+
+    endif
+
+    if((.not.DoCoupleSE) .or. (.not.UseFeedbackFromSE)) then
+       SeDens_C(:)=0.0
+       SeFlux_C(:)=0.0
+       SeHeat_C(:)=0.0
+    endif
     
     NewState_GV = State_GV
     if (TypeSolver == 'Godunov') then
@@ -177,6 +241,7 @@ contains
          do iIon=1,nIon-1
             call rusanov_solver(iIon,nDim,RGAS_I(iIon),dt,   &
                  State_GV(-1:nDim+2,iRho_I(iIon):iP_I(iIon)),&
+                 State_GV(-1:nDim+2,iRho_I(nIon):iP_I(nIon)),&
                  Source_CV(1:nDim,iRho_I(iIon)), Source_CV(1:nDim,iU_I(iIon)),&
                  Source_CV(1:nDim,iP_I(iIon)),  &
                  HeatCon_GI(0:nDim+1,iIon), &
@@ -197,8 +262,10 @@ contains
               HeatCon_GI(0:nDim+1,nIon), &
               NewState_GV(-1:nDim+2,iT_I(nIon)))
          ! Set electron density and velocity
-         NewState_GV(1:nDim,RhoE_)=0.0
-         NewState_GV(1:nDim,uE_)  =0.0
+         NewState_GV(1:nDim,RhoE_)= -SeDens_C(:)*Mass_I(nIon)
+         NewState_GV(1:nDim,uE_)  = -SeFlux_C(:)*Mass_I(nIon)
+!         NewState_GV(1:nDim,RhoE_)=0.0
+!         NewState_GV(1:nDim,uE_)  =0.0
          do k=1,nDim
             do iIon=1,nIon-1
                NewState_GV(K,RhoE_) = &
@@ -208,6 +275,8 @@ contains
                     (MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))&
                     *NewState_GV(K,iU_I(iIon)))
             enddo
+            NewState_GV(k,RhoE_) = &
+                 max(NewState_GV(k,RhoE_),eThermalDensMin*Mass_I(nIon))
             NewState_GV(K,uE_)=(NewState_GV(K,uE_) -1.8965E-18*CURR(K))/NewState_GV(K,RhoE_)
          enddo
          !get T from p and rho
@@ -217,8 +286,10 @@ contains
               *NewState_GV(1:nDim,iRho_I(nIon))
       else         
          ! Set electron density and velocity
-         NewState_GV(1:nDim,RhoE_)=0.0
-         NewState_GV(1:nDim,uE_)  =0.0
+         NewState_GV(1:nDim,RhoE_)= -SeDens_C(:)*Mass_I(nIon)
+         NewState_GV(1:nDim,uE_)  = -SeFlux_C(:)*Mass_I(nIon)
+!         NewState_GV(1:nDim,RhoE_)=0.0
+!         NewState_GV(1:nDim,uE_)  =0.0
          do k=1,nDim
             do iIon=1,nIon-1
                NewState_GV(K,RhoE_) = &
@@ -228,7 +299,8 @@ contains
                     (MassElecIon_I(iIon)*NewState_GV(K,iRho_I(iIon))&
                     *NewState_GV(K,iU_I(iIon)))
             enddo
-            
+            NewState_GV(k,RhoE_) = &
+                 max(NewState_GV(k,RhoE_),eThermalDensMin*Mass_I(nIon))
             NewState_GV(K,uE_)=(NewState_GV(K,uE_) -1.8965E-18*CURR(K))/NewState_GV(K,RhoE_)
          enddo
       endif

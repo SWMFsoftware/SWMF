@@ -128,8 +128,7 @@ subroutine initial_line_location
 
   do iLine=1,nLine
      iThetaLine_I(iLine) = floor(ThetaLine_I(iLine)/ dTheta) + 1
-
-   
+     
      iPhiLine_I(iLine)   = mod(floor(PhiLine_I(iLine)/ dPhi),nPhi-1) + 1
      
      xLine_I(iLine)      = &
@@ -160,7 +159,7 @@ subroutine move_line
   character(len=*), parameter :: NameSub = 'PW_move_line'
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
-  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  call PW_set_do_test(NameSub, DoTest, DoTestMe)
 
   ! Get the velocity of field line advection from a
   ! bilinear interpolation.
@@ -253,34 +252,9 @@ subroutine move_line
   yLine_I(iLine) = yLine_I(iLine)*a
   zLine_I(iLine) = zLine_I(iLine)*a
   
-  ThetaLineOld_I(iLine) = ThetaLine_I(iLine)
-  PhiLineOld_I(iLine) = PhiLine_I(iLine)
+  ThetaLine_I(iLine) = acos(max(-1.0,min(1.0, zLine_I(iLine)/rLowerBoundary)))
+  PhiLine_I(iLine)   = modulo(atan2(yLine_I(iLine), xLine_I(iLine)), cTwoPi)
   
-!  ThetaLine_I(iLine) = acos(max(-1.0,min(1.0, zLine_I(iLine)/rLowerBoundary)))
-!  PhiLine_I(iLine)   = modulo(atan2(yLine_I(iLine), xLine_I(iLine)), cTwoPi)
-
-
-  !N. Perlongo 2015 - The following handles the movement of the field lines over the 
-  !                   pole, without converting back and forth from Cartesian
-  ThetaLine_I(iLine) = ThetaLineOld_I(iLine) + &
-       DtHorizontal*UthetaLine_I(iLine)/rLowerBoundary
-  if (ThetaLine_I(iLine) == 0.0 .or. ThetaLine_I(iLine) == cPi) then
-     PhiLine_I(iLine) = 0.0
-  else
-     PhiLine_I(iLine)   = PhiLineOld_I(iLine) + &
-          DtHorizontal*UphiLine_I(iLine)/(rLowerBoundary*sin(ThetaLineOld_I(iLine)))
-  endif
-
-  if (abs(ThetaLine_I(iLine)) > cPi .or. ThetaLine_I(iLine) < 0.0) then
-     PhiLine_I(iLine) = PhiLine_I(iLine) + cPi
-     if (ThetaLine_I(iLine) > cPi)  ThetaLine_I(iLine) =  cTwoPi-ThetaLine_I(iLine)
-    if (ThetaLine_I(iLine) < 0.0) ThetaLine_I(iLine) = 0.0 -ThetaLine_I(iLine)  
-endif
-
-  do while (PhiLine_I(iLine) < 0.0 .or. PhiLine_I(iLine) > cTwoPi)   
-  	PhiLine_I(iLine) = mod(PhiLine_I(iLine) + cTwoPi, cTwoPi)
-  enddo 
-
   ! Deal with posibility that phi is negative
   if (PhiLine_I(iLine) .lt. 0.0) then
      write(*,*) 'TTT',PhiLine_I(iLine)
@@ -296,13 +270,11 @@ endif
   iPhiLine_I(iLine)   = mod(floor(PhiLine_I(iLine) / Dphi),nPhi-1)+1
 
   if(DoTestMe)then
-!     write(*,*) NameSub, ': Factor a=',a
+     write(*,*) NameSub, ': Factor a=',a
      write(*,*) NameSub, ': xyzLine   =',xLine_I(iLine), &
           yLine_I(iLine), zLine_I(iLine)
      write(*,*) NameSub, ': Theta, Phi=',ThetaLine_I(iLine)*cRadToDeg, &
           PhiLine_I(iLine)*cRadToDeg
-    ! write(*,*) NameSub, ': Theta, Phi=',ThetaLineOld_I(iLine)*cRadToDeg, &
-    !      PhiLine_I(iLine)*cRadToDeg
   end if
 
 end subroutine move_line

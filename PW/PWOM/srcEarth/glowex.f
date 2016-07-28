@@ -62,7 +62,7 @@ C
 C
       use ModGlow
       use ModCommonVariables, ONLY: MaxGrid,DoLog,AltMin,GLAT,GLONG,F107,
-     &     F107A,IYD,SEC,iUnitOutput, GMLAT, GMLONG
+     &     F107A,IYD,SEC,iUnitOutput, SmLat, SmLon
       use ModNumConst, ONLY: cRadToDeg, cDegToRad, cPi
       use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
 
@@ -103,7 +103,7 @@ CALEX
 CALEX origionally iyd was idate but this is inconsistant with 
 CALEX common_variables.f
 C      COMMON /MSIS1/ IDATE,UT,SEC,GLAT,GLONG,STL,F107A,F107,AP(7),IART
-C     $,GMLAT,GMLONG
+C     $,SmLat,SmLon
 c      COMMON /SPCE/ ALTMIN,ALTMAX,ALTD,RAD,RBOUND,DRBND,DTR1,DTR2
 c      COMMON /CMDN/ NDIM,NDIM1,DT,DTMX,TIME,TMAX,NSTEP,NPRINT,NSTPMX
 c     ;,NDIM2,NDIMM,DTX1,DTX2
@@ -175,8 +175,8 @@ C
 C     
        if (IsPlanetModified) then
           if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
-             !IDEALAXES are set. Use gmlat and gmlong to set sza
-             SZA=acos(cos(GMLAT*cDegToRad)*cos(GMLONG*cDegToRad))*cRadToDeg
+             !IDEALAXES are set. Use SmLat and SmLon to set sza
+             SZA=acos(cos(SmLat*cDegToRad)*cos(SmLon*cDegToRad))*cRadToDeg
           else
              ! ERROR, planet modified but not IDEALAXES
              call CON_STOP('PW ERROR: Planet modified, 
@@ -186,7 +186,7 @@ C
           ! Standard situation: Real axes
           CALL SOLZEN (IYD, UTG, GLAT, GLONG, SZA)
        endif
-
+       SZApe=SZA
        SZA = min(SZA,85.0)
        SZA = SZA * cPi/180.
        SZAD = SZA*cRadToDeg
@@ -208,15 +208,15 @@ C
 C     ALEX note IDATE HERE is IYD in the rest of the subroutine
  9997  FORMAT('   IDATE ','  UTG   ','   SEC   ','    GLAT    ',
      $      ' GLONG    ',' STL   ',' F107A   ','  F107   ',
-     $      '   AP(3)',' IART   ',' GMLAT   ','   GMLONG   ',
+     $      '   AP(3)',' IART   ',' SmLat   ','   SmLon   ',
      $      '   SZAD    ')
 C     
 !       if (DoLog) WRITE(iUnitOutput,9995)IYD,UTG,SEC,GLAT,GLONG,STL,F107A,F107,AP(3)
-!     $      ,IART,GMLAT,GMLONG,SZAD
+!     $      ,IART,SmLat,SmLon,SZAD
  9995  FORMAT(1X,I7,8(1X,F8.2),2X,I2,4X,F7.2,4X,F7.2,5X,F7.2)
 C     
 C     
-!       if (GMLAT .GE. 75.0) then 
+!       if (SmLat .GE. 75.0) then 
           call PRECIP(IDMX,ALTMIN,PHOTOTP)
 !       else
 !          PHOTOTP(:) =0.0

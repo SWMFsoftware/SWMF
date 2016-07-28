@@ -78,5 +78,6 @@ SUBROUTINE PW_iheat_flux
              RGAS_I(iIon)*State_GV(K,iRho_I(iIon))*State_GV(K,iT_I(iIon))
      enddo
   enddo
+
   RETURN
 END SUBROUTINE PW_iheat_flux

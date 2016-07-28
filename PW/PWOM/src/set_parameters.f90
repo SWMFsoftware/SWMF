@@ -11,6 +11,14 @@ subroutine PW_set_parameters(NameAction)
   use ModPwTime
   use ModPwPlots, ONLY: TypePlot
   use ModPwWaves, ONLY: UseWaveAcceleration 
+  use ModPhotoElectron, ONLY: PrecipEnergyMin, PrecipEnergyMax, &
+       PrecipEnergyMean, PrecipEnergyFlux,UseFixedPrecip, &
+       PolarRainEMin, PolarRainEMax, &
+       PolarRainEMean, PolarRainEFlux,UsePolarRain, &
+       DoCoupleSE, UseFeedbackFromSE,IsVerboseSE,DtGetSe
+  use ModOvation, ONLY: UseOvation,DoPlotOvation,OvationEmin,OvationEmax,&
+       DoPlotOvation
+
   implicit none
   
 
@@ -79,6 +87,7 @@ subroutine PW_set_parameters(NameAction)
         call read_var('DtPlotElectrodynamics',DtPlotElectrodynamics)
      case('#SCHEME')
         call read_var('TypeSolver',TypeSolver)
+        call read_var('TypeFlux',TypeFlux)
         call read_var('DtVertical',DtVertical)
         call read_var('IsFullyImplicit'   ,IsFullyImplicit)
         if(IsFullyImplicit)then
@@ -90,8 +99,6 @@ subroutine PW_set_parameters(NameAction)
         end if
      case('#VARIABLEDT')
         call read_var('IsVariableDt',IsVariableDt)
-     case('#DIFFUSION')
-        call read_var('TypeDiffusion',TypeDiffusion)
      case('#LIMITER')
         call read_var('LimiterBeta',BetaIn)
         Beta = BetaIn
@@ -204,6 +211,36 @@ subroutine PW_set_parameters(NameAction)
         if (iError /= 0) then
            write(*,*) "PW_ERROR: read indices was NOT successful"
         endif
+
+     case('#SE')
+        call read_var('DoCoupleSE', DoCoupleSE)
+        call read_var('UseFeedbackFromSE', UseFeedbackFromSE)
+        call read_var('IsVerboseSE', IsVerboseSE)
+        call read_var('DtGetSe', DtGetSe)
+        
+
+     case('#SETPRECIP')
+        call read_var('UseFixedPrecip',  UseFixedPrecip)
+        call read_var('PrecipEnergyMin', PrecipEnergyMin)        
+        call read_var('PrecipEnergyMax', PrecipEnergyMax)        
+        call read_var('PrecipEnergyMean',PrecipEnergyMean)        
+        call read_var('PrecipEnergyFlux',PrecipEnergyFlux)        
+
+!        if(.not.DoCoupleSE) &
+!             write(*,*) 'PW_WARNING: #SETPRECIP invoked but SE not coupled'
+     case('#OVATION')
+        call read_var('UseOvation',  UseOvation)
+        call read_var('DoPlotOvation',  DoPlotOvation)
+        call read_var('OvationEmin',  OvationEmin)
+        call read_var('OvationEmax',  OvationEmax)
+
+     case('#POLARRAIN')
+        call read_var('UsePolarRain',  UsePolarRain)
+        call read_var('PolarRainEMin', PolarRainEMin)        
+        call read_var('PolarRainEMax', PolarRainEMax)        
+        call read_var('PolarRainEMean',PolarRainEMean)        
+        call read_var('PolarRainEFlux',PolarRainEFlux)        
+        
         
      endselect
   enddo

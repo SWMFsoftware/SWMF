@@ -10,19 +10,34 @@ C
 C
 
       use ModCommonVariables
+      use ModCommonPlanet,ONLY: HLPO,HLPH,HLPHE,HLPE,HLPE0
       use ModGlow, ONLY: get_ionization
 C
       use ModConst ,ONLY: cBoltzmann
-      use ModPWOM  ,ONLY: UseAurora,UseIndicies, UseIE
+      use ModPWOM  ,ONLY: UseAurora,UseIndicies, UseIE, iLine
       use ModAurora,ONLY: get_aurora,AuroralIonRateO_C
       use ModPwTime,ONLY: CurrentTime,StartTime,iStartTime,
-     &                    Hour_,Minute_,Second_
+     &                    Hour_,Minute_,Second_, iCurrentTime_I
       use ModIndicesInterfaces
       use ModNumConst, ONLY: cDegToRad, cRadToDeg
       use ModLatLon,   ONLY: convert_lat_lon
+      use ModPhotoElectron
+      use ModCouplePWOMtoSE, only: get_se_for_pwom
       use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
+      use ModTimeConvert, ONLY: time_real_to_int
+      use ModOvation, ONLY: UseOvation,get_ovation_point,
+     &     read_ovation_all,OvationEmin,OvationEmax
+      
+      real :: EMeanDiff,EFluxDiff,EMeanWave,EFluxWave,EMeanMono,
+     &        EFluxMono
 C     
+      real :: UTsec 
+!     -----------------------------------------------------------------
       CurrentTime=StartTime+Time
+      call time_real_to_int(CurrentTime,iCurrentTime_I)
+      UTsec = iCurrentTime_I(Hour_)*3600.0+iCurrentTime_I(Minute_)*60.0
+     &     +iCurrentTime_I(Second_)
+
       NPT1=14
       NPT2=16
       NPT3=30
@@ -140,8 +155,8 @@ c      F107A=60.
 c      F107=60.
 c      SEC=43200.
 c      STL=12.
-c      GMLAT=80.
-c      GMLONG=0.
+c      SmLat=80.
+c      SmLon=0.
 c      IART=1
 c      GLAT=0.
 c      GLONG=180.
@@ -154,11 +169,12 @@ CALEX IYD=year_day of year
 !      F107A=60.
 !      F107=60.
 !      IART=1
-!      GMLONG=0.
-!      GMLAT=80.
+!      SmLon=0.
+!      SmLat=80.
 C END
-!      CALL GGM_PLANET(IART,GLONG,GLAT,GMLONG,GMLAT)
-      CALL convert_lat_lon(Time,GMLAT,GMLONG,GLAT,GLONG)
+!      CALL GGM_PLANET(IART,GLONG,GLAT,SmLon,SmLat)
+      CALL convert_lat_lon(Time,SmLat,SmLon,GLAT,GLONG,GLAT2,GLONG2,
+     &     GmLat,GmLon)
 
       if (.not.UseStaticAtmosphere) then
          iDay  = mod(IYD,1000)+floor(Time/24.0/3600.0)
@@ -173,6 +189,7 @@ C END
          
          SEC=mod(iStartTime(Hour_)*3600.0 + iStartTime(Minute_)*60.0 
      &        + iStartTime(Second_) + Time, 24.0*3600.0)
+         write(*,*) 'SEC,UTsec',SEC,UTsec
          !mod((STL-GLONG/15.)*3600.,24.*3600.)
       else
          SEC=0.0
@@ -284,12 +301,55 @@ C                                                                      C
 !         call get_aurora(nDim,AltD(1:nDim),NDensity_CI(1:nDim,O_:N2_),
 !     &        NeutralPressure_C(1:nDim)*0.1)
 !      endif
-      	
-      call  get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))		
+
+!get the SE fluxes from SE first (call here to get Ionization rate
+      if (.not.allocated(SeDens_C)) allocate(SeDens_C(nDim))
+      if (.not.allocated(SeFlux_C)) allocate(SeFlux_C(nDim))
+      if (.not.allocated(SeHeat_C)) allocate(SeHeat_C(nDim))
+      
+      if ((floor((Time+1.0e-5)/DtGetSe)/=floor((Time+1.0e-5-DT)/DtGetSe))
+     &     .and.DoCoupleSE) then
+         If (UseOvation) then
+            call read_ovation_all(Time)
+            call get_ovation_point(SmLat,SmLon,EMeanDiff,EFluxDiff,
+     &       EMeanWave,EFluxWave,EMeanMono,EFluxMono)
+            call get_se_for_pwom(Time,UTsec,iLine,(/GmLat,GmLon/),
+     &           (/GLAT,GLONG/),(/GLAT2,GLONG2/),
+     &           State_GV(1:nDim,RhoE_)/Mass_I(Ion4_),State_GV(1:nDim,Te_),
+     &           Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C,
+     &           IonRatePW_C=IonRateO_C(1:nDim),EMeanDiffPW=EMeanDiff,
+     &           EFluxDiffPW=EFluxDiff,
+     &           EMeanWavePW=EMeanWave,EFluxWavePW=EFluxWave,
+     &           EMeanMonoPW=EMeanMono,EFluxMonoPW=EFluxMono)
+        
+         else
+            call get_se_for_pwom(Time,UTsec,iLine,(/GmLat,GmLon/),
+     &           (/GLAT,GLONG/),(/GLAT2,GLONG2/),
+     &           State_GV(1:nDim,RhoE_)/Mass_I(Ion4_),State_GV(1:nDim,Te_),
+     &           Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C,
+     &           IonRatePW_C=IonRateO_C(1:nDim))
+         endif
+
+         ! Divide the Ionization rate from SE by oxygen density to get
+         ! production in units of ions/cc/s rather than ions/s
+         IonRateO_C(1:nDim)=IonRateO_C(1:nDim)/XO(1:nDim)
+      else
+         call  get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))
+      endif
+      
+      if((.not.DoCoupleSE) .or. (.not.UseFeedbackFromSE)) then
+         SeDens_C(:)=0.0
+         SeFlux_C(:)=0.0
+         SeHeat_C(:)=0.0
+         call  get_ionization(nDim, AltD(1:nDim), IonRateO_C(1:nDim))		
+      endif
+
+
 
 !      do K =1,nDim
-!         write(*,*) AltD(K),IonRateO_C(K),AuroralIonRateO_C(K)
+!         write(*,*) AltD(K),IonRateO_C(K)*XO(K)!,AuroralIonRateO_C(K)
 !      enddo
+!      call con_stop('')
       DO 1099 J = 1,40
 
  9999    FORMAT(2X,1PE15.3,2X,1PE15.3)
@@ -303,32 +363,41 @@ C     DEFINE TOPSIDE ELECTRON HEAT FLUX AND PARAMETRIC HEAT SOURCES    C
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
-C      READ (5,2) ETOP,ELFXIN
-c      ETOP=5.0E-3
-
-      if ((UseIE .or. UseAurora) .and. (GmLat < 85.0 .and. GmLat > -85.0)
-     &     .and. UseAuroralHeatFlux) then
-         ETOP = max (EfluxIE/EfluxRef * EtopAurora, EtopMin)
+      if(DoCoupleSE.and.UseFeedbackFromSE) then
+         !When using stet the heatflux should be zero
+         ETOP = 0.0
       else
-         ETOP = EtopMin
-      endif
-      
-      if (UsePhotoElectronHeatFlux) then
-         if (IsPlanetModified) then
-            if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
-               !IDEALAXES are set. Use gmlat and gmlong to set sza
-               SZA=acos(cos(GMLAT*cDegToRad)*cos(GMLONG*cDegToRad))*cRadToDeg
-            else
-               ! ERROR, planet modified but not IDEALAXES
-               call con_stop()
-            endif
+!when not using stet use phenomenalogical heatflux specification
+         if ((UseIE .or. UseAurora) .and. (SmLat < 85.0 .and. SmLat > -85.0)
+     &        .and. UseAuroralHeatFlux) then
+            ETOP = max (EfluxIE/EfluxRef * EtopAurora, EtopMin)
          else
-            ! Standard situation: Real axes
-            CALL SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
+            ETOP = EtopMin
          endif
-         ETOP = ETOP+EtopPhotoElectrons*max(cos(SZA*cDegToRad),0.0)
+         
+         if (UsePhotoElectronHeatFlux) then
+            if (IsPlanetModified) then
+               if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
+                  !IDEALAXES are set. Use SmLat and SmLon to set sza
+                  SZA=acos(cos(SmLat*cDegToRad)*cos(SmLon*cDegToRad))*cRadToDeg
+               else
+                  !ERROR, planet modified but not IDEALAXES
+                  call con_stop()
+               endif
+            else
+               ! Standard situation: Real axes
+               CALL SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
+            endif
+            ETOP = ETOP+EtopPhotoElectrons*max(cos(SZA*cDegToRad),0.0)
+            
+            
+!     kludge
+!     ETOP = 0.0
+!     ETOP = EtopMin*.75
+!     ETOP = EtopMin*.375
+            ETOP = EtopMin*.75*.25
+         endif
       endif
-      
       ELFXIN=0.
 C
 C      ELFXIN=9.
@@ -479,6 +548,30 @@ C      READ(5,3) NCNPRT
       ALTMIN=ALTMIN/1.E5
       ALTMAX=ALTMAX/1.E5
       ETOP1=ETOP*1.23E-6/DRBND
+
+!      !get the SE fluxes from SE first
+!      if (.not.allocated(SeDens_C)) allocate(SeDens_C(nDim))
+!      if (.not.allocated(SeFlux_C)) allocate(SeFlux_C(nDim))
+!      if (.not.allocated(SeHeat_C)) allocate(SeHeat_C(nDim))
+!      
+!      if ((floor((Time+1.0e-5)/DtGetSe)/=floor((Time+1.0e-5-DT)/DtGetSe))
+!     &     .and.DoCoupleSE) then 
+!         call get_stet_for_pwom(Time,iLine,(/SmLat,SmLon/),
+!     &        State_GV(1:nDim,RhoE_)/Mass_I(Ion4_),State_GV(1:nDim,Te_),
+!     &        Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C)
+!         write(*,*) 'max(IonRateO_C),min(IonRateO_C)',
+!     &        maxval(IonRateO_C(1:nDim)),minval(IonRateO_C(1:nDim))
+!         !stop
+!      endif
+!      
+!      if((.not.DoCoupleSE) .or. (.not.UseFeedbackFromSE)) then
+!         SeDens_C(:)=0.0
+!         SeFlux_C(:)=0.0
+!         SeHeat_C(:)=0.0
+!      endif
+
+
+      
       CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
 
       CALL PW_CALC_EFIELD(nDim,State_GV(-1:nDim+2,:))

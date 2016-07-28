@@ -9,7 +9,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C
 C
       use ModCommonVariables
-
+      use ModCommonPlanet,ONLY: HLPion1,HLPion2,HLPE,HLPE0
 C
       NPT1=14
       NPT2=16
@@ -39,6 +39,8 @@ C Mass of atomic H3 in gramms
       Mass_I(Ion1_)=3.0237*XAMU
 C Mass of atomic H in gramms
       Mass_I(Ion2_)=1.00797*XAMU
+C Mass of H2 in gramms
+      Mass_I(Ion3_)=2.0159*XAMU
 C Mass of electron in gramms
       Mass_I(nIon)=9.109534E-28
 C Relative mass of H3 to electron
@@ -46,10 +48,13 @@ C Relative mass of H3 to electron
 C Relative mass of atomic H to electron
       MassElecIon_I(Ion2_)=Mass_I(nIon)/Mass_I(Ion2_)
 C Relative mass of H2 to electron
+      MassElecIon_I(Ion3_)=Mass_I(nIon)/Mass_I(Ion3_)
 C kB/m_H3
       RGAS_I(Ion1_)=RGAS*XAMU/Mass_I(Ion1_)
 C kB/m_H
       RGAS_I(Ion2_)=RGAS*XAMU/Mass_I(Ion2_)
+C kB/m_H2
+      RGAS_I(Ion3_)=RGAS*XAMU/Mass_I(Ion3_)
 C kB/m_e
       RGAS_I(nIon)=RGAS*XAMU/Mass_I(nIon)
       GMIN1=GAMMA-1.
@@ -59,11 +64,13 @@ C kB/m_e
       GM12=GMIN1/GAMMA/2.
       GRAR=GAMMA/GMIN2
       GREC=1./GAMMA
-      CPO=GAMMA*RGAS_I(Ion1_)/GMIN1
-      CPH=GAMMA*RGAS_I(Ion2_)/GMIN1
+      CPion1=GAMMA*RGAS_I(Ion1_)/GMIN1
+      CPion2=GAMMA*RGAS_I(Ion2_)/GMIN1
+      CPion3=GAMMA*RGAS_I(Ion3_)/GMIN1
       CPE=GAMMA*RGAS_I(nIon)/GMIN1
-      CVO=RGAS_I(Ion1_)/GMIN1
-      CVH=RGAS_I(Ion2_)/GMIN1
+      CVion1=RGAS_I(Ion1_)/GMIN1
+      CVion2=RGAS_I(Ion2_)/GMIN1
+      CVion3=RGAS_I(Ion3_)/GMIN1
       CVE=RGAS_I(nIon)/GMIN1
 
 CALEX Set the planet radius and surface gravity, rotation freq
@@ -159,6 +166,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
       DO 50 K=1,NDIM
          CALL MODATM(ALTD(K),XH2(K),XH(K),XH2O(K),XCH4(K),XTN(K))
+         NDensity_CI(K,H2_) = XH2(K)
+         NDensity_CI(K,H_)  = XH(K)
+         NDensity_CI(K,H2O_)= XH2O(K)
+         NDensity_CI(K,CH4_)= XCH4(K)
+
 50    CONTINUE
 
 
@@ -214,8 +226,9 @@ C
       HEATX1=EXP(-(ALTD(K)-HEATA1)**2/HEATS1)
       HEATX2=EXP(-(ALTD(K)-HEATA2)**2/HEATS2)
       HEATX3=EXP(-(ALTD(K)-HEATA3)**2/HEATS3)
+C KGS What's all this? delete?
       QOXYG(K)=(HEATI1*HEATX1+HEATI2*HEATX2)/
-     #         (State_GV(K,RhoO_)+State_GV(K,RhoH_))
+     #         (State_GV(K,RhoH3_)+State_GV(K,RhoH_))
 calex origionally it was qhyd=qoxy/16 but I think 16 should be 3 since
 calex I am letting oxy stand in for H3+
       QHYD(K)=QOXYG(K)/3.
@@ -275,23 +288,25 @@ C                                                                      C
 CALEX terms with "surf" in them refer to surface values      
       HLPE0=GMIN1/RGAS_I(nIon)
       HLPE=1.23E-6*GMIN1/RGAS_I(nIon)
-      HLPO=2.86E-8*(Mass_I(nIon)/Mass_I(Ion1_))*GMIN1/RGAS_I(Ion1_)
-
-      HLPH=7.37E-8*(Mass_I(nIon)/Mass_I(Ion2_))*GMIN1/RGAS_I(Ion2_)
+      HLPion1=2.86E-8*(Mass_I(nIon)/Mass_I(Ion1_))*GMIN1/RGAS_I(Ion1_)
+      HLPion2=7.37E-8*(Mass_I(nIon)/Mass_I(Ion2_))*GMIN1/RGAS_I(Ion2_)
+! KGS fix this
+      HLPion3=7.37E-8*(Mass_I(nIon)/Mass_I(Ion3_))*GMIN1/RGAS_I(Ion3_)
 
  
       
 CALEX These are the heat conductivities at the lower boundary. Note:
 CALEX that no allowance is made to take into account the effect of
 CALEX neutrals on the heat conduction as was done at earth.     
-      HeatCon_GI(0,Ion1_)=HLPO*(State_GV(0,RhoO_)/State_GV(0,RhoE_))*State_GV(0,To_)**2.5
+      HeatCon_GI(0,Ion1_)=HLPion1*(State_GV(0,RhoH3_)/State_GV(0,RhoE_))*State_GV(0,Th3_)**2.5
       HeatCon_GI(0,nIon)=HLPE*State_GV(0,Te_)**2.5
-      HeatCon_GI(0,Ion2_)=HLPH*(State_GV(0,RhoH_)/State_GV(0,RhoE_))*State_GV(0,Th_)**2.5
+      HeatCon_GI(0,Ion2_)=HLPion2*(State_GV(0,RhoH_)/State_GV(0,RhoE_))*State_GV(0,Th_)**2.5
+      HeatCon_GI(0,Ion3_)=HLPion3*(State_GV(0,RhoH2_)/State_GV(0,RhoE_))*State_GV(0,Th2_)**2.5
 
       
-C!      HeatCon_GI(0,Ion1_)=HLPO*State_GV(0,To_)**2.5
+C!      HeatCon_GI(0,Ion1_)=HLPion1*State_GV(0,Th3_)**2.5
 C!      HeatCon_GI(0,nIon)=HLPE*State_GV(0,Te_)**2.5
-C!      HeatCon_GI(0,Ion2_)=HLPH*State_GV(0,Th_)**2.5
+C!      HeatCon_GI(0,Ion2_)=HLPion2*State_GV(0,Th_)**2.5
 C!      HeatCon_GI(0,Ion2_)E=HLPHE*State_GV(0,The_)**2.5
       CALL MODATM(ALTMAX,XNH2,XNH,XNH2O,XNCH4,TEMP)
       XTNMAX=TEMP
@@ -308,7 +323,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 C      READ(5,3) NCNPRT
       NCNPRT=0
-      
+
       CALL MODATM(ALTMIN,XNH2,XNH,XNH2O,XNCH4,XNT)
       CALL MODATM(ALTMAX,YNH2,YNH,YNH2O,YNCH4,YNT)
       DO 60 I=1,NDIM
@@ -323,13 +338,14 @@ C      READ(5,3) NCNPRT
       if (DoLog) then
 
       IF (NCNPRT.NE.0) GO TO 999
-      
+
+C KGS What's all this?      
       WRITE(iUnitOutput,1005) NDIM
 1005  FORMAT(1H1,5X,'NUMBER OF CELLS=',I4)
       WRITE(iUnitOutput,1020) NEXP
 1020  FORMAT(5X,'NEXP=',I1)
-      WRITE (iUnitOutput,1008) GAMMA,RGAS_I(Ion1_),CPO,CVO,
-     ;RGAS_I(Ion2_),CPH,CVH,RGAS_I(nIon),CPE,CVE
+      WRITE (iUnitOutput,1008) GAMMA,RGAS_I(Ion1_),CPion1,CVion1,
+     ;RGAS_I(Ion2_),CPion2,CVion2,RGAS_I(nIon),CPE,CVE
 1008  FORMAT(5X,'GAMMA=',F4.2,/5X,'RGAS(OXYGEN)=',1PE10.4,7X,
      ;'CP(OXYGEN)=',1PE10.4,7X,'CV(OXYGEN)=',1PE10.4
      ;/5X,'RGAS(HELIUM)=',1PE10.4,7X,
@@ -341,7 +357,7 @@ C      READ(5,3) NCNPRT
 1023  FORMAT(1H0,5X,'LOWER BOUNDARY PLASMA PARAMETERS:')
       WRITE(iUnitOutput,1001)
 1001  FORMAT(1H ,4X,'OXYGEN:')
-      WRITE (iUnitOutput,1009) State_GV(0,uO_),State_GV(0,pO_),State_GV(0,RhoO_),State_GV(0,To_),SoundSpeed_GI(0,Ion1_)
+      WRITE (iUnitOutput,1009) State_GV(0,uH3_),State_GV(0,pH3_),State_GV(0,RhoH3_),State_GV(0,Th3_),SoundSpeed_GI(0,Ion1_)
 1009  FORMAT(5X,'VELOCITY=',1PE11.4,3X,'PRESSURE=',1PE10.4,3X,
      ;'MASS DENSITY=',1PE10.4,3X,'TEMPERATURE=',1PE10.4,3X,
      ;'SOUND VELOCITY=',1PE10.4)
@@ -356,7 +372,7 @@ C      READ(5,3) NCNPRT
       WRITE (iUnitOutput,1004)
 1004  FORMAT(1H ,4X,'OXYGEN:')
       WRITE (iUnitOutput,1009) 
-     & State_GV(nDim+1,uO_),State_GV(nDim+1,pO_),State_GV(nDim+1,RhoO_),State_GV(nDim+1,To_),SoundSpeed_GI(nDim+1,Ion1_)
+     & State_GV(nDim+1,uH3_),State_GV(nDim+1,pH3_),State_GV(nDim+1,RhoH3_),State_GV(nDim+1,Th3_),SoundSpeed_GI(nDim+1,Ion1_)
 
       WRITE (iUnitOutput,1006)
 1006  FORMAT(1H ,4X,'HYDROGEN:')
@@ -830,47 +846,47 @@ C!3291  CONTINUE
      ;'PRESSURE',6X,'TEMPERATURE',/)
       K=0
 CALEX XM stands for Mach Number      
-      XM=State_GV(0,uO_)/SoundSpeed_GI(0,Ion1_)
-      DNS1=State_GV(0,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uO_),XM,DNS1,State_GV(0,pO_),State_GV(0,To_)
+      XM=State_GV(0,uH3_)/SoundSpeed_GI(0,Ion1_)
+      DNS1=State_GV(0,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTMIN,State_GV(0,uH3_),XM,DNS1,State_GV(0,pH3_),State_GV(0,Th3_)
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 630 K=1,NDMQ
-      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
-      XM=State_GV(K,uO_)/US
-      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
+      US=SQRT(GAMMA*State_GV(K,pH3_)/State_GV(K,RhoH3_))
+      XM=State_GV(K,uH3_)/US
+      DNS1=State_GV(K,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH3_),XM,DNS1,State_GV(K,pH3_),State_GV(K,Th3_)
 630   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 690
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 640 K=NPT2,NDMQ,2
-      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
-      XM=State_GV(K,uO_)/US
-      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
+      US=SQRT(GAMMA*State_GV(K,pH3_)/State_GV(K,RhoH3_))
+      XM=State_GV(K,uH3_)/US
+      DNS1=State_GV(K,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH3_),XM,DNS1,State_GV(K,pH3_),State_GV(K,Th3_)
 640   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 690
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 650 K=NPT4,NDMQ,5
-      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
-      XM=State_GV(K,uO_)/US
-      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
+      US=SQRT(GAMMA*State_GV(K,pH3_)/State_GV(K,RhoH3_))
+      XM=State_GV(K,uH3_)/US
+      DNS1=State_GV(K,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH3_),XM,DNS1,State_GV(K,pH3_),State_GV(K,Th3_)
 650   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 690
       DO 660 K=NPT6,NDIM,10
-      US=SQRT(GAMMA*State_GV(K,pO_)/State_GV(K,RhoO_))
-      XM=State_GV(K,uO_)/US
-      DNS1=State_GV(K,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uO_),XM,DNS1,State_GV(K,pO_),State_GV(K,To_)
+      US=SQRT(GAMMA*State_GV(K,pH3_)/State_GV(K,RhoH3_))
+      XM=State_GV(K,uH3_)/US
+      DNS1=State_GV(K,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTD(K),State_GV(K,uH3_),XM,DNS1,State_GV(K,pH3_),State_GV(K,Th3_)
 660   CONTINUE
 690   CONTINUE
       K=NDIM1
-      XM=State_GV(nDim+1,uO_)/SoundSpeed_GI(nDim+1,Ion1_)
-      DNS1=State_GV(nDim+1,RhoO_)/Mass_I(Ion1_)
-      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uO_),XM,DNS1,State_GV(nDim+1,pO_),State_GV(nDim+1,To_)
+      XM=State_GV(nDim+1,uH3_)/SoundSpeed_GI(nDim+1,Ion1_)
+      DNS1=State_GV(nDim+1,RhoH3_)/Mass_I(Ion1_)
+      WRITE(iUnitOutput,1022) K,ALTMAX,State_GV(nDim+1,uH3_),XM,DNS1,State_GV(nDim+1,pH3_),State_GV(nDim+1,Th3_)
       WRITE (iUnitOutput,1010)
 1010  FORMAT(1H1,45X,'INITIAL HYDROGEN PARAMETERS')
       WRITE(iUnitOutput,1021)
@@ -969,26 +985,26 @@ CALEX XM stands for Mach Number
       NDMQ=NPT1
       IF (NDIM.LT.NPT2) NDMQ=NDIM
       DO 930 K=1,NDMQ
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uH3_),Source_CV(K,pH3_),
      ;Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 930   CONTINUE
       IF (NDIM.LT.NPT2) GO TO 990
       NDMQ=NPT3
       IF (NDIM.LT.NPT4) NDMQ=NDIM
       DO 940 K=NPT2,NDMQ,2
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uH3_),Source_CV(K,pH3_),
      ;Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 940   CONTINUE
       IF (NDIM.LT.NPT4) GO TO 990
       NDMQ=NPT5
       IF (NDIM.LT.NPT6) NDMQ=NDIM
       DO 950 K=NPT4,NDMQ,5
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uH3_),Source_CV(K,pH3_),
      ;Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 950   CONTINUE
       IF (NDIM.LT.NPT6) GO TO 990
       DO 960 K=NPT6,NDIM,10
-      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uO_),Source_CV(K,pO_),
+      WRITE(iUnitOutput,1026) K,ALTD(K),EFIELD(K),Source_CV(K,uH3_),Source_CV(K,pH3_),
      ;Source_CV(K,uH_),Source_CV(K,pH_),Source_CV(K,uE_),Source_CV(K,pE_)
 960   CONTINUE
 990   CONTINUE
@@ -1051,7 +1067,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       use ModCommonVariables
       use ModPWOM, ONLY:IsRestart
 !     REAL jp1,jp2,jp3,jp4,kc1,kc2,kc3,kc6,kc7,kc8,kr1,kr2
-      real DensityHp,DensityH3p
+      real DensityHp,DensityH3p,DensityH2p
 C     ALEX define the reaction rates, label by reaction number
 C     ALEX j is for photochemistry, k is for regular chemistry
       
@@ -1122,63 +1138,73 @@ C     DEFINE THE GAS PARAMETERS AT THE LOWER BOUNDARY                  C
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     C
-      State_GV(-1:0,uO_)=0.
+      State_GV(-1:0,uH3_)=0.
       State_GV(-1:0,uH_)=0.
+      State_GV(-1:0,uH2_)=0.
       State_GV(-1:0,uE_)=0.
       CALL MODATM(ALTMIN,XNH2,XNH,XNH2O,XNCH4,TEMP)
 
 CALEX I pretend that for plasma parameters, O is H3 and HE is
 CALEX chemical equilibrium value for H2+ this allow me to just
 CALEX change the chemistry but leave the rest of the code the same  
-      State_GV(-1:0,To_)=TEMP
+      State_GV(-1:0,Th3_)=TEMP
       State_GV(-1:0,Th_)=TEMP
+      State_GV(-1:0,Th2_)=TEMP
       State_GV(-1:0,Te_)=TEMP
 
-      call calc_chemical_equilibrium(DensityHp,DensityH3p)
-      State_GV(-1:0,RhoO_)=Mass_I(Ion1_)*DensityH3p
+C KGS this subroutine needs to be modified
+      call calc_chemical_equilibrium(DensityHp,DensityH3p,DensityH2p)
+      State_GV(-1:0,RhoH3_)=Mass_I(Ion1_)*DensityH3p
       State_GV(-1:0,RhoH_)=Mass_I(Ion2_)*DensityHp
-      write(*,*) 'H+(1400km)=',DensityHp,', H3+(1400km)=',DensityH3p
+      State_GV(-1:0,RhoH2_)=Mass_I(Ion3_)*DensityH2p
+      write(*,*) 'H+(1400km)=',DensityHp,', H3+(1400km)=',DensityH3p,
+     &     ', H2+(1400km)=',DensityH2p
 
 
 C I have used numerically calculated chemical equilibrium
 C solution for T=800k.       
-!      State_GV(0,RhoO_)=Mass_I(Ion1_)*6489.69
+!      State_GV(0,RhoH3_)=Mass_I(Ion1_)*6489.69
 !c      State_GV(0,RhoHe_)=Mass_I(Ion3_)*jp2/kc1
 !      State_GV(0,RhoH_)E=0.
 !      State_GV(0,RhoH_)=Mass_I(Ion2_)*1343.64
 C I have used numerically calculated chemical equilibrium
 C solution for T=1000k.       
-c      State_GV(0,RhoO_)=Mass_I(Ion1_)*4725.0
+c      State_GV(0,RhoH3_)=Mass_I(Ion1_)*4725.0
 c      State_GV(0,RhoH_)E=0.
 c      State_GV(0,RhoH_)=Mass_I(Ion2_)*368.0
 
 C I have used numerically calculated chemical equilibrium
 C solution for T=1500k.       
-c      State_GV(0,RhoO_)=Mass_I(Ion1_)*560.0
+c      State_GV(0,RhoH3_)=Mass_I(Ion1_)*560.0
 c      State_GV(0,RhoH_)E=0.
 c      State_GV(0,RhoH_)=Mass_I(Ion2_)*30.0
 
 
 C I have used numerically calculated chemical equilibrium
 C solution for T=1500k. with enhanced water and decreased CH4      
-c      State_GV(0,RhoO_)=Mass_I(Ion1_)*11435.41
+c      State_GV(0,RhoH3_)=Mass_I(Ion1_)*11435.41
 c      State_GV(0,RhoH_)E=0.
 c      State_GV(0,RhoH_)=Mass_I(Ion2_)*1463.48
 
 C I have used numerically calculated chemical equilibrium
 C solution for T=100k. with reduced CH4 enhanced h2o      
-C      State_GV(0,RhoO_)=Mass_I(Ion1_)*5509.0
+C      State_GV(0,RhoH3_)=Mass_I(Ion1_)*5509.0
 C      State_GV(0,RhoH_)E=0.
 C      State_GV(0,RhoH_)=Mass_I(Ion2_)*1124.0
 
 
-      State_GV(-1:0,RhoE_)=MassElecIon_I(Ion2_)*State_GV(-1:0,RhoH_)+MassElecIon_I(Ion1_)*State_GV(-1:0,RhoO_)
-      State_GV(-1:0,pO_)=RGAS_I(Ion1_)*State_GV(-1:0,To_)*State_GV(-1:0,RhoO_)
+      State_GV(-1:0,RhoE_)=MassElecIon_I(Ion3_)*State_GV(-1:0,RhoH2_) +
+     &     MassElecIon_I(Ion2_)*State_GV(-1:0,RhoH_) + 
+     &     MassElecIon_I(Ion1_)*State_GV(-1:0,RhoH3_)
+      State_GV(-1:0,pH3_)=RGAS_I(Ion1_)*State_GV(-1:0,Th3_)*State_GV(-1:0,RhoH3_)
       State_GV(-1:0,pH_)=RGAS_I(Ion2_)*State_GV(-1:0,Th_)*State_GV(-1:0,RhoH_)
+      State_GV(-1:0,pH2_)=RGAS_I(Ion3_)*State_GV(-1:0,Th2_)*State_GV(-1:0,RhoH2_)
       State_GV(-1:0,pE_)=RGAS_I(nIon)*State_GV(-1:0,Te_)*State_GV(-1:0,RhoE_)
-      SoundSpeed_GI(0,Ion1_)=SQRT(GAMMA*RGAS_I(Ion1_)*State_GV(0,To_))
+      SoundSpeed_GI(0,Ion1_)=SQRT(GAMMA*RGAS_I(Ion1_)*State_GV(0,Th3_))
       SoundSpeed_GI(0,Ion2_)=SQRT(GAMMA*RGAS_I(Ion2_)*State_GV(0,Th_))
+      SoundSpeed_GI(0,Ion3_)=SQRT(GAMMA*RGAS_I(Ion3_)*State_GV(0,Th2_))
       SoundSpeed_GI(0,nIon)=SQRT(GAMMA*RGAS_I(nIon)*State_GV(0,Te_))
+
 C     
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     
@@ -1190,7 +1216,9 @@ C
 
 
       DO 20 I=1,NDIM
-CALEX SOURCE COEF?       
+CALEX SOURCE COEF?
+C jp = photochemical reaction rate
+C kc = collisional reaction rate      
          FFHpp1(I)=jp1*XH2(I)
          FFHpp3(I)=jp3*XH(I)
          FFHpp4(I)=jp4*XH2O(I)
@@ -1203,7 +1231,8 @@ CALEX write out source coeff
 CALEX         write(26,*) FFHpp1(I),FFHpp3(I),FFHpp4(I),FFHpc2(I),FFHpc3(I),FFHpc8(I),FFHpr1(I)
         
 
-         FFH3pc1(I)=kc1*(jp2/kc1)*XH2(I)
+!         FFH3pc1(I)=kc1*(jp2/kc1)*XH2(I)   ! KGS H2+ folded in here
+         FFH3pc1(I)=kc1*XH2(I)              ! KGS Make sure this is multiplied by H2+ now
          FFH3pc2(I)=kc2*XH2(I)*XH2(I)
          FFH3pc6(I)=-kc6*XCH4(I)
          FFH3pc7(I)=-kc7*XH2O(I)
@@ -1212,28 +1241,54 @@ CALEX         write(26,*) FFHpp1(I),FFHpp3(I),FFHpp4(I),FFHpc2(I),FFHpc3(I),FFHp
 CALEX write out source coeff
 CALEX         write(27,*) FFH3pc1(I),FFH3pc2(I),FFH3pc6(I),FFH3pc7(I),FFH3pr2(I)
 
-CALEX CL=COLLISION COEF, CF=collision freq ?         
+         FFH2pp2(I)=jp2*XH2(I)
+         FFH2pc9(I)=kc9(I)*XH2(I)
+         FFH2pc1(I)=-kc1*XH2(I)
 
+CALEX CL=COLLISION COEF, CF=collision freq ?         
+C KGS CF(1,2) = CL(1,2) * n(2)
+C KGS n(2)m(2)CF(2,1) = n(1)m(1)CF(1,2)
 CALEX the coulomb collisions
-CAlex H+ and H3+         
-         CLHpH3p(I)=1.905*4.**1.5/Mass_I(Ion1_)
+CAlex H+ and H3+
+c KGS and H2+   from eq 4.143?
+         CLHpH3p(I)=1.905*4.**1.5/Mass_I(Ion1_) ! KGS orig
+         CLHpH3p(I)=1.100*4.**1.5/Mass_I(Ion1_) ! KGS correct value?
+         CLH2pH3p(I)=3.17*6.**0.5/Mass_I(Ion1_) ! KGS double-check
+         CLH2pHp(I)=3.81*2.**0.5/Mass_I(Ion2_)  ! KGS double-check
 CALEX electron H+ and electron H3+
+c KGS and electron H2+
          CLELHp(I)=54.5/Mass_I(Ion2_)
          CLELH3p(I)=54.5/Mass_I(Ion1_)
+         CLELH2p(I)=54.5/Mass_I(Ion3_)
 
 CALEX  ion neutrals
+C KGS looks similar to Nagy 4.88 Maxwell Molecule Collisions
+C KGS but some terms seem to be missing
+         ! H+ - H2
          CLHpH(I)=2.65E-10*XH(I)
 !         CFHpH2(I)=2.6E-9*XH2(I)*(.82/.667)**.5
          CollisionFreq_IIC(Ion2_,Neutral1_,I)=
      &        2.6E-9*XH2(I)*(.82/.667)**.5
 
+! KGS 2-2 Coulomb Collision is in collisionPW.f
+
+         ! H3+ - H
 !         CFH3pH(I)=2.6E-9*XH(I)*(.667/.75)**.5
          CollisionFreq_IIC(Ion1_,Neutral2_,I)=
      &        2.6E-9*XH(I)*(.667/.75)**.5
 
+         ! H3+ - H2
 !         CFH3pH2(I)=2.6E-9*XH2(I)*(.82/1.2)**.5
          CollisionFreq_IIC(Ion1_,Neutral1_,I)=
      &        2.6E-9*XH2(I)*(.82/1.2)**.5
+
+C KGS make sure I should be using Maxwell Molecule Collisions here
+         ! H2+ - H2
+         CollisionFreq_IIC(Ion3_,Neutral1_,I)=
+     &        2.6E-9*XH2(I)*(.82/1.0)**.5    ! KGS check these
+         ! H2+ - H
+         CollisionFreq_IIC(Ion3_,Neutral2_,I)=
+     &        2.6E-9*XH(I)*(.667/.667)**.5
 
 CALEX electron H, e H2 done in collis
          CLELH(I)=4.5E-9*XH(I)
@@ -1270,9 +1325,18 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       !CTHpH3p=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
       !CTHpEL=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(nIon))
       
+      HeatFlowCoef_II(Ion3_,Neutral2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion3_,Neutral1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion3_))
+      HeatFlowCoef_II(Ion3_,Ion1_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion3_,Ion2_)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion3_,nIon)=3.*RGAS_I(Ion3_)*Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(nIon))
+
+      MassFracCoef_II(Ion3_,:) = HeatFlowCoef_II(Ion3_,:) / (3.0*RGAS_I(Ion3_))
+
       HeatFlowCoef_II(Ion2_,Neutral2_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion2_))
       HeatFlowCoef_II(Ion2_,Neutral1_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+2.*Mass_I(Ion2_))
       HeatFlowCoef_II(Ion2_,Ion1_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
+      HeatFlowCoef_II(Ion2_,Ion3_)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion2_,nIon)=3.*RGAS_I(Ion2_)*Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(nIon))
 
       MassFracCoef_II(Ion2_,:) = HeatFlowCoef_II(Ion2_,:) / (3.0*RGAS_I(Ion2_))
@@ -1284,6 +1348,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       HeatFlowCoef_II(Ion1_,Neutral2_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
       HeatFlowCoef_II(Ion1_,Neutral1_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+2.*Mass_I(Ion2_))
       HeatFlowCoef_II(Ion1_,Ion2_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
+      HeatFlowCoef_II(Ion1_,Ion3_)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
       HeatFlowCoef_II(Ion1_,nIon)=3.*RGAS_I(Ion1_)*Mass_I(Ion1_)/(Mass_I(Ion1_)+Mass_I(nIon))
 
       MassFracCoef_II(Ion1_,:) = HeatFlowCoef_II(Ion1_,:) / (3.0*RGAS_I(Ion1_))
@@ -1294,6 +1359,7 @@ CALEX CTOXN2 = 3*R_o*M_o/(M_o+M_{N2}) see nagy p.83
       
       HeatFlowCoef_II(nIon,Neutral2_)=3.*RGAS_I(nIon)*Mass_I(nIon)/(Mass_I(nIon)+Mass_I(Ion2_))
       HeatFlowCoef_II(nIon,Neutral1_)=3.*RGAS_I(nIon)*Mass_I(nIon)/(Mass_I(nIon)+2.*Mass_I(Ion2_))
+      HeatFlowCoef_II(nIon,Ion3_)=3.*RGAS_I(nIon)*Mass_I(nIon)/(Mass_I(nIon)+Mass_I(Ion3_))
       HeatFlowCoef_II(nIon,Ion2_)=3.*RGAS_I(nIon)*Mass_I(nIon)/(Mass_I(nIon)+Mass_I(Ion2_))
       HeatFlowCoef_II(nIon,Ion1_)=3.*RGAS_I(nIon)*Mass_I(nIon)/(Mass_I(nIon)+Mass_I(Ion1_))
 
@@ -1305,8 +1371,15 @@ CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
 !      CMHpH3p=Mass_I(Ion1_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
 !      CMHpEL=Mass_I(nIon)/(Mass_I(Ion2_)+Mass_I(nIon))
 
+      FricHeatCoef_II(Ion3_,Neutral2_)=Mass_I(Ion3_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion3_,Neutral1_)=2.*XAMU/(Mass_I(Ion3_)+2.*XAMU)
+      FricHeatCoef_II(Ion3_,Ion2_)=Mass_I(Ion2_)/(Mass_I(Ion3_)+Mass_I(Ion2_))
+      FricHeatCoef_II(Ion3_,Ion1_)=Mass_I(Ion1_)/(Mass_I(Ion3_)+Mass_I(Ion1_))
+      FricHeatCoef_II(Ion3_,nIon)=Mass_I(nIon)/(Mass_I(Ion3_)+Mass_I(nIon))
+
       FricHeatCoef_II(Ion2_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion2_)+Mass_I(Ion2_))
       FricHeatCoef_II(Ion2_,Neutral1_)=2.*XAMU/(Mass_I(Ion2_)+2.*XAMU)
+      FricHeatCoef_II(Ion2_,Ion3_)=Mass_I(Ion3_)/(Mass_I(Ion2_)+Mass_I(Ion3_))
       FricHeatCoef_II(Ion2_,Ion1_)=Mass_I(Ion1_)/(Mass_I(Ion2_)+Mass_I(Ion1_))
       FricHeatCoef_II(Ion2_,nIon)=Mass_I(nIon)/(Mass_I(Ion2_)+Mass_I(nIon))
        
@@ -1317,6 +1390,7 @@ CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
        
       FricHeatCoef_II(Ion1_,Neutral2_)=Mass_I(Ion2_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
       FricHeatCoef_II(Ion1_,Neutral1_)=2.*XAMU/(Mass_I(Ion1_)+2.*XAMU)
+      FricHeatCoef_II(Ion1_,Ion3_)=Mass_I(Ion3_)/(Mass_I(Ion1_)+Mass_I(Ion3_))
       FricHeatCoef_II(Ion1_,Ion2_)=Mass_I(Ion2_)/(Mass_I(Ion1_)+Mass_I(Ion2_))
       FricHeatCoef_II(Ion1_,nIon)=Mass_I(nIon)/(Mass_I(Ion1_)+Mass_I(nIon))
 
@@ -1327,23 +1401,30 @@ CALEX CMOXN2 = M_{N2}/(M_o+M_{N2}) see nagy p.83
       
       FricHeatCoef_II(nIon,Neutral2_)=Mass_I(Ion2_)/(Mass_I(nIon)+Mass_I(Ion2_))
       FricHeatCoef_II(nIon,Neutral1_)=2.*XAMU/(Mass_I(nIon)+2.*XAMU)
+      FricHeatCoef_II(nIon,Ion3_)=Mass_I(Ion3_)/(Mass_I(nIon)+Mass_I(Ion3_))
       FricHeatCoef_II(nIon,Ion2_)=Mass_I(Ion2_)/(Mass_I(nIon)+Mass_I(Ion2_))
       FricHeatCoef_II(nIon,Ion1_)=Mass_I(Ion1_)/(Mass_I(nIon)+Mass_I(Ion1_))
       
 C     ALEX(10/11/04): 
 C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
 
+      print *,'Restart: ',IsRestart
+
       if(IsRestart) RETURN
       IsRestart = .true.
       do K=1,NDIM
-         State_GV(K,RhoH_)=State_GV(0,RhoH_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
-         State_GV(K,uO_)=0
-         State_GV(K,pO_)=State_GV(0,pO_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
-         State_GV(K,RhoO_)=State_GV(0,RhoO_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
-         State_GV(K,To_)=State_GV(0,To_)
+         State_GV(K,uH3_)=0
+         State_GV(K,pH3_)=State_GV(0,pH3_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
+         State_GV(K,RhoH3_)=State_GV(0,RhoH3_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
+         State_GV(K,Th3_)=State_GV(0,Th3_)
          State_GV(K,uH_)=0
          State_GV(K,pH_)=State_GV(0,pH_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
+         State_GV(K,RhoH_)=State_GV(0,RhoH_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
          State_GV(K,Th_)=State_GV(0,Th_)
+         State_GV(K,uH2_)=0
+         State_GV(K,pH2_)=State_GV(0,pH2_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
+         State_GV(K,RhoH2_)=State_GV(0,RhoH2_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
+         State_GV(K,Th2_)=State_GV(0,Th2_)
          State_GV(K,RhoE_)=State_GV(0,RhoE_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
          State_GV(K,uE_)=0
          State_GV(K,pE_)=State_GV(0,pE_)*exp(-(ALTD(k)-1400.E5)/5000.E5)
@@ -1352,9 +1433,5 @@ C     TRY SETTING THE PLASMA PARAMETERS HERE TO THE SURFACE VALUES
          
       enddo
       
-      
-      
-
-
       RETURN
       END

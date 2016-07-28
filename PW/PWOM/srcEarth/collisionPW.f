@@ -5,6 +5,8 @@ CALEX then calculates the momentum and energy collision terms
       use ModCommonVariables
       use ModAurora,ONLY: get_aurora,HeatingRate_C
       use ModPWOM  ,ONLY: UseAurora
+      use ModPhotoElectron
+      use ModCommonPlanet,ONLY: HLPO,HLPH,HLPHE,HLPE
       
       integer, intent(in) :: N 
       real,    intent(in) :: StateIn_GV(-1:N+2,nVar)
@@ -288,6 +290,11 @@ CALEX These are the energy collision terms as seen in eq 4.86 in Nagy
       enddo
       Source_CV(I,pE_) =StateIn_GV(I,RhoE_)*Source_CV(I,pE_)
 
+      if(UseFeedbackFromSE) then
+         !add the energy deposition from SEs
+         Source_CV(I,pE_) =Source_CV(I,pE_)+SeHeat_C(I)
+      endif
+         
 !      write(*,*) I, (StateIn_GV(I,RhoO_)/Mass_I(Ion1_)**2.0)/ AuroralHeatCoefLower*HeatingRate_C(I), 
 !     &     Source_CV(I,pO_),Source_CV(I,pH_),Source_CV(I,pHe_)
 C

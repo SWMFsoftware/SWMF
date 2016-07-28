@@ -1,6 +1,6 @@
 include ../Makefile.def
 
-SEARCHDIR = -I${SHAREDIR} -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR} -I${EMPIRICALUADIR}
+SEARCHDIR = -I${SHAREDIR} -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR} -I${EMPIRICALUADIR} -I${STETDIR} -I${TWOSTREAMDIR}
 
 include ../Makefile.conf
 
@@ -10,9 +10,10 @@ include Makefile.DEPEND
 include Makefile.RULES
 
 MODULES = \
+	ModOvation.o\
 	ModPW.o\
 	ModParameters.o\
-	ModCommonPlanet.o\
+	ModCommonPlanet_planet.o\
 	ModCommonVariables.o\
 	ModNeutralPW.o\
 	ModPass.o\
@@ -23,6 +24,7 @@ MODULES = \
 	ModLatLon.o\
 	ModPwPlot.o\
 	ModWaves.o\
+	ModPhotoElectron.o\
 	${MODULES_PLANET}
 
 METHODS = \
@@ -58,6 +60,7 @@ LIBOBJECTS = ${MODULES} ${METHODS}
 EXEOBJECTS = main.o ${LIBOBJECTS}
 
 DEPEND:
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS} 
 	@${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${EXEOBJECTS} 
 
 
@@ -82,12 +85,12 @@ PWOM:	DEPEND
 	@echo "PWOM.exe has been created"
 
 ${EXE}:	${EXEOBJECTS}
-	@(if [ ${OS} = "Darwin" ];         then make PWOM_for_Darwin; \
-	else                                    make PWOM_general; fi)
+	make PWOM_general
 
 PWOM_general:
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
-		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE -lTIMING \
+		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES  \
+		-lTIMING  -lSE -lSHARE\
 		${Lflag1}
 
 PWOM_for_Darwin:
@@ -97,12 +100,11 @@ PWOM_for_Darwin:
 		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a
+		ar -x ${LIBDIR}/libSE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
 clean: cleanfiles
 
 distclean: clean
-	rm -f PLANET *_planet.f get_rate.f90 \
-		ModGlow.f90 upper_heat_conduction.f90 \
-		ModCommonPlanet.f90 Makefile.planet 
+	rm -f PLANET *_planet.f *_planet.f90

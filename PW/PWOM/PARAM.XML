@@ -23,6 +23,7 @@ List of PW commands used in the PARAM.in file
 	</if>
 #SCHEME
 Godunov			TypeSolver
+Godunov			TypeFlux
 0.05			DtVertical
 F			IsFullyImplicit
 F			IsPointImplicit
@@ -30,6 +31,11 @@ F			IsPointImplicitAll
 
 TypeSolver sets the type of solver which is to be used. Currently only two
 options are available: Godunov and Rusanov. 
+These are actually both Godunov type schemes, but with a first order exact 
+Riemann solver or a second order approximate Riemann solver. 
+Type Flux sets the intercell flux for the approximate Riemann solver and 
+hence only matters when the Rusanov option is selected for the TypeSolver. 
+The three choices are LaxFriedrichs, Rusanov, and HLL. 
 DtVertical sets the time step for plasma propagating along the field line.
 IsFullyImplicit determines whether the fully implicit time stepping is used. 
 If not, the last two parameters are also read.
@@ -49,16 +55,7 @@ The default values are shown.
 Sets the beta parameter in the Rusanov scheme.
 </command>
 
-<command name="DIFFUSION">
-	<parameter name="TypeDiffusion" type="string" length="100" />
 
-#DIFFUSION
-LaxFriedrichs			TypeDiffusion
-
-Sets the type of diffusion for use in the Rusanov scheme. The other option 
-is LocalLaxFriedrichs. The default is shown.
-
-</command>
 
 <command name="VERTICALGRID">
 	<parameter name="nPoints" type="integer" min="0" default="390" />
@@ -347,6 +344,23 @@ execution. Tmax sets the stop time in timeaccurate mode. and MaxStep sets the
 maximum number of iterations for non-timeaccurate mode.
 </command>
 
+<command name="SE">
+	<parameter name="DoCoupleSE" type="logical" default="T" />
+	<parameter name="UseFeedbackFromSE" type="logical" default="T" />
+	<parameter name="IsVerboseSE" type="logical" default="F" />
+	<parameter name="DtGetSe" type="real" min="-1" default="120.0" />
+#SE
+T		DoCoupleSE
+T		UseFeedbackFromSE
+F		IsVerboseSE
+120		DtGetSe
+
+#SE commands DoCoupleSE and UseFeedbackFromSE tells if you should include 
+SE coupling (works for Earth and Jupiter) and if feedback should be included. 
+IsVerboseSE option tells if SE should write lots of output 
+(good for debugging one line) or run quietly (good for lots of lines). DtGetSe 
+tells how frequently SE should be called.
+</command>
 
 
 </commandgroup>

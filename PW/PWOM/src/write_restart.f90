@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine PW_write_restart(&
-     nAlt,RAD,GmLat,GmLong,Time,DT,nStep,NameRestart,     &
+     nAlt,RAD,SmLat,SmLon,Time,DT,nStep,NameRestart,     &
      State_CV)
 
   !Description: Write out restart file for PW
@@ -11,7 +11,7 @@ subroutine PW_write_restart(&
   use ModIoUnit, ONLY: UnitTmp_
   implicit none
   integer, intent(in) :: nAlt,nStep
-  real   , intent(in) :: GmLat,GmLong,Time,DT
+  real   , intent(in) :: SmLat,SmLon,Time,DT
   real   , intent(in) :: RAD(nAlt)
   real   , intent(in) :: State_CV(1:nAlt,nVar)
   
@@ -23,7 +23,7 @@ subroutine PW_write_restart(&
   open(UnitTmp_, FILE=NameRestart)
   
   WRITE (UnitTmp_,*) TIME,DT,nAlt,NSTEP
-  Write (UnitTmp_,*) GMLAT, GMLONG
+  Write (UnitTmp_,*) SmLat, SmLon
   do iIon=1,nIon
      WRITE (UnitTmp_,2002)&
           (RAD(K),State_CV(K,iU_I(iIon)),State_CV(K,iP_I(iIon)),&

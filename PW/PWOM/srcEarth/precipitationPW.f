@@ -1,7 +1,7 @@
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE PRECIP(IDMX,ALTMIN,PHOTOTP)
       use ModPWOM, ONLY: UseAurora,UseIE
-      use ModCommonVariables, ONLY: GMLAT,GMLONG,AveIE,EfluxIE
+      use ModCommonVariables, ONLY: SmLat,SmLon,AveIE,EfluxIE
 C THIS SUBROUTINE CALCULATES IONIZATION FREQUENCIES FOR ATOMIC OXYGEN
 C BASED ON USER-SPECIFIED ELECTRON PRECIPITATION
        REAL MO,MD,NO,NN2,NO2,NH,NHE,TN,GEE
@@ -15,7 +15,7 @@ C     DIMENSION ZZZZ(601),G(601),PHOTOTP(601),IONRATE(601)
        DIMENSION FLUX1(4),ALF1(4)
 CALEX again common_variables.f includes common variables
 !       COMMON /MSIS1/IDATE,UT,SEC,GLAT,GLONG,STL,F107A,F107,AP(7),IART
-!     $,GMLAT,GMLONG
+!     $,SmLat,SmLon
 C                    rain   cusp  aurora  mix
        DATA FLUX1 /  0.03,  0.3,  1.5,    .3  /
        DATA ALF1 /   0.2,   0.1,  0.75,   .2 /
@@ -24,17 +24,17 @@ C      PICK A ENERGY AND FLUX VALUE!!!!!!!!!!!!!!!!!!!!!!!!
 C      DEFINE AN AVERAGE PARTICLE ENERGY (KEV)
 C      DEFINE A CHARACTERISTIC PRECIPITATING ELECTRON FLUX (ERGS/CM2/SEC)
 !          if (UseAurora) then
-!             ALF  = get_eAverageE(GMLAT,GMLON)
-!             FLUX = (get_eflux(GMLAT,GMLON)*1.602E9)/(2.*ALF)
+!             ALF  = get_eAverageE(SmLat,GMLON)
+!             FLUX = (get_eflux(SmLat,GMLON)*1.602E9)/(2.*ALF)
 !          else
-       if ( ((UseIE .or. UseAurora) .and. GmLat > 65.0) 
-     &      .or. ((UseIE.or. UseAurora) .and. GmLat < -65.0)) then
+       if ( ((UseIE .or. UseAurora) .and. SmLat > 65.0) 
+     &      .or. ((UseIE.or. UseAurora) .and. SmLat < -65.0)) then
           ALF  = max(AveIE,ALF1(1))
           FLUX = max((EfluxIE*1.602E9)/(2.0*ALF),(FLUX1(1)*1.602E9)/(2.*ALF))
        else
           ALF  = ALF1(1)  
           FLUX = (FLUX1(1)*1.602E9)/(2.*ALF)
-          if (GmLat < 75.0) then
+          if (SmLat < 75.0) then
              PHOTOTP(:)=0.0
              return
           endif

@@ -3,6 +3,7 @@
 SUBROUTINE PW_eheat_flux
   use ModCommonVariables
   use ModPWOM,ONLY: UseEleHeat
+  use ModCommonPlanet,ONLY: HLPE0
   REAL C1(MaxGrid),C2(MaxGrid),C3(MaxGrid),C4(MaxGrid),&
        D1(MaxGrid),D2(MaxGrid),&
        D3(MaxGrid),D4(MaxGrid)

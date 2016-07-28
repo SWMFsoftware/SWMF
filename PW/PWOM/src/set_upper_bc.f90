@@ -6,7 +6,7 @@ subroutine PW_set_upper_bc
   use ModGmPressure
   use ModPWOM, ONLY: iLine
   use ModConst,ONLY: cBoltzmann
-
+  use ModPwPlots, ONLY: PW_print_plot
   real :: ScaleHeight_I(nIon-1)
   !----------------------------------------------------------------------------
 
@@ -78,20 +78,22 @@ subroutine PW_set_upper_bc
   ! n_e   = n_H+  + n_O+ + n_He+
   ! rho_e = rho_H*(m_e/m_H) + rho_O*(m_e/m_O) + rho_He*(m_e/m_He)
   ! Set electron density and velocity and pressure
+  State_GV(nDim+1:nDim+2,RhoE_)= State_GV(nDim,RhoE_)
+  State_GV(nDim+1:nDim+2,uE_)  = State_GV(nDim,uE_)
 
-  State_GV(nDim+1:nDim+2,RhoE_)=0.0
-  State_GV(nDim+1:nDim+2,uE_)  =0.0
-  
-  do iIon=1,nIon-1
-     State_GV(nDim+1:nDim+2,RhoE_) = &
-          State_GV(nDim+1:nDim+2,RhoE_)+MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))
-     State_GV(nDim+1:nDim+2,uE_)= &
-          State_GV(nDim+1:nDim+2,uE_)+ &
-          ( MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))&
-          *State_GV(nDim+1:nDim+2,iU_I(iIon)) )
-  enddo
-  State_GV(nDim+1:nDim+2,uE_)=&
-       (State_GV(nDim+1:nDim+2,uE_) -1.8965E-18*CURRMX)/State_GV(nDim+1:nDim+2,RhoE_)
+!  State_GV(nDim+1:nDim+2,RhoE_)=0.0
+!  State_GV(nDim+1:nDim+2,uE_)  =0.0
+!  
+!  do iIon=1,nIon-1
+!     State_GV(nDim+1:nDim+2,RhoE_) = &
+!          State_GV(nDim+1:nDim+2,RhoE_)+MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))
+!     State_GV(nDim+1:nDim+2,uE_)= &
+!          State_GV(nDim+1:nDim+2,uE_)+ &
+!          ( MassElecIon_I(iIon)*State_GV(nDim+1:nDim+2,iRho_I(iIon))&
+!          *State_GV(nDim+1:nDim+2,iU_I(iIon)) )
+!  enddo
+!  State_GV(nDim+1:nDim+2,uE_)=&
+!       (State_GV(nDim+1:nDim+2,uE_) -1.8965E-18*CURRMX)/State_GV(nDim+1:nDim+2,RhoE_)
 
 
   State_GV(nDim+1:nDim+2,pE_)=&
