@@ -2330,15 +2330,15 @@ contains
     end do
     !report results of check_time
     if(IsVerbose) then
-       write(*,*), 'FINISHED check_time, Report for iLine:',iLine
-       write(*,*), 'check_time: Ibad=',Ibad
-       write(*,*), 'check_time: ErrorMax=',ErrorMax
-       write(*,*), 'check_time: iAltAtMax=',iAltAtMax
-       write(*,*), 'check_time: iAngleAtMax=',iAngleAtMax
-       write(*,*), 'check_time: nThetaAtMax=',nThetaAlt_IIC(iLine,iEnergyAtMax,iAltAtMax)
-       write(*,*), 'check_time: iEnergyAtMax=',iEnergyAtMax
-       write(*,*), 'check_time: FluxAtMax=',FluxAtMax
-       write(*,*), 'check_time: OldFluxMax=',OldFluxAtMax
+       write(*,*) 'FINISHED check_time, Report for iLine:',iLine
+       write(*,*) 'check_time: Ibad=',Ibad
+       write(*,*) 'check_time: ErrorMax=',ErrorMax
+       write(*,*) 'check_time: iAltAtMax=',iAltAtMax
+       write(*,*) 'check_time: iAngleAtMax=',iAngleAtMax
+       write(*,*) 'check_time: nThetaAtMax=',nThetaAlt_IIC(iLine,iEnergyAtMax,iAltAtMax)
+       write(*,*) 'check_time: iEnergyAtMax=',iEnergyAtMax
+       write(*,*) 'check_time: FluxAtMax=',FluxAtMax
+       write(*,*) 'check_time: OldFluxMax=',OldFluxAtMax
     endif
     RETURN
   END SUBROUTINE check_time_pot
@@ -2406,15 +2406,15 @@ contains
     end do
     !report results of check_time
     if(IsVerbose) then
-       write(*,*), 'FINISHED check_time, Report:'
-       write(*,*), 'check_time: Ibad=',Ibad
-       write(*,*), 'check_time: ErrorMax=',ErrorMax
-       write(*,*), 'check_time: iAltAtMax=',iAltAtMax
-       write(*,*), 'check_time: iAngleAtMax=',iAngleAtMax
-       write(*,*), 'check_time: nThetaAtMax=',nThetaAlt_II(iLine,iAltAtMax)
-       write(*,*), 'check_time: iEnergyAtMax=',iEnergyAtMax
-       write(*,*), 'check_time: FluxAtMax=',FluxAtMax
-       write(*,*), 'check_time: OldFluxMax=',OldFluxAtMax
+       write(*,*) 'FINISHED check_time, Report:'
+       write(*,*) 'check_time: Ibad=',Ibad
+       write(*,*) 'check_time: ErrorMax=',ErrorMax
+       write(*,*) 'check_time: iAltAtMax=',iAltAtMax
+       write(*,*) 'check_time: iAngleAtMax=',iAngleAtMax
+       write(*,*) 'check_time: nThetaAtMax=',nThetaAlt_II(iLine,iAltAtMax)
+       write(*,*) 'check_time: iEnergyAtMax=',iEnergyAtMax
+       write(*,*) 'check_time: FluxAtMax=',FluxAtMax
+       write(*,*) 'check_time: OldFluxMax=',OldFluxAtMax
     endif
     RETURN
   END SUBROUTINE check_time

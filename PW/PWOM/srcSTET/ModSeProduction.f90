@@ -16,7 +16,7 @@ Module ModSeProduction
 !  integer, parameter :: NEI=10
   
   !number of major neutral species
-  integer,save :: nNeutral
+  integer :: nNeutral
 
   ! WAVE1   Array of minimum boundaries for radiation intervals; Ang
   ! WAVE2   Array of maximum boundaries for radiation intervals: Ang
