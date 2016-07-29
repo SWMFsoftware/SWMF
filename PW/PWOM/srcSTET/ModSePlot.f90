@@ -610,7 +610,7 @@ contains
   ! energy output.
   subroutine plot_omni_pot(iLine,nStep,time,specup,specdn)
     use ModSeGrid,     ONLY: FieldLineGrid_IC, nEnergy, nLine, &
-         nPoint,KineticEnergy_IIC,iLineGlobal_I
+         nPoint,KineticEnergy_IIC,iLineGlobal_I, UsePwRegion, nPwRegion, nIono
     use ModIoUnit,     ONLY: UnitTmp_
     use ModPlotFile,   ONLY: save_plot_file
     use ModNumConst,   ONLY: cRadToDeg,cPi
@@ -632,12 +632,14 @@ contains
     
     character(len=*),parameter :: NameHeader='SE output Fluxes'
     character(len=5) :: TypePlot='ascii'
-    integer :: iAngle,iAngleDn,iIono,iEnergy, iPoint
-
+    integer :: iAngle,iAngleDn,iIono,iEnergy, iPoint, nPointUsed
     logical :: IsFirstCall=.true.
     !--------------------------------------------------------------------------
+
+    nPointUsed = nPoint
+    if(UsePwRegion) nPointUsed=nIono+nPwRegion
     
-    allocate(Coord_DII(nDim,nEnergy,nPoint),PlotState_IIV(nEnergy,nPoint,nVar))
+    allocate(Coord_DII(nDim,nEnergy,nPointUsed),PlotState_IIV(nEnergy,nPointUsed,nVar))
     
     !    do iLine=1,nLine
     PlotState_IIV = 0.0
@@ -645,7 +647,7 @@ contains
     
     !Set values
     do iEnergy=1,nEnergy
-       do iPoint=1,nPoint
+       do iPoint=1,nPointUsed
           Coord_DII(E_,iEnergy,iPoint) = KineticEnergy_IIC(iLine,iEnergy,iPoint)
           Coord_DII(S_,iEnergy,iPoint) = FieldLineGrid_IC(iLine,iPoint)/1e5
           ! set plot state
@@ -670,6 +672,15 @@ contains
             VarIn_IIV = PlotState_IIV, ParamIn_I = (/1.6, 1.0/))
        IsFirstCall = .false.
     else
+       write(*,*)'!!! nPoint, nPointUsed=', nPoint, nPointUsed
+       write(*,*)'!!! max(specup)=', maxval(specup(:,:,1:nPointUsed))
+       write(*,*)'!!! max(specdn)=', maxval(specdn(:,:,1:nPointUsed))
+       write(*,*)'!!! max(KineticEnergy_IIC)=',maxval(KineticEnergy_IIC(:,:,1:nPointUsed))
+       write(*,*)'!!! max( FieldLineGrid_IC)=',maxval(FieldLineGrid_IC(:,1:nPointUsed))
+       write(*,*)'!!! max(Var)=', maxval(PlotState_IIV)
+       write(*,*)'!!! max(coord)=', maxval(Coord_DII)
+
+
        call save_plot_file(NamePlot, TypePositionIn='append', &
             TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
             NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
