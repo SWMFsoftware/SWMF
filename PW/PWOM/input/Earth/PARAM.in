@@ -10,7 +10,7 @@
 F		IsCentrifugal
 
 #FIELDLINE
-2		nTotalLine
+8		nTotalLine
 
 #MOTION
 T
@@ -27,14 +27,15 @@ T
 4
 
 #SAVEPLOT
-60.0		DtSavePlot
+100.0		DtSavePlot
 -1		DnSavePlot
 T		SaveFirst
 
 
 #SCHEME
 Godunov		TypeSolver
-.01		DtVertical
+Godunov		TypeFlux
+0.05		DtVertical
 F		IsFullyImplicit
 F		IsPointImplicit
 F		IsPointImplicitAll
@@ -48,5 +49,5 @@ F		UseFixedPrecip
 2.0		PrecipEnergyFlux[ergs/cm2/s]
 
 #STOP
-60.0
+100.0
 -1

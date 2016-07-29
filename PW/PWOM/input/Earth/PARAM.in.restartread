@@ -9,6 +9,14 @@ F		IsCentrifugal
 -1		DnSavePlot
 F		SaveFirst
 
+#SCHEME
+Godunov		TypeSolver
+Godunov		TypeFlux
+0.05		DtVertical
+F		IsFullyImplicit
+F		IsPointImplicit
+F		IsPointImplicitAll
+
 #STOP
 100.0		TimeMax
 -1		MaxStep
