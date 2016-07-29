@@ -905,8 +905,9 @@ contains
 
                 phiup(iLine,k-1,iPlas,j)=newphi
              end do
-             CALL midpnt_int(specup(iLine,j,i),phiup(iLine,0,iPlas,j),&
-                  mu_IIIC(iLine,0,j,i),1, nThetaAlt_IIC(iLine,j,i)+1,nAngle+1,1)
+
+             CALL midpnt_int(specup(iLine,j,i),phiup(iLine,0:nAngle,iPlas,j),&
+                  mu_IIIC(iLine,0:nAngle,j,i),1, nThetaAlt_IIC(iLine,j,i)+1,nAngle+1,1)
              specup(iLine,j,i)=-.5*specup(iLine,j,i)
              !  Write to a file (if the solution isn't converging)
              IF (count.GT.countmax-2) THEN
@@ -1066,8 +1067,8 @@ contains
 
                 phidn(iLine,k-1,iPlas,j)=newphi
              end DO
-             CALL midpnt_int(specdn(iLine,j,i),phidn(iLine,0,iPlas,j),&
-                  mu_IIIC(iLine,0,j,i),1, nThetaAlt_IIC(iLine,j,i)+1,nAngle+1,1)
+             CALL midpnt_int(specdn(iLine,j,i),phidn(iLine,0:nAngle,iPlas,j),&
+                  mu_IIIC(iLine,0:nAngle,j,i),1, nThetaAlt_IIC(iLine,j,i)+1,nAngle+1,1)
              specdn(iLine,j,i)=.5*specdn(iLine,j,i)
              !  Write to a file (if the solution isn't converging)
              IF (count.GT.countmax-2) THEN
@@ -1999,8 +2000,8 @@ contains
        error=ABS(flux-oldflux)/flux
        IF (error.GT.epsil) flag=1
     END IF
-    if (present(DoReportError) .and. DoReportError) then
-       write(*,*) 'Error is:',error,'Epsilon is:',epsil
+    if (present(DoReportError))then
+       if(DoReportError) write(*,*) 'Error is:',error,'Epsilon is:',epsil
     endif
     
     if (present(ReturnError)) ReturnError=error
@@ -2031,17 +2032,17 @@ contains
     real :: error
     !--------------------------------------------------------------------------
     
-!    IF (flux.GT.1E-20) THEN
+    error = 0.0
     IF (flux.GT.1E-19) THEN
-       error=ABS(flux-oldflux)/flux
-       IF (error.GT.2.0*epsil) flag=1
+       error = ABS(flux-oldflux)/flux
+       IF (error > 2*epsil) flag=1
     END IF
     if (present(DoReportError) .and. DoReportError) then
        write(*,*) 'Error is:',error,'Epsilon is:',epsil
     endif
     
     if (present(ReturnError)) ReturnError=error
-    RETURN
+
   END SUBROUTINE CheckConv_full
   !=============================================================================
   
@@ -2424,7 +2425,7 @@ contains
   subroutine calc_integrated_output(iLine,nNeutral,eThermalDensity_C)
     use ModSeGrid, only: nAngle, nPlas, nIono, nEnergy, nPoint,&
          KineticEnergy_IIC, DoIncludePotential,nThetaAlt_II,nThetaAlt_IIC, &
-         mu_III,mu_IIIC, EnergyGrid_I, DeltaE_I,MaxAlt_IC
+         mu_III,mu_IIIC, EnergyGrid_I, DeltaE_I,MaxAlt_IC,UsePwRegion,nPwRegion
     use ModMath, only: midpnt_int
     use ModNumConst,    ONLY: cPi
     implicit none
@@ -2464,8 +2465,9 @@ contains
 
     HeatingRate_IC(iLine,:) = 0.0
     NumberDens_IC(iLine,:)=0.0
-
+    
     ALONG_LINE: do iPoint=1,nPoint
+       if (UsePwRegion .and. iPoint > nIono+nPwRegion) EXIT ALONG_LINE
        !\
        ! calculate the volume heating rate
        !/
@@ -2477,9 +2479,14 @@ contains
                 Spec(iEnergy)=0.0
                 cycle ENERGY
              endif
-             Spec(iEnergy)=&
-                  (specup(iLine,iEnergy,iPoint)-specdn(iLine,iEnergy,iPoint))&
-                  / KineticEnergy_IIC(iLine,iEnergy,iPoint)
+
+             if(KineticEnergy_IIC(iLine,iEnergy,iPoint) < 1e-30)then
+                Spec(iEnergy) = 0.0
+             else
+                Spec(iEnergy)=&
+                     (specup(iLine,iEnergy,iPoint)-specdn(iLine,iEnergy,iPoint))&
+                     / KineticEnergy_IIC(iLine,iEnergy,iPoint)
+             end if
              !set the delta kinetic energy array
              if (iEnergy<nEnergy) then
                 delKE_I(iEnergy) = KineticEnergy_IIC(iLine,iEnergy+1,iPoint) &
@@ -2702,6 +2709,16 @@ contains
          allocate(SecondaryIonRate_IIC(nLine,nNeutralSpecies,nPoint))
     if(.not.allocated(TotalIonizationRate_IC))&
          allocate(TotalIonizationRate_IC(nLine,nPoint))
+
+    ! Initializ to zero in case only a part of the line is used (with PWOM)
+    specup                =0
+    specdn                =0
+    HeatingRate_IC        =0
+    NumberDens_IC         =0
+    NumberFlux_IC         =0
+    SecondaryIonRate_IIC  =0
+    TotalIonizationRate_IC=0
+    
   end subroutine allocate_state_arrays
 
 end Module ModSeState
