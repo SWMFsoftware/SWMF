@@ -973,8 +973,8 @@ contains
        DoOnlySpatial1=DoOnlySpatial
     endif
     ! Set the Lshell for each line based on the input latitude
-    Lshell_I(iLine) = (cos(Coord_D(Lat_)*cDegToRad))**-2.0
-        
+    Lshell_I(iLine) = 1/cos(Coord_D(Lat_)*cDegToRad)**2
+
     if(IsVerbose) write(*,*) 'calling init_se_grid'
     call init_se_grid(iLine)
     
