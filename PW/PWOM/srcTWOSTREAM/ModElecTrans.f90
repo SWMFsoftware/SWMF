@@ -19,14 +19,14 @@ Module ModElecTrans
   !Precipitation info
   real,allocatable :: PrecipCombinedPhi_I(:)
   logical, public :: UsePrecipitation = .false.
-  real   , public :: PrecipEmin, PrecipEmax,PrecipEmean,PrecipEflux
+  real   , public :: PrecipEmin=0, PrecipEmax=0,PrecipEmean,PrecipEflux
   !Polar Rain info
   logical, public :: UsePolarRain = .false.
   real   , public :: PolarRainEmin=80.0,  PolarRainEmax=300.0, &
        PolarRainEmean=100.0, PolarRainEflux=1.0e-2
   !Ovation Precipitation info
   logical, public :: UseOvation
-  real   , public :: OvationEmin,OvationEmax
+  real   , public :: OvationEmin=0,OvationEmax=0
   real   , public :: EMeanDiff,EFluxDiff,EMeanWave,EFluxWave,EMeanMono,EFluxMono
 
   !time, used for output only
@@ -129,7 +129,7 @@ contains
     integer  IERR
     
     !phitop should be set
-    real PHITOP(NBINS),EFRAC, SION(NMAJ,JMAX), &
+    real:: PHITOP(NBINS),EFRAC, SION(NMAJ,JMAX), &
          UFLX(NBINS,JMAX), DFLX(NBINS,JMAX), AGLW(NEI,NMAJ,JMAX), &
          EHEAT(JMAX), TEZ(JMAX)
     real :: PolarRainPhi_I(NBINS),PrecipPhi_I(NBINS)
@@ -165,6 +165,9 @@ contains
     !------------------------------------------------------------------------
     !DeltaPot_C(:)=0.0
     DiffMax=1.0
+
+    LastPhiUp = 0.0
+    LastPhiDwn = 0.0
     
     !set the precipition arrays
     if (.not.allocated(PrecipCombinedPhi_I))&
@@ -198,16 +201,19 @@ contains
     !now combine the different types of precipitation
     PrecipCombinedPhi_I(:)=0.0
     do iEnergy=1,nBINS
-       PrecipCombinedPhi_I(iEnergy)=0.0
-       if (ENER(iEnergy)>PrecipEmin .and. ENER(iEnergy)<PrecipEmax) then
+       PrecipCombinedPhi_I(iEnergy)=0.0       
+       if (UsePrecipitation .and. ENER(iEnergy)>PrecipEmin &
+            .and. ENER(iEnergy)<PrecipEmax) then
           PrecipCombinedPhi_I(iEnergy)=&
                PrecipCombinedPhi_I(iEnergy)+PrecipPhi_I(iEnergy)
        endif
-       if (ENER(iEnergy)>PolarRainEmin .and. ENER(iEnergy)<PolarRainEmax) then
+       if (UsePolarRain .and. ENER(iEnergy)>PolarRainEmin &
+            .and. ENER(iEnergy)<PolarRainEmax) then
           PrecipCombinedPhi_I(iEnergy)=&
                PrecipCombinedPhi_I(iEnergy)+PolarRainPhi_I(iEnergy)
        endif
-       if (ENER(iEnergy)>OvationEmin .and. ENER(iEnergy)<OvationEmax) then
+       if (UseOvation .and. ENER(iEnergy)>OvationEmin &
+            .and. ENER(iEnergy)<OvationEmax) then
           PrecipCombinedPhi_I(iEnergy)=&
                PrecipCombinedPhi_I(iEnergy)+OvationDiffPhi_I(iEnergy)&
                +OvationWavePhi_I(iEnergy)+OvationMonoPhi_I(iEnergy)
@@ -554,6 +560,7 @@ contains
           !
           ! Electron impact excitation rates:
           !
+          AGLW(1:NEI,1:NMAJ,1:JMAX) = 0.0
           DO II = 1, JMAX
              DO I = 1, NMAJ
                 DO IBB = 1, NEI
@@ -1149,14 +1156,14 @@ contains
                (UpFlux_I(iEnergy)-DnFlux_I(iEnergy))
 
           !set dKE_I
-          if (iEnergy>1.and.iEnergy<nEnergy) &
-               dKE_I(iEnergy-1)=KE_I(iEnergy)-KE_I(iEnergy-1)
+          if (iEnergy>1) &
+               dKE_I(iEnergy-1) = KE_I(iEnergy) - KE_I(iEnergy-1)
        enddo ENERGY_LOOP
        dKE_I(nEnergy)=dKE_I(nEnergy-1)
 
        !now integrate quantities for density and number flux
-       NumberDens_C(iAlt)=4.0*cPi*1.7E-8*sum(NumDensIntegrand_I(:)*dKE_I(:))
-       NumberFlux_C(iAlt)=2.0*cPi*sum(NumFluxIntegrand_I(:)*dKE_I(:))
+       NumberDens_C(iAlt)=4.0*cPi*1.7E-8*sum(NumDensIntegrand_I*dKE_I)
+       NumberFlux_C(iAlt)=2.0*cPi*sum(NumFluxIntegrand_I*dKE_I)
 
     enddo ALT_LOOP
     
