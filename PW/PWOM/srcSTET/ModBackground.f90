@@ -170,7 +170,8 @@ contains
   !*  Subroutine get_iri calls IRI-90 for each ionosphere.
   SUBROUTINE get_iri(iLine,F107A)
     use ModSeGrid, only: nIono,nPoint,FieldLineGrid_IC,IsVerbose
-    
+    use EUA_ModIri90, only: iri90
+
     real,    intent(in) :: F107A
     integer, intent(in) :: iLine
 
@@ -213,7 +214,9 @@ contains
     IF (STL1.GT.24.) STL1=STL1-24.
     if(IsVerbose) write(*,*) 'calling iri'
     CALL IRI90(JF,JMAG,gLat1_I(iLine),gLon1_I(iLine),RZ12,MMDD,STL1, &
-         FieldLineGrid_IC(iLine,1:nIono)/1e5,nIono,'PW/IRI_DATA/ ',IriOutput_VC,OARR)
+         FieldLineGrid_IC(iLine,1:nIono)/1e5,nIono, &
+         'PW/IRI_DATA/ccir.cofcnts', &
+         'PW/IRI_DATA/ursi.cofcnts', IriOutput_VC,OARR, 0)
     if(IsVerbose) write(*,*) 'finish iri'
     do i=nIono,1,-1
        eThermalDensity_IC(iLine,i)=IriOutput_VC(1,i)*PerM3toPerCm3 
@@ -232,7 +235,9 @@ contains
     
     !  Call IRI for the second ionosphere
     CALL IRI90(JF,JMAG,gLat2_I(iLine),gLon2_I(iLine),RZ12,MMDD,STL1, &
-         FieldLineGrid_IC(iLine,1:nIono)/1e5,nIono,'PW/IRI_DATA/ ',IriOutput_VC,OARR)
+         FieldLineGrid_IC(iLine,1:nIono)/1e5,nIono, &
+         'PW/IRI_DATA/ccir.cofcnts', &
+         'PW/IRI_DATA/ursi.cofcnts', IriOutput_VC, OARR, 0)
     
     do i=nIono,1,-1
        j=nPoint-i+1
