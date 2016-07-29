@@ -207,3 +207,5 @@ clean:
 
 cleanpdf: clean
 	cd ..; rm -f ${PDF_FILES}
+
+cleanhtml: clean
