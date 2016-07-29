@@ -423,7 +423,7 @@ contains
     !Set named constants for particular wavelength bins
     integer,parameter :: LyAlpha_= 12, LyBeta_=18 , HeI_=35, HeII_=44
     !for starlight bin1 is 1000-1050A, bin2 is 950-1000A and bin3 is 900-950A
-    integer,parameter :: Starlight1_= 16,Starlight2_= 19,Starlight3=21
+    integer,parameter :: Starlight1_= 16,Starlight2_= 19,Starlight3_=21
     
     !incident starlight intensity for starlight bins (Thitheridge 2000)
     real, parameter :: StarLightIntensity = 5.0e6 !photons/cm2/s
