@@ -135,7 +135,7 @@ test_earth_twostream:
 	@echo "test_run..." >> test_Earth_twostream.diff
 	make test_run
 	@echo "test_check..." >> test_Earth_twostream.diff
-	make test_check SEDIR=TwoStream
+	make test_check SEDIR=TwoStream MYTEST=_twostream
 
 test_earth_stet:	
 	@echo "starting..." > test_Earth_stet_plots.diff
@@ -146,7 +146,7 @@ test_earth_stet:
 	@echo "test_run..." >> test_Earth_stet.diff
 	make test_run
 	@echo "test_check..." >> test_Earth_stet.diff
-	make test_check SEDIR=Stet
+	make test_check SEDIR=Stet MYTEST=_stet
 
 test_saturn:
 	@echo "starting..." > test_Saturn_plots.diff
