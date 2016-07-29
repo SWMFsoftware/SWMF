@@ -93,8 +93,10 @@ contains
   !=============================================================================
   !*  Subroutine get_iri calls IRI-90 for each ionosphere.
   SUBROUTINE get_iri(F107A)
-    use ModSeGrid, only: nAlt,Alt_C,IsVerbose
-    use ModNumConst,    only: cDegToRad    
+    use ModSeGrid,    only: nAlt,Alt_C,IsVerbose
+    use ModNumConst,  only: cDegToRad
+    use EUA_ModIri90, only: iri90
+
     real,    intent(in) :: F107A
 
     real    :: RZ12 ! parameter in MSIS equal to negative of F107A
@@ -122,6 +124,7 @@ contains
     end do
     JF(4)=.FALSE.
     JF(5)=.FALSE.
+    JF(12)=.FALSE.
     JMAG=0
     RZ12=-F107A
     MMDD=-(Idate-(Idate/1000)*1000)
@@ -132,7 +135,9 @@ contains
     IF (STL1.GT.24.) STL1=STL1-24.
     if(IsVerbose) write(*,*) 'calling iri'
     CALL IRI90(JF,JMAG,gLat,gLon,RZ12,MMDD,STL1, &
-         Alt_C(1:nAlt)/1e5,nAlt,'PW/IRI_DATA/ ',IriOutput_VC,OARR)
+         Alt_C(1:nAlt)/1e5,nAlt, &
+         'PW/IRI_DATA/ccir.cofcnts', &
+         'PW/IRI_DATA/ursi.cofcnts', IriOutput_VC,OARR, 0)
     !save dip inclination angle in radians from IRI output
     dip=OARR(25)*cDegToRad
     if(IsVerbose) write(*,*) 'finish iri'

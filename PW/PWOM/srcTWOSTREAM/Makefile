@@ -11,7 +11,6 @@ include Makefile.RULES
 MODULES = \
 	ModGrid.o\
 	geomag.o\
-	iri90.o\
 	ModSeProduction.o\
 	ModSeCross.o\
 	ModBackground.o\
