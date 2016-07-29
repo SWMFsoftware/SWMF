@@ -200,6 +200,7 @@ contains
     end do
     JF(4)=.FALSE.
     JF(5)=.FALSE.
+    JF(12)=.FALSE.
     JMAG=0
     RZ12=-F107A
     MMDD=-(Idate-(Idate/1000)*1000)
