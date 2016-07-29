@@ -76,9 +76,34 @@ LIB:
 	cd srcInterface; make LIB
 	cd srcSTET; make LIB
 
-TESTDIR = run_test
 
-MPIRUN = mpirun -np 2
+# Default PARAM.in file name (can be overwritten)
+PARAMIN = PARAM.in
+TESTDIR = run_test
+CODE    = PWOM
+MPIRUN  = mpirun -np 2
+
+rundir:
+	mkdir -p ${RUNDIR}/PW
+	@(cd ${RUNDIR}; \
+		if [ ! -e "EIE/README" ]; then \
+			ln -s ${EMPIRICALIEDIR}/data EIE;\
+		fi;)
+	cd ${RUNDIR}/PW; \
+		mkdir restartIN restartOUT plots; \
+		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
+		cp ${PWDIR}/data/input/${PLANET}/North.dat .;\
+		cp -r ${PWDIR}/data/IRI_DATA .;\
+		cp -r ${PWDIR}/data/nightside_fluxes/*dat .;\
+		cp ${PWDIR}/data/input/*dat .
+	@(if [ "$(STANDALONE)" != "NO" ]; then \
+		cd ${RUNDIR}; \
+			ln -s ${BINDIR}/PWOM.exe .; \
+			cp ${PWDIR}/input/${PLANET}/${PARAMIN} PARAM.in; \
+			touch core ; chmod 444 core ; \
+			ln -s PW/* .; \
+	fi)
+
 
 test:
 	-@(make test_saturn)
@@ -86,6 +111,9 @@ test:
 	-@(make test_restart)
 	-@(make test_earth)
 	-@(make test_restart)
+	-@(make test_earth_twostream)
+	-@(make clean)
+	-@(make test_earth_stet)
 
 test_earth:	
 	@echo "starting..." > test_Earth_plots.diff
@@ -97,6 +125,28 @@ test_earth:
 	make test_run
 	@echo "test_check..." >> test_Earth.diff
 	make test_check
+
+test_earth_twostream:	
+	@echo "starting..." > test_Earth_twostream_plots.diff
+	@echo "test_compile..." > test_Earth_twostream.diff
+	make test_compile PLANET=Earth
+	@echo "test_rundir..." >> test_Earth_twostream.diff
+	make test_rundir PARAMIN=PARAM.in.twostream
+	@echo "test_run..." >> test_Earth_twostream.diff
+	make test_run
+	@echo "test_check..." >> test_Earth_twostream.diff
+	make test_check SEDIR=TwoStream
+
+test_earth_stet:	
+	@echo "starting..." > test_Earth_stet_plots.diff
+	@echo "test_compile..." > test_Earth_stet.diff
+	make test_compile PLANET=Earth CODE=PWOMSTET
+	@echo "test_rundir..." >> test_Earth_stet.diff
+	make test_rundir PARAMIN=PARAM.in.stet
+	@echo "test_run..." >> test_Earth_stet.diff
+	make test_run
+	@echo "test_check..." >> test_Earth_stet.diff
+	make test_check SEDIR=Stet
 
 test_saturn:
 	@echo "starting..." > test_Saturn_plots.diff
@@ -122,51 +172,51 @@ test_jupiter:
 
 test_compile:
 	./Config.pl -${PLANET}
-	make PWOM
+	make ${CODE}
 
 test_rundir:
 	rm -rf ${TESTDIR}
 	make rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 
-test_run: PWOM
+test_run:
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 
 test_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0001.dat \
-		data/output/${PLANET}/restart_iline0001.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0001.dat \
 		> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0002.dat \
-		data/output/${PLANET}/restart_iline0002.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0002.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0003.dat \
-		data/output/${PLANET}/restart_iline0003.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0003.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0004.dat \
-		data/output/${PLANET}/restart_iline0004.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0004.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0005.dat \
-		data/output/${PLANET}/restart_iline0005.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0005.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0006.dat \
-		data/output/${PLANET}/restart_iline0006.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0006.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0007.dat \
-		data/output/${PLANET}/restart_iline0007.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0007.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/PW/restartOUT/restart_iline0008.dat \
-		data/output/${PLANET}/restart_iline0008.dat \
+		data/output/${PLANET}/${SEDIR}/restart_iline0008.dat \
 		>> test_${PLANET}${MYTEST}.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
-		data/output/${PLANET}/north_plots_iline0001.out \
+		data/output/${PLANET}/${SEDIR}/north_plots_iline0001.out \
 		> test_${PLANET}${MYTEST}_plots.diff)
 	ls -l *.diff
 
@@ -195,27 +245,6 @@ test_restart_read:
 	cat plots_read/north_plots_iline0002.out >> plots/north_plots_iline0002.out;\
 	cat plots_read/north_plots_iline0003.out >> plots/north_plots_iline0003.out;\
 	cat plots_read/north_plots_iline0004.out >> plots/north_plots_iline0004.out
-
-rundir:
-	mkdir -p ${RUNDIR}/PW
-	@(cd ${RUNDIR}; \
-		if [ ! -e "EIE/README" ]; then \
-			ln -s ${EMPIRICALIEDIR}/data EIE;\
-		fi;)
-	cd ${RUNDIR}/PW; \
-		mkdir restartIN restartOUT plots; \
-		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
-		cp ${PWDIR}/data/input/${PLANET}/North.dat .;\
-		cp -r ${PWDIR}/data/IRI_DATA .;\
-		cp -r ${PWDIR}/data/nightside_fluxes/*dat .;\
-		cp ${PWDIR}/data/input/*dat .
-	@(if [ "$(STANDALONE)" != "NO" ]; then \
-		cd ${RUNDIR}; \
-			ln -s ${BINDIR}/PWOM.exe .; \
-			cp ${PWDIR}/input/${PLANET}/PARAM.in .; \
-			touch core ; chmod 444 core ; \
-			ln -s PW/* .; \
-	fi)
 
 PwIDL:
 	cd ${SHAREDIR}; make LIB
