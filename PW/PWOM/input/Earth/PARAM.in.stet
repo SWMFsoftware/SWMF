@@ -1,0 +1,57 @@
+#STARTTIME
+2000
+03
+20
+00
+00
+00
+
+#ROTATION
+F		IsCentrifugal
+
+#FIELDLINE
+8		nTotalLine
+
+#MOTION
+T
+
+#MSISPARAM
+180.
+180.
+4
+4
+4
+4
+4
+4
+4
+
+#SAVEPLOT
+100.0		DtSavePlot
+-1		DnSavePlot
+T		SaveFirst
+
+#SCHEME
+Godunov		TypeSolver
+Godunov		TypeFlux
+0.05		DtVertical
+F		IsFullyImplicit
+F		IsPointImplicit
+F		IsPointImplicitAll
+
+#SE
+T		DoCoupleSE
+T		UseFeedbackFromSE
+F		IsVerboseSE
+120		DtGetSe
+
+#SETPRECIP
+F		UseFixedPrecip
+100.0		PrecipEnergyMin[eV]
+1000.0		PreciptEnergyMax[eV]
+400.0		PrecipEnergyMean[eV]
+2.0		PrecipEnergyFlux[ergs/cm2/s]
+
+#STOP
+100.0
+-1
