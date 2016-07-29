@@ -16,7 +16,7 @@ Module ModSeProduction
 !  integer, parameter :: NEI=10
   
   !number of major neutral species
-  integer,save :: nNeutral
+  integer:: nNeutral
 
   ! WAVE1   Array of minimum boundaries for radiation intervals; Ang
   ! WAVE2   Array of maximum boundaries for radiation intervals: Ang
@@ -420,7 +420,7 @@ contains
     integer,parameter :: LyAlpha_= 12, LyBeta_=18 , HeI_=62, HeII_=90
     !for starlight bin1 is 1000-1050A, bin2 is 950-1000A and bin3 is 900-950A
     integer,parameter :: Starlight1a_= 16,Starlight1b_= 20,&
-         Starlight2a_= 21,Starlight2b_= 25,Starlight3a=26,Starlight3b=30
+         Starlight2a_= 21,Starlight2b_= 25,Starlight3a_=26,Starlight3b_=30
     
     !incident starlight intensity for starlight bins (Thitheridge 2000)
     real, parameter :: StarLightIntensity = 5.0e6 !photons/cm2/s
@@ -551,7 +551,8 @@ contains
           if ((Starlight1a_>=L .and. Starlight1b_<=L)&
                .or. (Starlight2a_>=L .and. Starlight2b_<=L)&
                .or. (Starlight3a_>=L .and. Starlight3b_<=L)) then
-             ! recalculate tau for startlight which arrives over multiple 
+
+             ! recalculate tau for starlight which arrives over multiple 
              ! directions using approach of Titheridge 2000
              TAU=0.
              DO  I=1,nNeutral
@@ -1011,7 +1012,8 @@ contains
     ! upper box.
     ! Args:
     Real,Intent(in)    :: DEL(NBINS), ENER(NBINS)
-    Real,Intent(out)   :: E1,E2,R1,R2
+    Real,Intent(in)    :: E1,E2
+    Real,Intent(out)   :: R1,R2
     Integer,Intent(out):: M1,M2
     !Local:
     Integer I
