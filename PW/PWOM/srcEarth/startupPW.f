@@ -189,7 +189,7 @@ C END
          
          SEC=mod(iStartTime(Hour_)*3600.0 + iStartTime(Minute_)*60.0 
      &        + iStartTime(Second_) + Time, 24.0*3600.0)
-         write(*,*) 'SEC,UTsec',SEC,UTsec
+         
          !mod((STL-GLONG/15.)*3600.,24.*3600.)
       else
          SEC=0.0
