@@ -9,7 +9,7 @@ module ModPhotoElectron
   !minimum thermal density of electrons [/cc]
   real :: eThermalDensMin=1.0
 
-  logical :: DoCoupleSE = .true., UseFeedbackFromSE=.true.
+  logical :: DoCoupleSE = .false., UseFeedbackFromSE=.false.
 
   !Fixed precipitation to pass to SE
   logical :: UseFixedPrecip = .false.
