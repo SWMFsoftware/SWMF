@@ -10,6 +10,10 @@ help:
 	@echo 'make LIB                    - compile libPW.a for SWMF'
 	@echo 'make run                    - create run directory'
 	@echo 'make test                   - test PWOM in stand alone mode'
+	@echo 'make test_earth             - run Earth test only'
+	@echo 'make test_saturn            - run Saturn test only'
+	@echo 'make test_jupiter           - run Jupiter test only'
+	@echo 'make test_restart           - run restart test for the previous test'
 	@echo 'make clean                  - remove object files'
 	@echo 'make distclean              - remove all files not part of CVS'
 	@echo
@@ -202,8 +206,8 @@ rundir:
 		mkdir restartIN restartOUT plots; \
 		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
 		cp ${PWDIR}/data/input/${PLANET}/North.dat .;\
-		cp -r ${PWDIR}/srcSTET/IRI_DATA .;\
-		cp ${PWDIR}/srcSTET/nightside_fluxes/*dat .
+		cp -r ${PWDIR}/data/IRI_DATA .;\
+		cp -r ${PWDIR}/data/nightside_fluxes/*dat .;\
 		cp ${PWDIR}/data/input/*dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
