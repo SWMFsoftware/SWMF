@@ -8,7 +8,7 @@ module ModThreadedLC
        LambdaSi_, DLogLambdaOverLogT_,                           &
        DoInit_, Done_, Enthalpy_, Heat_
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
-       QeRatio, UseUniformHeatPartition
+       QeRatio
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
