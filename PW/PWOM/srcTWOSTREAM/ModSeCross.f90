@@ -435,7 +435,7 @@ contains
 !
       DO 250 II=1,ITMAX
       SEC(I,II,JY) = SEC(I,II,JY) + SIGI(II) * DETJ / DEL(II)
-      if (isnan(sec(i,ii,jy))) stop 'exsect: NaN in SEC'
+      !!! if (isnan(sec(i,ii,jy))) stop 'exsect: NaN in SEC'
       WTH1 = T12(II) + WAG
       ETA = ETJ - WTH1
       IF (ETA .GT. 0.) THEN
