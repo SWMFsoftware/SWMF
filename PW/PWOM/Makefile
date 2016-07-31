@@ -39,7 +39,7 @@ PWOM:
 	cd ${EMPIRICALIEDIR};     make LIB
 	cd ${EMPIRICALUADIR};     make  LIB
 	cd ${DATAREADINDICESDIR}; make LIB
-	cd ${TWOSTREAMDIR};	  make LIB
+	cd srcTWOSTREAM;	  make LIB
 	cd src;                   make PWOM
 
 PWOMSTET:
@@ -48,7 +48,7 @@ PWOMSTET:
 	cd ${EMPIRICALIEDIR};     make LIB
 	cd ${EMPIRICALUADIR};     make  LIB
 	cd ${DATAREADINDICESDIR}; make LIB
-	cd ${STETDIR}; 		  make LIB
+	cd srcSTET; 		  make LIB
 	cd src;                   make PWOM
 
 STET:
@@ -65,8 +65,7 @@ TWOSTREAM:
 	cd ${EMPIRICALIEDIR};     make LIB
 	cd ${EMPIRICALUADIR};     make  LIB
 	cd ${DATAREADINDICESDIR}; make LIB
-	cd ${TWOSTREAMDIR};       make TWOSTREAM
-
+	cd srcTWOSTREAM;          make TWOSTREAM
 
 nompirun: PWOM
 	cd ${RUNDIR}; ./PWOM.exe
@@ -91,15 +90,15 @@ rundir:
 		fi;)
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
-		cp ${PWDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
-		cp ${PWDIR}/data/input/${PLANET}/North.dat .;\
-		cp -r ${PWDIR}/data/IRI_DATA .;\
-		cp -r ${PWDIR}/data/nightside_fluxes/*dat .;\
-		cp ${PWDIR}/data/input/*dat .
+		cp ${MYDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
+		cp ${MYDIR}/data/input/${PLANET}/North.dat .;\
+		cp -r ${MYDIR}/data/IRI_DATA .;\
+		cp -r ${MYDIR}/data/nightside_fluxes/*dat .;\
+		cp ${MYDIR}/data/input/*dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
 			ln -s ${BINDIR}/PWOM.exe .; \
-			cp ${PWDIR}/input/${PLANET}/${PARAMIN} PARAM.in; \
+			cp ${MYDIR}/input/${PLANET}/${PARAMIN} PARAM.in; \
 			touch core ; chmod 444 core ; \
 			ln -s PW/* .; \
 	fi)
