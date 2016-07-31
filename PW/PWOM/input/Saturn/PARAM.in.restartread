@@ -8,6 +8,7 @@ F		SaveFirst
 
 #SCHEME
 Rusanov		TypeSolver
+Rusanov		TypeSolver
 0.01		DtVertical
 F		IsFullyImplicit
 T		IsPointImplicit

@@ -8,6 +8,7 @@ T		SaveFirst
 
 #SCHEME
 Rusanov		TypeSolver
+Rusanov		TypeFlux
 0.01		DtVertical
 F		IsFullyImplicit
 T		IsPointImplicit
