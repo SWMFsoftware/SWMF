@@ -106,13 +106,16 @@ rundir:
 
 test:
 	-@(make test_saturn)
-	-@(make test_jupiter)
 	-@(make test_restart)
 	-@(make test_earth)
 	-@(make test_restart)
 	-@(make test_earth_twostream)
 	-@(make clean)
 	-@(make test_earth_stet)
+
+
+###	-@(make test_jupiter)
+
 
 test_earth:	
 	@echo "starting..." > test_Earth_plots.diff
