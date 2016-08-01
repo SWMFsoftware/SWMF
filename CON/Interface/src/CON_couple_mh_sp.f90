@@ -223,7 +223,8 @@ contains
               put_request_source   = SC_put_request)
          if(is_proc(SC_))&
               call SC_extract_line(&
-              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceOrigin)
+              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceOrigin,&
+              iAuxStored_I)
          call set_router_from_source_2_stage(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
@@ -232,7 +233,7 @@ contains
               transform            = transform_sc_to_sp, &
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
-              put_scatter_target   = SP_put_scatter_from_sc)
+              put_scatter_target   = SP_put_scatter_from_mh)
          call global_message_pass(RouterScSp, &
               nVar = 11, &
               fill_buffer = SC_get_for_sp_and_transform, &
@@ -248,7 +249,8 @@ contains
               put_request_source   = IH_put_request)
          if(is_proc(IH_))&
               call IH_extract_line(&
-              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceEnd)
+              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceEnd, &
+              iAuxStored_I)
          call set_router_from_source_2_stage(&
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
@@ -257,7 +259,7 @@ contains
               transform            = transform_ih_to_sp, &
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
-              put_scatter_target   = SP_put_scatter_from_ih)
+              put_scatter_target   = SP_put_scatter_from_mh)
          call global_message_pass(RouterIhSp, &
               nVar = 11, &
               fill_buffer = IH_get_for_sp_and_transform, &
@@ -414,7 +416,10 @@ contains
     if(nData==0)&
          RETURN
 
+    ! coordinates of requested field lines' origins
     XyzStored_DI = Coord_DI
+    ! indices of the origins along the field lines
+    iAuxStored_I = nint(Aux_VI(1,:))
     ! perform transformations based on the type of geometry
     TypeGeometry = Grid_C(iComp)%TypeGeometry
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
@@ -459,25 +464,15 @@ contains
          nAux, Aux_VI)
   end subroutine IH_put_request
   !==================================================================!
-  subroutine SP_put_scatter_from_sc(nData, nDim, Coord_DI, nIndex, iIndex_II)
+  subroutine SP_put_scatter_from_mh(nData, nDim, Coord_DI, nIndex, iIndex_II)
     integer, intent(in):: nDim
     integer, intent(in):: nData
     real,    intent(in):: Coord_DI(nDim, nData)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nData)
     !--------------------------------------------------------
-    call SP_put_line(nData, Coord_DI, iIndex_II, iInterfaceOrigin)
-  end subroutine SP_put_scatter_from_sc
-  !==================================================================!
-  subroutine SP_put_scatter_from_ih(nData, nDim, Coord_DI, nIndex, iIndex_II)
-    integer, intent(in):: nDim
-    integer, intent(in):: nData
-    real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nData)
-    !--------------------------------------------------------
-    call SP_put_line(nData, Coord_DI, iIndex_II, iInterfaceEnd)
-  end subroutine SP_put_scatter_from_ih
+    call SP_put_line(nData, Coord_DI, iIndex_II)
+  end subroutine SP_put_scatter_from_mh
   !==================================================================!
   subroutine interpolate_sp(&
        nCoord, Coord_I, GridDescriptor, &

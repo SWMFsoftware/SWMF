@@ -171,7 +171,8 @@ contains
 
   !==========================================================================
 
-  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn)
+  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
+       iIndexStart_I)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -182,6 +183,7 @@ contains
     integer,           intent(in):: nFieldLineIn
     real,              intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
     integer, optional, intent(in):: iTraceModeIn
+    integer, optional, intent(in):: iIndexStart_I(nFieldLineIn)
 
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
@@ -202,6 +204,8 @@ contains
     ! starting point of a field line 
     ! (to satisfy intent INOUT for check_interpolate_amr_gc)
     real:: XyzStart_D(MaxDim)
+    ! its index along the field line
+    integer:: iIndexStart
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -230,9 +234,11 @@ contains
     Particle_I(KindEnd_)%nParticle = 0
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
+    iIndexStart   = 0
     do iFieldLine = 1, nFieldLineIn
        XyzStart_D = XyzStart_DI(:, iFieldLine) 
-       call start_line(XyzStart_D, nFieldLine + iFieldLine)
+       if(present(iIndexStart_I)) iIndexStart = iIndexStart_I(iFieldLine)
+       call start_line(XyzStart_D, iIndexStart, nFieldLine + iFieldLine)
     end do
 
     ! how many lines have been started on all processors
@@ -367,8 +373,9 @@ contains
 
   contains
 
-    subroutine start_line(XyzStart_D, iFieldLineIndex)
+    subroutine start_line(XyzStart_D, iIndexStart, iFieldLineIndex)
       real,    intent(inout):: XyzStart_D(MaxDim)
+      integer, intent(in)   :: iIndexStart
       integer, intent(in)   :: iFieldLineIndex
 
       real   :: Coord_D(MaxDim) ! generalized coordinates
@@ -409,8 +416,8 @@ contains
       iIndexEnd_II(fl_,  Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
 
       ! set index for initial particle to be 0
-      iIndexEnd_II(id_,Particle_I(KindEnd_)%nParticle) = 0
-      iIndexEnd_II(0,     Particle_I(KindEnd_)%nParticle) = iBlockOut
+      iIndexEnd_II(id_,Particle_I(KindEnd_)%nParticle) = iIndexStart
+      iIndexEnd_II(0,  Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
     !========================================================================
     function do_exclude(Xyz_D, iBlock) result(DoExcludeOut)

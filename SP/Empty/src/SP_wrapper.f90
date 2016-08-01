@@ -107,11 +107,10 @@ contains
     call CON_stop('Can not request line')
   end subroutine SP_request_line
   !===================================================================
-  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II, iDirIn)
+  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
     integer, intent(in):: nParticle
     real,    intent(in):: Coord_DI( 3, nParticle)
     integer, intent(in):: iIndex_II(4, nParticle)
-    integer, intent(in):: iDirIn
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
   !===================================================================

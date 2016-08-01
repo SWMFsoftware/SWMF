@@ -246,10 +246,11 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
   !===================================================================!
-  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode)
+  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode, iIndexOrigin_I)
     integer,          intent(in) :: nLine
     real,             intent(in) :: CoordOrigin_DI(3, 1)
     integer,          intent(in) :: iTraceMode
+    integer, optional,intent(in) :: iIndexOrigin_I(1) 
 
     character(len=*), parameter :: NameSub='IH_extract_line'
     !----------------------------------------------------------------

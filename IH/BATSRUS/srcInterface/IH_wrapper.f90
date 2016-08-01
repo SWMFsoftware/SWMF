@@ -1293,17 +1293,22 @@ contains
 
   !============================================================================
 
-  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode)
+  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, iIndexOrigin_I)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, ONLY: extract_particle_line
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
+    integer, optional,intent(in) :: iIndexOrigin_I(nLine)
 
     character(len=*), parameter:: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
     ! extract field lines starting at input points
-    call extract_particle_line(nLine, XyzOrigin_DI, iTraceMode)
+    if(present(iIndexOrigin_I))then
+       call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_I)
+    else
+       call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode)
+    end if
 
   end subroutine IH_extract_line
 

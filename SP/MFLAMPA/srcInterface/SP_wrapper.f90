@@ -295,7 +295,7 @@ contains
 
   !===================================================================
 
-  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II, iDirIn)
+  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
     use ModMain, ONLY: &
          iGrid_IA, State_VIB, iNode_B,&
          Proc_, Block_, Begin_, End_, iProc, iComm, &
@@ -306,10 +306,6 @@ contains
     integer, intent(in):: nParticle
     real,    intent(in):: Coord_DI( nDim,   nParticle)
     integer, intent(in):: iIndex_II(nDim+1, nParticle)
-    integer, intent(in):: iDirIn
-
-    ! directions where to put particles
-    integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
 
     ! cartesian coordinates
     real:: Xyz_D(nDim)
@@ -319,27 +315,15 @@ contains
     integer:: iParticle, iBlock, iNode
     ! indices of the particle
     integer:: iLine, iIndex
-    integer:: iMin_A(nNode),iMax_A(nNode), iOffset_A(nNode)
+    integer:: iMin_A(nNode),iMax_A(nNode)
     integer:: iError
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
-    ! list of min/max index of active particles is needed if iDirIn /= 0,
-    ! i.e. need to add particle to the beginning/end of list
-    select case(iDirIn)
-    case(iDirBegin_)
-       iOffset_A = iGrid_IA(Begin_,:)
-    case(iDirOrigin_)
-       iOffset_A = 0
-    case(iDirEnd_)
-       iOffset_A = iGrid_IA(End_, :)
-    case default
-       call CON_stop(NameSub//': invalid call')
-    end select
     ! store passed particles
     do iParticle = 1, nParticle
        iBlock  = iIndex_II(4, iParticle)
        iLine = iNode_B(iBlock)
-       iIndex = iIndex_II(1, iParticle) + iOffset_A(iLine)
+       iIndex = iIndex_II(1, iParticle)
        if(iIndex < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
        if(iIndex > iParticleMax)&
