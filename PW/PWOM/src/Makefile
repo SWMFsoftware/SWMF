@@ -86,23 +86,24 @@ PWOM:	DEPEND
 	@echo "PWOM.exe has been created"
 
 ${EXE}:	${EXEOBJECTS}
-	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
-		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES  \
-		-lTIMING  -lSE -lSHARE\
-		${Lflag1}
-
-PWOM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ${LIBDIR}/libEMPIRICALIE.a; \
 		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
-		ar -x ${LIBDIR}/libSHARE.a
+		ar -x ${LIBDIR}/libSHARE.a; \
 		ar -x ${LIBDIR}/libSE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
-	rm -rf Tmp_
+
+PWOM_from_lib:	${EXEOBJECTS}
+	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
+		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES  \
+		-lTIMING  -lSE -lSHARE\
+		${Lflag1}
+
 
 clean: cleanfiles
+	rm -rf Tmp_
 
 distclean: clean
 	rm -f PLANET *_planet.f *_planet.f90
