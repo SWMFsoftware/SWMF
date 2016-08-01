@@ -33,21 +33,29 @@ void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doub
 
   double S1=0.0, S2[3]={0.0}, S3=0.0;
   int i,idim;
-  char *SamplingBuffer;
+  char *offset;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
+    
+    offset = 
+      InterpolationList[i]->GetAssociatedDataBufferPointer() + 
+      PIC::Mesh::completedCellSampleDataPointerOffset;
 
-    S1+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceDensityOffset)))*InterpolationCoeficients[i];
+    S1+=(*((double*)(offset+OH::Output::ohSourceDensityOffset)))*InterpolationCoeficients[i];
     
     for(idim=0 ; idim<3; idim++)
-      S2[idim]+=(*(idim+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset)))*InterpolationCoeficients[i];
+      S2[idim]+=(*(idim+(double*)(offset+OH::Output::ohSourceMomentumOffset)))*InterpolationCoeficients[i];
 
-    S3+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset)))*InterpolationCoeficients[i];
+    S3+=(*((double*)(offset+OH::Output::ohSourceEnergyOffset)))*InterpolationCoeficients[i];
   }
+  
+  offset = 
+    CenterNode->GetAssociatedDataBufferPointer() + 
+    PIC::Mesh::completedCellSampleDataPointerOffset;
 
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceDensityOffset,&S1,sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset,&S2,3*sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset,&S3,sizeof(double));
+  memcpy(offset+OH::Output::ohSourceDensityOffset, &S1,  sizeof(double));
+  memcpy(offset+OH::Output::ohSourceMomentumOffset,&S2,3*sizeof(double));
+  memcpy(offset+OH::Output::ohSourceEnergyOffset,  &S3,  sizeof(double));
 
 }
 
@@ -56,7 +64,7 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
 
   //SourceDensity
   if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceDensityOffset));
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Output::ohSourceDensityOffset));
   }
 
   if (pipe->ThisThread==0) {
@@ -69,7 +77,7 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
   //SourceMomentum
   for(int idim=0; idim < 3; idim++){
     if (pipe->ThisThread==CenterNodeThread) {
-      t= *(idim+(double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset));
+      t= *(idim+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Output::ohSourceMomentumOffset));
     }
     
     if (pipe->ThisThread==0) {
@@ -82,7 +90,7 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
 
   //SourceEnergy
   if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset));
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Output::ohSourceEnergyOffset));
   }
 
   if (pipe->ThisThread==0) {
@@ -113,7 +121,7 @@ int OH::Output::RequestDataBuffer(int offset){
 
 void OH::Output::Init() {
   //request sampling buffer and particle fields
-  PIC::IndividualModelSampling::RequestStaticCellData.push_back(OH::Output::RequestDataBuffer);
+  PIC::IndividualModelSampling::RequestSamplingData.push_back(OH::Output::RequestDataBuffer);
 
   //print out of the otuput file
   PIC::Mesh::PrintVariableListCenterNode.push_back(OH::Output::PrintVariableList);
@@ -122,7 +130,7 @@ void OH::Output::Init() {
 }
 
 
-// Loss -------------------------------------------------------------------------------------
+// Loss -----------------------------------------------------------------------
 
 double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node){
 
@@ -214,7 +222,6 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
   #endif
 
-
     //account for the parent particle correction factor
     ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
@@ -235,16 +242,16 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
                      / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
                      / CenterNode->Measure;
       *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0;
+
       for(int idim=0; idim<3; idim++){
         *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) +=
-    c*_MASS_(_H_)*(vParent[idim]-PlasmaBulkVelocity[idim]);
+	  c*_MASS_(_H_)*(vParent[idim]-PlasmaBulkVelocity[idim]);
         v2      +=vParent[idim]*vParent[idim];
         plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
       }
       *((double*)(offset+OH::Output::ohSourceEnergyOffset)) +=
         c*0.5*_MASS_(_H_)*(v2-plasmav2);
     }
-
     PIC::ParticleBuffer::SetV(PlasmaBulkVelocity,(PIC::ParticleBuffer::byte*)ParticleData);
   }
 
@@ -254,7 +261,6 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
 
   if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
   FirstParticleCell=ptr;
-
 }
 
 
