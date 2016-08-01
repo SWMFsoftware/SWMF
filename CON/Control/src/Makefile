@@ -242,6 +242,7 @@ TMP_DIRS: LIB
 #
 
 clean: cleanfiles
+	rm -rf Tmp_*
 
 distclean: clean
-	rm -rf Makefile.DEPEND Tmp_*
+	rm -f Makefile.DEPEND
