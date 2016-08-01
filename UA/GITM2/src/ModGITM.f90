@@ -29,7 +29,7 @@ module ModGITM
 
   ! RCMR
   real :: f107_est, f107a_est, f107_msis, f107a_msis
-  real :: PhotoElectronHeatingEfficiency_est
+  real :: PhotoElectronHeatingEfficiency_est, EDC_est
   integer :: Sat_Loc
 
   ! Topography
