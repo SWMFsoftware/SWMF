@@ -83,7 +83,7 @@ subroutine calc_physics(iBlock)
   SunOrbitEccentricity = SunOrbit_A*(1.0-SunOrbit_B**2.0)/(1.0+ &
 	   SunOrbit_B*cos(TrueAnomaly))
 
- OrbitAngle = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
+  OrbitAngle = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
 
  !!!!!!! Old SunOrbitEccentricity
 !  SunOrbitEccentricity = SunOrbit_A                     + &
@@ -207,3 +207,41 @@ subroutine get_subsolar(CurrentTime, VernalTime, lon_sp, lat_sp)
        /SecondsPerYear))
 
 end subroutine get_subsolar
+
+!-----------------------------------------------------------------------------
+! get_sza: A routine to get the sza given latitude and longitude
+!
+! Author: Ankit Goel, UMich, 21 April 2015
+!
+! Comments: 
+!----------------------------------------------------------------------------
+
+subroutine get_sza(lon, lat, sza_calc)
+  use ModGITM
+  use ModTime
+  use ModConstants
+  use ModEUV
+  use ModPlanet
+  use ModInputs
+  implicit none
+  
+  double precision, intent(in) :: lon, lat !lat, lon need to be in radians
+  double precision, intent(out) :: sza_calc
+
+  real(8) :: OrbitAngle_1, LocalTime_1
+  real(8) :: SunDeclination_1, SinDec, CosDec
+
+  OrbitAngle_1 = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
+  SunDeclination_1 = atan(tan(Tilt*pi/180.)*sin(OrbitAngle_1))
+
+  SinDec = sin(SunDeclination_1)
+  CosDec = cos(SunDeclination_1)
+
+  LocalTime_1 = mod((UTime/3600.0 + &
+       lon * HoursPerDay / TwoPi), HoursPerDay)
+
+  sza_calc = acos(SinDec*sin(Lat) + &
+                  CosDec*Cos(lat) * &
+                  cos(pi*(LocalTime_1-HoursPerDay/2)/(HoursPerDay/2)))
+
+end subroutine get_sza

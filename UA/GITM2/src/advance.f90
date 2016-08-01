@@ -37,7 +37,9 @@ subroutine advance
         call IO_set_f107_single(f107_est)
         call IO_set_f107a_single(f107_est)
      else if(RCMROutType == "PHOTOELECTRON") then
-        PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est
+        PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est 
+     else if(RCMROutType == "EDC") then
+        EddyDiffusionCoef = EDC_est  !Ankit23May16: Added EDC_est out
      end if
   end if
 

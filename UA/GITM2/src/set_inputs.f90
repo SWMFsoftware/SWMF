@@ -18,7 +18,7 @@ subroutine set_inputs
   use ModInputs
   use ModSizeGitm
   use ModGITM, only: iProc, f107_est, f107a_est, f107_msis, f107a_msis, &
-       PhotoElectronHeatingEfficiency_est
+       PhotoElectronHeatingEfficiency_est, EDC_est !! Ankit23May16: Added EDC_est
   use ModTime
   use ModPlanet
   use ModSatellites
@@ -1218,16 +1218,42 @@ subroutine set_inputs
                  if(RCMROutType == 'PHOTOELECTRON') then
                     PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est
                  end if
+              
+                 !!ANKIT: TEC read
+              else if(RCMROutType == 'EDC') then
+                 RCMRFlag = .true.
+                 call read_in_real(EDC_est, iError)
+                 
+                 if(iError /= 0) then
+                    write (*,*) 'Unrecognizable initial eddy diffusion '
+                    write (*,*) 'coefficient.  Running with 1750, which is only '
+                    write (*,*) 'appropraite if the actual coefficient is not '
+                    write (*,*) 'close to 1750'
+                    EDC_est = 1750
+                    iError = 0
+                 end if
+                 
+                 if(RCMROutType == 'EDC') then
+                    EddyDiffusionCoef = EDC_est
+                 end if
               end if
-
               ! Quality check of the satellite indexes will occur when
               ! reading the satellite block.
               call read_in_int(nRCMRSat, iError)
               do iSat=1,nRCMRSat
                  call read_in_int(RCMRSat(iSat), iError)
               end do
+              call read_in_string(RCMRrun, iError)    !Ankit23May16: Truth or ID
+              call read_in_int(Nc, iError)            !Ankit23May16: Controller Order.
+              call read_in_int(RegZ, iError)          !Ankit23May16: Regressor Variable. 1=z, 0=y.
+              call read_in_real(lambda1, iError)      !Ankit23May16: Forgetting factor. 
+              call read_in_real(W_Rtheta, iError)     !Ankit23May16: Rtheta. Or inv(P0).
+              call read_in_real(Dts, iError)          !Ankit23May16: Time step used with RCMR
+              call read_in_real(Measure_Dts, iError)  !Ankit23May16: RCMR executes every Measure_Dts*Dts*steps timesteps.
+              call read_in_int(C_on, iError)          !Ankit23May16: RCMR switches on after C_on steps.
+              call read_in_int(uFiltLength, iError)   !Ankit23May16: Length of averaging filter.
            end if
-
+           
            if(iError /= 0) then
               write (*,*) 'Incorrect format for #RCMR'
               write (*,*) ''
@@ -1244,6 +1270,9 @@ subroutine set_inputs
               write (*,*) 'the MSIS F10.7 and F10.7a to realistic values'
               IsDone = .true.
            else
+              if(RCMROutType == 'EDC') then
+                 call read_tec_locations              
+              end if
               call alloc_rcmr
               call init_markov_matrix
               call init_rcmr
