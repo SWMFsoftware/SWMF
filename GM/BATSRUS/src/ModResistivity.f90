@@ -19,7 +19,6 @@ module ModResistivity
   public:: read_resistivity_param
   public:: init_mod_resistivity
   public:: set_resistivity
-  public:: mask_resistivity
   public:: calc_resistivity_source
   public:: calc_heat_exchange
   public:: init_impl_resistivity
@@ -37,6 +36,8 @@ module ModResistivity
   real, public, allocatable :: Eta_GB(:,:,:,:)
   real, public              :: Eta0=0.0, Eta0Si=0.0
 
+  real, public              :: Si2NoEta
+
   ! Local variables
   logical            :: UseJouleHeating  = .true.
   logical            :: DoMessagePassResistivity = .false.
@@ -46,13 +47,15 @@ module ModResistivity
   real               :: Eta0AnomSi=0.0, Eta0Anom
   real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
   real               :: JcritAnomSi=1.0, JcritInv
-  real, public       :: Si2NoEta
   real               :: EtaCoeff = 0.0
   real               :: JoverBCrit = 0.0
 
-  real:: rZeroResist = -1.0
-  real:: rFullResist = 1e30
+  ! Description of the region where resistivity is used
+  character(len=200):: StringResistRegion ='none'
 
+  ! Indexes of regions defined with the #REGION commands
+  integer, allocatable:: iRegionResist_I(:)
+  
   ! resistivity pre-multiplied by the face area vector
   real, allocatable :: Eta_DFDB(:,:,:,:,:,:)
 
@@ -112,8 +115,7 @@ contains
           end select
        end if
     case("#RESISTIVITYREGION", "#RESISTIVEREGION")
-       call read_var('rZeroResist', rZeroResist)
-       call read_var('rFullResist', rFullResist)
+       call read_var('StringResistRegion', StringResistRegion)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -124,9 +126,10 @@ contains
 
   subroutine init_mod_resistivity
 
-    use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
-    use ModConst,    ONLY: cLightSpeed, cElectronCharge, &
+    use ModPhysics, ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
+    use ModConst,   ONLY: cLightSpeed, cElectronCharge, &
          cElectronMass, cEps, cBoltzmann, cTwoPi
+    use BATL_lib,   ONLY: get_region_indexes
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'init_mod_resistivity'
@@ -160,6 +163,9 @@ contains
     ! resistive diffusion is switched off
     if(UseSemiResistivity) UseResistiveFlux = .false.
 
+    ! Get signed indexes for resistive region(s)
+    call get_region_indexes(StringResistRegion, iRegionResist_I)
+
     if(DoTestMe)then
        write(*,*)NameSub, ': DoResistiveFlux  = ', DoResistiveFlux
        write(*,*)NameSub, ': UseResistiveFlux = ', UseResistiveFlux
@@ -179,12 +185,17 @@ contains
   subroutine set_resistivity
 
     use ModMain,    ONLY: nBlock, Unused_B
-    use BATL_lib,   ONLY: message_pass_cell
+    use BATL_lib,   ONLY: message_pass_cell, block_inside_regions
 
     character (len=*), parameter :: NameSub = 'set_resistivity'
 
+    real, allocatable:: ResistFactor_G(:,:,:)
+
     integer :: iBlock
     !--------------------------------------------------------------------------
+
+    if(allocated(iRegionResist_I)) &
+         allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
@@ -203,8 +214,15 @@ contains
           call stop_mpi(NameSub//': invalid TypeResistivity='//TypeResistivity)
        end select
 
-       call mask_resistivity(iBlock, Eta_GB(:,:,:,iBlock))
+       ! Modify resistivity of resistive regions are defined
+       if(allocated(iRegionResist_I))then
+          call block_inside_regions(iRegionResist_I, iBlock, &
+               size(ResistFactor_G), 'ghosts', Value_I=ResistFactor_G)
+          Eta_GB(:,:,:,iBlock) = Eta_GB(:,:,:,iBlock)*ResistFactor_G
+       end if
     end do
+
+    if(allocated(iRegionResist_I)) deallocate(ResistFactor_G)
 
     if(DoMessagePassResistivity) &
          call message_pass_cell(Eta_GB, nWidthIn=1)
@@ -285,38 +303,6 @@ contains
     end do; end do; end do
 
   end subroutine anomalous_resistivity
-  !===========================================================================
-
-  subroutine mask_resistivity(iBlock, Eta_G)
-
-    use ModGeometry, ONLY: rMin_BLK, r_BLK
-
-    ! Mask Eta_G if required
-
-    integer, intent(in)   :: iBlock
-    real,    intent(inout):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
-
-    integer:: i, j, k
-    real:: r
-    !------------------------------------------------------------------------
-
-    ! Check if there is any region with masked resistivity
-    if(rZeroResist < 0.0) RETURN
-
-    ! Check if the block is fully outside the masked region
-    if(rMin_BLK(iBlock) > rFullResist) RETURN
-
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       r = r_BLK(i,j,k,iBlock)
-       if(r < rZeroResist)then
-          Eta_G(i,j,k) = 0.0
-       else if(r < rFullResist)then
-          Eta_G(i,j,k) = Eta_G(i,j,k) &
-               *(r - rZeroResist)/(rFullResist - rZeroResist)
-       end if
-    end do; end do; end do
-
-  end subroutine mask_resistivity
 
   !===========================================================================
   subroutine raeder_resistivity(iBlock, Eta_G)
