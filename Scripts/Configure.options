@@ -17,14 +17,12 @@ COPYRIGHT		OFF		^CMP END COPYRIGHT
 # Including documentation
 #
 DOC			ON
-DOCHTML			OFF  NEEDS DOC		^CMP IF DOCHTML
 
 #						^CMP IF NOT REMOVEDOCTEX BEGIN
 #                                               
 # Making documentation for the configured code
 #
 MAKEPDF			OFF NEEDS DOC
-MAKEHTML		OFF NEEDS DOCHTML  		^CMP IF DOCHTML
 #
 # Removing the source doc/Tex files
 #
