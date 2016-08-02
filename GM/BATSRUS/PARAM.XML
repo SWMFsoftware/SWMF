@@ -3343,6 +3343,7 @@ No magnetometer grid file is saved by default.
 				<option value="idl_real8" 
 					name="IDL double prec"/>
 				<option value="idl_ascii" name="IDL ascii"/>
+				<option value="idl_tec" name="IDL to Tecplot"/>
 			</part>
 			<part name="plotarea" type="string" input="select"
 								required="T">
@@ -3515,7 +3516,7 @@ No magnetometer grid file is saved by default.
 2d  FUL hdf		StringPlot ! 2d HDF plot with a lot of data
 100			DnSavePlot
 -1.			DtSavePlot
-1d  HD idl		StringPlot ! 1d IDL plot along X axis with hydro variables
+1d  HD idl_tec		StringPlot ! 1d plot (with Tecplot header) along X axis
 100			DnSavePlot
 -1.			DtSavePlot
 0.			DxSavePlot ! with smallest grid resolution
@@ -3525,7 +3526,7 @@ y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 0.25			DxSavePlot ! resolution (for IDL plots)
 jx jy jz		NameVars
 g rbody			NamePars
-cut ray idl_real8	StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
+cut ray idl_real8	StringPlot ! 3D cut plot with raytrace info
 1			DnSavePlot
 -1.			DtSavePlot
 -10.			xMinCut    
@@ -3659,6 +3660,7 @@ hdf             - HDF5 format (for VisIt)
 idl/idl_real4   - Single precision binary "IDL" format
 idl_real8       - Double precision binary "IDL" format
 idl_ascii       - ASCII "IDL" format
+idl_tec         - ASCII format with Tecplot header
 \end{verbatim}
 The Tecplot format (for most plot areas) interpolates data 
 to the grid cell corners (nodes).
@@ -4976,7 +4978,7 @@ T                       UseSunEarth   ! Only if there are any 'transient' crit
 
 The #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command defines the 
 criteria to select blocks for refinement or coarsening when the #DOAMR 
-command is used with DoAmr=T parameter. In one seesion you can only have one
+command is used with DoAmr=T parameter. In one session you can only have one
 #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command. 
 #AMRCRITERIARESOLUTION is equvilent with #AMRCRITERIALEVEL but works with
 cell size. For non-Cartesian grids "cell size" is defined as the maximum 
@@ -6056,6 +6058,35 @@ The rCurrentFreeB0 parameter is set to the radius within which the B0 field
 has no curl (i.e. it is current free).
 
 The default is UseCurlB0 false.
+</command>
+
+<command name="LIGHTSPEED">
+	 <parameter name="cLightDim"  type="real" min="0" default="3e5"/>
+
+#LIGHTSPEED
+10.0			cLightDim
+
+Set speed of light used in the Maxwell equations. Reducing the speed of light
+artificially will allow larger explicit time steps. The speed of light
+should be larger than the typical wave speeds present in the problem.
+
+Default is the true speed of light.
+</command>
+
+<command name="HYPERBOLICDIVE">
+	<parameter name="HypEDecay" type="real" min="-1" max="0.5"
+						default="0.1"/>
+#HYPERBOLICDIVE
+0.1			HypEDecay
+
+This command sets the decay rate for the hyperbolic/parabolic constraint
+for the div E = charge density condition when we solve for the electric
+field. The hyperbolic cleaning is always applied with the speed of light.
+In addition the scalar HypE decays as  HypE=HypE*(1-HypEDecay) if HypEDecay
+is set to a positive value. If HypEDecay is less than zero, 
+no parabolic decay is applied.
+
+Default is HypEDecay=0.1.
 </command>
 
 <command name="DIVB">
