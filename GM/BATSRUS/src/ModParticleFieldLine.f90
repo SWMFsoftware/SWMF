@@ -435,7 +435,7 @@ contains
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
-      integer:: i_D(MaxDim) = 1
+      integer:: i_D(MaxDim)
       !----------------------------------------------------------------------
       B_D = 0
       ! get potential part of the magnetic field at the current location
@@ -444,6 +444,7 @@ contains
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
       ! interpolate magnetic field value
       do iCell = 1, nCell
+         i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          B_D = B_D + &
               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
@@ -534,7 +535,7 @@ contains
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
-      integer:: i_D(MaxDim) = 1
+      integer:: i_D(MaxDim)
       character(len=200):: StringError
       !----------------------------------------------------------------------
       Dir_D = 0; B_D = 0
@@ -544,6 +545,7 @@ contains
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
       ! interpolate magnetic field value
       do iCell = 1, nCell
+         i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          B_D = B_D + &
               State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
@@ -620,7 +622,7 @@ contains
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
-      integer:: i_D(MaxDim) = 1
+      integer:: i_D(MaxDim)
       !------------------------------------
       ! reset the interpoalted values
       V_D = 0!; Rho = 0; M_D = 0
@@ -628,6 +630,7 @@ contains
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
       ! interpolate the local density and momentum
       do iCell = 1, nCell
+         i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
               call CON_stop(NameSub//": zero or negative plasma density")
