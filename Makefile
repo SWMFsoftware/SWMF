@@ -310,7 +310,7 @@ allclean: ENV_CHECK rmdir
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
-	cd doc/Tex;             make clean ${CLEAN1} ${CLEAN2}
+	cd doc/Tex;             make clean ${CLEAN1}
 	@#^CMP END REMOVEDOCTEX
 	@#^CMP END DOC
 	@echo
