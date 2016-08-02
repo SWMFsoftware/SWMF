@@ -226,7 +226,6 @@ if(not -d $Dir){
 &process_dir(".");
 
 if($switch{MAKEPDF}      eq "ON" or
-   $switch{MAKEHTML}     eq "ON" or
    $switch{REMOVEDOCTEX} eq "ON"){
 
     chdir $Dir or die "Could not cd $Dir\n";
@@ -246,12 +245,6 @@ if($switch{MAKEPDF}      eq "ON" or
 
 	# Try to enter the LaTex directory
 	chdir $texdir or next TEXDIR;
-
-	# Make HTML manual if required and possible
-	if($switch{MAKEHTML} eq "ON"){
-	    my $result=system("make HTML");
-	    die "Could not make HTML manuals\n" if $result;
-	}
 
         # Make PDF manual if required
         if($switch{MAKEPDF} eq "ON"){
@@ -762,9 +755,6 @@ Configure.pl [-c=STR] [-D] [-d=DIR] [-exe=option1,option2...] [-h] [-i]
               If MAKEPDF is ON, Configure.pl will execute 'make PDF'
               in the configured distribution.
 
-              If MAKEHTML is ON, then HTML documentation is made 
-              in the configured distribution. 
-
               If REMOVEDOCTEX is ON, the Doc/Tex directory will be removed
               from the configured distribution.
 
@@ -849,7 +839,7 @@ Configure.pl -keepall -exe=cartesian -on=cartesian -d=CARTESIAN
 
       Build a complete distribution with manuals but no Doc/Tex directory:
 
-Configure.pl -on=DOC,DOCHTML,MAKEPDF,MAKEHTML,REMOVEDOCTEX
+Configure.pl -on=DOC,MAKEPDF,REMOVEDOCTEX
 
 
    Syntax for directives:
