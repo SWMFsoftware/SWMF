@@ -7121,24 +7121,21 @@ The defaults are true for all three logicals.
 </command>
 
 <command name="RESISTIVEREGION" alias="RESISTIVITYREGION">
-	 <parameter name="rZeroResist" type="real" min="-1" default="-1"/>
-	 <parameter name="rFullResist" type="real" min="$rZeroResist" default="1e30"/>
+	 <parameter name="StringResistRegion" type="string" length="200"
+	 	    default="none"/>
 
 #RESISTIVEREGION
-4.0		rZeroResist
-5.0		rFullResist
++magnetotail -nearbody		StringResistRegion
 
-Mask the resistivity (set by the #RESISTIVITY command) depending on the
-radial coordinate r. For r less than rZeroResist the resistivity is zero.
-For r greater than rFullResist the full value of resistivity is used.
-Between these two value the resistivity is linearly ramped up from zero
-to the full value. This command can be used to reduce resistivity 
-where the field aligned currents are calculated 
-(set by the rCurrents parameter of the #BODY command), but still
-apply resistivity where reconnection happens.
+This command is only useful is the resistivity is switched on with
+the #RESISTIVITY command.
 
-The default values are rZeroResist=-1 and rFullResist=1e30, 
-so there is no masking applied.
+The StringResistRegion string can specify the region(s) where 
+resistivity is used.  The regions must be described with the #REGION
+commands.  Note the 'tapered' option in the shape desciption that can
+be used to make the transition smoother.
+
+The default is to apply the resistive MHD scheme everywhere if it is switched on.
 </command>
 
 <command name="HALLRESISTIVITY">
