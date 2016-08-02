@@ -332,7 +332,8 @@ contains
        iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iIndex)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
-       ! store data
+       ! reset the state vector and put coordinates
+       State_VIB(:,                  iIndex, iBlock) = 0.0
        State_VIB((/R_, Lon_, Lat_/), iIndex, iBlock) = &
             Coord_DI(1:nDim, iParticle)
     end do
