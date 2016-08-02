@@ -538,9 +538,6 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('AbsoluteEps',AbsoluteEps_V(iVar))
         end do
 
-     case("#IMPLIONELECTRON")
-        call read_ion_electron_param(NameCommand)
-
      case("#POINTIMPLICIT")
         call read_point_implicit_param
 
@@ -1351,6 +1348,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0", "#B0FACTOR")
         if(.not.is_first_session())CYCLE READPARAM
         call read_b0_param(NameCommand)
+
+     case("#HYPERBOLICDIVE")
+        call read_ion_electron_param(NameCommand)
 
      case("#HYPERBOLICDIVB")
         if(.not.UseB)CYCLE READPARAM

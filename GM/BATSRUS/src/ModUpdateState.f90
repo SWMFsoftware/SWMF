@@ -26,7 +26,8 @@ subroutine update_states_MHD(iBlock)
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
   use ModMessagePass, ONLY: fix_buffer_grid
-  use ModIonElectron, ONLY: ion_electron_source_impl, ion_electron_init_point_impl
+  use ModIonElectron, ONLY: ion_electron_source_impl, ion_electron_init_point_impl,&
+       HypEDecay
 
   implicit none
 
@@ -227,6 +228,10 @@ subroutine update_states_MHD(iBlock)
   if(UseHyperbolicDivb .and. HypDecay > 0 .and. iStage == nStage) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
+
+  if(UseEfield .and. HypEDecay > 0 .and. iStage == nStage) &
+       State_VGB(HypE_,1:nI,1:nJ,1:nK,iBlock) = &
+       State_VGB(HypE_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypEDecay)
 
   if(UseStableImplicit) call deduct_expl_source
 

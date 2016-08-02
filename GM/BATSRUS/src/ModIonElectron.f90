@@ -21,6 +21,8 @@ module ModIonElectron
   public:: ion_electron_source_impl
   public:: ion_electron_init_point_impl
   public:: read_ion_electron_param
+
+  real, public:: HypEDecay = 0.1
   
   ! calculate analytic Jacobian for point-implicit scheme
   logical, parameter:: IsAnalyticJacobian = .true.
@@ -36,6 +38,8 @@ contains
     character(len=*), parameter:: NameSub = 'read_ion_electron_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
+    case("#HYPERBOLICDIVE")
+       call read_var('HypEDecay', HypEDecay)
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
