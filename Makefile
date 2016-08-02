@@ -43,7 +43,6 @@ help:
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
 	@echo '    PDF         (make PDF  version of the documentation)' #^CMP IF DOC
-	@echo '    HTML        (make HTML version of the documentation)' #^CMP IF DOCHTML
 	@#^CMP END  REMOVEDOCTEX
 	@#^CFG IF TESTING BEGIN
 	@echo '    test        (run all tests for the SWMF)'
@@ -271,12 +270,6 @@ PDF:	ENV_CHECK
 
 CLEAN1 = cleanpdf #				^CMP IF NOT MAKEPDF
 
-#	Create HTML documentation		^CMP IF DOCHTML BEGIN
-HTML:	ENV_CHECK
-	@cd doc/Tex; make cleanhtml; make HTML
-
-CLEAN2 = cleanhtml #				    ^CMP IF NOT MAKEHTML
-#						^CMP END DOCHTML
 #					    ^CMP END REMOVEDOCTEX
 #					^CMP END DOC
 
