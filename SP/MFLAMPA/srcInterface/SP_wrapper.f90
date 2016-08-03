@@ -3,10 +3,28 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================!
 module SP_wrapper
- 
+
   use ModNumConst, ONLY: cHalfPi
- 
- implicit none
+  use ModConst, ONLY: rSun
+  use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
+  use ModMain, ONLY: &
+       advance, initialize, finalize, check, read_param,&
+       get_node_indexes, &
+       iComm, iProc, nProc, &
+       nDim, nNode, nLat, nLon, nBlock,&
+       iParticleMin, iParticleMax, nParticle,&
+       LatMin, LatMax, LonMin, LonMax, &
+       TimeGlobal, iGrid_IA, State_VIB, iNode_B, TypeCoordSystem,&
+       Block_, Proc_, Begin_, End_, R_, Lat_, Lon_
+  use CON_comp_info
+  use CON_router, ONLY: IndexPtrType, WeightPtrType
+  use CON_coupler, ONLY: &
+       set_coord_system, &
+       init_decomposition, get_root_decomposition, bcast_decomposition
+  use CON_world, ONLY: is_proc0
+  use CON_comp_param, ONLY: SP_
+
+  implicit none
 
   save
 
@@ -28,14 +46,11 @@ module SP_wrapper
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
-  character(len=*), parameter:: NameVarRequest = 'xx yy zz fl id'
-  integer,          parameter:: nVarRequest = 5
-
+  character(len=*), parameter:: NameVarCouple = 'bx by bz'
 
 contains
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
-    use ModMain, ONLY: advance, TimeGlobal
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
@@ -48,7 +63,6 @@ contains
 
   subroutine SP_init_session(iSession,TimeSimulation)
 
-    use ModMain, ONLY: initialize
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -64,8 +78,7 @@ contains
   !======================================================================
 
   subroutine SP_finalize(TimeSimulation)
-    
-    use ModMain, ONLY: finalize
+
 
     real,intent(in)::TimeSimulation
     !--------------------------------------------------------------------------
@@ -75,8 +88,6 @@ contains
   !=========================================================
 
   subroutine SP_set_param(CompInfo,TypeAction)
-    use CON_comp_info
-    use ModMain, ONLY: check, read_param, iComm, iProc, nProc
 
     type(CompInfoType),intent(inout):: CompInfo
     character(len=*),  intent(in)   :: TypeAction
@@ -123,10 +134,6 @@ contains
   !===================================================================
 
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
-    use ModMain, ONLY: State_VIB
-    use ModConst, ONLY: rSun
 
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
@@ -154,10 +161,10 @@ contains
 
 
     if(DoAdd)then
-!       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
+       !       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
        State_VIB(4:6,i,iBlock) = State_VIB(4:6,i,iBlock) + B_D
     else
-!       State_VIB((/1,2,3/),i,iBlock) = Coord_D
+       !       State_VIB((/1,2,3/),i,iBlock) = Coord_D
        State_VIB((/4,5,6/),i,iBlock) = B_D
     end if
   end subroutine SP_put_from_mh
@@ -165,19 +172,6 @@ contains
   !===================================================================
 
   subroutine SP_set_grid
-
-    use CON_coupler,    ONLY: &
-         set_coord_system, &
-         init_decomposition, get_root_decomposition, bcast_decomposition
-    use CON_world,      ONLY: is_proc0
-    use CON_comp_param, ONLY: SP_
-    use ModConst,       ONLY: rSun
-    use ModMain,        ONLY: &
-         LatMin, LatMax, LonMin, LonMax, &
-         iGrid_IA, Block_, Proc_, &
-         nDim, nLat, nLon, &
-         iParticleMin, iParticleMax, nParticle,&
-         TypeCoordSystem
 
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
@@ -203,6 +197,7 @@ contains
          GridID_      = SP_, &
          TypeCoord    = TypeCoordSystem, &
          TypeGeometry = 'spherical', &
+         NameVar      = NameVarCouple, &
          UnitX        = rSun)
   end subroutine SP_set_grid
 
@@ -210,11 +205,6 @@ contains
 
   subroutine SP_request_line(iDirIn, &
        nLine, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-    use ModMain, ONLY: &
-         iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, nBlock, &
-         nDim, nNode, R_, Lat_, Lon_, &
-         get_node_indexes
     ! request coordinates & indices of field lines' beginning/origin/end
     ! for the current processor
     !---------------------------------------------------------------
@@ -296,10 +286,6 @@ contains
   !===================================================================
 
   subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
-    use ModMain, ONLY: &
-         iGrid_IA, State_VIB, iNode_B,&
-         Proc_, Block_, Begin_, End_, iProc, iComm, &
-         nDim, nNode, iParticleMin, iParticleMax, Lat_, Lon_, R_
     use ModMpi
     ! store particle coordinates extracted elsewhere
     !---------------------------------------------------------------
@@ -352,7 +338,6 @@ contains
 
   subroutine SP_get_grid_descriptor_param(&
        iGridMin_D, iGridMax_D, Displacement_D)
-    use ModMain, ONLY: nDim, iParticleMin, iParticleMax
     integer, intent(out):: iGridMin_D(nDim)
     integer, intent(out):: iGridMax_D(nDim)
     real,    intent(out):: Displacement_D(nDim)
@@ -365,10 +350,6 @@ contains
   !===================================================================
 
   subroutine SP_get_line_all(Xyz_DI)
-    use ModMain, ONLY: iProc, iComm, Block_, Proc_, Begin_, End_,&
-         iGrid_IA, State_VIB, &
-         nDim, nNode, nParticle, R_, Lat_, Lon_, iParticleMin,iParticleMax
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use ModMpi
     real, pointer:: Xyz_DI(:, :)
 
@@ -393,6 +374,6 @@ contains
     call MPI_Allreduce(MPI_IN_PLACE, Xyz_DI, nParticle*nNode*nDim, MPI_REAL, &
          MPI_SUM, iComm, iError)
 
- end subroutine SP_get_line_all
+  end subroutine SP_get_line_all
 
 end module SP_wrapper
