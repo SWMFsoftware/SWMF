@@ -1,33 +1,125 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
-module ModUnsignedFluxModel
-
-  ! based on Abett (2007)
+!=========================================!Master module!======================
+module ModCoronalHeating
+  use ModMain,       ONLY: nBLK, nI, nJ, nK
+  use ModReadParam,  ONLY: lStringLine
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+  use ModMultiFluid, ONLY: IonFirst_, IonLast_
 
   implicit none
-  save
+  SAVE
+  PRIVATE  !Except
+  !\
+  ! The Poynting flux to magnetic field ratio (one of the input parameters
+  ! in SI unins and diminsionless:
+  !/
+  real,public    :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
+  real,public    :: MaxImbalance = 2.0, MaxImbalance2 = 4.0
 
-  private ! except
+  logical,public:: UseCoronalHeating = .false.
+  character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
-  ! Public methods
+  ! Variables and parameters for various heating models
+  !\
+  ! Exponential:
+  !/  
+
+  ! quantitative parameters for exponential heating model
+
+  real :: HeatingAmplitude, HeatingAmplitudeCgs = 6.07e-7
+  real :: DecayLengthExp = 0.7  ! in Solar Radii units
+  logical :: UseExponentialHeating = .false.
+
+  ! parameters for high-B transition (in Gauss)
+  ! idea is to grossly approx 'Active Region' heating values
+  logical :: UseArComponent = .false.
+  real :: ArHeatB0 = 30.0
+  real :: DeltaArHeatB0 = 5.0
+  real :: ArHeatFactorCgs = 4.03E-05  ! cgs energy density = [ergs cm-3 s-1]
+
+  ! open closed heat is if you want to have different heating
+  ! between open and closed field lines. The routines for the WSA
+  ! model in the ExpansionFactors module essentially do this, so will
+  ! need to call them
+  logical, public :: DoOpenClosedHeat = .false.
+  real :: WsaT0 = 3.50
+
+  !\
+  ! Abbett's model
+  !/
+
+  ! Normalization constant for Abbett Model
+  real :: HeatNormalization = 1.0
+
+  ! Alfven wave dissipation
+  logical,public :: UseAlfvenWaveDissipation = .false.
+  real,public    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real,public    :: LperpTimesSqrtB
+  real    :: Crefl = 0.04
+
+  logical,public :: UseTurbulentCascade = .false.
+  logical,public :: UseWaveReflection = .true.
+
+  logical,public :: IsNewBlockAlfven = .true.
+
+  ! long scale height heating (Ch = Coronal Hole)
+  logical :: DoChHeat = .false.
+  real :: HeatChCgs = 5.0e-7
+  real :: DecayLengthCh = 0.7
+
+  !Arrays for the calculated heat function and dissipated wave energy
+  real,public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
+  real,public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
+
+  character(len=lStringLine) :: TypeHeatPartitioning
+
+  ! Switch whether to use uniform heat partition
+  logical :: UseUniformHeatPartition = .true.
+  real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
+  real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
+  real,public :: QeRatio = 0.4
+
+  ! Dimensionless parameters for stochastic heating
+  logical :: UseStochasticHeating = .false.
+  real :: StochasticExponent = 0.34
+  real :: StochasticAmplitude = 0.18
+
+  logical :: DoInit = .true. 
+
+  ! The power spectrum of magnetic energy fluctuations in the solar wind
+  ! follows a Kolmogorov spectrum (\vardelta B)^(-5/3) in the inertial range
+  ! of the turbulence. Podesta et al. (2006) found based on in situ
+  ! observations  at 1 AU a spectral index of 3/2 for kinetic energy
+  ! fluctuations.
+  ! If the logical UseKolmogorov is .false., we assume a 3/2 spectral
+  ! index (for the entire solar corona and inner heliosphere) in the
+  ! stochastic heating mechanism, otherwise we assume it to be 5/3
+  logical :: UseKolmogorov = .false.
+
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
+  public :: get_cell_heating
+  public :: get_block_heating
+  public :: apportion_coronal_heating
+  public :: get_wave_reflection
+  public :: init_coronal_heating
+  public :: read_corona_heating
 
   !Bill Abbet model, if .true.
   logical, public :: UseUnsignedFluxModel = .false.
 
   ! Normalized value of Heating constant
-  real, public :: HeatFactor = 0.0
+  real :: HeatFactor = 0.0
 
   ! Cgs value of total power input from coronal heating
-  real, public :: TotalCoronalHeatingCgs = 1.0e+28
+  real :: TotalCoronalHeatingCgs = 1.0e+28
 
   ! Exponential Scale height to truncate heating function
-  real, public :: DecayLength = 1.0
-  real, public :: DtUpdateFlux = -1.0
-  real, public :: UnsignedFluxHeight = -99999
+  real :: DecayLength = 1.0
+  real :: DtUpdateFlux = -1.0
+  real :: UnsignedFluxHeight = -99999
 
 contains
 
@@ -237,106 +329,6 @@ contains
          DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
 
   end subroutine get_photosphere_field
-end module ModUnsignedFluxModel
-!=========================================!Master module!======================
-module ModCoronalHeating
-  use ModUnsignedFluxModel
-  use ModMain,       ONLY: nBLK, nI, nJ, nK
-  use ModReadParam,  ONLY: lStringLine
-  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
-  use ModMultiFluid, ONLY: IonFirst_, IonLast_
-
-  implicit none
-  SAVE
-
-  !\
-  ! The Poynting flux to magnetic field ratio (one of the input parameters
-  ! in SI unins and diminsionless:
-  !/
-  real    :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
-  real    :: MaxImbalance = 2.0, MaxImbalance2 = 4.0
-
-  logical,public:: UseCoronalHeating = .false.
-  character(len=lStringLine) :: NameModel, TypeCoronalHeating
-
-  ! Variables and parameters for various heating models
-  !\
-  ! Exponential:
-  !/  
-
-  ! quantitative parameters for exponential heating model
-
-  real :: HeatingAmplitude, HeatingAmplitudeCgs = 6.07e-7
-  real :: DecayLengthExp = 0.7  ! in Solar Radii units
-  logical :: UseExponentialHeating = .false.
-
-  ! parameters for high-B transition (in Gauss)
-  ! idea is to grossly approx 'Active Region' heating values
-  logical :: UseArComponent = .false.
-  real :: ArHeatB0 = 30.0
-  real :: DeltaArHeatB0 = 5.0
-  real :: ArHeatFactorCgs = 4.03E-05  ! cgs energy density = [ergs cm-3 s-1]
-
-  ! open closed heat is if you want to have different heating
-  ! between open and closed field lines. The routines for the WSA
-  ! model in the ExpansionFactors module essentially do this, so will
-  ! need to call them
-  logical :: DoOpenClosedHeat = .false.
-  real :: WsaT0 = 3.50
-
-  !\
-  ! Abbett's model
-  !/
-
-  ! Normalization constant for Abbett Model
-  real :: HeatNormalization = 1.0
-
-  ! Alfven wave dissipation
-  logical :: UseAlfvenWaveDissipation = .false.
-  real    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
-  real    :: LperpTimesSqrtB
-  real    :: Crefl = 0.04
-
-  logical :: UseTurbulentCascade = .false.
-  logical :: UseWaveReflection = .true.
-
-  logical :: IsNewBlockAlfven = .true.
-
-  ! long scale height heating (Ch = Coronal Hole)
-  logical :: DoChHeat = .false.
-  real :: HeatChCgs = 5.0e-7
-  real :: DecayLengthCh = 0.7
-
-  !Arrays for the calculated heat function and dissipated wave energy
-  real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
-  real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
-
-  character(len=lStringLine) :: TypeHeatPartitioning
-
-  ! Switch whether to use uniform heat partition
-  logical :: UseUniformHeatPartition = .true.
-  real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
-  real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
-  real :: QeRatio = 0.4
-
-  ! Dimensionless parameters for stochastic heating
-  logical :: UseStochasticHeating = .false.
-  real :: StochasticExponent = 0.34
-  real :: StochasticAmplitude = 0.18
-
-  logical,private:: DoInit = .true. 
-
-  ! The power spectrum of magnetic energy fluctuations in the solar wind
-  ! follows a Kolmogorov spectrum (\vardelta B)^(-5/3) in the inertial range
-  ! of the turbulence. Podesta et al. (2006) found based on in situ
-  ! observations  at 1 AU a spectral index of 3/2 for kinetic energy
-  ! fluctuations.
-  ! If the logical UseKolmogorov is .false., we assume a 3/2 spectral
-  ! index (for the entire solar corona and inner heliosphere) in the
-  ! stochastic heating mechanism, otherwise we assume it to be 5/3
-  logical :: UseKolmogorov = .false.
-
-contains
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
 
@@ -774,7 +766,7 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: true_cell, Xyz_DGB, R_BLK
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
@@ -817,9 +809,15 @@ contains
 
        ! Reflection rate driven by Alfven speed gradient and
        ! vorticity along the field lines
+       !if(R_BLK(i,j,k,iBlock)<2.5)then
        ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
             + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
-
+       !else
+       !   ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
+       !        + min((sum(FullB_D(1:nDim)*GradLogAlfven_D))**2,&
+       !        (sum(FullB_D(1:nDim)*Xyz_DGB(1:nDim,i,j,k,iBlock))/&
+       !        R_BLK(i,j,k,iBlock)**2)**2)/Rho )
+       !end if
        ! Clip the reflection rate from above with maximum dissipation rate
        ReflectionRate = min(ReflectionRate, DissipationRateMax)
 
