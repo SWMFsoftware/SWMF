@@ -56,14 +56,7 @@ module CON_couple_mh_sp
   real,   allocatable:: XyzStored_DI(:,:)
   integer,allocatable:: iAuxStored_I(:)
 
-  real,dimension(:,:),pointer ::Xyz_DI
-  logical,dimension(:),pointer :: Is_I
-  integer,parameter::nPointMax=5000
-  integer::nPoint=0
-  integer::iPoint
   integer::iError
-  real::bDxyz_I(1:6)!The interpolated values of full B and DXyz
-  real::DsResolution,XyzLine_D(3)
   real,save::rBoundIh=21.0                !^CMP IF IH
   real,save::rBoundSc=1.20                !^CMP IF SC
 
@@ -83,7 +76,6 @@ contains
     use ModConst
 
     logical::DoneRestart
-    integer::nLine
 
     integer:: iGridMin_D(3), iGridMax_D(3), ierror
     real:: Disp_D(3)
@@ -142,10 +134,6 @@ contains
     end if
 
 
-    !\
-    ! Allocate storage for field line requests
-    !/
-    nLine = SP_GridDescriptor%DD%Ptr%nBlockAll
 
     !\
     ! Extract and exchange initial data
@@ -154,31 +142,7 @@ contains
          call exchange_lines(SC_)
     if(use_comp(IH_))&
          call exchange_lines(IH_)
-
-    ! reserve memeory for SP grid
-    call allocate_vector('SP_Xyz_DI', &
-                  SP_GridDescriptor%DD%Ptr%nDim, &
-                  product(SP_GridDescriptor%DD%Ptr%nCells_D)*nLine)
-    call associate_with_global_vector(CoordMisc_DI, 'SP_Xyz_DI')
-    if(is_proc(SP_))&
-         call SP_get_line_all(CoordMisc_DI)
-    nullify(CoordMisc_DI)
-    call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-
-    if(use_comp(SC_))then
-       if(RouterScSp%IsProc)then
-          call allocate_mask('SP_IsInSC','SP_Xyz_DI')
-          call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
-       end if
-    end if
-
-    if(use_comp(IH_))then
-       if(RouterIhSp%IsProc)then
-          call allocate_mask('SP_IsInIH','SP_Xyz_DI')
-          call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
-       end if
-    end if
-    
+   
   contains
     !================================================================    
     subroutine exchange_lines(iMHComp)
@@ -501,124 +465,6 @@ contains
     iIndex_II(2:3,1) = (/1,1/)
     iIndex_II(4,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(BLK_,iLine)
   end subroutine interpolate_sp
-  !==================================================================!
-  subroutine interpolation_amr_gc_old_interface(&
-       nDim, Coord_D, GridDescriptor, &
-       nIndex, iIndex_II, nImage, Weight_I)
-    use CON_grid_descriptor
-
-    integer, intent(in):: nDim
-    real,    intent(inout):: Coord_D(nDim)
-    type(GridDescriptorType):: GridDescriptor
-    integer, intent(in) :: nIndex
-    integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
-    integer, intent(out):: nImage
-    real,    intent(out):: Weight_I(2**nDim)
-    !--------------------------
-    call interpolation_amr_gc(nDim, Coord_D, GridDescriptor, &
-         nIndex, iIndex_II, nImage, Weight_I)
-  end subroutine interpolation_amr_gc_old_interface
-
-  !==================================================================!
-  subroutine transform_from_cartesian(iComp)
-    use ModCoordTransform, ONLY: xyz_to_rlonlat
-    integer,intent(in)::iComp
-    real,pointer,dimension(:,:)::Coord_DI
-    character(len=100) :: TypeGeometry
-    real:: Coord_D(3), Rho
-    real, parameter:: cTol = 1E-8
-    integer::nU_I(2), iParticle
-    real:: SpToMh_DD(3,3)
-    !------------------------------------------
-    nU_I = ubound_vector('SP_Xyz_DI')
-    call associate_with_global_vector(Coord_DI, 'SP_Xyz_DI')
-    ! convert from cartesian coordinates if necessary                        
-    TypeGeometry = Grid_C(iComp)%TypeGeometry
-    SpToMh_DD=transform_matrix(tNow,&
-         Grid_C(SP_)%TypeCoord,&
-         Grid_C(iComp)%TypeCoord)
-    if( index(TypeGeometry, 'spherical_lnr') > 0 )then
-       do iParticle = 1, nU_I(2)
-          ! rotate cartesian
-          Coord_D(:) = matmul(SpToMh_DD, Coord_DI(:,iParticle))
-          call xyz_to_rlonlat(Coord_D, Coord_DI(1:3,iParticle))
-          ! convert radius to log(radius)
-          if(Coord_DI(1,iParticle) > 0)&
-               Coord_DI(1,iParticle) = log(Coord_DI(1,iParticle))
-       end do
-    elseif(index(TypeGeometry, 'cartesian') > 0 )then
-       do iParticle = 1, nU_I(2)
-          ! rotate cartesian
-          Coord_DI(:,iParticle) = matmul(SpToMh_DD, Coord_DI(:,iParticle))
-       end do
-    end if
-    nullify(Coord_DI)
-  end subroutine transform_from_cartesian
-
-  !==================================================================!
-  subroutine transform_to_cartesian(iComp)
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
-    integer,intent(in)::iComp
-    real,pointer,dimension(:,:)::Coord_DI
-    character(len=100) :: TypeGeometry
-    real:: Coord_D(3), Rho
-    real, parameter:: cTol = 1E-8
-    integer::nU_I(2), iParticle
-    real:: MhToSp_DD(3,3)
-    !------------------------------------------
-    nU_I = ubound_vector('SP_Xyz_DI')
-    call associate_with_global_vector(Coord_DI, 'SP_Xyz_DI')
-    ! convert from cartesian coordinates if necessary                        
-    TypeGeometry = Grid_C(iComp)%TypeGeometry
-    MhToSp_DD=transform_matrix(tNow,&
-         Grid_C(iComp)%TypeCoord,&
-         Grid_C(SP_)%TypeCoord)
-    if( index(TypeGeometry, 'spherical_lnr') > 0 )then
-       do iParticle = 1, nU_I(2)
-          ! convert log(radius) to radius
-          if(Coord_DI(1,iParticle) > 0)&
-               Coord_DI(1,iParticle) = exp(Coord_DI(1,iParticle))
-          call rlonlat_to_xyz(Coord_DI(1:3,iParticle), Coord_D)
-          ! rotate cartesian
-          Coord_DI(:,iParticle) = Coord_D
-          Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
-       end do
-    elseif(index(TypeGeometry, 'cartesian') > 0 )then
-       do iParticle = 1, nU_I(2)
-          ! rotate cartesian
-          Coord_DI(:,iParticle) = matmul(MhToSp_DD, Coord_DI(:,iParticle))
-       end do
-    end if
-    nullify(Coord_DI)
-  end subroutine transform_to_cartesian
-
-  !==================================================================!
-  subroutine transform_to_sp_from(iComp)
-    integer,intent(in)::iComp
-    real,pointer,dimension(:,:)::SP_LocalXyz_DI
-    logical,pointer,dimension(:)::Is_I
-    integer::nU_I(2),i
-    real,dimension(3,3)::MhToSp_DD
-    character(LEN=2)::NameComp
-    real::LengthRatio
-    call get_comp_info(iComp,Name=NameComp)
-    MhToSp_DD=transform_matrix(tNow,&
-         Grid_C(iComp)%TypeCoord,&
-         Grid_C(SP_)%TypeCoord)
-    if(DoTest)write(*,*)'Transform SP coordinates from '//NameComp
-    call associate_with_global_mask(Is_I,'SP_IsIn'//NameComp)
-    call associate_with_global_vector(SP_LocalXyz_DI,'SP_Xyz_DI')
-    nU_I=ubound(SP_LocalXyz_DI)
-    if(DoTest)write(*,*)nU_I
-    LengthRatio=Grid_C(iComp)%UnitX/Grid_C(SP_)%UnitX
-    do i=1,nU_I(2)
-       if(.not.Is_I(i))CYCLE
-       SP_LocalXyz_DI(:,i)=matmul(MhToSp_DD,&
-            point_state_v('SP_Xyz_DI',3,i))*LengthRatio
-    end do
-    nullify(SP_LocalXyz_DI,Is_I)
-  end subroutine transform_to_sp_from
-
   !==================================================================
   !^CMP IF IH BEGIN
   subroutine couple_ih_sp(DataInputTime)     
@@ -639,57 +485,27 @@ contains
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
-    call bcast_global_vector('SP_Xyz_DI',&
-         RouterIhSp%iProc0Source,&
-         RouterIhSp%iCommUnion,&
-         'SP_IsInIH')
-    call transform_from_cartesian(IH_)
-    call set_router(& 
-         GridDescriptorSource=IH_GridDescriptor,&
-         GridDescriptorTarget=SP_GridDescriptor,&
-         Router=RouterIhSp,&
-         NameMappingVector='SP_Xyz_DI',&
-         NameMask='SP_IsInIH',&
-         interpolate=interpolation_amr_gc_old_interface)
-
-    call transform_to_cartesian(IH_)
-    if(is_proc(SP_))then
+    call set_router_from_source_2_stage(&
+         GridDescriptorSource = IH_GridDescriptor, &
+         GridDescriptorTarget = SP_GridDescriptor, &
+         Router               = RouterIhSp, &
+         get_scatter_source   = IH_get_scatter_line, &
+         transform            = transform_ih_to_sp, &
+         interpolate_source   = interpolation_amr_gc, &
+         interpolate_target   = interpolate_sp, &
+         put_scatter_target   = SP_put_scatter_from_mh)
+    call global_message_pass(RouterIhSp, &
+         nVar = 11, &
+         fill_buffer = IH_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_mh)
+!    if(is_proc(SP_))then
 !       call SP_put_input_time(DataInputTime)
-!       call transform_to_sp_from(IH_)
-    end if
-
-    call global_message_pass(RouterIhSp,&
-         nVar=11,&
-         fill_buffer=IH_get_for_sp_and_transform,&
-         apply_buffer=SP_put_from_mh)
+!    end if
     !^CMP IF SC BEGIN
     !This coupler is performed after SC-SP coupling, so that 
     !on SP the updated coordinates are available for those
     !points which passed from SC to IH
 
-!    if(use_comp(SC_))then              
-!       if(is_proc0(SP_))then
-!          !Check the points which passed from SC to IH:
-!          call associate_with_global_vector(Xyz_DI,'SP_Xyz_DI')
-!          call associate_with_global_mask(Is_I,'SP_IsInIH')
-!
-!          do iPoint=1,nPoint
-!             if(Is_I(iPoint))CYCLE
-!             !Consider a point which before was   not in IH
-!             Xyz_D=matmul(ScToIh_DD,Xyz_DI(:,iPoint))*&
-!                  (Grid_C(SC_)%UnitX/Grid_C(IH_)%UnitX) 
-!             if(is_in_ih(Xyz_D))& ! Now the point is in IH
-!                  Xyz_DI(:,iPoint)=Xyz_D
-!             !..that is why we convert it to IH coordinates
-!          end do
-!          nullify(Xyz_DI)
-!          nullify(Is_I)
-!       end if
-!       call bcast_global_vector('SP_Xyz_DI',&
-!            RouterIhSp%iProc0Target,&
-!            RouterIhSp%iCommUnion)           !^CMP END SC
-!    end if
-!    call set_mask('SP_IsInIH','SP_Xyz_DI',is_in_ih)
   end subroutine couple_ih_sp
   !==================================================================
   logical function is_in_ih(Xyz_D)
@@ -741,30 +557,23 @@ contains
 
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
-    call bcast_global_vector('SP_Xyz_DI',&
-         RouterScSp%iProc0Source,&
-         RouterScSp%iCommUnion,&
-         'SP_IsInSC')
-    call transform_from_cartesian(SC_)
-    call set_router(& 
-         GridDescriptorSource=SC_GridDescriptor,&
-         GridDescriptorTarget=SP_GridDescriptor,&
-         Router=RouterScSp,&
-         NameMappingVector='SP_Xyz_DI',&
-         NameMask='SP_IsInSC',&
-         interpolate=interpolation_amr_gc_old_interface)
-    
-    call transform_to_cartesian(SC_)
-    if(is_proc(SP_))then
+    call set_router_from_source_2_stage(&
+         GridDescriptorSource = SC_GridDescriptor, &
+         GridDescriptorTarget = SP_GridDescriptor, &
+         Router               = RouterScSp, &
+         get_scatter_source   = SC_get_scatter_line, &
+         transform            = transform_sc_to_sp, &
+         interpolate_source   = interpolation_amr_gc, &
+         interpolate_target   = interpolate_sp, &
+         put_scatter_target   = SP_put_scatter_from_mh)
+    call global_message_pass(RouterScSp, &
+         nVar = 11, &
+         fill_buffer = SC_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_mh)
+!    if(is_proc(SP_))then
 !       call SP_put_input_time(DataInputTime)  
 !       call transform_to_sp_from(SC_)
-    end if
-
-    call global_message_pass(RouterScSp,&
-         nVar=11,&
-         fill_buffer=SC_get_for_sp_and_transform,&
-         apply_buffer=SP_put_from_mh)
-    call set_mask('SP_IsInSC','SP_Xyz_DI',is_in_sc)
+!    end if
   end subroutine couple_sc_sp
   !-------------------------------------------------------------------------
   logical function is_in_sc(Xyz_D)
