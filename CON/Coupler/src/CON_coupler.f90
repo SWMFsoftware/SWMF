@@ -711,7 +711,7 @@ contains
           end if
 
        case('Bx')
-          if(index(NameVarTarget,' Bx ') > 0) then
+          if(any(NameVarTarget_V=='Bx')) then
              DoCoupleVar_V(Bfield_) = .true.
              ! Check that By and Bz immediately follow Bx 
              if ( NameVarSource_V(iVarSource + 1) /= 'By' .and. &
@@ -723,14 +723,14 @@ contains
           end if
 
        case('Pe')
-          DoCoupleVar_V(ElectronPressure_) = index(NameVarTarget, ' Pe ') > 0
+          DoCoupleVar_V(ElectronPressure_) = any(NameVarTarget_V=='Pe')
 
        case('Ppar')
-          DoCoupleVar_V(AnisoPressure_) = index(NameVarTarget,' Ppar ') > 0
+          DoCoupleVar_V(AnisoPressure_) = any(NameVarTarget_V=='Ppar')
 
        case('Ehot')
           DoCoupleVar_V(CollisionlessHeatFlux_) = &
-               index(NameVarTarget,' Ehot ') > 0
+               any(NameVarTarget_V=='Ehot')
 
        case('i01')
           ! Enumerated names for waves                                     

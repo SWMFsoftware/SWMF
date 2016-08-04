@@ -125,6 +125,7 @@ contains
             RouterScSp%iCommUnion)
        ScToSp_DD=transform_matrix(tNow,&                 
             Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+       call set_couple_var_info(SC_, SP_)
     end if
 
     if(use_comp(IH_))then
@@ -137,6 +138,7 @@ contains
             RouterIhSp%iCommUnion)
        IhToSp_DD=transform_matrix(tNow,&                 
             Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+       call set_couple_var_info(IH_, SP_)
     end if
 
 
