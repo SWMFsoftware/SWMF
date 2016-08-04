@@ -956,6 +956,60 @@ sub ReadGeneralBlock {
     }
     
     
+    #read the block that defines a type of the boundary processing routine used for processing of a particle when it crosses the boundary of the computational domain
+    elsif ($InputLine eq "DOMAINBOUNDARYPARTICLEINTERSECTION") {
+      my $Mode=-1;
+      my $FunctionName;
+      
+      my $ModeDelete=0;
+      my $ModeUserFunction=1;
+      my $ModeSpecularReflection=2;
+      my $ModePeriodicCondition=3;
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);      
+      
+      if ($InputLine eq "DELETE") {
+        $Mode=$ModeDelete;
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_","_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "SPECULARREFLECTION") {
+        $Mode=$ModeSpecularReflection;
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_","_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__SPECULAR_REFLECTION_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "PERIODICCONDITION") {
+        $Mode=$ModePeriodicCondition;
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_","_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__PERIODIC_CONDITION_","pic/picGlobal.dfn");
+      }      
+      elsif ($InputLine eq "USER-DEFINED") {
+        $Mode=$ModeUserFunction;
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_","_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_","pic/picGlobal.dfn");
+      }  
+      else {
+        die "The option is unknown ($line)\n";
+      }    
+      
+      if ($Mode==$ModeUserFunction) {
+        $line=~s/[=,]/ /g;
+        chomp($line);
+        $line=~s/\s+$//;
+        
+        ($InputComment,$InputLine)=split('!',$line,2);
+        
+        while (defined $InputComment) {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          
+          $InputLine=uc($InputLine);
+          
+          if ($InputLine eq "FUNCTION") {
+            ($FunctionName,$InputComment)=split(' ',$InputComment,2);
+            
+            ampsConfigLib::ChangeValueOfVariable("PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles",$FunctionName,"pic/pic_mover.cpp");
+          }          
+        }
+      }
+    }
+    
+    
     #read the block that defines the user data for the NASTRAN triangulated surfaces
     elsif ($InputLine eq "USERDEFINEDSURFACETRIANGULATIONDATA") {
       $line=~s/[=,:]/ /g;
