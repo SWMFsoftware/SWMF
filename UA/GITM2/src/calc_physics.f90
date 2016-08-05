@@ -98,8 +98,11 @@ subroutine calc_physics(iBlock)
   SinDec = sin(SunDeclination)
   CosDec = cos(SunDeclination)
 
-  LocalTime = mod((UTime/3600.0 + &
-       Longitude(:,iBlock) * HoursPerDay / TwoPi), HoursPerDay)
+  ! Updated to work at all Planets
+  ! We need the equivalent number of "hours" per planet rotation, 
+  ! assuming that there are 24.0 LT hours per planet day
+  LocalTime = mod((UTime/(Rotation_Period/24.0) + &
+       Longitude(:,iBlock) * 24.0/TwoPi), 24.0)
 
   if (UseApex) &
        call SUBSOLR(iTimeArray(1),iJulianDay,iTimeArray(4),&
@@ -160,7 +163,7 @@ subroutine calc_physics(iBlock)
         sza(iLon, iLat,iBlock) =  &
              acos(SinDec*sin(Latitude(iLat,iBlock)) + &
              CosDec*CosLatitude(iLat,iBlock) * &
-             cos(pi*(LocalTime(iLon)-HoursPerDay/2)/(HoursPerDay/2)))
+             cos(pi*(LocalTime(iLon)- 24.0/2.0)/(24.0/2.)))
 
         if (DtLTERadiation < Rotation_Period) then
            call calc_avesza(iLon,iLat,iBlock, SinDec, CosDec)
