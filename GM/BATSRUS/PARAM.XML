@@ -6391,11 +6391,13 @@ and DoImSatTrace false.
 		<parameter name="PolarNDim" type="real" min="0" default="20"/>
 		<parameter name="PolarTDim" type="real" min="0" default="1e5"/>
 	</if>
+	<parameter name="rhoCoupleFloor"    type="real" default="-1"/>
 #IMCOUPLING
 20.0			TauCoupleIm
 F			DoImSatTrace
 T			DoCoupleImPressure
 F			DoCoupleImDensity
+0.01                    rhoCoupleFloor [amu/cc]
 T			DoFixPolarRegion (rest read if true)
 5.0			rFixPolarRegion
 20.0            	PolarNDim [amu/cc] for fluid 1
@@ -6447,6 +6449,13 @@ the pressure (and density) are relaxed toward the values given
 in the #POLARBOUNDARY command in the open field line region within
 radius defined by rFixPolarRegion and where the flow points outward.
 
+If rhoCoupleFloor is nonzero, it sets a minimum density floor for every
+fluid coupled between GM and IM.  This avoids situations where
+unreasonably low densities form in the ring current model, then couple
+to BATS-R-US fluids and reduce the timestep to near-zero values.
+If necessary, the recommended value is 0.01 amu/cc.
+The default value is -1, or no minimum density values.
+
 If DoFixPolarRegion is true then the following parameters are also read:
 
 The rFixPolarRegion radius (given in planetary radii) sets the outer
@@ -6456,6 +6465,7 @@ the PolarNDim and PolarTDim parameters are read for each fluid.
 
 The default is to couple the IM pressure only and no fix is applied 
 in the polar region.
+
 
 </command>
 

@@ -85,6 +85,7 @@ module ModMain
   real    :: rFixPolarRegion    = 5.0
   real    :: dLatSmoothIm       = -1.0
   real    :: TauCoupleIm        = 20.0
+  real    :: rhoFloorIm         = -1.0
 
   logical :: UseRaytrace            = UseB
   logical :: DoMultiFluidIMCoupling = .false.

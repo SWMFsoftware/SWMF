@@ -1465,9 +1465,12 @@ subroutine MH_set_parameters(TypeAction)
         if(NameCommand == "#IMCOUPLING")then
            call read_var('DoCoupleImPressure', DoCoupleImPressure)
            call read_var('DoCoupleImDensity',  DoCoupleImDensity)
+           call read_var('rhoCoupleFloor',     rhoFloorIm)
+           ! Change units to SI: amu/cc -> kg/m3
+           rhoFloorIm = rhoFloorIm * 1.67E-21
            call read_var('DoFixPolarRegion',   DoFixPolarRegion)
            if(DoFixPolarRegion)then
-              call read_var('rFixPolarRegion',    rFixPolarRegion)
+              call read_var('rFixPolarRegion', rFixPolarRegion)
               do iFluid = IonFirst_, nFluid
                  call read_var('PolarNDim',  PolarNDim_I(iFluid))
                  call read_var('PolarTDim',  PolarTDim_I(iFluid))

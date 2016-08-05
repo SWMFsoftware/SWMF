@@ -269,12 +269,12 @@ end subroutine get_im_pressure
 
 subroutine apply_im_pressure
 
-  use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, &
+  use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, rhoFloorIm, &
        time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, Unused_B
   use ModAdvance, ONLY: State_VGB, UseAnisoPressure
   use ModVarIndexes, ONLY: &
        Ppar_
-  use ModPhysics, ONLY: Si2No_V, UnitT_
+  use ModPhysics, ONLY: Si2No_V, UnitT_, UnitRho_
   use ModImPressure
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
        iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid
@@ -385,13 +385,15 @@ subroutine apply_im_pressure
            end if
         end if
         if(DoCoupleImDensity)then
+           write(*,*) Si2No_V(UnitRho_)*rhoFloorIm, maxval(State_VGB(iRho_I(1),1:nI,1:nJ,1:nK,iBlock))
            do iFluid = 1, nIons
               where(RhoIm_IC(iFluid,:,:,:) > 0.0) &
-                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = &
+                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = max( &
+                   Si2No_V(UnitRho_)*rhoFloorIm, &
                    State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)   &
                    + min(1.0, Factor * Dt) * TauCoeffIm_C &
                    * (RhoIm_IC(iFluid,:,:,:) - &
-                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock))
+                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)))
            end do
         end if
      else
