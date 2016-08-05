@@ -118,8 +118,8 @@ module ModCoronalHeating
 
   ! Exponential Scale height to truncate heating function
   real :: DecayLength = 1.0
-  real :: DtUpdateFlux = -1.0
-  real :: UnsignedFluxHeight = -99999
+  real,public :: DtUpdateFlux = -1.0
+  real,public :: UnsignedFluxHeight = -99999
 
 contains
 
