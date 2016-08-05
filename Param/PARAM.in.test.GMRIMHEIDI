@@ -274,6 +274,7 @@ F			DoCoupleOnTime
 F			DoImSatTrace
 T			DoCoupleImPressure
 T			DoCoupleImDensity
+-1			rhoCoupleFloor
 T			DoFixPolarRegion
 5.0			rFixPolarRegio
 28.0			PolarNDim [amu/cc]
