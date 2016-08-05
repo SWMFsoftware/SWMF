@@ -393,6 +393,7 @@ subroutine advance_vertical_1stage( &
   use ModVertical, only : &
        Heating, EddyCoef_1D, ViscCoef_1d,Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
+       KappaTemp_1d, ViscCoefS_1d, &
        Gravity_G, Altitude_G,Cv_1D, dAlt_F
   use ModTime
   use ModInputs
@@ -468,6 +469,11 @@ subroutine advance_vertical_1stage( &
   real :: MeshCoef0, MeshCoef1, &
           MeshCoef2, MeshCoef3, &
           MeshCoef4
+  ! ----------------------------------------------------
+  ! JMB: 06/27/2016:---- THERMAL CONDUCTION & VISCOSITY
+  ! ----------------------------------------------------
+  real, dimension(1:nAlts)    :: VertVisc
+  real, dimension(1:nAlts)    :: ThermalCond
 
   !--------------------------------------------------------------------------
   NS = exp(LogNS)
@@ -493,8 +499,8 @@ subroutine advance_vertical_1stage( &
   enddo
 
   ! Add geometrical correction to gradient and obtain divergence
-  DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)*InvRadialDistance_C
-  DiviVel = GradiVel_CD(:,iUp_) + 2*iVel(1:nAlts,iUp_)*InvRadialDistance_C
+  DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)*InvRadialDistance_C(1:nAlts)
+  DiviVel = GradiVel_CD(:,iUp_) + 2*iVel(1:nAlts,iUp_)*InvRadialDistance_C(1:nAlts)
 
   do iSpecies=1,nSpecies
 
@@ -506,7 +512,7 @@ subroutine advance_vertical_1stage( &
      GradVertVel(:,iSpecies) = GradTmp
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
-          2*VertVel(1:nAlts,iSpecies)*InvRadialDistance_C
+          2*VertVel(1:nAlts,iSpecies)*InvRadialDistance_C(1:nAlts)
 
   enddo
 
@@ -669,6 +675,19 @@ subroutine advance_vertical_1stage( &
      NewVertVel(1:nAlts,1:nSpecies) = nVel(1:nAlts,1:nSpecies)
   endif 
 
+  ! Update with vertical viscosity
+  do iSpecies = 1, nSpecies
+     call calc_vertviscosity(NewVertVel(-1:nAlts+2,iSpecies), &
+                           ViscCoefS_1d( 0:nAlts+1,iSpecies) + &
+                            EddyCoef_1d( 0:nAlts+1)*&
+                                     NS( 0:nAlts+1,iSpecies)*Mass(iSpecies), &
+                                     NS( 0:nAlts+1,iSpecies)*Mass(iSpecies), &
+                               VertVisc( 1:nAlts)) 
+
+     NewVertVel(1:nAlts,iSpecies) = NewVertVel(1:nAlts,iSpecies) + &
+                                      VertVisc(1:nAlts)
+  enddo 
+
   do iAlt = 1, nAlts
 
      do iSpecies=1,nSpecies
@@ -739,6 +758,35 @@ subroutine advance_vertical_1stage( &
 !               Temp(iAlt)*GradLogPress(iAlt)
 
   end do
+  ! Add the Horizontal Wind Viscosity
+     call calc_vertviscosity(NewVel_GD(-1:nAlts+2,iEast_), &
+                           ViscCoef_1d( 0:nAlts+1) + &
+                           EddyCoef_1d( 0:nAlts+1)*Rho(0:nAlts+1), &
+                                    Rho(0:nAlts+1), &
+                              VertVisc( 1:nAlts)) 
+
+     NewVel_GD(1:nAlts,iEast_) = NewVel_GD(1:nAlts,iEast_) + &
+                                      VertVisc(1:nAlts)
+
+  ! Add the Horizontal Wind Viscosity
+     call calc_vertviscosity(NewVel_GD(-1:nAlts+2,iNorth_), &
+                           ViscCoef_1d( 0:nAlts+1) + &
+                           EddyCoef_1d( 0:nAlts+1)*Rho(0:nAlts+1), &
+                                    Rho(0:nAlts+1), &
+                              VertVisc( 1:nAlts)) 
+
+     NewVel_GD(1:nAlts,iNorth_) = NewVel_GD(1:nAlts,iNorth_) + &
+                                      VertVisc(1:nAlts)
+
+  ! Add Conduction in the vertical solver
+  call calc_vertviscosity(NewTemp(-1:nAlts+2), &
+                         KappaTemp_1d( 0:nAlts+1) + &
+                          EddyCoef_1d( 0:nAlts+1)*&
+                                  Rho( 0:nAlts+1)*Cv_1d(0:nAlts+1), &
+                                  Rho( 0:nAlts+1)*Cv_1d(0:nAlts+1), &
+                          ThermalCond( 1:nAlts)) 
+
+  NewTemp(1:nAlts) = NewTemp(1:nAlts) + ThermalCond(1:nAlts)
 
   do iAlt = 1, nAlts
      NewSumRho    = sum( Mass(1:nSpecies)*exp(NewLogNS(iAlt,1:nSpecies)) )
@@ -770,12 +818,12 @@ subroutine calc_rusanov_alts(Var, GradVar, DiffVar)
   ! Gradient based on averaged Left/Right values
   GradVar = 0.5 * &
        (VarLeft(2:nAlts+1)+VarRight(2:nAlts+1) - &
-       VarLeft(1:nAlts)-VarRight(1:nAlts))/dAlt_C
+       VarLeft(1:nAlts)-VarRight(1:nAlts))/dAlt_C(1:nAlts)
 
   ! Rusanov/Lax-Friedrichs diffusive term
   DiffFlux = 0.5 * max(cMax(0:nAlts),cMax(1:nAlts+1)) * (VarRight - VarLeft)
 
-  DiffVar = (DiffFlux(2:nAlts+1) - DiffFlux(1:nAlts))/dAlt_C
+  DiffVar = (DiffFlux(2:nAlts+1) - DiffFlux(1:nAlts))/dAlt_C(1:nAlts)
 
 end subroutine calc_rusanov_alts
 

@@ -82,6 +82,7 @@ real, allocatable :: SpeciesDensityOld(:,:,:,:,:)
 
   real, allocatable :: cp(:,:,:,:)
   real :: ViscCoef(0:nLons+1,0:nLats+1, 0:nAlts+1)
+  real :: ViscCoefS(0:nLons+1,0:nLats+1, 0:nAlts+1,1:nSpecies)
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        MeanIonMass, MeanMajorMass

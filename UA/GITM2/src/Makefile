@@ -78,6 +78,7 @@ OBJECTS = \
 	output_common.o\
 	logfile.o\
 	calc_conduction.o\
+	calc_vertviscosity.o\
 	calc_physics.o\
 	calc_avesza.o\
 	calc_euv.o\

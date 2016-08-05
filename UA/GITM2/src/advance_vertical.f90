@@ -22,6 +22,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        gamma_1d, &
        EddyCoef_1d, &
        ViscCoef_1d, &
+       ViscCoefS_1d, &
+       KappaTemp_1d, &
        Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, &
         Cv_1D, dAltdLon_1D, dAltdLat_1D, SZAVertical
   
@@ -42,9 +44,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
   dAltdLon_1D = dAltdLon_CB(iLon,iLat,0,iBlock)
   dAltdLat_1D = dAltdLat_CB(iLon,iLat,0,iBlock)
-  EddyCoef_1d(1:nAlts) = KappaEddyDiffusion(iLon,iLat,1:nAlts,iBlock)
-  ViscCoef_1d(1:nAlts) = ViscCoef(iLon,iLat,1:nAlts)
-  Cv_1D(1:nAlts) = cp(iLon,iLat,1:nAlts,iBlock)
+  EddyCoef_1d(0:nAlts+1) = KappaEddyDiffusion(iLon,iLat,0:nAlts+1,iBlock)
+  ViscCoef_1d(0:nAlts+1) = ViscCoef(iLon,iLat,0:nAlts+1)
+  ViscCoefS_1d(0:nAlts+1,1:nSpecies) = ViscCoefS(iLon,iLat,0:nAlts+1,1:nSpecies)
+  KappaTemp_1d(0:nAlts+1) = KappaTemp(iLon,iLat,0:nAlts+1,iBlock)
+  Cv_1D(-1:nAlts+2) = cp(iLon,iLat,-1:nAlts+2,iBlock)
   
   if (minval(NDensityS(iLon,iLat,:,1:nSpecies,iBlock)) <= 0.0) then
      write(*,*) "negative density found!"
@@ -93,8 +97,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   ! Cell centered variables
   Gravity_G           = Gravity_GB(iLon, iLat, :, iBlock)
   Altitude_G          = Altitude_GB(iLon, iLat, :, iBlock)
-  dAlt_C              = dAlt_GB(iLon, iLat, 1:nAlts, iBlock)
-  InvRadialDistance_C = InvRadialDistance_GB(iLon, iLat, 1:nAlts, iBlock)
+  dAlt_C              = dAlt_GB(iLon, iLat, -1:nAlts+2, iBlock)
+  InvRadialDistance_C = InvRadialDistance_GB(iLon, iLat, -1:nAlts+2, iBlock)
 
   ! Face centered variables
   ! This is the distance between cell centers. 

@@ -44,6 +44,21 @@ subroutine add_sources
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
      !! To turn off Conduction, turn UseConduction=.false. in UAM.in
 
+!     Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
+!          Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
+!          LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+!          /TempUnit(1:nLons,1:nLats,1:nAlts)&
+!         - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+!           + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+!           + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+!           + AuroralHeating &
+!           + JouleHeating &
+!           + ElectronHeating &
+!           ) &
+!           + Conduction &
+!           + ChemicalHeatingRate &
+!           + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
+
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
@@ -54,10 +69,10 @@ subroutine add_sources
            + AuroralHeating &
            + JouleHeating &
            + ElectronHeating &
-           ) &
-           + Conduction &
+           ) & 
            + ChemicalHeatingRate &
            + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
+
 
      !-------------------------------------------
      ! This is an example of a user output:
@@ -121,9 +136,14 @@ iAlt = 10
 
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
 
+
+!     Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
+!          Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
+!          IonDrag) + Viscosity + GWAccel
+
      Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
           Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
-          IonDrag) + Viscosity + GWAccel
+          IonDrag) + GWAccel
 
      
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in

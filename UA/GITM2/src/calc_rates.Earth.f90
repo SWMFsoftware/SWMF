@@ -81,8 +81,12 @@ subroutine calc_rates(iBlock)
      ViscCoef(1:nLons,1:nLats,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
           TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
-
   enddo
+
+  do iSpecies = 1, nSpecies
+     ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
+      ViscCoef(1:nLons,1:nLats,0:nAlts+1)
+  enddo 
 
   ! Thermal Diffusion is zero for all but the lightest species
   ! Banks and Kockarts suggest Alpha_T = -0.38 for He
@@ -202,10 +206,16 @@ subroutine calc_viscosity(iBlock)
 
   integer, intent(in) :: iBlock
 
+  integer :: iSpecies
   ! This is Earth-based, and 
   ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 4.5e-5 * &
        (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
        TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
+
+  do iSpecies = 1, nSpecies
+     ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
+      ViscCoef(1:nLons,1:nLats,0:nAlts+1)
+  enddo 
 
 end subroutine calc_viscosity
 
