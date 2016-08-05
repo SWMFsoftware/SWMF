@@ -269,12 +269,11 @@ end subroutine get_im_pressure
 
 subroutine apply_im_pressure
 
-  use ModMain,    ONLY: nI, nJ, nK, nBlock, iNewGrid, TauCoupleIm, rhoFloorIm, &
-       time_accurate, Dt, DoCoupleImPressure,DoCoupleImDensity, Unused_B
+  use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iNewGrid, TauCoupleIm, &
+       time_accurate, Dt, DoCoupleImPressure, DoCoupleImDensity, RhoMinDimIm
   use ModAdvance, ONLY: State_VGB, UseAnisoPressure
-  use ModVarIndexes, ONLY: &
-       Ppar_
-  use ModPhysics, ONLY: Si2No_V, UnitT_, UnitRho_
+  use ModVarIndexes, ONLY: Ppar_
+  use ModPhysics, ONLY: Io2No_V, UnitT_, UnitRho_
   use ModImPressure
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
        iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid
@@ -284,24 +283,29 @@ subroutine apply_im_pressure
 
   real :: Factor
 
-  real :: RhoIm_IC(3,1:nI, 1:nJ, 1:nK)
-  real :: pIm_IC(3,1:nI, 1:nJ, 1:nK)
-  real :: TauCoeffIm_C(1:nI, 1:nJ, 1:nK)
-  real :: PparIm_C(1:nI, 1:nJ, 1:nK)
+  real :: RhoIm_IC(3,nI,nJ,nK), RhoMinIm
+  real :: pIm_IC(3,nI,nJ,nK)
+  real :: TauCoeffIm_C(nI,nJ,nK)
+  real :: PparIm_C(nI,nJ,nK)
 
   integer :: iLastPIm = -1, iLastGrid = -1
-
+  integer :: iIonSecond, nIons
   integer :: iBlock
+
   character (len=*), parameter :: NameSub='apply_im_pressure'
   logical :: DoTest, DoTestMe
-  integer :: iIonSecond, nIons
   !----------------------------------------------------------------------------
   if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
-  if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN  ! Nothing to do
+
+  ! Are we coupled at all?
+  if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN  
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   iIonSecond = min(IonFirst_+1, IonLast_)
 
-  call set_oktest(NameSub, DoTest, DoTestMe)
+  ! Set density floor in normalized units
+  if(DoCoupleImDensity) RhoMinIm = Io2No_V(UnitRho_)*RhoMinDimIm
 
   ! redo ray tracing if necessary 
   ! (load_balance takes care of new decomposition)
@@ -325,14 +329,14 @@ subroutine apply_im_pressure
      ! A typical value might be 5, to get close to the IM pressure 
      ! in 10 seconds
 
-     Factor = 1.0/(TauCoupleIM*Si2No_V(UnitT_))
+     Factor = 1.0/(TauCoupleIM*Io2No_V(UnitT_))
 
   else
      ! Ramp up is based on number of iterations: p' = (ntau*p + pIm)/(1+ntau)
      ! A typical value might be 20, to get close to the IM pressure 
      ! in 20 iterations
 
-     Factor = 1.0/(1.0+TauCoupleIM)
+     Factor = 1.0/(1 + TauCoupleIM)
 
   end if
 
@@ -385,11 +389,10 @@ subroutine apply_im_pressure
            end if
         end if
         if(DoCoupleImDensity)then
-           write(*,*) Si2No_V(UnitRho_)*rhoFloorIm, maxval(State_VGB(iRho_I(1),1:nI,1:nJ,1:nK,iBlock))
            do iFluid = 1, nIons
               where(RhoIm_IC(iFluid,:,:,:) > 0.0) &
-                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = max( &
-                   Si2No_V(UnitRho_)*rhoFloorIm, &
+                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = &
+                   max( RhoMinIm, &
                    State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)   &
                    + min(1.0, Factor * Dt) * TauCoeffIm_C &
                    * (RhoIm_IC(iFluid,:,:,:) - &
@@ -414,9 +417,10 @@ subroutine apply_im_pressure
         if(DoCoupleImDensity)then
            do iFluid = 1, nIons
               where(RhoIm_IC(iFluid,:,:,:) > 0.0) &
-                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = Factor* &
-                   (TauCoupleIM*State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) + &
-                   RhoIm_IC(iFluid,:,:,:))
+                   State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock) = &
+                   max(RhoMinIm, Factor*( &
+                   TauCoupleIM*State_VGB(iRho_I(iFluid),1:nI,1:nJ,1:nK,iBlock)&
+                   + RhoIm_IC(iFluid,:,:,:)))
            end do
         end if
      end if
