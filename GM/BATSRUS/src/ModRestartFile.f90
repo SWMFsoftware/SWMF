@@ -311,10 +311,16 @@ contains
        if (.not.Unused_B(iBlock)) call fix_block_geometry(iBlock)
     end do
 
-    if(SignB_>1 .and. DoThinCurrentSheet)then
-       do iBlock = 1, nBlock
-          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
-       end do
+    if(SignB_>1)then
+       if(DoThinCurrentSheet)then
+          do iBlock = 1, nBlock
+             if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
+          end do
+       else
+          do iBlock = 1, nBlock
+             if (.not.Unused_B(iBlock)) State_VGB(SignB_,:,:,:,iBlock) = 0
+          end do
+       end if
     end if
     ! The subtraction of B0 from full B0+B1 to obtain B1 is in set_ICs
     ! after B0 is set
