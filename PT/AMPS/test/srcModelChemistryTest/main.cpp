@@ -915,6 +915,10 @@ void Test2(double ReactionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies]) {
 //test the chemistry model
 int main(int argc,char **argv) {
   int s;
+
+  //set the reflective boundary conditions on the boundary of the computational domain
+  PIC::Mover::ProcessOutsideDomainParticles=ProcessOutsideDomainParticles;
+
   amps_init();
 
   //set time step different for each species
@@ -923,9 +927,6 @@ int main(int argc,char **argv) {
 
   for (s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalTimeStep[s]=-1.0;
   PIC::ParticleWeightTimeStep::initTimeStep();
-
-  //set the reflective boundary conditions on the boundary of the computational domain
-  PIC::Mover::ProcessOutsideDomainParticles=ProcessOutsideDomainParticles;
 
   //init the reaction ProductionYieldTable table
   double TotalProductYeld_PhotolyticReaction[PIC::nTotalSpecies][PIC::nTotalSpecies];
