@@ -24,6 +24,10 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 #endmain
 
 #General
+
+  DomainBoundaryParticleIntersection=user-defined \\ !delete \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
+    function = NULL 
+
   NastranSurfaceUserData=on 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
   define _SIMULATION_TIME_STEP_MODE_ _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_ 
