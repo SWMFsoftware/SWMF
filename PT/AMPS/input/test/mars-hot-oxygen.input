@@ -42,6 +42,10 @@ CouplerMode=off !!!ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
+
+  DomainBoundaryParticleIntersection=user-defined \\ !delete \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
+    function = newMars::ProcessOutsideDomainParticles
+
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
