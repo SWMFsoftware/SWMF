@@ -90,8 +90,8 @@ rundir:
 		fi;)
 	cd ${RUNDIR}/PW; \
 		mkdir restartIN restartOUT plots; \
-		cp ${MYDIR}/data/input/${PLANET}/restart_iline* restartIN/ ;\
-		cp ${MYDIR}/data/input/${PLANET}/North.dat .;\
+		cp ${MYDIR}/data/input/${PLANET}/restartfiles/restart_iline* restartIN/ ;\
+		cp ${MYDIR}/data/input/${PLANET}/*.dat .;\
 		cp -r ${MYDIR}/data/IRI_DATA .;\
 		cp -r ${MYDIR}/data/nightside_fluxes/*dat .;\
 		cp ${MYDIR}/data/input/*dat .
