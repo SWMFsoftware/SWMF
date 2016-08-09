@@ -31,7 +31,7 @@ void OH::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
 
 void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode){
 
-  double S1=0.0, S2[3]={0.0}, S3=0.0;
+  double S1=0.0, S2[3]={0.0,0.0,0.0}, S3=0.0;
   int i,idim;
   char *offset;
 
@@ -143,7 +143,7 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 
   PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
   PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
-  PlasmaTemperature   = PlasmaPressure / (Kbol * PlasmaNumberDensity);
+  PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
   PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
 
   PhotolyticReactionAllowedFlag=true;
@@ -225,7 +225,8 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
     //account for the parent particle correction factor
     ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
-    // new particle comes from solar wind and has velocity ~ plasma bulk velocity
+    // new particle comes from solar wind and has random velocity from proton distribution as done
+    // in Daldroff et al. 2014 for MHD-EPIC
     double PlasmaBulkVelocity[3];
     {
       PIC::CPLR::InitInterpolationStencil(xParent,node);
