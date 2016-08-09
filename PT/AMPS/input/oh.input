@@ -64,6 +64,14 @@ CouplerMode=swmf !ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  SaveParticleRestartFile=on  \\  !on,off
+    file=AMPS.restart \\
+    SaveMode=overwrite  \\ !overwrite, newfile
+    IterationInterval=20
+
+  RecoverParticleData=off  \\ !on, off
+    file=AMPS.restart
+
 #endGeneral
 
 #block ../oh.input.pl !process the settings of the Outer Heliosphere model
@@ -73,7 +81,7 @@ CouplerMode=swmf !ices !!off, ices, swmf
 
   !injection of the neutrals
   InjectionVelocity=(26.3E3,0.0,-2.3E3);!default=(26.3E3,0.0,-2.3E3)
-  InjectionNDensity= 0.18E-6;		!default=0.18E-6
+  InjectionNDensity= 0.18E6;		!default=0.18E6
   InjectionTemperature=6519;		!default=6519
   
   !domain settings
