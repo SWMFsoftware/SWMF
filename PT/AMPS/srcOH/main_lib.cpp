@@ -30,17 +30,6 @@
 const double StretchCoefficient=1.0;
 const double DebugRunMultiplier=4.0;
 
-//
-const double xMaxDomain=1500*1.5E11; //meters
-
-//the minimum size of the domain in the direction perpendicular to the direction to the sun
-const double yMaxDomain=500*1.5E11; //meters
-
-const double dxMinGlobal=DebugRunMultiplier*30 *1.5E11;
-const double dxMaxGlobal=DebugRunMultiplier*150*1.5E11;
-
-
-
 //the mesh resolution
 double localResolution(double *x) {
   int idim;
@@ -53,7 +42,7 @@ double localResolution(double *x) {
 //set up the local time step
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=1.0E6;
+  double CharacteristicSpeed=5.0E4;
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
@@ -210,44 +199,6 @@ void amps_init_mesh(){
   if (DIM>1) minBlockCellsnumber=min(minBlockCellsnumber,_BLOCK_CELLS_Y_);
   if (DIM>2) minBlockCellsnumber=min(minBlockCellsnumber,_BLOCK_CELLS_Z_);
   
-  double DomainLength[3],DomainCenterOffset[3],xmax[3]={0.0,0.0,0.0},xmin[3]={0.0,0.0,0.0};
-  
-  if (maxBlockCellsnumber==minBlockCellsnumber) {
-    for (idim=0;idim<DIM;idim++) {
-      DomainLength[idim]=2.0*xMaxDomain*StretchCoefficient;
-      DomainCenterOffset[idim]=-xMaxDomain*StretchCoefficient;
-    }
-  }
-  else {
-    if (maxBlockCellsnumber!=_BLOCK_CELLS_X_) exit(__LINE__,__FILE__);
-    if (minBlockCellsnumber!=_BLOCK_CELLS_Y_) exit(__LINE__,__FILE__);
-    if (minBlockCellsnumber!=_BLOCK_CELLS_Z_) exit(__LINE__,__FILE__);
-    
-    DomainLength[0]=xMaxDomain*StretchCoefficient*(1.0+double(_BLOCK_CELLS_Y_)/_BLOCK_CELLS_X_);
-    DomainLength[1]=DomainLength[0]*double(_BLOCK_CELLS_Y_)/_BLOCK_CELLS_X_;
-    DomainLength[2]=DomainLength[0]*double(_BLOCK_CELLS_Z_)/_BLOCK_CELLS_X_;
-    
-    if (DomainLength[1]<2.01*yMaxDomain*_RADIUS_(_TARGET_)) {
-      double r;
-      
-      printf("Size of the domain is smaller that the radius of the body: the size of the domain is readjusted\n");
-      r=2.01*yMaxDomain*_RADIUS_(_TARGET_)/DomainLength[1];
-      
-      for (idim=0;idim<DIM;idim++) DomainLength[idim]*=r;
-    }
-    
-    DomainCenterOffset[0]=-yMaxDomain*StretchCoefficient;
-    DomainCenterOffset[1]=-DomainLength[1]/2.0;
-    DomainCenterOffset[2]=-DomainLength[2]/2.0;
-  }
-  
-  
-  for (idim=0;idim<DIM;idim++) {
-    xmax[idim]=-DomainCenterOffset[idim];
-    xmin[idim]=-(DomainLength[idim]+DomainCenterOffset[idim]);
-  }
-  
-  
   //generate only the tree
   PIC::Mesh::mesh.AllowBlockAllocation=false;
   PIC::Mesh::mesh.init(OH::DomainXMin,OH::DomainXMax,localResolution);
@@ -264,7 +215,7 @@ void amps_init_mesh(){
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
   
-  //  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
+  // cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
   
   PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
   
