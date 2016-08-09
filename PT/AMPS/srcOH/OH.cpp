@@ -7,7 +7,7 @@ double OH::UserGlobalTimeStep = -1.0;
 
 //  injection boundary condition
 double OH::InjectionVelocity[3] = {26.3E3, 0.0, -2.3E3};
-double OH::InjectionNDensity    = 0.18E-6;
+double OH::InjectionNDensity    = 0.18E6;
 double OH::InjectionTemperature = 6519;
 
 // computational domain size
