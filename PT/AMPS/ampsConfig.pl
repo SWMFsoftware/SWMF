@@ -1358,6 +1358,49 @@ sub ReadGeneralBlock {
   
       ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","pic/picGlobal.dfn");
     }
+    
+    
+    #read injection BC section 
+    elsif ($InputLine eq "INJECTIONBOUNDARYCONDITIONS")  {
+      $InputComment=~s/[()=]/ /g;
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+           
+      if ($InputLine eq "OPENFLOW") {
+        my @ApplyBoundaryConditionMask=((0)x$TotalSpeciesNumber);
+        my $nspec;
+        my $mask="{";
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        while (defined $InputLine) {
+          $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+          $ApplyBoundaryConditionMask[$nspec]=1;
+          
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        }
+        
+        for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+          if ($i>0) {
+            $mask=$mask.",";
+          }
+          
+          if ($ApplyBoundaryConditionMask[$i]==0) {
+            $mask=$mask."false";
+          }
+          else {
+            $mask=$mask."true";
+          }
+        }
+        
+        $mask=$mask."}";
+        
+        ampsConfigLib::ChangeValueOfVariable("bool PIC::BC::ExternalBoundary::OpenFlow::BoundaryInjectionFlag\\[PIC::nTotalSpecies\\]",$mask,"pic/pic_bc.cpp");
+        ampsConfigLib::RedefineMacro("_PIC_BC__OPEN_FLOW_INJECTION__MODE_","_PIC_BC__OPEN_FLOW_INJECTION__MODE_ON_","pic/picGlobal.dfn");        
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
      
     elsif ($InputLine eq "#ENDGENERAL") {
       last;
