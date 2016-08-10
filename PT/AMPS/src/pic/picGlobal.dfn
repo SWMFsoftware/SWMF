@@ -287,3 +287,6 @@ at the end of each time step
 
 //processing of the particle intersection with the domain boundary
 #define _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE_
+
+//Free flow injection boundary mode
+#define _PIC_BC__OPEN_FLOW_INJECTION__MODE_  _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_

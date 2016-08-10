@@ -229,6 +229,10 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__PERIODIC_CONDITION_     2
 #define _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_          3
 
+//Open flow injection boundary mode
+#define _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_  0
+#define _PIC_BC__OPEN_FLOW_INJECTION__MODE_ON_   1
+
 
 
 
