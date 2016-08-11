@@ -61,7 +61,7 @@ Module ModCommonPlanet
   
   ! For Plotting
   integer, parameter :: nPlotVar = 20
-  character(len=79), parameter :: NamePlotVar= &
+  character(len=100), parameter :: NamePlotVar= &
  'r Lat Lon uH3 uH uH2 ue lgnH3 lgnH lgnH2 lgne TH3 TH TH2 Te MH3 MH MH2 Me Ef Pe g'
   integer, parameter :: nPlotVarNeutral = 6
   character(len=79), parameter :: NamePlotVarNeutral= &
