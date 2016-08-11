@@ -4333,6 +4333,27 @@ namespace PIC {
     typedef long int (*fExosphereModelExtraInjectionFunction)();
     extern fExosphereModelExtraInjectionFunction ExosphereModelExtraInjectionFunction;
 
+    namespace ExternalBoundary {
+
+       //get direction of the gas flow at the boundary of the computational domain
+      int ExternalBoundaryFlowDirection(int spec,int nface, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+
+      //free flow boundary (particle injection from the external boundary with the macroscopic flow conditions at the internal side of the boundary)
+      namespace OpenFlow {
+        extern bool BoundaryInjectionFlag[PIC::nTotalSpecies];
+        extern list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* > InjectionBlocksList;
+        extern bool InjectionBlocksListInitFlag;
+
+        //init the list of the injection blocks
+        void InitBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
+
+        //particle injection functions
+        int InjectBlock(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,int nInjectionFace=-1);
+        void Inject();
+      }
+
+    }
+
     namespace InternalBoundary {
 
       namespace Sphere {
