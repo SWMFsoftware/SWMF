@@ -25,6 +25,8 @@ module ModUtilities
   public:: make_dir
   public:: check_dir
   public:: fix_dir_name
+  public:: open_file
+  public:: close_file
   public:: flush_unit
   public:: split_string
   public:: join_string
@@ -125,7 +127,8 @@ contains
        if(k > 1) j = i + k - 1
 
        ! Create (sub)directory
-       iError = make_dir_c(NameDir(1:j)//C_NULL_CHAR, iPermission, iErrorNumber)
+       iError = &
+            make_dir_c(NameDir(1:j)//C_NULL_CHAR, iPermission, iErrorNumber)
 
        ! Check for errors
        if(iError /= 0)then
@@ -135,7 +138,8 @@ contains
              RETURN
           else
              write(*,*) NameSub,' iError, iErrorNumber=', iError, iErrorNumber 
-             call CON_stop(NameSub//' failed to open directory '//trim(NameDir))
+             call CON_stop(NameSub// &
+                  ' failed to open directory '//trim(NameDir))
           end if
        end if
 
@@ -218,6 +222,77 @@ contains
     NameDir(i+1:i+1) = '/'
 
   end subroutine fix_dir_name
+
+  !============================================================================
+  subroutine open_file(iUnitIn, File, Form, Status)
+
+    use ModIoUnit, ONLY: UNITTMP_
+
+    ! Interface for the Fortran open statement with error checking
+    ! If no unit number is passed, open UnitTmp_
+
+    integer, optional, intent(in):: iUnitIn
+    character(len=*), optional, intent(in):: File
+    character(len=*), optional, intent(in):: Form
+    character(len=*), optional, intent(in):: Status
+
+    character(len=20):: TypeForm
+    character(len=20):: TypeStatus
+
+    integer:: iUnit
+    integer:: iError
+
+    character(len=*), parameter:: NameSub = 'open_file'
+    !----------------------------------------------------------------------
+    iUnit = UnitTmp_
+    if(present(iUnitIn)) iUnit = iUnitIn
+
+    TypeForm = 'formatted'
+    if(present(Form)) TypeForm = Form
+
+    TypeStatus = 'replace'
+    if(present(Status)) TypeStatus = Status
+
+    open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, IOSTAT=iError)
+
+    if(iError /= 0)then
+       write(*,*) NameSub,' iUnit, iError=', iUnit, iError
+       call CON_stop(NameSub//' could not open file='//trim(File))
+    end if
+
+  end subroutine open_file
+
+  !========================================================================
+  subroutine close_file(iUnitIn, Status)
+
+    use ModIoUnit, ONLY: UNITTMP_
+
+    ! Interface for the Fortran close statement with error checking
+    ! If no unit number is passed, close UnitTmp_
+
+    integer, optional, intent(in):: iUnitIn
+    character(len=*), optional, intent(in):: Status
+
+    integer:: iUnit
+    integer:: iError
+
+    character(len=*), parameter:: NameSub = 'close_file'
+    !----------------------------------------------------------------------
+    iUnit = UnitTmp_
+    if(present(iUnitIn)) iUnit = iUnitIn
+
+    if(present(Status))then
+       close(iUnit, STATUS=Status, IOSTAT=iError)
+    else
+       close(iUnit, IOSTAT=iError)
+    end if
+
+    if(iError /= 0)then
+       write(*,*) NameSub,' iUnit, iError=', iUnit, iError
+       call CON_stop(NameSub//' could not close unit')
+    end if
+
+  end subroutine close_file
 
   !BOP ========================================================================
   !ROUTINE: flush_unit - flush output
@@ -634,6 +709,7 @@ contains
   !============================================================================
   subroutine test_mod_utility
 
+    use ModIoUnit, ONLY: UnitTmp_
     use iso_c_binding, ONLY: c_null_char
 
     ! Test split_string, read a string containing separators 
@@ -664,6 +740,13 @@ contains
     write(*,'(a)') 'make xxx/ directory again (should not produce an error)'
     call make_dir('xxx', iErrorOut=iError)
     write(*,*) iError
+
+    write(*,'(a)') 'testing open_file and close_file'
+    call open_file(FILE='xxx/testfile.dat')
+    write(UnitTmp_,'(a)') 'Some text'
+    call close_file
+    call open_file(FILE='xxx/testfile.dat',STATUS='old')
+    call close_file(STATUS='DELETE')
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
