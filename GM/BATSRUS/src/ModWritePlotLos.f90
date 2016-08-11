@@ -63,7 +63,8 @@ subroutine write_plot_los(iFile)
   use ModMpi
   use CON_axes, ONLY : transform_matrix
   use ModCoordTransform, ONLY : rot_matrix_z, cross_product
-  use ModUtilities, ONLY: lower_case, split_string, join_string
+  use ModUtilities, ONLY: lower_case, split_string, join_string, &
+       open_file, close_file
   use ModPlotFile, ONLY: save_plot_file
   use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
   use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
@@ -428,8 +429,7 @@ subroutine write_plot_los(iFile)
      ! write header file
 
      if(plot_form(ifile)=='tec') then
-        open(UnitTmp_,file=filename,status="replace",IOSTAT = iError)
-        if(iError /= 0)call stop_mpi(NameSub//" ERROR opening "//filename)
+        call open_file(FILE=filename)
 
         write(UnitTmp_,*) 'TITLE="BATSRUS: Synthetic Image"'
         write(UnitTmp_,'(a)')trim(unitstr_TEC)
@@ -489,7 +489,7 @@ subroutine write_plot_los(iFile)
 
            end do
         end do
-        close(UnitTmp_)
+        call close_file
      else
         ! description of file contains units, physics and dimension
         StringHeadLine = 'LOS integrals'

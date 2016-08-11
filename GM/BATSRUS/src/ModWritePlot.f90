@@ -18,7 +18,7 @@ subroutine write_plot_common(iFile)
   use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
-  use ModUtilities, ONLY: split_string, join_string
+  use ModUtilities, ONLY: split_string, join_string, open_file, close_file
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim, &
@@ -221,33 +221,15 @@ subroutine write_plot_common(iFile)
         filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
         filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
         ! open the files
-        open(UnitTmp_ , file=filename_n, status="replace", form=TypeForm, &
-             IOSTAT=iError)
-        if(iError /= 0)then
-           write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
-           call stop_mpi(NameSub//' file open error 1')
-        endif
-        open(UnitTmp2_, file=filename_s, status="replace", form=TypeForm, &
-             IOSTAT=iError)
-        if(iError /= 0)then
-           write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
-           call stop_mpi(NameSub//' file open error 2')
-        endif
+        call open_file(UnitTmp_,  FILE=filename_n, form=TypeForm)
+        call open_file(UnitTmp2_, FILE=filename_s, form=TypeForm)
      end if
   elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
-     open(UnitTmp_ , file=filename_n, status="replace", IOSTAT=iError)
-     if(iError /= 0)then
-        write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
-        call stop_mpi(NameSub//' file open error 3')
-     endif
-     open(UnitTmp2_, file=filename_s, status="replace", IOSTAT=iError)
-     if(iError /= 0)then
-        write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
-        call stop_mpi(NameSub//' file open error 4')
-     endif
+     call open_file(UnitTmp_,  FILE=filename_n)
+     call open_file(UnitTmp2_, FILE=filename_s)
   elseif(plot_form(iFile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
@@ -255,13 +237,7 @@ subroutine write_plot_common(iFile)
   else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
-     open(UnitTmp_, file=filename, status="replace", form=TypeForm, &
-          IOSTAT=iError)
-     if(iError /= 0)then
-        write(*,*) 'Error opening ',trim(filename),' form=', TypeForm, &
-             ' iError=', iError
-        call stop_mpi(NameSub//' file open error 5')
-     endif
+     call open_file(FILE=filename, form=TypeForm)
   end if
 
   if (IsSphPlot) then
@@ -474,12 +450,12 @@ subroutine write_plot_common(iFile)
   end if
 
   if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0) then
-     close(UnitTmp_, status = 'DELETE')
+     call close_file(status = 'DELETE')
   else
-     close(UnitTmp_)
+     call close_file
   end if
 
-  if(IsSphPlot .or. plot_form(iFile)=='tec') close(UnitTmp2_)
+  if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
@@ -538,11 +514,7 @@ subroutine write_plot_common(iFile)
               nGLOBALcells = nGLOBALcellsS
            end if
         end if
-        open(UnitTmp_,file=filename,status="replace", IOSTAT=iError)
-        if(iError /= 0)then
-           write(*,*) 'Error opening ',trim(filename),' iError=',iError
-           call stop_mpi(NameSub//' file open error 6')
-        endif
+        call open_file(FILE=filename)
 
         select case(plot_form(iFile))
         case('tec')
@@ -682,7 +654,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,*)
 
         end select
-        close(UnitTmp_)
+        call close_file
      end do
 
   end if

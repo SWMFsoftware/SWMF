@@ -35,7 +35,7 @@ subroutine MH_set_parameters(TypeAction)
   use CON_axes,         ONLY: init_axes, get_axes, &
        dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
   use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
-       split_string, join_string
+       split_string, join_string, open_file
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModReadParam
@@ -357,7 +357,7 @@ subroutine MH_set_parameters(TypeAction)
            if(UseTimingAll)then
               iUnitTiming = io_unit_new()
               write(NameTimingFile,'(a,i6.6)') 'timing.pe', iProc
-              open(iUnitTiming, FILE=NameTimingFile, STATUS='replace')
+              call open_file(iUnitTiming, FILE=NameTimingFile)
               call timing_iounit(iUnitTiming)
               call timing_comp_proc("  ",iProc)
            end if

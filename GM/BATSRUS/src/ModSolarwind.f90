@@ -94,13 +94,14 @@ contains
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
          nVectorVar, iVectorVar_I
 
-    use ModIoUnit, ONLY : UNITTMP_
+    use ModIoUnit, ONLY: UnitTmp_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
     use ModConst, ONLY: cDay => cSecondPerDay
     use CON_geopack, ONLY: geopack_recalc, HgiGse_DD, GsmGse_DD
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModTimeConvert, ONLY: time_int_to_real
-    use ModUtilities, ONLY: upper_case, lower_case, split_string
+    use ModUtilities, ONLY: upper_case, lower_case, split_string, &
+         open_file, close_file
 
     character(len=500):: StringInputVar
 
@@ -142,11 +143,8 @@ contains
     iVarInput_V(1:8) = (/ Bx_, By_, Bz_, Ux_, Uy_, Uz_, Rho_, p_ /)
     if(UseMultiSpecies) iVarInput_V(7) = SpeciesFirst_
 
-    ! Read and convert INPUT data on processor 0 then broadcast to others
-    open(UNITTMP_, file=NameSolarwindFile, status="old", iostat = iError)
-
-    if (iError /= 0) call stop_mpi(NameSub// &
-         ": Unable to open file "//trim(NameSolarwindFile))
+    ! Read solar wind file on all processors in parallel
+    call open_file(FILE=NameSolarwindFile, STATUS="old")
 
     nData = 0
     if(lVerbose>0 .and. iProc==0)then
@@ -156,20 +154,20 @@ contains
 
     ! Read header information
     do
-       read(UNITTMP_,'(a)', iostat = iError ) line
+       read(UnitTmp_,'(a)', iostat = iError ) line
        if (iError /= 0) call stop_mpi(NameSub// &
             ': could not find #START in '//trim(NameSolarwindFile))
 
-       if(index(line,'#REREAD')>0) read(UNITTMP_,*) DoReadAgain
+       if(index(line,'#REREAD')>0) read(UnitTmp_,*) DoReadAgain
 
        if(index(line,'#COOR')>0)then
-          read(UNITTMP_,'(a)') NameInputCoord
+          read(UnitTmp_,'(a)') NameInputCoord
           call upper_case(NameInputCoord)
        endif
 
        if(index(line,'#PLANE')>0)then
-          read(UNITTMP_,*) PlaneAngleXY
-          read(UNITTMP_,*) PlaneAngleXZ
+          read(UnitTmp_,*) PlaneAngleXY
+          read(UnitTmp_,*) PlaneAngleXZ
           PlaneAngleXY = PlaneAngleXY * cDegToRad
           PlaneAngleXZ = PlaneAngleXZ * cDegToRad
 
@@ -187,7 +185,7 @@ contains
        endif
 
        if(index(line,'#VAR')>0)then
-          read(UNITTMP_,'(a)', iostat = iError) StringInputVar
+          read(UnitTmp_,'(a)', iostat = iError) StringInputVar
           call split_string(StringInputVar, nVar, NameInputVar_I, nVarInput)
           UseNumberDensity = .false.
           UseTemperature   = .false.
@@ -238,19 +236,19 @@ contains
        end if
 
        if(index(line,'#POSITION')>0)then
-          read(UNITTMP_,*) SatelliteXyz_D(2)
-          read(UNITTMP_,*) SatelliteXyz_D(3)
+          read(UnitTmp_,*) SatelliteXyz_D(2)
+          read(UnitTmp_,*) SatelliteXyz_D(3)
        endif
 
        if(index(line,'#SATELLITEXYZ')>0)then
-          read(UNITTMP_,*) SatelliteXyz_D(1)
-          read(UNITTMP_,*) SatelliteXyz_D(2)
-          read(UNITTMP_,*) SatelliteXyz_D(3)
+          read(UnitTmp_,*) SatelliteXyz_D(1)
+          read(UnitTmp_,*) SatelliteXyz_D(2)
+          read(UnitTmp_,*) SatelliteXyz_D(3)
        endif
 
-       if(index(line,'#ZEROBX')>0)    read(UNITTMP_,*) UseZeroBx
+       if(index(line,'#ZEROBX')>0)    read(UnitTmp_,*) UseZeroBx
 
-       if(index(line,'#TIMEDELAY')>0) read(UNITTMP_,*) TimeDelay
+       if(index(line,'#TIMEDELAY')>0) read(UnitTmp_,*) TimeDelay
 
        if(index(line,'#START')>0) EXIT
     end do
@@ -265,7 +263,7 @@ contains
 
     ! Read the data
     do
-       read(UNITTMP_, *, iostat=iError) iTime_I, TmpData_V(1:nVarInput)
+       read(UnitTmp_, *, IOSTAT=iError) iTime_I, TmpData_V(1:nVarInput)
        if (iError /= 0) EXIT
 
        if (nData >= MaxData) then
@@ -346,7 +344,7 @@ contains
        endif
     enddo
 
-    close(UNITTMP_)
+    call close_file
 
     ! Check if the start time is within 1 day of the input data
     if ( StartTime + Time_Simulation < Time_I(1) - cDay .or. &

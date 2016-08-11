@@ -5,7 +5,7 @@ program BATSRUS
 
   use ModKind
   use ModProcMH, ONLY: iComm, iProc, nProc
-  use ModIoUnit, ONLY: UNITTMP_
+  use ModUtilities, ONLY: open_file, close_file
   use ModMain, ONLY: &
        IsStandAlone, &
        time_accurate, time_loop, time_simulation, t_max, &
@@ -70,14 +70,14 @@ program BATSRUS
 
      inquire(file='BATSRUS.SUCCESS',EXIST=IsFound)
      if(IsFound)then
-        open(UNITTMP_, file = 'BATSRUS.SUCCESS')
-        close(UNITTMP_,STATUS = 'DELETE')
+        call open_file(file='BATSRUS.SUCCESS')
+        call close_file(STATUS = 'DELETE')
      end if
 
      inquire(file='BATSRUS.STOP',EXIST=IsFound)
      if (IsFound) then
-        open(UNITTMP_, file = 'BATSRUS.STOP')
-        close(UNITTMP_, STATUS = 'DELETE')
+        call open_file(FILE='BATSRUS.STOP')
+        call close_file(STATUS='DELETE')
      endif
 
   end if
@@ -182,8 +182,8 @@ program BATSRUS
   ! Touch BATSRUS.SUCCESS
   !/
   if(iProc==0)then
-     open(UNITTMP_, file = 'BATSRUS.SUCCESS')
-     close(UNITTMP_)
+     call open_file(FILE='BATSRUS.SUCCESS')
+     call close_file
   end if
 
   call MPI_finalize(iError)

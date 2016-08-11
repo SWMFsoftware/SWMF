@@ -113,6 +113,7 @@ contains
   subroutine read_gen_radial_grid(NameFile)
 
     use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     character(len=*), intent(in) :: NameFile
 
@@ -128,9 +129,7 @@ contains
     ! The formate is a single column with number of points in the 
     ! first row, and the folling rows the log(r) value from gen = 0 to 1
 
-    open(UnitTmp_, FILE=NameFile, STATUS='old', IOSTAT=iError)
-    if(iError /= 0) call CON_stop(NameSub// &
-         ' could not open grid file = ' // trim(NameFile))
+    call open_file(FILE=NameFile, STATUS='old')
 
     ! read in nGrid 
     read(UnitTmp_,*,iostat=iError) nGrid
@@ -153,7 +152,7 @@ contains
        LogRGen_I(i) = LogR
     enddo
 
-    close(UnitTmp_)
+    call close_file
 
   end subroutine read_gen_radial_grid
   !===========================================================================

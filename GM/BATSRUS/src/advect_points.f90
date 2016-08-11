@@ -366,7 +366,10 @@ subroutine advect_test
   use BATL_lib,    ONLY: Xyz_DGB, x_, z_
   use ModNumConst, ONLY: cTwoPi
   use ModIoUnit,   ONLY: UnitTmp_
+  use ModUtilities,ONLY: open_file, close_file
+
   implicit none
+
   integer, parameter :: nStep=100, nPoint = 1000
   real,    parameter :: Ux = 1.0/cTwoPi, Uz = -2.0/cTwoPi
   integer :: iPoint, iStep
@@ -397,7 +400,7 @@ subroutine advect_test
   Dt = cTwoPi/nStep
 
   if(iProc==0)then
-     open(UnitTmp_,file='advect_test.log')
+     call open_file(FILE='advect_test.log')
      write(UnitTmp_,'(a)')'Shifted circle'
      write(UnitTmp_,'(a)')'x1 y1 z1 xM yM zM xN yN zN'
   end if
@@ -421,7 +424,7 @@ subroutine advect_test
           Xyz_DI(:,1),Xyz_DI(:,nPoint/2), Xyz_DI(:,nPoint)
   end do
 
-  if(iProc==0)close(UnitTmp_)
+  if(iProc==0)call close_file
 
   call timing_stop(NameSub)
 

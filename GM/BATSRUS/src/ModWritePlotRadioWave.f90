@@ -18,6 +18,7 @@ subroutine write_plot_radiowave(iFile)
   use ModNumConst
   use ModConst
   use ModIO
+  use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit, ONLY: UnitTmp_
 
   implicit none
@@ -238,7 +239,7 @@ subroutine write_plot_radiowave(iFile)
 
      write(*,*) 'filename = ', filename
 
-     open(UnitTmp_, file=filename, status="replace", err=999) !OPEN OPEN
+     call open_file(FILE=filename)
 
      !
      ! Write the file header
@@ -289,7 +290,7 @@ subroutine write_plot_radiowave(iFile)
         end do
      end select
 
-     close(UnitTmp_)  !CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE CLOSE
+     call close_file
 
   end if  !iProc ==0
 
@@ -300,12 +301,6 @@ subroutine write_plot_radiowave(iFile)
   if (oktest_me) write(*,*) 'write_plot_radiowave finished'
 
   call timing_stop('write_plot_radiowave')
-
-  return
-
-999 continue
-
-  call stop_mpi("Error in opening or writing file in write_plot_radiowave")
 
 end subroutine write_plot_radiowave
 

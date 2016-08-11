@@ -21,6 +21,7 @@ module ModRestartFile
        n_prev, ImplOld_VCB, dt_prev
   use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
+  use ModUtilities,  ONLY: open_file, close_file
   use ModGroundMagPerturb, ONLY: DoWriteIndices
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
@@ -383,7 +384,7 @@ contains
     NameFile = trim(NameRestartOutDir)//NameHeaderFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(UnitTmp_,file=NameFile)
+    call open_file(file=NameFile)
 
     write(UnitTmp_,'(a)')'#CODEVERSION'
     write(UnitTmp_,'(f5.2,a35)')CodeVersion,'CodeVersion'
@@ -567,7 +568,7 @@ contains
     write(UnitTmp_,'(a)')'No2Io_V='
     write(UnitTmp_,'(100es13.5)') No2Io_V
 
-    close(UnitTmp_)
+    call close_file
 
   end subroutine write_restart_header
 
@@ -596,12 +597,12 @@ contains
     ! Save index file
     NameFile = trim(NameRestartOutDir)//NameIndexFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
-    open(UnitTmp_, FILE=NameFile, STATUS='replace')
+    call open_file(FILE=NameFile)
     write(UnitTmp_,*) nBlockAll
     do iMorton = 1, nBlockAll
        write(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
     end do
-    close(UnitTmp_)
+    call close_file
     
   end subroutine write_restart_index
   !===========================================================================
@@ -611,7 +612,7 @@ contains
     !-------------------------------------------------------------------------
     NameFile = trim(NameRestartInDir)//NameIndexFile
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
-    open(UnitTmp_, FILE=NameFile, STATUS='old')
+    call open_file(FILE=NameFile, STATUS='old')
     read(UnitTmp_,*) nBlockAllRead
 
     if(nBlockAllRead /= nBlockAll) &
@@ -620,7 +621,7 @@ contains
     do iMorton = 1, nBlockAll
        read(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
     end do
-    close(UnitTmp_)
+    call close_file
 
   end subroutine read_restart_index
   !============================================================================
@@ -648,11 +649,7 @@ contains
          trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(UnitTmp_, file=NameFile, status='old', form='UNFORMATTED',&
-         iostat = iError)
-
-    if(iError /= 0) call stop_mpi(NameSub// &
-         ' read_restart_file could not open: '//trim(NameFile))
+    call open_file(file=NameFile, status='old', form='UNFORMATTED')
 
     ! Fill in ghost cells
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -718,7 +715,7 @@ contains
     if(iError /= 0) call stop_mpi(NameSub// &
          ' could not read data from '//trim(NameFile))
 
-    close(UnitTmp_)
+    call close_file
 
     if(CodeVersion>5.60 .and. CodeVersion <7.00) &
          dt_BLK(iBlock)=dt_BLK(iBlock)/cfl
@@ -766,7 +763,7 @@ contains
 
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(UnitTmp_, file=NameFile, status="replace", form='UNFORMATTED')
+    call open_file(file=NameFile, form='UNFORMATTED')
 
     write(UnitTmp_) dt_BLK(iBlock),time_Simulation
     write(UnitTmp_) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
@@ -780,7 +777,7 @@ contains
     end if
     if(n_prev==n_step) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
-    close(UnitTmp_)
+    call close_file
 
   end subroutine write_restart_file
 
@@ -898,7 +895,7 @@ contains
           iFile = iFileMorton_I(iMorton)
           iRec  = iRecMorton_I(iMorton)          
           if(iFile /= iFileLast) then
-             if(iFileLast > 0) close(UnitTmp_)
+             if(iFileLast > 0) call close_file
              call open_direct_restart_file(DoRead = .true., iFile = iFile)
              iFileLast = iFile
           end if
@@ -989,7 +986,7 @@ contains
        end if
     end do
 
-    close(UnitTmp_)
+    call close_file
 
   end subroutine read_direct_restart_file
 
@@ -1055,7 +1052,7 @@ contains
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
     end do
 
-    close(UnitTmp_)
+    call close_file
 
   end subroutine write_direct_restart_file
 
@@ -1104,7 +1101,7 @@ contains
     do iDim=1, 2
        ! Open restart file.
        NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
-       open(UnitTmp_, file=NameFile, status='REPLACE')
+       call open_file(file=NameFile)
 
        ! Size of array:
        write(UnitTmp_,*) nKpMag, iSizeKpWindow
@@ -1114,7 +1111,7 @@ contains
              write(UnitTmp_, '(es20.12)' ) MagHistory_DII(iDim, i,j)
           end do
        end do
-       close(UnitTmp_)
+       call close_file
     end do
 
   end subroutine write_geoind_restart
@@ -1153,7 +1150,7 @@ contains
 
        write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
 
-       open(UnitTmp_, file=NameFile, status='OLD', action='READ')
+       call open_file(file=NameFile, status='OLD')
 
        ! Read size of array, ensure that it matches expected.
        ! If not, it means that the restart is incompatible and cannot be used.
@@ -1173,7 +1170,7 @@ contains
              read(UnitTmp_,*) MagHistory_DII(iDim,i,j)
           end do
        end do
-       close(UnitTmp_)
+       call close_file
 
     end do
 

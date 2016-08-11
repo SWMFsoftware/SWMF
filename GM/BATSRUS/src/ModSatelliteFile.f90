@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModSatelliteFile
+
+  use ModUtilities, ONLY: open_file, close_file
 
   implicit none
   save
@@ -224,11 +226,11 @@ contains
           write(*,*) NameSub,': satellitename:', &
                NameSat_I(iSat), 'status =', TypeStatus
           write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
-          write(*,*) NameSub,': NameFile_I(iSat):', NameFile_I(iSat)
+          write(*,*) NameSub,': NameFile_I(iSat):', trim(NameFile_I(iSat))
        end if
 
        iUnitSat_I(iSat) = io_unit_new()
-       open(iUnitSat_I(iSat), file=trim(NameFile_I(iSat)), status='replace')
+       call open_file(iUnitSat_I(iSat), file=NameFile_I(iSat))
 
        IsOpen_I(iSat) = .true.
     case('append')
@@ -239,7 +241,7 @@ contains
           IsOpen_I(iSat) = .true.
        end if
     case('close')
-       if (IsOpen_I(iSat)) close(iUnitSat_I(iSat))
+       if (IsOpen_I(iSat)) call close_file(iUnitSat_I(iSat))
        IsOpen_I(iSat) = .false.
     case default
        call stop_mpi(NameSub//': unknown TypeStatus='//TypeStatus)
@@ -254,8 +256,8 @@ contains
     use ModMain,        ONLY: MaxDim, lVerbose, TypeCoordSystem, StartTime
     use CON_axes,       ONLY: transform_matrix
     use ModTimeConvert, ONLY: time_int_to_real
-    use ModIo,          ONLY: iUnitOut, write_prefix
     use ModIoUnit,      ONLY: UnitTmp_
+    use ModIo,          ONLY: iUnitOut, write_prefix
     use ModKind,        ONLY: Real8_
     use ModMpi
 
@@ -271,12 +273,9 @@ contains
     real, allocatable:: Time_I(:), Xyz_DI(:,:)
     character(len=100):: NameFile
 
-    character(len=*), parameter :: NameSub = 'read_satellite_input_files'
-
     logical :: DoTest, DoTestMe
-
+    character(len=*), parameter :: NameSub = 'read_satellite_input_files'
     !--------------------------------------------------------------------------
-
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! Count maximum number of points by reading all satellite files
@@ -285,9 +284,7 @@ contains
        SATELLITES1: do iSat=1, nSatellite
           if(.not.UseSatFile_I(iSat)) CYCLE SATELLITES1
           NameFile = NameSat_I(iSat)
-          open(UnitTmp_, file=NameFile, status="old", iostat = iError)
-          if (iError /= 0) call stop_mpi(NameSub // &
-               ' ERROR1: unable to open file ' // trim(NameFile))
+          call open_file(file=NameFile, status="old")
           nPoint = 0
 
           TypeSatCoord_I(iSat) = TypeCoordSystem
@@ -303,7 +300,7 @@ contains
                 end do READPOINTS1
              end if
           end do READFILE1
-          close(UnitTmp_)
+          call close_file
           MaxPoint = max(MaxPoint, nPoint)
        end do SATELLITES1
 
@@ -332,9 +329,7 @@ contains
                   " reading: ",trim(NameFile)
           end if
 
-          open(UnitTmp_, file=NameFile, status="old", iostat = iError)
-          if (iError /= 0) call stop_mpi(NameSub // &
-               ' ERROR2: unable to open file ' // trim(NameFile))
+          call open_file(file=NameFile, status="old")
           nPoint = 0
 
           ! Read the file: read #COOR TypeCoord, #START and points
@@ -373,7 +368,7 @@ contains
 
           enddo READFILE
 
-          close(UnitTmp_)
+          call close_file
 
           if(DoTest)write(*,*) NameSub,': nPoint=',nPoint
 

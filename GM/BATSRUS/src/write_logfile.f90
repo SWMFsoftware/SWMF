@@ -10,7 +10,7 @@ subroutine write_logfile(iSatIn, iFile)
   use ModPhysics, ONLY  : Si2Io_V, Si2No_V, UnitT_
   use ModIO
   use ModIoUnit, ONLY   : io_unit_new
-  use ModUtilities, ONLY: flush_unit, split_string
+  use ModUtilities, ONLY: flush_unit, split_string, open_file
   use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
        iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
   use BATL_lib, ONLY: Xyz_DGB
@@ -185,7 +185,7 @@ subroutine write_logfile(iSatIn, iFile)
 
            filename = trim(filename) // '.log'
 
-           open(unit_log,file=filename,status="replace")
+           call open_file(unit_log, FILE=filename)
            if (index(NameAll,'pnt')>0 .or. index(NameAll,'PNT')>0 &
                 .or. index(NameAll,'test')>0) then
    	      if (coord_test) then

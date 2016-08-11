@@ -705,6 +705,7 @@ contains
   subroutine write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
+    use ModUtilities, ONLY: open_file, close_file
     use ModIOUnit, ONLY: UnitTmp_
 
     character(len=*), intent(in) :: NameRestartOutDir
@@ -734,10 +735,10 @@ contains
           CYCLE
        end if
 
-       open(UnitTmp_, file=NameBlockFile, status="replace", form='UNFORMATTED')
+       call open_file(file=NameBlockFile, form='UNFORMATTED')
        write(UnitTmp_) nData_B(iBlock)
        write(UnitTmp_) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
-       close(UnitTmp_)
+       call close_file
     end do
 
     if(DoTestMe)then

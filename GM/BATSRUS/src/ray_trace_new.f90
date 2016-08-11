@@ -1844,7 +1844,7 @@ subroutine plot_ray_equator(iFile)
   use ModNumConst,       ONLY: cDegToRad
   use ModInterpolate,    ONLY: fit_parabola
   use ModVarIndexes,     ONLY: NamePrimitiveVar
-  use ModUtilities,      ONLY: split_string
+  use ModUtilities,      ONLY: split_string, open_file, close_file
 
   implicit none
 
@@ -1960,7 +1960,7 @@ subroutine plot_ray_equator(iFile)
   if(.not.IsMinB)then
 
      NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
-     open(UnitTmp_, FILE=NameFile, STATUS="replace")
+     call open_file(FILE=NameFile)
      write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
      write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p rCurve' 
 
@@ -1976,7 +1976,7 @@ subroutine plot_ray_equator(iFile)
      end do
      deallocate(PlotVar_V)
 
-     close(UnitTmp_)
+     call close_file
   else
      ! StateMinB: x,y,z,state variables and curvature at min B and Z=0
      allocate( &
@@ -2382,6 +2382,7 @@ subroutine test_ray_integral
        nRayIntegral, xyz_to_latlon, iLatTest, iLonTest
   use ModProcMH,   ONLY: iProc
   use ModIoUnit,   ONLY: UNITTMP_
+  use ModUtilities,ONLY: open_file, close_file
   use ModNumConst, ONLY: cTiny
   use ModMain,     ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
   implicit none
@@ -2413,7 +2414,7 @@ subroutine test_ray_integral
      ! Take logarithm of field line volume for better plotting ?
      RayResult_VII(InvB_,:,:)=alog10(RayResult_VII(InvB_,:,:)+cTiny)
 
-     open(UNITTMP_,file='test_ray_integral.dat')
+     call open_file(file='test_ray_integral.dat')
      write(UNITTMP_,"(a79)")'test-ray-integral_var22'
      write(UNITTMP_,"(i7,1pe13.5,3i3)")0, 0.0, 2, 1, nRayIntegral
      write(UNITTMP_,"(3i4)")nLat, nLon
@@ -2446,7 +2447,7 @@ subroutine test_ray_integral
            write(UNITTMP_,"(100(1pe18.10))")Lon,Lat,RayResult_VII(:,iLat,iLon)
         end do
      end do
-     close(UNITTMP_)
+     call close_file
   end if
 
   ! Deallocate buffers ???
@@ -2599,6 +2600,7 @@ subroutine write_plot_line(iFile)
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
   use ModMain,     ONLY: n_step, time_accurate, time_simulation
   use ModIoUnit,   ONLY: UnitTmp_
+  use ModUtilities,ONLY: open_file, close_file
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
   implicit none
@@ -2755,7 +2757,7 @@ subroutine write_plot_line(iFile)
      ! Figure out the number of points for this ray
      if(IsSingleLine) nPoint1 = count(nint(PlotVar_VI(0,1:nPoint))==iLine)
 
-     open(UnitTmp_,file=NameFile)
+     call open_file(FILE=NameFile)
      if(IsIdl)then
         write(UnitTmp_,'(a79)') trim(StringTitle)//'_var11'
         write(UnitTmp_,'(i7,1pe13.5,3i3)') &
@@ -2808,7 +2810,7 @@ subroutine write_plot_line(iFile)
            end if
         end do
      end if
-     close(UnitTmp_)
+     call close_file
   end do
 
   deallocate(PlotVar_VI)
@@ -2868,6 +2870,7 @@ subroutine lcb_plot(iFile)
   use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
   use ModIoUnit,         ONLY: UnitTmp_
+  use ModUtilities,      ONLY: open_file, close_file
   use ModAdvance,        ONLY: nVar
   use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
   use ModNumConst,       ONLY: cDegToRad
@@ -2928,7 +2931,7 @@ subroutine lcb_plot(iFile)
      if(IsPlotName_n) write(FileName,'(a,i7.7)') trim(FileName)//"_n",n_step
      FileName = trim(FileName)//".dat"
 
-     open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
+     call open_file(FILE=trim(FileName), STATUS="replace")
      write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
      if(SaveIntegrals)then
         write(UnitTmp_,'(a)')'VARIABLES="X [R]", "Y [R]", "Z [R]", "1/B", "n", "p"'
@@ -3117,7 +3120,7 @@ subroutine lcb_plot(iFile)
 
   end do  !iDirZ loop
 
-  if(iProc == 0) close(UnitTmp_)
+  if(iProc == 0) call close_file
 
   if(DoTest)write(*,*)NameSub,': finished'
 end subroutine lcb_plot
@@ -3129,6 +3132,7 @@ subroutine ieb_plot(iFile)
   use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
   use ModIoUnit,         ONLY: UnitTmp_
+  use ModUtilities,      ONLY: open_file, close_file
   use ModAdvance,        ONLY: nVar
   use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
   use ModNumConst,       ONLY: cDegToRad
@@ -3208,7 +3212,7 @@ subroutine ieb_plot(iFile)
            end if
            write(FileName,'(a,i7.7,a)') trim(FileName)//"_n", n_step,".dat"
 
-           open( UnitTmp_, FILE=trim(FileName), STATUS="replace")
+           call open_file(FILE=FileName)
            if(Coord == 'GM')then
               write(UnitTmp_,'(a)')'TITLE="IE B traces (GM Coordinates)"'
            else
@@ -3356,7 +3360,7 @@ subroutine ieb_plot(iFile)
               end if
            end if
 
-           close(UnitTmp_)
+           call close_file
         end do
 
         deallocate(PlotVar_VI)

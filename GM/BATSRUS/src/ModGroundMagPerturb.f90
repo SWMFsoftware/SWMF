@@ -261,7 +261,7 @@ contains
 
     ! Initialize variables, arrays, and output file.
     use ModNumConst,  ONLY: cDegToRad, cTwoPi
-    use ModUtilities, ONLY: flush_unit
+    use ModUtilities, ONLY: flush_unit, open_file
     use ModMain,      ONLY: n_step
     use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: io_unit_new
@@ -332,7 +332,7 @@ contains
                trim(NamePlotDir), 'geoindex_n', n_step, '.log'
        end if
        iUnitIndices = io_unit_new()
-       open(iUnitIndices, file=NameFile, status='replace')
+       call open_file(iUnitIndices, file=NameFile, status='replace')
 
        write(iUnitIndices, '(2a,f8.2,a,i4.4)') &
             'Synthetic Geomagnetic Indices', &
@@ -740,6 +740,7 @@ contains
     use ModMain,   ONLY: lVerbose
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO,     ONLY: iUnitOut, Write_prefix
+    use ModUtilities, ONLY: open_file, close_file
 
     use ModMpi
 
@@ -765,9 +766,7 @@ contains
                " reading: ",trim(MagInputFile)
        end if
 
-       open(UnitTmp_, file=MagInputFile, status="old", iostat = iError)
-       if (iError /= 0) call stop_mpi(NameSub // &
-            ' ERROR: unable to open file ' // trim(MagInputFile))
+       call open_file(file=MagInputFile, status="old")
 
        nMag = 0
 
@@ -803,7 +802,7 @@ contains
 
        end do READFILE
 
-       close(UnitTmp_)
+       call close_file
 
        if(DoTest)write(*,*) NameSub,': nMagnetometer=', nMag
 
@@ -830,6 +829,7 @@ contains
     use ModMain, ONLY: lVerbose
     use ModIO, ONLY: iUnitOut, Write_prefix
     use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     use ModMpi
 
@@ -854,7 +854,7 @@ contains
        end if
 
        ! Read in magnetometer positions and names
-       open(UnitTmp_, file=MagInputFile, status="old")
+       call open_file(file=MagInputFile, status="old")
        READFILE: do
           read(UnitTmp_,'(a)') StringLine
           if(index(StringLine, '#START') > 0)then
@@ -864,7 +864,7 @@ contains
              EXIT READFILE
           end if
        end do READFILE
-       close(UnitTmp_)
+       call close_file
     end if
 
     ! Tell the magnetometer name to the other processors
@@ -884,7 +884,7 @@ contains
     use ModMain,   ONLY: n_step
     use ModIoUnit, ONLY: io_unit_new
     use ModIO,     ONLY: NamePlotDir, IsLogName_e
-    use ModUtilities, ONLY: flush_unit
+    use ModUtilities, ONLY: flush_unit, open_file
 
     character(len=4), intent(in) :: NameGroupIn
 
@@ -931,7 +931,7 @@ contains
     end if
 
     iUnitNow= io_unit_new()
-    open(iUnitNow, file=NameFile, status="replace")
+    call open_file(iUnitNow, FILE=NameFile)
 
     ! Write the header
     write(iUnitNow, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
@@ -1263,9 +1263,12 @@ contains
 
     !=====================================================================
     subroutine write_mag_step
+
       ! For TypeMagFileOut == 'step', write one file for every write step.
-      use ModIoUnit, ONLY: UnitTmp_
-      use ModIO,     ONLY: NamePlotDir, IsLogName_e
+
+      use ModIoUnit,    ONLY: UnitTmp_
+      use ModUtilities, ONLY: open_file, close_file
+      use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
       integer ::  iTime_I(7)
 
@@ -1290,7 +1293,7 @@ contains
       end if
 
       ! Open file for output:
-      open(UnitTmp_, file=NameFile, status="replace")
+      call open_file(file=NameFile)
 
       ! Write the header
       write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
@@ -1319,7 +1322,7 @@ contains
       end do
 
       ! Close file:
-      close(UnitTmp_)
+      call close_file
 
     end subroutine write_mag_step
     !=========================================================================
