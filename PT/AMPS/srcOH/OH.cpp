@@ -139,6 +139,16 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 
   double lifetime=0.0;
 
+  //in case of running in a stand-along mode
+  #ifdef _OH_STAND_ALONG_MODE_
+  #if _OH_STAND_ALONG_MODE_ == _PIC_MODE_ON_
+  PhotolyticReactionAllowedFlag=false;
+  return lifetime;
+  #endif
+  #endif
+
+
+
   PIC::CPLR::InitInterpolationStencil(x,node);
 
   PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
