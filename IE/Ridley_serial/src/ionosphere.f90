@@ -324,8 +324,7 @@ subroutine write_timegcm_file(iter, phi_north, phi_south,   &
 
   write(*,*) '=> Writing output datafiles for TIMEGCM.'
 
-  open(unit=iUnit,file=trim(NameIonoDir)//"MHD_to_TIMEGCM"//IO_ext, &
-       status="unknown")
+  call open_file(FILE=trim(NameIonoDir)//"MHD_to_TIMEGCM"//IO_ext)
 
 !  Write Year, month, day, hour, minute, second
 
@@ -383,7 +382,7 @@ subroutine write_timegcm_file(iter, phi_north, phi_south,   &
      end do
   end do
 
-  close(iUnit)
+  call close_file
  
 end subroutine write_timegcm_file
 !^CFG END TIEGCM
@@ -417,7 +416,7 @@ subroutine read_timegcm_file
 
   TIMEGCM_file = trim(NameIonoDir)//"TIMEGCM_to_MHD.dat"
 
-  open(unit=iUnit,file=TIMEGCM_file, status="old")
+  call open_file(FILE=TIMEGCM_file, STATUS="old")
 
   read(iUnit,fmt="(6I5)") (time_array(i),i=1,6)
 
@@ -459,7 +458,7 @@ subroutine read_timegcm_file
      end do
   end do
 
-  close(iUnit)
+  call close_file
  
 end subroutine read_timegcm_file
 !^CFG END TIEGCM
@@ -597,7 +596,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
 
   end if
 
-  open(unit=iUnit,file=NameFile,status="unknown")
+  call open_file(FILE=NameFile, STATUS="unknown")
 
   select case(iBlock)
   case(1) ! North writes header and data
@@ -931,7 +930,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
   case default
      call CON_stop(NameSub//' invalid iBlock value')
   end select
-  close(iUnit)
+  call close_file
 
 end subroutine ionosphere_write_output
 
@@ -970,7 +969,7 @@ subroutine IE_save_logfile
              mod(time_array(1),100),time_array(2:6),".log"
      end if
 
-     open(unitlog,file=NameFile,status="replace")
+     call open_file(unitlog, FILE=NameFile)
      write(unitlog,fmt="(a)")  'Ridley Ionosphere Model, [deg] and [kV]'
      write(unitlog,fmt="(a)") &
           't yy mm dd hh mm ss ms tilt cpcpn cpcps'
@@ -996,8 +995,7 @@ end subroutine IE_save_logfile
 
 subroutine ionosphere_read_restart_file(iter)
   !\
-  ! This routine creates an ionospheric 
-  ! restart solution file.
+  ! This routine reads an ionospheric restart solution file.
   !/
   use ModIonosphere
   use IE_ModIo
@@ -1013,7 +1011,7 @@ subroutine ionosphere_read_restart_file(iter)
 
   write(NameFile,'(a,i6.6,a)')trim(NameIonoDir)//"ionosphere_n",iter,IO_ext
 
-  open(unit=iUnit,file=NameFile,status="old",iostat=ierror)
+  open(iUnit, FILE=NameFile, STATUS="old", iostat=ierror)
 
   if (ierror==0) then
 
@@ -1035,7 +1033,7 @@ subroutine ionosphere_read_restart_file(iter)
         end do
      end do
 
-     close(iUnit)
+     call close_file
 
   else
 
@@ -1072,7 +1070,7 @@ subroutine ionosphere_write_restart_file(iter)
 
   write(NameFile,'(a,i6.6,a)')trim(NameIonoDir)//"ionosphere_n",iter,IO_ext
 
-  open(unit=iUnit,file=NameFile,status="unknown")
+  call open_file(FILE=NameFile)
 
   write(iUnit,*) IONO_Radius, IONO_Height,                                    &
                  IONO_Bdp, IONO_Radius_Mag_Boundary,                          &
@@ -1096,7 +1094,7 @@ subroutine ionosphere_write_restart_file(iter)
      end do
   end do
 
-  close(iUnit)
+  call close_file
 
 end subroutine ionosphere_write_restart_file
 

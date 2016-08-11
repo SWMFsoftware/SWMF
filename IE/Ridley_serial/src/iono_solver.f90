@@ -290,8 +290,9 @@ contains
   !============================================================================
   subroutine check_solution(x_I, y_I, b_I, n)
 
-    use IE_ModMain, ONLY: Time_Simulation, nSolve
-    use ModIoUnit, ONLY: UnitTmp_
+    use IE_ModMain,   ONLY: Time_Simulation, nSolve
+    use ModIoUnit,    ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     ! Calculate y = A.x where A is the (pentadiagonal) matrix
 
@@ -305,9 +306,9 @@ contains
     call matvec_ionosphere(x_I, y_I, n)
 
     if(north)then
-       open(UnitTmp_, FILE='iono_north.out')
+       call open_file(FILE='iono_north.out')
     else
-       open(UnitTmp_, FILE='iono_south.out')
+       call open_file(FILE='iono_south.out')
     end if
     write(UnitTmp_,'(a79)')'Iono Solver_var22'
     write(UnitTmp_,'(i7,es13.5,3i3)') nSolve,Time_Simulation,2,1,13
@@ -329,7 +330,7 @@ contains
             d_I(i), e_I(i), f_I(i), e1_I(i), f1_I(i), &
             y_I(i), b_I(i), y_I(i)-b_I(i)
     end do; end do
-    close(UnitTmp_)
+    call close_file
 
   end subroutine check_solution
 

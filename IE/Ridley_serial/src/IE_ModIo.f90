@@ -4,6 +4,7 @@ module IE_ModIo
 
   ! Unit number for temporary files
   use ModIoUnit, ONLY: iUnit => UNITTMP_, STDOUT_
+  use ModUtilities, ONLY: open_file, close_file
 
   implicit none
   save
