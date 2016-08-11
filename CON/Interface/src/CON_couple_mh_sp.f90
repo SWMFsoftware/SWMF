@@ -118,6 +118,7 @@ contains
        ScToSp_DD=transform_matrix(tNow,&                 
             Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
        call set_couple_var_info(SC_, SP_)
+       call exchange_lines(SC_)
     end if
 
     if(use_comp(IH_))then
@@ -131,18 +132,9 @@ contains
        IhToSp_DD=transform_matrix(tNow,&                 
             Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
        call set_couple_var_info(IH_, SP_)
+       call exchange_lines(IH_)
     end if
 
-
-
-    !\
-    ! Extract and exchange initial data
-    !/
-    if(use_comp(SC_))&
-         call exchange_lines(SC_)
-    if(use_comp(IH_))&
-         call exchange_lines(IH_)
-   
   contains
     !================================================================    
     subroutine exchange_lines(iMHComp)
@@ -201,7 +193,7 @@ contains
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
          call global_message_pass(RouterScSp, &
-              nVar = 11, &
+              nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
       case(IH_)
@@ -227,7 +219,7 @@ contains
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
          call global_message_pass(RouterIhSp, &
-              nVar = 11, &
+              nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
       end select
@@ -495,7 +487,7 @@ contains
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
     call global_message_pass(RouterIhSp, &
-         nVar = 11, &
+         nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_mh)
 !    if(is_proc(SP_))then
@@ -523,23 +515,16 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
-         BuffX_    =9,BuffZ_=11
+    integer:: iVarBx, iVarBz
     !------------------------------------------------------------
+    ! get buffer with variables
     call IH_get_for_sp(&
          nPartial,iGetStart,Get,w,State_V,nVar)
-
-    State_V(Ux_:Uz_)=&
-         transform_velocity(tNow,&
-         State_V(Ux_:Uz_),&
-         State_V(BuffX_:BuffZ_),&
-         Grid_C(IH_)%TypeCoord,Grid_C(SP_)%TypeCoord)
-
-    State_V(Bx_:Bz_)=matmul(IhToSp_DD,State_V(Bx_:Bz_))
-
-    ! transfrom coordinates
-    State_V(9:11) =matmul(IhToSp_DD,State_V(9:11))
-
+    ! indices of variables 
+    iVarBx = iVar_V(BxCouple_)
+    iVarBz = iVar_V(BzCouple_)
+    ! perform transformation before returning
+    State_V(iVarBx:iVarBz)=matmul(IhToSp_DD,State_V(iVarBx:iVarBz))
   end subroutine IH_get_for_sp_and_transform
   !^CMP END IH
   !=========================================================================
@@ -567,7 +552,7 @@ contains
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
     call global_message_pass(RouterScSp, &
-         nVar = 11, &
+         nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_mh)
 !    if(is_proc(SP_))then
@@ -600,22 +585,16 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
-         BuffX_    =9,BuffZ_=11
+    integer:: iVarBx, iVarBz
     !------------------------------------------------------------
+    ! get buffer with variables
     call SC_get_for_sp(&
          nPartial,iGetStart,Get,w,State_V,nVar)
-
-    State_V(Ux_:Uz_)=&
-         transform_velocity(tNow,&
-         State_V(Ux_:Uz_),&
-         State_V(BuffX_:BuffZ_),&
-         Grid_C(SC_)%TypeCoord,Grid_C(SP_)%TypeCoord)
-
-    State_V(Bx_:Bz_)=matmul(ScToSp_DD,State_V(Bx_:Bz_))
-
-    ! transform coordinates
-    State_V(9:11) =matmul(ScToSp_DD,State_V(9:11))
+    ! indices of variables 
+    iVarBx = iVar_V(BxCouple_)
+    iVarBz = iVar_V(BzCouple_)
+    ! perform transformation before returning
+    State_V(iVarBx:iVarBz)=matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
   end subroutine SC_get_for_sp_and_transform
   !=========================================================================
   !^CMP END SC

@@ -117,18 +117,21 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer, parameter, public     :: nCoupleVarGroup = 8
+  integer, parameter, public     :: nCoupleVarGroup = 11
 
   ! named indices for variable groups for coupling
   integer, parameter, public :: &
-       Bfield_                = 1, &
-       AnisoPressure_         = 2, &
-       ElectronPressure_      = 3, &
-       Wave_                  = 4, &
-       MultiFluid_            = 5, &
-       MultiSpecie_           = 6, &
-       Material_              = 7, &
-       CollisionlessHeatFlux_ = 8
+       Density_               =  1, &
+       Momentum_              =  2, &
+       Pressure_              =  3, &
+       Bfield_                =  4, &
+       AnisoPressure_         =  5, &
+       ElectronPressure_      =  6, &
+       Wave_                  =  7, &
+       MultiFluid_            =  8, &
+       MultiSpecie_           =  9, &
+       Material_              = 10, &
+       CollisionlessHeatFlux_ = 11
 
   logical, public :: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
@@ -697,7 +700,7 @@ contains
 
        case('Rho', 'P', 'Ew','Eint', 'Hyp', 'My', 'Mz', 'By', 'Bz')
           ! Do nothing.
-          ! Rho, P assumed to always be present
+          ! Rho, P are processed later (based on value of nDensityCouple etc.)
           ! ew, EInt, hyp : internal variables, not to be coupled.      
           ! By, Bz, My, Mz already covered by other cases.       
 
@@ -852,13 +855,28 @@ contains
     nPCouple       = min(nPSource,       nPTarget)
     nPparCouple    = min(nPparSource,    nPparTarget)
 
-    iVar_V(RhoCouple_) = 1 
-    iVar_V(RhoUxCouple_) = 2
-    iVar_V(RhoUzCouple_) = 4
-    nVarCouple = 4
+    DoCoupleVar_V(Density_ ) = nDensityCouple > 0
+    DoCoupleVar_V(Momentum_) = nSpeedCouple > 0
+    DoCoupleVar_V(Pressure_) = nPCouple > 0
 
-    iVar_V(PCouple_) = nVarCouple + 1
-    nVarCouple = nVarCouple + 1
+    nVarCouple = 0
+    iVar_V     = 0
+
+    if(DoCoupleVar_V(Density_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(RhoCouple_) = nVarCouple
+    end if
+
+    if(DoCoupleVar_V(Momentum_))then
+       nVarCouple = nVarCouple + 3
+       iVar_V(RhoUxCouple_) = nVarCouple - 2
+       iVar_V(RhoUzCouple_) = nVarCouple
+    end if
+
+    if(DoCoupleVar_V(Pressure_))then
+       nVarCouple = nVarCouple + 1
+       iVar_V(PCouple_) = nVarCouple
+    end if
 
     if (DoCoupleVar_V(Bfield_)) then
        iVar_V(BxCouple_) = nVarCouple + 1

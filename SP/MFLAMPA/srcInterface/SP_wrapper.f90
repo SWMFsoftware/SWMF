@@ -15,12 +15,14 @@ module SP_wrapper
        iParticleMin, iParticleMax, nParticle,&
        LatMin, LatMax, LonMin, LonMax, &
        TimeGlobal, iGrid_IA, State_VIB, iNode_B, TypeCoordSystem,&
-       Block_, Proc_, Begin_, End_, R_, Lat_, Lon_
+       Block_, Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
        set_coord_system, &
-       init_decomposition, get_root_decomposition, bcast_decomposition
+       init_decomposition, get_root_decomposition, bcast_decomposition, &
+       iVar_V, DoCoupleVar_V, &
+       BField_, BxCouple_, BzCouple_
   use CON_world, ONLY: is_proc0
   use CON_comp_param, ONLY: SP_
 
@@ -140,10 +142,7 @@ contains
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-
-    real:: Xyz_D(3), Coord_D(3)
-    real:: B_D(3)
-
+    integer:: iBx, iBz
     integer:: i, j, k, iBlock
     !------------------------------------------------------------
     i      = Put%iCB_II(1,iPutStart)
@@ -151,21 +150,15 @@ contains
     k      = Put%iCB_II(3,iPutStart)
     iBlock = Put%iCB_II(4,iPutStart)
 
-    Xyz_D = Buff_I((nVar-2):nVar)
-
-    B_D = Buff_I(5:7)
-
-    ! convert from SI
-    Xyz_D = Xyz_D / rSun 
-    call xyz_to_rlonlat(Xyz_D, Coord_D)
-
+    iBx = iVar_V(BxCouple_)
+    iBz = iVar_V(BzCouple_)   
 
     if(DoAdd)then
-       !       State_VIB(1:3,i,iBlock) = State_VIB(1:3,i,iBlock) + Coord_D
-       State_VIB(4:6,i,iBlock) = State_VIB(4:6,i,iBlock) + B_D
+       if(DoCoupleVar_V(BField_)) &
+            State_VIB(Bx_:Bz_,i,iBlock)= State_VIB(Bx_:Bz_,i,iBlock) + Buff_I(iBx:iBz)
     else
-       !       State_VIB((/1,2,3/),i,iBlock) = Coord_D
-       State_VIB((/4,5,6/),i,iBlock) = B_D
+       if(DoCoupleVar_V(BField_)) &
+            State_VIB(Bx_:Bz_,i,iBlock)= Buff_I(iBx:iBz)
     end if
   end subroutine SP_put_from_mh
 

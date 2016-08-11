@@ -6,7 +6,7 @@ module ModMain
   use ModSize, ONLY: &
        nDim, nVar, nLat, nLon, nNode, &
        RMin, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
+       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
   
   use ModWrite, ONLY: &
        set_write_param, write_output, NamePlotDir
@@ -33,7 +33,7 @@ module ModMain
   public:: &
        nDim, nVar, nLat, nLon, nNode, &
        RMin, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
+       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
 
   ! Methods and variables from ModGrid
   public:: &

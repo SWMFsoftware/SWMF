@@ -1600,6 +1600,9 @@ contains
     use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitU_, UnitB_, UnitX_
     use CON_router
+    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
+         Density_, Pressure_, Momentum_, BField_, &
+         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, BxCouple_, BzCouple_
     use IH_BATL_lib, ONLY: Xyz_DGB, xyz_to_coord, coord_to_xyz, IsCartesianGrid
     use IH_ModMain,  ONLY: UseB0
 
@@ -1608,90 +1611,56 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::W
     real,dimension(nVar),intent(out)::State_V
-
-    integer::iGet, i, j, k, iBlock
+    ! cell and block indices
+    integer:: i, j, k, iBlock
+    ! loop variable
+    integer:: iGet
+    ! variable indices in State_V
+    integer:: iRho, iUx, iUz, iBx, iBz, iP
+    ! interpolation weight
     real :: Weight
-    real :: Coord_D(3), Xyz_D(3)
-    !The meaning of state intdex in buffer and in model can be 
-    !different. Below are the conventions for buffer:
-    integer,parameter::&
-         BuffRho_ = 1, &
-         BuffUx_  = 2, &
-         BuffUz_  = 4, &
-         BuffBx_  = 5, &
-         BuffBy_  = 6, &
-         BuffBz_  = 7, &
-         BuffP_   = 8, &
-         BuffX_   = 9, &
-         BuffZ_   =11
     !--------------------------------------------------------------------------
+    ! get variable indices in buffer
+    iRho= iVar_V(RhoCouple_)
+    iUx = iVar_V(RhoUxCouple_)
+    iUz = iVar_V(RhoUzCouple_)
+    iP  = iVar_V(PCouple_)
+    iBx = iVar_V(BxCouple_)
+    iBz = iVar_V(BzCouple_)   
 
-    i      = Get%iCB_II(1,iGetStart)
-    j      = Get%iCB_II(2,iGetStart)
-    k      = Get%iCB_II(3,iGetStart)
-    iBlock = Get%iCB_II(4,iGetStart)
-    Weight = W%Weight_I(iGetStart)
-
-    State_V(BuffRho_)= Weight*State_VGB(rho_,i,j,k,iBlock)
-    State_V(BuffUx_:BuffUz_)= Weight*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)/&
-         State_VGB(rho_,i,j,k,iBlock)
-    if(UseB0)then
-       State_V(BuffBx_:BuffBz_)= Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock)+ &
-            B0_DGB(:,i,j,k,iBlock))
-    else
-       State_V(BuffBx_:BuffBz_)= Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-    end if
-    State_V(BuffP_)= Weight*State_VGB(P_,i,j,k,iBlock)
-
-    if(IsCartesianGrid)then
-       Coord_D = Xyz_DGB(:,i,j,k,iBlock)
-    else
-       call xyz_to_coord(Xyz_DGB(:,i,j,k,iBlock), Coord_D)
-    end if
-    State_V(BuffX_:BuffZ_) = Coord_D * Weight
-
-    do iGet=iGetStart+1,iGetStart+nPartial-1
+    ! reset buffer
+    State_V = 0
+    do iGet=iGetStart,iGetStart+nPartial-1
+       ! cell and block indices and interpolation weight
        i      = Get%iCB_II(1,iGet)
        j      = Get%iCB_II(2,iGet)
        k      = Get%iCB_II(3,iGet)
        iBlock = Get%iCB_II(4,iGet)
        Weight = W%Weight_I(iGet)
-       State_V(1) = State_V(1) + &
+       ! fill buffer with coupled variables
+       if(DoCoupleVar_V(Density_)) State_V(iRho) = State_V(iRho) + &
             Weight*State_VGB(rho_,i,j,k,iBlock)
-       State_V(BuffUx_:BuffUz_) =  State_V(BuffUx_:BuffUz_) + &
+       if(DoCoupleVar_V(Pressure_))&
+            State_V(iP) = State_V(iP) + Weight*State_VGB(P_,i,j,k,iBlock)
+       if(DoCoupleVar_V(Momentum_)) State_V(iUx:iUz) = State_V(iUx:iUz) + &
             Weight*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)/&
             State_VGB(rho_,i,j,k,iBlock)
-       if(UseB0)then
-          State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_) + &
-               Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock)+ B0_DGB(:,i,j,k,iBlock))
-       else
-          State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_) + &
-               Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(DoCoupleVar_V(BField_))then
+          if(UseB0)then
+             State_V(iBx:iBz) = State_V(iBx:iBz) + &
+                  Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
+          else
+             State_V(iBx:iBz) = State_V(iBx:iBz) + &
+                  Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
+          end if
        end if
-       State_V(BuffP_)= State_V(BuffP_) + &
-            Weight*State_VGB(P_,i,j,k,iBlock)
-
-       if(IsCartesianGrid)then
-          Coord_D = Xyz_DGB(:,i,j,k,iBlock)
-       else
-          call xyz_to_coord(Xyz_DGB(:,i,j,k,iBlock), Coord_D)
-       end if
-       State_V(BuffX_:BuffZ_) = State_V(BuffX_:BuffZ_) + Coord_D*Weight     
     end do
 
-    if(IsCartesianGrid)then
-    else
-       call coord_to_xyz(State_V(BuffX_:BuffZ_),Xyz_D)
-       State_V(BuffX_:BuffZ_) = Xyz_D
-    end if
-
     ! Convert momentum to velocity and convert everything to SI units
-    State_V(BuffUx_:BuffUz_) = State_V(BuffUx_:BuffUz_)  *No2Si_V(UnitU_)
-    State_V(1)               = State_V(1)                *No2Si_V(UnitRho_)
-    State_V(BuffBx_:BuffBz_) = State_V(BuffBx_:BuffBz_)  *No2Si_V(UnitB_)
-    State_V(BuffP_)          = State_V(BuffP_)           *No2Si_V(UnitP_)
-    State_V(BuffX_:BuffZ_)   = State_V(BuffX_:BuffZ_)    *No2Si_V(UnitX_) 
-
+    if(DoCoupleVar_V(Density_ )) State_V(iRho)   = State_V(iRho)    *No2Si_V(UnitRho_)
+    if(DoCoupleVar_V(Momentum_)) State_V(iUx:iUz)= State_V(iUx:iUz) *No2Si_V(UnitU_)
+    if(DoCoupleVar_V(BField_  )) State_V(iBx:iBz)= State_V(iBx:iBz) *No2Si_V(UnitB_)
+    if(DoCoupleVar_V(Pressure_)) State_V(iP)     = State_V(iP)      *No2Si_V(UnitP_)
   end subroutine IH_get_for_sp
 
   !============================================================================
