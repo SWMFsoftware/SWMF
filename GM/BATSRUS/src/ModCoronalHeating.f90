@@ -10,21 +10,18 @@ module ModCoronalHeating
 
   implicit none
   SAVE
-  PRIVATE  !Except
-  !\
+  PRIVATE  ! except
+
   ! The Poynting flux to magnetic field ratio (one of the input parameters
   ! in SI unins and diminsionless:
-  !/
-  real,public    :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
-  real,public    :: MaxImbalance = 2.0, MaxImbalance2 = 4.0
+  real, public :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
+  real, public :: MaxImbalance = 2.0, MaxImbalance2 = 4.0
 
-  logical,public:: UseCoronalHeating = .false.
+  logical, public :: UseCoronalHeating = .false.
   character(len=lStringLine) :: NameModel, TypeCoronalHeating
 
+  ! Exponential Model ---------
   ! Variables and parameters for various heating models
-  !\
-  ! Exponential:
-  !/  
 
   ! quantitative parameters for exponential heating model
 
@@ -46,17 +43,15 @@ module ModCoronalHeating
   logical, public :: DoOpenClosedHeat = .false.
   real :: WsaT0 = 3.50
 
-  !\
-  ! Abbett's model
-  !/
+  ! Abbett's model -------------
 
   ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
   ! Alfven wave dissipation
   logical,public :: UseAlfvenWaveDissipation = .false.
-  real,public    :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
-  real,public    :: LperpTimesSqrtB
+  real,   public :: LperpTimesSqrtBSi = 7.5e4 ! m T^(1/2)
+  real,   public :: LperpTimesSqrtB
   real    :: Crefl = 0.04
 
   logical,public :: UseTurbulentCascade = .false.
@@ -79,7 +74,7 @@ module ModCoronalHeating
   logical :: UseUniformHeatPartition = .true.
   real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
   real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
-  real,public :: QeRatio = 0.4
+  real, public :: QeRatio = 0.4
 
   ! Dimensionless parameters for stochastic heating
   logical :: UseStochasticHeating = .false.
@@ -107,7 +102,7 @@ module ModCoronalHeating
   public :: init_coronal_heating
   public :: read_corona_heating
 
-  !Bill Abbet model, if .true.
+  ! Bill Abbet's model, if .true.
   logical, public :: UseUnsignedFluxModel = .false.
 
   ! Normalized value of Heating constant
@@ -118,8 +113,8 @@ module ModCoronalHeating
 
   ! Exponential Scale height to truncate heating function
   real :: DecayLength = 1.0
-  real,public :: DtUpdateFlux = -1.0
-  real,public :: UnsignedFluxHeight = -99999
+  real, public :: DtUpdateFlux = -1.0
+  real, public :: UnsignedFluxHeight = -99999.0
 
 contains
 
