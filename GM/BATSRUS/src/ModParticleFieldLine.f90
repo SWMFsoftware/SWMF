@@ -81,6 +81,14 @@ module ModParticleFieldLine
   ! number of active field lines
   integer:: nFieldLine = 0
 
+  ! soft radial boundary that may be set at FIRST call only of extract_particle_line;
+  ! "soft" means that exactly ONE particle is allowed beyond this boundary:
+  ! - during extraction the first particle that crosses is is left and extraction 
+  !   of this line is stopped
+  ! - during advection the particle that crosses it is left in the domain,
+  !   but the one that is already beyond it is removed
+  real:: RBoundarySoft = -1.0 ! negative value marks that extraction wasn't called yet
+
   !\
   ! initialization related info
   !/
@@ -172,7 +180,7 @@ contains
   !==========================================================================
 
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
-       iIndexStart_I)
+       iIndexStart_I, RBoundarySoftIn)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -182,8 +190,12 @@ contains
     !------------------------------------------------------------------------
     integer,           intent(in):: nFieldLineIn
     real,              intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
+    ! mode of tracing (forward, backward or both ways)
     integer, optional, intent(in):: iTraceModeIn
+    ! initial particle indices for starting particles
     integer, optional, intent(in):: iIndexStart_I(nFieldLineIn)
+    ! additional boundary imposed by user
+    real,    optional, intent(in):: RBoundarySoftIn
 
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
@@ -250,6 +262,22 @@ contains
          ': Limit for number of particle field lines exceeded')
     call copy_end_to_regular
 
+    ! check if soft boundary is provided
+    if(present(RBoundarySoftIn))then
+       ! soft boundary can be set only once!
+       if(RBoundarySoft < 0.0)then
+          RBoundarySoft = RBoundarySoftIn
+       else
+          call CON_stop(&
+               NameThisComp//':'//NameSub//&
+               ': soft boundary may be set only at the first call'//&
+               ' and may not be changed!')
+       end if
+    else
+       ! set it to zero to mark that hasn't been set at the first call
+       RBoundarySoft = 0.0
+    end if
+
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
        if(abs(iTraceModeIn) > 1)&
@@ -273,6 +301,14 @@ contains
        call get_alignment()
 
        TRACE: do
+
+          ! check if particles are beyond the soft boundary
+          if(RBoundarySoft > 0.0)then
+             call check_soft_boundary(KindEnd_)
+             call remove_undefined_particles(KindEnd_)
+          end if
+
+
           ! copy last known coordinates to Auxilary 
           StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
                StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
@@ -308,7 +344,7 @@ contains
           ! remove particles that went outside of the domain
           !/
           if(Body1)then ! check if there is an inner body
-             call check_inner_boundary_particle_line(KindEnd_)
+             call check_inner_boundary(KindEnd_)
           end if
           call remove_undefined_particles(KindEnd_)
 
@@ -341,7 +377,7 @@ contains
           ! remove particles that went outside of the domain
           !/
           if(Body1)then ! check if there is an inner body
-             call check_inner_boundary_particle_line(KindEnd_)
+             call check_inner_boundary(KindEnd_)
           end if
           call remove_undefined_particles(KindEnd_)
 
@@ -353,7 +389,7 @@ contains
                iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
                iDirTrace
           call copy_end_to_regular
-
+          
        end do TRACE
 
        ! if just finished backward tracing and need to trace in both dirs
@@ -587,6 +623,12 @@ contains
     ! set a pointers to parameters of particles
     State_VI  => Particle_I(KindReg_)%State_VI
     iIndex_II => Particle_I(KindReg_)%iIndex_II
+
+    ! check soft boundary
+    if(RBoundarySoft > 0.0)then
+       call check_soft_boundary(KindReg_)
+       call remove_undefined_particles(KindReg_)
+    end if
     !\
     ! go over the list of particles and advect them
     !/
@@ -603,6 +645,7 @@ contains
        State_VI(x_:z_, iParticle) = State_VI(x_:z_, iParticle) + &
             Dt * VLocal_D
     end do
+
     !\
     ! Message pass: some particles may have moved to different procs
     !/
@@ -650,7 +693,7 @@ contains
 
   !========================================================================
 
-  subroutine check_inner_boundary_particle_line(iKind)
+  subroutine check_inner_boundary(iKind)
     use BATL_lib, ONLY: Unset_
     ! check whether particles have crossed an inner boundary
     ! if so => set particle's block to Unset_
@@ -662,7 +705,23 @@ contains
        if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) < rBody*rBody)&
             Particle_I(iKind)%iIndex_II(0, iParticle) = Unset_
     end do
-  end subroutine check_inner_boundary_particle_line
+  end subroutine check_inner_boundary
+
+  !========================================================================
+
+  subroutine check_soft_boundary(iKind)
+    use BATL_lib, ONLY: Unset_
+    ! check whether particles have crossed an inner boundary
+    ! if so => set particle's block to Unset_
+    integer, intent(in):: iKind
+
+    integer:: iParticle ! loop variable
+    !----------------------------------------------------------------------
+    do iParticle = 1, Particle_I(iKind)%nParticle
+       if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) > rBoundarySoft**2)&
+            Particle_I(iKind)%iIndex_II(0, iParticle) = Unset_
+    end do
+  end subroutine check_soft_boundary
 
   !========================================================================
 
