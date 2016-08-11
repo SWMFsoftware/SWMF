@@ -97,6 +97,13 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
        startNode->GetExternalNormal(ExternalNormal,nface);
        TimeCounter=0.0;
 
+       //injection boundary conditions: -x -> inflow, other -> open boundary
+       if (-ExternalNormal[0]<0.9) {
+         nInjectedParticles+=PIC::BC::ExternalBoundary::OpenFlow::InjectBlock(spec,startNode,nface);
+         continue; 
+       } 
+
+
        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(OH::InjectionNDensity,OH::InjectionTemperature,OH::InjectionVelocity,ExternalNormal,spec);
 
 
