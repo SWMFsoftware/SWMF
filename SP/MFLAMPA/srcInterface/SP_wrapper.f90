@@ -13,7 +13,7 @@ module SP_wrapper
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
-       LatMin, LatMax, LonMin, LonMax, &
+       RSc, LatMin, LatMax, LonMin, LonMax, &
        TimeGlobal, iGrid_IA, State_VIB, iNode_B, TypeCoordSystem,&
        Block_, Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
   use CON_comp_info
@@ -45,6 +45,7 @@ module SP_wrapper
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
+  public:: SP_get_solar_corona_boundary
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -196,6 +197,14 @@ contains
 
   !===================================================================
 
+  subroutine SP_get_solar_corona_boundary(RScOut)
+    ! return the value of the solar corona boundary as set in SP component
+    real, intent(out):: RScOut
+    !-----------------------------------------------------------------
+    RScOut = RSc
+  end subroutine SP_get_solar_corona_boundary
+
+  !===================================================================
   subroutine SP_request_line(iDirIn, &
        nLine, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     ! request coordinates & indices of field lines' beginning/origin/end

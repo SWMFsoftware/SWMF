@@ -24,6 +24,7 @@ module SP_wrapper
   public:: SP_request_line
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
+  public:: SP_get_solar_corona_boundary
 
 contains
 
@@ -95,6 +96,16 @@ contains
     call CON_stop('Can not get line parameters from SP')
 
   end subroutine SP_get_line_param
+  !===================================================================
+
+  subroutine SP_get_solar_corona_boundary(RScOut)
+    ! return the value of the solar corona boundary as set in SP component
+    real, intent(out):: RScOut
+    character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
+    !-----------------------------------------------------------------
+    call CON_stop('SP: '//NameSub//' : cannot call the empty version')
+  end subroutine SP_get_solar_corona_boundary
+
   !===================================================================
   subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II,&
        nAux, AuxOut_VI)
