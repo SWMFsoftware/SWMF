@@ -119,6 +119,14 @@ while ($line=<InputFile>) {
 
     ampsConfigLib::ChangeValueOfVariable("char PIC::CCMC::Parser::ControlFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","pic/pic_ccmc.cpp");
   }
+  
+  #maximum trajectory integration time 
+  elsif ($InputLine eq "MAXTRAJECTORYINTEGTAIOBTIME") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    ampsConfigLib::ChangeValueOfVariable(static const double MaxTrajectoryIntegraionTime,$InputLine,"main/ccmc.dfn");
+  }
+  
+  #end og the CCMC block
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
   }
