@@ -145,22 +145,31 @@ contains
     real,dimension(nVar),intent(in)::Buff_I
     integer:: iBx, iBz
     integer:: i, j, k, iBlock
+    integer:: iPartial
+    real:: Weight
     !------------------------------------------------------------
-    i      = Put%iCB_II(1,iPutStart)
-    j      = Put%iCB_II(2,iPutStart)
-    k      = Put%iCB_II(3,iPutStart)
-    iBlock = Put%iCB_II(4,iPutStart)
-
+    ! indices of variables in the buffer
     iBx = iVar_V(BxCouple_)
     iBz = iVar_V(BzCouple_)   
-
-    if(DoAdd)then
-       if(DoCoupleVar_V(BField_)) &
-            State_VIB(Bx_:Bz_,i,iBlock)= State_VIB(Bx_:Bz_,i,iBlock) + Buff_I(iBx:iBz)
-    else
-       if(DoCoupleVar_V(BField_)) &
-            State_VIB(Bx_:Bz_,i,iBlock)= Buff_I(iBx:iBz)
-    end if
+    do iPartial = 0, nPartial-1
+       ! cell and block indices
+       i      = Put%iCB_II(1, iPutStart + iPartial)
+       j      = Put%iCB_II(2, iPutStart + iPartial)
+       k      = Put%iCB_II(3, iPutStart + iPartial)
+       iBlock = Put%iCB_II(4, iPutStart + iPartial)
+       ! interpolation weight
+       Weight = W%Weight_I(   iPutStart + iPartial)
+       ! put the data
+       if(DoAdd)then
+          ! NOTE: State_VIB must be reset to zero before putting coupled data
+          if(DoCoupleVar_V(BField_)) &
+               State_VIB(Bx_:Bz_,i,iBlock) = &
+               State_VIB(Bx_:Bz_,i,iBlock) + Buff_I(iBx:iBz) * Weight
+       else
+          if(DoCoupleVar_V(BField_)) &
+               State_VIB(Bx_:Bz_,i,iBlock)= Buff_I(iBx:iBz) * Weight
+       end if
+    end do
   end subroutine SP_put_from_mh
 
   !===================================================================

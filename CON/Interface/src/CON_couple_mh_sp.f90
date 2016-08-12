@@ -35,7 +35,7 @@ module CON_couple_mh_sp
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
        SP_put_line, SP_request_line, SP_get_grid_descriptor_param, &
-       SP_get_line_all
+       SP_get_line_all, SP_get_solar_corona_boundary
 
   implicit none
 
@@ -86,6 +86,9 @@ contains
     integer, parameter:: &
          iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
 
+    ! solar corona boundary
+    real:: RSc
+
     character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
     if(.not.DoInit)return
@@ -106,6 +109,9 @@ contains
          iGridPointMax_D = iGridMax_D, &
          Displacement_D  = Disp_D, &
          GridDescriptor  = SP_GridDescriptor)
+
+    ! get the value of solar corona boundary as set in SP
+    call SP_get_solar_corona_boundary(RSc)
 
     if(use_comp(SC_))then  
        ! Set pair SC-SP
@@ -182,7 +188,7 @@ contains
          if(is_proc(SC_))&
               call SC_extract_line(&
               ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceOrigin,&
-              iAuxStored_I)
+              iAuxStored_I, RSc)
          call set_router_from_source_2_stage(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
@@ -590,6 +596,7 @@ contains
     ! get buffer with variables
     call SC_get_for_sp(&
          nPartial,iGetStart,Get,w,State_V,nVar)
+!write(*,*)State_V
     ! indices of variables 
     iVarBx = iVar_V(BxCouple_)
     iVarBz = iVar_V(BzCouple_)

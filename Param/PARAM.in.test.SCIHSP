@@ -327,9 +327,6 @@ currentsheet		TypeCriteria
 5			nLevelArea
 initial			NameArea
 
-#THINCURRENTSHEET
-T			DoThinCurrentSheet
-
 #INNERBOUNDARY
 buffergrid		TypeBcInner
 
