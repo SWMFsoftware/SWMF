@@ -44,6 +44,10 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   double CellSize;
   double CharacteristicSpeed=5.0E4;
 
+  if (PIC::ParticleWeightTimeStep::GlobalTimeStep) 
+    if(PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] > 0.0)
+      return PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
 }
@@ -249,6 +253,13 @@ void amps_init_mesh(){
   
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
+
+  // allocate array with global times step and reset them
+  if (! PIC::ParticleWeightTimeStep::GlobalTimeStep) {
+    PIC::ParticleWeightTimeStep::GlobalTimeStep=new double [PIC::nTotalSpecies];
+    for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalTimeStep[s]=-1.0;
+  }
+
 
 }
 
