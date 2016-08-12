@@ -1,6 +1,7 @@
 //$Id$
 
 #include "OH.h"
+#include "pic.h"
 
 // user defined global time step
 double OH::UserGlobalTimeStep = -1.0;
@@ -235,12 +236,19 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
     //account for the parent particle correction factor
     ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
-    // new particle comes from solar wind and has random velocity from proton distribution as done
-    // in Daldroff et al. 2014 for MHD-EPIC
+    // new particle comes from solar wind and has random velocity from proton Maxwellian distribution
     double PlasmaBulkVelocity[3];
+    double PlasmaNumberDensity, PlasmaPressure, PlasmaTemperature;
+    double vp[3];
     {
       PIC::CPLR::InitInterpolationStencil(xParent,node);
       PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+      PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+      PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
+      PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
+
+      // calculating the random velocity of the proton from the maxwellian velocity of the local plasma
+      PIC::Distribution::MaxwellianVelocityDistribution(vp,PlasmaBulkVelocity,PlasmaTemperature,spec);
 
       // charge exchange process transfers momentum and energy to plasma
       PIC::Mesh::cDataCenterNode *CenterNode;
@@ -248,7 +256,7 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
 
       CenterNode=PIC::Mesh::Search::FindCell(xParent); ///node->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
-      double v2 = 0.0, plasmav2 = 0.0;
+      double vh2 = 0.0, vp2 = 0.0;
       double c = ParentParticleWeight
                      / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
                      / CenterNode->Measure;
@@ -256,14 +264,15 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
 
       for(int idim=0; idim<3; idim++){
         *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) +=
-	  c*_MASS_(_H_)*(vParent[idim]-PlasmaBulkVelocity[idim]);
-        v2      +=vParent[idim]*vParent[idim];
-        plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
+	  c*_MASS_(_H_)*(vParent[idim]-vp[idim]);
+        vh2      +=vParent[idim]*vParent[idim];
+        vp2+=vp[idim]*vp[idim];
       }
       *((double*)(offset+OH::Output::ohSourceEnergyOffset)) +=
-        c*0.5*_MASS_(_H_)*(v2-plasmav2);
+        c*0.5*_MASS_(_H_)*(vh2-vp2);
     }
-    PIC::ParticleBuffer::SetV(PlasmaBulkVelocity,(PIC::ParticleBuffer::byte*)ParticleData);
+    // creating new neutral particle with the velocity of the selected proton
+    PIC::ParticleBuffer::SetV(vp,(PIC::ParticleBuffer::byte*)ParticleData);
   }
 
   //add the particle to the list of the particles exisoting in the system after reaction
@@ -283,6 +292,27 @@ void OH::Init_BeforeParser(){
   PIC::CPLR::SWMF::SendCenterPointData.push_back(Coupling::Send);
 }
 
+// User defined functions -----------------------------------------------------
+int OH::user_set_face_boundary(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  //setting User defined function to process particles leaving domain at certain faces
+  //useful for 1D runs if just want flows in one direction
+  
+  // removing particles if hit faces perpandiulat to x axis
+  if (nIntersectionFace == 0 || nIntersectionFace == 1) return _PARTICLE_DELETED_ON_THE_FACE_; 
+
+  // keep and reflect particles if hit face perpandiculat to y or z axes
+  // y axis reflection
+  if (nIntersectionFace == 2 || nIntersectionFace == 3) {
+    vInit[1]=-vInit[1];
+    return _PARTICLE_REJECTED_ON_THE_FACE_; // particles are not deleted but remain in domain
+  }
+
+  // z axis reflection
+  if (nIntersectionFace == 4 || nIntersectionFace == 5) {
+    vInit[2]=-vInit[2];
+    return _PARTICLE_REJECTED_ON_THE_FACE_;
+  }
+}
 
 //-----------------------------------------------------------------------------
 //substitutes for Exosphere functions
