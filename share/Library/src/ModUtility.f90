@@ -224,20 +224,27 @@ contains
   end subroutine fix_dir_name
 
   !============================================================================
-  subroutine open_file(iUnitIn, File, Form, Status)
+  subroutine open_file(iUnitIn, File, Form, Status, Position, NameCaller)
 
     use ModIoUnit, ONLY: UNITTMP_
 
-    ! Interface for the Fortran open statement with error checking
-    ! If no unit number is passed, open UnitTmp_
+    ! Interface for the Fortran open statement with error checking.
+    ! If an error occurs, the code stops and writes out the unit number,
+    ! the error code and the name of the file. 
+    ! If NameCaller is present, it is also shown.
+    ! If no unit number is passed, open UnitTmp_.
+    ! Default format is 'formatted' as in the open statement.
+    ! Default status is 'replace' (not unknown) as it is well defined.
+    ! Default position is 'rewind' (not asis) as it is well defined.
 
     integer, optional, intent(in):: iUnitIn
     character(len=*), optional, intent(in):: File
     character(len=*), optional, intent(in):: Form
     character(len=*), optional, intent(in):: Status
+    character(len=*), optional, intent(in):: Position
+    character(len=*), optional, intent(in):: NameCaller
 
-    character(len=20):: TypeForm
-    character(len=20):: TypeStatus
+    character(len=20):: TypeForm, TypeStatus, TypePosition
 
     integer:: iUnit
     integer:: iError
@@ -253,25 +260,34 @@ contains
     TypeStatus = 'replace'
     if(present(Status)) TypeStatus = Status
 
-    open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, IOSTAT=iError)
+    TypePosition = 'rewind'
+    if(present(Position)) TypePosition = Position
+
+    open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
+         POSITION=TypePosition, IOSTAT=iError)
 
     if(iError /= 0)then
        write(*,*) NameSub,' iUnit, iError=', iUnit, iError
+       if(present(NameCaller)) write(*,*) 'NameCaller=', NameCaller
        call CON_stop(NameSub//' could not open file='//trim(File))
     end if
 
   end subroutine open_file
 
   !========================================================================
-  subroutine close_file(iUnitIn, Status)
+  subroutine close_file(iUnitIn, Status, NameCaller)
 
     use ModIoUnit, ONLY: UNITTMP_
 
     ! Interface for the Fortran close statement with error checking
+    ! If an error occurs, the code stops and writes out the unit number,
+    ! the error code and the name of the file. 
+    ! If NameCaller is present, it is also shown.
     ! If no unit number is passed, close UnitTmp_
 
     integer, optional, intent(in):: iUnitIn
     character(len=*), optional, intent(in):: Status
+    character(len=*), optional, intent(in):: NameCaller
 
     integer:: iUnit
     integer:: iError
@@ -289,6 +305,7 @@ contains
 
     if(iError /= 0)then
        write(*,*) NameSub,' iUnit, iError=', iUnit, iError
+       if(present(NameCaller)) write(*,*) 'NameCaller=', NameCaller
        call CON_stop(NameSub//' could not close unit')
     end if
 
@@ -742,11 +759,21 @@ contains
     write(*,*) iError
 
     write(*,'(a)') 'testing open_file and close_file'
+
+    ! Use defaults
     call open_file(FILE='xxx/testfile.dat')
     write(UnitTmp_,'(a)') 'Some text'
     call close_file
-    call open_file(FILE='xxx/testfile.dat',STATUS='old')
-    call close_file(STATUS='DELETE')
+    ! Create an error message by passing incorrect filename
+    ! Since the error code varies by compiler, this is commented out
+    !call open_file(FILE='xxx/testfile.bad', STATUS='old', &
+    !     NameCaller=NameSub)
+
+    ! Use all arguments
+    call open_file(UnitTmp_, FILE='xxx/testfile.dat', FORM='formatted', &
+         STATUS='old', POSITION='append', NameCaller=NameSub)
+    write(UnitTmp_,'(a)') 'More text'
+    call close_file(UnitTmp_, STATUS='delete', NameCaller=NameSub)
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
