@@ -236,8 +236,8 @@ contains
     case('append')
        if(.not.IsOpen_I(iSat))then
           iUnitSat_I(iSat) = io_unit_new()
-          open(iUnitSat_I(iSat), file=trim(NameFile_I(iSat)), status='old', &
-               POSITION='append')
+          call open_file(iUnitSat_I(iSat), FILE=trim(NameFile_I(iSat)), &
+               STATUS='old', POSITION='append')
           IsOpen_I(iSat) = .true.
        end if
     case('close')
