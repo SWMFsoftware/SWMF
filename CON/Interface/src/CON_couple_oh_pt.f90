@@ -110,8 +110,6 @@ contains
        if(is_proc(OH_)) call OH_get_for_pt_dt(DtSi)
        call transfer_real(OH_,PT_,DtSi)
        if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
-    else 
-       if(is_proc(PT_)) call PT_put_from_oh_dt(Couple_CC(OH_,PT_)%Dt)
     endif
 
 
