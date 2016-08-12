@@ -1041,6 +1041,9 @@ namespace PIC {
 
   extern char BackgroundDataFileName[_MAX_STRING_LENGTH_PIC_];
 
+  //maximum trajectory integraion time
+  extern double MaxTrajectoryIntegrationTime;
+
   //size of the computational domain
   namespace Domain {
     extern double xmin[3],xmax[3];
@@ -1204,7 +1207,7 @@ namespace PIC {
 
     //trace particles
     void LoadParticles();
-    int TraceParticles(double MaxTrajectoryIntegrationTime=-1.0);
+    int TraceParticles();
   }
 
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces

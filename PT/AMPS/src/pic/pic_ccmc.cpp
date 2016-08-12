@@ -18,6 +18,9 @@ vector<PIC::CCMC::ParticleInjection::cInjectionDescriptor> PIC::CCMC::ParticleIn
 char PIC::CCMC::Parser::ControlFileName[_MAX_STRING_LENGTH_PIC_]="ccmc.InjectionLocation.dat";
 char PIC::CCMC::BackgroundDataFileName[_MAX_STRING_LENGTH_PIC_]="amps.Background.data.cdf";
 
+//maximum trajectory integration time
+double PIC::CCMC::MaxTrajectoryIntegrationTime=-1.0;
+
 //characteristic speed of traced particles
 double *PIC::CCMC::ParticleCharacteristicSpeedTable=NULL;
 
@@ -66,6 +69,10 @@ void PIC::CCMC::Parser::LoadControlFile() {
     else if (strcmp("STARTTIME",str1)==0) {
       ifile.CutInputStr(str1,str);
       InjectionBlock.StartTime=atof(str1);
+    }
+    else if (strcmp("#MAXTRAJECTORYINTEGRATIONTIME",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::MaxTrajectoryIntegrationTime=atof(str1);
     }
 
     else if (strcmp("#SOURCEREGION",str1)==0) {
@@ -488,7 +495,7 @@ void PIC::CCMC::LoadParticles() {
 }
 
 //the main tracking procedure
-int PIC::CCMC::TraceParticles(double MaxTrajectoryIntegrationTime) {
+int PIC::CCMC::TraceParticles() {
   long int nTotalParticles;
   char fname[_MAX_STRING_LENGTH_PIC_];
   double TimeCounter[PIC::nTotalSpecies];
