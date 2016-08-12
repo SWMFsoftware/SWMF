@@ -552,8 +552,11 @@ contains
             *Weight_I(iImages)
     end do
   end function point_state_vx
+  !==========================================================
   subroutine save_global_vector(NameVector,NameMask,iFileIn)
     use ModIOUnit
+    use ModUtilities, ONLY: open_file, close_file
+    
     character(LEN=*),intent(in)::NameVector,NameMask
     integer,intent(in)::iFileIn
     optional::NameMask,iFileIn
@@ -561,6 +564,7 @@ contains
     character(LEN=2)::NameComp
     logical::UseMask
     integer::lLengthMask,iFile,nU_I(2),iPoint,iVector,iMask
+    !--------------------------------------------------------
     NameComp=NameVector(1:2)
     NameFile='./'//NameComp//'/'//NameVector(&
          4:len_trim(NameVector))
@@ -577,7 +581,7 @@ contains
        iMask=i_mask(NameMask)
     end if
     NameFile=trim(NameFile)//'_'//NameComp
-    open(iFile,file=trim(NameFile),status='replace')
+    call open_file(iFile, FILE=trim(NameFile))
 
     if(UseMask)then
        write(iFile,*)nU_I,count_mask(NameMask)
@@ -591,8 +595,9 @@ contains
           write(iFile,*)iPoint,Vector_I(iVector)%I(:,iPoint)
        end do
     end if
-    close(iFile)
+    call close_file(iFile)
   end subroutine save_global_vector
+  !==========================================================
   subroutine read_global_vector(NameVector,iFileIn)
     use ModIOUnit
     use CON_comp_param,ONLY:NameComp_I
@@ -602,6 +607,7 @@ contains
     integer::iFile,lComp,nU_I(2),nPoint,iVector,iError
     integer::iPoint,jPoint,nPointHere
     character(LEN=nLength+11)::NameFile,NameFilePreffix
+    !--------------------------------------------------------
     NameFilePreffix='./'//NameVector(1:2)//'/'//NameVector(&
          4:len_trim(NameVector))//'_'
     if(present(iFileIn))&
@@ -635,5 +641,6 @@ contains
        call CON_stop('For vector '//NameVector//' fewer points are read')
     end if
   end subroutine read_global_vector
+
 end Module CON_global_vector
       

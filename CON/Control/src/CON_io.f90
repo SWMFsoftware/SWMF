@@ -24,7 +24,7 @@ module CON_io
   use ModReadParam
   use CON_variables
   use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, make_dir, &
-       split_string
+       split_string, open_file, close_file
 
   implicit none
 
@@ -789,7 +789,7 @@ contains
              ! Get a new unit number
              iUnitOut=io_unit_new()
              ! Open the file
-             open(iUnitOut,FILE=NameFile,STATUS='unknown')
+             call open_file(iUnitOut, FILE=NameFile)
              ! Store the unit number into the registry
              call put_comp_info(iComp,iUnitOut=iUnitOut)
           end if
@@ -868,55 +868,55 @@ contains
 
     if(.not.is_proc0()) RETURN
 
-    open(UNITTMP_, FILE=trim(NameRestartOutDirNow)//NameRestartFile)
+    call open_file(FILE=trim(NameRestartOutDirNow)//NameRestartFile)
 
-    write(UNITTMP_,'(a)')'#DESCRIPTION'
-    write(UNITTMP_,'(a)')trim(StringDescription)
-    write(UNITTMP_,*)
+    write(UnitTmp_,'(a)')'#DESCRIPTION'
+    write(UnitTmp_,'(a)')trim(StringDescription)
+    write(UnitTmp_,*)
     if(NamePlanet == 'NEW')then
-       write(UNITTMP_,'(a)')'!!! PLANET'
+       write(UnitTmp_,'(a)')'!!! PLANET'
     else
-       write(UNITTMP_,'(a)')'#PLANET'
+       write(UnitTmp_,'(a)')'#PLANET'
     end if
-    write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
-    write(UNITTMP_,*)
+    write(UnitTmp_,'(a25,a15)') NamePlanet,         '     NamePlanet'
+    write(UnitTmp_,*)
     if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
-       write(UNITTMP_,'(a)')'#IDEALAXES'
-       write(UNITTMP_,*)
+       write(UnitTmp_,'(a)')'#IDEALAXES'
+       write(UnitTmp_,*)
     end if
-    write(UNITTMP_,'(a)')'#STARTTIME'
-    write(UNITTMP_,'(i8,a32)')TimeStart % iYear,         'iYear      '
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
-    write(UNITTMP_,'(i8,a32)')TimeStart % iDay,          'iDay       '
-    write(UNITTMP_,'(i8,a32)')TimeStart % iHour,         'iHour      '
-    write(UNITTMP_,'(i8,a32)')TimeStart % iMinute,       'iMinute    '
-    write(UNITTMP_,'(i8,a32)')TimeStart % iSecond,       'iSecond    '
-    write(UNITTMP_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond '
-    write(UNITTMP_,*)
-    write(UNITTMP_,'(a)')'#NSTEP'
-    write(UNITTMP_,'(i8,a32)')nStep,                     'nStep      '
-    write(UNITTMP_,*)
-    write(UNITTMP_,'(a)')'#TIMESIMULATION'
-    write(UNITTMP_,'(es15.8,a25)')tSimulation,           'tSimulation'
-    write(UNITTMP_,*)
-    write(UNITTMP_,'(a)')'#VERSION'
-    write(UNITTMP_,'(f5.2,a35)')VersionSwmf,             'VersionSwmf'
-    write(UNITTMP_,*)
-    write(UNITTMP_,'(a)')'#PRECISION'
-    write(UNITTMP_,'(i1,a39)')nByteReal,                 'nByteReal  '
-    write(UNITTMP_,*)
+    write(UnitTmp_,'(a)')'#STARTTIME'
+    write(UnitTmp_,'(i8,a32)')TimeStart % iYear,         'iYear      '
+    write(UnitTmp_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
+    write(UnitTmp_,'(i8,a32)')TimeStart % iDay,          'iDay       '
+    write(UnitTmp_,'(i8,a32)')TimeStart % iHour,         'iHour      '
+    write(UnitTmp_,'(i8,a32)')TimeStart % iMinute,       'iMinute    '
+    write(UnitTmp_,'(i8,a32)')TimeStart % iSecond,       'iSecond    '
+    write(UnitTmp_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond '
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#NSTEP'
+    write(UnitTmp_,'(i8,a32)')nStep,                     'nStep      '
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#TIMESIMULATION'
+    write(UnitTmp_,'(es15.8,a25)')tSimulation,           'tSimulation'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#VERSION'
+    write(UnitTmp_,'(f5.2,a35)')VersionSwmf,             'VersionSwmf'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#PRECISION'
+    write(UnitTmp_,'(i1,a39)')nByteReal,                 'nByteReal  '
+    write(UnitTmp_,*)
     if(dLongitudeHgr /= 0.0)then
-       write(UNITTMP_,'(a)')'#ROTATEHGR'
-       write(UNITTMP_,'(es15.8,a27)')dLongitudeHgrDeg,   'dLongitudeHgr'
-       write(UNITTMP_,*)
+       write(UnitTmp_,'(a)')'#ROTATEHGR'
+       write(UnitTmp_,'(es15.8,a27)')dLongitudeHgrDeg,   'dLongitudeHgr'
+       write(UnitTmp_,*)
     endif
     if(dLongitudeHgi /= 0.0)then
-       write(UNITTMP_,'(a)')'#ROTATEHGI'
-       write(UNITTMP_,'(es15.8,a27)')dLongitudeHgiDeg,   'dLongitudeHgi'
-       write(UNITTMP_,*)
+       write(UnitTmp_,'(a)')'#ROTATEHGI'
+       write(UnitTmp_,'(es15.8,a27)')dLongitudeHgiDeg,   'dLongitudeHgi'
+       write(UnitTmp_,*)
     endif
 
-    close(UNITTMP_)
+    call close_file
 
   end subroutine save_restart
 
