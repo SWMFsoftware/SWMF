@@ -2,7 +2,7 @@ module ModGrid
 
   use ModSize, ONLY: &
        nDim, nVar, nLat, nLon, nNode, &
-       RMin, iParticleMin, iParticleMax, nParticle,&
+       ROrigin, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
 
   implicit none
@@ -27,14 +27,14 @@ module ModGrid
   ! Grid info
   ! Containers for coordinates and data
   !----------------------------------------------------------------------------
-  ! Size of angular grid, latitude and longitude, at origin surface R=RMin
+  ! Size of angular grid, latitude and longitude, at origin surface R=ROrigin
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
   ! Said angular grids itself; each field line is identified by latitude
-  ! and longitude of the origin point at surface R=RMin as it is set
+  ! and longitude of the origin point at surface R=ROrigin as it is set
   ! at the beginning of simulation;
   ! 1st index - three spherical coordinates (R is added for completeness)
   ! 2nd index - node number (equivalent to line number)
@@ -175,7 +175,7 @@ contains
        do iLon = 1, nLon
           iNode = iNode_II(iLon, iLat)
           CoordOrigin_DA(:, iNode) = &
-               (/RMin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
+               (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGrid_IA(Block_, iNode)
           if(iProc == iGrid_IA(Proc_, iNode))&
                State_VIB(1:nDim,0,iBlock) = CoordOrigin_DA(:,iNode)

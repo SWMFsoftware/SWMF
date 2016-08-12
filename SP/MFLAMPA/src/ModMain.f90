@@ -5,7 +5,7 @@ module ModMain
 
   use ModSize, ONLY: &
        nDim, nVar, nLat, nLon, nNode, &
-       RMin, iParticleMin, iParticleMax, nParticle,&
+       ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
   
   use ModWrite, ONLY: &
@@ -32,7 +32,7 @@ module ModMain
   ! Methods and variables from ModSize
   public:: &
        nDim, nVar, nLat, nLon, nNode, &
-       RMin, iParticleMin, iParticleMax, nParticle,&
+       ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
 
   ! Methods and variables from ModGrid

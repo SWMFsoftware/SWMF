@@ -4,7 +4,7 @@ module ModWrite
 
   use ModSize, ONLY: &
        nDim, nVar, nLat, nLon, nNode, &
-       RMin, iParticleMin, iParticleMax, nParticle,&
+       iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
 
   use ModGrid, ONLY: &

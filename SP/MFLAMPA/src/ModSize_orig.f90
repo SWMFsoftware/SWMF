@@ -8,7 +8,7 @@ module ModSize
   private ! except
   public:: &
        nDim, nVar, &
-       RMin, &
+       ROrigin, RSc, &
        Particle_, OriginLat_, OriginLon_, &
        R_, Lat_, Lon_, Bx_, By_, Bz_, &
        nLat, nLon, nNode, &
@@ -21,7 +21,10 @@ module ModSize
   integer, parameter:: nVar = 6
 
   ! Starting position of field lines in Rs
-  real, parameter:: RMin = 2.5
+  real, parameter:: ROrigin = 2.5
+
+  ! Boundary of the solar corona in Rs
+  real, parameter:: RSc =21.0
 
   ! Indices of internal cooridnates
   integer, parameter:: &
