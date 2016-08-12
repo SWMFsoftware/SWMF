@@ -77,7 +77,7 @@ CouplerMode=swmf !ices !!off, ices, swmf
 
 #endGeneral
 
-#block ../oh.input.pl !process the settings of the Outer Heliosphere model
+#block ../input/oh.input.pl !process the settings of the Outer Heliosphere model
   
   ! user defined global time step
   UserGlobalTimeStep=-1.0   ! default = -1.0 (i.e. use time step defined by AMPS)
@@ -122,4 +122,3 @@ CouplerMode=swmf !ices !!off, ices, swmf
 
 #endblock
 
-#end
