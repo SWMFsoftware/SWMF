@@ -206,13 +206,28 @@ end subroutine RCM_advec0
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine RCM_advec (icontrol, itimei, itimef, idt)
+
   use ModProcRCM
   use ModIoUnit, ONLY: io_unit_new
-  USE Rcm_variables
-  USE Rcm_io
+  use ModUtilities, ONLY: open_file, close_file
+  use Rcm_variables
+  use Rcm_io
   use ModMpiOrig
+
   implicit none
-  INTEGER, INTENT (IN) :: icontrol, idt, itimei, itimef
+
+  INTEGER, INTENT (IN) :: icontrol, itimei, itimef, idt
+
+  ! Control RCM action:
+  ! icontrol = 0: read grid
+  ! icontrol = 1: initialize
+  ! icontrol = 2: compute
+  !     advance solution from itimei to itimef with time step idt
+  ! icontrol = 3: finalize
+  ! icontrol = 4: save restart file
+  !
+  ! The itimei, itimef and idt integer arguments are given in seconds
+
   INTEGER :: irdr, irdw
   integer :: iCurrentTime=0
   !
@@ -240,10 +255,10 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
   character(len=80) :: filename
   !
   SAVE
-  !
-!  call IM_write_prefix
-!  write(iUnitOut,'(A,I8,A,I8,A,I2)') &
-!       '  PE=',iProc+1,' of ',nProc,' starting.  icontrol=',icontrol
+  !-----------------------------------------------------------------------------
+  !  call IM_write_prefix
+  !  write(iUnitOut,'(A,I8,A,I8,A,I2)') &
+  !       '  PE=',iProc+1,' of ',nProc,' starting.  icontrol=',icontrol
   time0=MPI_Wtime()
   !
   !
@@ -279,8 +294,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      CALL Read_plasma ()
      !
      !
-     OPEN (UNIT = LUN, FILE = trim(NameRcmDir)//'rcm.params', STATUS = 'OLD', &
-          ACTION = 'READ', FORM = 'FORMATTED')
+     call open_file(FILE = trim(NameRcmDir)//'rcm.params', STATUS = 'OLD')
      !
      READ (LUN,*) !     READ (LUN,*) itimei   ! 1.  start time
      READ (LUN,*) !     READ (LUN,*) itimef   ! 2.  end time
@@ -322,7 +336,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
       f107           = 169
       doy            = 90
      !
-     CLOSE (UNIT = LUN)
+     call close_file
      !
      i1 = imin + 1 
      !
@@ -357,10 +371,10 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
         WRITE (iUnitOut,'(A)') '   Reading Restart File ...'
         !Open and read binary file
         write(filename,'(a)') "RCMrestart.rst"
-        open(LUN, file=trim(NameRcmDir)//"restartIN/"//filename, status='old', &
-             form='unformatted')
+        call open_file(FILE=trim(NameRcmDir)//"restartIN/"//filename, STATUS='old', &
+             FORM='unformatted')
         read(LUN) eeta
-        close(LUN)
+        call close_file
         !  Replace eeta at boundaries only because we are reading from restart file.
         CALL Get_boundary (boundary, bndloc)
         CALL Rcm_plasma_bc (2, 1)
@@ -488,7 +502,7 @@ subroutine RCM_advec (icontrol, itimei, itimef, idt)
      !
   case(3)    ! FINALIZE
      !
-     close(LUN_3)
+     call close_file(LUN_3)
      CALL MPI_BARRIER(iComm,ierror) ! ----------- BARRIER ------
      RETURN
 
@@ -528,9 +542,9 @@ CONTAINS
     END IF
     ! Added for SWMF
     LUN_2 = io_unit_new()
-    OPEN  (LUN_2, FILE = trim(NameRcmDir)//'rcm.printout', STATUS = ST, POSITION = PS)
+    call open_file(LUN_2, FILE=trim(NameRcmDir)//'rcm.printout', STATUS=ST, POSITION=PS)
     LUN_3 = io_unit_new()
-    OPEN  (LUN_3, FILE = trim(NameRcmDir)//'rcm.index',  STATUS = ST, POSITION = PS)
+    call open_file(LUN_3, FILE=trim(NameRcmDir)//'rcm.index', STATUS=ST, POSITION=PS)
     WRITE (LUN_3,'(T2,A)',ADVANCE='NO') TRIM(HD)
     WRITE (LUN_3,'(A11,A4,A1,A2,A1,A2, A8,A2,A1,A2,A1,A2)') &
          '  TODAY IS ', real_date(1:4), '/', real_date(5:6), '/', real_date(7:8), &
@@ -593,7 +607,7 @@ CONTAINS
     WRITE (LUN_2,'(T2,A,T20,I2)')     'IBND = ',    ibnd_type
     WRITE (LUN_2,'(T2,A,T20,I2)')     'IPCP_TYPE=', ipcp_type
     !
-    close(LUN_2)
+    call close_file(LUN_2)
     !
     !
 902 FORMAT (T2,'TIME', T12,'ITIME' , T19,'REC#' ,&
@@ -720,11 +734,10 @@ CONTAINS
     !Open file
     select case(plot_format(iFN))
     case('tec')
-       open(UNIT=LUN, FILE=trim(NameRcmDir)//"plots/"//filename, &
-            STATUS='REPLACE')
+       call open_file(FILE=trim(NameRcmDir)//"plots/"//filename)
     case('idl')
-       open(UNIT=LUN, FILE=trim(NameRcmDir)//"plots/"//filename, &
-            FORM='unformatted', STATUS='REPLACE')
+       call open_file(FILE=trim(NameRcmDir)//"plots/"//filename, &
+            FORM='unformatted')
     end select
 
     ! Write plot file: header followed by the data
@@ -1324,7 +1337,7 @@ CONTAINS
 
     end select
 
-    close(LUN)
+    call close_file
 
   end SUBROUTINE Disk_write_arrays
   !
@@ -1358,9 +1371,7 @@ CONTAINS
     inquire(file=NameSatFile, exist=IsExist)
 
     if ( (.not.IsExist) .or. IsFirstWrite ) then
-       open(unit=LUN, file=trim(NameSatFile), status='replace', iostat=iError)
-       if(iError /= 0) call CON_stop &
-            (NameSubSub//' Error opening file '//NameSatFile)
+       call open_file(FILE=trim(NameSatFile))
 
        ! Write header
        write(LUN, '(2a)')'RCM results for SWMF trajectory file ', &
@@ -1373,10 +1384,7 @@ CONTAINS
        
 
     else
-       open(unit=LUN, file=trim(NameSatFile), status='OLD',&
-            position='append', iostat=iError)
-       if(iError /= 0) &
-            call CON_stop(NameSubSub//' Error opening file '//NameSatFile)
+       call open_file(FILE=trim(NameSatFile), STATUS='OLD', POSITION='append')
     end if
 
     ! Collect variables.
@@ -1412,15 +1420,15 @@ CONTAINS
          '   Saving Restart at T=',iCurrentTime,'s ('//time_char//') '
 
     ! Open and write text file
-    open(LUN, file=trim(NameRestartOutDir)//"RCMrestart.txt", status='replace')
+    call open_file(FILE=trim(NameRestartOutDir)//"RCMrestart.txt")
     write(LUN,*) label
-    close(LUN)
+    call close_file
 
     ! Open and write binary file
-    open(LUN, file=trim(NameRestartOutDir)//"RCMrestart.rst", &
-         status='replace', form='unformatted')
+    call open_file(FILE=trim(NameRestartOutDir)//"RCMrestart.rst", &
+         FORM='unformatted')
     write(LUN) eeta
-    close(LUN)
+    call close_file
 
   end subroutine Save_Restart
   !

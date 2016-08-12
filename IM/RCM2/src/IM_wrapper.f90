@@ -276,7 +276,8 @@ contains
 
     use rcm_variables
     use ModNumConst
-    use ModIoUnit, ONLY: UNITTMP_
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     character(len=*), parameter :: NameSub='IM_print_variables'
 
@@ -305,8 +306,8 @@ contains
 
     nFile=nFile+1
     write(NameFile,'(a,i1,a)')'IM_from_'//NameSource//'_',nFile,'.dat'
-    open(UNITTMP_,file=NameFile)
-    write(UNITTMP_,'(a)')trim(NameVar)
+    call open_file(FILE=NameFile)
+    write(UnitTmp_,'(a)')trim(NameVar)
 
     do i=1,iSize
        do j=1,jSize
@@ -314,15 +315,15 @@ contains
           Lat = (cHalfPi-colat(i,j))*(180./cPi)
           select case(NameSource)
           case('IE')
-             write(UNITTMP_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
+             write(UnitTmp_,'(2i4,6G14.6)')j,i,Lon,Lat,v(i,j),birk_mhd(i,j),&
                   sigmaH_mhd(i,j),sigmaP_mhd(i,j)
           case('GM')
              if(.not.DoMultiFluidGMCoupling)then
-                write(UNITTMP_,'(2i4,9G14.6)') &
+                write(UnitTmp_,'(2i4,9G14.6)') &
                      j,i,Lon,Lat,density(i,j),pressure(i,j),&
                      vm(i,j),xmin(i,j),ymin(i,j),bmin(i,j),temperature(i,j)
              else
-                write(UNITTMP_,'(2i4,12G14.6)') &
+                write(UnitTmp_,'(2i4,12G14.6)') &
                      j,i,Lon,Lat,densityHp(i,j),densityOp(i,j),&
                      pressureHp(i,j),pressureOp(i,j),vm(i,j), &
                      xmin(i,j),ymin(i,j), &
@@ -331,7 +332,7 @@ contains
           end select
        end do
     end do
-    close(UNITTMP_)
+    call close_file
 
   end subroutine IM_print_variables
 
@@ -611,34 +612,36 @@ contains
     !==========================================================================
     !write values sent to IM from GM
     subroutine write_data
-      use ModIoUnit, ONLY: UNITTMP_
-      CHARACTER (LEN=80) :: filename
-      integer :: i,j
-      integer, save :: nCall=0
+      use ModIoUnit, ONLY: UnitTmp_
+      use ModUtilities, ONLY: open_file, close_file
+
+      character(LEN=80):: filename
+      integer:: i,j
+      integer:: nCall=0
       !------------------------------------------------------------------------
 
       nCall=nCall+1
       write(filename,'(a,i5.5,a)')"gm2im_debug_",nCall,".dat"
-      OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
-      write(UNITTMP_,'(a)') 'TITLE="gm2im debug values"'
+      call open_file(FILE=filename)
+      write(UnitTmp_,'(a)') 'TITLE="gm2im debug values"'
       if(.not. DoMultiFluidGMCoupling)then
-         write(UNITTMP_,'(a)') &
+         write(UnitTmp_,'(a)') &
               'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin", "rho", "p"'
       else
-         write(UNITTMP_,'(a)') &
+         write(UnitTmp_,'(a)') &
               'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin",&           
               & "rho","p","Hprho","Hpp","Oprho","Opp"'
       end if
-      write(UNITTMP_,'(a,i4,a,i4,a)') &
+      write(UnitTmp_,'(a,i4,a,i4,a)') &
            'ZONE T="SAVE", I=',jsize,', J=',isize,', K=1, F=POINT'
       do i=1,iSizeIn; do j=1,jSizeIn
          if(.not. DoMultiFluidGMCoupling)then
-            write(UNITTMP_,'(2i4,6G14.6)') j,i, &
+            write(UnitTmp_,'(2i4,6G14.6)') j,i, &
                  Buffer_IIV(i,j,vol_),Buffer_IIV(i,j,z0x_),Buffer_IIV(i,j,z0y_), &
                  Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_)
          else
             !multi-fluid                                                                
-            write(UNITTMP_,'(2i4,8G14.6)') j,i, &
+            write(UnitTmp_,'(2i4,8G14.6)') j,i, &
                  Buffer_IIV(i,j,vol_), &
                  Buffer_IIV(i,j,z0x_), &
                  Buffer_IIV(i,j,z0y_), &
@@ -651,7 +654,8 @@ contains
                  Buffer_IIV(i,j,Opp_)
          end if
       end do; end do
-      CLOSE(UNITTMP_)
+      call close_file
+
     end subroutine write_data
 
   end subroutine IM_put_from_gm
