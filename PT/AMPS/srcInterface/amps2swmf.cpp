@@ -73,6 +73,11 @@ extern "C" {
     PIC::CPLR::SWMF::RecieveCenterPointData(NameVar,*nVar,data,index);
   }
 
+  void amps_impose_global_time_step_(double *Dt) {
+    for(int spec=0; spec<PIC::nTotalSpecies; spec++)
+      PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] = *Dt;
+  }
+
   void amps_send_batsrus2amps_center_point_data_(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
     list<PIC::CPLR::SWMF::fSendCenterPointData>::iterator f;
 

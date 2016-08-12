@@ -19,9 +19,11 @@ module CON_couple_oh_pt
   use CON_couple_points, ONLY: &
        couple_points_init, couple_points, CouplePointsType
   use OH_wrapper, ONLY: &
-       OH_get_grid_info, OH_find_points, OH_get_for_pt, OH_put_from_pt
+       OH_get_grid_info, OH_find_points, OH_get_for_pt, OH_put_from_pt, &
+       OH_get_for_pt_dt
   use PT_wrapper, ONLY: &
-       PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh
+       PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh, &
+       PT_put_from_oh_dt
 
   implicit none
   save
@@ -84,7 +86,7 @@ contains
   !IROUTINE: couple_oh_pt - couple OH to PT
   !INTERFACE:
   subroutine couple_oh_pt(tSimulation)
-    
+    use CON_transfer_data, ONLY: transfer_real
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
@@ -97,11 +99,21 @@ contains
     !EOP
 
     logical :: DoTest, DoTestMe
+    real:: DtSi ! time step in SI units
     character (len=*), parameter:: NameSub = 'couple_oh_pt'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*) NameSub,' starting iProc=', CouplerOhToPt%iProcWorld
+
+    if(IsTightCouple_CC(OH_,PT_)) then 
+       if(is_proc(OH_)) call OH_get_for_pt_dt(DtSi)
+       call transfer_real(OH_,PT_,DtSi)
+       if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
+    else 
+       if(is_proc(PT_)) call PT_put_from_oh_dt(Couple_CC(OH_,PT_)%Dt)
+    endif
+
 
     call couple_points(CouplerOhToPt, OH_get_grid_info, OH_find_points, &
          OH_get_for_pt, PT_get_grid_info, PT_put_from_oh)

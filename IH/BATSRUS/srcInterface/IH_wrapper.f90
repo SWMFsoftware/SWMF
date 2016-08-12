@@ -48,6 +48,7 @@ module IH_wrapper
   ! Coupling with PT
   public:: IH_get_for_pt
   public:: IH_put_from_pt
+  public:: IH_get_for_pt_dt
 
   ! Coupling with EE (for SC)
   public:: IH_get_for_ee
@@ -1892,6 +1893,19 @@ contains
          ExtraSource_ICB(:,iTest,jTest,kTest,BlkTest)
 
   end subroutine IH_put_from_pt
+  !===========================================================================
+  subroutine IH_get_for_pt_dt(DtSi)
+    ! Calculate the global time step for PC
+    use IH_ModMain,            ONLY: Dt
+    use IH_ModPhysics,         ONLY: No2Si_V, UnitT_
+    use IH_ModTimeStepControl, ONLY: set_global_timestep
+
+    real, intent(out) ::  DtSi
+    !--------------------------------------------------------------------------
+    ! use -1.0 so that no limit is applied on Dt
+    call set_global_timestep(TimeSimulationLimit=-1.0)
+    DtSi = Dt*No2Si_V(UnitT_)
+  end subroutine IH_get_for_pt_dt
   !===========================================================================
   subroutine IH_get_for_sc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)

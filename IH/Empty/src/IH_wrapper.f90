@@ -48,6 +48,7 @@ module IH_wrapper
   ! Coupling with PT
   public:: IH_get_for_pt
   public:: IH_put_from_pt
+  public:: IH_get_for_pt_dt
 
   ! Coupling with EE (for SC)
   public:: IH_get_for_ee
@@ -393,8 +394,15 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_put_from_pt
-
   !===========================================================================
+  subroutine IH_get_for_pt_dt(DtSi)
+    real, intent(out) ::  DtSi
+    character(len=*), parameter :: NameSub='IH_get_for_pt_dt'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_for_pt_dt
+  !===========================================================================
+
   subroutine IH_get_for_ee(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
     

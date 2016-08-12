@@ -27,6 +27,7 @@ module PT_wrapper
   ! OH coupling
   public:: PT_put_from_oh
   public:: PT_get_for_oh
+  public:: PT_put_from_oh_dt
 
 contains
 
@@ -274,6 +275,14 @@ contains
     end if
     
   end subroutine PT_put_from_oh
+  !==============================================================================
+  subroutine PT_put_from_oh_dt(Dt)
+    implicit none
+    real,    intent(in):: Dt
+    character(len=*), parameter :: NameSub='PT_put_from_oh_dt'
+    !--------------------------------------------------------------------------
+    call amps_impose_global_time_step(Dt)
+  end subroutine PT_put_from_oh_dt
 
   !==============================================================================
   subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &

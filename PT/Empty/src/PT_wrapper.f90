@@ -146,7 +146,16 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_oh
+  !==============================================================================
+  subroutine PT_put_from_oh_dt(Dt)
+    implicit none
+    real,    intent(in):: Dt
+    character(len=*), parameter :: NameSub='PT_put_from_oh_dt'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+  end subroutine PT_put_from_oh_dt
   !============================================================================
+
   subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
