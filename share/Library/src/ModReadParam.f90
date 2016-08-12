@@ -213,6 +213,8 @@ contains
   !INTERFACE:
   subroutine read_file(NameFile, iCommIn, NameRestartFile)
 
+    use ModUtilities, ONLY: open_file, close_file
+
     !INPUT ARGUMENTS:
     ! Name of the base param file
     character (len=*), optional, intent(in):: NameFile 
@@ -271,10 +273,10 @@ contains
           if(.not.IsFound)call CON_stop(NameSub//' SWMF_ERROR: '//&
                trim(NameFile)//" cannot be found")
           iUnit_I(iFile)=io_unit_new()
-          open(iUnit_I(iFile),file=NameFile,status="old")
+          call open_file(iUnit_I(iFile), FILE=NameFile, STATUS="old")
        endif
        do
-          read(iUnit_I(iFile),'(a)',ERR=100,END=100) StringLine
+          read(iUnit_I(iFile),'(a)', ERR=100, END=100) StringLine
           NameCommand=StringLine
           i=index(NameCommand,' '); 
           if(i>0)NameCommand(i:len(NameCommand))=' '
@@ -320,7 +322,7 @@ contains
                   " SWMF_ERROR: include file cannot be found, name="//&
                   trim(StringLine))
              iUnit_I(iFile) = io_unit_new()
-             open(iUnit_I(iFile),FILE=StringLine,STATUS="old")
+             call open_file(iUnit_I(iFile), FILE=StringLine, STATUS="old")
              CYCLE
           else if(NameCommand/='#END')then
              ! Store line into buffer
@@ -332,7 +334,7 @@ contains
           end if
 
 100       continue
-          close (iUnit_I(iFile))
+          call close_file(iUnit_I(iFile))
           if(iFile > 1)then
              ! Continue reading the calling file
              iFile = iFile - 1

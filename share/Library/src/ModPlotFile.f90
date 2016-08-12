@@ -70,7 +70,7 @@ contains
        VarIn_VI, VarIn_VII, VarIn_VIII, &
        VarIn_IV, VarIn_IIV, VarIn_IIIV, iCommIn)
 
-    use ModUtilities, ONLY: split_string, join_string
+    use ModUtilities, ONLY: split_string, join_string, open_file, close_file
 
     character(len=*),           intent(in):: NameFile       ! Name of plot file
     character(len=*), optional, intent(in):: TypePositionIn !asis/rewind/append
@@ -408,10 +408,7 @@ contains
        deallocate(XYZMinMax)
        deallocate(MinimumBlockIjk)
     case('tec')
-       open(UnitTmp_, file=NameFile, &
-            position=TypePosition, status=TypeStatus, iostat=iError)
-       if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open tecplot file=' // trim(NameFile))
+       call open_file(FILE=NameFile, POSITION=TypePosition, STATUS=TypeStatus)
        write(UnitTmp_, "(a)", ADVANCE="NO") 'VARIABLES='
        if(n3 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
        if(n2 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
@@ -442,12 +439,9 @@ contains
           write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
 
-       close(UnitTmp_)
+       call close_file
     case('formatted', 'ascii')
-       open(UnitTmp_, file=NameFile, &
-            position = TypePosition, status=TypeStatus, iostat=iError)
-       if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open ascii file=' // trim(NameFile))
+       call open_file(FILE=NameFile, POSITION=TypePosition, STATUS=TypeStatus)
 
        write(UnitTmp_, "(a)")             trim(StringHeader)
        write(UnitTmp_, "(i7,es18.10,3i3)") nStep, Time, nDimOut, nParam, nVar
@@ -463,12 +457,10 @@ contains
           n = n + 1
           write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
-       close(UnitTmp_)
+       call close_file
     case('real8')
-       open(UnitTmp_, file=NameFile, form='unformatted', &
-            position=TypePosition, status=TypeStatus, iostat=iError)
-       if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open real8 file=' // trim(NameFile))
+       call open_file(FILE=NameFile, FORM='unformatted', &
+            POSITION=TypePosition, STATUS=TypeStatus)
        write(UnitTmp_) StringHeader
        write(UnitTmp_) nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_) n_D(1:nDim)
@@ -480,12 +472,10 @@ contains
        do iVar = 1, nVar
           write(UnitTmp_) Var_IV(:,iVar)
        end do
-       close(UnitTmp_)
+       call close_file
     case('real4')
-       open(UnitTmp_, file=NameFile, form='unformatted', &
-            position = TypePosition, status=TypeStatus, iostat=iError)
-       if(iError /= 0)call CON_stop(NameSub // &
-            ' could not open real4 file=' // trim(NameFile))
+       call open_file(FILE=NameFile, FORM='unformatted', &
+            POSITION=TypePosition, STATUS=TypeStatus)
 
        write(UnitTmp_) StringHeader
        write(UnitTmp_) nStep, real(Time, Real4_), nDimOut, nParam, nVar
@@ -508,7 +498,7 @@ contains
           write(UnitTmp_) Var4_I
        end do
        deallocate(Var4_I)
-       close(UnitTmp_)
+       call close_file
     case default
        call CON_stop(NameSub // ' unknown TypeFile =' // trim(TypeFile))
     end select
