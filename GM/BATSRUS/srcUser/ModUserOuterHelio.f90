@@ -1057,13 +1057,8 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('srho')
-       if(UseNeutralFluid)then
-          NameTecVar = 'Srho'
-          PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
-       else
-          !This is not needed when not using the 4 neutral fluids
-          call CON_stop(NameSub//': no neutral fluids present')
-       endif
+       NameTecVar = 'Srho'
+       PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
     case('fluid')
        if(UseNeutralFluid)then
           call select_region(iBlock)
@@ -1165,43 +1160,43 @@ contains
 
     !updating sources from AMPS in PT-OH coupling
     if(.not.UseNeutralFluid)then
+       if(allocated(ExtraSource_ICB))then
 
-       if(.not.allocated(ExtraSource_ICB)) &
-            call CON_stop(NameSub//': ExtraSource_ICB is not allocated')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             !skipping the cells inside rBody
+             if(.not.true_cell(i,j,k,iBlock))CYCLE
 
-          !skipping the cells inside rBody
-          if(.not.true_cell(i,j,k,iBlock))CYCLE
+             !Extract conservative variables
+             State_V = State_VGB(:,i,j,k,iBlock)
+             
+             Ux  = State_V(RhoUx_)/State_V(Rho_)
+             Uy  = State_V(RhoUy_)/State_V(Rho_)
+             Uz  = State_V(RhoUz_)/State_V(Rho_)
 
-          !Extract conservative variables
-          State_V = State_VGB(:,i,j,k,iBlock)
+             U2  = Ux**2 + Uy**2 + Uz**2
 
-          Ux  = State_V(RhoUx_)/State_V(Rho_)
-          Uy  = State_V(RhoUy_)/State_V(Rho_)
-          Uz  = State_V(RhoUz_)/State_V(Rho_)
+             !updating the source terms
+             Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
+                  + ExtraSource_ICB(1,i,j,k,iBlock)
+             Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
+                  + ExtraSource_ICB(2,i,j,k,iBlock)
+             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+                  + ExtraSource_ICB(3,i,j,k,iBlock)
+             Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+                  + ExtraSource_ICB(4,i,j,k,iBlock)
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + ExtraSource_ICB(5,i,j,k,iBlock)
+             Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                  + GammaMinus1*( Source_VC(Energy_,i,j,k) &
+                  - Ux*Source_VC(RhoUx_,i,j,k) &
+                  - Uy*Source_VC(RhoUy_,i,j,k) &
+                  - Uz*Source_VC(RhoUz_,i,j,k) &
+                  + 0.5*U2*Source_VC(Rho_,i,j,k) )
 
-          U2  = Ux**2 + Uy**2 + Uz**2
+          end do; end do; end do
+       end if
 
-          !updating the source terms
-          Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
-               + ExtraSource_ICB(1,i,j,k,iBlock)
-          Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
-               + ExtraSource_ICB(2,i,j,k,iBlock)
-          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + ExtraSource_ICB(3,i,j,k,iBlock)
-          Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
-               + ExtraSource_ICB(4,i,j,k,iBlock)
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + ExtraSource_ICB(5,i,j,k,iBlock)
-          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               + GammaMinus1*( Source_VC(Energy_,i,j,k) &
-               - Ux*Source_VC(RhoUx_,i,j,k) &
-               - Uy*Source_VC(RhoUy_,i,j,k) &
-               - Uz*Source_VC(RhoUz_,i,j,k) &
-               + 0.5*U2*Source_VC(Rho_,i,j,k) )
-
-       end do; end do; end do
        RETURN
     end if
 
