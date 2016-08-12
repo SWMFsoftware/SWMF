@@ -9,6 +9,7 @@ make directory "xxx/"
 make xxx/ directory again (should not produce an error)
  0
 testing open_file and close_file
+testing touch_file and remove_file
 
 testing fix_dir_name
 fixed empty string=

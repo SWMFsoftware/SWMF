@@ -27,6 +27,8 @@ module ModUtilities
   public:: fix_dir_name
   public:: open_file
   public:: close_file
+  public:: remove_file
+  public:: touch_file
   public:: flush_unit
   public:: split_string
   public:: join_string
@@ -310,6 +312,45 @@ contains
     end if
 
   end subroutine close_file
+
+  !============================================================================
+  subroutine remove_file(NameFile, NameCaller)
+
+    ! Remove file NameFile if it exists
+    ! Pass NameCaller to open_file and close_file in case of errors
+
+    use ModIoUnit, ONLY: UNITTMP_
+
+    character(len=*), intent(in):: NameFile
+    character(len=*), optional, intent(in):: NameCaller
+
+    logical:: IsFound
+    !-------------------------------------------------------------------------
+
+    inquire(FILE=NameFile, EXIST=IsFound)
+    if(.not.IsFound) RETURN
+
+    call open_file(FILE=NameFile, NameCaller=NameCaller)
+    call close_file(STATUS='DELETE', NameCaller=NameCaller)
+
+  end subroutine remove_file
+
+  !============================================================================
+  subroutine touch_file(NameFile, NameCaller)
+
+    ! Create file NameFile if it does not exist
+    ! Pass NameCaller to open_file and close_file in case of errors
+
+    use ModIoUnit, ONLY: UNITTMP_
+
+    character(len=*), intent(in):: NameFile
+    character(len=*), optional, intent(in):: NameCaller
+    !-------------------------------------------------------------------------
+
+    call open_file(FILE=NameFile, NameCaller=NameCaller)
+    call close_file(NameCaller=NameCaller)
+
+  end subroutine touch_file
 
   !BOP ========================================================================
   !ROUTINE: flush_unit - flush output
@@ -774,6 +815,12 @@ contains
          STATUS='old', POSITION='append', NameCaller=NameSub)
     write(UnitTmp_,'(a)') 'More text'
     call close_file(UnitTmp_, STATUS='delete', NameCaller=NameSub)
+
+    write(*,'(a)') 'testing touch_file and remove_file'
+    call touch_file('xxx/touched', NameCaller=NameSub)
+    call touch_file('xxx/touched', NameCaller=NameSub)
+    call remove_file('xxx/touched', NameCaller=NameSub)
+    call remove_file('xxx/touched', NameCaller=NameSub)
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
