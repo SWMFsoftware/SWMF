@@ -38,7 +38,9 @@ namespace OH {
   
 
   void Init_BeforeParser();
-
+  
+  int user_set_face_boundary(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+  
   //---------------------------------------------------------------------------
   namespace Sampling{
     using namespace Exosphere::Sampling;
