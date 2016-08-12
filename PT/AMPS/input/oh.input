@@ -72,6 +72,9 @@ CouplerMode=swmf !ices !!off, ices, swmf
   RecoverParticleData=off  \\ !on, off
     file=AMPS.restart
 
+  !DomainBoundaryParticleIntersection=user-defined \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
+  !  function = OH::user_set_face_boundary
+
 #endGeneral
 
 #block ../oh.input.pl !process the settings of the Outer Heliosphere model
