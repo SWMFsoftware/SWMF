@@ -39,6 +39,7 @@ void amps_time_step();
 extern "C" { 
   void amps_timestep_(double* TimeSimulation, double* TimeSimulationLimit);
   int initamps_();
+  void amps_impose_global_time_step_(double *Dt);
   void amps_setmpicommunicator_(signed int* iComm,signed int* iProc,signed int* nProc);
   void amps_finalize_();
 
@@ -75,7 +76,12 @@ extern "C" {
 
   void amps_impose_global_time_step_(double *Dt) {
     for(int spec=0; spec<PIC::nTotalSpecies; spec++)
-      PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] = *Dt;
+      if(PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] != *Dt){
+	if(PIC::ThisThread == 0)
+	  std::cout<<"AMPS: global time step has been changed to "<<
+	    *Dt<<" sec for species "<< spec << std::endl;
+	PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] = *Dt;
+      }
   }
 
   void amps_send_batsrus2amps_center_point_data_(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
