@@ -488,12 +488,17 @@ void PIC::CCMC::LoadParticles() {
 }
 
 //the main tracking procedure
-int PIC::CCMC::TraceParticles() {
+int PIC::CCMC::TraceParticles(double MaxTrajectoryIntegrationTime) {
   long int nTotalParticles;
   char fname[_MAX_STRING_LENGTH_PIC_];
+  double TimeCounter[PIC::nTotalSpecies];
+  int spec;
 
   //load particles
   LoadParticles();
+
+  //init the time counter
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) TimeCounter[spec]=0.0;
 
   //continue simulation untill particles are in the system
   MPI_Allreduce(&PIC::ParticleBuffer::NAllPart,&nTotalParticles,PIC::nTotalSpecies,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
@@ -518,6 +523,39 @@ int PIC::CCMC::TraceParticles() {
 
     //update the time counter
     PIC::SimulationTime::Update();
+
+    //compare the TimeCounter with the requested max trajectory integraion time and quit if the time is up
+    for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+      if ((MaxTrajectoryIntegrationTime>0.0) && (MaxTrajectoryIntegrationTime<TimeCounter[spec])) {
+        //the integration time for species 'spec' exseeds that of the requested -> terminate trajectory integration for species 'spec'
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+        PIC::Mesh::cDataBlockAMR *block;
+        int i,j,k;
+        long int ptr,ptrNext;
+
+        for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+          block=node->block;
+
+          if (block==NULL) continue;
+
+          for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+            for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+              for (i=0;i<_BLOCK_CELLS_X_;i++) {
+                ptr=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+                while (ptr!=-1) {
+                  ptrNext=PIC::ParticleBuffer::GetNext(ptr);
+                  if (PIC::ParticleBuffer::GetI(ptr)==spec) PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+
+                  ptr=ptrNext;
+                }
+              }
+            }
+          }
+        }
+      }
+      else TimeCounter[spec]+=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+    }
   }
 
   //output sampled trajectories

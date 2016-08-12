@@ -1204,7 +1204,7 @@ namespace PIC {
 
     //trace particles
     void LoadParticles();
-    int TraceParticles();
+    int TraceParticles(double MaxTrajectoryIntegrationTime=-1.0);
   }
 
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
