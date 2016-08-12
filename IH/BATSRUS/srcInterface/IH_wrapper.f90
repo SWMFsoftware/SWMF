@@ -1294,16 +1294,22 @@ contains
 
   !============================================================================
 
-  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, iIndexOrigin_I)
+  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, iIndexOrigin_I,&
+       RSoftBoundary)
     use IH_BATL_lib, ONLY: nDim
-    use IH_ModParticleFieldLine, ONLY: extract_particle_line
+    use IH_ModParticleFieldLine, &
+         ONLY: extract_particle_line, set_soft_boundary_particle_line
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
     integer, optional,intent(in) :: iIndexOrigin_I(nLine)
+    real,    optional,intent(in) :: RSoftBoundary
 
     character(len=*), parameter:: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
+    ! set the soft boundary if provided
+    if(present(RSoftBoundary))&
+         call set_soft_boundary_particle_line(RSoftBoundary)
     ! extract field lines starting at input points
     if(present(iIndexOrigin_I))then
        call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_I)

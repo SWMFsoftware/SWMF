@@ -30,7 +30,7 @@ module ModParticleFieldLine
   public:: extract_particle_line
   public:: advect_particle_line
   public:: get_particle_data
-
+  public:: set_soft_boundary_particle_line
 
   ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
@@ -81,13 +81,13 @@ module ModParticleFieldLine
   ! number of active field lines
   integer:: nFieldLine = 0
 
-  ! soft radial boundary that may be set at FIRST call only of extract_particle_line;
+  ! soft radial boundary that may be set only once during the run;
   ! "soft" means that exactly ONE particle is allowed beyond this boundary:
   ! - during extraction the first particle that crosses is is left and extraction 
   !   of this line is stopped
   ! - during advection the particle that crosses it is left in the domain,
   !   but the one that is already beyond it is removed
-  real:: RBoundarySoft = -1.0 ! negative value marks that extraction wasn't called yet
+  real:: RBoundarySoft = -1.0
 
   !\
   ! initialization related info
@@ -179,8 +179,24 @@ contains
 
   !==========================================================================
 
+  subroutine set_soft_boundary_particle_line(RBoundarySoftIn)
+    ! set additional boundary imposed by user
+    real, intent(in):: RBoundarySoftIn
+    character(len=*), parameter:: NameSub = 'set_soft_boundary'
+    !---------------------------------------------
+    ! soft boundary can be set only once!
+    if(RBoundarySoft < 0.0)then
+       RBoundarySoft = RBoundarySoftIn
+    else
+       call CON_stop(NameThisComp//':'//NameSub//&
+            ': soft boundary may be set only once and may not be changed!')
+    end if
+  end subroutine set_soft_boundary_particle_line
+  
+  !==========================================================================
+
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
-       iIndexStart_I, RBoundarySoftIn)
+       iIndexStart_I)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -194,8 +210,6 @@ contains
     integer, optional, intent(in):: iTraceModeIn
     ! initial particle indices for starting particles
     integer, optional, intent(in):: iIndexStart_I(nFieldLineIn)
-    ! additional boundary imposed by user
-    real,    optional, intent(in):: RBoundarySoftIn
 
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
@@ -261,22 +275,6 @@ contains
          call CON_stop(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
     call copy_end_to_regular
-
-    ! check if soft boundary is provided
-    if(present(RBoundarySoftIn))then
-       ! soft boundary can be set only once!
-       if(RBoundarySoft < 0.0)then
-          RBoundarySoft = RBoundarySoftIn
-       else
-          call CON_stop(&
-               NameThisComp//':'//NameSub//&
-               ': soft boundary may be set only at the first call'//&
-               ' and may not be changed!')
-       end if
-    else
-       ! set it to zero to mark that hasn't been set at the first call
-       RBoundarySoft = 0.0
-    end if
 
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
