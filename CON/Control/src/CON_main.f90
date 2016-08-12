@@ -18,7 +18,7 @@ module CON_main
   use CON_time
   use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
   use CON_session
-  use ModIoUnit, ONLY: UNITTMP_
+  use ModUtilities, ONLY: remove_file, touch_file
   use ModPlanetConst, ONLY: init_planet_const
   use CON_planet,     ONLY: set_planet_defaults
   use ModMpi, ONLY: MPI_WTIME, MPI_allreduce, MPI_INTEGER, MPI_MIN
@@ -53,8 +53,6 @@ module CON_main
   ! Local variable definitions.
   !/
   integer :: lComp, iComp
-
-  logical :: IsFound
 
   logical :: DoTest, DoTestMe
 
@@ -107,25 +105,9 @@ contains
     ! Delete SWMF.SUCCESS, SWMF.STOP and SWMF.KILL files if found
     !/
     if(is_proc0())then
-
-       inquire(file='SWMF.SUCCESS',EXIST=IsFound)
-       if(IsFound)then
-          open(UNITTMP_, file = 'SWMF.SUCCESS')
-          close(UNITTMP_,STATUS = 'DELETE')
-       end if
-
-       inquire(file='SWMF.STOP',EXIST=IsFound)
-       if (IsFound) then 
-          open(UNITTMP_, file = 'SWMF.STOP')
-          close(UNITTMP_, STATUS = 'DELETE')
-       endif
-
-       inquire(file='SWMF.KILL',EXIST=IsFound)
-       if (IsFound) then 
-          open(UNITTMP_, file = 'SWMF.KILL')
-          close(UNITTMP_, STATUS = 'DELETE')
-       endif
-
+       call remove_file('SWMF.SUCCESS')
+       call remove_file('SWMF.STOP')
+       call remove_file('SWMF.KILL')
     end if
 
     !\
@@ -244,10 +226,7 @@ contains
     !\
     ! Signal normal completion by writing an empty SWMF.SUCCESS file
     !/
-    if(is_proc0())then
-       open(UNITTMP_, file = 'SWMF.SUCCESS')
-       close(UNITTMP_)
-    end if
+    if(is_proc0()) call touch_file('SWMF.SUCCESS')
 
     !\
     ! Stop running
