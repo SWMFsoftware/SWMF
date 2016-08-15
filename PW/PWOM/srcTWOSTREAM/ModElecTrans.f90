@@ -160,7 +160,7 @@ contains
     logical :: DoIterateFlux=.true.
     ! this should be adjusted...planet specific
     real,allocatable:: potion(:)
-
+    real :: PrecipCoef
     !  DATA potion/16.,16.,18./
     !------------------------------------------------------------------------
     !DeltaPot_C(:)=0.0
@@ -169,11 +169,31 @@ contains
     LastPhiUp = 0.0
     LastPhiDwn = 0.0
     
+    !kludge
+!    UsePrecipitation=.true.
+!    PrecipEflux=2.0
+!    PrecipEmean=400.0
+!    PrecipEmin=100.
+!    PrecipEmax=800.
+    !PESPEC=0.0
+    
+!    PrecipCoef=get_precip_norm(PrecipEmean,PrecipEmin,&
+!                        PrecipEmax,PrecipEflux)
+!    do j=1,NBINS
+!       if (UsePrecipitation.and. ENER(j) > PrecipEmin &
+!            .and. ENER(j)<PrecipEmax) then
+!          PrecipPhi_I(j)= PrecipCoef*ENER(j)*exp(-ENER(j)&
+!               /PrecipEmean)
+!       endif
+!    end do
+
+!    write(*,*)PrecipCoef
     !set the precipition arrays
     if (.not.allocated(PrecipCombinedPhi_I))&
          allocate(PrecipCombinedPhi_I(NBINS))
     if (UsePrecipitation) then
        call maxt(PrecipEflux, PrecipEmean, ENER, DEL,0, 0.0, 0.0, PrecipPhi_I)
+       !call maxt(0.0, PrecipEmean, ENER, DEL,0, PrecipEflux, PrecipEmean, PrecipPhi_I)
     else
        PrecipPhi_I(:)=0.0
     endif
@@ -225,7 +245,7 @@ contains
        PHITOP(:)=0.0
     endif
     
-    write(*,*)2.0*3.14*sum(PHITOP(:)*DEL(:))*AVMU
+!    write(*,*)2.0*3.14*sum(PHITOP(:)*DEL(:))*AVMU
     
     do while (DiffMax >0.1 .and. DoIterateFlux)
        
@@ -922,11 +942,13 @@ contains
     real, allocatable   :: Coord_I(:), PlotState_IV(:,:)
 
     !grid parameters
-    integer, parameter :: nDim =1, nVar=4, S_=1
+    integer, parameter :: nDim =1, nVar=6, S_=1
     !variable parameters
-    integer, parameter :: n_=1, nflux_=2, qe_=3, pot_=4
+    integer, parameter :: n_=1, nflux_=2, qe_=3, pot_=4, ionrate_=5, sec_=6
     
-    character(len=100),parameter :: NamePlotVar='Alt[km] n_se[cm-3] nflux[cm-2s-1] HeatingRate[eV/cm3/s] Pot[eV] g r'
+    character(len=130),parameter :: NamePlotVar=&
+         'Alt[km] n_se[cm-3] nflux[cm-2s-1] HeatingRate[eV/cm3/s] Pot[eV] '&
+         //'IonRate[cm-3s-1] SecProdRate[cm-3s-1] g r'
     character(len=100) :: NamePlot='integrated.out'
     
     character(len=*),parameter :: NameHeader='SE output iono'
@@ -950,6 +972,8 @@ contains
        PlotState_IV(iAlt,nflux_)  = NumberFlux_C(iAlt)
        PlotState_IV(iAlt,qe_)  = HeatingRate_C(iAlt)
        PlotState_IV(iAlt,Pot_)  = DeltaPot_C(iAlt)
+       PlotState_IV(iAlt,ionrate_)  = TotalIonizationRate_C(iAlt)
+       PlotState_IV(iAlt,sec_)  = sum(SecondaryIonRate_IC(:,iAlt))
        
     enddo
     
@@ -1003,13 +1027,15 @@ contains
        enddo ENERGY
        CALL midpnt_int(NumberDens_C(iAlt),NumDensIntegrand_I,&
             EnergyGrid_I,1,nEnergy,nEnergy,1)
-       NumberDens_C(iAlt)=4.*cPi*1.7E-8*NumberDens_C(iAlt)
+!       NumberDens_C(iAlt)=4.*cPi*1.7E-8*NumberDens_C(iAlt)
+       NumberDens_C(iAlt)=1.7E-8*NumberDens_C(iAlt)
        
        ! calculate the number flux
 !       CALL midpnt_int(NumberFlux_C(iAlt),&
 !            uFlux_IC(:,iAlt)-dFlux_IC(:,iAlt),&
 !            DeltaE_I,1,nEnergy,nEnergy,2)
-       NumberFlux_C(iAlt)=2.0*cPi*sum((uFlux_IC(:,iAlt)-dFlux_IC(:,iAlt))*DeltaE_I(:))
+!       NumberFlux_C(iAlt)=2.0*cPi*sum((uFlux_IC(:,iAlt)-dFlux_IC(:,iAlt))*DeltaE_I(:))
+       NumberFlux_C(iAlt)=sum((uFlux_IC(:,iAlt)-dFlux_IC(:,iAlt))*DeltaE_I(:))
        
     enddo ALT
 
@@ -1045,6 +1071,9 @@ contains
     real, parameter :: cCmToM=1e-2
     logical :: DoReflect
     integer :: nReflect
+
+    !array to hold precipitating number flux and density
+    real::PrecNumberDens_C(nAltExtended),PrecNumberFlux_C(nAltExtended)
     !-----------------------------------------------------------------------
 
     if (.not.allocated(NumDensIntegrand_I))allocate(NumDensIntegrand_I(nEnergy))
@@ -1058,7 +1087,7 @@ contains
        mu_I(iPA) = cos(PA_I(iPA))
     enddo
     
-    DeltaPot_C(:)=0.0
+!    DeltaPot_C(:)=0.0
 !    DeltaPot_C(:)=0.5*EnergyGrid_I(1)
 
     !mu = sqrt((mu0^2-1) * (B(s)[E-e(dPhi(s)-dPhi0)])/(B0*E)+1)
@@ -1162,12 +1191,108 @@ contains
        dKE_I(nEnergy)=dKE_I(nEnergy-1)
 
        !now integrate quantities for density and number flux
-       NumberDens_C(iAlt)=4.0*cPi*1.7E-8*sum(NumDensIntegrand_I*dKE_I)
-       NumberFlux_C(iAlt)=2.0*cPi*sum(NumFluxIntegrand_I*dKE_I)
+!       NumberDens_C(iAlt)=4.0*cPi*1.7E-8*sum(NumDensIntegrand_I*dKE_I)
+!       NumberFlux_C(iAlt)=2.0*cPi*sum(NumFluxIntegrand_I*dKE_I)
 
+       NumberDens_C(iAlt)=1.7E-8*sum(NumDensIntegrand_I*dKE_I)
+       NumberFlux_C(iAlt)=sum(NumFluxIntegrand_I*dKE_I)
+
+       !get contribution from losscone filling aurora
+       call map_precip(AVMU,PrecipCombinedPhi_I,PrecNumberDens_C,PrecNumberFlux_C)
+       NumberDens_C(iAlt)=NumberDens_C(iAlt)+PrecNumberDens_C(iAlt)
+       NumberFlux_C(iAlt)=NumberFlux_C(iAlt)+PrecNumberFlux_C(iAlt)
+       
+       
     enddo ALT_LOOP
     
   end subroutine map_flux
+  !=============================================================================
+  
+  subroutine map_precip(AVMU,pFlux_I,PrecNumberDens_C,PrecNumberFlux_C)
+    use ModSeGrid,     ONLY: nAlt, nAltExtended,nEnergy,&
+         EnergyGrid_I,DeltaE_I,AltExtended_C,DeltaPot_C    
+    use ModNumConst,    ONLY: cPi
+    
+    real,intent(in) :: AVMU, pFlux_I(nEnergy)
+    real,intent(out)::PrecNumberDens_C(nAltExtended),PrecNumberFlux_C(nAltExtended)
+    integer :: iAlt,iEnergy,iPA, nPAforInt
+    real :: B0,Biono
+    integer, parameter :: nPA=90 ! number of PA
+    real :: PA_I(nPa) !array for PA
+    real :: mu0_I(nPA), mu_I(nPA),dmu0_I(nPA)
+    real :: dPA,alpha,IntMu0,IntdMu0,UpFlux_I(nEnergy),DnFlux_I(nEnergy)
+    real :: UpOmni_I(nEnergy),DnOmni_I(nEnergy)
+    real :: KE_I(nEnergy),dKE_I(nEnergy)
+    real,allocatable :: NumDensIntegrand_I(:) !integrand of number density
+    real,allocatable :: NumFluxIntegrand_I(:)!integrand of number flux
+    real, parameter :: cCmToM=1e-2
+    logical :: DoReflect
+    integer :: nReflect
+    !-----------------------------------------------------------------------
+
+    if (.not.allocated(NumDensIntegrand_I))allocate(NumDensIntegrand_I(nEnergy))
+    if (.not.allocated(NumFluxIntegrand_I))allocate(NumFluxIntegrand_I(nEnergy))
+    ! fill PA_I
+    dPA = 0.5*cPi/real(nPA)
+    PA_I(1) = 0.0
+    mu_I(1) = cos(PA_I(1))
+    do iPA =2,nPA
+       PA_I(iPA) = PA_I(iPA-1)+dPA
+       mu_I(iPA) = cos(PA_I(iPA))
+    enddo
+    
+    !set B at iono of line
+    call get_b(AltExtended_C(nAlt)*cCmToM,Biono)
+    ALT_LOOP: do iAlt=nAlt+1,nAltExtended
+       !for a given pitchangle at iAlt find coresponding PA at nAlt 
+       call get_b(AltExtended_C(iAlt)*cCmToM,B0)
+       ENERGY_LOOP: do iEnergy=1,nEnergy
+          nPAforInt=0
+          dmu0_I(:)=0.0
+          mu0_I(:)=0.0
+          PA_LOOP: do iPA =1,nPA
+             !mu0=sqrt(1-(B0*(B(s))) (1-mu^2)))
+             !mu0=sqrt(1-alpha)
+             alpha = (1.0-mu_I(iPA)**2.0)*(B0/Biono)
+             mu0_I(iPA) = sqrt(1.0-alpha)
+             nPAforInt=nPAforInt+1
+             !save dmu0 spacing
+             if (iPA>1) dmu0_I(iPA-1)=mu0_I(iPA-1)-mu0_I(iPA)
+          enddo PA_LOOP
+         
+          !fill in last delta for mu
+          if (nPAforInt>1) dmu0_I(nPAforInt)=0.0!dmu0_I(nPAforInt-1)
+          !set the Kinetic Energy array for this altitude
+          KE_I(iEnergy) = EnergyGrid_I(iEnergy)!-DeltaPot_C(iAlt)
+          !get mu0 integral
+          IntMu0=sum(mu0_I(1:nPAforInt)*dmu0_I(1:nPAforInt))
+          IntdMu0=sum(dmu0_I(1:nPAforInt))
+          DnOmni_I(iEnergy) = IntdMu0*pFlux_I(iEnergy)/AVMU
+          DnFlux_I(iEnergy) = IntMu0*pFlux_I(iEnergy)/AVMU
+          
+          !get precipitating number flux and number dens
+          NumDensIntegrand_I(iEnergy) = &
+               (DnOmni_I(iEnergy))&
+               /sqrt(KE_I(iEnergy))
+          NumFluxIntegrand_I(iEnergy) = &
+               (-DnFlux_I(iEnergy))
+
+          !set dKE_I
+          if (iEnergy>1.and.iEnergy<nEnergy) &
+               dKE_I(iEnergy-1)=KE_I(iEnergy)-KE_I(iEnergy-1)
+       enddo ENERGY_LOOP
+       dKE_I(nEnergy)=dKE_I(nEnergy-1)
+
+       !now integrate quantities for density and number flux
+!       PrecNumberDens_C(iAlt)=4.0*cPi*1.7E-8*sum(NumDensIntegrand_I(:)*dKE_I(:))
+!       PrecNumberFlux_C(iAlt)=2.0*cPi*sum(NumFluxIntegrand_I(:)*dKE_I(:))
+
+       PrecNumberDens_C(iAlt)=1.7E-8*sum(NumDensIntegrand_I(:)*dKE_I(:))
+       PrecNumberFlux_C(iAlt)=sum(NumFluxIntegrand_I(:)*dKE_I(:))
+
+    enddo ALT_LOOP
+    
+  end subroutine map_precip
 
   !=============================================================================
   ! check if a given energy and PA will reflect above iAltIn
@@ -1320,5 +1445,16 @@ contains
     endif
   END Subroutine maxt
   
-  
+  !=============================================================================
+  ! function to return normalization value for Maxwellian precipitation 
+  real function  get_precip_norm(E0,E1,E2,eFlux)
+    real, intent(in) :: E0, E1, E2, eFlux ! average, min, and max energy of precip
+    ! eflux is integrated energy flux in 
+    ! ergs/cm^2
+    get_precip_norm = 1.98774e11*eFlux/&
+         (exp(-E1/E0)*E0*(E1**2.0+2.0*E1*E0+2.0*E0**2.0)&
+         -exp(-E2/E0)*E0*(E2**2.0+2.0*E2*E0+2.0*E0**2.0))
+    return
+  end function get_precip_norm
+
 end Module ModElecTrans

@@ -376,10 +376,9 @@ contains
     ALONG_LINE: do iPoint=1,nAltExtended
        if (AltExtended_C(iPoint) < AltPw_C(nAltPw)) then
           if (AltExtended_C(iPoint) > AltPw_C(1))then
+             NormCoord=&
+                  (AltExtended_C(iPoint)-AltPw_C(1))/dAltPw+1
              if (iPoint <=nAlt) then
-                NormCoord=&
-                     (Alt_C(iPoint)-AltPw_C(1))/dAltPw+1
-                
                 eThermalDensity_C(iPoint)=&
                      linear(eDensPW_C,1,nAltPw,NormCoord)
                 eThermalTemp_C(iPoint)=&
