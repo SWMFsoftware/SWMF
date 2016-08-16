@@ -21,7 +21,7 @@ module SP_wrapper
   public:: SP_put_input_time
   public:: SP_put_from_mh
   public:: SP_put_line
-  public:: SP_request_line
+  public:: SP_get_request
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
   public:: SP_get_solar_corona_boundary
@@ -107,16 +107,17 @@ contains
   end subroutine SP_get_solar_corona_boundary
 
   !===================================================================
-  subroutine SP_request_line(iDirIn, nLine, CoordOut_DI, iIndexOut_II,&
+  subroutine SP_get_request(nLine, nCoord, CoordOut_DI, iIndexOut_II,&
        nAux, AuxOut_VI)
-    integer,              intent(in) :: iDirIn
     integer,              intent(out):: nLine
+    integer,              intent(out):: nCoord
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
-    call CON_stop('Can not request line')
-  end subroutine SP_request_line
+    character(len=*), parameter:: NameSub='SP_get_request'
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine SP_get_request
   !===================================================================
   subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
     integer, intent(in):: nParticle

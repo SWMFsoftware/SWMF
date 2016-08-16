@@ -34,7 +34,7 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
-       SP_put_line, SP_request_line, SP_get_grid_descriptor_param, &
+       SP_put_line, SP_get_request, SP_get_grid_descriptor_param, &
        SP_get_line_all, SP_get_solar_corona_boundary
 
   implicit none
@@ -181,7 +181,7 @@ contains
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
-              get_request_target   = SP_get_request_for_sc, &
+              get_request_target   = SP_get_request, &
               transform            = transform_sp_to_sc, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = SC_put_request)
@@ -207,7 +207,7 @@ contains
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIhSp, &
-              get_request_target   = SP_get_request_for_ih, &
+              get_request_target   = SP_get_request, &
               transform            = transform_sp_to_ih, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = IH_put_request)
@@ -327,34 +327,6 @@ contains
     !------------------------------------------
     call transform(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine transform_ih_to_sp
-  !==================================================================!
-  subroutine SP_get_request_for_sc(nData, &
-       nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
-    integer,            intent(out):: nData
-    integer,            intent(out):: nCoord
-    real,   allocatable,intent(out):: Coord_II(:,:)
-    integer,allocatable,intent(out):: iIndex_II(:,:)
-    integer,            intent(out):: nAux
-    real,   allocatable,intent(out):: Aux_VI(:,:)
-    !------------------------------------------------------------
-    nCoord = SP_GridDescriptor%nDim
-    call SP_request_line(iInterfaceOrigin, nData, Coord_II, iIndex_II, &
-         nAux, Aux_VI)
-  end subroutine SP_get_request_for_sc
-  !==================================================================!
-  subroutine SP_get_request_for_ih(nData, &
-       nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
-    integer,            intent(out):: nData
-    integer,            intent(out):: nCoord
-    real,   allocatable,intent(out):: Coord_II(:,:)
-    integer,allocatable,intent(out):: iIndex_II(:,:)
-    integer,            intent(out):: nAux
-    real,   allocatable,intent(out):: Aux_VI(:,:)
-    !------------------------------------------------------------
-    nCoord = SP_GridDescriptor%nDim
-    call SP_request_line(iInterfaceEnd, nData, Coord_II, iIndex_II, &
-         nAux, Aux_VI)
-  end subroutine SP_get_request_for_ih
   !==================================================================!
   subroutine put_request(iComp, nData, &
        nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)

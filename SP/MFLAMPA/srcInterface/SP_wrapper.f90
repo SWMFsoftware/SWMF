@@ -16,6 +16,8 @@ module SP_wrapper
        RSc, LatMin, LatMax, LonMin, LonMax, &
        TimeGlobal, iGrid_IA, State_VIB, iNode_B, TypeCoordSystem,&
        Block_, Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
+  use ModBufferQueue, ONLY: TypeBufferQueue, &
+       init_queue, reset_queue, add_to_queue, reset_peek_queue, peek_queue
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -41,7 +43,7 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_put_input_time
   public:: SP_put_from_mh
-  public:: SP_request_line
+  public:: SP_get_request
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
@@ -50,6 +52,13 @@ module SP_wrapper
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'bx by bz'
+
+  ! particles that need to be requested from MH component
+  type(TypeBufferQueue):: QueueRequest
+  ! indices that define a request: field line and particle indices
+  integer, parameter  :: nRequestIndex = 2
+  ! estimated number of requests per field line
+  integer, parameter  :: nRequestPerLine = nParticle / 100
 
 contains
 
@@ -214,125 +223,116 @@ contains
   end subroutine SP_get_solar_corona_boundary
 
   !===================================================================
-  subroutine SP_request_line(iDirIn, &
-       nLine, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+  subroutine SP_get_request( &
+       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     ! request coordinates & indices of field lines' beginning/origin/end
     ! for the current processor
     !---------------------------------------------------------------
-    integer,              intent(in) :: iDirIn
-    integer,              intent(out):: nLine
+    integer,              intent(out):: nRequestOut
+    integer,              intent(out):: nCoordOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
 
-    ! directions requested
-    integer, parameter:: iDirBegin_ = -1, iDirOrigin_ = 0, iDirEnd_ = 1
-
-    ! radius-lon-lat coordinates
-    real:: Coord_D(nDim)
     ! loop variables
-    integer:: iParticle, iBlock, iNode
-    ! indices of the particle
-    integer:: iLine, iIndex
-    integer:: iMin_A(nNode),iMax_A(nNode)
-    integer:: iError
-    character(len=*), parameter:: NameSub='SP_request_line'
+    integer:: iParticle, iBlock, iNode, iRequest
+    integer:: iRequest_I(nRequestIndex)
+
+    logical, save:: IsFirstCall = .true.
+    character(len=*), parameter:: NameSub='SP_get_request'
     !----------------------------------------------------------------
-    ! number of lines on this processor
-    nLine   = nBlock
-    nAux = 1
+    if(IsFirstCall)then
+       IsFirstCall = .false.
+       ! need to initalize request buffer:
+       ! size of request buffer is estimated average number of requests 
+       ! per line times number of lines on this proc
+       call init_queue(QueueRequest, nRequestPerLine * nBlock, nRequestIndex)
+       ! the initial request contains the origin points only
+       do iBlock = 1, nBlock
+          call add_to_queue(QueueRequest, (/iBlock, 0/))
+       end do
+    end if
+
+    ! size of the request
+    nRequestOut = QueueRequest % nRecordAll
+    nCoordOut   = nDim
+    nAux        = 1
 
     ! prepare containers to hold the request
     if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)
-    allocate(CoordOut_DI(nDim, nBlock))
+    allocate(CoordOut_DI(nDim, nRequestOut))
     if(allocated(iIndexOut_II)) deallocate(iIndexOut_II)
-    allocate(iIndexOut_II(nDim+1, nBlock))! 3 cell + 1 block index
+    allocate(iIndexOut_II(nDim+1, nRequestOut))! 3 cell + 1 block index
     if(allocated(AuxOut_VI)) deallocate(AuxOut_VI)
-    allocate(AuxOut_VI(1, nBlock))
+    allocate(AuxOut_VI(1, nRequestOut))
+    
+    ! go over the request queue
+    call reset_peek_queue(QueueRequest)
+    do iRequest = 1, nRequestOut
+       call peek_queue(QueueRequest, iRequest_I)
+       iBlock    = iRequest_I(1)
+       iParticle = iRequest_I(2)
+       iNode     = iNode_B(iBlock)
+       CoordOut_DI(:, iBlock) = &
+            State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+       iIndexOut_II(1, iBlock) = iParticle
+       call get_node_indexes(iNode, &
+            iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
+       iIndexOut_II(4, iBlock) = iBlock
+       AuxOut_VI(1, iBlock) = real(iParticle)
+    end do
 
-    ! each processor fills only its own nodes
-    select case(iDirIn)
-    case(iDirBegin_)
-       ! get coordinates of the 1st points on field lines
-       do iBlock = 1, nBlock
-          iNode = iNode_B(iBlock); iParticle = iGrid_IA(Begin_, iNode)
-          CoordOut_DI(:, iBlock) = &
-               State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          iIndexOut_II(1, iBlock) = iParticle
-          call get_node_indexes(iNode, &
-               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
-          iIndexOut_II(4, iBlock) = iBlock
-          AuxOut_VI(1, iBlock) = real(iParticle)
-       end do
-    case(iDirOrigin_)
-       ! get coordinates of the origin points of field lines
-       do iBlock = 1, nBlock
-          iNode = iNode_B(iBlock)
-          CoordOut_DI(:, iBlock) = &
-               State_VIB((/R_,Lon_,Lat_/), 0, iBlock)
-          iIndexOut_II(1, iBlock) = 0
-          call get_node_indexes(iNode, &
-               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
-          iIndexOut_II(4, iBlock) = iBlock
-          AuxOut_VI(1, iBlock) = 0.0
-       end do
-    case(iDirEnd_)
-       ! get coordinates of the last points on field lines
-       do iBlock = 1, nBlock
-          iNode = iNode_B(iBlock); iParticle = iGrid_IA(End_, iNode)
-          CoordOut_DI(:, iBlock) = &
-               State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          iIndexOut_II(1, iBlock) = iParticle
-          call get_node_indexes(iNode, &
-               iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
-          iIndexOut_II(4, iBlock) = iBlock
-          AuxOut_VI(1, iBlock) = real(iParticle)
-       end do
-    case default
-       call CON_stop(NameSub//': invalid request of field line coordinates')
-    end select
-  end subroutine SP_request_line
+    ! request is complete => reset queue
+    call reset_queue(QueueRequest)
+
+  end subroutine SP_get_request
 
   !===================================================================
 
-  subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
+  subroutine SP_put_line(nPut, Coord_DI, iIndex_II)
     use ModMpi
     ! store particle coordinates extracted elsewhere
     !---------------------------------------------------------------
-    integer, intent(in):: nParticle
-    real,    intent(in):: Coord_DI( nDim,   nParticle)
-    integer, intent(in):: iIndex_II(nDim+1, nParticle)
+    integer, intent(in):: nPut
+    real,    intent(in):: Coord_DI( nDim,   nPut)
+    integer, intent(in):: iIndex_II(nDim+1, nPut)
 
     ! cartesian coordinates
     real:: Xyz_D(nDim)
     ! radius-lon-lat coordinates
     real:: Coord_D(nDim)
     ! loop variables
-    integer:: iParticle, iBlock, iNode
+    integer:: iPut, iBlock, iNode
     ! indices of the particle
-    integer:: iLine, iIndex
+    integer:: iLine, iParticle
     integer:: iMin_A(nNode),iMax_A(nNode)
     integer:: iError
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     ! store passed particles
-    do iParticle = 1, nParticle
-       iBlock  = iIndex_II(4, iParticle)
-       iLine = iNode_B(iBlock)
-       iIndex = iIndex_II(1, iParticle)
-       if(iIndex < iParticleMin)&
+    do iPut = 1, nPut
+       iBlock = iIndex_II(4, iPut)
+       iLine  = iNode_B(iBlock)
+       iParticle = iIndex_II(1, iPut)
+       if(iParticle < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
-       if(iIndex > iParticleMax)&
+       if(iParticle > iParticleMax)&
             call CON_stop(NameSub//': particle index is above limit')
-       iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iIndex)
-       iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iIndex)
+       iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iParticle)
+       iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iParticle)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
+
+       ! check if the particle has crossed the solar corona boundary
+       if(State_VIB(R_,iParticle,iBlock) < RSc .and. Coord_DI(R_,iPut)>=RSc)&
+            ! add it to the request queue
+            call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+
        ! reset the state vector and put coordinates
-       State_VIB(:,                  iIndex, iBlock) = 0.0
-       State_VIB((/R_, Lon_, Lat_/), iIndex, iBlock) = &
-            Coord_DI(1:nDim, iParticle)
+       State_VIB(:,                  iParticle, iBlock) = 0.0
+       State_VIB((/R_, Lon_, Lat_/), iParticle, iBlock) = &
+            Coord_DI(1:nDim, iPut)
     end do
     !\
     ! Update begin/end points on all procs
