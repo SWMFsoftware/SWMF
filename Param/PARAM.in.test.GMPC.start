@@ -293,7 +293,7 @@ cut particles1 ascii planet		StringPlot
 2					yMax
 -1					zMin
 1					zMax
-3
+1					DxOutput
 
 #SAVEPLOT
 PC/plots				SaveDirName
