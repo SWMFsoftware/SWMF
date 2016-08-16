@@ -1565,13 +1565,13 @@ test12_3d_run:
 test12_3d_check:
 	gunzip -c output/test12/x=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/x_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/x_n4.ref \
 		> test12_3d_gmpc.diff)
 	gunzip -c output/test12/y=0_var.out.ref.3d.gz \
 	        > ${TESTDIR}/RESULTS/4step/GM/y_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
 		${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
 		${TESTDIR}/RESULTS/4step/GM/y_n4.ref \
 		>> test12_3d_gmpc.diff)
@@ -1621,7 +1621,7 @@ test12_iso_check:
 		> test12_iso_gm.diff)
 	gunzip -c output/test12/z=0_fluid.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/PC/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 \
 		${TESTDIR}/RESULTS/PC/z=0_fluid_0_t00000001_n00000004.out \
 		${TESTDIR}/RESULTS/PC/z_n4.ref \
 		> test12_iso_pc.diff)
