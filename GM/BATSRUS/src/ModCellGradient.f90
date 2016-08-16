@@ -47,6 +47,7 @@ contains
     logical:: UseBodyCell
 
     real:: InvDxHalf, InvDyHalf, InvDzHalf, InvDx, InvDy, InvDz
+    real:: VarR_D(nDim), VarL_D(nDIm)
     integer :: i, j, k, iL, iR, jL, jR, kL, kR
 
     character(len=*), parameter:: NameSub = 'calc_divergence'
@@ -73,7 +74,22 @@ contains
           end do; end do; end do
 
        else
-          call stop_mpi(NameSub//': non-cartesian to be implemented')
+          ! div(Var) = Sum(AreaNormal.VarFace_D)/Volume for the 2*nDim faces
+          ! VarFace_D = (VarCenter_D + VarNeighbor_D)/2
+          ! The contributions from the cell center cancel out
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Div_G(i,j,k) = &
+                  +sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*Var_DG(:,i+1,j,k)) &
+                  -sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*Var_DG(:,i-1,j,k))
+             if(nJ > 1) Div_G(i,j,k) = Div_G(i,j,k) &
+                  +sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*Var_DG(:,i,j+1,k)) &
+                  -sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*Var_DG(:,i,j-1,k))
+             if(nK > 1) Div_G(i,j,k) = Div_G(i,j,k) &
+                  +sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*Var_DG(:,i,j,k+1)) &
+                  -sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*Var_DG(:,i,j,k-1))
+             Div_G(i,j,k) = Div_G(i,j,k)*0.5/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+
        end if
     else
        ! One sided differences if the neighbor is inside a body          
@@ -119,7 +135,48 @@ contains
 
           end do; end do; end do
        else
-          call stop_mpi(NameSub//': non-cartesian to be implemented')
+
+          ! For false cells set div(Var) = 0. For true cells
+          ! div(Var) = Sum(AreaNormal.VarFace_D)/Volume for the 2*nDim faces
+          ! where VarFace_D = (VarNeighbor_D + VarCenter_D)/2
+          ! Since sum(AreaNormal) = 0, the VarCenter_D contributions vanish.
+          ! For false neighbor on one side extrapolate from the other side.
+          ! For false neighbors on both sides set VarNeigbbor_D = VarCenter_D.
+
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Div_G(i,j,k) = 0.0
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+             ! Shift to left and right if the neighbor is a true cell
+             iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
+             ! Set neighbor values
+             VarL_D = Var_DG(:,iL,j,k); VarR_D = Var_DG(:,iR,j,k)
+             ! Extrapolate from other side for false neighbors
+             if(iL == i .and. iR > i) VarL_D = 2*VarL_D - VarR_D
+             if(iR == i .and. iL < i) VarR_D = 2*VarR_D - VarL_D
+             Div_G(i,j,k) = sum(FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*VarR_D) &
+                  -         sum(FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*VarL_D)
+
+             if(nJ > 1)then
+                jL = j - iTrue_G(i,j-1,k); jR = j + iTrue_G(i,j+1,k)
+                VarL_D = Var_DG(:,i,jL,k); VarR_D = Var_DG(:,i,jR,k)
+                if(jL == j .and. jR > j) VarL_D = 2*VarL_D - VarR_D
+                if(jR == j .and. jL < j) VarR_D = 2*VarR_D - VarL_D
+                Div_G(i,j,k) = Div_G(i,j,k) &
+                     + sum(FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*VarR_D) &
+                     - sum(FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*VarL_D)
+             end if
+             if(nK > 1)then
+                kL = k - iTrue_G(i,j,k-1); kR = k + iTrue_G(i,j,k+1)
+                VarL_D = Var_DG(:,i,j,kL); VarR_D = Var_DG(:,i,j,kR)
+                if(kL == k .and. kR > k) VarL_D = 2*VarL_D - VarR_D
+                if(kR == k .and. kL < k) VarR_D = 2*VarR_D - VarL_D
+                Div_G(i,j,k) = Div_G(i,j,k) &
+                     + sum(FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*VarR_D) &
+                     - sum(FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*VarL_D)
+             end if
+             Div_G(i,j,k) = Div_G(i,j,k)*0.5/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
        end if
     end if
 
@@ -142,7 +199,7 @@ contains
 
     logical:: UseBodyCell
 
-    real:: InvDxHalf, InvDyHalf, InvDzHalf, InvDx, InvDy, InvDz
+    real:: InvDxHalf, InvDyHalf, InvDzHalf, InvDx, InvDy, InvDz, VarL, VarR
     integer :: i, j, k, iL, iR, jL, jR, kL, kR
 
     character(len=*), parameter:: NameSub = 'calc_gradient1'
@@ -168,25 +225,22 @@ contains
                   InvDzHalf*(Var_G(i,j,k+1) - Var_G(i,j,k-1))
           end do; end do; end do
        else
-          call stop_mpi(NameSub//': non-cartesian to be implemented')
-          !do k=1,nK; do j=1,nJ; do i=1,nI
-          !   VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
-          !
-          !   FaceArea_DS(:,1:2) = FaceNormal_DDFB(:,1,i:i+1,j,k,iBlock)
-          !   FaceArea_DS(:,3:4) = FaceNormal_DDFB(:,2,i,j:j+1,k,iBlock)
-          !   FaceArea_DS(:,5:6) = FaceNormal_DDFB(:,3,i,j,k:k+1,iBlock)
-          !
-          !   Difference_S(1) = -(Var_G(i-1,j,k) + Var_G(i,j,k))
-          !   Difference_S(2) = +(Var_G(i+1,j,k) + Var_G(i,j,k))
-          !   Difference_S(3) = -(Var_G(i,j-1,k) + Var_G(i,j,k))
-          !   Difference_S(4) = +(Var_G(i,j+1,k) + Var_G(i,j,k))
-          !   Difference_S(5) = -(Var_G(i,j,k-1) + Var_G(i,j,k))
-          !   Difference_S(6) = +(Var_G(i,j,k+1) + Var_G(i,j,k))
-          !
-          !   GradX_C(i,j,k) = sum(FaceArea_DS(x_,:)*Difference_S)*VInvHalf
-          !   GradY_C(i,j,k) = sum(FaceArea_DS(y_,:)*Difference_S)*VInvHalf
-          !   GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
-          !end do; end do; end do
+          ! grad(Var) = Sum(AreaNormal*VarFace)/Volume for the 2*nDim faces
+          ! VarFace = (VarCenter + VarNeighbor)/2
+          ! The contributions from the cell center cancel out
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Grad_DG(:,i,j,k) = &
+                  FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*Var_G(i+1,j,k) - &
+                  FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*Var_G(i-1,j,k)
+             if(nJ > 1) Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) + &
+                  FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*Var_G(i,j+1,k) - &
+                  FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*Var_G(i,j-1,k)
+             if(nK > 1) Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) + &
+                  FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*Var_G(i,j,k+1) - &
+                  FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*Var_G(i,j,k-1)
+             Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) &
+                  *0.5/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
        end if
     else
        ! One sided differences if the neighbor is inside a body
@@ -226,7 +280,49 @@ contains
 
           end do; end do; end do
        else
-          call stop_mpi(NameSub//': non-cartesian to be implemented')
+
+          ! For false cells grad(Var) = 0. For true cells
+          ! grad(Var) = Sum(AreaNormal*VarFace)/Volume for the 2*nDim faces
+          ! where VarFace = (VarNeighbor + VarCenter)/2. 
+          ! Since sum(AreaNormal) = 0, the VarCenter contributions vanish.
+          ! For false neighbor on one side extrapolate from the other side.
+          ! For false neighbors on both sides set VarNeigbbor = VarCenter.
+
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             Grad_DG(:,i,j,k) = 0.0
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+             ! Shift to left and right if the neighbor is a true cell
+             iL = i - iTrue_G(i-1,j,k); iR = i + iTrue_G(i+1,j,k)
+             ! Set neighbor values
+             VarR = Var_G(iR,j,k); VarL = Var_G(iL,j,k)
+             ! Extrapolate from other side for false neighbors
+             if(iL == i .and. iR > i) VarL = 2*VarL - VarR
+             if(iR == i .and. iL < i) VarR = 2*VarR - VarL
+             Grad_DG(:,i,j,k) = FaceNormal_DDFB(:,1,i+1,j,k,iBlock)*VarR &
+                  -             FaceNormal_DDFB(:,1,i  ,j,k,iBlock)*VarL
+
+             if(nJ > 1)then
+                jL = j - iTrue_G(i,j-1,k); jR = j + iTrue_G(i,j+1,k)
+                VarR = Var_G(i,jR,k); VarL = Var_G(i,jL,k)
+                if(jL == j .and. jR > j) VarL = 2*VarL - VarR
+                if(jR == j .and. jL < j) VarR = 2*VarR - VarL
+                Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) &
+                     + FaceNormal_DDFB(:,2,i,j+1,k,iBlock)*VarR &
+                     - FaceNormal_DDFB(:,2,i,j  ,k,iBlock)*VarL
+             end if
+             if(nK > 1)then
+                kL = k - iTrue_G(i,j,k-1); kR = k + iTrue_G(i,j,k+1)
+                VarR = Var_G(i,j,kR); VarL = Var_G(i,j,kL)
+                if(kL == k .and. kR > k) VarL = 2*VarL - VarR
+                if(kR == k .and. kL < k) VarR = 2*VarR - VarL
+                Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) &
+                     + FaceNormal_DDFB(:,3,i,j,k+1,iBlock)*VarR &
+                     - FaceNormal_DDFB(:,3,i,j,k  ,iBlock)*VarL
+             end if
+             Grad_DG(:,i,j,k) = Grad_DG(:,i,j,k) &
+                  *0.5/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
        end if
     end if
 
