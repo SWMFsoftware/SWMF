@@ -7226,7 +7226,6 @@ Default is UseHallResist false.
 
 #HALLREGION
 +magnetotail -nearbody		StringHallRegion
-10.0				HallSpeedTinyDim
 
 This command is only useful if the Hall MHD scheme is switched on with
 the #HALLRESISTIVITY command. 
@@ -7235,12 +7234,6 @@ The StringHallRegion string can specify the region(s) where the Hall
 resistivity is used.  The regions must be described with the #REGION
 commands.  Note the 'tapered' option in the shape desciption that can
 be used to make the transition smoother.
-
-The HallSpeedTinyDim parameter gives a cut off value for the Hall
-speed J/(n*e). If the Hall speed at a given grid cell is below
-HallSpeedTinyDim, the Hall effect is ignored. The value is given in
-I/O units. Zero or negative value means that the cut off is not
-applied.
 
 The default is to apply the Hall MHD scheme everywhere if it is switched on.
 </command>

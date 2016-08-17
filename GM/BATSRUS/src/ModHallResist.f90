@@ -54,9 +54,6 @@ module ModHallResist
   ! Indexes of regions defined with the #REGION commands
   integer, allocatable:: iRegionHall_I(:)
 
-  ! If Hall speed is less than HallSpeedTinyDim, ignore the Hall effect
-  real:: HallSpeedTinyDim = -1.0
-
 contains
   !============================================================================
   subroutine init_hall_resist
@@ -120,8 +117,6 @@ contains
 
     case("#HALLREGION")
        call read_var('StringHallRegion', StringHallRegion)
-       call read_var('HallSpeedTinyDim', HallSpeedTinyDim)
-       IsDynamicSemiImpl = HallSpeedTinyDim > 0
 
     case("#BIERMANNBATTERY")
        call read_var("UseBiermannBattery", UseBiermannBattery)
@@ -220,7 +215,7 @@ contains
 
     integer:: i, j, k
     real:: Current_D(MaxDim)
-    real:: Rho, HallSpeedTiny2, HallSpeed2
+    real:: Rho
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
@@ -246,16 +241,6 @@ contains
     call set_ion_mass_per_charge(iBlock)
     HallFactor_C = HallFactor_C*IonMassPerCharge_G(1:nI,1:nJ,1:nK)
 
-    if(HallSpeedTinyDim <= 0) RETURN
-
-    HallSpeedTiny2 = (HallSpeedTinyDim*Io2No_V(UnitU_))**2
-    do k=1, nK; do j=1,nJ; do i=1, nI
-       call get_current(i, j, k, iBlock, Current_D)
-       Rho = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-       HallSpeed2 = sum(Current_D**2)*(HallFactor_C(i,j,k)/Rho)**2
-       if(HallSpeed2 < HallSpeedTiny2) HallFactor_C(i,j,k) = 0
-    end do; end do; end do
-
   end subroutine set_hall_factor_cell
   !=========================================================================
   subroutine set_hall_factor_face(iBlock, UseIonMassPerCharge)
@@ -278,7 +263,7 @@ contains
 
     real, allocatable, save:: j2_G(:,:,:)
     real:: Current_D(MaxDim)
-    real:: Rho, HallSpeedTiny2, HallSpeed2
+    real:: Rho
     logical:: IsNewBlock
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_DF)) &
@@ -305,24 +290,9 @@ contains
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
 
-    ! Check for small Hall velocity
-    if(HallSpeedTinyDim > 0)then
-       ! Calculate Hall speed and compare with HallSpeedTiny
-       HallSpeedTiny2 = (HallSpeedTinyDim*Io2No_V(UnitU_))**2
-       if(.not.allocated(j2_G)) allocate(j2_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
-       do k=k0_, nKp1_; do j=j0_,nJp1_; do i=0, nI+1
-          call get_current(i, j, k, iBlock, Current_D)
-          j2_G(i,j,k) = sum(Current_D**2)
-       end do; end do; end do
-    end if
-
     do k=1, nK; do j=1,nJ; do i=1, nI+1
        HallFactor_DF(1,i,j,k) = HallFactor_DF(1,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i-1:i,j,k))
-       if(HallSpeedTinyDim <= 0) CYCLE
-       Rho = 0.5*sum(State_VGB(iRhoIon_I,i-1:i,j,k,iBlock))
-       HallSpeed2 = 0.5*sum(j2_G(i-1:i,j,k))*(HallFactor_DF(1,i,j,k)/Rho)**2
-       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(1,i,j,k) = 0
     end do; end do; end do
 
     if(nDim == 1) RETURN
@@ -330,10 +300,6 @@ contains
     do k=1, nK; do j=1,nJ+1; do i=1, nI
        HallFactor_DF(2,i,j,k) = HallFactor_DF(2,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j-1:j,k))
-       if(HallSpeedTinyDim <= 0) CYCLE
-       Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j-1:j,k,iBlock))
-       HallSpeed2 = 0.5*sum(j2_G(i,j-1:j,k))*(HallFactor_DF(2,i,j,k)/Rho)**2
-       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(2,i,j,k) = 0
     end do; end do; end do
 
     if(nDim == 2) RETURN
@@ -341,10 +307,6 @@ contains
     do k=1, nK+1; do j=1,nJ; do i=1, nI
        HallFactor_DF(3,i,j,k) = HallFactor_DF(3,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j,k-1:k))
-       if(HallSpeedTinyDim <= 0) CYCLE
-       Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j,k-1:k,iBlock))
-       HallSpeed2 = 0.5*sum(j2_G(i,j,k-1:k))*(HallFactor_DF(3,i,j,k)/Rho)**2
-       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(3,i,j,k) = 0
     end do; end do; end do
 
   end subroutine set_hall_factor_face
