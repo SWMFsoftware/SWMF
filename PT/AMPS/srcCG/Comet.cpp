@@ -26,6 +26,9 @@ char Comet::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
 //dust mass escape rate sampling buffer
 double Comet::Sampling::DustMassEscapeRate=0.0;
 
+//the total H2O source rate for each surface element
+double *Comet::BjornNASTRAN::TotalSourceRate_H2O=NULL;
+
 //parameters of the initial dust velocity distribution
 int Comet::DustInitialVelocity::VelocityModelMode=Comet::DustInitialVelocity::Mode::ConstantVelocity;
 double Comet::DustInitialVelocity::RotationPeriod=1.0E10;
@@ -568,7 +571,8 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 #pragma omp task default (none) shared (spec,_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_,_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_, \
     _EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_,PIC::ParticleWeightTimeStep::GlobalParticleWeight,PIC::ParticleBuffer::ParticleDataLength, \
      LocalTimeStep,threadInjectedParticles,PIC::ThisThread,threadBoundaryTriangleFacesInjectionRate,threadBoundaryTriangleFacesMassInjectionRate,CutCell::BoundaryTriangleFaces, \
-     threadCalculatedSourceRate,threadCalculatedMassSourceRate,threadCalculatedDustEscapedMassSourceRate) \
+     threadCalculatedSourceRate,threadCalculatedMassSourceRate,threadCalculatedDustEscapedMassSourceRate, \
+     Comet::BjornNASTRAN::TotalSourceRate_H2O,PIC::Mesh::mesh) \
      firstprivate (SourceProcessID,GrainRadius,ParticleWeight,GrainWeightCorrection,GrainMass,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT, \
      sphereX0,sphereRadius,startNode) \
      private (flag,iInjectionFaceNASTRAN, \
@@ -696,9 +700,24 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 
     //check whether the new dust particle can be lifted from the surface
     double accl[3],c=0.0;
+    double Gravity[3],DragForceAcceleration[3];
+    int nd,i,j,k;
+    double GrainDragCoefficient=2.0;
 
-    TotalParticleAcceleration(accl,spec,newParticle,x_SO_OBJECT,v_SO_OBJECT,startNode);
-    for (int i=0;i<3;i++) c+=accl[i]*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[i];
+ //   TotalParticleAcceleration(accl,spec,newParticle,x_SO_OBJECT,v_SO_OBJECT,startNode);
+
+    nd=PIC::Mesh::mesh.fingCellIndex(x_SO_OBJECT,i,j,k,startNode);
+    Comet::GetGravityAcceleration(Gravity,nd,startNode);
+
+    for (int idim=0;idim<3;idim++) {
+      DragForceAcceleration[idim]=Pi*pow(GrainRadius,2)*GrainDragCoefficient/2.0*Comet::BjornNASTRAN::TotalSourceRate_H2O[iInjectionFaceNASTRAN]*_H2O__MASS_/GrainMass*
+          CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[idim];
+
+      c+=(DragForceAcceleration[idim]+Gravity[idim])*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[idim];
+    }
+
+
+//   for (int i=0;i<3;i++) c+=accl[i]*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[i];
 
     //reset the particle tracking ID of a newrly created particle
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
@@ -1151,6 +1170,8 @@ void Comet::BjornNASTRAN::Init() {
 
   SurfaceInjectionProbability=new cSingleVariableDiscreteDistribution<int> [PIC::nTotalSpecies];
 
+  if (TotalSourceRate_H2O==NULL) TotalSourceRate_H2O=new double [CutCell::nBoundaryTriangleFaces];
+
 
   for (specIn=0;specIn<PIC::nTotalSpecies;specIn++) for (pass=0;pass<2;pass++) {
     int spec;
@@ -1218,6 +1239,10 @@ void Comet::BjornNASTRAN::Init() {
           productionDistributionNASTRAN[spec][i]=fluxBjorn[spec][angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
           total+=productionDistributionNASTRAN[spec][i];
         }
+
+        if (spec==_H2O_SPEC_) {
+          TotalSourceRate_H2O[i]=productionDistributionNASTRAN[spec][i]/CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+        }
       }
 
       cumulativeProductionDistributionNASTRAN[spec][0]=0.0;
@@ -1276,6 +1301,54 @@ void Comet::BjornNASTRAN::Init() {
 
           //init the surface distribution module
           SurfaceInjectionProbability[spec].InitArray(rate,totalSurfaceElementsNumber,10*totalSurfaceElementsNumber);
+
+          //calculate the total area of the nucleus, area of the dust ejection and source rates of water and the speccis through this area
+          double TotalNucleusSurface=0.0,SpeciesEjectionSurface=0.0,SpeciesInjectionRate=0.0,WaterMassEjectionRate=0.0;
+          double MeanGravityAcceleration=0.0,MeanGravityAccelerationAveragingArea=0.0;
+          double TotalWaterSourceRate=0.0;
+
+          for (i=0;i<totalSurfaceElementsNumber;i++) {
+            double accl[3],x[3];
+            int ii,jj,kk,nd;
+
+            TotalNucleusSurface+=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+            TotalWaterSourceRate+=productionDistributionNASTRAN[_H2O_SPEC_][i];
+
+            if (rate[i]>0.0) {
+              SpeciesEjectionSurface+=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+              SpeciesInjectionRate+=rate[i];
+              WaterMassEjectionRate+=productionDistributionNASTRAN[_H2O_SPEC_][i]*_H2O__MASS_;
+
+              CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x);
+
+              cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode;
+              startNode=PIC::Mesh::mesh.findTreeNode(x);
+              nd=PIC::Mesh::mesh.fingCellIndex(x,ii,jj,kk,startNode);
+
+              if (startNode->block!=NULL) {
+                Comet::GetGravityAcceleration(accl,nd,startNode);
+                MeanGravityAcceleration+=sqrt(pow(accl[0],2)+pow(accl[1],2)+pow(accl[2],2))*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+                MeanGravityAccelerationAveragingArea+=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+              }
+            }
+          }
+
+          //combine the gravity data from all processors
+          double tmpBuffer;
+
+          MPI_Reduce(&MeanGravityAcceleration,&tmpBuffer,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+          MeanGravityAcceleration=tmpBuffer;
+
+          MPI_Reduce(&MeanGravityAccelerationAveragingArea,&tmpBuffer,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+          MeanGravityAccelerationAveragingArea=tmpBuffer;
+
+          if (PIC::ThisThread==0) {
+            printf("\n$PREFIX: the total nucleus surface = %e [m^2]\n",TotalNucleusSurface);
+            printf("$PREFIX: mean gravity acceleration inf the ejection area= %e [m/s^2]\n",MeanGravityAcceleration/MeanGravityAccelerationAveragingArea);
+            printf("$PREFIX: Total water source rate %e [s^{-1}] or %e [kg/s]\n",TotalWaterSourceRate,TotalWaterSourceRate*_H2O__MASS_);
+            printf("$PREFIX: the total area of ejection of (spec=%i) = %e [m^2]; Species source rate=%e, water mass source rate = %e [ks/s], water source rate = %e  [1/s] \n m^{-2}\n\n",spec,SpeciesEjectionSurface,SpeciesInjectionRate,WaterMassEjectionRate,WaterMassEjectionRate/_H2O__MASS_);
+          }
+
         }
 
       }
@@ -1283,6 +1356,7 @@ void Comet::BjornNASTRAN::Init() {
       if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
         SurfaceInjectionProbability[spec].InitArray(productionDistributionNASTRAN[spec],totalSurfaceElementsNumber,10*totalSurfaceElementsNumber);
       }
+
 
       probabilityFunctionDefinedNASTRAN[spec]=true;
     }
