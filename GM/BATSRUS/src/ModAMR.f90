@@ -135,6 +135,10 @@ contains
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
     end if
 
+    ! If AMR is done, then the plotting of BATS_save_files('NORMAL')           
+    ! is called here instead of in BATS_method to save the AMR criteria
+    call BATS_save_files('NORMAL')
+
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
        call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &

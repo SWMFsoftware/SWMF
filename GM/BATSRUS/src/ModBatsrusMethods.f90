@@ -534,7 +534,6 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if (UseProjection) call project_B
 
-  call BATS_save_files('NORMAL')
 
   ! AmrTime is the time to do AMR.
   if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
@@ -570,6 +569,10 @@ subroutine BATS_advance(TimeSimulationLimit)
      ! Write plotfiles after AMR if required
      if(save_plots_amr)call BATS_save_files('AMRPLOTS')
 
+  else
+     ! If AMR is done, then the plotting of BATS_save_files('NORMAL')
+     ! is called in ModAMR to save the AMR criteria.  
+     call BATS_save_files('NORMAL')
   end if
 
 end subroutine BATS_advance
