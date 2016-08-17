@@ -704,8 +704,9 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
     int nd,i,j,k;
     double GrainDragCoefficient=2.0;
 
- //   TotalParticleAcceleration(accl,spec,newParticle,x_SO_OBJECT,v_SO_OBJECT,startNode);
+    TotalParticleAcceleration(accl,spec,newParticle,x_SO_OBJECT,v_SO_OBJECT,startNode);
 
+/*
     nd=PIC::Mesh::mesh.fingCellIndex(x_SO_OBJECT,i,j,k,startNode);
     Comet::GetGravityAcceleration(Gravity,nd,startNode);
 
@@ -715,9 +716,10 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 
       c+=(DragForceAcceleration[idim]+Gravity[idim])*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[idim];
     }
+*/
 
 
-//   for (int i=0;i<3;i++) c+=accl[i]*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[i];
+   for (int i=0;i<3;i++) c+=accl[i]*CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].ExternalNormal[i];
 
     //reset the particle tracking ID of a newrly created particle
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
