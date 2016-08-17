@@ -247,11 +247,15 @@ void cVirtisM::cBlockNucleus::GetColumnIntegralMap(const char *fname,cPostProces
     for (j=0;j<nFieldOfViewPixels;j++) DataBuffer[j]=0.0,GlobalDataBuffer[j]=0.0;
 
     if (PostProcessor!=NULL) {
-#pragma omp parallel for schedule(dynamic,1) default(none) private(l,j,StateVector) shared(i,jLocalMin,jLocalMax,DataBuffer,StateVectorLength,PostProcessor,IntegrationSet)
+#pragma omp parallel for schedule(dynamic,1) shared (cout) default(none) private(l,j,StateVector) shared(i,jLocalMin,jLocalMax,DataBuffer,StateVectorLength,PostProcessor,IntegrationSet)
       for (j=jLocalMin;j<=jLocalMax;j++) {
         //calculate the integral
         memcpy(l,InstrumentPointing[i][j],3*sizeof(double));
         PostProcessor->ColumnIntegral.GetCoulumnIntegral(StateVector,StateVectorLength,Virtis->xRosetta,l,IntegrationSet->IntegrantVector);
+
+
+        //TEST
+//        cout << "i,j" << i <<"," << j << "  " << "x0=" << Virtis->xRosetta[0] << "  " << Virtis->xRosetta[1] << "  " << Virtis->xRosetta[2] << "l=" << l[0] << "  " << l[1] << "  " << l[2] << "  " << "column density =" << StateVector[0] << endl << flush;
 
         //save the state vector in the data buffer
         memcpy(DataBuffer+j*StateVectorLength,StateVector,StateVectorLength*sizeof(double));

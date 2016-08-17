@@ -2,6 +2,10 @@ SHELL =/bin/sh
 
 DEFAULT_TARGET : pproc  
 FLAGS=-g -fopenmp 
+#FLAGS=-g
+
+LIB=../libiomp5.a 
+#LIB=
 
 pproc :
 	cd ..; Config.pl -openmp=on
@@ -10,6 +14,6 @@ pproc :
 	./Config.pl
 	mpicxx ${FLAGS} -c -I/Users/vtenishe/SPICE/Toolkit/cspice/include -I../utility/PostProcess -I../src/meshAMR -I../src/general main.cpp DustScatteringEfficientcy.cpp VIRTIS-M.cpp 
 	cd ../utility/PostProcess; make FLAGS="${FLAGS}" 
-	mpicxx main.o DustScatteringEfficientcy.o VIRTIS-M.o ../utility/PostProcess/pproc.a /Users/vtenishe/SPICE/Toolkit/cspice/lib/cspice.a ../libiomp5.a 
+	mpicxx main.o DustScatteringEfficientcy.o VIRTIS-M.o ../utility/PostProcess/pproc.a /Users/vtenishe/SPICE/Toolkit/cspice/lib/cspice.a ${LIB} 
 
 

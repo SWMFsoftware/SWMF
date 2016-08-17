@@ -91,12 +91,17 @@
 
 
 //calcualte the scattering efficeintcy for the LK model
-double LK::GetScatteringEfficeintcy (double GrainRadius, const double ScatteringData[][2],int nScatteringDataPoints) {
+double LK::GetScatteringEfficeintcy (double GrainRadius, const double ScatteringData[][2],int nScatteringDataPoints,double WaveLength) {
   int i;
   double x=GrainRadius*1.0E6;
   double res=ScatteringData[0][1];
   int found=0;
 
+
+  //correct the particle size according to the ratio of the wavelangth
+  x*=ModelWavalength/WaveLength;
+
+  //find the scattering efficentcy in the look up table
   for (i=1;i<nScatteringDataPoints;i++) if (x<ScatteringData[i][0]) {
     //determine the linear interpolation stencil between i-1 and i points
     double l,a;
@@ -113,7 +118,7 @@ double LK::GetScatteringEfficeintcy (double GrainRadius, const double Scattering
 
   if (found==0) res=ScatteringData[10][1];
 
-  return Pi*pow(x*1.0E-6,2.0)*res;
+  return Pi*pow(GrainRadius,2.0)*res;
 }
 
 

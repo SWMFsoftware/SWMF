@@ -17,12 +17,27 @@
 #include "SpiceUsr.h"
 #include "DustScatteringEfficientcy.h"
 
+#define _ON_  0
+#define _OFF_ 1
+
+
 #include "config.dfn"
 #include "config.h"
 
 //header of the functions for calculating of the dust scattering efficientcy
 
+//define wether particle trajectory files will be loaded
+#ifndef _LOAD_TRAJECTORY_FILES_
+#define _LOAD_TRAJECTORY_FILES_ _OFF_
+#endif
 
+#ifndef _SURFACE_EXPOSURE_TIME_CALCULATION_
+#define _SURFACE_EXPOSURE_TIME_CALCULATION_ _OFF_
+#endif
+
+#ifndef _FLUX_CORRECTION_TABLE_
+#define _FLUX_CORRECTION_TABLE_ _OFF_
+#endif
 
 
 //post-processing object
@@ -463,6 +478,9 @@ namespace SURFACE {
        int nface;
        double AccumulatedSearchTime=0.0;
 
+       //exit from the function if the exposrure time calculation mode is off
+       if (_SURFACE_EXPOSURE_TIME_CALCULATION_ == _OFF_) return;
+
        //init the data buffer if needed
        if (IlluminationMap==NULL) InitDataBuffer();
 
@@ -832,6 +850,10 @@ namespace DUST {
       }
     }
 
+    //TEST: calculation of the column integral of 1/r
+//    data[0]=1.0/sqrt(pow(x[0],2)+pow(x[1],2)+pow(x[2],2));
+
+
     //get the number of the trajectories
     cPostProcess3D::cCell*  cl=amps.GetCell(x);
     cPostProcess3D::cBlock* bl=amps.GetBlock(x);
@@ -842,7 +864,9 @@ namespace DUST {
       GrainRadius=VariablePair[iRadius].GrainRadius;
 
       ScatteringEfficentcy=
-        LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
+        LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_0500000007__Porosity0_828326166::Data,LK::Ice2Dust0_0500000007__Porosity0_828326166::nDataPoints,1.0);
+
+//ScatteringEfficentcy=3.141592654*GrainRadius*GrainRadius*5;
 
       for (i=0;i<8;i++) {
         data[7+3*iRadius]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][VariablePair[iRadius].nVar];
@@ -891,7 +915,7 @@ namespace DUST {
       //particle size
       GrainRadius=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][6];
       ScatteringEfficentcy=
-              LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints);
+              LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_0500000007__Porosity0_828326166::Data,LK::Ice2Dust0_0500000007__Porosity0_828326166::nDataPoints,1.0);
 
       data[6]+=c*ScatteringEfficentcy;
     }
@@ -899,6 +923,8 @@ namespace DUST {
 
 }
 
+
+#include "DustScatteringEfficientcy.h"
 
 int main(int argc,char **argv) {
 
@@ -923,7 +949,25 @@ return 1;
 */
 
 
+  //output the dust brightness efficientcy
+  const int RadiusTableLength=10;
+  const double RadiusTable[RadiusTableLength]=
+  {0.1755943000e-6,0.4410730000e-6,0.1107925e-5,0.2782982e-5,0.6990536e-5,0.1755943e-4,0.4410730e-4,0.1107925e-3, 0.2782982e-3, 0.6990536e-3};
 
+  //original scattering efficentcy
+  for (int i=0;i<RadiusTableLength;i++) {
+     cout << LK::GetScatteringEfficeintcy(RadiusTable[i],LK::Ice2Dust0_899999976__Porosity0_649122834::Data,LK::Ice2Dust0_899999976__Porosity0_649122834::nDataPoints,1.0) /
+         (Pi*pow(RadiusTable[i],2.0)) << endl;
+  }
+
+
+  //new scattering efficentcy
+  for (int i=0;i<RadiusTableLength;i++) {
+     cout << LK::GetScatteringEfficeintcy(RadiusTable[i],LK::Ice2Dust0_0500000007__Porosity0_828326166::Data,LK::Ice2Dust0_0500000007__Porosity0_828326166::nDataPoints,1.0) /
+         (Pi*pow(RadiusTable[i],2.0)) << endl;
+  }
+
+  //analyse the model output file
 
   const char SimulationStartTimeString[]="2015-04-12T07:14:00";
 
@@ -1013,9 +1057,11 @@ return 1;
     char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=3.s=0.H2O.dat"
     };*/
 
-    for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
-    amps.ParticleTrajectory.PrintVariableList();
-    amps.AssignParticleTrajectoriesToCells();
+    if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+      for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
+      amps.ParticleTrajectory.PrintVariableList();
+      amps.AssignParticleTrajectoriesToCells();
+    }
 
     //load the surface data
     std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
@@ -1053,19 +1099,21 @@ return 1;
     printf("Face List end:\n");
 
     //output the set of the trajectories emerged from the maximum source rate faces
-    int cnt=0;
-    amps.ParticleTrajectory.PrintDataFileHeader("maxSourceRateTrajectories.dat");
+    if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+      int cnt=0;
+      amps.ParticleTrajectory.PrintDataFileHeader("maxSourceRateTrajectories.dat");
 
-    for (int n=0;n<amps.ParticleTrajectory.nTotalTrajectories;n++) {
-      int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
+      for (int n=0;n<amps.ParticleTrajectory.nTotalTrajectories;n++) {
+        int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
 
-      for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
-        amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
-        cnt++;
+        for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
+          amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
+          cnt++;
 
-        break;
+          break;
+        }
+
       }
-
     }
 
 
@@ -1110,8 +1158,10 @@ return 1;
 
 
     //print out the limitab trajectories number 
-    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.uniform.dat");
-    amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.flux.dat"); 
+    if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+      amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.uniform.dat");
+      amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.flux.dat");
+    }
 //    return 1;
 
 
@@ -1165,12 +1215,15 @@ return 1;
   }
 
 
-  //process all trajectories: select those that falls into the jet corridor
-  TRAJECTORY_FILTER::ProcessTrajectories(et);
-  TRAJECTORY_FILTER::PrintSelectedTrajectories(500,"selected-trajectories.dat");
 
-  //output surface data 
-  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
+  //process all trajectories: select those that falls into the jet corridor
+  if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+    TRAJECTORY_FILTER::ProcessTrajectories(et);
+    TRAJECTORY_FILTER::PrintSelectedTrajectories(500,"selected-trajectories.dat");
+
+    //output surface data
+    amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
+  }
 
   //calculate the column integrals as seen by VIRTIS-M
   cVirtisM VirtisM;
@@ -1189,7 +1242,7 @@ return 1;
 //  amps.FinalizeMPI();
 
   //output of the flux correction table
-  if (amps.rank==0) {
+  if ((amps.rank==0) && (_FLUX_CORRECTION_TABLE_ != _OFF_)) {
     TRAJECTORY_FILTER::SaveFluxCorrectionTable();
     SURFACE::SaveCorrectedSourceRate(2.0E-6);
   }

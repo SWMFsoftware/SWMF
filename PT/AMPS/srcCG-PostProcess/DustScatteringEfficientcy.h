@@ -28,7 +28,26 @@ namespace LK {
         {100., 1.08209419}};
   }
 
-  double GetScatteringEfficeintcy (double GrainRadius, const double ScatteringData[][2],int nScatteringDataPoints);
+  namespace   Ice2Dust0_0500000007__Porosity0_828326166 {
+    const int nDataPoints=11;
+    const double Data[nDataPoints][2]={
+      {0.100000001,  0.001184531721},
+      {0.199526235,  0.00813579094},
+      {0.398107201,  0.0401802771},
+      {0.794328272,  0.161976323},
+      {1.58489335,  0.546364427},
+      {3.16227818,  1.35141349},
+      {6.3095746,  1.55201817},
+      {12.5892582,  1.08713472},
+      {25.1188698,  1.02689314},
+      {50.1187286,  1.01919293},
+      {100.,  1.01795852}};
+  }
+
+  //the wave length of the scattaring efficientcy model
+  const double ModelWavalength=0.65; //microns
+
+  double GetScatteringEfficeintcy (double GrainRadius, const double ScatteringData[][2],int nScatteringDataPoints,double WaveLength);
 }
 
 
