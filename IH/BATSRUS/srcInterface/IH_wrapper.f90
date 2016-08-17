@@ -1298,7 +1298,7 @@ contains
        RSoftBoundary)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
-         ONLY: extract_particle_line, set_soft_boundary_particle_line
+         ONLY: extract_particle_line, set_soft_boundary
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
@@ -1309,7 +1309,7 @@ contains
     !--------------------------------------------------------------------------
     ! set the soft boundary if provided
     if(present(RSoftBoundary))&
-         call set_soft_boundary_particle_line(RSoftBoundary)
+         call set_soft_boundary(RSoftBoundary)
     ! extract field lines starting at input points
     if(present(iIndexOrigin_I))then
        call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_I)
@@ -1323,7 +1323,8 @@ contains
 
   subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)
     use IH_BATL_lib, ONLY: nDim, xyz_to_coord
-    use IH_ModParticleFieldLine, ONLY: get_particle_data
+    use IH_ModParticleFieldLine, ONLY: &
+         get_particle_data, apply_soft_boundary
     integer,              intent(out):: nParticle
     integer,              intent(out):: nCoord
     real,    allocatable, intent(out):: Coord_II(:,:)
@@ -1340,6 +1341,9 @@ contains
     ! Coord_II is allocated inside the next call
     call get_particle_data(nCoord, 'xx yy zz fl id', Coord_II, nParticle)
 
+    ! remove particles that have crossed the boundary between components
+    call apply_soft_boundary
+    
     ! indices to get state vector are not available yet,
     ! they should be determined outside of this subroutine
     if(allocated(iIndex_II)) deallocate(iIndex_II)

@@ -30,7 +30,8 @@ module ModParticleFieldLine
   public:: extract_particle_line
   public:: advect_particle_line
   public:: get_particle_data
-  public:: set_soft_boundary_particle_line
+  public:: set_soft_boundary
+  public:: apply_soft_boundary
 
   ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
@@ -82,11 +83,11 @@ module ModParticleFieldLine
   integer:: nFieldLine = 0
 
   ! soft radial boundary that may be set only once during the run;
-  ! "soft" means that exactly ONE particle is allowed beyond this boundary:
-  ! - during extraction the first particle that crosses is is left and extraction 
+  ! "soft" means that particles are allowed beyond this boundary BUT:
+  ! - during extraction first particle that crosses it is kept but extraction 
   !   of this line is stopped
-  ! - during advection the particle that crosses it is left in the domain,
-  !   but the one that is already beyond it is removed
+  ! - all of the particles beyond the boundary are removed via
+  !   public method apply_soft_boundary
   real:: RBoundarySoft = -1.0
 
   !\
@@ -179,7 +180,7 @@ contains
 
   !==========================================================================
 
-  subroutine set_soft_boundary_particle_line(RBoundarySoftIn)
+  subroutine set_soft_boundary(RBoundarySoftIn)
     ! set additional boundary imposed by user
     real, intent(in):: RBoundarySoftIn
     character(len=*), parameter:: NameSub = 'set_soft_boundary'
@@ -191,8 +192,18 @@ contains
        call CON_stop(NameThisComp//':'//NameSub//&
             ': soft boundary may be set only once and may not be changed!')
     end if
-  end subroutine set_soft_boundary_particle_line
+  end subroutine set_soft_boundary
   
+  !==========================================================================
+  
+  subroutine apply_soft_boundary
+    ! check which particles went beyond soft boundary and remove them
+    !----------------------------------------------------
+    if(RBoundarySoft < 0.0) RETURN
+    call check_soft_boundary(KindReg_)
+    call remove_undefined_particles(KindReg_)
+  end subroutine apply_soft_boundary
+
   !==========================================================================
 
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
@@ -622,11 +633,6 @@ contains
     State_VI  => Particle_I(KindReg_)%State_VI
     iIndex_II => Particle_I(KindReg_)%iIndex_II
 
-    ! check soft boundary
-    if(RBoundarySoft > 0.0)then
-       call check_soft_boundary(KindReg_)
-       call remove_undefined_particles(KindReg_)
-    end if
     !\
     ! go over the list of particles and advect them
     !/
