@@ -39,6 +39,7 @@ module IH_wrapper
   ! Coupling with SP
   public:: IH_get_for_sp
   public:: IH_extract_line
+  public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
 
@@ -1294,15 +1295,16 @@ contains
 
   !============================================================================
 
-  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, iIndexOrigin_I,&
-       RSoftBoundary)
+  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, nIndex, &
+       iIndexOrigin_II, RSoftBoundary)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
          ONLY: extract_particle_line, set_soft_boundary
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
-    integer, optional,intent(in) :: iIndexOrigin_I(nLine)
+    integer,          intent(in) :: nIndex
+    integer,          intent(in) :: iIndexOrigin_II(nIndex, nLine)
     real,    optional,intent(in) :: RSoftBoundary
 
     character(len=*), parameter:: NameSub='IH_extract_line'
@@ -1311,14 +1313,23 @@ contains
     if(present(RSoftBoundary))&
          call set_soft_boundary(RSoftBoundary)
     ! extract field lines starting at input points
-    if(present(iIndexOrigin_I))then
-       call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_I)
-    else
-       call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode)
-    end if
-
+    call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_II)
   end subroutine IH_extract_line
 
+  !============================================================================
+
+  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II)
+    use IH_BATL_lib, ONLY: nDim
+    use IH_ModParticleFieldLine, ONLY: add_to_particle_line
+    ! add particles with specified coordinates to the already existing lines
+    integer, intent(in):: nParticle
+    real,    intent(in):: Xyz_DI(nDim, nParticle)
+    integer, intent(in):: nIndex
+    integer, intent(in):: iIndex_II(nIndex, nParticle)
+    !------------------------------------------------------------------------
+    call add_to_particle_line(nParticle, Xyz_DI, iIndex_II)
+  end subroutine IH_add_to_line
+  
   !============================================================================
 
   subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)

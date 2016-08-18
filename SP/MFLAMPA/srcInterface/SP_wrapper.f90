@@ -257,7 +257,7 @@ contains
     ! size of the request
     nRequestOut = QueueRequest % nRecordAll
     nCoordOut   = nDim
-    nAux        = 1
+    nAux        = 2
 
     ! prepare containers to hold the request
     if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)
@@ -265,7 +265,7 @@ contains
     if(allocated(iIndexOut_II)) deallocate(iIndexOut_II)
     allocate(iIndexOut_II(nDim+1, nRequestOut))! 3 cell + 1 block index
     if(allocated(AuxOut_VI)) deallocate(AuxOut_VI)
-    allocate(AuxOut_VI(1, nRequestOut))
+    allocate(AuxOut_VI(nAux, nRequestOut))
     
     ! go over the request queue
     call reset_peek_queue(QueueRequest)
@@ -274,13 +274,14 @@ contains
        iBlock    = iRequest_I(1)
        iParticle = iRequest_I(2)
        iNode     = iNode_B(iBlock)
-       CoordOut_DI(:, iBlock) = &
+       CoordOut_DI(:, iRequest) = &
             State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-       iIndexOut_II(1, iBlock) = iParticle
+       iIndexOut_II(1, iRequest) = iParticle
        call get_node_indexes(iNode, &
-            iIndexOut_II(2, iBlock), iIndexOut_II(3, iBlock))
-       iIndexOut_II(4, iBlock) = iBlock
-       AuxOut_VI(1, iBlock) = real(iParticle)
+            iIndexOut_II(2, iRequest), iIndexOut_II(3, iRequest))
+       iIndexOut_II(4, iRequest) = iBlock
+       AuxOut_VI(1, iRequest) = real(iNode)
+       AuxOut_VI(2, iRequest) = real(iParticle)
     end do
 
     ! request is complete => reset queue
@@ -308,8 +309,19 @@ contains
     integer:: iLine, iParticle
     integer:: iMin_A(nNode),iMax_A(nNode)
     integer:: iError
+    ! which field lines are being extracted
+    logical:: WasInSc, IsInSc, WasUndef
+    logical, save:: IsFirstCall = .true.
+    logical, save,allocatable:: DoneExtractSolarCorona_B(:)
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
+    if(IsFirstCall)then
+       ! initialize information of which 
+       IsFirstCall = .false.
+       allocate(DoneExtractSolarCorona_B(nBlock))
+       DoneExtractSolarCorona_B = .false.
+    end if
+
     ! store passed particles
     do iPut = 1, nPut
        iBlock = iIndex_II(4, iPut)
@@ -323,11 +335,20 @@ contains
        iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iParticle)
        if(iGrid_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
-
+       
        ! check if the particle has crossed the solar corona boundary
-       if(State_VIB(R_,iParticle,iBlock) < RSc .and. Coord_DI(R_,iPut)>=RSc)&
-            ! add it to the request queue
-            call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+       WasUndef = State_VIB(R_, iParticle, iBlock) < 0.0
+       WasInSc  = State_VIB(R_, iParticle, iBlock) < RSc
+       IsInSc   = Coord_DI( R_, iPut)              < RSc
+       if(.not.WasUndef .and. WasInSc .and. .not. IsInSc)then
+          ! particle existed and crossed SC boundary
+          call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+       elseif(.not.DoneExtractSolarCorona_B(iBlock) .and. &
+            WasUndef .and. .not. IsInSc)then
+          ! particle didn't exist, is the 1st beyond SC
+          call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+          DoneExtractSolarCorona_B(iBlock) = .true.
+       end if
 
        ! reset the state vector and put coordinates
        State_VIB(:,                  iParticle, iBlock) = 0.0

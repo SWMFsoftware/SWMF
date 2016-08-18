@@ -39,6 +39,7 @@ module IH_wrapper
   ! Coupling with SP
   public:: IH_get_for_sp
   public:: IH_extract_line
+  public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
 
@@ -247,17 +248,29 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
   !===================================================================!
-  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode, iIndexOrigin_I, RSoft)
+  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode, &
+       nIndex, iIndexOrigin_II, RSoft)
     integer,          intent(in) :: nLine
     real,             intent(in) :: CoordOrigin_DI(3, 1)
     integer,          intent(in) :: iTraceMode
-    integer, optional,intent(in) :: iIndexOrigin_I(1) 
+    integer,          intent(in) :: nIndex
+    integer,          intent(in) :: iIndexOrigin_II(1,1) 
     real,    optional,intent(in) :: RSoft
 
     character(len=*), parameter :: NameSub='IH_extract_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_extract_line
+  !============================================================================
+  subroutine IH_add_to_line(nParticle, Coord_DI, nIndex, iIndex_II)
+    integer, intent(in) :: nParticle
+    real,    intent(in) :: Coord_DI(3, 1)
+    integer, intent(in) :: nIndex
+    integer, intent(in) :: iIndex_II(1,1) 
+    character(len=*), parameter :: NameSub='IH_add_to_line'
+    !----------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_add_to_line
   !============================================================================
 
   subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)

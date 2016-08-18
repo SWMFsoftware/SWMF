@@ -23,7 +23,7 @@ module CON_couple_mh_sp
 
   use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
        IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
-       IH_get_scatter_line                                  !^CMP IF IH
+       IH_get_scatter_line, IH_add_to_line                  !^CMP IF IH
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
@@ -53,8 +53,8 @@ module CON_couple_mh_sp
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
 
   logical,save::DoInit=.true.
-  real,   allocatable:: XyzStored_DI(:,:)
-  integer,allocatable:: iAuxStored_I(:)
+  real,   allocatable:: XyzStored_DI(  :,:)
+  integer,allocatable:: iAuxStored_II(:,:)
 
   integer::iError
   real,save::rBoundIh=21.0                !^CMP IF IH
@@ -187,8 +187,8 @@ contains
               put_request_source   = SC_put_request)
          if(is_proc(SC_))&
               call SC_extract_line(&
-              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceOrigin,&
-              iAuxStored_I, RSc)
+              ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceOrigin,&
+              ubound(iAuxStored_II,1),iAuxStored_II, RSc)
          call set_router_from_source_2_stage(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
@@ -213,8 +213,8 @@ contains
               put_request_source   = IH_put_request)
          if(is_proc(IH_))&
               call IH_extract_line(&
-              ubound(XyzStored_DI,2), XyzStored_DI, iInterfaceEnd, &
-              iAuxStored_I)
+              ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceEnd,&
+              ubound(iAuxStored_II,1),iAuxStored_II)
          call set_router_from_source_2_stage(&
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
@@ -346,16 +346,16 @@ contains
     !----------------------------------------------------------
     if(allocated(XyzStored_DI)) deallocate(XyzStored_DI)
     allocate(XyzStored_DI(nDim, nData))
-    if(allocated(iAuxStored_I)) deallocate(iAuxStored_I)
-    allocate(iAuxStored_I(nData))
+    if(allocated(iAuxStored_II)) deallocate(iAuxStored_II)
+    allocate(iAuxStored_II(nAux,nData))
 
     if(nData==0)&
          RETURN
 
     ! coordinates of requested field lines' origins
     XyzStored_DI = Coord_DI
-    ! indices of the origins along the field lines
-    iAuxStored_I = nint(Aux_VI(1,:))
+    ! indices of paritcles along the field lines
+    iAuxStored_II = nint(Aux_VI)
     ! perform transformations based on the type of geometry
     TypeGeometry = Grid_C(iComp)%TypeGeometry
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
@@ -455,6 +455,18 @@ contains
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
+    call set_router_from_target_2_stage(&
+         GridDescriptorSource = IH_GridDescriptor, &
+         GridDescriptorTarget = SP_GridDescriptor, &
+         Router               = RouterIhSp, &
+         get_request_target   = SP_get_request, &
+         transform            = transform_sp_to_ih, &
+         interpolate_source   = interpolation_amr_gc, &
+         put_request_source   = IH_put_request)
+    if(is_proc(IH_))&
+         call IH_add_to_line(&
+         ubound(XyzStored_DI,2),   XyzStored_DI, &
+         ubound(iAuxStored_II,1), iAuxStored_II)
     call set_router_from_source_2_stage(&
          GridDescriptorSource = IH_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &

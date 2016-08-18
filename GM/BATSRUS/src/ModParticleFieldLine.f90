@@ -28,6 +28,7 @@ module ModParticleFieldLine
   public:: read_particle_line_param
   public:: init_particle_line
   public:: extract_particle_line
+  public:: add_to_particle_line
   public:: advect_particle_line
   public:: get_particle_data
   public:: set_soft_boundary
@@ -207,7 +208,7 @@ contains
   !==========================================================================
 
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
-       iIndexStart_I)
+       iIndexStart_II)
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -215,12 +216,12 @@ contains
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
     !------------------------------------------------------------------------
-    integer,           intent(in):: nFieldLineIn
-    real,              intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
+    integer,         intent(in)::nFieldLineIn
+    real,            intent(in)::XyzStart_DI(MaxDim, nFieldLineIn)
     ! mode of tracing (forward, backward or both ways)
-    integer, optional, intent(in):: iTraceModeIn
+    integer,optional,intent(in)::iTraceModeIn
     ! initial particle indices for starting particles
-    integer, optional, intent(in):: iIndexStart_I(nFieldLineIn)
+    integer,optional,intent(in)::iIndexStart_II(nIndexParticleReg,nFieldLineIn)
 
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
@@ -242,7 +243,7 @@ contains
     ! (to satisfy intent INOUT for check_interpolate_amr_gc)
     real:: XyzStart_D(MaxDim)
     ! its index along the field line
-    integer:: iIndexStart
+    integer:: iIndexStart_I(nIndexParticleReg)
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -271,11 +272,14 @@ contains
     Particle_I(KindEnd_)%nParticle = 0
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
-    iIndexStart   = 0
     do iFieldLine = 1, nFieldLineIn
        XyzStart_D = XyzStart_DI(:, iFieldLine) 
-       if(present(iIndexStart_I)) iIndexStart = iIndexStart_I(iFieldLine)
-       call start_line(XyzStart_D, iIndexStart, nFieldLine + iFieldLine)
+       if(present(iIndexStart_II)) then
+          iIndexStart_I = iIndexStart_II(:,iFieldLine)
+       else
+          iIndexStart_I = (/nFieldLine + iFieldLine, 0/)
+       end if
+       call start_line(XyzStart_D, iIndexStart_I)
     end do
 
     ! how many lines have been started on all processors
@@ -418,10 +422,9 @@ contains
 
   contains
 
-    subroutine start_line(XyzStart_D, iIndexStart, iFieldLineIndex)
+    subroutine start_line(XyzStart_D, iIndexStart_I)
       real,    intent(inout):: XyzStart_D(MaxDim)
-      integer, intent(in)   :: iIndexStart
-      integer, intent(in)   :: iFieldLineIndex
+      integer, intent(in)   :: iIndexStart_I(nIndexParticleReg)
 
       real   :: Coord_D(MaxDim) ! generalized coordinates
       integer:: iProcOut, iBlockOut
@@ -457,12 +460,10 @@ contains
            Particle_I(KindEnd_)%nParticle + 1         
       nLineThisProc = nLineThisProc + 1
 
-      StateEnd_VI(x_:z_, Particle_I(KindEnd_)%nParticle) = XyzStart_D
-      iIndexEnd_II(fl_,  Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
-
-      ! set index for initial particle to be 0
-      iIndexEnd_II(id_,Particle_I(KindEnd_)%nParticle) = iIndexStart
-      iIndexEnd_II(0,  Particle_I(KindEnd_)%nParticle) = iBlockOut
+      StateEnd_VI(x_:z_,Particle_I(KindEnd_)%nParticle) = XyzStart_D
+      iIndexEnd_II(fl_, Particle_I(KindEnd_)%nParticle) = iIndexStart_I(fl_)
+      iIndexEnd_II(id_, Particle_I(KindEnd_)%nParticle) = iIndexStart_I(id_)
+      iIndexEnd_II(0,   Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
     !========================================================================
     function do_exclude(Xyz_D, iBlock) result(DoExcludeOut)
@@ -608,6 +609,56 @@ contains
     end subroutine get_b_dir
 
   end subroutine extract_particle_line
+
+  !========================================================================
+  subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II)
+    ! add particles with specified coordinates to the already existing lines
+    integer, intent(in):: nParticleIn
+    real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
+    integer, intent(in):: iIndexIn_II(nIndexParticleReg, nParticleIn)
+    
+    real   :: Xyz_D(MaxDim)
+    integer:: iIndex_I(nIndexParticleReg)
+    integer:: iParticle
+    integer:: iProcOut, iBlockOut
+    ! parameters of regular particles
+    real,    pointer:: StateReg_VI(:,:)
+    integer, pointer:: iIndexReg_II(:,:)
+
+    character(len=100):: StringError
+    character(len=*), parameter:: NameSub = 'add_to_particle_line'
+    !----------------------------------------------------------------------
+    StateReg_VI => Particle_I(KindReg_)%State_VI
+    iIndexReg_II=> Particle_I(KindReg_)%iIndex_II
+
+    do iParticle = 1, nParticleIn
+       Xyz_D   = XyzIn_DI(:,   iParticle)
+       iIndex_I= iIndexIn_II(:,iParticle)
+
+       ! find block and processor suitable for interpolation
+       call check_interpolate_amr_gc(Xyz_D, &
+            1, & ! input block ID doesn't matter
+            iProcOut, iBlockOut)
+       
+      ! check whether point is outside of the domain
+      if(iProcOut < 0)then
+         write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
+              "Point for a field line is outside of the domain: X = ",&
+              Xyz_D(1), " Y = ", Xyz_D(2), " Z = ", Xyz_D(3) 
+         call stop_mpi(NameThisComp//':'//NameSub //": "//StringError)
+      end if
+
+      ! Assign particle to an appropriate processor
+      if(iProc /= iProcOut) RETURN
+
+      Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle + 1
+
+      StateReg_VI(x_:z_,Particle_I(KindReg_)%nParticle) = Xyz_D
+      iIndexReg_II(fl_, Particle_I(KindReg_)%nParticle) = iIndex_I(fl_)
+      iIndexReg_II(id_, Particle_I(KindReg_)%nParticle) = iIndex_I(id_)
+      iIndexReg_II(0,   Particle_I(KindReg_)%nParticle) = iBlockOut
+    end do
+  end subroutine add_to_particle_line
 
   !========================================================================
 
