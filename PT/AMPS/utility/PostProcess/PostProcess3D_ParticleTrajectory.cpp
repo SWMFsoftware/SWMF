@@ -346,11 +346,10 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname,int
       MPI_Reduce(InterpolatedDataLocal,InterpolatedDataGlobal,nvars,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
       //print the data into a file
-      if (PostProcess3D->rank==0) {
-        for (ivar=0;ivar<nvars;ivar++) fprintf(fout," %e",InterpolatedDataGlobal[ivar]);
-        fprintf(fout,"\n");
-      }
+      if (PostProcess3D->rank==0) for (ivar=0;ivar<nvars;ivar++) fprintf(fout," %e",InterpolatedDataGlobal[ivar]); 
     }
+
+    if (PostProcess3D->rank==0) fprintf(fout,"\n");
   }
 
   //print the connectivity list
