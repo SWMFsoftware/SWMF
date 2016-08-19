@@ -310,14 +310,26 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname,int
   //print the list of the data points
   int iMeshNode,iInterplationElement;
 
+
+  int ivar,nvars=0;
+  double *data=NULL,*InterpolatedDataLocal=NULL,*InterpolatedDataGlobal=NULL;
+
+  if (GetVariableNumber!=NULL) {
+    nvars=GetVariableNumber();
+
+    data=new double[nvars];
+    InterpolatedDataLocal=new double[nvars];
+    InterpolatedDataGlobal=new double[nvars];
+  }
+
   for (iMeshNode=0;iMeshNode<CutCell::nBoundaryTriangleNodes;iMeshNode++) {
     if (PostProcess3D->rank==0)
       fprintf(fout,"%e %e %e ",CutCell::BoundaryTriangleNodes[iMeshNode].x[0],CutCell::BoundaryTriangleNodes[iMeshNode].x[1],CutCell::BoundaryTriangleNodes[iMeshNode].x[2]);
 
     if (GetVariableNumber!=NULL) {
     //prepare and output averaged interpolated face data
-      int ivar,nvars=GetVariableNumber();
-      double data[nvars],InterpolatedDataLocal[nvars],InterpolatedDataGlobal[nvars];
+  //    int ivar,nvars=GetVariableNumber();
+  //    double data[nvars],InterpolatedDataLocal[nvars],InterpolatedDataGlobal[nvars];
 
       for (ivar=0;ivar<nvars;ivar++) InterpolatedDataLocal[ivar]=0.0;
 
@@ -355,6 +367,12 @@ void cPostProcess3D::cParticleTrajectory::PrintSurfaceData(const char *fname,int
   //deallocate the fata buffers
   delete [] InterpolationBase;
   delete [] Stencil;
+
+  if (GetVariableNumber!=NULL) {
+    delete [] data;
+    delete [] InterpolatedDataLocal;
+    delete [] InterpolatedDataGlobal;
+  }
 }
 
 //=============================================================================
@@ -580,6 +598,9 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
   int j,k;
   int nCellTrajectories,n,nTotalTrajectories,thread;
 
+  static int *TrajectoryList=NULL;
+  static int TrajectoryListLength=0;
+
   if (rank==0) fBinaryOut=fopen("post-processing.trajectory-cell-distribution.tmp.bin","w");
 
   for (iBlock=0;iBlock<nBlocks;iBlock++) for (i=0;i<nBlockCellX;i++) for (j=0;j<nBlockCellY;j++) for (k=0;k<nBlockCellZ;k++) {
@@ -593,7 +614,13 @@ void cPostProcess3D::AssignParticleTrajectoriesToCells() {
     if (rank==0) fwrite(&nTotalTrajectories,sizeof(int),1,fBinaryOut);
 
     for (thread=0;thread<size;thread++) {
-      int TrajectoryList[nCellTrajectoriesVector[thread]];
+//      int TrajectoryList[nCellTrajectoriesVector[thread]];
+
+      if (nCellTrajectoriesVector[thread]>TrajectoryListLength) {
+        TrajectoryListLength=nCellTrajectoriesVector[thread];
+        if (TrajectoryList!=NULL) delete [] TrajectoryList;
+        TrajectoryList=new int [TrajectoryListLength];
+      }
 
       if (thread==rank) {
         for (nTrajectory=0;nTrajectory<nCellTrajectoriesVector[thread];nTrajectory++)
