@@ -657,7 +657,7 @@ namespace SURFACE {
     double DustMassSourceRate=0.0;
 
     for(int iDust=0;iDust<_DUST_SPEC_NUMBER_;iDust++) {
-      DustMassSourceRate+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3+2*_GAS_SPEC_NUMBER_+_DUST_SPEC_NUMBER_+iDust];
+      for (i=0;i<3;i++) DustMassSourceRate+=0.3*amps.SurfaceData.data[amps.SurfaceData.ConnectivityList[nface][i]][3+2*_GAS_SPEC_NUMBER_+_DUST_SPEC_NUMBER_+iDust];
     }
 
     DataVector[7]=DustMassSourceRate*TRAJECTORY_FILTER::GetFaceCorrectionFactor(nface);
@@ -1232,6 +1232,10 @@ return 1;
   VirtisM.BlockNucleus.SetBlock(et,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces);
 
   VirtisM.BlockNucleus.GetColumnIntegralMap("Virtis.map.dat",&IntegrationSet,&amps);
+
+  if (amps.rank==0) {
+    printf("\"Virtis.map.dat\" is complete\n");
+  }
 
 
 
