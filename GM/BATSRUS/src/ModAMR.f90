@@ -64,7 +64,7 @@ contains
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
          lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
-         iNewGrid, iNewDecomposition, UseHighOrderAMR
+         iNewGrid, iNewDecomposition, UseHighOrderAMR, time_loop
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
@@ -137,7 +137,7 @@ contains
 
     ! If AMR is done, then the plotting of BATS_save_files('NORMAL')           
     ! is called here instead of in BATS_method to save the AMR criteria
-    call BATS_save_files('NORMAL')
+    if (time_loop) call BATS_save_files('NORMAL')
 
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
