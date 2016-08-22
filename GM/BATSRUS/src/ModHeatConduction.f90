@@ -824,7 +824,7 @@ contains
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: far_field_BCs_BLK, Xyz_DGB
+    use ModGeometry,     ONLY: far_field_BCs_BLK
     use ModParallel,     ONLY: NOBLK, NeiLev
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
