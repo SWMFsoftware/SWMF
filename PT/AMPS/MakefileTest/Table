@@ -266,9 +266,15 @@ Compile=
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
 
 >>>cp .amps.conf .amps.conf.tmp
+>>>cp .general.conf .general.conf.tmp
+>>>cp Makefile.local Makefile.local.tmp
+
 >>>./Config.pl -openmp=on
 >>>cd srcCG-PostProcess; make  
+
 >>>mv .amps.conf.tmp .amps.conf
+>>>mv .general.conf.tmp .general.conf
+>>>mv Makefile.local.tmp Makefile.local
 >>>@echo "test_CG_PostProcess_ReadTrajectories=off_compile... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
 
 Rundir=
