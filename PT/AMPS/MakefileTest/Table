@@ -192,9 +192,16 @@ Compile=
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
 
 >>>cp .amps.conf .amps.conf.tmp
+>>>cp .general.conf .general.conf.tmp
+>>>cp Makefile.local Makefile.local.tmp
+
 >>>./Config.pl -openmp=on
 >>>cd srcCG-PostProcess; make EXTERNALFLAGS="-D_LOAD_TRAJECTORY_FILES_=_ON_ -D_SURFACE_EXPOSURE_TIME_CALCULATION_=_ON_"  
+
 >>>mv .amps.conf.tmp .amps.conf
+>>>mv .general.conf.tmp .general.conf
+>>>mv Makefile.local.tmp Makefile.local
+
 >>>@echo "test_CG_PostProcess_ReadTrajectories=on_compile... done" >> test_CG_PostProcess_ReadTrajectories=on.diff
 
 Rundir=
