@@ -25,7 +25,6 @@ double ***Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Boun
 
 //allocate the buffers and init the model
 void Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::getMinMaxLimits() {
-
   //calcualte the number of the boundary injection faces
   list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* >::iterator end,nodeptr;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
@@ -283,6 +282,13 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
   //generate the time interval till the next particle injection
   TimeCounter-=-log(rnd())/ModelParticlesInjectionRate*rnd(); //shift back the beginig of the time counting to account for the stopping of the time counting on the previous iteration
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel
+   {
+#pragma omp single
+     {
+#endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
   while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<maxLocalTimeStep[spec]) {
     double TimeStepFraction=TimeCounter/maxLocalTimeStep[spec];
 
@@ -304,66 +310,91 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
       p=LocalTimeStep/LocalParticleWeight*Ratio;
 
       if (rnd()<p) {
-        //generate the new particle position on the face
-        PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,node);
-        node->GetExternalNormal(ExternalNormal,nface);
 
-        //determine the location of the injection
-        double *InjectionFaceLocalRateTable=BoundaryFaceLocalInjectionRate[spec][nBoundaryFace];
-        int ii,jj,nSurfaceElement;
-
-        do {
-          nSurfaceElement=(int)(rnd()*nFaceInjectionIntervals*nFaceInjectionIntervals);
-        }
-        while (rnd()>InjectionFaceLocalRateTable[nSurfaceElement]/maxBoundaryFaceLocalInjectionRate[spec][nBoundaryFace]);
-
-        jj=nSurfaceElement/nFaceInjectionIntervals;
-        ii=nSurfaceElement%nFaceInjectionIntervals;
-
-        for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+FluxIntegrationIncrement*((ii+c0)*e0[idim]+(jj+c1)*e1[idim])-PIC::Mesh::mesh.EPS*ExternalNormal[idim];
-
-        //generate a particle
-        newParticle=PIC::ParticleBuffer::GetNewParticle();
-        newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+        //sample the source rate
         nInjectedParticles++;
-
         Exosphere::Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
         PIC::BC::nInjectedParticles[spec]+=1;
         PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
 
-        //get macrospcopic parameters of the plasma at the point of the injection
-        //determine the bachground plasma conditions at the block's face
-        PIC::CPLR::InitInterpolationStencil(x,node);
+        //initiate a task for OpenMP threads
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp task default (none) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement,__libm_qnan) \
+         firstprivate (node,nface,spec,nBoundaryFace) \
+         private (x,x0,e0,e1,ExternalNormal,newParticle,newParticleData,PlasmaNumberDensity,PlasmaTemeprature,PlasmaBulkVelocity,idim,c0,c1,v)
+         {
 
-        PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
-        PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
-        PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature();
+           int thisThreadOpenMP=omp_get_thread_num();
+      #else
+           int thisThreadOpenMP=0;
+      #endif
 
-        do {
-          PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec);
-        }
-        while (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>vmax*vmax);
+          //generate the new particle position on the face
+          PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,node);
+          node->GetExternalNormal(ExternalNormal,nface);
 
-        PIC::ParticleBuffer::SetX(x,newParticleData);
-        PIC::ParticleBuffer::SetV(v,newParticleData);
-        PIC::ParticleBuffer::SetI(spec,newParticleData);
-        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,newParticleData);
+          //determine the location of the injection
+          double *InjectionFaceLocalRateTable=BoundaryFaceLocalInjectionRate[spec][nBoundaryFace];
+          int ii,jj,nSurfaceElement;
 
-        Exosphere::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_,(PIC::ParticleBuffer::byte*)newParticleData);
+          do {
+            nSurfaceElement=(int)(rnd()*nFaceInjectionIntervals*nFaceInjectionIntervals);
+          }
+          while (rnd()>InjectionFaceLocalRateTable[nSurfaceElement]/maxBoundaryFaceLocalInjectionRate[spec][nBoundaryFace]);
 
-        //apply condition of tracking the particle
-        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-        PIC::ParticleTracker::InitParticleID(newParticleData);
-        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)node);
-        #endif
+          jj=nSurfaceElement/nFaceInjectionIntervals;
+          ii=nSurfaceElement%nFaceInjectionIntervals;
 
-         //inject the particle into the system
-        _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,node->block->GetLocalTimeStep(spec)*rnd(),node,true);
+          for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+FluxIntegrationIncrement*((ii+c0)*e0[idim]+(jj+c1)*e1[idim])-PIC::Mesh::mesh.EPS*ExternalNormal[idim];
+
+          //generate a particle
+          newParticle=PIC::ParticleBuffer::GetNewParticle();
+          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+
+
+
+
+          //get macrospcopic parameters of the plasma at the point of the injection
+          //determine the bachground plasma conditions at the block's face
+          PIC::CPLR::InitInterpolationStencil(x,node);
+
+          PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+          PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+          PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature();
+
+          do {
+            PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec);
+          }
+          while (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>vmax*vmax);
+
+          PIC::ParticleBuffer::SetX(x,newParticleData);
+          PIC::ParticleBuffer::SetV(v,newParticleData);
+          PIC::ParticleBuffer::SetI(spec,newParticleData);
+          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,newParticleData);
+
+          Exosphere::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_,(PIC::ParticleBuffer::byte*)newParticleData);
+
+          //apply condition of tracking the particle
+          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+          PIC::ParticleTracker::InitParticleID(newParticleData);
+          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)node);
+          #endif
+
+           //inject the particle into the system
+          _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,node->block->GetLocalTimeStep(spec)*rnd(),node,true);
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  }
+#endif //the task section
+
       }
     }
 
   }
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+     }}  //patallel and single sections
+#endif
 
   return nInjectedParticles;
 }
