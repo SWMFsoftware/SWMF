@@ -1044,6 +1044,23 @@ namespace PIC {
   //maximum trajectory integraion time
   extern double MaxTrajectoryIntegrationTime;
 
+  //internal boundary surface
+  namespace InternalBoundary {
+    extern int ParticleProcessingMode;
+
+    //codes of the particle crossing internal boundary processing models
+    namespace ParticleBoundaryInteractionCode {
+      const int NoBoundary=-1;
+      const int Spehre=0;
+    }
+
+    namespace Sphere {
+      extern double Radius;
+      extern double x0[3];
+    }
+  }
+
+
   //size of the computational domain
   namespace Domain {
     extern double xmin[3],xmax[3];
@@ -1202,6 +1219,8 @@ namespace PIC {
          //read chracteristic speed table
          void CharacteristicSpeedTable(CiFileOperations&);
 
+         //read parameters of the internal boundary sphere
+         void InternalBoundarySphere(CiFileOperations&);
       }
     }
 
@@ -2667,6 +2686,7 @@ namespace PIC {
 
 
       //Sampling of the model data
+      extern int LocalEnergyTransferRateSamplingOffset;
       extern int LocalTotalCollisionFreqSamplingOffset;
       int RequestSamplingData(int offset);
       void PrintVariableList(FILE* fout,int DataSetNumber);

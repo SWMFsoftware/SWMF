@@ -10,6 +10,7 @@
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
 
 int PIC::MolecularCollisions::BackgroundAtmosphere::LocalTotalCollisionFreqSamplingOffset=-1;
+int PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset=-1;
 double *PIC::MolecularCollisions::BackgroundAtmosphere::ThermalizationRate=NULL,*PIC::MolecularCollisions::BackgroundAtmosphere::CollisionSourceRate=NULL;
 
 //init the model
@@ -60,24 +61,33 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::OutputSampledModelData(int 
 
 //Request Sampling Buffers
 int PIC::MolecularCollisions::BackgroundAtmosphere::RequestSamplingData(int offset) {
-  LocalTotalCollisionFreqSamplingOffset=offset;
-  return PIC::nTotalSpecies*sizeof(double);
+  int RequesterDataLength=0;
+
+  LocalTotalCollisionFreqSamplingOffset=offset+RequesterDataLength;
+  RequesterDataLength+=PIC::nTotalSpecies*sizeof(double);
+
+  LocalEnergyTransferRateSamplingOffset=offset+RequesterDataLength;
+  RequesterDataLength+=PIC::nTotalSpecies*sizeof(double);
+
+  return RequesterDataLength;
 }
 
 void PIC::MolecularCollisions::BackgroundAtmosphere::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,", \"Total Background Atmosphere Collison Freq [per a real particle,per sec]\"");
+  fprintf(fout,", \"Total Background Atmosphere Collison Freq [per a real particle,per sec]\", \"Energy Exchange Rate [J/m^3/s]\"");
 }
 
 void PIC::MolecularCollisions::BackgroundAtmosphere::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
 
   struct cDataExchengeBuffer {
     double TotalCollisionFreq;
+    double EnergyExchangeRate;
   };
 
-  cDataExchengeBuffer buffer;
+  cDataExchengeBuffer buffer={0.0,0.0};
 
-  if (pipe->ThisThread==CenterNodeThread) {
+  if ((pipe->ThisThread==CenterNodeThread)&&(LocalTotalCollisionFreqSamplingOffset!=-1)) {
     buffer.TotalCollisionFreq=*(DataSetNumber+(double*)(LocalTotalCollisionFreqSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
+    buffer.EnergyExchangeRate=*(DataSetNumber+(double*)(LocalEnergyTransferRateSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
   }
 
   if (pipe->ThisThread==0) {
@@ -85,9 +95,11 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::PrintData(FILE* fout,int Da
       pipe->recv((char*)&buffer,sizeof(cDataExchengeBuffer),CenterNodeThread);
     }
 
-    if (PIC::LastSampleLength!=0) buffer.TotalCollisionFreq/=PIC::LastSampleLength;
+    if (PIC::LastSampleLength!=0) {
+      buffer.TotalCollisionFreq/=PIC::LastSampleLength;
+    }
 
-    fprintf(fout,"%e  ",buffer.TotalCollisionFreq);
+    fprintf(fout,"%e  %e ",buffer.TotalCollisionFreq,buffer.EnergyExchangeRate);
   }
   else {
     pipe->send((char*)&buffer,sizeof(cDataExchengeBuffer));
@@ -98,19 +110,25 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::Interpolate(PIC::Mesh::cDat
   int i,spec;
   double c;
 
+  //exit in case sampling buffers are not allocated
+  if (LocalTotalCollisionFreqSamplingOffset==-1) return;
+
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     //interpolate the local productions rate
     double InterpoaltedTotalCollisionFreq=0.0;
+    double InterpolatedEnergyExchangeRate=0.0;
 
     //interpolate the sampled data
     for (i=0;i<nInterpolationCoeficients;i++) {
       c=InterpolationCoeficients[i];
 
       InterpoaltedTotalCollisionFreq+=c*(*(double*)(LocalTotalCollisionFreqSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()));
+      InterpolatedEnergyExchangeRate+=c*(*(double*)(LocalEnergyTransferRateSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()));
     }
 
     //stored the interpolated data in the associated data buffer
     *(spec+(double*)(LocalTotalCollisionFreqSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedTotalCollisionFreq;
+    *(spec+(double*)(LocalEnergyTransferRateSamplingOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpolatedEnergyExchangeRate;
   }
 }
 
@@ -474,6 +492,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
   //sample collisino frequentcy
   double TotalProspectiveCollisionParticleWeight[PIC::nTotalSpecies],TotalOccurringCollisionParticleWeight[PIC::nTotalSpecies];
+  double ModelParticleEnergyExchangeRate[PIC::nTotalSpecies];
 
   int LocalCellNumber;
 
@@ -578,7 +597,7 @@ if ((nCall==1452339-1)&&(PIC::ThisThread==1)) {
       nCollidingParticles=0;
       modelParticle=cell->FirstCellParticle;*/
 
-      for (spec=0;spec<PIC::nTotalSpecies;spec++) TotalProspectiveCollisionParticleWeight[spec]=0.0,TotalOccurringCollisionParticleWeight[spec]=0.0;
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) TotalProspectiveCollisionParticleWeight[spec]=0.0,TotalOccurringCollisionParticleWeight[spec]=0.0,ModelParticleEnergyExchangeRate[spec]=0.0;
 
 
       while (modelParticle!=-1) {
@@ -725,10 +744,19 @@ _StartParticleCollisionLoop_:
             Vrel[2]=V[2];
 
             //the collision between the model particle and the particle from the background atmosphere has occured
+            double InitialModelPArticleEnergy=0.0,FinalModelParticleEnergy=0.0;
+
             for (idim=0;idim<3;idim++) {
+              InitialModelPArticleEnergy+=pow(vModelParticle[idim],2);
+
               vModelParticle[idim]=Vcm[idim]+massBackgroundParticle/am*Vrel[idim];
               vBackgroundParticle[idim]=Vcm[idim]-massModelParticle/am*Vrel[idim];
+
+              FinalModelParticleEnergy+=pow(vModelParticle[idim],2);
             }
+
+            //sample energy exchabge rate
+            ModelParticleEnergyExchangeRate[spec]+=(FinalModelParticleEnergy-InitialModelPArticleEnergy)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData);
 
             //update velocities of the particles
             PIC::ParticleBuffer::SetV(vBackgroundParticle,BackgroundAtmosphereParticleData);
@@ -811,9 +839,14 @@ _StartParticleCollisionLoop_:
       }
 
       //sample total collision frequentcy
-      for (spec=0;spec<PIC::nTotalSpecies;spec++) if (TotalProspectiveCollisionParticleWeight[spec]>0.0) {
-        *(spec+(double*)(LocalTotalCollisionFreqSamplingOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=
-          TotalOccurringCollisionParticleWeight[spec]/TotalProspectiveCollisionParticleWeight[spec]/node->block->GetLocalTimeStep(spec);
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        if (TotalProspectiveCollisionParticleWeight[spec]>0.0) {
+          *(spec+(double*)(LocalTotalCollisionFreqSamplingOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=
+            TotalOccurringCollisionParticleWeight[spec]/TotalProspectiveCollisionParticleWeight[spec]/node->block->GetLocalTimeStep(spec);
+        }
+
+        *(spec+(double*)(LocalEnergyTransferRateSamplingOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=
+            ModelParticleEnergyExchangeRate[spec]*node->block->GetLocalParticleWeight(spec)/node->block->GetLocalTimeStep(spec)/cell->Measure*PIC::MolecularData::GetMass(spec)/2.0;
       }
 
     }
