@@ -216,10 +216,12 @@ void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
     }
 
   }
+	 
   if(itr==max_iter && is_output_thread())
   {
     printf("GMRES not converged !! Final error: %g\n",
       initial_error / rho_tol * tol);
+    MPI_Abort(MPI_COMM_MYSIM,MPI_ERR_OTHER);
     //cout << "GMRES not converged !! Final error: " << initial_error / rho_tol * tol << endl;
   }
 
