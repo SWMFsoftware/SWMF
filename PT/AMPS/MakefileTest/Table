@@ -270,7 +270,7 @@ Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy)
 Time=20
 
 Compile=
->>>@echo "test_CG_PostProcess_ReadTrajectories=off_compile..." >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG_PostProcess_ReadTrajectories=off_compile..." >> test_CG_PostProcess_ReadTrajectories=off.diff
 >>>cd srcCG-PostProcess; ./Config.pl -mode=dust
 >>>cd srcCG-PostProcess; ./Config.pl -out=7
 >>>cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
@@ -290,49 +290,49 @@ Compile=
 >>>-mv .amps.conf.tmp .amps.conf
 >>>-mv .general.conf.tmp .general.conf
 >>>-mv Makefile.local.tmp Makefile.local
->>>@echo "test_CG_PostProcess_ReadTrajectories=off_compile... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG_PostProcess_ReadTrajectories=off_compile... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
 
 Rundir=
->>>@echo "test_CG-PostProcess--Read-Trajectories=off_rundir..." >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG-PostProcess--Read-Trajectories=off_rundir..." >> test_CG_PostProcess_ReadTrajectories=off.diff
 >>>rm -rf   $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>mkdir -p $(TESTCG-PostProcess--Read-Trajectories--offDIR)
->>>@echo "test_CG-PostProcess--Read-Trajectories=off_rundir... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG-PostProcess--Read-Trajectories=off_rundir... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
 
 Run=
->>>@echo "test_CG_PostProcess_ReadTrajectories=off_run..." >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG_PostProcess_ReadTrajectories=off_run..." >> test_CG_PostProcess_ReadTrajectories=off.diff
 
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/Comet.InjectedDustSizeDistribution.out=7.dat  ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Comet.InjectedDustSizeDistribution.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=0.H2O.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=0.H2O.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=1.CO2.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=1.CO2.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.cut-cell.surface-data.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.cut-cell.surface-data.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.CO2.s=1.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.CO2.s=1.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST%0.s=2.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.DUST%0.s=2.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.H2O.s=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.H2O.s=0.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/Comet.InjectedDustSizeDistribution.out=7.dat  ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Comet.InjectedDustSizeDistribution.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=0.H2O.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=0.H2O.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=1.CO2.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=1.CO2.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.cut-cell.surface-data.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.cut-cell.surface-data.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.CO2.s=1.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.CO2.s=1.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST%0.s=2.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.DUST%0.s=2.out=7.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat
+>>>ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.H2O.s=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.H2O.s=0.out=7.dat
 
->>>@cp /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/kernels.tm ${TESTCG-PostProcess--Read-Trajectories--offDIR}
->>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR}; mpirun -np 1 ../srcCG-PostProcess/a.out 
->>>@echo "test_CG_PostProcess_ReadTrajectories=off_run... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>cp /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/kernels.tm ${TESTCG-PostProcess--Read-Trajectories--offDIR}
+>>>-cd ${TESTCG-PostProcess--Read-Trajectories--offDIR}; mpirun -np 1 ../srcCG-PostProcess/a.out 
+>>>echo "test_CG_PostProcess_ReadTrajectories=off_run... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
 
 Check=
->>>@echo "test_CG_PostProcess_ReadTrajectories=off_check..." >> test_CG_PostProcess_ReadTrajectories=off.diff
+>>>echo "test_CG_PostProcess_ReadTrajectories=off_check..." >> test_CG_PostProcess_ReadTrajectories=off.diff
 
->>>@${TESTCG-PostProcess--Read-Trajectories--offDIR}/../utility/ReduceFile.pl ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat 10
->>>@mv ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat
+>>>${TESTCG-PostProcess--Read-Trajectories--offDIR}/../utility/ReduceFile.pl ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat 10
+>>>mv ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat         \
+>>>-${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat         \
 >>>/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/output/test_CG_PostProcess_ReadTrajectories=off/Virtis.map.dat.Reduced.Step=10.ref  > test_CG_PostProcess_ReadTrajectories=off--VIRTIS-MAP.diff
->>>@ls -l test_CG_PostProcess_ReadTrajectories=off--VIRTIS-MAP.diff
+>>>ls -l test_CG_PostProcess_ReadTrajectories=off--VIRTIS-MAP.diff
 
->>>@cat test_CG_PostProcess_ReadTrajectories=off--VIRTIS-MAP.diff > test_CG_PostProcess_ReadTrajectories=off.diff 
+>>>cat test_CG_PostProcess_ReadTrajectories=off--VIRTIS-MAP.diff > test_CG_PostProcess_ReadTrajectories=off.diff 
 
->>>@ls -l test_CG_PostProcess_ReadTrajectories=off.diff
+>>>ls -l test_CG_PostProcess_ReadTrajectories=off.diff
 <#
 -------------------------------------------------------------------------------
 #>
