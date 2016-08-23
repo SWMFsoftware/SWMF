@@ -191,6 +191,10 @@ Compile=
 >>>cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
 
+>>>touch .amps.conf
+>>>touch .general.conf
+>>>touch Makefile.local
+
 >>>-cp .amps.conf .amps.conf.tmp
 >>>-cp .general.conf .general.conf.tmp
 >>>-cp Makefile.local Makefile.local.tmp
@@ -271,6 +275,10 @@ Compile=
 >>>cd srcCG-PostProcess; ./Config.pl -out=7
 >>>cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
+
+>>>touch .amps.conf
+>>>touch .general.conf
+>>>touch Makefile.local
 
 >>>-cp .amps.conf .amps.conf.tmp
 >>>-cp .general.conf .general.conf.tmp
