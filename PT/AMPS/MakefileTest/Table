@@ -191,16 +191,16 @@ Compile=
 >>>cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
 
->>>cp .amps.conf .amps.conf.tmp
->>>cp .general.conf .general.conf.tmp
->>>cp Makefile.local Makefile.local.tmp
+>>>-cp .amps.conf .amps.conf.tmp
+>>>-cp .general.conf .general.conf.tmp
+>>>-cp Makefile.local Makefile.local.tmp
 
 >>>./Config.pl -openmp=on
 >>>cd srcCG-PostProcess; make EXTERNALFLAGS="-D_LOAD_TRAJECTORY_FILES_=_ON_ -D_SURFACE_EXPOSURE_TIME_CALCULATION_=_ON_"  
 
->>>mv .amps.conf.tmp .amps.conf
->>>mv .general.conf.tmp .general.conf
->>>mv Makefile.local.tmp Makefile.local
+>>>-mv .amps.conf.tmp .amps.conf
+>>>-mv .general.conf.tmp .general.conf
+>>>-mv Makefile.local.tmp Makefile.local
 
 >>>@echo "test_CG_PostProcess_ReadTrajectories=on_compile... done" >> test_CG_PostProcess_ReadTrajectories=on.diff
 
@@ -272,16 +272,16 @@ Compile=
 >>>cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
 >>>cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${MYDIR}
 
->>>cp .amps.conf .amps.conf.tmp
->>>cp .general.conf .general.conf.tmp
->>>cp Makefile.local Makefile.local.tmp
+>>>-cp .amps.conf .amps.conf.tmp
+>>>-cp .general.conf .general.conf.tmp
+>>>-cp Makefile.local Makefile.local.tmp
 
 >>>./Config.pl -openmp=on
 >>>cd srcCG-PostProcess; make  
 
->>>mv .amps.conf.tmp .amps.conf
->>>mv .general.conf.tmp .general.conf
->>>mv Makefile.local.tmp Makefile.local
+>>>-mv .amps.conf.tmp .amps.conf
+>>>-mv .general.conf.tmp .general.conf
+>>>-mv Makefile.local.tmp Makefile.local
 >>>@echo "test_CG_PostProcess_ReadTrajectories=off_compile... done" >> test_CG_PostProcess_ReadTrajectories=off.diff
 
 Rundir=
