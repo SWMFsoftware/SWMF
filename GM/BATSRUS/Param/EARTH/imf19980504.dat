@@ -1,8 +1,9 @@
-
 Data taken from file : ac_h0_mfi_19980504_v04.cdf
      and               ac_h0_swe_19980504_v06.cdf
 
 The number density was multiplied by (1.0 + 4.0*AlphaRatio)
+
+Units: nT, km/s, amu/cc, K
 
 #COORD
 GSM
@@ -10,7 +11,7 @@ GSM
 #TIMEDELAY
       0.00000
       
-yr mn dy hr min sec msec bx by bz vx vy vz dens temp
+ year mn dy hr mn sc msc bx by bz ux uy uz rho T
 #START
  1998  5  4  0 43 41 591   -3.78   -2.07   -6.77  -477.05   -21.74    12.65    10.21      42272.2
  1998  5  4  0 44  1 232   -4.91   -3.58   -5.48  -476.39   -20.58    11.97    10.21      41383.5
