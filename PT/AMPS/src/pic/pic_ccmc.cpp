@@ -36,6 +36,12 @@ double PIC::CCMC::Domain::Resolution::dxMin=-1.0;
 double PIC::CCMC::Domain::Resolution::rXmax=-1.0;
 double PIC::CCMC::Domain::Resolution::rXmin=-1.0;
 
+//pocessing particles that cross the internal boundary
+int PIC::CCMC::InternalBoundary::ParticleProcessingMode=PIC::CCMC::InternalBoundary::ParticleBoundaryInteractionCode::NoBoundary;
+double PIC::CCMC::InternalBoundary::Sphere::Radius=0.0;
+double PIC::CCMC::InternalBoundary::Sphere::x0[3]={0.0,0.0,0.0};
+int PIC::CCMC::InternalBoundary::Sphere::SamplingMode=_PIC_MODE_OFF_;
+
 //read the control file
 void PIC::CCMC::Parser::LoadControlFile() {
   CiFileOperations ifile;
@@ -74,7 +80,15 @@ void PIC::CCMC::Parser::LoadControlFile() {
       ifile.CutInputStr(str1,str);
       PIC::CCMC::MaxTrajectoryIntegrationTime=atof(str1);
     }
+    else if (strcmp("#INTERNALBOUNDARYSPHERE",str1)==0) {
+      ifile.CutInputStr(str1,str);
 
+      if (strcmp("ON",str1)==0) {
+        PIC::CCMC::InternalBoundary::ParticleProcessingMode=PIC::CCMC::InternalBoundary::ParticleBoundaryInteractionCode::Sphere;
+        Read::InternalBoundarySphere(ifile);
+      }
+      else if (strcmp("OFF",str1)!=0) exit(__LINE__,__FILE__,"Error: the option is unknown");
+    }
     else if (strcmp("#SOURCEREGION",str1)==0) {
       ifile.CutInputStr(str1,str);
 
@@ -106,6 +120,36 @@ void PIC::CCMC::Parser::LoadControlFile() {
 
   //close the file
   ifile.closefile();
+}
+
+//Read the internal boundary sphere section
+void PIC::CCMC::Parser::Read::InternalBoundarySphere(CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("RADIUS",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CCMC::InternalBoundary::Sphere::Radius=atof(str1);
+    }
+    else if (strcmp("SAMPLING",str1)==0) {
+      ifile.CutInputStr(str1,str);
+
+      if (strcmp("ON",str1)==0) PIC::CCMC::InternalBoundary::Sphere::SamplingMode=_PIC_MODE_ON_;
+      else if (strcmp("OFF",str1)==0) PIC::CCMC::InternalBoundary::Sphere::SamplingMode=_PIC_MODE_OFF_;
+      else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+    }
+    else if (strcmp("X0",str1)==0) {
+       for (int idim=0;idim<3;idim++) {
+         ifile.CutInputStr(str1,str);
+         PIC::CCMC::InternalBoundary::Sphere::x0[idim]=atof(str1);
+       }
+    }
+    else if (strcmp("#ENDINTERNALBOUNDARYSPHERE",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
 }
 
 //Read individual section of the input file
@@ -462,6 +506,14 @@ void PIC::CCMC::LoadParticles() {
         exit(__LINE__,__FILE__,"Error: not implemented");
       }
 
+      //the new particle must be outside of the internal surface
+      if (InternalBoundary::ParticleProcessingMode==InternalBoundary::ParticleBoundaryInteractionCode::Sphere) {
+        double r=0.0;
+
+        for (int idim=0;idim<3;idim++) r+=pow(x[idim]-InternalBoundary::Sphere::x0[idim],2);
+        if (r<pow(InternalBoundary::Sphere::Radius,2)) continue;
+      }
+
       //determine the block and processor number for the particle
       static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
 
@@ -553,6 +605,18 @@ int PIC::CCMC::TraceParticles() {
                 while (ptr!=-1) {
                   ptrNext=PIC::ParticleBuffer::GetNext(ptr);
                   if (PIC::ParticleBuffer::GetI(ptr)==spec) PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+
+                  //delete the particle when: 1) it is within a boundary sphere, and 2) sampling of the partiucle on the sphere if turned off
+                  //(if the flux sampling is on then the particel is deleted during partucle motion step)
+                  if ((InternalBoundary::ParticleProcessingMode==InternalBoundary::ParticleBoundaryInteractionCode::Sphere)&&(InternalBoundary::Sphere::SamplingMode==_PIC_MODE_OFF_)) {
+                    double r=0.0,*x=PIC::ParticleBuffer::GetX(ptr);
+
+                    for (int idim=0;idim<3;idim++) r+=pow(x[idim]-InternalBoundary::Sphere::x0[idim],2);
+
+                    if (r<pow(InternalBoundary::Sphere::Radius,2)) {
+                      PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+                    }
+                  }
 
                   ptr=ptrNext;
                 }
