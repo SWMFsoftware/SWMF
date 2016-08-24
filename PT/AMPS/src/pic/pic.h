@@ -1051,7 +1051,7 @@ namespace PIC {
     //codes of the particle crossing internal boundary processing models
     namespace ParticleBoundaryInteractionCode {
       const int NoBoundary=-1;
-      const int Spehre=0;
+      const int Sphere=0;
     }
 
     namespace Sphere {
