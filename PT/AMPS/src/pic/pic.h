@@ -1057,6 +1057,7 @@ namespace PIC {
     namespace Sphere {
       extern double Radius;
       extern double x0[3];
+      extern int SamplingMode;
     }
   }
 
