@@ -11,7 +11,7 @@ subroutine write_plot_common(iFile)
   use ModMain
   use ModGeometry, ONLY: &
        XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
-  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, cLight
+  use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
        init_sph_hdf5_plot,init_hdf5_plot
@@ -633,9 +633,6 @@ subroutine write_plot_common(iFile)
               write(c0,'(i1)') i0
               write(UnitTmp_,'(es13.5,a18)')Param_I(i0), 'Param'//c0
            enddo
-           write(UnitTmp_,'(es13.5,a18)')cLight, 'cLight'
-           write(UnitTmp_,'(es13.5,a18)')ThetaTilt, 'ThetaTilt'
-           write(UnitTmp_,'(es13.5,a18)')rBody, 'rBody'
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#PLOTVARIABLE'
