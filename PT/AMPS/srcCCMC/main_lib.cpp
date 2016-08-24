@@ -24,7 +24,7 @@
 
 #include "Exosphere.h"
 
-//default definition of the functions for the exospehre module
+//default definition of the functions for the exosphere module
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble et) {return 0.0;}
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {return 0;}
 void Exosphere::ColumnIntegral::ProcessColumnIntegrationVector(double *res,int resLength) {}
@@ -36,6 +36,54 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& Reemi
 
 const double DomainLength[3]={1.0E8,1.0E8,1.0E8},DomainCenterOffset[3]={0.0,0.0,0.0};
 
+//=========================================================================================
+//init the internal shere
+int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer) {
+
+  //sample the particle flux
+  //needs to be implemented laterimplement later :-(
+
+  //the particle is deleted on the sphere
+  return _PARTICLE_DELETED_ON_THE_FACE_;
+}
+
+
+void InitInternalSphere() {
+  double sx0[3]={0.0,0.0,0.0};
+  cInternalBoundaryConditionsDescriptor SphereDescriptor;
+  cInternalSphericalData *Sphere;
+
+
+  //reserve memory for sampling of the surface balance of sticking species
+  cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
+
+  PIC::BC::InternalBoundary::Sphere::Init(NULL,NULL);
+  SphereDescriptor=PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere();
+  Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
+  Sphere->SetSphereGeometricalParameters(sx0,PIC::CCMC::InternalBoundary::Sphere::Radius);
+
+  Sphere->PrintSurfaceMesh("Sphere.dat");
+  Sphere->PrintSurfaceData("SpheraData.dat",0);
+
+//  Sphere->localResolution=localSphericalSurfaceResolution;
+//  Sphere->InjectionRate=Europa::SourceProcesses::totalProductionRate;
+//  Sphere->faceat=0;
+
+  Sphere->ParticleSphereInteraction=ParticleSphereInteraction;
+//  Sphere->InjectionBoundaryCondition=Europa::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+
+//  Sphere->PrintTitle=Europa::Sampling::OutputSurfaceDataFile::PrintTitle;
+//  Sphere->PrintVariableList=Europa::Sampling::OutputSurfaceDataFile::PrintVariableList;
+//  Sphere->PrintDataStateVector=Europa::Sampling::OutputSurfaceDataFile::PrintDataStateVector;
+
+  //set up the planet pointer in Exosphere model
+  Exosphere::Planet=Sphere;
+  Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
+}
+
+
+
+//=========================================================================================
 double localResolution(double *x) {
   return PIC::CCMC::Domain::Resolution::GetlocalResolution(x);
 }
@@ -258,6 +306,11 @@ void amps_init() {
 	//load the control file
 	PIC::CCMC::Parser::LoadControlFile();
 
+  //init the internal sphere boundary
+  if (PIC::CCMC::InternalBoundary::ParticleProcessingMode==PIC::CCMC::InternalBoundary::ParticleBoundaryInteractionCode::Sphere) {
+    InitInternalSphere();
+  }
+
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
 
@@ -380,6 +433,8 @@ void amps_init() {
 //  PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
 //  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
+
+
 
 
 	//set up the time step
