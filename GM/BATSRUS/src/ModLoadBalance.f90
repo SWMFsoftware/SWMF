@@ -242,6 +242,7 @@ contains
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModLocalTimeStep, ONLY: UseLocalTimeStep
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
+    use ModUserInterface ! user_action
 
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
@@ -529,6 +530,10 @@ contains
     if(allocated(iType_I))       deallocate(iType_I)
     if(allocated(IsTypeExist_I)) deallocate(IsTypeExist_I)
     call timing_stop(NameSub)
+
+    ! Allow the user to do something after load balancing was done
+    if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1 .and. DoMoveData)&
+         call user_action('load balance done')
 
   end subroutine load_balance
   !============================================================================
