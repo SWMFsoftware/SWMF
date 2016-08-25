@@ -1715,8 +1715,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	#SAVEIDL
 	4                       nPlotFile
 	z=0 var ascii si        StringPlot
-	1                       DnOutput
-	-0.05                   DtOutput
+	-1                      DnOutput
+	3.0                     DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
 	x=0 var ascii pic       StringPlot
@@ -1755,11 +1755,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
 
 	Note:
-	1) Do not support controlling output by DtOutPut now.
-	2) Available output variables are listed in EMfields3D.cpp::getVar().
-	3) DxOutput is only functional for particles output now.
-	4) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
-	5) Output variable 'particles' only works for 'cut' and '3d'.
+	1) Available output variables are listed in EMfields3D.cpp::getVar().
+	2) DxOutput is only functional for particles output now.
+	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
+	4) Output variable 'particles' only works for 'cut' and '3d'.
       */
       
       string::size_type pos;

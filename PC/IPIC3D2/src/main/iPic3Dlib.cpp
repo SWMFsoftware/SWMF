@@ -92,6 +92,7 @@ c_Solver::~c_Solver()
     }
     delete [] Var_II;
 
+    delete [] nextOutputTime_I;
     delete [] nVar_I;
     delete [] nCell_I;
     delete [] nameSnapshot_I;
@@ -957,8 +958,16 @@ void c_Solver:: write_plot_idl(int cycle){
 
   for(int iPlot=0; iPlot<nPlotFile; iPlot++){
     int dnOutput;
+    double dtOutput, timeNow;
     dnOutput = col->getdnOutput(iPlot);
-    if(cycle % dnOutput==0 ){
+    dtOutput = col->getdtOutput(iPlot);
+    timeNow  = col->getSItime();
+    if(  (dnOutput > 0 && cycle % dnOutput==0) ||
+	 (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])  ){
+      if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
+	nextOutputTime_I[iPlot] +=dtOutput;
+      }
+      
       set_output_unit(iPlot);
       write_plot_data(iPlot,cycle);
 
@@ -993,7 +1002,8 @@ void c_Solver:: write_plot_init(){
   plotVar_I         = new std::string[nPlotFile];
   doOutputParticles_I=new bool[nPlotFile];
   iSpeciesOutput_I  = new int[nPlotFile];
-
+  nextOutputTime_I  = new double[nPlotFile];
+  
   Var_II = new std::string*[nPlotFile];
   for(int i=0;i<nPlotFile;i++){
     Var_II[i]=new std::string[nVarMax];    
@@ -1002,7 +1012,11 @@ void c_Solver:: write_plot_init(){
   for(int i=0;i<nPlotFile;i++){
     doOutputParticles_I[i] = false;
   }
-  
+
+  for(int i=0;i<nPlotFile;i++){
+    nextOutputTime_I[i] = 0; 
+  }
+
   string plotString;
   string subString;
   string::size_type pos;
