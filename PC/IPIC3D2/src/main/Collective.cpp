@@ -1473,6 +1473,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   delta = 0.5;
 
   last_cycle = -1; 
+
+  dt = 0;
   
   // Test particles. Not available for coupling so far. 
   nstestpart = 0;
