@@ -212,6 +212,7 @@ Rundir=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--onDIR)
+>>>@mv srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Run=
@@ -233,7 +234,7 @@ Run=
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.H2O.s=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/pic.H2O.s=0.out=7.dat
 
 >>>@cp /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/kernels.tm ${TESTCG-PostProcess--Read-Trajectories--onDIR}
->>>-@cd ${TESTCG-PostProcess--Read-Trajectories--onDIR}; mpirun -np 1 ../srcCG-PostProcess/a.out 
+>>>-@cd ${TESTCG-PostProcess--Read-Trajectories--onDIR}; mpirun -np 1 ./a.out 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Check=
@@ -296,6 +297,7 @@ Rundir=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--offDIR)
+>>>@mv srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--offDIR) 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Run=
@@ -317,7 +319,7 @@ Run=
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.H2O.s=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/pic.H2O.s=0.out=7.dat
 
 >>>@cp /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/kernels.tm ${TESTCG-PostProcess--Read-Trajectories--offDIR}
->>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR}; mpirun -np 1 ../srcCG-PostProcess/a.out 
+>>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR}; mpirun -np 1 ./a.out 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Check=
