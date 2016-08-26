@@ -19,7 +19,6 @@ subroutine ray_trace_accurate
   use ModAdvance,     ONLY: State_VGB, Bx_, Bz_
   use ModB0,          ONLY: B0_DGB
   use ModGeometry,    ONLY: r_BLK, true_cell
-  use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
   use ModMpi
 
@@ -49,16 +48,19 @@ subroutine ray_trace_accurate
   call set_oktest('time_ray_trace',okTime,okTimeMe)
   if(okTime)call timing_reset('ray_pass',2)
 
-  ! Fill in all ghost cells
-  call message_pass_cell(nVar, State_VGB, nProlongOrderIn=1)
-
   ! Copy magnetic field into Bxyz_DGB
   do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
      Bxyz_DGB(:,:,:,:,iBlock) = State_VGB(Bx_:Bz_,:,:,:,iBlock)
-     ! Add B0
-     if(UseB0) Bxyz_DGB(:,:,:,:,iBlock) = &
-          Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
   end do
+  ! Fill in ghost cells with first order prolongation
+  call message_pass_cell(3, Bxyz_DGB, nProlongOrderIn=1)
+  if(UseB0)then
+     ! Add B0
+     do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
+        Bxyz_DGB(:,:,:,:,iBlock) = &
+             Bxyz_DGB(:,:,:,:,iBlock) + B0_DGB(:,:,:,:,iBlock)
+     end do
+  end if
 
   ! Initial values
   ray=NORAY
@@ -120,9 +122,6 @@ subroutine ray_trace_accurate
 
   if(okTestMe)write(*,*)'ray lat, lon, status=',&
        ray(:,:,iTest,jTest,kTest,BlkTest)
-
-  ! Return ghost cells to values before trace started
-  call exchange_messages
 
   if(okTime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
