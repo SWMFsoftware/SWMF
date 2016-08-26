@@ -710,7 +710,7 @@ subroutine BATS_save_files(TypeSaveIn)
      call save_files_final
   case('FINALWITHRESTART')
      call save_files_final
-  case('NORMAL', 'BEGINSTEP')
+  case('NORMAL', 'BEGINSTEP', 'BEFOREAMR')
      call save_files
   case('AMRPLOTS')
      do iFile=plot_+1, plot_+nPlotFile
@@ -816,7 +816,7 @@ contains
        ! Case for plot files
        IsFound=.false.
 
-       if(.not.DoExchangeAgain .and. ( &
+       if(TypeSave /= 'BEFOREAMR' .and. .not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &
             index(plot_type(iFile),'pnt')==1 .or. &
             index(plot_type(iFile),'eqr')==1 .or. &
