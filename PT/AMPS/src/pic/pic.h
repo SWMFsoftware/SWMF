@@ -1249,14 +1249,16 @@ namespace PIC {
 
   //run tame calculation of the check sums
   namespace RunTimeSystemState {
-    void GetParticleFieldCheckSum(char *msg=NULL);
-    void GetParticleFieldCheckSum(long int nline,char *fname);
+    void GetParticleFieldCheckSum(const char *msg=NULL);
+    void GetParticleFieldCheckSum(long int nline,const char *fname);
+    void GetParticleFieldCheckSum_CallCounter(const char *msg=NULL);
+    void GetParticleFieldCheckSum_CallCounter(long int nline,const char *fname);
 
-    void GetDomainDecompositionCheckSum(char *msg=NULL);
-    void GetDomainDecompositionCheckSum(long int nline,char *fname);
+    void GetDomainDecompositionCheckSum(const char *msg=NULL);
+    void GetDomainDecompositionCheckSum(long int nline,const char *fname);
 
-    void GetMeanParticleMicroscopicParameters(FILE* fout,char *msg=NULL);
-    void GetMeanParticleMicroscopicParameters(FILE* fout,long int nline,char *fname);
+    void GetMeanParticleMicroscopicParameters(FILE* fout,const char *msg=NULL);
+    void GetMeanParticleMicroscopicParameters(FILE* fout,long int nline,const char *fname);
     void GetMeanParticleMicroscopicParameters(const char *fname);
   }
 

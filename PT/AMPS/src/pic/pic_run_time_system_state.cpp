@@ -6,11 +6,11 @@
 #include "pic.h"
 
 //get the check sum of all particles
-void PIC::RunTimeSystemState::GetParticleFieldCheckSum(char *msg) {
+void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
   CRC32 CheckSum;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::ParticleBuffer::byte *ParticleData;
-  int i,j,k;
+  int i,j,k,ParticleCounter=0;
   long int ptr;
 
   //calcualte the check sum of the particles with in the domain
@@ -18,15 +18,18 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(char *msg) {
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
       for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
         for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-          ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+          for (int npass=0;npass<2;npass++) {
+            ptr=(npass==0) ? node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-          while (ptr!=-1) {
-            ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-            CheckSum.add<char>((char*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+            while (ptr!=-1) {
+              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+              CheckSum.add<char>((char*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+              ParticleCounter++;
 
-            ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+            }
+
           }
-
         }
       }
     }
@@ -40,15 +43,18 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(char *msg) {
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
         for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
           for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-            ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+            for (int npass=0;npass<2;npass++) {
+              ptr=(npass==0) ? node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-            while (ptr!=-1) {
-              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-              CheckSum.add<char>((char*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+              while (ptr!=-1) {
+                ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+                CheckSum.add<char>((char*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+                ParticleCounter++;
 
-              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+                ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+              }
+
             }
-
           }
         }
       }
@@ -57,27 +63,58 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(char *msg) {
   }
 
   unsigned long CheckSumBuffer[PIC::nTotalThreads],t;
+  int ParticleCounterBuffer[PIC::nTotalThreads];
 
   t=CheckSum.checksum();
   MPI_Gather(&t,1,MPI_LONG,CheckSumBuffer,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Gather(&ParticleCounter,1,MPI_INT,ParticleCounterBuffer,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
      printf("$PREFIX: Particle Field Check Sum:");
-     if (msg!=NULL) printf("(message=\"%s\")",msg);
+     if (msg!=NULL) printf("(message=\"%s\") \n",msg);
+
      for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  0x%lx",CheckSumBuffer[thread]);
+     printf("\n");
+
+     for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  %ld",ParticleCounterBuffer[thread]);
      printf("\n");
   }
 }
 
-void PIC::RunTimeSystemState::GetParticleFieldCheckSum(long int nline,char *fname) {
+void PIC::RunTimeSystemState::GetParticleFieldCheckSum(long int nline,const char *fname) {
   char msg[_MAX_STRING_LENGTH_PIC_];
 
   sprintf(msg,"file=%s, line=%ld",fname,nline);
   GetParticleFieldCheckSum(msg);
 }
 
+void PIC::RunTimeSystemState::GetParticleFieldCheckSum_CallCounter(long int nline,const char *fname) {
+  char msg[_MAX_STRING_LENGTH_PIC_];
+  static long int CallCounter=0;
+
+  sprintf(msg,"file=%s, line=%ld [Counter=%i]",fname,nline,CallCounter);
+  GetParticleFieldCheckSum(msg);
+  CallCounter++;
+}
+
+void PIC::RunTimeSystemState::GetParticleFieldCheckSum_CallCounter(const char *msg) {
+  char buffer[_MAX_STRING_LENGTH_PIC_];
+  static long int CallCounter=0;
+
+  if (msg!=NULL) {
+    sprintf(buffer,"%s [Counter=%i]",msg,CallCounter);
+  }
+  else {
+    sprintf(buffer,"[Counter=%i]",CallCounter);
+  }
+
+  GetParticleFieldCheckSum(msg);
+  CallCounter++;
+}
+
+
 //compare the domain decomposition: calcualte the chech sum of all block's TempID belong to the currect processor
-void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(char *msg) {
+void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(const char *msg) {
   CRC32 CheckSum;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
 
@@ -100,14 +137,14 @@ void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(char *msg) {
   }
 }
 
-void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(long int nline,char *fname) {
+void PIC::RunTimeSystemState::GetDomainDecompositionCheckSum(long int nline,const char *fname) {
   char msg[_MAX_STRING_LENGTH_PIC_];
 
   sprintf(msg,"file=%s, line=%ld",fname,nline);
   GetDomainDecompositionCheckSum(msg);
 }
 
-void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,char *msg) {
+void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,const char *msg) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::ParticleBuffer::byte *ParticleData;
   int i,j,k,idim;
@@ -186,7 +223,7 @@ void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,ch
   fflush(fout);
 }
 
-void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,long int nline,char *fname) {
+void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,long int nline,const char *fname) {
   char msg[_MAX_STRING_LENGTH_PIC_];
 
   sprintf(msg,"file=%s, line=%ld",fname,nline);
