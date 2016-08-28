@@ -1254,6 +1254,11 @@ namespace PIC {
     void GetParticleFieldCheckSum_CallCounter(const char *msg=NULL);
     void GetParticleFieldCheckSum_CallCounter(long int nline,const char *fname);
 
+    void GetIndividualParticleFieldCheckSum_CallCounter(long int ptr,const char *msg=NULL);
+    void GetIndividualParticleFieldCheckSum_CallCounter(void *ParticleData,const char *msg=NULL);
+    void GetIndividualParticleFieldCheckSum_CallCounter(long int ptr,long int nline,const char *fname,const char *msg=NULL);
+    void GetIndividualParticleFieldCheckSum_CallCounter(void *ParticleData,long int nline,const char *fname,const char *msg=NULL);
+
     void GetDomainDecompositionCheckSum(const char *msg=NULL);
     void GetDomainDecompositionCheckSum(long int nline,const char *fname);
 

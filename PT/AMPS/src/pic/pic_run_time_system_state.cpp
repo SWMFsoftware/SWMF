@@ -6,6 +6,33 @@
 #include "pic.h"
 
 //get the check sum of all particles
+void PIC::RunTimeSystemState::GetIndividualParticleFieldCheckSum_CallCounter(void *ParticleData,const char *msg) {
+  CRC32 CheckSum;
+  static int CallCounter=0;
+
+  CheckSum.add<char>((char*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+  printf("$PREFIX: Particle Field Check Sum ");
+  if (msg!=NULL) printf("(message=\"%s\")",msg);
+  printf(":  0x%lx [Counter=%ld]\n",CheckSum.checksum(),CallCounter);
+  CallCounter++;
+}
+
+void PIC::RunTimeSystemState::GetIndividualParticleFieldCheckSum_CallCounter(long int ptr,const char *msg) {
+  GetIndividualParticleFieldCheckSum_CallCounter((void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),msg);
+}
+
+void PIC::RunTimeSystemState::GetIndividualParticleFieldCheckSum_CallCounter(void *ParticleData,long int nline,const char *fname,const char *msg) {
+  char buffer[_MAX_STRING_LENGTH_PIC_];
+
+  sprintf(buffer,"file=%s, line=%ld",fname,nline);
+  GetIndividualParticleFieldCheckSum_CallCounter(ParticleData,buffer);
+}
+
+void PIC::RunTimeSystemState::GetIndividualParticleFieldCheckSum_CallCounter(long int ptr,long int nline,const char *fname,const char *msg) {
+  GetIndividualParticleFieldCheckSum_CallCounter((void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),nline,fname,msg);
+}
+
 void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
   CRC32 CheckSum;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
