@@ -119,6 +119,9 @@ int main(int argc,char **argv) {
   //init the interpolation routines
   PIC::InterpolationRoutines::Init();
 
+  //init mesh
+  amps_init();
+
   // output file name
   char fname[400];
   sprintf(fname,"%s/test_InterpolateAMR-test.dat",
@@ -128,8 +131,8 @@ int main(int argc,char **argv) {
   bool fail = false;
 
   Interpolation::cStencil* Stencil;
-  for(iCase=0; iCase<nCase && !fail; iCase++){
-    amps_init();
+  if (PIC::ThisThread==0) for(iCase=0; iCase<nCase && !fail; iCase++){
+//    amps_init();
     if(open_file){
       fout.open(fname, fstream::out);
       open_file=false;
