@@ -7,18 +7,14 @@ module ModSize
 
   private ! except
   public:: &
-       nDim, nVar, &
+       nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
        ROrigin, RSc, &
        Particle_, OriginLat_, OriginLon_, &
-       R_, Lat_, Lon_, Bx_, By_, Bz_, &
        nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle
 
   ! Dimensionality
   integer, parameter:: nDim = 3
-
-  ! Number of variables in the state vector
-  integer, parameter:: nVar = 6
 
   ! Starting position of field lines in Rs
   real, parameter:: ROrigin = 2.5
@@ -32,15 +28,7 @@ module ModSize
        OriginLon_ = 2, & ! Latitude of field line origin
        OriginLat_ = 3    ! Longitude  of field line origin
 
-  ! Indices of variables in state vector
-  integer, parameter:: &
-       R_   = 1,    & ! Radial coordinate
-       Lon_ = 2,    & ! Longitude
-       Lat_ = 3,    & ! Latitude
-       Bx_  = 4,    & !
-       By_  = 5,    & ! Magnetic field
-       Bz_  = 6       !
-       
+      
 
   ! Min and Max possible index of a particle along a field line,
   ! both are set by Config.pl
@@ -52,5 +40,12 @@ module ModSize
   integer, parameter:: nLon  = 4
   integer, parameter:: nLat  = 4
   integer, parameter:: nNode = nLat * nLon
+
+  ! number of bins in the distribution (see ModGrid);
+  integer, parameter:: nMomentumBin   = 100
+  integer, parameter:: nPitchAngleBin = 1  
+
+  ! whether to use pitch-angle averaged equations
+  logical, parameter:: IsPitchAngleAveraged = nPitchAngleBin == 1
 
 end module ModSize

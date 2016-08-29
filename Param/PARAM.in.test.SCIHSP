@@ -507,6 +507,9 @@ T			UseComp
 
 #BEGIN_COMP SP ----------------------------------------------------------------
 
+#DORUN
+F
+
 #GRID
 0			LonMin
 40			LonMax

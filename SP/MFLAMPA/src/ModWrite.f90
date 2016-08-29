@@ -3,14 +3,14 @@ module ModWrite
   ! This module contains methods for writing output files
 
   use ModSize, ONLY: &
-       nDim, nVar, nLat, nLon, nNode, &
+       nDim, nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
+       Particle_, OriginLat_, OriginLon_
 
   use ModGrid, ONLY: &
        get_node_indexes, &
-       nBlock, State_VIB, iGrid_IA, iNode_B, &
-       Proc_, Begin_, End_
+       nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
 
   use ModPlotFile, ONLY: save_plot_file
 
@@ -170,14 +170,18 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      real:: PFirst
-      real:: PLast
+      integer:: iFirst
+      integer:: iLast
       ! coordinates in spherical coordinates
       real:: Coord_D(nDim)
       ! magnetic field
       real:: B_D(nDim)
       ! storage for output data
-      real:: DataOut_VI(nVar,iParticleMin:iParticleMax)
+      integer, parameter:: nVarPlot = 6
+      integer, parameter:: &
+           PlotX_ = 1, PlotY_ = 2, PlotZ_ = 3, &
+           PlotBx_= 4, PlotBy_= 5, PlotBz_= 6
+      real:: DataOut_VI(nVarPlot,iParticleMin:iParticleMax)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
@@ -188,15 +192,15 @@ contains
               trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,'.out'
 
          ! get min and max particle indexes on this field line
-         PFirst = iGrid_IA(Begin_, iNode)
-         PLast  = iGrid_IA(End_,   iNode)
+         iFirst = iGridLocal_IB(Begin_, iBlock)
+         iLast  = iGridLocal_IB(End_,   iBlock)
 
-         do iParticle = int(PFirst), int(PLast)
+         do iParticle = iFirst, iLast
             ! convert coordinates to cartesian before output
             Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-            call rlonlat_to_xyz(Coord_D, DataOut_VI(1:nDim,iParticle))
+            call rlonlat_to_xyz(Coord_D, DataOut_VI(PlotX_:PlotZ_,iParticle))
             ! magnetic field
-            DataOut_VI((/Bx_,By_,Bz_/),iParticle) = &
+            DataOut_VI((/PlotBx_,PlotBy_,PlotBz_/),iParticle) = &
                  State_VIB((/Bx_,By_,Bz_/), iParticle, iBlock)
          end do
 
@@ -206,10 +210,10 @@ contains
               nDimIn       = 1, &
               TimeIn       = Time, &
               nStepIn      = iIter, &
-              CoordMinIn_D = (/PFirst/), &
-              CoordMaxIn_D = (/PLast/), &
+              CoordMinIn_D = (/real(iFirst)/), &
+              CoordMaxIn_D = (/real(iLast)/), &
               NameVarIn    = 'ParticleIndex X Y Z Bx By Bz', &
-              VarIn_VI     = DataOut_VI(1:nVar, int(PFirst):int(PLast))&
+              VarIn_VI     = DataOut_VI(1:nVarPlot, iFirst:iLast)&
               )
       end do
       

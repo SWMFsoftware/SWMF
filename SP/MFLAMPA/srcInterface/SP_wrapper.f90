@@ -5,17 +5,18 @@
 module SP_wrapper
 
   use ModNumConst, ONLY: cHalfPi
-  use ModConst, ONLY: rSun
+  use ModConst, ONLY: rSun, cProtonMass
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use ModMain, ONLY: &
-       advance, initialize, finalize, check, read_param,&
+       run, initialize, finalize, check, read_param,&
        get_node_indexes, &
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
        RSc, LatMin, LatMax, LonMin, LonMax, &
-       TimeGlobal, iGrid_IA, State_VIB, iNode_B, TypeCoordSystem,&
-       Block_, Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
+       iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
+       Block_, Proc_, Begin_, End_, &
+       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use ModBufferQueue, ONLY: TypeBufferQueue, &
        init_queue, reset_queue, add_to_queue, reset_peek_queue, peek_queue
   use CON_comp_info
@@ -24,6 +25,8 @@ module SP_wrapper
        set_coord_system, &
        init_decomposition, get_root_decomposition, bcast_decomposition, &
        iVar_V, DoCoupleVar_V, &
+       Density_, RhoCouple_, Pressure_, PCouple_, &
+       Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_
   use CON_world, ONLY: is_proc0
   use CON_comp_param, ONLY: SP_
@@ -51,7 +54,7 @@ module SP_wrapper
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
-  character(len=*), parameter:: NameVarCouple = 'bx by bz'
+  character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
 
   ! particles that need to be requested from MH component
   type(TypeBufferQueue):: QueueRequest
@@ -66,8 +69,7 @@ contains
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
-    TimeGlobal = TimeSimulation
-    call advance
+    call run(TimeSimulationLimit)
     TimeSimulation = TimeSimulationLimit
   end subroutine SP_run
 
@@ -84,7 +86,7 @@ contains
     if(IsInitialized)&
          RETURN
     IsInitialized = .true.
-    call initialize
+     call initialize(TimeSimulation)
   end subroutine SP_init_session
 
   !======================================================================
@@ -152,14 +154,33 @@ contains
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-    integer:: iBx, iBz
+    integer:: iRho, iP, iMx, iMz, iBx, iBz
     integer:: i, j, k, iBlock
     integer:: iPartial
     real:: Weight
+    real:: Aux
+
+    real, external:: energy_in
+
+    character(len=*), parameter:: NameSub='SP_put_from_mh'
     !------------------------------------------------------------
+    ! check consistency: momentum and pressure are needed together with density
+    if(.not. DoCoupleVar_V(Density_) .and. &
+         (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
+         call CON_Stop(NameSub//': pressure or momentum is coupled,'//&
+         ' but density is not')
+
     ! indices of variables in the buffer
+    iRho= iVar_V(RhoCouple_)
+    iP  = iVar_V(PCouple_)
+    iMx = iVar_V(RhoUxCouple_)
+    iMz = iVar_V(RhoUzCouple_)
     iBx = iVar_V(BxCouple_)
     iBz = iVar_V(BzCouple_)   
+    ! auxilary factor to account for value of DoAdd
+    Aux = 0.0
+    if(DoAdd) Aux = 1.0
+
     do iPartial = 0, nPartial-1
        ! cell and block indices
        i      = Put%iCB_II(1, iPutStart + iPartial)
@@ -169,15 +190,19 @@ contains
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
        ! put the data
-       if(DoAdd)then
-          ! NOTE: State_VIB must be reset to zero before putting coupled data
-          if(DoCoupleVar_V(BField_)) &
-               State_VIB(Bx_:Bz_,i,iBlock) = &
-               State_VIB(Bx_:Bz_,i,iBlock) + Buff_I(iBx:iBz) * Weight
-       else
-          if(DoCoupleVar_V(BField_)) &
-               State_VIB(Bx_:Bz_,i,iBlock)= Buff_I(iBx:iBz) * Weight
-       end if
+       ! NOTE: State_VIB must be reset to zero before putting coupled data
+       if(DoCoupleVar_V(Density_))&
+            State_VIB(Rho_,i,iBlock) = Aux * State_VIB(Rho_,i,iBlock) + &
+            Buff_I(iRho)/cProtonMass * Weight
+       if(DoCoupleVar_V(Pressure_))&
+            State_VIB(T_,i,iBlock) = Aux * State_VIB(T_,i,iBlock) + &
+            Buff_I(iP)/Buff_I(iRho)*cProtonMass/energy_in('kev') * Weight
+       if(DoCoupleVar_V(Momentum_))&
+            State_VIB(Ux_:Uz_,i,iBlock) = Aux * State_VIB(Ux_:Uz_,i,iBlock) + &
+            Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
+       if(DoCoupleVar_V(BField_))&
+            State_VIB(Bx_:Bz_,i,iBlock) = Aux * State_VIB(Bx_:Bz_,i,iBlock) + &
+            Buff_I(iBx:iBz) * Weight
     end do
   end subroutine SP_put_from_mh
 
@@ -199,8 +224,8 @@ contains
          XyzMin_D      = (/real(iParticleMin), LatMin, LonMin/),&
          XyzMax_D      = (/real(iParticleMax), LatMax, LonMax/),&
          nCells_D      = (/nParticle , 1, 1/),&
-         PE_I          = iGrid_IA(Proc_,:),&
-         iBlock_I      = iGrid_IA(Block_,:))
+         PE_I          = iGridGlobal_IA(Proc_,:),&
+         iBlock_I      = iGridGlobal_IA(Block_,:))
     call bcast_decomposition(SP_)
 
     ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
@@ -313,6 +338,9 @@ contains
     logical:: WasInSc, IsInSc, WasUndef
     logical, save:: IsFirstCall = .true.
     logical, save,allocatable:: DoneExtractSolarCorona_B(:)
+    integer, parameter:: nVarReset  = 8
+    integer, parameter:: &
+         VarReset_I(nVarReset) = (/Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     if(IsFirstCall)then
@@ -331,9 +359,9 @@ contains
             call CON_stop(NameSub//': particle index is below limit')
        if(iParticle > iParticleMax)&
             call CON_stop(NameSub//': particle index is above limit')
-       iGrid_IA(Begin_, iLine) = MIN(iGrid_IA(Begin_,iLine), iParticle)
-       iGrid_IA(End_,   iLine) = MAX(iGrid_IA(End_,  iLine), iParticle)
-       if(iGrid_IA(Proc_, iLine) /= iProc)&
+       iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
+       iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
+       if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        
        ! check if the particle has crossed the solar corona boundary
@@ -350,20 +378,15 @@ contains
           DoneExtractSolarCorona_B(iBlock) = .true.
        end if
 
-       ! reset the state vector and put coordinates
-       State_VIB(:,                  iParticle, iBlock) = 0.0
+       ! keep some variables as "old" state
+       State_VIB((/RhoOld_,BOld_/),  iParticle, iBlock) = &
+            State_VIB((/Rho_,B_/),   iParticle, iBlock)
+       ! reset others 
+       State_VIB(VarReset_I,         iParticle, iBlock) = 0.0
+       ! put coordinates
        State_VIB((/R_, Lon_, Lat_/), iParticle, iBlock) = &
             Coord_DI(1:nDim, iPut)
     end do
-    !\
-    ! Update begin/end points on all procs
-    !/
-    iMin_A = iGrid_IA(Begin_, :); iMax_A = iGrid_IA(End_,:)
-    call MPI_Allreduce(MPI_IN_PLACE, iMin_A, nNode, MPI_INTEGER, &
-         MPI_MIN, iComm, iError)
-    call MPI_Allreduce(MPI_IN_PLACE, iMax_A, nNode, MPI_INTEGER, &
-         MPI_MAX, iComm, iError)
-    iGrid_IA(Begin_, :) = iMin_A; iGrid_IA(End_,:) = iMax_A
   end subroutine SP_put_line
 
   !===================================================================
@@ -391,12 +414,12 @@ contains
     !-----------------------------------------
     Xyz_DI = 0.0
     do iNode = 1, nNode
-       if(iGrid_IA(Proc_, iNode) /= iProc)&
+       if(iGridGlobal_IA(Proc_, iNode) /= iProc)&
             CYCLE
-       iBlock = iGrid_IA(Block_, iNode)
+       iBlock = iGridGlobal_IA(Block_, iNode)
        do iParticle = iParticleMin, iParticleMax
-          if(  iParticle < iGrid_IA(Begin_, iNode) .or. &
-               iParticle > iGrid_IA(End_,   iNode)) &
+          if(  iParticle < iGridLocal_IB(Begin_, iBlock) .or. &
+               iParticle > iGridLocal_IB(End_,   iBlock)) &
                CYCLE
           Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
           call rlonlat_to_xyz(Coord_D, &

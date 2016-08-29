@@ -4,20 +4,26 @@
 module ModMain
 
   use ModSize, ONLY: &
-       nDim, nVar, nLat, nLon, nNode, &
+       nDim, nLat, nLon, nNode, &
        ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
+       Particle_, OriginLat_, OriginLon_
   
   use ModWrite, ONLY: &
        set_write_param, write_output, NamePlotDir
 
   use ModGrid, ONLY: &
+       nVar, &
+       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
        LatMin, LatMax, LonMin, LonMax, &
-       iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA, &
+       iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        set_grid_param, init_grid, get_node_indexes
   
+  use ModAdvance, ONLY: &
+       TimeGlobal, iIterGlobal, &
+       advance, set_injection_param
+
   implicit none
 
   SAVE
@@ -26,24 +32,28 @@ module ModMain
 
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, advance, finalize, check,&
+       read_param, initialize, run, finalize, check,&
        TimeGlobal, iIterGlobal
 
   ! Methods and variables from ModSize
   public:: &
-       nDim, nVar, nLat, nLon, nNode, &
+       nDim, nLat, nLon, nNode, &
        ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_, Bx_, By_, Bz_
+       Particle_, OriginLat_, OriginLon_
 
   ! Methods and variables from ModGrid
   public:: &
+       nVar, &
+       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
        TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, &
-       iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA, &
+       iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        get_node_indexes
 
   ! Methods and variables from ModWrite
+
+  ! Methods and variables from ModAdvance
 
   ! Coordinate system
   character(len=3) :: TypeCoordSystem = 'HGI'
@@ -59,12 +69,6 @@ module ModMain
   logical:: DoInit = .true.
   !/
 
-  !\
-  ! Global interation and time
-  !-----------------------------
-  real   :: TimeGlobal  = -1.0
-  integer:: iIterGlobal = -1
-  !/
 
 contains
 
@@ -96,8 +100,10 @@ contains
        case('#SAVEPLOT')
           call read_var('StringPlot', StringPlot)
           call set_write_param(StringPlot)
-       case("#COORDSYSTEM")
+       case('#COORDSYSTEM')
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
+       case('#INJECTION')
+          call set_injection_param
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
@@ -106,21 +112,30 @@ contains
 
   !============================================================================
 
-  subroutine initialize
+  subroutine initialize(TimeStart)
     ! initialize the model
-    integer:: iError
-    !
-    integer:: iLat, iLon, iNode, iBlock, iProcNode
+    real, intent(in):: TimeStart
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
     iIterGlobal = 0
+    TimeGlobal = TimeStart
     call init_grid
   end subroutine initialize
 
-  subroutine advance
+  subroutine run(TimeLimit)
+    ! advance the solution in time
+    real, intent(in):: TimeLimit
+    !------------------------------
     iIterGlobal = iIterGlobal + 1
     call write_output(TimeGlobal, iIterGlobal)
-  end subroutine advance
+    if(DoRun) then
+       ! run the model
+       call advance(TimeLimit)
+    else
+       ! update global time 
+       TimeGlobal = TimeLimit
+    end if
+  end subroutine run
 
   !============================================================================
 

@@ -1620,7 +1620,7 @@ contains
     !USES:
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_
     use IH_ModB0,      ONLY: B0_DGB
-    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitU_, UnitB_, UnitX_
+    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_,UnitP_,UnitRhoU_,UnitB_,UnitX_
     use CON_router
     use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
          Density_, Pressure_, Momentum_, BField_, &
@@ -1638,14 +1638,14 @@ contains
     ! loop variable
     integer:: iGet
     ! variable indices in State_V
-    integer:: iRho, iUx, iUz, iBx, iBz, iP
+    integer:: iRho, iMx, iMz, iBx, iBz, iP
     ! interpolation weight
     real :: Weight
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRho= iVar_V(RhoCouple_)
-    iUx = iVar_V(RhoUxCouple_)
-    iUz = iVar_V(RhoUzCouple_)
+    iMx = iVar_V(RhoUxCouple_)
+    iMz = iVar_V(RhoUzCouple_)
     iP  = iVar_V(PCouple_)
     iBx = iVar_V(BxCouple_)
     iBz = iVar_V(BzCouple_)   
@@ -1664,9 +1664,8 @@ contains
             Weight*State_VGB(rho_,i,j,k,iBlock)
        if(DoCoupleVar_V(Pressure_))&
             State_V(iP) = State_V(iP) + Weight*State_VGB(P_,i,j,k,iBlock)
-       if(DoCoupleVar_V(Momentum_)) State_V(iUx:iUz) = State_V(iUx:iUz) + &
-            Weight*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)/&
-            State_VGB(rho_,i,j,k,iBlock)
+       if(DoCoupleVar_V(Momentum_)) State_V(iMx:iMz) = State_V(iMx:iMz) + &
+            Weight*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)
        if(DoCoupleVar_V(BField_))then
           if(UseB0)then
              State_V(iBx:iBz) = State_V(iBx:iBz) + &
@@ -1680,7 +1679,7 @@ contains
 
     ! Convert momentum to velocity and convert everything to SI units
     if(DoCoupleVar_V(Density_ )) State_V(iRho)   = State_V(iRho)    *No2Si_V(UnitRho_)
-    if(DoCoupleVar_V(Momentum_)) State_V(iUx:iUz)= State_V(iUx:iUz) *No2Si_V(UnitU_)
+    if(DoCoupleVar_V(Momentum_)) State_V(iMx:iMz)= State_V(iMx:iMz) *No2Si_V(UnitRhoU_)
     if(DoCoupleVar_V(BField_  )) State_V(iBx:iBz)= State_V(iBx:iBz) *No2Si_V(UnitB_)
     if(DoCoupleVar_V(Pressure_)) State_V(iP)     = State_V(iP)      *No2Si_V(UnitP_)
   end subroutine IH_get_for_sp

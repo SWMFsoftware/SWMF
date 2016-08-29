@@ -1,9 +1,9 @@
 module ModGrid
 
   use ModSize, ONLY: &
-       nDim, nVar, nLat, nLon, nNode, &
+       nDim, nLat, nLon, nNode, nMomentumBin, nPitchAngleBin, &
        ROrigin, iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_, R_, Lat_, Lon_
+       Particle_, OriginLat_, OriginLon_
 
   implicit none
 
@@ -11,10 +11,14 @@ module ModGrid
 
   private ! except
 
-  public:: set_grid_param, init_grid, get_node_indexes
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, Begin_, End_
+  public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
-  public:: iGrid_IA, iNode_II, iNode_B, State_VIB, CoordOrigin_DA
+  public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
+  public:: State_VIB, Distribution_IIIB
+  public:: Begin_, End_, Shock_, ShockOld_
+  public:: nVar, R_, Lon_, Lat_, D_
+  public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
 
   !\
   ! MPI information
@@ -55,22 +59,57 @@ module ModGrid
   !----------------------------------------------------------------------------
   ! Various house-keeping information about the node/line;
   ! 1st index - identification of info field
-  ! 2nd index - node number
-  integer, allocatable:: iGrid_IA(:,:)
+  ! 2nd index - node number / block number
+  integer, allocatable:: iGridGlobal_IA(:,:)
+  integer, allocatable:: iGridLocal_IB(:,:)
   !----------------------------------------------------------------------------
-  ! Number of info fields per node and their identifications
-  integer, parameter:: nNodeIndexes = 4
+  ! Number of info fields per node/block and their identifications
+  integer, parameter:: nNodeIndexes = 2
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
-       Block_ = 2, & ! Block that has this line/node
-       Begin_ = 3, & ! Index of the 1st particle on this line/node
-       End_   = 4    ! Index of the last particle on this line/node
+       Block_ = 2    ! Block that has this line/node
+  integer, parameter:: nBlockIndexes = 2
+  integer, parameter:: &
+       Begin_   = 1, & ! Index of the 1st particle on this line/node
+       End_     = 2, & ! Index of the last particle on this line/node
+       Shock_   = 3, & ! Current location of a shock wave
+       ShockOld_= 4    ! Old location of a shock wave
   !----------------------------------------------------------------------------
   ! State vector;
   ! 1st index - identification of variable
   ! 2nd index - particle index along the field line
   ! 3rd index - local block number
-  real,    allocatable:: State_VIB(:,:,:)
+  real, allocatable:: State_VIB(:,:,:)
+  !----------------------------------------------------------------------------
+  ! Number of variables in the state vector and their identifications
+  integer, parameter:: nVar = 16
+  integer, parameter:: &
+       R_     = 1, & ! Radial coordinate
+       Lon_   = 2, & ! Longitude
+       Lat_   = 3, & ! Latitude
+       D_     = 5, & ! Distance to the next particle
+       ! Current values
+       Rho_   = 5, & ! Background plasma density
+       T_     = 6, & ! Background temperature
+       Ux_    = 7, &
+       Uy_    = 8, &
+       Uz_    = 9, &
+       U_     =10, &
+       Bx_    =11, & !
+       By_    =12, & ! Background magnetic field
+       Bz_    =13, & !
+       B_     =14, & ! Magnitude of magnetic field
+       ! Old values
+       RhoOld_=15, & ! Background plasma density
+       BOld_  =16 ! Magnitude of magnetic field
+  !----------------------------------------------------------------------------
+  ! Distribution vector;
+  ! Number of bins in the distribution is set in ModSize
+  ! 1st index - log(momentum) bin
+  ! 2nd index - cos(pitch-angle) bin
+  ! 3rd index - particle index along the field line
+  ! 4th index - local block number
+  real, allocatable:: Distribution_IIIB(:,:,:,:)
   !/
 
 contains
@@ -138,12 +177,18 @@ contains
     call check_allocate(iError, NameSub//'iNode_II')
     allocate(iNode_B(nBlock), stat=iError)
     call check_allocate(iError, NameSub//'iNode_B')
-    allocate(iGrid_IA(nNodeIndexes, nNode), stat=iError)
-    call check_allocate(iError, NameSub//'iGrid_IA')
+    allocate(iGridGlobal_IA(nNodeIndexes, nNode), stat=iError)
+    call check_allocate(iError, NameSub//'iGridGlobal_IA')
+    allocate(iGridLocal_IB(nBlockIndexes, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'iGridLocal_IB')
     allocate(CoordOrigin_DA(nDim, nNode), stat=iError)
     call check_allocate(iError, NameSub//'CoordOrigin_DA')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
+    allocate(Distribution_IIIB(&
+         nMomentumBin,nPitchAngleBin,iParticleMin:iParticleMax,nBlock), &
+         stat=iError)
+    call check_allocate(iError, NameSub//'Distribution_IIIB')
     !\
     ! fill grid containers
     !/
@@ -156,10 +201,12 @@ contains
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
           end if
-          iGrid_IA(Proc_, iNode) = iProcNode
-          iGrid_IA(Block_,iNode) = iBlock
-          iGrid_IA(Begin_,iNode) = 0
-          iGrid_IA(End_,  iNode) = 0
+          iGridGlobal_IA(Proc_,   iNode)  = iProcNode
+          iGridGlobal_IA(Block_,  iNode)  = iBlock
+          iGridLocal_IB(Begin_,   iBlock) = 0
+          iGridLocal_IB(End_,     iBlock) = 0
+          iGridLocal_IB(Shock_,   iBlock) = 0
+          iGridLocal_IB(ShockOld_,iBlock) = 0
           if(iNode == ((iProcNode+1)*nNode)/nProc)then
              iBlock = 1
           else
@@ -168,16 +215,17 @@ contains
        end do
     end do
     !\
-    ! fill data containers
+    ! reset and fill data containers
     !/
+    Distribution_IIIB = 0.0
     State_VIB = -1
     do iLat = 1, nLat
        do iLon = 1, nLon
           iNode = iNode_II(iLon, iLat)
           CoordOrigin_DA(:, iNode) = &
                (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
-          iBlock = iGrid_IA(Block_, iNode)
-          if(iProc == iGrid_IA(Proc_, iNode))&
+          iBlock = iGridGlobal_IA(Block_, iNode)
+          if(iProc == iGridGlobal_IA(Proc_, iNode))&
                State_VIB(1:nDim,0,iBlock) = CoordOrigin_DA(:,iNode)
        end do
     end do
@@ -195,6 +243,34 @@ contains
     iLonOut = iNodeIn - nLon * (iLatOut-1)
   end subroutine get_node_indexes
 
+  !============================================================================
+  function distance_to_next(iBlock, iParticle) result(Distance)
+    ! the function returns distance to the next particle measured in Rs;
+    ! formula for distance between 2 points in rlonlat system:
+    !  Distance = R1**2 + R2**2 - 
+    !     2*R1*R2*(Cos(Lat1)*Cos(Lat2) * Cos(Lon1-Lon2) + Sin(Lat1)*Sin(Lat2))
+    ! NOTE: function doesn't check whether iParticle is last on the field line
+    integer, intent(in):: iBlock
+    integer, intent(in):: iParticle
+    real               :: Distance
+
+    real:: CosLat1xCosLat2, SinLat1xSinLat2, CosLon1MinusLon2
+    real:: CosLat1PlusLat2, CosLat1MinusLat2
+    !--------------------------------------------------------------------
+    CosLat1PlusLat2 = cos(&
+         State_VIB(Lat_,iParticle,iBlock) + State_VIB(Lat_,iParticle+1,iBlock))
+    CosLat1MinusLat2 = cos(&
+         State_VIB(Lat_,iParticle,iBlock) - State_VIB(Lat_,iParticle+1,iBlock))
+    CosLon1MinusLon2 = cos(&
+         State_VIB(Lon_,iParticle,iBlock) - State_VIB(Lon_,iParticle+1,iBlock))
+    CosLat1xCosLat2 = 0.5 * (CosLat1MinusLat2 + CosLat1PlusLat2)
+    SinLat1xSinLat2 = 0.5 * (CosLat1MinusLat2 - CosLat1PlusLat2)
+    Distance = &
+         State_VIB(R_,iParticle,  iBlock)**2 + &
+         State_VIB(R_,iParticle+1,iBlock)**2 - &
+         2*State_VIB(R_,iParticle,iBlock)*State_VIB(R_,iParticle+1,iBlock) * &
+         (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2)
+  end function distance_to_next
   !============================================================================
 
   subroutine get_cell(CoordIn_D, iCellOut_D)
@@ -229,7 +305,7 @@ contains
     !--------------------------------------------------------------------------
     call get_cell(CoordIn_D, iCell_D)
     iBlock = &
-         iGrid_IA(Block_, iNode_II(iCell_D(OriginLon_), iCell_D(OriginLat_)))
+         iGridGlobal_IA(Block_, iNode_II(iCell_D(OriginLon_), iCell_D(OriginLat_)))
     CoordOut_D((/R_, Lat_, Lon_/)) = &
          State_VIB((/R_,Lat_,Lon_/), iCell_D(Particle_), iBlock)
   end subroutine convert_to_hgi
