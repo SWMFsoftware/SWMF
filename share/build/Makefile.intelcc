@@ -8,7 +8,7 @@ COMPILE.c     = cc
 COMPILE.mpicc = CC
 COMPILE.mpicxx= CC
 
-CPPLIB = 
+CPPLIB = -lstdc++
 
 #DEBUGC = -g -traceback -ftrapuv -debug all
 
