@@ -22,7 +22,7 @@ module ModMain
   
   use ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, &
-       advance, set_injection_param
+       advance, set_injection_param, init_advance_const
 
   implicit none
 
@@ -119,6 +119,7 @@ contains
     !--------------------------------------------------------------------------
     iIterGlobal = 0
     TimeGlobal = TimeStart
+    call init_advance_const
     call init_grid
   end subroutine initialize
 

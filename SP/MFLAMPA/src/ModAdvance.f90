@@ -2,7 +2,7 @@ module ModAdvance
 
   ! The module contains methods for advancing the solution in time
 
-  use ModConst, ONLY: cPi, cMu, cProtonMass, cGyroradius, cLightSpeed!, &
+  use ModConst, ONLY: cPi, cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
 
   use ModCoordTransform, ONLY: rlonlat_to_xyz
 
@@ -26,7 +26,8 @@ module ModAdvance
   
   private ! except
 
-  public:: TimeGlobal, iIterGlobal, set_injection_param, advance
+  public:: TimeGlobal, iIterGlobal, &
+       set_injection_param, init_advance_const, advance
 
   real, external:: kinetic_energy_to_momentum, momentum_to_energy, energy_in
 
@@ -44,7 +45,7 @@ module ModAdvance
   character(len=*), parameter:: NameParticle = 'proton'
   !-----------------------------
   ! Injection and max energy in the simulation
-  real:: EnergyInj=1.0, EnergyMax=1.0E+07
+  real:: EnergyInj=10.0, EnergyMax=1.0E+07
   !-----------------------------
   ! Injection and max momentum in the simulation
   real:: MomentumInj, MomentumMax
@@ -71,13 +72,14 @@ module ModAdvance
   real, dimension(iParticleMin:iParticleMax):: DOuter_I, DInner_I, DInnerInj_I
   !-----------------------------
   ! level of turbulence
-  real:: BOverDeltaB2
+  real:: BOverDeltaB2 = 1.0
   !-----------------------------
   real:: MachAlfven
   !-----------------------------
   integer:: nWidth = 10
   !-----------------------------
   logical:: UseRealDiffusionUpstream = .true.
+  logical:: DoTraceShock = .false.
   !/
 
 
@@ -90,6 +92,14 @@ contains
     call read_var('EnergyMax',    EnergyMax)
     call read_var('SpectralIndex',SpectralIndex)
     call read_var('Efficiency',   CInj)
+  end subroutine set_injection_param
+
+  !============================================================================
+
+  subroutine init_advance_const
+    ! compute all needed constants
+    integer:: iMomentumBin, iBlock, iParticle
+    !---------------------------------------------
     ! account for units of energy
     UnitEnergy = energy_in(NameEUnit)
     EnergyInj = EnergyInj * UnitEnergy
@@ -98,30 +108,53 @@ contains
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
     DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
-  end subroutine set_injection_param
+  end subroutine init_advance_const
+
+  !============================================================================
+  
+  subroutine set_initial_condition
+    ! set the initial distribution on all lines
+    integer:: iBlock, iParticle, iMomentumBin
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       do iParticle = iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_,iBlock)
+          do iMomentumBin = 1, nMomentumBin
+             Distribution_IIIB(iMomentumBin,1,iParticle,iBlock) = &
+                  1.0 / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
+               (MomentumInj*exp(iMomentumBin*DLogMomentum))**2
+          end do
+       end do
+    end do
+  end subroutine set_initial_condition
 
   !============================================================================
 
   subroutine fix_consistency
     ! recompute some values (magnitudes of plasma velocity and magnetic field)
     ! so they are consistent with components for all lines
-    integer:: iBlock, iParticle
+    integer:: iBlock, iParticle, iBegin, iEnd
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
-       do iParticle = &
-            iGridLocal_IB(Begin_,iBlock), &
-            iGridLocal_IB(End_,  iBlock)
+       iBegin = iGridLocal_IB(Begin_,iBlock)
+       iEnd   = iGridLocal_IB(End_,  iBlock)
+       do iParticle = iBegin, iEnd
           ! plasma speed
           State_VIB(U_,iParticle, iBlock) = &
-               sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)))
-          ! magneetic field
+               sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
+          ! magnetic field
           State_VIB(B_,iParticle, iBlock) = &
-               sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)))
+               sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))
+
           ! distances between particles
           if(iParticle < iGridLocal_IB(End_,  iBlock))&
                State_VIB(D_, iParticle, iBlock) = &
                distance_to_next(iParticle, iBlock)
        end do
+       ! location of shock
+       if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
+            iGridLocal_IB(ShockOld_, iBlock)= iBegin
+       if(iGridLocal_IB(Shock_, iBlock) < iParticleMin)&
+            iGridLocal_IB(Shock_, iBlock)   = iBegin
     end do
   end subroutine fix_consistency
 
@@ -131,20 +164,25 @@ contains
     ! find location of a shock wave on every field line
     !--------------------------------------------------------------------------
     ! loop variable
-    integer:: iBlock, iShockOld
+    integer:: iBlock, iShockOld, iEnd
     !--------------------------------------------------------------------------
+    if(.not.DoTraceShock)then
+       iGridLocal_IB(Shock_, 1:nBlock) = iGridLocal_IB(Begin_, 1:nBlock)
+       RETURN
+    end if
     ! go over field lines and find the shock location for each one
     do iBlock = 1, nBlock
        ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
        ! shock never moves back
        iShockOld = iGridLocal_IB(ShockOld_, iBlock)
+       iEnd      = iGridLocal_IB(End_, iBlock)
        iGridLocal_IB(Shock_, iBlock) = iShockOld - 1 + maxloc(&
             log(&
-            State_VIB(Rho_,iShockOld  :iParticleMax-1,iBlock)/ &
-            State_VIB(Rho_,iShockOld+1:iParticleMax  ,iBlock)   ) &
-            / State_VIB(D_,iShockOld  :iParticleMax-1,iBlock),&
+            State_VIB(Rho_,iShockOld  :iEnd-1,iBlock)/ &
+            State_VIB(Rho_,iShockOld+1:iEnd  ,iBlock)   ) &
+            / State_VIB(D_,iShockOld  :iEnd-1,iBlock),&
             1, &
-            MASK = State_VIB(R_,iShockOld:iParticleMax-1,iBlock) > 2.0)
+            MASK = State_VIB(R_,iShockOld:iEnd-1,iBlock) > 2.0)
     end do
   end subroutine get_shock_location
 
@@ -187,7 +225,7 @@ contains
     !----------------------------------------
     ! loop variable
     integer:: iParticle
-    integer:: Density, Momentum
+    real:: Density, Momentum
     !----------------------------------------
     do iParticle = iBegin, iEnd
        ! default injection distribution, see Sokolov et al., 2004, eq (3)
@@ -219,7 +257,7 @@ contains
        where(State_VIB(R_,iBegin:iEnd,iBlock)>State_VIB(R_,iShock,iBlock)*1.1)
           ! upstream:
           DInnerInj_I(iBegin:iEnd) = &
-               2.0/3.0 * State_VIB(R_,iBegin:iEnd,iBlock) * &
+               2.0/3.0 * State_VIB(R_,iBegin:iEnd,iBlock) *RSun * &
                (MomentumInj*cLightSpeed**2)/(B_I(iBegin:iEnd)*EnergyInj)*&
                (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
        elsewhere
@@ -236,7 +274,7 @@ contains
   !===========================================================================
 
   subroutine set_fermi_first_order
-    ! first oreder Fermi acceleration for the current line
+    ! first order Fermi acceleration for the current line
     !--------------------------------------------------------------------------
     FermiFirst_I(iBegin:iEnd) = log(&
          Rho_I(   iBegin:iEnd) / &
@@ -255,12 +293,23 @@ contains
     real   :: Alpha
     real:: Momentum, DiffCoeffMin =1.0
     real:: DtFull, DtProgress, Dt
+    logical, save:: IsFirstCall = .true.
+
+    character(len=*), parameter:: NameSub = 'SP:advance'
     !--------------------------------------------------------------------------
     ! make sure that variables like magnitude of the field 
     ! correspond to their components
     call fix_consistency
+if(IsFirstCall)then
+   IsFirstCall = .false.
+   call set_initial_condition
+   TimeGlobal = TimeLimit
+   RETURN
+end if
+
     ! identify shock in the data
     call get_shock_location
+
     ! the full time step
     DtFull = TimeLimit - TimeGlobal
     ! go line by line and advance the solution
@@ -279,6 +328,7 @@ contains
        T_I(     iBegin:iEnd) = State_VIB(T_,     iBegin:iEnd,iBlock)
        BOld_I(  iBegin:iEnd) = State_VIB(BOld_,  iBegin:iEnd,iBlock)
        RhoOld_I(iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock)
+
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step
        DtProgress = DtFull / nProgress
@@ -292,12 +342,14 @@ contains
           B_I(iBegin:iEnd) = State_VIB(BOld_,iBegin:iEnd,iBlock) + Alpha*&
                (State_VIB(B_,  iBegin:iEnd,iBlock) - &
                State_VIB(BOld_,iBegin:iEnd,iBlock))
-
           iShock = iShockOld + iProgress
+
           ! find the shock alfven mach number, also steepen the shock
           if(iShock < iEnd - nWidth .and. iShock > nWidth)then
              MachAlfven = mach_alfven()
              call steepen_shock
+          else
+             MachAlfven = 1.0
           end if
 
           ! 1st order Fermi acceleration is responsible for advection 
@@ -307,51 +359,48 @@ contains
           RhoOld_I(iBegin:iEnd) = Rho_I(iBegin:iEnd)
           BOld_I(  iBegin:iEnd) = B_I(  iBegin:iEnd)
 
+          Dt = DtProgress
           nStep = 1
           if(nStep>1)then
-             Dt = DtProgress / nStep
+             Dt = Dt / nStep
              FermiFirst_I(iBegin:iEnd) = FermiFirst_I(iBegin:iEnd) / nStep
           end if
 
           ! compute diffusion along the field line
           call set_diffusion
-
           do iStep = 1, nStep
              ! update bc
              call set_boundary_condition
+
              ! advection in the momentum space
              do iParticle = iBegin, iEnd
                 call advance_log_advection(&
-                     FermiFirst_I(iParticle),nMomentumBin,1,1,&
-                     Distribution_IIIB(:,1,iParticle,iBlock), &
+                     FermiFirst_I(iParticle),nMomentumBin-2,1,1,&
+                     Distribution_IIIB(1:nMomentumBin,1,iParticle,iBlock), &
                      .true.,DLogMomentum)
              end do
 
              ! diffusion along the field line
              do iMomentumBin = 1, nMomentumBin
                 Momentum = exp(iMomentumBin * DLogMomentum)
-                if(.not.UseRealDiffusionUpstream)then
-                   DInner_I(iBegin:iEnd) =&
-                        DInnerInj_I(iBegin:iEnd) * Momentum**2 * &
-                        momentum_to_energy(         MomentumInj,NameParticle)/&
-                        momentum_to_energy(Momentum*MomentumInj,NameParticle)
-                else
+                DInner_I(iBegin:iEnd) =&
+                     DInnerInj_I(iBegin:iEnd) * Momentum**2 * &
+                     momentum_to_energy(         MomentumInj,NameParticle)/&
+                     momentum_to_energy(Momentum*MomentumInj,NameParticle)
+                if(UseRealDiffusionUpstream)then
                    where(State_VIB(R_,iBegin:iEnd,iBlock) > &
                         State_VIB(R_,iShock,iBlock)*1.1)
                       ! upstream:
                       DInner_I(iBegin:iEnd) = &
-                           DInnerInj_I(iBegin:iEnd) / Momentum**(2.0/3)
+                           DInner_I(iBegin:iEnd) / Momentum**(2.0/3)
                    end where
                 end if
-                
                 DInner_I(iBegin:iEnd) = max(DInner_I(iBegin:iEnd),&
                      DiffCoeffMin/DOuter_I(iBegin:iEnd))
-                
                 call advance_diffusion(Dt, iEnd-iBegin+1,&
                      State_VIB(D_,iBegin:iEnd,iBlock), &
                      Distribution_IIIB(iMomentumBin,1,iBegin:iEnd,iBlock),&
                      DOuter_I(iBegin:iEnd), DInner_I(iBegin:iEnd))
-                
              end do
 
           end do

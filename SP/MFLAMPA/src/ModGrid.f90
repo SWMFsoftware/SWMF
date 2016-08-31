@@ -68,7 +68,7 @@ module ModGrid
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
        Block_ = 2    ! Block that has this line/node
-  integer, parameter:: nBlockIndexes = 2
+  integer, parameter:: nBlockIndexes = 4
   integer, parameter:: &
        Begin_   = 1, & ! Index of the 1st particle on this line/node
        End_     = 2, & ! Index of the last particle on this line/node
@@ -205,8 +205,8 @@ contains
           iGridGlobal_IA(Block_,  iNode)  = iBlock
           iGridLocal_IB(Begin_,   iBlock) = 0
           iGridLocal_IB(End_,     iBlock) = 0
-          iGridLocal_IB(Shock_,   iBlock) = 0
-          iGridLocal_IB(ShockOld_,iBlock) = 0
+          iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
+          iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
           if(iNode == ((iProcNode+1)*nNode)/nProc)then
              iBlock = 1
           else
@@ -217,7 +217,7 @@ contains
     !\
     ! reset and fill data containers
     !/
-    Distribution_IIIB = 0.0
+    Distribution_IIIB = tiny(1.0)
     State_VIB = -1
     do iLat = 1, nLat
        do iLon = 1, nLon
@@ -244,14 +244,14 @@ contains
   end subroutine get_node_indexes
 
   !============================================================================
-  function distance_to_next(iBlock, iParticle) result(Distance)
+  function distance_to_next(iParticle, iBlock) result(Distance)
     ! the function returns distance to the next particle measured in Rs;
     ! formula for distance between 2 points in rlonlat system:
     !  Distance = R1**2 + R2**2 - 
     !     2*R1*R2*(Cos(Lat1)*Cos(Lat2) * Cos(Lon1-Lon2) + Sin(Lat1)*Sin(Lat2))
     ! NOTE: function doesn't check whether iParticle is last on the field line
-    integer, intent(in):: iBlock
     integer, intent(in):: iParticle
+    integer, intent(in):: iBlock
     real               :: Distance
 
     real:: CosLat1xCosLat2, SinLat1xSinLat2, CosLon1MinusLon2
