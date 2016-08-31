@@ -146,6 +146,7 @@ contains
     use ModNumConst, ONLY: cPi
     character(len=*), parameter:: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
+    call read_var('RSc', RSc)
     call read_var('LonMin', LonMin)
     call read_var('LonMax', LonMax)
     if(LonMax <= LonMin)&

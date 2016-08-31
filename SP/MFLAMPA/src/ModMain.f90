@@ -104,8 +104,6 @@ contains
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_injection_param
-       case('#SOLARCORONABOUNDARY')
-          call read_var('RSc', RSc)
        case('#TEST')
           ! various test modes that allow to disable certain features
           call read_var('DoOutputDistribution', DoOutputDistribution)
