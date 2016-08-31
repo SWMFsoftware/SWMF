@@ -13,7 +13,7 @@ module ModAdvance
        Begin_, End_, Shock_, ShockOld_, &
 
        nBlock, &
-       State_VIB, Distribution_IIIB, iGridLocal_IB, &
+       State_VIB, Distribution_IIIB, iGridLocal_IB, MomentumScale_I, &
        distance_to_next
 
   use ModDiffusion, ONLY: advance_diffusion
@@ -108,6 +108,10 @@ contains
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
     DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
+    do iMomentumBin = 1, nMomentumBin
+       MomentumScale_I(iMomentumBin) = &
+            MomentumInj * exp(iMomentumBin * DLogMomentum)
+    end do
   end subroutine init_advance_const
 
   !============================================================================

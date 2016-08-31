@@ -16,7 +16,7 @@ module ModGrid
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: State_VIB, Distribution_IIIB
+  public:: State_VIB, Distribution_IIIB, MomentumScale_I
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, R_, Lon_, Lat_, D_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
@@ -130,6 +130,8 @@ module ModGrid
   ! 3rd index - particle index along the field line
   ! 4th index - local block number
   real, allocatable:: Distribution_IIIB(:,:,:,:)
+  ! scale with respect to log(Momentum)
+  real:: MomentumScale_I(nMomentumBin)
   !/
 
 contains

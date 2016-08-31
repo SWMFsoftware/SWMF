@@ -5,11 +5,13 @@ module ModWrite
   use ModSize, ONLY: &
        nDim, nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle,&
+       nMomentumBin, &
        Particle_, OriginLat_, OriginLon_
 
   use ModGrid, ONLY: &
        get_node_indexes, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       Distribution_IIIB, MomentumScale_I, &
        Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, &
        NameVar_V
@@ -162,12 +164,13 @@ contains
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
     call write_mh_data
+    !    call write_distribution
 
   contains
 
     subroutine write_mh_data
-      ! write output file in the format to be read by IDL;
-      ! separate fiel is created for each field line, name format is
+      ! write output file with MH data in the format to be read by IDL/TECPLOT;
+      ! separate file is created for each field line, name format is
       ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
@@ -218,9 +221,76 @@ contains
               NameVarIn    = 'ParticleIndex '//trim(NameVarPlot), &
               VarIn_VI     = DataOut_VI(1:nVarPlot, iFirst:iLast)&
               )
-      end do
-      
+      end do     
     end subroutine write_mh_data
+
+    !=========================================================================
+    
+    subroutine write_distribution
+      ! write file with distribution in the format to be read by IDL/TECPLOT;
+      ! separate fiel is created for each field line, name format is
+      ! Distribution_<iLon>_<iLat>_n<iIter>.{out/dat}
+      !------------------------------------------------------------------------
+      ! name of the output file
+      character(len=100):: NameFile
+      ! loop variables
+      integer:: iBlock, iParticle, iVarPlot
+      ! indexes of corresponding node, latitude and longitude
+      integer:: iNode, iLat, iLon
+      ! index of first/last particle on the field line
+      integer:: iFirst
+      integer:: iLast
+      ! coordinates in spherical coordinates
+      real:: Coord_D(nDim)
+      ! distribution function
+      real:: F_II(iParticleMin:iParticleMax, nMomentumBin)
+      ! auxliray array for scale with respect to particle index
+      real, save:: IndexScale_I(iParticleMin:iParticleMax) = -1.0
+      logical, save:: IsFirstCall = .true.
+      !------------------------------------------------------------------------
+      if(IsFirstCall)then
+         IsFirstCall = .false.
+         do iParticle = iParticleMin, iParticleMax
+            IndexScale_I(iParticle) = real(iParticle)
+         end do
+      end if
+      do iBlock = 1, nBlock
+         iNode = iNode_B(iBlock)
+         call get_node_indexes(iNode, iLon, iLat)
+
+         ! set the file name
+         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+              trim(NamePlotDir)//&
+              'Distribution_',iLon,'_',iLat,'_n',iIter,NameFormat
+
+         ! get min and max particle indexes on this field line
+         iFirst = iGridLocal_IB(Begin_, iBlock)
+         iLast  = iGridLocal_IB(End_,   iBlock)
+         
+         do iParticle = iParticleMin, iParticleMax
+            ! reset values outside the line's range
+            if(iParticle < iFirst .or. iParticle > iLast)then
+               F_II(iParticle,:) = 0.0
+               CYCLE
+            end if
+            ! the actual distribution
+            F_II(iParticle,:) = Distribution_IIIB(:,1,iParticle,iBlock)
+         end do
+
+         ! print data to file
+         call save_plot_file(&
+              NameFile     = NameFile, &
+              TypeFileIn   = TypeFile, &
+              nDimIn       = 2, &
+              TimeIn       = Time, &
+              nStepIn      = iIter, &
+              Coord1In_I   = IndexScale_I, &
+              Coord2In_I   = MomentumScale_I, &
+              NameVarIn    = 'ParticleIndex Momentum DistributionFunction', &
+              VarIn_II     = F_II &
+              )
+      end do     
+    end subroutine write_distribution
 
   end subroutine write_output
 
