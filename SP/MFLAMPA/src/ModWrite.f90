@@ -39,6 +39,8 @@ module ModWrite
   integer, parameter:: &
        Tec_ = 0, &
        Idl_ = 1
+  character(len=4):: NameFormat
+  character(len=20):: TypeFile
   !----------------------------------------------------------------------------
   ! List of MH variables that will be outputed
   logical:: DoPlot_V(nVar) = .false.
@@ -69,8 +71,12 @@ contains
     ! the type of output file must be set
     if(    index(StringPlot,'tec') > 0)then
        OutputFormat = Tec_
+       NameFormat   ='.dat'
+       TypeFile     ='tec'
     elseif(index(StringPlot,'idl') > 0)then
        OutputFormat = Idl_
+       NameFormat   ='.out'
+       TypeFile     ='ascii'
     else
        call CON_stop(NameSub//': output format was not set in PARAM.in')
     end if
@@ -155,71 +161,14 @@ contains
     character(len=*), parameter:: NameVarMesh = '"R", "Lat", "Lon"'
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
-    if(OutputFormat == Idl_)then
-       call write_idl
-       RETURN
-    end if
-
-    ! name of output file
-    write(NameFile,'(a,i6.6)') &
-         trim(NamePlotDir)//'lines_n',iPlotFile
-
-    select case(OutputFormat)
-    case(Tec_)
-       NameFile = trim(NameFile) // '.dat'
-    case(Idl_)
-       NameFile = trim(NameFile) // '.out'
-    end select
-
-    ! open a new file
-    open(UnitTmp_, file=NameFile, status="replace", iostat=iError)    
-
-    ! check if it has been opened successfully
-    if(iError /= 0) &
-         call CON_stop(NameSub//': could not open '//trim(NameFile))
-
-    ! file contents depends on the format
-    select case(OutputFormat)
-    case (Tec_)
-       ! header for the file
-       write(UnitTmp_,'(a)') 'Temporary header'
-       ! list the data names
-       select case(OutputData)
-       case(Mesh_)
-          write(UnitTmp_,'(a)') 'VARIABLES = "R", "Lat", "Lon"'
-       case(All_)
-          call CON_stop(NameSub//': not implemented')
-       end select
-       ! the format is scattered points
-       write(UnitTmp_,'(a)')'ZONE F=POINT'
-       ! print the data itself
-       do iBlock = 1, nBlock
-          do iParticle = iParticleMin, iParticleMax
-             if(State_VIB(R_,iParticle, iBlock) < 0) CYCLE
-             ! first, convert HGI coordinates to the cartesian
-             Coord_D = State_VIB((/R_,Lat_,Lon_/), iParticle, iBlock)
-             call sph_to_xyz(&
-                  Coord_D(R_),cHalfPi-Coord_D(Lat_),Coord_D(Lon_), &
-                  Xyz_D)
-             ! write data to the output file
-             write(UnitTmp_,'(100es18.10)') Xyz_D
-             !             write(UnitTmp_,'(100es18.10)')State_VIB(iVarMesh_I,iParticle, iBlock)
-          end do
-       end do
-    end select
-    
-    ! output is finished, close the file
-    close(UnitTmp_)
-
-    ! update the file counter
-    iPlotFile = iPlotFile + 1
+    call write_mh_data
 
   contains
 
-    subroutine write_idl
+    subroutine write_mh_data
       ! write output file in the format to be read by IDL;
       ! separate fiel is created for each field line, name format is
-      ! MH_data_<iLon>_<iLat>_n<iIter>.out
+      ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -239,7 +188,7 @@ contains
 
          ! set the file name
          write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,'.out'
+              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
@@ -260,6 +209,7 @@ contains
          ! print data to file
          call save_plot_file(&
               NameFile     = NameFile, &
+              TypeFileIn   = TypeFile, &
               nDimIn       = 1, &
               TimeIn       = Time, &
               nStepIn      = iIter, &
@@ -270,7 +220,7 @@ contains
               )
       end do
       
-    end subroutine write_idl
+    end subroutine write_mh_data
 
   end subroutine write_output
 

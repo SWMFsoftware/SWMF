@@ -18,7 +18,7 @@ module ModMain
        Proc_, Block_, Begin_, End_,&
        LatMin, LatMax, LonMin, LonMax, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       set_grid_param, init_grid, get_node_indexes
+       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
   use ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, &
@@ -128,6 +128,7 @@ contains
     real, intent(in):: TimeLimit
     !------------------------------
     iIterGlobal = iIterGlobal + 1
+    call fix_grid_consistency
     call write_output(TimeGlobal, iIterGlobal)
     if(DoRun) then
        ! run the model
