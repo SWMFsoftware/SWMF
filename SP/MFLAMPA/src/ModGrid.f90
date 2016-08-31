@@ -19,6 +19,7 @@ module ModGrid
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, R_, Lon_, Lat_, D_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
+  public:: NameVar_V
 
   !\
   ! MPI information
@@ -102,6 +103,24 @@ module ModGrid
        ! Old values
        RhoOld_=15, & ! Background plasma density
        BOld_  =16 ! Magnitude of magnetic field
+  ! variable names
+  character(len=10), parameter:: NameVar_V(nVar) = (/&
+       'R     ', &
+       'Lon   ', &
+       'Lat   ', &
+       'D     ', &
+       'Rho   ', &
+       'T     ', &
+       'Ux    ', &
+       'Uy    ', &
+       'Uz    ', &
+       'U     ', &
+       'Bx    ', &
+       'By    ', &
+       'Bz    ', &
+       'B     ', &
+       'RhoOld', &
+       'BOld  '/)
   !----------------------------------------------------------------------------
   ! Distribution vector;
   ! Number of bins in the distribution is set in ModSize

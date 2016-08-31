@@ -10,7 +10,9 @@ module ModWrite
   use ModGrid, ONLY: &
        get_node_indexes, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
-       Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_
+       Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_, &
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, &
+       NameVar_V
 
   use ModPlotFile, ONLY: save_plot_file
 
@@ -38,6 +40,19 @@ module ModWrite
        Tec_ = 0, &
        Idl_ = 1
   !----------------------------------------------------------------------------
+  ! List of MH variables that will be outputed
+  logical:: DoPlot_V(nVar) = .false.
+  ! Number of the variables to be outputed
+  integer:: nVarPlot = 0
+  ! Output Buffer
+  real, allocatable:: DataOut_VI(:,:)
+  ! Indices of the output variables in the state vector
+  integer, allocatable:: iVarPlot_V(:)
+  ! Coordinates are always fixed
+  integer, parameter:: PlotX_ = 1, PlotY_ = 2, PlotZ_ = 3
+  ! Names of variables
+  character(len=300) :: NameVarPlot = ''
+  !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
   !/
@@ -48,18 +63,9 @@ contains
     ! the data to be printed, the format of files
     character(len=*), intent(in):: StringPlot
 
+    integer:: iVar, iVarPlot
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
-    ! the output data must be set in the input file
-    if(    index(StringPlot,'msh') > 0)then
-       OutputData = Mesh_
-    elseif(index(StringPlot,'all') > 0)then
-       OutputData = All_
-    else
-       OutputData = All_
-!       call CON_stop(NameSub//': output data mode was not set in PARAM.in')
-    end if
-
     ! the type of output file must be set
     if(    index(StringPlot,'tec') > 0)then
        OutputFormat = Tec_
@@ -68,6 +74,58 @@ contains
     else
        call CON_stop(NameSub//': output format was not set in PARAM.in')
     end if
+
+    ! set variables to plot
+    !----------------------
+    ! coordinates are always printed
+    DoPlot_V((/R_, Lon_, Lat_/)) = .true.
+    nVarPlot = nVarPlot + 3
+    ! plasma density ----------
+    if(index(StringPlot,'rho') > 0)then
+       DoPlot_V(Rho_) = .true.
+       nVarPlot = nVarPlot + 1
+    end if
+    ! temperature -------------
+    if(index(StringPlot,'temp')> 0)then
+       DoPlot_V(T_) = .true.
+       nVarPlot = nVarPlot + 1
+    end if
+    ! velocity ----------------
+    if(index(StringPlot,'ux')> 0 .or. index(StringPlot,'uy')> 0 .or. &
+         index(StringPlot,'uz')> 0)then
+       DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
+       nVarPlot = nVarPlot + 3
+    end if
+    if(index(StringPlot,'|u|')> 0)then
+       DoPlot_V(U_) = .true.
+       nVarPlot = nVarPlot + 1
+    end if
+    ! magnetic field ----------
+    if(index(StringPlot,'bx')> 0 .or. index(StringPlot,'by')> 0 .or. &
+         index(StringPlot,'bz')> 0)then
+       DoPlot_V((/Bx_, By_, Bz_/)) = .true.
+       nVarPlot = nVarPlot + 3
+    end if
+    if(index(StringPlot,'|b|')> 0)then
+       DoPlot_V(B_) = .true.
+       nVarPlot = nVarPlot + 1
+    end if
+    !--------------------------
+    ! prepare the output data container
+    allocate(DataOut_VI(nVarPlot, iParticleMin:iParticleMax))
+    ! indices in the state vector
+    allocate(iVarPlot_V(nVarPlot))
+    ! coordinates
+    iVarPlot_V(PlotX_:PlotZ_) = (/1,2,3/)
+    NameVarPlot  = 'X Y Z'
+    ! the rest of variables
+    iVarPlot = nDim + 1
+    do iVar = nDim + 1, nVar
+       if(.not.DoPlot_V(iVar)) CYCLE
+       NameVarPlot = trim(NameVarPlot)//' '//trim(NameVar_V(iVar))
+       iVarPlot_V(iVarPlot) = iVar
+       iVarPlot = iVarPlot + 1
+    end do
   end subroutine set_write_param
 
   !============================================================================
@@ -166,7 +224,7 @@ contains
       ! name of the output file
       character(len=100):: NameFile
       ! loop variables
-      integer:: iBlock, iParticle
+      integer:: iBlock, iParticle, iVarPlot
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
@@ -174,14 +232,6 @@ contains
       integer:: iLast
       ! coordinates in spherical coordinates
       real:: Coord_D(nDim)
-      ! magnetic field
-      real:: B_D(nDim)
-      ! storage for output data
-      integer, parameter:: nVarPlot = 6
-      integer, parameter:: &
-           PlotX_ = 1, PlotY_ = 2, PlotZ_ = 3, &
-           PlotBx_= 4, PlotBy_= 5, PlotBz_= 6
-      real:: DataOut_VI(nVarPlot,iParticleMin:iParticleMax)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
@@ -199,9 +249,12 @@ contains
             ! convert coordinates to cartesian before output
             Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
             call rlonlat_to_xyz(Coord_D, DataOut_VI(PlotX_:PlotZ_,iParticle))
-            ! magnetic field
-            DataOut_VI((/PlotBx_,PlotBy_,PlotBz_/),iParticle) = &
-                 State_VIB((/Bx_,By_,Bz_/), iParticle, iBlock)
+            ! the rest of variables
+            do iVarPlot = nDim + 1, nVarPlot
+
+               DataOut_VI(iVarPlot, iParticle) = &
+                    State_VIB(iVarPlot_V(iVarPlot), iParticle, iBlock)
+            end do
          end do
 
          ! print data to file
@@ -212,7 +265,7 @@ contains
               nStepIn      = iIter, &
               CoordMinIn_D = (/real(iFirst)/), &
               CoordMaxIn_D = (/real(iLast)/), &
-              NameVarIn    = 'ParticleIndex X Y Z Bx By Bz', &
+              NameVarIn    = 'ParticleIndex '//trim(NameVarPlot), &
               VarIn_VI     = DataOut_VI(1:nVarPlot, iFirst:iLast)&
               )
       end do
