@@ -13,7 +13,8 @@ module ModAdvance
        Begin_, End_, Shock_, ShockOld_, &
 
        nBlock, &
-       State_VIB, Distribution_IIIB, iGridLocal_IB, MomentumScale_I, &
+       State_VIB, Distribution_IIIB, iGridLocal_IB, &
+       MomentumScale_I, LogMomentumScale_I, &
        distance_to_next
 
   use ModDiffusion, ONLY: advance_diffusion
@@ -111,6 +112,8 @@ contains
     do iMomentumBin = 1, nMomentumBin
        MomentumScale_I(iMomentumBin) = &
             MomentumInj * exp(iMomentumBin * DLogMomentum)
+       LogMomentumScale_I(iMomentumBin) = &
+            log(MomentumInj) + iMomentumBin * DLogMomentum
     end do
   end subroutine init_advance_const
 

@@ -11,9 +11,9 @@ module ModWrite
   use ModGrid, ONLY: &
        get_node_indexes, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
-       Distribution_IIIB, MomentumScale_I, &
+       Distribution_IIIB, MomentumScale_I, LogMomentumScale_I, &
        Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, &
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, &
        NameVar_V
 
   use ModPlotFile, ONLY: save_plot_file
@@ -86,8 +86,8 @@ contains
     ! set variables to plot
     !----------------------
     ! coordinates are always printed
-    DoPlot_V((/R_, Lon_, Lat_/)) = .true.
-    nVarPlot = nVarPlot + 3
+    DoPlot_V((/R_, Lon_, Lat_, S_/)) = .true.
+    nVarPlot = nVarPlot + 4
     ! plasma density ----------
     if(index(StringPlot,'rho') > 0)then
        DoPlot_V(Rho_) = .true.
@@ -164,7 +164,7 @@ contains
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
     call write_mh_data
-    !    call write_distribution
+!    call write_distribution
 
   contains
 
@@ -274,7 +274,7 @@ contains
                CYCLE
             end if
             ! the actual distribution
-            F_II(iParticle,:) = Distribution_IIIB(:,1,iParticle,iBlock)
+            F_II(iParticle,:) = log(Distribution_IIIB(:,1,iParticle,iBlock))
          end do
 
          ! print data to file
@@ -284,10 +284,10 @@ contains
               nDimIn       = 2, &
               TimeIn       = Time, &
               nStepIn      = iIter, &
-              Coord1In_I   = IndexScale_I, &
-              Coord2In_I   = MomentumScale_I, &
-              NameVarIn    = 'ParticleIndex Momentum DistributionFunction', &
-              VarIn_II     = F_II &
+              Coord1In_I   = State_VIB(S_,iFirst:iLast,iBlock), &!IndexScale_I, &
+              Coord2In_I   = LogMomentumScale_I, &
+              NameVarIn    = 'Distance LogMomentum LogDistribution', &
+              VarIn_II     = F_II(iFirst:iLast,:) &
               )
       end do     
     end subroutine write_distribution

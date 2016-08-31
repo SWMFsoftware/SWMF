@@ -16,9 +16,9 @@ module ModGrid
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: State_VIB, Distribution_IIIB, MomentumScale_I
+  public:: State_VIB, Distribution_IIIB, MomentumScale_I, LogMomentumScale_I
   public:: Begin_, End_, Shock_, ShockOld_
-  public:: nVar, R_, Lon_, Lat_, D_
+  public:: nVar, R_, Lon_, Lat_, D_, S_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
   public:: NameVar_V
 
@@ -84,32 +84,34 @@ module ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 16
+  integer, parameter:: nVar = 17
   integer, parameter:: &
        R_     = 1, & ! Radial coordinate
        Lon_   = 2, & ! Longitude
        Lat_   = 3, & ! Latitude
-       D_     = 5, & ! Distance to the next particle
+       D_     = 4, & ! Distance to the next particle
+       S_     = 5, & ! Distance from the beginning of the line
        ! Current values
-       Rho_   = 5, & ! Background plasma density
-       T_     = 6, & ! Background temperature
-       Ux_    = 7, &
-       Uy_    = 8, &
-       Uz_    = 9, &
-       U_     =10, &
-       Bx_    =11, & !
-       By_    =12, & ! Background magnetic field
-       Bz_    =13, & !
-       B_     =14, & ! Magnitude of magnetic field
+       Rho_   = 6, & ! Background plasma density
+       T_     = 7, & ! Background temperature
+       Ux_    = 8, &
+       Uy_    = 9, &
+       Uz_    =10, &
+       U_     =11, &
+       Bx_    =12, & !
+       By_    =13, & ! Background magnetic field
+       Bz_    =14, & !
+       B_     =15, & ! Magnitude of magnetic field
        ! Old values
-       RhoOld_=15, & ! Background plasma density
-       BOld_  =16 ! Magnitude of magnetic field
+       RhoOld_=16, & ! Background plasma density
+       BOld_  =17 ! Magnitude of magnetic field
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
        'R     ', &
        'Lon   ', &
        'Lat   ', &
        'D     ', &
+       'S     ', &
        'Rho   ', &
        'T     ', &
        'Ux    ', &
@@ -130,8 +132,9 @@ module ModGrid
   ! 3rd index - particle index along the field line
   ! 4th index - local block number
   real, allocatable:: Distribution_IIIB(:,:,:,:)
-  ! scale with respect to log(Momentum)
+  ! scale with respect to Momentum and log(Momentum)
   real:: MomentumScale_I(nMomentumBin)
+  real:: LogMomentumScale_I(nMomentumBin)
   !/
 
 contains
@@ -275,6 +278,15 @@ contains
           if(iParticle < iGridLocal_IB(End_,  iBlock))&
                State_VIB(D_, iParticle, iBlock) = &
                distance_to_next(iParticle, iBlock)
+          
+          ! distance from the beginning of the line
+          if(iParticle == iGridLocal_IB(Begin_,  iBlock))then
+             State_VIB(S_, iParticle, iBlock) = 0.0
+          else
+             State_VIB(S_, iParticle, iBlock) = &
+                  State_VIB(S_, iParticle-1, iBlock) + &
+                  State_VIB(D_, iParticle-1, iBlock)
+          end if
        end do
        ! location of shock
        if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
@@ -300,7 +312,7 @@ contains
   function distance_to_next(iParticle, iBlock) result(Distance)
     ! the function returns distance to the next particle measured in Rs;
     ! formula for distance between 2 points in rlonlat system:
-    !  Distance = R1**2 + R2**2 - 
+    !  Distance**2 = R1**2 + R2**2 - 
     !     2*R1*R2*(Cos(Lat1)*Cos(Lat2) * Cos(Lon1-Lon2) + Sin(Lat1)*Sin(Lat2))
     ! NOTE: function doesn't check whether iParticle is last on the field line
     integer, intent(in):: iParticle
@@ -318,11 +330,11 @@ contains
          State_VIB(Lon_,iParticle,iBlock) - State_VIB(Lon_,iParticle+1,iBlock))
     CosLat1xCosLat2 = 0.5 * (CosLat1MinusLat2 + CosLat1PlusLat2)
     SinLat1xSinLat2 = 0.5 * (CosLat1MinusLat2 - CosLat1PlusLat2)
-    Distance = &
+    Distance = sqrt(&
          State_VIB(R_,iParticle,  iBlock)**2 + &
          State_VIB(R_,iParticle+1,iBlock)**2 - &
          2*State_VIB(R_,iParticle,iBlock)*State_VIB(R_,iParticle+1,iBlock) * &
-         (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2)
+         (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2))
   end function distance_to_next
   !============================================================================
 
