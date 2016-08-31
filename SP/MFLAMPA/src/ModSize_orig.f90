@@ -8,7 +8,7 @@ module ModSize
   private ! except
   public:: &
        nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
-       ROrigin, RSc, &
+       ROrigin, &
        Particle_, OriginLat_, OriginLon_, &
        nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle
