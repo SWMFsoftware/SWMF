@@ -14,7 +14,7 @@ module ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax
+  public:: LatMin, LatMax, LonMin, LonMax, RSc
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
   public:: State_VIB, Distribution_IIIB, MomentumScale_I, LogMomentumScale_I
   public:: Begin_, End_, Shock_, ShockOld_
@@ -36,6 +36,8 @@ module ModGrid
   ! Size of angular grid, latitude and longitude, at origin surface R=ROrigin
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
+  ! Boundary of the solar corona in Rs
+  real:: RSc =21.0
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------

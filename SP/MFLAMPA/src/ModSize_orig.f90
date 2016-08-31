@@ -19,9 +19,6 @@ module ModSize
   ! Starting position of field lines in Rs
   real, parameter:: ROrigin = 2.5
 
-  ! Boundary of the solar corona in Rs
-  real, parameter:: RSc =21.0
-
   ! Indices of internal cooridnates
   integer, parameter:: &
        Particle_  = 1, & ! Index along  field line

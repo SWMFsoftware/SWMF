@@ -29,6 +29,7 @@ module ModAdvance
 
   public:: TimeGlobal, iIterGlobal, &
        set_injection_param, init_advance_const, advance
+  public:: DoTraceShock
 
   real, external:: kinetic_energy_to_momentum, momentum_to_energy, energy_in
 
@@ -80,7 +81,7 @@ module ModAdvance
   integer:: nWidth = 10
   !-----------------------------
   logical:: UseRealDiffusionUpstream = .true.
-  logical:: DoTraceShock = .false.
+  logical:: DoTraceShock = .true.
   !/
 
 

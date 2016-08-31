@@ -5,23 +5,23 @@ module ModMain
 
   use ModSize, ONLY: &
        nDim, nLat, nLon, nNode, &
-       ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
+       ROrigin, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
   
   use ModWrite, ONLY: &
-       set_write_param, write_output, NamePlotDir
+       set_write_param, write_output, NamePlotDir, DoOutputDistribution
 
   use ModGrid, ONLY: &
        nVar, &
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       LatMin, LatMax, LonMin, LonMax, &
+       LatMin, LatMax, LonMin, LonMax, RSc, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
   use ModAdvance, ONLY: &
-       TimeGlobal, iIterGlobal, &
+       TimeGlobal, iIterGlobal, DoTraceShock, &
        advance, set_injection_param, init_advance_const
 
   implicit none
@@ -38,7 +38,7 @@ module ModMain
   ! Methods and variables from ModSize
   public:: &
        nDim, nLat, nLon, nNode, &
-       ROrigin, RSc, iParticleMin, iParticleMax, nParticle,&
+       ROrigin, iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
 
   ! Methods and variables from ModGrid
@@ -47,7 +47,7 @@ module ModMain
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, &
+       TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, RSc, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        get_node_indexes
 
@@ -104,6 +104,12 @@ contains
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_injection_param
+       case('#SOLARCORONABOUNDARY')
+          call read_var('RSc', RSc)
+       case('#TEST')
+          ! various test modes that allow to disable certain features
+          call read_var('DoOutputDistribution', DoOutputDistribution)
+          call read_var('DoTraceShock', DoTraceShock)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select

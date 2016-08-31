@@ -27,6 +27,7 @@ module ModWrite
   private ! except
  
   public:: set_write_param, write_output, NamePlotDir
+  public:: DoOutputDistribution
 
   !\
   !----------------------------------------------------------------------------
@@ -56,6 +57,8 @@ module ModWrite
   integer, parameter:: PlotX_ = 1, PlotY_ = 2, PlotZ_ = 3
   ! Names of variables
   character(len=300) :: NameVarPlot = ''
+
+  logical:: DoOutputDistribution = .true.
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
@@ -86,8 +89,13 @@ contains
     ! set variables to plot
     !----------------------
     ! coordinates are always printed
-    DoPlot_V((/R_, Lon_, Lat_, S_/)) = .true.
-    nVarPlot = nVarPlot + 4
+    DoPlot_V((/R_, Lon_, Lat_/)) = .true.
+    nVarPlot = nVarPlot + 3
+    ! distance along line -----
+    if(index(StringPlot,'s') > 0)then
+       DoPlot_V(S_) = .true.
+       nVarPlot = nVarPlot + 1
+    end if
     ! plasma density ----------
     if(index(StringPlot,'rho') > 0)then
        DoPlot_V(Rho_) = .true.
@@ -164,7 +172,8 @@ contains
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
     call write_mh_data
-!    call write_distribution
+    if(DoOutputDistribution)&
+         call write_distribution
 
   contains
 

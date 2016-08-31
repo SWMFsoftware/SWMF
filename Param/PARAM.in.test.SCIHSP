@@ -510,6 +510,10 @@ T			UseComp
 #DORUN
 F
 
+#TEST
+F			DoOutputDistribution
+F			DoTraceShock
+
 #GRID
 0			LonMin
 40			LonMax
