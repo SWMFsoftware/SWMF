@@ -45,8 +45,19 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
       for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
         for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-          for (int npass=0;npass<2;npass++) {
-            ptr=(npass==0) ? node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+          for (int npass=0;npass<1+PIC::nTotalThreadsOpenMP;npass++) {
+            if (npass==0) {
+              ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+            }
+            else {
+              #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+              ptr=node->block->tempParticleMovingListTable+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+              #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+              ptr=*(node->block->GetTempParticleMovingListTableThread(npass-1,i,j,k));
+              #else
+              #error The option is unknown
+              #endif
+            }
 
             while (ptr!=-1) {
               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
@@ -70,8 +81,19 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
         for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
           for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-            for (int npass=0;npass<2;npass++) {
-              ptr=(npass==0) ? node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)] : node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+            for (int npass=0;npass<npass<1+PIC::nTotalThreadsOpenMP;npass++) {
+              if (npass==0) {
+                ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+              }
+              else {
+                #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+                ptr=node->block->tempParticleMovingListTable+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+                #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+                ptr=*(node->block->GetTempParticleMovingListTableThread(npass-1,i,j,k));
+                #else
+                #error The option is unknown
+                #endif
+              }
 
               while (ptr!=-1) {
                 ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
