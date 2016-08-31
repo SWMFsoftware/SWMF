@@ -51,7 +51,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
             }
             else {
               #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
-              ptr=node->block->tempParticleMovingListTable+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+              ptr=node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
               ptr=*(node->block->GetTempParticleMovingListTableThread(npass-1,i,j,k));
               #else
@@ -87,7 +87,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
               }
               else {
                 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
-                ptr=node->block->tempParticleMovingListTable+i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k);
+                ptr=node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
                 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
                 ptr=*(node->block->GetTempParticleMovingListTableThread(npass-1,i,j,k));
                 #else
