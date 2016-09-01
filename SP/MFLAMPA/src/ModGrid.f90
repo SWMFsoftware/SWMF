@@ -16,7 +16,8 @@ module ModGrid
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax, RSc
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: State_VIB, Distribution_IIIB, MomentumScale_I, LogMomentumScale_I
+  public:: State_VIB, Distribution_IIIB
+  public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, R_, Lon_, Lat_, D_, S_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
@@ -137,6 +138,7 @@ module ModGrid
   ! scale with respect to Momentum and log(Momentum)
   real:: MomentumScale_I(nMomentumBin)
   real:: LogMomentumScale_I(nMomentumBin)
+  real:: EnergyScale_I(nMomentumBin)
   !/
 
 contains

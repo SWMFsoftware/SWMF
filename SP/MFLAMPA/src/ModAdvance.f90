@@ -14,7 +14,7 @@ module ModAdvance
 
        nBlock, &
        State_VIB, Distribution_IIIB, iGridLocal_IB, &
-       MomentumScale_I, LogMomentumScale_I, &
+       MomentumScale_I, LogMomentumScale_I, EnergyScale_I, &
        distance_to_next
 
   use ModDiffusion, ONLY: advance_diffusion
@@ -31,7 +31,9 @@ module ModAdvance
        set_injection_param, init_advance_const, advance
   public:: DoTraceShock
 
-  real, external:: kinetic_energy_to_momentum, momentum_to_energy, energy_in
+  real, external:: &
+       kinetic_energy_to_momentum, momentum_to_kinetic_energy, &
+       momentum_to_energy, energy_in
 
 
   !\
@@ -111,10 +113,11 @@ contains
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
     DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
     do iMomentumBin = 1, nMomentumBin
-       MomentumScale_I(iMomentumBin) = &
-            MomentumInj * exp(iMomentumBin * DLogMomentum)
        LogMomentumScale_I(iMomentumBin) = &
-            log(MomentumInj) + iMomentumBin * DLogMomentum
+            log(MomentumInj) + (iMomentumBin-1) * DLogMomentum
+       MomentumScale_I(iMomentumBin) = exp(LogMomentumScale_I(iMomentumBin))
+       EnergyScale_I(iMomentumBin) = momentum_to_kinetic_energy(&
+            MomentumScale_I(iMomentumBin), NameParticle)
     end do
   end subroutine init_advance_const
 
@@ -129,7 +132,7 @@ contains
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIIB(iMomentumBin,1,iParticle,iBlock) = &
                   1.0 / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
-               (MomentumInj*exp(iMomentumBin*DLogMomentum))**2
+               (MomentumScale_I(iMomentumBin))**2
           end do
        end do
     end do
@@ -390,7 +393,7 @@ end if
 
              ! diffusion along the field line
              do iMomentumBin = 1, nMomentumBin
-                Momentum = exp(iMomentumBin * DLogMomentum)
+                Momentum = exp((iMomentumBin-1) * DLogMomentum)
                 DInner_I(iBegin:iEnd) =&
                      DInnerInj_I(iBegin:iEnd) * Momentum**2 * &
                      momentum_to_energy(         MomentumInj,NameParticle)/&
