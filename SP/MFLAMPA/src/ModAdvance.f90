@@ -2,6 +2,8 @@ module ModAdvance
 
   ! The module contains methods for advancing the solution in time
 
+  use ModNumConst, ONLY: cTiny
+
   use ModConst, ONLY: cPi, cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
 
   use ModCoordTransform, ONLY: rlonlat_to_xyz
@@ -29,7 +31,7 @@ module ModAdvance
 
   public:: TimeGlobal, iIterGlobal, &
        set_injection_param, init_advance_const, advance
-  public:: DoTraceShock
+  public:: DoTraceShock, UseDiffusion
 
   real, external:: &
        kinetic_energy_to_momentum, momentum_to_kinetic_energy, &
@@ -83,7 +85,7 @@ module ModAdvance
   integer:: nWidth = 10
   !-----------------------------
   logical:: UseRealDiffusionUpstream = .true.
-  logical:: DoTraceShock = .true.
+  logical:: DoTraceShock = .true., UseDiffusion = .true.
   !/
 
 
@@ -131,7 +133,7 @@ contains
        do iParticle = iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_,iBlock)
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIIB(iMomentumBin,1,iParticle,iBlock) = &
-                  1.0 / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
+                  cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
                (MomentumScale_I(iMomentumBin))**2
           end do
        end do
@@ -139,37 +141,6 @@ contains
   end subroutine set_initial_condition
 
   !============================================================================
-
-  subroutine fix_consistency
-    ! recompute some values (magnitudes of plasma velocity and magnetic field)
-    ! so they are consistent with components for all lines
-    integer:: iBlock, iParticle, iBegin, iEnd
-    !--------------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       iBegin = iGridLocal_IB(Begin_,iBlock)
-       iEnd   = iGridLocal_IB(End_,  iBlock)
-       do iParticle = iBegin, iEnd
-          ! plasma speed
-          State_VIB(U_,iParticle, iBlock) = &
-               sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
-          ! magnetic field
-          State_VIB(B_,iParticle, iBlock) = &
-               sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))
-
-          ! distances between particles
-          if(iParticle < iGridLocal_IB(End_,  iBlock))&
-               State_VIB(D_, iParticle, iBlock) = &
-               distance_to_next(iParticle, iBlock)
-       end do
-       ! location of shock
-       if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
-            iGridLocal_IB(ShockOld_, iBlock)= iBegin
-       if(iGridLocal_IB(Shock_, iBlock) < iParticleMin)&
-            iGridLocal_IB(Shock_, iBlock)   = iBegin
-    end do
-  end subroutine fix_consistency
-
-  !===========================================================================
 
   subroutine get_shock_location
     ! find location of a shock wave on every field line
@@ -308,15 +279,12 @@ contains
 
     character(len=*), parameter:: NameSub = 'SP:advance'
     !--------------------------------------------------------------------------
-    ! make sure that variables like magnitude of the field 
-    ! correspond to their components
-    call fix_consistency
-if(IsFirstCall)then
-   IsFirstCall = .false.
-   call set_initial_condition
-   TimeGlobal = TimeLimit
-   RETURN
-end if
+    if(IsFirstCall)then
+       IsFirstCall = .false.
+       call set_initial_condition
+       TimeGlobal = TimeLimit
+       RETURN
+    end if
 
     ! identify shock in the data
     call get_shock_location
@@ -392,6 +360,7 @@ end if
              end do
 
              ! diffusion along the field line
+             if(.not.UseDiffusion) CYCLE
              do iMomentumBin = 1, nMomentumBin
                 Momentum = exp((iMomentumBin-1) * DLogMomentum)
                 DInner_I(iBegin:iEnd) =&
@@ -415,7 +384,7 @@ end if
              end do
 
           end do
-
+          
        end do
     end do
     ! update time counter

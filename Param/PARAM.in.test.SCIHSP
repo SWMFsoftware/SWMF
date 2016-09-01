@@ -513,6 +513,7 @@ F
 #TEST
 F			DoOutputDistribution
 F			DoTraceShock
+F			UseDiffusion
 
 #GRID
 21			RSc

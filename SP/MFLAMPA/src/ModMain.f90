@@ -21,7 +21,7 @@ module ModMain
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
   use ModAdvance, ONLY: &
-       TimeGlobal, iIterGlobal, DoTraceShock, &
+       TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        advance, set_injection_param, init_advance_const
 
   implicit none
@@ -108,6 +108,7 @@ contains
           ! various test modes that allow to disable certain features
           call read_var('DoOutputDistribution', DoOutputDistribution)
           call read_var('DoTraceShock', DoTraceShock)
+          call read_var('UseDiffusion', UseDiffusion)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
