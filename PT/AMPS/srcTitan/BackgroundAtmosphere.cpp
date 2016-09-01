@@ -79,7 +79,7 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
   static const double T=147.0;
 
   r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-  res=(r<r0) ? n0*exp(-(r-r0) / ((Kbol*T*r*r0)/(GravityConstant*_MASS_(_TITAN_)*GetBackgroundMolecularMass(BackgroundSpecieNumber))) ) : n0; //   n0 exp [-(r – r0)/{ k T r r0/(G MT mN2)}]
+  res=(r>r0) ? n0*exp(-(r-r0) / ((Kbol*T*r*r0)/(GravityConstant*_MASS_(_TITAN_)*GetBackgroundMolecularMass(BackgroundSpecieNumber))) ) : n0; //   n0 exp [-(r – r0)/{ k T r r0/(G MT mN2)}]
 
 
   return res;
