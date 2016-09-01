@@ -173,17 +173,17 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
   int LocalCellNumber;
 
-  const int ParticleBufferLength=50000;
+  static int ParticleBufferLengthDefaut=50000;
 
   struct cCollidingParticleList {
     long int Particle;
     double CollisionTimeFraction;
   };
 
-  cCollidingParticleList CollidingParticleList[ParticleBufferLength];
-  long int nCollidingParticles;
+
 
   if (initTableFlag==false) {
+    //init thr center node table
     nTotalCenterNodes=0,initTableFlag=true;
 
 #if DIM == 3
@@ -230,6 +230,19 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
     PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)BackgroundAtmosphereParticleData[thread]);
   }
 
+  static cCollidingParticleList **CollidingParticleList=NULL;
+  static int *ParticleBufferLength=NULL;
+
+  if (ParticleBufferLength==NULL) {
+    ParticleBufferLength=new int [PIC::nTotalThreadsOpenMP];
+    CollidingParticleList=new cCollidingParticleList* [PIC::nTotalThreadsOpenMP];
+
+    for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      ParticleBufferLength[thread]=ParticleBufferLengthDefaut;
+      CollidingParticleList[thread]=new cCollidingParticleList [ParticleBufferLength[thread]];
+    }
+  }
+
   //sample the processor load
 //#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
   double EndTime,StartTime=MPI_Wtime();
@@ -251,30 +264,31 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
-#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (LocalCellNumber,ParticleBufferLength, \
-      CollidingParticleList,nCollidingParticles,node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
+#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (LocalCellNumber, \
+      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
       vBackgroundParticle,particleCollisionTime,cr2,block,tempBackgroundAtmosphereParticle,MajorantCollisionFreq,SigmaCr,SigmaCrMax,timeCounter,localTimeStep, \
       TranslationalEnergy,massModelParticle,massBackgroundParticle,Vrel,BackgroundAtmosphereParticleData,Vcm,am,EndTime,StartTime,thread) \
      \
     shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,TotalProspectiveCollisionParticleWeight,TotalOccurringCollisionParticleWeight,centerNodeIndexTable, \
       PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
       PIC::MolecularCollisions::BackgroundAtmosphere::LocalTotalCollisionFreqSamplingOffset,PIC::Mesh::collectingCellSampleDataPointerOffset, \
-      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
+      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset,CollidingParticleList,ParticleBufferLength)
 #else
-#pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (LocalCellNumber,ParticleBufferLength, \
-      CollidingParticleList,nCollidingParticles,node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
+#pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (LocalCellNumber, \
+      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
       vBackgroundParticle,particleCollisionTime,cr2,block,tempBackgroundAtmosphereParticle,MajorantCollisionFreq,SigmaCr,SigmaCrMax,timeCounter,localTimeStep, \
       TranslationalEnergy,massModelParticle,massBackgroundParticle,Vrel,BackgroundAtmosphereParticleData,Vcm,am,EndTime,StartTime,thread) \
      \
     shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,TotalProspectiveCollisionParticleWeight,TotalOccurringCollisionParticleWeight,centerNodeIndexTable, \
       PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
       PIC::MolecularCollisions::BackgroundAtmosphere::LocalTotalCollisionFreqSamplingOffset,PIC::Mesh::collectingCellSampleDataPointerOffset, \
-      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
+      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset,CollidingParticleList,ParticleBufferLength)
 #endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
 #endif  //_COMPILATION_MODE_
   for (int CellCounter=0;CellCounter<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;CellCounter++) {
     int nLocalNode,ii=CellCounter;
     int kCell,jCell,iCell; //,i,j,k;
+    long int nCollidingParticles=0;
 
     nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
     ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
@@ -301,7 +315,6 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
 
     {
-
           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
           cell=block->GetCenterNode(LocalCellNumber);
           if (cell==NULL) continue;
@@ -315,10 +328,20 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
 
       while (modelParticle!=-1) {
-        if (nCollidingParticles==ParticleBufferLength) exit(__LINE__,__FILE__,"Error: the value of 'ParticleBufferLength' is exeeded - too many particles in a cells. Increase the value of 'ParticleBufferLength'");
+        if (nCollidingParticles==ParticleBufferLength[thread]) {
+          //exit(__LINE__,__FILE__,"Error: the value of 'ParticleBufferLength' is exeeded - too many particles in a cells. Increase the value of 'ParticleBufferLength'");
 
-        CollidingParticleList[nCollidingParticles].Particle=modelParticle;
-        CollidingParticleList[nCollidingParticles].CollisionTimeFraction=1.0;
+          //re-allocate the list of the colliding particles
+          cCollidingParticleList *tmpCollidingParticleList=new cCollidingParticleList [2*ParticleBufferLength[thread]];
+          memcpy(tmpCollidingParticleList,CollidingParticleList[thread],ParticleBufferLength[thread]*sizeof(cCollidingParticleList));
+          delete [] CollidingParticleList[thread];
+
+          CollidingParticleList[thread]=tmpCollidingParticleList;
+          ParticleBufferLength[thread]*=2;
+        }
+
+        CollidingParticleList[thread][nCollidingParticles].Particle=modelParticle;
+        CollidingParticleList[thread][nCollidingParticles].CollisionTimeFraction=1.0;
 
         ++nCollidingParticles;
         modelParticle=PIC::ParticleBuffer::GetNext(modelParticle);
@@ -326,7 +349,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
 _StartParticleCollisionLoop_:
       while (nCollidingParticles!=0) {
-        modelParticle=CollidingParticleList[0].Particle;
+        modelParticle=CollidingParticleList[thread][0].Particle;
         modelParticleData=PIC::ParticleBuffer::GetParticleDataPointer(modelParticle);
 
         spec=PIC::ParticleBuffer::GetI(modelParticleData);
@@ -335,12 +358,12 @@ _StartParticleCollisionLoop_:
 
         massModelParticle=PIC::MolecularData::GetMass(spec);
         localTimeStep=node->block->GetLocalTimeStep(spec);
-        particleCollisionTime=CollidingParticleList[0].CollisionTimeFraction*localTimeStep;
+        particleCollisionTime=CollidingParticleList[thread][0].CollisionTimeFraction*localTimeStep;
 
         TotalProspectiveCollisionParticleWeight[thread][spec]+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData);
 
         //exclude the particle from the list of the model particle that still needs to be collided
-        if (nCollidingParticles!=1) CollidingParticleList[0]=CollidingParticleList[nCollidingParticles-1];
+        if (nCollidingParticles!=1) CollidingParticleList[thread][0]=CollidingParticleList[thread][nCollidingParticles-1];
         --nCollidingParticles;
 
         //simulate collisions with the background atmosphere
