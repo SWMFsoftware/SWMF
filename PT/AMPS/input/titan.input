@@ -47,7 +47,16 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+
+  define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 50 
+  define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5
+
+!define _PIC__OPENMP_THREAD_SPLIT_MODE_   _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_
+! define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+ define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
+
+
+  ReferenceInjectionParticleNumber=2000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
   InitialSampleLength=1000
@@ -75,6 +84,26 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
  define _PIC_USER_PARTICLE_PROCESSING__FUNCTION_(ptr,FirstParticleCell,node)   Titan::SpeciesEnergySeparation::Process(ptr,FirstParticleCell,node)
 
 #endGeneral
+
+
+#BackgroundSpecies
+  BackgroundSpecies=on !!on,off
+
+  SpeciesList=N2 
+  CollisionMode=on !on,off
+
+  CollisionCrossSection= function \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
+    FunctionName=PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionCrossSectionBackgoundAtmosphereParticle
+
+
+  CollisionScatteringAngle=isotropic \\ !function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
+    FunctionName=UserDefinedVelocityScatteringAngle1
+
+  InjectConditionBackgroundParticle=off
+  RemoveConditionModelParticle=off
+#endBackgroundSpecies
+
+
 
 #ParticleCollisions 
   model = HS ! HS !!off !HS ! HS, off
