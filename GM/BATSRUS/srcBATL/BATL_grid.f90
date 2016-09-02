@@ -1767,8 +1767,10 @@ contains
        ! that fall out of the computational domain
        do iGrid = 1, 2**nDim
           ! some subgrids fall into the same nodes
-          ! skip tree search for them
-          if(iNodeCopy_I(iGrid) /= iGrid)then
+          ! skip tree search for them;
+          ! NOTE: always search for finer nodes
+          if(iNodeCopy_I(iGrid) /= iGrid .and. &
+               iLevel_I(iNodeCopy_I(iGrid)) /= 1)then
              iNode_I( iGrid) = iNode_I( iNodeCopy_I(iGrid))
              IsOut_I( iGrid) = IsOut_I( iNodeCopy_I(iGrid))
              iLevel_I(iGrid) = iLevel_I(iNodeCopy_I(iGrid))
@@ -2477,6 +2479,7 @@ contains
                   *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
 
              Weight  = Point_VIII(0,iPoint,jPoint,kPoint)
+             if(Weight < 1e-6) CYCLE
              Point_V = Point_VIII(1:nDim,iPoint,jPoint,kPoint)/Weight
 
              if(abs(Weight - 1.0) < 1e-6)then
