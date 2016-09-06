@@ -186,7 +186,6 @@ contains
     !/
     if(.not.IsSetGrid)&
          call CON_stop(NameSub//': grid is not set in PARAM.in file')
-
     !\
     ! distribute nodes between processors
     !/
@@ -230,13 +229,13 @@ contains
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
+             iGridLocal_IB(Begin_,   iBlock) = 0
+             iGridLocal_IB(End_,     iBlock) = 0
+             iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
+             iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock
-          iGridLocal_IB(Begin_,   iBlock) = 0
-          iGridLocal_IB(End_,     iBlock) = 0
-          iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
-          iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
           if(iNode == ((iProcNode+1)*nNode)/nProc)then
              iBlock = 1
           else
