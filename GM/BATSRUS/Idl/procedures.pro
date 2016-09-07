@@ -1020,7 +1020,7 @@ else                           $
 n0=n_elements(a0)
 
 if keyword_set(arraysyntax) then begin
-    a1 = strarr(200)
+    a1 = strarr(300)
     n1 = 0
     for i0 = 0, n0-1 do begin
  
