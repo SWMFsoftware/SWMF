@@ -47,6 +47,7 @@ program PROPACEOS
 
   integer, parameter:: MaxString = 200
   character(LEN=20):: NameVar_I(MaxString)
+  character(len=lStringPlotFile) :: NameVar
   integer:: iMaterial
   real::AtomicMass
 
@@ -229,11 +230,21 @@ program PROPACEOS
         end do
      end do
 
+     if(nFrequency<10)then
+        write(NameVar,'(a,i1,a,i1,a,i1,a)') &
+             "logRho logTe Planck(",nFrequency,") Ross(",nFrequency, &
+             ") EGroup00 EGroup(",nFrequency,")"
+     else
+        write(NameVar,'(a,i2.2,a,i2.2,a,i2.2,a)') &
+             "logRho logTe Planck(",nFrequency,") Ross(",nFrequency, &
+             ") EGroup00 EGroup(",nFrequency,")"
+     end if
+
      call save_plot_file( &
           NameMaterial//'_opac_PRISM.dat', &
           TypeFileIn     = 'real8', &
           StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
-          NameVarIn      = 'logRho logTe Planck(30) Ross(30) EGroup00 EGroup(30)', &
+          NameVarIn      = NameVar, &
           ParamIn_I      = hNu_I, &
           CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
           CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
@@ -254,11 +265,21 @@ program PROPACEOS
         end do
      end do
 
+     if(nFrequency<10)then
+        write(NameVar,'(a,i1,a,i1,a,i1,a,i1,a)') &
+             "logRho logTe Planck(",nFrequency,") Ems(",nFrequency, &
+             ") Ross(",nFrequency, ") EGroup00 EGroup(",nFrequency,")"
+     else
+        write(NameVar,'(a,i2.2,a,i2.2,a,i2.2,a,i2.2,a)') &
+             "logRho logTe Planck(",nFrequency,") Ems(",nFrequency, &
+             ") Ross(",nFrequency, ") EGroup00 EGroup(",nFrequency,")"
+     end if
+
      call save_plot_file( &
           NameMaterial//'_opac_NLTE_PRISM.dat', &
           TypeFileIn     = 'real8', &
           StringHeaderIn = 'PROPACEOS Opacity for '//NameMaterial, &
-          NameVarIn      = 'logRho logTe Planck(30) Ems(30) Ross(30) EGroup00 EGroup(30)', &
+          NameVarIn      = NameVar, &
           ParamIn_I      = hNu_I, &
           CoordMinIn_D   = (/log10(Rho_I(1)), log10(Temperature_I(1))/), &
           CoordMaxIn_D   = (/log10(Rho_I(nDensity)), log10(Temperature_I(nTemperature))/), &
@@ -458,11 +479,11 @@ program PROPACEOS
   write(11,'(a)')'real8                 TypeFile'
   write(11,'(a)')'EOS(Te, Na) for '//NameMaterial
   write(11,'(a)')'logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
-  write(11,'(a)')'201                   nIndex1'
+  write(11,*)nTemperature,'                   nIndex1'
   write(11,'(e13.7,a)')Temperature_I(1),'                       Index1Min (eV)'
   write(11,'(e13.7,a)')Temperature_I(nTemperature),&
                                         '                       Index1Max (eV)'
-  write(11,'(a)')'201                   nIndex2'
+  write(11,*)nDensity,'                   nIndex2'
   write(11,'(e13.7,a)')Density_I(1),    '                       Index2Min (m-3)'
   write(11,'(e13.7,a)')Density_I(nDensity),&
                                         '                       Index2Max (m-3)'
@@ -484,14 +505,27 @@ program PROPACEOS
   write(11,'(a)')'real8                 TypeFile'
   write(11,'(a)')'Opacity(rho,Te) for '//NameMaterial
   if(DoLTE)then
-     write(11,'(a)')'logrho logT Planck(30) Ross(30)'
+     if(nFrequency<10)then
+        write(11,'(a,i1,a,i1,a)')'logrho logT Planck(',nFrequency, &
+             ') Ross(',nFrequency,')'
+     else
+        write(11,'(a,i2.2,a,i2.2,a)')'logrho logT Planck(',nFrequency, &
+             ') Ross(',nFrequency,')'
+     end if
   else
-     write(11,'(a)')'logrho logT Planck(30) Ems(30) Ross(30)'
+     if(nFrequency<10)then
+        write(11,'(a,i1,a,i1,a,i1,a)') 'logrho logT Planck(', &
+             nFrequency,') Ems(',nFrequency,') Ross(',nFrequency,')'
+     else
+        write(11,'(a,i2.2,a,i2.2,a,i2.2,a)') 'logrho logT Planck(', &
+             nFrequency,') Ems(',nFrequency,') Ross(',nFrequency,')'
+     end if
   end if
-  write(11,'(a)')'201                   nIndex1'
+
+  write(11,*)nDensity,'                   nIndex1'
   write(11,'(e13.7,a)')Rho_I(1),        '                       Index1Min (kg/m3)'
   write(11,'(e13.7,a)')Rho_I(nDensity), '                       Index1Max (kg/m3)'
-  write(11,'(a)')'201                   nIndex2'
+  write(11,*)nTemperature,'                   nIndex2'
   write(11,'(e13.7,a)')Temperature_I(1),'                       Index2Min (eV)'
   write(11,'(e13.7,a)')Temperature_I(nTemperature),&
                                         '                       Index2Max (eV)'
