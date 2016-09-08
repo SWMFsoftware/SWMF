@@ -175,22 +175,34 @@ contains
   !===========================================================================
 
   subroutine get_integral_energy_flux
-    ! compute integrated flux of SEP at each particle on the current line 
+    ! compute integrated flux of SEP at each particle on all lines
 
-    integer:: iParticle, iBin ! loop variables
-    real   :: EFlux ! the vale of energy flux
+    integer:: iBlock, iParticle, iBin ! loop variables
+    real   :: EFlux ! the value of energy flux
+    real   :: Norm  ! normalization factor
     !-------------------------------------------------------------------------
-    do iParticle = iBegin, iEnd
-       EFlux = 0.0
-       do iBin = 1, nMomentumBin - 1
-          EFlux = EFlux + 0.5 * &
-               (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
-               Distribution_IIB(iBin,  iParticle,iBlock)*EnergyScale_I(iBin)+&
-               Distribution_IIB(iBin+1,iParticle,iBlock)*EnergyScale_I(iBin+1))
+    do iBlock = 1, nBlock
+       do iParticle = &
+            iGridLocal_IB(Begin_,iBlock), &
+            iGridLocal_IB(End_,  iBlock)
+          EFlux = 0.0
+          Norm  = 0.0
+          do iBin = 1, nMomentumBin - 1
+             EFlux = EFlux + 0.5 * &
+                  (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
+                  Distribution_IIB(iBin,  iParticle,iBlock)*&
+                  EnergyScale_I(iBin) &
+                  +&
+                  Distribution_IIB(iBin+1,iParticle,iBlock)*&
+                  EnergyScale_I(iBin+1))
+             Norm = Norm + 0.5 * &
+                  (MomentumScale_I(iBin+1) - MomentumScale_I(iBin)) * (&
+                  Distribution_IIB(iBin,  iParticle, iBlock) + &
+                  Distribution_IIB(iBin+1,iParticle, iBlock))
+          end do
+          State_VIB(EFlux_, iParticle, iBlock) = EFlux / Norm
        end do
-       State_VIB(EFlux_, iParticle, iBlock) = EFlux
     end do
-    
   end subroutine get_integral_energy_flux
 
   !============================================================================
@@ -227,7 +239,7 @@ contains
 
   !===========================================================================
 
-  subroutine set_boundary_condition
+  subroutine set_advection_boundary_condition
     ! set boundary conditions on each particle on the current line
     !----------------------------------------
     ! loop variable
@@ -243,7 +255,7 @@ contains
             0.25/cPi/(SpectralIndex-3) * CInj * Density / &
             Momentum**3 * (Momentum/MomentumInj)**SpectralIndex
     end do
-  end subroutine set_boundary_condition
+  end subroutine set_advection_boundary_condition
 
   !===========================================================================
 
@@ -276,6 +288,10 @@ contains
                State_VIB(R_,iBegin:iEnd,iBlock)/State_VIB(R_,iShock,iBlock))
        end where
     end if
+    ! set the boundary condition for diffusion
+    Distribution_IIB(2:nMomentumBin, iBegin, iBlock) = &
+         Distribution_IIB(1, iBegin, iBlock) * &
+         (MomentumScale_I(1) / MomentumScale_I(2:nMomentumBin))**SpectralIndex
   end subroutine set_diffusion
 
   !===========================================================================
@@ -373,11 +389,11 @@ contains
           ! compute diffusion along the field line
           call set_diffusion
           do iStep = 1, nStep
-             ! update bc
-             call set_boundary_condition
+             ! update bc for advection
+             call set_advection_boundary_condition
 
              ! advection in the momentum space
-             do iParticle = iBegin, iEnd
+             do iParticle = iBegin+1, iEnd
                 call advance_log_advection(&
                      FermiFirst_I(iParticle),nMomentumBin-2,1,1,&
                      Distribution_IIB(1:nMomentumBin,iParticle,iBlock), &
@@ -411,8 +427,9 @@ contains
           end do
           
        end do
-       call get_integral_energy_flux
     end do
+    ! compute energy flux
+    call get_integral_energy_flux
     ! update time counter
     TimeGlobal = TimeLimit
   end subroutine advance

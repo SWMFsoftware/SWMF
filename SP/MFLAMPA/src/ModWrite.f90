@@ -189,42 +189,42 @@ contains
       File_I(iFile) % DoPlot_V((/R_, Lon_, Lat_/)) = .true.
       File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       ! distance along line -----
-      if(index(StringPlot,'dist') > 0)then
+      if(index(StringPlot,' dist ') > 0)then
          File_I(iFile) % DoPlot_V(S_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! plasma density ----------
-      if(index(StringPlot,'rho') > 0)then
+      if(index(StringPlot,' rho ') > 0)then
          File_I(iFile) % DoPlot_V(Rho_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! temperature -------------
-      if(index(StringPlot,'temp')> 0)then
+      if(index(StringPlot,' temp ')> 0)then
          File_I(iFile) % DoPlot_V(T_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! velocity ----------------
-      if(index(StringPlot,'ux')> 0 .or. index(StringPlot,'uy')> 0 .or. &
-           index(StringPlot,'uz')> 0)then
+      if(index(StringPlot,' ux ')> 0 .or. index(StringPlot,' uy ')> 0 .or. &
+           index(StringPlot,' uz ')> 0)then
          File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       end if
-      if(index(StringPlot,'|u|')> 0)then
+      if(index(StringPlot,' |u| ')> 0)then
          File_I(iFile) % DoPlot_V(U_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! magnetic field ----------
-      if(index(StringPlot,'bx')> 0 .or. index(StringPlot,'by')> 0 .or. &
-           index(StringPlot,'bz')> 0)then
+      if(index(StringPlot,' bx ')> 0 .or. index(StringPlot,' by ')> 0 .or. &
+           index(StringPlot,' bz ')> 0)then
          File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       end if
-      if(index(StringPlot,'|b|')> 0)then
+      if(index(StringPlot,' |b| ')> 0)then
          File_I(iFile) % DoPlot_V(B_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! energy flux -------------
-      if(index(StringPlot,'eflux')> 0)then
+      if(index(StringPlot,' eflux ')> 0)then
          File_I(iFile) % DoPlot_V(EFlux_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
@@ -482,11 +482,11 @@ contains
          do iParticle = iParticleMin, iParticleMax
             ! reset values outside the line's range
             if(iParticle < iFirst .or. iParticle > iLast)then
-               File_I(iFile) % Buffer_II(iParticle,:) = 0.0
+               File_I(iFile) % Buffer_II(:,iParticle) = 0.0
                CYCLE
             end if
             ! the actual distribution
-            File_I(iFile) % Buffer_II(iParticle,:) = &
+            File_I(iFile) % Buffer_II(:,iParticle) = &
                  log(Distribution_IIB(:,iParticle,iBlock) * Factor_I(:))
          end do
 
@@ -497,10 +497,10 @@ contains
               nDimIn     = 2, &
               TimeIn     = Time, &
               nStepIn    = iIter, &
-              Coord1In_I = State_VIB(S_,iFirst:iLast,iBlock), &
-              Coord2In_I = Scale_I, &
+              Coord1In_I = Scale_I, &
+              Coord2In_I = State_VIB(S_,iFirst:iLast,iBlock), &
               NameVarIn  = File_I(iFile) % NameVarPlot, &
-              VarIn_II   = File_I(iFile) % Buffer_II(iFirst:iLast,:) &
+              VarIn_II   = File_I(iFile) % Buffer_II(:,iFirst:iLast) &
               )
       end do     
     end subroutine write_distr_3d
