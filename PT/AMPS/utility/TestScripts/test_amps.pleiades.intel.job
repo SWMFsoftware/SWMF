@@ -18,6 +18,15 @@
 
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
+
+# fix reference solutions for Intel
+cd output
+foreach f (`ls *.intel`)
+  set base = `basename $f .intel`
+  mv $f $base
+end
+cd -
+
 module purge
 module load comp-intel/2015.0.090 
 module load mpi-openmpi/1.6.5-intel
