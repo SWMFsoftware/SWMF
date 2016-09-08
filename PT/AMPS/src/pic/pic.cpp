@@ -1368,8 +1368,8 @@ void PIC::InitMPI() {
 #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 
   if (ThisThread==0) {
-    printf("$PREFIX: The total number of the MPI threads=%i\n",nTotalThreads);
-    printf("$PREFIX: The total number of the OpenMP threads per each MPI thread=%i\n",nTotalThreadsOpenMP);
+    printf("$PREFIX: The total number of the MPI processes=%i\n",nTotalThreads);
+    printf("$PREFIX: The total number of the OpenMP threads per each MPI process=%i\n",nTotalThreadsOpenMP);
   }
 }
 
