@@ -9580,7 +9580,9 @@ if (TmpAllocationCounter==2437) {
     }
 
     if (startNode==rootTree) {
-      if (ThisThreadBlockFound==false) exit(__LINE__,__FILE__,"Error: no blocks found that belong to thins thread");
+      if (_AMR__NO_BLOCKS_FOUND__EXIT_MODE_ == _ON_AMR_MESH_) {
+        if (ThisThreadBlockFound==false) exit(__LINE__,__FILE__,"Error: no blocks found that belong to thins thread");
+      }
 
       int mpiInitFlag;
       MPI_Initialized(&mpiInitFlag);

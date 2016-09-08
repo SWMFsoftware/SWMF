@@ -191,6 +191,9 @@
 //the maximum number of refinment levels used in calculating the ramain volume of cut-cells
 #define _AMR__CUT_CELL_VOLUME_CALCULATION__MAX_REFINMENT_LEVEL_  5
 
+//exist when no bloks are allocated in a subdomain
+#define _AMR__NO_BLOCKS_FOUND__EXIT_MODE_ _ON_AMR_MESH_
+
 using namespace std;
 
 //the exist function with printing of the error message
