@@ -926,7 +926,7 @@ sub ReadGeneralBlock {
     $InputLine=~s/\s+$//; #remove spaces from the end of the line
  
     #substitute separators by 'spaces'
-    $InputLine=~s/[=,:]/ /g;
+    $InputLine=~s/[()=,:]/ /g;
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
     
    
@@ -1358,7 +1358,20 @@ sub ReadGeneralBlock {
   
       ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","pic/picGlobal.dfn");
     }
-    
+    elsif ($InputLine eq "DEFINELOCATION") {
+      my ($macro,$value,$location,$s0,$s1);
+  
+      $line=~s/[()=]/ /g;
+  
+      ($InputLine,$InputComment)=split('!',$line,2);
+      ($s0,$location,$macro,$value,$s1)=split(' ',$InputLine,5);
+  
+      $s0=$macro;
+      $s0=~s/[()=]/ /g;
+      ($s0,$s1)=split(' ',$s0,2);
+  
+      ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","$location");
+    }
     
     #read injection BC section 
     elsif ($InputLine eq "INJECTIONBOUNDARYCONDITIONS")  {
