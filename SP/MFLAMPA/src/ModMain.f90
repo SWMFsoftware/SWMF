@@ -9,7 +9,7 @@ module ModMain
        Particle_, OriginLat_, OriginLon_
   
   use ModWrite, ONLY: &
-       set_write_param, write_output, NamePlotDir, DoOutputDistribution
+       set_write_param, write_output, NamePlotDir
 
   use ModGrid, ONLY: &
        nVar, &
@@ -79,7 +79,6 @@ contains
 
     ! The name of the command
     character (len=100) :: NameCommand
-    character (len=100) :: StringPlot
     character (len=*), parameter :: NameSub='SP:read_param'
     !--------------------------------------------------------------------------
     if(DoInit)then
@@ -98,15 +97,13 @@ contains
        case('#DORUN')
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
-          call read_var('StringPlot', StringPlot)
-          call set_write_param(StringPlot)
+          call set_write_param
        case('#COORDSYSTEM')
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_injection_param
        case('#TEST')
           ! various test modes that allow to disable certain features
-          call read_var('DoOutputDistribution', DoOutputDistribution)
           call read_var('DoTraceShock', DoTraceShock)
           call read_var('UseDiffusion', UseDiffusion)
        case default

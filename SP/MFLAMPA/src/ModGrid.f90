@@ -16,11 +16,12 @@ module ModGrid
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax, RSc
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: State_VIB, Distribution_IIIB
-  public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I
+  public:: State_VIB, Distribution_IIB
+  public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
+  public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, R_, Lon_, Lat_, D_, S_
-  public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_  
+  public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_, EFlux_
   public:: NameVar_V
 
   !\
@@ -87,7 +88,7 @@ module ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 17
+  integer, parameter:: nVar = 18
   integer, parameter:: &
        R_     = 1, & ! Radial coordinate
        Lon_   = 2, & ! Longitude
@@ -107,7 +108,9 @@ module ModGrid
        B_     =15, & ! Magnitude of magnetic field
        ! Old values
        RhoOld_=16, & ! Background plasma density
-       BOld_  =17 ! Magnitude of magnetic field
+       BOld_  =17, & ! Magnitude of magnetic field
+       ! derived values
+       EFlux_ =18    ! Integrated particle flux
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
        'R     ', &
@@ -126,7 +129,8 @@ module ModGrid
        'Bz    ', &
        'B     ', &
        'RhoOld', &
-       'BOld  '/)
+       'BOld  ', &
+       'EFlux '  /)
   !----------------------------------------------------------------------------
   ! Distribution vector;
   ! Number of bins in the distribution is set in ModSize
@@ -134,11 +138,13 @@ module ModGrid
   ! 2nd index - cos(pitch-angle) bin
   ! 3rd index - particle index along the field line
   ! 4th index - local block number
-  real, allocatable:: Distribution_IIIB(:,:,:,:)
+  real, allocatable:: Distribution_IIB(:,:,:)
   ! scale with respect to Momentum and log(Momentum)
-  real:: MomentumScale_I(nMomentumBin)
-  real:: LogMomentumScale_I(nMomentumBin)
-  real:: EnergyScale_I(nMomentumBin)
+  real, target:: MomentumScale_I(nMomentumBin)
+  real, target:: LogMomentumScale_I(nMomentumBin)
+  real, target:: EnergyScale_I(nMomentumBin)
+  real, target:: LogEnergyScale_I(nMomentumBin)
+  real, target:: DMomentumOverDEnergy_I(nMomentumBin)
   !/
 
 contains
@@ -214,10 +220,10 @@ contains
     call check_allocate(iError, NameSub//'CoordOrigin_DA')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
-    allocate(Distribution_IIIB(&
-         nMomentumBin,nPitchAngleBin,iParticleMin:iParticleMax,nBlock), &
+    allocate(Distribution_IIB(&
+         nMomentumBin,iParticleMin:iParticleMax,nBlock), &
          stat=iError)
-    call check_allocate(iError, NameSub//'Distribution_IIIB')
+    call check_allocate(iError, NameSub//'Distribution_IIB')
     !\
     ! fill grid containers
     !/
@@ -246,7 +252,7 @@ contains
     !\
     ! reset and fill data containers
     !/
-    Distribution_IIIB = tiny(1.0)
+    Distribution_IIB = tiny(1.0)
     State_VIB = -1
     do iLat = 1, nLat
        do iLon = 1, nLon
@@ -313,6 +319,7 @@ contains
   end subroutine get_node_indexes
 
   !============================================================================
+
   function distance_to_next(iParticle, iBlock) result(Distance)
     ! the function returns distance to the next particle measured in Rs;
     ! formula for distance between 2 points in rlonlat system:
@@ -340,6 +347,7 @@ contains
          2*State_VIB(R_,iParticle,iBlock)*State_VIB(R_,iParticle+1,iBlock) * &
          (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2))
   end function distance_to_next
+
   !============================================================================
 
   subroutine get_cell(CoordIn_D, iCellOut_D)

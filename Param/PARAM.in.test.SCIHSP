@@ -511,7 +511,6 @@ T			UseComp
 F
 
 #TEST
-F			DoOutputDistribution
 F			DoTraceShock
 F			UseDiffusion
 
@@ -523,7 +522,8 @@ F			UseDiffusion
 30			LatMax
 
 #SAVEPLOT
-bx by bz idl
+1
+mh3d bx by bz idl
 
 #END_COMP SP   ----------------------------------------------------------------
 

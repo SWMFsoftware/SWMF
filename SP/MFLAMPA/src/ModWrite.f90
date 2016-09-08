@@ -10,15 +10,15 @@ module ModWrite
 
   use ModGrid, ONLY: &
        get_node_indexes, &
+       iComm, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
-       Distribution_IIIB, MomentumScale_I, LogMomentumScale_I, &
+       Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
+       DMomentumOverDEnergy_I, &
        Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, &
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
   use ModPlotFile, ONLY: save_plot_file
-
-  use ModIoUnit, ONLY: UnitTmp_
 
   implicit none
 
@@ -27,158 +27,272 @@ module ModWrite
   private ! except
  
   public:: set_write_param, write_output, NamePlotDir
-  public:: DoOutputDistribution
+
+  type TypeOutputFile
+     !\
+     ! General information
+     !/
+     ! kind of data printed to a file
+     integer:: iKindData
+     ! format of a file
+     integer:: iFormat
+     character(len=4 ):: NameFormat
+     character(len=20):: TypeFile
+     ! names of variables to be written
+     character(len=300):: NameVarPlot
+     ! output buffer
+     real, pointer:: Buffer_II(:,:)
+     !\
+     ! MH data
+     !/
+     ! variables from the state vector to be written
+     logical:: DoPlot_V(nVar)
+     ! total number of variables to be written
+     integer:: nVarPlot
+     ! their indices in the state vector
+     integer, pointer:: iVarPlot_V(:)
+     !\
+     ! Distribution
+     !/
+     ! scale of distribution function (momentum or energy)
+     integer:: iScale
+     !\
+     ! Data on the sphere
+     !/
+     ! radius of the sphere the data to be written at
+     real:: Radius
+  end type TypeOutputFile
 
   !\
   !----------------------------------------------------------------------------
-  ! Write modes:
-  ! Data mode, i.e. what data to include in the output file
-  integer:: OutputData
+  ! Number of output files
+  integer:: nFile = 0
+  ! The output files
+  type(TypeOutputFile), allocatable:: File_I(:)
+  ! Types of output files in terms of output dataa
   integer, parameter:: &
-       All_  = 0,  &
-       Mesh_ = 1
-  ! Write mode, i.e. the format of the output file
-  integer:: OutputFormat
+       MH3D_    = 0, & ! Background mhd data along all lines
+       MHSph_   = 1, & ! Background mhd data on a given sphere
+       Distr3D_ = 2, & ! Distribution along all lines
+       DistrSph_= 3    ! Distribution on a given sphere
+  ! Format of output files
   integer, parameter:: &
        Tec_ = 0, &
        Idl_ = 1
-  character(len=4):: NameFormat
-  character(len=20):: TypeFile
-  !----------------------------------------------------------------------------
-  ! List of MH variables that will be outputed
-  logical:: DoPlot_V(nVar) = .false.
-  ! Number of the variables to be outputed
-  integer:: nVarPlot = 0
-  ! Output Buffer
-  real, allocatable:: DataOut_VI(:,:)
-  ! Indices of the output variables in the state vector
-  integer, allocatable:: iVarPlot_V(:)
-  ! Coordinates are always fixed
-  integer, parameter:: PlotX_ = 1, PlotY_ = 2, PlotZ_ = 3
-  ! Names of variables
-  character(len=300) :: NameVarPlot = ''
-
-  logical:: DoOutputDistribution = .true.
+  ! Scale for writing distribution
+  integer, parameter:: &
+       MomentumScale_= 1, &
+       EnergyScale_  = 2
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
   !/
 contains
   
-  subroutine set_write_param(StringPlot)
-    ! set how output files are written:
-    ! the data to be printed, the format of files
-    character(len=*), intent(in):: StringPlot
+  subroutine set_write_param
+    use ModReadParam, ONLY: read_var
+    ! set parameters of output files: file format, kind of output etc.
+    character(len=300):: StringPlot
 
-    integer:: iVar, iVarPlot
+    integer:: iFile
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
-    ! the type of output file must be set
-    if(    index(StringPlot,'tec') > 0)then
-       OutputFormat = Tec_
-       NameFormat   ='.dat'
-       TypeFile     ='tec'
-    elseif(index(StringPlot,'idl') > 0)then
-       OutputFormat = Idl_
-       NameFormat   ='.out'
-       TypeFile     ='ascii'
-    else
-       call CON_stop(NameSub//': output format was not set in PARAM.in')
-    end if
+    ! number of output files
+    call read_var('nFile', nFile)
+    ! check correctness
+    if(nFile == 0) RETURN ! no output file requested
+    if(nFile  < 0) call CON_stop(NameSub//': incorrect SAVEPLOT section')
 
-    ! set variables to plot
-    !----------------------
-    ! coordinates are always printed
-    DoPlot_V((/R_, Lon_, Lat_/)) = .true.
-    nVarPlot = nVarPlot + 3
-    ! distance along line -----
-    if(index(StringPlot,'s') > 0)then
-       DoPlot_V(S_) = .true.
-       nVarPlot = nVarPlot + 1
-    end if
-    ! plasma density ----------
-    if(index(StringPlot,'rho') > 0)then
-       DoPlot_V(Rho_) = .true.
-       nVarPlot = nVarPlot + 1
-    end if
-    ! temperature -------------
-    if(index(StringPlot,'temp')> 0)then
-       DoPlot_V(T_) = .true.
-       nVarPlot = nVarPlot + 1
-    end if
-    ! velocity ----------------
-    if(index(StringPlot,'ux')> 0 .or. index(StringPlot,'uy')> 0 .or. &
-         index(StringPlot,'uz')> 0)then
-       DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
-       nVarPlot = nVarPlot + 3
-    end if
-    if(index(StringPlot,'|u|')> 0)then
-       DoPlot_V(U_) = .true.
-       nVarPlot = nVarPlot + 1
-    end if
-    ! magnetic field ----------
-    if(index(StringPlot,'bx')> 0 .or. index(StringPlot,'by')> 0 .or. &
-         index(StringPlot,'bz')> 0)then
-       DoPlot_V((/Bx_, By_, Bz_/)) = .true.
-       nVarPlot = nVarPlot + 3
-    end if
-    if(index(StringPlot,'|b|')> 0)then
-       DoPlot_V(B_) = .true.
-       nVarPlot = nVarPlot + 1
-    end if
-    !--------------------------
-    ! prepare the output data container
-    allocate(DataOut_VI(nVarPlot, iParticleMin:iParticleMax))
-    ! indices in the state vector
-    allocate(iVarPlot_V(nVarPlot))
-    ! coordinates
-    iVarPlot_V(PlotX_:PlotZ_) = (/1,2,3/)
-    NameVarPlot  = 'X Y Z'
-    ! the rest of variables
-    iVarPlot = nDim + 1
-    do iVar = nDim + 1, nVar
-       if(.not.DoPlot_V(iVar)) CYCLE
-       NameVarPlot = trim(NameVarPlot)//' '//trim(NameVar_V(iVar))
-       iVarPlot_V(iVarPlot) = iVar
-       iVarPlot = iVarPlot + 1
+    ! allocate the storage for file info
+    allocate(File_I(nFile))
+
+    ! read info about each file
+    do iFile = 1, nFile
+       ! reset and read the file info
+       StringPlot = ''
+       call read_var('StringPlot', StringPlot)
+
+       ! the format of output file must be set
+       if(    index(StringPlot,'tec') > 0)then
+          File_I(iFile) % iFormat   = Tec_
+          File_I(iFile) % NameFormat='.dat'
+          File_I(iFile) % TypeFile  ='tec'
+       elseif(index(StringPlot,'idl') > 0)then
+          File_I(iFile) % iFormat   = Idl_
+          File_I(iFile) % NameFormat='.out'
+          File_I(iFile) % TypeFile  ='ascii'
+       else
+          call CON_stop(NameSub//': output format was not set in PARAM.in')
+       end if
+
+       ! the kind of output data must be set
+       if(    index(StringPlot,'mh3d' )    > 0)then
+          File_I(iFile) % iKindData = MH3D_
+       elseif(index(StringPlot,'mhsph')    > 0)then
+          File_I(iFile) % iKindData = MHSph_
+       elseif(index(StringPlot,'distr3d')  > 0)then
+          File_I(iFile) % iKindData = Distr3D_
+       elseif(index(StringPlot,'distrsph') > 0)then
+          File_I(iFile) % iKindData = DistrSph_
+          call CON_stop(NameSub//&
+               ': spherical output for distribution is not implemented yet')
+       else
+          call CON_stop(NameSub//': kind of data was not set in PARAM.in')
+       end if
+
+       ! reset variables' names
+       File_I(iFile) % NameVarPlot = ''
+
+       ! based on kind of data process the requested output
+       select case(File_I(iFile) % iKindData)
+          case(MH3D_)
+             call process_mh
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(&
+                  File_I(iFile)%nVarPlot, iParticleMin:iParticleMax))
+             ! add particle index to variable names
+             File_I(iFile) % NameVarPlot = &
+                  'ParticleIndex '//trim(File_I(iFile) % NameVarPlot)
+          case(MHSph_)
+             call process_mh
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(&
+                  File_I(iFile)%nVarPlot, nNode))
+             ! add line index to variable names
+             File_I(iFile) % NameVarPlot = &
+                  'LineIndex '//trim(File_I(iFile) % NameVarPlot)
+             ! get radius
+             call read_var('Radius [Rs]', File_I(iFile) % Radius)
+          case(Distr3D_)
+             call process_distr
+             ! prepare the output data container
+             allocate(File_I(iFile) % &
+                  Buffer_II(nMomentumBin,iParticleMin:iParticleMax))
+          case(DistrSph_)
+             call process_distr
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(nMomentumBin, nNode))
+             ! get radius
+             call read_var('Radius [Rs]', File_I(iFile) % Radius)
+       end select       
     end do
+
+  contains
+    subroutine process_mh
+      ! process variables to plot
+      integer:: iVar, iVarPlot
+      !----------------------
+      ! reset
+      File_I(iFile) % nVarPlot = 0
+      File_I(iFile) % DoPlot_V = .false.
+      ! coordinates are always printed
+      File_I(iFile) % DoPlot_V((/R_, Lon_, Lat_/)) = .true.
+      File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
+      ! distance along line -----
+      if(index(StringPlot,'dist') > 0)then
+         File_I(iFile) % DoPlot_V(S_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! plasma density ----------
+      if(index(StringPlot,'rho') > 0)then
+         File_I(iFile) % DoPlot_V(Rho_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! temperature -------------
+      if(index(StringPlot,'temp')> 0)then
+         File_I(iFile) % DoPlot_V(T_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! velocity ----------------
+      if(index(StringPlot,'ux')> 0 .or. index(StringPlot,'uy')> 0 .or. &
+           index(StringPlot,'uz')> 0)then
+         File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
+      end if
+      if(index(StringPlot,'|u|')> 0)then
+         File_I(iFile) % DoPlot_V(U_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! magnetic field ----------
+      if(index(StringPlot,'bx')> 0 .or. index(StringPlot,'by')> 0 .or. &
+           index(StringPlot,'bz')> 0)then
+         File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
+      end if
+      if(index(StringPlot,'|b|')> 0)then
+         File_I(iFile) % DoPlot_V(B_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! energy flux -------------
+      if(index(StringPlot,'eflux')> 0)then
+         File_I(iFile) % DoPlot_V(EFlux_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      !--------------------------
+      ! indices in the state vector
+      allocate(File_I(iFile) % iVarPlot_V(File_I(iFile)%nVarPlot))
+      ! determine indices and names of variables
+      iVarPlot = 1
+      do iVar = 1, nVar
+         if(.not.File_I(iFile) % DoPlot_V(iVar)) CYCLE
+         File_I(iFile) % NameVarPlot = &
+              trim(File_I(iFile) % NameVarPlot)//' '//&
+              trim(NameVar_V(iVar))
+         File_I(iFile) % iVarPlot_V(iVarPlot) = iVar
+         iVarPlot = iVarPlot + 1
+      end do
+    end subroutine process_mh
+    !------------------------------------------------------------------------
+    subroutine process_distr
+      ! process output parameters for distribution output
+      !------------------------
+      File_I(iFile) % nVarPlot = 1
+      if(    index(StringPlot, 'momentum') > 0)then
+         File_I(iFile) % iScale = MomentumScale_
+         File_I(iFile) % NameVarPlot = &
+              'Distance LogMomentum LogDistribution'
+      elseif(index(StringPlot, 'energy') > 0)then
+         File_I(iFile) % iScale = EnergyScale_
+         File_I(iFile) % NameVarPlot = &
+              'Distance LogEnergy LogDistribution'
+      else
+         call CON_stop(NameSub//&
+              ': type of scale for distribution output wasnot set in PARAM.in')
+      end if
+    end subroutine process_distr
   end subroutine set_write_param
 
   !============================================================================
 
   subroutine write_output(Time, iIter)
     ! write the output data
-    use ModNumConst, ONLY: cHalfPi
-    use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
-    ! current time and iteration
-    real,    intent(in):: Time
-    integer, intent(in):: iIter
-
-    ! file name
-    character(len=100) :: NameFile, NameVar
-    ! file counter
-    integer, save:: iPlotFile = 1
-    !    integer, parameter:: iVarMesh_I(3) = (/1,2,3/)
+    real,    intent(in):: Time ! current time
+    integer, intent(in):: iIter! current iteration
 
     ! loop variables
-    integer:: iBlock, iParticle
-    ! status for file open 
-    integer:: iError
+    integer:: iFile
 
-    ! cartesian and HGI coordinates
-    real:: Xyz_D(nDim), Coord_D(nDim)
-
-    character(len=*), parameter:: NameVarMesh = '"R", "Lat", "Lon"'
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
-    call write_mh_data
-    if(DoOutputDistribution)&
-         call write_distribution
+    if(nFile == 0) RETURN
+
+    do iFile = 1, nFile
+       select case(File_I(iFile) % iKindData)
+       case(MH3D_)
+          call write_mh_3d
+       case(MHSph_)
+          call write_mh_sph
+       case(Distr3D_)
+          call write_distr_3d
+       case(DistrSph_)
+          !call write_distr_sph
+       end select
+    end do
 
   contains
 
-    subroutine write_mh_data
-      ! write output file with MH data in the format to be read by IDL/TECPLOT;
+    subroutine write_mh_3d
+      ! write output with 3D MH data in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
       ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
@@ -189,55 +303,147 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      integer:: iFirst
-      integer:: iLast
-      ! coordinates in spherical coordinates
-      real:: Coord_D(nDim)
+      integer:: iFirst, iLast
+      ! for better readability
+      integer:: nVarPlot
       !------------------------------------------------------------------------
+      nVarPlot = File_I(iFile) % nVarPlot
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
          write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,NameFormat
+              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,&
+              File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
          iLast  = iGridLocal_IB(End_,   iBlock)
 
          do iParticle = iFirst, iLast
-            ! convert coordinates to cartesian before output
-            Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-            call rlonlat_to_xyz(Coord_D, DataOut_VI(PlotX_:PlotZ_,iParticle))
-            ! the rest of variables
-            do iVarPlot = nDim + 1, nVarPlot
-
-               DataOut_VI(iVarPlot, iParticle) = &
-                    State_VIB(iVarPlot_V(iVarPlot), iParticle, iBlock)
+            ! fill the output buffer
+            do iVarPlot = 1, nVarPlot
+               File_I(iFile) % Buffer_II(iVarPlot, iParticle) = &
+                    State_VIB(File_I(iFile) % iVarPlot_V(iVarPlot), &
+                    iParticle, iBlock)
             end do
          end do
 
          ! print data to file
          call save_plot_file(&
               NameFile     = NameFile, &
-              TypeFileIn   = TypeFile, &
+              TypeFileIn   = File_I(iFile) % TypeFile, &
               nDimIn       = 1, &
               TimeIn       = Time, &
               nStepIn      = iIter, &
               CoordMinIn_D = (/real(iFirst)/), &
               CoordMaxIn_D = (/real(iLast)/), &
-              NameVarIn    = 'ParticleIndex '//trim(NameVarPlot), &
-              VarIn_VI     = DataOut_VI(1:nVarPlot, iFirst:iLast)&
+              NameVarIn    = File_I(iFile) % NameVarPlot, &
+              VarIn_VI     = &
+              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast)&
               )
-      end do     
-    end subroutine write_mh_data
+      end do
+    end subroutine write_mh_3d
+
+    !=========================================================================
+
+    subroutine write_mh_sph
+      use ModMpi
+      use CON_world, ONLY: is_proc0, i_proc0
+      use CON_comp_param, ONLY: SP_
+      ! write output with 3D MH data in the format to be read by IDL/TECPLOT;
+      ! single file is created for all field lines, name format is
+      ! MH_data_R=<Radius [AU]>_n<iIter>.{out/dat}
+      !------------------------------------------------------------------------
+      ! name of the output file
+      character(len=100):: NameFile
+      ! loop variables
+      integer:: iBlock, iParticle, iVarPlot, iVarIndex
+      ! indexes of corresponding node, latitude and longitude
+      integer:: iNode, iLat, iLon
+      ! index of first/last particle on the field line
+      integer:: iFirst, iLast
+      ! index of particle just above the radius
+      integer:: iAbove
+      ! interpolation weight
+      real:: Weight
+      ! for better readability
+      integer:: nVarPlot
+      ! MPI error
+      integer:: iError
+      !------------------------------------------------------------------------
+      nVarPlot = File_I(iFile) % nVarPlot
+      ! reset the output buffer
+      File_I(iFile) % Buffer_II = 0
+      do iBlock = 1, nBlock
+         iNode = iNode_B(iBlock)
+
+         ! set the file name
+         write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
+              trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
+              File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
+              '_n', iIter, File_I(iFile) % NameFormat
+
+         ! get min and max particle indexes on this field line
+         iFirst = iGridLocal_IB(Begin_, iBlock)
+         iLast  = iGridLocal_IB(End_,   iBlock)
+
+         ! find the particle just above the given radius
+         do iParticle = iFirst , iLast
+            if(State_VIB(R_, iParticle, iBlock) > File_I(iFile) % Radius) EXIT
+            if(iParticle == iLast) call CON_stop(NameSub//&
+                 ': radius of output sphere is above the field line range')
+         end do
+         if(iParticle == iFirst) call CON_stop(NameSub//&
+              ': radius of output sphere is below the field line range')
+
+         iAbove = iParticle
+         
+         ! interpolate data and fill buffer
+         Weight = &
+              (File_I(iFile)%Radius        - State_VIB(R_,iAbove-1,iBlock)) /&
+              (State_VIB(R_,iAbove,iBlock) - State_VIB(R_,iAbove-1,iBlock))
+         do iVarPlot = 1, nVarPlot
+            iVarIndex = File_I(iFile) % iVarPlot_V(iVarPlot)
+            File_I(iFile) % Buffer_II(iVarPlot, iNode) = &
+                 State_VIB(iVarIndex, iAbove-1, iBlock) * (1-Weight) + &
+                 State_VIB(iVarIndex, iAbove,   iBlock) *    Weight
+         end do
+
+      end do
+      
+      if(is_proc0(SP_))then
+         call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
+              nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+              i_proc0(SP_), iComm, iError)
+      else
+         call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
+              nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+              i_proc0(SP_), iComm, iError)
+      end if
+
+      if(is_proc0(SP_))&
+           ! print data to file
+           call save_plot_file(&
+           NameFile     = NameFile, &
+           TypeFileIn   = File_I(iFile) % TypeFile, &
+           nDimIn       = 1, &
+           TimeIn       = Time, &
+           nStepIn      = iIter, &
+           CoordMinIn_D = (/1.0/), &
+           CoordMaxIn_D = (/real(nNode)/), &
+           NameVarIn    = File_I(iFile) % NameVarPlot, &
+           VarIn_VI     = &
+           File_I(iFile) % Buffer_II(1:nVarPlot,1:nNode)&
+           )
+    end subroutine write_mh_sph
 
     !=========================================================================
     
-    subroutine write_distribution
+    subroutine write_distr_3d
       ! write file with distribution in the format to be read by IDL/TECPLOT;
-      ! separate fiel is created for each field line, name format is
+      ! separate file is created for each field line, name format is
       ! Distribution_<iLon>_<iLat>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
@@ -247,30 +453,27 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      integer:: iFirst
-      integer:: iLast
-      ! coordinates in spherical coordinates
-      real:: Coord_D(nDim)
-      ! distribution function
-      real:: F_II(iParticleMin:iParticleMax, nMomentumBin)
-      ! auxliray array for scale with respect to particle index
-      real, save:: IndexScale_I(iParticleMin:iParticleMax) = -1.0
-      logical, save:: IsFirstCall = .true.
+      integer:: iFirst, iLast
+      ! scale and conversion factor
+      real, pointer:: Scale_I(:), Factor_I(:)
+      real, target:: Unity_I(nMomentumBin) = 1.0
       !------------------------------------------------------------------------
-      if(IsFirstCall)then
-         IsFirstCall = .false.
-         do iParticle = iParticleMin, iParticleMax
-            IndexScale_I(iParticle) = real(iParticle)
-         end do
-      end if
+      select case(File_I(iFile) % iScale)
+      case(MomentumScale_)
+         Scale_I => LogMomentumScale_I
+         Factor_I=> Unity_I
+      case(EnergyScale_)
+         Scale_I => LogEnergyScale_I
+         Factor_I=> DMomentumOverDEnergy_I
+      end select
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
          write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//&
-              'Distribution_',iLon,'_',iLat,'_n',iIter,NameFormat
+              trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,'_n',iIter,&
+              File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
@@ -279,27 +482,28 @@ contains
          do iParticle = iParticleMin, iParticleMax
             ! reset values outside the line's range
             if(iParticle < iFirst .or. iParticle > iLast)then
-               F_II(iParticle,:) = 0.0
+               File_I(iFile) % Buffer_II(iParticle,:) = 0.0
                CYCLE
             end if
             ! the actual distribution
-            F_II(iParticle,:) = log(Distribution_IIIB(:,1,iParticle,iBlock))
+            File_I(iFile) % Buffer_II(iParticle,:) = &
+                 log(Distribution_IIB(:,iParticle,iBlock) * Factor_I(:))
          end do
 
          ! print data to file
          call save_plot_file(&
-              NameFile     = NameFile, &
-              TypeFileIn   = TypeFile, &
-              nDimIn       = 2, &
-              TimeIn       = Time, &
-              nStepIn      = iIter, &
-              Coord1In_I   = State_VIB(S_,iFirst:iLast,iBlock), &!IndexScale_I, &
-              Coord2In_I   = LogMomentumScale_I, &
-              NameVarIn    = 'Distance LogMomentum LogDistribution', &
-              VarIn_II     = F_II(iFirst:iLast,:) &
+              NameFile   = NameFile, &
+              TypeFileIn = File_I(iFile) % TypeFile, &
+              nDimIn     = 2, &
+              TimeIn     = Time, &
+              nStepIn    = iIter, &
+              Coord1In_I = State_VIB(S_,iFirst:iLast,iBlock), &
+              Coord2In_I = Scale_I, &
+              NameVarIn  = File_I(iFile) % NameVarPlot, &
+              VarIn_II   = File_I(iFile) % Buffer_II(iFirst:iLast,:) &
               )
       end do     
-    end subroutine write_distribution
+    end subroutine write_distr_3d
 
   end subroutine write_output
 

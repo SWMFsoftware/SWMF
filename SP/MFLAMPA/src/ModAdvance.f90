@@ -12,11 +12,11 @@ module ModAdvance
 
   use ModGrid, ONLY: &
        R_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_, &
-       Begin_, End_, Shock_, ShockOld_, &
-
+       Begin_, End_, Shock_, ShockOld_, EFlux_,&
        nBlock, &
-       State_VIB, Distribution_IIIB, iGridLocal_IB, &
-       MomentumScale_I, LogMomentumScale_I, EnergyScale_I, &
+       State_VIB, Distribution_IIB, iGridLocal_IB, &
+       MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
+       DMomentumOverDEnergy_I, &
        distance_to_next
 
   use ModDiffusion, ONLY: advance_diffusion
@@ -120,6 +120,10 @@ contains
        MomentumScale_I(iMomentumBin) = exp(LogMomentumScale_I(iMomentumBin))
        EnergyScale_I(iMomentumBin) = momentum_to_kinetic_energy(&
             MomentumScale_I(iMomentumBin), NameParticle)
+       LogEnergyScale_I(iMomentumBin) = log(EnergyScale_I(iMomentumBin))
+       DMomentumOverDEnergy_I(iMomentumBin) = &
+            momentum_to_energy(MomentumScale_I(iMomentumBin), NameParticle) / &
+            (MomentumScale_I(iMomentumBin) * cLightSpeed**2)
     end do
   end subroutine init_advance_const
 
@@ -132,7 +136,7 @@ contains
     do iBlock = 1, nBlock
        do iParticle = iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_,iBlock)
           do iMomentumBin = 1, nMomentumBin
-             Distribution_IIIB(iMomentumBin,1,iParticle,iBlock) = &
+             Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
                (MomentumScale_I(iMomentumBin))**2
           end do
@@ -169,6 +173,27 @@ contains
   end subroutine get_shock_location
 
   !===========================================================================
+
+  subroutine get_integral_energy_flux
+    ! compute integrated flux of SEP at each particle on the current line 
+
+    integer:: iParticle, iBin ! loop variables
+    real   :: EFlux ! the vale of energy flux
+    !-------------------------------------------------------------------------
+    do iParticle = iBegin, iEnd
+       EFlux = 0.0
+       do iBin = 1, nMomentumBin - 1
+          EFlux = EFlux + 0.5 * &
+               (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
+               Distribution_IIB(iBin,  iParticle,iBlock)*EnergyScale_I(iBin)+&
+               Distribution_IIB(iBin+1,iParticle,iBlock)*EnergyScale_I(iBin+1))
+       end do
+       State_VIB(EFlux_, iParticle, iBlock) = EFlux
+    end do
+    
+  end subroutine get_integral_energy_flux
+
+  !============================================================================
 
   function mach_alfven() result(MachAlfven)
     ! alfvenic mach number for the current line
@@ -214,7 +239,7 @@ contains
        Density = Rho_I(iParticle)
        Momentum= kinetic_energy_to_momentum(&
             State_VIB(T_,iParticle,iBlock)*UnitEnergy,NameParticle)
-       Distribution_IIIB(1,1,iParticle,iBlock) = &
+       Distribution_IIB(1,iParticle,iBlock) = &
             0.25/cPi/(SpectralIndex-3) * CInj * Density / &
             Momentum**3 * (Momentum/MomentumInj)**SpectralIndex
     end do
@@ -355,7 +380,7 @@ contains
              do iParticle = iBegin, iEnd
                 call advance_log_advection(&
                      FermiFirst_I(iParticle),nMomentumBin-2,1,1,&
-                     Distribution_IIIB(1:nMomentumBin,1,iParticle,iBlock), &
+                     Distribution_IIB(1:nMomentumBin,iParticle,iBlock), &
                      .true.,DLogMomentum)
              end do
 
@@ -379,13 +404,14 @@ contains
                      DiffCoeffMin/DOuter_I(iBegin:iEnd))
                 call advance_diffusion(Dt, iEnd-iBegin+1,&
                      State_VIB(D_,iBegin:iEnd,iBlock), &
-                     Distribution_IIIB(iMomentumBin,1,iBegin:iEnd,iBlock),&
+                     Distribution_IIB(iMomentumBin,iBegin:iEnd,iBlock),&
                      DOuter_I(iBegin:iEnd), DInner_I(iBegin:iEnd))
              end do
 
           end do
           
        end do
+       call get_integral_energy_flux
     end do
     ! update time counter
     TimeGlobal = TimeLimit
