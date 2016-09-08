@@ -29,6 +29,8 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
   define _SIMULATION_TIME_STEP_MODE_ _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_ 
   define _SIMULATION_PARTICLE_WEIGHT_MODE_ _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
 
+  defineLocation(meshAMR/meshAMRdef.h) _AMR__NO_BLOCKS_FOUND__EXIT_MODE_ _OFF_AMR_MESH_  
+
   BlockCells=4,4,4
   GhostCells=1,1,1
 
