@@ -131,7 +131,6 @@ contains
     !------------------------------
     iIterGlobal = iIterGlobal + 1
     call fix_grid_consistency
-    call write_output(TimeGlobal, iIterGlobal)
     if(DoRun) then
        ! run the model
        call advance(TimeLimit)
@@ -139,6 +138,7 @@ contains
        ! update global time 
        TimeGlobal = TimeLimit
     end if
+    call write_output(TimeGlobal, iIterGlobal)
   end subroutine run
 
   !============================================================================

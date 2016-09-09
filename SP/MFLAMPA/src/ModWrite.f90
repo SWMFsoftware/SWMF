@@ -250,11 +250,11 @@ contains
       if(    index(StringPlot, 'momentum') > 0)then
          File_I(iFile) % iScale = MomentumScale_
          File_I(iFile) % NameVarPlot = &
-              'Distance LogMomentum LogDistribution'
+              'LogMomentum Distance LogDistribution'
       elseif(index(StringPlot, 'energy') > 0)then
          File_I(iFile) % iScale = EnergyScale_
          File_I(iFile) % NameVarPlot = &
-              'Distance LogEnergy LogDistribution'
+              'LogEnergy Distance LogDistribution'
       else
          call CON_stop(NameSub//&
               ': type of scale for distribution output wasnot set in PARAM.in')
