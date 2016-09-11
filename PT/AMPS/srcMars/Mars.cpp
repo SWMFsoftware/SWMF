@@ -52,15 +52,20 @@ int maxLocalBackdroundDensityOffset=-1;
 #include "rnd.h"
 #include "pic.h"
 #include "Mars.h"
+#include "PhotolyticReactions.h"
 
 int newMars::maxLocalCellOxigenProductionRateOffset=-1;//,newMars::maxLocalBackdroundDensityOffset=-1;
 int newMars::minLocalCellOxigenProductionRateOffset=-1,newMars::minLocalBackdroundDensityOffset=-1;
 int newMars::sampledLocalInjectionRateOffset=-1;
 double *newMars::SampledEscapeRate=NULL;
+double *newMars::IonizationRate=NULL;
+
+
 //spherical mesh for sampling macroscopic parameters
 cSphericalVolumeMesh newMars::SphericalSamplingMesh;
 
-cDataSetMTGCM newMars::Te,newMars::Ti,newMars::Tn,newMars::O,newMars::CO2,newMars::O2p,newMars::Un,newMars::Vn,newMars::Wn,newMars::COp,newMars::CO,newMars::E,newMars::TnEQU,newMars::OEQU,newMars::CO2EQU;
+//cDataSetMTGCM newMars::Te,newMars::Ti,newMars::Tn,newMars::O,newMars::CO2,newMars::O2p,newMars::Un,newMars::Vn,newMars::Wn,newMars::COp,newMars::CO,newMars::E,newMars::TnEQU,newMars::OEQU,newMars::CO2EQU;
+cDataSetMGITM newMars::Te,newMars::Ti,newMars::Tn,newMars::O,newMars::CO2,newMars::CO,newMars::N2,newMars::O2p,newMars::Un,newMars::Vn,newMars::Wn,newMars::E;
 
 //read the forward collision cross section data
 //cDiffCrossSection newMars::ForwardCollisionCrossSection;
@@ -130,7 +135,9 @@ int newMars::RequestStaticCellData(int offset) {
 
   void newMars::OutputSampledModelData(int DataOutputFileNumber) {
     double buffer[PIC::nTotalSpecies*PIC::nTotalThreads];
-    int s;
+    double TotalIonizationRate[PIC::nTotalSpecies*PIC::nTotalThreads];
+
+      int s;
       
       //output data sampled on the spherical mesh
       char fname[300];
@@ -140,10 +147,13 @@ int newMars::RequestStaticCellData(int offset) {
 
 
     MPI_Gather(SampledEscapeRate,PIC::nTotalSpecies,MPI_DOUBLE,buffer,PIC::nTotalSpecies,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Gather(IonizationRate,PIC::nTotalSpecies,MPI_DOUBLE,TotalIonizationRate,PIC::nTotalSpecies,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
     if (PIC::ThisThread==0) {
       char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
 
+        
+        
       for (int thread=1;thread<PIC::nTotalThreads;thread++) for (s=0;s<PIC::nTotalSpecies;s++) buffer[s]+=buffer[thread*PIC::nTotalSpecies+s];
       printf("Total escape rate: \n Specie \t Escape rate [s^{-1}]\n");
 
@@ -153,9 +163,27 @@ int newMars::RequestStaticCellData(int offset) {
       }
 
       printf("\n");
+        
+        
+        for (int thread=1;thread<PIC::nTotalThreads;thread++) for (s=0;s<PIC::nTotalSpecies;s++) TotalIonizationRate[s]+=TotalIonizationRate[thread*PIC::nTotalSpecies+s];
+        printf("Total Inoization rate: \n Specie \t Ionization rate [s^{-1}]\n");
+        
+        for (s=0;s<PIC::nTotalSpecies;s++) {
+            PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+            printf("%s (s=%i):\t %e\n",ChemSymbol,s,TotalIonizationRate[s]/PIC::LastSampleLength);
+        }
+        
+        printf("\n");
+        
     }
 
-    if (PIC::SamplingMode==_RESTART_SAMPLING_MODE_) for (s=0;s<PIC::nTotalSpecies;s++) SampledEscapeRate[s]=0.0;
+      if (PIC::SamplingMode==_RESTART_SAMPLING_MODE_) for (s=0;s<PIC::nTotalSpecies;s++) {
+          
+          
+      SampledEscapeRate[s]=0.0;
+      IonizationRate[s]=0.0;
+          
+      }
   }
 
   void newMars::PrintVariableList(FILE* fout,int DataSetNumber) {
@@ -967,6 +995,448 @@ long int newMars::HotCarbon::HotCProduction(int iCellIndex,int jCellIndex,int kC
     return nInjectedParticles;
 }
 
+
+/////////////////////////Ionization////////////////////////////////////////////////////////
+
+
+double newMars::PhotoIonizationHotOFrequency(PIC::ParticleBuffer::byte *modelParticleData) {
+    double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
+    double frequency=0.0;
+    const double SemiMajorDistance=1.523679; //227,939,100 km = 1.523679 AU, from Wikipedia
+    //const double SemiMajorDistance=1.381497; //227,939,100 km = 1.523679 AU, from Wikipedia
+    
+    const double PhotoionizationTimeSolarMin=3.7E6*pow(SemiMajorDistance,2); // [s] at 1AU: 2.2E6 from Lammer 03 or 3.7E6 from Hodges 00.
+    //[s-1] at Mars: 8.89E-8 from Schunk 00 or 10.7E-8 from Modolo 05 or 11.7E-8 from Hodges 00.
+    const double PhotoionizationTimeSolarMax=1.7E6*pow(SemiMajorDistance,2); // [s] at 1AU: 1.7E6 from Hodges 00.
+    //[s-1] at Mars: 2.73E-7 from Schunk 00 or 2.6E-7 from Hodges 00 or 31.25E-8 from Modolo 05.
+    
+    //const double PhotoionizationTime=(PhotoionizationTimeSolarMin+PhotoionizationTimeSolarMax)/2;//solar moderate
+    const double PhotoionizationTime=PhotoionizationTimeSolarMin;//solar min
+    //const double PhotoionizationTime=PhotoionizationTimeSolarMax;//solar max
+    
+    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    
+    PIC::ParticleBuffer::GetV(v,modelParticleData);
+    PIC::ParticleBuffer::GetX(x,modelParticleData);
+    
+double AltI=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_);
+    //frequency=(1/PhotoionizationTime)*(1/pow(AltI,2));
+    frequency=1/PhotoionizationTime;
+
+  
+    //determine the positon of the subsolar point (tilt angle = 25.19 deg)
+    double Lat,Lon,xsun[3],xunit[3],x_proj;
+    Lat=0.0*Pi/180; //Aphelion=25.19, Perihelion=-25.19, Equinox=0.0
+    Lon=0.0*Pi/180;
+    
+    //unit vector for anti-subsolar point
+    xunit[0]=-cos(Lat)*cos(Lon);
+    xunit[1]=-cos(Lat)*sin(Lon);
+    xunit[2]=-sin(Lat);
+    
+    //x_proj_to_anti-subsolar=unit_vec(unit_vec.x)
+    xsun[0]=xunit[0]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[1]=xunit[1]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    
+    x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
+    
+    if (((xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2])>0.0)&&(x_proj<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    
+    //if ((x[0]<0.0)&&((sqrt(x[1]*x[1]+x[2]*x[2]))<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    if ((sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_))<IonopauseAltitude) frequency=0.0;
+    
+    return frequency;
+}
+
+
+double newMars::ChargeExchangeHotOFrequency(PIC::ParticleBuffer::byte *modelParticleData) {
+    double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
+    double frequency=0.0;
+    double CXcrossSection=8.0E-20; //[m2] from Stebbings 64.
+    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    
+    
+    double SolarWindProtonDensityx1EUV=2.5E6; //[m-3] from Lammer 03 from Selsis 02 or Zhang 93.
+    double SolarWindSpeedx1EUV=4E5; //[m.s-1] from Lammer 03 or Zhang 93 from Newkirk 80.
+    //    const double SolarWindProtonDensityx3EUV=8E6; //[m-3] from Lammer 03 from Selsis 02 or 6E6 from Zhang 93.
+    //    const double SolarWindSpeedx3EUV=4.8E5; //[m.s-1] from Lammer 03 or 5E5 from Zhang from Newkirk 80.
+    //    const double SolarWindProtonDensityx6EUV=4E7; //[m-3] from Lammer 03 from Selsis 02 or 4.3E6 from Zhang 93.
+    //    const double SolarWindSpeedx6EUV=7E5; //[m.s-1] from Lammer 03 or Zhang 93 from Newkirk 80.
+    
+    double SolarWindProtonDensity=SolarWindProtonDensityx1EUV;
+    double SolarWindSpeed=SolarWindSpeedx1EUV;
+
+ 
+double AltI=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_);
+    //frequency=CXcrossSection*SolarWindProtonDensity*SolarWindSpeed*(1/pow(AltI,2)); //[s-1]
+    frequency=CXcrossSection*SolarWindProtonDensity*SolarWindSpeed; //[s-1]
+    
+    PIC::ParticleBuffer::GetV(v,modelParticleData);
+    PIC::ParticleBuffer::GetX(x,modelParticleData);
+    
+    //determine the positon of the subsolar point (tilt angle = 25.19 deg)
+    double Lat,Lon,xsun[3],xunit[3],x_proj;
+    Lat=0.0*Pi/180; //Aphelion=25.19, Perihelion=-25.19, Equinox=0.0
+    Lon=0.0*Pi/180;
+    
+    //unit vector for anti-subsolar point
+    xunit[0]=-cos(Lat)*cos(Lon);
+    xunit[1]=-cos(Lat)*sin(Lon);
+    xunit[2]=-sin(Lat);
+    
+    //x_proj_to_anti-subsolar=unit_vec(unit_vec.x)
+    xsun[0]=xunit[0]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[1]=xunit[1]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    
+    x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
+    
+    if (((xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2])>0.0)&&(x_proj<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    
+    //if ((x[0]<0.0)&&((sqrt(x[1]*x[1]+x[2]*x[2]))<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    if ((sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_))<IonopauseAltitude) frequency=0.0;
+   
+    return frequency;
+}
+
+
+double newMars::ElectronImpactHotOFrequency(PIC::ParticleBuffer::byte *modelParticleData) {
+    double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
+    double frequency=0.0;
+    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    
+    double SolarWindProtonDensityx1EUV=2.5E6; //[m-3] from Lammer 03 from Selsis 02 or Zhang 93.
+    //    const double SolarWindProtonDensityx3EUV=8E6; //[m-3] from Lammer 03 from Selsis 02 or 6E6 from Zhang 93.
+    //    const double SolarWindProtonDensityx6EUV=4E7; //[m-3] from Lammer 03 from Selsis 02 or 4.3E6 from Zhang 93.
+    
+    double SolarWindProtonDensity=SolarWindProtonDensityx1EUV;
+    
+    double SolarWindElectronDensityAboveBowShock=SolarWindProtonDensity; //[cm-3] from Zhang 93.
+    double SolarWindElectronDensityBehindBowShock=4*SolarWindProtonDensity; //[cm-3] from Zhang 93.
+    double frequencyPerIncidentElectronAboveBowShock=2E-14; //[m3.s-1] function of Te from Cravens 87.
+    double frequencyPerIncidentElectronBehindBowShock=8E-14; //[m3.s-1] function of Te from Cravens 87.
+    
+    PIC::ParticleBuffer::GetV(v,modelParticleData);
+    PIC::ParticleBuffer::GetX(x,modelParticleData);
+    
+    double Xf=0.6*_RADIUS_(_TARGET_);
+    double L=2.081*_RADIUS_(_TARGET_);
+    double epsi=1.026;
+    double Ybs=sqrt(max((pow(epsi,2)-1)*pow((x[0]-Xf),2)-2*epsi*L*(x[0]-Xf)+pow(L,2),0.1));
+    double YY=sqrt(x[1]*x[1]+x[2]*x[2]);
+    
+    if (YY<Ybs) {frequency=SolarWindElectronDensityBehindBowShock*frequencyPerIncidentElectronBehindBowShock;}
+    else {frequency=SolarWindElectronDensityAboveBowShock*frequencyPerIncidentElectronAboveBowShock;}
+   
+
+double AltI=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_);
+//frequency=frequency*(1/pow(AltI,2)); 
+ 
+
+
+    //determine the positon of the subsolar point (tilt angle = 25.19 deg)
+    double Lat,Lon,xsun[3],xunit[3],x_proj;
+    Lat=0.0*Pi/180; //Aphelion=25.19, Perihelion=-25.19, Equinox=0.0
+    Lon=0.0*Pi/180;
+    
+    //unit vector for anti-subsolar point
+    xunit[0]=-cos(Lat)*cos(Lon);
+    xunit[1]=-cos(Lat)*sin(Lon);
+    xunit[2]=-sin(Lat);
+    
+    //x_proj_to_anti-subsolar=unit_vec(unit_vec.x)
+    xsun[0]=xunit[0]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[1]=xunit[1]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
+    
+    x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
+    
+    if (((xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2])>0.0)&&(x_proj<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    
+    //if ((x[0]<0.0)&&((sqrt(x[1]*x[1]+x[2]*x[2]))<(_RADIUS_(_TARGET_)+IonopauseAltitude))) frequency=0.0;
+    if ((sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_))<IonopauseAltitude) frequency=0.0;
+
+    return frequency;
+}
+
+/*
+//Total ionization of hot O corona
+double newMars::IonizationHotO(PIC::ParticleBuffer::byte *modelParticleData) {
+    double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
+    double localTimeStep;
+    int spec;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+    
+    PIC::ParticleBuffer::GetV(v,modelParticleData);
+    PIC::ParticleBuffer::GetX(x,modelParticleData);
+    spec=PIC::ParticleBuffer::GetI(modelParticleData);
+    localTimeStep=node->block->GetLocalTimeStep(spec);
+    
+    //    localTimeStep=node->block->GetLocalTimeStep(_O_SPEC_);
+    
+    double TotalIonizationFrequency=PhotoIonizationHotOFrequency(modelParticleData)+ChargeExchangeHotOFrequency(modelParticleData)+ElectronImpactHotOFrequency(modelParticleData);
+    double p=1.0-exp(-localTimeStep*TotalIonizationFrequency);
+    //    double p=1.0-exp(-1.0*TotalIonizationFrequency);
+    
+    //printf("%e, %i",localTimeStep,localTimeStep);
+    //exit(__LINE__,__FILE__,"Timestep printing");
+    
+    return (rnd()<p)? true:false;
+}*/
+
+
+//default function for calculation of the lifetile
+double newMars::TotalLifeTime(double *x,int spec,long int ptr,bool &ReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+    static bool initflag=false;
+    static double ReactionLifeTimeTable[PIC::nTotalSpecies];
+    static bool ReactionAllowedTable[PIC::nTotalSpecies];
+    
+    //init the lifetime table
+    if (initflag==false) {
+        initflag=true;
+        
+        for (int s=0;s<PIC::nTotalSpecies;s++) {
+            if (PhotolyticReactions::ModelAvailable(s)==true) {
+                ReactionAllowedTable[s]=true;
+         //       ReactionLifeTimeTable[s]=1.0/PhotolyticReactions::GetTotalReactionRate(s,HeliocentricDistance);
+            }
+            else {
+                ReactionAllowedTable[s]=false;
+       //         ReactionLifeTimeTable[s]=-1.0;
+            }
+        }
+    }
+    
+    //return the lifetime
+    ReactionAllowedFlag=ReactionAllowedTable[spec];
+   // return ReactionLifeTimeTable[spec];
+   
+    
+    double v[3]={0.0,0.0,0.0};
+    double localTimeStep;
+    //int spec;
+//    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+    PIC::ParticleBuffer::byte *modelParticleData;
+
+    //get the particle data
+    modelParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+    //PIC::ParticleBuffer::GetV(v,modelParticleData);
+   // PIC::ParticleBuffer::GetX(x,modelParticleData);
+    //spec=PIC::ParticleBuffer::GetI(modelParticleData);
+    localTimeStep=node->block->GetLocalTimeStep(spec);
+    
+    //    localTimeStep=node->block->GetLocalTimeStep(_O_SPEC_);
+    
+    double TotalIonizationFrequency=PhotoIonizationHotOFrequency(modelParticleData)+ChargeExchangeHotOFrequency(modelParticleData)+ElectronImpactHotOFrequency(modelParticleData);
+   // double p=1.0-exp(-localTimeStep*TotalIonizationFrequency);
+    //    double p=1.0-exp(-1.0*TotalIonizationFrequency);
+    
+    //return (rnd()<p)? true:false;
+  /* 
+if (TotalIonizationFrequency==0.0){
+    TotalIonizationFrequency=TotalIonizationFrequency;
+}
+else{ 
+    TotalIonizationFrequency=1/TotalIonizationFrequency;}
+    */
+return TotalIonizationFrequency;
+
+}
+
+
+//process particle chemical transformation
+void newMars::PhotochemicalModelProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+    int *ReactionProductsList,nReactionProducts;
+    double *ReactionProductVelocity;
+    int ReactionChannel,spec;
+    bool PhotolyticReactionRoute;
+    PIC::ParticleBuffer::byte *ParticleData;
+    double vParent[3],xParent[3],ParentLifeTime;
+    double rateI;
+
+    
+    
+    //get the particle data
+    ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+    spec=PIC::ParticleBuffer::GetI(ParticleData);
+    PIC::ParticleBuffer::GetV(vParent,ParticleData);
+    PIC::ParticleBuffer::GetX(xParent,ParticleData);
+    
+    rateI=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*node->block->GetLocalParticleWeight(spec)/node->block->GetLocalTimeStep(spec);
+    
+    bool PhotolyticReactionAllowedFlag;
+    
+    ParentLifeTime=TotalLifeTime(NULL,spec,ptr,PhotolyticReactionAllowedFlag,node);
+    
+//    exit(__LINE__,__FILE__,"test0");
+    if (PhotolyticReactionAllowedFlag==false) {
+        //no reaction occurs -> add the particle to the list
+        //the particle is remain in the system
+        PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+        PIC::ParticleBuffer::SetPrev(-1,ptr);
+        
+ //   exit(__LINE__,__FILE__,"test0.5");
+        if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+        FirstParticleCell=ptr;
+        return;
+    }
+    
+    //exit(__LINE__,__FILE__,"test1");
+  /*  //init the reaction tables
+    static bool initflag=false;
+    static double ProductionYieldTable[PIC::nTotalSpecies][PIC::nTotalSpecies];
+    
+    if (initflag==false) {
+        int iParent,iProduct;
+        initflag=true;
+        
+        for (iParent=0;iParent<PIC::nTotalSpecies;iParent++) for (iProduct=0;iProduct<PIC::nTotalSpecies;iProduct++) {
+            ProductionYieldTable[iParent][iProduct]=0.0;
+            
+            if (PhotolyticReactions::ModelAvailable(iParent)==true) {
+                ProductionYieldTable[iParent][iProduct]=PhotolyticReactions::GetSpeciesReactionYield(iProduct,iParent);
+            }
+        }
+    }*/
+    
+    //inject the products of the reaction
+    double ParentTimeStep,ParentParticleWeight;
+    
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+#else
+    ParentParticleWeight=0.0;
+    exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+    
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+    ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#else
+    ParentTimeStep=node->block->GetLocalTimeStep(spec);
+#endif
+    
+    
+    //account for the parent particle correction factor
+    ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+    
+    //the particle buffer used to set-up the new particle data
+    char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+    
+    //copy the state of the initial parent particle into the new-daugher particle (just in case....)
+    PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
+    
+    for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) if (specProduct!=spec) {
+        double ProductTimeStep,ProductParticleWeight;
+        double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+        int iProduct;
+        long int newParticle;
+        PIC::ParticleBuffer::byte *newParticleData;
+        
+        
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+        ProductParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[specProduct];
+#else
+        ProductParticleWeight=0.0;
+        exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+        
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+        ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
+#else
+        ProductTimeStep=node->block->GetLocalTimeStep(specProduct);
+#endif
+        
+    /*
+        double anpart=ProductionYieldTable[spec][specProduct]*(1.0-exp(-ProductTimeStep/ParentLifeTime))*ParentParticleWeight/ProductParticleWeight;
+        int npart=(int)anpart;
+        if (anpart-npart>rnd()) npart+=1;
+        
+        for (int n=0;n<npart;n++) {
+            //generate model particle with spec=specProduct
+            bool flag=false;
+            
+            do {
+                //generate a reaction channel
+                PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+                
+                //check whether the products contain species with spec=specProduct
+                for (iProduct=0;iProduct<nReactionProducts;iProduct++) if (ReactionProductsList[iProduct]==specProduct) {
+                    flag=true;
+                    break;
+                }
+            }
+            while (flag==false);
+   
+   
+            //determine the velocity of the product specie
+            double x[3],v[3],c=rnd();
+            
+            for (int idim=0;idim<3;idim++) {
+                x[idim]=xParent[idim];
+                v[idim]=vParent[idim]+ReactionProductVelocity[idim+3*iProduct];
+            }
+            
+            //generate a particle
+            PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
+            PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
+            PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
+            
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+            PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+#endif
+            
+            //apply condition of tracking the particle
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+            PIC::ParticleTracker::InitParticleID(tempParticleData);
+            PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,specProduct,tempParticleData,(void*)node);
+#endif
+            
+            
+            //get and injection into the system the new model particle
+            newParticle=PIC::ParticleBuffer::GetNewParticle(FirstParticleCell);
+            newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+            
+            PIC::ParticleBuffer::CloneParticle(newParticleData,(PIC::ParticleBuffer::byte *)tempParticleData);
+        }
+     */
+    }
+    
+            
+            
+    double probI=exp(-ParentTimeStep*ParentLifeTime);
+    double randomN=rnd();
+
+ //determine whether the parent particle is removed
+    //if (rnd()<exp(-ParentTimeStep*ParentLifeTime)) {
+   
+ if (randomN<probI) {
+        //the particle is remain in the system
+        PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
+        PIC::ParticleBuffer::SetPrev(-1,ptr);
+      
+/* 
+if (ParentLifeTime<3.0 && ParentLifeTime>0.0){ 
+    printf("%e  %e  %e\n",ParentTimeStep,ParentLifeTime,probI);
+    exit(__LINE__,__FILE__,"test2");
+    }
+*/
+        if (FirstParticleCell!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstParticleCell);
+        FirstParticleCell=ptr;
+    }
+    else {
+        //the particle is removed from the system
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        IonizationRate[spec]+=rateI;
+   // exit(__LINE__,__FILE__,"test3");
+        
+    }
+}
+/////////////////////////Ionization////////////////////////////////////////////////////////
+
+
+
    double newMars::LocalTimeStep(int spec,bool& TimeStepLimitationImposed, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
 
@@ -1004,6 +1474,7 @@ exit(__LINE__,__FILE__,"Error: HotC source is not defined");
     return dx/Vmax;
 
   }
+
 
    void newMars::TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
 

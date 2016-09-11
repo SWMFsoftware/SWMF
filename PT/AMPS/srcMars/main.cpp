@@ -41,7 +41,7 @@ const double DebugRunMultiplier=2.0;
 
 
 const double rSphere=_RADIUS_(_TARGET_);
-const double xMaxDomain=2.0;
+const double xMaxDomain=6.0;
 const double dxMinGlobal=2.0,dxMaxGlobal=5.0;
 const double dxMinSphere=DebugRunMultiplier*2.0/100,dxMaxSphere=DebugRunMultiplier*4.0/100.0;
 
@@ -219,10 +219,10 @@ int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &
 void OxigenTGCM() {
 /*cDataSetMTGCM O,COp;
 
- O.PlanetRadius=3396.0E3;
+ O.PlanetRadius=3388.25E3;
  O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
  O.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O.h");
-    COp.PlanetRadius=3396.0E3;
+    COp.PlanetRadius=3388.25E3;
     COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
     COp.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/COp.h");
 
@@ -231,7 +231,7 @@ void OxigenTGCM() {
 
 
  const int nPoints=300;
- double R=135.0E3+3396.0E3;
+ double R=135.0E3+3388.25E3;
  const double dLon=2.0*Pi/(nPoints-1),dLat=Pi/(nPoints-1);
 
  if (PIC::ThisThread==0) {
@@ -254,10 +254,10 @@ void OxigenTGCM() {
 
        t=COp.Interpolate(x);
      
-   //    cout <<(R-3396.0E3)/1000<<"  "<<t<<"\n"<< endl;
+   //    cout <<(R-3388.25E3)/1000<<"  "<<t<<"\n"<< endl;
 
      
-     fprintf(fout,"%e  %e\n",(R-3396.0E3)/1000,t);
+     fprintf(fout,"%e  %e\n",(R-3388.25E3)/1000,t);
      
     R+=1E3;
    }
@@ -448,6 +448,9 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 //    PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotCarbon::HotCProduction,newMars::LocalTimeStep);
     PIC::VolumeParticleInjection::RegisterVolumeInjectionProcess(newMars::ProductionRateCaluclation,newMars::HotAtomProduction_wrapper,newMars::LocalTimeStep);
 
+//  PIC::ChemicalReactions::PhotolyticReactions::Init();
+//PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
+  
   /*
   //init the interpolation procedure
   newMars::ReadMTGCM();
@@ -480,8 +483,8 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   PIC::ParticleWeightTimeStep::initTimeStep();
 
   //set up the particle weight
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000*PIC::nTotalThreads;
-  if (PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber>5000) PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500; //50000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=3000;//*PIC::nTotalThreads;
+//  if (PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber>5000) PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500; //50000;
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=NULL;
     if (_C_SPEC_>=0) {
@@ -562,7 +565,10 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 //     PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
 
-     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+//  PIC::ChemicalReactions::PhotolyticReactions::Init();
+//  PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
+  
+   if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
        PIC::RequiredSampleLength*=2;
        if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
 
