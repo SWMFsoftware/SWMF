@@ -1011,11 +1011,11 @@ double newMars::PhotoIonizationHotOFrequency(PIC::ParticleBuffer::byte *modelPar
     const double PhotoionizationTimeSolarMax=1.7E6*pow(SemiMajorDistance,2); // [s] at 1AU: 1.7E6 from Hodges 00.
     //[s-1] at Mars: 2.73E-7 from Schunk 00 or 2.6E-7 from Hodges 00 or 31.25E-8 from Modolo 05.
     
-    //const double PhotoionizationTime=(PhotoionizationTimeSolarMin+PhotoionizationTimeSolarMax)/2;//solar moderate
-    const double PhotoionizationTime=PhotoionizationTimeSolarMin;//solar min
+    const double PhotoionizationTime=(PhotoionizationTimeSolarMin+PhotoionizationTimeSolarMax)/2;//solar moderate
+    //const double PhotoionizationTime=PhotoionizationTimeSolarMin;//solar min
     //const double PhotoionizationTime=PhotoionizationTimeSolarMax;//solar max
     
-    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    double IonopauseAltitude=350000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
     
     PIC::ParticleBuffer::GetV(v,modelParticleData);
     PIC::ParticleBuffer::GetX(x,modelParticleData);
@@ -1055,7 +1055,7 @@ double newMars::ChargeExchangeHotOFrequency(PIC::ParticleBuffer::byte *modelPart
     double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
     double frequency=0.0;
     double CXcrossSection=8.0E-20; //[m2] from Stebbings 64.
-    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    double IonopauseAltitude=350000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
     
     
     double SolarWindProtonDensityx1EUV=2.5E6; //[m-3] from Lammer 03 from Selsis 02 or Zhang 93.
@@ -1105,7 +1105,7 @@ double AltI=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_);
 double newMars::ElectronImpactHotOFrequency(PIC::ParticleBuffer::byte *modelParticleData) {
     double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
     double frequency=0.0;
-    double IonopauseAltitude=300000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
+    double IonopauseAltitude=350000.0; // Day-side ionopause altitude assumed constant and equal to 300 km from Zhang 93
     
     double SolarWindProtonDensityx1EUV=2.5E6; //[m-3] from Lammer 03 from Selsis 02 or Zhang 93.
     //    const double SolarWindProtonDensityx3EUV=8E6; //[m-3] from Lammer 03 from Selsis 02 or 6E6 from Zhang 93.
