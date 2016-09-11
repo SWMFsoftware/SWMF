@@ -6,6 +6,20 @@
  */
 /*
  * $Log$
+ * Revision 1.10  2016/03/24 21:16:56  yunilee
+ * All the functions and parameters that have required manual chnages for different model species are now merged for a target-species switch in input file.
+ * Mars codes (Mars.cpp Mars.h main.cpp) are now specie-dependent.
+ * Model species is switchable by changing "SpeciesList" in input file (single/multispecies).
+ * Modifications were made in the functions listed below:
+ * 1. Production rate calculation function in Mars.h (double ProductionRateCaluclation_HotO, double ProductionRateCaluclation_HotC)
+ * 2. Independent namespaces are created for target species in Mars.h
+ * 3. In Mars.cpp: Former is a wrapper function for latter (see below):
+ * void newMars::ProductionRateCaluclation --> void newMars::SpeciesProductionRateCaluclation
+ * long int newMars::HotAtomProduction_wrapper --> long int newMars::HotOxygen::HotOProduction, long int newMars::HotCarbon::HotCProduction
+ * 4. main.cpp will now initialize species assigned by input file
+ *
+ * Working cases for current verstion: Hot O (Dissociative recombination of O2+), Hot C (Photodissociation of CO)
+ *
  * Revision 1.9  2015/10/23 18:51:23  dborovik
  * reverting to the previous versions
  *
@@ -46,7 +60,7 @@ double *newMars::SampledEscapeRate=NULL;
 //spherical mesh for sampling macroscopic parameters
 cSphericalVolumeMesh newMars::SphericalSamplingMesh;
 
-cDataSetMTGCM newMars::Te,newMars::Ti,newMars::Tn,newMars::O,newMars::CO2,newMars::O2p,newMars::Un,newMars::Vn,newMars::Wn,newMars::COp,newMars::CO,newMars::E;
+cDataSetMTGCM newMars::Te,newMars::Ti,newMars::Tn,newMars::O,newMars::CO2,newMars::O2p,newMars::Un,newMars::Vn,newMars::Wn,newMars::COp,newMars::CO,newMars::E,newMars::TnEQU,newMars::OEQU,newMars::CO2EQU;
 
 //read the forward collision cross section data
 //cDiffCrossSection newMars::ForwardCollisionCrossSection;
@@ -779,20 +793,19 @@ long int newMars::HotCarbon::HotCProduction(int iCellIndex,int jCellIndex,int kC
         //Determine the energy for new hot O
         double BrRatio=rnd(); //Branch Ratio for 4 channels from dissociative recombination Kella et al. ['97]
         double speed;
-        /*
-         if      (BrRatio<.22) {speed=sqrt(KineticEnergy4/massO);}
-         else if (BrRatio<.64) {speed=sqrt(KineticEnergy3/massO);}
-         else if (BrRatio<.95) {speed=sqrt(KineticEnergy2/massO);}
-         else                  {speed=sqrt(KineticEnergy1/massO);}
-         
+        
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
         //Determine the energy for new hot C, Branch Ration for 3 channels from dissociative recombination Rosen et al. ['98]
         if      (BrRatio<.761) {speed=sqrt((KineticEnergy1)/((massC*massO+massC*massC)/(2*massO)));}
         else if (BrRatio<.906) {speed=sqrt((KineticEnergy2)/((massC*massO+massC*massC)/(2*massO)));}
-        else                   {speed=sqrt((KineticEnergy3)/((massC*massO+massC*massC)/(2*massO)));}*/
+        else                   {speed=sqrt((KineticEnergy3)/((massC*massO+massC*massC)/(2*massO)));}
         
+#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
         //Determine the energy for new hot C from photodissociation of CO, Huebner[92]
         speed=sqrt((KineticEnergy)/((massC*massO+massC*massC)/(2*massO)));
-        
+#else
+        exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
         
         //=======================  DEBUG =============
         //test the particle injection with particular energy
@@ -807,8 +820,27 @@ long int newMars::HotCarbon::HotCProduction(int iCellIndex,int jCellIndex,int kC
         
         
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
+        
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+        if (Altitude>200.0E3 && Altitude<=300.0E3) {//Dr.Bougher provided Ti eqn, Fox93 Nitrogen paper
+            betaO2=massCO/(2*k*(pow(10,(2.243+((Altitude/1000)-180)/95))));
+            BGMeanFlowVelocity(bulkVelocity,x);
+        }
+        else if (Altitude>300.0E3) { //Ti=Te above 300km
+            betaO2=massCO/(2*k*(4200-3750*exp((180-(Altitude/1000))/89.6)));
+            BGMeanFlowVelocity(bulkVelocity,x);
+        }
+        else {
+            betaO2=massCO/(2*k*Ti.Interpolate(x));
+            BGMeanFlowVelocity(bulkVelocity,x);
+        }
+#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
         betaO2=massCO/(2*k*Tn.Interpolate(x));
         BGMeanFlowVelocity(bulkVelocity,x);
+#else
+        exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
+        
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
         betaO2=massCO/(2*k*MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetNeutralTemeprature(x));
 #endif
@@ -946,8 +978,17 @@ long int newMars::HotCarbon::HotCProduction(int iCellIndex,int jCellIndex,int kC
        
        
        else if (spec==_C_SPEC_) {
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+           
+           Vmax=sqrt((2*newMars::HotCarbon::KineticEnergy1)/massC);}
+#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
+
            Vmax=sqrt((2*newMars::HotCarbon::KineticEnergy)/massC);}
        
+#else
+exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
+
        else {
            exit(__LINE__,__FILE__,"Error: species is not defined");
        }

@@ -215,9 +215,11 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
   if (InitFlag==false) {
     InitFlag=true;
 
+    char fname[_MAX_STRING_LENGTH_PIC_];
     Tn.PlanetRadius=_RADIUS_(_TARGET_);
     Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-    Tn.ReadDataFile("Tn.h");
+    sprintf(fname,"%s/MTGCM_equinox_SL/Tn.h",PIC::UserModelInputDataPath);
+    Tn.ReadDataFile(fname);
   }
 
   //only oxigen atoms can be keeped in the system

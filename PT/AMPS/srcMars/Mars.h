@@ -38,21 +38,20 @@
 //the forward scattering cross section
 #include "Kharchenko-2000-fig-3.h"
 
-
 //List of types of O2+ DR coefficients
 #define Hodges 0
 #define Mehr 1
 #define Peverall 2
 
-#define DR Mehr
-/*
+#define DRO2p Mehr
+
 //List of types of CO+ DR coefficients
 #define Rosen 0
 #define Cloutier 1
 #define Mitchell 2
 
-#define DR Rosen
-*/
+#define DRCOp Rosen
+
 using namespace std;
 
 const double massO=26.56E-27; //kg 
@@ -87,8 +86,14 @@ extern cForwardScatteringCrossSection *ForwardScatteringCrossSectionData;
  
 namespace newMars {
 //extern cDataSetMTGCM Te;
-extern cDataSetMTGCM Te,Ti,Tn,O,CO2,O2p,Un,Vn,Wn,COp,CO,E;
-
+//#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+    extern cDataSetMTGCM Te,Ti,Tn,O,CO2,O2p,Un,Vn,Wn,COp,CO,E,TnEQU,OEQU,CO2EQU;
+/*#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
+    extern cDataSetMTGCM Te,Ti,Tn,O,CO2,O2p,Un,Vn,Wn,COp,CO,E;
+#else
+      exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
+  */  
 //offsets of the model sampled data
 extern int maxLocalCellOxigenProductionRateOffset,minLocalCellOxigenProductionRateOffset,minLocalBackdroundDensityOffset;
 extern int sampledLocalInjectionRateOffset;
@@ -144,7 +149,24 @@ inline void ReadMTGCM() {
 		pent=chdir(directory);*/
 
     char fname[_MAX_STRING_LENGTH_PIC_];
-				
+    
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+    TnEQU.PlanetRadius=_RADIUS_(_TARGET_);
+    TnEQU.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
+    sprintf(fname,"%s/MTGCM_equinox_SL/TnEQU.h",PIC::UserModelInputDataPath);
+    TnEQU.ReadDataFile(fname);
+    
+    OEQU.PlanetRadius=_RADIUS_(_TARGET_);
+    OEQU.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+    sprintf(fname,"%s/MTGCM_equinox_SL/OEQU.h",PIC::UserModelInputDataPath);
+    OEQU.ReadDataFile(fname);
+    
+    CO2EQU.PlanetRadius=_RADIUS_(_TARGET_);
+    CO2EQU.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+    sprintf(fname,"%s/MTGCM_equinox_SL/CO2EQU.h",PIC::UserModelInputDataPath);
+    CO2EQU.ReadDataFile(fname);
+#endif
+    
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
 		sprintf(fname,"%s/MTGCM_equinox_SL/Te.h",PIC::UserModelInputDataPath);
@@ -306,28 +328,180 @@ inline void ReadMTGCM() {
 	
 inline double ProductionRateCaluclation_HotO(double *x) {
 //inline double ProductionRateCaluclation(double *x) {
-        
+    
+    
     double production_rate=0.0;
     if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
-        
+    
     //Hot Oxygen O2+ DR reaction
-        #if DR == Hodges //Hodges [2000]
+        #if DRO2p == Hodges //Hodges [2000]
         production_rate=1.6E-7*pow(300/Te.Interpolate(x),0.55)*O2p.Interpolate(x)*E.Interpolate(x);
         #endif
-        #if DR == Mehr //Mehr and Biondi [1969]
+        #if DRO2p == Mehr //Mehr and Biondi [1969]
         if (Te.Interpolate(x)<=1200.0) {production_rate=1.95E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);}
         else if (Te.Interpolate(x)>1200.0) {production_rate=0.75E-7*pow(1200/Te.Interpolate(x),0.56)*O2p.Interpolate(x)*E.Interpolate(x);}
         #endif
-        #if DR == Peverall //Peverall [2001]
+        #if DRO2p == Peverall //Peverall [2001]
         production_rate=2.4E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);
         #endif
         
     return production_rate*1.0e6;
+
 }
 
 inline double ProductionRateCaluclation_HotC(double *x) {
 //inline double ProductionRateCaluclation(double *x) {
+    
+    
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+    double production_rate=0.0;
+    double t=0.0;
+    //	bool validAlt = false;
+    double z0 = 200E3;
+    //	while (validAlt == false) {
+    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
+    
+    double Altitude2,rpeak;
+    double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+    double r=sqrt(r2);
+    double AtmPressure,AtmPressurePeak,AzimuthalAng,PolarAng=0.0;
+    
+    double Altitude = r-_RADIUS_(_TARGET_);
+    
+    
+    
+    // Hot Carbon
+    double COpScaleHeight=53.8E3;//50.2E3; //Solar Min
+    //double COpScaleHeight=72.6E3;//102.1E3; //Solar Max
+    double peak=210.0E3;//solar min
+    //double peak=240.0E3;//solar max
+    
+    double vectop2[3]={0.0,0.0,0.0},vectop[3]={0.0,0.0,0.0},vectopP[3]={0.0,0.0,0.0};
+    //	double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+    //	double r=sqrt(r2);
+    int idim;
+    
+    
+    
+    AtmPressure=Kbol*(O.Interpolate(x)+CO2.Interpolate(x))*Tn.Interpolate(x);
+    
+    for (idim=0;idim<DIM;idim++) {vectopP[idim]= (3396.0E3+210.0E3)*(x[idim]/r);}
+    AtmPressurePeak=Kbol*(OEQU.Interpolate(vectopP)+CO2EQU.Interpolate(vectopP))*TnEQU.Interpolate(vectopP);
+    // AtmPressurePeak=1.7E-13;
+    
+    double Pz=0.0;
+    Altitude2=0.0;
+    if (AtmPressure<=AtmPressurePeak+(0.1*AtmPressurePeak) && AtmPressure>=AtmPressurePeak-(0.1*AtmPressurePeak))
+    {Altitude2=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])-_RADIUS_(_TARGET_);}
+    else if (Altitude <200.0E3)
+    {Altitude2=peak;}
+    else if (Altitude >= 200.0E3 && Altitude2==0.0) {
+        while (AtmPressure!=AtmPressurePeak)/*(AtmPressure>AtmPressurePeak+(0.1*AtmPressurePeak) || AtmPressure<AtmPressurePeak-(0.1*AtmPressurePeak))*/ {
+            
+            
+            if (AtmPressure<=AtmPressurePeak+(0.1*AtmPressurePeak) && AtmPressure>=AtmPressurePeak-(0.1*AtmPressurePeak))
+            {for (idim=0;idim<DIM;idim++) {vectopP[idim]=(3396.0E3+(r-(Pz+3396.0E3)))*(x[idim]/r);}
+                Altitude2=sqrt(vectopP[0]*vectopP[0]+vectopP[1]*vectopP[1]+vectopP[2]*vectopP[2])-_RADIUS_(_TARGET_);
+                break;}
+            
+            else if (((r-3396.0E3)-Pz)<200.0E3) {
+                Altitude2=peak;
+                break;}
+            
+            for (idim=0;idim<DIM;idim++) {vectopP[idim]=(3396.0E3+(r-(Pz+3396.0E3)))*(x[idim]/r);}
+            AtmPressure=Kbol*(O.Interpolate(vectopP)+CO2.Interpolate(vectopP))*Tn.Interpolate(vectopP);
+            
+            
+            Pz+=1E3;
+        }
+    }
+    
+    
+    
+    AtmPressure=Kbol*(O.Interpolate(x)+CO2.Interpolate(x))*Tn.Interpolate(x);
+    
+    bool validt=false;
+    while (validt==false) {
         
+        for (idim=0;idim<DIM;idim++) {
+            vectop[idim] = (3396.0E3+z0)*(x[idim]/r);
+            vectop2[idim]= (3396.0E3+(z0-10E3))*(x[idim]/r);
+        }
+        
+        double localH=10E3/(log(COp.Interpolate(vectop)/COp.Interpolate(vectop2)));
+        bool isnan(localH);
+        if (localH<COpScaleHeight/3) {
+            localH=COpScaleHeight/2;
+        }
+        else if (isnan(localH)==true) {
+            localH=COpScaleHeight;
+        }
+        else if (localH>COpScaleHeight) {
+            localH=COpScaleHeight;
+        }
+        
+        if (Altitude>=135.0E3 && Altitude<z0){t=COp.Interpolate(x);}
+        else if (Altitude>=z0 && Altitude<Altitude2){t=COp.Interpolate(vectop)*exp((Altitude-z0)/localH);}
+        // else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/COpScaleHeight);}
+        else if (Altitude>=Altitude2){t=(COp.Interpolate(vectop)*exp((Altitude2-z0)/localH))*exp(-(Altitude-Altitude2)/COpScaleHeight);}
+        
+        //	if (nz>100E3){exit(__LINE__,__FILE__,"Error");}
+        bool isnan(t);
+        bool isinf(t);
+        
+        double nz=1E3,tt=0.0;
+        while (isnan(t)==true) {
+            if (nz>=Altitude) {t=1.0;}
+            for (idim=0;idim<DIM;idim++) {vectop2[idim]= (3396.0E3+(Altitude-nz))*(x[idim]/r);}
+            t=COp.Interpolate(vectop2);
+            nz+=1E3;
+        }
+        
+        /*	if (z0<135.0E3) {
+         validt=true;
+         t=0.0;}
+         else {*/
+        if (Altitude>=1500E3) {
+            if (t>1E10) {z0-=1E3;}
+            else {validt=true;}
+        }
+        
+        else {
+            if (t>1E10 || t<1E-20) {z0-=1E3;}
+            else {validt=true;}
+        }
+        if (z0<135.0E3) {
+            t=1.0;
+            validt=true;}
+    }
+    
+    if (Altitude>200.0E3) {
+#if DRCOp == Rosen //Rosen [1998]
+        production_rate=2.75E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.55)*t*E.Interpolate(x);
+#endif
+#if DRCOp == Cloutier //Cloutier and Daniell [1979]
+        production_rate=6.47E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.53)*t*E.Interpolate(x);
+#endif
+#if DRCOp == Mitchell //Mitchell and Hus [1985]
+        production_rate=2.0E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.48)*t*E.Interpolate(x);
+#endif
+    }
+    else {
+#if DRCOp == Rosen //Rosen [1998]
+        production_rate=2.75E-7*pow(300/Te.Interpolate(x),0.55)*t*E.Interpolate(x);
+#endif
+#if DRCOp == Cloutier //Cloutier and Daniell [1979]
+        production_rate=6.47E-7*pow(300/Te.Interpolate(x),0.53)*t*E.Interpolate(x);
+#endif
+#if DRCOp == Mitchell //Mitchell and Hus [1985]
+        production_rate=2.0E-7*pow(300/Te.Interpolate(x),0.48)*t*E.Interpolate(x);
+#endif
+    }
+    
+    return production_rate*1.0e6;
+    
+#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
+
     double production_rate=0.0;
     if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
     
@@ -361,6 +535,11 @@ inline double ProductionRateCaluclation_HotC(double *x) {
             
         
     return production_rate*1.0e6;
+    
+#else
+    exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
+
 }
     
   /*  //Species needs to be identified for the production rate calculation function
@@ -520,16 +699,22 @@ namespace HotOxygen {
 }
 namespace HotCarbon {
     
+#if _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Dissociative_Recombination_COp_
+
     //Hot Carbon DR
     
-   /* const float KineticEnergy1=2.90*1.60217653E-19;
+    const float KineticEnergy1=2.90*1.60217653E-19;
     const float KineticEnergy2=1.64*1.60217653E-19;
     const float KineticEnergy3=0.94*1.60217653E-19;
-    */
+#elif _HotCarbon_Source_Reaction_==_HotCarbon_Source_Reaction__Photodissociation_CO_
+
     //Hot Carbon Photodissociation
             const float KineticEnergy=2.56*1.60217652E-19; //solar low
     //		const float KineticEnergy=2.58*1.60217652E-19; //solar high
     
+#else
+    exit(__LINE__,__FILE__,"Error: HotC source is not defined");
+#endif
     
     long int HotCProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
