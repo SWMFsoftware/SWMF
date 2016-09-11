@@ -170,57 +170,57 @@ inline void ReadMTGCM() {
     
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Te.ReadDataFile(_Te_MGITM_,fname);
 		
 		Tn.PlanetRadius=_RADIUS_(_TARGET_);
 		Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Tn.ReadDataFile(_Tn_MGITM_,fname);
 				
 		Ti.PlanetRadius=_RADIUS_(_TARGET_);
 		Ti.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Ti.ReadDataFile(_Ti_MGITM_,fname);
 		
 		O2p.PlanetRadius=_RADIUS_(_TARGET_);
 		O2p.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		O2p.ReadDataFile(_nO2P_MGITM_,fname);
 				
 		E.PlanetRadius=_RADIUS_(_TARGET_);
 		E.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		E.ReadDataFile(_Ne_MGITM_,fname);
 		
 		O.PlanetRadius=_RADIUS_(_TARGET_);
 		O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		O.ReadDataFile(_nO_MGITM_,fname);
 		
 		CO.PlanetRadius=_RADIUS_(_TARGET_);
 		CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		CO.ReadDataFile(_nCO_MGITM_,fname);
 		
 		CO2.PlanetRadius=_RADIUS_(_TARGET_);
 		CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		CO2.ReadDataFile(_nCO2_MGITM_,fname);
 	
 		Un.PlanetRadius=_RADIUS_(_TARGET_);
 		Un.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Un.ReadDataFile(_UN_MGITM_,fname);
 		
 		Vn.PlanetRadius=_RADIUS_(_TARGET_);
 		Vn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Vn.ReadDataFile(_VN_MGITM_,fname);
 		
 		Wn.PlanetRadius=_RADIUS_(_TARGET_);
 		Wn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Wn.ReadDataFile(_WN_MGITM_,fname);
 		
 	/*	COp.PlanetRadius=_RADIUS_(_TARGET_);
@@ -361,7 +361,7 @@ inline double ProductionRateCaluclation_HotO(double *x) {
     double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
     double r=sqrt(r2);
     double Altitude = r-_RADIUS_(_TARGET_);
-    double cutoffAlt=211.0E3;//211.0E3;
+    double cutoffAlt=221.0E3;//211.0E3;
     double delZ=30.0E3;
     
     ///////////Te modification///////

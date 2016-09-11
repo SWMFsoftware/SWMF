@@ -101,22 +101,22 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
         
         O.PlanetRadius=_RADIUS_(_TARGET_);
         O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 	O.ReadDataFile(_nO_MGITM_,fname);
         
         CO2.PlanetRadius=_RADIUS_(_TARGET_);
         CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 	CO2.ReadDataFile(_nCO2_MGITM_,fname);
         
         CO.PlanetRadius=_RADIUS_(_TARGET_);
         CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 	CO.ReadDataFile(_nCO_MGITM_,fname);
         
         N2.PlanetRadius=_RADIUS_(_TARGET_);
         N2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 	N2.ReadDataFile(_nN2_MGITM_,fname);
     }
     
@@ -261,7 +261,7 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
         
         Tn.PlanetRadius=_RADIUS_(_TARGET_);
         Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_VEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 	Tn.ReadDataFile(_Tn_MGITM_,fname);
     }
 
