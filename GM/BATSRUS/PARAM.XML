@@ -130,27 +130,31 @@ The default is time accurate mode.
 
 #LOCALTIMESTEP
 T               UseLocalTimeStep
+T		UseMaxTimeStep
 
 This command controls how the time stepping works in time accurate mode.
 
-If UseLocalTimeStep is true, the time step in each grid block
-will depend on the AMR level in explicit time accurate mode. 
-This algorithm is sometimes called "subcycling" because the blocks at a 
-finer AMR level will do several small time steps during a single global 
-time step. This should not be confused with the "steady state" mode 
+If UseLocalTimeStep is true, the time step size in each grid block can be different.
+This algorithm is sometimes called "subcycling" because some of the blocks
+will take several small time steps during a single global time step. 
+This should not be confused with the "steady state" mode 
 (see the TIMEACCURATE command) where each grid cell takes different 
 time steps and the result is only valid if a steady state is reached.
 
-For Cartesian grids the time step will be proportional to the physical cell 
-size, which is optimal if the wave speeds are roughly constant in the whole
-domain. Note that the stability conditions will hold in every grid block.
+If UseMaxTimeStep is true, each blocks takes the time step determined by
+the local stability condition. This algorithm is still under development.
 
-This is a fairly new algorithm that requires more testing. 
-Currently the algorithm is always second order accurate in time. 
-A conservative flux correction is applied at the resolution changes.
+If UseMaxTimeStep is false, then the local time step will be set by the AMR level. 
+For Cartesian grids the time step will be proportional to the physical cell size, 
+which is optimal if the wave speeds are roughly constant in the whole domain. 
+Note that the global time step is set so that the stability conditions hold in 
+every grid block. A conservative flux correction is applied at the resolution changes.
 On the other hand, the normal velocity, normal magnetic/electric field 
 etc. used in some source terms are not "corrected", which is different
 from the default uniform time step algorithm.
+
+Currently the subcycling algorithm is either first or second order accurate in time
+depending on the value of nStage set in the #TIMESTEPPING command.
 
 The default is using a uniform time step for the whole domain.
 </command>
