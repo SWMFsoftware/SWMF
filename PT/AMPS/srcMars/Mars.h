@@ -170,57 +170,57 @@ inline void ReadMTGCM() {
     
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Te.ReadDataFile(_Te_MGITM_,fname);
 		
 		Tn.PlanetRadius=_RADIUS_(_TARGET_);
 		Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Tn.ReadDataFile(_Tn_MGITM_,fname);
 				
 		Ti.PlanetRadius=_RADIUS_(_TARGET_);
 		Ti.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Ti.ReadDataFile(_Ti_MGITM_,fname);
 		
 		O2p.PlanetRadius=_RADIUS_(_TARGET_);
 		O2p.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		O2p.ReadDataFile(_nO2P_MGITM_,fname);
 				
 		E.PlanetRadius=_RADIUS_(_TARGET_);
 		E.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		E.ReadDataFile(_Ne_MGITM_,fname);
 		
 		O.PlanetRadius=_RADIUS_(_TARGET_);
 		O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		O.ReadDataFile(_nO_MGITM_,fname);
 		
 		CO.PlanetRadius=_RADIUS_(_TARGET_);
 		CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		CO.ReadDataFile(_nCO_MGITM_,fname);
 		
 		CO2.PlanetRadius=_RADIUS_(_TARGET_);
 		CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		CO2.ReadDataFile(_nCO2_MGITM_,fname);
 	
 		Un.PlanetRadius=_RADIUS_(_TARGET_);
 		Un.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Un.ReadDataFile(_UN_MGITM_,fname);
 		
 		Vn.PlanetRadius=_RADIUS_(_TARGET_);
 		Vn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Vn.ReadDataFile(_VN_MGITM_,fname);
 		
 		Wn.PlanetRadius=_RADIUS_(_TARGET_);
 		Wn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMIN-SDC.dat",PIC::UserModelInputDataPath);
+		sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_AEQUMED-SDC.dat",PIC::UserModelInputDataPath);
 		Wn.ReadDataFile(_WN_MGITM_,fname);
 		
 	/*	COp.PlanetRadius=_RADIUS_(_TARGET_);
@@ -338,7 +338,7 @@ inline double ProductionRateCaluclation_HotO(double *x) {
     //double z0 = 200E3;
     //	while (validAlt == false) {
     if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
-	
+/*	
 	//determine the position of subsolar point
 	double Lat, Lon, xsun[3],xunit[3],x_proj;
 	Lat=0.0*Pi/180;
@@ -355,12 +355,13 @@ inline double ProductionRateCaluclation_HotO(double *x) {
 	xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
 	
 	x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
-    ////////////////////////////////////////////////////////////////////////MGITM modification//////////////////////////////////////////////
+*/  
+  ////////////////////////////////////////////////////////////////////////MGITM modification//////////////////////////////////////////////
     double tE,tO2p;
     double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
     double r=sqrt(r2);
     double Altitude = r-_RADIUS_(_TARGET_);
-    double cutoffAlt=235.0E3;//211.0E3;
+    double cutoffAlt=221.0E3;//211.0E3;
     double delZ=30.0E3;
     
     ///////////Te modification///////
