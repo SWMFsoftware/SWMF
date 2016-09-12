@@ -1,0 +1,23 @@
+input file for line calculation
+
+VERBOSE
+TRUE
+
+#DATAFILE
+shl.out			NameDataFile
+real4			TypeDataFile
+
+#TABLEFILE
+SPECTRUM.input.erg	NameTableFile
+300			MaxWave 
+
+#WAVELENGTHINTERVAL
+2			nInterval
+0			min (A)
+300			max (A)
+1000			min (A)
+2000			max (A)
+1                       SizeWavelengthBin (A)
+
+#INSTRUMENT
+EIS                     NameInstrument
