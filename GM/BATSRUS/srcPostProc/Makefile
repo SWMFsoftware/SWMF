@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL =/bin/sh
@@ -7,13 +8,18 @@ include ../Makefile.def
 include ../Makefile.conf
 include Makefile.RULES
 
-# Other requireed libraries
+# Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 
 
 #
 # Post processing executables
 #
+${BINDIR}/SPECTRUM.exe:	spectrum.o ${LIBDIR}/libSHARE.a
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
+
+SPECTRUM:
+	make ${BINDIR}/SPECTRUM.exe
 
 ${BINDIR}/PostSPH.exe:	PostSPH.o
 	${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
