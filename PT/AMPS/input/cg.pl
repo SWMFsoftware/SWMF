@@ -481,6 +481,11 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_","_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__OFF_","main/Comet.dfn");
       }
   }
+  elsif ($InputLine eq "NUMERICALLOSSRATEINCREASE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("const double NumericalLossRateIncrease","$InputLine","main/Comet.h");
+  }
   elsif ($InputLine eq "HELIOCENTRICDISTANCE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;

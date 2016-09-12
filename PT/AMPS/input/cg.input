@@ -231,6 +231,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
   ReadNeutralsFromBinary= off !on, off
   NumberOfNeutralsToRead= 2
 
+  NumericalLossRateIncrease=1000.0; //Numerical factor for daughter species particle weight
 
   !!Dust parameters
   DustMode=off !!on,off
