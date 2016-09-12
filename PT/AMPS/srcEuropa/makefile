@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = Europa.o Europa_Plume.o Europa_OrbitalMotion.o Europa_Parallel.o Europa_SourceProcesses.o main_lib.o 
+MAINLIBOBJ = main_lib.o Earth.o 
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)

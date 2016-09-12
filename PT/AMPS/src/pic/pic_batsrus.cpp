@@ -192,17 +192,27 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
       uname[i1-i0]=0;
 
-      if (strcmp(uname,"r")==0) --n; //the special coordinate is not a part of the vector that is returned by the interpolation routine
 
+
+      // planetary units --------
+      if (strcmp(uname,"r")==0) --n; //the special coordinate is not a part of the vector that is returned by the interpolation routine
       if (strcmp(uname,"mp/cc")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E6/PlasmaSpeciesAtomicMass;
       if (strcmp(uname,"km/s")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E3;
       if (strcmp(uname,"nt")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E-9;
       if (strcmp(uname,"npa")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E-9;
+      //-------------------------
+
+      // -------SI units --------
+      if (strcmp(uname,"m")==0) --n; //the special coordinate is not a part of the vector that is returned by the interpolation routine
+      if (strcmp(uname,"kg/m3")==0)PhysicalVariableUnitConversionTable[n+1]=1.;
+      if (strcmp(uname,"m/s"  )==0)PhysicalVariableUnitConversionTable[n+1]=1.;
+      if (strcmp(uname,"t"    )==0)PhysicalVariableUnitConversionTable[n+1]=1.;
+      if (strcmp(uname,"pa"   )==0)PhysicalVariableUnitConversionTable[n+1]=1.;
+      //-------------------------
 
       i0=i1;
       while ((UnitVar[i0]!=0)&&(UnitVar[i0]==' ')) i0++;
     }
-
 
     //check whether the unit conversion factors are defined for all physical variables
     if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || \

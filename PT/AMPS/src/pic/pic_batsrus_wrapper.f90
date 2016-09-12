@@ -44,7 +44,7 @@ subroutine batsrus2amps_get_namevardata(varlist,varlistlength)
   integer,intent(in)::varlistlength
   character(len=varlistlength),intent(out)::varlist
   !-----------------------------------------------------  
-  varlist(1:varlistlength)=NameVarData(1:varlistlength)
+  varlist(1:len(NameVarData))=NameVarData(1:len(NameVarData))
 end subroutine batsrus2amps_get_namevardata  
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -56,7 +56,7 @@ subroutine batsrus2amps_get_nameunitdata(unitlist,unitlistlength)
   integer,                      intent(in )::unitlistlength
   character(len=unitlistlength),intent(out)::unitlist
   !-----------------------------------------------------
-  unitlist(1:unitlistlength)=NameUnitData(1:unitlistlength)
+  unitlist(1:len(NameUnitData))=NameUnitData(1:len(NameUnitData))
 end subroutine batsrus2amps_get_nameunitdata  
   
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
