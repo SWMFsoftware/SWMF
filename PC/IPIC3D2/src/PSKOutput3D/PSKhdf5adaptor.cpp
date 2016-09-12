@@ -186,7 +186,7 @@ void HDF5OutputAdaptor::open_append(const std::string & name, bool doEraseFile) 
   }
 
   if (_hdf5_file_id <= 0) {
-    eprintf("H5Fopen fails");
+    eprintf("H5Fopen fails for %s",name.c_str());
     //PSK::OutputException e("H5Fopen fails", "HDF5OutputAdaptor::open_append()");
 
     //throw e;
