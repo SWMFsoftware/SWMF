@@ -131,7 +131,6 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   pYYsn (ns, nxn, nyn, nzn),
   pYZsn (ns, nxn, nyn, nzn),
   pZZsn (ns, nxn, nyn, nzn),
-
   // array allocation: central points 
   //
   PHI  (nxc, nyc, nzc),
@@ -182,6 +181,14 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   fluidEx  (nxn,nyn,nzn),
   fluidEy  (nxn,nyn,nzn),
   fluidEz  (nxn,nyn,nzn),
+  
+  p0XXsn (ns, nxn, nyn, nzn),
+  p0YYsn (ns, nxn, nyn, nzn),
+  p0ZZsn (ns, nxn, nyn, nzn),
+  p0XYsn (ns, nxn, nyn, nzn),
+  p0XZsn (ns, nxn, nyn, nzn),
+  p0YZsn (ns, nxn, nyn, nzn),
+
 #endif
   Bx_ext(nxn,nyn,nzn),
   By_ext(nxn,nyn,nzn),
@@ -3680,6 +3687,40 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
 }
 
 
+ void EMfields3D::calculateFluidPressure(){
+   const VirtualTopology3D *vct = &get_vct();
+   string nameSub = "calculateFluidPressure";   
+   double ux, uy, uz, rhoMass, pRatio;
+   pRatio = 0.01;
+   for (register int is = 0; is < ns; is++)
+     for (register int i = 0; i < nxn; i++)
+       for (register int j = 0; j < nyn; j++)
+	 for (register int k = 0; k < nzn; k++) {
+	   rhoMass = rhons[is][i][j][k]/qom[is];
+	   if(rhoMass>1e-99){
+	     ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
+	     uy = Jys[is][i][j][k]/rhons[is][i][j][k];
+	     uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
+
+	     p0XXsn[is][i][j][k] = pXXsn[is][i][j][k]/qom[is] - rhoMass*ux*ux;
+	     p0YYsn[is][i][j][k] = pYYsn[is][i][j][k]/qom[is] - rhoMass*uy*uy;
+	     p0ZZsn[is][i][j][k] = pZZsn[is][i][j][k]/qom[is] - rhoMass*uz*uz;
+
+	     p0XYsn[is][i][j][k] = pXYsn[is][i][j][k]/qom[is] - rhoMass*ux*uy;
+	     p0XZsn[is][i][j][k] = pXZsn[is][i][j][k]/qom[is] - rhoMass*ux*uz;
+	     p0YZsn[is][i][j][k] = pYZsn[is][i][j][k]/qom[is] - rhoMass*uy*uz;
+	   }else{
+	     p0XXsn[is][i][j][k] = 0;
+	     p0YYsn[is][i][j][k] = 0;
+	     p0ZZsn[is][i][j][k] = 0;
+
+	     p0XYsn[is][i][j][k] = 0;
+	     p0XZsn[is][i][j][k] = 0;
+	     p0YZsn[is][i][j][k] = 0;
+	   }
+	 } // for 
+ }
+ 
 void EMfields3D::setFluidBC_P(int is)
 {
   const VirtualTopology3D *vct = &get_vct();
@@ -4543,70 +4584,52 @@ double EMfields3D:: calPxx(const int is, const int i, const int j, const int k, 
   // 'real' pXX.
   if(not isFluidP){
     return pXXsn[is][i][j][k];
+  }else{
+    return p0XXsn[is][i][j][k];
   }
-  double ux, rhoMass, pxx;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
-  pxx = pXXsn[is][i][j][k]/qom[is] - rhoMass*ux*ux;
-  return pxx;
+
 }
 
 double EMfields3D:: calPyy(const int is, const int i, const int j, const int k, const bool isFluidP){
   if(not isFluidP){
     return pYYsn[is][i][j][k];
+  }else{
+    return p0YYsn[is][i][j][k];
   }
-  double uy, rhoMass, pyy;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
-  pyy = pYYsn[is][i][j][k]/qom[is] - rhoMass*uy*uy;
-  return pyy;
+
 }
 
 double EMfields3D:: calPzz(const int is, const int i, const int j, const int k, const bool isFluidP){
   if(not isFluidP){
     return pZZsn[is][i][j][k];
+  }else{
+    return p0ZZsn[is][i][j][k];
   }
-  double uz, rhoMass, pzz;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
-  pzz = pZZsn[is][i][j][k]/qom[is] - rhoMass*uz*uz;
-  return pzz;
+
 }
 
 double EMfields3D:: calPxy(const int is, const int i, const int j, const int k, const bool isFluidP){
   if(not isFluidP){
     return pXYsn[is][i][j][k];
+  }else{
+    return p0XYsn[is][i][j][k];
   }
-  double ux, uy, rhoMass, pxy;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
-  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
-  pxy = pXYsn[is][i][j][k]/qom[is] - rhoMass*ux*uy;
-  return pxy;
 }
 
 double EMfields3D:: calPxz(const int is, const int i, const int j, const int k, const bool isFluidP){
   if(not isFluidP){
     return pXZsn[is][i][j][k];
+  }else{
+    return p0XZsn[is][i][j][k];
   }
-  double ux, uz, rhoMass, pxz;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  ux = Jxs[is][i][j][k]/rhons[is][i][j][k];
-  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
-  pxz = pXZsn[is][i][j][k]/qom[is] - rhoMass*ux*uz;
-  return pxz;
 }
 
 double EMfields3D:: calPyz(const int is, const int i, const int j, const int k, const bool isFluidP){
   if(not isFluidP){
     return pYZsn[is][i][j][k];
+  }else{
+    return p0YZsn[is][i][j][k];
   }
-  double uy, uz, rhoMass, pyz;
-  rhoMass = rhons[is][i][j][k]/qom[is];
-  uy = Jys[is][i][j][k]/rhons[is][i][j][k];
-  uz = Jzs[is][i][j][k]/rhons[is][i][j][k];
-  pyz = pYZsn[is][i][j][k]/qom[is] - rhoMass*uy*uz;
-  return pyz;
 }
 
 #endif

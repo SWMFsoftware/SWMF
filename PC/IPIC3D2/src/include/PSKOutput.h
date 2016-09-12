@@ -927,12 +927,12 @@ public:
     
     const double inv_dx = 1.0 / dx, inv_dy = 1.0 / dy, inv_dz = 1.0 / dz;
     
-    Pxx = _field->getpXXsn();
-    Pyy = _field->getpYYsn();
-    Pzz = _field->getpZZsn();
-    Pxy = _field->getpXYsn();
-    Pxz = _field->getpXZsn();
-    Pyz = _field->getpYZsn();
+    Pxx = _field->getp0XXsn();
+    Pyy = _field->getp0YYsn();
+    Pzz = _field->getp0ZZsn();
+    Pxy = _field->getp0XYsn();
+    Pxz = _field->getp0XZsn();
+    Pyz = _field->getp0YZsn();
 
     xmin = _col->getPhyXMin(); 
     ymin = _col->getPhyYMin();
@@ -979,7 +979,7 @@ public:
 	xi[1]   = _grid->getXN(ix,iy,iz) - xp;
 	eta[1]  = _grid->getYN(ix,iy,iz) - yp;
 	zeta[1] = _grid->getZN(ix,iy,iz) - zp;
-	
+
 	const double w000 = xi[0] * eta[0] * zeta[0] * invVOL;
 	const double w001 = xi[0] * eta[0] * zeta[1] * invVOL;
 	const double w010 = xi[0] * eta[1] * zeta[0] * invVOL;
@@ -995,16 +995,22 @@ public:
 	QoMe = _col->getQOM(0);
 	Rhoe = weightedValue(_field->getRHOns(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe;
 	//cout<<"ix = "<<ix<<" iy = "<<iy<<" iz = "<<iz<<" rhoe = "<<Rhoe<<endl;
-	Uxe  = weightedValue(_field->getJxs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	Uye  = weightedValue(_field->getJys(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	Uze  = weightedValue(_field->getJzs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	PeXX  = weightedValue(Pxx,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uxe;
-	PeYY  = weightedValue(Pyy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uye*Uye;
-	PeZZ  = weightedValue(Pzz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uze*Uze;
+	if(fabs(Rhoe)>0){
+	  Uxe  = weightedValue(_field->getJxs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	  Uye  = weightedValue(_field->getJys(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	  Uze  = weightedValue(_field->getJzs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	}else{
+	  Uxe  = 0;
+	  Uye  = 0;
+	  Uze  = 0;
+	}
+	PeXX  = weightedValue(Pxx,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	PeYY  = weightedValue(Pyy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	PeZZ  = weightedValue(Pzz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
 	Pe   = (PeXX + PeYY + PeZZ)/3.0;
-	PeXY = weightedValue(Pxy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uye;
-	PeXZ = weightedValue(Pxz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uxe*Uze;
-	PeYZ = weightedValue(Pyz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe - Rhoe*Uye*Uze;
+	PeXY = weightedValue(Pxy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	PeXZ = weightedValue(Pxz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	PeYZ = weightedValue(Pyz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
 	
 	BX  = weightedValue(_field->getBx(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
 	BY  = weightedValue(_field->getBy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
@@ -1038,16 +1044,22 @@ public:
 	  iSpecies = iIon + 1; // iSpecies = 0 is electron.	  
 	  QoMi = _col->getQOM(iSpecies);
 	  Rhoi = weightedValue(_field->getRHOns(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi;
-	  Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	  Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	  Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	  PiXX  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uxi;
-	  PiYY  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uyi*Uyi;
-	  PiZZ  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uzi*Uzi;
+	  if(fabs(Rhoi)>0){
+	    Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	    Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	    Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	  }else{
+	    Uxi  = 0;
+	    Uyi  = 0;
+	    Uzi  = 0;
+	  }
+	  PiXX  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PiYY  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PiZZ  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 	  Pi   = (PiXX + PiYY + PiZZ)/3.0;
-	  PiXY = weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uyi;
-	  PiXZ = weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uxi*Uzi;
-	  PiYZ = weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi - Rhoi*Uyi*Uzi;
+	  PiXY = weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PiXZ = weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PiYZ = weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 
 	  Mix = Rhoi*Uxi;
 	  Miy = Rhoi*Uyi;
@@ -1115,7 +1127,7 @@ public:
 	PitXY = PtXY - PeXY;
 	PitXZ = PtXZ - PeXZ;
 	PitYZ = PtYZ - PeYZ;
-	
+
 	// Pressure
 	if(!useMultiFluid){
 	  // AnisoP

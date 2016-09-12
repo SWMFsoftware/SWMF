@@ -392,6 +392,11 @@ void c_Solver::CalculateMoments() {
   //EMf->ConstantChargeOpenBC();
   
   EMf->interpDensitiesN2C();
+
+#ifdef BATSRUS
+  EMf->calculateFluidPressure();
+#endif
+  
 #ifndef BATSRUS
     // calculate the hat quantities for the implicit method
   EMf->calculateHatFunctions();

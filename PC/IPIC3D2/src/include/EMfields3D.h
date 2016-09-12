@@ -268,7 +268,6 @@ class EMfields3D                // :public Field
     arr4_double getpZZsn() { return pZZsn; }
     double getpZZsn(int X,int Y,int Z,int is)const{return pZZsn.get(is,X,Y,Z);}
 
-
     double getJx(int X, int Y, int Z) const { return Jx.get(X,Y,Z);}
     double getJy(int X, int Y, int Z) const { return Jy.get(X,Y,Z);}
     double getJz(int X, int Y, int Z) const { return Jz.get(X,Y,Z);}
@@ -602,6 +601,24 @@ class EMfields3D                // :public Field
 
 #ifdef BATSRUS
  public:
+    // Pressure tensors, which do NOT include the effect of bulk velocity. 
+    array4_double p0XXsn;
+    array4_double p0YYsn;
+    array4_double p0ZZsn;
+    array4_double p0XYsn;
+    array4_double p0XZsn;
+    array4_double p0YZsn;
+
+    arr4_double getp0XXsn() { return p0XXsn; }
+    arr4_double getp0YYsn() { return p0YYsn; }
+    arr4_double getp0ZZsn() { return p0ZZsn; }
+    arr4_double getp0XYsn() { return p0XYsn; }
+    arr4_double getp0XZsn() { return p0XZsn; }
+    arr4_double getp0YZsn() { return p0YZsn; }
+
+    // Calculate p0XXsn p0YYsn ...
+    void calculateFluidPressure();
+
     /*! initialize from BATSRUS */
     void initBATSRUS(VirtualTopology3D * vct, Grid * grid, Collective * col);
 
