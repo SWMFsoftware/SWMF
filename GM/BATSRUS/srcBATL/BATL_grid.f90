@@ -2758,7 +2758,7 @@ contains
     call clean_grid
     call clean_tree
 
-    if(nDim==nDimAmr)then
+    if(nDim==nDimAmr .and. nDim > 1)then
        if(DoTestMe) write(*,*)'Testing check_interpolate_amr_gc'
        
        DomainMin_D = (/0.0, 0.0, 0.0/)
