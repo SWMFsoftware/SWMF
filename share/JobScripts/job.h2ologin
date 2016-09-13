@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Environment configuration-----------------------
+module swap PrgEnv-cray PrgEnv-intel
+module load cray-hdf5-parallel
+module unload darshan
+module load idl
+# Environment configuration-----------------------
+
+
 # To run on XE nodes
 #PBS -l nodes=2:ppn=32:xe
 
