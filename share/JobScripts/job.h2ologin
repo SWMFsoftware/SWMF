@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Environment configuration-----------------------
-module swap PrgEnv-cray PrgEnv-intel
-module load cray-hdf5-parallel
-module unload darshan
-module load idl
+# The following commands (without '#') can be added to ~/.modules:
+# module swap PrgEnv-cray PrgEnv-intel
+# module load cray-hdf5-parallel
+# module unload darshan
+# module load idl
+
 # Environment configuration-----------------------
 
 
