@@ -41,7 +41,7 @@ i.e. ">>>" is empty (see Mars test), but ">>>\n>>>" is non-empty
 #>
 Name=Mars-ions 
 Time=2
-Keys=-cplr-data-path=/Volumes/data/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+valeriy)
+Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks73465-01)
 Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+pleiades)
 Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+stampede)
@@ -50,7 +50,7 @@ Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERm
 #>
 Name=Titan
 Time=7
-Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+valeriy)
+Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks73465-01)
 Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
 Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+stampede)
@@ -59,7 +59,7 @@ Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007
 #>
 Name=CCMC
 Time=5
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC@@(0+valeriy)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
@@ -129,7 +129,7 @@ Check=
 #>
 Time=2
 Name=test/kameleon-reader@@(0+valeriy)
-Keys=-boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/KAMELEON @@(0+valeriy)
+Keys=-boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/KAMELEON @@(0+valeriy)
 <#
 -------------------------------------------------------------------------------
 #>
@@ -182,7 +182,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/earth-test -link-option=-lc++ -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -cplr-data-path=/Volumes/data/AMPS_DATA/EARTH/test/ful_2 
+>>>./Config.pl -install -application=test/earth-test -link-option=-lc++ -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -cplr-data-path=/Volumes/Data01/AMPS_DATA/EARTH/test/ful_2 
 >>>./Config.pl -link-option=-lc++
 >>>make
 >>>@echo "test_earth_compile... done" > test_earth.diff
@@ -371,7 +371,7 @@ Check=
 #>
 Name=CG@@(0+valeriy+pleiades+stampede)
 Time=3
-Keys=-model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
+Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 Keys=-model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 <#
@@ -379,7 +379,7 @@ Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd705
 #>
 Name=CG-dust-test@@(0+valeriy+pleiades+stampede)
 Time=11
-Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
@@ -420,7 +420,7 @@ Time=2
 Name=CCMC-Individual_Trajectories 
 Time=3
 Keys= -model-data-path=${MYDIR}/input  
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC@@(0+valeriy)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/CCMC@@(0+stampede)
@@ -448,7 +448,7 @@ Compile=
 
 Run=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run..." >> test_CCMC-Individual_Trajectories--KAMELEON.diff
->>>cp /Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/amps.Background.data.cdf
+>>>cp /Volumes/Data01/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/amps.Background.data.cdf
 >>>cp input/ccmc.InjectionLocation.dat ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}
 >>>cd ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}; ${MPIRUN}  ./amps
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run... done" >> test_CCMC-Individual_Trajectories--KAMELEON.diff
@@ -466,7 +466,7 @@ Check=
 #>
 Name=Europa-test1
 Time=2
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/EUROPA@@(0+stampede) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA@@(0+pleiades) 
 Check=
@@ -489,10 +489,10 @@ Rundir=
 Run=
 >>>@echo "test_LOS_run..." >> test_LOS.diff
 
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --kernelFile /Volumes/data/AMPS_DATA_TEST/LOS/kernels.tm
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFile /Volumes/data/AMPS_DATA_TEST/LOS/SHAP5_stefano.ply
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFileShadow /Volumes/data/AMPS_DATA_TEST/LOS/SHAP5_shadow.ply
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/data/AMPS_DATA_TEST/LOS/pic.DUST%0.s=2.out=11.dat
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --kernelFile /Volumes/Data01/AMPS_DATA_TEST/LOS/kernels.tm
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFile /Volumes/Data01/AMPS_DATA_TEST/LOS/SHAP5_stefano.ply
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --meshFileShadow /Volumes/Data01/AMPS_DATA_TEST/LOS/SHAP5_shadow.ply
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/Data01/AMPS_DATA_TEST/LOS/pic.DUST%0.s=2.out=11.dat
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow yes
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltLevels 30
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltColorMap afmhot
@@ -500,7 +500,7 @@ Run=
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --pltAdditionalBorderPx 7
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doPlotResult yes
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --spicelib /Users/vtenishe/SPICE/Toolkit/cspice/lib
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --clib /Volumes/data/AMPS_DATA_TEST/LOS/cprog.c
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --clib /Volumes/Data01/AMPS_DATA_TEST/LOS/cprog.c
 >>>cd ${MYDIR}/utility/LOS/ && echo "pltLevels:30" >> .userSettings.conf
 >>>cd ${MYDIR}/utility/LOS/ && echo "pltColorMap:afmhot" >> .userSettings.conf
 >>>cd ${MYDIR}/utility/LOS/ && echo "pltBlankBody:yes" >> .userSettings.conf
@@ -520,7 +520,7 @@ Run=
 >>>cd ${MYDIR}/utility/LOS/Tmp/output && rm *.dat
 
 >>>#run gas case with shadow
->>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/data/AMPS_DATA_TEST/LOS/pic.H2O.s=0.out=11.dat
+>>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --dataFile /Volumes/Data01/AMPS_DATA_TEST/LOS/pic.H2O.s=0.out=11.dat
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --clib ${MYDIR}/utility/LOS/src/cprog.c
 
 >>>cd ${MYDIR}/utility/LOS/ && julia Config.jl --doCheckShadow yes
