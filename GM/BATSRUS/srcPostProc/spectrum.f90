@@ -1,5 +1,5 @@
-!idl output
 !zero density
+!test
 
 program spectrum
 
@@ -76,10 +76,11 @@ program spectrum
   ! Derived type of output 
   type SpectrumTableType
      real,allocatable         :: Spectrum_II(:,:), SpectrumGrid_I(:)
+     real                     :: nBin
   end type SpectrumTableType
 
   type(SpectrumTableType), allocatable :: SpectrumTable_I(:)
-  integer                     :: iCenter
+  integer                     :: iCenter, nBin
   real,allocatable            :: Spectrum_II(:,:), SpectrumGrid_I(:)
 
   character(len=*), parameter :: NameSub = 'spectrum.f90'
@@ -95,7 +96,7 @@ program spectrum
 
   call read_table
 
-  do iCenter = 1,1 !!! MaxWave !!! for testing purposes 
+  do iCenter = 1,MaxWave
      call calc_flux(iCenter)
   end do
 
@@ -113,26 +114,70 @@ contains
 
     character                      :: Namefile
 
-    ! Variables for output file
-    character(len=200)          :: NameSpectrumFile = 'spectrum.out'
-    character(len=200)          :: TypeFileSpectrum = 'real8'
-    character(len=200)          :: StringHeaderSpectrum = 'spectrum output'
-    integer                     :: nStepSpectrum
-    real                        :: TimeSpectrum 
-    character(len=200)          :: NameVarSpectrum
-    real,allocatable            :: VarSpectrum_IIV(:,:,:)    
-
-    character(len=*), parameter :: NameSub = 'save_all'
-
     !------------------------------------------------------------------------
 
-    !call save_plot_file(NameFile = NameSpectrumFile,      &
-    !     TypeFileIn     = TypeFileSpectrum,     &
-    !     StringHeaderIn = StringHeaderSpectrum, &
-    !     nStepIn        = nStepSpectrum,        &
-    !     TimeIn         = TimeSpectrum,         &
-    !     NameVarIn      = NameVarSpectrum,      &
-    !     VarIn_IIV      = VarSpectrum_IIV)
+    ! Variables for output file
+    character(len=200)          :: NameSpectrumFile = 'spectrum.out'
+    character(len=5)            :: TypeFileSpectrum = 'ascii'
+    character(len=200)          :: StringHeaderSpectrum = 'spectrum output'
+    character(len=200)          :: NameVarSpectrum = 'Wavelength Pixel flux'
+    real,allocatable            :: &
+         Intensity_VII(:,:,:), CoordWave_I(:), CoordPixel_I(:)
+    
+    integer                     :: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, nWaveBin,nWaveAll
+    real                        :: dWaveBin, WavelengthMin,WavelengthMax
+    character(len=*), parameter :: NameSub = 'save_all'
+    !------------------------------------------------------------------------
+
+    nWaveAll = 0
+    nWaveInterval = nWavelengthInterval
+    do iWavelengthInterval = 1,nWavelengthInterval
+       nWaveAll = nWaveAll + SpectrumTable_I(iWavelengthInterval)%nBin
+    end do
+    write(*,*)"nWaveAll",nWaveAll
+    allocate( &
+         Intensity_VII(1,nWaveAll,nPixel), &
+         CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
+
+    CoordPixel_I = (/1, nPixel/)
+    
+    ! Number of wave length processed so far
+    nWave = 0
+    ! Loop over intervals
+    write(*,*)"nWaveInterval",nWaveInterval
+    do iWaveInterval = 1, nWaveInterval
+       ! Number of wave length in this interval
+       nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
+
+       WaveLengthMin = WavelengthInterval_II(1,iWaveInterval)
+       WaveLengthMax = WavelengthInterval_II(2,iWaveInterval)
+       dWaveBin = (WaveLengthMax - WaveLengthMin)/nWaveBin
+       write(*,*)nWaveBin
+       ! Loop over wave lengths in this interval
+       do iWaveBin = 1, nWaveBin
+          ! Global wave length index
+          write(*,*)"iWave = nWave + iWaveBin",iWave,nWave,iWaveBin
+          iWave = nWave + iWaveBin
+          write(*,*)"iWave = nWave + iWaveBin",iWave,nWave,iWaveBin
+          ! Save intensity and coordinate into global array
+          Intensity_VII(1,iWave,:) = &
+               SpectrumTable_I(iWaveInterval)%Spectrum_II(:,iWaveBin)
+          CoordWave_I(iWave) = WaveLengthMin + (iWaveBin - 0.5)*dWaveBin
+          ! Finished processing this interval
+          
+       end do
+       nWave = nWave + nWaveBin
+    end do
+
+    call save_plot_file(NameFile = NameSpectrumFile,      &
+         TypeFileIn     = TypeFileSpectrum,     &
+         StringHeaderIn = StringHeaderSpectrum, &
+         NameVarIn      = NameVarSpectrum,      &
+         Coord1In_I     = CoordWave_I,          &
+         Coord2In_I     = CoordPixel_I,          &
+         VarIn_VII      = Intensity_VII)
+
+    deallocate(Intensity_VII, CoordWave_I, CoordPixel_I)
 
   end subroutine save_all
 
@@ -233,10 +278,13 @@ contains
     real, intent(in)            :: Lambda, dLambda, FluxMono
     integer, intent(in)         :: iInterval,iCenter
     real                        :: Flux, Phi
-    integer                     :: iStep
+    integer                     :: iStep, iWave, nWaveBin
 
     character(len=*), parameter :: NameSub='disperse_line'
     !------------------------------------------------------------------------
+
+    nWaveBin = SpectrumTable_I(iInterval)%nBin
+    
     do iStep = -5 , 5
 
        ! Calculate Gaussian of the line
@@ -248,8 +296,10 @@ contains
 
        ! Update value in bin
        do iPixel =1, nPixel
+          iWave = iCenter + iStep
+          if(iWave < 1 .or. iWave > nWaveBin) CYCLE
           SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iCenter+iStep) = &
-               SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iCenter+iStep) &
+               SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iWave) &
                + Flux
        end do
     end do
@@ -343,14 +393,16 @@ contains
 
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
-
+    nBin = 0
     do iWavelengthInterval=1, nWavelengthInterval
        MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
+       nBin = nWavelengthBin
        allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_II(nPixel,nWavelengthBin))
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(nWavelengthBin+1))
        SpectrumTable_I(iWavelengthinterval)%Spectrum_II(:,:)=0.0
+       SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
           SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin) = &
                MinWavelength + (iWavelengthBin-1)*SizeWavelengthBin
