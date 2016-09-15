@@ -42,7 +42,7 @@ int main(int argc,char **argv) {
 
 
 #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  int nTotalIterations = 150;
+  int nTotalIterations = 0;
 #else
   int nTotalIterations = 100000001;
 #endif
