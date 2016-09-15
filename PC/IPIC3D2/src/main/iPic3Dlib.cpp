@@ -970,7 +970,7 @@ void c_Solver:: write_plot_idl(int cycle){
     if(  (dnOutput > 0 && cycle % dnOutput==0) ||
 	 (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])  ){
       if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
-	nextOutputTime_I[iPlot] +=dtOutput;
+	nextOutputTime_I[iPlot] = timeNow + dtOutput;
       }
       
       set_output_unit(iPlot);
