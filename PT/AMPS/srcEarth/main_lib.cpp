@@ -45,7 +45,20 @@ double sodiumTotalProductionRate(int SourceProcessCode=-1) {
 //the mesh resolution
 double localSphericalSurfaceResolution(double *x) {
   double res,r,l[3] = {1.0,0.0,0.0};
-  return 10*_RADIUS_(_TARGET_);
+
+
+  if ( (strcmp(Earth::Mesh::sign,"0x301020156361a50")!=0)) {
+    //test mesh
+    return 0.05*_RADIUS_(_TARGET_);
+  }
+  else {
+    return 0.5*_RADIUS_(_TARGET_);
+  }
+
+
+
+
+
   res=dxMinSphere;
   res/=2.1;
   return rSphere*res;
@@ -54,7 +67,15 @@ double localSphericalSurfaceResolution(double *x) {
 
 double localResolution(double *x) {
   double res;
-  return 10*_RADIUS_(_TARGET_);
+
+  if ( (strcmp(Earth::Mesh::sign,"0x301020156361a50")!=0)) {
+    //test mesh
+    return 0.5*_RADIUS_(_TARGET_);
+  }
+  else {
+    return 0.5*_RADIUS_(_TARGET_);
+  }
+
   //  if (strcmp(Earth::Mesh::sign,"new")==0) 
 { // new mesh
     int idim;
