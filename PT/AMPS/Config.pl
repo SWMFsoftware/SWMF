@@ -24,7 +24,12 @@ if (! -e "Makefile.local") {
 
 # build AMPS' Makefile.test
 foreach (@Arguments) { 
-    if(/^-install/){require "utility/TestScripts/BuildTest.pl";}
+    if(/^-install/) {
+      require "utility/TestScripts/BuildTest.pl";
+     
+      #create .general.conf if not exists
+      `touch .general.conf` unless (-e ".general.conf");
+    }
 }
 
 
@@ -81,7 +86,8 @@ foreach (@Arguments) {
      print "-set-test(=NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all)\n";
      print "-rm-test\/comp\t\t\tremove nightly tests\n";
      print "-amps-test=[on,off]\t\ttells the code that a nightly test is executed\n";
-     
+     print "-openmp=[on,off]\t\twhen \"on\" use OpenMP and MPI libraries for compiling AMPS\n";
+     print "-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker\n";
      exit;
    }
    
@@ -153,6 +159,30 @@ foreach (@Arguments) {
   if (/^-kameleon-path=(.*)$/i)       {
       add_line_amps_conf("KAMELEON=$1");
       next};
+      
+      
+      
+      
+  if (/^-openmp=(.*)$/i) {
+    my $t;
+    $t=lc($1);
+    add_line_amps_conf("OPENMP=$1");
+       
+    if ($t eq "on") {
+      add_line_general_conf("#undef _COMPILATION_MODE_ \n#define _COMPILATION_MODE_ _COMPILATION_MODE__HYBRID_\n");
+      `echo OPENMP=on >> Makefile.local`;
+      next;
+    }
+    elsif ($t eq "off") {
+      add_line_general_conf("#undef _COMPILATION_MODE_ \n#define _COMPILATION_MODE_ _COMPILATION_MODE__MPI_\n");
+      `echo OPENMP=off >> Makefile.local`;
+      next;
+    }
+    else {
+      die "Option is unrecognized: -openmpfgf=($1)";
+    }
+  }   
+      
   
   if (/^-batl-path=(.*)$/i)       {
       add_line_amps_conf("BATL=$1");
@@ -207,6 +237,19 @@ foreach (@Arguments) {
       next}; 
 
   if (/^-rm-test$/i)      {require "./utility/TestScripts/RemoveNightlyTest.pl";     next}; 
+  if(/^-link-option=(.*)$/){
+      my $options=$1; $options =~ s/,/ /g;
+      open(my $fh,'<',"Makefile"); my @lines = <$fh>; close($fh);
+      open(my $fh,'>',"Makefile");
+      foreach my $line (@lines){
+	  if($line =~ m/^EXTRALINKEROPTIONS=/){
+	      $line = "EXTRALINKEROPTIONS=$options\n";
+	  }
+	  print $fh $line;
+      }
+      close($fh);
+      next;
+  };
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
@@ -214,6 +257,15 @@ foreach (@Arguments) {
 
 exit 0;
 
+#=============================== Add a line to .general.conf
+sub add_line_general_conf {
+  #create .general.conf if not exists
+  `touch .general.conf` unless (-e ".general.conf");
+  
+  open (SETTINGS,">>",".general.conf") || die "Cannot open .general.conf\n";
+  print SETTINGS "$_[0]\n";
+  close SETTINGS;
+}
 
 #=============================== Add a line to .amps.conf
 # USAGE:
