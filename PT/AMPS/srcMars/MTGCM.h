@@ -266,16 +266,26 @@ public:
     int iAlt,iLon,iLat,idim;
     bool AboveDomainLimit=false;
     double cAlt,cLon,cLat; //interpolation coefficient
+//    PlanetRadius=3.396E6;
 
     for (r=0.0,idim=0;idim<3;idim++) r+=x[idim]*x[idim];
     r=sqrt(r);
-
+    
+    //Lat=53.0*Pi/180;
     Lat=asin(x[2]/r);
+//   Lon=165.0*Pi/180;
 
     if (x[0]*x[0]+x[1]*x[1]<1.0E-20*x[2]*x[2]) Lon=0.0;
     else {
       Lon=acos(x[0]/sqrt(x[0]*x[0]+x[1]*x[1]));
-      if (x[1]<0.0) Lon*=-1.0;
+      if (x[1]<1.0E-20) {
+         if (lonMin<1.0E-20) {
+           Lon*=1.0;
+         }
+         else {
+           Lon=2.0*Pi-Lon;
+         }
+      }     
     }
 
     iAlt=(int)((r-PlanetRadius-minAltitude)/dAltitude);
@@ -366,7 +376,9 @@ cAlt=0.0,cLon=0.0,cLat=0.0;
       }
 
     }
-
+//	double testrand=rnd();
+//	printf("%i",testrand);
+  //        exit(__LINE__,__FILE__,"test");
     return res;
   }
 
