@@ -1,6 +1,0 @@
-*.o
-Makefile.DEPEND
-Makefile.RULES
-ModPar.f90
-ModUserSetup.f90
- 

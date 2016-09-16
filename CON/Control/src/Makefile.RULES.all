@@ -1,2 +1,0 @@
-$OS eq "Darwin" and $Compiler eq "xlf90"
-	${COMPILE.f90} ${Cflag2} ${SuffixMapf90} CON_session.f90
