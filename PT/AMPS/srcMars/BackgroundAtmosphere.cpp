@@ -6,6 +6,8 @@
 #include "pic.h"
 #include "MTGCM.h"
 #include "Mars.h"
+#include "m-gitm.h"
+
 
 //collison cross section of the model particles with the background atmosphere
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionCrossSectionBackgoundAtmosphereParticle(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData,PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,double TranslationalEnergy,double cr2) {
@@ -19,7 +21,12 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionCrossSectionB
   return 3.0E-19;
 #elif _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION_ == _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__FORWARD_SCATTERING_
 
-  return ForwardCollisionCrossSection.GetTotalCrossSection(TranslationalEnergy);
+  //return ForwardCollisionCrossSection.GetTotalCrossSection(TranslationalEnergy);
+    
+    if (BackgroundSpecieNumber==0) {return ForwardCollisionCrossSection.GetTotalCrossSection(TranslationalEnergy);}
+	else if (BackgroundSpecieNumber==1) {return 2.0E-18;}
+    else {return 1.8E-18;}
+    
 #endif
 }
 
@@ -29,7 +36,12 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetSigmaCrMax(int spec,in
   return 10000.0*3.0E-19;
 
 #elif _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION_ == _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__FORWARD_SCATTERING_
-  return 10000.0*ForwardCollisionCrossSection.GetMaxTotalCrossSection();
+    //return 10000.0*ForwardCollisionCrossSection.GetMaxTotalCrossSection();
+    
+    if (BackgroundSpecieNumber==0) {return 10000.0*ForwardCollisionCrossSection.GetMaxTotalCrossSection();}
+	else if (BackgroundSpecieNumber==1) {return 10000.0*2.0E-18;}
+    else {return 10000.0*1.8E-18;}
+
 #else
   exit(__LINE__,__FILE__,"Error: option is not found");
 #endif
@@ -43,7 +55,7 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionScatteringAng
 
 
 double GetBackgroundMolecularMass(int BackgroundSpecieNumber) {
-  static const double BackgroundSpecieMass[3]={26.56E-27,73.05E-27,46.49E-27};
+    static const double BackgroundSpecieMass[4]={26.56E-27,73.05E-27,46.53E-27,46.49E-27};
   return BackgroundSpecieMass[BackgroundSpecieNumber];
 }
 
@@ -76,63 +88,81 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::GenerateBackgoundAtmosphere
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberDensity(int BackgroundSpecieNumber,double *x) {
   double res=0.0;
 
-
-  //static MTGSM file readers
-  static cDataSetMTGCM O,CO2;
-  static bool InitFlag=false;
-
-  //init the readers
-  if (InitFlag==false) {
-    InitFlag=true;
+    
+    //static MTGSM file readers
+    //static cDataSetMTGCM O,CO2,CO,N2;
+    static cDataSetMGITM O,CO2,CO,N2;
     char fname[_MAX_STRING_LENGTH_PIC_];
-
-    O.PlanetRadius=_RADIUS_(_TARGET_);
-    O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    sprintf(fname,"%s/MTGCM_equinox_SL/O.h",PIC::UserModelInputDataPath);
-    O.ReadDataFile(fname);
-
-    CO2.PlanetRadius=_RADIUS_(_TARGET_);
-    CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    sprintf(fname,"%s/MTGCM_equinox_SL/CO2.h",PIC::UserModelInputDataPath);
-    CO2.ReadDataFile(fname);
-  }
-
-
+    static bool InitFlag=false;
+    
+    //init the readers
+    if (InitFlag==false) {
+        InitFlag=true;
+        
+        O.PlanetRadius=_RADIUS_(_TARGET_);
+        O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_APHMED-SDC.dat",PIC::UserModelInputDataPath);
+	O.ReadDataFile(_nO_MGITM_,fname);
+        
+        CO2.PlanetRadius=_RADIUS_(_TARGET_);
+        CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_APHMED-SDC.dat",PIC::UserModelInputDataPath);
+	CO2.ReadDataFile(_nCO2_MGITM_,fname);
+        
+        CO.PlanetRadius=_RADIUS_(_TARGET_);
+        CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_APHMED-SDC.dat",PIC::UserModelInputDataPath);
+	CO.ReadDataFile(_nCO_MGITM_,fname);
+        
+        N2.PlanetRadius=_RADIUS_(_TARGET_);
+        N2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_APHMED-SDC.dat",PIC::UserModelInputDataPath);
+	N2.ReadDataFile(_nN2_MGITM_,fname);
+    }
+    
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-  switch (BackgroundSpecieNumber) {
-  case _O_BACKGROUND_SPEC_ :
-    res=(O.DataValueDefined(x)==true) ? O.Interpolate(x) : 0.0;
-    break;
-  case _CO2_BACKGROUND_SPEC_ :
-    res=(CO2.DataValueDefined(x)==true) ? CO2.Interpolate(x) : 0.0;
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the optino is not found");
-  }
-
-  res*=1E6;
-
+    switch (BackgroundSpecieNumber) {
+        case _O_BACKGROUND_SPEC_ :
+            res=(O.DataValueDefined(x)==true) ? O.Interpolate(x) : 0.0;
+            break;
+        case _CO2_BACKGROUND_SPEC_ :
+            res=(CO2.DataValueDefined(x)==true) ? CO2.Interpolate(x) : 0.0;
+            break;
+        case _CO_BACKGROUND_SPEC_ :
+            res=(CO.DataValueDefined(x)==true) ? CO.Interpolate(x) : 0.0;
+            break;
+        case _N2_BACKGROUND_SPEC_ :
+            res=(N2.DataValueDefined(x)==true) ? N2.Interpolate(x) : 0.0;
+            break;
+        default:
+            exit(__LINE__,__FILE__,"Error: the optino is not found");
+    }
+    
+    // res*=1E6;
+    
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
-  switch (BackgroundSpecieNumber) {
-  case _O_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
-    break;
-  case _CO2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
-    break;
-  case _N2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the optino is not found");
-  }
+    switch (BackgroundSpecieNumber) {
+        case _O_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
+            break;
+        case _CO2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
+            break;
+        case _N2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
+            break;
+        case _CO_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO(x);
+            break;
+        default:
+            exit(__LINE__,__FILE__,"Error: the optino is not found");
+    }
 #else
-        exit(__LINE__,__FILE__,"Error: the option is not defined");
+    exit(__LINE__,__FILE__,"Error: the option is not defined");
 #endif
-
-  return res;
+    
+    return res;
 }
-
 
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetCellMeanBackgroundNumberDensity(int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   double x[3];
@@ -141,23 +171,28 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCellMeanBackgroundNumb
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
   return GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,x);
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
-  double res;
-
-  switch (BackgroundSpecieNumber) {
-  case _O_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
-    break;
-  case _CO2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
-    break;
-  case _N2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the optino is not found");
-  }
-
-  return res;
+    
+#elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
+    double res;
+    
+    switch (BackgroundSpecieNumber) {
+        case _O_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
+            break;
+        case _CO2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
+            break;
+        case _N2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
+            break;
+        case _CO_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO(x);
+            break;
+        default:
+            exit(__LINE__,__FILE__,"Error: the optino is not found");
+    }
+    
+    return res;
 #else
         exit(__LINE__,__FILE__,"Error: the option is not defined");
 #endif
@@ -172,27 +207,35 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCellLocalBackgroundNum
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
   return GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,x);
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
-  double res;
+    double res;
+    
+    switch (BackgroundSpecieNumber) {
+        case _O_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
+            break;
+        case _CO2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
+            break;
+        case _N2_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
+            break;
+        case _CO_BACKGROUND_SPEC_ :
+            res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO(x);
+            break;
+        default:
+            exit(__LINE__,__FILE__,"Error: the optino is not found");
+    }
+    
+    return res;
 
-  switch (BackgroundSpecieNumber) {
-  case _O_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_O(x);
-    break;
-  case _CO2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_CO2(x);
-    break;
-  case _N2_BACKGROUND_SPEC_ :
-    res=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetBackgroundDensity_N2(x);
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the optino is not found");
-  }
-
-  return res;
 #else
         exit(__LINE__,__FILE__,"Error: the option is not defined");
 #endif
 }
+
+
+
+
 
 //check if the particle should remain in the simulation
 #if _THERMALIZED_PARTICLE_REMOVE_CRITERION_ == _THERMALIZED_PARTICLE_REMOVE_CRITERION__ESCAPE_SPEED_
@@ -207,21 +250,23 @@ bool PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(
 #elif _THERMALIZED_PARTICLE_REMOVE_CRITERION_ == _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_
 bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData) {
 
-  //static MTGSM file readers
-  static cDataSetMTGCM Tn;
-  static bool InitFlag=false;
-
-  //init the readers
-  if (InitFlag==false) {
-    InitFlag=true;
-
-    Tn.PlanetRadius=_RADIUS_(_TARGET_);
-    Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-    Tn.ReadDataFile("Tn.h");
-  }
+    //static MTGCM/MGITM file readers
+    static cDataSetMGITM Tn;
+    char fname[_MAX_STRING_LENGTH_PIC_];
+    static bool InitFlag=false;
+    
+    //init the readers
+    if (InitFlag==false) {
+        InitFlag=true;
+        
+        Tn.PlanetRadius=_RADIUS_(_TARGET_);
+        Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
+	sprintf(fname,"%s/MTGCM_equinox_SL/MGITM_APHMED-SDC.dat",PIC::UserModelInputDataPath);
+	Tn.ReadDataFile(_Tn_MGITM_,fname);
+    }
 
   //only oxigen atoms can be keeped in the system
-  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_C_SPEC_) return false;
+  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_O_SPEC_) return false;
 
   static const double massOxigen=26.56E-27;
   double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0},vThermal2;
@@ -252,5 +297,5 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
 
 
 int GetTotalNumberBackgroundSpecies() {
-  return 2;
+  return 4;
 }
