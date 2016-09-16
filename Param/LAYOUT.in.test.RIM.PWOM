@@ -1,8 +1,0 @@
-This is the layout for running GM and IE in serial mode.
-
-Name First Last Stride
-======================
-#COMPONENTMAP
-IE       0    1    1   ! IE runs on 1 or 2 PE-s
-PW       1    1    1   ! GM runs on all PE-s
-#END
