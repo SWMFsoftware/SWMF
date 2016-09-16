@@ -25,10 +25,10 @@ module ModProcessVarName
   integer, parameter:: nSynonym = 3
 
   ! State variables not associated with a specific fluid/ specie
-  integer,parameter  :: nVarExtra = 14
+  integer, parameter:: nVarExtra = 15
 
   ! Named indices for all substances (species or fluids)
-  integer, parameter :: &
+  integer, parameter:: &
        H_    = 1,  &
        Hp_   = 2,  &
        HpSw_ = 3,  &
@@ -135,6 +135,7 @@ module ModProcessVarName
        'eint ', &
        'ehot ', &
        'hyp  ', &
+       'hype ', &
        'sign ', &
        'lperp' /)
 
@@ -151,6 +152,7 @@ module ModProcessVarName
        'Eint ', &
        'Ehot ', &
        'Hyp  ', &
+       'HypE ', &
        'Sign ', &
        'Lperp' /)
 
@@ -247,7 +249,7 @@ contains
        NameVarIn = NameVar_V(iName)
        call lower_case(NameVarIn)
 
-       ! Don't look up in dictionary for: bx, by, bz, EInt, ew, pe, hyp
+       ! Don't look up in dictionary for: bx, by, bz, EInt, ew, pe, hyp, hype
        do iVar = 1, nVarExtra
           if(NameVarIn == NameVarExtra_I(iVar)) then
              NameVar_V(iName) = NameVarExtraStandardized_I(iVar)
