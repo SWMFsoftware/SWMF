@@ -1,9 +1,0 @@
-
-
-#include input/cg-dust.input
-
-#General
-  ReferenceInjectionParticleNumber=2000
-#endGeneral
-
-
