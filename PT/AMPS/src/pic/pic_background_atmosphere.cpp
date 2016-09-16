@@ -502,9 +502,9 @@ _StartParticleCollisionLoop_:
             //check if the 'background' particle should be kept in the system
 #if _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_ == _PIC_MODE_ON_
             if (Background2ModelSpeciesConversionTable[BackgroundSpecieNumber]!=-1) {
-              PIC::ParticleBuffer::SetI(Background2ModelSpeciesConversionTable[BackgroundSpecieNumber],BackgroundAtmosphereParticleData);
+              PIC::ParticleBuffer::SetI(Background2ModelSpeciesConversionTable[BackgroundSpecieNumber],BackgroundAtmosphereParticleData[thread]);
 
-              if (KeepConditionModelParticle(BackgroundAtmosphereParticleData)==true) {
+              if (KeepConditionModelParticle(BackgroundAtmosphereParticleData[thread])==true) {
                 long int newParticle;
                 PIC::ParticleBuffer::byte *newParticleData;
 
@@ -516,11 +516,21 @@ _StartParticleCollisionLoop_:
                 //set the position of the new particle to be the position of the original model particle
                 PIC::ParticleBuffer::SetX(xModelParticle,newParticleData);
 
-                //add the new particle to teh list of the particles that needes to be collided
-                if (nCollidingParticles>ParticleBufferLength-1) exit(__LINE__,__FILE__,"Error: the particle buffer is overflown");
+                //add the new particle to the list of the particles that needes to be collided
+                if (nCollidingParticles>ParticleBufferLength[thread]-1) {
+                  //exit(__LINE__,__FILE__,"Error: the particle buffer is overflown");
 
-                CollidingParticleList[nCollidingParticles].Particle=newParticle;
-                CollidingParticleList[nCollidingParticles].CollisionTimeFraction=1.0-timeCounter/localTimeStep;
+                  //re-allocate the list of the colliding particles
+                  cCollidingParticleList *tmpCollidingParticleList=new cCollidingParticleList [2*ParticleBufferLength[thread]];
+                  memcpy(tmpCollidingParticleList,CollidingParticleList[thread],ParticleBufferLength[thread]*sizeof(cCollidingParticleList));
+                  delete [] CollidingParticleList[thread];
+
+                  CollidingParticleList[thread]=tmpCollidingParticleList;
+                  ParticleBufferLength[thread]*=2;
+                }
+
+                CollidingParticleList[thread][nCollidingParticles].Particle=newParticle;
+                CollidingParticleList[thread][nCollidingParticles].CollisionTimeFraction=1.0-timeCounter/localTimeStep;
                 ++nCollidingParticles;
 
                 //accout for the source of new exospheric particles
