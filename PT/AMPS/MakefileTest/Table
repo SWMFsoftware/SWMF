@@ -105,7 +105,7 @@ Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid
 
 #>
 Time=2
-Name=test/binary-reader@@(0+valeriy+srbwks73465-01+pleiades)  
+Name=test/binary-reader@@(0+valeriy+srbwks73465-01+pleiades)
 Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
 
 Run=
@@ -177,26 +177,26 @@ Name=Earth@@(0+valeriy)
 Time=10 
 
 Compile=
->>>@echo "test_earth_compile..." > test_earth.diff
+>>>@echo "test_Earth_compile..." > test_Earth.diff
 >>>echo "Installing BATL....."
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/earth-test -link-option=-lc++ -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -cplr-data-path=/Volumes/Data01/AMPS_DATA/EARTH/test/ful_2 
->>>./Config.pl -link-option=-lc++
+>>>./Config.pl -install -application=test/Earth-test -link-option=-lc++ -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2 
+>>>./Config.pl -amps-test=on -link-option=-lc++
 >>>make
->>>@echo "test_earth_compile... done" > test_earth.diff
+>>>@echo "test_Earth_compile... done" > test_Earth.diff
 
 
 Check=
->>>@echo "test_earth_check..." >> test_earth.diff
+>>>@echo "test_Earth_check..." >> test_Earth.diff
 >>>@${TESTEarthDIR}/../utility/ReduceFile.pl ${TESTEarthDIR}/loaded.SavedCellData.dat 1000
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTEarthDIR}/loaded.SavedCellData.dat.Reduced.Step=1000         \
 >>>/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2/output-sig=0x301020156361a50/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
 >>>@ls -l test_Earth--Background_Magnetosphere.diff
 
->>>@cat test_Earth--Background_Magnetosphere.diff > test_earth.diff
->>>@ls -l test_earth.diff
+>>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
+>>>@ls -l test_Earth.diff
 
 <#
 -------------------------------------------------------------------------------
