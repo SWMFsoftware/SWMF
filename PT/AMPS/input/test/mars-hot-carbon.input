@@ -3,7 +3,7 @@
 SpeciesList=C
 
 DebuggerMode=on !on,off
-ForceRepeatableSimulationPath=on ! on,off 
+ForceRepeatableSimulationPath=off ! on,off 
 
 
 makefile  SOURCES=src
@@ -42,10 +42,6 @@ CouplerMode=off !!!ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-
-  DomainBoundaryParticleIntersection=user-defined \\ !delete \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
-    function = newMars::ProcessOutsideDomainParticles
-
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
@@ -67,6 +63,9 @@ CouplerMode=off !!!ices !!off, ices, swmf
   define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_ _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_
   define _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION_ _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__HARD_SPHERE_
 
+ ! define _HotCarbon_Source_Reaction_ _HotCarbon_Source_Reaction__Photodissociation_CO_  
+  define _HotCarbon_Source_Reaction_ _HotCarbon_Source_Reaction__Dissociative_Recombination_COp_  
+ 
   define _THERMALIZED_PARTICLE_REMOVE_CRITERION_ _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_
 
   !the volume injection of the particles and the type of injection of model particles into a cell
@@ -100,21 +99,21 @@ CouplerMode=off !!!ices !!off, ices, swmf
 #include species.input
 
 #BackgroundSpecies
-  BackgroundSpecies=off !!on,off
+  BackgroundSpecies=on !!on,off
 
   SpeciesList=CO2,O
   CollisionMode=on !on,off
 
-  CollisionCrossSection= function \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
+  CollisionCrossSection= const \\!function \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
     FunctionName=GetCollisionCrossSectionBackgoundAtmosphereParticle1 \\
-    const(Na,CO)=3e-15 \\
-    const(Na,O)=3e-14
+    const(C,CO2)=3e-19 \\
+    const(C,O)=3e-19
 
-  CollisionScatteringAngle=function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
+  CollisionScatteringAngle=isotropic \\!function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
     FunctionName=UserDefinedVelocityScatteringAngle1
 
-  InjectConditionBackgroundParticle=off 
-  RemoveConditionModelParticle=off 
+  InjectConditionBackgroundParticle=on 
+  RemoveConditionModelParticle=on 
 
 
 
