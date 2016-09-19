@@ -616,7 +616,8 @@ Time=7
 
 Compile=
 >>>@echo "test_Mars-Hot-Oxygen_compile..." > test_Mars-Hot-Oxygen.diff
->>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on -cplr-data-path=${MYDIR}/data/input/Mars -model-data-path=${MYDIR}/data/input/Mars 
+>>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on -model-data-path=/Volumes/Data01/AMPS_DATA/MARS
+>>>cd srcMars; cvs update -r Mars_HotO_DRofO2p_PERMAX
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
 >>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen.diff
@@ -635,7 +636,8 @@ Time=7
 
 Compile=
 >>>@echo "test_Mars-Hot-Carbon_compile..." > test_Mars-Hot-Carbon.diff
->>>./Config.pl -application=test/Mars-Hot-Carbon -spice-path=nospice -spice-kernels=nospice  -amps-test=on -cplr-data-path=${MYDIR}/data/input/Mars -model-data-path=${MYDIR}/data/input/Mars
+>>>./Config.pl -application=test/Mars-Hot-Carbon -spice-path=nospice -spice-kernels=nospice  -amps-test=on -model-data-path=/Volumes/Data01/AMPS_DATA/MARS 
+>>>cd srcMars; cvs update -r HotC_DRofCOp_EL
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
 >>>@echo "test_Mars-Hot-Carbon_compile... done" >> test_Mars-Hot-Carbon.diff
