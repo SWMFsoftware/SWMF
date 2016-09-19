@@ -512,12 +512,15 @@ contains
          case(body1_, body2_)
             bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
             Brefl_D = FaceCoords_D*bDotR
-         case(1, 2)  
-            Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
-         case(3, 4)                                                 
-            Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
-         case(5, 6)                                                     
-            Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+         case default
+            select case(iSide)
+            case(1, 2)  
+               Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
+            case(3, 4)                                                 
+               Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
+            case(5, 6)                                                     
+               Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+            end select
          end select
 
          ! Apply floating condition on densities and pressures
