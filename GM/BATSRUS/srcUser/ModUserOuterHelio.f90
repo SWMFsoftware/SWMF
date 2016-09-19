@@ -40,7 +40,7 @@ module ModUser
   use ModConst,         ONLY: cBoltzmann, cProtonMass
   use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
   use ModGeometry,   ONLY: Xyz_DGB, r_BLK, true_cell
-  use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
+  use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
        Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
        nFluid, NameVar_V
   use ModProcMH,     ONLY: iProc 
@@ -56,14 +56,14 @@ module ModUser
        IMPLEMENTED4  => user_set_cell_boundary,         &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
-       IMPLEMENTED7  => user_update_states,                &
+       IMPLEMENTED7  => user_update_states,             &
        IMPLEMENTED8  => user_action,                    & 
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
        IMPLEMENTED12 => user_init_point_implicit,       &
-       IMPLEMENTED13 => user_init_session
-
+       IMPLEMENTED13 => user_init_session,              &
+       IMPLEMENTED14 => user_set_boundary_cells
 
   include 'user_module.h' !list of public methods
 
@@ -156,6 +156,8 @@ module ModUser
 
   integer :: iFluidProduced_C(nI, nJ, nK)
 
+  real:: rCylinder = 90.0, zCylinder = 150.0
+
 contains
 
   !=========================================================================
@@ -222,6 +224,9 @@ contains
           !    call read_var('uNe3Factor'  , uNe3Factor)
           !    call read_var('RhoNe4Factor', RhoNe4Factor)
           !    call read_var('uNe4Factor'  , uNe4Factor)
+       case("#INNERCYLINDER")
+          call read_var('rCylinder', rCylinder)
+          call read_var('zCylinder', zCylinder)
        case default
           if(iProc==0) call stop_mpi(NameSub// &
                ': unrecognized command: '//NameCommand)
@@ -252,14 +257,48 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='user_set_face_boundary'
     !-------------------------------------------------------------------
-
-    if(iBoundary /= body1_) &
-         call stop_mpi(NameSub//' only inner BC is implemented!')
+    if(iBoundary /= body1_ .and. iBoundary /= 1)then
+       write(*,*) NameSub,': iBoundary=', iBoundary
+       call stop_mpi(NameSub//' is not implemented for this boundary!')
+    end if
 
     if(iProc == ProcTest .and. iBlockBc == BlkTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest = .false.; DoTestMe = .false.
+    end if
+
+    if(DoTestMe)write(*,*) NameSub,' starting with iBoundary=', iBoundary
+
+    if(iBoundary == 1)then
+       ! The neutrals enter at the 1st boundary (negative x)
+
+       ! Use supersonic outflow by for most fluids
+       VarsGhostFace_V = VarsTrueFace_V
+
+       if(UseNeutralFluid)then
+
+          ! Ion inflow
+
+          VarsGhostFace_V(Rho_) = VLISW_rho
+          VarsGhostFace_V(Ux_)  = VLISW_Ux
+          VarsGhostFace_V(Uy_)  = VLISW_Uy
+          VarsGhostFace_V(Uz_)  = VLISW_Uz
+          VarsGhostFace_V(Bx_)  = VLISW_Bx
+          VarsGhostFace_V(By_)  = VLISW_By
+          VarsGhostFace_V(Bz_)  = VLISW_Bz
+          VarsGhostFace_V(p_ )  = VLISW_p
+
+          ! Inflow for the neutral Pop IV
+
+          VarsGhostFace_V(Ne4Rho_) = RhoNeutralsISW
+          VarsGhostFace_V(Ne4Ux_ ) = UxNeutralsISW
+          VarsGhostFace_V(Ne4Uy_ ) = UyNeutralsISW
+          VarsGhostFace_V(Ne4Uz_ ) = UzNeutralsISW
+          VarsGhostFace_V(Ne4P_  ) = PNeutralsISW
+       endif
+
+       RETURN
     end if
 
     ! Make sure that OmegaSun and ParkerTilt are set
@@ -1660,5 +1699,17 @@ contains
     iTableSolarwind = i_lookup_table('solarwind2d')
 
   end subroutine user_init_session
+
+  !=======================================================================
+  subroutine user_set_boundary_cells(iBlock)
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
+    integer, intent(in):: iBlock
+    !--------------------------------------------------------------------------
+    IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
+         Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+         Xyz_DGB(y_,:,:,:,iBlock)**2 < rCylinder**2 .and. &
+         abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder 
+
+  end subroutine user_set_boundary_cells
 
 end module ModUser
