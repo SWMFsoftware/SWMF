@@ -642,6 +642,9 @@ Compile=
 >>>@($(MAKE) amps)
 >>>@echo "test_Mars-Hot-Carbon_compile... done" >> test_Mars-Hot-Carbon.diff
 
+Run=
+>>>echo "the test execution is canceled"
+
 Check=
 >>>@echo "test_Mars-Hot-Carbon_check..." >> test_Mars-Hot-Carbon.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_Mars-HotC-PDCO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
