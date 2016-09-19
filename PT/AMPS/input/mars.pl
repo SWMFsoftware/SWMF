@@ -85,24 +85,7 @@ while ($line=<InputFile>) {
   $InputLine=~s/ //g;
   
   if ($InputLine eq "CASE") {
-    my ($s0,$s1);
-    
-    ($InputLine,$InputComment)=split('!',$line,2);
-    chomp($InputLine);
-    $InputLine=~s/[=()]/ /g;
-    ($s0,$s1,$InputLine)=split(' ',$InputLine,3);
-    
-    $s1=~s/ //g;
-    $DataCaseFiles=$DataDirectory.$s1."/*.h";
-
-    `mkdir -p $InputDirectory`;
-
-    if ( -d $DataDirectory.$s1 ) {
-	    `cp $DataCaseFiles $InputDirectory`;
-    }
-    else {
-	     die "The case selected entitled $InputLine does not exist, line=$InputFileLineNumber ($InputFileName)\n";
-    }
+    print "Section CASE is obsolite and not used. The case dependent model files are selected with Congig.pl -model-data-path=[path to the model dependent data files]\n";
   }
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
