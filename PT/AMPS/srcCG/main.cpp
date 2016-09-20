@@ -1,8 +1,8 @@
 /*
  * main.cpp
  *
- *  Created on: Sept 20, 2016
- *      Author: fougere
+ *  Created on: Jun 21, 2012
+ *      Author: fougere and vtenishe
  */
 
 //$Id$
@@ -31,16 +31,15 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include "SpiceUsr.h"
+
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
 #include "Comet.h"
 #include "Exosphere.h"
 
-
-//location of the Sun in the frame of reference related to the surface model
-double xSun[3];
-
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+#include "SpiceUsr.h"
+#endif
 
 static double SampleFluxDown[200000];
 
@@ -303,7 +302,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*18.0); // /1.5
+  return max(1.0,t->CharacteristicSize()*18.0)/1.5; //4.5
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -327,7 +326,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     if (spec==_H_SPEC_) CharacteristicSpeed*=30.0;
     if (spec==_O_SPEC_) CharacteristicSpeed*=10.0;
     if (spec==_H2_SPEC_) CharacteristicSpeed*=10.0;
-    //    if (spec==_OH_SPEC_) CharacteristicSpeed*=5.0;
+    if (spec==_OH_SPEC_) CharacteristicSpeed*=5.0;
 #endif
 
 #endif
@@ -513,36 +512,10 @@ int main(int argc,char **argv) {
     rnd_seed(100); 
   }
 
-  //analyse the model output file                                                                                                   
-
-  const char SimulationStartTimeString[]="2005-07-04T05:31:21";
-  //const char SimulationStartTimeString[]="2005-07-04T05:39:18";
-
-  //init SPICE                                                                                                                      
-  int i;
-  SpiceDouble StateRosetta[6],StateSun[6],et,lt;
-  double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
-
-  furnsh_c("tempel1.kernels.tm");
-  utc2et_c(SimulationStartTimeString,&et);
-  spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
-  spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
-
-  for (i=0;i<3;i++) {
-    xObservation[i]=1.0E3*StateRosetta[i];
-    xPrimary[i]=0.0;
-    xSecondary[i]=1.0E3*StateSun[i];
-    xSun[i]=1.0E3*StateSun[i];
-  }
-
-  printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e \n",xSun[0],xSun[1],xSun[2]);
-
-
-
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
 
-  PIC::Alarm::SetAlarm(20*3600-10*60);
+  PIC::Alarm::SetAlarm(8*3600-10*60);
 
   //seed the random number generator
   rnd_seed(100);
@@ -564,8 +537,7 @@ int main(int argc,char **argv) {
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-  //  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("tempel1.shape.nas"); //tempel1_2012_cart.nas
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
 #endif
@@ -617,7 +589,6 @@ int main(int argc,char **argv) {
     }
     else {
       if (strcmp(Comet::Mesh::sign,"")==0) {
-	xmin[i]=-100.0e3,xmax[i]=100.0e3;
         //do nothing
       }
       else if (strcmp(Comet::Mesh::sign,"0xd7058cc2a680a3a2")==0) {
@@ -753,10 +724,9 @@ int main(int argc,char **argv) {
   double subSolarPointZenith=0.0;
   double HeliocentricDistance=3.3*_AU_;  
 
-  //  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
+  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
-  //  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
-  PIC::RayTracing::SetCutCellShadowAttribute(xSun,false);
+  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
 //  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
@@ -774,7 +744,7 @@ int main(int argc,char **argv) {
   SpiceDouble lt,et;
   utc2et_c(Exosphere::SimulationStartTimeString,&et);
 
-  //    spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
 //  spkpos_c("SUN",et,"67P/C-G_CSO","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
 
 
@@ -814,8 +784,8 @@ int main(int argc,char **argv) {
     double theta=n*2.0*Pi/((double)(nSamplePoints));
 
     if (nSamplePoints==1) {
-      //      spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSampleLocation,&lt);
-      //spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+      spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSampleLocation,&lt);
+      spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
 
       for (int idim=0;idim<3;idim++) xSampleLocation[idim]*=1.0e3,xSun[idim]*=1.0E3;
     }
@@ -943,8 +913,6 @@ int main(int argc,char **argv) {
     }
 #endif  
 
-  printf("Particleweight OH=%e \n",PIC::ParticleWeightTimeStep::GlobalParticleWeight[_OH_SPEC_]);
-
   //scale the particle weight of the dust species
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if ((spec>=_DUST_SPEC_) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
     PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*=100;
@@ -1033,12 +1001,12 @@ int main(int argc,char **argv) {
       sxform_c("67P/C-G_CSO","67P/C-G_CK",et,CSO2CK);
 
       //location of the Sun in the CK frame
-      //      spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun_CK,&lt);
+      spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun_CK,&lt);
       for (int i=0;i<3;i++) xSun_CK[i]*=1.0E3;
 
 
       //determine e0
-      //      spkezr_c("Sun",et,"67P/C-G_CSO","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
+      spkezr_c("Sun",et,"67P/C-G_CSO","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
 
       l=sqrt(StateSun[0]*StateSun[0]+StateSun[1]*StateSun[1]+StateSun[2]*StateSun[2]);
       for (int idim=0;idim<3;idim++) e0[idim]=StateSun[idim]/l;

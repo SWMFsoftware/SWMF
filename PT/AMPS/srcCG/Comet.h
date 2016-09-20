@@ -1,8 +1,8 @@
 /*
  * Comet.h
  *
- *  Created on: Sept 20, 2016
- *      Author: fougere
+ *  Created on: Jun 21, 2012
+ *      Author: fougere and  vtenishe
  */
 
 #ifndef COMET_H_
@@ -94,7 +94,7 @@ namespace Comet {
    //the constant of the artificial increase of the primary species loss
    //the modification of the rate is compensated by the appropricate particle weight of the daugher products and
    //probabilities of the destruction of the primary species
-   const double NumericalLossRateIncrease=1000000.0; //1000.0
+   const double NumericalLossRateIncrease=1000.0; //1000.0
 
    double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
    int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);

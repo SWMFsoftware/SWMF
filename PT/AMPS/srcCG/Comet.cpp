@@ -1,8 +1,8 @@
 /*
  * Comet.cpp
  *
- *  Created on: Sept 20, 2016
- *      Author: fougere 
+ *  Created on: Jun 21, 2012
+ *      Author: fougere and vtenishe
  */
 
 
@@ -15,9 +15,9 @@
 #include "SingleVariableDiscreteDistribution.h"
 
 //the object name and the names of the frames
-char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="TEMPEL";
+char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
-char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="TEMPEL_FIXED";
+char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="67P/C-G_CK";
 
 int Comet::GravityFieldOffset=-1;
 
@@ -67,16 +67,10 @@ long int offsetSurfaceElement;
   //Nucleus activity
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
 const double  Activity[3][25]={
-  {1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0},
-  {1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0},
-  {1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0} 
-  };
-
-/*const double  Activity[3][25]={
     {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
     {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
     {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
-    };*/
+  };
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
 const double  Activity[3][25]={
   {1.57325301469702e+18,-3.06818217775564e+18,1.31208309667974e+18,1.46041554024817e+18,8.15209500298318e+16,-1.24651294678361e+18,1.35526945505413e+18,2.54057731030077e+17,-3.66692212249671e+17,1.55903292460876e+16,1.81666967120391e+17,-6.18543289507991e+17,3.12482388738060e+17,2.86385636557309e+17,-5.75937279996881e+17,-2.30661343795578e+16,-5.26756643398108e+16,6.20037543471409e+17,-4.83723255010864e+16,-2.55416973732876e+17,-2.97314650780211e+16,3.37966240023484e+15,-2.53012917097097e+17,-3.31563421581800e+17,-9.68864617418557e+15},
@@ -190,32 +184,9 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   }  
 
   //Init Sun position
-  /*  positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+  positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
   positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-  positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);*/
-
-  const char SimulationStartTimeString[]="2005-07-04T05:31:21";
-  //const char SimulationStartTimeString[]="2005-07-04T05:39:18";
-
-  //init SPICE                                                                                                                      
-  int i;
-  SpiceDouble StateRosetta[6],StateSun[6],et,lt;
-  double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
-
-  furnsh_c("kernels.tm");
-  utc2et_c(SimulationStartTimeString,&et);
-  spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
-  spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
-
-  for (i=0;i<3;i++) {
-    xObservation[i]=1.0E3*StateRosetta[i];
-    xPrimary[i]=0.0;
-    xSecondary[i]=1.0E3*StateSun[i];
-    positionSun[i]=1.0E3*StateSun[i];
-  }
-
-  printf("positionSun[0]=%e positionSun[1]=%e positionSun[2]=%e \n",positionSun[0],positionSun[1],positionSun[2]);
-
+  positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
@@ -471,7 +442,7 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
 
 
   //init the injection models
-    BjornNASTRAN::Init();
+  BjornNASTRAN::Init();
 
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
   ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
@@ -1071,8 +1042,7 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   if (definedFluxBjorn[spec]==false) {
     if (spec==_H2O_SPEC_) {
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-      //      double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
-      double Qmin=2.0e18*0.5412,Qmax=1.0e20*0.5412;
+      double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
       double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.8)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.8)*600;
 #endif      
@@ -1169,8 +1139,6 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
 
       if (factor<0.0) factor=0.0; //take care of the few cases where the constraints of positive activity is violated  
 
-      factor=1.0; // turn off spherical harmonics
-
       if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
 	totalProductionRate+=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
       }else{
@@ -1198,6 +1166,7 @@ int Comet::BjornNASTRAN::nDev=25;
 void Comet::BjornNASTRAN::Init() {
   int i,j,idim,specIn,pass,totalSurfaceElementsNumber;
   double norm[3],x[3],c,X;
+
 
   if (SurfaceInjectionProbability!=NULL) return;
 
@@ -1260,7 +1229,6 @@ void Comet::BjornNASTRAN::Init() {
 
         if (factor<0.0) factor=0.0; //take care of the few cases where the constraints of positive activity is violated
 
-	factor=1.0; //turn off spherical harmonics
 
         if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
           productionDistributionNASTRAN[spec][i]=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
@@ -1411,8 +1379,8 @@ bool Comet::BjornNASTRAN::GenerateParticle(int spec, double *x_SO_OBJECT,double 
   double totalProdNightSide=0.0,totalProdDaySide=0.0,scalingFactor,scalingFactorDay,totalSurfaceInShadow=0.0,totalSurfaceInDayLight=0.0;
 
 
-  
-  /*  int specIn=spec;
+  /*
+  int specIn=spec;
   int pass;
 
   static cSingleVariableDiscreteDistribution<int> *SurfaceInjectionProbability=NULL;
@@ -1520,17 +1488,18 @@ bool Comet::BjornNASTRAN::GenerateParticle(int spec, double *x_SO_OBJECT,double 
     }
   }
 }
-
+*/
   
   //Computation of the segment where the particle will be created
-  gamma=rnd();
+/*  gamma=rnd();
   i=0;
   while (gamma>cumulativeProductionDistributionNASTRAN[spec][i]){
     i++;
-  }
-*/
+  }*/
 
- i=SurfaceInjectionProbability[spec].DistributeVariable();
+
+
+  i=SurfaceInjectionProbability[spec].DistributeVariable();
 
 #if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
   Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
@@ -1965,15 +1934,12 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
     else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
   */
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  else if ((s0==_H2O_SPEC_ && s1==_OH_SPEC_) || (s1==_H2O_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
-  else if ((s0==_CO2_SPEC_ && s1==_OH_SPEC_) || (s1==_CO2_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
-
   /* //else if (s0==_OH_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
   //else if (s0==_H2_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
   //else if (s0==_H_SPEC_ && s1==_CO_SPEC_) return 1.5E-19;
   //else if (s0==_O_SPEC_ && s1==_CO_SPEC_) return 1.5E-19;
 
-
+  else if (s0==_H2O_SPEC_ && s1==_OH_SPEC_) return 3.2E-19;
   else if ((s0==_H2O_SPEC_ && s1==_H2_SPEC_) || (s0==_H2_SPEC_ && s1==_H2O_SPEC_)) return 3.2E-19;
   else if ((s0==_H2O_SPEC_ && s1==_H_SPEC_) || (s0==_H_SPEC_ && s1==_H2O_SPEC_)) return 1.8E-19;
   else if ((s0==_H2O_SPEC_ && s1==_O_SPEC_) || (s0==_O_SPEC_ && s1==_H2O_SPEC_)) return 1.8E-19;
