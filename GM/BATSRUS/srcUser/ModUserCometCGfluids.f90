@@ -128,7 +128,7 @@ module ModUser
   logical :: DoUseFieldlineFile = .false.
   character (len=100) :: NameFieldlineFile
   integer :: nVarFieldlineFile
-  real    :: RadiusTubeSI, RadiusTube, IonizationFactor=10.0
+  real    :: RadiusTubeSI, RadiusTube, SPeAdditionalSi=5.0e-9, SPeAdditional
   real, allocatable::  XyzFieldline_DI(:,:)
   real    :: TimeEnhanceStartSI = 180.0, TimeEnhanceEndSI = 240.0
   real    :: TimeEnhanceStart, TimeEnhanceEnd
@@ -161,6 +161,8 @@ module ModUser
   !! user_set_plot_var
   real, dimension(1:nNeuFluid,1:nIonFluid, &
        MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: v_IIGB, ve_IIGB
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: SPeAdditional_GB=0.0
 
   character (len=6), parameter, public :: NameNeutral_I(nNeuFluid) = &
        (/ 'Neu1  ' /)
@@ -265,7 +267,7 @@ contains
           call read_var('NameFieldlineFile',  NameFieldlineFile)
           call read_var('nVarFieldlineFile',  nVarFieldlineFile)
           call read_var('RadiusTubeSI',       RadiusTubeSI)
-          call read_var('IonizationFactor',   IonizationFactor)
+          call read_var('SPeAdditionalSi',    SPeAdditionalSi)
           call read_var('TimeEnhanceStartSI', TimeEnhanceStartSI)
           call read_var('TimeEnhanceEndSI',   TimeEnhanceEndSI)
        case('#USERINPUTEND')
@@ -287,8 +289,8 @@ contains
 
     use ModMain, ONLY: Time_Simulation, n_step
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
-         UnitU_, UnitTemperature_, UnitT_, &
-         UnitN_, UnitX_, UnitB_
+         UnitU_, UnitTemperature_, UnitT_, UnitP_,   &
+         UnitN_, UnitX_, UnitB_, UnitEnergyDens_
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -337,6 +339,8 @@ contains
        TimeEnhanceStart = TimeEnhanceStartSI*SI2NO_V(UnitT_)
        TimeEnhanceEnd   = TimeEnhanceEndSI*SI2NO_V(UnitT_)
        RadiusTube       = RadiusTubeSI*SI2NO_V(UnitX_)
+       SPeAdditional    = SPeAdditionalSi* &
+            Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        call read_fieldline_file
 
        if (iProc == 0) then
@@ -347,7 +351,9 @@ contains
             write(*,*) 'TimeEnhanceEndSI, TimeEnhanceEnd=    = ', &
                  TimeEnhanceEndSI, TimeEnhanceEnd
             write(*,*) 'RadiusTubeSI, RadiusTube = ', RadiusTubeSI, RadiusTube
-            write(*,*) 'IonizationFactor = ', IonizationFactor
+            write(*,*) 'SPeAdditional   = ', SPeAdditional, &
+                 SPeAdditionalSi*Si2No_V(UnitP_)/Si2No_V(UnitT_)
+            write(*,*) 'SPeAdditionalSi = ', SPeAdditionalSi
          end if
     end if
 
@@ -1028,7 +1034,7 @@ contains
                  uNormalIon_I(iIonFluid)
             write(*,*) 'BodyRho_I(iIonFluid), BodyP_I(iIonFluid) =', &
                  BodyRho_I(iIonFluid), BodyP_I(iIonFluid)
-            call stop_mpi('Plasma source at the surface????????')
+            ! call stop_mpi('Plasma source at the surface????????')
          end if
       end do
 
@@ -1443,8 +1449,8 @@ contains
     if(DoCalcShading .and. DoUseCGShape) then
 
        if (i == 1 .and. j == 1 .and. k ==1 .and. iBlock ==1) then
-!          write(*,*) NameSub, ': doing calculations. n_step, iProc =', &
-!               n_step, iProc
+          write(*,*) NameSub, ': doing calculations. n_step, iProc =', &
+               n_step, iProc
        end if
 
        CosAngleTmp     = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
@@ -1536,23 +1542,24 @@ contains
 
     If (IsWithinTheRingR == 1.0 .and. Time_Simulation >  TimeEnhanceStart &
          .and. Time_Simulation < TimeEnhanceEnd) then
-       v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) * IonizationFactor
+       SPeAdditional_GB(i,j,k,iBlock) = SPeAdditional
        if (DoWriteVeIncreaseOnce) then
-          write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
-               ' at ', Xyz_DGB(:,i,j,k,iBlock), &
-               ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
-               ' to ', v_II(Neu1_,H2Op_)
+          write(*,*) 'Additional Pe of  ', SPeAdditionalSi, ' [nPa/s] at ', &
+               Xyz_DGB(:,i,j,k,iBlock)
           DoWriteVeIncreaseOnce = .false.
        end if
        if (DoTestMe) then
-          write(*,*) 'Distance2Fieldline =', Distance2Fieldline
-          write(*,*) 'RadiusTube         =', RadiusTube*Si2No_V(UnitX_)
-!          write(*,*) 've_II is increased by a factor of ',IonizationFactor,&
-!               ' at ', Xyz_DGB(:,i,j,k,iBlock), &
-!               ' from v=', v_II(Neu1_,H2Op_)/IonizationFactor, &
-!               ' to ', v_II(Neu1_,H2Op_)
+          write(*,*) 'Time_Simulation          = ', Time_Simulation
+          write(*,*) 'DoCalcDistance2Fieldline = ', DoCalcDistance2Fieldline
+          write(*,*) 'Distance2Fieldline       = ', Distance2Fieldline
+          write(*,*) 'IsWithinTheRingR         = ', IsWithinTheRingR
+          write(*,*) 'SPeAdditionalSi          = ', SPeAdditionalSi
+          write(*,*) 'SPeAdditional_GB(i,j,k,iBlock) =', &
+               SPeAdditional_GB(i,j,k,iBlock)
        end if
-    end if
+    else
+       SPeAdditional_GB(i,j,k,iBlock) = 0.0
+    end If
 
     ! v_II is the total ionization rate, photons and electrons!
     v_II(Neu1_,H2Op_) = v_II(Neu1_,H2Op_) + ve_II(Neu1_,H2Op_)
@@ -1683,7 +1690,7 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, n_step
+         BlkTest, PROCtest, n_step, Time_Simulation
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
@@ -1695,8 +1702,8 @@ contains
          UnitB_, UnitJ_, UnitRhoU_, UnitTemperature_, &
          ElectronPressureRatio, ElectronCharge
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
-    use ModVarIndexes, ONLY: MassFluid_I
-    use ModBlockData, ONLY: use_block_data, get_block_data, put_block_data
+    use ModVarIndexes,    ONLY: MassFluid_I
+    use ModBlockData,     ONLY: use_block_data, get_block_data, put_block_data
 
     integer, intent(in) :: iBlock
 
@@ -1707,7 +1714,7 @@ contains
     real, dimension(5,1:nIonFluid,1:nI,1:nJ,1:nK) :: SRhoUxTerm_IIC, &
          SRhoUyTerm_IIC, SRhoUzTerm_IIC
     real, dimension(8,1:nIonFluid,1:nI,1:nJ,1:nK) :: SPTerm_IIC
-    real, dimension(8,            1:nI,1:nJ,1:nK) :: SPeTerm_IC
+    real, dimension(9,            1:nI,1:nJ,1:nK) :: SPeTerm_IC
 
     real, dimension(1:3,1:nIonFluid,1:nI,1:nJ,1:nK) :: uIon_DIC
 
@@ -1778,7 +1785,6 @@ contains
     SPTerm_IIC     = 0.
     SPe_C          = 0.
     SPeTerm_IC     = 0.
-
 
     ! nElec_C is the electron/ion density in SI units ( n_e=sum(n_i*Zi) )
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1897,11 +1903,15 @@ contains
 
     if (iBlock /= iBlockLast) then
        iBlocklast = iBlock
-       if (use_block_data(iBlock) .and. .not. DoCalcShading) &
-            call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
+       if (use_block_data(iBlock) .and. .not. DoCalcShading) then
+          call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
+!          write(*,*) 'iProc, iBlock get block data: ', iProc, iBlock, n_step
+       end if
 
-       if (use_block_data(iBlock) .and. .not.  DoCalcDistance2Fieldline) &
-            call get_block_data(iBlock,nI,nJ,nK, IsWithinTheRingR_III)
+       if (use_block_data(iBlock) .and. .not.  DoCalcDistance2Fieldline) then
+          call get_block_data(iBlock,nI,nJ,nK, IsWithinTheRingR_III)
+          !write(*,*) 'getting block data for IsWithinTheRingR_III'
+       end if
 
        if (.not. use_block_data(iBlock)) then
           DoCalcShading = .true.
@@ -2455,6 +2465,12 @@ contains
           !     Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
 
 
+          If (IsWithinTheRingR_III(i,j,k) == 1.0    .and. &
+               Time_Simulation >  TimeEnhanceStart  .and. &
+               Time_Simulation < TimeEnhanceEnd) then
+             SPeTerm_IC(9,i,j,k) =  SPeAdditional_GB(i,j,k,iBlock)
+          end If
+
        end if
 
        ! sum up individual terms
@@ -2478,7 +2494,7 @@ contains
        end do
 
        if(UseElectronPressure) then
-          SPe_C(i,j,k) = sum(SPeTerm_IC(1:8,i,j,k))
+          SPe_C(i,j,k) = sum(SPeTerm_IC(1:9,i,j,k))
        end if
 
        Source_VC(iRhoIon_I   ,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)    + &
@@ -3630,7 +3646,7 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, time_BLK
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_,&
-         ElectronCharge, ElectronPressureRatio, UnitTemperature_
+         ElectronCharge, ElectronPressureRatio, UnitTemperature_, UnitEnergyDens_
     use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
@@ -3824,6 +3840,14 @@ contains
        NameTecUnit = '[1/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
           PlotVar_G(i,j,k) = ve_IIGB(Neu1_,SW_,i,j,k,iBlock)
+       end do; end do; end do
+
+    case('v3')
+       NameIdlUnit = ' '
+       NameTecUnit = ' '
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = SPeAdditional_GB(i,j,k,iBlock) &
+               * No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
 
        ! case('testarray1')
