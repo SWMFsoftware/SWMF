@@ -188,7 +188,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 #endIDF
 
 
-#block ../cg.pl !process settings of the moon module
+#block ../tempel1.pl !process settings of the moon module
 
   define _NUCLEUS_SHAPE__MODE_  _SHAP5_
 
