@@ -523,7 +523,7 @@ int main(int argc,char **argv) {
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  furnsh_c("kernels.tm");
+  furnsh_c("tempel1.kernels.tm");
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
@@ -565,8 +565,7 @@ int main(int argc,char **argv) {
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
   //  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
-  //  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("tempel1_2012_cart.nas");
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("tempel1_2012_cart.nas");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("tempel1.shape.nas"); //tempel1_2012_cart.nas
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
 #endif
