@@ -501,39 +501,52 @@ contains
          call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
-      case('reflect','reflectb')
-         ! reflect the full velocity vector and
-         ! reflect the normal component of B1 (reflect) or full B (reflectb)
-
-         Borig_D = VarsTrueFace_V(Bx_:Bz_)
-         if(TypeBc == 'reflectb') Borig_D = Borig_D + B0Face_D
-
-         select case(iBoundary)
-         case(body1_, body2_)
-            bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
-            Brefl_D = FaceCoords_D*bDotR
-         case default
-            select case(iSide)
-            case(1, 2)  
-               Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
-            case(3, 4)                                                 
-               Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
-            case(5, 6)                                                     
-               Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
-            end select
-         end select
+      case('reflect','reflectb','reflectall')
+         ! reflect the normal component of B1 (reflect/reflectall) or full B (reflectb)
+         ! reflect the normal component of the velocities for reflectall
+         ! reflect the full velocity vectors for reflect and reflectb (linetied)
 
          ! Apply floating condition on densities and pressures
          VarsGhostFace_V          =  VarsTrueFace_V
 
-         ! Reflect all components of velocities
-         VarsGhostFace_V(iUx_I)   = -VarsGhostFace_V(iUx_I)
-         VarsGhostFace_V(iUy_I)   = -VarsGhostFace_V(iUy_I)
-         VarsGhostFace_V(iUz_I)   = -VarsGhostFace_V(iUz_I)
+         if(UseB)then
+            Borig_D = VarsTrueFace_V(Bx_:Bz_)
+            if(TypeBc == 'reflectb') Borig_D = Borig_D + B0Face_D
 
-         ! Reflect B1 or full B
-         VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D
+            select case(iBoundary)
+            case(body1_, body2_)
+               bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
+               Brefl_D = FaceCoords_D*bDotR
+            case default
+               select case(iSide)
+               case(1, 2)  
+                  Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
+               case(3, 4)                                                 
+                  Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
+               case(5, 6)                                                     
+                  Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+               end select
+            end select
+            ! Reflect B1 or full B
+            VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D
+         end if
 
+         if(TypeBc == 'reflectall')then
+            ! Reflect the normal component of the velocity
+            select case(iSide)
+            case(1, 2)  
+               VarsGhostFace_V(iUx_I) = -VarsGhostFace_V(iUx_I)
+            case(3, 4)                                                 
+               VarsGhostFace_V(iUy_I) = -VarsGhostFace_V(iUy_I)
+            case(5, 6)                                                     
+               VarsGhostFace_V(iUz_I) = -VarsGhostFace_V(iUz_I)
+            end select
+         else
+            ! Reflect all components of velocities (linetied)
+            VarsGhostFace_V(iUx_I) = -VarsGhostFace_V(iUx_I)
+            VarsGhostFace_V(iUy_I) = -VarsGhostFace_V(iUy_I)
+            VarsGhostFace_V(iUz_I) = -VarsGhostFace_V(iUz_I)
+         end if
       case('ionosphere', 'polarwind','ionosphereoutflow')
 
          ! By default apply floating condition
