@@ -794,23 +794,28 @@ namespace PIC {
       inline cFieldLineSegment* GetLastSegment(){ return LastSegment;}
       inline void GetFirstSegment(cFieldLineSegment* Out){Out=FirstSegment;}
       inline void GetLastSegment( cFieldLineSegment* Out){Out=LastSegment;}
+
       //access an arbitrary segment
       inline cFieldLineSegment* GetSegment(int iSegment){
-	cFieldLineSegment* Segment;
-	if(iSegment > 0.5*nSegment && iSegment < nSegment){
+	cFieldLineSegment* Segment=NULL;
+
+	if (iSegment > 0.5*nSegment && iSegment < nSegment){
           Segment = LastSegment;
           for(int i=nSegment-1; i > iSegment; i--)
 	    Segment = Segment->GetPrev();
-          return Segment;
         }
-        if(iSegment >= 0){
+
+        if (iSegment >= 0){
           Segment = FirstSegment;
           for(int i=0; i < iSegment; i++)
             Segment = Segment->GetNext();
-          return Segment;
         }
-        exit(__LINE__,__FILE__, "ERROR: invalid index of a segment");
+
+        if (Segment==NULL) exit(__LINE__,__FILE__, "ERROR: invalid index of a segment");
+
+        return Segment;
       }
+
       inline cFieldLineSegment* GetSegment(double S){
         // check correctness
         if(S < 0.0 || S > nSegment)
@@ -819,9 +824,11 @@ namespace PIC {
         int iSegment = (int) S;
         return GetSegment(iSegment);
       };
+
       inline double GetSegmentLength(double S){
         return GetSegment(S)->GetLength();
       }
+
       inline void GetSegmentDirection(double* Dir, double S){
         GetSegment(S)->GetDir(Dir);
       }
