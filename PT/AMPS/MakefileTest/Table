@@ -149,6 +149,13 @@ Time=2
 <#
 -------------------------------------------------------------------------------
 #>
+Name=Tempel1@@(0+valeriy) 
+Time=6
+Keys=-model-data-path=${MYDIR} -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/DeepImpact@@(0+valeriy)
+<#
+
+-------------------------------------------------------------------------------
+#>
 Name=Mercury-test 
 Time=2
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase@@(0+valeriy)  
