@@ -56,6 +56,7 @@ my @FinalApps;
 my $Name;
 my $Keys;
 my $Outs;
+my $Refs;
 my $Time;
 my $TimeTotal = 0;
 my $TimeLimit = 110;
@@ -70,7 +71,7 @@ my $PathName;
 while(@Table){
     my $refTable;
     my $refTars;
-    ($refTable,$Name,$Time,$Keys,$Outs,$refTars) = get_next_test(@Table);
+    ($refTable,$Name,$Time,$Keys,$Outs,$refTars,$Refs) = get_next_test(@Table);
     @Table   = @$refTable;
     @Tars = @$refTars;
     $PathName=$Name;
@@ -88,6 +89,7 @@ while(@Table){
 	    $Final[$i]=~s/<APPPATH>/$PathName/g;
 	    $Final[$i]=~s/<APPKEYS>/$Keys/g;
 	    $Final[$i]=~s/<APPOUTS>/$Outs/g;
+            $Final[$i]=~s/<APPREF>/$Refs/g;
 	}
 	else{
 	    $Final[$i]=$Base[$i];
@@ -121,7 +123,9 @@ while(@Table){
 #build the final Makefile
 push(@Final,"\n\n");
 push(@Final,@FinalApps);
+
 #write it
+write_content($fFinal,"include");
 &write_content($fFinal,@Final);
 
 return 1;
@@ -151,6 +155,7 @@ sub get_next_test{
     my $nRemove=0;
     #test description
     my $Name=''; my $Keys=''; my $Outs=''; my $Time=0;
+    my $Refs='';
     #target block flag
     my $iTar='';
     #non-generic target descriptions
@@ -178,6 +183,8 @@ sub get_next_test{
 	    elsif($line =~ m/Time=([0-9]+)/){$Time+=$1;}
 	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1,," if($1);}
 	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1,," if($1);}
+            elsif($line =~ m/Ref=(.*)/){$Refs="$Refs$1,," if($1);}  
+
 	    #non-generic target description header
 	    elsif($line =~ m/Compile=(.*)/){
 		$iTar = 1; $Tars[0].=',,' if $Tars[0];}
@@ -206,6 +213,8 @@ sub get_next_test{
 	my @Rundir  = split(/,,/,$Tars[1])if($Tars[1]);$Tars[1]='';
 	my @Run     = split(/,,/,$Tars[2])if($Tars[2]);$Tars[2]='';
 	my @Check   = split(/,,/,$Tars[3])if($Tars[3]);$Tars[3]='';
+        my @Refs    = split(/,,/,$Refs)   if($Refs);   $Refs   ='';
+
 	unless($ErrorRead){
 	    #process parameters for this machine
 	    $Name = process_option($Name);
@@ -219,6 +228,24 @@ sub get_next_test{
 		$Out = process_option($Out);
 		$Outs="$Outs$Out " if($Out);
 	    }
+
+            #process Refs
+            foreach my $Ref (@Refs){
+                $Ref = process_option($Ref);
+
+                #the reference change is requested for this machine
+                if ($Ref) {
+                   my ($nRef,$Compiler,$TestName); 
+
+                   $Ref=~s/[}{]/ /g;
+                   ($nRef,$Compiler)=split(' ',$Ref); 
+
+                   $TestName=$Name;
+                   if($TestName=~ m/(.*)\/(.*)$/){$TestName=$2;}
+                   $Refs=$Refs."\n\nifeq (\$(COMPILE.c),$Compiler)\nTEST".$TestName."-REF=[$nRef]\nendif\n";
+                }
+            }
+
 	    #process targets
 	    foreach my $Tar (@Compile){
 		$Tar    = process_option($Tar);
@@ -238,11 +265,11 @@ sub get_next_test{
 	    }
 
 	}
-	(\@_,$Name,$Time,$Keys,$Outs,\@Tars);
+	(\@_,$Name,$Time,$Keys,$Outs,\@Tars,$Refs);
     }
     else{
 	@Tars=('',0,'','','');
-	(\@_,'','','',\@Tars);
+	(\@_,'','','',\@Tars,$Refs);
     }
 }
 
