@@ -203,8 +203,8 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=on !on, off
-  SpiceKernels="NAIF/de430.bsp", \\
-  "NAIF/pck00010.tpc", \\
+  SpiceKernels="../NAIF/de430.bsp", \\
+  "../NAIF/pck00010.tpc", \\
   "spk/dii_preenc174_nav_v1.bsp", \\
   "spk/dif_preenc174_nav_v1.bsp", \\
   "spk/di_tempel1_ssd_v1.bsp", \\
