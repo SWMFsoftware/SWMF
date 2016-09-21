@@ -999,8 +999,8 @@ int main(int argc,char **argv) {
   int nTotalIterations=540000;
 
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
-    nTotalIterations=10; //50
-    PIC::RequiredSampleLength=10;
+    nTotalIterations=100; //50
+    PIC::RequiredSampleLength=100;
   }
 
 
@@ -1166,10 +1166,10 @@ int main(int argc,char **argv) {
     char fname[400];
 
     if (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_) {
-      sprintf(fname,"%s/test_CG-dust-test.dat",PIC::OutputDataFileDirectory);
+      sprintf(fname,"%s/test_Tempel1-dust-test.dat",PIC::OutputDataFileDirectory);
     }
     else {
-      sprintf(fname,"%s/test_CG.dat",PIC::OutputDataFileDirectory); 
+      sprintf(fname,"%s/test_Tempel1.dat",PIC::OutputDataFileDirectory); 
     }
 
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
