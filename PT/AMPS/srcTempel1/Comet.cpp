@@ -202,7 +202,7 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  furnsh_c("tempel1.kernels.tm");
+  //  furnsh_c("tempel1.kernels.tm");
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);

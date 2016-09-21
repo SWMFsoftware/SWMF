@@ -513,7 +513,10 @@ int main(int argc,char **argv) {
     rnd_seed(100); 
   }
 
-  //analyse the model output file                                                                                                   
+  //analyse the model output file                                                                                                 
+
+  PIC::Init_BeforeParser();
+  Comet::Init_BeforeParser();
 
   const char SimulationStartTimeString[]="2005-07-04T05:31:21";
   //const char SimulationStartTimeString[]="2005-07-04T05:39:18";
@@ -523,7 +526,7 @@ int main(int argc,char **argv) {
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  furnsh_c("tempel1.kernels.tm");
+  //  furnsh_c("tempel1.kernels.tm");
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
@@ -538,9 +541,6 @@ int main(int argc,char **argv) {
   printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e \n",xSun[0],xSun[1],xSun[2]);
 
 
-
-  PIC::Init_BeforeParser();
-  Comet::Init_BeforeParser();
 
   PIC::Alarm::SetAlarm(20*3600-10*60);
 
