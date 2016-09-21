@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O,CO2,OH
+SpeciesList=H2O,CO2
 !H2 O OH 
 !DUST DUST
 !CO CO2
@@ -132,58 +132,15 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
   nRotModes(CO2=2)
   RotZnum(CO2=5)
-!  nRotModes(CO=2)
-!  RotZnum(CO=5)
-  nRotModes(OH=2)
-  RotZnum(OH=5)
-!  nRotModes(H2=2)
-!  RotZnum(H2=5)
-!  nRotModes(O=0)
-!  RotZnum(O=5)
-!  nRotModes(H=0)
-!  RotZnum(H=5)
-
-!  nRotModes(O2=2)
-!  RotZnum(O2=5)
+!  nRotModes(OH=2)
+!  RotZnum(OH=5)
 
   TemperatureIndex(H2O,H2O)=0.5
   TemperatureIndex(CO2,CO2)=0.5
   TemperatureIndex(H2O,CO2)=0.5
 
-!  TemperatureIndex(CO,CO)=0.5
-!  TemperatureIndex(H2O,CO)=0.5
-!  TemperatureIndex(CO,CO2)=0.5
-!  TemperatureIndex(OH,CO)=0.5
-!  TemperatureIndex(H2,CO)=0.5
-!  TemperatureIndex(O,CO)=0.5	
-!  TemperatureIndex(H,CO)=0.5
-
-  TemperatureIndex(H2O,OH)=0.5
-  TemperatureIndex(CO2,OH)=0.5
-!  TemperatureIndex(H2O,H2)=0.5
-!  TemperatureIndex(H2O,O)=0.5
-!  TemperatureIndex(H2O,H)=0.5
-!  TemperatureIndex(OH,OH)=0.5
-!  TemperatureIndex(OH,H2)=0.5
-!  TemperatureIndex(OH,H)=0.5
-!  TemperatureIndex(OH,O)=0.5
-!  TemperatureIndex(H2,H2)=0.5
-!  TemperatureIndex(H2,H)=0.5
-!  TemperatureIndex(H2,O)=0.5
-!  TemperatureIndex(H,H)=0.5
-!  TemperatureIndex(H,O)=0.5
-!  TemperatureIndex(O,O)=0.5
-
-
-!  TemperatureIndex(O2,O2)=0.5
-!  TemperatureIndex(H2O,O2)=0.5
-!  TemperatureIndex(O2,CO2)=0.5
-!  TemperatureIndex(OH,O2)=0.5
-!  TemperatureIndex(H2,O2)=0.5
-!  TemperatureIndex(O,O2)=0.5	
-!  TemperatureIndex(H,O2)=0.5
-!  TemperatureIndex(CO,O2)=0.5
-
+!  TemperatureIndex(H2O,OH)=0.5
+!  TemperatureIndex(CO2,OH)=0.5
 
 #endIDF
 
@@ -202,7 +159,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
   RadialVelocityMode=off !on,off
 
-  CometTemperatureMode=Analytical !Bjorn,Constant,Analytical
+  CometTemperatureMode=Bjorn !Bjorn,Constant,Analytical
 
   SampleBackFluxMode=off
   ComputeMaximumLiftableSizeMode=off
@@ -215,18 +172,15 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
   
   !! if BjornProductionRateUserDefined=on, use following values
   BjornProductionRate(H2O)=0.0 !!2.0e25	    
-!  BjornProductionRate(CO)=0.0
   BjornProductionRate(CO2)=0.0
 
   UniformProductionRate(H2O)=0.0 !!8.0e25
-!  UniformProductionRate(CO)=0.0
   UniformProductionRate(CO2)=0.0
-  UniformProductionRate(OH)=0.0 !!8.0e25
+!  UniformProductionRate(OH)=0.0 !!8.0e25
 
   JetProductionRate(H2O)=0.0 !1.0e25	    
   JetProductionRate(CO2)=0.0 !1.0e25	    
-!  JetProductionRate(CO)=0.0 !1.0e25	    
-  JetProductionRate(OH)=0.0 !1.0e25	    
+!  JetProductionRate(OH)=0.0 !1.0e25	    
 
   
   TrackingSurfaceElementMode=off !on,off
