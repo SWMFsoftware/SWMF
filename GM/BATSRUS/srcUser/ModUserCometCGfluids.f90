@@ -1690,7 +1690,7 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, n_step, Time_Simulation
+         BlkTest, PROCtest, n_step, Time_Simulation, iNewDecomposition
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
@@ -1746,6 +1746,7 @@ contains
     logical :: DoTest, DoTestMe, TestCell
     logical :: DoCalcShading = .false.
     integer, save :: iBlockLast = -100
+    integer, save :: iLastDecomposition = -100
     real,    save :: IsIntersectedShapeR_III(nI,nJ,nK) = -1.0
 
     logical :: DoCalcDistance2Fieldline = .false.
@@ -1767,6 +1768,11 @@ contains
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest=.false.; DoTestMe=.false.
+    end if
+
+    if (iNewDecomposition /= iLastDecomposition) then
+       iBlockLast         = -100
+       iLastDecomposition = iNewDecomposition
     end if
 
     !! Set the source arrays for this block to zero
