@@ -562,13 +562,8 @@ int main(int argc,char **argv) {
   //  CutCell::ReadNastranSurfaceMeshLongFormat("CG2.bdf",xmin,xmax,1.0E-8);
 
 
-  //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
-#if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-  //  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("tempel1.shape.nas"); //tempel1_2012_cart.nas
-#elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
-#endif
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("tempel1.shape.nas",PIC::UserModelInputDataPath); //tempel1_2012_cart.nas
+
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
