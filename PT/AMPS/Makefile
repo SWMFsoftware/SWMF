@@ -15,8 +15,8 @@ BATL=nobatl
 TESTMODE=off
 INTERFACE=off
 
-include Makefile.def
 include Makefile.conf
+include Makefile.def
 
 
 #include the local makefile (defined the AMPS' compiling variables)  
