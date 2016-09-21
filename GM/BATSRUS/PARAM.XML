@@ -1141,6 +1141,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<option name="absorb"				/>
 		<option name="reflect"				/>
 		<option name="reflectb"				/>
+		<option name="reflectall"			/>
 		<option name="float"				/>
 		<option name="outflow"				/>
 		<option name="fixed"				/>
@@ -1161,6 +1162,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 			<option name="absorb"				/>
 			<option name="reflect"		default="T" 	/>
 			<option name="reflectb"				/>
+			<option name="reflectall"			/>
 			<option name="float"				/>
 			<option name="ionosphere"	    		/>
 			<option name="ionospherefloat"			/>
@@ -1195,9 +1197,11 @@ is controlled by this command.
 Possible values for TypeBcBody are:
 \begin{verbatim}
 'absorb'          - float all variables but reflect Vr if Vr > 0
-'reflect'         - reflect velocity relative to corotation, 
-                    reflect the radial component of B1, float B transverse, rho and P
-'reflectb'        - same as reflect, but the radial component of full B is reflected.
+'reflect'         - reflect all components of velocity relative to corotation, 
+                    reflect the normal component of B1, other variables float
+'reflectb'        - same as reflect, but the normal component of full B is reflected.
+'reflectall'      - reflect the normal component of B1 and all velocities.
+		    This is the perfectly conducting sphere. B0 should be 0.
 'float'           - float all variables
 'outflow'	  - same as 'float' but the pressure is set to pOutflow from #OUTFLOWPRESSURE
 'fixed'           - use initial solar wind values. Total B is set to solar wind B.
@@ -1225,8 +1229,10 @@ The boundary condition on Br can be changed with the #MAGNETICINNERBOUNDARY
 command.
 
 For the second body TypeBcBody2 can have the following values:
-'absorb', 'reflect', 'reflectb', 'float', 'ionosphere', 'ionospherefloat/linetied',
-however, the corotation and ionospheric drift velocities are zero for the second body.
+'absorb', 'reflect', 'reflectb', 'reflectall', 'float', 'ionosphere', 
+'ionospherefloat/linetied',
+however, the corotation and ionospheric drift velocities 
+are zero for the second body.
 
 Default value for TypeBcBody is 'ionosphere' for the GM component,
 and 'unknown' for the EE, SC, IH and OH components, so the inner boundary 
