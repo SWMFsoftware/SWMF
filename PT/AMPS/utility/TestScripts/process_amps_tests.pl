@@ -51,15 +51,30 @@ foreach $day (@days){
 	while(<RESULTS>){
 	    last if /===========/;
 	    my @item = split(' ',$_);
-	    my $test = $item[-1]; $test =~ s/\.diff$//;
+	    my $test = $item[-1]; 
 	    my $size = $item[4];
+            my $Ref='';
+
+            #get the reference solution index
+           if ($test=~m/\[/) {
+              my ($iRefStart,$iRefFinish);
+
+              $iRefStart=rindex($test,"[");
+              $iRefFinish=rindex($test,"]");
+              $Ref=substr($test,($iRefStart+1),($iRefFinish-$iRefStart-1));
+
+              $test=substr($test,0,$iRefStart);
+           }
+
+            $test =~ s/\.diff$//;
+
 	    $tests{$test} = 1;
 	    if($size){
 		$result{$day}{$test}{$machine}=
-		    "<font color=red>failed</font>";
+		    "<font color=red>failed<sub>$Ref</sub></font>";
 	    }else{
 		$result{$day}{$test}{$machine}=
-		    "<font color=green>passed</font>";
+		    "<font color=green>passed<sub>$Ref</sub></font>";
 	    }
 	    print HTML $_;
 	}
