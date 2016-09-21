@@ -202,7 +202,7 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  furnsh_c("kernels.tm");
+  furnsh_c("tempel1.kernels.tm");
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
@@ -1084,7 +1084,7 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
       nightSideFlux[spec]=Qmin;
     }
     else if (spec==_CO2_SPEC_) {
-      double Qmin=0.1/pow(HeliocentricDistance/_AU_,2.0)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,2.0)*600;
+      double Qmin=2.0e18*0.5412*0.1,Qmax=1.0e20*0.5412*0.1;
       for (i=0;i<90;i++) {
 	angle=(double) i;
 	fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
@@ -1965,8 +1965,8 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
     else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
   */
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  else if ((s0==_H2O_SPEC_ && s1==_OH_SPEC_) || (s1==_H2O_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
-  else if ((s0==_CO2_SPEC_ && s1==_OH_SPEC_) || (s1==_CO2_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
+  //  else if ((s0==_H2O_SPEC_ && s1==_OH_SPEC_) || (s1==_H2O_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
+  //else if ((s0==_CO2_SPEC_ && s1==_OH_SPEC_) || (s1==_CO2_SPEC_ && s0==_OH_SPEC_)) return 3.2E-19;
 
   /* //else if (s0==_OH_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
   //else if (s0==_H2_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
