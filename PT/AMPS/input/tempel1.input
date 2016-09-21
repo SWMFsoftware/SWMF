@@ -55,7 +55,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 #General
   RequestedParticleBufferLength=1500000
 
-  ReferenceInjectionParticleNumber=120000
+  ReferenceInjectionParticleNumber=6000 !!120000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
   InitialSampleLength=10
@@ -144,7 +144,6 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
 #endIDF
 
-
 #block ../tempel1.pl !process settings of the moon module
 
   define _NUCLEUS_SHAPE__MODE_  _SHAP5_
@@ -203,17 +202,20 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
-  SPICE=off !on, off
-!  SpiceKernels="/Users/fougere/ICES/DeepImpact/disp_1000/data/spk/dii_preenc174_nav_v1.bsp", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/spk/dif_preenc174_nav_v1.bsp"' \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/spk/di_tempel1_ssd_v1.bsp", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/spk/di_finalenc_nav_v3_to06048.bsp", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/fk/di_v17.tf", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/ik/dif_mri_v10.ti", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/ik/dif_hri_v10.ti", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/pck/pck00008.tpc", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/pck/di_tempel1_v01.tpc", \\
-!  "/Users/fougere/ICES/DeepImpact/disp_1000/data/sclk/dif_sclkscet_00015_science.tsc",  
+  SPICE=on !on, off
+  SpiceKernels="NAIF/de430.bsp", \\
+  "NAIF/pck00010.tpc", \\
+  "spk/dii_preenc174_nav_v1.bsp", \\
+  "spk/dif_preenc174_nav_v1.bsp", \\
+  "spk/di_tempel1_ssd_v1.bsp", \\
+  "spk/di_finalenc_nav_v3_to06048.bsp", \\
+  "fk/di_v17.tf", \\
+  "ik/dif_mri_v10.ti", \\
+  "ik/dif_hri_v10.ti", \\
+  "lsk/naif0008.tls", \\
+  "pck/pck00008.tpc", \\
+  "pck/di_tempel1_v01.tpc", \\
+  "sclk/dif_sclkscet_00015_science.tsc"  
 
 ! SimulationStartTime=2008-04-12T07:14:00
 
