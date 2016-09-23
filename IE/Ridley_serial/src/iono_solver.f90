@@ -104,7 +104,6 @@ subroutine ionosphere_solver(iBlock, Jr, &
   SAVE
   character(len=*), parameter:: NameSub = 'ionosphere_solver'
   !-------------------------------------------------------------------------
-
   call CON_set_do_test('ionosphere',DoTest,DoTestMe)
   call timing_start('iono_solve')
   if(DoTest)write(*,*)'iono_solve starting'
@@ -240,7 +239,7 @@ subroutine ionosphere_solver(iBlock, Jr, &
        write(*,*)'iono_solve: north, iter, resid, iError=',&
        north, nIteration, Residual, iError
   if(iError /= 0 .and. iError /=3)then
-     write(*,*)'IE_ERROR in iono_solve: gmres failed !!!'
+     write(*,*)'IE_ERROR in iono_solve: solver failed !!!'
      if(iError < 0) &
           call CON_stop('IE_ERROR in iono_solve: residual did not decrease')
   end if
