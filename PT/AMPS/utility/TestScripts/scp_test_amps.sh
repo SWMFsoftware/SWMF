@@ -35,6 +35,7 @@ cd $WorkDir/Tmp_AMPS_test
 # GNU compiled test
 #>GNUAll #####################################################################
 #cd GNU/AMPS                                                                 #
+#rm -rf test_amps.res
 #ls -ltr  *diff > test_amps.res                                              #
 #echo '===============================================' >> test_amps.res     # 
 #head -100 *diff >> test_amps.res                                            #
@@ -45,6 +46,7 @@ cd $WorkDir/Tmp_AMPS_test
 # Intel compiled test
 #>IntelAll ###################################################################
 #cd Intel/AMPS                                                               #
+#rm -rf test_amps.res
 #ls -ltr  *diff > test_amps.res                                              #
 #echo '===============================================' >> test_amps.res     # 
 #head -100 *diff >> test_amps.res                                            #
@@ -54,6 +56,7 @@ cd $WorkDir/Tmp_AMPS_test
 # PGI compiled test
 #>PGIAll #####################################################################
 #cd PGI/AMPS                                                                 #
+#rm -rf test_amps.res
 #ls -ltr  *diff > test_amps.res                                              #
 #echo '===============================================' >> test_amps.res     # 
 #head -100 *diff >> test_amps.res                                            #
