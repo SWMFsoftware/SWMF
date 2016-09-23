@@ -9,6 +9,7 @@ setenv NEWTESTDIR AMPS_TEST_RESULTS/`date -v-1d +%Y/%m/%d`
 mkdir -p ${NEWTESTDIR}
 
 # Copy over test results but preserve the subdirectories in Current
+chmod a+r Current/*/*
 cp -r Current/* ${NEWTESTDIR}/
 rm -f Current/*/*
 
