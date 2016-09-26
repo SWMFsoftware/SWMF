@@ -279,6 +279,18 @@ namespace Vector3D {
        OrthogonalVector[i]-=c*PrimaryVector[i];
       }
    }
+
+  inline double ParallelComponentLength(double *Vector,double *Axis) {
+    int i;
+    double l=0.0,c=0.0;
+
+    for (i=0;i<3;i++) {
+      l+=pow(Axis[i],2);
+      c+=Vector[i]*Axis[i];
+    }
+
+    return c/sqrt(l);
+  }
  
 
   //determine an orthogonal frame of rederence: z is input; e1 and e2 and orthogonal to z and form a right handed frame of reference
