@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_geopack
-  use ModNumConst, ONLY: cDegToRad
+  use ModNumConst, ONLY: cDegToRad, cHalfPi, cTwoPi
   implicit none
 
   ! Contains some subroutine of the geopack code (by N.V.Tsyganenko), 
@@ -12,6 +12,10 @@ module CON_geopack
 
   real:: GeiGse_DD(3,3), HgiGse_DD(3,3), GeiGsm_DD(3,3), GsmGse_DD(3,3)
   real:: DipoleStrength, AxisMagGeo_D(3)
+
+  ! For Earth we can use Geopack to get rotation axis too
+  real:: RotAxisPhiGeopack   = -1.0
+  real:: RotAxisThetaGeopack = -1.0
 
   ! Offset longitude angle for HGI in degrees and in radians
   ! Note: dLongitudeHgiDeg is the input value, which can be negative
@@ -100,7 +104,7 @@ contains
     ! Also see the corrected version in 
     ! http://www.space-plasma.qmul.ac.uk/heliocoords/
     ! Added by I.Sokolov&I.Roussev, 08.17.03
-    SunEMBDistance=1.000140-0.016710*cos(G)-0.000140*cos(G+G)
+    SunEMBDistance=1.000140-0.016710*cos(G)-0.000140*cos(2*G)
 
     IF(SunLongitude > 6.2831853) SunLongitude=SunLongitude - 6.2831853
     IF(SunLongitude < 0.) SunLongitude = SunLongitude + 6.2831853
@@ -255,6 +259,9 @@ contains
     jDay=JulianDay(iYear,iMonth,iDay)
     call geopack_mag_axis(iYear,jDay)
     call geopack_sun(iYear,jDay,iHour,iMin,iSec,GSTime,SunLongitude,Obliq)
+
+    RotAxisPhiGeoPack   = modulo(cHalfPi - (SunLongitude-9.924E-5), cTwoPi)
+    RotAxisThetaGeopack = Obliq
 
     GeiGse_DD=&
          matmul(rot_matrix_x(Obliq),rot_matrix_z(SunLongitude-9.924E-5))
