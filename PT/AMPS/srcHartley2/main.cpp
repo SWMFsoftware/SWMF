@@ -1,8 +1,8 @@
 /*
  * main.cpp
  *
- *  Created on: Jun 21, 2012
- *      Author: fougere and vtenishe
+ *  Created on: Sept 28, 2016
+ *      Author: fougere 
  */
 
 //$Id$
@@ -40,7 +40,6 @@
 
 //location of the Sun in the frame of reference related to the surface model
 double xSun[3];
-
 
 static double SampleFluxDown[200000];
 
@@ -303,7 +302,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*18.0); // /1.5
+  return max(1.0,t->CharacteristicSize()*18.0)/4.0;  
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -518,16 +517,13 @@ int main(int argc,char **argv) {
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
 
-  const char SimulationStartTimeString[]="2010-11-04T13:59:47";
-  //  const char SimulationStartTimeString[]="2010-11-04T13:56:28";
-
   //init SPICE                                                                                                                      
   int i;
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
   //  furnsh_c("tempel1.kernels.tm");
-  utc2et_c(SimulationStartTimeString,&et);
+  utc2et_c(Exosphere::SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"HARTLEY_2_FIXED","none","HARTLEY_2",StateRosetta,&lt);
   spkezr_c("SUN",et,"HARTLEY_2_FIXED","none","HARTLEY_2",StateSun,&lt);
 
@@ -538,9 +534,10 @@ int main(int argc,char **argv) {
     xSun[i]=-1.0E3*StateSun[i]; //a minus sign had to be applied for the illumination to agree with A'Hearn et al, Belton et al. Please double check
   }
 
-  printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e sunDistance=%e\n",xSun[0],xSun[1],xSun[2],sqrt(xSun[0]*xSun[0]+xSun[1]*xSun[1]+xSun[2]*xSun[2])/_AU_);
-  printf("xObs[0]=%e xObs[1]=%e xObs[2]=%e scDistance=%e\n",xObservation[0],xObservation[1],xObservation[2],sqrt(xObservation[0]*xObservation[0]+xObservation[1]*xObservation[1]+xObservation[2]*xObservation[2]));
-
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e sunDistance=%e AU\n",xSun[0],xSun[1],xSun[2],sqrt(xSun[0]*xSun[0]+xSun[1]*xSun[1]+xSun[2]*xSun[2])/_AU_);
+    printf("xObs[0]=%e xObs[1]=%e xObs[2]=%e scDistance=%e\n",xObservation[0],xObservation[1],xObservation[2],sqrt(xObservation[0]*xObservation[0]+xObservation[1]*xObservation[1]+xObservation[2]*xObservation[2]));
+  }
 
 
   PIC::Alarm::SetAlarm(20*3600-10*60);
@@ -744,20 +741,10 @@ int main(int argc,char **argv) {
     }
   }
 
-  //test the shadow procedure
-  double subSolarPointAzimuth=0.0;
-  double subSolarPointZenith=0.0;
-  double HeliocentricDistance=3.3*_AU_;  
-
-  //  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
+  //Shadow Procedure
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
-  //  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::RayTracing::SetCutCellShadowAttribute(xSun,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
-
-//  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
-//  PIC::RequiredSampleLength=10;
-
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust flux map sampling procedure
