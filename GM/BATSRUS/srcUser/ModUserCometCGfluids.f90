@@ -3662,7 +3662,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar
@@ -3686,7 +3686,7 @@ contains
        NameIdlUnit = '1/cm^3'
        NameTecUnit = '[1/cm^3]'
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           if (DoEnhanceNeu) then
              PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
                   MassFluid_I(nFluid)*No2Si_V(UnitN_) * &
@@ -3702,7 +3702,7 @@ contains
     case('unx1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(Neu1RhoUx_,i,j,k,iBlock)/ &
                State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
        end do; end do; end do
@@ -3710,7 +3710,7 @@ contains
     case('uny1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(Neu1RhoUy_,i,j,k,iBlock)/ &
                State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
        end do; end do; end do
@@ -3718,7 +3718,7 @@ contains
     case('unz1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(Neu1RhoUz_,i,j,k,iBlock)/ &
                State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
        end do; end do; end do
@@ -3726,7 +3726,7 @@ contains
     case('tn1')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(Neu1P_,i,j,k,iBlock)* &
                MassFluid_I(nFluid)/State_VGB(Neu1Rho_,i,j,k,iBlock) * &
                No2SI_V(UnitTemperature_)
@@ -3735,7 +3735,7 @@ contains
     case('te')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/ &
                MassIon_I*No2SI_V(UnitN_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
@@ -3752,7 +3752,7 @@ contains
     case('tisw')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(iPIon_I(SW_),i,j,k,iBlock) / &
                State_VGB(iRhoIon_I(Sw_),i,j,k,iBlock) * &
                MassIon_I(Sw_)* NO2SI_V(UnitTemperature_) 
@@ -3761,7 +3761,7 @@ contains
     case('tih2op')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = State_VGB(iPIon_I(H2Op_),i,j,k,iBlock) / &
                State_VGB(iRhoIon_I(H2Op_),i,j,k,iBlock) * &
                MassIon_I(H2Op_)* NO2SI_V(UnitTemperature_) 
@@ -3770,7 +3770,7 @@ contains
     case('uex')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
           uIon_I(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
@@ -3783,7 +3783,7 @@ contains
     case('uey')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
           uIon_I(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
@@ -3796,7 +3796,7 @@ contains
     case('uez')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
           uIon_I(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
@@ -3809,49 +3809,49 @@ contains
     case('dt')
        NameIdlUnit = 's'
        NameTecUnit = '[s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)
        end do; end do; end do
 
     case('ns')
        NameIdlUnit = ' '   
        NameTecUnit = '[ ]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = ne20eV_GB(i,j,k,iBlock)
        end do; end do; end do
 
     case('v11')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = v_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
        end do; end do; end do
 
     case('v12')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = v_IIGB(Neu1_,SW_,i,j,k,iBlock)
        end do; end do; end do
 
     case('v21')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = ve_IIGB(Neu1_,H2Op_,i,j,k,iBlock)
        end do; end do; end do
 
     case('v22')
        NameIdlUnit = '1/s'
        NameTecUnit = '[1/s]'
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = ve_IIGB(Neu1_,SW_,i,j,k,iBlock)
        end do; end do; end do
 
     case('v3')
        NameIdlUnit = ' '
        NameTecUnit = ' '
-       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = SPeAdditional_GB(i,j,k,iBlock) &
                * No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
