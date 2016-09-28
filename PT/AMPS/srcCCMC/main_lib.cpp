@@ -335,7 +335,7 @@ void amps_init() {
 	}
 
 	if (PIC::ThisThread==0) {
-	  if (DomainSizeChangeFlag==true) printf("$PREFIX: WARNING: the domain size is changed to be consistent with that of the KAMELEON background data file");
+	  if (DomainSizeChangeFlag==true) printf("$PREFIX: WARNING: the domain size is changed to be consistent with that of the KAMELEON background data file\n");
 
 	  printf("$PREFIX: Kameleon domain size: xmin=%e %e %e, xmax=%e %e %e\n",xminKAMELEON[0],xminKAMELEON[1],xminKAMELEON[2],xmaxKAMELEON[0],xmaxKAMELEON[1],xmaxKAMELEON[2]);
 	  printf("$PREFIX: Particle tracking domain size : xmin=%e %e %e, xmax=%e %e %e\n",PIC::CCMC::Domain::xmin[0],PIC::CCMC::Domain::xmin[1],PIC::CCMC::Domain::xmin[2],
