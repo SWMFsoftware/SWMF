@@ -8,7 +8,8 @@ module ModFaceValue
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrderOnly, UseLowOrder, &
-       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z, IsLowOrderOnly_B
+       UseLowOrderRegion, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z, &
+       IsLowOrderOnly_B
 
   implicit none
 
@@ -171,6 +172,7 @@ contains
        end if
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion)
+       UseLowOrderRegion = .true. 
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
     end select
@@ -2885,7 +2887,7 @@ contains
       character(len=*), parameter:: NameSub = 'set_low_order_face'
       !-------------------------------------------------------------------
       UseLowOrderOnly = .false.
-      UseLowOrder = UseTrueCell .or. allocated(iRegionLowOrder_I)
+      UseLowOrder = UseTrueCell .or. UseLowOrderRegion
       IsLowOrderOnly_B(iBlock) = .false.
       if(.not.UseLowOrder) RETURN
 

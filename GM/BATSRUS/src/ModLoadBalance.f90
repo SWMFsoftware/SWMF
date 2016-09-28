@@ -229,7 +229,7 @@ contains
     use ModAdvance, ONLY: &
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
-         UseLowOrder, IsLowOrderOnly_B
+         UseLowOrderRegion, IsLowOrderOnly_B
     use ModGeometry,   ONLY: True_Blk, true_cell, far_field_BCs_Blk
     use ModPartSteady, ONLY: UsePartSteady
     use BATL_lib,      ONLY: Unused_BP
@@ -337,7 +337,7 @@ contains
           end if
 
           ! next bit: high-order scheme -> 1, otherwise -> 0
-          if(UseLowOrder)then
+          if(UseLowOrderRegion)then
              ! High-order scheme block: some faces use high-order scheme
              iCrit = 2*iCrit
              iHighOrderBlock = iCrit
@@ -391,7 +391,7 @@ contains
                      iType = iType + iSteadyBlock
              end if
 
-             if(UseLowOrder)then
+             if(UseLowOrderRegion)then
                 ! High-order scheme block: some faces use high-order scheme
                 if(.not.IsLowOrderOnly_B(iBlock)) &
                      iType = iType + iHighOrderBlock

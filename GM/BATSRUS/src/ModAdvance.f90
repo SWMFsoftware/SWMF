@@ -127,6 +127,7 @@ module ModAdvance
   logical, allocatable:: &
        UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
   logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
+  logical:: UseLowOrderRegion = .false. 
   
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
