@@ -11,7 +11,7 @@ module CON_geopack
   ! the coordinate transformation like HGI=>other systems
 
   real:: GeiGse_DD(3,3), HgiGse_DD(3,3), GeiGsm_DD(3,3), GsmGse_DD(3,3)
-  real:: DipoleStrength, AxisMagGeo_D(3)
+  real:: DipoleStrengthGeopack, AxisMagGeo_D(3)
 
   ! For Earth we can use Geopack to get rotation axis too
   real:: RotAxisPhiGeopack   = -1.0
@@ -147,7 +147,7 @@ contains
     ! The 1st column is -1* 3rd element of the IGRF G coefficients (G11)
     ! The 2nd column is -1* 2nd element of the IGRF H coefficients (H11)
     ! The 3rd column is +1* 2nd element of the IGRF G coefficients (G10)
-    ! These provide the X, Y and Z components of the magnetic dipole.
+    ! These provide the X, Y and Z components of the magnetic dipole in nT.
 
     real, parameter:: Dipole_DI(3,nEpoch) = reshape( (/ &
          -2119.,   +5776.,   -30334.,   & ! 1965
@@ -209,10 +209,13 @@ contains
     Dipole_D = Weight1*Dipole_DI(:,iEpoch) + Weight2*Dipole_DI(:,iEpoch+1)
 
     ! Take the dipole strength with negative magnitude (conventional)
-    DipoleStrength = -sqrt(sum(Dipole_D**2))
+    DipoleStrengthGeopack = -sqrt(sum(Dipole_D**2))
 
     ! The negative sign is because the dipole strength is negative
-    AxisMagGeo_D = Dipole_D/DipoleStrength
+    AxisMagGeo_D = Dipole_D/DipoleStrengthGeopack
+
+    ! Convert from nT to Tesla (SI units)
+    DipoleStrengthGeopack = DipoleStrengthGeopack*1e-9
 
   end subroutine geopack_mag_axis
   !===========================================================================
@@ -331,7 +334,7 @@ contains
     ! For perihelion
     iMonth=1;iDay=3;iHour=5
     call geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-    write(*,'(a,f14.4)')  'DipoleStrength=', DipoleStrength
+    write(*,'(a,f14.4)')  'DipoleStrength=', DipoleStrengthGeopack
     write(*,'(a,3f14.10)')'AxisMagGeo_D=', AxisMagGeo_D
     write(*,'(a,/,3f14.10,/,3f14.10,/,3f14.10)')'GsmGse_DD=', GsmGse_DD
     
