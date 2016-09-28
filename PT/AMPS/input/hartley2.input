@@ -55,7 +55,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 #General
   RequestedParticleBufferLength=1500000
 
-  ReferenceInjectionParticleNumber=6000 !!120000
+  ReferenceInjectionParticleNumber=20000 !!120000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
   InitialSampleLength=10
@@ -149,10 +149,6 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
   define _NUCLEUS_SHAPE__MODE_  _SHAP5_
 
   Gravity3D=off !on,off
-
-  HeliocentricDistance=1.5*_AU_
-  subSolarPointAzimuth=5.2090
-  subSolarPointZenith=1.3973
 
   RadiativeCoolingMode=Crovisier !off, Crovisier	
 
