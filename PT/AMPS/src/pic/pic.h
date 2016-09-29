@@ -3789,6 +3789,9 @@ namespace PIC {
         //the mass of the dominant background plasma ion
         extern double PlasmaSpeciesAtomicMass;
 
+        //the conversion factor from units used in the external model (MATSRUS,LFM, etc....) into meters: [m]=cdfDataFile2m_ConversionFactor*[external model units] 
+        extern double cdfDataFile2m_ConversionFactor;
+
         //init the reader
         void Init();
 

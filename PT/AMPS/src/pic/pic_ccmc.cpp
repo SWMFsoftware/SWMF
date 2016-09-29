@@ -89,6 +89,10 @@ void PIC::CCMC::Parser::LoadControlFile() {
       }
       else if (strcmp("OFF",str1)!=0) exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
+    else if (strcmp("#BACKGROUNDMODELSPATIALUNITS2METERSFACTOR",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      PIC::CPLR::DATAFILE::KAMELEON::cdfDataFile2m_ConversionFactor=atof(str1);
+    }
     else if (strcmp("#SOURCEREGION",str1)==0) {
       ifile.CutInputStr(str1,str);
 
@@ -448,6 +452,7 @@ void PIC::CCMC::LoadParticles() {
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) for (iInjectionEntry=0;iInjectionEntry<ParticleInjection::InjectionDescriptorList.size();iInjectionEntry++) {
     for (np=0;np<ParticleInjection::InjectionDescriptorList[iInjectionEntry].nTestParticles;np++) {
+      static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* t=NULL;
 
       //generate the location
       switch (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Type) {
@@ -456,28 +461,45 @@ void PIC::CCMC::LoadParticles() {
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Sphere:
-        r=ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Radius*pow(rnd(),1.0/3.0);
-        phi=2.0*Pi*rnd();
-        sinTheta=2.0*rnd()-1;
-        cosTheta=sqrt(1.0-sinTheta*sinTheta);
+        for (idim=0;idim<3;idim++) {
+          if ((ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])  ||
+          (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]>PIC::Mesh::mesh.rootTree->xmax[idim])) { 
+            exit(__LINE__,__FILE__,"Error: injection sphere is outside of the domain. Redefine the location of the injection spherical region");
+          } 
+        }
 
-        x[0]=r*cos(phi)*cosTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[0];
-        x[1]=r*sin(phi)*cosTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[1];
-        x[2]=r*sinTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[2];
+        do {
+          r=ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Radius*pow(rnd(),1.0/3.0);
+          phi=2.0*Pi*rnd();
+          sinTheta=2.0*rnd()-1;
+          cosTheta=sqrt(1.0-sinTheta*sinTheta);
+
+          x[0]=r*cos(phi)*cosTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[0];
+          x[1]=r*sin(phi)*cosTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[1];
+          x[2]=r*sinTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[2];
+        }
+        while ((t=PIC::Mesh::mesh.findTreeNode(x,t))==NULL);
+
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral:
         //determine the local coordinates of the injection point in a triangle
-        xLocal[0]=1.0-sqrt(rnd());
-        xLocal[1]=rnd()*(1.0-xLocal[0]);
+        do {
+          xLocal[0]=1.0-sqrt(rnd());
+          xLocal[1]=rnd()*(1.0-xLocal[0]);
 
-        //determine the triangle at which the point will be generated
-        iTriangle=(int)(4.0*rnd());
-        Quadrilateral=&ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Quadrilateral;
+exit(__LINE__,__FILE__,"Error: a check of wether at least onne point of the quadraleteral is insode domain is not implemented yet. It needed to be implemented before using this option");
 
-        for (idim=0;idim<3;idim++) x[idim]=Quadrilateral->xCenter[idim]+
+
+          //determine the triangle at which the point will be generated
+          iTriangle=(int)(4.0*rnd());
+          Quadrilateral=&ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Quadrilateral;
+
+          for (idim=0;idim<3;idim++) x[idim]=Quadrilateral->xCenter[idim]+
             xLocal[0]*Quadrilateral->dX0[idim]*e0SignTable[iTriangle]+
             xLocal[1]*Quadrilateral->dX1[idim]*e1SignTable[iTriangle];
+        }
+        while ((t=PIC::Mesh::mesh.findTreeNode(x,t))==NULL);
 
         break;
 

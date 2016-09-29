@@ -22,6 +22,7 @@ void PIC::CPLR::DATAFILE::KAMELEON::Init() {
 }
 
 double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
+double PIC::CPLR::DATAFILE::KAMELEON::cdfDataFile2m_ConversionFactor=_RADIUS_(_EARTH_);
 
 
 #ifdef _PIC_COMPILE__KAMELEON_ //complile the KAMELEON part only when _PIC_COMPILE__KAMELEON_ is defined; The macro is defined in the Makefile only when 'ifneq ($(KAMELEON),nokameleon)' 
@@ -51,17 +52,19 @@ void PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(double *xmin,double *xmax,co
   sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
   long status = kameleon.open(DataFileFullName);
 
-  double ConversionCoord = _RADIUS_(_EARTH_);
-
   if(status == ccmc::FileReader::OK){
     //proceed and get domain limits
-    xmin[0]=ConversionCoord*kameleon.getVariableAttribute("x","actual_min").getAttributeFloat();
-    xmin[1]=ConversionCoord*kameleon.getVariableAttribute("y","actual_min").getAttributeFloat();
-    xmin[2]=ConversionCoord*kameleon.getVariableAttribute("z","actual_min").getAttributeFloat();
+    xmin[0]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("x","actual_min").getAttributeFloat();
+    xmin[1]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("y","actual_min").getAttributeFloat();
+    xmin[2]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("z","actual_min").getAttributeFloat();
     
-    xmax[0]=ConversionCoord*kameleon.getVariableAttribute("x","actual_max").getAttributeFloat();
-    xmax[1]=ConversionCoord*kameleon.getVariableAttribute("y","actual_max").getAttributeFloat();
-    xmax[2]=ConversionCoord*kameleon.getVariableAttribute("z","actual_max").getAttributeFloat();
+    xmax[0]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("x","actual_max").getAttributeFloat();
+    xmax[1]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("y","actual_max").getAttributeFloat();
+    xmax[2]=cdfDataFile2m_ConversionFactor*kameleon.getVariableAttribute("z","actual_max").getAttributeFloat();
+
+    //check wether xmin and xmax are consistent
+    for (int idim=0;idim<3;idim++) if (xmax[idim]-xmin[idim]<=0.0) exit(__LINE__,__FILE__,"Error: Particle tracking domain limites are incorrect (xmin exeeds xmax)"); 
+
     // close file
     kameleon.close();
   }
