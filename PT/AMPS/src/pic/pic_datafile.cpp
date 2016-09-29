@@ -889,8 +889,7 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
 //generate magnetic field gradient in the given block
 void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
 
-  if(DIM < 3)
-    exit(__LINE__,__FILE__,"This function is tested for 3D case, may require further testing and development for lower dimensional case!");
+  if (DIM < 3) exit(__LINE__,__FILE__,"This function is tested for 3D case, may require further testing and development for lower dimensional case!");
 
   // variables to access data storage
   int nd;
@@ -912,41 +911,39 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
   const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;
   const int kMin=0,kMax=_BLOCK_CELLS_Z_-1;
 
-  //locations
-  double xCenter[3]={0.0}, x[3]={0.0};
-  //values of the field
-  double Bplus[3]={0.0}, Bminus[3]={0.0};
+
+  double xCenter[3]={0.0,0.0,0.0},x[3]={0.0,0.0,0.0};   //locations
+  double Bplus[3]={0.0,0.0,0.0}, Bminus[3]={0.0,0.0,0.0}; //values of the field
 
   for (int k=kMin;k<=kMax;k++)for(int j=jMin;j<=jMax;j++)for (int i=iMin;i<=iMax;i++) {
-	//cell center
-	xCenter[0]=xNodeMin[0]+dXCell[0]*(0.5+i);
-	xCenter[1]=xNodeMin[1]+dXCell[1]*(0.5+j);
-	xCenter[2]=xNodeMin[2]+dXCell[2]*(0.5+k);
+    //cell center
+    xCenter[0]=xNodeMin[0]+dXCell[0]*(0.5+i);
+    xCenter[1]=xNodeMin[1]+dXCell[1]*(0.5+j);
+    xCenter[2]=xNodeMin[2]+dXCell[2]*(0.5+k);
 
-	// compute components of the gradient
-	for(int idim=0; idim < DIM; idim++){
-	  x[0] = xCenter[0]; x[1] = xCenter[1]; x[2] = xCenter[2];
-	  // value of B on face in -idim direction
-	  x[idim] -= dXCell[idim]/2.0;
-	  PIC::CPLR::InitInterpolationStencil(x,node);
-	  PIC::CPLR::GetBackgroundMagneticField(Bminus);
-	  // value of B on face in +idim direction
-	  x[idim] += dXCell[idim];
-	  PIC::CPLR::InitInterpolationStencil(x,node);
-	  PIC::CPLR::GetBackgroundMagneticField(Bplus);
+    // compute components of the gradient
+    for(int idim=0; idim < DIM; idim++) {
+      x[0] = xCenter[0]; x[1] = xCenter[1]; x[2] = xCenter[2];
+      // value of B on face in -idim direction
+      x[idim] -= dXCell[idim]/2.0;
+      PIC::CPLR::InitInterpolationStencil(x,node);
+      PIC::CPLR::GetBackgroundMagneticField(Bminus);
+      // value of B on face in +idim direction
+      x[idim] += dXCell[idim];
+      PIC::CPLR::InitInterpolationStencil(x,node);
+      PIC::CPLR::GetBackgroundMagneticField(Bplus);
 
-	  //get data sotrage location
-	  nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-	  if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
-	  offset=CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
-
-	  //compute and write gradient's components
-	  *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[idim];
-	  *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[idim];
-	  *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[idim];
-	}
-      }
+      //get data sotrage location
+      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
+      offset=CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
   
+      //compute and write gradient's components
+      *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[idim];
+      *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[idim];
+      *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[idim];
+    }
+  }
 }
 
 
