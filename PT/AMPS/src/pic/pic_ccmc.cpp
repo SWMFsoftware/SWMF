@@ -489,6 +489,8 @@ void PIC::CCMC::LoadParticles() {
         {
           bool InsideDomainFlag=false;
 
+          Quadrilateral=&ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Quadrilateral;
+
           for (iTriangle=0;(iTriangle<4)&&(InsideDomainFlag==false);iTriangle++) for (int np=0;np<3;np++) {
             InsideDomainFlag=true;
 
