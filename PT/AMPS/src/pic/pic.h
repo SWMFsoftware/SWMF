@@ -4013,6 +4013,7 @@ namespace PIC {
        //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
        //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
        //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+       GetBackgroundMagneticFieldGradient(gradB,Time);
 
        CurlB[0]=+(gradB[7]-gradB[5]);
        CurlB[1]=-(gradB[6]-gradB[2]);
