@@ -334,7 +334,7 @@ contains
     ! For perihelion
     iMonth=1;iDay=3;iHour=5
     call geopack_recalc(iYear,iMonth,iDay,iHour,iMin,iSec)
-    write(*,'(a,f14.4)')  'DipoleStrength=', DipoleStrengthGeopack
+    write(*,'(a,f14.4)')  'DipoleStrength=', DipoleStrengthGeopack*1e9
     write(*,'(a,3f14.10)')'AxisMagGeo_D=', AxisMagGeo_D
     write(*,'(a,/,3f14.10,/,3f14.10,/,3f14.10)')'GsmGse_DD=', GsmGse_DD
     
