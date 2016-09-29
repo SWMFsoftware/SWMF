@@ -871,11 +871,11 @@ test8_check:
 		output/test8/GM_log_n000001.log \
 		> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n00000068.mag \
+		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
 		output/test8/magnetometers.mag \
 		>> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
+		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
 		output/test8/GM_geoindex.log \
 		>> test8_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
