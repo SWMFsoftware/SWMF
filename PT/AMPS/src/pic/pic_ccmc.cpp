@@ -461,6 +461,8 @@ void PIC::CCMC::LoadParticles() {
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Sphere:
+
+        //verify the the origin of the sphere is inside the domain
         for (idim=0;idim<3;idim++) {
           if ((ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])  ||
           (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]>PIC::Mesh::mesh.rootTree->xmax[idim])) { 
@@ -483,13 +485,46 @@ void PIC::CCMC::LoadParticles() {
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral:
+        //verify that at least one corner point of the Quadrilateral is within the domain
+        {
+          bool InsideDomainFlag=false;
+
+          for (iTriangle=0;(iTriangle<4)&&(InsideDomainFlag==false);iTriangle++) for (int np=0;np<3;np++) {
+            InsideDomainFlag=true;
+
+            switch (np) {
+            case 0:
+              xLocal[0]=0.0,xLocal[1]=0.0;
+              break;
+            case 1:
+              xLocal[0]=1.0,xLocal[1]=0.0;
+              break;
+            case 2:
+              xLocal[0]=0.0,xLocal[1]=1.0;
+              break;
+            }
+
+            for (idim=0;idim<3;idim++) {
+              x[idim]=Quadrilateral->xCenter[idim]+
+                xLocal[0]*Quadrilateral->dX0[idim]*e0SignTable[iTriangle]+
+                xLocal[1]*Quadrilateral->dX1[idim]*e1SignTable[iTriangle];
+
+              if ((x[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])||(x[idim]>PIC::Mesh::mesh.rootTree->xmax[idim])) {
+                //the point is outside of the domain
+                InsideDomainFlag=false;
+                break;
+              }
+            }
+          }
+
+          if (InsideDomainFlag==false) exit(__LINE__,__FILE__,"Error: all points of the Quadrilateral are outside of the domain");
+        }
+
+
         //determine the local coordinates of the injection point in a triangle
         do {
           xLocal[0]=1.0-sqrt(rnd());
           xLocal[1]=rnd()*(1.0-xLocal[0]);
-
-exit(__LINE__,__FILE__,"Error: a check of wether at least onne point of the quadraleteral is insode domain is not implemented yet. It needed to be implemented before using this option");
-
 
           //determine the triangle at which the point will be generated
           iTriangle=(int)(4.0*rnd());
