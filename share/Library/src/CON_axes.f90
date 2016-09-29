@@ -1132,11 +1132,11 @@ contains
 
     call get_axes(0.0, MagAxisTilt, RotAxisGsm_D)
 
-    if(abs(MagAxisTilt*cRadToDeg - 8.0414272433221718) > 0.00001)write(*,*) &
+    if(abs(MagAxisTilt*cRadToDeg - 7.7223745616548189) > 0.00001)write(*,*) &
          'test get_axes failed: MagAxisTilt =',MagAxisTilt*cRadToDeg,&
-         ' should be 8.0414272433221718 degrees within round off error'
+         ' should be 7.7223745616548189 degrees within round off error'
 
-    Result_D = (/0.0, 0.131054271126, 0.991375195382/)
+    Result_D = (/4.017959626728e-5, 0.122841278089, 0.9924263291464/)
     if(maxval(abs(RotAxisGsm_D - Result_D)) > 0.00001) &
          write(*,*) 'test get_axes failed: RotAxisGsm_D =',&
          RotAxisGsm_D,' should be equal to ',Result_D, &
@@ -1223,14 +1223,15 @@ contains
     ! The sign is right, the amplitude is reasonable.
 
     Omega_D  = angular_velocity(0.0,'GSM')
-    Result_D = (/1.0213318187092477E-05 , 0., 0./)
+    Result_D = (/9.8163649853322886E-06, 0., 0./)
     if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
          write(*,*)'test angular_velocity failed: GSM Omega_D = ',Omega_D,&
          ' should be equal to ',Result_D,' within round off errors'   
 
     ! This is a general case, we believe the numbers
     Omega_D  = angular_velocity(0.0,'GSE','SMG',iFrame=2)
-    Result_D = (/1.01128925E-05,9.55662927E-06,-1.42873158E-06/)    
+    Result_D = (/9.7273384193693053E-06, 8.9577283077318018E-06, &
+         -1.3190560195532345E-06/)    
     if(maxval(abs(Omega_D - Result_D)) > Epsilon1) &
          write(*,*)'test angular_velocity failed: GSE-SMG Omega_D in SMG= ',&
          Omega_D,' should be equal to ',Result_D,' within round off errors'   
