@@ -3086,6 +3086,13 @@ namespace PIC {
 			    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     }
 
+
+    namespace Relativistic {
+
+      int Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    }
+
+
 //    typedef void (*fTotalParticleAcceleration)(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     typedef int (*fSpeciesDependentParticleMover_BoundaryInjection) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,bool);
@@ -3609,81 +3616,69 @@ namespace PIC {
 
       //calculate the values of the located parameters
       inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	
-        double *offset = (double*)(DataOffsetBegin + 
-				   MULTIFILE::CurrDataFileOffset + 
-				   cell->GetAssociatedDataBufferPointer());
+        double *offset = (double*)(DataOffsetBegin + MULTIFILE::CurrDataFileOffset + cell->GetAssociatedDataBufferPointer());
+
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
 
-#if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-	if(isnan(Time))
-	  Time = PIC::SimulationTime::Get();	
-        offset = (double*)(DataOffsetBegin + 
-				   MULTIFILE::NextDataFileOffset + 
-				   cell->GetAssociatedDataBufferPointer());
-	//interpolation weight
-	double alpha = 
-	  (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - Time) /
-	  (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
-        for (int i=0;i<DataVectorLength;i++) 
-	  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
+#if  _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+        if (isnan(Time)) Time = PIC::SimulationTime::Get();
+
+        offset = (double*)(DataOffsetBegin+MULTIFILE::NextDataFileOffset+cell->GetAssociatedDataBufferPointer());
+
+         //interpolation weight
+        double alpha = (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - Time) /
+        (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
+
+        for (int i=0;i<DataVectorLength;i++)  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
 
       }
 
       inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	GetBackgroundValue(E, 
-			   Offset::ElectricField.nVars,
-			   Offset::ElectricField.offset, cell, Time);
+      	GetBackgroundValue(E, Offset::ElectricField.nVars,Offset::ElectricField.offset, cell, Time);
       }
 
       inline void GetBackgroundMagneticField(double *B,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	GetBackgroundValue(B, 
-			   Offset::MagneticField.nVars,
-			   Offset::MagneticField.offset, cell, Time);
+      	GetBackgroundValue(B,Offset::MagneticField.nVars,Offset::MagneticField.offset, cell, Time);
       }
 
       inline void GetBackgroundMagneticFieldGradient(double *gradB,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	GetBackgroundValue(gradB, 
-			   Offset::MagneticFieldGradient.nVars,
-			   Offset::MagneticFieldGradient.offset, cell, Time);
+	      GetBackgroundValue(gradB,Offset::MagneticFieldGradient.nVars,Offset::MagneticFieldGradient.offset, cell, Time);
       }
 
       inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	GetBackgroundValue(vel, 
-			   Offset::PlasmaBulkVelocity.nVars,
-			   Offset::PlasmaBulkVelocity.offset, cell, Time);
+	      GetBackgroundValue(vel,Offset::PlasmaBulkVelocity.nVars,Offset::PlasmaBulkVelocity.offset, cell, Time);
       }
 
       inline double GetBackgroundMagneticFluxFunction(PIC::Mesh::cDataCenterNode *cell, double Time) {
-	double ff;
-	GetBackgroundValue(&ff, 
-			   Offset::MagneticFluxFunction.nVars,
-			   Offset::MagneticFluxFunction.offset, cell, Time);
-	return ff;
+	      double ff;
+
+	      GetBackgroundValue(&ff,Offset::MagneticFluxFunction.nVars,Offset::MagneticFluxFunction.offset, cell, Time);
+	      return ff;
       }
 
       inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell, double Time) {
-	double p;
-	GetBackgroundValue(&p, 
-			   Offset::PlasmaIonPressure.nVars,
-			   Offset::PlasmaIonPressure.offset, cell, Time);
-	return p;
+	      double p;
+
+	      GetBackgroundValue(&p,Offset::PlasmaIonPressure.nVars,Offset::PlasmaIonPressure.offset, cell, Time);
+	      return p;
       }
 
       inline double GetBackgroundElectronPlasmaPressure(PIC::Mesh::cDataCenterNode *cell, double Time) {
-	double p;
-	int nVars, offset;
-	if(Offset::PlasmaElectronPressure.offset!=-1){
-	  nVars  = Offset::PlasmaElectronPressure.nVars;
-	  offset = Offset::PlasmaElectronPressure.offset;}
-	else{
-	  nVars  = Offset::PlasmaIonPressure.nVars;
-	  offset = Offset::PlasmaIonPressure.offset;}
-	GetBackgroundValue(&p, 
-			   nVars,
-			   offset, cell, Time);
-	return p;
+        double p;
+        int nVars, offset;
+
+        if(Offset::PlasmaElectronPressure.offset!=-1) {
+          nVars  = Offset::PlasmaElectronPressure.nVars;
+          offset = Offset::PlasmaElectronPressure.offset;
+        }
+        else {
+          nVars  = Offset::PlasmaIonPressure.nVars;
+          offset = Offset::PlasmaIonPressure.offset;
+        }
+
+        GetBackgroundValue(&p,nVars,offset, cell, Time);
+        return p;
       }
 
       inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell, double Time) {
@@ -3789,7 +3784,7 @@ namespace PIC {
         //the mass of the dominant background plasma ion
         extern double PlasmaSpeciesAtomicMass;
 
-        //the conversion factor from units used in the external model (MATSRUS,LFM, etc....) into meters: [m]=cdfDataFile2m_ConversionFactor*[external model units] 
+        //the conversion factor from units used in the external model (MATSRUS,LFM, etc....) into meters: [m]=cdfDataFile2m_ConversionFactor*[external model units]
         extern double cdfDataFile2m_ConversionFactor;
 
         //init the reader
@@ -3952,10 +3947,22 @@ namespace PIC {
        }
      }
 
+     inline double GetAbsBackgroundMagneticField(double Time = NAN) {
+       double B[3];
+
+       GetBackgroundMagneticField(B,Time);
+       return sqrt(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]);
+     }
+
      inline void GetBackgroundMagneticFieldGradient(double *gradB, double Time = NAN) {
        double t[DATAFILE::Offset::MagneticFieldGradient.nVars];
        int idim,iStencil;
        PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
+
+       // structure of gradB is the following
+       //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+       //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+       //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
 
        for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=0.0;
 
@@ -3976,6 +3983,97 @@ namespace PIC {
 
          for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=Stencil.Weight[iStencil]*t[idim];
        }
+     }
+
+     inline void GetAbsBackgroundMagneticFieldGradient(double *gradAbsB, double Time = NAN) {
+       double gradB[9],B[3],AbsB,b[3];
+
+       // structure of gradB is the following
+       //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+       //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+       //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+       GetBackgroundMagneticFieldGradient(gradB,Time);
+       PIC::CPLR::GetBackgroundMagneticField(B);
+       AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5);
+
+       if (fabs(AbsB)>0.0) {
+         b[0] = B[0]/AbsB; b[1] = B[1]/AbsB; b[2] = B[2]/AbsB;
+
+         gradAbsB[0]= b[0] * gradB[0] + b[1] * gradB[3] + b[2] * gradB[6];
+         gradAbsB[1]= b[0] * gradB[1] + b[1] * gradB[4] + b[2] * gradB[7];
+         gradAbsB[2]= b[0] * gradB[2] + b[1] * gradB[5] + b[2] * gradB[8];
+       }
+       else for (int i=0;i<3;i++) gradAbsB[i]=0.0;
+     }
+
+     inline void GetCurlBackgroundMagneticField(double *CurlB, double Time = NAN) {
+       double gradB[9];
+
+       // structure of gradB is the following
+       //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+       //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+       //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+
+       CurlB[0]=+(gradB[7]-gradB[5]);
+       CurlB[1]=-(gradB[6]-gradB[2]);
+       CurlB[2]=+(gradB[3]-gradB[1]);
+     }
+
+     //calculate a particle drift velocity (Elkington-2002-JASTP)
+     inline void GetDriftVelocity(double *vDrift,double *ParticleVelocity,double ParticleMass,double ParticleCharge,double Time = NAN) {
+       double E[3],B[3],absB2,absB,absB4,t[3],c;
+       double M,gamma,gradAbsB_perp[3],ParticleMomentum[3],ParticleMomentum_normB[3],pParallel;
+       int idim;
+
+       //get the particle momentum
+       gamma=1.0/sqrt(1.0-sqrt(ParticleVelocity[0]*ParticleVelocity[0]+ParticleVelocity[1]*ParticleVelocity[1]+ParticleVelocity[2]*ParticleVelocity[2])/SpeedOfLight);
+       for (idim=0;idim<3;idim++) ParticleMomentum[idim]=gamma*ParticleMass*ParticleVelocity[idim],vDrift[idim]=0.0;
+
+       //get the background fields
+       PIC::CPLR::GetBackgroundMagneticField(B);
+       PIC::CPLR::GetBackgroundElectricField(E);
+       absB2=B[0]*B[0]+B[1]*B[1]+B[2]*B[2];
+       absB=sqrt(absB2);
+       absB4=absB2*absB2;
+
+       //E cross B drift
+       Vector3D::CrossProduct(t,E,B);
+       c=SpeedOfLight/absB2; 
+
+       for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+
+       //next
+       memcpy(ParticleMomentum_normB,ParticleMomentum,3*sizeof(double));
+       Vector3D::Orthogonalize(B,ParticleMomentum_normB);
+       M=pow(Vector3D::Length(ParticleMomentum_normB),2)/(2.0*ParticleMass*absB);
+
+       GetAbsBackgroundMagneticFieldGradient(gradAbsB_perp,Time);
+       Vector3D::Orthogonalize(B,gradAbsB_perp);
+       Vector3D::CrossProduct(t,B,gradAbsB_perp);
+
+       c=M*SpeedOfLight/(ParticleCharge*gamma*absB2);
+       for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+
+       //next drift coeffecient
+       double gradB[9],t1[3];
+
+       // structure of gradB is the following
+       //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+       //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+       //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+       GetBackgroundMagneticFieldGradient(gradB,Time);
+
+       //t1=(b\dot)b
+       t1[0]=(B[0]*gradB[0]+B[1]*gradB[1]+B[2]*gradB[2])/absB4;
+       t1[1]=(B[0]*gradB[3]+B[1]*gradB[4]+B[2]*gradB[5])/absB4;
+       t1[2]=(B[0]*gradB[6]+B[1]*gradB[7]+B[2]*gradB[8])/absB4;
+
+       Vector3D::CrossProduct(t,B,t1);
+       pParallel=Vector3D::ParallelComponentLength(ParticleMomentum,B);
+
+       c=SpeedOfLight*pow(pParallel,2)/(ParticleCharge*gamma*ParticleMass);
+       for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+
      }
 
      inline void GetBackgroundPlasmaVelocity(double *vel, double Time = NAN) {
