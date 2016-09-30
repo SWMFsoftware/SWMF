@@ -52,7 +52,8 @@ PICOBJ = pic.o \
 	pic_interpolation_routines.o \
 	pic_field_line.o \
 	pic_ccmc.o \
-	pic_user_particle_processing.o
+	pic_user_particle_processing.o \
+	pic_mover_relativistic_boris.o 
 	
 ifneq ($(BATL),nobatl)	
 PICOBJ+=pic_batsrus.o \
