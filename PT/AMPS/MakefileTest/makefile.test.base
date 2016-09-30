@@ -2,9 +2,11 @@
 # for each test a separate folder run_test_<NAME> is created 
 # and executables are copied there
 
+
 TEST<APP>DIR=run_test_<APP>
 TEST<APP>KEYS=<APPKEYS>
 TEST<APP>OUTFILES=<APPOUTS>
+TEST<APP>-REF=<APPREF>
 
 test_help:
 	@echo "    test_all\t\t(run all tests with ${MPIRUN})"
@@ -20,7 +22,7 @@ test_compile:
 	-@($(MAKE) test_<APP>_compile && $(MAKE) test_<APP>_rundir)
 
 test_run:
-	-@$(if $(findstring rundir... done,$(shell tail test_<APP>.diff)),$(MAKE) test_<APP>_run && $(MAKE) test_<APP>_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_<APP>$(TEST<APP>-REF).diff)),$(MAKE) test_<APP>_run && $(MAKE) test_<APP>_check)
 
 #-----------------------------------------------------------------
 # Individual applications' test targets are below.
