@@ -271,25 +271,23 @@ contains
     if(DoTestMe)write(*,*) NameSub,' starting with iBoundary=', iBoundary
 
     if(iBoundary == 1)then
-       ! The neutrals enter at the 1st boundary (negative x)
+       ! The LISW enters at the 1st boundary (negative x)
 
-       ! Use supersonic outflow by for most fluids
-       VarsGhostFace_V = VarsTrueFace_V
+       ! Ion inflow
+       VarsGhostFace_V(Rho_) = VLISW_rho
+       VarsGhostFace_V(Ux_)  = VLISW_Ux
+       VarsGhostFace_V(Uy_)  = VLISW_Uy
+       VarsGhostFace_V(Uz_)  = VLISW_Uz
+       VarsGhostFace_V(Bx_)  = VLISW_Bx
+       VarsGhostFace_V(By_)  = VLISW_By
+       VarsGhostFace_V(Bz_)  = VLISW_Bz
+       VarsGhostFace_V(p_ )  = VLISW_p
 
        if(UseNeutralFluid)then
-
-          ! Ion inflow
-
-          VarsGhostFace_V(Rho_) = VLISW_rho
-          VarsGhostFace_V(Ux_)  = VLISW_Ux
-          VarsGhostFace_V(Uy_)  = VLISW_Uy
-          VarsGhostFace_V(Uz_)  = VLISW_Uz
-          VarsGhostFace_V(Bx_)  = VLISW_Bx
-          VarsGhostFace_V(By_)  = VLISW_By
-          VarsGhostFace_V(Bz_)  = VLISW_Bz
-          VarsGhostFace_V(p_ )  = VLISW_p
-
           ! Inflow for the neutral Pop IV
+
+          ! Use supersonic outflow by for most fluids
+          VarsGhostFace_V = VarsTrueFace_V
 
           VarsGhostFace_V(Ne4Rho_) = RhoNeutralsISW
           VarsGhostFace_V(Ne4Ux_ ) = UxNeutralsISW
