@@ -417,6 +417,7 @@ contains
       use ModBoundaryCells, ONLY: iBoundary_GB
       use ModNumConst, ONLY: cTwoPi
       use ModIeCoupling, ONLY: get_inner_bc_jouleheating
+      use BATL_lib, ONLY: nDim, IsCartesianGrid, FaceNormal_DDFB, CellFace_DFB
 
       ! indexes of the true and ghost cells on the two sides of the face
       integer, intent(in):: iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
@@ -438,6 +439,10 @@ contains
 
       ! Variables for the absorbing BC
       real:: UdotR, r2Inv
+
+      ! Variables for reflectall boundary
+      integer:: iDir
+      real:: Normal_D(nDim)
 
       !logical:: DoTestCell
       logical, parameter:: DoTestCell = .false.
@@ -518,14 +523,22 @@ contains
                bDotR   = 2*sum(Borig_D*FaceCoords_D)/sum(FaceCoords_D**2)
                Brefl_D = FaceCoords_D*bDotR
             case default
-               select case(iSide)
-               case(1, 2)  
-                  Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
-               case(3, 4)                                                 
-                  Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
-               case(5, 6)                                                     
-                  Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
-               end select
+               if(IsCartesianGrid)then
+                  select case(iSide)
+                  case(1, 2)
+                     Brefl_D = (/ 2*Borig_D(x_), 0.0, 0.0 /)
+                  case(3, 4)
+                     Brefl_D = (/ 0.0, 2*Borig_D(y_), 0.0 /)
+                  case(5, 6)
+                     Brefl_D = (/ 0.0, 0.0, 2*Borig_D(z_) /)
+                  end select
+               else
+                  iDir = (iSide+1)/2
+                  Normal_D = 0.0
+                  Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
+                       / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
+                  Brefl_D = 2*sum(Normal_D*Borig_D)*Normal_D
+               end if
             end select
             ! Reflect B1 or full B
             VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D
@@ -533,14 +546,26 @@ contains
 
          if(TypeBc == 'reflectall')then
             ! Reflect the normal component of the velocity
-            select case(iSide)
-            case(1, 2)  
-               VarsGhostFace_V(iUx_I) = -VarsGhostFace_V(iUx_I)
-            case(3, 4)                                                 
-               VarsGhostFace_V(iUy_I) = -VarsGhostFace_V(iUy_I)
-            case(5, 6)                                                     
-               VarsGhostFace_V(iUz_I) = -VarsGhostFace_V(iUz_I)
-            end select
+            if(IsCartesianGrid)then
+               select case(iSide)
+               case(1, 2)
+                  VarsGhostFace_V(iUx_I) = -VarsGhostFace_V(iUx_I)
+               case(3, 4)
+                  VarsGhostFace_V(iUy_I) = -VarsGhostFace_V(iUy_I)
+               case(5, 6)
+                  VarsGhostFace_V(iUz_I) = -VarsGhostFace_V(iUz_I)
+               end select
+            else
+               iDir = (iSide+1)/2
+               Normal_D = 0.0
+               Normal_D(1:nDim) = FaceNormal_DDFB(:,iDir,i,j,k,iBlockBc) &
+                    / max(CellFace_DFB(iDir,i,j,k,iBlockBc), 1e-30)
+               do iFluid = 1, nFluid
+                  iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+                  VarsGhostFace_V(iUx:iUz) = VarsTrueFace_V(iUx:iUz) &
+                       - 2*sum(VarsTrueFace_V(iUx:iUz)*Normal_D)*Normal_D
+               end do
+            end if
          else
             ! Reflect all components of velocities (linetied)
             VarsGhostFace_V(iUx_I) = -VarsGhostFace_V(iUx_I)
