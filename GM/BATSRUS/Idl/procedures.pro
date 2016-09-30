@@ -2671,8 +2671,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
      if showbody and axistype eq 'coord' then $
         if rBody gt abs(rSlice) then begin
+        rBody = float(rBody) ; make sure it's not an integer
         theta = findgen(37)*!pi*2.0/36.0
         rBodySlice=sqrt(rBody^2-rSlice^2)
+
         polyfill, rBodySlice*cos(theta), rBodySlice*sin(theta),color = 0, $
                   noclip=0
                                 ; redraw box in case the body is at the edge
