@@ -115,13 +115,9 @@ Run=
 >>>cd ${TESTbinary-readerDIR}; ${MPIRUN} ./amps
 >>>@echo "test_binary_reader_run... done" >> test_binary-reader.diff
 
-
-
-
 Check=
 >>>@echo "test_binary_reader_check..." >> test_binary-reader.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary-reader.diff 
-
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary-reader.diff 
 >>>@ls -l test_binary-reader.diff 
 
 <#
@@ -146,11 +142,18 @@ Time=9
 #>
 Name=test/OH 
 Time=2
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
 <#
 -------------------------------------------------------------------------------
 #>
 Name=Tempel1@@(0+valeriy) 
 Time=6
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 Keys=-model-data-path=${MYDIR} -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/DeepImpact@@(0+valeriy)
 <#
 
@@ -403,18 +406,18 @@ Check=
 >>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat   
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O.diff 
+>>>output/test_CG-dust-test/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O.diff 
 >>>@ls -l test_CG-dust-test--H2O.diff
 
 >>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat 1000
 >>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--DUST.diff 
+>>>output/test_CG-dust-test/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--DUST.diff 
 >>>@ls -l test_CG-dust-test--DUST.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test.dat         \
->>>output/test_CG-dust-test.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test.diff
+>>>output/test_CG-dust-test/test_CG-dust-test.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test.diff
 >>>@ls -l test_CG-dust-test.diff
 <#
 -------------------------------------------------------------------------------
@@ -434,11 +437,11 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/d
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
->>>output/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--output.diff
+>>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--output.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--output.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories.diff
+>>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories.diff
 >>>@ls -l test_CCMC-Individual_Trajectories.diff
 <#
 -------------------------------------------------------------------------------
@@ -462,24 +465,26 @@ Run=
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
->>>output/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON--output.diff
+>>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON--output.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON--output.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON.diff
 <#
 -------------------------------------------------------------------------------
 #>
 Name=Europa-test1
 Time=2
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/EUROPA@@(0+stampede) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA@@(0+pleiades) 
+
 Check=
 >>>@echo "test_Europa-test1_check..." >> test_Europa-test1.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTEuropa-test1DIR}/PT/plots/test_Europa.dat         \
->>>output/test_Europa-test1.ref_np`ls ${TESTEuropa-test1DIR}/PT/thread* |wc -l |tr -d ' '` > test_Europa-test1.diff   
+>>>output/test_Europa-test1/test_Europa-test1.ref_np`ls ${TESTEuropa-test1DIR}/PT/thread* |wc -l |tr -d ' '` > test_Europa-test1.diff   
 >>>@ls -l test_Europa-test1.diff
 <#
 -------------------------------------------------------------------------------
@@ -545,11 +550,11 @@ Run=
 
 Check=
 >>>@echo "test_LOS_check..." >> test_LOS.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=yes.res output/test_LOS-dust--shadow=yes.ref > test_LOS-dust--shadow=yes.diff 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=no.res output/test_LOS-dust--shadow=no.ref > test_LOS-dust--shadow=no.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=yes.res output/test_LOS/test_LOS-dust--shadow=yes.ref > test_LOS-dust--shadow=yes.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-dust--shadow=no.res output/test_LOS/test_LOS-dust--shadow=no.ref > test_LOS-dust--shadow=no.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=yes.res output/test_LOS-gas--shadow=yes.ref > test_LOS-gas--shadow=yes.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=no.res output/test_LOS-gas--shadow=no.ref > test_LOS-gas--shadow=no.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=yes.res output/test_LOS/test_LOS-gas--shadow=yes.ref > test_LOS-gas--shadow=yes.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/utility/LOS/Tmp/output/test_LOS-gas--shadow=no.res output/test_LOS/test_LOS-gas--shadow=no.ref > test_LOS-gas--shadow=no.diff
 
 >>>cat test_LOS-dust--shadow=yes.diff test_LOS-dust--shadow=no.diff test_LOS-gas--shadow=yes.diff test_LOS-gas--shadow=no.diff > test_LOS.diff
 
@@ -567,17 +572,17 @@ Time=5
 
 Check=
 >>>@echo "test_Collision-Test_check..." >> test_Collision-Test.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1.diff 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4-1.diff
 
 >>>cat test_Collision-Test1.diff test_Collision-Test1-1.diff   test_Collision-Test2.diff test_Collision-Test2-1.diff  test_Collision-Test3.diff test_Collision-Test3-1.diff  test_Collision-Test4.diff test_Collision-Test4-1.diff > test_Collision-Test.diff
 
@@ -604,8 +609,8 @@ Time=5
 
 Check=
 >>>@echo "test_Chemistry-Test_check..." >> test_Chemistry-Test.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test1.dat output/test_Chemistry-Test1.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test1.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test2.dat output/test_Chemistry-Test2.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test2.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test1.dat output/test_Chemistry-Test/test_Chemistry-Test1.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_Chemistry-Test/PT/plots/test_Chemistry-Test2.dat output/test_Chemistry-Test/test_Chemistry-Test2.ref_np`ls $(TESTChemistry-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Chemistry-Test2.diff
 
 >>>cat test_Chemistry-Test1.diff test_Chemistry-Test2.diff  > test_Chemistry-Test.diff
 
@@ -621,19 +626,22 @@ Check=
 Name=test/Mars-Hot-Oxygen
 Time=7
 
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 Compile=
->>>@echo "test_Mars-Hot-Oxygen_compile..." > test_Mars-Hot-Oxygen.diff
+>>>@echo "test_Mars-Hot-Oxygen_compile..." > test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 >>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on -model-data-path=/Volumes/Data01/AMPS_DATA/MARS
 >>>cd srcMars; cvs update -r Mars_HotO_DRofO2p_PERMAX
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
->>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen.diff
+>>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
 Check=
 >>>@echo "test_Mars-Hot-Oxygen_check..." >> test_Mars-Hot-Oxygen.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-OxygenDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO.ref_np`ls $(TESTMars-Hot-OxygenDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Oxygen.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-OxygenDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO/test_Mars-HotO$(TESTMars-Hot-Oxygen-REF).ref_np`ls $(TESTMars-Hot-OxygenDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
->>>@ls -l test_Mars-Hot-Oxygen.diff
+>>>@ls -l test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 <#
 
 /------------------------------------------------------------------------------
@@ -654,7 +662,7 @@ Run=
 
 Check=
 >>>@echo "test_Mars-Hot-Carbon_check..." >> test_Mars-Hot-Carbon.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_Mars-HotC-PDCO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_test_Mars-HotC-PDCO/test_Mars-HotC-PDCO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
 
 >>>@ls -l test_Mars-Hot-Carbon.diff
 <#
@@ -669,7 +677,7 @@ Run=
 >>>@echo "test_InterpolateAMR-test_run... done" >> test_InterpolateAMR-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${MYDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
 >>>@ls -l test_InterpolateAMR-test.diff 
 
 <#
