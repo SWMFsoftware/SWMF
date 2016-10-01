@@ -170,6 +170,9 @@ Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/db
 #>
 Name=test/batl-reader
 Time=2
+
+Ref=1{pgcc}@@(0+pleiades)
+
 Compile=
 >>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
 >>>echo "Installing BATL....." 
