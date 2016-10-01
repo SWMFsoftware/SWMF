@@ -641,7 +641,7 @@ Compile=
 >>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
 Check=
->>>@echo "test_Mars-Hot-Oxygen_check..." >> test_Mars-Hot-Oxygen.diff
+>>>@echo "test_Mars-Hot-Oxygen_check..." >> test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-OxygenDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO/test_Mars-HotO$(TESTMars-Hot-Oxygen-REF).ref_np`ls $(TESTMars-Hot-OxygenDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
 >>>@ls -l test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
