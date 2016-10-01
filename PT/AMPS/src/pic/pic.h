@@ -1108,6 +1108,7 @@ namespace PIC {
         const int Sphere=0;
         const int Table=1;
         const int Quadrilateral=2;
+        const int Circle=3;
       }
 
       namespace SHPERE {
@@ -1173,6 +1174,11 @@ namespace PIC {
         int SpatialDistributionType;  //uniform, gaussian
       };
 
+      class cInjectionRegionCircle : public cInjectionRegionSpherical {
+      public:
+        double Normal[3],e0[3],e1[3];
+      };
+
       class cInjectionRegionTable {
       public:
         double x[3];
@@ -1190,6 +1196,7 @@ namespace PIC {
         cInjectionRegionSpherical Spherical;
         vector<cInjectionRegionTable> Table;
         cInjectionRegionQuadrilateral Quadrilateral;
+        cInjectionRegionCircle Circle;
       };
 
       class cInjectionDescriptor : public cInjectionControl {
@@ -1211,6 +1218,7 @@ namespace PIC {
       namespace Read {
          namespace SourceRegion {
            void Sphere(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Circle(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
            void Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
            void Quadrilateral(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
          }

@@ -97,6 +97,7 @@ void PIC::CCMC::Parser::LoadControlFile() {
       ifile.CutInputStr(str1,str);
 
       if (strcmp("SPHERE",str1)==0) Read::SourceRegion::Sphere(InjectionBlock,ifile);
+      else if (strcmp("CIRCLE",str1)==0) Read::SourceRegion::Circle(InjectionBlock,ifile);
       else if (strcmp("TABLE",str1)==0) Read::SourceRegion::Table(InjectionBlock,ifile);
       else if (strcmp("QUADRILATERAL",str1)==0) Read::SourceRegion::Quadrilateral(InjectionBlock,ifile);
       else exit(__LINE__,__FILE__,"Error: the option is unknown");
@@ -308,6 +309,55 @@ void PIC::CCMC::Parser::Read::SourceRegion::Sphere(PIC::CCMC::ParticleInjection:
   }
 }
 
+void PIC::CCMC::Parser::Read::SourceRegion::Circle(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Circle;
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("CENTER",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.SpatialDistribution.Circle.Origin[i]=atof(str1);
+      }
+    }
+    else if (strcmp("RADIUS",str1)==0) {
+      ifile.CutInputStr(str1,str);
+      InjectionBlock.SpatialDistribution.Circle.Radius=atof(str1);
+    }
+    else if (strcmp("NORMAL",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.SpatialDistribution.Circle.Normal[i]=atof(str1);
+      }
+
+      //normalize the vector
+      double l=0.0;
+      int i;
+
+      for (i=0;i<3;i++) l+=pow(InjectionBlock.SpatialDistribution.Circle.Normal[i],2);
+      for (l=sqrt(l),i=0;i<3;i++) InjectionBlock.SpatialDistribution.Circle.Normal[i]/=l;
+
+      //determine the coordinate frame related to the sphere
+      Vector3D::GetNormFrame(InjectionBlock.SpatialDistribution.Circle.e0,InjectionBlock.SpatialDistribution.Circle.e1,InjectionBlock.SpatialDistribution.Circle.Normal);
+    }
+    else if (strcmp("SPATIALDISTRIBUTION",str1)==0) {
+      ifile.CutInputStr(str1,str);
+
+      if (strcmp("UNIFORM",str1)==0) InjectionBlock.SpatialDistribution.Circle.SpatialDistributionType=PIC::CCMC::DEF::SOURCE::SHPERE::TYPE::Uniform;
+      else if (strcmp("UNIFORM",str1)==0) {
+        exit(__LINE__,__FILE__,"Error: not implemented");
+      }
+      else exit(__LINE__,__FILE__,"Error: the option is not found");
+    }
+    else if (strcmp("#ENDSOURCEREGION",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
+}
+
 void PIC::CCMC::Parser::Read::SourceRegion::Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
   int i,idim;
@@ -483,7 +533,26 @@ void PIC::CCMC::LoadParticles() {
         while ((t=PIC::Mesh::mesh.findTreeNode(x,t))==NULL);
 
         break;
+      case PIC::CCMC::DEF::SOURCE::TYPE::Circle:
+        //verify the the origin of the sphere is inside the domain
+        for (idim=0;idim<3;idim++) {
+          if ((ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Circle.Origin[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])  ||
+          (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Circle.Origin[idim]>PIC::Mesh::mesh.rootTree->xmax[idim])) {
+            exit(__LINE__,__FILE__,"Error: injection Circle is outside of the domain. Redefine the location of the injection spherical region");
+          }
+        }
 
+        do {
+          PIC::CCMC::ParticleInjection::cInjectionRegionCircle *Circle=&ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Circle;
+
+          r=Circle->Radius*pow(rnd(),1.0/2.0);
+          phi=2.0*Pi*rnd();
+
+          for (idim=0;idim<3;idim++) x[idim]=Circle->Origin[idim]+r*(sin(phi)*Circle->e0[idim]+cos(phi)*Circle->e1[idim]);
+        }
+        while ((t=PIC::Mesh::mesh.findTreeNode(x,t))==NULL);
+
+        break;
       case PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral:
         //verify that at least one corner point of the Quadrilateral is within the domain
         {
@@ -621,7 +690,7 @@ int PIC::CCMC::TraceParticles() {
   //continue simulation untill particles are in the system
   MPI_Allreduce(&PIC::ParticleBuffer::NAllPart,&nTotalParticles,PIC::nTotalSpecies,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-  if (PIC::ThisThread==0) printf("$PREFIX: Particle Tracking: The total number of tacked particle is %ld\n",nTotalParticles);
+  if (PIC::ThisThread==0) printf("$PREFIX: Particle Tracking: The total number of tracked particle is %ld\n",nTotalParticles);
 
   int niter=0;
   const int nOutputStep=1000;
