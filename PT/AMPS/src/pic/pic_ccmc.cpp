@@ -733,16 +733,17 @@ int PIC::CCMC::TraceParticles() {
                 while (ptr!=-1) {
                   ptrNext=PIC::ParticleBuffer::GetNext(ptr);
                   if (PIC::ParticleBuffer::GetI(ptr)==spec) PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+                  else {
+                    //delete the particle when: 1) it is within a boundary sphere, and 2) sampling of the partiucle on the sphere if turned off
+                    //(if the flux sampling is on then the particel is deleted during partucle motion step)
+                    if ((InternalBoundary::ParticleProcessingMode==InternalBoundary::ParticleBoundaryInteractionCode::Sphere)&&(InternalBoundary::Sphere::SamplingMode==_PIC_MODE_OFF_)) {
+                      double r=0.0,*x=PIC::ParticleBuffer::GetX(ptr);
 
-                  //delete the particle when: 1) it is within a boundary sphere, and 2) sampling of the partiucle on the sphere if turned off
-                  //(if the flux sampling is on then the particel is deleted during partucle motion step)
-                  if ((InternalBoundary::ParticleProcessingMode==InternalBoundary::ParticleBoundaryInteractionCode::Sphere)&&(InternalBoundary::Sphere::SamplingMode==_PIC_MODE_OFF_)) {
-                    double r=0.0,*x=PIC::ParticleBuffer::GetX(ptr);
+                      for (int idim=0;idim<3;idim++) r+=pow(x[idim]-InternalBoundary::Sphere::x0[idim],2);
 
-                    for (int idim=0;idim<3;idim++) r+=pow(x[idim]-InternalBoundary::Sphere::x0[idim],2);
-
-                    if (r<pow(InternalBoundary::Sphere::Radius,2)) {
-                      PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+                      if (r<pow(InternalBoundary::Sphere::Radius,2)) {
+                        PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+                      }
                     }
                   }
 
