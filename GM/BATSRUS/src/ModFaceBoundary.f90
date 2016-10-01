@@ -442,7 +442,7 @@ contains
 
       ! Variables for reflectall boundary
       integer:: iDir
-      real:: Normal_D(nDim)
+      real:: Normal_D(MaxDim)
 
       !logical:: DoTestCell
       logical, parameter:: DoTestCell = .false.
