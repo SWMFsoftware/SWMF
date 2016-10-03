@@ -217,7 +217,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
   "pck/di_tempel1_v01.tpc", \\
   "sclk/dif_sclkscet_00015_science.tsc"  
 
-! SimulationStartTime=2008-04-12T07:14:00
+ SimulationStartTime=2005-07-04T05:31:21
 
   define _TARGET_ _CG_
 
