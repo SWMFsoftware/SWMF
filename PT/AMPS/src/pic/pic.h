@@ -2700,6 +2700,10 @@ namespace PIC {
       //the conditions to keep the background particle or remove a model particle after a collision
       bool KeepConditionModelParticle(PIC::ParticleBuffer::byte *ModelParticleData);
 
+      //use stopping power for determeinig energy loss of simulated species interactinf with the background atmosphere
+      double GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      void StoppingPowerProcessor();
+
 
 
       //include the user defined properties of the background atmosphere

@@ -162,9 +162,17 @@ int PIC::TimeStep() {
   //simulate collisions with the background atmosphere
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
   BackgroundAtmosphereCollisionTime=MPI_Wtime();
+
+  #if _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__PARTICLE_COLLISIONS_
   MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
+  #elif _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
+  MolecularCollisions::BackgroundAtmosphere::StoppingPowerProcessor();
+  #else
+  exit(__LINE__,__FILE__,"Error: the option is unknown");
+  #endif //_PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_
+
   BackgroundAtmosphereCollisionTime=MPI_Wtime()-BackgroundAtmosphereCollisionTime;
-#endif
+#endif //_PIC_BACKGROUND_ATMOSPHERE_MODE_
 
   //particle photochemistry model
   #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
