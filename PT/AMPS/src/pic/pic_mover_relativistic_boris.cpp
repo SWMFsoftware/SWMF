@@ -13,7 +13,7 @@
 #include "Exosphere.h"
 
 //advance particle location
-int PIC::Mover::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   double dtTemp;
   PIC::ParticleBuffer::byte *ParticleData;
