@@ -518,16 +518,13 @@ int main(int argc,char **argv) {
   PIC::Init_BeforeParser();
   Comet::Init_BeforeParser();
 
-  const char SimulationStartTimeString[]="2005-07-04T05:31:21";
-  //const char SimulationStartTimeString[]="2005-07-04T05:39:18";
-
   //init SPICE                                                                                                                      
   int i;
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
   //  furnsh_c("tempel1.kernels.tm");
-  utc2et_c(SimulationStartTimeString,&et);
+  utc2et_c(Exosphere::SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
 
@@ -538,8 +535,9 @@ int main(int argc,char **argv) {
     xSun[i]=1.0E3*StateSun[i];
   }
 
-  printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e \n",xSun[0],xSun[1],xSun[2]);
-
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e \n",xSun[0],xSun[1],xSun[2]);
+  }
 
 
   PIC::Alarm::SetAlarm(20*3600-10*60);

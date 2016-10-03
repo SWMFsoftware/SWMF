@@ -194,16 +194,13 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
   positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);*/
 
-  const char SimulationStartTimeString[]="2005-07-04T05:31:21";
-  //const char SimulationStartTimeString[]="2005-07-04T05:39:18";
-
   //init SPICE                                                                                                                      
   int i;
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
   //  furnsh_c("tempel1.kernels.tm");
-  utc2et_c(SimulationStartTimeString,&et);
+  utc2et_c(Exosphere::SimulationStartTimeString,&et);
   spkezr_c("DEEP_IMPACT_FLYBY_SC",et,"TEMPEL_FIXED","none","TEMPEL",StateRosetta,&lt);
   spkezr_c("SUN",et,"TEMPEL_FIXED","none","TEMPEL",StateSun,&lt);
 
