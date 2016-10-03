@@ -86,8 +86,8 @@ program time_convert
   do iUnit=11,12
      write(iUnit,'(i4.4)')iTimeExact_I(1)     !Year
      do iTime=2,5
-         write(iUnit,'(i2.2)')iTimeExact_I(iTime)
-      end do
+        write(iUnit,'(i2.2)')iTimeExact_I(iTime)
+     end do
      write(iUnit,'(a)')' 0'
      write(iUnit,'(a)')' 0.0'
      write(iUnit,*)
@@ -100,7 +100,7 @@ contains
     call time_real_to_int(TimeL,iTimeL_I)
     call CON_recalc(iTimeL_I(1),iTimeL_I(2),iTimeL_I(3),iTimeL_I(4),iTimeL_I(5),iTimeL_I(6))
     LongitudeL=CarringtonLongitude
-    
+
     call time_real_to_int(TimeR,iTimeR_I)
     call CON_recalc(iTimeR_I(1),iTimeR_I(2),iTimeR_I(3),iTimeR_I(4),iTimeR_I(5),iTimeR_I(6))
     LongitudeR=CarringtonLongitude
@@ -109,41 +109,35 @@ contains
     ! LongitudeL >= LongitudeIn >= LongitudeR
     ! Under the condition, TimeL < TimeR
     !/
-    
-    if(LongitudeL<=cPi.and.LongitudeR>=cPi)LongitudeL = LongitudeL + cTwoPi
-       !\
-       !Say, LongitudeL belongs to the end of previous CR and is small
-       !LongitudeR belongs to the beginning of the current rotation and 
-       !is large. Make LongitudeL larger
-       !/ 
-       
-       !if(LongitudeIn > cPi)LongitudeCompare = LongitudeIn-cTwoPi
-    !write(*,*)iCR,TimeL,TimeR,LongitudeL,LongitudeR
+
+    if(LongitudeL<=cPi.and.LongitudeR>=cPi)then
+       if(LongitudeIn>cPi)then
+          LongitudeL = LongitudeL + cTwoPi
+       else
+          LongitudeR = LongitudeR - cTwoPi
+       end if
+    end if
+
     do while( any( iTimeL_I(1:5)/=iTimeR_I(1:5)).and.TimeR-TimeL>10.0)
        Time=0.50*(TimeL+TimeR)
        call time_real_to_int(Time,iTime_I)
        call CON_recalc(iTime_I(1),iTime_I(2),iTime_I(3),iTime_I(4),iTime_I(5),iTime_I(6))
        Longitude=CarringtonLongitude
-    
+
        if(Longitude<=cPi.and.LongitudeR>=cPi)&
             Longitude = Longitude + cTwoPi
-       !\
-       !Say, Longitude belongs to the end of previous CR and is small
-       !LongitudeR belongs to the beginning of the current rotation and 
-       !is large. Make Longitude larger
-       !/ 
-       !if(LongitudeL<=cPi.and.Longitude>=cPi)Longitude=Longitude-cTwoPi
-     if(Longitude - LongitudeIn < 0.0)then
-        iTimeR_I=iTime_I
-        TimeR = Time
-        LongitudeR = Longitude
-     else
-        iTimeL_I=iTime_I
-        TimeL = Time
-        LongitudeL = Longitude
-     end if
-     !write(*,*)TimeL,Time,TimeR,LongitudeL,Longitude,LongitudeR
-     !write(*,*)iTimeL_I,iTimeR_I
-  end do
-end subroutine solve_time
+       if(Longitude>=cPi.and.LongitudeL<=cPi)&
+            Longitude = Longitude - cTwoPi
+
+       if(Longitude - LongitudeIn < 0.0)then
+          iTimeR_I=iTime_I
+          TimeR = Time
+          LongitudeR = Longitude
+       else
+          iTimeL_I=iTime_I
+          TimeL = Time
+          LongitudeL = Longitude
+       end if
+    end do
+  end subroutine solve_time
 end program time_convert
