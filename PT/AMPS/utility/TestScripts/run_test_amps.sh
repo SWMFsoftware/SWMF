@@ -58,6 +58,10 @@ cd AMPS
 cvs co -D "`date +%m/%d/%Y` 23:20" AMPS_data 
 cd ..
 
+# Update data files for test at supercomputers
+#>Pleiades>Yellowstone>Stampede #########################
+#rsync -r amps@tower-left.engin.umich.edu:/Volumes/Data01/AMPS_DATA_TEST/ $WorkDir/AMPS_DATA_TEST <#
+
 # create separate folders for different compilers
 #>GNUAll ############################
 #mkdir -p GNU;   cp -r AMPS GNU/;  <#
