@@ -38,6 +38,7 @@
 #define SpeedOfLight         299792458.0
 #define cm2m                 1.0E-2
 #define m2cm                 100.0
+#define J2eV                 (1.0/eV2J)
 
 //convert time units
 #define Min2Sec 60.0
