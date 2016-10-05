@@ -52,8 +52,8 @@ Name=Titan
 Time=7
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks73465-01)
-Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
-Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+stampede)
+Keys=-cplr-data-path=${MYDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
+Keys=-cplr-data-path=${MYDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+stampede)
 <#
 -------------------------------------------------------------------------------
 #>
