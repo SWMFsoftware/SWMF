@@ -23,8 +23,8 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName="hartley2.input.Assembled.Block";   #$ARGV[0];
-my $SpeciesFileName="hartley2.input.Assembled.Species";
+my $InputFileName="hartley2rotationbody.input.Assembled.Block";   #$ARGV[0];
+my $SpeciesFileName="hartley2rotationbody.input.Assembled.Species";
 my $WorkingSourceDirectory="srcTemp";  #$ARGV[1];
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
