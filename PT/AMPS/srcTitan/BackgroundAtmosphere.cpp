@@ -3,6 +3,9 @@
 //====================================================
 //define specific functions for modeling collisions with the backgound atmosphere
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include "pic.h"
 
 
@@ -103,4 +106,67 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCellLocalBackgroundNum
 
 int GetTotalNumberBackgroundSpecies() {
   return 1;
+}
+
+//acceptance croterion for the simulated ions
+bool PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(PIC::ParticleBuffer::byte *ModelParticleData) {
+  double *v;
+
+  static double const VelocityLimit=100.0;
+
+  v=PIC::ParticleBuffer::GetV(ModelParticleData);
+
+  return (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>VelocityLimit*VelocityLimit) ? true : false;
+}
+
+//calculate the stopping power
+double PIC::MolecularCollisions::BackgroundAtmosphere::GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  double mass,charge;
+
+  struct cStoppingPowerData {
+    double B,T0,q,s;
+  };
+
+  static cStoppingPowerData SeParam={1.3798e-16,0.05,0.92,0.6};
+  static cStoppingPowerData SnParamLow={2.665e-11,4700.0,0.99,1.68};
+  static cStoppingPowerData SnParamHigh={1.57e-11,4000,0.97,1.65};
+  static double EaEnergyThrehold=1000.0;
+
+  mass=PIC::MolecularData::GetMass(spec);
+  charge=PIC::MolecularData::GetElectricCharge(spec);
+
+  if (charge==0.0) return 0.0;
+
+  double Ea,nu,Se,Sn;
+
+  Ea=mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])/2.0;
+  Ea = Ea/eV2J;
+
+  nu=(4.0*mass*_N__MASS_/(pow(mass+_N__MASS_,2.0)));
+
+  Se=(SeParam.B/pow(Ea,SeParam.s))*
+      (pow(SeParam.T0,2.0-SeParam.q)-pow(SeParam.T0+nu*Ea,1.0-SeParam.q)*
+      (SeParam.T0+(-1.0+SeParam.q)*nu*Ea))/
+      ((1.0-SeParam.q)*(2.0-SeParam.q));
+
+  if (Ea<EaEnergyThrehold) {
+    Sn=(SnParamLow.B/pow(Ea,SnParamLow.s))*
+        (pow(SnParamLow.T0,2.0-SnParamLow.q)-pow(SnParamLow.T0+nu*Ea,1.0-SnParamLow.q)*
+        (SnParamLow.T0+(-1.0+SnParamLow.q)*nu*Ea))/
+        ((1.0-SnParamLow.q)*(2.0-SnParamLow.q));
+  }
+  else {
+    Sn=(SnParamHigh.B/pow(Ea,SnParamHigh.s))*
+        (pow(SnParamHigh.T0,2.0-SnParamHigh.q)-pow(SnParamHigh.T0+nu*Ea,1.0-SnParamHigh.q)*
+        (SnParamHigh.T0+(-1.0+SnParamHigh.q)*nu*Ea))/
+        ((1.0-SnParamHigh.q)*(2.0-SnParamHigh.q));
+  }
+
+  //get the totan background species number density
+  double nTotalNumberDensity=0.0;
+  for (int nBackgroundSpec=0;nBackgroundSpec<GetTotalNumberBackgroundSpecies();nBackgroundSpec++) {
+    nTotalNumberDensity+=GetBackgroundLocalNumberDensity(nBackgroundSpec,x);
+  }
+ 
+  return 2.0*(Se+Sn)*eV2J*1.0e-4*nTotalNumberDensity;
 }
