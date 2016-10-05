@@ -675,7 +675,11 @@ void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
 
 //export data from a TECPLOT output file: the function includes all nessesary calls
 void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
-  if (PIC::ThisThread==0) printf("$PREFIX: Import Background data (tecplot): mesh signature=0x%lx, fname=%s\n",PIC::Mesh::mesh.getMeshSignature(),fname);
+
+  //create and output the mesh signature
+  unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+  if (PIC::ThisThread==0) printf("$PREFIX: Import Background data (tecplot): mesh signature=0x%lx, fname=%s\n",MeshSignature,fname);
 
   //check whether all variables needed to read the data are set
   if (DataMode==-1) exit(__LINE__,__FILE__,"The DataMode is not initialized");
