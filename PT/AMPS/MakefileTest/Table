@@ -635,9 +635,14 @@ Time=7
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 
+
+Keys=-model-data-path=${MYDIR}/../../../AMPS_DATA_TEST/MARS@@(0+stampede) 
+Keys=-model-data-path=/Volumes/Data01/AMPS_DATA/MARS@@(0+valeriy)
+
+
 Compile=
 >>>@echo "test_Mars-Hot-Oxygen_compile..." > test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
->>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on -model-data-path=/Volumes/Data01/AMPS_DATA/MARS
+>>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on ${TESTMars-Hot-OxygenKEYS}
 >>>cd srcMars; cvs update -r Mars_HotO_DRofO2p_PERMAX
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
