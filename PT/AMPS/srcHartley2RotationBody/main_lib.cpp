@@ -83,18 +83,6 @@ const double yMaxDomain=4.0; //the minimum size of the domain in the direction p
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
 
-
-
-//the species
-/*int NA=0;
-int NAPLUS=1;*/
-
-
-//the total acceleration of the particles
-#include "Na.h"
-
-
-
 /*---------------------------------------------------------------------------------*/
 //the user defined additionas output data in the exosphery model outputdata file
 void ExospherUserDefinedOutputVariableList(FILE *fout) {
@@ -102,13 +90,6 @@ void ExospherUserDefinedOutputVariableList(FILE *fout) {
 }
 
 void ExosphereUserDefinedOutputData(FILE *fout,int spec) {
-
-  if (PIC::ThisThread==0) {
-    double t;
-
-    t=(spec==_NA_SPEC_) ? SodiumRadiationPressureAcceleration__Combi_1997_icarus(Comet::vObjectRadial,Comet::xObjectRadial) : 0.0;
-    fprintf(fout,"%e  ",t);
-  }
 }
 
 /*---------------------------------------------------------------------------------*/
@@ -366,7 +347,9 @@ bool sodiumDistributeParticleParameters(double *x,double *v, cTreeNodeAMR<PIC::M
 
 
 
-
+double SurfaceResolution(CutCell::cTriangleFace* t) {
+  return 1.0 ;//max(1.0,t->CharacteristicSize()*18.0)/4.0;
+}
 
 //the mesh resolution
 double localSphericalSurfaceResolution(double *x) {
@@ -438,7 +421,7 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
 
-  double CharacteristicSpeed_NA=2.0E3;
+  double CharacteristicSpeed_NA=5.0E2;
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
@@ -1176,8 +1159,8 @@ void amps_init() {
     Comet::Sampling::SetUserDefinedAdditionalOutputSampledModelDataFunctions(ExospherUserDefinedOutputVariableList,ExosphereUserDefinedOutputData);
 
 
-    PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000; //0; //00; //*10;
-    PIC::RequiredSampleLength=100; //00; //0; //0;
+    PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500; //0; //00; //*10;
+    PIC::RequiredSampleLength=10; //00; //0; //0;
 
     Comet::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
 
@@ -1424,8 +1407,8 @@ void amps_init() {
       Nucleus->PrintDataStateVector=testPrintDataStateVector; ///Comet::Sampling::OutputSurfaceDataFile::PrintDataStateVector;
 
 
-      //sprintf(fname,"%s/Sphere.dat",PIC::OutputDataFileDirectory);
-      //      Nucleus->PrintSurfaceMesh(fname);
+      sprintf(fname,"%s/RotationBodyNucleus.dat",PIC::OutputDataFileDirectory);
+      Nucleus->PrintSurfaceMesh(fname);
 
       //sprintf(fname,"%s/SpheraData.dat",PIC::OutputDataFileDirectory);
       //Nucleus->PrintSurfaceData(fname,0);
@@ -1435,8 +1418,8 @@ void amps_init() {
       Nucleus->faceat=0;
       Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
       //Nucleus->InjectionBoundaryCondition=Comet::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
-      Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
-      //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
+      //      Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
+      PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
       //set up the planet pointer in Mercury model
 
@@ -1628,10 +1611,9 @@ void amps_init() {
 
 
     //generate only the tree
+    //    PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
     PIC::Mesh::mesh.AllowBlockAllocation=false;
-    PIC::Mesh::mesh.init(xmin,xmax,localResolution);
-    PIC::Mesh::mesh.memoryAllocationReport();
-
+    PIC::Mesh::mesh.init(xmin,xmax,localSphericalSurfaceResolution);
 
   //  VT_ON();
   //  VT_USER_START("name");
@@ -1642,8 +1624,8 @@ void amps_init() {
 
    char fname[_MAX_STRING_LENGTH_PIC_];
 
-
-    sprintf(fname,"%s/mesh.msh",PIC::OutputDataFileDirectory);
+   /**/
+   sprintf(fname,"%s/mesh.msh",PIC::OutputDataFileDirectory);
     if (PIC::Mesh::mesh.ThisThread==0) {
       PIC::Mesh::mesh.buildMesh();
       PIC::Mesh::mesh.saveMeshFile(fname);
@@ -1653,16 +1635,10 @@ void amps_init() {
       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
       PIC::Mesh::mesh.readMeshFile(fname);
     }
-
-  //  }
-  //  VT_USER_END("name");
-  //  MPI_Finalize();
-  //  return 1;
-
-  //  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
-
+   
     sprintf(fname,"%s/mesh.dat",PIC::OutputDataFileDirectory);
     PIC::Mesh::mesh.outputMeshTECPLOT(fname);
+   
 
     PIC::Mesh::mesh.memoryAllocationReport();
     PIC::Mesh::mesh.GetMeshTreeStatistics();
@@ -1688,10 +1664,6 @@ void amps_init() {
     //init the volume of the cells'
     PIC::Mesh::mesh.InitCellMeasure();
 
-
-
-
-
   //init the PIC solver
     PIC::Init_AfterParser ();
     PIC::Mover::Init();
@@ -1703,21 +1675,17 @@ void amps_init() {
   //  }
 
 
+
     //set up the time step
     PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
     PIC::ParticleWeightTimeStep::initTimeStep();
 
-    //set up the particle weight
-    if (_NA_SPEC_<0) exit(__LINE__,__FILE__,"Error: the species that is usd for defining the weight is used used in the simulation");
 
     PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_NA_SPEC_);
+    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO2_SPEC_);
+    
 
-    //copy the weight and time step from Na neutra to Na ions
-    if (_NAPLUS_SPEC_!=-1) {
-      PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_NAPLUS_SPEC_,_NA_SPEC_,1.0);
-      PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_NAPLUS_SPEC_,_NA_SPEC_,1.0);
-    }
 
     //set photolytic reactions
   /*
@@ -1751,425 +1719,34 @@ void amps_init() {
 
 
     //init the sampling of the particls' distribution functions
-    const int nSamplePoints=3;
+    /*    const int nSamplePoints=3;
     double SampleLocations[nSamplePoints][DIM]={{3.0E3,3.0E3,0.0}, {2.8E3,5.6E3,0.0}, {-2.3E3,3.0E3,0.0}};
 
     PIC::DistributionFunctionSample::vMin=-40.0E3;
     PIC::DistributionFunctionSample::vMax=40.0E3;
     PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
 
-    PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
-
-
-  #if _MERCURY_FIPS_SAMPLING_ == _MERCURY_MODE_ON_
-    //init sampling points along the s/c trajectory
-    const int nFlybySamplePasses=6;
-    const double FlybySamplingInterval=20.0*60.0,FlybySamplingIntervalStep=60.0; //in seconds
-    const int nSampleSteps=(int)(FlybySamplingInterval/FlybySamplingIntervalStep);
-
-    const char *FlybySamplePassesUTC[nFlybySamplePasses]={"2011-04-13T16:15:00","2011-04-14T16:30:00","2011-04-16T04:35:00",
-        "2011-04-13T04:40:00","2011-04-15T04:55:00","2011-04-21T17:50:00"};
-
-    SpiceDouble et,lt;
-    SpiceDouble state[6];
-    int nFlybyPass,n;
-
-    /* FIPS POINTING
-        INS-236720_FOV_FRAME       = 'MSGR_EPPS_FIPS'
-        INS-236720_FOV_SHAPE       = 'CIRCLE'
-        INS-236720_BORESIGHT       = ( 0.0, 0.0, 1.0 )
-     */
-
-    SpiceDouble pointing[3],bsight[3],bsight_INIT[3]={0.0,0.0,1.0};
-    SpiceDouble rotate[3][3];
-
-    const SpiceInt lenout = 35;
-    SpiceChar utcstr[lenout+2];
-
-
-    int nFluxSamplePoint=0;
-
-    int nTotalFluxSamplePoints=nFlybySamplePasses*nSampleSteps;
-    double FluxSampleLocations[nTotalFluxSamplePoints][3];
-    double FluxSampleDirections[nTotalFluxSamplePoints][3];
-
-
-
-    for (nFlybyPass=0;nFlybyPass<nFlybySamplePasses;nFlybyPass++) {
-      utc2et_c(FlybySamplePassesUTC[nFlybyPass],&et);
-
-      if (PIC::ThisThread==0) {
-        cout << "S/C Flyby Sampling: Pass=" << nFlybyPass << ":" << endl;
-        cout << "Flux Sample Point\tUTS\t\t\t x[km]\t\ty[km]\t\tz[km]\t\t\t lx\t\tly\t\tlz\t" << endl;
-      }
-
-      for (n=0;n<nSampleSteps;n++) {
-        //position of the s/c
-        spkezr_c("MESSENGER",et,"LSO","NONE","MERCURY",state,&lt);
-
-
-        //get the pointing vector in the 'SO' frame
-        memcpy(bsight,bsight_INIT,3*sizeof(double));
-
-        pxform_c ("MSGR_EPPS_FIPS","LSO",et,rotate);
-        mxv_c(rotate,bsight,pointing);
-
-        //print the pointing information
-        if (PIC::ThisThread==0) {
-          et2utc_c(et,"C",0,lenout,utcstr);
-          fprintf(PIC::DiagnospticMessageStream,"%i\t\t\t%s\t",nFluxSamplePoint,utcstr);
-          for (idim=0;idim<3;idim++) fprintf(PIC::DiagnospticMessageStream,"%e\t",state[idim]);
-
-          cout << "\t";
-
-          for (idim=0;idim<3;idim++) fprintf(PIC::DiagnospticMessageStream,"%e\t",pointing[idim]);
-          cout << endl;
-        }
-
-        //save the samlpe pointing information
-        for (idim=0;idim<3;idim++) {
-          FluxSampleLocations[nFluxSamplePoint][idim]=state[idim]*1.0E3;
-          FluxSampleDirections[nFluxSamplePoint][idim]=pointing[idim];
-        }
-
-        //increment the flyby time
-        et+=FlybySamplingIntervalStep;
-        ++nFluxSamplePoint;
-      }
-
-      if (PIC::ThisThread==0) cout << endl;
-    }
-
-    PIC::ParticleFluxDistributionSample::Init(FluxSampleLocations,FluxSampleDirections,30.0/180.0*Pi,nTotalFluxSamplePoints);
-
-  #elif _MERCURY_FIPS_SAMPLING_ == _MERCURY_MODE_OFF_
-    fprintf(PIC::DiagnospticMessageStream,"No FIPS sampling\n");
-  #else
-    exit(__LINE__,__FILE__,"Error: the option is not recognized");
-  #endif
-
-    //init ICES
-
-  #ifdef _ICES_CREATE_COORDINATE_LIST_
-    PIC::ICES::createCellCenterCoordinateList();
-    PIC::ICES::SetLocationICES("/left/ices/ICES");
-    PIC::ICES::retriveSWMFdata("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
-  #endif
-
-
-  #ifdef _ICES_LOAD_DATA_
-    PIC::ICES::readSWMFdata(1.0);
-    PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
-
-
-    //create the map of the solar wind flux
-    int el;
-
-    for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-      int i,j,k;
-      long int nd;
-      double FaceCenterPoint[3],PlasmaVelocity[3],PlasmaNumberDensity,FaceElementNormal[3],c;
-      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-      PIC::Mesh::cDataCenterNode *CenterNode;
-      char *offset;
-
-      Comet::Planet->GetSurfaceElementMiddlePoint(FaceCenterPoint,el);
-      Comet::Planet->GetSurfaceElementNormal(FaceElementNormal,el);
-
-      if (FaceElementNormal[0]<0.0) continue;
-
-      node=PIC::Mesh::mesh.findTreeNode(FaceCenterPoint);
-
-      if ((nd=PIC::Mesh::mesh.fingCellIndex(FaceCenterPoint,i,j,k,node,false))==-1) {
-        exit(__LINE__,__FILE__,"Error: the cell is not found");
-      }
-
-  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-      if ((node->Thread==PIC::ThisThread)&&(node->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is not initialized");
-  #endif
-
-      if (node->Thread==PIC::ThisThread) {
-        CenterNode=node->block->GetCenterNode(nd);
-        offset=CenterNode->GetAssociatedDataBufferPointer();
-
-        if (*((int*)(offset+PIC::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-          memcpy(PlasmaVelocity,offset+PIC::ICES::PlasmaBulkVelocityOffset,3*sizeof(double));
-          memcpy(&PlasmaNumberDensity,offset+PIC::ICES::PlasmaNumberDensityOffset,sizeof(double));
-        }
-        else {
-          double EmptyArray[3]={0.0,0.0,0.0};
-
-          memcpy(PlasmaVelocity,EmptyArray,3*sizeof(double));
-          memcpy(&PlasmaNumberDensity,EmptyArray,sizeof(double));
-        }
-
-        c=-(PlasmaVelocity[0]*FaceElementNormal[0]+PlasmaVelocity[1]*FaceElementNormal[1]+PlasmaVelocity[2]*FaceElementNormal[2]);
-        if (c<0.0) c=0.0;
-
-        Comet::Planet->SolarWindSurfaceFlux[el]=c*PlasmaNumberDensity;
-      }
-
-      MPI_Bcast(Comet::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_GLOBAL_COMMUNICATOR);
-    }
-
-
-  #endif
-
-    //prepopulate the solar wind protons
-  //  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
-
-
-    /*
-    //check the volume of local cells
-    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-    while (node!=NULL) {
-      int i,j,k,di,dj,dk,idim;
-      long int LocalCellNumber;
-      double r,rmin=0.0,rmax=0.0,rprobe[3]={0.0,0.0,0.0};
-      PIC::Mesh::cDataCenterNode *cell;
-
-      if (node->Temp_ID==1862) {
-        cout << __FILE__ << "@" << __LINE__ << endl;
-      }
-
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-            for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-              cell=node->block->GetCenterNode(LocalCellNumber);
-              rmin=-1,rmax=-1;
-
-              if (cell->Measure<=0.0) {
-                for (dk=0;dk<=((DIM==3) ? 1 : 0);dk++) for (dj=0;dj<=((DIM>1) ? 1 : 0);dj++) for (di=0;di<=1;di++) {
-                  node->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
-
-                  for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-                  r=sqrt(r);
-
-                  if ((rmin<0.0)||(rmin>r)) rmin=r;
-                  if ((rmax<0.0)||(rmax<r)) rmax=r;
-                }
-
-                if ((rmin<rSphere)&&(rmax>rSphere)) {
-                  cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << endl;
-                }
-
-                PIC::Mesh::mesh.InitCellMeasure(node);
-
-              }
-
-
-            }
-         }
-      }
-
-      node=node->nextNodeThisThread;
-    }
-  */
-
-  //  VT_TRACER("main");
-
-
-
-
-
-
-
-
+    PIC::DistributionFunctionSample::Init();
+    */
 
     //time step
     double SimulationTimeStep=-1.0;
+    
+    //    for (int spec=0;spec<PIC::nTotalSpecies;spec++) if ((SimulationTimeStep<0.0)||(SimulationTimeStep>PIC::ParticleWeightTimeStep::GlobalTimeStep[spec])) {
+    //SimulationTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+      // }
 
-    for (int spec=0;spec<PIC::nTotalSpecies;spec++) if ((SimulationTimeStep<0.0)||(SimulationTimeStep>PIC::ParticleWeightTimeStep::GlobalTimeStep[spec])) {
-      SimulationTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
-    }
+    //set up the time step                                                                                    
+    PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
+    PIC::ParticleWeightTimeStep::initTimeStep();
 
+    //    SimulationTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_H2O_SPEC_];
+    //SimulationTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_CO2_SPEC_];
   }
 
 void amps_time_step() {
 
 
-  //  cout << __LINE__ << __FILE__ << endl;
-
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-    //determine the parameters of the orbital motion of Mercury
-    SpiceDouble StateBegin[6],StateEnd[6],lt,StateSun[6],StateMiddle[6];
-    double lBegin[3],rBegin,lEnd[3],rEnd,vTangentialBegin=0.0,vTangentialEnd=0.0,c0=0.0,c1=0.0;
-    int idim;
-
-    SpiceDouble HCI_to_MSO_TransformationMartix[6][6];
-
-    spkezr_c("Comet",Comet::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateBegin,&lt);
-    spkezr_c("SUN",Comet::OrbitalMotion::et,"LSO","none","Comet",StateSun,&lt);
-
-    double SimulationTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
-
-    //calculate position of the Earth ar the middle of the interation
-    SpiceDouble StateEarth_SO[6],StateEarth_HCI[6];
-    spkezr_c("Earth",Comet::OrbitalMotion::et+0.5*SimulationTimeStep,Comet::SO_FRAME,"none","MOON",StateEarth_SO,&lt);
-    spkezr_c("Earth",Comet::OrbitalMotion::et+0.5*SimulationTimeStep,"MSGR_HCI","none","MOON",StateEarth_HCI,&lt);
-
-    //calculate lunar velocity in an itertial frame, which have dirtectional vectors that coinsides with that of LSO
-    sxform_c("MSGR_HCI","LSO",Comet::OrbitalMotion::et+0.5*SimulationTimeStep,HCI_to_MSO_TransformationMartix);
-    spkezr_c("Comet",Comet::OrbitalMotion::et+0.5*SimulationTimeStep,"MSGR_HCI","none","SUN",StateMiddle,&lt);
-
-
-    Comet::OrbitalMotion::et+=SimulationTimeStep;
-    spkezr_c("Comet",Comet::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateEnd,&lt);
-
-
-    for (rBegin=0.0,rEnd=0.0,idim=0;idim<3;idim++) {
-      StateBegin[idim]*=1.0E3,StateBegin[3+idim]*=1.0E3;
-      StateEnd[idim]*=1.0E3,StateEnd[3+idim]*=1.0E3;
-      StateMiddle[idim]*=1.0E3,StateMiddle[3+idim]*=1.0E3;
-
-      rBegin+=pow(StateBegin[idim],2);
-      rEnd+=pow(StateEnd[idim],2);
-
-      Comet::xObject_HCI[idim]=StateBegin[idim];
-      Comet::vObject_HCI[idim]=StateBegin[3+idim];
-
-      Comet::xSun_SO[idim]=1.0E3*StateSun[idim];
-      Comet::vSun_SO[idim]=1.0E3*StateSun[3+idim];
-
-      Comet::xEarth_SO[idim]=1.0E3*StateEarth_SO[idim];
-      Comet::vEarth_SO[idim]=1.0E3*StateEarth_SO[3+idim];
-
-      Comet::xEarth_HCI[idim]=1.0E3*StateEarth_HCI[idim];
-      Comet::vEarth_HCI[idim]=1.0E3*StateEarth_HCI[3+idim];
-    }
-
-    //calculate parameters of SO_FROZEN
-    //velocity of the coordinate frame
-    for (idim=0;idim<3;idim++) {
-      Comet::vObject_SO_FROZEN[idim]=
-          HCI_to_MSO_TransformationMartix[idim][0]*StateMiddle[3+0]+
-          HCI_to_MSO_TransformationMartix[idim][1]*StateMiddle[3+1]+
-          HCI_to_MSO_TransformationMartix[idim][2]*StateMiddle[3+2];
-    }
-
-    //the axis of rotation of the MSO fraim in MSO_FROZEN during the next time step
-    //get pointing direction to the Sun at the end of the current iteration in MSO_FROZEN
-    SpiceDouble fmatrix[6][6];
-    double SunPointingDirectionEnd[3],SunPointingDirectionEnd_MSO_FROZEN[3];
-
-    //calculate Sun pointing at the end of the iteration in HCI frame (et is already incremented!!!!!!)
-    sxform_c("LSO","MSGR_HCI",Comet::OrbitalMotion::et,fmatrix);
-
-    SunPointingDirectionEnd[0]=fmatrix[0][0];
-    SunPointingDirectionEnd[1]=fmatrix[1][0];
-    SunPointingDirectionEnd[2]=fmatrix[2][0];
-
-    //convert the pointing direction vector into MSO_FROZEN frame
-    sxform_c("MSGR_HCI","LSO",Comet::OrbitalMotion::et-SimulationTimeStep,fmatrix);
-
-    for (idim=0;idim<3;idim++) {
-      SunPointingDirectionEnd_MSO_FROZEN[idim]=
-          fmatrix[idim][0]*SunPointingDirectionEnd[0]+
-          fmatrix[idim][1]*SunPointingDirectionEnd[1]+
-          fmatrix[idim][2]*SunPointingDirectionEnd[2];
-    }
-
-    //calculate the rate of rotation in MSO_FROZEN
-    Comet::RotationRate_SO_FROZEN=acos(SunPointingDirectionEnd_MSO_FROZEN[0])/SimulationTimeStep;
-
-
-    //calculate the direction of rotation
-    double c=sqrt(pow(SunPointingDirectionEnd_MSO_FROZEN[1],2)+pow(SunPointingDirectionEnd_MSO_FROZEN[2],2));
-
-    if (c>0.0) {
-      Comet::RotationVector_SO_FROZEN[0]=0.0;
-      Comet::RotationVector_SO_FROZEN[1]=-SunPointingDirectionEnd_MSO_FROZEN[2]/c*Comet::RotationRate_SO_FROZEN;
-      Comet::RotationVector_SO_FROZEN[2]=SunPointingDirectionEnd_MSO_FROZEN[1]/c*Comet::RotationRate_SO_FROZEN;
-    }
-    else {
-      Comet::RotationVector_SO_FROZEN[0]=0.0;
-      Comet::RotationVector_SO_FROZEN[1]=0.0;
-      Comet::RotationVector_SO_FROZEN[2]=0.0;
-    }
-
-
-    //RECALCUALTE THE ROTATION VECTOR USING THE TRANSOFRMATON MARTICX FROM MSO_FROSEN at the time step (n) to the MSO_FROZEN at the time step (n+1)
-    //the rotation vector is the eigrnvector of the transformation matrix
-    //Zhuravlev, Osnovy teoreticheskoi mehaniki, Chapter 2, paragraph 6.2 (sposoby zadaniya orientacii tverdogo tela)
-
-    //get the transformation matrix T(LSO[n]->LSO[n+1])=T1(LSO[n]->MSGR_HCI)*T2(MSGR_HCI->LSO[n+1])
-    SpiceDouble T1[6][6],T2[6][6];
-    double T[3][3];
-    int i,j,k;
-
-
-    sxform_c("LSO","MSGR_HCI",Comet::OrbitalMotion::et-SimulationTimeStep,T1);
-    sxform_c("MSGR_HCI","LSO",Comet::OrbitalMotion::et,T2);
-
-
-    for (i=0;i<3;i++) for (j=0;j<3;j++) {
-      T[i][j]=0.0;
-
-      for (k=0;k<3;k++) T[i][j]+=T1[i][k]*T2[k][j];
-    }
-
-    //determine the rate and the vectrot of the rotation
-    double RotationAngle,t,RotationVector[3],RotationRate;
-
-    RotationAngle=acos((T[0][0]+T[1][1]+T[2][2]-1.0)/2.0);
-
-    t=2.0*sin(RotationAngle);
-    RotationVector[0]=(T[2][1]-T[1][2])/t;
-    RotationVector[1]=(T[0][2]-T[2][0])/t;
-    RotationVector[2]=(T[1][0]-T[0][1])/t;
-
-    RotationRate=RotationAngle/SimulationTimeStep;
-
-    t=RotationRate/sqrt(RotationVector[0]*RotationVector[0]+RotationVector[1]*RotationVector[1]+RotationVector[2]*RotationVector[2]);
-    RotationVector[0]*=t,RotationVector[1]*=t,RotationVector[2]*=t;
-
-
-    rBegin=sqrt(rBegin);
-    rEnd=sqrt(rEnd);
-
-    for (idim=0;idim<3;idim++) {
-      lBegin[idim]=StateBegin[idim]/rBegin;
-      lEnd[idim]=StateEnd[idim]/rEnd;
-
-      c0+=StateBegin[3+idim]*lBegin[idim];
-      c1+=StateEnd[3+idim]*lEnd[idim];
-    }
-
-    Comet::xObjectRadial=0.5*(rBegin+rEnd);
-    Comet::vObjectRadial=0.5*(c0+c1);
-
-    //calculate TAA
-    Comet::OrbitalMotion::TAA=Comet::OrbitalMotion::GetTAA(Comet::OrbitalMotion::et);
-
-    for (idim=0;idim<3;idim++) {
-      vTangentialBegin+=pow(StateBegin[3+idim]-c0*lBegin[idim],2);
-      vTangentialEnd+=pow(StateEnd[3+idim]-c1*lEnd[idim],2);
-    }
-
-    vTangentialBegin=sqrt(vTangentialBegin);
-    vTangentialEnd=sqrt(vTangentialEnd);
-
-    Comet::OrbitalMotion::CoordinateFrameRotationRate=0.5*(vTangentialBegin/rBegin+vTangentialEnd/rEnd);
-
-
-    //determine direction to the Sun and rotation angle in the coordiname frame related to the Comet
-    SpiceDouble state[6],l=0.0;
-
-    spkezr_c("SUN",Comet::OrbitalMotion::et,"IAU_MOON","none","MOON",state,&lt);
-
-    for (idim=0;idim<3;idim++) l+=pow(state[idim],2);
-
-    for (l=sqrt(l),idim=0;idim<3;idim++) {
-      Comet::OrbitalMotion::SunDirection_IAU_OBJECT[idim]=state[idim]/l;
-    }
-
-    //matrixes for tranformation LSO->IAU and IAU->LSO coordinate frames
-    sxform_c("LSO","IAU_MOON",Comet::OrbitalMotion::et,Comet::OrbitalMotion::SO_to_IAU_TransformationMartix);
-    sxform_c("IAU_MOON","LSO",Comet::OrbitalMotion::et,Comet::OrbitalMotion::IAU_to_SO_TransformationMartix);
-#endif
-
-    //    cout << __LINE__ << __FILE__ << endl;
 
     //make the time advance
      PIC::TimeStep();

@@ -26,10 +26,6 @@
 #define _GHOST_CELLS_Z_       2
 
 
-#undef _BLOCK_CELLS_X_
-#define _BLOCK_CELLS_X_ 5
-
-
 #include "specfunc.h"
 
 class cInternalSphericalData_UserDefined {

@@ -77,6 +77,8 @@ double Exosphere::SurfaceInteraction::SodiumStickingProbability(double Temp) {
 }
 */
 
+double Exosphere::OrbitalMotion::GetTAA(double t) {return 0.0;}
+
 void Comet::Init_AfterParser() {
 
   //set up the Chamberlen model
@@ -183,7 +185,7 @@ double SodiumStickingProbability(double& ReemissionParticleFraction,double Temp)
 
 double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& ReemissionParticleFraction,double Temp) {
   double res=0.0;
-
+  /*
    switch (spec) {
    case _NA_SPEC_: case _NAPLUS_SPEC_:
      res=SodiumStickingProbability(ReemissionParticleFraction,Temp);
@@ -191,7 +193,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& Reem
    default:
      exit(__LINE__,__FILE__,"the option is not implemented");
    }
-
+  */
    return res;
 }
 
@@ -311,57 +313,14 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   */}
 
 
-//calcualte the true anomaly angle
-double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
-    double res=0.0;
-
-    /*
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  SpiceDouble State[6],ltlocal;
-  double EccentricityVector[3];
-  double Speed2,a,c,absEccentricity;
-  const double GravitationalParameter=GravityConstant*_MASS_(_EARTH_);
-  double vComet[3],xComet[3],rGeocentric=0.0;
-  int idim;
-
-
-  spkezr_c("Comet",EphemerisTime,"MSGR_HCI","none","Earth",State,&ltlocal);
-
-  for (idim=0;idim<3;idim++) {
-    xComet[idim]=State[idim]*1.0E3;
-    vComet[idim]=State[idim+3]*1.0E3;
-
-    rGeocentric+=pow(xComet[idim],2);
-  }
-
-  rGeocentric=sqrt(rGeocentric);
-  Speed2=vComet[0]*vComet[0]+vComet[1]*vComet[1]+vComet[2]*vComet[2];
-  c=xComet[0]*vComet[0]+xComet[1]*vComet[1]+xComet[2]*vComet[2];
-
-  for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
-    EccentricityVector[idim]=Speed2/GravitationalParameter*xComet[idim] - c/GravitationalParameter*vComet[idim] - xComet[idim]/rGeocentric;
-    absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
-    a+=EccentricityVector[idim]*xComet[idim];
-  }
-
-  absEccentricity=sqrt(absEccentricity);
-  res=acos(a/(absEccentricity*rGeocentric));
-
-  if (c<0.0) res=2.0*Pi-res;
-#endif
-*/
-  return res;
-  }
-
-
-double Comet::GetTotalProductionRateBjorn(int spec,void *SphereDataPointer){
+double Comet::GetTotalProductionRateBjorn(int spec,int BoundaryElementType,void *SphereDataPointer){
   return Comet::Bjorn_SourceRate[spec];
 
   //    return 1.0e26; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
-bool Comet::GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
+bool Comet::GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void* Sphere) {
+  /*  double ExternalNormal[3]; 
   int i;
   double rate,TableTotalProductionRate,totalSurface,gamma,SubSolarAngle,ProjectedAngle;
   const double NightSideProduction[5]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0};
@@ -405,18 +364,6 @@ bool Comet::GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* 
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
 
-  /*  
-  Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
-
-  ExternalNormal[0]=-cos(SubSolarAngle);
-  ExternalNormal[1]=-sin(SubSolarAngle)*cos(ProjectedAngle);
-  ExternalNormal[2]=-sin(SubSolarAngle)*sin(ProjectedAngle);
-
-  
-  x_LOCAL_IAU_OBJECT[0]=rSphere*cos(SubSolarAngle);
-  x_LOCAL_IAU_OBJECT[1]=rSphere*sin(SubSolarAngle)*cos(ProjectedAngle);
-  x_LOCAL_IAU_OBJECT[2]=rSphere*sin(SubSolarAngle)*sin(ProjectedAngle);
-  */
 
   Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
 
@@ -497,6 +444,8 @@ bool Comet::GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* 
   memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
   
   return true;
+  */
+  return false;
 }
 
 bool Comet::Radius(double &r,double x){
@@ -691,9 +640,9 @@ bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,dou
   return true;
 }
 
-double Comet::GetTotalProductionRateJet(int spec,void *SphereDataPointer){
+double Comet::GetTotalProductionRateJet(int spec,int BoundaryElementType,void *SphereDataPointer){
   return Comet::Jet_SourceRate[spec];
-  //return 1.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
+  //  return 1.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
 //NUCLEUS
@@ -1148,7 +1097,7 @@ bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *
 }
 */
 
-double Comet::GetTotalProductionRateWaist(int spec,void *SphereDataPointer){
+double Comet::GetTotalProductionRateWaist(int spec,int BoundaryElementType,void *SphereDataPointer){
   //  return Comet::Jet_SourceRate[spec];
   double res;
   res=(spec==0)? 9.0e26:0.0;
@@ -1303,8 +1252,26 @@ long int Comet::InjectionBoundaryModel_Limited(void *SphereDataPointer) {
   int spec;
   long int res=0;
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel_Limited(spec,SphereDataPointer);
+  //  printf("PIC::nTotalSpecies=%i \n",PIC::nTotalSpecies);
 
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    //    printf("InjectionBoundaryModel_Limited spec=%i\n",spec);
+    res+=InjectionBoundaryModel_Limited(spec,SphereDataPointer);
+  }
+  return res;
+}
+
+long int Comet::InjectionBoundaryModel_Limited() {
+  int spec;
+  long int res=0;
+  void *SphereDataPointer;
+
+  //  printf("PIC::nTotalSpecies=%i \n",PIC::nTotalSpecies);
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    //    printf("InjectionBoundaryModel_Limited spec=%i\n",spec);
+    res+=InjectionBoundaryModel_Limited(spec,SphereDataPointer);
+  }
   return res;
 }
 
@@ -1321,7 +1288,7 @@ long int Comet::InjectionBoundaryModel_Limited(int spec,void *SphereDataPointer)
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
   PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
-  double totalProductionRate=Comet::SourceProcesses::totalProductionRate(spec,SphereDataPointer);
+  double totalProductionRate=Comet::SourceProcesses::totalProductionRate(spec,0,SphereDataPointer);
 
   const int nMaxInjectedParticles=10*PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber;
 
@@ -1353,7 +1320,7 @@ long int Comet::InjectionBoundaryModel_Limited(int spec,void *SphereDataPointer)
   //  int _EXOSPHERE__SOURCE_MAX_ID_VALUE_=0;
   //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_=0;
   //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_=1;
-  //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_=2;
+  int _EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_=2;
 
   //calcualte probabilities of each source processes                                                                 
   double TotalFlux,FluxSourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_]; //,ProbabilitySourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];                                                                                               
@@ -1365,11 +1332,13 @@ TotalFlux=totalProductionRate;
 
 //only Used defined source here since we only want the Bjorn model so far
 //calculate the source rate due to user defined source functions                                                   
- FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_]=Comet::GetTotalProductionRateJet(spec,SphereDataPointer);
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_]=Comet::GetTotalProductionRateJet(spec,0,SphereDataPointer);
 
- FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_]=Comet::GetTotalProductionRateWaist(spec,SphereDataPointer);
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_]=Comet::GetTotalProductionRateWaist(spec,0,SphereDataPointer);
 
- FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_]=Comet::GetTotalProductionRateBjorn(spec,SphereDataPointer);
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_]=Comet::GetTotalProductionRateBjorn(spec,0,SphereDataPointer);
+
+ // printf("totalProductionRate=%e spec=%i Comet::GetTotalProductionRateJet(spec,0,SphereDataPointer)=%e Comet::GetTotalProductionRateWaist(spec,0,SphereDataPointer)=%e Comet::GetTotalProductionRateBjorn(spec,0,SphereDataPointer)=%e _EXOSPHERE__SOURCE_MAX_ID_VALUE_=%i \n",totalProductionRate,spec,Comet::GetTotalProductionRateJet(spec,0,SphereDataPointer),Comet::GetTotalProductionRateWaist(spec,0,SphereDataPointer),Comet::GetTotalProductionRateBjorn(spec,0,SphereDataPointer),_EXOSPHERE__SOURCE_MAX_ID_VALUE_); 
 
 
 while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
@@ -1445,109 +1414,79 @@ ot defined");
 }
 
 
-void Comet::AntiSolarDirectionColumnMap::Print(int DataOutputFileNumber) {
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  FILE *fout=NULL;
-  char fname[300];
-  SpiceDouble xform[6][6],EarthState[6],lt;
-  double xEarthLSO[3];
-  SpiceDouble lGSE[6]={0,0,0,0,0,0},lLSO[6]={0,0,0,0,0,0};  //only 3 first components of the vectors are used. all 6 components are needed in the definition in order SPICE routines work correctly
-  int idim;
-
-  //calculate the currect position of the Earth
-  spkezr_c("Earth",Exosphere::OrbitalMotion::et,"LSO","none","Comet",EarthState,&lt);
-  for (idim=0;idim<3;idim++) xEarthLSO[idim]=1.0E3*EarthState[idim];
-
-  //calculate the rotation matrix from 'GSE' to 'LSO'
-  sxform_c("GSE","LSO",Exosphere::OrbitalMotion::et,xform);
-
-  //determine the number of angular points
-  int nZenithPoints;
-  double dZ,rr,ZenithAngle,AzimuthAngle,dZenithAngle;
-
-  dZ=dZenithAngleMin;
-  rr=(maxZenithAngle+dZenithAngleMax)/(maxZenithAngle+dZenithAngleMin);
-  nZenithPoints=(long int)(log(dZenithAngleMax/dZenithAngleMin)/log(rr)-2.0);
-  rr=pow(dZenithAngleMax/dZenithAngleMin,1.0/(nZenithPoints+2.0));
-
-  nZenithPoints=0,ZenithAngle=dZenithAngleMin,dZenithAngle=dZenithAngleMin;
-
-  while (ZenithAngle<maxZenithAngle) {
-    ZenithAngle+=dZenithAngle;
-    dZenithAngle*=rr;
-    nZenithPoints++;
-  }
-
-  if (PIC::ThisThread==0) {
-    const SpiceInt lenout = 35;
-    SpiceChar utcstr[lenout+2];
-    char vlist[_MAX_STRING_LENGTH_PIC_]="";
-
-    //open data file
-    sprintf(fname,"%s/pic.Comet.Anti-sunwardColumnIntegrals.out=%i.dat",PIC::OutputDataFileDirectory,DataOutputFileNumber);
-
-    fout=fopen(fname,"w");
-
-    et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
-    fprintf(fout,"TITLE=\"UTC=%s\"\n",utcstr);
-
-//    fprintf(fout,"VARIABLES=\"Angle from the anti-solar direction [degree]\", \"Angle Out of Ecpliptic Plane [degree]\", \"Column Density [m^{-2}]\", \"Intensity (5891.58A) [R]\", \"Intensity (5897.56A) [R]\" \n");
-
-    ColumnIntegral::GetVariableList(vlist);
-    fprintf(fout,"VARIABLES=\"l[0]\", \"l[1]\" %s \n",vlist);
+double Comet::PhotolyticReactionRate=0.0;
+double Comet::ElectronImpactRate=0.0;
+double Comet::ElectronTemeprature=0.0;
 
 
-    fprintf(fout,"ZONE T=\"Column Density Map\"\n");
-    fprintf(fout,"I=%i, J=%i, K=1, ZONETYPE=Ordered\n",nAzimuthPoints+1,nZenithPoints);
-    fprintf(fout,"DATAPACKING=POINT\n");
-//    fprintf(fout,"DT=(SINGLE SINGLE SINGLE SINGLE SINGLE)\n");
+double Comet::ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  return -1.0;
+
+  /*
+  long int nd;
+  int i,j,k;
+  double BackgroundPlasmaNumberDensity;
+//  double PlasmaBulkVelocity[3],ElectronDensity;
+
+  PhotolyticReactionRate=0.0;
+
+
+//DEBUG -> no chemistry at all
+  if ((spec!=_H2O_SPEC_) && (spec!=_H2_SPEC_) && (spec!=_H_SPEC_) && (spec!=_OH_SPEC_) && (spec!=_O_SPEC_) && (spec!=_O2_SPEC_)) {
+   PhotolyticReactionAllowedFlag=false;
+   return -1.0;
   }
 
 
-  //calculate the integrals
-  //calcualte the column integrals
-  int StateVectorLength=ColumnIntegral::GetVariableList(NULL);
-  double StateVector[StateVectorLength];
+  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
+//  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+//  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
+
+  PhotolyticReactionAllowedFlag=true;
+
+  static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_H2=PhotolyticReactions::H2::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_H=PhotolyticReactions::H::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_OH=PhotolyticReactions::OH::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_O=PhotolyticReactions::O::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(HeliocentricDistance);
 
 
-  nZenithPoints=0,ZenithAngle=dZenithAngleMin,dZenithAngle=dZenithAngleMin;
+  switch (spec) {
+    case _H2O_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H2O;
+      break;
+    case _H2_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H2;
+      break;
+    case _H_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H;
+      break;
+    case _OH_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_OH;
+      break;
+    case _O_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_O;
+      break;
+    case _O2_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_O2;
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: unknown specie");
+    }
 
-  while (ZenithAngle<maxZenithAngle) {
-
-  for (int iAzimuthPoint=0;iAzimuthPoint<nAzimuthPoints+1;iAzimuthPoint++) {
-    AzimuthAngle=2.0*Pi*double(iAzimuthPoint)/double(nAzimuthPoints);
-
-      //get the pointing vector of integration in 'GSE' frame
-      lGSE[0]=-cos(ZenithAngle);
-      lGSE[1]=sin(ZenithAngle)*sin(AzimuthAngle);
-      lGSE[2]=sin(ZenithAngle)*cos(AzimuthAngle);
-
-      //convert the pointing vector from 'GSE' to 'LSO'
-      mxvg_c(xform,lGSE,6,6,lLSO);
-
-      //get the integrals
-      PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarthLSO,lLSO,ColumnIntegral::CoulumnDensityIntegrant);
-      ColumnIntegral::ProcessColumnIntegrationVector(StateVector,StateVectorLength);
-
-//      if (PIC::ThisThread==0) fprintf(fout,"%e   %e   %e   %e  %e\n",ZenithAngle/Pi*180.0,AzimuthAngle/Pi*180.0,StateVector[0],StateVector[1],StateVector[2]);
-//      if (PIC::ThisThread==0) fprintf(fout,"%e   %e   %e   %e  %e\n",lGSE[1]/sqrt(lGSE[1]*lGSE[1]+lGSE[2]*lGSE[2]),lGSE[2]/sqrt(lGSE[1]*lGSE[1]+lGSE[2]*lGSE[2]),StateVector[0],StateVector[1],StateVector[2]);
-
-
-      if (PIC::ThisThread==0) {
-        fprintf(fout,"%e   %e",lGSE[1],lGSE[2]);
-
-        for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
-        fprintf(fout,"\n");
-      }
-
+  if (PhotolyticReactionRate+ElectronImpactRate<=0.0) {
+    PhotolyticReactionAllowedFlag=false;
+    return -1.0;
   }
 
-    ZenithAngle+=dZenithAngle;
-    dZenithAngle*=rr;
-    nZenithPoints++;
-  }
-
-
-  if (PIC::ThisThread==0) fclose(fout);
-#endif
+  return 1.0/((PhotolyticReactionRate+ElectronImpactRate)*NumericalLossRateIncrease);  //use the "false" reaction event to increase the number of the dauter model particles. Account for this artificial correction in the ExospherePhotoionizationReactionProcessor
+  */
 }
+
+
+int ExospherePhotoionizationReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
+  Exosphere::ChemicalModel::PhotochemicalModelProcessor(ptr,FirstParticleCell,node);
+    return 1;
+}
+

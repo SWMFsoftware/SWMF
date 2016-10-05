@@ -30,19 +30,20 @@ namespace Comet {
   //init the model
   void Init_AfterParser();
   
-  double GetTotalProductionRateBjorn(int spec,void *SphereDataPointer);
-  bool GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere);
+  double GetTotalProductionRateBjorn(int spec,int BoundaryElementType,void *SphereDataPointer);
+  bool GenerateParticlePropertiesBjorn(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void* Sphere);
 
   //  bool GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Sphere);
-    bool GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
+  bool GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
     bool Radius(double &r,double x);
 
-  double GetTotalProductionRateJet(int spec,void *SphereDataPointer);
-  bool GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
+    double GetTotalProductionRateJet(int spec,int BoundaryElementType,void *SphereDataPointer);
+    bool GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
 
-  double GetTotalProductionRateWaist(int spec,void *SphereDataPointer);
+  double GetTotalProductionRateWaist(int spec,int BoundaryElementType,void *SphereDataPointer);
   bool GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
 
+  long int InjectionBoundaryModel_Limited();
   long int InjectionBoundaryModel_Limited(void *SphereDataPointer);
   long int InjectionBoundaryModel_Limited(int spec,void *SphereDataPointer);
 
@@ -56,6 +57,19 @@ namespace Comet {
 
     void Print(int DataOutputFileNumber);
   }
+
+   extern double PhotolyticReactionRate,ElectronImpactRate,ElectronTemeprature;
+
+   //the constant of the artificial increase of the primary species loss
+   //the modification of the rate is compensated by the appropricate particle weight of the daugher products and
+   //probabilities of the destruction of the primary species
+   const double NumericalLossRateIncrease=1000.0;
+
+   double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+   void PhotochemicalModelProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+
+   int ExospherePhotoionizationReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+
 
 
 
@@ -83,18 +97,6 @@ namespace Comet {
         double meanVelocityLineOfSight[PIC::nTotalSpecies],meanVelocityRadialHeliocentric[PIC::nTotalSpecies],ColumnDensityIntegral[PIC::nTotalSpecies],meanSpeed[PIC::nTotalSpecies];
         double Brightness[PIC::nTotalSpecies];
 
-
-        SpiceDouble lGSE[6];
-
-        cVelocitySampleBuffer() {
-          for (int s=0;s<PIC::nTotalSpecies;s++) {
-            meanVelocityLineOfSight[s]=0.0,meanVelocityRadialHeliocentric[s]=0.0,ColumnDensityIntegral[s]=0.0,meanSpeed[s]=0.0,Brightness[s]=0.0;
-
-            for (int n=0;n<nVelocitySamplePoints;n++) VelocityLineOfSight[s][n]=0.0,VelocityRadialHeliocentric[s][n]=0.0,Speed[s][n]=0.0;
-          }
-
-          for (int i=0;i<6;i++) lGSE[i]=0.0;
-        }
       };
 
       extern cVelocitySampleBuffer *SampleBuffer;
@@ -206,7 +208,6 @@ namespace Comet {
 */
 
 
-      extern SpiceDouble etSampleBegin;
       extern int SamplingPhase;
       extern int firstPhaseRadialVelocityDirection;
 
@@ -437,47 +438,6 @@ namespace Comet {
 
 
 
-  inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
-    static const double LifeTime=3600.0*5.8/pow(0.4,2);
-
-
-    //only sodium can be ionized
-    if (spec!=_NA_SPEC_) {
-      PhotolyticReactionAllowedFlag=false;
-      return -1.0;
-    }
-
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-    double res,r2=x[1]*x[1]+x[2]*x[2];
-
-    //check if the particle is outside of the Earth and lunar shadows
-    if ( ((r2>_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_))||(x[0]<0.0)) && (Comet::EarthShadowCheck(x)==false) ) {
-      res=LifeTime,PhotolyticReactionAllowedFlag=true;
-    }
-    else {
-      res=-1.0,PhotolyticReactionAllowedFlag=false;
-    }
-
-    //check if the particle intersect the surface of the Earth
-    if (pow(x[0]-Comet::xEarth_SO[0],2)+pow(x[1]-Comet::xEarth_SO[1],2)+pow(x[2]-Comet::xEarth_SO[2],2)<_RADIUS_(_EARTH_)*_RADIUS_(_EARTH_)) {
-      res=1.0E-10*LifeTime,PhotolyticReactionAllowedFlag=true;
-    }
-#else
-    double res=LifeTime;
-    PhotolyticReactionAllowedFlag=true;
-#endif
-
-    return res;
-  }
-
-  inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
-    spec=_NAPLUS_SPEC_;
-
-    PIC::ParticleBuffer::SetI(spec,ParticleData);
-  //  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
-
-    return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
-  }
 
 }
 

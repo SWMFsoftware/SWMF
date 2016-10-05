@@ -23,6 +23,7 @@
 #ifndef USERDEFINITION_EXOSPHERE_H_
 #define USERDEFINITION_EXOSPHERE_H_
 
+/*
 //path to the SPICE Kernels directory
 const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/fougere/SPICE/Kernels";
 
@@ -64,7 +65,7 @@ const int nReferenceGroundBasedObservations=9; //25;
 const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations][_MAX_STRING_LENGTH_PIC_]={
     "1988-05-28T12:00:00","1988-10-02T12:00:00","1994-04-22T12:00:00","1993-11-29T12:00:00","1996-04-03T12:00:00",
     "1996-09-27T12:00:00","1997-03-24T12:00:00","2002-07-16T12:00:00","1991-09-30T11:00:00"};
-
+*/
 
 /*
    "2001-05-25T00:00:00","2006-01-12T00:00:00","2005-12-18T00:00:00","2006-06-17T00:00:00","2003-10-04T00:00:00",
