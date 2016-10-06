@@ -635,6 +635,8 @@ Time=7
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 
+Ref=3{gcc}@@(0+stampede)
+
 
 Keys=-model-data-path=${MYDIR}/../../../AMPS_DATA_TEST/MARS@@(0+stampede) 
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA/MARS@@(0+valeriy)
