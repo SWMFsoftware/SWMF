@@ -151,13 +151,13 @@ Ref=3{gcc}@@(0+pleiades)
 <#
 -------------------------------------------------------------------------------
 #>
-Name=Tempel1@@(0+valeriy) 
+Name=Tempel1@@(0+valeriy+stampede) 
 Time=6
 
-Ref=2{icc}@@(0+valeriy)
-Ref=1{gcc}@@(0+valeriy)
+Ref=2{icc}@@(0+valeriy+stampede)
+Ref=1{gcc}@@(0+valeriy+stampede)
 
-Keys=-model-data-path=${MYDIR} -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/DeepImpact@@(0+valeriy)
+Keys=-model-data-path=${MYDIR} -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/DeepImpact@@(0+valeriy+stampede)
 <#
 
 -------------------------------------------------------------------------------
