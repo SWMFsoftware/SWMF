@@ -4275,12 +4275,14 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 	  fwrite(&nRecord, nSizeInt, 1, outFile);
 	  data0 = dx*No2OutL;
 	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
+	  data0 = getVar("X",i,j,k, No2OutL, No2OutV, No2OutB,
+			   No2OutRho, No2OutP, No2OutJ);
 	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = (grid->getYN(j) + col->getFluidStartY())*No2OutL;
+	  data0 = getVar("Y",i,j,k, No2OutL, No2OutV, No2OutB,
+			 No2OutRho, No2OutP, No2OutJ);
 	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = col->getnDim()==2?
-			  0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL;
+	  data0 = getVar("Z",i,j,k, No2OutL, No2OutV, No2OutB,
+			 No2OutRho, No2OutP, No2OutJ);
 	  fwrite(&data0, nSizeDouble, 1, outFile);
 	  for(int iVar=0; iVar<nVar; iVar++){
 	    data0 = getVar(var_I[iVar],i,j,k, No2OutL, No2OutV, No2OutB,
@@ -4299,10 +4301,12 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
       for(int j=minJ; j<=maxJ; j++)
 	for(int k=minK; k<=maxK; k++){
 	  outFile<<dx*No2OutL
-		 <<"\t"<<(grid->getXN(i) + col->getFluidStartX())*No2OutL
-		 <<"\t"<<(grid->getYN(j) + col->getFluidStartY())*No2OutL
-		 <<"\t"<<(col->getnDim()==2?
-			  0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL);
+		 <<"\t"<< getVar("X",i,j,k, No2OutL, No2OutV, No2OutB,
+				 No2OutRho, No2OutP, No2OutJ)
+		 <<"\t"<< getVar("Y",i,j,k, No2OutL, No2OutV, No2OutB,
+				 No2OutRho, No2OutP, No2OutJ)
+		 <<"\t"<< getVar("Z",i,j,k, No2OutL, No2OutV, No2OutB,
+				 No2OutRho, No2OutP, No2OutJ);
 	  for(int iVar=0; iVar<nVar; iVar++){
 	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k,No2OutL, No2OutV,
 				  No2OutB, No2OutRho, No2OutP, No2OutJ);
@@ -4318,6 +4322,8 @@ double EMfields3D:: getVar(string var, int i, int j, int k,
 			   const double No2OutL, const double No2OutV,
 			   const double No2OutB, const double No2OutRho,
 			   const double No2OutP, const double No2OutJ){
+  const Collective *col = &get_col();
+  const Grid *grid = &get_grid();
   double value;
   if(var.substr(0,1)=="q"){
     // "q", "qS0", "qS1"...
@@ -4573,6 +4579,13 @@ double EMfields3D:: getVar(string var, int i, int j, int k,
   }else if(var.substr(0,2)=="Bz"){
     value = Bzn[i][j][k];
     value *= No2OutB;
+  }else if(var.substr(0,1)=="X"){
+    value = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
+  }else if(var.substr(0,1)=="Y"){
+    value = (grid->getYN(j) + col->getFluidStartY())*No2OutL;
+  }else if(var.substr(0,1)=="Z"){
+    value = col->getnDim()==2?
+      0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL;	  
   }else{
     value = 0;
   }
