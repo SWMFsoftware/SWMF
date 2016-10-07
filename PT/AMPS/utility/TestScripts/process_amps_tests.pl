@@ -48,67 +48,84 @@ foreach $day (@days){
 	print HTML 
 	    "<h1>List of ${day}'s difference files for $machine</h1>\n".
 	    "<pre>\n";
+	    
 	while(<RESULTS>){
 	    last if /===========/;
 	    my @item = split(' ',$_);
 	    my $test = $item[-1]; 
 	    my $size = $item[4];
-            my $Ref='';
+      my $Ref='';
 
-            #get the reference solution index
-           if ($test=~m/\[/) {
-              my ($iRefStart,$iRefFinish);
+      #get the reference solution index
+      if ($test=~m/\[/) {
+         my ($iRefStart,$iRefFinish);
 
-              $iRefStart=rindex($test,"[");
-              $iRefFinish=rindex($test,"]");
-              $Ref=substr($test,($iRefStart+1),($iRefFinish-$iRefStart-1));
+         $iRefStart=rindex($test,"[");
+         $iRefFinish=rindex($test,"]");
+         $Ref=substr($test,($iRefStart+1),($iRefFinish-$iRefStart-1));
 
-              $test=substr($test,0,$iRefStart);
-           }
+         $test=substr($test,0,$iRefStart);
+       }
 
-            $test =~ s/\.diff$//;
-
+      $test =~ s/\.diff$//;
 	    $tests{$test} = 1;
+	    
 	    if($size){
-		$result{$day}{$test}{$machine}=
+     		$result{$day}{$test}{$machine}=
 		    "<font color=red>failed<sub>$Ref</sub></font>";
-	    }else{
-		$result{$day}{$test}{$machine}=
+	    } 
+	    else {
+	     	$result{$day}{$test}{$machine}=
 		    "<font color=green>passed<sub>$Ref</sub></font>";
 	    }
+	    
 	    print HTML $_;
 	}
+	
 	print HTML 
 	    "</pre>\n".
 	    "<H1>Head of ${day}'s difference files for $machine</H1><pre>\n";
-        my $test;
-        my $stage;
-        while(<RESULTS>){
-            if( s{==>\ (\S+)\.diff\ <==}
-                {</pre><H2><A NAME=$1>$1 ($day: $machine)</H2><pre>}x){
-                my $newtest = $1;
-                # specify failure for previous test
-                $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
+	    
+  my $test;
+  my $stage;
+      
+  while (<RESULTS>) {
+    if( s{==>\ (\S+)\.diff\ <==}
+    {</pre><H2><A NAME=$1>$1 ($day: $machine)</H2><pre>}x){
+       my $newtest = $1;
+       
+       #remove the reference solution index if such exists
+       $newtest=~s/\[(.?)\]//g;
+             
+       # specify failure for previous test
+       $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
 
-                $test = $newtest;
-                $stage = "result";
-            }
+       $test = $newtest;
+       $stage = "result";
+     }
 
-            # read last stage
-            $stage = $1 if /(compile|rundir|run)\.\.\.$/;
-            $stage = "run" if /could not open/;
+     # read last stage
+     $stage = $1 if /(compile|rundir|run)\.\.\.$/;
+     $stage = "run" if /could not open/;
+     
+     #remove square brackets from the line that will be saved in the html file
+     my $line;
+     
+     $line=$_;
+     $line=~s/\[(.?)\]//g;
 
-            print HTML $_;
-        }
+     print HTML $line;
+   }
 
 
-        # Fix the stage for the last test
-        $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
+   # Fix the stage for the last test
+   $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
 
-        close RESULTS;
-        close HTML;
-    }
-    chdir "../../../..";
+   close RESULTS;
+   close HTML;
+ }
+ 
+ chdir "../../../..";
 }
 
 my $Table = "<hr>\n<center>\n";
