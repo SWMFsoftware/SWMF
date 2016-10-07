@@ -166,6 +166,11 @@ subroutine MH_set_parameters(TypeAction)
 
   character(len=10) :: NamePrimitive_V(nVar)
 
+  ! Variables for #SAVEPLOT command, to replace some common used variables
+  ! in VAR string
+  character(len=500) :: TmpNameVars
+  integer :: index1, index2
+
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -908,8 +913,42 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
               plot_var='var'
               plot_dimensional(ifile) = index(plot_string,'VAR')>0
-              call read_var('NameVars',plot_vars(ifile))
+              call read_var('NameVars',TmpNameVars)
               call read_var('NamePars',plot_pars(ifile))
+              if (index(TmpNameVars, '{') > 0) then
+                 index1 = index(TmpNameVars, '{')
+                 index2 = index(TmpNameVars, '}')
+                 if (index2 == 0) &
+                      call stop_mpi(NameSub// &
+                      ': incomplete brackets in #SAVEPLOT')
+
+                 select case(TmpNameVars(index1+1:index2-1))
+                 case('MHD', 'mhd')
+                    plot_vars(ifile) = &
+                         TmpNameVars(1:index1-1)//NamePrimitiveVar//  &
+                         ' jx jy jz ' //TmpNameVars(index2+1:500)
+                    if (len(trim(TmpNameVars))-index2+index1-1              &
+                         +len(NamePrimitiveVar) +10 > len(plot_vars(ifile)) &
+                         .and. iProc == 0)                                  &
+                         write(*,*) 'Warning: '//NameSub//                  &
+                         ': the new string length exceeds len(plot_vars)'
+                 case('HD', 'hd')
+                    plot_vars(ifile) = &
+                         TmpNameVars(1:index1-1)//NamePrimitiveVar//  &
+                         TmpNameVars(index2+1:500)
+                    if (len(trim(TmpNameVars))-index2+index1-1              &
+                         +len(NamePrimitiveVar)     > len(plot_vars(ifile)) &
+                         .and. iProc == 0)                                  &
+                         write(*,*) 'Warning: '//NameSub//                  &
+                         ': the new string length exceeds len(plot_vars)'
+                 case default
+                    call stop_mpi(NameSub// &
+                         ' unknown VAR name='//TmpNameVars(index1+1:index2-1))
+                 end select
+
+              else
+                 plot_vars(ifile) = TmpNameVars
+              end if
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
               plot_dimensional(ifile) = index(plot_string,'RAY')>0
