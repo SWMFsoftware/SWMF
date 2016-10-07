@@ -614,3 +614,73 @@ void Grid3DCU::interpN2Cfull(double ***vecFieldC, double ***vecFieldN){
 }
 
 
+void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
+				      int &ix, int &iy, int &iz,
+				      double weight_I[8], bool isOnThisProc){
+
+  
+  const double nxn = getNXN();
+  const double nyn = getNYN();
+  const double nzn = getNZN();
+
+
+  const double xstart = getXstart();
+  const double ystart = getYstart();
+  const double zstart = getZstart();
+  const double xend = getXend();
+  const double yend = getYend();
+  const double zend = getZend();
+
+
+  const double dx = getDX();
+  const double dy = getDY();
+  const double dz = getDZ();
+  
+  const double invVOL = getInvVOL();
+  const double inv_dx = 1.0 / dx, inv_dy = 1.0 / dy, inv_dz = 1.0 / dz;
+    
+
+  const double ixd = floor((xp - xstart) * inv_dx);
+  const double iyd = floor((yp - ystart) * inv_dy);
+  const double izd = floor((zp - zstart) * inv_dz);
+
+
+  isOnThisProc = xp >=xstart && xp<=xend && yp>=ystart && yp<=yend && zp>=zstart && zp<=zend;
+    
+  
+  ix = 2 + int (ixd);
+  iy = 2 + int (iyd);
+  iz = 2 + int (izd);
+	
+  if (ix < 1)
+    ix = 1;
+   if (iy < 1)
+     iy = 1;
+   if (iz < 1)
+     iz = 1;
+   if (ix > nxn - 1)
+     ix = nxn - 1;
+   if (iy > nyn - 1)
+     iy = nyn - 1;
+   if (iz > nzn - 1)
+     iz = nzn - 1;
+	
+   double xi[2];
+   double eta[2];
+   double zeta[2];
+   xi[0]   = xp - getXN(ix - 1, iy, iz);
+   eta[0]  = yp - getYN(ix, iy - 1, iz);
+   zeta[0] = zp - getZN(ix, iy, iz - 1);
+   xi[1]   = getXN(ix,iy,iz) - xp;
+   eta[1]  = getYN(ix,iy,iz) - yp;
+   zeta[1] = getZN(ix,iy,iz) - zp;
+
+   weight_I[0] = xi[0] * eta[0] * zeta[0] * invVOL;
+   weight_I[1] = xi[0] * eta[0] * zeta[1] * invVOL;
+   weight_I[2] = xi[0] * eta[1] * zeta[0] * invVOL;
+   weight_I[3] = xi[0] * eta[1] * zeta[1] * invVOL;
+   weight_I[4] = xi[1] * eta[0] * zeta[0] * invVOL;
+   weight_I[5] = xi[1] * eta[0] * zeta[1] * invVOL;
+   weight_I[6] = xi[1] * eta[1] * zeta[0] * invVOL;
+   weight_I[7] = xi[1] * eta[1] * zeta[1] * invVOL;
+}

@@ -908,24 +908,7 @@ public:
 
     double xmin, ymin, zmin;
 
-    const double nxn = _grid->getNXN();
-    const double nyn = _grid->getNYN();
-    const double nzn = _grid->getNZN();
-
-    const double xstart = _grid->getXstart();
-    const double ystart = _grid->getYstart();
-    const double zstart = _grid->getZstart();
-
-    const double dx = _grid->getDX();
-    const double dy = _grid->getDY();
-    const double dz = _grid->getDZ();
-
-    const double invVOL = _grid->getInvVOL();
-
     double xp,yp,zp; 
-    //double ****node_coordinate = asgArr4(double, _grid->getNXN(), _grid->getNYN(), _grid->getNZN(), 3, _grid->getN());
-    
-    const double inv_dx = 1.0 / dx, inv_dy = 1.0 / dy, inv_dz = 1.0 / dz;
     
     Pxx = _field->getp0XXsn();
     Pyy = _field->getp0YYsn();
@@ -949,45 +932,19 @@ public:
 	xp = Xyz_I[iPoint*nDim] - xmin;
 	yp = (nDim > 1) ? Xyz_I[iPoint*nDim + 1] - ymin : 0.0;
 	zp = (nDim > 2) ? Xyz_I[iPoint*nDim + 2] - zmin : 0.0;
-	
-	const double ixd = floor((xp - xstart) * inv_dx);
-	const double iyd = floor((yp - ystart) * inv_dy);
-	const double izd = floor((zp - zstart) * inv_dz);
-	int ix = 2 + int (ixd);
-	int iy = 2 + int (iyd);
-	int iz = 2 + int (izd);
-	
-	if (ix < 1)
-	  ix = 1;
-	if (iy < 1)
-	  iy = 1;
-	if (iz < 1)
-	  iz = 1;
-	if (ix > nxn - 1)
-	  ix = nxn - 1;
-	if (iy > nyn - 1)
-	  iy = nyn - 1;
-	if (iz > nzn - 1)
-	  iz = nzn - 1;
-	
-	double xi[2];
-	double eta[2];
-	double zeta[2];
-	xi[0]   = xp - _grid->getXN(ix - 1, iy, iz);
-	eta[0]  = yp - _grid->getYN(ix, iy - 1, iz);
-	zeta[0] = zp - _grid->getZN(ix, iy, iz - 1);
-	xi[1]   = _grid->getXN(ix,iy,iz) - xp;
-	eta[1]  = _grid->getYN(ix,iy,iz) - yp;
-	zeta[1] = _grid->getZN(ix,iy,iz) - zp;
 
-	const double w000 = xi[0] * eta[0] * zeta[0] * invVOL;
-	const double w001 = xi[0] * eta[0] * zeta[1] * invVOL;
-	const double w010 = xi[0] * eta[1] * zeta[0] * invVOL;
-	const double w011 = xi[0] * eta[1] * zeta[1] * invVOL;
-	const double w100 = xi[1] * eta[0] * zeta[0] * invVOL;
-	const double w101 = xi[1] * eta[0] * zeta[1] * invVOL;
-	const double w110 = xi[1] * eta[1] * zeta[0] * invVOL;
-	const double w111 = xi[1] * eta[1] * zeta[1] * invVOL;
+	double weight_I[8];
+	int ix, iy, iz;
+	_grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);
+	
+	const double w000 = weight_I[0];
+	const double w001 = weight_I[1];
+	const double w010 = weight_I[2];
+	const double w011 = weight_I[3];
+	const double w100 = weight_I[4];
+	const double w101 = weight_I[5];
+	const double w110 = weight_I[6];
+	const double w111 = weight_I[7];
 
 	n = iPoint*nVar;	
 

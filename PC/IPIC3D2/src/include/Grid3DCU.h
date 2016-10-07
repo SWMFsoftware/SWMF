@@ -319,7 +319,7 @@ public: // accessors (inline)
   const double &getYC(int X, int Y, int Z)const{ return center_ycoord[Y];}
   const double &getZC(int X, int Y, int Z)const{ return center_zcoord[Z];}
   //
-  double getXstart()const{ return (xStart); }
+  double getXstart()const{return (xStart); }
   double getXend()const{ return (xEnd); }
   double getYstart()const{ return (yStart); }
   double getYend()const{ return (yEnd); } 
@@ -458,6 +458,10 @@ public: // accessors (inline)
   {
     get_safe_cell_and_weights(xpos[0],xpos[1],xpos[2],cx[0],cx[1],cx[2],weights);
   }
+
+
+  void getInterpolateWeight(double x, double y, double z, int &ix, int &iy, int &iz, double weight_I[8], bool isOnThisProc=true);
+  
 };
 
 typedef Grid3DCU Grid;
