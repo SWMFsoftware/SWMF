@@ -3534,7 +3534,7 @@ y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 -1			DnSavePlot
 100.			DtSavePlot
 0.25			DxSavePlot ! resolution (for IDL plots)
-jx jy jz		NameVars
+{MHD} impl dx		NameVars
 g rbody			NamePars
 cut ray idl_real8	StringPlot ! 3D cut plot with raytrace info
 1			DnSavePlot
@@ -3887,7 +3887,12 @@ are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
 
 \noindent
 The possible values for NameVars for other plot areas
-are listed in subroutine set_plotvar in write_plot_common.f90.\\
+are listed in subroutine set_plotvar in write_plot_common.f90.
+For convenience and to avoid exceeding the line length limit
+of the PARAM.in file, the {MHD} and {HD} strings can be
+used in NameVars. These are replaced with the appropriate
+primitive variables (and jx jy jz for MHD), so one can add
+a few extra variables easily.\\
 
 \noindent
 The possible values for NamePars are listed in subroutine 
