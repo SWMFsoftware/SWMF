@@ -168,8 +168,8 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for #SAVEPLOT command, to replace some common used variables
   ! in VAR string
-  character(len=500) :: TmpNameVars
-  integer :: index1, index2
+  character(len(plot_vars1)+2) :: NamePlotVar
+  integer :: l1, l2
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
@@ -913,42 +913,32 @@ subroutine MH_set_parameters(TypeAction)
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
               plot_var='var'
               plot_dimensional(ifile) = index(plot_string,'VAR')>0
-              call read_var('NameVars',TmpNameVars)
-              call read_var('NamePars',plot_pars(ifile))
-              if (index(TmpNameVars, '{') > 0) then
-                 index1 = index(TmpNameVars, '{')
-                 index2 = index(TmpNameVars, '}')
-                 if (index2 == 0) &
-                      call stop_mpi(NameSub// &
-                      ': incomplete brackets in #SAVEPLOT')
+              call read_var('NameVars', NamePlotVar)
+              call read_var('NamePars', plot_pars(ifile))
+              l1 = index(NamePlotVar, '{')
+              if (l1 > 0) then
+                 l2 = index(NamePlotVar, '}')
+                 if (l2 == 0) call stop_mpi(NameSub// &
+                      ': error in #SAVEPLOT, missing } in NamePlotVar='//&
+                      NamePlotVar)
 
-                 select case(TmpNameVars(index1+1:index2-1))
+                 select case(NamePlotVar(l1+1:l2-1))
                  case('MHD', 'mhd')
-                    plot_vars(ifile) = &
-                         TmpNameVars(1:index1-1)//NamePrimitiveVar//  &
-                         ' jx jy jz ' //TmpNameVars(index2+1:500)
-                    if (len(trim(TmpNameVars))-index2+index1-1              &
-                         +len(NamePrimitiveVar) +10 > len(plot_vars(ifile)) &
-                         .and. iProc == 0)                                  &
-                         write(*,*) 'Warning: '//NameSub//                  &
-                         ': the new string length exceeds len(plot_vars)'
+                    NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVar//  &
+                         ' jx jy jz ' //trim(NamePlotVar(l2+1:))
                  case('HD', 'hd')
-                    plot_vars(ifile) = &
-                         TmpNameVars(1:index1-1)//NamePrimitiveVar//  &
-                         TmpNameVars(index2+1:500)
-                    if (len(trim(TmpNameVars))-index2+index1-1              &
-                         +len(NamePrimitiveVar)     > len(plot_vars(ifile)) &
-                         .and. iProc == 0)                                  &
-                         write(*,*) 'Warning: '//NameSub//                  &
-                         ': the new string length exceeds len(plot_vars)'
+                    NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVar//  &
+                         trim(NamePlotVar(l2+1:))
                  case default
                     call stop_mpi(NameSub// &
-                         ' unknown VAR name='//TmpNameVars(index1+1:index2-1))
+                         ': unknown {name} ='//NamePlotVar(l1:l2))
                  end select
-
-              else
-                 plot_vars(ifile) = TmpNameVars
+                 if(len_trim(NamePlotVar) > len(plot_vars1)) &
+                      call stop_mpi(NameSub// &
+                      ': too long expanded variable list='//NamePlotVar)
               end if
+              plot_vars(ifile) = NamePlotVar
+
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
               plot_dimensional(ifile) = index(plot_string,'RAY')>0
@@ -1010,7 +1000,7 @@ subroutine MH_set_parameters(TypeAction)
               plot_dimensional(ifile) = index(plot_string,'TBL')>0
               plot_vars(ifile)='tbl' ! will read a table in write_plot_los 
               plot_pars(ifile)='mu'
-           elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then 
+           elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then
               plot_var='rwi'
               plot_dimensional(ifile) = .false.
               plot_vars(ifile)='' ! Intensity
@@ -2076,7 +2066,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#OHBOUNDARY")
         call read_var('DoOhNeutralBc',DoOhNeutralBc)
-        do iFluid = 2,nFluid
+        do iFluid = 2, nFluid
            call read_var('RhoBcFactor', RhoBcFactor_I(iFluid))
            call read_var('uBcFactor'  , uBcFactor_I(iFluid))
         end do
