@@ -190,8 +190,11 @@ Compile=
 -------------------------------------------------------------------------------
 
 #>
-Name=Earth@@(0+valeriy) 
+Name=Earth
 Time=10 
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy) 
+Keys=${MYDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede)
 
 Compile=
 >>>@echo "test_Earth_compile..." > test_Earth.diff
@@ -199,8 +202,9 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test -link-option=-lc++ -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2 
->>>./Config.pl -amps-test=on -link-option=-lc++
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${MYDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -amps-test=on
 >>>make
 >>>@echo "test_Earth_compile... done" > test_Earth.diff
 
@@ -209,7 +213,7 @@ Check=
 >>>@echo "test_Earth_check..." >> test_Earth.diff
 >>>@${TESTEarthDIR}/../utility/ReduceFile.pl ${TESTEarthDIR}/loaded.SavedCellData.dat 1000
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTEarthDIR}/loaded.SavedCellData.dat.Reduced.Step=1000         \
->>>/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2/output-sig=0x301020156361a50/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
+>>>${TESTEarthKEYS}/output-sig=0x301020156361a50/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
 >>>@ls -l test_Earth--Background_Magnetosphere.diff
 
 >>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
