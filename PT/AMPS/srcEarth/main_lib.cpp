@@ -191,6 +191,7 @@ void amps_init_mesh() {
    
    //reserve memory for sampling of the surface balance of sticking species
    long int ReserveSamplingSpace[PIC::nTotalSpecies];
+   for (int s=0;s<PIC::nTotalSpecies;s++) ReserveSamplingSpace[s]=0;
    
    
    cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
