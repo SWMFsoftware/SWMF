@@ -2504,7 +2504,7 @@ contains
     end if
 
     ! This depends on the grid geometry set above
-    call correct_plot_range
+    if(i_line_command("#SAVEPLOT") > 0) call correct_plot_range
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
