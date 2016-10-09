@@ -157,7 +157,9 @@ module ModUser
 
   integer :: iFluidProduced_C(nI, nJ, nK)
 
-  real:: rCylinder = 90.0, zCylinder = 150.0
+  ! Variables for the reflective shape
+  real:: rCylinder = -1.0, zCylinder = -1.0
+  real:: rCrescent = -1.0, xCrescentCenter = -1.0
 
 contains
 
@@ -228,6 +230,9 @@ contains
        case("#INNERCYLINDER")
           call read_var('rCylinder', rCylinder)
           call read_var('zCylinder', zCylinder)
+       case("#INNERCRESCENT")
+          call read_var('rCrescent', rCrescent)
+          call read_var('xCrescentCenter', xCrescentCenter)
        case default
           if(iProc==0) call stop_mpi(NameSub// &
                ': unrecognized command: '//NameCommand)
@@ -1708,12 +1713,47 @@ contains
   !=======================================================================
   subroutine user_set_boundary_cells(iBlock)
     use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
+
     integer, intent(in):: iBlock
-    !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
-         Xyz_DGB(x_,:,:,:,iBlock)**2 + &
-         Xyz_DGB(y_,:,:,:,iBlock)**2 < rCylinder**2 .and. &
-         abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder 
+    integer:: i, j, k
+    real:: x, y, z, x0, z0, Ratio, d, r
+    !---------------------------------------------------------------------
+    if(rCylinder > 0.0)then
+       IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
+            Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+            Xyz_DGB(y_,:,:,:,iBlock)**2 < rCylinder**2 .and. &
+            abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder 
+       RETURN
+    end if
+    if(rCrescent < 0.0) RETURN
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       x = Xyz_DGB(x_,i,j,k,iBlock) - xCrescentCenter
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
+
+       ! point at the centerline of the crescent
+       if(x < 0)then
+          ! Half circle
+          Ratio = xCrescentCenter/sqrt(x**2 + z**2)
+          x0 = x*Ratio
+          z0 = z*Ratio
+       else
+          ! horizontal lines
+          x0 = x
+          z0 = sign(xCrescentCenter, z)
+       end if
+       ! Distance from the centerline
+       d = sqrt( (x-x0)**2 + y**2 + (z-z0)**2 )
+       
+       ! The radius of the crescent is a function of x. 
+       if(x < 0.5*xCrescentCenter)then
+          r = rCrescent
+       else
+          r = rCrescent*max(0.0, 1.5 - x/xCrescentCenter)
+       end if
+       IsBoundaryCell_GI(i,j,k,ExtraBc_) = d < r
+    end do; end do; end do
 
   end subroutine user_set_boundary_cells
 
