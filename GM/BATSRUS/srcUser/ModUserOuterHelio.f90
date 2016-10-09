@@ -32,10 +32,11 @@ module ModUser
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
        nBlock, Unused_B, Time_Simulation
-  use ModPhysics,    ONLY: Gamma, GammaMinus1, UnitX_, Io2Si_V, Si2Io_V, No2Io_V, No2Si_V, & 
-       Io2No_V,  NameTecUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
-       UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, UnitTemperature_, &
-       UnitT_, UnitRhoU_, Si2No_V, OmegaBody
+  use ModPhysics,    ONLY: Gamma, GammaMinus1, OmegaBody, &
+       UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
+       NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
+       UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
+       UnitTemperature_, UnitT_, UnitRhoU_
   use ModNumConst,      ONLY: cRadToDeg, cTwoPi
   use ModConst,         ONLY: cBoltzmann, cProtonMass
   use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
@@ -1064,6 +1065,12 @@ contains
     NameTecUnit_V(UnitU_)            = 'km/s'
     NameTecUnit_V(UnitP_)            = 'dyne/cm^2'
     NameTecUnit_V(UnitB_)            = 'nT'
+
+    NameIdlUnit_V(UnitX_)            = 'AU'
+    NameIdlUnit_V(UnitRho_)          = '/cc'
+    NameIdlUnit_V(UnitU_)            = 'km/s'
+    NameIdlUnit_V(UnitP_)            = 'dyne/cm^2'
+    NameIdlUnit_V(UnitB_)            = 'nT'
 
   end subroutine user_io_units
   !==============================================================
