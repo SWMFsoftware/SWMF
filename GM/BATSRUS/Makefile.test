@@ -228,9 +228,11 @@ test_shockramp_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shockramp_check:
+	gunzip -c Param/SHOCKTUBE/TestOutput/shockramp.out.gz \
+	        > ${TESTDIR}/RESULT/GM/shockramp.out
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
 		${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
-		Param/SHOCKTUBE/TestOutput/shockramp.out \
+		${TESTDIR}/RESULT/GM/shockramp.out \
 		> test_shockramp.diff)
 	ls -l test_shockramp.diff
 
