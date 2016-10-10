@@ -105,8 +105,10 @@ Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid
 
 #>
 Time=2
-Name=test/binary-reader@@(0+valeriy+srbwks73465-01+pleiades)
-Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
+Name=test/binary-reader@@(0+valeriy+stampede+pleiades)
+
+Keys=-cplr-data-path=${MYDIR}/../../../AMPS_DATA_TEST/BINARY-READER@@(0+stampede+pleiades)
+Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/BINARY-READER@@(0+valeriy) 
 
 Run=
 >>>@echo "test_binary_reader_run..." >> test_binary-reader.diff
