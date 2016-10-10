@@ -135,7 +135,7 @@ subroutine write_runtime_values()
              ', BodyTDim:  ',BodyTDim_I(iFluid)
      end do
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-          'Bdp:         ',Bdp      ,', Tilt [deg]:',ThetaTilt*cRadToDeg
+          'BdpDim:      ', Bdp*No2Io_V(UnitB_),', Tilt [deg]:', ThetaTilt*cRadToDeg
      if(UseRotatingBc)then
         call write_prefix; write(iUnitOut,'(10X,a)') 'Corotation is used'
      end if
