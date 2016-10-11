@@ -159,6 +159,8 @@ Time=6
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 
+Ref=3{gcc}@@(0+stampede)
+
 Keys=-model-data-path=${MYDIR} -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/DeepImpact@@(0+valeriy)
 Keys=-model-data-path=${MYDIR} -spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/DeepImpact@@(0+stampede)
 <#
