@@ -689,4 +689,221 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
 }
 
 
+//model decrease of energy of the simulated particles in the stopping power approxymation
+void PIC::MolecularCollisions::BackgroundAtmosphere::StoppingPowerProcessor() {
+  int i,j,k,thread;
+
+  //the table of increments for accessing the cells in the block
+  static bool initTableFlag=false;
+  static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  static int nTotalCenterNodes=-1;
+
+  //init sampling buffers
+  static double **ModelParticleEnergyExchangeRate=NULL;
+
+  if (ModelParticleEnergyExchangeRate==NULL) {
+    ModelParticleEnergyExchangeRate=new double* [PIC::nTotalThreadsOpenMP];
+    ModelParticleEnergyExchangeRate[0]=new double [PIC::nTotalThreadsOpenMP*PIC::nTotalSpecies];
+
+    int s,offset=0;
+
+    for (thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      ModelParticleEnergyExchangeRate[thread]=ModelParticleEnergyExchangeRate[0]+offset;
+
+      offset+=PIC::nTotalSpecies;
+    }
+  }
+
+
+  int LocalCellNumber;
+
+
+  if (initTableFlag==false) {
+    //init thr center node table
+    nTotalCenterNodes=0,initTableFlag=true;
+
+#if DIM == 3
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#elif DIM == 2
+    for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#elif DIM == 1
+    for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    }
+#endif
+  }
+
+  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+  memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
+
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  PIC::Mesh::cDataCenterNode *cell;
+
+  //the buffer of particles that occuping the local cell
+  long int modelParticle;
+  int BackgroundSpecieNumber,spec,idim;
+  PIC::ParticleBuffer::byte *modelParticleData;
+  double vModelParticle[3],xModelParticle[3],vBackgroundParticle[3],particleCollisionTime,cr2;
+  PIC::Mesh::cDataBlockAMR *block;
+
+  //sample the processor load
+//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  double EndTime,StartTime=MPI_Wtime();
+//#endif
+
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    //reset the balancing counters
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))=0.0;
+    }
+#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+
+#if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
+#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (LocalCellNumber, \
+      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
+      block,localTimeStep,EndTime,StartTime,thread) \
+     \
+    shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
+      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
+      PIC::Mesh::collectingCellSampleDataPointerOffset, \
+      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
+#else
+#pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (LocalCellNumber, \
+      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, block, \
+      EndTime,StartTime,thread) \
+     \
+    shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
+      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
+      PIC::Mesh::collectingCellSampleDataPointerOffset, \
+      PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
+#endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
+#endif  //_COMPILATION_MODE_
+  for (int CellCounter=0;CellCounter<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;CellCounter++) {
+    int nLocalNode,ii=CellCounter;
+    int kCell,jCell,iCell; //,i,j,k;
+    long int nCollidingParticles=0;
+
+    nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    kCell=ii/(_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=kCell*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    jCell=ii/_BLOCK_CELLS_X_;
+    ii-=jCell*_BLOCK_CELLS_X_;
+
+    iCell=ii;
+
+    StartTime=MPI_Wtime();
+    node=DomainBlockDecomposition::BlockTable[nLocalNode];
+    block=node->block;
+    if (block==NULL) continue;
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    thread=omp_get_thread_num();
+    #else
+    thread=0;
+    #endif
+
+
+
+    {
+          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+          cell=block->GetCenterNode(LocalCellNumber);
+          if (cell==NULL) continue;
+
+          modelParticle=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
+          nCollidingParticles=0;
+
+
+
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) ModelParticleEnergyExchangeRate[thread][spec]=0.0;
+
+      while (modelParticle!=-1) {
+        double v[3],x[3],StoppingPower;
+        int spec,idim;
+
+        modelParticleData=PIC::ParticleBuffer::GetParticleDataPointer(modelParticle);
+        modelParticle=PIC::ParticleBuffer::GetNext(modelParticleData);
+
+        spec=PIC::ParticleBuffer::GetI(modelParticleData);
+        PIC::ParticleBuffer::GetV(v,modelParticleData);
+        PIC::ParticleBuffer::GetX(x,modelParticleData);
+
+        StoppingPower=GetStoppingPower(x,v,spec,cell,node);
+
+        //get the change of the particle energy and the new velocity vector
+        double l,dE,speed2,SpeedOld,SpeedNew,c0;
+
+        speed2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+        l=sqrt(speed2)*node->block->GetLocalTimeStep(spec);
+        dE=StoppingPower*l;
+
+        SpeedOld=sqrt(speed2);
+        SpeedNew=speed2-dE*2.0/PIC::MolecularData::GetMass(spec);
+        if (SpeedNew<0.0) SpeedNew=0.0;
+        SpeedNew=sqrt(SpeedNew);
+
+        for (idim=0,c0=SpeedNew/SpeedOld;idim<3;idim++) v[idim]*=c0;
+
+        //save the velocity vector with in the particle data vector
+        PIC::ParticleBuffer::SetV(v,modelParticleData);
+
+        //sample the ebergy exchange rate
+        //sample energy exchabge rate
+        ModelParticleEnergyExchangeRate[thread][spec]+=(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]-speed2)*
+            PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData);
+
+        //check wether a particle with sucj energy needs to stay in the system
+        //check if the model particle should be removed from the system
+#if _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_ == _PIC_MODE_ON_
+        if (KeepConditionModelParticle(modelParticleData)==false) {
+          //the particle should be removed
+          long int next,prev;
+
+          //accout for the termalization of the exospheric particles
+          ThermalizationRate[spec]+=node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/localTimeStep;
+
+          next=PIC::ParticleBuffer::GetNext(modelParticleData);
+          prev=PIC::ParticleBuffer::GetPrev(modelParticleData);
+
+          //reconnect particles from the list
+          if (prev==-1) block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=next;
+          else PIC::ParticleBuffer::SetNext(next,prev);
+
+          if (next!=-1) PIC::ParticleBuffer::SetPrev(prev,next);
+
+          PIC::ParticleBuffer::DeleteParticle(modelParticle);
+          continue;
+        }
+#endif
+      }
+
+      //sample total energy exchange rate
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        *(spec+(double*)(LocalEnergyTransferRateSamplingOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=
+            ModelParticleEnergyExchangeRate[thread][spec]*node->block->GetLocalParticleWeight(spec)/node->block->GetLocalTimeStep(spec)/cell->Measure*PIC::MolecularData::GetMass(spec)/2.0;
+      }
+
+    }
+
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    EndTime=MPI_Wtime();
+    node->ParallelLoadMeasure+=EndTime-StartTime;
+    StartTime=EndTime;
+#endif
+
+  }
+}
+
+
+
 #endif
