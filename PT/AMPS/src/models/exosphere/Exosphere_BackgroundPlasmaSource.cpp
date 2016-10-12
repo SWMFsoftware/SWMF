@@ -319,7 +319,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
 
         //initiate a task for OpenMP threads
     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp task default (none) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement,__libm_qnan) \
+    #pragma omp task default (none) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement) \
          firstprivate (node,nface,spec,nBoundaryFace) \
          private (x,x0,e0,e1,ExternalNormal,newParticle,newParticleData,PlasmaNumberDensity,PlasmaTemeprature,PlasmaBulkVelocity,idim,c0,c1,v)
          {
