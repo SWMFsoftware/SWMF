@@ -3251,6 +3251,7 @@ the ground magnetic perturbations. The file has the following format:
 MAG			The coordinate system for the latitude/longitude below
 
 #START
+DST  360.00   360.00    Virtual DST station at the center of the Earth
 YKC   68.93   299.36    The name of the station, latitude, longitude
 MEA   61.57   306.20
 NEW   54.85   304.68
@@ -3259,6 +3260,9 @@ NEW   54.85   304.68
 The coordinate system can be set to GEO (geographic), MAG (geomagnetic) or SMG 
 (solar magnetic) coordinates. The station names can have maximum 3 characters.
 The name, latitude, and longitude columns should be separated with spaces.
+If the latitude and longitude are both set to 360.0, the station is placed to
+the center of the Earth, and the perturbation for this "DST" station will be given
+in SMG coordinates.
 
 The TypeFileOut parameter specifies the format of the output file. 
 The value 'single' creates a single output file for all magnetometers and all output times, 
@@ -3277,7 +3281,9 @@ the x, y and z coordinates of the station in SM coordinates, the 3 components
 (magnetic northward, eastward, and downward) of the total 
 magnetic perturbations, as well as the contributions due to 
 magnetospheric currents, field-aligned currents in the gap region,
-Hall currents and  in the ionosphere are saved,
+and Hall and Pedersen currents in the ionosphere are saved.
+For the "DST" station at the center of the Earth the magnetic perturbations
+are given in the SMG coordinates: north=x, east=y, down=z.
 The units of coordinates is meters, while the magnetic perturbations are given in nT.
 
 Default is no magnetic perturbation calculation.
