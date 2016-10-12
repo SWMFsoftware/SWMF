@@ -703,13 +703,10 @@ class InterfaceFluid
   }
 
   /** Finding the start index of each processors subdomain */
-  void setGlobalStartIndex(VCtopology3D *vct)
+  void setGlobalStartIndex()
   {
     bool isCrowdedX, isCrowdedY, isCrowdedZ;
         
-    // If vct == NULL it has bin set earlyer
-    if( vct != NULL) _vct = vct;
-
     nxcLocal=1;
     nycLocal=1;
     nzcLocal=1;

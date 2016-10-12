@@ -173,8 +173,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 #ifdef BATSRUS
     if(col->getCase()=="BATSRUS") {
       col->setVCTpointer(vct);
-      // Why setGlobalStartIndex is called twice?? -Yuxi
-      col->setGlobalStartIndex(NULL);
+      col->setGlobalStartIndex();
       return 0;
     }
 #endif
@@ -183,7 +182,6 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   // set index offset for each processor
   if(col->getCase()=="BATSRUS") {
     col->FinilizeInit();
-    col->setGlobalStartIndex(vct);
   }
 #endif
 
