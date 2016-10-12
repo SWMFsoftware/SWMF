@@ -65,7 +65,9 @@ class InterfaceFluid
   int nVarFluid, nIonFluid, nSpecies, nIon, nVarCoupling;
   bool useMultiSpecies, useMultiFluid;
 
-  int StartIdx_D[3], EndIdx_D[3];  // storage for starting/ending grid indexes of this processor
+  // storage for starting/ending physical (not include ghost cell)
+  // cell indexes of this processor
+  int StartIdx_D[3], EndIdx_D[3];  
   
   static const int NG = 1; // number of ghost cell
 
@@ -221,21 +223,21 @@ class InterfaceFluid
     } 
     else{
       // convert from local cpu index il to global domain index ig
-      *ig =StartIdx_D[0] + il;
+      *ig =StartIdx_D[0] + il - 1 ;
       
       // solution is constant across ignored dimensions indicated by nIJK_D == 1
-      if(nIJK_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl;
-      if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl;
+      if(nIJK_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl - 1;
+      if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl - 1;
     }
   }
 
  public:  inline void getLocalIndex(int *i, int *j, int *k)const
   {
-    *i = *i - StartIdx_D[0];
+    *i = *i - StartIdx_D[0] + 1;
       
     // solution is constant across ignored dimensions indicated by nIJK_D == 1
-    if(nIJK_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1];
-    if(nIJK_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2];
+    if(nIJK_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1] + 1;
+    if(nIJK_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2] + 1;
   }
 
   
@@ -705,6 +707,55 @@ class InterfaceFluid
   /** Finding the start index of each processors subdomain */
   void setGlobalStartIndex()
   {
+    /**
+       Example: A 2d case. 
+       
+       7 physical cells in x direction, and 2 processors are used. 
+       1 cell and 1 processor in z direction. Do not consider y 
+       direction in this case. 
+       
+      y|
+       |
+       --->x
+       
+       proc 1 
+      ________________________
+      |   |   |   |   |   |  |
+      |___|___|___|___|___|__|
+      |   |   |   |   |   |  |
+      |___|___|___|___|___|__|
+      |   |   |   |   |   |  |
+      |___|___|___|___|___|__|                                
+      0   1   2   3   4   5      global node index
+        0   1   2   3   4        global cell index
+      0   1   2   3   4   5      local node index
+        0   1   2   3   4   5    local cell index
+
+	x: StartIdx_D[0] = 1, nxcLocal = 4, EndIdx_D[0] = 4
+	z: StartIdx_D[2] = 1, nxcLocal = 1, EndIdx_D[0] = 1
+	
+
+
+	proc 2
+      ____________________
+      |   |   |   |   |  |
+      |___|___|___|___|__|
+      |   |   |   |   |  |
+      |___|___|___|___|__|
+      |   |   |   |   |  |
+      |___|___|___|___|__|
+          5   6   7   8     global node index
+            5   6   7       global cell index
+      0   1   2   3   4  5  local node index
+        0   1   2   3  4    local cell index
+
+
+	x: StartIdx_D[0] = 5, nxcLocal = 3, EndIdx_D[0] = 7
+	z: StartIdx_D[2] = 1, nxcLocal = 1, EndIdx_D[0] = 1
+
+
+     **/
+    
     bool isCrowdedX, isCrowdedY, isCrowdedZ;
         
     nxcLocal=1;
@@ -717,9 +768,9 @@ class InterfaceFluid
 
     myrank = _vct-> getCartesian_rank();
 
-    StartIdx_D[0] = _vct->getCoordinates(0)*nxcLocal;    
-    StartIdx_D[1] = _vct->getCoordinates(1)*nycLocal;    
-    StartIdx_D[2] = _vct->getCoordinates(2)*nzcLocal;    
+    StartIdx_D[0] = _vct->getCoordinates(0)*nxcLocal + 1;    
+    StartIdx_D[1] = _vct->getCoordinates(1)*nycLocal + 1;    
+    StartIdx_D[2] = _vct->getCoordinates(2)*nzcLocal + 1;    
 
     isCrowdedX =							\
       _vct->getCoordinates(0) < (getFluidNxc() - nxcLocal*_vct->getXLEN());
@@ -751,9 +802,9 @@ class InterfaceFluid
     EndIdx_D[1] = StartIdx_D[1];
     EndIdx_D[2] = StartIdx_D[2];
 
-    EndIdx_D[0] += nxcLocal;    
-    if(INdim > 1) EndIdx_D[1] += nycLocal;    
-    if(INdim > 2) EndIdx_D[2] += nzcLocal;
+    EndIdx_D[0] += nxcLocal - 1;    
+    if(INdim > 1) EndIdx_D[1] += nycLocal - 1;    
+    if(INdim > 2) EndIdx_D[2] += nzcLocal - 1;
 
     nxnLG = nxcLocal + 3;
     nynLG = nycLocal + 3;
@@ -1143,16 +1194,12 @@ class InterfaceFluid
   double getMaxFluidUth(const int is, const int dir)const
   {
     double maxVth, allmaxVth;
-    // Helping variable for looping
-    // one step over ignored dimention
-    int fix_D[3] = {0};
-    if(INdim < 2) fix_D[1] = 1;
-    if(INdim < 3) fix_D[2] = 1;
 
     maxVth=0.0;
-    for(int i = 0; i<EndIdx_D[0] - StartIdx_D[0] + fix_D[0]; i++)
-      for(int j = 0; j< EndIdx_D[1] - StartIdx_D[1] + fix_D[1]; j++)
-  	for(int k = 0; k< EndIdx_D[2] - StartIdx_D[2] + fix_D[2]; k++)
+    // The loop range seems not right. --Yuxi
+    for(int i = 0; i<nxcLocal; i++)
+      for(int j = 0; j< nycLocal; j++)
+  	for(int k = 0; k< nzcLocal; k++)
 	  maxVth = max(maxVth, getFluidUth(i,j,k,is));
     allmaxVth = maxVth; 
     MPI_Reduce(&maxVth, &allmaxVth, 1, MPI_DOUBLE, MPI_MAX, 0 , MPI_COMM_MYSIM);
@@ -1376,9 +1423,9 @@ class InterfaceFluid
     int minDn;
     if(doNeedBCOnly){
       doGetGM = false;
-      int ig = getGlobalStartIndex(0) + i; int nxg = getFluidNxc()+3;
-      int jg = getGlobalStartIndex(1) + j; int nyg = getFluidNyc()+3;
-      int kg = getGlobalStartIndex(2) + k; int nzg = getFluidNzc()+3;
+      int ig = StartIdx_D[0] + i -1; int nxg = getFluidNxc()+3;
+      int jg = StartIdx_D[1] + j -1; int nyg = getFluidNyc()+3;
+      int kg = StartIdx_D[2] + k -1; int nzg = getFluidNzc()+3;
       minDn = min(ig, nxg -ig -1);
       if(INdim>1) minDn = min(minDn, min(jg, nyg - jg - 1));
       if(INdim>2) minDn = min(minDn, min(kg, nzg - kg - 1));
@@ -1394,19 +1441,19 @@ class InterfaceFluid
     int i,j,k;
     *nPoint = 0;
     if(INdim == 1) {
-      for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++)
+      for(i = 0; i <= nxcLocal + 2*NG; i++)
 	if(doGetFromGM(i,0,0)) *nPoint +=1;
     }
     else if (INdim == 2){
-      for(j = 0; j <=  EndIdx_D[1] - StartIdx_D[1] + 2*NG; j++)
-	for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++){
+      for(j = 0; j <=  nycLocal + 2*NG; j++)
+	for(i = 0; i <= nxcLocal + 2*NG; i++){
 	  if(doGetFromGM(i,j,0)) *nPoint +=1;
 	}
     }
     else{
-      for(k = 0; k <=  EndIdx_D[2] - StartIdx_D[2] + 2*NG; k++)
-	for(j = 0; j <=  EndIdx_D[1] - StartIdx_D[1] + 2*NG; j++)
-	  for(i = 0; i <= EndIdx_D[0] - StartIdx_D[0] + 2*NG; i++){
+      for(k = 0; k <= nzcLocal + 2*NG; k++)
+	for(j = 0; j <= nycLocal + 2*NG; j++)
+	  for(i = 0; i <= nxcLocal + 2*NG; i++){
 	    if(doGetFromGM(i,j,k)) *nPoint +=1;
 	  }
     }
@@ -1419,24 +1466,25 @@ class InterfaceFluid
 
     n=0;
     if(INdim == 1) {
-      for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++)
-	if(doGetFromGM(i-StartIdx_D[0],0,0))
+      // There is 1 ghost cell layer. Index i is node. 
+      for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++)
+	if(doGetFromGM(i-StartIdx_D[0]+1,0,0))
 	  Pos_I[i] = i*INgridDx_D[0]  + INxRange_I[0];
     }
     else if (INdim == 2){
-      for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++)
-	for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++){
-	  if(doGetFromGM(i-StartIdx_D[0],j-StartIdx_D[1],0)){
+      for(j = StartIdx_D[1] - 1; j <=  EndIdx_D[1] + 2; j++)
+	for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++){
+	  if(doGetFromGM(i-StartIdx_D[0]+1,j-StartIdx_D[1]+1,0)){
 	    Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
 	    Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
 	  }
 	}
     }
     else{ 
-      for(k = StartIdx_D[2]; k <=  EndIdx_D[2] + 2*NG; k++)
-        for(j = StartIdx_D[1]; j <=  EndIdx_D[1] + 2*NG; j++)
-	  for(i = StartIdx_D[0]; i <= EndIdx_D[0] + 2*NG; i++){
-	    if(doGetFromGM(i-StartIdx_D[0],j-StartIdx_D[1],k-StartIdx_D[2])){
+      for(k = StartIdx_D[2] - 1; k <=  EndIdx_D[2] + 2; k++)
+        for(j = StartIdx_D[1] - 1; j <=  EndIdx_D[1] + 2; j++)
+	  for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++){
+	    if(doGetFromGM(i-StartIdx_D[0]+1,j-StartIdx_D[1]+1,k-StartIdx_D[2]+1)){
 	      Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
 	      Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
 	      Pos_I[n++] = k*INgridDx_D[2] + INxRange_I[4];
@@ -1453,7 +1501,7 @@ class InterfaceFluid
     const int x_=0, y_=1, z_=2;
     int i, j, k, iVar;
     int ii, jj, kk;
-    int idx, Nx, Ny, Nz; 
+    int idx;
 
     if(isFirstTime){
       InitData();
@@ -1462,10 +1510,6 @@ class InterfaceFluid
       // Cell center values.
       Bc_GD = newArr4(double,nxnLG-1,nynLG-1,nznLG-1,3);
     }
-
-    Nx = EndIdx_D[0]-StartIdx_D[0]+1 + 2*NG;
-    Ny = EndIdx_D[1]-StartIdx_D[1]+1 + 2*NG;
-    Nz = EndIdx_D[2]-StartIdx_D[2]+1 + 2*NG;
 
     // The order to loop through State_GV should be the same as the
     // order to find out the posion, which is in GetGridPnt().
