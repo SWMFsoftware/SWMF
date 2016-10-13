@@ -88,6 +88,7 @@ foreach (@Arguments) {
      print "-amps-test=[on,off]\t\ttells the code that a nightly test is executed\n";
      print "-openmp=[on,off]\t\twhen \"on\" use OpenMP and MPI libraries for compiling AMPS\n";
      print "-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker\n";
+     print "-compiler-option=opt\t\tadd option \'opt\' into the compiler argument line\n";
      exit;
    }
    
@@ -253,6 +254,15 @@ foreach (@Arguments) {
       close($fh);
       next;
   };
+
+  if(/^-compiler-option=(.*)$/){
+    my $options=$1; 
+
+    $options =~ s/,/ /g;
+    `echo EXTRACOMPILEROPTIONS+=$options >> Makefile.local`;
+    next;
+  }
+
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
