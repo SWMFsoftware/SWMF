@@ -1041,6 +1041,9 @@ void c_Solver:: write_plot_init(){
     }
     nameSnapshot_I[iPlot] = SaveDirName + "/" + subString;
 
+    int plotDx = col->getplotDx(iPlot);
+    double No2NoL = col->getMhdNo2NoL();
+    
     // plotRange_ID is the range of the whole plot domain, it can be larger
     // than the simulation domain on this processor.
     stringstream ss;
@@ -1048,8 +1051,9 @@ void c_Solver:: write_plot_init(){
       subString.erase(0,2);
       ss<<subString;
       ss>>plotRange_ID[iPlot][0];
-      plotRange_ID[iPlot][0] = plotRange_ID[iPlot][0]*col->getMhdNo2NoL() - col->getFluidStartX();
-      plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0]+1e-10;
+      plotRange_ID[iPlot][0] = plotRange_ID[iPlot][0]*No2NoL - col->getFluidStartX();
+      plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0] + 1e-10;
+
       plotRange_ID[iPlot][2] = 0;
       plotRange_ID[iPlot][3] = col->getLy();
       plotRange_ID[iPlot][4] = 0;
@@ -1060,8 +1064,8 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][0] = 0;
       plotRange_ID[iPlot][1] = col->getLx();
       ss>>plotRange_ID[iPlot][2];
-      plotRange_ID[iPlot][2] = plotRange_ID[iPlot][2]*col->getMhdNo2NoL() - col->getFluidStartY();
-      plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2]+1e-10;
+      plotRange_ID[iPlot][2] = plotRange_ID[iPlot][2]*No2NoL - col->getFluidStartY();
+      plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2] + 1e-10;
       plotRange_ID[iPlot][4] = 0;
       plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,2)=="z="){
@@ -1072,8 +1076,8 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][2] = 0;
       plotRange_ID[iPlot][3] = col->getLy();
       ss>>plotRange_ID[iPlot][4];
-      plotRange_ID[iPlot][4] = plotRange_ID[iPlot][4]*col->getMhdNo2NoL() - col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4]+1e-10;
+      plotRange_ID[iPlot][4] = plotRange_ID[iPlot][4]*No2NoL - col->getFluidStartZ();
+      plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4] + 1e-10;
     }else if(subString.substr(0,2)=="3d"){
       plotRange_ID[iPlot][0] = 0;
       plotRange_ID[iPlot][1] = col->getLx();
@@ -1082,12 +1086,12 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][4] = 0;
       plotRange_ID[iPlot][5] = col->getLz();
     }else if(subString.substr(0,3)=="cut"){
-      plotRange_ID[iPlot][0] = col->getplotRange(iPlot,0)*col->getMhdNo2NoL() - col->getFluidStartX();
-      plotRange_ID[iPlot][1] = col->getplotRange(iPlot,1)*col->getMhdNo2NoL() - col->getFluidStartX();
-      plotRange_ID[iPlot][2] = col->getplotRange(iPlot,2)*col->getMhdNo2NoL() - col->getFluidStartY();
-      plotRange_ID[iPlot][3] = col->getplotRange(iPlot,3)*col->getMhdNo2NoL() - col->getFluidStartY();
-      plotRange_ID[iPlot][4] = col->getplotRange(iPlot,4)*col->getMhdNo2NoL() - col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = col->getplotRange(iPlot,5)*col->getMhdNo2NoL() - col->getFluidStartZ();
+      plotRange_ID[iPlot][0] = col->getplotRange(iPlot,0)*No2NoL - col->getFluidStartX();
+      plotRange_ID[iPlot][1] = col->getplotRange(iPlot,1)*No2NoL - col->getFluidStartX();
+      plotRange_ID[iPlot][2] = col->getplotRange(iPlot,2)*No2NoL - col->getFluidStartY();
+      plotRange_ID[iPlot][3] = col->getplotRange(iPlot,3)*No2NoL - col->getFluidStartY();
+      plotRange_ID[iPlot][4] = col->getplotRange(iPlot,4)*No2NoL - col->getFluidStartZ();
+      plotRange_ID[iPlot][5] = col->getplotRange(iPlot,5)*No2NoL - col->getFluidStartZ();
     }else{
       if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
       abort();
@@ -1217,6 +1221,8 @@ void c_Solver:: write_plot_init(){
 
     // Calcualte plotIndexRange_ID, which is the local index, based on
     // plot range.
+
+    int ig, jg, kg;
     
     plotIndexRange_ID[iPlot][0]= 30000;
     plotIndexRange_ID[iPlot][1]=-30000;
@@ -1226,7 +1232,10 @@ void c_Solver:: write_plot_init(){
     if(vct->getXright_neighbor()==MPI_PROC_NULL) iEnd++;
     
     for(int i=1; i<iEnd; i++){
-      if(grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
+      col->getGlobalIndex(i,1,1,&ig,&jg,&kg);
+
+      if(ig % plotDx == 0 &&
+	 grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
 	 grid->getXN(i)<plotRange_ID[iPlot][1] + 0.5*col->getDx()){
 	if(i<plotIndexRange_ID[iPlot][0]) plotIndexRange_ID[iPlot][0] = i;
 	if(i>plotIndexRange_ID[iPlot][1]) plotIndexRange_ID[iPlot][1] = i;
@@ -1240,7 +1249,10 @@ void c_Solver:: write_plot_init(){
     if(vct->getYright_neighbor()==MPI_PROC_NULL) iEnd++;
 
     for(int i=1; i<iEnd; i++){
-      if(grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
+      col->getGlobalIndex(1,i,1,&ig,&jg,&kg);
+
+      if(jg % plotDx == 0 &&
+	 grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
 	 grid->getYN(i)<plotRange_ID[iPlot][3] + 0.5*col->getDy()){
 	if(i<plotIndexRange_ID[iPlot][2]) plotIndexRange_ID[iPlot][2] = i;
 	if(i>plotIndexRange_ID[iPlot][3]) plotIndexRange_ID[iPlot][3] = i;
@@ -1254,7 +1266,10 @@ void c_Solver:: write_plot_init(){
     if(vct->getZright_neighbor()==MPI_PROC_NULL) iEnd++;
 
     for(int i=1; i<iEnd; i++){
-      if(grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
+      col->getGlobalIndex(1,1,i,&ig,&jg,&kg);
+
+      if(kg % plotDx == 0 &&
+	 grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
 	 grid->getZN(i)<plotRange_ID[iPlot][5] + 0.5*col->getDz()){
 	if(i<plotIndexRange_ID[iPlot][4]) plotIndexRange_ID[iPlot][4] = i;
 	if(i>plotIndexRange_ID[iPlot][5]) plotIndexRange_ID[iPlot][5] = i;
@@ -1270,9 +1285,9 @@ void c_Solver:: write_plot_init(){
     if(!doOutputParticles_I[iPlot]){
       long nCellLocal;
       nCellLocal =
-	(plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4]+1)*
-	(plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2]+1)*
-	(plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0]+1);
+	((plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4])/plotDx+1)*
+	((plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2])/plotDx+1)*
+	((plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0])/plotDx+1);
 
       if(nCellLocal<0) nCellLocal=0;
     
@@ -1325,12 +1340,12 @@ void c_Solver:: write_plot_init(){
 
       // Change plotRange_ID into MHD coordinates. The field outputs are also
       // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
-      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx() + col->getFluidStartX();
-      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx() + col->getFluidStartX();
-      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy() + col->getFluidStartY();
-      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy() + col->getFluidStartY();
-      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz() + col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz() + col->getFluidStartZ();
+      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
+      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
+      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
+      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
+      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
       
       // Correct PlotRange_ID based on PlotIndexRange_ID-----end
     }    
@@ -1434,10 +1449,12 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     }
     outFile<<"\n";
 
+    int plotDx = col->getplotDx(iPlot);
+    
     outFile<<"#CELLSIZE\n";
-    outFile<<col->getDx()*No2OutL<<"\t dx\n";
-    outFile<<col->getDy()*No2OutL<<"\t dy\n";
-    outFile<<col->getDz()*No2OutL<<"\t dz\n";
+    outFile<<plotDx*col->getDx()*No2OutL<<"\t dx\n";
+    outFile<<plotDx*col->getDy()*No2OutL<<"\t dy\n";
+    outFile<<plotDx*col->getDz()*No2OutL<<"\t dz\n";
     outFile<<"\n";
 
     outFile<<"#NCELL\n";
@@ -1451,11 +1468,11 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<"#PLOTRESOLUTION\n";
     for(int i=0; i<col->getnDim();i++){
       if(doOutputParticles_I[iPlot]){
-	outFile<<(-1)<<"\t plotDx\n"; // Save particles as unstructured.
+	outFile<<(-1)<<"\t plotDx\n"; // Save partices as unstructured.
       }else{
-	outFile<<col->getplotDx(iPlot)<<"\t plotDx\n";
+	outFile<<0<<"\t plotDx\n";
       }
-    }
+    }                
     outFile<<"\n";
           
     outFile<<"#PLOTVARIABLE\n";
@@ -1529,6 +1546,7 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
 
   }else{
     EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
+			  col->getplotDx(iPlot),
 			  plotIndexRange_ID[iPlot][0],
 			  plotIndexRange_ID[iPlot][1],
 			  plotIndexRange_ID[iPlot][2],

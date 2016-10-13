@@ -2073,7 +2073,7 @@ class InterfaceFluid
   int getdnOutput(int i)const{return dnOutput_I[i];};
   double getdtOutput(int i)const{return dtOutput_I[i];};
   string getplotString(int i)const{return plotString_I[i];};
-  double getplotDx(int i)const{return plotDx_I[i];};
+  double getplotDx(int i)const{return plotDx_I[i]>0 ? plotDx_I[i]:1;};
   string getplotVar(int i)const{return plotVar_I[i];};
   double getplotRange(int iPlot,int i)const{
     // plotRange_ID is only set from PARAM.in for 'cut'!!!!

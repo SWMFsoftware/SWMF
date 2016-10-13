@@ -644,6 +644,7 @@ class EMfields3D                // :public Field
 
     /* Write fields to IDL format files*/
     void write_plot_field(string filename, string *plotVar, int nVar,
+			  int plotDx, 
 			  const int minI, const int maxI,
 			  const int minJ, const int maxJ,
 			  const int minK, const int maxK,

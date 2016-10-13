@@ -1756,7 +1756,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
 	Note:
 	1) Available output variables are listed in EMfields3D.cpp::getVar().
-	2) DxOutput is only functional for particles output now.
+	2) DxOutput is only functional for particles and 3d field output now.
 	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
 	4) Output variable 'particles' only works for 'cut' and '3d'.
       */

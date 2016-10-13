@@ -4231,6 +4231,7 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
 }
 
 void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
+				   int plotDx,
 				   const int minI, const int maxI,
 				   const int minJ, const int maxJ,
 				   const int minK, const int maxK,
@@ -4265,9 +4266,9 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
     outFile = fopen(filename.c_str(),"wb");
 
     double data0;
-    for(int i=minI; i<= maxI; i++)
-      for(int j=minJ; j<=maxJ; j++)
-	for(int k=minK; k<=maxK; k++){
+    for(int i=minI; i<= maxI; i+=plotDx)
+      for(int j=minJ; j<=maxJ; j+=plotDx)
+	for(int k=minK; k<=maxK; k+=plotDx){
 	  // The PostIDL.f90 is designed for Fortran output. In order to
 	  // use PostIDL.f90, we should follow the format of Fortran
 	  // binary output. Here, each line is a record. Before and after
@@ -4297,9 +4298,9 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
     outFile.open(filename.c_str(),fstream::out | fstream::trunc);
     outFile<<std::scientific;
     outFile.precision(7);
-    for(int i=minI; i<= maxI; i++)
-      for(int j=minJ; j<=maxJ; j++)
-	for(int k=minK; k<=maxK; k++){
+    for(int i=minI; i<= maxI; i+=plotDx)
+      for(int j=minJ; j<=maxJ; j+=plotDx)
+	for(int k=minK; k<=maxK; k+=plotDx){
 	  outFile<<dx*No2OutL
 		 <<"\t"<< getVar("X",i,j,k, No2OutL, No2OutV, No2OutB,
 				 No2OutRho, No2OutP, No2OutJ)
