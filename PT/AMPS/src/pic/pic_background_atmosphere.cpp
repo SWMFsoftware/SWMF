@@ -11,7 +11,9 @@
 
 int PIC::MolecularCollisions::BackgroundAtmosphere::LocalTotalCollisionFreqSamplingOffset=-1;
 int PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset=-1;
-double *PIC::MolecularCollisions::BackgroundAtmosphere::ThermalizationRate=NULL,*PIC::MolecularCollisions::BackgroundAtmosphere::CollisionSourceRate=NULL;
+
+double **PIC::MolecularCollisions::BackgroundAtmosphere::TotalCollisionModelParticleSourceRate=NULL;
+double **PIC::MolecularCollisions::BackgroundAtmosphere::TotalCollisionModelParticleLossRate=NULL;
 
 //init the model
 void PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser() {
@@ -23,15 +25,28 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser() {
 }
 
 void PIC::MolecularCollisions::BackgroundAtmosphere::Init_AfterParser() {
-  int spec;
-
-  ThermalizationRate=new double[PIC::nTotalSpecies];
-  CollisionSourceRate=new double[PIC::nTotalSpecies];
-
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) ThermalizationRate[spec]=0.0,CollisionSourceRate[spec]=0.0;
+  int i,spec;
 
   //set up the model sampling procedure
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SampleModelData,OutputSampledModelData);
+
+  //set up buffers for sampling the model particle spource and loss rates
+  TotalCollisionModelParticleSourceRate=new double* [PIC::nTotalSpecies];
+  TotalCollisionModelParticleSourceRate[0]=new double[PIC::nTotalSpecies*PIC::nTotalThreadsOpenMP];
+
+  TotalCollisionModelParticleLossRate=new double* [PIC::nTotalSpecies];
+  TotalCollisionModelParticleLossRate[0]=new double[PIC::nTotalSpecies*PIC::nTotalThreadsOpenMP];
+
+  for (spec=1;spec<PIC::nTotalSpecies;spec++) {
+    TotalCollisionModelParticleSourceRate[spec]=TotalCollisionModelParticleSourceRate[0]+spec*PIC::nTotalThreadsOpenMP;
+    TotalCollisionModelParticleLossRate[spec]=TotalCollisionModelParticleLossRate[0]+spec*PIC::nTotalThreadsOpenMP;
+  }
+
+  for (i=0;i<PIC::nTotalSpecies*PIC::nTotalThreadsOpenMP;i++) {
+    TotalCollisionModelParticleSourceRate[0][i]=0.0;
+    TotalCollisionModelParticleLossRate[0][i]=0.0;
+  }
+
 }
 
 //output sampled model paramters
@@ -40,22 +55,33 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::SampleModelData() {
 }
 
 void PIC::MolecularCollisions::BackgroundAtmosphere::OutputSampledModelData(int DataOutputFileNumber) {
-  int spec;
+  int spec,thread;
 
   //collect the thermalization and collision source rates
-  double TotalThermalizationRate[PIC::nTotalSpecies],TotalCollisonSourceRate[PIC::nTotalSpecies];
+  double TotalCollsionLossRate[PIC::nTotalSpecies],TotalCollisonSourceRate[PIC::nTotalSpecies];
+  double threadTotalCollsionLossRate[PIC::nTotalSpecies],threadTotalCollisonSourceRate[PIC::nTotalSpecies];
 
-  MPI_Allreduce(ThermalizationRate,TotalThermalizationRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-  MPI_Allreduce(CollisionSourceRate,TotalCollisonSourceRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    threadTotalCollsionLossRate[spec]=0.0;
+    threadTotalCollisonSourceRate[spec]=0.0;
 
-  if (PIC::ThisThread==0) {
-    cout << "$PREFIX:Background Atmosphere: \n$PREFIX: spec \t Thermalization Rate \t Collision Source Rate \n";
+    for (thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      threadTotalCollsionLossRate[spec]+=TotalCollisionModelParticleLossRate[spec][thread];
+      threadTotalCollisonSourceRate[spec]+=TotalCollisionModelParticleSourceRate[spec][thread];
 
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) cout << "$PREFIX:" << spec << "\t" << TotalThermalizationRate[spec]/PIC::LastSampleLength << "\t" << TotalCollisonSourceRate[spec]/PIC::LastSampleLength << endl;
+      TotalCollisionModelParticleLossRate[spec][thread]=0.0;
+      TotalCollisionModelParticleSourceRate[spec][thread]=0.0;
+    }
   }
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) ThermalizationRate[spec]=0.0,CollisionSourceRate[spec]=0.0;
+  MPI_Allreduce(threadTotalCollsionLossRate,TotalCollsionLossRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Allreduce(threadTotalCollisonSourceRate,TotalCollisonSourceRate,PIC::nTotalSpecies,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
+  if (PIC::ThisThread==0) {
+    cout << "$PREFIX:Background Atmosphere: \n$PREFIX: spec \t Collision Source Rate \t Collision Loss Rate \n";
+
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) cout << "$PREFIX:" << spec << "\t" << TotalCollisonSourceRate[spec]/PIC::LastSampleLength << "\t" << TotalCollsionLossRate[spec]/PIC::LastSampleLength << endl;
+  }
 }
 
 
@@ -259,7 +285,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
     //reset the balancing counters
     for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
       node=DomainBlockDecomposition::BlockTable[nLocalNode];
-      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))=0.0;
+      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset))=0.0;
     }
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
@@ -534,7 +560,7 @@ _StartParticleCollisionLoop_:
                 ++nCollidingParticles;
 
                 //accout for the source of new exospheric particles
-                CollisionSourceRate[spec]+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)*block->GetLocalParticleWeight(spec)/localTimeStep;
+                TotalCollisionModelParticleSourceRate[Background2ModelSpeciesConversionTable[BackgroundSpecieNumber]][thread]+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)*block->GetLocalParticleWeight(spec)/localTimeStep;
 
                 //set particle weight
 #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
@@ -565,7 +591,7 @@ _StartParticleCollisionLoop_:
               long int next,prev;
 
               //accout for the termalization of the exospheric particles
-              ThermalizationRate[spec]+=node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/localTimeStep;
+              TotalCollisionModelParticleLossRate[spec][thread]+=node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/localTimeStep;
 
               next=PIC::ParticleBuffer::GetNext(modelParticleData);
               prev=PIC::ParticleBuffer::GetPrev(modelParticleData);
@@ -762,7 +788,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::StoppingPowerProcessor() {
     //reset the balancing counters
     for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
       node=DomainBlockDecomposition::BlockTable[nLocalNode];
-      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))=0.0;
+      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset))=0.0;
     }
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
@@ -838,7 +864,11 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::StoppingPowerProcessor() {
         PIC::ParticleBuffer::GetV(v,modelParticleData);
         PIC::ParticleBuffer::GetX(x,modelParticleData);
 
+        #if _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
         StoppingPower=GetStoppingPower(x,v,spec,cell,node);
+        #else
+        exit(__LINE__,__FILE__,"Error: something is wrong. This function should not be called when _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ != _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_");
+        #endif //_PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_
 
         //get the change of the particle energy and the new velocity vector
         double l,dE,speed2,SpeedOld,SpeedNew,c0;
@@ -870,7 +900,8 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::StoppingPowerProcessor() {
           long int next,prev;
 
           //accout for the termalization of the exospheric particles
-          ThermalizationRate[spec]+=node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/localTimeStep;
+          TotalCollisionModelParticleLossRate[spec][thread]+=node->block->GetLocalParticleWeight(spec)*
+              PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/node->block->GetLocalTimeStep(spec);
 
           next=PIC::ParticleBuffer::GetNext(modelParticleData);
           prev=PIC::ParticleBuffer::GetPrev(modelParticleData);
