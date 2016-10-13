@@ -62,10 +62,10 @@ initial                 NameArea
 #OUTERBOUNDARY
 fixvalue		TypeBcEast
 no_inflow		TypeBcWest
-reflect			TypeBcSouth
-reflect			TypeBcNorth
-reflect			TypeBcBottom
-reflect			TypeBcTop
+periodic		TypeBcSouth
+periodic		TypeBcNorth
+periodic		TypeBcBottom
+periodic		TypeBcTop
 
 #USERFLAGS
 F			UseUserInnerBcs
