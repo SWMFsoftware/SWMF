@@ -7,6 +7,10 @@
 # module unload darshan
 # module load idl
 
+# Checking availabe XE nodes for various wall-clock times
+# showbf -f xe -p bwsched
+
+
 # Environment configuration-----------------------
 
 
@@ -24,6 +28,9 @@
 #PBS -q normal
 
 #PBS -N SWMF
+
+# Send email if something happens
+#PBS -m abe
 
 cd $PBS_O_WORKDIR
 
