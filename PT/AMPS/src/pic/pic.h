@@ -2720,8 +2720,8 @@ namespace PIC {
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
       void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
-      //sample the global rate of termalization of exospehric species and the rate of injection of new exospheric particles from the background atmosphere
-      extern double *ThermalizationRate,*CollisionSourceRate;
+      //souce and loss rate of the model particles in interactions with the background atmosphere
+      extern double **TotalCollisionModelParticleSourceRate,**TotalCollisionModelParticleLossRate;
 
       //init the model
       void Init_BeforeParser();
