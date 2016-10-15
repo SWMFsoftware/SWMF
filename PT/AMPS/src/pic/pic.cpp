@@ -1387,6 +1387,9 @@ void PIC::Init_BeforeParser() {
   //initiate MPI
   InitMPI();
 
+  //intialize the interpolation module
+  InterpolationRoutines::Init();
+
 /*
   //init the particle buffer
   //the default value of 'RequestedParticleBufferLength' is -1, which can be chganged by ampsConfig.pl
@@ -1625,9 +1628,6 @@ void PIC::Init_AfterParser() {
   long int LocalCellNumber;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataBlockAMR *block;
-
-  //intialize the interpolation module
-  InterpolationRoutines::Init();
 
   //flush the sampling buffers
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
