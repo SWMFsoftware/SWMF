@@ -3644,6 +3644,12 @@ namespace PIC {
         for (int i=0;i<DataVectorLength;i++)  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
 
+      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+      #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+        PIC::Debugger::CatchOutLimitValue(DataVector,DataVectorLength,__LINE__,__FILE__);
+      #endif
+      #endif
+
       }
 
       inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell, double Time) {
