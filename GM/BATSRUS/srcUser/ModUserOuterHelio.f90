@@ -30,13 +30,14 @@
 module ModUser
 
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
+  use ModMain,       ONLY: Body1, body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
        nBlock, Unused_B, Time_Simulation
   use ModPhysics,    ONLY: Gamma, GammaMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
        NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
        UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
-       UnitTemperature_, UnitT_, UnitRhoU_
+       UnitTemperature_, UnitT_, UnitRhoU_, &
+       CellState_VI
   use ModNumConst,      ONLY: cRadToDeg, cTwoPi
   use ModConst,         ONLY: cBoltzmann, cProtonMass
   use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
@@ -160,6 +161,7 @@ module ModUser
   ! Variables for the reflective shape
   real:: rCylinder = -1.0, zCylinder = -1.0
   real:: rCrescent = -1.0, xCrescentCenter = -1.0
+  real:: rHelioPause = -1.0, TempHelioPauseSi = -1.0, TempHelioPause = -1.0
 
 contains
 
@@ -233,6 +235,9 @@ contains
        case("#INNERCRESCENT")
           call read_var('rCrescent', rCrescent)
           call read_var('xCrescentCenter', xCrescentCenter)
+       case("#HELIOPAUSE")
+          call read_var('rHelioPause', rHelioPause)
+          call read_var('TempHelioPauseSi', TempHelioPauseSi)
        case default
           if(iProc==0) call stop_mpi(NameSub// &
                ': unrecognized command: '//NameCommand)
@@ -920,7 +925,16 @@ contains
     character(len=*), intent(in):: NameAction
 
     character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
+
+    character(len=*), parameter:: NameSub = 'user_action'
     !-----------------------------------------------------------------------
+
+    if(iProc==0) write(*,*) NameSub,' called with NameAction=', NameAction
+
+    if(NameAction == 'reading restart files')then
+       TempHelioPause = TempHelioPauseSi * Si2No_V(UnitTemperature_)
+       RETURN
+    end if
 
     if(NameAction /= 'write progress') RETURN
 
@@ -1724,12 +1738,31 @@ contains
 
   !=======================================================================
   subroutine user_set_boundary_cells(iBlock)
+
     use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
 
     integer, intent(in):: iBlock
     integer:: i, j, k
     real:: x, y, z, x0, z0, Ratio, d, r
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !---------------------------------------------------------------------
+    if(rHelioPause > 0.0)then
+       if(TempHelioPause < 0.0) RETURN   ! restart files are not yet read
+       IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
+            r_BLK(:,:,:,iBlock) < rHelioPause .or. &
+            State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
+            > TempHelioPause
+       
+       if(body1)then
+          ! Set internal state 
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(IsBoundaryCell_GI(i,j,k,ExtraBc_)) &
+                  State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Body1_)
+          end do; end do; end do
+       end if
+       RETURN
+    end if
+
     if(rCylinder > 0.0)then
        IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
             Xyz_DGB(x_,:,:,:,iBlock)**2 + &
@@ -1737,6 +1770,7 @@ contains
             abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder 
        RETURN
     end if
+
     if(rCrescent < 0.0) RETURN
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
