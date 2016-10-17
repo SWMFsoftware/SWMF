@@ -869,6 +869,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModLoadBalance, ONLY: iTypeBalance_A
   use ModB0, ONLY: B0_DGB
   use ModGeometry
+  use ModBoundaryCells, ONLY: iBoundary_GB
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
        ElectronPressureRatio, RhoBody2, pBody2, rBody2
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
@@ -1466,6 +1467,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         else if(.not.UseNonConservative)then
            PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
         end if
+     case('ibound')
+        PlotVar(:,:,:,iVar) = iBoundary_GB(:,:,:,iBlk)
      case('evolve','impl')
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
         if(UsePointImplicit_B(iBLK))&
