@@ -967,12 +967,38 @@ contains
     use ModConst, ONLY: cAU, cProtonMass
     character (len=*), parameter :: NameSub='user_io_units'
     !-------------------------------------------------------------------------
+    ! set strings for writing Tecplot output
+    !/
+    NameTecUnit_V(UnitX_)            = 'AU'
+    NameTecUnit_V(UnitRho_)          = 'amu/cm3'
+    NameTecUnit_V(UnitN_)            = '#/cm3'
+    NameTecUnit_V(UnitU_)            = 'km/s'
+    NameTecUnit_V(UnitP_)            = 'dyne/cm^2'
+    NameTecUnit_V(UnitB_)            = 'nT'
+    NameTecUnit_V(UnitRhoU_)         = 'g/cm^2/s'
+    NameTecUnit_V(UnitEnergydens_)   = 'erg/cm^3'
+    NameTecUnit_V(UnitJ_)            = 'uA/m^2'
+    NameTecUnit_V(UnitDivB_)         = 'G/cm'
+    NameTecUnit_V(UnitAngle_)        = 'deg'
+
+    NameIdlUnit_V(UnitX_)            = 'AU'
+    NameIdlUnit_V(UnitRho_)          = 'amu/cc'
+    NameIdlUnit_V(UnitN_)            = '/cc'
+    NameIdlUnit_V(UnitU_)            = 'km/s'
+    NameIdlUnit_V(UnitP_)            = 'dyne/cm^2'
+    NameIdlUnit_V(UnitB_)            = 'nT'
+    NameIdlUnit_V(UnitRhoU_)         = 'g/cm^2/s'
+    NameIdlUnit_V(UnitEnergydens_)   = 'erg/cm^3'
+    NameIdlUnit_V(UnitJ_)            = 'uA/m^2'
+    NameIdlUnit_V(UnitDivB_)         = 'G/cm'
+    NameIdlUnit_V(UnitAngle_)        = 'deg'
+ 
     Io2Si_V(UnitX_)           = cAU                       ! R  
     Io2Si_V(UnitRho_)         = 1.0E+6*cProtonMass        ! Mp/cm^3
     Io2Si_V(UnitN_)           = 1.0E+6                    ! #/cm^3
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
     Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
-    Io2Si_V(UnitB_)           = 1.0E-9                    ! nT 
+    Io2Si_V(UnitB_)           = 1.0E-9                    ! nT
     Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
     Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
     Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
@@ -1062,20 +1088,6 @@ contains
        !write(*,*) 'PNeutralsISW1',PNeutralsISW1
        !merav
     endif
-
-    ! set strings for writing Tecplot output
-    !/
-    NameTecUnit_V(UnitX_)            = 'AU'
-    NameTecUnit_V(UnitRho_)          = '#/cm3'
-    NameTecUnit_V(UnitU_)            = 'km/s'
-    NameTecUnit_V(UnitP_)            = 'dyne/cm^2'
-    NameTecUnit_V(UnitB_)            = 'nT'
-
-    NameIdlUnit_V(UnitX_)            = 'AU'
-    NameIdlUnit_V(UnitRho_)          = '/cc'
-    NameIdlUnit_V(UnitU_)            = 'km/s'
-    NameIdlUnit_V(UnitP_)            = 'dyne/cm^2'
-    NameIdlUnit_V(UnitB_)            = 'nT'
 
   end subroutine user_io_units
   !==============================================================
