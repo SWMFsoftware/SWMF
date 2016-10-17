@@ -4231,10 +4231,7 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
 }
 
 void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
-				   int plotDx,
-				   const int minI, const int maxI,
-				   const int minJ, const int maxJ,
-				   const int minK, const int maxK,
+				   int** pointList_ID, long nPoint,
 				   const double No2OutL, const double No2OutV,
 				   const double No2OutB, const double No2OutRho,
 				   const double No2OutP, const double No2OutJ){
@@ -4250,7 +4247,15 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
   const Collective *col = &get_col();
   const Grid *grid = &get_grid();
   const bool isBinary = col->getdoSaveBinary();
-  
+
+  string * varOut_I;
+  varOut_I = new string[nVar+3]; // x/y/z + var 
+
+  varOut_I[0] = 'X';
+  varOut_I[1] = 'Y';
+  varOut_I[2] = 'Z';
+  for (int iVar=0; iVar<nVar; iVar++) varOut_I[iVar+3] = var_I[iVar];
+
   if(isBinary){
     FILE *outFile;
     int nRecord, nSizeDouble, nSizeInt;
@@ -4264,59 +4269,50 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 	  <<endl;
     }
     outFile = fopen(filename.c_str(),"wb");
-
+    
     double data0;
-    for(int i=minI; i<= maxI; i+=plotDx)
-      for(int j=minJ; j<=maxJ; j+=plotDx)
-	for(int k=minK; k<=maxK; k+=plotDx){
-	  // The PostIDL.f90 is designed for Fortran output. In order to
-	  // use PostIDL.f90, we should follow the format of Fortran
-	  // binary output. Here, each line is a record. Before and after
-	  // each record, use 4 byte to save the length of this record. 
-	  fwrite(&nRecord, nSizeInt, 1, outFile);
-	  data0 = dx*No2OutL;
-	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = getVar("X",i,j,k, No2OutL, No2OutV, No2OutB,
-			   No2OutRho, No2OutP, No2OutJ);
-	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = getVar("Y",i,j,k, No2OutL, No2OutV, No2OutB,
-			 No2OutRho, No2OutP, No2OutJ);
-	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  data0 = getVar("Z",i,j,k, No2OutL, No2OutV, No2OutB,
-			 No2OutRho, No2OutP, No2OutJ);
-	  fwrite(&data0, nSizeDouble, 1, outFile);
-	  for(int iVar=0; iVar<nVar; iVar++){
-	    data0 = getVar(var_I[iVar],i,j,k, No2OutL, No2OutV, No2OutB,
-			   No2OutRho, No2OutP, No2OutJ);
-	    fwrite(&data0, nSizeDouble, 1, outFile);
-	  }
-	  fwrite(&nRecord, nSizeInt, 1, outFile);
-	}
+
+    for(long iPoint = 0; iPoint<nPoint; iPoint++){
+      // The PostIDL.f90 was originally designed for Fortran output. In order to
+      // use PostIDL.f90, we should follow the format of Fortran
+      // binary output. Each line is a record. Before and after
+      // each record, use 4 byte to save the length of this record. 
+      fwrite(&nRecord, nSizeInt, 1, outFile);
+      data0 = dx*No2OutL;
+      fwrite(&data0, nSizeDouble, 1, outFile);
+      for(int iVar=0; iVar<nVar+3; iVar++){
+	data0 = getVar(varOut_I[iVar],
+		       pointList_ID[iPoint][0],
+		       pointList_ID[iPoint][1],
+		       pointList_ID[iPoint][2],
+		       No2OutL, No2OutV, No2OutB,
+		       No2OutRho, No2OutP, No2OutJ);
+	fwrite(&data0, nSizeDouble, 1, outFile);
+      }
+      fwrite(&nRecord, nSizeInt, 1, outFile);
+    }
     fclose(outFile);
   }else{
     ofstream outFile;
     outFile.open(filename.c_str(),fstream::out | fstream::trunc);
     outFile<<std::scientific;
     outFile.precision(7);
-    for(int i=minI; i<= maxI; i+=plotDx)
-      for(int j=minJ; j<=maxJ; j+=plotDx)
-	for(int k=minK; k<=maxK; k+=plotDx){
-	  outFile<<dx*No2OutL
-		 <<"\t"<< getVar("X",i,j,k, No2OutL, No2OutV, No2OutB,
-				 No2OutRho, No2OutP, No2OutJ)
-		 <<"\t"<< getVar("Y",i,j,k, No2OutL, No2OutV, No2OutB,
-				 No2OutRho, No2OutP, No2OutJ)
-		 <<"\t"<< getVar("Z",i,j,k, No2OutL, No2OutV, No2OutB,
-				 No2OutRho, No2OutP, No2OutJ);
-	  for(int iVar=0; iVar<nVar; iVar++){
-	    outFile<<"\t"<<getVar(var_I[iVar],i,j,k,No2OutL, No2OutV,
-				  No2OutB, No2OutRho, No2OutP, No2OutJ);
-	  }	
-	  outFile<<"\n";
-	}
+    for(long iPoint = 0; iPoint<nPoint; iPoint++){
+      outFile<<dx*No2OutL;
+      for(int iVar=0; iVar<nVar+3; iVar++){
+	outFile<<"\t"<<getVar(varOut_I[iVar],
+			      pointList_ID[iPoint][0],
+			      pointList_ID[iPoint][1],
+			      pointList_ID[iPoint][2],
+			      No2OutL, No2OutV,
+			      No2OutB, No2OutRho, No2OutP, No2OutJ);
+      }	
+      outFile<<"\n";
+    }
     if(outFile.is_open()) outFile.close(); 
   }
-
+  
+  delete [] varOut_I;
 }
 
 double EMfields3D:: getVar(string var, int i, int j, int k,

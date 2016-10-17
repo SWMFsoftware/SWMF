@@ -1349,6 +1349,7 @@ void c_Solver:: write_plot_init(){
       
       // Correct PlotRange_ID based on PlotIndexRange_ID-----end
     }    
+
     
     if(doTestFunc){
       cout<<" plotstring= "<<plotString<<endl;
@@ -1545,16 +1546,44 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
     MPI_Reduce(&nPartOutputLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 
   }else{
+    const int minI = plotIndexRange_ID[iPlot][0];
+    const int maxI = plotIndexRange_ID[iPlot][1];
+    const int minJ = plotIndexRange_ID[iPlot][2];
+    const int maxJ = plotIndexRange_ID[iPlot][3];
+    const int minK = plotIndexRange_ID[iPlot][4];
+    const int maxK = plotIndexRange_ID[iPlot][5];
+    
+  // Create point list;
+  // How much will allocating/deleting every call slow down the code? -Yuxi
+    int plotDx = col->getplotDx(iPlot);
+    long nPoint;
+    nPoint =
+      floor((maxI-minI)/plotDx + 1)*
+      floor((maxJ-minJ)/plotDx + 1)*
+      floor((maxK-minK)/plotDx + 1);
+    int** pointList_ID = new int*[nPoint];
+    for(long i=0; i<nPoint; i++){
+      pointList_ID[i] = new int[3]; 
+    }
+
+    long iCount = 0; 
+    for(int i=minI; i<= maxI; i+=plotDx)
+      for(int j=minJ; j<=maxJ; j+=plotDx)
+	for(int k=minK; k<=maxK; k+=plotDx){
+	  pointList_ID[iCount][0] = i;
+	  pointList_ID[iCount][1] = j;
+	  pointList_ID[iCount][2] = k;
+	  iCount++;
+	}
+          
     EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
-			  col->getplotDx(iPlot),
-			  plotIndexRange_ID[iPlot][0],
-			  plotIndexRange_ID[iPlot][1],
-			  plotIndexRange_ID[iPlot][2],
-			  plotIndexRange_ID[iPlot][3],
-			  plotIndexRange_ID[iPlot][4],
-			  plotIndexRange_ID[iPlot][5],
-			  No2OutL, No2OutV, No2OutB, No2OutRho,
-			  No2OutP, No2OutJ);
+			  pointList_ID, nPoint,
+			  No2OutL, No2OutV, No2OutB,
+			  No2OutRho, No2OutP, No2OutJ);
+    for(long i=0; i<nPoint; i++){
+      delete [] pointList_ID[i];
+    }
+    delete [] pointList_ID; 
   }
 
 }
