@@ -128,7 +128,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
   common phys_units, $
      fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'

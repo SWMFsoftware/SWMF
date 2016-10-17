@@ -1978,7 +1978,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
   common phys_units, $
      fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
 
   if keyword_set(type) then $
      typeunit = strupcase(type) $
@@ -1986,6 +1986,8 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      return $
   else if strpos(headline, 'PIC') ge 0 then $
      typeunit = 'PIC' $
+  else if strpos(headline,' AU ') ge 0 then $
+     typeunit = 'OUTERHELIO' $
   else if strpos(headline, 'kg/m3') ge 0 or strpos(headline,' m/s') ge 0 then $
      typeunit = 'SI' $
   else if strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
@@ -2039,6 +2041,15 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         rhoSI = mpSI*1e6        ; mp/cm^3
         uSI   = 1e3             ; km/s
         pSI   = 1e-9            ; nPa
+        bSI   = 1e-9            ; nT
+        jSI   = 1e-6            ; muA/m^2
+     end
+     'OUTERHELIO': begin
+        xSI   = AuSI            ; AU
+        tSI   = 1.0             ; s
+        rhoSI = mpSI*1e6        ; mp/cm^3
+        uSI   = 1e3             ; km/s
+        pSI   = 1e-1            ; dyne/cm^2
         bSI   = 1e-9            ; nT
         jSI   = 1e-6            ; muA/m^2
      end

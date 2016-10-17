@@ -137,7 +137,7 @@ log_spacex=5
 log_spacey=5
 
 ; Some useful constants in SI units
-common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
+common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
 
 kbSI   = 1.3807d-23      ; Boltzmann constant
 mpSI   = 1.6726d-27      ; proton mass
@@ -145,6 +145,7 @@ mu0SI  = 4*!dpi*1d-7     ; vacuum permeability
 eSI    = 1.602d-19       ; elementary charge
 ReSI   = 6378d3          ; radius of Earth
 RsSI   = 6.96d8          ; radius of Sun
+AuSI   = 1.4959787d11    ; astronomical unit
 cSI    = 2.9979d8        ; speed of light
 e0SI   = 1/(mu0SI*cSI^2) ; vacuum permettivity 
 
