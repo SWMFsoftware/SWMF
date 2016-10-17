@@ -2415,9 +2415,8 @@ contains
 
     real    :: BetaProlongOrig = 0.0
     logical :: IsFirstCheck = .true.
-    character(len=4) :: NameVarTemp_V(100) = ''
+    character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
     !---------------------------------------------------------------------
-
     !\
     ! Check for some combinations of things that cannot be accepted as input
     !/
@@ -2944,8 +2943,7 @@ contains
     ! manually to older restart header files, but might become redundant 
     ! in the future).
     if(IsReadNameVarRestart) then
-       call split_string(NameVarRestartRead,100, NameVarTemp_V, &
-            nVarRestart)
+       call split_string(NameVarRestartRead, NameVarTemp_V, nVarRestart)
        if (nVarRestart /= nVarEquationRead) then
           write(*,*)'Number of variables in #EQUATION command is different'//&
                ' than the number of variables listed in #RESTARTVARIABLES.'
@@ -2954,7 +2952,7 @@ contains
           ! Save array of variable names
           if (allocated(NameVarRestart_V)) deallocate(NameVarRestart_V)
           allocate(NameVarRestart_V(nVarRestart))
-          NameVarRestart_V = NameVarTemp_V
+          NameVarRestart_V = NameVarTemp_V(1:nVarRestart)
        end if
     end if
 

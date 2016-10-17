@@ -11,7 +11,7 @@ module ModRestartFile
        nBlockAll, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
-  use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
+  use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface
@@ -49,13 +49,14 @@ module ModRestartFile
 
   ! simulation time read in upon restart
   real, public    :: tSimulationRead
-    
+
   ! Variables for allowing the user to use a different set of state variables
   ! from those saved in an existing restart file.
   logical, public :: DoChangeRestartVariables = .false.
-  integer, public :: nVarRestart = nVar 
-  character(len=100), public :: NameVarRestart
-  character(len=4),allocatable,public :: NameVarRestart_V(:)
+  integer, public :: nVarRestart = nVar
+  ! Length is set to exceed the variable names in the current equation module
+  ! so that accidental matches are avoided.
+  character(len(NameVar_V)+1), allocatable, public:: NameVarRestart_V(:)
 
   ! Local variables
   character(len=*), parameter :: StringRestartExt = ".rst"
