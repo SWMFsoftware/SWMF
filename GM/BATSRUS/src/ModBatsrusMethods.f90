@@ -196,7 +196,10 @@ contains
     nRefineLevelIC = 0
 
     ! Read initial data from restart files as necessary.
-    if(restart) call read_restart_files
+    if(restart)then
+       call user_action('reading restart files')
+       call read_restart_files
+    end if
 
     do iBlock = 1, nBlockMax
        ! Initialize solution blocks
