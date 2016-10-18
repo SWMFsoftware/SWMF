@@ -532,6 +532,27 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
+Name=test/Mover-Boris-relativistic@@(0+valeriy)
+Time=5
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Boris@@(0+valeriy)
+
+Compile=
+>>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic.diff
+>>>./Config.pl -application=test/Mover-Boris-relativistic -cplr-data-path=${TESTMover-Boris-relativisticKEYS} -model-data-path=${TESTMover-Boris-relativisticKEYS}  -link-option=-lc++  -amps-test=on
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_Mover-Boris-relativistic_compile... done" >> test_Mover-Boris-relativistic.diff
+
+Check=
+>>>@echo "test_Mover-Boris-relativistic_check..." >> test_Mover-Boris-relativistic.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic.diff
+>>>@ls -l test_Mover-Boris-relativistic.diff
+<#
+
+-------------------------------------------------------------------------------
+#>
 Name=Europa-test1
 Time=2
 
@@ -690,7 +711,7 @@ Ref=1{gcc}@@(0+valeriy)
 Ref=3{gcc}@@(0+stampede)
 
 
-Keys=-model-data-path=${MYDIR}/../../../AMPS_DATA_TEST/MARS@@(0+stampede) 
+Keys=-model-data-path=${MYDIR}/../../../AMPS_DATA_TEST/MARS@@(0+stampede+pleiades) 
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA/MARS@@(0+valeriy)
 
 
