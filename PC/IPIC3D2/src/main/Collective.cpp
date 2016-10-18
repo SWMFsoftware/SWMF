@@ -595,6 +595,19 @@ int Collective::ReadRestart(string inputfile) {
   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &ns);
   status = H5Dclose(dataset_id);
 
+  // read XLEN
+  dataset_id = H5Dopen2(file_id, "/topology/XLEN", H5P_DEFAULT); // HDF 1.8.8
+  status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &XLEN);
+  status = H5Dclose(dataset_id);
+  // read YLEN
+  dataset_id = H5Dopen2(file_id, "/topology/YLEN", H5P_DEFAULT); // HDF 1.8.8
+  status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &YLEN);
+  status = H5Dclose(dataset_id);
+  // read ZLEN
+  dataset_id = H5Dopen2(file_id, "/topology/ZLEN", H5P_DEFAULT); // HDF 1.8.8
+  status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &ZLEN);
+  status = H5Dclose(dataset_id);
+
   bool doReadNsTestPart;
   doReadNsTestPart = true;
 #ifdef BATSRUS
@@ -1865,6 +1878,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   ReadFromGMinit(paramint, griddim, paramreal, ss);
 
   if(XLEN*YLEN*ZLEN!=MPIdata::get_nprocs()){
+    if(RESTART1){
+      cout<<"Error: This is restart, and the number of processors does not match!!"<<endl;
+      abort();
+    }
     divide_processors(XLEN,YLEN,ZLEN,MPIdata::get_nprocs());
   }
   
