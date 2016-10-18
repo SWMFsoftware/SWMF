@@ -1,0 +1,25 @@
+
+
+#include input/test/mover-base.input
+
+#main
+  MoverIntegratorMode=Boris-relativistic 
+! MoverIntegratorMode=GuidingCenter
+
+  DEBUGGERMODE=ON
+
+  ErrorLog=PT
+  Prefix=AMPS
+  DiagnosticStream=PT
+  OutputDirectory=PT/plots
+#endmain
+
+#block ../input/ccmc.pl
+  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly
+  InjectionLocationFile=ccmc.InjectionLocation.dat
+#endblock
+
+#interface
+  cell_centered_linear_interpolation_mode=on
+  cell_centered_linear_interpolation_src=default
+#endinterface
