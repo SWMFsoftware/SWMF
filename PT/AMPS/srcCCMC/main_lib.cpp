@@ -295,12 +295,15 @@ void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,doub
 
 
 void amps_init() {
-  PIC::InitMPI();
+
+        PIC::InitMPI();
 	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 	//init the particle solver
 	CCMC::Init_BeforeParser();
 	PIC::Init_BeforeParser();
+
+//        PIC::Init_AfterParser();
 	CCMC::Init_AfterParser();
 
 	//load the control file
@@ -323,8 +326,8 @@ void amps_init() {
 	}*/
 
 	//read the domain size from the data file
-#ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
-  #ifndef _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+#ifndef _NO_KAMELEON_CALLS_
+  #ifndef _NO_KAMELEON_CALLS__DOMAIN_LIMITS_
 	double xminKAMELEON[3],xmaxKAMELEON[3];
 	bool DomainSizeChangeFlag=false;
 
@@ -335,20 +338,20 @@ void amps_init() {
 	}
 
 	if (PIC::ThisThread==0) {
-	  if (DomainSizeChangeFlag==true) printf("$PREFIX: WARNING: the domain size is changed to be consistent with that of the KAMELEON background data file\n");
+	  if (DomainSizeChangeFlag==true) printf("$PREFIX: WARNING: the domain size is changed to be consistent with that of the KAMELEON background data file");
 
 	  printf("$PREFIX: Kameleon domain size: xmin=%e %e %e, xmax=%e %e %e\n",xminKAMELEON[0],xminKAMELEON[1],xminKAMELEON[2],xmaxKAMELEON[0],xmaxKAMELEON[1],xmaxKAMELEON[2]);
 	  printf("$PREFIX: Particle tracking domain size : xmin=%e %e %e, xmax=%e %e %e\n",PIC::CCMC::Domain::xmin[0],PIC::CCMC::Domain::xmin[1],PIC::CCMC::Domain::xmin[2],
 	      PIC::CCMC::Domain::xmax[0],PIC::CCMC::Domain::xmax[1],PIC::CCMC::Domain::xmax[2]);
 	}
 
-  #endif //_CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+  #endif //_NO_KAMELEON_CALLS__DOMAIN_LIMITS_
 
 	if (PIC::ThisThread==0) {
 	  cout << "xmin=" << PIC::CCMC::Domain::xmin[0] << ", " << PIC::CCMC::Domain::xmin[1] << ", " << PIC::CCMC::Domain::xmin[2] << endl;
 	  cout << "xmax=" << PIC::CCMC::Domain::xmax[0] << ", " << PIC::CCMC::Domain::xmax[1] << ", " << PIC::CCMC::Domain::xmax[2] << endl;
 	}
-#endif //_CCMC_TEST__NO_KAMELEON_CALLS_
+#endif //_NO_KAMELEON_CALLS_
 
 
 	for (idim=0;idim<3;idim++) {
@@ -402,31 +405,28 @@ void amps_init() {
 	//init the volume of the cells'
 	PIC::Mesh::mesh.InitCellMeasure();
 
+        //init the PIC solver
+//        PIC::Init_AfterParser();
+//        PIC::Mover::Init();
+
 	//read the data file
   if (PIC::CPLR::DATAFILE::BinaryFileExists("KAMELEON-TEST")==true)  {
     PIC::CPLR::DATAFILE::LoadBinaryFile("KAMELEON-TEST");
   }
   else {
 
-    #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
-/*    char BackgroundDataFileName[]="amps.Background.data.cdf";
-
-    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
-      //substitute the file name on that used in tests
-      sprintf(BackgroundDataFileName,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
-    }*/
-
+    #ifndef _NO_KAMELEON_CALLS_
 	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CCMC::BackgroundDataFileName);
 
 	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
    #else
 	  exit(__LINE__,__FILE__,"Error: the background data file is not found");
-   #endif //_CCMC_TEST__NO_KAMELEON_CALLS_
+   #endif //_NO_KAMELEON_CALLS_
   }
 
 	//init the PIC solver
-	PIC::Init_AfterParser();
-	PIC::Mover::Init();
+PIC::Init_AfterParser();
+PIC::Mover::Init();
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
