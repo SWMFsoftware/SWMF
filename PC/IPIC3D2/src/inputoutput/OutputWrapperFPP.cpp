@@ -174,6 +174,19 @@ void OutputWrapperFPP::append_restart(int cycle)
 #endif
 }
 
+
+void OutputWrapperFPP::append_restart_setting(string filename)
+{
+  // settings*.hdf file will not change during the simulation. But
+  // the restart files, include this one, may be moved to other
+  // directory for backup during simulation. So it is better to save
+  // settings*.hdf at each restart cycle. 
+  bool doEraseFile = true;
+  hdf5_agent.open_append(RestartDirName +"/"+filename,doEraseFile);
+  output_mgr.output("collective + total_topology + proc_topology", 0);
+  hdf5_agent.close();
+}
+
 #ifdef BATSRUS
 void OutputWrapperFPP::getFluidState(int nDim, int nPoint, double *Xyz_I,
 				     double *data_I,int nVar){

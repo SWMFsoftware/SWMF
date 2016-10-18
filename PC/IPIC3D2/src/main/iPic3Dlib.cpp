@@ -673,6 +673,10 @@ void c_Solver::WriteRestart(int cycle)
   if ((restart_cycle>0 && cycle%restart_cycle==0) || col->getCase()=="BATSRUS"){
 	  convertParticlesToSynched();
 	  fetch_outputWrapperFPP().append_restart(cycle);
+
+	  stringstream settingFile;
+	  settingFile<<"settings"<<"_region"<<col->getiRegion()<<".hdf";  
+	  if(myrank==0)fetch_outputWrapperFPP().append_restart_setting(settingFile.str());
   }
 #endif
 }

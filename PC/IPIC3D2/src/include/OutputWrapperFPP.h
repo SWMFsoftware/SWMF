@@ -59,6 +59,7 @@ class OutputWrapperFPP
   void append_output(const char* tag, int cycle);
   void append_output(const char* tag, int cycle, int sample);
   void append_restart(int cycle);
+  void append_restart_setting(string filename);
 
 #ifdef BATSRUS
   void getFluidState(int nDim, int nPoint, double *Xyz_I, double *data_I,
