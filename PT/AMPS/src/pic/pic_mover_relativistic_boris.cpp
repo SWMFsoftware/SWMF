@@ -17,7 +17,7 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   double dtTemp;
   PIC::ParticleBuffer::byte *ParticleData;
-  double gamma,vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3],Charge;
+  double gamma,vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3];
   double mass,uMinus[3],pFinal[3],ElectricCharge,c,E[3],B[3],QdT_over_twoM;
   int idim;
 
@@ -34,6 +34,7 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
   PIC::ParticleBuffer::GetX(xInit,ParticleData);
   spec=PIC::ParticleBuffer::GetI(ParticleData);
 
+  ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
   mass=PIC::MolecularData::GetMass(spec);
   gamma=1.0/sqrt(1.0-(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2])/(SpeedOfLight*SpeedOfLight));
 
@@ -50,7 +51,7 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
   PIC::CPLR::GetBackgroundMagneticField(B);
 
   //convert velocity into momentum and advance particle half time step
-  QdT_over_twoM=Charge*dtTotal/(2.0*mass);
+  QdT_over_twoM=ElectricCharge*dtTotal/(2.0*mass);
   for (idim=0;idim<3;idim++) uMinus[idim]=gamma*vInit[idim]+QdT_over_twoM*E[idim];
 
   //first rotation
