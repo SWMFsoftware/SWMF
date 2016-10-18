@@ -176,6 +176,21 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
     //close file
     kameleon.close();
     std::cout << "Kameleon file "<< fname << " was loaded successfully\n";
+
+    //initialize derived data
+    if (PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate==true) {
+      #if _PIC_COUPLER__INTERPOLATION_MODE_==_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+      exit(__LINE__,__FILE__,"ERROR: magnetic field gradient can't be computed with 0th order interpolation method");
+      #endif
+
+      for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+        PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(node);
+      }
+
+      //Exchange derived data betwenn the boundary nodes
+      PIC::Mesh::mesh.ParallelBlockDataExchange();
+    }
+
   }
 }
 
