@@ -513,6 +513,10 @@ sub ReadMainBlock {
 	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
 	    $MoverIntegrator='PIC::Mover::Boris';
 	}
+        elsif($s0 eq "BORIS-RELATIVISTIC"){
+            $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+            $MoverIntegrator='PIC::Mover::Relativistic::Boris';
+        }
 	elsif($s0 eq "GUIDINGCENTER"){
 	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
 	    $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
