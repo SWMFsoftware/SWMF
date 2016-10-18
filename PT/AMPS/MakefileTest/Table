@@ -497,16 +497,37 @@ Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Guiding-Center@@(0+valeriy)
 
 Compile=
 >>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center.diff
->>>./Config.pl -application=test/Mover-guiding-center -cplr-data-path=${TESTMover-guiding-centerKEYS} -model-data-path=${TESTMover-guiding-centerKEYS}   -D _CCMC_TEST__NO_KAMELEON_CALLS_ -link-option=-lc++  -amps-test=on 
+>>>./Config.pl -application=test/Mover-guiding-center -cplr-data-path=${TESTMover-guiding-centerKEYS} -model-data-path=${TESTMover-guiding-centerKEYS}   -link-option=-lc++  -amps-test=on 
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
 >>>@echo "test_Mover-guiding-center_compile... done" >> test_Mover-guiding-center.diff
 
 Check=
 >>>@echo "test_Mover-guiding-center_check..." >> test_Mover-guiding-center.diff
->>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-guiding-centerDIR}/amps.TrajectoryTracking.s=0.O2_PLUS.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center.diff
 >>>@ls -l test_Mover-guiding-center.diff
+<#
+
+-------------------------------------------------------------------------------
+#>
+Name=test/Mover-Boris@@(0+valeriy)
+Time=5
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Boris@@(0+valeriy)
+
+Compile=
+>>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris.diff
+>>>./Config.pl -application=test/Mover-Boris -cplr-data-path=${TESTMover-BorisKEYS} -model-data-path=${TESTMover-BorisKEYS}  -link-option=-lc++  -amps-test=on
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_Mover-Boris_compile... done" >> test_Mover-Boris.diff
+
+Check=
+>>>@echo "test_Mover-Boris_check..." >> test_Mover-Boris.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris.diff
+>>>@ls -l test_Mover-Boris.diff
 <#
 
 -------------------------------------------------------------------------------
