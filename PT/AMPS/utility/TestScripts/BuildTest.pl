@@ -81,6 +81,8 @@ while(@Table){
     $TimeTotal+=$Time;
     &check_overtime;
 
+    $Keys=~s/\s+$//; #remove spaces from the end of the line
+
     for (my $i = 0; $i<=@Base-1; $i++){
 	# general part with all tests
 	if($Base[$i]=~m/<APP.*?>/){
