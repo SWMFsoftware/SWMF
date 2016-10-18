@@ -35,6 +35,8 @@ SEARCH_C_GENERAL=
 #define the "compile kameleon' flag only when KAMELEON is used (to exclude including of the KAMELEON headers on machimes where KAMELEON is not installed) 
 ifneq ($(KAMELEON),nokameleon)   
 	SEARCH_C+=-D _PIC_COMPILE__KAMELEON_ 
+else
+	SEARCH_C+=-D _NO_KAMELEON_CALLS_
 endif
 
 
