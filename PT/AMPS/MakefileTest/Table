@@ -198,7 +198,7 @@ Name=Earth
 Time=10 
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy) 
-Keys=${MYDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede)
+Keys=${MYDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
 
 Compile=
 >>>@echo "test_Earth_compile..." > test_Earth.diff
