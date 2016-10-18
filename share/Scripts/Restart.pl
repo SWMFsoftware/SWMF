@@ -13,7 +13,9 @@ my $CheckOnly   = ($c or $check);
 my $Verbose     = ($v or $verbose);
 my $TimeUnit    = ($t or $u or $timeunit or $unit);
 my $Repeat      = ($r or $repeat);
+my $Keep        = ($k or $keep);   # Number of restart trees to keep
 my $Wait        = ($w or $wait or 120);
+my @RestartTree;                   # List of restart trees created
 my $RestartTree = $ARGV[0];        # Name of the restart tree directory
 $RestartTree =~ s/\/+$//;          # Remove trailing /
 
@@ -162,6 +164,14 @@ LOOP:{
     if(not $InputOnly){
 	&create_tree_check;
 	&create_tree unless $CheckOnly;
+	if($Keep and $Repeat){
+	    push(@RestartTree, $RestartTree);
+	    if($#RestartTree >= $Keep){
+		my $OldTree = shift(@RestartTree);
+		print "# Restart.pl removing $OldTree\n";
+		system("rm -rf $OldTree");
+	    }
+	}
     }
 
     # Link restart tree if required
@@ -532,6 +542,9 @@ Usage:
     -c -check   Check but do not actually create or link.
                 Default is to create and link as specified by -i and -o.
 
+    -k=NUMBER   Keep the last NUMBER restart trees. Only works with the -r(epeat)
+    -keep=...   argument. By default all restart trees are kept.
+
     -r=REPEAT   Repeat creating (and linking unless -o is used) of the 
     -repeat=... restart tree every REPEAT seconds. This can be used to
                 store multiple copies of the restart tree.
@@ -581,9 +594,10 @@ Restart.pl
 
     Check every 15 seconds for new restart output, and move it to 
     a new restart tree with the date and time in the name,
+    only keep the last two restart trees,
     and save output and error messages (if any) into Restart.log:
 
-Restart.pl -o -r=15 -t=date >& Restart.log &
+Restart.pl -o -r=15 -k=2 -t=date >& Restart.log &
 
     Check linking to the existing RESTART_t002.00h tree:
 
