@@ -168,8 +168,8 @@ LOOP:{
 	    push(@RestartTree, $RestartTree);
 	    if($#RestartTree >= $Keep){
 		my $OldTree = shift(@RestartTree);
-		print "# Restart.pl removing $OldTree\n";
-		system("rm -rf $OldTree");
+		print "# Restart.pl removing $OldTree in the background\n";
+		exec("rm -rf $OldTree") unless fork();
 	    }
 	}
     }
