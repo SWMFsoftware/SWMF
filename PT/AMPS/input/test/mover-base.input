@@ -1,0 +1,132 @@
+
+#main
+
+SpeciesList=O2_PLUS
+
+
+ErrorLog=PT
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+
+
+DebuggerMode=off !on,off
+ForceRepeatableSimulationPath=on ! on,off 
+
+makefile SOURCES=src
+makefile RUNDIR=run
+makefile MPIRUN=mpirun -np 4
+makefile ExternalModules=models/exosphere
+
+makefile KAMELEON=/Users/ccmc/Kameleon-plus
+makefile BOOST=/Users/vtenishe/ccmc/boost
+
+ProjectSourceDirectory=srcCCMC 
+TrajectoryIntersectionWithBlockFaces=off !on, off
+
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
+SourceDirectory=src
+
+!ErrorLog=amps_error.log
+Prefix=AMPS
+!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log'
+!OutputDirectory=output/PT
+
+!PT/plots
+ErrorLog=PT/amps_error.log
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+
+
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=on ! on,off
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
+
+DEBUGGERMODE=ON
+
+#endmain
+
+#include species.input
+
+#UserDefinitions
+  PIC=on ! on, off
+  Mesh=on ! on, off
+#endUserDefinitions
+
+#mesh
+!define _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_OFF_
+! define _USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_ _USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_OFF_
+#endmesh
+
+#General
+
+define _PIC_DEBUGGER_MODE_  _PIC_DEBUGGER_MODE_ON_
+define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_  _PIC_DEBUGGER_MODE_ON_
+
+  ReferenceInjectionParticleNumber=200
+  MaxMeshRefinmentLevel=12
+  EnforceRequestedMeshResolution=off !on,off
+  InitialSampleLength=100
+  TestRunTotalIteration=-1 !set infinite number ot iterations 
+
+  BlockCells=5,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=30000
+
+  define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
+! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+
+! define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) CCMC::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+  
+
+! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::GuidingCenter::Mover_SecondOrder(ptr,LocalTimeStep,node)
+!  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+#endGeneral
+
+#block ../exosphere.pl
+  SPICE=off 
+  define _TARGET_ _TARGET_NONE_
+
+! define _CCMC_TEST__NO_KAMELEON_CALLS_
+! define _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+
+
+! define _ICES_CREATE_COORDINATE_LIST_
+  define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
+! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path
+  IcesModelCase=Europa09
+
+  addPhysicalModelHeader=ccmc.h
+
+  BackgroundIonInjection=on \\ !on,off
+    InjectionMode=SteadyState \\ ! SteadyState, TimeDependent
+    vmax=1500.0e3 \\ !the maximum velocity of the injected particles
+    IonNumberDensityFraction(O2_PLUS)=1.0
+
+#endblock
+
+#block ../input/ccmc.pl
+  xmin=(-1.0,-1.0,-1.0)
+  xmax=(1.0,1.0,1.0)
+
+  sphere=on \\ !on, off
+    radius=1.0
+
+  SimulationMode= IndividualParticlesOnly ! EntireFlow ! IndividualParticlesOnly !EntireFlow, IndividualParticleOnly 
+  InjectionLocationFile=ccmc.InjectionLocation.dat  
+
+#endblock
+
+
