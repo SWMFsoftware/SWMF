@@ -3,6 +3,13 @@ default: PWOM
 include Makefile.def
 include Makefile.planet
 
+# Serial and parallel execution defaults:
+SERIAL   =
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
+
 help:
 	@echo Makefile targets:
 	@echo
@@ -67,8 +74,8 @@ TWOSTREAM:
 	cd ${DATAREADINDICESDIR}; make LIB
 	cd srcTWOSTREAM;          make TWOSTREAM
 
-nompirun: PWOM
-	cd ${RUNDIR}; ./PWOM.exe
+serialrun: PWOM
+	cd ${RUNDIR}; ${SERIAL} ./PWOM.exe
 
 LIB:
 	cd src; make LIB
@@ -80,7 +87,6 @@ LIB:
 PARAMIN = PARAM.in
 TESTDIR = run_test
 CODE    = PWOM
-MPIRUN  = mpirun -np 2
 
 rundir:
 	mkdir -p ${RUNDIR}/PW

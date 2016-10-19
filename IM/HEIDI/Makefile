@@ -4,6 +4,13 @@ default: HEIDI
 
 include Makefile.def
 
+# Serial and parallel execution defaults:
+SERIAL   =
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
+
 INSTALLFILES =  src/Makefile.DEPEND \
 		src/Makefile.RULES \
 		srcInterface/Makefile.DEPEND
@@ -80,16 +87,10 @@ test_numeric_rundir:
 
 # The tests run on 1 or 2 PE-s only
 test_analytic_run: 
-	cd ${TESTDIR1}; perl -e \
-		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
-		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
-		print "$$_\n"; exec($$_)'
+	cd ${TESTDIR1}; ${PARALLEL} ${NPFLAG} 2 ./HEIDI.exe > runlog
 
 test_numeric_run: 
-	cd ${TESTDIR2}; perl -e \
-		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
-		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
-		print "$$_\n"; exec($$_)'
+	cd ${TESTDIR2}; ${PARALLEL} ${NPFLAG} 2 ./HEIDI.exe > runlog
 
 test_analytic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \

@@ -31,6 +31,14 @@ ALL : SWMF PIDL PSPH EARTH_TRAJ
 include Makefile.def
 include Makefile.conf
 
+# Defaults for serial and parallel runs
+SERIAL   =
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+
+MPIRUN = ${PARALLEL} ${NPFLAG} ${NP}
+
 help:
 	@echo ' '
 	@echo '  You can "make" the following:'
@@ -83,10 +91,9 @@ help:
 	@echo '    rundir MACHINE=columbia (select job scripts for columbia)'
 	@echo '    rundir_code (saves code archive in run directory)'
 	@echo ' '
-	@echo '    mpirun      (make SWMF and mpirun SWMF.exe on 2 PEs)'
-	@echo '    mpirun NP=7 (make SWMF and mpirun SWMF.exe on 7 PEs)'
-	@echo '    mprun  NP=5 (make SWMF and mprun  SWMF.exe on 5 PEs)'
-	@echo '    nompirun    (make SWMF and run it without MPI)'
+	@echo '    parallelrun (make SWMF and run SWMF.exe on ${NP} PEs)'
+	@echo '    parallelrun NP=7 (make SWMF and run SWMF.exe on 7 PEs)'
+	@echo '    serialrun   (make SWMF and run it on 1 processor)'
 	@echo ' '
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
 	@echo '    cleanclones (remove src/Makefile-s from BATSRUS clones)'
@@ -398,14 +405,11 @@ rundir_code:
 #
 NP=2
 
-mpirun: ENV_CHECK SWMF ${RUNDIR}
-	cd ${RUNDIR}; mpirun -np ${NP} ./SWMF.exe
+parallelrun: ENV_CHECK SWMF ${RUNDIR}
+	cd ${RUNDIR}; ${MPIRUN} ./SWMF.exe
 
-mprun: ENV_CHECK SWMF ${RUNDIR}
-	cd ${RUNDIR}; mprun -np ${NP} ./SWMF.exe
-
-nompirun: ENV_CHECK SWMF ${RUNDIR}
-	cd ${RUNDIR}; ./SWMF.exe
+serialrun: ENV_CHECK SWMF ${RUNDIR}
+	cd ${RUNDIR}; ${SERIAL} ./SWMF.exe
 
 ETAGS = etags
 

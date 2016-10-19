@@ -61,15 +61,12 @@ TESTDIR = run_test
 # Reference solution is put into this directory when needed:
 REFDIR = run_test_ref
 
-# Tests are done either parallel or serial. Default:
-MPIRUN = mpirun -np 2
-
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test KEEP=y                (run tests and keep run directories)"
-	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
-	@echo "    test MPIRUN='mprun -np 2'  (run tests with mprun -np 2)"
+	@echo "    test MPIRUN=               (run tests serially)"
+	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
+	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
 	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_amr                   (run AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"

@@ -578,7 +578,7 @@ contains
     use ModMpi
 
     integer :: i, iError
-    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
+    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, SmgNed_DD
     real, dimension(3,nKpMag):: &
          dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
 
@@ -609,15 +609,15 @@ contains
        ! Rotation matrix from Cartesian to spherical coordinates
        XyzSph_DD = rot_xyz_sph(XyzKp_DI(:,i))
 
-       ! Rotation matrix from Cartesian to North-East-Down components
+       ! Rotation matrix from SMG to local North-East-Down components
        ! North = -Theta
-       XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+       SmgNed_DD(:,1) = -XyzSph_DD(:,2) 
        ! East = Phi
-       XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+       SmgNed_DD(:,2) =  XyzSph_DD(:,3)
        ! Down = -R
-       XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+       SmgNed_DD(:,3) = -XyzSph_DD(:,1)
 
-       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  XyzNed_DD)
+       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  SmgNed_DD)
     end do
 
     ! MPI Reduce to head node.
@@ -673,7 +673,7 @@ contains
     use ModMpi
 
     integer :: i, iError
-    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
+    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, SmgNed_DD
     real, dimension(3,nAeMag):: &
          dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
 
@@ -703,15 +703,15 @@ contains
        ! Rotation matrix from Cartesian to spherical coordinates
        XyzSph_DD = rot_xyz_sph(XyzAe_DI(:,i))
 
-       ! Rotation matrix from Cartesian to North-East-Down components
+       ! Rotation matrix from SMG to local North-East-Down components
        ! North = -Theta
-       XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+       SmgNed_DD(:,1) = -XyzSph_DD(:,2) 
        ! East = Phi
-       XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+       SmgNed_DD(:,2) =  XyzSph_DD(:,3)
        ! Down = -R
-       XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+       SmgNed_DD(:,3) = -XyzSph_DD(:,1)
 
-       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  XyzNed_DD)
+       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  SmgNed_DD)
     end do
 
     ! MPI Reduce to head node.
@@ -1021,7 +1021,7 @@ contains
     character(len=6):: TypeFileNow
 
     real:: Xyz_D(3)
-    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3), XyzSph_DD(3,3), XyzNed_DD(3,3)
+    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3), XyzSph_DD(3,3), SmgNed_DD(3,3)
 
     real, dimension(:,:), allocatable :: &
          MagGmXyz_DI, MagSmXyz_DI, &
@@ -1125,23 +1125,24 @@ contains
     if(iProc==0)then
        do iMag = 1, nMagNow
           ! Convert from SMG components to North-East-Down components
+          ! except for the "DST" station at the center of the Earth.
           if(any(MagSmXyz_DI(:,iMag) /= 0.0)) then
 
              ! Rotation matrix from Cartesian to spherical coordinates
              XyzSph_DD = rot_xyz_sph(MagSmXyz_DI(:,iMag))
 
-             ! Rotation matrix from Cartesian to North-East-Down components
+             ! Rotation matrix from SMG to local North-East-Down components
              ! North = -Theta
-             XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+             SmgNed_DD(:,1) = -XyzSph_DD(:,2) 
              ! East = Phi
-             XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+             SmgNed_DD(:,2) =  XyzSph_DD(:,3)
              ! Down = -R
-             XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+             SmgNed_DD(:,3) = -XyzSph_DD(:,1)
 
-             dBMhd_DI(:,iMag)     = matmul(dBMhd_DI(:,iMag),  XyzNed_DD)
-             dBFac_DI(:,iMag)     = matmul(dBFac_DI(:,iMag),  XyzNed_DD)
-             dBHall_DI(:,iMag)    = matmul(dBHall_DI(:,iMag), XyzNed_DD)
-             dBPedersen_DI(:,iMag)= matmul(dBPedersen_DI(:,iMag), XyzNed_DD)
+             dBMhd_DI(:,iMag)     = matmul(dBMhd_DI(:,iMag),  SmgNed_DD)
+             dBFac_DI(:,iMag)     = matmul(dBFac_DI(:,iMag),  SmgNed_DD)
+             dBHall_DI(:,iMag)    = matmul(dBHall_DI(:,iMag), SmgNed_DD)
+             dBPedersen_DI(:,iMag)= matmul(dBPedersen_DI(:,iMag), SmgNed_DD)
           end if
 
        end do
@@ -1151,10 +1152,6 @@ contains
        dBFac_DI      = No2Io_V(UnitB_)*dBFac_DI
        dBHall_DI     = No2Io_V(UnitB_)*dBHall_DI
        dBPedersen_DI = No2Io_V(UnitB_)*dBPedersen_DI
-
-       !!! TEST !!!!
-       !dBHall_DI     = IeMagPerturb_DII(:,1,iStart+1:iEnd)
-       !dBPedersen_DI = IeMagPerturb_DII(:,2,iStart+1:iEnd)
 
        ! Get total perturbation:
        dBTotal_DI = dBMhd_DI + dBFac_DI + dBHall_DI + dBPedersen_DI 

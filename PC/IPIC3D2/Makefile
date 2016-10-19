@@ -3,6 +3,13 @@ default: IPIC3D
 include Makefile.conf
 include Makefile.def
 
+# Serial and parallel execution defaults:
+SERIAL   =
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
+
 help:
 	@echo Makefile targets:
 	@echo
@@ -36,16 +43,14 @@ IPIC3D:
 PIDL:
 	cd ${SHAREDIR}; $(MAKE) PIDL
 
-nompirun: IPIC3D
-	cd ${RUNDIR}; ./IPIC3D.exe IPIC.in
+serialrun: IPIC3D
+	cd ${RUNDIR}; ${SERIAL} ./IPIC3D.exe IPIC.in
 
 LIB: 
 	cd src; $(MAKE) LIB
 	cd srcInterface; $(MAKE) LIB
 
 TESTDIR = run_test
-
-MPIRUN = mpirun -np 2
 
 CHECKDIR  = output
 
@@ -74,11 +79,7 @@ test_ipic3d_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 
 test_ipic3d_run:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 4 ./IPIC3D.exe IPIC.in > runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 4 ./IPIC3D.exe IPIC.in > runlog; \
-	fi;
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./IPIC3D.exe IPIC.in > runlog
 
 test_ipic3d_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7\
@@ -106,11 +107,7 @@ test_h5hut_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 
 test_h5hut_run:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 4 ${BINDIR}/IPIC3D.exe > runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 4 ${BINDIR}/IPIC3D.exe > runlog; \
-	fi;
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./IPIC3D.exe IPIC.in > runlog
 
 test_h5hut_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7\
@@ -141,11 +138,7 @@ test_ipic3d_vtk_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 
 test_ipic3d_vtk_run:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 8 ./IPIC3D.exe  ../input/GEM3D.inp | tee runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 8 ./IPIC3D.exe  ../input/GEM3D.inp  | tee runlog; \
-	fi;
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 8 ./IPIC3D.exe ../input/GEM3D.inp | tee runlog
 
 test_ipic3d_vtk_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7\

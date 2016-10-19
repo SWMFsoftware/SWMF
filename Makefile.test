@@ -5,16 +5,14 @@
 
 TESTDIR = ${DIR}/run_test
 
-MPIRUN = mpirun -np 2
-
 TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test KEEP=y                (run tests and keep run directories)"
-	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
-	@echo "    test MPIRUN='mpiexec'      (run tests with mpiexec)"
+	@echo "    test MPIRUN=               (run tests serially)"
+	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
+	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_util                  (run util/ tests)"
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
@@ -150,7 +148,7 @@ test_cz_rundir:
 	cp ${CZDIR}/input/gong.l4b.14 ${TESTDIR}/
 
 test_cz_run:
-	cd ${TESTDIR}; mpirun -n 6 ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 6 ./SWMF.exe > runlog
 
 test_cz_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-13 -r=1e-10 \
@@ -1284,7 +1282,7 @@ test_esmf_check:
 	ls -l test_esmf.diff
 
 #### FOR CCMC ONLY #######################
-# CCMC instalation, compiling, and  PostIDL.exe	 generation
+# CCMC instalation, compiling, and  PostIDL.exe	generation
 # Use "Config.pl -install" before "${MAKE} ccmc_compile" or "make test_ccmc"
 # Public version. Specific job scripts are to be substituted for generic mpirun
 #

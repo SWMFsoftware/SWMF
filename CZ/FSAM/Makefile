@@ -28,8 +28,8 @@ xfsam:
 	cd ${UTILDIR};  $(MAKE) install
 	cd src; 	$(MAKE) xfsam
 
-nompirun: xfsam
-	cd ${RUNDIR}; ./xfsam.exe
+serialrun: xfsam
+	cd ${RUNDIR}; ${SERIAL} ./xfsam.exe
 
 LIB:	
 	cd src; $(MAKE) LIB
@@ -77,11 +77,7 @@ test_rundir:
 	${MAKE} rundir PROBS=test RUNDIR=${TESTDIR} STANDALONE="YES"
 
 test_run:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 6 xfsam.exe > runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 6 xfsam.exe > runlog; \
-	fi;
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 6 xfsam.exe > runlog
 
 test_check:
 	grep -v 'Grid cell updates' ${TESTDIR}/runlog > ${TESTDIR}/runlog.new

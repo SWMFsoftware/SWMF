@@ -8,6 +8,13 @@ default : ${DEFAULT_TARGET}
 
 include Makefile.def
 
+# Serial and parallel execution defaults:
+SERIAL   =
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
+
 #
 # Menu of make options
 #
@@ -43,10 +50,9 @@ help:
 	@echo '    rundir      (create run directory for standalone or SWMF)'
 	@echo '    rundir RUNDIR=run_test (create run directory run_test)'
 	@echo ' '
-	@echo "    nompirun    (make and run ${DEFAULT_EXE} on 1 PE)"
-	@echo "    mpirun      (make and mpirun ${DEFAULT_EXE} on 8 PEs)"
-	@echo "    mpirun NP=7 RUNDIR=run_test (run on 7 PEs in run_test)"
-	@echo "    mprun NP=5  (make and mprun ${DEFAULT_EXE} on 5 PEs)"
+	@echo "    serialrun    (make and run ${DEFAULT_EXE} on 1 PE)"
+	@echo "    parallelrun  (make and ${MPIRUN} ${DEFAULT_EXE})"
+	@echo "    parallelrun NP=7 RUNDIR=run_test (cd run_test; ${PARALLEL} ${NPFLAG} 7 ${DEFAULT_EXE})"
 	@echo ' '	
 	@echo '    clean     (remove temp files like: *~ *.o *.kmo *.mod *.T *.lst core)'
 	@echo '    distclean (equivalent to ./Config.pl -uninstall)'
@@ -175,16 +181,11 @@ rundir_rh:
 #       Run the default code on NP processors
 #
 
-NP=2
+parallelrun: ${DEFAULT_TARGET}
+	cd ${RUNDIR}; ${MPIRUN} ./${DEFAULT_EXE}
 
-mpirun: ${DEFAULT_TARGET}
-	cd ${RUNDIR}; mpirun -np ${NP} ./${DEFAULT_EXE}
-
-mprun: ${DEFAULT_TARGET}
-	cd ${RUNDIR}; mprun -np ${NP} ./${DEFAULT_EXE}
-
-nompirun: ${DEFAULT_TARGET}
-	cd ${RUNDIR}; ./${DEFAULT_EXE}
+serialrun: ${DEFAULT_TARGET}
+	cd ${RUNDIR}; ${SERIAL} ./${DEFAULT_EXE}
 
 #					^CFG IF DOC BEGIN
 #	Create the documentation files      ^CFG IF NOT REMOVEDOCTEX BEGIN
