@@ -24,6 +24,11 @@ echo `which mpif90`
 # Go to the GFORTRAN test directory
 cd Tmp_gfortran
 
+# Either check out the code from scratch or just update and reinstall
+# cd SWMF; Config.pl -uninstall; cvs update -d; Config.pl -install
+# cd BATL; Config.pl -uninstall; cvs update -d; Config.pl -install
+# cd ..
+
 # Remove the previous test directory if necessary
 rm -rf SWMF
 
@@ -38,14 +43,14 @@ cd BATL
 cd ..
 
 # Directory on herot
-export NEWTESTDIR=Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/nyx_gfortran
+export NEWTESTDIR=Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/MACHINENAME
 
 # Run test
-/usr/bin/make -j test MPIRUN='mpirun -np 4' KEEP=y >> test_swmf.log 2>&1
+/usr/bin/make -j test NP=8 KEEP=y >> test_swmf.log 2>&1
 
 # copy results to herot
 /usr/bin/ssh herot.engin.umich.edu mkdir -p ${NEWTESTDIR}
 /usr/bin/scp test_swmf.res test_swmf.log herot.engin.umich.edu:${NEWTESTDIR}
 
 # resubmit the job at 19:40 to execute the nightly test
-qsub -a 1940 /home/gtoth/bin/test_swmf_gfortran.job
+qsub -a 1940 /home/gtoth/bin/test_swmf.job

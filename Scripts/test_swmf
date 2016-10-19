@@ -68,14 +68,17 @@ cd ..
 #
 # Directory on herot. The date is set when the test starts!
 #
-setenv NEWTESTDIR Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/mesh
+setenv NEWTESTDIR Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/MACHINENAME
 
 #
 # Select one of the following options:
 #
-#make -j4 test MPIRUN= >>& test_swmf.log #	        Run the tests on 1 processor
-#make -j4 test >>& test_swmf.log #		        Run the tests on 2 processors
-make -j4 test MPIRUN="mpirun -np 4' >>& test_swmf.log #	Run the tests on 4 processors
+#make -j test MPIRUN= >>& test_swmf.log # Compile parallel but run on 1 processor
+#make -j test >>& test_swmf.log #	  Run the tests on 2 processors
+#make -j test NP=4 >>& test_swmf.log #	  Run the tests on 4 processors
+
+# Run with aprun -q (quiet) on 8 cores, serial tests are run with aprun -n 1
+make -j test PARALLEL='aprun -q' NP=8 SERIAL='aprun -q -n 1' 
 
 #
 # Send back the test results by scp
