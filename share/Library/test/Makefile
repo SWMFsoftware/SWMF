@@ -5,7 +5,11 @@ include ../../../Makefile.def
 
 include ../../../Makefile.conf
 
-MPIRUN = mpirun -np 2
+SERIAL = 
+PARALLEL = mpirun
+NPFLAG   = -np
+NP       = 2
+MPIRUN = ${PARALLEL} ${NPFLAG} ${NP}
 
 help:
 	@echo "You can test the following modules in ../src:"
@@ -39,9 +43,9 @@ help:
 	@echo
 	@echo "The parallel tests can be executed like this"
 	@echo
-	@echo "   make MPIRUN='mpirun -np 4' test_line_extract"
+	@echo "   make NP=4 test_line_extract"
 	@echo
-	@echo "The default value for MPIRUN is mpirun -np 2."
+	@echo "The default value for NP is ${NP}."
 
 test:
 	-@make test_axes
