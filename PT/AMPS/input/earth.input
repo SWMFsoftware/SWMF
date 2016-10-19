@@ -126,6 +126,10 @@ ParticleWeightCorrectionMode=on
 
 #endSampling
 
+#block ../input/earth.input.pl
+  GCR=off
+  SEP=off
+#endBlock
 
 #block ../exosphere.pl
   SPICE=off

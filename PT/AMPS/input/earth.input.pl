@@ -85,8 +85,33 @@ while ($line=<InputFile>) {
 
     ampsConfigLib::ChangeValueOfVariable("char Earth::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Earth.cpp");
   }
-  
-    elsif ($InputLine eq "#ENDBLOCK") {
+  elsif ($InputLine eq "SEP") {
+    ($s0,$s1)=split(' ',$InputComment,2);
+
+    if ($s0 eq "ON") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_SEP__MODE_","_PIC_MODE_ON_","main/Earth.dfn");
+    } 
+    elsif($s0 eq "OFF") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_SEP__MODE_","_PIC_MODE_OFF_","main/Earth.dfn");
+    }
+    else {
+      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }    
+  }
+  elsif ($InputLine eq "GCR") {
+    ($s0,$s1)=split(' ',$InputComment,2);
+
+    if ($s0 eq "ON") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_GCR__MODE_","_PIC_MODE_ON_","main/Earth.dfn");
+    } 
+    elsif($s0 eq "OFF") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_GCR__MODE_","_PIC_MODE_OFF_","main/Earth.dfn");
+    }
+    else {
+      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }     
+  }
+  elsif ($InputLine eq "#ENDBLOCK") {
     last;
   }   
   else {
