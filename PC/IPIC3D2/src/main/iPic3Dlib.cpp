@@ -1565,6 +1565,7 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
       floor((maxI-minI)/plotDx + 1)*
       floor((maxJ-minJ)/plotDx + 1)*
       floor((maxK-minK)/plotDx + 1);
+    nPoint = nPoint>0? nPoint:0;
     int** pointList_ID = new int*[nPoint];
     for(long i=0; i<nPoint; i++){
       pointList_ID[i] = new int[3]; 
