@@ -265,9 +265,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
       //check that the inquired point is within the domain defined by the data file 
       for (idim=0;idim<3;idim++) if ((x[idim]<xDomainMin[idim])||(xDomainMax[idim]<x[idim])) {
-         char msg[500];
+         char msg[600];
 
-         sprintf(msg,"Error: the inquired point in out of the background data file domain:\nxDomainMin=%e, %e, %e\xDomainMax=%e, %e, %e\nxInquired=%e, %e, %e\n",xDomainMin[0],xDomainMin[1],xDomainMin[2],xDomainMax[0],xDomainMax[1],xDomainMax[2],x[0],x[1],x[2]);
+         sprintf(msg,"Error: the inquired point in out of the background data file domain:\nxDomainMin=%e, %e, %e\nxDomainMax=%e, %e, %e\nxInquired=%e, %e, %e\n",xDomainMin[0],xDomainMin[1],xDomainMin[2],xDomainMax[0],xDomainMax[1],xDomainMax[2],x[0],x[1],x[2]);
 
          exit(__LINE__,__FILE__,msg);
        }
