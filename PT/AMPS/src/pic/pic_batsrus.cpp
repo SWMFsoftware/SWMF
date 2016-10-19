@@ -96,6 +96,8 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
   static double *StateLocal=NULL,*State=NULL,*PhysicalVariableUnitConversionTable=NULL;
   static int nVar;
 
+  static double xDomainMin[3],xDomainMax[3];
+
   if (InitFlag==false) exit(__LINE__,__FILE__,"Error: the reader needs to be initialized first! Call PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::InitAMR before PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile");
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
@@ -106,6 +108,13 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     //open the data file
     for (length=0;length<_MAX_STRING_LENGTH_PIC_;length++) if (filename[length]==0) break;
     batsrus2amps_openfile_(filename,&length);
+
+    //determine the limits of the domain
+    GetDomainLimits(xDomainMin,xDomainMax); 
+
+    printf("$PREFIX: BATSRUS domain size\n");
+    printf("$PREFIX: xDomainMin=%e, %e, %e\n",xDomainMin[0],xDomainMin[1],xDomainMin[2]);
+    printf("$PREFIX: xDomainMax=%e, %e, %e\n",xDomainMax[0],xDomainMax[1],xDomainMax[2]); 
 
     //read the variable nabmer and string
     length=_MAX_STRING_LENGTH_PIC_;
@@ -253,6 +262,15 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
       x[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
       x[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
       x[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+
+      //check that the inquired point is within the domain defined by the data file 
+      for (idim=0;idim<3;idim++) if ((x[idim]<xDomainMin[idim])||(xDomainMax[idim]<x[idim])) {
+         char msg[500];
+
+         sprintf(msg,"Error: the inquired point in out of the background data file domain:\nxDomainMin=%e, %e, %e\xDomainMax=%e, %e, %e\nxInquired=%e, %e, %e\n",xDomainMin[0],xDomainMin[1],xDomainMin[2],xDomainMax[0],xDomainMax[1],xDomainMax[2],x[0],x[1],x[2]);
+
+         exit(__LINE__,__FILE__,msg);
+       }
 
       //recover the data from the BATSRUS data file
       batsrus2amps_get_data_point_(x,StateLocal,&IsFound);
