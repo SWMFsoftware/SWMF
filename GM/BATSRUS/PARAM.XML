@@ -7242,8 +7242,6 @@ Default is UseHallResist false.
 <command name="HALLREGION">
 	 <parameter name="StringHallRegion" type="string" length="200"
 	 	    default="none"/>
-         <parameter name="HallSpeedTinyDim" type="real" min="-1"
-	 	    default="-1"/>
 
 #HALLREGION
 +magnetotail -nearbody		StringHallRegion
