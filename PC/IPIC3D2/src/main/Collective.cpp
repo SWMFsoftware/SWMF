@@ -1466,7 +1466,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Set default parameters.
   // #CASE 
   Case               = "BATSRUS";
-  wmethod            = "idl";
   PoissonCorrection  = "no";
   SimName            = "MHD-EPIC";
 
@@ -1543,6 +1542,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   FieldOutputTag      = "Ball+Eall+Jsall";
   MomentsOutputTag    = "rhos+pressure+rho";
   ParticlesOutputTag  = "position+velocity+q";
+
+  SaveDirName = "PC/plots";
+  FieldOutputCycle = 0;
+  ParticlesOutputCycle = 0; 
+  DiagnosticsOutputCycle = 10; 
+  wmethod            = "idl";
 
   // processors
   XLEN = 2; YLEN = 2; ZLEN = 1; 
@@ -1681,10 +1686,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"ParticlesOutputCycle",   &ParticlesOutputCycle);
       read_var(param,"DiagnosticsOutputCycle", &DiagnosticsOutputCycle);
       read_var(param,"WriteMethod", &wmethod);
-      
-      // In "BATSRUS" mode restart is controled by the coupler
-      if(Case == "BATSRUS") RestartOutputCycle = 1; 
-
     }
     else if( Command == "#SAVEBINARY"){
       read_var(param,"doSaveBinary", &doSaveBinary);
@@ -1849,6 +1850,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //else
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }
+
+  // In "BATSRUS" mode restart is controled by the coupler
+  if(Case == "BATSRUS") RestartOutputCycle = 1; 
   
   if(RESTART1){
     ReadRestart(RestartDirName);
