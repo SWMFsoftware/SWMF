@@ -8,13 +8,6 @@ default : ${DEFAULT_TARGET}
 
 include Makefile.def
 
-# Serial and parallel execution defaults:
-SERIAL   =
-PARALLEL = mpirun
-NPFLAG   = -np
-NP       = 2
-MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
-
 #
 # Menu of make options
 #

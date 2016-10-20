@@ -5,12 +5,6 @@ include ../../../Makefile.def
 
 include ../../../Makefile.conf
 
-SERIAL = 
-PARALLEL = mpirun
-NPFLAG   = -np
-NP       = 2
-MPIRUN = ${PARALLEL} ${NPFLAG} ${NP}
-
 help:
 	@echo "You can test the following modules in ../src:"
 	@echo
