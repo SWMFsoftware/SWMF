@@ -6,15 +6,21 @@ my $Help = $h or $help;
 my $Remove = $r;
 my $Debug = $D;
 
+# Allow in-place editing
+$^I = "";
+
 use strict;
 
-if($Help or not @ARGV){
+my @source = @ARGV;
+
+if($Help or not @source){
     print '
 This script can be used to remove unused variables from Fortran code.
-It uses the output of the NAG Fortran compiler to find the unused variables. 
-The -w compilation flag has to be removed from the CFLAG definition in 
-Makefile.conf so that the compiler warnings are not suppressed.
-It is a good ideat to set zero level for optimization for sake of speed.
+It uses the output of the NAG Fortran compiler to find the unused variables.
+The script will not work with other compilers.
+The -w compilation flag will be commented out in the CFLAG definition in 
+Makefile.conf so that the compiler warnings about unused variables are kept.
+It is a good idea to set zero level for optimization for sake of speed.
 
 Usage:
 
@@ -41,8 +47,37 @@ Remove unused variables from a certain file:
     exit;
 }
 
+# Search for Makfile.conf up to 4 directories up
+# Check if it is the NAG compiler
+# Comment out the -w flag, so warnings are not suppressed
+my $MakefileConf;
+my $found;
+my $compiler;
+my $nag;
+my $level;
+foreach $level (0..4){
+    $MakefileConf = "../" x $level . "Makefile.conf";
+    next unless -s $MakefileConf > 100;
+    $found=1;
+    @ARGV = ($MakefileConf);
+    while(<>){
+	if(/FORTRAN_COMPILER_NAME=(.*)/){
+	    $compiler = $1;
+	    $nag = 1 if $compiler =~ /^(nagfor|f95)$/;
+	}
+	warn "Commenting out the -w flag in $MakefileConf\n" 
+	    if $nag and s/^(CFLAG =.+) \-w(.+)/$1$2 # -w/;
+	print;
+    }
+    last;
+}
+
+die "UnusedVariables.pl could not find Makefile.conf\n" unless $found;
+die "UnusedVariables.pl only works with the nagfor compiler, not with $compiler\n"
+    unless $nag;
+
 my $source;
-foreach $source (@ARGV){
+foreach $source (@source){
 
     next if $source eq "MpiTemplate.f90";
 
