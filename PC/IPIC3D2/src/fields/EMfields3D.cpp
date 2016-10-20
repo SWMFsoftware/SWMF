@@ -373,11 +373,8 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     int displacementsN[]={0,nzn-1,(nyn-1)*nzn,nyn*nzn-1};
     MPI_Type_indexed(4, blocklengthN, displacementsN, MPI_DOUBLE, &cornertypeN);
     MPI_Type_commit(&cornertypeN);
-#ifdef BATSRUS
-    if (col->getPicOutputFormat()==1){
-#else
+
     if (col->getWriteMethod() == "pvtk" || col->getWriteMethod() == "nbcvtk"){
-#endif
     	//test Endian
     	int TestEndian = 1;
     	lEndFlag =*(char*)&TestEndian;

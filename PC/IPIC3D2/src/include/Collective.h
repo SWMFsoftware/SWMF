@@ -434,17 +434,8 @@ class Collective
     void PostProcParam();
 
     void FinilizeInit();
-    /*! OutputFormat[0=BATSRUS ASCII, 1=Runtime VTK] of fields */
-    int getPicOutputFormat(){return PicOutputFormat;};
  private:
     int nSmooth;
-    int FieldOutputCycleASCII;
-    /*! Output for virtual satellites */
-    int SatelliteOutputCycle;
-    /*OutputFormat[0=BATSRUS ASCII, 1=Runtime VTK]*/
-    int PicOutputFormat;
-
-
 #endif
     
 };

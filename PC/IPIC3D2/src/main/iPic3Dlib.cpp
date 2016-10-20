@@ -285,7 +285,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 		}
 		#endif
 #ifdef BATSRUS
-		if(col->getPicOutputFormat()==1 && col->getFieldOutputCycle()>0){
+		if(col->getFieldOutputCycle()>0){
 		  fieldwritebuffer = newArr4(float,(grid->getNZN()-3),grid->getNYN()-3,grid->getNXN()-3,3);
 		}
 #else
@@ -550,11 +550,10 @@ void c_Solver::WriteOutput(int cycle) {
 #ifdef BATSRUS
   write_plot_idl(cycle);
 
-  if(col->getPicOutputFormat()==1){
-    if(col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
-      WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
-    }
+  if(col->getWriteMethod()=="pvtk" && col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
+    WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
   }
+
 #else
 
     WriteConserved(cycle);
@@ -698,10 +697,24 @@ void c_Solver::WriteConserved(int cycle) {
     }
     if (myrank == (nprocs-1)) {
       ofstream my_file(cq.c_str(), fstream::app);
-      if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << "\t" << "Kenergy(species)" << "\t" << "BulkEnergy(species)" << endl;
-      my_file << cycle << "\t" << "\t" << (Eenergy + Benergy + TOTenergy) << "\t" << TOTmomentum << "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
-      for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
-      for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];      
+      if(col->getCase()=="BATSRUS"){
+	my_file.precision(12);
+	if(cycle == 0){
+	  // What is the unit of bulk energy?? --Yuxi
+	  my_file<<"time nstep Moment Etotal Eefield Ebfield Epart ";
+	  for (int is = 0; is < ns; is++) my_file << " Epart" <<is<<" Ebulk"<<is;
+	  my_file<<endl;
+	}
+
+	my_file<<getSItime()<<"\t"<<cycle<< "\t" << TOTmomentum<< "\t"<< (Eenergy + Benergy + TOTenergy)<< "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
+	for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
+	for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];      
+      }else{
+	if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << "\t" << "Kenergy(species)" << "\t" << "BulkEnergy(species)" << endl;
+	my_file << cycle << "\t" << "\t" << (Eenergy + Benergy + TOTenergy) << "\t" << TOTmomentum << "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
+	for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
+	for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];      
+      }
       my_file << endl;
       my_file.close();
     }

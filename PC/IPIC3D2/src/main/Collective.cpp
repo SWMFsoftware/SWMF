@@ -1466,12 +1466,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Set default parameters.
   // #CASE 
   Case               = "BATSRUS";
-  // FieldsInit         = "./data/Initial-Fields_000000.h5";
-  // PartInit           = "Maxwell";
-  wmethod            = "shdf5";
+  wmethod            = "idl";
   PoissonCorrection  = "no";
   SimName            = "MHD-EPIC";
-  //  verbose            = 1;
 
   //#NSYN
   setnSync(1);
@@ -1575,15 +1572,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   
   while(*param){
     get_next_command(param,&Command);
-    // if(      Command == "#CASE"){
-    //   read_var(param,"Simulation Case",   &Case);
-    //   read_var(param,"FieldsInit",        &FieldsInit);
-    //   read_var(param,"PartInit",          &PartInit);
-    //   read_var(param,"WriteMethod",       &wmethod);
-    //   read_var(param,"PoissonCorrection", &PoissonCorrection);
-    //   read_var(param,"SimulationName",    &SimName);
-    //   read_var(param,"verbose",           &verbose);
-    // }
     if( Command == "#NSYNC" && Case == "BATSRUS"){
       int tmp;
       read_var(param,"nSync", &tmp);
@@ -1692,15 +1680,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"FieldOutputCycle",       &FieldOutputCycle);
       read_var(param,"ParticlesOutputCycle",   &ParticlesOutputCycle);
       read_var(param,"DiagnosticsOutputCycle", &DiagnosticsOutputCycle);
-      read_var(param,"FieldOutputCycleASCII",  &FieldOutputCycleASCII);
-      read_var(param,"SatelliteOutputCycle",   &SatelliteOutputCycle);
-      read_var(param,"OutputFormat[0=BATSRUS ASCII, 1=Runtime VTK]", &PicOutputFormat);
-        
+      read_var(param,"WriteMethod", &wmethod);
       
-        
-      if(Case != "BATSRUS")
-          read_var(param,"RestartOutputCycle",     &RestartOutputCycle);
-
       // In "BATSRUS" mode restart is controled by the coupler
       if(Case == "BATSRUS") RestartOutputCycle = 1; 
 
