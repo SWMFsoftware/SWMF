@@ -5,24 +5,19 @@ SEARCH_EXTRA = -I../ -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR} -I${EMPIRICALUA
 
 include ../../Makefile.conf
 
-MPIRUN = mpirun -np 2
-
 help:
 	@echo "Tests for STET modules: unit tests and combinations"
 	@echo
-	@echo "   test_axes             - test CON_axes"
-	@echo "   test_coord_transform  - test ModTimeConvert"
-	@echo "   test                  - test all the above"
-	@echo
-	@echo "To test everything with easy to read output try"
-	@echo
-	@echo "   make -s test"
-	@echo
-	@echo "The parallel tests can be executed like this"
-	@echo
-	@echo "   make MPIRUN='mpirun -np 4' test_line_extract"
-	@echo
-	@echo "The default value for MPIRUN is mpirun -np 2."
+	@echo "   unit_test_grid_potential"
+	@echo "   unit_test_update_plasmasphere"
+	@echo "   unit_test_update_plasmasphere_pot"
+	@echo "   unit_test_update_iono"
+	@echo "   unit_test_update_iono_pot"
+	@echo "   unit_test_update_iono_nosources"
+	@echo "   unit_test_update_iono_nosources_pot"
+	@echo "   unit_test_background"
+	@echo "   unit_test_res_scatter"
+	@echo ""
 
 test:   unit_test_update_plasmasphere 
 	@echo ---------------------------------------------------------
