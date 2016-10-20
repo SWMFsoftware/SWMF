@@ -433,10 +433,22 @@ sub install_code_{
 	    $MakefileDefOrig;
 	die "$ERROR_ $MakefileDefOrig is missing\n" unless
 	    -f $MakefileDefOrig;
-	&shell_command("echo OS=$OS > $MakefileDef");
-	&shell_command("echo MYDIR=$DIR >> $MakefileDef");
-	&shell_command("echo ${Component}DIR=$DIR >> $MakefileDef");
-	&shell_command("echo COMPILER=$Compiler >> $MakefileDef");
+	my $header = "${Component}DIR    = $DIR
+OS       = $OS
+COMPILER = $Compiler
+SERIAL   =
+PARALLEL = mpiexec
+NPFLAG   = -n
+NP       = 2
+MPIRUN   = \${PARALLEL} \${NPFLAG} \${NP}
+";
+	if($DryRun){
+	    print "write into $MakefileDef:\n$header";
+	}else{
+	    open(MAKEFILE, ">$MakefileDef");
+	    print MAKEFILE $header;
+	    close(MAKEFILE);
+	}
 	&shell_command("cat $MakefileDefOrig >> $MakefileDef");
 
 	my $Makefile = "$MakefileConfOrig.$OS.$Compiler";
