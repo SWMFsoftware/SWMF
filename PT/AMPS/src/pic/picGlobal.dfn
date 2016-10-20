@@ -1,3 +1,9 @@
+//definitions of macros that are used as serrings of AMPS
+//$Id$
+
+#ifndef _PIC_GLOBAL_DEFINITIONS_H_
+#define _PIC_GLOBAL_DEFINITIONS_H_
+
 #include "picGlobalDefinitions.dfn"
 
 //the dimention of the problem 
@@ -293,3 +299,5 @@ at the end of each time step
 
 //Free flow injection boundary mode
 #define _PIC_BC__OPEN_FLOW_INJECTION__MODE_  _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_
+
+#endif //_PIC_GLOBAL_DEFINITIONS_H_  
