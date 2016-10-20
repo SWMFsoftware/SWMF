@@ -31,14 +31,6 @@ ALL : SWMF PIDL PSPH EARTH_TRAJ
 include Makefile.def
 include Makefile.conf
 
-# Defaults for serial and parallel runs
-SERIAL   =
-PARALLEL = mpirun
-NPFLAG   = -np
-NP       = 2
-
-MPIRUN = ${PARALLEL} ${NPFLAG} ${NP}
-
 help:
 	@echo ' '
 	@echo '  You can "make" the following:'
