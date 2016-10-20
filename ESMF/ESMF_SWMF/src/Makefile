@@ -73,7 +73,7 @@ test.exe: ${TESTOBJS} ${ESMFLIB}
 		-L${LIBDIR}
 
 test: test.exe
-	mpirun -np ${NP} test.exe
+	${MPIRUN} test.exe
 
 ESMFTESTOBJS = \
 	user_model1.o \
@@ -86,20 +86,18 @@ esmftest.exe: ${ESMFTESTOBJS} ${ESMFLIB}
 		-L${LIBDIR}
 
 esmftest: esmftest.exe
-	mpirun -np ${NP} esmftest.exe
+	${MPIRUN} esmftest.exe
 
 # run the executable in parallel. 
-NP = 2
-
-mpirun:	${EXE}
+parallelrun: ${EXE}
 	@cd ../run; rm -f *.ESMF_LogFile; \
-	${MPIRUN} -np ${NP} ${EXELINK}; \
+	${MPIRUN} ${EXELINK}; \
 	perl -ne 'print if /error/i' PET*.ESMF_LogFile
 
 # run only a single copy.
-run:	${EXE}
+serialrun: ${EXE}
 	@cd ../run; rm -f *.ESMF_LogFile; \
-	${MPIRUN} -np 1 ${EXELINK}; \
+	${SERIAL} ${EXELINK}; \
 	perl -ne 'print if /error/i' PET0.ESMF_LogFile
 
 clean: cleanfiles

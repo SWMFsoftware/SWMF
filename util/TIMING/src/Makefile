@@ -40,13 +40,13 @@ test: timing_test.exe
 	timing_test.exe
 
 test_mpi: timing_test_mpi.exe
-	mpirun -np 2 timing_test_mpi.exe
+	${PARALLEL} ${NPFLAG} 2 timing_test_mpi.exe
 
 test_empty: timing_empty.exe
 	timing_empty.exe
 
 test_empty_mpi: timing_empty_mpi.exe
-	mpirun -np 2 timing_empty_mpi.exe
+	${PARALLEL} ${NPFLAG} 2 timing_empty_mpi.exe
 
 EXE: timing_test.exe
 

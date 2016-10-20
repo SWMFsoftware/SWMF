@@ -3,13 +3,6 @@ default: IPIC3D
 include Makefile.conf
 include Makefile.def
 
-# Serial and parallel execution defaults:
-SERIAL   =
-PARALLEL = mpirun
-NPFLAG   = -np
-NP       = 2
-MPIRUN   = ${PARALLEL} ${NPFLAG} ${NP}
-
 help:
 	@echo Makefile targets:
 	@echo
