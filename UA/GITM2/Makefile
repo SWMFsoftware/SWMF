@@ -51,9 +51,9 @@ LIB:
 	cd $(MAINDIR)   ; make LIBPREV=${GITM2}/${GLDIR}/libUPTOGL.a   libGITM.a
 	cd srcInterface ; make LIBPREV=${GITM2}/${MAINDIR}/libUA.a     LIB
 
-nompirun:
+serialrun:
 	make GITM
-	cd ${RUNDIR}; ./GITM.exe
+	cd ${RUNDIR}; ${SERIAL} ./GITM.exe
 
 clean:
 	@touch ${INSTALLFILES}
@@ -99,8 +99,6 @@ rundir:
 
 
 TESTDIR = run_test
-
-MPIRUN = mpirun -np 2
 
 test:
 	echo "GITM2 is not tested nightly" > notest.diff
