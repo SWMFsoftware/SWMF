@@ -2901,6 +2901,8 @@ namespace PIC {
 
     void MaxwellianVelocityDistribution(double *v,const double *BulkFlowVelocity,const double Temp,const int spec);
     double InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,const double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
+
+    void InjectRingDistribution(double *v,double Energy,double *ExternalNormal,int spec);
   }
 
   //the namespace contained the domain decomposition information used for loop parallelization in OpenMP

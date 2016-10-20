@@ -7,6 +7,32 @@
 
 #include "pic.h"
 
+
+//====================================================
+//Get velocity of a particle injected with a "ring" distribution (a direction of a particle is uniformly distributed in 4 pi)
+void PIC::Distribution::InjectRingDistribution(double *v,double Energy,double *ExternalNormal,int spec) {
+  double l[3],c,speed,mass;
+  int idim;
+
+  //determine direction of the injected particle velocity
+  do {
+    Vector3D::Distribution::Uniform(l);
+    c=l[0]*ExternalNormal[0]+l[1]*ExternalNormal[1]+l[2]*ExternalNormal[2];
+
+    if (c>0.0) continue;
+  }
+  while (rnd()>-c);
+
+  //convert energy into speed
+  mass=PIC::MolecularData::GetMass(spec);
+  speed=SpeedOfLight*sqrt(Energy/(Energy+mass*SpeedOfLight*SpeedOfLight));
+
+  //init the velocity vector
+  for (idim=0;idim<3;idim++) v[idim]=speed*l[idim];
+}
+
+
+//====================================================
 //get particle velocity distribution with Maxwellian
 void PIC::Distribution::MaxwellianVelocityDistribution(double *v,const double *BulkFlowVelocity,double Temp,int spec) {
   double beta;
