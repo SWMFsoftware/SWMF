@@ -8,8 +8,10 @@ program test_registry
   logical :: UseMe
   character (len=lNameVersion) :: Name
   real :: Version
-  integer :: lComp,iComp
+  integer :: iError, lComp, iComp
   !---------------------------------------------------------------------------
+  call MPI_init(iError)
+
   call world_init
 
   call world_setup
@@ -44,6 +46,8 @@ program test_registry
   end if
 
   call world_clean
+
+  call MPI_finalize(iError)
 
 end program test_registry
 
