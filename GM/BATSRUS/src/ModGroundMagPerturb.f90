@@ -592,7 +592,7 @@ contains
 
     ! Obtain locations in correct (GSM) coordinates.
     SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    XyzGm_DI = matmul(SmgToGm_DD, XyzKp_DI)
+    XyzGm_DI   = matmul(SmgToGm_DD, XyzKp_DI)
 
     ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nKpMag, XyzGm_DI, dBmag_DI)
@@ -686,7 +686,7 @@ contains
 
        ! Obtain locations in correct (GSM) coordinates.
     SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    XyzGm_DI = matmul(SmgToGm_DD, XyzAe_DI)
+    XyzGm_DI   = matmul(SmgToGm_DD, XyzAe_DI)
 
     ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nAeMag, XyzGm_DI, dBmag_DI)
