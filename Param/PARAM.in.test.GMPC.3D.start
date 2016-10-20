@@ -188,14 +188,6 @@ g
 1.0e-4			GMREStol : GMRES solver stopping criterium tolerance
 3			NiterMover : mover predictor corrector iteration
 
-#SAVEPLOT
-PC/plots		SaveDirName
-0			FieldOutputCycle
-0			ParticlesOutputCycle
-0			DiagnosticsOutputCycle
-4			FieldOutputCycleASCII
-0			SatelliteOutputCycle
-
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP

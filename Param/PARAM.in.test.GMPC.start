@@ -300,9 +300,7 @@ PC/plots				SaveDirName
 1					FieldOutputCycle
 0					ParticlesOutputCycle
 0					DiagnosticsOutputCycle
-0					FieldOutputCycleASCII
-0					SatelliteOutputCycle
-0					OutputFormat (HDF=0, VTK=1)
+shdf5					WriteMethod
 
 #END_COMP PC -----------------------------------------------------------------
 

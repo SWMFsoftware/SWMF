@@ -118,8 +118,7 @@ PC/plots		SaveDirName
 1			FieldOutputCycle
 10000			ParticlesOutputCycle
 1			DiagnosticsOutputCycle
-0			FieldOutputCycleASCII
-0			SatelliteOutputCycle
+shdf5
 
 #END_COMP PC -----------------------------------------------------------------
 
