@@ -13,7 +13,7 @@
 #ifndef _EXOSPHERE_
 #define _EXOSPHERE_
 
-
+#include "picGlobal.dfn"
 
 #include "SingleVariableDistribution.h"
 #include "SingleVariableDiscreteDistribution.h"
