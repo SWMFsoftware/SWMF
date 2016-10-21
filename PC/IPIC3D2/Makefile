@@ -49,6 +49,7 @@ CHECKDIR  = output
 
 test:
 	-@($(MAKE) test_ipic3d)
+	cd src; cp -f Makefile.local.default Makefile.local
 
 test_ipic3d:
 	@echo "test_compile..." > test_ipic3d.diff
@@ -64,8 +65,7 @@ test_ipic3d_compile:
 	cd src; rm -f Makefile.local; \
 	echo "FLAGC_LOCAL=" >Makefile.local
 	./Config.pl -pseudrand=true
-	-$(MAKE) IPIC3D
-	cd src; cp -f Makefile.local.default Makefile.local
+	$(MAKE) IPIC3D
 
 test_ipic3d_rundir:
 	rm -rf ${TESTDIR}
