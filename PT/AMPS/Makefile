@@ -46,7 +46,7 @@ SEARCH_F=
 
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
-CWD=${MYDIR}
+CWD=${PTDIR}
 AMPSLINKER=${CC}
 
 AMPSLINKLIB= 

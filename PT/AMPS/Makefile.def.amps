@@ -1,6 +1,6 @@
-RUNDIR = ${MYDIR}/run
-SCRIPTDIR = ${MYDIR}/share/Scripts
-SHAREDIR = ${MYDIR}/share/Library/src
+RUNDIR = ${PTDIR}/run
+SCRIPTDIR = ${PTDIR}/share/Scripts
+SHAREDIR = ${PTDIR}/share/Library/src
 
 SOURCES=src
 WSD=srcTemp
@@ -12,4 +12,4 @@ ExternalModules=models/exosphere
 
 INTERFACE=off
 
-include ${MYDIR}/Makefile.test
+include ${PTDIR}/Makefile.test
