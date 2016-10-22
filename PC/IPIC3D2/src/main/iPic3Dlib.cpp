@@ -674,7 +674,13 @@ void c_Solver::WriteRestart(int cycle)
 	  fetch_outputWrapperFPP().append_restart(cycle);
 
 	  stringstream settingFile;
-	  settingFile<<"settings"<<"_region"<<col->getiRegion()<<".hdf";  
+	  
+	  settingFile<<"settings";
+#ifdef BATSRUS
+	  settingFile<<"_region"<<col->getiRegion();
+#endif
+	  settingFile<<".hdf";
+	  
 	  if(myrank==0)fetch_outputWrapperFPP().append_restart_setting(settingFile.str());
   }
 #endif
@@ -698,6 +704,7 @@ void c_Solver::WriteConserved(int cycle) {
     if (myrank == (nprocs-1)) {
       ofstream my_file(cq.c_str(), fstream::app);
       if(col->getCase()=="BATSRUS"){
+#ifdef BATSRUS
 	my_file.precision(12);
 	if(cycle == 0){
 	  // What is the unit of bulk energy?? --Yuxi
@@ -708,7 +715,8 @@ void c_Solver::WriteConserved(int cycle) {
 
 	my_file<<getSItime()<<"\t"<<cycle<< "\t" << TOTmomentum<< "\t"<< (Eenergy + Benergy + TOTenergy)<< "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
 	for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
-	for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];      
+	for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];
+#endif
       }else{
 	if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << "\t" << "Kenergy(species)" << "\t" << "BulkEnergy(species)" << endl;
 	my_file << cycle << "\t" << "\t" << (Eenergy + Benergy + TOTenergy) << "\t" << TOTmomentum << "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
