@@ -1,5 +1,0 @@
-//definitions used in the Earth magnetosphere model
-//$Id$
-
-#define _PIC_EARTH_SEP__MODE_   _PIC_MODE_ON_
-#define _PIC_EARTH_GCR__MODE_   _PIC_MODE_ON_
