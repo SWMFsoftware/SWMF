@@ -24,4 +24,7 @@ void Earth::BoundingBoxInjection::SEP::GetNewParticle(PIC::ParticleBuffer::byte 
   exit(__LINE__,__FILE__,"Error: not implemented");
 }
 
-
+//init the SEP injection model
+void Earth::BoundingBoxInjection::SEP::Init() {
+  exit(__LINE__,__FILE__,"Error: not implemented");
+}
