@@ -149,6 +149,7 @@ double Earth::BoundingBoxInjection::InjectionRate(int spec,cTreeNodeAMR<PIC::Mes
   return ModelParticlesInjectionRate;
 }
 
+/*
 
 //init the particle injection tables
 //init the boundary box injection tables
@@ -263,3 +264,4 @@ void Earth::BoundingBoxInjection::InitBoundingBoxInjectionTable(double** &Bounda
 
    MPI_Bcast(maxBoundaryFaceLocalInjectionRate,PIC::nTotalSpecies,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 }
+*/
