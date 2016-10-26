@@ -49,7 +49,7 @@ double localSphericalSurfaceResolution(double *x) {
 
   if ( (strcmp(Earth::Mesh::sign,"0x301020156361a50")!=0)) {
     //test mesh
-    return 0.05*_RADIUS_(_TARGET_);
+    return 0.1*_RADIUS_(_TARGET_);
   }
   else {
     return 0.5*_RADIUS_(_TARGET_);
@@ -70,10 +70,10 @@ double localResolution(double *x) {
 
   if ( (strcmp(Earth::Mesh::sign,"0x301020156361a50")!=0)) {
     //test mesh
-    return 0.5*_RADIUS_(_TARGET_);
+    res=0.5*_RADIUS_(_TARGET_);
   }
   else {
-    return 0.5*_RADIUS_(_TARGET_);
+    res=0.5*_RADIUS_(_TARGET_);
   }
 
   //  if (strcmp(Earth::Mesh::sign,"new")==0) 
@@ -85,44 +85,24 @@ double localResolution(double *x) {
 
     r=sqrt(r);
 
-    if (r<0.98*rSphere) return rSphere;
-    else if (r<1.05*rSphere) return localSphericalSurfaceResolution(x);
-    else return rSphere * dxMinGlobal;
+    if (r<0.98*rSphere) res=rSphere;
+    else if (r<1.05*rSphere) res=localSphericalSurfaceResolution(x);
+    else if (r<2.0*rSphere) res=rSphere * dxMinGlobal;
+    else res=rSphere*dxMinGlobal*max(1.0+(5.0-1.0)/((6.0-2.0)*_RADIUS_(_TARGET_))*(r-2.0*_RADIUS_(_TARGET_)),1.0);   
   }
+
+  return res;
 }
 
 //set up the local time step
-double localTimeStep(int spec,
-		     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double CellSize;
-  CellSize = startNode->GetCharacteristicCellSize();
+double localTimeStep(int spec, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  double mass,maxSpeed,CellSize=startNode->GetCharacteristicCellSize();
   
-  const double maxInjectionEnergy=1E5*1000*ElectronCharge;
-  double CharacteristicSpeed = sqrt(2*maxInjectionEnergy/_MASS_(_O_));
-  return 0.2* 0.3*CellSize/CharacteristicSpeed;
-}
+  //evaluate the maximum particle speed with the energy limit used in the Earth magnetosphere model
+  mass=PIC::MolecularData::GetMass(spec);
+  maxSpeed=SpeedOfLight*sqrt(Earth::BoundingBoxInjection::maxEnergy/(Earth::BoundingBoxInjection::maxEnergy+mass*SpeedOfLight*SpeedOfLight));
 
-
-double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  return 0.0;
-}
-
-bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  
-  return false;
-}
-
-
-
-//injection of model particles through the faces of the bounding box
-double  BoundingBoxInjection(int spec,
-			       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-
-  return 0;
-}
-
-long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  return 0;
+  return 0.3*CellSize/maxSpeed;
 }
 
 
@@ -131,20 +111,11 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   return res;
 }
 
-int ParticleSphereInteraction(int spec,long int ptr,
-			      double *x,double *v, 
-			      double &dtTotal, void *NodeDataPonter,
-			      void *SphereDataPointer)  {
-  return _PARTICLE_DELETED_ON_THE_FACE_;
-}
 
 
 
 
-double sphereInjectionRate(int spec,void *SphereDataPointer) {
-  double res=0.0;
-  return res;
-}
+
 
 
 
@@ -191,7 +162,6 @@ void amps_init_mesh() {
    
    //reserve memory for sampling of the surface balance of sticking species
    long int ReserveSamplingSpace[PIC::nTotalSpecies];
-   for (int s=0;s<PIC::nTotalSpecies;s++) ReserveSamplingSpace[s]=0;
    
    
    cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
@@ -239,8 +209,8 @@ void amps_init_mesh() {
  double xmax[3]={0.0,0.0,0.0},xmin[3]={0.0,0.0,0.0};
 
  for (idim=0;idim<DIM;idim++) {
-   xmax[idim]= 16 * _RADIUS_(_TARGET_);
-   xmin[idim]=-16 * _RADIUS_(_TARGET_);
+   xmax[idim]= 29 * _RADIUS_(_TARGET_);
+   xmin[idim]=-29 * _RADIUS_(_TARGET_);
  }
  
  
@@ -300,6 +270,11 @@ void amps_init_mesh() {
  
  //init the volume of the cells'
  PIC::Mesh::mesh.InitCellMeasure();
+
+/*
+ //print out the mesh file
+ PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+*/
  
  //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
  if (NewMeshGeneratedFlag==true) {
@@ -335,18 +310,18 @@ void amps_init_mesh() {
    PIC::ParticleWeightTimeStep::initTimeStep();
    
    //set up the particle weight
-   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjection;
-   PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(0,1.0);
+   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Earth::BoundingBoxInjection::InjectionRate;
+   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
    
    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
    if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
    
    //output final data
    //create the list of mesh nodes where the injection boundary conditions are applied
-   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
-   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
+   PIC::BC::BlockInjectionBCindicatior=Earth::BoundingBoxInjection::InjectionIndicator;
+   PIC::BC::userDefinedBoundingBlockInjectionFunction=Earth::BoundingBoxInjection::InjectionProcessor;
    PIC::BC::InitBoundingBoxInjectionBlockList();
-   
+
    
    //init the particle buffer
    PIC::ParticleBuffer::Init(10000000);
@@ -359,10 +334,16 @@ void amps_init_mesh() {
 #if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
    // BATL reader
 
-   // initialize the reader
-   PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_t00000000_n00020000.idl");
-   PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+   if (PIC::CPLR::DATAFILE::BinaryFileExists("EARTH-BATSRUS")==true)  {
+     PIC::CPLR::DATAFILE::LoadBinaryFile("EARTH-BATSRUS");
+   }
+   else {
+     // initialize the reader
+     PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_t00000000_n00020000.idl");
+     PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
 
+     PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
+   }
 
 #else
    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
