@@ -50,3 +50,21 @@ double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x) {
 void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   //do nothing
 }
+
+//particle/sphere interactions
+int Earth::BC::ParticleSphereInteraction(int spec,long int ptr,double *x,double *v, double &dtTotal, void *NodeDataPonter,void *SphereDataPointer)  {
+  return _PARTICLE_DELETED_ON_THE_FACE_;
+}
+
+//the total injection rate from the Earth
+double Earth::BC::sphereInjectionRate(int spec,void *SphereDataPointer) {
+  double res=0.0;
+  return res;
+}
+
+//init the Earth magnetosphere model
+void Earth::Init() {
+  //init source models of SEP and GCR
+  if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::SEP::Init();
+  if (_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::GCR::Init();
+}
