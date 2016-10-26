@@ -52,16 +52,18 @@ namespace Earth {
     extern cBoundaryFaceDescriptor *BoundaryFaceDescriptor;
     extern int nTotalBoundaryInjectionFaces;
 
+/*
     //init and populate the tables used by the particle injectino procedure
     void InitBoundingBoxInjectionTable(double** &BoundaryFaceLocalInjectionRate,double* &maxBoundaryFaceLocalInjectionRate,
         double* &BoundaryFaceTotalInjectionRate,double (*InjectionRate)(int spec,int nface,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode));
+*/
 
     //model that specify injectino of the gakactic cosmic rays
     namespace GCR {
-      //data buffers used for injection of GCR thought the boundary of the computational domain
+/*      //data buffers used for injection of GCR thought the boundary of the computational domain
       extern double **BoundaryFaceLocalInjectionRate;
       extern double *maxBoundaryFaceLocalInjectionRate;
-      extern double *BoundaryFaceTotalInjectionRate;
+      extern double *BoundaryFaceTotalInjectionRate;*/
 
       //init the model
       void Init();
@@ -75,6 +77,7 @@ namespace Earth {
 
       //init the model
       void Init();
+
     }
 
     //model that specifies injectino of SEP
