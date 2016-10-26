@@ -82,7 +82,7 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
    if Long0>0:
       GL_Longitude +=Long0
       if GL_Longitude>=360:
-         lLongitude-=360
+         GL_Longitude-=360
    print "GL_Longitude: {0:4.1f} GL_Latitude:{1:4.1f}".format(
       GL_Longitude, GL_Latitude)
 
@@ -162,8 +162,8 @@ def Alg(nLong,nLat,nParam, Param_I,Long_I,Lat_I,Br_C,
       #(make it perpendicular to PIL).
        PILMap_C = np.where(DisCenter_C<=DisThresholdS, PILBitMap_C, 0.)
        
-       iYPILPoints_I,iXPILPoints_I =np.where(PILMap_C > 0)
-       MM = len(iYPILPoints_I)
+       iYPIL_I,iXPIL_I =np.where(PILMap_C > 0)
+       MM = len(iYPIL_I)
    
        #    PIL_xx=PIL_x[sort(PIL_x)]
        #    PIL_yy=PIL_y[sort(PIL_x)]
