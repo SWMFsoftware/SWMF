@@ -37,6 +37,9 @@ int main(int argc,char **argv) {
   amps_init_mesh();
   amps_init();
 
+  //init Earth magnetosphere model
+  Earth::Init();
+
 
   PIC::RequiredSampleLength=600;
 
