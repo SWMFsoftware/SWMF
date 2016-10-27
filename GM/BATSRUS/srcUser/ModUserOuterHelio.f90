@@ -65,7 +65,8 @@ module ModUser
        IMPLEMENTED11 => user_calc_sources,              &
        IMPLEMENTED12 => user_init_point_implicit,       &
        IMPLEMENTED13 => user_init_session,              &
-       IMPLEMENTED14 => user_set_boundary_cells
+       IMPLEMENTED14 => user_set_boundary_cells,        &
+       IMPLEMENTED15 => user_amr_criteria
 
   include 'user_module.h' !list of public methods
 
@@ -1802,5 +1803,42 @@ contains
     end do; end do; end do
 
   end subroutine user_set_boundary_cells
+
+  !===========================================================================
+  subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+    ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
+
+    ! Variables required by this user subroutine
+    integer, intent(in)          :: iBlock
+    real, intent(out)            :: UserCriteria
+    character (len=*),intent(in) :: TypeCriteria
+    logical ,intent(inout)       :: IsFound
+
+    logical:: IsBoundaryCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !------------------------------------------------------------------
+    if(rHelioPause < 0.0) &
+         call stop_mpi(NameSub//' #HELIOPAUSE command is needed')
+
+    IsFound = .true.
+    UserCriteria = 0.0
+
+    if(TempHelioPause < 0.0)then
+       write(*,*) NameSub,' called before restart files read???!!!'
+       RETURN
+    end if
+
+    IsBoundaryCell_G = &
+         r_BLK(:,:,:,iBlock) < rHelioPause .or. &
+         State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
+         > TempHelioPause
+       
+    if(any(IsBoundaryCell_G) &
+         .and. .not. all(IsBoundaryCell_G(1:nI,1:nJ,1:nK))) &
+         UserCriteria = 1.0
+
+  end subroutine user_amr_criteria
 
 end module ModUser
