@@ -3,6 +3,8 @@
 # and executables are copied there
 
 
+TESTMPIRUN1=$(word 1, $(MPIRUN)) -np 1
+
 TEST<APP>DIR=run_test_<APP>
 TEST<APP>KEYS=<APPKEYS>
 TEST<APP>OUTFILES=<APPOUTS>

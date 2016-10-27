@@ -120,7 +120,7 @@ int main(int argc,char **argv) {
   PIC::InterpolationRoutines::Init();
 
   //init mesh
-  amps_init();
+  //  amps_init();
 
   // output file name
   char fname[400];
@@ -132,7 +132,7 @@ int main(int argc,char **argv) {
 
   Interpolation::cStencil* Stencil;
   if (PIC::ThisThread==0) for(iCase=0; iCase<nCase && !fail; iCase++){
-//    amps_init();
+      amps_init();
     if(open_file){
       fout.open(fname, fstream::out);
       open_file=false;
