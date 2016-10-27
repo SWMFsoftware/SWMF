@@ -814,9 +814,19 @@ subroutine MH_set_parameters(TypeAction)
               plot_area='los'
               ! Line of sight vector
               ! Satellite position
-              call read_var('ObsPosX',ObsPos_DI(1,ifile))
-              call read_var('ObsPosY',ObsPos_DI(2,ifile))
-              call read_var('ObsPosZ',ObsPos_DI(3,ifile))
+              if(NameThisComp == 'GM')then
+                 call read_var('ObsPosX',ObsPos_DI(1,ifile))
+                 call read_var('ObsPosY',ObsPos_DI(2,ifile))
+                 call read_var('ObsPosZ',ObsPos_DI(3,ifile))
+              else
+                 !\
+                 ! Coordinates of the observation point are in HGI
+                 ! system
+                 !/
+                 call read_var('ObsPosX_HGI',ObsPos_DI(1,ifile))
+                 call read_var('ObsPosY_HGI',ObsPos_DI(2,ifile))
+                 call read_var('ObsPosZ_HGI',ObsPos_DI(3,ifile))
+              end if
               ! Offset angle
               call read_var('OffsetAngle',offset_angle(ifile))
               offset_angle(ifile) = offset_angle(ifile)*cDegToRad
