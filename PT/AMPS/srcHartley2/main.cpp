@@ -531,8 +531,9 @@ int main(int argc,char **argv) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
     xSecondary[i]=1.0E3*StateSun[i];
-    xSun[i]=-1.0E3*StateSun[i]; //a minus sign had to be applied for the illumination to agree with A'Hearn et al, Belton et al. Please double check
+    xSun[i]=1.0E3*StateSun[i];
   }
+  xSun[2]=-xSun[2]; //a minus sign had to be applied for the illumination to agree with A'Hearn et al, Belton et al. Please double check
 
   if (PIC::Mesh::mesh.ThisThread==0) {
     printf("xSun[0]=%e xSun[1]=%e xSun[2]=%e sunDistance=%e AU\n",xSun[0],xSun[1],xSun[2],sqrt(xSun[0]*xSun[0]+xSun[1]*xSun[1]+xSun[2]*xSun[2])/_AU_);

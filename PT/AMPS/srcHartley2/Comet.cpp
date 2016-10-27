@@ -196,8 +196,9 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
     xObservation[i]=1.0E3*StateRosetta[i];
     xPrimary[i]=0.0;
     xSecondary[i]=1.0E3*StateSun[i];
-    positionSun[i]=-1.0E3*StateSun[i];
+    positionSun[i]=1.0E3*StateSun[i];
   }
+  positionSun[2]=-positionSun[2]; //a minus sign had to be applied for the illumination to agree with A'Hearn et al, Belton et al. Please double check  
 
   HeliocentricDistance=sqrt(positionSun[0]*positionSun[0]+positionSun[1]*positionSun[1]+positionSun[2]*positionSun[2]);
   printf("positionSun[0]=%e positionSun[1]=%e positionSun[2]=%e \n",positionSun[0],positionSun[1],positionSun[2]);
@@ -2073,7 +2074,6 @@ double Comet::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec
   }
 
 
-  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
 //  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
 //  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
 
