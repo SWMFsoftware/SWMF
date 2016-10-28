@@ -106,6 +106,15 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     return GetTriliniarInterpolationStencil(iLoc,jLoc,kLoc,XyzIn_D,node);
   }
 
+  // if the point of interest is very close to the cell center
+  // then truncated stencil to the single point
+  if( fabs(iLoc-0.5-(long)iLoc) < PrecisionCellCenter &&
+      fabs(jLoc-0.5-(long)jLoc) < PrecisionCellCenter &&
+      fabs(kLoc-0.5-(long)kLoc) < PrecisionCellCenter   ){
+    return PIC::InterpolationRoutines::CellCentered::
+      Constant::InitStencil(XyzIn_D,node);
+  }
+
   //re-init variables in the INTERFACE and flush the Stencil
   INTERFACE::iBlockFoundCurrent=0;
   for(int iBlock = 0; iBlock < INTERFACE::nBlockFoundMax; iBlock++ ) INTERFACE::BlockFound[iBlock] = NULL;

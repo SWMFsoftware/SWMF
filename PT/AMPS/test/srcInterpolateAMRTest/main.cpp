@@ -9,7 +9,7 @@ const int nCase=256;
 int iCase;
 
 //size of the domain and cell resolution
-const double dxSubMesh=1.0;
+const double dxSubMesh=1.0e16;
 const double dxCell=0.5*dxSubMesh / _BLOCK_CELLS_X_;
 double XMin[3] = {            0,             0,             0};
 double XMax[3] = {    dxSubMesh,     dxSubMesh,     dxSubMesh};
@@ -109,7 +109,7 @@ void fix_coords(double* x){
   if( fabs( fabs(xShift[0]) - (int)fabs(xShift[0]) ) < 0.1)
     return;
   for(int i=0; i<3; i++)
-    x[i] = 0.5+(2*floor(0.5*xShift[i]) + 1) * 0.5*dxCell;
+    x[i] = 0.5*dxSubMesh+(2*floor(0.5*xShift[i]) + 1) * 0.5*dxCell;
 }
 //-----------------------------------------------------------------------------
 int main(int argc,char **argv) {
@@ -158,7 +158,7 @@ int main(int argc,char **argv) {
       }
       diff=0;
       for(int i=0; i<3; i++)
-	diff+= pow(x1[i]-x0[i],2);
+	diff+= pow((x1[i]-x0[i])/(0.5*(x1[i]+x0[i])),2);
       diff = pow(diff, 0.5);
       if(diff > 0.001){
 	fout << "iCase="   << iCase

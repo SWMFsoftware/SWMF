@@ -3366,6 +3366,9 @@ namespace PIC {
           extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*  last;
         }
 
+	// precision for taking shortcut and moving point to the cell center
+	const double PrecisionCellCenter = 1.0e-3;
+	
         //interpolation functions
         PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
         PIC::InterpolationRoutines::CellCentered::cStencil *GetTriliniarInterpolationStencil(double iLoc,double jLoc,double kLoc,double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
