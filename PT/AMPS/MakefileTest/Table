@@ -761,7 +761,7 @@ Name=test/InterpolateAMR-test
 Time=5
 Run=
 >>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
->>>cd ${TESTInterpolateAMR-testDIR}; ${MPIRUN} ./amps
+>>>cd ${TESTInterpolateAMR-testDIR}; ${TESTMPIRUN1} ./amps
 >>>@echo "test_InterpolateAMR-test_run... done" >> test_InterpolateAMR-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
