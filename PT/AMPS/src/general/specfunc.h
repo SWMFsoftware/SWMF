@@ -329,5 +329,20 @@ namespace Vector3D {
 }
   
 
+//=========================================================
+//Relativistic functions
+namespace Relativistic {
+  inline double Speed2E(double Speed,double mass) {
+    return mass*pow(SpeedOfLight,2)*(1.0/sqrt(1.0-pow(Speed/SpeedOfLight,2))-1.0);
+  }
+
+  inline double E2Speed(double E,double mass) {
+    double mc2;
+
+    mc2=mass*SpeedOfLight*SpeedOfLight;
+    return SpeedOfLight*sqrt(E*(E+2.0*mc2))/(E+mc2);
+  }
+}
+
 #endif
    
