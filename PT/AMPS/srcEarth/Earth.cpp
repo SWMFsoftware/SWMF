@@ -15,10 +15,14 @@
 
 
 char Earth::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
-
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="";
-
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="";
+
+//composition of the GCRs
+cCompositionGroupTable *Earth::CompositionGroupTable=NULL;
+int *Earth::CompositionGroupTableIndex=NULL;
+int Earth::nCompositionGroups;
+
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble et) {
@@ -64,6 +68,23 @@ double Earth::BC::sphereInjectionRate(int spec,void *SphereDataPointer) {
 
 //init the Earth magnetosphere model
 void Earth::Init() {
+  //init the composition gourp tables
+  //!!!!!!!!!!!!! For now only hydrogen is considered !!!!!!!!!!!!!!!!!
+
+  //composition of the GCRs
+  nCompositionGroups=1;
+  CompositionGroupTable=new cCompositionGroupTable[nCompositionGroups];
+  CompositionGroupTableIndex=new int[PIC::nTotalSpecies];
+
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) CompositionGroupTableIndex[spec]=0; //all simulated model species are hydrogen
+  CompositionGroupTable[0].FistGroupSpeciesNumber=0;
+  CompositionGroupTable[0].nModelSpeciesGroup=PIC::nTotalSpecies;
+
+  CompositionGroupTable[0].minVelocity=Relativistic::E2Speed(Earth::BoundingBoxInjection::minEnergy,PIC::MolecularData::GetMass(0));
+  CompositionGroupTable[0].maxVelocity=Relativistic::E2Speed(Earth::BoundingBoxInjection::maxEnergy,PIC::MolecularData::GetMass(0));
+
+  CompositionGroupTable[0].GroupVelocityStep=(CompositionGroupTable[0].maxVelocity-CompositionGroupTable[0].minVelocity)/CompositionGroupTable[0].nModelSpeciesGroup;
+
   //init source models of SEP and GCR
   if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::SEP::Init();
   if (_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::GCR::Init();
