@@ -19,7 +19,7 @@
 ! nCritGrid                          : Number of criteria from #GRIDLEVEL/RESOLUTION
 ! nGeoCrit                           : =2, dx(1) and level(2)
 ! RefineCritAll_I[nAmrCritUsed]      : Limit for criteria to do refinment
-! CoarsenCritAll_I[nAmrCritUsed]     : Limit for criteria for when to coursen
+! CoarsenCritAll_I[nAmrCritUsed]     : Limit for criteria for when to coarsen
 ! ResolutionLimit_I[nAmrCritUsed]    : A criteria will not be applied for block with a better resolution then indicated
 ! iResolutionLimit_I[nAmrCritUsed]   : Index of ResolutionLimit_I for dx/level crit
 ! iMapToUniqCrit_I[nAmrCritUsed]     : Map from used criteria to unique criteria
@@ -1087,7 +1087,8 @@ contains
              ! is above the coarsening limit, the block should not be coarsened
              DoCoarsen = .false.
 
-             if(DoTest) write(*,*) NameSub, ' do not coarsen block'
+             if(DoTest) write(*,*) NameSub, &
+                  ' do not coarsen block, CoarsenCritAll=', CoarsenCritAll_I(iCrit)
 
           end if
 
@@ -1211,7 +1212,6 @@ contains
           select case(CritName)
           case('error')
              iCritPhy = iCritPhy +1
-             ! if(CritName(1:5) == 'error') then
              UseErrorCrit = .true.
 
              if(.not. present(nStateVarIn) &
@@ -1240,7 +1240,6 @@ contains
              call SetCritArea(3,nCritArgs,CritName_I,iCritPhy)
           case('transient')
              iCritPhy = iCritPhy +1
-             !elseif(CritName(1:9) == 'transient') then
              if(.not. present(ReadExtraOut)) call CON_stop(NameCommand//&
                   ' ERROR: BATSRUS need flag to read more data')
              ReadExtra = .true.
@@ -1267,21 +1266,20 @@ contains
              end if
              call SetCritArea(3,nCritArgs,CritName_I,iCritPhy)
           case('dx')
-             ! at this time we do not know corect index for dx
+             ! at this time we do not know the correct index for dx
              iMapToUniqCrit_I(nCrit-nCritDxLevel) = 10001
              call SetCritArea(2,nCritArgs,CritName_I,nCrit-nCritDxLevel)
           case('level') 
-             ! at this time we do not know corect index for level
+             ! at this time we do not know the correct index for level
              iMapToUniqCrit_I(nCrit-nCritDxLevel) = 10002
              call SetCritArea(2,nCritArgs,CritName_I,nCrit-nCritDxLevel)
           case default
              iCritPhy = iCritPhy +1
-             !else
              if(.not. present(NameCritOut_I) &
                   .and. .not. present(nCritInOut))&
                   call CON_stop(NameCommand//' ERROR: Need a name table')
 
-             ! Find out if the name has bin used before
+             ! Find out if the name has been used before
              do iCritName = 1, nCrit
                 if(trim(CritName) == trim(NameCritOut_I(iCritName))) then
                    iMapToUniqCrit_I(iCritPhy) = iCritName
@@ -1302,7 +1300,6 @@ contains
                 nCritInOut = iMapToUniqCrit_I(iCritPhy)
              end if
              call SetCritArea(2,nCritArgs,CritName_I,iCritPhy)
-             !end if
           end select
           select case(CritName)
           case('level')
@@ -1324,10 +1321,13 @@ contains
           case default   
              call read_var('CoarsenLimit', CoarsenCritPhys_I(iCritPhy))
              call read_var('RefineLimit',  RefineCritPhys_I(iCritPhy))
-             if(IsLevel .or. IsRes) &
-                  call read_var('MaxResolution', MaxLevelCritPhys_I(iCritPhy))
-             if(IsLevel) &
-                  MaxLevelCritPhys_I(iCritPhy) = -MaxLevelCritPhys_I(iCritPhy)
+             if(IsRes)then
+                call read_var('MaxResolution', MaxLevelCritPhys_I(iCritPhy))
+             elseif(IsLevel)then
+                call read_var('MaxLevel', MaxLevelCritPhys_I(iCritPhy))
+                ! Level is stored with negative sign
+                MaxLevelCritPhys_I(iCritPhy) = -MaxLevelCritPhys_I(iCritPhy)
+             end if
           end select
        end do
 
