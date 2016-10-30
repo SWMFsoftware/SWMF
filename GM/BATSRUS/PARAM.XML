@@ -4881,8 +4881,8 @@ then the criteria can be chosen from the following list:
 \begin{verbatim}
   'gradT'		- gradient of temperature
   'gradP'		- gradient of pressure
-  'gradlogrho'		- gradient of log(rho)
-  'gradlogP'		- gradient of log(P)
+  'gradlogrho'		- gradient of log10(rho)
+  'gradlogP'		- gradient of log10(P)
   'gradE'		- gradient of electric field magnitude
   'curlV','curlU' 	- magnitude of curl of velocity
   'curlB'		- magnitude of current
@@ -4920,54 +4920,29 @@ Example for InvD2Ray =
 <command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION">
 	<parameter name="nRefineCrit" type="integer" min="0" default="0" />
 	<for from="1" to="$nRefineCrit">
-	     <parameter name="StringRefine" type="strings" min="1" max="2">
-		<part name="TypeRefine" type="string" case="lower"
-		      input="select">
-			<option name="grad T"		value="gradt"        />
-			<option name="grad P"		value="gradp"        />
-			<option name="grad log(Rho)"	value="gradlogrho"   />
-			<option name="grad log(p)" 	value="gradlogp"     />
-			<option name="grad E"		value="grade"	     />
-			<option name="curl U" 		value="curlu"        />
-			<option name="curl B"		value="curlb"  	     />
-			<option name="current squared"  value="j2"           />
-			<option name="current sheet"    value="currentsheet" />
-			<option name="div U"		value="divu"	     />
-			<option name="divB"		value="divb"	     />
-			<option name="rCurrents"	value="rcurrents"    />
-			<option name="error"            value="error"        />
-			<option name="transient"        value="transient"    />
-			<option name="User defined"     value="user" 	     />
-		</part>
-		<part name="TypeTransient" type="string" input="select"
-		      	   required="$TypeRefine =~ /transient/" >
-			<option name='Rho_dot' 	default="T"/>
-			<option name='RhoU_dot'		   />
-			<option name='P_dot'	    	   />
-			<option name='T_dot'		   />
-			<option name='Rho_2nd_1'	   />
-			<option name='Rho_2nd_2'	   />
-		</part>
-		<part name="NameStateVar" type="string" length="10"
-		      	   required="$TypeRefine =~ /error/" />
-	    </parameter>
-	    <parameter name="CoarsenLimit"      type="real"    min="0" /> 
-	    <parameter name="RefineLimit"       type="real"    min="0" />
-	    <parameter name="MaxRefinmentLevel" type="integer" min="0"/>
+	    <parameter name="StringRefine" type="string" length="200"/>
+	    <if expr="$StringRefine=~/^level/">
+	    	<parameter name="RefineTo"    type="integer" min="0" />
+	        <parameter name="CoarsenFrom" type="integer" min="$RefineTo" />
+            </if>
+	    <if expr="$StringRefine=~/^dx/">
+	    	<parameter name="RefineTo"      type="real"  min="0" /> 
+	        <parameter name="CoarsenFrom"   type="real"  min="0" 
+			   max="$RefineTo"/>
+	    </if>
+	    <if expr="$StringRefine!~/^level|dx/">
+	        <parameter name="CoarsenLimit" type="real" /> 
+	    	<parameter name="RefineLimit"  type="real" 
+			   min="$CoarsenLimit" />
+	    	<parameter name="MaxLevel" type="integer" min="0"
+			   if="$_command=~/LEVEL/" />
+	    	<parameter name="MaxResolution" type="real" min="0"
+			   if="$_command=~/RESOLUTION/" />
+	    </if>
 	</for>
-	<parameter name="SmallError" type="real" default="1.0e-8"
-		   if="$NameStateVar =~ /./" />
-	<parameter name="UseSunEarth" type="logical" default="F"
-		   if="$TypeTransient =~ /./" />
-	<if expr="$UseSunEarth">
-		<parameter name="xEarth"   type="real"/>
-		<parameter name="yEarth"   type="real"/>
-		<parameter name="zEarth"   type="real"/>
-		<parameter name="InvD2Ray" type="real"/>
-	</if>
 
 #AMRCRITERIALEVEL
-4                       nCriteria 
+5                       nCriteria 
 J2 +tail -nearbody      TypeCriteria
 0.1                     CoarsenLimit
 0.75                    RefineLimit
@@ -4976,45 +4951,81 @@ J2 +tail -nearbody      TypeCriteria
 1.0			CoarsenLimit
 2.0			RefineLimit
 2			MaxLevel
-Level                   TypeCriteria
+level                   TypeCriteria
 2                       RefineTo
 3                       CoarsenFrom
-dx  +nearbody           TypeCriteria
+dx +nearbody            TypeCriteria
 0.5                     RefineTo
 0.25                    CoarsenFrom
-error Bx -nearbody	TypeCriteria
-0.025			CoarsenLimit
-0.1			RefineLimit
-2			MaxLevel
 transient P_dot		TypeCriteria
 1.0	  		CoarsenLimit
 2.0			RefineLimit
 1			MaxLevel
-1.0e-2                  SmallError    ! Only if there are any 'error' crit
 T                       UseSunEarth   ! Only if there are any 'transient' crit
 0.00E+00                xEarth        ! Only if UseSunEarth is true
 2.56E+02                yEarth        ! Only if UseSunEarth is true
 0.00E+00                zEarth        ! Only if UseSunEarth is true
 5.00E-01                InvD2Ray      ! Only if UseSunEarth is true
 
+#AMRCRITERIARESOLUTION
+3                       nCriteria 
+J2 +tail -nearbody      TypeCriteria
+0.1                     CoarsenLimit
+0.75                    RefineLimit
+0.25                    MaxResolution
+J2 +tail -nearbody      TypeCriteria
+1.0			CoarsenLimit
+2.0			RefineLimit
+0.125			MaxResolution
+error Bx -nearbody	TypeCriteria
+0.025			CoarsenLimit
+0.1			RefineLimit
+0.5			MaxResolution
+1.0e-2                  SmallError    ! Only if there are any 'error' crit
+
 The #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command defines the 
 criteria to select blocks for refinement or coarsening when the #DOAMR 
 command is used with DoAmr=T parameter. In one session you can only have one
 #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command. 
 #AMRCRITERIARESOLUTION is equvilent with #AMRCRITERIALEVEL but works with
-cell size. For non-Cartesian grids "cell size" is defined as the maximum 
+cell size (MaxResolution) instead of grid level (MaxLevel). 
+For non-Cartesian grids "cell size" is defined as the maximum 
 length of the cell edges inside a block) instead of grid levels.
 Note that this is different from the definition used in the #GRIDRESOLUTION
 command.
 
 The number of criteria is given by the nCriteria parameter.
-Up to 3 different types of criteria (given by TypeCriteria) can be used. 
-But there can be multiple criteria for the same TypeCriteria. 
+For each criteria the first parameter TypeCriteria determines its type.
+TypeCriteria="level" and "dx" are geometric criteria, 
+while any other values (that depend on the solution) are non-geometric.
+Up to 3 different types of non-geometric criteria can be used,
+but there can be multiple criteria (with different criteria levels
+and/or geometric restrictions) for the same non-geometric TypeCriteria. 
 
-The various criteria types define a positive real number for every grid block.
-This number is compared with the CoarsenLimit and RefineLimit values.
-The MaxLevel parameter defines the maximum grid level to which a given
-criterion can refine to.
+For the geometric criteria there are two additional 
+parameters read: RefineTo and CoarsenFrom. 
+These are given either as grid level (for TypeCriteria="level") or as
+grid resolution (for TypeCriteria="dx"). In the above example the "level"
+criteria tries to refine the grid to level 2 (and coarsen from level 3 down
+to level 2) everywhere in the computational domain. 
+The "dx" criteria above tries to refine to a grid resolution 0.5 
+(and coarsen from 0.25 to 0.5) inside the region
+named "nearbody" that has to be defined by the #REGION command.
+
+For non-geometric criteria there are three additional parameters read:
+CoarsenLimit, RefineLimit and MaxLevel (for #AMRCRITERIALEVEL) 
+or MaxResolution (for #AMRCRITERIARESOLUTION).
+The TypeCriteria determines how the criterion value (a positive real
+number in "I/O" units) is calculated. In the above example TypeCriteria="J2" 
+is the largest value of the current density squared inside the grid block.
+The CoarsenLimit and RefineLimit are positive real numbers that
+are compared to the criterion value, for every grid block.
+If the criterion value is above the RefineLimit then the block will be refined
+if it has not yet reached the grid level or grid resolution defined by 
+the MaxLevel (for #AMRCRITERIALEVEL) or MaxResolution 
+(for #AMRCRITERIARESOLUTION) parameter.
+If the criterion value is below the CoarsenLimit then the block is 
+allowed to get coarsened according to this criterion.
 
 Refinement is done if ANY of the criteria demand it, and the block 
 can be refined. A block cannot be refined if the refinement level would exceed
@@ -5025,55 +5036,46 @@ can be coarsened. A block cannot be coarsened if the block level
 is already at the minimum level or it has a neighbor block that is
 and remains finer. 
 
+By default the AMR criteria are applied in the whole simulation domain.
+This can be limited to a certain area by adding +REGIONNAME and -REGIONNAME
+modifiers to the end of the TypeCriteria string. The unique REGIONNAME names 
+have to be defined in the #REGION command(s), where the definition
+of the region is given (for example a sphere, or a box).
+The plus sign before the region name means that the AMR criterion is
+applied in this region, while the minus sign means that the criterion
+is not applied in this region. If the first modifier has a negative sign, 
+it is assumed that you want the criterion to be evaluated everywhere except 
+in the region(s) specified with - sign(s).
+
 TypeCriteria can be chosen from the following list:
 \begin{verbatim}
+  'dx'                  - refinment based on (max) cell size in a block
+  'level'               - refinment based on the grid level of a block
   'gradT'		- gradient of temperature
   'gradP'		- gradient of pressure
   'gradlogrho'		- gradient of log(rho)
   'gradlogP'		- gradient of log(P)
   'gradE'		- gradient of electric field magnitude
   'curlV','curlU' 	- magnitude of curl of velocity
-  'curlB'		- magnitude of current
-  'J2'                  - square of current
+  'curlB'		- magnitude of current density
+  'J2'                  - square of current density
   'currentsheet'        - current sheet (radial B changes sign)
   'divU', 'divV'	- divergence of velocity
-  'divB'		- div B
-  'Rcurrents'		- refinement near Rcurrents value
   'user'                - criteria defined in the user module
-  'dx'                  - refinment based on max dx in a block
-  'Level'               - refinment based on the level of a block
 \end{verbatim}
-For TypeRefine "transient TypeTransient" there are the following posibileties 
-for TypeTransient:
+For TypeRefine="transient TypeTransient" there are the following possibiities:
 \begin{verbatim}
-  'P_dot'		- time derivative of pressure
-  'T_dot'		- time derivative of temperature
-  'Rho_dot'		- time derivative of density
-  'RhoU_dot'		- time derivative of momentum
-  'B_dot'		- time derivative of magnetic field
-  'Rho_2nd_1'
-  'Rho_2nd_2'
-  'meanUB'
+  'transient P_dot'	- time derivative of pressure
+  'transient T_dot'	- time derivative of temperature
+  'transient Rho_dot'	- time derivative of density
+  'transient RhoU_dot'	- time derivative of momentum
+  'transient B_dot'	- time derivative of magnetic field
+  'transient Rho_2nd_1'
+  'transient Rho_2nd_2'
+  'transient meanUB'
 \end{verbatim}
-
-For each TypeCriteria one can specify one or more region(s) where we want the 
-criteria to act on (use a plus sign before the region name) or to be excluded
-(use a minus sign before the region name).
-If you start with a negative sign, it is assumed that
-you want the criteria to act upon all regions but the negative one. 
-The regions are identified by their names 
-and are defined by the #REGION comands. 
-If no region is specified, all of the simulation domain is asumed (all).
-
-The UseSunEarth logical is only read if there are any "transient" type
-criteria. If UseSunEarth is set to true then the xEarth, yEarth, zEarth
-parameters are read, and these define the coordinates of the Earth 
-in the heliocentric coordinate system. The InvD2Ray parameter is
-a factor that defines how close to the Sun-Earth line the grid is refined.
-Note that the AMR occurs in a cylinder around the ray.
-
-For TypeRefine "error StateVarName" the criteria is a numerical error 
-estimate for the state varable StateVarName. 
+For TypeRefine="error StateVarName" the criteria is a numerical error 
+estimate for the state variable StateVarName. 
 The error estimation is based on the second and first derivatives:
 \begin{verbatim}
                           d^2 U
@@ -5085,11 +5087,16 @@ The error estimation is based on the second and first derivatives:
           DX     dx         DX^2
 \end{verbatim}
 The SmallError parameter gives a relative error with respect to the mean value 
-of the state variable. 
+of the state variable. This parameter is read as the last parameter of the
+command if there are any "error" type criteria.
+
+A useful tool to see the values of the various criteria is to plot the 
+'crit1'..'crit9' plot variables with the #SAVEPLOT command just before 
+the AMR(s).
 
 The default setting is nCriteria = 0.
-This can be used to refine or coarsen
-all the blocks limited by the minimum and maximum levels only
+This can be used to refine or coarsen all the blocks 
+limited by the minimum and maximum levels only
 (see commands #AMRLEVELS and #AMRRESOLUTION).
 
 </command>
