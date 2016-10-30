@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = main_lib.o Earth.o BoundaryInjection.o BoundaryInjection_SEP.o BoundaryInjection_GCR.o
+MAINLIBOBJ = main_lib.o Earth.o BoundaryInjection.o BoundaryInjection_SEP.o BoundaryInjection_GCR.o GCR_Badavi2011ASR.o 
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
