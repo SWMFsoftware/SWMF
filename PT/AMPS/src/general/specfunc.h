@@ -1,3 +1,4 @@
+//$Id$
 //  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 //  For more information, see http://csem.engin.umich.edu/tools/swmf
 #ifndef SPECFUNC
@@ -341,6 +342,10 @@ namespace Relativistic {
 
     mc2=mass*SpeedOfLight*SpeedOfLight;
     return SpeedOfLight*sqrt(E*(E+2.0*mc2))/(E+mc2);
+  }
+
+  inline double GetGamma(double *v) {
+    return 1.0/sqrt(1.0-(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])/(SpeedOfLight*SpeedOfLight));
   }
 }
 
