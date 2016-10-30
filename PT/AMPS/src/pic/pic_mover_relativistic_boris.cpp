@@ -174,6 +174,13 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
   PIC::Mesh::cDataBlockAMR *block;
   long int tempFirstCellParticle,*tempFirstCellParticlePtr;
 
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+  PIC::Debugger::CatchOutLimitValue(vFinal,DIM,__LINE__,__FILE__);
+  PIC::Debugger::CatchOutLimitValue(xFinal,DIM,__LINE__,__FILE__);
+#endif
+#endif
+
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
 
   if ((block=newNode->block)==NULL) {
