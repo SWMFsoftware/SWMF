@@ -940,6 +940,7 @@ void PIC::Sampling::Sampling() {
   //sample the distribution functions
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
+  if (PIC::EnergyDistributionSampleRelativistic::SamplingInitializedFlag==true) PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
   if (_PIC_COUPLER_MODE_!=_PIC_COUPLER_MODE__OFF_) if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
 #endif
@@ -1089,6 +1090,10 @@ void PIC::Sampling::Sampling() {
           PIC::DistributionFunctionSample::printDistributionFunction(fname,s);
         }
 
+        if (PIC::EnergyDistributionSampleRelativistic::SamplingInitializedFlag==true) {
+          sprintf(fname,"%s/pic.energy-distribution.%s.s=%i.out=%ld",OutputDataFileDirectory,ChemSymbol,s,DataOutputFileNumber);
+          PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(fname,s);
+        }
 
         if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) {
           sprintf(fname,"%s/pic.flux.%s.s=%i.out=%ld.dat",OutputDataFileDirectory,ChemSymbol,s,DataOutputFileNumber);
@@ -1210,6 +1215,7 @@ void PIC::Sampling::Sampling() {
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
     if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::flushSamplingBuffers();
+    if (PIC::EnergyDistributionSampleRelativistic::SamplingInitializedFlag==true) PIC::EnergyDistributionSampleRelativistic::flushSamplingBuffers();
     if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::flushSamplingBuffers();
 #endif
 
@@ -1680,6 +1686,11 @@ void PIC::Init_AfterParser() {
   //init the velocity distribution sample procedure
 #if _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::DistributionFunctionSample::Init();
+#endif
+
+  //init the energy distribution sample procedure
+#if _PIC_ENERGY_DISTRIBUTION_SAMPLING_RELATIVISTIC_MODE_ == _PIC_MODE_ON_
+  PIC::EnergyDistributionSampleRelativistic::Init();
 #endif
 
   //init the pitch angle distribution sample procedure
