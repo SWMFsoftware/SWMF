@@ -248,6 +248,9 @@ at the end of each time step
 //default sampling model for the particle pitch angle
 #define _PIC_PITCH_ANGLE_DISTRIBUTION_SAMPLING_MODE_ _PIC_MODE_OFF_
 
+//default value for sampling of the energy distribution function
+#define _PIC_ENERGY_DISTRIBUTION_SAMPLING_RELATIVISTIC_MODE_ _PIC_MODE_OFF_
+
 //the mode of the output of the AMPS' macroscopic data file 
 #define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_ 
 
