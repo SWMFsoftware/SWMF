@@ -34,11 +34,13 @@ void amps_time_step();
 
 int main(int argc,char **argv) {
 
+  //init Earth magnetosphere model
+  Earth::Init();
+
   amps_init_mesh();
   amps_init();
 
-  //init Earth magnetosphere model
-  Earth::Init();
+
 
 
   PIC::RequiredSampleLength=600;
