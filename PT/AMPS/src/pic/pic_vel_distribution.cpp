@@ -25,7 +25,7 @@ void PIC::Distribution::InjectRingDistribution(double *v,double Energy,double *E
 
   //convert energy into speed
   mass=PIC::MolecularData::GetMass(spec);
-  speed=SpeedOfLight*sqrt(Energy/(Energy+mass*SpeedOfLight*SpeedOfLight));
+  speed=Relativistic::E2Speed(Energy,mass);
 
   //init the velocity vector
   for (idim=0;idim<3;idim++) v[idim]=speed*l[idim];
