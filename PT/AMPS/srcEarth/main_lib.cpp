@@ -31,7 +31,7 @@ double xMaxDomain=5; //modeling the vicinity of the planet
 double yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 
-double dxMinSphere=0.1,dxMaxSphere=0.1;
+double dxMinSphere=0.5,dxMaxSphere=0.5;
 double dxMinGlobal=1,dxMaxGlobal=1;
 
 
@@ -61,7 +61,10 @@ double localSphericalSurfaceResolution(double *x) {
 
   res=dxMinSphere;
   res/=2.1;
-  return rSphere*res;
+
+  res*=2.1;
+
+  return 5.5* 2.5*rSphere*res;
 }
 
 
@@ -87,22 +90,27 @@ double localResolution(double *x) {
 
     if (r<0.98*rSphere) res=rSphere;
     else if (r<1.05*rSphere) res=localSphericalSurfaceResolution(x);
-    else if (r<2.0*rSphere) res=rSphere * dxMinGlobal;
-    else res=rSphere*dxMinGlobal*max(1.0+(5.0-1.0)/((6.0-2.0)*_RADIUS_(_TARGET_))*(r-2.0*_RADIUS_(_TARGET_)),1.0);   
+    else if (r<2.0*rSphere) res=2.5* rSphere * dxMinGlobal;
+    else res=6.0*rSphere*dxMinGlobal*max(1.0+(5.0-1.0)/((6.0-2.0)*_RADIUS_(_TARGET_))*(r-2.0*_RADIUS_(_TARGET_)),1.0);
   }
 
-  return res;
+  return 2.5*res;
 }
 
 //set up the local time step
 double localTimeStep(int spec, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double mass,maxSpeed,CellSize=startNode->GetCharacteristicCellSize();
-  
-  //evaluate the maximum particle speed with the energy limit used in the Earth magnetosphere model
-  mass=PIC::MolecularData::GetMass(spec);
-  maxSpeed=SpeedOfLight*sqrt(Earth::BoundingBoxInjection::maxEnergy/(Earth::BoundingBoxInjection::maxEnergy+mass*SpeedOfLight*SpeedOfLight));
+  int nCompositionGroup;
 
-  return 0.3*CellSize/maxSpeed;
+  nCompositionGroup=Earth::CompositionGroupTableIndex[spec];
+  maxSpeed=Earth::CompositionGroupTable[nCompositionGroup].GetMaxVelocity(spec);
+
+  
+/*  //evaluate the maximum particle speed with the energy limit used in the Earth magnetosphere model
+  mass=PIC::MolecularData::GetMass(spec);
+  maxSpeed=SpeedOfLight*sqrt(Earth::BoundingBoxInjection::maxEnergy/(Earth::BoundingBoxInjection::maxEnergy+mass*SpeedOfLight*SpeedOfLight));*/
+
+  return 0.2*CellSize/maxSpeed;
 }
 
 
@@ -124,7 +132,7 @@ void amps_init_mesh() {
   //if (strcmp(Earth::Mesh::sign,"new")==0) 
 { //full mesh
 
-    dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
+    dxMinGlobal=2.2*0.4/2.1,dxMaxGlobal=1;
 
     //modeling the vicinity of the planet
     xMaxDomain=16 *_RADIUS_(_TARGET_); 
@@ -162,7 +170,7 @@ void amps_init_mesh() {
    
    //reserve memory for sampling of the surface balance of sticking species
    long int ReserveSamplingSpace[PIC::nTotalSpecies];
-   
+   for (int s=0;s<PIC::nTotalSpecies;s++) ReserveSamplingSpace[s]=0;
    
    cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
    
@@ -172,6 +180,7 @@ void amps_init_mesh() {
    SphereDescriptor=PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere();
    Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
    Sphere->SetSphereGeometricalParameters(sx0,rSphere);
+   Sphere->ParticleSphereInteraction=Earth::BC::ParticleSphereInteraction;
    
    
    
@@ -305,10 +314,29 @@ void amps_init_mesh() {
    PIC::Init_AfterParser ();
    PIC::Mover::Init();
    
+   //set up the sampling routine
+   //combine all species into the same distribution function
+   vector<int> SpeciesTable;
+
+   for (int s=0;s<PIC::nTotalSpecies;s++) SpeciesTable.push_back(s);
+
+/*   const int nSamplePoints=7;
+   double SampleLocations[nSamplePoints][DIM]={{1.8E8,0.0,0.0}, {1.3E8,0.0,0.0}, {9.4E7,0.0,0.0}, {5.7E7,0.0,0.0}, {3.6E7,0.0,0.0}, {2.3E7,0.0,0.0}, {7.3E6,0.0,0.0}};
+
+   PIC::EnergyDistributionSampleRelativistic::eMin=1.0E6;
+   PIC::EnergyDistributionSampleRelativistic::eMax=1.0E10;
+   PIC::EnergyDistributionSampleRelativistic::AddCombinedCombinedParticleDistributionList(SpeciesTable);
+
+   PIC::EnergyDistributionSampleRelativistic::nSamleLocations=nSamplePoints;
+   PIC::EnergyDistributionSampleRelativistic::SamplingLocations=SampleLocations;*/
+
+   PIC::EnergyDistributionSampleRelativistic::AddCombinedCombinedParticleDistributionList(SpeciesTable);
+
    //set up the time step
    PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
    PIC::ParticleWeightTimeStep::initTimeStep();
    
+
    //set up the particle weight
    PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Earth::BoundingBoxInjection::InjectionRate;
    for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
