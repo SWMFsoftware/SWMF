@@ -55,6 +55,12 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     if (node==NULL) exit(__LINE__,__FILE__,"Error: the location is outside of the computational domain");
     if (node->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not allocated");
   }
+  else if (node->block==NULL) {
+    char msg[200];
+
+    sprintf(msg,"Error: the block is not allocated\nCurrent MPI Process=%i\nnode->Thread=%i\n",PIC::ThisThread,node->Thread);
+    exit(__LINE__,__FILE__,msg);
+  }
 
   //find cell
   nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
