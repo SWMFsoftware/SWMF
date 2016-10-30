@@ -248,12 +248,11 @@ contains
          x_, y_, z_, MaxBlock
     use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B,&
          DoThinCurrentSheet
-    use ModGeometry,   ONLY: r_BLK, true_cell
     use ModAdvance,    ONLY: State_VGB, StateOld_VCB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: rCurrents
-    use ModPhysics,    ONLY: UseSunEarth
+    use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
+         UnitTemperature_, UnitElectric_, UseSunEarth
     use ModCurrent,    ONLY: get_current
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
     use ModNumConst,   ONLY: cSqrtTwo, cTiny
@@ -266,7 +265,7 @@ contains
 
     logical :: UseSwitchAMR, IsFound
     integer :: iBlock, iCrit, i, j, k
-    real :: Xyz_D(3), RR, RcritAMR,AMRsort_1,AMRsort_2
+    real :: Xyz_D(3), RR, RcritAMR
 
     real, allocatable, save, dimension(:,:,:):: &
          Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
@@ -330,7 +329,8 @@ contains
              Var_G = P_G/Rho_G
              call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
-                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
+                  *No2Io_V(UnitTemperature_)
           case('gradlogrho')
              ! Log of density gradient.
              Var_G = log10(Rho_G)
@@ -348,7 +348,8 @@ contains
              ! Pressure gradient 2.
              call calc_gradient(iBlock, P_G, GradX_C,GradY_C,GradZ_C)
              Crit_IB(iCrit,iBlock) = &
-                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
+                  * No2Io_V(UnitP_)
 
           case('grade')
              ! Electric field gradient.
@@ -374,7 +375,8 @@ contains
              end if
              call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
-                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
+                  sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
+                  * No2Io_V(UnitElectric_)
 
           case('curlv', 'curlu')
              ! Curl of velocity
@@ -387,7 +389,8 @@ contains
              Crit_IB(iCrit,iBlock) = sqrt(maxval( &
                   (GradYVarZ_C - GradZVarY_C)**2 + &
                   (GradZVarX_C - GradXVarZ_C)**2 + &
-                  (GradXVarY_C - GradYVarX_C)**2))
+                  (GradXVarY_C - GradYVarX_C)**2)) &
+                  * No2Io_V(UnitU_)
 
           case('curlb')
              ! Curl of magnetic field (current)
@@ -400,7 +403,8 @@ contains
              Crit_IB(iCrit,iBlock) = sqrt(maxval( &
                   (GradYVarZ_C - GradZVarY_C)**2 + &
                   (GradZVarX_C - GradXVarZ_C)**2 + &
-                  (GradXVarY_C - GradYVarX_C)**2))
+                  (GradXVarY_C - GradYVarX_C)**2)) &
+                  *No2Io_V(UnitJ_)
 
           case('j2')
              Crit_IB(iCrit,iBlock) = 0.0
@@ -409,6 +413,8 @@ contains
                 Crit_IB(iCrit,iBlock) = max(Crit_IB(iCrit,iBlock),&
                      sum(Current_D**2))
              end do;end do;end do
+             Crit_IB(iCrit,iBlock) = Crit_IB(iCrit,iBlock) &
+                  *No2Io_V(UnitJ_)**2
 
           case('divu','divv')
              ! Divergence of velocity (this is REALLY INEFFICIENT !!!)
@@ -420,14 +426,8 @@ contains
                   GradXVarZ_C,GradYVarZ_C,GradZVarZ_C)
 
              Crit_IB(iCrit,iBlock) = &
-                  maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C))
-
-          case('rcurrents')	
-             ! Inverse distance from Rcurrents, squared
-             Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
-                  abs(Rcurrents - R_BLK(1:nI,1:nJ,1:nK,iBlock))))**2)
-             Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
-                  MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+                  maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C)) &
+                  *No2Io_V(UnitU_)
 
           case('currentsheet')
              if(SignB_>1 .and. DoThinCurrentSheet)then
@@ -481,18 +481,8 @@ contains
                 end if
                 if (UseSwitchAMR) then
                    ! Use dynamic refinement if there is a transient event 
-                   call trace_transient(RefineCrit(iCrit),iCrit,iBlock,&
-                        AMRsort_1)
-                   Crit_IB(iCrit,iBlock) = AMRsort_1
-                   ! Restrict the refinement to the Sun-Earth ray only
-                   ! Only if UseSunEarth == .true.
-                   if (UseSunEarth) then
-                      call refine_sun_earth_cyl(iBlock, &
-                           Xyz_D(x_), Xyz_D(y_), Xyz_D(z_), AMRsort_2)
-                   else
-                      AMRsort_2 = 1.0
-                   end if
-                   Crit_IB(iCrit,iBlock) = AMRsort_2*Crit_IB(iCrit,iBlock)
+                   call trace_transient(RefineCrit(iCrit), &
+                        Crit_IB(iCrit,iBlock))
                 end if
              end if
           end select
@@ -502,11 +492,10 @@ contains
   contains
     !==========================================================================
 
-    subroutine trace_transient(NameCrit,iCrit,iBlock,refine_crit)
+    subroutine trace_transient(NameCrit, refine_crit)
 
       character(len=*), intent(in) :: NameCrit
 
-      integer, intent(in) :: iBlock,iCrit
       real, intent(out) :: refine_crit
       real :: AMRsort
       real, dimension(nI,nJ,nK) :: scrARR
@@ -646,126 +635,5 @@ contains
     end subroutine trace_transient
   end subroutine amr_criteria
   !============================================================================
-  subroutine refine_sun_earth_cone(iBlock,xBLK,yBLK,zBLK,refine_profile)
-
-!!! The code below is WAY overcomplicated. To be removed.
-
-    use ModMain,     ONLY: BLKtest
-    use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody,xEarth,yEarth,zEarth,InvD2Ray
-    use ModNumConst, ONLY: cRadToDeg
-
-    ! This subroutine aims to restrict the refinement mainly along the ray 
-    ! Sun-Earth, in a cone with a user-defined opening angle.
-
-    integer, intent(in) :: iBlock
-    real, intent(in) :: xBLK,yBLK,zBLK
-    real, intent(out) :: refine_profile
-
-    real :: rBLK, xxx,yyy,zzz, cutFACT
-    real :: signY,cosPHI,cosTHETA
-    real :: signY_BLK,cosPHI_BLK,cosTHETA_BLK
-    !--------------------------------------------------------------------------
-
-    cutFACT = InvD2Ray*2*cRadToDeg
-    !\
-    ! For InvD2Ray = 1. ==> refine_profile = 0.174587 at angle 5deg around the ray.
-    ! For InvD2Ray = 2. ==> refine_profile = 0.030481 at angle 5deg around the ray.
-    !/
-    xxx = xEarth
-    yyy = yEarth
-    zzz = zEarth
-
-    if (yyy == 0.0) then
-       signY = 1.0
-    else
-       signY = abs(yyy)/yyy
-    end if
-    cosTHETA = zzz/sqrt(xxx**2+yyy**2+zzz**2)
-    cosPHI   = xxx/sqrt(xxx**2+yyy**2)
-    if ((iProc==0).and.(iBlock==BLKtest)) then
-       write(*,*) ''
-       write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<'
-       write(*,*) '                 Position of the Earth'
-       write(*,*) '' 
-       write(*,*) 'cosPHI   =',cosPHI
-       write(*,*) 'PHI      =',acos(cosPHI)*cRadToDeg
-       write(*,*) 'cosTHETA =',cosTHETA
-       write(*,*) 'THETA    =',acos(cosTHETA)*cRadToDeg
-       write(*,*) '' 
-       write(*,*) '>>>>>>>>>>>>>>>>>>>                  <<<<<<<<<<<<<<<<<<<<<'
-       write(*,*) '' 
-    end if
-    rBLK = sqrt(xBLK**2+yBLK**2+zBLK**2)
-    if (rBLK.gt.Rbody) then
-       if (yBLK == 0.0) then
-          signY_BLK = 1.0
-       else
-          signY_BLK = abs(yBLK)/yBLK
-       end if
-       cosTHETA_BLK = zBLK/sqrt(xBLK**2+yBLK**2+zBLK**2)
-       cosPHI_BLK   = xBLK/sqrt(xBLK**2+yBLK**2)
-
-       refine_profile = abs(0.5*(signY+signY_BLK)* &
-            exp(-cutFACT*(acos(cosPHI_BLK)-acos(cosPHI))**2)* &
-            exp(-cutFACT*(acos(cosTHETA_BLK)-acos(cosTHETA))**2))
-    else
-       refine_profile = 0.0
-    end if
-
-  end subroutine refine_sun_earth_cone
-  !============================================================================
-  subroutine refine_sun_earth_cyl(iBlock,xBLK,yBLK,zBLK,refine_profile)
-
-!!! The code below is WAY overcomplicated. To be removed.
-
-    use ModPhysics, ONLY: rBody, xEarth, yEarth, zEarth, InvD2Ray
-
-    integer, intent(in) :: iBlock
-    real, intent(in) :: xBLK,yBLK,zBLK
-    real, intent(out) :: refine_profile
-    real :: rBLK, xxx,yyy,zzz, cutFact
-    real :: cosPHI,sinPHI,cosTHETA,sinTHETA
-    real :: dist2BLK,yPrimeBLK
-
-    ! This subroutine aims to restrict the refinement mainly along the ray 
-    ! Sun-Earth, in a cylinder with user-defined profile across.
-    !--------------------------------------------------------------------------
-    cutFact = (InvD2Ray*10)**2
-    !\
-    ! For InvD2Ray = 1. ==> refine_profile = 0.3679 at distance 0.1*Rsun from the ray
-    ! For InvD2Ray = 2. ==> refine_profile = 0.0183 at distance 0.1*Rsun from the ray
-    ! For InvD2Ray = 3. ==> refine_profile = 0.0001 at distance 0.1*Rsun from the ray
-    !/
-
-
-    xxx = xEarth
-    yyy = yEarth
-    zzz = zEarth
-    cosTHETA = zzz/ &
-         sqrt(xxx**2+yyy**2+zzz**2)
-    sinTHETA = sqrt(xxx**2+yyy**2)/ &
-         sqrt(xxx**2+yyy**2+zzz**2)
-    cosPHI   = xxx/sqrt(xxx**2+yyy**2)
-    sinPHI   = yyy/sqrt(xxx**2+yyy**2)
-
-    dist2BLK  = (xBLK*sinPHI-yBLK*cosPHI)**2                + &
-         (-xBLK*cosTHETA*cosPHI-yBLK*cosTHETA*sinPHI + &
-         zBLK*sinTHETA)**2
-    yPrimeBLK = (xBLK*sinTHETA*cosPHI+yBLK*sinTHETA*sinPHI  + &
-         zBLK*cosTHETA)
-
-    rBLK = sqrt(xBLK**2+yBLK**2+zBLK**2)
-    if ((rBLK.gt.Rbody).and.(yPrimeBLK >= 0.0)) then
-       if (cutFact*dist2BLK <= 150.0) then
-          refine_profile = exp(-cutFact*dist2BLK)
-       else
-          refine_profile = 0.0
-       end if
-    else
-       refine_profile = 0.0
-    end if
-
-  end subroutine refine_sun_earth_cyl
 
 end module ModAMR
