@@ -53,7 +53,8 @@ PICOBJ = pic.o \
 	pic_field_line.o \
 	pic_ccmc.o \
 	pic_user_particle_processing.o \
-	pic_mover_relativistic_boris.o 
+	pic_mover_relativistic_boris.o \
+	pic_sample_energy_distribution_relativistic.o 
 	
 ifneq ($(BATL),nobatl)	
 PICOBJ+=pic_batsrus.o \
