@@ -22,6 +22,8 @@ using namespace std;
 #include "constants.h"
 #include "Earth.dfn"
 
+#include "GCR_Badavi2011ASR.h"
+
 //class that is used for keeping information of the injected faces
 class cBoundaryFaceDescriptor {
 public:
@@ -33,10 +35,42 @@ public:
   }
 };
 
+class cCompositionGroupTable {
+public:
+  int FistGroupSpeciesNumber;
+  int nModelSpeciesGroup;
+  double minVelocity,maxVelocity; //the velocity range of particles from a given species group that corresponds to the energy range from Earth::BoundingBoxInjection
+  double GroupVelocityStep;   //the velocity threhold after which the species number in the group is switched
+  double maxEnergySpectrumValue;
+
+  double inline GetMaxVelocity(int spec) {
+    int nGroup=spec-FistGroupSpeciesNumber;
+
+    if ((nGroup<0)||(spec>=FistGroupSpeciesNumber+nModelSpeciesGroup)) exit(__LINE__,__FILE__,"Error: cannot recogniza the velocit group");
+    return minVelocity+(nGroup+1)*GroupVelocityStep;
+  }
+
+  double inline GetMinVelocity(int spec) {
+    int nGroup=spec-FistGroupSpeciesNumber;
+
+    if ((nGroup<0)||(spec>=FistGroupSpeciesNumber+nModelSpeciesGroup)) exit(__LINE__,__FILE__,"Error: cannot recogniza the velocit group");
+    return minVelocity+nGroup*GroupVelocityStep;
+  }
+
+  cCompositionGroupTable() {
+    FistGroupSpeciesNumber=-1,nModelSpeciesGroup=-1;
+    minVelocity=-1.0,maxVelocity=-1.0,GroupVelocityStep=-1.0;
+  }
+};
 
 namespace Earth {
   using namespace Exosphere;
   
+  //composition table of the GCR composition
+  extern cCompositionGroupTable *CompositionGroupTable;
+  extern int *CompositionGroupTableIndex;
+  extern int nCompositionGroups;
+
   //the mesh parameters
   namespace Mesh {
     extern char sign[_MAX_STRING_LENGTH_PIC_];
@@ -46,7 +80,7 @@ namespace Earth {
   namespace BoundingBoxInjection {
     //Energy limis of the injected particles
     const double minEnergy=1.0*MeV2J;
-    const double maxEnergy=100.0*MeV2J;
+    const double maxEnergy=1.0E4*MeV2J;
 
     //the list of the faces located on the domain boundary through which particles can be injected
     extern cBoundaryFaceDescriptor *BoundaryFaceDescriptor;
@@ -64,6 +98,10 @@ namespace Earth {
       extern double **BoundaryFaceLocalInjectionRate;
       extern double *maxBoundaryFaceLocalInjectionRate;
       extern double *BoundaryFaceTotalInjectionRate;*/
+
+
+      extern double *InjectionRateTable;  //injection rate for a given species/composition group component
+      extern double *maxEnergySpectrumValue;  //the maximum value of the energy epectra for a given species/composition group component
 
       //init the model
       void Init();
