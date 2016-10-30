@@ -2806,6 +2806,49 @@ namespace PIC {
     void printDistributionFunction(char *fname,int spec);
   }
 
+  //sample energy distribution in the relativistic case
+  namespace EnergyDistributionSampleRelativistic {
+    //the init flag
+    extern bool SamplingInitializedFlag;
+
+    //the modes for sampling of the v^2 and the absolute value of velocity
+    extern const int _LINEAR_SAMPLING_SCALE_,_LOGARITHMIC_SAMPLING_SCALE_;
+    extern int EnergySamplingMode;
+
+    //combine sampled distribution for several species (in the relativistic mode the same chemical species can have a group of the model particle numbers to fix the problem of
+    //substantial velocity different of partilces that belong to the same chemical component
+    extern vector<vector<int> > CombinedSpeciesDistributionTable;
+
+    //the range of the velocity scale and the number of nodes in the sample
+    extern double eMax,eMin;
+    extern long int nSampledFunctionPoints;
+    extern double dE;
+
+    //the sampling buffers
+    extern double **SamplingBuffer;
+
+    //sampling data offsets
+    extern int Sample_Energy_Offset,SampleDataLength;
+
+    //get the offset to the beginig of the sampling data for a particular samplePoint, spec,.....
+    long int GetSampleDataOffset(int spec,int nInterval);
+
+    //sampling  locations
+    extern double SamplingLocations[][3];
+    extern int nSamleLocations;
+    extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
+    extern long int *SampleLocalCellNumber;
+
+    void AddCombinedCombinedParticleDistributionList(vector<int> CombinedSpecies);
+
+    void Init();
+
+    void SampleDistributionFnction();
+    void flushSamplingBuffers();
+
+    void printDistributionFunction(char *fname,int spec);
+  }
+
   //sample and output the particle's pitch angle distribution function
   namespace PitchAngleDistributionSample {
     //the init flag
@@ -3366,9 +3409,9 @@ namespace PIC {
           extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*  last;
         }
 
-	// precision for taking shortcut and moving point to the cell center
-	const double PrecisionCellCenter = 1.0e-3;
-	
+        // precision for taking shortcut and moving point to the cell center
+        const double PrecisionCellCenter = 1.0e-3;
+
         //interpolation functions
         PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
         PIC::InterpolationRoutines::CellCentered::cStencil *GetTriliniarInterpolationStencil(double iLoc,double jLoc,double kLoc,double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
