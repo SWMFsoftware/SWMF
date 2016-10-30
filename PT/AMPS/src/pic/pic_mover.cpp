@@ -61,6 +61,11 @@ void PIC::Mover::MoveParticles() {
   long int ParticleList,ptr;
   double LocalTimeStep;
 
+  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  //the total number of the particle moving procedure calls
+  static unsigned long int nTotalCalls=0;
+  #endif
+
 
   //the table of increments for accessing the cells in the block
   static bool initTableFlag=false;
@@ -339,6 +344,10 @@ void PIC::Mover::MoveParticles() {
               LocalTimeStep=block->GetLocalTimeStep(s);
 
               _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node);
+
+              #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+              nTotalCalls++;
+              #endif
             }
 
           }
