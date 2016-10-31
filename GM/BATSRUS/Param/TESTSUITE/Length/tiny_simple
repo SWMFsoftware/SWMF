@@ -32,14 +32,11 @@ F                       IsStrictAmr
 1e-8                    DiffCriteriaLevel
 
 #AMRCRITERIA
-3                       nRefineCrit (number of refinement criteria: 1,2 or 3)
+2                       nRefineCrit (number of refinement criteria: 1,2 or 3)
 curlB                   TypeRefine
 -1.0                    CoarsenLimit  ! Only if UseBatl is true
 -1.0                    RefineLimit   ! Only if UseBatl is true
 gradlogP		TypeRefine
--1.0                    CoarsenLimit  ! Only if UseBatl is true
--1.0                    RefineLimit   ! Only if UseBatl is true
-Rcurrents		TypeRefine
 -1.0                    CoarsenLimit  ! Only if UseBatl is true
 -1.0                    RefineLimit   ! Only if UseBatl is true
 
