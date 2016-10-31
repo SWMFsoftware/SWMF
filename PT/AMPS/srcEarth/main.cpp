@@ -33,6 +33,7 @@ void amps_init_mesh();
 void amps_time_step();
 
 int main(int argc,char **argv) {
+  static int LastDataOutputFileNumber=0;
 
   //init Earth magnetosphere model
   Earth::Init();
@@ -65,6 +66,16 @@ int main(int argc,char **argv) {
 	     PIC::RequiredSampleLength,
 	     PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
     }
+
+     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+       PIC::RequiredSampleLength*=2;
+       if (PIC::RequiredSampleLength>25000) PIC::RequiredSampleLength=25000;
+
+
+       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+     }
+
   }
   
   
