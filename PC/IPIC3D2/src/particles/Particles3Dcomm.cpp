@@ -2033,9 +2033,18 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
 					   const double xMin, const double xMax,
 					   const double yMin, const double yMax,
 					   const double zMin, const double zMax,
+					   double** pointList_ID, long nPoint,
+					   bool usePointList,
 					   const double No2OutL,
 					   const double No2OutV
 					   ){
+  /*
+    For output along the satellite trajectory. xMin,xMax... characterize the smallest
+    cube can contain the whole trajectory so that the particles outside the cube can be
+    easily excluded. pointList_ID lists the trajectory points, if a particle is close to
+    one of the trajectory points, then output this particle.    
+   */
+
   string nameSub = "write_plot_particles";
   bool doTestFunc;
   doTestFunc = do_test_func(nameSub);
@@ -2071,9 +2080,32 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
       x = pcl.get_x();
       y = pcl.get_y();
       z = nDim>2? pcl.get_z():0;
-      doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
-      if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
 
+      doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
+      if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;	
+
+      double drSat = col->getDx()*2; // This value should be got from PARAM.in
+
+      if(doOutput && usePointList){
+
+	bool isNearSat;
+	double dx0, dy0, dz0, dr0;
+	isNearSat = false;
+	for(long iPoint=0; iPoint<nPoint; iPoint++){
+	  dx0 = x - pointList_ID[iPoint][0];
+	  dy0 = y - pointList_ID[iPoint][1];
+	  dz0 = nDim>2? z - pointList_ID[iPoint][2]:0;
+	  
+	  dr0 = sqrt(dx0*dx0 + dy0*dy0 + dz0*dz0);
+	  if(dr0 <drSat) {
+	    isNearSat=true;
+	    break;
+	  }
+	  	  
+	}// for
+	doOutput = isNearSat;
+      }//if
+      
       if(doOutput){
 	// The PostIDL.f90 is designed for Fortran output. In order to
 	// use PostIDL.f90, we should follow the format of Fortran
@@ -2118,6 +2150,32 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
       doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
       if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
 
+
+      double drSat = col->getDx()*2; // This value should be got from PARAM.in
+
+      if(doOutput && usePointList){
+
+	bool isNearSat;
+	double dx0, dy0, dz0, dr0;
+	isNearSat = false;
+	for(long iPoint=0; iPoint<nPoint; iPoint++){
+	  dx0 = x - pointList_ID[iPoint][0];
+	  dy0 = y - pointList_ID[iPoint][1];
+	  dz0 = nDim>2? z - pointList_ID[iPoint][2]:0;
+	  
+
+	  dr0 = sqrt(dx0*dx0 + dy0*dy0 + dz0*dz0);
+	  if(dr0 <drSat) {
+	    isNearSat=true;
+	    break;
+	  }
+	  	  
+	}// for
+	doOutput = isNearSat;
+      }//if
+
+
+      
       if(doOutput){
 	x = (pcl.get_x() + col->getFluidStartX());
 	y = (pcl.get_y() + col->getFluidStartY());

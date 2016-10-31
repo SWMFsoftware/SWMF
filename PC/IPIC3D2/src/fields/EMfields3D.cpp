@@ -4228,7 +4228,7 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
 }
 
 void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
-				   int** pointList_ID, long nPoint,
+				   double** pointList_ID, long nPoint, bool isCoord,
 				   const double No2OutL, const double No2OutV,
 				   const double No2OutB, const double No2OutRho,
 				   const double No2OutP, const double No2OutJ){
@@ -4282,6 +4282,7 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 		       pointList_ID[iPoint][0],
 		       pointList_ID[iPoint][1],
 		       pointList_ID[iPoint][2],
+		       isCoord,
 		       No2OutL, No2OutV, No2OutB,
 		       No2OutRho, No2OutP, No2OutJ);
 	fwrite(&data0, nSizeDouble, 1, outFile);
@@ -4301,6 +4302,7 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
 			      pointList_ID[iPoint][0],
 			      pointList_ID[iPoint][1],
 			      pointList_ID[iPoint][2],
+			      isCoord,
 			      No2OutL, No2OutV,
 			      No2OutB, No2OutRho, No2OutP, No2OutJ);
       }	
@@ -4312,13 +4314,60 @@ void EMfields3D:: write_plot_field(string filename, string *var_I, int nVar,
   delete [] varOut_I;
 }
 
-double EMfields3D:: getVar(string var, int i, int j, int k,
+double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool isCoord, 
 			   const double No2OutL, const double No2OutV,
 			   const double No2OutB, const double No2OutRho,
 			   const double No2OutP, const double No2OutJ){
+  /*
+    if isCoord is true: iIn,jIn,kIn are the location (x/y/z) of the output point.
+    else: iIn,jIn,kIn are the node index, eventhough they are double number.
+   */
+  
   const Collective *col = &get_col();
   const Grid *grid = &get_grid();
+  int i, j, k;
   double value;
+
+  if(isCoord){
+    int ix, iy, iz;
+    double weight_I[8];
+
+    // The interpolate weights should be stored in an array so that it
+    // only need to be calculated once. Yuxi 
+    grid->getInterpolateWeight(iIn,jIn,kIn,ix,iy,iz,weight_I);
+
+    const double w000 = weight_I[0];
+    const double w001 = weight_I[1];
+    const double w010 = weight_I[2];
+    const double w011 = weight_I[3];
+    const double w100 = weight_I[4];
+    const double w101 = weight_I[5];
+    const double w110 = weight_I[6];
+    const double w111 = weight_I[7];
+
+    value = 0;
+    value += w000*getVar(var,ix,iy,iz,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w001*getVar(var,ix,iy,iz-1,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w010*getVar(var,ix,iy-1,iz,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w011*getVar(var,ix,iy-1,iz-1,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w100*getVar(var,ix-1,iy,iz,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w101*getVar(var,ix-1,iy,iz-1,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w110*getVar(var,ix-1,iy-1,iz,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+    value += w111*getVar(var,ix-1,iy-1,iz-1,false,No2OutL, No2OutV,
+			 No2OutB, No2OutRho, No2OutP, No2OutJ);
+
+    return value;
+  }else{
+    i = iIn; j=jIn; k=kIn;
+  }
+  
   if(var.substr(0,1)=="q"){
     // "q", "qS0", "qS1"...
     if(var.size()==1){

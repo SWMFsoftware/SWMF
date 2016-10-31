@@ -20,6 +20,8 @@ Writen by Lars Daldorff (daldorff@umich.edu) 15 Jan 2013
 #include <unistd.h>
 #include <stdio.h>
 #include <math.h>
+#include <vector>
+#include <array>
 #include "ConfigFile.h"
 #include "input_array.h"
 #include "Alloc.h"
@@ -135,6 +137,11 @@ class InterfaceFluid
   string *plotVar_I;
   bool doSaveBinary;
 
+  vector< vector< array<double,4> > > satInfo_III;
+
+  // Simulation start time.
+  int iYear, iMonth, iDay, iHour, iMinute, iSecond;
+  
   // 'CFL' condition: uth*dt/dx < 1 needs to be satisfied for all species.
   double cflLimit;
   double maxDt; // maxDt = min(dxi/uth, dyi/uth, dzi/uth), i=0...nspecies-1
@@ -608,9 +615,9 @@ class InterfaceFluid
       delete [] dtOutput_I;
       delete [] plotDx_I;
       delete [] plotString_I;
-      delete [] plotVar_I;
+      delete [] plotVar_I;      
       delArr2(plotRange_ID,2*nDimMax);
-    }
+    }    
   }
 
   /** return min X for fluid grid without ghostcell */
@@ -1821,6 +1828,184 @@ class InterfaceFluid
   }
 
 
+  // Read Satellite files. 
+  void read_satellite_file(string filename){
+    ifstream file;
+    string line;
+    bool doStartRead;
+    vector< array<double,4> > satInfo_II;
+    file.open(filename.c_str());
+    int len;
+    while(getline(file, line)){
+      len = line.length();
+      if(line.substr(0,6)=="#START") break;
+    }
+
+    int yr, mo, dy, hr, mn, sc;
+    double msc; 
+    array<double, 4> data;
+    // A better way??
+    while(file >> yr &&     //yr
+	  file >> mo &&     //Mo
+	  file >> dy &&     //Dy
+	  file >> hr &&     //Hr
+	  file >> mn &&     //Mn
+	  file >> sc &&     //Sc
+	  file >> msc &&     //Msc
+	  file >> data[1] &&     //X
+	  file >> data[2] &&     //Y
+	  file >> data[3]        //Z
+	  ){
+      data[0] = convert_time(yr,mo,dy,hr,mn,sc,msc);
+
+      // Assume the location of satellite is in normalized BATSRUS unit.It
+      // is usually planet radius. 
+      data[1] = data[1]*getMhdNo2NoL() - getFluidStartX();
+      data[2] = data[2]*getMhdNo2NoL() - getFluidStartY();
+      data[3] = data[3]*getMhdNo2NoL() - getFluidStartZ();
+
+      satInfo_II.push_back(data);
+    }
+    
+    bool doTestMe;
+    doTestMe = true;
+    int nline;
+    nline = satInfo_II.size();
+    for(int i=0; i<nline; i++){
+      cout.precision(10);
+    }            
+    file.close();
+    satInfo_III.push_back(satInfo_II);
+  }
+
+  void find_sat_points(double **pointList_ID, int &nPoint, int nPointMax,
+		       double plotRange_I[6],
+		       double xStart,double xEnd,double yStart,double yEnd,
+		       double zStart,double zEnd){
+    // Need to know which satellite. Here always read use the last satellite
+    // information read by read_satellite_file(). Not a good choice!!!!
+    
+    nPoint = 0;
+    int const iSat = satInfo_III.size()-1;
+    int const nLine = satInfo_III[iSat].size();
+    double x, y, z, xm, ym, zm;
+
+    double dl; // The distance between two virual satellite output points.
+
+    // dl = 0.25*min(dx,dy,dz); The parameter 0.25 can be changed. 0.5 may be
+    // good enough. 
+    dl = INgridDx_D[0]<INgridDx_D[1]? INgridDx_D[0]:INgridDx_D[1];
+    if(INdim>2) dl = dl<INgridDx_D[2]? dl:INgridDx_D[2];
+    dl *=0.25;
+
+    for(int iLine = 0; iLine<nLine; iLine++){
+      x = satInfo_III[iSat][iLine][1];
+      y = satInfo_III[iSat][iLine][2];
+      z = satInfo_III[iSat][iLine][3];
+      if(INdim<3) z = 0;
+
+      if(x>=0 && x<=getFluidLx() &&
+	 y>=0 && y<=getFluidLy() &&
+	 z>=0 && z<=getFluidLz()){ // inside the computational domain?
+
+	if(nPoint==0){
+	  xm = x;
+	  ym = y;
+	  zm = z;
+
+	  plotRange_I[0] = xm; plotRange_I[1] = xm;
+	  plotRange_I[2] = ym; plotRange_I[3] = ym;
+	  plotRange_I[4] = zm; plotRange_I[5] = zm;	  
+	  
+	  if(xm>=xStart && xm<xEnd && ym>=yStart && ym<yEnd &&
+	     zm>=zStart && zm<zEnd){	    
+	    // This position is on this processor.
+	    pointList_ID[nPoint][0] = xm;
+	    pointList_ID[nPoint][1] = ym;
+	    pointList_ID[nPoint][2] = zm;
+	    nPoint++;
+	  }
+
+	}else{
+	  double dl0;
+	  dl0 = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym)+(z-zm)*(z-zm));
+	  while(dl0 >=dl ){	    
+	    xm = dl/dl0*x + (1-dl/dl0)*xm;
+	    ym = dl/dl0*y + (1-dl/dl0)*ym;
+	    zm = dl/dl0*z + (1-dl/dl0)*zm;
+
+	    if(xm<plotRange_I[0]) plotRange_I[0] = xm;
+	    if(xm>plotRange_I[1]) plotRange_I[1] = xm;
+	    if(ym<plotRange_I[2]) plotRange_I[2] = ym;
+	    if(ym>plotRange_I[3]) plotRange_I[3] = ym; 
+	    if(zm<plotRange_I[4]) plotRange_I[4] = zm;
+	    if(zm>plotRange_I[5]) plotRange_I[5] = zm; 
+
+	    if(xm>=xStart && xm<xEnd && ym>=yStart && ym<yEnd &&
+	       zm>=zStart && zm<zEnd){
+	      // This position is on this processor.
+	      pointList_ID[nPoint][0] = xm;
+	      pointList_ID[nPoint][1] = ym;
+	      pointList_ID[nPoint][2] = zm;
+	    
+	      nPoint++;
+	      if(nPoint>nPointMax){
+		cout<<"Error: nPoint = "<<nPoint<<" nPointMax= "<<nPointMax<<endl;
+		abort();
+	      }
+	    }
+	    dl0 = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym)+(z-zm)*(z-zm));
+	    
+	  } // while
+	}// if(nPoint==0)
+      }// if
+    }//for
+
+
+    /* for(int iPoint=0; iPoint<nPoint;iPoint++){ */
+    /*   cout<<"iPoint = "<<iPoint */
+    /* 	  <<" x = "<<pointList_ID[iPoint][0] */
+    /* 	  <<" y = "<<pointList_ID[iPoint][1] */
+    /* 	  <<" z = "<<pointList_ID[iPoint][2] */
+    /* 	  <<endl; */
+    /* } */
+    
+  }
+
+  /** Convert real time into simulation time in second. **/
+  double convert_time(int yr, int mo, int dy, int hr, int mn,int sc,double msc){
+    double time; 
+    double doyStart, doyNow; 
+    doyStart = doy(iYear, iMonth, iDay);
+    doyNow   = doy(yr, mo, dy);
+
+    time = (((doyNow-doyStart)*24 + (hr - iHour))*60 + (mn - iMinute))*60 + sc - iSecond + msc/1000.0;
+
+    bool doTestMe;
+    doTestMe = false;
+    if(doTestMe){
+      cout<<" yr= "<<yr<<" mo= "<<mo<<" dy= "<<dy<<" hr= "<<hr<<" mn= "<<mn
+	  <<" sc= "<<sc<<" msc="<<msc<<" iyr= "<<iYear<<" imo= "<<iMonth
+	  <<" idy= "<<iDay<<" ihr= "<<iHour<<" imn= "<<iMinute
+	  <<" isc= "<<iSecond<<" time= "<<time<<endl;
+    }    
+    return time; 
+  }
+
+  /** day of year **/
+  int doy(int yr, int mo, int dy){
+    int nDayInMonth_I [] ={31,28,31,30,31,30,31,31,30,31,30,31};
+    int doy; 
+
+    if(yr % 4 == 0) nDayInMonth_I[1]++;
+
+    doy = 0;
+    for(int i=0; i< mo-1; i++) doy += nDayInMonth_I[i];
+    doy += dy;
+    
+    return doy;
+  }
+    
   /** electron mass given by IPIC3D params while ion mass comes form BATSRUS */
   void fixPARAM(double*& qom, int*& npcelx, int*& npcely, int*& npcelz, int *ns){
 
@@ -2079,8 +2264,7 @@ class InterfaceFluid
     // plotRange_ID is only set from PARAM.in for 'cut'!!!!
     return plotRange_ID[iPlot][i];
   };
-  bool getdoSaveBinary()const{return doSaveBinary;};
-
+  bool getdoSaveBinary()const{return doSaveBinary;};  
   void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
 };
 

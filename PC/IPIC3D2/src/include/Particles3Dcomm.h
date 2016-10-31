@@ -450,6 +450,8 @@ protected:
 			    const double xMin, const double xMax,
 			    const double yMin, const double yMax,
 			    const double zMin, const double zMax,
+			    double** pointList_ID, long nPoint,
+			    bool usePointList,
 			    const double No2OutL,
 			    const double No2OutV);
 #endif

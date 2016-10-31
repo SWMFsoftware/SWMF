@@ -87,9 +87,17 @@ c_Solver::~c_Solver()
     delArr2(plotRange_ID,2*nDimMax);
     delArr2(plotIndexRange_ID, 2*nDimMax);
 
-    for(int i=0;i<nPlotFile;i++){
-      delete [] Var_II[i];
+
+
+    
+    for(int iPlot=0;iPlot<nPlotFile;iPlot++){
+      for(int inode=0;inode<nNodeMax;inode++){
+	delete [] pointList_IID[iPlot][inode];
+      }
+      delete [] pointList_IID[iPlot];
+      delete [] Var_II[iPlot];
     }
+    delete [] pointList_IID;
     delete [] Var_II;
 
     delete [] nextOutputTime_I;
@@ -100,6 +108,7 @@ c_Solver::~c_Solver()
     delete [] outputUnit_I;
     delete [] plotVar_I;
     delete [] doOutputParticles_I;
+    delete [] nPoint_I;
   }
   #endif
 }
@@ -549,7 +558,6 @@ bool c_Solver::ParticlesMover()
 void c_Solver::WriteOutput(int cycle) {
 #ifdef BATSRUS
   write_plot_idl(cycle);
-
   if(col->getWriteMethod()=="pvtk" && col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
     WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
   }
@@ -1018,6 +1026,8 @@ void c_Solver:: write_plot_init(){
   nPlotFile = col->getnPlotFile();
   if(nPlotFile<=0) return;
 
+  nNodeMax = grid->getNXN()*grid->getNYN()*grid->getNZN();
+
   IsBinary = col->getdoSaveBinary();
   
   plotRange_ID      = newArr2(double, nPlotFile, 2*nDimMax);
@@ -1031,30 +1041,40 @@ void c_Solver:: write_plot_init(){
   doOutputParticles_I=new bool[nPlotFile];
   iSpeciesOutput_I  = new int[nPlotFile];
   nextOutputTime_I  = new double[nPlotFile];
+  Var_II            = new std::string*[nPlotFile];
+  isSat_I           = new bool[nPlotFile];
+  pointList_IID     = new double**[nPlotFile];
+  nPoint_I          = new int[nPlotFile];
   
-  Var_II = new std::string*[nPlotFile];
-  for(int i=0;i<nPlotFile;i++){
-    Var_II[i]=new std::string[nVarMax];    
+  //doSaveTrajectory_I= new bool[nPlotFile];
+  satInputFile_I    = new string[nPlotFile];
+  
+  for(int iPlot=0;iPlot<nPlotFile;iPlot++){
+    Var_II[iPlot]           = new std::string[nVarMax];
+    pointList_IID[iPlot]      = new double*[nNodeMax];
+    for(int inode=0; inode<nNodeMax; inode++){
+      pointList_IID[iPlot][inode] = new double[3];
+    }
   }
 
   for(int i=0;i<nPlotFile;i++){
     doOutputParticles_I[i] = false;
-  }
-
-  for(int i=0;i<nPlotFile;i++){
-    nextOutputTime_I[i] = 0; 
+    nextOutputTime_I[i] = 0;
+    isSat_I[i] = false;
+    //doSaveTrajectory_I[i] = false;
   }
 
   string plotString;
   string subString;
   string::size_type pos;
-  double dxSave;  
+  double dxSave;
   for(int iPlot=0; iPlot<nPlotFile; iPlot++){
     // plotString = plot range, plot variables, save format, output unit
     // Example:
     //   plotString =  'x=0 all real si'
     //   plotString =  '3d var ascii pic'
     //   plotString =  'cut var real planet'
+    //   plotString =  'sat_sat01.dat particles01 ascii si'
     plotString = col->getplotString(iPlot);
     
     // Find the first sub-string: 'x=0',or 'y=1.2'.....
@@ -1066,7 +1086,6 @@ void c_Solver:: write_plot_init(){
     }
     nameSnapshot_I[iPlot] = SaveDirName + "/" + subString;
 
-    int plotDx = col->getplotDx(iPlot);
     double No2NoL = col->getMhdNo2NoL();
     
     // plotRange_ID is the range of the whole plot domain, it can be larger
@@ -1117,6 +1136,21 @@ void c_Solver:: write_plot_init(){
       plotRange_ID[iPlot][3] = col->getplotRange(iPlot,3)*No2NoL - col->getFluidStartY();
       plotRange_ID[iPlot][4] = col->getplotRange(iPlot,4)*No2NoL - col->getFluidStartZ();
       plotRange_ID[iPlot][5] = col->getplotRange(iPlot,5)*No2NoL - col->getFluidStartZ();
+    }else if(subString.substr(0,3)=="sat"){
+      // sat_satFileName.sat
+
+      isSat_I[iPlot] = true;
+      subString.erase(0,4);
+      ss<<subString;      
+      ss>>satInputFile_I[iPlot];
+
+      // For satellite output,plotRange_ID is not meaningful. 
+      plotRange_ID[iPlot][0] = 0;
+      plotRange_ID[iPlot][1] = col->getLx();
+      plotRange_ID[iPlot][2] = 0;
+      plotRange_ID[iPlot][3] = col->getLy();
+      plotRange_ID[iPlot][4] = 0;
+      plotRange_ID[iPlot][5] = col->getLz();
     }else{
       if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
       abort();
@@ -1136,7 +1170,7 @@ void c_Solver:: write_plot_init(){
       nameSnapshot_I[iPlot] += "_fluid";
     }else if(plotString.find("particles") !=string::npos){
       doOutputParticles_I[iPlot] = true;
-      plotVar_I[iPlot] = "ux uy uz weight"; // what is 'weight'? q, mass, qom?
+      plotVar_I[iPlot] = "ux uy uz weight"; 
       
       string subString0; 
       pos = plotString.find("particles");
@@ -1196,186 +1230,8 @@ void c_Solver:: write_plot_init(){
       abort();
     }
 
-    /* Assume there are two processors in X-direction.
-       
-       proc 1 
-      _________________
-      |   |   |   |   |
-      |___|___|___|___|
-      |   |   |   |   | 
-      |___|___|___|___|
-      |   |   |   |   |
-      |___|___|___|___|
-      0   1   2   3      global node index
-        0   1   2        global cell index
-      0   1   2   3   4  local node index
-        0   1   2   3    local cell index
-
-	proc 2
-      _________________
-      |   |   |   |   |
-      |___|___|___|___|
-      |   |   |   |   | 
-      |___|___|___|___|
-      |   |   |   |   |
-      |___|___|___|___|
-          3   4   5   6   global node index
-            3   4   5     global cell index
-      0   1   2   3   4   local node index
-        0   1   2   3     local cell index
-
-	In X-directoin, assume the global cell index is 0 - 6, then the 
-	global node index is 0 - 6. 
-
-	
-	In a global view, cell 0 and 5 are ghost cells. For MHD-IPIC, cell
-	1 and 4 are also behave like ghost cells: particles are repopulated
-	in cell 1 and 4 when boundary conditions are applied from MHD, and
-	electric field solver solve field for nodes from 2 to 4. (all the 
-	indexes are global index.)
-
-	In a local view, the cells with local index 0 and 3 are ghost cells. 
-	1) Global node 3 is on bothe proc 1 and proc 2. So the information on 
-	   this node only needs saved once. We choose to save on proc 2 (local
-	   node index 1), and the local nodes 3 and 4 are not saved. 
-	2) If the local node 3 is close to boundary, then save the information.
-
-	So, for this example, nodes with local node index 1 or 2 on proc 1, 
-	and nodes with local node index 1, 2 or 3 on proc 2 are saved.        
-     */
-
-    // Calcualte plotIndexRange_ID, which is the local index, based on
-    // plot range.
-
-    int ig, jg, kg;
-    
-    plotIndexRange_ID[iPlot][0]= 30000;
-    plotIndexRange_ID[iPlot][1]=-30000;
-
-    int iEnd;
-    iEnd = grid->getNXN()-2;
-    if(vct->getXright_neighbor()==MPI_PROC_NULL) iEnd++;
-    
-    for(int i=1; i<iEnd; i++){
-      col->getGlobalIndex(i,1,1,&ig,&jg,&kg);
-
-      if(ig % plotDx == 0 &&
-	 grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
-	 grid->getXN(i)<plotRange_ID[iPlot][1] + 0.5*col->getDx()){
-	if(i<plotIndexRange_ID[iPlot][0]) plotIndexRange_ID[iPlot][0] = i;
-	if(i>plotIndexRange_ID[iPlot][1]) plotIndexRange_ID[iPlot][1] = i;
-      }
-    }
-
-    plotIndexRange_ID[iPlot][2]= 30000;
-    plotIndexRange_ID[iPlot][3]=-30000;
-
-    iEnd = grid->getNYN()-2;
-    if(vct->getYright_neighbor()==MPI_PROC_NULL) iEnd++;
-
-    for(int i=1; i<iEnd; i++){
-      col->getGlobalIndex(1,i,1,&ig,&jg,&kg);
-
-      if(jg % plotDx == 0 &&
-	 grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
-	 grid->getYN(i)<plotRange_ID[iPlot][3] + 0.5*col->getDy()){
-	if(i<plotIndexRange_ID[iPlot][2]) plotIndexRange_ID[iPlot][2] = i;
-	if(i>plotIndexRange_ID[iPlot][3]) plotIndexRange_ID[iPlot][3] = i;
-      }
-    }
-    
-    plotIndexRange_ID[iPlot][4]= 30000;
-    plotIndexRange_ID[iPlot][5]=-30000;
-
-    iEnd = grid->getNZN()-2;
-    if(vct->getZright_neighbor()==MPI_PROC_NULL) iEnd++;
-
-    for(int i=1; i<iEnd; i++){
-      col->getGlobalIndex(1,1,i,&ig,&jg,&kg);
-
-      if(kg % plotDx == 0 &&
-	 grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
-	 grid->getZN(i)<plotRange_ID[iPlot][5] + 0.5*col->getDz()){
-	if(i<plotIndexRange_ID[iPlot][4]) plotIndexRange_ID[iPlot][4] = i;
-	if(i>plotIndexRange_ID[iPlot][5]) plotIndexRange_ID[iPlot][5] = i;
-      }
-    }
-    
-    if(col->getnDim()==2) {
-      // When IPIC3D coupled with MHD, the 2D plane is always XY plane.
-      plotIndexRange_ID[iPlot][4] = 1;
-      plotIndexRange_ID[iPlot][5] = 1;
-    }
-
-    if(!doOutputParticles_I[iPlot]){
-      long nCellLocal;
-      nCellLocal =
-	((plotIndexRange_ID[iPlot][5] - plotIndexRange_ID[iPlot][4])/plotDx+1)*
-	((plotIndexRange_ID[iPlot][3] - plotIndexRange_ID[iPlot][2])/plotDx+1)*
-	((plotIndexRange_ID[iPlot][1] - plotIndexRange_ID[iPlot][0])/plotDx+1);
-
-      if(nCellLocal<0) nCellLocal=0;
-    
-      MPI_Reduce(&nCellLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
-    }
-
-    
-    // Do not correct plot range for 'particles' now. Because the position of
-    // particle does not depend on grid. But plotIndexRange_ID may be useful.
-    // It can give us some feelings about where the output particles are. 
-    if(!doOutputParticles_I[iPlot]){
-      // Correct PlotRange_ID based on PlotIndexRange_ID-----begin
-           
-      double xMinL_I[nDimMax], xMaxL_I[nDimMax],
-	xMinG_I[nDimMax], xMaxG_I[nDimMax];
-
-      // x
-      if(plotIndexRange_ID[iPlot][1]>=plotIndexRange_ID[iPlot][0]){
-	xMinL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][0]);
-	xMaxL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][1]);
-      }else{
-	// This processor does not output any node.
-	xMinL_I[0] = 2*col->getLx();
-	xMaxL_I[0] = -1;
-      }
-
-      // y
-      if(plotIndexRange_ID[iPlot][3]>=plotIndexRange_ID[iPlot][2]){
-	xMinL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][2]);
-	xMaxL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][3]);
-      }else{
-	// This processor does not output any node.
-	xMinL_I[1] = 2*col->getLy();
-	xMaxL_I[1] = -1;
-      }
-
-      // z
-      if(plotIndexRange_ID[iPlot][5]>=plotIndexRange_ID[iPlot][4]){
-      xMinL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][4]);
-      xMaxL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][5]);
-      }else{
-	// This processor does not output any node.
-	xMinL_I[2] = 2*col->getLz();
-	xMaxL_I[2] = -1;
-      }
-      
-      MPI_Reduce(xMinL_I, xMinG_I,nDimMax,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_MYSIM);
-      MPI_Reduce(xMaxL_I, xMaxG_I,nDimMax,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_MYSIM);
-
-
-      // Change plotRange_ID into MHD coordinates. The field outputs are also
-      // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
-      plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
-      plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
-      plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
-      plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
-      plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
-      
-      // Correct PlotRange_ID based on PlotIndexRange_ID-----end
-    }    
-
-    
+    find_output_list(iPlot);
+        
     if(doTestFunc){
       cout<<" plotstring= "<<plotString<<endl;
       cout<<"length sub = "<<subString.size()
@@ -1406,8 +1262,12 @@ void c_Solver:: write_plot_init(){
       cout<<"\n output format: "<<outputFormat_I[iPlot]
 	  <<"\n output unit: "<<outputUnit_I[iPlot]
 	  <<endl;
+      if(isSat_I[iPlot]){
+	cout<<"satllite input file = "<<satInputFile_I[iPlot]<<endl;
+      }
     }      
-  }        
+  }
+
 }
 
 
@@ -1464,8 +1324,9 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<"#PLOTRANGE\n";      
     for(int i=0; i<col->getnDim();i++){
       double x0=0;
-      if(doOutputParticles_I[iPlot]){
-	// For field output, plotRange_ID is already in MHD coordinates.
+      if(doOutputParticles_I[iPlot] || isSat_I[iPlot]){
+	// For field output, plotRange_ID is already in MHD coordinates. 
+	
 	if(i==0) x0 = col->getFluidStartX();
 	if(i==1) x0 = col->getFluidStartY();
 	if(i==2) x0 = col->getFluidStartZ();
@@ -1475,8 +1336,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     }
     outFile<<"\n";
 
-    int plotDx = col->getplotDx(iPlot);
-    
+    int plotDx = col->getplotDx(iPlot);    
     outFile<<"#CELLSIZE\n";
     outFile<<plotDx*col->getDx()*No2OutL<<"\t dx\n";
     outFile<<plotDx*col->getDy()*No2OutL<<"\t dy\n";
@@ -1493,7 +1353,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
        
     outFile<<"#PLOTRESOLUTION\n";
     for(int i=0; i<col->getnDim();i++){
-      if(doOutputParticles_I[iPlot]){
+      if(doOutputParticles_I[iPlot] || isSat_I[iPlot]){
 	outFile<<(-1)<<"\t plotDx\n"; // Save partices as unstructured.
       }else{
 	outFile<<0<<"\t plotDx\n";
@@ -1565,51 +1425,18 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
 					plotRange_ID[iPlot][3],
 					plotRange_ID[iPlot][4],
 					plotRange_ID[iPlot][5],
+					pointList_IID[iPlot], nPoint_I[iPlot],
+					isSat_I[iPlot],
 					No2OutL, No2OutV
 					);
     
     MPI_Reduce(&nPartOutputLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 
-  }else{
-    const int minI = plotIndexRange_ID[iPlot][0];
-    const int maxI = plotIndexRange_ID[iPlot][1];
-    const int minJ = plotIndexRange_ID[iPlot][2];
-    const int maxJ = plotIndexRange_ID[iPlot][3];
-    const int minK = plotIndexRange_ID[iPlot][4];
-    const int maxK = plotIndexRange_ID[iPlot][5];
-    
-  // Create point list;
-  // How much will allocating/deleting every call slow down the code? -Yuxi
-    int plotDx = col->getplotDx(iPlot);
-    long nPoint;
-    nPoint =
-      floor((maxI-minI)/plotDx + 1)*
-      floor((maxJ-minJ)/plotDx + 1)*
-      floor((maxK-minK)/plotDx + 1);
-    nPoint = nPoint>0? nPoint:0;
-    int** pointList_ID = new int*[nPoint];
-    for(long i=0; i<nPoint; i++){
-      pointList_ID[i] = new int[3]; 
-    }
-
-    long iCount = 0; 
-    for(int i=minI; i<= maxI; i+=plotDx)
-      for(int j=minJ; j<=maxJ; j+=plotDx)
-	for(int k=minK; k<=maxK; k+=plotDx){
-	  pointList_ID[iCount][0] = i;
-	  pointList_ID[iCount][1] = j;
-	  pointList_ID[iCount][2] = k;
-	  iCount++;
-	}
-          
+  }else{          
     EMf->write_plot_field(filename, Var_II[iPlot], nVar_I[iPlot],
-			  pointList_ID, nPoint,
+			  pointList_IID[iPlot], nPoint_I[iPlot], isSat_I[iPlot],
 			  No2OutL, No2OutV, No2OutB,
 			  No2OutRho, No2OutP, No2OutJ);
-    for(long i=0; i<nPoint; i++){
-      delete [] pointList_ID[i];
-    }
-    delete [] pointList_ID; 
   }
 
 }
@@ -1656,6 +1483,245 @@ void c_Solver:: set_output_unit(int iPlot){
 	<<"No2OutJ = "<<No2OutJ
 	<<endl;
   }
+
+}
+
+
+void c_Solver:: find_output_list(int iPlot){
+  string nameSub = "find_output_list";
+  bool doTestFunc;
+  doTestFunc = do_test_func(nameSub);
+  //----------------------------------
+
+  if(doTestFunc) cout<<"Start "<<nameSub<<endl;
+  int plotDx = col->getplotDx(iPlot);
+  
+  if(!isSat_I[iPlot]){
+    /*
+      Find out the node index for output. Only useful for non-satellite field
+      output. Also prove useful information for non-satellite particle outpu,
+      eventhough the information has not been used in the current code. 
+    */
+
+    /* Assume there are two processors in X-direction.
+       
+       proc 1 
+       _________________
+       |   |   |   |   |
+       |___|___|___|___|
+       |   |   |   |   | 
+       |___|___|___|___|
+       |   |   |   |   |
+       |___|___|___|___|
+       0   1   2   3      global node index
+       0   1   2        global cell index
+       0   1   2   3   4  local node index
+       0   1   2   3    local cell index
+
+       proc 2
+       _________________
+       |   |   |   |   |
+       |___|___|___|___|
+       |   |   |   |   | 
+       |___|___|___|___|
+       |   |   |   |   |
+       |___|___|___|___|
+       3   4   5   6   global node index
+       3   4   5     global cell index
+       0   1   2   3   4   local node index
+       0   1   2   3     local cell index
+
+       In X-directoin, assume the global cell index is 0 - 6, then the 
+       global node index is 0 - 6. 
+
+	
+       In a global view, cell 0 and 5 are ghost cells. For MHD-IPIC, cell
+       1 and 4 are also behave like ghost cells: particles are repopulated
+       in cell 1 and 4 when boundary conditions are applied from MHD, and
+       electric field solver solve field for nodes from 2 to 4. (all the 
+       indexes are global index.)
+
+       In a local view, the cells with local index 0 and 3 are ghost cells. 
+       1) Global node 3 is on bothe proc 1 and proc 2. So the information on 
+       this node only needs saved once. We choose to save on proc 2 (local
+       node index 1), and the local nodes 3 and 4 are not saved. 
+       2) If the local node 3 is close to boundary, then save the information.
+
+       So, for this example, nodes with local node index 1 or 2 on proc 1, 
+       and nodes with local node index 1, 2 or 3 on proc 2 are saved.        
+    */
+
+    // Calcualte plotIndexRange_ID, which is the local index, based on
+    // plot range.
+
+    int ig, jg, kg;
+    
+    plotIndexRange_ID[iPlot][0]= 30000;
+    plotIndexRange_ID[iPlot][1]=-30000;
+
+    int iEnd;
+    iEnd = grid->getNXN()-2;
+    if(vct->getXright_neighbor()==MPI_PROC_NULL) iEnd++;
+    
+    for(int i=1; i<iEnd; i++){
+      col->getGlobalIndex(i,1,1,&ig,&jg,&kg);
+
+      if(ig % plotDx == 0 &&
+	 grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
+	 grid->getXN(i)<plotRange_ID[iPlot][1] + 0.5*col->getDx()){
+	if(i<plotIndexRange_ID[iPlot][0]) plotIndexRange_ID[iPlot][0] = i;
+	if(i>plotIndexRange_ID[iPlot][1]) plotIndexRange_ID[iPlot][1] = i;
+      }
+    }
+
+    plotIndexRange_ID[iPlot][2]= 30000;
+    plotIndexRange_ID[iPlot][3]=-30000;
+
+    iEnd = grid->getNYN()-2;
+    if(vct->getYright_neighbor()==MPI_PROC_NULL) iEnd++;
+
+    for(int i=1; i<iEnd; i++){
+      col->getGlobalIndex(1,i,1,&ig,&jg,&kg);
+
+      if(jg % plotDx == 0 &&
+	 grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
+	 grid->getYN(i)<plotRange_ID[iPlot][3] + 0.5*col->getDy()){
+	if(i<plotIndexRange_ID[iPlot][2]) plotIndexRange_ID[iPlot][2] = i;
+	if(i>plotIndexRange_ID[iPlot][3]) plotIndexRange_ID[iPlot][3] = i;
+      }
+    }
+    
+    plotIndexRange_ID[iPlot][4]= 30000;
+    plotIndexRange_ID[iPlot][5]=-30000;
+
+    iEnd = grid->getNZN()-2;
+    if(vct->getZright_neighbor()==MPI_PROC_NULL) iEnd++;
+
+    for(int i=1; i<iEnd; i++){
+      col->getGlobalIndex(1,1,i,&ig,&jg,&kg);
+
+      if(kg % plotDx == 0 &&
+	 grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
+	 grid->getZN(i)<plotRange_ID[iPlot][5] + 0.5*col->getDz()){
+	if(i<plotIndexRange_ID[iPlot][4]) plotIndexRange_ID[iPlot][4] = i;
+	if(i>plotIndexRange_ID[iPlot][5]) plotIndexRange_ID[iPlot][5] = i;
+      }
+    }
+    
+    if(col->getnDim()==2) {
+      // When IPIC3D coupled with MHD, the 2D plane is always XY plane.
+      plotIndexRange_ID[iPlot][4] = 1;
+      plotIndexRange_ID[iPlot][5] = 1;
+    }
+
+    if(!doOutputParticles_I[iPlot]){
+      const int minI = plotIndexRange_ID[iPlot][0];
+      const int maxI = plotIndexRange_ID[iPlot][1];
+      const int minJ = plotIndexRange_ID[iPlot][2];
+      const int maxJ = plotIndexRange_ID[iPlot][3];
+      const int minK = plotIndexRange_ID[iPlot][4];
+      const int maxK = plotIndexRange_ID[iPlot][5];
+    
+      long nPoint;
+      nPoint =
+	floor((maxI-minI)/plotDx + 1)*
+	floor((maxJ-minJ)/plotDx + 1)*
+	floor((maxK-minK)/plotDx + 1);
+      nPoint = nPoint>0? nPoint:0;
+      MPI_Reduce(&nPoint, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+	
+      nPoint_I[iPlot] = nPoint;
+      long iCount = 0; 
+      for(int i=minI; i<= maxI; i+=plotDx)
+	for(int j=minJ; j<=maxJ; j+=plotDx)
+	  for(int k=minK; k<=maxK; k+=plotDx){
+	    // pointList_IID stores the index of the output nodes.
+	    pointList_IID[iPlot][iCount][0] = i;
+	    pointList_IID[iPlot][iCount][1] = j;
+	    pointList_IID[iPlot][iCount][2] = k;
+	    iCount++;
+	  }	
+    }
+      
+  }else{
+    double plotRange_I[6];
+    col->read_satellite_file(satInputFile_I[iPlot]);
+    // pointList_IID stores the coordinate (x/y/z) of the output points.
+    col->find_sat_points(pointList_IID[iPlot], nPoint_I[iPlot],nNodeMax,plotRange_I,
+			 grid->getXstart(), grid->getXend(),
+			 grid->getYstart(), grid->getYend(),
+			 grid->getZstart(), grid->getZend());
+    MPI_Reduce(&nPoint_I[iPlot], &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+
+    if(doOutputParticles_I[iPlot] && nCell_I[iPlot]>0){
+      double drSat = col->getDx()*2; // This value should be got from PARAM.in
+
+      // Find out a cube can contain all the satellite sampling points. 
+      plotRange_ID[iPlot][0] = plotRange_I[0] - drSat;
+      plotRange_ID[iPlot][1] = plotRange_I[1] + drSat;
+      plotRange_ID[iPlot][2] = plotRange_I[2] - drSat;
+      plotRange_ID[iPlot][3] = plotRange_I[3] + drSat;
+      plotRange_ID[iPlot][4] = plotRange_I[4] - drSat;
+      plotRange_ID[iPlot][5] = plotRange_I[5] + drSat;
+      
+    }
+    
+  }// if(isSat_I)
+    
+  // Do not correct plot range for 'particles' now. Because the position of
+  // particle does not depend on grid. But plotIndexRange_ID may be useful.
+  // It can give us some feelings about where the output particles are. 
+  if(!doOutputParticles_I[iPlot] && !isSat_I[iPlot]){
+    // Correct PlotRange_ID based on PlotIndexRange_ID-----begin
+           
+    double xMinL_I[nDimMax], xMaxL_I[nDimMax],
+      xMinG_I[nDimMax], xMaxG_I[nDimMax];
+
+    // x
+    if(plotIndexRange_ID[iPlot][1]>=plotIndexRange_ID[iPlot][0]){
+      xMinL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][0]);
+      xMaxL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][1]);
+    }else{
+      // This processor does not output any node.
+      xMinL_I[0] = 2*col->getLx();
+      xMaxL_I[0] = -1;
+    }
+
+    // y
+    if(plotIndexRange_ID[iPlot][3]>=plotIndexRange_ID[iPlot][2]){
+      xMinL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][2]);
+      xMaxL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][3]);
+    }else{
+      // This processor does not output any node.
+      xMinL_I[1] = 2*col->getLy();
+      xMaxL_I[1] = -1;
+    }
+
+    // z
+    if(plotIndexRange_ID[iPlot][5]>=plotIndexRange_ID[iPlot][4]){
+      xMinL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][4]);
+      xMaxL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][5]);
+    }else{
+      // This processor does not output any node.
+      xMinL_I[2] = 2*col->getLz();
+      xMaxL_I[2] = -1;
+    }
+      
+    MPI_Reduce(xMinL_I, xMinG_I,nDimMax,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_MYSIM);
+    MPI_Reduce(xMaxL_I, xMaxG_I,nDimMax,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_MYSIM);
+
+
+    // Change plotRange_ID into MHD coordinates. The field outputs are also
+    // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
+    plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
+    plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
+    plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
+    plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
+    plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+    plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+      
+    // Correct PlotRange_ID based on PlotIndexRange_ID-----end
+  }    
 
 }
 #endif

@@ -1574,6 +1574,14 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   useFixedDt = false;
   maxDt    = -1; 
   cflLimit = 0.6;
+
+  // Start time. The default values are the same as BATSRUS. 
+  iYear   = 2000;
+  iMonth  = 3;
+  iDay    = 21;
+  iHour   = 10;
+  iMinute = 45;
+  iSecond = 0;
   
   while(*param){
     get_next_command(param,&Command);
@@ -1701,6 +1709,14 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	}
       }
     }
+    else if(Command ==  "#STARTTIME"){
+      read_var(param, "iYear", &iYear);
+      read_var(param, "iMonth", &iMonth);
+      read_var(param, "iDay", &iDay);
+      read_var(param, "iHour", &iHour);
+      read_var(param, "iMinute", &iMinute);
+      read_var(param, "iSecond", &iSecond);
+    }
     else if( Command == "#SAVEIDL"){
       /*
 	1) The command name should be #SAVEPLOT
@@ -1709,6 +1725,15 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	Example: 
 	#SAVEIDL
 	4                       nPlotFile
+	sat_satInputFile.sat  var ascii si        StringPlot
+	-1                      DnOutput
+	3.0                     DtOutput
+	0.                      DxOutput
+	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
+	sat_satInputFile.sat particles real4 si   StringPlot
+	1                       DnOutput
+	-0.05                   DtOutput
+	10.          DxOutput: output one particle of every DxOutput particles.
 	z=0 var ascii si        StringPlot
 	-1                      DnOutput
 	3.0                     DtOutput
@@ -1789,7 +1814,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	pos = plotString_I[iPlot].find("var");
 	if(pos !=string::npos){
 	  read_var(param, "plotVar", &plotVar_I[iPlot]);
-	}	
+	}
+	//if(plotString_I[iPlot].find("sat") !=string::npos) nSatellite++;
       } // iPlot  			        
     } // Command
 
@@ -1952,8 +1978,7 @@ void Collective::PostProcParam() {
     u0[is] = 0;
     v0[is] = 0;
     w0[is] = 0; 
-  }  
+  }
 }
-
 
 #endif

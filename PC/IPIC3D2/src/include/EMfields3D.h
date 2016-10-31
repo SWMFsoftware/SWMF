@@ -644,11 +644,11 @@ class EMfields3D                // :public Field
 
     /* Write fields to IDL format files*/
     void write_plot_field(string filename, string *plotVar, int nVar,
-			  int **pointList_ID, long nPoint,
+			  double **pointList_ID, long nPoint, bool isCoord,
 			  const double No2OutL, const double No2OutV,
 			  const double No2OutB, const double No2OutRho,
 			  const double No2OutP, const double No2OutJ);
-    double getVar(string var, int i, int j, int k,
+    double getVar(string var, double i, double j, double k, bool isCoord,
 		  const double No2OutL, const double No2OutV,
 		  const double No2OutB, const double No2OutRho,
 		  const double No2OutP, const double No2OutJ);

@@ -180,6 +180,8 @@ namespace iPic3D {
     int nPlotFile;
     double **plotRange_ID;
     int **plotIndexRange_ID; // Local index range.
+    double ***pointList_IID;// Output location. Indexes:iplot,ipoint,idim
+    int *nPoint_I; 
     string *nameSnapshot_I;
     static const int nVarMax = 50; 
     string **Var_II;
@@ -187,22 +189,27 @@ namespace iPic3D {
     long *nCell_I;
     bool IsBinary;
     int nByte;
-    long nGlobalNode;
+    long nNodeMax;
     string *outputFormat_I;
     string *outputUnit_I;
     string *plotVar_I;
-    bool *doOutputParticles_I;
+    bool *doOutputParticles_I; // Save particles or fields.
+    bool *isSat_I; // Satellite related output?
+    //bool *doSaveTrajectory_I; // Save all the information along the trajectory.
+    string *satInputFile_I;
     int *iSpeciesOutput_I;
     double *nextOutputTime_I;
     double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
     
+    // IDL output related methods. 
     void write_plot_idl(int cycle);
     void write_plot_init();
     void write_plot_header(int iPlot, int cycle);
     void write_plot_data(int iPlot, int cycle);
     void set_output_unit(int iPlot);
-    
+    void find_output_list(int iPlot);
     // IDL output. End-----------------
+    
 #endif
 
     

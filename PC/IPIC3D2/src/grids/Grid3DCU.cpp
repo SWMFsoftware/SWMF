@@ -616,7 +616,7 @@ void Grid3DCU::interpN2Cfull(double ***vecFieldC, double ***vecFieldN){
 
 void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
 				      int &ix, int &iy, int &iz,
-				      double weight_I[8], bool isOnThisProc){
+				      double weight_I[8], bool isOnThisProc)const{
 
   
   const double nxn = getNXN();
