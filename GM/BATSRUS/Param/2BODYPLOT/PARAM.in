@@ -199,36 +199,36 @@ STOP
 
 #BEGIN_COMP GM ################################################################
 
-AMR
-30                      DnRefine
-T                       DoAutoRefine 
-10.                     PercentCoarsen
-30.                     PercentRefine
-800                     MaxTotalBlocks
-
 #DOAMR
 T                       DoAmr
-30                      dnAmr
--1                      dtAmr
+30                      DnAmr
+-1                      DtAmr
 F                       IsStrictAmr
 
 #AMRLIMIT
-10.                     percentCoarsen
-4.29                    percentRefine
-800                     MaxBlcokALL
+10.                     PercentCoarsen
+4.29                    PercentRefine
+800                     MaxBlockAll
 1.e-8                   DiffCriteriaLevel
 
+! Since we use #AMRLIMIT above, the CoarsenLimit and RefineLimit 
+! parameters are set to negative values below (seems to matter).
+
 #AMRCRITERIA
-3                       nRefineCric)
+2                       nRefineCrit
 curlB                   TypeRefine
--1                      CoarsenLimit
--1                      RefineLimit
+-1.                     CoarsenLimit
+-1.                     RefineLimit
 gradlogP                TypeRefine
--1 	                CoarsenLimit
--1         	        RefineLimit
-Rcurrents               TypeRefine
--1             		CoarsenLimit
--1             		RefineLimit
+-1. 	                CoarsenLimit
+-1.         	        RefineLimit
+
+! A shell around rcurrents
+#GRIDLEVEL
+10			MaxLevel
+shell0			NameShape
+3.0			Radius1
+4.0			Radius2
 
 #SCHEME
 2			nOrder
@@ -243,11 +243,13 @@ minmod			TypeLimiter
 2                       nPlotFile
 y=0 FUL tec             StringPlot
 -1                      DnSavePlot
-10.			DtSavePlot
-y=0 FUL idl_ascii       StringPlot
+10.0			DtSavePlot
+y=0 VAR idl_ascii       StringPlot
 -1                      DnSavePlot
-10.                     DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+10.0                    DtSavePlot
+-1.                     DxSavePlot
+{MHD} amrlevel crit1 crit2 crit3
+g rbody
 
 #END_COMP GM ###############################################################
 
