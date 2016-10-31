@@ -181,7 +181,7 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
       fprintf(fout,"\"TITLE=Distribution function at x=%e",SamplingLocations[nProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[nProbe][idim]);
 
-      fprintf(fout,"\"\nVARIABLES=\"E [eV]\" \"f(E)\"\n");
+      fprintf(fout,"\"\nVARIABLES=\"E [eV]\", \"v[m/s]\", \"f(E)\"\n");
 
       //init the tempSamplingBuffer
       for (nVariable=0;nVariable<SampleDataLength*nSampledFunctionPoints*PIC::nTotalSpecies;nVariable++) tempSamplingBuffer[nVariable]=0.0;
@@ -246,7 +246,7 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
          }
 
         tempOffsetSpec=GetSampleDataOffset(spec,Sample_Energy_Offset);
-        fprintf(fout,"%e  %e\n",e,tempSamplingBuffer[i+tempOffsetSpec]);
+        fprintf(fout,"%e  %e  %e\n",e,Relativistic::E2Speed(e*eV2J,PIC::MolecularData::GetMass(spec)),tempSamplingBuffer[i+tempOffsetSpec]);
       }
 
       //close the output file
