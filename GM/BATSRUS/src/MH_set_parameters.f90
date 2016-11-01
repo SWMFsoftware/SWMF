@@ -1126,14 +1126,7 @@ subroutine MH_set_parameters(TypeAction)
         call init_mod_amr(nAmrCriteria)
         call read_amr_criteria(NameCommand, &
              nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
-             NameStatVarIn_V= NameVar_V,&
-             nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
-        if (UseSunEarth) then
-           call read_var('xEarth'  ,xEarth)
-           call read_var('yEarth'  ,yEarth)
-           call read_var('zEarth'  ,zEarth)
-           call read_var('InvD2Ray',InvD2Ray)
-        end if
+             NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
 
      case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
 
@@ -1144,16 +1137,9 @@ subroutine MH_set_parameters(TypeAction)
         call init_mod_amr(nAmrCriteria)
         call read_amr_criteria(NameCommand, &
              nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
-             NameStatVarIn_V= NameVar_V,&
-             nStateVarIn = nVar,ReadExtraOut=UseSunEarth)
-        if(nAmrCriteria<0)call stop_mpi(NameSub// &
+             NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
+        if(nAmrCriteria < 0)call stop_mpi(NameSub// &
              ' ERROR: nAmrCriteria must be positiv.')
-        if (UseSunEarth) then
-           call read_var('xEarth'  ,xEarth)
-           call read_var('yEarth'  ,yEarth)
-           call read_var('zEarth'  ,zEarth)
-           call read_var('InvD2Ray',InvD2Ray)
-        end if
 
      case('#CONSERVEFLUX')
         call read_var('DoConserveFlux', DoConserveFlux)

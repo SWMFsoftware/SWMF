@@ -252,7 +252,7 @@ contains
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
-         UnitTemperature_, UnitElectric_, UseSunEarth
+         UnitTemperature_, UnitElectric_
     use ModCurrent,    ONLY: get_current
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
     use ModNumConst,   ONLY: cSqrtTwo, cTiny
@@ -263,9 +263,8 @@ contains
     character(len=3), intent(in) :: TypeAmr
     real :: userCriteria
 
-    logical :: UseSwitchAMR, IsFound
+    logical :: IsFound
     integer :: iBlock, iCrit, i, j, k
-    real :: Xyz_D(3), RR, RcritAMR
 
     real, allocatable, save, dimension(:,:,:):: &
          Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
@@ -301,13 +300,6 @@ contains
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
        if (masked_amr_criteria(iBlock)) CYCLE
-
-       ! Initialize values to use below for criteria
-       if (UseSunEarth) then
-          RcritAMR = 1 + 1.5*cSqrtTwo*maxval(CellSize_DB(:,iBlock))
-       else
-          RcritAMR = 0.0
-       end if
 
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           Rho_G(i,j,k)  = State_VGB(Rho_,i,j,k,iBlock)
@@ -431,16 +423,15 @@ contains
 
           case('currentsheet')
              if(SignB_>1 .and. DoThinCurrentSheet)then
-
-                if(maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0.0.and. &
-                     minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0.0)then
+                if(maxval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))>0 .and. &
+                     minval(State_VGB(SignB_,1:nI,1:nJ,0:nK+1,iBlock))<0)then
                    Crit_IB(iCrit,iBlock) = 1.0
                 else
                    Crit_IB(iCrit,iBlock) = 0.0
                 end if
 
              else
-                ! Calculate BdotR including the ghost cells in 3rd dimension only
+                ! Calculate R.B including the ghost cells in 3rd dimension only
                 if(UseB0)then
                    do k=0, nK+1; do j=1, nJ; do i=1, nI
                       rDotB_G(i,j,k) = sum( Xyz_DGB(:,i,j,k,iBlock) &
@@ -470,20 +461,8 @@ contains
                      UserCriteria, RefineCrit(iCrit), IsFound)
                 Crit_IB(iCrit,iBlock) = userCriteria
              else
-                Xyz_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBlock) &
-                     +       Xyz_DGB(:,1,1,1,iBlock))
-                RR = sqrt(sum(Xyz_D**2))
-                if (UseSunEarth) then
-                   UseSwitchAMR = RR > RcritAMR
-                else
-                   UseSwitchAMR = RR > RcritAMR .and. &
-                        abs(Xyz_D(z_)) <= CellSize_DB(z_,iBlock)
-                end if
-                if (UseSwitchAMR) then
-                   ! Use dynamic refinement if there is a transient event 
-                   call trace_transient(RefineCrit(iCrit), &
-                        Crit_IB(iCrit,iBlock))
-                end if
+                ! Use dynamic refinement if there is a transient event 
+                call trace_transient(RefineCrit(iCrit), Crit_IB(iCrit,iBlock))
              end if
           end select
        end do ! iCrit
@@ -492,142 +471,123 @@ contains
   contains
     !==========================================================================
 
-    subroutine trace_transient(NameCrit, refine_crit)
+    subroutine trace_transient(NameCrit, RefineCrit)
 
       character(len=*), intent(in) :: NameCrit
 
-      real, intent(out) :: refine_crit
-      real :: AMRsort
-      real, dimension(nI,nJ,nK) :: scrARR
+      real, intent(out) :: RefineCrit
 
-      real, dimension(nI,nJ,nK) :: RhoOld_C, RhoUxOld_C, &
+      real, dimension(nI,nJ,nK) :: Tmp_C, RhoOld_C, RhoUxOld_C, &
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
       !-----------------------------------------------------------------------
-
-      ! if we do a amr pysics refinmnet at startup we do not have any
-      ! old walue. Can be inporved in the future
-      if(nRefineLevelIC>0 ) then
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            RhoOld_C(i,j,k)  = State_VGB(rho_,i,j,k,iBlock)
-            RhoUxOld_C(i,j,k)= State_VGB(rhoUx_,i,j,k,iBlock)
-            RhoUyOld_C(i,j,k)= State_VGB(rhoUy_,i,j,k,iBlock)
-            RhoUzOld_C(i,j,k)= State_VGB(rhoUz_,i,j,k,iBlock)
-            BxOld_C(i,j,k)   = State_VGB(Bx_,i,j,k,iBlock)
-            ByOld_C(i,j,k)   = State_VGB(By_,i,j,k,iBlock)
-            BzOld_C(i,j,k)   = State_VGB(Bz_,i,j,k,iBlock)
-            POld_C(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
-         end do; end do; end do
-      else
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBlock)
-            RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBlock)
-            RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBlock)
-            RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBlock)
-            BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBlock)
-            ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBlock)
-            BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBlock)
-            POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBlock)
-         end do; end do; end do
-      end if
+      do k=1,nK; do j=1,nJ; do i=1,nI
+         RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBlock)
+         RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBlock)
+         RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBlock)
+         RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBlock)
+         BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBlock)
+         ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBlock)
+         BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBlock)
+         POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBlock)
+      end do; end do; end do
 
       select case(NameCrit)
       case('P_dot','p_dot')
          !\
-         ! refine_crit = abs(|p|-|p|_o)/max(|p|,|p|_o,cTiny)
+         ! RefineCrit = abs(|p|-|p|_o)/max(|p|,|p|_o,cTiny)
          ! over all the cells of block iBlock
          !/
-         scrARR(1:nI,1:nJ,1:nK) = abs(P_G(1:nI,1:nJ,1:nK) - POld_C(1:nI,1:nJ,1:nK))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny,P_G(1:nI,1:nJ,1:nK), &
-              POld_C(1:nI,1:nJ,1:nK))
-         refine_crit = maxval(scrARR)
+         Tmp_C = abs(P_G(1:nI,1:nJ,1:nK) - POld_C)
+         Tmp_C = Tmp_C / max(cTiny,P_G(1:nI,1:nJ,1:nK), &
+              POld_C)
+         RefineCrit = maxval(Tmp_C)
       case('T_dot','t_dot')
          !\
-         ! refine_crit = abs(|T|-|T|_o)/max(|T|,|T|_o,cTiny)
+         ! RefineCrit = abs(|T|-|T|_o)/max(|T|,|T|_o,cTiny)
          ! over all the cells of block iBlock
          !/
-         scrARR(1:nI,1:nJ,1:nK) = abs(P_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK)  - &
-              POld_C(1:nI,1:nJ,1:nK)/RhoOld_C(1:nI,1:nJ,1:nK))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny,P_G(1:nI,1:nJ,1:nK)/ &
-              Rho_G(1:nI,1:nJ,1:nK),POld_C(1:nI,1:nJ,1:nK)/ &
-              RhoOld_C(1:nI,1:nJ,1:nK))
-         refine_crit = maxval(scrARR)
+         Tmp_C = abs(P_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK)  - &
+              POld_C/RhoOld_C)
+         Tmp_C = Tmp_C / max(cTiny,P_G(1:nI,1:nJ,1:nK)/ &
+              Rho_G(1:nI,1:nJ,1:nK),POld_C/ &
+              RhoOld_C)
+         RefineCrit = maxval(Tmp_C)
       case('Rho_dot','rho_dot')
          !\
-         ! refine_crit = abs(|rho|-|rho|_o)/max(|rho|,|rho|_o,cTiny)
+         ! RefineCrit = abs(|rho|-|rho|_o)/max(|rho|,|rho|_o,cTiny)
          ! over all the cells of block iBlock
          !/
-         scrARR(1:nI,1:nJ,1:nK) = abs(Rho_G(1:nI,1:nJ,1:nK) - RhoOld_C(1:nI,1:nJ,1:nK))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny,Rho_G(1:nI,1:nJ,1:nK), &
-              RhoOld_C(1:nI,1:nJ,1:nK))
-         refine_crit = maxval(scrARR)
+         Tmp_C = abs(Rho_G(1:nI,1:nJ,1:nK) - RhoOld_C)
+         Tmp_C = Tmp_C / max(cTiny,Rho_G(1:nI,1:nJ,1:nK), &
+              RhoOld_C)
+         RefineCrit = maxval(Tmp_C)
       case('RhoU_dot','rhoU_dot','rhou_dot')
          !\
-         ! refine_crit = abs(|rhoU|-|rhoU|_o)/max(|rhoU|,|rhoU|_o,cTiny)
+         ! RefineCrit = abs(|rhoU|-|rhoU|_o)/max(|rhoU|,|rhoU|_o,cTiny)
          ! over all the cells of block iBlock
          !/
-         scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2       + &
+         Tmp_C = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2       + &
               RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
-              sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                            + &
-              RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
+              sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
+         Tmp_C = Tmp_C / max(cTiny,                                           &
               sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2 + RhoUy_G(1:nI,1:nJ,1:nK)**2  + &
-              RhoUz_G(1:nI,1:nJ,1:nK)**2),sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2 + &
-              RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
-         refine_crit = maxval(scrARR)
+              RhoUz_G(1:nI,1:nJ,1:nK)**2), &
+              sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
+         RefineCrit = maxval(Tmp_C)
       case('B_dot','b_dot')
          !\
-         ! refine_crit = abs(|B|-|B|_o)/max(|B|,|B|_o,cTiny)
+         ! RefineCrit = abs(|B|-|B|_o)/max(|B|,|B|_o,cTiny)
          ! over all the cells of block iBlock
          !/
-         scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2         + &
-              By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)           - &
-              sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2                              + &
-              ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
+         Tmp_C = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2                + &
+              By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2) - &
+              sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
+         Tmp_C = Tmp_C / max(cTiny, &
               sqrt(Bx_G(1:nI,1:nJ,1:nK)**2 + By_G(1:nI,1:nJ,1:nK)**2  + &
-              Bz_G(1:nI,1:nJ,1:nK)**2),sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2 + &
-              ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
-         refine_crit = maxval(scrARR)
-      case('meanUB') 
-         scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2        + &
-              RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)       - &
-              sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2                             + &
-              RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
-              sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2 + RhoUy_G(1:nI,1:nJ,1:nK)**2  + &
-              RhoUz_G(1:nI,1:nJ,1:nK)**2),sqrt(RhoUxOld_C(1:nI,1:nJ,1:nK)**2 + &
-              RhoUyOld_C(1:nI,1:nJ,1:nK)**2 + RhoUzOld_C(1:nI,1:nJ,1:nK)**2))
-         AMRsort = maxval(scrARR)
+              Bz_G(1:nI,1:nJ,1:nK)**2),                                 &
+              sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
+         RefineCrit = maxval(Tmp_C)
+      case('meanUB')
+         !  (d|rhoU|/dt)/|rhoU| * (d|B|/dt)/|B|
+         Tmp_C = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2                   + &
+              RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2) - &
+              sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
+         Tmp_C = Tmp_C / max(cTiny,                                          &
+              sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2 + RhoUy_G(1:nI,1:nJ,1:nK)**2 + &
+              RhoUz_G(1:nI,1:nJ,1:nK)**2),                                   &
+              sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
+         RefineCrit = maxval(Tmp_C)
 
-         scrARR(1:nI,1:nJ,1:nK) = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2           + &
-              By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2)      - &
-              sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2                                 + &
-              ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
-         scrARR(1:nI,1:nJ,1:nK) = scrARR(1:nI,1:nJ,1:nK) / max(cTiny, &
+         Tmp_C = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2                + &
+              By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2) - &
+              sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
+         Tmp_C = Tmp_C / max(cTiny,                                     &
               sqrt(Bx_G(1:nI,1:nJ,1:nK)**2 + By_G(1:nI,1:nJ,1:nK)**2  + &
-              Bz_G(1:nI,1:nJ,1:nK)**2),sqrt(BxOld_C(1:nI,1:nJ,1:nK)**2 + &
-              ByOld_C(1:nI,1:nJ,1:nK)**2 + BzOld_C(1:nI,1:nJ,1:nK)**2))
-         refine_crit = AMRsort*maxval(scrARR)
+              Bz_G(1:nI,1:nJ,1:nK)**2),                                 &
+              sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
+         RefineCrit = RefineCrit*maxval(Tmp_C)
       case('Rho_2nd_1')
-         scrARR(1:nI,1:nJ,1:nK) = ( & 
+         ! (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
+         Tmp_C = ( & 
               abs(Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK))                                + &
+              2 * Rho_G(1:nI,1:nJ,1:nK))                            + &
               abs(Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK))                                + &
+              2 * Rho_G(1:nI,1:nJ,1:nK))                            + &
               abs(Rho_G(1:nI,1:nJ,0:nK-1) + Rho_G(1:nI,1:nJ,2:nK+1) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK)))                               / &
+              2 * Rho_G(1:nI,1:nJ,1:nK)))                           / &
               Rho_G(1:nI,1:nJ,1:nK)
-         refine_crit = maxval(scrARR)
+         RefineCrit = maxval(Tmp_C)
       case('Rho_2nd_2')
-         scrARR(1:nI,1:nJ,1:nK) = abs( & 
+         ! (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
+         Tmp_C = abs( & 
               (Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK))                             + &
+              2 * Rho_G(1:nI,1:nJ,1:nK))                         + &
               (Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK))                             + &
+              2 * Rho_G(1:nI,1:nJ,1:nK))                         + &
               (Rho_G(1:nI,1:nJ,0:nK-1) + Rho_G(1:nI,1:nJ,2:nK+1) - &
-              2 * Rho_G(1:nI,1:nJ,1:nK)))                            / &
+              2 * Rho_G(1:nI,1:nJ,1:nK)))                        / &
               Rho_G(1:nI,1:nJ,1:nK)
-         refine_crit = maxval(scrARR)
+         RefineCrit = maxval(Tmp_C)
       case default
          call stop_mpi('Unknown RefineCrit='//NameCrit)
       end select

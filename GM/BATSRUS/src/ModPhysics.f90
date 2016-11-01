@@ -173,13 +173,6 @@ module ModPhysics
   real,dimension(nVar,body2_:6):: FaceState_VI, CellState_VI
 
   !\
-  ! Position of Earth for Dynamic AMR purposes, including
-  ! a parameter that specifies the opening angle of the ray
-  !/
-  logical :: UseSunEarth=.false.
-  real    :: xEarth=0.0, yEarth=0.0, zEarth=0.0, InvD2Ray
-
-  !\
   ! Units for normalization of variables
   !/
   character (len=20) :: TypeNormalization="PLANETARY"
