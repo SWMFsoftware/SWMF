@@ -1429,7 +1429,7 @@ test_2bodyplot_check:
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
-		${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.out \
+		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
 		${TESTDIR}/RESULTS/GM/ref_y=0.out >> test_2bodyplot.diff)
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
 	        | grep -v AUXDATA \
