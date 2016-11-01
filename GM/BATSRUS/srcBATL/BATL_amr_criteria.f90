@@ -1385,8 +1385,6 @@ contains
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
        DoSortAmrCrit = PercentCoarsen > 0.0 .or. PercentRefine > 0.0       
     case("#AMRLIMIT")
-       !if(UseAmrMask) &
-       !     call CON_stop(NameCommand//' ERROR: AMR masking not supported')
        call read_var('PercentCoarsen', PercentCoarsen)
        call read_var('PercentRefine' , PercentRefine)
        call read_var('MaxTotalBlock',  MaxTotalBlock) 
