@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H
+SpeciesList=H_PLUS1 H_PLUS2 H_PLUS3 H_PLUS4 H_PLUS5 H_PLUS6 H_PLUS7  
 
 ErrorLog=error.log
 Prefix=AMPS
@@ -48,6 +48,8 @@ TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
 ParticleWeightCorrectionMode=on
 
+MoverIntegratorMode=Boris-relativistic
+
 #endmain
 
 #include species.input
@@ -77,6 +79,9 @@ ParticleWeightCorrectionMode=on
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
 !  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
+define _PIC_DEBUGGER_MODE_  _PIC_DEBUGGER_MODE_ON_ 
+define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+
   define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
 
@@ -100,7 +105,7 @@ ParticleWeightCorrectionMode=on
 !  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::Charging::UpdateGrainCharge__EQUILIBRIUM_POTENTIAL(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
 
 
-  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 
 
 !the mesh resoution close to Europa
@@ -108,6 +113,11 @@ ParticleWeightCorrectionMode=on
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
 #endGeneral
+
+#interface
+  cell_centered_linear_interpolation_mode=off 
+  cell_centered_linear_interpolation_src=default
+#endinterface
 
 
 
@@ -124,10 +134,16 @@ ParticleWeightCorrectionMode=on
       ( 0.0,   0.0,  -2.0E6), (-1.0E6, 0.0,  -1.7E6), (-1.7E6, 0.0,  -1.0E6) \\
     nSampleIntervals=200
 
+
+ EnergyDistributionSamplingRelativistic=on \\ !on, off
+   x=(1.8E8,0.0,0.0), (1.3E8,0.0,0.0), (9.4E7,0.0,0.0), (5.7E7,0.0,0.0), (3.6E7,0.0,0.0), (2.3E7,0.0,0.0), (7.3E6,0.0,0.0) \\ 
+   nSampleIntervals=500 \\
+   emin=1e6, emax=1.0e10 
+
 #endSampling
 
 #block ../input/earth.input.pl
-  GCR=off
+  GCR=on
   SEP=off
 #endBlock
 
