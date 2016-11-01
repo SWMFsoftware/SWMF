@@ -92,6 +92,36 @@
   mass=1.0*_AMU_
   charge=1.0
 
+
+#component=H_PLUS1
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS2 
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS3 
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS4 
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS5 
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS6 
+  mass=1.0*_AMU_
+  charge=1.0
+
+#component=H_PLUS7 
+  mass=1.0*_AMU_
+  charge=1.0
+
+
 #component=Ca
   mass=40.0*_AMU_
   charge=0
