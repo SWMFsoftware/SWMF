@@ -1160,6 +1160,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<parameter name="TypeBcBody2" type="string" case="lower"
 		input="select">
 			<option name="absorb"				/>
+			<option name="fixed"				/>
 			<option name="reflect"		default="T" 	/>
 			<option name="reflectb"				/>
 			<option name="reflectall"			/>
@@ -1192,7 +1193,8 @@ command that has to occur BEFORE this command).
 The second body can be anywhere in the computational domain, 
 so its sperical surface is never aligned with the grid block boundaries, 
 consequently only face boundary conditions can be applied which 
-is controlled by this command.
+is controlled by this command. It can have the same types as TypeBcBody,
+although not all those options are meaningful.
 
 Possible values for TypeBcBody are:
 \begin{verbatim}
@@ -4734,10 +4736,23 @@ Defaults are DoAmr false and IsStrictAmr true.
 999999                  MaxBlockAll
 1e-8                    DiffCriteriaLevel
 
-Setting up percentage refinement and coarsening using the criteria given by
-AMRCRITERIA or AMRCRITERIALEVEL. MaxBlockAll set max for total number of 
-blocks if both _nProc and MaxBlock are set. DiffCriteriaLevel give the deviation
-of the criteria that should have the same AMR treatment. 
+This is the obsolete way of doing AMR. All users are advised to use
+AMR where the grid depends on geometry and solution only, but not
+on the number of blocks. The #AMRCRITERIALEVEL and #AMRCRITERIARESOLUTION
+and #REGION commands provide all the needed functionality.
+
+This command sets a desired percentage of blocks to be coarsened 
+(PercentCoarsen) and refined (PercentRefine). In addition, the 
+total number of grid blocks can be limited with MaxBlockAll. 
+The criteria will be given by #AMRCRITERIA or #AMRCRITERIALEVEL. 
+To maintain symmetry of the solution, it is useful to treat blocks
+with similar criteria value to be coarsened and refined together.
+The DiffCriteriaLevel gives the tolerance so that blocks with
+criteria values closer than DiffCriteriaLevel 
+will be refined or coarsened together.
+
+The default is to refine and coarsen blocks based on the criteria
+without any percentage limits.
 </command>
 
 <command name="AMR">
@@ -4802,8 +4817,6 @@ Default for DnRefine is -1, i.e. no run time refinement.
 			<option name="current squared"  value="j2"           />
 			<option name="current sheet"    value="currentsheet" />
 			<option name="div U"		value="divu"	     />
-			<option name="divB"		value="divb"	     />
-			<option name="rCurrents" value="rcurrents"	     />
 			<option name="Transient" value="transient" />
 			<option name="User defined" value="user" />
 		</parameter>
@@ -4822,14 +4835,6 @@ Default for DnRefine is -1, i.e. no run time refinement.
 				<option name="Rho_2nd_1" value="rho_2nd_1"/>
 				<option name="Rho_2nd_2" value="rho_2nd_2"/>
 			</parameter>
-			<parameter name="UseSunEarth" type="logical" 
-								default="F"/>
-			<if expr="$UseSunEarth">
-				<parameter name="xEarth"   type="real"/>
-				<parameter name="yEarth"   type="real"/>
-				<parameter name="zEarth"   type="real"/>
-				<parameter name="InvD2Ray" type="real"/>
-			</if>
 		</if>
 	</for>
 #AMRCRITERIA
@@ -4842,11 +4847,6 @@ user			TypeRefine
 0.5			RefineLimit 
 Transient		TypeRefine
 Rho_dot			TypeTransient ! Only if 'Transient' or 'transient'
-T			UseSunEarth   ! Only if 'Transient'
-0.00E+00		xEarth        ! Only if UseSunEarth
-2.56E+02 		yEarth        ! Only if UseSunEarth
-0.00E+00		zEarth        ! Only if UseSunEarth
-5.00E-01		InvD2Ray      ! Only if UseSunEarth
 
 Note: "#AMRCRITERIALEVEL" gives even more control.
 
@@ -4859,25 +4859,17 @@ the maximum level or too many blocks would be created.
 
 Coarsening is done if ALL the criteria allow it and the block
 can be coarsened (a block cannot be coarsened if the block level
-is already at the minimum level, or too many blocks would be coarsened). 
+is already at the minimum level, or a neighboring block is finer). 
 
 The CoarsenLimit and RefineLimit parameters set the coarsening and 
-refinement thresholds for the NORMALIZED (divided by the largest value) 
-criteria. When the BATL library is not used the criteria are sorted by
-their value and a certain per cent of the blocks with the largest/lowest
-criteria get refined/coarsened, as determined by the 
-PercentCoarsen and PercentRefine parameters of the #AMR command.
-
-The default settings currently depend on the component used,
-but it is best to set the criteria explicitly if the #AMR command
-is used with DoAutoRefine=T, because the defaults may change, and 
-they are not optimal for most applications.
+refinement thresholds for the criteria that are given in I/O units.
 
 If nRefineCrit is set to zero, the blocks are not ordered. 
 This can be used to refine or coarsen
 all the blocks limited by the minimum and maximum levels only
 (see commands #AMRLEVELS and #AMRRESOLUTION). If nRefineCrit is 1, 2, or 3
-then the criteria can be chosen from the following list:
+then the criteria can be chosen from the following list
+(all criteria are based on the maximum over the cells in the grid block):
 \begin{verbatim}
   'gradT'		- gradient of temperature
   'gradP'		- gradient of pressure
@@ -4889,32 +4881,23 @@ then the criteria can be chosen from the following list:
   'J2'                  - current squared
   'currentsheet'        - current sheet (radial B changes sign)
   'divU', 'divV'	- divergence of velocity
-  'divB'		- div B
-  'Rcurrents'		- refinement near Rcurrents value
   'user'                - criteria defined in the user module
+  'transient'           - criteria is defined by the TypeTransient parameter.
 \end{verbatim}
-All the names can also be spelled with all small case letters.\\
-
-\noindent
 The possible choices for TypeTransient:
 \begin{verbatim}
-  'P_dot'
-  'T_dot'
-  'Rho_dot'
-  'RhoU_dot'
-  'B_dot'
-  'Rho_2nd_1'
-  'Rho_2nd_2'
+  'P_dot'	- relative change of pressure       (dP/dt)/P
+  'T_dot'	- relative change of temperature    (dT/dt)/T
+  'Rho_dot'	- relative change of density        (drho/dt)/rho
+  'RhoU_dot'	- relative change of momentum       (d|rhoU|/dt)/|rhoU|
+  'B_dot'	- relative change of magnetic field (d|B|/dt)/|B|
+  'meanUB'      - max[(d|rhoU|/dt)/|rhoU|] * max[(d|B|/dt)/|B|]
+  'Rho_2nd_1'   - (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
+  'Rho_2nd_2'   - (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
 \end{verbatim}
-Also, (xEarth,yEarth,zEarth) are the coordinates of the Earth. InvD2Ray is
-a factor that defines how close to the ray Sun-Earth to refine the grid.
-Note that the AMR occurs in a cylinder around the ray.
-Example for InvD2Ray =
-\begin{verbatim}
-   1 - refine_profile = 0.3679 at distance Rsun/10 from the ray
-   2 - refine_profile = 0.0183 at distance Rsun/10 from the ray
-   3 - refine_profile = 0.0001 at distance Rsun/10 from the ray
-\end{verbatim}
+
+By default there are no criteria, so all blocks are refined or coarsened 
+together.
 </command>
 
 <command name="AMRCRITERIALEVEL" alias="AMRCRITERIARESOLUTION">
@@ -5065,14 +5048,14 @@ TypeCriteria can be chosen from the following list:
 \end{verbatim}
 For TypeRefine="transient TypeTransient" there are the following possibiities:
 \begin{verbatim}
-  'transient P_dot'	- time derivative of pressure
-  'transient T_dot'	- time derivative of temperature
-  'transient Rho_dot'	- time derivative of density
-  'transient RhoU_dot'	- time derivative of momentum
-  'transient B_dot'	- time derivative of magnetic field
-  'transient Rho_2nd_1'
-  'transient Rho_2nd_2'
-  'transient meanUB'
+  'transient P_dot'	- relative change of pressure       (dP/dt)/P
+  'transient T_dot'	- relative change of temperature    (dT/dt)/T
+  'transient Rho_dot'	- relative change of density        (drho/dt)/rho
+  'transient RhoU_dot'	- relative change of momentum       (d|rhoU|/dt)/|rhoU|
+  'transient B_dot'	- relative change of magnetic field (d|B|/dt)/|B|
+  'transient meanUB'    - max[(d|rhoU|/dt)/|rhoU|] * max[(d|B|/dt)/|B|]
+  'transient Rho_2nd_1' - (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
+  'transient Rho_2nd_2' - (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
 \end{verbatim}
 For TypeRefine="error StateVarName" the criteria is a numerical error 
 estimate for the state variable StateVarName. 
