@@ -153,8 +153,10 @@ contains
 
   subroutine init_amr_criteria
 
-    use BATL_size, ONLY: MaxBlock, nBlock
-    use BATL_tree, ONLY: Unused_B
+    use ModNumConst, ONLY: cRadToDeg
+    use BATL_geometry, ONLY: DomainSize_D, CellSizeRoot, IsLogRadius, IsGenRadius, Phi_
+    use BATL_size, ONLY: MaxBlock, nBlock, nI, nIJK_D
+    use BATL_tree, ONLY: Unused_B,  nRoot_D
     use BATL_mpi,  ONLY: iProc
 
     integer :: iBlock, iCrit, nCrit, iGeo, iArea, idx, iVar
@@ -162,6 +164,14 @@ contains
     logical, parameter :: DoTest = .false.
     character(len=*), parameter :: NameSub = 'init_amr_criteria'
     !-------------------------------------------------------------------------
+    if(CellSizeRoot < 0.0)then
+       ! Set maximum cell size in the first non-stretched dimension for comparison
+       if(IsLogRadius .or. IsGenRadius)then
+          CellSizeRoot = cRadToDeg*DomainSize_D(Phi_)/(nRoot_D(Phi_)*nIJK_D(Phi_))
+       else
+          CellSizeRoot = DomainSize_D(1)/(nRoot_D(1) * nI)
+       end if
+    end if
 
     if(.not.(IsNewGeoParam .or. IsNewPhysParam)) RETURN
 
