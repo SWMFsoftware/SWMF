@@ -485,6 +485,7 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
       ampsConfigLib::ChangeValueOfVariable("const double NumericalLossRateIncrease","$InputLine","main/Comet.h");
+      ampsConfigLib::ChangeValueOfVariable("const double NumericalLossRateIncrease","$InputLine","models/exosphere/Exosphere_Chemistry.cpp");
   }
   elsif ($InputLine eq "HELIOCENTRICDISTANCE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
