@@ -177,6 +177,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
   JetProductionRate(CO2)=0.0 !1.0e25	    
 !  JetProductionRate(OH)=0.0 !1.0e25	    
 
+  NumericalLossRateIncrease=1
   
   TrackingSurfaceElementMode=off !on,off
 
