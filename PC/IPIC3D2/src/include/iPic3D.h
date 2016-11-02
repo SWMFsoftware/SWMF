@@ -181,7 +181,7 @@ namespace iPic3D {
     double **plotRange_ID;
     int **plotIndexRange_ID; // Local index range.
     double ***pointList_IID;// Output location. Indexes:iplot,ipoint,idim
-    int *nPoint_I; 
+    long *nPoint_I; 
     string *nameSnapshot_I;
     static const int nVarMax = 50; 
     string **Var_II;

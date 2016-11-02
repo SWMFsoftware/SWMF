@@ -1044,7 +1044,7 @@ void c_Solver:: write_plot_init(){
   Var_II            = new std::string*[nPlotFile];
   isSat_I           = new bool[nPlotFile];
   pointList_IID     = new double**[nPlotFile];
-  nPoint_I          = new int[nPlotFile];
+  nPoint_I          = new long[nPlotFile];
   
   //doSaveTrajectory_I= new bool[nPlotFile];
   satInputFile_I    = new string[nPlotFile];
@@ -1061,6 +1061,7 @@ void c_Solver:: write_plot_init(){
     doOutputParticles_I[i] = false;
     nextOutputTime_I[i] = 0;
     isSat_I[i] = false;
+    nCell_I[i] = 0;
     //doSaveTrajectory_I[i] = false;
   }
 
@@ -1336,7 +1337,8 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     }
     outFile<<"\n";
 
-    int plotDx = col->getplotDx(iPlot);    
+    int plotDx = col->getplotDx(iPlot);
+    if(doOutputParticles_I[iPlot]) plotDx=1;
     outFile<<"#CELLSIZE\n";
     outFile<<plotDx*col->getDx()*No2OutL<<"\t dx\n";
     outFile<<plotDx*col->getDy()*No2OutL<<"\t dy\n";

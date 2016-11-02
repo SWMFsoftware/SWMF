@@ -1878,7 +1878,7 @@ class InterfaceFluid
     satInfo_III.push_back(satInfo_II);
   }
 
-  void find_sat_points(double **pointList_ID, int &nPoint, int nPointMax,
+  void find_sat_points(double **pointList_ID, long &nPoint, int nPointMax,
 		       double plotRange_I[6],
 		       double xStart,double xEnd,double yStart,double yEnd,
 		       double zStart,double zEnd){
@@ -1892,23 +1892,29 @@ class InterfaceFluid
 
     double dl; // The distance between two virual satellite output points.
 
+    bool isFirstPoint;
+    
     // dl = 0.25*min(dx,dy,dz); The parameter 0.25 can be changed. 0.5 may be
     // good enough. 
     dl = INgridDx_D[0]<INgridDx_D[1]? INgridDx_D[0]:INgridDx_D[1];
     if(INdim>2) dl = dl<INgridDx_D[2]? dl:INgridDx_D[2];
     dl *=0.25;
 
+    isFirstPoint=true;
     for(int iLine = 0; iLine<nLine; iLine++){
       x = satInfo_III[iSat][iLine][1];
       y = satInfo_III[iSat][iLine][2];
       z = satInfo_III[iSat][iLine][3];
       if(INdim<3) z = 0;
 
+
+      
       if(x>=0 && x<=getFluidLx() &&
 	 y>=0 && y<=getFluidLy() &&
 	 z>=0 && z<=getFluidLz()){ // inside the computational domain?
-
-	if(nPoint==0){
+	
+	if(isFirstPoint){
+	  isFirstPoint=false;
 	  xm = x;
 	  ym = y;
 	  zm = z;
@@ -1940,20 +1946,21 @@ class InterfaceFluid
 	    if(ym>plotRange_I[3]) plotRange_I[3] = ym; 
 	    if(zm<plotRange_I[4]) plotRange_I[4] = zm;
 	    if(zm>plotRange_I[5]) plotRange_I[5] = zm; 
-
+	    
 	    if(xm>=xStart && xm<xEnd && ym>=yStart && ym<yEnd &&
 	       zm>=zStart && zm<zEnd){
 	      // This position is on this processor.
 	      pointList_ID[nPoint][0] = xm;
 	      pointList_ID[nPoint][1] = ym;
 	      pointList_ID[nPoint][2] = zm;
-	    
+
 	      nPoint++;
 	      if(nPoint>nPointMax){
 		cout<<"Error: nPoint = "<<nPoint<<" nPointMax= "<<nPointMax<<endl;
 		abort();
 	      }
 	    }
+	    
 	    dl0 = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym)+(z-zm)*(z-zm));
 	    
 	  } // while
@@ -1961,7 +1968,7 @@ class InterfaceFluid
       }// if
     }//for
 
-
+    
     /* for(int iPoint=0; iPoint<nPoint;iPoint++){ */
     /*   cout<<"iPoint = "<<iPoint */
     /* 	  <<" x = "<<pointList_ID[iPoint][0] */
