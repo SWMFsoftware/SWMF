@@ -45,7 +45,7 @@ module BATL_grid
      module procedure interpolate_grid_amr_gc_nob  
   end interface interpolate_grid_amr_gc
   ! Coordinate limits and size of domain inherited from BATL_geometry
-  public:: CoordMin_D, CoordMax_D, DomainSize_D
+  public:: CoordMin_D, CoordMax_D, DomainSize_D, CellSizeRoot
 
   real, public, allocatable::   &
        CoordMin_DB(:,:),        &    ! Min gen. coordinates of a block domain
@@ -1582,7 +1582,6 @@ contains
     !\
     !Direction along which the point goes out of the block inner part
     !/
-    integer :: iShift_D(MaxDim) 
     !\
     !/
     logical :: DoSearch !If .true. find iPeOut and iBlockOut via tree search
@@ -2219,7 +2218,7 @@ contains
     integer, parameter:: nRootCheck     = 2**nDim
     integer, parameter:: nBlockCheckMax = nRootCheck**2
     integer, parameter:: nCaseCheck     = 2**nRootCheck
-    integer:: iCase, iNodeCheck, iBlockCheck, iProcCheck, iRootCheck, iSeed=1
+    integer:: iCase, iNodeCheck, iBlockCheck, iProcCheck, iSeed=1
 
     logical:: DoTestMe
     character(len=*), parameter :: NameSub = 'test_grid'
