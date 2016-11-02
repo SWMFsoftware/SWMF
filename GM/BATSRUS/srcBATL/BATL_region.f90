@@ -11,7 +11,7 @@ module BATL_region
 
   use BATL_mpi,  ONLY: iProc
   use BATL_size, ONLY: nDim, Dim2_, Dim3_, j0_, nJp1_, k0_, nKp1_, &
-       nI, nJ, nK, nIJK, nIJK_D, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
+       nI, nJ, nK, nIJK, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
        nINode, nJNode, nKNode
 
   implicit none
@@ -69,11 +69,6 @@ module BATL_region
   ! initial refinement loop. 
   integer, public :: nInitialAmrLevel  = 0
 
-
-  ! Cell size of the root blocks in either the first coordinate,
-  ! or the Phi direction in degrees if IsLogRadius or IsGenRadius is true.
-  real, public:: CellSizeRoot = -1.0
-
   ! Local variables
   real            :: InitialResolution = -1.0
 
@@ -96,9 +91,8 @@ contains
   subroutine init_region
 
     use BATL_geometry,     ONLY: Phi_, Theta_, IsCartesianGrid, &
-         IsLogRadius, IsGenRadius, DomainSize_D, radius_to_gen
-    use BATL_tree,         ONLY: nRoot_D
-    use ModNumConst,       ONLY: cDegToRad, cRadToDeg
+         IsLogRadius, IsGenRadius, radius_to_gen, CellSizeRoot
+    use ModNumConst,       ONLY: cDegToRad
 
     integer :: iGeo
     real:: rMin, rMax
@@ -106,13 +100,6 @@ contains
     logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
     !-------------------------------------------------------------------------
-
-    ! Set maximum cell size in the first non-stretched dimension for comparison
-    if(IsLogRadius .or. IsGenRadius)then
-       CellSizeRoot = cRadToDeg*DomainSize_D(Phi_)/(nRoot_D(Phi_)*nIJK_D(Phi_))
-    else
-       CellSizeRoot = DomainSize_D(1)/(nRoot_D(1) * nI)
-    end if
 
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) nInitialAmrLevel &
