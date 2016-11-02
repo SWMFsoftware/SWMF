@@ -34,6 +34,10 @@ module BATL_geometry
   real, public:: CoordMax_D(MaxDim)             ! Max gen. coords of domain
   real, public:: DomainSize_D(MaxDim)           ! CoordMax - CoordMin
 
+  ! Cell size of the root blocks in either the first coordinate,
+  ! or the Phi direction in degrees if IsLogRadius or IsGenRadius is true.
+  real, public:: CellSizeRoot = -1.0
+
   ! Cartesian, cylindrical or spherical coordinates
   logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid (possibly RZ)
   logical, public:: IsCartesian       = .true.  ! Normal Cartesian geometry
