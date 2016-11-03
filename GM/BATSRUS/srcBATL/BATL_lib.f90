@@ -76,7 +76,7 @@ module BATL_lib
   public:: rRound0, rRound1, IsRoundCube, SqrtNDim
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, DomainSize_D
-  public:: CoordMin_DB, CoordMax_DB, CellSize_DB
+  public:: CoordMin_DB, CoordMax_DB, CellSize_DB, CellSizeRoot
   public:: Xyz_DGB, Xyz_DNB
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
@@ -96,7 +96,7 @@ module BATL_lib
 
   ! Inherited from BATL_region
   public:: read_region_param, get_region_indexes, block_inside_regions
-  public:: nInitialAmrLevel, CellSizeRoot
+  public:: nInitialAmrLevel
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
@@ -239,7 +239,6 @@ contains
     call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr
-
 
   end subroutine init_grid_batl
 
