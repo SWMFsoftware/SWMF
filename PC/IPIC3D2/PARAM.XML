@@ -1,0 +1,109 @@
+<command name="COMPONENT">
+#SAVEIDL
+4                       nPlotFile
+sat_sat01.sat  var ascii si        StringPlot
+-1                      DnOutput
+3.0                     DtOutput
+0.                      DxOutput
+rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
+sat_sat02.sat particles1 real4 si   StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+10.          DxOutput: output one particle of every DxOutput particles.
+z=0 var ascii si        StringPlot
+-1                      DnOutput
+3.0                     DtOutput
+0.                      DxOutput
+rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
+x=0 var ascii pic       StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+0.                      DxOutput
+rhoS0 rhoS1 bx by pxx          PlotVar
+3d all real4  planet    StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+5                       DxOutput
+cut all real8 si        StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+0                       xMin
+1                       xMax
+2                       yMin
+3                       yMax
+4                       zMin
+5                       zMax
+0.                      DxOutput
+cut particles0 real4 si  StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+0                       xMin
+1                       xMax
+2                       yMin
+3                       yMax
+4                       zMin
+5                       zMax
+1.            DxOutput: output one particle of every DxOutput particles.
+3d particles1 real4 si   StringPlot
+1                       DnOutput
+-0.05                   DtOutput
+10.          DxOutput: output one particle of every DxOutput particles.
+
+This command determins the IDL type output from iPIC3D.
+
+The first parameter is nPlotFile, which is the number of files to be saved.
+Each output starts with StringPlot, which specify the output region, variables,
+file format and variable units. The plotting frequencies DnOutput and DtOutput
+are following. DnOutput is needed and it only works for particles and '3d' type
+field output. Only one of every DnOutput nodes/particles are saved in order
+to save disk space, also to speed out the post processing and virtualization.
+Several other parameters may follow based on the content of StringPlot.
+
+StringPlot has the format:'domain variabels format unit'.
+'domain' can be one of the following:
+\begin{verbatim}
+x=x0     - a 2D cut of x=x0 plane. 'x0' is the coordinate.
+y=y0     - a 2D cut of y=y0 plane. 'y0' is the coordinate.
+z=z0     - a 2D cut of z=z0 plane. 'z0' is the coordinate.
+3d       - the whole 3d domain.
+cut      - part of the 3D domain. Need to specifiy the output range.
+sat_SatelliteFile  - save information along the satellite trajectory, and the satellite information is read from SatelliteFile.
+\end{verbatim}
+The value of 'variables' coule be:
+\begin{verbatim}
+all   - all the PIC field variables of the first two species:'qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1'
+fluid - all the FLUID field variabels of the first two species:'rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1'
+var   - read from parameter file
+particles0/particles1/particles2... - the location, velocity and weight of
+particles. The particle species needs to be specified. One and only speces 
+is allowd in one output file. 
+\end{verbatim}
+
+qS0 and qS1 are charge densities, while rhos0 and rhos1 are mass densities.
+kXXS0 = sum(vx*vx), where vx is the particle velocity. So kXXS0 includes the
+effect of bulk velocity. But pXXS0 has exclude the influence of the bulk
+velocity.
+
+The file format could be either 'real4' or 'ascii'. The 'unit' could be:
+\begin{verbatim}
+PIC  - normalized PIC unit.
+SI   - SI unit. The unit of current and electric field are not well defined. 
+PLANETARY - planetary unit. B field is in nT, velocity is in km/s, length is in planet radius, density is in amu/cm^3, pressure is in nPa. Current and electric field are not well defined. 
+\end{verbatim}
+
+
+Note:
+1) Available output variables are listed in EMfields3D.cpp::getVar().
+2) DxOutput is only functional for particles and 3d field output now.
+3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
+4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
+5) The unit of current and electric field are not well defined so far.
+
+<command name="COMPONENT">
+#SATELLITERADIUS
+2                 SatRadius
+
+If the distance between a particle and the satellite trajectory is less than
+SatRadius*dx, where dx is the cell size in x direction, this particle will be
+saved in the output file. 
+  
