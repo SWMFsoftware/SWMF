@@ -27,6 +27,7 @@ program spectrum
 
   ! Variables for solar wind input data file
   logical                     :: IsDataBlock = .false. ! read only part of data
+  logical                     :: IsUniData = .false. ! overwrite data with const
   integer                     :: n1Block,n2Block,n3Block ! defines the size
   integer                     :: iError
   integer                     :: nVar   ! number of variables   
@@ -35,6 +36,8 @@ program spectrum
   integer                     :: n1, n2, n3 ! grid size
   real                        :: CoordMin_D(3), CoordMax_D(3)        
   real,allocatable            :: Var_VIII(:,:,:,:)
+  real                        :: rhoUni, uxUni, uyUni, uzUni, bxUni, byUni, bzUni
+  real                        :: tiUni, teUni, I01Uni, I02Uni
 
   ! Indexes for the solar wind variables
   integer, parameter          :: &
@@ -390,6 +393,20 @@ contains
           end select
           A = aInstrument
 
+       case("#UNIFORMDATA")
+          IsUniData = .true.
+      call read_var('rhoUni',rhoUni)
+      call read_var('uxUni',uxUni)
+      call read_var('uyUni',uyUni)
+      call read_var('uzUni',uzUni)
+      call read_var('bxUni',bxUni)
+      call read_var('byUni',byUni)
+      call read_var('bzUni',bzUni)
+      call read_var('tiUni',tiUni)
+      call read_var('teUni',teUni)
+      call read_var('I01Uni',I01Uni)
+      call read_var('I02Uni',I02Uni)
+   
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -455,20 +472,20 @@ contains
          NameSub//' could not header from '//trim(NameDataFile))
 
     allocate(VarIn_VIII(nVar,n1,n2,n3))
-   
+
     call read_plot_file(NameFile=NameDataFile, &
          TypeFileIn = TypeDataFile,            &
          VarOut_VIII = VarIn_VIII,             &
          CoordMinOut_D=CoordMin_D,             &
          CoordMaxOut_D=CoordMax_D,             &   
          iErrorOut = iError)
-   
+
     if(iError /= 0) call CON_stop( &
          NameSub//' could not read data from '//trim(NameDataFile))
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
-    
+
     if(IsDataBlock)then
        n1 = n1Block
        n2 = n2Block
@@ -477,45 +494,61 @@ contains
     else
        allocate(Var_VIII(11,n1,n2,n3))
     endif
-    
-    do iVar=1, nVar
-       if(IsVerbose)      write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
 
-       call lower_case(NameVar_V(iVar+nDim))
+    if (IsUniData) then
 
-       select case(NameVar_V(iVar+nDim))
-       case('rho')
-          Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
-       case('ux')
-          Var_VIII(ux_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
-       case('uy')
-          Var_VIII(uy_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
-       case('uz')
-          Var_VIII(uz_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
-       case('bx')
-          Var_VIII(bx_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
-       case('by')
-          Var_VIII(by_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
-       case('bz')
-          Var_VIII(bz_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
-       case('ti')
-          Var_VIII(ti_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
-       case('te')
-          Var_VIII(te_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
-       case('i01')
-          Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
-       case('i02')
-          Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
-       case default
-          write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
-       end select
-    end do
+       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni
+       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni
+       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni
+       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni
+       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni
+       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni
+       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni
+       Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
+       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni
+       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni
+
+    else
+       do iVar=1, nVar
+          if(IsVerbose)      write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
+
+          call lower_case(NameVar_V(iVar+nDim))
+
+          select case(NameVar_V(iVar+nDim))
+          case('rho')
+             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+          case('ux')
+             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+          case('uy')
+             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+          case('uz')
+             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+          case('bx')
+             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+          case('by')
+             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
+          case('bz')
+             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
+          case('ti')
+             Var_VIII(ti_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+          case('te')
+             Var_VIII(te_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+          case('i01')
+             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+          case('i02')
+             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+          case default
+             write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
+          end select
+       end do
+    endif
 
     deallocate(VarIn_VIII)
 
     LOS_D = CoordMax_D-CoordMin_D
     LOSnorm_D  = LOS_D/sqrt(max(sum(LOS_D**2), 1e-30))
-    
+
     dx = (CoordMax_D(1)-CoordMin_D(1))/n1
 
   end subroutine read_data
