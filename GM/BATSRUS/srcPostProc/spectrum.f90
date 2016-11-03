@@ -146,7 +146,7 @@ contains
     ! Number of wave length processed so far
     nWave = 0
     ! Loop over intervals
-    write(*,*)"nWaveInterval",nWaveInterval
+    if(IsVerbose) write(*,*)"  nWaveInterval = ",nWaveInterval
     do iWaveInterval = 1, nWaveInterval
        ! Number of wave length in this interval
        nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
