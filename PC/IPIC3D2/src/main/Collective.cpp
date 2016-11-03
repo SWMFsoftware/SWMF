@@ -1582,6 +1582,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   iHour   = 10;
   iMinute = 45;
   iSecond = 0;
+
+  drSat = 2; 
   
   while(*param){
     get_next_command(param,&Command);
@@ -1717,6 +1719,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param, "iMinute", &iMinute);
       read_var(param, "iSecond", &iSecond);
     }
+    else if(Command == "#SATELLITERADIUS"){
+      read_var(param, "SatRadius", &drSat);
+    }    
     else if( Command == "#SAVEIDL"){
       /*
 	1) The command name should be #SAVEPLOT
@@ -1778,7 +1783,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	1) Available output variables are listed in EMfields3D.cpp::getVar().
 	2) DxOutput is only functional for particles and 3d field output now.
 	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
-	4) Output variable 'particles' only works for 'cut' and '3d'.
+	4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
       */
       
       string::size_type pos;

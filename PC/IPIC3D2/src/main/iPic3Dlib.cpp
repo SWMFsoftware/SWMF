@@ -1649,14 +1649,15 @@ void c_Solver:: find_output_list(int iPlot){
     double plotRange_I[6];
     col->read_satellite_file(satInputFile_I[iPlot]);
     // pointList_IID stores the coordinate (x/y/z) of the output points.
-    col->find_sat_points(pointList_IID[iPlot], nPoint_I[iPlot],nNodeMax,plotRange_I,
+    col->find_sat_points(pointList_IID[iPlot], nPoint_I[iPlot],
+			 nNodeMax,plotRange_I,
 			 grid->getXstart(), grid->getXend(),
 			 grid->getYstart(), grid->getYend(),
 			 grid->getZstart(), grid->getZend());
     MPI_Reduce(&nPoint_I[iPlot], &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 
     if(doOutputParticles_I[iPlot] && nCell_I[iPlot]>0){
-      double drSat = col->getDx()*2; // This value should be got from PARAM.in
+      double drSat = col->getSatRadius(); 
 
       // Find out a cube can contain all the satellite sampling points. 
       plotRange_ID[iPlot][0] = plotRange_I[0] - drSat;

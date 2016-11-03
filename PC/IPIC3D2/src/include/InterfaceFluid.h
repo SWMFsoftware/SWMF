@@ -136,7 +136,8 @@ class InterfaceFluid
   string *plotString_I;
   string *plotVar_I;
   bool doSaveBinary;
-
+  double drSat; // A particle within drSat*dx from a satellite point will be wrote out. 
+  
   vector< vector< array<double,4> > > satInfo_III;
 
   // Simulation start time.
@@ -1882,8 +1883,9 @@ class InterfaceFluid
 		       double plotRange_I[6],
 		       double xStart,double xEnd,double yStart,double yEnd,
 		       double zStart,double zEnd){
-    // Need to know which satellite. Here always read use the last satellite
-    // information read by read_satellite_file(). Not a good choice!!!!
+    // Need to know which satellite. Here always use the last satellite
+    // information read by read_satellite_file(), since this method is called
+    // after read_sat_points() in iPic3dlib.cpp. Not a good approach!!!!
     
     nPoint = 0;
     int const iSat = satInfo_III.size()-1;
@@ -2271,7 +2273,8 @@ class InterfaceFluid
     // plotRange_ID is only set from PARAM.in for 'cut'!!!!
     return plotRange_ID[iPlot][i];
   };
-  bool getdoSaveBinary()const{return doSaveBinary;};  
+  bool getdoSaveBinary()const{return doSaveBinary;};
+  double getSatRadius()const{return drSat*INgridDx_D[0];};
   void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
 };
 

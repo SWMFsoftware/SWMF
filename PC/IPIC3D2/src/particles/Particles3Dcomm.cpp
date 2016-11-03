@@ -2060,6 +2060,8 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
   bool doOutput;
   double x, y, z; 
 
+  double drSat = col->getSatRadius();
+  
   if(isBinary){    
     FILE *outFile;
     int nRecord, nSizeDouble, nSizeInt;
@@ -2083,9 +2085,6 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
 
       doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
       if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;	
-
-      double drSat = col->getDx()*2; // This value should be got from PARAM.in
-
       if(doOutput && usePointList){
 
 	bool isNearSat;
@@ -2149,9 +2148,6 @@ void Particles3Dcomm::write_plot_particles(string filename, const int dnOutput,
       z = nDim>2? pcl.get_z():0;
       doOutput = x>xMin && x<xMax && y>yMin && y<yMax;
       if(nDim>2) doOutput = doOutput && z>zMin && z<zMax;
-
-
-      double drSat = col->getDx()*2; // This value should be got from PARAM.in
 
       if(doOutput && usePointList){
 
