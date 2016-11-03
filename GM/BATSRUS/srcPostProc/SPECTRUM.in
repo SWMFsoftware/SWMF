@@ -7,17 +7,29 @@ TRUE
 shl.out			NameDataFile
 real4			TypeDataFile
 
+DATABLOCK
+3	n1
+3	n2
+3	n3
+1	nPixel
+
 #TABLEFILE
 SPECTRUM.input.erg	NameTableFile
-300			MaxWave 
+70			MaxWave 
 
 #WAVELENGTHINTERVAL
-2			nInterval
-0			min (A)
-300			max (A)
+1			nInterval
 1000			min (A)
-2000			max (A)
-1                       SizeWavelengthBin (A)
+1200			max (A)
+10                      SizeWavelengthBin (A)
 
 #INSTRUMENT
 EIS                     NameInstrument
+
+WAVELENGTHINTERVAL
+2                       nInterval
+0                       min (A)
+300                     max (A)
+1000                    min (A)
+2000                    max (A)
+1                       SizeWavelengthBin (A)
