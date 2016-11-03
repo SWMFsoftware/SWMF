@@ -26,6 +26,8 @@ program spectrum
   integer                     :: nWavelengthBin, iWavelengthBin
 
   ! Variables for solar wind input data file
+  logical                     :: IsDataBlock = .false. ! read only part of data
+  integer                     :: n1Block,n2Block,n3Block ! defines the size
   integer                     :: iError
   integer                     :: nVar   ! number of variables   
   integer                     :: nDim   ! number of dimensions  
@@ -50,7 +52,7 @@ program spectrum
 
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
-  integer                     :: MaxWave
+  integer                     :: MaxWave, nWaveFound
   real, allocatable           :: WavelengthInterval_II(:,:)
 
   ! Temperature and density grid for G
@@ -95,8 +97,8 @@ program spectrum
   call read_data
 
   call read_table
-
-  do iCenter = 1,MaxWave
+  
+  do iCenter = 1,min(MaxWave,nWaveFound)
      call calc_flux(iCenter)
   end do
 
@@ -134,7 +136,7 @@ contains
     do iWavelengthInterval = 1,nWavelengthInterval
        nWaveAll = nWaveAll + SpectrumTable_I(iWavelengthInterval)%nBin
     end do
-    write(*,*)"nWaveAll",nWaveAll
+    
     allocate( &
          Intensity_VII(1,nWaveAll,nPixel), &
          CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
@@ -148,24 +150,22 @@ contains
     do iWaveInterval = 1, nWaveInterval
        ! Number of wave length in this interval
        nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
-
+       
        WaveLengthMin = WavelengthInterval_II(1,iWaveInterval)
        WaveLengthMax = WavelengthInterval_II(2,iWaveInterval)
        dWaveBin = (WaveLengthMax - WaveLengthMin)/nWaveBin
-       write(*,*)nWaveBin
+       
        ! Loop over wave lengths in this interval
        do iWaveBin = 1, nWaveBin
           ! Global wave length index
-          write(*,*)"iWave = nWave + iWaveBin",iWave,nWave,iWaveBin
           iWave = nWave + iWaveBin
-          write(*,*)"iWave = nWave + iWaveBin",iWave,nWave,iWaveBin
+          
           ! Save intensity and coordinate into global array
           Intensity_VII(1,iWave,:) = &
                SpectrumTable_I(iWaveInterval)%Spectrum_II(:,iWaveBin)
           CoordWave_I(iWave) = WaveLengthMin + (iWaveBin - 0.5)*dWaveBin
-          ! Finished processing this interval
-          
        end do
+       ! Finished processing this interval
        nWave = nWave + nWaveBin
     end do
 
@@ -203,11 +203,12 @@ contains
     !------------------------------------------------------------------------
 
     allocate(gLambda_II(MinI:MaxI,MinJ:MaxJ))
-
+       
     ! Convert to SI
     Lambda = LineTable_I(iLambda)%Wavelength
+    
     LambdaSI = LineTable_I(iLambda)%Wavelength * 1e-10 
-
+    
     do iWavelengthInterval = 1, nWavelengthInterval
        if((Lambda < WavelengthInterval_II(2,iWavelengthInterval)) &
             .and.(Lambda > WavelengthInterval_II(1,iWavelengthInterval))) then
@@ -227,11 +228,6 @@ contains
        if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
             WavelengthInterval_II(2,iInterval))EXIT
     end do
-
-!!! for testing purposes
-    n1 = 2
-    n2 = 3
-    n3 = 4
 
     do k=1,n3
        do j=1,n2
@@ -358,13 +354,22 @@ contains
           end do
           call read_var('SizeWavelengthBin',SizeWavelengthBin)
 
+       case("#DATABLOCK")
+          IsDataBlock = .true.
+          call read_var('n1',n1Block)
+          call read_var('n2',n2Block)
+          call read_var('n3',n3Block)
+          call read_var('nPixel',nPixel)
+          
        case("#INSTRUMENT")
           IsInstrument = .true.
           call read_var('NameInstrument',NameInstrument)
 
           select case(NameInstrument)
           case("EIS")
-             nPixel = 1024
+             if(.not.IsDataBlock)then
+                nPixel = 1024
+             endif
              allocate(dLambdaInstr_I(nPixel))
 !!! Here something from Enrico
              do iPixel=1,nPixel
@@ -447,25 +452,32 @@ contains
          iErrorOut = iError)
 
     if(iError /= 0) call CON_stop( &
-         NameSub//' could not read header from '//trim(NameDataFile))
+         NameSub//' could not header from '//trim(NameDataFile))
 
     allocate(VarIn_VIII(nVar,n1,n2,n3))
-
+   
     call read_plot_file(NameFile=NameDataFile, &
          TypeFileIn = TypeDataFile,            &
          VarOut_VIII = VarIn_VIII,             &
          CoordMinOut_D=CoordMin_D,             &
          CoordMaxOut_D=CoordMax_D,             &   
          iErrorOut = iError)
-
+   
     if(iError /= 0) call CON_stop( &
          NameSub//' could not read data from '//trim(NameDataFile))
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
-
-    allocate(Var_VIII(11,n1,n2,n3))
-
+    
+    if(IsDataBlock)then
+       n1 = n1Block
+       n2 = n2Block
+       n3 = n3Block
+       allocate(Var_VIII(11,n1,n2,n3))
+    else
+       allocate(Var_VIII(11,n1,n2,n3))
+    endif
+    
     do iVar=1, nVar
        if(IsVerbose)      write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
 
@@ -473,27 +485,27 @@ contains
 
        select case(NameVar_V(iVar+nDim))
        case('rho')
-          Var_VIII(rho_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e3
+          Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
        case('ux')
-          Var_VIII(ux_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e3
+          Var_VIII(ux_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
        case('uy')
-          Var_VIII(uy_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e3
+          Var_VIII(uy_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
        case('uz')
-          Var_VIII(uz_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e3
+          Var_VIII(uz_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
        case('bx')
-          Var_VIII(bx_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e3
+          Var_VIII(bx_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
        case('by')
-          Var_VIII(by_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e-4
+          Var_VIII(by_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
        case('bz')
-          Var_VIII(bz_,:,:,:) = VarIn_VIII(iVar,:,:,:) *1e-4
+          Var_VIII(bz_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
        case('ti')
-          Var_VIII(ti_,:,:,:) = VarIn_VIII(iVar,:,:,:)
+          Var_VIII(ti_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
        case('te')
-          Var_VIII(te_,:,:,:) = VarIn_VIII(iVar,:,:,:)
+          Var_VIII(te_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
        case('i01')
-          Var_VIII(I01_,:,:,:) = VarIn_VIII(iVar,:,:,:)
+          Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
        case('i02')
-          Var_VIII(I02_,:,:,:) = VarIn_VIII(iVar,:,:,:)
+          Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
        case default
           write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
        end select
@@ -503,8 +515,8 @@ contains
 
     LOS_D = CoordMax_D-CoordMin_D
     LOSnorm_D  = LOS_D/sqrt(max(sum(LOS_D**2), 1e-30))
-
-    dx = (CoordMax_D(1)-CoordMin_D(1)/n1)
+    
+    dx = (CoordMax_D(1)-CoordMin_D(1))/n1
 
   end subroutine read_data
 
@@ -541,7 +553,7 @@ contains
 
     ! Read only wavelength of interest into a nice table
     allocate(LineTable_I(MaxWave))
-
+    nWaveFound      = 0
     iWave           = 0
     FirstWaveLength = -1.0
     DoStore         = .false.
@@ -622,14 +634,14 @@ contains
           ! New line of interest found
           iWave = iWave + 1
           if(iWave > MaxWave) call CON_stop('Too many waves, increase MaxWave')
-
+          
           FirstWavelength = Wavelength
           DoStore = .true.
-
+          nWaveFound = nWaveFound + 1
           ! Store ion name and wavelength 
           LineTable_I(iWave)%NameIon    = NameIon
           LineTable_I(iWave)%Wavelength = Wavelength
-
+          
           ! Calculate indexes and store as the minimum indexes
           iN = nint(LogN/dLogN) + 1; iT = nint(LogT/dLogT) + 1
           LineTable_I(iWave)%iMin = iN; LineTable_I(iWave)%jMin = iT
