@@ -39,7 +39,7 @@ subroutine fix_boundary_ghost_cells
 
   use ModBoundaryCells, ONLY: iBoundary_GB, domain_
   use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-       body2_, BlkTest, iTest, jTest, kTest
+       body2_, BlkTest, iTest, jTest, kTest, iteration_number
   use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
   !use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: message_pass_cell
@@ -61,10 +61,16 @@ subroutine fix_boundary_ghost_cells
   if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
        true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
 
+  ! DoResChangeOnly=true works as long as the ghost cells are correctly set
+  ! away from resolution changes. This usually holds, but not if the 
+  ! boundary cells are set based on the state variables read from a restart
+  ! file that has no ghost cell information saved. This can only happen
+  ! at the very beginning of a run when iteration_number == 0.
+
   call message_pass_cell(iBoundary_GB, &
        nProlongOrderIn=1, nCoarseLayerIn=2, &
        DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-       DoResChangeOnlyIn=.true., NameOperatorIn='max')
+       DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
 
   if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
        iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
