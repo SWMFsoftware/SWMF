@@ -7,7 +7,7 @@ TRUE
 shl.out			NameDataFile
 real4			TypeDataFile
 
-DATABLOCK
+#DATABLOCK
 3	n1
 3	n2
 3	n3
@@ -33,3 +33,16 @@ WAVELENGTHINTERVAL
 1000                    min (A)
 2000                    max (A)
 1                       SizeWavelengthBin (A)
+
+#UNIFORMDATA
+1			rhoUni
+0			uxUni
+0			uyUni
+0			uzUni
+0			bxUni
+0			byUni
+0			bzUni
+1			tiUni
+1			teUni
+0			I01Uni
+0			I02Uni
