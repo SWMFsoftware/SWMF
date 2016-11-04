@@ -246,13 +246,14 @@ contains
 
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
-    use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B,&
+    use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B, &
          DoThinCurrentSheet
+    use ModGeometry,   ONLY: r_BLK, true_cell
     use ModAdvance,    ONLY: State_VGB, StateOld_VCB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
-         UnitTemperature_, UnitElectric_
+         UnitTemperature_, UnitElectric_, rCurrents
     use ModCurrent,    ONLY: get_current
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
     use ModNumConst,   ONLY: cSqrtTwo, cTiny
@@ -420,6 +421,15 @@ contains
              Crit_IB(iCrit,iBlock) = &
                   maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C)) &
                   *No2Io_V(UnitU_)
+
+          case('rcurrents')	
+             ! Inverse distance from Rcurrents, squared
+             ! The new geometric methods are better, but this is kept 
+             ! so that the tests keep running
+             Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
+                  abs(Rcurrents - r_BLK(1:nI,1:nJ,1:nK,iBlock))))**2)
+             Crit_IB(iCrit,iBlock) = maxval(Var_G(1:nI,1:nJ,1:nK),&
+                  MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
           case('currentsheet')
              if(SignB_>1 .and. DoThinCurrentSheet)then
