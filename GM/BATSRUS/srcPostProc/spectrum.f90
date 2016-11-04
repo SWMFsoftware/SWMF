@@ -20,7 +20,7 @@ program spectrum
   logical                     :: IsInstrument = .false.
   character(len=200)          :: NameInstrument
   integer                     :: nPixel, iPixel
-  real                        :: aInstrument
+  real                        :: Ainstrument
   real,allocatable            :: dLambdaInstr_I(:)
   real                        :: SizeWavelengthBin
   integer                     :: nWavelengthBin, iWavelengthBin
@@ -166,8 +166,9 @@ contains
           iWave = nWave + iWaveBin
           
           ! Save intensity and coordinate into global array
+          ! Convert intensity to [erg cm^-2 sr^-1 s^-1 A^-1]
           Intensity_VII(1,iWave,:) = &
-               SpectrumTable_I(iWaveInterval)%Spectrum_II(:,iWaveBin)
+               SpectrumTable_I(iWaveInterval)%Spectrum_II(:,iWaveBin) * 10.**7
           CoordWave_I(iWave) = WaveLengthMin + (iWaveBin - 0.5)*dWaveBin
        end do
        ! Finished processing this interval
@@ -238,11 +239,11 @@ contains
        do j=1,n2
           do i=1,n1
              ! Calculate thermal and non-thermal broadening
-             Rho = max(Var_VIII(rho_,i,j,k),1e-30)
+             Rho = Var_VIII(rho_,i,j,k)
              zPlus2   = Var_VIII(I01_,i,j,k) * 4.0 / Rho
              zMinus2  = Var_VIII(I02_,i,j,k) * 4.0 / Rho
              B_D      = Var_VIII(bx_:bz_,i,j,k)
-             Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30)) 
+             Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
              cosAlpha = sum(LOSnorm_D*Bnorm_D)
              uNth2    = 1.0/16.0 * zPlus2 * zMinus2* abs(cosAlpha)
              uTh2     = 2 * cBoltzmann * Var_VIII(ti_,i,j,k) / cProtonMass
@@ -265,7 +266,7 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = A/(4*cPi*Dist**2.0)* Gint * (10.0**LogNe)**2.0*dx
+             FluxMono = Ainstrument/(4*cPi*Dist**2.0)* Gint * (10.0**LogNe)**2.0*dx
              call disperse_line(iInterval,iCenter,Lambda,DeltaLambda,FluxMono)
 
           end do
@@ -343,7 +344,7 @@ contains
 
        case("#WAVELENGTHINTERVAL")
           IsNoInstrument = .true.
-          A = 1.0
+          Ainstrument = 1e-5
           if(.not.IsDataBlock)nPixel = 1
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
@@ -380,7 +381,7 @@ contains
              do iPixel=1,nPixel
                 dLambdaInstr_I(iPixel) = 0.0
              end do
-             aInstrument = 1.0 !!! Again Enrico
+             Ainstrument = 2e-5 !!! Again Enrico
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
@@ -393,7 +394,6 @@ contains
           case default
              write(*,*) NameSub // ' WARNING: unknown #INSTRUMENT '
           end select
-          A = aInstrument
 
        case("#UNIFORMDATA")
           IsUniData = .true.
@@ -484,7 +484,7 @@ contains
 
     if(iError /= 0) call CON_stop( &
          NameSub//' could not read data from '//trim(NameDataFile))
-
+write(*,*)VarIn_VIII(1,1:n1,1:n2,1:n3)
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
 
