@@ -187,15 +187,11 @@ Rusanov			TypeFlux
 
 #RUN ##########################################################################
 
-STOP
--1			MaxIteration
-10.0			tSimulationMax
-
-!Changing stop command because AMR at 150 iterations differs on some machines
+! Stop time is set to allow 2 AMRs
 
 #STOP
-145			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+9.0			tSimulationMax
 
 #BEGIN_COMP GM ################################################################
 
@@ -248,7 +244,7 @@ y=0 VAR idl_ascii       StringPlot
 -1                      DnSavePlot
 10.0                    DtSavePlot
 -1.                     DxSavePlot
-{MHD} amrlevel crit1 crit2 crit3
+{MHD} amrlevel
 g rbody
 
 #END_COMP GM ###############################################################
