@@ -144,8 +144,10 @@ contains
          Intensity_VII(1,nWaveAll,nPixel), &
          CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
 
-    CoordPixel_I = (/1, nPixel/)
-    
+    do iPixel = 1,nPixel
+       CoordPixel_I(iPixel) = iPixel
+    end do
+
     ! Number of wave length processed so far
     nWave = 0
     ! Loop over intervals
@@ -342,7 +344,7 @@ contains
        case("#WAVELENGTHINTERVAL")
           IsNoInstrument = .true.
           A = 1.0
-          nPixel = 1
+          if(.not.IsDataBlock)nPixel = 1
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
              deallocate(WavelengthInterval_II)
