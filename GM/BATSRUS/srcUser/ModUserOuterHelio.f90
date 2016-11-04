@@ -26,11 +26,12 @@
 ! in subroutine calc_time_dep_sw, it reads in file solarwind.dat
 !note TimeDep code was implemented without the Heliopause function
 !September 2015 - Added user_init_session
+! October-Novermber 2016 - gtoth added code for a reflective heliosphere body
 !==============================================================================
 module ModUser
 
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModMain,       ONLY: Body1, body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
+  use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
        nBlock, Unused_B, Time_Simulation
   use ModPhysics,    ONLY: Gamma, GammaMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
@@ -164,6 +165,9 @@ module ModUser
   real:: rCrescent = -1.0, xCrescentCenter = -1.0
   real:: rHelioPause = -1.0, TempHelioPauseSi = -1.0, TempHelioPause = -1.0
 
+  ! Freeze neutrals (with user_update_states
+  logical:: DoFreezeNeutral = .false.
+
 contains
 
   !=========================================================================
@@ -239,6 +243,8 @@ contains
        case("#HELIOPAUSE")
           call read_var('rHelioPause', rHelioPause)
           call read_var('TempHelioPauseSi', TempHelioPauseSi)
+       case("#FREEZENEUTRAL")
+          call read_var('DoFreezeNeutral', DoFreezeNeutral)
        case default
           if(iProc==0) call stop_mpi(NameSub// &
                ': unrecognized command: '//NameCommand)
@@ -756,17 +762,36 @@ contains
   !=====================================================================
   subroutine user_initial_perturbation
 
-    use ModEnergy, only: calc_energy
+    use ModEnergy, ONLY: calc_energy, calc_energy_ghost
 
     ! Set Pop II to be the same state as the ions with smaller density
     integer:: iBlock
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-------------------------------------------------------------------
-
     !This subroutine is not needed when not using the 4 neutral fluids
-    if(.not.UseNeutralFluid) &
-         call CON_stop(NameSub//':  no neutral fluids present')
+
+    if(.not.UseNeutralFluid)then
+       if(rHelioPause > 0.0)then
+          if(iProc==0) write(*,*) NameSub,' overwriting solution with VLISW'
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock)) CYCLE
+             where(true_cell(:,:,:,iBlock))
+                State_VGB(Rho_,  :,:,:,iBlock) = VLISW_rho
+                State_VGB(RhoUx_,:,:,:,iBlock) = VLISW_rho*VLISW_Ux
+                State_VGB(RhoUy_,:,:,:,iBlock) = VLISW_rho*VLISW_Uy
+                State_VGB(RhoUz_,:,:,:,iBlock) = VLISW_rho*VLISW_Uz
+                State_VGB(Bx_   ,:,:,:,iBlock) = VLISW_Bx
+                State_VGB(By_   ,:,:,:,iBlock) = VLISW_By
+                State_VGB(Bz_   ,:,:,:,iBlock) = VLISW_Bz
+                State_VGB(p_    ,:,:,:,iBlock) = VLISW_p
+             endwhere
+             call calc_energy_ghost(iBlock)
+          end do
+          RETURN
+       end if
+       call CON_stop(NameSub//': no neutral fluids or heliopause body present')
+    end if
 
     do iBlock = 1, nBlock
 
@@ -800,6 +825,17 @@ contains
 
     !------------------------------------------------------------------
     call update_states_MHD(iBlock)
+
+    if(DoFreezeNeutral)then
+
+       ! Set neutrals back to previous state
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VCB(NeuRho_:Ne4P_,i,j,k,iBlock) 
+          Energy_GBI(i,j,k,iBlock,2:) = EnergyOld_CBI(i,j,k,iBlock,2:)
+       end do; end do; end do
+       
+       RETURN
+    end if
 
     ! No need to check blocks outside:
     if(rMin_BLK(iBlock) > rBody) RETURN
@@ -1731,16 +1767,19 @@ contains
   subroutine user_init_session
 
     use ModLookupTable,   ONLY: i_lookup_table
-
+    use ModMain,          ONLY: UseUserUpdateStates
+    !--------------------------------------------------------------------
     ! Get index for the solar wind table holding time-dep. solar cycle values
     iTableSolarwind = i_lookup_table('solarwind2d')
+
+    if(DoFreezeNeutral) UseUserUpdateStates = .true.
 
   end subroutine user_init_session
 
   !=======================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB
 
     integer, intent(in):: iBlock
     integer:: i, j, k
@@ -1753,14 +1792,17 @@ contains
             r_BLK(:,:,:,iBlock) < rHelioPause .or. &
             State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
             > TempHelioPause
-       
-       if(body1)then
-          ! Set internal state 
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(IsBoundaryCell_GI(i,j,k,ExtraBc_)) &
-                  State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Body1_)
-          end do; end do; end do
-       end if
+
+       ! Set internal state to "body" values with high ion temperature
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          if(IsBoundaryCell_GI(i,j,k,ExtraBc_))then
+             State_VGB(:,i,j,k,iBlock) = CellState_VI(:,body1_)
+             ! Make sure the temperature is higher than the heliopause threshold
+             State_VGB(p_,i,j,k,iBlock) = &
+                  State_VGB(rho_,i,j,k,iBlock)*TempHelioPause*2
+          end if
+       end do; end do; end do
+
        RETURN
     end if
 
