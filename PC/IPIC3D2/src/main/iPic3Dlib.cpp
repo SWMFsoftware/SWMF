@@ -319,11 +319,31 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   Ke = new double[ns];
   BulkEnergy = new double[ns];
   momentum = new double[ns];
-  cq = SaveDirName + "/ConservedQuantities.txt";
-  if (myrank == 0) {
-    ofstream my_file(cq.c_str());
-    my_file.close();
+
+  if(col->getCase()=="BATSRUS"){
+    stringstream logFile;
+    logFile<<SaveDirName<<"/log_region"<<col->getiRegion()
+	   <<"_n"<<setfill('0')<<setw(8)<<first_cycle<<".log";
+    cq = logFile.str();
+    if (myrank == 0) {
+      ofstream my_file(cq.c_str());
+      // What is the unit of bulk energy?? --Yuxi
+      my_file<<"time nstep Moment Etotal Eefield Ebfield Epart ";
+      for (int is = 0; is < ns; is++) my_file << " Epart" <<is;
+      //for (int is = 0; is < ns; is++) my_file <<" Ebulk"<<is;
+      my_file<<endl;
+      my_file.close();
+    }    
+  }else{
+    cq = SaveDirName + "/ConservedQuantities.txt";
+    if (myrank == 0) {
+      ofstream my_file(cq.c_str());
+      my_file.close();
+    }
   }
+
+  
+  
   
 
   Qremoved = new double[ns];
@@ -714,16 +734,10 @@ void c_Solver::WriteConserved(int cycle) {
       if(col->getCase()=="BATSRUS"){
 #ifdef BATSRUS
 	my_file.precision(12);
-	if(cycle == 0){
-	  // What is the unit of bulk energy?? --Yuxi
-	  my_file<<"time nstep Moment Etotal Eefield Ebfield Epart ";
-	  for (int is = 0; is < ns; is++) my_file << " Epart" <<is<<" Ebulk"<<is;
-	  my_file<<endl;
-	}
-
+	my_file<<std::scientific;
 	my_file<<getSItime()<<"\t"<<cycle<< "\t" << TOTmomentum<< "\t"<< (Eenergy + Benergy + TOTenergy)<< "\t" << Eenergy << "\t" << Benergy << "\t" << TOTenergy;
 	for (int is = 0; is < ns; is++) my_file << "\t" << Ke[is];
-	for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];
+	//for (int is = 0; is < ns; is++) my_file << "\t" << BulkEnergy[is];
 #endif
       }else{
 	if(cycle == 0) my_file << "\t" << "\t" << "\t" << "Total_Energy" << "\t" << "Momentum" << "\t" << "Eenergy" << "\t" << "Benergy" << "\t" << "Kenergy" << "\t" << "Kenergy(species)" << "\t" << "BulkEnergy(species)" << endl;
