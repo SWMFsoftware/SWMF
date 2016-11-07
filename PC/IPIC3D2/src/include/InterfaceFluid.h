@@ -1981,6 +1981,17 @@ class InterfaceFluid
     
   }
 
+  int second_to_clock_time(int second){
+    int iHr, iMn, iSc, time;
+    iHr = floor(second/3600);
+    second -= iHr*3600;
+    iMn = floor(second/60);
+    iSc = second - iMn*60;
+
+    time = iSc + 100*iMn + 10000*iHr; 
+    return time;
+  }
+    
   /** Convert real time into simulation time in second. **/
   double convert_time(int yr, int mo, int dy, int hr, int mn,int sc,double msc){
     double time; 

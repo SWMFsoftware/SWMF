@@ -1015,7 +1015,7 @@ void c_Solver:: write_plot_idl(int cycle){
     if(  (dnOutput > 0 && cycle % dnOutput==0) ||
 	 (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])  ){
       if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
-	nextOutputTime_I[iPlot] = timeNow + dtOutput;
+	nextOutputTime_I[iPlot] = floor(timeNow/dtOutput+1)*dtOutput;
       }
       
       set_output_unit(iPlot);
@@ -1297,7 +1297,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
   time = getSItime(); // double to int.
 
   ss<<"_"<<iPlot
-    <<"_t"<<setfill('0')<<setw(8)<<time
+    <<"_t"<<setfill('0')<<setw(8)<<col->second_to_clock_time(time)
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<".h";
   if(myrank==0){
@@ -1415,7 +1415,7 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
   }
   
   ss<<"_"<<iPlot
-    <<"_t"<<setfill('0')<<setw(8)<<time
+    <<"_t"<<setfill('0')<<setw(8)<<col->second_to_clock_time(time)
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<"_pe"<<setfill('0')<<setw(nLength)<<myrank
     <<".idl";
