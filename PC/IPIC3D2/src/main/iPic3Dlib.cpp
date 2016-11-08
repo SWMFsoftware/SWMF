@@ -321,6 +321,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   momentum = new double[ns];
 
   if(col->getCase()=="BATSRUS"){
+#ifdef BATSRUS    
     stringstream logFile;
     logFile<<SaveDirName<<"/log_region"<<col->getiRegion()
 	   <<"_n"<<setfill('0')<<setw(8)<<first_cycle<<".log";
@@ -333,7 +334,8 @@ int c_Solver::Init(int argc, char **argv, double inittime,
       //for (int is = 0; is < ns; is++) my_file <<" Ebulk"<<is;
       my_file<<endl;
       my_file.close();
-    }    
+    }
+#endif
   }else{
     cq = SaveDirName + "/ConservedQuantities.txt";
     if (myrank == 0) {
