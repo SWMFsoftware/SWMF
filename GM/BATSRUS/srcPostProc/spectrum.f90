@@ -36,7 +36,8 @@ program spectrum
   integer                     :: n1, n2, n3 ! grid size
   real                        :: CoordMin_D(3), CoordMax_D(3)        
   real,allocatable            :: Var_VIII(:,:,:,:)
-  real                        :: rhoUni, uxUni, uyUni, uzUni, bxUni, byUni, bzUni
+  real                        :: rhoUni, uxUni, uyUni, uzUni, bxUni, byUni
+  real                        :: bzUni
   real                        :: tiUni, teUni, I01Uni, I02Uni
 
   ! Indexes for the solar wind variables
@@ -254,8 +255,8 @@ contains
              ! Add instrumental broadening if there is any
              DeltaLambda2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
              if(IsInstrument)DeltaLambda2 = DeltaLambda2 + dLambdaInstr2
-             DeltaLambda = max(sqrt(DeltaLambda2),1e-10)
-
+             DeltaLambda = sqrt(DeltaLambda2)
+             
              ! Get the contribution function
              iNMin  = LineTable_I(iLambda)%iMin
              jTMin  = LineTable_I(iLambda)%jMin
@@ -266,8 +267,9 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = Ainstrument/(4*cPi*Dist**2.0)* Gint * (10.0**LogNe)**2.0*dx
-             call disperse_line(iInterval,iCenter,Lambda,DeltaLambda,FluxMono)
+             FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx
+             
+             call disperse_line(iInterval,iCenter,LambdaSI,DeltaLambda,FluxMono)
 
           end do
        end do
@@ -275,9 +277,9 @@ contains
   end subroutine calc_flux
 
   !==========================================================================
-  subroutine disperse_line(iInterval,iCenter,Lambda,dLambda,FluxMono)
+  subroutine disperse_line(iInterval,iCenter,LambdaSI,dLambdaSI,FluxMono)
 
-    real, intent(in)            :: Lambda, dLambda, FluxMono
+    real, intent(in)            :: LambdaSI, dLambdaSI, FluxMono
     integer, intent(in)         :: iInterval,iCenter
     real                        :: Flux, Phi
     integer                     :: iStep, iWave, nWaveBin
@@ -288,10 +290,13 @@ contains
     nWaveBin = SpectrumTable_I(iInterval)%nBin
     
     do iStep = -5 , 5
-
+       
        ! Calculate Gaussian of the line
-       Phi = 1.0 / (sqrt(2.0*cPi) * dLambda) * &
-            exp(-0.5*(iStep*dLambda)**2.0 / dLambda)
+       Phi = exp(-0.5*(dLambdaSI*iStep)**2/(2*dLambdaSI**2))/ &
+       (sqrt(2.0*cPi) * dLambdaSI)
+       
+       write(*,*)'LambdaSI, dLambdaSI = ',LambdaSI,dLambdaSI
+       write(*,*)'PHI, FluxMono = ',Phi, FluxMono
 
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
@@ -344,7 +349,7 @@ contains
 
        case("#WAVELENGTHINTERVAL")
           IsNoInstrument = .true.
-          Ainstrument = 1e-5
+          Ainstrument = 7.7778e5**2
           if(.not.IsDataBlock)nPixel = 1
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
@@ -381,7 +386,7 @@ contains
              do iPixel=1,nPixel
                 dLambdaInstr_I(iPixel) = 0.0
              end do
-             Ainstrument = 2e-5 !!! Again Enrico
+             Ainstrument = 7.7778e5**2
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
@@ -484,7 +489,7 @@ contains
 
     if(iError /= 0) call CON_stop( &
          NameSub//' could not read data from '//trim(NameDataFile))
-write(*,*)VarIn_VIII(1,1:n1,1:n2,1:n3)
+
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
 
@@ -513,25 +518,27 @@ write(*,*)VarIn_VIII(1,1:n1,1:n2,1:n3)
 
     else
        do iVar=1, nVar
-          if(IsVerbose)      write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
+          if(IsVerbose)write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
 
           call lower_case(NameVar_V(iVar+nDim))
 
           select case(NameVar_V(iVar+nDim))
           case('rho')
-             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('ux')
-             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('uy')
-             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('uz')
-             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('bx')
-             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e3
+             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('by')
-             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
+             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)* &
+                  1e-4
           case('bz')
-             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) *1e-4
+             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)* &
+                  1e-4
           case('ti')
              Var_VIII(ti_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('te')
