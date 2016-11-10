@@ -123,14 +123,14 @@ contains
     !------------------------------------------------------------------------
 
     ! Variables for output file
-    character(len=200)          :: NameSpectrumFile = 'spectrum.out'
-    character(len=5)            :: TypeFileSpectrum = 'ascii'
-    character(len=200)          :: StringHeaderSpectrum = 'spectrum output'
-    character(len=200)          :: NameVarSpectrum = 'Wavelength Pixel flux'
+    character(len=200)   :: NameSpectrumFile = 'spectrum.out'
+    character(len=5)     :: TypeFileSpectrum = 'ascii'
+    character(len=200)   :: StringHeaderSpectrum = '[A] [erg sr^-1 cm^-2 A^-1]'
     real,allocatable            :: &
          Intensity_VII(:,:,:), CoordWave_I(:), CoordPixel_I(:)
-    
-    integer                     :: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, nWaveBin,nWaveAll
+
+    integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, nWaveBin, &
+         nWaveAll
     real                        :: dWaveBin, WavelengthMin,WavelengthMax
     character(len=*), parameter :: NameSub = 'save_all'
     !------------------------------------------------------------------------
@@ -140,7 +140,7 @@ contains
     do iWavelengthInterval = 1,nWavelengthInterval
        nWaveAll = nWaveAll + SpectrumTable_I(iWavelengthInterval)%nBin
     end do
-    
+
     allocate( &
          Intensity_VII(1,nWaveAll,nPixel), &
          CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
@@ -156,16 +156,16 @@ contains
     do iWaveInterval = 1, nWaveInterval
        ! Number of wave length in this interval
        nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
-       
+
        WaveLengthMin = WavelengthInterval_II(1,iWaveInterval)
        WaveLengthMax = WavelengthInterval_II(2,iWaveInterval)
        dWaveBin = (WaveLengthMax - WaveLengthMin)/nWaveBin
-       
+
        ! Loop over wave lengths in this interval
        do iWaveBin = 1, nWaveBin
           ! Global wave length index
           iWave = nWave + iWaveBin
-          
+
           ! Save intensity and coordinate into global array
           ! Convert intensity to [erg cm^-2 sr^-1 s^-1 A^-1]
           Intensity_VII(1,iWave,:) = &
@@ -176,14 +176,27 @@ contains
        nWave = nWave + nWaveBin
     end do
 
-    call save_plot_file(NameFile = NameSpectrumFile,      &
-         TypeFileIn     = TypeFileSpectrum,     &
-         StringHeaderIn = StringHeaderSpectrum, &
-         NameVarIn      = NameVarSpectrum,      &
-         Coord1In_I     = CoordWave_I,          &
-         Coord2In_I     = CoordPixel_I,          &
-         VarIn_VII      = Intensity_VII)
+    ! nDim = 1 if nPixel = 1, otherwise 2
+    if(nPixel==1)then
 
+       call save_plot_file(NameFile = NameSpectrumFile,      &
+            TypeFileIn     = TypeFileSpectrum,      &
+            StringHeaderIn = StringHeaderSpectrum,  &
+            NameVarIn      = "wavelength flux",     &
+            nDimIn         = 1,                     &
+            Coord1In_I     = CoordWave_I,           &
+            VarIn_VII      = Intensity_VII)
+    else
+
+       call save_plot_file(NameFile = NameSpectrumFile,      &
+            TypeFileIn     = TypeFileSpectrum,      &
+            StringHeaderIn = StringHeaderSpectrum,  &
+            NameVarIn      = "wavelength pixel flux", &
+            nDimIn         = 2,                     &
+            Coord1In_I     = CoordWave_I,           &
+            Coord2In_I     = CoordPixel_I,          &
+            VarIn_VII      = Intensity_VII)
+    endif
     deallocate(Intensity_VII, CoordWave_I, CoordPixel_I)
 
   end subroutine save_all
@@ -248,8 +261,10 @@ contains
              cosAlpha = sum(LOSnorm_D*Bnorm_D)
              uNth2    = 1.0/16.0 * zPlus2 * zMinus2* abs(cosAlpha)
              uTh2     = 2 * cBoltzmann * Var_VIII(ti_,i,j,k) / cProtonMass
-
-             LogNe = log10(Rho*1e-3/cProtonMass)
+             
+             ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
+             ! and divide by cProtonMass in kg so Ne is in cm^-3  
+             LogNe = log10(Rho*1e-6/cProtonMass)
              LogTe = log10(max(Var_VIII(te_,i,j,k),1e-30))
 
              ! Add instrumental broadening if there is any
@@ -281,32 +296,43 @@ contains
 
     real, intent(in)            :: LambdaSI, dLambdaSI, FluxMono
     integer, intent(in)         :: iInterval,iCenter
-    real                        :: Flux, Phi
+    integer                     :: iUpdate, iBin
+    real                        :: Flux, Phi, Lambda
     integer                     :: iStep, iWave, nWaveBin
 
     character(len=*), parameter :: NameSub='disperse_line'
     !------------------------------------------------------------------------
 
     nWaveBin = SpectrumTable_I(iInterval)%nBin
-    
+
     do iStep = -5 , 5
+       ! Convert m --> A
+       Lambda = (LambdaSI + dLambdaSI*iStep)*1e10
        
        ! Calculate Gaussian of the line
        Phi = exp(-0.5*(dLambdaSI*iStep)**2/(2*dLambdaSI**2))/ &
-       (sqrt(2.0*cPi) * dLambdaSI)
+            (sqrt(2.0*cPi) * dLambdaSI)
        
-       write(*,*)'LambdaSI, dLambdaSI = ',LambdaSI,dLambdaSI
-       write(*,*)'PHI, FluxMono = ',Phi, FluxMono
-
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
 
-       ! Update value in bin
+       ! Find the corresponding wvl bin = iUpdate
+       iBin =0
+       do
+          iBin=iBin+1
+          if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
+               .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))then
+             iUpdate=iBin
+             
+             EXIT
+          end if
+          if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
+               WavelengthInterval_II(2,iInterval))EXIT
+       end do
+       ! Update bin iUpdate by adding the flux
        do iPixel =1, nPixel
-          iWave = iCenter + iStep
-          if(iWave < 1 .or. iWave > nWaveBin) CYCLE
-          SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iCenter+iStep) = &
-               SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iWave) &
+          SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iUpdate) = &
+               SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iUpdate) &
                + Flux
        end do
     end do
@@ -524,26 +550,32 @@ contains
 
           select case(NameVar_V(iVar+nDim))
           case('rho')
+             ! g/cm3 --> kg/m3
              Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('ux')
+             ! km/s --> m/s
              Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('uy')
              Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('uz')
              Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
           case('bx')
-             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
+             ! G --> T
+             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  *1e-4
           case('by')
-             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)* &
-                  1e-4
+             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  *1e-4
           case('bz')
-             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)* &
-                  1e-4
+             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  *1e-4
           case('ti')
+             ! K
              Var_VIII(ti_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('te')
              Var_VIII(te_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('i01')
+             ! erg/cm^3 --> J/m^3
              Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('i02')
              Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
