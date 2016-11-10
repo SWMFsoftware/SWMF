@@ -928,11 +928,27 @@ public:
 
 
     for(int iPoint = 0; iPoint < nPoint; iPoint++){
-      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){	
+      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){
+	double pos_D[3];
+	pos_D[0] = Xyz_I[iPoint*nDim ] - xmin;
+	pos_D[1] = Xyz_I[iPoint*nDim+1] - ymin;
+	pos_D[2] = Xyz_I[iPoint*nDim+2] - zmin;
+	if(! _col->isThisProc(&pos_D[0],true)){
+	  cout<<" proc= "<<_vct->getCartesian_rank()
+	      <<" xp= "<<Xyz_I[iPoint*nDim]
+	      <<" yp= "<<Xyz_I[iPoint*nDim+1]
+	      <<" zp= "<<Xyz_I[iPoint*nDim+2]
+	      <<" xmin= "<<xmin
+	      <<" ymin= "<<ymin
+	      <<" zmin= "<<zmin
+	      <<endl;
+	}
 	xp = Xyz_I[iPoint*nDim] - xmin;
 	yp = (nDim > 1) ? Xyz_I[iPoint*nDim + 1] - ymin : 0.0;
 	zp = (nDim > 2) ? Xyz_I[iPoint*nDim + 2] - zmin : 0.0;
 
+	
+	
 	double weight_I[8];
 	int ix, iy, iz;
 	_grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);

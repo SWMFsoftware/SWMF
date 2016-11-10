@@ -79,6 +79,14 @@ Grid3DCU::Grid3DCU(CollectiveIO * col, VirtualTopology3D * vct):
     if(!isCrowdedZ) nzcStart += col->getNzc() - (nzc-2)*vct->getZLEN();
     zStart = col->getLz()*nzcStart / (double) col->getNzc();
     zEnd = zStart + col->getLz()*(nzc-2) / (double) col->getNzc();
+
+    col->setxStart(xStart);
+    col->setyStart(yStart);
+    col->setzStart(zStart);
+    col->setxEnd(xEnd);
+    col->setyEnd(yEnd);
+    col->setzEnd(zEnd);
+    col->setSubDomainRange();
     #endif
   }else{
     /*Example: 18 cells (not include ghost cells) distributed on 4 processors 
@@ -616,7 +624,7 @@ void Grid3DCU::interpN2Cfull(double ***vecFieldC, double ***vecFieldN){
 
 void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
 				      int &ix, int &iy, int &iz,
-				      double weight_I[8], bool isOnThisProc)const{
+				      double weight_I[8])const{
 
   
   const double nxn = getNXN();
@@ -643,28 +651,11 @@ void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
   const double ixd = floor((xp - xstart) * inv_dx);
   const double iyd = floor((yp - ystart) * inv_dy);
   const double izd = floor((zp - zstart) * inv_dz);
-
-
-  isOnThisProc = xp >=xstart && xp<=xend && yp>=ystart && yp<=yend && zp>=zstart && zp<=zend;
-    
   
   ix = 2 + int (ixd);
   iy = 2 + int (iyd);
   iz = 2 + int (izd);
-	
-  if (ix < 1)
-    ix = 1;
-   if (iy < 1)
-     iy = 1;
-   if (iz < 1)
-     iz = 1;
-   if (ix > nxn - 1)
-     ix = nxn - 1;
-   if (iy > nyn - 1)
-     iy = nyn - 1;
-   if (iz > nzn - 1)
-     iz = nzn - 1;
-	
+		
    double xi[2];
    double eta[2];
    double zeta[2];

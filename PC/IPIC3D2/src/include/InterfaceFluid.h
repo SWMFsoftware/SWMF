@@ -119,6 +119,10 @@ class InterfaceFluid
   // Nodes, include ghost cells.
   int nxnLG, nynLG, nznLG;
 
+  // The range of the computtational domain on this processor.
+  double xStart, xEnd, yStart, yEnd, zStart, zEnd;
+  double *xStart_I, *xEnd_I, *yStart_I, *yEnd_I, *zStart_I, *zEnd_I;
+  
   // Unless it is the first step to initilize PC, otherwise, only boundary
   // information is needed from GM. 
   bool doNeedBCOnly;
@@ -611,6 +615,13 @@ class InterfaceFluid
     delete iPpar_I;
     delete iP_I;
 
+    delete xStart_I;
+    delete xEnd_I;
+    delete yStart_I;
+    delete yEnd_I;
+    delete zStart_I;
+    delete zEnd_I;
+    
     if(nPlotFile>0){
       delete [] dnOutput_I;
       delete [] dtOutput_I;
@@ -819,6 +830,89 @@ class InterfaceFluid
     nznLG = nzcLocal + 3; 
   }	
 
+
+  void setSubDomainRange(){
+    xStart_I = new double[_vct->getXLEN()];
+    xEnd_I   = new double[_vct->getXLEN()];
+    yStart_I = new double[_vct->getYLEN()];
+    yEnd_I   = new double[_vct->getYLEN()];
+    zStart_I = new double[_vct->getZLEN()];
+    zEnd_I   = new double[_vct->getZLEN()];
+
+    double *xStart0_I, *xEnd0_I, *yStart0_I, *yEnd0_I, *zStart0_I, *zEnd0_I;
+    xStart0_I = new double[_vct->getXLEN()];
+    xEnd0_I   = new double[_vct->getXLEN()];
+    yStart0_I = new double[_vct->getYLEN()];
+    yEnd0_I   = new double[_vct->getYLEN()];
+    zStart0_I = new double[_vct->getZLEN()];
+    zEnd0_I   = new double[_vct->getZLEN()];
+
+    for(int ix=0; ix<_vct->getXLEN(); ix++){
+      xStart_I[ix] = -1e99;
+      xEnd_I[ix]   = -1e99;
+      xStart0_I[ix] = -1e99;
+      xEnd0_I[ix]   = -1e99; 
+
+    }
+
+    for(int iy=0; iy<_vct->getYLEN(); iy++){
+      yStart_I[iy] = -1e99;
+      yEnd_I[iy]   = -1e99;
+      yStart0_I[iy] = -1e99;
+      yEnd0_I[iy]   = -1e99; 
+
+    }
+
+    for(int iz=0; iz<_vct->getZLEN(); iz++){
+      zStart_I[iz] = -1e99;
+      zEnd_I[iz]   = -1e99;      
+      zStart0_I[iz] = -1e99;
+      zEnd0_I[iz]   = -1e99;
+    }
+
+
+    xStart0_I[_vct->getCoordinates(0)] = xStart;
+    xEnd0_I[_vct->getCoordinates(0)] = xEnd;
+    yStart0_I[_vct->getCoordinates(1)] = yStart;
+    yEnd0_I[_vct->getCoordinates(1)] = yEnd;
+    zStart0_I[_vct->getCoordinates(2)] = zStart;
+    zEnd0_I[_vct->getCoordinates(2)] = zEnd;
+
+    MPI_Allreduce(xStart0_I,xStart_I,_vct->getXLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(xEnd0_I,xEnd_I,_vct->getXLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(yStart0_I,yStart_I,_vct->getYLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(yEnd0_I,yEnd_I,_vct->getYLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(zStart0_I,zStart_I,_vct->getZLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(zEnd0_I,zEnd_I,_vct->getZLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+
+
+
+    delete xStart0_I;
+    delete xEnd0_I;
+    delete yStart0_I;
+    delete yEnd0_I;
+    delete zStart0_I;
+    delete zEnd0_I;
+
+    bool doTest;
+    doTest=false;
+    if(doTest && myrank==0){
+    for(int ix=0; ix<_vct->getXLEN(); ix++){
+      cout<<"ix= "<<ix<<" xstart= "<<xStart_I[ix]<<endl;
+    }
+
+    for(int iy=0; iy<_vct->getYLEN(); iy++){
+      cout<<"iy= "<<iy<<" ystart= "<<yStart_I[iy]<<endl;
+    }
+
+    for(int iz=0; iz<_vct->getZLEN(); iz++){
+      cout<<"iz= "<<iz<<" zstart= "<<zStart_I[iz]<<endl;
+    }
+    }
+  }
+
+
+  
   /** find which processor have with dordinate */
   void findProcForPoint(VCtopology3D *vct, int nPoint, double *Xyz_I, int *iProc_I){
 
@@ -828,53 +922,109 @@ class InterfaceFluid
     const double Epsilon = 0.0;//1.0e-13;
     myrank = vct-> getCartesian_rank();
 
+    int *iProc0_I;
+    iProc0_I = new int[nPoint];
+    
     for(int i =0; i<nPoint*INdim; i++)
       Xyz_I[i]*=Si2NoL; 
 
-
-    // Length of each processors sub domain for each dimentions.
-    invLx = (double)vct->getXLEN()/(INgridDx_D[0]*getFluidNxn());
-    invLy = (double)vct->getYLEN()/(INgridDx_D[1]*getFluidNyn());
-    invLz = (double)vct->getZLEN()/(INgridDx_D[2]*getFluidNzn());
-
-    if(INdim == 1){
-      for(int i = 0; i < nPoint; i++){
-	if(isThisRun(&Xyz_I[i*INdim])){
-	  iProc_I[i] = (int)((Xyz_I[i*INdim    ]-INxRange_I[0]-Epsilon)*invLx);
-	}
-      }    
+    for(int i=0; i<nPoint; i++){
+      iProc0_I[i] = -10000;
     }
-    else if(INdim == 2){
+
+       
+    // Estimated length of each processors sub domain for each dimentions.
+    invLx = (double)vct->getXLEN()/(INgridDx_D[0]*getFluidNxc());
+    invLy = (double)vct->getYLEN()/(INgridDx_D[1]*getFluidNyc());
+    invLz = (double)vct->getZLEN()/(INgridDx_D[2]*getFluidNzc());
+
+
       for(int i = 0; i < nPoint; i++){
-	// Find out whether the point is in this simulation run region or not. 
-	if(isThisRun(&Xyz_I[i*INdim])){
-	  iPx = (int)((Xyz_I[i*INdim    ]-INxRange_I[0]-Epsilon)*invLx);
-	  iPy = (int)((Xyz_I[i*INdim + 1]-INxRange_I[2]-Epsilon)*invLy);
+    	if(isThisRun(&Xyz_I[i*INdim])){
+    	  iPx = (int)((Xyz_I[i*INdim    ]-getPhyXMin()-Epsilon)*invLx);
+	  while( Xyz_I[i*INdim]-getPhyXMin()>xEnd_I[iPx] ||
+		 Xyz_I[i*INdim]-getPhyXMin()<xStart_I[iPx] ){
+	    if(Xyz_I[i*INdim]-getPhyXMin()>xEnd_I[iPx]) iPx++;
+	    if(Xyz_I[i*INdim]-getPhyXMin()<xStart_I[iPx])iPx--;
+	  }
+    	  iPy = (int)((Xyz_I[i*INdim + 1]-getPhyYMin()-Epsilon)*invLy);
+	  while( Xyz_I[i*INdim+1]-getPhyYMin()>yEnd_I[iPy] ||
+		 Xyz_I[i*INdim+1]-getPhyYMin()<yStart_I[iPy] ){
+	    if(Xyz_I[i*INdim+1]-getPhyYMin()>yEnd_I[iPy]) iPy++;
+	    if(Xyz_I[i*INdim+1]-getPhyYMin()<yStart_I[iPy])iPy--;
+	  }	  
+
+	  if(INdim<3)
+	    iPz = 0;
+	  else{
+	    iPz = (int)((Xyz_I[i*INdim + 2]-getPhyZMin()-Epsilon)*invLz);
+	    while( Xyz_I[i*INdim+2]-getPhyZMin()>zEnd_I[iPz] ||
+		   Xyz_I[i*INdim+2]-getPhyZMin()<zStart_I[iPz] ){
+	      if(Xyz_I[i*INdim+2]-getPhyZMin()>zEnd_I[iPz]) iPz++;
+	      if(Xyz_I[i*INdim+2]-getPhyZMin()<zStart_I[iPz])iPz--;
+	  }	  
+
+	  }
 	  
-	  rank = iPy + vct->getYLEN()*iPx; 
-	  iProc_I[i] = rank;
-	}
-      }  
-    }
-    else{
-      for(int i = 0; i < nPoint; i++){
-	if(isThisRun(&Xyz_I[i*INdim])){
-	  iPx = (int)((Xyz_I[i*3    ]-INxRange_I[0]-Epsilon)*invLx);
-	  iPy = (int)((Xyz_I[i*3 + 1]-INxRange_I[2]-Epsilon)*invLy);
-	  iPz = (int)((Xyz_I[i*3 + 2]-INxRange_I[4]-Epsilon)*invLz);
+    	  rank = iPz + vct->getZLEN()*(iPy + iPx*vct->getYLEN());
 	  
-	  rank = iPz + vct->getZLEN()*(iPy + iPx*vct->getYLEN()); 
-	  
-	  iProc_I[i] = rank;
-	}
+    	  iProc_I[i] = rank;
+    	}
       }
-    }
+
     // if its used later ( may be removed)
     for(int i =0; i<nPoint*INdim; i++)
-      Xyz_I[i]*=No2SiL; 
+      Xyz_I[i]*=No2SiL;
+
+
+    bool doTest;
+    doTest=false;
+    if(doTest && myrank==0){
+      for(int iPoint=0; iPoint<nPoint; iPoint++){
+	cout<<"ipoint= "<<iPoint
+	    <<" x = "<<Xyz_I[iPoint*INdim  ] - getPhyXMin()
+	    <<" y = "<<Xyz_I[iPoint*INdim+1] - getPhyYMin()
+	    <<" z = "<<Xyz_I[iPoint*INdim+2] - getPhyZMin()
+	    <<" proc= "<<iProc_I[iPoint]
+	    <<endl;
+	  }
+    }
+
+    
 
   }
 
+  bool isThisProc(double *Pos_D, bool doDebug=false){
+    bool isThisProcReturn;
+    double xmin, ymin, zmin, xmax, ymax, zmax;
+    double csmall; 
+    csmall = 0;
+      
+    xmin = xStart - csmall;
+    ymin = yStart - csmall;
+    zmin = zStart - csmall;
+    xmax = xEnd + csmall;
+    ymax = yEnd + csmall;
+    zmax = zEnd + csmall;
+
+    isThisProcReturn = true;
+    if(Pos_D[0] < xmin || Pos_D[0] > xmax) isThisProcReturn = false;
+    if(INdim > 1){
+      if(Pos_D[1] < ymin || Pos_D[1] > ymax) isThisProcReturn = false;
+    }
+    if(INdim > 2){
+      if(Pos_D[2] < zmin || Pos_D[2] > zmax) isThisProcReturn = false;
+    }
+
+    if(doDebug && !isThisProcReturn){
+      cout<<" xmin= "<<xmin<<" ymin= "<<ymin<<" zmin= "<<zmin
+	  <<" xmax= "<<xmax<<" ymax= "<<ymax<<" zmax= "<<zmax
+	  <<" x= "<<Pos_D[0]<<" y= "<<Pos_D[1]<<" z= "<<Pos_D[2]<<endl;
+    }
+    
+    return isThisProcReturn;
+  }
+  
 
   /* Is Pos_D inside this PIC domain? */
   bool isThisRun(double *Pos_D){
@@ -2287,6 +2437,12 @@ class InterfaceFluid
   bool getdoSaveBinary()const{return doSaveBinary;};
   double getSatRadius()const{return drSat*INgridDx_D[0];};
   void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
+  void setxStart(double v){xStart=v;};
+  void setxEnd(double v){xEnd=v;};
+  void setyStart(double v){yStart=v;};
+  void setyEnd(double v){yEnd=v;};
+  void setzStart(double v){zStart=v;};
+  void setzEnd(double v){zEnd=v;};
 };
 
 
