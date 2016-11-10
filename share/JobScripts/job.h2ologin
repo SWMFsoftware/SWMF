@@ -9,7 +9,9 @@
 
 # Checking availabe XE nodes for various wall-clock times
 # showbf -f xe -p bwsched
-
+#
+# To see jobs queued for the XE nodes:
+# xequeue.pl
 
 # Environment configuration-----------------------
 
@@ -39,3 +41,24 @@ echo "PBS_NUM_PPN = "$PBS_NUM_PPN
 echo "PBS_NP = "$PBS_NP
 
 aprun -n $PBS_NP ./SWMF.exe  > runlog_`date +%y%m%d%H%M`
+
+exit
+
+# To use automated resubmission remove the 'exit' command above
+# and adapt the script below!
+#
+# Use the #CPUTIMEMAX and #CHECKSTOP commands in PARAM.in
+# so the code stops before the wall clock time is exceeded.
+
+# Do not continue unless the job finished successfully
+if(! -f SWMF.SUCCESS) exit
+
+# Link latest restart files
+./Restart.pl
+
+# Provide a PARAM.in.restart file if you wish and uncomment these lines:
+#if(! -f PARAM.in.start) cp PARAM.in PARAM.in.start
+#if(-f PARAM.in.restart) cp PARAM.in.restart PARAM.in
+
+# Check final time/iteration and resubmit if not done (modify as needed!)
+if(! -d RESTART_t0003.0000h) qsub job.h2ologin
