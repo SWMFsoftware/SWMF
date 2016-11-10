@@ -415,8 +415,9 @@ subroutine write_plot_common(iFile)
      end if
 
      ! Pass and average the plot variables
+     ! Do not average at pseudo-periodic boundaries
      call message_pass_node(nPlotvarMax, PlotVarNodes_VNB, &
-          NameOperatorIn='Mean')
+          NameOperatorIn='Mean', UsePeriodicCoordIn = .not.IsCartesianGrid)
 
      do iBlk = 1, nBlock; if(Unused_B(iBlk)) CYCLE
         call average_grid_node(iBlk, nPlotvarMax, &
