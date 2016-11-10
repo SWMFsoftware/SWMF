@@ -98,6 +98,8 @@ mpiexec ./SWMF.exe > runlog_`date +%y%m%d%H%M`
 exit
 
 # To use automated resubmission remove the 'exit' command above
+# and adapt the script below!
+#
 # Use the #CPUTIMEMAX and #CHECKSTOP commands in PARAM.in
 # so the code stops before the wall clock time is exceeded.
 
@@ -112,4 +114,4 @@ if(! -f SWMF.SUCCESS) exit
 # if(-f PARAM.in.restart) cp PARAM.in.restart PARAM.in
 
 # Check final time/iteration and resubmit if not done (modify as needed!)
-if(! -d RESTART_t008.00h) qsub job.pfe
+if(! -d RESTART__t0008.0000h) qsub job.pfe
