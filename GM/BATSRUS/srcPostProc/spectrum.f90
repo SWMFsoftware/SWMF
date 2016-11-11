@@ -19,7 +19,7 @@ program spectrum
   ! Variables for instrument (if any)
   logical                     :: IsInstrument = .false.
   character(len=200)          :: NameInstrument
-  integer                     :: nPixel, iPixel
+  integer                     :: nPixel, iPixel = 1
   real                        :: Ainstrument
   real,allocatable            :: dLambdaInstr_I(:)
   real                        :: SizeWavelengthBin
@@ -145,7 +145,7 @@ contains
          Intensity_VII(1,nWaveAll,nPixel), &
          CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
 
-    do iPixel = 1,nPixel
+    do iPixel = 1, nPixel
        CoordPixel_I(iPixel) = iPixel
     end do
 
@@ -228,14 +228,24 @@ contains
     Lambda = LineTable_I(iLambda)%Wavelength
     
     LambdaSI = LineTable_I(iLambda)%Wavelength * 1e-10 
-    
+
+    ! Find which interval wavelength belongs to
+    iInterval = -1
     do iWavelengthInterval = 1, nWavelengthInterval
-       if((Lambda < WavelengthInterval_II(2,iWavelengthInterval)) &
-            .and.(Lambda > WavelengthInterval_II(1,iWavelengthInterval))) then
+       if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
+            .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval))) then
           iInterval = iWavelengthInterval
+          EXIT
        end if
     end do
-
+    if(iInterval == -1)then
+       write(*,*)"Lambda = ",Lambda
+       write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
+       call CON_stop(NameSub // " no interval founnd")
+    endif
+     
+    write(*,*)"!!! Lambda,iInterval=", Lambda, iInterval
+       
     iBin =0
 
     do
@@ -296,8 +306,9 @@ contains
 
     real, intent(in)            :: LambdaSI, dLambdaSI, FluxMono
     integer, intent(in)         :: iInterval,iCenter
-    integer                     :: iUpdate, iBin
-    real                        :: Flux, Phi, Lambda
+    integer                     :: iBin, iBegin, iEnd
+    real                        :: Flux, Phi, InvNorm, InvSigma2
+    real                        :: LambdaBin, LambdaBegin, LambdaEnd, LambdaDistSI
     integer                     :: iStep, iWave, nWaveBin
 
     character(len=*), parameter :: NameSub='disperse_line'
@@ -305,36 +316,47 @@ contains
 
     nWaveBin = SpectrumTable_I(iInterval)%nBin
 
-    do iStep = -5 , 5
-       ! Convert m --> A
-       Lambda = (LambdaSI + dLambdaSI*iStep)*1e10
-       
+    ! Beginning and end of gaussian truncated to +/-5 sigma in [A]
+    LambdaBegin = (LambdaSI - 5*dLambdaSI)*1e10
+    LambdaEnd   = (LambdaSI + 5*dLambdaSI)*1e10
+
+    ! Find the corresponding wavelength bin for starting wavelength
+    do iBegin = 1, nWaveBin - 1
+       if (LambdaBegin < SpectrumTable_I(iInterval)%SpectrumGrid_I(iBegin+1)) EXIT
+    end do
+
+    ! Start at iBegin for efficiency and
+    ! stop at nWaveBin-1 so iEnd = mWaveBin if no EXIT was performed
+    do iEnd = iBegin, nWaveBin-1
+       if (LambdaEnd < SpectrumTable_I(iInterval)%SpectrumGrid_I(iEnd)) EXIT
+    end do
+
+    write(*,*)"!!! Lambda, LambdaBegin, LambdaEnd, dLambda, iBegin, iEnd =", &
+          LambdaSI*1e10, LambdaBegin, LambdaEnd, dLambdaSI*1e10, iBegin, iEnd
+
+    InvNorm   = 1/(sqrt(2*cPi) * dLambdaSI)
+    InvSigma2 = 1/(2*dLambdaSI**2) 
+    
+    ! Update bins between begin and end indices by adding the Gaussian distribution
+    do iBin = iBegin , iEnd
+       ! Get wavelength from the center of the bin
+       LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
+    
+       ! Get distance from peak wavelength in SI
+       LambdaDistSI = LambdaSI - LambdaBin*1e-10
+
        ! Calculate Gaussian of the line
-       Phi = exp(-0.5*(dLambdaSI*iStep)**2/(2*dLambdaSI**2))/ &
-            (sqrt(2.0*cPi) * dLambdaSI)
-       
+       Phi = InvNorm * exp(-LambdaDistSI**2 * InvSigma2)
+            
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
 
-       ! Find the corresponding wvl bin = iUpdate
-       iBin =0
-       do
-          iBin=iBin+1
-          if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
-               .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))then
-             iUpdate=iBin
-             
-             EXIT
-          end if
-          if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
-               WavelengthInterval_II(2,iInterval))EXIT
-       end do
-       ! Update bin iUpdate by adding the flux
-       do iPixel =1, nPixel
-          SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iUpdate) = &
-               SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iUpdate) &
-               + Flux
-       end do
+       ! write(*,*)' Lambda,LambdaDist,Phi,Flux', Lambda,LambdaDistSI*1e10,Phi,Flux
+
+       ! Update bin with flux
+       SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iBin) = &
+            SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iBin) + Flux
+
     end do
 
   end subroutine disperse_line
