@@ -71,6 +71,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['ue'       , 'sqrt({uex}^2+{uey}^2+{uez}^2)'           ], $
                 ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'              ], $ ; current density
                 ['divbxy'   , 'div(bx,by,x,y)'                          ], $ ; div(B) in 2D
+                ['divb1xy'  , 'div({b1x},{b1y},x,y)'                    ], $ ; div(B1) in 2D
                 ['Ex'       , 'by*uz-uy*bz'                             ], $ ; electric field
                 ['Ey'       , 'bz*ux-uz*bx'                             ], $
                 ['Ez'       , 'bx*uy-ux*by'                             ], $
