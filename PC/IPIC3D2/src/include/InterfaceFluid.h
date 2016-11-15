@@ -224,55 +224,27 @@ class InterfaceFluid
   }
   
   
-  /** Convert from local processor index to full domain index */
+  /** Convert from local index to global index. Only correct for State_GV because of the ignored
+   dimension. */
  public:  inline void getGlobalIndex(const int il, const int jl, const int kl,
-                             int *ig, int *jg, int *kg)const
-  {
-    if(StartIdx_D[0] == -1){
-      *ig=il;
-      *jg=jl;
-      *kg=kl;
-    } 
-    else{
-      // convert from local cpu index il to global domain index ig
-      *ig =StartIdx_D[0] + il - 1 ;
-      
-      // solution is constant across ignored dimensions indicated by nIJK_D == 1
-      if(nIJK_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl - 1;
-      if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl - 1;
-    }
+                             int *ig, int *jg, int *kg)const{
+    *ig =StartIdx_D[0] + il - 1 ;      
+    if(nIJK_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl - 1;
+    if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl - 1;
   }
 
+  /** Only correct for State_GV because of the ignored dimension. */
  public:  inline void getLocalIndex(int *i, int *j, int *k)const
   {
-    *i = *i - StartIdx_D[0] + 1;
-      
-    // solution is constant across ignored dimensions indicated by nIJK_D == 1
+    *i = *i - StartIdx_D[0] + 1;      
     if(nIJK_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1] + 1;
     if(nIJK_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2] + 1;
   }
-
   
-  /** Convert from position to full domain index */
- public: inline void getGlobalIndex(const double x, const double y, const double  z,
-			     int *ig, int *jg, int *kg)const
-  {
-    *ig = max(floor(x/INgridDx_D[0]),0.0);
-    if(nIJK_D[1] == 1) *jg =0 ; else *jg = max(floor(y/INgridDx_D[1]),0.0);
-    if(nIJK_D[2] == 1) *kg =0 ; else *kg = max(floor(z/INgridDx_D[2]),0.0);
-  }
-  
-  
-  /** Second order interpolation  for a given position */
-
-  inline void getInterpolatedValue(const int i, const int j, const int k,
-				   double *Var, int iVar)const
-  {
-    int i1,j1,k1;
-    i1=i;j1=j;k1=k;
-    if(nIJK_D[1] == 1) j1=0;
-    if(nIJK_D[2] == 1) k1=0;
-    *Var = State_GV[i1][j1][k1][iVar];
+  inline void getInterpolatedValue(int i, int j,  int k, double *Var, int iVar)const{
+    if(nIJK_D[1] == 1) j=0;
+    if(nIJK_D[2] == 1) k=0;
+    *Var = State_GV[i][j][k][iVar];
   }
   
   	
@@ -490,87 +462,7 @@ class InterfaceFluid
       }
     }    
   }
-   
-   
-  /** for debugging, printing stat var matrix by variable */
-  void PrintStateVar()
-  {
-    ofstream myfile;
-    cout<<" PrintStateVar thisrank = "<<thisrank<<endl;
-    if(thisrank == 0) myfile.open("state_vg_0.txt");
-    if(thisrank == 1) myfile.open("state_vg_1.txt");
-    if(thisrank == 2) myfile.open("state_vg_2.txt");
-    if(thisrank == 3) myfile.open("state_vg_3.txt");
-    if(thisrank == 4) myfile.open("state_vg_4.txt");
-    if(thisrank == 5) myfile.open("state_vg_5.txt");
-    if(thisrank == 6) myfile.open("state_vg_6.txt");
-    if(thisrank == 7) myfile.open("state_vg_7.txt");
-    if(thisrank == 8) myfile.open("state_vg_8.txt");
-    if(thisrank == 9) myfile.open("state_vg_9.txt");
-    if(thisrank == 10) myfile.open("state_vg_10.txt");
-    if(thisrank == 11) myfile.open("state_vg_11.txt");
-    if(thisrank == 12) myfile.open("state_vg_12.txt");
-    if(thisrank == 13) myfile.open("state_vg_13.txt");
-    if(thisrank == 14) myfile.open("state_vg_14.txt");
-    if(thisrank == 15) myfile.open("state_vg_15.txt");
-
-    myfile.setf(ios::fixed,ios::floatfield);
-    myfile.precision(10);
-    myfile.width(10);
-    for(int k=0;k<nznLG;k++)
-      {
-	for(int j=0;j<nynLG;j++)
-	  { 
-	    for(int i=0;i<nxnLG; i++)
-	      { 
-		myfile<<setw(16)<<scientific<< i*INgridDx_D[0] + INxRange_I[0]<<" "<<j*INgridDx_D[1] + INxRange_I[2]<<"  ";
-		for(int iVar=0;iVar<INnPlotvar +3;iVar++)
-		  {
-  		    myfile<<setw(16)<<scientific<<State_GV[i][j][k][iVar]<<"  ";
-  		  }
-		myfile<<"\n";
-  	      }	
-  	  }
-  
-      }
-    myfile.close();
-  }
-  
-  
-  /** Help function for reading input variables */
-  void InputToArray(ConfigFile *config,int ns, string Name, double *out)
-  {
-    array_double tmp = config->read<array_double>( Name);
-    for(int i=0;i<ns;i++)
-      switch(i){
-      case 0:
-        out[0] = tmp.a;
-        break;
-      case 1:
-        out[1] = tmp.b;
-        break;
-      case 2:
-        out[2] = tmp.c;
-        break;
-      case 3:
-        out[3] = tmp.d;
-        break;
-      case 4:
-        out[4] = tmp.e;
-        break;
-      case 5:
-        out[5] = tmp.f;
-        break;
-      default:
-  	{ 
-  	  cout<<"Only 5 Species allowed!"<<flush;
-  	  abort();
-  	}
-      }
-  
-  }
-    
-   
+         
  public:
 
   /** constructor */
@@ -650,68 +542,6 @@ class InterfaceFluid
   // BATSRUS normalized unit -> PIC normalized unit;
   inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
   
-  /** Average over nodes in ignored dimentions. Used by the original 2D file coupling. */
-  inline double getValueNode(double ****vec, int i, int j, int k, int si)
-  {
-    double Var,N;
-    
-    N = 1;	
-    Var = vec[si][i][j][k];
-    if(nIJK_D[1] == 1){
-      Var += vec[si][i][j+1][k];
-      N++;
-    }
-    if(nIJK_D[2] == 1){
-      Var += vec[si][i][j][k+1];
-      N++;
-      if(nIJK_D[1] == 1){
-  	Var += vec[si][i][j+1][k+1];
-  	N++;
-      }
-    }
-    return(Var/N);
-  }
-  
-  
-  /** Average over nodes in ignored dimentions. Used by the original 2D file coupling. */
-  inline double getValueNode(double ***vec, int i, int j, int k)
-  {
-    double Var,N;
-
-    N = 1;	
-    Var = vec[i][j][k];
-    if(nIJK_D[1] == 1){
-      Var += vec[i][j+1][k];
-      N++;
-    }
-    if(nIJK_D[2] == 1){
-      Var += vec[i][j][k+1];
-      N++;
-      if(nIJK_D[1] == 1){
-  	Var += vec[i][j+1][k+1];
-  	N++;
-      }
-    }
-    return(Var/N);
-  }
-  
-  
-  /** return the cell value form the node */
-  inline double getN2C(double ***vec, int i, int j, int k)
-  {
-    return(.125*(vec[i][j][k] + vec[i+1][j][k] + vec[i][j+1][k] + vec[i][j][k+1] 
-  		 + vec[i+1][j+1][k] + vec[i+1][j][k+1] + vec[i][j+1][k+1] + vec[i+1][j+1][k+1]));
-  }
-  
-  
-  // return the cell value form the node
-  inline double getN2C(double ****vec, int i, int j, int k,int is)
-  {
-    return(.125*(vec[is][i][j][k] + vec[is][i+1][j][k] + vec[is][i][j+1][k] + vec[is][i][j][k+1] 
-  		 + vec[is][i+1][j+1][k] + vec[is][i+1][j][k+1] + vec[is][i][j+1][k+1] + vec[is][i+1][j+1][k+1]));
-  }
-  
-  
   /** Find out if we will sync with fluid solution at this time/cycle */
   inline unsigned long doSyncWithFluid(unsigned long cycle)
   {
@@ -727,6 +557,8 @@ class InterfaceFluid
   void setGlobalStartIndex()
   {
     /**
+       StartIdx_D could be either cell index or node index. 
+
        Example: A 2d case. 
        
        7 physical cells in x direction, and 2 processors are used. 
@@ -832,22 +664,27 @@ class InterfaceFluid
 
 
   void setSubDomainRange(){
-    xStart_I = new double[_vct->getXLEN()];
-    xEnd_I   = new double[_vct->getXLEN()];
-    yStart_I = new double[_vct->getYLEN()];
-    yEnd_I   = new double[_vct->getYLEN()];
-    zStart_I = new double[_vct->getZLEN()];
-    zEnd_I   = new double[_vct->getZLEN()];
+    int xlen, ylen, zlen;
+    xlen = _vct->getXLEN();
+    ylen = _vct->getYLEN();
+    zlen = _vct->getZLEN();
+
+    xStart_I = new double[xlen];
+    xEnd_I   = new double[xlen];
+    yStart_I = new double[ylen];
+    yEnd_I   = new double[ylen];
+    zStart_I = new double[zlen];
+    zEnd_I   = new double[zlen];
 
     double *xStart0_I, *xEnd0_I, *yStart0_I, *yEnd0_I, *zStart0_I, *zEnd0_I;
-    xStart0_I = new double[_vct->getXLEN()];
-    xEnd0_I   = new double[_vct->getXLEN()];
-    yStart0_I = new double[_vct->getYLEN()];
-    yEnd0_I   = new double[_vct->getYLEN()];
-    zStart0_I = new double[_vct->getZLEN()];
-    zEnd0_I   = new double[_vct->getZLEN()];
+    xStart0_I = new double[xlen];
+    xEnd0_I   = new double[xlen];
+    yStart0_I = new double[ylen];
+    yEnd0_I   = new double[ylen];
+    zStart0_I = new double[zlen];
+    zEnd0_I   = new double[zlen];
 
-    for(int ix=0; ix<_vct->getXLEN(); ix++){
+    for(int ix=0; ix<xlen; ix++){
       xStart_I[ix] = -1e99;
       xEnd_I[ix]   = -1e99;
       xStart0_I[ix] = -1e99;
@@ -855,7 +692,7 @@ class InterfaceFluid
 
     }
 
-    for(int iy=0; iy<_vct->getYLEN(); iy++){
+    for(int iy=0; iy<ylen; iy++){
       yStart_I[iy] = -1e99;
       yEnd_I[iy]   = -1e99;
       yStart0_I[iy] = -1e99;
@@ -863,7 +700,7 @@ class InterfaceFluid
 
     }
 
-    for(int iz=0; iz<_vct->getZLEN(); iz++){
+    for(int iz=0; iz<zlen; iz++){
       zStart_I[iz] = -1e99;
       zEnd_I[iz]   = -1e99;      
       zStart0_I[iz] = -1e99;
@@ -878,14 +715,12 @@ class InterfaceFluid
     zStart0_I[_vct->getCoordinates(2)] = zStart;
     zEnd0_I[_vct->getCoordinates(2)] = zEnd;
 
-    MPI_Allreduce(xStart0_I,xStart_I,_vct->getXLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-    MPI_Allreduce(xEnd0_I,xEnd_I,_vct->getXLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-    MPI_Allreduce(yStart0_I,yStart_I,_vct->getYLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-    MPI_Allreduce(yEnd0_I,yEnd_I,_vct->getYLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-    MPI_Allreduce(zStart0_I,zStart_I,_vct->getZLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-    MPI_Allreduce(zEnd0_I,zEnd_I,_vct->getZLEN(),MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
-
-
+    MPI_Allreduce(xStart0_I,xStart_I,xlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(xEnd0_I,xEnd_I,xlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(yStart0_I,yStart_I,ylen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(yEnd0_I,yEnd_I,ylen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(zStart0_I,zStart_I,zlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
+    MPI_Allreduce(zEnd0_I,zEnd_I,zlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
 
     delete xStart0_I;
     delete xEnd0_I;
@@ -897,15 +732,15 @@ class InterfaceFluid
     bool doTest;
     doTest=false;
     if(doTest && myrank==0){
-    for(int ix=0; ix<_vct->getXLEN(); ix++){
+    for(int ix=0; ix<xlen; ix++){
       cout<<"ix= "<<ix<<" xstart= "<<xStart_I[ix]<<endl;
     }
 
-    for(int iy=0; iy<_vct->getYLEN(); iy++){
+    for(int iy=0; iy<ylen; iy++){
       cout<<"iy= "<<iy<<" ystart= "<<yStart_I[iy]<<endl;
     }
 
-    for(int iz=0; iz<_vct->getZLEN(); iz++){
+    for(int iz=0; iz<zlen; iz++){
       cout<<"iz= "<<iz<<" zstart= "<<zStart_I[iz]<<endl;
     }
     }
@@ -917,65 +752,52 @@ class InterfaceFluid
   void findProcForPoint(VCtopology3D *vct, int nPoint, double *Xyz_I, int *iProc_I){
 
     double invLx, invLy, invLz;
-    double rank;
     int iPx, iPy, iPz;
-    const double Epsilon = 0.0;//1.0e-13;
     myrank = vct-> getCartesian_rank();
 
-    int *iProc0_I;
-    iProc0_I = new int[nPoint];
-    
     for(int i =0; i<nPoint*INdim; i++)
       Xyz_I[i]*=Si2NoL; 
-
-    for(int i=0; i<nPoint; i++){
-      iProc0_I[i] = -10000;
-    }
-
        
-    // Estimated length of each processors sub domain for each dimentions.
+    // Estimated inversed length of a sub domain for each dimension. 
     invLx = (double)vct->getXLEN()/(INgridDx_D[0]*getFluidNxc());
     invLy = (double)vct->getYLEN()/(INgridDx_D[1]*getFluidNyc());
     invLz = (double)vct->getZLEN()/(INgridDx_D[2]*getFluidNzc());
 
 
-      for(int i = 0; i < nPoint; i++){
-    	if(isThisRun(&Xyz_I[i*INdim])){
-    	  iPx = (int)((Xyz_I[i*INdim    ]-getPhyXMin()-Epsilon)*invLx);
-	  while( Xyz_I[i*INdim]-getPhyXMin()>xEnd_I[iPx] ||
-		 Xyz_I[i*INdim]-getPhyXMin()<xStart_I[iPx] ){
-	    if(Xyz_I[i*INdim]-getPhyXMin()>xEnd_I[iPx]) iPx++;
-	    if(Xyz_I[i*INdim]-getPhyXMin()<xStart_I[iPx])iPx--;
+    for(int i = 0; i < nPoint; i++){
+      if(isThisRun(&Xyz_I[i*INdim])){
+	double xp = Xyz_I[i*INdim] - getPhyXMin();
+	// Estimated process index in x direction. It can be shifted because the
+	// domain size on different processor may different, so the
+	// while loop is used to do the correction.
+	iPx = (int)(xp*invLx); 
+	while( xp > xEnd_I[iPx] || xp < xStart_I[iPx] ){
+	    if(xp > xEnd_I[iPx]) iPx++;
+	    if(xp < xStart_I[iPx])iPx--;
 	  }
-    	  iPy = (int)((Xyz_I[i*INdim + 1]-getPhyYMin()-Epsilon)*invLy);
-	  while( Xyz_I[i*INdim+1]-getPhyYMin()>yEnd_I[iPy] ||
-		 Xyz_I[i*INdim+1]-getPhyYMin()<yStart_I[iPy] ){
-	    if(Xyz_I[i*INdim+1]-getPhyYMin()>yEnd_I[iPy]) iPy++;
-	    if(Xyz_I[i*INdim+1]-getPhyYMin()<yStart_I[iPy])iPy--;
-	  }	  
+
+	double yp = Xyz_I[i*INdim + 1]-getPhyYMin();
+	iPy = (int)(yp*invLy);
+	while( yp > yEnd_I[iPy] || yp < yStart_I[iPy] ){
+	    if(yp > yEnd_I[iPy]) iPy++;
+	    if(yp < yStart_I[iPy])iPy--;
+	  }
 
 	  if(INdim<3)
 	    iPz = 0;
 	  else{
-	    iPz = (int)((Xyz_I[i*INdim + 2]-getPhyZMin()-Epsilon)*invLz);
-	    while( Xyz_I[i*INdim+2]-getPhyZMin()>zEnd_I[iPz] ||
-		   Xyz_I[i*INdim+2]-getPhyZMin()<zStart_I[iPz] ){
-	      if(Xyz_I[i*INdim+2]-getPhyZMin()>zEnd_I[iPz]) iPz++;
-	      if(Xyz_I[i*INdim+2]-getPhyZMin()<zStart_I[iPz])iPz--;
+	    double zp = Xyz_I[i*INdim + 2]-getPhyZMin();
+	    iPz = (int)(zp*invLz);
+	    while( zp > zEnd_I[iPz] || zp < zStart_I[iPz] ){
+	      if(zp > zEnd_I[iPz]) iPz++;
+	      if(zp < zStart_I[iPz])iPz--;
 	  }	  
 
 	  }
 	  
-    	  rank = iPz + vct->getZLEN()*(iPy + iPx*vct->getYLEN());
-	  
-    	  iProc_I[i] = rank;
+    	  iProc_I[i] = iPz + vct->getZLEN()*(iPy + iPx*vct->getYLEN());	  
     	}
       }
-
-    // if its used later ( may be removed)
-    for(int i =0; i<nPoint*INdim; i++)
-      Xyz_I[i]*=No2SiL;
-
 
     bool doTest;
     doTest=false;
@@ -1355,9 +1177,9 @@ class InterfaceFluid
 
     maxVth=0.0;
     // The loop range seems not right. --Yuxi
-    for(int i = 0; i<nxcLocal; i++)
-      for(int j = 0; j< nycLocal; j++)
-  	for(int k = 0; k< nzcLocal; k++)
+    for(int i = 1; i<=nxcLocal; i++)
+      for(int j = 1; j<=nycLocal; j++)
+  	for(int k = 1; k<=nzcLocal; k++)
 	  maxVth = max(maxVth, getFluidUth(i,j,k,is));
     allmaxVth = maxVth; 
     MPI_Reduce(&maxVth, &allmaxVth, 1, MPI_DOUBLE, MPI_MAX, 0 , MPI_COMM_MYSIM);
