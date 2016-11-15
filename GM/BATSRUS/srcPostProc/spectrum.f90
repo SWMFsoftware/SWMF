@@ -1,6 +1,3 @@
-!zero density
-!test
-
 program spectrum
 
   use ModConst
@@ -243,8 +240,6 @@ contains
        write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
        call CON_stop(NameSub // " no interval founnd")
     endif
-     
-    write(*,*)"!!! Lambda,iInterval=", Lambda, iInterval
        
     iBin =0
 
@@ -330,9 +325,6 @@ contains
     do iEnd = iBegin, nWaveBin-1
        if (LambdaEnd < SpectrumTable_I(iInterval)%SpectrumGrid_I(iEnd)) EXIT
     end do
-
-    write(*,*)"!!! Lambda, LambdaBegin, LambdaEnd, dLambda, iBegin, iEnd =", &
-          LambdaSI*1e10, LambdaBegin, LambdaEnd, dLambdaSI*1e10, iBegin, iEnd
 
     InvNorm   = 1/(sqrt(2*cPi) * dLambdaSI)
     InvSigma2 = 1/(2*dLambdaSI**2) 
@@ -430,7 +422,7 @@ contains
                 nPixel = 1024
              endif
              allocate(dLambdaInstr_I(nPixel))
-!!! Here something from Enrico
+
              do iPixel=1,nPixel
                 dLambdaInstr_I(iPixel) = 0.0
              end do
@@ -481,8 +473,9 @@ contains
        SpectrumTable_I(iWavelengthinterval)%Spectrum_II(:,:)=0.0
        SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
+          ! Values of each wavelength bin correspond to the center of the bin
           SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin) = &
-               MinWavelength + (iWavelengthBin-1)*SizeWavelengthBin
+               MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
 
