@@ -1,3 +1,5 @@
+<commandList name="IPIC3D2">
+
 <command name="COMPONENT">
 #SAVEIDL
 4                       nPlotFile
@@ -98,6 +100,7 @@ Note:
 3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
 4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
 5) The unit of current and electric field are not well defined so far.
+</command>
 
 <command name="COMPONENT">
 #SATELLITERADIUS
@@ -106,4 +109,6 @@ Note:
 If the distance between a particle and the satellite trajectory is less than
 SatRadius*dx, where dx is the cell size in x direction, this particle will be
 saved in the output file. 
+</command>
   
+</commandList>
