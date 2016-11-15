@@ -1,0 +1,42 @@
+input file for spectrum test
+
+VERBOSE
+T
+
+#DATAFILE
+spectrum-shl.out	NameDataFile
+real4			TypeDataFile
+
+#DATABLOCK
+3	n1
+3	n2
+3	n3
+1	nPixel
+
+#TABLEFILE
+SPECTRUM.input.erg	NameTableFile
+10			MaxWave 
+
+#WAVELENGTHINTERVAL
+2			nInterval
+948			min (A)
+951			max (A)
+970			min (A)
+974			max (A)
+.1                    SizeWavelengthBin (A)
+
+h_1  1 19      949.745       6.0000       6.0000      -26.089
+h_1  1 12      972.538       6.0000       6.0000      -25.712
+
+#UNIFORMDATA
+1.6726219e-15	        rhoUni [kg/m^3] (1e6 cm^-3)
+0			uxUni
+0			uyUni
+0			uzUni
+0			bxUni
+0			byUni
+0			bzUni
+6e6			tiUni
+6e6			teUni
+0			I01Uni
+0			I02Uni
