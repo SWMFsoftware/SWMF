@@ -37,5 +37,9 @@ echo "PBS_NP = "$PBS_NP
 # This can/should also be put into the ~/.bashrc
 ulimit -s unlimited
 
-./PostProc.pl -n=$PBS_NP -r=360 -s=2  >& PostProc.log
+# Suppress some error messages of Blue Waters
+export PMI_NO_FORK=1
+export PMI_NO_PREINITIALIZE=1
+
+aprun ./PostProc.pl -n=$PBS_NP -r=60 -s=7  >& PostProc.log
 
