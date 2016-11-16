@@ -2820,18 +2820,12 @@ namespace PIC {
     extern vector<vector<int> > CombinedSpeciesDistributionTable;
 
     //the range of the velocity scale and the number of nodes in the sample
-    extern double eMax,eMin;
+    extern double eMax,eMin,log10eMax,log10eMin;
     extern long int nSampledFunctionPoints;
-    extern double dE;
+    extern double dE,log10dE;
 
     //the sampling buffers
-    extern double **SamplingBuffer;
-
-    //sampling data offsets
-    extern int Sample_Energy_Offset,SampleDataLength;
-
-    //get the offset to the beginig of the sampling data for a particular samplePoint, spec,.....
-    long int GetSampleDataOffset(int spec,int nInterval);
+    extern double ***SamplingBuffer;
 
     //sampling  locations
     extern double SamplingLocations[][3];
