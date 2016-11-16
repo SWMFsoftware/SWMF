@@ -217,7 +217,7 @@ Check=
 >>>@echo "test_Earth_check..." >> test_Earth.diff
 >>>@${TESTEarthDIR}/../utility/ReduceFile.pl ${TESTEarthDIR}/loaded.SavedCellData.dat 1000
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTEarthDIR}/loaded.SavedCellData.dat.Reduced.Step=1000         \
->>>${TESTEarthKEYS}/output-sig=0x301020156361a50/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
+>>>${TESTEarthKEYS}/output-sig=0x103010036592e5d/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
 >>>@ls -l test_Earth--Background_Magnetosphere.diff
 
 >>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
