@@ -64,12 +64,16 @@ program PROPACEOS
              TeTi_   =  9, &
              Cond_   = 10, &
              Z_      = 11, &
-             Z2_     = 12
+             Z2_     = 12, &
+             DPOverDRho_ = 13, &
+             DPOverDT_   = 14, &
+             DPEOverDRho_= 15, &
+             DPEOverDT_  = 16
 
   !The number of columns in the EOS table
-  integer :: nVarEos =12
+  integer :: nVarEos =16
   character(LEN=100):: NameVarEos = &
-       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2'
+       'P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2 DPOverDRho DPOverDT DPEOverDRho DPEOverDT'
   
   character(LEN=100)::NameDescription
   !Commented out:
@@ -390,6 +394,13 @@ program PROPACEOS
 
         Value_VII(Z_,  iTe, iRho) = zAvr_II(iTe, iRho)
         Value_VII(Z2_,  iTe, iRho) = zAvr_II(iTe, iRho)**2
+
+        ! The following quantities are not yet filled in
+        Value_VII(DPOverDRho_,iTe,iRho) = 0.0
+        Value_VII(DPOverDT_,iTe,iRho) = 0.0
+        Value_VII(DPEOverDRho_,iTe,iRho) = 0.0
+        Value_VII(DPEOverDT_,iTe,iRho) = 0.0
+
         ZAv =  Value_VII(Z_,  iTe, iRho)
         Z2  =  ZAv **2
         Z2PerA = Z2/AtomicMass
