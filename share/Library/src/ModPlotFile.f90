@@ -347,17 +347,17 @@ contains
           do k = 1, n3; do j = 1, n2; do i = 1, n1
              n = n + 1
              Coord = huge(1.0)
+             if(present(CoordMinIn_D)) then
+                i_D = (/i, j, k/)
+                Coord = CoordMinIn_D(iDim) + (i_D(iDim)-1)* &
+                     ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/max(1,n_D(iDim)-1))
+             end if
              if(present(CoordIn_I))    Coord = CoordIn_I(i)
              if(present(CoordIn_DII))  Coord = CoordIn_DII(iDim,i,j)
              if(present(CoordIn_DIII)) Coord = CoordIn_DIII(iDim,i,j,k)
              if(present(Coord1In_I) .and. iDim==1) Coord = Coord1In_I(i)
              if(present(Coord2In_I) .and. iDim==2) Coord = Coord2In_I(j)
              if(present(Coord3In_I) .and. iDim==3) Coord = Coord3In_I(k)
-             if(present(CoordMinIn_D)) then
-                i_D = (/i, j, k/)
-                Coord = CoordMinIn_D(iDim) + (i_D(iDim)-1)* &
-                     ((CoordMaxIn_D(iDim) - CoordMinIn_D(iDim))/max(1,n_D(iDim)-1))
-             end if
              Coord_ID(n, iDim) = Coord
           end do; end do; end do; 
        end do
@@ -725,6 +725,7 @@ contains
 
          read(iUnit, ERR=77, END=77) StringHeader
          read(iUnit, ERR=77, END=77) nStep, Time4, nDim, nParam, nVar
+
          Time = Time4
          read(iUnit, ERR=77, END=77) n_D(1:abs(nDim))
          if(nParam > 0)then
