@@ -1,6 +1,6 @@
 program spectrum
 
-  use ModConst
+  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi
 
   implicit none
 
@@ -16,7 +16,7 @@ program spectrum
   ! Variables for instrument (if any)
   logical                     :: IsInstrument = .false.
   character(len=200)          :: NameInstrument
-  integer                     :: nPixel, iPixel = 1
+  integer                     :: nPixel
   real                        :: Ainstrument
   real,allocatable            :: dLambdaInstr_I(:)
   real                        :: SizeWavelengthBin
@@ -53,7 +53,7 @@ program spectrum
 
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
-  integer                     :: MaxWave, nWaveFound
+  integer                     :: nMaxLine, nLineFound
   real, allocatable           :: WavelengthInterval_II(:,:)
 
   ! Temperature and density grid for G
@@ -66,7 +66,7 @@ program spectrum
   ! Derived type to read tabulated G values
   type LineTableType
      character(len=6)         :: NameIon
-     real                     :: Wavelength
+     real                     :: LineWavelength
      integer                  :: iMin, jMin, iMax, jMax
      real, allocatable        :: g_II(:,:)
   end type LineTableType
@@ -78,13 +78,15 @@ program spectrum
 
   ! Derived type of output 
   type SpectrumTableType
-     real,allocatable         :: Spectrum_II(:,:), SpectrumGrid_I(:)
+     real,allocatable         :: Spectrum_III(:,:,:), SpectrumGrid_I(:)
      real                     :: nBin
   end type SpectrumTableType
 
   type(SpectrumTableType), allocatable :: SpectrumTable_I(:)
-  integer                     :: iCenter, nBin
+  integer                     :: i, nBin
   real,allocatable            :: Spectrum_II(:,:), SpectrumGrid_I(:)
+
+  integer                     :: iLine, jPixel, kPixel
 
   character(len=*), parameter :: NameSub = 'spectrum.f90'
 
@@ -98,9 +100,14 @@ program spectrum
   call read_data
 
   call read_table
-  
-  do iCenter = 1,min(MaxWave,nWaveFound)
-     call calc_flux(iCenter)
+
+  ! Loope over Chianti lines and pixels in the orthogonal direction
+  do iLine = 1,min(nMaxLine,nLineFound)
+     do kPixel = 1, n3
+        do jPixel = 1, n2
+           call calc_flux 
+        end do
+     end do
   end do
 
   call save_all
@@ -124,7 +131,7 @@ contains
     character(len=5)     :: TypeFileSpectrum = 'ascii'
     character(len=200)   :: StringHeaderSpectrum = '[A] [erg sr^-1 cm^-2 A^-1]'
     real,allocatable            :: &
-         Intensity_VII(:,:,:), CoordWave_I(:), CoordPixel_I(:)
+         Intensity_VIII(:,:,:,:), CoordWave_I(:), CoordPixel_DII(:,:,:)
 
     integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, nWaveBin, &
          nWaveAll
@@ -139,12 +146,8 @@ contains
     end do
 
     allocate( &
-         Intensity_VII(1,nWaveAll,nPixel), &
-         CoordWave_I(nWaveAll), CoordPixel_I(nPixel))
-
-    do iPixel = 1, nPixel
-       CoordPixel_I(iPixel) = iPixel
-    end do
+         Intensity_VIII(1,nWaveAll,n2,n3), &
+         CoordWave_I(nWaveAll), CoordPixel_DII(2,n2,n3))
 
     ! Number of wave length processed so far
     nWave = 0
@@ -154,9 +157,9 @@ contains
        ! Number of wave length in this interval
        nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
 
-       WaveLengthMin = WavelengthInterval_II(1,iWaveInterval)
-       WaveLengthMax = WavelengthInterval_II(2,iWaveInterval)
-       dWaveBin = (WaveLengthMax - WaveLengthMin)/nWaveBin
+       WavelengthMin = WavelengthInterval_II(1,iWaveInterval)
+       WavelengthMax = WavelengthInterval_II(2,iWaveInterval)
+       dWaveBin = (WavelengthMax - WavelengthMin)/nWaveBin
 
        ! Loop over wave lengths in this interval
        do iWaveBin = 1, nWaveBin
@@ -165,54 +168,66 @@ contains
 
           ! Save intensity and coordinate into global array
           ! Convert intensity to [erg cm^-2 sr^-1 s^-1 A^-1]
-          Intensity_VII(1,iWave,:) = &
-               SpectrumTable_I(iWaveInterval)%Spectrum_II(:,iWaveBin) * 10.**7
-          CoordWave_I(iWave) = WaveLengthMin + (iWaveBin - 0.5)*dWaveBin
+          Intensity_VIII(1,iWave,:,:) = &
+               SpectrumTable_I(iWaveInterval)%Spectrum_III(:,:,iWaveBin) * &
+               10.**7
+          CoordWave_I(iWave) = WavelengthMin + (iWaveBin - 0.5)*dWaveBin
        end do
        ! Finished processing this interval
        nWave = nWave + nWaveBin
     end do
 
-    ! nDim = 1 if nPixel = 1, otherwise 2
-    if(nPixel==1)then
-
-       call save_plot_file(NameFile = NameSpectrumFile,      &
-            TypeFileIn     = TypeFileSpectrum,      &
-            StringHeaderIn = StringHeaderSpectrum,  &
-            NameVarIn      = "wavelength flux",     &
-            nDimIn         = 1,                     &
-            Coord1In_I     = CoordWave_I,           &
-            VarIn_VII      = Intensity_VII)
+    ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n1 = 1 /= n2 otherwise nDim= 3
+    if(n3==1)then
+       if(n2==1)then
+          call save_plot_file(NameFile = NameSpectrumFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength flux",     &
+               nDimIn         = 1,                     &
+               Coord1In_I     = CoordWave_I,           &
+               VarIn_VIII      = Intensity_VIII)
+       else
+          call save_plot_file(NameFile = NameSpectrumFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength x flux",   &
+               nDimIn         = 2,                     &
+               CoordMinIn_D   = CoordMin_D,            &
+               CoordMaxIn_D   = CoordMax_D,            &
+               Coord1In_I     = CoordWave_I,           &
+               VarIn_VIII     = Intensity_VIII)
+       endif
     else
-
-       call save_plot_file(NameFile = NameSpectrumFile,      &
-            TypeFileIn     = TypeFileSpectrum,      &
-            StringHeaderIn = StringHeaderSpectrum,  &
-            NameVarIn      = "wavelength pixel flux", &
-            nDimIn         = 2,                     &
-            Coord1In_I     = CoordWave_I,           &
-            Coord2In_I     = CoordPixel_I,          &
-            VarIn_VII      = Intensity_VII)
+          call save_plot_file(NameFile = NameSpectrumFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength x y flux", &
+               nDimIn         = 3,                     &
+               CoordMinIn_D   = CoordMin_D,            &
+               CoordMaxIn_D   = CoordMax_D,            &
+               Coord1In_I     = CoordWave_I,           &
+               VarIn_VIII      = Intensity_VIII)
     endif
-    deallocate(Intensity_VII, CoordWave_I, CoordPixel_I)
+
+    deallocate(Intensity_VIII, CoordWave_I, CoordPixel_DII)
 
   end subroutine save_all
 
   !==========================================================================
-  subroutine calc_flux(iLambda)
+  subroutine calc_flux
 
-    use ModInterpolate
+    use ModInterpolate, ONLY: bilinear
 
-    integer, intent(in)            :: iLambda
     real                           :: FluxMono
-    integer                        :: i, j, k, iInterval, iBin, iCenter
+    integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
-    real                           :: LambdaSI, Lambda0SI, DeltaLambda, DeltaLambda2
+    real                           :: LambdaSI, Lambda0SI, DeltaLambda, &
+         DeltaLambda2
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
     real                           :: uNth2, uTh2, Lambda
-
     real                           :: Gint, LogNe, LogTe, Rho
     real, allocatable              :: gLambda_II(:,:)
 
@@ -222,9 +237,9 @@ contains
     allocate(gLambda_II(MinI:MaxI,MinJ:MaxJ))
        
     ! Convert to SI
-    Lambda = LineTable_I(iLambda)%Wavelength
+    Lambda = LineTable_I(iLine)%LineWavelength
     
-    LambdaSI = LineTable_I(iLambda)%Wavelength * 1e-10 
+    LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
     ! Find which interval wavelength belongs to
     iInterval = -1
@@ -254,23 +269,23 @@ contains
             WavelengthInterval_II(2,iInterval))EXIT
     end do
 
-    do k=1,n3
-       do j=1,n2
+    do kPixel=1,n3
+       do jPixel=1,n2
           do i=1,n1
              ! Calculate thermal and non-thermal broadening
-             Rho = Var_VIII(rho_,i,j,k)
-             zPlus2   = Var_VIII(I01_,i,j,k) * 4.0 / Rho
-             zMinus2  = Var_VIII(I02_,i,j,k) * 4.0 / Rho
-             B_D      = Var_VIII(bx_:bz_,i,j,k)
+             Rho = Var_VIII(rho_,i,jPixel,kPixel)
+             zPlus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
+             zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
+             B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
              Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
-             cosAlpha = sum(LOSnorm_D*Bnorm_D)
+             CosAlpha = sum(LOSnorm_D*Bnorm_D)
              uNth2    = 1.0/16.0 * zPlus2 * zMinus2* abs(cosAlpha)
-             uTh2     = 2 * cBoltzmann * Var_VIII(ti_,i,j,k) / cProtonMass
+             uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel) / cProtonMass
              
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3  
              LogNe = log10(Rho*1e-6/cProtonMass)
-             LogTe = log10(max(Var_VIII(te_,i,j,k),1e-30))
+             LogTe = log10(max(Var_VIII(te_,i,jPixel,kPixel),1e-30))
 
              ! Add instrumental broadening if there is any
              DeltaLambda2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
@@ -278,29 +293,35 @@ contains
              DeltaLambda = sqrt(DeltaLambda2)
              
              ! Get the contribution function
-             iNMin  = LineTable_I(iLambda)%iMin
-             jTMin  = LineTable_I(iLambda)%jMin
-             iNMax  = LineTable_I(iLambda)%iMax
-             jTMax  = LineTable_I(iLambda)%jMax
-             gLambda_II = LineTable_I(iLambda)%g_II(:,:)
+             iNMin  = LineTable_I(iLine)%iMin
+             jTMin  = LineTable_I(iLine)%jMin
+             iNMax  = LineTable_I(iLine)%iMax
+             jTMax  = LineTable_I(iLine)%jMax
+             gLambda_II = LineTable_I(iLine)%g_II(:,:)
              Gint = bilinear(gLambda_II, iNMin, iNMax, jTMin, jTMax, &
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
              FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx
              
-             call disperse_line(iInterval,iCenter,LambdaSI,DeltaLambda,FluxMono)
+             call disperse_line(iInterval, iCenter, LambdaSI, DeltaLambda, FluxMono)
 
           end do
        end do
     end do
+
   end subroutine calc_flux
 
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,LambdaSI,dLambdaSI,FluxMono)
 
     real, intent(in)            :: LambdaSI, dLambdaSI, FluxMono
-    integer, intent(in)         :: iInterval,iCenter
+    integer, intent(in)         :: iInterval, iCenter
+
+    ! 
+    
+
+
     integer                     :: iBin, iBegin, iEnd
     real                        :: Flux, Phi, InvNorm, InvSigma2
     real                        :: LambdaBin, LambdaBegin, LambdaEnd, LambdaDistSI
@@ -343,11 +364,9 @@ contains
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
 
-       ! write(*,*)' Lambda,LambdaDist,Phi,Flux', Lambda,LambdaDistSI*1e10,Phi,Flux
-
        ! Update bin with flux
-       SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iBin) = &
-            SpectrumTable_I(iInterval)%Spectrum_II(iPixel,iBin) + Flux
+       SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) = &
+            SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) + Flux
 
     end do
 
@@ -360,9 +379,8 @@ contains
 
     character(len=lString)      :: NameCommand
     logical                     :: IsNoInstrument = .false.
+    integer                     :: iPixel
     character(len=*), parameter :: NameSub='read_param'
-
-    real                        :: MinWavelength, MaxWavelength
     !------------------------------------------------------------------------
     call read_file('SPECTRUM.in')
 
@@ -385,12 +403,11 @@ contains
 
        case("#TABLEFILE")
           call read_var('NameTableFile',NameTableFile)
-          call read_var('MaxWave',MaxWave)
+          call read_var('nMaxLine',nMaxLine)
 
        case("#WAVELENGTHINTERVAL")
           IsNoInstrument = .true.
           Ainstrument = 7.7778e5**2
-          if(.not.IsDataBlock)nPixel = 1
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
              deallocate(WavelengthInterval_II)
@@ -410,10 +427,11 @@ contains
           call read_var('n1',n1Block)
           call read_var('n2',n2Block)
           call read_var('n3',n3Block)
-          call read_var('nPixel',nPixel)
           
        case("#INSTRUMENT")
           IsInstrument = .true.
+          iPixel = 0
+          nPixel = 0
           call read_var('NameInstrument',NameInstrument)
 
           select case(NameInstrument)
@@ -460,25 +478,6 @@ contains
        end select
     end do READPARAM
 
-    ! Set up bins for Spectrum
-    allocate(SpectrumTable_I(nWavelengthinterval))
-    nBin = 0
-    do iWavelengthInterval=1, nWavelengthInterval
-       MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
-       MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
-       nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
-       nBin = nWavelengthBin
-       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_II(nPixel,nWavelengthBin))
-       allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(nWavelengthBin+1))
-       SpectrumTable_I(iWavelengthinterval)%Spectrum_II(:,:)=0.0
-       SpectrumTable_I(iWavelengthinterval)%nBin=nBin
-       do iWavelengthBin=1,nWavelengthBin+1
-          ! Values of each wavelength bin correspond to the center of the bin
-          SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin) = &
-               MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
-       end do
-    end do
-
   end subroutine read_param
 
   !==========================================================================
@@ -497,6 +496,8 @@ contains
     integer                     :: nVarName, iVar
     integer, parameter          :: MaxNameVar = 100
     character(len=20)           :: NameVar_V(MaxNameVar)
+    
+    real                        :: MinWavelength, MaxWavelength
 
     real,allocatable            :: VarIn_VIII(:,:,:,:)
 
@@ -543,19 +544,47 @@ contains
        allocate(Var_VIII(11,n1,n2,n3))
     endif
 
-    if (IsUniData) then
+    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
+         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
 
-       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni
-       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni
-       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni
-       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni
-       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni
-       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni
-       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni
+    ! Set up bins for Spectrum
+    allocate(SpectrumTable_I(nWavelengthinterval))
+    nBin = 0
+    do iWavelengthInterval=1, nWavelengthInterval
+       MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
+       MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
+       nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
+       nBin = nWavelengthBin
+       
+       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3,nWavelengthBin))
+       allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(nWavelengthBin+1))
+
+       SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
+       SpectrumTable_I(iWavelengthinterval)%nBin=nBin
+       do iWavelengthBin=1,nWavelengthBin+1
+          ! Values of each wavelength bin correspond to the center of the bin
+          SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin) = &
+               MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
+       end do
+    end do
+
+    if (IsUniData) then
+       ! cm^-3 --> kgm^-3
+       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
+       ! km/s --> m/s
+       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni * 1e3
+       ! G --> T
+       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni * 1e-4
+       ! K
        Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
        Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
-       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni
-       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni
+       ! erg/cm^3 --> J/m^3
+       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni * 1e-1
+       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni * 1e-1
 
     else
        do iVar=1, nVar
@@ -591,9 +620,9 @@ contains
              Var_VIII(te_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('i01')
              ! erg/cm^3 --> J/m^3
-             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e-1
           case('i02')
-             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e-1
           case default
              write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
           end select
@@ -616,7 +645,7 @@ contains
 
     ! Data read from the file
     character(len=6)            :: NameIon
-    real                        :: Wavelength, FirstWavelength
+    real                        :: LineWavelength, FirstLineWavelength
     integer                     :: nLevelFrom, nLevelTo
     real                        :: LogN, LogT, LogG 
 
@@ -630,7 +659,7 @@ contains
     integer                     :: iMin, jMin, iMax, jMax
 
     ! Density, temperature and wave indexes
-    integer                     :: iN, iT, iWave
+    integer                     :: iN, iT, iLine
 
     ! Switches for header and information for a wavelength of interest
     logical                     :: IsHeader
@@ -641,10 +670,10 @@ contains
     if(IsVerbose) write(*,*)'reading table file=', trim(NameTableFile)
 
     ! Read only wavelength of interest into a nice table
-    allocate(LineTable_I(MaxWave))
-    nWaveFound      = 0
-    iWave           = 0
-    FirstWaveLength = -1.0
+    allocate(LineTable_I(nMaxLine))
+    nLineFound      = 0
+    iLine           = 0
+    FirstLineWavelength = -1.0
     DoStore         = .false.
     IsHeader        = .true.
 
@@ -678,10 +707,10 @@ contains
        end if
 
        read(UnitTmp_,*,iostat=iError) &
-            NameIon, nLevelFrom, nLevelTo, Wavelength, LogN, LogT, LogG
+            NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
 
        ! Check if this belongs to the same line
-       if(WaveLength == FirstWaveLength .and. iError == 0) then
+       if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN) + 1
           iT = nint(LogT/dLogT) + 1
@@ -692,20 +721,20 @@ contains
        if(DoStore)then
           ! Store last indexes as the maximum indexes for N and T
           iMax = iN; jMax = iT
-          LineTable_I(iWave)%iMax = iMax; LineTable_I(iWave)%jMax = jMax
+          LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
 
           ! Extract min indexes into scalars
-          iMin = LineTable_I(iWave)%iMin; jMin = LineTable_I(iWave)%jMin
+          iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
 
           ! Create intensity table
-          allocate(LineTable_I(iWave)%g_II(iMin:iMax,jMin:jMax))
-          LineTable_I(iWave)%g_II = g_II(iMin:iMax,jMin:jMax)
+          allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
+          LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
 
           ! Storage is done
           DoStore = .false.
 
           if(IsVerbose)then
-             write(*,*)'Wavelength = ', LineTable_I(iWave)%Wavelength
+             write(*,*)'LineWavelength = ', LineTable_I(iLine)%LineWavelength
              write(*,*)'log(g_II(iMin,jMin:jMax)) = ', &
                   log10(g_II(iMin,jMin:jMax))
              write(*,*)'log(g_II(iMax,jMin:jMax)) = ', &
@@ -717,23 +746,23 @@ contains
 
        ! Check if wavelength is inside any of the intervals
        do iWavelengthInterval = 1, nWavelengthInterval
-          if(Wavelength < WavelengthInterval_II(1,iWavelengthInterval)) CYCLE
-          if(Wavelength > WavelengthInterval_II(2,iWavelengthInterval)) CYCLE
+          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval)) CYCLE
+          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval)) CYCLE
 
           ! New line of interest found
-          iWave = iWave + 1
-          if(iWave > MaxWave) call CON_stop('Too many waves, increase MaxWave')
+          iLine = iLine + 1
+          if(iLine > nMaxLine) call CON_stop('Too many waves, increase MaxWave')
           
-          FirstWavelength = Wavelength
+          FirstLineWavelength = LineWavelength
           DoStore = .true.
-          nWaveFound = nWaveFound + 1
+          nLineFound = nLineFound + 1
           ! Store ion name and wavelength 
-          LineTable_I(iWave)%NameIon    = NameIon
-          LineTable_I(iWave)%Wavelength = Wavelength
+          LineTable_I(iLine)%NameIon    = NameIon
+          LineTable_I(iLine)%LineWavelength = LineWavelength
           
           ! Calculate indexes and store as the minimum indexes
           iN = nint(LogN/dLogN) + 1; iT = nint(LogT/dLogT) + 1
-          LineTable_I(iWave)%iMin = iN; LineTable_I(iWave)%jMin = iT
+          LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
 
           ! To be safe zero out the input array
           g_II = 0.0
@@ -748,9 +777,11 @@ contains
 
     end do READLOOP
     close(UnitTmp_)
-
+    
     deallocate(g_II)
 
+    if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
+    
   end subroutine read_table
   !==========================================================================
 end program spectrum
