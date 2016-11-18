@@ -100,14 +100,19 @@ void PIC::EnergyDistributionSampleRelativistic::flushSamplingBuffers() {
 void PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
   long int ptr,iProbe,spec,idim;
-  double LocalParticleWeight,e,mass,speed;
+  double LocalParticleWeight,e,mass,speed,CellMeasure;
 
   for (node=SampleNodes[0],iProbe=0;iProbe<nSamleLocations;node=SampleNodes[++iProbe]) if (node->Thread==PIC::ThisThread) {
       double *v;
       PIC::ParticleBuffer::byte *ParticleData;
       int i,j,k;
+      PIC::Mesh::cDataCenterNode *cell;
 
       PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[iProbe],i,j,k);
+      cell=node->block->GetCenterNode(SampleLocalCellNumber[iProbe]);
+      CellMeasure=cell->Measure;
+      if (CellMeasure<=0.0) CellMeasure=1.0;
+
       ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
       while (ptr!=-1) {
@@ -126,7 +131,7 @@ void PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction() {
           e=Relativistic::Speed2E(speed,mass)*J2eV;
 
           i=(int)((e-eMin)/dE);
-          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight;
+          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
 
           break;
         case _LOGARITHMIC_SAMPLING_SCALE_:
@@ -134,7 +139,7 @@ void PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction() {
           e=Relativistic::Speed2E(speed,mass)*J2eV;
 
           i=(int)((log10(e)-log10eMin)/log10dE);
-          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight;
+          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
 
           break;
         default:
@@ -189,7 +194,7 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
       fprintf(fout,"\"TITLE=Distribution function at x=%e",SamplingLocations[iProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[iProbe][idim]);
 
-      fprintf(fout,"\"\nVARIABLES=\"E [eV]\", \"v[m/s]\", \"f(E)\"\n");
+      fprintf(fout,"\"\nVARIABLES=\"E [eV]\", \"v[m/s]\", \"f(E)\", \"Fluency(E)\"\n");
 
       //init the tempSamplingBuffer
       for (i=0;i<nSampledFunctionPoints;i++) tempSamplingBuffer[i]=0.0;
@@ -231,7 +236,10 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
         }
       }
 
-      if (fabs(norm)>0.0) for (i=0;i<nSampledFunctionPoints;i++) tempSamplingBuffer[i+tempOffsetSpec]/=norm;
+      //check the normalization constant
+      norm=(fabs(norm)>0.0) ? fabs(norm) : 1.0;
+
+//      if (fabs(norm)>0.0) for (i=0;i<nSampledFunctionPoints;i++) tempSamplingBuffer[i+tempOffsetSpec]/=norm;
 
       //print the output file
       for (i=0;i<nSampledFunctionPoints;i++) {
@@ -248,7 +256,8 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
           exit(__LINE__,__FILE__,"Error: the option is unknown");
          }
 
-        fprintf(fout,"%e  %e  %e\n",e,Relativistic::E2Speed(e*eV2J,PIC::MolecularData::GetMass(spec)),tempSamplingBuffer[i]);
+        double Speed=Relativistic::E2Speed(e*eV2J,PIC::MolecularData::GetMass(spec));
+        fprintf(fout,"%e  %e  %e  %e\n",e,Speed,tempSamplingBuffer[i]/norm,tempSamplingBuffer[i]/PIC::LastSampleLength*Speed);
       }
 
       //close the output file
