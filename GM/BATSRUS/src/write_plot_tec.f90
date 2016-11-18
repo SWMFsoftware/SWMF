@@ -111,7 +111,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         ! Write file header
         write(UnitTmp_,'(a)')'TITLE="BATSRUS: 1D Block Data, '//textDateTime//'"'
         write(UnitTmp_,'(a)')trim(unitstr_TEC)
-        write(UnitTmp_,'(a,a,i8,a,a)') &
+        write(UnitTmp_,'(a,a,i12,a,a)') &
              'ZONE T="1D   '//textNandT//'"', &
              ', I=',nBlockALL,', J=1, K=1,', &
              ', ZONETYPE=ORDERED, DATAPACKING=POINT'
@@ -137,7 +137,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         ! Write file header
         write(UnitTmp_,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
         write(UnitTmp_,'(a)')trim(unitstr_TEC)
-        write(UnitTmp_,'(a,a,i8,a,i8,a)') &
+        write(UnitTmp_,'(a,a,i12,a,i12,a)') &
              'ZONE T="3D   '//textNandT//'"', &
              ', N=',nNodeALL, &
              ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
@@ -198,7 +198,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
               ! Write file header
               write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
               write(UnitTmp_,'(a)')trim(unitstr_TEC)
-              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a,a,i12,a,i12,a)') &
                    'ZONE T="2D X '//textNandT//'"', &
                    ', N=',nBlockCuts*((nJ+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nJ  )*(nK  )), &
@@ -264,7 +264,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
               ! Write file header
               write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut X Data, '//textDateTime//'"'
               write(UnitTmp_,'(a)')trim(unitstr_TEC)
-              write(UnitTmp_,'(a,a,i8,a,i8,a)')       &
+              write(UnitTmp_,'(a,a,i12,a,i12,a)')       &
                    'ZONE T="2D X '//textNandT//'"',   &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -336,7 +336,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
               ! Write file header
               write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
               write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a,a,i12,a,i12,a)') &
                    'ZONE T="2D Y '//textNandT//'"', &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -402,7 +402,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
               ! Write file header
               write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Y Data, '//textDateTime//'"'
               write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-              write(UnitTmp_,'(a,a,i8,a,i8,a)') &
+              write(UnitTmp_,'(a,a,i12,a,i12,a)') &
                    'ZONE T="2D Y '//textNandT//'"', &
                    ', N=',nBlockCuts*((nI+1)*(nK+1)), &
                    ', E=',nBlockCuts*((nI  )*(nK  )), &
@@ -473,7 +473,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            ! Write file header
            write(UnitTmp_,'(a)')'TITLE="BATSRUS: Cut Z Data, '//textDateTime//'"'
            write(UnitTmp_,'(a)')unitstr_TEC(1:len_trim(unitstr_TEC))
-           write(UnitTmp_,'(a,a,i8,a,i8,a)') &
+           write(UnitTmp_,'(a,a,i12,a,i12,a)') &
                 'ZONE T="2D Z '//textNandT//'"', &
                 ', N=',nBlockCuts*((nI+1)*(nJ+1)), &
                 ', E=',nBlockCuts*((nI  )*(nJ  )), &
