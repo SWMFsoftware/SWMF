@@ -88,8 +88,14 @@ void Earth::BoundingBoxInjection::GCR::GetNewParticle(PIC::ParticleBuffer::byte 
   minE=Relativistic::Speed2E(minV,mass);
   maxE=Relativistic::Speed2E(maxV,mass);
 
-  E=minE+rnd()*(maxE-minE);
-  WeightCorrectionFactor=GCR_BADAVI2011ASR::Hydrogen::GetDiffFlux(E)/Earth::BoundingBoxInjection::GCR::maxEnergySpectrumValue[spec];
+  do {
+    E=minE+rnd()*(maxE-minE);
+    WeightCorrectionFactor=GCR_BADAVI2011ASR::Hydrogen::GetDiffFlux(E)/Earth::BoundingBoxInjection::GCR::maxEnergySpectrumValue[spec];
+  }
+  while (rnd()>WeightCorrectionFactor);
+
+  WeightCorrectionFactor=1.0;
+
 
   //generate velocity of the new particle
   PIC::Distribution::InjectRingDistribution(v,E,ExternalNormal,spec);
