@@ -9,7 +9,7 @@ INSTALLFILES =  src/Makefile.DEPEND \
 
 install: 
 	touch ${INSTALLFILES}
-	Config.pl -EarthHO -GridDefault
+	./Config.pl -EarthHO -GridDefault
 
 #
 #       General Housekeeping
