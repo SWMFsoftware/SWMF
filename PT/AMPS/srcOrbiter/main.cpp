@@ -73,126 +73,13 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=1.0E3;
+  double CharacteristicSpeed=10.0E3;
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
 }
 
-double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 
-  bool ExternalFaces[6];
-  double res=0.0,ExternalNormal[3],BlockSurfaceArea,ModelParticlesInjectionRate;
-  int nface;
-
-  static double v[3]={2.0e3,000.0,000.0},n=5.0E6,temp=20.0;
-
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
-
-      if (spec!=_H2O_SPEC_) return 0.0;
-
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,_H2O_SPEC_);
-
-      res+=ModelParticlesInjectionRate*BlockSurfaceArea;
-    }
-  }
-
-  return res;
-}
-
-bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  bool ExternalFaces[6];
-  double ExternalNormal[3],ModelParticlesInjectionRate;
-  int nface;
-
-  static double vNA[3]={2.0e3,0.0,0.0},nNA=5.0E6,tempNA=20.0;
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_H2O_SPEC_);
-
-      if (ModelParticlesInjectionRate>0.0) return true;
-    }
-  }
-
-  return false;
-}
-
-//injection of model particles through the faces of the bounding box
-long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  bool ExternalFaces[6];
-  double ParticleWeight,LocalTimeStep,TimeCounter,ExternalNormal[3],x[3],x0[3],e0[3],e1[3],c0,c1;
-  int nface,idim;
-  long int newParticle;
-  PIC::ParticleBuffer::byte *newParticleData;
-  long int nInjectedParticles=0;
-
-  if (spec!=_H2O_SPEC_) return 0; //inject only spec=0
-
-  static double vNA[3]={2.0e3,000.0,000.0},nNA=5.0E6,tempNA=20.0;
-  double v[3];
-
-
-  double ModelParticlesInjectionRate;
-
-  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-    ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
-    LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
-
-
-    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-      startNode->GetExternalNormal(ExternalNormal,nface);
-      TimeCounter=0.0;
-
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_H2O_SPEC_);
-
-
-      if (ModelParticlesInjectionRate>0.0) {
-        ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
-
-        PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
-
-        while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
-          //generate the new particle position on the face
-          for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
-
-          //generate a particle
-          newParticle=PIC::ParticleBuffer::GetNewParticle();
-          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-          nInjectedParticles++;
-
-          //generate particles' velocity
-          PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,_H2O_SPEC_,-1);
-
-          PIC::ParticleBuffer::SetX(x,newParticleData);
-          PIC::ParticleBuffer::SetV(v,newParticleData);
-          PIC::ParticleBuffer::SetI(spec,newParticleData);
-          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
-
-          //inject the particle into the system
-          _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
-        }
-      }
-
-
-    }
-  }
-
-  return nInjectedParticles;
-}
-
-long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  long int nInjectedParticles=0;
-
-  for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
-
-  return nInjectedParticles;
-}
 
 double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   double res=1.0;
@@ -205,175 +92,13 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 
 
-  double Orbiter::GetTotalProduction(int spec,void *BoundaryElement) {
+/*  double Orbiter::GetTotalProduction(int spec,void *BoundaryElement) {
     return 1.0E20;
   }
 
   double Orbiter::GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement) {
     return GetTotalProduction(spec,BoundaryElement);
-  }
-
-
-  bool Orbiter::GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
-//  bool Orbiter::GenerateParticleProperties(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, char *tempParticleData,int BoundaryElementType,void *BoundaryElement) {
-
-    static long int ProbabilityTableLengh=0;
-    static double ProbabilityTableIncrement=0.0;
-
-    class cFaceDescriptor {
-    public:
-      double weight;
-      int nFace;
-      cFaceDescriptor* next;
-
-      cFaceDescriptor() {
-        weight=0.0,nFace=-1,next=NULL;
-      }
-    };
-
-    class cProbabilityTable {
-    public:
-      int nTotalFaces;
-      cFaceDescriptor *firstFaceDescriptor;
-
-      cProbabilityTable() {
-        nTotalFaces=0;
-        firstFaceDescriptor=NULL;
-      }
-    };
-
-
-    static cFaceDescriptor *FaceDescriptorTable=NULL;
-    static cProbabilityTable *ProbabilityTable=NULL;
-
-    static bool initflag=false;
-
-    if (initflag==false) {
-      initflag=true;
-
-      double t,minSurfaceArea=-1.0,totalSurfaceArea=0.0;
-      int nt,cnt,next;
-
-      const int defaultProbabilityTableLengh=10000;
-
-      //calculate the length of the probability table
-      for (nt=0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
-        if ((minSurfaceArea<0.0)||(minSurfaceArea>CutCell::BoundaryTriangleFaces[nt].SurfaceArea)) minSurfaceArea=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-        totalSurfaceArea+=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-      }
-
-      ProbabilityTableIncrement=totalSurfaceArea/defaultProbabilityTableLengh;
-      ProbabilityTableLengh=defaultProbabilityTableLengh;
-
-      ProbabilityTable=new cProbabilityTable [ProbabilityTableLengh];
-
-      //calculate the number of the face descriptors that is needed for the mesh
-      int nFaceDescriptor=0,iStart=0,iFinish=0;
-
-      for (nt=0,t=0.0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
-        t+=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-        iFinish=(int)(t/ProbabilityTableIncrement);
-
-        nFaceDescriptor+=iFinish-iStart+1;
-        iStart=iFinish;
-      }
-
-      FaceDescriptorTable=new cFaceDescriptor [nFaceDescriptor];
-
-      //init the face descriptor table
-      for (cnt=0,nt=0,t=0.0,iStart=0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
-        t+=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-        iFinish=(int)(t/ProbabilityTableIncrement);
-
-        if (iFinish>=ProbabilityTableLengh) iFinish=ProbabilityTableLengh-1;
-
-        for (int ii=iStart;ii<=iFinish;ii++) {
-          if (iStart==iFinish) FaceDescriptorTable[cnt].weight=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-          else {
-        	  if (ii==iStart) FaceDescriptorTable[cnt].weight=(iStart+1)*ProbabilityTableIncrement-(t-CutCell::BoundaryTriangleFaces[nt].SurfaceArea);
-        	  else if (ii==iFinish) FaceDescriptorTable[cnt].weight=t-iFinish*ProbabilityTableIncrement;
-        	  else FaceDescriptorTable[cnt].weight=ProbabilityTableIncrement;
-          }
-
-          if (cnt<nFaceDescriptor) {
-            FaceDescriptorTable[cnt].nFace=nt;
-            FaceDescriptorTable[cnt].next=ProbabilityTable[ii].firstFaceDescriptor;
-
-            ProbabilityTable[ii].firstFaceDescriptor=FaceDescriptorTable+cnt;
-            ProbabilityTable[ii].nTotalFaces++;
-          }
-
-          cnt++;
-        }
-
-        iStart=iFinish;
-      }
-
-      //normalize weights
-      for (int np=0;np<ProbabilityTableLengh;np++) if (ProbabilityTable[np].firstFaceDescriptor!=NULL) {
-        double summ=0.0;
-        cFaceDescriptor *face,*prev;
-
-        for (face=ProbabilityTable[np].firstFaceDescriptor;face!=NULL;face=face->next) summ+=face->weight;
-        for (face=ProbabilityTable[np].firstFaceDescriptor;face!=NULL;face=face->next) face->weight/=summ;
-
-        //Convert the weight into a cumulative distribution
-        for (summ=0.0,face=ProbabilityTable[np].firstFaceDescriptor;face!=NULL;face=face->next) {
-          summ+=face->weight;
-          face->weight=summ;
-        }
-      }
-    }
-
-
-    //Determine the face number
-    int nt,nface=-1;
-    double x[3],v[3];
-    double weight=rnd();
-    cFaceDescriptor *face;
-
-    nt=(int)(rnd()*ProbabilityTableLengh);
-
-    for (face=ProbabilityTable[nt].firstFaceDescriptor;face!=NULL;face=face->next) if (face->weight>=weight){
-  	  nface=face->nFace;
-	    break;
-    }
-
-    bool PositionGenerated;
-
-    do {
-    	PositionGenerated=true;
-
-		  CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x);
-
-	  	//place the point inside the domain
-		  for (int idim=0;idim<3;idim++) x[idim]+=0.001*PIC::Mesh::mesh.EPS*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
-    }
-    while (PositionGenerated==false);
-
-
-    //determine if the particle belongs to this processor
-    startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
-    if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-
-    //get the velocity vector
-//    for (int idim=0;idim<3;idim++) v[idim]=500.0*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
-
-    const static double vbulk[3]={0.0,0.0,0.0};
-    const static double SurfaceTemperature=200.0;
-
-    PIC::Distribution::InjectMaxwellianDistribution(v,vbulk,SurfaceTemperature,CutCell::BoundaryTriangleFaces[nface].ExternalNormal,_H2O_SPEC_);
-
-
-
-    memcpy(x_SO_OBJECT,x,3*sizeof(double));
-    memcpy(x_IAU_OBJECT,x,3*sizeof(double));
-    memcpy(v_SO_OBJECT,v,3*sizeof(double));
-    memcpy(v_IAU_OBJECT,v,3*sizeof(double));
-
-    return true;
-
-  }
+  }*/
 
 
 
@@ -420,10 +145,10 @@ int main(int argc,char **argv) {
 //  Orbiter->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
 
 //  Nucleus->localResolution=Comet::localSphericalSurfaceResolution;
-  Orbiter->InjectionRate=Orbiter::GetTotalProduction;
+//  Orbiter->InjectionRate=Orbiter::GetTotalProduction;
   Orbiter->faceat=0;
 //  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
-  Orbiter->InjectionBoundaryCondition=Orbiter::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+//  Orbiter->InjectionBoundaryCondition=Orbiter::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
 //  Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
   //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
@@ -436,13 +161,15 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
   PIC::Mesh::mesh.init(xmin,xmax,BulletLocalResolution);
+
   PIC::Mesh::mesh.memoryAllocationReport();
+  PIC::Mesh::mesh.GetMeshTreeStatistics();
 
 
   //PIC::Mesh::mesh.buildMesh();
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  char mesh[200]="amr.sig=0xb94827c2b64e2fd8.mesh.bin";
   bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
@@ -548,13 +275,16 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
   PIC::ParticleWeightTimeStep::initTimeStep();
 
-  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
-  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
-  PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
+  PIC::BC::BlockInjectionBCindicatior=Orbiter::UpstreamBC::BoundingBoxParticleInjectionIndicator;
+  PIC::BC::userDefinedBoundingBlockInjectionFunction=Orbiter::UpstreamBC::BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
+
+
+  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Orbiter::UpstreamBC::BoundingBoxInjectionRate;
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 
   //init the particle buffer
   PIC::ParticleBuffer::Init(1000000);
@@ -584,6 +314,12 @@ int main(int argc,char **argv) {
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
     }
 
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      time_t TimeValue=time(NULL);
+      tm *ct=localtime(&TimeValue);
+
+      printf(": (%i/%i %i:%i:%i), Iteration: %ld  (current sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+    }
   }
 
   //output the particle statistics for the nightly tests
@@ -593,7 +329,6 @@ int main(int argc,char **argv) {
     sprintf(fname,"%s/test_Orbiter.dat",PIC::OutputDataFileDirectory);
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
-
 
   MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
