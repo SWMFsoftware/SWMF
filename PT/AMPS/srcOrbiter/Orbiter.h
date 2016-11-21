@@ -15,6 +15,18 @@
 namespace Orbiter {
 using namespace Exosphere;
 
+  //upstream boundary conditions
+  namespace UpstreamBC {
+    extern double Velocity[3];
+    extern double NumberDensity;
+    extern double Temperature;
+
+    bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+    long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+    long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+    double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+  }
+
   double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
   double GetTotalProduction(int spec,void *BoundaryElement);
 
