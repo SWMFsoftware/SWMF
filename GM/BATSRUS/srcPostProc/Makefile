@@ -20,6 +20,7 @@ ${BINDIR}/SPECTRUM.exe:	spectrum.o ${LIBDIR}/libSHARE.a
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
+	rm ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
 
 ${BINDIR}/PostSPH.exe:	PostSPH.o
@@ -65,7 +66,7 @@ TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 #
 test_spectrum:
 	@echo "test_spectrum compiles..." > test_spectrum.diff
-	rm -f SPECTRUM.exe SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out
+	rm -f SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out test-spectrum.eps
 	make SPECTRUM
 	@echo "test_spectrum copies input files..." >> test_spectrum.diff
 	cp SPECTRUM.test.in SPECTRUM.in
@@ -76,13 +77,13 @@ test_spectrum:
 		spectrum.out \
 		spectrum.ref > test_spectrum.diff
 	@ls -l test_spectrum.diff
-
+	idl test_spectrum.pro
 #
 #	cleaning
 #
 clean: cleanfiles
 
 distclean: clean
-	rm -f SPECTRUM.exe SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out
+	rm -f SPECTRUM.exe SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out test-spectrum.eps
 
 # keep this line
