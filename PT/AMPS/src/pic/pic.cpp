@@ -34,7 +34,11 @@ int PIC::TimeStep() {
    double UserDefinedParticleProcessingTime=0.0;
    static double summIterationExecutionTime=0.0;
 
+   //Set the exit error code
+   ExitErrorCode=_PIC__EXIT_CODE__LAST_FUNCTION__PIC_TimeStep_;
+
    //update the local block list
+   ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UpdateBlockTable_;
    DomainBlockDecomposition::UpdateBlockTable();
 
    //recover the sampling data from the sampling data restart file, print the TECPLOT files and quit
@@ -106,6 +110,7 @@ int PIC::TimeStep() {
    PIC::Parallel::IterationNumberAfterRebalancing++;
 
   //sampling of the particle data
+   ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__Sampling_;
    SamplingTime=MPI_Wtime();
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
@@ -128,6 +133,7 @@ int PIC::TimeStep() {
   InjectionBoundaryTime=MPI_Wtime();
 
   //inject particle through the domain's boundaries
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__InjectionBoundaryConditions_;
   PIC::BC::InjectionBoundaryConditions();
 
   //inject particles into the volume of the domain
@@ -136,16 +142,23 @@ int PIC::TimeStep() {
 #endif
 
   //call a user-defined injection function
-  if (PIC::BC::UserDefinedParticleInjectionFunction!=NULL) PIC::BC::nTotalInjectedParticles+=PIC::BC::UserDefinedParticleInjectionFunction();
+  if (PIC::BC::UserDefinedParticleInjectionFunction!=NULL) {
+    ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UserDefinedParticleInjectionFunction_;
+    PIC::BC::nTotalInjectedParticles+=PIC::BC::UserDefinedParticleInjectionFunction();
+  }
 
   //the extra injection process by the exosphere model (src/models/exosphere)
-  if (BC::ExosphereModelExtraInjectionFunction!=NULL) PIC::BC::nTotalInjectedParticles+=BC::ExosphereModelExtraInjectionFunction();
+  if (BC::ExosphereModelExtraInjectionFunction!=NULL) {
+    ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ExosphereModelExtraInjectionFunction_;
+    PIC::BC::nTotalInjectedParticles+=BC::ExosphereModelExtraInjectionFunction();
+  }
 
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
 
 
   //simulate particle collisions
 #if _PIC__PARTICLE_COLLISION_MODEL__MODE_ == _PIC_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ParticleCollisionModel_;
   ParticleCollisionTime=MPI_Wtime();
 
   #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
@@ -161,6 +174,7 @@ int PIC::TimeStep() {
 
   //simulate collisions with the background atmosphere
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__BackgroundAtmosphere_;
   BackgroundAtmosphereCollisionTime=MPI_Wtime();
 
   #if _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__PARTICLE_COLLISIONS_
@@ -176,6 +190,7 @@ int PIC::TimeStep() {
 
   //particle photochemistry model
   #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__PhotolyticReactions_;
   PhotoChemistryTime=MPI_Wtime();
   ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel();
   PhotoChemistryTime=MPI_Wtime()-PhotoChemistryTime;
@@ -183,18 +198,21 @@ int PIC::TimeStep() {
 
   //perform user-define processing of the model particles
 #if _PIC_USER_PARTICLE_PROCESSING__MODE_ == _PIC_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UserParticleProcessing_;
   UserDefinedParticleProcessingTime=MPI_Wtime();
   PIC::UserParticleProcessing::Processing();
   UserDefinedParticleProcessingTime=MPI_Wtime()-UserDefinedParticleProcessingTime;
 #endif
 
   //move existing particles
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__MoveParticles_;
   ParticleMovingTime=MPI_Wtime();
   PIC::Mover::MoveParticles();
   ParticleMovingTime=MPI_Wtime()-ParticleMovingTime;
 
   //check the consistence of the particles lists
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__CheckParticleList_;
   PIC::ParticleBuffer::CheckParticleList();
 #endif
 
@@ -202,6 +220,7 @@ int PIC::TimeStep() {
   summIterationExecutionTime+=IterationExecutionTime;
 
   //syncrinie processors and exchnge particle data
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ExchangeParticleData_;
   ParticleExchangeTime=MPI_Wtime();
   PIC::Parallel::ExchangeParticleData();
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
@@ -215,17 +234,20 @@ int PIC::TimeStep() {
 
   //incase OpenMP is used: rebalance the list of the available particles between OpenMP threads
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__RebalanceParticleList_;
   PIC::ParticleBuffer::Thread::RebalanceParticleList();
   #endif
 
 
   //update the total number of the sampled trajecotries
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UpdateTrajectoryCounter_;
   PIC::ParticleTracker::UpdateTrajectoryCounter();
 #endif
 
   //call user defined MPI procedure
 #if _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ == _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UserDefinedMPI_RoutineExecutionTime_;
   UserDefinedMPI_RoutineExecutionTime=MPI_Wtime();
   _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_();
   UserDefinedMPI_RoutineExecutionTime=MPI_Wtime()-UserDefinedMPI_RoutineExecutionTime;
@@ -233,6 +255,7 @@ int PIC::TimeStep() {
 
   //update the glabal time counter if needed
 #if _PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__CPLR_DATAFILE_MULTIFILE_;
   PIC::SimulationTime::Update();
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
   //update data
