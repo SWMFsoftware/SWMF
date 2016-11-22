@@ -107,6 +107,13 @@ int main(int argc,char **argv) {
 
   //init the particle solver
   PIC::InitMPI();
+
+  //seed the random number generatore
+  if (_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_) {
+    rnd_seed(100);
+  }
+
+
   PIC::Init_BeforeParser();
 
   Orbiter::Init_BeforeParser();
@@ -287,7 +294,7 @@ int main(int argc,char **argv) {
   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(1000000);
+//  PIC::ParticleBuffer::Init(1000000);
 
   //set the model of the boundary conditinos
   PIC::Mover::ProcessTriangleCutFaceIntersection=SurfaceBoundaryCondition;
