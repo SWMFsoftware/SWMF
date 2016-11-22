@@ -242,6 +242,28 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC__EXTERNAL_BOUNDARY_FLOW_DIRECTION__OUTWARD_    1
 #define _PIC__EXTERNAL_BOUNDARY_FLOW_DIRECTION__UNDEFINED_  2
 
+//Definitions of the exit eror codes
+#define _PIC__EXIT_CODE__LAST_FUNCTION__PIC_TimeStep_   1
+
+#define _PIC__EXIT_CODE__LAST_BLOCK__UpdateBlockTable_                        -1
+#define _PIC__EXIT_CODE__LAST_BLOCK__Sampling_                                -2
+#define _PIC__EXIT_CODE__LAST_BLOCK__InjectionBoundaryConditions_             -3
+#define _PIC__EXIT_CODE__LAST_BLOCK__UserDefinedParticleInjectionFunction_    -4
+#define _PIC__EXIT_CODE__LAST_BLOCK__ExosphereModelExtraInjectionFunction_    -5
+#define _PIC__EXIT_CODE__LAST_BLOCK__ParticleCollisionModel_                  -6
+#define _PIC__EXIT_CODE__LAST_BLOCK__BackgroundAtmosphere_                    -7
+#define _PIC__EXIT_CODE__LAST_BLOCK__PhotolyticReactions_                     -8
+#define _PIC__EXIT_CODE__LAST_BLOCK__UserParticleProcessing_                  -9
+#define _PIC__EXIT_CODE__LAST_BLOCK__MoveParticles_                          -10
+#define _PIC__EXIT_CODE__LAST_BLOCK__ExchangeParticleData_                   -11
+#define _PIC__EXIT_CODE__LAST_BLOCK__RebalanceParticleList_                  -12
+#define _PIC__EXIT_CODE__LAST_BLOCK__UpdateTrajectoryCounter_                -13
+#define _PIC__EXIT_CODE__LAST_BLOCK__UserDefinedMPI_RoutineExecutionTime_    -14
+#define _PIC__EXIT_CODE__LAST_BLOCK__CPLR_DATAFILE_MULTIFILE_                -15
+#define _PIC__EXIT_CODE__LAST_BLOCK__CheckParticleList_                      -16
+
+
+
 
 
 
