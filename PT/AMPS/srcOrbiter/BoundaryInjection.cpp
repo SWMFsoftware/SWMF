@@ -66,14 +66,31 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
 
          PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
 
+         #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+         #pragma omp parallel default(none)  shared(nInjectedParticles,ModelParticlesInjectionRate,LocalTimeStep,x0,e0,e1,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,startNode) \
+           private (idim,c0,c1,x,v,newParticle,newParticleData) firstprivate (TimeCounter)
+           {
+             #pragma omp single
+             {
+         #endif //_COMPILATION_MODE_
+
          while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
+           //increment the particle counter
+           nInjectedParticles++;
+
+           #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+           #pragma omp task default (none) shared(ModelParticlesInjectionRate,LocalTimeStep,x0,e0,e1,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,startNode) \
+             private (idim,c0,c1,x,v,newParticle,newParticleData) firstprivate (TimeCounter)
+             {
+           #endif //_COMPILATION_MODE_
+
            //generate the new particle position on the face
            for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
 
            //generate a particle
            newParticle=PIC::ParticleBuffer::GetNewParticle();
            newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-           nInjectedParticles++;
+
 
            //generate particles' velocity
            PIC::Distribution::InjectMaxwellianDistribution(v,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,-1);
@@ -85,7 +102,18 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
 
            //inject the particle into the system
            _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
+
+           //end task
+           #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+             }
+           #endif
          }
+
+         //end OpenMP parallel section
+         #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+         }}
+         #endif
+
        }
 
      }
