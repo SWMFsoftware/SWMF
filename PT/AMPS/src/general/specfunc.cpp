@@ -19,6 +19,7 @@
 
 int ThisThread;
 int TotalThreadsNumber;
+int ExitErrorCode=0;
 
 long int nint(double a)
 {
@@ -183,8 +184,8 @@ void StampSignature(char* message) {
 void exit(long int nline, const char* fname, const char* msg) {
   char str[1000];
 
-  if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
-  else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg); 
+  if (msg==NULL) sprintf(str," exit: line=%ld, file=%s (error code=%i)\n",nline,fname,ExitErrorCode);
+  else sprintf(str," exit: line=%ld, file=%s, message=%s (error code=%i)\n",nline,fname,msg,ExitErrorCode);
 
   printf("$PREFIX:%s",str);
 
