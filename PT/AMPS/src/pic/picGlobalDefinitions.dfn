@@ -261,6 +261,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC__EXIT_CODE__LAST_BLOCK__UserDefinedMPI_RoutineExecutionTime_    -14
 #define _PIC__EXIT_CODE__LAST_BLOCK__CPLR_DATAFILE_MULTIFILE_                -15
 #define _PIC__EXIT_CODE__LAST_BLOCK__CheckParticleList_                      -16
+#define _PIC__EXIT_CODE__LAST_BLOCK__ExchangeStatisticData_                  -17
 
 
 

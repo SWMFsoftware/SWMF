@@ -277,6 +277,8 @@ int PIC::TimeStep() {
 #endif//_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 #endif//_PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
 
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ExchangeStatisticData_;
+
   struct cExchangeStatisticData {
     double TotalInterationRunTime;
     double IterationExecutionTime;
