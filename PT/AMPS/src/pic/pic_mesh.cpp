@@ -547,7 +547,7 @@ void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,
 
 //      Particle=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
 
-      Particle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+      Particle=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)],true);
       PIC::ParticleBuffer::UnPackParticleData(buffer,Particle);
       break;
     default :
