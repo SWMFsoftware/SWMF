@@ -65,19 +65,28 @@ TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 # test for spectrum
 #
 test_spectrum:
-	@echo "test_spectrum compiles..." > test_spectrum.diff
+	@echo "test_spectrum_compile..." > test_spectrum.diff
+	$(MAKE) test_spectrum_compile
+	@echo "test_spectrum_run..." >> test_spectrum.diff
+	$(MAKE) test_spectrum_run
+	@echo "test_spectrum_check..." >> test_spectrum.diff
+	$(MAKE) test_spectrum_check
+
+test_spectrum_compile:
 	rm -f SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out test-spectrum.eps
-	make SPECTRUM
-	@echo "test_spectrum copies input files..." >> test_spectrum.diff
 	cp SPECTRUM.test.in SPECTRUM.in
-	@echo "test_spectrum runs..." > test_spectrum.diff
+	make SPECTRUM
+
+test_spectrum_run:
 	./SPECTRUM.exe > spectrum.log
-	@echo "test_spectrum checks result" >> test_spectrum.diff
+
+test_spectrum_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		spectrum.out \
 		spectrum.ref > test_spectrum.diff
 	@ls -l test_spectrum.diff
 	idl test_spectrum.pro
+
 #
 #	cleaning
 #
