@@ -115,6 +115,7 @@ int main(int argc,char **argv) {
 
 
   PIC::Init_BeforeParser();
+  PIC::Alarm::SetAlarm(8*3600-20*60);
 
   Orbiter::Init_BeforeParser();
 
@@ -271,8 +272,8 @@ int main(int argc,char **argv) {
 
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000; //0; //00; //*10;
-  PIC::RequiredSampleLength=500; //00; //0; //0;
+//  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000; //0; //00; //*10;
+//  PIC::RequiredSampleLength=500; //00; //0; //0;
 
 
   PIC::Init_AfterParser ();
