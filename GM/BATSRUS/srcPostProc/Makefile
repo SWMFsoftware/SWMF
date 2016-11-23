@@ -15,12 +15,12 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 #
 # Post processing executables
 #
-${BINDIR}/SPECTRUM.exe:	spectrum.o ${LIBDIR}/libSHARE.a
+${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
 	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
-	rm ./SPECTRUM.exe
+	rm -f ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
 
 ${BINDIR}/PostSPH.exe:	PostSPH.o
@@ -71,7 +71,7 @@ test_spectrum:
 	@echo "test_spectrum copies input files..." >> test_spectrum.diff
 	cp SPECTRUM.test.in SPECTRUM.in
 	@echo "test_spectrum runs..." > test_spectrum.diff
-	${BINDIR}/SPECTRUM.exe > spectrum.log
+	./SPECTRUM.exe > spectrum.log
 	@echo "test_spectrum checks result" >> test_spectrum.diff
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		spectrum.out \
