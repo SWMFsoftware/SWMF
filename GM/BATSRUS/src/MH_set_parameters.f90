@@ -809,6 +809,24 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('LatMax', plot_range(6,iFile))
               if (plot_range(5, iFile) /= plot_range(6,iFile)) &
                    call read_var('dLat', plot_dx(3,iFile))
+           elseif (index(plot_string, 'box')>0)then
+              plot_area = 'box'
+              call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+              call read_var('xMin',   plot_range(1,iFile))
+              call read_var('xMax',   plot_range(2,iFile))
+              if (plot_range(1, iFile) /= plot_range(2,iFile)) &
+                   call read_var('dX',   plot_dx(1,iFile))
+              call read_var('yMin', plot_range(3,iFile))
+              call read_var('yMax', plot_range(4,iFile))
+              if (plot_range(3, iFile) /= plot_range(4,iFile)) &
+                   call read_var('dY', plot_dx(2,iFile))
+              call read_var('zMin', plot_range(5,iFile))
+              call read_var('zMax', plot_range(6,iFile))
+              if (plot_range(5, iFile) /= plot_range(6,iFile)) &
+                   call read_var('dZ', plot_dx(3,iFile))
+              call read_var('xAngle', plot_normal(1,iFile))
+              call read_var('yAngle', plot_normal(2,iFile))
+              call read_var('zAngle', plot_normal(3,iFile))
 
            elseif (index(plot_string,'los')>0) then
               plot_area='los'
@@ -887,6 +905,7 @@ subroutine MH_set_parameters(TypeAction)
               plot_form(ifile)='idl'
               if (       plot_area /= 'sph' &
                    .and. plot_area /= 'shl' &
+                   .and. plot_area /= 'box' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &
@@ -1622,7 +1641,7 @@ subroutine MH_set_parameters(TypeAction)
         if(TypeGeometry == 'roundcube') then
            call read_var('rRound0',rRound0)
            call read_var('rRound1',rRound1)
-        end if        
+        end if
         if(NameCommand == '#GRIDGEOMETRYLIMIT')then
            do iDim = 1, nDim
               call read_var('CoordDimMin_D', CoordDimMin_D(iDim))
@@ -1766,10 +1785,10 @@ subroutine MH_set_parameters(TypeAction)
         if(UseMultiSpecies) then
            do iSpecies = SpeciesFirst_, SpeciesLast_
               call read_var('MassSpecies', MassSpecies_V(iSpecies))
-           enddo           
+           enddo
            do iSpecies = SpeciesFirst_, SpeciesLast_
               call read_var('ChargeSpecies', ChargeSpecies_I(iSpecies))
-           enddo           
+           enddo
         else
            do iFluid = IonFirst_, nFluid
               call read_var('MassFluid', MassFluid_I(iFluid))
@@ -1779,7 +1798,7 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('ChargeIon', ChargeIon_I(iFluid))
            end do
         endif
-        
+
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
         ElectronPressureRatio = ElectronTemperatureRatio
 
@@ -3157,7 +3176,7 @@ contains
 
        ! Fix plot range for various plot areas
        select case(plot_area)
-       case('shl', 'eqb', 'eqr', 'lcb')
+       case('shl', 'box', 'eqb', 'eqr', 'lcb')
           ! These plot areas read all ranges from PARAM.in
           CYCLE PLOTFILELOOP
        case('cut')

@@ -68,6 +68,7 @@ OBJECTS = \
 	ModPIC.o \
 	ModPhysics.o \
 	ModPlotShell.o \
+	ModPlotBox.o \
 	ModPointImplicit.o \
 	ModProcMH.o \
 	ModProject.o \

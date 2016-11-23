@@ -27,6 +27,7 @@ subroutine write_plot_common(iFile)
   use ModVarIndexes, ONLY: SignB_
   use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell,&
        write_plot_sph
+  use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
 
   implicit none
 
@@ -53,7 +54,7 @@ subroutine write_plot_common(iFile)
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
   ! True for spherical/ geospherical plots
-  logical:: IsSphPlot, DoPlotShell
+  logical:: IsSphPlot, DoPlotShell, DoPlotBox
 
   ! Equation parameters
   integer, parameter :: MaxParam = 100
@@ -207,8 +208,12 @@ subroutine write_plot_common(iFile)
   ! Spherical slices are special cases:
   IsSphPlot   = plot_type1(1:3) == 'sph'
   DoPlotShell = plot_type1(1:3) == 'shl'
+  DoPlotBox   = plot_type1(1:3) == 'box'
 
-  if(DoPlotShell)then
+  if(DoPlotBox)then
+     ! Initialize the box grid for this file
+     call init_plot_box(iFile, nPlotVar)
+  elseif(DoPlotShell)then
      ! Initialize the shell grid for this file
      call init_plot_shell(iFile, nPlotVar)
   elseif(IsSphPlot)then
@@ -263,6 +268,7 @@ subroutine write_plot_common(iFile)
   end if
 
   if (DoPlotShell) IsNonCartesianPlot = .true.
+  if (DoPlotBox) IsNonCartesianPlot = .false.
 
   !Logical for hdf plots
 
@@ -335,6 +341,8 @@ subroutine write_plot_common(iFile)
         dzblk=360.0/real(nphi)
      else if (DoPlotShell) then
         call set_plot_shell(iBLK, nPlotvar, Plotvar)
+     else if (DoPlotBox) then
+        call set_plot_box(iBLK, nPlotvar, Plotvar)
      else
         select case(plot_form(iFile))
         case('tec')
@@ -355,7 +363,8 @@ subroutine write_plot_common(iFile)
         end select
      end if
 
-     if (plot_form(iFile)=='idl' .and. .not.DoPlotShell) then
+     if (plot_form(iFile)=='idl' .and. .not.DoPlotShell .and. .not.DoPlotBox) &
+          then
    	! Update number of cells per processor
         if (IsSphPlot) then
       	   nPEcellsN = nPEcellsN + nBLKcellsN
@@ -395,16 +404,21 @@ subroutine write_plot_common(iFile)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
      if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
           plotvarnames, unitstr_TEC, trim(NameSnapshot)//'.dat')
+     if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
+          plotvarnames, unitstr_TEC, trim(NameSnapshot)//'.dat')
   case('idl')
      call get_idl_units(iFile, nplotvar, plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
      if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
           plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
+     if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
+          plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
   end select
 
   ! Done writing shell plot
   if(DoPlotShell) RETURN
+  if(DoPlotBox) RETURN
 
   ! Write files for tecplot format
   if(plot_form(iFile)=='tec' .and. .not.IsSphPlot)then
@@ -547,7 +561,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(a)') '#NDIM'
            write(UnitTmp_,'(i8,a18)') nDim, 'nDim'        
            write(UnitTmp_,*)
-           
+
            write(UnitTmp_,'(a)') '#GRIDBLOCKSIZE'
            do i0 = 1, nDim
               write(c0,'(i1)') i0
@@ -1699,7 +1713,15 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   !/
 
   ! Coordinate names and units
-  if(plot_type1(1:3) == 'shl')then
+  if(plot_type1(1:3) == 'box')then
+     if (plot_dimensional(iFile)) then
+        StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
+             // '", "", "'
+     else
+        StringVarTec = 'VARIABLES ="x", "y", "z'
+     end if
+
+  elseif(plot_type1(1:3) == 'shl')then
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
              // '", "Lon [deg]", "Lat [deg]'
@@ -2002,7 +2024,10 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      RETURN
   end if
 
-  if(plot_type1(1:3)=='sph' .or. plot_type1(1:3) == 'shl') then
+  if(plot_type1(1:3)=='box') then
+     StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//'    '
+
+  elseif(plot_type1(1:3)=='sph' .or. plot_type1(1:3) == 'shl') then
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
