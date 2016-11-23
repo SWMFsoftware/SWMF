@@ -2608,6 +2608,7 @@ namespace PIC {
 
       //model of the particle collisions
       void ntc();
+      void mf();
     }
 
     //models for calculation of the relative velocity after a collision
