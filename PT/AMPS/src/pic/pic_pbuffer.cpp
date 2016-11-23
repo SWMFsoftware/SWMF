@@ -194,8 +194,60 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle,bool Ra
 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   int thread; //=omp_get_thread_num();
 
-  thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
-  if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
+  if (RandomThreadOpenMP==false) {
+    thread=omp_get_thread_num();
+  }
+  else {
+    bool found=false;
+    
+    //random search for a thread
+    for (int i=0;i<Thread::NTotalThreads;i++) {  
+      thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
+
+      if (Thread::AvailableParticleListLength[thread]!=0) {
+        found=true;
+        break;
+      }
+    }
+
+    //go through each thread
+    if (found==false) for (thread=0;thread<Thread::NTotalThreads;thread++) if (Thread::AvailableParticleListLength[thread]!=0) {
+      found=true;
+      break;  
+    }
+ 
+    if (found==false) {
+      thread=omp_get_thread_num();
+      printf("$PREFIX: The particle buffer is full [MPI process=%i,OpenMP thread=%i]\n",PIC::ThisThread,thread);
+
+      if (RandomThreadOpenMP==true) {
+        printf("$PREFIX:RandomThreadOpenMP==true\nThread\tThe number of the available particles\n");
+      }
+      else {
+        printf("$PREFIX:RandomThreadOpenMP==false\nThread\tThe number of the available particles\n");
+      }
+
+      for (thread=0;thread<Thread::NTotalThreads;thread++) printf("$PREFIX: %i\t%i\n",thread,Thread::AvailableParticleListLength[thread]);
+
+      exit(__LINE__,__FILE__,"The particle buffer is full");
+    }
+  }
+
+  if (Thread::AvailableParticleListLength[thread]==0) {
+    thread=omp_get_thread_num();
+
+    if (RandomThreadOpenMP==true) {
+      printf("$PREFIX:RandomThreadOpenMP==true\nThread\tThe number of the available particles\n");
+    }
+    else {
+      printf("$PREFIX:RandomThreadOpenMP==false\nThread\tThe number of the available particles\n");
+    }
+
+    printf("$PREFIX: The particle buffer is full [MPI process=%i,OpenMP thread=%i]\nThread\tThe number of the available particles\n",PIC::ThisThread,thread);
+    for (thread=0;thread<Thread::NTotalThreads;thread++) printf("$PREFIX: %i\t%i\n",thread,Thread::AvailableParticleListLength[thread]);
+
+    exit(__LINE__,__FILE__,"The particle buffer is full");
+  }
 
   Thread::AvailableParticleListLength[thread]--;
   newptr=Thread::FirstPBufferParticle[thread];
@@ -693,5 +745,13 @@ void PIC::ParticleBuffer::Thread::RebalanceParticleList() {
     if (AvailableParticleListLength[RecvThread]>=nParticlePerThread-NTotalThreads) RecvThread++;
   }
   while ((SendThread<NTotalThreads)&&(RecvThread<NTotalThreads));
+
+  //check that all threads has particles
+  for (thread=0;thread<NTotalThreads;thread++) if (AvailableParticleListLength[thread]<=0) {
+    char msg[100];
+
+    sprintf(msg,"Error: AvailableParticleListLength[thread]==0 for thread=%i",thread);
+    exit(__LINE__,__FILE__,msg);
+  }
 
 }
