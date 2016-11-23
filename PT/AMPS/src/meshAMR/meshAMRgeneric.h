@@ -3426,7 +3426,7 @@ if (startNode->Temp_ID==77) {
 
 
   //collect all nodes that can intersect 'startNode'
-  const int nNeibListMax=200;
+  const int nNeibListMax=250;
   int nNeibListCounter=0,nlist;
 
 
@@ -3530,6 +3530,7 @@ if (startNode->Temp_ID==77) {
 
         t=findTreeNodeLimitedResolutionLevel(xSearchNode,searchNode->RefinmentLevel,searchNode);
         if (t==NULL) continue;
+        if (t->RefinmentLevel>searchNode->RefinmentLevel) exit(__LINE__,__FILE__,"Error: something is wrong in the serach procedure");
 
         AddNodeNeighborList(t,NeibList,nNeibListCounter,nNeibListMax,iSearchOffset,jSearchOffset,kSearchOffset,SearchStartBlockSize);
       }
@@ -8980,6 +8981,19 @@ nMPIops++;
        long int i,j,k,nd;
        cCenterNode *centerNode;
        int IntersectionCode=_AMR_BLOCK_INSIDE_DOMAIN_;
+
+       static long int nProcessedBlocks=0;
+       static  time_t LastTimeValue=time(NULL);
+       time_t TimeValue=time(NULL);
+
+       nProcessedBlocks++;
+
+       if (TimeValue-LastTimeValue>120.0) {
+         tm *ct=localtime(&TimeValue);
+
+         LastTimeValue=TimeValue;
+         printf("MESH: InitMeasure: Processed %i blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+       }
 
 
 #if _MESH_DIMENSION_ == 1
