@@ -78,6 +78,10 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
            //increment the particle counter
            nInjectedParticles++;
 
+           PIC::BC::nInjectedParticles[spec]++;
+           PIC::BC::ParticleProductionRate[spec]+=ParticleWeight/LocalTimeStep;
+           PIC::BC::ParticleMassProductionRate[spec]+=ParticleWeight*PIC::MolecularData::GetMass(spec)/LocalTimeStep;
+
            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
            #pragma omp task default (none) shared(ModelParticlesInjectionRate,LocalTimeStep,x0,e0,e1,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,startNode) \
              private (idim,c0,c1,x,v,newParticle,newParticleData) firstprivate (TimeCounter)
