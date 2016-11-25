@@ -2253,30 +2253,36 @@ void EMfields3D::calculateE(int cycle)
     eqValue (0.0, xkrylov, n3SolveNode);              // x=0 as we solve for the change
   }
   
-  // solver
+  // solve A.xKrylob = bKrylov for x being the change in E field (dE)
   GMRES(&Field::MaxwellImage, xkrylov, n3SolveNode,
 	bkrylov, 20, 200, GMREStol,doSolveForChange, this);
-  // move from krylov space to physical space
+
+  // move from krylov space to physical space: Eth = dE
   solver2phys(Exth,Eyth,Ezth,xkrylov,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
 
-  if(true && doSolveForChange){
-    // Add the change to the field value
+  if(doSolveForChange){
+    // Caclulate the fully implicit solution E* = E_n + dE
+    // Eth = Eth + 1.0*E, where Eth = dE originally, and Eth=E* after the update
     addscale(1.0,Exth,Ex,nxn,nyn,nzn);
     addscale(1.0,Eyth,Ey,nxn,nyn,nzn);
     addscale(1.0,Ezth,Ez,nxn,nyn,nzn);
   }
 
   #ifdef BATSRUS
+  // Apply BATSRUS boundary condition to Eth. 
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
   #endif
-  
+
+  // apply smoothing to Eth
+  smoothE();
+
+  // E_n+1 = 1/theta*E* -(1.0-theta)/theta*E_n = [ E* + (theta - 1)E ] / theta  (extrapolation for theta<1 ?)
+  // E = 1/theta*Eth -(1.0-theta)/theta*E = [ Eth + (theta - 1)E ] / theta
+  // for theta=1 (usual setting): E = Eth
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ez, Ezth, nxn, nyn, nzn);
-
-  // apply to smooth to electric field 3 times
-  smoothE();
-
+  
   // communicate so the interpolation can have good values
   communicateNodeBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
   communicateNodeBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
@@ -2661,57 +2667,59 @@ void EMfields3D::smoothE()
   double ***temp = newArr3(double, nxn, nyn, nzn);
 
   for (int icount = 1; icount < SmoothNiter + 1; icount++) {
-      communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
-      communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
-      communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+      communicateNodeBoxStencilBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+      communicateNodeBoxStencilBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+      communicateNodeBoxStencilBC(nxn, nyn, nzn, Ezth, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
       #ifdef BATSRUS
-      if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,false);
+      if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
       #endif 
       
       // Exth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            temp[i][j][k] = alpha * Ex[i][j][k] + beta3D * (Ex[i - 1][j][k] + Ex[i + 1][j][k] + Ex[i][j - 1][k] + Ex[i][j + 1][k] + Ex[i][j][k - 1] + Ex[i][j][k + 1]);
+            temp[i][j][k] = alpha * Exth[i][j][k] + beta3D * (Exth[i - 1][j][k] + Exth[i + 1][j][k] + Exth[i][j - 1][k] + Exth[i][j + 1][k] + Exth[i][j][k - 1] + Exth[i][j][k + 1]);
       	    //temp[i][j][k] = alpha * Ex[i][j][k] + beta2D * (Ex[i - 1][j][k] + Ex[i + 1][j][k] + Ex[i][j][k - 1] + Ex[i][j][k + 1]);
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            Ex[i][j][k] = temp[i][j][k];
+            Exth[i][j][k] = temp[i][j][k];
       // Eyth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            temp[i][j][k] = alpha * Ey[i][j][k] + beta3D * (Ey[i - 1][j][k] + Ey[i + 1][j][k] + Ey[i][j - 1][k] + Ey[i][j + 1][k] + Ey[i][j][k - 1] + Ey[i][j][k + 1]);
+            temp[i][j][k] = alpha * Eyth[i][j][k] + beta3D * (Eyth[i - 1][j][k] + Eyth[i + 1][j][k] + Eyth[i][j - 1][k] + Eyth[i][j + 1][k] + Eyth[i][j][k - 1] + Eyth[i][j][k + 1]);
       //temp[i][j][k] = alpha * Ey[i][j][k] + beta2D * (Ey[i - 1][j][k] + Ey[i + 1][j][k] + Ey[i][j][k - 1] + Ey[i][j][k + 1]);
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            Ey[i][j][k] = temp[i][j][k];
+            Eyth[i][j][k] = temp[i][j][k];
       // Ezth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            temp[i][j][k] = alpha * Ez[i][j][k] + beta3D * (Ez[i - 1][j][k] + Ez[i + 1][j][k] + Ez[i][j - 1][k] + Ez[i][j + 1][k] + Ez[i][j][k - 1] + Ez[i][j][k + 1]);
+            temp[i][j][k] = alpha * Ezth[i][j][k] + beta3D * (Ezth[i - 1][j][k] + Ezth[i + 1][j][k] + Ezth[i][j - 1][k] + Ezth[i][j + 1][k] + Ezth[i][j][k - 1] + Ezth[i][j][k + 1]);
       //temp[i][j][k] = alpha * Ez[i][j][k] + beta2D * (Ez[i - 1][j][k] + Ez[i + 1][j][k] + Ez[i][j][k - 1] + Ez[i][j][k + 1]);
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++)
-            Ez[i][j][k] = temp[i][j][k];
-
-      if(col->getCase()=="BATSRUS"){
-	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ex, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
-	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ey, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
-	communicateNodeBoxStencilBC(nxn, nyn, nzn, Ez, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
-	#ifdef BATSRUS
-	fixE_BATSRUS(vectX,vectY,vectZ,false);
-	#endif
-      }
+            Ezth[i][j][k] = temp[i][j][k];
       
   }
+
+
+  if(col->getCase()=="BATSRUS"){
+    communicateNodeBoxStencilBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+    communicateNodeBoxStencilBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+    communicateNodeBoxStencilBC(nxn, nyn, nzn, Ezth, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+#ifdef BATSRUS
+    fixE_BATSRUS(Exth,Eyth,Ezth,false);
+#endif
+  }
+  
   delArr3(temp, nxn, nyn);  
 }
 
