@@ -7,7 +7,7 @@
 class cSurfaceDataOrbiter {
 public:
   double EnergyTransferRate[_TOTAL_SPECIES_NUMBER_];
-  double MomentumTransferRate[_TOTAL_SPECIES_NUMBER_];
+  double MomentumTransferRateX[_TOTAL_SPECIES_NUMBER_],MomentumTransferRateY[_TOTAL_SPECIES_NUMBER_],MomentumTransferRateZ[_TOTAL_SPECIES_NUMBER_];
 
   void PrintVarableList(FILE* fout);  
   void Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataOrbiter** InterpolationFaceList,int *Stencil,int StencilLength);
