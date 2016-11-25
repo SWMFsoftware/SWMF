@@ -43,12 +43,34 @@ return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
   return res;
 }
 
-int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
-  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+  double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
+  int spec;
 
+  memcpy(vInitUnchanged,vInit,3*sizeof(double));
+
+  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
   vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
   vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
   vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
+
+  //sample the energy and momentum transfer rates
+  spec=PIC::ParticleBuffer::GetI(ptr);
+  mass=PIC::MolecularData::GetMass(spec);
+
+  LocalParticleWeight=startNode->block->GetLocalParticleWeight(spec);
+  LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+
+  dt=startNode->block->GetLocalTimeStep(spec);
+  RateFactor=mass*LocalParticleWeight/dt/TriangleCutFace->SurfaceArea;
+
+  TriangleCutFace->UserData.MomentumTransferRateX[spec]+=(vInit[0]-vInitUnchanged[0])*RateFactor;
+  TriangleCutFace->UserData.MomentumTransferRateY[spec]+=(vInit[1]-vInitUnchanged[1])*RateFactor;
+  TriangleCutFace->UserData.MomentumTransferRateZ[spec]+=(vInit[2]-vInitUnchanged[2])*RateFactor;
+
+  TriangleCutFace->UserData.EnergyTransferRate[spec]+=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
+      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
+
 
   return _PARTICLE_REJECTED_ON_THE_FACE_;
 }
@@ -293,6 +315,8 @@ int main(int argc,char **argv) {
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Orbiter::UpstreamBC::BoundingBoxInjectionRate;
   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::AdjustParticleWeight_ConstantWeightOverTimeStep_KeepMinParticleWeight(s);
 
   //init the particle buffer
 //  PIC::ParticleBuffer::Init(1000000);
