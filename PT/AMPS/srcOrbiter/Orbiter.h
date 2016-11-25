@@ -27,6 +27,11 @@ using namespace Exosphere;
     double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
   }
 
+  //sample calulated aerodynamcis properties
+  namespace Sampling {
+    extern double DragCorfficient;
+  }
+
   double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
   double GetTotalProduction(int spec,void *BoundaryElement);
 

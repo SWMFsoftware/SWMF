@@ -18,6 +18,8 @@ double Orbiter::UpstreamBC::Velocity[3]={-30.0E3,0.0,0.0};
 double Orbiter::UpstreamBC::NumberDensity=1.5E21;
 double Orbiter::UpstreamBC::Temperature=293.0;
 
+double Orbiter::Sampling::DragCorfficient=0.0;
+
 
 
 
