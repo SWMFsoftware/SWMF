@@ -95,7 +95,7 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=10.0E3;
+  double CharacteristicSpeed=30.0E3;
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
@@ -137,7 +137,7 @@ int main(int argc,char **argv) {
 
 
   PIC::Init_BeforeParser();
-  PIC::Alarm::SetAlarm(8*3600-20*60);
+  PIC::Alarm::SetAlarm(48*3600-30*60);
 
   Orbiter::Init_BeforeParser();
 
@@ -339,7 +339,7 @@ int main(int argc,char **argv) {
 
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
       PIC::RequiredSampleLength*=2;
-      if (PIC::RequiredSampleLength>40000) PIC::RequiredSampleLength=40000;
+      if (PIC::RequiredSampleLength>1000) PIC::RequiredSampleLength=1000;
 
 
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
