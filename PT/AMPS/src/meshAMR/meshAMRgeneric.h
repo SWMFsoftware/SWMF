@@ -3426,7 +3426,7 @@ if (startNode->Temp_ID==77) {
 
 
   //collect all nodes that can intersect 'startNode'
-  const int nNeibListMax=250;
+  const int nNeibListMax=1250;
   int nNeibListCounter=0,nlist;
 
 
