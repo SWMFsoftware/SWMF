@@ -2,6 +2,8 @@
 #ifndef _ORBITER_SURFACE_DATA_
 #define _ORBITER_SURFACE_DATA_
 
+#include "global.h"
+#include "specfunc.h"
 #include "mpichannel.h"
 
 class cSurfaceDataOrbiter {
