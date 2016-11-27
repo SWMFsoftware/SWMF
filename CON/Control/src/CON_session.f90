@@ -23,7 +23,7 @@ module CON_session
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
-       NameCompCheckKill
+       IsForcedStop, NameCompCheckKill
   use ModFreq, ONLY: is_time_to
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
   use CON_transfer_data, ONLY: transfer_real
@@ -300,6 +300,7 @@ contains
        if(is_time_to(CheckStop, nStep, tSimulation+DtTiny, DoTimeAccurate))then
           if(DoTestMe)write(*,*)NameSub,' checking do_stop_now'
           if(do_stop_now())then
+             IsForcedStop  = .true.
              IsLastSession = .true.
              EXIT TIMELOOP
           end if

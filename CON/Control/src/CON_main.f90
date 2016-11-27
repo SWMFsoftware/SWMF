@@ -102,12 +102,13 @@ contains
     IsStandAlone = .not. present(iComm)
 
     !\
-    ! Delete SWMF.SUCCESS, SWMF.STOP and SWMF.KILL files if found
+    ! Delete SWMF.SUCCESS, SWMF.DONE, SWMF.STOP and SWMF.KILL files if found
     !/
     if(is_proc0())then
-       call remove_file('SWMF.SUCCESS')
-       call remove_file('SWMF.STOP')
-       call remove_file('SWMF.KILL')
+       call remove_file('SWMF.SUCCESS') ! code successfully stopeed (no crash)
+       call remove_file('SWMF.DONE')    ! code is done with the whole run
+       call remove_file('SWMF.STOP')    ! stop the code when it listens
+       call remove_file('SWMF.KILL')    ! kill the code ASAP
     end if
 
     !\
@@ -188,7 +189,7 @@ contains
     !    call world_clean                                     \end{verbatim}
     !\end{itemize}
     ! The actual code is longer: verbose information is printed, timing
-    ! report is shown and the SWMF.SUCCESS file is written.
+    ! report is shown and the SWMF.SUCCESS and SWMF.DONE files are written.
     !EOP ---------------------------------------------------------------------
 
     if(is_proc0())then
@@ -227,6 +228,7 @@ contains
     ! Signal normal completion by writing an empty SWMF.SUCCESS file
     !/
     if(is_proc0()) call touch_file('SWMF.SUCCESS')
+    if(is_proc0() .and. .not. IsForcedStop) call touch_file('SWMF.DONE')
 
     !\
     ! Stop running

@@ -78,6 +78,9 @@ module CON_time
   ! How often shall we check cpu time and stop file. Default is never.
   type(FreqType):: CheckStop = FreqType(.false., -1, -1.0, 0, 0.0)
 
+  ! Did the code stop due to a stop condition?
+  logical :: IsForcedStop = .false.
+
   ! Name of component checking for the kill file
   character(len=2):: NameCompCheckKill = '!!'
 
