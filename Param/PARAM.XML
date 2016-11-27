@@ -264,6 +264,10 @@ corresponding condition is  not checked. The default values
 are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
 must be used in every session. The only exception is the last
 session, where the #ENDTIME command can be used instead of #STOP.
+
+If the code completes the last session of the run successfully, 
+both the SWMF.SUCCESS and the SWMF.DONE files are created in the 
+run directory.
 </command>
 
 <command name="CHECKKILL">
@@ -289,6 +293,8 @@ for the SWMF.KILL file. This makes sure that the run gets terminated
 essentially immediately. If NameCompCheckKill is set to the string '!!'
 then no check is performed at all. Otherwise NameCompCheckKill should
 contain the component ID of a component present in the LAYOUT.in file.
+
+If the code gets killed, no SWMF.SUCCESS or SWMF.DONE files are created.
 
 The default value is NameCompCheckKill='!!', i.e. no check is performed.
 </command>
@@ -324,6 +330,10 @@ synchronization of the components. The more frequent the checks
 are the less efficient the execution.  On the other hand the
 less frequent the checks are, the less control the user has to stop
 the code at a given time.
+
+If the code is stopped this way for any reason (for example the
+CPU time maximum is reached or the SWMF.STOP file was used), 
+an SWMF.SUCCESS file is created but no SWMF.DONE file is created.
 </command>
 
 <command name="CHECKSTOPFILE">
