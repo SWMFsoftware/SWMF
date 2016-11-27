@@ -67,7 +67,7 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
          PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
 
          #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-         #pragma omp parallel default(none)  shared(nInjectedParticles,ModelParticlesInjectionRate,LocalTimeStep,x0,e0,e1,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,startNode) \
+         #pragma omp parallel default(none)  shared(ParticleWeight,PIC::BC::nInjectedParticles,PIC::BC::ParticleProductionRate,PIC::BC::ParticleMassProductionRate,nInjectedParticles,ModelParticlesInjectionRate,LocalTimeStep,x0,e0,e1,Orbiter::UpstreamBC::Velocity,Orbiter::UpstreamBC::Temperature,ExternalNormal,spec,startNode) \
            private (idim,c0,c1,x,v,newParticle,newParticleData) firstprivate (TimeCounter)
            {
              #pragma omp single
