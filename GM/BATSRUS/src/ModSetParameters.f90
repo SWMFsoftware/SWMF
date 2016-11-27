@@ -812,17 +812,17 @@ subroutine MH_set_parameters(TypeAction)
            elseif (index(plot_string, 'box')>0)then
               plot_area = 'box'
               call read_var('TypeCoord', TypeCoordPlot_I(iFile))
-              call read_var('xMin',   plot_range(1,iFile))
-              call read_var('xMax',   plot_range(2,iFile))
-              if (plot_range(1, iFile) /= plot_range(2,iFile)) &
+              call read_var('x0',   plot_range(1,iFile))
+              call read_var('y0',   plot_range(2,iFile))
+              call read_var('z0',   plot_range(3,iFile))
+              call read_var('xLen',   plot_range(4,iFile))
+              if (plot_range(4, iFile) /= 0) &
                    call read_var('dX',   plot_dx(1,iFile))
-              call read_var('yMin', plot_range(3,iFile))
-              call read_var('yMax', plot_range(4,iFile))
-              if (plot_range(3, iFile) /= plot_range(4,iFile)) &
+              call read_var('yLen', plot_range(5,iFile))
+              if (plot_range(5, iFile) /= 0) &
                    call read_var('dY', plot_dx(2,iFile))
-              call read_var('zMin', plot_range(5,iFile))
-              call read_var('zMax', plot_range(6,iFile))
-              if (plot_range(5, iFile) /= plot_range(6,iFile)) &
+              call read_var('zLen', plot_range(6,iFile))
+              if (plot_range(6, iFile) /= 0) &
                    call read_var('dZ', plot_dx(3,iFile))
               call read_var('xAngle', plot_normal(1,iFile))
               call read_var('yAngle', plot_normal(2,iFile))

@@ -22,11 +22,11 @@ module ModPlotBox
 
   ! Resolution and range of current plot:
   real :: dX, dY, dZ
-  real :: xMin, xMax, yMin, yMax, zMin, zMax
+  real :: xMin, xMax, yMin, yMax, zMin, zMax, xLen, yLen, zLen
 
   ! Rotation angles around axis, center coordinates
   real :: xAngle, yAngle, zAngle
-  real :: X0_D(3)
+  real :: Xyz0_D(3)
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
@@ -54,22 +54,26 @@ contains
     ! Allocate results array and set up the box
     if(allocated(PlotVar_VIII)) RETURN
 
-    ! Get plot area info from ModIO arrays:
+    ! Get box resolution, center and size from ModIO arrays:
     dX   = abs(plot_dx(1, iFile))
     dY   = abs(plot_dx(2, iFile))
     dZ   = abs(plot_dx(3, iFile))
-    xMin = plot_range(1, iFile)
-    xMax = plot_range(2, iFile)
-    yMin = plot_range(3, iFile)
-    yMax = plot_range(4, iFile)
-    zMin = plot_range(5, iFile)
-    zMax = plot_range(6, iFile)
+    Xyz0_D = plot_range(1:3, iFile) 
+    xLen = plot_range(4, iFile)
+    yLen = plot_range(5, iFile)
+    zLen = plot_range(6, iFile)
+    
+    xMin = plot_range(1, iFile) - xLen/2
+    xMax = plot_range(1, iFile) + xLen/2
+    yMin = plot_range(2, iFile) - yLen/2
+    yMax = plot_range(2, iFile) + yLen/2
+    zMin = plot_range(3, iFile) - zLen/2
+    zMax = plot_range(3, iFile) + zLen/2
 
-    ! Get box orientation and center from ModIO arrays:
-    X0_D = (/ (xMax+xMin)/2.0,(yMax+yMin)/2.0,(yMax+yMin)/2.0 /)
+    ! Get box orientation from ModIO arrays:
     xAngle = plot_normal(1,iFile) * cDegtoRad
-    yAngle = plot_normal(1,iFile) * cDegtoRad
-    zAngle = plot_normal(1,iFile) * cDegtoRad
+    yAngle = plot_normal(2,iFile) * cDegtoRad
+    zAngle = plot_normal(3,iFile) * cDegtoRad
 
     ! Set number of points:
     nX = nint((xMax - xMin)/dX) + 1
@@ -113,10 +117,11 @@ contains
     use ModGeometry,    ONLY: rMin_BLK
     use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
-    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, MinI, MaxI,&
-         MinJ, MaxJ, Mink, MaxK
+    use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
+         MinI, MaxI, MinJ, MaxJ, Mink, MaxK
 
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz, rot_matrix_x, rot_matrix_y, &
+         rot_matrix_z
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -127,7 +132,7 @@ contains
     integer :: i, j, k, iVar
 
     real :: x, y, z, r, Lon, Lat
-    real :: Xyz_D(3)
+    real :: Xyz_D(3), XyzRot_D(3), XyzRotGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
     character(len=*), parameter :: NameSub='set_plot_box'
@@ -142,14 +147,43 @@ contains
 
     if (DoTestMe) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
-    ! Find box points and interpolate PlotVar
-    
-    
-    
-    
+    do k = 1, nZ
+       Xyz_D(3) = zMin + (k-1)*dZ
 
+       do j = 1, nY
+          Xyz_D(2) = yMin + (j-1)*dY
 
-    
+          do i = 1, nX
+             Xyz_D(1) = xMin + (i-1)*dX
+
+             XyzRot_D = matmul(rot_matrix_z(zAngle), &
+                  matmul(rot_matrix_y(yAngle), &
+                  matmul(rot_matrix_x(xAngle), Xyz_D)))
+
+             XyzrotGm_D = matmul(PlotToGm_DD, XyzRot_D)
+
+             ! Get generalized coordinates
+             call xyz_to_coord(XyzrotGm_D, Coord_D)
+
+             ! Normalize to block coordinates
+             CoordNorm_D = &
+                  (Coord_D - CoordMin_DB(:,iBlock))/CellSize_DB(:,iBlock) + 0.5
+
+             ! Check if point is inside block
+             if(any(CoordNorm_D < 0.5)) CYCLE
+             if(any(CoordNorm_D > nIjk_D + 0.5)) CYCLE
+
+             ! Compute the interpolated values at the current location
+             PlotVar_VIII(0,i,j,k) = 1.0
+             do iVar=1, nPlotVar
+                ! Interpolate up to ghost cells.
+                PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
+                     MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
+             end do
+          end do
+       end do
+    end do
+
   end subroutine set_plot_box
 
   !============================================================================
