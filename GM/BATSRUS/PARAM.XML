@@ -5492,6 +5492,29 @@ Default values are shown for the non-Runge-Kutta time integration schemes.
 For Runge-Kutta schemes UseUpdateCheck is forced to be false.
 </command>
 
+<command name="CHECKTIMESTEP">
+	 <parameter name="DoCheckTimeStep" type="logical" default="F"/>
+	 <parameter name="nCheckTimeStep" type="integer" minimum="1" 
+	 	    default="2"/>
+	 <parameter name="TimeStepMin" type="real" minimum="0" 
+	 	    default="1e-12"/>
+#CHECKTIMESTEP
+T		DoCheckTimeStep
+2		nCheckTimeStep
+1e-6		TimeStepMin
+
+This command is only effective in time accurate mode.
+
+If DoCheckTimeStep is true, then check if time step is smaller than
+TimeStepMin for nCheckTimeStep consecutive time steps. If it is, save
+the output files (but not restart) and stop the code.
+
+The current implementation only looks at the time step set before
+update check or other time step control was applied. 
+
+Default is DoCheckTimeStep false.
+</command>
+
 <command name="CONTROLTIMESTEP" alias="TIMESTEPCONTROL">
 	<parameter name="UseTimeStepControl" type="logical" default="F"/>
 #CONTROLTIMESTEP
