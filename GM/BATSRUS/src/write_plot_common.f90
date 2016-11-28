@@ -911,6 +911,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
   use ModFaceValue, ONLY: iRegionLowOrder_I
+  use ModPIC, ONLY: pic_find_region
   use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
        AmrCrit_IB, nAmrCrit, IsCartesian, &
        Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
@@ -1532,6 +1533,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(:,:,:,iVar) = State_VGB(Ew_,:,:,:,iBLK)
         end if
+     case('pic')
+        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+           PlotVar(i,j,k,iVar) = pic_find_region(iBLK,i,j,k)
+        end do; end do; end do
 
      case default
         ! Check if the name is one of the state variable names

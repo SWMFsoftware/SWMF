@@ -17,6 +17,7 @@ module ModPIC
   public:: pic_read_param
   public:: pic_init_region
   public:: pic_find_node
+  public:: pic_find_region
   
   logical, public:: UsePic = .false.
   
@@ -254,5 +255,30 @@ contains
     
     if(DoTestMe) write(*,*)'IsPicNode= ', IsPicNode_A(:)
   end subroutine pic_find_node
+  !===========================================================================
+
+  integer function pic_find_region(iBlock,i,j,k)
+    ! If a cell is inside the PIC region, return 1;
+    ! otherwise, return 0; 
+    use BATL_lib, ONLY: nDim, Xyz_DGB
+    
+    integer, intent(in) :: iBlock,i,j,k
+
+    integer:: iStatus
+    integer:: iRegion
+    real:: xyz_D(nDim)
+
+    xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
+
+    iStatus=0
+    do iRegion = 1, nRegionPic    
+       if( &
+            all(xyz_D>XyzMinPic_DI(1:nDim,iRegion)+DxyzPic_DI(1:nDim,iRegion)).and.&
+            all(Xyz_D<XyzMaxPic_DI(1:nDim,iRegion)-DxyzPic_DI(1:nDim,iRegion))) &
+            iStatus = 1
+    enddo
+
+    pic_find_region=iStatus
+  end function pic_find_region
   !===========================================================================
 end module ModPIC
