@@ -7,7 +7,7 @@ module ModPlotBox
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I
   use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
-  use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
+  use ModNumConst, ONLY: cDegToRad
 
   implicit none
   SAVE
@@ -27,6 +27,7 @@ module ModPlotBox
   ! Rotation angles around axis, center coordinates
   real :: xAngle, yAngle, zAngle
   real :: Xyz0_D(3)
+
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
@@ -119,9 +120,9 @@ contains
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK
+    use ModPhysics,     ONLY: rBody
 
-    use ModCoordTransform, ONLY: rlonlat_to_xyz, rot_matrix_x, rot_matrix_y, &
-         rot_matrix_z
+    use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     ! Arguments
     integer, intent(in) :: iBlock
@@ -131,7 +132,6 @@ contains
     ! Local variables
     integer :: i, j, k, iVar
 
-    real :: x, y, z, r, Lon, Lat
     real :: Xyz_D(3), XyzRot_D(3), XyzRotGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
@@ -150,23 +150,26 @@ contains
     ! Shift box elements with origin of box
     do k = 1, nZ
        Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
-
+       
        do j = 1, nY
           Xyz_D(2) = yMin + (j-1)*dY - Xyz0_D(2)
 
           do i = 1, nX
              Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
-             
+
+             ! When inside Body keep default plot values
+             if(sqrt(sum((Xyz_D + Xyz0_D)**2)) < rBody)CYCLE 
+                 
              ! Rotate box 
              XyzRot_D = matmul(rot_matrix_z(zAngle), &
                   matmul(rot_matrix_y(yAngle), &
                   matmul(rot_matrix_x(xAngle), Xyz_D)))
-
+             
              ! Shift box back and Get Gm coordinates
-             XyzrotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
-
+             XyzRotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
+             
              ! Get generalized coordinates
-             call xyz_to_coord(XyzrotGm_D, Coord_D)
+             call xyz_to_coord(XyzRotGm_D, Coord_D)
 
              ! Normalize to block coordinates
              CoordNorm_D = &
@@ -225,6 +228,8 @@ contains
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
+
+       ! Correct for double counting in MPI_reduce_real_array
        do k = 1, nZ
           do j = 1, nY; 
              do i = 1, nX; 
