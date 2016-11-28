@@ -4,8 +4,8 @@
 !=============================================================================
 module ModPlotBox
 
-  use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, plot_form, &
-       TypeFile_I
+  use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
+       plot_form, TypeFile_I
   use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
 
@@ -147,20 +147,23 @@ contains
 
     if (DoTestMe) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
+    ! Shift box elements with origin of box
     do k = 1, nZ
-       Xyz_D(3) = zMin + (k-1)*dZ
+       Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
 
        do j = 1, nY
-          Xyz_D(2) = yMin + (j-1)*dY
+          Xyz_D(2) = yMin + (j-1)*dY - Xyz0_D(2)
 
           do i = 1, nX
-             Xyz_D(1) = xMin + (i-1)*dX
-
+             Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
+             
+             ! Rotate box 
              XyzRot_D = matmul(rot_matrix_z(zAngle), &
                   matmul(rot_matrix_y(yAngle), &
                   matmul(rot_matrix_x(xAngle), Xyz_D)))
 
-             XyzrotGm_D = matmul(PlotToGm_DD, XyzRot_D)
+             ! Shift box back and Get Gm coordinates
+             XyzrotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
 
              ! Get generalized coordinates
              call xyz_to_coord(XyzrotGm_D, Coord_D)
