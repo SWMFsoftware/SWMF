@@ -36,6 +36,11 @@ module ModTimeStepControl
        IncreaseStepLevel2 = 1.2, &
        IncreaseStepFactor = 1.05
 
+  ! Minimum time step checking
+  logical:: DoCheckTimeStep = .false.
+  integer:: nCheckTimeStep = 0, iCheckTimeStep = 0
+  real   :: TimeStepMin = 0.0
+
 contains
 
   !===========================================================================
@@ -86,6 +91,10 @@ contains
                NameVarControl)
           iVarControl_I(iControl) = iVar
        end do
+    case("#CHECKTIMESTEP")
+       call read_var('DoCheckTimeStep', DoCheckTimeStep)
+       call read_var('nCheckTimeStep',  nCheckTimeStep)
+       call read_var('TimeStepMin'   ,  TimeStepMin)
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -290,8 +299,8 @@ contains
     use ModB0,       ONLY: B0_DGB
     use ModGeometry, ONLY: true_cell, true_BLK, XyzStart_BLK
     use ModImplicit, ONLY: UsePartImplicit
-    use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitX_, UnitU_, UnitT_, UnitB_, &
-         UnitRho_, UnitP_, Gamma
+    use ModPhysics,  ONLY: No2Si_V, Si2No_V, No2Io_V, &
+         UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
     use ModNumConst
     use ModMpi
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB
@@ -301,6 +310,8 @@ contains
     integer :: iBlock
     integer :: iError, Ijk_D(3), i, j, k
     real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
+
+    real :: DtDim
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_global_timestep'
@@ -431,6 +442,31 @@ contains
 
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
+
+    ! Check if time step has been too small for nCheckTimeStep steps
+    if(DoTestMe)write(*,*) NameSub,' DoCheckTimeStep=', DoCheckTimeStep
+
+    if(DoCheckTimeStep)then
+       DtDim = Dt*No2Io_V(UnitT_)
+       if(DoTestMe)write(*,*) NameSub,' checking DtDim=', DtDim
+       if(DtDim < TimeStepMin)then
+          iCheckTimeStep = iCheckTimeStep + 1
+          if(DoTestMe)write(*,*) NameSub,' iCheckTimeStep=', iCheckTimeStep
+          if(iCheckTimeStep >= nCheckTimeStep)then
+             if(iProc==0)then
+                write(*,*) NameSub,' ERROR: time step=', &
+                     DtDim,' is smaller than TimeStepMin=', TimeStepMin, &
+                     ' for the last ',iCheckTimeStep, ' time steps'
+                write(*,*) NameSub,' saving output files before abort'
+             end if
+             call BATS_save_files('FINAL')
+             if(iProc==0) call stop_mpi(NameSub//' time steps are too small')
+          end if
+       else
+          ! Reset counter for small time steps
+          iCheckTimeStep = 0
+       end if
+    end if
 
     if(DoTestMe)write(*,*) NameSub, ' finished with Dt=', Dt
 
