@@ -2508,7 +2508,7 @@ MovingLoop:
 
 
       do {
-        code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace) : _PARTICLE_DELETED_ON_THE_FACE_;
+        code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace,newNode) : _PARTICLE_DELETED_ON_THE_FACE_;
 
 
 /*      double c=vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2];
@@ -2966,7 +2966,7 @@ ProcessPhotoChemistry:
               int code;
 
               do {
-                code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,t->TriangleFace) : _PARTICLE_DELETED_ON_THE_FACE_;
+                code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,t->TriangleFace,newNode) : _PARTICLE_DELETED_ON_THE_FACE_;
 
                 if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
                   PIC::ParticleBuffer::DeleteParticle(ptr);
