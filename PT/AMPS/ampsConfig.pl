@@ -620,12 +620,12 @@ sub ReadMainBlock {
     elsif ($s0 eq "TRAJECTORYINTERSECTIONWITHBLOCKFACES") {
       ($s0,$s1)=split(' ',$s1,2);
       
-      if(    $s0 eq "ON") {
-	  $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";
-      }elsif($s0 eq "OFF") {
-	  $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";
-      }else{
-	  die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      if ($s0 eq "ON") {
+	 $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";
+      } elsif ($s0 eq "OFF") {
+        $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";
+      } else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }       
     
@@ -1631,6 +1631,16 @@ sub Sampling {
               die "#2 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
+          elsif ($InputLine eq "SAMPLINGSCALE") {
+            ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+            if ($InputLine eq "LINEAR") {
+              ampsConfigLib::ChangeValueOfVariable("int PIC::EnergyDistributionSampleRelativistic::EnergySamplingMode","PIC::EnergyDistributionSampleRelativistic::_LINEAR_SAMPLING_SCALE_","pic/pic_sample_energy_distribution_relativistic.cpp");   
+            }
+            elsif ($InputLine eq "LOGARITHMIC") {
+              ampsConfigLib::ChangeValueOfVariable("int PIC::EnergyDistributionSampleRelativistic::EnergySamplingMode","PIC::EnergyDistributionSampleRelativistic::_LOGARITHMIC_SAMPLING_SCALE_","pic/pic_sample_energy_distribution_relativistic.cpp");
+            }
+          }
           elsif ($InputLine eq "NSAMPLEINTERVALS") {
             ($InputLine,$InputComment)=split(' ',$InputComment,2);
             
@@ -1817,19 +1827,29 @@ sub ParticleCollisionModel {
     if ($InputLine eq "MODEL") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
-      if ($InputLine eq "HS") {
+      if ($InputLine eq "NTC") {
         ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
-        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL_","_PIC__PARTICLE_COLLISION_MODEL__HS_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL_","_PIC__PARTICLE_COLLISION_MODEL__NTC_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "MF") {
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL_","_PIC__PARTICLE_COLLISION_MODEL__MF_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
         $ModelIsOnFlag=0;
       }  
       else {
-        die "Unknown option\n";
+        die "Unknown option (line=$line)\n";
       }
     }
     
+    elsif ($InputLine eq "COLLISIONLIMITINGTHREHOLD") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      ampsConfigLib::ChangeValueOfVariable("double PIC::MolecularCollisions::ParticleCollisionModel::CollisionLimitingThrehold",$InputLine,"pic/pic_particle_collision_models.cpp");
+    }      
+      
     elsif ($InputLine eq "SAMPLECOLLISIONFREQUENCY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
@@ -1853,6 +1873,8 @@ sub ParticleCollisionModel {
       elsif ($InputLine eq "CONST") {
         my @CrossSectionTable;
         my ($t0,$t1,$t2,$t3,$s0,$s1,$cnt);
+
+        ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_","_PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_","pic/picGlobal.dfn");
         
         $InputComment=~s/[(),=]/ /g;
                 
