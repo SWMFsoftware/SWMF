@@ -204,7 +204,8 @@ at the end of each time step
 
 //the mode of particle collision model
 #define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_OFF_
-#define _PIC__PARTICLE_COLLISION_MODEL_ _PIC__PARTICLE_COLLISION_MODEL__HS_
+#define _PIC__PARTICLE_COLLISION_MODEL_ _PIC__PARTICLE_COLLISION_MODEL__NTC_
+#define _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_  _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_
 
 //the functions that are used for the user defined collision models
 #define _PIC__PARTICLE_COLLISION_MODEL__MEAN_CR_SIGMA_FUNCTION_    0

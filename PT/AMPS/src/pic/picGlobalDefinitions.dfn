@@ -143,8 +143,13 @@ species number (between reactions). Each segment is saved in the trajectory file
 
 
 //collision models
-#define _PIC__PARTICLE_COLLISION_MODEL__HS_            0
-#define _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_  1
+#define _PIC__PARTICLE_COLLISION_MODEL__NTC_            0
+#define _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_   1
+#define _PIC__PARTICLE_COLLISION_MODEL__MF_             2
+
+//collision cross section models
+#define _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__USER_DEFINED_   0
+#define _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_            1
 
 //sampling of the parallel and normal kinetic temperature
 #define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_                                   0
