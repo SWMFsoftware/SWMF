@@ -480,7 +480,81 @@ double PIC::ParticleWeightTimeStep::GetGlobalTimeStep(int spec) {
   return -1.0;
 }
 
+//====================================================
+//adjust particle weight so Weight/dT=const in all blocks (need to be called after the time step and particle weight are initialized
+void PIC::ParticleWeightTimeStep::AdjustParticleWeight_ConstantWeightOverTimeStep(int spec,double WeightOverTimeStepRatio,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    double dt;
+
+    if (startNode->block!=NULL) {
+      dt=startNode->block->GetLocalTimeStep(spec);
+      startNode->block->SetLocalParticleWeight(WeightOverTimeStepRatio*dt,spec);
+    }
+  }
+  else {
+    int i;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) AdjustParticleWeight_ConstantWeightOverTimeStep(spec,WeightOverTimeStepRatio,downNode);
+  }
+}
+
+double PIC::ParticleWeightTimeStep::GetMinLocalParticleWeightValue(int spec,double &WeightOverTimeStepRatio,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  double res=-1.0;
+  double WeightOverTimeStepRatioLocal,dt;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    double dt;
+
+    if (startNode->block!=NULL) {
+      res=startNode->block->GetLocalParticleWeight(spec);
+      dt=startNode->block->GetLocalTimeStep(spec);
+      WeightOverTimeStepRatio=res/dt;
+    }
+  }
+  else {
+    int i;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      double t;
+
+      t=GetMinLocalParticleWeightValue(spec,WeightOverTimeStepRatioLocal,downNode);
+
+      if ((t>0.0)&&((res<0.0)||(res>t))) res=t,WeightOverTimeStepRatio=WeightOverTimeStepRatioLocal;
+    }
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //exchange results between all processors
+    double ParticleWeightTable[PIC::nTotalThreads],WeightOverTimeStepRatioTable[PIC::nTotalThreads];
+    int thread;
+
+    MPI_Gather(&res,1,MPI_DOUBLE,ParticleWeightTable,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Gather(&WeightOverTimeStepRatio,1,MPI_DOUBLE,WeightOverTimeStepRatioTable,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (PIC::ThisThread==0) {
+      res=-1.0;
+
+      for (thread=0;thread<PIC::nTotalThreads;thread++) if ((res<0.0)|| ((ParticleWeightTable[thread]>0.0)&&(res>ParticleWeightTable[thread])) ) {
+        res=ParticleWeightTable[thread];
+        WeightOverTimeStepRatio=WeightOverTimeStepRatioTable[thread];
+      }
+    }
+
+    MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(&WeightOverTimeStepRatio,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+  }
+
+  return res;
+}
 
 
+void PIC::ParticleWeightTimeStep::AdjustParticleWeight_ConstantWeightOverTimeStep_KeepMinParticleWeight(int spec) {
+  double WeightOverTimeStepRatio,MinValueParticleWeight;
+
+  MinValueParticleWeight=GetMinLocalParticleWeightValue(spec,WeightOverTimeStepRatio);
+  AdjustParticleWeight_ConstantWeightOverTimeStep(spec,WeightOverTimeStepRatio);
+}
 
 
