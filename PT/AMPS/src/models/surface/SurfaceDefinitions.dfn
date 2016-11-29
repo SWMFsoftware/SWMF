@@ -1,0 +1,17 @@
+//$Id$
+//definitions used in the surface model
+
+#ifndef _SURFACE_DEFINITIONS_
+#define _SURFACE_DEFINITIONS_
+
+//the types of the surface temperature models
+#define _SURFACE__TEMPERATURE_MODEL__ISOTHERMAL_     0
+
+//the types of the gas-surface interaction models
+#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL__DIFFUSE_REFLECTION_          0
+#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL__SPECULAR_REFLECTION_         1
+#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL__CCL_                         2
+#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL__MAXWELL_                     3
+#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL__QUASI_SPECULAR_REFLECTION_   4   
+
+#endif
