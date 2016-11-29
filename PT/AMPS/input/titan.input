@@ -106,7 +106,7 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
 
 
 #ParticleCollisions 
-  model = HS ! HS !!off !HS ! HS, off
+  model = NTC ! HS !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 

@@ -91,7 +91,7 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
 !  define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_  _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_
 
-  define _PIC__PARTICLE_COLLISION_MODEL_   _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_ !!_PIC__PARTICLE_COLLISION_MODEL_HS_
+  define _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_   _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__USER_DEFINED_ !!_PIC__PARTICLE_COLLISION_MODEL_HS_
   define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
 
   define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_
@@ -111,11 +111,11 @@ UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=Surface
 
 
 #ParticleCollisions
-!  model = HS !!off !HS ! HS, off
+!  model = NTC !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
 
-  CollisionCrossSection=const \\ !const, function
-    const (H2O,H2O)= 3.4E-19 
+! CollisionCrossSection=const \\ !const, function
+!   const (H2O,H2O)= 3.4E-19 
 #endParticleCollisions
 
 #IDF

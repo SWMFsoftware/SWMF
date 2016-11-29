@@ -68,7 +68,7 @@ CouplerMode=swmf !!off, ices, swmf
 #endUserDefinitions
 
 #ParticleCollisions 
-  model = HS !!off !HS ! HS, off
+  model = NTC !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
