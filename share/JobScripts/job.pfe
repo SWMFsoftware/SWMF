@@ -106,6 +106,9 @@ exit
 # Do not continue unless the job finished successfully
 if(! -f SWMF.SUCCESS) exit
 
+# Do not continue if the whole run is done
+if(-f SWMF.DONE) exit
+
 # Link latest restart files
 ./Restart.pl
 
@@ -113,5 +116,5 @@ if(! -f SWMF.SUCCESS) exit
 # if(! -f PARAM.in.start) cp PARAM.in PARAM.in.start
 # if(-f PARAM.in.restart) cp PARAM.in.restart PARAM.in
 
-# Check final time/iteration and resubmit if not done (modify as needed!)
-if(! -d RESTART__t0008.0000h) qsub job.pfe
+# Resubmit job
+qsub job.pfe
