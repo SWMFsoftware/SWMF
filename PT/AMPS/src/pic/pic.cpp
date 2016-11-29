@@ -161,8 +161,10 @@ int PIC::TimeStep() {
   ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ParticleCollisionModel_;
   ParticleCollisionTime=MPI_Wtime();
 
-  #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+  #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__NTC_
   PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+  #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__MF_
+  PIC::MolecularCollisions::ParticleCollisionModel::mf();
   #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
   PIC::MolecularCollisions::ParticleCollisionModel::ntc();
   #else
