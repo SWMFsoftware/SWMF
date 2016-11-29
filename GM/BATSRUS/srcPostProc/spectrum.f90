@@ -1,7 +1,7 @@
 !comments!!!
 program spectrum
 
-  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi
+  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi, rSun
 
   implicit none
 
@@ -167,10 +167,8 @@ contains
           iWave = nWave + iWaveBin
 
           ! Save intensity and coordinate into global array
-          ! Convert intensity to [erg cm^-2 sr^-1 s^-1 A^-1]
           Intensity_VIII(1,iWave,:,:) = &
-               SpectrumTable_I(iWaveInterval)%Spectrum_III(:,:,iWaveBin) * &
-               10.**7
+               SpectrumTable_I(iWaveInterval)%Spectrum_III(:,:,iWaveBin)
           CoordWave_I(iWave) = WavelengthMin + (iWaveBin - 0.5)*dWaveBin
        end do
        ! Finished processing this interval
@@ -303,7 +301,11 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx
+             ! Ainstrument from m^2 to cm^2 --> * 1e4
+             ! Dist from m to cm --> * 1e2
+             ! A/Dist^2 cancels
+             ! dx from Rs to cm --> * rSun * 1e2
+             FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx*rSun*1e2
              
              call disperse_line(iInterval, iCenter, LambdaSI, DeltaLambda, FluxMono)
 
@@ -493,14 +495,14 @@ contains
     character(len=lString)      :: StringHeader
     character(len=lString)      :: NameVar
 
-    integer                     :: nStep
+    integer                     :: nStep, i, j, k
 
-    real                        :: Time
+    real                        :: Time, dZnew
 
     integer                     :: nVarName, iVar
     integer, parameter          :: MaxNameVar = 100
     character(len=20)           :: NameVar_V(MaxNameVar)
-    
+
     real                        :: MinWavelength, MaxWavelength
 
     real,allocatable            :: VarIn_VIII(:,:,:,:)
@@ -548,11 +550,8 @@ contains
        allocate(Var_VIII(11,n1,n2,n3))
     endif
 
-!    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
-!         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
-    if(IsInstrument .and. nPixel /= n3)write(*,*)&
-         '!!! nPixel /= n3 !!! nPixel = ',nPixel,' and n3 = ',n3
-    
+    !    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
+    !         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
 
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
@@ -562,7 +561,7 @@ contains
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
-       
+
        allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3,nWavelengthBin))
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(nWavelengthBin+1))
 
@@ -636,13 +635,36 @@ contains
        end do
     endif
 
+    deallocate(VarIn_VIII)
+
+    if(IsInstrument .and. nPixel /= n3) then
+       write(*,*)'!!! nPixel /= n3, interpolate from n3 to nPixel!!! nPixel = ',nPixel,' and n3 = ',n3
+       allocate(VarIn_VIII(nVar,n1,n2,n3))
+
+       VarIn_VIII =  Var_VIII
+       deallocate(Var_VIII)
+       allocate(Var_VIII(nVar,n1,n2,nPixel))
+       dZnew = (CoordMax_D(3)-CoordMin_D(3))/nPixel
+
+       ! Interpolate to new grid
+       do iVar=1, nVar
+          do k = 1, nPixel
+             Var_VIII(iVar,:,:,k) = &
+                  VarIn_VIII(iVar,:,:,1) + k*dZnew * &
+                  (VarIn_VIII(iVar,:,:,1) - VarIn_VIII(iVar,:,:,n3)) / &
+                  max(1.0,(CoordMax_D(3)- CoordMin_D(3)))
+          end do
+       end do
+       n3 = nPixel
+    endif
+
+    deallocate(VarIn_VIII)
+
     if(IsNoAlfven)then
        Var_VIII(I01_,1:n1,1:n2,1:n3) = 0
        Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
        write(*,*)"IsNoAlfven ON !!!"
     endif
-
-    deallocate(VarIn_VIII)
 
     LOS_D = CoordMax_D-CoordMin_D
     LOSnorm_D  = LOS_D/sqrt(max(sum(LOS_D**2), 1e-30))
@@ -723,6 +745,7 @@ contains
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
 
        ! Check if this belongs to the same line
+       if(IsVerbose)write(*,*)'LineWavelength = ',LineWavelength
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN) + 1
@@ -748,15 +771,11 @@ contains
 
           if(IsVerbose)then
              write(*,*)'LineWavelength = ', LineTable_I(iLine)%LineWavelength
-             write(*,*)'log(g_II(iMin,jMin:jMax)) = ', &
-                  log10(g_II(iMin,jMin:jMax))
-             write(*,*)'log(g_II(iMax,jMin:jMax)) = ', &
-                  log10(g_II(iMax,jMin:jMax))
           endif
        end if
 
        if(iError /= 0) EXIT READLOOP
-
+       if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
        ! Check if wavelength is inside any of the intervals
        do iWavelengthInterval = 1, nWavelengthInterval
           if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval)) CYCLE
@@ -765,7 +784,7 @@ contains
           ! New line of interest found
           iLine = iLine + 1
           if(iLine > nMaxLine) call CON_stop('Too many waves, increase MaxWave')
-          
+
           FirstLineWavelength = LineWavelength
           DoStore = .true.
           nLineFound = nLineFound + 1
