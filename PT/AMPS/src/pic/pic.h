@@ -1334,7 +1334,7 @@ namespace PIC {
     }
 
     inline double GetRefDiam(int s0,int s1) {
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+#if _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_ == _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_
       return MolecularModels::HS::GetRefDiam(s0,s1);
 #else
       exit(__LINE__,__FILE__,"not implemented");
@@ -1343,7 +1343,7 @@ namespace PIC {
     }
 
     inline double GetDiam(int s0,int s1) {
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+#if _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_ == _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_
       return MolecularModels::HS::GetRefDiam(s0,s1);
 #else
       exit(__LINE__,__FILE__,"not implemented");
@@ -1352,7 +1352,7 @@ namespace PIC {
     }
 
     inline double GetTotalCrossSect(double Vrel,int ptr0,int s0,int ptr1,int s1,long int ncell) {
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+#if _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_ == _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_
       return MolecularModels::HS::GetTotalCrossSection(s0,s1);
 #else
       exit(__LINE__,__FILE__,"not implemented");
@@ -2587,6 +2587,9 @@ namespace PIC {
     //collisions between model particles
     namespace ParticleCollisionModel {
 
+      //the limit of the collision number per a single model particles
+      extern double CollisionLimitingThrehold;
+
       //sample collision statistics
       namespace CollsionFrequentcySampling {
         extern int SamplingBufferOffset;
@@ -3159,7 +3162,7 @@ namespace PIC {
     typedef int (*fProcessOutsideDomainParticles) (long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     extern fProcessOutsideDomainParticles ProcessOutsideDomainParticles;
 
-    typedef int (*fProcessTriangleCutFaceIntersection) (long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace);
+    typedef int (*fProcessTriangleCutFaceIntersection) (long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     extern fProcessTriangleCutFaceIntersection ProcessTriangleCutFaceIntersection;
 
     void Init_BeforeParser();
@@ -3217,6 +3220,11 @@ namespace PIC {
     void copyLocalParticleWeightDistribution(int specTarget,int specSource,double ProportionaltyCoefficient=1.0);
     void copyLocalTimeStepDistribution(int specTarger,int specSource,double ProportionaltyCoefficient=1.0);
 
+    //adjust particle weight so Weight/dT=const in all blocks (need to be called after the time step and particle weight are initialized
+    void AdjustParticleWeight_ConstantWeightOverTimeStep(int spec,double WeightOverTimeStepRatio,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+    void AdjustParticleWeight_ConstantWeightOverTimeStep_KeepMinParticleWeight(int spec);
+
+    double GetMinLocalParticleWeightValue(int spec,double &WeightOverTimeStepRatio,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
   }
 
   //in case of time-dependent model runs with glocal time stop for all specis -> count the physical time of the simulation
