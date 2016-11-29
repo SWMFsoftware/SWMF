@@ -150,12 +150,12 @@ module ModUser
   real :: xPerturbedSwMinIO = 1.5e4, xPerturbedSwMaxIO = 1.6e4
   real :: PerturbedSwNIO = 10.0
   real :: PerturbedSwUxIO = 400.0, PerturbedSwUyIO = 0.0, PerturbedSwUzIO = 0.0
-  real :: PerturbedSwTIO = 1.5e5
+  real :: PerturbedSwTIO = 1.5e5, PerturbedSwTeIO = 1.5e5
   real :: PerturbedSwBxIO = 5.0, PerturbedSwByIO = 0.0, PerturbedSwBzIO = 0.0
-  real :: xPerturbedSwMin, xPerturbedSwMax, PerturbedSwN, PerturbedSwT
+  real :: xPerturbedSwMin, xPerturbedSwMax, PerturbedSwN, PerturbedSwRho
+  real :: PerturbedSwT,  PerturbedSwTe
   real :: PerturbedSwUx, PerturbedSwUy, PerturbedSwUz
   real :: PerturbedSwBx, PerturbedSwBy, PerturbedSwBz
-  real :: PerturbedSwRho
 
   !! Make the photo- and electron impact ionization rate global arrays for
   !! user_set_plot_var
@@ -256,6 +256,7 @@ contains
           call read_var('xPerturbedSwMaxIO', xPerturbedSwMaxIO)
           call read_var('PerturbedSwNIO',    PerturbedSwNIO)
           call read_var('PerturbedSwTIO',    PerturbedSwTIO)
+          call read_var('PerturbedSwTeIO',   PerturbedSwTeIO)
           call read_var('PerturbedSwUxIO',   PerturbedSwUxIO)
           call read_var('PerturbedSwUyIO',   PerturbedSwUyIO)
           call read_var('PerturbedSwUzIO',   PerturbedSwUzIO)
@@ -421,6 +422,7 @@ contains
     PerturbedSwUy     = PerturbedSwUyIO*Io2NO_V(UnitU_)
     PerturbedSwUz     = PerturbedSwUzIO*Io2NO_V(UnitU_)
     PerturbedSwT      = PerturbedSwTIO*Io2NO_V(UnitTemperature_)
+    PerturbedSwTe     = PerturbedSwTeIO*Io2NO_V(UnitTemperature_)
     PerturbedSwBx     = PerturbedSwBxIO*Io2NO_V(UnitB_)
     PerturbedSwBy     = PerturbedSwByIO*Io2NO_V(UnitB_)
     PerturbedSwBz     = PerturbedSwBzIO*Io2NO_V(UnitB_)
@@ -483,6 +485,8 @@ contains
                PerturbedSwNIO, PerturbedSwN
           write(*,*) 'PerturbedSwTIO, PerturbedSwT   =', &
                PerturbedSwTIO, PerturbedSwT
+          write(*,*) 'PerturbedSwTeIO,PerturbedSwTe  =', &
+               PerturbedSwTeIO, PerturbedSwTe
           write(*,*) 'PerturbedSwUxIO, PerturbedSwUx =', &
                PerturbedSwUxIO, PerturbedSwUx
           write(*,*) 'PerturbedSwUyIO, PerturbedSwUy =', &
@@ -4141,25 +4145,6 @@ contains
                 State_VGB(H2OpP_,i,j,k,iBlock)   = &
                      State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed
 
- ! Solar wind, assuming that ratioPerturbedSw is small enough
- !             ratioPerturbedSw = ratioPerturbed*LowDensityRatio
- !
- !             State_VGB(SwRho_,i,j,k,iBlock) = &
- !                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw
- !             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
- !                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw
- !             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
- !                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw
- !             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
- !                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw
- !             State_VGB(SwP_,i,j,k,iBlock)= &
- !                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw
- !
- !             ! Magnetic field
- !             State_VGB(Bx_,i,j,k,iBlock) = 0
- !             State_VGB(By_,i,j,k,iBlock) = 0
- !             State_VGB(Bz_,i,j,k,iBlock) = 0
-
              else if (r_BLK(i,j,k,iBlock) <= R1Perturbed) then
                 alpha = (r_BLK(i,j,k,iBlock)-R0Perturbed) / &
                      (R1Perturbed-R0Perturbed)
@@ -4184,29 +4169,6 @@ contains
                      State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed*beta + &
                      SW_p*LowDensityRatio*alpha
 
-! Solar wind
-!             State_VGB(SwRho_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
-!                  RhoSw*alpha
-!             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-!                  RhoSw*SW_Ux*alpha
-!             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-!                  RhoSw*SW_Uy*alpha
-!             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
-!                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-!                  RhoSw*SW_Uz*alpha
-!             State_VGB(SwP_,i,j,k,iBlock)= &
-!                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
-!                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))*alpha
-!
-!
-!             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx*alpha
-!             State_VGB(By_,i,j,k,iBlock) = SW_By*alpha
-!             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz*alpha
-
-
              else
                 ! Far away from the comet, both ions are the same as the
                 ! solar wind conditions
@@ -4227,6 +4189,29 @@ contains
                 State_VGB(By_,i,j,k,iBlock) = SW_By
                 State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
              end if
+
+             ! Total fluid
+             State_VGB(Rho_,i,j,k,iBlock)       = &
+                  sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+             State_VGB(RhoUx_,i,j,k,iBlock)     = &
+                  sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+             State_VGB(RhoUy_,i,j,k,iBlock)     = &
+                  sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+             State_VGB(RhoUz_,i,j,k,iBlock)     = &
+                  sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+
+             ! Electron pressure
+             if(UseElectronPressure) then
+                State_VGB(P_,i,j,k,iBlock)      = &
+                     sum(State_VGB(iPIon_I,i,j,k,iBlock))
+                State_VGB(Pe_,i,j,k,iBlock)     = &
+                     State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
+             else
+                State_VGB(P_,i,j,k,iBlock)      = &
+                     sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
+                     (1.+ElectronPressureRatio)
+             end if
+
           else
              if (Xyz_DGB(x_,i,j,k,iBlock) >= xPerturbedSwMin .and. &
                   Xyz_DGB(x_,i,j,k,iBlock) <= xPerturbedSwMax) then
@@ -4238,30 +4223,30 @@ contains
                 State_VGB(Bx_,i,j,k,iBlock) = PerturbedSwBx
                 State_VGB(By_,i,j,k,iBlock) = PerturbedSwBy
                 State_VGB(Bz_,i,j,k,iBlock) = PerturbedSwBz
+
+                ! Total fluid
+                State_VGB(Rho_,i,j,k,iBlock)       = &
+                     sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+                State_VGB(RhoUx_,i,j,k,iBlock)     = &
+                     sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+                State_VGB(RhoUy_,i,j,k,iBlock)     = &
+                     sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+                State_VGB(RhoUz_,i,j,k,iBlock)     = &
+                     sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+
+                if(UseElectronPressure) then
+                   State_VGB(P_,i,j,k,iBlock)      = &
+                        sum(State_VGB(iPIon_I,i,j,k,iBlock))
+                   State_VGB(Pe_,i,j,k,iBlock)     = PerturbedSwN*PerturbedSwTe
+                else
+                   State_VGB(P_,i,j,k,iBlock)      = &
+                        sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
+                        (1.+ElectronPressureRatio)
+                end if
+
              end if
           end if
 
-          ! Total fluid
-          State_VGB(Rho_,i,j,k,iBlock)       = &
-               sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-          State_VGB(RhoUx_,i,j,k,iBlock)     = &
-               sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-          State_VGB(RhoUy_,i,j,k,iBlock)     = &
-               sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-          State_VGB(RhoUz_,i,j,k,iBlock)     = &
-               sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
-          ! Electron pressure
-          if(UseElectronPressure) then
-             State_VGB(P_,i,j,k,iBlock)      = &
-                  sum(State_VGB(iPIon_I,i,j,k,iBlock))
-             State_VGB(Pe_,i,j,k,iBlock)     = &
-                  State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
-          else
-             State_VGB(P_,i,j,k,iBlock)      = &
-                  sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-                  (1.+ElectronPressureRatio)
-          end if
        end do; end do; end do
 
        call calc_energy_cell(iBlock)
