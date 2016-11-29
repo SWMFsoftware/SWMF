@@ -220,8 +220,7 @@ contains
     real                           :: FluxMono
     integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
-    real                           :: LambdaSI, Lambda0SI, DeltaLambda, &
-         DeltaLambda2
+    real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambdaSI2
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
@@ -287,9 +286,9 @@ contains
              LogTe = log10(max(Var_VIII(te_,i,jPixel,kPixel),1e-30))
 
              ! Add instrumental broadening if there is any
-             DeltaLambda2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
-             if(IsInstrument)DeltaLambda2 = DeltaLambda2 + dLambdaInstr2
-             DeltaLambda = sqrt(DeltaLambda2)
+             dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
+             if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
+             dLambdaSI = sqrt(dLambdaSI2)
              
              ! Get the contribution function
              iNMin  = LineTable_I(iLine)%iMin
@@ -303,11 +302,11 @@ contains
              ! Calculate flux and spread it on the Spectrum_II grids
              ! Ainstrument from m^2 to cm^2 --> * 1e4
              ! Dist from m to cm --> * 1e2
-             ! A/Dist^2 cancels
+             ! A/Dist^2 conversions cancel
              ! dx from Rs to cm --> * rSun * 1e2
              FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx*rSun*1e2
              
-             call disperse_line(iInterval, iCenter, LambdaSI, DeltaLambda, FluxMono)
+             call disperse_line(iInterval, iCenter, LambdaSI, dLambdaSI, FluxMono)
 
           end do
        end do
@@ -656,9 +655,8 @@ contains
           end do
        end do
        n3 = nPixel
+       deallocate(VarIn_VIII)
     endif
-
-    deallocate(VarIn_VIII)
 
     if(IsNoAlfven)then
        Var_VIII(I01_,1:n1,1:n2,1:n3) = 0
