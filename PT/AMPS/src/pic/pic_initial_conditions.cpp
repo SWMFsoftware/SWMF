@@ -42,14 +42,7 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
   PIC::Mesh::cDataCenterNode *cellList[cellListLength];
 
   //particle ejection parameters
-  double beta=PIC::MolecularData::GetMass(spec)/(2*Kbol*Temperature);
-
-  //particle stat weight
-#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-  double ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
-#else
-  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
-#endif
+  double ParticleWeight,beta=PIC::MolecularData::GetMass(spec)/(2*Kbol*Temperature);
 
 #if DIM == 3
   static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
@@ -70,6 +63,13 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
     memcpy(cellList,node->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
     xmin=node->xmin,xmax=node->xmax;
+
+    //particle stat weight
+    #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+    #else
+    ParticleWeight=node->block->GetLocalParticleWeight(spec);
+    #endif
 
     for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
