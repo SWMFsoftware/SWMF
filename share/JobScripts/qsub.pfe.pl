@@ -1,4 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -s
+
+my $NoWatch=$n or $nowatch;
+
 use strict;
 
 my $script = shift(@ARGV);
@@ -7,7 +10,7 @@ my @machine = @ARGV;
 
 if(not $script or $script =~ /\-+h/i){
     print "
-Usage: qsub.pfe.pl SCRIPT [NAME [MACHINE1 [MACHINE2 [MACHINE3]]]] ...
+Usage: qsub.pfe.pl [-n] SCRIPT [NAME [MACHINE1 [MACHINE2 [MACHINE3]]]] ...
 
 Submit generic job script to multiple machine types.
 Use a unique NAME argument to identify the jobs.
@@ -17,18 +20,19 @@ If no machine is specified, 4 jobs will be submitted for the 4 machine
 types (IvyBridge, SandyBridge, Haswell, Broadwell). Otherwise,
 the job will be submitted for the listed machines.
 Only the first three characters of the machine types are used.
-Use watch.pl to make sure that when any of the jobs start to run, 
-the others get deleted from the queuewith qdel. Note you can
-add or delete jobs with matching NAME while watch.pl is running.
+
+Unless the -n (or -nowatch) flag is used, the code starts watch.pfe.pl with
+the NAME argument to make sure that when any of the jobs start to run, 
+the others get deleted with qdel. The output is piped into watch.log. 
+
+Note you can add or delete jobs with matching NAME while watch.pfe.pl is running.
 
 Example:
 
 qsub.pfe.pl job.long Mars
-watch.pfe.pl Mars >& watch.log &
 ";
     exit;
 }
-
 
 # Default for job ID
 ($name) = (`pwd` =~ /(....)$/) if not $name;
@@ -70,9 +74,16 @@ foreach $machine (@machine){
     close SCRIPT;
 }
 
-
 # submit jobs;
 foreach $machine (@machine){
     print "qsub $script.$machine\n";
     `qsub $script.$machine`;
 }
+
+# start watch.pfe.pl in the background
+unless($NoWatch){
+    print "watch.pfe.pl $name >& watch.log\n";
+    exec("./watch.pfe.pl $name > watch.log 2>&1") unless fork();
+}
+
+exit 0;
