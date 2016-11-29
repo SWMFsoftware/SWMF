@@ -1,17 +1,17 @@
+!comments!!!
 program spectrum
 
   use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi
 
   implicit none
 
-  logical                     :: IsVerbose =  .false.
+  logical                     :: IsVerbose =  .false., IsNoAlfven = .false.
 
   ! Variables for input files
   integer                     :: lString = 200 
   character(len=200)          :: StringLine
   character(len=200)          :: NameDataFile,NameTableFile
   character(len=200)          :: TypeDataFile
-
 
   ! Variables for instrument (if any)
   logical                     :: IsInstrument = .false.
@@ -177,7 +177,7 @@ contains
        nWave = nWave + nWaveBin
     end do
 
-    ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n1 = 1 /= n2 otherwise nDim= 3
+    ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n3 = 1 /= n2 otherwise nDim= 3
     if(n3==1)then
        if(n2==1)then
           call save_plot_file(NameFile = NameSpectrumFile, &
@@ -191,7 +191,7 @@ contains
           call save_plot_file(NameFile = NameSpectrumFile, &
                TypeFileIn     = TypeFileSpectrum,      &
                StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength x flux",   &
+               NameVarIn      = "wavelength y flux",   &
                nDimIn         = 2,                     &
                CoordMinIn_D   = CoordMin_D,            &
                CoordMaxIn_D   = CoordMax_D,            &
@@ -273,14 +273,15 @@ contains
        do jPixel=1,n2
           do i=1,n1
              ! Calculate thermal and non-thermal broadening
+             if(all(Var_VIII(:,i,jPixel,kPixel)==0))CYCLE ! cells inside body
              Rho = Var_VIII(rho_,i,jPixel,kPixel)
              zPlus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
              zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
              B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
              Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
              CosAlpha = sum(LOSnorm_D*Bnorm_D)
-             uNth2    = 1.0/16.0 * zPlus2 * zMinus2* abs(cosAlpha)
-             uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel) / cProtonMass
+             uNth2    = 1.0/16.0 * (zPlus2 + zMinus2) * abs(cosAlpha)
+             uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel)/cProtonMass
              
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3  
@@ -471,7 +472,10 @@ contains
       call read_var('teUni',teUni)
       call read_var('I01Uni',I01Uni)
       call read_var('I02Uni',I02Uni)
-   
+
+      case("#NOALFVEN")
+         call read_var('IsNoAlfven',IsNoAlfven)
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -544,8 +548,11 @@ contains
        allocate(Var_VIII(11,n1,n2,n3))
     endif
 
-    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
-         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
+!    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
+!         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
+    if(IsInstrument .and. nPixel /= n3)write(*,*)&
+         '!!! nPixel /= n3 !!! nPixel = ',nPixel,' and n3 = ',n3
+    
 
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
@@ -627,6 +634,12 @@ contains
              write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
           end select
        end do
+    endif
+
+    if(IsNoAlfven)then
+       Var_VIII(I01_,1:n1,1:n2,1:n3) = 0
+       Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
+       write(*,*)"IsNoAlfven ON !!!"
     endif
 
     deallocate(VarIn_VIII)
