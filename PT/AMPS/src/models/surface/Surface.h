@@ -28,6 +28,8 @@ namespace Surface {
      }
    }
 
+   double GetSurfaceTemeprature(CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+
    //diffuse refrelction
    namespace DiffuseReflection {
      int Processor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
@@ -50,6 +52,8 @@ namespace Surface {
 
    //Maxwell model
    namespace MaxwellReflection {
+     extern double AccommodationCoefficient[PIC::nTotalSpecies];
+
      int Processor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
    }
 
