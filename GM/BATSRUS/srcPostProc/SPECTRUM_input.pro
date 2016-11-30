@@ -113,6 +113,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,'number of ions = ',nions,format='(a17,i3)'
   printf,10,'ion ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
          'logG(n,T) ',format='(a4,2a5,a11,2a5,a9)'
+  printf,10,'in units [A] [cm^-3] [K] [erg cm^3 s^-1]'
   printf,10,'#START',format='(a)'
 
 ; START main loop f calculation and writing
@@ -171,71 +172,27 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      LogG(Missing)=-100.
 ; Write into output file
      nTransition=n_elements(data)   
-     if nTransition lt 40000L then begin
-        for k=0,nTransition-1 do begin
-           if max(LogG(*,*,k)) gt -26.0 then begin
-              for j=0,nLogN-1 do begin
-                 for l=0,nLogT-1 do begin
-                    if Flag(k) eq 0 then begin
-                       printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
-                              Wavelength(k),LogN(j),$
-                              LogT(l),LogG(l,j,k),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                    if Flag(k) lt 0 then begin
-                       printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
-                              Wavelength(k)*Flag(k),$
-                              LogN(j),LogT(l),LogG(l,j,k),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                 endfor
+     help,nTransition
+     for k=0L,nTransition-1 do begin
+        if max(LogG(*,*,k)) gt -26.0 then begin
+           for j=0,nLogN-1 do begin
+              for l=0,nLogT-1 do begin
+                 if Flag(k) eq 0 then begin
+                    printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
+                           Wavelength(k),LogN(j),$
+                           LogT(l),LogG(l,j,k),$
+                           format='(a6,2i5,f13.3,2f13.4,f13.3)'
+                 endif
+                 if Flag(k) lt 0 then begin
+                    printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
+                           Wavelength(k)*Flag(k),$
+                           LogN(j),LogT(l),LogG(l,j,k),$
+                           format='(a6,2i5,f13.3,2f13.4,f13.3)'
+                 endif
               endfor
-           endif
-        endfor
-     endif
-     if nTransition ge 40000L then begin
-        for k=0,39999 do begin
-           if max(LogG(*,*,k)+7.702+alog10(Wavelength(k))) gt -18.0 then begin
-              for j=0,nLogN-1 do begin
-                 for l=0,nLogT-1 do begin
-                    if Flag(k) eq 0 then begin
-                       printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
-                              Wavelength(k),LogN(j),$
-                              LogT(l),LogG(l,j,k),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                    if Flag(k) lt 0 then begin
-                       printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
-                              Wavelength(k)*Flag(k),$
-                              LogN(j),LogT(l),LogG(l,j,k),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                 endfor
-              endfor
-           endif
-        endfor
-        for k=0L,nTransition-40000L-1 do begin
-           kk=k+40000L
-           if max(LogG(*,*,kk)+7.702+alog10(Wavelength(kk))) gt -18.0 then begin
-              for j=0,nLogN-1 do begin
-                 for l=0,nLogT-1 do begin
-                    if Flag(kk) eq 0 then begin
-                       printf,10,MasterList(i),LevelFrom(kk),LevelTo(kk),$
-                              Wavelength(kk),LogN(j),$
-                              LogT(l),LogG(l,j,kk),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                    if Flag(kk) lt 0 then begin
-                       printf,10,MasterList(i),LevelFrom(kk),LevelTo(kk),$
-                              Wavelength(kk)*Flag(kk),$
-                              LogN(j),LogT(l),LogG(l,j,kk),$
-                              format='(a6,2i3,f13.3,2f13.4,f13.3)'
-                    endif
-                 endfor
-              endfor
-           endif
-        endfor
-     endif
+           endfor
+        endif
+     endfor
   endfor
   close,10
 end
