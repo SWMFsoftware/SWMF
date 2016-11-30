@@ -44,15 +44,12 @@ return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
-  double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
-  int spec;
+  double dt,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
+  int res,spec;
 
   memcpy(vInitUnchanged,vInit,3*sizeof(double));
 
-  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
-  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
-  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
-  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
+  res=Surface::ParticleInteractionProcessor(ptr,xInit,vInit,TriangleCutFace,startNode);
 
   //sample the energy and momentum transfer rates
   spec=PIC::ParticleBuffer::GetI(ptr);
@@ -72,7 +69,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
       vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
 
 
-  return _PARTICLE_REJECTED_ON_THE_FACE_;
+  return res; 
 }
 
 
