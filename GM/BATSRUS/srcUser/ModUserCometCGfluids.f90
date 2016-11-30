@@ -3628,30 +3628,6 @@ contains
           end if
        end do; end do; end do
 
-    case('unx1')
-       NameIdlUnit = 'km/s'
-       NameTecUnit = '[km/s]'
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          PlotVar_G(i,j,k) = State_VGB(Neu1RhoUx_,i,j,k,iBlock)/ &
-               State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
-       end do; end do; end do
-
-    case('uny1')
-       NameIdlUnit = 'km/s'
-       NameTecUnit = '[km/s]'
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          PlotVar_G(i,j,k) = State_VGB(Neu1RhoUy_,i,j,k,iBlock)/ &
-               State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
-       end do; end do; end do
-
-    case('unz1')
-       NameIdlUnit = 'km/s'
-       NameTecUnit = '[km/s]'
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          PlotVar_G(i,j,k) = State_VGB(Neu1RhoUz_,i,j,k,iBlock)/ &
-               State_VGB(Neu1Rho_,i,j,k,iBlock) *No2Si_V(UnitU_)
-       end do; end do; end do
-
     case('tn1')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
@@ -3696,7 +3672,7 @@ contains
                MassIon_I(H2Op_)* NO2SI_V(UnitTemperature_) 
       end do; end do; end do
 
-    case('uex')
+    case('uplusx')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -3709,7 +3685,7 @@ contains
                sum(nIon_I*uIon_I(1,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
        end do; end do; end do
 
-    case('uey')
+    case('uplusy')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -3722,7 +3698,7 @@ contains
                sum(nIon_I*uIon_I(2,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
        end do; end do; end do
 
-    case('uez')
+    case('uplusz')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -3733,13 +3709,6 @@ contains
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
           PlotVar_G(i,j,k) = &
                sum(nIon_I*uIon_I(3,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
-       end do; end do; end do
-
-    case('dt')
-       NameIdlUnit = 's'
-       NameTecUnit = '[s]'
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          PlotVar_G(i,j,k) = time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)
        end do; end do; end do
 
     case('ns')
@@ -3785,40 +3754,6 @@ contains
                * No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
        end do; end do; end do
 
-       ! case('testarray1')
-       !    NameIdlUnit = ' '   
-       !    NameTecUnit = '[ ]'
-       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       !       PlotVar_G(i,j,k) = TestArray(1,i,j,k,iBlock)
-       !    end do; end do; end do
-       ! case('testarray2')
-       !    NameIdlUnit = ' '   
-       !    NameTecUnit = '[ ]'
-       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       !       PlotVar_G(i,j,k) = TestArray(2,i,j,k,iBlock)
-       !    end do; end do; end do
-       ! case('testarray3')
-       !    NameIdlUnit = ' '   
-       !    NameTecUnit = '[ ]'
-       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       !       PlotVar_G(i,j,k) = TestArray(3,i,j,k,iBlock)
-       !    end do; end do; end do
-       ! case('testarray4')
-       !    NameIdlUnit = ' '   
-       !    NameTecUnit = '[ ]'
-       !    do k=1,nK; do j=1,nJ; do i=1,nI ! only idl
-       !       !       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       !       PlotVar_G(i,j,k) = TestArray(4,i,j,k,iBlock)
-       !    end do; end do; end do
-       ! case('fluxlim')
-       !    NameIdlUnit = ' '   
-       !    NameTecUnit = '[ ]'
-       !    do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-       !       PlotVar_G(i,j,k) = FluxLimited_GB(i,j,k,iBlock)
-       !    end do; end do; end do
     case default
        IsFound = .false.
     end select
