@@ -4,7 +4,7 @@ DEFAULT_TARGET : surface
 
 include ../../../Makefile.conf
 
-SURFACEGOBJ = Surface_particle_interaction.cpp Surface_temperature.o Surface.o
+SURFACEGOBJ = Surface_particle_interaction.o Surface_temperature.o Surface.o
 
 surface : $(SURFACEGOBJ)
 	ar -src surface.a $(SURFACEGOBJ)
