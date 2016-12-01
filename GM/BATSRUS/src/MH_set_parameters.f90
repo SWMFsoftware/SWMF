@@ -2314,7 +2314,6 @@ contains
     UseConstrainB   = .false.
 
     UseB0Source     = UseB0
-    UseHyperbolicDivB = Hyp_ > 1
 
     UseUpdateCheck  = .true.
     ! The use of (/../) is correct F90, but it is replaced
