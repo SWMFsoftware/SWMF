@@ -6180,8 +6180,7 @@ parabolic cleaning is applied. If it is positive, the scalar field is
 modified as Hyp=Hyp*(1-HypDecay) after every update. This corresponds to
 a point implicit evaluation of a parabolic diffusion of the Hyp scalar.
 
-Default values are UseHyperbolicDivb true, the speed SpeedHyp is 1.0 in
-the normalized units, and HypDecay=0.1.
+Default is UseHyperbolicDivb false.
 </command>
 
 <command name="PROJECTION">
