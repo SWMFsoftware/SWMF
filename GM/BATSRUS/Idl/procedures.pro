@@ -2365,6 +2365,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         if strpos(plotmodes(ifunc+1),'over') gt 0 then begin
            nexttitle = plottitles(ifunc+1)
            if nexttitle eq 'default' then nexttitle=funcs(ifunc+1)
+           if strpos(plotmodes(ifunc+1),'log') gt 0 then $
+              nexttitle = 'log '+nexttitle
            if nexttitle ne ' ' then !p.title += ' and '+nexttitle
         endif
      endif
@@ -2521,7 +2523,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         f     = alog10(f)
         f_min = alog10(f_min)
         f_max = alog10(f_max)
-        if plottitles(ifunc) eq 'default' then !p.title = 'log '+!p.title
+        if plottitles(ifunc) eq 'default' and !p.title ne '' $
+        then !p.title = 'log '+!p.title
      endif
 
      if usemax and plottitles(ifunc) eq 'default' then $
