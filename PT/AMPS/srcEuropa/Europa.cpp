@@ -41,6 +41,9 @@ double DustTotalMassProductionRate=1.0e23*_H2O__MASS_;
 int    DustSampleIntervals=10;
 double DustSizeDistribution=0.0;
 
+//sample the total escape and the toral return fluxes
+double Europa::Sampling::TotalEscapeFlux[PIC::nTotalSpecies];
+double Europa::Sampling::TotalReturnFlux[PIC::nTotalSpecies];
 
 //sample velocity of the sputtered O2;
 double Europa::Sampling::O2InjectionSpeed::SamplingBuffer[Europa::Sampling::O2InjectionSpeed::nSampleIntervals];
@@ -62,6 +65,44 @@ double Europa::SourceProcesses::ImpactVaporization::CalculatedTotalSodiumSourceR
 double Europa::SourceProcesses::ThermalDesorption::CalculatedTotalSodiumSourceRate=0.0;
 double Europa::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSourceRate=0.0;*/
 
+
+//the pair of fucntions that are used to sample model data, and output of the return amd escape fluxes
+void Europa::Sampling::SamplingProcessor() {}
+void Europa::Sampling::PrintOutputFile(int nfile) {
+//  if (nfile!=0) return;
+
+  if (PIC::ThisThread==0) {
+    printf("$PREFIX: Escape and return fluxes\n");
+    printf("$PREFIX: spec, Escape flux, Return flux\n");
+  }
+
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    double EscapeRate=0.0,ReturnRate=0.0;
+    int ierr;
+
+    ierr=MPI_Reduce(TotalEscapeFlux+spec,&EscapeRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
+
+    ierr=MPI_Reduce(TotalReturnFlux+spec,&ReturnRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
+
+    if (PIC::ThisThread==0) printf("$PREFIX: %s\t %e\t%e\n",PIC::MolecularData::GetChemSymbol(spec),EscapeRate/PIC::LastSampleLength,ReturnRate/PIC::LastSampleLength);
+
+    TotalEscapeFlux[spec]=0.0;
+    TotalReturnFlux[spec]=0.0;
+  }
+}
+
+//process praticles when they cross boundary of the computational domain
+int Europa::ParticleDomainBoundaryIntersection(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  //sample the total particle escape rate
+  int spec;
+  double ParticleWeight;
+
+  spec=PIC::ParticleBuffer::GetI(ptr);
+  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+  Europa::Sampling::TotalEscapeFlux[spec]+=ParticleWeight;
+}
 
 
 //energy distribution of particles injected via ion sputtering
@@ -100,6 +141,15 @@ double Europa::EnergeticIonSputteringRate(int spec) {
 //init the model
 void Europa::Init_BeforeParser() {
   Exosphere::Init_BeforeParser();
+
+  //set the initial values in the flux sampling buffers
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) Sampling::TotalEscapeFlux[spec]=0.0,Sampling::TotalReturnFlux[spec]=0.0;
+
+  //set up the processoe of particles that leave the computational domain
+  PIC::Mover::ProcessOutsideDomainParticles=ParticleDomainBoundaryIntersection;
+
+  //register the sampling functions
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SamplingProcessor,Sampling::PrintOutputFile);
 
   //check the state of the Sputtering source
   if (_EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_) {
@@ -518,6 +568,8 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       Sphere->SampleSpeciesSurfaceReturnFlux[spec][el]+=ParticleWeight;
       Sphere->SampleReturnFluxBulkSpeed[spec][el]+=sqrt(pow(v_SO[0],2)+pow(v_SO[1],2)+pow(v_SO[2],2))*ParticleWeight;
 
+      //sample the total return flux
+      Europa::Sampling::TotalReturnFlux[spec]+=ParticleWeight;
 
     }
 

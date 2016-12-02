@@ -194,6 +194,15 @@ namespace Europa {
   namespace Sampling {
     using namespace Exosphere::Sampling;
 
+    //sample the total escape and the toral retuen fluxes
+    extern double TotalEscapeFlux[PIC::nTotalSpecies];
+    extern double TotalReturnFlux[PIC::nTotalSpecies];
+
+    //the pair of sampling processor, and dampled data output functions
+    //used here to print the escape and return fluxe tables on the screen
+    void SamplingProcessor();
+    void PrintOutputFile(int);
+
     namespace O2InjectionSpeed {
       const int nSampleIntervals=1000;
       const double vMax=10.0E3;
@@ -1333,6 +1342,9 @@ v[0]=Speed,v[1]=0.0,v[2]=0.0;
   //combine together the surface area densities and recalculate the
   void ExchangeSurfaceAreaDensity();
 
+
+  //process particles when they cross the boubdary of the computational domain
+  int ParticleDomainBoundaryIntersection(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
 
   //Interaction of the particles with the surface
   namespace SurfaceInteraction {
