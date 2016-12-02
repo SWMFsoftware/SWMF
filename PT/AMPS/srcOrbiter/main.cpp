@@ -25,6 +25,7 @@
 
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
+#include "Surface.h"
 
 double BulletLocalResolution(double *x) {
   int idim;
