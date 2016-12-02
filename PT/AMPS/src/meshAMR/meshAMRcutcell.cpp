@@ -309,6 +309,101 @@ struct cNASTRANface {
   double externalNormal[3];
 };*/
 
+
+void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor) {
+  CiFileOperations ifile;
+  char str[10000],dat[10000],*endptr;
+  long int i,j,idim,nnodes=0,nfaces=0;
+  long int nTriangulationNodes=-1,nTriangulationFaces=-1;
+
+  if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
+
+
+  cNASTRANnode node;
+  vector<cNASTRANnode> nodes;
+
+  cNASTRANface face;
+  vector<cNASTRANface> faces;
+
+  ifile.openfile(fname);
+
+  do {
+   ifile.GetInputStr(str,sizeof(str));
+
+   if ((str[0]>='0')||(str[0]<='9')) {
+     //the fist line file a number has been found
+     ifile.CutInputStr(dat,str);
+     nTriangulationNodes=strtol(dat,&endptr,10);
+
+     ifile.CutInputStr(dat,str);
+     nTriangulationFaces=strtol(dat,&endptr,10);
+   }
+  }
+  while (nTriangulationNodes==-1);
+
+
+  //read nodes from the file
+  for (int cnt=0;cnt<nTriangulationNodes;cnt++) {
+    ifile.GetInputStr(str,sizeof(str));
+    node.id=cnt+1;
+
+    ifile.CutInputStr(dat,str);
+    node.x[0]=UnitConversitonFactor*strtod(dat,&endptr);
+
+    ifile.CutInputStr(dat,str);
+    node.x[1]=UnitConversitonFactor*strtod(dat,&endptr);
+
+    ifile.CutInputStr(dat,str);
+    node.x[2]=UnitConversitonFactor*strtod(dat,&endptr);
+
+    nodes.push_back(node);
+    nnodes++;
+  }
+
+
+  //read the face information
+  for (int cnt=0;cnt<nTriangulationFaces;cnt++) {
+    ifile.GetInputStr(str,sizeof(str));
+
+    face.faceat=0;
+
+    for (idim=0;idim<3;idim++) {
+      ifile.CutInputStr(dat,str);
+      face.node[idim]=strtol(dat,&endptr,10)-1;
+    }
+
+    nfaces++;
+    faces.push_back(face);
+  }
+
+
+
+  //create the surface triangulation array
+  long int nd,nfc,id;
+
+  nBoundaryTriangleFaces=nfaces;
+  BoundaryTriangleFaces=new cTriangleFace[nfaces];
+
+  nBoundaryTriangleNodes=nnodes;
+  BoundaryTriangleNodes=new cNASTRANnode[nnodes];
+
+  //copy nodes and faces into the array
+  for (nd=0;nd<nnodes;nd++) {
+    BoundaryTriangleNodes[nd]=nodes[nd];
+    for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+  }
+
+  for (nfc=0;nfc<nfaces;nfc++) {
+    BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+
+    for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
+    BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
+  }
+}
+
+
+
+
 void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;

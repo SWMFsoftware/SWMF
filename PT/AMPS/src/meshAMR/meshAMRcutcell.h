@@ -534,6 +534,8 @@ namespace CutCell {
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor=1.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path,double UnitConversitonFactor=1.0);
 
+  void ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor=1.0);
+
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname);
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path);
 
