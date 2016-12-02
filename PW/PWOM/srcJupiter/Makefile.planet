@@ -1,8 +1,0 @@
-OBJECTS_PLANET = \
-	getcfeh2_planet.o\
-	startupPW_planet.o\
-	neutral_atmosphere_planet.o\
-	collisionPW_planet.o\
-	calc_chemical_equilibrium_planet.o\
-	upper_heat_conduction_planet.o\
-	get_rate_planet.o
