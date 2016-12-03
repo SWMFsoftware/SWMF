@@ -228,13 +228,6 @@ contains
   end subroutine GM_get_for_pc
   !============================================================================
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
-
-    ! This subrutine is called 3 times:
-    !   First time we set the number of cell centered grid points 
-    !       on this processor. 
-    !   Second time we get the cordinates to the same time.
-    !   Third time we set the state variables to the value given by PC.
-
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
     use ModPIC,       ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
@@ -283,7 +276,7 @@ contains
     iPoint = 1
     do iRegion = 1, nRegionPic
 
-       ! (nGhostPic +1) where +1 is from the IPIC3D ghost layor
+       ! (nGhostPic +1) where +1 is from the IPIC3D ghost layer
        XyzMaxRegion_D = XyzMaxPic_DI(1:nDim,iRegion) - &
             (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
