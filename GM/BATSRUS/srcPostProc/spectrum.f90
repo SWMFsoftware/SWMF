@@ -1,11 +1,17 @@
 !comments!!!
 program spectrum
 
+<<<<<<< spectrum.f90
+  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, &
+       cPi, rSun
+=======
   use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi, rSun
+>>>>>>> 1.15
 
   implicit none
 
-  logical                     :: IsVerbose =  .false., IsNoAlfven = .false.
+  logical                     :: IsVerbose =  .false., IsNoAlfven = .false.,&
+       IsAllLines = .false., IsPermuteAxis = .false.
 
   ! Variables for input files
   integer                     :: lString = 200 
@@ -24,7 +30,7 @@ program spectrum
 
   ! Variables for solar wind input data file
   logical                     :: IsDataBlock = .false. ! read only part of data
-  logical                     :: IsUniData = .false. ! overwrite data with const
+  logical                     :: IsUniData = .false. ! overwrite data w/ const
   integer                     :: n1Block,n2Block,n3Block ! defines the size
   integer                     :: iError
   integer                     :: nVar   ! number of variables   
@@ -51,6 +57,8 @@ program spectrum
        I01_ =10, &
        I02_ =11
 
+  integer                     ::  iDimLOS,iDimVertical,iDimHorizontal
+
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
   integer                     :: nMaxLine, nLineFound
@@ -73,9 +81,10 @@ program spectrum
 
   type(LineTableType), allocatable :: LineTable_I(:)
 
-  real                        :: Dist = 0.99*cAU ! Sun-L1 distance
-  real                        :: LOS_D(3), LOSnorm_D(3), dx, A
-
+  real                        :: Dist = 0.99*cAU * 1e2 ! Sun-L1 distance in cm
+  real                        :: LOS_D(3), LOSnorm_D(3)
+  real                        :: dx, dA ! dx is plasma thickness along the LOS
+  real                        :: dy, dz ! in case of boxdata used
   ! Derived type of output 
   type SpectrumTableType
      real,allocatable         :: Spectrum_III(:,:,:), SpectrumGrid_I(:)
@@ -101,7 +110,7 @@ program spectrum
 
   call read_table
 
-  ! Loope over Chianti lines and pixels in the orthogonal direction
+  ! Loop over Chianti lines and pixels in the orthogonal direction
   do iLine = 1,min(nMaxLine,nLineFound)
      do kPixel = 1, n3
         do jPixel = 1, n2
@@ -154,9 +163,9 @@ contains
     ! Loop over intervals
     if(IsVerbose) write(*,*)"  nWaveInterval = ",nWaveInterval
     do iWaveInterval = 1, nWaveInterval
+
        ! Number of wave length in this interval
        nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
-
        WavelengthMin = WavelengthInterval_II(1,iWaveInterval)
        WavelengthMax = WavelengthInterval_II(2,iWaveInterval)
        dWaveBin = (WavelengthMax - WavelengthMin)/nWaveBin
@@ -220,11 +229,15 @@ contains
     real                           :: FluxMono
     integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
+<<<<<<< spectrum.f90
+    real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambda, Lambda, dLambdaSI2
+=======
     real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambdaSI2
+>>>>>>> 1.15
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
-    real                           :: uNth2, uTh2, Lambda
+    real                           :: uNth2, uTh2
     real                           :: Gint, LogNe, LogTe, Rho
     real, allocatable              :: gLambda_II(:,:)
 
@@ -232,11 +245,8 @@ contains
     !------------------------------------------------------------------------
 
     allocate(gLambda_II(MinI:MaxI,MinJ:MaxJ))
-       
-    ! Convert to SI
-    Lambda = LineTable_I(iLine)%LineWavelength
-    
-    LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
+
+    Lambda   = LineTable_I(iLine)%LineWavelength
 
     ! Find which interval wavelength belongs to
     iInterval = -1
@@ -270,7 +280,8 @@ contains
        do jPixel=1,n2
           do i=1,n1
              ! Calculate thermal and non-thermal broadening
-             if(all(Var_VIII(:,i,jPixel,kPixel)==0))CYCLE ! cells inside body
+             if(all(Var_VIII(:,i,jPixel,kPixel)==0))EXIT ! cells inside body
+
              Rho = Var_VIII(rho_,i,jPixel,kPixel)
              zPlus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
              zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
@@ -283,13 +294,26 @@ contains
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3  
              LogNe = log10(Rho*1e-6/cProtonMass)
-             LogTe = log10(max(Var_VIII(te_,i,jPixel,kPixel),1e-30))
+             LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
+
+             ! Convert to SI
+             LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
              ! Add instrumental broadening if there is any
+<<<<<<< spectrum.f90
+             dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
+             if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
+             dLambdaSI = sqrt(dLambdaSI2)
+
+             ! Convert [m] --> [A]
+             dLambda   = dLambdaSI * 1e10
+      
+=======
              dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
              if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
              dLambdaSI = sqrt(dLambdaSI2)
              
+>>>>>>> 1.15
              ! Get the contribution function
              iNMin  = LineTable_I(iLine)%iMin
              jTMin  = LineTable_I(iLine)%jMin
@@ -300,6 +324,12 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
+<<<<<<< spectrum.f90
+             FluxMono = dA / (4 * cPi * Dist**2.0) * &
+                  Gint * (10.0**LogNe)**2.0 * dx
+
+             call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
+=======
              ! Ainstrument from m^2 to cm^2 --> * 1e4
              ! Dist from m to cm --> * 1e2
              ! A/Dist^2 conversions cancel
@@ -307,6 +337,7 @@ contains
              FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx*rSun*1e2
              
              call disperse_line(iInterval, iCenter, LambdaSI, dLambdaSI, FluxMono)
+>>>>>>> 1.15
 
           end do
        end do
@@ -315,18 +346,15 @@ contains
   end subroutine calc_flux
 
   !==========================================================================
-  subroutine disperse_line(iInterval,iCenter,LambdaSI,dLambdaSI,FluxMono)
+  subroutine disperse_line(iInterval,iCenter,Lambda,dLambda,FluxMono)
 
-    real, intent(in)            :: LambdaSI, dLambdaSI, FluxMono
+    real, intent(in)            :: Lambda, dLambda, FluxMono
     integer, intent(in)         :: iInterval, iCenter
 
     ! 
-    
-
-
     integer                     :: iBin, iBegin, iEnd
     real                        :: Flux, Phi, InvNorm, InvSigma2
-    real                        :: LambdaBin, LambdaBegin, LambdaEnd, LambdaDistSI
+    real                        :: LambdaBin, LambdaBegin, LambdaEnd, LambdaDist
     integer                     :: iStep, iWave, nWaveBin
 
     character(len=*), parameter :: NameSub='disperse_line'
@@ -335,8 +363,8 @@ contains
     nWaveBin = SpectrumTable_I(iInterval)%nBin
 
     ! Beginning and end of gaussian truncated to +/-5 sigma in [A]
-    LambdaBegin = (LambdaSI - 5*dLambdaSI)*1e10
-    LambdaEnd   = (LambdaSI + 5*dLambdaSI)*1e10
+    LambdaBegin = (Lambda - 5*dLambda)
+    LambdaEnd   = (Lambda + 5*dLambda)
 
     ! Find the corresponding wavelength bin for starting wavelength
     do iBegin = 1, nWaveBin - 1
@@ -349,19 +377,19 @@ contains
        if (LambdaEnd < SpectrumTable_I(iInterval)%SpectrumGrid_I(iEnd)) EXIT
     end do
 
-    InvNorm   = 1/(sqrt(2*cPi) * dLambdaSI)
-    InvSigma2 = 1/(2*dLambdaSI**2) 
-    
-    ! Update bins between begin and end indices by adding the Gaussian distribution
+    InvNorm   = 1/(sqrt(2*cPi) * dLambda)
+    InvSigma2 = 1/(2*dLambda**2) 
+ 
+     ! Update bins between begin and end indices by adding the Gaussian distribution
     do iBin = iBegin , iEnd
        ! Get wavelength from the center of the bin
        LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
     
        ! Get distance from peak wavelength in SI
-       LambdaDistSI = LambdaSI - LambdaBin*1e-10
+       LambdaDist = Lambda - LambdaBin 
 
        ! Calculate Gaussian of the line
-       Phi = InvNorm * exp(-LambdaDistSI**2 * InvSigma2)
+       Phi = InvNorm * exp(-LambdaDist**2 * InvSigma2)
             
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
@@ -380,7 +408,7 @@ contains
     use ModReadParam
 
     character(len=lString)      :: NameCommand
-    logical                     :: IsNoInstrument = .false.
+    logical                     :: IsNoInstrument = .false., DoEcho = .false.
     integer                     :: iPixel
     character(len=*), parameter :: NameSub='read_param'
     !------------------------------------------------------------------------
@@ -396,6 +424,10 @@ contains
        if(.not.read_command(NameCommand)) CYCLE READPARAM
 
        select case(NameCommand)
+       case("#ECHO")
+          call read_var('DoEcho',DoEcho)
+          call read_echo_set(DoEcho)
+
        case("#VERBOSE")
           call read_var('IsVerbose', IsVerbose)
 
@@ -409,7 +441,7 @@ contains
 
        case("#WAVELENGTHINTERVAL")
           IsNoInstrument = .true.
-          Ainstrument = 7.7778e5**2
+
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
              deallocate(WavelengthInterval_II)
@@ -429,7 +461,12 @@ contains
           call read_var('n1',n1Block)
           call read_var('n2',n2Block)
           call read_var('n3',n3Block)
-          
+          call read_var('dx',dx)
+          call read_var('dy',dy)
+          call read_var('dz',dz)
+          dx = dx*rSun*1e2 ! Convert to CGS
+          dA = dy*rSun*1e2 *dz*rSun*1e2
+
        case("#INSTRUMENT")
           IsInstrument = .true.
           iPixel = 0
@@ -446,7 +483,8 @@ contains
              do iPixel=1,nPixel
                 dLambdaInstr_I(iPixel) = 0.0
              end do
-             Ainstrument = 7.7778e5**2
+             ! 1 arcsec x 1 arcsec on solar surface in cm^-2
+             Ainstrument = (14e10/1800.)**2.
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
@@ -462,21 +500,30 @@ contains
 
        case("#UNIFORMDATA")
           IsUniData = .true.
-      call read_var('rhoUni',rhoUni)
-      call read_var('uxUni',uxUni)
-      call read_var('uyUni',uyUni)
-      call read_var('uzUni',uzUni)
-      call read_var('bxUni',bxUni)
-      call read_var('byUni',byUni)
-      call read_var('bzUni',bzUni)
-      call read_var('tiUni',tiUni)
-      call read_var('teUni',teUni)
-      call read_var('I01Uni',I01Uni)
-      call read_var('I02Uni',I02Uni)
+          call read_var('rhoUni',rhoUni)
+          call read_var('uxUni',uxUni)
+          call read_var('uyUni',uyUni)
+          call read_var('uzUni',uzUni)
+          call read_var('bxUni',bxUni)
+          call read_var('byUni',byUni)
+          call read_var('bzUni',bzUni)
+          call read_var('tiUni',tiUni)
+          call read_var('teUni',teUni)
+          call read_var('I01Uni',I01Uni)
+          call read_var('I02Uni',I02Uni)
 
-      case("#NOALFVEN")
-         call read_var('IsNoAlfven',IsNoAlfven)
+       case("#NOALFVEN")
+          call read_var('IsNoAlfven',IsNoAlfven)
 
+       case("#ISPERMUTEAXIS")
+          call read_var('IsPermuteAxis',IsPermuteAxis)
+          call read_var('iDimLOS',iDimLOS)
+          call read_var('iDimVertical',iDimVertical)
+          call read_var('iDimHorizontal',iDimHorizontal)
+
+
+       case("#ISUNOBSERVEDLINES")
+          call read_var('IsAllLines',IsAllLines)
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -494,7 +541,11 @@ contains
     character(len=lString)      :: StringHeader
     character(len=lString)      :: NameVar
 
+<<<<<<< spectrum.f90
+    integer                     :: nStep, i, j, k, Size_D(3)
+=======
     integer                     :: nStep, i, j, k
+>>>>>>> 1.15
 
     real                        :: Time, dZnew
 
@@ -540,6 +591,15 @@ contains
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
 
+    if(IsPermuteAxis)then
+       Size_D(1:3) = (/n1,n2,n3/)
+       CoordMax_D = (/ CoordMax_D(iDimLOS), CoordMax_D(iDimVertical), CoordMax_D(iDimHorizontal)/)
+       CoordMin_D = (/ CoordMin_D(iDimLOS), CoordMin_D(iDimVertical), CoordMin_D(iDimHorizontal)/)
+       n1 = Size_D(iDimLOS)
+       n2 = Size_D(iDimVertical)
+       n3 = Size_D(iDimHorizontal)
+    endif
+
     if(IsDataBlock)then
        n1 = n1Block
        n2 = n2Block
@@ -549,9 +609,12 @@ contains
        allocate(Var_VIII(11,n1,n2,n3))
     endif
 
+<<<<<<< spectrum.f90
+=======
     !    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
     !         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
 
+>>>>>>> 1.15
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
     nBin = 0
@@ -574,7 +637,7 @@ contains
     end do
 
     if (IsUniData) then
-       ! cm^-3 --> kgm^-3
+       ! cm^-3 --> kg/m^3
        Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
        ! km/s --> m/s
        Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni * 1e3
@@ -587,7 +650,7 @@ contains
        ! K
        Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
        Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
-       ! erg/cm^3 --> J/m^3
+       ! erg cm^-3 --> J m^-3
        Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni * 1e-1
        Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni * 1e-1
 
@@ -664,10 +727,19 @@ contains
        write(*,*)"IsNoAlfven ON !!!"
     endif
 
+<<<<<<< spectrum.f90
+    ! LOS is set align with the x axis
+    LOSnorm_D = (/1,0,0/) 
+
+    ! Convert to CGS
+    if(.not. IsDataBlock)dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
+    if(.not. IsDataBlock)dA = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2 * (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2 
+=======
     LOS_D = CoordMax_D-CoordMin_D
     LOSnorm_D  = LOS_D/sqrt(max(sum(LOS_D**2), 1e-30))
 
     dx = (CoordMax_D(1)-CoordMin_D(1))/n1
+>>>>>>> 1.15
 
   end subroutine read_data
 
@@ -743,7 +815,11 @@ contains
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
 
        ! Check if this belongs to the same line
+<<<<<<< spectrum.f90
+
+=======
        if(IsVerbose)write(*,*)'LineWavelength = ',LineWavelength
+>>>>>>> 1.15
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN) + 1
@@ -767,14 +843,18 @@ contains
           ! Storage is done
           DoStore = .false.
 
+<<<<<<< spectrum.f90
+=======
           if(IsVerbose)then
              write(*,*)'LineWavelength = ', LineTable_I(iLine)%LineWavelength
           endif
+>>>>>>> 1.15
        end if
 
        if(iError /= 0) EXIT READLOOP
        if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
        ! Check if wavelength is inside any of the intervals
+
        do iWavelengthInterval = 1, nWavelengthInterval
           if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval)) CYCLE
           if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval)) CYCLE
@@ -786,10 +866,11 @@ contains
           FirstLineWavelength = LineWavelength
           DoStore = .true.
           nLineFound = nLineFound + 1
+
           ! Store ion name and wavelength 
           LineTable_I(iLine)%NameIon    = NameIon
           LineTable_I(iLine)%LineWavelength = LineWavelength
-          
+
           ! Calculate indexes and store as the minimum indexes
           iN = nint(LogN/dLogN) + 1; iT = nint(LogT/dLogT) + 1
           LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
@@ -807,11 +888,12 @@ contains
 
     end do READLOOP
     close(UnitTmp_)
-    
+
     deallocate(g_II)
 
     if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
-    
+    if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+
   end subroutine read_table
   !==========================================================================
 end program spectrum
