@@ -93,10 +93,11 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      position=strpos(MasterList(i),'d')
      if position ge 2 then Dielectronic=[Dielectronic,i]
   endfor
+
   if n_elements(Dielectronic) gt 1 then begin
      Dielectronic=Dielectronic(1:*)
      remove,Dielectronic,MasterList
-     nions=n_elements(MasterList)
+     nIon = n_elements(MasterList)
   endif
 
 ; Set output file name
@@ -110,7 +111,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,'#GRID',format='(a)'
   printf,10,LogNmin,LogNmax,dLogN
   printf,10,LogTmin,LogTmax,dLogT
-  printf,10,'number of ions = ',nions,format='(a17,i3)'
+  printf,10,'number of ions = ',nIon,format='(a17,i3)'
   printf,10,'ion ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
          'logG(n,T) ',format='(a4,2a5,a11,2a5,a9)'
   printf,10,'in units [A] [cm^-3] [K] [erg cm^3 s^-1]'
@@ -126,7 +127,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      zElem=zElem(0)
      Ion=MasterList(i)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
-     print,'doing ',i,'th ion out of ',nIon
+     print,'doing ion ',MasterList(i),' which is the ',i,'th ion out of ',nIon
 
 ; Select ioneq 
      ion_eq=ioneq(*,zElem-1,zIon-1)
