@@ -127,7 +127,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      zElem=zElem(0)
      Ion=MasterList(i)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
-     print,'doing ion ',MasterList(i),' which is the ',i,'th ion out of ',nIon
+     print,'doing ion ',MasterList(i),' which is the ',i+1,'th ion out of ',nIon
 
 ; Select ioneq 
      ion_eq=ioneq(*,zElem-1,zIon-1)
