@@ -1,12 +1,8 @@
 !comments!!!
 program spectrum
 
-<<<<<<< spectrum.f90
   use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, &
        cPi, rSun
-=======
-  use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, cPi, rSun
->>>>>>> 1.15
 
   implicit none
 
@@ -229,11 +225,7 @@ contains
     real                           :: FluxMono
     integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
-<<<<<<< spectrum.f90
     real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambda, Lambda, dLambdaSI2
-=======
-    real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambdaSI2
->>>>>>> 1.15
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
@@ -300,7 +292,6 @@ contains
              LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
              ! Add instrumental broadening if there is any
-<<<<<<< spectrum.f90
              dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
              if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
              dLambdaSI = sqrt(dLambdaSI2)
@@ -308,12 +299,6 @@ contains
              ! Convert [m] --> [A]
              dLambda   = dLambdaSI * 1e10
       
-=======
-             dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
-             if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
-             dLambdaSI = sqrt(dLambdaSI2)
-             
->>>>>>> 1.15
              ! Get the contribution function
              iNMin  = LineTable_I(iLine)%iMin
              jTMin  = LineTable_I(iLine)%jMin
@@ -324,20 +309,10 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
-<<<<<<< spectrum.f90
              FluxMono = dA / (4 * cPi * Dist**2.0) * &
                   Gint * (10.0**LogNe)**2.0 * dx
 
              call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
-=======
-             ! Ainstrument from m^2 to cm^2 --> * 1e4
-             ! Dist from m to cm --> * 1e2
-             ! A/Dist^2 conversions cancel
-             ! dx from Rs to cm --> * rSun * 1e2
-             FluxMono = Ainstrument/(4*cPi*Dist**2.0)*Gint*(10.0**LogNe)**2.0*dx*rSun*1e2
-             
-             call disperse_line(iInterval, iCenter, LambdaSI, dLambdaSI, FluxMono)
->>>>>>> 1.15
 
           end do
        end do
@@ -541,11 +516,7 @@ contains
     character(len=lString)      :: StringHeader
     character(len=lString)      :: NameVar
 
-<<<<<<< spectrum.f90
     integer                     :: nStep, i, j, k, Size_D(3)
-=======
-    integer                     :: nStep, i, j, k
->>>>>>> 1.15
 
     real                        :: Time, dZnew
 
@@ -609,12 +580,6 @@ contains
        allocate(Var_VIII(11,n1,n2,n3))
     endif
 
-<<<<<<< spectrum.f90
-=======
-    !    if(IsInstrument .and. nPixel /= n3)call CON_stop( &
-    !         NameSub//' incorrect number of vertical pixels for instrument in data file'//trim(NameInstrument))
-
->>>>>>> 1.15
     ! Set up bins for Spectrum
     allocate(SpectrumTable_I(nWavelengthinterval))
     nBin = 0
@@ -727,19 +692,12 @@ contains
        write(*,*)"IsNoAlfven ON !!!"
     endif
 
-<<<<<<< spectrum.f90
     ! LOS is set align with the x axis
     LOSnorm_D = (/1,0,0/) 
 
     ! Convert to CGS
     if(.not. IsDataBlock)dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
     if(.not. IsDataBlock)dA = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2 * (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2 
-=======
-    LOS_D = CoordMax_D-CoordMin_D
-    LOSnorm_D  = LOS_D/sqrt(max(sum(LOS_D**2), 1e-30))
-
-    dx = (CoordMax_D(1)-CoordMin_D(1))/n1
->>>>>>> 1.15
 
   end subroutine read_data
 
@@ -815,11 +773,7 @@ contains
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
 
        ! Check if this belongs to the same line
-<<<<<<< spectrum.f90
 
-=======
-       if(IsVerbose)write(*,*)'LineWavelength = ',LineWavelength
->>>>>>> 1.15
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN) + 1
@@ -843,16 +797,10 @@ contains
           ! Storage is done
           DoStore = .false.
 
-<<<<<<< spectrum.f90
-=======
-          if(IsVerbose)then
-             write(*,*)'LineWavelength = ', LineTable_I(iLine)%LineWavelength
-          endif
->>>>>>> 1.15
        end if
 
        if(iError /= 0) EXIT READLOOP
-       if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+
        ! Check if wavelength is inside any of the intervals
 
        do iWavelengthInterval = 1, nWavelengthInterval
