@@ -1,4 +1,6 @@
 !comments!!!
+!convert vector components to x,y,z!!!
+
 program spectrum
 
   use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, &
@@ -25,7 +27,7 @@ program spectrum
   integer                     :: nWavelengthBin, iWavelengthBin
 
   ! Variables for solar wind input data file
-  logical                     :: IsDataBlock = .false. ! read only part of data
+  logical                     :: IsDataBlock = .false. ! read part of data
   logical                     :: IsUniData = .false. ! overwrite data w/ const
   integer                     :: n1Block,n2Block,n3Block ! defines the size
   integer                     :: iError
@@ -134,12 +136,13 @@ contains
     ! Variables for output file
     character(len=200)   :: NameSpectrumFile = 'spectrum.out'
     character(len=5)     :: TypeFileSpectrum = 'ascii'
-    character(len=200)   :: StringHeaderSpectrum = '[A] [erg sr^-1 cm^-2 A^-1]'
+    character(len=200)   :: StringHeaderSpectrum = &
+         '[A] [erg sr^-1 cm^-2 A^-1]'
     real,allocatable            :: &
          Intensity_VIII(:,:,:,:), CoordWave_I(:), CoordPixel_DII(:,:,:)
 
-    integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, nWaveBin, &
-         nWaveAll
+    integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, & 
+         nWaveBin, nWaveAll
     real                        :: dWaveBin, WavelengthMin,WavelengthMax
     character(len=*), parameter :: NameSub = 'save_all'
     !------------------------------------------------------------------------
@@ -225,7 +228,8 @@ contains
     real                           :: FluxMono
     integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
-    real                           :: LambdaSI, Lambda0SI, dLambdaSI, dLambda, Lambda, dLambdaSI2
+    real                           :: LambdaSI, Lambda0SI, dLambdaSI, &
+         dLambda, Lambda, dLambdaSI2
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
@@ -244,7 +248,7 @@ contains
     iInterval = -1
     do iWavelengthInterval = 1, nWavelengthInterval
        if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
-            .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval))) then
+            .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))then
           iInterval = iWavelengthInterval
           EXIT
        end if
@@ -260,7 +264,8 @@ contains
     do
        iBin=iBin+1
        if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
-            .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))then
+            .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
+            then
           iCenter=iBin
           EXIT
        end if
@@ -318,6 +323,21 @@ contains
        end do
     end do
 
+if(IsVerbose)then
+write(*,*)'iLine = ',iLine
+write(*,*)'NameIon = ',LineTable_I(iLine)%NameIon
+write(*,*)'LineWaveLength = ',LineTable_I(iLine)%LineWavelength
+write(*,*)'iMin = ',LineTable_I(iLine)%iMin,'jMin = ',LineTable_I(iLine)%jMin
+write(*,*)'iMax = ',LineTable_I(iLine)%iMax,'jMax = ',LineTable_I(iLine)%jMax
+write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)',int(LogTe/dLogT)
+write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN),int(LogTe/dLogT)))
+endif
+
+if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLine)%g_II)
+
+!    if(IsVerbose)write(*,*)'Lambda, Gint = ',Lambda, log10(Gint)
+!    if(IsVerbose)write(*,*)'LogNe, LogTe = ',LogNe, LogTe
+
   end subroutine calc_flux
 
   !==========================================================================
@@ -329,7 +349,8 @@ contains
     ! 
     integer                     :: iBin, iBegin, iEnd
     real                        :: Flux, Phi, InvNorm, InvSigma2
-    real                        :: LambdaBin, LambdaBegin, LambdaEnd, LambdaDist
+    real                        :: LambdaBin, LambdaBegin, LambdaEnd, &
+         LambdaDist
     integer                     :: iStep, iWave, nWaveBin
 
     character(len=*), parameter :: NameSub='disperse_line'
@@ -343,7 +364,8 @@ contains
 
     ! Find the corresponding wavelength bin for starting wavelength
     do iBegin = 1, nWaveBin - 1
-       if (LambdaBegin < SpectrumTable_I(iInterval)%SpectrumGrid_I(iBegin+1)) EXIT
+       if (LambdaBegin < SpectrumTable_I(iInterval)%SpectrumGrid_I(iBegin+1))&
+            EXIT
     end do
 
     ! Start at iBegin for efficiency and
@@ -355,7 +377,8 @@ contains
     InvNorm   = 1/(sqrt(2*cPi) * dLambda)
     InvSigma2 = 1/(2*dLambda**2) 
  
-     ! Update bins between begin and end indices by adding the Gaussian distribution
+     ! Update bins between begin and end indices by adding the Gaussian 
+     ! distribution
     do iBin = iBegin , iEnd
        ! Get wavelength from the center of the bin
        LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
@@ -420,7 +443,7 @@ contains
           call read_var('nWavelengthInterval',nWavelengthInterval)
           if(IsInstrument)then
              deallocate(WavelengthInterval_II)
-             write(*,*)'INSTRUMENT intervals are changed to given WAVELENGTHINTERVALS'
+             write(*,*)'INSTRUMENT intervals changed to WAVELENGTHINTERVALS'
           endif
           allocate(WavelengthInterval_II(2,nWavelengthInterval))
           do iWavelengthInterval=1, nWavelengthInterval
@@ -463,7 +486,7 @@ contains
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
-                write(*,*)'INSTRUMENT intervals are changed to given WAVELENGTHINTERVALS'
+                write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
              else
                 allocate(WavelengthInterval_II(2,2))
                 WavelengthInterval_II(:,1) = (/ 170 ,210 /)
@@ -495,7 +518,6 @@ contains
           call read_var('iDimLOS',iDimLOS)
           call read_var('iDimVertical',iDimVertical)
           call read_var('iDimHorizontal',iDimHorizontal)
-
 
        case("#ISUNOBSERVEDLINES")
           call read_var('IsAllLines',IsAllLines)
@@ -564,8 +586,10 @@ contains
 
     if(IsPermuteAxis)then
        Size_D(1:3) = (/n1,n2,n3/)
-       CoordMax_D = (/ CoordMax_D(iDimLOS), CoordMax_D(iDimVertical), CoordMax_D(iDimHorizontal)/)
-       CoordMin_D = (/ CoordMin_D(iDimLOS), CoordMin_D(iDimVertical), CoordMin_D(iDimHorizontal)/)
+       CoordMax_D = (/ CoordMax_D(iDimLOS), CoordMax_D(iDimVertical), &
+            CoordMax_D(iDimHorizontal)/)
+       CoordMin_D = (/ CoordMin_D(iDimLOS), CoordMin_D(iDimVertical), &
+            CoordMin_D(iDimHorizontal)/)
        n1 = Size_D(iDimLOS)
        n2 = Size_D(iDimVertical)
        n3 = Size_D(iDimHorizontal)
@@ -589,15 +613,17 @@ contains
        nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
 
-       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3,nWavelengthBin))
-       allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(nWavelengthBin+1))
+       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
+            nWavelengthBin))
+       allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
+            nWavelengthBin+1))
 
        SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
        SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
           ! Values of each wavelength bin correspond to the center of the bin
-          SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin) = &
-               MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
+          SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin)&
+               = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
 
@@ -621,21 +647,26 @@ contains
 
     else
        do iVar=1, nVar
-          if(IsVerbose)write(*,*)'NameVar_V(iVar+nDim) = ',NameVar_V(iVar+nDim)
+          if(IsVerbose)write(*,*)'NameVar_V(iVar+nDim) = ',&
+               NameVar_V(iVar+nDim)
 
           call lower_case(NameVar_V(iVar+nDim))
 
           select case(NameVar_V(iVar+nDim))
           case('rho')
              ! g/cm3 --> kg/m3
-             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
+             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e3
           case('ux')
              ! km/s --> m/s
-             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
+             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e3
           case('uy')
-             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
+             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e3
           case('uz')
-             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e3
+             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e3
           case('bx')
              ! G --> T
              Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
@@ -653,11 +684,14 @@ contains
              Var_VIII(te_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
           case('i01')
              ! erg/cm^3 --> J/m^3
-             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e-1
+             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1
           case('i02')
-             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)*1e-1
+             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1
           case default
-             write(*,*) NameSub // ' unused NameVar = ' // NameVar_V(iVar+nDim)
+             write(*,*) NameSub // ' unused NameVar = '&
+                  // NameVar_V(iVar+nDim)
           end select
        end do
     endif
@@ -665,7 +699,8 @@ contains
     deallocate(VarIn_VIII)
 
     if(IsInstrument .and. nPixel /= n3) then
-       write(*,*)'!!! nPixel /= n3, interpolate from n3 to nPixel!!! nPixel = ',nPixel,' and n3 = ',n3
+       write(*,*)'!!! nPixel /= n3, interpolate from n3 to nPixel! nPixel = '&
+            ,nPixel,' and n3 = ',n3
        allocate(VarIn_VIII(nVar,n1,n2,n3))
 
        VarIn_VIII =  Var_VIII
@@ -696,8 +731,11 @@ contains
     LOSnorm_D = (/1,0,0/) 
 
     ! Convert to CGS
-    if(.not. IsDataBlock)dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
-    if(.not. IsDataBlock)dA = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2 * (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2 
+    if(.not. IsDataBlock)dx = &
+         (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
+    if(.not. IsDataBlock)dA = &
+         (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2 * &
+         (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2 
 
   end subroutine read_data
 
@@ -758,7 +796,7 @@ contains
     MaxJ = nint(MaxLogT/dLogT) + 1
     allocate(g_II(MinI:MaxI,MinJ:MaxJ))
     if(IsVerbose)&
-         write(*,*)'MinLogN, MaxLogN, dLogN, MinLogT, MaxLogT, dLogT = ',&
+         write(*,*)'MinLogN, MaxLogN, dLogN, MinLogT, MaxLogT, dLogT = ', &
          MinLogN, MaxLogN, dLogN,MinLogT, MaxLogT, dLogT
 
     READLOOP: do
@@ -771,9 +809,9 @@ contains
 
        read(UnitTmp_,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
-
+!if(NameIon=='fe_9' .and. nLevelFrom==12 .and. nLevelTo == 96 .and. LogN == 8.0 .and. LogT == 6.0)write(*,*)LogG
+if(NameIon=='fe_9')write(*,*)NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
        ! Check if this belongs to the same line
-
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN) + 1
@@ -796,20 +834,21 @@ contains
 
           ! Storage is done
           DoStore = .false.
-
        end if
 
        if(iError /= 0) EXIT READLOOP
 
        ! Check if wavelength is inside any of the intervals
-
        do iWavelengthInterval = 1, nWavelengthInterval
-          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval)) CYCLE
-          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval)) CYCLE
+          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
+               CYCLE
+          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
+               CYCLE
 
           ! New line of interest found
           iLine = iLine + 1
-          if(iLine > nMaxLine) call CON_stop('Too many waves, increase MaxWave')
+          if(iLine > nMaxLine)&
+               call CON_stop('Too many waves, increase MaxWave')
 
           FirstLineWavelength = LineWavelength
           DoStore = .true.
