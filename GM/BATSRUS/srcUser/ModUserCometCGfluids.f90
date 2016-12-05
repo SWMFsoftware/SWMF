@@ -3735,12 +3735,14 @@ contains
 
     use ModAdvance,    ONLY: State_VGB, time_BLK
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_,&
-         ElectronCharge, ElectronPressureRatio, UnitTemperature_, UnitEnergyDens_
+         ElectronCharge, ElectronPressureRatio, &
+         UnitTemperature_, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
     use ModMain,       ONLY: n_step
+    use ModCellGradient, ONLY: calc_gradient
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -3759,6 +3761,10 @@ contains
     real, dimension(nIonFluid)   :: nIon_I
     real, dimension(3,nIonFluid) :: uIon_I
 
+    real, allocatable :: &
+         GradXVarX_C(:,:,:), GradXVarY_C(:,:,:), GradXVarZ_C(:,:,:), &
+         GradYVarX_C(:,:,:), GradYVarY_C(:,:,:), GradYVarZ_C(:,:,:), &
+         GradZVarX_C(:,:,:), GradZVarY_C(:,:,:), GradZVarZ_C(:,:,:)
 
     !--------------------------------------------------------------------------
 
@@ -3963,6 +3969,30 @@ contains
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           PlotVar_G(i,j,k) = TestArray_IGB(8,i,j,k,iBlock)
        end do; end do; end do
+
+    case('divuh2op')
+       PlotVar_G = 0.0
+       NameIdlUnit = ' '
+       NameTecUnit = ' '
+       allocate(GradXVarX_C(1:nI,1:nJ,1:nK), GradXVarY_C(1:nI,1:nJ,1:nK), &
+            GradXVarZ_C(1:nI,1:nJ,1:nK), GradYVarX_C(1:nI,1:nJ,1:nK),     &
+            GradYVarY_C(1:nI,1:nJ,1:nK), GradYVarZ_C(1:nI,1:nJ,1:nK),     &
+            GradZVarX_C(1:nI,1:nJ,1:nK), GradZVarY_C(1:nI,1:nJ,1:nK),     &
+            GradZVarZ_C(1:nI,1:nJ,1:nK))
+       call calc_gradient(iBlock, &
+            State_VGB(H2OpRhoUx_,:,:,:,iBlock)/ &
+            State_VGB(H2OpRho_, :,:,:,iBlock),  &
+            GradXVarX_C, GradYVarX_C, GradZVarX_C)
+       call calc_gradient(iBlock, &
+            State_VGB(H2OpRhoUy_,:,:,:,iBlock)/ &
+            State_VGB(H2OpRho_, :,:,:,iBlock),  &
+            GradXVarY_C, GradYVarY_C, GradZVarY_C)
+       call calc_gradient(iBlock, &
+            State_VGB(H2OpRhoUz_,:,:,:,iBlock)/ &
+            State_VGB(H2OpRho_, :,:,:,iBlock),  &
+            GradXVarZ_C, GradYVarZ_C, GradZVarZ_C)
+       PlotVar_G(1:nI,1:nJ,1:nK) = (GradXVarX_C + GradYVarY_C + GradZVarZ_C)*&
+            NO2SI_V(UnitU_)/NO2SI_V(UnitX_)
 
     case default
        IsFound = .false.
