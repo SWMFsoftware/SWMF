@@ -8,10 +8,16 @@
 #include "pic.h"
 #include "RosinaMeasurements.h"
 
+#ifndef _NO_SPICE_CALLS_
+#include "SpiceUsr.h"
+#endif
+
+
 RosinaSample::cRosinaSamplingLocation RosinaSample::Rosina[RosinaSample::nPoints];
 
 //init the pointing directions and geomentry informationvoid
 void RosinaSample::Init() {
+#ifndef _NO_SPICE_CALLS_
   int i,idim,iCell,jCell,kCell,nd;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
 
@@ -66,12 +72,13 @@ void RosinaSample::Init() {
     for (idim=0;idim<3;idim++) Rosina[i].RamGauge.LineOfSight[idim]=l[idim];
   }
 
-  Flush();
-
   if (PIC::ThisThread==0) {
     fclose(fTrajectory);
     printf("$PREFIX: RosinaSample::Init is complete.....\n");
   }
+#endif  
+  
+  Flush();
 }
 
 //flush the data buffers
@@ -92,6 +99,9 @@ void RosinaSample::SamplingProcessor() {
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
 
+  #ifdef _NO_SPICE_CALLS_
+  return; //cannot sample the instrument related data when SPICE is not used
+  #endif
 
   for (i=0;i<nPoints;i++) if (Rosina[i].node!=NULL) if (Rosina[i].node->Thread==PIC::ThisThread) if ((block=Rosina[i].node->block)!=NULL) {
     ptr=block->FirstCellParticleTable[Rosina[i].iCell+_BLOCK_CELLS_X_*(Rosina[i].jCell+_BLOCK_CELLS_Y_*Rosina[i].kCell)];
