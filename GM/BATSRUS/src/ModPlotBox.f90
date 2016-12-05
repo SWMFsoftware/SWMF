@@ -161,9 +161,9 @@ contains
              if(sqrt(sum((Xyz_D + Xyz0_D)**2)) < rBody)CYCLE 
                  
              ! Rotate box 
-             XyzRot_D = matmul(rot_matrix_z(zAngle), &
-                  matmul(rot_matrix_y(yAngle), &
-                  matmul(rot_matrix_x(xAngle), Xyz_D)))
+             XyzRot_D = matmul(rot_matrix_z(-zAngle), &
+                  matmul(rot_matrix_y(-yAngle), &
+                  matmul(rot_matrix_x(-xAngle), Xyz_D)))
              
              ! Shift box back and Get Gm coordinates
              XyzRotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
