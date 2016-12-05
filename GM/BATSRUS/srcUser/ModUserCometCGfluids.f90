@@ -2475,9 +2475,9 @@ contains
                   (0.1*cEV)))
           end if
           
-          SPeTerm_IC(8,i,j,k) = -2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
+          SPeTerm_IC(8,i,j,k) = min(-2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
                SPeTerm_IC(8,i,j,k)/1e6*cEV* &
-               Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+               Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_), 0.0)
 
           !SPeTerm_IC(8,i,j,k) = -2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
           !     SPeTerm_IC(8,i,j,k)/1e6*1.60217733e-19* &
