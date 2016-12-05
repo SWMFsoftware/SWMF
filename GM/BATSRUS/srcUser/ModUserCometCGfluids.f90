@@ -1335,7 +1335,7 @@ contains
     use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, &
          n_step, iTest, ProcTest, Time_Simulation
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
-    use ModPhysics, ONLY:  Si2No_V, UnitX_
+    use ModPhysics, ONLY:  Si2No_V, NO2SI_V, UnitX_
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
 
@@ -1508,8 +1508,9 @@ contains
     if (IsIntersectedShape) then
        v_II = v_II*1e-9
     else
-!!! No opacity corrections yet
-       NCol = 0
+! opacity corrections based on Haser, still need some fecth fectors
+       NCol = Qprod/4.0/(uHaser)/(sqrt(DistProjection2)*NO2SI_V(UnitX_)) * &
+            (0.5-1.0/cPi*atan(Xyz_DGB(x_,i,j,k,iBlock)/sqrt(DistProjection2)))
        v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
     end if
 
