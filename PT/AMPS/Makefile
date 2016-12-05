@@ -39,6 +39,11 @@ else
 	SEARCH_C+=-D _NO_KAMELEON_CALLS_
 endif
 
+#define _NO_SPICE_CALLS_ when SPICE library is not intended to be linked
+ifeq ($(SPICE),nospice)
+	SEARCH_C+=-D _NO_SPICE_CALLS_
+endif
+
 
 #the additional argument string for the fortran compiler
 SEARCH_F=
