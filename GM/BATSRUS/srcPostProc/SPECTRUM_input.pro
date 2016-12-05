@@ -89,7 +89,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   Dielectronic=100.
 
 ; Remove dielectronic list elements
-  for i=0,nIon-1 do begin
+  for i=0L ,nIon-1 do begin
      position=strpos(MasterList(i),'d')
      if position ge 2 then Dielectronic=[Dielectronic,i]
   endfor
@@ -118,7 +118,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,'#START',format='(a)'
 
 ; START main loop f calculation and writing
-  for i=0,nIon-1 do begin
+  for i=0L,nIon-1 do begin
      
 ; Select ion
      position=strpos(MasterList(i),'_')
