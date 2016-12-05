@@ -14,6 +14,8 @@
 #include "Comet.h"
 #include "SingleVariableDiscreteDistribution.h"
 
+#include "RosinaMeasurements.h"
+
 //the object name and the names of the frames
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
@@ -91,6 +93,12 @@ const double  Activity[3][25]={
 
 void Comet::Init_BeforeParser() {
   Exosphere::Init_SPICE();
+
+  //init the model of the Rosina Ram and Nude gauge measuments
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(RosinaSample::SamplingProcessor,RosinaSample::PrintOutputFile);
+
+
+//  RosinaSample::Init();
 
 #if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
   // Keep track of original surface element the particle was created from
