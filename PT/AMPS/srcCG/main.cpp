@@ -37,6 +37,8 @@
 #include "Comet.h"
 #include "Exosphere.h"
 
+#include "RosinaMeasurements.h"
+
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 #include "SpiceUsr.h"
 #endif
@@ -664,6 +666,9 @@ int main(int argc,char **argv) {
   //init the volume of the cells'
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure(PIC::UserModelInputDataPath);
+
+  //init sampling of the last Rosina data
+  RosinaSample::Init();
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
   if (NewMeshGeneratedFlag==true) {
