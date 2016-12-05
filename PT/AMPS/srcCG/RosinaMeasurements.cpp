@@ -173,7 +173,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
       fout=fopen(fname,"w");
       if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
-      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\"\n");
+      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Flux\", \"Nude Gauge Flux\"\n");
 
       for (int i=0;i<nPoints;i++) {
         fprintf(fout,"%i %e %e\n",i,SumBuffer[2*i+1],SumBuffer[2*i+1+2*nPoints]);
