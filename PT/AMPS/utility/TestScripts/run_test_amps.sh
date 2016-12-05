@@ -121,8 +121,8 @@ cd ..
 #module purge;                               <#
 
 #>Pleiades ####################################
-#module load comp-intel/2015.0.090;           #
-#module load mpi-openmpi/1.6.5-intel;        <#
+#module load comp-intel/2016.2.181;           #
+#module load mpi-sgi/mpt;                    <#
 
 #>Stampede ####################################
 #module load intel/15.0.2;                    #
