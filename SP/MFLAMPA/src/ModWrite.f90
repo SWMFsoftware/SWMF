@@ -86,6 +86,9 @@ module ModWrite
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
+  !----------------------------------------------------------------------------
+  ! auxilary array, used to write data on a sphere
+  integer:: iNodeIndex_I(nNode)
   !/
 contains
   
@@ -93,10 +96,14 @@ contains
     use ModReadParam, ONLY: read_var
     ! set parameters of output files: file format, kind of output etc.
     character(len=300):: StringPlot
-
-    integer:: iFile
+    ! loop variables
+    integer:: iFile, iNode
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
+    ! initialize auxilary array
+    do iNode = 1, nNode
+       iNodeIndex_I(iNode) = iNode
+    end do
     ! number of output files
     call read_var('nFile', nFile)
     ! check correctness
@@ -372,10 +379,18 @@ contains
       integer:: nVarPlot
       ! MPI error
       integer:: iError
+      ! skip a field line if it fails to reach radius of output sphere
+      logical:: DoPrint_I(nNode)
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
+      
+      ! reset, all field lines are printed unless fail to reach output sphere
+      DoPrint_I = .true.
+
+      ! go over all lines on the processor and find the point of intersection
+      ! with output sphere if present
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
 
@@ -392,18 +407,25 @@ contains
          ! find the particle just above the given radius
          do iParticle = iFirst , iLast
             if(State_VIB(R_, iParticle, iBlock) > File_I(iFile) % Radius) EXIT
-            if(iParticle == iLast) call CON_stop(NameSub//&
-                 ': radius of output sphere is above the field line range')
+            ! check if reached the end, i.e. there is no intersection
+            if(iParticle == iLast) &
+                 DoPrint_I(iNode) = .false.
          end do
-         if(iParticle == iFirst) call CON_stop(NameSub//&
-              ': radius of output sphere is below the field line range')
+         !check if field line started above output sphere, i.e. no intersection
+         if(iParticle == iFirst) &
+              DoPrint_I(iNode) = .false.
 
+         ! if no intersection found -> proceed to the next line
+         if(.not.DoPrint_I(iNode)) CYCLE
+
+         !intersection is found -> get data at that location
          iAbove = iParticle
          
          ! interpolate data and fill buffer
          Weight = &
               (File_I(iFile)%Radius        - State_VIB(R_,iAbove-1,iBlock)) /&
               (State_VIB(R_,iAbove,iBlock) - State_VIB(R_,iAbove-1,iBlock))
+         ! interpolate each requested variable
          do iVarPlot = 1, nVarPlot
             iVarIndex = File_I(iFile) % iVarPlot_V(iVarPlot)
             File_I(iFile) % Buffer_II(iVarPlot, iNode) = &
@@ -413,13 +435,20 @@ contains
 
       end do
       
+      ! gather interpolated data on the source processor
       if(is_proc0(SP_))then
          call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
               nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
               i_proc0(SP_), iComm, iError)
+         call MPI_Reduce(MPI_IN_PLACE, DoPrint_I, &
+              nNode, MPI_Logical, MPI_Land, &
+              i_proc0(SP_), iComm, iError)
       else
          call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
               nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+              i_proc0(SP_), iComm, iError)
+         call MPI_Reduce(DoPrint_I, DoPrint_I, &
+              nNode, MPI_Logical, MPI_Land, &
               i_proc0(SP_), iComm, iError)
       end if
 
@@ -431,11 +460,13 @@ contains
            nDimIn       = 1, &
            TimeIn       = Time, &
            nStepIn      = iIter, &
-           CoordMinIn_D = (/1.0/), &
-           CoordMaxIn_D = (/real(nNode)/), &
+           Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)), &
            NameVarIn    = File_I(iFile) % NameVarPlot, &
            VarIn_VI     = &
-           File_I(iFile) % Buffer_II(1:nVarPlot,1:nNode)&
+           reshape(&
+           pack(File_I(iFile) % Buffer_II(1:nVarPlot,1:nNode),&
+           MASK = spread(DoPrint_I, 1, nVarPlot)), &
+           (/nVarPlot, count(DoPrint_I)/))&
            )
     end subroutine write_mh_sph
 
