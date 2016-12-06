@@ -259,7 +259,7 @@ contains
        write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
        call CON_stop(NameSub // " no interval founnd")
     endif
-       
+
     iBin =0
 
     do
@@ -288,7 +288,7 @@ contains
              CosAlpha = sum(LOSnorm_D*Bnorm_D)
              uNth2    = 1.0/16.0 * (zPlus2 + zMinus2) * abs(cosAlpha)
              uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel)/cProtonMass
-             
+
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3  
              LogNe = log10(Rho*1e-6/cProtonMass)
@@ -304,7 +304,7 @@ contains
 
              ! Convert [m] --> [A]
              dLambda   = dLambdaSI * 1e10
-      
+
              ! Get the contribution function
              iNMin  = LineTable_I(iLine)%iMin
              jTMin  = LineTable_I(iLine)%jMin
@@ -331,7 +331,10 @@ contains
        write(*,*)'iMin = ',LineTable_I(iLine)%iMin,'jMin = ',LineTable_I(iLine)%jMin
        write(*,*)'iMax = ',LineTable_I(iLine)%iMax,'jMax = ',LineTable_I(iLine)%jMax
        write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)',int(LogTe/dLogT)
+       write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN),int(LogTe/dLogT)))
     endif
+
+!    if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLine)%g_II)
 
   end subroutine calc_flux
 
@@ -527,8 +530,9 @@ contains
   !==========================================================================
   subroutine read_data
 
-    use ModPlotFile, ONLY: read_plot_file
-    use ModUtilities, ONLY: split_string, lower_case
+    use ModPlotFile,         ONLY: read_plot_file
+    use ModUtilities,        ONLY: split_string, lower_case
+    use ModCoordTransform,   ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     character(len=lString)      :: StringHeader
     character(len=lString)      :: NameVar
@@ -543,7 +547,9 @@ contains
 
     real                        :: MinWavelength, MaxWavelength
 
-    real,allocatable            :: VarIn_VIII(:,:,:,:)
+    real                        :: xAngle, yAngle, zAngle
+
+    real,allocatable            :: VarIn_VIII(:,:,:,:), Param_I(:)
 
     character(len=*), parameter :: NameSub = 'read_data'
     !------------------------------------------------------------------------
@@ -565,16 +571,23 @@ contains
          NameSub//' could not header from '//trim(NameDataFile))
 
     allocate(VarIn_VIII(nVar,n1,n2,n3))
+    allocate(Param_I(nParam))
 
     call read_plot_file(NameFile=NameDataFile, &
          TypeFileIn = TypeDataFile,            &
          VarOut_VIII = VarIn_VIII,             &
-         CoordMinOut_D=CoordMin_D,             &
-         CoordMaxOut_D=CoordMax_D,             &   
+         CoordMinOut_D = CoordMin_D,           &
+         CoordMaxOut_D = CoordMax_D,           &   
+         ParamOut_I = Param_I,                 &
          iErrorOut = iError)
 
     if(iError /= 0) call CON_stop( &
          NameSub//' could not read data from '//trim(NameDataFile))
+
+    ! Assign angles of rotated box
+    xAngle = Param_I(1)
+    yAngle = Param_I(2)
+    zAngle = Param_I(3)
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
@@ -688,6 +701,20 @@ contains
              write(*,*) NameSub // ' unused NameVar = '&
                   // NameVar_V(iVar+nDim)
           end select
+       end do
+
+       ! Apply rotation on vector variables
+       do k=1, n3
+          do j=1, n2
+             do i=1, n2
+                Var_VIII(ux_:uz_,i,j,k) = matmul(rot_matrix_z(-zAngle), &
+                     matmul(rot_matrix_y(-yAngle), &
+                     matmul(rot_matrix_x(-xAngle), Var_VIII(ux_:uz_,i,j,k))))
+                Var_VIII(bx_:bz_,i,j,k) = matmul(rot_matrix_z(-zAngle), &
+                     matmul(rot_matrix_y(-yAngle), &
+                     matmul(rot_matrix_x(-xAngle), Var_VIII(bx_:bz_,i,j,k))))
+             end do
+          end do
        end do
     endif
 
@@ -804,14 +831,14 @@ contains
 
        read(UnitTmp_,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
-
+!if(NameIon=='fe_9' .and. nLevelFrom==12 .and. nLevelTo == 96 .and. LogN == 8.0 .and. LogT == 6.0)write(*,*)LogG
+!if(NameIon=='fe_9')write(*,*)NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
        ! Check if this belongs to the same line
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
           iN = nint(LogN/dLogN)
           iT = nint(LogT/dLogT)
           g_II(iN,iT) = 10.0**LogG
-
           CYCLE READLOOP
        end if
 
@@ -852,12 +879,11 @@ contains
           ! Store ion name and wavelength 
           LineTable_I(iLine)%NameIon    = NameIon
           LineTable_I(iLine)%nLevelFrom = nLevelFrom
-          LineTable_I(iLine)%nLevelTo = nLevelTo 
+          LineTable_I(iLine)%nLevelTo = nLevelTo
           LineTable_I(iLine)%LineWavelength = LineWavelength
 
-
           ! Calculate indexes and store as the minimum indexes
-          iN = nint(LogN/dLogN) ; iT = nint(LogT/dLogT)
+          iN = nint(LogN/dLogN); iT = nint(LogT/dLogT)
           LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
 
           ! To be safe zero out the input array
