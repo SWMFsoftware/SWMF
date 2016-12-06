@@ -72,6 +72,7 @@ program spectrum
   ! Derived type to read tabulated G values
   type LineTableType
      character(len=6)         :: NameIon
+     integer                  :: nLevelFrom, nLevelTo
      real                     :: LineWavelength
      integer                  :: iMin, jMin, iMax, jMax
      real, allocatable        :: g_II(:,:)
@@ -323,20 +324,14 @@ contains
        end do
     end do
 
-if(IsVerbose)then
-write(*,*)'iLine = ',iLine
-write(*,*)'NameIon = ',LineTable_I(iLine)%NameIon
-write(*,*)'LineWaveLength = ',LineTable_I(iLine)%LineWavelength
-write(*,*)'iMin = ',LineTable_I(iLine)%iMin,'jMin = ',LineTable_I(iLine)%jMin
-write(*,*)'iMax = ',LineTable_I(iLine)%iMax,'jMax = ',LineTable_I(iLine)%jMax
-write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)',int(LogTe/dLogT)
-write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN),int(LogTe/dLogT)))
-endif
-
-if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLine)%g_II)
-
-!    if(IsVerbose)write(*,*)'Lambda, Gint = ',Lambda, log10(Gint)
-!    if(IsVerbose)write(*,*)'LogNe, LogTe = ',LogNe, LogTe
+    if(IsVerbose)then
+       write(*,*)'iLine = ',iLine
+       write(*,*)'NameIon = ',LineTable_I(iLine)%NameIon
+       write(*,*)'LineWaveLength = ',LineTable_I(iLine)%LineWavelength
+       write(*,*)'iMin = ',LineTable_I(iLine)%iMin,'jMin = ',LineTable_I(iLine)%jMin
+       write(*,*)'iMax = ',LineTable_I(iLine)%iMax,'jMax = ',LineTable_I(iLine)%jMax
+       write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)',int(LogTe/dLogT)
+    endif
 
   end subroutine calc_flux
 
@@ -790,10 +785,10 @@ if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLin
        end if
     end do READGRID
 
-    MinI = nint(MinLogN/dLogN) + 1
-    MaxI = nint(MaxLogN/dLogN) + 1
-    MinJ = nint(MinLogT/dLogT) + 1
-    MaxJ = nint(MaxLogT/dLogT) + 1
+    MinI = nint(MinLogN/dLogN)
+    MaxI = nint(MaxLogN/dLogN)
+    MinJ = nint(MinLogT/dLogT)
+    MaxJ = nint(MaxLogT/dLogT)
     allocate(g_II(MinI:MaxI,MinJ:MaxJ))
     if(IsVerbose)&
          write(*,*)'MinLogN, MaxLogN, dLogN, MinLogT, MaxLogT, dLogT = ', &
@@ -809,14 +804,14 @@ if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLin
 
        read(UnitTmp_,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
-!if(NameIon=='fe_9' .and. nLevelFrom==12 .and. nLevelTo == 96 .and. LogN == 8.0 .and. LogT == 6.0)write(*,*)LogG
-if(NameIon=='fe_9')write(*,*)NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
+
        ! Check if this belongs to the same line
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
-          iN = nint(LogN/dLogN) + 1
-          iT = nint(LogT/dLogT) + 1
+          iN = nint(LogN/dLogN)
+          iT = nint(LogT/dLogT)
           g_II(iN,iT) = 10.0**LogG
+
           CYCLE READLOOP
        end if
 
@@ -856,10 +851,13 @@ if(NameIon=='fe_9')write(*,*)NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN
 
           ! Store ion name and wavelength 
           LineTable_I(iLine)%NameIon    = NameIon
+          LineTable_I(iLine)%nLevelFrom = nLevelFrom
+          LineTable_I(iLine)%nLevelTo = nLevelTo 
           LineTable_I(iLine)%LineWavelength = LineWavelength
 
+
           ! Calculate indexes and store as the minimum indexes
-          iN = nint(LogN/dLogN) + 1; iT = nint(LogT/dLogT) + 1
+          iN = nint(LogN/dLogN) ; iT = nint(LogT/dLogT)
           LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
 
           ! To be safe zero out the input array
