@@ -3,6 +3,7 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModParallel
   use ModSize, ONLY: MaxBlock
+  use BATL_tree, ONLY: Unset_
   implicit none
   save
 
@@ -13,7 +14,7 @@ module ModParallel
   !  +1=neighbors at higher level,
   !  NOBLK=no neighbors).
   !/
-  integer, parameter :: NOBLK=-100
+  integer, parameter :: NOBLK = Unset_
 
   integer, dimension(MaxBlock) :: &
        neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
