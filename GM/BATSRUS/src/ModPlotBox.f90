@@ -156,9 +156,6 @@ contains
 
           do i = 1, nX
              Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
-
-             ! When inside Body keep default plot values
-             if(sqrt(sum((Xyz_D + Xyz0_D)**2)) < rBody)CYCLE 
                  
              ! Rotate box 
              XyzRot_D = matmul(rot_matrix_z(-zAngle), &
@@ -167,6 +164,9 @@ contains
              
              ! Shift box back and Get Gm coordinates
              XyzRotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
+
+             ! When inside Body keep default plot values
+             if(sqrt(sum(XyzRotGm_D**2)) < rBody)CYCLE 
              
              ! Get generalized coordinates
              call xyz_to_coord(XyzRotGm_D, Coord_D)
@@ -214,7 +214,7 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! This subroutine does not support HDF output.
-    if(plot_form(iFile) == 'hgf') call CON_stop(NameSub// &
+    if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
          ': HDF file type is not supported for BOX output.')
 
     ! Collect results to head node
@@ -228,6 +228,7 @@ contains
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
+       NameVar = trim(NameVar) // ' xAngle yAngle zAngle' 
 
        ! Correct for double counting in MPI_reduce_real_array
        do k = 1, nZ
@@ -247,9 +248,10 @@ contains
             StringHeaderIn=NameUnit, &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
+            ParamIn_I = (/ xAngle, yAngle, zAngle /), &
             NameVarIn = NameVar, &
-            CoordMinIn_D = (/xMin, yMin, zMin/), &
-            CoordMaxIn_D = (/xMax, yMax, zMax/), &
+            CoordMinIn_D = (/ xMin, yMin, zMin /), &
+            CoordMaxIn_D = (/ xMax, yMax, zMax /), &
             VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
 
