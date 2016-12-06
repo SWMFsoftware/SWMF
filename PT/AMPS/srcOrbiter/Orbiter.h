@@ -27,6 +27,16 @@ using namespace Exosphere;
     double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
   }
 
+  //the set of function needed for calculating of the projection area of the spacecraft
+  extern double ProjectionOrbiterSurfaceArea;
+  double CalculateProjectionArea();
+
+  //the name of the surace mesh file
+  extern char SurfaceMeshName[_MAX_STRING_LENGTH_PIC_];
+
+  //the dimension coefficients of the computational domain in respect to the size of the orbiter
+  extern double DomainSizeMultiplierX,DomainSizeMultiplierY,DomainSizeMultiplierZ;
+
   //sample calulated aerodynamcis properties
   namespace Sampling {
     extern double DragCorfficient;
