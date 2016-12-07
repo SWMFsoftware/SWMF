@@ -281,7 +281,10 @@ contains
             WavelengthInterval_II(2,iInterval))EXIT
     end do
 
-    FluxConst = dA * dx / (4 * cPi * Dist**2.0)
+    ! Convert arsec^-2 --> sr^-1 to match Chianti output
+    ! 1 str = 4.25e10 arcsec^2
+    ! 1 str^-1 = 2.3529412e-11 arcsec^-2
+    FluxConst = dA * dx / (4 * cPi * Dist**2.0)/2.3529412e-11
 
     do kPixel=1,n3
        do jPixel=1,n2
@@ -326,7 +329,7 @@ contains
              ! Calculate flux and spread it on the Spectrum_II grids
              ! FluxMono = 1 / (4 * cPi * Dist**2.0) * &
              !      Gint * (10.0**LogNe)**2.0 * dV
-               FluxMono = FluxConst * Gint * (10.0**LogNe)**2.0
+             FluxMono = FluxConst * Gint * (10.0**LogNe)**2.0
 
              call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
 
