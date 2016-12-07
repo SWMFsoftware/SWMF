@@ -294,7 +294,7 @@ contains
              zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
              B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
              Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
-             CosAlpha = sum(LOSnorm_D*Bnorm_D)
+             cosAlpha = sum(LOSnorm_D*Bnorm_D)
              uNth2    = 1.0/16.0 * (zPlus2 + zMinus2) * abs(cosAlpha)
              uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel)/cProtonMass
 
@@ -344,8 +344,8 @@ contains
             'jMax = ',LineTable_I(iLine)%jMax
        write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)', & 
             int(LogTe/dLogT)
-       write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN), &
-            int(LogTe/dLogT)))
+    !   write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN), &
+    !        int(LogTe/dLogT)))
     endif
 
 
@@ -741,8 +741,7 @@ contains
     deallocate(VarIn_VIII)
 
     if(IsInstrument .and. nPixel /= n3) then
-       write(*,*)'!!! nPixel /= n3, interpolate from n3 to nPixel! nPixel = '&
-            ,nPixel,' and n3 = ',n3
+       write(*,*)'interpolate from n3 to nPixel! nPixel=',nPixel,' /= n3=',n3
        allocate(VarIn_VIII(nVar,n1,n2,n3))
 
        VarIn_VIII =  Var_VIII
@@ -752,7 +751,7 @@ contains
        ! Interpolate to new grid
        do k = 1, nPixel
           Coord = 1 + real(n3-1)/real(nPixel-1)*real(k-1)
-          k1 = nint(Coord)
+          k1 = floor(Coord)
           k2 = k1+1
           Dz1 = Coord - real(k1)
           Dz2 = 1.0 - Dz1
@@ -774,11 +773,18 @@ contains
     LOSnorm_D = (/1,0,0/) 
 
     ! Convert to CGS
-    if(.not. IsDataBlock)dx = &
-         (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
-    if(.not. IsDataBlock)dA = &
-         (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2 * &
-         (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2 
+    if(.not. IsDataBlock)then
+       dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
+       dy = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2
+       dz = (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2
+       if(dy*dz /= 0) then 
+          dA = dy*dz 
+       else 
+          dA = max(dy**2,dz**2)
+       end if
+    endif
+
+    if(IsVerbose)write(*,*)'dx, dA = ',dx,dA
 
   end subroutine read_data
 

@@ -119,7 +119,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 
 ; START main loop f calculation and writing
   for i=0L,nIon-1 do begin
-     
+
 ; Select ion
      position=strpos(MasterList(i),'_')
      LocalElement=strmid(MasterList(i),0,position)
@@ -127,10 +127,32 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      zElem=zElem(0)
      Ion=MasterList(i)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
-     print,'doing ion ',MasterList(i),' which is the ',i+1,'th ion out of ',nIon
+     print,'doing ',MasterList(i),' which is the ',i+1,'th ion out of ',nIon
 
 ; Select ioneq 
      ion_eq=ioneq(*,zElem-1,zIon-1)
+
+; Limit LogT range to fraction > limit_ioneq
+     limit_ioneq = 1e-6
+
+     if zElem-1 eq 0 and zIon-1 eq 0 then begin
+        location = where(ion_eq gt limit_ioneq/100.)
+     endif else begin
+        location = where(ion_eq gt limit_ioneq)
+     endelse
+
+     LogTmin=t_ioneq(min(location))
+     LogTmax=t_ioneq(max(location))
+     dLogT=0.1
+     nLogT=(LogTmax-LogTmin)/dLogT
+     LogT=LogTmin+dLogT*findgen(nLogT+1)
+     nLogT=n_elements(LogT)
+     
+     dt1=t_ioneq(min(location)+1)-t_ioneq(min(location))
+      if dt1 lt 0.09 then begin
+         q1=location(2*findgen(nLogT))
+         location=q1
+      endif
 
 ; Calculate the emissivities
      data=emiss_calc(zElem,zIon,dens=LogN,temp=LogT,/quiet)
@@ -161,11 +183,8 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      LogG=LogG*ElementAbundance*0.83
      for k=0,nLogT-1 do begin
         for j=0,nLogN-1 do begin
-           if not keyword_set(ioneq_unity) then begin
-              LogG(k,j,*)=LogG(k,j,*)*ion_eq(k)/(10^LogN(j))
-              position=abs(logT(k)-t_ioneq)
-           endif
-           if keyword_set(ioneq_unity) then LogG(k,j,*)=LogG(k,j,*)/(10^LogN(j))
+           LogG(k,j,*)=LogG(k,j,*)*ion_eq(location(k))/(10^LogN(j))
+           position=abs(logT(k)-t_ioneq)
         endfor
      endfor
      LogG=alog10(LogG)
