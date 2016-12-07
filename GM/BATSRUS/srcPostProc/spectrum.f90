@@ -1,5 +1,12 @@
+!instrumental broadening
+
 !comments!!!
-!convert vector components to x,y,z!!!
+!verbose levels
+
+!Doppler
+!option for unpobserved lines
+
+!units
 
 program spectrum
 
@@ -237,7 +244,7 @@ contains
     real                           :: uNth2, uTh2
     real                           :: Gint, LogNe, LogTe, Rho
     real, allocatable              :: gLambda_II(:,:)
-
+    real                           :: FluxConst
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
 
@@ -273,6 +280,8 @@ contains
        if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
             WavelengthInterval_II(2,iInterval))EXIT
     end do
+
+    FluxConst = dA * dx / (4 * cPi * Dist**2.0)
 
     do kPixel=1,n3
        do jPixel=1,n2
@@ -315,8 +324,9 @@ contains
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = dA / (4 * cPi * Dist**2.0) * &
-                  Gint * (10.0**LogNe)**2.0 * dx
+             ! FluxMono = 1 / (4 * cPi * Dist**2.0) * &
+             !      Gint * (10.0**LogNe)**2.0 * dV
+               FluxMono = FluxConst * Gint * (10.0**LogNe)**2.0
 
              call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
 
@@ -328,13 +338,16 @@ contains
        write(*,*)'iLine = ',iLine
        write(*,*)'NameIon = ',LineTable_I(iLine)%NameIon
        write(*,*)'LineWaveLength = ',LineTable_I(iLine)%LineWavelength
-       write(*,*)'iMin = ',LineTable_I(iLine)%iMin,'jMin = ',LineTable_I(iLine)%jMin
-       write(*,*)'iMax = ',LineTable_I(iLine)%iMax,'jMax = ',LineTable_I(iLine)%jMax
-       write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)',int(LogTe/dLogT)
-       write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN),int(LogTe/dLogT)))
+       write(*,*)'iMin = ',LineTable_I(iLine)%iMin, &
+            'jMin = ',LineTable_I(iLine)%jMin
+       write(*,*)'iMax = ',LineTable_I(iLine)%iMax, &
+            'jMax = ',LineTable_I(iLine)%jMax
+       write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)', & 
+            int(LogTe/dLogT)
+       write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN), &
+            int(LogTe/dLogT)))
     endif
 
-!    if(LineTable_I(iLine)%LineWaveLength == 203.683)write(*,*)log10(LineTable_I(iLine)%g_II)
 
   end subroutine calc_flux
 
@@ -374,7 +387,7 @@ contains
 
     InvNorm   = 1/(sqrt(2*cPi) * dLambda)
     InvSigma2 = 1/(2*dLambda**2) 
- 
+
      ! Update bins between begin and end indices by adding the Gaussian 
      ! distribution
     do iBin = iBegin , iEnd
@@ -539,17 +552,18 @@ contains
 
     integer                     :: nStep, i, j, k, Size_D(3)
 
-    real                        :: Time, dZnew
-
     integer                     :: nVarName, iVar
     integer, parameter          :: MaxNameVar = 100
     character(len=20)           :: NameVar_V(MaxNameVar)
 
     real                        :: MinWavelength, MaxWavelength
 
-    real                        :: xAngle, yAngle, zAngle
+    real                        :: xAngle, yAngle, zAngle, Rot_DD(3,3)
+    real                        :: Param_I(3)
+    real,allocatable            :: VarIn_VIII(:,:,:,:)
 
-    real,allocatable            :: VarIn_VIII(:,:,:,:), Param_I(:)
+    real                        :: Coord, Dz1, Dz2
+    integer                     :: k1, k2
 
     character(len=*), parameter :: NameSub = 'read_data'
     !------------------------------------------------------------------------
@@ -557,9 +571,9 @@ contains
          TypeFileIn=TypeDataFile,              &
          StringHeaderOut=StringHeader,         &
          nStepOut=nStep,                       &
-         TimeOut=Time,                         &
          nDimOut=nDim,                         &
          nParamOut=nParam,                     &
+         ParamOut_I = Param_I,                 &
          nVarOut=nVar,                         &
          n1Out=n1,                             &
          n2Out=n2,                             &
@@ -571,14 +585,12 @@ contains
          NameSub//' could not header from '//trim(NameDataFile))
 
     allocate(VarIn_VIII(nVar,n1,n2,n3))
-    allocate(Param_I(nParam))
 
     call read_plot_file(NameFile=NameDataFile, &
          TypeFileIn = TypeDataFile,            &
          VarOut_VIII = VarIn_VIII,             &
          CoordMinOut_D = CoordMin_D,           &
          CoordMaxOut_D = CoordMax_D,           &   
-         ParamOut_I = Param_I,                 &
          iErrorOut = iError)
 
     if(iError /= 0) call CON_stop( &
@@ -703,19 +715,27 @@ contains
           end select
        end do
 
-       ! Apply rotation on vector variables
-       do k=1, n3
-          do j=1, n2
-             do i=1, n2
-                Var_VIII(ux_:uz_,i,j,k) = matmul(rot_matrix_z(-zAngle), &
-                     matmul(rot_matrix_y(-yAngle), &
-                     matmul(rot_matrix_x(-xAngle), Var_VIII(ux_:uz_,i,j,k))))
-                Var_VIII(bx_:bz_,i,j,k) = matmul(rot_matrix_z(-zAngle), &
-                     matmul(rot_matrix_y(-yAngle), &
-                     matmul(rot_matrix_x(-xAngle), Var_VIII(bx_:bz_,i,j,k))))
-             end do
-          end do
-       end do
+
+       if(xAngle /= 0.0 .or. yAngle /= 0.0 .or. zAngle /= 0.0)then
+          ! Apply rotation on vector variables
+          Rot_DD = matmul(rot_matrix_z(-zAngle), &
+               matmul(rot_matrix_y(-yAngle), rot_matrix_x(-xAngle)))
+
+          if(IsVerbose)then
+             write(*,*)'angles = ',Param_I
+             write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
+             write(*,*)'Rot_DD=', Rot_DD
+             write(*,*)'Before: u_D=', Var_VIII(ux_:uz_,1,1,1)
+          endif
+
+          do k = 1, n3; do j = 1, n2; do i = 1, n1
+             Var_VIII(ux_:uz_,i,j,k) = matmul(Rot_DD, Var_VIII(ux_:uz_,i,j,k))
+             Var_VIII(bx_:bz_,i,j,k) = matmul(Rot_DD, Var_VIII(bx_:bz_,i,j,k))
+          end do; end do; end do
+
+          if(IsVerbose)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
+
+       end if
     endif
 
     deallocate(VarIn_VIII)
@@ -728,17 +748,18 @@ contains
        VarIn_VIII =  Var_VIII
        deallocate(Var_VIII)
        allocate(Var_VIII(nVar,n1,n2,nPixel))
-       dZnew = (CoordMax_D(3)-CoordMin_D(3))/nPixel
 
        ! Interpolate to new grid
-       do iVar=1, nVar
-          do k = 1, nPixel
-             Var_VIII(iVar,:,:,k) = &
-                  VarIn_VIII(iVar,:,:,1) + k*dZnew * &
-                  (VarIn_VIII(iVar,:,:,1) - VarIn_VIII(iVar,:,:,n3)) / &
-                  max(1.0,(CoordMax_D(3)- CoordMin_D(3)))
-          end do
+       do k = 1, nPixel
+          Coord = 1 + real(n3-1)/real(nPixel-1)*real(k-1)
+          k1 = nint(Coord)
+          k2 = k1+1
+          Dz1 = Coord - real(k1)
+          Dz2 = 1.0 - Dz1
+
+          Var_VIII(:,:,:,k) = Dz2*VarIn_VIII(:,:,:,k1)+Dz1*VarIn_VIII(:,:,:,k2)
        end do
+
        n3 = nPixel
        deallocate(VarIn_VIII)
     endif
