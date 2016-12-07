@@ -58,7 +58,7 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
   }
 
   //collect the surface normals
-  double sendBuffer[3*2*nFaceThread];
+  double *sendBuffer=new double[3*2*nFaceThread];
   int thread,cnt;
 
   for (thread=0;thread<nTotalThreads;thread++) {
@@ -77,6 +77,7 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
     }
   }
 
+  delete [] sendBuffer;
 
 }
 
