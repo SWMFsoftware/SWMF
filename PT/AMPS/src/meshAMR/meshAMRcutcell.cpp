@@ -27,6 +27,8 @@ using namespace std;
 #include "ifileopr.h"
 #include "meshAMRcutcell.h"
 
+#include "pic.h"
+
 CutCell::cTriangleFace *CutCell::BoundaryTriangleFaces=NULL;
 int CutCell::nBoundaryTriangleFaces=0;
 
@@ -843,6 +845,7 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
     flag=true;
 
     //find intersections with the faces on the mesh
+/*
     for (nface=nfaceStart;nface<nfaceFinish;nface++) {
       if (SurfaceTriangulation[nface].RayIntersection(x,SearchDirection,EPS)==true) iIntersections++;
 
@@ -853,6 +856,17 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
       }
 
     }
+*/
+
+
+   double xLength,xTarget[3];
+
+   xLength=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); 
+   for (int idim=0;idim<3;idim++) xTarget[idim]=x[idim]+SearchDirection[idim]*xLength; 
+
+   iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xTarget,NULL);
+   flag=true;
+
 
     if (ParallelCheck==true) {
       MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
