@@ -6,6 +6,9 @@
 namespace RosinaSample {
   const int nPoints=1150;
 
+  //split the cell when sample Rosina measurements
+  const int CellFractionationFactor=6;
+
   const char ObservationTime[nPoints][100]={
 "2016-09-30T0:00:04",
 "2016-09-30T0:01:04",
@@ -1168,6 +1171,8 @@ namespace RosinaSample {
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     double SecondsFromBegining,RadiusVectorLeangth,CometDistance,CharacteristicCellSize;
     int LocationCode;
+    double x[3];
+    int iLocalSubCell,jLocalSubCell,kLocalSubCell;
 
     //sampled data 
     cSamplingData NudeGauge;

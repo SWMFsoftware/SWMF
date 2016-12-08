@@ -20,6 +20,8 @@ void RosinaSample::Init() {
 #ifndef _NO_SPICE_CALLS_
   int i,idim,iCell,jCell,kCell,nd;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  double dxSubCell,dySubCell,dzSubCell,xLocalCell,yLocalCell,zLocalCell;
+
 
   //init line-of-sight vectors
   SpiceDouble lt,et,xRosetta[3],etStart;
@@ -49,6 +51,7 @@ void RosinaSample::Init() {
     }
     else nd=-1,iCell=-1,jCell=-1,kCell-1;
 
+    for (idim=0;idim<3;idim++) Rosina[i].x[idim]=xRosetta[idim];
     Rosina[i].nd=nd;
     Rosina[i].node=node;
     Rosina[i].iCell=iCell;
@@ -59,6 +62,14 @@ void RosinaSample::Init() {
     Rosina[i].CometDistance=-1.0;
     Rosina[i].SecondsFromBegining=et-etStart;
     Rosina[i].CharacteristicCellSize=-1.0;
+
+    dxSubCell=(Rosina[i].node->xmax[0]-Rosina[i].node->xmin[0])/_BLOCK_CELLS_X_/CellFractionationFactor;
+    dySubCell=(Rosina[i].node->xmax[1]-Rosina[i].node->xmin[1])/_BLOCK_CELLS_Y_/CellFractionationFactor;
+    dzSubCell=(Rosina[i].node->xmax[2]-Rosina[i].node->xmin[2])/_BLOCK_CELLS_Z_/CellFractionationFactor;
+
+    Rosina[i].iLocalSubCell=(int)((xRosetta[0]-Rosina[i].node->xmin[0])/dxSubCell);
+    Rosina[i].jLocalSubCell=(int)((xRosetta[1]-Rosina[i].node->xmin[1])/dySubCell);
+    Rosina[i].kLocalSubCell=(int)((xRosetta[2]-Rosina[i].node->xmin[2])/dzSubCell);
 
     if (node==NULL) {
       Rosina[i].LocationCode=-1; //outside of the domain
@@ -127,11 +138,14 @@ void RosinaSample::Flush() {
 
 //the sampling routine
 void RosinaSample::SamplingProcessor() {
-  int i,spec;
+  int i,spec,idim;
   long int ptr;
-  double ParticleWeight,*v,c;
+  double ParticleWeight,*v,c,*x;
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
+  int iCellFraction,jCellFraction,kCellFraction;
+  double dxSubCell,dySubCell,dzSubCell;
+  int iLocalSubCell,jLocalSubCell,kLocalSubCell;
 
   #ifdef _NO_SPICE_CALLS_
   return; //cannot sample the instrument related data when SPICE is not used
@@ -140,12 +154,25 @@ void RosinaSample::SamplingProcessor() {
   for (i=0;i<nPoints;i++) if (Rosina[i].node!=NULL) if (Rosina[i].node->Thread==PIC::ThisThread) if ((block=Rosina[i].node->block)!=NULL) {
     ptr=block->FirstCellParticleTable[Rosina[i].iCell+_BLOCK_CELLS_X_*(Rosina[i].jCell+_BLOCK_CELLS_Y_*Rosina[i].kCell)];
 
+    dxSubCell=(Rosina[i].node->xmax[0]-Rosina[i].node->xmin[0])/_BLOCK_CELLS_X_/CellFractionationFactor;
+    dySubCell=(Rosina[i].node->xmax[1]-Rosina[i].node->xmin[1])/_BLOCK_CELLS_Y_/CellFractionationFactor;
+    dzSubCell=(Rosina[i].node->xmax[2]-Rosina[i].node->xmin[2])/_BLOCK_CELLS_Z_/CellFractionationFactor;
+
     while (ptr!=-1) {
       spec=PIC::ParticleBuffer::GetI(ptr);
       v=PIC::ParticleBuffer::GetV(ptr);
+      x=PIC::ParticleBuffer::GetX(ptr);
+      iLocalSubCell=(int)((x[0]-Rosina[i].node->xmin[0])/dxSubCell);
+      jLocalSubCell=(int)((x[1]-Rosina[i].node->xmin[1])/dySubCell);
+      kLocalSubCell=(int)((x[2]-Rosina[i].node->xmin[2])/dzSubCell);
+
+      if ((Rosina[i].iLocalSubCell!=iLocalSubCell)||(Rosina[i].jLocalSubCell!=jLocalSubCell)||(Rosina[i].kLocalSubCell!=kLocalSubCell)) {
+        ptr=PIC::ParticleBuffer::GetNext(ptr);
+        continue;
+      }
 
       ParticleWeight=block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
-      if ((cell=block->GetCenterNode(Rosina[i].nd))!=NULL) ParticleWeight/=cell->Measure;
+      if ((cell=block->GetCenterNode(Rosina[i].nd))!=NULL) ParticleWeight/=(cell->Measure/pow(CellFractionationFactor,3));
 
       //can the particle be registered by the ram gauge?
       if ((c=Rosina[i].RamGauge.LineOfSight[0]*v[0]+Rosina[i].RamGauge.LineOfSight[1]*v[1]+Rosina[i].RamGauge.LineOfSight[2]*v[2])<0.0) {
