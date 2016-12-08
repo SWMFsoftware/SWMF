@@ -1166,6 +1166,8 @@ namespace RosinaSample {
   struct cRosinaSamplingLocation {
     int nd,iCell,jCell,kCell;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    double SecondsFromBegining,RadiusVectorLeangth,CometDistance,CharacteristicCellSize;
+    int LocationCode;
 
     //sampled data 
     cSamplingData NudeGauge;

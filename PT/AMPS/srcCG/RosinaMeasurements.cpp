@@ -22,7 +22,7 @@ void RosinaSample::Init() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
 
   //init line-of-sight vectors
-  SpiceDouble lt,et,xRosetta[3];
+  SpiceDouble lt,et,xRosetta[3],etStart;
   SpiceDouble       xform[6][6];
 
   FILE *fTrajectory=NULL;
@@ -40,6 +40,8 @@ void RosinaSample::Init() {
     spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xRosetta,&lt);
     for (idim=0;idim<3;idim++) xRosetta[idim]*=1.0E3;
 
+    if (i==0) etStart=et;
+
     node=PIC::Mesh::mesh.findTreeNode(xRosetta,NULL);
 
     if (node!=NULL) {
@@ -52,6 +54,38 @@ void RosinaSample::Init() {
     Rosina[i].iCell=iCell;
     Rosina[i].jCell=jCell;
     Rosina[i].kCell=kCell;
+
+    Rosina[i].RadiusVectorLeangth=sqrt(xRosetta[0]*xRosetta[0]+xRosetta[1]*xRosetta[1]+xRosetta[2]*xRosetta[2]);
+    Rosina[i].CometDistance=-1.0;
+    Rosina[i].SecondsFromBegining=et-etStart;
+    Rosina[i].CharacteristicCellSize=-1.0;
+
+    if (node==NULL) {
+      Rosina[i].LocationCode=-1; //outside of the domain
+    }
+    else {
+      if (CutCell::CheckPointInsideDomain(xRosetta,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0)==false) {
+        Rosina[i].LocationCode=-2; //the point is inside the body
+      }
+      else {
+        Rosina[i].LocationCode=0; //the point is within the domain
+        Rosina[i].CharacteristicCellSize=sqrt(pow(node->xmax[0]-node->xmin[0],2)+pow(node->xmax[1]-node->xmin[1],2)+pow(node->xmax[2]-node->xmin[2],2));
+
+        //determine the closest distance to the comet
+
+
+        for (int ii=0;ii<CutCell::nBoundaryTriangleFaces;ii++) {
+          double r,xCenter[3];
+          int idim;
+
+          CutCell::BoundaryTriangleFaces[ii].GetCenterPosition(xCenter);
+          for (idim=0,r=0.0;idim<3;idim++) r+=pow(xCenter[idim]-xRosetta[idim],2);
+
+          r=sqrt(r);
+          if ((Rosina[i].CometDistance<0.0)||(r<Rosina[i].CometDistance)) Rosina[i].CometDistance=r;
+        }
+      }
+    }
 
     if (PIC::ThisThread==0) fprintf(fTrajectory,"%e %e %e\n",xRosetta[0],xRosetta[1],xRosetta[2]);
 
@@ -160,10 +194,15 @@ void RosinaSample::PrintOutputFile(int nfile) {
       fout=fopen(fname,"w");
       if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
-      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\"\n");
+
+      double SecondsFromBegining,RadiusVectorLeangth,CometDistance;
+      int LocationCode;
+
+
+      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
 
       for (int i=0;i<nPoints;i++) {
-        fprintf(fout,"%i %e %e\n",i,SumBuffer[2*i],SumBuffer[2*i+2*nPoints]);
+        fprintf(fout,"%i %e %e %e %e %e %i %e\n",i,SumBuffer[2*i],SumBuffer[2*i+2*nPoints], Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
       }
 
       fclose(fout);
@@ -173,10 +212,10 @@ void RosinaSample::PrintOutputFile(int nfile) {
       fout=fopen(fname,"w");
       if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
-      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Flux\", \"Nude Gauge Flux\"\n");
+      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Flux\", \"Nude Gauge Flux\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
 
       for (int i=0;i<nPoints;i++) {
-        fprintf(fout,"%i %e %e\n",i,SumBuffer[2*i+1],SumBuffer[2*i+1+2*nPoints]);
+        fprintf(fout,"%i %e %e %e %e %e %i %e\n",i,SumBuffer[2*i+1],SumBuffer[2*i+1+2*nPoints], Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
       }
 
       fclose(fout);
