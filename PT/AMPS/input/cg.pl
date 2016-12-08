@@ -133,6 +133,21 @@ while ($line=<InputFile>) {
     }     
   }
   
+  #turn on sampling of the Rosina data
+  elsif ($InputLine eq "ROSINADATASAMPLING") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if  ($InputLine eq "ON") {
+      ampsConfigLib::RedefineMacro("_COMET_SAMPLE_ROSINA_DATA_","_PIC_MODE_ON_","main/Comet.dfn");   
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::RedefineMacro("_COMET_SAMPLE_ROSINA_DATA_","_PIC_MODE_OFF_","main/Comet.dfn");         
+    }     
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
+    
   #redefine a value of a macro 
   elsif ($InputLine eq "DEFINE") {
     my ($macro,$value,$s0,$s1);
