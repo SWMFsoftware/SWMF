@@ -1457,6 +1457,9 @@ contains
     ! sigma_33=8.4E-18 cm^2: H2O + hv -> H2Op + e
     ! sigma = 1.18E-21 ! sum(sigma_i3)
 
+    CosAngleTmp     = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
+    DistProjection2 = R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2
+    
     ! New Block, need to check whether the cell is in the shade
     if(DoCalcShading .and. DoUseCGShape) then
 
@@ -1464,9 +1467,6 @@ contains
           write(*,*) NameSub, ': doing calculations. n_step, iProc =', &
                n_step, iProc
        end if
-
-       CosAngleTmp     = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
-       DistProjection2 = R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2
 
        if (DistProjection2 < rMinShape**2 .and. CosAngleTmp < 0) then
           IsIntersectedShapeR = 1.0
@@ -1485,8 +1485,6 @@ contains
     end if
 
     if (.not.DoUseCGShape) then
-       CosAngleTmp    = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
-       DistProjection2= R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2
        if (DistProjection2 < rSphericalBody**2 .and. CosAngleTmp < 0) then
           IsIntersectedShapeR = 1.0
        else
