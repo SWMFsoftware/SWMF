@@ -46,3 +46,6 @@
 
 //load the dust rate correction injection correction factor
 #define _DUST_INJECTION_RATE_CORRECTION_MODE_ _DUST_INJECTION_RATE_CORRECTION_MODE__OFF_
+
+//sampling of the Rosina data
+#define _COMET_SAMPLE_ROSINA_DATA_ _PIC_MODE_OFF_

@@ -668,7 +668,9 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.InitCellMeasure(PIC::UserModelInputDataPath);
 
   //init sampling of the last Rosina data
-  RosinaSample::Init();
+  if (_COMET_SAMPLE_ROSINA_DATA_ == _PIC_MODE_ON_) {
+    RosinaSample::Init();
+  }
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
   if (NewMeshGeneratedFlag==true) {

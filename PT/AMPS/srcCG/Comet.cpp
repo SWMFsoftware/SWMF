@@ -94,8 +94,10 @@ const double  Activity[3][25]={
 void Comet::Init_BeforeParser() {
   Exosphere::Init_SPICE();
 
-  //init the model of the Rosina Ram and Nude gauge measuments
-  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(RosinaSample::SamplingProcessor,RosinaSample::PrintOutputFile);
+  if (_COMET_SAMPLE_ROSINA_DATA_ == _PIC_MODE_ON_) {
+    //init the model of the Rosina Ram and Nude gauge measuments
+    PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(RosinaSample::SamplingProcessor,RosinaSample::PrintOutputFile);
+  }
 
 
 //  RosinaSample::Init();
