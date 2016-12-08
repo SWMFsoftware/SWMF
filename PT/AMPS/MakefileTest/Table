@@ -237,7 +237,7 @@ Run=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy) 
+Name=CG-PostProcess--Read-Trajectories--on@@(0+) 
 Time=20
 
 Compile=
@@ -257,6 +257,7 @@ Compile=
 
 >>>@./Config.pl -openmp=on
 >>>@cd srcCG-PostProcess; make EXTERNALFLAGS="-D_LOAD_TRAJECTORY_FILES_=_ON_ -D_SURFACE_EXPOSURE_TIME_CALCULATION_=_ON_"  
+>>>@./Config.pl -openmp=off
 
 >>>-@mv .amps.conf.tmp .amps.conf
 >>>-@mv .general.conf.tmp .general.conf
@@ -323,7 +324,7 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
+Name=CG-PostProcess--Read-Trajectories--off@@(0+) 
 Time=20
 
 Compile=
@@ -343,6 +344,7 @@ Compile=
 
 >>>@./Config.pl -openmp=on
 >>>@cd srcCG-PostProcess; make  
+>>>@./Config.pl -openmp=off
 
 >>>-@mv .amps.conf.tmp .amps.conf
 >>>-@mv .general.conf.tmp .general.conf
