@@ -2365,9 +2365,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         if strpos(plotmodes(ifunc+1),'over') gt 0 then begin
            nexttitle = plottitles(ifunc+1)
            if nexttitle eq 'default' then nexttitle=funcs(ifunc+1)
-           if strpos(plotmodes(ifunc+1),'log') gt 0 then $
-              nexttitle = 'log '+nexttitle
-           if nexttitle ne ' ' then !p.title += ' and '+nexttitle
+           if nexttitle ne ' ' then begin
+              if strpos(plotmodes(ifunc+1),'log') gt 0 then $
+                 nexttitle = 'log '+nexttitle
+              !p.title += ' and '+nexttitle
+           endif
         endif
      endif
 
