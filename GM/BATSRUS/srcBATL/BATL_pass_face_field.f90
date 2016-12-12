@@ -15,8 +15,20 @@ module BATL_pass_face_field
   SAVE
   
   private ! except
-  
+  !\
+  ! PUBLIC MEMBERS
+  !/
+  !\
+  ! Fills in ghost face values for the face-centered staggered
+  ! (electric) field (in Particle-In-Cell code)
+  !/
   public message_pass_field
+  !\
+  ! Add ghost face values of face-centered staggered vector 
+  ! variables (such as the electric current components in PIC, which
+  ! are created by the particles close to the block boundary)
+  ! to all physical faces 
+  !/
   public add_ghost_face_field
   ! Fast lookup tables for index ranges per dimension
   integer, parameter:: Min_=1, Max_=2
@@ -50,11 +62,7 @@ contains
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
     
-    logical :: DoSendCorner
-
-    ! Fill in the nVar variables in the ghost cells of Field_FDB.
-    !
-    ! nWidthIn is the number of ghost cell layers to be set. Default is all.
+    ! nWidthIn is the number of ghost face layers to be set. Default is nG.
 
 
     ! Local variables
@@ -98,9 +106,7 @@ contains
 
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
-    DoSendCorner = nWidth>1
-
-
+ 
     ! Set index ranges based on arguments
     call set_range
 
@@ -125,10 +131,6 @@ contains
        if(nProc == 1 .and. DoCountOnly) CYCLE
 
        call timing_start('local_pass')
-
-       ! Second order prolongation needs two stages: 
-       ! first stage fills in equal and coarser ghost cells
-       ! second stage uses these to prolong and fill in finer ghost cells
 
        if(nProc>1)then
           if(DoCountOnly)then
