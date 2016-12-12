@@ -167,9 +167,6 @@ contains
              if(nDim < 3 .and. kDir /= 0) CYCLE
              do jDir = -1, 1
                 if(nDim < 2 .and. jDir /= 0) CYCLE
-                ! Skip edges
-                if(.not.DoSendCorner .and. jDir /= 0 .and. kDir /= 0) &
-                     CYCLE
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
