@@ -183,7 +183,10 @@ contains
 
     end do ! iCountOnly
 
-
+    if(nProc==1)then
+       call timing_stop('batl_pass')
+       RETURN
+    end if
 
     call timing_start('recv_pass')
 
@@ -872,14 +875,15 @@ contains
       !\
       ! For x_, y_, z_ direction (the first index), the receiving block is at
       ! negative displcement with respect to the sending one
-      iS_DIID(:,-1,Min_,:) = 1
-      iS_DIID(:,-1,Max_,:) = nWidth
+      iS_DIID(:,-1,Min_,:) = 1 - nWidth
+      iS_DIID(:,-1,Max_,:) = 0
       do iDim = 1,MaxDim
-         iR_DIID(:,-1,Min_,iDim) = nIjk_D + 1
-         iR_DIID(:,-1,Max_,iDim) = nIjk_D + nWidth
-         iS_DIID(iDim,-1,Max_,iDim) = iS_DIID(iDim,-1,Max_,iDim) - 1
-         iR_DIID(iDim,-1,Max_,iDim) = iR_DIID(iDim,-1,Max_,iDim) - 1
+         iR_DIID(:,-1,Min_,iDim) = nIjk_D + 1 -nWidth
+         iR_DIID(:,-1,Max_,iDim) = nIjk_D
       end do
+      !\
+      ! Zero displacement
+      !/
       iS_DIID(:, 0,Min_,:) = 1
       iR_DIID(:, 0,Min_,:) = 1
       do iDim = 1,MaxDim
@@ -889,13 +893,14 @@ contains
          iR_DIID(iDim,0,Min_,iDim) = 0
       end do
 
-      iR_DIID(:, 1,Min_,:) = 1 - nWidth
-      iR_DIID(:, 1,Max_,:) = 0
+      iR_DIID(:, 1,Min_,:) = 1
+      iR_DIID(:, 1,Max_,:) = nWidth
+  
       do iDim = 1,MaxDim
-         iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1 - nWidth
-         iS_DIID(:, 1,Max_,iDim) = nIjk_D
-         iS_DIID(iDim,1,Max_,iDim) = iS_DIID(iDim,1,Max_,iDim) - 1
-         iR_DIID(iDim,1,Max_,iDim) = iR_DIID(iDim,1,Max_,iDim) - 1
+         iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1
+         iS_DIID(:, 1,Max_,iDIm) = nIjk_D + nWidth
+         iS_DIID(iDim,1,Min_:Max_,iDim) = iS_DIID(iDim,1,Min_:Max_,iDim) - 1
+         iR_DIID(iDim,1,Min_:Max_,iDim) = iR_DIID(iDim,1,Min_:Max_,iDim) - 1
       end do
 
 
