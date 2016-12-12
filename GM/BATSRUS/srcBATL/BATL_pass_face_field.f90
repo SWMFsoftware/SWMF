@@ -88,10 +88,6 @@ contains
     integer:: iRequestR, iRequestS, iError
  
     character(len=*), parameter:: NameSub = 'BATL_pass_face_field'
-
-    integer:: iBlock
-
-
     !--------------------------------------------------------------------------
 
 
@@ -488,11 +484,7 @@ contains
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
     
-    logical :: DoSendCorner
-
-    ! Fill in the nVar variables in the ghost cells of Current_FDB.
-    !
-    ! nWidthIn is the number of ghost cell layers to be set. Default is all.
+    ! nWidthIn is the number of ghost face layers to be set. Default is all.
 
 
     ! Local variables
@@ -518,13 +510,7 @@ contains
     integer:: iRequestR, iRequestS, iError
  
     character(len=*), parameter:: NameSub = 'BATL_pass::add_ghost_face_field'
-
-    integer:: iBlock
-
-
     !--------------------------------------------------------------------------
-
-
     call timing_start('batl_pass')
 
     call timing_start('init_pass')
@@ -533,15 +519,27 @@ contains
     nWidth = nG
     if(present(nWidthIn)) nWidth = nWidthIn
 
-
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
-    DoSendCorner = nWidth>1
-
 
     ! Set index ranges based on arguments
     call set_range
-
+    !\
+    ! Nullify counter
+    !/
+    Counter_FDB = 0.0
+    !\
+    ! Fill in physical faces of the Counter:
+    !/
+    do iBlockSend = 1, nBlock
+       if(Unused_B(iBlockSend)) CYCLE
+       Counter_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend) = &
+            Current_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend)
+       Counter_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend) = &
+            Current_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend)
+       Counter_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend) = &
+            Current_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend)
+    end do
     if(nProc > 1)then
        ! Allocate fixed size communication arrays.
        if(.not.allocated(iBufferS_P))then
@@ -603,9 +601,6 @@ contains
              if(nDim < 3 .and. kDir /= 0) CYCLE
              do jDir = -1, 1
                 if(nDim < 2 .and. jDir /= 0) CYCLE
-                ! Skip edges
-                if(.not.DoSendCorner .and. jDir /= 0 .and. kDir /= 0) &
-                     CYCLE
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
@@ -620,7 +615,19 @@ contains
 
     end do ! iCountOnly
 
-
+    if(nProc==1)then
+       do iBlockSend = 1, nBlock
+          if(Unused_B(iBlockSend)) CYCLE
+          Current_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend) = &
+               Counter_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend)
+          Current_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend) = &
+               Counter_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend)
+          Current_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend) = &
+               Counter_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend)
+       end do
+       call timing_stop('batl_pass')
+       RETURN
+    end if
 
     call timing_start('recv_pass')
 
@@ -681,7 +688,15 @@ contains
     call timing_start('buffer_to_state')
     call buffer_to_state
     call timing_stop('buffer_to_state')
-
+    do iBlockSend = 1, nBlock
+       if(Unused_B(iBlockSend)) CYCLE
+       Current_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend) = &
+            Counter_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend)
+       Current_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend) = &
+            Counter_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend)
+       Current_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend) = &
+            Counter_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend)
+    end do
 
     call timing_stop('batl_pass')
 
@@ -767,7 +782,7 @@ contains
          RETURN
       end if
       if(iProc == iProcRecv)then
-            ! Local copy
+         ! Local copy
          do iDim = 1,MaxDim
             iRMin = iR_DIID(1,iDir,Min_,iDim)
             iRMax = iR_DIID(1,iDir,Max_,iDim)
