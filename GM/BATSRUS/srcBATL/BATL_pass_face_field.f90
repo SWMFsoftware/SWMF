@@ -39,6 +39,12 @@ module BATL_pass_face_field
   integer, allocatable:: iBufferS_P(:), nBufferS_P(:), nBufferR_P(:)
   
   real,    allocatable:: BufferR_I(:), BufferS_I(:)
+
+  !\
+  ! Counter of currents through the physical faces
+  !/
+  real, allocatable :: Counter_FDB(:,:,:,:,:) 
+  integer:: nBlockMax = -1
   
   integer, allocatable:: iRequestR_I(:), iRequestS_I(:), &
        iStatus_II(:,:)
@@ -464,13 +470,13 @@ contains
 
   end subroutine message_pass_field
   !===========================
-  subroutine add_ghost_face_field(nG, Current_FDB, Counter_FDB, nWidthIn)
+  subroutine add_ghost_face_field(nG, Current_FDB, nWidthIn)
     use ModMpi
 
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     real, intent(inout), dimension(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-         1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock):: Current_FDB, Counter_FDB
+         1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock):: Current_FDB
     !Array index is the coordinate of the gridpoint with +1/2 being
     !approximated as 1. By x the physical cells are marked below
     !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)    
@@ -480,7 +486,6 @@ contains
     !    -2  ! ! !                x!x!_!_        Jx(0,1,1),Jx(nI,1,1)...
     !       -2                           Ghost values: Jx(-1,1,1),Jy(0,1,1)..
     !------------------------------------------------------------------------
-
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
     
@@ -514,16 +519,14 @@ contains
     call timing_start('batl_pass')
 
     call timing_start('init_pass')
-
-    ! Set values or defaults for optional arguments
-    nWidth = nG
-    if(present(nWidthIn)) nWidth = nWidthIn
-
-    if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
-         ' nWidth do not contain the ghost cells or too many')
-
-    ! Set index ranges based on arguments
-    call set_range
+    !\
+    ! Allocate block-based counter for currents through hysical phases
+    !/
+    if(nBlock>nBlockMax)then
+       if(allocated(Counter_FDB))deallocate(Counter_FDB)
+       allocate(Counter_FDB(0:nI, 1-jDim_:nJ, 1-kDim_:nK, MaxDim, nBlock))
+       nBlockMax = nBlock
+    end if
     !\
     ! Nullify counter
     !/
@@ -540,6 +543,16 @@ contains
        Counter_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend) = &
             Current_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend)
     end do
+    ! Set values or defaults for optional arguments
+    nWidth = nG
+    if(present(nWidthIn)) nWidth = nWidthIn
+
+    if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
+         ' nWidth do not contain the ghost cells or too many')
+
+    ! Set index ranges based on arguments
+    call set_range
+
     if(nProc > 1)then
        ! Allocate fixed size communication arrays.
        if(.not.allocated(iBufferS_P))then
