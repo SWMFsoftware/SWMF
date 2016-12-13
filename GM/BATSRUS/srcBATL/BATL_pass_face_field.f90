@@ -30,6 +30,7 @@ module BATL_pass_face_field
   ! to all physical faces 
   !/
   public add_ghost_face_field
+  public add_ghost_cell_field
   ! Fast lookup tables for index ranges per dimension
   integer, parameter:: Min_=1, Max_=2
   integer:: iS_DIID(MaxDim,-1:1,Min_:Max_,MaxDim)
@@ -1054,6 +1055,11 @@ contains
        call timing_stop('local_pass')
 
     end do ! iCountOnly
+
+    if(nProc==1)then
+       call timing_stop('batl_pass')
+       RETURN
+    end if
 
     call timing_start('recv_pass')
 
