@@ -23,7 +23,7 @@ makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
-makefile ExternalModules=models/exosphere
+makefile ExternalModules=models/exosphere models/surface 
 
 ProjectSourceDirectory=srcOrbiter 
 
@@ -48,8 +48,8 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 CouplerMode=off, ices, swmf
 
-TimeStepMode=SpeciesGlobalTimeStep !!!SpeciesLocalTimeStep !!SpeciesGlobalTimeStep
-ParticleWeightMode=SpeciesGlobalParticleWeight !!!SpeciesLocalParticleWeight !!SpeciesGlobalParticleWeight
+TimeStepMode=SpeciesLocalTimeStep !!!!SpeciesGlobalTimeStep
+ParticleWeightMode=SpeciesLocalParticleWeight !!!SpeciesGlobalParticleWeight
 ParticleWeightCorrectionMode=on
 
 
@@ -63,12 +63,12 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=500000
+  ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=7 !2 !4
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=200
 
-  RequestedParticleBufferLength=150000000
+  RequestedParticleBufferLength=1500000
+  InitialSampleLength=100
 
   BlockCells=5,5,5
   GhostCells=2,2,2
@@ -93,13 +93,33 @@ ParticleWeightCorrectionMode=on
 
 
 #ParticleCollisions
-  model = MF !!off !HS ! HS, off
+  model = MF !!!NTC !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
-  CollisionLimitingThrehold=5
 
   CollisionCrossSection=const \\ !const, function
     const (H2O,H2O)= 3.4E-19
 #endParticleCollisions
+
+#block ../input/orbiter.input.pl
+  UpstreamVelocity=-30.0e3,0.0,0.0
+
+  UpstreamNumberDensity= \\
+    const(H2O)=1.5E21
+
+  UpstreamTemperature=293.0
+
+  SurfaceModel=Orbiter.bdf
+  SurfaceModelFormat=CEA !CEA, NASTRAN
+  
+  MeshSignature=0xb3422242b9bcb538
+
+  DomainLimits= \\
+    xMinOffset=0.5,0.5,0.5 \\
+    xMaxOffset=0.5,0.5,0.5
+
+  CalculateDragCoefficient=on !on, off  
+
+#endblock
 
 
 
