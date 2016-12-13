@@ -314,14 +314,14 @@ contains
          !\
          ! Number of integers to be send/received
          !/
-         nSize = 1 + 2*nDim*MaxDim
+         nSize = 1 + 2*nDim
          do iDim = 1,MaxDim
-            iRMin = iR_DIID(1,iDir,Min_,iDim)
-            iRMax = iR_DIID(1,iDir,Max_,iDim)
-            jRMin = iR_DIID(2,jDir,Min_,iDim)
-            jRMax = iR_DIID(2,jDir,Max_,iDim)
-            kRMin = iR_DIID(3,kDir,Min_,iDim)
-            kRMax = iR_DIID(3,kDir,Max_,iDim)
+            iRMin = iR_DIID(1,iDir,Min_,1)
+            iRMax = iR_DIID(1,iDir,Max_,1)
+            jRMin = iR_DIID(2,jDir,Min_,1)
+            jRMax = iR_DIID(2,jDir,Max_,1)
+            kRMin = iR_DIID(3,kDir,Min_,1)
+            kRMax = iR_DIID(3,kDir,Max_,1)
 
  
             ! Number of reals to send to and received from the other processor
@@ -634,6 +634,7 @@ contains
     if(nProc==1)then
        do iBlockSend = 1, nBlock
           if(Unused_B(iBlockSend)) CYCLE
+          Current_FDB(:, :, :, :, iBlockSend) = 0.0
           Current_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend) = &
                Counter_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend)
           Current_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend) = &
@@ -706,6 +707,7 @@ contains
     call timing_stop('buffer_to_state')
     do iBlockSend = 1, nBlock
        if(Unused_B(iBlockSend)) CYCLE
+       Current_FDB(:, :, :, :, iBlockSend) = 0.0
        Current_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend) = &
             Counter_FDB(0:nI, 1:nJ, 1:nK, 1, iBlockSend)
        Current_FDB(1:nI, 1-jDim_:nJ, 1:nK, 2, iBlockSend) = &
@@ -908,7 +910,7 @@ contains
 
   end subroutine add_ghost_face_field
   !=========================
-  subroutine add_ghost_cell_field(nG, nVar, State_VGB, nWidthIn)
+  subroutine add_ghost_cell_field(nVar, nG, State_VGB, nWidthIn)
     use ModMpi
 
     ! Arguments
@@ -929,8 +931,6 @@ contains
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
     
-    logical :: DoSendCorner
-
     ! Fill in the nVar variables in the ghost cells of Current_FDB.
     !
     ! nWidthIn is the number of ghost cell layers to be set. Default is all.
@@ -977,9 +977,6 @@ contains
 
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
-    DoSendCorner = nWidth>1
-
-
     ! Set index ranges based on arguments
     call set_range
 
@@ -1044,9 +1041,6 @@ contains
              if(nDim < 3 .and. kDir /= 0) CYCLE
              do jDir = -1, 1
                 if(nDim < 2 .and. jDir /= 0) CYCLE
-                ! Skip edges
-                if(.not.DoSendCorner .and. jDir /= 0 .and. kDir /= 0) &
-                     CYCLE
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
@@ -1129,9 +1123,9 @@ contains
     !======================================================================
     subroutine buffer_to_state
 
-      ! Copy buffer into recv block of Current_FDB
+      ! Copy buffer into recv block 
 
-      integer:: iBufferR, i, j, k, iDim
+      integer:: iBufferR, i, j, k
       !------------------------------------------------------------------------
       jRMin = 1; jRMax = 1
       kRMin = 1; kRMax = 1
@@ -1143,24 +1137,22 @@ contains
          do
             iBufferR = iBufferR + 1
             iBlockRecv = nint(BufferR_I(iBufferR))
-            do iDim = 1, MaxDim
-               iRMin      = nint(BufferR_I(iBufferR+1))
-               iRMax      = nint(BufferR_I(iBufferR+2))
-               if(nDim > 1) jRMin = nint(BufferR_I(iBufferR+3))
-               if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+4))
-               if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+5))
-               if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+6))
+            iRMin      = nint(BufferR_I(iBufferR+1))
+            iRMax      = nint(BufferR_I(iBufferR+2))
+            if(nDim > 1) jRMin = nint(BufferR_I(iBufferR+3))
+            if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+4))
+            if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+5))
+            if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+6))
+            
+            iBufferR = iBufferR + 2*nDim
                
-               iBufferR = iBufferR + 2*nDim
                
-               
-               do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
-                  State_VGB(:,i,j,k,iBlockRecv) =      &
-                       State_VGB(:,i,j,k,iBlockRecv) + &
-                       BufferR_I(iBufferR+1:iBufferR+nVar)
-                  iBufferR = iBufferR + nVar
-               end do; end do; end do
-            end do
+            do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
+               State_VGB(:,i,j,k,iBlockRecv) =      &
+                    State_VGB(:,i,j,k,iBlockRecv) + &
+                    BufferR_I(iBufferR+1:iBufferR+nVar)
+               iBufferR = iBufferR + nVar
+            end do; end do; end do
             if(iBufferR >= sum(nBufferR_P(0:iProcSend))) EXIT
          end do
        end do
@@ -1170,7 +1162,7 @@ contains
 
     subroutine do_equal
 
-      integer :: nSize, iDim, iBufferS, i, j, k, iSend, jSend, kSend, iNodeRecv
+      integer :: nSize, iBufferS, i, j, k, iSend, jSend, kSend, iNodeRecv
       !------------------------------------------------------------------------
 
       iSend = (3*iDir + 3)/2
@@ -1181,86 +1173,78 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-      
+
       if(DoCountOnly)then
-         ! No need to count data for local copy
+         ! No need not to count data for local copy
          if(iProc == iProcRecv) RETURN
          !\
          ! Number of integers to be send/received
          !/
-         nSize = 1 + 2*nDim*MaxDim
-         do iDim = 1,MaxDim
-            iRMin = iR_DIID(1,iDir,Min_,iDim)
-            iRMax = iR_DIID(1,iDir,Max_,iDim)
-            jRMin = iR_DIID(2,jDir,Min_,iDim)
-            jRMax = iR_DIID(2,jDir,Max_,iDim)
-            kRMin = iR_DIID(3,kDir,Min_,iDim)
-            kRMax = iR_DIID(3,kDir,Max_,iDim)
+         nSize = 1 + 2*nDim
+         iRMin = iR_DIID(1,iDir,Min_,1)
+         iRMax = iR_DIID(1,iDir,Max_,1)
+         jRMin = iR_DIID(2,jDir,Min_,1)
+         jRMax = iR_DIID(2,jDir,Max_,1)
+         kRMin = iR_DIID(3,kDir,Min_,1)
+         kRMax = iR_DIID(3,kDir,Max_,1)
 
- 
-            ! Number of reals to send to and received from the other processor
-            nSize = (iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) + nSize
-         end do
+
+         ! Number of reals to send to and received from the other processor
+         nSize = (iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)*nVar + nSize
          nBufferR_P(iProcRecv) = nBufferR_P(iProcRecv) + nSize
          nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
          RETURN
       end if
       if(iProc == iProcRecv)then
-            ! Local copy
-         do iDim = 1,MaxDim
-            iRMin = iR_DIID(1,iDir,Min_,iDim)
-            iRMax = iR_DIID(1,iDir,Max_,iDim)
-            jRMin = iR_DIID(2,jDir,Min_,iDim)
-            jRMax = iR_DIID(2,jDir,Max_,iDim)
-            kRMin = iR_DIID(3,kDir,Min_,iDim)
-            kRMax = iR_DIID(3,kDir,Max_,iDim)
-            iSMin = iS_DIID(1,iDir,Min_,iDim)
-            iSMax = iS_DIID(1,iDir,Max_,iDim)
-            jSMin = iS_DIID(2,jDir,Min_,iDim)
-            jSMax = iS_DIID(2,jDir,Max_,iDim)
-            kSMin = iS_DIID(3,kDir,Min_,iDim)
-            kSMax = iS_DIID(3,kDir,Max_,iDim)
-            if((iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)==0)CYCLE
+         ! Local copy
          
-            State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) =    &
-                 State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) &
-                 + State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
-         end do
+         iRMin = iR_DIID(1,iDir,Min_,1)
+         iRMax = iR_DIID(1,iDir,Max_,1)
+         jRMin = iR_DIID(2,jDir,Min_,1)
+         jRMax = iR_DIID(2,jDir,Max_,1)
+         kRMin = iR_DIID(3,kDir,Min_,1)
+         kRMax = iR_DIID(3,kDir,Max_,1)
+         iSMin = iS_DIID(1,iDir,Min_,1)
+         iSMax = iS_DIID(1,iDir,Max_,1)
+         jSMin = iS_DIID(2,jDir,Min_,1)
+         jSMax = iS_DIID(2,jDir,Max_,1)
+         kSMin = iS_DIID(3,kDir,Min_,1)
+         kSMax = iS_DIID(3,kDir,Max_,1)
+         State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) =    &
+              State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) &
+              + State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
       else
-            ! Put data into the send buffer
-            iBufferS = iBufferS_P(iProcRecv) +1
+         ! Put data into the send buffer
+         iBufferS = iBufferS_P(iProcRecv) +1
 
-            BufferS_I(            iBufferS) = iBlockRecv
-            do iDim = 1,MaxDim
-               iRMin = iR_DIID(1,iDir,Min_,iDim)
-               iRMax = iR_DIID(1,iDir,Max_,iDim)
-               jRMin = iR_DIID(2,jDir,Min_,iDim)
-               jRMax = iR_DIID(2,jDir,Max_,iDim)
-               kRMin = iR_DIID(3,kDir,Min_,iDim)
-               kRMax = iR_DIID(3,kDir,Max_,iDim)
-               iSMin = iS_DIID(1,iDir,Min_,iDim)
-               iSMax = iS_DIID(1,iDir,Max_,iDim)
-               jSMin = iS_DIID(2,jDir,Min_,iDim)
-               jSMax = iS_DIID(2,jDir,Max_,iDim)
-               kSMin = iS_DIID(3,kDir,Min_,iDim)
-               kSMax = iS_DIID(3,kDir,Max_,iDim)
-               BufferS_I(            iBufferS+1) = iRMin
-               BufferS_I(            iBufferS+2) = iRMax
-               if(nDim > 1)BufferS_I(iBufferS+3) = jRMin
-               if(nDim > 1)BufferS_I(iBufferS+4) = jRMax
-               if(nDim > 2)BufferS_I(iBufferS+5) = kRMin
-               if(nDim > 2)BufferS_I(iBufferS+6) = kRMax
+         BufferS_I(            iBufferS) = iBlockRecv
+         
+         iRMin = iR_DIID(1,iDir,Min_,1)
+         iRMax = iR_DIID(1,iDir,Max_,1)
+         jRMin = iR_DIID(2,jDir,Min_,1)
+         jRMax = iR_DIID(2,jDir,Max_,1)
+         kRMin = iR_DIID(3,kDir,Min_,1)
+         kRMax = iR_DIID(3,kDir,Max_,1)
+         iSMin = iS_DIID(1,iDir,Min_,1)
+         iSMax = iS_DIID(1,iDir,Max_,1)
+         jSMin = iS_DIID(2,jDir,Min_,1)
+         jSMax = iS_DIID(2,jDir,Max_,1)
+         kSMin = iS_DIID(3,kDir,Min_,1)
+         kSMax = iS_DIID(3,kDir,Max_,1)
+         BufferS_I(            iBufferS+1) = iRMin
+         BufferS_I(            iBufferS+2) = iRMax
+         if(nDim > 1)BufferS_I(iBufferS+3) = jRMin
+         if(nDim > 1)BufferS_I(iBufferS+4) = jRMax
+         if(nDim > 2)BufferS_I(iBufferS+5) = kRMin
+         if(nDim > 2)BufferS_I(iBufferS+6) = kRMax
+         iBufferS = iBufferS + 2*nDim
 
-               iBufferS = iBufferS + 2*nDim
-
-               do k = kSMin,kSmax; do j = jSMin,jSMax; do i = iSMin,iSmax
-                  BufferS_I(iBufferS+1:iBufferS+nVar) = &
-                       State_VGB(:,i,j,k,iBlockSend)
-                  iBufferS = iBufferS + nVar
-               end do; end do; end do
-            end do
-            iBufferS_P(iProcRecv) = iBufferS
-
+         do k = kSMin,kSmax; do j = jSMin,jSMax; do i = iSMin,iSmax
+            BufferS_I(iBufferS+1:iBufferS+nVar) = &
+                 State_VGB(:,i,j,k,iBlockSend)
+            iBufferS = iBufferS + nVar
+         end do; end do; end do
+         iBufferS_P(iProcRecv) = iBufferS
       end if
 
     end subroutine do_equal
@@ -1268,8 +1252,6 @@ contains
     !==========================================================================
 
     subroutine set_range
-
-      integer:: iDim
       !------------------------------------------------------------------------
 
             !Array index is the coordinate of the gridpoint with +1/2 being
@@ -1284,33 +1266,26 @@ contains
       !\
       ! For x_, y_, z_ direction (the first index), the receiving block is at
       ! negative displcement with respect to the sending one
-      iS_DIID(:,-1,Min_,:) = 1
-      iS_DIID(:,-1,Max_,:) = nWidth
-      do iDim = 1,MaxDim
-         iR_DIID(:,-1,Min_,iDim) = nIjk_D + 1
-         iR_DIID(:,-1,Max_,iDim) = nIjk_D + nWidth
-         iS_DIID(iDim,-1,Max_,iDim) = iS_DIID(iDim,-1,Max_,iDim) - 1
-         iR_DIID(iDim,-1,Max_,iDim) = iR_DIID(iDim,-1,Max_,iDim) - 1
-      end do
-      iS_DIID(:, 0,Min_,:) = 1
-      iR_DIID(:, 0,Min_,:) = 1
-      do iDim = 1,MaxDim
-         iS_DIID(:, 0,Max_,iDim) = nIjk_D
-         iR_DIID(:, 0,Max_,iDim) = nIjk_D
-         iS_DIID(iDim,0,Min_,iDim) = 0
-         iR_DIID(iDim,0,Min_,iDim) = 0
-      end do
-
-      iR_DIID(:, 1,Min_,:) = 1 - nWidth
-      iR_DIID(:, 1,Max_,:) = 0
-      do iDim = 1,MaxDim
-         iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1 - nWidth
-         iS_DIID(:, 1,Max_,iDim) = nIjk_D
-         iS_DIID(iDim,1,Max_,iDim) = iS_DIID(iDim,1,Max_,iDim) - 1
-         iR_DIID(iDim,1,Max_,iDim) = iR_DIID(iDim,1,Max_,iDim) - 1
-      end do
-
-
+      !/
+      iS_DIID(:,-1,Min_,1) = 1 - nWidth
+      iS_DIID(:,-1,Max_,1) = 0
+      iR_DIID(:,-1,Min_,1) = nIjk_D + 1 -nWidth
+      iR_DIID(:,-1,Max_,1) = nIjk_D
+      !\
+      ! Zero displacement
+      !/
+      iS_DIID(:, 0,Min_,1) = 1
+      iR_DIID(:, 0,Min_,1) = 1
+      iS_DIID(:, 0,Max_,1) = nIjk_D
+      iR_DIID(:, 0,Max_,1) = nIjk_D
+      !\
+      ! For x_, y_, z_ direction (the first index), the receiving block is at
+      ! negative displcement with respect to the sending one
+      !/       
+      iR_DIID(:, 1,Min_,1) = 1
+      iR_DIID(:, 1,Max_,1) = nWidth
+      iS_DIID(:, 1,Min_,1) = nIjk_D + 1
+      iS_DIID(:, 1,Max_,1) = nIjk_D + nWidth
     end subroutine set_range
 
   end subroutine add_ghost_cell_field
