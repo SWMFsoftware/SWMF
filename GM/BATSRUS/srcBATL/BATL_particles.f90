@@ -5,8 +5,9 @@ module BATL_particles
 
   use BATL_size, ONLY: nDim, MaxDim, nKindParticle
   use BATL_tree, ONLY: Unset_
-  use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc
-
+  use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc, &
+       CoordMin_D, CoordMax_D
+  use BATL_geometry, ONLY: IsCartesian, IsPeriodic_D
   implicit none
 
   private ! except
@@ -14,6 +15,7 @@ module BATL_particles
   ! Public methods and variables of this module
   public:: Particle_I
   public:: allocate_particles
+  public:: set_pointer_to_particles
   public:: message_pass_particles
   public:: remove_undefined_particles
 
@@ -113,19 +115,26 @@ contains
        nVar, nIndex, nParticle, nParticleMax)
     integer,          intent(in)    :: iKindParticle
     real,    pointer, intent(inout) :: State_VI(:,:)
-    integer, pointer, intent(inout) :: iIndex_II(:,:)
-    integer,          intent(out)   :: nVar 
-    integer,          intent(out)   :: nIndex 
-    integer,          intent(out)   :: nParticle
-    integer,          intent(out)   :: nParticleMax
+    integer, pointer, optional, intent(inout) :: iIndex_II(:,:)
+    integer, optional,intent(out)   :: nVar 
+    integer, optional,intent(out)   :: nIndex 
+    integer, optional,intent(out)   :: nParticle
+    integer, optional,intent(out)   :: nParticleMax
     !-----------------------------------------------------------------------
-    nullify(State_VI); nullify(iIndex_II)
+    nullify(State_VI)
     State_VI     => Particle_I(iKindParticle)%State_VI
-    iIndex_II    => Particle_I(iKindParticle)%iIndex_II
-    nVar         =  Particle_I(iKindParticle)%nVar
-    nIndex       =  Particle_I(iKindParticle)%nIndex
-    nParticle    =  Particle_I(iKindParticle)%nParticle
-    nParticleMax =  Particle_I(iKindParticle)%nParticleMax
+    if(present(iIndex_II))then
+       nullify(iIndex_II)
+       iIndex_II => Particle_I(iKindParticle)%iIndex_II
+    end if
+    if(present(nVar))&
+         nVar         =  Particle_I(iKindParticle)%nVar
+    if(present(nIndex))&
+         nIndex       =  Particle_I(iKindParticle)%nIndex
+    if(present(nParticle))&
+         nParticle    =  Particle_I(iKindParticle)%nParticle
+    if(present(nParticleMax))&
+         nParticleMax =  Particle_I(iKindParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !===========================================================================
   subroutine remove_undefined_particles(iKindParticle)
@@ -228,6 +237,10 @@ contains
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
          Xyz_D = 0
+         where(IsPeriodic_D(1:nDim))State_VI(1:nDim, iParticle) = &
+              CoordMin_D(1:nDIm) + &
+              modulo(State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
+              CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
          Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
          iBlock = iIndex_II(0, iParticle)
          call check_interpolate(Xyz_D, iBlock, iProcOut, iBlockOut)
