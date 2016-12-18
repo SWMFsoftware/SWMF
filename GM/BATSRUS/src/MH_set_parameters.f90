@@ -337,7 +337,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
-     if(UsePic)  call pic_init_region
+     if(UsePic) call pic_init_region
 
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
@@ -345,7 +345,9 @@ subroutine MH_set_parameters(TypeAction)
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
 
-     if(UseFieldLineThreads.and.iSession==1)call init_threaded_lc
+     ! Initialize threaded field line module (lower corona)
+     if(UseFieldLineThreads .and. iSession==1)call init_threaded_lc
+
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
 
@@ -694,7 +696,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEPLOT")
         call read_var('nPlotFile', nPlotFile)
-        nfile = max(nfile, plot_ + nPlotFile)
+        nFile = max(nFile, plot_ + nPlotFile)
         if (nFile > MaxFile .or. nPlotFile > MaxPlotFile) call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
              //' nPlotFile > MaxPlotFile .or. nFile > MaxFile')
@@ -703,48 +705,48 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('StringPlot',plot_string)
 
            ! Plotting frequency
-           call read_var('DnSavePlot',dn_output(ifile))
-           call read_var('DtSavePlot',dt_output(ifile))
+           call read_var('DnSavePlot',dn_output(iFile))
+           call read_var('DtSavePlot',dt_output(iFile))
 
            ! Default resolution (original AMR grid)
-           plot_dx(:,ifile) = -1.0
+           plot_dx(:,iFile) = -1.0
 
            ! Plotting area
            if(index(plot_string,'cut')>0)then
               plot_area='cut'
-              call read_var('xMinCut',plot_range(1,ifile))
-              call read_var('xMaxCut',plot_range(2,ifile))
-              call read_var('yMinCut',plot_range(3,ifile))
-              call read_var('yMaxCut',plot_range(4,ifile))
-              call read_var('zMinCut',plot_range(5,ifile))
-              call read_var('zMaxCut',plot_range(6,ifile))
+              call read_var('xMinCut',plot_range(1,iFile))
+              call read_var('xMaxCut',plot_range(2,iFile))
+              call read_var('yMinCut',plot_range(3,iFile))
+              call read_var('yMaxCut',plot_range(4,iFile))
+              call read_var('zMinCut',plot_range(5,iFile))
+              call read_var('zMaxCut',plot_range(6,iFile))
            elseif(index(plot_string,'slc')>0)then
               plot_area='slc'
-              call read_var('xMinCut',plot_range(1,ifile))
-              call read_var('xMaxCut',plot_range(2,ifile))
-              call read_var('yMinCut',plot_range(3,ifile))
-              call read_var('yMaxCut',plot_range(4,ifile))
-              call read_var('zMinCut',plot_range(5,ifile))
-              call read_var('zMaxCut',plot_range(6,ifile))
-              call read_var('xPoint',plot_point(1,ifile))
-              call read_var('yPoint',plot_point(2,ifile))
-              call read_var('zPoint',plot_point(3,ifile))
-              call read_var('xNormal',plot_normal(1,ifile))
-              call read_var('yNormal',plot_normal(2,ifile))
-              call read_var('zNormal',plot_normal(3,ifile))
+              call read_var('xMinCut',plot_range(1,iFile))
+              call read_var('xMaxCut',plot_range(2,iFile))
+              call read_var('yMinCut',plot_range(3,iFile))
+              call read_var('yMaxCut',plot_range(4,iFile))
+              call read_var('zMinCut',plot_range(5,iFile))
+              call read_var('zMaxCut',plot_range(6,iFile))
+              call read_var('xPoint',plot_point(1,iFile))
+              call read_var('yPoint',plot_point(2,iFile))
+              call read_var('zPoint',plot_point(3,iFile))
+              call read_var('xNormal',plot_normal(1,iFile))
+              call read_var('yNormal',plot_normal(2,iFile))
+              call read_var('zNormal',plot_normal(3,iFile))
            elseif(index(plot_string,'dpl')>0)then
               plot_area='dpl'
-              call read_var('xMinCut',plot_range(1,ifile))
-              call read_var('xMaxCut',plot_range(2,ifile))
-              call read_var('yMinCut',plot_range(3,ifile))
-              call read_var('yMaxCut',plot_range(4,ifile))
-              call read_var('zMinCut',plot_range(5,ifile))
-              call read_var('zMaxCut',plot_range(6,ifile))
+              call read_var('xMinCut',plot_range(1,iFile))
+              call read_var('xMaxCut',plot_range(2,iFile))
+              call read_var('yMinCut',plot_range(3,iFile))
+              call read_var('yMaxCut',plot_range(4,iFile))
+              call read_var('zMinCut',plot_range(5,iFile))
+              call read_var('zMaxCut',plot_range(6,iFile))
            elseif (index(plot_string,'blk')>0) then
               plot_area='blk'
-              call read_var('xPoint',plot_point(1,ifile))
-              call read_var('yPoint',plot_point(2,ifile))
-              call read_var('zPoint',plot_point(3,ifile))
+              call read_var('xPoint',plot_point(1,iFile))
+              call read_var('yPoint',plot_point(2,iFile))
+              call read_var('zPoint',plot_point(3,iFile))
            elseif (index(plot_string,'pnt')>0) then
               plot_area='pnt'
            elseif(index(plot_string,'lin')>0)then
@@ -771,29 +773,29 @@ subroutine MH_set_parameters(TypeAction)
               end do
            elseif (index(plot_string,'eqr')>0)then
               plot_area='eqr'
-              call read_var('nRadius',   plot_range(1,ifile))
-              call read_var('nLon',      plot_range(2,ifile))
-              call read_var('RadiusMin', plot_range(3,ifile))
-              call read_var('RadiusMax', plot_range(4,ifile))
-              plot_range(5,ifile) =   0.0
-              plot_range(6,ifile) = 360.0
+              call read_var('nRadius',   plot_range(1,iFile))
+              call read_var('nLon',      plot_range(2,iFile))
+              call read_var('RadiusMin', plot_range(3,iFile))
+              call read_var('RadiusMax', plot_range(4,iFile))
+              plot_range(5,iFile) =   0.0
+              plot_range(6,iFile) = 360.0
            elseif (index(plot_string,'eqb')>0)then
               plot_area='eqb'
-              call read_var('nRadius',   plot_range(1,ifile))
-              call read_var('nLon',      plot_range(2,ifile))
-              call read_var('RadiusMin', plot_range(3,ifile))
-              call read_var('RadiusMax', plot_range(4,ifile))
-              call read_var('LongitudeMin', plot_range(5,ifile))
-              call read_var('LongitudeMax', plot_range(6,ifile))
+              call read_var('nRadius',   plot_range(1,iFile))
+              call read_var('nLon',      plot_range(2,iFile))
+              call read_var('RadiusMin', plot_range(3,iFile))
+              call read_var('RadiusMax', plot_range(4,iFile))
+              call read_var('LongitudeMin', plot_range(5,iFile))
+              call read_var('LongitudeMax', plot_range(6,iFile))
            elseif (index(plot_string,'ieb')>0)then
               plot_area='ieb'
            elseif (index(plot_string,'lcb')>0)then
               plot_area='lcb'
-              call read_var('Radius', plot_range(1,ifile))
-              call read_var('nLon',   plot_range(2,ifile))
+              call read_var('Radius', plot_range(1,iFile))
+              call read_var('nLon',   plot_range(2,iFile))
            elseif (index(plot_string,'sph')>0)then
    	      plot_area='sph'
-	      call read_var('Radius',plot_range(1,ifile))
+	      call read_var('Radius',plot_range(1,iFile))
            elseif (index(plot_string, 'shl')>0)then
               plot_area = 'shl'
               call read_var('TypeCoord', TypeCoordPlot_I(iFile))
@@ -833,54 +835,54 @@ subroutine MH_set_parameters(TypeAction)
               ! Line of sight vector
               ! Satellite position
               if(NameThisComp == 'GM')then
-                 call read_var('ObsPosX',ObsPos_DI(1,ifile))
-                 call read_var('ObsPosY',ObsPos_DI(2,ifile))
-                 call read_var('ObsPosZ',ObsPos_DI(3,ifile))
+                 call read_var('ObsPosX',ObsPos_DI(1,iFile))
+                 call read_var('ObsPosY',ObsPos_DI(2,iFile))
+                 call read_var('ObsPosZ',ObsPos_DI(3,iFile))
               else
                  !\
                  ! Coordinates of the observation point are in HGI
                  ! system
                  !/
-                 call read_var('ObsPosX_HGI',ObsPos_DI(1,ifile))
-                 call read_var('ObsPosY_HGI',ObsPos_DI(2,ifile))
-                 call read_var('ObsPosZ_HGI',ObsPos_DI(3,ifile))
+                 call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
+                 call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
+                 call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
               end if
               ! Offset angle
-              call read_var('OffsetAngle',offset_angle(ifile))
-              offset_angle(ifile) = offset_angle(ifile)*cDegToRad
+              call read_var('OffsetAngle',offset_angle(iFile))
+              offset_angle(iFile) = offset_angle(iFile)*cDegToRad
               ! read max dimensions of the 2d image plane
-              call read_var('rSizeImage',r_size_image(ifile))
+              call read_var('rSizeImage',r_size_image(iFile))
               ! read the position of image origin relative to grid origin
-              call read_var('xOffset',xoffset(ifile))
-              call read_var('yOffset',yoffset(ifile))
+              call read_var('xOffset',xoffset(iFile))
+              call read_var('yOffset',yoffset(iFile))
               ! read the occulting radius
-              call read_var('rOccult',radius_occult(ifile))
+              call read_var('rOccult',radius_occult(iFile))
               ! read the limb darkening parameter
               call read_var('MuLimbDarkening',mu_los)
               ! read the number of pixels
-              call read_var('nPix',n_pix_r(ifile))
+              call read_var('nPix',n_pix_r(iFile))
               ! if it is an EUV plot using a long table then read in the name 
               ! of the specific lookup table (will be matched to the name read
               ! in by the lookuptable command).
               if (index(plot_string,'TBL')>0&
                    .or.index(plot_string,'tbl')>0) &
-                   call read_var('NameLosTable',NameLosTable(ifile))            
+                   call read_var('NameLosTable',NameLosTable(iFile))            
            elseif (index(plot_string,'rfr')>0) then
               ! Refractive radiowave image 
               plot_area='rfr'
               ! Observer position
-              call read_var('ObsPosX', ObsPos_DI(1,ifile))
-              call read_var('ObsPosY', ObsPos_DI(2,ifile))
-              call read_var('ObsPosZ', ObsPos_DI(3,ifile))
+              call read_var('ObsPosX', ObsPos_DI(1,iFile))
+              call read_var('ObsPosY', ObsPos_DI(2,iFile))
+              call read_var('ObsPosZ', ObsPos_DI(3,iFile))
               ! read number of radiowave frequencies, i.e. # of plots
               !call read_var('nRadioFrequency', nRadioFrequency)
               call read_var('StringRadioFrequency', &
                    StringRadioFrequency_I(iFile))
-              call read_var('xSizeImage', X_Size_Image(ifile))
-              call read_var('ySizeImage', Y_Size_Image(ifile))
+              call read_var('xSizeImage', X_Size_Image(iFile))
+              call read_var('ySizeImage', Y_Size_Image(iFile))
               ! read the number of pixels
-              call read_var('nPixX', n_Pix_X(ifile))            
-              call read_var('nPixY', n_Pix_Y(ifile))
+              call read_var('nPixX', n_Pix_X(iFile))            
+              call read_var('nPixY', n_Pix_Y(iFile))
            elseif(index(plot_string,'buf')>0)then
               plot_area='buf'
            elseif(index(plot_string,'1d')>0)then
@@ -902,7 +904,7 @@ subroutine MH_set_parameters(TypeAction)
 
            ! Plot file format
            if(index(plot_string,'idl') > 0)then
-              plot_form(ifile)='idl'
+              plot_form(iFile)='idl'
               if (       plot_area /= 'sph' &
                    .and. plot_area /= 'shl' &
                    .and. plot_area /= 'box' &
@@ -912,7 +914,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'eqr' &
                    .and. plot_area /= 'eqb' &
                    .and. plot_area /= 'buf' &
-                   ) call read_var('DxSavePlot',plot_dx(1,ifile))
+                   ) call read_var('DxSavePlot',plot_dx(1,iFile))
 
               ! Extract the type of idl plot file: default is real4
               TypeFile_I(iFile) = 'real4' 
@@ -931,7 +933,7 @@ subroutine MH_set_parameters(TypeAction)
               plot_form(iFile)='hdf'
               TypeFile_I(iFile) = 'hdf5'
            elseif(index(plot_string,'tec')>0)then 
-              plot_form(ifile)='tec'
+              plot_form(iFile)='tec'
               TypeFile_I(iFile) = 'tec'
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
@@ -941,9 +943,9 @@ subroutine MH_set_parameters(TypeAction)
            ! Plot variables
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
               plot_var='var'
-              plot_dimensional(ifile) = index(plot_string,'VAR')>0
+              plot_dimensional(iFile) = index(plot_string,'VAR')>0
               call read_var('NameVars', NamePlotVar)
-              call read_var('NamePars', plot_pars(ifile))
+              call read_var('NamePars', plot_pars(iFile))
               l1 = index(NamePlotVar, '{')
               if (l1 > 0) then
                  l2 = index(NamePlotVar, '}')
@@ -966,99 +968,98 @@ subroutine MH_set_parameters(TypeAction)
                       call stop_mpi(NameSub// &
                       ': too long expanded variable list='//NamePlotVar)
               end if
-              plot_vars(ifile) = NamePlotVar
+              plot_vars(iFile) = NamePlotVar
 
            elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
               plot_var='ray'
-              plot_dimensional(ifile) = index(plot_string,'RAY')>0
+              plot_dimensional(iFile) = index(plot_string,'RAY')>0
               if(DoMapEquatorRay)then
-                 plot_vars(ifile)='bx by bz req1 phi1 req2 phi2 status blk'
+                 plot_vars(iFile)='bx by bz req1 phi1 req2 phi2 status blk'
               else
-                 plot_vars(ifile)='bx by bz theta1 phi1 theta2 phi2 status blk'
+                 plot_vars(iFile)='bx by bz theta1 phi1 theta2 phi2 status blk'
               end if
-              plot_pars(ifile)='rbody'
+              plot_pars(iFile)='rbody'
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
-              plot_dimensional(ifile)=index(plot_string,'RAW')>0
-              plot_vars(ifile)=NameConservativeVar//' p b1x b1y b1z absdivB'
-              plot_pars(ifile)='g rbody'
+              plot_dimensional(iFile)=index(plot_string,'RAW')>0
+              plot_vars(iFile) = NameConservativeVar//' p b1x b1y b1z absdivB'
+              plot_pars(iFile) = "default"
            elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
               plot_var='mhd'
-              plot_dimensional(ifile) = index(plot_string,'MHD')>0
-              plot_vars(ifile) = NamePrimitiveVar//' jx jy jz'
-              plot_pars(ifile)='g rbody'
+              plot_dimensional(iFile) = index(plot_string,'MHD')>0
+              plot_vars(iFile) = NamePrimitiveVar//' jx jy jz'
+              plot_pars(iFile) = "default"
            elseif(index(plot_string,'HD')>0.or.index(plot_string,'hd')>0)then
               plot_var='hd'
-              plot_dimensional(ifile) = index(plot_string,'HD')>0
-              plot_vars(ifile) = NamePrimitiveVar
-              plot_pars(ifile)='g'
-              if(rBody>0.0)plot_pars(ifile)='g rbody'
+              plot_dimensional(iFile) = index(plot_string,'HD')>0
+              plot_vars(iFile) = NamePrimitiveVar
+              plot_pars(iFile) = "default"
            elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
               ! This is intended for restart with a different dimensionality
               plot_var='all'
-              plot_dimensional(ifile) = .false.
-              call join_string(nVar, NameVar_V(1:nVar), plot_vars(ifile))
-              plot_pars(ifile)='g'
+              plot_dimensional(iFile) = .false.
+              call join_string(nVar, NameVar_V(1:nVar), plot_vars(iFile))
+              plot_pars(iFile)='g'
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
-              plot_dimensional(ifile) = index(plot_string,'FUL')>0
-              plot_vars(ifile) = NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
-              plot_pars(ifile)='g rbody'
+              plot_dimensional(iFile) = index(plot_string,'FUL')>0
+              plot_vars(iFile) = NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
+              plot_pars(iFile) = "default"
            elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
               plot_var='flx'
-              plot_dimensional(ifile) = index(plot_string,'FLX')>0
-              plot_vars(ifile)='rho mr br p jr pvecr'
-              plot_pars(ifile)='g rbody'
+              plot_dimensional(iFile) = index(plot_string,'FLX')>0
+              plot_vars(iFile) = 'rho mr br p jr pvecr'
+              plot_pars(iFile) = "default"
            elseif(index(plot_string,'SOL')>0.or.index(plot_string,'sol')>0)then
               plot_var='sol'
-              plot_dimensional(ifile) = index(plot_string,'SOL')>0
-              plot_vars(ifile)='wl pb' ! white light
-              plot_pars(ifile)='mu'
+              plot_dimensional(iFile) = index(plot_string,'SOL')>0
+              plot_vars(iFile)='wl pb' ! white light
+              plot_pars(iFile)='mu'
            elseif(index(plot_string,'EUV')>0.or.index(plot_string,'euv')>0)then
               plot_var='euv'
-              plot_dimensional(ifile) = index(plot_string,'EUV')>0
-              plot_vars(ifile)='euv171 euv195 euv284' ! main euv bands
-              plot_pars(ifile)='mu'
+              plot_dimensional(iFile) = index(plot_string,'EUV')>0
+              plot_vars(iFile)='euv171 euv195 euv284' ! main euv bands
+              plot_pars(iFile)='mu'
            elseif(index(plot_string,'SXR')>0.or.index(plot_string,'sxr')>0)then
               plot_var='sxr'
-              plot_dimensional(ifile) = index(plot_string,'SXR')>0
-              plot_vars(ifile)='sxr' ! soft x-ray band
-              plot_pars(ifile)='mu'
+              plot_dimensional(iFile) = index(plot_string,'SXR')>0
+              plot_vars(iFile)='sxr' ! soft x-ray band
+              plot_pars(iFile)='mu'
            elseif(index(plot_string,'TBL')>0.or.index(plot_string,'tbl')>0)then
               plot_var='tbl'
-              plot_dimensional(ifile) = index(plot_string,'TBL')>0
-              plot_vars(ifile)='tbl' ! will read a table in write_plot_los 
-              plot_pars(ifile)='mu'
+              plot_dimensional(iFile) = index(plot_string,'TBL')>0
+              plot_vars(iFile)='tbl' ! will read a table in write_plot_los 
+              plot_pars(iFile)='mu'
            elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then
               plot_var='rwi'
-              plot_dimensional(ifile) = .false.
-              plot_vars(ifile)='' ! Intensity
-              plot_pars(ifile)=''
+              plot_dimensional(iFile) = .false.
+              plot_vars(iFile)='' ! Intensity
+              plot_pars(iFile)=''
            elseif(index(plot_string,'pos')>0.or.index(plot_string,'POS')>0)then
               plot_var='pos'
-              plot_dimensional(ifile) = index(plot_string,'POS')>0
+              plot_dimensional(iFile) = index(plot_string,'POS')>0
               if(plot_area /= 'lin')call stop_mpi(&
                    'Variable "pos" can only be used with area "lin" !')
            elseif(index(plot_string,'eqr')>0)then
               plot_var ='eqr'
-              plot_dimensional(ifile) = .true.
+              plot_dimensional(iFile) = .true.
            elseif(index(plot_string,'eqb')>0)then
               plot_var ='eqb'
-              plot_dimensional(ifile) = .true.
+              plot_dimensional(iFile) = .true.
            elseif(index(plot_string,'NUL')>0.or.index(plot_string,'nul')>0)then
               plot_var ='nul'
-              plot_dimensional(ifile) = .true.
-              plot_vars(ifile)=''
-              plot_pars(ifile)=''
+              plot_dimensional(iFile) = .true.
+              plot_vars(iFile)=''
+              plot_pars(iFile)=''
            elseif(index(plot_string,'INT')>0.or.index(plot_string,'int')>0)then
               plot_var ='int'
-              plot_dimensional(ifile) = index(plot_string,'INT')>0
-              plot_vars(ifile)=''
-              plot_pars(ifile)=''
+              plot_dimensional(iFile) = index(plot_string,'INT')>0
+              plot_vars(iFile)=''
+              plot_pars(iFile)=''
            elseif(index(plot_string,'BBK')>0.or.index(plot_string,'bbk')>0)then
               plot_var='blk'
-              plot_dimensional(ifile) = index(plot_string,'BBK')>0
-              plot_vars(ifile)='dx pe blk blkall'
+              plot_dimensional(iFile) = index(plot_string,'BBK')>0
+              plot_vars(iFile)='dx pe blk blkall'
            else
               call stop_mpi('Variable definition missing from plot_string=' &
                    //plot_string)
@@ -1739,9 +1740,10 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#GAMMA")
         if(.not.is_first_session())CYCLE READPARAM
-        do iFluid = 1, nFluid
+        do iFluid = IonFirst_, nFluid
            call read_var('Gamma_I',Gamma_I(iFluid))
         end do
+        Gamma_I(1) = Gamma_I(IonFirst_)
         ! Derived values for fluids
         GammaMinus1_I    = Gamma_I - 1.0
         where(GammaMinus1_I /= 0.0)
@@ -3196,21 +3198,21 @@ contains
           end do
        case('sph')
           if(IsCartesianGrid)then
-             plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
-             plot_dx(2:3,ifile) = 1.0  ! angular resolution in degrees
-             plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
-             plot_range(3,ifile)= 0.   - 0.5*plot_dx(2,ifile)
-             plot_range(4,ifile)= 90.0 + 0.5*plot_dx(2,ifile)
-             plot_range(5,ifile)= 0.   - 0.5*plot_dx(3,ifile)
-             plot_range(6,ifile)= 360.0- 0.5*plot_dx(3,ifile)
+             plot_dx(1,iFile) = 1.0    ! set to match write_plot_sph
+             plot_dx(2:3,iFile) = 1.0  ! angular resolution in degrees
+             plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 !so that R/=0
+             plot_range(3,iFile)= 0.   - 0.5*plot_dx(2,iFile)
+             plot_range(4,iFile)= 90.0 + 0.5*plot_dx(2,iFile)
+             plot_range(5,iFile)= 0.   - 0.5*plot_dx(3,iFile)
+             plot_range(6,iFile)= 360.0- 0.5*plot_dx(3,iFile)
           elseif(IsRLonLat)then
-             plot_dx(1,ifile) = -1.0
-             if(IsLogRadius) plot_range(1,ifile) = log(plot_range(1,ifile))
-             if(IsGenRadius) call radius_to_gen(plot_range(1,ifile))
-             plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
+             plot_dx(1,iFile) = -1.0
+             if(IsLogRadius) plot_range(1,iFile) = log(plot_range(1,iFile))
+             if(IsGenRadius) call radius_to_gen(plot_range(1,iFile))
+             plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 !so that R/=0
              do i=Phi_,Theta_
-                plot_range(2*i-1,ifile) = CoordMin_D(i)
-                plot_range(2*i,ifile)   = CoordMax_D(i)  
+                plot_range(2*i-1,iFile) = CoordMin_D(i)
+                plot_range(2*i,iFile)   = CoordMax_D(i)  
              end do
              plot_area='r=r' ! to disable the write_plot_sph routine
           else
@@ -3279,14 +3281,14 @@ contains
        if(nK == 1) plot_range(5,iFile) = -SmallSize_D(z_)
        if(nK == 1) plot_range(6,iFile) = +SmallSize_D(z_)
 
-       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
-            ' original range   =',plot_range(:,ifile)
+       if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+            ' original range   =',plot_range(:,iFile)
 
        plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), CoordMin_D)
        plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), CoordMax_D)
 
-       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
-            ' limited range   =',plot_range(:,ifile)
+       if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+            ' limited range   =',plot_range(:,iFile)
 
        ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
        if(plot_dx(1, iFile) <= cTiny)then
@@ -3305,8 +3307,8 @@ contains
 
        ! Make sure that plotting range is placed at an integer multiple of dx
        call adjust_plot_range(PlotRes_D(1), plot_range(:,iFile))
-       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
-            ' adjusted range   =',plot_range(:,ifile)
+       if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+            ' adjusted range   =',plot_range(:,iFile)
 
     end do PLOTFILELOOP
 
@@ -3317,6 +3319,8 @@ contains
 
     use ModMultiFluid, ONLY: UseMultiIon
     use ModTimeStepControl, ONLY: UseTimeStepControl,TimeStepControlInit
+
+    character(len=500):: StringParam
     !--------------------------------------------------------------------------
     ! We need normalization for dt
     if(UseDtFixed)then
@@ -3325,7 +3329,6 @@ contains
        Dt = DtFixed
        if(time_accurate) Cfl=1.0
     end if
-
 
     if(UseTimeStepControl)then
        ! Reduce initial time step / Cfl number. 
@@ -3353,6 +3356,38 @@ contains
 !!! momentum limiting fails for multiion: to be debugged
     if(UseMultiIon)DoLimitMomentum = .false.
 !!!
+
+    if(any(plot_pars(plot_+1:plot_+nPlotFile) == 'default'))then
+
+       ! Set the name of default scalar parameters for plotting
+       StringParam = ''
+       if(No2Si_V(UnitX_) /= 1.0) StringParam = 'xSI'
+       if(No2Si_V(UnitT_) /= 1.0) StringParam = 'tSI'
+       if(rBody > 0.0) StringParam = trim(StringParam) // ' r'
+       if(any(Gamma_I /= Gamma))then
+          do iFluid = IonFirst_, nFluid
+             write(StringParam,'(a,i1)') trim(StringParam)//' g', &
+                  iFluid - IonFirst_ + 1
+          end do
+       else
+          StringParam = trim(StringParam)//' g'
+       end if
+       if(GammaElectron /= 5./3.) StringParam = trim(StringParam)//' ge'
+       if(any(MassFluid_I /= 1.0))then
+          do iFluid = IonFirst_, nFluid
+             write(StringParam,'(a,i1)') trim(StringParam)//' m', &
+                  iFluid - IonFirst_ + 1
+          end do
+       end if
+       if(any(ChargeIon_I /= 1.0))then
+          do iFluid = 1, nIonFluid
+             write(StringParam,'(a,i1)') trim(StringParam)//' q',iFluid
+          end do
+       end if
+       do iFile = plot_+1, plot_+nPlotFile
+          if(plot_pars(iFile) == 'default') plot_pars(iFile) = StringParam
+       end do
+    end if
 
   end subroutine set_extra_parameters
   !============================================================================
