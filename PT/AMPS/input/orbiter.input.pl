@@ -90,7 +90,7 @@ while ($line=<InputFile>) {
     ($InputLine,$line)=split(' ',$line,2);
     ($InputLine,$line)=split(' ',$line,2);
 
-    ampsConfigLib::ChangeValueOfVariable("char Orbiter::Mesh::SurfaceModel\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
+    ampsConfigLib::ChangeValueOfVariable("char Orbiter::SurfaceModel::MeshFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
   }
   elsif ($InputLine eq "SURFACEMODELFORMAT") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -130,8 +130,8 @@ while ($line=<InputFile>) {
         $NumberDensityTable[$nspec]=$c2;
       }
     }
-    
-    ampsConfigLib::ChangeValueOfArray("double Orbiter::UpstreamBC::NumberDensityTable\\[PIC::nTotalSpecies\\]",\@NumberDensityTable,"main/Orbiter.cpp");
+
+    ampsConfigLib::ChangeValueOfArray("double Orbiter::UpstreamBC::NumberDensity\\[PIC::nTotalSpecies\\]",\@NumberDensityTable,"main/Orbiter.cpp");
   }
   elsif ($InputLine eq "UPSTREAMTEMPERATURE") {
     my $t;
