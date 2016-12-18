@@ -430,7 +430,7 @@ contains
 
     character(len=*), parameter:: NameSub = 'set_b0_source'
     !-----------------------------------------------------------------------
-    if(.not.(UseB0 .and. UseB0Source)) RETURN
+    if(.not.(UseB0 .and. UseB0Source .and. nDim==3)) RETURN
 
     ! set B0_DX, B0_DY, B0_DZ for this block
     call set_b0_face(iBlock)
