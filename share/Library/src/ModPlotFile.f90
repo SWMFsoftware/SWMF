@@ -120,7 +120,7 @@ contains
     real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_I(:)
 
     integer :: n_D(0:MaxDim),ii,jj,kk
-    integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut, iError
+    integer :: i, j, k, i_D(3), iDim, iVar, n, nDimOut
     logical  :: IsSplitSuccessfull
 
     character(len=*), parameter:: NameSub = 'save_plot_file'
