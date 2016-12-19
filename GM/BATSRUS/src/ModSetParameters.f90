@@ -3361,9 +3361,11 @@ contains
 
        ! Set the name of default scalar parameters for plotting
        StringParam = ''
-       if(No2Si_V(UnitX_) /= 1.0) StringParam = 'xSI'
-       if(No2Si_V(UnitT_) /= 1.0) StringParam = 'tSI'
-       if(rBody > 0.0) StringParam = trim(StringParam) // ' r'
+       if(abs(No2Si_V(UnitX_) - 1.0) > 1e-6) &
+            StringParam = 'xSI'
+       if(abs(No2Si_V(UnitT_) - 1.0) > 1e-6) &
+            StringParam = trim(StringParam)//' tSI'
+       if(rBody > 0.0) StringParam = trim(StringParam)//' r'
        if(any(Gamma_I /= Gamma))then
           do iFluid = IonFirst_, nFluid
              write(StringParam,'(a,i1)') trim(StringParam)//' g', &
@@ -3385,7 +3387,8 @@ contains
           end do
        end if
        do iFile = plot_+1, plot_+nPlotFile
-          if(plot_pars(iFile) == 'default') plot_pars(iFile) = StringParam
+          if(plot_pars(iFile) == 'default') plot_pars(iFile) = &
+               adjustl(StringParam)
        end do
     end if
 
