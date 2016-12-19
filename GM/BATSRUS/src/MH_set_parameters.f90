@@ -3361,9 +3361,9 @@ contains
 
        ! Set the name of default scalar parameters for plotting
        StringParam = ''
-       if(abs(No2Si_V(UnitX_) - 1.0) > 1e-6) &
+       if(abs(Io2Si_V(UnitX_) - 1.0) > 1e-6) &
             StringParam = 'xSI'
-       if(abs(No2Si_V(UnitT_) - 1.0) > 1e-6) &
+       if(abs(Io2Si_V(UnitT_) - 1.0) > 1e-6) &
             StringParam = trim(StringParam)//' tSI'
        if(rBody > 0.0) StringParam = trim(StringParam)//' r'
        if(any(Gamma_I /= Gamma))then
