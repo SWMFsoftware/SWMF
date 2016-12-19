@@ -2607,6 +2607,8 @@ void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdot
 void EMfields3D::smooth(arr3_double vector, int type)
 {
   if(Smooth==1.0) return;
+  const Collective *col = &get_col();
+  if(!col->getdoSmoothAll()) return;
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
 
@@ -2639,9 +2641,14 @@ void EMfields3D::smooth(arr3_double vector, int type)
 
       for (int i = 1; i < nx - 1; i++)
         for (int j = 1; j < ny - 1; j++)
-          for (int k = 1; k < nz - 1; k++)
+          for (int k = 1; k < nz - 1; k++){
+	    // getSmoothFactor is node based. but i,j,k can be cell indexes 
+	    alpha = col->getSmoothFactor(i,j,k);
+	    beta3D  = (1-alpha)/6.0;
+	    
             temp[i][j][k] = alpha * vector[i][j][k] + beta3D * (vector[i - 1][j][k] + vector[i + 1][j][k] + vector[i][j - 1][k] + vector[i][j + 1][k] + vector[i][j][k - 1] + vector[i][j][k + 1]);
           //temp[i][j][k] = alpha * vector[i][j][k] + beta2D * (vector[i - 1][j][k] + vector[i + 1][j][k] + vector[i][j][k - 1] + vector[i][j][k + 1]);
+  }
 
       for (int i = 1; i < nx - 1; i++)
         for (int j = 1; j < ny - 1; j++)
@@ -2671,15 +2678,18 @@ void EMfields3D::smoothE()
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ezth, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
       #ifdef BATSRUS
-      //      if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
+      //if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
       #endif 
       
       // Exth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
-          for (int k = 1; k < nzn - 1; k++)
+          for (int k = 1; k < nzn - 1; k++){
+	    alpha = col->getSmoothFactor(i,j,k);
+	    beta3D  = (1-alpha)/6.0;
             temp[i][j][k] = alpha * Exth[i][j][k] + beta3D * (Exth[i - 1][j][k] + Exth[i + 1][j][k] + Exth[i][j - 1][k] + Exth[i][j + 1][k] + Exth[i][j][k - 1] + Exth[i][j][k + 1]);
       	    //temp[i][j][k] = alpha * Ex[i][j][k] + beta2D * (Ex[i - 1][j][k] + Ex[i + 1][j][k] + Ex[i][j][k - 1] + Ex[i][j][k + 1]);
+	  }
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
@@ -2688,9 +2698,13 @@ void EMfields3D::smoothE()
       // Eyth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
-          for (int k = 1; k < nzn - 1; k++)
+          for (int k = 1; k < nzn - 1; k++){
+	    alpha = col->getSmoothFactor(i,j,k);
+	    beta3D  = (1-alpha)/6.0;
+
             temp[i][j][k] = alpha * Eyth[i][j][k] + beta3D * (Eyth[i - 1][j][k] + Eyth[i + 1][j][k] + Eyth[i][j - 1][k] + Eyth[i][j + 1][k] + Eyth[i][j][k - 1] + Eyth[i][j][k + 1]);
       //temp[i][j][k] = alpha * Ey[i][j][k] + beta2D * (Ey[i - 1][j][k] + Ey[i + 1][j][k] + Ey[i][j][k - 1] + Ey[i][j][k + 1]);
+	  }
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
@@ -2699,9 +2713,13 @@ void EMfields3D::smoothE()
       // Ezth
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
-          for (int k = 1; k < nzn - 1; k++)
+          for (int k = 1; k < nzn - 1; k++){
+	    alpha = col->getSmoothFactor(i,j,k);
+	    beta3D  = (1-alpha)/6.0;
+
             temp[i][j][k] = alpha * Ezth[i][j][k] + beta3D * (Ezth[i - 1][j][k] + Ezth[i + 1][j][k] + Ezth[i][j - 1][k] + Ezth[i][j + 1][k] + Ezth[i][j][k - 1] + Ezth[i][j][k + 1]);
       //temp[i][j][k] = alpha * Ez[i][j][k] + beta2D * (Ez[i - 1][j][k] + Ez[i + 1][j][k] + Ez[i][j][k - 1] + Ez[i][j][k + 1]);
+	  }
 
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
@@ -4630,6 +4648,8 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
   }else if(var.substr(0,2)=="Bz"){
     value = Bzn[i][j][k];
     value *= No2OutB;
+  }else if(var.substr(0,6)=="smooth"){
+    value = col->getSmoothFactor(i,j,k);
   }else if(var.substr(0,1)=="X"){
     value = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
   }else if(var.substr(0,1)=="Y"){

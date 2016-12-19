@@ -110,5 +110,35 @@ If the distance between a particle and the satellite trajectory is less than
 SatRadius*dx, where dx is the cell size in x direction, this particle will be
 saved in the output file. 
 </command>
-  
+
+<command name="COMPONENT">
+#SMOOTHE
+T                     doSmoothAll
+4                     nSmooth
+0.5                   innerSmoothFactor
+1.0                   boundarySmoothFactor
+5                     nBoundarySmooth
+
+These parameters determin how to smooth electric field.
+
+The algorithm for smoothing is:
+E`_ijk = smooth*(E_ijk) + (1-smooth)/6*sum(neighbors of E_ijk).
+This process will repeat nSmooth times. The coefficient 'smooth' is calculated
+based on innerSmoothFactor, boundarySmoothFactor and nBoundarySmooth.Define
+iCell as the distance from a node to the PIC boundary (node index 1 NOT 0).
+If iCell > nBoundarySmooth, then smooth = innerSmoothFactor, otherwise the
+coefficient 'smooth' will be linearly interpolated from innerSmoothFactor and
+boundarySmoothFactor.
+
+If doSmoothAll is false, electric field will still be smoothed, but not the
+hat functions of j and rho. 
+
+The value of 'smooth' calculated from innerSmoothFactor and boundarySmoothFactor
+is limited to smaller than 1. 
+
+Default nSmooth is 0. 
+
+</command>
+
+
 </commandList>

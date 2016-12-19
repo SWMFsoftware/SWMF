@@ -169,6 +169,12 @@ class InterfaceFluid
   bool doUseOldRestart;
   string testFuncs;
   int iTest, jTest,kTest;
+
+  // Change smooth coefficient near the boundary.
+  // Parameters 'SmoothNiter' and 'Smooth' are declared in Colective.h
+  bool doSmoothAll; // Smooth jh and rhoh?. 
+  double innerSmoothFactor, boundarySmoothFactor;
+  double nBoundarySmooth;
   
  private:
   
@@ -2203,6 +2209,34 @@ class InterfaceFluid
     npy = divisor1 > divisor2 ? divisor1 : divisor2;
     npz = divisor1 > divisor2 ? divisor2 : divisor1;
   }
+
+  double getSmoothFactor(int i, int j, int k)const{
+    double smooth; 
+    int iMin,jMin,kMin,idxMin;
+
+    int ig, jg, kg;
+    getGlobalIndex(i,j,k,&ig,&jg,&kg);
+
+    // The edge for PIC domain is node with index 1. It is different from
+    // standalone PIC
+    iMin = min(ig-1,nIJK_D[0]-ig-2);
+    jMin = min(jg-1,nIJK_D[1]-jg-2);
+    kMin = min(kg-1,nIJK_D[2]-kg-2);
+    idxMin = min(iMin,jMin);
+
+    if(INdim>2) idxMin = min(idxMin,kMin);
+
+    double ix;
+    if(idxMin<nBoundarySmooth){
+      ix = (nBoundarySmooth-idxMin)/nBoundarySmooth; 
+      smooth = ix*boundarySmoothFactor + (1-ix)*innerSmoothFactor;
+    }else{
+      smooth = innerSmoothFactor;
+    }
+
+    if(smooth > 1) smooth = 1;
+    return smooth;    
+  }
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
@@ -2265,6 +2299,8 @@ class InterfaceFluid
   void setyEnd(double v){yEnd=v;};
   void setzStart(double v){zStart=v;};
   void setzEnd(double v){zEnd=v;};
+
+  bool getdoSmoothAll()const{return doSmoothAll;};
 };
 
 

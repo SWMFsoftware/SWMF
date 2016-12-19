@@ -1481,6 +1481,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   NpMaxNpRatio = 3.0;
   delta = 0.5;
 
+  // Smooth related.
+  doSmoothAll = true;
+  innerSmoothFactor = 1.0;
+  boundarySmoothFactor = 1.0;
+  nBoundarySmooth = 0; 
+
   last_cycle = -1; 
 
   dt = 0;
@@ -1583,7 +1589,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   iMinute = 45;
   iSecond = 0;
 
-  drSat = 2; 
+  drSat = 2;
   
   while(*param){
     get_next_command(param,&Command);
@@ -1613,6 +1619,16 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"NpMaxNpRatio", &NpMaxNpRatio);
       read_var(param,"delta",        &delta);
 
+    }
+    else if( Command == "#SMOOTHE"){
+      read_var(param,"doSmoothAll",          &doSmoothAll);
+      read_var(param,"nSmooth",              &SmoothNiter);
+      read_var(param,"innerSmoothFactor",    &innerSmoothFactor);
+      read_var(param,"boundarySmoothFactor", &boundarySmoothFactor);
+      if(boundarySmoothFactor - innerSmoothFactor > 1e-6){
+	read_var(param,"nBoundarySmooth",    &nBoundarySmooth);
+      }
+      Smooth = innerSmoothFactor;
     }
     else if( Command == "#GRID" && !RESTART1){
       read_var(param,"nxc",       &nxc);
