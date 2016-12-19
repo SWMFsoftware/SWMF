@@ -1476,7 +1476,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // #PARAMS
   th          = 1.0;
   c           = 1.0;
-  Smooth      = 0.5;
+  Smooth      = 1.0;
   SmoothNiter = 0;
   NpMaxNpRatio = 3.0;
   delta = 0.5;
@@ -1485,7 +1485,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   doSmoothAll = true;
   innerSmoothFactor = 1.0;
   boundarySmoothFactor = 1.0;
-  nBoundarySmooth = 0; 
+  nBoundarySmooth = 1; 
 
   last_cycle = -1; 
 
@@ -1618,7 +1618,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"nSmooth",      &SmoothNiter);
       read_var(param,"NpMaxNpRatio", &NpMaxNpRatio);
       read_var(param,"delta",        &delta);
-
+      
+      innerSmoothFactor = Smooth;
+      boundarySmoothFactor = Smooth;
     }
     else if( Command == "#SMOOTHE"){
       read_var(param,"doSmoothAll",          &doSmoothAll);
