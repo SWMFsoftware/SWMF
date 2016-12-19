@@ -62,7 +62,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['my'       , 'rho*uy'                                  ], $
                 ['mz'       , 'rho*uz'                                  ], $
                 ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'      ], $ ; Hall velocity
-                ['uHx'      , 'uH0*{jx}/rho'                            ], $ 
+                ['uHx'      , 'uH0*{jx}/rho'                            ], $
                 ['uHy'      , 'uH0*{jy}/rho'                            ], $ 
                 ['uHz'      , 'uH0*{jz}/rho'                            ], $ 
                 ['uex'      , 'ux-uH0*{jx}/rho'                         ], $ ; electron velocity
@@ -123,6 +123,16 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['skindepth',' di0/sqrt(rho*mi/me)'                     ], $ ; electron skin depth
                 ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $ ; electron skin depth in SI
                 ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
+                ['jxp'      , '{rhos1}*{uxs1}-{rhos0}*{uxs0}*100'       ], $ ; jx from particles
+                ['jyp'      , '{rhos1}*{uys1}-{rhos0}*{uys0}*100'       ], $ ; jy from particles
+                ['jzp'      , '{rhos1}*{uzs1}-{rhos0}*{uzs0}*100'       ], $ ; jz from particles
+                ['jp'       , 'sqrt({jxp}^2+{jyp}^2+{jzp}^2)'           ], $ ; j from particles 
+                ['jppar'    , '({jxp}*{bx}+{jyp}*{by}+{jzp}*{bz})/b'    ], $ ; j parallel to field line
+                ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $ ; j perpendicular to field line
+                ['jxbx'     , '({rhos1}*{uys1}-{rhos0}*{uys0}*100)*{bz}-({rhos1}*{uzs1}-{rhos0}*{uzs0}*100)*{by}' ], $ ; j cross b - x
+                ['jxby'     , '({rhos1}*{uzs1}-{rhos0}*{uzs0}*100)*{bx}-({rhos1}*{uxs1}-{rhos0}*{uxs0}*100)*{bz}' ], $ ; j cross b - y
+                ['jxbz'     , '({rhos1}*{uxs1}-{rhos0}*{uxs0}*100)*{by}-({rhos1}*{uys1}-{rhos0}*{uys0}*100)*{bx}' ], $ ; j cross b - z
+                ['jxb'     , 'sqrt({jxbx}^2+{jxby}^2+{jxbz}^2)'         ], $ ; j cross b
                 ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
                                      ]))
 
