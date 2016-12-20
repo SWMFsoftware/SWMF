@@ -3,6 +3,8 @@
 
 #include "pic.h"
 
+int PIC::Mesh::IrregularSurface::nCutFaceInformationCopyAttempts=0; 
+
 void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
   //calculate external normals to the faces
   double xStart[3],xFinish[3],l,l0,*norm;
@@ -13,6 +15,31 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
   const double angleCosMin=cos(85.0/180.0*3.141592654);
 
   int nStartFace,nFinishFace,nTotalThreads,ThisThread,nFaceThread;
+
+  //check whether external normal vectors are already have been determined for the surface trianguletion
+  unsigned long int TriangulationSignature;
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  FILE *fExternalVectorFile=NULL;
+
+  TriangulationSignature=CutCell::GetTriangulationSignature();
+  sprintf(fname,"amr.sig=0x%lx.TriangulationExternalNormalVector.bin",TriangulationSignature);
+
+  fExternalVectorFile=fopen(fname,"r");
+
+  if (fExternalVectorFile!=NULL) {
+    //the binary file containing the external normal information exists -> load it
+    if (PIC::ThisThread==0) printf("$PREFIX: Binary file with the external normals (%s) is found: loading.... ",fname);
+
+    for (nface=0;nface<nBoundaryTriangleFaces;nface++) fread(BoundaryTriangleFaces[nface].ExternalNormal,sizeof(double),3,fExternalVectorFile);
+
+    fclose(fExternalVectorFile);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    if (PIC::ThisThread==0) printf("done\n");
+
+    return;
+  }
+
+  if (PIC::ThisThread==0) printf("$PREFIX: Binary file with the external normals is not found: generating.... "); 
 
   MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
   MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
@@ -27,6 +54,10 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
       pow(PIC::Mesh::mesh.xGlobalMax[1]-PIC::Mesh::mesh.xGlobalMin[1],2)+
       pow(PIC::Mesh::mesh.xGlobalMax[2]-PIC::Mesh::mesh.xGlobalMin[2],2));
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic,1) default (none) shared(nStartFace,nFinishFace,BoundaryTriangleFaces,lDomain) \
+  private (nface,fcptr,norm,idim,xFinish,xStart,l,l0,iIntersections)
+#endif
   for (nface=nStartFace;nface<nFinishFace;nface++) {
     fcptr=BoundaryTriangleFaces+nface;
 
@@ -79,6 +110,18 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 
   delete [] sendBuffer;
 
+  //save a file with the external normals for the future use
+  if (PIC::ThisThread==0) {
+    fExternalVectorFile=fopen(fname,"w");
+
+    for (nface=0;nface<nBoundaryTriangleFaces;nface++) fwrite(BoundaryTriangleFaces[nface].ExternalNormal,sizeof(double),3,fExternalVectorFile);
+
+    fclose(fExternalVectorFile);
+  }
+
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  if (PIC::ThisThread==0) printf("done\n");
 }
 
 //check weather a point (x0) in insed the domain:
@@ -176,3 +219,284 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 
   return (2*(iIntersections/2)==iIntersections) ? true : false;
 */}
+
+
+//copy information about the triangular cut faces into the nighbouring blocks 
+void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  static unsigned int *BoundaryTriangleMap=NULL;
+  static const int nResetBoundaryTriangleMapTestCounter=100000000;
+  static unsigned int BoundaryTriangleMapTestCounter=0;
+
+  static int CutFaceDescriptorTablePointer=-1;
+  static CutCell::cTriangleFaceDescriptor *CutFaceDescriptorTable=NULL;
+  static int CutFaceDescriptorTableLength=(int)(0.5*CutCell::nBoundaryTriangleFaces);     
+
+  struct CutFaceData {
+    void ResetTempPointerTable(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *nd) {
+      if (nd->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+        int i;
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+        for (i=0;i<(1<<DIM);i++) if ((downNode=nd->downNode[i])!=NULL) {
+          ResetTempPointerTable(downNode);
+        }
+      }
+      else nd->neibFirstTriangleCutFace_temp=NULL;
+    } 
+
+    void SetTempCutFacePointers(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *nd) {
+      if (nd->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+        int i;
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+        for (i=0;i<(1<<DIM);i++) if ((downNode=nd->downNode[i])!=NULL) {
+          SetTempCutFacePointers(downNode);
+        }
+      }
+      else if (nd->neibFirstTriangleCutFace_temp!=NULL) {
+        //add the pointers to the neibFirstTriangleCutFace list
+        CutCell::cTriangleFaceDescriptor *t;
+
+        if (nd->neibFirstTriangleCutFace==NULL) {
+          nd->neibFirstTriangleCutFace=nd->neibFirstTriangleCutFace_temp;
+          nd->neibFirstTriangleCutFace_temp=NULL;
+        }
+        else {
+          t=nd->neibFirstTriangleCutFace;
+          while (t->next!=NULL) t=t->next; 
+
+          //link the lists
+          t->next=nd->neibFirstTriangleCutFace_temp;
+          nd->neibFirstTriangleCutFace_temp->prev=t;
+
+          nd->neibFirstTriangleCutFace_temp=NULL;
+        }
+      }
+    }
+
+    //add cut faces from block NodeFrom to NodeTo 
+    void AddCutFaceData(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *To,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *From) { 
+      int iTestNeib,iTestNode;
+      CutCell::cTriangleFaceDescriptor *t;
+
+      //save all cut-faces from the neib node
+      if (++BoundaryTriangleMapTestCounter==nResetBoundaryTriangleMapTestCounter) {
+        //reset the counters
+        BoundaryTriangleMapTestCounter=1;
+        for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) BoundaryTriangleMap[i]=0;
+      }
+
+      for (iTestNode=0;iTestNode<3;iTestNode++) {
+        switch (iTestNode) {
+        case 0: 
+          t=To->FirstTriangleCutFace;
+          break;
+        case 1: 
+          t=To->neibFirstTriangleCutFace;
+          break;
+        case 2:
+          t=To->neibFirstTriangleCutFace_temp;
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error: something is wrong");
+        }
+
+        for (;t!=NULL;t=t->next) BoundaryTriangleMap[t->TriangleFace->Temp_ID]=BoundaryTriangleMapTestCounter;
+      }
+
+      //check whether all cut-faces from startNode are regiteres in neibNode
+      for (iTestNode=0;iTestNode<2;iTestNode++) {
+        t=(iTestNode==0) ? From->FirstTriangleCutFace : From->neibFirstTriangleCutFace;
+
+        for (;t!=NULL;t=t->next) if (BoundaryTriangleMap[t->TriangleFace->Temp_ID]!=BoundaryTriangleMapTestCounter) {
+          CutCell::cTriangleFaceDescriptor *NewDescriptor;
+
+          if (CutFaceDescriptorTablePointer==-1) {
+            CutFaceDescriptorTable=new CutCell::cTriangleFaceDescriptor[CutFaceDescriptorTableLength];
+            CutFaceDescriptorTablePointer=CutFaceDescriptorTableLength-1;
+          }
+
+          NewDescriptor=CutFaceDescriptorTable+CutFaceDescriptorTablePointer;
+          CutFaceDescriptorTablePointer--;
+
+          NewDescriptor->TriangleFace=t->TriangleFace;
+          NewDescriptor->prev=NULL;
+          NewDescriptor->next=To->neibFirstTriangleCutFace_temp;
+
+          if (To->neibFirstTriangleCutFace_temp!=NULL) To->neibFirstTriangleCutFace_temp->prev=NewDescriptor;
+          To->neibFirstTriangleCutFace_temp=NewDescriptor;
+
+          BoundaryTriangleMap[t->TriangleFace->Temp_ID]=BoundaryTriangleMapTestCounter;
+        }
+      }
+    }
+
+ 
+  } ProcessCutFaceData;
+     
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    BoundaryTriangleMapTestCounter=1;
+    BoundaryTriangleMap=new unsigned int [CutCell::nBoundaryTriangleFaces];  
+         
+    for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+      BoundaryTriangleMap[i]=0,CutCell::BoundaryTriangleFaces[i].Temp_ID=i;
+    }
+
+    //allocate the buffer with the new descriptors if needed 
+    if (CutFaceDescriptorTable==NULL) {
+      CutFaceDescriptorTable=new CutCell::cTriangleFaceDescriptor[CutFaceDescriptorTableLength];
+      CutFaceDescriptorTablePointer=CutFaceDescriptorTableLength-1;
+    }
+
+
+    ProcessCutFaceData.ResetTempPointerTable(PIC::Mesh::mesh.rootTree); 
+  }
+
+  //move to the botton of the tree
+  if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+    int i;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+    double c;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
+      CopyCutFaceInformation(downNode); 
+    }
+  }
+  else if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibFirstTriangleCutFace!=NULL)) {
+    const int ProcessedNeibBlockTableLength=60;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ProcessedNeibBlockTable[ProcessedNeibBlockTableLength];
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* neibNode;
+    int i,j,k,iFace,iEdge,iCorner,iNeib,ProcessedNodeCounter=0;
+    bool found;
+
+    //connection through corners
+    for (iCorner=0;iCorner<(1<<DIM);iCorner++) if ((neibNode=startNode->GetNeibCorner(iCorner))!=NULL) {
+      for (found=false,iNeib=0;iNeib<ProcessedNodeCounter;iNeib++) if (neibNode==ProcessedNeibBlockTable[iNeib]) {
+        found=true;
+        break;
+      }
+
+      if (found==false) {
+        //the block is not processed yet -> copy cut face information 
+        ProcessedNeibBlockTable[ProcessedNodeCounter++]=neibNode;
+        ProcessCutFaceData.AddCutFaceData(neibNode,startNode);  
+      }
+    }
+  
+    //connection through edges 
+    for (iEdge=0;iEdge<12;iEdge++) for (i=0;i<2;i++) if ((neibNode=startNode->GetNeibEdge(iEdge,i))!=NULL) {
+      for (found=false,iNeib=0;iNeib<ProcessedNodeCounter;iNeib++) if (neibNode==ProcessedNeibBlockTable[iNeib]) {
+        found=true;
+        break;
+      }
+
+      if (found==false) {
+        //the block is not processed yet -> copy cut face information
+        ProcessedNeibBlockTable[ProcessedNodeCounter++]=neibNode;
+        ProcessCutFaceData.AddCutFaceData(neibNode,startNode);
+      }
+    }
+
+    //connection through faces   
+    for (iFace=0;iFace<6;iFace++) for (i=0;i<2;i++) for (j=0;j<2;j++) if ((neibNode=startNode->GetNeibFace(iFace,i,j))!=NULL) {
+      for (found=false,iNeib=0;iNeib<ProcessedNodeCounter;iNeib++) if (neibNode==ProcessedNeibBlockTable[iNeib]) {
+        found=true;
+        break;
+      }
+
+      if (found==false) {
+        //the block is not processed yet -> copy cut face information
+        ProcessedNeibBlockTable[ProcessedNodeCounter++]=neibNode;
+        ProcessCutFaceData.AddCutFaceData(neibNode,startNode);
+      }
+    }
+
+    if (ProcessedNodeCounter>ProcessedNeibBlockTableLength) exit(__LINE__,__FILE__,"Error: the counting is wrong"); 
+  } 
+
+ 
+
+
+
+
+
+/*
+    int iNeib,jNeib,kNeib;
+    CutCell::cTriangleFaceDescriptor *t,*tNeib;
+
+    //scan through all neibours
+    int iNeibNode,jNeibNode,kNeibNode;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *neibNode;
+
+    static const int iNeibNodeMin=-1,iNeibNodeMax=1,jNeibNodeMin=-1,jNeibNodeMax=1,kNeibNodeMin=-1,kNeibNodeMax=1;
+
+    for (iNeibNode=iNeibNodeMin;iNeibNode<=iNeibNodeMax;iNeibNode++) { 
+      for (jNeibNode=jNeibNodeMin;jNeibNode<=jNeibNodeMax;jNeibNode++) {
+        for (kNeibNode=kNeibNodeMin;kNeibNode<=kNeibNodeMax;kNeibNode++)  {
+          if (abs(iNeibNode)+abs(jNeibNode)+abs(kNeibNode)!=0) {
+            if ((neibNode=PIC::Mesh::mesh.getNeibNode(iNeibNode,jNeibNode,kNeibNode,startNode))!=NULL) {
+              int iTestNeib,iTestNode;
+
+              //save all cut-faces from the neib node
+              if (++BoundaryTriangleMapTestCounter==nResetBoundaryTriangleMapTestCounter) {
+                //reset the counters 
+                BoundaryTriangleMapTestCounter=1;
+                for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) BoundaryTriangleMap[i]=0; 
+              }
+
+              for (iTestNode=0;iTestNode<2;iTestNode++) {
+                t=(iTestNode==0) ? neibNode->FirstTriangleCutFace : neibNode->neibFirstTriangleCutFace;
+
+                for (;t!=NULL;t=t->next) BoundaryTriangleMap[t->TriangleFace->Temp_ID]=BoundaryTriangleMapTestCounter;
+              }     
+
+              //check whether all cut-faces from startNode are regiteres in neibNode
+              for (iTestNode=0;iTestNode<2;iTestNode++) {
+                t=(iTestNode==0) ? startNode->FirstTriangleCutFace : startNode->neibFirstTriangleCutFace; 
+
+                for (;t!=NULL;t=t->next) if (BoundaryTriangleMap[t->TriangleFace->Temp_ID]!=BoundaryTriangleMapTestCounter) {
+                  CutCell::cTriangleFaceDescriptor *NewDescriptor;
+
+                  if (CutFaceDescriptorTablePointer==-1) {
+                    CutFaceDescriptorTable=new CutCell::cTriangleFaceDescriptor[CutFaceDescriptorTableLength];
+                    CutFaceDescriptorTablePointer=CutFaceDescriptorTableLength-1;  
+                  }
+
+                  NewDescriptor=CutFaceDescriptorTable+CutFaceDescriptorTablePointer;
+                  CutFaceDescriptorTablePointer--;
+
+                  NewDescriptor->TriangleFace=t->TriangleFace;
+                  NewDescriptor->prev=NULL;
+                  NewDescriptor->next=neibNode->neibFirstTriangleCutFace;
+
+                  if (neibNode->neibFirstTriangleCutFace!=NULL) neibNode->neibFirstTriangleCutFace->prev=NewDescriptor;
+                  neibNode->neibFirstTriangleCutFace=NewDescriptor;   
+
+                  BoundaryTriangleMap[t->TriangleFace->Temp_ID]=BoundaryTriangleMapTestCounter; 
+                }
+              }
+
+            }
+          }
+        }
+      }
+    } 
+  }
+*/
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    delete [] BoundaryTriangleMap;
+
+    BoundaryTriangleMapTestCounter=0;
+    BoundaryTriangleMap=NULL;
+
+    ProcessCutFaceData.SetTempCutFacePointers(PIC::Mesh::mesh.rootTree);
+  }
+}
+ 
+
+
+
+
+
