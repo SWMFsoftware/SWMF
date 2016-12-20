@@ -25,7 +25,6 @@
 
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
-#include "Surface.h"
 
 double BulletLocalResolution(double *x) {
   int idim;
@@ -45,12 +44,15 @@ return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
-  double dt,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
-  int res,spec;
+  double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
+  int spec;
 
   memcpy(vInitUnchanged,vInit,3*sizeof(double));
 
-  res=Surface::ParticleInteractionProcessor(ptr,xInit,vInit,TriangleCutFace,startNode);
+  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
+  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
+  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
 
   //sample the energy and momentum transfer rates
   spec=PIC::ParticleBuffer::GetI(ptr);
@@ -60,17 +62,78 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
 
   dt=startNode->block->GetLocalTimeStep(spec);
-  RateFactor=mass*LocalParticleWeight/dt/TriangleCutFace->SurfaceArea;
+  RateFactor=mass*LocalParticleWeight/dt; 
 
-  TriangleCutFace->UserData.MomentumTransferRateX[spec]+=(vInit[0]-vInitUnchanged[0])*RateFactor;
-  TriangleCutFace->UserData.MomentumTransferRateY[spec]+=(vInit[1]-vInitUnchanged[1])*RateFactor;
-  TriangleCutFace->UserData.MomentumTransferRateZ[spec]+=(vInit[2]-vInitUnchanged[2])*RateFactor;
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+  double *xx,dp,de; 
 
-  TriangleCutFace->UserData.EnergyTransferRate[spec]+=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
+  dp=(vInit[0]-vInitUnchanged[0])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpX[0]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateX;
+  xx[spec]+=dp/TriangleCutFace->SurfaceArea;
+
+  dp=(vInit[1]-vInitUnchanged[1])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpY[0]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateY;
+  xx[spec]+=dp/TriangleCutFace->SurfaceArea;
+
+  dp=(vInit[2]-vInitUnchanged[2])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpZ[0]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateZ;
+  xx[spec]+=dp/TriangleCutFace->SurfaceArea;
+
+  de=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
       vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
+  xx=TriangleCutFace->UserData.EnergyTransferRate;
+  xx[spec]+=de/TriangleCutFace->SurfaceArea;
+
+#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  double *xx,dp,de; 
+  int thread=omp_get_thread_num();
+
+  //dpX
+  dp=(vInit[0]-vInitUnchanged[0])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpX[thread]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateX;
+  dp/=TriangleCutFace->SurfaceArea;
+
+  #pragma omp atomic
+  xx[spec]+=dp;
+
+  //dpY
+  dp=(vInit[1]-vInitUnchanged[1])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpY[thread]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateY;
+  dp/=TriangleCutFace->SurfaceArea; 
+
+  #pragma omp atomic
+  xx[spec]+=dp;
+
+  //dpX
+  dp=(vInit[2]-vInitUnchanged[2])*RateFactor;
+  Orbiter::Sampling::DragCoefficient::dpZ[thread]+=dp;
+  xx=TriangleCutFace->UserData.MomentumTransferRateZ;
+  dp/=TriangleCutFace->SurfaceArea;
+
+  #pragma omp atomic
+  xx[spec]+=dp;
+
+  //dE
+  de=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
+      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
+  xx=TriangleCutFace->UserData.EnergyTransferRate; 
+  de/=TriangleCutFace->SurfaceArea; 
+
+  #pragma omp atomic
+  xx[spec]+=de;
+
+#else
+  exit(__LINE__,__FLIE__,"Error: the option is unknown");
+#endif
 
 
-  return res; 
+
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
 }
 
 
@@ -93,7 +156,7 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=30.0E3;
+  double CharacteristicSpeed=50.0E3;
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
@@ -146,10 +209,29 @@ int main(int argc,char **argv) {
 
 
   //load the NASTRAN mesh
-  sprintf(fname,"%s/Orbiter-Only",PIC::UserModelInputDataPath);
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname); //("C-G_MOC_original.bdf"); //("Orbiter.surface.reduced.nas");
+  sprintf(fname,"%s/%s",PIC::UserModelInputDataPath,Orbiter::SurfaceModel::MeshFileName);
+
+  switch (Orbiter::SurfaceModel::MeshFileFormat) {
+  case Orbiter::SurfaceModel::MeshFileFormat_CEA:
+    PIC::Mesh::IrregularSurface::ReadCEASurfaceMeshLongFormat(fname,20.0);
+    break;
+
+  case Orbiter::SurfaceModel::MeshFileFormat_NASTRAN:
+    PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname);
+    break;
+
+  default:
+    exit(__LINE__,__FILE__,"Error: the format is unknown");
+  }
+
+
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
+
+  //calculate the projection are when the drag coefficient it to be calculated 
+  if (Orbiter::Sampling::DragCoefficient::SamplingMode==true) {
+    Orbiter::CalculateProjectionArea();
+  }
 
 
 //  PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
@@ -181,10 +263,12 @@ int main(int argc,char **argv) {
   //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
 
+  for (int idim=0;idim<3;idim++) {
+    double OrbiterSize=xmax[idim]-xmin[idim];
 
-
-  for (int i=0;i<3;i++) xmin[i]*=2.0,xmax[i]*=2.0;
-
+    xmin[idim]-=OrbiterSize*Orbiter::DomainSize::xMinOffset[idim];
+    xmax[idim]+=OrbiterSize*Orbiter::DomainSize::xMaxOffset[idim];
+  }
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -197,28 +281,53 @@ int main(int argc,char **argv) {
   //PIC::Mesh::mesh.buildMesh();
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xb94827c2b64e2fd8.mesh.bin";
+  char mesh[400];
   bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
 
+  sprintf(mesh,"%s/amr.sig=%s.mesh.bin",PIC::UserModelInputDataPath,Orbiter::Mesh::sign);
   fmesh=fopen(mesh,"r");
 
   if (fmesh!=NULL) {
+    if (PIC::ThisThread==0) printf("$PREFIX: mesh %s is found: loading.... ",mesh);
+
     fclose(fmesh);
     PIC::Mesh::mesh.readMeshFile(mesh);
+
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    if (PIC::ThisThread==0) printf("done. \n");
   }
   else {
     NewMeshGeneratedFlag=true;
+    if (PIC::ThisThread==0) {
+      printf("$PREFIX: mesh %s is not found: generating.... ",mesh);
+      fflush(stdout);
+    }
 
     if (PIC::Mesh::mesh.ThisThread==0) {
-       PIC::Mesh::mesh.buildMesh();
-       PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+      PIC::Mesh::mesh.buildMesh();
+      PIC::Mesh::mesh.saveMeshFile("mesh.msh");
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
     else {
-       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+      PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    }
+
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+    //rename the mesh file name 
+    char command[300];
+    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+    if (PIC::ThisThread==0) {
+      printf(" done.\n");
+      printf("$PREFIX: Renaming the mesh file to amr.sig=0x%lx.mesh.bin.....  ",MeshSignature); 
+      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+      system(command);
+
+      printf(" done.\n");
     }
   }
 
@@ -277,6 +386,7 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.InitCellMeasure();
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
+/*
   if (NewMeshGeneratedFlag==true) {
     unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
 
@@ -287,6 +397,7 @@ int main(int argc,char **argv) {
       system(command);
     }
   }
+*/
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
