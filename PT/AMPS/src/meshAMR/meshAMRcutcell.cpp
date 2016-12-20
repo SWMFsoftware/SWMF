@@ -50,6 +50,22 @@ struct cFaceNodeConnection {
   list<cNodeCoordinates>::iterator node[3];
 };*/
 
+//get triangulation signature
+unsigned long int CutCell::GetTriangulationSignature() {
+  CRC32 Signature;
+
+  Signature.add(nBoundaryTriangleFaces);
+  Signature.add(nBoundaryTriangleNodes);
+
+  for (int nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+    Signature.add(BoundaryTriangleFaces[nface].x0Face,3);
+    Signature.add(BoundaryTriangleFaces[nface].x1Face,3);
+    Signature.add(BoundaryTriangleFaces[nface].x2Face,3);
+  }
+
+  return Signature.checksum();
+}
+
 void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
   int nface,pnode,cnt;
   bool flag;
@@ -400,6 +416,7 @@ void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversi
 
     for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
     BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
+    BoundaryTriangleFaces[nfc].Temp_ID=nfc;
   }
 }
 
@@ -560,6 +577,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
 
   for (nfc=0;nfc<nfaces;nfc++) {
     BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+    BoundaryTriangleFaces[nfc].Temp_ID=nfc;
 
     for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
   }
@@ -763,6 +781,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConv
 
     for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
     BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
+    BoundaryTriangleFaces[nfc].Temp_ID=nfc;
   }
 
 }

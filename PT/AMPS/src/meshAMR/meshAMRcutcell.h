@@ -37,6 +37,9 @@
 
 namespace CutCell {
 
+  //get the sugnature of the triangulation
+unsigned long int GetTriangulationSignature();
+
   struct cNodeCoordinates {
     double *x;
     int id,pic__shadow_attribute;
@@ -182,7 +185,7 @@ namespace CutCell {
   //  list<cCutBlockNode>::iterator node[3];
     cNASTRANnode *node[3];
     list<cTriangleEdge>::iterator edge[3];
-
+    int Temp_ID;
 
     double ExternalNormal[3],SurfaceArea;
     int attribute;
@@ -305,7 +308,7 @@ namespace CutCell {
       xLocal[1]=(c1*c00-c01*c0)/c;
     }
 
-    bool RayIntersection(double *x0,double *l,double &t,double EPS) {
+    inline bool RayIntersection(double *x0,double *l,double &t,double *xLocal,double *x,double EPS) {
       double length,lNorm;
 
       lNorm=l[0]*ExternalNormal[0]+l[1]*ExternalNormal[1]+l[2]*ExternalNormal[2];
@@ -353,7 +356,7 @@ namespace CutCell {
       xLocal[0]=(c0*c11-c1*c01)/c;
       xLocal[1]=(c1*c00-c01*c0)/c;*/
 
-      double x[3],xLocal[2];
+ //     double x[3],xLocal[2];
 
       for (int i=0;i<3;i++) x[i]=x0[i]+l[i]*t;
       GetProjectedLocalCoordinates(xLocal,x);
@@ -369,6 +372,14 @@ namespace CutCell {
 
       return true;
     }
+
+
+    inline bool RayIntersection(double *x0,double *l,double &t,double EPS) {
+      double x[3],xLocal[2];
+
+      return RayIntersection(x0,l,t,xLocal,x,EPS);
+    }
+
 
     inline bool RayIntersection(double *x0,double *l,double EPS) {
       double t;
@@ -498,6 +509,7 @@ namespace CutCell {
 
       pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
       pic__cosine_illumination_angle=0.0;
+      Temp_ID=-1;
     }
 
     inline double CharacteristicSize() {
