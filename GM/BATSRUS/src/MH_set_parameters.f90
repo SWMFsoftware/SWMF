@@ -983,17 +983,17 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='raw'
               plot_dimensional(iFile)=index(plot_string,'RAW')>0
               plot_vars(iFile) = NameConservativeVar//' p b1x b1y b1z absdivB'
-              plot_pars(iFile) = "default"
+              plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
               plot_var='mhd'
               plot_dimensional(iFile) = index(plot_string,'MHD')>0
               plot_vars(iFile) = NamePrimitiveVar//' jx jy jz'
-              plot_pars(iFile) = "default"
+              plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'HD')>0.or.index(plot_string,'hd')>0)then
               plot_var='hd'
               plot_dimensional(iFile) = index(plot_string,'HD')>0
               plot_vars(iFile) = NamePrimitiveVar
-              plot_pars(iFile) = "default"
+              plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
               ! This is intended for restart with a different dimensionality
               plot_var='all'
@@ -1004,12 +1004,12 @@ subroutine MH_set_parameters(TypeAction)
               plot_var='ful'
               plot_dimensional(iFile) = index(plot_string,'FUL')>0
               plot_vars(iFile) = NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
-              plot_pars(iFile) = "default"
+              plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
               plot_var='flx'
               plot_dimensional(iFile) = index(plot_string,'FLX')>0
               plot_vars(iFile) = 'rho mr br p jr pvecr'
-              plot_pars(iFile) = "default"
+              plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'SOL')>0.or.index(plot_string,'sol')>0)then
               plot_var='sol'
               plot_dimensional(iFile) = index(plot_string,'SOL')>0
@@ -3320,6 +3320,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon
     use ModTimeStepControl, ONLY: UseTimeStepControl,TimeStepControlInit
 
+    integer:: l
     character(len=500):: StringParam
     !--------------------------------------------------------------------------
     ! We need normalization for dt
@@ -3357,15 +3358,22 @@ contains
     if(UseMultiIon)DoLimitMomentum = .false.
 !!!
 
-    if(any(plot_pars(plot_+1:plot_+nPlotFile) == 'default'))then
+    ! Set default scalar parameters for plot files
+    do iFile = plot_+1, plot_+nPlotFile
+       l = index(plot_pars(iFile), '{default}')
+       if(l < 1) CYCLE
 
        ! Set the name of default scalar parameters for plotting
        StringParam = ''
-       if(abs(Io2Si_V(UnitX_) - 1.0) > 1e-6) &
-            StringParam = 'xSI'
-       if(abs(Io2Si_V(UnitT_) - 1.0) > 1e-6) &
-            StringParam = trim(StringParam)//' tSI'
-       if(rBody > 0.0) StringParam = trim(StringParam)//' r'
+       if(plot_dimensional(iFile))then
+          if(Io2Si_V(UnitX_)   /= 1) StringParam = 'xSI'
+          if(Io2Si_V(UnitT_)   /= 1) StringParam = trim(StringParam)//' tSI'
+       else
+          if(No2Si_V(UnitX_)   /= 1) StringParam = 'xSI'
+          if(No2Si_V(UnitT_)   /= 1) StringParam = trim(StringParam)//' tSI'
+          if(No2Si_V(UnitRho_) /= 1) StringParam = trim(StringParam)//' rhoSI'
+       end if
+       if(rBody > 0) StringParam = trim(StringParam)//' r'
        if(any(Gamma_I /= Gamma))then
           do iFluid = IonFirst_, nFluid
              write(StringParam,'(a,i1)') trim(StringParam)//' g', &
@@ -3374,23 +3382,24 @@ contains
        else
           StringParam = trim(StringParam)//' g'
        end if
-       if(GammaElectron /= 5./3.) StringParam = trim(StringParam)//' ge'
-       if(any(MassFluid_I /= 1.0))then
+       if(GammaElectron /= Gamma) StringParam = trim(StringParam)//' ge'
+       if(any(MassFluid_I /= 1))then
           do iFluid = IonFirst_, nFluid
              write(StringParam,'(a,i1)') trim(StringParam)//' m', &
                   iFluid - IonFirst_ + 1
           end do
        end if
-       if(any(ChargeIon_I /= 1.0))then
+       if(any(ChargeIon_I /= 1))then
           do iFluid = 1, nIonFluid
              write(StringParam,'(a,i1)') trim(StringParam)//' q',iFluid
           end do
        end if
-       do iFile = plot_+1, plot_+nPlotFile
-          if(plot_pars(iFile) == 'default') plot_pars(iFile) = &
-               adjustl(StringParam)
-       end do
-    end if
+       
+       ! Replace '{default}' with StringParam
+       plot_pars1 = plot_pars(iFile)
+       plot_pars(iFile) = plot_pars1(1:l-1)//trim(adjustl(StringParam))// &
+            plot_pars1(l+9:len_trim(plot_pars1))
+    end do
 
   end subroutine set_extra_parameters
   !============================================================================
