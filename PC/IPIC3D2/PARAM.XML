@@ -1,6 +1,6 @@
 <commandList name="IPIC3D2">
 
-<command name="COMPONENT">
+<command name="SAVEIDL">
 #SAVEIDL
 4                       nPlotFile
 sat_sat01.sat  var ascii si        StringPlot
@@ -51,7 +51,7 @@ cut particles0 real4 si  StringPlot
 -0.05                   DtOutput
 10.          DxOutput: output one particle of every DxOutput particles.
 
-This command determins the IDL type output from iPIC3D.
+This command determines the IDL type output from iPIC3D.
 
 The first parameter is nPlotFile, which is the number of files to be saved.
 Each output starts with StringPlot, which specify the output region, variables,
@@ -61,7 +61,7 @@ field output. Only one of every DnOutput nodes/particles are saved in order
 to save disk space, also to speed out the post processing and virtualization.
 Several other parameters may follow based on the content of StringPlot.
 
-StringPlot has the format:'domain variabels format unit'.
+StringPlot has the format:'domain variables format unit'.
 'domain' can be one of the following:
 \begin{verbatim}
 x=x0     - a 2D cut of x=x0 plane. 'x0' is the coordinate.
@@ -69,16 +69,17 @@ y=y0     - a 2D cut of y=y0 plane. 'y0' is the coordinate.
 z=z0     - a 2D cut of z=z0 plane. 'z0' is the coordinate.
 3d       - the whole 3d domain.
 cut      - part of the 3D domain. Need to specifiy the output range.
-sat_SatelliteFile  - save information along the satellite trajectory, and the satellite information is read from SatelliteFile.
+sat_SatelliteFile  - save information along the satellite trajectory read from SatelliteFile.
 \end{verbatim}
-The value of 'variables' coule be:
+The value of 'variables' could be:
 \begin{verbatim}
-all   - all the PIC field variables of the first two species:'qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1'
-fluid - all the FLUID field variabels of the first two species:'rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1'
-var   - read from parameter file
-particles0/particles1/particles2... - the location, velocity and weight of
-particles. The particle species needs to be specified. One and only speces 
-is allowd in one output file. 
+all                                 - all the PIC field variables of the first two species:
+   'qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1'
+fluid                               - all the FLUID field variables of the first two species:
+   'rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1'
+var                                 - read from parameter file
+particles0/particles1/particles2... - the location, velocity and weight of particles belonging to species0, species1, ... 
+   The particle species needs to be specified. One and only one species is allowd in one output file. 
 \end{verbatim}
 
 qS0 and qS1 are charge densities, while rhos0 and rhos1 are mass densities.
@@ -112,33 +113,41 @@ saved in the output file.
 </command>
 
 <command name="COMPONENT">
+	 <parameter name="DoSmoothAll" type="logical" default="T"/>
+	 <parameter name="nSmooth" type="integer" minimum="0" default="5"/>
+	 <parameter name="InnerSmoothFactor" type="real" minimum="0" maximum="1" default="0.5"/>
+         <parameter name="BoundarySmoothFactor" type="real" minimum="0" default="0.5"/>
+	 <parameter name="nBoundarySmooth" type="integer" minimum="0" default="5"/>
+
 #SMOOTHE
-T                     doSmoothAll
+T                     DoSmoothAll
 4                     nSmooth
-0.5                   innerSmoothFactor
-1.0                   boundarySmoothFactor
+0.5                   InnerSmoothFactor
+1.0                   BoundarySmoothFactor
 5                     nBoundarySmooth
 
-These parameters determin how to smooth electric field.
+These parameters determine how to smooth electric field and optionally the
+cell centered total current and total charge density (hat functions).
+
+If DoSmoothAll is true, all three quantities are smoothed.
+If DoSmoothAll is false, only the electric field will be smoothed.
 
 The algorithm for smoothing is:
-E`_ijk = smooth*(E_ijk) + (1-smooth)/6*sum(neighbors of E_ijk).
+
+E`_ijk = smooth*(E_ijk) + (1-smooth)/6 * sum(six neighbors of E_ijk).
+
 This process will repeat nSmooth times. The coefficient 'smooth' is calculated
-based on innerSmoothFactor, boundarySmoothFactor and nBoundarySmooth.Define
-iCell as the distance from a node to the PIC boundary (node index 1 NOT 0).
+based on innerSmoothFactor, boundarySmoothFactor and nBoundarySmooth and the 
+distance of the cell from the boundary. 
+Define iCell as the distance from a node to the PIC boundary (node index 1 NOT 0).
 If iCell > nBoundarySmooth, then smooth = innerSmoothFactor, otherwise the
 coefficient 'smooth' will be linearly interpolated from innerSmoothFactor and
 boundarySmoothFactor.
 
-If doSmoothAll is false, electric field will still be smoothed, but not the
-hat functions of j and rho. 
-
 The value of 'smooth' calculated from innerSmoothFactor and boundarySmoothFactor
-is limited to smaller than 1. 
+is limited to be smaller than 1 and larger than 0.
 
-Default nSmooth is 0. 
-
+Default is nSmooth=0, so no smoothing is done.
 </command>
-
 
 </commandList>
