@@ -959,7 +959,23 @@ sub ReadGeneralBlock {
 	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
     }
     
-    
+    #set up the number of attempts for exchanges of the cut face information between the neibouring blocks
+    elsif ($InputLine eq "NEIBNODECOPYCUTFACEDATA") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+      if ($InputLine eq "ON") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("int PIC::Mesh::IrregularSurface::nCutFaceInformationCopyAttempts",$InputLine,"pic/pic_cut_cells.cpp");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::ChangeValueOfVariable("int PIC::Mesh::IrregularSurface::nCutFaceInformationCopyAttempts","0","pic/pic_cut_cells.cpp");
+      }
+      else {
+        die "The option is unknown ($line)\n";
+      }
+    }
+
     #read the block that defines a type of the boundary processing routine used for processing of a particle when it crosses the boundary of the computational domain
     elsif ($InputLine eq "DOMAINBOUNDARYPARTICLEINTERSECTION") {
       my $Mode=-1;
