@@ -91,15 +91,13 @@ subroutine write_plot_common(iFile)
   integer :: nPEcellsN,nPEcellsS,nBLKcellsN, nBLKcellsS
   integer :: nGLOBALcellsN,nGLOBALcellsS
 
-  integer :: iTime_I(7), i0
+  integer :: iTime_I(7), iDim, iParam
 
   character(len=10) :: NamePlotVar
 
   ! Event date for filename
   character (len=80) :: format
   character (len=19) :: eventDateTime
-
-  character (len=1) :: c0
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
@@ -552,105 +550,97 @@ subroutine write_plot_common(iFile)
         case('idl')
            write(UnitTmp_,'(a)') '#HEADFILE'
            write(UnitTmp_,'(a)') filename
-           write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
-           write(UnitTmp_,'(l8,a18)') IsBinary,' save_binary'
+           write(UnitTmp_,'(i8,16x,a)') nProc, 'nProc'        
+           write(UnitTmp_,'(l8,16x,a)') IsBinary, 'IsBinary'
            if(IsBinary) &
-                write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
+                write(UnitTmp_,'(i8,16x,a)')nByteReal, 'nByteReal'
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#NDIM'
-           write(UnitTmp_,'(i8,a18)') nDim, 'nDim'        
+           write(UnitTmp_,'(i8,16x,a)') nDim, 'nDim'        
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#GRIDBLOCKSIZE'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(i8,a18)') nIJK_D(i0), 'BlockSize'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(i8,16x,a,i1)') nIJK_D(iDim), 'BlockSize', iDim
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#ROOTBLOCK'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(i8,a18)') nRoot_D(i0), 'nRootBlock'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(i8,16x,a,i1)') nRoot_D(iDim), 'nRootBlock', iDim
            enddo
            write(UnitTmp_,*)
 
-
            write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
-           write(UnitTmp_,'(a,a18)')TypeGeometry, 'TypeGeometry'
+           write(UnitTmp_,'(a,4x,a)') TypeGeometry, 'TypeGeometry'
            if(index(TypeGeometry,'genr') > 0)then
-              write(UnitTmp_,'(i8,    " nRgen"  )') size(LogRGen_I)
-              write(UnitTmp_,'(es13.5," LogRgen")') LogRGen_I
+              write(UnitTmp_,'(i8,16x,a)') size(LogRGen_I), 'nRgen'
+              write(UnitTmp_,'(es13.5,11x,a)') LogRGen_I, 'LogRgen'
            end if
            if(TypeGeometry == 'roundcube')then
-              write(UnitTmp_,'(es13.5," rRound0")') rRound0
-              write(UnitTmp_,'(es13.5," rRound1")') rRound1
-              write(UnitTmp_,'(es13.5," SqrtNDim")') SqrtNDim
+              write(UnitTmp_,'(es13.5,11x,a)') rRound0,  'rRound0'
+              write(UnitTmp_,'(es13.5,11x,a)') rRound1,  'rRound1'
+              write(UnitTmp_,'(es13.5,11x,a)') SqrtNDim, 'SqrtNDim'
            end if
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(es13.5,a18)') XyzMin_D(i0), 'XyzMin'//c0
-              write(UnitTmp_,'(es13.5,a18)') XyzMax_D(i0), 'XyzMax'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMin_D(iDim),'XyzMin',iDim
+              write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMax_D(iDim),'XyzMax',iDim
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#PERIODIC'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(l8,a18)') IsPeriodic_D(i0), 'IsPeriodic'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(l8,16x,a,i1)') &
+                   IsPeriodic_D(iDim), 'IsPeriodic', iDim
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#NSTEP'
-           write(UnitTmp_,'(i8,a18)')n_step, 'nStep'
+           write(UnitTmp_,'(i8,16x,a)')n_step, 'nStep'
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#TIMESIMULATION'
-           write(UnitTmp_,'(1pe18.10,a18)')time_simulation, 'TimeSimulation'
+           write(UnitTmp_,'(1pe18.10,6x,a)')time_simulation, 'TimeSimulation'
            write(UnitTmp_,*)        
 
            write(UnitTmp_,'(a)') '#NCELL'
-           write(UnitTmp_,'(i10,a18)') nGLOBALcells, 'nCellPlot'
+           write(UnitTmp_,'(i10,14x,a)') nGLOBALcells, 'nCellPlot'
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#CELLSIZE'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(1pe18.10,a18)') &
-                   dxGLOBALmin(i0)*CoordUnit, 'CellSizeMin'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                   DxGlobalMin(iDim)*CoordUnit, 'CellSizeMin',iDim
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#PLOTRANGE'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(1pe18.10,a18)') &
-                   PlotRange_I(2*i0-1)*CoordUnit, 'Coord'//c0//'Min'
-              write(UnitTmp_,'(1pe18.10,a18)') &
-                   PlotRange_I(2*i0)*CoordUnit, 'Coord'//c0//'Max'
+           do iDim = 1, nDim
+              write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
+                   PlotRange_I(2*iDim-1)*CoordUnit, 'Coord', iDim, 'Min'
+              write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
+                   PlotRange_I(2*iDim)*CoordUnit, 'Coord', iDim, 'Max'
            enddo
            write(UnitTmp_,*)
 
-
            write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
-           do i0 = 1, nDim
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(1pe18.10,a18)') &
-                   plot_dx(i0,iFile)*CoordUnit, 'DxSavePlot'//c0
+           do iDim = 1, nDim
+              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                   plot_dx(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#SCALARPARAM'
-           write(UnitTmp_,'(i8,a18)') nParam, 'nParam'
-           do i0 = 1, nParam
-              write(c0,'(i1)') i0
-              write(UnitTmp_,'(es13.5,a18)')Param_I(i0), 'Param'//c0
+           write(UnitTmp_,'(i8,16x,a)') nParam, 'nParam'
+           do iParam = 1, nParam
+              write(UnitTmp_,'(es13.5,11x,a)') &
+                   Param_I(iParam), NameParam_I(iParam)
            enddo
            write(UnitTmp_,*)
 
            write(UnitTmp_,'(a)') '#PLOTVARIABLE'
-           write(UnitTmp_,'(i8,a18)') nplotvar, 'nPlotVar'
+           write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
            write(UnitTmp_,'(a)')trim(allnames)
            if(TypeFile_I(iFile) == 'tec')then
               call get_tec_variables(iFile, nplotvar, plotvarnames, &
@@ -757,7 +747,7 @@ subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
   use ModProcMH
   use ModPhysics, ONLY : Gamma, Gamma_I, GammaElectron, &
        cLight, rBody, ThetaTilt, &
-       No2Io_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
+       No2Io_V, No2Si_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace
   use ModNumConst, ONLY : cRadToDeg
   use ModResistivity, ONLY: Eta0Si
@@ -839,26 +829,40 @@ subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
         Param_I(iPar) = ThetaTilt*cRadToDeg
      case('eta')
         Param_I(iPar) = Eta0Si
-     case('unitx')
-        Param_I(iPar) = No2Io_V(UnitX_)
-     case('unitrho')
-        Param_I(iPar) = No2Io_V(UnitRho_)
-     case('unitv')
-        Param_I(iPar) = No2Io_V(UnitU_)
      case('mu')
         Param_I(iPar) = mu_los
      case('R_ray')
         Param_I(iPar) = R_raytrace
      case('dt')
-        Param_I(iPar) = dt
+        if(plot_dimensional(iFile))then
+           Param_I(iPar) = dt*No2Io_V(UnitT_)
+        else
+           Param_I(iPar) = dt
+        end if
      case('xsi')
-        Param_I(iPar) = Io2Si_V(UnitX_)
+        if(plot_dimensional(iFile))then
+           Param_I(iPar) = Io2Si_V(UnitX_)
+        else
+           Param_I(iPar) = No2Si_V(UnitX_)
+        end if
      case('tsi')
-        Param_I(iPar) = Io2Si_V(UnitT_)
+        if(plot_dimensional(iFile))then
+           Param_I(iPar) = Io2Si_V(UnitT_)
+        else
+           Param_I(iPar) = No2Si_V(UnitT_)
+        end if
      case('usi')
-        Param_I(iPar) = Io2Si_V(UnitU_)
+        if(plot_dimensional(iFile))then
+           Param_I(iPar) = Io2Si_V(UnitU_)
+        else
+           Param_I(iPar) = No2Si_V(UnitU_)
+        end if
      case('rhosi')
-        Param_I(iPar) = Io2Si_V(UnitRho_)
+        if(plot_dimensional(iFile))then
+           Param_I(iPar) = Io2Si_V(UnitRho_)
+        else
+           Param_I(iPar) = No2Si_V(UnitRho_)
+        end if
      case('mi','m1')
         Param_I(iPar) = MassFluid_I(IonFirst_)
      case('m2')
