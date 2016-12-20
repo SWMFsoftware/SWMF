@@ -312,15 +312,15 @@ pro gettype,filenames,filetypes,npictinfiles
            status=fstat(1)
            fsize=status.size
 
-           pointer=0
-           pictsize=1
+           pointer=long64(0)
+           pictsize=long64(1)
            npict=0
            while pointer lt fsize do begin
                                 ; Obtain size of a single snapshot
               point_lun,1,pointer
               gethead,1,filenames(ifile),ftype,pictsize=pictsize
-              npict=npict+1
-              pointer=long64(pointer) + pictsize
+              npict   = npict+1
+              pointer = pointer + pictsize
            endwhile
            close,1
 
@@ -466,7 +466,7 @@ if keyword_set(pictsize) then begin
     point_lun,-unit,pointer1
     headlen=pointer1-pointer0
                                 ; Number of cells
-    nxs=1
+    nxs=long64(1)
     for idim=1,ndim do nxs=nxs*nx(idim-1)
                                 ; Snapshot size = header + data + recordmarks
     case ftype of
@@ -2672,6 +2672,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                               DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
            'vector'   :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
                               TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
+                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
+                              /NOERASE, WHITE=white
+           'arrow'    :vector,f1/f,f2/f,xx,yy,XXOLD=velx,YYOLD=vely,$
+                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=1.5,$
                               DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
                               /NOERASE, WHITE=white
            'stream'   :streamline,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
