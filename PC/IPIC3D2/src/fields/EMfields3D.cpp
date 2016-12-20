@@ -2608,7 +2608,9 @@ void EMfields3D::smooth(arr3_double vector, int type)
 {
   if(Smooth==1.0) return;
   const Collective *col = &get_col();
+#ifdef BATSRUS
   if(!col->getdoSmoothAll()) return;
+#endif
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
 
@@ -2643,7 +2645,11 @@ void EMfields3D::smooth(arr3_double vector, int type)
         for (int j = 1; j < ny - 1; j++)
           for (int k = 1; k < nz - 1; k++){
 	    // getSmoothFactor is node based. but i,j,k can be cell indexes 
+#ifdef BATSRUS
 	    alpha = col->getSmoothFactor(i,j,k);
+#else
+	    alpha = Smooth;
+#endif
 	    beta3D  = (1-alpha)/6.0;
 	    
             temp[i][j][k] = alpha * vector[i][j][k] + beta3D * (vector[i - 1][j][k] + vector[i + 1][j][k] + vector[i][j - 1][k] + vector[i][j + 1][k] + vector[i][j][k - 1] + vector[i][j][k + 1]);
@@ -2685,7 +2691,11 @@ void EMfields3D::smoothE()
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++){
+#ifdef BATSRUS
 	    alpha = col->getSmoothFactor(i,j,k);
+#else
+	    alpha = Smooth;
+#endif
 	    beta3D  = (1-alpha)/6.0;
             temp[i][j][k] = alpha * Exth[i][j][k] + beta3D * (Exth[i - 1][j][k] + Exth[i + 1][j][k] + Exth[i][j - 1][k] + Exth[i][j + 1][k] + Exth[i][j][k - 1] + Exth[i][j][k + 1]);
       	    //temp[i][j][k] = alpha * Ex[i][j][k] + beta2D * (Ex[i - 1][j][k] + Ex[i + 1][j][k] + Ex[i][j][k - 1] + Ex[i][j][k + 1]);
@@ -2699,7 +2709,11 @@ void EMfields3D::smoothE()
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++){
+#ifdef BATSRUS
 	    alpha = col->getSmoothFactor(i,j,k);
+#else
+	    alpha = Smooth;
+#endif
 	    beta3D  = (1-alpha)/6.0;
 
             temp[i][j][k] = alpha * Eyth[i][j][k] + beta3D * (Eyth[i - 1][j][k] + Eyth[i + 1][j][k] + Eyth[i][j - 1][k] + Eyth[i][j + 1][k] + Eyth[i][j][k - 1] + Eyth[i][j][k + 1]);
@@ -2714,7 +2728,11 @@ void EMfields3D::smoothE()
       for (int i = 1; i < nxn - 1; i++)
         for (int j = 1; j < nyn - 1; j++)
           for (int k = 1; k < nzn - 1; k++){
+#ifdef BATSRUS
 	    alpha = col->getSmoothFactor(i,j,k);
+#else
+	    alpha = Smooth;
+#endif
 	    beta3D  = (1-alpha)/6.0;
 
             temp[i][j][k] = alpha * Ezth[i][j][k] + beta3D * (Ezth[i - 1][j][k] + Ezth[i + 1][j][k] + Ezth[i][j - 1][k] + Ezth[i][j + 1][k] + Ezth[i][j][k - 1] + Ezth[i][j][k + 1]);
