@@ -20,7 +20,11 @@ bool Orbiter::UpstreamBC::BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC
    if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
      for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
        startNode->GetExternalNormal(ExternalNormal,nface);
-       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Orbiter::UpstreamBC::NumberDensity,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,0);
+
+       for (int s=0;s<PIC::nTotalSpecies;s++) {
+         double t=Orbiter::UpstreamBC::NumberDensity[s];
+         ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(t,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,s);
+       }
 
        if (ModelParticlesInjectionRate>0.0) return true;
      }
@@ -59,7 +63,8 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
          continue;
        }
 
-       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Orbiter::UpstreamBC::NumberDensity,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,spec);
+       double t=Orbiter::UpstreamBC::NumberDensity[spec];
+       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(t,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,spec);
 
        if (ModelParticlesInjectionRate>0.0) {
          ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
@@ -146,7 +151,7 @@ double Orbiter::UpstreamBC::BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
       startNode->GetExternalNormal(ExternalNormal,nface);
       BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
-      ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Orbiter::UpstreamBC::NumberDensity,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,spec);
+      ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Orbiter::UpstreamBC::NumberDensity[spec],Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,spec);
     }
   }
 
