@@ -15,15 +15,86 @@ char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";*/
 
 double Orbiter::UpstreamBC::Velocity[3]={-30.0E3,0.0,0.0};
-double Orbiter::UpstreamBC::NumberDensity=1.5E21;
+double Orbiter::UpstreamBC::NumberDensity[PIC::nTotalSpecies];
 double Orbiter::UpstreamBC::Temperature=293.0;
 
-double Orbiter::Sampling::DragCorfficient=0.0;
+bool Orbiter::Sampling::DragCoefficient::SamplingMode=false;
 double Orbiter::ProjectionOrbiterSurfaceArea=0.0;
 
-char Orbiter::SurfaceMeshName[_MAX_STRING_LENGTH_PIC_]="Orbiter";
-double Orbiter::DomainSizeMultiplierX=1.0,Orbiter::DomainSizeMultiplierY=1.0,Orbiter::DomainSizeMultiplierZ=1.0;
+char Orbiter::SurfaceModel::MeshFileName[_MAX_STRING_LENGTH_PIC_]="Orbiter";
+int Orbiter::SurfaceModel::MeshFileFormat=Orbiter::SurfaceModel::MeshFileFormat_NASTRAN;
 
+double Orbiter::DomainSize::xMinOffset[3]={0.1,0.1,0.1};
+double Orbiter::DomainSize::xMaxOffset[3]={0.1,0.1,0.1};
+
+char Orbiter::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
+
+double *Orbiter::Sampling::DragCoefficient::dpX=NULL;
+double *Orbiter::Sampling::DragCoefficient::dpY=NULL;
+double *Orbiter::Sampling::DragCoefficient::dpZ=NULL;
+
+void Orbiter::Sampling::DragCoefficient::Init() {
+  dpX=new double [PIC::nTotalThreadsOpenMP];
+  dpY=new double [PIC::nTotalThreadsOpenMP];
+  dpZ=new double [PIC::nTotalThreadsOpenMP];
+
+  for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    dpX[thread]=0.0;
+    dpY[thread]=0.0;
+    dpZ[thread]=0.0;
+  }
+
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SamplingProcessor,PrintOutputFile);
+}
+
+//=======================================================================================
+//sampling functions that are used in calculating of the drag coefficient 
+void Orbiter::Sampling::DragCoefficient::SamplingProcessor() {}
+
+void Orbiter::Sampling::DragCoefficient::PrintOutputFile(int nfile) {
+  double Cd,dpTotal[3];
+  int thread;
+
+  for (thread=1;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    dpX[0]+=dpX[thread];
+    dpY[0]+=dpY[thread];
+    dpZ[0]+=dpZ[thread];
+  }
+
+  //collect the momentum exchange rate from all processors
+  MPI_Reduce(dpX,dpTotal+0,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Reduce(dpY,dpTotal+1,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Reduce(dpZ,dpTotal+2,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR); 
+
+  if (PIC::ThisThread==0) {
+    //calculate the drag coefficient 
+    double speed=0.0,dpProjection=0.0,TotalMassDensity=0.0;
+    int spec,idim;
+
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) TotalMassDensity+=Orbiter::UpstreamBC::NumberDensity[spec]*PIC::MolecularData::GetMass(spec); 
+
+    for (idim=0;idim<3;idim++) speed+=pow(Orbiter::UpstreamBC::Velocity[idim],2);
+    speed=sqrt(speed);
+    for (idim=0;idim<3;idim++) dpProjection+=Orbiter::UpstreamBC::Velocity[idim]*dpTotal[idim]/(speed*PIC::LastSampleLength);
+
+    Cd=2.0*dpProjection/(TotalMassDensity*ProjectionOrbiterSurfaceArea*speed*speed);
+
+    printf("$PREFIX: Calculated Drag Coefficient:\n");
+    printf("$PREFIX: Mass Density=%e; dp/dt=%e, %e, %e\n",TotalMassDensity,dpTotal[0],dpTotal[1],dpTotal[2]);
+    printf("$PREFIX: dpProjection=%e, Speed=%e\n",dpProjection,speed);
+    printf("$PREFIX: ProjectionOrbiterSurfaceArea=%e\n",ProjectionOrbiterSurfaceArea);
+    printf("$PREFIX: Calculated Drag Coefficient = %e\n",Cd);
+    
+  }
+
+  //reset the sampling buffer 
+  for (thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+    dpX[thread]=0.0;
+    dpY[thread]=0.0;
+    dpZ[thread]=0.0;
+  }  
+} 
+  
 
 //=======================================================================================
 //calculate the projection area of the spacecraft
@@ -213,4 +284,13 @@ double Orbiter::CalculateProjectionArea() {
   delete [] map;
 }
 
+//====================================================================
+//init the Orbiter model
+void Orbiter::Init_BeforeParser() {
+  //init the drag coefficient sampling 
+  if (Orbiter::Sampling::DragCoefficient::SamplingMode==true) Orbiter::Sampling::DragCoefficient::Init();
+
+  //init the exosphere model
+  Exosphere::Init_BeforeParser();
+}  
 

@@ -15,10 +15,13 @@
 namespace Orbiter {
 using namespace Exosphere;
 
+  //init the Orbiter model
+  void Init_BeforeParser();
+
   //upstream boundary conditions
   namespace UpstreamBC {
     extern double Velocity[3];
-    extern double NumberDensity;
+    extern double NumberDensity[PIC::nTotalSpecies];
     extern double Temperature;
 
     bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
@@ -27,19 +30,44 @@ using namespace Exosphere;
     double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
   }
 
+  //mesh data
+  namespace Mesh {
+    extern char sign[_MAX_STRING_LENGTH_PIC_];
+  }
+
+  //domain size limits
+  namespace DomainSize {
+    extern double xMinOffset[3],xMaxOffset[3];
+  }
+
   //the set of function needed for calculating of the projection area of the spacecraft
   extern double ProjectionOrbiterSurfaceArea;
   double CalculateProjectionArea();
 
   //the name of the surace mesh file
-  extern char SurfaceMeshName[_MAX_STRING_LENGTH_PIC_];
+  namespace SurfaceModel {
+    //constant defining the mesh file formats
+    const int MeshFileFormat_NASTRAN=0;
+    const int MeshFileFormat_CEA=1;
 
-  //the dimension coefficients of the computational domain in respect to the size of the orbiter
-  extern double DomainSizeMultiplierX,DomainSizeMultiplierY,DomainSizeMultiplierZ;
+    extern char MeshFileName[_MAX_STRING_LENGTH_PIC_];
+    extern int MeshFileFormat;
+  }
 
   //sample calulated aerodynamcis properties
   namespace Sampling {
-    extern double DragCorfficient;
+
+     //sampling of the drag coefficient
+     namespace DragCoefficient {
+       extern bool SamplingMode;
+       extern double *dpX,*dpY,*dpZ;
+
+       void Init();
+
+       void SamplingProcessor();
+       void PrintOutputFile(int);
+     }
+
   }
 
   double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
