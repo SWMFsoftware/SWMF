@@ -280,7 +280,7 @@ public:
 
   //the list of the cut-face descriptors
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
-  CutCell::cTriangleFaceDescriptor *FirstTriangleCutFace;
+  CutCell::cTriangleFaceDescriptor *FirstTriangleCutFace,*neibFirstTriangleCutFace,*neibFirstTriangleCutFace_temp;
   double (*CutCellSurfaceLocalResolution)(CutCell::cTriangleFaceDescriptor*);
 #endif
 
@@ -425,7 +425,7 @@ public:
     nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
 
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
-    FirstTriangleCutFace=NULL;
+    FirstTriangleCutFace=NULL,neibFirstTriangleCutFace=NULL,neibFirstTriangleCutFace_temp=NULL;
 #endif
 
     //Neighbors of the nodes
@@ -8593,6 +8593,7 @@ nMPIops++;
 
       if (fData==NULL) {
         //the file does not exists -> the measure has to be calculated directly
+        if (ThisThread==0) printf("$PREFIX: the calculated volume data file %s is not found\n",fname);
         return false;
       }
     }
@@ -8946,54 +8947,11 @@ nMPIops++;
   }
 
 
-  void InitCellMeasure(const char* CellMeasureFilePath,cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
-   #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-    if (startNode==NULL) {
-      //try to load the saved file with the cell measures
-      if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
-        if (LoadCenterNodeMeasure(CellMeasureFilePath,NULL)==true) return;
-      }
-
-      startNode=rootTree;
-    }
-
-
-    if (startNode==rootTree) InitCellMeasure_ResetToZero(rootTree);
-
-
-
-
-//=============   DEBUG ==================
-/*
-    if (startNode!=NULL) if (startNode->Temp_ID==5096) {
-  *DiagnospticMessageStream << __FILE__ << "@" << __LINE__ << std::endl;
-}
-*/
-//=============  END DEBUG ===============
-
-
-
-    if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
-      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitCellMeasure(startNode->downNode[nDownNode]);
-    }
-    else if (startNode->block!=NULL) { //set up the cell's volume
+  void InitCellMeasureBlock(cTreeNodeAMR<cBlockAMR>* startNode) {
        double *xNodeMin,*xNodeMax,Measure,xCellMin[3],xCellMax[3],dx=0.0,dy=0.0,dz=0.0,xTotalMin[3]={0.0,0.0,0.0},xTotalMax[3]={0.0,0.0,0.0};
        long int i,j,k,nd;
        cCenterNode *centerNode;
        int IntersectionCode=_AMR_BLOCK_INSIDE_DOMAIN_;
-
-       static long int nProcessedBlocks=0;
-       static  time_t LastTimeValue=time(NULL);
-       time_t TimeValue=time(NULL);
-
-       nProcessedBlocks++;
-
-       if (TimeValue-LastTimeValue>120.0) {
-         tm *ct=localtime(&TimeValue);
-
-         LastTimeValue=TimeValue;
-         printf("MESH: InitMeasure: Processed %i blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-       }
 
 
 #if _MESH_DIMENSION_ == 1
@@ -9011,6 +8969,9 @@ nMPIops++;
 #else
        exit(__LINE__,__FILE__,"Error: unknown option");
 #endif
+
+
+       if (startNode->block==NULL)  exit(__LINE__,__FILE__,"Error: the block is not allocated");
 
        xNodeMin=startNode->xmin,xNodeMax=startNode->xmax;
 
@@ -9149,12 +9110,83 @@ nMPIops++;
          }
        }
 
+
+  }
+
+
+
+  void InitCellMeasure(const char* CellMeasureFilePath,cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
+   #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+    if (startNode==NULL) {
+      //try to load the saved file with the cell measures
+      if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
+        if (ThisThread==0) printf("$PREFIX: check existance of the calculated volume data file.... \n");
+
+        if (LoadCenterNodeMeasure(CellMeasureFilePath,NULL)==true) {
+          return;
+        }
+        else if (ThisThread==0) printf("$PREFIX: the calculated volume data file is not found: generating....\n ");
+      }
+
+      startNode=rootTree;
     }
+
+
+    if (startNode==rootTree) InitCellMeasure_ResetToZero(rootTree);
+
+
+
+
+//=============   DEBUG ==================
+/*
+    if (startNode!=NULL) if (startNode->Temp_ID==5096) {
+  *DiagnospticMessageStream << __FILE__ << "@" << __LINE__ << std::endl;
+}
+*/
+//=============  END DEBUG ===============
+
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  //allocate the Thread::FirstPBufferParticle array and distribute particles between processes
+  #pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
+
+    if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitCellMeasure(startNode->downNode[nDownNode]);
+    }
+    else if (startNode->block!=NULL) { //set up the cell's volume
+      static long int nProcessedBlocks=0;
+      static  time_t LastTimeValue=time(NULL);
+      time_t TimeValue=time(NULL);
+
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      #pragma omp task default (none) firstprivate (startNode)
+      #endif
+      InitCellMeasureBlock(startNode);
+
+      nProcessedBlocks++;
+
+      if (TimeValue-LastTimeValue>120.0) {
+        tm *ct=localtime(&TimeValue);
+
+        LastTimeValue=TimeValue;
+        printf("MESH: InitMeasure: Processed %i blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+      }
+    }
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    }}
+#endif
+
 
     if (startNode==rootTree) {
       //try to save the file with the cell measures
       if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
+        if (ThisThread==0) printf("$PREFIX: saving the calculated volume data file.... ");
         SaveCenterNodeMeasure(NULL);
+        if (ThisThread==0) printf("   done\n");
       }
     }
     #endif
@@ -9854,8 +9886,8 @@ if (TmpAllocationCounter==2437) {
     }
 
     //redistribute the load on the root processor
-    double CumulativeThreadLoad[nTotalThreads];
-    cTreeNodeAMR<cBlockAMR>* ThreadStartNode[nTotalThreads];
+    double *CumulativeThreadLoad=new double [nTotalThreads];
+    cTreeNodeAMR<cBlockAMR>** ThreadStartNode=new cTreeNodeAMR<cBlockAMR>* [nTotalThreads];
     int thread;
 
     for (thread=0;thread<nTotalThreads;thread++) CumulativeThreadLoad[thread]=0.0,ThreadStartNode[thread]=NULL;
@@ -9867,6 +9899,10 @@ if (TmpAllocationCounter==2437) {
       while (CurveNode!=NULL) {
         CumulativeProcessorLoad+=CurveNode->ParallelLoadMeasure;
         CumulativeThreadLoad[nCurrentProcessorBalancing]+=CurveNode->ParallelLoadMeasure;
+
+        if ((isfinite(CumulativeProcessorLoad)==false)||(CumulativeThreadLoad[nCurrentProcessorBalancing]==false)) {
+          exit(__LINE__,__FILE__,"Error: the parallel load measure is not finite");
+        }  
 
         //increment the processor number if needed
         if ((CumulativeProcessorLoad>1.0+nCurrentProcessorBalancing)&&(nCurrentProcessorBalancing!=nTotalThreads-1)) {
@@ -9891,18 +9927,45 @@ if (TmpAllocationCounter==2437) {
 
            if (smallLoadNeighbour!=-1) {
              //try to transfer some load to the neighboring processor
-             if (smallLoadNeighbour==thread-1) {
+             if ((smallLoadNeighbour==thread-1)&&(ThreadStartNode[thread-1]!=NULL)) {
                while (CumulativeThreadLoad[thread-1]+ThreadStartNode[thread]->ParallelLoadMeasure<max(1.0,CumulativeThreadLoad[thread]-ThreadStartNode[thread]->ParallelLoadMeasure)) {
+
+                 //ckeck whether there are any blocks to exchange
+                 if (thread<nTotalThreads-1) {
+                   if (ThreadStartNode[thread]->FillingCurveNextNode==ThreadStartNode[thread+1]) {
+                     //'thread' has only one block
+                     break;
+                   }
+                 } 
+                 else {
+                   if (ThreadStartNode[thread]->FillingCurveNextNode==NULL) {
+                     break;
+                   }
+                 }
+
                  CumulativeThreadLoad[thread-1]+=ThreadStartNode[thread]->ParallelLoadMeasure;
                  CumulativeThreadLoad[thread]-=ThreadStartNode[thread]->ParallelLoadMeasure;
 
                  ThreadStartNode[thread]=ThreadStartNode[thread]->FillingCurveNextNode;
                }
              }
-             else if (smallLoadNeighbour==thread+1) {
-//               while (CumulativeThreadLoad[thread+1]+ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure<CumulativeThreadLoad[thread]-ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure) {
+             else if ((smallLoadNeighbour==thread+1)&&(ThreadStartNode[thread+1]!=NULL)) {
                while (CumulativeThreadLoad[thread+1]+ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure<max(1.0,CumulativeThreadLoad[thread]-ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure)) {
-                 CumulativeThreadLoad[thread-1]+=ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure;
+
+                 //ckeck whether there are any blocks to exchange
+                 if (thread<nTotalThreads-1) {
+                   if (ThreadStartNode[thread]->FillingCurveNextNode==ThreadStartNode[thread+1]) {
+                     //'thread' has only one block
+                     break;
+                   }
+                 }
+                 else {
+                   if (ThreadStartNode[thread]->FillingCurveNextNode==NULL) {
+                     break;
+                   }
+                 }
+
+                 CumulativeThreadLoad[thread+1]+=ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure;
                  CumulativeThreadLoad[thread]-=ThreadStartNode[thread+1]->FillingCurvePrevNode->ParallelLoadMeasure;
 
                  ThreadStartNode[thread+1]=ThreadStartNode[thread+1]->FillingCurvePrevNode;
@@ -9942,28 +10005,6 @@ if (TmpAllocationCounter==2437) {
     }
 
     pipe.closeBcast();
-
-    /*
-    pipe.openBcast(0);
-
-    while (CurveNode!=NULL) {
-      CumulativeProcessorLoad+=CurveNode->ParallelLoadMeasure;
-
-      if (ThisThread==0) pipe.send(nCurrentProcessorBalancing);
-      else pipe.recv(nCurrentProcessorBalancing,0);
-
-      AttachDownNodesToDistributionList(ParallelNodesDistributionList+nCurrentProcessorBalancing,CurveNode);
-
-      //increment the processor number if needed
-      if ((CumulativeProcessorLoad>1.0+nCurrentProcessorBalancing)&&(nCurrentProcessorBalancing!=nTotalThreads-1)) {
-        nCurrentProcessorBalancing++;
-      }
-
-      CurveNode=CurveNode->FillingCurveNextNode;
-    }
-
-    pipe.closeBcast();
-*/
 
     //check if the nodes' distribution is the same on all processors
 
@@ -10077,6 +10118,12 @@ if (TmpAllocationCounter==2437) {
 
 
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+    //de-allocate the temporary data buffers
+    delete [] CumulativeThreadLoad;
+    delete [] ThreadStartNode;
+
+    CumulativeThreadLoad=NULL,ThreadStartNode=NULL;
 
     //check that all blocks are presented in the new blocks' distribution lists
     long int nDistributedNodes=0;
