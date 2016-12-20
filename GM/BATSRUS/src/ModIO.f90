@@ -117,7 +117,7 @@ Module ModIO
 
   ! variables to plot
   character (len=500) :: plot_vars(MaxFile), plot_vars1
-  character (len=50)  :: plot_pars(MaxFile), plot_pars1
+  character (len=500) :: plot_pars(MaxFile), plot_pars1
 
   ! variables to put in log file
   character (len=500) :: log_vars, log_R_str
