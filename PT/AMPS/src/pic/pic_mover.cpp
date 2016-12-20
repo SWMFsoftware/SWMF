@@ -1954,11 +1954,28 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
 //===================== END DEBUG ==================
 
-
+int nLoopCycle=0;
 
   while (MovingTimeFinished==false) {
 MovingLoop:
 
+  nLoopCycle++;
+
+if (nLoopCycle>100) {
+  //there is a problem with the particles: remove the particle
+  if (_PIC_MOVER__UNKNOWN_ERROR_IN_PARTICLE_MOTION__STOP_EXECUTION_ == _PIC_MODE_OFF_) {
+    double Rate;
+
+    Rate=startNode->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr)/
+        startNode->block->GetLocalTimeStep(spec);
+
+    PIC::Mover::Sampling::Errors::AddRemovedParticleData(Rate,spec,__LINE__,__FILE__);
+
+    //remove the particle
+    PIC::ParticleBuffer::DeleteParticle(ptr);
+    return _PARTICLE_LEFT_THE_DOMAIN_;
+  }
+}
 
 
 //    DEBUG
@@ -2333,16 +2350,41 @@ MovingLoop:
     //check intersection of the particle trajectory with the cut-faces
 //    cTriangleFace *IntersectionFace=NULL;
 
-    if (startNode->FirstTriangleCutFace!=NULL) {
+    double xLocalIntersectionFace[2],xIntersectionFace[3];
+
+    if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibFirstTriangleCutFace!=NULL)) {
       CutCell::cTriangleFaceDescriptor *t;
       double TimeOfFlight;
+      double xLocalIntersection[2],xIntersection[3];
 
-      for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) if (t->TriangleFace!=lastIntersectedTriangleFace) {
-        if (t->TriangleFace->RayIntersection(xInit,vInit,TimeOfFlight,PIC::Mesh::mesh.EPS)==true) {
-          if (TimeOfFlight<dtMin) {
-            dtMin=TimeOfFlight;
-            IntersectionFace=t->TriangleFace;
-            ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
+      for (int iTestNode=0;iTestNode<2;iTestNode++)  
+      for (t=((iTestNode==0) ?  startNode->FirstTriangleCutFace : startNode->neibFirstTriangleCutFace);t!=NULL;t=t->next) if (t->TriangleFace!=lastIntersectedTriangleFace) {
+        if (t->TriangleFace->RayIntersection(xInit,vInit,TimeOfFlight,xLocalIntersection,xIntersection,PIC::Mesh::mesh.EPS)==true) {
+          if ((TimeOfFlight<dtMin)&&(TimeOfFlight>0.0)) {
+
+            //the intersection location has to be on the positive side of the previously intersected face
+            bool FaceIntersectionAccetanceFlag=true;
+
+            if (lastIntersectedTriangleFace!=NULL) {
+              double c=0.0;
+              int idim;
+
+              for (idim=0;idim<3;idim++) c+=(xIntersection[idim]-lastIntersectedTriangleFace->x0Face[idim])*lastIntersectedTriangleFace->ExternalNormal[idim];
+
+              if (c<=0.0) FaceIntersectionAccetanceFlag=false;
+            }
+
+
+            if (FaceIntersectionAccetanceFlag==true) {
+              dtMin=TimeOfFlight;
+              IntersectionFace=t->TriangleFace;
+
+              memcpy(xLocalIntersectionFace,xLocalIntersection,2*sizeof(double));
+              memcpy(xIntersectionFace,xIntersection,3*sizeof(double));
+
+
+              ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
+            }
           }
         }
       }
@@ -2355,7 +2397,56 @@ MovingLoop:
 
     //advance the particle's position and velocity
     //interaction with the faces of the block and internal surfaces
+
+
     if (ParticleIntersectionCode==_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
+
+      const double xLocalEPS=1.0E-5;
+
+      //relalculate the point of intersection using the localcoordinates of th intersection
+      int idim;
+
+      for (idim=0;idim<2;idim++) {
+        if (xLocalIntersectionFace[idim]<xLocalEPS) xLocalIntersectionFace[idim]=xLocalEPS;
+        if (xLocalIntersectionFace[idim]>1.0-xLocalEPS) xLocalIntersectionFace[idim]=1.0-xLocalEPS;
+      }
+
+      if (xLocalIntersectionFace[0]+xLocalIntersectionFace[1]>1.0-xLocalEPS) {
+        double c=(1.0-xLocalEPS)/(xLocalIntersectionFace[0]+xLocalIntersectionFace[1]);
+
+        xLocalIntersectionFace[0]*=c;
+        xLocalIntersectionFace[1]*=c;
+      }
+
+
+      //update velocity and location of a particle
+      for (idim=0;idim<3;idim++) {
+        xFinal[idim]=IntersectionFace->x0Face[idim]+xLocalIntersectionFace[0]*IntersectionFace->e0[idim]+
+            xLocalIntersectionFace[1]*IntersectionFace->e1[idim];
+
+        vFinal[idim]=vInit[idim]+dtMin*acclInit[idim];
+      }
+
+
+      //apply boundary condition procedure
+      int code;
+
+      newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+
+      do {
+        code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace,newNode) : _PARTICLE_DELETED_ON_THE_FACE_;
+
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        }
+      }
+      while (vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2]<=0.0);
+
+      //save the face of the intersection
+      lastIntersectedTriangleFace=IntersectionFace;
+    }
+    else if (false) { //(ParticleIntersectionCode==_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
 /*      xFinal[0]=xInit[0]+dtMin*vInit[0]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[0];
       xFinal[1]=xInit[1]+dtMin*vInit[1]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[1];
       xFinal[2]=xInit[2]+dtMin*vInit[2]+PIC::Mesh::mesh.EPS*IntersectionFace->ExternalNormal[2];*/
@@ -2433,7 +2524,18 @@ MovingLoop:
           }
         }
 
-        for (int idim=0;idim<DIM;idim++) xInit[idim]+=minTimeOfFlight*ClosestFace->ExternalNormal[idim];
+        double cVel=0.0;
+
+        for (int idim=0;idim<DIM;idim++) {
+          xInit[idim]+=minTimeOfFlight*ClosestFace->ExternalNormal[idim];
+          cVel+=xInit[idim]*ClosestFace->ExternalNormal[idim];
+        }
+
+        //apply boundary condition procedure if needed
+        if (cVel<=0.0) {
+
+        }
+
 
         IntersectionFace=ClosestFace;
         memcpy(xFinal,xInit,3*sizeof(double));
