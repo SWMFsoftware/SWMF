@@ -196,12 +196,14 @@ double Orbiter::CalculateProjectionArea() {
           xLocal[1]=jLocal*dxLocal;
 
           if ((xLocal[1]<1.0)&&(xLocal[0]+xLocal[1]<1.0)) {
+            double xx[3];
+
             //the point belong to the surface triangle -> register it
-            for (idim=0;idim<3;idim++) x[idim]=CutCell::BoundaryTriangleFaces[iSurfaceElement].x0Face[idim]+
+            for (idim=0;idim<3;idim++) xx[idim]=CutCell::BoundaryTriangleFaces[iSurfaceElement].x0Face[idim]+
                 xLocal[0]*CutCell::BoundaryTriangleFaces[iSurfaceElement].e0[idim]+xLocal[1]*CutCell::BoundaryTriangleFaces[iSurfaceElement].e1[idim];
 
-            c0=Vector3D::DotProduct(e0,x)-e0Min;
-            c1=Vector3D::DotProduct(e1,x)-e1Min;
+            c0=Vector3D::DotProduct(e0,xx)-e0Min;
+            c1=Vector3D::DotProduct(e1,xx)-e1Min;
 
             int iPixel,jPixel,iGlobalPixelIndex,iByte,iBit;
 
