@@ -2392,6 +2392,10 @@ namespace PIC {
     namespace IrregularSurface {
       using namespace CutCell;
 
+      //propagate the information of the cut faces to the neibbouring nodes
+      extern int nCutFaceInformationCopyAttempts;
+      void CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
+
       //init the vectors of the external normals at the cut-faces
       void InitExternalNormalVector();
       bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
