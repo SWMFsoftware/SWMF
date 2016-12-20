@@ -537,8 +537,16 @@ int PIC::TimeStep() {
 
       //correct the node's load balancing measure
       #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      if (summIterationExecutionTime>0.0)  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
-        DomainBlockDecomposition::BlockTable[nLocalNode]->ParallelLoadMeasure*=summIterationExecutionTime;
+      if (summIterationExecutionTime>0.0)  {
+        //normalize the load to the summ of the execution time
+        double c,norm=0.0;
+        int nLocalNode;
+
+        for (nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) norm+=DomainBlockDecomposition::BlockTable[nLocalNode]->ParallelLoadMeasure;
+
+        for (nLocalNode=0,c=summIterationExecutionTime/norm;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+          DomainBlockDecomposition::BlockTable[nLocalNode]->ParallelLoadMeasure*=c;
+        }
       }
 
       summIterationExecutionTime=0.0;
@@ -1732,6 +1740,10 @@ void PIC::Init_AfterParser() {
 
   if (RequestedParticleBufferLength!=-1) PIC::ParticleBuffer::Init(RequestedParticleBufferLength);
 
+  //copy the cut face information between the neighouring nodes 
+  if (Mesh::IrregularSurface::nCutFaceInformationCopyAttempts!=0) {
+    for (int i=0;i<Mesh::IrregularSurface::nCutFaceInformationCopyAttempts;i++) Mesh::IrregularSurface::CopyCutFaceInformation(); 
+  }
 }
 
 //====================================================
