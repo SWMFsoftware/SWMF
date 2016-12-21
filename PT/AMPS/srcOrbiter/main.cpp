@@ -317,17 +317,9 @@ int main(int argc,char **argv) {
 
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
-    //rename the mesh file name 
-    char command[300];
-    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
-
     if (PIC::ThisThread==0) {
-      printf(" done.\n");
-      printf("$PREFIX: Renaming the mesh file to amr.sig=0x%lx.mesh.bin.....  ",MeshSignature); 
-      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
-      system(command);
-
-      printf(" done.\n");
+      printf("  done.\n",mesh);
+      fflush(stdout);
     }
   }
 
@@ -338,7 +330,6 @@ int main(int argc,char **argv) {
 
 
   //initialize the blocks
-
   PIC::Mesh::initCellSamplingDataBuffer();
 
   PIC::Mesh::mesh.AllowBlockAllocation=true;
@@ -368,7 +359,6 @@ int main(int argc,char **argv) {
   }
 
   //test the shadow procedure
-
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,true);
 
   if (PIC::ThisThread==0) {
@@ -385,19 +375,21 @@ int main(int argc,char **argv) {
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
 
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
-/*
   if (NewMeshGeneratedFlag==true) {
     unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
 
     if (PIC::Mesh::mesh.ThisThread==0) {
       char command[300];
 
+      printf("$PREFIX: Renaming the mesh file to amr.sig=0x%lx.mesh.bin.....  ",MeshSignature);
       sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
       system(command);
+      printf(" done.\n");
     }
   }
-*/
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
