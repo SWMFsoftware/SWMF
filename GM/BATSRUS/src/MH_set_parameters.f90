@@ -2315,7 +2315,7 @@ contains
     UseProjection   = .false.
     UseConstrainB   = .false.
 
-    UseB0Source     = UseB0
+    UseB0Source     = UseB0 .and. nDim > 1
 
     UseUpdateCheck  = .true.
     ! The use of (/../) is correct F90, but it is replaced
