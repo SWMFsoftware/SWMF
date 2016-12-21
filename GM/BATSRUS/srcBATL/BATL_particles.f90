@@ -263,7 +263,7 @@ contains
          iSendOffset_I(iParticle) = nSend_P(iProcOut) * (nVar + nIndex + 1)
          nSend_P(      iProcOut)  = nSend_P(iProcOut) + 1
       end do
-
+      if(nProc==1)RETURN
       ! send size of messages
       iRequest = 0
       do iProcFrom = 0, nProc - 1
