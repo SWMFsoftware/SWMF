@@ -9365,7 +9365,12 @@ nMPIops++;
       res=startNode->ParallelLoadMeasure;
 
       //check whether the node load measure is normalized
-      if (isfinite(res)==false) exit(__LINE__,__FILE__,"Error: the parallel load measure is not normalized");
+      if (isfinite(res)==false) {
+        char msg[200];
+   
+        sprintf(msg,"Error: the parallel load measure is not normalized (res=%e)",res);
+        exit(__LINE__,__FILE__,msg);
+      }
 
 
       if (ThisThread==0) {
@@ -9412,7 +9417,12 @@ nMPIops++;
       startNode->ParallelLoadMeasure/=Norm;
 
       //check whether the node load measure is normalized
-      if (isfinite(startNode->ParallelLoadMeasure)==false) exit(__LINE__,__FILE__,"Error: the parallel load measure is not normalized");
+      if (isfinite(startNode->ParallelLoadMeasure)==false) {
+        char msg[200];
+
+        sprintf(msg,"Error: the parallel load measure is not normalized (startNode->ParallelLoadMeasure=%e)\n",startNode->ParallelLoadMeasure);
+        exit(__LINE__,__FILE__,msg);
+      }
 
       //add the load to all parent nodes
       cTreeNodeAMR<cBlockAMR>* upNode=startNode->upNode;
@@ -9900,8 +9910,11 @@ if (TmpAllocationCounter==2437) {
         CumulativeProcessorLoad+=CurveNode->ParallelLoadMeasure;
         CumulativeThreadLoad[nCurrentProcessorBalancing]+=CurveNode->ParallelLoadMeasure;
 
-        if ((isfinite(CumulativeProcessorLoad)==false)||(CumulativeThreadLoad[nCurrentProcessorBalancing]==false)) {
-          exit(__LINE__,__FILE__,"Error: the parallel load measure is not finite");
+        if ((isfinite(CumulativeProcessorLoad)==false)||(isfinite(CumulativeThreadLoad[nCurrentProcessorBalancing])==false)) {
+          char msg[500];
+
+          sprintf(msg,"Error: the parallel load measure is not finite (CumulativeProcessorLoad=%e, CumulativeThreadLoad[nCurrentProcessorBalancing]=%e, nCurrentProcessorBalancing=%i)",CumulativeProcessorLoad,CumulativeThreadLoad[nCurrentProcessorBalancing],nCurrentProcessorBalancing); 
+          exit(__LINE__,__FILE__,msg);
         }  
 
         //increment the processor number if needed
