@@ -576,7 +576,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(a,4x,a)') TypeGeometry, 'TypeGeometry'
            if(index(TypeGeometry,'genr') > 0)then
               write(UnitTmp_,'(i8,16x,a)') size(LogRGen_I), 'nRgen'
-              write(UnitTmp_,'(es13.5,11x,a)') LogRGen_I, 'LogRgen'
+              write(UnitTmp_,'(es13.5,"           LogRgen")') LogRGen_I
            end if
            if(TypeGeometry == 'roundcube')then
               write(UnitTmp_,'(es13.5,11x,a)') rRound0,  'rRound0'
