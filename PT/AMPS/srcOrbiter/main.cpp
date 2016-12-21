@@ -318,7 +318,7 @@ int main(int argc,char **argv) {
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
     if (PIC::ThisThread==0) {
-      printf("  done.\n",mesh);
+      printf("  done.\n");
       fflush(stdout);
     }
   }
