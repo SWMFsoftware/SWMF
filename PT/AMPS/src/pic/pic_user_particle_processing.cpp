@@ -25,9 +25,20 @@ void PIC::UserParticleProcessing::Processing() {
   int i,j,k;
   long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel default(none)  shared(PIC::Mesh::mesh) \
+  private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext)
+   {
+#pragma omp single
+     {
+#endif //_COMPILATION_MODE_
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     if (node->block!=NULL) {
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp task default (none) firstprivate (node) private (i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext)
+    {
+#endif
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
@@ -48,9 +59,17 @@ void PIC::UserParticleProcessing::Processing() {
            }
          }
       }
+
+      //end of the block processing
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  }
+#endif
     }
   }
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+}}
+#endif
 
 }
 
