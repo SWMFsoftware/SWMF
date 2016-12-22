@@ -81,7 +81,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
         for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
           for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-            for (int npass=0;npass<npass<1+PIC::nTotalThreadsOpenMP;npass++) {
+            for (int npass=0;npass<1+PIC::nTotalThreadsOpenMP;npass++) {
               if (npass==0) {
                 ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               }
