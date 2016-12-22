@@ -116,7 +116,7 @@ ParticleWeightCorrectionMode=on
   SurfaceModel=X-Wing.mail 
   SurfaceModelFormat=CEA !CEA, NASTRAN
   
-  MeshSignature=0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
+  MeshSignature=0xb2402143d4da3e7c !0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
 
   DomainLimits= \\
     xMinOffset=0.5,0.5,0.5 \\
