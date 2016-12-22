@@ -110,7 +110,7 @@ for ($nline=0;$nline<$nNode;$nline++) {
   }
 
   for ($i=0;$i<$nVariables;$i++) {
-    $tmp[$i]/=$nVariables;
+    $tmp[$i]/=$nDataFiles;
   }
 
   print fAveraged "@tmp\n";
