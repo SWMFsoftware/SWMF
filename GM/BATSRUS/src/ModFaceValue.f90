@@ -1994,9 +1994,15 @@ contains
 
          ! Left face values
          RhoInv = 1/LeftState_VX(rho_,i,j,k)
-         BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
-         ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
-         BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
+            ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
+            BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
+         else
+            BxFull = LeftState_VX(Bx_,i,j,k)
+            ByFull = LeftState_VX(By_,i,j,k)
+            BzFull = LeftState_VX(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  = inv_c2LIGHT*RhoInv
          LeftState_VX(Ux_,i,j,k)=LeftState_VX(Ux_,i,j,k)*RhoInv
@@ -2018,9 +2024,15 @@ contains
 
          ! Right face values
          RhoInv = 1/RightState_VX(rho_,i,j,k)
-         BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
-         ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
-         BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
+            ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
+            BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
+         else
+            BxFull = RightState_VX(Bx_,i,j,k)
+            ByFull = RightState_VX(By_,i,j,k)
+            BzFull = RightState_VX(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          RightState_VX(Ux_,i,j,k)=RightState_VX(Ux_,i,j,k)*RhoInv
@@ -2053,9 +2065,15 @@ contains
 
          ! Left face values
          RhoInv = 1/LeftState_VY(rho_,i,j,k)
-         BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
-         ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
-         BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
+            ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
+            BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
+         else
+            BxFull = LeftState_VY(Bx_,i,j,k)
+            ByFull = LeftState_VY(By_,i,j,k)
+            BzFull = LeftState_VY(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          LeftState_VY(Ux_,i,j,k)=LeftState_VY(Ux_,i,j,k)*RhoInv
@@ -2077,9 +2095,15 @@ contains
 
          ! Right face values
          RhoInv = 1/RightState_VY(rho_,i,j,k) 
-         BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
-         ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
-         BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
+            ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
+            BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
+         else
+            BxFull = RightState_VY(Bx_,i,j,k)
+            ByFull = RightState_VY(By_,i,j,k)
+            BzFull = RightState_VY(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv=inv_c2LIGHT*RhoInv
          RightState_VY(Ux_,i,j,k)=RightState_VY(Ux_,i,j,k)*RhoInv
@@ -2114,9 +2138,15 @@ contains
 
          ! Left face values
          RhoInv = 1/LeftState_VZ(rho_,i,j,k)
-         BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
-         ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
-         BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
+            ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
+            BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
+         else
+            BxFull = LeftState_VZ(Bx_,i,j,k)
+            ByFull = LeftState_VZ(By_,i,j,k)
+            BzFull = LeftState_VZ(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          LeftState_VZ(Ux_,i,j,k)=LeftState_VZ(Ux_,i,j,k)*RhoInv
@@ -2138,9 +2168,15 @@ contains
 
          ! Right face values
          RhoInv = 1/RightState_VZ(rho_,i,j,k)
-         BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
-         ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
-         BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
+         if(UseB0)then
+            BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
+            ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
+            BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
+         else
+            BxFull = RightState_VZ(Bx_,i,j,k)
+            ByFull = RightState_VZ(By_,i,j,k)
+            BzFull = RightState_VZ(Bz_,i,j,k)
+         end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
          RhoC2Inv  =inv_c2LIGHT*RhoInv
          RightState_VZ(Ux_,i,j,k)=RightState_VZ(Ux_,i,j,k)*RhoInv
