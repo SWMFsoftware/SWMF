@@ -46,7 +46,10 @@ namespace Surface {
    }
 
    //Cercignani-Lampis-Lord model
-   namespace CCL {
+   namespace CLL {
+     extern double TangentialMomentumAccommodationCoefficient[PIC::nTotalSpecies];
+     extern double NormalPartKineticEnergyAccommodationCoefficient[PIC::nTotalSpecies];
+
      int Processor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
    }
 
