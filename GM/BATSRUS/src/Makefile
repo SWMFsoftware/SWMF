@@ -21,6 +21,7 @@ OBJECTS = \
 	ModB0.o \
 	ModBatlInterface.o \
 	ModBlockData.o \
+	ModBorisCorrection.o \
 	ModBoundaryCells.o \
 	ModCalcSource.o \
 	ModCellBoundary.o \
