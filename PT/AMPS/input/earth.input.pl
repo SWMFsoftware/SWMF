@@ -74,7 +74,7 @@ while ($line=<InputFile>) {
   $InputLine=uc($InputLine);
   chomp($InputLine);
  
-  $InputLine=~s/[=()]/ /g;
+  $InputLine=~s/[:,;=()]/ /g;
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
   
@@ -111,6 +111,100 @@ while ($line=<InputFile>) {
       die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
     }     
   }
+  
+  #parameters of the impulse source 
+  elsif ($InputLine eq "IMPULSESOURCE") {
+    ($s0,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($s0 eq "ON") {
+      #the model is turned "ON" -> Set up the model parameters 
+      my $nTotalInjectionLocations=0;
+      my (@x0All,@x1All,@x2All,@SpecAll,@TimeAll,@SourceAll,@nPartAll);
+            
+      ampsConfigLib::ChangeValueOfVariable("bool Earth::ImpulseSource::Mode","true","main/ImpulseSource.cpp"); 
+            
+      while (defined $InputComment) {
+        ($s0,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($s0 eq "NEW") {
+          $nTotalInjectionLocations++;
+        }
+        elsif ($s0 eq "X") {
+          my ($x0,$x1,$x2);
+          
+          ($x0,$x1,$x2,$InputComment)=split(' ',$InputComment,4);
+          
+          push(@x0All,$x0);
+          push(@x1All,$x1);
+          push(@x2All,$x2);          
+        }
+        elsif ($s0 eq "SPEC") {
+          my $nspec;
+          
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          
+          push(@SpecAll,$nspec);
+        }
+        elsif ($s0 eq "TIME") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          push(@TimeAll,$s0);
+        }
+        elsif ($s0 eq "NPART") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          push(@nPartAll,$s0);
+        }        
+        elsif ($s0 eq "SOURCE") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          push(@SourceAll,$s0);
+        }
+        
+        elsif ($s0 eq "SPECTRUM") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          
+          if ($s0 eq "CONSTANT") {
+            ($s0,$InputComment)=split(' ',$InputComment,2);
+            ampsConfigLib::ChangeValueOfVariable("double Earth::ImpulseSource::EnergySpectrum::Constant::e",$s0,"main/ImpulseSource.cpp"); 
+            ampsConfigLib::ChangeValueOfVariable("int Earth::ImpulseSource::EnergySpectrum::Mode","Earth::ImpulseSource::EnergySpectrum::Mode_Constatant","main/ImpulseSource.cpp");           
+          }
+          else {
+            die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+          
+        }
+        
+        else {
+          die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }
+      }
+      
+      #in case locations are defined -> set the model
+      if ($nTotalInjectionLocations != 0) {
+        #construct the list for the inpulse source data structure 
+        my ($TotalDataStructureLine,$SingleEntry,$i);
+        
+        #{spec,time,false,{x0,x1,x2},Source};
+        for ($i=0;$i<$nTotalInjectionLocations;$i++) {
+          $SingleEntry="{".$SpecAll[$i].",".$TimeAll[$i].",false,{".$x0All[$i].",".$x1All[$i].",".$x2All[$i]."},".$SourceAll[$i].",".$nPartAll[$i]."}";
+          
+          if ($i==0) {
+            $TotalDataStructureLine="{".$SingleEntry;
+          }
+          else {
+            $TotalDataStructureLine=$TotalDataStructureLine.",".$SingleEntry;
+          }          
+        }
+        
+        $TotalDataStructureLine=$TotalDataStructureLine."}";
+        ampsConfigLib::ChangeValueOfVariable("Earth::ImpulseSource::cImpulseSourceData Earth::ImpulseSource::ImpulseSourceData\\[\\]",$TotalDataStructureLine,"main/ImpulseSource.cpp");
+        ampsConfigLib::ChangeValueOfVariable("int Earth::ImpulseSource::nTotalSourceLocations",$nTotalInjectionLocations,"main/ImpulseSource.cpp");
+      }
+       
+    }  
+  }
+  
+  
+  
   elsif ($InputLine eq "#ENDBLOCK") {
     last;
   }   
