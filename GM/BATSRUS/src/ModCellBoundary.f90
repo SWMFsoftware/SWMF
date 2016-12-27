@@ -193,8 +193,8 @@ contains
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
        end if
 
-       !write(*,*)'! iSide, Type iMin..kMax=', iSide, TypeBc, &
-       !     iMin, iMax, jMin, jMax, kMin, kMax
+       if(DoTestMe) write(*,*) NameSub,' iSide, Type iMin,iMax..kMax=', &
+            iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBc)
        case('gradpot')
