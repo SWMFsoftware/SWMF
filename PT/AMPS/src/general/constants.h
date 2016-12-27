@@ -41,6 +41,7 @@
 #define J2eV                 (1.0/eV2J)
 #define KeV2J                (1.0E3*eV2J)
 #define MeV2J                (1.0E6*eV2J)
+#define MEV2J                MeV2J 
 #define J2KeV                (1.0/KeV2J)
 #define J2MeV                (1.0/MeV2J)
 
