@@ -324,7 +324,7 @@ namespace Vector3D {
   namespace Distribution {
     //uniform distribution of the
     inline void Uniform(double *a) {
-      for (int i=0;i<3;i++) a[i]=sqrt(-log(rnd()))*cos(2.0*Pi*rnd());
+      for (int i=0;i<3;i++) a[i]=sqrt(-log(rnd()))*cos(PiTimes2*rnd());
       Vector3D::Normalize(a);
     }
   }
@@ -347,6 +347,10 @@ namespace Relativistic {
 
   inline double GetGamma(double *v) {
     return 1.0/sqrt(1.0-(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])/(SpeedOfLight*SpeedOfLight));
+  }
+
+  inline double Speed2Momentum(double Speed,double mass) {
+    return mass*Speed/sqrt(1.0-(Speed*Speed)/(SpeedOfLight*SpeedOfLight));
   }
 }
 
