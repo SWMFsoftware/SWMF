@@ -37,7 +37,7 @@ ${MY_LIB}:  $(OBJ_LIB) ${MAKEFILE_COMP_SELECT}
 tests: test test_mpi test_empty test_empty_mpi
 
 test: timing_test.exe
-	timing_test.exe
+	./timing_test.exe
 
 test_mpi: timing_test_mpi.exe
 	${PARALLEL} ${NPFLAG} 2 timing_test_mpi.exe
