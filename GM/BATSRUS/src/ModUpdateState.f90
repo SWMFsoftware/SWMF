@@ -9,7 +9,6 @@ subroutine update_states_MHD(iBlock)
   use ModB0, ONLY: B0_DGB
   use ModPhysics
   use ModGeometry, ONLY: true_cell
-  use ModKind, ONLY: Real8_
   use ModSemiImplVar, ONLY: UseStableImplicit
   use ModVarIndexes, ONLY: pe_, p_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
@@ -307,6 +306,23 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
+    if(UseElectronPressure .and. UseElectronEntropy)then
+       ! Convert electron pressure to entropy
+       ! Se = Pe^(1/GammaE)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          StateOld_VCB(Pe_,i,j,k,iBlock) = &
+               StateOld_VCB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+          ! State_VGB is not used in 1-stage and HalfStep schemes
+          if(.not.UseHalfStep .and. nStage > 1) &
+               State_VGB(Pe_,i,j,k,iBlock) = &
+               State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+       end do; end do; end do
+    end if
+
+    ! Now update State_VGB
+
     if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
        ! Update state variables starting from level n (=old) state
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -468,6 +484,19 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
+    if(UseElectronPressure .and. UseElectronEntropy)then
+       ! Convert electron entropy back to pressure
+       ! Pe = Se^GammaE
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          StateOld_VCB(Pe_,i,j,k,iBlock) = &
+               StateOld_VCB(Pe_,i,j,k,iBlock)**GammaElectron
+          State_VGB(Pe_,i,j,k,iBlock) = &
+               State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
+       end do; end do; end do
+    end if
+
     if(UseMultiSpecies)then
        ! Fix negative species densities
        State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = max(0.0,&
@@ -538,22 +567,6 @@ contains
                   max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
           end do; end do; end do
        end if
-    end if
-
-!!! The electron entropy and the Boris corrections do not work for RK update!!!
-
-    if(UseElectronPressure .and. UseElectronEntropy)then
-       ! Fix update to use the electron entropy equation
-       ! Se = Pe^(1/GammaE), dSe/Pe = 1/GammaE*Se/Pe
-       ! Pe_n+1 = (Se_n+1)^GammaE = (Se_n + R(Se))^GammaE 
-       !        = (Pe_n^(1/GammaE + R(Se))^GammaE
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-          State_VGB(Pe_,i,j,k,iBlock) = &
-               (StateOld_VCB(Pe_,i,j,k,iBlock)**(1/GammaElectron) &
-               + Source_VC(Pe_,i,j,k))**GammaElectron
-       end do; end do; end do
     end if
 
     ! Update energy or pressure based on UseConservative and IsConserv_CB
