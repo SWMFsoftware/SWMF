@@ -36,9 +36,7 @@ subroutine update_states_MHD(iBlock)
   integer :: i, j, k
 
   ! These variables have to be double precision for accurate Boris scheme
-  real(Real8_) :: FullBx, FullBy, FullBz, fullBB, rhoc2, gA2_Boris
   real:: DtLocal, DtFactor, Coeff
-  real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
   !--------------------------------------------------------------------------
@@ -241,7 +239,8 @@ contains
 
   subroutine update_explicit
 
-    use ModBorisCorrection, ONLY: mhd_to_boris, boris_to_mhd
+    use ModBorisCorrection, ONLY: mhd_to_boris, boris_to_mhd, &
+         mhd_to_boris_simple, boris_simple_to_mhd
 
     ! Allocatable storage for classical 4th order Runge-Kutta scheme
     real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
@@ -260,21 +259,53 @@ contains
           if(UseB0)then
              call mhd_to_boris(StateOld_VCB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
-             call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
+             ! State_VGB is not used in 1-stage and HalfStep schemes
+             if(.not.UseHalfStep .and. nStage > 1) &
+                  call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
                   Energy_GBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
           else
              call mhd_to_boris(StateOld_VCB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1))
-             call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
+             ! State_VGB is not used in 1-stage and HalfStep schemes
+             if(.not.UseHalfStep .and. nStage > 1) &
+                  call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
                   Energy_GBI(i,j,k,iBlock,1))
           end if
        end do; end do; end do
           
-
        if(DoTestMe)write(*,*) NameSub, ' after mhd_to_boris=', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
+
+    if(UseBorisSimple .and. IsMhd) then
+       ! Update using simplified Boris correction, i.e. update
+       !
+       !    RhoUBorisSimple = (1+B^2/(rho*c^2)) * RhoU
+       !
+       ! instead of RhoU. See Gombosi et al JCP 2002, 177, 176 (eq. 38-39)
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          if(UseB0)then
+             call mhd_to_boris_simple(StateOld_VCB(:,i,j,k,iBlock), &
+                  B0_DGB(:,i,j,k,iBlock))
+             ! State_VGB is not used in 1-stage and HalfStep schemes
+             if(.not.UseHalfStep .and. nStage > 1) &
+                  call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock), &
+                  B0_DGB(:,i,j,k,iBlock))
+          else
+             call mhd_to_boris_simple(StateOld_VCB(:,i,j,k,iBlock))
+             ! State_VGB is not used in 1-stage and HalfStep schemes
+             if(.not.UseHalfStep .and. nStage > 1) &
+                  call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock))
+          end if
+       end do; end do; end do
+          
+       if(DoTestMe)write(*,*) NameSub, ' after mhd_to_boris_simple=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+    end if
 
     if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
        ! Update state variables starting from level n (=old) state
@@ -415,6 +446,28 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
+    if(UseBorisSimple) then
+       ! Convert mometum in StateOld_VCB and State_VGB back from 
+       ! enhanced momentum
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          if(UseB0)then
+             call boris_simple_to_mhd(StateOld_VCB(:,i,j,k,iBlock), &
+                  B0_DGB(:,i,j,k,iBlock))
+             call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock), &
+                  B0_DGB(:,i,j,k,iBlock))
+          else
+             call boris_simple_to_mhd(StateOld_VCB(:,i,j,k,iBlock))
+             call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock))
+          end if
+       end do; end do; end do
+          
+       if(DoTestMe)write(*,*) NameSub, ' after boris_to_mhd=', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+            Energy_GBI(iTest,jTest,kTest,iBlock,:)
+    endif
+
     if(UseMultiSpecies)then
        ! Fix negative species densities
        State_VGB(SpeciesFirst_:SpeciesLast_,1:nI,1:nJ,1:nK,iBlock) = max(0.0,&
@@ -501,63 +554,6 @@ contains
                (StateOld_VCB(Pe_,i,j,k,iBlock)**(1/GammaElectron) &
                + Source_VC(Pe_,i,j,k))**GammaElectron
        end do; end do; end do
-    end if
-
-    if(UseBorisSimple .and. IsMhd) then
-       ! Update using simplified Boris correction, i.e. update
-       !
-       !    RhoUBorisSimple = (1+B^2/(rho*c^2)) * RhoU
-       !
-       ! instead of RhoU. See Gombosi et al JCP 2002, 177, 176 (eq. 38-39)
-
-       if(UseB0)then
-          B0_DC=B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
-       else
-          B0_DC=0.00
-       end if
-
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-          ! State_VGB now contains an MHD update: 
-          !      RhoU_new = RhoU_old + DeltaRhoU
-
-          fullBx = B0_DC(x_,i,j,k) + StateOld_VCB(Bx_,i,j,k,iBlock)
-          fullBy = B0_DC(y_,i,j,k) + StateOld_VCB(By_,i,j,k,iBlock)
-          fullBz = B0_DC(z_,i,j,k) + StateOld_VCB(Bz_,i,j,k,iBlock)
-          fullBB = fullBx**2 + fullBy**2 + fullBz**2
-          rhoc2  = StateOld_VCB(rho_,i,j,k,iBlock)*c2LIGHT
-          gA2_Boris = fullBB/rhoc2
-
-          ! RhoU_new' = RhoU_new + B^2/(rho*c^2) RhoU_old
-          !           = DeltaRhoU + RhoU_old + B^2/(rho*c^2) RhoU_old
-          !           = DeltaRhoU + RhoUBorisSimple_old 
-          !           = RhoUBorisSimple_new
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) + &
-               StateOld_VCB(rhoUx_:rhoUz_,i,j,k,iBlock)*ga2_Boris
-
-
-          ! Convert RhoUBorisSimple_new to 
-          ! RhoU = RhoUBorisSimple/(1+B^2/(rho*c^2))
-          !      = RhoUBorisSimple * rho c^2/(rho c^2 + B^2)
-          fullBx = B0_DGB(x_,i,j,k,iBlock) + State_VGB(Bx_,i,j,k,iBlock)
-          fullBy = B0_DGB(y_,i,j,k,iBlock) + State_VGB(By_,i,j,k,iBlock)
-          fullBz = B0_DGB(z_,i,j,k,iBlock) + State_VGB(Bz_,i,j,k,iBlock)
-          fullBB = fullBx**2 + fullBy**2 + fullBz**2
-          rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
-          gA2_Boris = rhoc2/(fullBB + rhoc2)
-
-          ! rhoU = 1/[1+BB/(rho c^2)]* rhoU_BorisSimple
-          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = gA2_Boris * &
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)
-
-       end do; end do; end do
-
-       if(DoTestMe)write(*,*) NameSub, ' after BorisSimple update=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
-
     end if
 
     ! Update energy or pressure based on UseConservative and IsConserv_CB

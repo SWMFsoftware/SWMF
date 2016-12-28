@@ -1,14 +1,16 @@
 module ModBorisCorrection
 
-  use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-  use ModPhysics,    ONLY: c2Light, inv_c2light
+  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
+  use ModPhysics,        ONLY: c2Light, inv_c2light
   use ModCoordTransform, ONLY: cross_product
 
   implicit none
   private ! except
 
-  public:: mhd_to_boris ! from classical to semi-relativistic variables
-  public:: boris_to_mhd ! from semi-relativistic to classical variables
+  public:: mhd_to_boris        ! from classical to semi-relativistic variables
+  public:: boris_to_mhd        ! from semi-relativistic to classical variables
+  public:: mhd_to_boris_simple ! from RhoU to (1+B^2/(Rho*c^2))*RhoU
+  public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
 
 contains
   !==========================================================================
@@ -78,5 +80,45 @@ contains
     end if
 
   end subroutine boris_to_mhd
+  !==========================================================================
+  subroutine mhd_to_boris_simple(State_V, B0_D)
+
+    real, intent(inout)          :: State_V(nVar)
+    real, intent(in),    optional:: B0_D(3)
+
+    ! Replace MHD momentum with (1+B^2/(rho*c^2)) * RhoU
+    ! Use B0=B0_D in the total magnetic field if present.
+
+    real:: b_D(3), Factor
+    !-------------------------------------------------------------------------
+
+    b_D = State_V(Bx_:Bz_)
+    if(present(b0_D)) b_D = b_D + B0_D
+
+    ! Gombosi et al. 2001, eq(38) with vA^2 = B^2/Rho
+    Factor = 1 + sum(b_D**2)/(State_V(Rho_)*c2light)
+    State_V(RhoUx_:RhoUz_) = Factor*State_V(RhoUx_:RhoUz_)
+
+  end subroutine mhd_to_boris_simple
+  !==========================================================================
+  subroutine boris_simple_to_mhd(State_V, B0_D)
+
+    real, intent(inout)          :: State_V(nVar)
+    real, intent(in),    optional:: B0_D(3)
+
+    ! Replace (1+B^2/(rho*c^2)) * RhoU with RhoU
+    ! Use B0=B0_D in the total magnetic field if present.
+
+    real:: b_D(3), Factor
+    !-------------------------------------------------------------------------
+
+    b_D = State_V(Bx_:Bz_)
+    if(present(b0_D)) b_D = b_D + B0_D
+
+    ! Gombosi et al. 2001, eq(38) with vA^2 = B^2/Rho
+    Factor = 1 + sum(b_D**2)/(State_V(Rho_)*c2Light)
+    State_V(RhoUx_:RhoUz_) = State_V(RhoUx_:RhoUz_)/Factor
+
+  end subroutine boris_simple_to_mhd
 
 end module ModBorisCorrection
