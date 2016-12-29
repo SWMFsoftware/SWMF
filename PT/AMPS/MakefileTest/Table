@@ -143,6 +143,13 @@ Time=9
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 
+Ref=3{pgcc}@@(0+pleiades)
+Ref=3{gcc}@@(0+pleiades)
+Ref=4{icc}@@(0+pleiades)
+
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
+
 <#
 -------------------------------------------------------------------------------
 #>
@@ -236,6 +243,9 @@ Time=2
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
+
+Ref=2{icc}@@(0+stampede)
+Ref=2{icc}@@(0+pleiades)
 
 Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
