@@ -666,7 +666,7 @@ subroutine advance_vertical_1stage( &
   ! Add Neutral Friction Between Species
   ! Needed for each increment in the RK-4 Solver
   if (UseNeutralFriction) then
-     nVel(-1:nAlts+2,1:nSpecies) = NewVertVel(-1:nAlts+2,1:nSpecies)
+     nVel(1:nAlts,1:nSpecies) = NewVertVel(1:nAlts,1:nSpecies)
      call calc_neutral_friction(nVel(1:nAlts,1:nSpecies), &
                   EddyCoef_1d(1:nAlts), NT(1:nAlts), &
                            NS(1:nAlts,1:nSpecies), &
