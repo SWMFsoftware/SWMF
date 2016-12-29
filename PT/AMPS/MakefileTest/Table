@@ -139,6 +139,10 @@ Keys=-cplr-data-path=${PTDIR}/data/input/Enceladus
 #>
 Name=Rosetta 
 Time=9
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 <#
 -------------------------------------------------------------------------------
 #>
@@ -229,6 +233,10 @@ Check=
 #>
 Name=SEP3D
 Time=2
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
 >>>@echo "test_SEP3D_run..." >> test_SEP3D.diff
@@ -398,6 +406,10 @@ Check=
 #>
 Name=CG@@(0+valeriy+pleiades+stampede)
 Time=3
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 Keys=-model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
@@ -406,36 +418,40 @@ Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd705
 #>
 Name=CG-dust-test@@(0+valeriy+pleiades+stampede)
 Time=11
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
 Run=
->>>@echo "test_CG-dust-test_run..." >> test_CG-dust-test.diff
+>>>@echo "test_CG-dust-test_run..." >> test_CG-dust-test${TESTCG-dust-test-REF}.diff
 >>>cp ${PTDIR}/srcCG/ModelData/CorrectedFluxRelativeDUST.bin  ${TESTCG-dust-testDIR}
 >>>cd ${TESTCG-dust-testDIR}; ${MPIRUN}  ./amps
->>>@echo "test_CG-dust-test_run... done" >> test_CG-dust-test.diff
+>>>@echo "test_CG-dust-test_run... done" >> test_CG-dust-test${TESTCG-dust-test-REF}.diff
 
 Check=
->>>@echo "test_CG-dust-test_check..." >> test_CG-dust-test.diff
+>>>@echo "test_CG-dust-test_check..." >> test_CG-dust-test${TESTCG-dust-test-REF}.diff
 
 >>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat 1000
 >>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat   
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-dust-test/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O.diff 
->>>@ls -l test_CG-dust-test--H2O.diff
+>>>output/test_CG-dust-test/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000${TESTCG-dust-test-REF}.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O${TESTCG-dust-test-REF}.diff 
+>>>@ls -l test_CG-dust-test--H2O${TESTCG-dust-test-REF}.diff
 
 >>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat 1000
 >>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-dust-test/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--DUST.diff 
->>>@ls -l test_CG-dust-test--DUST.diff
+>>>output/test_CG-dust-test/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000${TESTCG-dust-test-REF}.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--DUST${TESTCG-dust-test-REF}.diff 
+>>>@ls -l test_CG-dust-test--DUST${TESTCG-dust-test-REF}.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test.dat         \
->>>output/test_CG-dust-test/test_CG-dust-test.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test.diff
->>>@ls -l test_CG-dust-test.diff
+>>>output/test_CG-dust-test/test_CG-dust-test${TESTCG-dust-test-REF}.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test${TESTCG-dust-test-REF}.diff
+>>>@ls -l test_CG-dust-test${TESTCG-dust-test-REF}.diff
 <#
 -------------------------------------------------------------------------------
 #>
