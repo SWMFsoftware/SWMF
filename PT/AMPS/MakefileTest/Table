@@ -249,9 +249,9 @@ Ref=2{icc}@@(0+pleiades)
 
 Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
->>>@echo "test_SEP3D_run..." >> test_SEP3D.diff
+>>>@echo "test_SEP3D_run..." >> test_SEP3D${TESTSEP3D-REF}.diff
 >>>cd ${TESTSEP3DDIR}; ${MPIRUN} -np 4 ./amps
->>>@echo "test_SEP3D_run... done" >> test_SEP3D.diff
+>>>@echo "test_SEP3D_run... done" >> test_SEP3D${TESTSEP3D-REF}.diff
 <#
 -------------------------------------------------------------------------------
 #>
