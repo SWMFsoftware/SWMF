@@ -573,20 +573,22 @@ Check=
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
 Time=5
 
+Ref=1{gcc}@@(0+valeriy)
+
 Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Boris@@(0+valeriy)
 
 Compile=
->>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic.diff
+>>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>./Config.pl -application=test/Mover-Boris-relativistic -cplr-data-path=${TESTMover-Boris-relativisticKEYS} -model-data-path=${TESTMover-Boris-relativisticKEYS}  -link-option=-lc++  -amps-test=on
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
->>>@echo "test_Mover-Boris-relativistic_compile... done" >> test_Mover-Boris-relativistic.diff
+>>>@echo "test_Mover-Boris-relativistic_compile... done" >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 
 Check=
->>>@echo "test_Mover-Boris-relativistic_check..." >> test_Mover-Boris-relativistic.diff
+>>>@echo "test_Mover-Boris-relativistic_check..." >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
->>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic.diff
->>>@ls -l test_Mover-Boris-relativistic.diff
+>>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories${TESTMover-Boris-relativistic-REF}.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
+>>>@ls -l test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 <#
 
 -------------------------------------------------------------------------------
