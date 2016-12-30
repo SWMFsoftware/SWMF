@@ -121,7 +121,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona_6.0.dat
 ascii			TypeFile
 
 #SCHEME
