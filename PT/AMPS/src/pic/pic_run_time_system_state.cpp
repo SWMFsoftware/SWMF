@@ -157,7 +157,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum_CallCounter(const char *m
     sprintf(buffer,"[Counter=%i]",CallCounter);
   }
 
-  GetParticleFieldCheckSum(msg);
+  GetParticleFieldCheckSum(buffer);
   CallCounter++;
 }
 
