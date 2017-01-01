@@ -547,18 +547,38 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test/Mover-Boris@@(0+valeriy+stampede+pleiades)
+Name=test/Mover-Boris@@(0+valeriy)
 Time=5
 
 Ref=1{gcc}@@(0+valeriy)
 
-Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris -link-option=-lc++ @@(0+valeriy)
-Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/test_Mover/Boris -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
-Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
+Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
 Compile=
 >>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris${TESTMover-Boris-REF}.diff
->>>./Config.pl -application=test/Mover-Boris ${TESTMover-BorisKEYS}  -amps-test=on
+>>>./Config.pl -application=test/Mover-Boris -cplr-data-path=${TESTMover-BorisKEYS} -model-data-path=${TESTMover-BorisKEYS} -link-option=-lc++ -amps-test=on
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_Mover-Boris_compile... done" >> test_Mover-Boris${TESTMover-Boris-REF}.diff
+
+Check=
+>>>@echo "test_Mover-Boris_check..." >> test_Mover-Boris${TESTMover-Boris-REF}.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Boris-REF}.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris${TESTMover-Boris-REF}.diff
+>>>@ls -l test_Mover-Boris${TESTMover-Boris-REF}.diff
+<#
+
+
+#>
+Name=test/Mover-Boris@@(0+stampede+pleiades)
+Time=5
+
+Keys=/work/02695/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
+Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
+
+Compile=
+>>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris${TESTMover-Boris-REF}.diff
+>>>./Config.pl -application=test/Mover-Boris -cplr-data-path=${TESTMover-BorisKEYS} -model-data-path=${TESTMover-BorisKEYS}  -amps-test=on
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
 >>>@echo "test_Mover-Boris_compile... done" >> test_Mover-Boris${TESTMover-Boris-REF}.diff
