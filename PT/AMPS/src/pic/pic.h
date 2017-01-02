@@ -3365,7 +3365,7 @@ namespace PIC {
 
     namespace CellCentered {
       //the maximum number of the elements in the interpolation stencil
-      const int nMaxStencilLength=50;
+      const int nMaxStencilLength=64;
 
       class cStencil {
       public:
@@ -3422,7 +3422,7 @@ namespace PIC {
         //interpolation functions
         PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
         PIC::InterpolationRoutines::CellCentered::cStencil *GetTriliniarInterpolationStencil(double iLoc,double jLoc,double kLoc,double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-
+        PIC::InterpolationRoutines::CellCentered::cStencil *GetTriliniarInterpolationMutiBlockStencil(double *x,double *xStencilMin,double *xStencilMax,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
       }
 
     }
