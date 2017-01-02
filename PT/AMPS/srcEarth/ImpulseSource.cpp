@@ -44,6 +44,10 @@ long int Earth::ImpulseSource::InjectParticles() {
 
       mass=PIC::MolecularData::GetMass(spec);
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic,1) default (none) private (idim,newParticle,newParticleData)  \
+  shared (TimeCounter,iTotalSourceLocations,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
+#endif
       for (int iPart=0;iPart<nTotalInjectedParticles;iPart++) {
         //generate new particle velocity
         double v[3],speed;
