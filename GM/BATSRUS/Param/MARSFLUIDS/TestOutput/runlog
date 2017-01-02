@@ -3,12 +3,12 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2007
 
- BATSRUS version 9.10 is running as GM on      4 PE(s)
+ BATSRUS version 9.20 is running as GM on      4 PE(s)
 
  EQUATIONS:   Multi-fluid MHD for Mars
  USER MODULE: Mars 5 Fluids + Pe MHD code, Dalal Najib 1.20
 
-ModReadParam::read_file: read and broadcast nLine= 227 lines of text
+ModReadParam::read_file: read and broadcast nLine= 217 lines of text
  ----- Starting Session  1  ------
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
@@ -16,9 +16,6 @@ ModReadParam::read_file: read and broadcast nLine= 227 lines of text
 SOLARWIND		TypeNormalization
 
 #DESCRIPTION
-
-#COVARIANTGEOMETRY
-spherical_lnr		TypeGeometry
 
 #PLANET
 Mars			NamePlanet
@@ -30,37 +27,37 @@ F			UseRotation
 T			UseGravity
 0			iDirGravity
 
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
 #GRID
 2                     nRootBlockX
 2                      nRootBlockY
 2                      nRootBlockZ
 -24.                    xMin
-  8.              TypeGeometryBatl TypeGeometryBatl = rlo TypeGeometryBatl = rlonlat_lnr         xMax
--16.                    y = rlonlat_lnr         
-nlat_lnr         
-       
-Min
+  8.                    xMax
+-16.                    yMin
  16.                    yMax
 -16.                    zMin
  16.                    zMax
 
 #LIMITRADIUS
-1.029884232197		rMin		Coord1Min
-32.9849			rMax = sqrt(24^2+16^2+16^2)		Coord1Max
+1.029884232197		rMin		RadiusMin
+32.9849			rMax = sqrt(24^2+16^2+16^2)		RadiusMax
 
 #GRIDLEVEL
 3			nLevelArea
-initial			NameArea
+initial			NameArea		StringShape
 
 #GRIDLEVEL
 1			nLevelArea
-sphere0			NameArea
-1.7			Radius = 1.5*rBody
+sphere0			NameArea		StringShape
+1.7			Radius
 
 #POINTIMPLICIT
 T			UsePointImplicit	
 1.0			BetaPointImpl			BetaPointImplicit
-F			IsAssymetric			IsAsymmetric
+F			IsAsymmetric	
 T			DoNormalizeCell
 
 #BODY
@@ -79,14 +76,14 @@ T			body1		UseBody
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#TIMESTEPPING
-1			nStage
-0.2			CflExpl
-
 #SCHEME
 2                       nOrder
 Linde                   TypeFlux
 minmod                  TypeLimiter
+
+#TIMESTEPPING
+2			nStage
+0.2			CflExpl
 
 #USERFLAGS
 T			UseUserInnerBcs
@@ -119,22 +116,22 @@ RAW step time	        StringLog
 user			TypeInnerBc		TypeBcInner
 
 #OUTERBOUNDARY
-inflow                  TypeBcEast
-outflow                 TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
+outflow			TypeBc1 MinX
+inflow			TypeBc2 MaxX
+fixed			TypeBc3 MinY
+fixed			TypeBc4 MaxY
+fixed			TypeBc5 MinZ
+fixed			TypeBc6 MaxZ
 
 #SOLARWIND
-2.7                     SW_rho_dim [n/cc] \		SwNDim
-2.55E5                   SW_T_dim [K]       |		SwTDim
--485.0                  SW_Ux_dim [km/s]   |		SwUxDim
-0.0                     SW_Uy_dim [km/s]   |		SwUyDim
-0.0                     SW_Uz_dim [km/s]   |		SwUzDim
--1.634                 SW_Bx_dim [nT]     |3nT parker's spiral		SwBxDim
-2.516                  SW_By_dim [nT]     |		SwByDim
-1.00                    SW_Bz_dim [nT]    /		SwBzDim
+2.7			SwNDim  [/cc]
+2.55E5                 	SwTDim  [K]
+-485.0                 	SwUxDim [km/s]
+0.0                    	SwUyDim [km/s]
+0.0                    	SwUzDim [km/s]
+-1.634                  SwBxDim [nT]
+2.516                   SwByDim [nT]
+1.0                     SwBzDim [nT]
 
 #USERINPUTBEGIN -----------------------------------------------------
 
@@ -155,12 +152,8 @@ T		UseChargeEx
  USERINPUTEND
 
 #MHDIONS
-T		DoAddRhoP
-T			DoAddRhoU
-
-#MULTISPECIES
-F			DoReplaceDensity
-5.0			SpeciesPercentCheck
+T		DoAddRho
+T		DoAddRhoU
 
 #PLASMA
 1.0             IonMass H [amu]		MassFluid
@@ -186,26 +179,31 @@ F			DoSaveRestart
 x=0 MHD idl             StringPlot
 2000			DnSaveplot		DnSavePlot
 -1.0			DtSaveplot		DtSavePlot
-0.0			DxSavePlot
+-1.0			DxSavePlot
 y=0 MHD idl             StringPlot
 2000			DnSaveplot		DnSavePlot
 -1.0			DtSaveplot		DtSavePlot
-0.0			DxSavePlot
+-1.0			DxSavePlot
 z=0 MHD idl             StringPlot
 2000			DnSaveplot		DnSavePlot
 -1.0			DtSaveplot		DtSavePlot
-0.0			DxSaveplot		DxSavePlot
+-1.0			DxSaveplot		DxSavePlot
 
 #STOP
 20			MaxIteration
 -1.0			tSimulationMax
  GM_set_parameters: CHECK iSession = 1
   
- TypeGeometryBatl = rlonlat_lnr         
+ The code is configured with nG= 3  ghost cell layers.
+ The selected scheme requires nGUsed= 2  layers!
 init_mod_advance allocated arrays
 init_mod_geometry allocated arrays
 init_mod_nodes allocated arrays
+ !!! UseTvdResChange, UseAccurateResChange, DoOneCoarserLayer, DoLimitMomentum= T F F F
+ !!! UseTvdResChange, UseAccurateResChange, DoOneCoarserLayer, DoLimitMomentum= T F F F
+ !!! UseTvdResChange, UseAccurateResChange, DoOneCoarserLayer, DoLimitMomentum= T F F F
 init_mod_raytrace allocated arrays
+ !!! UseTvdResChange, UseAccurateResChange, DoOneCoarserLayer, DoLimitMomentum= T F F F
  BATS_setup starting initial refinement level, nBlockAll = 1 8
  BATS_setup starting initial refinement level, nBlockAll = 2 36
  BATS_setup starting initial refinement level, nBlockAll = 3 36
@@ -218,11 +216,11 @@ init_mod_raytrace allocated arrays
     Planetary Parameters
     --------------------
 
-          Name:            MARS  ( default values were modified! )
+          Name:           MARS  ( default values were modified! )
           Radius:           3.39600E+06
           Mass:             6.43600E+23
-          Rotation Tilt:    0.00000E+00
           Rotation Period: Not Rotating
+          Rot. Tilt [deg]:  0.00000E+00
           Orbit Period:     5.93551E+07
           Iono Height:      0.00000E+00
 
@@ -231,14 +229,14 @@ init_mod_raytrace allocated arrays
 
           I/O Unit type: PLANETARY            Normalization: SOLARWIND
 
-          Gamma:         1.66666667
+          Gamma:         1.66666667  1.66666667  1.66666667  1.66666667  1.66666667
 
           rBody:         1.02945E+00, rPlanet:     3.39600E+06
           BodyNDim:      1.00000E+02, BodyTDim:    3.00000E+02
           BodyNDim:      9.07000E+03, BodyTDim:    3.00000E+02
           BodyNDim:      4.80000E-04, BodyTDim:    3.00000E+02
           BodyNDim:      1.70000E+01, BodyTDim:    3.00000E+02
-          Bdp:           0.00000E+00, Tilt:       -0.00000E+00
+          BdpDim:        0.00000E+00, Tilt [deg]: -0.00000E+00
           Gravity is used, gBody= -3.60452E-03
 
           UseBody2: .false.
@@ -246,15 +244,15 @@ init_mod_raytrace allocated arrays
           ClightFactor:  1.00000E+00, Clight:      5.06138E+03
 
 
-          SW_n_dim   [/cc  ]:        2.700000,  SW_n:         1.000000
-          SW_Rho_dim [Mp/cc]:        2.700000,  SW_Rho:       1.000000
-          SW_Ux_dim  [km/s ]:     -485.000000,  SW_Ux:       -8.188298
-          SW_Uy_dim  [km/s ]:        0.000000,  SW_Uy:        0.000000
-          SW_Uz_dim  [km/s ]:        0.000000,  SW_Uz:        0.000000
-          SW_p_dim   [nPa  ]:        0.019012,  SW_p:         1.200000
-          SW_Bx_dim  [nT   ]:       -1.634000,  SW_Bx:       -0.366202
-          SW_By_dim  [nT   ]:        2.516000,  SW_By:        0.563871
-          SW_Bz_dim  [nT   ]:        1.000000,  SW_Bz:        0.224114
+          SW_n_dim   [/cc  ]:    2.700000E+00,  SW_n:     1.000000E+00
+          SW_Rho_dim [Mp/cc]:    2.700000E+00,  SW_Rho:   1.000000E+00
+          SW_Ux_dim  [km/s ]:   -4.850000E+02,  SW_Ux:   -8.188298E+00
+          SW_Uy_dim  [km/s ]:    0.000000E+00,  SW_Uy:    0.000000E+00
+          SW_Uz_dim  [km/s ]:    0.000000E+00,  SW_Uz:    0.000000E+00
+          SW_p_dim   [nPa  ]:    1.901224E-02,  SW_p:     1.200000E+00
+          SW_Bx_dim  [nT   ]:   -1.634000E+00,  SW_Bx:   -3.662023E-01
+          SW_By_dim  [nT   ]:    2.516000E+00,  SW_By:    5.638709E-01
+          SW_Bz_dim  [nT   ]:    1.000000E+00,  SW_Bz:    2.241140E-01
           SW_T_dim   [K    ]:   255000.000000
 
     MHD Numerical Solution Parameters
@@ -273,39 +271,42 @@ init_mod_raytrace allocated arrays
  Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax =  9  nBLK =  1000
+   nBlockMax and MaxBlock      =  9 1000
    Total number of blocks used =  36
-   Total number of cells =  7776
-   Total number of true cells =  7460
-   Smallest cell dx:    0.1444418117079068   Largest cell dx:    0.2888836234158138
+   Total number of cells       =  7776
+   Total number of true cells  =  7460
+   Min and max AMR levels      =  0 1
+   Min and max cell size in Phi=   15.0000000000000000  30.0000000000000000
 
  root blocks:        2       2       2
  nIJK_D:             6       6       6
- x:               -24.00000000      8.00000000
- y:               -16.00000000     16.00000000
- z:               -16.00000000     16.00000000
+ x:            -2.40000000E+01  8.00000000E+00
+ y:            -1.60000000E+01  1.60000000E+01
+ z:            -1.60000000E+01  1.60000000E+01
 
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   0.05    100.00         1         1
+BATSRUS                   0.07    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     0.05     99.96         1         1
-exch_msgs                 0.02     42.07         1         1
-batl_pass                 0.02     40.43         1         2
-wait_pass                 0.02     37.96         1         2
+setup                     0.07     99.98         1         1
+exch_msgs                 0.04     62.99         1         2
+batl_pass                 0.04     57.25         1         3
+wait_pass                 0.03     48.60         1         3
+local_pass                0.00      5.43         1         6
+buffer_to_state           0.00      2.53         1         3
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4804688501200859E-10
-Speed is   7756.0 c/s/p after      2.6 s at N =      10
-Speed is   7955.9 c/s/p after      5.1 s at N =      20
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.5436168210570957E-09
+Speed is  13451.2 c/s/p after      1.5 s at N =      10
+Speed is  13706.3 c/s/p after      3.0 s at N =      20
 
     Finished Numerical Simulation
     -----------------------------
-saved ifile= 5 type=x=0_mhd    at n_step=     20
-saved ifile= 6 type=y=0_mhd    at n_step=     20
-saved ifile= 7 type=z=0_mhd    at n_step=     20
+saved ifile= 6 type=x=0_mhd    at n_step=     20
+saved ifile= 7 type=y=0_mhd    at n_step=     20
+saved ifile= 8 type=z=0_mhd    at n_step=     20
 
     Finished Saving Output Files
     ----------------------------
@@ -313,34 +314,35 @@ saved ifile= 7 type=z=0_mhd    at n_step=     20
 SORTED TIMING from step       0 to      20    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   5.14    100.00         1         1
+BATSRUS                   3.04    100.00         1         1
 -------------------------------------------------------------------------------
-advance                   5.04     97.95        20        20
-update_states             3.85     74.84        20       360
-update_point_implici      3.75     72.96        20       180
-calc_fluxes               0.52     10.04        20       360
-barrier-expl2             0.22      4.29        20        40
-calc_facevalues           0.18      3.57        20       360
-save_logfile              0.09      1.78        20        20
-calc_sources              0.08      1.63        20       360
-exch_msgs                 0.07      1.38        20        40
-update_check              0.04      0.84        20        40
-calc_face_bfo             0.04      0.83        20       160
-batl_pass                 0.03      0.66        20        40
-local_pass                0.01      0.27        20        80
-save_plot                 0.01      0.26         1         3
-calc_fluxes_bfo           0.01      0.23        20       160
-wait_pass                 0.01      0.22        20        40
-set_bcs                   0.01      0.14        20       280
-buffer_to_state           0.01      0.10        20        40
-init_pass                 0.00      0.07        20        40
-barrier-expl1             0.00      0.03        20        40
+advance                   2.88     94.63        20        20
+update_states             2.02     66.22        20       360
+update_point_implici      1.96     64.39        20       180
+calc_fluxes               0.38     12.44        20       360
+exch_msgs                 0.23      7.48        20        40
+batl_pass                 0.15      5.06        20        40
+save_logfile              0.15      4.82        20        20
+calc_facevalues           0.12      3.81        20       360
+local_pass                0.06      1.85        20        80
+calc_sources              0.06      1.83        20       360
+wait_pass                 0.05      1.71        20        40
+buffer_to_state           0.04      1.22        20        40
+update_check              0.03      1.05        20        40
+calc_face_bfo             0.02      0.77        20       160
+save_plot                 0.02      0.52         1         3
+barrier-expl2             0.01      0.35        20        40
+calc_fluxes_bfo           0.01      0.31        20       160
+init_pass                 0.01      0.24        20        40
+integrate_domain          0.01      0.24        20        20
+set_face_boundary         0.01      0.21        20       440
+barrier-expl1             0.00      0.04        20        40
 -------------------------------------------------------------------------------
 clean_mod_advance deallocated arrays
 clean_mod_geometry deallocated arrays
 clean_mod_nodes deallocated arrays
 clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 19  count_max= 37  count_sum= 37
- VALUES min=   1.4804688501200859E-10  max=   0.7362123619896325  mean=   0.1309904239676875  last=   0.7362123619896325  last_sum=   0.7362123619896325
+ OCCURED first= 1  last= 20  count_max= 40  count_sum= 40
+ VALUES min=   1.5436168210570957E-09  max=   0.4389912294127649  mean=   0.1410086481228870  last=   0.4101577977195561  last_sum=   0.4101577977195561
 

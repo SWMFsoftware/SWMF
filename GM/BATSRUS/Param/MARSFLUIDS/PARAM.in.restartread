@@ -64,13 +64,12 @@ RAW step time	        StringLog
 user			TypeInnerBc
 
 #OUTERBOUNDARY
-inflow                  TypeBcEast
-outflow                 TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
-
+outflow			TypeBc1 MinX
+inflow			TypeBc2 MaxX
+fixed			TypeBc3 MinY
+fixed			TypeBc4 MaxY
+fixed			TypeBc5 MinZ
+fixed			TypeBc6 MaxZ
 
 #USERINPUTBEGIN -----------------------------------------------------
 

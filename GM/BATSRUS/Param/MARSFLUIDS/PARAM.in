@@ -112,22 +112,23 @@ RAW step time	        StringLog
 user			TypeInnerBc
 
 #OUTERBOUNDARY
-inflow                  TypeBcEast
-outflow                 TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
+outflow			TypeBc1 MinX
+inflow			TypeBc2 MaxX
+fixed			TypeBc3 MinY
+fixed			TypeBc4 MaxY
+fixed			TypeBc5 MinZ
+fixed			TypeBc6 MaxZ
 
+! 3nT Parker's spiral
 #SOLARWIND
-2.7                     SW_rho_dim [n/cc] \
-2.55E5                   SW_T_dim [K]       |
--485.0                  SW_Ux_dim [km/s]   |
-0.0                     SW_Uy_dim [km/s]   |
-0.0                     SW_Uz_dim [km/s]   |
--1.634                 SW_Bx_dim [nT]     |3nT parker's spiral
-2.516                  SW_By_dim [nT]     |
-1.00                    SW_Bz_dim [nT]    /
+2.7			SwNDim  [/cc]
+2.55E5                 	SwTDim  [K]  
+-485.0                 	SwUxDim [km/s]
+0.0                    	SwUyDim [km/s]
+0.0                    	SwUzDim [km/s]
+-1.634                  SwBxDim [nT]
+2.516                   SwByDim [nT]
+1.0                     SwBzDim [nT]
 
 #USERINPUTBEGIN -----------------------------------------------------
 
