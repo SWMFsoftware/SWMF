@@ -164,14 +164,8 @@ T
 #USERINPUTEND ---------------------------------------------------------
 
 #MHDIONS
-T		DoAddRhoP
+T			DoAddRho
 T			DoAddRhoU
-
-
-#MULTISPECIES
-F			DoReplaceDensity
-5.0			SpeciesPercentCheck
-
 
 #PLASMA
 1.0             IonMass H [amu]
