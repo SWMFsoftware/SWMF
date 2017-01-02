@@ -164,8 +164,8 @@ T
 #USERINPUTEND ---------------------------------------------------------
 
 #MHDIONS
-T			DoAddRho
-T			DoAddRhoU
+T		DoAddRho
+T		DoAddRhoU
 
 #PLASMA
 1.0             IonMass H [amu]
