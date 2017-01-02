@@ -1662,6 +1662,13 @@ void PIC::Init_BeforeParser() {
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   ::PhotolyticReactions::Init();
 #endif
+
+  //Interpolation routines
+  if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+    //in case the second order interpolation routine is used:
+    //the number of cells in a block MUST be even
+    if ((_BLOCK_CELLS_X_%2!=0)||(_BLOCK_CELLS_Y_%2!=0)||(_BLOCK_CELLS_Z_%2!=0)) exit(__LINE__,__FILE__,"Error: in case the second order interpolation routine is used the number of cells in a block MUST be even");
+  }
 }
 
 void PIC::Init_AfterParser() {
