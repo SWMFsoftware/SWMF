@@ -1664,7 +1664,8 @@ void PIC::Init_BeforeParser() {
 #endif
 
   //Interpolation routines
-  if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+  if ((_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) && \
+      (_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ == _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_)) {
     //in case the second order interpolation routine is used:
     //the number of cells in a block MUST be even
     if ((_BLOCK_CELLS_X_%2!=0)||(_BLOCK_CELLS_Y_%2!=0)||(_BLOCK_CELLS_Z_%2!=0)) exit(__LINE__,__FILE__,"Error: in case the second order interpolation routine is used the number of cells in a block MUST be even");
