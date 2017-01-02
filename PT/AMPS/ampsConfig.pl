@@ -1984,6 +1984,12 @@ sub ReadInterfaceBlock {
   my $CELL_CENTERED_LINEAR_INTERPOLATION_MODE=0;
   my $CELL_CENTERED_LINEAR_INTERPOLATION_SRC='';
   my @MakeFileContent;
+
+  my $LinearInterpolationMode_OFF=0;
+  my $LinearInterpolationMode_AMPS=1;
+  my $LinearInterpolationMode_SWMF=2;
+
+
   while ($line=<InputFile>) {
     ($InputFileLineNumber,$FileName)=split(' ',$line);
     $line=<InputFile>;;
@@ -2001,9 +2007,10 @@ sub ReadInterfaceBlock {
 	($InputLine,$InputComment)=split(' ',$InputComment,2);
 	$InputLine=~s/ //g;
 	
-	if    (uc($InputLine) eq "ON" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=1;}
-	elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=0;}
-	else  {die "Unknown option\n";}
+	if    (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
+        elsif (uc($InputLine) eq "SWMF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_SWMF;}
+	elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
+	else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
     }
     elsif (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_SRC") {
 	#set ABSOLUTE path to external source code
@@ -2020,29 +2027,40 @@ sub ReadInterfaceBlock {
 	my $UseInterface='off';
 	my $Interfaces='';
 	#AMR interpolation ----------------------------------------------
-	if($CELL_CENTERED_LINEAR_INTERPOLATION_MODE){
+	if ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_SWMF) {
 	    # check if source folder for external files has been defined
 	    die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
 	    #switch macro for AMR interpolation mode
 	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
 	    ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+            ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__SWMF_",'pic/picGlobal.dfn');
 	    $UseInterface='on';
 	    $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
 	}
+        elsif ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_AMPS) {
+            #switch macro for AMR interpolation mode
+            ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+            ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+            ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_",'pic/picGlobal.dfn');
+        } 
 	else{
 	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
 	}
+
 	# read the current content of the corresponding makefile
 	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
 	@MakeFileContent=<MAKEFILE>;
 	close(MAKEFILE);
 	# write with changes
 	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation");   
+
 	foreach(@MakeFileContent){
 	    $_=~s/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=.*/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$CELL_CENTERED_LINEAR_INTERPOLATION_SRC/;
 	    print MAKEFILE $_;
 	}
+
 	close (MAKEFILE);
+
 	#-------------------------------------------------------------
 	#change variable in makefile
 	# read the current content 
