@@ -829,9 +829,19 @@ Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
 >>>@ls -l test_InterpolateAMR-test.diff 
-
 <#
 
-
+#>
+Name=test/InterpolateAMR-AMPS-test
+Time=5
+Run=
+>>>@echo "test_InterpolateAMR-AMPS-test_run..." >> test_InterpolateAMR-AMPS-test.diff
+>>>cd ${TESTInterpolateAMR-AMPS-testDIR}; ${TESTMPIRUN1} ./amps
+>>>@echo "test_InterpolateAMR-AMPS-test_run... done" >> test_InterpolateAMR-AMPS-test.diff
+Check=
+>>>@echo "test_InterpolateAMR-AMPS-test_check..." >> test_InterpolateAMR-AMPS-test.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-AMPS-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-AMPS-test.diff
+>>>@ls -l test_InterpolateAMR-AMPS-test.diff
+<#
 
 
