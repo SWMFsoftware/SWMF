@@ -1,0 +1,71 @@
+
+#main
+SpeciesList=H2O,O,H2 
+
+makefile  SOURCES=src
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+ProjectSourceDirectory=test/srcInterpolateAMRTest  
+
+WorkingSourceDirectory=srcTemp  
+SourceDirectory=src
+
+ErrorLog=PT/amps_error.log
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+InputDirectory=InputData 
+
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=on ! on,off
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+#endmain
+
+#General
+  NastranSurfaceUserData=on 
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+  define _SIMULATION_TIME_STEP_MODE_ _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_ 
+  define _SIMULATION_PARTICLE_WEIGHT_MODE_ _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+
+  defineLocation(meshAMR/meshAMRdef.h) _AMR__NO_BLOCKS_FOUND__EXIT_MODE_ _OFF_AMR_MESH_  
+
+  BlockCells=4,4,4
+  GhostCells=1,1,1
+
+#endGeneral
+
+#ParticleCollisions
+  SampleCollisionFrequency=on
+
+  CollisionCrossSection=const \\ !const, function
+    const (H2O,H2O)= 3.4E-19 \\  
+    const (H2O,O)= 3.4E-19 \\ 
+    const (H2O,H2)= 3.4E-19 \\ 
+\\
+    const (O,O)= 3.4E-19 \\ 
+    const (O,H2)= 3.4E-19 \\ 
+\\
+    const (H2,H2)= 3.4E-19
+
+#endParticleCollisions
+
+
+#include species.input
+
+#block ../exosphere.pl
+  define _TARGET_ _EUROPA_
+
+  SPICE=off
+#endblock
+
+#interface
+
+  cell_centered_linear_interpolation_mode=amps  
+  cell_centered_linear_interpolation_src=default	
+
+#endinterface
+
+
+#end
