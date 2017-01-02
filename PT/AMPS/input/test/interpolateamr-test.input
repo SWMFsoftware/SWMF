@@ -62,7 +62,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 #interface
 
-  cell_centered_linear_interpolation_mode=on
+  cell_centered_linear_interpolation_mode=swmf 
   cell_centered_linear_interpolation_src=default	
 
 #endinterface

@@ -137,7 +137,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 #endGeneral
 
 !#Interface
-!  cell_centered_linear_interpolation_mode=on
+!  cell_centered_linear_interpolation_mode=swmf 
 !  cell_centered_linear_interpolation_src=default
 !#endInterface
 
