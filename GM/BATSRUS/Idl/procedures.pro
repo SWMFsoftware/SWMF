@@ -786,9 +786,9 @@ pro get_pict, unit, filename, filetype, npict, x, w, error
                                 ; set rBody if listed among the parameters
      for i = nDim + nW, n_elements(variables)-1 do begin
         iPar = i - nDim - nW
-        if strlowcase(variables(i)) eq 'rbody' then rBody = eqpar(iPar)
+        if strlowcase(variables(i)) eq 'rbody' or $
+           strlowcase(variables(i)) eq 'r' then rBody = eqpar(iPar)
      endfor
-
                                 ; Read data
      case strlowcase(filetype) of
         'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
