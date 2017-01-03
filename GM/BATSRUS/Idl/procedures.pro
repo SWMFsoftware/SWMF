@@ -8,20 +8,20 @@
 ; Procedures for
 ;
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
-;    openfile, gettype, gethead, get_pict, 
+;    open_file, get_file_types, get_file_head, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
 ; showing / overwriting information read from last file:
 ;    show_head, show_units, set_units
 ; saving ascii and binary data in the same format as used for input:
 ;    save_pict, save_log
 ; reading numbers and strings from input:
-;    asknum, askstr, string_to_array, arr2arr, readplotpar, readlimits
+;    asknum, askstr, string_to_array, arr2arr, read_plot_param, read_limits
 ; transforming initial data:
-;    readtransform, do_transform, do_my_transform, 
+;    read_transform_param, do_transform, do_my_transform, 
 ;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
 ;    interpol_logfiles, interpol_log
 ; calculating functions of the data
-;    getfunc, getlimits
+;    get_func, get_limits
 ; plotting
 ;    plot_func, plot_grid, plot_log
 ; calculating cell corners and cell volumes for general 2D grids
@@ -228,7 +228,7 @@ pro white_background
 
 end
 ;=============================================================================
-pro openfile,unit,filename,filetype
+pro open_file,unit,filename,filetype
 
    on_error,2
 
@@ -249,18 +249,20 @@ pro openfile,unit,filename,filetype
        'BINARY':openr,unit,filename,/f77_unf
        'REAL4' :openr,unit,filename,/f77_unf
        'IPIC3D':
-       else    :print,'Openfile: unknown filetype:',filetype
+       else    :print,'open_file: unknown filetype:',filetype
    endcase
 end
 
 ;=============================================================================
-pro gettype,filenames,filetypes,npictinfiles
+pro get_file_types
+
+  common getpict_param
 
   on_error,2
 
-  filetypes=filenames
-  npictinfiles=intarr(n_elements(filenames))
-  for ifile=0,n_elements(filenames)-1 do begin
+  filetypes    = strarr(nfile)
+  npictinfiles = intarr(nfile)
+  for ifile=0, nfile-1 do begin
      l = strlen(filenames(ifile)) - 4
      if   strpos(filenames(ifile),'.log') eq l $
         or strpos(filenames(ifile),'.sat') eq l then begin
@@ -283,14 +285,14 @@ pro gettype,filenames,filetypes,npictinfiles
            H5F_CLOSE, file_id
            filetypes(ifile)   ='IPIC3D'
         endif else begin
-                                ; Obtain filetype based on the length info in the first 4 bytes
+           ;; Obtain filetype based on the length info in the first 4 bytes
            close,10
            openr,10,filenames(ifile)
            lenhead=long(1)
            readu,10,lenhead
            if lenhead ne 79 and lenhead ne 500 then ftype='ascii' else begin
-                                ; The length of the 2nd line decides between real4 and binary
-                                ; since it contains the time, which is real*8 or real*4
+              ;; The length of the 2nd line decides between real4 and binary
+              ;; since it contains the time, which is real*8 or real*4
               head=bytarr(lenhead+4)
               len=long(1)
               readu,10,head,len
@@ -298,7 +300,7 @@ pro gettype,filenames,filetypes,npictinfiles
                  20: ftype='real4'
                  24: ftype='binary'
                  else: begin
-                    print,'Error in GetType: strange unformatted file:',$
+                    print,'Error in get_file_types: strange unformatted file:',$
                           filenames(ifile)
                     retall
                  end
@@ -307,8 +309,8 @@ pro gettype,filenames,filetypes,npictinfiles
            endelse
            close,10
            
-                                ; Obtain file size and number of snapshots
-           openfile,1,filenames(ifile),ftype
+           ;; Obtain file size and number of snapshots
+           open_file,1,filenames(ifile),ftype
            status=fstat(1)
            fsize=status.size
 
@@ -318,7 +320,7 @@ pro gettype,filenames,filetypes,npictinfiles
            while pointer lt fsize do begin
                                 ; Obtain size of a single snapshot
               point_lun,1,pointer
-              gethead,1,filenames(ifile),ftype,pictsize=pictsize
+              get_file_head,1,filenames(ifile),ftype,pictsize=pictsize
               npict   = npict+1
               pointer = pointer + pictsize
            endwhile
@@ -332,22 +334,16 @@ pro gettype,filenames,filetypes,npictinfiles
 end
 
 ;=============================================================================
-pro show_head,filename
+pro show_head, ifile
 
-  common file_head, $
-     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-     rbody
+  common ask_param
+  common getpict_param
+  common file_head
 
   on_error,2
-  if n_elements(filename) gt 0 then begin
-     gettype,filename,filetype
-     openfile,1,filename,filetype
-     gethead,1,filename,filetype
-     close,1
-     print,'filename  = ',filename, format="(a,a)"
-     print,'filetype  = ',filetype, format="(a,a)"
-  endif
 
+  print,   'filename   = ',filenames(ifile), format="(a,a)"
+  print,   'filetype   = ',filetypes(ifile), format="(a,a)"
   print,   'headline   = ',strtrim(headline,2), format="(a,a)"
   print,   'it         = ',it,       format="(a,i8)"
   print,   'time       = ',time,     format="(a,g15.8)"
@@ -365,45 +361,43 @@ pro show_head,filename
 
 end
 ;=============================================================================
-pro gethead, unit, filename, filetype, pictsize=pictsize
+pro get_file_head, unit, filename, filetype, pictsize=pictsize
 
-common file_head, $
-   headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-   rbody
+  on_error,2
 
-;; on_error,2
+  common file_head
 
-ftype = strlowcase(filetype)
+  ftype = strlowcase(filetype)
 
-if ftype eq filetype then lenstr = 79 else lenstr = 500
+  if ftype eq filetype then lenstr = 79 else lenstr = 500
 
-; Type definitions
-headline=''
-for i=1, lenstr do headline=headline+' '
-it=long(1)
-ndim=long(1)
-neqpar=long(0)
-eqpar=0.0
-nw=long(1)
-varname=''
-for i=1, lenstr do varname=varname+' '
+  ;; Type definitions
+  headline=''
+  for i=1, lenstr do headline=headline+' '
+  it=long(1)
+  ndim=long(1)
+  neqpar=long(0)
+  eqpar=0.0
+  nw=long(1)
+  varname=''
+  for i=1, lenstr do varname=varname+' '
 
-; Remember pointer position at beginning of header
-if ftype ne 'ipic3d' then point_lun,-unit,pointer0
+  ;; Remember pointer position at beginning of header
+  if ftype ne 'ipic3d' then point_lun,-unit,pointer0
 
-; Read header
-case ftype of
-    'ipic3d':begin
+  ;; Read header
+  case ftype of
+     'ipic3d':begin
         tmppict = 0
         tmperror = 0
-        get_pict_hdf, filename, tmppict, x, w, tmperror, 0
-    end
-    'log': begin
+        get_pict_hdf, filename, tmppict, tmperror, 0
+     end
+     'log': begin
         readf,unit,headline
         readf,unit,varname
         nw=n_elements(strsplit(varname))-2
         varname ='hour '+varname
-        ; reset pointer
+                                ; reset pointer
         point_lun,unit,pointer0
         it=0
         time=0.0
@@ -411,8 +405,8 @@ case ftype of
         ndim=1
         nx=lonarr(1)
         nx(0)=1
-    end
-    'ascii': begin
+     end
+     'ascii': begin
         time=double(1)
         readf,unit,headline
         readf,unit,it,time,ndim,neqpar,nw
@@ -425,8 +419,8 @@ case ftype of
            readf,unit,eqpar
         endif
         readf,unit,varname
-    end
-    'binary':begin
+     end
+     'binary':begin
         time=double(1)
         readu,unit,headline
         readu,unit,it,time,ndim,neqpar,nw
@@ -439,8 +433,8 @@ case ftype of
            readu,unit,eqpar
         endif
         readu,unit,varname
-    end
-    'real4': begin
+     end
+     'real4': begin
         time=float(1)
         readu,unit,headline
         readu,unit,it,time,ndim,neqpar,nw
@@ -453,41 +447,40 @@ case ftype of
            readu,unit,eqpar
         endif
         readu,unit,varname
-    end
-    else: begin
-        print,'Gethead: unknown filetype',filetype
+     end
+     else: begin
+        print,'get_file_head: unknown filetype',filetype
         retall
-    end
-endcase
+     end
+  endcase
 
-if keyword_set(pictsize) then begin
+  if keyword_set(pictsize) then begin
                                 ; Calculate the picture size
                                 ; Header length
-    point_lun,-unit,pointer1
-    headlen=pointer1-pointer0
+     point_lun,-unit,pointer1
+     headlen=pointer1-pointer0
                                 ; Number of cells
-    nxs=long64(1)
-    for idim=1,ndim do nxs=nxs*nx(idim-1)
+     nxs=long64(1)
+     for idim=1,ndim do nxs=nxs*nx(idim-1)
                                 ; Snapshot size = header + data + recordmarks
-    case ftype of
+     case ftype of
         'log'   :pictsize = 1
         'ascii' :pictsize = headlen + (18*(ndim+nw)+1)*nxs
         'binary':pictsize = headlen + 8*(1+nw)+8*(ndim+nw)*nxs
         'real4' :pictsize = headlen + 8*(1+nw)+4*(ndim+nw)*nxs
-    endcase
-endif else begin
-                                ; Set variables 
-    string_to_array,varname,variables,nvar,/arraysyntax
-endelse
+     endcase
+  endif
+
+  ;; Set variables array
+  string_to_array,varname,variables,nvar,/arraysyntax
 
 end
 
 ;=============================================================================
-pro get_pict_hdf, filename, npict, x, w, error, getdata
+pro get_pict_hdf, filename, npict, error, getdata
 
-  common file_head, $
-     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-     rbody
+  common file_head
+  common plot_data
 
     ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
   
@@ -500,7 +493,6 @@ pro get_pict_hdf, filename, npict, x, w, error, getdata
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
 
-  rbody    = 0.0
   gencoord = 0
   headline = 'PIC CGS units'
 
@@ -740,13 +732,9 @@ pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 
 end
 ;=============================================================================
-pro get_pict, unit, filename, filetype, npict, x, w, error
+pro get_pict, unit, filename, filetype, npict, error
 
-  common file_head, $
-     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-     rbody
-
-  on_error,2
+  ;; on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
@@ -769,7 +757,7 @@ pro get_pict, unit, filename, filetype, npict, x, w, error
      pictsize=1
      while ipict lt npict-1 and not eof(unit) do begin
         ipict=ipict+1
-        gethead,unit,filename,filetype,pictsize=pictsize
+        get_file_head,unit,filename,filetype,pictsize=pictsize
         pointer=long64(pointer) + pictsize
         point_lun,unit,pointer
      endwhile
@@ -781,20 +769,14 @@ pro get_pict, unit, filename, filetype, npict, x, w, error
      endif
 
                                 ; Read header information
-     gethead, unit, filename, filetype
+     get_file_head, unit, filename, filetype
 
-                                ; set rBody if listed among the parameters
-     for i = nDim + nW, n_elements(variables)-1 do begin
-        iPar = i - nDim - nW
-        if strlowcase(variables(i)) eq 'rbody' or $
-           strlowcase(variables(i)) eq 'r' then rBody = eqpar(iPar)
-     endfor
                                 ; Read data
      case strlowcase(filetype) of
-        'log':    get_pict_log ,unit, npict, ndim, nw, nx, x, w
-        'ascii':  get_pict_asc ,unit, npict, ndim, nw, nx, x, w
-        'binary': get_pict_bin ,unit, npict, ndim, nw, nx, x, w
-        'real4':  get_pict_real,unit, npict, ndim, nw, nx, x, w
+        'log':    get_pict_log ,unit
+        'ascii':  get_pict_asc ,unit, npict
+        'binary': get_pict_bin ,unit, npict
+        'real4':  get_pict_real,unit, npict
         else:    begin
            print,'get_pict: unknown filetype:',filetype
            error=1
@@ -809,19 +791,27 @@ pro get_pict, unit, filename, filetype, npict, x, w, error
 end
 
 ;=============================================================================
-pro get_pict_log,unit,npict,ndim,nw,nx,x,w
+pro get_pict_log, unit
 
-get_log, unit, w, wlognames, x, 's'
-ndim = 1
-nx(0)= n_elements(x)
-nw   = n_elements(wlognames)
+  common plot_data
+  common file_head
 
+  get_log, unit, w, wlognames, x, 's'
+
+  ndim = 1
+  nx(0)= n_elements(x)
+  nw   = n_elements(wlognames)
+  
 end
 
 ;=============================================================================
-pro get_pict_asc,unit,npict,ndim,nw,nx,x,w
+pro get_pict_asc,unit,npict
 
   on_error,2
+
+  common plot_data
+  common file_head
+
   ;----------------------------------------
   ; Read coordinates and values row by row
   ;----------------------------------------
@@ -868,9 +858,13 @@ pro get_pict_asc,unit,npict,ndim,nw,nx,x,w
 end
 
 ;=============================================================================
-pro get_pict_bin,unit,npict,ndim,nw,nx,x,w
+pro get_pict_bin,unit,npict
 
   on_error,2
+
+  common plot_data
+  common file_head
+
   ;----------------------------------------
   ; Read coordinates and values
   ;----------------------------------------
@@ -918,9 +912,13 @@ pro get_pict_bin,unit,npict,ndim,nw,nx,x,w
 end
 
 ;=============================================================================
-pro get_pict_real,unit,npict,ndim,nw,nx,x,w
+pro get_pict_real,unit,npict
 
   on_error,2
+
+  common file_head
+  common plot_data
+
   ;----------------------------------------
   ; Read coordinates and values
   ;----------------------------------------
@@ -998,7 +996,7 @@ pro askstr,prompt,var,doask
 end
 
 ;=============================================================================
-pro string_to_array,s,a,n,sep,arraysyntax=arraysyntax
+pro string_to_array,s,a,n,sep,arraysyntax=arraysyntax, wildcard=wildcard
 
 ; If s is an array copy it to a.
 ; If s is a string then split string s at the sep characters 
@@ -1009,6 +1007,12 @@ pro string_to_array,s,a,n,sep,arraysyntax=arraysyntax
 ; If n is defined but smaller than the number of elements in s, print a warning
 
 on_error,2
+
+if keyword_set(wildcard) and stregex(s, '[?*[]', /boolean) then begin
+   spawn,'/bin/ls '+s, a
+   n = n_elements(a)
+   return
+endif
 
 if n_elements(s) gt 1 then     $
     a0 = s                     $
@@ -1100,62 +1104,71 @@ else if k lt n then for i = k, n-1 do a = [a, a(k-1)] ; extend array
 
 end
 ;===========================================================================
-pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-   nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+pro read_plot_param
 
-   on_error,2
+  common ask_param, doask
+  common plot_param
+  common plotfunc_param
+  common file_head, ndim
 
-   ; Determine dimension of plots based on cut or ndim,
-   ; calculate reduced cut0 array by eliminating degenerate dimensions
-   if keyword_set(cut) then begin
-      cut0=reform2(cut)
-      siz=size(cut0)
-      plotdim=siz(0)
-   endif else begin
-      plotdim=ndim
-      cut0=0
-   endelse
+  on_error,2
 
-   askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
-   if plotdim eq 1 then begin
-      print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
-      print,'1D +options: max,mean,log,noaxis,over,#c999,#ct999'
-      askstr,'plotmode(s)                ',plotmode,doask
-      if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
-   endif else begin
-      if strmid(plotmode,0,4) eq 'plot' then plotmode='contbar'
-      print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log'
-      print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
-      askstr,'plotmode(s)                ',plotmode,doask
-   endelse
-   askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
-   askstr,'autorange(s) (y/n)         ',autorange,doask
+  ;; Determine dimension of plots based on cut or ndim,
+  ;; calculate reduced cut0 array by eliminating degenerate dimensions
+  if keyword_set(cut) then begin
+     cut0=reform2(cut)
+     siz=size(cut0)
+     plotdim=siz(0)
+  endif else begin
+     plotdim=ndim
+     cut0=0
+  endelse
 
-   nfunc=0
-   string_to_array,func,funcs,nfunc
-   string_to_array,plotmode,plotmodes,nfunc
-   string_to_array,plottitle,plottitles,nfunc,';'
-   string_to_array,autorange,autoranges,nfunc
+  askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
+  if plotdim eq 1 then begin
+     print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
+     print,'1D +options: max,mean,log,noaxis,over,#c999,#ct999'
+     askstr,'plotmode(s)                ',plotmode,doask
+     if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
+  endif else begin
+     if strmid(plotmode,0,4) eq 'plot' then plotmode='contbar'
+     print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
+     print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log'
+     print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
+     askstr,'plotmode(s)                ',plotmode,doask
+  endelse
+  askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
+  askstr,'autorange(s) (y/n)         ',autorange,doask
 
-   nplot = nfunc
-   funcs1=strarr(nfunc)
-   funcs2=strarr(nfunc)
-   for ifunc=0,nfunc-1 do begin
-      func12=strsplit(funcs(ifunc),';',/extract)
-      funcs1(ifunc)=func12(0)
-      if n_elements(func12) eq 2 then funcs2(ifunc)=func12(1)
-      if strpos(plotmodes(ifunc),'over') ge 0 then nplot=nplot-1
-   endfor
+  nfunc=0
+  string_to_array,func,funcs,nfunc
+  string_to_array,plotmode,plotmodes,nfunc
+  string_to_array,plottitle,plottitles,nfunc,';'
+  string_to_array,autorange,autoranges,nfunc
+
+  nplot = nfunc
+  funcs1=strarr(nfunc)
+  funcs2=strarr(nfunc)
+  for ifunc=0,nfunc-1 do begin
+     func12=strsplit(funcs(ifunc),';',/extract)
+     funcs1(ifunc)=func12(0)
+     if n_elements(func12) eq 2 then funcs2(ifunc)=func12(1)
+     if strpos(plotmodes(ifunc),'over') ge 0 then nplot=nplot-1
+  endfor
 
 end
 ;===========================================================================
-pro readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-                  nvector,vectors,grid,doask
+pro read_transform_param
 
-   on_error,2
+  ;; on_error,2
 
-   if (gencoord or transform eq 'unpolar') and ndim eq 2 then begin
+  common ask_param
+  common file_head
+  common transform_param
+  common vector_param
+  common plot_data
+
+  if (gencoord or transform eq 'unpolar') and ndim eq 2 then begin
       if transform eq '' then begin
         transform='none'
         askstr,"transform (r=regular/p=polar/u=unpolar/m=my/n=none)",$
@@ -1285,38 +1298,35 @@ usereg = 0
 end
 
 ;===========================================================================
-pro do_transform,transform,ifile,gencoord,variables,nw,x,w, $
-                 xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
-                 wregpad,triangles,symmtri,nvector,vectors,usereg,$
-                 dotransform,doask
+pro do_transform,ifile
+
+; transfrom x, w eithr in-place or to xreg, wreg
+
+common ask_param, doask
+common file_head ; gencoord
+common plot_data
+common transform_param
 
 usereg = (transform eq 'unpolar') or $
   (gencoord and (transform eq 'polar' or transform eq 'regular' $
                  or transform eq 'sphere'))
 
-if keyword_set(dotransform) then begin
-    askstr, 'dotransform (y/n) ',dotransform,doask
-    if dotransform eq 'n' then return
-endif
+if dotransform eq 'n' then return
 
 if transform eq 'my' or transform eq 'm' then $
   do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
 else if usereg then case transform of
-    'regular':begin
-        regulargrid,x_old,nxreg_old,xreglimits_old,$
-          x,xreg,nxreg,xreglimits, $
-          w,wreg,nw,wregpad,triangles,symmtri
-    end
+    'regular': make_regular_grid
     'polar'  :begin
-        polargrid,nvector,vectors,x,w,xreg,wreg
+        make_polar_grid
         variables(0:1)=['r','phi']
     end
     'sphere' :begin
-        spheregrid  ,nvector,vectors,x,w,xreg,wreg
+        make_sphere_grid
         variables(0:2)=['r','theta','phi']
     end
     'unpolar':begin
-        unpolargrid,nvector,vectors,x,w,xreg,wreg
+        make_unpolar_grid
         variables(0:1)=['x','y']
     end
     else     :print,'Unknown value for transform:',transform
@@ -1325,9 +1335,12 @@ endcase
 end
 
 ;===========================================================================
-pro readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
+pro read_limits
 
    on_error,2
+   
+   common ask_param, doask
+   common plotfunc_param
 
    if n_elements(fmax) ne nfunc then fmax=dblarr(nfunc) else fmax=double(fmax)
    if n_elements(fmin) ne nfunc then fmin=dblarr(nfunc) else fmin=double(fmin)
@@ -1349,40 +1362,44 @@ pro readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
 
 end
 ;===========================================================================
-pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-              x,w,xreg,wreg,usereg,time,eqpar,variables,cut,rcut
+pro get_limits,first
 
-   on_error,2
+;;  on_error,2
 
-   for ifunc=0,nfunc-1 do begin
-      if autoranges(ifunc) eq 'n' then begin
-         if first then begin
-            f_min=fmin(ifunc)
-            f_max=fmax(ifunc)
-            asknum,'Min value for '+funcs(ifunc),f_min,doask
-            asknum,'Max value for '+funcs(ifunc),f_max,doask
-            fmin(ifunc)=f_min
-            fmax(ifunc)=f_max
-         endif
-      endif else begin
-         if usereg then $
-            getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                    xreg,wreg,time,eqpar,variables,cut,rcut $
-         else $
-            getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                    x,   w,   time,eqpar,variables,cut,rcut
+  common ask_param, doask
+  common plot_data
+  common plot_param
+  common plotfunc_param
+  common transform_param
+  common plot_store, f, f1, f2
 
-         f_max=max(f)
-         f_min=min(f)
-         if first then begin
-            fmax(ifunc)=f_max
-            fmin(ifunc)=f_min
-         endif else begin
-            if f_max gt fmax(ifunc) then fmax(ifunc)=f_max
-            if f_min lt fmin(ifunc) then fmin(ifunc)=f_min
-         endelse
-      endelse
-   endfor
+  for ifunc=0,nfunc-1 do begin
+     if autoranges(ifunc) eq 'n' then begin
+        if first then begin
+           f_min=fmin(ifunc)
+           f_max=fmax(ifunc)
+           asknum,'Min value for '+funcs(ifunc),f_min,doask
+           asknum,'Max value for '+funcs(ifunc),f_max,doask
+           fmin(ifunc)=f_min
+           fmax(ifunc)=f_max
+        endif
+     endif else begin
+        if usereg then $
+           get_func,ifunc,xreg,wreg $
+        else $
+           get_func,ifunc,x,w
+
+        f_max=max(f)
+        f_min=min(f)
+        if first then begin
+           fmax(ifunc)=f_max
+           fmin(ifunc)=f_min
+        endif else begin
+           if f_max gt fmax(ifunc) then fmax(ifunc)=f_max
+           if f_min lt fmin(ifunc) then fmin(ifunc)=f_min
+        endelse
+     endelse
+  endfor
 
 end
 
@@ -1406,8 +1423,11 @@ end
 
 
 ;===========================================================================
-pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
-                w,wreg,nw,wregpad,triangles,symmtri
+pro make_regular_grid
+
+common plot_data
+common transform_param
+
 ;
 ;    Regularize grid and interpolate "w" via triangulate and trigrid.
 ;    The original "w" data is interpolated into "wreg", for points outside
@@ -1694,18 +1714,18 @@ pro average_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
 
 end
 ;===========================================================================
-pro polargrid,nvector,vectors,x,w,xreg,wreg
+pro make_polar_grid
 ;
 ;  Transform 2D or 3D grid and vector variables 
 ;  from Cartesian to cylindrical components
 
   on_error,2
 
-  siz = size(x)
-  ndim = siz(0)-1
+  common file_head  ; ndim
+
   case ndim of
-      2: polargrid2,nvector,vectors,x,w,xreg,wreg
-      3: polargrid3,nvector,vectors,x,w,xreg,wreg
+      2: make_polar_grid2
+      3: make_polar_grid3
       else: begin
           print,'polargid works for 2D and 3D arrays only'
           retall
@@ -1713,12 +1733,15 @@ pro polargrid,nvector,vectors,x,w,xreg,wreg
   endcase
 end
 ;===========================================================================
-pro polargrid2,nvector,vectors,x,w,xreg,wreg
+pro make_polar_grid2
 ;
 ;  Transform 2D grid and vector variables 
 ;  from x and y to radial and phi components
 
   on_error,2
+
+  common plot_data
+  common vector_param
 
   xreg=x
   xreg(*,*,0)=sqrt(x(*,*,0)^2+x(*,*,1)^2)
@@ -1746,11 +1769,14 @@ pro polargrid2,nvector,vectors,x,w,xreg,wreg
 end
 
 ;===========================================================================
-pro polargrid3,nvector,vectors,x,w,xreg,wreg
+pro make_polar_grid3
 ;
 ;    Transform 3D vector variables from x,y,z to radial,phi,z components
 
   on_error,2
+
+  common plot_data
+  common vector_param
 
   xreg=x
   xreg(*,*,*,0)=sqrt(x(*,*,*,0)^2+x(*,*,*,1)^2)
@@ -1773,9 +1799,12 @@ pro polargrid3,nvector,vectors,x,w,xreg,wreg
 end
 
 ;===========================================================================
-pro spheregrid,nvector,vectors,x,w,xreg,wreg
+pro make_sphere_grid
 ;
 ;    Transform vector variables from x,y,z to radial,phi,z components
+
+  common plot_data
+  common vector_param
 
   on_error,2
 
@@ -1801,7 +1830,7 @@ pro spheregrid,nvector,vectors,x,w,xreg,wreg
                      +w(*,*,*,ivy)*costheta
   endfor
 
-  ;Remove 2*pi jumps from phi
+  ;; Remove 2*pi jumps from phi
   pi=4*atan(1) & pi2=2*pi & sz=size(phi) & nx2=sz(2) & nx3=sz(3)
   for ix3=1,nx3-1 do while phi(1,1,ix3-1) gt phi(1,1,ix3) do $
      phi(*,*,ix3)=phi(*,*,ix3)+pi2
@@ -1820,17 +1849,19 @@ pro spheregrid,nvector,vectors,x,w,xreg,wreg
 end
 
 ;===========================================================================
-pro unpolargrid,nvector,vectors,x,w,xreg,wreg
+pro make_unpolar_grid
 ;
 ; Transform 2D and 3D vector variables cylindrical to Cartesian components
 
   on_error,2
 
+  common file_head ; ndim
+
   siz = size(x)
   ndim = siz(0)-1
   case ndim of
-      2: unpolargrid2,nvector,vectors,x,w,xreg,wreg
-      3: unpolargrid3,nvector,vectors,x,w,xreg,wreg
+      2: make_unpolar_grid2
+      3: make_unpolar_grid3
       else: begin
           print,'unpolargid works for 2D and 3D arrays only'
           retall
@@ -1839,10 +1870,15 @@ pro unpolargrid,nvector,vectors,x,w,xreg,wreg
 
 end
 ;===========================================================================
-pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
+pro make_unpolar_grid2
 ;
 ;    Transform 2D grid (and vector variables)
 ;    from radial and phi to x and y components
+
+  on_error,2
+
+  common plot_data
+  common vector_param
 
   xreg=x
   phi=x(*,*,1)
@@ -1866,12 +1902,15 @@ pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
 end
 
 ;===========================================================================
-pro unpolargrid3,nvector,vectors,x,w,xreg,wreg
+pro make_unpolar_grid3
 ;
 ;  Transform 3D grid (and vector variables)
 ;  from radial, phi,z to x, y, z components
 
   on_error,2
+
+  common plot_data
+  common vector_param
 
   xreg=x
   phi=x(*,*,*,1)
@@ -1974,11 +2013,11 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
   ;; Also calculate convenient constants ti0, cs0 ... for typical formulas.
   ;; See file "defaults" for definitions and usage
 
-  common file_head, headline
-  common phys_units, $
-     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
-  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
+  common file_head
+  common phys_units
+  common phys_convert
+  common phys_const
+  common plot_param ; for rbody
 
   if keyword_set(type) then $
      typeunit = strupcase(type) $
@@ -2025,6 +2064,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         pSI   = 1.0             ; dyne/cm^2
         bSI   = 1.0             ; G
         jSI   = 1.0             ; Fr/s/cm^2
+        c0    = 1.0             ; speed of light always 1 for iPIC3D
      end
      'NORMALIZED': begin
         xSI   = 1.0             ; distance unit in SI
@@ -2034,6 +2074,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         pSI   = 1.0             ; pressure unit in SI
         bSI   = sqrt(mu0SI)     ; magnetic unit in SI
         jSI   = 1/sqrt(mu0SI)   ; current unit in SI
+        c0    = 1.0             ; speed of light (for Boris correction)
      end
      'PLANETARY': begin
         xSI   = ReSi            ; Earth radius (default planet)
@@ -2043,6 +2084,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         pSI   = 1e-9            ; nPa
         bSI   = 1e-9            ; nT
         jSI   = 1e-6            ; muA/m^2
+        c0    = cSI/uSI         ; speed of light in velocity units
      end
      'OUTERHELIO': begin
         xSI   = AuSI            ; AU
@@ -2052,6 +2094,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         pSI   = 1e-1            ; dyne/cm^2
         bSI   = 1e-9            ; nT
         jSI   = 1e-6            ; muA/m^2
+        c0    = cSI/uSI         ; speed of light in velocity units
      end
      'SOLAR': begin
         xSI   = RsSI            ; radius of the Sun
@@ -2061,12 +2104,44 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         pSI   = 1e-1            ; dyne/cm^2
         bSI   = 1e-4            ; G
         jSI   = 1e-6            ; muA/m^2
+        c0    = cSI/uSI         ; speed of light in velocity units
      end
      else: begin 
         print, 'ERROR in set_units, invalid typeunit=', typeunit
         retall
      end
   endcase
+
+;; Overwrite values if given by eqpar
+
+  gammae = -1.0
+
+  for ieqpar = 1, neqpar-1 do begin
+     value = eqpar(ieqpar)
+     case variables(ndim+nw+ieqpar) of
+        'xSI'   : xSI    = value
+        'tSI'   : tSI    = value
+        'uSI'   : uSI    = value
+        'rhoSI' : rhoSI  = value
+        'mi'    : mi     = value
+        'm1'    : mi     = value
+        'me'    : me     = value
+        'qi'    : qi     = value
+        'q1'    : qi     = value
+        'qe'    : qe     = value
+        'g'     : gamma  = value
+        'g1'    : gamma  = value
+        'g'     : gamma  = value
+        'ge'    : gammae = value
+        'c'     : clight = value
+        'clight': clight = value
+        'r'     : rbody  = value
+        'rbody' : rbody  = value
+        else:
+     endcase
+  endfor
+
+  if gammae eq -1 then gammae = gamma
 
   ;; Overwrite distance unit if given as an argument
   if keyword_set(distunit) then xSI = distunit
@@ -2077,32 +2152,29 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
 
   ;; Calculate convenient conversion factors
   if typeunit eq 'NORMALIZED' then begin
-     c0   = 1.0              ; speed of light (for Boris correction)
-     ti0  = 1.0/Mi           ; T      = p/rho*Mi           = ti0*p/rho
-     cs0  = 1.0              ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)
-     mu0A = 1.0              ; vA     = sqrt(b/rho)        = sqrt(bb/mu0A/rho)
-     mu0  = 1.0              ; beta   = p/(bb/2)           = p/(bb/(2*mu0))
-     uH0  = Mi               ; uH     = j/rho*Mi           = uH0*j/rho
-     op0  = 1.0/Mi           ; omegap = sqrt(rho)/Mi       = op0*sqrt(rho)
-     oc0  = 1.0/Mi           ; omegac = b/Mi               = oc0*b
-     rg0  = sqrt(Mi)         ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
-     di0  = c0*Mi            ; di = c0/sqrt(rho)*Mi        = di0/sqrt(rho)
-     ld0  = Mi               ; ld = sqrt(p)/(rho*c0)*Mi    = ld0*sqrt(p)/rho
+     ti0  = 1.0/Mi              ; T      = p/rho*Mi           = ti0*p/rho
+     cs0  = 1.0                 ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)
+     mu0A = 1.0                 ; vA     = sqrt(b/rho)        = sqrt(bb/mu0A/rho)
+     mu0  = 1.0                 ; beta   = p/(bb/2)           = p/(bb/(2*mu0))
+     uH0  = Mi                  ; uH     = j/rho*Mi           = uH0*j/rho
+     op0  = 1.0/Mi              ; omegap = sqrt(rho)/Mi       = op0*sqrt(rho)
+     oc0  = 1.0/Mi              ; omegac = b/Mi               = oc0*b
+     rg0  = sqrt(Mi)            ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     di0  = c0*Mi               ; di = c0/sqrt(rho)*Mi        = di0/sqrt(rho)
+     ld0  = Mi                  ; ld = sqrt(p)/(rho*c0)*Mi    = ld0*sqrt(p)/rho
   endif else if typeunit eq 'PIC' then begin
-     c0   = 1.0              ; speed of light always 1 for iPIC3D
-     ti0  = 1.0/Mi           ; T      = p/rho*Mi           = ti0*p/rho        
-     cs0  = 1.0              ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)   
-     mu0A = 4*!pi            ; vA     = sqrt(b/(4*!pi*rho))= sqrt(bb/mu0A/rho)
-     mu0  = 4*!pi            ; beta   = p/(bb/(8*!pi))     = p/(bb/(2*mu0))   
-     uH0  = Mi               ; uH     = j/rho*Mi           = uH0*j/rho        
-     op0  = sqrt(4*!pi)/Mi   ; omegap = sqrt(4*!pi*rho)/Mi = op0*sqrt(rho)    
-     oc0  = 1.0/Mi           ; omegac = b/Mi               = oc0*b            
-     rg0  = sqrt(Mi)         ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
-     di0  = 1.0/sqrt(4*!pi)  ; di = 1/sqrt(4*!pi*rho)*Mi   = di0/sqrt(rho)
-     ld0  = 1.0/sqrt(4*!pi)  ; ld = sqrt(p/(4*!pi))/rho*Mi = ld0*sqrt(p)/rho
+     ti0  = 1.0/Mi              ; T      = p/rho*Mi           = ti0*p/rho        
+     cs0  = 1.0                 ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)   
+     mu0A = 4*!pi               ; vA     = sqrt(b/(4*!pi*rho))= sqrt(bb/mu0A/rho)
+     mu0  = 4*!pi               ; beta   = p/(bb/(8*!pi))     = p/(bb/(2*mu0))   
+     uH0  = Mi                  ; uH     = j/rho*Mi           = uH0*j/rho        
+     op0  = sqrt(4*!pi)/Mi      ; omegap = sqrt(4*!pi*rho)/Mi = op0*sqrt(rho)    
+     oc0  = 1.0/Mi              ; omegac = b/Mi               = oc0*b            
+     rg0  = sqrt(Mi)            ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     di0  = 1.0/sqrt(4*!pi)     ; di = 1/sqrt(4*!pi*rho)*Mi   = di0/sqrt(rho)
+     ld0  = 1.0/sqrt(4*!pi)     ; ld = sqrt(p/(4*!pi))/rho*Mi = ld0*sqrt(p)/rho
   endif else begin
      qom  = eSI/(Mi*mpSI) & moq = 1/qom
-     c0   = cSI/uSI                         ; speed of light in velocity units
      ti0  = mpSI/kbSI*pSI/rhoSI*Mi          ; T[K]=p/(nk) = ti0*p/rho
      cs0  = pSI/rhoSI/uSI^2                 ; cs          = sqrt(gs*p/rho)
      mu0A = uSI^2*mu0SI*rhoSI*bSI^(-2)      ; vA          = sqrt(bb/(mu0A*rho))
@@ -2111,8 +2183,8 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      op0  = qom*sqrt(rhoSI/e0SI)*tSI        ; omegap      = op0*sqrt(rho)
      oc0  = qom*bSI*tSI                     ; omegac      = oc0*b
      rg0  = moq*sqrt(pSI/rhoSI)/bSI/xSI/sqrt(Mi) ; rg     = rg0*sqrt(p/rho)/b
-     di0  = cSI/(op0/tSI)/xSI               ; di=c/omegap = di0/sqrt(rho)
-     ld0  = moq*sqrt(pSI)/rhoSI/xSI         ; ld          = ld0*sqrt(p)/rho
+     di0  = cSI/(op0/tSI)/xSI                    ; di=c/omegap = di0/sqrt(rho)
+     ld0  = moq*sqrt(pSI)/rhoSI/xSI              ; ld          = ld0*sqrt(p)/rho
   endelse
 
 end
@@ -2121,10 +2193,9 @@ end
 pro show_units
 ;===========================================================================
 
-  common file_head, headline
-  common phys_units, $
-     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
-  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+  common file_head
+  common phys_units
+  common phys_convert
 
   print,'headline=', strtrim(headline,2)
   print,'fixunits=', fixunits
@@ -2138,6 +2209,11 @@ pro show_units
   print,'jSI     =', jSI
   print,'Mi      =', Mi
   print,'Me      =', Me
+  print,'Qi      =', Qi
+  print,'Qe      =', Qe
+  print,'gamma   =', gamma
+  print,'gammae  =', gammae
+  print,'clight  =', clight
   print,'ti0     =', ti0
   print,'cs0     =', cs0
   print,'mu0A    =', mu0A
@@ -2152,53 +2228,59 @@ pro show_units
 
 end
 ;===========================================================================
-pro getfunc,f,f1,f2,func1,func2,x,w,time,eqpar,variables,cut,rcut
+pro get_func,ifunc,x,w
 ;===========================================================================
-on_error,2
+;; on_error,2
 
-f1=funcdef(x,w,func1,time,eqpar,variables,rcut)
+common plotfunc_param
+common plot_param
+common plot_store
 
-if keyword_set(cut) then f1=f1(cut)
+func1 = funcs1(ifunc)
+func2 = funcs2(ifunc)
+
+f1 = funcdef(x,w,func1)
+
+if n_elements(cut0) gt 1 then f1 = f1(cut0)
 
 if func2 eq '' then f=f1 else begin
 
-   f2=funcdef(x,w,func2,time,eqpar,variables,rcut)
+   f2 = funcdef(x,w,func2)
 
-   if keyword_set(cut) then f2=f2(cut)
+   if n_elements(cut0) gt 1 then f2 = f2(cut0)
 
-   ; Calculate f=sqrt(f1^2+f2^2)
-   f=sqrt(f1^2+f2^2)
+   ; Calculate f
+   f = sqrt(f1^2 + f2^2)
+
 endelse
 
 end
 
 ;===========================================================================
-pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-              variables,axistype,plotmodes,plottitles,$
-              ax,az,contourlevel,linestyle,$
-              velvector,velspeed,velseed,velpos,velx,vely,veltri,$
-              cut,cut0,rcut,plotdim,$
-              nfunc,multix,multiy,fixaspect,plotix,plotiy,$
-              funcs,funcs1,funcs2,fmin,fmax,f
+pro plot_func
 ;===========================================================================
-  on_error,2
-  common plot_param, plot_spacex, plot_spacey
-  common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
-     plotstore, timestore
+;;  on_error,2
 
-                                ; Get grid dimensions and set irr=1 
-                                ; if it is an irregular grid
+  common transform_param, usereg
+  common plot_data
+  common plot_param
+  common plotfunc_param
+  common plot_store
+  common file_head
+
+  ;; Get grid dimensions and set irr=1 
+  ;; if it is an irregular grid
 
   if keyword_set(cut) then siz = size(cut)  $
   else if usereg then      siz = size(xreg) $
   else                     siz = size(x)
-  nx=siz(1)
+  n1=siz(1)
   if plotdim eq 1 then begin
-     ny=1
+     n2=1
      irr=0
   endif else begin
-     ny=siz(2)
-     irr=ny eq 1
+     n2=siz(2)
+     irr=n2 eq 1
   endelse
 
   if irr and axistype eq 'cells' then begin
@@ -2440,8 +2522,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               aspectx = abs(fixaspect) $
            else begin
               if axistype eq 'cells' then begin
-                 width  = nx-1.0
-                 height = ny-1.0
+                 width  = n1-1.0
+                 height = n2-1.0
               endif else begin
                  width  = abs(xrange(1) - xrange(0))
                  height = abs(yrange(1) - yrange(0))
@@ -2482,12 +2564,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
         !p.position = pos
 
-     endif
+     endif     
 
-     if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                            xreg,wreg,time,eqpar,variables,cut0,rcut $
-     else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-                            x,   w,   time,eqpar,variables,cut0,rcut
+     if usereg then get_func,ifunc,xreg,wreg $
+     else           get_func,ifunc,x,w
 
      ; calculate running max or mean
      if nplotstore gt 0 then begin
@@ -4195,17 +4275,7 @@ end
 
 ;=============================================================================
 
-pro plot_log, logfilenames, func, $
-              wlog0, wlognames0, wlog1, wlognames1, wlog2, wlognames2, $
-              wlog3, wlognames3, wlog4, wlognames4, wlog5, wlognames5, $
-              wlog6, wlognames6, wlog7, wlognames7, wlog8, wlognames8, $
-              wlog9, wlognames9,                                       $
-              xrange=xrange, yranges=yranges, timeshifts=timeshifts,   $
-              smooths=smooths,                                         $
-              colors=colors, linestyles=linestyles, symbols=symbols,   $
-              title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit,$
-              legends=legends, legendpos=legendpos, noerase=noerase, $
-              dofft=dofft
+pro plot_log
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the string array logfilenames.
@@ -4224,10 +4294,12 @@ pro plot_log, logfilenames, func, $
 ; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
 
-common log_param, log_spacex, log_spacey
+common log_data
+common getlog_param
+common plotlog_param
 
 nlog = n_elements(logfilenames)
-string_to_array,func,funcs,nfunc
+string_to_array,logfunc,logfuncs,nlogfunc
 
 ; read in arrays if not present
 if    (nlog eq 1 and n_elements(wlognames0) eq 0) $
@@ -4257,9 +4329,9 @@ endif else $
    DoXrange = 0
 
 ; Calculate yranges from the data unless defined
-if n_elements(yranges) ne 2*nfunc then begin
+if n_elements(yranges) ne 2*nlogfunc then begin
    DoYrange = 1
-   yranges = fltarr(2,nfunc)
+   yranges = fltarr(2,nlogfunc)
    yranges(0,*) =  1e30
    yranges(1,*) = -1e30
 endif else $
@@ -4290,10 +4362,10 @@ else if dofft then xtitle0="!5"+'Frequency [1/'+timeunit+']' $
 else xtitle0="!5"+'Time ['+timeunit+']'
 
 ; Define default ytitles
-if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
+if n_elements(ytitles) eq nlogfunc and size(ytitles,/type) eq 7 then $
   ytitles0=ytitles $
-else if dofft then ytitles0 = "!5"+'Power spectrum of '+funcs $
-else ytitles0 = "!5" + funcs
+else if dofft then ytitles0 = "!5"+'Power spectrum of '+logfuncs $
+else ytitles0 = "!5" + logfuncs
 
 if !p.thick eq 0 then begin
    if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
@@ -4303,7 +4375,7 @@ endif else $
 if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 
 ; Set size of plot windows
-ppp   = nfunc
+ppp   = nlogfunc
 ;space = 0.05
 ;if !y.charsize gt 0 then space = space*!y.charsize
 spacex = log_spacex*float(!d.x_ch_size)/float(!d.x_size)
@@ -4371,12 +4443,12 @@ for iter = iter0, 2 do begin
         endif else $
            xcoord = hour
 
-        for ifunc = 0, nfunc-1 do begin
+        for ifunc = 0, nlogfunc-1 do begin
 
-            field = double(log_func(wlog, wlognames, funcs(ifunc), error))
+            field = double(log_func(wlog, wlognames, logfuncs(ifunc), error))
 
             if error then begin
-                if iter eq 1 then print,"function ",funcs(ifunc), $
+                if iter eq 1 then print,"function ",logfuncs(ifunc), $
                   " was not found in wlog",strtrim(string(ilog),2)
             endif else begin
 
@@ -4398,7 +4470,7 @@ for iter = iter0, 2 do begin
                endif else begin
                   set_position, sizes, 0, ifunc, posm, /rect
                   posm(0) = posm(0) + 0.05
-                  if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
+                  if nlogfunc lt 3 then posm(1) = posm(1) + 0.05/nlogfunc
                   title1  = ''
                   xtitle1 = ''
                   xtickname1 = strarr(60)+' '
@@ -4408,7 +4480,7 @@ for iter = iter0, 2 do begin
                      xstyle=1
                      ystyle=1
                      if ifunc eq 0       then title1  = title0
-                     if ifunc eq nfunc-1 then begin
+                     if ifunc eq nlogfunc-1 then begin
                         xtitle1    = xtitle0
                         xtickname1 = !x.tickname
                      endif

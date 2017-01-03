@@ -10,10 +10,11 @@
 
 !p.charsize=2.0
 
+.r set_defaults
 .r procedures
 .r vector
 .r funcdef
-.r set_defaults
+
 spawn,'uname',uname
 
 ; Use the X command xdpyinfo to find what color schemes are supported

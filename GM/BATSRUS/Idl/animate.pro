@@ -22,8 +22,6 @@
 ;===========================================================================
 
 ; Initialize storage for running maxima and averages
-common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
-   plotstore, timestore
 iplotstore = 0
 plotstore  = 0
 timestore  = 0
@@ -47,13 +45,13 @@ if keyword_set(multiplot) then begin
          ', fixaspect= ',fixaspect,$
          FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
 endif else $
-        print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
-              ', fixaspect= ',fixaspect,$
-              FORMAT='(a,a,a,i1)'
-   print,'bottomline=',bottomline,', headerline=',headerline,$
-              FORMAT='(a,i1,a,i1)'
+   print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
+         ', fixaspect= ',fixaspect,$
+         FORMAT='(a,a,a,i1)'
+print,'bottomline=',bottomline,', headerline=',headerline,$
+      FORMAT='(a,i1,a,i1)'
 
-   if keyword_set(cut) then help,cut
+if keyword_set(cut) then help,cut
    if keyword_set(wsubtract) then help,wsubtract
    if keyword_set(velpos) then help,velpos
    velpos0 = velpos
@@ -63,13 +61,9 @@ endif else $
    if filename eq '' or doask then $
       askstr,'filename(s)   ',filename,doask
 
-   if stregex(filename, '[?*[]', /boolean) then begin
-       spawn,'/bin/ls '+filename, filenames
-       nfile = n_elements(filenames)
-   endif else $
-     string_to_array,filename,filenames,nfile
+   string_to_array,filename,filenames,nfile,/wildcard
 
-   gettype,filenames,filetypes,npictinfiles
+   get_file_types
 
    print, 'filenames     =', filenames
    print, 'filetype(s)   =', filetypes
@@ -83,8 +77,8 @@ endif else $
 
    anygencoord=0
    for ifile=0,nfile-1 do begin
-      openfile,10,filenames(ifile),filetypes(ifile)
-      gethead,10,filenames(ifile),filetypes(ifile)
+      open_file,10,filenames(ifile),filetypes(ifile)
+      get_file_head,10,filenames(ifile),filetypes(ifile)
       anygencoord=anygencoord or gencoord
       print,         'headline                  =',strtrim(headline,2)
       print,FORMAT='("variables                 =",100(a," "),$)',variables
@@ -92,15 +86,13 @@ endif else $
    endfor
 
    print,'======= PLOTTING PARAMETERS ========================='
-   readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+   read_plot_param
 
-   readtransform,ndim,nx,anygencoord,transform,nxreg,xreglimits,wregpad,$
-     nvector,vectors,grid,doask
+   read_transform_param
 
    print,'======= DETERMINE PLOTTING RANGES ==================='
 
-   readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
+   read_limits
 
    if noautorange then begin
       npict = min( (npictinfiles-firstpict)/dpict + 1 )
@@ -109,7 +101,7 @@ endif else $
    endif else begin
       npict=0
       for ifile=0,nfile-1 do $
-         openfile,ifile+10,filenames(ifile),filetypes(ifile)
+         open_file,ifile+10,filenames(ifile),filetypes(ifile)
       error=0
       while npict lt npictmax and not error do begin
 
@@ -122,8 +114,7 @@ endif else $
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + npict*dpict(ifile)
 
-            get_pict, ifile+10, filenames(ifile), filetypes(ifile), nextpict,$
-                      x, w, err
+            get_pict, ifile+10, filenames(ifile), filetypes(ifile), nextpict, err
 
             if keyword_set(wsubtract) then w=w-wsubtract
 
@@ -143,14 +134,10 @@ endif else $
             error=err or error
 
             if not error then begin
-                do_transform,transform,ifile,gencoord,variables,nw,x,w, $
-                  xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
-                  wregpad,triangles,symmtri,nvector,vectors,usereg
+               do_transform,ifile
 
                first= npict eq 0 and ifile eq 0
-               getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
-                         doask,x,w,xreg,wreg,usereg,time,eqpar,$
-                         variables,cut0,rcut
+               get_limits, first
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'
@@ -197,7 +184,6 @@ endif else $
       npict1=1
    endelse
 
-
    if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
    if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
 
@@ -211,7 +197,7 @@ endif else $
    ipict=0
    ipict1=0
    iplot=0
-   for ifile=0,nfile-1 do openfile,ifile+10,filenames(ifile),filetypes(ifile)
+   for ifile=0,nfile-1 do open_file,ifile+10,filenames(ifile),filetypes(ifile)
    error=0
    while ipict lt npict and not error do begin
       if ipict1 eq 0 then begin
@@ -243,8 +229,7 @@ endif else $
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + ipict*dpict(ifile)
 
-            get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, $
-                      x, w, err
+            get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, err
 
             error=error or err
          endif
@@ -267,9 +252,7 @@ endif else $
 
             wnames=variables(ndim:ndim+nw-1)
 
-            do_transform,transform,ifile,gencoord,variables,nw,x,w, $
-              xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
-              wregpad,triangles,symmtri,nvector,vectors,usereg
+            do_transform
 
 	    linestyle=0
             if multix*multiy lt nplot*nfile then $
@@ -290,13 +273,7 @@ endif else $
             nfilestore = nfile
             ifilestore = ifile
 
-            plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-                      variables,axistype,plotmodes,plottitles,$
-                      ax,az,contourlevel,linestyle,$
-                      velvector,velspeed,velseed,velpos,velx,vely,veltri,$
-                      cut,cut0,rcut,plotdim,$
-                      nfunc,multix,multiy,fixaspect,plotix,plotiy,$
-                      funcs,funcs1,funcs2,fmin,fmax,f
+            plot_func
 
             if npict1 le 1 then begin
                putbottom,multix,multiy,ifile,0,bottomline,nx,it,time
@@ -319,9 +296,9 @@ endif else $
          endif else if savemovie ne 'n' and !d.name eq 'X' then begin
             imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
             print,FORMAT='("(",a,")",$)',imagefile
-            common colors,  r_curr, g_curr, b_curr
+            common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
 	    write_image,imagefile,savemovie, $
-              tvrd( order=(savemovie eq 'tiff'), true=1),r_curr, g_curr, b_curr
+                        tvrd( order=(savemovie eq 'tiff'), true=1),r_curr, g_curr, b_curr
          endif
       endif
 

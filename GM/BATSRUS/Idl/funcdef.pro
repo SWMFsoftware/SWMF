@@ -2,7 +2,7 @@
 ;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;===========================================================================
-function funcdef,xx,w,func,time,eqpar,variables,rcut
+function funcdef,xx,w,func
 ;
 ; Originally developed for the Versatile Advection Code by G. Toth (1996-99).
 ; Rewritten for the BATSRUS code by G. Toth (2000).
@@ -12,11 +12,6 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ; "xx"        array contains the "ndim" components of the coordinates.
 ; "w"         array contains the "nw" variables.
 ; "func"      string describes the function to be returned.
-; "time"      simulatuion time
-; "eqpar"     array contains the equation parameters.
-; "variables" string array contains the names of the coordinates in xx
-;             the variables in w and the equation parameters in eqpar
-; "rcut"      radius for central cut out circle
 ;
 ; The "func" string is interpreted by the following rules:
 ;
@@ -34,7 +29,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;   Expressions formed from the 
 ;   1. standard variables:  rho, mx, my, mz, ux, uy, uz, uu, u, p, bx, by, bz, bb, b
 ;   2. standard coordinates: x, y, z, r
-;   3. standard equation parameters: gamma, rbody, c0
+;   3. scalar parameters: gamma, gammae, rbody, c0, mi, me, ...
 ;   4. standard IDL functions and operators
 ;   5. {names of coordinates}, {names of variables}, {names of equation parameters}
 ;      Examples: {r}, {bx1}, {rbody} will be replaced with
@@ -47,8 +42,8 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ; One can use "funcdef" interactively too, e.g.
 ; 
-; ekin =funcdef(x,w,'(ux^2+uy^2)*rho,time,eqpar,variables)
-; cfast=funcdef(x,w,'cfast',time,eqpar,variables)
+; ekin =funcdef(x,w,'(ux^2+uy^2)*rho')
+; cfast=funcdef(x1,w1,'cfast')
 ;
 ;===========================================================================
 
@@ -136,10 +131,10 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
                                      ]))
 
-  common phys_units, $
-     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
-  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
+  common file_head
+  common phys_units
+  common phys_convert
+  common phys_const
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
@@ -161,28 +156,6 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
   ;; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
   siz=size(w)
   if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
-
-  ;; Number of equation parameters
-  nEqpar = n_elements(eqpar)
-
-  ;; Extract equation parameters
-  gamma  =  5./3.
-  c0     =  1.0
-  rbody  = -1.0
-
-  if nEqpar gt 0 then begin
-     for i=nDim+nW,n_elements(variables)-1 do begin
-        iEqpar = i-nDim-nW
-        case variables(i) of
-           'g'     : gamma  = eqpar(iEqpar)
-           'gamma' : gamma  = eqpar(iEqpar)
-           'c'     : c0     = eqpar(iEqpar)
-           'r'     : rbody  = eqpar(iEqpar)
-           'rbody' : rbody  = eqpar(iEqpar)
-           else:
-        endcase
-     endfor
-  endif
 
   ;; Define gamma for the sound speed = sqrt(gs*p/rho) with units
   gs = gamma*cs0

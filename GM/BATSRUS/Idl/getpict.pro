@@ -41,32 +41,26 @@
 ;
 ;===========================================================================
 
-nfile=0
-if filename eq '' and logfilename ne '' then begin
-   filename=logfilename
-   while strpos(filename,'.log') ge 0 $
-   do strput,filename,'.out',strpos(filename,'.log')
-   askstr,'filename(s)   ',filename,1
-endif else $
-   askstr,'filename(s)   ',filename,doask
+common ask_param, doask
+common getpict_param
+common plot_data
+common transform_param, usereg
 
-if stregex(filename, '[?*[]', /boolean) then begin
-    spawn,'/bin/ls '+filename, filenames
-    nfile = n_elements(filenames)
-endif else $
-  string_to_array,filename,filenames,nfile
+nfile=0
+askstr,'filename(s)   ',filename, doask
+string_to_array,filename,filenames,nfile,/wildcard
 
 if nfile gt 10 then begin
    print,'Error in getpict: cannot handle more than 10 files.'
    retall
 endif
-gettype,filenames,filetypes,npictinfiles
+get_file_types
+
 print,'filetype(s)   =','',filetypes
 print,'npictinfile(s)=',npictinfiles
 if max(npictinfiles) eq 1 then npict=1
 asknum,'npict',npict,doask
 print
-
 
 for ifile=0,nfile-1 do begin
 
@@ -75,12 +69,12 @@ for ifile=0,nfile-1 do begin
    print
    if nfile gt 1 then print,'filename  =',filenames(ifile)
 
-   openfile,10,filenames(ifile),filetypes(ifile)
+   open_file,10,filenames(ifile),filetypes(ifile)
 
    get_pict,10,filenames(ifile),filetypes(ifile),npict<npictinfiles(ifile),$
-            x, w, error
+            error
 
-   show_head
+   show_head, ifile
 
    if nfile gt 1 then begin
      case ifile of
@@ -128,12 +122,9 @@ for ifile=0,nfile-1 do begin
      print,'Read x',ifile,' and w',ifile,FORMAT='(a,i1,a,i1)'
    endif else print,'Read x and w'
 
-   readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-     nvector,vectors,grid,doask
+   read_transform_param
 
-   do_transform,transform,ifile,gencoord,variables,nw,x,w, $
-     xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
-     wregpad,triangles,symmtri,nvector,vectors,usereg
+   do_transform
 
    if usereg then begin
       if nfile eq 1 then $

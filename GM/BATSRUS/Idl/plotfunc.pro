@@ -37,12 +37,14 @@
 ;
 ;===========================================================================
 
-   if not keyword_set(nfile) then begin
-      print,'No file has been read yet, run getpict or animate!'
-      return
-   endif
+common getpict_param
 
-   if nfile gt 1 then begin
+if not keyword_set(nfile) then begin
+   print,'No file has been read yet, run getpict or animate!'
+   return
+endif
+
+if nfile gt 1 then begin
       print,'More than one files were read...'
       print,'Probably w is from file ',filenames(nfile-1)
       nfile=1
@@ -66,24 +68,21 @@
 
    print,'======= PLOTTING PARAMETERS ========================='
    print,'wnames                     =',wnames
-   readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
+   read_plot_param
 
-   readtransform,ndim,nx,gencoord,transform,nxreg,xreglimits,wregpad,$
-     nvector,vectors,grid,doask
+   help,nx
+
+   read_transform_param
 
    ; ifile=0, also pass dotransform and doask
-   do_transform,transform,0,gencoord,variables,nw,x,w, $
-     xreg,wreg,nxreg,xreglimits,x_old,nxreg_old,xreglimits_old,$
-     wregpad,triangles,symmtri,nvector,vectors,usereg,dotransform,doask
+   do_transform
 
    print,'======= DETERMINE PLOTTING RANGES ==================='
 
-   readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
+   read_limits
 
    if noautorange eq 0 then begin
-      getlimits,1,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-                x,w,xreg,wreg,usereg,time,eqpar,variables,cut0,rcut
+      get_limits,1
 
       print
       for ifunc=0,nfunc-1 do $
@@ -115,14 +114,8 @@
 
    if !d.name eq 'X' and !d.window ge 0 then wshow
 
-   plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-     variables,axistype,plotmodes,plottitles,$
-     ax,az,contourlevel,0,$
-     velvector,0,velseed,velpos,velx,vely,veltri,$
-     cut,cut0,rcut,plotdim,$
-     nfunc,multix,multiy,fixaspect,plotix,plotiy,$
-     funcs,funcs1,funcs2,fmin,fmax,f
-
+   plot_func
+   
    putbottom,1,1,0,0,bottomline,nx,it,time
    putheader,1,1,0,0,headerline,headline,nx
 
@@ -134,4 +127,5 @@
    !z.title=''
    ; Restore velpos array
    velpos=velpos0 & velpos0=0
+
 end

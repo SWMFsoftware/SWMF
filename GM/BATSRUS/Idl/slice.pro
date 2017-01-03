@@ -81,23 +81,28 @@
        retall
    endif
 
+   ; store 3D data
+   var3d = variables
+   x3d   = x
+   w3d   = w
+
    case slicedir of
         1:begin
-           x2d=dblarr(n2,n3,2)
-           w2d=dblarr(n2,n3,nw)
-           var2d=variables(1:*)
+           x=dblarr(n2,n3,2)
+           w=dblarr(n2,n3,nw)
+           variables=var3d(1:*)
            grid2d=lindgen(n2,n3)
         end
         2:begin
-           x2d=dblarr(n1,n3,2)
-           w2d=dblarr(n1,n3,nw)
-           var2d=[variables(0),variables(2:*)]
+           x=dblarr(n1,n3,2)
+           w=dblarr(n1,n3,nw)
+           variables=[var3d(0),var3d(2:*)]
            grid2d=lindgen(n1,n3)
         end
         3:begin
-           x2d=dblarr(n1,n2,2)
-           w2d=dblarr(n1,n2,nw)
-           var2d=[variables(0:1),variables(3:*)]
+           x=dblarr(n1,n2,2)
+           w=dblarr(n1,n2,nw)
+           variables=[var3d(0:1),var3d(3:*)]
            grid2d=lindgen(n1,n2)
         end
    endcase
@@ -105,9 +110,7 @@
    help,grid2d
 
    print,'======= PLOTTING PARAMETERS ========================='
-   readplotpar,2,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
-      nplot,plotmode,plotmodes,plottitle,plottitles,autorange,autoranges,doask
-
+   read_plot_param
 
    usereg=0
 
@@ -124,30 +127,29 @@
    endelse
 
    print,'======= DETERMINE PLOTTING RANGES ==================='
-   readlimits,nfunc,funcs,autoranges,noautorange,fmax,fmin,doask
+   read_limits
 
    if not noautorange then $
    for islice=1,nslice do begin
       ix=dslice*(islice-1)+firstslice-1
       case slicedir of
         1:begin
-           x2d(*,*,*)=x(ix,*,*,1:2)
-           w2d(*,*,*)=w(ix,*,*,*)
+           x(*,*,*)=x3d(ix,*,*,1:2)
+           w(*,*,*)=w3d(ix,*,*,*)
         end
         2:begin
-           x2d(*,*,0)=x(*,ix,*,0)
-           x2d(*,*,1)=x(*,ix,*,2)
-           w2d(*,*,*)=w(*,ix,*,*)
+           x(*,*,0)=x3d(*,ix,*,0)
+           x(*,*,1)=x3d(*,ix,*,2)
+           w(*,*,*)=w3d(*,ix,*,*)
         end
         3:begin
-           x2d(*,*,*)=x(*,*,ix,0:1)
-           w2d(*,*,*)=w(*,*,ix,*)
+           x(*,*,*)=x3d(*,*,ix,0:1)
+           w(*,*,*)=w3d(*,*,ix,*)
         end
-    endcase
+     endcase
     
-    first= islice eq 1
-    getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
-        x2d,w2d,xreg,wreg,usereg,time,eqpar,var2d,cut0,rcut
+      first= islice eq 1
+      get_limits,first
 
    endfor
 
@@ -171,22 +173,22 @@
       dirname=variables(slicedir-1)
       case slicedir of
         1:begin
-           x2d(*,*,*)=x(ix,*,*,1:2)
-           w2d(*,*,*)=w(ix,*,*,*)
-           height=x(ix,0,0,0)
+           x(*,*,*)=x3d(ix,*,*,1:2)
+           w(*,*,*)=w3d(ix,*,*,*)
+           height=x3d(ix,0,0,0)
            info1='i'+dirname+'='+string(ix,format='(i4)')
         end
         2:begin
-           x2d(*,*,0)=x(*,ix,*,0)
-           x2d(*,*,1)=x(*,ix,*,2)
-           w2d(*,*,*)=w(*,ix,*,*)
-           height=x(0,ix,0,1)
+           x(*,*,0)=x3d(*,ix,*,0)
+           x(*,*,1)=x3d(*,ix,*,2)
+           w(*,*,*)=w3d(*,ix,*,*)
+           height=x3d(0,ix,0,1)
            info1='i'+dirname+'='+string(ix,format='(i4)')
         end
         3:begin
-           x2d(*,*,*)=x(*,*,ix,0:1)
-           w2d(*,*,*)=w(*,*,ix,*)
-           height=x(0,0,ix,2)
+           x(*,*,*)=x3d(*,*,ix,0:1)
+           w(*,*,*)=w3d(*,*,ix,*)
+           height=x3d(0,0,ix,2)
            info1='i'+dirname+'='+string(ix,format='(i4)')
         end
       endcase
@@ -202,16 +204,11 @@
 
       if velrandom then velpos=0
 
-      if abs(height) ge rBody then rBodySlice=0.0 $
-      else                         rBodySlice=sqrt(rBody^2 - height^2)
+      rBody3d = rBody
+      if abs(height) ge rBody3d then rBody=0.0 $
+      else                           rBody=sqrt(rBody3d^2 - height^2)
 
-      plot_func,x2d,w2d,xreg,wreg,usereg,2,time,eqpar,rBodySlice,$
-        var2d,axistype,plotmodes,plottitles,$
-        ax,az,contourlevel,0,$
-        velvector,0,velseed,velpos,velx,vely,veltri,$
-        cut,cut0,rcut,plotdim,$
-        nfunc,multix,multiy,fixaspect,$
-        plotix,plotiy,funcs,funcs1,funcs2,fmin,fmax,f
+      plot_func
 
       xyouts,5+(plotix*!d.x_size)/multix, $
              (1-dyslicelabel)*!d.y_size $
@@ -226,6 +223,12 @@
          iplot=iplot+1
       endif
    endfor
+
+   ; restore 3d state
+   x         = x3d
+   w         = w3d
+   variables = var3d
+   rBody     = rBody3d
    
    print
    !p.multi=0
