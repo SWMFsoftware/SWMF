@@ -2,8 +2,8 @@
 
 !comments!!!
 !verbose levels
+!labels in output
 
-!Doppler
 !option for unpobserved lines
 
 !units
@@ -67,7 +67,7 @@ program spectrum
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
   integer                     :: nMaxLine, nLineFound
-  real, allocatable           :: WavelengthInterval_II(:,:)
+  real, allocatable           :: WavelengthInterval_II(:,:),WavelengthIntervalShifted_II(:,:)
 
   ! Temperature and density grid for G
   real                        :: dLogN, dLogT, MaxLogN, MaxLogT, &
@@ -103,6 +103,8 @@ program spectrum
 
   integer                     :: iLine, jPixel, kPixel
 
+  logical                     :: IsDoppler = .true.
+  
   character(len=*), parameter :: NameSub = 'spectrum.f90'
 
   !---------------------------------------------------------------------------
@@ -116,13 +118,9 @@ program spectrum
 
   call read_table
 
-  ! Loop over Chianti lines and pixels in the orthogonal direction
+  ! Loop over Chianti lines
   do iLine = 1,min(nMaxLine,nLineFound)
-     do kPixel = 1, n3
-        do jPixel = 1, n2
-           call calc_flux 
-        end do
-     end do
+     call calc_flux 
   end do
 
   call save_all
@@ -213,15 +211,15 @@ contains
                VarIn_VIII     = Intensity_VIII)
        endif
     else
-          call save_plot_file(NameFile = NameSpectrumFile, &
-               TypeFileIn     = TypeFileSpectrum,      &
-               StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength x y flux", &
-               nDimIn         = 3,                     &
-               CoordMinIn_D   = CoordMin_D,            &
-               CoordMaxIn_D   = CoordMax_D,            &
-               Coord1In_I     = CoordWave_I,           &
-               VarIn_VIII      = Intensity_VIII)
+       call save_plot_file(NameFile = NameSpectrumFile, &
+            TypeFileIn     = TypeFileSpectrum,      &
+            StringHeaderIn = StringHeaderSpectrum,  &
+            NameVarIn      = "wavelength x y flux", &
+            nDimIn         = 3,                     &
+            CoordMinIn_D   = CoordMin_D,            &
+            CoordMaxIn_D   = CoordMax_D,            &
+            Coord1In_I     = CoordWave_I,           &
+            VarIn_VIII      = Intensity_VIII)
     endif
 
     deallocate(Intensity_VIII, CoordWave_I, CoordPixel_DII)
@@ -237,7 +235,7 @@ contains
     integer                        :: i, iInterval, iBin, iCenter
     integer                        :: iNMin, jTMin, iNMax, jTMax
     real                           :: LambdaSI, Lambda0SI, dLambdaSI, &
-         dLambda, Lambda, dLambdaSI2
+         dLambda, Lambda, dLambdaSI2, Lambda_shifted
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
     real                           :: zPlus2, zMinus2, cosAlpha
     real                           :: B_D(3), Bnorm_D(3)
@@ -252,35 +250,6 @@ contains
 
     Lambda   = LineTable_I(iLine)%LineWavelength
 
-    ! Find which interval wavelength belongs to
-    iInterval = -1
-    do iWavelengthInterval = 1, nWavelengthInterval
-       if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
-            .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))then
-          iInterval = iWavelengthInterval
-          EXIT
-       end if
-    end do
-    if(iInterval == -1)then
-       write(*,*)"Lambda = ",Lambda
-       write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
-       call CON_stop(NameSub // " no interval founnd")
-    endif
-
-    iBin =0
-
-    do
-       iBin=iBin+1
-       if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
-            .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
-            then
-          iCenter=iBin
-          EXIT
-       end if
-       if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
-            WavelengthInterval_II(2,iInterval))EXIT
-    end do
-
     ! Convert arsec^-2 --> sr^-1 to match Chianti output
     ! 1 str = 4.25e10 arcsec^2
     ! 1 str^-1 = 2.3529412e-11 arcsec^-2
@@ -289,9 +258,45 @@ contains
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
-             ! Calculate thermal and non-thermal broadening
-             if(all(Var_VIII(:,i,jPixel,kPixel)==0))EXIT ! cells inside body
+             ! Cells inside body
+             if(all(Var_VIII(:,i,jPixel,kPixel)==0))EXIT 
 
+             ! Doppler shift while x axis is oriented towards observer
+             if(IsDoppler)then
+                Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed + 1 ) * Lambda
+                Lambda = Lambda_shifted
+             endif
+             
+             ! Find which interval wavelength belongs to
+             iInterval = -1
+             do iWavelengthInterval = 1, nWavelengthInterval
+                if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
+                     .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))then
+                   iInterval = iWavelengthInterval
+                   EXIT
+                end if
+             end do
+             if(iInterval == -1)then
+                write(*,*)"Lambda = ",Lambda," will be left out!"
+                write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
+                EXIT
+             endif
+
+             iBin =0
+
+             do
+                iBin=iBin+1
+                if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
+                     .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
+                     then
+                   iCenter=iBin
+                   EXIT
+                end if
+                if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
+                     WavelengthInterval_II(2,iInterval))EXIT
+             end do
+
+             ! Calculate thermal and non-thermal broadening
              Rho = Var_VIII(rho_,i,jPixel,kPixel)
              zPlus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
              zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
@@ -347,13 +352,12 @@ contains
             'jMax = ',LineTable_I(iLine)%jMax
        write(*,*)'int(LogNe/dLogN)',int(LogNe/dLogN),'int(LogTe/dLogT)', & 
             int(LogTe/dLogT)
-    !   write(*,*)'g = ',log10(LineTable_I(iLine)%g_II(int(LogNe/dLogN), &
-    !        int(LogTe/dLogT)))
     endif
 
 
   end subroutine calc_flux
 
+  
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,dLambda,FluxMono)
 
@@ -391,18 +395,18 @@ contains
     InvNorm   = 1/(sqrt(2*cPi) * dLambda)
     InvSigma2 = 1/(2*dLambda**2) 
 
-     ! Update bins between begin and end indices by adding the Gaussian 
-     ! distribution
+    ! Update bins between begin and end indices by adding the Gaussian 
+    ! distribution
     do iBin = iBegin , iEnd
        ! Get wavelength from the center of the bin
        LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
-    
+
        ! Get distance from peak wavelength in SI
        LambdaDist = Lambda - LambdaBin 
 
        ! Calculate Gaussian of the line
        Phi = InvNorm * exp(-LambdaDist**2 * InvSigma2)
-            
+
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
 
@@ -535,6 +539,19 @@ contains
 
        case("#ISUNOBSERVEDLINES")
           call read_var('IsAllLines',IsAllLines)
+
+       case("#ISDOPPLER")
+          call read_var('IsDoppler',IsDoppler)
+          ! In case of Doppler shift applied some lines might appear that would not
+          ! otherwise. For this reason we introduce the extended WaveLengthIntervals
+          ! for the sake of searching of lines of interest, assuming plasma moves no
+          ! faster than 10% of the speed of light.
+          allocate(WavelengthIntervalShifted_II(2,nWavelengthInterval))
+          if(IsDoppler)then
+             WavelengthIntervalShifted_II(1,:) =  WavelengthInterval_II(1,:) * 0.9
+             WavelengthIntervalShifted_II(2,:) =  WavelengthInterval_II(2,:) * 1.1
+          endif
+          
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -861,8 +878,6 @@ contains
 
        read(UnitTmp_,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
-!if(NameIon=='fe_9' .and. nLevelFrom==12 .and. nLevelTo == 96 .and. LogN == 8.0 .and. LogT == 6.0)write(*,*)LogG
-!if(NameIon=='fe_9')write(*,*)NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
        ! Check if this belongs to the same line
        if(LineWavelength == FirstLineWavelength .and. iError == 0) then
           ! Calculate indexes and store extra elements of LogG
@@ -892,11 +907,17 @@ contains
 
        ! Check if wavelength is inside any of the intervals
        do iWavelengthInterval = 1, nWavelengthInterval
-          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
-               CYCLE
-          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
-               CYCLE
-
+          if(IsDoppler)then
+             if(LineWavelength < WavelengthIntervalShifted_II(1,iWavelengthInterval))&
+                  CYCLE
+             if(LineWavelength > WavelengthIntervalShifted_II(2,iWavelengthInterval))&
+                  CYCLE
+          else
+             if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
+                  CYCLE
+             if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
+                  CYCLE
+          endif
           ! New line of interest found
           iLine = iLine + 1
           if(iLine > nMaxLine)&
