@@ -4,7 +4,6 @@
 module BATL_particles
 
   use BATL_size, ONLY: nDim, MaxDim, nKindParticle
-  use BATL_tree, ONLY: Unset_
   use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc, &
        CoordMin_D, CoordMax_D
   use BATL_geometry, ONLY: IsCartesian, IsPeriodic_D
@@ -138,7 +137,7 @@ contains
   end subroutine set_pointer_to_particles
   !===========================================================================
   subroutine remove_undefined_particles(iKindParticle)
-    ! remove all particles with undefined block: iBlock_I == Unset_
+    ! remove all particles with undefined block: iBlock_I<0
     integer, intent(in) :: iKindParticle
     integer :: iVar, iIndex ! loop variables
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
@@ -152,23 +151,24 @@ contains
     call set_pointer_to_particles(iKindParticle, &
          State_VI, iIndex_II, nVar, nIndex, nParticle, nParticleMax)
  
-    nUnset = count(iIndex_II(0,1:nParticle)==Unset_)
+    nUnset = count(iIndex_II(0,1:nParticle)<0)
     if(nUnset==0) RETURN
 
     do iVar = 1, nVar
        State_VI(iVar, 1:(nParticle-nUnset)) = PACK(&
             State_VI(iVar, 1:nParticle), &
-            iIndex_II(0,   1:nParticle)/=Unset_ )
+            iIndex_II(0,   1:nParticle)>0 )
     end do
     do iIndex = nIndex, 0, -1
        iIndex_II(iIndex, 1:(nParticle-nUnset)) = PACK(&
             iIndex_II(iIndex, 1:nParticle), &
-            iIndex_II(0,      1:nParticle)/=Unset_ )
+            iIndex_II(0,      1:nParticle)>0 )
     end do
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
   subroutine message_pass_particles(iKindParticleIn)
+    use BATL_tree, ONLY: Unset_
     use ModMpi
     use BATL_mpi, ONLY: iProc, nProc, iComm
     ! this subroutine passes particles between processors
@@ -249,7 +249,7 @@ contains
               CYCLE
 
          if(iBlockOut == Unset_)then ! particle is out of domain, don't pass it
-            iIndex_II(0, iParticle) = Unset_
+            iIndex_II(0, iParticle) = -iIndex_II(0, iParticle)
             CYCLE
          end if
 
