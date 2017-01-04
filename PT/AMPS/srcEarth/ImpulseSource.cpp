@@ -21,23 +21,23 @@ bool Earth::ImpulseSource::Mode=false;
 //inject the energetic particles
 long int Earth::ImpulseSource::InjectParticles() {
   int nTotalInjectedParticles=0;
-  int idim,spec,iTotalSourceLocations;
+  int idim,spec,iSource;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
   double mass,a,v[3];
   long int newParticle;
   PIC::ParticleBuffer::byte *newParticleData;
 
-  for (iTotalSourceLocations=0;iTotalSourceLocations<nTotalSourceLocations;iTotalSourceLocations++) {
-    if ((TimeCounter>=ImpulseSourceData[iTotalSourceLocations].time)&&(ImpulseSourceData[iTotalSourceLocations].ProcessedFlag==false)) {
-      ImpulseSourceData[iTotalSourceLocations].ProcessedFlag=true;
+  for (iSource=0;iSource<nTotalSourceLocations;iSource++) {
+    if ((TimeCounter>=ImpulseSourceData[iSource].time)&&(ImpulseSourceData[iSource].ProcessedFlag==false)) {
+      ImpulseSourceData[iSource].ProcessedFlag=true;
 
       //inject energetic particles
-      startNode=PIC::Mesh::mesh.findTreeNode(ImpulseSourceData[iTotalSourceLocations].x);
-      if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+      startNode=PIC::Mesh::mesh.findTreeNode(ImpulseSourceData[iSource].x);
+      if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) continue;
 
       //determine the number of the injected particles
-      spec=ImpulseSourceData[iTotalSourceLocations].spec;
-      a=ImpulseSourceData[iTotalSourceLocations].Source/startNode->block->GetLocalParticleWeight(spec);
+      spec=ImpulseSourceData[iSource].spec;
+      a=ImpulseSourceData[iSource].Source/startNode->block->GetLocalParticleWeight(spec);
       nTotalInjectedParticles=(int)a;
       a-=nTotalInjectedParticles;
       if (rnd()<a) nTotalInjectedParticles++;
@@ -46,7 +46,7 @@ long int Earth::ImpulseSource::InjectParticles() {
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic,1) default (none) private (idim,newParticle,newParticleData)  \
-  shared (TimeCounter,iTotalSourceLocations,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
+  shared (TimeCounter,iSource,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
 #endif
       for (int iPart=0;iPart<nTotalInjectedParticles;iPart++) {
         //generate new particle velocity
@@ -67,13 +67,13 @@ long int Earth::ImpulseSource::InjectParticles() {
         newParticle=PIC::ParticleBuffer::GetNewParticle();
         newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
-        PIC::ParticleBuffer::SetX(ImpulseSourceData[iTotalSourceLocations].x,newParticleData);
+        PIC::ParticleBuffer::SetX(ImpulseSourceData[iSource].x,newParticleData);
         PIC::ParticleBuffer::SetV(v,newParticleData);
         PIC::ParticleBuffer::SetI(spec,newParticleData);
         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
 
         //inject the particle into the system
-        _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,TimeCounter-ImpulseSourceData[iTotalSourceLocations].time,startNode);
+        _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,TimeCounter-ImpulseSourceData[iSource].time,startNode);
       }
 
     }
