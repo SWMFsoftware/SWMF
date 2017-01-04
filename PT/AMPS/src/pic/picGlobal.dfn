@@ -76,6 +76,9 @@ at the end of each time step
 //create the trajectory output file during the run-time
 #define _PIC_PARTICLE_TRACKER__RUNTIME_OUTPUT_ _PIC_MODE_ON_
 
+//the type of the stencil that is used for interpolating of the models cell centered data onto cell corners
+#define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_ _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__DEFAULT_ 
+
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  2000
 

@@ -207,6 +207,10 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_               0
 #define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_  1
 
+//the type of the stencil that is used for interpolating of the models cell centered data onto cell corners
+#define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__DEFAULT_      0
+#define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_       1
+
 //make AMPS to read saved sampling data restart file
 #define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_  0
 #define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_ 1
