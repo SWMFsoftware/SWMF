@@ -437,8 +437,14 @@ Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd705
 Name=CG-dust-test@@(0+valeriy+pleiades+stampede)
 Time=11
 
-Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
+Ref=2{icc}@@(0+valeriy)
+Ref=3{gcc}@@(0+stampede)
+Ref=4{icc}@@(0+stampede)
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
@@ -551,6 +557,9 @@ Name=test/Mover-Boris@@(0+valeriy)
 Time=5
 
 Ref=1{gcc}@@(0+valeriy)
+Ref=2{gcc}@@(0+pleiades)
+Ref=2{pgcc}@@(0+pleiades)
+Ref=2{gcc}@@(0+stampede)
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
