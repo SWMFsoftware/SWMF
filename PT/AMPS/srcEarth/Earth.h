@@ -76,6 +76,77 @@ namespace Earth {
     extern char sign[_MAX_STRING_LENGTH_PIC_];
   }
   
+  //calculation of the cutoff rigidity
+  namespace CutoffRigidity {
+    const double RigidityTestRadiusVector=400.0E3+_RADIUS_(_TARGET_);
+    const double RigidityTestMinEnergy=1.0*MeV2J;
+    const double RigidityTestMaxEnergy=1.0E4*MeV2J;
+
+    namespace OutputDataFile {
+      void PrintVariableList(FILE* fout);
+      void PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,
+          long int SurfaceElementsInterpolationListLength,
+          cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+    }
+
+    namespace ParticleInjector {
+      double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
+      bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+          double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,
+          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement);
+    }
+
+    //save the location of the particle origin, and the particle rigidity
+    extern long int InitialRigidityOffset,InitialLocationOffset;
+
+    //sample the rigidity mode
+    extern bool SampleRigidityMode;
+
+    //sphere for sampling of the cutoff regidity
+    extern double ***CutoffRigidityTable;
+
+    //process particles that leaves that computational domain
+    int ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+
+    //reversed time particle integration procedure
+    int ReversedTimeRelativisticBoris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+
+    //init the cutoff sampling model
+    void AllocateCutoffRigidityTable();
+    void Init_BeforeParser();
+  }
+
+  //impulse source of the energetic particles
+  namespace ImpulseSource {
+    extern bool Mode;  //the model of using the model
+    extern double TimeCounter;
+
+    struct cImpulseSourceData {
+      int spec;
+      double time;
+      bool ProcessedFlag;
+      double x[3];
+      double Source;
+      double NumberInjectedParticles;
+    };
+
+    namespace EnergySpectrum {
+      const int Mode_Constatant=0;
+
+      extern int Mode;
+
+      namespace Constant {
+        extern double e;
+      }
+    }
+
+    extern cImpulseSourceData ImpulseSourceData[];
+    extern int nTotalSourceLocations;
+
+    long int InjectParticles();
+    void InitParticleWeight();
+  }
+
   //injection of new particles into the system
   namespace BoundingBoxInjection {
     //Energy limis of the injected particles
