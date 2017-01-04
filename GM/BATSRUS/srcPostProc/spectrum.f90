@@ -1,8 +1,6 @@
 !instrumental broadening
-
 !comments!!!
 !verbose levels
-!labels in output
 !units
 
 program spectrum
@@ -14,6 +12,10 @@ program spectrum
 
   logical                     :: IsVerbose =  .false., IsNoAlfven = .false.,&
        IsAllLines = .false., IsPermuteAxis = .false.
+
+  ! Variables for output file
+  character(len=200)   :: NameSpectrumFile = 'spectrum.out'
+  character(len=200)   :: NameLabelFile = 'label.out'
 
   ! Variables for input files
   integer                     :: lString = 200 
@@ -64,7 +66,8 @@ program spectrum
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
   integer                     :: nMaxLine, nLineFound
-  real, allocatable           :: WavelengthInterval_II(:,:),WavelengthIntervalShifted_II(:,:)
+  real, allocatable           :: WavelengthInterval_II(:,:), & 
+       WavelengthIntervalShifted_II(:,:)
 
   ! Temperature and density grid for G
   real                        :: dLogN, dLogT, MaxLogN, MaxLogT, &
@@ -101,7 +104,18 @@ program spectrum
   integer                     :: iLine, jPixel, kPixel
 
   logical                     :: IsDoppler = .true.
-  
+
+  ! Derived type for the Labels
+  type LabelTableType
+     character(len=6)         :: NameIon
+     real                     :: Lambda
+     real                     :: FluxMono
+  end type LabelTableType
+
+  type(LabelTableType), allocatable :: LabelTable_III(:,:,:)
+
+  integer                     :: nLineAll
+
   character(len=*), parameter :: NameSub = 'spectrum.f90'
 
   !---------------------------------------------------------------------------
@@ -115,29 +129,63 @@ program spectrum
 
   call read_table
 
+  nLineAll = min(nMaxLine,nLineFound)
+
+  ! Allocate table for labels
+  allocate(LabelTable_III(nLineAll,n2,n3))
+
   ! Loop over Chianti lines
-  do iLine = 1,min(nMaxLine,nLineFound)
+  do iLine = 1,nLineAll
      call calc_flux 
   end do
 
   call save_all
+
+  call save_label
 
   write(*,*)'Spectrum.exe ending'
 
   call MPI_finalize(iError)
 
 contains
+
+  !==========================================================================
+  subroutine save_label
+    integer, parameter             :: iUnitOut = 18
+
+    character(len=*), parameter    :: NameSub = 'save_label'
+    !------------------------------------------------------------------------
+
+    open(unit=iUnitOut,file=NameLabelFile,action='write')
+    write(iUnitOut,*)"SPECTRUM output file - labels of lines"
+    write(iUnitOut,*)"found spectral lines: nLineAll = ",nLineAll
+    write(iUnitOut,*)"pixels in grid: n2 X n3 = ",n2 ," X ", n3
+    write(iUnitOut,*)"jPixel kPixel NameIon Lambda FluxMono"
+    write(iUnitOut,*)"Number of data lines in this file = ",nLineAll*n2*n3
+
+    do jPixel = 1,n2
+       do kPixel = 1,n3
+          do iLine = 1,nLineAll
+             write(iUnitOut,*)jPixel,kPixel, &
+                  LabelTable_III(iLine,jPixel,kPixel)%NameIon, &
+                  LabelTable_III(iLine,jPixel,kPixel)%Lambda, &
+                  LabelTable_III(iLine,jPixel,kPixel)%FluxMono
+          end do
+       end do
+    end do
+
+    close(unit=iUnitOut)
+
+  end subroutine save_label
   !==========================================================================
   subroutine save_all
 
     use ModPlotFile, ONLY          : save_plot_file
 
     character                      :: Namefile
-
     !------------------------------------------------------------------------
 
     ! Variables for output file
-    character(len=200)   :: NameSpectrumFile = 'spectrum.out'
     character(len=5)     :: TypeFileSpectrum = 'ascii'
     character(len=200)   :: StringHeaderSpectrum = &
          '[A] [erg sr^-1 cm^-2 A^-1]'
@@ -240,12 +288,16 @@ contains
     real                           :: Gint, LogNe, LogTe, Rho
     real, allocatable              :: gLambda_II(:,:)
     real                           :: FluxConst
+
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
 
     allocate(gLambda_II(MinI:MaxI,MinJ:MaxJ))
 
     Lambda   = LineTable_I(iLine)%LineWavelength
+
+    ! Fill in LabelTabel%NameIon
+    LabelTable_III(iLine,:,:)%NameIon = LineTable_I(iLine)%NameIon
 
     ! Convert arsec^-2 --> sr^-1 to match Chianti output
     ! 1 str = 4.25e10 arcsec^2
@@ -260,7 +312,8 @@ contains
 
              ! Doppler shift while x axis is oriented towards observer
              if(IsDoppler)then
-                Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed + 1 ) * Lambda
+                Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed &
+                     + 1 ) * Lambda
                 Lambda = Lambda_shifted
              endif
              
@@ -268,14 +321,17 @@ contains
              iInterval = -1
              do iWavelengthInterval = 1, nWavelengthInterval
                 if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
-                     .and.(Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))then
+                     .and.&
+                     (Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))&
+                     then
                    iInterval = iWavelengthInterval
                    EXIT
                 end if
              end do
              if(iInterval == -1)then
                 write(*,*)"Lambda = ",Lambda," will be left out!"
-                write(*,*)"Intervals begin and end = ", WavelengthInterval_II(:,:)
+                write(*,*)"Intervals begin and end = ", &
+                     WavelengthInterval_II(:,:)
                 EXIT
              endif
 
@@ -284,7 +340,8 @@ contains
              do
                 iBin=iBin+1
                 if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
-                     .and.(Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
+                     .and.&
+                   (Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
                      then
                    iCenter=iBin
                    EXIT
@@ -336,7 +393,11 @@ contains
              ! FluxMono = 1 / (4 * cPi * Dist**2.0) * &
              !      Gint * (10.0**LogNe)**2.0 * dV
              FluxMono = FluxConst * Gint * (10.0**LogNe)**2.0
-
+             
+             ! Fill in LabelTabel%Lambda,FluxMono
+             LabelTable_III(iLine,:,:)%Lambda = Lambda
+             LabelTable_III(iLine,jPixel,kPixel)%FluxMono = FluxMono
+             
              call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
 
           end do
@@ -355,9 +416,7 @@ contains
             int(LogTe/dLogT)
     endif
 
-
   end subroutine calc_flux
-
   
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,dLambda,FluxMono)
@@ -447,6 +506,10 @@ contains
 
        case("#VERBOSE")
           call read_var('IsVerbose', IsVerbose)
+
+       case("#OUTFILE")
+          call read_var('NameSpectrumFile',NameSpectrumFile)
+          call read_var('NameLabelFile',NameLabelFile)
 
        case("#DATAFILE")
           call read_var('NameDataFile',NameDataFile)
@@ -917,9 +980,11 @@ contains
     ! Check if wavelength is inside any of the intervals
     do iWavelengthInterval = 1, nWavelengthInterval
        if(IsDoppler)then
-          if(LineWavelength < WavelengthIntervalShifted_II(1,iWavelengthInterval))&
+          if(LineWavelength < &
+               WavelengthIntervalShifted_II(1,iWavelengthInterval))&
                CYCLE
-          if(LineWavelength > WavelengthIntervalShifted_II(2,iWavelengthInterval))&
+          if(LineWavelength > &
+               WavelengthIntervalShifted_II(2,iWavelengthInterval))&
                CYCLE
        else
           if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
