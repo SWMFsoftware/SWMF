@@ -10,6 +10,7 @@ module BATL_pass_face_field
   use BATL_tree, ONLY: &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iNode_B, &
        iTree_IA, Proc_, Block_, Unused_B
+  use ModMpi
   implicit none
   
   SAVE
@@ -40,7 +41,7 @@ module BATL_pass_face_field
   integer, allocatable:: iBufferS_P(:), nBufferS_P(:), nBufferR_P(:)
   
   real,    allocatable:: BufferR_I(:), BufferS_I(:)
-
+  integer :: MaxBufferS = -1, MaxBufferR = -1
   !\
   ! Counter of currents through the physical faces
   !/
@@ -50,9 +51,32 @@ module BATL_pass_face_field
   integer, allocatable:: iRequestR_I(:), iRequestS_I(:), &
        iStatus_II(:,:)
 contains
+  !============================
+  subroutine allocate_pe_arrays
+      ! Allocate fixed size communication arrays.
+    if(allocated(iBufferS_P))RETURN
+    allocate(iBufferS_P(0:nProc-1), nBufferS_P(0:nProc-1), &
+               nBufferR_P(0:nProc-1))
+    allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
+    allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
+  end subroutine allocate_pe_arrays
+  !============================
+  subroutine check_buffer
+    ! Make buffers large enough
+    if(sum(nBufferR_P) > MaxBufferR) then
+       if(allocated(BufferR_I)) deallocate(BufferR_I)
+       MaxBufferR = sum(nBufferR_P) 
+       allocate(BufferR_I(MaxBufferR))
+    end if
+    
+    if(sum(nBufferS_P) > MaxBufferS) then
+       if(allocated(BufferS_I)) deallocate(BufferS_I)
+       MaxBufferS = sum(nBufferS_P)
+       allocate(BufferS_I(MaxBufferS))
+    end if
+  end subroutine check_buffer
+  !============================
   subroutine message_pass_field(nG, Field_FDB, nWidthIn)
-    use ModMpi
-
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     !Array index is the coordinate of the gridpoint with +1/2 being
@@ -91,7 +115,6 @@ contains
     integer :: iSMin, iSMax, jSMin, jSMax, kSMin, kSMax
 
     integer :: iBufferS, iBufferR
-    integer :: MaxBufferS = -1, MaxBufferR = -1
     integer:: iRequestR, iRequestS, iError
  
     character(len=*), parameter:: NameSub = 'BATL_pass_face_field'
@@ -113,17 +136,7 @@ contains
     ! Set index ranges based on arguments
     call set_range
 
-    if(nProc > 1)then
-       ! Allocate fixed size communication arrays.
-       if(.not.allocated(iBufferS_P))then
-          allocate(iBufferS_P(0:nProc-1), nBufferS_P(0:nProc-1), &
-               nBufferR_P(0:nProc-1))
-          allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
-          allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
-       end if
-    end if
-
-
+    if(nProc > 1)call allocate_pe_arrays
     call timing_stop('init_pass')
 
 
@@ -141,19 +154,7 @@ contains
              nBufferR_P = 0
              nBufferS_P = 0
           else
-             ! Make buffers large enough
-             if(sum(nBufferR_P) > MaxBufferR) then
-                if(allocated(BufferR_I)) deallocate(BufferR_I)
-                MaxBufferR = sum(nBufferR_P) 
-                allocate(BufferR_I(MaxBufferR))
-             end if
-
-             if(sum(nBufferS_P) > MaxBufferS) then
-                if(allocated(BufferS_I)) deallocate(BufferS_I)
-                MaxBufferS = sum(nBufferS_P)
-                allocate(BufferS_I(MaxBufferS))
-             end if
-
+             call check_buffer
              ! Initialize buffer indexes for storing data into BufferS_I
              iBufferS = 0
              do iProcRecv = 0, nProc-1
@@ -165,11 +166,9 @@ contains
        ! Loop through all blocks that may send a message
        do iBlockSend = 1, nBlock
           if(Unused_B(iBlockSend)) CYCLE
-          do kDir = -1, 1
+          do kDir = -kDim_, kDim_
              ! Do not message pass in ignored dimensions
-             if(nDim < 3 .and. kDir /= 0) CYCLE
-             do jDir = -1, 1
-                if(nDim < 2 .and. jDir /= 0) CYCLE
+             do jDir = -jDim_, jDim_
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
@@ -315,14 +314,14 @@ contains
          !\
          ! Number of integers to be send/received
          !/
-         nSize = 1 + 2*nDim
+         nSize = 1 + 2*nDim*MaxDim
          do iDim = 1,MaxDim
-            iRMin = iR_DIID(1,iDir,Min_,1)
-            iRMax = iR_DIID(1,iDir,Max_,1)
-            jRMin = iR_DIID(2,jDir,Min_,1)
-            jRMax = iR_DIID(2,jDir,Max_,1)
-            kRMin = iR_DIID(3,kDir,Min_,1)
-            kRMax = iR_DIID(3,kDir,Max_,1)
+            iRMin = iR_DIID(1,iDir,Min_,iDim)
+            iRMax = iR_DIID(1,iDir,Max_,iDim)
+            jRMin = iR_DIID(2,jDir,Min_,iDim)
+            jRMax = iR_DIID(2,jDir,Max_,iDim)
+            kRMin = iR_DIID(3,kDir,Min_,iDim)
+            kRMax = iR_DIID(3,kDir,Max_,iDim)
 
  
             ! Number of reals to send to and received from the other processor
@@ -475,8 +474,6 @@ contains
   end subroutine message_pass_field
   !===========================
   subroutine add_ghost_face_field(nG, Current_FDB, nWidthIn)
-    use ModMpi
-
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     real, intent(inout), dimension(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
@@ -531,6 +528,18 @@ contains
        allocate(Counter_FDB(0:nI, 1-jDim_:nJ, 1-kDim_:nK, MaxDim, nBlock))
        nBlockMax = nBlock
     end if
+
+    ! Set values or defaults for optional arguments
+    nWidth = nG
+    if(present(nWidthIn)) nWidth = nWidthIn
+
+    if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
+         ' nWidth do not contain the ghost cells or too many')
+
+    ! Set index ranges based on arguments
+    call set_range
+
+    if(nProc > 1)call allocate_pe_arrays
     !\
     ! Nullify counter
     !/
@@ -547,26 +556,6 @@ contains
        Counter_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend) = &
             Current_FDB(1:nI, 1:nJ, 1-kDim_:nK, 3, iBlockSend)
     end do
-    ! Set values or defaults for optional arguments
-    nWidth = nG
-    if(present(nWidthIn)) nWidth = nWidthIn
-
-    if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
-         ' nWidth do not contain the ghost cells or too many')
-
-    ! Set index ranges based on arguments
-    call set_range
-
-    if(nProc > 1)then
-       ! Allocate fixed size communication arrays.
-       if(.not.allocated(iBufferS_P))then
-          allocate(iBufferS_P(0:nProc-1), nBufferS_P(0:nProc-1), &
-               nBufferR_P(0:nProc-1))
-          allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
-          allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
-       end if
-    end if
-
 
     call timing_stop('init_pass')
 
@@ -589,19 +578,7 @@ contains
              nBufferR_P = 0
              nBufferS_P = 0
           else
-             ! Make buffers large enough
-             if(sum(nBufferR_P) > MaxBufferR) then
-                if(allocated(BufferR_I)) deallocate(BufferR_I)
-                MaxBufferR = sum(nBufferR_P) 
-                allocate(BufferR_I(MaxBufferR))
-             end if
-
-             if(sum(nBufferS_P) > MaxBufferS) then
-                if(allocated(BufferS_I)) deallocate(BufferS_I)
-                MaxBufferS = sum(nBufferS_P)
-                allocate(BufferS_I(MaxBufferS))
-             end if
-
+             call check_buffer
              ! Initialize buffer indexes for storing data into BufferS_I
              iBufferS = 0
              do iProcRecv = 0, nProc-1
@@ -787,10 +764,10 @@ contains
          do iDim = 1,MaxDim
             iRMin = iR_DIID(1,iDir,Min_,iDim)
             iRMax = iR_DIID(1,iDir,Max_,iDim)
-            jRMin = iR_DIID(2,jDir,Min_,iDim)
-            jRMax = iR_DIID(2,jDir,Max_,iDim)
-            kRMin = iR_DIID(3,kDir,Min_,iDim)
-            kRMax = iR_DIID(3,kDir,Max_,iDim)
+            if(nDim > 1)jRMin = iR_DIID(2,jDir,Min_,iDim)
+            if(nDim > 1)jRMax = iR_DIID(2,jDir,Max_,iDim)
+            if(nDim > 2)kRMin = iR_DIID(3,kDir,Min_,iDim)
+            if(nDim > 2)kRMax = iR_DIID(3,kDir,Max_,iDim)
 
  
             ! Number of reals to send to and received from the other processor
@@ -912,8 +889,6 @@ contains
   end subroutine add_ghost_face_field
   !=========================
   subroutine add_ghost_cell_field(nVar, nG, State_VGB, nWidthIn)
-    use ModMpi
-
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     integer, intent(in) :: nVar
@@ -981,17 +956,8 @@ contains
     ! Set index ranges based on arguments
     call set_range
 
-    if(nProc > 1)then
-       ! Allocate fixed size communication arrays.
-       if(.not.allocated(iBufferS_P))then
-          allocate(iBufferS_P(0:nProc-1), nBufferS_P(0:nProc-1), &
-               nBufferR_P(0:nProc-1))
-          allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
-          allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
-       end if
-    end if
-
-
+    if(nProc > 1)call allocate_pe_arrays
+ 
     call timing_stop('init_pass')
 
 
@@ -1013,19 +979,7 @@ contains
              nBufferR_P = 0
              nBufferS_P = 0
           else
-             ! Make buffers large enough
-             if(sum(nBufferR_P) > MaxBufferR) then
-                if(allocated(BufferR_I)) deallocate(BufferR_I)
-                MaxBufferR = sum(nBufferR_P) 
-                allocate(BufferR_I(MaxBufferR))
-             end if
-
-             if(sum(nBufferS_P) > MaxBufferS) then
-                if(allocated(BufferS_I)) deallocate(BufferS_I)
-                MaxBufferS = sum(nBufferS_P)
-                allocate(BufferS_I(MaxBufferS))
-             end if
-
+             call check_buffer
              ! Initialize buffer indexes for storing data into BufferS_I
              iBufferS = 0
              do iProcRecv = 0, nProc-1
