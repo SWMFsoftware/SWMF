@@ -2168,9 +2168,7 @@ namespace PIC {
 
 
       void PrintVariableList(FILE* fout,int DataSetNumber);
-
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients);
-
     };
 
   
@@ -2421,6 +2419,8 @@ namespace PIC {
     }
     //namespace Search --------------------------------------------------------
 
+    //get the interpolation stencil (used only when the lineat interpolation is set)
+    int GetCenterNodesInterpolationCoefficients(double *x,double *CoefficientsList,PIC::Mesh::cDataCenterNode **InterpolationStencil,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,int nMaxCoefficients);
   } 
   // namespace Mesh ===========================================================
 
@@ -3385,7 +3385,7 @@ namespace PIC {
         }
 
         void AddCell(double w,PIC::Mesh::cDataCenterNode* c) {
-          if (Length==nMaxStencilLength-1) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
+          if (Length==nMaxStencilLength) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
 
           Weight[Length]=w;
           cell[Length]=c;
