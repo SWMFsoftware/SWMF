@@ -115,7 +115,7 @@ module BATL_lib
   ! Inherited from BATL_particles
   public:: Particle_I
   public:: allocate_particles
-  public:: message_pass_particles, remove_undefined_particles
+  public:: message_pass_particles, remove_undefined_particles, mark_undefined
 
 contains
   !============================================================================

@@ -14,7 +14,9 @@ module ModParticleFieldLine
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
        Particle_I, CellSize_DB, &
-       message_pass_particles, remove_undefined_particles, allocate_particles
+       allocate_particles,&
+       message_pass_particles, remove_undefined_particles, &
+       mark_undefined
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
@@ -749,32 +751,30 @@ contains
   !========================================================================
 
   subroutine check_inner_boundary(iKind)
-    use BATL_lib, ONLY: Unset_
     ! check whether particles have crossed an inner boundary
-    ! if so => set particle's block to Unset_
+    ! if so => set particle's block to negative value
     integer, intent(in):: iKind
 
     integer:: iParticle ! loop variable
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(iKind)%nParticle
        if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) < rBody*rBody)&
-            Particle_I(iKind)%iIndex_II(0, iParticle) = Unset_
+            call mark_undefined(iKind, iParticle)
     end do
   end subroutine check_inner_boundary
 
   !========================================================================
 
   subroutine check_soft_boundary(iKind)
-    use BATL_lib, ONLY: Unset_
     ! check whether particles have crossed an inner boundary
-    ! if so => set particle's block to Unset_
+    ! if so => set particle's block to negative value
     integer, intent(in):: iKind
 
     integer:: iParticle ! loop variable
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(iKind)%nParticle
        if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) > rBoundarySoft**2)&
-            Particle_I(iKind)%iIndex_II(0, iParticle) = Unset_
+            call mark_undefined(iKind, iParticle)
     end do
   end subroutine check_soft_boundary
 

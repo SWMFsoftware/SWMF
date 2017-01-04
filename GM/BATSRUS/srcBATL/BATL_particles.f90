@@ -16,6 +16,7 @@ module BATL_particles
   public:: allocate_particles
   public:: set_pointer_to_particles
   public:: message_pass_particles
+  public:: mark_undefined
   public:: remove_undefined_particles
 
   SAVE
@@ -136,6 +137,17 @@ contains
          nParticleMax =  Particle_I(iKindParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !===========================================================================
+  subroutine mark_undefined(iKind, iParticle)
+    ! mark the particle of the given kind as undefined
+    integer, intent(in):: iKind, iParticle
+    !------------------------------------------------
+    ! particle is considered undefined if its block number is negative,
+    ! the absolute value is kept the same to retain information on its position
+    Particle_I(iKind)%iIndex_II(0,iParticle) = &
+         - abs(Particle_I(iKind)%iIndex_II(0,iParticle))
+    ! abs() is used to prevent making an undefined particle a defined one
+  end subroutine mark_undefined
+  !===========================================================================
   subroutine remove_undefined_particles(iKindParticle)
     ! remove all particles with undefined block: iBlock_I<0
     integer, intent(in) :: iKindParticle
@@ -237,10 +249,12 @@ contains
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
          Xyz_D = 0
-         where(IsPeriodic_D(1:nDim))State_VI(1:nDim, iParticle) = &
-              CoordMin_D(1:nDIm) + &
-              modulo(State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
-              CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
+         if(IsCartesian)then
+            where(IsPeriodic_D(1:nDim))State_VI(1:nDim, iParticle) = &
+                 CoordMin_D(1:nDIm) + &
+                 modulo(State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
+                 CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
+         end if
          Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
          iBlock = iIndex_II(0, iParticle)
          call check_interpolate(Xyz_D, iBlock, iProcOut, iBlockOut)
@@ -249,7 +263,7 @@ contains
               CYCLE
 
          if(iBlockOut == Unset_)then ! particle is out of domain, don't pass it
-            iIndex_II(0, iParticle) = -iIndex_II(0, iParticle)
+            call mark_undefined(iKindParticle, iParticle)
             CYCLE
          end if
 
