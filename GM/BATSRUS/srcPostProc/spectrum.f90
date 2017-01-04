@@ -4,7 +4,11 @@
 !verbose levels
 !labels in output
 
+!option for unobserved lines
+!labels in output
+
 !option for unpobserved lines
+
 
 !units
 
@@ -294,6 +298,10 @@ contains
                 end if
                 if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
                      WavelengthInterval_II(2,iInterval))EXIT
+                if (iBin==nBin)then
+                   write(*,*)"Lambda = ",Lambda," will be left out!"
+                   EXIT
+                endif
              end do
 
              ! Calculate thermal and non-thermal broadening
@@ -537,26 +545,27 @@ contains
           call read_var('iDimVertical',iDimVertical)
           call read_var('iDimHorizontal',iDimHorizontal)
 
-       case("#ISUNOBSERVEDLINES")
-          call read_var('IsAllLines',IsAllLines)
+       case("#ISALLLINES")
+          call read_var('IsAllLines',IsAllLines) ! Unobserved lines included
 
        case("#ISDOPPLER")
           call read_var('IsDoppler',IsDoppler)
-          ! In case of Doppler shift applied some lines might appear that would not
-          ! otherwise. For this reason we introduce the extended WaveLengthIntervals
-          ! for the sake of searching of lines of interest, assuming plasma moves no
-          ! faster than 10% of the speed of light.
-          allocate(WavelengthIntervalShifted_II(2,nWavelengthInterval))
-          if(IsDoppler)then
-             WavelengthIntervalShifted_II(1,:) =  WavelengthInterval_II(1,:) * 0.9
-             WavelengthIntervalShifted_II(2,:) =  WavelengthInterval_II(2,:) * 1.1
-          endif
-          
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
        end select
     end do READPARAM
+
+    ! In case of Doppler shift applied some lines might appear that would not
+    ! otherwise. For this reason we introduce the extended WaveLengthIntervals
+    ! for the sake of searching of lines of interest, assuming plasma moves no
+    ! faster than 10% of the speed of light.
+    if(IsDoppler)then
+       allocate(WavelengthIntervalShifted_II(2,nWavelengthInterval))
+       WavelengthIntervalShifted_II(1,:) =  WavelengthInterval_II(1,:) * 0.9
+       WavelengthIntervalShifted_II(2,:) =  WavelengthInterval_II(2,:) * 1.1
+    endif
 
   end subroutine read_param
 
@@ -878,85 +887,92 @@ contains
 
        read(UnitTmp_,*,iostat=iError) &
             NameIon, nLevelFrom, nLevelTo, LineWavelength, LogN, LogT, LogG
-       ! Check if this belongs to the same line
-       if(LineWavelength == FirstLineWavelength .and. iError == 0) then
-          ! Calculate indexes and store extra elements of LogG
-          iN = nint(LogN/dLogN)
-          iT = nint(LogT/dLogT)
-          g_II(iN,iT) = 10.0**LogG
-          CYCLE READLOOP
-       end if
+       ! If unobserved line, it is stored as a negative wavelength
+       ! If interested in unobserved lines, use absolute value of wavelength
+       if(IsAllLines)then
+          if(IsVerbose .and. LineWavelength < 0)write(*,*)'Unobserved line read : ',LineWavelength
+          LineWavelength = abs(LineWavelength)
+       endif
 
-       if(DoStore)then
-          ! Store last indexes as the maximum indexes for N and T
-          iMax = iN; jMax = iT
-          LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
+    ! Check if this belongs to the same line
+    if(LineWavelength == FirstLineWavelength .and. iError == 0) then
+       ! Calculate indexes and store extra elements of LogG
+       iN = nint(LogN/dLogN)
+       iT = nint(LogT/dLogT)
+       g_II(iN,iT) = 10.0**LogG
+       CYCLE READLOOP
+    end if
 
-          ! Extract min indexes into scalars
-          iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
+    if(DoStore)then
+       ! Store last indexes as the maximum indexes for N and T
+       iMax = iN; jMax = iT
+       LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
 
-          ! Create intensity table
-          allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
-          LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
+       ! Extract min indexes into scalars
+       iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
 
-          ! Storage is done
-          DoStore = .false.
-       end if
+       ! Create intensity table
+       allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
+       LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
 
-       if(iError /= 0) EXIT READLOOP
+       ! Storage is done
+       DoStore = .false.
+    end if
 
-       ! Check if wavelength is inside any of the intervals
-       do iWavelengthInterval = 1, nWavelengthInterval
-          if(IsDoppler)then
-             if(LineWavelength < WavelengthIntervalShifted_II(1,iWavelengthInterval))&
-                  CYCLE
-             if(LineWavelength > WavelengthIntervalShifted_II(2,iWavelengthInterval))&
-                  CYCLE
-          else
-             if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
-                  CYCLE
-             if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
-                  CYCLE
-          endif
-          ! New line of interest found
-          iLine = iLine + 1
-          if(iLine > nMaxLine)&
-               call CON_stop('Too many waves, increase MaxWave')
+    if(iError /= 0) EXIT READLOOP
 
-          FirstLineWavelength = LineWavelength
-          DoStore = .true.
-          nLineFound = nLineFound + 1
+    ! Check if wavelength is inside any of the intervals
+    do iWavelengthInterval = 1, nWavelengthInterval
+       if(IsDoppler)then
+          if(LineWavelength < WavelengthIntervalShifted_II(1,iWavelengthInterval))&
+               CYCLE
+          if(LineWavelength > WavelengthIntervalShifted_II(2,iWavelengthInterval))&
+               CYCLE
+       else
+          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
+               CYCLE
+          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
+               CYCLE
+       endif
+       ! New line of interest found
+       iLine = iLine + 1
+       if(iLine > nMaxLine)&
+            call CON_stop('Too many waves, increase MaxWave')
 
-          ! Store ion name and wavelength 
-          LineTable_I(iLine)%NameIon    = NameIon
-          LineTable_I(iLine)%nLevelFrom = nLevelFrom
-          LineTable_I(iLine)%nLevelTo = nLevelTo
-          LineTable_I(iLine)%LineWavelength = LineWavelength
+       FirstLineWavelength = LineWavelength
+       DoStore = .true.
+       nLineFound = nLineFound + 1
 
-          ! Calculate indexes and store as the minimum indexes
-          iN = nint(LogN/dLogN); iT = nint(LogT/dLogT)
-          LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
+       ! Store ion name and wavelength 
+       LineTable_I(iLine)%NameIon    = NameIon
+       LineTable_I(iLine)%nLevelFrom = nLevelFrom
+       LineTable_I(iLine)%nLevelTo = nLevelTo
+       LineTable_I(iLine)%LineWavelength = LineWavelength
 
-          ! To be safe zero out the input array
-          g_II = 0.0
+       ! Calculate indexes and store as the minimum indexes
+       iN = nint(LogN/dLogN); iT = nint(LogT/dLogT)
+       LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
 
-          ! Store first element
-          g_II(iN,iT) = 10.0**LogG
+       ! To be safe zero out the input array
+       g_II = 0.0
 
-          ! Wavelength was found to be interesting.
-          EXIT
+       ! Store first element
+       g_II(iN,iT) = 10.0**LogG
 
-       end do
+       ! Wavelength was found to be interesting.
+       EXIT
 
-    end do READLOOP
-    close(UnitTmp_)
+    end do
 
-    deallocate(g_II)
+ end do READLOOP
+ close(UnitTmp_)
 
-    if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
-    if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+ deallocate(g_II)
 
-  end subroutine read_table
+ if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
+ if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+
+end subroutine read_table
   !==========================================================================
 end program spectrum
 
