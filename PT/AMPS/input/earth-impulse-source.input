@@ -65,7 +65,7 @@ MoverIntegratorMode=Boris-relativistic
   EnforceRequestedMeshResolution=on !on,off
 
 
-  BlockCells=5,5,5
+  BlockCells=6,6,6
   GhostCells=2,2,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
@@ -73,6 +73,8 @@ MoverIntegratorMode=Boris-relativistic
   ControlParticleInsideNastranSurface=on !!!on,of
 
   TrajectoryTracing=off
+
+  define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_  _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_
 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
   define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
@@ -115,7 +117,7 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 #endGeneral
 
 #interface
-  cell_centered_linear_interpolation_mode=off 
+  cell_centered_linear_interpolation_mode=amps !!off !amps,swmf,off  
   cell_centered_linear_interpolation_src=default
 #endinterface
 
@@ -149,8 +151,8 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
   ImpulseSource=on \\
     Spectrum=constant(1.0E1*MeV2J) \\ 
-    New: x=1.0E4,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=1000000 \\
-    New: x=-1.0E3,0,0; spec=H_PLUS1,time=1,Source=1.0E12,npart=1.0E7    
+    New: x=9000.0E3,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=5.0E6 \\
+    New: x=5.7E7,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=5.0E6    
 
 #endBlock
 
@@ -168,8 +170,8 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 !  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
 !  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
-  define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2) Exosphere::ChemicalModel::PhotochemicalModelProcessor(t0,t1,t2) ! Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
+! define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+! define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2) Exosphere::ChemicalModel::PhotochemicalModelProcessor(t0,t1,t2) ! Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
 !  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Europa::LossProcesses::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
@@ -211,7 +213,7 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 !    SourceRate(O2)=1.69E22, BulkVelocity(O2)=6000.0  
 
 
-  Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
+! Source:ExternalDomainBoundaryInjection=off !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
 !  Source:UserDefined=off \\ !on,off
 !    SourceProcessCode=Plume  \\
