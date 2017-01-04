@@ -59,7 +59,7 @@ my $Outs;
 my $Refs;
 my $Time;
 my $TimeTotal = 0;
-my $TimeLimit = 110;
+my $TimeLimit = 115;
 my $iOvertime = 0;
 #non-generic targets of tests 
 my @Tars=('','','','');
