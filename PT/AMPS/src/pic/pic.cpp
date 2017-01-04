@@ -1664,12 +1664,14 @@ void PIC::Init_BeforeParser() {
 #endif
 
   //Interpolation routines
-  if ((_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) && \
-      (_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ == _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_)) {
-    //in case the second order interpolation routine is used:
-    //the number of cells in a block MUST be even
-    if ((_BLOCK_CELLS_X_%2!=0)||(_BLOCK_CELLS_Y_%2!=0)||(_BLOCK_CELLS_Z_%2!=0)) exit(__LINE__,__FILE__,"Error: in case the second order interpolation routine is used the number of cells in a block MUST be even");
+  if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+    if (_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ == _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_) {
+      //in case AMPS' second order interpolation routine is used:
+      //the number of cells in a block MUST be even
+      if ((_BLOCK_CELLS_X_%2!=0)||(_BLOCK_CELLS_Y_%2!=0)||(_BLOCK_CELLS_Z_%2!=0)) exit(__LINE__,__FILE__,"Error: in case the second order interpolation routine is used the number of cells in a block MUST be even");
+    }
   }
+
 }
 
 void PIC::Init_AfterParser() {
@@ -1677,6 +1679,14 @@ void PIC::Init_AfterParser() {
   long int LocalCellNumber;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataBlockAMR *block;
+
+  //Interpolation routines
+  if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+    //set the interpolation retine for constructing of the stencil when output the model data file
+    if (_PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_ == _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_) {
+      PIC::Mesh::mesh.GetCenterNodesInterpolationCoefficients=PIC::Mesh::GetCenterNodesInterpolationCoefficients;
+    }
+  }
 
   //flush the sampling buffers
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
