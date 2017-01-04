@@ -584,3 +584,44 @@ void PIC::DomainBlockDecomposition::UpdateBlockTable() {
   //update the domain decomposition table ID
   LastMeshModificationID=PIC::Mesh::mesh.nMeshModificationCounter;
 }
+
+
+//===============================================================================================================
+//get the interpolation stencil for visualization of the model results (used only when the linear interpolation routine is set)
+int PIC::Mesh::GetCenterNodesInterpolationCoefficients(double *x,double *CoefficientsList,PIC::Mesh::cDataCenterNode **InterpolationStencil,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,int nMaxCoefficients) {
+  int iCell,cnt=0;
+  double SumWeight=0.0;
+
+  if (_PIC_COUPLER__INTERPOLATION_MODE_ != _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+    exit(__LINE__,__FILE__,"Error: the function should be used only when the linear interpolation routine is set");
+  }
+
+  //construct the interpolation stencil
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int ThreadOpenMP=omp_get_thread_num();
+  #else
+  int ThreadOpenMP=0;
+  #endif
+
+  PIC::CPLR::InitInterpolationStencil(x,startNode);
+
+  //if the length of the coefficient list is not enough -> exist with an error message
+  if (nMaxCoefficients<PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length) {
+    exit(__LINE__,__FILE__,"The length of the interpolation stencil is too short");
+    return -1;
+  }
+
+  for (iCell=0;iCell<PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length;iCell++) {
+    if (PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].cell[iCell]->Measure>0.0) {
+      CoefficientsList[cnt]=PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Weight[iCell];
+      InterpolationStencil[cnt]=PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].cell[iCell];
+
+      SumWeight+=CoefficientsList[cnt];
+      cnt++;
+    }
+  }
+
+  if (cnt!=0) for (int ii=0;ii<cnt;ii++) CoefficientsList[ii]/=SumWeight;
+
+  return cnt;
+}
