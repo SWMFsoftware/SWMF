@@ -3,13 +3,6 @@
 !comments!!!
 !verbose levels
 !labels in output
-
-!option for unobserved lines
-!labels in output
-
-!option for unpobserved lines
-
-
 !units
 
 program spectrum
