@@ -18,7 +18,6 @@ namespace Geopack {
     void GetMagneticField(double *B,double *x);
   }
 
-  void GetMagneticField(double *B,double *x);
   void Init(const char* Epoch,double *SolarWindVelocity);
 }
 
