@@ -302,6 +302,9 @@ void PIC::CPLR::DATAFILE::Init() {
       exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
   }
+  else if (_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__T96_) {
+    PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  }
   else exit(__LINE__,__FILE__,"Error: wrong option");
 
   //init the offset table and request memory
