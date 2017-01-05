@@ -538,6 +538,8 @@ sub ReadMainBlock {
       
       if ($s0 eq "OFF") {$CouplingMode="_PIC_COUPLER_MODE__OFF_";}
       elsif ($s0 eq "SWMF") {$CouplingMode="_PIC_COUPLER_MODE__SWMF_";}
+      elsif ($s0 eq "GEOPACK") {$CouplingMode="_PIC_COUPLER_MODE__GEOPACK_";}
+      elsif ($s0 eq "T96") {$CouplingMode="_PIC_COUPLER_MODE__T96_";}
       elsif ($s0 eq "FILE") {
         $CouplingMode="_PIC_COUPLER_MODE__DATAFILE_";
         $CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_";
@@ -550,6 +552,7 @@ sub ReadMainBlock {
         elsif ($s0 eq "ICES") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__ICES_";}
         elsif ($s0 eq "KAMELEON") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_";}
         elsif ($s0 eq "BATSRUS") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_";}
+        elsif ($s0 eq "T96") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__T96_";}
         else {
           die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }
@@ -1988,6 +1991,14 @@ sub ReadInterfaceBlock {
   my $LinearInterpolationMode_OFF=0;
   my $LinearInterpolationMode_AMPS=1;
   my $LinearInterpolationMode_SWMF=2;
+  
+  my $GEOPACK_MODE__OFF=0;
+  my $GEOPACK_MODE__ON=1;
+  my $GEOPACK_MODE_=$GEOPACK_MODE__OFF;
+  
+  my $T96_MODE__OFF=0;
+  my $T96_MODE__ON=1;
+  my $T96_MODE_=$T96_MODE__OFF;
 
 
   while ($line=<InputFile>) {
@@ -2003,100 +2014,138 @@ sub ReadInterfaceBlock {
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
   
     if (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_MODE") {
-	# turn interface for AMR interpolation on/off
-	($InputLine,$InputComment)=split(' ',$InputComment,2);
-	$InputLine=~s/ //g;
+      # turn interface for AMR interpolation on/off
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
 	
-	if    (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
-        elsif (uc($InputLine) eq "SWMF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_SWMF;}
-	elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
-	else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+   	  if  (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
+      elsif (uc($InputLine) eq "SWMF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_SWMF;}
+	    elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
+	    else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
     }
     elsif (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_SRC") {
-	#set ABSOLUTE path to external source code
-	($InputLine,$InputComment)=split(' ',$InputComment,2);
-	$InputLine=~s/ //g;
-	$CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$InputLine;
-	if((uc($InputLine)=~m/.*DEFAULT.*/) || (uc($InputLine)=~m/.*SHAREDIR.*/)){
-	    $CELL_CENTERED_LINEAR_INTERPOLATION_SRC="\${SHAREDIR}";
-	    print $CELL_CENTERED_LINEAR_INTERPOLATION_SRC;
-	}
+      #set ABSOLUTE path to external source code
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$InputLine;
+
+      if((uc($InputLine)=~m/.*DEFAULT.*/) || (uc($InputLine)=~m/.*SHAREDIR.*/)){
+	      $CELL_CENTERED_LINEAR_INTERPOLATION_SRC="\${SHAREDIR}";
+        print $CELL_CENTERED_LINEAR_INTERPOLATION_SRC;
+	    }
     }
+    
+    #geopack
+    elsif (uc($InputLine) eq "GEOPACK") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if (uc($InputLine) eq "ON") {
+        $GEOPACK_MODE_=$GEOPACK_MODE__ON;
+      }
+      elsif (uc($InputLine) eq "OFF") {
+        $GEOPACK_MODE_=$GEOPACK_MODE__OFF;
+      }
+      else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+    }
+    
+    #Tsyganenko T96
+    elsif (uc($InputLine) eq "T96") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if (uc($InputLine) eq "ON") {
+        $T96_MODE_=$T96_MODE__ON;
+      }
+      elsif (uc($InputLine) eq "OFF") {
+        $T96_MODE_=$T96_MODE__OFF;
+      }
+      else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+    }
+        
     elsif (uc($InputLine) eq "#ENDINTERFACE") {
-	# the section has been read, apply changes
-	my $UseInterface='off';
-	my $Interfaces='';
-	#AMR interpolation ----------------------------------------------
-	if ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_SWMF) {
-	    # check if source folder for external files has been defined
-	    die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
-	    #switch macro for AMR interpolation mode
-	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
-	    ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
-            ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__SWMF_",'pic/picGlobal.dfn');
-	    $UseInterface='on';
-	    $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
-	}
-        elsif ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_AMPS) {
-            #switch macro for AMR interpolation mode
-            ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
-            ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
-            ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_",'pic/picGlobal.dfn');
-        } 
-	else{
-	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
-	}
+      # the section has been read, apply changes
+      my $UseInterface='off';
+      my $Interfaces='';
+	
+      #AMR interpolation ----------------------------------------------
+      if ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_SWMF) {
+        # check if source folder for external files has been defined
+	      die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
 
-	# read the current content of the corresponding makefile
-	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
-	@MakeFileContent=<MAKEFILE>;
-	close(MAKEFILE);
-	# write with changes
-	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation");   
+  	    #switch macro for AMR interpolation mode
+	      ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	      ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+        ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__SWMF_",'pic/picGlobal.dfn');
+	
+	      $UseInterface='on';
+	      $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
+	    }
+      elsif ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_AMPS) {
+        #switch macro for AMR interpolation mode
+        ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+        ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+        ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_",'pic/picGlobal.dfn');
+      } 
+	    else{
+	      ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
+	    }
+	    
+	    #GEOPACK interface ---------------------------------------------------------
+	    if ($GEOPACK_MODE_==$GEOPACK_MODE__ON) {
+	      ampsConfigLib::RedefineMacro("_INTERFACE__GEOPACK__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	      
+	      $UseInterface='on';
+	      $Interfaces="$Interfaces "."geopack";
+	    }
+	    
+	    #T96 interface ---------------------------------------------------------
+	    if ($T96_MODE_==$T96_MODE__ON) {
+	      ampsConfigLib::RedefineMacro("_INTERFACE__T96__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	      
+	      $UseInterface='on';
+	      $Interfaces="$Interfaces "."t96";
+	    }
 
-	foreach(@MakeFileContent){
-	    $_=~s/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=.*/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$CELL_CENTERED_LINEAR_INTERPOLATION_SRC/;
-	    print MAKEFILE $_;
-	}
+      # read the current content of the corresponding makefile
+	    open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
+      @MakeFileContent=<MAKEFILE>;
+      close(MAKEFILE);
+	
+      # write with changes
+      open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation");   
 
-	close (MAKEFILE);
+      foreach(@MakeFileContent){
+        $_=~s/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=.*/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$CELL_CENTERED_LINEAR_INTERPOLATION_SRC/;
+        print MAKEFILE $_;
+      }
 
-	#-------------------------------------------------------------
-	#change variable in makefile
-	# read the current content 
-	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile") || die "Cannot open Makefile.local\n";
-	@MakeFileContent=<MAKEFILE>;
-	close(MAKEFILE);
+      close (MAKEFILE);
 
-	# write with changes
-	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile");   
-	foreach(@MakeFileContent){
-	    $_=~s/INTERFACES=.*/INTERFACES=$Interfaces/;
-	    print MAKEFILE $_;
-	}
-	close (MAKEFILE);
+      #-------------------------------------------------------------
+      #change variable in makefile
+      # read the current content 
+      open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile") || die "Cannot open Makefile.local\n";
+      @MakeFileContent=<MAKEFILE>;
+      close(MAKEFILE);
 
-        #change variable in Makefile.local
-	# read the current content 
-	#open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-	#@MakeFileContent=<MAKEFILE>;
-	#close(MAKEFILE);
+      # write with changes
+      open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile");   
+      
+      foreach(@MakeFileContent){
+        $_=~s/INTERFACES=.*/INTERFACES=$Interfaces/;
+        print MAKEFILE $_;
+      }
 
-	# add line with redefinition of the variable
-	#push(@MakeFileContent, "INTERFACE=$UseInterface\n");
-	#open (MAKEFILE,">","Makefile.local");   
-	#print MAKEFILE  @MakeFileContent;  
-	#close (MAKEFILE);
-        add_line_makefile_local("INTERFACE=$UseInterface",1);
-	last;
+      close (MAKEFILE);
+      add_line_makefile_local("INTERFACE=$UseInterface",1);
+      last;
     }
     else {      
-	$line=~s/ //g;
-	chomp($line);
+      $line=~s/ //g;
+      chomp($line);
 	
-	if (($line ne "") && (substr($line,0,1) ne '!')) {
-	    die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-	}
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+	      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+	    }
     }
     
   }
