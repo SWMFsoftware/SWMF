@@ -9,3 +9,6 @@
 
 //interface to Geopack
 #define _INTERFACE__GEOPACK__MODE_ _INTERFACE_MODE_OFF_
+
+//interface to T96
+#define _INTERFACE__T96__MODE_ _INTERFACE_MODE_OFF_
