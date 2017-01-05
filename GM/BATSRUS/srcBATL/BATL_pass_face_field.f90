@@ -322,8 +322,6 @@ contains
             jRMax = iR_DIID(2,jDir,Max_,iDim)
             kRMin = iR_DIID(3,kDir,Min_,iDim)
             kRMax = iR_DIID(3,kDir,Max_,iDim)
-
- 
             ! Number of reals to send to and received from the other processor
             nSize = (iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) + nSize
          end do
@@ -1132,7 +1130,12 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
-
+      iRMin = iR_DIID(1,iDir,Min_,1)
+      iRMax = iR_DIID(1,iDir,Max_,1)
+      jRMin = iR_DIID(2,jDir,Min_,1)
+      jRMax = iR_DIID(2,jDir,Max_,1)
+      kRMin = iR_DIID(3,kDir,Min_,1)
+      kRMax = iR_DIID(3,kDir,Max_,1)
 
       if(DoCountOnly)then
          ! No need not to count data for local copy
@@ -1141,13 +1144,6 @@ contains
          ! Number of integers to be send/received
          !/
          nSize = 1 + 2*nDim
-         iRMin = iR_DIID(1,iDir,Min_,1)
-         iRMax = iR_DIID(1,iDir,Max_,1)
-         jRMin = iR_DIID(2,jDir,Min_,1)
-         jRMax = iR_DIID(2,jDir,Max_,1)
-         kRMin = iR_DIID(3,kDir,Min_,1)
-         kRMax = iR_DIID(3,kDir,Max_,1)
-
 
          ! Number of reals to send to and received from the other processor
          nSize = (iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)*nVar + nSize
@@ -1155,21 +1151,14 @@ contains
          nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
          RETURN
       end if
+      iSMin = iS_DIID(1,iDir,Min_,1)
+      iSMax = iS_DIID(1,iDir,Max_,1)
+      jSMin = iS_DIID(2,jDir,Min_,1)
+      jSMax = iS_DIID(2,jDir,Max_,1)
+      kSMin = iS_DIID(3,kDir,Min_,1)
+      kSMax = iS_DIID(3,kDir,Max_,1)
       if(iProc == iProcRecv)then
-         ! Local copy
-         
-         iRMin = iR_DIID(1,iDir,Min_,1)
-         iRMax = iR_DIID(1,iDir,Max_,1)
-         jRMin = iR_DIID(2,jDir,Min_,1)
-         jRMax = iR_DIID(2,jDir,Max_,1)
-         kRMin = iR_DIID(3,kDir,Min_,1)
-         kRMax = iR_DIID(3,kDir,Max_,1)
-         iSMin = iS_DIID(1,iDir,Min_,1)
-         iSMax = iS_DIID(1,iDir,Max_,1)
-         jSMin = iS_DIID(2,jDir,Min_,1)
-         jSMax = iS_DIID(2,jDir,Max_,1)
-         kSMin = iS_DIID(3,kDir,Min_,1)
-         kSMax = iS_DIID(3,kDir,Max_,1)
+         ! Local copy 
          State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) =    &
               State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) &
               + State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
@@ -1178,19 +1167,7 @@ contains
          iBufferS = iBufferS_P(iProcRecv) +1
 
          BufferS_I(            iBufferS) = iBlockRecv
-         
-         iRMin = iR_DIID(1,iDir,Min_,1)
-         iRMax = iR_DIID(1,iDir,Max_,1)
-         jRMin = iR_DIID(2,jDir,Min_,1)
-         jRMax = iR_DIID(2,jDir,Max_,1)
-         kRMin = iR_DIID(3,kDir,Min_,1)
-         kRMax = iR_DIID(3,kDir,Max_,1)
-         iSMin = iS_DIID(1,iDir,Min_,1)
-         iSMax = iS_DIID(1,iDir,Max_,1)
-         jSMin = iS_DIID(2,jDir,Min_,1)
-         jSMax = iS_DIID(2,jDir,Max_,1)
-         kSMin = iS_DIID(3,kDir,Min_,1)
-         kSMax = iS_DIID(3,kDir,Max_,1)
+
          BufferS_I(            iBufferS+1) = iRMin
          BufferS_I(            iBufferS+2) = iRMax
          if(nDim > 1)BufferS_I(iBufferS+3) = jRMin
@@ -1240,7 +1217,7 @@ contains
       iR_DIID(:, 0,Max_,1) = nIjk_D
       !\
       ! For x_, y_, z_ direction (the first index), the receiving block is at
-      ! negative displcement with respect to the sending one
+      ! positive displcement with respect to the sending one
       !/       
       iR_DIID(:, 1,Min_,1) = 1
       iR_DIID(:, 1,Max_,1) = nWidth
