@@ -24,6 +24,9 @@
 #include "constants.h"
 #include "Earth.h"
 
+#include "GeopackInterface.h"
+#include "T96Interface.h"
+
 
 const double rSphere=_RADIUS_(_TARGET_);
 
@@ -182,12 +185,7 @@ void amps_init_mesh() {
    Sphere->SetSphereGeometricalParameters(sx0,rSphere);
    Sphere->ParticleSphereInteraction=Earth::BC::ParticleSphereInteraction;
    
-   
-   
-   
-   
-   
-   
+   Earth::Planet=Sphere;
    
    Sphere->Radius=_RADIUS_(_TARGET_);
    Sphere->PrintSurfaceMesh("Sphere.dat");
@@ -196,6 +194,13 @@ void amps_init_mesh() {
    Sphere->faceat=0;
    
    Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
+
+    if (Earth::CutoffRigidity::SampleRigidityMode==true) {
+      Earth::CutoffRigidity::AllocateCutoffRigidityTable();
+
+      Sphere->PrintDataStateVector=Earth::CutoffRigidity::OutputDataFile::PrintDataStateVector;
+      Sphere->PrintVariableList=Earth::CutoffRigidity::OutputDataFile::PrintVariableList;
+    }
  }
  
  //init the solver
@@ -338,49 +343,140 @@ void amps_init_mesh() {
    
 
    //set up the particle weight
-   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Earth::BoundingBoxInjection::InjectionRate;
-   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+   if (Earth::ImpulseSource::Mode==true) {
+     Earth::ImpulseSource::InitParticleWeight();
+   }
+   else {
+     PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Earth::BoundingBoxInjection::InjectionRate;
+     for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+   }
    
    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
    if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
    
    //output final data
    //create the list of mesh nodes where the injection boundary conditions are applied
-   PIC::BC::BlockInjectionBCindicatior=Earth::BoundingBoxInjection::InjectionIndicator;
-   PIC::BC::userDefinedBoundingBlockInjectionFunction=Earth::BoundingBoxInjection::InjectionProcessor;
-   PIC::BC::InitBoundingBoxInjectionBlockList();
-
    
+   if (Earth::ImpulseSource::Mode==true) {
+     PIC::BC::UserDefinedParticleInjectionFunction=Earth::ImpulseSource::InjectParticles;
+   }
+   else {
+     PIC::BC::BlockInjectionBCindicatior=Earth::BoundingBoxInjection::InjectionIndicator;
+     PIC::BC::userDefinedBoundingBlockInjectionFunction=Earth::BoundingBoxInjection::InjectionProcessor;
+     PIC::BC::InitBoundingBoxInjectionBlockList();
+   }
+
+
    //init the particle buffer
    PIC::ParticleBuffer::Init(10000000);
 
    int LastDataOutputFileNumber=-1;
    
-   
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 
-#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
-   // BATL reader
+   //init the nackground magnetic field
+   switch (_PIC_COUPLER_MODE_) {
+   case _PIC_COUPLER_MODE__DATAFILE_ :
 
-   if (PIC::CPLR::DATAFILE::BinaryFileExists("EARTH-BATSRUS")==true)  {
-     PIC::CPLR::DATAFILE::LoadBinaryFile("EARTH-BATSRUS");
+     if (PIC::CPLR::DATAFILE::BinaryFileExists("EARTH-BATSRUS")==true)  {
+       PIC::CPLR::DATAFILE::LoadBinaryFile("EARTH-BATSRUS");
+     }
+     else if (_PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_) {
+       // BATL reader
+
+       if (PIC::CPLR::DATAFILE::BinaryFileExists("EARTH-BATSRUS")==true)  {
+         PIC::CPLR::DATAFILE::LoadBinaryFile("EARTH-BATSRUS");
+       }
+       else {
+         // initialize the reader
+         PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_t00000000_n00020000.idl");
+         PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+
+         PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
+       }
+     }
+     else {
+       exit(__LINE__,__FILE__,"ERROR: the background importing procedure is not defined");
+     }
+
+     break;
+   case _PIC_COUPLER_MODE__T96_ :
+     {
+       //calculate the geomegnetic filed
+       T96::Init(Exosphere::SimulationStartTimeString,NULL);
+
+       //set the magnetic field;
+       //set default == 0 electric field
+
+
+       class cSetBackgroundMagneticField {
+       public:
+         void Set(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+           int i,j,k;
+
+           const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+           const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+           const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+           if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+             for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+               double *xNodeMin=startNode->xmin;
+               double *xNodeMax=startNode->xmax;
+               double x[3],B[3],xCell[3];
+               PIC::Mesh::cDataCenterNode *CenterNode;
+
+               if (startNode->block!=NULL) {
+                 //set the value of the geomagnetic field calculated at the centers of the cells
+                 int nd,idim;
+                 char *offset;
+                 double xCell[3];
+
+                 //locate the cell
+                 nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+                 if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
+                 offset=CenterNode->GetAssociatedDataBufferPointer();
+
+                 //the interpolation location
+                 xCell[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i));
+                 xCell[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j));
+                 xCell[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k));
+
+                 //calculate the geomagnetic field
+                 T96::GetMagneticField(B,xCell);
+
+                 //save E and B
+                 for (idim=0;idim<3;idim++) {
+                   if (PIC::CPLR::DATAFILE::Offset::MagneticField.active==true) {
+                     *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=B[idim];
+                   }
+
+                   if (PIC::CPLR::DATAFILE::Offset::ElectricField.active==true) {
+                     *((double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset+idim*sizeof(double)))=0.0;
+                   }
+                 }
+               }
+             }
+           }
+           else {
+             int i;
+             cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
+
+             for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) Set(downNode);
+           }
+
+
+         }
+       } SetBackgroundMagneticField;
+
+       SetBackgroundMagneticField.Set(PIC::Mesh::mesh.rootTree);
+     }
+
+
+     break;
+   default:
+     exit(__LINE__,__FILE__,"Error: the option is unknown");
    }
-   else {
-     // initialize the reader
-     PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_t00000000_n00020000.idl");
-     PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
 
-     PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
-   }
 
-#else
-   exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
-   
-#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
-   
-
-#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-	
 
     //init particle weight of neutral species that primary source is sputtering
 
