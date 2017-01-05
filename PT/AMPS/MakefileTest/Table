@@ -205,7 +205,7 @@ Compile=
 -------------------------------------------------------------------------------
 
 #>
-Name=Earth
+Name=Earth@@(0+valeriy) 
 Time=10 
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy) 
@@ -219,6 +219,39 @@ Compile=
 >>>@echo "Install AMPS......"
 >>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -amps-test=on
+>>>./Config.pl -link-option=-lc++ 
+>>>make
+>>>@echo "test_Earth_compile... done" > test_Earth.diff
+
+
+Check=
+>>>@echo "test_Earth_check..." >> test_Earth.diff
+>>>@${TESTEarthDIR}/../utility/ReduceFile.pl ${TESTEarthDIR}/loaded.SavedCellData.dat 1000
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTEarthDIR}/loaded.SavedCellData.dat.Reduced.Step=1000         \
+>>>${TESTEarthKEYS}/output-sig=0x103010036592e5d/test_Earth_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarthDIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth--Background_Magnetosphere.diff
+>>>@ls -l test_Earth--Background_Magnetosphere.diff
+
+>>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
+>>>@ls -l test_Earth.diff
+
+<#
+
+#>
+Name=Earth@@(0+stampede+pleiades)
+Time=10
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
+Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
+
+Compile=
+>>>@echo "test_Earth_compile..." > test_Earth.diff
+>>>echo "Installing BATL....."
+>>>@cvs co BATL
+>>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
+>>>@echo "Install AMPS......"
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
+>>>./Config.pl -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -amps-test=on
 >>>make
 >>>@echo "test_Earth_compile... done" > test_Earth.diff
