@@ -22,7 +22,7 @@ c OF THE ARRAY PARMOD(10).
  *
  */
 
-double T96::PS=10.0/Pi;
+double T96::PS=0.170481;
 double T96::PARMOD[11]={2.0,-50.0,1.0,-3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 extern "C"{
