@@ -1638,7 +1638,7 @@ void PIC::Init_BeforeParser() {
 
 
   //init coupler 
-  if (_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__DATAFILE_) {
+  if ((_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__DATAFILE_)||(_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__T96_)) {
     PIC::CPLR::DATAFILE::Init();
   }
 
