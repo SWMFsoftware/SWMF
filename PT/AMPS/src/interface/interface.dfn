@@ -6,3 +6,6 @@
 
 //default values for individual interfaces
 #define _INTERFACE__INTERPOLATION_AMR__MODE_ _INTERFACE_MODE_OFF_
+
+//interface to Geopack
+#define _INTERFACE__GEOPACK__MODE_ _INTERFACE_MODE_OFF_
