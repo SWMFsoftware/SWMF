@@ -1,4 +1,4 @@
 geopack : 
-	${COMPILE.f90} ${Cflag3} geopack2008.for 
+	${COMPILE.f77} ${Cflag3} geopack2008.for 
 	${COMPILE.mpicxx} ${FLAGC} GeopackInterface.cpp -o GeopackInterface.o
 	ar -src geopack2008.a   geopack2008.o GeopackInterface.o 

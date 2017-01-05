@@ -12,6 +12,6 @@ include makefile.T96
 INTERFACES=
 
 interface :
-	$(foreach INTERFACE, ${INTERFACES}, ${MAKE} ${INTERFACE})
+	${MAKE} ${INTERFACES}
 	${AR} interface.a ./*.o
 	@echo "Target 'interface' is done." 
