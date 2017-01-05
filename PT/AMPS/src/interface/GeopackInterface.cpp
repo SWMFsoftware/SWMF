@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <strings.h>
+#include <math.h>
+
 
 
 #include "GeopackInterface.h"
@@ -11,12 +13,14 @@
 #include "constants.h"
 #include "constants.PlanetaryData.h"
 #include "ifileopr.h"
+#include "specfunc.h"
 
 extern "C"{
   void recalc_08_(int*,int*,int*,int*,int*,double*,double*,double*);
   void sphcar_08_(double*,double*,double*,double*,double*,double*,int*);
   void bspcar_08_(double*,double*,double*,double*,double*,double*,double*,double*);
   void igrf_geo_08_(double*,double*,double*,double*,double*,double*);
+  void igrf_gsw_08_(double*,double*,double*,double*,double*,double*);
 }
 
 
@@ -63,10 +67,16 @@ void Geopack::Init(const char* Epoch,double *SolarWindVelocity) {
 
   //init Geopack
   double VGSE[3];
-  double defaultSolarWindVelocity[3]={-400.0,0.0,0.0};
+  double defaultSolarWindVelocity[3]={-400.0*1.0E-3,0.0,0.0};
 
   if (SolarWindVelocity!=NULL) {
     for (int idim=0;idim<3;idim++) VGSE[idim]=SolarWindVelocity[idim]/1.0E3;
+
+    if (fabs(SolarWindVelocity[0])*1.0E-5<sqrt(pow(SolarWindVelocity[1],2)+pow(SolarWindVelocity[2],2))) {
+      //the direction of the solar wind is not alighned with the x-axis
+      exit(__LINE__,__FILE__,"Error: the field extraction in Geopack::IGRF is done usin the GSW frame. GSW coinsides with GCM only when the solar wind velocity is aligned with the x-direction. The frame conversion need to be implemented. See Geopack manual. :-(");
+    }
+
   }
   else {
     for (int idim=0;idim<3;idim++) VGSE[idim]=defaultSolarWindVelocity[idim];
@@ -117,41 +127,15 @@ C   AUTHOR:  N. A. TSYGANENKO
 C
    */
 
-  int idim,J;
-  double R,THETA,PHI,xLocal[3],BR,BTHETA,BPHI;
+  int idim;
+  double xLocal[3];
 
   for (idim=0;idim<3;idim++) xLocal[idim]=x[idim]/_EARTH__RADIUS_;
 
-  //convert cartesian vector into the spherical coordinate system
-  J=-1;
-  sphcar_08_(&R,&THETA,&PHI,xLocal+0,xLocal+1,xLocal+3,&J);
-
   //extract the magnetic field vector
-  igrf_geo_08_(&R,&THETA,&PHI,&BR,&BTHETA,&BPHI);
-
-  //conver the mgnetic field vector to the cartesian coordinate frame
-  /*       SUBROUTINE BSPCAR_08 (THETA,PHI,BR,BTHETA,BPHI,BX,BY,BZ)
-C
-C   CALCULATES CARTESIAN FIELD COMPONENTS FROM LOCAL SPHERICAL ONES
-C
-C-----INPUT:   THETA,PHI - SPHERICAL ANGLES OF THE POINT IN RADIANS
-C              BR,BTHETA,BPHI -  LOCAL SPHERICAL COMPONENTS OF THE FIELD
-C-----OUTPUT:  BX,BY,BZ - CARTESIAN COMPONENTS OF THE FIELD
-C
-C   LAST MOFIFICATION:  APRIL 1, 2003 (ONLY SOME NOTATION CHANGES)
-C
-C   WRITTEN BY:  N. A. TSYGANENKO
-*/
-
-  bspcar_08_(&THETA,&PHI,&BR,&BTHETA,&BPHI,B+0,B+1,B+2);
+  igrf_gsw_08_(xLocal+0,xLocal+1,xLocal+2,B+0,B+1,B+2);
 
   for (idim=0;idim<3;idim++) B[idim]*=_NANO_;
-}
-
-//=======================================================================
-//calculate the total magnetic field
-void Geopack::GetMagneticField(double *B,double *x) {
-
 }
 
 
