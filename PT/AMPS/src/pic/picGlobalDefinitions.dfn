@@ -164,6 +164,8 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_COUPLER_MODE__OFF_               0
 #define _PIC_COUPLER_MODE__SWMF_              1
 #define _PIC_COUPLER_MODE__DATAFILE_          3
+#define _PIC_COUPLER_MODE__GEOPACK_           4
+#define _PIC_COUPLER_MODE__T96_               5
 
 //define the background data file reader 
 #define _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_    0
