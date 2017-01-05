@@ -5,9 +5,16 @@
 ; Written by G. Toth for the Versatile Advection Code and BATSRUS/SWMF
 ; Some improvements by Aaron Ridley.
 ;
+; Main procedures to (re)set defaults and to read, plot, animate and slice data
+;   set_default_values
+;   read_data, plot_data, animate_data, slice_data
+;   read_log_data, plot_log_data
+;
 ; Procedures for
 ;
-; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
+; fixing things if animate or slice crashes
+;   reset_axis, slice_data_restore
+; reading ascii and binary data produced by VAC, BATSRUS, PWOM, IPIC3D etc:
 ;    open_file, get_file_types, get_file_head, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
 ; showing / overwriting information read from last file:
@@ -18,7 +25,9 @@
 ;    asknum, askstr, string_to_array, arr2arr, read_plot_param, read_limits
 ; transforming initial data:
 ;    read_transform_param, do_transform, do_my_transform, 
-;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
+;    make_regular_grid, make_polar_grid, make_unpolar_grid,
+;    make_sphere_grid, 
+;    getaxes
 ;    interpol_logfiles, interpol_log
 ; calculating functions of the data
 ;    get_func, get_limits
@@ -55,10 +64,1242 @@
 ;    log_time, log_func
 
 
+;===========================================================================
+pro set_default_values
+
+; Definitions and default values for variables in common blocks
+
+; System variables that can get corrupted if an animation is interrupted
+  !x.tickname=strarr(60)
+  !y.tickname=strarr(60)
+
+; Confirmation for set parameters
+  common ask_param, $
+     doask
+  doask=0
+
+  common fits_param, $
+     noresize
+  noresize=0                    ; Keep original size of fits image
+
+; Parameters for .r getpict
+  common getpict_param, $
+     filename, nfile, filenames, filetypes, npictinfiles, npict
+  filename=''          ; space separated list of filenames. May contain *, []
+  nfile=0              ; number of files
+  filenames=0          ; array of filenames
+  filetype=''          ; file types (binary, real4, ascii...)
+  npictinfiles=0       ; number of pictures in each file
+  npict=0              ; index of snapshot to be read
+
+; Parameters for .r plotfunc
+  common plotfunc_param, $
+     func, nfunc, funcs, funcs1, funcs2, plotmode, plotmodes, nplot, $
+     plottitle, plottitles, plottitles_file, $
+     timetitle, timetitleunit, timetitlestart, $
+     autorange, autoranges, noautorange, fmin, fmax, $
+     axistype, bottomline, headerline
+  func=''              ; space separated list of functions to be plotted
+  nfunc=0              ; number of functions to be plotted
+  funcs=''             ; array of function names
+  funcs1=''            ; array of first  components of vectors functions
+  funcs2=''            ; array of second components of vectors functions
+  plotmode='plot'      ; space separated list of plot modes
+  plotmodes=''         ; array of plot modes
+  nplot=0              ; number of subplots (overplot functions count as 1)
+  plottitle='default'  ; semicolon separated list of titles
+  plottitles=''        ; array of plot titles
+  plottitles_file=''   ; array of plottitle strings per file
+  timetitle=''     ; set to format string to plot time as title for time series
+  timetitleunit=0      ; set to number of seconds in time unit
+  timetitlestart=0     ; set to initial time to be subtracted (in above units)
+  autorange='y'        ; function ranges set automatically or by fmin/fmax
+  autoranges=''        ; array of autorange values
+  noautorange=0        ; true if all autoranges are 'n'
+  fmin=0               ; array of minimum values for each function
+  fmax=0               ; array of maximum values for each function
+  axistype='coord'     ; 'cells' or 'coord'
+  headerline=0         ; Number of items to show at the top
+  bottomline=3         ; Number of items or a string to show at the bottom
+
+; Animation parameters for the movie
+  common animate_param, $
+     firstpict, dpict, npictmax, savemovie, wsubtract, timediff
+  firstpict=1        ; a scalar or array (per file) of the index of first frame
+  dpict=1            ; a scalar or array (per file) of distance between frames
+  npictmax=500       ; maximum number of frames in an animation
+  savemovie='n'      ; save movie into 'ps', 'png', 'tiff', 'bmp', 'jpeg' files
+  wsubtract=0        ; Array subtracted from w during animation
+  timediff=0         ; take time derivative of w during animation if timediff=1
+
+; Parameters for .r slice
+  common slice_param, $
+     firstslice, dslice, nslicemax, slicedir, dyslicelabel, $
+     x3d, w3d, var3d, rbody3d, grid2d
+  firstslice=1                  ; index of first slice
+  dslice=1                      ; stride between slices
+  nslicemax=500                 ; maximum number of slices shown
+  slicedir=0                    ; 
+  dyslicelabel=0.98             ; position of bottom label (?)
+  x3d=0                         ; 3D coordinates saved
+  w3d=0                         ; 3D state saved
+  var3d=0                       ; 3D variable names saved
+  rbody3d=0.0                   ; 3D rBody value saved
+  grid2d=0                      ; grid indexes for the slice
+
+; Transformation parameters for irregular grids 
+  common transform_param, $
+     usereg, dotransform, transform, nxreg, xreglimits, wregpad, $
+     nxreg_old, xreglimits_old, triangles, $
+     symmtri
+  usereg=0         ; use wreg and xreg instead of w and x
+  dotransform='n'  ; do transform with .r plotfunc?
+  transform='n'    ; transformation 'none', 'regular', 'my', 'polar', 'unpolar'
+  nxreg=[0,0]      ; size of transformed grid
+  xreglimits=0     ; transformed grid limits [xmin, ymin, xmax, ymax]
+  wregpad=0        ; array of values used in "padding" the regular arrays
+  nxreg_old=0      ; previous transformation grid
+  xreglimits_old=0 ; previous limits of transform grid
+  triangles=0      ; triangulation saved from previous transform
+  symmtri=0        ; use symmetric triangulation during transformation?
+
+  common vector_param, $
+     nvector, vectors
+  nvector=0                     ; number of vector variables
+  vectors=0                     ; index of first components of vector variables
+
+; Parameters for getlog
+  common getlog_param, $
+     logfilename, logfilenames
+  logfilename=''       ; space separated string of filenames. May contain *, []
+  logfilenames=0                ; array of log filenames
+
+  common log_data, $
+     timeunit, $
+     wlog , logtime , wlognames , $
+     wlog1, logtime1, wlognames1, $
+     wlog2, logtime2, wlognames2, $
+     wlog3, logtime3, wlognames3, $
+     wlog4, logtime4, wlognames4, $
+     wlog5, logtime5, wlognames5, $
+     wlog6, logtime6, wlognames6, $
+     wlog7, logtime7, wlognames7, $
+     wlog8, logtime8, wlognames8, $
+     wlog9, logtime9, wlognames9
+
+  wlog=0                        ; data array from logfile
+  logtime=0                     ; time array from logfile
+  wlognames=''                  ; array of log data names
+  timeunit='h' ; set to '1' (unitless), 's' (second), 'm' (minute), 'h' (hour) 
+                                ;        'millisec', 'microsec', 'ns' (nanosec)
+
+; Parameters for plotlog
+  common plotlog_param, $
+     log_spacex,log_spacey, logfunc, title, xtitle, ytitles, $
+     xrange, yranges, colors, linestyles, symbols, smooths, dofft, $
+     legends, legendpos
+
+  log_spacex=5 ; horizontal distance around log plots (in character size)
+  log_spacey=5 ; vertical distance between log plots (in character size)
+  logfunc=''   ; space separated list of log variables in wlogname(s)
+  title=0      ; set to a string with the title
+  xtitle=0     ; set to a string with the time title
+  ytitles=0    ; set to a string array with the function names
+  xrange=0     ; set to a [min,max] array for the time range
+  yranges=0    ; set to a [[min1,max1], [min2,max2] ...] for function ranges
+  colors=255   ; set to an array with colors for each function
+  linestyles=0 ; set to an array with line styles for each function
+  symbols=0    ; set to an array with symbols for each function
+  smooths=0    ; set to an array with smoothing width for each logfile
+  dofft=0      ; set to 1 to do an FFT transform on the functions
+  legends=''   ; legends for the lines, defaults are logfilenames
+  legendpos=0  ; position for the legends: [xmin, xmax, ymin, ymax]
+
+; arrays containing plot data
+  common plot_data, $
+     grid, $
+     x, w, xreg, wreg, $
+     x0,w0, x1,w1, x2,w2, x3,w3, x4,w4, x5,w5, x6,w6, x7,w7, x8,w8, x9,w9, $
+     wreg0, wreg1, wreg2, wreg3, wreg4, wreg5, wreg6, wreg7, wreg8, wreg9
+  grid=0                        ; index array to be used for cuts
+  x=0                           ; coordinate array of the last read snapshot
+  w=0                           ; data array of the last read snapshot
+  xreg=0                        ; regular grid coordinates
+  wreg=0                        ; regular grid data
+
+; parameters passed to plot_func through common blocks
+  common plot_param, $
+     multiplot, multix, multiy, multidir, plotix, plotiy, $
+     plot_spacex, plot_spacey, $
+     fixaspect, noerase, $ 
+     cut, cut0, plotdim, rcut, rbody, $
+     velvector, velpos, velpos0, velrandom, velspeed, velx, vely, veltri, $
+     ax, az, contourlevel, linestyle
+
+; multiplot=0 gives the default number of subplots depending on nfile,nfunc
+; multiplot=[3,2,0] defines 3 by 2 subplots filled up in vertical order
+; multiplot=[2,4,1] defines 2 by 4 subplots filled up in horizontal order
+  multiplot=0                   ;
+  multix=0                      ; number of subplots horizontally
+  multiy=0                      ; number of subplots vertically
+  multidir=0                    ; subplot order: horizontal (0) or vertical (1)
+  plotix=0                      ; horizontal index of subplot
+  plotiy=0                      ; vertical index of subplot
+  plot_spacex=3                 ; horizontal subplot distance (character size)
+  plot_spacey=3                 ; vertical subplot distance (character size)
+  fixaspect=1                   ; fix aspect ratio according to coordinates
+  noerase=0                     ; Do not erase before new plot
+  cut=0                         ; index array for the cut
+  cut0=0                        ; cut array without degenerate indices
+  plotdim=2                     ; plot dimensionality after cut is applied
+  rcut=-1.0                     ; radius of cutting out inner part
+  rbody= -1.                    ; radius of inner body shown as a black circle
+  velvector=200                 ; number of vectors/stream lines per plot
+  velpos   =0                   ; 2 x velvector array with start positions 
+  velpos0  =0                   ; previous velpos
+  velrandom=0                   ; use new random start positions in animation
+  velspeed =5                   ; speed of moving vectors during animation
+  velx=0                        ; storage for x coordinate of vector positions
+  vely=0                        ; storage for y coordinate of vector positions
+  veltri=0                      ; storage for triangulation
+  ax=30                  ; view angle relative to x axis for surface/shade_surf
+  az=30                  ; view angle relative to z axis for surface/shade_surf
+  contourlevel=30               ; Number of contour levels for contour/contfill
+  linestyle=0                   ; line style for plot
+
+; store plot function values from plotting and animations
+; calculate running max or mean of functions during animation
+  common plot_store, $
+     f, f1, f2, $
+     nplotstore, iplotstore, nfilestore, ifilestore, plotstore, timestore
+  f=0                           ; last plot function magnitude
+  f1=0                          ; first  component of last vector plot function
+  f2=0                          ; second component of last vector plot function
+  nplotstore = 0                ; number of plots stored
+  iplotstore = 0                ; current plot index
+  nfilestore = 1                ; number of files stored
+  ifilestore = 0                ; current file index
+  plotstore  = 0                ; array of stored data
+  timestore  = 0                ; array of stored times
+
+; Some useful constants in SI units
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, AuSI, cSI, e0SI
+
+  kbSI   = 1.3807d-23           ; Boltzmann constant
+  mpSI   = 1.6726d-27           ; proton mass
+  mu0SI  = 4*!dpi*1d-7          ; vacuum permeability
+  eSI    = 1.602d-19            ; elementary charge
+  ReSI   = 6378d3               ; radius of Earth
+  RsSI   = 6.96d8               ; radius of Sun
+  AuSI   = 1.4959787d11         ; astronomical unit
+  cSI    = 2.9979d8             ; speed of light
+  e0SI   = 1/(mu0SI*cSI^2)      ; vacuum permettivity 
+
+; Physical unit names and values in SI units
+  common phys_units, $
+     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me, $
+     Qi, Qe, gamma, gammae, clight
+
+  fixunits   = 0                ; fix units (do not overwrite) if true
+  typeunit   = 'NORMALIZED'     ; 'SI'/'NORMALIZED'/'PIC'/'PLANETARY'/'SOLAR'
+  xSI        = 1.0              ; distance unit in SI
+  tSI        = 1.0              ; time unit in SI
+  rhoSI      = 1.0              ; density unit in SI
+  uSI        = 1.0              ; velocity unit in SI
+  pSI        = 1.0              ; pressure unit in SI
+  bSI        = sqrt(mu0SI)      ; magnetic unit in SI
+  jSI        = 1/sqrt(mu0SI)    ; current unit in SI
+  Mi         = 1.0              ; Ion mass in amu
+  Me         = 1/1836.15        ; Electron mass in amu
+  Qi         = 1.0              ; Ion charge in unit charge
+  Qe         = -1.0             ; Electron change in unit charge
+  gamma      = 5./3.            ; Adiabatic index for first fluid
+  gammae     = 5./3.            ; Adiabatic index for electrons
+  clight     = cSI              ; (Reduced) speed of light
+
+; conversion factors that are useful to calculate various derived quantities
+  common phys_convert, $
+     ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+
+  ti0  = 1.0                    ; ion temperature = ti0*p/rho*Mi
+  cs0  = 1.0                    ; sound speed     = sqrt(cs0*gamma*p/rho)
+  c0   = 1.0                    ; speed of light  = c0
+  mu0A = 1.0                    ; Alfven speed    = sqrt(bb/mu0A/rho)
+  mu0  = 1.0                    ; plasma beta     = p/(bb/2/mu0)
+  uH0  = 1.0                    ; Hall velocity   = uH0*j/rho*Mi
+  op0  = 1.0                    ; plasma freq.    = op0*sqrt(rho)/Mi
+  oc0  = 1.0                    ; cyclotron freq. = oc0*b/mIon
+  rg0  = 1.0                    ; ion gyro radius = rg0*sqrt(p/rho)/b*sqrt(Mi)
+  di0  = 1.0                    ; inertial length = di0*sqrt(rho)*Mi
+  ld0  = 1.0                    ; Debye length    = ld0*sqrt(p)/rho*Mi
+
+; information obtained from the last file header
+  common file_head, $
+     ndim, headline, it, time, gencoord, neqpar, nw, nx, eqpar, $
+     variables, wnames
+
+  ndim     = 1                  ; number of spatial dimensions
+  headline = ''                 ; 1st line often containing physcial unit names
+  it       = 0                  ; time step
+  time     = 0.                 ; simulation time
+  gencoord = 0                  ; true for unstructured/non-Cartesian grids
+  neqpar   = 0                  ; number of scalar parameters
+  nw       = 1                  ; number of variables
+  nx       = 0                  ; number of grid cells
+  eqpar    = 0.                 ; values of scalar parameters
+  variables= ''                 ; array of coordinate/variable/param names
+  wnames   = ''                 ; array of variables names
+
+end
+;===========================================================================
+pro read_data
+;
+;    Read the npict-th snapshot from an ascii or binary data file into
+;    the x (coordinates) and w (data) arrays. 
+;    If dotransfrom='y' the data is transformed according to 
+;    the transformation parameters, potentially into xreg, wreg.
+;
+;    Usage: 
+;
+; filename='...' ; set file to read from (optional)
+; npict=...      ; set snapshot index (optional)
+; read_data
+;
+;    read_data will prompt you for "filename(s)" and "npict"
+;    unless they are already set. Previous settings can be erased by 
+;
+; set_defaults
+;
+;    or modified explicitly, e.g.:
+;
+; filename='data/example.ini'
+; npict=1
+;
+;    The "x" and "w" arrays and the header info will be read from the file. 
+;
+;    If a file is read with generalized coordinates, "gencoord=1" is set,
+;    and the original data is transformed according to the "transform"
+;    string variable into "xreg" and "wreg".
+;
+;    The same npict-th snapshot can be read from up to 10 files by e.g. setting
+;
+; filename='data/file1.ini data/file2.out'
+;
+;    In this case the data is read into x0,w0 and x1,w1 for the two files,
+;    and possibly transformeed into wreg0,wreg1.
+;
+;    To plot a variable with IDL functions, type e.g.:
+;
+; plot, x(*,0), w(*,5,2)
+;
+;    or use the procedure
+;
+; plot_data
+;
+;===========================================================================
+
+  common ask_param, doask
+  common getpict_param
+  common plot_data
+  common file_head
+  common transform_param
+
+  nfile=0
+  askstr,'filename(s)   ',filename, doask
+  string_to_array,filename,filenames,nfile,/wildcard
+
+  if nfile gt 10 then begin
+     print,'Error in getpict: cannot handle more than 10 files.'
+     retall
+  endif
+  get_file_types
+
+  print,'filetype(s)   =','',filetypes
+  print,'npictinfile(s)=',npictinfiles
+  if max(npictinfiles) eq 1 then npict=1
+  asknum,'npict',npict,doask
+  print
+
+  for ifile=0,nfile-1 do begin
+
+     ;; Read data from file ifile
+
+     print
+
+     open_file,10,filenames(ifile),filetypes(ifile)
+
+     get_pict,10,filenames(ifile),filetypes(ifile),npict<npictinfiles(ifile),$
+              error
+
+     show_head, ifile
+
+     if nfile gt 1 then begin
+        case ifile of
+           0: begin
+              w0=w
+              x0=x
+           end
+           1: begin
+              w1=w
+              x1=x
+           end
+           2: begin
+              w2=w
+              x2=x
+           end
+           3: begin
+              w3=w
+              x3=x
+           end
+           4: begin
+              w4=w
+              x4=x
+           end
+           5: begin
+              w5=w
+              x5=x
+           end
+           6: begin
+              w6=w
+              x6=x
+           end
+           7: begin
+              w7=w
+              x7=x
+           end
+           8: begin
+              w8=w
+              x8=x
+           end
+           9: begin
+              w9=w
+              x9=x
+           end
+        endcase
+        print,'Read x',ifile,' and w',ifile,FORMAT='(a,i1,a,i1)'
+     endif else print,'Read x and w'
+
+     read_transform_param
+
+     do_transform
+
+     if usereg then begin
+        if nfile eq 1 then $
+           print,'...transform to xreg and wreg' $
+        else print,'...transform to xreg and wreg',ifile,FORMAT='(a,i1)'
+
+        if nfile gt 1 then case ifile of
+           0: wreg0 = wreg
+           1: wreg1 = wreg
+           2: wreg2 = wreg
+           3: wreg3 = wreg
+           4: wreg4 = wreg
+           5: wreg5 = wreg
+           6: wreg6 = wreg
+           7: wreg7 = wreg
+           8: wreg8 = wreg
+           9: wreg9 = wreg
+        endcase
+     endif
+  endfor
+  close,10
+
+; Produce a wnames from the last file
+  wnames=variables(ndim:ndim+nw-1)
+
+end
+;===========================================================================
+pro plot_data
+
+;    Use the x and w arrays (usually read by read_data or animate_data) and
+;    plot one or more functions of w using different plotting routines. 
+;    The functions are defined in the "Idl/funcdef.pro" file.
+;
+;    For generalized coordinates the variables are interpolated from the 
+;    irregular grid onto a regular one.
+;
+;    A subset can be cut from the grid by using the "cut" index array, e.g.:
+;    cut=grid(10:30,*), where "grid" contains the full index array.
+;    for the regular grid. The grid array is only defined after animate ran.
+;
+;    Usage:
+;
+; w=w2 & x=x2    ; set x and w (optional)
+; func='....'    ; function(s) to plot (optional)
+; plotmode='...' ; plot mode(s) (optional)
+; plot_data
+;
+;    Output can be directed to PS, EPS and/or PDF files:
+;
+; set_device,'filename.eps'
+; plot_data
+; close_device,/pdf
+;
+;===========================================================================
+
+  common getpict_param
+  common plot_param
+  common plotfunc_param
+  common file_head
+  common plot_store
+
+  if not keyword_set(nfile) then begin
+     print,'No file has been read yet, run getpict or animate!'
+     return
+  endif
+
+  if nfile gt 1 then begin
+     print,'More than one files were read...'
+     print,'Probably w is from file ',filenames(nfile-1)
+     nfile=1
+  endif
+
+  print,'======= CURRENT PLOTTING PARAMETERS ================'
+  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+        ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
+        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+  print,'multiplot=',multiplot
+  print,'axistype (coord/cells)=',axistype,', fixaspect= ',fixaspect,$
+        FORMAT='(a,a,a,i1)'
+  print,'bottomline=',bottomline,', headerline=',headerline,$
+        FORMAT='(a,i1,a,i1)'
+
+  if keyword_set(cut) then help,cut
+  if keyword_set(velpos) then help,velpos
+  velpos0=velpos
+
+                                ; Read plotting and transforming parameters
+
+  print,'======= PLOTTING PARAMETERS ========================='
+  print,'wnames                     =',wnames
+  read_plot_param
+
+  help,nx
+
+  read_transform_param
+
+                                ; ifile=0, also pass dotransform and doask
+  do_transform
+
+  print,'======= DETERMINE PLOTTING RANGES ==================='
+
+  read_limits
+
+  if noautorange eq 0 then begin
+     get_limits,1
+
+     print
+     for ifunc=0,nfunc-1 do $
+        print,'Min and max value for ',funcs(ifunc),':',fmin(ifunc),fmax(ifunc)
+  endif
+
+  ;;===== DO PLOTTING IN MULTIX * MULTIY MULTIPLE WINDOWS
+
+  if keyword_set(multiplot) then begin
+     if n_elements(multiplot) eq 1 then begin
+        if multiplot gt 0 then       !p.multi=[0,multiplot,1 ,0,1] $
+        else if multiplot eq -1 then !p.multi=[0,1,nplot     ,0,1] $
+        else                         !p.multi=[0,1,-multiplot,0,1]
+     endif else if n_elements(multiplot) eq 5 then $
+        !p.multi = multiplot $
+     else $
+        !p.multi=[0,multiplot(0),multiplot(1),0,multiplot(2)]
+     multix=!p.multi(1)
+     multiy=!p.multi(2)
+  endif else begin
+     multix=long(sqrt(nplot-1)+1)
+     multiy=long((nplot-1)/multix+1)
+     !p.multi=[0,multix,multiy,0,0]
+  endelse
+
+  if not noerase then erase
+
+  if velrandom then velpos=0
+
+  if !d.name eq 'X' and !d.window ge 0 then wshow
+
+  plot_func
+  
+  putbottom,1,1,0,0,bottomline,nx,it,time
+  putheader,1,1,0,0,headerline,headline,nx
+
+  print
+  !p.multi=0
+  !p.title=''
+
+  ;; Restore velpos array
+  velpos=velpos0 & velpos0=0
+
+end
+;===========================================================================
+pro animate_data
+
+;    Written by G. Toth for the Versatile Advection Code.
+;
+;    Read pictures from one or more ascii or binary data files and 
+;    plot or animate one or more functions of w using different plotting 
+;    routines. The functions are defined in the "Idl/funcdef.pro" file.
+;
+;    For generalized coordinates the variables can be interpolated from the 
+;    irregular grid onto a regular one, or to polar coordinates.
+;
+;    A subset can be cut from the grid by using the "cut" index array, e.g.:
+;    cut=grid(10:30,*), where "grid" contains the full index array.
+;    for the regular grid. The grid array is only defined after animate ran.
+;
+;    Usage:
+; 
+; filename='... ; files to read (optional)
+; func='...     ; functions to plot (optional)
+; animate_data
+;
+;===========================================================================
+
+  on_error, 2
+
+  common animate_param
+  common getpict_param
+  common file_head
+  common ask_param
+  common plot_param
+  common plotfunc_param
+
+  ;; Initialize storage for running maxima and averages
+  iplotstore = 0
+  plotstore  = 0
+  timestore  = 0
+
+  print,'======= CURRENT ANIMATION PARAMETERS ================'
+  print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
+        FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
+        +string(n_elements(dpict))+'i4,a,i4)'
+  print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
+  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+        ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
+        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+  if keyword_set(multiplot) then begin
+     siz=size(multiplot)
+     ;; scalar multiplot value is converted to a row (+) or a column (-)
+     if siz(0) eq 0 then begin
+        if multiplot gt 0 then multiplot=[multiplot,1,1] $
+        else                   multiplot=[1,-multiplot,1]
+     endif
+     print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
+           ', fixaspect= ',fixaspect,$
+           FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
+  endif else $
+     print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
+           ', fixaspect= ',fixaspect,$
+           FORMAT='(a,a,a,i1)'
+  print,'bottomline=',bottomline,', headerline=',headerline,$
+        FORMAT='(a,i1,a,i1)'
+
+  if keyword_set(cut) then help,cut
+  if keyword_set(wsubtract) then help,wsubtract
+  if keyword_set(velpos) then help,velpos
+  velpos0 = velpos
+
+  print,'======= FILE DESCRIPTION ============================'
+  nfile=0
+  if filename eq '' or doask then $
+     askstr,'filename(s)   ',filename,doask
+
+  string_to_array,filename,filenames,nfile,/wildcard
+
+  get_file_types
+
+  print, 'filenames     =', filenames
+  print, 'filetype(s)   =', filetypes
+  print, 'npictinfile(s)=', npictinfiles
+
+  ;; Extend firstpict and dpict into arrays of size nfile
+  arr2arr,firstpict,nfile
+  arr2arr,dpict,nfile
+
+  ;;====== OPEN FILE(S) AND READ AND PRINT HEADER(S)
+
+  anygencoord=0
+  for ifile=0,nfile-1 do begin
+     open_file,10,filenames(ifile),filetypes(ifile)
+     get_file_head,10,filenames(ifile),filetypes(ifile)
+     anygencoord=anygencoord or gencoord
+     print,         'headline                  =',strtrim(headline,2)
+     print,FORMAT='("variables                 =",100(a," "),$)',variables
+     print,FORMAT='(" (ndim=",i2,", nw=",i2,")")',ndim,nw
+  endfor
+
+  print,'======= PLOTTING PARAMETERS ========================='
+  read_plot_param
+
+  read_transform_param
+
+  print,'======= DETERMINE PLOTTING RANGES ==================='
+
+  read_limits
+
+  if noautorange then begin
+     npict = min( (npictinfiles-firstpict)/dpict + 1 )
+     if npict gt npictmax then npict=npictmax
+     if npict lt 0 then npict=0
+  endif else begin
+     npict=0
+     for ifile=0,nfile-1 do $
+        open_file,ifile+10,filenames(ifile),filetypes(ifile)
+     error=0
+     while npict lt npictmax and not error do begin
+
+        for ifile = 0, nfile-1 do begin
+
+           if npict eq 0 then nextpict=firstpict(ifile) $
+           else               nextpict=dpict(ifile)
+
+           ;; IPIC3D reader always counts from the beginning
+           if filetypes(ifile) eq 'IPIC3D' then $
+              nextpict = firstpict(ifile) + npict*dpict(ifile)
+
+           get_pict, ifile+10, filenames(ifile), filetypes(ifile), nextpict, err
+
+           if keyword_set(wsubtract) then w=w-wsubtract
+
+           if keyword_set(timediff) then begin
+              if npict eq 0 then begin
+                 timeprev = time
+                 wprev = w
+                 w = 0.0*w
+              endif else begin
+                 w = (w - wprev)/(time - timeprev)
+                 wprev = wprev + w*(time - timeprev)
+                 timeprev = time
+              endelse
+           endif
+
+           wnames=variables(ndim:ndim+nw-1)
+           error=err or error
+
+           if not error then begin
+              do_transform,ifile
+
+              first= npict eq 0 and ifile eq 0
+              get_limits, first
+
+              if ifile eq nfile-1 then begin
+                 if npict eq 0 then print,FORMAT='("ipict:    ",$)'
+                 npict=npict+1
+                 print,FORMAT='(i4,$)',npict
+              endif
+           endif
+        endfor
+     endwhile
+     print
+     for ifunc=0,nfunc-1 do $
+        print,'Min and max value for ',funcs(ifunc),':',fmin(ifunc),fmax(ifunc)
+
+  endelse
+  print,'npict=',npict
+  if npict eq 0 then begin
+     print,'There are no frames to animate! Check the following settings:'
+     print,'   npictinfiles=',npictinfiles
+     print,'   firstpict   =',firstpict
+     print,'   dpict       =',dpict
+     print,'   npictmax    =',npictmax
+     if min(npictinfiles - firstpict) lt 0 then $
+        print,'   firstpict is larger than npictinfiles for some files!' 
+     retall
+  endif
+
+  ;;===== DO ANIMATION IN MULTIX * MULTIY MULTIPLE WINDOWS
+
+  if keyword_set(multiplot) then begin
+     multix=multiplot(0)
+     multiy=multiplot(1)
+     multidir=multiplot(2)
+     npict1=(multix*multiy)/(nplot*nfile)
+     if npict1 eq 0 then npict1=1
+  endif else if nfile eq 1 then begin
+     multix=long(sqrt(nplot-1)+1)
+     multiy=long((nplot-1)/multix+1)
+     multidir=0
+     npict1=1
+  endif else begin
+     multix=nfile
+     multiy=nplot
+     multidir=1
+     npict1=1
+  endelse
+
+  if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
+  if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
+
+  doanimate= npict gt npict1 and !d.name eq 'X'
+  if !d.name eq 'X' then begin
+     if !d.window lt 0 then window
+     wshow
+  endif
+  if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,(npict-1)/npict1+1]
+
+  ipict=0
+  ipict1=0
+  iplot=0
+  for ifile=0,nfile-1 do open_file,ifile+10,filenames(ifile),filetypes(ifile)
+  error=0
+  while ipict lt npict and not error do begin
+     if ipict1 eq 0 then begin
+        if not keyword_set(noerase) then erase
+        !p.multi=[0,multix,multiy,0,multidir]
+        if savemovie eq 'ps' then $
+           device,filename='Movie/'+string(FORMAT='(i4.4)',iplot+1)+'.ps',$
+                  XSIZE=24,YSIZE=18,/LANDSCAPE,/COLOR,BITS=8
+     endif
+
+     if ipict eq 0 then print,FORMAT='("ipict:    ",$)'
+     print,FORMAT='(i4,$)',ipict+1
+
+     if n_elements(velpos) gt 1 and velrandom gt 0 then begin
+        ;; reset a subset of the vector positions to a random value
+        ii = velrandom*indgen(velvector/velrandom) + (ipict mod velrandom)
+        velpos(ii,0) = randomu(seed,n_elements(ii),/double)*1e6
+        velpos(ii,1) = randomu(seed,n_elements(ii),/double)*1e6
+     endif
+
+     for ifile=0,nfile-1 do begin
+
+        if npict gt 1 or nfile gt 1 or noautorange then begin
+
+           if ipict eq 0 then nextpict=firstpict(ifile) $
+           else               nextpict=dpict(ifile)
+
+           ;; IPIC3D reader always counts from the beginning
+           if filetypes(ifile) eq 'IPIC3D' then $
+              nextpict = firstpict(ifile) + ipict*dpict(ifile)
+
+           get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, err
+
+           error=error or err
+        endif
+
+        if not error then begin
+
+           if keyword_set(wsubtract) then w=w-wsubtract
+
+           if keyword_set(timediff) then begin
+              if ipict eq 0 then begin
+                 timeprev = time
+                 wprev = w
+                 w = 0.0*w
+              endif else begin
+                 w = (w - wprev)/(time - timeprev)
+                 wprev = wprev + w*(time - timeprev)
+                 timeprev = time
+              endelse
+           endif
+
+           wnames=variables(ndim:ndim+nw-1)
+
+           do_transform
+
+           linestyle=0
+           if multix*multiy lt nplot*nfile then $
+              linestyle=fix(nplot*ifile)/(multix*multiy)
+
+           if(keyword_set(timetitle))then begin
+              t = time
+              if(keyword_set(timetitleunit))then  t = t / timetitleunit
+              if(keyword_set(timetitlestart))then t = t - timetitlestart
+              plottitles(*) = string(format=timetitle,t)
+           endif
+
+           if(keyword_set(plottitles_file))then begin
+              plottitle = plottitles_file(ifile)
+              string_to_array,plottitle,plottitles,nfunc,';'
+           end
+
+           nfilestore = nfile
+           ifilestore = ifile
+
+           plot_func
+
+           if npict1 le 1 then begin
+              putbottom,multix,multiy,ifile,0,bottomline,nx,it,time
+              putheader,nfile,1,ifile,0,headerline,headline,nx
+           endif else begin
+              putbottom,multix,multiy,plotix,plotiy,bottomline,nx,it,time
+              if ipict1 eq 0 then $
+                 putheader,nfile,1,ifile,0,headerline,headline,nx
+           endelse
+        endif
+
+     endfor
+
+     if ipict1 eq npict1-1 or ipict eq npict-1 then begin
+        if doanimate then $
+           xinteranimate,frame=iplot,window=!d.window
+        if savemovie eq 'ps' then begin
+           print,FORMAT='(" (Movie/",i4.4,".ps)",$)',iplot+1
+           device,/close
+        endif else if savemovie ne 'n' and !d.name eq 'X' then begin
+           imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
+           print,FORMAT='("(",a,")",$)',imagefile
+           common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
+           write_image,imagefile,savemovie, $
+                       tvrd( order=(savemovie eq 'tiff'), true=1),r_curr, g_curr, b_curr
+        endif
+     endif
+
+     ipict1=ipict1+1
+     if ipict1 ge npict1 then begin
+        ipict1=0
+        iplot=iplot+1
+     endif
+     ipict=ipict+1
+
+  endwhile
+
+  for ifile=0,nfile-1 do close,ifile+10
+  print
+  !p.multi=0
+  !p.title=''
+  !z.title=''
+
+  if savemovie eq 'ps' then set_plot,'X'
+  ;; Restore velpos array
+  velpos=velpos0 & velpos0=0
+  if doanimate then xinteranimate,5,/keep_pixmaps
+end
+
+;===========================================================================
+pro slice_data
+
+;    Animate slices of 3D data in the w array (usually read by 
+;    read_data or animate_data).
+;    The functions are defined in the "Idl/funcdef.pro" file.
+;    "cut" should be defined in 2D, possibly using the grid2d index array.
+;
+;    Usage:
+;
+; func='...'     ; functions to plot (optional)
+; plotmode='...' ; plot mode(s) (optional)
+; slicedir=...   ; select slice direction (1, 2 or 3) (optional)
+; slice_data
+
+  common slice_param
+  common ask_param
+  common getpict_param
+  common plot_param
+  common plotfunc_param
+  common file_head
+  common plot_data
+  common animate_param
+
+  if not keyword_set(nfile) then read_data
+
+  if nfile gt 1 then begin
+     print,'More than one files were read...'
+     print,'Probably w is from file ',filenames(nfile-1)
+     nfile=1
+  endif
+
+  siz=size(x)
+
+  if siz(0) ne 4 then begin
+     print,'The x array is not 3 dimensional'
+     return
+  endif
+  n1=siz(1) & n2=siz(2) & n3=siz(3)
+
+  print,'======= CURRENT SLICING PARAMETERS ================'
+  print,'firstslice=',firstslice,', dslice=',dslice,$
+        ', nslicemax=',nslicemax,', savemovie (y/n)=',savemovie,$
+        FORMAT='(a,i4,a,i4,a,i4,a,a)'
+  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+        ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
+        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+  if keyword_set(multiplot) then begin
+     siz=size(multiplot)
+     if siz(0) eq 0 then begin
+        if multiplot gt 0 then multiplot=[multiplot,1,1] $
+        else                   multiplot=[1,-multiplot,1]
+     endif
+     print,'multiplot= ',multiplot,', axistype (coord/cells)=',axistype,$
+           ', fixaspect= ',fixaspect,$
+           FORMAT='(a,"[",i2,",",i2,",",i2,"]",a,a,a,i1)'
+  endif else $
+     print,'multiplot= 0 (default), axistype (coord/cells)=',axistype,$
+           ', fixaspect= ',fixaspect,$
+           FORMAT='(a,a,a,i1)'
+  print,'bottomline=',bottomline,', headerline=',headerline,$
+        FORMAT='(a,i1,a,i1)'
+
+  if keyword_set(cut) then help,cut
+  if keyword_set(velpos) then help,velpos
+  velpos0=velpos
+
+  print
+  help,x
+  asknum,'slicedir (1, 2, or 3)',slicedir,doask
+  asknum,'firstslice',firstslice,doask
+  asknum,'dslice',dslice,doask
+
+  siz=size(x)
+  if dslice gt 0 then nslice=(siz(slicedir)-firstslice)/dslice+1 $
+  else                nslice=-firstslice/dslice+1
+  if nslice gt nslicemax then nslice=nslicemax
+  if nslice lt 1 then nslice=0
+  print,'Number of slices:',nslice
+  if nslice lt 1 then begin
+     print,'There are no slices to be shown!'
+     print,'   Check firstslice=',firstslice,' and dslice=',dslice
+     if siz(slicedir) lt firstslice then $
+        print,'   The value of firstslice is larger than the'
+     print,'   grid size in slice direction (',slicedir,') =',siz(slicedir)
+     retall
+  endif
+
+                                ; store 3D data
+  var3d = variables
+  x3d   = x
+  w3d   = w
+
+  case slicedir of
+     1:begin
+        x=dblarr(n2,n3,2)
+        w=dblarr(n2,n3,nw)
+        variables=var3d(1:*)
+        grid2d=lindgen(n2,n3)
+     end
+     2:begin
+        x=dblarr(n1,n3,2)
+        w=dblarr(n1,n3,nw)
+        variables=[var3d(0),var3d(2:*)]
+        grid2d=lindgen(n1,n3)
+     end
+     3:begin
+        x=dblarr(n1,n2,2)
+        w=dblarr(n1,n2,nw)
+        variables=[var3d(0:1),var3d(3:*)]
+        grid2d=lindgen(n1,n2)
+     end
+  endcase
+
+  help,grid2d
+
+  print,'======= PLOTTING PARAMETERS ========================='
+  read_plot_param
+
+  usereg=0
+
+  if keyword_set(multiplot) then begin
+     multix=multiplot(0)
+     multiy=multiplot(1)
+     nslice1=(multix*multiy)/(nplot*nfile)
+     !p.multi=[0,multix,multiy,0,multiplot(2)]
+  endif else begin
+     multix=long(sqrt(nplot-1)+1)
+     multiy=long((nplot-1)/multix+1)
+     nslice1=1
+     !p.multi=[0,multix,multiy,0,0]
+  endelse
+
+  print,'======= DETERMINE PLOTTING RANGES ==================='
+  read_limits
+
+  if not noautorange then $
+     for islice=1,nslice do begin
+     ix=dslice*(islice-1)+firstslice-1
+     case slicedir of
+        1:begin
+           x(*,*,*)=x3d(ix,*,*,1:2)
+           w(*,*,*)=w3d(ix,*,*,*)
+        end
+        2:begin
+           x(*,*,0)=x3d(*,ix,*,0)
+           x(*,*,1)=x3d(*,ix,*,2)
+           w(*,*,*)=w3d(*,ix,*,*)
+        end
+        3:begin
+           x(*,*,*)=x3d(*,*,ix,0:1)
+           w(*,*,*)=w3d(*,*,ix,*)
+        end
+     endcase
+     
+     first= islice eq 1
+     get_limits,first
+
+  endfor
+
+  print
+  for ifunc=0,nfunc-1 do $
+     print,'Min and max value for ',funcs(ifunc),':',fmin(ifunc),fmax(ifunc)
+
+
+                                ;==== ANIMATE THE SLICES
+  doanimate= nslice gt nslice1 and !d.name eq 'X'
+  if !d.name eq 'X' then begin
+     if !d.window lt 0 then window
+     wshow
+  endif
+  if doanimate then xinteranimate,set=[!d.x_size,!d.y_size,nslice]
+
+  islice1=0                     ; slice index in a multiplot frame
+  iplot=0                       ; plot index for animation
+  for islice=1,nslice do begin
+     ix=dslice*(islice-1)+firstslice-1
+     dirname=variables(slicedir-1)
+     case slicedir of
+        1:begin
+           x(*,*,*)=x3d(ix,*,*,1:2)
+           w(*,*,*)=w3d(ix,*,*,*)
+           height=x3d(ix,0,0,0)
+           info1='i'+dirname+'='+string(ix,format='(i4)')
+        end
+        2:begin
+           x(*,*,0)=x3d(*,ix,*,0)
+           x(*,*,1)=x3d(*,ix,*,2)
+           w(*,*,*)=w3d(*,ix,*,*)
+           height=x3d(0,ix,0,1)
+           info1='i'+dirname+'='+string(ix,format='(i4)')
+        end
+        3:begin
+           x(*,*,*)=x3d(*,*,ix,0:1)
+           w(*,*,*)=w3d(*,*,ix,*)
+           height=x3d(0,0,ix,2)
+           info1='i'+dirname+'='+string(ix,format='(i4)')
+        end
+     endcase
+     info2=dirname+'='+string(height)
+     case bottomline of
+        0: info=''
+        1: info=info2
+        2: info=info1+' '+info2
+        3: info='time='+string(time,format='(g12.5)')+' '+info1+' '+info2
+     endcase
+
+     if not keyword_set(noerase) and islice1 eq 0 then erase
+
+     if velrandom then velpos=0
+
+     rBody3d = rBody
+     if abs(height) ge rBody3d then rBody=0.0 $
+     else                           rBody=sqrt(rBody3d^2 - height^2)
+
+     plot_func
+
+     xyouts,5+(plotix*!d.x_size)/multix, $
+            (1-dyslicelabel)*!d.y_size $
+            +  dyslicelabel*(plotiy*!d.y_size)/multiy,/DEV,info
+     putheader,1,1,0,0,headerline,headline,nx
+
+     if doanimate then xinteranimate,frame=iplot,window=!d.window
+     
+     islice1=islice1+1
+     if islice1 ge nslice1 then begin
+        islice1=0
+        iplot=iplot+1
+     endif
+  endfor
+
+  ;; restore 3d state
+  slice_data_restore
+  
+  print
+  !p.multi=0
+  !p.title=''
+
+  ;; Restore velpos array
+  velpos=velpos0 & velpos0=0
+
+  if doanimate then xinteranimate,5,/keep_pixmaps
+end
+
+;=============================================================================
+pro slice_data_restore
+
+  ; restore the 3D state after slice_data
+  ; this can be useful is slice_data crashed
+
+  on_error,2
+
+  common plot_data
+  common slice_param
+  common file_head
+  common plot_param
+
+  x         = x3d
+  w         = w3d
+  variables = var3d
+  rBody     = rBody3d
+end
+
+;=============================================================================
+pro read_log_data
+
+; Read the log data from 1, 2, or 3 files into the wlog, wlog1, wlog2 arrays
+; Store the names of the variables into wlognames, wlognames1 and wlognames2
+; Calculate and store log time into the logtime, logtime1 and logtime2
+; arrays. The time units are set by timeunit.
+
+  on_error,2
+
+  common getlog_param
+  common log_data
+  common ask_param
+
+  askstr,'logfilename(s) ',logfilename,doask
+
+  nlogfile=0
+  if stregex(logfilename, '[?*[]', /boolean) then begin
+     spawn,'/bin/ls '+logfilename, logfilenames
+     nlogfile = n_elements(logfilenames)
+  endif else $
+     string_to_array,logfilename,logfilenames,nlogfile
+
+  if nlogfile gt 10 then begin
+     print,'Error in getlog: cannot handle more than 10 files.'
+     retall
+  endif
+
+  get_log,   logfilenames(0), wlog,  wlognames,  logtime, timeunit, /verbose
+  if nlogfile ge 2 then $
+     get_log, logfilenames(1), wlog1, wlognames1, logtime1, timeunit, verbose='1'
+  if nlogfile ge 3 then $
+     get_log, logfilenames(2), wlog2, wlognames2, logtime2, timeunit, verbose='2'
+  if nlogfile ge 4 then $
+     get_log, logfilenames(3), wlog3, wlognames3, logtime3, timeunit, verbose='3'
+  if nlogfile ge 5 then $
+     get_log, logfilenames(4), wlog4, wlognames4, logtime4, timeunit, verbose='4'
+  if nlogfile ge 6 then $
+     get_log, logfilenames(5), wlog5, wlognames5, logtime5, timeunit, verbose='5'
+  if nlogfile ge 7 then $
+     get_log, logfilenames(6), wlog6, wlognames6, logtime6, timeunit, verbose='6'
+  if nlogfile ge 8 then $
+     get_log, logfilenames(7), wlog7, wlognames7, logtime7, timeunit, verbose='7'
+  if nlogfile ge 9 then $
+     get_log, logfilenames(8), wlog8, wlognames8, logtime8, timeunit, verbose='8'
+  if nlogfile gt 9 then $
+     get_log, logfilenames(9), wlog9, wlognames9, logtime9, timeunit, verbose='9'
+
+end
+
+;=============================================================================
+pro plot_log_data
+
+  common ask_param
+  common plotlog_param
+
+  askstr,'logfunc(s)     ',logfunc,doask
+
+  if !d.name eq 'X' then begin
+     if !d.window lt 0 then window
+     wshow
+  endif
+
+  plot_log
+
+end
+
 ;=============================================================================
 function reform2,x
 
-;Remove all degenerate dimensions from x
+  ;; Remove all degenerate dimensions from x
 
   if n_elements(x) lt 2 then return,x
 
@@ -734,7 +1975,7 @@ end
 ;=============================================================================
 pro get_pict, unit, filename, filetype, npict, error
 
-  ;; on_error,2
+  on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
@@ -1160,7 +2401,7 @@ end
 ;===========================================================================
 pro read_transform_param
 
-  ;; on_error,2
+  on_error,2
 
   common ask_param
   common file_head
@@ -1364,7 +2605,7 @@ end
 ;===========================================================================
 pro get_limits,first
 
-;;  on_error,2
+  on_error,2
 
   common ask_param, doask
   common plot_data
@@ -1425,9 +2666,6 @@ end
 ;===========================================================================
 pro make_regular_grid
 
-common plot_data
-common transform_param
-
 ;
 ;    Regularize grid and interpolate "w" via triangulate and trigrid.
 ;    The original "w" data is interpolated into "wreg", for points outside
@@ -1444,20 +2682,23 @@ common transform_param
 
    on_error,2
 
-   ;Floating underflow is not a real error, the message is suppressed
+   common plot_data
+   common transform_param
+
+   ;; Floating underflow is not a real error, the message is suppressed
    err=check_math(1,1)
 
    xx=x(*,*,0)
    yy=x(*,*,1)
 
-   ; Test distribution. If you uncomment the next lines you can
-   ; take a look at the different "shock wave" representation
-   ; on your grid for the 0-th variable (usually rho)
-   ; for i=0L,n_elements(xx)-1 do $
-   ;   if abs(xx(i))-0.2*abs(yy(i)) gt 0.01 then $
-   ;       w(i,*,0)=2. else w(i,*,0)=1.
+   ;; Test distribution. If you uncomment the next lines you can
+   ;; take a look at the different "shock wave" representation
+   ;; on your grid for the 0-th variable (usually rho)
+   ;; for i=0L,n_elements(xx)-1 do $
+   ;;   if abs(xx(i))-0.2*abs(yy(i)) gt 0.01 then $
+   ;;       w(i,*,0)=2. else w(i,*,0)=1.
 
-   ; Check if nxreg==nxreg_old and xreglimits==xreglimits_old and x==x_old
+   ;; Check if nxreg==nxreg_old and xreglimits==xreglimits_old and x==x_old
    newx=1
    nrectan=0
    if symmtri ne 1 and symmtri ne 2 then $
@@ -1803,10 +3044,10 @@ pro make_sphere_grid
 ;
 ;    Transform vector variables from x,y,z to radial,phi,z components
 
+  on_error,2
+
   common plot_data
   common vector_param
-
-  on_error,2
 
   xreg=x
   xreg(*,*,*,0)=sqrt(x(*,*,*,0)^2+x(*,*,*,1)^2+x(*,*,*,2)^2)
@@ -1933,67 +3174,67 @@ end
 ;===========================================================================
 pro getaxes,ndim,x,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
 ;===========================================================================
-on_error,2
-case ndim of
-  1: xx=x
-  2: begin
+  on_error,2
+  case ndim of
+     1: xx=x
+     2: begin
         xx=x(*,*,0)
         yy=x(*,*,1)
      end
-  3: begin
-       xx=x(*,*,*,0)
-       yy=x(*,*,*,1)
-       zz=x(*,*,*,2)
+     3: begin
+        xx=x(*,*,*,0)
+        yy=x(*,*,*,1)
+        zz=x(*,*,*,2)
      end
-endcase
+  endcase
 
-if keyword_set(cut0) then begin
-   xx=xx(cut0)
-   if ndim gt 1 then yy=yy(cut0)
-   if ndim gt 2 then zz=zz(cut0)
-endif
+  if keyword_set(cut0) then begin
+     xx=xx(cut0)
+     if ndim gt 1 then yy=yy(cut0)
+     if ndim gt 2 then zz=zz(cut0)
+  endif
 
-!x.title="!5"+strupcase(variables(0))
-if plotdim gt 1 then !y.title = "!5"+strupcase(variables(1))
-if plotdim gt 2 then !z.title = "!5"+strupcase(variables(2))
+  !x.title="!5"+strupcase(variables(0))
+  if plotdim gt 1 then !y.title = "!5"+strupcase(variables(1))
+  if plotdim gt 2 then !z.title = "!5"+strupcase(variables(2))
 
-if ndim eq 3 and plotdim eq 2 then begin
-   siz=size(cut)
-   case 1 of
-     siz(0) eq 2: rSlice=zz(0)
-     siz(1) eq 1: rSlice=xx(0)
-     siz(2) eq 1: rSlice=yy(0)
-   endcase
-   print,'Normal coordinate of 2D slice:',rSlice
-endif else        rSlice=0.0
+  if ndim eq 3 and plotdim eq 2 then begin
+     siz=size(cut)
+     case 1 of
+        siz(0) eq 2: rSlice=zz(0)
+        siz(1) eq 1: rSlice=xx(0)
+        siz(2) eq 1: rSlice=yy(0)
+     endcase
+     print,'Normal coordinate of 2D slice:',rSlice
+  endif else        rSlice=0.0
 
 ; Cut with fixed X value?
-siz=size(cut)
+  siz=size(cut)
 ; in 2D
-if siz(0) eq 2 and siz(1) eq 1 then begin
-   xx=yy
-   !x.title=variables(1)
-endif
+  if siz(0) eq 2 and siz(1) eq 1 then begin
+     xx=yy
+     !x.title=variables(1)
+  endif
 ; in 3D
-if siz(0) eq 3 then begin
-   case 1 of
-   plotdim eq 1: begin
-      xx=zz
-      !x.title=variables(2)
-   end
-   siz(1) eq 1: begin
-         xx=yy
-         yy=zz
-         !x.title="!5"+variables(1)
-         !y.title="!5"+variables(2)
-   end
-   siz(2) eq 1: begin
-      yy=zz
-      !y.title="!5"+variables(2)
-   end
-   else: print,'internal error in getaxes'
-   endcase
-endif
+  if siz(0) eq 3 then begin
+     case 1 of
+        plotdim eq 1: begin
+           xx=zz
+           !x.title=variables(2)
+        end
+        siz(1) eq 1: begin
+           xx=yy
+           yy=zz
+           !x.title="!5"+variables(1)
+           !y.title="!5"+variables(2)
+        end
+        siz(2) eq 1: begin
+           yy=zz
+           !y.title="!5"+variables(2)
+        end
+        else: print,'internal error in getaxes'
+     endcase
+  endif
 
 end
 
@@ -2230,36 +3471,36 @@ end
 ;===========================================================================
 pro get_func,ifunc,x,w
 ;===========================================================================
-;; on_error,2
+  on_error,2
 
-common plotfunc_param
-common plot_param
-common plot_store
+  common plotfunc_param
+  common plot_param
+  common plot_store
 
-func1 = funcs1(ifunc)
-func2 = funcs2(ifunc)
+  func1 = funcs1(ifunc)
+  func2 = funcs2(ifunc)
 
-f1 = funcdef(x,w,func1)
+  f1 = funcdef(x,w,func1)
 
-if n_elements(cut0) gt 1 then f1 = f1(cut0)
+  if n_elements(cut0) gt 1 then f1 = f1(cut0)
 
-if func2 eq '' then f=f1 else begin
+  if func2 eq '' then f=f1 else begin
 
-   f2 = funcdef(x,w,func2)
+     f2 = funcdef(x,w,func2)
 
-   if n_elements(cut0) gt 1 then f2 = f2(cut0)
+     if n_elements(cut0) gt 1 then f2 = f2(cut0)
 
-   ; Calculate f
-   f = sqrt(f1^2 + f2^2)
+                                ; Calculate f
+     f = sqrt(f1^2 + f2^2)
 
-endelse
+  endelse
 
 end
 
 ;===========================================================================
 pro plot_func
 ;===========================================================================
-;;  on_error,2
+  on_error,2
 
   common transform_param, usereg
   common plot_data
@@ -2288,7 +3529,7 @@ pro plot_func
      axistype='coord'
   endif
 
-  ; Save global values that will be overwritten
+                                ; Save global values that will be overwritten
   xtitleorig = !x.title
   ytitleorig = !y.title
 
@@ -2309,7 +3550,7 @@ pro plot_func
         yrange=[min(yy),max(yy)]
   endif
 
-  ; Calculate plot spacing from number of plots per page (ppp) and charsize
+                                ; Calculate plot spacing from number of plots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
   ppp   = multix*multiy
   spacex = float(!d.x_ch_size)/float(!d.x_size)*plot_spacex*!p.charsize
@@ -2423,7 +3664,7 @@ pro plot_func
         usemean=1
      endif else usemean=0
 
-     ; check if this plot requires a special color table #ctNNN
+                                ; check if this plot requires a special color table #ctNNN
      i = strpos(plotmod, '#ct')
      if i ge 0 then begin
         color = strmid(plotmod,i+3)
@@ -2431,7 +3672,7 @@ pro plot_func
         loadct_extra, color
      endif
 
-     ; check if this plot requires a special color #cNNN
+                                ; check if this plot requires a special color #cNNN
      i = strpos(plotmod, '#c')
      if i ge 0 then begin
         color = strmid(plotmod,i+2)
@@ -2569,28 +3810,28 @@ pro plot_func
      if usereg then get_func,ifunc,xreg,wreg $
      else           get_func,ifunc,x,w
 
-     ; calculate running max or mean
+                                ; calculate running max or mean
      if nplotstore gt 0 then begin
-        ; allocate plotstore and timesture arrays
+                                ; allocate plotstore and timesture arrays
         if n_elements(plotstore) ne $
            n_elements(f)*nplotstore*nfunc*nfilestore then $
-           plotstore = fltarr(n_elements(f),nplotstore,nfunc,nfilestore)
+              plotstore = fltarr(n_elements(f),nplotstore,nfunc,nfilestore)
 
         if n_elements(timestore) ne nplotstore*nfilestore then $
            timestore = fltarr(nplotstore,nfilestore)
 
-        ; store plot function (list of points) and simulation time
+                                ; store plot function (list of points) and simulation time
         plotstore(*,iplotstore,ifunc,ifilestore) = f
         timestore(iplotstore,ifilestore) = time
 
-        ; jump to next storage index (cyclic)
+                                ; jump to next storage index (cyclic)
         if ifunc eq nfunc-1 then iplotstore = (iplotstore + 1) mod nplotstore
 
-        ; calculate maximum over stored functions
+                                ; calculate maximum over stored functions
         if usemax then $
            for i = 0, nplotstore-1 do f = f > plotstore(*,i,ifunc,ifilestore)
 
-        ; calculate mean of stored functions
+                                ; calculate mean of stored functions
         if usemean then begin
            f = 0*f
            for i = 0, nplotstore-1 do f = f + plotstore(*,i,ifunc,ifilestore)
@@ -2634,7 +3875,7 @@ pro plot_func
                                 ; second coordinate if not already set
      if plotmod eq 'polar' and angleunit lt 0 then begin
         if max(yy)-min(yy) gt 300 then $
-           angleunit = !dtor $ ; degrees
+           angleunit = !dtor $  ; degrees
         else if max(yy)-min(yy) gt 20 then $
            angleunit = !pi/12 $ ; local time
         else $
@@ -2666,7 +3907,7 @@ pro plot_func
            'plot':plot,f,YRANGE=[f_min,f_max],$
                        XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
            'plot_io':plot_io,f,YRANGE=[f_min,f_max],$
-                       XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
+                             XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
            'shade'    :begin
               shade_surf,f>f_min,ZRANGE=[f_min,f_max],$
                          XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
@@ -2716,14 +3957,14 @@ pro plot_func
                             XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
                             LINE=lstyle,/NOERASE
            'plot_io'  :plot_io,xx,f,YRANGE=[f_min,f_max],$
-                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
-                            LINE=lstyle,/NOERASE
+                               XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                               LINE=lstyle,/NOERASE
            'plot_oi'  :plot_oi,xx,f,YRANGE=[f_min,f_max],$
-                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
-                            LINE=lstyle,/NOERASE
+                               XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                               LINE=lstyle,/NOERASE
            'plot_oo'  :plot_oo,xx,f,YRANGE=[f_min,f_max],$
-                            XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
-                            LINE=lstyle,/NOERASE
+                               XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
+                               LINE=lstyle,/NOERASE
            'shade'    :if irr then begin
               shade_surf_irr,f>f_min,xx,yy,AX=ax,AZ=az
               shade_surf,f>f_min,xx,yy,AX=ax,AZ=az,/NODATA,/NOERASE
@@ -2771,7 +4012,7 @@ pro plot_func
 
      if showbody and axistype eq 'coord' then $
         if rBody gt abs(rSlice) then begin
-        rBody = float(rBody) ; make sure it's not an integer
+        rBody = float(rBody)    ; make sure it's not an integer
         theta = findgen(37)*!pi*2.0/36.0
         rBodySlice=sqrt(rBody^2-rSlice^2)
 
@@ -2800,10 +4041,10 @@ pro plot_func
            plot_grid,xx,yy,lines=showmesh,xstyle=5,ystyle=5               $
         else begin
            plot_grid,x,lines=showmesh,xstyle=5,ystyle=5,$
-                    xrange=xrange,yrange=yrange
+                     xrange=xrange,yrange=yrange
         endelse
 
-        ; restore colors
+                                ; restore colors
         if white then begin
            common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
            tvlct, r_curr, g_curr, b_curr
@@ -2827,49 +4068,49 @@ end
 ;===========================================================================
 pro putbottom,multix,multiy,ix,iy,info,nx,it,time
 
-on_error,2
+  on_error,2
 
-t    = round(time)
-sec  = t mod 60
-t    = t/60
-min  = t mod 60
-t    = t/60
-hour = t mod 24
-t    = t/24
-day  = t mod 365
-year = t/365
+  t    = round(time)
+  sec  = t mod 60
+  t    = t/60
+  min  = t mod 60
+  t    = t/60
+  hour = t mod 24
+  t    = t/24
+  day  = t mod 365
+  year = t/365
 
-if year gt 0 then $
-  stime = string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
-else if day gt 0 then $
-  stime = string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
-else if hour gt 0 then $
-  stime = string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
-else $
-  stime = string(time, format='(g12.5)')
+  if year gt 0 then $
+     stime = string(year,day,hour,format='(i3,"y",i3.3,"d",i2.2,"h")') $
+  else if day gt 0 then $
+     stime = string(day,hour,min,format='(i4,"d",i2.2,"h",i2.2,"m")') $
+  else if hour gt 0 then $
+     stime = string(hour,min,sec,format='(i4,"h",i2.2,"m",i2.2,"s")') $
+  else $
+     stime = string(time, format='(g12.5)')
 
-if n_elements(nx) eq 1 then snx = string(nx, format='(i6)')
-if n_elements(nx) eq 2 then snx = string(nx, format='(i6,",",i4)')
-if n_elements(nx) eq 3 then snx = string(nx, format='(i6,",",i4,",",i4)')
+  if n_elements(nx) eq 1 then snx = string(nx, format='(i6)')
+  if n_elements(nx) eq 2 then snx = string(nx, format='(i6,",",i4)')
+  if n_elements(nx) eq 3 then snx = string(nx, format='(i6,",",i4,",",i4)')
 
-sit = string(it, format='(i8)')
+  sit = string(it, format='(i8)')
 
-siz = size(info)
+  siz = size(info)
 
-if siz(1) eq 7 then begin
-  if not execute("s = "+info) then begin
-      print,'Error in putbottom: cannot evaluate info=',info
-      return
-  endif
-endif else begin
-    if info lt 1 then return
-    s = ''
-    if info gt 2 then s = 'nx=' + snx + ', '
-    if info gt 1 then s = s + 'it=' + sit + ', '
-    s = s + 'time=' + stime
-endelse
+  if siz(1) eq 7 then begin
+     if not execute("s = "+info) then begin
+        print,'Error in putbottom: cannot evaluate info=',info
+        return
+     endif
+  endif else begin
+     if info lt 1 then return
+     s = ''
+     if info gt 2 then s = 'nx=' + snx + ', '
+     if info gt 1 then s = s + 'it=' + sit + ', '
+     s = s + 'time=' + stime
+  endelse
 
-xyouts, 5+(ix*!d.x_size)/multix, 8+(iy*!d.y_size)/multiy, /DEV, s
+  xyouts, 5+(ix*!d.x_size)/multix, 8+(iy*!d.y_size)/multiy, /DEV, s
 
 ;;xyouts,5,3000,/DEV,info
 
@@ -2885,12 +4126,12 @@ end
 ;===========================================================================
 pro putheader,multix,multiy,ix,iy,ninfo,headline,nx
 
-on_error,2
+  on_error,2
 
-if ninfo lt 1 then return
-info=strtrim(headline,2)
-if ninfo gt 1 then info=info+' (nx='+string(nx,format='(i6,2(i4))')+')'
-xyouts,5+(ix*!d.x_size)/multix,-12+((iy+1)*!d.y_size)/multiy,/DEV,info
+  if ninfo lt 1 then return
+  info=strtrim(headline,2)
+  if ninfo gt 1 then info=info+' (nx='+string(nx,format='(i6,2(i4))')+')'
+  xyouts,5+(ix*!d.x_size)/multix,-12+((iy+1)*!d.y_size)/multiy,/DEV,info
 
 end
 ;===========================================================================
@@ -2900,33 +4141,33 @@ function diff1,a,x
 ; using 2nd order centered differencing
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-ndim=siz(0)
-if ndim ne 1 then begin
-   print,'Function diff1 is intended for 1D arrays only'
-   retall
-endif
+  siz=size(a)
+  ndim=siz(0)
+  if ndim ne 1 then begin
+     print,'Function diff1 is intended for 1D arrays only'
+     retall
+  endif
 
-n  = n_elements(a)
-nx = n_elements(x)
+  n  = n_elements(a)
+  nx = n_elements(x)
 
-if nx ne 0 and nx ne n then begin
-   print,'Error in diff1, arrays sizes differ: nx, n=', nx, n
-   retall
-endif
+  if nx ne 0 and nx ne n then begin
+     print,'Error in diff1, arrays sizes differ: nx, n=', nx, n
+     retall
+  endif
 
-dadx = a
+  dadx = a
 
-if nx eq 0 then dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/2 $
-else            dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/(x(2:n-1) - x(0:n-3))
+  if nx eq 0 then dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/2 $
+  else            dadx(1:n-2) = (a(2:n-1) - a(0:n-3))/(x(2:n-1) - x(0:n-3))
 
 ; fill in boundaries
-dadx(0)   = dadx(1)
-dadx(n-1) = dadx(n-2)
+  dadx(0)   = dadx(1)
+  dadx(n-1) = dadx(n-2)
 
-return,dadx
+  return,dadx
 end
 ;===========================================================================
 function laplace,a,x,y,z
@@ -2934,38 +4175,38 @@ function laplace,a,x,y,z
 ; Take Laplace of "a" in 1 or 2D with respect to "x" (and "y") if present.
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-ndim=siz(0)
-if ndim eq 3 then return,laplace3(a,x,y,z)
-if ndim eq 2 then return,laplace2(a,x,y)
-if ndim ne 1 then begin
-   print,'Function laplace is intended for 1, 2 and 3D arrays only'
-   retall
-endif
+  siz=size(a)
+  ndim=siz(0)
+  if ndim eq 3 then return,laplace3(a,x,y,z)
+  if ndim eq 2 then return,laplace2(a,x,y)
+  if ndim ne 1 then begin
+     print,'Function laplace is intended for 1, 2 and 3D arrays only'
+     retall
+  endif
 
-n  = n_elements(a)
-nx = n_elements(x)
+  n  = n_elements(a)
+  nx = n_elements(x)
 
-if nx ne 0 and nx ne n then begin
-   print,'Error in laplace, array sizes differ: nx, n=', nx, n
-   retall
-endif
+  if nx ne 0 and nx ne n then begin
+     print,'Error in laplace, array sizes differ: nx, n=', nx, n
+     retall
+  endif
 
-d2adx2 = a
+  d2adx2 = a
 
-if nx eq 0 then d2adx2(1:n-2) = a(2:n-1) - 2*a(1:n-2) + a(0:n-3) $
-else            d2adx2(1:n-2) = $
-  ( (a(2:n-1) - a(1:n-2))/(x(2:n-1) - x(1:n-2)) $
-  - (a(1:n-2) - a(0:n-3))/(x(1:n-2) - x(0:n-3)) ) $
-  / (0.5*(x(2:n-1) - x(0:n-3)))
+  if nx eq 0 then d2adx2(1:n-2) = a(2:n-1) - 2*a(1:n-2) + a(0:n-3) $
+  else            d2adx2(1:n-2) = $
+     ( (a(2:n-1) - a(1:n-2))/(x(2:n-1) - x(1:n-2)) $
+       - (a(1:n-2) - a(0:n-3))/(x(1:n-2) - x(0:n-3)) ) $
+     / (0.5*(x(2:n-1) - x(0:n-3)))
 
 ; fill in boundaries
-d2adx2(0)   = d2adx2(1)
-d2adx2(n-1) = d2adx2(n-2)
+  d2adx2(0)   = d2adx2(1)
+  d2adx2(n-1) = d2adx2(n-2)
 
-return,d2adx2
+  return,d2adx2
 end
 ;===========================================================================
 function laplace2,a,x,y
@@ -2973,46 +4214,46 @@ function laplace2,a,x,y
 ; Take Laplace of "a" in 2D with respect to "x" and "y" (if present).
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-ndim=siz(0)
+  siz=size(a)
+  ndim=siz(0)
 
-n1 = siz(1)
-n2 = siz(2)
-n  = n1*n2
-nx = n_elements(x)
-ny = n_elements(y)
+  n1 = siz(1)
+  n2 = siz(2)
+  n  = n1*n2
+  nx = n_elements(x)
+  ny = n_elements(y)
 
-if (nx ne 0 or ny ne 0) and (nx ne n or ny ne n) then begin
-   print,'Error in laplace2, array sizes differ: n, nx, ny=', n, nx, ny
-   retall
-endif
+  if (nx ne 0 or ny ne 0) and (nx ne n or ny ne n) then begin
+     print,'Error in laplace2, array sizes differ: n, nx, ny=', n, nx, ny
+     retall
+  endif
 
-d2adx2 = a
+  d2adx2 = a
 
-if nx eq 0 then d2adx2(1:n1-2,1:n2-2) = $
-  a(2:n1-1,1:n2-2) - 2*a(1:n1-2,1:n2-2) + a(0:n1-3,1:n2-2) + $
-  a(1:n1-2,2:n2-1) - 2*a(1:n1-2,1:n2-2) + a(1:n1-2,0:n2-3)   $
-else            d2adx2(1:n1-2,1:n2-2) = $
-  ( (a(2:n1-1,1:n2-2) - a(1:n1-2,1:n2-2))/ $
-    (x(2:n1-1,1:n2-2) - x(1:n1-2,1:n2-2))- $
-    (a(1:n1-2,1:n2-2) - a(0:n1-3,1:n2-2))/ $
-    (x(1:n1-2,1:n2-2) - x(0:n1-3,1:n2-2)) $
-  ) / (0.5*(x(2:n1-1,1:n2-2) - x(0:n1-3,1:n2-2))) + $
-  ( (a(1:n1-2,2:n2-1) - a(1:n1-2,1:n2-1))/ $
-    (y(1:n1-2,2:n2-1) - y(1:n1-2,1:n2-1))- $
-    (a(1:n1-2,1:n2-2) - a(1:n1-2,0:n2-3))/ $
-    (y(1:n1-2,1:n2-2) - y(1:n1-2,0:n2-3)) $
-  ) / (0.5*(y(1:n1-2,2:n2-1) - y(1:n1-2,0:n2-3)))
+  if nx eq 0 then d2adx2(1:n1-2,1:n2-2) = $
+     a(2:n1-1,1:n2-2) - 2*a(1:n1-2,1:n2-2) + a(0:n1-3,1:n2-2) + $
+     a(1:n1-2,2:n2-1) - 2*a(1:n1-2,1:n2-2) + a(1:n1-2,0:n2-3)   $
+  else            d2adx2(1:n1-2,1:n2-2) = $
+     ( (a(2:n1-1,1:n2-2) - a(1:n1-2,1:n2-2))/ $
+       (x(2:n1-1,1:n2-2) - x(1:n1-2,1:n2-2))- $
+       (a(1:n1-2,1:n2-2) - a(0:n1-3,1:n2-2))/ $
+       (x(1:n1-2,1:n2-2) - x(0:n1-3,1:n2-2)) $
+     ) / (0.5*(x(2:n1-1,1:n2-2) - x(0:n1-3,1:n2-2))) + $
+     ( (a(1:n1-2,2:n2-1) - a(1:n1-2,1:n2-1))/ $
+       (y(1:n1-2,2:n2-1) - y(1:n1-2,1:n2-1))- $
+       (a(1:n1-2,1:n2-2) - a(1:n1-2,0:n2-3))/ $
+       (y(1:n1-2,1:n2-2) - y(1:n1-2,0:n2-3)) $
+     ) / (0.5*(y(1:n1-2,2:n2-1) - y(1:n1-2,0:n2-3)))
 
 ; fill in boundaries
-d2adx2(0   ,1:n2-1) = d2adx2(1   ,1:n2-1)
-d2adx2(n1-1,1:n2-1) = d2adx2(n1-2,1:n2-1)
-d2adx2(*,0)         = d2adx2(*,1)
-d2adx2(*,n2-1)      = d2adx2(*,n2-2)
+  d2adx2(0   ,1:n2-1) = d2adx2(1   ,1:n2-1)
+  d2adx2(n1-1,1:n2-1) = d2adx2(n1-2,1:n2-1)
+  d2adx2(*,0)         = d2adx2(*,1)
+  d2adx2(*,n2-1)      = d2adx2(*,n2-2)
 
-return,d2adx2
+  return,d2adx2
 end
 ;===========================================================================
 function laplace3,a,x,y,z
@@ -3020,58 +4261,58 @@ function laplace3,a,x,y,z
 ; Take Laplace of "a" in 2D with respect to "x", "y" and "z" (if present).
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-ndim=siz(0)
+  siz=size(a)
+  ndim=siz(0)
 
-n1 = siz(1)
-n2 = siz(2)
-n3 = siz(3)
-n  = n1*n2*n3
-nx = n_elements(x)
-ny = n_elements(y)
-nz = n_elements(z)
+  n1 = siz(1)
+  n2 = siz(2)
+  n3 = siz(3)
+  n  = n1*n2*n3
+  nx = n_elements(x)
+  ny = n_elements(y)
+  nz = n_elements(z)
 
-if (nx+ny+nz ne 0) and (nx ne n or ny ne n or nz ne n) then begin
-   print,'Error in laplace3, array sizes differ: n, nx, ny, nz=', $
-     n, nx, ny, nz
-   retall
-endif
+  if (nx+ny+nz ne 0) and (nx ne n or ny ne n or nz ne n) then begin
+     print,'Error in laplace3, array sizes differ: n, nx, ny, nz=', $
+           n, nx, ny, nz
+     retall
+  endif
 
-d2adx2 = a
+  d2adx2 = a
 
-if nx eq 0 then d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
-  a(2:n1-1,1:n2-2,1:n3-2) + a(0:n1-3,1:n2-2,1:n3-2) + $
-  a(1:n1-2,2:n2-1,1:n3-2) + a(1:n1-2,0:n2-3,1:n3-2) + $
-  a(1:n1-2,1:n2-2,2:n3-1) + a(1:n1-2,1:n2-2,0:n3-3) - $
-  6*a(1:n1-2,1:n2-2,1:n3-2)                           $
-else            d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
-  ( (a(2:n1-1,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,1:n3-2))/ $
-    (x(2:n1-1,1:n2-2,1:n3-2) - x(1:n1-2,1:n2-2,1:n3-2))- $
-    (a(1:n1-2,1:n2-2,1:n3-2) - a(0:n1-3,1:n2-2,1:n3-2))/ $
-    (x(1:n1-2,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2)) $
-  ) / (0.5*(x(2:n1-1,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2))) + $
-  ( (a(1:n1-2,2:n2-1,1:n3-2) - a(1:n1-2,1:n2-1,1:n3-2))/ $
-    (y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,1:n2-1,1:n3-2))- $
-    (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,0:n2-3,1:n3-2))/ $
-    (y(1:n1-2,1:n2-2,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2)) $
-  ) / (0.5*(y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2))) + $
-  ( (a(1:n1-2,1:n2-2,2:n3-1) - a(1:n1-2,1:n2-2,1:n3-2))/ $
-    (z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,1:n3-2))- $
-    (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,0:n3-3))/ $
-    (z(1:n1-2,1:n2-2,1:n3-2) - z(1:n1-2,1:n2-2,0:n3-3)) $
-  ) / (0.5*(z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,0:n3-3)))
+  if nx eq 0 then d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
+     a(2:n1-1,1:n2-2,1:n3-2) + a(0:n1-3,1:n2-2,1:n3-2) + $
+     a(1:n1-2,2:n2-1,1:n3-2) + a(1:n1-2,0:n2-3,1:n3-2) + $
+     a(1:n1-2,1:n2-2,2:n3-1) + a(1:n1-2,1:n2-2,0:n3-3) - $
+     6*a(1:n1-2,1:n2-2,1:n3-2)                           $
+  else            d2adx2(1:n1-2,1:n2-2,1:n3-2) = $
+     ( (a(2:n1-1,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,1:n3-2))/ $
+       (x(2:n1-1,1:n2-2,1:n3-2) - x(1:n1-2,1:n2-2,1:n3-2))- $
+       (a(1:n1-2,1:n2-2,1:n3-2) - a(0:n1-3,1:n2-2,1:n3-2))/ $
+       (x(1:n1-2,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2)) $
+     ) / (0.5*(x(2:n1-1,1:n2-2,1:n3-2) - x(0:n1-3,1:n2-2,1:n3-2))) + $
+     ( (a(1:n1-2,2:n2-1,1:n3-2) - a(1:n1-2,1:n2-1,1:n3-2))/ $
+       (y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,1:n2-1,1:n3-2))- $
+       (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,0:n2-3,1:n3-2))/ $
+       (y(1:n1-2,1:n2-2,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2)) $
+     ) / (0.5*(y(1:n1-2,2:n2-1,1:n3-2) - y(1:n1-2,0:n2-3,1:n3-2))) + $
+     ( (a(1:n1-2,1:n2-2,2:n3-1) - a(1:n1-2,1:n2-2,1:n3-2))/ $
+       (z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,1:n3-2))- $
+       (a(1:n1-2,1:n2-2,1:n3-2) - a(1:n1-2,1:n2-2,0:n3-3))/ $
+       (z(1:n1-2,1:n2-2,1:n3-2) - z(1:n1-2,1:n2-2,0:n3-3)) $
+     ) / (0.5*(z(1:n1-2,1:n2-2,2:n3-1) - z(1:n1-2,1:n2-2,0:n3-3)))
 
 ; fill in boundaries
-d2adx2(0   ,1:n2-1,1:n3-2) = d2adx2(1   ,1:n2-1,1:n3-2)
-d2adx2(n1-1,1:n2-1,1:n3-2) = d2adx2(n1-2,1:n2-1,1:n3-2)
-d2adx2(*   ,0     ,1:n3-2) = d2adx2(*   ,1     ,1:n3-2)
-d2adx2(*   ,n2-1  ,1:n3-2) = d2adx2(*   ,n2-2  ,1:n3-2)
-d2adx2(*   ,*     ,0     ) = d2adx2(*   ,*     ,1     )
-d2adx2(*   ,*     ,n3-1  ) = d2adx2(*   ,*     ,n3-2  )
+  d2adx2(0   ,1:n2-1,1:n3-2) = d2adx2(1   ,1:n2-1,1:n3-2)
+  d2adx2(n1-1,1:n2-1,1:n3-2) = d2adx2(n1-2,1:n2-1,1:n3-2)
+  d2adx2(*   ,0     ,1:n3-2) = d2adx2(*   ,1     ,1:n3-2)
+  d2adx2(*   ,n2-1  ,1:n3-2) = d2adx2(*   ,n2-2  ,1:n3-2)
+  d2adx2(*   ,*     ,0     ) = d2adx2(*   ,*     ,1     )
+  d2adx2(*   ,*     ,n3-1  ) = d2adx2(*   ,*     ,n3-2  )
 
-return,d2adx2
+  return,d2adx2
 end
 ;===========================================================================
 function diff2,direction,a,x
@@ -3080,56 +4321,56 @@ function diff2,direction,a,x
 ; using 2nd order centered differencing
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-ndim=siz(0)
-if ndim ne 2 and ndim ne 3 then begin
-   print,'Function diff2 is intended for 2D and 3D arrays only'
-   retall
-endif
+  siz=size(a)
+  ndim=siz(0)
+  if ndim ne 2 and ndim ne 3 then begin
+     print,'Function diff2 is intended for 2D and 3D arrays only'
+     retall
+  endif
 
-if direction lt 1 or direction gt ndim then begin
-   print,'Direction=',direction,' should be between 1 and ndim=',ndim,'!'
-   retall
-endif
+  if direction lt 1 or direction gt ndim then begin
+     print,'Direction=',direction,' should be between 1 and ndim=',ndim,'!'
+     retall
+  endif
 
-n1=siz(1)
-n2=siz(2)
-if ndim eq 3 then n3=siz(3)
+  n1=siz(1)
+  n2=siz(2)
+  if ndim eq 3 then n3=siz(3)
 
-if direction eq 1 then begin
-   ind1=indgen(n1)
-   jnd1=ind1+1
-   jnd1(n1-1)=n1
-   hnd1=ind1-1
-   hnd1(0)=0
-   if ndim eq 2 then $
-     dadx=(a(jnd1,*)-a(hnd1,*))/(x(jnd1,*)-x(hnd1,*)) $
-   else $
-     dadx=(a(jnd1,*,*)-a(hnd1,*,*))/(x(jnd1,*,*)-x(hnd1,*,*))
-endif
-if direction eq 2 then begin
-   ind2=indgen(n2)
-   jnd2=ind2+1
-   jnd2(n2-1)=n2
-   hnd2=ind2-1
-   hnd2(0)=0
-   if ndim eq 2 then $
-     dadx=(a(*,jnd2)-a(*,hnd2))/(x(*,jnd2)-x(*,hnd2)) $
-   else $
-     dadx=(a(*,jnd2,*)-a(*,hnd2,*))/(x(*,jnd2,*)-x(*,hnd2,*))
-endif
-if direction eq 3 then begin
-   ind3=indgen(n3)
-   jnd3=ind3+1
-   jnd3(n3-1)=n3
-   hnd3=ind3-1
-   hnd3(0)=0
-   dadx=(a(*,*,jnd3)-a(*,*,hnd3))/(x(*,*,jnd3)-x(*,*,hnd3))
-endif
+  if direction eq 1 then begin
+     ind1=indgen(n1)
+     jnd1=ind1+1
+     jnd1(n1-1)=n1
+     hnd1=ind1-1
+     hnd1(0)=0
+     if ndim eq 2 then $
+        dadx=(a(jnd1,*)-a(hnd1,*))/(x(jnd1,*)-x(hnd1,*)) $
+     else $
+        dadx=(a(jnd1,*,*)-a(hnd1,*,*))/(x(jnd1,*,*)-x(hnd1,*,*))
+  endif
+  if direction eq 2 then begin
+     ind2=indgen(n2)
+     jnd2=ind2+1
+     jnd2(n2-1)=n2
+     hnd2=ind2-1
+     hnd2(0)=0
+     if ndim eq 2 then $
+        dadx=(a(*,jnd2)-a(*,hnd2))/(x(*,jnd2)-x(*,hnd2)) $
+     else $
+        dadx=(a(*,jnd2,*)-a(*,hnd2,*))/(x(*,jnd2,*)-x(*,hnd2,*))
+  endif
+  if direction eq 3 then begin
+     ind3=indgen(n3)
+     jnd3=ind3+1
+     jnd3(n3-1)=n3
+     hnd3=ind3-1
+     hnd3(0)=0
+     dadx=(a(*,*,jnd3)-a(*,*,hnd3))/(x(*,*,jnd3)-x(*,*,hnd3))
+  endif
 
-return,dadx
+  return,dadx
 
 end
 
@@ -3140,45 +4381,45 @@ function diff4,direction,a,x
 ; using 4th order centered differencing
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-if siz(0) ne 2 then begin
-   print,'Function diff4 is intended for 2D arrays only'
-   retall
-endif
+  siz=size(a)
+  if siz(0) ne 2 then begin
+     print,'Function diff4 is intended for 2D arrays only'
+     retall
+  endif
 
-n1=siz(1)
-n2=siz(2)
+  n1=siz(1)
+  n2=siz(2)
 
-dadx=a
+  dadx=a
 
-if direction eq 1 then begin
-   if n1 lt 5 then begin
-      print,'Cannot take 4th order X gradient of grid with less than 5 columns'
-      retall
-   endif
-   dadx(2:n1-3,*)=(a(4:n1-1,*)-8*a(3:n1-2,*)+8*a(1:n1-4,*)-a(0:n1-5,*)) $
-                 /(x(3:n1-2,*)-x(1:n1-4,*))/6;
-   dadx(0,*)   =dadx(2,*)
-   dadx(1,*)   =dadx(2,*)
-   dadx(n1-2,*)=dadx(n1-3,*)
-   dadx(n1-1,*)=dadx(n1-3,*)
-endif
-if direction eq 2 then begin
-   if n2 lt 5 then begin
-      print,'Cannot take 4th order Y gradient of grid with less than 5 rows'
-      retall
-   endif
-   dadx(*,2:n2-3)=(a(*,4:n2-1)-8*a(*,3:n2-2)+8*a(*,1:n2-4)-a(*,0:n2-5)) $
-                 /(x(*,3:n2-2)-x(*,1:n2-4))/6;
-   dadx(*,0)   =dadx(*,2)
-   dadx(*,1)   =dadx(*,2)
-   dadx(*,n2-2)=dadx(*,n2-3)
-   dadx(*,n2-1)=dadx(*,n2-3)
-endif
+  if direction eq 1 then begin
+     if n1 lt 5 then begin
+        print,'Cannot take 4th order X gradient of grid with less than 5 columns'
+        retall
+     endif
+     dadx(2:n1-3,*)=(a(4:n1-1,*)-8*a(3:n1-2,*)+8*a(1:n1-4,*)-a(0:n1-5,*)) $
+                    /(x(3:n1-2,*)-x(1:n1-4,*))/6 ;
+     dadx(0,*)   =dadx(2,*)
+     dadx(1,*)   =dadx(2,*)
+     dadx(n1-2,*)=dadx(n1-3,*)
+     dadx(n1-1,*)=dadx(n1-3,*)
+  endif
+  if direction eq 2 then begin
+     if n2 lt 5 then begin
+        print,'Cannot take 4th order Y gradient of grid with less than 5 rows'
+        retall
+     endif
+     dadx(*,2:n2-3)=(a(*,4:n2-1)-8*a(*,3:n2-2)+8*a(*,1:n2-4)-a(*,0:n2-5)) $
+                    /(x(*,3:n2-2)-x(*,1:n2-4))/6 ;
+     dadx(*,0)   =dadx(*,2)
+     dadx(*,1)   =dadx(*,2)
+     dadx(*,n2-2)=dadx(*,n2-3)
+     dadx(*,n2-1)=dadx(*,n2-3)
+  endif
 
-return,dadx
+  return,dadx
 
 end
 
@@ -3189,20 +4430,20 @@ function diff3,direction,a,x
 ; using IDL's 1D deriv() function
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-siz=size(a)
-if siz(0) ne 2 then begin
-   print,'Function diff3 is intended for 2D arrays only'
-   retall
-endif
+  siz=size(a)
+  if siz(0) ne 2 then begin
+     print,'Function diff3 is intended for 2D arrays only'
+     retall
+  endif
 
-dadx=a
+  dadx=a
 
-if direction eq 1 then for i2=0,siz(2)-1 do dadx(*,i2)=deriv(x(*,i2),a(*,i2))
-if direction eq 2 then for i1=0,siz(1)-1 do dadx(i1,*)=deriv(x(i1,*),a(i1,*))
+  if direction eq 1 then for i2=0,siz(2)-1 do dadx(*,i2)=deriv(x(*,i2),a(*,i2))
+  if direction eq 2 then for i1=0,siz(1)-1 do dadx(i1,*)=deriv(x(i1,*),a(i1,*))
 
-return,dadx
+  return,dadx
 
 end
 
@@ -3211,15 +4452,15 @@ function minmod,a,b
 ;
 ; Calculate minmod limited slope of a and b slopes
 
-on_error,2
+  on_error,2
 
-; get sign of a
-if a gt 0 then s=1 else s=-1
+  ;; get sign of a
+  if a gt 0 then s=1 else s=-1
 
-; calculate limited slope
-c = s*max([0,min([abs(a),s*b])])
+  ;; calculate limited slope
+  c = s*max([0,min([abs(a),s*b])])
 
-return,c
+  return,c
 end
 ;==========================================================================
 function symmdiff,direction,a,x,y,report=report,anti=anti
@@ -3300,50 +4541,50 @@ function symmdiffreg,direction,a
 ; "direction"
 ;
 ;===========================================================================
-on_error,2
+  on_error,2
 
-if not keyword_set(report) then report = 0
+  if not keyword_set(report) then report = 0
 
-siz=size(a)
-dim=siz(0)
-nx=siz(1)
+  siz=size(a)
+  dim=siz(0)
+  nx=siz(1)
 
-diff=a
+  diff=a
 
-case dim of
-1: for i=0,nx-1 do diff(i)=a(i)-a(nx-1-i)
+  case dim of
+     1: for i=0,nx-1 do diff(i)=a(i)-a(nx-1-i)
 
 ;if keyword_set(anti) then diff(i)= a(i)+a(nx-1-i) 
 ;if report and abs(diff(i)) gt report then print,"i,x,y,diff=",i,xi,yi,diff(i)
 
-2: begin
-     ny=siz(2)
-     case direction of
-     1: for i=0,nx-1 do diff(i,*)=a(i,*)-a(nx-1-i,*)
-     2: for i=0,ny-1 do diff(*,i)=a(*,i)-a(*,ny-1-i)
-     endcase
-   end
-3: begin
-     ny=siz(2)
-     nz=siz(3)
-     case direction of
-     1: for i=0,nx-1 do diff(i,*,*)=a(i,*,*)-a(nx-1-i,*,*)
-     2: for i=0,ny-1 do diff(*,i,*)=a(*,i,*)-a(*,ny-1-i,*)
-     3: for i=0,nz-1 do diff(*,*,i)=a(*,*,i)-a(*,*,nz-1-i)
-     endcase
-   end
-4: begin
-     ny=siz(2)
-     nz=siz(3)
-     case direction of
-     1: for i=0,nx-1 do diff(i,*,*,*)=a(i,*,*,*)-a(nx-1-i,*,*,*)
-     2: for i=0,ny-1 do diff(*,i,*,*)=a(*,i,*,*)-a(*,ny-1-i,*,*)
-     3: for i=0,nz-1 do diff(*,*,i,*)=a(*,*,i,*)-a(*,*,nz-1-i,*)
-     endcase
-   end
-endcase
+     2: begin
+        ny=siz(2)
+        case direction of
+           1: for i=0,nx-1 do diff(i,*)=a(i,*)-a(nx-1-i,*)
+           2: for i=0,ny-1 do diff(*,i)=a(*,i)-a(*,ny-1-i)
+        endcase
+     end
+     3: begin
+        ny=siz(2)
+        nz=siz(3)
+        case direction of
+           1: for i=0,nx-1 do diff(i,*,*)=a(i,*,*)-a(nx-1-i,*,*)
+           2: for i=0,ny-1 do diff(*,i,*)=a(*,i,*)-a(*,ny-1-i,*)
+           3: for i=0,nz-1 do diff(*,*,i)=a(*,*,i)-a(*,*,nz-1-i)
+        endcase
+     end
+     4: begin
+        ny=siz(2)
+        nz=siz(3)
+        case direction of
+           1: for i=0,nx-1 do diff(i,*,*,*)=a(i,*,*,*)-a(nx-1-i,*,*,*)
+           2: for i=0,ny-1 do diff(*,i,*,*)=a(*,i,*,*)-a(*,ny-1-i,*,*)
+           3: for i=0,nz-1 do diff(*,*,i,*)=a(*,*,i,*)-a(*,*,nz-1-i,*)
+        endcase
+     end
+  endcase
 
-return,diff
+  return,diff
 end
 
 ;===========================================================================
@@ -3703,85 +4944,85 @@ function coarsen,a,boxsize,fd=fd
 ; extract every n1-th element in dimension 1, every n2-th in dim 2 etc.
 
 
-;on_error,2
+  on_error,2
 
-if(n_elements(a) eq 0 or n_elements(boxsize) eq 0)then begin
-   print,'Calling sequence is: array_co=coarse(array, boxsize, /fd)'
-   retall
-endif
+  if(n_elements(a) eq 0 or n_elements(boxsize) eq 0)then begin
+     print,'Calling sequence is: array_co=coarse(array, boxsize, /fd)'
+     retall
+  endif
 
-siz=size(a)
-ndim=siz(0)
+  siz=size(a)
+  ndim=siz(0)
 
-if(ndim eq 0 or ndim gt 4)then begin
-   print,'coarse requires a 1, 2, 3 or 4D array for the 1st argument'
-   retall
-endif
-nx=siz(1:ndim)
+  if(ndim eq 0 or ndim gt 4)then begin
+     print,'coarse requires a 1, 2, 3 or 4D array for the 1st argument'
+     retall
+  endif
+  nx=siz(1:ndim)
 
-siz=size(box)
-if(siz(0) eq 0)then begin
-   n = intarr(ndim) + boxsize
-endif else if siz(0) eq ndim then begin
-   n = boxsize
-endif else begin
-   print,'boxsize should either be a scalar, or an array '
-   print,'of the same dimension as the number of dimensions of the array'
-   retall
-endelse
+  siz=size(box)
+  if(siz(0) eq 0)then begin
+     n = intarr(ndim) + boxsize
+  endif else if siz(0) eq ndim then begin
+     n = boxsize
+  endif else begin
+     print,'boxsize should either be a scalar, or an array '
+     print,'of the same dimension as the number of dimensions of the array'
+     retall
+  endelse
 
-if keyword_set(fd) then case ndim of
-   1: result = a(triplet(0,nx(0)-1,n(0)))
-   2: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1)))
-   3: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2)))
-   4: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2), $
-                         0,nx(3)-1,n(3)))
-endcase else case ndim of
-   1: begin
-      result = dblarr(nx(0)/n(0))
-      for ix=0,nx(0)/n(0)-1 do $
-        for i=0,n(0)-1 do $
-           result(ix)=result(ix) + a(ix*n(0)+i)
-      result=result/n(0)
-   end
-   2: begin
-      result = dblarr(nx(0)/n(0),nx(1)/n(1))
-      for ix=0,nx(0)/n(0)-1 do $
-      for iy=0,nx(1)/n(1)-1 do $
-        for i=0,n(0)-1 do $
-        for j=0,n(1)-1 do $
-           result(ix,iy) = result(ix,iy) + a(ix*n(0)+i,iy*n(1)+j)
-      result=result/n(0)/n(1)
-   end
-   3: begin
-      result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
-      for ix=0,nx(0)/n(0)-1 do $
-      for iy=0,nx(1)/n(1)-1 do $
-      for iz=0,nx(2)/n(2)-1 do $
-        for i=0,n(0)-1 do $
-        for j=0,n(1)-1 do $
-        for k=0,n(2)-1 do $
-           result(ix,iy,iz) = result(ix,iy,iz) $
-         + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k)
-      result = result/n(0)/n(1)/n(2)
-   end
-   4: begin
-      result = dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2),nx(3)/n(3))
-      for ix=0,nx(0)/n(0)-1 do $
-      for iy=0,nx(1)/n(1)-1 do $
-      for iz=0,nx(2)/n(2)-1 do $
-      for iw=0,nx(3)/n(3)-1 do $
-        for i=0,n(0)-1 do $
-        for j=0,n(1)-1 do $
-        for k=0,n(2)-1 do $
-        for l=0,n(3)-1 do $
-           result(ix,iy,iz,iw) = result(ix,iy,iz,iw) $
-         + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k,iw*n(3)+l)
-      result = result/n(0)/n(1)/n(2)/n(3)
-   end
-endcase
+  if keyword_set(fd) then case ndim of
+     1: result = a(triplet(0,nx(0)-1,n(0)))
+     2: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1)))
+     3: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2)))
+     4: result = a(triplet(0,nx(0)-1,n(0), 0,nx(1)-1,n(1), 0,nx(2)-1,n(2), $
+                           0,nx(3)-1,n(3)))
+  endcase else case ndim of
+     1: begin
+        result = dblarr(nx(0)/n(0))
+        for ix=0,nx(0)/n(0)-1 do $
+           for i=0,n(0)-1 do $
+              result(ix)=result(ix) + a(ix*n(0)+i)
+        result=result/n(0)
+     end
+     2: begin
+        result = dblarr(nx(0)/n(0),nx(1)/n(1))
+        for ix=0,nx(0)/n(0)-1 do $
+           for iy=0,nx(1)/n(1)-1 do $
+              for i=0,n(0)-1 do $
+                 for j=0,n(1)-1 do $
+                    result(ix,iy) = result(ix,iy) + a(ix*n(0)+i,iy*n(1)+j)
+        result=result/n(0)/n(1)
+     end
+     3: begin
+        result=dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2))
+        for ix=0,nx(0)/n(0)-1 do $
+           for iy=0,nx(1)/n(1)-1 do $
+              for iz=0,nx(2)/n(2)-1 do $
+                 for i=0,n(0)-1 do $
+                    for j=0,n(1)-1 do $
+                       for k=0,n(2)-1 do $
+                          result(ix,iy,iz) = result(ix,iy,iz) $
+           + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k)
+        result = result/n(0)/n(1)/n(2)
+     end
+     4: begin
+        result = dblarr(nx(0)/n(0),nx(1)/n(1),nx(2)/n(2),nx(3)/n(3))
+        for ix=0,nx(0)/n(0)-1 do $
+           for iy=0,nx(1)/n(1)-1 do $
+              for iz=0,nx(2)/n(2)-1 do $
+                 for iw=0,nx(3)/n(3)-1 do $
+                    for i=0,n(0)-1 do $
+                       for j=0,n(1)-1 do $
+                          for k=0,n(2)-1 do $
+                             for l=0,n(3)-1 do $
+                                result(ix,iy,iz,iw) = result(ix,iy,iz,iw) $
+           + a(ix*n(0)+i,iy*n(1)+j,iz*n(2)+k,iw*n(3)+l)
+        result = result/n(0)/n(1)/n(2)/n(3)
+     end
+  endcase
 
-return,result
+  return,result
 end
 
 ;===========================================================================
@@ -3816,101 +5057,101 @@ end
 
 ;===================================================================
 pro plot_grid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar,$
-             xrange=xrange,yrange=yrange,noorigin=noorigin
+              xrange=xrange,yrange=yrange,noorigin=noorigin
 ;===================================================================
 
-on_error,2
+  on_error,2
 
-if not keyword_set(x) then begin
-    print,'Usage: plot_grid, x [,y] [,/lines] [,/polar]',$
-      ' [,xstyle=3] [,ystyle=1]',$
-      '                   [,xrange=[-10,10]], [yrange=[-10,10]]'
-    retall
-endif
+  if not keyword_set(x) then begin
+     print,'Usage: plot_grid, x [,y] [,/lines] [,/polar]',$
+           ' [,xstyle=3] [,ystyle=1]',$
+           '                   [,xrange=[-10,10]], [yrange=[-10,10]]'
+     retall
+  endif
 
-xx=reform2(x)
-sizx=size(xx)
+  xx=reform2(x)
+  sizx=size(xx)
 
-if (n_elements(polar) eq 0) then polar = 0
+  if (n_elements(polar) eq 0) then polar = 0
 
-if not keyword_set(y) then begin
-    case sizx(0) of
+  if not keyword_set(y) then begin
+     case sizx(0) of
         3:begin
-            if sizx(3) ne 2 then goto, ERROR1
-            yy=xx(*,*,1)
-            xx=xx(*,*,0)
+           if sizx(3) ne 2 then goto, ERROR1
+           yy=xx(*,*,1)
+           xx=xx(*,*,0)
         end
         2:begin
-            if sizx(2) ne 2 then goto, ERROR1
-            yy=xx(*,1)
-            xx=xx(*,0)
-            lines=0
+           if sizx(2) ne 2 then goto, ERROR1
+           yy=xx(*,1)
+           xx=xx(*,0)
+           lines=0
         end
         else: goto, ERROR1
-    endcase
-endif else begin
-    yy=reform2(y)
-    sizy=size(yy)
-    if sizx(0) ne sizy(0)            then goto, ERROR2
-    if max(abs(sizx-sizy)) ne 0      then goto, ERROR2
-    if sizx(0) ne 2 and sizx(0) ne 1 then goto, ERROR2
-    if sizx(0) eq 1 then lines=0
-endelse
+     endcase
+  endif else begin
+     yy=reform2(y)
+     sizy=size(yy)
+     if sizx(0) ne sizy(0)            then goto, ERROR2
+     if max(abs(sizx-sizy)) ne 0      then goto, ERROR2
+     if sizx(0) ne 2 and sizx(0) ne 1 then goto, ERROR2
+     if sizx(0) eq 1 then lines=0
+  endelse
 
-if not keyword_set(xrange) then xrange = [0,0]
-if not keyword_set(yrange) then yrange = [0,0]
+  if not keyword_set(xrange) then xrange = [0,0]
+  if not keyword_set(yrange) then yrange = [0,0]
 
-if keyword_set(lines) then begin
+  if keyword_set(lines) then begin
 
-    plot, xx, yy, XSTYLE=xstyle, YSTYLE=ystyle, POLAR=polar, $
-      XRANGE=xrange, YRANGE=yrange, /NOERASE, /NODATA
+     plot, xx, yy, XSTYLE=xstyle, YSTYLE=ystyle, POLAR=polar, $
+           XRANGE=xrange, YRANGE=yrange, /NOERASE, /NODATA
 
-    if(keyword_set(noorigin))then begin
+     if(keyword_set(noorigin))then begin
         for ix=0,sizx(1)-1 do $
-          for iy=0,sizx(2)-2 do $
-          if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
-             (xx(ix,iy+1) ne 0 or yy(ix,iy+1) ne 0)) then $
-          oplot,[xx(ix,iy),xx(ix,iy+1)],[yy(ix,iy),yy(ix,iy+1)],POLAR=polar,$
-          psym=0
+           for iy=0,sizx(2)-2 do $
+              if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
+                 (xx(ix,iy+1) ne 0 or yy(ix,iy+1) ne 0)) then $
+                    oplot,[xx(ix,iy),xx(ix,iy+1)],[yy(ix,iy),yy(ix,iy+1)],POLAR=polar,$
+                          psym=0
 
         for iy=0,sizx(2)-1 do $
-          for ix=0,sizx(1)-2 do $
-          if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
-             (xx(ix+1,iy) ne 0 or yy(ix+1,iy) ne 0)) then $
-          oplot,[xx(ix,iy),xx(ix+1,iy)],[yy(ix,iy),yy(ix+1,iy)],POLAR=polar,$
-          psym=0
+           for ix=0,sizx(1)-2 do $
+              if((xx(ix,iy)   ne 0 or yy(ix,iy)   ne 0) and $
+                 (xx(ix+1,iy) ne 0 or yy(ix+1,iy) ne 0)) then $
+                    oplot,[xx(ix,iy),xx(ix+1,iy)],[yy(ix,iy),yy(ix+1,iy)],POLAR=polar,$
+                          psym=0
 
-    endif else begin
+     endif else begin
 
         for ix=0,sizx(1)-1 do $
-          oplot,xx(ix,*),yy(ix,*),POLAR=polar,psym=0
+           oplot,xx(ix,*),yy(ix,*),POLAR=polar,psym=0
         for iy=0,sizx(2)-1 do $
-          oplot,xx(*,iy),yy(*,iy),POLAR=polar,psym=0
+           oplot,xx(*,iy),yy(*,iy),POLAR=polar,psym=0
 
-    endelse
+     endelse
 
-endif else begin
+  endif else begin
 
-    if polar then $
-      plot, xx, yy, PSYM=3, SYMSIZE=!p.symsize, $
-      XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE,$
-      /POLAR $
-    else $
-      plot, xx, yy, PSYM=1, SYMSIZE=!p.symsize, $
-      XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE
-endelse
+     if polar then $
+        plot, xx, yy, PSYM=3, SYMSIZE=!p.symsize, $
+              XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE,$
+              /POLAR $
+     else $
+        plot, xx, yy, PSYM=1, SYMSIZE=!p.symsize, $
+              XRANGE=xrange, YRANGE=yrange, XSTYLE=xstyle, YSTYLE=ystyle, /NOERASE
+  endelse
 
-return
+  return
 
 ERROR1:
-   print,'size(x)=',sizx
-   print,'Error: plot_grid,x  requires x(nx,ny,2) array'
-   retall
+  print,'size(x)=',sizx
+  print,'Error: plot_grid,x  requires x(nx,ny,2) array'
+  retall
 
 ERROR2:
-   print,'size(x)=',sizx,' size(y)=',sizy
-   print,'Error: plot_grid,x,y requires x(nx,ny) y(nx,ny) arrays'
-   retall
+  print,'size(x)=',sizx,' size(y)=',sizy
+  print,'Error: plot_grid,x,y requires x(nx,ny) y(nx,ny) arrays'
+  retall
 
 
 end
@@ -3922,67 +5163,67 @@ pro compare,w0,w1,wnames
 ; relative difference in the 1st norm.
 ;==========================================
 
-on_error,2
+  on_error,2
 
-sizew0=size(w0)
-sizew1=size(w1)
+  sizew0=size(w0)
+  sizew1=size(w1)
 
-if sizew0(0) ne sizew1(0) then begin
-   print,'w0 and w1 have different dimensions:',sizew0(0),' and ',sizew1(0)
-   retall
-endif
+  if sizew0(0) ne sizew1(0) then begin
+     print,'w0 and w1 have different dimensions:',sizew0(0),' and ',sizew1(0)
+     retall
+  endif
 
-ndim=sizew0(0)-1
+  ndim=sizew0(0)-1
 
-if ndim eq 0 then begin
-   ndim=1
-   nw=1
-endif else $
-   nw=sizew0(ndim+1)
+  if ndim eq 0 then begin
+     ndim=1
+     nw=1
+  endif else $
+     nw=sizew0(ndim+1)
 
-if max(abs(sizew0(1:ndim)-sizew1(1:ndim))) gt 0 then begin
-   print,'w0 and w1 have different sizes:',sizew0(1:ndim),' /= ',sizew1(1:ndim)
-   retall
-endif
+  if max(abs(sizew0(1:ndim)-sizew1(1:ndim))) gt 0 then begin
+     print,'w0 and w1 have different sizes:',sizew0(1:ndim),' /= ',sizew1(1:ndim)
+     retall
+  endif
 
-if keyword_set(wnames) then $
-  print,$
-  'var 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2' $
-else $
-  print, $
-  'ind 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2'
+  if keyword_set(wnames) then $
+     print,$
+     'var 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2' $
+  else $
+     print, $
+     'ind 2*max(|A-B|)/max(|A|+|B|) 2*sum(|A-B|)/sum(|A|+|B|) max(|A|+|B|)/2'
 
-for iw=0,nw-1 do begin
-   case ndim of
-   1: begin
-      wsum=max(abs(w0(*,iw))+abs(w1(*,iw)))/2
-      wdif=max(abs(w0(*,iw)-w1(*,iw)))
-      wsum1=total(abs(w0(*,iw))+abs(w1(*,iw)))/2
-      wdif1=total(abs(w0(*,iw)-w1(*,iw)))
-      end
-   2: begin
-      wsum=max(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
-      wdif=max(abs(w0(*,*,iw)-w1(*,*,iw)))
-      wsum1=total(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
-      wdif1=total(abs(w0(*,*,iw)-w1(*,*,iw)))
-      end
-   3: begin
-      wsum=max(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
-      wdif=max(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
-      wsum1=total(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
-      wdif1=total(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
-      end
-   endcase
+  for iw=0,nw-1 do begin
+     case ndim of
+        1: begin
+           wsum=max(abs(w0(*,iw))+abs(w1(*,iw)))/2
+           wdif=max(abs(w0(*,iw)-w1(*,iw)))
+           wsum1=total(abs(w0(*,iw))+abs(w1(*,iw)))/2
+           wdif1=total(abs(w0(*,iw)-w1(*,iw)))
+        end
+        2: begin
+           wsum=max(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
+           wdif=max(abs(w0(*,*,iw)-w1(*,*,iw)))
+           wsum1=total(abs(w0(*,*,iw))+abs(w1(*,*,iw)))/2
+           wdif1=total(abs(w0(*,*,iw)-w1(*,*,iw)))
+        end
+        3: begin
+           wsum=max(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
+           wdif=max(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
+           wsum1=total(abs(w0(*,*,*,iw))+abs(w1(*,*,*,iw)))/2
+           wdif1=total(abs(w0(*,*,*,iw)-w1(*,*,*,iw)))
+        end
+     endcase
 
-   if keyword_set(wnames) then begin
-      if wsum eq 0. then print,wnames(iw),' wsum=0' $
-      else               print,wnames(iw),wdif/wsum,wdif1/wsum1,wsum
-   endif else begin
-      if wsum eq 0. then print,iw,' wsum=0' $
-      else               print,iw,wdif/wsum,wdif1/wsum1,wsum
-   endelse
+     if keyword_set(wnames) then begin
+        if wsum eq 0. then print,wnames(iw),' wsum=0' $
+        else               print,wnames(iw),wdif/wsum,wdif1/wsum1,wsum
+     endif else begin
+        if wsum eq 0. then print,iw,' wsum=0' $
+        else               print,iw,wdif/wsum,wdif1/wsum1,wsum
+     endelse
 
-endfor
+  endfor
 end
 
 ;=============================================================================
@@ -4125,151 +5366,151 @@ pro get_log, source, wlog, wlognames, logtime, timeunit, verbose=verbose
 ; If verbose is present set show verbose information.
 ; If versbose is a string, attach it to 'wlog' in the verbose info.
 
-;;on_error,2
+  on_error,2
 
-if not keyword_set(source) then begin
-   print, $
-     'Usage: get_log, source, wlog, wlognames [,logtime, timeunit] [,verbose=verbose]'
-   help,source,wlog,wlognames
-   retall
-endif
+  if not keyword_set(source) then begin
+     print, $
+        'Usage: get_log, source, wlog, wlognames [,logtime, timeunit] [,verbose=verbose]'
+     help,source,wlog,wlognames
+     retall
+  endif
 
-itype = size(source,/type)
-if itype eq 2 or itype eq 3 then begin
-    filesource=0
-    unit = source
-    file = 'unit '+strtrim(string(unit),2)
-    stat = fstat(unit)
-    if not stat.open then begin
+  itype = size(source,/type)
+  if itype eq 2 or itype eq 3 then begin
+     filesource=0
+     unit = source
+     file = 'unit '+strtrim(string(unit),2)
+     stat = fstat(unit)
+     if not stat.open then begin
         print,'get_log error: unit is not open'
         retall
-    endif
-endif else if itype eq 7 then begin
-    filesource=1
-    file = source
-    unit = 0
-    found = 0
-    while not found do begin
+     endif
+  endif else if itype eq 7 then begin
+     filesource=1
+     file = source
+     unit = 0
+     found = 0
+     while not found do begin
         unit = unit + 1
         stat = fstat(unit)
         if not stat.open then found = 1
-    endwhile
-    openr,unit,file
-endif else begin
-    print,'get_log error: source =',source,$
-      ' should be a unit number or a filename.'
-    retall
-end
+     endwhile
+     openr,unit,file
+  endif else begin
+     print,'get_log error: source =',source,$
+           ' should be a unit number or a filename.'
+     retall
+  end
 
-if not keyword_set(verbose) then verbose = 0
+  if not keyword_set(verbose) then verbose = 0
 ; If verbose is a string set the index string to it
-if size(verbose,/type) eq 7 then index=verbose else index=''
+  if size(verbose,/type) eq 7 then index=verbose else index=''
 
 ; Use buffers for efficient reading
-line  = ''
-nheadline = 0
-isheader  = 1
-headlines = strarr(1)
-buf   = long(10000)
-dbuf  = long(10000)
-nt    = long(0)
-while not eof(unit) do begin
-    on_ioerror,close_file
+  line  = ''
+  nheadline = 0
+  isheader  = 1
+  headlines = strarr(1)
+  buf   = long(10000)
+  dbuf  = long(10000)
+  nt    = long(0)
+  while not eof(unit) do begin
+     on_ioerror,close_file
 
-    if isheader then begin
-       readf, unit, line
+     if isheader then begin
+        readf, unit, line
 
-       ; check if the line contains any character that is not a number
-       isheader = 0
-       for i = 0, strlen(line)-1 do begin
-          if strmatch(strmid(line,i,1), '[!	0123456789dDeE \.+-]') $
-          then begin
-             isheader = 1
-             break
-          endif
-       endfor
+                                ; check if the line contains any character that is not a number
+        isheader = 0
+        for i = 0, strlen(line)-1 do begin
+           if strmatch(strmid(line,i,1), '[!	0123456789dDeE \.+-]') $
+           then begin
+              isheader = 1
+              break
+           endif
+        endfor
 
-       ; check if line contains a single number only
-       if not isheader then begin
-          n = 0
-          string_to_array,line, numbers, n
-          if n le 1 then isheader=1
-       endif
-       
-       if isheader then begin
-          if nheadline eq 0 then $
-             headlines(0) = line $
-          else $
-             headlines = [headlines, line]
-          nheadline = nheadline + 1
-       endif else begin
-          ; split line into numbers
-          string_to_array,line, numbers, nwlog
-          ; create arrays to read data into
-          wlog_ = dblarr(nwlog)
-          wlog  = dblarr(nwlog,buf)
+                                ; check if line contains a single number only
+        if not isheader then begin
+           n = 0
+           string_to_array,line, numbers, n
+           if n le 1 then isheader=1
+        endif
+        
+        if isheader then begin
+           if nheadline eq 0 then $
+              headlines(0) = line $
+           else $
+              headlines = [headlines, line]
+           nheadline = nheadline + 1
+        endif else begin
+                                ; split line into numbers
+           string_to_array,line, numbers, nwlog
+                                ; create arrays to read data into
+           wlog_ = dblarr(nwlog)
+           wlog  = dblarr(nwlog,buf)
 
-          ; read first line
-          reads, line, wlog_
-          if total(finite(wlog_)) eq nwlog then begin
-             wlog(*,0) = wlog_
-             nt = 1L
-          endif
+                                ; read first line
+           reads, line, wlog_
+           if total(finite(wlog_)) eq nwlog then begin
+              wlog(*,0) = wlog_
+              nt = 1L
+           endif
 
-          ; find variable names in the header lines
-          for i = nheadline - 1, 0, -1 do begin
-             line = headlines[i]
-             char = strlowcase(strmid(strtrim(line,1),0,1))
-             if char ge 'a' and char le 'z' then begin
+                                ; find variable names in the header lines
+           for i = nheadline - 1, 0, -1 do begin
+              line = headlines[i]
+              char = strlowcase(strmid(strtrim(line,1),0,1))
+              if char ge 'a' and char le 'z' then begin
 
-                ; Overwrite #START with spaces if present
-                j = strpos(line,'#START')
-                if j ge 0 then strput, line, '      ', j
+                                ; Overwrite #START with spaces if present
+                 j = strpos(line,'#START')
+                 if j ge 0 then strput, line, '      ', j
 
-                ; split line into names
-                string_to_array, line, wlognames, nname
+                                ; split line into names
+                 string_to_array, line, wlognames, nname
 
-                ; if number of names agree we are done
-                if nname eq nwlog then BREAK
-             endif
-          endfor
+                                ; if number of names agree we are done
+                 if nname eq nwlog then BREAK
+              endif
+           endfor
 
-          if n_elements(wlognames) ne nwlog then begin
-             wlognames = strarr(nwlog)
-             for i = 0, nwlog - 1 do $
-                wlognames[i] = 'var'+string(i, format='(i2.2)')
-          endif
+           if n_elements(wlognames) ne nwlog then begin
+              wlognames = strarr(nwlog)
+              for i = 0, nwlog - 1 do $
+                 wlognames[i] = 'var'+string(i, format='(i2.2)')
+           endif
 
-          if verbose then begin
-             if filesource then print,'logfile',index,'  =',file
-             print,'headlines',index,':'
-             print, format='(a)', strtrim(headlines,2)
-             for i=0, nwlog-1 do $
-                print,FORMAT='("  wlog",A,"(*,",I2,")= ",A)',index,i,wlognames(i)
-          endif
+           if verbose then begin
+              if filesource then print,'logfile',index,'  =',file
+              print,'headlines',index,':'
+              print, format='(a)', strtrim(headlines,2)
+              for i=0, nwlog-1 do $
+                 print,FORMAT='("  wlog",A,"(*,",I2,")= ",A)',index,i,wlognames(i)
+           endif
 
-       endelse
-    endif else begin
-       readf, unit, wlog_
-       if total(finite(wlog_)) eq nwlog then begin
-          wlog(*,nt) = wlog_
-          nt=nt+1
-       endif
-       if nt ge buf then begin
-          buf=buf+dbuf
-          wlog=[[wlog],[dblarr(nwlog,buf)]]
-       endif
-    endelse
+        endelse
+     endif else begin
+        readf, unit, wlog_
+        if total(finite(wlog_)) eq nwlog then begin
+           wlog(*,nt) = wlog_
+           nt=nt+1
+        endif
+        if nt ge buf then begin
+           buf=buf+dbuf
+           wlog=[[wlog],[dblarr(nwlog,buf)]]
+        endif
+     endelse
 
-endwhile
-close_file: if filesource then close,unit
+  endwhile
+  close_file: if filesource then close,unit
 
-if verbose then print,'Number of recorded timesteps: nt=',nt
+  if verbose then print,'Number of recorded timesteps: nt=',nt
 
-wlog = transpose(wlog(*,0:nt-1))
+  wlog = transpose(wlog(*,0:nt-1))
 
-logtime = log_time(wlog,wlognames,timeunit)
-if verbose then print,'Setting logtime',index
+  logtime = log_time(wlog,wlognames,timeunit)
+  if verbose then print,'Setting logtime',index
 
 end
 
@@ -4538,17 +5779,17 @@ pro rms_logfiles,logfilename,varname,tmin=tmin,tmax=tmax,verbose=verbose
 ; Print the rms deviation between two logfiles for variables in varname.
 ; If varname is not present, show rms for all variables.
 
-on_error,2
+  on_error,2
 
-interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
-  verbose=verbose
-string_to_array,varname,varnames,nvar
-ntime = n_elements(time)
+  interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
+                    verbose=verbose
+  string_to_array,varname,varnames,nvar
+  ntime = n_elements(time)
 
-print,'var rms(A-B) rsm(A) rms(B)'
-for ivar=0,nvar-1 do $
-  print,varnames(ivar),sqrt(total((var0(*,ivar)-var1(*,ivar))^2)/ntime), $
-  sqrt(total(var0(*,ivar)^2)/ntime), sqrt(total(var1(*,ivar)^2)/ntime)
+  print,'var rms(A-B) rsm(A) rms(B)'
+  for ivar=0,nvar-1 do $
+     print,varnames(ivar),sqrt(total((var0(*,ivar)-var1(*,ivar))^2)/ntime), $
+           sqrt(total(var0(*,ivar)^2)/ntime), sqrt(total(var1(*,ivar)^2)/ntime)
 
 end
 ;============================================================================
@@ -4558,88 +5799,88 @@ pro interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
 ; Interpolate variables between two logfiles for variables in varname.
 ; If varname is not present, interpolate all variables.
 
-on_error,2
+  on_error,2
 
-string_to_array,logfilename,logfilenames,nfile
+  string_to_array,logfilename,logfilenames,nfile
 
-get_log, logfilenames(0), wlog0, varnames0, verbose=verbose
-get_log, logfilenames(1), wlog1, varnames1, verbose=verbose
-if not keyword_set(varname) then varname = varnames0
-interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,$
-  time,tmin=tmin,tmax=tmax
+  get_log, logfilenames(0), wlog0, varnames0, verbose=verbose
+  get_log, logfilenames(1), wlog1, varnames1, verbose=verbose
+  if not keyword_set(varname) then varname = varnames0
+  interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,$
+               time,tmin=tmin,tmax=tmax
 
 end
 ;============================================================================
 pro interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,time,$
-             tmin=tmin,tmax=tmax,timeunit=timeunit
+                 tmin=tmin,tmax=tmax,timeunit=timeunit
 
 ; Interpolate the variables listed in varname to the time of wlog0
 ; between tmin and tmax. 
 
-on_error,2
+  on_error,2
 
-string_to_array,varname,varnames,nvar
+  string_to_array,varname,varnames,nvar
 
-if nvar eq 0 then begin
-    print,'Usage: interpol_log, wlog0, wlog1, var0, var1, varnames ', $
-      '[,varnames0] [,varnames1] [,time] [,tmin=tmin] [,tmax=tmax]'
-    retall
-endif
+  if nvar eq 0 then begin
+     print,'Usage: interpol_log, wlog0, wlog1, var0, var1, varnames ', $
+           '[,varnames0] [,varnames1] [,time] [,tmin=tmin] [,tmax=tmax]'
+     retall
+  endif
 
-if n_elements(varnames0) eq 0 then varnames0 = varnames
-if n_elements(varnames1) eq 0 then varnames1 = varnames0
+  if n_elements(varnames0) eq 0 then varnames0 = varnames
+  if n_elements(varnames1) eq 0 then varnames1 = varnames0
 
-nvar0 = n_elements(varnames0)
-nvar1 = n_elements(varnames1)
+  nvar0 = n_elements(varnames0)
+  nvar1 = n_elements(varnames1)
 
-sizewlog0=size(wlog0)
-sizewlog1=size(wlog1)
+  sizewlog0=size(wlog0)
+  sizewlog1=size(wlog1)
 
-if sizewlog0(0) ne 2 or sizewlog1(0) ne 2 then begin
-   print,'wlog0 and wlog1 must be 2D arrays'
-   retall
-endif
+  if sizewlog0(0) ne 2 or sizewlog1(0) ne 2 then begin
+     print,'wlog0 and wlog1 must be 2D arrays'
+     retall
+  endif
 
-if sizewlog0(2) ne nvar0 then begin
-   print,'Second dimension of wlog0 should be nvar0=',nvar0
-   retall
-endif
+  if sizewlog0(2) ne nvar0 then begin
+     print,'Second dimension of wlog0 should be nvar0=',nvar0
+     retall
+  endif
 
-if sizewlog1(2) ne nvar1 then begin
-   print,'Second dimension of wlog1 should be nvar1=',nvar1
-   retall
-endif
+  if sizewlog1(2) ne nvar1 then begin
+     print,'Second dimension of wlog1 should be nvar1=',nvar1
+     retall
+  endif
 
-time0 = log_time(wlog0,varnames0,timeunit)
-time1 = log_time(wlog1,varnames1,timeunit)
+  time0 = log_time(wlog0,varnames0,timeunit)
+  time1 = log_time(wlog1,varnames1,timeunit)
 
-if not keyword_set(tmin) then tmin = max([ min(time0), min(time1) ])
-if not keyword_set(tmax) then tmax = min([ max(time0), max(time1) ])
+  if not keyword_set(tmin) then tmin = max([ min(time0), min(time1) ])
+  if not keyword_set(tmax) then tmax = min([ max(time0), max(time1) ])
 
-index0 = where(time0 ge tmin and time0 le tmax)
-time   = time0(index0)
-ntime  = n_elements(time)
+  index0 = where(time0 ge tmin and time0 le tmax)
+  time   = time0(index0)
+  ntime  = n_elements(time)
 
-var0   = fltarr(ntime, nvar)
-var1   = fltarr(ntime, nvar)
+  var0   = fltarr(ntime, nvar)
+  var1   = fltarr(ntime, nvar)
 
-for ivar = 0, nvar-1 do begin
+  for ivar = 0, nvar-1 do begin
 
-    name = varnames(ivar)
+     name = varnames(ivar)
 
-    field0 = log_func(wlog0, varnames0, name, error0)
-    field1 = log_func(wlog1, varnames1, name, error1)
+     field0 = log_func(wlog0, varnames0, name, error0)
+     field1 = log_func(wlog1, varnames1, name, error1)
 
-    if error0 then print,'Could not find variable ',name,' in wlog0'
-    if error1 then print,'Could not find variable ',name,' in wlog1'
+     if error0 then print,'Could not find variable ',name,' in wlog0'
+     if error1 then print,'Could not find variable ',name,' in wlog1'
 
-    if not error0 and not error1 then begin
+     if not error0 and not error1 then begin
 
         var0(*,ivar) = field0(index0)
         var1(*,ivar) = interpol(field1,time1,time)
 
-    endif
-endfor
+     endif
+  endfor
 
 end
 
@@ -5105,10 +6346,10 @@ pro save_log, filename, headline, varname, array, format=format
   close, unit
 
 end
-;=========================================================================================
+;==============================================================================
 pro reset_axis
 
-!x.tickname=strarr(60)
-!y.tickname=strarr(60)
+  !x.tickname=strarr(60)
+  !y.tickname=strarr(60)
 
 end

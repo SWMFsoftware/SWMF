@@ -10,8 +10,8 @@
 
 !p.charsize=2.0
 
-.r set_defaults
 .r procedures
+.r set_defaults
 .r vector
 .r funcdef
 
