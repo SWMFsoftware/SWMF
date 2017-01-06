@@ -411,24 +411,38 @@ void amps_init_mesh() {
        class cSetBackgroundMagneticField {
        public:
          void Set(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-           int i,j,k;
 
            const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
            const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
            const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
 
            if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-             for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-               double *xNodeMin=startNode->xmin;
-               double *xNodeMax=startNode->xmax;
-               double x[3],B[3],xCell[3];
-               PIC::Mesh::cDataCenterNode *CenterNode;
+             int ii,S=(kMax-kMin+1)*(jMax-jMin+1)*(iMax-iMin+1);
 
-               if (startNode->block!=NULL) {
+             if (startNode->block!=NULL) {
+               #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+               #pragma omp parallel for schedule(dynamic,1) default (none) shared (PIC::Mesh::mesh,iMin,jMin,kMin,S,PIC::CPLR::DATAFILE::Offset::MagneticField,PIC::CPLR::DATAFILE::Offset::ElectricField,startNode)
+               #endif
+
+               for (ii=0;ii<S;ii++) {
+                 int i,j,k;
+                 double *xNodeMin=startNode->xmin;
+                 double *xNodeMax=startNode->xmax;
+                 double x[3],B[3],xCell[3];
+                 PIC::Mesh::cDataCenterNode *CenterNode;
+
                  //set the value of the geomagnetic field calculated at the centers of the cells
                  int nd,idim;
                  char *offset;
-                 double xCell[3];
+
+                 //determine the coordinates of the cell
+                 int S1=ii;
+
+                 i=iMin+S1/((kMax-kMin+1)*(jMax-jMin+1));
+                 S1=S1%((kMax-kMin+1)*(jMax-jMin+1));
+
+                 j=jMin+S1/(kMax-kMin+1);
+                 k=kMin+S1%(kMax-kMin+1);
 
                  //locate the cell
                  nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -454,6 +468,7 @@ void amps_init_mesh() {
                    }
                  }
                }
+
              }
            }
            else {
