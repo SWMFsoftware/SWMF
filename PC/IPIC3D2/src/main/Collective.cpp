@@ -1559,7 +1559,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   XLEN = 2; YLEN = 2; ZLEN = 1; 
 
   // Number of layers needed to set boundary.
-  nBCLayer=4;
+  nBCLayer=3+nPartGhost;
 
   // When Yingjuan does not need to restart from output of IPIC3D1,
   // remove this command. 
@@ -1590,7 +1590,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   iSecond = 0;
 
   drSat = 2;
-  
+
+  nPartGhost = 1; 
   while(*param){
     get_next_command(param,&Command);
     if( Command == "#NSYNC" && Case == "BATSRUS"){
@@ -1883,6 +1884,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"nIsotropic", &tmp);
       setnIsotropic(tmp);
     }
+    else if( Command == "#PARTICLEBC"){
+      read_var(param,"nPartGhost", &nPartGhost);
+    }
     else if( Command == "#RESTART"){
       read_var(param,"doRestart", &RESTART1);
       if(Case != "BATSRUS") 
@@ -1909,6 +1913,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //else
     //  cout<<"Can not find Comand : "<<Command<<endl;
   }
+
+  // Correct paramaters.
+  if(nBCLayer<3+nPartGhost) nBCLayer = 3+nPartGhost;
+
 
   // In "BATSRUS" mode restart is controled by the coupler
   if(Case == "BATSRUS") RestartOutputCycle = 1; 

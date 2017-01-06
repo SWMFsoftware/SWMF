@@ -170,6 +170,8 @@ class InterfaceFluid
   string testFuncs;
   int iTest, jTest,kTest;
 
+  int nPartGhost;
+
   // Change smooth coefficient near the boundary.
   // Parameters 'SmoothNiter' and 'Smooth' are declared in Colective.h
   bool doSmoothAll; // Smooth jh and rhoh?. 
@@ -2299,7 +2301,7 @@ class InterfaceFluid
   void setyEnd(double v){yEnd=v;};
   void setzStart(double v){zStart=v;};
   void setzEnd(double v){zEnd=v;};
-
+  int getnPartGhost()const{return nPartGhost;};
   bool getdoSmoothAll()const{return doSmoothAll;};
 };
 

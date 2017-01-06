@@ -307,81 +307,6 @@ void Particles3D::delete_outside_particles(){
       pidx++;
   }
 }
-
-void Particles3D::set_fluid_BC()
-{
-#ifndef PSEUDRAND
-  srand (vct->getCartesian_rank()+1+ns+(int(MPI_Wtime()))%10000);
-#endif
-  // if this is not a boundary process then there is nothing to do
-  if(!vct->isBoundaryProcess_P()) return;
-
-  //The below is OpenBC outflow for all other boundaries
-  using namespace BCparticles;
-
-  const bool fluidXleft = !vct->getPERIODICX_P() && vct->noXleftNeighbor_P() &&  bcPfaceXleft == FLUID;
-  const bool fluidYleft = !vct->getPERIODICY_P() && vct->noYleftNeighbor_P() &&  bcPfaceYleft == FLUID;
-  const bool fluidZleft = !vct->getPERIODICZ_P() && vct->noZleftNeighbor_P() &&  bcPfaceZleft == FLUID;
-
-  const bool fluidXright = !vct->getPERIODICX_P() && vct->noXrghtNeighbor_P() && bcPfaceXright == FLUID;
-  const bool fluidYright = !vct->getPERIODICY_P() && vct->noYrghtNeighbor_P() && bcPfaceYright == FLUID;
-  const bool fluidZright = !vct->getPERIODICZ_P() && vct->noZrghtNeighbor_P() && bcPfaceZright == FLUID;
-
-  if(!fluidXleft && !fluidYleft && !fluidZleft && !fluidXright && !fluidYright && !fluidZright)  return;
-
-  assert_gt(nxc-2, (fluidXleft+fluidXright)*NG_P); //excluding 2 ghost cells, #of cells should be larger than total # of fluidBC layers
-  assert_gt(nyc-2, (fluidYleft+fluidYright)*NG_P);
-  assert_gt(nzc-2, (fluidZleft+fluidZright)*NG_P);
-
-  const double xLow = NG_P*dx;
-  const double yLow = NG_P*dy;
-  const double zLow = NG_P*dz;
-  const double xHgh = Lx-xLow;
-  const double yHgh = Ly-yLow;
-  const double zHgh = Lz-zLow;
-
-  const bool   apply_fluidBC[6]    = {fluidXleft, fluidXright,fluidYleft, fluidYright,fluidZleft, fluidZright};
-  const double delete_boundary[6] = {0, Lx,0, Ly,0, Lz};
-  const double fluid_boundary[6]   = {xLow, xHgh,yLow, yHgh,zLow, zHgh};
-  const int nxc = grid->getNXC(), nyc = grid->getNYC(), nzc = grid->getNZC();
-  const int iBegin[6] = {1,   nxc-1-NG_P, 1,   1,        1,      1 };
-  const int iEnd[6]   = {NG_P, nxc-2,   nxc-2, nxc-2,   nxc-2, nxc-2 };
-  const int jBegin[6] = {1,     1,       1,  nyc-1-NG_P, 1,     1};
-  const int jEnd[6]   = {nyc-2, nyc-2,  NG_P, nyc-2,   nyc-2,  nyc-2 };
-  const int kBegin[6] = {1,     1,       1,     1,      1,    nzc-1-NG_P};
-  const int kEnd[6]   = {nzc-2, nzc-2,  nzc-2,  nzc-2,  NG_P, nzc-2};
-  
-  int pidx = 0; 
-  while(pidx < getNOP())
-  {
-    SpeciesParticle& pcl = _pcls[pidx];
-    // determine whether to delete the particle
-    const bool delete_pcl =
-      (fluidXleft  && pcl.get_x() < xLow) ||
-      (fluidYleft  && pcl.get_y() < yLow) ||
-      (fluidZleft  && pcl.get_z() < zLow) ||
-      (fluidXright && pcl.get_x() > xHgh) ||
-      (fluidYright && pcl.get_y() > yHgh) ||
-      (fluidZright && pcl.get_z() > zHgh);
-    if(delete_pcl){
-      delete_particle(pidx);
-    }
-    else
-      pidx++;
-  }
-
-  //  return;
-  for (int iDir = 0; iDir < 6; ++iDir){
-    if(apply_fluidBC[iDir]){
-      for (int i = iBegin[iDir]; i<=iEnd[iDir]; ++i)
-	for(int j = jBegin[iDir]; j<=jEnd[iDir]; ++j)
-	  for (int k = kBegin[iDir]; k<=kEnd[iDir]; ++k){
-	    MaxwellianFromFluidCell(i,j,k);
-	  }
-    } // if apply_fluidBC
-  } // for iDir
-
-}
 #endif
 
 /** Maxellian random velocity and uniform spatial distribution */
@@ -1934,7 +1859,7 @@ void Particles3D::repopulate_particles()
   // number of cell layers to repopulate at boundary
   
   #ifdef BATSRUS
-  const int num_layers = NG_P;
+  const int num_layers = col->getnPartGhost();
   #else
   const int num_layers = 3;
   #endif
@@ -1944,9 +1869,17 @@ void Particles3D::repopulate_particles()
   const double xHgh = Lx-xLow;
   const double yHgh = Ly-yLow;
   const double zHgh = Lz-zLow;
+
+
+#ifdef BATSRUS
+  if(repopulateXleft || repopulateXrght) assert_gt(nxc, num_layers);
+  if(repopulateYleft || repopulateYrght) assert_gt(nyc, num_layers);
+  if(repopulateZleft || repopulateZrght) assert_gt(nzc, num_layers);
+#else 
   if(repopulateXleft || repopulateXrght) assert_gt(nxc, 2*num_layers);
   if(repopulateYleft || repopulateYrght) assert_gt(nyc, 2*num_layers);
   if(repopulateZleft || repopulateZrght) assert_gt(nzc, 2*num_layers);
+#endif
 
   // delete particles in repopulation layers
   //

@@ -60,6 +60,8 @@ contains
     character(len=*), parameter:: NameSub = 'read_pic_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
+    case ("#PICGHOST")
+      call read_var('nGhostPic',nGhostPic)
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
