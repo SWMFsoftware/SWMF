@@ -1162,6 +1162,11 @@ contains
          State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) =    &
               State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) &
               + State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
+         !\
+         ! Nullify the send values to avoid double counting
+         !/
+         State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend) = 0.0
+            
       else
          ! Put data into the send buffer
          iBufferS = iBufferS_P(iProcRecv) +1
@@ -1179,6 +1184,10 @@ contains
          do k = kSMin,kSmax; do j = jSMin,jSMax; do i = iSMin,iSmax
             BufferS_I(iBufferS+1:iBufferS+nVar) = &
                  State_VGB(:,i,j,k,iBlockSend)
+            !\
+            ! Nullify the send values to avoid double counting
+            !/
+            State_VGB(:,i,j,k,iBlockSend) = 0.0
             iBufferS = iBufferS + nVar
          end do; end do; end do
          iBufferS_P(iProcRecv) = iBufferS
