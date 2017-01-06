@@ -271,13 +271,19 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   jnmaxsolve = nyn-2;
   knminsolve = 1;
   knmaxsolve = nzn-2;
-
-  /** number of unknowns solved for in implicit solver*/
-  nSolveCell  = (nxc - 2) * (nyc - 2) * (nzc - 2);
   n3SolveNode = 3
     *       (inmaxsolve - inminsolve + 1)
     *       (jnmaxsolve - jnminsolve + 1)
     *       (knmaxsolve - knminsolve + 1);
+
+
+  /* Index of cells solved by field solver. */
+  icMinSolve = 1; icMaxSolve = nxc - 2;
+  jcMinSolve = 1; jcMaxSolve = nyc - 2;
+  kcMinSolve = 1; kcMaxSolve = nzc - 2;   
+  nSolveCell  = (icMaxSolve - icMinSolve + 1)
+    *           (jcMaxSolve - jcMinSolve + 1)
+    *           (kcMaxSolve - kcMinSolve + 1);
   
   if(Parameters::get_VECTORIZE_MOMENTS())
   {
@@ -2141,6 +2147,15 @@ void solver2phys(arr3_double vectPhys1, arr3_double vectPhys2, arr3_double vectP
 	vectPhys3[i][j][k] = *vectSolver++;
       }
 }
+void solver2phys(arr3_double vectPhys, double *vectSolver,		 
+		 int iMin, int iMax , int jMin, int jMax, int kMin, int kMax){
+  for (register int i=iMin; i <= iMax; i++)
+    for (register int j=jMin; j <= jMax; j++)
+      for (register int k=kMin; k <= kMax; k++){
+	vectPhys[i][j][k] = *vectSolver++;
+      }
+}
+
 /** method to convert a 3D field in a 1D field not considering guard cells*/
 void phys2solver(double *vectSolver, const arr3_double vectPhys, int nx, int ny, int nz) {
   for (register int i = 1; i < nx - 1; i++)
@@ -2171,6 +2186,15 @@ void phys2solver(double* vectSolver, const arr3_double vectPhys1,
 	*vectSolver++ =  vectPhys3.get(i,j,k);
       }
 }
+void phys2solver(double* vectSolver, const arr3_double vectPhys,
+		 int iMin, int iMax , int jMin, int jMax, int kMin, int kMax){
+  for (register int i=iMin; i <= iMax; i++)
+    for (register int j=jMin; j <= jMax; j++)
+      for (register int k=kMin; k <= kMax; k++){
+	*vectSolver++ =  vectPhys.get(i,j,k);
+      }
+}
+
 
 /*! Calculate Electric field with the implicit solver: the Maxwell solver method is called here */
 void EMfields3D::calculateE(int cycle)
@@ -2209,35 +2233,41 @@ void EMfields3D::calculateE(int cycle)
     eqValue(0.0, dxkrylov, n3SolveNode);
 
     if (PoissonCorrection &&  cycle%PoissonCorrectionCycle == 0) {
-		double *xkrylovPoisson = new double[(nxc - 2) * (nyc - 2) * (nzc - 2)];
-		double *bkrylovPoisson = new double[(nxc - 2) * (nyc - 2) * (nzc - 2)];
-		eqValue(0.0, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2));
+                double PoissonTol = GMREStol*1e3;
+		double *xkrylovPoisson = new double[nSolveCell];
+		double *bkrylovPoisson = new double[nSolveCell];
+		eqValue(0.0, xkrylovPoisson, nSolveCell);
 
 		grid->divN2C(divE, Ex, Ey, Ez);
 		scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
 		sum(divE, tempC, nxc, nyc, nzc);
 		// move to krylov space
-		phys2solver(bkrylovPoisson, divE, nxc, nyc, nzc);
+		phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
+			    jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
 		// use conjugate gradient first
 		//if (!CG(xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2), bkrylovPoisson, 3000, CGtol, &Field::PoissonImage, this)) {
 		  	  //if (vct->getCartesian_rank() == 0)
 					//cout << "CG not Converged. Trying with GMRes. Consider to increase the number of the CG iterations" << endl;
 		  //eqValue(0.0, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2));
 		  if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING using GMRes***" << endl;
-		  GMRES(&Field::PoissonImage, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2), bkrylovPoisson, 20, 200, GMREStol,false, this);
+		  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, 20, 200, PoissonTol,false, this);
 
-		//}
-		solver2phys(PHI, xkrylovPoisson, nxc, nyc, nzc);
-		communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
-		// calculate the gradient
-		grid->gradC2N(gradPHIX, gradPHIY, gradPHIZ, PHI);
-		// sub
-		sub(Ex, gradPHIX, nxn, nyn, nzn);
-		sub(Ey, gradPHIY, nxn, nyn, nzn);
-		sub(Ez, gradPHIZ, nxn, nyn, nzn);
+		  //}
+		  solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
+			      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+#ifdef BATSRUS
+		  fixPHI_BATSRUS();
+#endif
+		  communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
+		  // calculate the gradient
+		  grid->gradC2N(gradPHIX, gradPHIY, gradPHIZ, PHI);
+		  // sub
+		  sub(Ex, gradPHIX, nxn, nyn, nzn);
+		  sub(Ey, gradPHIY, nxn, nyn, nzn);
+		  sub(Ez, gradPHIZ, nxn, nyn, nzn);
 
-		delete[]xkrylovPoisson;
-		delete[]bkrylovPoisson;
+		  delete[]xkrylovPoisson;
+		  delete[]bkrylovPoisson;
   }                             // end of divergence cleaning
 
   if (vct->getCartesian_rank() == 0)
@@ -3414,11 +3444,13 @@ void EMfields3D::PoissonImage(double *image, double *vector, bool doSolveForChan
   eqValue(0.0, temp, nxc, nyc, nzc);
   eqValue(0.0, im, nxc, nyc, nzc);
   // move from krylov space to physical space and communicate ghost cells
-  solver2phys(temp, vector, nxc, nyc, nzc);
+  solver2phys(temp, vector, icMinSolve,icMaxSolve,
+	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
   // calculate the laplacian
   grid->lapC2Cpoisson(im, temp, this);
   // move from physical space to krylov space
-  phys2solver(image, im, nxc, nyc, nzc);
+  phys2solver(image, im, icMinSolve, icMaxSolve,
+	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
 }
 /*! interpolate charge density and pressure density from node to center */
 void EMfields3D::interpDensitiesN2C()
@@ -3665,24 +3697,40 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
     cout << "------------------------------------------" << endl;
   }
 
-  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX())
+  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
     inminsolve = 1+NG_F;
-  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX())
+    icMinSolve = 1+NG_F;
+  }
+  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
     inmaxsolve = nxn-2-NG_F;
-  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY())
+    icMaxSolve = nxc-2-NG_F;
+  }
+  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
     jnminsolve = 1+NG_F;
-  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY())
+    jcMinSolve = 1+NG_F;
+  }
+  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
     jnmaxsolve = nyn-2-NG_F;
-  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ())
+    jcMaxSolve = nyc-2-NG_F;
+  }
+  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
     knminsolve = 1+NG_F;
-  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ())
+    kcMinSolve = 1+NG_F;
+  }
+  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
     knmaxsolve = nzn-2-NG_F;
+    kcMaxSolve = nzc-2-NG_F;
+  }
 
   /** number of unknowns solved for in implicit solver*/
-    n3SolveNode = 3
-      *       (inmaxsolve - inminsolve + 1)
-      *       (jnmaxsolve - jnminsolve + 1)
-      *       (knmaxsolve - knminsolve + 1);
+  nSolveCell  = (icMaxSolve - icMinSolve + 1)
+    *           (jcMaxSolve - jcMinSolve + 1)
+    *           (kcMaxSolve - kcMinSolve + 1);
+
+  n3SolveNode = 3
+    *       (inmaxsolve - inminsolve + 1)
+    *       (jnmaxsolve - jnminsolve + 1)
+    *       (knmaxsolve - knminsolve + 1);
 
     // loop over species and cell centers: fill in charge density
     for (int is=0; is < ns; is++)
@@ -3964,6 +4012,8 @@ void EMfields3D::fixE_BATSRUS(arr3_double VecX, arr3_double VecY, arr3_double Ve
 
 
 
+
+
 /** fix the B boundary when running with BATSRUS*/
 void EMfields3D::fixB_BATSRUS(){
   const VirtualTopology3D *vct = &get_vct();
@@ -4084,6 +4134,87 @@ void EMfields3D::fixB_BATSRUS(){
 	}
   }
 }
+
+
+
+
+/** fix the PHI boundary when running with BATSRUS. 
+
+           |-----|-------|-------|---------|------
+global ic:    0     1        2        3        4 ..... nxc-2   nxc-1
+where nxc include ghost cells. 
+
+The index for PHI is from 0 to nxc-1, but for MHD-EPIC, cell 0 and nxc-1 is 
+meaningless and the real ghost cells are 1 and nxc-2. The Poisson correction
+takes cells 1 and nxc-2 as boundary condition, and the floating BC is set here. 
+The cells from 2 and nxc-3 are solved by implicit solver. See the definition 
+of icMinSolve ... kcMaxSolve. 
+
+For convenience, the PHI value at cell 0 and nxc-1 is also proved based on 
+floating BC. 
+*/
+
+void EMfields3D::fixPHI_BATSRUS(){
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  if (vct->getZright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    // CELL
+    for (int i=0; i < nxc; i++)
+      for (int j=0; j < nyc; j++)
+	for(int ng=1;ng<=NG_F+1; ng++){
+	  PHI[i][j][nzc-ng] = PHI[i][j][nzc-NG_F-2];
+	}
+  }
+
+  if (vct->getZleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICZ()){
+    // CELL
+    for (int i=0; i < nxc; i++)
+      for (int j=0; j < nyc; j++)
+	for(int ng=0;ng<NG_F+1; ng++){
+	  PHI[i][j][ng] = PHI[i][j][NG_F+1];
+	}
+  }
+
+
+  if (vct->getYright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    // CELL
+    for (int i=0; i < nxc;i++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  PHI[i][nyc-ng][k] = PHI[i][nyc-NG_F-2][k];
+	}
+  }
+
+  if (vct->getYleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICY()){
+    // CELL
+    for (int i=0; i < nxc;i++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  PHI[i][ng][k] = PHI[i][NG_F+1][k];
+	}
+  }
+
+  if (vct->getXright_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    // CELL
+    for (int j=0; j < nyc;j++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=1;ng<=NG_F+1;ng++){
+	  PHI[nxc-ng][j][k] = PHI[nxc-NG_F-2][j][k];
+	}
+  }
+
+  if (vct->getXleft_neighbor()==MPI_PROC_NULL && !vct->getPERIODICX()){
+    // CELL
+    for (int j=0; j < nyc;j++)
+      for (int k=0; k < nzc;k++)
+	for(int ng=0;ng<NG_F+1;ng++){
+	  PHI[ng][j][k] = PHI[NG_F+1][j][k];
+	}
+  }
+}
+
+
 
 
 inline void EMfields3D::fixVarBCcell(arr3_double Var, 

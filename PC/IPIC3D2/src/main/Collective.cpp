@@ -1632,6 +1632,16 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       }
       Smooth = innerSmoothFactor;
     }
+    else if( Command == "#POISSON"){
+      bool doCorrection;
+      read_var(param, "doPoissonCorrection", &doCorrection);
+      if(doCorrection){	
+	read_var(param, "correctionCycle", &PoissonCorrectionCycle);
+	PoissonCorrection = "yes";
+      }else{
+	PoissonCorrection = "no";
+      }	
+    }
     else if( Command == "#GRID" && !RESTART1){
       read_var(param,"nxc",       &nxc);
       read_var(param,"nyc",       &nyc);

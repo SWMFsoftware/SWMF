@@ -629,6 +629,10 @@ class EMfields3D                // :public Field
 
     /* ! fix the B boundary when running with BATSRUS*/
     void fixB_BATSRUS();
+
+    /* ! fix the PHI boundary when running with BATSRUS*/
+    void fixPHI_BATSRUS();
+    
     // Fix variables close to the boundary for BATSRUS, node values
     inline void fixVarBCnode(arr4_double Var, 
 			     double (CollectiveIO::*fluidVar)(int,int,int,int)const, int nOverlap, int is);
@@ -717,10 +721,12 @@ class EMfields3D                // :public Field
     int knminsolve;
     /*!  index of nodes containing unknows in implicit solver, end index Z */
     int knmaxsolve;
-    /*! number of unknown for cells */
-    int nSolveCell;
     /*! number of unknown for nodes, 3 vector components */
-    int n3SolveNode;    
+    int n3SolveNode;
+
+    /*! index of cells solved by field solver. 'c' represents cell. */
+    int icMinSolve, icMaxSolve, jcMinSolve, jcMaxSolve, kcMinSolve, kcMaxSolve; 
+    int nSolveCell;    
     /* Used for MHD-IPIC3D coupling. End */    
 };
 
