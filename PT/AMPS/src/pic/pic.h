@@ -3653,11 +3653,18 @@ namespace PIC {
       void GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
 
       //return the interpolated value of the background data
+      inline void GetBackgroundData(double *DataVector,int DataVectorLength,int BackgroundDataOffset,PIC::Mesh::cDataCenterNode *CenterNode) {
+        int i;
+        double *offset=(double*)(BackgroundDataOffset+CenterNode->GetAssociatedDataBufferPointer());
+
+        for (i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
+      }
+
       inline void GetBackgroundData(double *DataVector,int DataVectorLength,int BackgroundDataOffset,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
         int i;
         double *offset=(double*)(BackgroundDataOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
 
-        for (i=0;i<3;i++) DataVector[i]=offset[i];
+        for (i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
       }
 
       //save/read the background data binary file
@@ -3984,6 +3991,8 @@ namespace PIC {
       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
         SWMF::GetBackgroundElectricField(t,Stencil.cell[iStencil]);
+        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_
+        for (int i=0;i<3;i++) t[i]=0.0;
         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
         DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
         #else
@@ -4010,6 +4019,8 @@ namespace PIC {
        for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundMagneticField(t,Stencil.cell[iStencil]);
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_
+         DATAFILE::GetBackgroundData(t,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticField(t,Stencil.cell[iStencil], Time);
          #else
