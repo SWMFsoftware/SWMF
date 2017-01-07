@@ -151,7 +151,16 @@ long int PIC::ParticleBuffer::GetNewParticle(bool RandomThreadOpenMP) {
   int thread; //=omp_get_thread_num();
 
   thread=(RandomThreadOpenMP==false) ? omp_get_thread_num() : (int)(rnd()*Thread::NTotalThreads);
-  if (Thread::AvailableParticleListLength[thread]==0) exit(__LINE__,__FILE__,"The particle buffer is full");
+
+  if (Thread::AvailableParticleListLength[thread]==0) {
+    printf("$PREFIX: The particle buffer is full (thread=%i)\nParticle allocation report:\nOpenMP thread\tAvailable Particles\n",PIC::ThisThread);
+
+    for (int tt=0;tt<Thread::NTotalThreads;tt++) {
+      printf("$PREFIX: %i\t%i\n",tt,Thread::AvailableParticleListLength[tt]); 
+    }
+
+    exit(__LINE__,__FILE__,"The particle buffer is full");
+  }
 
   Thread::AvailableParticleListLength[thread]--;
   newptr=Thread::FirstPBufferParticle[thread];
