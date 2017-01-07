@@ -49,7 +49,7 @@ Keys=-cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERm
 -------------------------------------------------------------------------------
 #>
 Name=Titan
-Time=7
+Time=4
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks73465-01)
 Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
@@ -58,7 +58,7 @@ Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL
 -------------------------------------------------------------------------------
 #>
 Name=CCMC
-Time=5
+Time=3
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
@@ -138,7 +138,7 @@ Keys=-cplr-data-path=${PTDIR}/data/input/Enceladus
 -------------------------------------------------------------------------------
 #>
 Name=Rosetta 
-Time=9
+Time=3
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -165,7 +165,7 @@ Ref=3{gcc}@@(0+pleiades)
 -------------------------------------------------------------------------------
 #>
 Name=Tempel1@@(0+valeriy+stampede) 
-Time=6
+Time=3
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -206,7 +206,7 @@ Compile=
 
 #>
 Name=Earth@@(0+valeriy) 
-Time=10 
+Time=5 
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy) 
 Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
@@ -239,7 +239,7 @@ Check=
 
 #>
 Name=Earth@@(0+stampede+pleiades)
-Time=10
+Time=5
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
 Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
@@ -468,7 +468,7 @@ Keys=-model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd705
 -------------------------------------------------------------------------------
 #>
 Name=CG-dust-test@@(0+valeriy+pleiades+stampede)
-Time=11
+Time=5
 
 Ref=1{gcc}@@(0+valeriy)
 Ref=2{icc}@@(0+valeriy)
@@ -566,7 +566,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-guiding-center@@(0+valeriy) 
-Time=5
+Time=3
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Guiding-Center@@(0+valeriy)
 
@@ -587,7 +587,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris@@(0+valeriy)
-Time=5
+Time=3
 
 Ref=1{gcc}@@(0+valeriy)
 
@@ -610,7 +610,7 @@ Check=
 
 #>
 Name=test/Mover-Boris@@(0+stampede+pleiades)
-Time=5
+Time=3
 
 Ref=2{gcc}@@(0+pleiades)
 Ref=2{pgcc}@@(0+pleiades)
@@ -636,7 +636,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
-Time=5
+Time=3
 
 Ref=1{gcc}@@(0+valeriy)
 
@@ -752,7 +752,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Collision-Test 
-Time=5
+Time=3
 
 Check=
 >>>@echo "test_Collision-Test_check..." >> test_Collision-Test.diff
@@ -789,7 +789,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Chemistry-Test
-Time=5
+Time=3
 
 Check=
 >>>@echo "test_Chemistry-Test_check..." >> test_Chemistry-Test.diff
@@ -808,7 +808,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Mars-Hot-Oxygen
-Time=7
+Time=5
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -838,7 +838,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Mars-Hot-Carbon 
-Time=7
+Time=5
 
 Compile=
 >>>@echo "test_Mars-Hot-Carbon_compile..." > test_Mars-Hot-Carbon.diff
@@ -863,7 +863,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/InterpolateAMR-test
-Time=5
+Time=3
 Run=
 >>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
 >>>cd ${TESTInterpolateAMR-testDIR}; ${TESTMPIRUN1} ./amps
@@ -876,7 +876,7 @@ Check=
 
 #>
 Name=test/InterpolateAMR-AMPS-test
-Time=5
+Time=3
 Run=
 >>>@echo "test_InterpolateAMR-AMPS-test_run..." >> test_InterpolateAMR-AMPS-test.diff
 >>>cd ${TESTInterpolateAMR-AMPS-testDIR}; ${TESTMPIRUN1} ./amps
