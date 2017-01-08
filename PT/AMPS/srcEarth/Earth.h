@@ -66,6 +66,9 @@ public:
 namespace Earth {
   using namespace Exosphere;
   
+  //that fucntion that created the SampledDataRecoveryTable
+  void DataRecoveryManager(list<pair<string,list<int> > >&,int,int);
+
   //composition table of the GCR composition
   extern cCompositionGroupTable *CompositionGroupTable;
   extern int *CompositionGroupTableIndex;

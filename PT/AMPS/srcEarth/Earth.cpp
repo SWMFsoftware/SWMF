@@ -24,6 +24,22 @@ int *Earth::CompositionGroupTableIndex=NULL;
 int Earth::nCompositionGroups;
 
 
+//manager of the data recovering
+void Earth::DataRecoveryManager(list<pair<string,list<int> > >& SampledDataRecoveryTable ,int MinOutputFileNumber,int MaxOutputFilenumber) {
+  int iOutputFile;
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  pair<string,list<int> > DataRecoveryTableElement;
+
+  DataRecoveryTableElement.second.push_back(0);
+
+  for (iOutputFile=MinOutputFileNumber;iOutputFile<=MaxOutputFilenumber;iOutputFile++) {
+    sprintf(fname,"pic.SamplingDataRestart.out=%i.dat",iOutputFile);
+
+    DataRecoveryTableElement.first=fname;
+    SampledDataRecoveryTable.push_back(DataRecoveryTableElement);
+  }
+}
+
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble et) {
   return 0.0;
