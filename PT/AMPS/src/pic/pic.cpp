@@ -48,19 +48,53 @@ int PIC::TimeStep() {
      if (RestartFileReadFlag==false) {
        RestartFileReadFlag=true;
 
-       Restart::ReadSamplingData(Restart::SamplingDataRestartFileName);
-       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+       //prepare the list of the files/speces which data fille be revobered and saved
+       list<pair<string,list<int> > > SampledDataRecoveryTable;
 
-       for (int s=0;s<PIC::nTotalSpecies;s++) {
-         char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+       if (Restart::SamplingData::DataRecoveryManager==NULL) {
+         //no user-defined fucntion to create the 'SampledDataRecoveringTable' is provided
+         pair<string,list<int> > Table;
 
-         PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
-         sprintf(fname,"RECOVERED.%s.%s.s=%i.dat",Restart::SamplingDataRestartFileName,ChemSymbol,s);
-         PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+         for (int s=0;s<PIC::nTotalSpecies;s++) Table.second.push_back(s);
+
+         Table.first=Restart::SamplingData::RestartFileName;
+         SampledDataRecoveryTable.push_back(Table);
+       }
+       else Restart::SamplingData::DataRecoveryManager(SampledDataRecoveryTable,Restart::SamplingData::minReadFileNumber,Restart::SamplingData::maxReadFileNumber);
+
+       //iterate through SampledDataRecoveryTable
+       list<pair<string,list<int> > >::iterator RecoveryEntry;
+
+       for (RecoveryEntry=SampledDataRecoveryTable.begin();RecoveryEntry!=SampledDataRecoveryTable.end();RecoveryEntry++) {
+         Restart::SamplingData::Read(RecoveryEntry->first.c_str());
+         MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+         for (list<int>::iterator s=RecoveryEntry->second.begin();s!=RecoveryEntry->second.end();s++) {
+           char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+
+           PIC::MolecularData::GetChemSymbol(ChemSymbol,*s);
+           sprintf(fname,"RECOVERED.%s.%s.s=%i.dat",RecoveryEntry->first.c_str(),ChemSymbol,*s);
+           PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,*s);
+
+           //preplot the recovered file if needed
+           if (Restart::SamplingData::PreplotRecoveredData==true) {
+             char cmd[_MAX_STRING_LENGTH_PIC_];
+
+             sprintf(cmd,"preplot %s",fname);
+             system(cmd);
+           }
+         }
        }
 
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
        if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE_ == _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__STOP_) {
-         if (PIC::ThisThread==0) printf("Sucesfully recoved the sampled data from restart file \"%s\". Execution is complete. See you later :-)\n",Restart::SamplingDataRestartFileName);
+         if (PIC::ThisThread==0) {
+           printf("The sampled data from restart file/files\n");
+           for (RecoveryEntry=SampledDataRecoveryTable.begin();RecoveryEntry!=SampledDataRecoveryTable.end();RecoveryEntry++) printf("%s\n",RecoveryEntry->first.c_str());
+           printf("is successfully recoved. Execution is complete. See you later :-)\n");
+         }
+
          MPI_Finalize();
          exit(EXIT_SUCCESS);
        }
@@ -1146,7 +1180,7 @@ void PIC::Sampling::Sampling() {
       //save the sampling data restart file in case when the macroscopic data are downloaded from remote host for post-processing
       if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_) {
         sprintf(fname,"%s/pic.SamplingDataRestart.out=%ld.dat",OutputDataFileDirectory,DataOutputFileNumber);
-        PIC::Restart::SaveSamplingData(fname);
+        PIC::Restart::SamplingData::Save(fname);
       }
 
       //print the sampled local data sets of the user defined functions

@@ -12,6 +12,7 @@
 #include <vector>
 #include <string.h>
 #include <list>
+#include <utility>
 #include <math.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -4347,13 +4348,26 @@ namespace PIC {
   //Save and read the restart files
   namespace Restart {
     //sampled data
-    extern char SamplingDataRestartFileName[_MAX_STRING_LENGTH_PIC_]; //<- SAVE INTO THIS FILE: the name of the sampled restart file that will be used in the 'read' procedures to recoved the sampled data. The name is set in AMPS' input file
+    namespace SamplingData {
+      extern char RestartFileName[_MAX_STRING_LENGTH_PIC_]; //<- SAVE INTO THIS FILE: the name of the sampled restart file that will be used in the 'read' procedures to recoved the sampled data. The name is set in AMPS' input file
 
-    void SaveSamplingData(const char*);
-    void SaveSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
+      void Save(const char*);
+      void SaveBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
 
-    void ReadSamplingData(const char*);
-    void ReadSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,FILE*);
+      void Read(const char*);
+      void ReadBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,FILE*);
+
+      //Read Sampling data range
+      //the new function and variables are placed into the namespace. Old variables are
+      extern int minReadFileNumber,maxReadFileNumber;
+
+      //preplot the recovered data file
+      extern bool PreplotRecoveredData;
+
+      //pointer to a user-defined function that defined the all combinations of the species number/output file number that will be recovered
+      typedef void (*fDataRecoveryManager) (list<pair<string,list<int> > >&,int,int);    //(list<pair<string FileName,list<int> Species > >&, min output file number, max output file number);
+      extern fDataRecoveryManager DataRecoveryManager;
+    }
 
     //Particle data
     extern int ParticleRestartAutosaveIterationInterval;

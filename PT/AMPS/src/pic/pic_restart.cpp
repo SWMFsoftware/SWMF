@@ -4,16 +4,21 @@
 #include "pic.h"
 
 int PIC::Restart::ParticleRestartAutosaveIterationInterval=1;
-char PIC::Restart::SamplingDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="SampleData.restart";
+char PIC::Restart::SamplingData::RestartFileName[_MAX_STRING_LENGTH_PIC_]="SampleData.restart";
 
 char PIC::Restart::saveParticleDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="ParticleData.restart";
 char PIC::Restart::recoverParticleDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="ParticleData.restart";
 bool PIC::Restart::ParticleDataRestartFileOverwriteMode=true;
 
+int PIC::Restart::SamplingData::minReadFileNumber=-1;
+int PIC::Restart::SamplingData::maxReadFileNumber=-1;
+PIC::Restart::SamplingData::fDataRecoveryManager PIC::Restart::SamplingData::DataRecoveryManager=NULL;
+bool PIC::Restart::SamplingData::PreplotRecoveredData=false;
+
 
 //-------------------------------------- Save/Load Sampling Data Restart File ---------------------------------------------------------
 //save sampling data
-void PIC::Restart::SaveSamplingData(const char* fname) {
+void PIC::Restart::SamplingData::Save(const char* fname) {
   FILE *fRestart=NULL;
   int BlockDataSize=0,mpiBufferSize=0;
 
@@ -36,7 +41,7 @@ void PIC::Restart::SaveSamplingData(const char* fname) {
   else pipe.openSend(0);
 
   //save the restart information
-  SaveSamplingDataBlock(PIC::Mesh::mesh.rootTree,&pipe,fRestart);
+  SaveBlock(PIC::Mesh::mesh.rootTree,&pipe,fRestart);
 
   //close the MPI channel and the restart file
   if (PIC::Mesh::mesh.ThisThread==0) {
@@ -48,7 +53,7 @@ void PIC::Restart::SaveSamplingData(const char* fname) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
-void PIC::Restart::SaveSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,CMPI_channel* pipe,FILE* fRestart) {
+void PIC::Restart::SamplingData::SaveBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,CMPI_channel* pipe,FILE* fRestart) {
   int nAllocatedCells,i,j,k;
 
   //save the data
@@ -107,11 +112,11 @@ void PIC::Restart::SaveSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
     }
   }
   else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) SaveSamplingDataBlock(node->downNode[nDownNode],pipe,fRestart);
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) SamplingData::SaveBlock(node->downNode[nDownNode],pipe,fRestart);
   }
 }
 
-void PIC::Restart::ReadSamplingData(const char* fname) {
+void PIC::Restart::SamplingData::Read(const char* fname) {
   FILE *fRestart=NULL;
 
   fRestart=fopen(fname,"r");
@@ -126,13 +131,13 @@ void PIC::Restart::ReadSamplingData(const char* fname) {
   fread(&PIC::LastSampleLength,sizeof(PIC::LastSampleLength),1,fRestart);
   fread(&PIC::DataOutputFileNumber,sizeof(PIC::DataOutputFileNumber),1,fRestart);
 
-  ReadSamplingDataBlock(PIC::Mesh::mesh.rootTree,fRestart);
+  SamplingData::ReadBlock(PIC::Mesh::mesh.rootTree,fRestart);
   fclose(fRestart);
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
-void PIC::Restart::ReadSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,FILE* fRestart) {
+void PIC::Restart::SamplingData::ReadBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,FILE* fRestart) {
   int nAllocatedCells;
 
   //read the data
@@ -163,7 +168,7 @@ void PIC::Restart::ReadSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
     }
   }
   else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) ReadSamplingDataBlock(node->downNode[nDownNode],fRestart);
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) ReadBlock(node->downNode[nDownNode],fRestart);
   }
 }
 
