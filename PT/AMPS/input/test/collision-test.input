@@ -31,6 +31,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 #endGeneral
 
 #ParticleCollisions
+    model = NTC !! MF !!!NTC !!off !HS ! HS, off
   SampleCollisionFrequency=on
 
   CollisionCrossSection=const \\ !const, function
