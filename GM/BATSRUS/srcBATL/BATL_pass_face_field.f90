@@ -167,7 +167,6 @@ contains
        do iBlockSend = 1, nBlock
           if(Unused_B(iBlockSend)) CYCLE
           do kDir = -kDim_, kDim_
-             ! Do not message pass in ignored dimensions
              do jDir = -jDim_, jDim_
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
@@ -990,11 +989,8 @@ contains
        ! Loop through all blocks that may send a message
        do iBlockSend = 1, nBlock
           if(Unused_B(iBlockSend)) CYCLE
-          do kDir = -1, 1
-             ! Do not message pass in ignored dimensions
-             if(nDim < 3 .and. kDir /= 0) CYCLE
-             do jDir = -1, 1
-                if(nDim < 2 .and. jDir /= 0) CYCLE
+          do kDir = -kDim_, kDim_
+             do jDir = -jDim_, jDim_
                 do iDir = -1,1
                    ! Ignore inner parts of the sending block
                    if(iDir == 0 .and. jDir == 0 .and. kDir == 0) CYCLE
