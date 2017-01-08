@@ -786,6 +786,43 @@ Check=
 
 <#
 
+
+#>
+Name=test/Collision-Test-MF
+Time=3
+
+Check=
+>>>@echo "test_Collision-Test-MF_check..." >> test_Collision-Test-MF.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF1-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF2.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF2-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF3.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF3-1.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF4.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-MF/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest-MF/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-MFDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-MF4-1.diff
+
+>>>cat test_Collision-Test-MF1.diff test_Collision-Test-MF1-1.diff   test_Collision-Test-MF2.diff test_Collision-Test-MF2-1.diff  test_Collision-Test-MF3.diff test_Collision-Test-MF3-1.diff  test_Collision-Test-MF4.diff test_Collision-Test-MF4-1.diff > test_Collision-Test-MF.diff
+
+>>>@ls -l test_Collision-Test-MF1.diff
+>>>@ls -l test_Collision-Test-MF1-1.diff
+
+>>>@ls -l test_Collision-Test-MF2.diff
+>>>@ls -l test_Collision-Test-MF2-1.diff
+
+>>>@ls -l test_Collision-Test-MF3.diff
+>>>@ls -l test_Collision-Test-MF3-1.diff
+
+>>>@ls -l test_Collision-Test-MF4.diff
+>>>@ls -l test_Collision-Test-MF4-1.diff
+
+>>>@ls -l test_Collision-Test-MF.diff
+
+<#
+
 -------------------------------------------------------------------------------
 #>
 Name=test/Chemistry-Test
