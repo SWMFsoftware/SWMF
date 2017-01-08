@@ -1131,7 +1131,7 @@ sub ReadGeneralBlock {
 
       if ($InputLine eq "ON") {
         chomp($line);
-        $line=~s/[();]/ /g;
+        $line=~s/[();,]/ /g;
         $line=~s/(=)/ /;
         $line=~s/(=)/ /;
         
@@ -1142,13 +1142,46 @@ sub ReadGeneralBlock {
         while (defined $line) {
           ($s0,$line)=split(' ',$line,2);
           $s0=uc($s0);
-
+          
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2); 
 
             ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
-            $line=~s/(=)/ /;
           }
+          
+          #the user defined function that would create the output data request
+          elsif ($s0 eq "FUNCTION") {
+            my $func;
+
+            ($func,$line)=split(' ',$line,2);
+            ampsConfigLib::ChangeValueOfVariable("PIC::Restart::SamplingData::fDataRecoveryManager PIC::Restart::SamplingData::DataRecoveryManager",$func,"pic/pic_restart.cpp");
+          }
+
+          #preplot flag of the recovered data files
+          elsif ($s0 eq "PREPLOT") {
+            ($InputLine,$line)=split(' ',$line,2);
+            $InputLine=uc($InputLine);
+
+            if ($InputLine eq "ON") {
+              ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::SamplingData::PreplotRecoveredData","true","pic/pic_restart.cpp");
+            }
+            elsif ($InputLine eq "OFF") {
+              ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::SamplingData::PreplotRecoveredData","false","pic/pic_restart.cpp");
+            }
+            else {
+              die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          }
+
+          #the limit of the output file numbers to be recovered
+          elsif ($s0 eq "OUTPUTFILENUMBERRANGE") {
+            my ($t0,$t1);
+
+            ($t0,$t1,$line)=split(' ',$line,3);
+            ampsConfigLib::ChangeValueOfVariable("int PIC::Restart::SamplingData::minReadFileNumber","$t0","pic/pic_restart.cpp");
+            ampsConfigLib::ChangeValueOfVariable("int PIC::Restart::SamplingData::maxReadFileNumber","$t1","pic/pic_restart.cpp");
+          }
+          
           elsif ($s0 eq "EXECUTION") {
             ($s0,$line)=split(' ',$line,2);
             $s0=uc($s0);
@@ -1163,8 +1196,12 @@ sub ReadGeneralBlock {
               die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
             
-            $line=~s/(=)/ /;
           }
+          else {
+            die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+          
+          $line=~s/(=)/ /;
         }
  
         ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_","pic/picGlobal.dfn");
