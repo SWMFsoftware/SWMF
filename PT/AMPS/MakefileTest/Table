@@ -751,38 +751,38 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test/Collision-Test 
+Name=test/Collision-Test-NTC 
 Time=3
 
 Check=
->>>@echo "test_Collision-Test_check..." >> test_Collision-Test.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1.diff 
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test1-1.diff
+>>>@echo "test_Collision-Test-NTC_check..." >> test_Collision-Test-NTC.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC1.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC1-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test2-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC2.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC2-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test3-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC3.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC3-1.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-TestDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test4-1.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC4.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_Collision-Test-NTC/PT/plots/test_ModelCollisionTest--test1.dat output/test_ModelCollisionTest/test_ModelCollisionTest--test1.ref_np`ls $(TESTCollision-Test-NTCDIR)/PT/thread* |wc -l |tr -d ' '` > test_Collision-Test-NTC4-1.diff
 
->>>cat test_Collision-Test1.diff test_Collision-Test1-1.diff   test_Collision-Test2.diff test_Collision-Test2-1.diff  test_Collision-Test3.diff test_Collision-Test3-1.diff  test_Collision-Test4.diff test_Collision-Test4-1.diff > test_Collision-Test.diff
+>>>cat test_Collision-Test-NTC1.diff test_Collision-Test-NTC1-1.diff   test_Collision-Test-NTC2.diff test_Collision-Test-NTC2-1.diff  test_Collision-Test-NTC3.diff test_Collision-Test-NTC3-1.diff  test_Collision-Test-NTC4.diff test_Collision-Test-NTC4-1.diff > test_Collision-Test-NTC.diff
 
->>>@ls -l test_Collision-Test1.diff
->>>@ls -l test_Collision-Test1-1.diff
+>>>@ls -l test_Collision-Test-NTC1.diff
+>>>@ls -l test_Collision-Test-NTC1-1.diff
 
->>>@ls -l test_Collision-Test2.diff
->>>@ls -l test_Collision-Test2-1.diff
+>>>@ls -l test_Collision-Test-NTC2.diff
+>>>@ls -l test_Collision-Test-NTC2-1.diff
 
->>>@ls -l test_Collision-Test3.diff
->>>@ls -l test_Collision-Test3-1.diff
+>>>@ls -l test_Collision-Test-NTC3.diff
+>>>@ls -l test_Collision-Test-NTC3-1.diff
 
->>>@ls -l test_Collision-Test4.diff
->>>@ls -l test_Collision-Test4-1.diff
+>>>@ls -l test_Collision-Test-NTC4.diff
+>>>@ls -l test_Collision-Test-NTC4-1.diff
 
->>>@ls -l test_Collision-Test.diff
+>>>@ls -l test_Collision-Test-NTC.diff
 
 <#
 
