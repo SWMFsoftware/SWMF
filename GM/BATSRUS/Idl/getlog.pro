@@ -1,3 +1,3 @@
-get_log_data
+read_log_data
 
 end
