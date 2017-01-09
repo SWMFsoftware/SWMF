@@ -924,14 +924,14 @@ pro setdevice, psfile, orient, psfont, percent, eps=eps, 	$
 end
 
 list = findfile("-t i*.idl")
-if strlen(list(0)) gt 0 then filein = list(0) $
+if strlen(list[0]) gt 0 then filein = list[0] $
 else filein = 'in000000.idl'
 
 filein = ask('filename',filein)
 
 list = findfile(filein)
 nfiles = n_elements(list)
-if nfiles eq 1 and strlen(list(0)) eq 0 then begin
+if nfiles eq 1 and strlen(list[0]) eq 0 then begin
   print, "I can't seem to find that file."
   stop
 endif else begin
@@ -982,7 +982,7 @@ ntotal = 0
 for n = 0, nfiles-1,nskip do begin
 
   swaptheta = 0
-  filein = list(n)
+  filein = list[n]
 
   if strpos(filein,'save') gt -1 then begin
 
@@ -1159,7 +1159,7 @@ for hem = 0, 1 do for i = 0, nvars_to_plot-1 do for j = 0, ntotal-1 do begin
 endfor
 
 if strpos(savefiles,'y') gt -1 then  $
-  save, indices, indices_vars, time, file = list(0)+'.ind.save'
+  save, indices, indices_vars, time, file = list[0]+'.ind.save'
 
 ;
 ; Figure out plots per page...
@@ -1208,8 +1208,8 @@ for hem = 0, isouth do begin
     if (ntotal eq 1) and (nvars_to_plot le 2) then begin
       if hem eq 0 and i eq 0 then begin
         pn = -1
-        print,'opening1 file=',list(0)+'.ps'
-        setdevice, list(0)+'.ps','p',4
+        print,'opening1 file=',list[0]+'.ps'
+        setdevice, list[0]+'.ps','p',4
 	pos_space, ppp, space, sizes
       endif
     endif else begin
@@ -1217,8 +1217,8 @@ for hem = 0, isouth do begin
       if (ntotal le 5) and (nvars_to_plot le 3) then begin
         if hem eq 1 and i eq 0 then closedevice
         if i eq 0 then begin
-          print,'opening2 file=',list(0)+'_'+strmid(hems(hem),0,5)+'.ps'
-          setdevice, list(0)+'_'+strmid(hems(hem),0,5)+'.ps','p',4
+          print,'opening2 file=',list[0]+'_'+strmid(hems(hem),0,5)+'.ps'
+          setdevice, list[0]+'_'+strmid(hems(hem),0,5)+'.ps','p',4
           pos_space, ppp, space, sizes, nx = nvars_to_plot
         endif
       endif else begin
@@ -1229,9 +1229,9 @@ for hem = 0, isouth do begin
               closedevice
               print,'closing file'
           endif
-          print,'opening3 file=',list(0)+'_Var'+tostr(i) $
+          print,'opening3 file=',list[0]+'_Var'+tostr(i) $
             +'_'+strmid(hems(hem),0,5)+'.ps'
-          setdevice, list(0)+'_Var'+tostr(i)+'_'+strmid(hems(hem),0,5)+'.ps',$
+          setdevice, list[0]+'_Var'+tostr(i)+'_'+strmid(hems(hem),0,5)+'.ps',$
                      'p',4
           pos_space, ppp, space, sizes
         endif
@@ -1258,7 +1258,7 @@ for hem = 0, isouth do begin
         endif else begin
             list = strsplit(path,':',/extract)
             for nl = 0,n_elements(list)-1 do begin
-                dir=list(nl)
+                dir=list[nl]
                 if strpos(dir,'/Idl') gt strlen(dir)-6 then ct_path = dir
             endfor
         endelse
