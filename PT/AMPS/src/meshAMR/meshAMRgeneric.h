@@ -1944,18 +1944,18 @@ Start:
     memcpy(xmax,startNode->xmax,_MESH_DIMENSION_*sizeof(double));
 
     if (x[0]<xmin[0]) iState=-1;
-    else if (x[0]>xmax[0]) iState=+1;
+    else if (x[0]>=xmax[0]) iState=+1;
     else iState=0;
 
 #if _MESH_DIMENSION_ > 1
     if (x[1]<xmin[1]) jState=-1;
-    else if (x[1]>xmax[1]) jState=+1;
+    else if (x[1]>=xmax[1]) jState=+1;
     else jState=0;
 #endif
 
 #if _MESH_DIMENSION_ > 2
     if (x[2]<xmin[2]) kState=-1;
-    else if (x[2]>xmax[2]) kState=+1;
+    else if (x[2]>=xmax[2]) kState=+1;
     else kState=0;
 #endif
 
@@ -6590,7 +6590,7 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
 
                 //print the data stored in the 'center' nodes
                 #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-                const int nMaxCenterInterpolationCoefficients=8;
+                const int nMaxCenterInterpolationCoefficients=64;
                 cCenterNode *tempCenterNode,*CenterNodeInterpolationStencil[nMaxCenterInterpolationCoefficients];
                 double CenterNodeInterpolationCoefficients[nMaxCenterInterpolationCoefficients];
                 int centerNodeInterpolationStencilLength;
@@ -6902,7 +6902,7 @@ nMPIops++;
 
                   //print the data stored in the 'center' nodes
                   #if  _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-                  const int nMaxCenterInterpolationCoefficients=8;
+                  const int nMaxCenterInterpolationCoefficients=64;
                   cCenterNode *tempCenterNode,*CenterNodeInterpolationStencil[nMaxCenterInterpolationCoefficients];
                   double CenterNodeInterpolationCoefficients[nMaxCenterInterpolationCoefficients],xCenterNode[3];
                   int centerNodeInterpolationStencilLength;
@@ -9125,7 +9125,7 @@ nMPIops++;
         if (LoadCenterNodeMeasure(CellMeasureFilePath,NULL)==true) {
           return;
         }
-        else if (ThisThread==0) printf("$PREFIX: the calculated volume data file is not found: generating....\n");
+        else if (ThisThread==0) printf("$PREFIX: the calculated volume data file is not found: generating....\n ");
       }
 
       startNode=rootTree;
