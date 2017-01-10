@@ -44,11 +44,32 @@ long int Earth::ImpulseSource::InjectParticles() {
 
       mass=PIC::MolecularData::GetMass(spec);
 
+/*
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic,1) default (none) private (idim,newParticle,newParticleData)  \
   shared (TimeCounter,iSource,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
 #endif
+*/
+
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      #pragma omp parallel
+      {
+      #pragma omp single
+      {
+#endif
       for (int iPart=0;iPart<nTotalInjectedParticles;iPart++) {
+
+        //generate particles' velocity
+        newParticle=PIC::ParticleBuffer::GetNewParticle(true);
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+        #pragma omp task default (none) firstprivate (newParticle) private (idim,newParticleData)  \
+        shared (TimeCounter,iSource,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
+        {
+#endif
+
+
         //generate new particle velocity
         double v[3],speed;
 
@@ -64,7 +85,6 @@ long int Earth::ImpulseSource::InjectParticles() {
         for (idim=0;idim<3;idim++) v[idim]*=speed;
 
         //generate particles' velocity
-        newParticle=PIC::ParticleBuffer::GetNewParticle();
         newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
         PIC::ParticleBuffer::SetX(ImpulseSourceData[iSource].x,newParticleData);
@@ -74,7 +94,17 @@ long int Earth::ImpulseSource::InjectParticles() {
 
         //inject the particle into the system
         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,TimeCounter-ImpulseSourceData[iSource].time,startNode);
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+        }
+#endif
+
       }
+
+      //end of the particle injetion loop
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+     }}
+#endif
 
     }
 
