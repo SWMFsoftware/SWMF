@@ -1092,10 +1092,7 @@ contains
        MagSmXyz_DI(:,iMag) = matmul(GmtoSm_DD, Xyz_D)
     end do
 
-    !-------------------------------------------------------------------
-    ! Calculate the perturbations from GM currents and FACs in the Gap Region;
-    ! The results are in SM spherical coordinates.
-    !------------------------------------------------------------------
+    ! Obtain geomagnetic pertubations in SMG coordinates
     call ground_mag_perturb(    nMagNow, MagGmXyz_DI, dBMhd_DI) 
     call ground_mag_perturb_fac(nMagNow, MagSmXyz_DI, dBFac_DI)
     call calc_ie_mag_perturb(nMagNow, MagSmXyz_DI, dBHall_DI, dBPedersen_DI)
