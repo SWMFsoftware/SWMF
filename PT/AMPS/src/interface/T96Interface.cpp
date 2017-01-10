@@ -8,7 +8,7 @@
  *      Author: vtenishe
  */
 
-
+#include "pic.h"
 #include "constants.h"
 #include "constants.PlanetaryData.h"
 #include "T96Interface.h"
@@ -36,6 +36,12 @@ void T96::GetMagneticField(double *B,double *x) {
   double xLocal[3],bT96[3];
 
   for (idim=0;idim<3;idim++) xLocal[idim]=x[idim]/_EARTH__RADIUS_;
+
+/*  if (pow(xLocal[0],2)+pow(xLocal[1],2)+pow(xLocal[2],2)<1.0) {
+    for (idim=0;idim<3;idim++) B[idim]=0.0;
+    return;
+  }*/
+
   t96_01_(&IOPT,PARMOD,&PS,xLocal+0,xLocal+1,xLocal+2,bT96+0,bT96+1,bT96+2);
 
   //calcualte the Earth's internal magnetis field
@@ -43,6 +49,14 @@ void T96::GetMagneticField(double *B,double *x) {
 
   //sum contributions of the internal Earth's magnetic field, and the global field in the magnetoshere
   for (idim=0;idim<3;idim++) B[idim]+=bT96[idim]*_NANO_;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+  PIC::Debugger::CatchOutLimitValue(xLocal,DIM,__LINE__,__FILE__);
+  PIC::Debugger::CatchOutLimitValue(bT96,DIM,__LINE__,__FILE__);
+  PIC::Debugger::CatchOutLimitValue(B,DIM,__LINE__,__FILE__);
+#endif
+#endif
 }
 
 void T96::SetSolarWindPressure(double SolarWindPressure) {PARMOD[0]=SolarWindPressure/_NANO_;}
