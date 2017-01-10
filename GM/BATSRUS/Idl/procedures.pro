@@ -196,8 +196,8 @@ pro set_default_values
 ; Parameters for plotlog
   common plotlog_param, $
      log_spacex,log_spacey, logfunc, title, xtitle, ytitles, $
-     xrange, yranges, colors, linestyles, symbols, smooths, dofft, $
-     legends, legendpos
+     xrange, yranges, timeshifts, $
+     colors, linestyles, symbols, smooths, dofft, legends, legendpos
 
   log_spacex=5 ; horizontal distance around log plots (in character size)
   log_spacey=5 ; vertical distance between log plots (in character size)
@@ -207,6 +207,7 @@ pro set_default_values
   ytitles=0    ; set to a string array with the function names
   xrange=0     ; set to a [min,max] array for the time range
   yranges=0    ; set to a [[min1,max1], [min2,max2] ...] for function ranges
+  timeshifts=0 ; set to array of time shifts per logfile
   colors=255   ; set to an array with colors for each function
   linestyles=0 ; set to an array with line styles for each function
   symbols=0    ; set to an array with symbols for each function
@@ -5550,6 +5551,7 @@ common log_data, $
 
 common getlog_param
 common plotlog_param
+common plot_param ; noerase
 
 nlog = n_elements(logfilenames)
 
