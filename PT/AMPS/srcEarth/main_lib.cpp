@@ -483,6 +483,7 @@ void amps_init_mesh() {
        } SetBackgroundMagneticField;
 
        SetBackgroundMagneticField.Set(PIC::Mesh::mesh.rootTree);
+       PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
      }
 
 
