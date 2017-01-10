@@ -5535,11 +5535,24 @@ pro plot_log
 ; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
 
-common log_data
+common log_data, $
+     timeunit, $
+     wlog0, logtime0, wlognames0, $  ; renamed from wlog, logtime, wlognames
+     wlog1, logtime1, wlognames1, $
+     wlog2, logtime2, wlognames2, $
+     wlog3, logtime3, wlognames3, $
+     wlog4, logtime4, wlognames4, $
+     wlog5, logtime5, wlognames5, $
+     wlog6, logtime6, wlognames6, $
+     wlog7, logtime7, wlognames7, $
+     wlog8, logtime8, wlognames8, $
+     wlog9, logtime9, wlognames9
+
 common getlog_param
 common plotlog_param
 
 nlog = n_elements(logfilenames)
+
 string_to_array,logfunc,logfuncs,nlogfunc
 
 ; read in arrays if not present
