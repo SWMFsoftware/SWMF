@@ -10,6 +10,7 @@
 
 #include "GeopackInterface.h"
 
+#include "pic.h"
 #include "constants.h"
 #include "constants.PlanetaryData.h"
 #include "ifileopr.h"
@@ -136,6 +137,12 @@ C
   igrf_gsw_08_(xLocal+0,xLocal+1,xLocal+2,B+0,B+1,B+2);
 
   for (idim=0;idim<3;idim++) B[idim]*=_NANO_;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+  PIC::Debugger::CatchOutLimitValue(B,DIM,__LINE__,__FILE__);
+#endif
+#endif
 }
 
 
