@@ -42,7 +42,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=file(batsrus) !!!ices !!off, ices, swmf
+CouplerMode=T96 !!geopack !!!!(batsrus) !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
@@ -65,8 +65,8 @@ MoverIntegratorMode=Boris-relativistic
   EnforceRequestedMeshResolution=on !on,off
 
 
-  BlockCells=6,6,6
-  GhostCells=2,2,2
+  BlockCells=4,4,4
+  GhostCells=1,1,1
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
   NastranSurfaceUserData=on !!!on, off
@@ -89,7 +89,10 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
   RecoverMacroscopicSampledData=off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
-    file=pic.SamplingDataRestart.out=2.dat
+    file=pic.SamplingDataRestart.out=16.dat \\
+     \\ !function=Earth::DataRecoveryManager \\
+     \\ !OutputFileNumberRange=0,16 \\
+    preplot=on
 
 
   RecoverParticleData=off  \\ !on, off
@@ -119,6 +122,9 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 #interface
   cell_centered_linear_interpolation_mode=amps !!off !amps,swmf,off  
   cell_centered_linear_interpolation_src=default
+
+  geopack=on
+  T96=on
 #endinterface
 
 
@@ -189,7 +195,7 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 ! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path  
 !  IcesModelCase=Europa09
 
-!  SimulationStartTime=1996-12-19T06:00:00 !!!2009-01-24T00:00:00
+  SimulationStartTime=2013-04-01T12:59:30 !!!2009-01-24T00:00:00
 
   addPhysicalModelHeader=Earth.h
 
