@@ -118,17 +118,19 @@ function funcdef,xx,w,func
                 ['skindepth',' di0/sqrt(rho*mi/me)'                     ], $ ; electron skin depth
                 ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $ ; electron skin depth in SI
                 ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
-                ['jxp'      , '{rhos1}*{uxs1}-{rhos0}*{uxs0}*100'       ], $ ; jx from particles
-                ['jyp'      , '{rhos1}*{uys1}-{rhos0}*{uys0}*100'       ], $ ; jy from particles
-                ['jzp'      , '{rhos1}*{uzs1}-{rhos0}*{uzs0}*100'       ], $ ; jz from particles
-                ['jp'       , 'sqrt({jxp}^2+{jyp}^2+{jzp}^2)'           ], $ ; j from particles 
-                ['jppar'    , '({jxp}*{bx}+{jyp}*{by}+{jzp}*{bz})/b'    ], $ ; j parallel to field line
+                ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ], $ ; Debye length in SI
+                ['ni'       , '{rhos1}/mi'                              ], $ ; ion number density
+                ['ne'       , '{rhos0}/me'                              ], $ ; electron number density
+                ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $ ; total charge
+                ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $ ; jx from particles
+                ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $ ; jy from particles
+                ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $ ; jz from particles
+                ['jp'       , 'sqrt({jpx}^2+{jpy}^2+{jpz}^2)'           ], $ ; j from particles 
+                ['jppar'    , '({jpx}*{bx}+{jpy}*{by}+{jpz}*{bz})/b'    ], $ ; j parallel to field line
                 ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $ ; j perpendicular to field line
-                ['jxbx'     , '({rhos1}*{uys1}-{rhos0}*{uys0}*100)*{bz}-({rhos1}*{uzs1}-{rhos0}*{uzs0}*100)*{by}' ], $ ; j cross b - x
-                ['jxby'     , '({rhos1}*{uzs1}-{rhos0}*{uzs0}*100)*{bx}-({rhos1}*{uxs1}-{rhos0}*{uxs0}*100)*{bz}' ], $ ; j cross b - y
-                ['jxbz'     , '({rhos1}*{uxs1}-{rhos0}*{uxs0}*100)*{by}-({rhos1}*{uys1}-{rhos0}*{uys0}*100)*{bx}' ], $ ; j cross b - z
-                ['jxb'     , 'sqrt({jxbx}^2+{jxby}^2+{jxbz}^2)'         ], $ ; j cross b
-                ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
+                ['jpxbx'    , '{jpy}*{bz}-{jpz}*{by}'                   ], $ ; (j x b)_x
+                ['jpxby'    , '{jpz}*{bx}-{jpx}*{bz}'                   ], $ ; (j x b)_y
+                ['jpxbz'    , '{jpx}*{by}-{jpy}*{bx}'                   ]  $ ; (j x b)_z
                                      ]))
 
   common file_head
