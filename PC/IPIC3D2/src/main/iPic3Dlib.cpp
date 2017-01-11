@@ -1179,7 +1179,8 @@ void c_Solver:: write_plot_init(){
       plotVar_I[iPlot] = "qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1";
       nameSnapshot_I[iPlot] += "_all";
     }else if(plotString.find("var") !=string::npos){
-      plotVar_I[iPlot] = col->getplotVar(iPlot);
+      
+      plotVar_I[iPlot] = col->expandVariable(col->getplotVar(iPlot));
       nameSnapshot_I[iPlot] += "_var";
     }else if(plotString.find("fluid") !=string::npos){
       // Only include two species.
@@ -1216,12 +1217,13 @@ void c_Solver:: write_plot_init(){
     while(pos1 !=string::npos){
       pos1 = plotVar_I[iPlot].find_first_not_of(' ',pos2);
       pos2 = plotVar_I[iPlot].find_first_of(" \t\n",pos1);
-      if(pos1 !=string::npos){
+      if(pos1 !=string::npos){       	
 	Var_II[iPlot][count] = plotVar_I[iPlot].substr(pos1,pos2-pos1);
-	nVar_I[iPlot]++;
+	//nVar_I[iPlot]++;
 	count++;
       }
     }
+    nVar_I[iPlot] = count;
 
     // Find out output format.
     if(plotString.find("ascii") !=string::npos){
@@ -1364,10 +1366,6 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<"#NCELL\n";
     outFile<<nCell_I[iPlot]<<"\t nCell\n";
     outFile<<"\n";
-
-    outFile<<"#SCALARPARAM\n";
-    outFile<<0<<"\t nParam\n";
-    outFile<<"\n";
        
     outFile<<"#PLOTRESOLUTION\n";
     for(int i=0; i<col->getnDim();i++){
@@ -1378,12 +1376,36 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
       }
     }                
     outFile<<"\n";
-          
-    outFile<<"#PLOTVARIABLE\n";
-    outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
-    outFile<<plotVar_I[iPlot]<<"\n";    
-    outFile<<outputUnit_I[iPlot]<<"\n"; 
+
+
+    // me, m1, m2....c, rPlanet
+    int nScalar = ns + 2;       
+    outFile<<"#SCALARPARAM\n";
+    outFile<<nScalar<<"\t nParam\n";
+    outFile<<col->getMiSpecies(0)<<"\t me\n";
+    for(int iSpecies=1; iSpecies<ns; iSpecies++){
+      outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
+    }
+    outFile<<col->getcLightSI()<<"\t cLight\n";
+    outFile<<col->getrPlanet()<<"\t rPlanet\n";
     outFile<<"\n";
+
+    {
+      string scalarVar;
+      stringstream ss;
+      ss<<" me";
+      for(int iSpecies=1; iSpecies<ns; iSpecies++){
+	ss<<" m"<<iSpecies;
+      }
+      ss<<" clight"<<" xSI";
+      scalarVar = ss.str();
+      
+      outFile<<"#PLOTVARIABLE\n";
+      outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
+      outFile<<plotVar_I[iPlot]<<scalarVar<<"\n";    
+      outFile<<outputUnit_I[iPlot]<<"\n"; 
+      outFile<<"\n";
+    }
 
     outFile<<"#OUTPUTFORMAT\n";
     outFile<<outputFormat_I[iPlot]<<"\n";

@@ -527,7 +527,7 @@ class InterfaceFluid
       delete [] dtOutput_I;
       delete [] plotDx_I;
       delete [] plotString_I;
-      delete [] plotVar_I;      
+      delete [] plotVar_I;
       delArr2(plotRange_ID,2*nDimMax);
     }    
   }
@@ -2227,7 +2227,7 @@ class InterfaceFluid
     idxMin = min(iMin,jMin);
 
     if(INdim>2) idxMin = min(idxMin,kMin);
-
+    
     double ix;
     if(idxMin<nBoundarySmooth){
       ix = (nBoundarySmooth-idxMin)/nBoundarySmooth; 
@@ -2239,6 +2239,31 @@ class InterfaceFluid
     if(smooth > 1) smooth = 1;
     return smooth;    
   }
+
+  string expandVariable(string inVars)const{
+    // Expand the plot variables inside { };
+    // Only support {fluid} so far.
+    string::size_type pos1, pos2;
+    string var0;
+    
+    pos1 = inVars.find_first_of("{");
+    while(pos1 !=string::npos){
+      pos2 = inVars.find_first_of("}");
+      if(pos2 == string::npos){
+  	cout<<"Variables should be inside { }: "<<inVars<<endl;
+  	abort();
+      }
+
+      var0 = inVars.substr(pos1+1,pos2-pos1-1);
+      inVars.erase(pos1,pos2-pos1+1);
+      if(var0=="fluid"){
+  	inVars += "rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
+      }
+      pos1 = inVars.find_first_of("{");
+    }
+    return inVars;
+  }
+  
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
@@ -2303,6 +2328,8 @@ class InterfaceFluid
   void setzEnd(double v){zEnd=v;};
   int getnPartGhost()const{return nPartGhost;};
   bool getdoSmoothAll()const{return doSmoothAll;};
+  double getMiSpecies(int i)const{return MoMi_S[i];};
+  double getcLightSI()const{return Unorm/100;/*Unorm is in cgs unit*/};
 };
 
 
