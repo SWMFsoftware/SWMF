@@ -3358,7 +3358,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
 
   gammae = -1.0
 
-  for ieqpar = 1, neqpar-1 do begin
+  for ieqpar = 0, neqpar-1 do begin
      value = eqpar(ieqpar)
      case variables(ndim+nw+ieqpar) of
         'xSI'   : xSI    = value
