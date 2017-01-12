@@ -3373,6 +3373,7 @@ No magnetometer grid file is saved by default.
 				<option name="z=0" />
 				<option name="sphere" value="sph" />
 				<option name="shell"  value="shl" />
+				<option name="box" />
 				<option name="los" />
 				<option name="rfr" />
 				<option name="line" value="lin" />
@@ -3518,9 +3519,24 @@ No magnetometer grid file is saved by default.
 			<parameter name="LatMin" type="real" min="-90"               default="-90"/>
 			<parameter name="LatMax" type="real" min="$LatMin" max="90"  default="90"/>
 			<parameter name="dLat"   type="real" min="0" if="$LatMin != $LatMax"/>
+		</if>
+		<if expr="$plotarea =~ /\bbox\b/">
+			<parameter name="TypeCoord" type="string" length="3" default="HGR"/>
+			<parameter name="x0"     type="real" default="0"/>
+			<parameter name="y0"     type="real" default="0"/>
+			<parameter name="z0"     type="real" default="0"/>
+			<parameter name="xSize"  type="real" min="0"/>
+			<parameter name="dX"     type="real" min="0" if="$xSize != 0" />
+			<parameter name="ySize"  type="real" min="0" />
+			<parameter name="dY"     type="real" min="0" if="$ySize != 0"/>
+			<parameter name="zSize"  type="real" min="0" />
+			<parameter name="dZ"     type="real" min="0" if="$zSize != 0"/>
+			<parameter name="xAngle" type="real" min="-360" max="360" default="0"/>
+			<parameter name="yAngle" type="real" min="-360" max="360" default="0"/>
+			<parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
 		</if>		
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|shl|los|rfr|lin|eqr|eqb)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|sph|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -3653,6 +3669,22 @@ GEO			TypeCoordPlot
 -90.			LatMin
 90.			LatMax
 10.			dLat    ! only read if LatMin /= LatMax
+box MHD idl             StringPlot
+1                       DnSavePlot
+-10.0                   DtSavePlot
+HGR                     TypeCoordPlot
+0.0                     x0
+0.0                     y0
+1.5                     z0
+2.0                     xSize
+.01                     dX       ! only read if xSize /= 0
+0.2                     ySize
+0.01			dY       ! only read if ySize /= 0	
+3.0                     zSize
+0.01                    dZ       ! only read if zSize /= 0	
+0.0                     xAngle
+90.0                    yAngle
+0.0                     zAngle
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US. 
@@ -3704,6 +3736,7 @@ dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
+box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
 lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
@@ -3768,11 +3801,15 @@ from the parameter file in this order:
 \begin{verbatim}
  xMinCut ... zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
- TypeCoordPlot           if PlotArea is 'shl'
+ TypeCoordPlot           if PlotArea is 'shl' or 'box'
  RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
  LonMin LonMax           if PlotArea is 'eqb' or 'shl'
  LatMin LatMax           if PlotArea is 'shl'
  dRadius, dLon, dLat     if PlotArea is 'shl' and associated range is nonzero.
+ x0, y0, z0              if PlotArea is 'box'
+ xSize, ySize, zSize     if PlotArea is 'box'
+ dX, dY, dZ              if PlotArea is 'box' and associated range is nonzero.
+ xAngle, yAngle, zAngle  if PlotArea is 'box'
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
  DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
@@ -3945,8 +3982,16 @@ system given by TypeCoordPlot. If the range has extent zero in
 one or two coordinates, the shell becomes a 2D or 1D slice
 (for example 2D Lon-Lat, r-Lon, r-Lat surfaces, or 1D circle at fixed latitude,
 or a radial line with fixed longitude and latitude).
-The output is a sinlge file in IDL or Tecplot format.
+The output is a single file in IDL or Tecplot format.
 This capability is to replace the 'sph' plot type. 
+
+The box plot area ('box') can be used to extract a Cartesian box
+defined by the center position and the size (length of the edges) 
+and angles by which it is rotated around the axes of the coordinate
+system given by TypeCoordPlot. If the range has extent zero in 
+one or two coordinates, the box becomes a 2D or 1D slice
+(for example 2D X-Y, X-Z, Y-Z surfaces, or 1D line along the X, Y or Z axis).
+The output is a single file in IDL or Tecplot format.
 
 Default is nPlotFile=0, so no plot files are saved.
 </command>
