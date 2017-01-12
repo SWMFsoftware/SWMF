@@ -123,7 +123,7 @@ contains
   subroutine get_coronal_heat_factor
 
     use ModAdvance,     ONLY: State_VGB, Bz_
-    use ModGeometry,    ONLY: true_BLK, true_cell
+    use ModGeometry,    ONLY: true_BLK, true_cell, TypeGeometry
     use ModMagnetogram, ONLY: nTheta, nPhi, dSinTheta, dPhi, &
          get_magnetogram_field
     use ModMain,        ONLY: nI, nJ, nK, nBlock, Unused_B, Time_Simulation,z_
@@ -140,11 +140,13 @@ contains
     real :: HeatFunction, HeatFunctionVolume, HeatFunctionVolumePe
     real :: x, y, z, Theta, Phi, SinTheta, CosTheta, SinPhi, CosPhi
     real :: B0_D(3), BrSi, BrCgs, SumUnsignedBrCgs
-    real :: BzCgs(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
+    real :: BzCgs_II(1:nI,1:nJ), SumUnsignedBzCgs, UnsignedFluxCgsPe
     real    :: TotalCoronalHeating = -1.0, TimeUpdateLast = -1.0
     logical :: DoFirst = .true.
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
+
+    character(len=*), parameter:: NameSub = 'get_coronal_heat_factor'
     !--------------------------------------------------------------------------
 
     if(DoFirst .and. DtUpdateFlux <= 0.0)then
@@ -186,19 +188,32 @@ contains
 
     elseif( DtUpdateFlux > 0.0 .and. &
          Time_Simulation - TimeUpdateLast > DtUpdateFlux ) then
+
        UnsignedFluxCgs = 0.0
-       do iBlock = 1, nBlock 
-          if(Unused_B(iBlock)) cycle
-          if(true_BLK(iBlock)) then
-             dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
+       if(TypeGeometry == 'spherical')then
+          do iBlock = 1, nBlock 
+             if(Unused_B(iBlock)) cycle
+             if(true_BLK(iBlock)) then
+                call get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
+             end if
+          end do
+       elseif(TypeGeometry == 'cartesian')then
+          do iBlock = 1, nBlock 
+             if(Unused_B(iBlock)) cycle
+             if(true_BLK(iBlock)) then
+                dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
 
-             call get_photosphere_field(iBlock, UnsignedFluxHeight, &
-                  State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock), BzCgs)
+                call get_photosphere_field(iBlock, &
+                     State_VGB(Bz_,1:nI,1:nJ,0:nK+1,iBlock), BzCgs_II)
 
-             SumUnsignedBzCgs = sum(abs(BzCgs))
-             UnsignedFluxCgs = UnsignedFluxCgs +  SumUnsignedBzCgs*dAreaCgs
-          end if
-       end do
+                SumUnsignedBzCgs = sum(abs(BzCgs_II))
+                UnsignedFluxCgs = UnsignedFluxCgs +  SumUnsignedBzCgs*dAreaCgs
+             end if
+          end do
+       else
+          call CON_stop(NameSub//': '//TypeGeometry// &
+              ' geometry is not yet implemented')
+       end if
        if(nProc>1)then
           UnsignedFluxCgsPe = UnsignedFluxCgs
           call MPI_allreduce(UnsignedFluxCgsPe, UnsignedFluxCgs, 1, &
@@ -296,7 +311,7 @@ contains
   end subroutine get_heat_function
 
   !===========================================================================
-  subroutine get_photosphere_field(iBlock, z_cut, Bz_V, BzCgs)
+  subroutine get_photosphere_field(iBlock, Bz_V, BzCgs_II)
 
     use ModMain,      ONLY: nI, nJ, nK, z_
     use ModInterpolate, ONLY: find_cell
@@ -304,26 +319,65 @@ contains
     use BATL_lib,     ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB
 
     integer, intent(in) :: iBlock
-    real, intent(in)    :: z_cut, Bz_V(1:nI, 1:nJ, 0:nK+1)
-    real, intent(out)   :: BzCgs(1:nI, 1:nJ)
-    real :: MinZ, MaxZ, DxLeft, iZ
+    real, intent(in)    :: Bz_V(1:nI, 1:nJ, 0:nK+1)
+    real, intent(out)   :: BzCgs_II(1:nI, 1:nJ)
+    real :: MinZ, MaxZ, DxLeft, z
     integer :: iLeft
     !--------------------------------------------------------------------------
 
     MinZ = CoordMin_DB(z_,iBlock)
     MaxZ = CoordMax_DB(z_,iBlock)
 
-    BzCgs = 0.0
-    if((UnsignedFluxHeight > MaxZ).or.(UnsignedFluxHeight < MinZ))&
-         return
+    BzCgs_II = 0.0
+    if((UnsignedFluxHeight > MaxZ) .or. (UnsignedFluxHeight < MinZ)) RETURN
 
-    iZ = (UnsignedFluxHeight - MinZ)/CellSize_DB(z_,iBlock) + 0.5
-    call find_cell(0, nK+1, iZ, iLeft, DxLeft)
+    z = (UnsignedFluxHeight - MinZ)/CellSize_DB(z_,iBlock) + 0.5
+    call find_cell(0, nK+1, z, iLeft, DxLeft)
 
-    BzCgs = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
+    BzCgs_II = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
          DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
 
   end subroutine get_photosphere_field
+  !============================================================================
+  subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
+
+    use ModAdvance,     ONLY: State_VGB
+    use ModGeometry,    ONLY: r_BLK
+    use ModMain,        ONLY: nJ, nK, r_
+    use ModInterpolate, ONLY: find_cell
+    use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
+    use ModVarIndexes,  ONLY: Bx_, Bz_
+    use BATL_lib,       ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB, &
+         CellFace_DB, Xyz_DGB
+
+    integer, intent(in) :: iBlock
+    real, intent(inout) :: UnsignedFluxCgs
+
+    real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, dAreaCgs
+    integer :: iLeft, j, k
+    !--------------------------------------------------------------------------
+    MinR = CoordMin_DB(r_,iBlock)
+    MaxR = CoordMax_DB(r_,iBlock)
+
+    if((UnsignedFluxHeight > MaxR) .or. (UnsignedFluxHeight < MinR)) RETURN
+
+    dAreaCgs = CellFace_DB(r_,iBlock)*No2Si_V(UnitX_)**2*1e4
+
+    r = (UnsignedFluxHeight - MinR)/CellSize_DB(r_,iBlock) + 0.5
+    call find_cell(0, nI+1, r, iLeft, DrLeft)
+
+    do k = 1, nK; do j = 1, nJ
+       BrLeft = sum(Xyz_DGB(:,iLeft,j,k,iBlock) &
+            *State_VGB(Bx_:Bz_,iLeft,j,k,iBlock))/r_BLK(iLeft,j,k,iBlock)
+       BrRight = sum(Xyz_DGB(:,iLeft+1,j,k,iBlock) &
+            *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_BLK(iLeft+1,j,k,iBlock)
+
+       BrCgs = ((1.0 - DrLeft)*BrLeft + DrLeft*BrRight)*No2Si_V(UnitB_)*1e4
+
+       UnsignedFluxCgs = UnsignedFluxCgs + abs(BrCgs)*dAreaCgs
+    end do; end do
+
+  end subroutine get_photosphere_unsignedflux
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
 
