@@ -1142,7 +1142,7 @@ pro slice_data
   iplot=0                       ; plot index for animation
   for islice=1,nslice do begin
      ix=dslice*(islice-1)+firstslice-1
-     dirname=variables(slicedir-1)
+     dirname=var3d(slicedir-1)
      case slicedir of
         1:begin
            x(*,*,*)=x3d(ix,*,*,1:2)
