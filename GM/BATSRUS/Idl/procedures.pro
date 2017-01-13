@@ -414,7 +414,6 @@ pro read_data
      retall
   endif
   get_file_types
-
   print,'filetype(s)   =','',filetypes
   print,'npictinfile(s)=',npictinfiles
   if max(npictinfiles) eq 1 then npict=1
@@ -428,7 +427,6 @@ pro read_data
      print
 
      open_file,10,filenames(ifile),filetypes(ifile)
-
      get_pict,10,filenames(ifile),filetypes(ifile),npict<npictinfiles(ifile),$
               error
 
@@ -1558,17 +1556,17 @@ pro get_file_types
 
            pointer=long64(0)
            pictsize=long64(1)
-           npict=0
+           ipict=0
            while pointer lt fsize do begin
                                 ; Obtain size of a single snapshot
               point_lun,1,pointer
               get_file_head,1,filenames(ifile),ftype,pictsize=pictsize
-              npict   = npict+1
+              ipict   = ipict+1
               pointer = pointer + pictsize
            endwhile
            close,1
 
-           npictinfiles(ifile)=npict
+           npictinfiles(ifile)=ipict
            filetypes(ifile)   =ftype
         endelse
      endelse
