@@ -15,9 +15,16 @@
 //heliocentric distance to the object
 double Exosphere::ChemicalModel::HeliocentricDistance=1.0*_AU_;
 
+//the total loss and source rates in the exospheric chemistry
+double Exosphere::ChemicalModel::TotalSourceRate[PIC::nTotalSpecies];
+double Exosphere::ChemicalModel::TotalLossRate[PIC::nTotalSpecies];
+
 //set the helioncentric distance
 void Exosphere::ChemicalModel::Init(double rHeliocentric) {
   HeliocentricDistance=rHeliocentric;
+
+  //init the source and loss sampling buffers
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) TotalSourceRate[spec]=0.0,TotalLossRate[spec]=0.0;
 }
 
 //default function for calculation of the lifetile

@@ -128,6 +128,8 @@ namespace Exosphere {
   //Chemical Models
   namespace ChemicalModel {
     extern double HeliocentricDistance;
+    extern double TotalSourceRate[PIC::nTotalSpecies],TotalLossRate[PIC::nTotalSpecies];
+
     void Init(double rHeliocentric);
     double TotalLifeTime(double *x,int spec,long int ptr,bool &ReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
     void PhotochemicalModelProcessor(long int ptr,long int& FirstParticleCell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);

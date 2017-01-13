@@ -1313,7 +1313,33 @@ void Exosphere::Sampling::SampleModelData() {
 
 //output the column integrated density
 void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+
+
+  //print the total loss and source rates due to chemical reactions in the exospehre
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    double LossRate=0.0,SourceRate=0.0;
+    int ierr;
+
+    ierr=MPI_Reduce(Exosphere::ChemicalModel::TotalSourceRate+spec,&SourceRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
+
+    ierr=MPI_Reduce(Exosphere::ChemicalModel::TotalLossRate+spec,&LossRate,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
+
+    if (PIC::ThisThread==0) {
+      if (spec==0) {
+        printf("$PREFIX: The total source and loss rate due to chemical reactions in the exosphere:\n");
+        printf("$PREFIX: spec\tLoss Rate\tSource Rate\n");
+      }
+
+      printf("$PREFIX: %s\t%e\t%e\n",PIC::MolecularData::GetChemSymbol(spec),LossRate/PIC::LastSampleLength,SourceRate/PIC::LastSampleLength);
+    }
+
+    Exosphere::ChemicalModel::TotalSourceRate[spec]=0.0;
+    Exosphere::ChemicalModel::TotalLossRate[spec]=0.0;
+  }
+
+  #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   char fname[_MAX_STRING_LENGTH_PIC_];
   int ierr;
 
@@ -1327,7 +1353,6 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   //print the simulation time
   const SpiceInt lenout = 35;
   SpiceChar utcstr[lenout+2];
-
 
   et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
 
@@ -1500,6 +1525,10 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     printf("\nNight side return fluxes");
   }*/
 
+
+
+
+
   //print the total night side flux
 
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
@@ -1580,17 +1609,17 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-    ierr=MPI_Reduce(Sampling::TotalPlanetReturnFlux+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    ierr=MPI_Reduce(Exosphere::Sampling::TotalPlanetReturnFlux+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
     if (PIC::LastSampleLength!=0) TotalFlux/=PIC::LastSampleLength*LocalTimeStep;
     if (PIC::ThisThread==0) printf("%e\t",TotalFlux);
 
-    ierr=MPI_Reduce(Sampling::PlanetSurfaceStickingRate+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    ierr=MPI_Reduce(Exosphere::Sampling::PlanetSurfaceStickingRate+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
     if (PIC::LastSampleLength!=0) TotalFlux/=PIC::LastSampleLength*LocalTimeStep;
     if (PIC::ThisThread==0) printf("%e\n",TotalFlux);
 
-    Sampling::TotalPlanetReturnFlux[spec]=0.0,Sampling::PlanetSurfaceStickingRate[spec]=0.0;
+    Exosphere::Sampling::TotalPlanetReturnFlux[spec]=0.0,Exosphere::Sampling::PlanetSurfaceStickingRate[spec]=0.0;
   }
 
   //output the trajectory file
