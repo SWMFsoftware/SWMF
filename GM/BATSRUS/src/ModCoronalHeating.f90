@@ -282,7 +282,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: r_BLK
-    use BATL_lib, ONLY: Xyz_DGB
+    use BATL_lib, ONLY: Xyz_DGB, IsCartesian
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(out) :: HeatFunction
@@ -301,10 +301,19 @@ contains
     if(DtUpdateFlux <= 0.0)then
        HeatFunction = Bmagnitude*exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
     else
-       if(Xyz_DGB(z_,i,j,k,iBlock)<UnsignedFluxHeight)then
-          HeatFunction = 0.0
+       if(IsCartesian)then
+          if(Xyz_DGB(z_,i,j,k,iBlock)<UnsignedFluxHeight)then
+             HeatFunction = 0.0
+          else
+             HeatFunction = Bmagnitude
+          end if
        else
-          HeatFunction = Bmagnitude
+          if(r_BLK(i,j,k,iBlock)<UnsignedFluxHeight)then
+             HeatFunction = 0.0
+          else
+             HeatFunction = Bmagnitude &
+                  *exp(-(r_BLK(i,j,k,iBlock)-1.0)/DecayLength)
+          end if
        end if
     end if
 
