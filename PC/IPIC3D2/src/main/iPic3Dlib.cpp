@@ -1667,6 +1667,7 @@ void c_Solver:: find_output_list(int iPlot){
 	floor((maxI-minI)/plotDx + 1)*
 	floor((maxJ-minJ)/plotDx + 1)*
 	floor((maxK-minK)/plotDx + 1);
+      if( minI>maxI || minJ>maxJ || minK>maxK) nPoint=0;
       nPoint = nPoint>0? nPoint:0;
       MPI_Reduce(&nPoint, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 	
