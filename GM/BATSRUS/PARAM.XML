@@ -3538,8 +3538,8 @@ No magnetometer grid file is saved by default.
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|sph|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
-			<parameter name="NameVars" type="string" length="100"/>
-			<parameter name="NamePars" type="string" length="100"/>
+			<parameter name="NameVars" type="string" length="200"/>
+			<parameter name="NamePars" type="string" length="200" default="{default}"/>
 		</if>
 	</for>
 #SAVEPLOT
@@ -3559,7 +3559,7 @@ y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 100.			DtSavePlot
 0.25			DxSavePlot ! resolution (for IDL plots)
 {MHD} impl dx		NameVars
-g rbody			NamePars
+{default} c		NamePars
 cut ray idl_real8	StringPlot ! 3D cut plot with raytrace info
 1			DnSavePlot
 -1.			DtSavePlot
@@ -3682,9 +3682,9 @@ HGR                     TypeCoordPlot
 0.01			dY       ! only read if ySize /= 0	
 3.0                     zSize
 0.01                    dZ       ! only read if zSize /= 0	
-0.0                     xAngle
-90.0                    yAngle
-0.0                     zAngle
+0.0                     xAngle [deg]
+90.0                    yAngle [deg]
+0.0                     zAngle [deg]
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US. 
@@ -3809,7 +3809,7 @@ from the parameter file in this order:
  x0, y0, z0              if PlotArea is 'box'
  xSize, ySize, zSize     if PlotArea is 'box'
  dX, dY, dZ              if PlotArea is 'box' and associated range is nonzero.
- xAngle, yAngle, zAngle  if PlotArea is 'box'
+ xAngle, yAngle, zAngle  if PlotArea is 'box' (given in degrees)
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
  DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
@@ -3941,7 +3941,14 @@ a few extra variables easily.\\
 
 \noindent
 The possible values for NamePars are listed in subroutine 
-set_eqpar in write_plot_common.f90\\
+set_scalar_param in write_plot_common.f90. The {default} string
+will be replaced with the default list of parameters, which
+include molecular masses (m1..m9) and charges (q1..q9) for each fluid,
+the length and time units (xSI and tSI) if different from 1,
+the adiabatic index (g) or indexes (g1..g9 if they are not equal,
+and the radius of the inner boundary (r) if present. The electron
+mass (me) is saved if there is an electron fluid, 
+and the adiabatic index of electrons (ge) if it is different from gamma.\\
 
 Most plot files are written in parallel: each processor
 writes out part of the data. These intermediate files are ASCII in 'tec'

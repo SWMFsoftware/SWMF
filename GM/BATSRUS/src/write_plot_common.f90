@@ -881,6 +881,8 @@ subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
         Param_I(iPar) = MassFluid_I(min(IonFirst_+7,nFluid))
      case('m9')
         Param_I(iPar) = MassFluid_I(min(IonFirst_+8,nFluid))
+     case('me')
+        Param_I(iPar) = MassFluid_I(nIonFluid)
      case('q1')
         Param_I(iPar) = ChargeIon_I(1)
      case('q2')
@@ -899,6 +901,8 @@ subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
         Param_I(iPar) = ChargeIon_I(min(8,nIonFluid))
      case('q9')
         Param_I(iPar) = ChargeIon_I(min(9,nIonFluid))
+     case('qe')
+        Param_I(iPar) = ChargeIon_I(nIonFluid)
      case default
         Param_I(iPar) = -7777.
         if(iProc==0)write(*,*) NameSub, ' Error: unknown parameter name=',&

@@ -3385,13 +3385,23 @@ contains
        if(GammaElectron /= Gamma) StringParam = trim(StringParam)//' ge'
        if(any(MassFluid_I /= 1))then
           do iFluid = IonFirst_, nFluid
-             write(StringParam,'(a,i1)') trim(StringParam)//' m', &
-                  iFluid - IonFirst_ + 1
+             if(UseEfield .and. iFluid == nIonFluid)then
+                ! Last fluid is assumed to be the electrons
+                StringParam = trim(StringParam)//' me'
+             else
+                write(StringParam,'(a,i1)') trim(StringParam)//' m', &
+                     iFluid - IonFirst_ + 1
+             end if
           end do
        end if
        if(any(ChargeIon_I /= 1))then
           do iFluid = 1, nIonFluid
-             write(StringParam,'(a,i1)') trim(StringParam)//' q',iFluid
+             if(UseEfield .and. iFluid == nIonFluid)then
+                ! Last fluid is assumed to be the electrons
+                StringParam = trim(StringParam)//' qe'
+             else
+                write(StringParam,'(a,i1)') trim(StringParam)//' q',iFluid
+             end if
           end do
        end if
        
