@@ -146,15 +146,19 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
 
   if (fBinaryIn==NULL) {
     //read the data file
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel
    {
 #pragma omp single
      {
+#endif
       for (nline=0;nline<nNodes;nline++) {
         ifile.GetInputStr(str,sizeof(str));
 
         if (nline%size==rank) {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp task default(none) firstprivate(str,nline) private (str1) shared(nvars,ifile)
+#endif 
           {
             for (int i=0;i<nvars;i++) {
               ifile.CutInputStr(str1,str);
@@ -164,8 +168,11 @@ void cPostProcess3D::LoadDataFile(const char *fname,const char* path) {
         }
         else for (int i=0;i<nvars;i++) data.data[nline][i]=0.0;
       }
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
      }
    }
+#endif
 
     //collect data from all processors
     int ExchangeBufferSize=(int)(20.0E6/(nvars*sizeof(double)));
