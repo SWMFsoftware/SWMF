@@ -953,8 +953,8 @@ sub ReadGeneralBlock {
     }
 
     elsif ($InputLine eq "TESTRUNTOTALITERATION") {
-	($InputLine,$InputComment)=split(' ',$InputComment,2);
-	ampsConfigLib::ChangeValueOfVariable("int PIC::ModelTestRun::nTotalIteraction",$InputLine,"pic/pic_init_const.cpp");
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("int PIC::ModelTestRun::nTotalIteraction",$InputLine,"pic/pic_init_const.cpp");
     }
     
     elsif ($InputLine eq "FIRSTPRINTEDOUTPUTFILE") {
@@ -962,6 +962,22 @@ sub ReadGeneralBlock {
 	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
     }
     
+    #set the 'ForceRepatableExecutionPath' in the General section in addition to that in the Main section
+    #Needed for setting up tests that are used a working input file with no ForceRepatableExecutionPath in the Main section
+    elsif ($InputLine eq "FORCEREPEATABLESIMULATIONPATH") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_DEBUGGER_MODE_","_PIC_DEBUGGER_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_DYNAMIC_LOAD_BALANCING_MODE_","_PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_","pic/picGlobal.dfn");      }
+      elsif ($InputLine eq "OFF") {
+        #do nothing
+      }
+      else {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+        
     #set up the number of attempts for exchanges of the cut face information between the neibouring blocks
     elsif ($InputLine eq "NEIBNODECOPYCUTFACEDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
