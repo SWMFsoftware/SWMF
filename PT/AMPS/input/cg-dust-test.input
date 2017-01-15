@@ -3,6 +3,8 @@
 #include input/cg-dust.input
 
 #General
+  ForceRepeatableSimulationPath=on ! on,off
+
   ReferenceInjectionParticleNumber=2000
   RequestedParticleBufferLength=1500000
 #endGeneral
