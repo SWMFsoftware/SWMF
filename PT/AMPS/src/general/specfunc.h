@@ -352,6 +352,29 @@ namespace Relativistic {
   inline double Speed2Momentum(double Speed,double mass) {
     return mass*Speed/sqrt(1.0-(Speed*Speed)/(SpeedOfLight*SpeedOfLight));
   }
+
+
+
+  //get gyro frequency
+  inline double GetGyroFrequency(double *v,double ParticleRestMass, double ElectricCharge, double* B) {
+    return fabs(ElectricCharge)*Vector3D::Length(B)/(PiTimes2*ParticleRestMass*GetGamma(v));
+  }
+
+  inline double GetGyroRadius(double *v,double ParticleRestMass,double ElectricCharge,double *B) {
+    double c,VelocityPerp=0.0,absB,absB2=0.0;
+    int idim;
+
+    for (idim=0;idim<3;idim++) absB2+=B[idim]*B[idim];
+
+    c=Vector3D::DotProduct(v,B)/absB2;
+    absB=sqrt(absB2);
+
+    for (idim=0;idim<3;idim++) VelocityPerp+=pow(v[idim]-c*B[idim],2);
+
+    VelocityPerp=sqrt(VelocityPerp);
+    return ParticleRestMass*GetGamma(v)*VelocityPerp/(fabs(ElectricCharge)*absB);
+  }
+
 }
 
 #endif
