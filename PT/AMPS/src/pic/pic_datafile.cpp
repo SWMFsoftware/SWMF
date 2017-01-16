@@ -273,9 +273,9 @@ void PIC::CPLR::DATAFILE::Init() {
   PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
 
   //offset for magnetic field gradient (if needed)
-#if _PIC_MOVER_INTEGRATOR_MODE_==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-  PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
-#endif//_PIC_MOVER_INTEGRATOR_MODE_==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER
+  if ((_PIC_MOVER_INTEGRATOR_MODE_==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_)||(_PIC_OUTPUT__DRIFT_VELOCITY__MODE_==_PIC_MODE_ON_)) { 
+    PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
+  }
 
   if (_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__DATAFILE_) {
     switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
@@ -964,7 +964,103 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
   }
 }
 
+//=====================================================================================================
+//calculate drift velocity
+//calculate a particle drift velocity (Elkington-2002-JASTP)
+void PIC::CPLR::GetDriftVelocity(double *vDrift,double *ParticleVelocity,double ParticleMass,double ParticleCharge,double Time) {
+  double E[3],B[3],absB2,absB,absB4,t[3],c;
+  double M,gamma,gradAbsB_perp[3],ParticleMomentum[3],ParticleMomentum_normB[3],pParallel;
+  int idim;
 
+  //get the particle momentum
+  gamma=1.0/sqrt(1.0-sqrt(ParticleVelocity[0]*ParticleVelocity[0]+ParticleVelocity[1]*ParticleVelocity[1]+ParticleVelocity[2]*ParticleVelocity[2])/SpeedOfLight);
+  for (idim=0;idim<3;idim++) ParticleMomentum[idim]=gamma*ParticleMass*ParticleVelocity[idim],vDrift[idim]=0.0;
+
+  //get the background fields
+  PIC::CPLR::GetBackgroundMagneticField(B);
+  PIC::CPLR::GetBackgroundElectricField(E);
+  absB2=B[0]*B[0]+B[1]*B[1]+B[2]*B[2];
+  absB=sqrt(absB2);
+  absB4=absB2*absB2;
+
+  //E cross B drift (avarage the drift velocities directly)
+  PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
+  int iStencil;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+  #else
+  memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+  #endif
+
+  for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
+    double cellB[3],cellE[3];
+
+    //loop through all cells of the stencil
+    switch (_PIC_COUPLER_MODE_) {
+    case _PIC_COUPLER_MODE__SWMF_:
+      SWMF::GetBackgroundElectricField(cellE,Stencil.cell[iStencil]);
+      SWMF::GetBackgroundMagneticField(cellB,Stencil.cell[iStencil]);
+
+      break;
+    case _PIC_COUPLER_MODE__T96_:
+      for (int i=0;i<3;i++) cellE[i]=0.0;
+      DATAFILE::GetBackgroundData(cellB,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
+
+      break;
+    case _PIC_COUPLER_MODE__DATAFILE_:
+      DATAFILE::GetBackgroundElectricField(cellE,Stencil.cell[iStencil],Time);
+      DATAFILE::GetBackgroundMagneticField(cellB,Stencil.cell[iStencil],Time);
+
+      break;
+    default:
+      exit(__LINE__,__FILE__,"not implemented");
+    }
+
+    Vector3D::CrossProduct(t,cellE,cellB);
+    c=Stencil.Weight[iStencil]/(cellB[0]*cellB[0]+cellB[1]*cellB[1]+cellB[2]*cellB[2]);
+
+    for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+  }
+
+  //next: Grad B drift
+  memcpy(ParticleMomentum_normB,ParticleMomentum,3*sizeof(double));
+  Vector3D::Orthogonalize(B,ParticleMomentum_normB);
+  M=pow(Vector3D::Length(ParticleMomentum_normB),2)/(2.0*ParticleMass*absB);
+
+  GetAbsBackgroundMagneticFieldGradient(gradAbsB_perp,Time);
+  Vector3D::Orthogonalize(B,gradAbsB_perp);
+  Vector3D::CrossProduct(t,B,gradAbsB_perp);
+
+  c=M/(ParticleCharge*gamma*absB2);
+  for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+
+  //next drift coeffecient: curvature drift
+  double gradB[9],t1[3];
+
+  // structure of gradB is the following
+  //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+  //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+  //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+  GetBackgroundMagneticFieldGradient(gradB,Time);
+
+  //t1=(b\dot)b
+  t1[0]=(B[0]*gradB[0]+B[1]*gradB[1]+B[2]*gradB[2])/absB4;
+  t1[1]=(B[0]*gradB[3]+B[1]*gradB[4]+B[2]*gradB[5])/absB4;
+  t1[2]=(B[0]*gradB[6]+B[1]*gradB[7]+B[2]*gradB[8])/absB4;
+
+  Vector3D::CrossProduct(t,B,t1);
+  pParallel=Vector3D::ParallelComponentLength(ParticleMomentum,B);
+
+  c=pow(pParallel,2)/(ParticleCharge*gamma*ParticleMass);
+  for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+
+  //if any of the velocity components are not finite -> set the entire vector to zero (can be caused by magnetic field be zero)
+  if ((isfinite(vDrift[0])==false)||(isfinite(vDrift[1])==false)||(isfinite(vDrift[2])==false)) {
+    for (idim=0;idim<3;idim++) vDrift[idim]=0.0;
+  }
+
+}
 
 
 

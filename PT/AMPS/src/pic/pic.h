@@ -4106,7 +4106,9 @@ namespace PIC {
      }
 
      //calculate a particle drift velocity (Elkington-2002-JASTP)
-     inline void GetDriftVelocity(double *vDrift,double *ParticleVelocity,double ParticleMass,double ParticleCharge,double Time = NAN) {
+      void GetDriftVelocity(double *vDrift,double *ParticleVelocity,double ParticleMass,double ParticleCharge,double Time = NAN);
+
+      /*{
        double E[3],B[3],absB2,absB,absB4,t[3],c;
        double M,gamma,gradAbsB_perp[3],ParticleMomentum[3],ParticleMomentum_normB[3],pParallel;
        int idim;
@@ -4122,11 +4124,45 @@ namespace PIC {
        absB=sqrt(absB2);
        absB4=absB2*absB2;
 
-       //E cross B drift
-       Vector3D::CrossProduct(t,E,B);
-       c=SpeedOfLight/absB2; 
+       //E cross B drift (avarage the drift velocities directly)
+       PIC::InterpolationRoutines::CellCentered::cStencil Stencil;
+       int iStencil;
 
-       for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable+omp_get_thread_num(),sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #else
+       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
+       #endif
+
+       for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
+         double cellB[3],cellE[3];
+
+         //loop through all cells of the stencil
+         switch (_PIC_COUPLER_MODE_) {
+         case _PIC_COUPLER_MODE__SWMF_:
+           SWMF::GetBackgroundElectricField(cellE,Stencil.cell[iStencil]);
+           SWMF::GetBackgroundMagneticField(cellB,Stencil.cell[iStencil]);
+
+           break;
+         case _PIC_COUPLER_MODE__T96_:
+           for (int i=0;i<3;i++) cellE[i]=0.0;
+           DATAFILE::GetBackgroundData(cellB,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
+
+           break;
+         case _PIC_COUPLER_MODE__DATAFILE_:
+           DATAFILE::GetBackgroundElectricField(cellE,Stencil.cell[iStencil],Time);
+           DATAFILE::GetBackgroundMagneticField(cellB,Stencil.cell[iStencil],Time);
+
+           break;
+         default:
+           exit(__LINE__,__FILE__,"not implemented");
+         }
+
+         Vector3D::CrossProduct(t,cellE,cellB);
+         c=Stencil.Weight[iStencil]*SpeedOfLight/(cellB[0]*cellB[0]+cellB[1]*cellB[1]+cellB[2]*cellB[2]);
+
+         for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
+       }
 
        //next
        memcpy(ParticleMomentum_normB,ParticleMomentum,3*sizeof(double));
@@ -4160,7 +4196,7 @@ namespace PIC {
        c=SpeedOfLight*pow(pParallel,2)/(ParticleCharge*gamma*ParticleMass);
        for (idim=0;idim<3;idim++) vDrift[idim]+=c*t[idim];
 
-     }
+     }*/
 
      inline void GetBackgroundPlasmaVelocity(double *vel, double Time = NAN) {
        double t[3];
