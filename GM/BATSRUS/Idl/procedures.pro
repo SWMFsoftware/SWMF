@@ -2683,6 +2683,7 @@ pro make_regular_grid
 
    common plot_data
    common transform_param
+   common file_head;  nw
 
    ;; Floating underflow is not a real error, the message is suppressed
    err=check_math(1,1)
