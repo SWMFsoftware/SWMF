@@ -100,7 +100,23 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 #if _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 
   //find the block if needed
-  if (node==NULL) node=PIC::Mesh::mesh.findTreeNode(XyzIn_D);
+  if (node==NULL) {
+    node=PIC::Mesh::mesh.findTreeNode(XyzIn_D);
+
+    if (node==NULL) exit(__LINE__,__FILE__,"Error: the location is outside of the computational domain");
+    if (node->block==NULL) {
+      char msg[200];
+
+      sprintf(msg,"Error: the block is not allocated\nCurrent MPI Process=%i\nnode->Thread=%i\n",PIC::ThisThread,node->Thread);
+      exit(__LINE__,__FILE__,msg);
+    }
+  }
+  else if (node->block==NULL) {
+    char msg[200];
+
+    sprintf(msg,"Error: the block is not allocated\nCurrent MPI Process=%i\nnode->Thread=%i\n",PIC::ThisThread,node->Thread);
+    exit(__LINE__,__FILE__,msg);
+  }
 
   //check whether the point is located deep in the block -> use three linear interpolation
   double iLoc,jLoc,kLoc;
