@@ -96,24 +96,29 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
 void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber) {
   // printe sampled data names
   vector<PIC::Datum::cDatumSampled*>::iterator ptrDatumSampled;
-  for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
-      ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
-    if((*ptrDatumSampled)->doPrint) (*ptrDatumSampled)->PrintName(fout);
+
+  for (ptrDatumSampled = DataSampledCenterNodeActive.begin(); ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++) {
+    if ((*ptrDatumSampled)->doPrint==true) (*ptrDatumSampled)->PrintName(fout);
+  }
+
   // print derived data names
   vector<cDatumDerived*>::iterator ptrDatumDerived;
-  for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
-      ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
-    if((*ptrDatumDerived)->doPrint) (*ptrDatumDerived)->PrintName(fout);
-  
+
+  for(ptrDatumDerived = DataDerivedCenterNodeActive.begin(); ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++) {
+    if ((*ptrDatumDerived)->doPrint==true) (*ptrDatumDerived)->PrintName(fout);
+  }
+
   //print the user defind 'center node' data
   vector<fPrintVariableListCenterNode>::iterator fptr;
   for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
   
+  //if drift velocity is output -> print the variable name here
+  if (_PIC_OUTPUT__DRIFT_VELOCITY__MODE_==_PIC_MODE_ON_) fprintf(fout, ", \"vxDrift\", \"vyDrift\", \"vzDrift\"");
+
   //print varialbes sampled by the user defined sampling procedures
-  if (PIC::IndividualModelSampling::PrintVariableList.size()!=0)
-    for (unsigned int i=0;
-	 i<PIC::IndividualModelSampling::PrintVariableList.size();i++) 
-      PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
+  if (PIC::IndividualModelSampling::PrintVariableList.size()!=0) {
+    for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
+  }
 }
 
 void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
@@ -133,35 +138,38 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
   static vector<cDatumDerived*>  DataDerivedPrint;
 
   // find size of message at the first call
-  if(IsFirstCall){
+  if (IsFirstCall==true) {
     // include sampled data
     vector<PIC::Datum::cDatumSampled*>::iterator itrDatumSampled;
     cDatumTimed*    ptrDatumTimed;
     cDatumWeighted* ptrDatumWeighted;
-    for(itrDatumSampled = DataSampledCenterNodeActive.begin();
-	itrDatumSampled!= DataSampledCenterNodeActive.end();itrDatumSampled++){
-      if((*itrDatumSampled)->doPrint) {
-	nOutput+=(*itrDatumSampled)->length;
-	if((*itrDatumSampled)->type == PIC::Datum::cDatumSampled::Timed_){
-	  ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatumSampled));
-	  DataTimedPrint.push_back(ptrDatumTimed);
-	}
-	else {
-	  ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatumSampled));
-	  DataWeightedPrint.push_back(ptrDatumWeighted);
-	}
+
+    for(itrDatumSampled = DataSampledCenterNodeActive.begin();itrDatumSampled!= DataSampledCenterNodeActive.end();itrDatumSampled++) {
+      if ((*itrDatumSampled)->doPrint==true) {
+	      nOutput+=(*itrDatumSampled)->length;
+
+	      if((*itrDatumSampled)->type == PIC::Datum::cDatumSampled::Timed_) {
+	        ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatumSampled));
+	        DataTimedPrint.push_back(ptrDatumTimed);
+	      }
+	      else {
+	        ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatumSampled));
+	        DataWeightedPrint.push_back(ptrDatumWeighted);
+	      }
       }
     }
+
     // include derived data
     vector<cDatumDerived*>::iterator itrDatumDerived;
-    for(itrDatumDerived = DataDerivedCenterNodeActive.begin();
-	itrDatumDerived!= DataDerivedCenterNodeActive.end(); itrDatumDerived++)
-      if((*itrDatumDerived)->doPrint) {
-	nOutput+=(*itrDatumDerived)->length;
-	DataDerivedPrint.push_back((*itrDatumDerived));
-      }
+
+    for(itrDatumDerived = DataDerivedCenterNodeActive.begin();itrDatumDerived!= DataDerivedCenterNodeActive.end(); itrDatumDerived++) if ((*itrDatumDerived)->doPrint) {
+	    nOutput+=(*itrDatumDerived)->length;
+	    DataDerivedPrint.push_back((*itrDatumDerived));
+    }
+
     // allocate memory for output
     OutputData = new double[nOutput];
+
     // mark exit from the first (initializing) call
     IsFirstCall=false;
   }
@@ -171,36 +179,30 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
     int iOutput=0;
     // timed data values
     vector<cDatumTimed*>::iterator itrDatumTimed;
-    for(itrDatumTimed = DataTimedPrint.begin();
-	    itrDatumTimed!= DataTimedPrint.end(); itrDatumTimed++){
+    vector<cDatumWeighted*>::iterator itrDatumWeighted;
+    vector<cDatumDerived*>::iterator itrDatumDerived;
 
+    for (itrDatumTimed = DataTimedPrint.begin();itrDatumTimed!= DataTimedPrint.end(); itrDatumTimed++) {
       GetDatumAverage(*(*itrDatumTimed),&OutputData[iOutput], DataSetNumber);
       iOutput += (*itrDatumTimed)->length;
     }
 
-    vector<cDatumWeighted*>::iterator itrDatumWeighted;
-    for(itrDatumWeighted = DataWeightedPrint.begin();
-	    itrDatumWeighted!= DataWeightedPrint.end(); itrDatumWeighted++){
-
+    for(itrDatumWeighted = DataWeightedPrint.begin();itrDatumWeighted!= DataWeightedPrint.end(); itrDatumWeighted++) {
       GetDatumAverage(*(*itrDatumWeighted),&OutputData[iOutput],DataSetNumber);
       iOutput += (*itrDatumWeighted)->length;
     }
 
-    vector<cDatumDerived*>::iterator itrDatumDerived;
-    for(itrDatumDerived = DataDerivedPrint.begin();
-      itrDatumDerived!= DataDerivedPrint.end(); itrDatumDerived++){
-
+    for(itrDatumDerived = DataDerivedPrint.begin();itrDatumDerived!= DataDerivedPrint.end(); itrDatumDerived++) {
       GetDatumAverage(*(*itrDatumDerived),&OutputData[iOutput], DataSetNumber);
       iOutput += (*itrDatumDerived)->length;
     }
   }
-
   
   if (pipe->ThisThread==0) {
     //print values to the output file
-    if (CenterNodeThread!=0)pipe->recv((char*)OutputData,nOutput*sizeof(double),CenterNodeThread);
-    for(int iOutput=0; iOutput<nOutput; iOutput++)
-      fprintf(fout, "%e ", OutputData[iOutput]);
+    if (CenterNodeThread!=0) pipe->recv((char*)OutputData,nOutput*sizeof(double),CenterNodeThread);
+
+    for(int iOutput=0; iOutput<nOutput; iOutput++) fprintf(fout, "%e ", OutputData[iOutput]);
   }
   else pipe->send((char*)OutputData,nOutput*sizeof(double));
 
@@ -208,6 +210,37 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
   vector<fPrintDataCenterNode>::iterator fptr;
 
   for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
+
+  //if drift velocity is output -> print the variable name here
+  if (_PIC_OUTPUT__DRIFT_VELOCITY__MODE_==_PIC_MODE_ON_) {
+    double vDrift[3];
+
+    if (pipe->ThisThread==CenterNodeThread) {
+      //calculate the drift velocity
+      double BulkVelocity[3],ParticleMass,ParticleCharge;
+
+      ParticleMass=PIC::MolecularData::GetMass(DataSetNumber);
+      ParticleCharge=PIC::MolecularData::GetElectricCharge(DataSetNumber);
+      GetBulkVelocity(BulkVelocity,DataSetNumber);
+
+      //set up the points of the interpolation. move the point inside domain if on the boundary
+      double xTest[3];
+
+      for (int idim=0;idim<3;idim++) {
+        xTest[idim]=x[idim];
+        if (xTest[idim]==PIC::Mesh::mesh.xGlobalMax[idim]) xTest[idim]-=1.0E-10*(PIC::Mesh::mesh.xGlobalMax[idim]-PIC::Mesh::mesh.xGlobalMin[idim]);
+      }
+
+      PIC::CPLR::InitInterpolationStencil(xTest,NULL);
+      PIC::CPLR::GetDriftVelocity(vDrift,BulkVelocity,ParticleMass,ParticleCharge);
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv((char*)vDrift,3*sizeof(double),CenterNodeThread);
+      fprintf(fout," %e %e %e ",vDrift[0],vDrift[1],vDrift[2]);
+    }
+    else pipe->send((char*)vDrift,3*sizeof(double));
+  }
 
   //print data sampled by the user defined sampling functions
   if (PIC::IndividualModelSampling::PrintSampledData.size()!=0) {
@@ -255,12 +288,10 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
 
     // interpolate all sampled data
     vector<PIC::Datum::cDatumSampled*>::iterator ptrDatum;
-    for(ptrDatum = DataSampledCenterNodeActive.begin();
-    	ptrDatum!= DataSampledCenterNodeActive.end(); ptrDatum++)
-      InterpolateDatum(**ptrDatum,
-    		       InterpolationList,
-    		       InterpolationCoefficients,
-    		       nInterpolationCoefficients, s);
+
+    for(ptrDatum = DataSampledCenterNodeActive.begin();ptrDatum!= DataSampledCenterNodeActive.end(); ptrDatum++) {
+      InterpolateDatum(**ptrDatum,InterpolationList,InterpolationCoefficients,nInterpolationCoefficients, s);
+    }
   }
 
   //print the user defind 'center node' data
