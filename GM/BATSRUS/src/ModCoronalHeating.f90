@@ -357,23 +357,26 @@ contains
     use ModPhysics,     ONLY: No2Si_V, UnitB_, UnitX_
     use ModVarIndexes,  ONLY: Bx_, Bz_
     use BATL_lib,       ONLY: CoordMin_DB, CoordMax_DB, CellSize_DB, &
-         CellFace_DB, Xyz_DGB
+         CellFace_DFB, Xyz_DGB
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: UnsignedFluxCgs
 
-    real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, dAreaCgs
-    integer :: iLeft, j, k
+    real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, DrL, dAreaCgs
+    integer :: iLeft, j, k, iL
     !--------------------------------------------------------------------------
     MinR = CoordMin_DB(r_,iBlock)
     MaxR = CoordMax_DB(r_,iBlock)
 
     if((UnsignedFluxHeight > MaxR) .or. (UnsignedFluxHeight < MinR)) RETURN
 
-    dAreaCgs = CellFace_DB(r_,iBlock)*No2Si_V(UnitX_)**2*1e4
-
+    ! Cells used to interpolate Br
     r = (UnsignedFluxHeight - MinR)/CellSize_DB(r_,iBlock) + 0.5
     call find_cell(0, nI+1, r, iLeft, DrLeft)
+
+    ! Cells used to interpolate face area
+    r = r + 0.5
+    call find_cell(0, nI+1, r, iL, DrL)
 
     do k = 1, nK; do j = 1, nJ
        BrLeft = sum(Xyz_DGB(:,iLeft,j,k,iBlock) &
@@ -382,6 +385,10 @@ contains
             *State_VGB(Bx_:Bz_,iLeft+1,j,k,iBlock))/r_BLK(iLeft+1,j,k,iBlock)
 
        BrCgs = ((1.0 - DrLeft)*BrLeft + DrLeft*BrRight)*No2Si_V(UnitB_)*1e4
+
+       dAreaCgs = ((1.0-DrL)*CellFace_DFB(r_,iL,j,k,iBlock) &
+            +            DrL*CellFace_DFB(r_,iL+1,j,k,iBlock)) &
+            *No2Si_V(UnitX_)**2*1e4
 
        UnsignedFluxCgs = UnsignedFluxCgs + abs(BrCgs)*dAreaCgs
     end do; end do
