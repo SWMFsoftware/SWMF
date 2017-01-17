@@ -377,6 +377,12 @@ contains
     ! Cells used to interpolate face area
     r = r + 0.5
     call find_cell(0, nI+1, r, iL, DrL)
+    ! Make sure that CellFace_DFB is never out of index range
+    if(iL == 0)then
+       iL = 1; DrL = 0.0
+    else if(iL == nI+1)then
+       iL = nI; DrL = 1.0
+    end if
 
     do k = 1, nK; do j = 1, nJ
        BrLeft = sum(Xyz_DGB(:,iLeft,j,k,iBlock) &

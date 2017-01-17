@@ -74,9 +74,9 @@ T			UseRope
 
 #USERINPUTEND
 
-CORONALHEATING
+#CORONALHEATING
 unsignedflux		TypeCoronalHeating
-4640.			Decaylength
+0.7			Decaylength
 1.			HeatNormalization
 
 #LOOKUPTABLE
