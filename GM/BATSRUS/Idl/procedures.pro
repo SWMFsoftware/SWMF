@@ -3925,13 +3925,17 @@ pro plot_func
               contour,f,XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
                       /NODATA,/NOERASE
            end
-           'vel'      :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
-                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-           'vector'   :vector,f1,f2,NVECS=velvector,MAXVAL=f_max,$
-                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
-                              /NOERASE,WHITE=white
-           'stream'   :streamline,f1,f2,NVECS=velvector,SEED=velseed, $
-                                  X0=velpos,/NOERASE,WHITE=white
+           'vel'      :vector, f1, f2, NVECS=velvector, MAXVAL=f_max, $
+                              DYNAMIC=velspeed, SEED=velseed, X0=velpos, $
+                              /NOERASE, WHITE=white, $
+                              XSTYLE=noaxis+1, YSTYLE=noaxis+1
+           'vector'   :vector, f1, f2, NVECS=velvector, MAXVAL=f_max, $
+                              DYNAMIC=velspeed, SEED=velseed, X0=velpos, $
+                              /NOERASE,WHITE=white, $
+                              XSTYLE=noaxis+1, YSTYLE=noaxis+1
+           'stream'   :streamline, f1, f2, NVECS=velvector, SEED=velseed, $
+                                  X0=velpos, /NOERASE, WHITE=white, $
+                                  XSTYLE=noaxis+1, YSTYLE=noaxis+1
            'velovect' :velovect,f1,f2,/NOERASE
            'ovelovect':velovect,f1,f2,/NOERASE,$
                                 XRANGE=[0,n_elements(f1(*,0))-1], $
@@ -3988,21 +3992,26 @@ pro plot_func
                       XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
                       /NODATA,/NOERASE
            end
-           'vel'      :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
-                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,/NOERASE
-           'vector'   :vector,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
-                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
-                              /NOERASE, WHITE=white
-           'arrow'    :vector,f1/f,f2/f,xx,yy,XXOLD=velx,YYOLD=vely,$
-                              TRIANGLES=veltri,NVECS=velvector,MAXVAL=1.5,$
-                              DYNAMIC=velspeed,SEED=velseed,X0=velpos,$
-                              /NOERASE, WHITE=white
-           'stream'   :streamline,f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
-                                  TRIANGLES=veltri,NVECS=velvector,$
-                                  SEED=velseed,X0=velpos,$
-                                  /NOERASE, WHITE=white
+           'vel'      :vector, f1, f2, xx, yy, XXOLD=velx, YYOLD=vely, $
+                               TRIANGLES=veltri, NVECS=velvector,MAXVAL=f_max,$
+                               DYNAMIC=velspeed, SEED=velseed, X0=velpos,$
+                               /NOERASE, WHITE=white, $
+                               XSTYLE=noaxis+1, YSTYLE=noaxis+1
+           'vector'   :vector, f1,f2,xx,yy,XXOLD=velx,YYOLD=vely,$
+                               TRIANGLES=veltri,NVECS=velvector,MAXVAL=f_max,$
+                               DYNAMIC=velspeed, SEED=velseed, X0=velpos,$
+                               /NOERASE, WHITE=white, $
+                               XSTYLE=noaxis+1, YSTYLE=noaxis+1
+           'arrow'    :vector, f1/f, f2/f, xx, yy, XXOLD=velx, YYOLD=vely, $
+                               TRIANGLES=veltri, NVECS=velvector, MAXVAL=1.5,$
+                               DYNAMIC=velspeed, SEED=velseed, X0=velpos,$
+                               /NOERASE, WHITE=white, $
+                               XSTYLE=noaxis+1, YSTYLE=noaxis+1
+           'stream'   :streamline, f1, f2, xx, yy, XXOLD=velx, YYOLD=vely,$
+                                   TRIANGLES=veltri, NVECS=velvector,$
+                                   SEED=velseed, X0=velpos,$
+                                   /NOERASE, WHITE=white, $
+                                   XSTYLE=noaxis+1, YSTYLE=noaxis+1
            'velovect' :velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE
            'ovelovect':velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE,$
                                 XRANGE=xrange, YRANGE=yrange

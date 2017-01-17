@@ -4,7 +4,7 @@
 ;=============================================================================
 PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
                   XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
-                  NOERASE=noerase,WHITE=white
+                  NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ;+
 ; NAME:
@@ -43,6 +43,10 @@ PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
 ;	NOERASE: NOERASE=1 or /NOERASE does not allow erase for VECTOR.
 ;
 ;       WHITE:   WHITE=1 or /WHITE forces the vectors to be white.
+;
+;       XSTYLE:  style for the X axis, default is 1
+;
+;       YSTYLE:  style for the Y axis, default is 1
 ;
 ;	The following 3 keyword parameters should be supplied together
 ;	when the XX,YY parameters describe a nonuniform grid. Do not initialize
@@ -91,14 +95,14 @@ vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
   NSTEP=6,LENGTH=0.012,HEAD=0.5,$
   XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
   DYNAMIC=0,SEED=seed,X0=x0,$
-  NOERASE=noerase,WHITE=white
+  NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ; draw streamline along u1;v1
 vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
   NSTEP=1000,LENGTH=2.,HEAD=0.,$
   XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
   DYNAMIC=0,SEED=seed,X0=x0,$
-  /NOERASE,WHITE=white
+  /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ; draw streamline in the other direction
 u1=-u1 & v1=-v1
@@ -106,14 +110,14 @@ vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
   NSTEP=1000,LENGTH=2.,HEAD=0.,$
   XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
   DYNAMIC=0,SEED=seed,X0=x0,$
-  /NOERASE,WHITE=white
+  /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 end
 ;=============================================================================
 PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 		  NSTEPS=nsteps,X0=x0,DYNAMIC=dynamic,NOERASE=noerase,$
 		  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
-                  WHITE=white
+                  WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 ;+
 ; NAME:
 ;	VECTOR
@@ -177,6 +181,10 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 ;	NOERASE: NOERASE=1 or /NOERASE does not allow erase for VECTOR.
 ;
 ;       WHITE:   WHITE=1 or /WHITE forces the vectors to be white.
+;
+;       XSTYLE:  style for the X axis, default is 1
+;
+;       YSTYLE:  style for the Y axis, default is 1
 ;
 ; OUTPUTS:
 ;	A velocity field graph is drawn on the current graphics device.
@@ -288,6 +296,9 @@ if n_elements(LENGTH)   eq 0 then length  = 0.04
 if n_elements(HEAD)     eq 0 then head    = 0.3
 if n_elements(NSTEPS)   eq 0 then nsteps  = 5
 if n_elements(DYNAMIC)  eq 0 then dynamic = 0
+
+if n_elements(XSTYLE)   eq 0 then xstyle=1
+if n_elements(YSTYLE)   eq 0 then ystyle=1
 
 ; Derived parameters and derived defaults
 ;
@@ -448,7 +459,7 @@ x(*,i+3,1) = ym-dx
 x0(*,*) = x(*,dynamic,*)
 
 ; Draw box
-plot,[xmin,xmax],[ymin,ymax],/nodata,XSTYLE=1,YSTYLE=1,NOERASE=noerase
+plot,[xmin,xmax],[ymin,ymax],/nodata,XSTYLE=xstyle,YSTYLE=ystyle,NOERASE=noerase
 
 ; Draw arrows
 if keyword_set(white) then begin
