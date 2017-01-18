@@ -948,7 +948,7 @@ void PIC::Sampling::Sampling() {
 
               //call user defined particle sampling procedure
 #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
-              _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s,node);
+              _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s);
 #endif
             }
 
