@@ -66,8 +66,12 @@ double localSphericalSurfaceResolution(double *x) {
   res/=2.1;
 
   res*=2.1;
-
+  
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
   return 5.5* 2.5*rSphere*res;
+  #endif
+
+  return 0.3* 5.5* 2.5*rSphere*res;
 }
 
 
@@ -91,13 +95,24 @@ double localResolution(double *x) {
 
     r=sqrt(r);
 
+    #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
     if (r<0.98*rSphere) res=rSphere;
     else if (r<1.05*rSphere) res=localSphericalSurfaceResolution(x);
     else if (r<2.0*rSphere) res=2.5* rSphere * dxMinGlobal;
     else res=6.0*rSphere*dxMinGlobal*max(1.0+(5.0-1.0)/((6.0-2.0)*_RADIUS_(_TARGET_))*(r-2.0*_RADIUS_(_TARGET_)),1.0);
+    #else
+    if (r<0.98*rSphere) res=rSphere;
+    else if (r<2*1.05*rSphere) res=localSphericalSurfaceResolution(x);
+    else if (r<3.0*rSphere) res=2.5* rSphere * dxMinGlobal;
+    else res=6.0*rSphere*dxMinGlobal*max(1.0+(5.0-1.0)/((6.0-2.0)*_RADIUS_(_TARGET_))*(r-2.0*_RADIUS_(_TARGET_)),1.0);
+    #endif
   }
 
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
   return 2.5*res;
+  #endif
+
+  return 0.3*  2.5*res;
 }
 
 //set up the local time step
@@ -203,6 +218,9 @@ void amps_init_mesh() {
     }
  }
  
+ //Init the spherical shells used for sampling of the energetic particle flux
+ Earth::Sampling::Init();
+
  //init the solver
  PIC::Mesh::initCellSamplingDataBuffer();
  
@@ -368,7 +386,7 @@ void amps_init_mesh() {
 
 
    //init the particle buffer
-   PIC::ParticleBuffer::Init(10000000);
+//   PIC::ParticleBuffer::Init(10000000);
 
    int LastDataOutputFileNumber=-1;
    
@@ -388,8 +406,24 @@ void amps_init_mesh() {
        }
        else {
          // initialize the reader
+         #if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
          PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_t00000000_n00020000.idl");
          PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+         #endif
+
+         //initialize derived data
+         if (PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate==true) {
+           #if _PIC_COUPLER__INTERPOLATION_MODE_==_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+           exit(__LINE__,__FILE__,"ERROR: magnetic field gradient can't be computed with 0th order interpolation method");
+           #endif
+
+           for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+             PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(node);
+           }
+
+           //Exchange derived data betwenn the boundary nodes
+           PIC::Mesh::mesh.ParallelBlockDataExchange();
+         }
 
          PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
        }
@@ -400,7 +434,10 @@ void amps_init_mesh() {
 
      break;
    case _PIC_COUPLER_MODE__T96_ :
-     {
+     if (PIC::CPLR::DATAFILE::BinaryFileExists("EARTH-T96")==true)  {
+       PIC::CPLR::DATAFILE::LoadBinaryFile("EARTH-T96");
+     }
+     else {
        //calculate the geomegnetic filed
        T96::Init(Exosphere::SimulationStartTimeString,NULL);
 
@@ -483,7 +520,7 @@ void amps_init_mesh() {
        } SetBackgroundMagneticField;
 
        SetBackgroundMagneticField.Set(PIC::Mesh::mesh.rootTree);
-       PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-BATSRUS");
+       PIC::CPLR::DATAFILE::SaveBinaryFile("EARTH-T96");
      }
 
 
@@ -498,9 +535,9 @@ void amps_init_mesh() {
 
 
 
-  if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
+//  if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
     PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
-  }
+//  }
 
 
 
