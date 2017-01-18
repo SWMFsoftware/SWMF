@@ -79,6 +79,60 @@ namespace Earth {
     extern char sign[_MAX_STRING_LENGTH_PIC_];
   }
   
+  //sampling of the energetic particle fluency
+  namespace Sampling {
+
+    //the number of the spherical layers of the sampling spheres, and shell's radii
+    const int nSphericalShells=3;
+    const double SampleSphereRadii[nSphericalShells]={9000.0E3,9000.0E3+400.0E3,9000.0E3-400.0E3};
+
+    //sampling of the particle fluency
+    namespace Fluency {
+      extern double minSampledEnergy;
+      extern double maxSampledEnergy;
+
+      extern int nSampledLevels;
+      extern double dLogEnergy;
+    }
+
+    //Sphere object used for sampling
+    extern cInternalSphericalData SamplingSphericlaShell[nSphericalShells];
+
+    //output sampled data
+    void PrintVariableList(FILE*);
+    void PrintTitle(FILE*);
+    void PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+
+    //the function that will be called to print sampled data
+    void PrintManager(int);
+    void SamplingManager();
+
+   //Init sampling procedure
+    void Init();
+
+    //Sample GyroFrequency and GyroRadius of the model particles
+    namespace ParticleData {
+      extern int _GYRO_RADIUS_SAMPLING_OFFSET_;
+      extern int _GYRO_FRECUENCY_SAMPLING_OFFSET_;
+      extern bool SamplingMode;
+
+      int RequestSamplingData(int offset);
+      void SampleParticleData(char* tempParticleData,double LocalParticleWeight,char *SamplingData,int s,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+
+      void Init();
+    }
+  }
+
+  //particle mover: call Boris-relativistic, and sample particles that intersects the sampling shells
+  int ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+
+
+
   //calculation of the cutoff rigidity
   namespace CutoffRigidity {
     const double RigidityTestRadiusVector=400.0E3+_RADIUS_(_TARGET_);
