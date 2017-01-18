@@ -14,17 +14,20 @@
 
 int Earth::Sampling::ParticleData::_GYRO_RADIUS_SAMPLING_OFFSET_=-1;
 int Earth::Sampling::ParticleData::_GYRO_FRECUENCY_SAMPLING_OFFSET_=-1;
+bool Earth::Sampling::ParticleData::SamplingMode=false;
 
 
 //init the sampling module
 void Earth::Sampling::ParticleData::Init() {
-  //request sampling data
-  PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
+  if (SamplingMode==true) {
+    //request sampling data
+    PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
 
-  //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
-  PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
-  PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+    //print out of the otuput file
+    PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+    PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
+    PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+  }
 }
 
 //request sampling data
