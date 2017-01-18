@@ -29,7 +29,7 @@ long int Earth::ImpulseSource::InjectParticles() {
 
   //the number of the OpenMP threads
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  nThreadsOpenMP=omp_get_num_threads();
+  int nThreadsOpenMP=omp_get_num_threads();
   #else
   int nThreadsOpenMP=1;
   #endif
