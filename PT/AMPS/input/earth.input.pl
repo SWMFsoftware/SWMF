@@ -112,6 +112,21 @@ while ($line=<InputFile>) {
     }     
   }
   
+  #sampling of the gyro-radius and gyro-frecuency in the computational domain
+  elsif ($InputLine eq "PARTICLEDATASAMPLINGMODE") {
+    ($s0,$InputComment)=split(' ',$InputComment,2);
+
+    if ($s0 eq "ON") {
+      ampsConfigLib::ChangeValueOfVariable("bool Earth::Sampling::ParticleData::SamplingMode","true","main/Earth_Sampling.cpp");  
+    }
+    elsif ($s0 eq "OFF") {
+      #do nothing
+    }
+    else {
+      die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }
+  }
+  
   #parameters of the impulse source 
   elsif ($InputLine eq "IMPULSESOURCE") {
     ($s0,$InputComment)=split(' ',$InputComment,2);
