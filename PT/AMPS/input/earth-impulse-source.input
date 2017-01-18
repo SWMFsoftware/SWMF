@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H_PLUS1 H_PLUS2 H_PLUS3 H_PLUS4 H_PLUS5 H_PLUS6 H_PLUS7  
+SpeciesList=H_PLUS1 
 
 ErrorLog=error.log
 Prefix=AMPS
@@ -42,7 +42,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=T96 !!geopack !!!!(batsrus) !!!ices !!off, ices, swmf
+CouplerMode=file(tecplot) !!T96 !!geopack !!!!(batsrus) !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
@@ -64,6 +64,7 @@ MoverIntegratorMode=Boris-relativistic
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
+  RequestedParticleBufferLength=15000000
 
   BlockCells=4,4,4
   GhostCells=1,1,1
@@ -74,6 +75,9 @@ MoverIntegratorMode=Boris-relativistic
 
   TrajectoryTracing=off
 
+ define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node) Earth::Sampling::ParticleData::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)
+
+  define _PIC_OUTPUT__DRIFT_VELOCITY__MODE_ _PIC_MODE_ON_
   define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_  _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_
 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
@@ -87,12 +91,12 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
   define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
 
-  RecoverMacroscopicSampledData=off  \\ !!on, off
+  RecoverMacroscopicSampledData=off \\ !!off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
-    file=pic.SamplingDataRestart.out=16.dat \\
-     \\ !function=Earth::DataRecoveryManager \\
-     \\ !OutputFileNumberRange=0,16 \\
-    preplot=on
+    file=pic.SamplingDataRestart.out=2.dat \\
+    function=Earth::DataRecoveryManager \\
+    OutputFileNumberRange=0,12 \\
+    preplot=on  
 
 
   RecoverParticleData=off  \\ !on, off
@@ -110,12 +114,18 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 !  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::Charging::UpdateGrainCharge__EQUILIBRIUM_POTENTIAL(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
 
 
-! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
 
 
-!the mesh resoution close to Europa
-! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
-! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
+  define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 15
+  define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5
+
+!define _PIC__OPENMP_THREAD_SPLIT_MODE_   _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_
+! define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+ define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
+
+  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
 #endGeneral
 
@@ -155,6 +165,8 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
   GCR=on
   SEP=off
 
+  ParticleDataSamplingMode=on
+
   ImpulseSource=on \\
     Spectrum=constant(1.0E1*MeV2J) \\ 
     New: x=9000.0E3,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=5.0E6 \\
@@ -165,11 +177,13 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 #block ../exosphere.pl
   SPICE=off
 
+  SurfaceDataStructure=SurfaceDataStructure.h
+
 ! ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
 
   define _TARGET_ _EARTH_ 
-!  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
+! define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
 !  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Europa::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) 
 !  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
 !  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Europa::ExchangeSurfaceAreaDensity()
