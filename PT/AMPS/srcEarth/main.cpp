@@ -37,6 +37,7 @@ int main(int argc,char **argv) {
 
   //init Earth magnetosphere model
   Earth::Init();
+  Earth::Sampling::ParticleData::Init();
 
   amps_init_mesh();
   amps_init();
@@ -44,7 +45,7 @@ int main(int argc,char **argv) {
 
 
 
-  PIC::RequiredSampleLength=600;
+  PIC::RequiredSampleLength=60;
 
 
 #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
@@ -69,7 +70,7 @@ int main(int argc,char **argv) {
 
      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
        PIC::RequiredSampleLength*=2;
-       if (PIC::RequiredSampleLength>25000) PIC::RequiredSampleLength=25000;
+       if (PIC::RequiredSampleLength>50000) PIC::RequiredSampleLength=50000;
 
 
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
