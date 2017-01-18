@@ -27,6 +27,14 @@ long int Earth::ImpulseSource::InjectParticles() {
   long int newParticle;
   PIC::ParticleBuffer::byte *newParticleData;
 
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  #pragma omp parallel
+  {
+  #pragma omp single
+  {
+#endif
+
   //the number of the OpenMP threads
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   int nThreadsOpenMP=omp_get_num_threads();
@@ -68,32 +76,15 @@ long int Earth::ImpulseSource::InjectParticles() {
         SampleCounter[thread]=0;
       }
 
-
-/*
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic,1) default (none) private (idim,newParticle,newParticleData)  \
-  shared (TimeCounter,iSource,nTotalInjectedParticles,startNode,spec,mass,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
-#endif
-*/
-
-
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      #pragma omp parallel
-      {
-      #pragma omp single
-      {
-#endif
       for (int iPart=0;iPart<nTotalInjectedParticles;iPart++) {
-
         //generate particles' velocity
         newParticle=PIC::ParticleBuffer::GetNewParticle(true);
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-        #pragma omp task default (none) firstprivate (newParticle) private (idim,newParticleData)  \
+       #pragma omp task default (none) firstprivate (newParticle) private (idim,newParticleData)  \
         shared (SourceLocationB,GyroFrequencySample,GyroRadiiSample,SampleCounter,TimeCounter,iSource,nTotalInjectedParticles,startNode,spec,mass,ElectricCharge,EnergySpectrum::Mode,EnergySpectrum::Mode_Constatant,EnergySpectrum::Constant::e,ImpulseSourceData)
         {
 #endif
-
 
         //generate new particle velocity
         double v[3],speed;
@@ -119,7 +110,7 @@ long int Earth::ImpulseSource::InjectParticles() {
 
         //sample the gyrofequency and gyroradius of the source
         #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-        int thread=omp_get_num_threads();
+        int thread=omp_get_thread_num();
         #else
         int thread=0;
         #endif
@@ -138,10 +129,6 @@ long int Earth::ImpulseSource::InjectParticles() {
       }
 
       //end of the particle injetion loop
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-     }}
-#endif
-
 
       //output sampled information
       for (int thread=1;thread<nThreadsOpenMP;thread++) {
@@ -160,10 +147,16 @@ long int Earth::ImpulseSource::InjectParticles() {
 
   }
 
+
+
   //deallocate the sampling buffers
   delete [] GyroFrequencySample;
   delete [] GyroRadiiSample;
   delete [] SampleCounter;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+     }}
+#endif
 }
 
 //set weights of the model particles
