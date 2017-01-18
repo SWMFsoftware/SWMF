@@ -89,9 +89,10 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
   //check whether the particle trajectory is intersected the spherical body
 #if _TARGET_ID_(_TARGET_) != _TARGET_NONE__ID_
   double rFinal2;
+  static double rSphere=max(_RADIUS_(_TARGET_),Exosphere::Planet->Radius);
 
   //if the particle is inside the sphere -> apply the boundary condition procedure
-  if ((rFinal2=xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2])<_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_)) {
+  if ((rFinal2=xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2])<rSphere*rSphere) {
     double r=sqrt(rFinal2);
     int code;
 
@@ -100,7 +101,7 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC
     static void* BoundaryElement=PIC::Mesh::mesh.InternalBoundaryList.front().BoundaryElement;
 
     //move the particle location at the surface of the sphere
-    for (int idim=0;idim<DIM;idim++) xFinal[idim]*=_RADIUS_(_TARGET_)/r;
+    for (int idim=0;idim<DIM;idim++) xFinal[idim]*=rSphere/r;
 
     //determine the block of the particle location
     newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
