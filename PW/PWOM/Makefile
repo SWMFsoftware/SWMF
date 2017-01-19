@@ -71,6 +71,7 @@ serialrun: PWOM
 	cd ${RUNDIR}; ${SERIAL} ./PWOM.exe
 
 LIB:
+	cd srcTWOSTREAM; make LIB
 	cd src; make LIB
 	cd srcInterface; make LIB
 	cd srcSTET; make LIB
