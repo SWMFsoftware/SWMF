@@ -35,23 +35,21 @@ double Earth::Sampling::Fluency::maxSampledEnergy=100.0*MeV2J;
 int Earth_Sampling_Fluency_nSampledLevels=10;
 
 void Earth::Sampling::PrintVariableList(FILE* fout) {
-  for (int i=0;i<PIC::nTotalSpecies;i++) {
-    fprintf(fout,", \"TotalFlux[spec=%i]\", \"max Rigidity[spec=%i]\", \"FluxUp[spec=%i]\", \"FluxDown[spec=%i]\"",i,i,i,i);
+  fprintf(fout,", \"TotalFlux\", \"max Rigidity\", \"FluxUp\", \"FluxDown\"");
 
-    for (int iEnergyLevel=0;iEnergyLevel<Earth::Sampling::Fluency::nSampledLevels;iEnergyLevel++) {
-      double emin=Fluency::minSampledEnergy*pow(10.0,iEnergyLevel*Fluency::dLogEnergy);
-      double emax=emin*pow(10.0,Fluency::dLogEnergy);
+  for (int iEnergyLevel=0;iEnergyLevel<Earth::Sampling::Fluency::nSampledLevels;iEnergyLevel++) {
+    double emin=Fluency::minSampledEnergy*pow(10.0,iEnergyLevel*Fluency::dLogEnergy);
+    double emax=emin*pow(10.0,Fluency::dLogEnergy);
 
-      emin*=J2eV;
-      emax*=J2eV;
+    emin*=J2eV;
+    emax*=J2eV;
 
-      fprintf(fout,", \"TotalFluency[spec=%i](%e<E<%e)\", \"FluencyUp[spec=%i](%e<E<%e)\", \"FluencyDown[spec=%i](%e<E<%e)\",",i,emin,emax, i,emin,emax, i,emin,emax);
-    }
+    fprintf(fout,", \"TotalFluency(%e<E<%e)\", \"FluencyUp(%e<E<%e)\", \"FluencyDown(%e<E<%e)\"",emin,emax, emin,emax, emin,emax);
   }
 }
 
 void Earth::Sampling::PrintTitle(FILE* fout) {
-  fprintf(fout,"Sampled particle flux and max rigidity");
+  fprintf(fout,"TITLE=\"Sampled particle flux and max rigidity\"");
 }
 
 void Earth::Sampling::PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,
