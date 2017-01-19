@@ -367,7 +367,7 @@ public:
 
       //print the number of variables and blocks
       fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
-      fprintf(fout2d,"ZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
+      fprintf(fout2d,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
     }
     else pipe.openSend(0);
 
