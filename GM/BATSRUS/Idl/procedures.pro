@@ -202,7 +202,7 @@ pro set_default_values
   log_spacex=5 ; horizontal distance around log plots (in character size)
   log_spacey=5 ; vertical distance between log plots (in character size)
   logfunc=''   ; space separated list of log variables in wlogname(s)
-  title=0      ; set to a string with the title
+  title=''     ; set to a string with the title
   xtitle=0     ; set to a string with the time title
   ytitles=0    ; set to a string array with the function names
   xrange=0     ; set to a [min,max] array for the time range
@@ -231,15 +231,19 @@ pro set_default_values
 ; parameters passed to plot_func through common blocks
   common plot_param, $
      multiplot, multix, multiy, multidir, plotix, plotiy, $
-     plot_spacex, plot_spacey, $
+     plot_spacex, plot_spacey, showxaxis, showyaxis, showxtitle, showytitle, $
      fixaspect, noerase, $ 
      cut, cut0, plotdim, rcut, rbody, $
      velvector, velpos, velpos0, velrandom, velspeed, velx, vely, veltri, $
      ax, az, contourlevel, linestyle
 
-; multiplot=0 gives the default number of subplots depending on nfile,nfunc
-; multiplot=[3,2,0] defines 3 by 2 subplots filled up in vertical order
-; multiplot=[2,4,1] defines 2 by 4 subplots filled up in horizontal order
+; multiplot=0         - default subplot arrangement based on nfile,nfunc
+; multiplot=-1        - arrange subplots vertically
+; multiplot=3         - 3 subplots horizontally
+; multiplot=[3,2,1]   - 3x2 subplots filled up in vertical order
+; multiplot=[2,4,0]   - 2x4 subplots filled up in horizontal order
+; multiplot=[2,4,0,4] - start with subplot 4 (3rd row left)
+
   multiplot=0                   ;
   multix=0                      ; number of subplots horizontally
   multiy=0                      ; number of subplots vertically
@@ -248,6 +252,10 @@ pro set_default_values
   plotiy=0                      ; vertical index of subplot
   plot_spacex=3                 ; horizontal subplot distance (character size)
   plot_spacey=3                 ; vertical subplot distance (character size)
+  showxtitle=0                  ; show x title and axis in all subplots
+  showytitle=0                  ; show y title and axis in all subplots
+  showxaxi=0                    ; show x axis in all subplots
+  showyaxis=0                   ; show y axis in all subplots
   fixaspect=1                   ; fix aspect ratio according to coordinates
   noerase=0                     ; Do not erase before new plot
   cut=0                         ; index array for the cut
@@ -599,10 +607,10 @@ pro plot_data
         if multiplot gt 0 then       !p.multi=[0,multiplot,1 ,0,1] $
         else if multiplot eq -1 then !p.multi=[0,1,nplot     ,0,1] $
         else                         !p.multi=[0,1,-multiplot,0,1]
-     endif else if n_elements(multiplot) eq 5 then $
-        !p.multi = multiplot $
+     endif else if n_elements(multiplot) eq 4 then $
+        !p.multi = [multiplot(0)*multiplot(1)-multiplot(3),multiplot(0:1),0,multiplot(2)] $
      else $
-        !p.multi=[0,multiplot(0),multiplot(1),0,multiplot(2)]
+        !p.multi=[0,multiplot(0:1),0,multiplot(2)]
      multix=!p.multi(1)
      multiy=!p.multi(2)
   endif else begin
@@ -3791,15 +3799,16 @@ pro plot_func
            endelse
         endif
 
-                                ; Omit X axis if unneeded
-        if plotiy gt 0 then begin
-           !x.tickname = strarr(60)+' '
+        ;; Omit X axis if unneeded
+        if plotiy gt 0 and not showxtitle then begin
+           if not showxaxis then !x.tickname = strarr(60)+' '
            !x.title = ' '
         endif
-                                ; Omit Y axis if unneeded
-        if plotix gt 0 and not newytitle $
+
+        ;; Omit Y axis if unneeded
+        if plotix gt 0 and not showytitle $
            and strmid(plotmod,0,4) ne 'plot' then begin
-           !y.tickname = strarr(60)+' '
+           if not showyaxis then !y.tickname = strarr(60)+' '
            !y.title = ' '
         endif
 
