@@ -147,6 +147,21 @@ while ($line=<InputFile>) {
       die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
     }
   }
+
+  #recalculate the location of the Sun using the time string from Exosphere%SimulationStartTime
+  elsif ($InputLine eq "RECALCULATESOLARLOCATION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    if  ($InputLine eq "ON") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::RecalculateSolarLocation","true","main/OrbitCalculation.cpp");
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::RecalculateSolarLocation","false","main/OrbitCalculation.cpp");
+    }
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
     
   #redefine a value of a macro 
   elsif ($InputLine eq "DEFINE") {
