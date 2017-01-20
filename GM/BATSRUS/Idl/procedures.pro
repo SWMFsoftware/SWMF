@@ -254,7 +254,7 @@ pro set_default_values
   plot_spacey=3                 ; vertical subplot distance (character size)
   showxtitle=0                  ; show x title and axis in all subplots
   showytitle=0                  ; show y title and axis in all subplots
-  showxaxi=0                    ; show x axis in all subplots
+  showxaxis=0                   ; show x axis in all subplots
   showyaxis=0                   ; show y axis in all subplots
   fixaspect=1                   ; fix aspect ratio according to coordinates
   noerase=0                     ; Do not erase before new plot
