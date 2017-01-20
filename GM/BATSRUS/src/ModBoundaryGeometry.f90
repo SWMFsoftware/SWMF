@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !============================================================================
 
@@ -28,6 +29,28 @@ contains
     end if
 
   end subroutine init_mod_boundary_cells
+
+  !============================================================================
+
+  subroutine read_boundary_geometry_param(NameCommand)
+
+    use ModMain,      ONLY: UseSolidState
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_boundary_geometry_param'
+    !--------------------------------------------------------------------------
+
+    select case(NameCommand)
+    case("#SOLIDSTATE")
+       call read_var('UseSolidState', UseSolidState)
+
+    case default
+       call stop_mpi(NameSub//' unknown command='//NameCommand)
+    end select
+
+  end subroutine read_boundary_geometry_param
 
   !============================================================================
 
@@ -216,7 +239,8 @@ contains
          IsBoundaryCell_GI(:,:,:,Body1_) = &
          body1    .and. R_BLK(:,:,:,iBlock) < Rbody
 
-    if(IsBoundaryBlock_IB(ExtraBc_,iBlock).or.IsBoundaryBlock_IB(Solid_,iBlock))&
+    if(IsBoundaryBlock_IB(ExtraBc_,iBlock) .or. &
+         IsBoundaryBlock_IB(Solid_,iBlock)) &
          call user_set_boundary_cells(iBlock)
 
     if(IsBoundaryBlock_IB(1,iBlock)) &

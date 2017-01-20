@@ -49,7 +49,8 @@ subroutine MH_set_parameters(TypeAction)
        StringLowOrderRegion, iRegionLowOrder_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  use ModBoundaryGeometry, ONLY: init_mod_boundary_cells
+  use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
+       read_boundary_geometry_param
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
        DoChangeRestartVariables, nVarRestart, UseRestartWithFullB, &
@@ -1831,8 +1832,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case('#SOLIDSTATE')
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('UseSolidState', UseSolidState)
+        call read_boundary_geometry_param(NameCommand)
 
      case("#FACEBOUNDARY")
         if(.not.is_first_session())CYCLE READPARAM
