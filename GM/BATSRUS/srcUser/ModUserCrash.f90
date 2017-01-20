@@ -17,7 +17,8 @@ module ModUser
        IMPLEMENTED8  => user_amr_criteria,               &
        IMPLEMENTED9  => user_get_log_var,                &
        IMPLEMENTED10 => user_set_resistivity,            &
-       IMPLEMENTED11 => user_action
+       IMPLEMENTED11 => user_action,                     &
+       IMPLEMENTED12 => user_set_boundary_cells
 
   use ModMain, ONLY: &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
@@ -143,6 +144,12 @@ module ModUser
   real :: TeDim_NLTE = 100.0  ! eV
   real :: NiDim_NLTE = 1.0e22 ! 1/cm3
   real :: TeSi_NLTE, NiSi_NLTE
+
+  ! Electron temperature below which the material is solid and
+  ! the hydro equations will be switched off (but still solving for
+  ! radiation diffusion, heat conduction, and energy exchanges)
+  real :: MeltingTeDim_I(0:MaxMaterial-1) = 0.0 ! eV
+  real :: MeltingTeSi_I(0:MaxMaterial-1)
 
 contains
 
@@ -290,6 +297,12 @@ contains
           call read_var('UseTableNLTE', UseTableNLTE)
           call read_var('TeDim_NLTE', TeDim_NLTE) ! eV
           call read_var('NiDim_NLTE', NiDim_NLTE) ! 1/cm3
+
+       case("#MELTINGTEMPERTURE")
+          do iMaterial = 0, nMaterial - 1
+             call read_var('MeltingTe'//NameMaterial_I(iMaterial), &
+                  MeltingTeDim_I(iMaterial)) ! eV
+          end do
 
        case('#USERINPUTEND')
           EXIT
@@ -894,15 +907,16 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModConst,   ONLY: cKtoKev, cBoltzmann
-    use ModAdvance, ONLY: State_VGB, UseElectronPressure
-    use ModPhysics, ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
+    use ModConst,      ONLY: cKtoKev, cBoltzmann
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModPhysics,    ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V
-    use ModGeometry, ONLY: r_BLK, Xyz_DGB
+    use ModGeometry,   ONLY: r_BLK, Xyz_DGB, IsBoundaryCell_GI
+    use ModMain,       ONLY: Solid_
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
-    use CRASH_ModEos, ONLY: Xe_, Be_, Plastic_, Au_, Ay_
-    use BATL_size,    ONLY: nI, nJ, nK, MinI, MaxI
-    use BATL_lib,     ONLY: IsRzGeometry
+    use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
+    use BATL_size,     ONLY: nI, nJ, nK, MinI, MaxI
+    use BATL_lib,      ONLY: IsRzGeometry
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1014,6 +1028,15 @@ contains
              PlotVar_G(i,j,k) = 1.0  ! NLTE EOS
           else
              PlotVar_G(i,j,k) = 0.0  ! LTE EOS
+          end if
+       end do; end do; end do
+    case('solid')
+       call user_set_boundary_cells(iBlock)
+       do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
+          if(IsBoundaryCell_GI(i,j,k,Solid_))then
+             PlotVar_G(i,j,k) = 1.0 ! Solid
+          else
+             PlotVar_G(i,j,k) = 0.0 ! Not a solid
           end if
        end do; end do; end do
     case('cond')
@@ -1315,6 +1338,8 @@ contains
        if(iProc==0) write(*,*) NameSub, &
             ' iTableEosNLTE_I = ', iTableEosNLTE_I
     end if
+
+    MeltingTeSi_I = MeltingTeDim_I*cEVToK
 
   end subroutine user_init_session
 
@@ -2319,5 +2344,34 @@ contains
     end do; end do; end do
 
   end subroutine user_set_resistivity
+
+  !============================================================================
+
+  subroutine user_set_boundary_cells(iBlock)
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModMain,       ONLY: Solid_, Dt
+    use ModGeometry,   ONLY: IsBoundaryCell_GI
+
+    integer, intent(in):: iBlock
+
+    integer :: i, j, k, iMaterial
+    real :: TeSi
+
+    character(len=*), parameter :: NameSub='user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    if(Dt == 0.0) RETURN
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1) - 1
+       call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
+       if(TeSi < MeltingTeSi_I(iMaterial))then
+          IsBoundaryCell_GI(i,j,k,Solid_) = .true.
+       else
+          IsBoundaryCell_GI(i,j,k,Solid_) = .false.
+       end if
+    end do; end do; end do
+
+  end subroutine user_set_boundary_cells
 
 end module ModUser

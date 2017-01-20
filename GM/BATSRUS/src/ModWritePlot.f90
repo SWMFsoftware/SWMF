@@ -925,7 +925,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModLoadBalance, ONLY: iTypeBalance_A
   use ModB0, ONLY: B0_DGB
   use ModGeometry
-  use ModBoundaryCells, ONLY: iBoundary_GB
+  use ModBoundaryGeometry, ONLY: iBoundary_GB
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
        ElectronPressureRatio, RhoBody2, pBody2, rBody2
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK

@@ -237,8 +237,8 @@ subroutine update_secondbody
   use ModMain,     ONLY: time_simulation, nBlock
   use ModConst,    ONLY: cTwoPi
   use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
-  use ModMessagePass, ONLY: exchange_messages
-
+  use ModMessagePass,      ONLY: exchange_messages
+  use ModBoundaryGeometry, ONLY: set_boundary_cells, fix_block_geometry
   implicit none
 
   integer :: iBlock
@@ -250,7 +250,7 @@ subroutine update_secondbody
 
   do iBlock = 1, nBlock
      call set_boundary_cells(iBlock)
-     call fix_block_geometry(iBlock)
+     call fix_block_geometry(iBlock) ! This might not work together with solid
   end do
 
   ! call set_body_flag ! OLDAMR

@@ -5,7 +5,7 @@ module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst
-  use ModMain, ONLY: body2_
+  use ModMain, ONLY: body2_, Solid_
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
@@ -170,7 +170,7 @@ module ModPhysics
   real :: ShockPosition = 0.0, ShockSlope = 0.0
 
   ! State for the boundary conditions
-  real,dimension(nVar,body2_:6):: FaceState_VI, CellState_VI
+  real,dimension(nVar,Solid_:6):: FaceState_VI, CellState_VI
 
   !\
   ! Units for normalization of variables
@@ -422,7 +422,7 @@ contains
 
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
-    do iBoundary=body2_,6
+    do iBoundary=Solid_,6
        FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
     end do
 

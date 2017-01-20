@@ -398,6 +398,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModHeatConduction, ONLY: calc_ei_heat_exchange
   use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_
   use ModLoadBalance, ONLY: load_balance_blocks
+  use ModBoundaryGeometry, ONLY: fix_geometry
   implicit none
 
   !INPUT ARGUMENTS:
@@ -432,10 +433,18 @@ subroutine BATS_advance(TimeSimulationLimit)
   n_step = n_step + 1
   iteration_number = iteration_number+1
 
-  if(time_accurate) call set_global_timestep(TimeSimulationLimit)
+  if(time_accurate)then
+     if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
+
+     call set_global_timestep(TimeSimulationLimit)
+
+     if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
+  end if
 
   ! Select block types and load balance blocks
   call load_balance_blocks
+
+  if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
 
   ! Switch off steady blocks to reduce calculation
   if(UsePartSteady) call part_steady_switch(.true.)
@@ -455,6 +464,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   else
      call advance_expl(.true., -1)
   endif
+
+  if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
 
   ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
   if(  time_accurate .and. &
@@ -498,7 +509,13 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
        call advance_semi_impl
 
-  if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
+  if(UseTimeStepControl .and. time_accurate .and. Dt>0)then
+     if(UseSolidState) call fix_geometry(DoSolveSolidIn=.false.)
+
+     call control_time_step
+
+     if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
+  end if
 
   if(UsePartSteady) then
      ! Select steady and unsteady blocks

@@ -86,6 +86,7 @@ contains
          iNode_B, iNodeNei_IIIB, DiLevelNei_IIIB, &
          iTree_IA, Block_, Proc_, Unset_
 
+    use ModBoundaryGeometry, ONLY: fix_block_geometry
     use ModGeometry, ONLY: &
          XyzStart_BLK, r_BLK, rMin_BLK
 

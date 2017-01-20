@@ -23,7 +23,7 @@ module ModRestartFile
   use ModIoUnit,     ONLY: UnitTmp_
   use ModUtilities,  ONLY: open_file, close_file
   use ModGroundMagPerturb, ONLY: DoWriteIndices
-
+  use ModBoundaryGeometry, ONLY: fix_block_geometry
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
        IsCartesian, IsCartesianGrid, IsGenRadius, IsRoundCube, rRound0, rRound1, &
        nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK

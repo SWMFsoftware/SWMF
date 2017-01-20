@@ -106,7 +106,7 @@ contains
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
     use ModGeometry, ONLY: true_cell, MinFaceBoundary, MaxFaceBoundary
-    use ModBoundaryCells, ONLY: iBoundary_GB
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in) :: iBlock
     real,    intent(in) :: TimeBcIn
@@ -414,7 +414,7 @@ contains
       use ModConst,   ONLY: cElectronCharge, cBoltzmann,cProtonMass
       use ModPlanetConst, ONLY: Earth_, rPlanet_I
       use ModUtilities
-      use ModBoundaryCells, ONLY: iBoundary_GB
+      use ModBoundaryGeometry, ONLY: iBoundary_GB
       use ModNumConst, ONLY: cTwoPi
       use ModIeCoupling, ONLY: get_inner_bc_jouleheating
       use BATL_lib, ONLY: nDim, IsCartesianGrid, FaceNormal_DDFB, CellFace_DFB

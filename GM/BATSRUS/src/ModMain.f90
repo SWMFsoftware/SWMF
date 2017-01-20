@@ -113,9 +113,10 @@ module ModMain
   integer, parameter :: body1_   = -1
   integer, parameter :: body2_   = -2
   integer, parameter :: ExtraBc_ =  0
+  integer, parameter :: Solid_   = -3
 
   ! Inner and outer boundary conditions
-  character (len=20) :: TypeBc_I(body2_:6) = 'float'
+  character (len=20) :: TypeBc_I(Solid_:6) = 'float'
 
   ! Logicals for bodies
   logical:: Body1    = .false.
@@ -285,6 +286,7 @@ module ModMain
   logical:: UseUserInitSession       = .false.
   logical:: UseUserUpdateStates      = .false.
   logical:: UseExtraBoundary         = .false.
+  logical:: UseSolidState            = .false.
 
   !\
   ! Number of true cells locally and globally

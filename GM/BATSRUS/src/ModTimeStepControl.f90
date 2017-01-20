@@ -476,12 +476,13 @@ contains
 
   subroutine control_time_step
 
-    use ModMain,    ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
+    use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation
-    use ModAdvance, ONLY: Rho_, p_, &
+    use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
-    use ModPhysics, ONLY: No2Si_V, UnitT_
-    use ModProcMH,  ONLY: nProc, iComm
+    use ModPhysics,  ONLY: No2Si_V, UnitT_
+    use ModGeometry, ONLY: true_cell
+    use ModProcMH,   ONLY: nProc, iComm
     use ModMpi
 
     integer:: iBlock, i, j, k, iError
@@ -506,10 +507,12 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
-               /    StateOld_VCB(iVarControl_I,i,j,k,iBlock)
-          RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
-          RelativeChangeMax = max(RelativeChangeMax, maxval(VarRatio_I))
+          if(true_cell(i,j,k,iBlock))then
+             VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
+                  /    StateOld_VCB(iVarControl_I,i,j,k,iBlock)
+             RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
+             RelativeChangeMax = max(RelativeChangeMax, maxval(VarRatio_I))
+          end if
        end do; end do; end do
     end do
 

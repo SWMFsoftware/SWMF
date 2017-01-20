@@ -22,7 +22,7 @@ OBJECTS = \
 	ModBatlInterface.o \
 	ModBlockData.o \
 	ModBorisCorrection.o \
-	ModBoundaryCells.o \
+	ModBoundaryGeometry.o \
 	ModCalcSource.o \
 	ModCellBoundary.o \
 	ModCellGradient.o \
@@ -106,7 +106,6 @@ OBJECTS = \
 	ray_trace_new.o \
 	ray_pass.o \
 	rotate.o \
-	set_block_geometry.o \
 	set_ICs.o \
 	update_states.o \
 	update_states_MHD.o \
