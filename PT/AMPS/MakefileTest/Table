@@ -568,20 +568,22 @@ Check=
 Name=test/Mover-guiding-center@@(0+valeriy) 
 Time=3
 
-Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Guiding-Center@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+valeriy)
 
 Compile=
->>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center.diff
+>>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>./Config.pl -application=test/Mover-guiding-center -cplr-data-path=${TESTMover-guiding-centerKEYS} -model-data-path=${TESTMover-guiding-centerKEYS}   -link-option=-lc++  -amps-test=on 
 >>>rm -rf srcTemp
 >>>@($(MAKE) amps)
->>>@echo "test_Mover-guiding-center_compile... done" >> test_Mover-guiding-center.diff
+>>>@echo "test_Mover-guiding-center_compile... done" >> test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 
 Check=
->>>@echo "test_Mover-guiding-center_check..." >> test_Mover-guiding-center.diff
+>>>@echo "test_Mover-guiding-center_check..." >> test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
->>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center.diff
->>>@ls -l test_Mover-guiding-center.diff
+>>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-guiding-center-REF}.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
+>>>@ls -l test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 <#
 
 -------------------------------------------------------------------------------
@@ -589,7 +591,7 @@ Check=
 Name=test/Mover-Boris@@(0+valeriy)
 Time=3
 
-Ref=1{gcc}@@(0+valeri_y)
+Ref=1{gcc}@@(0+valeriy)
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
@@ -602,7 +604,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mover-Boris_check..." >> test_Mover-Boris${TESTMover-Boris-REF}.diff
->>>-${SCRIPTDIR}/DiffNum.pl -r=1.0E-6 ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Boris-REF}.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>@ls -l test_Mover-Boris${TESTMover-Boris-REF}.diff
 <#
@@ -612,9 +614,9 @@ Check=
 Name=test/Mover-Boris@@(0+stampede+pleiades)
 Time=3
 
-Ref=2{gcc}@@(0+pleiade_s)
-Ref=2{pgcc}@@(0+pleiade_s)
-Ref=2{gcc}@@(0+stamped_e)
+Ref=2{gcc}@@(0+pleiades)
+Ref=2{pgcc}@@(0+pleiades)
+Ref=2{gcc}@@(0+stampede)
 
 Keys=/work/02695/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
 Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
@@ -628,7 +630,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mover-Boris_check..." >> test_Mover-Boris${TESTMover-Boris-REF}.diff
->>>-${SCRIPTDIR}/DiffNum.pl -r=1.0E-6 ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Boris-REF}.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>@ls -l test_Mover-Boris${TESTMover-Boris-REF}.diff
 <#
@@ -638,9 +640,9 @@ Check=
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
 Time=3
 
-Ref=1{gcc}@@(0+valeri_y)
+Ref=1{gcc}@@(0+valeriy)
 
-Keys=/Volumes/Data01/AMPS_DATA_TEST_TEMP/test_Mover/Boris@@(0+valeriy)
+Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
 Compile=
 >>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
@@ -651,7 +653,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mover-Boris-relativistic_check..." >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
->>>-${SCRIPTDIR}/DiffNum.pl -r=1.0E-6 ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories${TESTMover-Boris-relativistic-REF}.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>@ls -l test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 <#
@@ -660,6 +662,10 @@ Check=
 #>
 Name=test/Mover-Boris-relativistic@@(0+stampede+pleiades)
 Time=3
+
+Ref=2{gcc}@@(0+pleiades)
+Ref=2{pgcc}@@(0+pleiades)
+Ref=2{gcc}@@(0+stampede)
 
 Keys=/work/02695/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
 Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
@@ -673,7 +679,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mover-Boris-relativistic_check..." >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
->>>-${SCRIPTDIR}/DiffNum.pl -r=1.0E-6  ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories${TESTMover-Boris-relativistic-REF}.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>@ls -l test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 <#
