@@ -4,7 +4,7 @@
 module ModGeometry
 
   use ModSize
-  use ModMain,       ONLY: UseBody2, Solid_
+  use ModMain,       ONLY: UseBody2, Solid_, ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
   use BATL_grid,     ONLY: Xyz_DGB, CellSize_DB
