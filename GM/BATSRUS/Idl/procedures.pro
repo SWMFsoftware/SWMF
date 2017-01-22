@@ -579,13 +579,13 @@ pro plot_data
 
   print,'======= PLOTTING PARAMETERS ========================='
   print,'wnames                     =',wnames
+
   read_plot_param
 
   help,nx
 
   read_transform_param
 
-                                ; ifile=0, also pass dotransform and doask
   do_transform
 
   print,'======= DETERMINE PLOTTING RANGES ==================='
@@ -2559,7 +2559,7 @@ usereg = (transform eq 'unpolar') or $
   (gencoord and (transform eq 'polar' or transform eq 'regular' $
                  or transform eq 'sphere'))
 
-if dotransform eq 'n' then return
+if dotransform eq 'n' and (not usereg or keyword_set(wreg)) then return
 
 if transform eq 'my' or transform eq 'm' then $
   do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
