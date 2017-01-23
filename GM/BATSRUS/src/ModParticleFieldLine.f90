@@ -51,7 +51,7 @@ module ModParticleFieldLine
        Aux_  = 7, &
        ! auxilary vector, used on End particles at extraction 
        AuxVx_ = 8, AuxVy_ = 9, AuxVz_ = 10 
-  
+
   ! indices of a particle
   integer, parameter:: &
        ! field line this particle lays on
@@ -157,7 +157,8 @@ contains
           elseif(index(StringOrderMode, 'radius' ) > 0)then
              iOrderMode = Radius_
           else
-             call CON_stop(NameThisComp//':'//NameSub //": unknown ordering mode")
+             call CON_stop(NameThisComp//':'//NameSub //&
+                  ": unknown ordering mode")
           end if
        end if
     end select
@@ -196,9 +197,9 @@ contains
             ': soft boundary may be set only once and may not be changed!')
     end if
   end subroutine set_soft_boundary
-  
+
   !==========================================================================
-  
+
   subroutine apply_soft_boundary
     ! check which particles went beyond soft boundary and remove them
     !----------------------------------------------------
@@ -207,6 +208,143 @@ contains
     call remove_undefined_particles(KindReg_)
   end subroutine apply_soft_boundary
 
+  !==========================================================================
+
+  subroutine trace_particle_line(iDirTrace)
+    ! the subroutine is the tracing loop;
+    ! tracing starts at KindEnd_ particles and proceeds in a given direction
+    !------------------------------------------------------------------------
+    integer, intent(in):: iDirTrace
+
+
+    integer :: iParticle     ! loop variable
+
+    ! direction of the magnetic field
+    real:: Dir1_D(MaxDim), Dir2_D(MaxDim)
+
+    ! parameters of end particles
+    real,    pointer:: StateEnd_VI(:,:)
+    integer, pointer:: iIndexEnd_II(:,:)
+
+    ! constant in Ralston's method
+    real, parameter:: cTwoThird = 2.0 / 3.0
+
+    character(len=*),parameter:: NameSub = "trace_particle_line"
+    !------------------------------------------------------------------------
+    ! set a pointers to parameters of end particles
+    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
+    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
+
+    TRACE: do
+       ! check if particles are beyond the soft boundary
+       if(RBoundarySoft > 0.0)then
+          call check_soft_boundary(KindEnd_)
+          call remove_undefined_particles(KindEnd_)
+       end if
+
+       ! copy last known coordinates to Auxilary 
+       StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
+            StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
+       !\
+       ! First stage of Ralston's method
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the direction of the magnetic field at original location
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = Dir1_D)
+          ! find the step size
+          StateEnd_VI(Aux_, iParticle) = &
+               MIN(SpaceStepMax, MAX(SpaceStepMin,&
+               0.1*SQRT(&
+               sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
+               )))
+          ! save direction for the second stage
+          StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir1_D
+          ! get middle location
+          StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
+               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+               cTwoThird * Dir1_D * &
+               iIndexEnd_II(Alignment_, iParticle)
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       !\
+       ! Second stage of Ralston's method
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the direction of the magnetic field in the middle
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = Dir2_D)
+          ! direction at the 1st stage
+          Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
+          ! get final location
+          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
+               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+               (0.25 * Dir1_D + 0.75 * Dir2_D) * &
+               iIndexEnd_II(Alignment_, iParticle)
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       ! increase particle index & copy to regular
+       iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+            iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+            iDirTrace
+       call copy_end_to_regular
+
+    end do TRACE
+
+  contains
+    !========================================================================
+    function is_complete() result(IsCompleteOut)
+      use ModMpi
+      use BATL_mpi, ONLY: iComm
+      ! returns true if tracing is complete for all field line on all procs
+      logical:: IsComplete, IsCompleteOut
+      integer:: iError
+      !----------------------------------------------------------------------
+      if(Particle_I(KindEnd_)%nParticle < 0)&
+           call CON_stop(NameThisComp//":"//NameSub//&
+           ": negative number of particles of KindEnd_")
+      IsComplete = Particle_I(KindEnd_)%nParticle == 0
+      ! reduce IsComplete variable from all processors
+      call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
+           MPI_LOGICAL, MPI_LAND, iComm, iError)               
+    end function is_complete
+
+  end subroutine trace_particle_line
+  
   !==========================================================================
 
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
@@ -230,10 +368,6 @@ contains
     integer :: iFieldLine    ! loop variable
     integer :: iBlock
     integer :: nParticleOld  ! number of already existing regular particles
-    integer :: iParticle     ! loop variable
-
-    ! direction of the magnetic field
-    real:: Dir1_D(MaxDim), Dir2_D(MaxDim)
 
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
@@ -253,9 +387,6 @@ contains
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
-
-    ! constant in Ralston's method
-    real, parameter:: cTwoThird = 2.0 / 3.0
 
     character(len=*), parameter:: NameSub='extract_particle_line'
     !------------------------------------------------------------------------
@@ -315,97 +446,7 @@ contains
        ! fix alignment of particle indexing with B field direction
        call get_alignment()
 
-       TRACE: do
-
-          ! check if particles are beyond the soft boundary
-          if(RBoundarySoft > 0.0)then
-             call check_soft_boundary(KindEnd_)
-             call remove_undefined_particles(KindEnd_)
-          end if
-
-
-          ! copy last known coordinates to Auxilary 
-          StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
-               StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
-          !\
-          ! First stage of Ralston's method
-          !/
-          do iParticle = 1, Particle_I(KindEnd_)%nParticle
-             ! get the direction of the magnetic field at original location
-             call get_b_dir(&
-                  Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-                  iBlock=iIndexEnd_II(0,iParticle),&
-                  Dir_D = Dir1_D)
-             ! find the step size
-             StateEnd_VI(Aux_, iParticle) = &
-                  MIN(SpaceStepMax, MAX(SpaceStepMin,&
-                  0.1*SQRT(&
-                  sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-                  )))
-             ! save direction for the second stage
-             StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir1_D
-             ! get middle location
-             StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-                  iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-                  cTwoThird * Dir1_D * &
-                  iIndexEnd_II(Alignment_, iParticle)
-          end do
-          !\
-          ! Message pass: some particles may have moved to different procs
-          !/
-          call message_pass_particles(KindEnd_)
-
-          !\
-          ! remove particles that went outside of the domain
-          !/
-          if(Body1)then ! check if there is an inner body
-             call check_inner_boundary(KindEnd_)
-          end if
-          call remove_undefined_particles(KindEnd_)
-
-          ! check if all field lines have been completed
-          if(is_complete()) EXIT TRACE
-
-          !\
-          ! Second stage of Ralston's method
-          !/
-          do iParticle = 1, Particle_I(KindEnd_)%nParticle
-             ! get the direction of the magnetic field in the middle
-             call get_b_dir(&
-                  Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-                  iBlock=iIndexEnd_II(0,iParticle),&
-                  Dir_D = Dir2_D)
-             ! direction at the 1st stage
-             Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
-             ! get final location
-             StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
-                  iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-                  (0.25 * Dir1_D + 0.75 * Dir2_D) * &
-                  iIndexEnd_II(Alignment_, iParticle)
-          end do
-          !\
-          ! Message pass: some particles may have moved to different procs
-          !/
-          call message_pass_particles(KindEnd_)
-
-          !\
-          ! remove particles that went outside of the domain
-          !/
-          if(Body1)then ! check if there is an inner body
-             call check_inner_boundary(KindEnd_)
-          end if
-          call remove_undefined_particles(KindEnd_)
-
-          ! check if all field lines have been completed
-          if(is_complete()) EXIT TRACE
-
-          ! increase particle index & copy to regular
-          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-               iDirTrace
-          call copy_end_to_regular
-          
-       end do TRACE
+       call trace_particle_line(iDirTrace)
 
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
@@ -476,7 +517,7 @@ contains
       real,    intent(in):: Xyz_D(MaxDim)
       integer, intent(in):: iBlock
       logical:: DoExcludeOut
-      
+
       ! interpolated magnetic field
       real   :: B_D(MaxDim) = 0.0
       ! interpolation data: number of cells, cell indices, weights
@@ -531,86 +572,71 @@ contains
               nint( SIGN(1.0, sum(Dir_D*StateEnd_VI(x_:z_,iParticle))) )
       end do
     end subroutine get_alignment
-    !========================================================================
-    function is_complete() result(IsCompleteOut)
-      use ModMpi
-      use BATL_mpi, ONLY: iComm
-      ! returns true if tracing is complete for all field line on all procs
-      logical:: IsComplete, IsCompleteOut
-      integer:: iError
-      !----------------------------------------------------------------------
-      if(Particle_I(KindEnd_)%nParticle < 0)STOP
-      IsComplete = Particle_I(KindEnd_)%nParticle == 0
-      ! reduce IsComplete variable from all processors
-      call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
-           MPI_LOGICAL, MPI_LAND, iComm, iError)               
-    end function is_complete
-    !========================================================================
-    subroutine copy_end_to_regular
-      ! copies indicated variables of known end particles to regular particles
-      integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
-      integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
-      !----------------------------------------------------------------------
-      StateReg_VI(iVarCopy_I,&
-           Particle_I(KindReg_)%nParticle+1:&
-           Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
-           StateEnd_VI(iVarCopy_I, 1:Particle_I(KindEnd_)%nParticle)
-      iIndexReg_II(iIndexCopy_I,&
-           Particle_I(KindReg_)%nParticle+1:&
-           Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
-           iIndexEnd_II(iIndexCopy_I, 1:Particle_I(KindEnd_)%nParticle)
-      Particle_I(KindReg_)%nParticle = &
-           Particle_I(KindReg_)%nParticle + &
-           Particle_I(KindEnd_)%nParticle
-      ! also update the counter of particles per field line
-      do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         iFieldLine = iIndexEnd_II(fl_,iParticle)
-      end do
-    end subroutine copy_end_to_regular
-    !========================================================================
-    subroutine get_b_dir(Xyz_D, iBlock, Dir_D)
-      use ModMain, ONLY: UseB0
-      use ModB0, ONLY: get_b0
-      ! returns the direction of magnetic field 
-      ! as well as the block used for interpolation
-      real,    intent(in) :: Xyz_D(MaxDim)
-      integer, intent(in) :: iBlock
-      real,    intent(out):: Dir_D(MaxDim)
-
-      ! magnetic field
-      real   :: B_D(MaxDim) = 0.0
-      ! interpolation data: number of cells, cell indices, weights
-      integer:: nCell, iCell_II(0:nDim, 2**nDim)
-      real   :: Weight_I(2**nDim)
-      integer:: iCell ! loop variable
-      integer:: i_D(MaxDim)
-      character(len=200):: StringError
-      !----------------------------------------------------------------------
-      Dir_D = 0; B_D = 0
-      ! get potential part of the magnetic field at the current location
-      if(UseB0)call get_b0(Xyz_D, B_D)
-      ! get the remaining part of the magnetic field
-      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
-      ! interpolate magnetic field value
-      do iCell = 1, nCell
-         i_D = 1
-         i_D(1:nDim) = iCell_II(1:nDim, iCell)
-         B_D = B_D + &
-              State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-      end do
-      if(all(B_D==0))then
-         write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
-              NameThisComp//':'//NameSub//&
-              ': trying to extract line at region with zero magnetic field'//&
-              ' at location X = ', &
-              Xyz_D(1), ' Y = ', Xyz_D(2), ' Z = ', Xyz_D(3) 
-         call CON_stop(StringError)
-      end if
-      ! normalize vector to unity
-      Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
-    end subroutine get_b_dir
 
   end subroutine extract_particle_line
+
+  !========================================================================
+  subroutine copy_end_to_regular
+    ! copies indicated variables of known end particles to regular particles
+    integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
+    integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
+    !----------------------------------------------------------------------
+    Particle_I(KindReg_)%State_VI(iVarCopy_I,&
+         Particle_I(KindReg_)%nParticle+1:&
+         Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
+         Particle_I(KindEnd_)%State_VI(iVarCopy_I, 1:Particle_I(KindEnd_)%nParticle)
+    Particle_I(KindReg_)%iIndex_II(iIndexCopy_I,&
+         Particle_I(KindReg_)%nParticle+1:&
+         Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
+         Particle_I(KindEnd_)%iIndex_II(iIndexCopy_I, 1:Particle_I(KindEnd_)%nParticle)
+    Particle_I(KindReg_)%nParticle = &
+         Particle_I(KindReg_)%nParticle + &
+         Particle_I(KindEnd_)%nParticle
+  end subroutine copy_end_to_regular
+
+  !========================================================================
+  subroutine get_b_dir(Xyz_D, iBlock, Dir_D)
+    use ModMain, ONLY: UseB0
+    use ModB0, ONLY: get_b0
+    ! returns the direction of magnetic field 
+    ! as well as the block used for interpolation
+    real,    intent(in) :: Xyz_D(MaxDim)
+    integer, intent(in) :: iBlock
+    real,    intent(out):: Dir_D(MaxDim)
+
+    ! magnetic field
+    real   :: B_D(MaxDim) = 0.0
+    ! interpolation data: number of cells, cell indices, weights
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    real   :: Weight_I(2**nDim)
+    integer:: iCell ! loop variable
+    integer:: i_D(MaxDim)
+    character(len=200):: StringError
+    character(len=*), parameter:: NameSub = "get_b_dir"
+    !----------------------------------------------------------------------
+    Dir_D = 0; B_D = 0
+    ! get potential part of the magnetic field at the current location
+    if(UseB0)call get_b0(Xyz_D, B_D)
+    ! get the remaining part of the magnetic field
+    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+    ! interpolate magnetic field value
+    do iCell = 1, nCell
+       i_D = 1
+       i_D(1:nDim) = iCell_II(1:nDim, iCell)
+       B_D = B_D + &
+            State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+    end do
+    if(all(B_D==0))then
+       write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
+            NameThisComp//':'//NameSub//&
+            ': trying to extract line at region with zero magnetic field'//&
+            ' at location X = ', &
+            Xyz_D(1), ' Y = ', Xyz_D(2), ' Z = ', Xyz_D(3) 
+       call CON_stop(StringError)
+    end if
+    ! normalize vector to unity
+    Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
+  end subroutine get_b_dir
 
   !========================================================================
   subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II)
@@ -618,7 +644,7 @@ contains
     integer, intent(in):: nParticleIn
     real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
     integer, intent(in):: iIndexIn_II(nIndexParticleReg, nParticleIn)
-    
+
     real   :: Xyz_D(MaxDim)
     integer:: iIndex_I(nIndexParticleReg)
     integer:: iParticle
@@ -641,24 +667,24 @@ contains
        call check_interpolate_amr_gc(Xyz_D, &
             1, & ! input block ID doesn't matter
             iProcOut, iBlockOut)
-       
-      ! check whether point is outside of the domain
-      if(iProcOut < 0)then
-         write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
-              "Point for a field line is outside of the domain: X = ",&
-              Xyz_D(1), " Y = ", Xyz_D(2), " Z = ", Xyz_D(3) 
-         call stop_mpi(NameThisComp//':'//NameSub //": "//StringError)
-      end if
 
-      ! Assign particle to an appropriate processor
-      if(iProc /= iProcOut) RETURN
+       ! check whether point is outside of the domain
+       if(iProcOut < 0)then
+          write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
+               "Point for a field line is outside of the domain: X = ",&
+               Xyz_D(1), " Y = ", Xyz_D(2), " Z = ", Xyz_D(3) 
+          call stop_mpi(NameThisComp//':'//NameSub //": "//StringError)
+       end if
 
-      Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle + 1
+       ! Assign particle to an appropriate processor
+       if(iProc /= iProcOut) RETURN
 
-      StateReg_VI(x_:z_,Particle_I(KindReg_)%nParticle) = Xyz_D
-      iIndexReg_II(fl_, Particle_I(KindReg_)%nParticle) = iIndex_I(fl_)
-      iIndexReg_II(id_, Particle_I(KindReg_)%nParticle) = iIndex_I(id_)
-      iIndexReg_II(0,   Particle_I(KindReg_)%nParticle) = iBlockOut
+       Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle + 1
+
+       StateReg_VI(x_:z_,Particle_I(KindReg_)%nParticle) = Xyz_D
+       iIndexReg_II(fl_, Particle_I(KindReg_)%nParticle) = iIndex_I(fl_)
+       iIndexReg_II(id_, Particle_I(KindReg_)%nParticle) = iIndex_I(id_)
+       iIndexReg_II(0,   Particle_I(KindReg_)%nParticle) = iBlockOut
     end do
   end subroutine add_to_particle_line
 
@@ -741,10 +767,10 @@ contains
               Weight_I(iCell)
       end do
       ! check of there is plasma at the location
-!      if(Rho==0)&
-!           call CON_stop(NameSub//&
-!           ': trying to advect particle line at region with no plasma')
-!      V_D = M_D / Rho
+      !      if(Rho==0)&
+      !           call CON_stop(NameSub//&
+      !           ': trying to advect particle line at region with no plasma')
+      !      V_D = M_D / Rho
     end subroutine get_v
   end subroutine advect_particle_line
 
