@@ -1018,8 +1018,8 @@ pro slice_data
         ', nslicemax=',nslicemax,', savemovie (y/n)=',savemovie,$
         FORMAT='(a,i4,a,i4,a,i4,a,a)'
   print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
-        ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
-        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+        ', velvector=',velvector,', $
+        FORMAT='(a,i4,a,i3,a,i3,a,i4)'
   if keyword_set(multiplot) then begin
      siz=size(multiplot)
      if siz(0) eq 0 then begin
@@ -1039,6 +1039,7 @@ pro slice_data
   if keyword_set(cut) then help,cut
   if keyword_set(velpos) then help,velpos
   velpos0=velpos
+  velspeed=0
 
   print
   help,x
