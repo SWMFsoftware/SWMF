@@ -3694,7 +3694,8 @@ pro plot_func
      !p.title="!5"+!p.title
 
      if ifunc lt nfunc-1 then begin
-        if strpos(plotmodes(ifunc+1),'over') gt 0 then begin
+        if strpos(plotmodes(ifunc+1),'over') gt 0 $
+           and not keyword_set(timetitle) then begin
            nexttitle = plottitles(ifunc+1)
            if nexttitle eq 'default' then nexttitle=funcs(ifunc+1)
            if nexttitle ne ' ' then begin
