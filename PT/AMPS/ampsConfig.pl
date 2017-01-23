@@ -1162,7 +1162,7 @@ sub ReadGeneralBlock {
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2); 
 
-            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SamplingData::RestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
           }
           
           #the user defined function that would create the output data request
