@@ -27,15 +27,15 @@ function funcdef,xx,w,func
 ;   case statement below are calculated and returned.
 ;
 ;   Expressions formed from the 
-;   1. standard variables:  rho, mx, my, mz, ux, uy, uz, uu, u, p, bx, by, bz, bb, b
+;   1. standard variables:  rho, ux, uy, uz, uu, u, p, bx, by, bz, bb, b
 ;   2. standard coordinates: x, y, z, r
 ;   3. scalar parameters: gamma, gammae, rbody, c0, mi, me, ...
 ;   4. standard IDL functions and operators
 ;   5. {names of coordinates}, {names of variables}, {names of equation parameters}
-;      Examples: {r}, {bx1}, {rbody} will be replaced with
-;                xx(*,*,0), w(*,*,10), eqpar(2)
+;      Examples: {phi}, {bx1}, {eta} will be replaced with
+;                xx(*,*,1), w(*,*,10), eqpar(2)
 ;   6. {names of functions defined in the functiondef array}
-;      Examples: {T_GM}, {Mfast}
+;      Examples: {Ti}, {Mfast}
 ;
 ; Examples for valid strings: 
 ;   '3', 'rho', '{Mfast}+ux', '-T', 'rho*ux', '{bx1}^2+{by1}^2'...
