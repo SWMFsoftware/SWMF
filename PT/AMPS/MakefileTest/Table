@@ -607,7 +607,7 @@ Compile=
 
 Check=
 >>>@echo "test_Mover-guiding-center_check..." >> test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
->>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>-${SCRIPTDIR}/DiffNum.pl -r=2.0e-5 ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-guiding-center-REF}.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>@ls -l test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 <#
