@@ -179,15 +179,16 @@ namespace PIC {
 
       // constructor
       //......................................................................
-      cDatum(int lengthIn, const char* nameIn, bool doPrintIn = true){
-	// nameIn must be in the format acceptable for printing output:
-	//   "\"var_1\", \"var_2\""
-	length = lengthIn;
-	sprintf(name, "%s", nameIn);
-	// mark as inactive by default
-	offset = -1;
-	type = Unset_;
-	doPrint= doPrintIn;
+      cDatum(int lengthIn, const char* nameIn, bool doPrintIn = true) {
+	      // nameIn must be in the format acceptable for printing output:
+	      //   "\"var_1\", \"var_2\""
+	      length = lengthIn;
+	      sprintf(name, "%s", nameIn);
+
+	      // mark as inactive by default
+	      offset = -1;
+	      type = Unset_;
+	      doPrint= doPrintIn;
       }
     };
     // class cDatum -----------------------------------------------------------
@@ -207,22 +208,26 @@ namespace PIC {
       // a storage for data info to keep track of data being sampled
       // at different buffers
       //......................................................................
-      inline bool is_active(){return offset >= 0;}
-      inline void activate(long int& offsetInOut, 
-			   vector<cDatumStored*>* DatumVector){
-	if(is_active()) 
-	  exit(__LINE__,__FILE__,
-	       "ERROR: trying to activate datum a second time");
-	// set offset to the variable
-	offset       = offsetInOut;
-	// return info about length of the variable
-	offsetInOut += length*sizeof(double);
-	// add this datum to the provided cDatum vector
-	DatumVector->push_back(this);
+      inline bool is_active() {return offset >= 0;}
+
+      inline void activate(long int& offsetInOut, vector<cDatumStored*>* DatumVector) {
+	      if(is_active()) exit(__LINE__,__FILE__,"ERROR: trying to activate datum a second time");
+
+        // set offset to the variable
+	      offset=offsetInOut;
+
+       	// return info about length of the variable
+	      offsetInOut+=length*sizeof(double);
+
+	      // add this datum to the provided cDatum vector
+	      DatumVector->push_back(this);
       }
+
       // constructor is inherited
-    cDatumStored(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatum(lengthIn, nameIn, doPrintIn){type = Stored_;}
+      cDatumStored(int lengthIn, const char* nameIn, bool doPrintIn = true) : cDatum(lengthIn, nameIn, doPrintIn) {
+        type = Stored_;
+      }
+
     };
 
     class cDatumSampled : public cDatum {
@@ -232,36 +237,42 @@ namespace PIC {
       // a storage for data info to keep track of data being sampled
       // at different buffers
       //......................................................................
-      inline bool is_active(){return offset >= 0;}
-      inline void activate(long int& offsetInOut, 
-			   vector<cDatumSampled*>* DatumVector){
-	if(is_active()) 
-	  exit(__LINE__,__FILE__,
-	       "ERROR: trying to activate datum a second time");
-	// set offset to the variable
-	offset       = offsetInOut;
-	// return info about length of the variable
-	// RESERVE SPACE FOR ALL SPECIES
-	offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
-	// add this datum to the provided cDatum vector
-	DatumVector->push_back(this);
+      inline bool is_active() {return offset >= 0;}
+
+      inline void activate(long int& offsetInOut, vector<cDatumSampled*>* DatumVector) {
+	      if(is_active()) exit(__LINE__,__FILE__,"ERROR: trying to activate datum a second time");
+
+        // set offset to the variable
+	      offset=offsetInOut;
+
+      	// return info about length of the variable
+	      // RESERVE SPACE FOR ALL SPECIES
+	      offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
+
+	      // add this datum to the provided cDatum vector
+	      DatumVector->push_back(this);
       }
+
       // constructor is inherited
-    cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatum(lengthIn, nameIn, doPrintIn){type = Sampled_;}
+      cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true) : cDatum(lengthIn, nameIn, doPrintIn) {
+        type = Sampled_;
+      }
     };
 
     class cDatumTimed : public cDatumSampled {
     public:
       // constructor is inherited as well
-    cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Timed_;}
+      cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) : cDatumSampled(lengthIn, nameIn, doPrintIn) {
+        type = Timed_;
+      }
     };
+
     class cDatumWeighted : public cDatumSampled {
     public:
       // constructor is inherited as well
-    cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Weighted_;}
+      cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) : cDatumSampled(lengthIn, nameIn, doPrintIn) {
+        type = Weighted_;
+      }
     };
     //-------------------------------------------------------------------------
 
@@ -339,230 +350,255 @@ namespace PIC {
       //neighboring vertices
       cFieldLineVertex* prev;
       cFieldLineVertex* next;
+
     public:
       long int Temp_ID;
-      cFieldLineVertex(){
-	IsSet = 0;
-	for(int idim=0; idim<DIM; idim++) x[idim]=0;
-	prev = (next = NULL);
-	Temp_ID = 0;
+
+      cFieldLineVertex() {
+	      IsSet = 0;
+
+	      for (int idim=0; idim<DIM; idim++) x[idim]=0;
+
+	      prev = (next = NULL);
+	      Temp_ID = 0;
       }
+
       //.......................................................................
       // interface with stack functionality
-      inline int AssociatedDataLength(){
-	return totalAssociatedDataLength;
+      inline int AssociatedDataLength() {
+	      return totalAssociatedDataLength;
       }
-      inline char* GetAssociatedDataBufferPointer(){
-	return AssociatedDataPointer;
-	}
-      inline void SetAssociatedDataBufferPointer(char* ptr){
-	AssociatedDataPointer=ptr;
+
+      inline char* GetAssociatedDataBufferPointer() {
+	      return AssociatedDataPointer;
       }
-      inline void cleanDataBuffer(){
+
+      inline void SetAssociatedDataBufferPointer(char* ptr) {
+	      AssociatedDataPointer=ptr;
+      }
+
+      inline void cleanDataBuffer() {
         int i,length=totalAssociatedDataLength/sizeof(double);
         double *p;
         for (i=0,p=(double*)AssociatedDataPointer;i<length;i++,p++) *p=0.0;
       }
+
       //.......................................................................
       // offset manipulation
-      inline static void SetDataOffsets(int SamplingOffset, int SampleDataLengthIn){
-	CollectingSamplingOffset = SamplingOffset;
-	CompletedSamplingOffset  = SamplingOffset +   SampleDataLengthIn;
-	totalAssociatedDataLength= SamplingOffset + 2*SampleDataLengthIn;
-	sampleDataLength         = SampleDataLengthIn;
+      inline static void SetDataOffsets(int SamplingOffset, int SampleDataLengthIn) {
+	      CollectingSamplingOffset = SamplingOffset;
+	      CompletedSamplingOffset  = SamplingOffset +   SampleDataLengthIn;
+	      totalAssociatedDataLength= SamplingOffset + 2*SampleDataLengthIn;
+	      sampleDataLength         = SampleDataLengthIn;
       }
-      inline void flushCompletedSamplingBuffer(){
-	int i,length=sampleDataLength/sizeof(double);
-	double *ptr;
-	for(i=0,ptr=(double*)(AssociatedDataPointer+CompletedSamplingOffset);
-	    i<length;i++,ptr++) *ptr=0.0;
+
+      inline void flushCompletedSamplingBuffer() {
+	      int i,length=sampleDataLength/sizeof(double);
+	      double *ptr;
+
+	      for(i=0,ptr=(double*)(AssociatedDataPointer+CompletedSamplingOffset);i<length;i++,ptr++) *ptr=0.0;
       }
-      inline void flushCollectingSamplingBuffer(){
-	int i,length=sampleDataLength/sizeof(double);
-	double *ptr;
-	for(i=0,ptr=(double*)(AssociatedDataPointer+CollectingSamplingOffset);
-	    i<length;i++,ptr++) *ptr=0.0;
+
+      inline void flushCollectingSamplingBuffer() {
+	      int i,length=sampleDataLength/sizeof(double);
+	      double *ptr;
+
+	      for(i=0,ptr=(double*)(AssociatedDataPointer+CollectingSamplingOffset);i<length;i++,ptr++) *ptr=0.0;
       }
-      inline static void swapSamplingBuffers(){
-	int tempOffset = CollectingSamplingOffset;
-	CollectingSamplingOffset = CompletedSamplingOffset;
-	CompletedSamplingOffset = tempOffset;
+
+      inline static void swapSamplingBuffers() {
+	      int tempOffset = CollectingSamplingOffset;
+	      CollectingSamplingOffset = CompletedSamplingOffset;
+	      CompletedSamplingOffset = tempOffset;
       }
+
       //.......................................................................
       //check status of vertex
-      inline int status(){
-	if(IsSet == 0)                   return Unset_;
-	if(prev == NULL && next == NULL) return Hanging_;
-	return OK_;
+      inline int status() {
+	      if (IsSet == 0) return Unset_;
+        if (prev == NULL && next == NULL) return Hanging_;
+	      return OK_;
       }
+
       //.......................................................................
       //status of vertex as a string
-      inline void status(char* res){
-	if(IsSet == 0)                  {sprintf(res,"%s","Unset");  return;}
-	if(prev == NULL && next == NULL){sprintf(res,"%s","Hanging");return;}
-	sprintf(res,"%s","OK"); return;
+      inline void status(char* res) {
+	      if (IsSet == 0)                  {sprintf(res,"%s","Unset");  return;}
+	      if (prev == NULL && next == NULL){sprintf(res,"%s","Hanging");return;}
+	      sprintf(res,"%s","OK"); return;
       }
+
       //.......................................................................
       //access to coordinates
-      inline void SetX(double* xIn){
-	IsSet = 1;
-	for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];}
-      inline void GetX(double* xOut){
-	for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];}
+      inline void SetX(double* xIn) {
+	      IsSet = 1;
+	      for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];
+      }
+
+      inline void GetX(double* xOut) {
+	      for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];
+      }
+
       //.......................................................................
       //set individual stored variables
-      inline void SetDatum(cDatumStored Datum, double* In){
-	memcpy(AssociatedDataPointer+Datum.offset, In, 
-	       Datum.length * sizeof(double));
+      inline void SetDatum(cDatumStored Datum, double* In) {
+	      memcpy(AssociatedDataPointer+Datum.offset, In, Datum.length * sizeof(double));
       }
-      inline void SetDatum(cDatumStored Datum, double In){
-	memcpy(AssociatedDataPointer+Datum.offset, &In, sizeof(double));
+
+      inline void SetDatum(cDatumStored Datum, double In) {
+	      memcpy(AssociatedDataPointer+Datum.offset, &In, sizeof(double));
       }
-      inline void SetElectricField(double* ElectricFieldIn){
-	SetDatum(DatumAtVertexElectricField, ElectricFieldIn);}
-      inline void SetMagneticField(double* MagneticFieldIn){
-	SetDatum(DatumAtVertexMagneticField, MagneticFieldIn);}
-      inline void SetPlasmaVelocity(double* PlasmaVelocityIn){
-	SetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityIn);}
-      inline void SetPlasmaDensity(double  PlasmaDensityIn){
-	SetDatum(DatumAtVertexPlasmaDensity, PlasmaDensityIn);}
-      inline void SetPlasmaTemperature(double  PlasmaTemperatureIn){
-	SetDatum(DatumAtVertexPlasmaTemperature, PlasmaTemperatureIn);}
-      inline void SetPlasmaPressure(double  PlasmaPressureIn){
-	SetDatum(DatumAtVertexPlasmaPressure, PlasmaPressureIn);}
+
+      inline void SetElectricField(double* ElectricFieldIn) {
+	      SetDatum(DatumAtVertexElectricField, ElectricFieldIn);
+      }
+
+      inline void SetMagneticField(double* MagneticFieldIn) {
+	      SetDatum(DatumAtVertexMagneticField, MagneticFieldIn);
+      }
+
+      inline void SetPlasmaVelocity(double* PlasmaVelocityIn) {
+	      SetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityIn);
+      }
+
+      inline void SetPlasmaDensity(double  PlasmaDensityIn) {
+	      SetDatum(DatumAtVertexPlasmaDensity, PlasmaDensityIn);
+      }
+
+      inline void SetPlasmaTemperature(double  PlasmaTemperatureIn) {
+	      SetDatum(DatumAtVertexPlasmaTemperature, PlasmaTemperatureIn);
+      }
+
+      inline void SetPlasmaPressure(double  PlasmaPressureIn) {
+	      SetDatum(DatumAtVertexPlasmaPressure, PlasmaPressureIn);
+      }
+
       //.......................................................................
       //set individual sampled variables
-      inline void SetDatum(cDatumSampled Datum, double* In, int spec){
-	memcpy(AssociatedDataPointer + CompletedSamplingOffset +
-	       Datum.offset + Datum.length * spec * sizeof(double),
-	       In, Datum.length * sizeof(double));
+      inline void SetDatum(cDatumSampled Datum, double* In, int spec) {
+	      memcpy(AssociatedDataPointer + CompletedSamplingOffset + Datum.offset + Datum.length * spec * sizeof(double),In, Datum.length * sizeof(double));
       }
-      inline void SetDatum(cDatumSampled Datum, double In, int spec){
-	memcpy(AssociatedDataPointer + CompletedSamplingOffset +
-	       Datum.offset + Datum.length * spec * sizeof(double),
-	       &In, sizeof(double));
+
+      inline void SetDatum(cDatumSampled Datum, double In, int spec) {
+	      memcpy(AssociatedDataPointer + CompletedSamplingOffset + Datum.offset + Datum.length * spec * sizeof(double),&In, sizeof(double));
       }
+
       //.......................................................................
       // sample data
-      inline void SampleDatum(PIC::Datum::cDatumSampled Datum,
-                              double* In, int spec, double weight=1.0){
-        for(int i=0; i<Datum.length; i++)
-          *(i + Datum.length * spec +
-            (double*)(AssociatedDataPointer +
-                      CollectingSamplingOffset+
-                      Datum.offset))+= In[i] * weight;
+      inline void SampleDatum(PIC::Datum::cDatumSampled Datum,double* In, int spec, double weight=1.0) {
+        for(int i=0; i<Datum.length; i++)  *(i + Datum.length * spec + (double*)(AssociatedDataPointer + CollectingSamplingOffset+Datum.offset))+= In[i] * weight;
       }
-      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec,
-                              double weight=1.0){
-        *(spec +
-          (double*)(AssociatedDataPointer +
-                    CollectingSamplingOffset+
-                    Datum.offset))+= In * weight;
+
+      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec,double weight=1.0) {
+        *(spec + (double*)(AssociatedDataPointer + CollectingSamplingOffset+Datum.offset))+= In * weight;
       }
+
       //.......................................................................
       //get individual stored variables
-      inline void GetDatum(cDatumStored Datum, double* Out){
-	memcpy(Out, AssociatedDataPointer+Datum.offset,
-	       Datum.length * sizeof(double));
+      inline void GetDatum(cDatumStored Datum, double* Out) {
+	       memcpy(Out, AssociatedDataPointer+Datum.offset, Datum.length * sizeof(double));
       }
-      inline void GetDatum(cDatumStored Datum, double& Out){
-	Out = *(double*)(AssociatedDataPointer+Datum.offset);
+
+      inline void GetDatum(cDatumStored Datum, double& Out) {
+        Out = *(double*)(AssociatedDataPointer+Datum.offset);
       }
-      inline void GetElectricField(double* ElectricFieldOut){
-	GetDatum(DatumAtVertexElectricField, ElectricFieldOut);}
-      inline void GetMagneticField(double* MagneticFieldOut){
-	GetDatum(DatumAtVertexMagneticField, MagneticFieldOut);}
-      inline void GetPlasmaVelocity(double* PlasmaVelocityOut){
-	GetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityOut);}
-      inline void GetPlasmaDensity(double& PlasmaDensityOut){
-	GetDatum(DatumAtVertexPlasmaDensity, &PlasmaDensityOut);}
-      inline void GetPlasmaTemperature(double& PlasmaTemperatureOut){
-	GetDatum(DatumAtVertexPlasmaTemperature, &PlasmaTemperatureOut);}
-      inline void GetPlasmaPressure(double& PlasmaPressureOut){
-	GetDatum(DatumAtVertexPlasmaPressure, &PlasmaPressureOut);}
+
+      inline void GetElectricField(double* ElectricFieldOut) {
+	      GetDatum(DatumAtVertexElectricField, ElectricFieldOut);
+      }
+
+      inline void GetMagneticField(double* MagneticFieldOut) {
+	      GetDatum(DatumAtVertexMagneticField, MagneticFieldOut);
+      }
+
+      inline void GetPlasmaVelocity(double* PlasmaVelocityOut) {
+	      GetDatum(DatumAtVertexPlasmaVelocity, PlasmaVelocityOut);
+      }
+
+      inline void GetPlasmaDensity(double& PlasmaDensityOut) {
+	      GetDatum(DatumAtVertexPlasmaDensity, &PlasmaDensityOut);
+      }
+
+      inline void GetPlasmaTemperature(double& PlasmaTemperatureOut) {
+	      GetDatum(DatumAtVertexPlasmaTemperature, &PlasmaTemperatureOut);
+      }
+
+      inline void GetPlasmaPressure(double& PlasmaPressureOut) {
+	      GetDatum(DatumAtVertexPlasmaPressure, &PlasmaPressureOut);
+      }
+
       //get accumulated data
       //.......................................................................
-      inline void GetDatumCumulative(Datum::cDatumSampled Datum, 
-				     double* Out, int spec){
-	for(int i=0; i<Datum.length; i++)
-	  Out[i] = *(i + Datum.length * spec + 
-		     (double*)(AssociatedDataPointer + 
-			       CompletedSamplingOffset+
-			       Datum.offset));
+      inline void GetDatumCumulative(Datum::cDatumSampled Datum, double* Out, int spec) {
+	      for (int i=0; i<Datum.length; i++) Out[i] = *(i + Datum.length * spec + (double*)(AssociatedDataPointer + CompletedSamplingOffset+Datum.offset));
       }
-      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec){
-	return *(spec + 
-		 (double*)(AssociatedDataPointer + 
-			   CompletedSamplingOffset+
-			   Datum.offset));
+
+      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec) {
+	      return *(spec + (double*)(AssociatedDataPointer + CompletedSamplingOffset+Datum.offset));
       }
+
       //get data averaged over time
       //.......................................................................
-      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec){
-	if(PIC::LastSampleLength > 0)
-	  for(int i=0; i<Datum.length; i++)
-	    Out[i] = *(i + Datum.length * spec + 
-		       (double*)(AssociatedDataPointer + 
-				 CompletedSamplingOffset+
-				 Datum.offset)) / PIC::LastSampleLength;
-	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec) {
+	      if (PIC::LastSampleLength > 0) {
+	        for (int i=0; i<Datum.length; i++) Out[i] = *(i + Datum.length * spec + (double*)(AssociatedDataPointer + CompletedSamplingOffset+Datum.offset)) / PIC::LastSampleLength;
+	      }
+	      else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
       }
-      inline double GetDatumAverage(cDatumTimed Datum, int spec){
-	if(PIC::LastSampleLength > 0)
-	  return *(spec + 
-		   (double*)(AssociatedDataPointer + 
-			     CompletedSamplingOffset+
-			     Datum.offset)) / PIC::LastSampleLength;
-	else return 0.0;
+
+      inline double GetDatumAverage(cDatumTimed Datum, int spec) {
+	      return (PIC::LastSampleLength > 0) ? *(spec + (double*)(AssociatedDataPointer + CompletedSamplingOffset+Datum.offset)) / PIC::LastSampleLength : 0.0;
       }
+
       //get data averaged over sampled weight
       //.......................................................................
-      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec){
-	double TotalWeight=0.0;
-	GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
-	if(TotalWeight > 0)
-	  for(int i=0; i<Datum.length; i++)
-	    Out[i] = *(i + Datum.length * spec +
-		       (double*)(AssociatedDataPointer + 
-				 CompletedSamplingOffset+
-				 Datum.offset)) / TotalWeight;
-	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec) {
+	      double TotalWeight=0.0;
+
+	      GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
+
+	      if(TotalWeight > 0) for(int i=0; i<Datum.length; i++) Out[i] = *(i + Datum.length * spec + (double*)(AssociatedDataPointer + CompletedSamplingOffset+ Datum.offset)) / TotalWeight;
+	      else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
       }
-      inline double GetDatumAverage(cDatumWeighted Datum, int spec){
-	double TotalWeight=0.0;
-	GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
-	if(TotalWeight > 0)
-	  return *(spec +
-		   (double*)(AssociatedDataPointer + 
-			     CompletedSamplingOffset+
-			     Datum.offset)) / TotalWeight;
-	else return 0.0;
+
+      inline double GetDatumAverage(cDatumWeighted Datum, int spec) {
+	      double TotalWeight=0.0;
+
+	      GetDatumCumulative(DatumAtVertexParticleWeight, &TotalWeight, spec);
+
+	      return (TotalWeight > 0) ? *(spec +(double*)(AssociatedDataPointer + CompletedSamplingOffset+Datum.offset)) / TotalWeight : 0.0;
       }
+
       //.......................................................................
       //access to neighbors
-      inline void SetPrev(cFieldLineVertex* prevIn){prev=prevIn;}
-      inline void SetNext(cFieldLineVertex* nextIn){next=nextIn;}
-      inline void GetPrev(cFieldLineVertex* prevOut){prevOut=prev;}
-      inline void GetNext(cFieldLineVertex* nextOut){nextOut=next;}
-      inline cFieldLineVertex* GetPrev(){return prev;}
-      inline cFieldLineVertex* GetNext(){return next;}
+      inline void SetPrev(cFieldLineVertex* prevIn) {prev=prevIn;}
+      inline void SetNext(cFieldLineVertex* nextIn) {next=nextIn;}
+      inline void GetPrev(cFieldLineVertex* prevOut) {prevOut=prev;}
+      inline void GetNext(cFieldLineVertex* nextOut) {nextOut=next;}
+      inline cFieldLineVertex* GetPrev() {return prev;}
+      inline cFieldLineVertex* GetNext() {return next;}
     };
-    //class cFieldLineVertex --------------------------------------------------
 
+    //class cFieldLineVertex --------------------------------------------------
     class cFieldLineSegment{
     private:
       //flag segment has been set (i.e. both vertices are set)
       char IsSet;
+
       //length of this segment
       double length;
+
       // weight of the segment for each species,
       // needed for injection of particles
       double weight[PIC::nTotalSpecies];
+
       //direction of this segment
       double Dir[DIM];
+
       //neighboring segments
       cFieldLineSegment* prev;
       cFieldLineSegment* next;
+
       //segment's vertices
       cFieldLineVertex* begin;
       cFieldLineVertex* end;
@@ -570,82 +606,100 @@ namespace PIC {
       long int Temp_ID;
 
       cFieldLineSegment(){
-	Temp_ID = 0;
-	IsSet=0, length=0.0;
-	prev  = (next = NULL);
-	begin = (end  = NULL);
+	      Temp_ID = 0;
+	      IsSet=0, length=0.0;
+	      prev  = (next = NULL);
+	      begin = (end  = NULL);
       }
+
       //.......................................................................
       // interface with stack functionality
       inline void cleanDataBuffer(){}
       inline int AssociatedDataLength(){return 0;}
       inline char* GetAssociatedDataBufferPointer(){return NULL;}
       inline void SetAssociatedDataBufferPointer(char* ptr){}
+
       //.......................................................................
       //check status of segment
-      inline int status(){
-	if(IsSet == 0)                return Unset_;
-	if(prev==NULL && next==NULL)  return Hanging_;
-	if(begin==end || length==0.0) return Collapsed_;
-	if(length < 0.0)              return Error_;	
-	return OK_;
+      inline int status() {
+	      if (IsSet == 0)                return Unset_;
+	      if (prev==NULL && next==NULL)  return Hanging_;
+	      if (begin==end || length==0.0) return Collapsed_;
+	      if (length < 0.0)              return Error_;
+	      return OK_;
       }
+
       //.......................................................................
       //status of segment as string
-      inline void status(char* res){
-	if(IsSet == 0)               {sprintf(res,"%s","Unset");    return;}
-	if(prev==NULL && next==NULL) {sprintf(res,"%s","Hanging");  return;}
-	if(begin==end || length==0.0){sprintf(res,"%s","Collapsed");return;}
-	if(length < 0.0)             {sprintf(res,"%s","Error");    return;}
-	sprintf(res,"%s","OK"); return;
+      inline void status(char* res) {
+	      if (IsSet == 0)               {sprintf(res,"%s","Unset");    return;}
+	      if (prev==NULL && next==NULL) {sprintf(res,"%s","Hanging");  return;}
+	      if (begin==end || length==0.0){sprintf(res,"%s","Collapsed");return;}
+	      if (length < 0.0)             {sprintf(res,"%s","Error");    return;}
+	      sprintf(res,"%s","OK"); return;
       }
+
       //.......................................................................
       //set the segment
-      inline void SetVertices(cFieldLineVertex* beginIn,
-			      cFieldLineVertex* endIn){
+      inline void SetVertices(cFieldLineVertex* beginIn,cFieldLineVertex* endIn) {
+
         #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-	if(beginIn->status() != OK_ || endIn->status() != OK_){
-	  char msg[600];
-	  char statusBegin[10],statusEnd[10];
-	  beginIn->status(statusBegin), endIn->status(statusEnd); 
-	  sprintf(msg,"ERROR:: trying to set a segment with invalid vertices, beginIn->status()=%s, endIn->status()=%s",
-		  statusBegin, statusEnd);
-	  exit(__LINE__,__FILE__, msg);
-	}
+	      if (beginIn->status() != OK_ || endIn->status() != OK_) {
+	        char msg[600];
+	        char statusBegin[10],statusEnd[10];
+
+	        beginIn->status(statusBegin), endIn->status(statusEnd);
+	        sprintf(msg,"ERROR:: trying to set a segment with invalid vertices, beginIn->status()=%s, endIn->status()=%s",statusBegin, statusEnd);
+	        exit(__LINE__,__FILE__, msg);
+	      }
         #endif//_PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-	IsSet=1;
-	if(beginIn!=NULL) begin = beginIn;
-	if(endIn  !=NULL) end   = endIn;  
-	double xBegin[DIM], xEnd[DIM];
-	length = 0.0;
-	if(begin!=NULL && end!=NULL){
-	  begin->GetX(xBegin); end->GetX(xEnd);
-	  for(int idim=0; idim<DIM; idim++){
-	    Dir[idim] = xEnd[idim]-xBegin[idim];
-	    length   += pow(Dir[idim], 2);
-	  }
-	  length = sqrt(length);
-	  Dir[0]/= length; Dir[1]/= length; Dir[2]/= length;
-	}
-	else IsSet = 0;
+
+	      IsSet=1;
+	      if (beginIn!=NULL) begin = beginIn;
+	      if (endIn  !=NULL) end   = endIn;
+
+	      double xBegin[DIM], xEnd[DIM];
+
+	      length = 0.0;
+
+	      if (begin!=NULL && end!=NULL) {
+	        begin->GetX(xBegin); end->GetX(xEnd);
+
+	        for(int idim=0; idim<DIM; idim++) {
+	          Dir[idim] = xEnd[idim]-xBegin[idim];
+	          length   += pow(Dir[idim], 2);
+	        }
+
+	        length = sqrt(length);
+	        Dir[0]/= length; Dir[1]/= length; Dir[2]/= length;
+	      }
+	      else IsSet = 0;
       }
+
       //.......................................................................
       //access segment's vertices
-      inline void GetBegin(cFieldLineVertex* beginOut){beginOut = begin;}
-      inline void GetEnd(  cFieldLineVertex* endOut  ){endOut   = end;}
-      inline cFieldLineVertex* GetBegin(){return begin;}
-      inline cFieldLineVertex* GetEnd(){  return end;}
+      inline void GetBegin(cFieldLineVertex* beginOut) {beginOut = begin;}
+      inline void GetEnd(  cFieldLineVertex* endOut  ) {endOut   = end;}
+      inline cFieldLineVertex* GetBegin() {return begin;}
+      inline cFieldLineVertex* GetEnd() {return end;}
+
       //.......................................................................
       //access segment's length and and directoon at its beginning
-      inline double GetLength(){return length;}
-      inline void GetDir(double* DirOut){memcpy(DirOut,Dir,DIM*sizeof(double));}
+      inline double GetLength() {return length;}
+      inline void GetDir(double* DirOut) {memcpy(DirOut,Dir,DIM*sizeof(double));}
+
       //.......................................................................
       //access segment's statistical weight
-      inline double GetWeight(int spec){return weight[spec];}
-      inline void   SetWeight(double* weightIn){
-	memcpy(weight, weightIn, PIC::nTotalSpecies*sizeof(double));}
-      inline void   SetWeight(double weightIn, int spec){
-	weight[spec] = weightIn;}
+      inline double GetWeight(int spec) {return weight[spec];}
+
+      inline void   SetWeight(double* weightIn) {
+	      memcpy(weight, weightIn, PIC::nTotalSpecies*sizeof(double));
+      }
+
+      inline void   SetWeight(double weightIn, int spec) {
+	      weight[spec] = weightIn;
+      }
+
       //.......................................................................
       //access segment's neighbors
       inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
@@ -654,47 +708,71 @@ namespace PIC {
       inline void GetNext(cFieldLineSegment* nextOut){nextOut = next;}
       inline cFieldLineSegment* GetPrev(){return prev;}
       inline cFieldLineSegment* GetNext(){return next;}
+
       //.......................................................................
       //interpolate individual variables from vertices to point on the segment
-      inline void GetElectricField(double  S, //position 0<=s<=1 on the segment
-				   double* ElectricFieldOut){
-	double tBegin[DIM], tEnd[DIM];
-	begin->GetElectricField( tBegin), end->GetElectricField(tEnd);
-	for(int idim=0; idim<DIM; idim++){
-	  ElectricFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
-      inline void GetMagneticField(double  S, //position 0<=s<=1 on the segment
-				   double* MagneticFieldOut){
-	double tBegin[DIM], tEnd[DIM];
-	begin->GetMagneticField( tBegin), end->GetMagneticField(tEnd);
-	for(int idim=0; idim<DIM; idim++){
-	  MagneticFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
-      inline void GetPlasmaVelocity(double  S, //position 0<=s<=1 on segment
-				    double* PlasmaVelocityOut){
-	double tBegin[DIM], tEnd[DIM];
-	begin->GetPlasmaVelocity(tBegin), end->GetPlasmaVelocity(tEnd);
-	for(int idim=0; idim<DIM; idim++){
-	  PlasmaVelocityOut[idim] = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
-      inline void GetPlasmaDensity(double  S, //position 0<=s<=1 on the segment
-				   double& PlasmaDensityOut){
-	double tBegin, tEnd;
-	//plasma density
-	begin->GetPlasmaDensity(tBegin), end->GetPlasmaDensity(tEnd);
-	PlasmaDensityOut = tBegin * (1 - S) + tEnd * S;}
-      inline void GetPlasmaTemperature(double  S, //position 0<=s<=1 on segment
-				       double& PlasmaTemperatureOut){
-	double tBegin, tEnd;
-	//plasma temperature
-	begin->GetPlasmaTemperature(tBegin), end->GetPlasmaTemperature(tEnd);
-	PlasmaTemperatureOut = tBegin * (1 - S) + tEnd * S;}
-      inline void GetPlasmaPressure(double  S, //position 0<=s<=1 on segment
-				    double& PlasmaPressureOut){
-	double tBegin, tEnd;
-	//plasma pressure
-	begin->GetPlasmaPressure(tBegin), end->GetPlasmaPressure(tEnd);
-	PlasmaPressureOut = tBegin * (1 - S) + tEnd * S;}
-    };
-    //class cFieldLineSegment -------------------------------------------------
+      //position 0<=s<=1 on the segment
+      inline void GetElectricField(double  S, double* ElectricFieldOut) {
+	      double tBegin[DIM], tEnd[DIM];
 
+	      begin->GetElectricField( tBegin), end->GetElectricField(tEnd);
+
+	      for (int idim=0; idim<DIM; idim++) {
+	        ElectricFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;
+	      }
+      }
+
+      //position 0<=s<=1 on the segment
+      inline void GetMagneticField(double  S, double* MagneticFieldOut) {
+	      double tBegin[DIM], tEnd[DIM];
+
+	      begin->GetMagneticField( tBegin), end->GetMagneticField(tEnd);
+
+	      for (int idim=0; idim<DIM; idim++) {
+	        MagneticFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;
+	      }
+      }
+
+      //position 0<=s<=1 on segment
+      inline void GetPlasmaVelocity(double  S, double* PlasmaVelocityOut) {
+	      double tBegin[DIM], tEnd[DIM];
+
+	      begin->GetPlasmaVelocity(tBegin), end->GetPlasmaVelocity(tEnd);
+
+	      for(int idim=0; idim<DIM; idim++) {
+	        PlasmaVelocityOut[idim] = tBegin[idim] * (1 - S) + tEnd[idim] * S;
+	      }
+      }
+
+      //position 0<=s<=1 on the segment
+      inline void GetPlasmaDensity(double  S, double& PlasmaDensityOut) {
+	      double tBegin, tEnd;
+
+	      //plasma density
+	      begin->GetPlasmaDensity(tBegin), end->GetPlasmaDensity(tEnd);
+	      PlasmaDensityOut = tBegin * (1 - S) + tEnd * S;
+      }
+
+      //position 0<=s<=1 on segment
+      inline void GetPlasmaTemperature(double  S, double& PlasmaTemperatureOut) {
+	      double tBegin, tEnd;
+
+	      //plasma temperature
+	      begin->GetPlasmaTemperature(tBegin), end->GetPlasmaTemperature(tEnd);
+	      PlasmaTemperatureOut = tBegin * (1 - S) + tEnd * S;
+      }
+
+      //position 0<=s<=1 on segment
+      inline void GetPlasmaPressure(double  S, double& PlasmaPressureOut) {
+	      double tBegin, tEnd;
+
+	      //plasma pressure
+	      begin->GetPlasmaPressure(tBegin), end->GetPlasmaPressure(tEnd);
+	      PlasmaPressureOut = tBegin * (1 - S) + tEnd * S;
+      }
+    };
+
+    //class cFieldLineSegment -------------------------------------------------
     class cFieldLine {
     private:
       //flag whether line has been set (1 or more valid segments)
@@ -712,104 +790,112 @@ namespace PIC {
       bool is_broken();
     public:
 
-      cFieldLine(){
-	IsSet = 0, nSegment = -1, TotalLength=-1.0;
-	FirstSegment = (LastSegment = NULL);
-	FirstVertex  = (LastVertex  = NULL);
+      cFieldLine() {
+	      IsSet = 0, nSegment = -1, TotalLength=-1.0;
+	      FirstSegment = (LastSegment = NULL);
+	      FirstVertex  = (LastVertex  = NULL);
       }
 
       //check status of line
-      inline int status(){
-	if(IsSet == 0)                       return Unset_;
-	if(is_broken())                      return Broken_;
-	if(TotalLength < 0.0 || nSegment < 0)return Error_;	
-	return OK_;
+      inline int status() {
+	      if (IsSet == 0)                       return Unset_;
+	      if (is_broken())                      return Broken_;
+	      if (TotalLength < 0.0 || nSegment < 0)return Error_;
+	      return OK_;
       }
 
       //status of segment as string
-      inline void status(char* res){
-	if(IsSet == 0)                   {sprintf(res,"%s","Unset"); return;}
-	if(is_broken())                  {sprintf(res,"%s","Broken");return;}
-	if(TotalLength<0.0 || nSegment<0){sprintf(res,"%s","Error"); return;}
-	sprintf(res,"%s","OK"); return;
+      inline void status(char* res) {
+	      if(IsSet == 0)                   {sprintf(res,"%s","Unset"); return;}
+	      if(is_broken())                  {sprintf(res,"%s","Broken");return;}
+	      if(TotalLength<0.0 || nSegment<0){sprintf(res,"%s","Error"); return;}
+	      sprintf(res,"%s","OK"); return;
       }
 
       //check whether the line is a loop
-      inline void close_loop(){
-	VerticesAll.deleteElement(LastVertex);
-	LastVertex = FirstVertex;
-	LastVertex->SetPrev(LastSegment->GetBegin());
-	LastSegment->GetBegin()->SetNext(LastVertex);
-	TotalLength -= LastSegment->GetLength();
-	LastSegment->SetVertices(LastSegment->GetBegin(), LastVertex);
-	TotalLength += LastSegment->GetLength();
-	LastSegment->SetNext(FirstSegment);
-	FirstSegment->SetPrev(LastSegment);
+      inline void close_loop() {
+	      VerticesAll.deleteElement(LastVertex);
+
+	      LastVertex = FirstVertex;
+	      LastVertex->SetPrev(LastSegment->GetBegin());
+	      LastSegment->GetBegin()->SetNext(LastVertex);
+	      TotalLength -= LastSegment->GetLength();
+	      LastSegment->SetVertices(LastSegment->GetBegin(), LastVertex);
+	      TotalLength += LastSegment->GetLength();
+	      LastSegment->SetNext(FirstSegment);
+	      FirstSegment->SetPrev(LastSegment);
       }
-      inline bool is_loop(){return LastVertex==FirstVertex;}
-      inline void fix_coord(double& Coord){
-	while(Coord < 0)       Coord += nSegment;
-	while(Coord >=nSegment)Coord -= nSegment;
+
+      inline bool is_loop() {return LastVertex==FirstVertex;}
+
+      inline void fix_coord(double& Coord) {
+	      while(Coord < 0)       Coord += nSegment;
+	      while(Coord >=nSegment)Coord -= nSegment;
       }
-      inline double move(double SInit, double Increment){
-	double res = SInit;
-	cFieldLineSegment *Segment = GetSegment(SInit);
-	double Length = Segment->GetLength();
-	double remain;
-	if(Increment>0) {
-	  remain = (int)(SInit+1) - SInit;
-	  for(Segment = GetSegment(SInit);
-	      true;
-	      Segment = Segment->GetNext()){
-	    Length = Segment->GetLength();
-	    if(Increment < remain*Length){
-	      res += Increment / Length;
-	      break;
-	    }
-	    Increment -= remain*Length;
-	    res += remain;
-	    remain = 1.0;
-	  }
-	}
-	else {
-	  remain = SInit - (int)(SInit) ;
-	  for(Segment = GetSegment(SInit);
-	      true;
-	      Segment = Segment->GetPrev()){
-	    Length = Segment->GetLength();
-	    if(-Increment < remain*Length){
-	      res += Increment / Length;
-	      break;
-	    }
-	    Increment += remain*Length;
-	    res -= remain;
-	    remain = 1.0;
-	  }
-	}
-	return res;
+
+      inline double move(double SInit, double Increment) {
+	      double res = SInit;
+	      cFieldLineSegment *Segment = GetSegment(SInit);
+	      double Length = Segment->GetLength();
+	      double remain;
+
+	      if (Increment>0) {
+	        remain = (int)(SInit+1) - SInit;
+
+	        for (Segment = GetSegment(SInit); true; Segment = Segment->GetNext()) {
+	          Length = Segment->GetLength();
+
+	          if (Increment < remain*Length) {
+	            res += Increment / Length;
+	            break;
+	          }
+
+	          Increment -= remain*Length;
+	          res += remain;
+	          remain = 1.0;
+	        }
+	      }
+	      else {
+	        remain = SInit - (int)(SInit) ;
+
+	        for (Segment = GetSegment(SInit);true; Segment = Segment->GetPrev()) {
+	          Length = Segment->GetLength();
+
+	          if (-Increment < remain*Length) {
+	            res += Increment / Length;
+	            break;
+	          }
+
+	          Increment += remain*Length;
+	          res -= remain;
+	          remain = 1.0;
+	        }
+	      }
+
+	      return res;
       }
+
       // Segment access
       //-----------------------------------------------------------------------
       //access first/last segment
-      inline cFieldLineSegment* GetFirstSegment(){return FirstSegment;}
-      inline cFieldLineSegment* GetLastSegment(){ return LastSegment;}
-      inline void GetFirstSegment(cFieldLineSegment* Out){Out=FirstSegment;}
-      inline void GetLastSegment( cFieldLineSegment* Out){Out=LastSegment;}
+      inline cFieldLineSegment* GetFirstSegment() {return FirstSegment;}
+      inline cFieldLineSegment* GetLastSegment() { return LastSegment;}
+      inline void GetFirstSegment(cFieldLineSegment* Out) {Out=FirstSegment;}
+      inline void GetLastSegment( cFieldLineSegment* Out) {Out=LastSegment;}
 
       //access an arbitrary segment
-      inline cFieldLineSegment* GetSegment(int iSegment){
-	cFieldLineSegment* Segment=NULL;
+      inline cFieldLineSegment* GetSegment(int iSegment) {
+	      cFieldLineSegment* Segment=NULL;
 
-	if (iSegment > 0.5*nSegment && iSegment < nSegment){
+	      if (iSegment > 0.5*nSegment && iSegment < nSegment) {
           Segment = LastSegment;
-          for(int i=nSegment-1; i > iSegment; i--)
-	    Segment = Segment->GetPrev();
+
+          for(int i=nSegment-1; i > iSegment; i--) Segment = Segment->GetPrev();
         }
 
-        if (iSegment >= 0){
+        if (iSegment >= 0) {
           Segment = FirstSegment;
-          for(int i=0; i < iSegment; i++)
-            Segment = Segment->GetNext();
+          for(int i=0; i < iSegment; i++) Segment = Segment->GetNext();
         }
 
         if (Segment==NULL) exit(__LINE__,__FILE__, "ERROR: invalid index of a segment");
@@ -817,10 +903,10 @@ namespace PIC {
         return Segment;
       }
 
-      inline cFieldLineSegment* GetSegment(double S){
+      inline cFieldLineSegment* GetSegment(double S) {
         // check correctness
-        if(S < 0.0 || S > nSegment)
-          return NULL;
+        if(S < 0.0 || S > nSegment) return NULL;
+
         //  floor(S) is the index of the segment
         int iSegment = (int) S;
         return GetSegment(iSegment);
@@ -838,34 +924,39 @@ namespace PIC {
       // Vertex access
       //-----------------------------------------------------------------------
       // access first/last vertex
-      inline cFieldLineVertex* GetFirstVertex(){return FirstVertex;}
-      inline cFieldLineVertex* GetLastVertex(){ return LastVertex;}
-      inline void GetFirstVertex(cFieldLineVertex* Out){Out=FirstVertex;}
-      inline void GetLastVertex( cFieldLineVertex* Out){Out=LastVertex;}
+      inline cFieldLineVertex* GetFirstVertex() {return FirstVertex;}
+      inline cFieldLineVertex* GetLastVertex() {return LastVertex;}
+      inline void GetFirstVertex(cFieldLineVertex* Out) {Out=FirstVertex;}
+      inline void GetLastVertex( cFieldLineVertex* Out) {Out=LastVertex;}
+
       // access an arbitrary vertex
-      inline cFieldLineVertex* GetVertex(int iVertex){
+      inline cFieldLineVertex* GetVertex(int iVertex) {
         cFieldLineVertex* Vertex;
-        if(iVertex > 0.5*nSegment && iVertex <= nSegment){
+
+        if(iVertex > 0.5*nSegment && iVertex <= nSegment) {
           Vertex = LastVertex;
-          for(int i=nSegment; i > iVertex; i--)
-            Vertex = Vertex->GetPrev();
+
+          for(int i=nSegment; i > iVertex; i--) Vertex = Vertex->GetPrev();
           return Vertex;
         }
-        if(iVertex >= 0){
+
+        if(iVertex >= 0) {
           Vertex = FirstVertex;
-          for(int i=0; i < iVertex; i++)
-            Vertex = Vertex->GetNext();
+
+          for(int i=0; i < iVertex; i++) Vertex = Vertex->GetNext();
           return Vertex;
         }
+
         exit(__LINE__,__FILE__, "ERROR: invalid index of a vertex");
       }
-      //-----------------------------------------------------------------------
 
+      //-----------------------------------------------------------------------
       //get cartesian coordinats of the location
-      inline void GetCartesian(double* xOut, double S){
+      inline void GetCartesian(double* xOut, double S) {
         cFieldLineSegment* Segment = GetSegment(S);
         double w = S - (int)S;
         double xBegin[3], xEnd[3];
+
         Segment->GetBegin()->GetX(xBegin);
         Segment->GetEnd()  ->GetX(xEnd);
         for(int i=0; i<3; i++) xOut[i] = (1-w) * xBegin[i] + w * xEnd[i];
@@ -873,14 +964,17 @@ namespace PIC {
 
       // add vertex with given coordinates
       cFieldLineVertex* Add(double* xIn);
+
       // assign statistical weights to segments and normalize them
       void ResetSegmentWeights();
+
       // get random segment
-      void GetSegmentRandom(int& iSegment,//cFieldLineSegment* SegmentOut,
-			    double& WeightCorrectionFactor,
-			    int spec);
+      //cFieldLineSegment* SegmentOut,
+      void GetSegmentRandom(int& iSegment,double& WeightCorrectionFactor, int spec);
+
       // set magnetic field at a given vertex (last by default)
       void SetMagneticField(double* BIn, int iVertex=-1);
+
       // get background data at a given 1D coordinate along the field line
       //-----------------------------------------------------------------------
       // get magnetic field
@@ -1662,25 +1756,23 @@ namespace PIC {
 
     // Operations related to the particle magnetic moment
     //-------------------------------------------------------------------------
-    inline double GetMagneticMoment(long int ptr){
-      return *(double*)(ParticleDataBuffer + ptr*ParticleDataLength + 
-			_PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_);
+    inline double GetMagneticMoment(long int ptr) {
+      return *(double*)(ParticleDataBuffer + ptr*ParticleDataLength + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_);
     }
+
     //.........................................................................
-    inline double GetMagneticMoment(byte *ParticleDataStart){
-      return *(double*)(ParticleDataStart + 
-			_PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_);
+    inline double GetMagneticMoment(byte *ParticleDataStart) {
+      return *(double*)(ParticleDataStart + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_);
     }
+
     //.........................................................................
-    inline void SetMagneticMoment(double MagneticMoment, long int ptr){
-      *(double*)(ParticleDataBuffer +ptr*ParticleDataLength +
-		 _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;
+    inline void SetMagneticMoment(double MagneticMoment, long int ptr) {
+      *(double*)(ParticleDataBuffer +ptr*ParticleDataLength + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;
     }
+
     //.........................................................................
-    inline void SetMagneticMoment(double MagneticMoment, 
-				  byte* ParticleDataStart){
-      *(double*)(ParticleDataStart +
-		 _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;
+    inline void SetMagneticMoment(double MagneticMoment, byte* ParticleDataStart) {
+      *(double*)(ParticleDataStart + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;
     }
     //-------------------------------------------------------------------------
 
@@ -1704,8 +1796,7 @@ namespace PIC {
     }
 
     inline double GetParticleWeightOverTimeStepRatio(byte *ParticleDataStart) {
-      if (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_)
-        return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_));
+      if (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_) return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_));
 
       return 0.0;
     }
@@ -1714,47 +1805,44 @@ namespace PIC {
 
     // Operations related to the field line particle sits on                    
     //-------------------------------------------------------------------------
-    inline int GetFieldLineId(long int ptr){
-      return *(int*)(ParticleDataBuffer + ptr*ParticleDataLength +
-                     _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    inline int GetFieldLineId(long int ptr) {
+      return *(int*)(ParticleDataBuffer + ptr*ParticleDataLength + _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    }
+
+    //.........................................................................
+    inline int GetFieldLineId(byte *ParticleDataStart) {
+      return *(int*)(ParticleDataStart + _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    }
+
+    //.........................................................................
+    inline void SetFieldLineId(int FieldLineId, long int ptr) {
+      *(int*)(ParticleDataBuffer +ptr*ParticleDataLength + _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
+    }
+
+    //.........................................................................
+    inline void SetFieldLineId(int FieldLineId, byte* ParticleDataStart) {
+      *(int*)(ParticleDataStart + _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
     }
     //.........................................................................
-    inline int GetFieldLineId(byte *ParticleDataStart){
-      return *(int*)(ParticleDataStart +
-                     _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_);
+    inline double GetFieldLineCoord(long int ptr) {
+      return *(double*)(ParticleDataBuffer + ptr*ParticleDataLength +_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
     }
+
     //.........................................................................
-    inline void SetFieldLineId(int FieldLineId, long int ptr){
-      *(int*)(ParticleDataBuffer +ptr*ParticleDataLength +
-	      _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
+    inline double GetFieldLineCoord(byte *ParticleDataStart) {
+      return *(double*)(ParticleDataStart +_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
     }
+
     //.........................................................................
-    inline void SetFieldLineId(int FieldLineId,
-                               byte* ParticleDataStart){
-      *(int*)(ParticleDataStart +
-	      _PIC_PARTICLE_DATA__FIELD_LINE_ID_OFFSET_) = FieldLineId;
+    inline void SetFieldLineCoord(double FieldLineCoord, long int ptr) {
+      *(double*)(ParticleDataBuffer +ptr*ParticleDataLength +_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
     }
+
     //.........................................................................
-    inline double GetFieldLineCoord(long int ptr){
-      return *(double*)(ParticleDataBuffer + ptr*ParticleDataLength +
-                        _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
+    inline void SetFieldLineCoord(double FieldLineCoord,byte* ParticleDataStart){
+      *(double*)(ParticleDataStart +_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
     }
-    //.........................................................................
-    inline double GetFieldLineCoord(byte *ParticleDataStart){
-      return *(double*)(ParticleDataStart +
-			_PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_);
-    }
-    //.........................................................................
-    inline void SetFieldLineCoord(double FieldLineCoord, long int ptr){
-      *(double*)(ParticleDataBuffer +ptr*ParticleDataLength +
-                 _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
-    }
-    //.........................................................................
-    inline void SetFieldLineCoord(double FieldLineCoord,
-                                  byte* ParticleDataStart){
-      *(double*)(ParticleDataStart +
-                 _PIC_PARTICLE_DATA__FIELD_LINE_COORD_OFFSET_)= FieldLineCoord;
-    }
+
     //-------------------------------------------------------------------------
 
     inline bool IsParticleAllocated(byte* ParticleDataStart) {
@@ -1852,31 +1940,30 @@ namespace PIC {
     // the following class isn't sampled directly
     // values are derived from sampled variables
     //-------------------------------------------------------------------------
-    class cDatumDerived : public Datum::cDatumSampled{
+    class cDatumDerived : public Datum::cDatumSampled {
     public:
       // function to find an averaged value derived from other variables;
       // CURRENTLY WORKS ONLY FOR CELL-CENTERED DATA
       void (cDataCenterNode::*GetAverage)(double*, int);
       //.......................................................................
       inline bool is_active(){return GetAverage != NULL;}
-      inline void activate(void (cDataCenterNode::*GetAverageIn)(double*, int),
-			   vector<cDatumDerived*>* DatumVector){
-	if(is_active()) 
-	  exit(__LINE__,__FILE__,
-	       "ERROR: trying to activate datum a second time");
-	GetAverage = GetAverageIn;
-	// add this datum to the provided cDatumSampled vector
-	DatumVector->push_back(this);
+
+      inline void activate(void (cDataCenterNode::*GetAverageIn)(double*, int),vector<cDatumDerived*>* DatumVector) {
+	      if (is_active()) exit(__LINE__,__FILE__,"ERROR: trying to activate datum a second time");
+
+	      GetAverage = GetAverageIn;
+	      // add this datum to the provided cDatumSampled vector
+	      DatumVector->push_back(this);
       }
+
       // constructor is inherited as well
       //.......................................................................
-    cDatumDerived(int lengthIn, const char* nameIn, bool doPrintIn = true) 
-      : Datum::cDatumSampled(lengthIn, nameIn, doPrintIn){
-	type = Derived_; GetAverage=NULL;
+      cDatumDerived(int lengthIn, const char* nameIn, bool doPrintIn = true) : Datum::cDatumSampled(lengthIn, nameIn, doPrintIn) {
+	      type = Derived_; GetAverage=NULL;
       }
     };
-    // class cDatumDerived ----------------------------------------------------
 
+    // class cDatumDerived ----------------------------------------------------
     //vector of active sampling data
     extern vector<Datum::cDatumSampled*> DataSampledCenterNodeActive;
     //vector of active derived data
@@ -1946,31 +2033,31 @@ namespace PIC {
       char *associatedDataPointer;
       
       inline int AssociatedDataLength() {
-	return totalAssociatedDataLength;
+	      return totalAssociatedDataLength;
       }
       
       void SetAssociatedDataBufferPointer(char* ptr) {
-	associatedDataPointer=ptr;
+	      associatedDataPointer=ptr;
       }
       
       inline char* GetAssociatedDataBufferPointer() {
-	return associatedDataPointer;
+	      return associatedDataPointer;
       }
           
       //clean the sampling buffers
       void cleanDataBuffer() {
-	cBasicCenterNode::cleanDataBuffer();
+	      cBasicCenterNode::cleanDataBuffer();
 	
-	int i,length=totalAssociatedDataLength/sizeof(double);
-	double *ptr;
-	for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
+	      int i,length=totalAssociatedDataLength/sizeof(double);
+	      double *ptr;
+	      for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
 	
-	if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
+	      if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
       }
       
       //init the buffers
-    cDataCenterNode() : cBasicCenterNode() {
-	associatedDataPointer=NULL;
+      cDataCenterNode() : cBasicCenterNode() {
+	      associatedDataPointer=NULL;
       }
         
       // access sampled macroscopic parameters;
@@ -1978,135 +2065,112 @@ namespace PIC {
       // - for array
       // - for scalars
       //-----------------------------------------------------------------------
-      inline void SampleDatum(Datum::cDatumSampled Datum, 
-			      double* In, int spec, double weight=1.0){
-	for(int i=0; i<Datum.length; i++)
-	  *(i + Datum.length * spec + 
-	    (double*)(associatedDataPointer + 
-		      collectingCellSampleDataPointerOffset+
-		      Datum.offset))+= In[i] * weight;
+      inline void SampleDatum(Datum::cDatumSampled Datum, double* In, int spec, double weight=1.0) {
+	      for(int i=0; i<Datum.length; i++) {
+	        *(i + Datum.length * spec + (double*)(associatedDataPointer + collectingCellSampleDataPointerOffset+Datum.offset))+= In[i] * weight;
+	      }
       }
-      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec, 
-			      double weight=1.0){
-	*(spec + 
-	  (double*)(associatedDataPointer + 
-		    collectingCellSampleDataPointerOffset+
-		    Datum.offset))+= In * weight;
+
+      inline void SampleDatum(Datum::cDatumSampled Datum, double In, int spec,  double weight=1.0) {
+	      *(spec + (double*)(associatedDataPointer + collectingCellSampleDataPointerOffset+Datum.offset))+= In * weight;
       }
+
       //.......................................................................
-      inline void SetDatum(Datum::cDatumSampled Datum, double* In, int spec){
-	for(int i=0; i<Datum.length; i++)
-	  *(i + Datum.length * spec + 
-	    (double*)(associatedDataPointer + 
-		      completedCellSampleDataPointerOffset+
-		      Datum.offset)) = In[i];
+      inline void SetDatum(Datum::cDatumSampled Datum, double* In, int spec) {
+        for(int i=0; i<Datum.length; i++) *(i + Datum.length * spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset)) = In[i];
       }
 
       //get accumulated data
       //.......................................................................
-      inline void GetDatumCumulative(Datum::cDatumSampled Datum, 
-				     double* Out, int spec){
-	for(int i=0; i<Datum.length; i++)
-	  Out[i] = *(i + Datum.length * spec + 
-		     (double*)(associatedDataPointer + 
-			       completedCellSampleDataPointerOffset+
-			       Datum.offset));
+      inline void GetDatumCumulative(Datum::cDatumSampled Datum, double* Out, int spec) {
+	      for(int i=0; i<Datum.length; i++) Out[i] = *(i + Datum.length * spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset));
       }
-      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec){
-	return *(spec + 
-		 (double*)(associatedDataPointer + 
-			   completedCellSampleDataPointerOffset+
-			   Datum.offset));
+
+      inline double GetDatumCumulative(Datum::cDatumSampled Datum, int spec) {
+	      return *(spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset));
       }
 
       //get data averaged over time
       //.......................................................................
-      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec){
-	if(PIC::LastSampleLength > 0)
-	  for(int i=0; i<Datum.length; i++)
-	    Out[i] = *(i + Datum.length * spec + 
-		       (double*)(associatedDataPointer + 
-				 completedCellSampleDataPointerOffset+
-				 Datum.offset)) / PIC::LastSampleLength;
-	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec) {
+	      if (PIC::LastSampleLength > 0) for (int i=0; i<Datum.length; i++) {
+	        Out[i] = *(i + Datum.length * spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset)) / PIC::LastSampleLength;
+	      }
+	      else for (int i=0; i<Datum.length; i++) Out[i] = 0.0;
       }
-      inline double GetDatumAverage(cDatumTimed Datum, int spec){
-	if(PIC::LastSampleLength > 0)
-	  return *(spec + 
-		   (double*)(associatedDataPointer + 
-			     completedCellSampleDataPointerOffset+
-			     Datum.offset)) / PIC::LastSampleLength;
-	else return 0.0;
+
+      inline double GetDatumAverage(cDatumTimed Datum, int spec) {
+	      return (PIC::LastSampleLength > 0) ?  *(spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset)) / PIC::LastSampleLength : 0.0;
       }
+
       //get data averaged over sampled weight
       //.......................................................................
-      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec){
-	double TotalWeight=0.0;
-	GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
-	if(TotalWeight > 0)
-	  for(int i=0; i<Datum.length; i++)
-	    Out[i] = *(i + Datum.length * spec +
-		       (double*)(associatedDataPointer + 
-				 completedCellSampleDataPointerOffset+
-				 Datum.offset)) / TotalWeight;
-	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec) {
+	      double TotalWeight=0.0;
+
+	      GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
+
+	      if (TotalWeight > 0) {
+	        for(int i=0; i<Datum.length; i++) Out[i] = *(i + Datum.length * spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset)) / TotalWeight;
+	      }
+	      else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
       }
-      inline double GetDatumAverage(cDatumWeighted Datum, int spec){
-	double TotalWeight=0.0;
-	GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
-	if(TotalWeight > 0)
-	  return *(spec +
-		   (double*)(associatedDataPointer + 
-			     completedCellSampleDataPointerOffset+
-			     Datum.offset)) / TotalWeight;
-	else return 0.0;
+
+      inline double GetDatumAverage(cDatumWeighted Datum, int spec) {
+	      double TotalWeight=0.0;
+
+	      GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
+	      return (TotalWeight > 0) ? *(spec + (double*)(associatedDataPointer + completedCellSampleDataPointerOffset+Datum.offset)) / TotalWeight : 0.0;
       }
+
       //get average for derived data
       //.......................................................................
-      inline void GetDatumAverage(cDatumDerived Datum, double* Out, int spec){
+      inline void GetDatumAverage(cDatumDerived Datum, double* Out, int spec) {
         (this->*Datum.GetAverage)(Out,spec);
       }
       //-----------------------------------------------------------------------
 
       //backward compatible access
       //-----------------------------------------------------------------------
-      inline double GetNumberDensity(int spec){
-	return GetDatumAverage(DatumNumberDensity, spec);
+      inline double GetNumberDensity(int spec) {
+	      return GetDatumAverage(DatumNumberDensity, spec);
       }
-      inline void GetBulkVelocity(double* vOut, int spec){
-	GetDatumAverage(DatumParticleVelocity, vOut, spec);
+
+      inline void GetBulkVelocity(double* vOut, int spec) {
+	      GetDatumAverage(DatumParticleVelocity, vOut, spec);
       }
-      inline double GetMeanParticleSpeed(int spec){
-	return GetDatumAverage(DatumParticleSpeed, spec);
+
+      inline double GetMeanParticleSpeed(int spec) {
+	      return GetDatumAverage(DatumParticleSpeed, spec);
       }
-      inline double GetCompleteSampleCellParticleWeight(int spec){
-	return GetDatumAverage(DatumParticleWeight, spec);
+
+      inline double GetCompleteSampleCellParticleWeight(int spec) {
+	      return GetDatumAverage(DatumParticleWeight, spec);
       }
       //-----------------------------------------------------------------------
 
       // data interpolation
       //-----------------------------------------------------------------------
-      inline void InterpolateDatum(Datum::cDatumSampled Datum, 
-				   cDataCenterNode** InterpolationList,
-				   double *InterpolationCoefficients,
-				   int nInterpolationCoefficients, 
-				   int spec){
-	// container for the interpolated value; set it to be zero
-	double value[Datum.length], interpolated[Datum.length]; 
-	for(int i=0; i<Datum.length; i++) {
-	  value[i]=0.0; interpolated[i]=0.0;}
-	// interpolation loop
-	for(int i=0; i<nInterpolationCoefficients; i++){
-	  InterpolationList[i]->GetDatumCumulative(Datum, value, spec);
-	  for(int j=0; j<Datum.length; j++)
-	    interpolated[j] += InterpolationCoefficients[i] * value[j];
-	}
-	SetDatum(Datum, interpolated, spec);
+      inline void InterpolateDatum(Datum::cDatumSampled Datum, cDataCenterNode** InterpolationList,double *InterpolationCoefficients,int nInterpolationCoefficients, int spec) {
+	      // container for the interpolated value; set it to be zero
+	      double value[Datum.length], interpolated[Datum.length];
+
+	      for (int i=0; i<Datum.length; i++) {
+	        value[i]=0.0; interpolated[i]=0.0;
+	      }
+
+	      // interpolation loop
+	      for (int i=0; i<nInterpolationCoefficients; i++) {
+	        InterpolationList[i]->GetDatumCumulative(Datum, value, spec);
+
+	        for(int j=0; j<Datum.length; j++) interpolated[j] += InterpolationCoefficients[i] * value[j];
+	      }
+
+	      SetDatum(Datum, interpolated, spec);
+
         #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
         #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
-	for(int i=0; i<Datum.length; i++)
-	  if(isfinite(interpolated[i])==false)
-	    exit(__LINE__,__FILE__,"Error: Floating Point Exception");
+	        for(int i=0; i<Datum.length; i++) if (isfinite(interpolated[i])==false) exit(__LINE__,__FILE__,"Error: Floating Point Exception");
         #endif
         #endif
       }
@@ -2124,36 +2188,41 @@ namespace PIC {
         for (idim=0;idim<3;idim++) res+=v2[idim]-v[idim]*v[idim];
 
         //return 
-	T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
+	      T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
+
       inline double GetTranslationalTemperature(int s) {
         double res=0.0;
-	GetTranslationalTemperature(&res, s);
-	return res;
+
+        GetTranslationalTemperature(&res, s);
+        return res;
       }
 
       void GetParallelTranslationalTemperature(double* T, int s) {
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+        #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
         //return 
-	GetTranslationalTemperature(T, s);
-#else
+	      GetTranslationalTemperature(T, s);
+        #else
         double v=0.0,v2=0.0,w=0.0,res=0.0;
-	v = GetDatumAverage(DatumParticleParallelVelocity, s);
-	v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
-	res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
-	T[0]=res;
-#endif
+
+        v = GetDatumAverage(DatumParticleParallelVelocity, s);
+	      v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
+	      res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
+	      T[0]=res;
+        #endif
       }
 
       void GetTangentialTranslationalTemperature(double* T, int s) {
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-	GetTranslationalTemperature(T,s);
-#else
-	double t,tp;
-	GetTranslationalTemperature(&t,s);
-	GetParallelTranslationalTemperature(&tp,s);
-	T[0]=0.5*(3.0*t-tp);
-#endif
+        #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+	      GetTranslationalTemperature(T,s);
+        #else
+	      double t,tp;
+
+
+	      GetTranslationalTemperature(&t,s);
+	      GetParallelTranslationalTemperature(&tp,s);
+	      T[0]=0.5*(3.0*t-tp);
+        #endif
       }
       //-----------------------------------------------------------------------
 
@@ -3529,51 +3598,62 @@ namespace PIC {
     //coupling thrugh a file
     namespace DATAFILE {
 
-      namespace MULTIFILE{
-	//-----------------------------------
-	//number of file to be loaded
-	extern int nFile;
+      namespace MULTIFILE {
+	      //-----------------------------------
+	      //number of file to be loaded
+	      extern int nFile;
+
         // number of the next data file in the schedule
         extern int iFileLoadNext;
-	//schedule for loading multiple data files
-	struct cScheduleItem {
-	  double Time;
-	  char FileName[_MAX_STRING_LENGTH_PIC_];
-	};
-	extern vector<cScheduleItem> Schedule;
-	//comparison function for schedule items: for sorting
-	inline bool _compare(cScheduleItem Item1, cScheduleItem Item2){
-	  return Item1.Time < Item2.Time;}
-	// name of file with table defining schedule
-	extern char FileTable[_MAX_STRING_LENGTH_PIC_];
 
-	//offsets to the data at next/current datafile 
-	//used for time interpolation
-	extern int NextDataFileOffset;
-	extern int CurrDataFileOffset;
+	      //schedule for loading multiple data files
+	      struct cScheduleItem {
+	        double Time;
+	        char FileName[_MAX_STRING_LENGTH_PIC_];
+	      };
+
+	      extern vector<cScheduleItem> Schedule;
+
+	      //comparison function for schedule items: for sorting
+	      inline bool _compare(cScheduleItem Item1, cScheduleItem Item2) {
+	        return Item1.Time < Item2.Time;
+	      }
+
+	      // name of file with table defining schedule
+	      extern char FileTable[_MAX_STRING_LENGTH_PIC_];
+
+	      //offsets to the data at next/current datafile
+	      //used for time interpolation
+	      extern int NextDataFileOffset;
+	      extern int CurrDataFileOffset;
 
 
 
-	//variable to track whether to break simulation at the last datafile
-	extern bool BreakAtLastFile;
-	//variable to track whether the last datafile has been reached
-	extern bool ReachedLastFile;
+	      //variable to track whether to break simulation at the last datafile
+	      extern bool BreakAtLastFile;
+
+	      //variable to track whether the last datafile has been reached
+	      extern bool ReachedLastFile;
+
         //check whether it is time to load the next file
-        inline bool IsTimeToUpdate(){
-#if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+        inline bool IsTimeToUpdate() {
+          #if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
           return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext-1].Time;
-#else
+          #else
           return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].  Time;
-#endif
+          #endif
         }
+
         //initialize
-        void Init(bool BreakAtLastFileIn = true, 
-		  int  FileNumber        = 0);
-	//load the schedule
-	void GetSchedule();
-	//extract time from datafile itself
-	double GetFileTime(const char* FileName);
-        //update the datafile
+        void Init(bool BreakAtLastFileIn = true, int  FileNumber        = 0);
+
+	      //load the schedule
+	      void GetSchedule();
+
+	      //extract time from datafile itself
+	      double GetFileTime(const char* FileName);
+
+	      //update the datafile
         void UpdateDataFile();
       }
 
@@ -3607,7 +3687,7 @@ namespace PIC {
         extern cOffsetElement MagneticField;
         extern cOffsetElement ElectricField;
         extern cOffsetElement MagneticFieldGradient;
-	extern cOffsetElement MagneticFluxFunction;
+	      extern cOffsetElement MagneticFluxFunction;
 
 
         inline void SetAllocate(bool flag,cOffsetElement* offset) {
@@ -3617,7 +3697,7 @@ namespace PIC {
             offset->allocate=flag;
           }
           else exit(__LINE__,__FILE__,"Error: changing of the allocation flags is not allowed after initialization of the offsets is completed");
-	}
+        }
 
         inline void SetActive(bool flag,cOffsetElement* offset) {
           if ((flag==true)&&(offset->allocate==false)) exit(__LINE__,__FILE__,"Error: the offset cannot be set 'active' if it is not allocated before during the initialization");
@@ -3763,30 +3843,23 @@ namespace PIC {
       }
 
       inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell, double Time) {
-	double n;
-	GetBackgroundValue(&n, 
-			   Offset::PlasmaNumberDensity.nVars,
-			   Offset::PlasmaNumberDensity.offset, cell, Time);
-	return n;
+	      double n;
+
+	       GetBackgroundValue(&n,Offset::PlasmaNumberDensity.nVars,Offset::PlasmaNumberDensity.offset, cell, Time);
+         return n;
       }	
 
       inline double GetBackgroundPlasmaTemperature(PIC::Mesh::cDataCenterNode *cell, double Time) {
-	double T;
-	GetBackgroundValue(&T, 
-			   Offset::PlasmaTemperature.nVars,
-			   Offset::PlasmaTemperature.offset, cell, Time);
-	return T;
+	       double T;
+
+	       GetBackgroundValue(&T, Offset::PlasmaTemperature.nVars,Offset::PlasmaTemperature.offset, cell, Time);
+         return T;
       }
 
       inline void GetBackgroundFieldsVector(double *E,double *B,PIC::Mesh::cDataCenterNode *cell, double Time) {
-	GetBackgroundValue(E, 
-			   Offset::ElectricField.nVars,
-			   Offset::ElectricField.offset, cell, Time);
-	GetBackgroundValue(B, 
-			   Offset::MagneticField.nVars,
-			   Offset::MagneticField.offset, cell, Time);
+         GetBackgroundValue(E, Offset::ElectricField.nVars,Offset::ElectricField.offset, cell, Time);
+         GetBackgroundValue(B, Offset::MagneticField.nVars,Offset::MagneticField.offset, cell, Time);
       }
-
 
       //individual reading procedures
       namespace ICES {
@@ -3871,8 +3944,8 @@ namespace PIC {
         //init the reader
         void Init();
 
-	void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-	void GetDomainLimits(double *xmin,double *xmax,const char *fname);
+	      void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+	      void GetDomainLimits(double *xmin,double *xmax,const char *fname);
 
         namespace LFM {
           void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
@@ -3882,10 +3955,8 @@ namespace PIC {
       }
 
       namespace ARMS {
-
-
         void Init();
-	double GetFileTime(const char *fname);
+	      double GetFileTime(const char *fname);
         void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
       }
 
