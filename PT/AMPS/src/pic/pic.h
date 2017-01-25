@@ -2065,6 +2065,29 @@ namespace PIC {
       // - for array
       // - for scalars
       //-----------------------------------------------------------------------
+
+      void SampleDatum(Datum::cDatumSampled Datum, double* In, int spec, double weight=1.0);
+      void SampleDatum(Datum::cDatumSampled Datum, double In, int spec,  double weight=1.0);
+      void SetDatum(Datum::cDatumSampled Datum, double* In, int spec);
+      void GetDatumCumulative(Datum::cDatumSampled Datum, double* Out, int spec);
+      double GetDatumCumulative(Datum::cDatumSampled Datum, int spec);
+      void GetDatumAverage(cDatumTimed Datum, double* Out, int spec);
+      double GetDatumAverage(cDatumTimed Datum, int spec);
+      void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec);
+      double GetDatumAverage(cDatumWeighted Datum, int spec);
+      void GetDatumAverage(cDatumDerived Datum, double* Out, int spec);
+
+      //backward compatible access
+      double GetNumberDensity(int spec);
+      void GetBulkVelocity(double* vOut, int spec);
+      inline double GetMeanParticleSpeed(int spec);
+      double GetCompleteSampleCellParticleWeight(int spec);
+
+      // data interpolation
+      void InterpolateDatum(Datum::cDatumSampled Datum, cDataCenterNode** InterpolationList,double *InterpolationCoefficients,int nInterpolationCoefficients, int spec);
+
+
+      /*
       inline void SampleDatum(Datum::cDatumSampled Datum, double* In, int spec, double weight=1.0) {
 	      for(int i=0; i<Datum.length; i++) {
 	        *(i + Datum.length * spec + (double*)(associatedDataPointer + collectingCellSampleDataPointerOffset+Datum.offset))+= In[i] * weight;
@@ -2175,6 +2198,7 @@ namespace PIC {
         #endif
       }
       //-----------------------------------------------------------------------
+*/
     
       //get the sampled macroscopic parameter of the flow (for derived data)
       //-----------------------------------------------------------------------
@@ -2435,11 +2459,6 @@ namespace PIC {
     void flushCollectingSamplingBuffer(cDataCenterNode*);
     void switchSamplingBuffers();
 
-
-
-  
-
-
     //the computational mesh
     #if DIM == 3
     extern cMeshAMR3d<cDataCornerNode,cDataCenterNode,cDataBlockAMR > mesh;
@@ -2448,8 +2467,6 @@ namespace PIC {
     #else
     extern cMeshAMR1d<cDataCornerNode,cDataCenterNode,cDataBlockAMR > mesh;
     #endif
-
-
 
     //init the computational mesh
     void Init(double*,double*,fLocalMeshResolution);
@@ -3973,16 +3990,15 @@ namespace PIC {
         //open the file and init BATL libraty
         void Init(const char *fname);
 
-
         void GetDomainLimits(double *xmin,double *xmax);
         void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
-	//the offsets of the physical variables in the .idl file
-	extern int rhoBATSRUS2AMPS;
-	extern int mxBATSRUS2AMPS,myBATSRUS2AMPS,mzBATSRUS2AMPS;
-	extern int uxBATSRUS2AMPS,uyBATSRUS2AMPS,uzBATSRUS2AMPS;
-	extern int bxBATSRUS2AMPS,byBATSRUS2AMPS,bzBATSRUS2AMPS;
-	extern int pBATSRUS2AMPS;
+	      //the offsets of the physical variables in the .idl file
+        extern int rhoBATSRUS2AMPS;
+        extern int mxBATSRUS2AMPS,myBATSRUS2AMPS,mzBATSRUS2AMPS;
+        extern int uxBATSRUS2AMPS,uyBATSRUS2AMPS,uzBATSRUS2AMPS;
+        extern int bxBATSRUS2AMPS,byBATSRUS2AMPS,bzBATSRUS2AMPS;
+        extern int pBATSRUS2AMPS;
       }
 
       namespace TECPLOT {
@@ -4038,9 +4054,6 @@ namespace PIC {
         //the function call all nessesary methods of the TECPLOT namespace to export the data
         void ImportData(const char* fname);
       }
-
-
-
     }
 
     //save and load the center node associated data from the AMPS' data buffers
@@ -4962,21 +4975,13 @@ namespace PIC {
         typedef int (*fParticleSphereInteraction)(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
         int ParticleSphereInteraction_SpecularReflection(int spec,long int ptr,double *x,double *v,double &dtTotal, void* NodeDataPointer,void *SphereDataPointer);
 
-
         //Sampling of the particles data
         typedef void (*fSampleParticleData)(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
         void SampleDefaultParticleData(long int ptr,double *x,double *v,double &dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,cInternalBoundaryConditionsDescriptor* sphereDescriptor);
         extern fSampleParticleData SampleParticleData;
       }
-
-
     }
-
-
-
   }
-
-
 
 }
 
