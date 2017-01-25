@@ -2080,7 +2080,7 @@ namespace PIC {
       //backward compatible access
       double GetNumberDensity(int spec);
       void GetBulkVelocity(double* vOut, int spec);
-      inline double GetMeanParticleSpeed(int spec);
+      double GetMeanParticleSpeed(int spec);
       double GetCompleteSampleCellParticleWeight(int spec);
 
       // data interpolation
