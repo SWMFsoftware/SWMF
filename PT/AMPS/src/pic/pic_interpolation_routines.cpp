@@ -551,6 +551,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
           jCellNeib=2*((int)((xStencil[1]-StencilNode->xmin[1])/dx[1]));
           kCellNeib=2*((int)((xStencil[2]-StencilNode->xmin[2])/dx[2]));
 
+          if ((iCellNeib<0)||(iCellNeib+1>=_BLOCK_CELLS_X_) || (jCellNeib<0)||(jCellNeib+1>=_BLOCK_CELLS_Y_) || (kCellNeib<0)||(kCellNeib+1>=_BLOCK_CELLS_Z_)) exit(__LINE__,__FILE__,"Error: cells's index is out of range");
+
           for (ii=0;ii<2;ii++) for (jj=0;jj<2;jj++) for (kk=0;kk<2;kk++) {
             nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(ii+iCellNeib,jj+jCellNeib,kk+kCellNeib);
             cell=StencilNode->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
