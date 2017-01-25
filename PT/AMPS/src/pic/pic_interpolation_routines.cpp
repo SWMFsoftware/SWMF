@@ -266,8 +266,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
       for (idim=0;idim<3;idim++) {
         int iInterval;
 
-        iInterval=(int)((XyzIn_D[idim]-(xmin[idim]-dxCell[idim]/2.0))/dxCell[idim]);
-        xStencilMin[idim]=(xmin[idim]-dxCell[idim]/2.0)+iInterval*dxCell[idim];
+        iInterval=(int)((XyzIn_D[idim]-(CoarserBlock->xmin[idim]-dxCell[idim]/2.0))/dxCell[idim]);
+        xStencilMin[idim]=(CoarserBlock->xmin[idim]-dxCell[idim]/2.0)+iInterval*dxCell[idim];
         xStencilMax[idim]=xStencilMin[idim]+dxCell[idim];
       }
 
@@ -275,7 +275,25 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     }
 
     //2.threre is no a coarser block that can be used for interpolation
-    // check if all cells are available for tri-liniar interpolation using the data from the block
+    //The current block is the coarstest that can be used to construct the interpolation stencil
+    double xStencilMin[3],xStencilMax[3];
+
+    dxCell[0]=(node->xmax[0]-node->xmin[0])/_BLOCK_CELLS_X_;
+    dxCell[1]=(node->xmax[1]-node->xmin[1])/_BLOCK_CELLS_Y_;
+    dxCell[2]=(node->xmax[2]-node->xmin[2])/_BLOCK_CELLS_Z_;
+
+    for (idim=0;idim<3;idim++) {
+      int iInterval;
+
+      iInterval=(int)((XyzIn_D[idim]-(node->xmin[idim]-dxCell[idim]/2.0))/dxCell[idim]);
+      xStencilMin[idim]=(node->xmin[idim]-dxCell[idim]/2.0)+iInterval*dxCell[idim];
+      xStencilMax[idim]=xStencilMin[idim]+dxCell[idim];
+    }
+
+    return GetTriliniarInterpolationMutiBlockStencil(XyzIn_D,xStencilMin,xStencilMax,node);
+
+
+/*    // check if all cells are available for tri-liniar interpolation using the data from the block
     int i,j,k,i0,j0,k0,nd;
     bool found=true;
 
@@ -291,7 +309,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     if (found==true) return GetTriliniarInterpolationStencil(iLoc,jLoc,kLoc,XyzIn_D,node);
 
     //3. if not: use a constant interpolation spencil
-    return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);
+    return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);*/
   }
 
   #elif _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ == _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__SWMF_
