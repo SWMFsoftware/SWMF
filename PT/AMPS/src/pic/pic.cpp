@@ -950,6 +950,11 @@ void PIC::Sampling::Sampling() {
 #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
               _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s);
 #endif
+
+#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ //call a user-defind particle sampling procedure with passing the node information
+              _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(tempParticleData,LocalParticleWeight,SamplingData,s,node);
+#endif
+
             }
 
 	    //            memcpy((void*)SamplingData,(void*)tempSamplingBuffer,/*PIC::Mesh::*/sampleSetDataLength);
