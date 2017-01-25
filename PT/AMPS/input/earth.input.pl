@@ -129,7 +129,7 @@ while ($line=<InputFile>) {
         ($s0,$s1)=split(' ',$s1,2);        
         ($s0,$s1)=split(' ',$s1,2);
                 
-        ampsConfigLib::AddLine2File("#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_ \n#undef _PIC_USER_DEFING_PARTICLE_SAMPLING_ \n#endif \n\n#define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)   ".$s0."(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)\n","pic/picGlobal.dfn");        
+        ampsConfigLib::AddLine2File("#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ \n#undef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ \n#endif \n\n#define _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)   ".$s0."(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)\n","pic/picGlobal.dfn");        
       }
       else {
         die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
