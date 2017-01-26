@@ -197,7 +197,7 @@ contains
     if(allocated(CornerNorm_DI))  deallocate(CornerNorm_DI)
 
     nArea                 = 0
-    IsNewGeoParam         = .true.
+    IsNewGeoParam         = .false.
     InitialResolution     = -1.0 
     nInitialAmrLevel      = 0
 
@@ -348,8 +348,6 @@ contains
     character(len=*), parameter :: NameSub='read_region_param'
     !-------------------------------------------------------------------------
 
-    IsNewGeoParam =.true.
-
     UseStrict = .true.
     if(present(UseStrictIn)) UseStrict = UseStrictIn
 
@@ -403,7 +401,10 @@ contains
     Area => Area_I(nArea)
 
     ! Regions without a name are produced by #GRIDLEVEL/RESOLUTION commands
-    if(NameRegion == "NULL") nCritGrid = nCritGrid + 1
+    if(NameRegion == "NULL")then
+       nCritGrid = nCritGrid + 1
+       IsNewGeoParam =.true.
+    end if
 
     ! Store the information read above
     Area%NameRegion = NameRegion
