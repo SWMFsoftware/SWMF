@@ -168,9 +168,13 @@ module ModPhysics
   logical :: UseShockTube = .false.
   real :: ShockLeftState_V(nVar)=0.0, ShockRightState_V(nVar)=0.0
   real :: ShockPosition = 0.0, ShockSlope = 0.0
+ 
+
+  ! Logicals for using Boundary State                                                                                              
+  logical :: UseBoundaryState_I(Solid_:6) = .false.
 
   ! State for the boundary conditions
-  real,dimension(nVar,Solid_:6):: FaceState_VI, CellState_VI
+  real,dimension(nVar,Solid_:6):: FaceState_VI, CellState_VI, FaceStateDim_VI
 
   !\
   ! Units for normalization of variables
@@ -253,7 +257,8 @@ contains
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
-
+    
+    call set_unit_conversion_array_indices
     !\
     ! Load body rotation rates, masses, and radii
     !/
@@ -513,6 +518,11 @@ contains
                pCoef*sum(FaceState_VI(iPIon_I,1))
        end if
     end if
+
+    do iBoundary = Solid_, 6
+       if (.not.UseBoundaryState_I(iBoundary)) CYCLE
+       FaceState_VI( : , iBoundary) = FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
+    end do
 
     ! Cell State is used for filling the ghostcells
     CellState_VI = FaceState_VI
@@ -823,23 +833,15 @@ contains
   end subroutine set_units
 
   !============================================================================
-
-  subroutine init_mhd_variables
-
-    ! Set default I/O units and unit names for the state variables 
-    ! in MHD type equations
-
+  subroutine set_unit_conversion_array_indices
     use ModProcMH,  ONLY: iProc
     use ModVarIndexes
     use ModMultiFluid
-    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
-         UseEfield
-    use ModMain,    ONLY: UseB
     use ModUtilities, ONLY: lower_case
 
     integer :: iVar
     character (len=len(NameVar_V)) :: NameVar
-    character (len=*), parameter :: NameSub="init_mhd_variables"
+    character (len=*), parameter :: NameSub="set_unit_conversion_array_indices"
     !--------------------------------------------------------------------------
 
     ! Set mapping from state variable indices to unit conversion array indices
@@ -869,7 +871,7 @@ contains
        case('e', 'ew', 'ehot', 'eint')
           iUnitCons_V(iVar) = UnitEnergyDens_
           iUnitPrim_V(iVar) = UnitEnergyDens_
-       case('ex', 'ey', 'ez')
+       case('ex', 'ey', 'ez','hyp')
           iUnitCons_V(iVar) = UnitElectric_
        case default
           if(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
@@ -884,6 +886,30 @@ contains
           end if
        end select
     end do
+
+
+  end subroutine set_unit_conversion_array_indices
+
+
+  !============================================================================
+  subroutine init_mhd_variables
+
+    ! Set default I/O units and unit names for the state variables 
+    ! in MHD type equations
+
+    use ModProcMH,  ONLY: iProc
+    use ModVarIndexes
+    use ModMultiFluid
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
+         UseEfield
+    use ModMain,    ONLY: UseB
+    use ModUtilities, ONLY: lower_case
+
+    integer :: iVar
+    character (len=len(NameVar_V)) :: NameVar
+    character (len=*), parameter :: NameSub="init_mhd_variables"
+    !--------------------------------------------------------------------------
+
 
     if(UseB)then
        UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
