@@ -127,7 +127,7 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iFile, i, j
   logical :: IsUninitialized      = .true.
   real :: local_root_dx
-
+  integer :: iBoundary
   !  logical :: HdfUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
@@ -1898,6 +1898,17 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
 
+     case("#BOUNDARYSTATE")
+         call read_var('iBoundary',iBoundary)
+         if (iBoundary > 6 .or. iBoundary < Solid_) then
+            call stop_mpi(NameSub//' ERROR: iBoundary is out of the range')
+         else
+            UseBoundaryState_I(iBoundary) = .true.
+         end if
+         do iVar = 1, nVar
+            call read_var('FaceStateDim', FaceStateDim_VI(iVar, iBoundary))
+         end do
+         
      case("#DIPOLEBODY2")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('BdpDimBody2x',BdpDimBody2_D(1))
