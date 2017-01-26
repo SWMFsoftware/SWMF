@@ -82,7 +82,7 @@ pro set_default_values
      noresize
   noresize=0                    ; Keep original size of fits image
 
-; Parameters for .r getpict
+; Parameters for read_data
   common getpict_param, $
      filename, nfile, filenames, filetypes, npictinfiles, npict
   filename=''          ; space separated list of filenames. May contain *, []
@@ -92,7 +92,7 @@ pro set_default_values
   npictinfiles=0       ; number of pictures in each file
   npict=0              ; index of snapshot to be read
 
-; Parameters for .r plotfunc
+; Parameters for plot_data
   common plotfunc_param, $
      func, nfunc, funcs, funcs1, funcs2, plotmode, plotmodes, nplot, $
      plottitle, plottitles, plottitles_file, $
@@ -153,7 +153,7 @@ pro set_default_values
      nxreg_old, xreglimits_old, triangles, $
      symmtri
   usereg=0         ; use wreg and xreg instead of w and x
-  dotransform='n'  ; do transform with .r plotfunc?
+  dotransform='n'  ; do transform with plot_data?
   transform='n'    ; transformation 'none', 'regular', 'my', 'polar', 'unpolar'
   nxreg=[0,0]      ; size of transformed grid
   xreglimits=0     ; transformed grid limits [xmin, ymin, xmax, ymax]
@@ -168,7 +168,7 @@ pro set_default_values
   nvector=0                     ; number of vector variables
   vectors=0                     ; index of first components of vector variables
 
-; Parameters for getlog
+; Parameters for read_log_data
   common getlog_param, $
      logfilename, logfilenames
   logfilename=''       ; space separated string of filenames. May contain *, []
@@ -193,7 +193,7 @@ pro set_default_values
   timeunit='h' ; set to '1' (unitless), 's' (second), 'm' (minute), 'h' (hour) 
                                 ;        'millisec', 'microsec', 'ns' (nanosec)
 
-; Parameters for plotlog
+; Parameters for plot_log_data
   common plotlog_param, $
      log_spacex,log_spacey, logfunc, title, xtitle, ytitles, $
      xrange, yranges, timeshifts, $
@@ -415,10 +415,17 @@ pro read_data
 
   nfile=0
   askstr,'filename(s)   ',filename, doask
-  string_to_array,filename,filenames,nfile,/wildcard
+  string_to_array, filename, filenames, nfile, /wildcard
+
+  if not keyword_set(filenames) then begin
+     print,'Error in read_data: no matching filename was found.'
+     retall
+  endif
 
   if nfile gt 10 then begin
-     print,'Error in getpict: cannot handle more than 10 files.'
+     print,'Error in read_data: cannot handle more than 10 files.'
+     print,'nfile     = ', nfile
+     print,'filenames = ', filenames
      retall
   endif
   get_file_types
@@ -550,10 +557,7 @@ pro plot_data
   common file_head
   common plot_store
 
-  if not keyword_set(nfile) then begin
-     print,'No file has been read yet, run getpict or animate!'
-     return
-  endif
+  if not keyword_set(nfile) then read_data
 
   if nfile gt 1 then begin
      print,'More than one files were read...'
@@ -1251,17 +1255,19 @@ pro read_log_data
   common log_data
   common ask_param
 
-  askstr,'logfilename(s) ',logfilename,doask
-
   nlogfile=0
-  if stregex(logfilename, '[?*[]', /boolean) then begin
-     spawn,'/bin/ls '+logfilename, logfilenames
-     nlogfile = n_elements(logfilenames)
-  endif else $
-     string_to_array,logfilename,logfilenames,nlogfile
+  askstr,'logfilename(s) ',logfilename,doask
+  string_to_array, logfilename, logfilenames, nlogfile, /wildcard
+
+  if not keyword_set(logfilenames) then begin
+     print,'Error in read_log_data: no matching filename was found.'
+     retall
+  endif
 
   if nlogfile gt 10 then begin
-     print,'Error in getlog: cannot handle more than 10 files.'
+     print,'Error in read_log_data: cannot handle more than 10 files.'
+     print,'nlogfile     = ', nlogfile
+     print,'logfilenames = ', logfilenames
      retall
   endif
 
@@ -1292,8 +1298,11 @@ pro plot_log_data
 
   common ask_param
   common plotlog_param
+  common log_data
 
-  askstr,'logfunc(s)     ',logfunc,doask
+  if not keyword_set(wlog) then read_log_data
+
+  askstr,'logfunc(s)     ', logfunc, doask
 
   if !d.name eq 'X' then begin
      if !d.window lt 0 then window
