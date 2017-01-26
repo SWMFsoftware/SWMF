@@ -4769,10 +4769,10 @@ For both DtAmr and DnAmr negative values mean that no AMR is
 performed based on that condition. If IsStrictAmr is true, 
 we demand that the AMR is fully performed. If the AMR would require
 too many grid blocks, the code stops with an error message.
-If IsStrictAmr is false, the code will the a partial AMR allowed by
+If IsStrictAmr is false, the code will do a partial AMR allowed by
 the maximum of available blocks and continue running.
-For pure geometry based AMR the IsStrictAmr=F will causes the code to 
-skip the complete AMR if there are not enough blocsk.
+For pure geometry based AMR the IsStrictAmr=F will cause the code to 
+skip the complete AMR if there are not enough blocks.
 
 Defaults are DoAmr false and IsStrictAmr true.
 </command>
