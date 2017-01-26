@@ -462,7 +462,7 @@ contains
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
-    if(UseBorisSimple) then
+    if(UseBorisSimple .and. IsMhd) then
        ! Convert mometum in StateOld_VCB and State_VGB back from 
        ! enhanced momentum
        do k=1,nK; do j=1,nJ; do i=1,nI
