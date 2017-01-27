@@ -565,6 +565,9 @@ contains
 
          call set_cell_values_x
 
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
+
          if(UseB0)then
             B0x = B0_DX(x_,iFace,jFace,kFace)
             B0y = B0_DX(y_,iFace,jFace,kFace)
@@ -646,6 +649,9 @@ contains
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 
          call set_cell_values_y
+
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
 
          if(UseB0)then
             B0x = B0_DY(x_,iFace, jFace, kFace)
@@ -731,6 +737,9 @@ contains
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 
          call set_cell_values_z
+
+         if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
+              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
 
          if(UseB0)then
             B0x = B0_DZ(x_,iFace, jFace, kFace)
@@ -3611,7 +3620,6 @@ contains
               State_VGB(:,iLeft,jLeft,kLeft,iBlockFace)
          write(*,*)NameSub,' State(right cell)=', &
               State_VGB(:,iRight,jRight,kRight,iBlockFace)
-
          write(*,*)NameSub,' idim,i,j,k,BlockFace,iProc=', &
               iDimFace, iFace, jFace, kFace, iBlockFace, iProc
          write(*,*)NameSub,' xyz(right)=', &
