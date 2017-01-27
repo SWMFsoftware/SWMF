@@ -23,7 +23,7 @@ if($cron =~ m/run_test_amps/) {
 # Proceed with tests' installation
 
 # the server name
-my $server = 'dborovik@herot.engin.umich.edu';
+my $server = 'vtenishe@herot.engin.umich.edu';
 
 # the full hostname of the current machine
 my $hostname = `hostname -f`;

@@ -16,7 +16,7 @@
 
 # set the working directory
 set WorkDir = $HOME  
-set Server  = dborovik@herot.engin.umich.edu
+set Server  = vtenishe@herot.engin.umich.edu
 
 #>Pleiades ############################
 #set WorkDir = /nobackup/`whoami`    <#

@@ -4,7 +4,7 @@ use strict;
 
 
 # the server name
-my $server = 'dborovik@herot.engin.umich.edu';
+my $server = 'vtenishe@herot.engin.umich.edu';
 
 # the full hostname of the current machine
 my $hostname_s = `hostname -s`;
