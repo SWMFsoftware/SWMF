@@ -531,9 +531,13 @@ subroutine MH_set_parameters(TypeAction)
      case('#LOCALTIMESTEP')
         call read_localstep_param(NameCommand, iSession)
 
-     case("#FIXEDTIMESTEP", "#TIMESTEPLIMIT")
-        call               read_var('UseDtLimit', UseDtFixed)
-        if(UseDtFixed)call read_var('DtLimitDim', DtFixedDim)
+     case( "#TIMESTEPLIMIT")
+        call               read_var('UseDtLimit', UseDtLimit)
+        if(UseDtLimit)call read_var('DtLimitDim', DtLimitDim)
+
+     case("#FIXEDTIMESTEP")
+        call               read_var('UseDtFixed', UseDtFixed)
+        if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
 
      case("#PARTSTEADY")
         call read_var('UsePartSteady',UsePartSteady)
@@ -2304,6 +2308,7 @@ contains
     Cfl           = 0.8
     CflOrig       = 0.8
     UseDtFixed    = .false.
+    UseDtLimit    = .false.
     dt            = 0.0
     dt_BLK        = 0.0
 
@@ -2853,6 +2858,22 @@ contains
        end if
     end if
 
+    if(.not.time_accurate .and. UseDtFixed)then
+       if(iProc==0)then
+          write(*,'(a)')'Steady state Run can not use fixed time step'
+          write(*,'(a)')'Use limited time step instead'
+          call stop_mpi('Correct PARAM.in')
+       end if
+    end if
+
+    if(UseDtLimit .and. UseDtFixed)then
+       if(iProc==0)then
+          write(*,'(a)')'Limited time step and fixed time step can not be'
+          write(*,'(a)')'use together'
+          call stop_mpi('Correct PARAM.in')
+       end if
+    end if
+
     if(.not.time_accurate.and.UseBDF2)then
        if(iProc==0)then
           write(*,'(a)') NameSub//&
@@ -3346,9 +3367,16 @@ contains
     !--------------------------------------------------------------------------
     ! We need normalization for dt
     if(UseDtFixed)then
-       DtFixed = DtFixedDim * Io2No_V(UnitT_)
-       DtFixedOrig = DtFixed                   ! Store the initial setting
-       Dt = DtFixed
+       DtFixed     = DtFixedDim * Io2No_V(UnitT_)
+       DtFixedOrig = DtFixed   ! Store the initial setting
+       Dt          = DtFixed
+       Cfl         = 1.0       ! UseDtFixed only works with time accurate
+    end if
+
+    if(UseDtLimit)then
+       DtLimit     = DtLimitDim * Io2No_V(UnitT_)
+       DtLimitOrig = DtLimit   ! Store the initial setting
+       Dt          = DtLimit
        if(time_accurate) Cfl=1.0
     end if
 
@@ -3357,6 +3385,8 @@ contains
        ! The original values are stored in DtFixedOrig and CflOrig
        if(UseDtFixed)then
           DtFixed = TimeStepControlInit*DtFixed
+       else if(UseDtLimit) then
+          DtLimit = TimeStepControlInit*DtLimit
        else
           Cfl     = TimeStepControlInit*Cfl
        end if
@@ -3364,6 +3394,8 @@ contains
     else
        if(UseDtFixed)then
           DtFixed = DtFixedOrig
+       else if(UseDtLimit) then
+          DtLimit = DtLimitOrig
        else
           Cfl     = CflOrig
        end if

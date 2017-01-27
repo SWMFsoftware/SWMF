@@ -55,8 +55,12 @@ module ModMain
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0
 
-  ! Fixed time step (for implicit scheme mostly)
+  ! Fixed time step (only for time accurate and for implicit scheme mostly)
   logical :: UseDtFixed
+
+  ! Limited time step
+  logical :: UseDtLimit
+  real    :: DtLimit, DtLimitOrig, DtLimitDim
 
   !\
   ! Model Coupling variables

@@ -108,7 +108,7 @@ contains
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt, Dt_BLK, Cfl, &
-         iTest, jTest, kTest, BlkTest, time_accurate
+         iTest, jTest, kTest, BlkTest, time_accurate, UseDtLimit, DtLimit
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -272,14 +272,14 @@ contains
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
     ! Reset time_BLK for fixed time step (but Dt_BLK is kept!)
-    if(UseDtFixed) then
-       if(time_accurate) then
-          time_BLK(:,:,:,iBlock) = Dt
-       else 
-          ! Limit local time step so that Cfl*time_BLK <= DtFixed
-          time_BLK(:,:,:,iBlock) = min(DtFixed/Cfl, time_BLK(:,:,:,iBlock))
-       endif
-    endif
+    if(UseDtFixed) &
+         time_BLK(:,:,:,iBlock) = DtFixed
+
+    ! Limit local time step so that Cfl*time_BLK <= DtLimit,
+    ! Cfl = 1.0 for UseDtLimit and time accurate, 
+    if(UseDtLimit) &
+         time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
+
     ! Set time step to zero inside body.
     if(.not.true_BLK(iBlock)) then
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
@@ -326,6 +326,8 @@ contains
 
     if(UseDtFixed)then
        Dt = DtFixed
+    elseif(UseDtLimit)then
+       Dt = DtLimit
     elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
        Dt    = 0.0
        DtMin = 0.0
@@ -477,7 +479,8 @@ contains
   subroutine control_time_step
 
     use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
-         DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation
+         DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
+         DtLimit, DtLimitOrig, UseDtLimit
     use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
@@ -564,6 +567,9 @@ contains
     if(UseDtFixed)then
        ! Do not exceed DtFixedOrig
        DtFixed = min(DtFixedOrig, DtFixed*Factor)
+    elseif(UseDtLimit)then
+       ! Do not exceed DtLimitOrig
+       DtLimit = min(DtLimitOrig, DtLimit*Factor)
     else
        ! Do not exceed CflOrig
        Cfl     = min(CflOrig, Cfl*Factor)
@@ -575,6 +581,9 @@ contains
        if(UseDtFixed)then
           write(*,*) NameSub,': Dt, DtFixed, Cfl=',&
                Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
+       elseif(UseDtLimit)then
+          write(*,*) NameSub,': Dt, DtLimit, Cfl=',&
+               Dt*No2Si_V(UnitT_), DtLimit*No2Si_V(UnitT_), Cfl
        else
           write(*,*) NameSub,': Dt, Cfl=', Dt*No2Si_V(UnitT_), Cfl
        end if
