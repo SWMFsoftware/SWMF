@@ -16,6 +16,7 @@ subroutine set_ics(iBlock)
   use ModConserveFlux, ONLY: init_cons_flux
   use ModRestartFile, ONLY: UseRestartWithFullB
   use BATL_lib, ONLY: Xyz_DGB
+  use ModBoundaryGeometry, ONLY: iBoundary_GB
 
   implicit none
 
@@ -23,7 +24,7 @@ subroutine set_ics(iBlock)
 
   real   :: SinSlope, CosSlope, Rot_II(2,2)
   real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
-  integer:: i, j, k, iVar
+  integer:: i, j, k, iVar, iBoundary
 
   character(len=*), parameter:: NameSub = 'set_ics'
   logical :: DoTest, DoTestMe
@@ -43,11 +44,14 @@ subroutine set_ics(iBlock)
 
   call init_cons_flux(iBlock)
 
-  if(Unused_B(iBlock))then  
-     do iVar=1,nVar
+ 
+  if(Unused_B(iBlock))then
+     do iVar = 1, nVar
         State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
      end do
   else
+
+
      !\
      ! If used, initialize solution variables and parameters.
      !/
@@ -81,13 +85,10 @@ subroutine set_ics(iBlock)
         ! Loop through all the cells
         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
            if(.not.true_cell(i,j,k,iBlock))then
-              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,body1_)
-              if(UseBody2)then
-                 if(R2_BLK(i,j,k,iBlock) < rBody2) &
-                      State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,body2_)
-              end if
+              iBoundary = iBoundary_GB(i,j,k,iBlock)
+              State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,iBoundary)
            elseif(.not.UseShockTube)then
-              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
+              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)  
            else
               if( (Xyz_DGB(x_,i,j,k,iBlock)-ShockPosition) &
                    < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
@@ -128,7 +129,8 @@ subroutine set_ics(iBlock)
            end if
 
         end do; end do; end do
-
+        
+         
         if(UseConstrainB)call constrain_ics(iBlock)
 
         if(UseUserICs) call user_set_ics(iBlock)
@@ -138,6 +140,7 @@ subroutine set_ics(iBlock)
      end if ! not restart
 
   end if ! Unused_B
+
   !\
   ! Compute energy from set values above.
   !/
