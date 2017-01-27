@@ -42,7 +42,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=file(batsrus) !!!ices !!off, ices, swmf
+CouplerMode=file(batsrus) !file(tecplot) !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
@@ -64,9 +64,10 @@ MoverIntegratorMode=Boris-relativistic
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
+  RequestedParticleBufferLength=15000000
 
-  BlockCells=5,5,5
-  GhostCells=2,2,2
+  BlockCells=4,4,4
+  GhostCells=1,1,1
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
   NastranSurfaceUserData=on !!!on, off
@@ -85,9 +86,12 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
   define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
 
-  RecoverMacroscopicSampledData=off  \\ !!on, off
+  RecoverMacroscopicSampledData=on \\ !!off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
-    file=pic.SamplingDataRestart.out=2.dat
+    file=pic.SamplingDataRestart.out=7.dat \\
+    \\ !function=Earth::DataRecoveryManager \\
+    OutputFileNumberRange=0,12 \\
+    preplot=on
 
 
   RecoverParticleData=off  \\ !on, off
@@ -106,17 +110,23 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
 
 ! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
 
 
 !the mesh resoution close to Europa
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
+define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
+
 #endGeneral
 
 #interface
-  cell_centered_linear_interpolation_mode=off 
+  cell_centered_linear_interpolation_mode=amps !!off !amps,swmf,off
   cell_centered_linear_interpolation_src=default
+
+  geopack=on
+  T96=on
 #endinterface
 
 
@@ -135,9 +145,10 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
     nSampleIntervals=200
 
 
- EnergyDistributionSamplingRelativistic=on \\ !on, off
+ EnergyDistributionSamplingRelativistic=off \\ !on, off
    x=(1.8E8,0.0,0.0), (1.3E8,0.0,0.0), (9.4E7,0.0,0.0), (5.7E7,0.0,0.0), (3.6E7,0.0,0.0), (2.3E7,0.0,0.0), (7.3E6,0.0,0.0) \\ 
-   nSampleIntervals=500 \\
+   nSampleIntervals=100 \\
+   samplingScale=LOGARITHMIC \\
    emin=1e6, emax=1.0e10 
 
 #endSampling
@@ -145,10 +156,25 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 #block ../input/earth.input.pl
   GCR=on
   SEP=off
+
+  SphericalShells=on \\  
+    x=300.0E3+_RADIUS_(_TARGET_),400.0E3+_RADIUS_(_TARGET_), \\ 
+       1.5*_RADIUS_(_TARGET_),2.0*_RADIUS_(_TARGET_),5.0*_RADIUS_(_TARGET_), \\
+       10.0*_RADIUS_(_TARGET_),15.0*_RADIUS_(_TARGET_) \\
+    emin=10.0*MeV2J \\
+    emax=2000.0*MeV2J \\
+    nLevels=20
+ 
+
+  ParticleDataSamplingMode=on \\ 
+    function=Earth::Sampling::ParticleData::SampleParticleData
+
 #endBlock
 
 #block ../exosphere.pl
   SPICE=off
+
+  SurfaceDataStructure=SurfaceDataStructure.h
 
 ! ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
