@@ -82,9 +82,13 @@ namespace Earth {
   //sampling of the energetic particle fluency
   namespace Sampling {
 
+    //the flag determine whether sampling will be performed
+    extern bool SamplingMode;
+
     //the number of the spherical layers of the sampling spheres, and shell's radii
-    const int nSphericalShells=3;
-    const double SampleSphereRadii[nSphericalShells]={9000.0E3,9000.0E3+400.0E3,9000.0E3-400.0E3};
+    const int nSphericalShells=1;
+    extern double SampleSphereRadii[nSphericalShells];
+
 
     //sampling of the particle fluency
     namespace Fluency {

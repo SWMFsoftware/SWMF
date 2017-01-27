@@ -35,7 +35,7 @@ double Earth::Sampling::Fluency::maxSampledEnergy=100.0*MeV2J;
 int Earth_Sampling_Fluency_nSampledLevels=10;
 
 void Earth::Sampling::PrintVariableList(FILE* fout) {
-  fprintf(fout,", \"TotalFlux\", \"max Rigidity\", \"FluxUp\", \"FluxDown\"");
+  fprintf(fout,", \"TotalFlux\", \"min Rigidity\", \"FluxUp\", \"FluxDown\"");
 
   for (int iEnergyLevel=0;iEnergyLevel<Earth::Sampling::Fluency::nSampledLevels;iEnergyLevel++) {
     double emin=Fluency::minSampledEnergy*pow(10.0,iEnergyLevel*Fluency::dLogEnergy);
@@ -55,7 +55,7 @@ void Earth::Sampling::PrintTitle(FILE* fout) {
 void Earth::Sampling::PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,
     int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads) {
 
-  double Flux=0.0,Rigidity=0.0,ParticleFluxUp=0.0,ParticleFluxDown=0.0;
+  double Flux=0.0,Rigidity=-1.0,ParticleFluxUp=0.0,ParticleFluxDown=0.0;
   int i,el;
   double elArea,TotalStencilArea=0.0;
 
@@ -70,7 +70,7 @@ void Earth::Sampling::PrintDataStateVector(FILE* fout,long int nZenithPoint,long
 
   for (i=0;i<Fluency::nSampledLevels;i++) ParticleFluenceDown[i]=0.0,ParticleFluenceUp[i]=0.0;
 
-  //get averaged at a give processor
+  //get averaged on a given processor
   for (i=0;i<SurfaceElementsInterpolationListLength;i++) {
     el=SurfaceElementsInterpolationList[i];
 
@@ -86,9 +86,10 @@ void Earth::Sampling::PrintDataStateVector(FILE* fout,long int nZenithPoint,long
       ParticleFluenceUp[iLevel]+=Sphere->ParticleFluencyUp[spec][el][iLevel];
     }
 
-    if (Sphere->maxRigidity[spec][el]>Rigidity) Rigidity=Sphere->maxRigidity[spec][el];
+    if (Sphere->minRigidity[spec][el]>0.0) {
+      if ((Rigidity<0.0) || (Sphere->minRigidity[spec][el]<Rigidity)) Rigidity=Sphere->minRigidity[spec][el];
+    }
   }
-
 
   double SamplingTime;
 
@@ -120,14 +121,11 @@ void Earth::Sampling::PrintDataStateVector(FILE* fout,long int nZenithPoint,long
         ParticleFluenceUp[i]+=pipe->recv<double>(thread);
       }
 
-
       t=pipe->recv<double>(thread);
-      if (t>Rigidity) Rigidity=t;
+      if ((t>0.0) && ((t<Rigidity)||(Rigidity<0.0)) ) Rigidity=t;
     }
 
-
-
-    fprintf(fout," %e  %e  %e  %e ", ParticleFluxUp+ParticleFluxDown,Rigidity,ParticleFluxUp,ParticleFluxDown);
+    fprintf(fout," %e  %e  %e  %e ", ParticleFluxUp+ParticleFluxDown,((Rigidity>0.0) ? Rigidity : 0.0),ParticleFluxUp,ParticleFluxDown);
     for (i=0;i<Fluency::nSampledLevels;i++) fprintf(fout," %e  %e  %e ", ParticleFluenceUp[i]+ParticleFluenceDown[i],ParticleFluenceUp[i],ParticleFluenceDown[i]);
   }
   else {
@@ -165,12 +163,12 @@ void Earth::Sampling::SamplingManager() {}
 //particle mover: call relativistic Boris, ans sample particle flux
 int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   double xInit[3],xFinal[3];
-  int res;
+  int res,iShell;
 
   PIC::ParticleBuffer::GetX(xInit,ptr);
   res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
 
-  if (res==_PARTICLE_MOTION_FINISHED_) {
+  if ((Sampling::SamplingMode==true)&&(res==_PARTICLE_MOTION_FINISHED_)) {
     //trajectory integration was successfully completed
     double r0,r1;
 
@@ -178,15 +176,9 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
     r0=sqrt(xInit[0]*xInit[0]+xInit[1]*xInit[1]+xInit[2]*xInit[2]);
     r1=sqrt(xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2]);
 
-    if (r0>r1) {
-      double t=r0;
-      r0=r1;
-      r1=t;
-    }
-
     //Important: now r0<=r1
     //search for a shell that was intersected by the trajectory segment
-    for (int i=0;i<Sampling::nSphericalShells;i++) if ((r0<Sampling::SampleSphereRadii[i])&&(Sampling::SampleSphereRadii[i]<r1)) {
+    for (iShell=0;iShell<Sampling::nSphericalShells;iShell++) if ((r0-Sampling::SampleSphereRadii[iShell])*(r1-Sampling::SampleSphereRadii[iShell])<=0.0) {
       //the trajectory segment has intersected a sampling shell
       //get the point of intersection
       double l[3],t=-1.0,a=0.0,b=0.0,c=0.0,d4,t1,t2;
@@ -198,7 +190,7 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
         c+=pow(xInit[idim],2);
       }
 
-      c-=pow(Sampling::SampleSphereRadii[i],2);
+      c-=pow(Sampling::SampleSphereRadii[iShell],2);
       d4=sqrt(b*b-a*c);
 
       if ((isfinite(d4)==true)&&(a!=0.0)) {
@@ -216,8 +208,8 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
 
           for (idim=0;idim<3;idim++) xIntersection[idim]=xInit[idim]+t*(xFinal[idim]-xInit[idim]);
 
-          Sampling::SamplingSphericlaShell[i].GetSurfaceElementProjectionIndex(xIntersection,iZenithElement,iAzimuthalElement);
-          iSurfaceElementNumber=Sampling::SamplingSphericlaShell[i].GetLocalSurfaceElementNumber(iZenithElement,iAzimuthalElement);
+          Sampling::SamplingSphericlaShell[iShell].GetSurfaceElementProjectionIndex(xIntersection,iZenithElement,iAzimuthalElement);
+          iSurfaceElementNumber=Sampling::SamplingSphericlaShell[iShell].GetLocalSurfaceElementNumber(iZenithElement,iAzimuthalElement);
 
           //increment sampling counters
           double ParticleWeight,Rigidity;
@@ -230,12 +222,12 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
 
           #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
           double *t;
-          t=Sampling::SamplingSphericlaShell[i].Flux[spec]+iSurfaceElementNumber;
+          t=Sampling::SamplingSphericlaShell[iShell].Flux[spec]+iSurfaceElementNumber;
 
           #pragma omp atomic
           *t+=ParticleWeight;
           #else
-          Sampling::SamplingSphericlaShell[i].Flux[spec][iSurfaceElementNumber]+=ParticleWeight;
+          Sampling::SamplingSphericlaShell[iShell].Flux[spec][iSurfaceElementNumber]+=ParticleWeight;
           #endif
 
           //Fluence Sampling Energy level
@@ -248,43 +240,45 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
 
           if ((Sampling::Fluency::minSampledEnergy<Energy)&&(Energy<Sampling::Fluency::maxSampledEnergy)) {
             iEnergyLevel=(int)(log10(Energy/Sampling::Fluency::minSampledEnergy)/Sampling::Fluency::dLogEnergy);
+
+            if ((iEnergyLevel<0)||(iEnergyLevel>=Sampling::Fluency::nSampledLevels)) iEnergyLevel=-1;
           }
           else iEnergyLevel=-1;
 
-          if (r0>Sampling::SampleSphereRadii[i]) {
+          if (r0>Sampling::SampleSphereRadii[iShell]) {
             //the particle moves toward hte Earth
             #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-            t=Sampling::SamplingSphericlaShell[i].ParticleFluxDown[spec]+iSurfaceElementNumber;
+            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxDown[spec]+iSurfaceElementNumber;
 
             #pragma omp atomic
             *t+=ParticleWeight;
 
             if (iEnergyLevel!=-1) {
-              t=Sampling::SamplingSphericlaShell[i].ParticleFluencyDown[spec][iSurfaceElementNumber]+iEnergyLevel;
+              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber]+iEnergyLevel;
 
               #pragma omp atomic
               *t+=ParticleWeight;
 
-              //Sampling::SamplingSphericlaShell[i].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+              //Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
             }
 
 
             #else //_COMPILATION_MODE__HYBRID_
-            Sampling::SamplingSphericlaShell[i].ParticleFluxDown[spec][iSurfaceElementNumber]+=ParticleWeight;
-            if (iEnergyLevel!=-1) Sampling::SamplingSphericlaShell[i].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            Sampling::SamplingSphericlaShell[iShell].ParticleFluxDown[spec][iSurfaceElementNumber]+=ParticleWeight;
+            if (iEnergyLevel!=-1) Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
             #endif //_COMPILATION_MODE__HYBRID_
 
           }
           else {
             //the particle moves outward the Earth
             #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-            t=Sampling::SamplingSphericlaShell[i].ParticleFluxUp[spec]+iSurfaceElementNumber;
+            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxUp[spec]+iSurfaceElementNumber;
 
             #pragma omp atomic
             *t+=ParticleWeight;
 
             if (iEnergyLevel!=-1) {
-              t=Sampling::SamplingSphericlaShell[i].ParticleFluencyUp[spec][iSurfaceElementNumber]+iEnergyLevel;
+              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber]+iEnergyLevel;
 
               #pragma omp atomic
               *t+=ParticleWeight;
@@ -293,23 +287,28 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
             }
 
             #else //_COMPILATION_MODE__HYBRID_
-            Sampling::SamplingSphericlaShell[i].ParticleFluxUp[spec][iSurfaceElementNumber]+=ParticleWeight;
-            if (iEnergyLevel!=-1) Sampling::SamplingSphericlaShell[i].ParticleFluencyUp[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            Sampling::SamplingSphericlaShell[iShell].ParticleFluxUp[spec][iSurfaceElementNumber]+=ParticleWeight;
+            if (iEnergyLevel!=-1) Sampling::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
             #endif //_COMPILATION_MODE__HYBRID_
           }
 
           //calculate particle rigidity
           double ElectricCharge;
 
-          ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+          ElectricCharge=fabs(PIC::MolecularData::GetElectricCharge(spec));
 
           if (ElectricCharge>0.0) {
-            Rigidity=Relativistic::Speed2Momentum(Speed,PIC::MolecularData::GetMass(spec))/fabs(PIC::MolecularData::GetElectricCharge(spec));
+            Rigidity=Relativistic::Speed2Momentum(Speed,PIC::MolecularData::GetMass(spec))/PIC::MolecularData::GetElectricCharge(spec);
 
             #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
             #pragma omp critical
             #endif
-            if (Rigidity>Sampling::SamplingSphericlaShell[i].maxRigidity[spec][iSurfaceElementNumber]) Sampling::SamplingSphericlaShell[i].maxRigidity[spec][iSurfaceElementNumber]=Rigidity;
+            {
+              if ((Sampling::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber]<0.0) || (Rigidity<Sampling::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber])) {
+                Sampling::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber]=Rigidity;
+              }
+            }
+
           }
         }
       }
@@ -323,23 +322,25 @@ void Earth::Sampling::Init() {
   int iShell;
 
 
-  //set the user-function for output of the data files in the core
-  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SamplingManager,PrintManager);
+  if (Earth::Sampling::SamplingMode==true) {
+    //set the user-function for output of the data files in the core
+    PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SamplingManager,PrintManager);
 
-  //set parameters of the fluency sampling
-  Earth_Sampling_Fluency_nSampledLevels=Fluency::nSampledLevels;
-  Fluency::dLogEnergy=log10(Fluency::maxSampledEnergy/Fluency::minSampledEnergy)/Fluency::nSampledLevels;
+    //set parameters of the fluency sampling
+    Earth_Sampling_Fluency_nSampledLevels=Fluency::nSampledLevels;
+    Fluency::dLogEnergy=log10(Fluency::maxSampledEnergy/Fluency::minSampledEnergy)/Fluency::nSampledLevels;
 
-  //init the shells
-  for (iShell=0;iShell<nSphericalShells;iShell++) {
-    double sx0[3]={0.0,0.0,0.0};
+    //init the shells
+     for (iShell=0;iShell<nSphericalShells;iShell++) {
+      double sx0[3]={0.0,0.0,0.0};
 
-    SamplingSphericlaShell[iShell].PrintDataStateVector=PrintDataStateVector;
-    SamplingSphericlaShell[iShell].PrintTitle=PrintTitle;
-    SamplingSphericlaShell[iShell].PrintVariableList=PrintVariableList;
+      SamplingSphericlaShell[iShell].PrintDataStateVector=PrintDataStateVector;
+      SamplingSphericlaShell[iShell].PrintTitle=PrintTitle;
+      SamplingSphericlaShell[iShell].PrintVariableList=PrintVariableList;
 
-    SamplingSphericlaShell[iShell].SetSphereGeometricalParameters(sx0,SampleSphereRadii[iShell]);
-    SamplingSphericlaShell[iShell].Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,SamplingSphericlaShell+iShell);
+      SamplingSphericlaShell[iShell].SetSphereGeometricalParameters(sx0,SampleSphereRadii[iShell]);
+      SamplingSphericlaShell[iShell].Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,SamplingSphericlaShell+iShell);
+    }
   }
 }
 
@@ -419,6 +420,25 @@ void Earth::Init() {
   CompositionGroupTable[0].maxVelocity=Relativistic::E2Speed(Earth::BoundingBoxInjection::maxEnergy,PIC::MolecularData::GetMass(0));
 
   CompositionGroupTable[0].GroupVelocityStep=(CompositionGroupTable[0].maxVelocity-CompositionGroupTable[0].minVelocity)/CompositionGroupTable[0].nModelSpeciesGroup;
+
+  if (PIC::ThisThread==0) {
+    cout << "$PREFIX: Composition Group Velocity and Energy Characteristics:\nspec\tmin Velocity [m/s]\tmax Velovity[m/s]\t min Energy[eV]\tmax Energy[eV]" << endl;
+
+    for (int s=0;s<PIC::nTotalSpecies;s++) {
+      double minV,maxV,minE,maxE,mass;
+
+      mass=PIC::MolecularData::GetMass(s);
+
+      minV=Earth::CompositionGroupTable[0].GetMinVelocity(s);
+      maxV=Earth::CompositionGroupTable[0].GetMaxVelocity(s);
+
+      //convert velocity into energy and distribute energy of a new particles
+      minE=Relativistic::Speed2E(minV,mass);
+      maxE=Relativistic::Speed2E(maxV,mass);
+
+      cout << s << "\t" << minV << "\t" << maxV << "\t" << minE*J2eV << "\t" <<  maxE*J2eV << endl;
+    }
+  }
 
   //init source models of SEP and GCR
   if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::SEP::Init();

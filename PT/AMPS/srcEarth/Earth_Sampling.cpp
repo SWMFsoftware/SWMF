@@ -12,9 +12,14 @@
 #include "pic.h"
 #include "Earth.h"
 
+char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
+
 int Earth::Sampling::ParticleData::_GYRO_RADIUS_SAMPLING_OFFSET_=-1;
 int Earth::Sampling::ParticleData::_GYRO_FRECUENCY_SAMPLING_OFFSET_=-1;
 bool Earth::Sampling::ParticleData::SamplingMode=false;
+double Earth::Sampling::SampleSphereRadii[Earth::Sampling::nSphericalShells]={0.0};
+bool Earth::Sampling::SamplingMode=false;
+
 
 
 //init the sampling module
