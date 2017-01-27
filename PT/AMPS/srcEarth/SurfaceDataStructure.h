@@ -30,7 +30,7 @@ public :
   double *SamplingBuffer;
 
   //cutoff rigidity
-  double **maxRigidity;
+  double **minRigidity;
 
   //flux of the energetic particles throught the face
   double **Flux;
@@ -105,7 +105,7 @@ public :
     InjectionRate=NULL,InjectionBoundaryCondition=NULL,ParticleSphereInteraction=NULL;
     maxIntersectedNodeTimeStep=NULL;
 
-    maxRigidity=NULL,Flux=NULL;
+    minRigidity=NULL,Flux=NULL;
 
     ParticleFluxUp=NULL,ParticleFluxDown=NULL;
     ParticleFluencyUp=NULL,ParticleFluencyDown=NULL;
@@ -151,19 +151,11 @@ public :
     for (s=0;s<nTotalSpecies;s++) {
       for (el=0;el<TotalSurfaceElementNumber;el++) {
         Flux[s][el]=0.0;
-        maxRigidity[s][el]=0.0;
+        minRigidity[s][el]=-1.0;
       }
     }
 
     for (el=0;el<TotalSurfaceElementNumber;el++) {
-/*      for (int spec=0;spec<nTotalSpecies;spec++) {
-        SurfaceElementDesorptionFluxUP[spec][el]=0.0;
-        SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
-        SurfaceElementPopulation[spec][el]=0.0;
-      }
-
-      SolarWindSurfaceFlux[el]=-1.0;*/
-
       for (s=0;s<nTotalSpecies;s++) {
         for (i=0;i<EXOSPHERE__SOURCE_MAX_ID_VALUE+1;i++) SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
       }
@@ -198,14 +190,14 @@ public :
     EXOSPHERE__SOURCE_MAX_ID_VALUE=EXOSPHERE__SOURCE_MAX_ID_VALUE_IN;
 
     Flux=new double* [nTotalSpecies];
-    maxRigidity=new double* [nTotalSpecies];
+    minRigidity=new double* [nTotalSpecies];
 
     Flux[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
-    maxRigidity[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
+    minRigidity[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
 
     for (int spec=1;spec<nTotalSpecies;spec++) {
       Flux[spec]=Flux[spec-1]+TotalSurfaceElementNumber;
-      maxRigidity[spec]=maxRigidity[spec-1]+TotalSurfaceElementNumber;
+      minRigidity[spec]=minRigidity[spec-1]+TotalSurfaceElementNumber;
     }
 
 
