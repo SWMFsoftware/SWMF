@@ -44,10 +44,10 @@ my %TZ2CRON_run = (
     "MDT" => "30 21", "MST" => "30 21",
     "PDT" => "30 20", "PST" => "30 20");
 my %TZ2CRON_scp = (
-    "EDT" => "30 8", "EST" => "30 8", 
-    "CDT" => "30 7", "CST" => "30 7",
-    "MDT" => "30 6", "MST" => "30 6",
-    "PDT" => "30 5", "PST" => "30 5");
+    "EDT" => "30 10", "EST" => "30 10", 
+    "CDT" => "30 9", "CST" => "30 9",
+    "MDT" => "30 8", "MST" => "30 8",
+    "PDT" => "30 7", "PST" => "30 7");
 
 # name of the script to be installed
 my $run_script="run_test_amps.sh";
