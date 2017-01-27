@@ -108,7 +108,7 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
            PIC::ParticleBuffer::SetI(spec,newParticleData);
 
            //inject the particle into the system
-           _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
+           _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,rnd()*LocalTimeStep,startNode);
          }
        }
      }
