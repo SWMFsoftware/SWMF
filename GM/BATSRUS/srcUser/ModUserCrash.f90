@@ -145,11 +145,11 @@ module ModUser
   real :: NiDim_NLTE = 1.0e22 ! 1/cm3
   real :: TeSi_NLTE, NiSi_NLTE
 
-  ! Electron temperature below which the material is solid and
+  ! Ion temperature below which the material is solid (or fluid) and
   ! the hydro equations will be switched off (but still solving for
   ! radiation diffusion, heat conduction, and energy exchanges)
-  real :: MeltingTeDim_I(0:MaxMaterial-1) = 0.0 ! eV
-  real :: MeltingTeSi_I(0:MaxMaterial-1)
+  real :: VaporizationTiDim_I(0:MaxMaterial-1) = 0.0 ! eV
+  real :: VaporizationTi_I(0:MaxMaterial-1)
 
 contains
 
@@ -298,10 +298,10 @@ contains
           call read_var('TeDim_NLTE', TeDim_NLTE) ! eV
           call read_var('NiDim_NLTE', NiDim_NLTE) ! 1/cm3
 
-       case("#MELTINGTEMPERTURE")
+       case("#VAPORIZATIONTEMPERTURE")
           do iMaterial = 0, nMaterial - 1
-             call read_var('MeltingTe'//NameMaterial_I(iMaterial), &
-                  MeltingTeDim_I(iMaterial)) ! eV
+             call read_var('VaporizationTi'//NameMaterial_I(iMaterial), &
+                  VaporizationTiDim_I(iMaterial)) ! eV
           end do
 
        case('#USERINPUTEND')
@@ -1339,7 +1339,7 @@ contains
             ' iTableEosNLTE_I = ', iTableEosNLTE_I
     end if
 
-    MeltingTeSi_I = MeltingTeDim_I*cEVToK
+    VaporizationTi_I = VaporizationTiDim_I*cEVToK*Si2No_V(UnitTemperature_)
 
   end subroutine user_init_session
 
@@ -2349,14 +2349,16 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModMain,       ONLY: Solid_, Dt
     use ModGeometry,   ONLY: IsBoundaryCell_GI
+    use ModPhysics,    ONLY: Si2No_V, UnitN_, UnitTemperature_
+    use ModVarIndexes, ONLY: p_
 
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iMaterial
-    real :: TeSi
+    real :: TeSi, Ti, Natomic, NatomicSi
 
     character(len=*), parameter :: NameSub='user_set_boundary_cells'
     !--------------------------------------------------------------------------
@@ -2364,8 +2366,16 @@ contains
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock), 1) - 1
-       call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
-       if(TeSi < MeltingTeSi_I(iMaterial))then
+       if(UseElectronPressure)then
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+               NatomicOut = NatomicSi)
+          Natomic = NatomicSi*Si2No_V(UnitN_)
+          Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
+       else
+          call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
+          Ti = TeSi*Si2No_V(UnitTemperature_)
+       end if
+       if(Ti < VaporizationTi_I(iMaterial))then
           IsBoundaryCell_GI(i,j,k,Solid_) = .true.
        else
           IsBoundaryCell_GI(i,j,k,Solid_) = .false.

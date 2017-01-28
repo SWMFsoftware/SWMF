@@ -31,15 +31,12 @@ T			UseSolidState
 #USERINPUTBEGIN ------------------------
 
 ! Temperatures are in eV
-! Be target is initially a solid to check if we can laserheat a solid
-! The melting temperature of Pl, Au, and Ay is arbitrary (we need temperature
-! initialization of solid to make this more correct)
-#MELTINGTEMPERTURE
-0.0			MeltingTeXe
-0.25			MeltingTeBe
-5.0			MeltingTePl
-5.0			MeltingTeAu
-5.0			MeltingTeAy
+#VAPORIZATIONTEMPERTURE
+0.0			VaporizationTiXe
+0.25			VaporizationTiBe
+5.0			VaporizationTiPl
+5.0			VaporizationTiAu
+5.0			VaporizationTiAy
 
 #USERINPUTEND ----------------------------
 
