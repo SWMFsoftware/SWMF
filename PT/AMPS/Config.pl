@@ -83,7 +83,7 @@ foreach (@Arguments) {
      print "-output-path=PATH\t\tthe directory where AMPS' output files will be saved.\n";
      print "-batl-path=PATH\t\t\tthe path to the BATL directory\n";
      print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
-     print "-set-test(=NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all)\n";
+     print "-set-test=(NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all; NAME parameter is optional)\n";
      print "-rm-test\/comp\t\t\tremove nightly tests\n";
      print "-amps-test=[on,off]\t\ttells the code that a nightly test is executed\n";
      print "-openmp=[on,off]\t\twhen \"on\" use OpenMP and MPI libraries for compiling AMPS\n";
