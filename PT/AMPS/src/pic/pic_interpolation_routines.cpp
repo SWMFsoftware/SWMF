@@ -514,6 +514,21 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
 
         StencilNode=PIC::Mesh::mesh.findTreeNode(xStencil,StencilNode);
 
+        if (StencilNode==NULL) {
+          //verify that the point is inside the domain, and return a "constant" ctencil
+          double xTest[3];
+
+          for (int idim=0;idim<3;idim++) {
+            xTest[idim]=x[idim];
+
+            if (xTest[idim]<=PIC::Mesh::mesh.xGlobalMin[idim]) xTest[idim]+=0.1*(PIC::Mesh::mesh.xGlobalMax[idim]-PIC::Mesh::mesh.xGlobalMin[idim])/(1<<_MAX_REFINMENT_LEVEL_);
+            if (xTest[idim]>=PIC::Mesh::mesh.xGlobalMax[idim]) xTest[idim]-=0.1*(PIC::Mesh::mesh.xGlobalMax[idim]-PIC::Mesh::mesh.xGlobalMin[idim])/(1<<_MAX_REFINMENT_LEVEL_);
+          }
+
+          node=PIC::Mesh::mesh.findTreeNode(xTest,node);
+          return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(xTest,node);
+        }
+
         switch (iStencil+2*jStencil+4*kStencil) {
         case 0+0*2+0*4:
           StencilElementWeight=(1.0-xLoc[0])*(1.0-xLoc[1])*(1.0-xLoc[2]);
