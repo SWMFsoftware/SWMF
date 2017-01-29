@@ -235,7 +235,7 @@ pro set_default_values
      fixaspect, noerase, $ 
      cut, cut0, plotdim, rcut, rbody, $
      velvector, velpos, velpos0, velrandom, velspeed, velx, vely, veltri, $
-     ax, az, contourlevel, linestyle
+     viewanglex, viewanglez, colorlevel, contourlevel, linestyle
 
 ; multiplot=0         - default subplot arrangement based on nfile,nfunc
 ; multiplot=-1        - arrange subplots vertically
@@ -271,9 +271,10 @@ pro set_default_values
   velx=0                        ; storage for x coordinate of vector positions
   vely=0                        ; storage for y coordinate of vector positions
   veltri=0                      ; storage for triangulation
-  ax=30                  ; view angle relative to x axis for surface/shade_surf
-  az=30                  ; view angle relative to z axis for surface/shade_surf
-  contourlevel=30               ; Number of contour levels for contour/contfill
+  viewanglex=30                 ; view angle relative to x axis for surface/shade_surf
+  viewanglez=30                 ; view angle relative to z axis for surface/shade_surf
+  colorlevel=30                 ; Number of color levels for contfill/contbar
+  contourlevel=30               ; Number of contour levels for contour
   linestyle=0                   ; line style for plot
 
 ; store plot function values from plotting and animations
@@ -566,9 +567,9 @@ pro plot_data
   endif
 
   print,'======= CURRENT PLOTTING PARAMETERS ================'
-  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+  print,'colorlevel=',colorlevel,', contourlevel=',contourlevel,$
         ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
-        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+        FORMAT='(a,i3,a,i3,a,i4,a,i2)'
   print,'multiplot=',multiplot
   print,'axistype (coord/cells)=',axistype,', fixaspect= ',fixaspect,$
         FORMAT='(a,a,a,i1)'
@@ -685,9 +686,9 @@ pro animate_data
         FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
         +string(n_elements(dpict))+'i4,a,i4)'
   print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
-  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+  print,'colorlevel=',colorlevel,', contourlevel=',contourlevel,$
         ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
-        FORMAT='(a,i4,a,i3,a,i3,a,i4,a,i2)'
+        FORMAT='(a,i3,a,i3,a,i4,a,i2)'
   if keyword_set(multiplot) then begin
      siz=size(multiplot)
      ;; scalar multiplot value is converted to a row (+) or a column (-)
@@ -1021,9 +1022,9 @@ pro slice_data
   print,'firstslice=',firstslice,', dslice=',dslice,$
         ', nslicemax=',nslicemax,', savemovie (y/n)=',savemovie,$
         FORMAT='(a,i4,a,i4,a,i4,a,a)'
-  print,'ax,az=',ax,',',az,', contourlevel=',contourlevel,$
+  print,'colorlevel=',colorlevel,', contourlevel=',contourlevel,$
         ', velvector=',velvector,', $
-        FORMAT='(a,i4,a,i3,a,i3,a,i4)'
+        FORMAT='(a,i3,a,i3,a,i4)'
   if keyword_set(multiplot) then begin
      siz=size(multiplot)
      if siz(0) eq 0 then begin
@@ -3723,7 +3724,7 @@ pro plot_func
         !p.title = ''
      endif
 
-                                ; Check if the angular unit of phi is given
+     ;; Check if the angular unit of phi is given
      angleunit = -1.0
      i=strpos(plotmod,'polardeg')
      if i ge 0 then begin
@@ -3741,17 +3742,17 @@ pro plot_func
         plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+8)
      endif
 
-                                ; Calculate the next p.multi(0) explicitly
+     ;; Calculate the next p.multi(0) explicitly
      if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
      else multi0=!p.multi(1)*!p.multi(2)-1
 
-                                ; Calculate subplot position indices
+     ;; Calculate subplot position indices
      if !p.multi(4) then begin
-                                ; columnwise
+        ;; columnwise
         plotix=multix-1-multi0/multiy
         plotiy=multi0 mod multiy
      endif else begin
-                                ; rowwise
+        ;; rowwise
         plotix=multix-1-(multi0 mod multix)
         plotiy=multi0/multix
      endelse
@@ -3760,17 +3761,14 @@ pro plot_func
 
      if plotmod ne 'shade' and plotmod ne 'surface' then begin
 
-                                ; obtain position for flat plotmodes
+        ;; obtain position for flat plotmodes
         set_position, sizes, plotix, multiy-1-plotiy, pos, /rect
 
-                                ; shrink in X direction
-                                ; for (overplotting) a colorbar
-        if strpos(plotmodes(ifunc),'bar') ge 0 $
-           or (strpos(plotmodes(ifunc),'over') ge 0 and $
-               strpos(plotmodes(ifunc-1>0),'bar') ge 0) then $
-                  pos(2) = pos(2) - (pos(2) - pos(0))*0.15
+        ;; shrink in X direction if there is a colorbar among the plotmodes
+        if strpos(plotmode,'bar') then $
+           pos(2) = pos(2) - (pos(2) - pos(0))*0.15
 
-                                ; shrink in X direction for the Y axis of plot
+        ;; shrink in X direction for the Y axis of plot
         if strmid(plotmod,0,4) eq 'plot' and multix gt 1 then $
            pos(0) = pos(0) + (pos(2) - pos(0))*0.15
 
@@ -3886,13 +3884,13 @@ pro plot_func
         else if keyword_set(linestyle) then lstyle=linestyle $
         else                                lstyle=!p.linestyle
 
-                                ; Skip minimum ad maximum levels
-     if plotmod eq 'cont' or plotmod eq 'polar' then $
-        levels=(findgen(contourlevel+2)-1)/(contourlevel-1) $
-               *(f_max-f_min)+f_min
-     
-                                ; figure out the units of angle in the 
-                                ; second coordinate if not already set
+     ;; Skip minimum ad maximum levels
+     if plotmod eq 'cont' or plotmod eq 'polar' then begin
+        if fill then nlevel=colorlevel else nlevel=contourlevel
+        levels=(findgen(nlevel+2)-1)/(nlevel-1)*(f_max-f_min)+f_min
+     endif
+
+     ;; figure out the units of angle in 2nd coordinate if not already set
      if plotmod eq 'polar' and angleunit lt 0 then begin
         if max(yy)-min(yy) gt 300 then $
            angleunit = !dtor $  ; degrees
@@ -3903,8 +3901,7 @@ pro plot_func
      endif
 
      if plotmod eq 'tv' then begin
-                                ; Calculate plotting position and size
-
+        ;; Calculate plotting position and size
         tvplotx=pos(0)*!d.x_size
         tvploty=pos(1)*!d.y_size
         tvsizex=(pos(2)-pos(0))*!d.x_size
@@ -3931,15 +3928,15 @@ pro plot_func
            'shade'    :begin
               shade_surf,f>f_min,ZRANGE=[f_min,f_max],$
                          XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
-                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+                         ZSTYLE=noaxis+18,AX=viewanglex,AZ=viewanglez,/NOERASE
               if showgrid then $
                  surface,f>f_min,ZRANGE=[f_min,f_max],$
                          XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
-                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+                         ZSTYLE=noaxis+18,AX=viewanglex,AZ=viewanglez,/NOERASE
            end
            'surface'  :surface,f>f_min,ZRANGE=[f_min,f_max],$
                                XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
-                               ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+                               ZSTYLE=noaxis+18,AX=viewanglex,AZ=viewanglez,/NOERASE
            'tv'       :begin
               tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
               contour,f,XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
@@ -3990,22 +3987,22 @@ pro plot_func
                                XSTYLE=noaxis+1,YSTYLE=noaxis+3,$
                                LINE=lstyle,/NOERASE
            'shade'    :if irr then begin
-              shade_surf_irr,f>f_min,xx,yy,AX=ax,AZ=az
-              shade_surf,f>f_min,xx,yy,AX=ax,AZ=az,/NODATA,/NOERASE
+              shade_surf_irr,f>f_min,xx,yy,AX=viewanglex,AZ=viewanglez
+              shade_surf,f>f_min,xx,yy,AX=viewanglex,AZ=viewanglez,/NODATA,/NOERASE
            endif else begin
               shade_surf,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
                          XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
-                         ZSTYLE=noaxis+18,AX=ax,AZ=az,/NOERASE
+                         ZSTYLE=noaxis+18,AX=viewanglex,AZ=viewanglez,/NOERASE
               if showgrid then $
                  surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
                          XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
                          ZSTYLE=noaxis+18,$
-                         AX=ax,AZ=az,/NOERASE
+                         AX=viewanglex,AZ=viewanglez,/NOERASE
            endelse
            'surface'  :surface,f>f_min,xx,yy,ZRANGE=[f_min,f_max],$
                                XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
                                ZSTYLE=noaxis+18,$
-                               AX=ax,AZ=az,/NOERASE
+                               AX=viewanglex,AZ=viewanglez,/NOERASE
            'tv'       :begin
               tv,tvf,tvplotx,tvploty,XSIZE=tvsizex,YSIZE=tvsizey
               contour,f,xx,yy,$
