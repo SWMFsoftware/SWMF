@@ -6,11 +6,15 @@ my %WeightMachine = (
     "gfortran"     => "1.0",
     "grid"         => "1.0",
     "mesh"         => "1.0",
-    "nyx"          => "1.0",
-    "nyx_gfortran" => "1.0",
-    "nyx_pgf90"    => "1.0",
-    "nyx_ifort"    => "1.0",
+    "bluewaters"   => "0.0",
     );
+
+#    "nyx"          => "1.0",
+#    "nyx_gfortran" => "1.0",
+#    "nyx_pgf90"    => "1.0",
+#    "nyx_ifort"    => "1.0",
+
+
 
 my @machines = sort keys %WeightMachine;
 
@@ -62,7 +66,9 @@ my %WeightTest = (
 
     "CRASH:GM/BATSRUS/test_eosgodunov"    => "1.0",
     "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
+    "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
     "CRASH:GM/BATSRUS/test_laserpackage"  => "1.0",
+    "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
 
     );
 
