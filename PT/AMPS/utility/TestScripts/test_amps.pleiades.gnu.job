@@ -20,7 +20,7 @@
 cd GNU/AMPS
 module purge
 module load gcc/4.9.2
-module load mpi-openmpi/1.6.5-gcc
+module load mpi-sgi
 module load tecplot/360_2013
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
