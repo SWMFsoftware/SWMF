@@ -3569,15 +3569,14 @@ pro plot_func
         yrange=[min(yy),max(yy)]
   endif
 
-                                ; Calculate plot spacing from number of plots per page (ppp) and charsize
+  ;; Calculate plot spacing from number of subplots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
   ppp   = multix*multiy
   spacex = float(!d.x_ch_size)/float(!d.x_size)*plot_spacex*!p.charsize
   spacey = float(!d.y_ch_size)/float(!d.y_size)*plot_spacey*!p.charsize
   set_space, ppp, spacex, spacey, sizes, nx = multix, ny = multiy
 
-                                ; Store x and y titles and tick names
-
+  ;; Store x and y titles and tick names
   newytitle  = 0 ;;; ytitleorig ne !y.title
   xtitle     = !x.title
   ytitle     = !y.title
@@ -3765,7 +3764,7 @@ pro plot_func
         set_position, sizes, plotix, multiy-1-plotiy, pos, /rect
 
         ;; shrink in X direction if there is a colorbar among the plotmodes
-        if strpos(plotmode,'bar') then $
+        if strpos(plotmode,'bar') gt 0 then $
            pos(2) = pos(2) - (pos(2) - pos(0))*0.15
 
         ;; shrink in X direction for the Y axis of plot
@@ -3776,7 +3775,7 @@ pro plot_func
 
            if plotmod eq 'polar' then $
               aspectx=1 $
-           else if fixaspect ne 1 then $
+           else if abs(fixaspect) ne 1 then $
               aspectx = abs(fixaspect) $
            else begin
               if axistype eq 'cells' then begin
@@ -3794,18 +3793,25 @@ pro plot_func
                        *float(!d.x_size)/float(!d.y_size)
 
            aspectratio = aspectpos/aspectx
-           
+
            if aspectratio gt 1 then begin
-              posmid=(pos(2)+pos(0))/2.
-              posdif=(pos(2)-pos(0))/2.
-              pos(0)=posmid - posdif/aspectratio
-              pos(2)=posmid + posdif/aspectratio
+              if fixaspect gt 0 then begin
+                 posmid=(pos(2)+pos(0))/2.
+                 posdif=(pos(2)-pos(0))/2.
+                 pos(0)=posmid - posdif/aspectratio
+                 pos(2)=posmid + posdif/aspectratio
+              endif else $
+                 pos(0:2:2) = pos(0:2:2)/aspectratio + 0.5*(1-1/aspectratio)
            endif else begin
-              posmid=(pos(3)+pos(1))/2.
-              posdif=(pos(3)-pos(1))/2.
-              pos(1)=posmid - posdif*aspectratio
-              pos(3)=posmid + posdif*aspectratio
+              if fixaspect gt 0 then begin
+                 posmid=(pos(3)+pos(1))/2.
+                 posdif=(pos(3)-pos(1))/2.
+                 pos(1)=posmid - posdif*aspectratio
+                 pos(3)=posmid + posdif*aspectratio
+              endif else $
+                 pos(1:3:2) = pos(1:3:2)*aspectratio + 0.5*(1-aspectratio)
            endelse
+
         endif
 
         ;; Omit X axis if unneeded
@@ -5656,12 +5662,9 @@ endif else $
 if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 
 ; Set size of plot windows
-ppp   = nlogfunc
-;space = 0.05
-;if !y.charsize gt 0 then space = space*!y.charsize
 spacex = log_spacex*float(!d.x_ch_size)/float(!d.x_size)
 spacey = log_spacey*float(!d.y_ch_size)/float(!d.y_size)
-set_space, ppp, spacex, spacey, sizes, ny = ppp
+set_space, nlogfunc, spacex, spacey, sizes, ny = nlogfunc
 
 if not keyword_set(noerase) then erase
 
@@ -5936,7 +5939,7 @@ pro set_space, nb, spacex, spacey, sizes, nx = nx, ny = ny
 ; or squares. This routine is used to simply find the parameters, another
 ; procedure, set_position, is used to actually find the position of the
 ; circle or square.
-; This routine maxamizes the area used by the plots, determinining the best
+; This routine maximizes the area used by the plots, determinining the best
 ; positions for the number of plots that the user has selected.
 ;
 ; input parameters:
@@ -5964,83 +5967,87 @@ pro set_space, nb, spacex, spacey, sizes, nx = nx, ny = ny
 
   if nb eq 1 then begin
 
-    sizes.nbx = 1
-    sizes.nby = 1
-    sizes.bs = 1.0 - spacex
+     sizes.nbx = 1
+     sizes.nby = 1
+     sizes.bs = 1.0 - spacex
 
-    if xs gt ys then begin
+     if xs gt ys then begin
 
-       sizes.yf = 1.0
-       sizes.xf = ys/xs
+        sizes.yf = 1.0
+        sizes.xf = ys/xs
 
-    endif else begin
+     endif else begin
 
-       sizes.xf = 1.0
-       sizes.yf = xs/ys
+        sizes.xf = 1.0
+        sizes.yf = xs/ys
 
      endelse
 
   endif else begin
 
-    if (n_elements(nx) gt 0) then begin
-      sizes.nbx = nx(0)
-      if n_elements(ny) eq 0 then sizes.nby = nb/nx(0) else sizes.nby = ny(0)
-    endif else begin
-      if (n_elements(ny) gt 0) then begin
-        sizes.nby = ny(0)
-        sizes.nbx = nb/ny(0)
-      endif else begin
-        if xs gt ys then begin
-          sizes.nbx = round(sqrt(nb))
-          sizes.nby = fix(nb/sizes.nbx)
+     if (n_elements(nx) gt 0) then begin
+        sizes.nbx = nx(0)
+        if n_elements(ny) eq 0 then sizes.nby = nb/nx(0) else sizes.nby = ny(0)
+     endif else begin
+        if (n_elements(ny) gt 0) then begin
+           sizes.nby = ny(0)
+           sizes.nbx = nb/ny(0)
         endif else begin
-          sizes.nby = round(sqrt(nb))
-          sizes.nbx = fix(nb/sizes.nby)
+           if xs gt ys then begin
+              sizes.nbx = round(sqrt(nb))
+              sizes.nby = fix(nb/sizes.nbx)
+           endif else begin
+              sizes.nby = round(sqrt(nb))
+              sizes.nbx = fix(nb/sizes.nby)
+           endelse
         endelse
-      endelse
-    endelse
+     endelse
 
-    if xs gt ys then begin
+     if xs gt ys then begin
 
-      if (sizes.nbx*sizes.nby lt nb) then                               $
-        if (sizes.nbx le sizes.nby) then sizes.nbx = sizes.nbx + 1      $
-        else sizes.nby = sizes.nby + 1                                  $
-      else                                                        	$
-	if (sizes.nbx lt sizes.nby) and					$
-	   (n_elements(nx) eq 0) and					$
-	   (n_elements(ny) eq 0) then begin
-	  temp = sizes.nby
-	  sizes.nby = sizes.nbx
-	  sizes.nbx = temp
-	endif
+        if (sizes.nbx*sizes.nby lt nb) then                               $
+           if (sizes.nbx le sizes.nby) then sizes.nbx = sizes.nbx + 1      $
+           else sizes.nby = sizes.nby + 1                                  $
+           else                                                        	$
+              if (sizes.nbx lt sizes.nby) and					$
+           (n_elements(nx) eq 0) and					$
+           (n_elements(ny) eq 0) then begin
+           temp = sizes.nby
+           sizes.nby = sizes.nbx
+           sizes.nbx = temp
+        endif
 
-      sizes.yf = 1.0
-      sizes.xf = ys/xs
-      sizes.bs = ((1.0-spacex*(sizes.nbx-1))/sizes.nbx )/sizes.xf
-      if sizes.nby*sizes.bs+spacey*(sizes.nby-1) gt 1.0 then 		$
-         sizes.bs = (1.0- spacey*(sizes.nby-1))/sizes.nby
+        sizes.yf = 1.0
+        sizes.xf = ys/xs
+        ;; box size is total size - spacing / number of boxes
+        ;; first set this based on X direction
+        sizes.bs = ((1.0-spacex*(sizes.nbx-1))/sizes.nbx )/sizes.xf
+        ;; check if it fits in the Y direction. If not, set again.
+        if sizes.nby*sizes.bs+spacey*(sizes.nby-1) gt 1.0 then 		$
+           sizes.bs = (1.0- spacey*(sizes.nby-1))/sizes.nby
 
-    endif else begin
+     endif else begin
 
-      if (sizes.nbx*sizes.nby lt nb) then				$
-	if (sizes.nby le sizes.nbx) then sizes.nby = sizes.nby + 1	$
-	else sizes.nbx = sizes.nbx + 1					$
-      else								$
-	if (sizes.nby lt sizes.nbx) and					$
-	   (n_elements(nx) eq 0) and					$
-	   (n_elements(ny) eq 0) then begin
-	  temp = sizes.nby
-	  sizes.nby = sizes.nbx
-	  sizes.nbx = temp
-	endif
+        if (sizes.nbx*sizes.nby lt nb) then				$
+           if (sizes.nby le sizes.nbx) then sizes.nby = sizes.nby + 1	$
+           else sizes.nbx = sizes.nbx + 1					$
+           else								$
+              if (sizes.nby lt sizes.nbx) and					$
+           (n_elements(nx) eq 0) and					$
+           (n_elements(ny) eq 0) then begin
+           temp = sizes.nby
+           sizes.nby = sizes.nbx
+           sizes.nbx = temp
+        endif
 
-      sizes.xf = 1.0
-      sizes.yf = xs/ys
-      sizes.bs = ((1.0 - spacey*(sizes.nby-1))/sizes.nby)/sizes.yf
-      if sizes.nbx*sizes.bs+spacex*(sizes.nbx-1) gt 1.0 then 		$
-         sizes.bs = (1.0 - spacex*(sizes.nbx-1))/sizes.nbx
+        sizes.xf = 1.0
+        sizes.yf = xs/ys
+        sizes.bs = ((1.0 - spacey*(sizes.nby-1))/sizes.nby)/sizes.yf
 
-    endelse
+        if sizes.nbx*sizes.bs+spacex*(sizes.nbx-1) gt 1.0 then $
+           sizes.bs = (1.0 - spacex*(sizes.nbx-1))/sizes.nbx
+
+     endelse
 
   endelse
 
@@ -6072,9 +6079,9 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
   spacey = sizes.spacey
 
   yf2 = sizes.yf
-  yf = sizes.yf*(1.0-spacex)
+  yf  = sizes.yf*(1.0-spacey)
   xf2 = sizes.xf
-  xf = sizes.xf*(1.0-spacey)
+  xf  = sizes.xf*(1.0-spacex)
 
   if keyword_set(rect) then begin
 
