@@ -5567,9 +5567,9 @@ pro plot_log
 ; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
 
-common log_data, $
+  common log_data, $
      timeunit, $
-     wlog0, logtime0, wlognames0, $  ; renamed from wlog, logtime, wlognames
+     wlog0, logtime0, wlognames0, $ ; renamed from wlog, logtime, wlognames
      wlog1, logtime1, wlognames1, $
      wlog2, logtime2, wlognames2, $
      wlog3, logtime3, wlognames3, $
@@ -5580,141 +5580,141 @@ common log_data, $
      wlog8, logtime8, wlognames8, $
      wlog9, logtime9, wlognames9
 
-common getlog_param
-common plotlog_param
-common plot_param ; noerase
+  common getlog_param
+  common plotlog_param
+  common plot_param             ; noerase
 
-nlog = n_elements(logfilenames)
+  nlog = n_elements(logfilenames)
 
-string_to_array,logfunc,logfuncs,nlogfunc
+  string_to_array,logfunc,logfuncs,nlogfunc
 
 ; read in arrays if not present
-if    (nlog eq 1 and n_elements(wlognames0) eq 0) $
-   or (nlog eq 2 and n_elements(wlognames1) eq 0) $
-   or (nlog eq 3 and n_elements(wlognames2) eq 0) then begin
+  if    (nlog eq 1 and n_elements(wlognames0) eq 0) $
+     or (nlog eq 2 and n_elements(wlognames1) eq 0) $
+     or (nlog eq 3 and n_elements(wlognames2) eq 0) then begin
 
-   if nlog ge 1 then get_log,logfilenames(0),wlog0,wlognames0,/verbose
-   if nlog ge 2 then get_log,logfilenames(1),wlog1,wlognames1,verbose='1'
-   if nlog ge 3 then get_log,logfilenames(2),wlog2,wlognames2,verbose='2'
+     if nlog ge 1 then get_log,logfilenames(0),wlog0,wlognames0,/verbose
+     if nlog ge 2 then get_log,logfilenames(1),wlog1,wlognames1,verbose='1'
+     if nlog ge 3 then get_log,logfilenames(2),wlog2,wlognames2,verbose='2'
 
-endif
+  endif
 
 ; Shift times by 0 unless defined
-if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
+  if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
 
 ; Shall we do an FFT transform and plot power spectra?
-if n_elements(dofft) eq 0 then dofft=0
+  if n_elements(dofft) eq 0 then dofft=0
 
 ; Do not smooth data unless defined
-if n_elements(smooths) lt nlog then smooths = intarr(nlog)
+  if n_elements(smooths) lt nlog then smooths = intarr(nlog)
 
 ; Calculate the xrange from the data unless defined
-if n_elements(xrange) ne 2 then begin
-   DoXrange = 1
-   xrange   = [1e30, -1e30]
-endif else $
-   DoXrange = 0
+  if n_elements(xrange) ne 2 then begin
+     DoXrange = 1
+     xrange   = [1e30, -1e30]
+  endif else $
+     DoXrange = 0
 
 ; Calculate yranges from the data unless defined
-if n_elements(yranges) ne 2*nlogfunc then begin
-   DoYrange = 1
-   yranges = fltarr(2,nlogfunc)
-   yranges(0,*) =  1e30
-   yranges(1,*) = -1e30
-endif else $
-   DoYrange = 0
+  if n_elements(yranges) ne 2*nlogfunc then begin
+     DoYrange = 1
+     yranges = fltarr(2,nlogfunc)
+     yranges(0,*) =  1e30
+     yranges(1,*) = -1e30
+  endif else $
+     DoYrange = 0
 
 ; If line styles are not defined use normal lines (0)
-if n_elements(linestyles) lt nlog then linestyles = intarr(nlog)
+  if n_elements(linestyles) lt nlog then linestyles = intarr(nlog)
 
 ; If symbols are not defined do not use symbols (0)
-if n_elements(symbols) lt nlog then symbols = intarr(nlog)
+  if n_elements(symbols) lt nlog then symbols = intarr(nlog)
 
 ; If colors are not defined, make nlog colors defined to white/black
-if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
+  if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 
 ; If none of colors, linestyles or symbols are defined, make colors different
-if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
-  colors = [255,100,250,150,200,50,25,220,125]
+  if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
+     colors = [255,100,250,150,200,50,25,220,125]
 
 ; Define default title
-if n_elements(title) eq 1 and size(title,/type) eq 7 then title0=title $
-else if n_elements(legendpos) ne 4 then title0=strjoin(logfilenames,' ') $
-else                                    title0=' '
+  if n_elements(title) eq 1 and size(title,/type) eq 7 then title0=title $
+  else if n_elements(legendpos) ne 4 then title0=strjoin(logfilenames,' ') $
+  else                                    title0=' '
 
 ; Define default xtitle
-if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
-else if timeunit eq '1' then xtitle0="!5"+'Time' $
-else if dofft then xtitle0="!5"+'Frequency [1/'+timeunit+']' $
-else xtitle0="!5"+'Time ['+timeunit+']'
+  if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
+  else if timeunit eq '1' then xtitle0="!5"+'Time' $
+  else if dofft then xtitle0="!5"+'Frequency [1/'+timeunit+']' $
+  else xtitle0="!5"+'Time ['+timeunit+']'
 
 ; Define default ytitles
-if n_elements(ytitles) eq nlogfunc and size(ytitles,/type) eq 7 then $
-  ytitles0=ytitles $
-else if dofft then ytitles0 = "!5"+'Power spectrum of '+logfuncs $
-else ytitles0 = "!5" + logfuncs
+  if n_elements(ytitles) eq nlogfunc and size(ytitles,/type) eq 7 then $
+     ytitles0=ytitles $
+  else if dofft then ytitles0 = "!5"+'Power spectrum of '+logfuncs $
+  else ytitles0 = "!5" + logfuncs
 
-if !p.thick eq 0 then begin
-   if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
-endif else $
-   thick = !p.thick
+  if !p.thick eq 0 then begin
+     if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
+  endif else $
+     thick = !p.thick
 
-if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
+  if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 
 ; Set size of plot windows
-spacex = log_spacex*float(!d.x_ch_size)/float(!d.x_size)
-spacey = log_spacey*float(!d.y_ch_size)/float(!d.y_size)
-set_space, nlogfunc, spacex, spacey, sizes, ny = nlogfunc
+  spacex = log_spacex*float(!d.x_ch_size)/float(!d.x_size)
+  spacey = log_spacey*float(!d.y_ch_size)/float(!d.y_size)
+  set_space, nlogfunc, spacex, spacey, sizes, ny = nlogfunc
 
-if not keyword_set(noerase) then erase
+  if not keyword_set(noerase) then erase
 
 ; The first iteration is used to get the X and Y ranges from the
 ; data. This can be skipped if both ranges are given explicitly.
-if DoXrange or DoYrange then iter0 = 1 else iter0 = 2
+  if DoXrange or DoYrange then iter0 = 1 else iter0 = 2
 
-for iter = iter0, 2 do begin
-    for ilog = 0, nlog-1 do begin
+  for iter = iter0, 2 do begin
+     for ilog = 0, nlog-1 do begin
         case ilog of 
-            0: begin
-                wlog=wlog0
-                wlognames = wlognames0
-            end
-            1: begin
-                wlog=wlog1
-                wlognames = wlognames1
-            end
-            2: begin
-                wlog=wlog2
-                wlognames = wlognames2
-            end
-            3: begin
-                wlog=wlog3
-                wlognames = wlognames3
-            end
-            4: begin
-                wlog=wlog4
-                wlognames = wlognames4
-            end
-            5: begin
-                wlog=wlog5
-                wlognames = wlognames5
-            end
-            6: begin
-                wlog=wlog6
-                wlognames = wlognames6
-            end
-            7: begin
-                wlog=wlog7
-                wlognames = wlognames7
-            end
-            8: begin
-                wlog=wlog8
-                wlognames = wlognames8
-            end
-            9: begin
-                wlog=wlog9
-                wlognames = wlognames9
-            end
+           0: begin
+              wlog=wlog0
+              wlognames = wlognames0
+           end
+           1: begin
+              wlog=wlog1
+              wlognames = wlognames1
+           end
+           2: begin
+              wlog=wlog2
+              wlognames = wlognames2
+           end
+           3: begin
+              wlog=wlog3
+              wlognames = wlognames3
+           end
+           4: begin
+              wlog=wlog4
+              wlognames = wlognames4
+           end
+           5: begin
+              wlog=wlog5
+              wlognames = wlognames5
+           end
+           6: begin
+              wlog=wlog6
+              wlognames = wlognames6
+           end
+           7: begin
+              wlog=wlog7
+              wlognames = wlognames7
+           end
+           8: begin
+              wlog=wlog8
+              wlognames = wlognames8
+           end
+           9: begin
+              wlog=wlog9
+              wlognames = wlognames9
+           end
         endcase
         
         hour = log_time(wlog,wlognames,timeunit) + timeshifts(ilog)
@@ -5729,91 +5729,94 @@ for iter = iter0, 2 do begin
 
         for ifunc = 0, nlogfunc-1 do begin
 
-            field = double(log_func(wlog, wlognames, logfuncs(ifunc), error))
+           field = double(log_func(wlog, wlognames, logfuncs(ifunc), error))
 
-            if error then begin
-                if iter eq 1 then print,"function ",logfuncs(ifunc), $
-                  " was not found in wlog",strtrim(string(ilog),2)
-            endif else begin
+           if error then begin
+              if iter eq 1 then $
+                 print,"function ",logfuncs(ifunc), $
+                       " was not found in wlog",strtrim(string(ilog),2)
+           endif else begin
 
-               if(dofft) then field = abs(fft(field))^2
+              if(dofft) then field = abs(fft(field))^2
 
-               if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
+              if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
 
-               if iter eq 1 then begin
-                  if DoXrange then begin
-                     xrange[0]   = min( [ xrange[0], xcoord ] )
-                     xrange[1]   = max( [ xrange[1], xcoord ] )
-                  endif else $
-                     field = field( where(xcoord ge xrange[0] and $
-                                          xcoord le xrange[1]))
-                  if DoYrange then begin
-                     yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
-                     yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
-                  endif
-               endif else begin
-                  set_position, sizes, 0, ifunc, posm, /rect
-                  posm(0) = posm(0) + 0.05
-                  if nlogfunc lt 3 then posm(1) = posm(1) + 0.05/nlogfunc
-                  title1  = ''
-                  xtitle1 = ''
-                  xtickname1 = strarr(60)+' '
-                  xstyle=5
-                  ystyle=5
-                  if ilog eq 0 then begin
-                     xstyle=1
-                     ystyle=1
-                     if ifunc eq 0       then title1  = title0
-                     if ifunc eq nlogfunc-1 then begin
-                        xtitle1    = xtitle0
-                        xtickname1 = !x.tickname
-                     endif
-                  endif
-                  plot, xcoord, field, pos = posm, $
-                        xrange = xrange, $
-                        yrange = yranges(*,ifunc), $
-                        ylog = dofft, $
-                        xstyle = xstyle, $
-                        ystyle = ystyle, $
-                        title  = title1, $
-                        xtitle = xtitle1, $
-                        xtickname = xtickname1, $
-                        ytitle = ytitles0(ifunc), $
-                        color = colors(ilog), $
-                        psym  = symbols(ilog), $
-                        linestyle = linestyles(ilog), $
-                        thick = thick, $
-                        /noerase
+              if iter eq 1 then begin
+                 if DoXrange then begin
+                    xrange[0]   = min( [ xrange[0], xcoord ] )
+                    xrange[1]   = max( [ xrange[1], xcoord ] )
+                 endif else $
+                    field = field( where(xcoord ge xrange[0] and $
+                                         xcoord le xrange[1]))
+                 if DoYrange then begin
+                    yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
+                    yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
+                 endif
+              endif else begin
+                 set_position, sizes, 0, ifunc, posm, /rect
+                 posm(0) = posm(0) + 0.05
+                 if nlogfunc lt 3 then posm(1) = posm(1) + 0.05/nlogfunc
+                 title1  = ''
+                 xtitle1 = ''
+                 xtickname1 = strarr(60)+' '
+                 xstyle=5
+                 ystyle=5
+                 if ilog eq 0 then begin
+                    xstyle=1
+                    ystyle=1
+                    if ifunc eq 0       then title1  = title0
+                    if ifunc eq nlogfunc-1 then begin
+                       xtitle1    = xtitle0
+                       xtickname1 = !x.tickname
+                    endif
+                 endif
+                 plot, xcoord, field, pos = posm, $
+                       xrange = xrange, $
+                       yrange = yranges(*,ifunc), $
+                       ylog = dofft, $
+                       xstyle = xstyle, $
+                       ystyle = ystyle, $
+                       title  = title1, $
+                       xtitle = xtitle1, $
+                       xtickname = xtickname1, $
+                       ytitle = ytitles0(ifunc), $
+                       color = colors(ilog), $
+                       psym  = symbols(ilog), $
+                       linestyle = linestyles(ilog), $
+                       thick = thick, $
+                       /noerase
 
-                  if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
-                  
-               endelse
-            endelse
+                 if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
+                 
+              endelse
+           endelse
         endfor
 
-        if n_elements(legendpos) eq 4 then begin
-            ; get vertical position of legend
-            ypos=legendpos(3) - (ilog+0.5)/nlog*(legendpos(3)-legendpos(2))
-            ; draw a line (or a point) with the appropriate color/linetype/symbol
-            plot,legendpos(0:1),[ypos,ypos],    $
-              color     = colors(ilog),         $
-              psym      = symbols(ilog),        $
-              linestyle = linestyles(ilog),     $
-              thick     = thick,                $
-              /normal, xrange=[0,1], yrange=[0,1], $
-              /noerase, xstyle=-1, ystyle=-1
-            
-            ; print out legend or logfile name
-            if n_elements(legends) eq nlog then legend=legends(ilog) $
-            else                                legend=logfilenames(ilog)
-            xyouts,legendpos(1),ypos,'  '+legend
+        if n_elements(legendpos) eq 4 and iter eq 2 then begin
+           ;; get vertical position of legend
+           ypos=legendpos(3) - (ilog+0.5)/nlog*(legendpos(3)-legendpos(2))
+           ;; draw a line (or point) with the appropriate color/linetype/symbol
+           plot,legendpos(0:1),[ypos,ypos],    $
+                color     = colors(ilog),         $
+                psym      = symbols(ilog),        $
+                linestyle = linestyles(ilog),     $
+                thick     = thick,                $
+                /normal, xrange=[0,1], yrange=[0,1], $
+                /noerase, xstyle=-1, ystyle=-1
+           
+                                ; print out legend or logfile name
+           if n_elements(legends) eq nlog then legend=legends(ilog) $
+           else                                legend=logfilenames(ilog)
+           xyouts,legendpos(1), $
+                  ypos - float(!d.y_ch_size)/float(!d.y_size)*!p.charsize/2, $
+                  '  '+legend
         endif
-    endfor
-endfor 
+     endfor
+  endfor 
 
-if DoXrange then xrange =0
-if DoYrange then yranges=0
-if strpos(!d.name,'X') lt 0 then loadct,39
+  if DoXrange then xrange =0
+  if DoYrange then yranges=0
+  if strpos(!d.name,'X') lt 0 then loadct,39
 
 end
 ;=============================================================================
