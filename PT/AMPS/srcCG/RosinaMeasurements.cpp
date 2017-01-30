@@ -15,6 +15,13 @@
 
 RosinaSample::cRosinaSamplingLocation RosinaSample::Rosina[RosinaSample::nPoints];
 
+//the sampling time interval limit
+SpiceDouble RosinaSample::SamplingTimeInterval::StartSamplingEt=0.0;
+SpiceDouble RosinaSample::SamplingTimeInterval::EndSamplingEt=0.0;
+char RosinaSample::SamplingTimeInterval::StartSamplingTime[_MAX_STRING_LENGTH_PIC_]="";
+char RosinaSample::SamplingTimeInterval::EndSamplingTime[_MAX_STRING_LENGTH_PIC_]="";
+
+
 //init the pointing directions and geomentry informationvoid
 void RosinaSample::Init() {
 #ifndef _NO_SPICE_CALLS_
@@ -22,6 +29,10 @@ void RosinaSample::Init() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   double dxSubCell,dySubCell,dzSubCell,xLocalCell,yLocalCell,zLocalCell;
 
+  //init the start and end time of the particle sample
+  //init the sampling point
+  utc2et_c(SamplingTimeInterval::StartSamplingTime,&SamplingTimeInterval::StartSamplingEt);
+  utc2et_c(SamplingTimeInterval::EndSamplingTime,&SamplingTimeInterval::EndSamplingEt);
 
   //init line-of-sight vectors
   SpiceDouble lt,et,xRosetta[3],etStart;
@@ -62,6 +73,8 @@ void RosinaSample::Init() {
     Rosina[i].CometDistance=-1.0;
     Rosina[i].SecondsFromBegining=et-etStart;
     Rosina[i].CharacteristicCellSize=-1.0;
+
+    if (Rosina[i].node==NULL) continue;
 
     dxSubCell=(Rosina[i].node->xmax[0]-Rosina[i].node->xmin[0])/_BLOCK_CELLS_X_/CellFractionationFactor;
     dySubCell=(Rosina[i].node->xmax[1]-Rosina[i].node->xmin[1])/_BLOCK_CELLS_Y_/CellFractionationFactor;
@@ -115,6 +128,12 @@ void RosinaSample::Init() {
 
     mxvg_c(xform,RamGauge,6,6,l);
     for (idim=0;idim<3;idim++) Rosina[i].RamGauge.LineOfSight[idim]=l[idim];
+
+    //init the sampling point
+    SpiceDouble et;
+
+    utc2et_c(ObservationTime[i],&et);
+    Rosina[i].SamplingParticleDataFlag=((RosinaSample::SamplingTimeInterval::StartSamplingEt<=et)&&(et<=RosinaSample::SamplingTimeInterval::EndSamplingEt)) ? true : false;
   }
 
   if (PIC::ThisThread==0) {
@@ -151,7 +170,7 @@ void RosinaSample::SamplingProcessor() {
   return; //cannot sample the instrument related data when SPICE is not used
   #endif
 
-  for (i=0;i<nPoints;i++) if (Rosina[i].node!=NULL) if (Rosina[i].node->Thread==PIC::ThisThread) if ((block=Rosina[i].node->block)!=NULL) {
+  for (i=0;i<nPoints;i++) if ((Rosina[i].node!=NULL)&&(Rosina[i].SamplingParticleDataFlag==true)) if (Rosina[i].node->Thread==PIC::ThisThread) if ((block=Rosina[i].node->block)!=NULL) {
     ptr=block->FirstCellParticleTable[Rosina[i].iCell+_BLOCK_CELLS_X_*(Rosina[i].jCell+_BLOCK_CELLS_Y_*Rosina[i].kCell)];
 
     dxSubCell=(Rosina[i].node->xmax[0]-Rosina[i].node->xmin[0])/_BLOCK_CELLS_X_/CellFractionationFactor;

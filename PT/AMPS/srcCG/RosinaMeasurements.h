@@ -1166,7 +1166,8 @@ namespace RosinaSample {
     double LineOfSight[3];
   };
 
-  struct cRosinaSamplingLocation {
+  class cRosinaSamplingLocation {
+  public:
     int nd,iCell,jCell,kCell;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     double SecondsFromBegining,RadiusVectorLeangth,CometDistance,CharacteristicCellSize;
@@ -1174,12 +1175,25 @@ namespace RosinaSample {
     double x[3];
     int iLocalSubCell,jLocalSubCell,kLocalSubCell;
 
+    //sampling particle for this location (useg to set sampling that corresponds to the right simulatino time)
+    bool SamplingParticleDataFlag;
+
     //sampled data 
     cSamplingData NudeGauge;
     cSamplingData RamGauge;
+
+    cRosinaSamplingLocation() {
+      SamplingParticleDataFlag=false;
+    }
   }; 
 
   extern cRosinaSamplingLocation Rosina[nPoints];
+
+  //the time interval for which sampling will be performed
+  namespace SamplingTimeInterval {
+    extern SpiceDouble StartSamplingEt,EndSamplingEt;
+    extern char StartSamplingTime[_MAX_STRING_LENGTH_PIC_],EndSamplingTime[_MAX_STRING_LENGTH_PIC_];
+  }
 
   //init the sampling container
   void Init();
