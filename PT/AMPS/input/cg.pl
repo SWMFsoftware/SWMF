@@ -704,6 +704,68 @@ while ($line=<InputFile>) {
         die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
       }    
   }   
+  
+  #init the location of the Sun from the initial simjulation time string before the beginig of the simulation
+  elsif ($InputLine eq "INITSOLARLOCATION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    if  ($InputLine eq "ON") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::Time::InitSunLocationFlag","true","main/Comet.cpp");
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::Time::InitSunLocationFlag","false","main/Comet.cpp");
+    }
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  } 
+  
+  #recalculate the location of the Sun each iteration during the model run
+  elsif ($InputLine eq "RECALCULATESOLARLOCATION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    if  ($InputLine eq "ON") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::Time::RecalculateSunLocationFlag","true","main/Comet.cpp");
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::Time::RecalculateSunLocationFlag","false","main/Comet.cpp");
+    }
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
+  
+  #starting time of collecting the end of the mission Rosina data 
+  elsif ($InputLine eq "SIMULATIONSTARTTIME") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+
+    $InputLine=~s/[=(),]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+
+    ampsConfigLib::ChangeValueOfVariable("char Comet::Time::SimulationStartTimeString\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputComment."\"","main/Comet.cpp");
+  }
+  
+  #starting time of collecting the end of the mission Rosina data 
+  elsif ($InputLine eq "STARTSAMPLINGTIME") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+
+    $InputLine=~s/[=(),]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+
+    ampsConfigLib::ChangeValueOfVariable("char RosinaSample::SamplingTimeInterval::StartSamplingTime\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputComment."\"","main/RosinaMeasurements.cpp");
+  }
+  
+  #end time of collecting the end of the mission Rosina data
+  elsif ($InputLine eq "ENDSAMPLINGTIME") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+
+    $InputLine=~s/[=(),]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+
+    ampsConfigLib::ChangeValueOfVariable("char RosinaSample::SamplingTimeInterval::EndSamplingTime\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputComment."\"","main/RosinaMeasurements.cpp");
+  }  
+  
+  
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
   }
