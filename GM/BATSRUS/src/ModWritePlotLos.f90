@@ -813,7 +813,7 @@ contains
     use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iPIon_I
     use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
-    use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
+    use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, NameVar_V
     use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D
     use ModUserInterface ! user_set_plot_var
 
@@ -839,6 +839,10 @@ contains
     character(len=1):: NameTecVar, NameTecUnit, NameIdlUnit
     real    :: ValueBody
     real, allocatable, save:: PlotVar_GV(:,:,:,:)
+    logical :: StateInterpolateDone = .false.
+    integer :: jVar
+    character (len=10)  ::  NameTemp
+
 
     ! Added for EUV synth and sph geometry
     real :: GenLos_D(3)
@@ -906,10 +910,13 @@ contains
        CoordNorm_D = (GenLos_D - CoordMinBlock_D)/CellSize_D + 0.5
     end if
 
+
     ! Interpolate state if it is needed by any of the plot variables
+    StateInterpolateDone = .false.
     if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
        State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
             nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+       StateInterpolateDone = .true.
        Rho = State_V(Rho_)
     end if
 
@@ -1038,26 +1045,48 @@ contains
           Value = product( 0.5 + sign(0.5, 10.0 - abs(XyzLos_D-10.0)) )
 
        case default
-          ! Obtain user defined plot function for the whole block
-          if(iBlock /= iBlockLast .or. iVar > iVarLast)then
-             iBlockLast = iBlock
-             iVarLast   = iVar
-             if(.not.allocated(PlotVar_GV)) &
-                  allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
-             call user_set_plot_var(iBlock, NameVar, &
-                  plot_dimensional(iFile), &
-                  PlotVar_GV(:,:,:,iVar), &
-                  ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
-                  IsFound)
-             if(.not. IsFound)then
-                PlotVar_GV(:,:,:,iVar)=-7777.
-                if(iProc==0.and.iBlock==1)write(*,*) &
-                     NameSub, ' WARNING: unknown plotvarname=', NameVar
+
+          ! check if the variable is standard state variable
+          do jVar = 1, nVar
+             NameTemp = NameVar_V(jVar)
+             call lower_case(NameTemp)
+
+             if(NameTemp /= NameVar) CYCLE
+
+             if (.not. StateInterpolateDone) then
+                State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
+                     nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
+                StateInterpolateDone = .true.
              end if
+
+             Value = State_V(jVar)
+
+             EXIT
+          end do
+
+          ! if the name is not in state variables
+          if (jVar > nVar) then 
+             ! Obtain user defined plot function for the whole block
+             if(iBlock /= iBlockLast .or. iVar > iVarLast)then
+                iBlockLast = iBlock
+                iVarLast   = iVar
+                if(.not.allocated(PlotVar_GV)) &
+                     allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
+                call user_set_plot_var(iBlock, NameVar, &
+                     plot_dimensional(iFile), &
+                     PlotVar_GV(:,:,:,iVar), &
+                     ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
+                     IsFound)
+                if(.not. IsFound)then
+                   PlotVar_GV(:,:,:,iVar)=-7777.
+                   if(iProc==0.and.iBlock==1)write(*,*) &
+                        NameSub, ' WARNING: unknown plotvarname=', NameVar
+                end if
+             end if
+             ! Interpolate value
+             Value = interpolate_scalar(PlotVar_GV(:,:,:,iVar), &
+                  nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
           end if
-          ! Interpolate value
-          Value = interpolate_scalar(PlotVar_GV(:,:,:,iVar), &
-               nDim, MinIJK_D, MaxIJK_D, CoordNorm_D) 
        end select
 
        ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
