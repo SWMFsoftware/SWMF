@@ -1954,7 +1954,7 @@ If the #SCHEME command is not used, then the defaults are
 nStage=2 with the half-step predictor and CflExpl=0.8.
 </command>
 
-<command name="FIXEDTIMESTEP" alias="TIMESTEPLIMIT">
+<command name="TIMESTEPLIMIT">
 	<parameter name="UseDtLimit" type="logical" default="F" />
 	<parameter name="DtLimitDim" type="real" min="0" default="1.0" 
 							if="$UseDtLimit" />
@@ -1962,23 +1962,43 @@ nStage=2 with the half-step predictor and CflExpl=0.8.
 T                       UseDtLimit
 10.                     DtLimitDim [sec] (read if UseDtLimit is true)
 
-If UseDtLimit is true, the global time step is set to DtLimitDim 
-in time accurate mode, and the local time step is limited to DtLimitDim in 
-steady state mode.
+If UseDtLimit is true, the local time step is limited to DtLimitDim in 
+either steady state mode or time accurate mode.
 
-The fixed time step is typically used with the implicit and partially
-implicit schemes in time accurate mode. The time step is set to DtLimitDim 
-unless the time step control algorithm (see #TIMESTEPCONTROL) reduces the time 
-step for the sake of robustness.
-
-The fixed time step can also be used with explicit time stepping in time accurate 
-mode for debugging as well as for convergence tests. 
-
-In steady state mode the limited time step can be useful for
-making transients smaller, or in some cases, solving in time accurate mode
+In steady state mode the limited time step can be useful for making 
+transients smaller, or in some cases, solving in time accurate mode
 in part of the domain, and steady state mode in other parts.
 
+In time accurate mode the limited time step can be useful when some
+regions are close to their steady state but the stable time step there
+is very small. In this case, the code solves in time accurate mode
+outside the steady state domain, similar to the situation of running 
+steady state mode with #TIMESTEPLIMIT.
+
 The default is UseDtLimit false.
+</command>
+
+<command name="FIXEDTIMESTEP">
+	<parameter name="UseDtFixed" type="logical" default="F" />
+	<parameter name="DtFixedDim" type="real" min="0" default="1.0" 
+							if="$UseDtFixed" />
+#FIXEDTIMESTEP
+T                       UseDtFixed
+10.                     DtFixedDim [sec] (read if UseDtFixed is true)
+
+The fixed time step is typically used with the implicit and partially
+implicit schemes in time accurate mode. The time step is set to DtFixedDim 
+unless the time step control algorithm (see #TIMESTEPCONTROL or #UPDATECHEK) 
+reduces the time step for the sake of robustness.
+
+The fixed time step can also be used with explicit time stepping in time 
+accurate mode for debugging as well as for convergence tests. 
+
+The fixed time step can not be used in steady state mode. See #TIMESTEPLIMIT 
+if the purpose is to make transients smaller or solve part of the domain
+in time accurate mode.
+
+The default is UseDtFixed false.
 </command>
 
 <command name="PARTSTEADY">
