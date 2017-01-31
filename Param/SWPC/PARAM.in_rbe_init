@@ -24,6 +24,10 @@ F			UseStrict
 IM                      NameComp
 F                       UseComp
 
+#COMPONENT
+RB                      NameComp
+F                       UseComp
+
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
@@ -253,12 +257,16 @@ CPUTIMEMAX
 IM			NameComp
 T			UseComp
 
+#COMPONENT
+RB			NameComp
+T			UseComp
+
 ! All processors are used now
 #STRICT
 T			UseStrict
 
 ! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
-#COUPLEORDER
+COUPLEORDER
 5			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
