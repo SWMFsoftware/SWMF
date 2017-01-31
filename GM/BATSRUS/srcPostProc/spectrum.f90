@@ -1,7 +1,7 @@
 !instrumental broadening
 !comments!!!
 !verbose levels
-!units
+! 3T
 
 program spectrum
 
@@ -9,9 +9,9 @@ program spectrum
        cPi, rSun
 
   implicit none
-
-  logical                     :: IsVerbose =  .false., IsNoAlfven = .false.,&
-       IsAllLines = .false., IsPermuteAxis = .false.
+  logical                     :: IsVerbose =  .false., IsNoAlfven = .false.
+  logical                     :: IsDataFile = .false., IsAllLines = .false.
+  logical                     :: IsPermuteAxis = .false.
 
   ! Variables for output file
   character(len=200)   :: NameSpectrumFile = 'spectrum.out'
@@ -125,7 +125,11 @@ program spectrum
 
   call read_param
 
-  call read_data
+  if(IsDataFile)then
+     call read_data
+  else
+     call set_data_block
+  endif
 
   call read_table
 
@@ -133,22 +137,85 @@ program spectrum
 
   ! Allocate table for labels
   allocate(LabelTable_III(nLineAll,n2,n3))
+  if(IsVerbose)write(*,*)'allocated LabelTable_III'
 
   ! Loop over Chianti lines
   do iLine = 1,nLineAll
      call calc_flux 
+     if(IsVerbose)write(*,*)'calc_flux: line ',iLine,' out of nLineAll = ',nLineAll
   end do
 
   call save_all
-
+  if(IsVerbose)write(*,*)'done with save_all'
   call save_label
-
+  if(IsVerbose)write(*,*)'done with save_label'
   write(*,*)'Spectrum.exe ending'
 
   call MPI_finalize(iError)
 
 contains
 
+
+  !==========================================================================
+  subroutine set_data_block
+    integer, parameter             :: iUnitOut = 18
+    integer                        :: MinWavelength, Maxwavelength
+    character(len=*), parameter    :: NameSub = 'set_data_block'
+    !------------------------------------------------------------------------
+
+    if(IsVerbose)write(*,*)'dx, dA = ',dx,dA,' inside set_data_block'
+
+    n1 = n1Block
+    n2 = n2Block
+    n3 = n3Block
+    allocate(Var_VIII(11,n1,n2,n3))
+
+    if (IsUniData) then
+       ! cm^-3 --> kg/m^3
+       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
+       ! km/s --> m/s
+       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni * 1e3
+       ! G --> T
+       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni * 1e-4
+       ! K
+       Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
+       ! erg cm^-3 --> J m^-3
+       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni * 1e-1
+       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni * 1e-1
+    else 
+       call CON_stop( &
+            NameSub//' need data input!!! ')
+    end if
+
+    ! Set up bins for Spectrum
+    allocate(SpectrumTable_I(nWavelengthinterval))
+    nBin = 0
+    do iWavelengthInterval=1, nWavelengthInterval
+       MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
+       MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
+       nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
+       nBin = nWavelengthBin
+
+       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
+            nWavelengthBin))
+       allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
+            nWavelengthBin+1))
+
+       SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
+       SpectrumTable_I(iWavelengthinterval)%nBin=nBin
+       do iWavelengthBin=1,nWavelengthBin+1
+          ! Values of each wavelength bin correspond to the center of the bin
+          SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(iWavelengthBin)&
+               = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
+       end do
+    end do
+
+  end subroutine set_data_block
   !==========================================================================
   subroutine save_label
     integer, parameter             :: iUnitOut = 18
@@ -299,16 +366,22 @@ contains
     ! Fill in LabelTabel%NameIon
     LabelTable_III(iLine,:,:)%NameIon = LineTable_I(iLine)%NameIon
 
+    ! Calculate flux from 1AU distant plasma parcel
     ! Convert arsec^-2 --> sr^-1 to match Chianti output
     ! 1 str = 4.25e10 arcsec^2
-    ! 1 str^-1 = 2.3529412e-11 arcsec^-2
-    FluxConst = dA * dx / (4 * cPi * Dist**2.0)/2.3529412e-11
+    ! 1 str^-1 = 2.3529412e-11 arcsec^-2 
+    FluxConst = dA * dx / (4 * cPi * Dist**2)/2.3529412e-11
 
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
+
+             if(IsVerbose)write(*,*)'inside calc_flux loop begins i,j,k =',i,jPixel,kPixel
+
              ! Cells inside body
              if(all(Var_VIII(:,i,jPixel,kPixel)==0))EXIT 
+
+             if(IsVerbose)write(*,*)'inside calc_flux loop after body-check'
 
              ! Doppler shift while x axis is oriented towards observer
              if(IsDoppler)then
@@ -316,7 +389,9 @@ contains
                      + 1 ) * Lambda
                 Lambda = Lambda_shifted
              endif
-             
+
+             if(IsVerbose)write(*,*)'inside calc_flux loop after doppler-check'
+
              ! Find which interval wavelength belongs to
              iInterval = -1
              do iWavelengthInterval = 1, nWavelengthInterval
@@ -335,15 +410,21 @@ contains
                 EXIT
              endif
 
+             if(IsVerbose)write(*,*)'inside calc_flux loop after interval-check'
+
              iBin =0
 
              do
                 iBin=iBin+1
+                if(IsVerbose)write(*,*)'inside calc_flux loop iBin =',iBin
+                if(IsVerbose)write(*,*)'inside calc_flux loop iInterval =',iInterval
+                if(IsVerbose)write(*,*)'inside calc_flux loop nBin',nBin
                 if ((Lambda>SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
                      .and.&
-                   (Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
+                     (Lambda<SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
                      then
                    iCenter=iBin
+                   if(IsVerbose)write(*,*)'inside calc_flux loop iCenter =',iCenter
                    EXIT
                 end if
                 if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
@@ -353,6 +434,8 @@ contains
                    EXIT
                 endif
              end do
+
+             if(IsVerbose)write(*,*)'in calc_flux, before calculations'
 
              ! Calculate thermal and non-thermal broadening
              Rho = Var_VIII(rho_,i,jPixel,kPixel)
@@ -373,7 +456,7 @@ contains
              LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
              ! Add instrumental broadening if there is any
-             dLambdaSI2 = (LambdaSI/cLightSpeed)**2.0 * (uTh2 + uNth2)
+             dLambdaSI2 = (LambdaSI/cLightSpeed)**2 * (uTh2 + uNth2)
              if(IsInstrument)dLambdaSI2 = dLambdaSI2 + dLambdaInstr2
              dLambdaSI = sqrt(dLambdaSI2)
 
@@ -389,15 +472,18 @@ contains
              Gint = bilinear(gLambda_II, iNMin, iNMax, jTMin, jTMax, &
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
+             ! When Gint becomes negative due to extrapolation -> move to next
+             if(Gint<0.0)CYCLE 
+
              ! Calculate flux and spread it on the Spectrum_II grids
              ! FluxMono = 1 / (4 * cPi * Dist**2.0) * &
              !      Gint * (10.0**LogNe)**2.0 * dV
-             FluxMono = FluxConst * Gint * (10.0**LogNe)**2.0
-             
+             FluxMono = FluxConst * Gint * (10.0**LogNe)**2
+
              ! Fill in LabelTabel%Lambda,FluxMono
              LabelTable_III(iLine,:,:)%Lambda = Lambda
              LabelTable_III(iLine,jPixel,kPixel)%FluxMono = FluxMono
-             
+
              call disperse_line(iInterval, iCenter, Lambda, dLambda, FluxMono)
 
           end do
@@ -417,7 +503,7 @@ contains
     endif
 
   end subroutine calc_flux
-  
+
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,dLambda,FluxMono)
 
@@ -512,6 +598,7 @@ contains
           call read_var('NameLabelFile',NameLabelFile)
 
        case("#DATAFILE")
+          IsDataFile = .true.
           call read_var('NameDataFile',NameDataFile)
           call read_var('TypeDataFile',TypeDataFile)
 
@@ -950,87 +1037,87 @@ contains
           LineWavelength = abs(LineWavelength)
        endif
 
-    ! Check if this belongs to the same line
-    if(LineWavelength == FirstLineWavelength .and. iError == 0) then
-       ! Calculate indexes and store extra elements of LogG
-       iN = nint(LogN/dLogN)
-       iT = nint(LogT/dLogT)
-       g_II(iN,iT) = 10.0**LogG
-       CYCLE READLOOP
-    end if
+       ! Check if this belongs to the same line
+       if(LineWavelength == FirstLineWavelength .and. iError == 0) then
+          ! Calculate indexes and store extra elements of LogG
+          iN = nint(LogN/dLogN)
+          iT = nint(LogT/dLogT)
+          g_II(iN,iT) = 10.0**LogG
+          CYCLE READLOOP
+       end if
 
-    if(DoStore)then
-       ! Store last indexes as the maximum indexes for N and T
-       iMax = iN; jMax = iT
-       LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
+       if(DoStore)then
+          ! Store last indexes as the maximum indexes for N and T
+          iMax = iN; jMax = iT
+          LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
 
-       ! Extract min indexes into scalars
-       iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
+          ! Extract min indexes into scalars
+          iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
 
-       ! Create intensity table
-       allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
-       LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
+          ! Create intensity table
+          allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
+          LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
 
-       ! Storage is done
-       DoStore = .false.
-    end if
+          ! Storage is done
+          DoStore = .false.
+       end if
 
-    if(iError /= 0) EXIT READLOOP
+       if(iError /= 0) EXIT READLOOP
 
-    ! Check if wavelength is inside any of the intervals
-    do iWavelengthInterval = 1, nWavelengthInterval
-       if(IsDoppler)then
-          if(LineWavelength < &
-               WavelengthIntervalShifted_II(1,iWavelengthInterval))&
-               CYCLE
-          if(LineWavelength > &
-               WavelengthIntervalShifted_II(2,iWavelengthInterval))&
-               CYCLE
-       else
-          if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
-               CYCLE
-          if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
-               CYCLE
-       endif
-       ! New line of interest found
-       iLine = iLine + 1
-       if(iLine > nMaxLine)&
-            call CON_stop('Too many waves, increase MaxWave')
+       ! Check if wavelength is inside any of the intervals
+       do iWavelengthInterval = 1, nWavelengthInterval
+          if(IsDoppler)then
+             if(LineWavelength < &
+                  WavelengthIntervalShifted_II(1,iWavelengthInterval))&
+                  CYCLE
+             if(LineWavelength > &
+                  WavelengthIntervalShifted_II(2,iWavelengthInterval))&
+                  CYCLE
+          else
+             if(LineWavelength < WavelengthInterval_II(1,iWavelengthInterval))&
+                  CYCLE
+             if(LineWavelength > WavelengthInterval_II(2,iWavelengthInterval))&
+                  CYCLE
+          endif
+          ! New line of interest found
+          iLine = iLine + 1
+          if(iLine > nMaxLine)&
+               call CON_stop('Too many waves, increase MaxWave')
 
-       FirstLineWavelength = LineWavelength
-       DoStore = .true.
-       nLineFound = nLineFound + 1
+          FirstLineWavelength = LineWavelength
+          DoStore = .true.
+          nLineFound = nLineFound + 1
 
-       ! Store ion name and wavelength 
-       LineTable_I(iLine)%NameIon    = NameIon
-       LineTable_I(iLine)%nLevelFrom = nLevelFrom
-       LineTable_I(iLine)%nLevelTo = nLevelTo
-       LineTable_I(iLine)%LineWavelength = LineWavelength
+          ! Store ion name and wavelength 
+          LineTable_I(iLine)%NameIon    = NameIon
+          LineTable_I(iLine)%nLevelFrom = nLevelFrom
+          LineTable_I(iLine)%nLevelTo = nLevelTo
+          LineTable_I(iLine)%LineWavelength = LineWavelength
 
-       ! Calculate indexes and store as the minimum indexes
-       iN = nint(LogN/dLogN); iT = nint(LogT/dLogT)
-       LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
+          ! Calculate indexes and store as the minimum indexes
+          iN = nint(LogN/dLogN); iT = nint(LogT/dLogT)
+          LineTable_I(iLine)%iMin = iN; LineTable_I(iLine)%jMin = iT
 
-       ! To be safe zero out the input array
-       g_II = 0.0
+          ! To be safe zero out the input array
+          g_II = 0.0
 
-       ! Store first element
-       g_II(iN,iT) = 10.0**LogG
+          ! Store first element
+          g_II(iN,iT) = 10.0**LogG
 
-       ! Wavelength was found to be interesting.
-       EXIT
+          ! Wavelength was found to be interesting.
+          EXIT
 
-    end do
+       end do
 
- end do READLOOP
- close(UnitTmp_)
+    end do READLOOP
+    close(UnitTmp_)
 
- deallocate(g_II)
+    deallocate(g_II)
 
- if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
- if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
+    if(IsVerbose)write(*,*)'nLineFound = ',nLineFound
+    if(IsVerbose)write(*,*)'nMaxLine = ',nMaxLine
 
-end subroutine read_table
+  end subroutine read_table
   !==========================================================================
 end program spectrum
 
