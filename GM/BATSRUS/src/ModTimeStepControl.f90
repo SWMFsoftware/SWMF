@@ -276,7 +276,6 @@ contains
          time_BLK(:,:,:,iBlock) = DtFixed
 
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
-    ! Cfl = 1.0 for UseDtLimit and time accurate, 
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
 

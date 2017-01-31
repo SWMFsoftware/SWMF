@@ -3375,11 +3375,8 @@ contains
 
     if(UseDtLimit)then
        DtLimit     = DtLimitDim * Io2No_V(UnitT_)
-       DtLimitOrig = DtLimit   ! Store the initial setting
-       if(time_accurate) then
-          Dt  = DtLimit        ! Dt = 0 if steady state
-          Cfl = 1.0
-       end if
+       DtLimitOrig = DtLimit             ! Store the initial setting
+       if(time_accurate) Dt  = DtLimit   ! Dt = 0 if steady state
     end if
 
     if(UseTimeStepControl)then
