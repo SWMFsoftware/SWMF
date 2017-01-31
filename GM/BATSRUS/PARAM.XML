@@ -134,7 +134,8 @@ T		UseMaxTimeStep
 
 This command controls how the time stepping works in time accurate mode.
 
-If UseLocalTimeStep is true, the time step size in each grid block can be different.
+If UseLocalTimeStep is true, the time step size in each grid block 
+can be different.
 This algorithm is sometimes called "subcycling" because some of the blocks
 will take several small time steps during a single global time step. 
 This should not be confused with the "steady state" mode 
@@ -144,17 +145,22 @@ time steps and the result is only valid if a steady state is reached.
 If UseMaxTimeStep is true, each blocks takes the time step determined by
 the local stability condition. This algorithm is still under development.
 
-If UseMaxTimeStep is false, then the local time step will be set by the AMR level. 
-For Cartesian grids the time step will be proportional to the physical cell size, 
-which is optimal if the wave speeds are roughly constant in the whole domain. 
-Note that the global time step is set so that the stability conditions hold in 
-every grid block. A conservative flux correction is applied at the resolution changes.
-On the other hand, the normal velocity, normal magnetic/electric field 
+If UseMaxTimeStep is false, then the local time step will be set by
+the AMR level.  For Cartesian grids the time step will be proportional
+to the physical cell size, which is optimal if the wave speeds are
+roughly constant in the whole domain.  Note that the global time step
+is set so that the stability conditions hold in every grid block. A
+conservative flux correction is applied at the resolution changes.  On
+the other hand, the normal velocity, normal magnetic/electric field
 etc. used in some source terms are not "corrected", which is different
 from the default uniform time step algorithm.
 
-Currently the subcycling algorithm is either first or second order accurate in time
-depending on the value of nStage set in the #TIMESTEPPING command.
+Currently the subcycling algorithm is either first or second order
+accurate in time depending on the value of nStage set in the
+#TIMESTEPPING command.
+
+See also the #PARTSTEADY and #TIMESTEPLIMIT commands for related
+time stepping algorithms.
 
 The default is using a uniform time step for the whole domain.
 </command>
@@ -1965,13 +1971,26 @@ T                       UseDtLimit
 If UseDtLimit is true, the local time step is limited to DtLimitDim in 
 either steady state mode or time accurate mode. The only difference 
 between running in steady state and time accurate is that the simulation 
-time does not evolve in steady state mode. It is recommended to use this
-command with time accurate mode.
+time does not evolve in steady state mode. 
 
-This feature can be useful when some regions are close to their steady
-state but the stable time step there is very small. In this case, the code 
-solves in steady state mode in the steady state domain and in time accurate 
-mode outside the steady state domain.
+Limiting the local time step in steady state mode can be useful to
+reach steady state with less violent transients. 
+
+For time accurate simulations this feature can be useful when in some 
+stiff regions the local stable time step is very small, but the solution is 
+in a quasi-steady state. If this is true, selecting a suitable value
+for DtLimitDim will evolve the solution in time accurate mode in the 
+region where the stable time step is larger than DtLimitDim*Cfl,
+and it will iterate with the local time step in the stiff region.
+As long as the quasi-steady state can follow the time evolution with
+the local time step, the overall solution will be correct.
+
+The limited time step approach is different from the part steady scheme
+(see #PARTSTEADY), which assumes a near perfect steady state in parts of the
+domain where the solution is not evolved at all. 
+If the stiff region cannot keep up with the time evolution, 
+then subcycling (see #LOCALTIMESTEP) or implicit time stepping 
+(see #IMPLICIT) is needed.
 
 The default is UseDtLimit false.
 </command>
@@ -2012,6 +2031,10 @@ of the domain is in a numerical steady state.
 In steady state runs the code stops when a full steady state is
 achieved. The conditions for checking the numerical steady state are set 
 by the #PARTSTEADYCRITERIA command.
+
+See also the #LOCALTIMESTEP and #TIMESTEPLIMIT commands for related
+approaches.
+
 Default value is UsePartSteady = .false.
 </command>
 
