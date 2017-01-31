@@ -1963,17 +1963,15 @@ T                       UseDtLimit
 10.                     DtLimitDim [sec] (read if UseDtLimit is true)
 
 If UseDtLimit is true, the local time step is limited to DtLimitDim in 
-either steady state mode or time accurate mode.
+either steady state mode or time accurate mode. The only difference 
+between running in steady state and time accurate is that the simulation 
+time does not evolve in steady state mode. It is recommended to use this
+command with time accurate mode.
 
-In steady state mode the limited time step can be useful for making 
-transients smaller, or in some cases, solving in time accurate mode
-in part of the domain, and steady state mode in other parts.
-
-In time accurate mode the limited time step can be useful when some
-regions are close to their steady state but the stable time step there
-is very small. In this case, the code solves in time accurate mode
-outside the steady state domain, similar to the situation of running 
-steady state mode with #TIMESTEPLIMIT.
+This feature can be useful when some regions are close to their steady
+state but the stable time step there is very small. In this case, the code 
+solves in steady state mode in the steady state domain and in time accurate 
+mode outside the steady state domain.
 
 The default is UseDtLimit false.
 </command>
