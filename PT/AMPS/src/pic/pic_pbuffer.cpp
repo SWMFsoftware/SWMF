@@ -303,12 +303,12 @@ void PIC::ParticleBuffer::ExcludeParticleFromList(long int ptr,long int& ListFir
   next=GetNext(pdataptr);
 
   if (ptr==ListFirstParticle) {
-    SetPrev(prev,next);
+    if (next>=0) SetPrev(prev,next);
     ListFirstParticle=next;
   }
   else {
-    SetNext(next,prev);
-    SetPrev(prev,next);
+    if (prev>=0) SetNext(next,prev);
+    if (next>=0) SetPrev(prev,next);
   }
 }
 
