@@ -34,6 +34,9 @@ my $home = $ENV{"HOME"};
 # pfe number on Pleiades to set tests on
 my $PFE = "26";
 
+# login number on Stampede to set tests on
+my $SLOGIN = "1";
+
 # date on the machine
 my $date = `date`;
 
@@ -118,6 +121,17 @@ elsif($hostname =~ m/login(.).stampede.tacc.utexas.edu/){
     # Stampede
     $Blocks{"Stampede"} = "1";
     $TestName = "stampede"
+    if($1 ne $SLOGIN){
+	print 
+	    "WARNING: nightly tests on Stampede should be set on login$SLOGIN,\n"
+	    .
+	    "but currently you are on $hostname."
+	    .
+	    "SSH to login$SLOGIN and try again."
+	    .
+	    "Tests\' installation has been ABORTED!\n";
+	return 1;	
+    }
 }
 elsif($hostname =~ m/srbwks2014-0079.engin.umich.edu/){
     # Valeriy
