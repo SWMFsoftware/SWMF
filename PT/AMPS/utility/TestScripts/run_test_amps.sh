@@ -102,7 +102,7 @@ cd ..
 
 #>Pleiades ####################################
 #module load gcc/4.9.2                        #
-#module load mpi-openmpi/1.6.5-gcc;          <#
+#module load mpi-sgi;                        <#
 
 #>Stampede ####################################
 #module load gcc/4.9.1                        #
