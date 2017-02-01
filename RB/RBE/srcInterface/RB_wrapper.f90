@@ -201,10 +201,15 @@ contains
 
   subroutine RB_save_restart(TimeSimulation)
 
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use rbe_cread2,  ONLY: NameRestartOutDir
+
     real,     intent(in) :: TimeSimulation   ! seconds from start time
     character(len=*), parameter :: NameSub='RB_save_restart'
 
     !-------------------------------------------------------------------------
+    if( NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
+
     call rbe_save_result(.true., .false.)
 
   end subroutine RB_save_restart

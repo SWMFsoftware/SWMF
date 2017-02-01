@@ -2091,12 +2091,15 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
 
   use rbe_grid
   use rbe_cread1,ONLY: UseSeparatePlotFiles
-  use rbe_cread2,ONLY: js,storm,DoSaveIe
+  use rbe_cread2,ONLY: js,storm,DoSaveIe,NameRestartOutDir
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY: pi => cPi
   use ModRbSat,    ONLY: write_rb_sat, nRbSats, DoWriteSats
   use rbe_cread1
   use ModWriteTec, ONLY: write_tec, DoWriteTec
+
+!!!  implicit none
+
   real xlati(ir),ekev(ir,ip,iw,ik),y(ir,ip,0:ik+1),bo(ir,ip),&
        xjac(ir,iw),gride(je),gridp(je),gridy(ig),f2(ir,ip,iw,ik),ro(ir,ip),&
        xmlto(ir,ip),f(ir,ip,iw,ik),xlati1(ir),p(ir,ip,iw,ik),xmlt(ip),&
@@ -2247,9 +2250,13 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   ! Open files to write all the information for continous run        
   if (DoSaveRestart) then
      if(UseSeparatePlotFiles)then
-        open(unit=UnitTmp_,file='RB/restartOUT/restart_rbe_c.f2',form='unformatted')
+        open(unit=UnitTmp_, &
+             file=trim(NameRestartOutDir)//'restart_rbe_c.f2',&
+             form='unformatted')
      else
-        open(unit=UnitTmp_,file='RB/restartOUT/'//outname//st2//'_c.f2',form='unformatted')
+        open(unit=UnitTmp_, &
+             file=trim(NameRestartOutDir)//outname//st2//'_c.f2', &
+             form='unformatted')
      end if
      write(UnitTmp_) f2   
      write(UnitTmp_) iw1
@@ -2262,7 +2269,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      close(UnitTmp_)
      
      ! Write the restart.H file to be included at restart
-     open(unit=UnitTmp_,file='RB/restartOUT/restart.H')
+     open(unit=UnitTmp_,file=trim(NameRestartOutDir)//'restart.H')
      
      write(UnitTmp_,'(a)') '#TIMESIMULATION'
      write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'

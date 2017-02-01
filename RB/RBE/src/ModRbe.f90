@@ -69,6 +69,8 @@ module rbe_cread2
        nimf,nsw,iyear,iday,js,itype,nstep,nstept,ndst,nKp,&
        ires,ismo,imod,iprint,ntime,iconvect,init,il,ie,idfa,idfe,iplsp
 
+  character (len=100):: NameRestartOutDir = 'RB/restartOUT/'
+
   character (len=8)::  storm
 
   logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
