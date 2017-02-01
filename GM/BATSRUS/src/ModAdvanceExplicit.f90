@@ -140,7 +140,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! Calculate time step (both local and global
         ! for the block) used in multi-stage update
         ! for steady state calculations.
-        if (.not.time_accurate .and. iStage == 1 &
+        ! Also calculate time step when UseDtLimit is true.
+        if ((.not.time_accurate .or. UseDtLimit).and. iStage == 1 &
              .and. DoCalcTimestep) call calc_timestep(iBlock)
 
         ! Update solution state in each cell.
@@ -161,7 +162,10 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! Calculate time step (both local and global
         ! for the block) used in multi-stage update
         ! for time accurate calculations.
-        if (time_accurate .and. iStage == nStage .and. DoCalcTimestep) &
+        ! For time accurate with UseDtLimit, do not
+        ! calculate time step.
+        if (time_accurate .and. .not.UseDtLimit .and. &
+             iStage == nStage .and. DoCalcTimestep) &
              call calc_timestep(iBlock)
 
         ! At this point the user has surely set all "block data" 
