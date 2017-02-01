@@ -414,12 +414,12 @@ aur idl                 StringPlot
 
 #BEGIN_COMP RB ---------------------------------------------------------------
 
+#RESTART
+F		IsRestart
+
 #SAVEPLOT
 60.0		DtSavePlot
 T		UseSeparatePlotFiles
-
-#RESTART
-F		IsRestart
 
 #TIMESTEP
 5.0		Dt
@@ -436,9 +436,6 @@ F		UseFixedB
 
 #IEMODEL
 1		iConvect
-
-#INPUTDATA
-2002_296
 
 #PLASMASPHERE
 F		UsePlasmaSphere
