@@ -4659,11 +4659,11 @@ if (startNode->Temp_ID==15) {
      #endif
 
 
-     double *xmin,*xmax,dxBlock[3]={0.0,0.0,0.0};
+     double *xmin,*xmax,dxMddle[3]={0.0,0.0,0.0};
 
-     dxBlock[0]=(startNode->xmax[0]-startNode->xmin[0])/2.0;
-     if (_MESH_DIMENSION_>1) dxBlock[1]=(startNode->xmax[1]-startNode->xmin[1])/2.0; 
-     if (_MESH_DIMENSION_>2) dxBlock[2]=(startNode->xmax[2]-startNode->xmin[2])/2.0;
+     dxMddle[0]=(startNode->xmax[0]+startNode->xmin[0])/2.0;
+     if (_MESH_DIMENSION_>1) dxMddle[1]=(startNode->xmax[1]+startNode->xmin[1])/2.0;
+     if (_MESH_DIMENSION_>2) dxMddle[2]=(startNode->xmax[2]+startNode->xmin[2])/2.0;
 
      for (kDownNode=0;kDownNode<kDownNodeMax;kDownNode++) for (jDownNode=0;jDownNode<jDownNodeMax;jDownNode++) for (iDownNode=0;iDownNode<iDownNodeMax;iDownNode++) if (startNode->GetDownNode(iDownNode,jDownNode,kDownNode)==NULL) {
        newTreeNode=treeNodes.newElement();
@@ -4680,20 +4680,19 @@ if (startNode->Temp_ID==15) {
        xmin=newTreeNode->xmin;
        xmax=newTreeNode->xmax;
 
-       xmin[0]=startNode->xmin[0]+iDownNode*dxBlock[0];
-       xmax[0]=xmin[0]+dxBlock[0];
+       xmin[0]=(iDownNode==0) ? startNode->xmin[0] : dxMddle[0];
+       xmax[0]=(iDownNode==0) ? dxMddle[0] : startNode->xmax[0];
 
        if (_MESH_DIMENSION_>1) {
-         xmin[1]=startNode->xmin[1]+jDownNode*dxBlock[1];
-         xmax[1]=xmin[1]+dxBlock[1];
+         xmin[1]=(jDownNode==0) ? startNode->xmin[1] : dxMddle[1];
+         xmax[1]=(jDownNode==0) ? dxMddle[1] : startNode->xmax[1];
        } 
 
        if (_MESH_DIMENSION_>2) {
-         xmin[2]=startNode->xmin[2]+kDownNode*dxBlock[2];
-         xmax[2]=xmin[2]+dxBlock[2];
+         xmin[2]=(kDownNode==0) ? startNode->xmin[2] : dxMddle[2];
+         xmax[2]=(kDownNode==0) ? dxMddle[2] : startNode->xmax[2];
        }
       
-
        //allocate the blocks:THE ORDER IS IMPORTANT
        AllocateBlock(newTreeNode);
 
