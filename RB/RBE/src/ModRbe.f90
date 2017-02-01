@@ -71,7 +71,7 @@ module rbe_cread2
 
   character (len=100):: NameRestartOutDir = 'RB/restartOUT/'
 
-  character (len=8)::  storm
+  character (len=8)::  storm = 'storm'
 
   logical :: IsStandAlone=.false.,UseGm=.false.,UseIE=.false., &
        UseSplitting = .false.,DoSaveIe = .false.,UseSmooth=.true.
