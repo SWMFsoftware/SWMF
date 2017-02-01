@@ -498,7 +498,7 @@ test3_check:
 		> test3_im_rcm.diff)
 	ls -l test3_*.diff
 
-### test_swpc_build and test_swpc: GM+IE+IM ###
+### test_swpc_build and test_swpc: GM+IE+IM+RB ###
 
 # Configure with 3 components: GM, IE, IM. Remove unused component versions.
 # Run test_swpc in the reduced SWMF build SWPC_build.
@@ -531,7 +531,7 @@ test_swpc:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:8,8,8,400,1 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
@@ -540,11 +540,11 @@ test_swpc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_SWPC ${TESTDIR}/LAYOUT.in
+	cp ${TESTDIR}/LAYOUT.in_rbe ${TESTDIR}/LAYOUT.in
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_SWPC_init
-	cp ${TESTDIR}/PARAM.in_SWPC_init ${TESTDIR}/PARAM.in
-	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_restart
+	     ${TESTDIR}/PARAM.in_rbe_init
+	cp ${TESTDIR}/PARAM.in_rbe_init ${TESTDIR}/PARAM.in
+	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_rbe_restart
 
 test_swpc_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -552,10 +552,9 @@ test_swpc_run:
 
 # Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
 test_swpc_restart:
-	cd ${TESTDIR}; cp PARAM.in_SWPC_restart PARAM.in
+	cd ${TESTDIR}; cp PARAM.in_rbe_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl 
-
+	cd ${TESTDIR}; ./PostProc.pl
 
 test_swpc_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
