@@ -2049,7 +2049,7 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
   !  Write boundary condition in file outname_st2.bc
   xnn_cm3=xnn/1.e6
   if (t.ge.tstart) then
-  thour=t/3600.
+     thour=t/3600.
      if (itype.eq.1.and.t.eq.tstart) then
         if(UseSeparatePlotFiles) then
            open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
@@ -2064,8 +2064,7 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
         close(UnitTmp_)
      elseif (mod(t,tint).eq.0.) then
         if(UseSeparatePlotFiles) then
-           open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc',&
-                status='old',position='append')
+           open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
         else
            open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc',&
                 status='old',position='append')
@@ -2271,12 +2270,15 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
      ! Write the restart.H file to be included at restart
      open(unit=UnitTmp_,file=trim(NameRestartOutDir)//'restart.H')
      
-     write(UnitTmp_,'(a)') '#TIMESIMULATION'
-     write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'
      write(UnitTmp_,'(a)') '#RESTART'
      write(UnitTmp_,'(a,a25)') 'T', 'IsRestart'
+     write(UnitTmp_,*)
+     write(UnitTmp_,'(a)') '#TIMESIMULATION'
+     write(UnitTmp_,'(es15.8,a25)') t,'tSimulation'
+     write(UnitTmp_,*)
      write(UnitTmp_,'(a)') '#INPUTDATA'
      write(UnitTmp_,'(a,a25)') storm, 'NameStorm'
+     write(UnitTmp_,*)
      write(UnitTmp_,'(a)') '#SPECIES'
      if (js == 1 ) write(UnitTmp_,'(a,a32)') 'e','NameSpecies'
      if (js == 2 ) write(UnitTmp_,'(a,a32)') 'H','NameSpecies'
@@ -2287,7 +2289,7 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
 
   ! Write to log file
   if (t.eq.tstart .and. DoSavePlot) write(*,'(a8)') outname
-  if (DoSavePlot) write(*,*) 't(hour)   ',t/3600. 
+  if (DoSavePlot) write(*,*) 'RB: save plot at time = ',t/3600.,' hour'
   
   ! Write the potential values
   if (DoSaveIe .and. DoSavePlot) call RB_plot_potential
