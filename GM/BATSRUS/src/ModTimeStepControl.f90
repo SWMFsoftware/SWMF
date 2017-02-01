@@ -279,6 +279,14 @@ contains
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
 
+    if(DoTestMe .and. UseDtFixed) &
+         write(*,*) NameSub,' after UseDtFixed, time_BLK =', &
+         time_BLK(Itest,Jtest,Ktest,iBlock)
+
+    if(DoTestMe .and. UseDtLimit) &
+         write(*,*) NameSub,' after UseDtLimit, time_BLK =', &
+         time_BLK(Itest,Jtest,Ktest,iBlock)
+
     ! Set time step to zero inside body.
     if(.not.true_BLK(iBlock)) then
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&
@@ -315,6 +323,10 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
+    ! time_BLK is already set in calc_timestep, 
+    ! and Dt=DtLimit is set in MH_set_parameters
+    if(UseDtLimit) RETURN
+
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! if calc_timestep is tested, test this routine too
@@ -325,8 +337,6 @@ contains
 
     if(UseDtFixed)then
        Dt = DtFixed
-    elseif(UseDtLimit)then
-       Dt = DtLimit
     elseif(n_step < 1 .or. n_step == 1 .and. TimeSimulationLimit > 0.0)then
        Dt    = 0.0
        DtMin = 0.0
