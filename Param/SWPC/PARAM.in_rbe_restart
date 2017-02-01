@@ -279,21 +279,15 @@ aur idl                 StringPlot
 
 #BEGIN_COMP RB ---------------------------------------------------------------
 
+#INCLUDE
+RB/restartIN/restart.H
+
 #SAVEPLOT
 60.0		DtSavePlot
 T		UseSeparatePlotFiles
 
-#RESTART
-T		IsRestart
-
 #TIMESTEP
 5.0		Dt
-
-#TIMESIMULATION
-0.0		tStart
-
-#SPECIES
-e		NameSpecies
 
 #STARTUPTIME
 0.0		trans
@@ -304,9 +298,6 @@ F		UseFixedB
 
 #IEMODEL
 1		iConvect
-
-INPUTDATA
-2002_296
 
 #PLASMASPHERE
 F		UsePlasmaSphere
