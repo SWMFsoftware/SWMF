@@ -266,8 +266,8 @@ T			UseComp
 T			UseStrict
 
 ! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
-COUPLEORDER
-5			nCouple
+#COUPLEORDER
+7			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
 IE RB			NameSourceTarget
