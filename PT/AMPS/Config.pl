@@ -89,6 +89,8 @@ foreach (@Arguments) {
      print "-openmp=[on,off]\t\twhen \"on\" use OpenMP and MPI libraries for compiling AMPS\n";
      print "-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker\n";
      print "-compiler-option=opt\t\tadd option \'opt\' into the compiler argument line\n";
+     print "-f-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe fortran compiler is used as a linker \n";
+     print "-cpp-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe c++ compiler is used as a linker \n";
      exit;
    }
    
@@ -202,12 +204,12 @@ foreach (@Arguments) {
       add_line_amps_conf("MODELINPUTDATA=$1");
       next}; #the path to the data file used by the user direactly (not through the PIC::CPLR::DATAFILE readers)
 
-  if (/^-output-path=(.*)$/i)       {
+  if (/^-output-path=(.*)$/i) {
       add_line_amps_conf("OUTPUT=$1");
       next};  #the directory where AMPS' output files will be located 
 
   #compile for the nightly test
-  if (/^-amps-test=(.*)$/i)  {
+  if (/^-amps-test=(.*)$/i) {
     my $t;
 
     $t=lc($1);
@@ -225,37 +227,100 @@ foreach (@Arguments) {
   # set nightly test:
   #  -set-name=NAME/comp - tests' name NAME cannot be empty
   #  -set-name/comp      - tests' name will be `hostname -s`
-  if (/^-set-test=(.*)$/i)      {
-      die "ERROR: test name is empty!" unless ($1);
-      my $CompilersRaw;
-      ($TestName, $CompilersRaw) = split("\/",$1,2);
-      die "ERROR: no compiler is indicated for tests!" unless ($CompilersRaw);
-      @Compilers = split (',',lc $CompilersRaw);
-      require "./utility/TestScripts/SetNightlyTest.pl";
-      next}; 
-  if (/^-set-test\/(.*)$/i)      {
-      die "ERROR: no compiler is indicated for tests!" unless ($1);
-      $TestName=''; 
-      @Compilers = split (',',lc $1);
-      require "./utility/TestScripts/SetNightlyTest.pl";     
-      next}; 
+  if (/^-set-test=(.*)$/i) {
+    die "ERROR: test name is empty!" unless ($1);
+    my $CompilersRaw;
+   
+    ($TestName, $CompilersRaw) = split("\/",$1,2);
+    die "ERROR: no compiler is indicated for tests!" unless ($CompilersRaw);
+    @Compilers = split (',',lc $CompilersRaw);
+    require "./utility/TestScripts/SetNightlyTest.pl";
+    next;
+  } 
 
-  if (/^-rm-test$/i)      {require "./utility/TestScripts/RemoveNightlyTest.pl";     next}; 
-  if(/^-link-option=(.*)$/){
-      my $options=$1; $options =~ s/,/ /g;
-      open(my $fh,'<',"Makefile"); my @lines = <$fh>; close($fh);
-      open(my $fh,'>',"Makefile");
-      foreach my $line (@lines){
-	  if($line =~ m/^EXTRALINKEROPTIONS=/){
+  if (/^-set-test\/(.*)$/i) {
+    die "ERROR: no compiler is indicated for tests!" unless ($1);
+    $TestName=''; 
+    @Compilers = split (',',lc $1);
+    require "./utility/TestScripts/SetNightlyTest.pl";     
+    next;
+  } 
+
+  if (/^-rm-test$/i) {
+    require "./utility/TestScripts/RemoveNightlyTest.pl";     
+    next;
+  } 
+
+  if (/^-link-option=(.*)$/) {
+    my $options=$1; 
+    $options =~ s/,/ /g;
+    
+    my $fh;
+    open($fh,'<',"Makefile"); 
+    my @lines = <$fh>; 
+    close($fh);
+    
+    open($fh,'>',"Makefile");
+      
+    foreach my $line (@lines) {
+	    if($line =~ m/^EXTRALINKEROPTIONS=/) {
 	      $line = "EXTRALINKEROPTIONS=$options\n";
-	  }
-	  print $fh $line;
-      }
-      close($fh);
-      next;
-  };
-
-  if(/^-compiler-option=(.*)$/){
+	    }
+	      
+	    print $fh $line;
+    }
+      
+    close($fh);
+    next;
+  }
+  
+  if (/^-f-link-option=(.*)$/) {
+    my $options=$1; 
+    $options =~ s/,/ /g;
+    
+    my $fh;
+    open($fh,'<',"Makefile"); 
+    my @lines = <$fh>; 
+    close($fh);
+    
+    open($fh,'>',"Makefile");
+      
+    foreach my $line (@lines) {
+	    if($line =~ m/^EXTRALINKEROPTIONS_F=/) {
+	      $line = "EXTRALINKEROPTIONS_F=$options\n";
+	    }
+	      
+	    print $fh $line;
+    }
+      
+    close($fh);
+    next;
+  }
+  
+  if (/^-cpp-link-option=(.*)$/) {
+    my $options=$1; 
+    $options =~ s/,/ /g;
+    
+    my $fh;
+    open($fh,'<',"Makefile"); 
+    my @lines = <$fh>; 
+    close($fh);
+    
+    open($fh,'>',"Makefile");
+      
+    foreach my $line (@lines) {
+	    if($line =~ m/^EXTRALINKEROPTIONS_CPP=/) {
+	      $line = "EXTRALINKEROPTIONS_CPP=$options\n";
+	    }
+	      
+	    print $fh $line;
+    }
+      
+    close($fh);
+    next;
+  }
+  
+  if (/^-compiler-option=(.*)$/) {
     my $options=$1; 
 
     $options =~ s/,/ /g;
