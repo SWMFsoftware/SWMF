@@ -11,6 +11,10 @@ OPENMP=off
 #extra compiler options can be defined in Makefile.local
 EXTRACOMPILEROPTIONS=
 
+#extra linker options specific for fortran and c++ linker
+EXTRALINKEROPTIONS_F=
+EXTRALINKEROPTIONS_CPP=
+
 #Compiling with the CCMC's Kameleon
 KAMELEON=nokameleon
 BOOST=noboost
@@ -103,23 +107,33 @@ ifeq ($(COMPILE.f90),${LINK.f90})
 endif
 
 ifeq ($(COMPILE.f90),pgf90)
-	AMPSLINKER+= -Mnomain 
+	AMPSLINKLIB+= -Mnomain 
 else ifeq  ($(COMPILE.f90),ifort)
-	AMPSLINKER+= -nofor-main  
+	AMPSLINKLIB+= -nofor-main  
 else ifeq  ($(COMPILE.f90),gfortran)
-	AMPSLINKER+= 
+	AMPSLINKLIB+= 
 endif
 endif
 
+#add liker options that are apecific cor c++ cortran linkers 
+ifeq (${AMPSLINKER},mpif90) 
+  AMPSLINKLIB+=${EXTRALINKEROPTIONS_F} 
+else 
+  AMPSLINKLIB+=${EXTRALINKEROPTIONS_CPP} 
+endif 
 
+
+#add KAMELEON to the list of the linked libraries
 ifneq ($(KAMELEON),nokameleon)
 	AMPSLINKLIB+=/Users/ccmc/miniconda2/envs/kameleon/lib/ccmc/libccmc.dylib  
 endif
 
+#add SPICE to the list of the linked libraries 
 ifneq ($(SPICE),nospice)
 	AMPSLINKLIB+=${SPICE}/lib/cspice.a
 endif
 
+#set the nightly test flag
 ifeq ($(TESTMODE),on)  
 	SEARCH_C+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
