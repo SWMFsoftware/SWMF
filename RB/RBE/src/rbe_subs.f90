@@ -2066,8 +2066,8 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
         if(UseSeparatePlotFiles) then
            open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
         else
-           open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc',&
-                status='old',position='append')
+           open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc', &
+                position='append')
         end if
         write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
         close(UnitTmp_)
@@ -2230,9 +2230,9 @@ subroutine p_result(t,tstart,f2,rc,xlati,ekev,y,p,ro,xmlto,xmlt,&
   ! Write energy changes from various processes
   if (DoSavePlot) then
      if(UseSeparatePlotFiles) then
-        open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec',status='old',position='append')
+        open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.ec')
      else
-        open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',status='old',position='append')
+        open(unit=UnitTmp_,file='RB/'//outname//st2//'.ec',position='append')
      endif
      write(UnitTmp_,*) hour,'     ! hour'
      write(UnitTmp_,*) '   i  ro(i,1)       ecbf          ecdt          ecce',&
