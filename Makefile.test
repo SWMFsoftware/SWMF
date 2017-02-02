@@ -515,18 +515,23 @@ test_swpc_build:
 test_swpc:
 	@echo "test_swpc_compile..." > test_swpc_gm.diff
 	@echo "test_swpc_compile..." > test_swpc_ie.diff
+	@echo "test_swpc_compile..." > test_swpc_rb.diff
 	${MAKE} test_swpc_compile
 	@echo "test_swpc_rundir..." >> test_swpc_gm.diff
 	@echo "test_swpc_rundir..." >> test_swpc_ie.diff
+	@echo "test_swpc_rundir..." >> test_swpc_rb.diff
 	${MAKE} test_swpc_rundir
 	@echo "test_swpc_run..." >> test_swpc_gm.diff
 	@echo "test_swpc_run..." >> test_swpc_ie.diff
+	@echo "test_swpc_run..." >> test_swpc_rb.diff
 	${MAKE} test_swpc_run
 	@echo "test_swpc_restart..." >> test_swpc_gm.diff
 	@echo "test_swpc_restart..." >> test_swpc_ie.diff
+	@echo "test_swpc_restart..." >> test_swpc_rb.diff
 	${MAKE} test_swpc_restart
 	@echo "test_swpc_check..." >> test_swpc_gm.diff
 	@echo "test_swpc_check..." >> test_swpc_ie.diff
+	@echo "test_swpc_check..." >> test_swpc_rb.diff
 	${MAKE} test_swpc_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -581,6 +586,12 @@ test_swpc_check:
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_ie.diff)
+	gunzip -c Param/SWPC/TestOutput/RB_20140410_0004_e.fls.gz \
+	        > ${TESTDIR}/RB/plots/20140410_0004_e.fls.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 \
+                ${TESTDIR}/RB/plots/20140410_0004_e.fls \
+		${TESTDIR}/RB/plots/20140410_0004_e.fls.ref \
+		> test_swpc_rb.diff)
 	ls -l test_swpc_*.diff
 
 ### Test4: GM+IE+HEIDI ###############
