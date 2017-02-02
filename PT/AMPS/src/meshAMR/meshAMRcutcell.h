@@ -308,7 +308,7 @@ unsigned long int GetTriangulationSignature();
       xLocal[1]=(c1*c00-c01*c0)/c;
     }
 
-    inline bool RayIntersection(double *x0,double *l,double &t,double *xLocal,double *x,double EPS) {
+    inline bool RayIntersection(double *x0,double *l,double &t,double *xLocal,double *xIntersection,double EPS) {
       double length,lNorm;
 
       lNorm=l[0]*ExternalNormal[0]+l[1]*ExternalNormal[1]+l[2]*ExternalNormal[2];
@@ -358,8 +358,8 @@ unsigned long int GetTriangulationSignature();
 
  //     double x[3],xLocal[2];
 
-      for (int i=0;i<3;i++) x[i]=x0[i]+l[i]*t;
-      GetProjectedLocalCoordinates(xLocal,x);
+      for (int i=0;i<3;i++) xIntersection[i]=x0[i]+l[i]*t;
+      GetProjectedLocalCoordinates(xLocal,xIntersection);
 
       //determine weather the node in outside of the face
 /*      double a0=e0Length*xLocal[0],a1=e1Length*xLocal[1];
@@ -373,6 +373,11 @@ unsigned long int GetTriangulationSignature();
       return true;
     }
 
+    inline bool RayIntersection(double *x0,double *l,double &t,double *xIntersection,double EPS) {
+      double xLocal[2];
+
+      return RayIntersection(x0,l,t,xLocal,xIntersection,EPS);
+    }
 
     inline bool RayIntersection(double *x0,double *l,double &t,double EPS) {
       double x[3],xLocal[2];
