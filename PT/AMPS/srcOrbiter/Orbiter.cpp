@@ -88,6 +88,22 @@ void Orbiter::Sampling::DragCoefficient::PrintOutputFile(int nfile) {
     printf("$PREFIX: ProjectionOrbiterSurfaceArea=%e\n",ProjectionOrbiterSurfaceArea);
     printf("$PREFIX: Calculated Drag Coefficient = %e\n",Cd);
     
+    //output the particle statistics for the nightly tests
+    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+      char fname[400];
+      FILE *fout;
+
+      sprintf(fname,"%s/test_Orbiter_Drag_Coefficient.dat",PIC::OutputDataFileDirectory);
+      fout=fopen(fname,"w");
+
+      fprintf(fout,"Mass Density:\n%e\ndp/dt:\n%e %e %e\n",TotalMassDensity,dpTotal[0],dpTotal[1],dpTotal[2]);
+      fprintf(fout,"dpProjection\n%e\nSpeed\n%e\n",dpProjection,speed);
+      fprintf(fout,"ProjectionOrbiterSurfaceArea\n%e\n",ProjectionOrbiterSurfaceArea);
+      fprintf(fout,"Calculated Drag Coefficient\n%e\n",Cd);
+
+      fclose(fout);
+    }
+
   }
 
   //reset the sampling buffer 
