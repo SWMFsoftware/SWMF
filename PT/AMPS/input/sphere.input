@@ -1,0 +1,149 @@
+
+#main
+
+SpeciesList=H2O  
+
+
+makefile  SPICE=/Users/vtenishe/SPICE/cspice
+
+
+
+ErrorLog=error.log
+Prefix=AMPS
+DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
+OutputDirectory=out
+
+
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=off  ! on,off 
+
+
+makefile  SOURCES=src
+makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+makefile ExternalModules=models/exosphere models/surface 
+
+ProjectSourceDirectory=srcOrbiter 
+
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
+SourceDirectory=src
+
+TrajectoryIntersectionWithBlockFaces=on !on, off 
+
+!ErrorLog=amps_error.log
+Prefix=AMPS
+!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log'
+!OutputDirectory=output/PT
+
+!PT/plots
+ErrorLog=PT/amps_error.log
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+
+CouplerMode=off, ices, swmf
+
+TimeStepMode=SpeciesGlobalTimeStep !!!SpeciesLocalTimeStep !!SpeciesGlobalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight !!!SpeciesLocalParticleWeight !!SpeciesGlobalParticleWeight
+ParticleWeightCorrectionMode=on
+
+#endmain
+
+#include species.input
+
+#UserDefinitions
+  PIC=on ! on, off
+  Mesh=on ! on, off
+#endUserDefinitions
+
+#General
+  ReferenceInjectionParticleNumber=200000
+  MaxMeshRefinmentLevel=7 !2 !4
+  EnforceRequestedMeshResolution=off !on,off
+
+  RequestedParticleBufferLength=150000000
+  InitialSampleLength=100
+
+  BlockCells=3,3,3
+  GhostCells=1,1,1
+
+  NeibNodeCopyCutFaceData=on \\ !on, off
+    repeat=1 
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=on !!!on,of
+
+  UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataOrbiter,header=SurfaceDataOrbiter.h
+
+  define _PIC_MOVER__UNKNOWN_ERROR_IN_PARTICLE_MOTION__STOP_EXECUTION_ _PIC_MODE_OFF_
+
+  define _PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_  _PIC_MODE_OFF_
+
+  define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 15
+  define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5
+
+!define _PIC__OPENMP_THREAD_SPLIT_MODE_   _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_
+! define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+ define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
+
+  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+#endGeneral
+
+
+#ParticleCollisions
+  model = off !MF !!!NTC !!off !HS ! HS, off
+  SampleCollisionFrequency=on !!on !on, off
+  CollisionLimitingThrehold=5
+
+  CollisionCrossSection=const \\ !const, function
+    const (H2O,H2O)= 3.4E-19
+#endParticleCollisions
+
+#block ../input/orbiter.input.pl
+  UpstreamVelocity=-30.0e3,0.0,0.0
+
+  UpstreamNumberDensity= \\
+    const(H2O)=1.5E21
+
+  UpstreamTemperature=293.0
+
+  SurfaceModel=sphere.bdf !box-mesh.mail 
+  SurfaceModelFormat=NASTRAN !CEA, NASTRAN
+  SurfaceMeshScalingFactor=5.0E-7
+  
+  MeshSignature= 0 !0xb2402143d4da3e7c !0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
+
+  DomainLimits= \\
+    xMinOffset=0.5,0.5,0.5 \\
+    xMaxOffset=0.5,0.5,0.5
+
+  CalculateDragCoefficient=on !on, off  
+
+#endblock
+
+
+
+#block ../exosphere.pl !process the data block with the setting of the exospehre model
+  SPICE=off !off !on, of
+  
+  define _TARGET_ _EUROPA_
+  
+  addPhysicalModelHeader=Orbiter.h
+  
+  Source:UserDefined=off: \\ !on,off
+    SourceProcessCode= Rosetta\\
+    SourceRate=Rosetta::GetTotalProduction \\
+    GenerateParticleProperties=Rosetta::GenerateParticleProperties \\
+    ModifySurfaceSpeciesAbundance=false !!false !!!true,false
+!!   InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init
+  
+  #endblock
+
+
+#end
