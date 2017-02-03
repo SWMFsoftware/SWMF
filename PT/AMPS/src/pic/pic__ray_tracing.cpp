@@ -313,6 +313,85 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
   return IntersectionCounter;
 }
 
+int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace) {
+  double x[3],c=0.0;
+  int idim;
+  int IntersectedFaceNumber=-1;
+
+  //determine the initial block
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
+
+  node=PIC::Mesh::mesh.findTreeNode(x0Ray);
+  if (node==NULL) return false;
+
+  //increment the call counter
+  nCallsTestDirectAccess++;
+  memcpy(x,x0Ray,3*sizeof(double));
+
+  if (nCallsTestDirectAccess==0) {
+    //if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
+    nCallsTestDirectAccess=1;
+
+    for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+  }
+
+  //trace the ray
+  PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
+
+  while (node!=NULL) {
+    PIC::Mesh::IrregularSurface::cTriangleFace *TriangleFace;
+    PIC::Mesh::IrregularSurface::cTriangleFace *minIntersectionTimeTriangleFace=NULL;
+    double IntersectionTime,minIntersectionTime=-1.0;
+    double xIntersectionTemp[3],xMinTimeIntersection[3];
+
+    bool code;
+
+    if ((t=node->FirstTriangleCutFace)!=NULL) {
+      for (;t!=NULL;t=t->next) {
+        if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
+          code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
+
+          if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
+            if ((minIntersectionTimeTriangleFace==NULL) || (IntersectionTime>minIntersectionTime)) {
+              minIntersectionTimeTriangleFace=TriangleFace;
+              minIntersectionTime=IntersectionTime;
+              memcpy(xMinTimeIntersection,xIntersectionTemp,3*sizeof(double));
+            }
+          }
+
+          TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
+        }
+      }
+    }
+
+    if (minIntersectionTimeTriangleFace!=NULL) {
+      //intersection face is found -> return it
+      memcpy(xIntersection,xMinTimeIntersection,3*sizeof(double));
+      return minIntersectionTimeTriangleFace-PIC::Mesh::IrregularSurface::BoundaryTriangleFaces;
+    }
+
+    //determine the new node
+    double xNodeExit[3],xFaceExitLocal[2];
+    int nExitFace,iFace,jFace;
+
+    if (PIC::RayTracing::GetBlockExitPoint(node->xmin,node->xmax,x,lRay,xNodeExit,xFaceExitLocal,nExitFace)==true) {
+      iFace=(xFaceExitLocal[0]<0.5) ? 0 : 1;
+      jFace=(xFaceExitLocal[1]<0.5) ? 0 : 1;
+
+      node=node->GetNeibFace(nExitFace,iFace,jFace);
+    }
+    else {
+      PIC::RayTracing::GetBlockExitPoint(node->xmin,node->xmax,x,lRay,xNodeExit,xFaceExitLocal,nExitFace);
+      node=PIC::Mesh::mesh.findTreeNode(xNodeExit,node);
+    }
+
+    memcpy(x,xNodeExit,3*sizeof(double));
+  }
+
+  //no face of intersection was found -> return the default value
+  return -1;
+}
+
 
 void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool ParallelExecution) {
   double xTriangle[3],c;
