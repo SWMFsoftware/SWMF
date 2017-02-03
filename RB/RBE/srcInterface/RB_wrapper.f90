@@ -193,8 +193,8 @@ contains
 
     !-------------------------------------------------------------------------
 
-    !call RB_write_prefix; write(iUnitOut,*) &
-    !     NameSub,' at TimeSimulation=',TimeSimulation
+    ! Save final plot
+    call rbe_save_result(.false., .true.)
 
   end subroutine RB_finalize
   !===========================================================================
