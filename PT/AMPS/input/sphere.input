@@ -62,11 +62,11 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200000
+  ReferenceInjectionParticleNumber=2000
   MaxMeshRefinmentLevel=7 !2 !4
   EnforceRequestedMeshResolution=off !on,off
 
-  RequestedParticleBufferLength=150000000
+  RequestedParticleBufferLength=1500000
   InitialSampleLength=100
 
   BlockCells=3,3,3
