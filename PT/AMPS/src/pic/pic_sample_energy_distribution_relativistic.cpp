@@ -51,6 +51,25 @@ void PIC::EnergyDistributionSampleRelativistic::Init() {
 
   dE=(eMax-eMin)/nSampledFunctionPoints;
 
+  //de-allocate sampling buffers if they were allocated before
+  if (SampleLocalCellNumber!=NULL) {
+    delete [] SampleLocalCellNumber;
+    SampleLocalCellNumber=NULL;
+  }
+
+  if (SampleNodes!=NULL) {
+    delete [] SampleNodes;
+    SampleNodes=NULL;
+  }
+
+  if (SamplingBuffer!=NULL) {
+    delete [] SamplingBuffer[0][0];
+    delete [] SamplingBuffer[0];
+    delete [] SamplingBuffer;
+
+    SamplingBuffer=NULL;
+  }
+
 
   //allocate the sampling buffers
   SampleLocalCellNumber=new long int [nSamleLocations];
