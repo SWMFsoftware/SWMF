@@ -430,7 +430,7 @@ int main(int argc,char **argv) {
   //in the test-mode run 100 iterations and than output the particle data statistics
   int nIterations,nTotalIterations=100000001;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=550;
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=700;
 
   //time step
   for (long int niter=0;niter<nTotalIterations;niter++) {
