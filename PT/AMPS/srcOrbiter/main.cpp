@@ -67,17 +67,17 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   double *xx,dp,de; 
 
-  dp=(vInit[0]-vInitUnchanged[0])*RateFactor;
+  dp=-(vInit[0]-vInitUnchanged[0])*RateFactor;  //the rate of the momentu gain by the orbiter's surface
   Orbiter::Sampling::DragCoefficient::dpX[0]+=dp;
   xx=TriangleCutFace->UserData.MomentumTransferRateX;
   xx[spec]+=dp/TriangleCutFace->SurfaceArea;
 
-  dp=(vInit[1]-vInitUnchanged[1])*RateFactor;
+  dp=-(vInit[1]-vInitUnchanged[1])*RateFactor;   //the rate of the momentu gain by the orbiter's surface
   Orbiter::Sampling::DragCoefficient::dpY[0]+=dp;
   xx=TriangleCutFace->UserData.MomentumTransferRateY;
   xx[spec]+=dp/TriangleCutFace->SurfaceArea;
 
-  dp=(vInit[2]-vInitUnchanged[2])*RateFactor;
+  dp=-(vInit[2]-vInitUnchanged[2])*RateFactor;   //the rate of the momentu gain by the orbiter's surface
   Orbiter::Sampling::DragCoefficient::dpZ[0]+=dp;
   xx=TriangleCutFace->UserData.MomentumTransferRateZ;
   xx[spec]+=dp/TriangleCutFace->SurfaceArea;
@@ -213,11 +213,11 @@ int main(int argc,char **argv) {
 
   switch (Orbiter::SurfaceModel::MeshFileFormat) {
   case Orbiter::SurfaceModel::MeshFileFormat_CEA:
-    PIC::Mesh::IrregularSurface::ReadCEASurfaceMeshLongFormat(fname,20.0);
+    PIC::Mesh::IrregularSurface::ReadCEASurfaceMeshLongFormat(fname,Orbiter::SurfaceModel::ScalingFactor);
     break;
 
   case Orbiter::SurfaceModel::MeshFileFormat_NASTRAN:
-    PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname);
+    PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname,Orbiter::SurfaceModel::ScalingFactor);
     break;
 
   default:
