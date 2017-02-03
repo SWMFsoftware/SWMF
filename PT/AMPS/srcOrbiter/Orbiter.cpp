@@ -18,6 +18,9 @@ double Orbiter::UpstreamBC::Velocity[3]={-30.0E3,0.0,0.0};
 double Orbiter::UpstreamBC::NumberDensity[PIC::nTotalSpecies];
 double Orbiter::UpstreamBC::Temperature=293.0;
 
+//scaling factor of the surface model
+double Orbiter::SurfaceModel::ScalingFactor=1.0;
+
 bool Orbiter::Sampling::DragCoefficient::SamplingMode=false;
 double Orbiter::ProjectionOrbiterSurfaceArea=0.0;
 

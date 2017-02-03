@@ -52,6 +52,9 @@ using namespace Exosphere;
 
     extern char MeshFileName[_MAX_STRING_LENGTH_PIC_];
     extern int MeshFileFormat;
+
+    //scale the size of the surface mesh
+    extern double ScalingFactor;
   }
 
   //sample calulated aerodynamcis properties
