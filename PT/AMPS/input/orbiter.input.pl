@@ -91,6 +91,11 @@ while ($line=<InputFile>) {
     ($InputLine,$line)=split(' ',$line,2);
 
     ampsConfigLib::ChangeValueOfVariable("char Orbiter::SurfaceModel::MeshFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
+  }   
+  elsif ($InputLine eq "SURFACEMESHSCALINGFACTOR") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    ampsConfigLib::ChangeValueOfVariable("double Orbiter::SurfaceModel::ScalingFactor",$InputLine,"main/Orbiter.cpp");         
   }
   elsif ($InputLine eq "SURFACEMODELFORMAT") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
