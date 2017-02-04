@@ -979,3 +979,32 @@ Check=
 <#
 
 
+/------------------------------------------------------------------------------
+#>
+Name=test/Drag-Coefficient--Specular-Reflection
+Time=1
+
+Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
+
+Check=
+>>>@echo "Drag-Coefficient--Specular-Reflection_check..." >> Drag-Coefficient--Specular-Reflection.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/test_Orbiter_Drag_Coefficient.dat output/test_DragCoefficient/SpecularReflection/test_Orbiter_Drag_Coefficient.ref_np`ls $(TESTDrag-Coefficient--Specular-ReflectionDIR)/PT/thread* |wc -l |tr -d ' '` > Drag-Coefficient--Specular-Reflection--Drag-Value.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/test_Orbiter.dat output/test_DragCoefficient/SpecularReflection/test_Orbiter.ref_np`ls $(TESTDrag-Coefficient--Specular-ReflectionDIR)/PT/thread* |wc -l |tr -d ' '` > Drag-Coefficient--Specular-Reflection-Particle-Data.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/amps.cut-cell.surface-data.out=2.dat output/test_DragCoefficient/SpecularReflection/amps.cut-cell.surface-data.out=2.ref_np`ls $(TESTDrag-Coefficient--Specular-ReflectionDIR)/PT/thread* |wc -l |tr -d ' '` > Drag-Coefficient--Specular-Reflection--Surface-Data.diff
+
+>>>@${TESTDrag-Coefficient--Specular-ReflectionDIR}/../utility/ReduceFile.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/pic.H2O.s=0.out=2.dat 10
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/pic.H2O.s=0.out=2.dat.Reduced.Step=10 output/test_DragCoefficient/SpecularReflection/pic.H2O.s=0.out=2.dat.Reduced.Step=10.ref_np`ls $(TESTDrag-Coefficient--Specular-ReflectionDIR)/PT/thread* |wc -l |tr -d ' '` > Drag-Coefficient--Specular-Reflection--Volume-data.diff
+
+>>>@${TESTDrag-Coefficient--Specular-ReflectionDIR}/../utility/ReduceFile.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/OrbiterProjectionArea.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTDrag-Coefficient--Specular-ReflectionDIR}/PT/plots/OrbiterProjectionArea.dat.Reduced.Step=100 output/test_DragCoefficient/SpecularReflection/OrbiterProjectionArea.dat.Reduced.Step=100.ref_np`ls $(TESTDrag-Coefficient--Specular-ReflectionDIR)/PT/thread* |wc -l |tr -d ' '` > Drag-Coefficient--Specular-Reflection--Projection-Map.diff
+
+>>>@cat Drag-Coefficient--Specular-Reflection--Drag-Value.diff Drag-Coefficient--Specular-Reflection-Particle-Data.diff Drag-Coefficient--Specular-Reflection--Surface-Data.diff Drag-Coefficient--Specular-Reflection--Volume-data.diff Drag-Coefficient--Specular-Reflection--Projection-Map.diff > Drag-Coefficient--Specular-Reflection.diff
+
+>>>@ls -l Drag-Coefficient--Specular-Reflection--Drag-Value.diff 
+>>>@ls -l Drag-Coefficient--Specular-Reflection-Particle-Data.diff
+>>>@ls -l Drag-Coefficient--Specular-Reflection--Surface-Data.diff
+>>>@ls -l Drag-Coefficient--Specular-Reflection--Volume-data.diff
+>>>@ls -l Drag-Coefficient--Specular-Reflection--Projection-Map.diff
+
+>>>@ls -l Drag-Coefficient--Specular-Reflection.diff
+<#
