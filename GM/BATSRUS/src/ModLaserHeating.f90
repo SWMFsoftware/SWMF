@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModLaserHeating
@@ -40,13 +41,12 @@ module ModLaserHeating
 
 
   !Circular frequency, [rad/s]
-  real, parameter:: Omega = 3* &            !Third harmonic
-       cTwoPi * cLightSpeed/(1.06e-6)       !of the Nd Laser
+  real, parameter:: Omega = 3* &            ! Third harmonic
+       cTwoPi * cLightSpeed/(1.06e-6)       ! of the Nd Laser
 
   !Critical density
   real, parameter:: DensityCrSI  = Omega**2 &
-       *cEps * cElectronMass/cElectronCharge**2 *&
-       cAtomicMass * 9.0121823              !and for Beryllium
+       *cEps * cElectronMass/cElectronCharge**2
 
   logical:: DoInit=.true.
 
@@ -131,12 +131,12 @@ module ModLaserHeating
 
 contains
   !==========================================================================
-  subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, RhoSI, Absorption)
+  subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, NeSI, Absorption)
     !The subroutine calculates the absorption coefficient, Absorption [m-1],
     ! at the circular frequency, omega and convert then to the dimensionless
     !form
 
-    real,intent(in):: NAtomicSI, ZAverage, TeSI, RhoSI
+    real,intent(in):: NAtomicSI, ZAverage, TeSI, NeSI
     real, intent(out):: Absorption  !The absorption coefficient, [m-1]
 
     real:: AveragedElectronSpeed, CollisionCrossSection
@@ -144,9 +144,9 @@ contains
     real,parameter::CoulombLog = 5.0
     !------------------------------------------------------------------------
 
-    Dens2DensCr = min(1.0, RhoSI/DensityCrSi)
+    Dens2DensCr = min(1.0, NeSI/DensityCrSi)
     !calculate the effective collision frequency
-    !write(*,*)'RhoSi=',RhoSi,' Dens2DensCr=',Dens2DensCr
+    !write(*,*)'NeSi=',NeSi,' Dens2DensCr=',Dens2DensCr
 
     if(DoLaserRayTest)then
 
@@ -195,13 +195,13 @@ contains
     integer:: iRay, iBlock, iCell, nCell
     integer:: iCell_II(0:nDim,2**nDim), iCell_D(MaxDim), i, j, k
 
-    real:: Xyz_D(MaxDim), GradRhoZ_D(MaxDim)
+    real:: Xyz_D(MaxDim), GradNe_D(MaxDim)
     real:: Weight_I(2**nDim), Weight
-    real:: NatomicSi, TeSI, Zaverage, RhoZSi, Absorption
-    real:: ZaverageL, ZaverageR
+    real:: NatomicSi, TeSI, Zaverage, NeSi, Absorption
+    real:: ZaverageL, ZaverageR, NatomicSiL, NatomicSiR
 
     ! Variables interpolated to ray positions
-    integer, parameter:: GradXRhoZ_=1, GradYRhoZ_=2, GradZRhoZ_=3, RhoZ_=4, &
+    integer, parameter:: GradXNe_=1, GradYNe_=2, GradZNe_=3, Ne_=4, &
          Absorption_=5, CellSize_=6, nVarRay = CellSize_
     real, allocatable:: RayValue_VI(:,:), RayValueAll_VI(:,:)
 
@@ -211,7 +211,7 @@ contains
          allocate(RayValue_VI(nVarRay,nRay), RayValueAll_VI(nVarRay,nRay))
 
     RayValue_VI = 0.0
-    GradRhoZ_D  = 0.0
+    GradNe_D  = 0.0
     iCell_D     = 1 ! set the index for ignored dimensions
 
     ! Loop through the rays
@@ -255,88 +255,88 @@ contains
           ! Increase Z for weakly ionized plasma to 1
           zAverage = max(zAverage, 1.0)
 
-          ! Rho*Z in SI units
-          RhoZSi = State_VGB(rho_,i,j,k,iBlock)*ZAverage*No2Si_V(UnitRho_)
+          ! Ne in SI units
+          NeSi = NatomicSi*ZAverage
 
           ! Calculate the absorption rate
           call calc_absorption(&
-               NAtomicSI  = NAtomicSI, &
-               ZAverage   = ZAverage, &
-               TeSI       = TeSi, &
-               RhoSI      = RhoZSi,&
+               NAtomicSI = NAtomicSI, &
+               ZAverage  = ZAverage, &
+               TeSI      = TeSi, &
+               NeSI      = NeSi,&
                Absorption = Absorption)
 
           ! Interpolate density*Z
-          RayValue_VI(RhoZ_,iRay) = RayValue_VI(RhoZ_,iRay) &
-               + Weight * RhoZSi
+          RayValue_VI(Ne_,iRay) = RayValue_VI(Ne_,iRay) &
+               + Weight * NeSi
 
           ! Interpolate absorption rate
           RayValue_VI(Absorption_,iRay) = RayValue_VI(Absorption_,iRay) &
                + Weight * Absorption
 
-          ! If speed is an issue in the following lines, we can always
-          ! calculate Zaverage a-priori and store it in tmp1_BLK
-
-          ! Interpolate (X gradient of Rho*Z)
+          ! Interpolate (X gradient of Ne)
           call user_material_properties( &
-               State_VGB(:,i+1,j,k,iBlock),         &
-               i+1, j, k, iBlock,                   &
-               AverageIonChargeOut=ZaverageR)
+               State_VGB(:,i+1,j,k,iBlock),   &
+               i+1, j, k, iBlock,             &
+               AverageIonChargeOut=ZaverageR, &
+               NatomicOut=NatomicSiR)
           call user_material_properties( &
-               State_VGB(:,i-1,j,k,iBlock),         &
-               i-1, j, k, iBlock,                   &
-               AverageIonChargeOut=ZaverageL)
+               State_VGB(:,i-1,j,k,iBlock),   &
+               i-1, j, k, iBlock,             &
+               AverageIonChargeOut=ZaverageL, &
+               NatomicOut=NatomicSiL)
           ZaverageR = max(ZaverageR,1.0)
           ZaverageL = max(ZaverageL,1.0)
-          GradRhoZ_D(1) = &
-               ( ZaverageR*State_VGB(Rho_,i+1,j,k,iBlock) &
-               - ZaverageL*State_VGB(Rho_,i-1,j,k,iBlock) ) &
-               * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(1,iBlock)
+          GradNe_D(1) = &
+               (ZaverageR*NatomicSiR - ZaverageL*NatomicSiL) &
+               *0.5/CellSize_DB(1,iBlock)
 
-          ! Interpolate (Y gradient of Rho*Z)
+          ! Interpolate (Y gradient of Ne)
           if(nDim > 1)then
              call user_material_properties( &
-                  State_VGB(:,i,j+1,k,iBlock),         &
-                  i,j+1,k,iBlock,                      &
-                  AverageIonChargeOut=ZaverageR)
+                  State_VGB(:,i,j+1,k,iBlock),   &
+                  i,j+1,k,iBlock,                &
+                  AverageIonChargeOut=ZaverageR, &
+                  NatomicOut=NatomicSiR)
              call user_material_properties( &
-                  State_VGB(:,i,j-1,k,iBlock),         &
-                  i, j-1, k, iBlock,                   &
-                  AverageIonChargeOut=ZaverageL)
+                  State_VGB(:,i,j-1,k,iBlock),   &
+                  i, j-1, k, iBlock,             &
+                  AverageIonChargeOut=ZaverageL, &
+                  NatomicOut=NatomicSiL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)
-             GradRhoZ_D(2) = &
-                  ( ZaverageR*State_VGB(Rho_,i,j+1,k,iBlock) &
-                  - ZaverageL*State_VGB(Rho_,i,j-1,k,iBlock) ) &
-                  * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(2,iBlock)
+             GradNe_D(2) = &
+                  (ZaverageR*NatomicSiR - ZaverageL*NatomicSiL) &
+                  *0.5/CellSize_DB(2,iBlock)
           end if
 
-          ! Interpolate (Z gradient of Rho*Z)
+          ! Interpolate (Z gradient of Ne)
           if(nDim==3)then
              call user_material_properties( &
-                  State_VGB(:,i,j,k+1,iBlock),         &
-                  i, j, k+1, iBlock,                   &
-                  AverageIonChargeOut=ZaverageR)
+                  State_VGB(:,i,j,k+1,iBlock),   &
+                  i, j, k+1, iBlock,             &
+                  AverageIonChargeOut=ZaverageR, &
+                  NatomicOut=NatomicSiR)
              call user_material_properties( &
-                  State_VGB(:,i,j,k-1,iBlock),         &
-                  i,j,k-1,iBlock,                      &
-                  AverageIonChargeOut=ZaverageL)
+                  State_VGB(:,i,j,k-1,iBlock),   &
+                  i,j,k-1,iBlock,                &
+                  AverageIonChargeOut=ZaverageL, &
+                  NatomicOut=NatomicSiL)
              ZaverageR = max(ZaverageR,1.0)
              ZaverageL = max(ZaverageL,1.0)
-             GradRhoZ_D(3) = &
-                  ( ZaverageR*State_VGB(Rho_,i,j,k+1,iBlock) &
-                  - ZaverageL*State_VGB(Rho_,i,j,k-1,iBlock) ) &
-                  * No2Si_V(UnitRho_) * 0.5 / CellSize_DB(3,iBlock)
+             GradNe_D(3) = &
+                  (ZaverageR*NatomicSiR - ZaverageL*NatomicSiL) &
+                  *0.5/CellSize_DB(3,iBlock)
           end if
 
           if(Is3DBeamInRz)then
-             GradRhoZ_D(3) = GradRhoZ_D(2)*Position_DI(3,iRay)/Xyz_D(2)
-             GradRhoZ_D(2) = GradRhoZ_D(2)*Position_DI(2,iRay)/Xyz_D(2)
+             GradNe_D(3) = GradNe_D(2)*Position_DI(3,iRay)/Xyz_D(2)
+             GradNe_D(2) = GradNe_D(2)*Position_DI(2,iRay)/Xyz_D(2)
           end if
 
-          RayValue_VI(GradXRhoZ_:GradZRhoZ_,iRay) = &
-               RayValue_VI(GradXRhoZ_:GradZRhoZ_,iRay) &
-               + Weight*GradRhoZ_D
+          RayValue_VI(GradXNe_:GradZNe_,iRay) = &
+               RayValue_VI(GradXNe_:GradZNe_,iRay) &
+               + Weight*GradNe_D
 
           ! Use the interpolated cell size to set the ray step size
           RayValue_VI(CellSize_,iRay) = RayValue_VI(CellSize_,iRay) &
@@ -355,8 +355,8 @@ contains
 
     ! Put it into individual arrays
     do iRay = 1, nRay
-       GradDensity_DI(:,iRay) = RayValue_VI(GradXRhoZ_:GradZRhoZ_,iRay)
-       Density_I(iRay)        = RayValue_VI(RhoZ_,iRay)
+       GradDensity_DI(:,iRay) = RayValue_VI(GradXNe_:GradZNe_,iRay)
+       Density_I(iRay)        = RayValue_VI(Ne_,iRay)
        AbsorptionCoeff_I(iRay)= RayValue_VI(Absorption_,iRay)
        DeltaSNew_I(iRay)      = RayValue_VI(CellSize_,iRay)
     end do
@@ -895,11 +895,6 @@ contains
     !----------------------
 
     if (TimeSi > tPulse) UseLaserHeating = .false.
-
-    !irradiance_t = IrradianceSi *&
-    !     max(0.0, min(1.0,       &
-    !     (TimeSi/tRaise)**3,     &
-    !     (tPulse -TimeSi)/tDecay))
 
     if(DoLaserRayTest)then
        !no temporal profile
@@ -1457,33 +1452,9 @@ contains
           if (Position_DI(1,1) > PosXHold) PosXHold = Position_DI(1,1)
        end if
 
-!!$       if(DoVerbose .and. iProc==0)then
-!!$          NameFile=''
-!!$          write(NameFile,'(a,i4.4)')'Rays_n',iStep+1
-!!$          write(*,*)trim(NameFile)
-!!$          open(UnitTmp_, file=NameFile, status='replace')
-!!$          do iRay = 1, nRay
-!!$             if(Unused_I(iRay)) CYCLE
-!!$             write(UnitTmp_,*)iRay,Position_DI(1:2,iRay), Slope_DI(:,iRay), &
-!!$                  DeltaS_I(iRay),Density_I(iRay), AbsorptionCoeff_I(iRay), &
-!!$                  GradDensity_DI(:,iRay), EnergyDeposition_I(iRay)
-!!$          end do
-!!$          close(UnitTmp_)
-!!$       end if
        DoRay_I = (.not.Unused_I).or.IsBehindCr_I
        if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
-!!$       if(DoVerbose .and. iProc==0 .and. .not.all(Unused_I))then
-!!$          write(*,*)'Laser package at iStep =',iStep
-!!$          write(*,*)'Used rays #=',count(.not.Unused_I)
-!!$          write(*,*)'Rays penetrated into overdense plasma, #=', &
-!!$               count(IsBehindCr_I)
-!!$          write(*,*)'Total energy deposition =', &
-!!$               sum(EnergyDeposition_I,MASK=DoRay_I)
-!!$          write(*,*)'MinumumStep=',minval(DeltaS_I,MASK=.not.Unused_I)
-!!$          write(*,*)'MaximumStep=',maxval(DeltaS_I,MASK=.not.unused_I)
-!!$          write(*,*)'Min DeltaSNew_I=',minval(DeltaSNew_I,MASK=.not.Unused_I)
-!!$       end if
 
        ! Save EnergyDeposition_I to LaserHeating_CB 
        ! using the interpolation weights
@@ -1523,10 +1494,6 @@ contains
              ! Deposit the energy 
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   + Weight*EnergyDeposition_I(iRay)
-
-!!$             write(*,*)'!!! i,j,k,iBlock,Weight,Deposition,SourceE=',&
-!!$                  i,j,k,iBlock,Weight,&
-!!$                  EnergyDeposition_I(iRay),LaserHeating_CB(i,j,k,iBlock)
 
           end do
        end do
@@ -1600,8 +1567,9 @@ contains
              ! Denominator 50.0 is the distance to the critical surface.
              ! The beryllium is initially weakly ionized (Z=1), so that
              ! the electron density is like the mass density a linear profile.
-             State_VGB(Rho_,i,j,k,iBlock) = (Xyz_DGB(x_,i,j,k,iBlock) - x1)/50.0 &
-                  *DensityCrSI*Si2No_V(UnitRho_)
+             State_VGB(Rho_,i,j,k,iBlock) = &
+                  (Xyz_DGB(x_,i,j,k,iBlock) - x1)/50.0 &
+                  *DensityCrSI*cAtomicMass*9.0121823*Si2No_V(UnitRho_)
           end do; end do; end do
        end do
     end if
@@ -1643,7 +1611,8 @@ contains
              ! The formula below needs some explanation
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
-                  *(CoordMax_D(3) - CoordMin_D(3))*(CoordMax_D(2) - CoordMin_D(2))/(cPi*rBeam**2)
+                  *(CoordMax_D(3) - CoordMin_D(3)) &
+                  *(CoordMax_D(2) - CoordMin_D(2))/(cPi*rBeam**2)
           else
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock)
