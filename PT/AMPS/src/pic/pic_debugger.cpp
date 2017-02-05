@@ -9,6 +9,60 @@
 
 #include "pic.h"
 
+
+//Save particle data into a debugger data stream
+void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length) {
+  int i;
+
+  struct cStreamBuffer {
+    int CollCounter;
+    unsigned long CheckSum;
+  };
+
+  const int CheckSumBufferLength=500;
+  static cStreamBuffer StreamBuffer[CheckSumBufferLength];
+
+  static int BufferPointer=0;
+  static int CallCounter=0;
+  static CRC32 CheckSum;
+
+  //create a new copy of the dbuffer stream file at the first call of this function
+  if (CallCounter==0) {
+    FILE *fout;
+    char fname[200];
+
+    sprintf(fname,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
+    fout=fopen(fname,"w");
+    fclose(fout);
+  }
+
+  //increment the call counter
+  CallCounter++;
+
+  //update the check sum
+  CheckSum.add((char*)data,length);
+
+  //save the checksum in the buffer
+  StreamBuffer[BufferPointer].CollCounter=CallCounter;
+  StreamBuffer[BufferPointer].CheckSum=CheckSum.checksum();
+  BufferPointer++;
+
+  if (BufferPointer>=CheckSumBufferLength) {
+    //save the accumulated checksums into a file
+    FILE *fout;
+    char fname[200];
+
+    sprintf(fname,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
+    fout=fopen(fname,"a");
+
+    for (int i=0;i<BufferPointer;i++) fprintf(fout,"%i: 0x%lx\n",StreamBuffer[i].CollCounter,StreamBuffer[i].CheckSum);
+
+    BufferPointer=0;
+    fclose(fout);
+  }
+}
+
+
 //InfiniteLoop==false ==> no problem found; InfiniteLoop==true => the actual number of particles does not consider the that in teh particle buffer
 bool PIC::Debugger::InfiniteLoop(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
   int nDownNode,i,j,k;
