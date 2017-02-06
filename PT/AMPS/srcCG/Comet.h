@@ -47,6 +47,21 @@ namespace Comet {
   
   double GetTotalProductionRateBjornNASTRAN(int spec);
 
+  //track change of the Sun's location during the simulation
+  namespace Time {
+    //relaculate location of the Sun each iteration
+    extern bool RecalculateSunLocationFlag;
+
+    //init the location of the Sun using the value of 'SimulationStartTimeString' duting the initialization
+    extern bool InitSunLocationFlag;
+
+    //current simulation time
+    extern SpiceDouble et;
+
+    //the string containing the simulatino start time
+    extern char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_];
+  }
+
   namespace BjornNASTRAN{
     extern cSingleVariableDiscreteDistribution<int> *SurfaceInjectionProbability;
     extern int nDev;
