@@ -21,6 +21,12 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="67P/C-G_CK";
 
+//variables that controls initialization and re-calculation of the Sun's location during the course of the simulation
+bool Comet::Time::InitSunLocationFlag=false;
+bool Comet::Time::RecalculateSunLocationFlag=false;
+char Comet::Time::SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_]="";
+SpiceDouble Comet::Time::et=0.0;
+
 int Comet::GravityFieldOffset=-1;
 
 char Comet::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
@@ -197,6 +203,26 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
     fluxBjorn[i]=fluxBjorn[0]+i*90;
     for(int j=0;j<90;j++) fluxBjorn[i][j]=0.0;
   }  
+
+
+  //recalculate the location of the Sun
+  #ifndef _NO_SPICE_CALLS_
+  if ((Comet::Time::RecalculateSunLocationFlag==true)||(Comet::Time::InitSunLocationFlag==true)) {
+    SpiceDouble lt,et,xSun[3];
+
+    utc2et_c(Comet::Time::SimulationStartTimeString,&et);
+    spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+    reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+
+    HeliocentricDistance*=1.0E3;
+
+    if (PIC::ThisThread==0) {
+      printf("$PREFIX: Heliocentric disttance: %e [AU]\n",HeliocentricDistance/_AU_);
+      printf("$PREFIX: subSolarPointAzimuth: %e [deg]\n",subSolarPointAzimuth/Pi*180.0);
+      printf("$PREFIX: subSolarPointZenith: %e [deg]\n",subSolarPointZenith/Pi*180.0);
+    }
+  }
+  #endif
 
   //Init Sun position
   positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
