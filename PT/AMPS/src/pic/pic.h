@@ -1027,7 +1027,7 @@ namespace PIC {
   //the first part of the namespace Debugger difinition
   namespace Debugger {
     //save a sequence of the particle data checksums into a file
-    void SaveParticleDataIntoDebuggerDataStream(void*,int);
+    void SaveParticleDataIntoDebuggerDataStream(void*,int,int,const char*);
   }
 
   //the particle trajectory tracing
@@ -1572,7 +1572,7 @@ namespace PIC {
       unsigned char flag,t=spec;
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&spec,sizeof(int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&spec,sizeof(int),__LINE__,__FILE__);
       #endif
 
       flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
@@ -1584,7 +1584,7 @@ namespace PIC {
       unsigned char flag,t=spec;
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&spec,sizeof(int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&spec,sizeof(int),__LINE__,__FILE__);
       #endif
 
       flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
@@ -1606,7 +1606,7 @@ namespace PIC {
     inline void SetNext(long int next,long int ptr) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&next,sizeof(long int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&next,sizeof(long int),__LINE__,__FILE__);
       #endif
 
       *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__NEXT_OFFSET_))=next;
@@ -1615,7 +1615,7 @@ namespace PIC {
     inline void SetNext(long int next,byte* ParticleDataStart) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&next,sizeof(long int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&next,sizeof(long int),__LINE__,__FILE__);
       #endif
 
       *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__NEXT_OFFSET_))=next;
@@ -1635,7 +1635,7 @@ namespace PIC {
     inline void SetPrev(long int prev,long int ptr) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&prev,sizeof(long int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&prev,sizeof(long int),__LINE__,__FILE__);
       #endif
 
       *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__PREV_OFFSET_))=prev;
@@ -1644,7 +1644,7 @@ namespace PIC {
     inline void SetPrev(long int prev,byte* ParticleDataStart) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&prev,sizeof(long int));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&prev,sizeof(long int),__LINE__,__FILE__);
       #endif
 
       *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__PREV_OFFSET_))=prev;
@@ -1692,7 +1692,7 @@ namespace PIC {
 #endif
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(v,3*sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(v,3*sizeof(double),__LINE__,__FILE__);
       #endif
 
       memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,v,3*sizeof(double));
@@ -1710,7 +1710,7 @@ namespace PIC {
     #endif
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(v,3*sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(v,3*sizeof(double),__LINE__,__FILE__);
       #endif
 
       memcpy(ParticleDataStart+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,v,3*sizeof(double));
@@ -1738,7 +1738,7 @@ namespace PIC {
     inline void SetX(double* x,long int ptr) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(x,3*sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(x,3*sizeof(double),__LINE__,__FILE__);
       #endif
 
       memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__POSITION_OFFSET_,x,DIM*sizeof(double));
@@ -1747,7 +1747,7 @@ namespace PIC {
     inline void SetX(double* x,byte *ParticleDataStart) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(x,3*sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(x,3*sizeof(double),__LINE__,__FILE__);
       #endif
 
       memcpy(ParticleDataStart+_PIC_PARTICLE_DATA__POSITION_OFFSET_,x,DIM*sizeof(double));
@@ -1784,7 +1784,7 @@ namespace PIC {
     #endif
 
     #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-    PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&WeightCorrectionFactor,sizeof(double));
+    PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&WeightCorrectionFactor,sizeof(double),__LINE__,__FILE__);
     #endif
 
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
@@ -1804,7 +1804,7 @@ namespace PIC {
     #endif
 
     #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-    PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&WeightCorrectionFactor,sizeof(double));
+    PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&WeightCorrectionFactor,sizeof(double),__LINE__,__FILE__);
     #endif
 
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
@@ -1832,7 +1832,7 @@ namespace PIC {
     inline void SetMagneticMoment(double MagneticMoment, long int ptr) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&MagneticMoment,sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&MagneticMoment,sizeof(double),__LINE__,__FILE__);
       #endif
 
       *(double*)(ParticleDataBuffer +ptr*ParticleDataLength + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;
@@ -1842,7 +1842,7 @@ namespace PIC {
     inline void SetMagneticMoment(double MagneticMoment, byte* ParticleDataStart) {
 
       #if _PIC_DEBUGGER__SAVE_DATA_STREAM_MODE_ == _PIC_MODE_ON_
-      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&MagneticMoment,sizeof(double));
+      PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(&MagneticMoment,sizeof(double),__LINE__,__FILE__);
       #endif
 
       *(double*)(ParticleDataStart + _PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_) = MagneticMoment;

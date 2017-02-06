@@ -11,12 +11,13 @@
 
 
 //Save particle data into a debugger data stream
-void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length) {
+void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length,int nline,const char* fname) {
   int i;
 
   struct cStreamBuffer {
     int CollCounter;
     unsigned long CheckSum;
+    char CallPoint[200];
   };
 
   const int CheckSumBufferLength=500;
@@ -29,10 +30,10 @@ void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length
   //create a new copy of the dbuffer stream file at the first call of this function
   if (CallCounter==0) {
     FILE *fout;
-    char fname[200];
+    char fn[200];
 
-    sprintf(fname,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
-    fout=fopen(fname,"w");
+    sprintf(fn,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
+    fout=fopen(fn,"w");
     fclose(fout);
   }
 
@@ -45,17 +46,18 @@ void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length
   //save the checksum in the buffer
   StreamBuffer[BufferPointer].CollCounter=CallCounter;
   StreamBuffer[BufferPointer].CheckSum=CheckSum.checksum();
+  sprintf(StreamBuffer[BufferPointer].CallPoint,"%s, line %i",fname,nline);
   BufferPointer++;
 
   if (BufferPointer>=CheckSumBufferLength) {
     //save the accumulated checksums into a file
     FILE *fout;
-    char fname[200];
+    char fn[200];
 
-    sprintf(fname,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
-    fout=fopen(fname,"a");
+    sprintf(fn,"DebuggerStream.thread=%i.dbg",PIC::ThisThread);
+    fout=fopen(fn,"a");
 
-    for (int i=0;i<BufferPointer;i++) fprintf(fout,"%i: 0x%lx\n",StreamBuffer[i].CollCounter,StreamBuffer[i].CheckSum);
+    for (int i=0;i<BufferPointer;i++) fprintf(fout,"%i: 0x%lx\t%s\n",StreamBuffer[i].CollCounter,StreamBuffer[i].CheckSum,StreamBuffer[i].CallPoint);
 
     BufferPointer=0;
     fclose(fout);
