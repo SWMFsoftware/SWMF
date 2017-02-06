@@ -120,7 +120,7 @@ elsif($hostname =~ m/^yslogin(.*)/){
 elsif($hostname =~ m/login(.).stampede.tacc.utexas.edu/){
     # Stampede
     $Blocks{"Stampede"} = "1";
-    $TestName = "stampede"
+    $TestName = "stampede";
     if($1 ne $SLOGIN){
 	print 
 	    "WARNING: nightly tests on Stampede should be set on login$SLOGIN,\n"
