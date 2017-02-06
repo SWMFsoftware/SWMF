@@ -11,7 +11,7 @@ if($cron =~ m/run_test_amps/) {
 	.
 	"Please check/edit it with command\n\tcrontab -e\n"
 	.
-	"and look for line with execution of script\n\trun_test_maps.*.sh\n"
+	"and look for line with execution of script\n\trun_test_amps.*.sh\n"
 	.
 	"Remove tests\' execution manually if you want to reinstall it.\n"
 	.
