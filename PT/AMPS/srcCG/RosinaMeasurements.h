@@ -1195,6 +1195,11 @@ namespace RosinaSample {
     extern char StartSamplingTime[_MAX_STRING_LENGTH_PIC_],EndSamplingTime[_MAX_STRING_LENGTH_PIC_];
   }
 
+  //evaluate density and pressure using the Liouville's theoreme
+  namespace Liouville {
+    void EvaluateLocation(int iPoint);
+  }
+
   //init the sampling container
   void Init();
 
