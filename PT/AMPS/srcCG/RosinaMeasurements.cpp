@@ -216,60 +216,79 @@ void RosinaSample::SamplingProcessor() {
 void RosinaSample::PrintOutputFile(int nfile) {
 
   //collect all sampled data on the root processor
-  double ExchangeBuffer[4*nPoints],SumBuffer[4*nPoints];
+  double ExchangeBuffer[PIC::nTotalSpecies*nPoints];
+  double DensityRamGauge[PIC::nTotalSpecies*nPoints],FluxRamGauge[PIC::nTotalSpecies*nPoints];
+  double DensityNudeGauge[PIC::nTotalSpecies*nPoints],FluxNudeGauge[PIC::nTotalSpecies*nPoints];
+
   int i,spec;
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-    for (i=0;i<nPoints;i++) {
-      ExchangeBuffer[2*i]=Rosina[i].RamGauge.Density[spec]/PIC::LastSampleLength;
-      ExchangeBuffer[2*i+1]=Rosina[i].RamGauge.Flux[spec]/PIC::LastSampleLength;
+  //collect all sampled data
+  for (i=0;i<nPoints;i++) for (spec=0;spec<PIC::nTotalSpecies;spec++) ExchangeBuffer[spec+i*PIC::nTotalSpecies]=Rosina[i].RamGauge.Density[spec]/PIC::LastSampleLength;
+  MPI_Reduce(ExchangeBuffer,DensityRamGauge,PIC::nTotalSpecies*nPoints,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
-      ExchangeBuffer[2*i+2*nPoints]=Rosina[i].NudeGauge.Density[spec]/PIC::LastSampleLength;
-      ExchangeBuffer[2*i+1+2*nPoints]=Rosina[i].NudeGauge.Flux[spec]/PIC::LastSampleLength;
-    }
+  for (i=0;i<nPoints;i++) for (spec=0;spec<PIC::nTotalSpecies;spec++) ExchangeBuffer[spec+i*PIC::nTotalSpecies]=Rosina[i].RamGauge.Flux[spec]/PIC::LastSampleLength;
+  MPI_Reduce(ExchangeBuffer,FluxRamGauge,PIC::nTotalSpecies*nPoints,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
-    MPI_Reduce(ExchangeBuffer,SumBuffer,4*nPoints,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+  for (i=0;i<nPoints;i++) for (spec=0;spec<PIC::nTotalSpecies;spec++) ExchangeBuffer[spec+i*PIC::nTotalSpecies]=Rosina[i].NudeGauge.Density[spec]/PIC::LastSampleLength;
+  MPI_Reduce(ExchangeBuffer,DensityNudeGauge,PIC::nTotalSpecies*nPoints,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
-    //output the data file
-    if (PIC::ThisThread==0) {
-      char fname[1000];
-      FILE *fout=NULL;
+  for (i=0;i<nPoints;i++) for (spec=0;spec<PIC::nTotalSpecies;spec++) ExchangeBuffer[spec+i*PIC::nTotalSpecies]=Rosina[i].NudeGauge.Flux[spec]/PIC::LastSampleLength;
+  MPI_Reduce(ExchangeBuffer,FluxNudeGauge,PIC::nTotalSpecies*nPoints,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
-      //sampeled density
-      sprintf(fname,"%s/RamNudeGaugeModelDensity.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
-      fout=fopen(fname,"w");
-      if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
+  //output the data file
+  if (PIC::ThisThread==0) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    char fname[1000];
+    FILE *fout=NULL;
 
-
-      double SecondsFromBegining,RadiusVectorLeangth,CometDistance;
-      int LocationCode;
+    //sampeled density
+    sprintf(fname,"%s/RamNudeGaugeModelDensity.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
+    fout=fopen(fname,"w");
+    if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
 
-      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
+    double SecondsFromBegining,RadiusVectorLeangth,CometDistance;
+    int LocationCode;
 
-      for (int i=0;i<nPoints;i++) {
-        fprintf(fout,"%i %e %e %e %e %e %i %e\n",i,SumBuffer[2*i],SumBuffer[2*i+2*nPoints], Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
+
+    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
+
+    for (int i=0;i<nPoints;i++) {
+      double rgPressure=0.0;
+
+      const double rgTemperature=293.0;
+
+      if (_H2O_SPEC_>=0) {
+        rgPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
       }
 
-      fclose(fout);
-
-      //sampeled flux
-      sprintf(fname,"%s/RamNudeGaugeModelFlux.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
-      fout=fopen(fname,"w");
-      if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
-
-      fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Flux\", \"Nude Gauge Flux\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
-
-      for (int i=0;i<nPoints;i++) {
-        fprintf(fout,"%i %e %e %e %e %e %i %e\n",i,SumBuffer[2*i+1],SumBuffer[2*i+1+2*nPoints], Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
+      if (_CO2_SPEC_>=0) {
+        rgPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_CO2_SPEC_)));
       }
 
-      fclose(fout);
+      fprintf(fout,"%i %e %e %e %e %e %e %i %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies], rgPressure,
+          Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
     }
+
+    fclose(fout);
+
+    //sampeled flux
+    sprintf(fname,"%s/RamNudeGaugeModelFlux.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
+    fout=fopen(fname,"w");
+    if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
+
+    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Flux\", \"Nude Gauge Flux\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
+
+    for (int i=0;i<nPoints;i++) {
+      fprintf(fout,"%i %e %e %e %e %e %i %e\n",i,FluxRamGauge[spec+i*PIC::nTotalSpecies],FluxNudeGauge[spec+i*PIC::nTotalSpecies],
+          Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
+    }
+
+    fclose(fout);
   }
 
+
   //flush sampled data buffers
-  Flush();
+ // Flush();
 }
 
 
