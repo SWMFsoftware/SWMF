@@ -592,6 +592,7 @@ int main(int argc,char **argv) {
     else {
       if (strcmp(Comet::Mesh::sign,"")==0) {
         //do nothing
+        xmin[i]=-20.0e3,xmax[i]=20.0e3;
       }
       else if (strcmp(Comet::Mesh::sign,"0xd7058cc2a680a3a2")==0) {
         xmin[i]=-100.0e3,xmax[i]=100.0e3;
@@ -730,6 +731,30 @@ int main(int argc,char **argv) {
   double subSolarPointAzimuth=0.0;
   double subSolarPointZenith=0.0;
   double HeliocentricDistance=3.3*_AU_;  
+
+  //recalculate the location of the Sun
+  #ifndef _NO_SPICE_CALLS_
+  if (Comet::Time::InitSunLocationFlag==true) {
+    SpiceDouble lt,xSun[3];
+
+    utc2et_c(Comet::Time::SimulationStartTimeString,&Comet::Time::et);
+    spkpos_c("SUN",Comet::Time::et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+    reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+
+    HeliocentricDistance*=1.0E3;
+/*
+    et = spice.str2et(timeStamp)
+    r_obj, lt = spice.spkpos(objectName, et, frame, 'NONE', observer)
+
+    r, lon, lat = spice.reclat(r_obj)
+
+    lat = lat / pi * 180
+    lon = lon / pi * 180
+
+    r_AU = r*km2AU
+    */
+  }
+  #endif
 
   double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
@@ -1062,6 +1087,34 @@ int main(int argc,char **argv) {
 
     //perform the next time step
     PIC::TimeStep();
+
+    //update the location of the Sun  is needed
+    //recalculate the location of the Sun
+    #ifndef _NO_SPICE_CALLS_ 
+    if (Comet::Time::RecalculateSunLocationFlag==true) {
+      SpiceDouble lt,xSun[3];
+
+      Comet::Time::et+=PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0);
+
+//      utc2et_c(Comet::Time::SimulationStartTimeString,&Comet::Time::et);
+      spkpos_c("SUN",Comet::Time::et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+      reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+
+      HeliocentricDistance*=1.0E3;
+  /*
+      et = spice.str2et(timeStamp)
+      r_obj, lt = spice.spkpos(objectName, et, frame, 'NONE', observer)
+
+      r, lon, lat = spice.reclat(r_obj)
+
+      lat = lat / pi * 180
+      lon = lon / pi * 180
+
+      r_AU = r*km2AU
+      */
+    }
+    #endif
+
 
 //    Comet::CometData::PrintCheckSum();
 
