@@ -146,12 +146,14 @@ contains
 
     ! Calculate time step limit based on maximum speeds across 6 faces
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-       Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
-       if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
-       if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
-       time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
-
+       if(.not. true_cell(i,j,k,iBlock)) then
+          time_BLK(i,j,k,iBlock) = 0
+       else
+          Vdt = max(VdtFace_x(i,j,k),VdtFace_x(i+1,j,k))
+          if(nJ > 1) Vdt = Vdt + max(VdtFace_y(i,j,k), VdtFace_y(i,j+1,k))
+          if(nK > 1) Vdt = Vdt + max(VdtFace_z(i,j,k), VdtFace_z(i,j,k+1))
+          time_BLK(i,j,k,iBlock) = CellVolume_GB(i,j,k,iBlock) / Vdt
+       end if
     end do; end do; end do
 
     if(DoFixAxis)then
