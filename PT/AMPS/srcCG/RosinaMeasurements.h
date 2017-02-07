@@ -1202,6 +1202,7 @@ namespace RosinaSample {
 
   //init the sampling container
   void Init();
+  void Init(double etMin,double etMax);
 
   //flux the sampeled data 
   void Flush();

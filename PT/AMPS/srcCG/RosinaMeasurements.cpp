@@ -23,16 +23,23 @@ char RosinaSample::SamplingTimeInterval::EndSamplingTime[_MAX_STRING_LENGTH_PIC_
 
 
 //init the pointing directions and geomentry informationvoid
-void RosinaSample::Init() {
-#ifndef _NO_SPICE_CALLS_
-  int i,idim,iCell,jCell,kCell,nd;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  double dxSubCell,dySubCell,dzSubCell,xLocalCell,yLocalCell,zLocalCell;
 
+
+
+void RosinaSample::Init() {
   //init the start and end time of the particle sample
   //init the sampling point
   utc2et_c(SamplingTimeInterval::StartSamplingTime,&SamplingTimeInterval::StartSamplingEt);
   utc2et_c(SamplingTimeInterval::EndSamplingTime,&SamplingTimeInterval::EndSamplingEt);
+
+  RosinaSample::Init(SamplingTimeInterval::StartSamplingEt,SamplingTimeInterval::EndSamplingEt);
+}
+
+void RosinaSample::Init(double etMin,double etMax) {
+#ifndef _NO_SPICE_CALLS_
+  int i,idim,iCell,jCell,kCell,nd;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  double dxSubCell,dySubCell,dzSubCell,xLocalCell,yLocalCell,zLocalCell;
 
   //init line-of-sight vectors
   SpiceDouble lt,et,xRosetta[3],etStart;
@@ -133,7 +140,7 @@ void RosinaSample::Init() {
     SpiceDouble et;
 
     utc2et_c(ObservationTime[i],&et);
-    Rosina[i].SamplingParticleDataFlag=((RosinaSample::SamplingTimeInterval::StartSamplingEt<=et)&&(et<=RosinaSample::SamplingTimeInterval::EndSamplingEt)) ? true : false;
+    Rosina[i].SamplingParticleDataFlag=((etMin<=et)&&(et<etMax)) ? true : false;
   }
 
   if (PIC::ThisThread==0) {
