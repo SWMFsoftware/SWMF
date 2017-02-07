@@ -1,7 +1,7 @@
 !instrumental broadening
 !comments!!!
 !verbose levels
-! 3T
+! isothermal.pro
 
 program spectrum
 
@@ -45,22 +45,24 @@ program spectrum
   real,allocatable            :: Var_VIII(:,:,:,:)
   real                        :: rhoUni, uxUni, uyUni, uzUni, bxUni, byUni
   real                        :: bzUni
-  real                        :: tiUni, teUni, I01Uni, I02Uni
+  real                        :: tparUni, tperUni, teUni, I01Uni, I02Uni
+  integer                     :: nTemperature = 2
 
   ! Indexes for the solar wind variables
   integer, parameter          :: &
-       rho_ = 1, &              
-       ux_  = 2, &                  
-       uy_  = 3, &               
-       uz_  = 4, & 
-       bx_  = 5, &
-       by_  = 6, &
-       bz_  = 7, &
-       ti_  = 8, &
-       te_  = 9, &
-       I01_ =10, &
-       I02_ =11
-
+       rho_  =  1, &              
+       ux_   =  2, &                  
+       uy_   =  3, &               
+       uz_   =  4, & 
+       bx_   =  5, &
+       by_   =  6, &
+       bz_   =  7, &
+       tpar_ =  8, &
+       tper_ =  9, &
+       te_   = 10, &
+       I01_  = 11, &
+       I02_  = 12
+  
   integer                     ::  iDimLOS,iDimVertical,iDimHorizontal
 
   ! Variables for the wavelengths of interest
@@ -168,25 +170,26 @@ contains
     n1 = n1Block
     n2 = n2Block
     n3 = n3Block
-    allocate(Var_VIII(11,n1,n2,n3))
+    allocate(Var_VIII(12,n1,n2,n3))
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
-       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
+       Var_VIII(rho_,1:n1,1:n2,1:n3)  = rhoUni * 1e6 * cProtonMass
        ! km/s --> m/s
-       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni * 1e3
-       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni * 1e3
-       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni * 1e3
+       Var_VIII(ux_,1:n1,1:n2,1:n3)   = uxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)   = uyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)   = uzUni * 1e3
        ! G --> T
-       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni * 1e-4
-       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni * 1e-4
-       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni * 1e-4
+       Var_VIII(bx_,1:n1,1:n2,1:n3)   = bxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)   = byUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)   = bzUni * 1e-4
        ! K
-       Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
-       Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = tparUni
+       Var_VIII(tper_,1:n1,1:n2,1:n3) = tperUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)   = teUni
        ! erg cm^-3 --> J m^-3
-       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni * 1e-1
-       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni * 1e-1
+       Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
+       Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
     else 
        call CON_stop( &
             NameSub//' need data input!!! ')
@@ -349,12 +352,13 @@ contains
     real                           :: LambdaSI, Lambda0SI, dLambdaSI, &
          dLambda, Lambda, dLambdaSI2, Lambda_shifted
     real                           :: dLambdaInstr2 = 0.0 !!! do it later
-    real                           :: zPlus2, zMinus2, cosAlpha
+    real                           :: zPlus2, zMinus2, cosAlpha, sinAlpha
     real                           :: B_D(3), Bnorm_D(3)
     real                           :: uNth2, uTh2
     real                           :: Gint, LogNe, LogTe, Rho
     real, allocatable              :: gLambda_II(:,:)
     real                           :: FluxConst
+    real                           :: Tlos
 
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
@@ -437,15 +441,24 @@ contains
 
              if(IsVerbose)write(*,*)'in calc_flux, before calculations'
 
-             ! Calculate thermal and non-thermal broadening
+             ! Calculate Elzasser variables
              Rho = Var_VIII(rho_,i,jPixel,kPixel)
              zPlus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
              zMinus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
+
+             ! Calculate angle between LOS and B directions
              B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
              Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
              cosAlpha = sum(LOSnorm_D*Bnorm_D)
+
+             ! Calculate temperature relative to the LOS direction
+             sinAlpha = sqrt(1 - cosAlpha**2)
+             Tlos = sinAlpha * Var_VIII(tper_,i,jPixel,kPixel) &
+                  + cosAlpha * Var_VIII(tpar_,i,jPixel,kPixel)
+
+             ! Calculate thermal and non-thermal broadening
              uNth2    = 1.0/16.0 * (zPlus2 + zMinus2) * abs(cosAlpha)
-             uTh2     = cBoltzmann * Var_VIII(ti_,i,jPixel,kPixel)/cProtonMass
+             uTh2     = cBoltzmann * Tlos/cProtonMass
 
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3  
@@ -674,7 +687,8 @@ contains
           call read_var('bxUni',bxUni)
           call read_var('byUni',byUni)
           call read_var('bzUni',bzUni)
-          call read_var('tiUni',tiUni)
+          call read_var('tparUni',tparUni)
+          call read_var('tperUni',tperUni)
           call read_var('teUni',teUni)
           call read_var('I01Uni',I01Uni)
           call read_var('I02Uni',I02Uni)
@@ -693,6 +707,9 @@ contains
 
        case("#ISDOPPLER")
           call read_var('IsDoppler',IsDoppler)
+
+       case("NTEMPERATURE")
+          call read_var('nTemperature',nTemperature)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
@@ -791,9 +808,9 @@ contains
        n1 = n1Block
        n2 = n2Block
        n3 = n3Block
-       allocate(Var_VIII(11,n1,n2,n3))
+       allocate(Var_VIII(12,n1,n2,n3))
     else
-       allocate(Var_VIII(11,n1,n2,n3))
+       allocate(Var_VIII(12,n1,n2,n3))
     endif
 
     ! Set up bins for Spectrum
@@ -823,19 +840,20 @@ contains
        ! cm^-3 --> kg/m^3
        Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
        ! km/s --> m/s
-       Var_VIII(ux_,1:n1,1:n2,1:n3)  = uxUni * 1e3
-       Var_VIII(uy_,1:n1,1:n2,1:n3)  = uyUni * 1e3
-       Var_VIII(uz_,1:n1,1:n2,1:n3)  = uzUni * 1e3
+       Var_VIII(ux_,1:n1,1:n2,1:n3)   = uxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)   = uyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)   = uzUni * 1e3
        ! G --> T
-       Var_VIII(bx_,1:n1,1:n2,1:n3)  = bxUni * 1e-4
-       Var_VIII(by_,1:n1,1:n2,1:n3)  = byUni * 1e-4
-       Var_VIII(bz_,1:n1,1:n2,1:n3)  = bzUni * 1e-4
+       Var_VIII(bx_,1:n1,1:n2,1:n3)   = bxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)   = byUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)   = bzUni * 1e-4
        ! K
-       Var_VIII(ti_,1:n1,1:n2,1:n3)  = tiUni
-       Var_VIII(te_,1:n1,1:n2,1:n3)  = teUni
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = tparUni
+       Var_VIII(tper_,1:n1,1:n2,1:n3) = tperUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)   = teUni
        ! erg cm^-3 --> J m^-3
-       Var_VIII(I01_,1:n1,1:n2,1:n3) = I01Uni * 1e-1
-       Var_VIII(I02_,1:n1,1:n2,1:n3) = I02Uni * 1e-1
+       Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
+       Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
 
     else
        do iVar=1, nVar
@@ -847,46 +865,51 @@ contains
           select case(NameVar_V(iVar+nDim))
           case('rho')
              ! g/cm3 --> kg/m3
-             Var_VIII(rho_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(rho_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e3
           case('ux')
              ! km/s --> m/s
-             Var_VIII(ux_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(ux_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e3
           case('uy')
-             Var_VIII(uy_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(uy_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e3
           case('uz')
-             Var_VIII(uz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(uz_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e3
           case('bx')
              ! G --> T
-             Var_VIII(bx_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(bx_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   *1e-4
           case('by')
-             Var_VIII(by_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(by_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   *1e-4
           case('bz')
-             Var_VIII(bz_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(bz_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   *1e-4
-          case('ti')
-             ! K
-             Var_VIII(ti_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
-          case('te')
-             Var_VIII(te_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3)
+          case('ppar')
+             ! dyne/cm2 --> N/m2
+             ! T = p/rho * M / kB
+             Var_VIII(tpar_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
+          case('p')
+             Var_VIII(tper_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
+          case('pe')
+             Var_VIII(te_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
           case('i01')
              ! erg/cm^3 --> J/m^3
-             Var_VIII(I01_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(I01_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1
           case('i02')
-             Var_VIII(I02_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(I02_,1:n1,1:n2,1:n3)  = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1
           case default
              write(*,*) NameSub // ' unused NameVar = '&
                   // NameVar_V(iVar+nDim)
           end select
        end do
-
 
        if(xAngle /= 0.0 .or. yAngle /= 0.0 .or. zAngle /= 0.0)then
           ! Apply rotation on vector variables
@@ -911,6 +934,15 @@ contains
     endif
 
     deallocate(VarIn_VIII)
+
+    ! Copy temperatures if no three-temperature model is in use
+    ! tpar = tper
+    if(nTemperature == 2)Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(tper_,1:n1,1:n2,1:n3)
+    ! tpar = te = tper
+    if(nTemperature == 1)then
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(tper_,1:n1,1:n2,1:n3)
+       Var_VIII(te_,1:n1,1:n2,1:n3)   = Var_VIII(tper_,1:n1,1:n2,1:n3)
+    endif
 
     if(IsInstrument .and. nPixel /= n3) then
        write(*,*)'interpolate from n3 to nPixel! nPixel=',nPixel,' /= n3=',n3
