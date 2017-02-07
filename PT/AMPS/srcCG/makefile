@@ -4,7 +4,18 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = RosinaMeasurements.o Gravity.o Comet.o CometData.o main_lib.o OrbitCalculation.o ColumnIntegral.o SurfaceDataCG.o SampleSizeDistribution.o RosinaMeasurements_Liouville.o
+MAINLIBOBJ = RosinaMeasurements.o \
+	Gravity.o \
+	Comet.o \
+	CometData.o \
+	main_lib.o \
+	OrbitCalculation.o \
+	ColumnIntegral.o \
+	SurfaceDataCG.o \
+	SampleSizeDistribution.o \
+	RosinaMeasurements_Liouville.o \
+	SunLocation.o
+
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
