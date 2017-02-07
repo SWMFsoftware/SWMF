@@ -47,7 +47,26 @@ namespace Comet {
   
   double GetTotalProductionRateBjornNASTRAN(int spec);
 
+  //increment the sample length flag
+  extern bool IncrementSamplingLengthFlag;
+
   //track change of the Sun's location during the simulation
+  namespace SunLocationUpdate {
+    extern char StartTime[_MAX_STRING_LENGTH_PIC_];
+
+    //start time of the Sun's locatiopn update; the temporal step for the location updates
+    extern double StartTime_et;
+    extern double TimeIncrement;
+
+    //the number of the output files between the updates; the fiest output file after the first update occurs
+    extern int OutputCycleCounter,OutputCycleStep,FirstUpdateOutputCycleNumber;
+
+
+    //update the location of the Sun if needed, change the output directory such the data files are placed into PT/plots/Time
+    void Processor();
+  }
+
+
   namespace Time {
     //relaculate location of the Sun each iteration
     extern bool RecalculateSunLocationFlag;

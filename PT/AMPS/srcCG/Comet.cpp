@@ -21,6 +21,9 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="67P/C-G_CK";
 
+//increase the sample length after each data file output
+bool Comet::IncrementSamplingLengthFlag=true;
+
 //variables that controls initialization and re-calculation of the Sun's location during the course of the simulation
 bool Comet::Time::InitSunLocationFlag=false;
 bool Comet::Time::RecalculateSunLocationFlag=false;
