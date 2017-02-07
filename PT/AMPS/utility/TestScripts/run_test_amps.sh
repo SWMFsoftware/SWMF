@@ -83,12 +83,24 @@ cd ..
 #>IntelAll #################################################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #./Config.pl -install -compiler=ifortmpif90,iccmpicxx >& test_amps.log    <#
-#>Valeriy ##################################################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
-#./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >>& test_amps.log<#
 #>PGIAll ###################################################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
+
+# Exeptions
+echo -n "Set Exeptions....."
+
+#>Valeriy ##################################################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                                                      #
+#./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >>& test_amps.log <# 
+
+#>Pleiades ##############################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                   #
+#./Config.pl -f-link-option=-lmpi++                     #
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                     #
+#./Config.pl -f-link-option=-lmpi_cxx                  <#
+
+echo " done."
 
 # compile AMPS tests
 
@@ -109,8 +121,10 @@ cd ..
 #module load mvapich2/2.1                    <#
 
 #>GNUAll ######################################
+#echo -n "Compiling GNU....."                 # 
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#make test_compile >>& test_amps.log         <#
+#make test_compile >>& test_amps.log          #
+#echo " done."                               <# 
 
 # Intel compiler 
 
@@ -130,8 +144,10 @@ cd ..
 
 
 #>IntelAll ####################################
+#echo -n "Compiling Intel....."               #
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#make test_compile >>& test_amps.log         <#
+#make test_compile >>& test_amps.log          #
+echo " done."                                <#
 
 # PGI compiler
 
@@ -144,8 +160,10 @@ cd ..
 
 
 #>PGIAll ######################################
+#echo -n "Compiling PGI....."                 # 
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_compile >>& test_amps.log         <#
+#make test_compile >>& test_amps.log          #
+echo " done."                                <#
 
 
 # Run test
