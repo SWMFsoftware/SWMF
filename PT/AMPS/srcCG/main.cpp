@@ -1174,8 +1174,12 @@ int main(int argc,char **argv) {
       }
 #endif
 
-      PIC::RequiredSampleLength*=2;
-      if (PIC::RequiredSampleLength>700) PIC::RequiredSampleLength=700;
+      if (Comet::IncrementSamplingLengthFlag==true) {
+        PIC::RequiredSampleLength*=2;
+        if (PIC::RequiredSampleLength>700) PIC::RequiredSampleLength=700;
+      }
+
+      if (_COMET_SAMPLE_ROSINA_DATA_==_PIC_MODE_ON_) Comet::SunLocationUpdate::Processor();
 
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
