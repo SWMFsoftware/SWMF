@@ -699,6 +699,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVEINITIAL")
         call read_var('DoSaveInitial',DoSaveInitial)
 
+     case("#SAVEONETECFILE")
+        call read_var('DoSaveOneTecFile', DoSaveOneTecFile)
+
      case("#SAVEPLOT")
         call read_var('nPlotFile', nPlotFile)
         nFile = max(nFile, plot_ + nPlotFile)

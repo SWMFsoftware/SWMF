@@ -146,6 +146,8 @@ Module ModIO
   logical :: IsLogName_n = .true.
   logical :: IsLogName_e = .false.
 
+  logical :: DoSaveOneTecFile = .false.
+
 contains
 
   !===========================================================================

@@ -15,7 +15,7 @@ subroutine write_plot_common(iFile)
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
        init_sph_hdf5_plot,init_hdf5_plot
-  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
+  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: split_string, join_string, open_file, close_file
@@ -65,7 +65,7 @@ subroutine write_plot_common(iFile)
   character (LEN=500) :: allnames
   character (LEN=1500) :: unitstr_TEC
   character (LEN=500) ::unitstr_IDL
-  character (len=80) :: filename_n, filename_s
+  character (len=80) :: filename_n, filename_s, filename_h
   character (len=80) :: NameSnapshot, NameProc
   character (len=20) :: TypeForm
 
@@ -99,6 +99,11 @@ subroutine write_plot_common(iFile)
   character (len=80) :: format
   character (len=19) :: eventDateTime
 
+  ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
+  integer :: lrecData, lrecConnect
+  integer :: iUnit
+  integer :: iErrorFile
+
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
   character(len=*), parameter :: NameSub = 'write_plot_common'
@@ -117,8 +122,12 @@ subroutine write_plot_common(iFile)
   plot_vars1=plot_vars(iFile)
   PlotRange_I = plot_range(:,iFile)
 
+  ! DoSaveOneTecFile = T only works for 3D tecplot file right now
+  if (plot_form(iFile)/='tec' .or. plot_type1(1:3)/= '3d_') &
+       DoSaveOneTecFile = .false.
+
   if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
-       ' form = ',plot_form(iFile)
+       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
@@ -186,7 +195,9 @@ subroutine write_plot_common(iFile)
   end if
 
   ! String containing the processor index and file extension
-  if(nProc < 10000) then
+  if (DoSaveOneTecFile) then
+     write(NameProc, '(a)') "."//plot_form(iFile)
+  elseif(nProc < 10000) then
      write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(iFile)
   elseif(nProc < 100000) then
      write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(iFile)
@@ -208,7 +219,76 @@ subroutine write_plot_common(iFile)
   DoPlotShell = plot_type1(1:3) == 'shl'
   DoPlotBox   = plot_type1(1:3) == 'box'
 
-  if(DoPlotBox)then
+  if (DoSaveOneTecFile) then
+     iUnit = io_unit_new()
+  else
+     iUnit = UnitTmp_
+  end if
+
+  if (DoSaveOneTecFile) then
+     ! filename_h stores the header, filename_n stores the data and
+     ! filename_s stores the connectivity
+     filename_h = trim(NameSnapshot)//"_1"//trim(NameProc)
+     filename_n = trim(NameSnapshot)//"_2"//trim(NameProc)
+     filename_s = trim(NameSnapshot)//"_3"//trim(NameProc)
+
+     ! The output format for data is E14.6, so each cell has 
+     ! (nplotvar+3)*14 data, plus a new line character
+     lrecData    = (nplotvar+3)*14+1
+     ! The output format for point connectivity is (8(i8,1x))
+     lRecConnect = 8*9+1
+
+     if (oktest_me) then
+        write(*,*) 'filename_h =', filename_h
+        write(*,*) 'filename_n =', filename_n
+        write(*,*) 'filename_s =', filename_s
+        write(*,*) 'nplotvar, nI, nJ, nK       =', nplotvar, nI, nJ, nK
+        write(*,*) 'lrecData, lRecConnect      =', lrecData, lRecConnect
+        write(*,*) 'UnitTmp_, UnitTmp2_, iUnit =', &
+             UnitTmp_, UnitTmp2_, iUnit
+     end if
+
+     if (iProc == 0) then
+        ! only iProc == 0 opens the header file
+        call open_file(iUnit,  FILE=filename_h)
+
+        open(UnitTmp_, FILE=filename_n, form=TypeForm, ACCESS='DIRECT', &
+             iostat=iErrorFile, RECL = lrecData, status = 'replace')
+        if(iErrorFile /= 0)then
+           write(*,*) NameSub, ' UnitTmp_, iErrorFile =', &
+                UnitTmp_, iErrorFile
+           call stop_mpi(NameSub//' could not open file='//filename_n)
+        end if
+
+        open(UnitTmp2_, FILE=filename_s, form=TypeForm, ACCESS='DIRECT', &
+             iostat=iErrorFile, RECL = lrecConnect, status = 'replace')
+        if(iErrorFile /= 0)then
+           write(*,*) NameSub, ' UnitTmp2_, iErrorFile =', &
+                UnitTmp2_, iErrorFile
+           call stop_mpi(NameSub//' could not open file='//filename_s)
+        end if
+     end if
+
+     ! Make sure that all processors wait until the file is re-opened      
+     call barrier_mpi
+     if (iProc > 0) then
+        open(UnitTmp_, FILE=filename_n, form=TypeForm, ACCESS='DIRECT', &
+             iostat=iErrorFile, RECL = lrecData, status = 'old')
+        if(iErrorFile /= 0)then
+           write(*,*) NameSub, ' UnitTmp_, iErrorFile =', &
+                UnitTmp_, iErrorFile
+           call stop_mpi(NameSub//' could not open file='//filename_n)
+        end if
+
+        open(UnitTmp2_, FILE=filename_s, form=TypeForm, ACCESS='DIRECT', &
+             iostat=iErrorFile, RECL = lrecConnect, status = 'old')
+        if(iErrorFile /= 0)then
+           write(*,*) NameSub, ' UnitTmp2_, iErrorFile =', &
+                UnitTmp2_, iErrorFile
+           call stop_mpi(NameSub//' could not open file='//filename_s)
+        end if
+     end if
+  elseif(DoPlotBox)then
      ! Initialize the box grid for this file
      call init_plot_box(iFile, nPlotVar)
   elseif(DoPlotShell)then
@@ -438,7 +518,8 @@ subroutine write_plot_common(iFile)
 
      if(IsCartesianGrid)then
         call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
+             Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax,     &
+             iUnit)
      else
         ! Fix "hanging" nodes so they lie precisely on the same plane 
         ! as "non-hanging" nodes. This is needed for non-Cartesian grids.
@@ -454,7 +535,8 @@ subroutine write_plot_common(iFile)
                 PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
         end do
         call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax)
+             PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax,        &
+             zMin, zMax, iUnit)
 
         deallocate(PlotXYZNodes_DNB)
      end if
@@ -469,6 +551,8 @@ subroutine write_plot_common(iFile)
   end if
 
   if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
+
+  if(DoSaveOneTecFile) call close_file(iUnit)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
