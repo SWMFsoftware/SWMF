@@ -43,7 +43,7 @@ Name=Mars-ions
 Time=2
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks73465-01)
-Keys=-cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+pleiades)
+Keys=-cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+pleiades)
 Keys=-cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+stampede)
 <#
 -------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ Name=CCMC
 Time=3
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/CCMC@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/CCMC@@(0+stampede)
 
 Compile=
@@ -182,7 +182,7 @@ Name=Mercury-test
 Time=2
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+valeriy)  
 Keys=-spice-path=/Users/dborovik/SPICE/cspice -spice-kernels=/Users/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+srbwks73465-01)  
-Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+pleiades)   
+Keys=-spice-path=/nobackupp8/vtenishe/SPICE/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+pleiades)   
 Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+stampede)   
 <#
 -------------------------------------------------------------------------------
@@ -463,7 +463,7 @@ Ref=4{icc}@@(0+stampede)
 
 
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
-Keys=-model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 <#
 -------------------------------------------------------------------------------
@@ -481,7 +481,7 @@ Ref=7{pgcc}@@(0+pleiades)
 
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
-Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-spice-path=/nobackupp8/vtenishe/SPICE/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
 Run=
@@ -523,7 +523,7 @@ Time=3
 Keys= -model-data-path=${PTDIR}/input  
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/CCMC@@(0+pleiades)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/CCMC@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/CCMC@@(0+stampede)
 
 Check=
@@ -597,7 +597,7 @@ Ref=2{pgcc}@@(0+pleiades)
 Ref=2{gcc}@@(0+stampede)
 
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+stampede)
-Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+pleiades)
+Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+pleiades)
 
 Compile=
 >>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
@@ -647,7 +647,7 @@ Ref=2{gcc}@@(0+stampede)
 Ref=3{icc}@@(0+pleiades)
 
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
-Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
+Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
 
 Compile=
 >>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris${TESTMover-Boris-REF}.diff
@@ -697,7 +697,7 @@ Ref=2{gcc}@@(0+stampede)
 Ref=3{icc}@@(0+pleiades)
 
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
-Keys=/nobackupp8/dborovik/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
+Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
 
 Compile=
 >>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
@@ -720,7 +720,7 @@ Time=2
 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/EUROPA@@(0+stampede) 
-Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA@@(0+pleiades) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/EUROPA@@(0+pleiades) 
 
 Check=
 >>>@echo "test_Europa-test1_check..." >> test_Europa-test1.diff
