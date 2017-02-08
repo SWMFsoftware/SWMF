@@ -787,29 +787,34 @@ while ($line=<InputFile>) {
     chomp($InputLine);
  
     $InputLine=~s/[=]/ /g;
-    ($s0,$InputLine)=split('!',$InputLine,2);
+    ($s0,$InputLine)=split(' ',$InputLine,2);
+    ($s0,$InputLine)=split(' ',$InputLine,2);
   
     while (defined $InputLine) {     
       ($s0,$InputLine)=split(' ',$InputLine,2);
       
-      if ($s0 eq "TIMEINTERVAL") {
+      if ($s0 eq "TIMEINCREMENT") {
         ($s0,$InputLine)=split(' ',$InputLine,2);
+        
         ampsConfigLib::ChangeValueOfVariable("double Comet::SunLocationUpdate::TimeIncrement",$s0,"main/SunLocation.cpp");        
       }
       elsif ($s0 eq "FIRSTUPDATEOUTPUTCYCLENUMBER") {
         ($s0,$InputLine)=split(' ',$InputLine,2);
+        
         ampsConfigLib::ChangeValueOfVariable("int Comet::SunLocationUpdate::FirstUpdateOutputCycleNumber",$s0,"main/SunLocation.cpp");        
       }
       elsif ($s0 eq "OUTPUTCYCLESTEP") {
         ($s0,$InputLine)=split(' ',$InputLine,2);
+        
         ampsConfigLib::ChangeValueOfVariable("int Comet::SunLocationUpdate::OutputCycleStep",$s0,"main/SunLocation.cpp");        
       }
       elsif ($s0 eq "STARTTIME") {
         ($s0,$InputLine)=split(' ',$InputLine,2);
-        ampsConfigLib::ChangeValueOfVariable("char Comet::SunLocationUpdate::StartTime\\[_MAX_STRING_LENGTH_PIC_\\]",$s0,"main/SunLocation.cpp");        
+        
+        ampsConfigLib::ChangeValueOfVariable("char Comet::SunLocationUpdate::StartTime\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","main/SunLocation.cpp");        
       }
       else {
-        die "Option is unknown (__LINE__), line=$InputFileLineNumber, option=$InputLine ($InputFileName)\n";
+        die "Option is unknown ( sdfsd __LINE__ ), line=$InputFileLineNumber, option=$InputLine ($InputFileName)\n";
       }          
     }
   }
