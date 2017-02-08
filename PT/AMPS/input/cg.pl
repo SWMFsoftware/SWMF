@@ -765,13 +765,61 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("char RosinaSample::SamplingTimeInterval::EndSamplingTime\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputComment."\"","main/RosinaMeasurements.cpp");
   }  
   
+  #output the sample length after each data file output 
+  elsif ($InputLine eq "INCREASESAMPLINGLENGTH") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ON" ) {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::IncrementSamplingLengthFlag","true","main/Comet.cpp");     
+    }
+    elsif ($InputLine eq "OFF" ) {
+      ampsConfigLib::ChangeValueOfVariable("bool Comet::IncrementSamplingLengthFlag","false","main/Comet.cpp");     
+    }
+    else {
+     die "Option is unknown (_LINE_), line=$InputFileLineNumber, option=$InputLine ($InputFileName)\n";
+    } 
+  }
+  
+  #update the Sun location section
+  elsif ($InputLine eq "UPDATESUNLOCATION") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+ 
+    $InputLine=~s/[=]/ /g;
+    ($s0,$InputLine)=split('!',$InputLine,2);
+  
+    while (defined $InputLine) {     
+      ($s0,$InputLine)=split(' ',$InputLine,2);
+      
+      if ($s0 eq "TIMEINTERVAL") {
+        ($s0,$InputLine)=split(' ',$InputLine,2);
+        ampsConfigLib::ChangeValueOfVariable("double Comet::SunLocationUpdate::TimeIncrement",$s0,"main/SunLocation.cpp");        
+      }
+      elsif ($s0 eq "FIRSTUPDATEOUTPUTCYCLENUMBER") {
+        ($s0,$InputLine)=split(' ',$InputLine,2);
+        ampsConfigLib::ChangeValueOfVariable("int Comet::SunLocationUpdate::FirstUpdateOutputCycleNumber",$s0,"main/SunLocation.cpp");        
+      }
+      elsif ($s0 eq "OUTPUTCYCLESTEP") {
+        ($s0,$InputLine)=split(' ',$InputLine,2);
+        ampsConfigLib::ChangeValueOfVariable("int Comet::SunLocationUpdate::OutputCycleStep",$s0,"main/SunLocation.cpp");        
+      }
+      elsif ($s0 eq "STARTTIME") {
+        ($s0,$InputLine)=split(' ',$InputLine,2);
+        ampsConfigLib::ChangeValueOfVariable("char Comet::SunLocationUpdate::StartTime\\[_MAX_STRING_LENGTH_PIC_\\]",$s0,"main/SunLocation.cpp");        
+      }
+      else {
+        die "Option is unknown (__LINE__), line=$InputFileLineNumber, option=$InputLine ($InputFileName)\n";
+      }          
+    }
+  }
   
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
   }
    
   else {
-    die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    die "Option is unknown, line=$InputFileLineNumber, option=$InputLine ($InputFileName)\n";
   }
 }
 
