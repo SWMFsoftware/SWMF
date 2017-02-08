@@ -97,11 +97,11 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
      ! Write cell values
      do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
         if (plot_dimensional(ifile)) then
-           write(UnitTmp_,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(50(E14.6))") &
                 Xyz_DGB(:,i,j,k,iBLK)*No2Io_V(UnitX_), &
                 PlotVarBlk(i,j,k,1:nPlotVar)
         else
-           write(UnitTmp_,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(50(E14.6))") &
                 Xyz_DGB(:,i,j,k,iBLK), &
                 PlotVarBlk(i,j,k,1:nPlotVar)
         end if
@@ -125,7 +125,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         if(iProc==iPE)then
            ! Write point values
            call fill_NodeXYZ
-           write(UnitTmp_,fmt="(30(E14.6))") &
+           write(UnitTmp_,fmt="(50(E14.6))") &
                 (NodeXYZ_DN(1,1,1,1)+NodeXYZ_DN(1,nI+1,1,1))/2., &
                 (NodeXYZ_DN(2,1,1,1)+NodeXYZ_DN(2,1,nJ+1,1))/2., &
                 (NodeXYZ_DN(3,1,1,1)+NodeXYZ_DN(3,1,1,nK+1))/2., &
@@ -151,7 +151,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         call fill_NodeXYZ
         do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
            if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
-              write(UnitTmp_,fmt="(30(E14.6))") &
+              write(UnitTmp_,fmt="(50(E14.6))") &
                    NodeXYZ_DN(1:3,i,j,k),PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBLK)
            end if
         end do; end do; end do
@@ -228,7 +228,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do j=1,1+nJ
-                       write(UnitTmp_,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(50(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,cut1,j,k)+ &
                             factor2*NodeXYZ_DN(1:3,cut2,j,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,cut1,j,k,iBLK)+ &
@@ -294,7 +294,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ                    
                     do k=1,1+nK; do i=1,1+nI
-                       write(UnitTmp_,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(50(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -366,7 +366,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do i=1,1+nI
-                       write(UnitTmp_,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(50(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -432,7 +432,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                     ! Write point values
                     call fill_NodeXYZ
                     do k=1,1+nK; do i=1,1+nI
-                       write(UnitTmp_,fmt="(30(E14.6))") &
+                       write(UnitTmp_,fmt="(50(E14.6))") &
                             (factor1*NodeXYZ_DN(1:3,i,cut1,k)+ &
                             factor2*NodeXYZ_DN(1:3,i,cut2,k)), &
                             (factor1*PlotVarNodes_VNB(1:nPlotVar,i,cut1,k,iBLK)+ &
@@ -503,7 +503,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
                  ! Write point values
                  call fill_NodeXYZ
                  do j=1,1+nJ; do i=1,1+nI
-                    write(UnitTmp_,fmt="(30(E14.6))") &
+                    write(UnitTmp_,fmt="(50(E14.6))") &
                          (factor1*NodeXYZ_DN(1:3,i,j,cut1)+ &
                          factor2*NodeXYZ_DN(1:3,i,j,cut2)), &
                          (factor1*PlotVarNodes_VNB(1:nPlotVar,i,j,cut1,iBLK)+ &
@@ -650,7 +650,7 @@ contains
                 factor2=(Xp-PlotXYZNodes_DNB(1,ic1,jc,kc,iBLK))/ &
                      (PlotXYZNodes_DNB(1,ic2,jc,kc,iBLK)-PlotXYZNodes_DNB(1,ic1,jc,kc,iBLK))
                 factor1=1.-factor2
-                write(UnitTmp_,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(50(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic1,jc,kc)+ &
                      factor2*NodeXYZ_DN(:, ic2,jc,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic1,jc,kc,iBLK)+ &
@@ -683,7 +683,7 @@ contains
                 factor2=(Yp-PlotXYZNodes_DNB(2,ic,jc1,kc,iBLK))/ &
                      (PlotXYZNodes_DNB(2,ic,jc2,kc,iBLK)-PlotXYZNodes_DNB(2,ic,jc1,kc,iBLK))
                 factor1=1.-factor2
-                write(UnitTmp_,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(50(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc1,kc)+ &
                      factor2*NodeXYZ_DN(:, ic,jc2,kc)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc1,kc,iBLK)+ &
@@ -716,7 +716,7 @@ contains
                 factor2=(Zp-PlotXYZNodes_DNB(3,ic,jc,kc1,iBLK))/ &
                      (PlotXYZNodes_DNB(3,ic,jc,kc2,iBLK)-PlotXYZNodes_DNB(3,ic,jc,kc1,iBLK))
                 factor1=1.-factor2
-                write(UnitTmp_,fmt="(30(E14.6))") &
+                write(UnitTmp_,fmt="(50(E14.6))") &
                      (factor1*NodeXYZ_DN(:, ic,jc,kc1)+ &
                      factor2*NodeXYZ_DN(:, ic,jc,kc2)), &
                      (factor1*PlotVarNodes_VNB(1:nPlotVar,ic,jc,kc1,iBLK)+ &
