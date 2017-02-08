@@ -1193,6 +1193,8 @@ namespace RosinaSample {
   namespace SamplingTimeInterval {
     extern SpiceDouble StartSamplingEt,EndSamplingEt;
     extern char StartSamplingTime[_MAX_STRING_LENGTH_PIC_],EndSamplingTime[_MAX_STRING_LENGTH_PIC_];
+
+    extern char CurrentTimeWindowStamp[_MAX_STRING_LENGTH_PIC_];
   }
 
   //evaluate density and pressure using the Liouville's theoreme
