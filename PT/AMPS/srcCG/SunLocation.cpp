@@ -54,13 +54,13 @@ void Comet::SunLocationUpdate::Processor() {
 
     PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
 
-    //update the output directory name, and print the triangulation with the shadowing
-    char SubDirectory[100];
+    //update the output time stamp usen in the file names, and print the triangulation with the shadowing
+    char fname[100];
 
-    et2utc_c (StartTime_et,"ISOC",4,100,SubDirectory);
-    sprintf(PIC::OutputDataFileDirectory,"PT/%s",SubDirectory);
+    et2utc_c (StartTime_et,"ISOC",4,100,RosinaSample::SamplingTimeInterval::CurrentTimeWindowStamp);
+    sprintf(fname,"SurfaceTriangulation-shadow.time=%s.dat",RosinaSample::SamplingTimeInterval::CurrentTimeWindowStamp);
 
-    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,PIC::OutputDataFileDirectory);
 
     //reset the sampling point flags for sampling Rosina measurements
     if (_COMET_SAMPLE_ROSINA_DATA_==_PIC_MODE_ON_) {
