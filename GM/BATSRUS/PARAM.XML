@@ -4044,6 +4044,23 @@ The output is a single file in IDL or Tecplot format.
 Default is nPlotFile=0, so no plot files are saved.
 </command>
 
+<command name="SAVETECPLOT">
+	 <parameter name="DoSaveOneTecFile" type="logical" default="F" />
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
+This command only works with 3D tecplot file (see #SAVEPLOT). It allows 
+saving a single direct access formatted tecplot data/connectivity file. 
+Post processing is still needed because the tecplot file is separated into
+3 diffrent files: the header file, the data file and the connectivity file.
+
+The default is false, which saves the tecplot data/connectivity for each 
+processor. In some systems, saving the data/connectivity in a single file 
+might not work.
+
+The default value is F.
+</command>
+
 <command name="SAVEPLOTNAME">
 	<parameter name="UsePlotNameStep" type="logical" default="T" />
 	<parameter name="UsePlotNameTime" type="logical" default="T" />
