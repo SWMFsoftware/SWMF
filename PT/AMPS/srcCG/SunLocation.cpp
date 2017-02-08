@@ -13,7 +13,9 @@
 #include "Comet.h"
 #include "RosinaMeasurements.h"
 
+#ifndef _NO_SPICE_CALLS_
 #include "SpiceUsr.h"
+#endif
 
 
 char Comet::SunLocationUpdate::StartTime[_MAX_STRING_LENGTH_PIC_]="";
@@ -29,7 +31,7 @@ extern double HeliocentricDistance,subSolarPointAzimuth,subSolarPointZenith;
 
 void Comet::SunLocationUpdate::Processor() {
 
-
+  #ifndef _NO_SPICE_CALLS_
   //increment the call counter; proceed with the location only the reqired numer of the prior outputs is reached
   if (FirstUpdateOutputCycleNumber>++OutputCycleCounter) return;
 
@@ -70,6 +72,7 @@ void Comet::SunLocationUpdate::Processor() {
     //increment the time counter
     StartTime_et+=TimeIncrement;
   }
+  #endif //_NO_SPICE_CALLS_
 }
 
 
