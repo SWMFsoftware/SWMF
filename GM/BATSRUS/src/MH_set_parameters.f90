@@ -699,7 +699,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVEINITIAL")
         call read_var('DoSaveInitial',DoSaveInitial)
 
-     case("#SAVEONETECFILE")
+     case("#SAVETECPLOT")
         call read_var('DoSaveOneTecFile', DoSaveOneTecFile)
 
      case("#SAVEPLOT")
