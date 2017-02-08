@@ -80,7 +80,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   ReferenceInjectionParticleNumber=1000  !!00
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=100
+  InitialSampleLength=10
   TestRunTotalIteration=50
 
   NastranSurfaceUserData=on
@@ -194,7 +194,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   !simulation and Rosina sampling times
   SimulationStartTime=2016-09-01T00:00:00
-  InitSolarLocation=off
+  InitSolarLocation=on
   RecalculateSolarLocation=off
 
   StartSamplingTime=2016-09-30T00:00:00
@@ -283,6 +283,23 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   !!use correction factors to the dust surface rate distribution
   DustInjectionCorrectionMode=InjectionRate, file=CorrectedFluxRelativeDUST.bin   !off,RelativeToH2O,InjectionRate , file= 
+
+  !!increase the sample sength during the course of the simulation
+  IncreaseSamplingLength=off
+
+  !!in case location of the Sun should be updated during the simulation define
+  !!1. updata the sun location flag
+  !!2. the time step (seconds) of the solar location update
+  !!3. the number of the output files between the updates
+
+  UpdateSunLocation=on \\  
+    TimeIncrement=0.5*3600.0 \\
+    FirstUpdateOutputCycleNumber=2 \\
+    OutputCycleStep=2 \\
+    StartTime=2016-09-30T00:00:00   
+ 
+    
+  
 
 #endblock
 
