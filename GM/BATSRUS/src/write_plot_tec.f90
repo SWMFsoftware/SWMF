@@ -52,7 +52,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   ! parameters for saving 3d tecplot in a single file
   character (len=1),parameter  :: CharNewLine = char(10)
   character (len=80) :: formatData
-  integer :: iMorton, iStart, iShift
+  integer :: iRec
 
   integer :: iTime0_I(7),iTime_I(7)
 
@@ -155,7 +155,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
         write(iUnit,'(a,a,i12,a,i12,a)') &
              'ZONE T="3D   '//textNandT//'"', &
              ', N=',nNodeALL, &
-             ', E=',nBlockALL*((nI  )*(nJ  )*(nK  )), &
+             ', E=',nBlockALL*nIJK, &
              ', F=FEPOINT, ET=BRICK'
         call write_auxdata(iUnit)
      end if
@@ -168,21 +168,20 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            ! Write point values
            do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
               if(NodeUniqueGlobal_NB(i,j,k,iBLK))then
-                 write(UnitTmp_, fmt=formatData,           &
-                      rec=NodeNumberGlobal_NB(i,j,k,iBLK)) &
+                 iRec = NodeNumberGlobal_NB(i,j,k,iBLK)
+                 write(UnitTmp_, FMT=formatData, REC=iRec) &
                       NodeXYZ_DN(1:3,i,j,k),                  &
                       PlotVarNodes_VNB(1:nPlotVar,i,j,k,iBLK),&
                       CharNewLine
               end if
            end do; end do; end do
 
-           ! Write point connectivity
-           iMorton = iMortonNode_A(iNode_B(iBLK))
-           iStart  = (iMorton-1)*(nI)*(nJ)*(nK)
-           iShift  = 0
+           ! Write point connectivity.
+           ! Initalize record index based on Morton ordering
+           iRec = nIJK*(iMortonNode_A(iNode_B(iBLK)) - 1)
            do k=1,nK; do j=1,nJ; do i=1,nI
-              iShift = iShift+1
-              write(UnitTmp2_,'(8(i8,1x),a)', rec=iStart+iShift) &
+              iRec = iRec + 1
+              write(UnitTmp2_,'(8(i8,1x),a)', REC=iRec) &
                    NodeNumberGlobal_NB(i  ,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j+1,k  ,iBLK), &
@@ -819,7 +818,7 @@ contains
     write(iUnitHere,'(a,a,a)') 'AUXDATA BTHETATILT="',trim(adjustl(stmp)),'"'
 
     !CELLS
-    write(stmp,'(i12)')nBlockALL*nI*nJ*nK
+    write(stmp,'(i12)')nBlockALL*nIJK
     write(iUnitHere,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
 
     !CELLSUSED
