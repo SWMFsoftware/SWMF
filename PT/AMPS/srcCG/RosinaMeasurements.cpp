@@ -21,6 +21,8 @@ SpiceDouble RosinaSample::SamplingTimeInterval::EndSamplingEt=0.0;
 char RosinaSample::SamplingTimeInterval::StartSamplingTime[_MAX_STRING_LENGTH_PIC_]="";
 char RosinaSample::SamplingTimeInterval::EndSamplingTime[_MAX_STRING_LENGTH_PIC_]="";
 
+char RosinaSample::SamplingTimeInterval::CurrentTimeWindowStamp[_MAX_STRING_LENGTH_PIC_]="";
+
 
 //init the pointing directions and geomentry informationvoid
 
@@ -248,7 +250,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
     FILE *fout=NULL;
 
     //sampeled density
-    sprintf(fname,"%s/RamNudeGaugeModelDensity.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
+    sprintf(fname,"%s/RamNudeGaugeModelDensity.time=%s.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,RosinaSample::SamplingTimeInterval::CurrentTimeWindowStamp,PIC::MolecularData::GetChemSymbol(spec),nfile);
     fout=fopen(fname,"w");
     if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
@@ -279,7 +281,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
     fclose(fout);
 
     //sampeled flux
-    sprintf(fname,"%s/RamNudeGaugeModelFlux.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,PIC::MolecularData::GetChemSymbol(spec),nfile);
+    sprintf(fname,"%s/RamNudeGaugeModelFlux.time=%s.spec=%s.out=%i.dat",PIC::OutputDataFileDirectory,RosinaSample::SamplingTimeInterval::CurrentTimeWindowStamp,PIC::MolecularData::GetChemSymbol(spec),nfile);
     fout=fopen(fname,"w");
     if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
