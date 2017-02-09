@@ -182,7 +182,7 @@ Name=Mercury-test
 Time=2
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+valeriy)  
 Keys=-spice-path=/Users/dborovik/SPICE/cspice -spice-kernels=/Users/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+srbwks73465-01)  
-Keys=-spice-path=/nobackupp8/vtenishe/SPICE/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+pleiades)   
+Keys=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+pleiades)   
 Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${PTDIR}/data/input/Mercury/TestCase@@(0+stampede)   
 <#
 -------------------------------------------------------------------------------
@@ -481,7 +481,7 @@ Ref=7{pgcc}@@(0+pleiades)
 
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
-Keys=-spice-path=/nobackupp8/vtenishe/SPICE/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+pleiades)
 Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2@@(0+stampede)
 
 Run=
