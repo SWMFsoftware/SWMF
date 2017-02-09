@@ -13,21 +13,24 @@ Module ModIoDGCPM
 
   ! Define a few time and geophysical index input variables
   ! Formerly: Common block PARAM2
-  integer nstep,ikp,iwpi
-  real :: ut,r,kp=0.0,f107,tint,time
+  integer :: nstep,iwpi
+  real    :: ut,r,tint,time
 
-  integer :: nst, nkp, nibc, i2
-
+  integer :: nst, nkp, nibc
+  
+  ! Define variables for setting Kp:
+  character(len=5) :: NameSourceKp='const'
+  real             :: kpConst=0.0, Kp=0.0
+  
   ! Define some variables set with the input file
   ! Formerly: Common block PARAM3
-  real TINJ
-  character*5 name
+  real :: TINJ
+  character(len=5) ::  name
 
   ! Define convection input parameters
   ! Formerly: Common block PARAM5
-  integer ilame,ilambe,ippcm,ippc
-  parameter (ilame=450, ippcm=5000)
-  real lamgam,lambe(ilame),tlame(ilame),ppc(ippcm),tppc(ippcm)
+  integer, parameter :: ilame=450, ippcm=5000
+  real :: lamgam,lambe(ilame),tlame(ilame),ppc(ippcm),tppc(ippcm)
 
   integer, parameter        :: iCharLen_     = 100
 

@@ -114,11 +114,12 @@ contains
          case("#TIMING")
             call read_var('DtStep',DT)
             call read_var('TMAX', Tmax)
+
          case("#KP")
-            call read_var('IKP',IKP)
-            if (ikp.eq.0) then
-               call read_var('KP',KP)
-            else if (ikp.eq.6) then
+            call read_var('NameSourceKp', NameSourceKp)
+            if (NameSourceKp == 'const') then
+               call read_var('KP',kpConst)
+            else if (index(NameSourceKp, 'file')>0) then
                cTempLines(1) = '#NGDC_INDICES'
                call read_var('kpFileName', kpFileName)
                cTempLines(2) = kpFileName
@@ -128,10 +129,10 @@ contains
                call IO_set_Inputs(cTempLines)
                call read_NGDC_Indices(iError)
 
-               if (iError /= 0) then
-                  write(*,*) "Read indices was NOT successful (NGDC KP File)"
-                  EXIT
-               endif
+               if (iError /= 0) call CON_stop( &
+                    NameSub//"Read indices FAILED (NGDC KP File)")
+            else
+               call CON_stop(NameSub//' Unrecognized SourceKp='//NameSourceKp)
             endif
 
          case("#NAME")
@@ -296,6 +297,12 @@ contains
 
     !-------------------------------------------------------------------------
     coupled_potential = Potential_out
+
+    write(*,*) "PS: received potential from IE!!"
+    write(*,*) "CPCP == ", maxval(coupled_potential), ' - ', &
+         minval(coupled_potential), ' = ', &
+         maxval(coupled_potential) - minval(coupled_potential)
+    
     !    EFieldModel = FieldModel
     isCoupled = .true.
 
@@ -356,12 +363,8 @@ contains
        nkp=nint(10800./dt/2.)
        call get_time(tCurrentOut = StartTime)
 
-       ! Read KP Input File via GETKPA
-       if (debug .gt. 0) write(*,*) "GetKPA"
-       call GetKPA(0)
-
-       i2=(nst-1)/nkp + 1
-       if (ikp >= 3) f107=f107r(i2)
+       ! Set Kp values:
+       call GetKPA
 
        if (debug.gt.0) write(*,*) "thermal"
        call thermal   ! setup only
@@ -470,10 +473,9 @@ contains
 
     nst=nint(t/dt/2.) + 1
     nkp=nint(10800./dt/2.)
-    i2=(nst-1)/nkp + 1
 
-    !  if (debug .gt. 0) write(*,*) "getkpa"
-    call getkpa(i3)
+    ! Get Kp value:
+    call getkpa
 
     !  if (debug .gt. 0) write(*,*) "magconv"
     if (.not.(isCoupled)) call magconv()
@@ -491,7 +493,6 @@ contains
     if (WriteLogFile .and. (mod(tSimulation, 300.0)<0.001)) then
        call LogFileDGCPM(cOutputDir, i3)
     endif
-
 
     ! General Output Writing
     if (mod(tSimulation, tint) < 1E-5) then

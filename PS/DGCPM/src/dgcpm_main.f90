@@ -68,7 +68,7 @@ program dgcpm
      write(17,*) 'i3:', i3, ' T:', t, ' kp:', kp
      close(17)
 
-     call getkpa(i3,nst,i2,nkp)
+     call getkpa()
 
      call magconv()
      call thermal

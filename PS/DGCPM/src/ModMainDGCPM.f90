@@ -14,7 +14,7 @@ Module ModMainDGCPM
 
   ! Define "constants" of the simulation
   ! Formerly: Common block CONST
-  real dayr(250),rkph(250),f107r(250),apr(250),rsunr(250), t, A, AP
+  real dayr(250),rkph(250),apr(250),rsunr(250), t, A, AP
   integer :: itherminit=1
   integer :: ithermfirst
 

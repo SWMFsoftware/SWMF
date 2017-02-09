@@ -409,9 +409,11 @@ ccccccccccccccccccccccccc
 
       subroutine loadit(filename)
 
+      use ModIoUnit, ONLY: UnitTMP_
+      
       use ModSizeDGCPM, only: nthetacells, nphicells
       use ModMainDGCPM, only: vthetacells, vphicells, mgridden,
-     *    mgridx, mgridy, mgridoc
+     *     mgridx, mgridy, mgridoc
         
 c Input: filename
       character filename*80
@@ -432,22 +434,22 @@ c Internal: mgridx1, mgridy1, in Re
 c Internal: mgridoc1, open(0) or closed(1) table
       real mgridoc1(nthetacells2,nphicells2)
 
-      open(unit = 10, file=filename, status = 'old',
+      open(unit = UnitTMP_, file=filename, status = 'old',
      *   form = 'formatted')
-      read(10,*) nthetacells1, nphicells1
+      read(UnitTMP_,*) nthetacells1, nphicells1
 
       if (nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2) then
        print*,'File size mismatch in subroutine Loadit'
        stop
       endif
 
-      read(10,*) vthetacells1
-      read(10,*) vphicells1
-      read(10,*) mgridden1
-      read(10,*) mgridx1
-      read(10,*) mgridy1
-      read(10,*) mgridoc1
-      close(unit = 10)
+      read(UnitTMP_,*) vthetacells1
+      read(UnitTMP_,*) vphicells1
+      read(UnitTMP_,*) mgridden1
+      read(UnitTMP_,*) mgridx1
+      read(UnitTMP_,*) mgridy1
+      read(UnitTMP_,*) mgridoc1
+      close(unit = UnitTMP_)
 
       call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
      *   nphicells1,mgridden1,vthetacells,nthetacells,vphicells,
@@ -2127,23 +2129,25 @@ cccccccccccccccccccccccccc
 
       subroutine savet96(parmod)
 
+      use ModIoUnit, ONLY: UnitTMP_
+      
       use ModSizeDGCPM, only: nthetacells, nphicells
       use ModMainDGCPM, only: vthetacells, vphicells, mgridvol,
      *    mgridx, mgridy, mgridoc
 
-      real parmod(10)
+      real parmod(UnitTMP_)
 
-      open(unit = 10, file='t96_2.dato', status = 'new',
+      open(unit = UnitTMP_, file='t96_2.dato', status = 'new',
      *   form = 'formatted')
-      write(10,*) parmod
-      write(10,*) nthetacells, nphicells
-      write(10,*) vthetacells
-      write(10,*) vphicells
-      write(10,*) mgridx
-      write(10,*) mgridy
-      write(10,*) mgridvol
-      write(10,*) mgridoc
-      close(unit = 10)
+      write(UnitTMP_,*) parmod
+      write(UnitTMP_,*) nthetacells, nphicells
+      write(UnitTMP_,*) vthetacells
+      write(UnitTMP_,*) vphicells
+      write(UnitTMP_,*) mgridx
+      write(UnitTMP_,*) mgridy
+      write(UnitTMP_,*) mgridvol
+      write(UnitTMP_,*) mgridoc
+      close(unit = UnitTMP_)
 
       return
       end
