@@ -32,12 +32,41 @@ and other numerical options.
 
 Set the timestep for the simulation.  Default values are shown.
 
+</command>
+
 </commandgroup>
 
 <commandgroup name="PHYSICAL PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!Physics group!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="KP">
+  <parameter name="NameSourceKp" type="string" default="const"/>
+  <parameter name="ConstKp"      type="int" min="0" max="9" default="0"
+	     if="$NameSourceKp eq 'const'"/>
+  <parameter name="NameKpFile" type="string" if="$NameSourceKp eq 'file'"/>
+
+  #KP
+  const         NameSourceKp
+  3             ConstKp
+
+  #KP
+  file          NameSourceKp
+  kp_data.dat   NameKpFile
+  
+This command controls the behavior of the built-in Volland-Stern electric
+field model by setting the value of the Kp index -- the only input to VS.
+NameSourceKp sets the source for Kp, either via an NGDC-formatted file
+("file") or as a constant ("const").  If NameSourceKp is "const", then the
+"ConstKp" value is read and Kp is held constant at that value for all times
+in the simulation.  If NameSourceKp is "file", "NameKpFile" is read and
+sets the name of the input file.
+
+For an example input file, see DGCPM/Input/kp_test.dat.
+
+</command>
+
+
 <command name="FILLING">
   <parameter name="EmptyPeriodClosed" type="float" min="0" default="3.0"/>
   <parameter name="EmptyPeriodOpen"   type="float" min="0" default="1.0"/>
