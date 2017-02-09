@@ -366,7 +366,8 @@ ccccccccccccccccccccccccc
 
       subroutine saveit(filename)
 
-    
+      use ModIoUnit, ONLY: UnitTMP_
+      
       use ModTimeDGCPM, only: currenttime
       use ModSizeDGCPM, only: nthetacells, nphicells
       use ModMainDGCPM, only: nthetacells, nphicells, mgridden,
@@ -379,26 +380,26 @@ ccccccccccccccccccccccccc
 c Input: filename
       character filename*80
       
-      open(unit = 10, file=filename, status = 'unknown',
+      open(unit = UnitTMP_, file=filename, status = 'unknown',
      *   form = 'formatted')
-      write(10,*) nthetacells, nphicells
-      write(10,*) 90.0-vthetacells
-      write(10,*) vphicells
-      write(10,*) mgridden
-      write(10,*) mgridx
-      write(10,*) mgridy
-      write(10,*) mgridoc
-      write(10,*) mgridpot
-      write(10,*) mgridcoro
-      write(10,*) mgridvr
-      write(10,*) mgridvp
-      write(10,*) mgridsource
-      write(10,*) mgridfluxr
-      write(10,*) mgridfluxa
-      write(10,*) mgridn
-      write(10,*) mgridvol
-      write(10,*) CurrentTime
-      close(unit = 10)
+      write(UnitTMP_,*) nthetacells, nphicells
+      write(UnitTMP_,*) 90.0-vthetacells
+      write(UnitTMP_,*) vphicells
+      write(UnitTMP_,*) mgridden
+      write(UnitTMP_,*) mgridx
+      write(UnitTMP_,*) mgridy
+      write(UnitTMP_,*) mgridoc
+      write(UnitTMP_,*) mgridpot
+      write(UnitTMP_,*) mgridcoro
+      write(UnitTMP_,*) mgridvr
+      write(UnitTMP_,*) mgridvp
+      write(UnitTMP_,*) mgridsource
+      write(UnitTMP_,*) mgridfluxr
+      write(UnitTMP_,*) mgridfluxa
+      write(UnitTMP_,*) mgridn
+      write(UnitTMP_,*) mgridvol
+      write(UnitTMP_,*) CurrentTime
+      close(unit = UnitTMP_)
       
       return
       end
