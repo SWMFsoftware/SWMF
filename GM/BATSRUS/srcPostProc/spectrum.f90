@@ -1,7 +1,8 @@
 !instrumental broadening
 !comments!!!
 !verbose levels
-! isothermal.pro
+!isothermal.pro
+!dataname
 
 program spectrum
 
@@ -12,6 +13,7 @@ program spectrum
   logical                     :: IsVerbose =  .false., IsNoAlfven = .false.
   logical                     :: IsDataFile = .false., IsAllLines = .false.
   logical                     :: IsPermuteAxis = .false.
+  logical                     :: IsPe = .false., IsPpar = .false., IsPperp = .false.
 
   ! Variables for output file
   character(len=200)   :: NameSpectrumFile = 'spectrum.out'
@@ -43,10 +45,9 @@ program spectrum
   integer                     :: n1, n2, n3 ! grid size
   real                        :: CoordMin_D(3), CoordMax_D(3)        
   real,allocatable            :: Var_VIII(:,:,:,:)
-  real                        :: rhoUni, uxUni, uyUni, uzUni, bxUni, byUni
-  real                        :: bzUni
-  real                        :: tparUni, tperUni, teUni, I01Uni, I02Uni
-  integer                     :: nTemperature = 2
+  real                        :: RhoUni, UxUni, UyUni, UzUni, BxUni, ByUni
+  real                        :: BzUni
+  real                        :: TparUni, TperpUni, TeUni, I01Uni, I02Uni
 
   ! Indexes for the solar wind variables
   integer, parameter          :: &
@@ -58,12 +59,14 @@ program spectrum
        by_   =  6, &
        bz_   =  7, &
        tpar_ =  8, &
-       tper_ =  9, &
+       tperp_ =  9, &
        te_   = 10, &
-       I01_  = 11, &
-       I02_  = 12
+       t_    = 11, &
+       I01_  = 12, &
+       I02_  = 13
   
-  integer                     ::  iDimLOS,iDimVertical,iDimHorizontal
+  integer                     :: nLocalVar
+  integer                     :: iDimLOS,iDimVertical,iDimHorizontal
 
   ! Variables for the wavelengths of interest
   integer                     :: iWavelengthInterval, nWavelengthInterval
@@ -90,9 +93,8 @@ program spectrum
   type(LineTableType), allocatable :: LineTable_I(:)
 
   real                        :: Dist = 0.99*cAU * 1e2 ! Sun-L1 distance in cm
-  real                        :: LOS_D(3), LOSnorm_D(3)
-  real                        :: dx, dA ! dx is plasma thickness along the LOS
-  real                        :: dy, dz ! in case of boxdata used
+  real                        :: Dx, Da ! dx is plasma thickness along the LOS
+  real                        :: Dy, Dz ! in case of boxdata used
   ! Derived type of output 
   type SpectrumTableType
      real,allocatable         :: Spectrum_III(:,:,:), SpectrumGrid_I(:)
@@ -165,28 +167,28 @@ contains
     character(len=*), parameter    :: NameSub = 'set_data_block'
     !------------------------------------------------------------------------
 
-    if(IsVerbose)write(*,*)'dx, dA = ',dx,dA,' inside set_data_block'
+    if(IsVerbose)write(*,*)'Dx, Da = ',Dx,Da,' inside set_data_block'
 
     n1 = n1Block
     n2 = n2Block
     n3 = n3Block
-    allocate(Var_VIII(12,n1,n2,n3))
+    allocate(Var_VIII(nLocalVar,n1,n2,n3))
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
-       Var_VIII(rho_,1:n1,1:n2,1:n3)  = rhoUni * 1e6 * cProtonMass
+       Var_VIII(rho_,1:n1,1:n2,1:n3)  = RhoUni * 1e6 * cProtonMass
        ! km/s --> m/s
-       Var_VIII(ux_,1:n1,1:n2,1:n3)   = uxUni * 1e3
-       Var_VIII(uy_,1:n1,1:n2,1:n3)   = uyUni * 1e3
-       Var_VIII(uz_,1:n1,1:n2,1:n3)   = uzUni * 1e3
+       Var_VIII(ux_,1:n1,1:n2,1:n3)   = UxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)   = UyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)   = UzUni * 1e3
        ! G --> T
-       Var_VIII(bx_,1:n1,1:n2,1:n3)   = bxUni * 1e-4
-       Var_VIII(by_,1:n1,1:n2,1:n3)   = byUni * 1e-4
-       Var_VIII(bz_,1:n1,1:n2,1:n3)   = bzUni * 1e-4
+       Var_VIII(bx_,1:n1,1:n2,1:n3)   = BxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)   = ByUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)   = BzUni * 1e-4
        ! K
-       Var_VIII(tpar_,1:n1,1:n2,1:n3) = tparUni
-       Var_VIII(tper_,1:n1,1:n2,1:n3) = tperUni
-       Var_VIII(te_,1:n1,1:n2,1:n3)   = teUni
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = TparUni
+       Var_VIII(tperp_,1:n1,1:n2,1:n3) = TperpUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)   = TeUni
        ! erg cm^-3 --> J m^-3
        Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
        Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
@@ -203,9 +205,10 @@ contains
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
-
+       if(IsVerbose)write(*,*)'!!!!!!!!!!!!!!!!!!!',Var_VIII(bz_,1:n1,1:n2,1:n3) 
        allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
             nWavelengthBin))
+       if(IsVerbose)write(*,*)'!!!!!!!!!!!!!!!!!!!',Var_VIII(bz_,1:n1,1:n2,1:n3) 
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
             nWavelengthBin+1))
 
@@ -218,6 +221,7 @@ contains
        end do
     end do
 
+    STOP
   end subroutine set_data_block
   !==========================================================================
   subroutine save_label
@@ -374,14 +378,14 @@ contains
     ! Convert arsec^-2 --> sr^-1 to match Chianti output
     ! 1 str = 4.25e10 arcsec^2
     ! 1 str^-1 = 2.3529412e-11 arcsec^-2 
-    FluxConst = dA * dx / (4 * cPi * Dist**2)/2.3529412e-11
+    FluxConst = Da * Dx / (4 * cPi * Dist**2)/2.3529412e-11
 
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
 
              if(IsVerbose)write(*,*)'inside calc_flux loop begins i,j,k =',i,jPixel,kPixel
-
+            
              ! Cells inside body
              if(all(Var_VIII(:,i,jPixel,kPixel)==0))EXIT 
 
@@ -448,13 +452,12 @@ contains
 
              ! Calculate angle between LOS and B directions
              B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
-             Bnorm_D  = B_D/sqrt(max(sum(B_D**2), 1e-30))
-             cosAlpha = sum(LOSnorm_D*Bnorm_D)
+             CosAlpha = abs(B_D(1)/sqrt(max(sum(B_D**2), 1e-30)))
 
              ! Calculate temperature relative to the LOS direction
-             sinAlpha = sqrt(1 - cosAlpha**2)
-             Tlos = sinAlpha * Var_VIII(tper_,i,jPixel,kPixel) &
-                  + cosAlpha * Var_VIII(tpar_,i,jPixel,kPixel)
+             SinAlpha = sqrt(1 - CosAlpha**2)
+             Tlos = SinAlpha * Var_VIII(tperp_,i,jPixel,kPixel) &
+                  + CosAlpha * Var_VIII(tpar_,i,jPixel,kPixel)
 
              ! Calculate thermal and non-thermal broadening
              uNth2    = 1.0/16.0 * (zPlus2 + zMinus2) * abs(cosAlpha)
@@ -485,6 +488,10 @@ contains
              Gint = bilinear(gLambda_II, iNMin, iNMax, jTMin, jTMax, &
                   (/ LogNe/dLogN , LogTe/dLogT /),DoExtrapolate=.true.)
 
+             if(IsVerbose)write(*,*)'!!!!!!!!!!!!!!!!!!!in calc_flux'
+             if(IsVerbose)write(*,*)'Gint,LogNe = '
+             if(IsVerbose)write(*,*)Gint,' ',LogNe
+
              ! When Gint becomes negative due to extrapolation -> move to next
              if(Gint<0.0)CYCLE 
 
@@ -492,6 +499,10 @@ contains
              ! FluxMono = 1 / (4 * cPi * Dist**2.0) * &
              !      Gint * (10.0**LogNe)**2.0 * dV
              FluxMono = FluxConst * Gint * (10.0**LogNe)**2
+
+             if(IsVerbose)write(*,*)'!!!!!!!!!!!!!!!!!!!in calc_flux'
+             if(IsVerbose)write(*,*)'FluxConst,Gint,LogNe = '
+             if(IsVerbose)write(*,*)FluxConst,' ',Gint,' ',LogNe
 
              ! Fill in LabelTabel%Lambda,FluxMono
              LabelTable_III(iLine,:,:)%Lambda = Lambda
@@ -641,11 +652,11 @@ contains
           call read_var('n1',n1Block)
           call read_var('n2',n2Block)
           call read_var('n3',n3Block)
-          call read_var('dx',dx)
-          call read_var('dy',dy)
-          call read_var('dz',dz)
-          dx = dx*rSun*1e2 ! Convert to CGS
-          dA = dy*rSun*1e2 *dz*rSun*1e2
+          call read_var('Dx',Dx)
+          call read_var('Dy',Dy)
+          call read_var('Dz',Dz)
+          Dx = Dx*rSun*1e2 ! Convert to CGS
+          Da = Dy*rSun*1e2 *Dz*rSun*1e2
 
        case("#INSTRUMENT")
           IsInstrument = .true.
@@ -680,16 +691,36 @@ contains
 
        case("#UNIFORMDATA")
           IsUniData = .true.
-          call read_var('rhoUni',rhoUni)
-          call read_var('uxUni',uxUni)
-          call read_var('uyUni',uyUni)
-          call read_var('uzUni',uzUni)
-          call read_var('bxUni',bxUni)
-          call read_var('byUni',byUni)
-          call read_var('bzUni',bzUni)
-          call read_var('tparUni',tparUni)
-          call read_var('tperUni',tperUni)
-          call read_var('teUni',teUni)
+          call read_var('IsPpar',IsPpar)
+          call read_var('IsPe',IsPe)
+          call read_var('RhoUni',RhoUni)
+          call read_var('UxUni',UxUni)
+          call read_var('UyUni',UyUni)
+          call read_var('UzUni',UzUni)
+          call read_var('BxUni',BxUni)
+          call read_var('ByUni',ByUni)
+          call read_var('BzUni',BzUni)
+          ! One temperature
+          if(.not. IsPe .and. .not. IsPpar)then
+             call read_var('TparUni',TparUni)
+             TperpUni = TparUni
+             TeUni = TparUni
+          ! Proton +  electron temperatures
+          elseif(IsPe .and. .not. IsPpar)then
+             call read_var('TparUni',TparUni)
+             TperpUni = TparUni
+             call read_var('TeUni',TeUni)
+          ! Electron + anisotropic proton temperatures
+          elseif(IsPe .and. IsPpar)then
+             IsPperp = .true.
+             call read_var('TparUni',TparUni)
+             call read_var('TperpUni',TperpUni)
+             call read_var('TeUni',TeUni)
+          else 
+             write(*,*) NameSub // ' WARNING: unusual temperature setting is in use ' // &
+             'Select either 1-temperature, 2-temperature (proton+electron), or 3 temperature' // & 
+             '(electron+anisotropic proton) model!' 
+          endif
           call read_var('I01Uni',I01Uni)
           call read_var('I02Uni',I02Uni)
 
@@ -707,9 +738,6 @@ contains
 
        case("#ISDOPPLER")
           call read_var('IsDoppler',IsDoppler)
-
-       case("NTEMPERATURE")
-          call read_var('nTemperature',nTemperature)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
@@ -808,9 +836,9 @@ contains
        n1 = n1Block
        n2 = n2Block
        n3 = n3Block
-       allocate(Var_VIII(12,n1,n2,n3))
+       allocate(Var_VIII(nLocalVar,n1,n2,n3))
     else
-       allocate(Var_VIII(12,n1,n2,n3))
+       allocate(Var_VIII(nLocalVar,n1,n2,n3))
     endif
 
     ! Set up bins for Spectrum
@@ -849,7 +877,7 @@ contains
        Var_VIII(bz_,1:n1,1:n2,1:n3)   = bzUni * 1e-4
        ! K
        Var_VIII(tpar_,1:n1,1:n2,1:n3) = tparUni
-       Var_VIII(tper_,1:n1,1:n2,1:n3) = tperUni
+       Var_VIII(tperp_,1:n1,1:n2,1:n3) = tperpUni
        Var_VIII(te_,1:n1,1:n2,1:n3)   = teUni
        ! erg cm^-3 --> J m^-3
        Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
@@ -892,11 +920,17 @@ contains
              ! T = p/rho * M / kB
              Var_VIII(tpar_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
-          case('p')
-             Var_VIII(tper_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             IsPpar = .true.
+          case('pperp')
+             Var_VIII(tperp_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
+             IsPperp = .true.
           case('pe')
              Var_VIII(te_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
+             IsPe = .true.
+          case('p')
+             Var_VIII(t_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
                   * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass / cBoltzmann
           case('i01')
              ! erg/cm^3 --> J/m^3
@@ -935,14 +969,20 @@ contains
 
     deallocate(VarIn_VIII)
 
-    ! Copy temperatures if no three-temperature model is in use
+    ! Copy temperatures if not all components are given
     ! tpar = tper
-    if(nTemperature == 2)Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(tper_,1:n1,1:n2,1:n3)
-    ! tpar = te = tper
-    if(nTemperature == 1)then
-       Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(tper_,1:n1,1:n2,1:n3)
-       Var_VIII(te_,1:n1,1:n2,1:n3)   = Var_VIII(tper_,1:n1,1:n2,1:n3)
+    if(.not. IsPpar .and. .not. IsPperp)then
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
+       Var_VIII(tperp_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
+    ! tperp = (3*t - tpar)/2
+    elseif(IsPpar .and. .not. IsPperp)then
+       Var_VIII(tperp_,1:n1,1:n2,1:n3) = (3*Var_VIII(t_,1:n1,1:n2,1:n3) - Var_VIII(tpar_,1:n1,1:n2,1:n3))/2.0
+    ! tpar = 3*t - 2*tperp
+    elseif(.not. IsPpar .and.IsPperp)then
+       Var_VIII(tpar_,1:n1,1:n2,1:n3) = 3*Var_VIII(t_,1:n1,1:n2,1:n3) - 2*Var_VIII(tperp_,1:n1,1:n2,1:n3)
     endif
+    ! te = t
+    if(.not. IsPe)Var_VIII(te_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
 
     if(IsInstrument .and. nPixel /= n3) then
        write(*,*)'interpolate from n3 to nPixel! nPixel=',nPixel,' /= n3=',n3
@@ -973,22 +1013,19 @@ contains
        write(*,*)"IsNoAlfven ON !!!"
     endif
 
-    ! LOS is set align with the x axis
-    LOSnorm_D = (/1,0,0/) 
-
     ! Convert to CGS
     if(.not. IsDataBlock)then
-       dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
-       dy = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2
-       dz = (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2
-       if(dy*dz /= 0) then 
-          dA = dy*dz 
+       Dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
+       Dy = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2
+       Dz = (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2
+       if(Dy*Dz /= 0) then 
+          Da = Dy*Dz 
        else 
-          dA = max(dy**2,dz**2)
+          Da = max(Dy**2,Dz**2)
        end if
     endif
 
-    if(IsVerbose)write(*,*)'dx, dA = ',dx,dA
+    if(IsVerbose)write(*,*)'Dx, Da = ',Dx,Da
 
   end subroutine read_data
 
