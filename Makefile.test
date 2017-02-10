@@ -217,16 +217,24 @@ test_ps_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.PS ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PS ${TESTDIR}/LAYOUT.in
-	cp ${PSDIR}/Input/a1001_dgcpm.in ${TESTDIR}/PS/Input/
-	cp ${PSDIR}/Input/a1001_kp.in ${TESTDIR}/PS/Input/
+	cp ${PSDIR}/Input/kp_test.dat ${TESTDIR}/PS/Input/
 
 test_ps_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ps_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
-		${TESTDIR}/PS/Output/a1001_dgcpm_dynamic_00003.dat \
-		${PSDIR}/Output/a1001_dgcpm_dynamic_00003.ref \
+		${TESTDIR}/RESULTS/PS/dgcpm_t20011021_010000_000.dat \
+		${PSDIR}/Output/dgcpm_t20011021_010000_000.ref \
+		> test_ps.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
+		${TESTDIR}/RESULTS/PS/PS_t20011021_002000_000.log \
+		${PSDIR}/Output/PS_t20011021_002000_000.ref \
+		> test_ps.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
+		${TESTDIR}/RESULTS/PS/slice_L6p60_t20011021_002000_000.dat \
+		${PSDIR}/Output/slice_L6p60_t20011021_002000_000.ref \
 		> test_ps.diff)
 	ls -ltr test_ps*.diff
 
