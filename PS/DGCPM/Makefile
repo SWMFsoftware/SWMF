@@ -8,10 +8,9 @@ LIB:
 
 rundir:
 	mkdir -p ${RUNDIR}/PS/Output
-	mkdir -p ${RUNDIR}/PS/Input
-	mkdir -p ${RUNDIR}/PS/restartOUT
-	mkdir -p ${RUNDIR}/PS/restartIN
-	cp Input/dgcpm_restart_coldstart.dat ${RUNDIR}/PS/restartIN/dgcpm_restart.dat
+	mkdir ${RUNDIR}/PS/Input
+	mkdir ${RUNDIR}/PS/restartOUT
+	ln -s ${PSDIR}/Input/restart_cold ${RUNDIR}/PS/restartIN
 
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
