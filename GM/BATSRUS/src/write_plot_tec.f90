@@ -34,8 +34,8 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   integer, intent(in) :: ifile, nPlotVar
   character (LEN=1000), intent(in) :: unitstr_TEC
   real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVarMax)
-  real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,1:1+nI,1:1+nJ,1:1+nK,nBLK)
-  real, intent(in) :: PlotXYZNodes_DNB(3,1:1+nI,1:1+nJ,1:1+nK,nBLK)
+  real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,1:1+nI,1:1+nJ,1:1+nK,nBlock)
+  real, intent(in) :: PlotXYZNodes_DNB(3,1:1+nI,1:1+nJ,1:1+nK,nBlock)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
   integer, intent(in) :: iUnit
 
@@ -968,11 +968,11 @@ subroutine assign_node_numbers
 
 
   ! Done a evel one, with allocate and dealocate. NEED to be fixed
-  allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBLK))
-  IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,:))
+  allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBlock))
+  IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,1:nBlock))
   call message_pass_node(1,IndexNode_VNB, &
        NameOperatorIn='Min', UsePeriodicCoordIn = .true.)
-  NodeNumberGlobal_NB(:,:,:,:) = nint(IndexNode_VNB(1,:,:,:,:))
+  NodeNumberGlobal_NB(:,:,:,1:nBlock) = nint(IndexNode_VNB(1,:,:,:,:))
   deallocate(IndexNode_VNB)
 
   !Allocate memory for storing the node offsets

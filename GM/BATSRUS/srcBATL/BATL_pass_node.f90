@@ -59,7 +59,7 @@ contains
     ! Arguments
     integer, intent(in) :: nVar
     real, intent(inout) :: &
-         State_VNB(nVar,1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
+         State_VNB(nVar,1:nI+1,1:nJ+1,1:nK+1,nBlock)
 
     ! Optional arguments
     character(len=*), optional, intent(in) :: NameOperatorIn 

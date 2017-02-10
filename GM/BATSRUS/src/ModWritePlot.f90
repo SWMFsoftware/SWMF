@@ -502,7 +502,7 @@ subroutine write_plot_common(iFile)
   if(plot_form(iFile)=='tec' .and. .not.IsSphPlot)then
 
      if(.not.allocated(PlotVarNodes_VNB)) then 
-        allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
+        allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
         PlotVarNodes_VNB = 0.0
      end if
 
@@ -524,7 +524,7 @@ subroutine write_plot_common(iFile)
         ! Fix "hanging" nodes so they lie precisely on the same plane 
         ! as "non-hanging" nodes. This is needed for non-Cartesian grids.
 
-        allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,MaxBlock))
+        allocate(PlotXYZNodes_DNB(3,nINode,nJNode,nKNode,nBlock))
         PlotXYZNodes_DNB(:,:,:,:,1:nBlock) = Xyz_DNB(:,:,:,:,1:nBlock)
 
         do iBlk = 1, nBlock; if(Unused_B(iBlk)) CYCLE
@@ -768,7 +768,7 @@ contains
     real    :: r2, r2Min
     !-----------------------------------------------------------------------
     if(.not.allocated(PlotVarNodes_VNB)) then 
-       allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
+       allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
        PlotVarNodes_VNB = 0.0
     end if
 
