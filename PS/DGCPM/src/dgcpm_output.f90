@@ -71,19 +71,19 @@ SUBROUTINE WRESULT()
   
   ! "dynamic" files are time-accurate files.
   if(WriteDynamic)then
-     open(unit=UNITTMP_, file=cOutputDir//'dgcpm_'//StringFileTime//'.dat')
+     open(unit=UNITTMP_, file=cOutputDir//'dgcpm_t'//StringFileTime//'.dat')
 
      ! Write data according to OutputType
      SELECT CASE (OutputType)
      CASE ('SHORT')
         write(UNITTMP_,*) 'TIME NTHETA NPHI N POT'
-        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) StringFileTime//'  ', CurrentTime
         write(UNITTMP_,*) nthetacells, nphicells
         write(UNITTMP_,*) mgridden
         write(UNITTMP_,*) mgridpot
      CASE ('VELOCITY')
         write(UNITTMP_,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
-        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) StringFileTime//'  ',CurrentTime
         write(UNITTMP_,*) nthetacells, nphicells
         write(UNITTMP_,*) mgridx
         write(UNITTMP_,*) mgridy
@@ -93,7 +93,7 @@ SUBROUTINE WRESULT()
         write(UNITTMP_,*) mgridvp
      CASE ('POTENTIAL')
         write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y POT CORO'
-        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) StringFileTime//'  ',CurrentTime
         write(UNITTMP_,*) nthetacells, nphicells
         write(UNITTMP_,*) 90.0 - vthetacells
         write(UNITTMP_,*) vphicells
@@ -103,7 +103,7 @@ SUBROUTINE WRESULT()
         write(UNITTMP_,*) mgridcoro
      CASE ('FLOWS')
         write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y OC VOL'
-        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) StringFileTime//'  ',CurrentTime
         write(UNITTMP_,*) nthetacells, nphicells
         write(UNITTMP_,*) 90.0 - vthetacells
         write(UNITTMP_,*) vphicells
@@ -128,7 +128,7 @@ SUBROUTINE WRESULT()
         write(UNITTMP_,*) mgridfluxa
         write(UNITTMP_,*) mgridn
         write(UNITTMP_,*) mgridvol
-        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) StringFileTime//'  ',CurrentTime
      END SELECT
     
      close(unit = UNITTMP_)
@@ -156,6 +156,7 @@ subroutine write_lslice
   logical, save :: IsFirstWrite=.true.
   character(len=12)  :: StrFmt1
   character(len=24)  :: StrFmt2
+  character(len=19)  :: StringFileTime
   character(len=100) :: NameFile
 
   ! Testing params:
@@ -164,11 +165,22 @@ subroutine write_lslice
   !------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+  ! Use TimeType to get a well-formatted date/time string.
+  TimeNow%Time = CurrentTime
+  call time_real_to_int(TimeNow)
+  
   if(IsFirstWrite)then
+     ! Create time stamp for file name.
+     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+          TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+          TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+          floor(TimeNow%FracSecond*1000.0)
+     
      ! Create file name and open.
      i = floor(radiusSlice)
      j = floor(100.0*radiusSlice-100.0*i)
-     write(NameFile, "(a,'/slice_',i1.1,'_',i2.2,'.txt')")trim(cOutputDir), i, j
+     write(NameFile, "(a,'/slice_L',i1.1,'p',i2.2,'_t',a,'.dat')")&
+          trim(cOutputDir), i, j, StringFileTime
      iUnitSlice = io_unit_new()
      open(iUnitSlice, FILE=NameFile, STATUS='REPLACE')
 
@@ -198,10 +210,6 @@ subroutine write_lslice
           (vrcells(iL+1)-vrcells(iL)) * &
           (radiusSlice-vrcells(iL)) + mgridden(iL,j)
   end do
-
-  ! Use TimeType to get a well-formatted date/time string.
-  TimeNow%Time = CurrentTime
-  call time_real_to_int(TimeNow)
 
   ! Write data to file.
   write(StrFmt2, '(a,i3.3,a)') '(i5,5i3,1x,i3.3,', nphicells, 'f9.3)'
@@ -233,6 +241,7 @@ subroutine write_mltslice
   integer :: i
   real    :: MltNow = 0.0
   character(len=1000) :: StringHeader
+  character(len=19)   :: StringFileTime
   character(len=12)   :: StrFmt1
   character(len=24)   :: StrFmt2
   character(len=100)  :: NameMltFiles(nMltSlice)
@@ -244,6 +253,10 @@ subroutine write_mltslice
   !------------------------------------------------------------------------
   call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+  ! Use TimeType to get a well-formatted date/time string.
+  TimeNow%Time = CurrentTime
+  call time_real_to_int(TimeNow)
+  
   ! Initiate files, write headers.
   if(.not. IsInitiated) then
      ! Slices should align with grid.
@@ -261,13 +274,22 @@ subroutine write_mltslice
      write(StrFmt1, '(a,i3,a)') '(a, ', nrcells, 'f7.3)'
      write(StringHeader,StrFmt1) 'L = ', vrcells
 
+     ! Create time stamp for file name.
+     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+          TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+          TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+          floor(TimeNow%FracSecond*1000.0)
+     
      ! Find slice indices, get file names, write headers.
      do i=1, nMltSlice
+        
         iMltIndex(i) = (nPhiCells/nMltSlice) * (i-1) + 1
         MltNow = vmltcells(iMltIndex(i))
-        write(NameMltFiles(i), "(a,'/MLT_',i2.2,'_',i2.2,'_t',i10.10,'.txt')") &
+
+        ! Create file name:
+        write(NameMltFiles(i), "(a,'/MLT_',i2.2,'p',i2.2,'_t',a,'.dat')") &
              cOutputDir, floor(MltNow), floor(100.0*(MltNow-floor(MltNow))), &
-             floor(CurrentTime-StartTime)
+             StringFileTime
         iUnitMlt(i) = io_unit_new()
         if(DoTestMe) write(*,*)'DGCPM: Opening file ', NameMltFiles(i)
         open(iUnitMlt(i), FILE=NameMltFiles(i), STATUS='REPLACE')
@@ -276,10 +298,6 @@ subroutine write_mltslice
      end do
      IsInitiated = .true.
   end if
-
-  ! Use TimeType to get a well-formatted date/time string.
-  TimeNow%Time = CurrentTime
-  call time_real_to_int(TimeNow)
 
   ! Write data to file.
   write(StrFmt2, '(a,i3.3,a)') '(i5,5i3,1x,i3.3,', nrcells, 'f9.3)'

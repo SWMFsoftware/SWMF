@@ -379,6 +379,7 @@ contains
        ! Finish Initialization     
        IsUninitialized = .false.
        WriteStatic = .true.
+
     end if
 
     if (debug .gt. 0) write(*,*) "Done with PS_init_session"
@@ -495,7 +496,7 @@ contains
     nkp=nint(10800./dt/2.)
 
     ! Get Kp value:
-    call getkpa
+    call getkpa()
 
     !  if (debug .gt. 0) write(*,*) "magconv"
     if (.not.(isCoupled)) call magconv()

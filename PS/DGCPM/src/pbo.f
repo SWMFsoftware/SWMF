@@ -338,16 +338,6 @@ c calculate filling and draining of flux tubes
       return
 
 cccccccccccccccccccccccccccccc
-ccc entry saveplasmasphere ccc
-cccccccccccccccccccccccccccccc
-
-      entry saveplasmasphere(filename)
-
-      call saveit(filename)
-
-      return
-
-cccccccccccccccccccccccccccccc
 ccc entry loadplasmasphere ccc
 cccccccccccccccccccccccccccccc
 
@@ -360,49 +350,6 @@ cccccccccccccccccccccccccccccc
       return
       end
 
-ccccccccccccccccccccccccc
-ccc subroutine saveit ccc
-ccccccccccccccccccccccccc
-
-      subroutine saveit(filename)
-
-      use ModIoUnit, ONLY: UnitTMP_
-      
-      use ModTimeDGCPM, only: currenttime
-      use ModSizeDGCPM, only: nthetacells, nphicells
-      use ModMainDGCPM, only: nthetacells, nphicells, mgridden,
-     *    mgridx, mgridy, mgridoc, mgridpot, mgridcoro, 
-     *    mgridvr, mgridvp, mgridsource, mgridn, mgridvol,
-     *    mgridfluxa, mgridfluxr, vthetacells, vphicells
-
-      implicit none
-    
-c Input: filename
-      character filename*80
-      
-      open(unit = UnitTMP_, file=filename, status = 'unknown',
-     *   form = 'formatted')
-      write(UnitTMP_,*) nthetacells, nphicells
-      write(UnitTMP_,*) 90.0-vthetacells
-      write(UnitTMP_,*) vphicells
-      write(UnitTMP_,*) mgridden
-      write(UnitTMP_,*) mgridx
-      write(UnitTMP_,*) mgridy
-      write(UnitTMP_,*) mgridoc
-      write(UnitTMP_,*) mgridpot
-      write(UnitTMP_,*) mgridcoro
-      write(UnitTMP_,*) mgridvr
-      write(UnitTMP_,*) mgridvp
-      write(UnitTMP_,*) mgridsource
-      write(UnitTMP_,*) mgridfluxr
-      write(UnitTMP_,*) mgridfluxa
-      write(UnitTMP_,*) mgridn
-      write(UnitTMP_,*) mgridvol
-      write(UnitTMP_,*) CurrentTime
-      close(unit = UnitTMP_)
-      
-      return
-      end
 
 ccccccccccccccccccccccccc
 ccc subroutine loadit ccc
