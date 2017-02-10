@@ -268,15 +268,8 @@ void RosinaSample::PrintOutputFile(int nfile) {
       const double rgTemperature=293.0;
       const double ngTemperature=293.0;
 
-      if (_H2O_SPEC_>=0) {
-        rgPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
-        ngPressure+=DensityNudeGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
-      }
-
-      if (_CO2_SPEC_>=0) {
-        rgPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_CO2_SPEC_)));
-        ngPressure+=DensityNudeGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
-      }
+      rgPressure=4.0*Kbol*rgTemperature*FluxRamGauge[spec+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
+      ngPressure=DensityNudeGauge[spec+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
 
       fprintf(fout,"%i %e %e %e %e %e %e %e %i %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies], rgPressure, ngPressure,
           Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
