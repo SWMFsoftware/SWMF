@@ -192,6 +192,7 @@ Time=2
 
 Ref=1{pgcc}@@(0+pleiades)
 Ref=1{icc}@@(0+pleiades)
+Ref=1{gcc}@@(0+pleiades)
 
 Compile=
 >>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
