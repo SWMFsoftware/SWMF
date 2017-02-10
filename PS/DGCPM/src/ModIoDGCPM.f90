@@ -34,17 +34,16 @@ Module ModIoDGCPM
 
   integer, parameter        :: iCharLen_     = 100
 
-  integer                   :: iOutputUnit_  != UnitTmp_
-  integer                   :: iInputUnit_   != UnitTmp_
-  integer                   :: iRestartUnit_ != UnitTmp_
-
   integer, parameter        :: nInputMaxLines = 10000
   integer                   :: nInputLines
   character (len=iCharLen_) :: cInputText(nInputMaxLines)
 
   character (len=iCharLen_) :: cInputFile = "input.dgcpm"
-  character (len=10) :: cOutputDir = "PS/Output/"
-  character (len= 9) :: cInputDir  = "PS/Input/"
+  character(len=*), parameter :: cOutputDir  = "PS/Output/"
+  character(len=*), parameter :: cInputDir   = "PS/Input/"
+  character(len=*), parameter :: cRestartIn  = "PS/restartIn/"
+  character(len=*), parameter :: cRestartOut = "PS/restartOUT/"
+  
 
   integer :: iUnitOut=STDOUT_
   integer, parameter :: lStringPrefix=6

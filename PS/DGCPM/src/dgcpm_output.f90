@@ -6,160 +6,135 @@
 !	WRESULT
 !
 ! Last Modified: December 2006, Mike Liemohn
+! Updated: dwelling, 2017 -> added date & times to file names.  
 !
 ! **********************************************************************
 !				WRESULT
 !       Routine prints all the results at time T after injection
 !***********************************************************************
-	SUBROUTINE WRESULT(IFIR)
+SUBROUTINE WRESULT()
 
-	use ModIoDGCPM
-        use ModTimeDGCPM
-        use ModMainDGCPM
-        use ModIoUnit, ONLY: UNITTMP_
-
-	implicit none
-
-	integer i,j,IFIR
-	INTEGER NTC
-	CHARACTER*5 ST1,ST3
-	CHARACTER*5 SUF
-	CHARACTER*2 ST2,SUF2
-	CHARACTER*1 SUF1
- 	CHARACTER*80 filename
-	SAVE NTC
-
-
-!......... Dynamic Data Output
-!.......Define parts of the output file names
-	IF (IFIR.EQ.1) THEN
-	  NTC=INT(NINT(TIME/TINT))
-	ELSE
-	  NTC=NTC+1
-	END IF
-
-        write(suf,'(i5.5)') ntc
-
-	ST1=NAME
-        
-        call getdensity(vthetacells,nthetacells,vphicells,nphicells,   &
-              dendgcpm)
+  use ModIoDGCPM
+  use ModTimeDGCPM
+  use ModMainDGCPM
+  use ModIoUnit, ONLY: UNITTMP_
+  use ModTimeConvert, ONLY: TimeType, time_real_to_int
+  
+  implicit none
+  
+  integer ::  i,j
+  character(len=19) :: StringFileTime
+  
+  type(TimeType) :: TimeNow
+  
+  ! Testing params:
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='wresult'
+  !-------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  
+  ! Create file time stamp:
+  TimeNow%Time = CurrentTime
+  call time_real_to_int(TimeNow)
+  write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+       TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+       TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+       floor(TimeNow%FracSecond*1000.0)
+  
+  ! Update density values:
+  call getdensity(vthetacells,nthetacells,vphicells,nphicells, dendgcpm)
  
-!........ Static File Selector Writing
-      filename=cOutputDir//ST1//'_dgcpm_static.dat'
+  ! "Static" files just overwrite previous result.
+  if(WriteStatic)then
+     SELECT CASE (MagneticType)
+     CASE ('DIPOLE')
+        IF (OutputType.ne.'OLD') then
+           open(unit=UNITTMP_, file=cOutputDir//'dgcpm_static.dat')
+           write(UNITTMP_,*) 'NTHETA NPHI THETA PHI X Y OC VOL'
+           write(UNITTMP_,*) nthetacells, nphicells
+           write(UNITTMP_,*) 90.0-vthetacells
+           write(UNITTMP_,*) vphicells
+           write(UNITTMP_,*) mgridx
+           write(UNITTMP_,*) mgridy
+           write(UNITTMP_,*) mgridoc
+           write(UNITTMP_,*) mgridvol
+           close(unit = UNITTMP_)
+        ENDIF
+     CASE ('T96')
+        write(*,*) 'NOT IMPLIMENTED - NO OUTPUT'
+     CASE ('SHUE')
+        write(*,*) 'NOT IMPLIMENTED - NO OUTPUT'
+     END SELECT
+     WriteStatic = .false.
+  endif
 
-      if(WriteStatic)then
-        SELECT CASE (MagneticType)
-            CASE ('DIPOLE')
-                IF (OutputType.ne.'OLD') then
-                    open(unit=UNITTMP_, file=filename, form='formatted')
-                    write(UNITTMP_,*) 'NTHETA NPHI THETA PHI X Y OC VOL'
-                    write(UNITTMP_,*) nthetacells, nphicells
-                    write(UNITTMP_,*) 90.0-vthetacells
-                    write(UNITTMP_,*) vphicells
-                    write(UNITTMP_,*) mgridx
-                    write(UNITTMP_,*) mgridy
-                    write(UNITTMP_,*) mgridoc
-                    write(UNITTMP_,*) mgridvol
-                    close(unit = UNITTMP_)
-                ENDIF
-             CASE ('T96')
-                write(*,*) 'NOT IMPLIMENTED - NO OUTPUT'
-             CASE ('SHUE')
-                write(*,*) 'NOT IMPLIMENTED - NO OUTPUT'
-          END SELECT
-          WriteStatic = .false.
-        endif
+  
+  ! "dynamic" files are time-accurate files.
+  if(WriteDynamic)then
+     open(unit=UNITTMP_, file=cOutputDir//'dgcpm_'//StringFileTime//'.dat')
 
-        filename=cOutputDir//ST1//'_dgcpm_dynamic_'//SUF//'.dat'
-
-!........... Type Selection
-
-
-      if(WriteDynamic)then
-        open(unit=UNITTMP_, file=filename, form = 'formatted')
-        
-        SELECT CASE (OutputType)
-            CASE ('SHORT')
-                write(UNITTMP_,*) 'TIME NTHETA NPHI N POT'
-                write(UNITTMP_,*) CurrentTime
-                write(UNITTMP_,*) nthetacells, nphicells
-                write(UNITTMP_,*) mgridden
-                write(UNITTMP_,*) mgridpot
-            CASE ('VELOCITY')
-                write(UNITTMP_,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
-                write(UNITTMP_,*) CurrentTime
-                write(UNITTMP_,*) nthetacells, nphicells
-                write(UNITTMP_,*) mgridx
-                write(UNITTMP_,*) mgridy
-                write(UNITTMP_,*) mgridden
-                write(UNITTMP_,*) mgridpot
-                write(UNITTMP_,*) mgridvr
-                write(UNITTMP_,*) mgridvp
-            CASE ('POTENTIAL')
-                write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y POT CORO'
-                write(UNITTMP_,*) CurrentTime
-                write(UNITTMP_,*) nthetacells, nphicells
-                write(UNITTMP_,*) 90.0 - vthetacells
-                write(UNITTMP_,*) vphicells
-                write(UNITTMP_,*) mgridx
-                write(UNITTMP_,*) mgridy
-                write(UNITTMP_,*) mgridpot
-                write(UNITTMP_,*) mgridcoro
-            CASE ('FLOWS')
-                write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y OC VOL'
-                write(UNITTMP_,*) CurrentTime
-                write(UNITTMP_,*) nthetacells, nphicells
-                write(UNITTMP_,*) 90.0 - vthetacells
-                write(UNITTMP_,*) vphicells
-                write(UNITTMP_,*) mgridx
-                write(UNITTMP_,*) mgridy
-                write(UNITTMP_,*) mgridfluxr
-                write(UNITTMP_,*) mgridfluxa
-            CASE ('OLD')
-                write(UNITTMP_,*) nthetacells, nphicells
-                write(UNITTMP_,*) 90.0-vthetacells
-                write(UNITTMP_,*) vphicells
-                write(UNITTMP_,*) mgridden
-                write(UNITTMP_,*) mgridx
-                write(UNITTMP_,*) mgridy
-                write(UNITTMP_,*) mgridoc
-                write(UNITTMP_,*) mgridpot
-                write(UNITTMP_,*) mgridcoro
-                write(UNITTMP_,*) mgridvr
-                write(UNITTMP_,*) mgridvp
-                write(UNITTMP_,*) mgridsource
-                write(UNITTMP_,*) mgridfluxr
-                write(UNITTMP_,*) mgridfluxa
-                write(UNITTMP_,*) mgridn
-                write(UNITTMP_,*) mgridvol
-                write(UNITTMP_,*) CurrentTime
-        END SELECT
+     ! Write data according to OutputType
+     SELECT CASE (OutputType)
+     CASE ('SHORT')
+        write(UNITTMP_,*) 'TIME NTHETA NPHI N POT'
+        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) nthetacells, nphicells
+        write(UNITTMP_,*) mgridden
+        write(UNITTMP_,*) mgridpot
+     CASE ('VELOCITY')
+        write(UNITTMP_,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
+        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) nthetacells, nphicells
+        write(UNITTMP_,*) mgridx
+        write(UNITTMP_,*) mgridy
+        write(UNITTMP_,*) mgridden
+        write(UNITTMP_,*) mgridpot
+        write(UNITTMP_,*) mgridvr
+        write(UNITTMP_,*) mgridvp
+     CASE ('POTENTIAL')
+        write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y POT CORO'
+        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) nthetacells, nphicells
+        write(UNITTMP_,*) 90.0 - vthetacells
+        write(UNITTMP_,*) vphicells
+        write(UNITTMP_,*) mgridx
+        write(UNITTMP_,*) mgridy
+        write(UNITTMP_,*) mgridpot
+        write(UNITTMP_,*) mgridcoro
+     CASE ('FLOWS')
+        write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y OC VOL'
+        write(UNITTMP_,*) CurrentTime
+        write(UNITTMP_,*) nthetacells, nphicells
+        write(UNITTMP_,*) 90.0 - vthetacells
+        write(UNITTMP_,*) vphicells
+        write(UNITTMP_,*) mgridx
+        write(UNITTMP_,*) mgridy
+        write(UNITTMP_,*) mgridfluxr
+        write(UNITTMP_,*) mgridfluxa
+     CASE ('OLD')
+        write(UNITTMP_,*) nthetacells, nphicells
+        write(UNITTMP_,*) 90.0-vthetacells
+        write(UNITTMP_,*) vphicells
+        write(UNITTMP_,*) mgridden
+        write(UNITTMP_,*) mgridx
+        write(UNITTMP_,*) mgridy
+        write(UNITTMP_,*) mgridoc
+        write(UNITTMP_,*) mgridpot
+        write(UNITTMP_,*) mgridcoro
+        write(UNITTMP_,*) mgridvr
+        write(UNITTMP_,*) mgridvp
+        write(UNITTMP_,*) mgridsource
+        write(UNITTMP_,*) mgridfluxr
+        write(UNITTMP_,*) mgridfluxa
+        write(UNITTMP_,*) mgridn
+        write(UNITTMP_,*) mgridvol
+        write(UNITTMP_,*) CurrentTime
+     END SELECT
     
-        close(unit = UNITTMP_)
-        endif
+     close(unit = UNITTMP_)
+  endif
   
-      if(WriteRestart)then
-        filename=cOutputDir//ST1//'_restart.dat'
-        open(unit=UNITTMP_, file=filename, form = 'formatted')
-
-            write(UNITTMP_,*) nthetacells, nphicells
-            write(UNITTMP_,*) vphicells
-            write(UNITTMP_,*) mgridden
-            write(UNITTMP_,*) mgridx
-            write(UNITTMP_,*) mgridy
-            write(UNITTMP_,*) mgridoc
-            write(UNITTMP_,*) mgridpot
-            write(UNITTMP_,*) mgridvr
-            write(UNITTMP_,*) mgridvp
-            write(UNITTMP_,*) mgridn
-            write(UNITTMP_,*) mgridvol
-
-        close(unit = UNITTMP_)
-      endif
-  
-      RETURN
-      END
+END SUBROUTINE WRESULT
 
 !=============================================================================
 subroutine write_lslice

@@ -111,6 +111,7 @@ contains
          select case(NameCommand)
          case("#TIMESTEP")
             call read_var('DtStep', DT)
+
          case("#TIMING")
             call read_var('DtStep',DT)
             call read_var('TMAX', Tmax)
@@ -137,30 +138,34 @@ contains
 
          case("#NAME")
             call read_var('Name', Name)
+
          case("#SHUE")
             call read_var('UseShue', UseShue)
+
          case("#OUTPUT")
             call read_var('WriteStatic',WriteStatic)
             call read_var('WriteDynamic',WriteDynamic)
             call read_var('OutputInterval',TINT)
             call read_var('OutputType', OutputType)
             call read_var('MagneticType', MagneticType)
+
          case("#MLTSLICE")
             DoMltSlice=.true.
             call read_var('nMltSlice', nMltSlice)
             call read_var('DtMltSlice', DtMltSlice)
 
-         case("#RESTART")
-            call read_var('WriteRestart', WriteRestart)
          case("#LOG")
             call read_var('WriteLogFile', WriteLogFile)
+
          case("#FILLING")
             call read_var('EmptyPeriodClosed', EmptyPeriodClosed)
             call read_var('EmptyPeriodOpen', EmptyPeriodOpen)
             call read_var('FillRate', FillDays) 
             call read_var('FluxMax', FluxMax)
+
          case("#TESTS")
             call read_var('TestFill', TestFill)
+
          case default
             if(iProc==0) then
                write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
@@ -398,7 +403,7 @@ contains
 
     !--------------------------------------------------------------------------
 
-    call wresult(0)
+    call wresult()
 
     ! Close files:
     close(iUnitSlice)
@@ -415,16 +420,31 @@ contains
 
   subroutine PS_save_restart(tSimulation)
 
-    use ModProcPS, ONLY:  nProc
+    use ModIoUnit,   ONLY: UNITTMP_
+    use ModIoDGCPM,  ONLY: cRestartOut
+    use ModMainDGCPM
 
     !INPUT PARAMETERS:
     real,     intent(in) :: tSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PS_save_restart'
+    !--------------------------------------------------------------------------
 
-    ! I don't know how to restart...
-
-    RETURN
+    open(unit=UNITTMP_, form = 'formatted', &
+         file=cRestartOut//'dgcpm_restart.dat')     
+    write(UNITTMP_,*) nthetacells, nphicells
+    write(UNITTMP_,*) vphicells
+    write(UNITTMP_,*) mgridden
+    write(UNITTMP_,*) mgridx
+    write(UNITTMP_,*) mgridy
+    write(UNITTMP_,*) mgridoc
+    write(UNITTMP_,*) mgridpot
+    write(UNITTMP_,*) mgridvr
+    write(UNITTMP_,*) mgridvp
+    write(UNITTMP_,*) mgridn
+    write(UNITTMP_,*) mgridvol
+    
+    close(unit = UNITTMP_)
 
   end subroutine PS_save_restart
 
@@ -483,7 +503,7 @@ contains
     call thermal
 
     !  if (debug .gt. 0) write(*,*) "wresult"
-    if (i3.eq.nst) call wresult(1)
+    if (i3.eq.nst) call wresult()
 
     ! Update timing.
     tSimulation = tSimulation+2.*dt
@@ -496,7 +516,7 @@ contains
 
     ! General Output Writing
     if (mod(tSimulation, tint) < 1E-5) then
-       call wresult(0)
+       call wresult()
     end if
 
     ! Slice file writing.

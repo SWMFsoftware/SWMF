@@ -163,12 +163,12 @@ SUBROUTINE THERMAL
 
   implicit none
 
-  integer i,j,i1,j1,l,jj,jjj,j2,ier,ntimestep,n,testi,testj
-  real EO,FAC,FACI
-  real delt, par(2)
-  real chi1, kpinit, dtimestep
-  character*80 filename 
-  integer ierror
+  integer :: i,j,i1,j1,l,jj,jjj,j2,ier,ntimestep,n,testi,testj
+  real :: EO,FAC,FACI
+  real :: delt, par(2)
+  real :: chi1, kpinit, dtimestep
+  character(len=100) ::  filename =''
+  integer :: ierror
 
   par(1)=-1.0
   par(2)=-1.0
@@ -198,8 +198,9 @@ SUBROUTINE THERMAL
   delt=2*DT*dtimestep
   If (ithermfirst.eq.2) then
      If (itherminit.eq.1) then  ! Read initial plasmasphere from file
-        filename=cInputDir//name//'_dgcpm.in'
-        if (debug .gt. 0) write(*,*) 'Reading in plasmasphere file: ',filename
+        filename=cRestartIn//'dgcpm_restart.dat'
+        if (debug .gt. 0) write(*,*) &
+             'Reading in plasmasphere file: ', trim(filename)
         call loadplasmasphere(filename)
         call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
              dendgcpm)
