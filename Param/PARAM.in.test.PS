@@ -2,8 +2,8 @@
 T
 
 #PROGRESS
-100			DnShowProgressShort
-1000			DnShowProgressLong
+100		DnShowProgressShort
+1000		DnShowProgressLong
 
 #DESCRIPTION
 PS:DGCPM Stand-alone test.
@@ -12,53 +12,58 @@ PS:DGCPM Stand-alone test.
 EARTH
 
 #SAVERESTART
-F
+T               DoSaveRestart
+-1              DnSaveRestart
+1800            DtSaveRestart
+
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T		DoTimeAccurate
 
 #STARTTIME
-2001			iYear
-10			iMonth
-21			iDay
+2001		iYear
+10		iMonth
+21		iDay
 00  	 	iHour
-00			iMinute
-0			iSecond
-0.0			FracSecond
+00		iMinute
+0		iSecond
+0.0		FracSecond
 
 #IDEALAXES
 ! align rotation and magnetic axes with z axis
 
 #ROTATION
-F                       UseRotation
+F               UseRotation
 
 
 #BEGIN_COMP PS #############################################################
 
 #TIMESTEP
-20.0			DtStep
+20.0		DtStep
 
 #KP
-3                       IKP
-
-#NAME
-a1001                  NAME
+const           NameSourceKp
+1.0             ConstKp
 
 #OUTPUT
-T			WriteStatic
-T			WriteDynamic
+T		WriteStatic
+T		WriteDynamic
 600.		OutputInterval
-SHORT			OutputType
+SHORT		OutputType
 DIPOLE		MagneticType
 
+#MLTSLICE
+4	        nMltSlice
+300.0	        DtMltSlice
+
 #LOG
-T		 	WriteLogFile
+T		WriteLogFile
 
 #END_COMP PS ###############################################################
 
 #STOP
--1                      MaxIteration
-1800.0                 tSimulationMax
+-1              MaxIteration
+3600.0          tSimulationMax
 
 #END
 
