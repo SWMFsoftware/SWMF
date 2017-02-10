@@ -994,6 +994,8 @@ Ref=1{gcc}@@(0+valeriy)
 Ref=3{gcc}@@(0+stampede)
 Ref=4{icc}@@(0+stampede)
 
+Ref=5{icc}@@(0+pleiades)
+
 
 Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
 
