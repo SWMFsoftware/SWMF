@@ -36,7 +36,6 @@ OBJECTS = \
     dgcpm_coefficients.o\
     dgcpm_output.o\
     pbo.o\
-    dgcpm_stop.o\
     dgcpm_test.o\
     PS_wrapper.o\
     dgcpm_log.o
