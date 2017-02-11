@@ -41,7 +41,7 @@ Module ModIoDGCPM
   character (len=iCharLen_) :: cInputFile = "input.dgcpm"
   character(len=*), parameter :: cOutputDir  = "PS/Output/"
   character(len=*), parameter :: cInputDir   = "PS/Input/"
-  character(len=*), parameter :: cRestartIn  = "PS/restartIn/"
+  character(len=*), parameter :: cRestartIn  = "PS/restartIN/"
   character(len=*), parameter :: cRestartOut = "PS/restartOUT/"
   
 
