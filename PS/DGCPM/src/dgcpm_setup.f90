@@ -201,7 +201,7 @@ SUBROUTINE THERMAL
         filename=cRestartIn//'dgcpm_restart.dat'
         if (debug .gt. 0) write(*,*) &
              'Reading in plasmasphere file: ', trim(filename)
-        call loadplasmasphere(filename)
+        call load_restart_file(trim(filename))
         call getdensity(vthetacells,nthetacells,vphicells,nphicells, &
              dendgcpm)
         delt=0.        

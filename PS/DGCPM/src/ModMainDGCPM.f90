@@ -47,7 +47,7 @@ Module ModMainDGCPM
   real :: mgrider(nthetacells,nphicells)
   real :: mgridep(nthetacells,nphicells)
   real :: mgridhalf(nthetacells,nphicells)
-  real delr, delphi
+  real :: delr, delphi
   real :: CrossPotential=0.0
   
   ! Test Variables for WEIMER Errors.    

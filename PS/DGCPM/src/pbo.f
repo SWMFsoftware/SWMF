@@ -337,87 +337,7 @@ c calculate filling and draining of flux tubes
 
       return
 
-cccccccccccccccccccccccccccccc
-ccc entry loadplasmasphere ccc
-cccccccccccccccccccccccccccccc
-
-      entry loadplasmasphere(filename)
-
-      call loadit(filename)
-
-      call denton()
-
-      return
       end
-
-
-ccccccccccccccccccccccccc
-ccc subroutine loadit ccc
-ccccccccccccccccccccccccc
-
-      subroutine loadit(filename)
-
-      use ModIoUnit, ONLY: UnitTMP_
-      
-      use ModSizeDGCPM, only: nthetacells, nphicells
-      use ModMainDGCPM, only: vthetacells, vphicells, mgridden,
-     *     mgridx, mgridy, mgridoc
-        
-c Input: filename
-      character filename*80
-
-c Internal: nthetacells1, nphicells1 array index
-      integer nthetacells1, nphicells1
-      integer nthetacells2, nphicells2
-c      parameter (nthetacells2 = 200, nphicells2 = 720)
-ccc Set the next line to match the input file you are using:
-      parameter (nthetacells2 = 60, nphicells2 = 120)
-c Internal: vthetacells1, vphicells1 in degrees 
-      real vthetacells1(nthetacells2), vphicells1(nphicells2)
-c Internal: mgridden1 in particles / m**3
-      real mgridden1(nthetacells2,nphicells2)
-c Internal: mgridx1, mgridy1, in Re
-      real mgridx1(nthetacells2,nphicells2)
-      real mgridy1(nthetacells2,nphicells2)
-c Internal: mgridoc1, open(0) or closed(1) table
-      real mgridoc1(nthetacells2,nphicells2)
-
-      open(unit = UnitTMP_, file=filename, status = 'old',
-     *   form = 'formatted')
-      read(UnitTMP_,*) nthetacells1, nphicells1
-
-      if (nthetacells1.ne.nthetacells2.or.nphicells1.ne.nphicells2) then
-       print*,'File size mismatch in subroutine Loadit'
-       stop
-      endif
-
-      read(UnitTMP_,*) vthetacells1
-      read(UnitTMP_,*) vphicells1
-      read(UnitTMP_,*) mgridden1
-      read(UnitTMP_,*) mgridx1
-      read(UnitTMP_,*) mgridy1
-      read(UnitTMP_,*) mgridoc1
-      close(unit = UnitTMP_)
-
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
-     *   nphicells1,mgridden1,vthetacells,nthetacells,vphicells,
-     *   nphicells,mgridden)
-
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
-     *   nphicells1,mgridx1,vthetacells,nthetacells,vphicells,
-     *   nphicells,mgridx)
-
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
-     *   nphicells1,mgridy1,vthetacells,nthetacells,vphicells,
-     *   nphicells,mgridy)
-
-      call interpol2dpolar(vthetacells1,nthetacells1,vphicells1,
-     *   nphicells1,mgridoc1,vthetacells,nthetacells,vphicells,
-     *   nphicells,mgridoc)
-
-      return
-      end
-
 ccccccccccccccccccccccccccc
 ccc function saturation ccc
 ccccccccccccccccccccccccccc
@@ -888,28 +808,6 @@ ccccccccccccccccccccccccccccc
         mgridn(i,j) = 100.0
         mgridden(i,j) = 0.0
        end if
-      enddo
-
-      return
-      end
-
-ccccccccccccccccccccccccc
-ccc subroutine denton ccc
-ccccccccccccccccccccccccc
-
-      subroutine denton()
-
-      use ModSizeDGCPM, only: nthetacells, nphicells
-      use ModMainDGCPM, only: mgridden, mgridvol, mgridoc, mgridn
-        
-      integer i, j
-
-      do i = 1, nthetacells
-       do j = 1, nphicells
-        if (mgridoc(i,j).gt.0.999) then
-         mgridn(i,j) = mgridden(i,j) * mgridvol(i,j)
-        endif
-       enddo
       enddo
 
       return
