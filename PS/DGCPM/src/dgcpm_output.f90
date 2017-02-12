@@ -36,7 +36,7 @@ SUBROUTINE WRESULT()
   ! Create file time stamp:
   TimeNow%Time = CurrentTime
   call time_real_to_int(TimeNow)
-  write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+  write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_",i3.3)') &
        TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
        TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
        floor(TimeNow%FracSecond*1000.0)
@@ -79,7 +79,7 @@ SUBROUTINE WRESULT()
   CASE ('SHORT')
      write(UNITTMP_,*) 'I J N POT'
      do j=1, nPhiCells; do i=1, nThetaCells
-        write(UnitTMP_, '( 2(1x,i4) 2(1x, E14.7))') &
+        write(UnitTMP_, '( 2(1x,i4), 2(1x, E14.7))') &
              i, j, mgridden(i,j), mgridpot(i,j)
      end do; end do
      
@@ -164,7 +164,7 @@ subroutine write_lslice
   
   if(IsFirstWrite)then
      ! Create time stamp for file name.
-     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_",i3.3)') &
           TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
           TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
           floor(TimeNow%FracSecond*1000.0)
@@ -268,7 +268,7 @@ subroutine write_mltslice
      write(StringHeader,StrFmt1) 'L = ', vrcells
 
      ! Create time stamp for file name.
-     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+     write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_",i3.3)') &
           TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
           TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
           floor(TimeNow%FracSecond*1000.0)
