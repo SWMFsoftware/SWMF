@@ -259,11 +259,14 @@ void RosinaSample::PrintOutputFile(int nfile) {
     int LocationCode;
 
 
-    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
+    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Total Ram Gauge Pressure\", \"Total Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
 
     for (int i=0;i<nPoints;i++) {
       double rgPressure=0.0;
       double ngPressure=0.0;
+
+      double rgTotalPressure=0.0;
+      double ngTotalPressure=0.0;
 
       const double rgTemperature=293.0;
       const double ngTemperature=293.0;
@@ -271,7 +274,18 @@ void RosinaSample::PrintOutputFile(int nfile) {
       rgPressure=4.0*Kbol*rgTemperature*FluxRamGauge[spec+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
       ngPressure=DensityNudeGauge[spec+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
 
-      fprintf(fout,"%i %e %e %e %e %e %e %e %i %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies], rgPressure, ngPressure,
+      if (_H2O_SPEC_>=0) {
+        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
+        ngTotalPressure+=DensityNudeGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
+      }
+
+      if (_CO2_SPEC_>=0) {
+        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_CO2_SPEC_)));
+        ngTotalPressure+=DensityNudeGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
+      }
+
+      fprintf(fout,"%i %e %e %e %e %e %e %e %e %e %i %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies],
+          rgPressure, ngPressure, rgTotalPressure, ngTotalPressure,
           Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
     }
 
