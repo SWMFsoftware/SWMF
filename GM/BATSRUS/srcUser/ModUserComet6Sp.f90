@@ -168,7 +168,7 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-    do iBoundary=1,6
+    do iBoundary=xMinBc_,zMaxBc_
        FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary) = cTiny8
        FaceState_VI(rhoHp_,iBoundary) = SW_rho
     end do
@@ -176,8 +176,10 @@ contains
     FaceState_VI(rhoH2Op_,body1_) = BodyRho_I(H2Op_)
     FaceState_VI(rhoHp_  ,body1_) = cTiny
 
-    CellState_VI(SpeciesFirst_:SpeciesLast_,:) = &
-         FaceState_VI(SpeciesFirst_:SpeciesLast_,:)
+    CellState_VI(SpeciesFirst_:SpeciesLast_,SolidBc_:ExtraBc_) = &
+         FaceState_VI(SpeciesFirst_:SpeciesLast_,SolidBc_:ExtraBc_)
+    CellState_VI(SpeciesFirst_:SpeciesLast_,Coord1MinBc_:Coord3MaxBc_) = &
+         FaceState_VI(SpeciesFirst_:SpeciesLast_,xMinBc_:zMaxBc_)
 
     kin=kin_cc*1E-6
     Unr=Unr_km*1E3
