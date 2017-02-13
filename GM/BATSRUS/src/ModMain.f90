@@ -339,11 +339,6 @@ module ModMain
   ! ModUserMercury.f90.
   logical :: UseResistivePlanet = .false. 
 
-  !hyzhou:
-  ! Use constant density and pressure inside body. Used in ModUser.f90
-  logical :: UsePlanetDensity = .false.
-  logical :: UsePlanetPressure = .false.
-
   ! use particles in the simulation
   logical:: UseParticles = .false.
 
