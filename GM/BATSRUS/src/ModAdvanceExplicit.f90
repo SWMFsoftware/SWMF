@@ -70,8 +70,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
            call calc_face_value(.true.,iBlock)
            call timing_stop('calc_face_bfo')
 
-           if(body_BLK(iBlock))call &
-                set_face_boundary(iBlock, Time_Simulation, .true.)
+           if(body_BLK(iBlock)) &
+              call set_face_boundary(iBlock, Time_Simulation, .true.)
 
            ! Compute interface fluxes for each fine grid cell face at
            ! block edges with resolution changes.
@@ -117,7 +117,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         call timing_stop('calc_facevalues')
 
         if(body_BLK(iBlock)) &
-             call set_face_boundary(iBlock, Time_Simulation,.false.)
+           call set_face_boundary(iBlock, Time_Simulation,.false.)
 
         if(.not.DoInterpolateFlux)then
            ! Compute interface fluxes for each cell.
@@ -242,7 +242,7 @@ subroutine update_secondbody
   use ModConst,    ONLY: cTwoPi
   use ModPhysics,  ONLY: xBody2,yBody2,OrbitPeriod,PhaseBody2,DistanceBody2
   use ModMessagePass,      ONLY: exchange_messages
-  use ModBoundaryGeometry, ONLY: set_boundary_cells, fix_block_geometry
+  use ModBoundaryGeometry, ONLY: fix_block_geometry
   implicit none
 
   integer :: iBlock
@@ -253,7 +253,6 @@ subroutine update_secondbody
   yBody2 = DistanceBody2*sin(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
 
   do iBlock = 1, nBlock
-     call set_boundary_cells(iBlock)
      call fix_block_geometry(iBlock) ! This might not work together with solid
   end do
 
