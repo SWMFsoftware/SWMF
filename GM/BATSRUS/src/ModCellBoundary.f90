@@ -38,7 +38,7 @@ contains
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
-         far_field_BCs_BLK, MinFaceBoundary, MaxFaceBoundary, XyzMin_D
+         far_field_BCs_BLK, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
@@ -130,6 +130,7 @@ contains
 
     allocate(SymmCoeff_V(nVarState))
 
+
     ! Loop through all sides
     do iSide = 1, 2*nDim
 
@@ -137,10 +138,8 @@ contains
        ! Also skips periodic boundaries
        if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
 
-       ! Skip boundaries handled by ModFaceBoundary
-       ! but not for semi-implicit scheme
-       if(.not.present(iImplBlock) .and. &
-            iSide >= MinFaceBoundary .and. iSide <= MaxFaceBoundary) CYCLE
+       ! Apply cell BC when TypeBc_I(1:6) is set
+       if(TypeBc_I(iSide)=='none') CYCLE
 
        ! Do not apply cell boundary conditions at the pole 
        ! This is either handled by message passing or supercell
