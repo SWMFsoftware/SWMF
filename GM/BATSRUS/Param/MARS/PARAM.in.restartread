@@ -73,7 +73,7 @@ rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx
 #INNERBOUNDARY
 user			TypeBcInner
 
-OUTERBOUNDARY
+#BOXBOUNDARY
 outflow                 TypeBcEast
 inflow                  TypeBcWest
 fixed                   TypeBcSouth
