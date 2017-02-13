@@ -80,13 +80,16 @@ T                       UseBody
 1			nStage
 0.80			CflExlp
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 outflow			TypeBcEast
 vary			TypeBcWest
 float			TypeBcSouth
 float			TypeBcNorth
 float			TypeBcBottom
 float			TypeBcTop
+
+#INNERBOUNDARY
+ionosphere		TypeBcIn
 
 #SCHEME
 1			nOrder
