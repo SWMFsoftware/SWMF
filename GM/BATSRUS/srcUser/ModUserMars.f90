@@ -850,7 +850,7 @@ contains
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
-    do iBoundary=1,6
+    do iBoundary=xMinBc_,zMaxBc_
        FaceState_VI(rhoHp_,iBoundary)    = SW_rho
        FaceState_VI(rhoO2p_,iBoundary)   = cTiny8
        FaceState_VI(rhoOp_,iBoundary)    = cTiny8
@@ -865,10 +865,15 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
-    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
-    do iBoundary=body1_,6  
+    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)    
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
+    do iBoundary=body1_,ExtraBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
+    end do
+    do iBoundary=Coord1MinBc_,Coord3MaxBc_
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
     end do
 
     UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
@@ -1281,7 +1286,7 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain,       ONLY: UseRotatingBc, ExtraBc_, Body1_
+    use ModMain,       ONLY: UseRotatingBc, ExtraBc_, Body1_, xMinBc_
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
     use ModPhysics,    ONLY: SW_rho, FaceState_VI
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iBoundary
@@ -1296,12 +1301,11 @@ contains
     !--------------------------------------------------------------------------
 
     if(iBoundary == ExtraBc_)then
-       VarsGhostFace_V = FaceState_VI(:,1)
+       VarsGhostFace_V = FaceState_VI(:,xMinBc_)
        RETURN
     elseif(iBoundary /= Body1_)then
        call stop_mpi(NameSub//' invalid iBoundary value')
     end if
-
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1347,14 +1351,15 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
-
+    use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, x2
+    use ModBoundaryGeometry, ONLY: iBoundary_GB 
 
     integer, intent(in):: iBlock
 
     character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+    where (Xyz_DGB(x_,:,:,:,iBlock) > x2) &
+         iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
   end subroutine user_set_boundary_cells
 
