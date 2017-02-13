@@ -1779,7 +1779,8 @@ contains
   !=======================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
     integer:: i, j, k
@@ -1788,14 +1789,14 @@ contains
     !---------------------------------------------------------------------
     if(rHelioPause > 0.0)then
        if(TempHelioPause < 0.0) RETURN   ! restart files are not yet read
-       IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
-            r_BLK(:,:,:,iBlock) < rHelioPause .or. &
+       where(r_BLK(:,:,:,iBlock) < rHelioPause .or. &
             State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
-            > TempHelioPause
+            > TempHelioPause) &
+            iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
        ! Set internal state to "body" values with high ion temperature
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          if(IsBoundaryCell_GI(i,j,k,ExtraBc_))then
+          if(iBoundary_GB(i,j,k,iBlock)==ExtraBc_)then
              State_VGB(:,i,j,k,iBlock) = CellState_VI(:,body1_)
              ! Make sure the temperature is higher than the heliopause threshold
              State_VGB(p_,i,j,k,iBlock) = &
@@ -1807,10 +1808,10 @@ contains
     end if
 
     if(rCylinder > 0.0)then
-       IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
-            Xyz_DGB(x_,:,:,:,iBlock)**2 + &
+       where(Xyz_DGB(x_,:,:,:,iBlock)**2 + &
             Xyz_DGB(y_,:,:,:,iBlock)**2 < rCylinder**2 .and. &
-            abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder 
+            abs(Xyz_DGB(z_,:,:,:,iBlock)) < zCylinder) &
+            iBoundary_GB(:,:,:,iBlock) = ExtraBc_
        RETURN
     end if
 
@@ -1841,7 +1842,7 @@ contains
        else
           r = rCrescent*max(0.0, 1.5 - x/xCrescentCenter)
        end if
-       IsBoundaryCell_GI(i,j,k,ExtraBc_) = d < r
+       if( d < r ) iBoundary_GB(i,j,k,iBlock) = ExtraBc_
     end do; end do; end do
 
   end subroutine user_set_boundary_cells

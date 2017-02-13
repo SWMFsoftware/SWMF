@@ -1644,7 +1644,8 @@ contains
     use ModPhysics, ONLY: rBody, No2Io_V, UnitB_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
-    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
@@ -1698,7 +1699,7 @@ contains
 
     if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(UnitB_)
 
-    if(.not.IsBoundaryBlock_IB(body1_, iBlock)) RETURN
+    if(.not. any(iBoundary_GB(:,:,:,iBlock)==body1_)) RETURN
 
     ! Reflect at surface of the body
     do i=0,nI
