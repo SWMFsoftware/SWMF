@@ -182,10 +182,6 @@ F			UseRhoRatioLimiter
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#FACEBOUNDARY
-6			MinBoundary
--2			MaxBoundary
-
 #OUTERBOUNDARY
 user			TypeBcEast   user for spherical and user_outerbcs
 float			TypeBcWest
