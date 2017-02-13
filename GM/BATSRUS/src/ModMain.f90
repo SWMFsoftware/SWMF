@@ -117,10 +117,18 @@ module ModMain
   integer, parameter :: body1_   = -1
   integer, parameter :: body2_   = -2
   integer, parameter :: ExtraBc_ =  0
-  integer, parameter :: Solid_   = -3
+  integer, parameter :: SolidBc_ = -3
+  integer, parameter :: &
+       Coord1MinBc_ = 1, Coord1MaxBc_ = 2, &
+       Coord2MinBc_ = 3, Coord2MaxBc_ = 4, &
+       Coord3MinBc_ = 5, Coord3MaxBc_ = 6, &
+       xMinBc_ =  7, xMaxBc_ =  8, &
+       yMinBc_ =  9, yMaxBc_ = 10, &
+       zMinBc_ = 11, zMaxBc_ = 12
+  integer, parameter :: MinBoundary_ = SolidBc_, MaxBoundary_ = zMaxBc_
 
   ! Inner and outer boundary conditions
-  character (len=20) :: TypeBc_I(Solid_:6) = 'float'
+  character (len=20) :: TypeBc_I(SolidBc_:12) = 'none'
 
   ! Logicals for bodies
   logical:: Body1    = .false.
@@ -135,7 +143,7 @@ module ModMain
 
   ! Number of geometric based refinements performed
   ! (needed by the CCMC user module only!)
-  integer:: nRefineLevel = 0
+  integer :: nRefineLevel = 0
 
   ! nBlockMax is a maximum block index over all processors
   integer :: nBlockMax
@@ -330,6 +338,11 @@ module ModMain
   ! Use resistivity planetary interior. It may be set to true in the
   ! ModUserMercury.f90.
   logical :: UseResistivePlanet = .false. 
+
+  !hyzhou:
+  ! Use constant density and pressure inside body. Used in ModUser.f90
+  logical :: UsePlanetDensity = .false.
+  logical :: UsePlanetPressure = .false.
 
   ! use particles in the simulation
   logical:: UseParticles = .false.
