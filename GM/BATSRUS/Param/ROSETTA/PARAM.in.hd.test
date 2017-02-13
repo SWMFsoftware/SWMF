@@ -103,6 +103,9 @@ fixed			TypeBcNorth
 fixed			TypeBcBottom
 fixed			TypeBcTop
 
+#INNERBOUNDARY
+ionosphere		TypeBc_Inner
+
 #SCHEME
 1			nOrder
 Linde			TypeFlux

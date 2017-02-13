@@ -106,6 +106,9 @@ solarwind		UseSwBC
  0.0                    SW_By_dim [nT]        |
  0.0                    SW_Bz_dim [nT]       /
 
+#INNERBOUNDARY
+ionosphere		TypeBcInner
+
 #BOXBOUNDARY
 user                   TypeBcEast
 user                   TypeBcWest
