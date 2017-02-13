@@ -12,7 +12,7 @@ subroutine MH_set_parameters(TypeAction)
        read_b0_param, init_mod_b0
   use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
-       MinFaceBoundary, MaxFaceBoundary, CoordDimMin_D, CoordDimMax_D, &
+       CoordDimMin_D, CoordDimMax_D, &
        read_gen_radial_grid, set_gen_radial_grid, NameGridFile
   use ModNodes, ONLY: init_mod_nodes
   use ModImplicit
@@ -516,10 +516,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#OPTIMIZEMPI")
         call read_var('UseOptimizeMpi', UseOptimizeMpi)
 
-     case("#OUTERBOUNDARY")
-        do i = 1, 2*nDim
-           call read_var('TypeBc', TypeBc_I(i))  
-        end do
+     case("#OUTERBOUNDARY","#BOXBOUNDARY")
+        call read_boundary_geometry_param(NameCommand)
 
      case("#TIMESTEPPING", "#RUNGEKUTTA", "#RK")
         call read_var('nStage',  nStage)
@@ -1841,10 +1839,9 @@ subroutine MH_set_parameters(TypeAction)
      case('#SOLIDSTATE')
         call read_boundary_geometry_param(NameCommand)
 
-     case("#FACEBOUNDARY")
-        if(.not.is_first_session())CYCLE READPARAM
-        call read_var('MinFaceBoundary', MinFaceBoundary)
-        call read_var('MaxFaceBoundary', MaxFaceBoundary)
+     case('#FACEBOUNDARY')
+        if(iProc==0) &
+           call stop_mpi('#FACEBOUNDARY command is no longer used!')
 
      case("#SOLARWIND")
         !if(.not.is_first_session())CYCLE READPARAM
@@ -1907,7 +1904,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#BOUNDARYSTATE")
          call read_var('iBoundary',iBoundary)
-         if (iBoundary > 6 .or. iBoundary < Solid_) then
+         if (iBoundary > 6 .or. iBoundary < SolidBc_) then
             call stop_mpi(NameSub//' ERROR: iBoundary is out of the range')
          else
             UseBoundaryState_I(iBoundary) = .true.
@@ -2400,8 +2397,10 @@ contains
        rConserv             = -1.
 
        ! Boundary Conditions
-       TypeBc_I(1:6)  = 'float'
-       TypeBc_I(body1_)      = 'unknown'
+       ! Default boundary type is 'none'.
+       !TypeBc_I(1:6)  = 'float'
+       !TypeBc_I(body1_)      = 'unknown'
+
        BodyTDim_I            = 2.85E06    ! K
        BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
        BodyNDim_I(IonFirst_+1:nFluid) = BodyNDim_I(IonFirst_)*cTiny
@@ -2425,10 +2424,12 @@ contains
        rConserv             = 2*rBody
 
        ! Boundary Conditions and Normalization
-       TypeBc_I(1)        ='outflow'
-       TypeBc_I(2)        ='inflow'
-       TypeBc_I(3:6)  ='fixed'
-       TypeBc_I(body1_)='ionosphere'
+       ! Default BC type is 'none'.
+       !TypeBc_I(1)        ='outflow'
+       !TypeBc_I(2)        ='inflow'
+       !TypeBc_I(3:6)      ='fixed'
+       !TypeBc_I(body1_)   ='ionosphere'
+       
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
 
@@ -2438,7 +2439,7 @@ contains
 
     end select
 
-    TypeBc_I(Solid_) = 'reflectall'
+    TypeBc_I(SolidBc_) = 'reflectall'
 
   end subroutine set_defaults
 
@@ -2466,14 +2467,16 @@ contains
     if(IsFirstCheck)then
        call correct_grid_geometry
 
-       if( (.not.IsCartesian .or. MinFaceBoundary <= MaxFaceBoundary) &
+       if( (.not.IsCartesian .or. &
+            i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0 ) &
             .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
           if(iProc==0)then
              if(.not. IsCartesian) write(*,'(a)')NameSub//&
                   ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                   'for Cartesian grid only!'
 
-             if(MinFaceBoundary <= MaxFaceBoundary) write(*,'(a)')NameSub//&
+             if(i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0) &
+                  write(*,'(a)')NameSub//&
                   ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                   'for cell based boundaries only!'
 
@@ -2683,9 +2686,9 @@ contains
     UseBdf2 = nStage > 1 .and. time_accurate
 
     ! Make sure periodic boundary conditions are symmetric
-    if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
-    if(any(TypeBc_I(3:4)=='periodic')) TypeBc_I(3:4)='periodic'
-    if(any(TypeBc_I(5:6)=='periodic')) TypeBc_I(5:6)='periodic'
+    do i=Coord1MinBc_,zMinBc_,2
+       if(any(TypeBc_I(i:i+1)=='periodic')) TypeBc_I(i:i+1)='periodic'
+    end do
 
     ! Set UseBufferGrid logical 
     UseBufferGrid = any(TypeBc_I=='buffergrid')
@@ -3034,6 +3037,12 @@ contains
          call stop_mpi(NameSub // &
          ' #GRID command must be specified in the first session!')
 
+    if(  i_line_command("#OUTERBOUNDARY", iSessionIn = 1) < 0 .and. &
+         i_line_command("#BOXBOUNDARY", iSessionIn = 1) < 0 ) &
+         call stop_mpi(NameSub // &
+         ' #OUTERBOUNDARY or #BOXBOUNDARY command must be specified &
+         &in the first session!')
+
     if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
        write(*,*)'Not enough grid blocks allocated for root blocks'
        write(*,*)'Number of root blocks=',product(nRootRead_D)
@@ -3102,41 +3111,6 @@ contains
        end if
     end if
 
-    ! Set defaults for MinFaceBoundary and MaxFaceBoundary 
-    ! if they were not set by #FACEBOUNDARY command
-    ! Using face BC is necessary if there is brick cut out of the
-    ! spherical/cylindrical grid. 
-    if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
-       ! Use all face based BCs by default for spherical geometry
-       if(TypeGeometry(1:9) == 'spherical')then
-          MinFaceBoundary = 1
-          MaxFaceBoundary = 6
-       end if
-
-       ! Use face based boundaries by default for cylindrical geometry 
-       ! except for top and bottom 
-       if(TypeGeometry == 'cylindrical')then
-          MinFaceBoundary = 1
-          MaxFaceBoundary = 4
-       end if
-    end if
-
-    ! Make sure MinFaceBoundary and MaxFaceBoundary cover face only boundaries
-    if(UseSolidState) MinFaceBoundary = min(Solid_, MinFaceBoundary)
-    if(UseBody2)then
-       MinFaceBoundary = min(Body2_, MinFaceBoundary)
-       MaxFaceBoundary = max(Body2_, MaxFaceBoundary)
-    end if
-    if(body1) then
-       MinFaceBoundary = min(Body1_, MinFaceBoundary)
-       MaxFaceBoundary = max(Body1_, MaxFaceBoundary)
-    end if
-    if(UseExtraBoundary) then                        
-       MinFaceBoundary = min(ExtraBc_, MinFaceBoundary)
-       MaxFaceBoundary = max(ExtraBc_, MaxFaceBoundary)
-    end if
-    MaxFaceBoundary = min(MaxFaceBoundary, 6)
-    MinFaceBoundary = max(MinFaceBoundary, Solid_)
 
     if(index(TypeGeometry,'_genr') < 1) call set_gen_radial_grid
 
