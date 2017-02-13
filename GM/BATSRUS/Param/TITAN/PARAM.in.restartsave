@@ -74,7 +74,7 @@ RAW step time	        StringLog
 #INNERBOUNDARY
 user			TypeInnerBc
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 inflow                  TypeBcEast
 outflow                 TypeBcWest
 fixed                   TypeBcSouth
