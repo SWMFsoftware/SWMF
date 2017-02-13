@@ -44,6 +44,14 @@ VAR step                StringLog
 dt pmin pmax rho p hpflx opflx o2pflx co2pflx
 3.0 5.0
 
+#BOXBOUNDARY
+outflow                 TypeBcEast
+inflow                  TypeBcWest
+fixed                   TypeBcSouth
+fixed                   TypeBcNorth
+fixed                   TypeBcBottom
+fixed                   TypeBcTop
+
 #INNERBOUNDARY
 user			TypeInnerBc
 
