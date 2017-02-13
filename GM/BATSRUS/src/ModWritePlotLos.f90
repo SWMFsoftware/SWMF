@@ -53,7 +53,7 @@ subroutine write_plot_los(iFile)
        time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
        Body1,body1_, StartTime
   use ModGeometry, ONLY: &
-       XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D, RadiusMin
+       XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
@@ -1135,10 +1135,9 @@ contains
        ! means rInner depends on block resolution (which you want).
 
        rInner = max(rBody, RadiusMin)
-       if(Body1) then
-          if(IsBoundaryBlock_IB(body1_,iBlock)) rInner = rBody + &
-               sqrt(sum(CellSize_D**2))
-       end if
+  
+       if(body1 .and. rMin_BLK(iBlock) < rBody ) &
+            rInner = rBody + sqrt(sum(CellSize_D**2))
     end if
 
     FixedXyzBlockCenter_D = XyzBlockCenter_D
