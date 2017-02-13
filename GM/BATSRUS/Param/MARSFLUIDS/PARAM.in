@@ -111,7 +111,7 @@ RAW step time	        StringLog
 #INNERBOUNDARY
 user			TypeInnerBc
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 outflow			TypeBc1 MinX
 inflow			TypeBc2 MaxX
 fixed			TypeBc3 MinY
