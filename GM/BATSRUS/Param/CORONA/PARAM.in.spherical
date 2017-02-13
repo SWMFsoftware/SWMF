@@ -114,9 +114,8 @@ T			UseBody
 3.0E+8			BodyNDim
 3.5E+6			BodyTDim
 
-#FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
+#INNERBOUNDARY
+ionosphere		TypeBcIn
 
 #USECURLB0
 T			UseCurlB0
