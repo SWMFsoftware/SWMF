@@ -5,7 +5,8 @@ module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst
-  use ModMain, ONLY: body2_, Solid_
+  use ModMain, ONLY: body2_, SolidBc_, Coord3MaxBc_, &
+       MinBoundary_ , MaxBoundary_
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
@@ -170,11 +171,13 @@ module ModPhysics
   real :: ShockPosition = 0.0, ShockSlope = 0.0
  
 
-  ! Logicals for using Boundary State                                                                                              
-  logical :: UseBoundaryState_I(Solid_:6) = .false.
+  ! Logicals for using Boundary State              
+  logical :: UseBoundaryState_I(MinBoundary_:MaxBoundary_) = .false.
 
   ! State for the boundary conditions
-  real,dimension(nVar,Solid_:6):: FaceState_VI, CellState_VI, FaceStateDim_VI
+  real, dimension(nVar,MinBoundary_:MaxBoundary_):: &
+       FaceState_VI, FaceStateDim_VI
+  real, dimension(nVar,SolidBc_:Coord3MaxBc_):: CellState_VI
 
   !\
   ! Units for normalization of variables
@@ -427,7 +430,8 @@ contains
 
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
-    do iBoundary=Solid_,6
+    do iBoundary=MinBoundary_,MaxBoundary_
+       if(iBoundary>=Coord1MinBc_ .and. iBoundary<=Coord3MaxBc_) cycle
        FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
     end do
 
@@ -462,24 +466,24 @@ contains
     !For Outer Boundaries (if SW_* are set)
     if(SW_rho > 0.0)then
 
-       FaceState_VI(Rho_, 1:6) = SW_rho
-       FaceState_VI(Ux_,  1:6) = SW_Ux
-       FaceState_VI(Uy_,  1:6) = SW_Uy
-       FaceState_VI(Uz_,  1:6) = SW_Uz
-       FaceState_VI(Bx_,  1:6) = SW_Bx
-       FaceState_VI(By_,  1:6) = SW_By
-       FaceState_VI(Bz_,  1:6) = SW_Bz
-       FaceState_VI(P_,   1:6) = SW_p
+       FaceState_VI(Rho_, xMinBc_:zMaxBc_) = SW_rho
+       FaceState_VI(Ux_,  xMinBc_:zMaxBc_) = SW_Ux
+       FaceState_VI(Uy_,  xMinBc_:zMaxBc_) = SW_Uy
+       FaceState_VI(Uz_,  xMinBc_:zMaxBc_) = SW_Uz
+       FaceState_VI(Bx_,  xMinBc_:zMaxBc_) = SW_Bx
+       FaceState_VI(By_,  xMinBc_:zMaxBc_) = SW_By
+       FaceState_VI(Bz_,  xMinBc_:zMaxBc_) = SW_Bz
+       FaceState_VI(P_,   xMinBc_:zMaxBc_) = SW_p
 
        if(UseElectronPressure) &
-            FaceState_VI(Pe_, 1:6) = SW_p*ElectronPressureRatio
+            FaceState_VI(Pe_, xMinBc_:zMaxBc_) = SW_p*ElectronPressureRatio
        
-       if(UseAnisoPressure) FaceState_VI(Ppar_, 1:6) = SW_p
+       if(UseAnisoPressure) FaceState_VI(Ppar_, xMinBc_:zMaxBc_) = SW_p
 
        if (UseMultiSpecies) then
-          FaceState_VI(SpeciesFirst_, 1:6) = &
+          FaceState_VI(SpeciesFirst_, xMinBc_:zMaxBc_) = &
                SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
-          FaceState_VI(SpeciesFirst_+1:SpeciesLast_, 1:6) = &
+          FaceState_VI(SpeciesFirst_+1:SpeciesLast_, xMinBc_:zMaxBc_) = &
                LowDensityRatio*Sw_rho
        endif
 
@@ -495,44 +499,51 @@ contains
           ! changes proportionally to the density.
           iFluid=IonFirst_
           call select_fluid
-          FaceState_VI(iRho,1:6) = SW_Rho*(1 - LowDensityRatio*(nIonFluid - 1))
-          FaceState_VI( iUx,1:6) = SW_Ux
-          FaceState_VI( iUy,1:6) = SW_Uy
-          FaceState_VI( iUz,1:6) = SW_Uz
+          FaceState_VI(iRho,xMinBc_:zMaxBc_) = &
+               SW_Rho*(1 - LowDensityRatio*(nIonFluid - 1))
+          FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
+          FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
+          FaceState_VI( iUz,xMinBc_:zMaxBc_) = SW_Uz
           ! Use solar wind temperature and reduced density to get pressure
-          FaceState_VI(  iP,1:6) = SW_p/pCoef &
+          FaceState_VI( iP,xMinBc_:zMaxBc_) = SW_p/pCoef &
                *(1.0 - LowDensityRatio*(nIonFluid-1))
 
           do iFluid = IonFirst_+1, nFluid
              call select_fluid
-             FaceState_VI(iRho,1:6) = SW_Rho*LowDensityRatio
-             FaceState_VI( iUx,1:6) = SW_Ux
-             FaceState_VI( iUy,1:6) = SW_Uy
-             FaceState_VI( iUz,1:6) = SW_Uz
+             FaceState_VI(iRho,xMinBc_:zMaxBc_) = SW_Rho*LowDensityRatio
+             FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
+             FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
+             FaceState_VI( iUz,xMinBc_:zMaxBc_) = SW_Uz
              ! Use solar wind temperature and reduced density to get pressure 
-             FaceState_VI(  iP,1:6) = SW_p/pCoef &
+             FaceState_VI( iP,xMinBc_:zMaxBc_) = SW_p/pCoef &
                   *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
           end do
           ! Fix total pressure if necessary (density and temperature are kept)
-          if(UseMultiIon .and. IsMhd) FaceState_VI(P_,1:6) = &
-               pCoef*sum(FaceState_VI(iPIon_I,1))
+          if(UseMultiIon .and. IsMhd) FaceState_VI(P_,xMinBc_:zMaxBc_) = &
+               pCoef*sum(FaceState_VI(iPIon_I,7))
        end if
     end if
 
-    do iBoundary = Solid_, 6
+
+    do iBoundary = MinBoundary_, MaxBoundary_
        if (.not.UseBoundaryState_I(iBoundary)) CYCLE
-       FaceState_VI( : , iBoundary) = FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
+       FaceState_VI( : , iBoundary) = &
+            FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
     end do
 
     ! Cell State is used for filling the ghostcells
-    CellState_VI = FaceState_VI
+    CellState_VI(:,SolidBc_:ExtraBc_) = FaceState_VI(:,SolidBc_:ExtraBc_)
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
 
     ! Convert velocity to momentum for all fluids and boundaries
     do iFluid = 1, nFluid
        call select_fluid
-       CellState_VI(iRhoUx,:) = FaceState_VI(iUx,:)*FaceState_VI(iRho,:)
-       CellState_VI(iRhoUy,:) = FaceState_VI(iUy,:)*FaceState_VI(iRho,:)
-       CellState_VI(iRhoUz,:) = FaceState_VI(iUz,:)*FaceState_VI(iRho,:)
+       CellState_VI(iRhoUx,Coord1MinBc_:Coord3MaxBc_) = &
+           FaceState_VI(iUx,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
+       CellState_VI(iRhoUy,Coord1MinBc_:Coord3MaxBc_) = &
+           FaceState_VI(iUy,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
+       CellState_VI(iRhoUz,Coord1MinBc_:Coord3MaxBc_) = &
+           FaceState_VI(iUz,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
     end do
 
     if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)
