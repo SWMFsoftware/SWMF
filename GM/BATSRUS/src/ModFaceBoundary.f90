@@ -25,7 +25,8 @@ module ModFaceBoundary
 
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
-  ! Positive iBoundary indexes the outer boundaries from 1 to 2*nDim.
+  ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
+  ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY  
   integer, public :: iBoundary
 
   ! Index of the face
@@ -34,7 +35,7 @@ module ModFaceBoundary
   ! The side of the cell defined with respect to the cell inside the domain
   integer, public :: iSide
 
-  ! The values on the physical side and the ghost cell side of the boudary
+  ! The values on the physical side and the ghost cell side of the boundary
   real, public :: VarsTrueFace_V(nVar), VarsGhostFace_V(nVar)
 
   ! The coordinates of the face center and the B0 field at that point
@@ -105,8 +106,8 @@ contains
     use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModGeometry, ONLY: true_cell, MinFaceBoundary, MaxFaceBoundary
-    use ModBoundaryGeometry, ONLY: iBoundary_GB
+    use ModGeometry, ONLY: true_cell
+    use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
     integer, intent(in) :: iBlock
     real,    intent(in) :: TimeBcIn
@@ -116,7 +117,6 @@ contains
     character(len=*), parameter:: NameSub='set_face_boundary'
     logical, allocatable :: IsBodyCell_G(:,:,:)
     !--------------------------------------------------------------------------
-
     if(.not.allocated(IsBodyCell_G))&
          allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
@@ -139,9 +139,8 @@ contains
     !!! call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
-         iBoundary_GB(:,:,:,iBlockBc) >= MinFaceBoundary .and. &
-         iBoundary_GB(:,:,:,iBlockBc) <= MaxFaceBoundary
-
+         .not.(iBoundary_GB(:,:,:,iBlockBc) == domain_)
+          
     call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 
     if(DoTestMe)call write_face_state('Final')
@@ -293,7 +292,7 @@ contains
 
                 call set_face(i,j,k,i-1,j,k)
 
-                LeftState_VX(:,i,j,k) = VarsGhostFace_V
+                LeftState_VX(:,i,j,k) = VarsGhostFace_V                
              end if
           end do !end i loop
        end do !end j loop
@@ -448,7 +447,6 @@ contains
       logical, parameter:: DoTestCell = .false.
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
-
       !DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
 
       if(DoTestCell)write(*,*) NameSubSub,' starting with ijkTrue, ijkGhost=',&
@@ -476,7 +474,6 @@ contains
          FaceCoords_D(z_)= FaceCoords_D(z_) - zBody2
       end if
 
-
       ! Default fixed/initial state for this boundary
       FaceState_V = FaceState_VI(:, iBoundary)  
 
@@ -496,6 +493,10 @@ contains
 
       case('fixedB1')
          VarsGhostFace_V = FaceState_V
+
+      case('zeroB1')
+         VarsGhostFace_V = VarsTrueFace_V
+         VarsGhostFace_V(Bx_:Bz_) = -VarsTrueFace_V(Bx_:Bz_)
 
       case('fixed')
          VarsGhostFace_V = FaceState_V
