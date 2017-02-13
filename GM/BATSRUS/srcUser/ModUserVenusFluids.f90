@@ -712,10 +712,15 @@ contains
     FaceState_VI(iRhoIon_I,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
 
-    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
-    do iBoundary=body1_,6  
+    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
+    do iBoundary=body1_,ExtraBc_
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)       
+    end do
+    do iBoundary=Coord1MinBc_,Coord3MaxBc_
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
     end do
 
     if(.not.allocated(nDenNuSpecies_CBI))then
@@ -1185,7 +1190,6 @@ contains
           State_VGB(P_,i,j,k,iBlock) = &
                max(SW_p,sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1+ElectronPressureRatio))
        else
-
           State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
 
           !write(*,*)'CellState_VI(HpRho_,1_)=',CellState_VI(HpRho_,1)
@@ -1219,11 +1223,8 @@ contains
        State_VGB(iRhoUy_I,i,j,k,iBlock) = 0.0
        State_VGB(iRhoUz_I,i,j,k,iBlock) = 0.0
 
-
-
        if (.not. (true_cell(i,j,k,iBlock).and. &
             R_BLK(i,j,k,iBlock)<1.5*Rbody) ) CYCLE
-
 
        cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
@@ -1310,7 +1311,7 @@ contains
 
     use ModSize,       ONLY: nDim,2,4,6	
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
-         BlkTest, ExtraBc_, Body1_
+         BlkTest, ExtraBc_, Body1_, xMinBc_
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
@@ -1335,7 +1336,7 @@ contains
     end if
 
     if(iBoundary == ExtraBc_)then
-       VarsGhostFace_V = FaceState_VI(:,1)
+       VarsGhostFace_V = FaceState_VI(:,xMinBc_)
        RETURN
     elseif(iBoundary /= Body1_)then       
        call stop_mpi(NameSub//' invalid iBoundary value')
@@ -1414,11 +1415,13 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, x2
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
     !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+    where(Xyz_DGB(x_,:,:,:,iBlock) > x2) &
+         iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
   end subroutine user_set_boundary_cells
 
@@ -1684,7 +1687,7 @@ contains
     use ModPhysics, ONLY: rBody, No2Io_V, UnitRho_, BodyRho_I,UnitT_,UnitN_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB
-    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use ModSize, ONLY: nI, nJ, nK
