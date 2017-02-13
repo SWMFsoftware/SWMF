@@ -537,7 +537,8 @@ contains
   !========================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x1, x2
+    use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, x1, x2
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     implicit none
 
@@ -547,9 +548,11 @@ contains
 
     !--------------------------------------------------------------------------
     ! For inflow in positive x direction
-    ! IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) < x1
+    !where(Xyz_DGB(x_,:,:,:,iBlock) < x1) &
+    !     iBoundary_GB(:,:,:,iBlock) = ExtraBc_
     ! For inflow in negative x direction
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+    where (Xyz_DGB(x_,:,:,:,iBlock) > x2) &
+         iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
   end subroutine user_set_boundary_cells
 
