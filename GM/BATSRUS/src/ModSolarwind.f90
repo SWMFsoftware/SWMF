@@ -648,7 +648,7 @@ contains
 
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
-       SolarWind_V = FaceState_VI(:,1)
+       SolarWind_V = FaceState_VI(:,xMinBc_)
        RETURN
     end if
 
