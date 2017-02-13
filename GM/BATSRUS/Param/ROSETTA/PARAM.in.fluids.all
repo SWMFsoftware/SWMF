@@ -106,7 +106,7 @@ solarwind		UseSwBC
  0.0                    SW_By_dim [nT]        |
  0.0                    SW_Bz_dim [nT]       /
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 user                   TypeBcEast
 user                   TypeBcWest
 user                   TypeBcSouth
@@ -117,10 +117,6 @@ user                   TypeBcTop
 #EXTRABOUNDARY
 T                       UseExtraBoundary
 user                    TypeExtraBoundary
-
-#FACEBOUNDARY
-0                       MinFaceBoundary
-6                       MaxFaceBoundary
 
 #MHDIONS
 T		          DoAddRhoP
