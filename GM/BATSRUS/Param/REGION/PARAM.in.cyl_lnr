@@ -135,6 +135,12 @@ box_gen			StringShape
 382.5			PhiMax
 +10.0			LatMax
 
+#BOXBOUNDARY
+outflow                 TypeBcEast
+inflow                  TypeBcWest
+fixed                   TypeBcSouth
+fixed                   TypeBcNorth
+
 #HALLREGION
 +r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8
 -1.0			HallSpeedTinyDim
