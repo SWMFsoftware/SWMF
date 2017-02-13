@@ -58,12 +58,9 @@ float                    TypeBcTop
 #EXTRABOUNDARY
 T                       UseExtraBoundary
 user                    TypeExtraBoundary
-F                       DoFixExtraboundary
 
-#FACEBOUNDARY
--1                      MinFaceBoundary
--1                      MaxFaceBoundary
-F                       DoFixOuterBoundary
+#INNERBOUNDARY
+ionosphere		TypeBcInner
 
 #GRID
 2                        proc_dims(1)
