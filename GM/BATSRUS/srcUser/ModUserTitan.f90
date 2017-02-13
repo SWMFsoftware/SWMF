@@ -841,7 +841,8 @@ contains
 
   !==============================================================================
   subroutine user_init_session
-    use ModMain, ONLY:BODY1_
+    use ModMain, ONLY: Body1_, ExtraBc_, &
+         Coord1MinBc_, Coord3MaxBc_, xMinBc_, zMaxBc_
     use ModPhysics
     use ModVarIndexes, ONLY: ScalarFirst_,ScalarLast_, &
          rhoUx_, rhoUz_,  UnitUser_V
@@ -851,7 +852,7 @@ contains
     AverageIonCharge         = 1.0
     ElectronTemperatureRatio = 1.0   !default was 0.0
 
-    do iBoundary=1,6
+    do iBoundary=xMinBc_, zMaxBc_
        FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = cTiny8/1.0e5     
        !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
        FaceState_VI(RhoLp_,iBoundary)=SW_LP
@@ -867,14 +868,17 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(ScalarFirst_:ScalarLast_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
-    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
-    do iBoundary=body1_,6  
+    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
+    do iBoundary=body1_,ExtraBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
-    !    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
-    !    write(*,*)'CellState_VI, 6=',CellState_VI(:,6)
-    !    write(*,*)'CellState_VI, 1=',CellState_VI(:,1)    
+    do iBoundary=Coord1MinBc_,Coord3MaxBc_
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
+    end do
+
     UnitUser_V(ScalarFirst_:ScalarLast_) = No2Io_V(UnitRho_)/MassSpecies_V
 
   end subroutine user_init_session
@@ -1446,7 +1450,8 @@ contains
     use ModPhysics, ONLY: rBody, No2Io_V, UnitB_
     use ModMain, ONLY: Body1_
     use ModAdvance, ONLY: State_VGB, Bx_, By_, Bz_, B_
-    use ModGeometry, ONLY: Xyz_DGB, r_BLK, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB, r_BLK
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
@@ -1496,7 +1501,7 @@ contains
 
     if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(UnitB_)
 
-    if(.not.IsBoundaryBlock_IB(body1_, iBlock)) RETURN
+    if(.not. any(iBoundary_GB(:,:,:,iBlock)==body1_) ) RETURN
 
     ! Reflect at surface of the body
     do i=0,nI
