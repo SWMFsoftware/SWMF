@@ -911,8 +911,9 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, No2Io_V, UnitRho_, UnitP_, &
          UnitTemperature_, cRadiationNo, No2Si_V
-    use ModGeometry,   ONLY: r_BLK, Xyz_DGB, IsBoundaryCell_GI
-    use ModMain,       ONLY: Solid_
+    use ModGeometry,   ONLY: r_BLK, Xyz_DGB
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
+    use ModMain,       ONLY: SolidBc_
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
     use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
     use BATL_size,     ONLY: nI, nJ, nK, MinI, MaxI
@@ -1033,7 +1034,7 @@ contains
     case('solid')
        call user_set_boundary_cells(iBlock)
        do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
-          if(IsBoundaryCell_GI(i,j,k,Solid_))then
+          if(iBoundary_GB(i,j,k,iBlock)==SolidBc_)then
              PlotVar_G(i,j,k) = 1.0 ! Solid
           else
              PlotVar_G(i,j,k) = 0.0 ! Not a solid
@@ -2350,8 +2351,8 @@ contains
   subroutine user_set_boundary_cells(iBlock)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModMain,       ONLY: Solid_, Dt
-    use ModGeometry,   ONLY: IsBoundaryCell_GI
+    use ModMain,       ONLY: SolidBc_, Dt
+    use ModBoundaryGeometry,   ONLY: iBoundary_GB
     use ModPhysics,    ONLY: Si2No_V, UnitN_, UnitTemperature_
     use ModVarIndexes, ONLY: p_
 
@@ -2375,11 +2376,8 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), TeOut=TeSi)
           Ti = TeSi*Si2No_V(UnitTemperature_)
        end if
-       if(Ti < VaporizationTi_I(iMaterial))then
-          IsBoundaryCell_GI(i,j,k,Solid_) = .true.
-       else
-          IsBoundaryCell_GI(i,j,k,Solid_) = .false.
-       end if
+       if(Ti < VaporizationTi_I(iMaterial)) &
+            iBoundary_GB(i,j,k,iBlock) = SolidBc_
     end do; end do; end do
 
   end subroutine user_set_boundary_cells

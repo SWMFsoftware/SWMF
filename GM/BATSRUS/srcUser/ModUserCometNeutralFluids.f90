@@ -326,7 +326,8 @@ contains
 !===========================================================================
 subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, r_BLK
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, r_BLK
+    use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -340,15 +341,16 @@ subroutine user_set_boundary_cells(iBlock)
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
        ! Check if we are close enough
        if(r_BLK(i,j,k,iBlock) > rMaxShape) then
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .false.
+          iBoundary_GB(i,j,k,iBlock) = domain_
        elseif(r_BLK(i,j,k,iBlock) < rMinShape) then
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .true.
+          iBoundary_GB(i,j,k,iBlock) = ExtraBc_
        else
           ! Connect cell center with a point inside.
           ! If the line segment does not intersect the shape or it intersects
           ! even times then the point is inside the shape.
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .not. is_segment_intersected( &
-               XyzInside_D, Xyz_DGB(:,i,j,k,iBlock), IsOddIn=.true.)
+          if(.not. is_segment_intersected( &
+               XyzInside_D, Xyz_DGB(:,i,j,k,iBlock), IsOddIn=.true.)) &
+               iBoundary_GB(i,j,k,iBlock) = ExtraBc_
        end if
 
     end do; end do; end do
