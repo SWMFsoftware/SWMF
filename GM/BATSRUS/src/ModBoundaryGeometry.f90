@@ -12,7 +12,7 @@ module ModBoundaryGeometry
   integer, allocatable :: iBoundary_GB(:,:,:,:)
 
   ! Cells inside domain have index domain_ that is smaller than smallest 
-  ! boundary index (body2_ = -2)
+  ! boundary index (SolidBc_ = -3)
   integer, parameter :: domain_ = -10
 
 contains
@@ -34,17 +34,36 @@ contains
 
   subroutine read_boundary_geometry_param(NameCommand)
 
-    use ModMain,      ONLY: UseSolidState
+    use ModMain,      ONLY: UseSolidState, TypeBc_I
+    use ModMain,      ONLY: Coord1MinBc_, xMinBc_
     use ModReadParam, ONLY: read_var
+    use BATL_size,    ONLY: nDim
+    
+    integer :: i
 
     character(len=*), intent(in):: NameCommand
-
     character(len=*), parameter:: NameSub = 'read_boundary_geometry_param'
     !--------------------------------------------------------------------------
 
     select case(NameCommand)
     case("#SOLIDSTATE")
        call read_var('UseSolidState', UseSolidState)
+    case("#OUTERBOUNDARY")
+       do i = Coord1MinBc_, 2*nDim
+          call read_var('TypeBc', TypeBc_I(i))
+       end do
+    case("#BOXBOUNDARY")
+       do i = xMinBc_, xMinBc_-1+2*nDim
+          call read_var('TypeBc', TypeBc_I(i))
+       end do
+       
+    !case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
+    !      "#MAGNETICINNERBOUNDARY")
+    !    call read_face_boundary_param(NameCommand)
+
+    !case("#EXTRABOUNDARY")
+
+    !case("#USERBOUNDARY")
 
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)
@@ -56,17 +75,20 @@ contains
 
   subroutine fix_block_geometry(iBlock, DoSolveSolidIn)
 
-    use ModMain, ONLY: body1_, body2_, ExtraBc_, Solid_, &
+    use ModMain, ONLY: Body1, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
-         ProcTest, BlkTest, iTest, jTest, kTest
+         ProcTest, BlkTest, iTest, jTest, kTest, TypeBc_I, &
+         Coord1MinBc_, Coord1MaxBc_ , Coord2MinBc_, Coord2MaxBc_, &
+         Coord3MinBc_, Coord3MaxBc_, xMinBc_, xMaxBc_, &
+         yMinBc_, yMaxBc_, zMinBc_, zMaxBc_
     use ModGeometry, ONLY: &
-         MinFaceBoundary, MaxFaceBoundary, IsBoundaryBlock_IB, &
-         IsBoundaryCell_GI, R2_BLK, Rmin2_BLK, Body_BLK, &
-         far_field_BCs_BLK, true_blk, true_cell
-    use ModPhysics, ONLY : xBody2,yBody2,zBody2
+         R_BLK, R2_BLK, Rmin_BLK, Rmin2_BLK, Body_BLK, &
+         far_field_BCs_BLK, true_blk, true_cell,&
+         x1, x2, y1, y2, z1, z2
+    use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
          iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
-         Xyz_DGB, CellSize_DB, &
+         Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
 
     implicit none
@@ -111,60 +133,47 @@ contains
        write(*,*)NameSub,': CellSize_D = ',CellSize_DB(:,iBlock)
        write(*,*)NameSub,': CoordMin_D =', CoordMin_D
        write(*,*)NameSub,': CoordMax_D =', CoordMax_D
-       write(*,*)NameSub,': MinFaceBoundary, MaxFaceBoundary=',  &
-            MinFaceBoundary, MaxFaceBoundary
     end if
 
-    !\
+
     ! TRUE_CELL: if not inside a body or outside the outer face boundary
-    !/
+    ! so true cells are those where iBoundary_GB==domain_
     true_cell(:,:,:,iBlock)=.true.
-    IsBoundaryBlock_IB(:,iBlock)=.false.
-    do iBoundary = MinFaceBoundary, MaxFaceBoundary
-       IsBoundaryBlock_IB(iBoundary,iBlock) = .true.
-    end do
-    IsBoundaryBlock_IB(ExtraBc_,iBlock) = UseExtraBoundary
-    if(DoSolveSolid)then
-       IsBoundaryBlock_IB(Solid_,iBlock) = .false.
-    else
-       IsBoundaryBlock_IB(Solid_,iBlock) = UseSolidState
-    end if
 
-    ! set IsBoundaryCell_GI to be used for true_cell
-    call set_boundary_cells(iBlock)
-
-    do iBoundary = MinFaceBoundary, max(MaxFaceBoundary,Body1_)
-       IsBoundaryBlock_IB(iBoundary,iBlock) = &
-            any(IsBoundaryCell_GI(:,:,:,iBoundary))
-       true_cell(:,:,:,iBlock) = &
-            true_cell(:,:,:,iBlock).and..not.IsBoundaryCell_GI(:,:,:,iBoundary)
-    end do
-
-    if(DoTestMe)write(*,*) NameSub,&
-         ' after call set_boundary_cells: true_cell(iTest-nG:iTest+nG)=',&
-         true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
-
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
-         UseExtraBoundary .and. IsBoundaryCell_GI(:,:,:,ExtraBc_)
-
-    if(DoSolveSolid)then
-       IsBoundaryCell_GI(:,:,:,Solid_) = .false.
-    else
-       IsBoundaryCell_GI(:,:,:,Solid_) = &
-            UseSolidState .and. IsBoundaryCell_GI(:,:,:,Solid_)
-    end if
-
-    ! Copying  the IsBoundaryCell_GI into the format for iBoundary_GB
+    ! Reset for every level of refinement                               
     iBoundary_GB(:,:,:,iBlock) = domain_
-    do iBoundary = Solid_, 6
-       where(IsBoundaryCell_GI(:,:,:,iBoundary))
-          iBoundary_GB(:,:,:,iBlock) = iBoundary
-       end where
-    end do
 
-    ! Alow other places to set true_cell
-    true_cell(1:nI,1:nJ,1:nK,iBlock) = true_cell(1:nI,1:nJ,1:nK,iBlock) &
-         .and. iBoundary_GB(1:nI,1:nJ,1:nK,iBlock) == domain_
+    ! Solid and extra boundary
+    if( (.not.DoSolveSolid .and. UseSolidState) .or. UseExtraBoundary) &
+       call user_set_boundary_cells(iBlock)
+
+    ! Set iBoundary_GB for body1 and body2 (always face boundary)            
+    if(UseBody2) then
+       where( R2_BLK(:,:,:,iBlock) < rbody2) &
+          iBoundary_GB(:,:,:,iBlock) = body2_
+    end if
+    if(body1) then
+       where( R_BLK(:,:,:,iBlock) < rbody ) &
+         iBoundary_GB(:,:,:,iBlock) = body1_
+    end if
+
+    ! No face BC is applied for TypeBc_I(7:12) if not set in PARAM.in   
+    if(.not. all(TypeBc_I(xMinBc_:zMaxBc_)=='none') )then
+       where( Xyz_DGB(x_,:,:,:,iBlock) < x1 ) &
+            iBoundary_GB(:,:,:,iBlock) = xMinBc_
+       where( Xyz_DGB(x_,:,:,:,iBlock) > x2 ) &
+            iBoundary_GB(:,:,:,iBlock) = xMaxBc_
+       where( Xyz_DGB(y_,:,:,:,iBlock) < y1 ) &
+            iBoundary_GB(:,:,:,iBlock) = yMinBc_
+       where( Xyz_DGB(y_,:,:,:,iBlock) > y2 ) &
+            iBoundary_GB(:,:,:,iBlock) = yMaxBc_
+       where( Xyz_DGB(z_,:,:,:,iBlock) < z1 ) &
+            iBoundary_GB(:,:,:,iBlock) = zMinBc_
+       where( Xyz_DGB(z_,:,:,:,iBlock) > z2 ) &
+            iBoundary_GB(:,:,:,iBlock) = zMaxBc_
+    end if
+
+    true_cell(:,:,:,iBlock) = (iBoundary_GB(:,:,:,iBlock)==domain_)
 
     ! body_BLK: if any cell INCLUDING ghost cells is inside body(ies)
     body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
@@ -201,63 +210,6 @@ contains
 
   end subroutine fix_geometry
 
-  !============================================================================
-
-  subroutine set_boundary_cells(iBlock)
-
-    use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, &
-         Body1, Body1_, UseBody2, Body2_, ExtraBc_, Solid_
-    use ModPhysics,  ONLY: Rbody
-    use ModGeometry, ONLY: R_BLK, IsBoundaryBlock_IB, IsBoundaryCell_GI
-    use ModPhysics,  ONLY: Rbody2
-    use ModGeometry, ONLY: R2_BLK
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2
-    use BATL_lib,    ONLY: iProc, Xyz_DGB, x_, y_, z_, nG
-    use ModUserInterface ! user_set_boundary_cells
-
-    implicit none
-    integer, intent(in)::iBlock
-
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='set_boundary_cells'
-    !--------------------------------------------------------------------------
-    if(iBlock==BlkTest .and. iProc==ProcTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    if(DoTestMe)write(*,*) NameSub,' IsBoundaryBlock_IB=', &
-         IsBoundaryBlock_IB(:,iBlock)
-
-    IsBoundaryCell_GI=.false.  
-
-    if(UseBody2 .and. IsBoundaryBlock_IB(Body2_,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,Body2_) = R2_BLK(:,:,:,iBlock) < rBody2  
-
-    if(IsBoundaryBlock_IB(Body1_,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,Body1_) = &
-         body1    .and. R_BLK(:,:,:,iBlock) < Rbody
-
-    if(IsBoundaryBlock_IB(ExtraBc_,iBlock) .or. &
-         IsBoundaryBlock_IB(Solid_,iBlock)) &
-         call user_set_boundary_cells(iBlock)
-
-    if(IsBoundaryBlock_IB(1,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,1)= Xyz_DGB(x_,:,:,:,iBlock) < x1  
-    if(IsBoundaryBlock_IB(2,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,2)= Xyz_DGB(x_,:,:,:,iBlock) > x2 
-    if(IsBoundaryBlock_IB(3,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,3)= Xyz_DGB(y_,:,:,:,iBlock) < y1
-    if(IsBoundaryBlock_IB(4,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,4)= Xyz_DGB(y_,:,:,:,iBlock) > y2 
-    if(IsBoundaryBlock_IB(5,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,5)= Xyz_DGB(z_,:,:,:,iBlock) < z1
-    if(IsBoundaryBlock_IB(6,iBlock)) &
-         IsBoundaryCell_GI(:,:,:,6)= Xyz_DGB(z_,:,:,:,iBlock) > z2  
-
-  end subroutine set_boundary_cells
-
 end module ModBoundaryGeometry
 
 !=============================================================================
@@ -268,8 +220,8 @@ subroutine fix_boundary_ghost_cells
 
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-       body2_, BlkTest, iTest, jTest, kTest, iteration_number, Solid_
-  use ModGeometry, ONLY: true_cell, body_BLK, IsBoundaryBlock_IB
+       BlkTest, iTest, jTest, kTest, iteration_number
+  use ModGeometry, ONLY: true_cell, body_BLK
   !use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: message_pass_cell
 
@@ -311,11 +263,6 @@ subroutine fix_boundary_ghost_cells
           .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
 
      body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
-
-     do iBoundary = Solid_, 6
-        IsBoundaryBlock_IB(iBoundary,iBlock)= &
-             any(iBoundary_GB(:,:,:,iBlock) == iBoundary)
-     end do
   end do
 
   if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
