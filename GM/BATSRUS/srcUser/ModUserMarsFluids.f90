@@ -818,22 +818,26 @@ contains
 
 
     if(UseElectronPressure)then
-       do iBoundary=1, 6
+       do iBoundary=xMinBc_, zMaxBc_
           FaceState_VI(Pe_, iBoundary)=sw_p
           FaceState_VI(P_, iBoundary)=sw_p
        end do
-
        FaceState_VI(P_,body1_)=BodyP_I(1)       
        FaceState_VI(Pe_,body1_)=BodyP_I(1)
     else
        FaceState_VI(P_,body1_)=BodyP_I(1)*(1+ElectronPressureRatio)
     end if
 
+    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
 
-    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
-    do iBoundary=body1_,6  
+    do iBoundary=body1_,ExtraBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)       
+    end do
+    do iBoundary=Coord1MinBc_, Coord3MaxBc_
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
     end do
 
     if(.not.allocated(nDenNuSpecies_CBI))then
@@ -1809,7 +1813,7 @@ contains
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
-         BlkTest, ExtraBc_, Body1_
+         BlkTest, ExtraBc_, Body1_, xMinBc_
     use ModProcMH,   ONLY: iProc
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,iRhoUx_I,iRhoUy_I,iRhoUz_I
     use ModPhysics,    ONLY: SW_rho,ElectronPressureRatio,FaceState_VI
@@ -1833,7 +1837,7 @@ contains
     end if
 
     if(iBoundary == ExtraBc_)then
-       VarsGhostFace_V = FaceState_VI(:,1)
+       VarsGhostFace_V = FaceState_VI(:,xMinBc_)
        RETURN
     elseif(iBoundary /= Body1_)then
        call stop_mpi(NameSub//' invalid iBoundary value')
@@ -1907,14 +1911,15 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry,      ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, x2
-
+    use ModGeometry,      ONLY: ExtraBc_, Xyz_DGB, x2
+    use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
 
     character (len=*), parameter :: Name='user_set_boundary_cells'
     !--------------------------------------------------------------------------
-    IsBoundaryCell_GI(:,:,:,ExtraBc_) = Xyz_DGB(x_,:,:,:,iBlock) > x2
+    where(Xyz_DGB(x_,:,:,:,iBlock) > x2) &
+         iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
   end subroutine user_set_boundary_cells
 
