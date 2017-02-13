@@ -29,7 +29,7 @@ my $Empty = "-Planet=earth_simple -Grid=earth_211 -Res=1.0".
     " -B0source=empty -Cfl=empty -Conservative=empty".
     " -Corotation=empty -Divb=empty -Reschange=empty".
     " -Implicit=empty".                                    #^CFG IF IMPLICIT
-    " -Inner=empty -Message=empty -Outer=empty".
+    " -Inner=ionosphere -Message=empty -Outer=inflowsidesfixed".
     " -Stage=empty -Time=empty -Timestep=empty -Upstream=empty";
 
 ###########################################################################
