@@ -234,10 +234,6 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#FACEBOUNDARY
--1
--2
-
 #COARSEAXIS
 F			UsePoleDiffusion
 T                       UseCoarseAxis
@@ -349,10 +345,6 @@ buffergrid		TypeBcInner
 360.			PhiBuffMax
 -90.0			LatBuffMin
 90.0			LatBuffMax
-
-#FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
 
 #OUTERBOUNDARY
 float			TypeBcEast

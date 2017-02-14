@@ -226,10 +226,6 @@ RAW			StringLogfile
 #INNERBOUNDARY
 user			TypeBcInner
 
-#FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
-
 #OUTERBOUNDARY
 user			TypeBcEast   user for spherical and user_outerbcs
 float			TypeBcWest
@@ -338,10 +334,6 @@ buffergrid		TypeBcInner
 360.			PhiBuffMax
 -90.0			LatBuffMin
 90.0			LatBuffMax
-
-#FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
 
 #OUTERBOUNDARY
 float			TypeBcEast

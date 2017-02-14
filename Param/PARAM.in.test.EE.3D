@@ -41,10 +41,6 @@ all			NameArea
 2			nLevel
 initial			NameArea
 
-#FACEBOUNDARY
-6			MinFaceBoundary
--2			MaxFaceBoundary
-
 #OUTERBOUNDARY
 fixvalue		TypeBcEast
 no_inflow		TypeBcWest

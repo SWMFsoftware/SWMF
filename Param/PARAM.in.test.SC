@@ -238,10 +238,6 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#FACEBOUNDARY
--1
--2
-
 #COARSEAXIS
 F			UsePoleDiffusion
 T                       UseCoarseAxis
