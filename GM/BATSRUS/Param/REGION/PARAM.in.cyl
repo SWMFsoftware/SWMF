@@ -44,7 +44,7 @@ sphere0			NameShape
 0.0			Bz
 1.0			p
 
-#OUTERBOUNDARY
+#BOXBOUNDARY
 periodic		TypeBcEast
 periodic		TypeBcWest
 periodic		TypeBcSouth
