@@ -30,7 +30,7 @@ subroutine logfileDGCPM(dir, i3)
      
      if (IsFirstTime) then
         ! Create time stamp for file name.
-        write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_"i3.3)') &
+        write(StringFileTime, '(i4.4,i2.2,i2.2,"_",i2.2,i2.2,i2.2,"_",i3.3)') &
              TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
              TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
              floor(TimeNow%FracSecond*1000.0)
