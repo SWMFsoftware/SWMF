@@ -988,6 +988,9 @@ void PIC::Sampling::Sampling() {
 #endif
 #endif
 
+   //check if the number of sampled particles coinsides with the number of particles in the buffer
+   if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particle buffer");
+
   //sample user defined data
   if (PIC::IndividualModelSampling::SamplingProcedure.size()!=0) {
     int nfunc,nfuncTotal=PIC::IndividualModelSampling::SamplingProcedure.size();
@@ -1030,10 +1033,6 @@ void PIC::Sampling::Sampling() {
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDistributionFnction();
   ElectricallyChargedDust::Sampling::FluxMap::Sampling();
 #endif
-
-
-  //check if the number of sampled particles coinsides with the number of particles in the buffer
-  if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particle buffer");
 
   //END OF THE PARTICLE SAMPLING SECTION
   #endif //<-- end of the particle sampling section
