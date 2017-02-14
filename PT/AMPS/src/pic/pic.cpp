@@ -1033,7 +1033,7 @@ void PIC::Sampling::Sampling() {
 
 
   //check if the number of sampled particles coinsides with the number of particles in the buffer
-  if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particel buffer");
+  if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particle buffer");
 
   //END OF THE PARTICLE SAMPLING SECTION
   #endif //<-- end of the particle sampling section
