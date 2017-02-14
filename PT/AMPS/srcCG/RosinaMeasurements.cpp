@@ -166,7 +166,7 @@ void RosinaSample::Flush() {
 
 //the sampling routine
 void RosinaSample::SamplingProcessor() {
-  int i,spec,idim;
+  int i,j,k,spec,idim;
   long int ptr;
   double ParticleWeight,*v,c,*x;
   PIC::Mesh::cDataCenterNode *cell;
@@ -219,7 +219,66 @@ void RosinaSample::SamplingProcessor() {
       ptr=PIC::ParticleBuffer::GetNext(ptr);
     }
   }
+
+  //remove all particles that would not be able to reach the spacecraft
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  int iPoint,ptrNext,iLocalNode;
+  bool DirectAccessPathFound;
+
+  for (iLocalNode=0;iLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;iLocalNode++) {
+    node=PIC::DomainBlockDecomposition::BlockTable[iLocalNode];
+
+    if (node->block!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+          ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+          if (ptr!=-1) {
+            v=PIC::ParticleBuffer::GetV(ptr);
+            x=PIC::ParticleBuffer::GetX(ptr);
+            DirectAccessPathFound=false;
+
+            //check whether the particle can reach the nude gauge
+            //a particle can reach the gauge if
+            //1) it is in the direction of the line of sight, and
+            //2) the particle vbelocity is opposite to the line of sight
+            for (iPoint=0;iPoint<nPoints;iPoint++) {
+              for (c=0.0,idim=0;idim<3;idim++) c+=Rosina[iPoint].NudeGauge.LineOfSight[idim]*(x[idim]-Rosina[iPoint].x[idim]);
+
+              if ((c>=0)&&(Vector3D::DotProduct(Rosina[iPoint].NudeGauge.LineOfSight,v)<=0.0)) {
+                DirectAccessPathFound=true;
+                break;
+              }
+            }
+
+            //check whether the particle can reach the ram gauge
+            if (DirectAccessPathFound==false) for (iPoint=0;iPoint<nPoints;iPoint++) {
+              for (c=0.0,idim=0;idim<3;idim++) c+=Rosina[iPoint].RamGauge.LineOfSight[idim]*(x[idim]-Rosina[iPoint].x[idim]);
+
+              if ((c>=0)&&(Vector3D::DotProduct(Rosina[iPoint].RamGauge.LineOfSight,v)<=0.0)) {
+                DirectAccessPathFound=true;
+                break;
+              }
+            }
+
+            ptrNext=PIC::ParticleBuffer::GetNext(ptr);
+
+            if (DirectAccessPathFound==false) {
+              //remove the particle
+              long int t=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+              PIC::ParticleBuffer::DeleteParticle(ptr,t);
+              node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=t;
+            }
+
+            ptr=ptrNext;
+          }
+        }
+      }
+    }
+  }
 }
+
 
 //output sampled flux and density
 void RosinaSample::PrintOutputFile(int nfile) {
@@ -255,7 +314,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
     if (fout==0) exit(__LINE__,__FILE__,"Error: cannot open file");
 
 
-    double SecondsFromBegining,RadiusVectorLeangth,CometDistance;
+    double SecondsFromBegining,RadiusVectorLeangth,CometDistance,beta;
     int LocationCode;
 
 
@@ -271,16 +330,28 @@ void RosinaSample::PrintOutputFile(int nfile) {
       const double rgTemperature=293.0;
       const double ngTemperature=293.0;
 
-      rgPressure=4.0*Kbol*rgTemperature*FluxRamGauge[spec+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
+      beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*rgTemperature));
+      rgPressure=Kbol*rgTemperature*Pi*beta/2.0*FluxRamGauge[spec+i*PIC::nTotalSpecies];
+
+
+ //     rgPressure=4.0*Kbol*rgTemperature*FluxRamGauge[spec+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
+
+
       ngPressure=DensityNudeGauge[spec+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
 
       if (_H2O_SPEC_>=0) {
-        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
+        beta=sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/(2.0*Kbol*rgTemperature));
+        rgTotalPressure+=Kbol*rgTemperature*Pi*beta/2.0*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies];
+
+//        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
         ngTotalPressure+=DensityNudeGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
       }
 
       if (_CO2_SPEC_>=0) {
-        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_CO2_SPEC_)));
+        beta=sqrt(PIC::MolecularData::GetMass(_CO2_SPEC_)/(2.0*Kbol*rgTemperature));
+        rgTotalPressure+=Kbol*rgTemperature*Pi*beta/2.0*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies];
+
+//        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_CO2_SPEC_)));
         ngTotalPressure+=DensityNudeGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
       }
 
