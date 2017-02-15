@@ -304,3 +304,32 @@ subroutine write_mltslice
 end subroutine write_mltslice
 
 !=============================================================================
+
+subroutine write_dgcpm_output(iStepIn, tSimIn)
+  ! Given a current simulation time, tSimIn, and iteration iStepIn, check
+  ! output write frequencies and write files/records as necssary.  The
+  ! following output types are checked and written:
+  !    FILE TYPE             SUBROUTINE
+  !    -------------------   -------------
+  !    Full domain files     wresult
+  !    MLT slices            write_mltslice
+  !    L-slice files         write_lslice
+
+  use ModMainDGCPM, ONLY: WriteLogFile
+  use ModIoDGCPM,   ONLY: DtMltSlice, tWriteOutput, DoMltSlice
+  
+  integer, intent(in) :: iStepIn
+  real,    intent(in) :: tSimIn
+  
+  !--------------------------------------------------------------------------
+  ! Log File Writing (every 5 minutes).
+  if (WriteLogFile .and. mod(tSimIn, 300.0)<0.001) call LogFileDGCPM(iStepIn)
+
+  ! General Output Writing
+  if (mod(tSimIn, tWriteOutput) < 1E-5) call wresult()
+
+  ! Slice file writing.
+  if (mod(tSimIn, 300.0)<0.001) call write_lslice
+  if (DoMltSlice .and. mod(tSimIn,DtMltSlice)<0.001) call write_mltslice
+  
+end subroutine write_dgcpm_output

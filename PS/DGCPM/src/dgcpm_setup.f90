@@ -65,8 +65,8 @@ SUBROUTINE GETKPA
   A=7.05E-6/(1.-0.159*KP+0.0093*KP**2)**3
 
   ! Write test info to screen as necessary:
-  if (DoTestMe) write(*,'(a,f15.1,a, f4.2, E12.3)') &
-       'PS/DGCPM: T=', CurrentTime, ' Kp, A = ', Kp, A
+  if (DoTestMe) write(*,'(a,a,a,f15.1,a, f4.2, E12.3)') &
+       'PS/DGCPM: Source=', NameSourceKp,' T=', CurrentTime,' Kp, A = ', Kp, A
   
 END SUBROUTINE GETKPA
 

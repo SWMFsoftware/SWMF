@@ -1,19 +1,18 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-subroutine logfileDGCPM(dir, i3)
+subroutine logfileDGCPM(nStepIn)
 
   use ModMainDGCPM,   ONLY: mgridpot
   use ModTimeDGCPM,   ONLY: StartTime, CurrentTime
-  use ModIoDGCPM,     ONLY: Kp
+  use ModIoDGCPM,     ONLY: Kp, cOutputDir
   use ModTimeConvert, ONLY: TimeType, time_real_to_int
   use ModProcPS,      ONLY: iProc
   use ModIoUnit,      ONLY: UnitTmp_
 
   implicit none
 
-  character(len=*), intent(in) :: dir
-  integer, intent(in)          ::  i3
+  integer, intent(in)          ::  nStepIn
 
   character(len=19), save :: StringFileTime
   
@@ -37,7 +36,7 @@ subroutine logfileDGCPM(dir, i3)
           
         ! Open file and write header:
         open(unit=UnitTmp_, &
-             file=trim(dir)//"PS_t"//StringFileTime//".log",status="replace")
+             file=cOutputDir//"PS_t"//StringFileTime//".log",status="replace")
         write(UnitTmp_,'(a)')  &
              'Dynamic Global Core Plasma Model'
         write(UnitTmp_,'(a)') &
@@ -49,11 +48,11 @@ subroutine logfileDGCPM(dir, i3)
         IsFirstTime = .false.
      else
         open(unit=UnitTmp_, status="old", position="append",&
-             file=trim(dir)//"PS_t"//StringFileTime//".log")
+             file=cOutputDir//"PS_t"//StringFileTime//".log")
      endif
 
      write(UnitTmp_,'(i10.10,i5,5(1x,i2.2),1x,i3.3, 2(1x,f8.3))') &
-          i3, TimeNow%iYear, TimeNow%iMonth,  TimeNow%iDay, &
+          nStepIn, TimeNow%iYear, TimeNow%iMonth,  TimeNow%iDay, &
           TimeNow%iHour,     TimeNow%iMinute, TimeNow%iSecond, &
           floor(TimeNow%FracSecond*1000.0), &
           (maxval(mgridpot) - minval(mgridpot))/1000.0, Kp

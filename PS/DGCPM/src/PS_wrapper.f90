@@ -145,7 +145,7 @@ contains
          case("#OUTPUT")
             call read_var('WriteStatic',WriteStatic)
             call read_var('WriteDynamic',WriteDynamic)
-            call read_var('OutputInterval',TINT)
+            call read_var('OutputInterval',tWriteOutput)
             call read_var('OutputType', OutputType)
             call read_var('MagneticType', MagneticType)
 
@@ -175,9 +175,6 @@ contains
          end select
       end do
 
-      DT = DT * 2.
-      !  Tmax = tSimulationMax
-
       ithermfirst=1		! So we do the setup routines in THERMAL
 
       LAMGAM=2.       ! Empirical E-field shielding parameter
@@ -198,10 +195,9 @@ contains
     use ModMainDGCPM
     use CON_coupler
 
-    character (len=*), parameter :: NameSub='PS_set_grid'
-    logical :: IsInitialized=.false.
     real    :: zTmp(1)
 
+    character(len=*), parameter :: NameSub='PS_set_grid'
     logical :: DoTest, DoTestMe
 
     !------------------------------------------------------
@@ -320,8 +316,8 @@ contains
 
     !--------------------------------------------------------------------------
 
-    write(*,*) "Don't know what this is really supposed to do.  I think that it is"
-    write(*,*) "Supposed to be applying periodic boundaries...?"
+    ! Currently Empty.
+    return
 
   end subroutine PS_put_from_ie_complete
 
@@ -331,59 +327,87 @@ contains
 
     ! Initialize the Plasmasphere (PS) module for session iSession
 
-    use CON_physics,   ONLY: get_time, get_planet, get_axes
-    use CON_time,   ONLY: tSimulationMax
+    use CON_physics,    ONLY: get_time, get_planet, get_axes
+    use CON_time,       ONLY: tSimulationMax
+    use ModTimeConvert, ONLY: TimeType, time_real_to_int
+    use ModCoupleDGCPM, ONLY: IsCoupled, coupled_potential
     use ModIoDGCPM
     use ModMainDGCPM
     use ModTimeDGCPM
 
     !INPUT PARAMETERS:
-    integer,  intent(in) :: iSession      ! session number (starting from 1)
-    real,     intent(in) :: tSimulation   ! seconds from start time
+    integer, intent(in) :: iSession      ! session number (starting from 1)
+    real,    intent(in) :: tSimulation   ! seconds from start time
 
     !DESCRIPTION:
     ! Initialize the Plasmasphere (PS) module for session iSession
 
-    ! Local variables:
-    real :: Tmax = 0.0
-
+    ! Debug variables:
     character(len=*), parameter :: NameSub='PS_init_session'
-    logical :: DoTest,DoTestMe
+    logical                     :: DoTest,DoTestMe
+    type(TimeType)              :: TimeNow
 
-    IsUninitialized = .true.
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    if(IsUninitialized)then
+    ! Use the SWMF time max, set max number of steps.
+    NSTEP=NINT(tSimulationMax/DT/2.)
+    
+    ! Set up internal time variables
+    time = tSimulation
+    t=time
+    nst=nint(time/dt/2.) + 1
+    nkp=nint(10800./dt/2.)
 
-       if (debug .gt. 0) write(*,*) "PS_init_session"
+    ! Synchronize time with SWMF:
+    call get_time(tCurrentOut=CurrentTime, tStartOut=StartTime)
 
-       ! Use the SWMF time max, set max number of steps.
-       Tmax = tSimulationMax
-       NSTEP=NINT(TMAX/DT/2.)
-       ! Setup Time variables
-       time = tSimulation
-       t=time
-       nst=nint(time/dt/2.) + 1
-       nkp=nint(10800./dt/2.)
-       call get_time(tCurrentOut = StartTime)
-
-       ! Set Kp values:
-       call GetKPA
-
-       if (debug.gt.0) write(*,*) "thermal"
-       call thermal   ! setup only
-
-       if (TestFill.gt.0) call TestFilling(1.0)
-
-       ! Finish Initialization     
-       IsUninitialized = .false.
-       WriteStatic = .true.
-
+    ! Print timing
+    if(DoTestMe)then
+       write(*,*) 'PS: DGCPM initial timing values:'
+       write(*,'(a,3(i10))')' PS: Timing indices nStep, nSt, nKp =',nStep,nSt,nKp
+       write(*,'(a,f8.1)') ' PS: Time step dT = ', dt
+       TimeNow%Time=StartTime
+       call time_real_to_int(TimeNow)
+       write(*,'(a4, a15,i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') &
+            'PS:', 'Start Time: ', &
+            TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+            TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+            floor(TimeNow%FracSecond*1000.0)
+       
+       TimeNow%Time=CurrentTime
+       call time_real_to_int(TimeNow)
+       write(*,'(a4, a15,i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') &
+            'PS:', 'Current Time: ', &
+            TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+            TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+            floor(TimeNow%FracSecond*1000.0)
     end if
+    
+    ! Set Kp values:
+    call GetKPA()
 
-    if (debug .gt. 0) write(*,*) "Done with PS_init_session"
+    ! Load restart file, initialize grid/domain, etc.:
+    call thermal()
 
+    ! Initialize electric field values:
+    if (isCoupled) then
+         mgridpot = coupled_potential
+     else
+         call magconv
+     endif
+     call setpot(vthetacells,nthetacells,vphicells,nphicells,mgridpot)
+     
+    if (TestFill.gt.0) call TestFilling(1.0)
+    
+    ! Write/initialize output as necessary:
+    call write_dgcpm_output(nStep, CurrentTime)
+    
+    ! Finish Initialization     
+    WriteStatic = .true.
+
+    if (DoTestMe) write(*,*) "PS: Initialization Complete."
+    write(*,*) '!!!!!! DT = ', dt
   end subroutine PS_init_session
 
   !============================================================================
@@ -431,21 +455,22 @@ contains
     character(len=*), parameter :: NameSub='PS_save_restart'
     !--------------------------------------------------------------------------
 
-    open(unit=UNITTMP_, form = 'formatted', &
+    open(unit=UnitTMP_, form = 'formatted', &
          file=cRestartOut//'dgcpm_restart.dat')     
-    write(UNITTMP_,*) nthetacells, nphicells
-    write(UNITTMP_,*) vphicells
-    write(UNITTMP_,*) mgridden
-    write(UNITTMP_,*) mgridx
-    write(UNITTMP_,*) mgridy
-    write(UNITTMP_,*) mgridoc
-    write(UNITTMP_,*) mgridpot
-    write(UNITTMP_,*) mgridvr
-    write(UNITTMP_,*) mgridvp
-    write(UNITTMP_,*) mgridn
-    write(UNITTMP_,*) mgridvol
+    write(UnitTMP_,*) nthetacells, nphicells
+    write(UnitTMP_,*) vthetacells
+    write(UnitTMP_,*) vphicells
+    write(UnitTMP_,*) mgridden
+    write(UnitTMP_,*) mgridx
+    write(UnitTMP_,*) mgridy
+    write(UnitTMP_,*) mgridoc
+    write(UnitTMP_,*) mgridpot
+    write(UnitTMP_,*) mgridvr
+    write(UnitTMP_,*) mgridvp
+    write(UnitTMP_,*) mgridn
+    write(UnitTMP_,*) mgridvol
     
-    close(unit = UNITTMP_)
+    close(unit = UnitTMP_)
 
   end subroutine PS_save_restart
 
@@ -468,7 +493,6 @@ contains
     real, intent(in) :: tSimulationLimit ! simulation time not to be exceeded
 
     real(Real8_) :: tStart
-    integer      :: i3
     real         :: dt_requested
 
     character(len=*), parameter :: NameSub='PS_run'
@@ -490,7 +514,6 @@ contains
 
 
     t = tSimulation
-    i3 = tSimulation/(2.0*dt)
 
     nst=nint(t/dt/2.) + 1
     nkp=nint(10800./dt/2.)
@@ -500,31 +523,17 @@ contains
 
     !  if (debug .gt. 0) write(*,*) "magconv"
     if (.not.(isCoupled)) call magconv()
+    
     !  if (debug .gt. 0) write(*,*) "thermal"
     call thermal
-
-    !  if (debug .gt. 0) write(*,*) "wresult"
-    if (i3.eq.nst) call wresult()
 
     ! Update timing.
     tSimulation = tSimulation+2.*dt
     CurrentTime = StartTime + tSimulation
 
-    ! Log File Writing
-    if (WriteLogFile .and. (mod(tSimulation, 300.0)<0.001)) then
-       call LogFileDGCPM(cOutputDir, i3)
-    endif
-
-    ! General Output Writing
-    if (mod(tSimulation, tint) < 1E-5) then
-       call wresult()
-    end if
-
-    ! Slice file writing.
-    if (mod(tSimulation, 300.0)<0.001) call write_lslice
-    if (DoMltSlice .and. mod(tSimulation,DtMltSlice)<0.001) call write_mltslice
-    return
-
+    ! Write output files:
+    call write_dgcpm_output(int(tSimulation/(2.0*dt)), CurrentTime)
+    
   end subroutine PS_run
 
   !============================================================================

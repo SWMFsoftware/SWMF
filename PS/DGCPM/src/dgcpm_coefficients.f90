@@ -36,7 +36,6 @@ SUBROUTINE MAGCONV
   enddo
 
   if (debug .gt. 0) write(*,*) "cpcp : ", maxval(mgridpot)-minval(mgridpot)
-  return
 
 end subroutine magconv
 !
