@@ -229,13 +229,13 @@ test_ps_check:
 		${PSDIR}/Output/dgcpm_t20011021_010000_000.ref \
 		> test_ps.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
-		${TESTDIR}/RESULTS/PS/PS_t20011021_002000_000.log \
-		${PSDIR}/Output/PS_t20011021_002000_000.ref \
-		> test_ps.diff)
+		${TESTDIR}/RESULTS/PS/PS_t20011021_000000_000.log \
+		${PSDIR}/Output/PS_t20011021_000000_000.ref \
+		>> test_ps.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
-		${TESTDIR}/RESULTS/PS/slice_L6p60_t20011021_002000_000.dat \
-		${PSDIR}/Output/slice_L6p60_t20011021_002000_000.ref \
-		> test_ps.diff)
+		${TESTDIR}/RESULTS/PS/slice_L6p60_t20011021_000000_000.dat \
+		${PSDIR}/Output/slice_L6p60_t20011021_000000_000.ref \
+		>> test_ps.diff)
 	ls -ltr test_ps*.diff
 
 
