@@ -407,7 +407,7 @@ contains
     WriteStatic = .true.
 
     if (DoTestMe) write(*,*) "PS: Initialization Complete."
-    write(*,*) '!!!!!! DT = ', dt
+
   end subroutine PS_init_session
 
   !============================================================================
