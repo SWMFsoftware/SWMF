@@ -939,8 +939,11 @@ subroutine MH_set_parameters(TypeAction)
               plot_form(iFile)='hdf'
               TypeFile_I(iFile) = 'hdf5'
            elseif(index(plot_string,'tec')>0)then 
-              plot_form(iFile)='tec'
+              plot_form(iFile)  = 'tec'
               TypeFile_I(iFile) = 'tec'
+           elseif(index(plot_string,'plt')>0)then 
+              plot_form(iFile)  = 'plt'
+              TypeFile_I(iFile) = 'plt'
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)

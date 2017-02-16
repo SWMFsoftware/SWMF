@@ -28,6 +28,8 @@ subroutine write_plot_common(iFile)
   use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell,&
        write_plot_sph
   use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
+  use ModWriteTecplot, ONLY: &
+       write_tecplot_head, write_tecplot_data, write_tecplot_connect
 
   implicit none
 
@@ -96,7 +98,7 @@ subroutine write_plot_common(iFile)
   character(len=10) :: NamePlotVar
 
   ! Event date for filename
-  character (len=80) :: format
+  character (len=3)  :: NameExt
   character (len=19) :: eventDateTime
 
   ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
@@ -178,9 +180,9 @@ subroutine write_plot_common(iFile)
   else
      if(IsPlotName_e)then
         ! Event date
-        write(format,*)'(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)'
         call get_date_time(iTime_I)
-        write(eventDateTime ,format) iTime_I
+        write(eventDateTime, '(i4.4,i2.2,i2.2,"-",i2.2,i2.2,i2.2,"-",i3.3)') &
+             iTime_I
         NameSnapshot = trim(NameSnapshot) // "_e" // trim(eventDateTime)
      end if
      if(IsPlotName_t)then
@@ -195,14 +197,16 @@ subroutine write_plot_common(iFile)
   end if
 
   ! String containing the processor index and file extension
+  NameExt = plot_form(iFile)
+  if(NameExt == 'plt') NameExt = 'tec'
   if (DoSaveOneTecFile) then
-     write(NameProc, '(a)') "."//plot_form(iFile)
+     write(NameProc, '(a)') "."//NameExt
   elseif(nProc < 10000) then
-     write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(iFile)
+     write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//NameExt
   elseif(nProc < 100000) then
-     write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(iFile)
+     write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//NameExt
   else
-     write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//plot_form(iFile)
+     write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//NameExt
   end if
 
   ! Determine if output file is formatted or unformatted
@@ -232,7 +236,7 @@ subroutine write_plot_common(iFile)
      filename_n = trim(NameSnapshot)//"_2"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_3"//trim(NameProc)
 
-     ! The output format for data is E14.6, so each cell has 
+     ! The output format for data is ES14.6, so each cell has 
      ! (nplotvar+3)*14 data, plus a new line character
      lrecData    = (nplotvar+3)*14+1
      ! The output format for point connectivity is (8(i8,1x))
@@ -313,6 +317,10 @@ subroutine write_plot_common(iFile)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      call open_file(UnitTmp_,  FILE=filename_n)
      call open_file(UnitTmp2_, FILE=filename_s)
+  elseif(plot_form(iFile)=='plt')then
+     ! Open one file for data
+     filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
+     call open_file(UnitTmp_,  FILE=filename_n)
   elseif(plot_form(iFile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
@@ -428,6 +436,8 @@ subroutine write_plot_common(iFile)
            if(plot_type1(1:3)=='blk' &
                 .and. iProc == iProcFound .and. iBlk==iBlockFound) &
                 PlotVarBlk = PlotVar
+        case('plt')
+           call write_tecplot_data(iBlk, nPlotvar, Plotvar)
         case('idl')
            call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
                 DoSaveGenCoord, CoordUnit, xmin, xmax, ymin, ymax, zmin, zmax, &
@@ -477,7 +487,7 @@ subroutine write_plot_common(iFile)
      end if
 
      RETURN
-  case('tec')
+  case('tec','plt')
      call get_tec_variables(iFile, nplotvar, plotvarnames, unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
      if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
@@ -550,6 +560,12 @@ subroutine write_plot_common(iFile)
      call close_file
   end if
 
+  if(plot_form(iFile)=='plt') then
+     ! Write out connectivity and header files
+     call write_tecplot_connect(trim(NameSnapshot)//"_2"//trim(NameProc))
+     call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
+  end if
+
   if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
   if(DoSaveOneTecFile) call close_file(iUnit)
@@ -584,7 +600,7 @@ subroutine write_plot_common(iFile)
   if(iProc==0)then
 
      select case(plot_form(iFile))
-     case('tec')
+     case('tec','plt')
         if (IsSphPlot) then
            filename = trim(NameSnapshot) // ".S"
         else  
@@ -614,7 +630,7 @@ subroutine write_plot_common(iFile)
         call open_file(FILE=filename)
 
         select case(plot_form(iFile))
-        case('tec')
+        case('tec','plt')
            write(UnitTmp_,'(a)')filename
            write(UnitTmp_,'(i8,a)')nProc,' nProc'
            write(UnitTmp_,'(i8,a)')n_step,' n_step'
@@ -726,7 +742,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(a)') '#PLOTVARIABLE'
            write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
            write(UnitTmp_,'(a)')trim(allnames)
-           if(TypeFile_I(iFile) == 'tec')then
+           if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'plt')then
               call get_tec_variables(iFile, nplotvar, plotvarnames, &
                    unitstr_TEC)
               write(UnitTmp_,'(a)')trim(unitstr_TEC)

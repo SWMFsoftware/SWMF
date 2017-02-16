@@ -90,6 +90,7 @@ OBJECTS = \
 	ModUser.o \
 	ModViscosity.o \
 	ModWaves.o \
+	ModWriteTecplot.o \
 	BATS_methods.o \
 	MH_set_parameters.o \
 	advect_points.o \
