@@ -351,6 +351,7 @@ contains
 
     if(UseElectronPressure .and. &
          .not.(UseElectronEntropy .and. UseMultiIon))then
+       ! Calculate DivU = div(U_e)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
@@ -371,7 +372,7 @@ contains
              ! The energy equation contains the work of the electron pressure
              ! -u.grad Pe = -div(u Pe) + Pe div(u)
              ! The -div(u Pe) is implemented as a flux in ModFaceFlux.
-             ! Here we add the Pe div(u) source term
+             ! Here we add the Pe div(u_e) source term
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
 
              ! Add "geometrical source term" p/r to the radial momentum
