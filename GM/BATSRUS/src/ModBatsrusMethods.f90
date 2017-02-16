@@ -449,9 +449,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! Switch off steady blocks to reduce calculation
   if(UsePartSteady) call part_steady_switch(.true.)
 
-  ! Calculate time step dt
-  !if (time_accurate) call set_global_timestep(TimeSimulationLimit)
-
   call timing_start('advance')
 
   if(UseNonConservative .and. nConservCrit > 0)&
@@ -691,7 +688,6 @@ subroutine BATS_save_files(TypeSaveIn)
 
   character(len=*), parameter :: NameSub='BATS_save_files'
   !--------------------------------------------------------------------------
-
   DoExchangeAgain     = .false.
   DoAssignNodeNumbers = .true.
   TypeSave = TypeSaveIn
