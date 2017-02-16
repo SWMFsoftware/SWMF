@@ -7,7 +7,7 @@ namespace RosinaSample {
   const int nPoints=1150;
 
   //split the cell when sample Rosina measurements
-  const int CellFractionationFactor=6;
+  const int CellFractionationFactor=1;
 
   const char ObservationTime[nPoints][100]={
 "2016-09-30T0:00:04",

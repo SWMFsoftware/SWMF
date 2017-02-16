@@ -51,6 +51,11 @@ void RosinaSample::Init(double etMin,double etMax) {
 
   if (PIC::ThisThread==0) {
    char fname[1000];
+   char TimeStampStart[100],TimeStampEnd[100];
+
+   et2utc_c(etMin,"ISOC",4,100,TimeStampStart);
+   et2utc_c(etMax,"ISOC",4,100,TimeStampEnd);
+   printf("Setting sampling flags: data will be sampled for the time interval of %s - %s\n",TimeStampStart,TimeStampEnd);
 
    sprintf(fname,"%s/TrajectoryLastMeasuremetns.dat",PIC::OutputDataFileDirectory);
    fTrajectory=fopen(fname,"w");
@@ -179,7 +184,7 @@ void RosinaSample::SamplingProcessor() {
   return; //cannot sample the instrument related data when SPICE is not used
   #endif
 
-  for (i=0;i<nPoints;i++) if ((Rosina[i].node!=NULL)&&(Rosina[i].SamplingParticleDataFlag==true)) if (Rosina[i].node->Thread==PIC::ThisThread) if ((block=Rosina[i].node->block)!=NULL) {
+  for (i=0;i<nPoints;i++) if ((Rosina[i].node!=NULL)&&(Rosina[i].SamplingParticleDataFlag==true)) if ((block=Rosina[i].node->block)!=NULL) {
     ptr=block->FirstCellParticleTable[Rosina[i].iCell+_BLOCK_CELLS_X_*(Rosina[i].jCell+_BLOCK_CELLS_Y_*Rosina[i].kCell)];
 
     dxSubCell=(Rosina[i].node->xmax[0]-Rosina[i].node->xmin[0])/_BLOCK_CELLS_X_/CellFractionationFactor;
@@ -238,8 +243,34 @@ void RosinaSample::SamplingProcessor() {
             x=PIC::ParticleBuffer::GetX(ptr);
             DirectAccessPathFound=false;
 
-            //check whether the particle can reach the nude gauge
-            //a particle can reach the gauge if
+            //check whether the particle can reach the nude gauge:
+            //1 check whether the particle trajectory intersects a sphere with the radius of 2 cells, and centered in the observations point
+            //2 the direction of the particle velocity is opposite to the line of sight ofthe instrument
+            for (iPoint=0;iPoint<nPoints;iPoint++) {
+              double a=0.0,b=0.0,c=0.0,d2,t;
+
+              for (idim=0;idim<3;idim++) {
+                a+=pow(v[idim],2);
+                b+=2.0*(x[idim]-Rosina[iPoint].x[idim])*v[idim];
+                c+=pow(x[idim]-Rosina[iPoint].x[idim],2);
+              }
+
+              c-=pow(3.0*node->GetCharacteristicCellSize(),2);
+              d2=b*b-4.0*a*c;
+
+              if (d2>0.0) {
+                double d=sqrt(d2);
+
+                if ( ((-b+d)/(2.0*a)>0.0) || ((-b-d)/(2.0*a)>0.0) ) {
+                  if ( (Vector3D::DotProduct(Rosina[iPoint].RamGauge.LineOfSight,v)<0.0) || (Vector3D::DotProduct(Rosina[iPoint].NudeGauge.LineOfSight,v)<0.0) ) {
+                    DirectAccessPathFound=true;
+                    break;
+                  }
+                }
+              }
+            }
+
+/*            //a particle can reach the gauge if
             //1) it is in the direction of the line of sight, and
             //2) the particle vbelocity is opposite to the line of sight
             for (iPoint=0;iPoint<nPoints;iPoint++) {
@@ -259,7 +290,7 @@ void RosinaSample::SamplingProcessor() {
                 DirectAccessPathFound=true;
                 break;
               }
-            }
+            }*/
 
             ptrNext=PIC::ParticleBuffer::GetNext(ptr);
 
