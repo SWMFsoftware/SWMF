@@ -516,7 +516,16 @@ void PIC::CCMC::LoadParticles() {
         for (idim=0;idim<3;idim++) {
           if ((ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])  ||
           (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]>PIC::Mesh::mesh.rootTree->xmax[idim])) { 
-            exit(__LINE__,__FILE__,"Error: injection sphere is outside of the domain. Redefine the location of the injection spherical region");
+            //the origin of the sphere is outside of thedomain => terminate execution
+
+            char message[1000];
+            double *x=ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin;
+            double *xmin=PIC::Mesh::mesh.rootTree->xmin;
+            double *xmax=PIC::Mesh::mesh.rootTree->xmax; 
+
+            sprintf(message," Error: injection sphere is outside of the domain. Redefine the location of the injection spherical region.\nThe origin of the sphere: %e, %e, %e.\nThe domain limits: xmin= %e, %e, %e, and xmax=%e, %e, %e\n",x[0],x[1],x[2], xmin[0],xmin[1],xmin[2], xmax[0],xmax[1],xmax[2]); 
+
+            exit(__LINE__,__FILE__,message);
           } 
         }
 
