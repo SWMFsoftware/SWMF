@@ -9124,7 +9124,7 @@ nMPIops++;
         if (LoadCenterNodeMeasure(CellMeasureFilePath,NULL)==true) {
           return;
         }
-        else if (ThisThread==0) printf("$PREFIX: the calculated volume data file is not found: generating....\n ");
+        else if (ThisThread==0) printf("$PREFIX: the calculated volume data file is not found: generating....\n");
       }
 
       startNode=rootTree;
