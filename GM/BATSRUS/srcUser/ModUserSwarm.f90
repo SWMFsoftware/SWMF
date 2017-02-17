@@ -579,17 +579,11 @@ contains
        ! Smoothing function is 1 if rho<RhoThinCutoff , 0 if not
        Fraction = mf*(0.5 - 0.5*tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.)))
        ! Calculate the cooling function culve dependent on temperature
-       if(TeSi <= 8e3)then
-          CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
-       elseif(TeSi <= 1e4)then
-          CoolingFunctionCgs = (1.397e-8*TeSi)**6.15
-       else
-          ! Table variable should be normalized to radloss_cgs * 1e22
-          ! since we don't want to deal with such tiny numbers
-          call interpolate_lookup_table(iTableRadCool, TeSi, &
-               CoolingTableOut_I, DoExtrapolate = .false.)
-          CoolingFunctionCgs = CoolingTableOut_I(1)/RadNorm
-       end if
+       ! Table variable should be normalized to radloss_cgs * 1e22
+       ! since we don't want to deal with such tiny numbers
+       call interpolate_lookup_table(iTableRadCool, TeSi, &
+            CoolingTableOut_I, DoExtrapolate = .false.)
+       CoolingFunctionCgs = CoolingTableOut_I(1)/RadNorm
        ! thin radiative cooling = -\CoolinFunction * n_{e}*n_{p}
        RadiativeCooling = -Fraction*NumberDensCgs**2*CoolingFunctionCgs
        if(RadiativeCooling/MassDensCgs <= RadiationCutoff) &

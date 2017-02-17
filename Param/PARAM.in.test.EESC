@@ -117,7 +117,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona_6.0.dat
+SC/Param/RadCoolCorona.dat
 ascii			TypeFile
 
 #SCHEME
@@ -144,7 +144,7 @@ x=0 VAR idl		StringPlot
 -1  			DnSavePlot
 12.0			DtSavePlot
 0			DxSavePlot
-rho ux uy uz bx by bz tempe p
+rho ux uy uz bx by bz tempe p eint
 g rbody
 
 #SAVEINITIAL
