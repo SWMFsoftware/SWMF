@@ -330,7 +330,7 @@ contains
     integer, intent(in) :: iBlock
     character (len=*), parameter :: NameSub = NameMod//'::use_block_data'
     !------------------------------------------------------------------------
-    use_block_data = UseData_B(iBlock)
+    use_block_data = UseData_B(iBlock) .and. nData_B(iBlock) > 0
     if(DoDebug)then
        if(iProc==ProcTest .and. iBlock==BlkTest) &
             write(*,*)NameSub,' returning ',UseData_B(iBlock)
