@@ -280,6 +280,7 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
     int shadow_attribute,faceat;
     long int nface;
     double cos_illumination_angle;
+    int MeshFileID;
   };
 
   cTempNodeData *TempNodeData=new cTempNodeData[nBoundaryTriangleNodes];
@@ -292,6 +293,7 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
       TempNodeData[nnode].faceat=BoundaryTriangleFaces[nface].attribute;
       TempNodeData[nnode].cos_illumination_angle=BoundaryTriangleFaces[nface].pic__cosine_illumination_angle;
       TempNodeData[nnode].nface=nface;
+      TempNodeData[nnode].MeshFileID=BoundaryTriangleFaces[nface].MeshFileID;
 
       if ((nnode<0)||(nnode>=nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
     }
@@ -300,12 +302,12 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
 
   //print the mesh
   FILE *fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"cos(face illumination angle)\", \"faceat\", \"nface\"");
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"cos(face illumination angle)\", \"faceat\", \"nface\",\"Mesh File ID\"");
   fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
 
   for (nnode=0;nnode<nBoundaryTriangleNodes;nnode++) {
-    fprintf(fout,"%e %e %e %i %e %i %ld\n",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],
-        TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].cos_illumination_angle,TempNodeData[nnode].faceat,TempNodeData[nnode].nface);
+    fprintf(fout,"%e %e %e %i %e %i %ld %i\n",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],
+        TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].cos_illumination_angle,TempNodeData[nnode].faceat,TempNodeData[nnode].nface,TempNodeData[nnode].MeshFileID);
   }
 
   for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
@@ -327,12 +329,25 @@ struct cNASTRANface {
   double externalNormal[3];
 };*/
 
-
 void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor) {
+  cSurfaceMeshFile MeshFile;
+  list<cSurfaceMeshFile> SurfaceMeshFileList;
+
+  sprintf(MeshFile.MeshFileName,"%s",fname);
+  MeshFile.faceat=-1;
+
+  SurfaceMeshFileList.push_back(MeshFile);
+
+  ReadCEASurfaceMeshLongFormat(SurfaceMeshFileList,UnitConversitonFactor);
+}
+
+
+void CutCell::ReadCEASurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
   long int i,j,idim,nnodes=0,nfaces=0;
   long int nTriangulationNodes=-1,nTriangulationFaces=-1;
+  int faceat,NodeNumberOffset=0;
 
   if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
@@ -343,57 +358,65 @@ void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversi
   cNASTRANface face;
   vector<cNASTRANface> faces;
 
-  ifile.openfile(fname);
+  //loop through all mesh files
+  list<cSurfaceMeshFile>::iterator MeshFile;
 
-  do {
-   ifile.GetInputStr(str,sizeof(str));
+  for (MeshFile=SurfaceMeshFileList.begin();MeshFile!=SurfaceMeshFileList.end();MeshFile++) {
+    ifile.openfile(MeshFile->MeshFileName);
+    faceat=(MeshFile->faceat!=-1) ? MeshFile->faceat : 0;
 
-   if ((str[0]>='0')||(str[0]<='9')) {
-     //the fist line file a number has been found
-     ifile.CutInputStr(dat,str);
-     nTriangulationNodes=strtol(dat,&endptr,10);
+    do {
+     ifile.GetInputStr(str,sizeof(str));
 
-     ifile.CutInputStr(dat,str);
-     nTriangulationFaces=strtol(dat,&endptr,10);
-   }
-  }
-  while (nTriangulationNodes==-1);
+     if ((str[0]>='0')||(str[0]<='9')) {
+       //the fist line file a number has been found
+       ifile.CutInputStr(dat,str);
+       nTriangulationNodes=strtol(dat,&endptr,10);
 
-
-  //read nodes from the file
-  for (int cnt=0;cnt<nTriangulationNodes;cnt++) {
-    ifile.GetInputStr(str,sizeof(str));
-    node.id=cnt+1;
-
-    ifile.CutInputStr(dat,str);
-    node.x[0]=UnitConversitonFactor*strtod(dat,&endptr);
-
-    ifile.CutInputStr(dat,str);
-    node.x[1]=UnitConversitonFactor*strtod(dat,&endptr);
-
-    ifile.CutInputStr(dat,str);
-    node.x[2]=UnitConversitonFactor*strtod(dat,&endptr);
-
-    nodes.push_back(node);
-    nnodes++;
-  }
+       ifile.CutInputStr(dat,str);
+       nTriangulationFaces=strtol(dat,&endptr,10);
+     }
+    }
+    while (nTriangulationNodes==-1);
 
 
-  //read the face information
-  for (int cnt=0;cnt<nTriangulationFaces;cnt++) {
-    ifile.GetInputStr(str,sizeof(str));
+    //read nodes from the file
+    for (int cnt=0;cnt<nTriangulationNodes;cnt++) {
+      ifile.GetInputStr(str,sizeof(str));
+      node.id=cnt+1;
 
-    face.faceat=0;
-
-    for (idim=0;idim<3;idim++) {
       ifile.CutInputStr(dat,str);
-      face.node[idim]=strtol(dat,&endptr,10)-1;
+      node.x[0]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      ifile.CutInputStr(dat,str);
+      node.x[1]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      ifile.CutInputStr(dat,str);
+      node.x[2]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      nodes.push_back(node);
+      nnodes++;
     }
 
-    nfaces++;
-    faces.push_back(face);
-  }
 
+    //read the face information
+    for (int cnt=0;cnt<nTriangulationFaces;cnt++) {
+      ifile.GetInputStr(str,sizeof(str));
+
+      face.faceat=0;
+
+      for (idim=0;idim<3;idim++) {
+        ifile.CutInputStr(dat,str);
+        face.node[idim]=NodeNumberOffset+strtol(dat,&endptr,10)-1;
+      }
+
+      nfaces++;
+      faces.push_back(face);
+    }
+
+    ifile.closefile();
+    NodeNumberOffset=nodes.size();
+  }
 
 
   //create the surface triangulation array
@@ -423,10 +446,11 @@ void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversi
 
 
 
-void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
+void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
   long int i,j,idim,nnodes=0,nfaces=0;
+  int NodeNumberOffset=0,MeshFileID=0;
 
   if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
@@ -437,71 +461,81 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
   cNASTRANface face;
   vector<cNASTRANface> faces;
 
-  ifile.openfile(fname);
-  ifile.GetInputStr(str,sizeof(str));
+  //loop through all mesh files
+  list<cSurfaceMeshFile>::iterator MeshFile;
 
-  //read nodes from the file
+  for (MeshFile=SurfaceMeshFileList.begin();MeshFile!=SurfaceMeshFileList.end();MeshFile++) {
+    ifile.openfile(MeshFile->MeshFileName);
+    ifile.GetInputStr(str,sizeof(str));
 
-  ifile.GetInputStr(str,sizeof(str));
-  ifile.CutInputStr(dat,str);
-
-  //load the nodes
-  while (strcmp("GRID*",dat)==0) {
-    ifile.CutInputStr(dat,str);
-    node.id=strtol(dat,&endptr,10);
-
-    ifile.CutInputStr(dat,str);
-    ifile.CutInputStr(dat,str);
-    node.x[0]=strtod(dat,&endptr);
-
-    ifile.CutInputStr(dat,str);
-    node.x[1]=strtod(dat,&endptr);
+    //read nodes from the file
 
     ifile.GetInputStr(str,sizeof(str));
     ifile.CutInputStr(dat,str);
 
-    ifile.CutInputStr(dat,str);
-    node.x[2]=strtod(dat,&endptr);
-
-
-    if (nnodes==0) for (idim=0;idim<3;idim++) xSurfaceMin[idim]=node.x[idim],xSurfaceMax[idim]=node.x[idim];
-    else {
-      for (idim=0;idim<3;idim++) {
-        if (xSurfaceMin[idim]>node.x[idim]) xSurfaceMin[idim]=node.x[idim];
-        if (xSurfaceMax[idim]<node.x[idim]) xSurfaceMax[idim]=node.x[idim];
-      }
-    }
-
-    nodes.push_back(node);
-    nnodes++;
-
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
-  }
-
-  //find the beginig for the face information
-  while (strcmp("CBAR",dat)==0) {
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
-  }
-
-  //read the face information
-  while (strcmp("CTRIA3",dat)==0) {
-    ifile.CutInputStr(dat,str);
-
-    ifile.CutInputStr(dat,str);
-    face.faceat=strtol(dat,&endptr,10);
-
-    for (idim=0;idim<3;idim++) {
+    //load the nodes
+    while (strcmp("GRID*",dat)==0) {
       ifile.CutInputStr(dat,str);
-      face.node[idim]=strtol(dat,&endptr,10);
+      node.id=strtol(dat,&endptr,10);
+
+      ifile.CutInputStr(dat,str);
+      ifile.CutInputStr(dat,str);
+      node.x[0]=strtod(dat,&endptr);
+
+      ifile.CutInputStr(dat,str);
+      node.x[1]=strtod(dat,&endptr);
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+
+      ifile.CutInputStr(dat,str);
+      node.x[2]=strtod(dat,&endptr);
+
+
+      if (nnodes==0) for (idim=0;idim<3;idim++) xSurfaceMin[idim]=node.x[idim],xSurfaceMax[idim]=node.x[idim];
+      else {
+        for (idim=0;idim<3;idim++) {
+          if (xSurfaceMin[idim]>node.x[idim]) xSurfaceMin[idim]=node.x[idim];
+          if (xSurfaceMax[idim]<node.x[idim]) xSurfaceMax[idim]=node.x[idim];
+        }
+      }
+
+      nodes.push_back(node);
+      nnodes++;
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
     }
 
-    nfaces++;
-    faces.push_back(face);
+    //find the beginig for the face information
+    while (strcmp("CBAR",dat)==0) {
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+    }
 
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
+    //read the face information
+    while (strcmp("CTRIA3",dat)==0) {
+      ifile.CutInputStr(dat,str);
+
+      ifile.CutInputStr(dat,str);
+      face.faceat=(MeshFile->faceat==-1) ? strtol(dat,&endptr,10) : MeshFile->faceat;
+
+      face.MeshFileID=MeshFileID;
+
+      for (idim=0;idim<3;idim++) {
+        ifile.CutInputStr(dat,str);
+        face.node[idim]=strtol(dat,&endptr,10);
+      }
+
+      nfaces++;
+      faces.push_back(face);
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+    }
+
+    MeshFileID++;
+    ifile.closefile();
   }
 
 
@@ -578,6 +612,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
   for (nfc=0;nfc<nfaces;nfc++) {
     BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
     BoundaryTriangleFaces[nfc].Temp_ID=nfc;
+    BoundaryTriangleFaces[nfc].MeshFileID=faces[nfc].MeshFileID;
 
     for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
   }
@@ -687,10 +722,10 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
 
 }
 
-void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor) {
+void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
-  long int i,j,idim,nnodes=0,nfaces=0;
+  int i,j,idim,nnodes=0,nfaces=0,NodeNumberOffset=0,ThisMeshNodeCounter,MeshFileID=1;
 
   if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
@@ -701,68 +736,81 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConv
   cNASTRANface face;
   vector<cNASTRANface> faces;
 
-  ifile.openfile(fname);
-  ifile.GetInputStr(str,sizeof(str));
+  //loop through all mesh files
+  list<cSurfaceMeshFile>::iterator MeshFile;
 
-  //read nodes from the file
+  for (MeshFile=SurfaceMeshFileList.begin();MeshFile!=SurfaceMeshFileList.end();MeshFile++) {
+    ifile.openfile(MeshFile->MeshFileName);
+    ifile.GetInputStr(str,sizeof(str));
 
-  ifile.GetInputStr(str,sizeof(str));
-  ifile.CutInputStr(dat,str);
-
-  //load the nodes
-  while (strcmp("GRID*",dat)==0) {
-    ifile.CutInputStr(dat,str);
-    node.id=strtol(dat,&endptr,10);
-
-    ifile.CutInputStr(dat,str);
-    ifile.CutInputStr(dat,str);
-    node.x[0]=UnitConversitonFactor*strtod(dat,&endptr);
-
-    ifile.CutInputStr(dat,str);
-    node.x[1]=UnitConversitonFactor*strtod(dat,&endptr);
-
+    //read nodes from the file
     ifile.GetInputStr(str,sizeof(str));
     ifile.CutInputStr(dat,str);
 
-    ifile.CutInputStr(dat,str);
-    node.x[2]=UnitConversitonFactor*strtod(dat,&endptr);
+    ThisMeshNodeCounter=0;
 
-    nodes.push_back(node);
-    nnodes++;
-
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
-  }
-
-  //find the beginig for the face information
-  while (strcmp("CBAR",dat)==0) {
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
-  }
-
-  //read the face information
-  while (strcmp("CTRIA3",dat)==0) {
-    ifile.CutInputStr(dat,str);
-
-    ifile.CutInputStr(dat,str);
-    face.faceat=strtol(dat,&endptr,10);
-
-    for (idim=0;idim<3;idim++) {
+    //load the nodes
+    while (strcmp("GRID*",dat)==0) {
       ifile.CutInputStr(dat,str);
-      face.node[idim]=strtol(dat,&endptr,10)-1;
+      node.id=strtol(dat,&endptr,10);
+
+      ifile.CutInputStr(dat,str);
+      ifile.CutInputStr(dat,str);
+      node.x[0]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      ifile.CutInputStr(dat,str);
+      node.x[1]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+
+      ifile.CutInputStr(dat,str);
+      node.x[2]=UnitConversitonFactor*strtod(dat,&endptr);
+
+      nodes.push_back(node);
+      nnodes++;
+      ThisMeshNodeCounter++;
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
     }
 
-    nfaces++;
-    faces.push_back(face);
+    //find the beginig for the face information
+    while (strcmp("CBAR",dat)==0) {
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+    }
 
-    ifile.GetInputStr(str,sizeof(str));
-    ifile.CutInputStr(dat,str);
+    //read the face information
+    while (strcmp("CTRIA3",dat)==0) {
+      ifile.CutInputStr(dat,str);
+
+      ifile.CutInputStr(dat,str);
+      face.faceat=(MeshFile->faceat==-1) ? strtol(dat,&endptr,10) : MeshFile->faceat;
+
+      face.MeshFileID=MeshFileID;
+
+      for (idim=0;idim<3;idim++) {
+        ifile.CutInputStr(dat,str);
+        face.node[idim]=NodeNumberOffset+strtol(dat,&endptr,10)-1;
+      }
+
+      nfaces++;
+      faces.push_back(face);
+
+      ifile.GetInputStr(str,sizeof(str));
+      ifile.CutInputStr(dat,str);
+    }
+
+    MeshFileID++;
+    NodeNumberOffset+=ThisMeshNodeCounter;
+    ifile.closefile();
   }
 
 
 
   //create the surface triangulation array
-  long int nd,nfc,id;
+  int nd,nfc,id;
 
   nBoundaryTriangleFaces=nfaces;
   BoundaryTriangleFaces=new cTriangleFace[nfaces];
@@ -782,29 +830,97 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConv
     for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
     BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
     BoundaryTriangleFaces[nfc].Temp_ID=nfc;
+    BoundaryTriangleFaces[nfc].MeshFileID=faces[nfc].MeshFileID;
   }
 
 }
 
 
-void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path,double UnitConversitonFactor) {
-  char fullname[STRING_LENGTH];
+//begin: read surface mesh with a given cconvertion factor
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor) {
+  cSurfaceMeshFile MeshFile;
+  list<cSurfaceMeshFile> MeshFileList;
 
-  sprintf(fullname,"%s/%s",path,fname);
-  ReadNastranSurfaceMeshLongFormat(fullname,UnitConversitonFactor);
+  sprintf(MeshFile.MeshFileName,"%s",fname);
+  MeshFile.faceat=-1;
+
+  MeshFileList.push_back(MeshFile);
+
+  ReadNastranSurfaceMeshLongFormat(MeshFileList,UnitConversitonFactor);
+}
+
+
+
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path,double UnitConversitonFactor) {
+  cSurfaceMeshFile MeshFile;
+  list<cSurfaceMeshFile> MeshFileList;
+
+  sprintf(MeshFile.MeshFileName,"%s/%s",path,fname);
+  MeshFile.faceat=-1;
+
+  MeshFileList.push_back(MeshFile);
+
+  ReadNastranSurfaceMeshLongFormat(MeshFileList,UnitConversitonFactor);
+}
+
+void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,const char *path,double UnitConversitonFactor) {
+  list<cSurfaceMeshFile> tempSurfaceMeshFileList;
+  list<cSurfaceMeshFile>::iterator MeshFile,tempMeshFile;
+
+  tempSurfaceMeshFileList=SurfaceMeshFileList;
+
+  for (tempMeshFile=tempSurfaceMeshFileList.begin(),MeshFile=SurfaceMeshFileList.begin();tempMeshFile!=tempSurfaceMeshFileList.end();tempMeshFile++,MeshFile++) {
+    sprintf(tempMeshFile->MeshFileName,"%s/%s",path,MeshFile->MeshFileName);
+  }
+
+  ReadNastranSurfaceMeshLongFormat(tempSurfaceMeshFileList,UnitConversitonFactor);
+}
+//end: read surface mesh with a given cconvertion factor
+
+//begin: read surface mesh given in km
+void CutCell::ReadNastranSurfaceMeshLongFormat_km(list<cSurfaceMeshFile> MeshFileList) {
+  ReadNastranSurfaceMeshLongFormat(MeshFileList,1.0E3);
 }
 
 void CutCell::ReadNastranSurfaceMeshLongFormat_km(const char *fname) {
-  ReadNastranSurfaceMeshLongFormat(fname,1.0E3);
-}
+  cSurfaceMeshFile MeshFile;
+  list<cSurfaceMeshFile> MeshFileList;
 
+  sprintf(MeshFile.MeshFileName,"%s",fname);
+  MeshFile.faceat=-1;
+
+  MeshFileList.push_back(MeshFile);
+
+  ReadNastranSurfaceMeshLongFormat(MeshFileList,1.0E3);
+}
+//end: read surface mesh given in km
+
+//begin: read surface mesh given in km, and a path to the file
 void CutCell::ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path) {
-  char fullname[STRING_LENGTH];
+  cSurfaceMeshFile MeshFile;
+  list<cSurfaceMeshFile> MeshFileList;
 
-  sprintf(fullname,"%s/%s",path,fname);
-  ReadNastranSurfaceMeshLongFormat_km(fullname);
+  sprintf(MeshFile.MeshFileName,"%s/%s",path,fname);
+  MeshFile.faceat=-1;
+
+  MeshFileList.push_back(MeshFile);
+
+  ReadNastranSurfaceMeshLongFormat_km(MeshFileList);
 }
 
+void CutCell::ReadNastranSurfaceMeshLongFormat_km(list<cSurfaceMeshFile> SurfaceMeshFileList,const char *path) {
+  list<cSurfaceMeshFile> tempSurfaceMeshFileList;
+  list<cSurfaceMeshFile>::iterator MeshFile,tempMeshFile;
+
+  tempSurfaceMeshFileList=SurfaceMeshFileList;
+
+  for (tempMeshFile=tempSurfaceMeshFileList.begin(),MeshFile=SurfaceMeshFileList.begin();tempMeshFile!=tempSurfaceMeshFileList.end();tempMeshFile++,MeshFile++) {
+    sprintf(tempMeshFile->MeshFileName,"%s/%s",path,MeshFile->MeshFileName);
+  }
+
+  ReadNastranSurfaceMeshLongFormat_km(tempSurfaceMeshFileList);
+}
+//end: read surface mesh given in km
 
 
 //calcualte the size limit of the surface mesh

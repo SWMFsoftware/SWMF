@@ -63,9 +63,17 @@ unsigned long int GetTriangulationSignature();
     }
   };
 
-  struct cNASTRANface {
-    int node[3],faceat;
+  class cNASTRANface {
+  public:
+    int node[3],faceat,MeshFileID;
     double externalNormal[3];
+
+    cNASTRANface() {
+      MeshFileID=0;
+      faceat=-1;
+
+      for (int idim=0;idim<3;idim++) node[idim]=-1,externalNormal[idim]=0.0;
+    }
   };
 
   class cCutBlockNode {
@@ -185,7 +193,7 @@ unsigned long int GetTriangulationSignature();
   //  list<cCutBlockNode>::iterator node[3];
     cNASTRANnode *node[3];
     list<cTriangleEdge>::iterator edge[3];
-    int Temp_ID;
+    int Temp_ID,MeshFileID;
 
     double ExternalNormal[3],SurfaceArea;
     int attribute;
@@ -514,7 +522,7 @@ unsigned long int GetTriangulationSignature();
 
       pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
       pic__cosine_illumination_angle=0.0;
-      Temp_ID=-1;
+      Temp_ID=-1,MeshFileID=-1;
     }
 
     inline double CharacteristicSize() {
@@ -547,11 +555,31 @@ unsigned long int GetTriangulationSignature();
   //output of the user-defined surface data
   void PrintSurfaceData(const char *fname);
 
+  //read multiple surface mesh files: the class describing individual mesh file, and functions that read these files
+  class cSurfaceMeshFile {
+  public:
+    char MeshFileName[200];
+    int faceat;
+
+    cSurfaceMeshFile() {
+      faceat=-1;
+      sprintf(MeshFileName,"");
+    }
+  };
+
+  void ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
+  void ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor=1.0);
+  void ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,const char *path,double UnitConversitonFactor=1.0);
+
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor=1.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path,double UnitConversitonFactor=1.0);
 
+  void ReadCEASurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor=1.0);
   void ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversitonFactor=1.0);
+
+  void ReadNastranSurfaceMeshLongFormat_km(list<cSurfaceMeshFile> SurfaceMeshFileList);
+  void ReadNastranSurfaceMeshLongFormat_km(list<cSurfaceMeshFile> SurfaceMeshFileList,const char *path);
 
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname);
   void ReadNastranSurfaceMeshLongFormat_km(const char *fname,const char *path);
