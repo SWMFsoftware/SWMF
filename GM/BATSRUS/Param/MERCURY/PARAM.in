@@ -72,13 +72,13 @@ F                       UseRotation
 2			nStage
 0.40			CflExlp
 
-#BOXBOUNDARY
-outflow			TypeBcEast
-vary			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+#OUTERBOUNDARY
+none			TypeBcEast
+none			TypeBcWest
+periodic		TypeBcSouth
+periodic		TypeBcNorth
+periodic		TypeBcBottom
+periodic		TypeBcTop
 
 #INNERBOUNDARY
 reflect                 TyepBcInner
@@ -111,8 +111,11 @@ VAR			StringLogfile
 -1.			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax status
 
+#SAVETECPLOT
+T			DoSaveOneTecFile
+
 #SAVEPLOT
-2                      DnSavePlot
+2			DnSavePlot
 y=0 var idl             PlotString
 10                      DnSavePlot
 -1.0                    DtSavePlot
