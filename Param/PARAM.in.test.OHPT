@@ -124,15 +124,15 @@ box
 40.0
 
 #INNERBOUNDARY
-user
+user			TypeBcInner
 
 #OUTERBOUNDARY
-user                  TypeBcOuter_E(East_) user
-outflow               TypeBcOuter_E(West_) 
-outflow               TypeBcOuter_E(South_) 
-outflow               TypeBcOuter_E(North_) 
-outflow               TypeBcOuter_E(Bot_) 
-outflow               TypeBcOuter_E(Top_) 
+user			TypeBc1
+outflow			TypeBc2
+outflow			TypeBc3
+outflow			TypeBc4
+outflow			TypeBc5
+outflow			TypeBc6
 
 NEUTRALFLUID
 F			DoConserveNeutrals
@@ -151,10 +151,6 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 0			nConsCrit
-
-1       nConservCrit1
-p       TypeConservCrit
-0.0001
 
 #SAVERESTART
 T			DoSaveRestart 
@@ -199,9 +195,9 @@ F                       UseUserUpdateStates
 #USERINPUTBEGIN --------------------------------------------------------
 
 #SOLARWINDH
-0.00874                    SWH_rho_dim [n/cc]
-1.0868E5                   SWH_T_dim [K] 
-417.07                   SWH_Ux_dim [km/s]
+0.00874			SWH_N_dim [/cc]
+1.0868E5       		SWH_T_dim [K] 
+417.07                  SWH_Ux_dim [km/s]
 0.0                     SWH_Uy_dim [km/s]
 0.0                     SWH_Uz_dim [km/s]
 7.17E-03                SWH_Bx_dim [nT]
@@ -209,14 +205,14 @@ F                       UseUserUpdateStates
 0.0                     SWH_Bz_dim [nT]
 
 #VLISW                  
-0.06            VLISW_rho_dim [n/cc]
-6519.0               VLISW_T_dim
-26.3               VLISW_Ux_dim
-0.0                VLISW_Uy_dim
--2.3              VLISW_Uz_dim
-0.3093            VLISW_Bx_dim
--0.080            VLISW_By_dim
--0.2988           VLISW_Bz_dim
+0.06            	VLISW_N_dim [n/cc]
+6519.0               	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.0                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.3093            	VLISW_Bx_dim
+-0.080            	VLISW_By_dim
+-0.2988           	VLISW_Bz_dim
 
 #USERINPUTEND ----------------------------------------------------------
 
@@ -307,7 +303,7 @@ PT                      NameComp2
 -1.0                    DtCouple
 
 #STOP
-140                      MaxIteration
--1.0                     tSimulationMax
+140			MaxIteration
+-1.0			tSimulationMax
 
 #END
