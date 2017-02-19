@@ -70,12 +70,12 @@ T			UseBody
 1.5000E+00			Gamma
 
 #OUTERBOUNDARY
-float			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBot
-float			TypeBcTop
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #USECURLB0
 T			UseCurlB0
@@ -177,12 +177,12 @@ F
 1.50000E+00		Gamma
 
 #OUTERBOUNDARY
-float   		TypeBcEast
-float   		TypeBcWest
-float  			TypeBcSouth 
-float   		TypeBcNorth 
-float   		TypeBcBottom  
-float   		TypeOuterBcTop
+float   		TypeBc1
+float   		TypeBc2
+float  			TypeBc3 
+float   		TypeBc4 
+float   		TypeBc5  
+float   		TypeBc6
 
 #GRID
 1                     	nRootBlockX

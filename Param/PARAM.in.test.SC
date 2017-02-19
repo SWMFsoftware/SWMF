@@ -244,12 +244,12 @@ T                       UseCoarseAxis
 2			nCoarseLayer
 
 #OUTERBOUNDARY
-fieldlinethreads	TypeBcEast   user for spherical and user_outerbcs
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+fieldlinethreads	TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SAVEPLOT
 3			nPlotFiles

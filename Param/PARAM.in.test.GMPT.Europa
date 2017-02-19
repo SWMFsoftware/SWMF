@@ -96,12 +96,12 @@ T                       DoFixAxis
 0.0			zTest
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-inflow			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+inflow			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #MINIMUMDENSITY
 1E-4			RhoMin

@@ -64,12 +64,12 @@ T			Usebody
 1.5000E+00		Gamma
 
 #OUTERBOUNDARY
-float	                TypeBcEast
-float   	        TypeBcWest
-float	                TypeBcSouth
-float	  		TypeBcNorth
-float	 	        TypeBcBot
-float	   		TypeBcTop
+float	                TypeBc1
+float   	        TypeBc2
+float	                TypeBc3
+float	  		TypeBc4
+float	 	        TypeBc5
+float	   		TypeBc6
 
 #INCLUDE
 SC/Param/Grid
@@ -159,12 +159,12 @@ buffergrid		TypeBcInner
 HGC			TypeCoordSystem
 
 #OUTERBOUNDARY
-float			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop 
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6 
 
 #GRIDRESOLUTION
 4.0			Resolution

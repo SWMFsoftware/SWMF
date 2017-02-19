@@ -54,12 +54,12 @@ T			UseNonConservative
 1.25/3			DyPic
 
 #OUTERBOUNDARY
-periodic                TypeBcEast
-periodic                TypeBcWest
-periodic                TypeBcSouth
-periodic                TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+periodic                TypeBc1
+periodic                TypeBc2
+periodic                TypeBc3
+periodic                TypeBc4
+float                   TypeBc5
+float                   TypeBc6
 
 HALLRESISTIVITY
 T			UseHallResistFlux

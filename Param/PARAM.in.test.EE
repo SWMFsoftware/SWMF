@@ -18,12 +18,12 @@ EE/restartIN/restart.H
 0.0			RotationPeriodStar
 
 #OUTERBOUNDARY
-fixvalue		TypeBcEast
-no_inflow		TypeBcWest
-periodic		TypeBcSouth
-periodic		TypeBcNorth
-periodic		TypeBcBottom
-periodic		TypeBcTop
+fixvalue		TypeBc1
+no_inflow		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #USERFLAGS
 F			UseUserInnerBcs

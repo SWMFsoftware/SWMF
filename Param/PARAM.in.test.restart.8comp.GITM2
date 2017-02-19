@@ -87,12 +87,12 @@ F			UseFluxRope
 1.50000E+00		Gamma
 
 #OUTERBOUNDARY
-coupled 		TypeBcEast
-coupled 		TypeBcWest
-coupled 		TypeBcSouth
-coupled 		TypeBcNorth
-coupled 		TypeBcBottom
-coupled 		TypeBcTop
+coupled 		TypeBc1
+coupled 		TypeBc2
+coupled 		TypeBc3
+coupled 		TypeBc4
+coupled 		TypeBc5
+coupled 		TypeBc6
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -159,12 +159,12 @@ buffergrid		TypeBcInner
 F                       UseUserPerturbation
 
 #OUTERBOUNDARY
-float			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop 
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6 
 
 #TIMESTEPPING
 2			nStage
@@ -261,12 +261,12 @@ GM			NameTarget
 GM/restartIN/restart.H
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-coupled			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+coupled			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SAVELOGFILE
 T                       DoSaveLogfile

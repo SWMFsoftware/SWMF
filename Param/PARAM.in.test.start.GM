@@ -80,12 +80,12 @@ T			UseBody
     +0.744              SwBzDim  [nT]
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-inflow			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+inflow			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #TIMESTEPPING
 1			nStage

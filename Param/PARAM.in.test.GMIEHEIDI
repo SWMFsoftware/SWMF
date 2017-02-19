@@ -122,12 +122,12 @@ T			UseTvdResChange
 0.80			CflExlp
 
 #OUTERBOUNDARY
-outflow			TypeBCEast
-vary			TypeBCWest
-float			TypeBCSouth
-float			TypeBCNorth
-float			TypeBCBottom
-float			TypeBCTop
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
