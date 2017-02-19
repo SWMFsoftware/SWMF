@@ -193,12 +193,12 @@ user			TypeBcInner
 -2			MaxBoundary
 
 #OUTERBOUNDARY
-user			TypeBcEast   user for spherical and user_outerbcs
-float			TypeBcWest
-reflect			TypeBcSouth
-reflect			TypeBcNorth
-reflect			TypeBcBottom
-reflect			TypeBcTop
+user			TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+reflect			TypeBc3
+reflect			TypeBc4
+reflect			TypeBc5
+reflect			TypeBc6
 
 #SAVEPLOT
 1			nPlotFiles

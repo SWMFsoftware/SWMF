@@ -136,10 +136,10 @@ box_gen			StringShape
 +10.0			LatMax
 
 #BOXBOUNDARY
-outflow                 TypeBcEast
-inflow                  TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
+outflow                 TypeBc1
+inflow                  TypeBc2
+fixed                   TypeBc3
+fixed                   TypeBc4
 
 #HALLREGION
 +r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8

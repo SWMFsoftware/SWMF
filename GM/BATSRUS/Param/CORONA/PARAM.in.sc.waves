@@ -100,12 +100,12 @@ RAW                     StringLogfile
 -1.                     DtSaveLogfile
 
 #OUTERBOUNDARY
-float                   TypeBcEast
-float                   TypeBcWest
-float                   TypeBcSouth
-float                   TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+float                   TypeBc1
+float                   TypeBc2
+float                   TypeBc3
+float                   TypeBc4
+float                   TypeBc5
+float                   TypeBc6
 
 #AMR
 6000                    DnRefine

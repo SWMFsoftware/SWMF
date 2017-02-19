@@ -123,12 +123,12 @@ cut MHD tec             StringPlot
  -9.99                  zMaxCut    
 
 #OUTERBOUNDARY
-outflow			TypeBC_I(east_)		TypeBcEast 
-inflow			TypeBC_I(west_)		TypeBcWest 
-float			TypeBC_I(south_)		TypeBcSouth
-float			TypeBC_I(north_)		TypeBcNorth
-float			TypeBC_I(bot_)		TypeBcBottom
-float			TypeBC_I(top_)		TypeBcTop
+outflow			TypeBC_I(east_)		TypeBc1 
+inflow			TypeBC_I(west_)		TypeBc2 
+float			TypeBC_I(south_)		TypeBc3
+float			TypeBC_I(north_)		TypeBc4
+float			TypeBC_I(bot_)		TypeBc5
+float			TypeBC_I(top_)		TypeBc6
 
 
 This may be needed for the jin jout etc. log variables ??

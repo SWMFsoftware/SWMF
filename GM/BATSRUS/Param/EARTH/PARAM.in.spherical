@@ -81,12 +81,12 @@ T                       UseBody
 0.80			CflExlp
 
 #BOXBOUNDARY
-outflow			TypeBcEast
-vary			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcIn

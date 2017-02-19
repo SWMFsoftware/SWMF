@@ -62,12 +62,12 @@ F			UseBody
     60.0                SwBzDim  [nT]
 
 #OUTERBOUNDARY
-fixedb1			TypeBcEast
-fixedb1			TypeBcWest
-fixedb1			TypeBcSouth
-fixedb1			TypeBcNorth
-fixedb1			TypeBcBottom
-fixedb1			TypeBcTop
+fixedb1			TypeBc1
+fixedb1			TypeBc2
+fixedb1			TypeBc3
+fixedb1			TypeBc4
+fixedb1			TypeBc5
+fixedb1			TypeBc6
 
 #TIMESTEPPING
 2			nStage

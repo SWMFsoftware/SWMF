@@ -37,12 +37,12 @@ T			UseGravity
 -273.06667              GravitySi [m/s^2]
 
 #OUTERBOUNDARY
-periodic		TypeBcEast
-periodic		TypeBcWest
-periodic		TypeBcSouth
-periodic		TypeBcNorth
-fixvalue	        TypeBcBottom
-no_inflow		TypeBcTop	
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+fixvalue	        TypeBc5
+no_inflow		TypeBc6	
 
 #NORMALIZATION
 READ                    TypeNormalization

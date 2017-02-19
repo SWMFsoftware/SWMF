@@ -5,7 +5,7 @@ T			DoEcho
 OH			NameComponent
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
@@ -26,13 +26,13 @@ T                       UseBody
 6519.0                  BodyTDim(5)
 
 #IOUNITS
-USER
+USER			TypeIoUnit
 
 #NORMALIZATION
-USER
+USER			TypeNormalization
 
 #PLOTFILENAME
-year                   NameMaxTimeUnit
+year			NameMaxTimeUnit
 
 #GRID
 1			nRootBlockX
@@ -56,8 +56,8 @@ initial			NameArea
 #GRIDLEVEL
 11                      nLevel
 shell0                  NameArea
-30.0
-30.2
+30.0			Radius1
+30.2			Radius2
 
 #GRIDRESOLUTION
 35.937
@@ -130,15 +130,15 @@ box
 40.0
 
 #INNERBOUNDARY
-user
+user			TypeBcInner
 
 #OUTERBOUNDARY
-user                  TypeBcOuter_E(East_) user
-outflow               TypeBcOuter_E(West_) 
-outflow               TypeBcOuter_E(South_) 
-outflow               TypeBcOuter_E(North_) 
-outflow               TypeBcOuter_E(Bot_) 
-outflow               TypeBcOuter_E(Top_) 
+user			TypeBc1
+outflow               	TypeBc2
+outflow               	TypeBc3
+outflow               	TypeBc4
+outflow               	TypeBc5
+outflow               	TypeBc6
 
 #TIMEACCURATE           
 F  			IsTimeAccurate
@@ -160,10 +160,6 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 0			nConsCrit
-
-1       nConservCrit1
-p       TypeConservCrit
-0.0001
 
 #SAVERESTART
 T			DoSaveRestart 
@@ -213,58 +209,58 @@ F                       UseUserUpdateStates
 
 #OHBOUNDARY
 T
-0.05		RhoNeuFactor
-1.0		uNeuFactor
-1.E-2		RhoNe2Factor
-0.2		uNe2Factor
-1.E-2		RhoNe3Factor
-1.0		uNe3Factor
-1.E-3		RhoNe4Factor
-0.1		uNe4Factor
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNe2Factor
+0.2			uNe2Factor
+1.E-2			RhoNe3Factor
+1.0			uNe3Factor
+1.E-3			RhoNe4Factor
+0.1			uNe4Factor
 
 #OHNEUTRALS
-0.18		RhoNeutralsISW_dim
-6519.0		TNeutralsISW_dim
-26.3		UxNeutralsISW_dim
-0.0		UyNeutralsISW_dim
--2.3		UzNeutralsISW_dim
-1.0		mNeutralsmp
+0.18			RhoNeutralsISW_dim
+6519.0			TNeutralsISW_dim
+26.3			UxNeutralsISW_dim
+0.0			UyNeutralsISW_dim
+-2.3			UzNeutralsISW_dim
+1.0			mNeutralsmp
 
 #USERINPUTBEGIN --------------------------------------------------------
 
 #SOLARWINDH
-0.00874                    SWH_rho_dim [n/cc]
-1.0868E5                   SWH_T_dim [K] 
-417.07                   SWH_Ux_dim [km/s]
-0.0                     SWH_Uy_dim [km/s]
+0.00874			SWH_N_dim [n/cc]
+1.0868E5            	SWH_T_dim [K] 
+417.07              	SWH_Ux_dim [km/s]
+0.0                    	SWH_Uy_dim [km/s]
 0.0                     SWH_Uz_dim [km/s]
 7.17E-03                SWH_Bx_dim [nT]
 0.0                     SWH_By_dim [nT]
 0.0                     SWH_Bz_dim [nT]
 
 #VLISW                  
-0.06            VLISW_rho_dim [n/cc]
-6519.0               VLISW_T_dim
-26.3               VLISW_Ux_dim
-0.0                VLISW_Uy_dim
--2.3              VLISW_Uz_dim
-0.3093            VLISW_Bx_dim
--0.080            VLISW_By_dim
--0.2988           VLISW_Bz_dim
+0.06            	VLISW_N_dim [n/cc]
+6519.0               	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.0                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.3093            	VLISW_Bx_dim
+-0.080            	VLISW_By_dim
+-0.2988           	VLISW_Bz_dim
 
 #REGIONS
-6.E5		TempPop1LimitDim
-100.0		uPop1LimitDim
-0.9		MachPop2Limit
-1.5		MachPop3Limit
-50.0		rPop3Limit
-0.5		MachPop4Limit
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+0.5			MachPop4Limit
 
 #USERINPUTEND ----------------------------------------------------------
 
 #STOP
-50
--1.0
+50			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ####################################################################
 

@@ -165,12 +165,12 @@ RAW			StringLogfile
 user			TypeBcInner
 
 #OUTERBOUNDARY
-user			TypeBcEast   user for spherical and user_outerbcs
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+user			TypeBc1   user for spherical and user_outerbcs
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SAVEPLOT
 1			nPlotFiles 1

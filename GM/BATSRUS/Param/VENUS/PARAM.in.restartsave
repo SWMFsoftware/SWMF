@@ -62,12 +62,12 @@ dt pmin pmax rho p hpflx opflx o2pflx co2pflx
 3.0 5.0
 
 #BOXBOUNDARY
-outflow                 TypeBcEast
-inflow                  TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
+outflow                 TypeBc1
+inflow                  TypeBc2
+fixed                   TypeBc3
+fixed                   TypeBc4
+fixed                   TypeBc5
+fixed                   TypeBc6
 
 #INNERBOUNDARY
 user			TypeInnerBc

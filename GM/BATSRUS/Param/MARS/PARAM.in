@@ -74,12 +74,12 @@ rho p rhopnt ppnt bxpnt pmin pmax Hpflx Opflx O2pflx CO2pflx
 user			TypeBcInner
 
 #BOXBOUNDARY
-outflow                 TypeBcEast
-inflow                  TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
+outflow                 TypeBc1
+inflow                  TypeBc2
+fixed                   TypeBc3
+fixed                   TypeBc4
+fixed                   TypeBc5
+fixed                   TypeBc6
 
 
 ! 3nT parker's spiral

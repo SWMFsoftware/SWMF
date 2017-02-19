@@ -41,12 +41,12 @@ sphere0			NameShape
 1.0			p
 
 #OUTERBOUNDARY
-periodic		TypeBcEast
-periodic		TypeBcWest
-periodic		TypeBcSouth
-periodic		TypeBcNorth
-periodic		TypeBcBottom
-periodic		TypeBcTop
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 
 #HALLRESISTIVITY

@@ -58,12 +58,12 @@ rotatedcartesian	NameGeometry
 3/4			ShockSlope
 
 #OUTERBOUNDARY
-periodic                TypeBcEast
-periodic                TypeBcWest
-periodic                TypeBcSouth
-periodic                TypeBcNorth
-periodic                TypeBcBottom
-periodic                TypeBcTop
+periodic                TypeBc1
+periodic                TypeBc2
+periodic                TypeBc3
+periodic                TypeBc4
+periodic                TypeBc5
+periodic                TypeBc6
 
 #USERINPUTBEGIN ----------------
 

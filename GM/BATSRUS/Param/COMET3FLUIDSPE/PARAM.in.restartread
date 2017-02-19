@@ -29,12 +29,12 @@ TESTIJK
 0.000
 
 #OUTERBOUNDARY
-outflow                  TypeBcEast
-user                     TypeBcWest
-float                    TypeBcSouth
-float                    TypeBcNorth
-float                    TypeBcBottom
-float                    TypeBcTop
+outflow                  TypeBc1
+user                     TypeBc2
+float                    TypeBc3
+float                    TypeBc4
+float                    TypeBc5
+float                    TypeBc6
 
 #EXTRABOUNDARY
 T                       UseExtraBoundary

@@ -62,12 +62,12 @@ brick0			NameArea
 The ghost cells are initialized with the rotational velocity,
 we keep the ghost cells to make the solution exact at the boundaries
 #OUTERBOUNDARY
-none			TypeBcEast
-none			TypeBcWest
-none			TypeBcSouth
-none			TypeBcNorth
-none			TypeBcBottom
-none			TypeBcTop
+none			TypeBc1
+none			TypeBc2
+none			TypeBc3
+none			TypeBc4
+none			TypeBc5
+none			TypeBc6
 
 #TIMESTEPPING
 2			nStage

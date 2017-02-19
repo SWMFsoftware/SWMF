@@ -73,12 +73,12 @@ F                       UseRotation
 0.40			CflExlp
 
 #OUTERBOUNDARY
-none			TypeBcEast
-none			TypeBcWest
-periodic		TypeBcSouth
-periodic		TypeBcNorth
-periodic		TypeBcBottom
-periodic		TypeBcTop
+none			TypeBc1
+none			TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+periodic		TypeBc5
+periodic		TypeBc6
 
 #INNERBOUNDARY
 reflect                 TyepBcInner

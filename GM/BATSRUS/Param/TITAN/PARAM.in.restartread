@@ -58,12 +58,12 @@ RAW step time	        StringLog
 user			TypeInnerBc
 
 #BOXBOUNDARY
-inflow                  TypeBcEast
-outflow                 TypeBcWest
-fixed                   TypeBcSouth
-fixed                   TypeBcNorth
-fixed                   TypeBcBottom
-fixed                   TypeBcTop
+inflow                  TypeBc1
+outflow                 TypeBc2
+fixed                   TypeBc3
+fixed                   TypeBc4
+fixed                   TypeBc5
+fixed                   TypeBc6
 
 #USERINPUTBEGIN -----------------------------------------------------
 

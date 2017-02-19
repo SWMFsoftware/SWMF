@@ -63,12 +63,12 @@ NONE			TypeNormalization
  1.                   	zMax
 
 #OUTERBOUNDARY
-periodic                TypeBcEast
-periodic                TypeBcWest
-float                   TypeBcSouth
-float                   TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+periodic                TypeBc1
+periodic                TypeBc2
+float                   TypeBc3
+float                   TypeBc4
+float                   TypeBc5
+float                   TypeBc6
 
 #USERINPUTBEGIN ----------------
 

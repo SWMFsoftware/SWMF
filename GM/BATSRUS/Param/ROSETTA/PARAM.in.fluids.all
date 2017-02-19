@@ -110,12 +110,12 @@ solarwind		UseSwBC
 ionosphere		TypeBcInner
 
 #BOXBOUNDARY
-user                   TypeBcEast
-user                   TypeBcWest
-user                   TypeBcSouth
-user                   TypeBcNorth
-user                   TypeBcBottom
-user                   TypeBcTop
+user                   TypeBc1
+user                   TypeBc2
+user                   TypeBc3
+user                   TypeBc4
+user                   TypeBc5
+user                   TypeBc6
 
 #EXTRABOUNDARY
 T                       UseExtraBoundary
