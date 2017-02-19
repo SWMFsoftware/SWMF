@@ -838,9 +838,9 @@ contains
        if (UseRestartInSeries) &
             call string_append_iter(NameFile, iteration_number)
 
-       open(UnitTmp_, file=NameFile, &
+       call open_file(FILE=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            status = 'old', iostat=iError)
+            STATUS = 'old')
     else
        NameFile = trim(NameRestartOutDir)//NameDataFile
        if (present(iFile)) &
@@ -850,16 +850,15 @@ contains
 
        ! Delete and open file (only from proc 0 for type 'one')
        if(iProc==0 .or. TypeRestartOutFile == 'proc') &
-            open(UnitTmp_, file=NameFile, &
-            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            status = 'replace', iostat=iError)
+            call open_file(FILE=NameFile, &
+            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted')
 
        if(TypeRestartOutFile == 'one') then
           ! Make sure that all processors wait until the file is re-opened
           call barrier_mpi
-          if(iProc > 0)open(UnitTmp_, file=NameFile, &
+          if(iProc > 0) call open_file(FILE=NameFile, &
                RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-               status = 'old', iostat=iError)
+               STATUS = 'old')
        end if
     end if
     if(iError /= 0)then

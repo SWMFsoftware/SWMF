@@ -104,7 +104,6 @@ subroutine write_plot_common(iFile)
   ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
   integer :: lrecData, lrecConnect
   integer :: iUnit
-  integer :: iErrorFile
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
@@ -256,41 +255,19 @@ subroutine write_plot_common(iFile)
         ! only iProc == 0 opens the header file
         call open_file(iUnit,  FILE=filename_h)
 
-        open(UnitTmp_, FILE=filename_n, form=TypeForm, ACCESS='DIRECT', &
-             iostat=iErrorFile, RECL = lrecData, status = 'replace')
-        if(iErrorFile /= 0)then
-           write(*,*) NameSub, ' UnitTmp_, iErrorFile =', &
-                UnitTmp_, iErrorFile
-           call stop_mpi(NameSub//' could not open file='//filename_n)
-        end if
-
-        open(UnitTmp2_, FILE=filename_s, form=TypeForm, ACCESS='DIRECT', &
-             iostat=iErrorFile, RECL = lrecConnect, status = 'replace')
-        if(iErrorFile /= 0)then
-           write(*,*) NameSub, ' UnitTmp2_, iErrorFile =', &
-                UnitTmp2_, iErrorFile
-           call stop_mpi(NameSub//' could not open file='//filename_s)
-        end if
+        call open_file(FILE=filename_n, FORM=TypeForm, ACCESS='DIRECT', &
+             RECL = lRecData)
+        call open_file(UnitTmp2_, FILE=filename_s, FORM=TypeForm, ACCESS='DIRECT', &
+             RECL = lRecConnect)
      end if
 
      ! Make sure that all processors wait until the file is re-opened      
      call barrier_mpi
      if (iProc > 0) then
-        open(UnitTmp_, FILE=filename_n, form=TypeForm, ACCESS='DIRECT', &
-             iostat=iErrorFile, RECL = lrecData, status = 'old')
-        if(iErrorFile /= 0)then
-           write(*,*) NameSub, ' UnitTmp_, iErrorFile =', &
-                UnitTmp_, iErrorFile
-           call stop_mpi(NameSub//' could not open file='//filename_n)
-        end if
-
-        open(UnitTmp2_, FILE=filename_s, form=TypeForm, ACCESS='DIRECT', &
-             iostat=iErrorFile, RECL = lrecConnect, status = 'old')
-        if(iErrorFile /= 0)then
-           write(*,*) NameSub, ' UnitTmp2_, iErrorFile =', &
-                UnitTmp2_, iErrorFile
-           call stop_mpi(NameSub//' could not open file='//filename_s)
-        end if
+        call open_file(FILE=filename_n, FORM=TypeForm, ACCESS='DIRECT', &
+             RECL = lRecData, STATUS='old')
+        call open_file(UnitTmp2_, FILE=filename_s, FORM=TypeForm, ACCESS='DIRECT', &
+             RECL = lRecConnect, STATUS='old')
      end if
   elseif(DoPlotBox)then
      ! Initialize the box grid for this file
