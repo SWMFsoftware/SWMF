@@ -29,21 +29,21 @@ IH/restartIN/restart.H
 float			TypeBcInner
 
 #OUTERBOUNDARY
-float			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop 
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #END_COMP IH ---------------------------------------------------------------
 
 #BEGIN_COMP GM --------------------------------------------------------------
 
 #GRID
-2			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+2			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -224.                   xMin
  +32.                   xMax
  -64.                   yMin
@@ -68,12 +68,12 @@ T			IsStrictAmr
 T			UseBody
 2.5			rBody      [rEarth]
 3.5			rCurrents  [rEarth]
-10.0			BodyRhoDim [amu/cc]
+10.0			BodyNDim   [/cc]
 25000.0			BodyTDim   [K]
 
 ! This is used to initialize the domain
 #SOLARWIND
-    5.0                 SwRhoDim [amu/cc]
+    5.0                 SwNDim   [/cc]
 250000.0                SwTDim   [K]
   -400.0                SwUxDim  [km/s]
      0.0                SwUyDim  [km/s]
@@ -84,12 +84,15 @@ T			UseBody
 
 ! The upstream boundary condition is obtained from IH
 #OUTERBOUNDARY
-outflow			TypeBcEast
-coupled			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+coupled			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeInnerBc
 
 #TIMESTEPPING
 1			nStage
@@ -110,11 +113,11 @@ RAW			StringLogfile
 y=0 MHD idl             StringPlot
 10                      DnSavePlot
 -1.			DtSavePlot
--1.			Dx
+-1.			DxSavePlot
 z=0 MHD idl             StringPlot
 10                      DnSavePlot
 -1.			DtSavePlot
--1.			Dx
+-1.			DxSavePlot
 
 #END_COMP GM ------------------------------------------------------------------
 
@@ -122,7 +125,7 @@ z=0 MHD idl             StringPlot
 #COUPLE1
 IH                      NameSource
 GM                      NameTarget
-60                       DnCouple
+60                      DnCouple
 -1.0                    DtCouple
 
 ! Note: the GM->IH coupling does not work if IH is not active!
