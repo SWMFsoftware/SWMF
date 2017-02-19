@@ -226,7 +226,8 @@ contains
   end subroutine fix_dir_name
 
   !============================================================================
-  subroutine open_file(iUnitIn, File, Form, Status, Position, NameCaller)
+  subroutine open_file(iUnitIn, File, Form, Status, Position, Access, Recl, &
+       NameCaller)
 
     use ModIoUnit, ONLY: UNITTMP_
 
@@ -238,15 +239,19 @@ contains
     ! Default format is 'formatted' as in the open statement.
     ! Default status is 'replace' (not unknown) as it is well defined.
     ! Default position is 'rewind' (not asis) as it is well defined.
+    ! Default access is 'sequential' as in the open statement.
+    ! There is no default record length Recl.
 
     integer, optional, intent(in):: iUnitIn
     character(len=*), optional, intent(in):: File
     character(len=*), optional, intent(in):: Form
     character(len=*), optional, intent(in):: Status
     character(len=*), optional, intent(in):: Position
+    character(len=*), optional, intent(in):: Access
+    integer,          optional, intent(in):: Recl
     character(len=*), optional, intent(in):: NameCaller
 
-    character(len=20):: TypeForm, TypeStatus, TypePosition
+    character(len=20):: TypeForm, TypeStatus, TypePosition, TypeAccess
 
     integer:: iUnit
     integer:: iError
@@ -265,8 +270,16 @@ contains
     TypePosition = 'rewind'
     if(present(Position)) TypePosition = Position
 
-    open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
-         POSITION=TypePosition, IOSTAT=iError)
+    TypeAccess = 'sequential'
+    if(present(Access)) TypeAccess = Access
+
+    if(present(Recl))then
+       open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
+            POSITION=TypePosition, ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+    else
+       open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
+            POSITION=TypePosition, ACCESS=TypeAccess, IOSTAT=iError)
+    end if
 
     if(iError /= 0)then
        write(*,*) NameSub,' iUnit, iError=', iUnit, iError
@@ -319,7 +332,6 @@ contains
     ! Remove file NameFile if it exists
     ! Pass NameCaller to open_file and close_file in case of errors
 
-    use ModIoUnit, ONLY: UNITTMP_
 
     character(len=*), intent(in):: NameFile
     character(len=*), optional, intent(in):: NameCaller
@@ -341,7 +353,6 @@ contains
     ! Create file NameFile if it does not exist
     ! Pass NameCaller to open_file and close_file in case of errors
 
-    use ModIoUnit, ONLY: UNITTMP_
 
     character(len=*), intent(in):: NameFile
     character(len=*), optional, intent(in):: NameCaller
@@ -700,7 +711,7 @@ contains
     character,         intent(in) :: String_I(*)
     character(len=*),  intent(out):: String
 
-    integer:: i, n
+    integer:: i
     !-------------------------------------------------------------------------
     String = ' '
     do i = 1, len(String)
