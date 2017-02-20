@@ -104,6 +104,7 @@ subroutine write_plot_common(iFile)
   ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
   integer :: lrecData, lrecConnect
   integer :: iUnit
+  logical :: DoSave3DTec = .true.
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
@@ -124,11 +125,15 @@ subroutine write_plot_common(iFile)
   PlotRange_I = plot_range(:,iFile)
 
   ! DoSaveOneTecFile = T only works for 3D tecplot file right now
-  if (plot_form(iFile)/='tec' .or. plot_type1(1:3)/= '3d_') &
-       DoSaveOneTecFile = .false.
+  if (plot_form(iFile)/='tec' .or. plot_type1(1:3)/= '3d_') then
+     DoSave3DTec = .false.
+  else
+     DoSave3DTec = .true.
+  end if
 
-  if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
-       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile
+  if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1,            &
+       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile, &
+       ' DoSave3DTec =', DoSave3DTec
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
@@ -198,7 +203,7 @@ subroutine write_plot_common(iFile)
   ! String containing the processor index and file extension
   NameExt = plot_form(iFile)
   if(NameExt == 'plt') NameExt = 'tec'
-  if (DoSaveOneTecFile) then
+  if (DoSaveOneTecFile .and. DoSave3DTec) then
      write(NameProc, '(a)') "."//NameExt
   elseif(nProc < 10000) then
      write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//NameExt
@@ -222,13 +227,13 @@ subroutine write_plot_common(iFile)
   DoPlotShell = plot_type1(1:3) == 'shl'
   DoPlotBox   = plot_type1(1:3) == 'box'
 
-  if (DoSaveOneTecFile) then
+  if (DoSaveOneTecFile .and. DoSave3DTec) then
      iUnit = io_unit_new()
   else
      iUnit = UnitTmp_
   end if
 
-  if (DoSaveOneTecFile) then
+  if (DoSaveOneTecFile .and. DoSave3DTec) then
      ! filename_h stores the header, filename_n stores the data and
      ! filename_s stores the connectivity
      filename_h = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -545,7 +550,7 @@ subroutine write_plot_common(iFile)
 
   if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
-  if(DoSaveOneTecFile) call close_file(iUnit)
+  if(DoSaveOneTecFile .and. DoSave3DTec) call close_file(iUnit)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
