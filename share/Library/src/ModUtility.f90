@@ -275,7 +275,7 @@ contains
 
     if(present(Recl))then
        open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
-            POSITION=TypePosition, ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+            ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
     else
        open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
             POSITION=TypePosition, ACCESS=TypeAccess, IOSTAT=iError)
