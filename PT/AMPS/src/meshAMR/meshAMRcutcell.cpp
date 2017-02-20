@@ -202,6 +202,10 @@ void CutCell::PrintSurfaceData(const char *fname) {
       double weight=BoundaryTriangleFaces[nface].SurfaceArea;
       int nnode=BoundaryTriangleFaces[nface].node[i]->id;
 
+      if (isfinite(weight)==false) {
+        exit(__LINE__,__FILE__,"Error: area of one of the surface elements is not defined");
+      }
+
       Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].UserData=&(BoundaryTriangleFaces[nface].UserData);
       Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].Weight=weight;
       Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].nface=nface;
@@ -212,7 +216,13 @@ void CutCell::PrintSurfaceData(const char *fname) {
 
     //normalize the interpolation weights
     for (i=0;i<nBoundaryTriangleNodes;i++) for (nface=0;nface<InterpolationBase[i].StencilLength;nface++) {
-      Stencil[InterpolationBase[i].StencilOffset+nface].Weight/=InterpolationBase[i].TotalInterpolationWeight;
+      if (InterpolationBase[i].TotalInterpolationWeight>0.0) {
+        Stencil[InterpolationBase[i].StencilOffset+nface].Weight/=InterpolationBase[i].TotalInterpolationWeight;
+      }
+
+      if (isfinite(Stencil[InterpolationBase[i].StencilOffset+nface].Weight)==false) {
+        exit(__LINE__,__FILE__,"Error: area of one of the surface elements is not defined");
+      }
     }
 
     double *InterpolationWeightList=new double [maxStencilLength];
@@ -220,7 +230,7 @@ void CutCell::PrintSurfaceData(const char *fname) {
     int SurfaceFaceList[maxStencilLength];
 
     //print the variable list
-    fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"");
+    fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"faceat\",\"Mesh File ID\"");
     BoundaryTriangleFaces[0].UserData.PrintVarableList(fout);
     fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
 
@@ -234,6 +244,9 @@ void CutCell::PrintSurfaceData(const char *fname) {
         InterpolationFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].UserData;
         SurfaceFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].nface;
       }
+
+      //output faceat and Mesh file for one of the faces that contains the node
+      fprintf(fout,"%i %i ",BoundaryTriangleFaces[SurfaceFaceList[0]].attribute,BoundaryTriangleFaces[SurfaceFaceList[0]].MeshFileID);
 
       //output the user-defined surface data
       BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,SurfaceFaceList,InterpolationBase[i].StencilLength);
