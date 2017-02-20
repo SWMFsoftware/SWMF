@@ -378,6 +378,8 @@ contains
 
     integer :: iFluid, iDim
     logical :: IsLimitedGeometry=.false.
+
+    character(len=*), parameter:: NameSub='write_restart_header'
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
@@ -385,7 +387,7 @@ contains
     NameFile = trim(NameRestartOutDir)//NameHeaderFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    call open_file(file=NameFile)
+    call open_file(file=NameFile, NameCaller=NameSub)
 
     write(UnitTmp_,'(a)')'#CODEVERSION'
     write(UnitTmp_,'(f5.2,a35)')CodeVersion,'CodeVersion'
@@ -580,6 +582,8 @@ contains
 
     integer, allocatable:: Int_I(:)
     integer:: iMorton, iError
+
+    character(len=*), parameter:: NameSub='write_restart_index'
     !-------------------------------------------------------------------------
     if(nProc > 1)then
        ! Collect file and record indexes onto the root processor
@@ -598,7 +602,7 @@ contains
     ! Save index file
     NameFile = trim(NameRestartOutDir)//NameIndexFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
-    call open_file(FILE=NameFile)
+    call open_file(FILE=NameFile, NameCaller=NameSub)
     write(UnitTmp_,*) nBlockAll
     do iMorton = 1, nBlockAll
        write(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
@@ -610,10 +614,12 @@ contains
   subroutine read_restart_index
 
     integer:: iMorton, nBlockAllRead
+
+    character(len=*), parameter:: NameSub='read_restart_index'
     !-------------------------------------------------------------------------
     NameFile = trim(NameRestartInDir)//NameIndexFile
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
-    call open_file(FILE=NameFile, STATUS='old')
+    call open_file(FILE=NameFile, STATUS='old', NameCaller=NameSub)
     read(UnitTmp_,*) nBlockAllRead
 
     if(nBlockAllRead /= nBlockAll) &
@@ -633,8 +639,8 @@ contains
     integer   :: iVar, i, j, k, iError, iBlockRestart
     character :: StringDigit
 
-    character (len=*), parameter :: NameSub='read_restart_file'
     logical :: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub='read_restart_file'
     !--------------------------------------------------------------------
     if(iProc==PROCtest.and.iBlock==BLKtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
@@ -650,7 +656,8 @@ contains
          trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
 
-    call open_file(file=NameFile, status='old', form='UNFORMATTED')
+    call open_file(file=NameFile, status='old', form='UNFORMATTED', &
+         NameCaller=NameSub)
 
     ! Fill in ghost cells
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -750,9 +757,10 @@ contains
 
     integer, intent(in) :: iBlock
 
-    character (len=*), parameter :: NameSub='write_restart_file'
     integer:: iVar, iBlockRestart
     character:: StringDigit
+
+    character (len=*), parameter :: NameSub='write_restart_file'
     !--------------------------------------------------------------------
 
     iBlockRestart = iMortonNode_A(iNode_B(iBlock))
@@ -764,7 +772,7 @@ contains
 
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    call open_file(file=NameFile, form='UNFORMATTED')
+    call open_file(file=NameFile, form='UNFORMATTED', NameCaller=NameSub)
 
     write(UnitTmp_) dt_BLK(iBlock),time_Simulation
     write(UnitTmp_) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
@@ -840,7 +848,7 @@ contains
 
        call open_file(FILE=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            STATUS = 'old')
+            STATUS = 'old', NameCaller=NameSub//':read')
     else
        NameFile = trim(NameRestartOutDir)//NameDataFile
        if (present(iFile)) &
@@ -851,14 +859,15 @@ contains
        ! Delete and open file (only from proc 0 for type 'one')
        if(iProc==0 .or. TypeRestartOutFile == 'proc') &
             call open_file(FILE=NameFile, &
-            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted')
+            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
+            NameCaller=NameSub//':write direct proc0')
 
        if(TypeRestartOutFile == 'one') then
           ! Make sure that all processors wait until the file is re-opened
           call barrier_mpi
           if(iProc > 0) call open_file(FILE=NameFile, &
                RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-               STATUS = 'old')
+               STATUS = 'old', NameCaller=NameSub//':write direct iProc>0')
        end if
     end if
     if(iError /= 0)then
@@ -1101,7 +1110,7 @@ contains
     do iDim=1, 2
        ! Open restart file.
        NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
-       call open_file(file=NameFile)
+       call open_file(file=NameFile, NameCaller=NameSub)
 
        ! Size of array:
        write(UnitTmp_,*) nKpMag, iSizeKpWindow
@@ -1150,7 +1159,7 @@ contains
 
        write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
 
-       call open_file(file=NameFile, status='OLD')
+       call open_file(file=NameFile, status='OLD', NameCaller=NameSub)
 
        ! Read size of array, ensure that it matches expected.
        ! If not, it means that the restart is incompatible and cannot be used.
