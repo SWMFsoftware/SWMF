@@ -797,7 +797,7 @@ contains
     logical, intent(in)           :: DoRead
     integer, intent(in), optional :: iFile 
 
-    integer :: lRecord, l, lReal, iError
+    integer :: lRecord, l, lReal
     character(len=*), parameter :: NameSub='open_direct_restart_file'
     logical :: DoTest, DoTestme
     !-------------------------------------------------------------------------
@@ -869,10 +869,6 @@ contains
                RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
                STATUS = 'old', NameCaller=NameSub//':write direct iProc>0')
        end if
-    end if
-    if(iError /= 0)then
-       write(*,*) NameSub,': ERROR for DoRead=',DoRead
-       call stop_mpi(NameSub//': could not open file='//NameFile)
     end if
 
   end subroutine open_direct_restart_file
