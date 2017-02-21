@@ -102,7 +102,7 @@ contains
     use ModMain,      ONLY: nBlockMax
     use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar
     use BATL_lib,     ONLY: nI, nJ, nK, nIJK, MaxBlock, nBlock, Unused_B, &
-         DiLevelNei_IIIB, message_pass_cell
+         DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
 
@@ -151,6 +151,9 @@ contains
     ! Note that the coarse ghost cells are not going to be used.
     call message_pass_cell(1, CellIndex_GB, nProlongOrderIn=1)
 
+    ! switch off "fake" periodicity so there are no connections
+    call set_tree_periodic(.false.)
+
     call open_file(File=NameFile)
     nBrickAll = 0
     do iBlock = 1, nBlock
@@ -193,6 +196,9 @@ contains
 
     end do
     call close_file
+
+    ! Reset periodicity as it was
+    call set_tree_periodic(.true.)
 
     ! Calculate total number of bricks
     if(nProc > 1) &
