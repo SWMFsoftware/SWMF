@@ -3394,7 +3394,8 @@ No magnetometer grid file is saved by default.
 		<parameter name="StringPlot" type="strings" min="3" max="3">
 			<part name="plotform" type="string" input="select" 
 								required="T">
-				<option value="tec" name="TECPLOT"/>
+				<option value="tec" name="Node based TECPLOT"/>
+				<option value="tcp" name="Cell centered TECPLOT"/>
 				<option value="hdf" name="HDF5"/>
 				<option value="idl" name="IDL" default="T"/>
 				<option value="idl_real4" 
@@ -3585,7 +3586,7 @@ No magnetometer grid file is saved by default.
 	</for>
 #SAVEPLOT
 16			nPlotFile
-3d  MHD tec		StringPlot ! 3d plot with MHD data
+3d  MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
 2d  FUL hdf		StringPlot ! 2d HDF plot with a lot of data
@@ -3746,16 +3747,17 @@ PlotForm PlotArea PlotVar
 Each of these parts can have different values. Most (but not all) combinations are valid.
 The PlotForm can have one of the following values:
 \begin{verbatim}
-tec             - Tecplot format
+tec             - Node based Tecplot format
+tcp             - Cell centered Tecplot format (implemented for 3d only)
 hdf             - HDF5 format (for VisIt)
 idl/idl_real4   - Single precision binary "IDL" format
 idl_real8       - Double precision binary "IDL" format
 idl_ascii       - ASCII "IDL" format
 idl_tec         - ASCII format with Tecplot header
 \end{verbatim}
-The Tecplot format (for most plot areas) interpolates data 
+The node based Tecplot format (for most plot areas) interpolates data 
 to the grid cell corners (nodes).
-The HDF and IDL formats save the cell center values.
+The cell centered Tecplot, HDF and IDL formats save the cell center values.
 The HDF output works only if the HDF library is installed, 
 the appropriate parallel HDF module is loaded and BATSRUS/SWMF is 
 configured with the -hdf flag.
@@ -3771,8 +3773,8 @@ The PlotArea string defines a 1, 2, or 3D volume for plotting:
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
-cut   - 3D, 2D or 1D cut along (curvilinear) coorinates (IDL) 
-        or a 2D rectangular cut (Tecplot)
+cut   - 3D, 2D or 1D cut along (curvilinear) coordinates (IDL) 
+        or a 2D rectangular cut (node based Tecplot)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
@@ -3993,12 +3995,12 @@ and the adiabatic index of electrons (ge) if it is different from gamma.\\
 
 Most plot files are written in parallel: each processor
 writes out part of the data. These intermediate files are ASCII in 'tec'
-format and can be either binary or ASCII in 'idl' format as chosen with
+and 'tcp' format and can be either binary or ASCII in 'idl' format as chosen with
 the #SAVEBINARY command (default is binary). The name of the files are
 \begin{verbatim}
  IO2/PlotArea_PlotVar_PlotNumber_TIMESTAMP_PEnumber.extension
 \end{verbatim}
-where extension is 'tec' for the TEC and 'idl' for the IDL file formats.
+where extension is 'tec' for the TEC/TCP and 'idl' for the IDL file formats.
 The PlotNumber goes from 1 to nPlotFilr in the order of the files in PARAM.in.
 The TIMESTAMP contains time step, simulation time or date-time information
 depending on the settings in the #SAVEPLOTNAME command.
@@ -4012,7 +4014,7 @@ ASCII header file named as
 \end{verbatim}
 where headextension is:
 \begin{verbatim}
-           'T' for TEC file format
+           'T' for TEC/TCP file format
            'S' for TEC and plot_area 'sph' 
            'h' for IDL file format       
 \end{verbatim}
