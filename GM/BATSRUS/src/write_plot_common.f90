@@ -157,7 +157,7 @@ subroutine write_plot_common(iFile)
      write(*,*) NameSub, ' ', plot_vars1
      write(*,*) NameSub, ' ', nplotvar, plotvarnames(1:nplotvar)
      write(*,*) NameSub, ' ', plot_dx(:,iFile)
-     write(*,*) NameSub, ' ', PlotRange_I(iFile)     
+     write(*,*) NameSub, ' ', PlotRange_I
      write(*,*) NameSub, ' ', plot_type1
      write(*,*) NameSub, ' ', plot_form(iFile)
   end if
