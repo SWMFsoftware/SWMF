@@ -698,7 +698,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSaveInitial',DoSaveInitial)
 
      case("#SAVETECPLOT")
-        call read_var('DoSaveOneTecFile', DoSaveOneTecFile)
+        call read_var('DoSaveOneTecFile', DoSaveOneTecFileOrig)
 
      case("#SAVEPLOT")
         call read_var('nPlotFile', nPlotFile)
@@ -941,9 +941,9 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'tec')>0)then 
               plot_form(iFile)  = 'tec'
               TypeFile_I(iFile) = 'tec'
-           elseif(index(plot_string,'plt')>0)then 
-              plot_form(iFile)  = 'plt'
-              TypeFile_I(iFile) = 'plt'
+           elseif(index(plot_string,'tcp')>0)then 
+              plot_form(iFile)  = 'tcp'
+              TypeFile_I(iFile) = 'tcp'
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)

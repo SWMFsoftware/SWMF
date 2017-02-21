@@ -104,7 +104,6 @@ subroutine write_plot_common(iFile)
   ! Parameters for saving a single 3D tecplot file (DoSaveOneTecFile = T)
   integer :: lrecData, lrecConnect
   integer :: iUnit
-  logical :: DoSave3DTec = .true.
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
@@ -125,15 +124,11 @@ subroutine write_plot_common(iFile)
   PlotRange_I = plot_range(:,iFile)
 
   ! DoSaveOneTecFile = T only works for 3D tecplot file right now
-  if (plot_form(iFile)/='tec' .or. plot_type1(1:3)/= '3d_') then
-     DoSave3DTec = .false.
-  else
-     DoSave3DTec = .true.
-  end if
+  DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
+       (plot_form(iFile)=='tec' .and. plot_type1(1:3)== '3d_')
 
   if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1,            &
-       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile, &
-       ' DoSave3DTec =', DoSave3DTec
+       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
@@ -202,8 +197,8 @@ subroutine write_plot_common(iFile)
 
   ! String containing the processor index and file extension
   NameExt = plot_form(iFile)
-  if(NameExt == 'plt') NameExt = 'tec'
-  if (DoSaveOneTecFile .and. DoSave3DTec) then
+  if(NameExt == 'tcp') NameExt = 'tec'
+  if (DoSaveOneTecFile) then
      write(NameProc, '(a)') "."//NameExt
   elseif(nProc < 10000) then
      write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//NameExt
@@ -227,13 +222,13 @@ subroutine write_plot_common(iFile)
   DoPlotShell = plot_type1(1:3) == 'shl'
   DoPlotBox   = plot_type1(1:3) == 'box'
 
-  if (DoSaveOneTecFile .and. DoSave3DTec) then
+  if (DoSaveOneTecFile) then
      iUnit = io_unit_new()
   else
      iUnit = UnitTmp_
   end if
 
-  if (DoSaveOneTecFile .and. DoSave3DTec) then
+  if (DoSaveOneTecFile) then
      ! filename_h stores the header, filename_n stores the data and
      ! filename_s stores the connectivity
      filename_h = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -299,7 +294,7 @@ subroutine write_plot_common(iFile)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      call open_file(UnitTmp_,  FILE=filename_n)
      call open_file(UnitTmp2_, FILE=filename_s)
-  elseif(plot_form(iFile)=='plt')then
+  elseif(plot_form(iFile)=='tcp')then
      ! Open one file for data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      call open_file(UnitTmp_,  FILE=filename_n)
@@ -418,7 +413,7 @@ subroutine write_plot_common(iFile)
            if(plot_type1(1:3)=='blk' &
                 .and. iProc == iProcFound .and. iBlk==iBlockFound) &
                 PlotVarBlk = PlotVar
-        case('plt')
+        case('tcp')
            call write_tecplot_data(iBlk, nPlotvar, Plotvar)
         case('idl')
            call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
@@ -469,7 +464,7 @@ subroutine write_plot_common(iFile)
      end if
 
      RETURN
-  case('tec','plt')
+  case('tec','tcp')
      call get_tec_variables(iFile, nplotvar, plotvarnames, unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
      if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
@@ -542,7 +537,7 @@ subroutine write_plot_common(iFile)
      call close_file
   end if
 
-  if(plot_form(iFile)=='plt') then
+  if(plot_form(iFile)=='tcp') then
      ! Write out connectivity and header files
      call write_tecplot_connect(trim(NameSnapshot)//"_2"//trim(NameProc))
      call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
@@ -550,7 +545,7 @@ subroutine write_plot_common(iFile)
 
   if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
-  if(DoSaveOneTecFile .and. DoSave3DTec) call close_file(iUnit)
+  if(DoSaveOneTecFile) call close_file(iUnit)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
@@ -582,7 +577,7 @@ subroutine write_plot_common(iFile)
   if(iProc==0)then
 
      select case(plot_form(iFile))
-     case('tec','plt')
+     case('tec','tcp')
         if (IsSphPlot) then
            filename = trim(NameSnapshot) // ".S"
         else  
@@ -612,7 +607,7 @@ subroutine write_plot_common(iFile)
         call open_file(FILE=filename)
 
         select case(plot_form(iFile))
-        case('tec','plt')
+        case('tec','tcp')
            write(UnitTmp_,'(a)')filename
            write(UnitTmp_,'(i8,a)')nProc,' nProc'
            write(UnitTmp_,'(i8,a)')n_step,' n_step'
@@ -724,7 +719,7 @@ subroutine write_plot_common(iFile)
            write(UnitTmp_,'(a)') '#PLOTVARIABLE'
            write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
            write(UnitTmp_,'(a)')trim(allnames)
-           if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'plt')then
+           if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'tcp')then
               call get_tec_variables(iFile, nplotvar, plotvarnames, &
                    unitstr_TEC)
               write(UnitTmp_,'(a)')trim(unitstr_TEC)
