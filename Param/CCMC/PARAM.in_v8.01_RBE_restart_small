@@ -1,7 +1,5 @@
-
 #ECHO
-T
-
+T			DoEcho
 
 #DESCRIPTION
 Restart GM-IM-IE in time accurate mode.
@@ -18,25 +16,25 @@ RESTART.in
 #SAVERESTART
 T			DoSaveRestart
 -1                      DnSaveRestart
-30                    DtSaveRestart
+30                    	DtSaveRestart
 
 #TIMEACCURATE
 T			DoTimeAccurate
 
 #STOP
 -60                     MaxIteration
-30.               tSimulationMax
+30.               	tSimulationMax
 
 #CHECKSTOP
-T       DoCheckStop
--1       DnCheckStop
-10.0   DtCheckStop
+T			DoCheckStop
+-1      		DnCheckStop
+10.0   			DtCheckStop
 
 #CHECKSTOPFILE
 T        DoCheckStopFile
 
 #UPDATEB0
-15			Dt_UpdateB0
+15			DtUpdateB0
 
 #COUPLE2
 GM			NameSource
@@ -70,7 +68,7 @@ T                       UseHyperbolicDivb
 
 
 #RESTARTOUTFILE
-block
+block			TypeRestartFile
 
 
 #INCLUDE
@@ -78,25 +76,28 @@ GM/restartIN/restart.H
 
 
 #SOLARWINDFILE
-T
-Param_ccmc/IMF.dat
+T			UseSolarWindFile
+Param_ccmc/IMF.dat	NameSolarWindFile
 
 #INCLUDE
 Param_ccmc/satellites
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-vary			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
 
 #SAVELOGFILE
-T
-date VAR
--1
-10.
+T			DoSaveLogfile
+date VAR		StringLogfile
+-1   			DnSaveLogfile
+10.			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps rhoflx pvecflx dst
 5.0 6.7 10.0            R_log
 
@@ -105,22 +106,22 @@ F          DoSaveBinary
 
 #SAVEPLOT
 1			nPlotFiles
-3d FUL idl             StringPlot
+3d FUL idl             	StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.			Dx
-z=0 FUL idl
-1
--1
--1
-y=0 FUL idl
-1
--1
--1
-x=0 FUL idl
-1
--1
--1
+-1.			DxSavePlot
+z=0 FUL idl		StringPlot
+1   			DnSavePlot
+-1			DtSavePlot
+-1			DxSavePlot
+y=0 FUL idl		StringPlot
+1   			DnSavePlot
+-1			DtSavePlot
+-1			DxSavePlot
+x=0 FUL idl		StringPlot
+1   			DnSavePlot
+-1			DtSavePlot
+-1			DxSavePlot
 
 #TIMESTEPPING
 2			nStage
@@ -129,7 +130,7 @@ x=0 FUL idl
 #SCHEME
 2                       nOrder
 Rusanov                 TypeFlux
-minmod                     TypeLimiter
+minmod			TypeLimiter
 1.
 
 #MESSAGEPASS
@@ -137,16 +138,16 @@ opt                     TypeMessagePass
 
 !Switch this on for additional refinement in the middle of the run
 AMRINIT
-ror6_long                      InitialRefineType
+ror6_long               InitialRefineType
 4
 
 !Switch this on for refinement
 AMR
-22615                    dn_refine (frequency in terms of total steps n_step)
-F                  automatic_refinement
-0.                      percentCoarsen
-10.                     percentRefine
-130000                  maxTotalBlocks
+22615                   DnRefine (frequency in terms of total steps n_step)
+F                  	DoAutomaticRefinement
+0.                      PercentCoarsen
+10.                     PercentRefine
+130000                  MaxTotalBlock
 
 
 !!!!  Low resolution run unstatable with BORIS !!!!!!!!!!!!!
@@ -183,7 +184,7 @@ F			UseFullImplicit
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IONOSPHERE
-5     	conductance_model
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 67.3			F10.7 Flux
@@ -201,44 +202,44 @@ max tec			plot_string
 #BEGIN_COMP RB ----------------------------------------
 
 #SAVEPLOT
-10.           DtSavePlot
-T               UseSeparatePlotFiles
+10.			DtSavePlot
+T               	UseSeparatePlotFiles
 
 SAVEPLOT
-600.           DtSavePlot
-2000Y225        OutName
+600.			DtSavePlot
+2000Y225		OutName
 
 #RESTART
-F               IsRestart
+F			IsRestart
 
 #TIMESTEP
-1.0             Dt
+1.0			Dt
 
 LIMITER
-T		UseMcLimmiter
-1.0		BetaLimiter
+T			UseMcLimmiter
+1.0			BetaLimiter
 
 #TIMESIMULATION
-0.0             tStart
+0.0			tStart
 
 #SPECIES
-e               NameSpecies
+e			NameSpecies
 
 #STARTUPTIME
-0.0             trans
+0.0			trans
 
 #BMODEL
-MHD             NameModel
-F               UseFixedB
+MHD			NameModel
+F               	UseFixedB
 
 #IEMODEL
-2               iConvect
+2			iConvect
 
 #INPUTDATA
 TEMPOUT
 
 #PLASMASPHERE
-F               UsePlasmaSphere
+F			UsePlasmaSphere
 
 #END_COMP RB   ----------------------------------------
 

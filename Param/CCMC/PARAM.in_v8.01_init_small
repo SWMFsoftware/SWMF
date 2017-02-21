@@ -1,6 +1,6 @@
 
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Set up SWMF with GM and IE
@@ -19,13 +19,13 @@ RESTART.scaling_IN
 F
 
 #STARTTIME
-2008                  year
-09                 month
-03                   day
-00                  hour
-00                minute
-0                second
-0.0                          FracSec
+2008			iYear
+09                    	iMonth
+03                   	iDay
+00                  	iHour
+00                	iMinute
+0                	iSecond
+0.0			FracSec
 
 #COUPLE2
 GM			NameComp1
@@ -50,9 +50,9 @@ T                       UseHyperbolicDivb
 block
 
 #GRID
-3                       proc_dims(1)
-1                       proc_dims(2)
-1                       proc_dims(3)
+3                       nRootBlock1
+1                       nRootBlock2
+1                       nRootBlock3
 -255.                   x1
  33.                    x2
 -48.                    y1
@@ -64,25 +64,25 @@ block
 F			UseStrict
 
 #AMRINIT
-ror6_long                      InitialRefineType
+ror6_long		InitialRefineType
 3
 
 #AMRRESOLUTION
-4.0			minCellDx
-8.0			maxCellDx
+4.0			MinCellDx
+8.0			MaxCellDx
 T			FixBodyLevel
 
 #DOAMR
 T                       DoAmr
-5                      dnAmr
--1                      dtAmr
+5                      	DnAmr
+-1                      DtAmr
 F                       IsStrictAmr
 
 #AMRLIMIT
 10.                     percentCoarsen
 20.                     percentRefine
-700                  MaxBlcokALL
-1e-8                 DiffCriteriaLevel
+700                  	MaxBlcokALL
+1e-8                 	DiffCriteriaLevel
 
 #BODY
 T			UseBody
@@ -92,61 +92,62 @@ T			UseBody
 25000.0			tBody
 
 #SAVEBINARY
-F          DoSaveBinary
+F			DoSaveBinary
 
 #SAVEPLOT
-1                      nplotfiles
-3d FUL idl              plot_string
-100                     dn_output(plot_+0)
--1                      dt_output(plot_+0)
--1			dx_saveplot
-3d FUL tec
-100
--1
-y=0 FUL idl
-100
--1
--1
-z=0 FUL idl
-100
--1
--1
+1			nPlotFile
+3d FUL idl              StringPlot
+100                     DnSavePlot
+-1                      DtSavePlot
+-1			DxSavePlot
+3d FUL tec		StringPlot
+100    			DnSavePlot
+-1			DtSavePlot
+y=0 FUL idl		StringPlot
+100 			DnSavePlot
+-1			DtSavePlot
+-1			DxSavePlot
+z=0 FUL idl		StringPlot
+100 			DnSavePlot
+-1			DtSavePlot
+-1			DxSavePlot
 
 
 #SOLARWIND
-5.79                         SW_rho_dim [n/cc]
-44058.48                     SW_T_dim [K]
--310.75                       SW_Ux_dim [km/s]
--6.94                       SW_Uy_dim [km/s]
--14.11                       SW_Uz_dim [km/s]
-0.00                       SW_Bx_dim [nT]
--0.09                       SW_By_dim [nT]
--1.15                       SW_Bz_dim [nT]
+5.79			SwNDim [/cc]
+44058.48              	SwTDim [K]
+-310.75             	SwUxDim [km/s]
+-6.94               	SwUyDim [km/s]
+-14.11            	SwUzDim [km/s]
+0.00                  	SwBxDim [nT]
+-0.09                 	SwByDim [nT]
+-1.15                 	SwBzDim [nT]
 
 #OUTERBOUNDARY
-outflow			east
-vary			west
-fixed			south
-fixed			north
-fixed			bot
-fixed			top
+outflow			TypeBc1
+vary			TypeBc2
+fixed			TypeBc3
+fixed			TypeBc4
+fixed			TypeBc5
+fixed			TypeBc6
+
+#INNERBOUNDARY
+ionosphere		TypeBcInner
 
 ! End of commands implied by SIMPLE configuration
 
-UPSTREAM_INPUT_FILE
+SOLARWINDFILE
 T			UseUpstreamInputFile
 IMF.dat                 UpstreamFileName
-0.0                     Satellite_Y_Pos
-0.0                     Satellite_Z_Pos
 
 #RESTARTOUTDIR
 GM/restartOUT
 
 #SAVELOGFILE
-F
-RAW
-10
--1.
+F			DoSaveLogfile
+RAW			StringLogfile
+10			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #TIMESTEPPING
 1			nStage
@@ -157,14 +158,14 @@ RAW
 Rusanov			TypeFlux
 
 #BORIS
-F			boris_correction
-
+F			UseBorisCorrection
 
 #END_COMP GM ------------------------------------------------------------------
+
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IONOSPHERE
-5     	conductance_model
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 67.3			F10.7 Flux
@@ -173,9 +174,9 @@ F			UseFakeRegion2
 
 #SAVEPLOT
 1			nPlotFile
-max tec             plot_string
-100                      dn_output(plot_+0)
--1                  dt_output(plot_+0)
+max tec             	StringPlot
+100			DnOutput
+-1			DtOutput
 
 #END_COMP IE -----------------------------------------------------------------
 
@@ -188,14 +189,14 @@ max tec             plot_string
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #TIMESTEPPING
-2			nSTAGE
-0.80			cfl
+2			nStage
+0.80			Cfl
 
 #SCHEME
-2                       nORDER
+2                       nOrder
 Rusanov			TypeFlux
-minmod		TypeLimiter
-1.0            LimiterBeta
+minmod			TypeLimiter
+1.0            		LimiterBeta
 
 AMR
 1001
@@ -203,16 +204,16 @@ F
 
 #DOAMR
 T                       DoAmr
-100                    dnAmr
--1                      dtAmr
+100                    	DnAmr
+-1                      DtAmr
 F                       IsStrictAmr
 
 
 
 #SAVERESTART
-T        DoSaveRestart
-100      DnSaveRestart
--1       DtSaveRestart
+T			DoSaveRestart
+100      		DnSaveRestart
+-1       		DtSaveRestart
 
 #END_COMP GM -----------------------------------------------------------------
 
