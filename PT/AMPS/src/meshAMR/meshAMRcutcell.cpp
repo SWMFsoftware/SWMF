@@ -246,7 +246,10 @@ void CutCell::PrintSurfaceData(const char *fname) {
       }
 
       //output faceat and Mesh file for one of the faces that contains the node
-      fprintf(fout,"%i %i ",BoundaryTriangleFaces[SurfaceFaceList[0]].attribute,BoundaryTriangleFaces[SurfaceFaceList[0]].MeshFileID);
+      if (InterpolationBase[i].StencilLength!=0) {
+        fprintf(fout,"%i %i ",BoundaryTriangleFaces[SurfaceFaceList[0]].attribute,BoundaryTriangleFaces[SurfaceFaceList[0]].MeshFileID);
+      }
+      else fprintf(fout,"-1 -1 ");
 
       //output the user-defined surface data
       BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,SurfaceFaceList,InterpolationBase[i].StencilLength);
