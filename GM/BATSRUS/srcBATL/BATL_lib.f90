@@ -61,6 +61,7 @@ module BATL_lib
   public:: write_tree_file, read_tree_file
   public:: get_tree_position
   public:: min_tree_level
+  public:: set_tree_periodic
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry
