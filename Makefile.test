@@ -220,7 +220,7 @@ test_ps_rundir:
 	cp ${PSDIR}/Input/kp_test.dat ${TESTDIR}/PS/Input/
 
 test_ps_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ps_check:
