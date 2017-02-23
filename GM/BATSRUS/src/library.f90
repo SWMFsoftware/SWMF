@@ -982,7 +982,7 @@ subroutine find_test_cell
   use ModGeometry, ONLY: r_BLK, true_cell
   use BATL_lib, ONLY: nBlock, Unused_B, &
        Xyz_DGB, CellSize_DB, CellFace_DFB, CellVolume_GB, &
-       IsCartesian, MaxDim, find_grid_block
+       IsCartesian, MaxDim, find_grid_block, nDim
   use ModMpi
 
   implicit none
@@ -1052,14 +1052,18 @@ subroutine find_test_cell
         if(.not.all(true_cell(iTest-1:iTest+1,jTest,kTest,BlkTest))) &
              write(*,*)'true_cell(iTest-1:iTest+1)=', &
              true_cell(iTest-1:iTest+1,jTest,kTest,BlkTest)
-        
-        if(.not.all(true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest))) &
-             write(*,*)'true_cell(jTest-1:jTest+1)=', &
-             true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest)
 
-        if(.not.all(true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest))) &
-             write(*,*)'true_cell(kTest-1:kTest+1)=', &
-             true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest)
+        if(nDim > 1)then
+           if(.not.all(true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest))) &
+                write(*,*)'true_cell(jTest-1:jTest+1)=', &
+                true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest)
+        end if
+
+        if(nDim > 2)then
+           if(.not.all(true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest))) &
+                write(*,*)'true_cell(kTest-1:kTest+1)=', &
+                true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest)
+        end if
 
         write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
              'I=',Itest,' J=',Jtest,' K=',Ktest,&
