@@ -9,7 +9,6 @@ Module ModMainDGCPM
 
   use ModSizeDGCPM
 
-  integer :: demo
   logical :: IsInitialized = .false.
 
   ! Define "constants" of the simulation

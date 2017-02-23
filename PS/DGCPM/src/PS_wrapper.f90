@@ -34,17 +34,17 @@ contains
     use ModIoUnit
     use CON_comp_info
 
-    character (len=*), parameter :: NameSub='PS_set_param'
-
     ! Arguments
     type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
     character (len=*), intent(in)    :: TypeAction ! What to do
 
     integer :: iError
 
+    character (len=*), parameter :: NameSub='PS_set_param'
+    logical                      :: DoTest, DoTestMe
     !-------------------------------------------------------------------------
-    demo =2
-
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    
     select case(TypeAction)
     case('VERSION')
        call put(CompInfo,&
@@ -53,7 +53,7 @@ contains
             Version=0.1)
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
-       ! if( NameOutputDir(1:3) /= 'PS/' ) NameOutputDir = 'PS/'//NameOutputDir
+       if(nProc>1)  call CON_stop(NameSub//' PS_ERROR this version is serial!')
     case('READ','CHECK')
        call read_param
     case('STDOUT')
