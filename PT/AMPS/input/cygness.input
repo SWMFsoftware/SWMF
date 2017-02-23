@@ -62,7 +62,7 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200000
+  ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=7 !2 !4
   EnforceRequestedMeshResolution=off !on,off
 
@@ -72,11 +72,23 @@ ParticleWeightCorrectionMode=on
   BlockCells=3,3,3
   GhostCells=1,1,1
 
+!  define _PIC__PARTICLE_MOVER__CHECK_BLOCK_FACE_INTERSECTION__MODE_  _PIC_MODE_ON_
+
+  define _PIC_DEBUGGER_MODE_  _PIC_DEBUGGER_MODE_ON_
+  define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_  _PIC_DEBUGGER_MODE_ON_
+
   NeibNodeCopyCutFaceData=on \\ !on, off
-    repeat=1 
+    repeat=2 
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=on !!!on,of
+
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=1000
+
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__RUNTIME_OUTPUT_ _PIC_MODE_ON_
+
 
   UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataOrbiter,header=SurfaceDataOrbiter.h
 
@@ -93,6 +105,12 @@ ParticleWeightCorrectionMode=on
 
   !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
   define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+
+
+  !user-defined MPI exchenge model data procedure 
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_  _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Orbiter::ExchangeModelData()
+
 #endGeneral
 
 
@@ -112,17 +130,28 @@ ParticleWeightCorrectionMode=on
     const(H2O)=1.5E21
 
   UpstreamTemperature=293.0
+  UpstreamSourceMode=off
 
-  SurfaceModel=CYGNSS-MODEL-1.mail   
+  SurfaceModel=CYGNSS-MODEL-1--REDUCED.mail   
   SurfaceModelFormat=CEA !CEA, NASTRAN
   
-  MeshSignature= 0 !0xb2402143d4da3e7c !0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
+  MeshSignature=0x5b768c25346afa8 !0xb2402143d4da3e7c !0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
 
   DomainLimits= \\
-    xMinOffset=0.5,0.5,0.5 \\
-    xMaxOffset=0.5,0.5,0.5
+    xMinOffset=0.25,0.25,0.25 \\
+    xMaxOffset=0.25,0.25,0.25
 
   CalculateDragCoefficient=on !on, off  
+
+  PointSource=off \\ 
+    Source: spec=0, x=0.0,0.0,0.0, Temperature=260, rate=1.0E23 \\
+    Source: spec=0, x=1.0,0.0,0.0, Temperature=200, rate=2.0E23
+
+
+  FaceEjection=on \\
+    Source: spec=0, faceat=5, Temperature=260, Rate=1.0E23
+
+
 
 #endblock
 
@@ -145,4 +174,3 @@ ParticleWeightCorrectionMode=on
   #endblock
 
 
-#end
