@@ -8595,6 +8595,9 @@ nMPIops++;
         if (ThisThread==0) printf("$PREFIX: the calculated volume data file %s is not found\n",fname);
         return false;
       }
+      else {
+        if (ThisThread==0) printf("$PREFIX: the calculated volume data file %s is found: loading....  ",fname);
+      }
     }
 
     //loop through all points
@@ -8636,6 +8639,7 @@ nMPIops++;
       fclose(fData);
 
       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+      if (ThisThread==0) printf("done. \n");
     }
 
     return true;
