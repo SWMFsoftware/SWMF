@@ -1,0 +1,18 @@
+//$Id$
+//definitions used in the Orbiter model
+
+
+//the state of the adsorption/desorption modeling
+#define _ORBITER_ADSORPTION_MODEL__MODE__OFF_                             0
+#define _ORBITER_ADSORPTION_MODEL__MODE__CONSTANT_STICKING_COEFFICIENT_   1
+
+
+#define _ORBITER_DESORPTION_MODEL__MODE__OFF_                             0
+#define _ORBITER_DESORPTION_MODEL__MODE__CONSTANT_RATE_                   1  
+
+
+
+
+//set up the appropriate macros
+#define _ORBITER_ADSORPTION_MODEL__MODE_ _ORBITER_ADSORPTION_MODEL__MODE__CONSTANT_STICKING_COEFFICIENT_
+#define _ORBITER_DESORPTION_MODEL__MODE_ _ORBITER_DESORPTION_MODEL__MODE__OFF_
