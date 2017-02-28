@@ -10,59 +10,313 @@
 
 #include "pic.h"
 #include "RosinaMeasurements.h"
+#include "Comet.h"
 
 #ifndef _NO_SPICE_CALLS_
 #include "SpiceUsr.h"
 #endif
 
+extern double *productionDistributionUniformNASTRAN;
+extern double HeliocentricDistance,subSolarPointAzimuth,subSolarPointZenith;
+extern bool *definedFluxBjorn;
+extern double positionSun[3];
+extern double **productionDistributionNASTRAN;
 
-void RosinaSample::Liouville::EvaluateLocation(int iPoint) {
+void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
-  double c,l[3],xLocation[3],rLocation,xIntersection[3];
+  double c,l[3],*xLocation,rLocation,xIntersection[3],beta;
+  double SampledNudeGaugeDensity=0.0,SampledRamGaugeFlux=0.0;
+
+  const int nTotalTests=10;
+
+/*  //set the location of the Sun, and shadowing flags according top the time of the observation
+  SpiceDouble et,lt,xSun[3];
+  double HeliocentricDistance,subSolarPointZenith,subSolarPointAzimuth,positionSun[3];
+
+  utc2et_c(ObservationTime[iPoint],&et);
+  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+  reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+
+  HeliocentricDistance*=1.0E3;
+
+  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),
+      HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),
+      HeliocentricDistance*cos(subSolarPointZenith)};
+
+  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);*/
 
 
-  const int nTotalTests=10000000;
-  double cosAngleThrouhold=cos(25.0/180.0*Pi);
+  //set the angular limit for the ray direction generation
+  xLocation=Rosina[iPoint].x;
 
-  const double CometocentricDistanceThrehold=5.0E3/tan(25.0/180.0*Pi);
+  NudeGaugeDensity=0.0,NudeGaugeFlux=0.0;
+  RamGaugeFlux=0.0,RamGaugeDensity=0.0;
 
-  //set the location of the Sun, and shadowing flags according top the time of the observation
+  //loop through all surface elements
+  int iStartSurfaceElement,iFinishSurfaceElement,nSurfaceElementThread;
 
+  nSurfaceElementThread=CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads;
+  iStartSurfaceElement=nSurfaceElementThread*PIC::ThisThread;
+  iFinishSurfaceElement=iStartSurfaceElement+nSurfaceElementThread;
+  if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishSurfaceElement=CutCell::nBoundaryTriangleFaces;
 
-  rLocation=Vector3D::Length(xLocation);
-  cosAngleThrouhold=(rLocation>3.0E3) ? cos(atan(5.0E3/rLocation)) : 0.0;
+  double localNudeGaugeDensity=0.0,localNudeGaugeFlux=0.0,localRamGaugeFlux=0.0,localRamGaugeDensity=0.0;
 
-  //perform the integration loop
-  for (iTest=0;iTest<nTotalTests;iTest++) {
-    //generate the line direction
-    if (rLocation<CometocentricDistanceThrehold) {
-      //close to the nucleus limit
-      Vector3D::Distribution::Uniform(l);
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic) default(none) shared(iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
+  private(l,xIntersection,beta) reduction(+:localNudeGaugeDensity) reduction(+:localNudeGaugeFlux) reduction(+:localRamGaugeFlux) reduction(+:localRamGaugeDensity)
+#endif
+  for (iSurfaceElement=iStartSurfaceElement;iSurfaceElement<iFinishSurfaceElement;iSurfaceElement++) {
+    int iTest,idim;
+    double c=0.0,x[3],l[3],r,cosTheta,A;
+    double tNudeGaugeDensity=0.0,tRamGaugeFlux=0.0,tRamGaugeDensity=0.0;
+
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].GetCenterPosition(x);
+
+    for (idim=0;idim<3;idim++) c+=CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal[idim]*(xLocation[idim]-x[idim]);
+
+    if (c<0.0) {
+      //the normal is directed opposite to the point of data sampling -> check the next face
+      continue;
     }
     else {
-      //far from the nucleus limit
-      do {
-        Vector3D::Distribution::Uniform(l);
-        c=-Vector3D::DotProduct(xLocation,l)/rLocation;
-      }
-      while ((c<cosAngleThrouhold)||(c<0.0));
+      //determine the surface temeprature, production rate, and the normalization coefficient
+      //parameters of the primary species source at that surface element
+      double SourceRate,Temperature,cosSubSolarAngle,x_LOCAL_SO_OBJECT[3]={0.0,0.0,0.0};
+
+      SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+      cosSubSolarAngle=Vector3D::DotProduct(CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,positionSun)/Vector3D::Length(positionSun);
+      if (CutCell::BoundaryTriangleFaces[iSurfaceElement].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
+
+      Temperature=Comet::GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
+
+      beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*Temperature));
+      A=2.0*SourceRate/Pi*pow(beta,4);
     }
 
-    //find the first face of intersection with the nucleus
-    iSurfaceElement=PIC::RayTracing::FindFistIntersectedFace(xLocation,l,xIntersection);
+    for (iTest=0;iTest<nTotalTests;iTest++) {
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].GetRandomPosition(x);
+      for (idim=0;idim<3;idim++) l[idim]=xLocation[idim]-x[idim];
 
-    //parameters of the primary species source at that surface element
+      if (PIC::RayTracing::FindFistIntersectedFace(x,l,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement)==-1) {
+        //there is the direct access from the point on teh surface to the point of the observation ->  sample the number density and flux
 
-    //pointing direcion of the surface element normal vector
+        r=Vector3D::Length(l);
+        cosTheta=Vector3D::DotProduct(l,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal)/r;
+
+        if (Vector3D::DotProduct(l,Rosina[iPoint].NudeGauge.LineOfSight)<0.0) {
+          //the particle flux can access the nude gauge
+          tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3);
+        }
+
+        if ((c=Vector3D::DotProduct(l,Rosina[iPoint].RamGauge.LineOfSight))<0.0)  {
+           //the particle flux can bedetected by the ram gauge
+          double cosLineOfSightAngle=-c/r;
+
+          tRamGaugeFlux+=cosTheta/(2.0*pow(r,2)*pow(beta,4)) * cosLineOfSightAngle;
+          tRamGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3);
+        }
+      }
+    }
 
 
+    localNudeGaugeDensity+=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+    localNudeGaugeFlux=0.0;
 
-
-
-
+    localRamGaugeFlux+=tRamGaugeFlux*A/2.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+    localRamGaugeDensity+=tRamGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
   }
 
+  //colles contribution from all processors
+  MPI_Allreduce(&localNudeGaugeDensity,&NudeGaugeDensity,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Allreduce(&localNudeGaugeFlux,&NudeGaugeFlux,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
+  MPI_Allreduce(&localRamGaugeFlux,&RamGaugeFlux,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Allreduce(&localRamGaugeDensity,&RamGaugeDensity,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+  //convert the sampled fluxes and density into the nude and ram gauges pressures
+  const double rgTemperature=293.0;
+  const double ngTemperature=293.0;
+
+  beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*rgTemperature));
+
+//  RamGaugePressure=Kbol*rgTemperature*Pi*beta/2.0*RamGaugeFlux;
+  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
+
+  NudeGaugePressure=NudeGaugeDensity*Kbol*ngTemperature;
+
+
+/* EXAMPLE OF CALCULATING THE PRESSURES
+   if (_H2O_SPEC_>=0) {
+    beta=sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/(2.0*Kbol*rgTemperature));
+    rgTotalPressure+=Kbol*rgTemperature*Pi*beta/2.0*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies];
+
+//        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
+    ngTotalPressure+=DensityNudeGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
+  }*/
+
+}
+
+//==========================================================================================
+//estimate the solud angles that the nucleus is seen by the ram and nude gauges
+void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,double& RamGaugeNucleusSolidAngle,int iPoint) {
+  NudeGaugeNucleusSolidAngle=0.0;
+  RamGaugeNucleusSolidAngle=0.0;
+
+  //solid angle occupied by the nucleus by the nude gauge
+  int t,nTotalTests=10000,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
+  double l[3],xIntersection[3];
+
+  int iStartTest,iFinishTest,nTestThread;
+
+  iStartTest=(nTotalTests/PIC::nTotalThreads)*PIC::ThisThread;
+  iFinishTest=(nTotalTests/PIC::nTotalThreads)*(PIC::ThisThread+1);
+
+  nTestThread=nTotalTests/PIC::nTotalThreads;
+  iStartTest=(nTotalTests/PIC::nTotalThreads)*PIC::ThisThread;
+  iFinishTest=iStartTest+nTestThread;
+  if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishTest=nTotalTests;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#endif
+  for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
+    //generate a ranfom direction
+    do {
+      Vector3D::Distribution::Uniform(l);
+    }
+    while (Vector3D::DotProduct(l,Rosina[iPoint].NudeGauge.LineOfSight)<0.0);
+
+    //determine whether an intersection with the nucleus is found
+    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
+
+    if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+  }
+
+  MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  NudeGaugeNucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
+
+  //solid angle occupied by the nucleus by the ram gauge
+  NucleusIntersectionCounter=0;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#endif
+  for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
+    //generate a ranfom direction
+    do {
+      Vector3D::Distribution::Uniform(l);
+    }
+    while (Vector3D::DotProduct(l,Rosina[iPoint].RamGauge.LineOfSight)<0.0);
+
+    //determine whether an intersection with the nucleus is found
+    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
+
+    if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+  }
+
+  MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  RamGaugeNucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
+}
+
+
+//==========================================================================================
+//evaluete the fulle set of the measuremetns
+void RosinaSample::Liouville::Evaluate() {
+  double NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux;
+  double NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle;
+  int iPoint,idim,spec;
+  SpiceDouble lt,et,xRosetta[3],etStart;
+  SpiceDouble       xform[6][6];
+
+  FILE *fout[PIC::nTotalSpecies];
+
+  const int Step=5;
+
+  if (PIC::ThisThread==0) {
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+      char fname[200];
+
+      sprintf(fname,"Liouville.spec=%s.dat",PIC::MolecularData::GetChemSymbol(spec));
+      fout[spec]=fopen(fname,"w");
+      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\" \n");
+    }
+  }
+
+  for (iPoint=0;iPoint<RosinaSample::nPoints;iPoint+=Step) {
+    //set the vectors, location of the Sub for the observation
+    //init line-of-sight vectors
+    //set the location of the spacecraft
+    utc2et_c(RosinaSample::ObservationTime[iPoint],&et);
+    spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xRosetta,&lt);
+    for (idim=0;idim<3;idim++) xRosetta[idim]*=1.0E3;
+
+    if (iPoint==0) etStart=et;
+
+    Rosina[iPoint].SecondsFromBegining=et-etStart;
+    for (idim=0;idim<3;idim++) Rosina[iPoint].x[idim]=xRosetta[idim];
+
+    sxform_c("ROS_SPACECRAFT","67P/C-G_CK",et,xform);
+
+    //set pointing of COPS nude gauge: negative y
+    SpiceDouble NudeGauge[6]={0.0,-1.0,0.0 ,0.0,0.0,0.0};
+    SpiceDouble l[6];
+
+    mxvg_c(xform,NudeGauge,6,6,l);
+    for (idim=0;idim<3;idim++) Rosina[iPoint].NudeGauge.LineOfSight[idim]=l[idim];
+
+
+    //set pointing of COPS ram gauge: positive z
+    SpiceDouble RamGauge[6]={0.0,0.0,1.0 ,0.0,0.0,0.0};
+
+    mxvg_c(xform,RamGauge,6,6,l);
+    for (idim=0;idim<3;idim++) Rosina[iPoint].RamGauge.LineOfSight[idim]=l[idim];
+
+    //update the location of the Sun and the nucleus shadowing
+    SpiceDouble xSun[3];
+
+    spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+    reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+
+    HeliocentricDistance*=1.0E3;
+
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+
+    PIC::RayTracing::SetCutCellShadowAttribute(positionSun,false);
+
+    for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+      definedFluxBjorn[spec]=false;
+      Comet::GetTotalProductionRateBjornNASTRAN(spec);
+    }
+
+
+    Comet::BjornNASTRAN::Init();
+
+
+
+    //simulate teh solid angles and the measuremetns
+    GetSolidAngle(NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,iPoint);
+
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+      EvaluateLocation(spec,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
+
+      if (PIC::ThisThread==0) {
+        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+            Rosina[iPoint].SecondsFromBegining,
+            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle);
+
+
+        printf("%i (%s) %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+            Rosina[iPoint].SecondsFromBegining,
+            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle);
+      }
+    }
+  }
+
+  if (PIC::ThisThread==0) for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
 }
 
 
