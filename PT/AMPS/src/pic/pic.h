@@ -1351,7 +1351,7 @@ namespace PIC {
 
     bool GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace);
     bool TestDirectAccess(double *xStart,double *xTarget);
-    int CountFaceIntersectionNumber(double *xStart,double *xTarget,void* ExeptionFace=NULL);
+    int CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,void* ExeptionFace=NULL);
     int FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace=NULL);
 
     void SetCutCellShadowAttribute(double *xLightSource, bool ParallelExecution=false);
@@ -3339,7 +3339,7 @@ namespace PIC {
 
     int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     int UniformWeight_UniformTimeStep_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
-    int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag);
+    int UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag,CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL);
 
     void TotalParticleAcceleration_default(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
 
