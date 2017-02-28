@@ -496,7 +496,67 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
 }
  
 
+//========================================================================================================================
+double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
+  double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],xIntersectionLocal[3],IntersectionTime,t;
+  int iFace,idim,iPoint;
 
+  //determine whether the point is insde the triangulated surface
+  if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0)==false) return -1.0;
+
+  //loop through the cut-faces to detemine the closest distance to the surface
+
+  for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) {
+    //the external point has to be pointed in the direction of the point of test
+    ExternNormal=CutCell::BoundaryTriangleFaces[iFace].ExternalNormal;
+
+    CutCell::BoundaryTriangleFaces[iFace].GetCenterPosition(xFace);
+    for (c=0.0,idim=0;idim<DIM;idim++) c+=(l[idim]=(x[idim]-xFace[idim]))*ExternNormal[idim];
+
+    if (c<0.0) continue;
+
+    //the extermal normal of the face is derected toward the tested point ==>
+    //evaluate the distance to the face at the center, corners of the face, and in the direction normal to the surface
+    t=Vector3D::Length(l);
+    if ((t<Altitude)||(Altitude<0.0)) Altitude=t;
+
+    //the closest point to the face is that along the normal check intersecion of the line along the normal with the surface element
+    for (idim=0;idim<DIM;idim++) l[idim]=-ExternNormal[idim];
+
+    if (CutCell::BoundaryTriangleFaces[iFace].RayIntersection(x,l,IntersectionTime,xIntersectionLocal,xIntersection,PIC::Mesh::mesh.EPS)==true) {
+      for (c=0.0,idim=0;idim<DIM;idim++) c+=pow(x[idim]-xIntersection[idim],2);
+
+      t=sqrt(c);
+      if (t<Altitude) Altitude=t;
+    }
+    else {
+      //in case there is no intersection of the line that is along the  normal -> get the distances to the corners to the face
+      for (iPoint=0;iPoint<DIM;iPoint++) {
+        //get the corner point on the face
+        switch (iPoint) {
+        case 0:
+          memcpy(xFace,CutCell::BoundaryTriangleFaces[iFace].x0Face,3*sizeof(double));
+          break;
+        case 1:
+          memcpy(xFace,CutCell::BoundaryTriangleFaces[iFace].x1Face,3*sizeof(double));
+          break;
+        case 2:
+          memcpy(xFace,CutCell::BoundaryTriangleFaces[iFace].x2Face,3*sizeof(double));
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error: something went wrong");
+        }
+
+        for (c=0.0,idim=0;idim<DIM;idim++) c+=pow(x[idim]-xFace[idim],2);
+
+        t=sqrt(c);
+        if (t<Altitude) Altitude=t;
+      }
+    }
+  }
+
+  return Altitude;
+}
 
 
 
