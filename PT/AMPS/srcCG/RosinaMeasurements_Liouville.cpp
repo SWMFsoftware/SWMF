@@ -120,12 +120,54 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressur
       }
     }
 
+    //sample the contribution of the surface element to the isntrument observation
+    double t,*t_ptr;
 
-    localNudeGaugeDensity+=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+    //nude gauge density
+    t=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
+    localNudeGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution;
+
+    #pragma omp atomic
+    t_ptr[spec]+=t;
+    #else
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution[spec]+=t;
+    #endif
+
+    //nude gauge flux
     localNudeGaugeFlux=0.0;
 
-    localRamGaugeFlux+=tRamGaugeFlux*A/2.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-    localRamGaugeDensity+=tRamGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests * CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+    //ram gauge density
+    t=tRamGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
+    localRamGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution;
+
+    #pragma omp atomic
+    t_ptr[spec]+=t;
+    #else
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution[spec]+=t;
+    #endif
+
+
+    //ram gauge flux
+    t=tRamGaugeFlux*A/2.0 / nTotalTests;
+    localRamGaugeFlux+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution;
+
+    #pragma omp atomic
+    t_ptr[spec]+=t;
+    #else
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution[spec]+=t;
+    #endif
+
+
+
   }
 
   //colles contribution from all processors
@@ -233,6 +275,7 @@ void RosinaSample::Liouville::Evaluate() {
   FILE *fout[PIC::nTotalSpecies];
 
   const int Step=5;
+  const int SurfaceOutputSter=2;
 
   if (PIC::ThisThread==0) {
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
@@ -287,7 +330,7 @@ void RosinaSample::Liouville::Evaluate() {
 
     PIC::RayTracing::SetCutCellShadowAttribute(positionSun,false);
 
-    for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       definedFluxBjorn[spec]=false;
       Comet::GetTotalProductionRateBjornNASTRAN(spec);
     }
@@ -312,6 +355,23 @@ void RosinaSample::Liouville::Evaluate() {
         printf("%i (%s) %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle);
+      }
+    }
+
+    //save the surface properties
+    if ((iPoint/Step)%SurfaceOutputSter==0) {
+      //create the surface output file, and clean the buffers
+      char fname[200];
+
+      sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
+      CutCell::PrintSurfaceData(fname);
+
+      //clear the samplign buffers
+      for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+        CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeDensityContribution[spec]=0.0;
+        CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeFluxContribution[spec]=0.0;
+        CutCell::BoundaryTriangleFaces[iface].UserData.RamGaugeDensityContribution[spec]=0.0;
+        CutCell::BoundaryTriangleFaces[iface].UserData.RamGaugeFluxContribution[spec]=0.0;
       }
     }
   }
