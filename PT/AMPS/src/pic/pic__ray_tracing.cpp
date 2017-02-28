@@ -241,7 +241,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 	return true;
 }
 
-int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,void* ExeptionFace) {
+int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,void* ExeptionFace) {
   double c=0.0,l[3],x[3];
   int idim,IntersectionCounter=0;
 
@@ -283,9 +283,10 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
     if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
         if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
-          code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
-
-          if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
+          if ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) {
+            code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
+            if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
+          }
 
           TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
         }
