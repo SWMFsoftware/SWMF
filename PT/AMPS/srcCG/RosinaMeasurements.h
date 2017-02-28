@@ -1164,6 +1164,7 @@ namespace RosinaSample {
   struct cSamplingData {
     double Flux[PIC::nTotalSpecies],Density[PIC::nTotalSpecies];
     double LineOfSight[3];
+    double NucleusSolidAngle;
   };
 
   class cRosinaSamplingLocation {
@@ -1199,7 +1200,9 @@ namespace RosinaSample {
 
   //evaluate density and pressure using the Liouville's theoreme
   namespace Liouville {
-    void EvaluateLocation(int iPoint);
+    void EvaluateLocation(int spec,double& NudeGausePressure,double& NudeGaugeDensity,double& NudeGaugeFlux,double& RamGausePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint);
+    void Evaluate();
+    void GetSolidAngle(double& NudeGaugeNucleusSolidAngle,double& RamGaugeNucleusSolidAngle,int iPoint);
   }
 
   //init the sampling container
