@@ -1018,7 +1018,7 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
    xLength=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]); 
    for (int idim=0;idim<3;idim++) xTarget[idim]=x[idim]+SearchDirection[idim]*xLength; 
 
-   iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xTarget,NULL);
+   iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xTarget,-1,NULL);
    flag=true;
 
 
