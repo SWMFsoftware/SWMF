@@ -668,10 +668,6 @@ int main(int argc,char **argv) {
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure(PIC::UserModelInputDataPath);
 
-  //init sampling of the last Rosina data
-  if (_COMET_SAMPLE_ROSINA_DATA_ == _PIC_MODE_ON_) {
-    RosinaSample::Init();
-  }
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
   if (NewMeshGeneratedFlag==true) {
@@ -912,6 +908,12 @@ int main(int argc,char **argv) {
   PIC::Init_AfterParser();
   PIC::Mover::Init();
   Comet::Init_AfterParser(PIC::UserModelInputDataPath);
+
+  //init sampling of the last Rosina data
+  if (_COMET_SAMPLE_ROSINA_DATA_ == _PIC_MODE_ON_) {
+    RosinaSample::Init();
+    RosinaSample::Liouville::Evaluate();
+  }
 
   //init the dust particle tracing condition
   Comet::TrajectoryTracking::Init();
