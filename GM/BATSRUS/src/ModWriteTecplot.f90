@@ -183,7 +183,7 @@ contains
 
        do i = i0, i1; do j = j0, j1; do k = k0, k1
           nBrickAll = nBrickAll + 1
-          write(UnitTmp_,'(8(i8,1x))') &
+          write(UnitTmp_,'(8i11)') &
                iCell_G(i  ,j  ,k  ), &
                iCell_G(i+1,j  ,k  ), &
                iCell_G(i+1,j+1,k  ), &
