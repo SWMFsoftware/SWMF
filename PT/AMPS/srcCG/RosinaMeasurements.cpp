@@ -43,6 +43,11 @@ void RosinaSample::Init(double etMin,double etMax) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   double dxSubCell,dySubCell,dzSubCell,xLocalCell,yLocalCell,zLocalCell;
 
+  //the function call counter
+  static int CallCounter=0;
+
+  CallCounter++;
+
   //init line-of-sight vectors
   SpiceDouble lt,et,xRosetta[3],etStart;
   SpiceDouble       xform[6][6];
@@ -142,6 +147,67 @@ void RosinaSample::Init(double etMin,double etMax) {
 
     mxvg_c(xform,RamGauge,6,6,l);
     for (idim=0;idim<3;idim++) Rosina[i].RamGauge.LineOfSight[idim]=l[idim];
+
+
+    if (CallCounter==1) {
+      Rosina[i].NudeGauge.NucleusSolidAngle=0.0;
+      Rosina[i].RamGauge.NucleusSolidAngle=0.0;
+
+      //solid angle occupied by the nucleus by the nude gauge
+      int t,nTotalTests=10000,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
+      double l[3],xIntersection[3];
+
+      int iStartTest,iFinishTest,nTestThread;
+
+      iStartTest=(nTotalTests/PIC::nTotalThreads)*PIC::ThisThread;
+      iFinishTest=(nTotalTests/PIC::nTotalThreads)*(PIC::ThisThread+1);
+
+      nTestThread=nTotalTests/PIC::nTotalThreads;
+      iStartTest=(nTotalTests/PIC::nTotalThreads)*PIC::ThisThread;
+      iFinishTest=iStartTest+nTestThread;
+      if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishTest=nTotalTests;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,i) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#endif
+      for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
+        //generate a ranfom direction
+        do {
+          Vector3D::Distribution::Uniform(l);
+        }
+        while (Vector3D::DotProduct(l,Rosina[i].NudeGauge.LineOfSight)<0.0);
+
+        //determine whether an intersection with the nucleus is found
+        iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[i].x,l,xIntersection,NULL);
+
+        if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+      }
+
+      MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      Rosina[i].NudeGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
+
+      //solid angle occupied by the nucleus by the ram gauge
+      NucleusIntersectionCounter=0;
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,i) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#endif
+      for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
+        //generate a ranfom direction
+        do {
+          Vector3D::Distribution::Uniform(l);
+        }
+        while (Vector3D::DotProduct(l,Rosina[i].RamGauge.LineOfSight)<0.0);
+
+        //determine whether an intersection with the nucleus is found
+        iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[i].x,l,xIntersection,NULL);
+
+        if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+      }
+
+      MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      Rosina[i].RamGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
+    }
 
     //init the sampling point
     SpiceDouble et;
@@ -349,7 +415,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
     int LocationCode;
 
 
-    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Total Ram Gauge Pressure\", \"Total Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\"\n");
+    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Total Ram Gauge Pressure\", \"Total Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\", \"Ram Guage Nucleus Solid angle\", \"Nude Gauge Nucleus Solid Angle\" \n");
 
     for (int i=0;i<nPoints;i++) {
       double rgPressure=0.0;
@@ -386,9 +452,10 @@ void RosinaSample::PrintOutputFile(int nfile) {
         ngTotalPressure+=DensityNudeGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
       }
 
-      fprintf(fout,"%i %e %e %e %e %e %e %e %e %e %i %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies],
+      fprintf(fout,"%i %e %e %e %e %e %e %e %e %e %i %e %e %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies],
           rgPressure, ngPressure, rgTotalPressure, ngTotalPressure,
-          Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize);
+          Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize,
+          Rosina[i].RamGauge.NucleusSolidAngle,Rosina[i].NudeGauge.NucleusSolidAngle);
     }
 
     fclose(fout);
