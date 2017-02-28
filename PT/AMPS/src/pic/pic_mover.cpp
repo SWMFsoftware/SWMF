@@ -1749,7 +1749,7 @@ exit(__LINE__,__FILE__,"not implemented");
   return _PARTICLE_MOTION_FINISHED_;
 }
 
-int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag) {
+int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag,CutCell::cTriangleFace *lastIntersectedTriangleFace) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL,*middleNode=NULL;
   double dtMin=-1.0,dtTemp,dtMinInit2,dtMinInit;
   PIC::ParticleBuffer::byte *ParticleData;
@@ -1766,7 +1766,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   //the descriptors of the internal surfaces
   cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*InternalBoundaryDescriptor_dtMin=NULL,*lastInternalBoundaryDescriptor=NULL;
   CutCell::cTriangleFace *IntersectionFace=NULL;
-  CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL;
+//  CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL;
 
   //the description of the boundaries of the block faces
   struct cExternalBoundaryFace {
