@@ -47,7 +47,7 @@ double Comet::DustInitialVelocity::RotationAxis[3]={1.0,0.0,0.0};
 double Comet::DustInitialVelocity::InjectionConstantVelocity=0.001;
 
 static bool probabilityFunctionDefinedUniformNASTRAN=false;
-static double *productionDistributionUniformNASTRAN,*cumulativeProductionDistributionUniformNASTRAN;
+double *productionDistributionUniformNASTRAN,*cumulativeProductionDistributionUniformNASTRAN;
 
 static bool probabilityFunctionDefinedJetNASTRAN=false;
 
@@ -56,9 +56,9 @@ static double azimuthCenter;
 static double zenithCenter;
 static cInternalRotationBodyData* Nucleus;
 
-static double **productionDistributionNASTRAN,**cumulativeProductionDistributionNASTRAN;
+double **productionDistributionNASTRAN,**cumulativeProductionDistributionNASTRAN;
 static double *BjornProductionANALYTICAL;
-static bool *definedFluxBjorn,*probabilityFunctionDefinedNASTRAN;
+bool *definedFluxBjorn,*probabilityFunctionDefinedNASTRAN;
 static double **fluxBjorn;
 double *nightSideFlux;
 
@@ -199,7 +199,7 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
     BjornProductionANALYTICAL[i]=0.0;
     definedFluxBjorn[i]=false;
     probabilityFunctionDefinedNASTRAN[i]=false;
-    nightSideFlux[i]=false;
+    nightSideFlux[i]=0.0;
   }
 
   for(int i=0;i<PIC::nTotalSpecies;i++) {
@@ -1212,9 +1212,9 @@ void Comet::BjornNASTRAN::Init() {
   double norm[3],x[3],c,X;
 
 
-  if (SurfaceInjectionProbability!=NULL) return;
+//  if (SurfaceInjectionProbability!=NULL) return;
 
-  SurfaceInjectionProbability=new cSingleVariableDiscreteDistribution<int> [PIC::nTotalSpecies];
+  if (SurfaceInjectionProbability==NULL) SurfaceInjectionProbability=new cSingleVariableDiscreteDistribution<int> [PIC::nTotalSpecies];
 
   if (TotalSourceRate_H2O==NULL) TotalSourceRate_H2O=new double [CutCell::nBoundaryTriangleFaces];
 
@@ -1399,9 +1399,9 @@ void Comet::BjornNASTRAN::Init() {
 
       }
 
-      if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
+//      if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
         SurfaceInjectionProbability[spec].InitArray(productionDistributionNASTRAN[spec],totalSurfaceElementsNumber,10*totalSurfaceElementsNumber);
-      }
+//      }
 
 
       probabilityFunctionDefinedNASTRAN[spec]=true;
