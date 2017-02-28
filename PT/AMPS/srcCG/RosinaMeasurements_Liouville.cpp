@@ -266,6 +266,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
 //==========================================================================================
 //evaluete the fulle set of the measuremetns
 void RosinaSample::Liouville::Evaluate() {
+  #ifndef _NO_SPICE_CALLS_
   double NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux;
   double NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle;
   int iPoint,idim,spec;
@@ -377,6 +378,7 @@ void RosinaSample::Liouville::Evaluate() {
   }
 
   if (PIC::ThisThread==0) for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
+#endif //_NO_SPICE_CALLS_ 
 }
 
 
