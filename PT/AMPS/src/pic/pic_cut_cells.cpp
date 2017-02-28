@@ -80,7 +80,7 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
     for (idim=0;idim<3;idim++) xFinish[idim]=lDomain*xFinish[idim]/l+xStart[idim];
 
     //count face intersections
-    iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(xStart,xFinish,fcptr);
+    iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(xStart,xFinish,fcptr->MeshFileID,fcptr);
 
     if (iIntersections%2!=0) {
       //the norm has to be reversed
@@ -151,7 +151,7 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
   //xFinish is outside of the domain -> the point outside of the surface
   //calculate the number of the face intersections between 'x' and 'xFinish'
 
-  iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xFinish);
+  iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xFinish,-1);
 
   return (iIntersections%2==0) ? true : false;
 
