@@ -297,6 +297,7 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
     long int nface;
     double cos_illumination_angle;
     int MeshFileID;
+    double ExternalNormal[3];
   };
 
   cTempNodeData *TempNodeData=new cTempNodeData[nBoundaryTriangleNodes];
@@ -310,6 +311,7 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
       TempNodeData[nnode].cos_illumination_angle=BoundaryTriangleFaces[nface].pic__cosine_illumination_angle;
       TempNodeData[nnode].nface=nface;
       TempNodeData[nnode].MeshFileID=BoundaryTriangleFaces[nface].MeshFileID;
+      memcpy(TempNodeData[nnode].ExternalNormal,BoundaryTriangleFaces[nface].ExternalNormal,3*sizeof(double));
 
       if ((nnode<0)||(nnode>=nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
     }
@@ -318,12 +320,13 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
 
   //print the mesh
   FILE *fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"cos(face illumination angle)\", \"faceat\", \"nface\",\"Mesh File ID\"");
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"cos(face illumination angle)\", \"faceat\", \"nface\",\"Mesh File ID\", \"External NormX\",\"External NormY\",\"External NormZ\"");
   fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
 
   for (nnode=0;nnode<nBoundaryTriangleNodes;nnode++) {
-    fprintf(fout,"%e %e %e %i %e %i %ld %i\n",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],
-        TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].cos_illumination_angle,TempNodeData[nnode].faceat,TempNodeData[nnode].nface,TempNodeData[nnode].MeshFileID);
+    fprintf(fout,"%e %e %e %i %e %i %ld %i %e %e %e\n",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],
+        TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].cos_illumination_angle,TempNodeData[nnode].faceat,TempNodeData[nnode].nface,TempNodeData[nnode].MeshFileID,
+        TempNodeData[nnode].ExternalNormal[0],TempNodeData[nnode].ExternalNormal[1],TempNodeData[nnode].ExternalNormal[2]);
   }
 
   for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
