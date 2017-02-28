@@ -2557,6 +2557,10 @@ namespace PIC {
       //init the vectors of the external normals at the cut-faces
       void InitExternalNormalVector();
       bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
+
+      //determine the closes distance to the triangulated surface
+      //if the point is inside the body -> the distance is -1
+      double GetClosestDistance(double *x);
     }
 
     //the namespace for the block/cell search functions
