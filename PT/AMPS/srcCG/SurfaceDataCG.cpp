@@ -12,6 +12,10 @@ void cSurfaceDataCG::PrintVarableList(FILE* fout) {
   for (spec=0;spec<PIC::nTotalSpecies;spec++) fprintf(fout,", \"SourceRate[s=%i]\"",spec);
   for (spec=0;spec<PIC::nTotalSpecies;spec++) fprintf(fout,", \"MassSourceRate[s=%i]\"",spec);
   for (spec=0;spec<PIC::nTotalSpecies;spec++) fprintf(fout,", \"Probability Density[s=%i]\"",spec);
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    fprintf(fout,", \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Flux Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Flux Contribution[s=%i]\"",spec,spec,spec,spec);
+  }
 }
 
 void cSurfaceDataCG::Gather(CMPI_channel* pipe) {
@@ -35,7 +39,13 @@ void cSurfaceDataCG::Gather(CMPI_channel* pipe) {
 }
 
 void cSurfaceDataCG::Flush() {
-  for (int spec=0;spec<PIC::nTotalSpecies;spec++) InjectionFlux[spec]=0.0,MassInjectionFlux[spec]=0.0;
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+    InjectionFlux[spec]=0.0,MassInjectionFlux[spec]=0.0;
+
+    NudeGaugeDensityContribution[spec]=0.0,NudeGaugeFluxContribution[spec]=0.0;
+    RamGaugeDensityContribution[spec]=0.0,RamGaugeFluxContribution[spec]=0.0;
+  }
+
 }
 
 void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int *Stencil,int StencilLength) {
@@ -47,7 +57,9 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
     t=0.0;
 
     for (i=0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->InjectionFlux[spec];
-    fprintf(fout," %e",t/PIC::LastSampleLength);
+    if (PIC::LastSampleLength!=0) t/=PIC::LastSampleLength;
+
+    fprintf(fout," %e",t);
   }
 
   //output the calculated mass source rate
@@ -55,7 +67,9 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
     t=0.0;
 
     for (i=0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->MassInjectionFlux[spec];
-    fprintf(fout," %e",t/PIC::LastSampleLength);
+    if (PIC::LastSampleLength!=0) t/=PIC::LastSampleLength;
+
+    fprintf(fout," %e",t);
   }
 
   //output the theoretical value proportianal to the probability density of particle be generated at a particular location
@@ -73,4 +87,24 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
 
     fprintf(fout," %e",t);
   }
+
+  //output contribution of the oarticular surface elements to the ram nad nude gauges measuremetns
+  // \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Pressure Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Pressure Contribution[s=%i]
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->NudeGaugeDensityContribution[spec];
+    fprintf(fout," %e",t);
+
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->NudeGaugeFluxContribution[spec];
+    fprintf(fout," %e",t);
+
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->RamGaugeDensityContribution[spec];
+    fprintf(fout," %e",t);
+
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->RamGaugeFluxContribution[spec];
+    fprintf(fout," %e",t);
+
+  }
+
+
 }
