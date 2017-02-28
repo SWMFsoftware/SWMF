@@ -114,7 +114,10 @@ at the end of each time step
 #define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode) TotalParticleAcceleration_default(accl,spec,ptr,x,v,startNode);
 #define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode) _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 #define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(ptr,LocalTimeStep,node);
+
 #define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag);
+#define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_FACE_(ptr,LocalTimeStep,node,FirstBoundaryFlag,InjectionFace) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag,InjectionFace);
+
 
 //accounting for relativistic effects
 #define _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ _PIC_MODE_OFF_
