@@ -207,6 +207,9 @@ void RosinaSample::Init(double etMin,double etMax) {
 
       MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
       Rosina[i].RamGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
+
+      //estimate distance to the nucleus
+      Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x);
     }
 
     //init the sampling point
@@ -415,7 +418,7 @@ void RosinaSample::PrintOutputFile(int nfile) {
     int LocationCode;
 
 
-    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Total Ram Gauge Pressure\", \"Total Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\", \"Ram Guage Nucleus Solid angle\", \"Nude Gauge Nucleus Solid Angle\" \n");
+    fprintf(fout,"VARIABLES=\"i\", \"Ram Gauge Density\", \"Nude Gauge Density\", \"Ram Gauge Pressure\", \"Nude Gauge Pressure\", \"Total Ram Gauge Pressure\", \"Total Nude Gauge Pressure\", \"Seconds From The First Point\", \" Radius-Vector Length\", \"Distance to the Coment\", \"Location Code\", \"Characteristic Cell Size\", \"Ram Guage Nucleus Solid angle\", \"Nude Gauge Nucleus Solid Angle\", \"Altitude\" \n");
 
     for (int i=0;i<nPoints;i++) {
       double rgPressure=0.0;
@@ -452,10 +455,10 @@ void RosinaSample::PrintOutputFile(int nfile) {
         ngTotalPressure+=DensityNudeGauge[_CO2_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
       }
 
-      fprintf(fout,"%i %e %e %e %e %e %e %e %e %e %i %e %e %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies],
+      fprintf(fout,"%i %e %e %e %e %e %e %e %e %e %i %e %e %e %e\n",i, DensityRamGauge[spec+i*PIC::nTotalSpecies],DensityNudeGauge[spec+i*PIC::nTotalSpecies],
           rgPressure, ngPressure, rgTotalPressure, ngTotalPressure,
           Rosina[i].SecondsFromBegining,Rosina[i].RadiusVectorLeangth,Rosina[i].CometDistance,Rosina[i].LocationCode,Rosina[i].CharacteristicCellSize,
-          Rosina[i].RamGauge.NucleusSolidAngle,Rosina[i].NudeGauge.NucleusSolidAngle);
+          Rosina[i].RamGauge.NucleusSolidAngle,Rosina[i].NudeGauge.NucleusSolidAngle,Rosina[i].Altitude);
     }
 
     fclose(fout);
