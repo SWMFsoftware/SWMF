@@ -498,6 +498,13 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
 
 //========================================================================================================================
 double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
+  double xClosestPoint[3];
+  int iClosestTriangularFace;
+
+  return GetClosestDistance(x,xClosestPoint,iClosestTriangularFace);
+}
+
+double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace) {
   double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],xIntersectionLocal[3],IntersectionTime,t;
   int iFace,idim,iPoint;
 
@@ -518,7 +525,11 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
     //the extermal normal of the face is derected toward the tested point ==>
     //evaluate the distance to the face at the center, corners of the face, and in the direction normal to the surface
     t=Vector3D::Length(l);
-    if ((t<Altitude)||(Altitude<0.0)) Altitude=t;
+    if ((t<Altitude)||(Altitude<0.0)) {
+      Altitude=t;
+      memcpy(xClosestPoint,xFace,3*sizeof(double));
+      iClosestTriangularFace=iFace;
+    }
 
     //the closest point to the face is that along the normal check intersecion of the line along the normal with the surface element
     for (idim=0;idim<DIM;idim++) l[idim]=-ExternNormal[idim];
@@ -527,7 +538,12 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
       for (c=0.0,idim=0;idim<DIM;idim++) c+=pow(x[idim]-xIntersection[idim],2);
 
       t=sqrt(c);
-      if (t<Altitude) Altitude=t;
+
+      if (t<Altitude) {
+        Altitude=t;
+        memcpy(xClosestPoint,xIntersection,3*sizeof(double));
+        iClosestTriangularFace=iFace;
+      }
     }
     else {
       //in case there is no intersection of the line that is along the  normal -> get the distances to the corners to the face
@@ -550,7 +566,12 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
         for (c=0.0,idim=0;idim<DIM;idim++) c+=pow(x[idim]-xFace[idim],2);
 
         t=sqrt(c);
-        if (t<Altitude) Altitude=t;
+
+        if (t<Altitude) {
+          Altitude=t;
+          memcpy(xClosestPoint,xFace,3*sizeof(double));
+          iClosestTriangularFace=iFace;
+        }
       }
     }
   }

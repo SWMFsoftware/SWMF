@@ -2561,6 +2561,8 @@ namespace PIC {
       //determine the closes distance to the triangulated surface
       //if the point is inside the body -> the distance is -1
       double GetClosestDistance(double *x);
+      double GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace);
+
     }
 
     //the namespace for the block/cell search functions
