@@ -274,18 +274,22 @@ void RosinaSample::Liouville::Evaluate() {
   SpiceDouble       xform[6][6];
 
   FILE *fout[PIC::nTotalSpecies];
+  FILE *fGroundTrack=NULL;
 
-  const int Step=5;
+  const int Step=2;
   const int SurfaceOutputSter=2;
 
   if (PIC::ThisThread==0) {
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-      char fname[200];
+    char fname[200];
 
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       sprintf(fname,"Liouville.spec=%s.dat",PIC::MolecularData::GetChemSymbol(spec));
       fout[spec]=fopen(fname,"w");
-      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\" \n");
+      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\" \n");
     }
+
+    sprintf(fname,"GroundTracks.dat",PIC::MolecularData::GetChemSymbol(spec));
+    fGroundTrack=fopen(fname,"w");
   }
 
   for (iPoint=0;iPoint<RosinaSample::nPoints;iPoint+=Step) {
@@ -348,16 +352,20 @@ void RosinaSample::Liouville::Evaluate() {
       EvaluateLocation(spec,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
 
       if (PIC::ThisThread==0) {
-        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        fprintf(fGroundTrack,"%e %e %e\n",Rosina[iPoint].xNucleusClosestPoint[0],Rosina[iPoint].xNucleusClosestPoint[1],Rosina[iPoint].xNucleusClosestPoint[2]);
+
+        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
-            Rosina[iPoint].Altitude);
+            Rosina[iPoint].Altitude,
+            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea);
 
 
-        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
-            Rosina[iPoint].Altitude);
+            Rosina[iPoint].Altitude,
+            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea);
       }
     }
 
@@ -379,7 +387,10 @@ void RosinaSample::Liouville::Evaluate() {
     }
   }
 
-  if (PIC::ThisThread==0) for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
+  if (PIC::ThisThread==0) {
+    fclose(fGroundTrack);
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
+  }
 #endif //_NO_SPICE_CALLS_
 }
 
