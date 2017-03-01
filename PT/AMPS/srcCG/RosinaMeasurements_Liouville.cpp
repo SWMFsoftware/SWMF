@@ -266,7 +266,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
 //==========================================================================================
 //evaluete the fulle set of the measuremetns
 void RosinaSample::Liouville::Evaluate() {
-  #ifndef _NO_SPICE_CALLS_
+#ifndef _NO_SPICE_CALLS_  //the function will be compiled only when SPICE is used (bacause SPICE is needed to adjust the model parameters for each point of the observations
   double NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux;
   double NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle;
   int iPoint,idim,spec;
@@ -284,7 +284,7 @@ void RosinaSample::Liouville::Evaluate() {
 
       sprintf(fname,"Liouville.spec=%s.dat",PIC::MolecularData::GetChemSymbol(spec));
       fout[spec]=fopen(fname,"w");
-      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\" \n");
+      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\" \n");
     }
   }
 
@@ -348,14 +348,16 @@ void RosinaSample::Liouville::Evaluate() {
       EvaluateLocation(spec,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
 
       if (PIC::ThisThread==0) {
-        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
-            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle);
+            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
+            Rosina[iPoint].Altitude);
 
 
-        printf("%i (%s) %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
-            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle);
+            NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
+            Rosina[iPoint].Altitude);
       }
     }
 
@@ -378,7 +380,7 @@ void RosinaSample::Liouville::Evaluate() {
   }
 
   if (PIC::ThisThread==0) for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
-#endif //_NO_SPICE_CALLS_ 
+#endif //_NO_SPICE_CALLS_
 }
 
 
