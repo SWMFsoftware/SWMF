@@ -112,19 +112,34 @@ void cSurfaceDataOrbiter::Print(FILE *fout,double* InterpolationWeightList,cSurf
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     double tAboundance=0.0,TotalStencilArea=0.0;
 
-    for (i=0;i<StencilLength;i++) {
+    //average the surface aboundance weighting not with the surface area but.....
+    double AboundanceInterpolationWeight[StencilLength],summAboundanceInterpolationWeight=0.0;
+
+    for (i=0;i<StencilLength;i++) if (CutCell::BoundaryTriangleFaces[Stencil[i]].SurfaceArea>0.0) {
+      double w=InterpolationFaceList[i]->SpeciesSurfaceAboundance[spec]/CutCell::BoundaryTriangleFaces[Stencil[i]].SurfaceArea;
+
+      tAboundance+=w*InterpolationFaceList[i]->SpeciesSurfaceAboundance[spec]/CutCell::BoundaryTriangleFaces[Stencil[i]].SurfaceArea;
+      summAboundanceInterpolationWeight+=w;
+    }
+
+    //if (TotalStencilArea>0.0) tAboundance/=TotalStencilArea;
+
+    if (summAboundanceInterpolationWeight>0.0) tAboundance/=summAboundanceInterpolationWeight;
+
+
+/*    for (i=0;i<StencilLength;i++) {
       tAboundance+=InterpolationFaceList[i]->SpeciesSurfaceAboundance[spec];
       TotalStencilArea+=CutCell::BoundaryTriangleFaces[Stencil[i]].SurfaceArea;
-    }
+    }*/
 
     #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
     #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
     PIC::Debugger::CatchOutLimitValue(tAboundance,__LINE__,__FILE__);
-    PIC::Debugger::CatchOutLimitValue(TotalStencilArea,__LINE__,__FILE__);
+ //   PIC::Debugger::CatchOutLimitValue(TotalStencilArea,__LINE__,__FILE__);
     #endif
     #endif
 
-    if (TotalStencilArea>0.0) tAboundance/=TotalStencilArea;
+
     fprintf(fout," %e ",tAboundance);
   }
 
