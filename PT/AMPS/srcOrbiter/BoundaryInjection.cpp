@@ -134,7 +134,7 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
 long int Orbiter::UpstreamBC::BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   long int nInjectedParticles=0;
 
-  for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
+  if (UpstreamSourceMode==true) for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
 
   return nInjectedParticles;
 }
@@ -145,6 +145,9 @@ double Orbiter::UpstreamBC::BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::
   double ExternalNormal[3],BlockSurfaceArea;
   int nface;
 
+  if (UpstreamSourceMode==false)  return 0.0;
+
+  //calculate the soruce rate
   double ModelParticlesInjectionRate=0.0;
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
