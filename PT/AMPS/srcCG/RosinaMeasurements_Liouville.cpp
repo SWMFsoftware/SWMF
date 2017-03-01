@@ -288,8 +288,7 @@ void RosinaSample::Liouville::Evaluate() {
       fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\" \n");
     }
 
-    sprintf(fname,"GroundTracks.dat",PIC::MolecularData::GetChemSymbol(spec));
-    fGroundTrack=fopen(fname,"w");
+    fGroundTrack=fopen("GroundTracks.dat","w");
   }
 
   for (iPoint=0;iPoint<RosinaSample::nPoints;iPoint+=Step) {
