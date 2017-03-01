@@ -8,6 +8,7 @@
 //$Id$
 
 #include "pic.h"
+#include "global.h"
 
 //the object name and the names of the frames
 /*char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Orbiter";
@@ -17,6 +18,7 @@ char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";*/
 double Orbiter::UpstreamBC::Velocity[3]={-30.0E3,0.0,0.0};
 double Orbiter::UpstreamBC::NumberDensity[PIC::nTotalSpecies];
 double Orbiter::UpstreamBC::Temperature=293.0;
+bool Orbiter::UpstreamBC::UpstreamSourceMode=true;
 
 //scaling factor of the surface model
 double Orbiter::SurfaceModel::ScalingFactor=1.0;
@@ -311,7 +313,71 @@ void Orbiter::Init_BeforeParser() {
   //init the drag coefficient sampling 
   if (Orbiter::Sampling::DragCoefficient::SamplingMode==true) Orbiter::Sampling::DragCoefficient::Init();
 
+  //set the injection boundary processor
+  PIC::BC::UserDefinedParticleInjectionFunction=InjectionModel::InjectParticles;
+  PIC::ParticleWeightTimeStep::UserDefinedExtraSourceRate=InjectionModel::GetTotalInjectionRate;
+
   //init the exosphere model
   Exosphere::Init_BeforeParser();
 }  
+
+//====================================================================
+//exchange model data
+void Orbiter::ExchangeModelData() {
+  int iSurfaceElement,spec;
+
+
+  //prepare and exchange the adsotprion/desorption fluxes, and update the surface aboundance
+  double *AdsorptionDesorptionExchangeBuffer=new double [CutCell::nBoundaryTriangleFaces];
+  double *sumAdsorptionDesorptionExchangeBuffer=new double [CutCell::nBoundaryTriangleFaces];
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    //exchange the adsorption flux
+    for (iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
+      AdsorptionDesorptionExchangeBuffer[iSurfaceElement]=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.AdsorptionFlux[spec];
+    }
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+    PIC::Debugger::CatchOutLimitValue(AdsorptionDesorptionExchangeBuffer,CutCell::nBoundaryTriangleFaces,__LINE__,__FILE__);
+#endif
+#endif
+
+    MPI_Allreduce(AdsorptionDesorptionExchangeBuffer,sumAdsorptionDesorptionExchangeBuffer,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+
+    //update the adsorption flux, exchange the desorption flux
+    for (iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.AdsorptionFlux[spec]=sumAdsorptionDesorptionExchangeBuffer[iSurfaceElement];
+
+      AdsorptionDesorptionExchangeBuffer[iSurfaceElement]=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.DesorptionFlux[spec];
+    }
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+    PIC::Debugger::CatchOutLimitValue(AdsorptionDesorptionExchangeBuffer,CutCell::nBoundaryTriangleFaces,__LINE__,__FILE__);
+#endif
+#endif
+
+    MPI_Allreduce(AdsorptionDesorptionExchangeBuffer,sumAdsorptionDesorptionExchangeBuffer,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+    //update the desorption flux, then update the surface aboundance, and then set the default vaelues to the Adsorption/Desorption buffers
+    for (iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.DesorptionFlux[spec]=sumAdsorptionDesorptionExchangeBuffer[iSurfaceElement];
+
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.SpeciesSurfaceAboundance[spec]+=
+          CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.AdsorptionFlux[spec]-CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.DesorptionFlux[spec];
+
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.AdsorptionFlux[spec]=0.0;
+      CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.DesorptionFlux[spec]=0.0;
+    }
+  }
+
+  delete [] AdsorptionDesorptionExchangeBuffer;
+  delete [] sumAdsorptionDesorptionExchangeBuffer;
+}
+
+
+
+
 
