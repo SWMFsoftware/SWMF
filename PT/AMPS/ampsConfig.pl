@@ -3355,6 +3355,7 @@ sub ReadMeshBlock {
 #=============================== Read Species Block =============================
 sub ReadSpeciesBlock {
   my $nspec=-1;
+  my $nNotFoundSpeciesID=-1000;
   
   my $s0;
   my $s1;
@@ -3397,10 +3398,24 @@ sub ReadSpeciesBlock {
           $nspec++;
         }      
       }
+
+      if ($SkipSpecieFlag == 0) {
+        #the speces is PRESENT in the speces.input but NOT present in the list of species used in the simulation -> create a macro for that species and set the macro a negative value
+        my $t;
+        my $spec;
+        
+        $spec="_".$s0."_SPEC_";
+        $t="#ifdef ".$spec."\n#undef ".$spec."\n#endif\n";
+        $t=$t."#define ".$spec." ".$nNotFoundSpeciesID."\n";
+        
+        ampsConfigLib::AddLine2File($t,"pic/picSpeciesMacro.dfn");    
+        $nNotFoundSpeciesID--;  
+      }      
+      
     }
     
 
-    #pars the species properties    
+    #determine the species properties    
     if ($SkipSpecieFlag == 1) {
       if ($s0 eq "MASS") {
         ($s0,$s1)=split(' ',$s1,2);
