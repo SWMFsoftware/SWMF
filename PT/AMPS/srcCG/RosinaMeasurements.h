@@ -1175,7 +1175,8 @@ namespace RosinaSample {
     int LocationCode;
     double x[3];
     int iLocalSubCell,jLocalSubCell,kLocalSubCell;
-    double Altitude;
+    double Altitude,xNucleusClosestPoint[3];
+    int iNucleusClosestFace;
 
     //sampling particle for this location (useg to set sampling that corresponds to the right simulatino time)
     bool SamplingParticleDataFlag;
@@ -1187,6 +1188,8 @@ namespace RosinaSample {
     cRosinaSamplingLocation() {
       SamplingParticleDataFlag=false;
       Altitude=-1.0;
+      iNucleusClosestFace=-1;
+      for (int idim=0;idim<3;idim++) xNucleusClosestPoint[idim]=0.0;
     }
   }; 
 

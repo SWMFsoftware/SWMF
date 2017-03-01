@@ -209,7 +209,7 @@ void RosinaSample::Init(double etMin,double etMax) {
       Rosina[i].RamGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
 
       //estimate distance to the nucleus
-      Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x);
+      Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x,Rosina[i].xNucleusClosestPoint,Rosina[i].iNucleusClosestFace);
     }
 
     //init the sampling point
