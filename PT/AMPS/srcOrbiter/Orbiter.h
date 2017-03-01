@@ -11,18 +11,118 @@
 #define _ORBITER_H_
 
 #include "Exosphere.h"
+#include "Orbiter.dfn"
+#include "SingleVariableDiscreteDistribution.h"
 
 namespace Orbiter {
 using namespace Exosphere;
 
+  //Exchange model data
+  void ExchangeModelData();
+
   //init the Orbiter model
   void Init_BeforeParser();
+
+  //injection models
+  namespace InjectionModel {
+
+    //source from a group of faces that shares the same face attribute
+    namespace FaceEjection {
+
+      struct cFaceTableEntry {
+        double TotalArea;
+        int *FaceTable;
+        int FaceTableLength;
+        int faceat;
+        cSingleVariableDiscreteDistribution<int> InjectionFaceGenerator;
+      };
+
+      struct cInjectionData {
+        int faceat;
+        double SourceRate;
+        double Temperature;
+        int Species;
+        cFaceTableEntry *FaceTable;
+      };
+
+      //this source is considered active only when InjectionDataTableLength is not zero, which is a default value
+      extern cFaceTableEntry *InjectionFaceTable;
+      extern int InjectionFaceTableLength;
+
+      extern cInjectionData InjectionDataTable[];
+      extern int InjectionDataTableLength;
+
+      //call the init function when needed
+      extern bool SourceInitFlag;
+      void Init();
+
+      //inject model particles
+      long int InjectParticles();
+    }
+
+    //point source of the model particles
+    namespace PointSource {
+
+      //source rate of the injeted particles
+      struct cInjectionData {
+        double SourceRate;
+        double Temperature;
+        double Location[3];
+        int Species;
+      };
+
+      //this source is considered active only when InjectionDataTableLength is not zero, which is a default value
+      extern cInjectionData InjectionDataTable[];
+      extern int InjectionDataTableLength;
+
+      //inject particles functions
+      long int  InjectParticles();
+    }
+
+    //particle injection from a ring
+    namespace Ring {
+      //source rate, and temperature of the injected species
+      extern double SourceRate[PIC::nTotalSpecies];
+      extern double SourceTemperature[PIC::nTotalSpecies];
+
+      //location of the center of the ring, and the coordinate frame related to the ring
+      extern double e0[3],e1[3],e2[3],x0[3],Radius;
+
+      //inject model particles
+      long int  InjectParticles();
+    }
+
+    //particle desorption
+    namespace Desorption {
+
+      //inject model particles
+      long int  InjectParticles();
+    }
+
+    //diffusion of particles from the surface
+    namespace Diffusion {
+
+      //inject model particles
+      long int InjectParticles();
+    }
+
+    //the function controls injecting of the model particles from all sources
+    long int  InjectParticles();
+    double GetTotalInjectionRate(int spec);
+  }
+
+  //adsorption model
+  namespace Adsorption {
+
+    double GetStickingCoefficient();
+  }
 
   //upstream boundary conditions
   namespace UpstreamBC {
     extern double Velocity[3];
     extern double NumberDensity[PIC::nTotalSpecies];
     extern double Temperature;
+    extern bool UpstreamSourceMode;
 
     bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
     long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
