@@ -121,6 +121,15 @@ long int Orbiter::InjectionModel::FaceEjection::InjectParticles() {
   if (_SIMULATION_PARTICLE_WEIGHT_MODE_ != _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_) exit(__LINE__,__FILE__,"Error: the model should be used with the specied dependent global particle weight");
 
 
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  //allocate the Thread::FirstPBufferParticle array and distribute particles between processes
+  #pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
+
   for (iSource=0;iSource<InjectionDataTableLength;iSource++) {
     spec=InjectionDataTable[iSource].Species;
 
@@ -169,10 +178,17 @@ long int Orbiter::InjectionModel::FaceEjection::InjectParticles() {
       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)startNode);
       #endif
 
+
        //inject the particle into the system
+       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+       #pragma omp task default (none) shared(CutCell::BoundaryTriangleFaces,TimeStep) firstprivate (newParticle,startNode,iFace)
+       #endif
       _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_FACE_(newParticle,TimeStep*rnd(),startNode,true,CutCell::BoundaryTriangleFaces+iFace);
     }
   }
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    }}
+#endif //_COMPILATION_MODE_
 
   return nTotalInjectedParticles;
 }
