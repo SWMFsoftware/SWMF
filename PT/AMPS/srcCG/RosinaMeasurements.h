@@ -1175,6 +1175,7 @@ namespace RosinaSample {
     int LocationCode;
     double x[3];
     int iLocalSubCell,jLocalSubCell,kLocalSubCell;
+    double Altitude;
 
     //sampling particle for this location (useg to set sampling that corresponds to the right simulatino time)
     bool SamplingParticleDataFlag;
@@ -1185,6 +1186,7 @@ namespace RosinaSample {
 
     cRosinaSamplingLocation() {
       SamplingParticleDataFlag=false;
+      Altitude=-1.0;
     }
   }; 
 
@@ -1215,6 +1217,7 @@ namespace RosinaSample {
   //the set of the model sampling functions
   void SamplingProcessor();
   void PrintOutputFile(int nfile);  
+
 }  
   
 #endif
