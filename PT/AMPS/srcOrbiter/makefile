@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = main_lib.o Orbiter.o BoundaryInjection.o SurfaceDataOrbiter.o 
+MAINLIBOBJ = main_lib.o Orbiter.o BoundaryInjection.o SurfaceDataOrbiter.o ParticleInjection.o
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
