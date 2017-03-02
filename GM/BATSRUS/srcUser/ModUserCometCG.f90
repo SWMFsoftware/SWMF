@@ -28,7 +28,7 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
+       'CG Comet, G. Toth & Z. Huang, 2014'
 
   character (len=100) :: NameShapeFile
 
