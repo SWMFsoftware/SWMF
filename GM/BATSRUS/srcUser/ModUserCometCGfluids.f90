@@ -176,7 +176,6 @@ contains
   !============================================================================
   subroutine user_read_inputs
 
-    use ModMain, ONLY: UseUserInitSession, UseExtraBoundary
     use ModReadParam
 
     character (len=100) :: NameCommand
@@ -286,9 +285,6 @@ contains
                NameSub//' invalid command='//trim(NameCommand))
        end select
     end do
-
-    ! UseUserInitSession = .true.
-    ! UseExtraBoundary   = .true.
 
   end subroutine user_read_inputs
   !===========================================================================
