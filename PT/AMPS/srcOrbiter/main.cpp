@@ -25,7 +25,6 @@
 
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
-#include "Orbiter.dfn"
 
 double BulletLocalResolution(double *x) {
   int idim;
@@ -46,69 +45,17 @@ return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
-  int res,spec;
+  int spec;
 
   memcpy(vInitUnchanged,vInit,3*sizeof(double));
-  spec=PIC::ParticleBuffer::GetI(ptr);
 
-  //determine whether the particle has stuck or reflected on the surface
-  if (_ORBITER_ADSORPTION_MODEL__MODE_ == _ORBITER_ADSORPTION_MODEL__MODE__OFF_) {
-    res=_PARTICLE_REJECTED_ON_THE_FACE_;
-  }
-  else {
-    double StickingProbability;
-
-    switch (_ORBITER_ADSORPTION_MODEL__MODE_) {
-    case _ORBITER_ADSORPTION_MODEL__MODE__CONSTANT_STICKING_COEFFICIENT_:
-      StickingProbability=1.5;
-      break;
-    default:
-      exit(__LINE__,__FILE__,"Error: the surface boundary model is not defined");
-    }
-
-    if (rnd()<StickingProbability) {
-      //the particle got adsorbed on the surface
-      double ParticleWeight,LocalTimeStep;
-
-      ParticleWeight=startNode->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
-      LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
-
-      //update the adsorption flux
-      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      double *p=TriangleCutFace->UserData.AdsorptionFlux;
-
-      #pragma omp atomic
-      p[spec]+=ParticleWeight;
-
-      #else
-      TriangleCutFace->UserData.AdsorptionFlux[spec]+=ParticleWeight;
-      #endif
-
-      res=_PARTICLE_DELETED_ON_THE_FACE_;
-    }
-    else {
-      //the particle is scattered back on the surface
-      res=_PARTICLE_REJECTED_ON_THE_FACE_;
-    }
-  }
-
-  switch (res) {
-  case _PARTICLE_DELETED_ON_THE_FACE_:
-    vInit[0]=0.0,vInit[1]=0.0,vInit[2]=0.0;
-
-    break;
-  case _PARTICLE_REJECTED_ON_THE_FACE_:
-    c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
-    vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
-    vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
-    vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
-
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the option is not found");
-  }
+  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
+  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
+  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
 
   //sample the energy and momentum transfer rates
+  spec=PIC::ParticleBuffer::GetI(ptr);
   mass=PIC::MolecularData::GetMass(spec);
 
   LocalParticleWeight=startNode->block->GetLocalParticleWeight(spec);
@@ -185,10 +132,8 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 #endif
 
 
-/*  //if the particle is scheduled for deletion -> remove it
-  if (res==_PARTICLE_DELETED_ON_THE_FACE_) PIC::ParticleBuffer::DeleteParticle(ptr);*/
 
-  return res;
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
 }
 
 
@@ -211,7 +156,7 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=4.0E3; //50.0E3;
+  double CharacteristicSpeed=50.0E3;
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
@@ -263,7 +208,7 @@ int main(int argc,char **argv) {
 
 
 
-/*  //load the NASTRAN mesh
+  //load the NASTRAN mesh
   sprintf(fname,"%s/%s",PIC::UserModelInputDataPath,Orbiter::SurfaceModel::MeshFileName);
 
   switch (Orbiter::SurfaceModel::MeshFileFormat) {
@@ -277,21 +222,7 @@ int main(int argc,char **argv) {
 
   default:
     exit(__LINE__,__FILE__,"Error: the format is unknown");
-  }*/
-
-
-  list<CutCell::cSurfaceMeshFile> SurfaceMeshFileList;
-  CutCell::cSurfaceMeshFile MeshFile;
-
-  for (int iPart=1;iPart<=11;iPart++) {
-    MeshFile.faceat=-1;
-    sprintf(MeshFile.MeshFileName,"%s/part-%i.bdf",PIC::UserModelInputDataPath,iPart);
-
-    SurfaceMeshFileList.push_back(MeshFile);
   }
-
-
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(SurfaceMeshFileList,Orbiter::SurfaceModel::ScalingFactor);
 
 
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
@@ -396,9 +327,7 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.SetParallelLoadMeasure(InitLoadMeasure);
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
 
-/*  //DEBUG: TEST Initialization of the external normals
-  PIC::Mesh::IrregularSurface::InitExternalNormalVector();
-  PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);*/
+
 
   //initialize the blocks
   PIC::Mesh::initCellSamplingDataBuffer();
