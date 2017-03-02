@@ -33,10 +33,13 @@ T			UseSolidState
 ! Temperatures are in eV
 #VAPORIZATIONTEMPERTURE
 0.0			VaporizationTiXe
-0.25			VaporizationTiBe
-5.0			VaporizationTiPl
-5.0			VaporizationTiAu
-5.0			VaporizationTiAy
+0.0			VaporizationTiBe
+0.07			VaporizationTiPl
+0.28			VaporizationTiAu
+0.06			VaporizationTiAy
+
+LEVELSET
+F			UseNonConsLevelSet
 
 #USERINPUTEND ----------------------------
 
