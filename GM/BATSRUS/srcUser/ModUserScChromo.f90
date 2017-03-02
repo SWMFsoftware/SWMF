@@ -1127,11 +1127,23 @@ contains
           !\
           ! Add the eruptive event state to the solar wind
           !/
+          !\
+          ! Convert momentum density to velocity
+          !/
+          State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+               State_VGB(Rho_,i,j,k,iBlock)
           if(State_VGB(Rho_,i,j,k,iBlock) + Rho < 0.25*State_VGB(Rho_,i,j,k,iBlock))then
              State_VGB(Rho_,i,j,k,iBlock) = 0.25*State_VGB(Rho_,i,j,k,iBlock)
           else
              State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
           endif
+          !\
+          ! Fix momentum density to correspond to the modified mass density 
+          !/
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+               State_VGB(Rho_,i,j,k,iBlock)
 
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
