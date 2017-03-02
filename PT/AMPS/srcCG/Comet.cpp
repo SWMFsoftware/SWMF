@@ -1219,10 +1219,16 @@ void Comet::BjornNASTRAN::Init() {
   if (TotalSourceRate_H2O==NULL) TotalSourceRate_H2O=new double [CutCell::nBoundaryTriangleFaces];
 
 
-  for (specIn=0;specIn<PIC::nTotalSpecies;specIn++) for (pass=0;pass<2;pass++) {
+  for (specIn=-1;specIn<PIC::nTotalSpecies;specIn++) {
     int spec;
 
-    spec=(pass==0) ? _H2O_SPEC_ : specIn;
+    if (specIn==-1) {
+      spec=_H2O_SPEC_;
+    }
+    else {
+      spec=specIn;
+      if (spec==_H2O_SPEC_) continue;
+    }
 
     if (probabilityFunctionDefinedNASTRAN[spec]==true) continue;
 
@@ -1400,8 +1406,10 @@ void Comet::BjornNASTRAN::Init() {
       }
 
 //      if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
+      if ( (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__OFF_) ||
+          ((_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_)&&((spec<_DUST_SPEC_)||(spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups))) ) {
         SurfaceInjectionProbability[spec].InitArray(productionDistributionNASTRAN[spec],totalSurfaceElementsNumber,10*totalSurfaceElementsNumber);
-//      }
+      }
 
 
       probabilityFunctionDefinedNASTRAN[spec]=true;
