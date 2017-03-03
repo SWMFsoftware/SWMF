@@ -9522,11 +9522,16 @@ nMPIops++;
   void AllocateTreeBlocks() {
     int flag=_BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
 
+    int rank;
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+    if (rank==0) printf("$PREFIX: Allocating tree blocks.....  ");
+
 #if _AMR__CUT_CELL__MODE_ == _AMR__CUT_CELL__MODE__ON_
     if (rootTree->FirstTriangleCutFace!=NULL) flag=_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_;
 #endif
 
     AllocateTreeBlocks(rootTree,flag);
+    if (rank==0) printf("done.\n");
   }
 
 

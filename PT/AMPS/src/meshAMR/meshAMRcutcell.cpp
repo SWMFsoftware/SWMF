@@ -291,6 +291,8 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
   MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
   if (rank!=0) return;
 
+  printf("$PREFIX: printing the surface triangulation mesh.....  ");
+
   class cTempNodeData {
   public:
     int shadow_attribute,faceat;
@@ -335,6 +337,8 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
 
   fclose(fout);
   delete [] TempNodeData;
+
+  printf("done. \n");
 }
 
 
