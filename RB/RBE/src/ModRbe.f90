@@ -60,7 +60,7 @@ module rbe_cread2
   implicit none
 
   real :: &
-       tstart,tmax,trans,tint,tf,hlosscone,dsth(ndstmax),&
+       tstart,tmax,trans,tint=1.4142135623730951,tf,hlosscone,dsth(ndstmax),&
        tdst(ndstmax),timf(nswmax),bxw(nswmax),byw(nswmax),bzw(nswmax),&
        tsw(nswmax),xnswa(nswmax),vswa(nswmax),rc,tKp(nKpmax),&
        xKph(nKpmax)
