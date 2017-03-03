@@ -29,7 +29,7 @@ The default values are shown.
 	<parameter name="Dt" type="real" min="0" default="3" />
 
 #TIMESTEP
-3		Dt
+3.0		Dt
 
 Dt is the timestep of the calculation.
 
@@ -130,17 +130,23 @@ The name of the input data associated with the storm
 </command>
 
 <command name="SAVEPLOT">
-	<parameter name="DtSavePlot" type="real" />
-	<parameter name="UseSeparatePlotFiles" type="logical" default="F"/>
-	<parameter name="OutName" type="string" length="20" 
+	<parameter name="DtSavePlot" type="real" min="-1" default="0"/>
+	<if expr="$DtSavePlot&gt;0">
+		<parameter name="UseSeparatePlotFiles" type="logical" default="T"/>
+		<parameter name="OutName" type="string" length="20" 
 				if="not $UseSeparatePlotFiles" />
+	</if>
 
 #SAVEPLOT
 2		DtSavePlot
-F		UseSeparatePlotFiles
+F		UseSeparatePlotFiles (read if DtSavePlot is positive)
 2000f223	OutName (read if UseSeparatePlotFiles is false)
 
-Define frequency and output name of plots. 
+Define frequency and output name of plots. If DtSavePlot is negative, no plots are saved.
+If zero, the final plot is saved only. For positive values, the frequency of saves is given.
+The frequency has to be a multiple of the time step given in #TIMESTEP command.
+
+The default value is zero, so the final plot is saved only.
 </command>
 
 <command name="PLOTELECTRODYNAMICS">
