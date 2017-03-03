@@ -527,8 +527,6 @@ contains
 
 
     do iBoundary = MinBoundary_, MaxBoundary_
-       write(*,*) 'Io2No_V     =', Io2No_V
-       write(*,*) 'iUnitPrim_V =', iUnitPrim_V
        if (.not.UseBoundaryState_I(iBoundary)) CYCLE
        FaceState_VI( : , iBoundary) = &
             FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
