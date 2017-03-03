@@ -47,8 +47,8 @@ module rbe_cread1
   implicit none
 
   character(len=8):: outname
-  character(len=13):: outnameSep,outnameSepOrig
-  logical         :: UseSeparatePlotFiles = .false.
+  character(len=15):: outnameSep, outnameSepOrig
+  logical         :: UseSeparatePlotFiles = .true.
   character(len=2):: st2
 
 end module rbe_cread1
@@ -59,7 +59,6 @@ module rbe_cread2
 
   implicit none
 
-  real,parameter :: dtmax=3.0
   real :: &
        tstart,tmax,trans,tint,tf,hlosscone,dsth(ndstmax),&
        tdst(ndstmax),timf(nswmax),bxw(nswmax),byw(nswmax),bzw(nswmax),&
@@ -67,7 +66,10 @@ module rbe_cread2
        xKph(nKpmax)
   integer :: &
        nimf,nsw,iyear,iday,js,itype,nstep,nstept,ndst,nKp,&
-       ires,ismo,imod,iprint,ntime,iconvect,init,il,ie,idfa,idfe,iplsp
+       ires,ismo,imod, iprint=1, ntime,iconvect,init,il,ie,idfa,idfe,iplsp
+
+  ! iprint=0: no output, iprint=1: final output only, 
+  ! iprint=2: output every tint seconds
 
   character (len=100):: NameRestartOutDir = 'RB/restartOUT/'
 
@@ -148,7 +150,7 @@ module rbe_plasmasphere
 end module rbe_plasmasphere
 !=============================================================================
 module rbe_time
-  real :: t, dt
+  real :: t, dt = 3.0, DtMax = 3.0
   integer :: istep
 end module rbe_time
 !=============================================================================
