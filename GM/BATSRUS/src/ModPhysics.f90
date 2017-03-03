@@ -190,7 +190,7 @@ module ModPhysics
   character (len=20) :: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
-  integer, parameter :: nIoUnit = 18
+  integer, parameter :: nIoUnit = 19
 
   integer, parameter :: UnitX_           = 1
   integer, parameter :: UnitU_           = 2
@@ -209,7 +209,8 @@ module ModPhysics
   integer, parameter :: UnitAngle_       = 15
   integer, parameter :: UnitMass_        = 16
   integer, parameter :: UnitCharge_      = 17
-  integer, parameter :: UnitUnity_       = 18
+  integer, parameter :: UnitHypE_        = 18
+  integer, parameter :: UnitUnity_       = 19
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
@@ -526,6 +527,8 @@ contains
 
 
     do iBoundary = MinBoundary_, MaxBoundary_
+       write(*,*) 'Io2No_V     =', Io2No_V
+       write(*,*) 'iUnitPrim_V =', iUnitPrim_V
        if (.not.UseBoundaryState_I(iBoundary)) CYCLE
        FaceState_VI( : , iBoundary) = &
             FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
@@ -676,6 +679,7 @@ contains
     No2Si_V(UnitMass_)       = No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3    ! kg
     No2Si_V(UnitCharge_)     = No2Si_V(UnitJ_)/No2Si_V(UnitU_) &       ! C
          *No2Si_V(UnitX_)**3
+    No2Si_V(UnitHypE_)       = No2Si_V(UnitElectric_)*No2Si_V(UnitU_)  ! V/s
     No2Si_V(UnitUnity_)      = 1.0   ! Fallback conversion for undefined units
 
     !\
@@ -714,6 +718,7 @@ contains
     NameTecUnit_V(UnitPoynting_)    = '[J m^-^2 s^-^1]'
     NameTecUnit_V(UnitJ_)           = '[A/m^2]'       
     NameTecUnit_V(UnitElectric_)    = '[V/m]'          
+    NameTecUnit_V(UnitHypE_)        = '[V/s]'
     NameTecUnit_V(UnitTemperature_) = '[K]'             
     NameTecUnit_V(UnitDivB_)        = '[T/m]'           
     NameTecUnit_V(UnitAngle_)       = '[rad]'
@@ -732,6 +737,7 @@ contains
     NameIdlUnit_V(UnitPoynting_)    = 'J/m2s'
     NameIdlUnit_V(UnitJ_)           = 'A/m2'       
     NameIdlUnit_V(UnitElectric_)    = 'V/m'          
+    NameIdlUnit_V(UnitHypE_)        = 'V/s'
     NameIdlUnit_V(Unittemperature_) = 'K'             
     NameIdlUnit_V(UnitDivB_)        = 'T/m'           
     NameIdlUnit_V(UnitAngle_)       = 'rad'
@@ -884,6 +890,10 @@ contains
           iUnitPrim_V(iVar) = UnitEnergyDens_
        case('ex', 'ey', 'ez','hyp')
           iUnitCons_V(iVar) = UnitElectric_
+          iUnitPrim_V(iVar) = UnitElectric_
+       case('hype')
+          iUnitCons_V(iVar) = UnitHypE_
+          iUnitPrim_V(iVar) = UnitHypE_
        case default
           if(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
@@ -932,6 +942,13 @@ contains
        UnitUser_V(Ex_:Ez_)        = No2Io_V(UnitElectric_)
        NameUnitUserTec_V(Ex_:Ez_) = NameTecUnit_V(UnitElectric_)
        NameUnitUserIdl_V(Ex_:Ez_) = NameIdlUnit_V(UnitElectric_)
+    end if
+
+    if(HypE_ > 1) then
+       ! Set the scalar field Psi used in hyperbolic constraint of electric field
+       UnitUser_V(HypE_)          = No2Io_V(UnitHypE_)
+       NameUnitUserTec_V(HypE_)   = NameTecUnit_V(UnitHypE_)
+       NameUnitUserIdl_V(HypE_)   = NameIdlUnit_V(UnitHypE_)
     end if
 
     do iFluid = 1, nFluid
@@ -1001,16 +1018,6 @@ contains
 
        NameUnitUserIdl_V(Hyp_) = &
             trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
-    end if
-
-    if(HypE_ > 1)then
-       ! Set the scalar field Psi used in hyperbolic constraint of electric field
-       UnitUser_V(HypE_) = No2Io_V(UnitElectric_)*No2Io_V(UnitU_)
-       NameUnitUserTec_V(HypE_) = &
-            trim(NameTecUnit_V(UnitElectric_)) // trim(NameTecUnit_V(UnitU_))
-
-       NameUnitUserIdl_V(HypE_) = &
-            trim(NameIdlUnit_V(UnitElectric_)) // trim(NameIdlUnit_V(UnitU_))
     end if
 
     if(SignB_ > 1)then
