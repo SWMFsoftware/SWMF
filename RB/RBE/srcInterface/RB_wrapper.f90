@@ -34,8 +34,9 @@ contains
     use CON_comp_info
     use ModUtilities
     use ModReadParam
+    use CON_physics, ONLY: get_time
     use CON_coupler, ONLY: Couple_CC, GM_, RB_, IE_
-    use rbe_cread2,  ONLY: UseGm,UseIE
+    use rbe_cread2,  ONLY: UseGm, UseIE, tstart
 
     character (len=*), intent(in)     :: TypeAction ! which action to perform
     type(CompInfoType), intent(inout) :: CompInfo   ! component information
@@ -76,11 +77,9 @@ contains
        call readinputdata
 
     case('CHECK')
-       ! We should check and correct parameters here
-       !if(iProc==0)then
-       !   call RB_write_prefix;  write(iUnitOut,*)&
-       !        NameSub,': CHECK iSession =',i_session_read()
-       !end if
+       ! Overwrite start time with the SWMF time
+       call get_time(tSimulationOut = tstart)
+
     case('GRID')
        call RB_set_grid
     case default
@@ -161,8 +160,7 @@ contains
 
   subroutine RB_run(TimeSimulation,TimeSimulationLimit)
 
-    use rbe_time, ONLY: t, dt
-    use rbe_cread2, ONLY: dtmax
+    use rbe_time, ONLY: t, Dt, DtMax
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
     real, intent(inout):: TimeSimulation   ! current time of component
@@ -177,7 +175,9 @@ contains
        IsInitiallized = .true.
     endif
 
-    dt = min(dtmax, 0.5*(TimeSimulationLimit - TimeSimulation))
+    ! Note that RBE takes TWO time steps for each RB_run call, hence the 0.5
+    Dt = min(DtMax, 0.5*(TimeSimulationLimit - TimeSimulation))
+
     call rbe_run
 
     ! return time at the end of the time step to CON
@@ -188,13 +188,15 @@ contains
 
   subroutine RB_finalize(TimeSimulation)
 
+    use rbe_cread2, ONLY: iprint
+
     real,     intent(in) :: TimeSimulation   ! seconds from start time
     character(len=*), parameter :: NameSub='RB_finalize'
 
     !-------------------------------------------------------------------------
 
     ! Save final plot
-    call rbe_save_result(.false., .true.)
+    if(iprint > 0) call rbe_save_result(.false., .true.)
 
   end subroutine RB_finalize
   !===========================================================================
