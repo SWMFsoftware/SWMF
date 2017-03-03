@@ -78,12 +78,9 @@ subroutine rbe_init
   !\
   ! Set the Time parameters
   !/
-   if (dt > dtmax) dt=dtmax
-   t=tstart-trans
+  t=tstart-trans
 
   iYear = iStartTime_I(1)
-!  iDOY  = get_doy(iStartTime_I(1),iStartTime_I(2),iStartTime_I(3))
-!  IYD=mod(iYear,100)*1000+iDOY
   call time_int_to_real(iStartTime_I,CurrentTime)
   StartTime=CurrentTime
 
@@ -93,16 +90,11 @@ subroutine rbe_init
 
   !set outname
   if (UseSeparatePlotFiles) then
-     CurrentTime = StartTime+t
-     call time_real_to_int(CurrentTime,iCurrentTime_I)
-     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
-          iCurrentTime_I(4),iCurrentTime_I(5)
-     write(outnameSepOrig,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
-          iStartTime_I(1),iStartTime_I(2),iStartTime_I(3),'_',&
-          iStartTime_I(4),iStartTime_I(5)
+     CurrentTime = StartTime + t
+     call time_real_to_int(CurrentTime, iCurrentTime_I)
+     write(outnameSep,    "(i4.4,2i2.2,'_',3i2.2)") iCurrentTime_I(1:6)
+     write(outnameSepOrig,"(i4.4,2i2.2,'_',3i2.2)") iStartTime_I(1:6)
   endif
-
   
   ! latitudes from Meredith as a function of L, MLT and Kp.
   call readChorusIntensity
@@ -240,14 +232,11 @@ subroutine rbe_run
   if (usePrerun) call read_prerun(t)
   if (usePrerun .and. iConvect==2) call read_prerun_IE(t)
   !update outname 
-  CurrentTime = StartTime+t
-  call time_real_to_int(CurrentTime,iCurrentTime_I)
-  if (UseSeparatePlotFiles) then
-     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
-          iCurrentTime_I(4),iCurrentTime_I(5)  
-  endif
-
+  if(UseSeparatePlotFiles)then
+     CurrentTime = StartTime + t
+     call time_real_to_int(CurrentTime,iCurrentTime_I)
+     write(outnameSep,"(i4.4,2i2.2,'_',3i2.2)") iCurrentTime_I(1:6)
+  end if
 
   if (ires.eq.1.and.mod(t,tf).eq.0.) then
      call fieldpara(t,dt,c,q,rc,re,xlati,&
@@ -292,13 +281,12 @@ subroutine rbe_run
 
   t=t+dt
   !update outname 
-  CurrentTime = StartTime+t
-  call time_real_to_int(CurrentTime,iCurrentTime_I)
   if (UseSeparatePlotFiles) then
-     write(outnameSep,"(i4.4,i2.2,i2.2,a,i2.2,i2.2)") & 
-          iCurrentTime_I(1),iCurrentTime_I(2),iCurrentTime_I(3),'_',&
-          iCurrentTime_I(4),iCurrentTime_I(5)  
-  endif
+     CurrentTime = StartTime + t
+     call time_real_to_int(CurrentTime,iCurrentTime_I)
+     write(outnameSep,"(i4.4,2i2.2,'_',3i2.2)") iCurrentTime_I(1:6)
+  end if
+
   ! update the plasmasphere density
   if (iplsp.eq.1) then
      call RB_setpot(colat,ir,xmltd,ip,potent)
@@ -308,12 +296,14 @@ subroutine rbe_run
   endif
 
   !  Print results
-  if (t.gt.tstart.and.mod(t,tint).eq.0.) &
-       call rbe_save_result(.true. .and. IsStandAlone, .true.)
+  if(iprint > 1)then
+     if (t.gt.tstart.and.mod(t,tint).eq.0.) &
+          call rbe_save_result(.true. .and. IsStandAlone, .true.)
+  end if
 
   open(unit=UnitTmp_,file='RB/rbe_swmf.log')
   if (UseSeparatePlotFiles) then
-     write(UnitTmp_,'(a8)') outnameSep
+     write(UnitTmp_,'(a)') outnameSep
   else
      write(UnitTmp_,'(a8)') outname
   endif
@@ -368,9 +358,6 @@ subroutine readInputData
   character (len=80):: header
   character  pmz(8)*1
   !---------------------------------------------------------------------------
-
-  iprint=2                  ! 1=print result @ tmax, 2=print every tint
- 
   if (IsStandAlone) then
      ntime=int((tmax-tstart)/tint)+1
   else
@@ -2062,15 +2049,17 @@ subroutine boundary(t,tstart,f2,v,xjac,xmass,p,xktd,xnd,&
              '     t(hour)    n(cm^-3)    kT(keV)   n(cm^-3)    kT(keV)'
         write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
         close(UnitTmp_)
-     elseif (mod(t,tint).eq.0.) then
-        if(UseSeparatePlotFiles) then
-           open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
-        else
-           open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc', &
-                position='append')
+     elseif(iprint > 0)then
+        if(mod(t,tint).eq.0.) then
+           if(UseSeparatePlotFiles) then
+              open(unit=UnitTmp_,file='RB/'//outnameSepOrig//st2//'.bc')
+           else
+              open(unit=UnitTmp_,file='RB/'//outname//st2//'.bc', &
+                   position='append')
+           end if
+           write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
+           close(UnitTmp_)
         end if
-        write(UnitTmp_,'(f12.2,2(f11.4,f11.3))') thour,xnn_cm3,xktn,xnd,xktd
-        close(UnitTmp_)
      endif
   endif
   
