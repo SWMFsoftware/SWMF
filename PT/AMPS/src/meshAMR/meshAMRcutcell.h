@@ -276,7 +276,8 @@ unsigned long int GetTriangulationSignature();
 
       l=sqrt(ExternalNormal[0]*ExternalNormal[0]+ExternalNormal[1]*ExternalNormal[1]+ExternalNormal[2]*ExternalNormal[2]);
       SurfaceArea=l/2.0;
-      ExternalNormal[0]/=l,ExternalNormal[1]/=l,ExternalNormal[2]/=l;
+
+      if (l>0.0) ExternalNormal[0]/=l,ExternalNormal[1]/=l,ExternalNormal[2]/=l;
 
       c00=e0[0]*e0[0]+e0[1]*e0[1]+e0[2]*e0[2];
       c11=e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2];
@@ -298,7 +299,7 @@ unsigned long int GetTriangulationSignature();
 
       //determine the orthogonal frame of reference related to the triangular element
       l=Vector3D::Length(e0);
-      for (idim=0;idim<3;idim++) e0Orthogonal[idim]=e0[idim]/l;
+      if (l>0.0) for (idim=0;idim<3;idim++) e0Orthogonal[idim]=e0[idim]/l;
 
       Vector3D::CrossProduct(e1Orthogonal,ExternalNormal,e0Orthogonal);
     }
@@ -377,6 +378,9 @@ unsigned long int GetTriangulationSignature();
       else if (xLocal[0]+xLocal[1]>1.0) return false;*/
 
       if ((xLocal[0]<0.0)||(xLocal[0]>1.0) || (xLocal[1]<0.0)||(xLocal[1]>1.0) || (xLocal[0]+xLocal[1]>1.0)) return false;
+
+// TEST:
+//      if ((xLocal[0]<-1.0E-5)||(xLocal[0]>1.0+1.0E-5) || (xLocal[1]<-1.0E-5)||(xLocal[1]>1.0+1.0E-5) || (xLocal[0]+xLocal[1]>1.0+1.0E-5)) return false;
 
       return true;
     }
