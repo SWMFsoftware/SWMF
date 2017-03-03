@@ -2,7 +2,7 @@ subroutine RB_set_parameters(NameAction)
 
   use ModIoUnit, ONLY: UnitTmp_, io_unit_new
   use ModReadParam
-  use rbe_time, ONLY: dt
+  use rbe_time, ONLY: Dt, DtMax
   use rbe_constant
   use rbe_cread1
   use rbe_cread2
@@ -51,11 +51,20 @@ subroutine RB_set_parameters(NameAction)
      
      case('#SAVEPLOT')
         call read_var('DtSavePlot',tint)   ! output results every tint seconds
-        call read_var('UseSeparatePlotFiles',UseSeparatePlotFiles)
-        if (.not. UseSeparatePlotFiles) then
-           call read_var('OutName',OutName)
-        endif
-        
+        if(tint < 0)then
+           ! No plot files
+           iprint = 0
+           tint = sqrt(2.0)
+        elseif(tint == 0)then
+           ! Final plot file only
+           iprint = 1
+           tint = sqrt(2.0)
+        else
+           ! Plot file every tint seconds (has to be a multiple of 2*Dt)
+           iprint = 2
+           call read_var('UseSeparatePlotFiles',UseSeparatePlotFiles)
+           if (.not. UseSeparatePlotFiles) call read_var('OutName',OutName)
+        end if
      case('#TECPLOT')
         call read_var('DoWriteTec',DoWriteTec)
 
@@ -72,9 +81,8 @@ subroutine RB_set_parameters(NameAction)
         endif
      
      case('#TIMESTEP')
-        call read_var('Dt',Dt)             ! time step in s. 
-                                           ! Summer 2006: read dt from *.dat
-
+        call read_var('Dt',DtMax)             ! maximum time step in s. 
+        Dt = DtMax
      case('#SPLITING')
         call read_var('UseSplitting', UseSplitting)
         if (.not. UseSplitting) call read_var('UseCentralDiff', UseCentralDiff)
