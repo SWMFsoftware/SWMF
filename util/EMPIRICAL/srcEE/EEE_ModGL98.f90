@@ -121,7 +121,7 @@ contains
     real, dimension(3,3), save :: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
 
-    real :: a1scl,rho1scl,rho2scl,SSPscl
+    real :: a1scl,rho1scl,rho2scl
     !------------------------------------------------------------------------
     if (DoFirst_GL) then
        DoFirst_GL=.false.
@@ -148,7 +148,7 @@ contains
           write(*,*) prefix, 'cme_a  = ',cme_a, '[rSun]'
           write(*,*) prefix, 'cme_r1 = ',cme_r1,'[rSun]'
           write(*,*) prefix, 'cme_r0 = ',cme_r0,'[rSun]'
-          write(*,*) prefix, 'cme_a1 = ',cme_a1,'[Gauss]'
+          write(*,*) prefix, 'cme_a1 = ',cme_a1,'[Gauss/rSun^2]'
           write(*,*) prefix, 'cme_rho1 = ',cme_rho1,'[kg/m^3]'
           write(*,*) prefix, 'cme_rho2 = ',cme_rho2,'[kg/m^3]'
           write(*,*) prefix, 'ModulationRho = ',ModulationRho
@@ -159,11 +159,15 @@ contains
           write(*,*) prefix
        end if
     end if
-
-    a1scl   = abs(cme_a1)*Io2No_V(UnitB_)
+    !\
+    ! 4\pi in the formula below is incorrect. The GL98 paper is in
+    ! CGS system, while in dimensionless formulae used below it may not
+    ! appear. To mantain the capability with EEGGL, the muliplier 4\pi
+    ! is included into a definition of A1Scaled
+    a1scl   = abs(cme_a1)*Io2No_V(UnitB_)&!
+         *4.0*cPi     
     rho1scl = cme_rho1*Si2No_V(UnitRho_)
     rho2scl = cme_rho2*Si2No_V(UnitRho_)
-    SSPscl  = 1.0
 
     delta = 0.1
     !\
@@ -221,6 +225,7 @@ contains
     sin_theta2 = sqrt(z_2**2 + y_2**2)/r_2
     cos_phi2   = y_2/sqrt(z_2**2 + y_2**2)
     sin_phi2   = z_2/sqrt(z_2**2 + y_2**2)
+
     if (r_2 <= delta) then
        r_2 = delta
        y_2 = delta*sin_theta2*cos_phi2
@@ -229,24 +234,24 @@ contains
     end if
     alpha0 = 5.763854/cme_r0
     ga0r0 = sin(alpha0*cme_r0)/(alpha0*cme_r0) - cos(alpha0*cme_r0)
-    A2 = (4.0*cPi*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
+    A2 = (a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
          *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
          *sin_theta2**2
-    dA2dr = ((4.0*cPi*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
+    dA2dr = (a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
          *(cos(alpha0*r_2)/r_2 - sin(alpha0*r_2)/(alpha0*r_2**2) &
-         + alpha0*sin(alpha0*r_2)) - 2.0*r_2))*sin_theta2**2
-    dA2dth = (8.0*cPi*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
+         + alpha0*sin(alpha0*r_2)) - 2.0*r_2)*sin_theta2**2
+    dA2dth = (2.0*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
          *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
          *sin_theta2*cos_theta2 
-    d2A2dr2 = (4.0*cPi*a1scl/alpha0**2)*sin_theta2**2 &
+    d2A2dr2 = (a1scl/alpha0**2)*sin_theta2**2 &
          *( (cme_r0**2/ga0r0)*(2.0*sin(alpha0*r_2)/(alpha0*r_2**3) &
          - 2.0*cos(alpha0*r_2)/(r_2**2) - alpha0*sin(alpha0*r_2)/r_2 &
          + (alpha0**2)*cos(alpha0*r_2)) - 2.0)  
-    d2A2drdth = (8.0*cPi*a1scl/alpha0**2)*sin_theta2*cos_theta2 &
+    d2A2drdth = (2.0*a1scl/alpha0**2)*sin_theta2*cos_theta2 &
          *((cme_r0**2/ga0r0)*(cos(alpha0*r_2)/r_2 &
          - sin(alpha0*r_2)/(alpha0*r_2**2) &
          + alpha0*sin(alpha0*r_2)) - 2.0*r_2) 
-    d2A2dth2 = (8.0*cPi*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
+    d2A2dth2 = (2.0*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
          *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
          *(cos_theta2**2 - sin_theta2**2)
     dr2dr1  =  (x_2/r_2)*sin_theta1*cos_phi1 &
@@ -324,7 +329,7 @@ contains
        !\
        ! Compute kinetic gas pressure
        !/
-       pres_1     = inv_g*rho1scl*SSPscl**2 + a1scl*A2
+       pres_1     = inv_g*rho1scl + a1scl*A2
        dpres_1dr1 = a1scl*(dA2dr*dr2dr1 + dA2dth*dth2dr1)
        !\
        ! MAGNETIC FIELD transformed with stretching transformation
@@ -358,12 +363,12 @@ contains
        !/
        F_grav   = (abs(Gbody)/(r**2) + cme_alpha*r)
        rho_GL98 = (1.0/ F_grav)*(((lambda/r)**2) &
-            *((lambda/r)**2 - 1.0)*(dpres_1dr1 + (1.0/(4.0*cPi)) &
-            *(Br2*dBr2dr1 + Btheta2*dBtheta2dr1 + Bphi2*dBphi2dr1)) &
+            *((lambda/r)**2 - 1.0)*(dpres_1dr1 +  &
+            Br2*dBr2dr1 + Btheta2*dBtheta2dr1 + Bphi2*dBphi2dr1) &
             + 2.0*lambda*cme_a*pres_1/r**3 + cme_a*lambda &
-            /(4.0*cPi*r**3)*(1.0 - 2.0*(lambda/r)**2)*Br1**2 &
+            /r**3*(1.0 - 2.0*(lambda/r)**2)*Br1**2 &
             + ((lambda/r)**2)*((cme_a/r)**2 +2.0*cme_a/r)*(Btheta1**2 &
-            + Bphi1**2)/(4.0*cPi*lambda))
+            + Bphi1**2)/lambda)
        !\
        ! Add background density
        !/
@@ -372,7 +377,7 @@ contains
        ! PLASMA PRESSURE with contraction transformation
        !/
        p_GL98 = pres_1*(lambda/r)**2 &
-            - (1.0/(8.0*cPi))*((lambda/r)**2)*((lambda/r)**2 - 1.0)*Br1**2 
+            - (1.0/2.0)*((lambda/r)**2)*((lambda/r)**2 - 1.0)*Br1**2 
        !\
        ! Add background pressure
        !/
