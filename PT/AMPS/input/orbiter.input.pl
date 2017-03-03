@@ -111,6 +111,139 @@ while ($line=<InputFile>) {
     }
   }
   
+  #point particle source 
+  elsif ($InputLine eq "POINTSOURCE") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ON") {
+      #read the point source section
+      my $SourceLocationCounter=0;
+      my (@spec,@xLocation,@yLocation,@zLocation,@Temperature,@SourceRate);
+      
+      $InputComment=~s/[:]/ /g;
+      
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "SOURCE") {
+          $SourceLocationCounter++;
+        }
+        elsif ($InputLine eq "SPEC") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @spec,$InputLine;
+        }
+        elsif ($InputLine eq "RATE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @SourceRate,$InputLine          
+        }
+        elsif ($InputLine eq "TEMPERATURE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @Temperature,$InputLine          
+        }
+        elsif ($InputLine eq "X") {
+          my ($x,$y,$z);
+          
+          ($x,$y,$z,$InputComment)=split(' ',$InputComment,4);
+          push @xLocation,$x; 
+          push @yLocation,$y;
+          push @zLocation,$z;
+        }
+        else {
+          die "Option is unknown in the 'Point Source' section, line=$InputFileLineNumber, option=$InputLine,  ($InputFileName)\n";
+        }       
+      }
+      
+      #insert the point source data into the code 
+      my $InjectionDataTable="";
+      
+      for (my $i=0;$i<$SourceLocationCounter;$i++) {
+        if ($i!=0) {
+          $InjectionDataTable=$InjectionDataTable.",";
+        }        
+        
+        $InjectionDataTable=$InjectionDataTable."{".$SourceRate[$i].",".$Temperature[$i].",{".$xLocation[$i].",".$yLocation[$i].",".$zLocation[$i]."},".$spec[$i]."}";        
+      }
+      
+      ampsConfigLib::ChangeValueOfVariable("int Orbiter::InjectionModel::PointSource::InjectionDataTableLength",$SourceLocationCounter,"main/ParticleInjection.cpp"); 
+      ampsConfigLib::ChangeValueOfVariable("Orbiter::InjectionModel::PointSource::cInjectionData Orbiter::InjectionModel::PointSource::InjectionDataTable\\[\\]","{".$InjectionDataTable."}","main/ParticleInjection.cpp");             
+    }
+    else {      
+      ampsConfigLib::ChangeValueOfVariable("int Orbiter::InjectionModel::PointSource::InjectionDataTableLength","0","main/ParticleInjection.cpp"); 
+    }
+  }
+  
+  #source of the model particles due to the particle ejectino from faces 
+  elsif ($InputLine eq "FACEEJECTION") {    
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ON") {
+      #read the point source section
+      my $SourceLocationCounter=0;
+      my (@spec,@faceat,@Temperature,@SourceRate);
+      
+      $InputComment=~s/[:]/ /g;
+      
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "SOURCE") {
+          $SourceLocationCounter++;
+        }
+        elsif ($InputLine eq "SPEC") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @spec,$InputLine;
+        }
+        elsif ($InputLine eq "RATE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @SourceRate,$InputLine          
+        }
+        elsif ($InputLine eq "TEMPERATURE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @Temperature,$InputLine          
+        }
+        elsif ($InputLine eq "FACEAT") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @faceat,$InputLine           
+        }
+        else {
+          die "Option is unknown in the 'Point Source' section, line=$InputFileLineNumber, option=$InputLine,  ($InputFileName)\n";
+        }       
+      }
+
+      #insert the point source data into the code 
+      my $InjectionDataTable="";
+      
+      for (my $i=0;$i<$SourceLocationCounter;$i++) {
+        if ($i!=0) {
+          $InjectionDataTable=$InjectionDataTable.",";
+        }        
+        
+        $InjectionDataTable=$InjectionDataTable."{".$faceat[$i].",".$SourceRate[$i].",".$Temperature[$i].",".$spec[$i].",NULL}";        
+      }
+  
+      ampsConfigLib::ChangeValueOfVariable("int Orbiter::InjectionModel::FaceEjection::InjectionDataTableLength",$SourceLocationCounter,"main/ParticleInjection.cpp"); 
+      ampsConfigLib::ChangeValueOfVariable("Orbiter::InjectionModel::FaceEjection::cInjectionData Orbiter::InjectionModel::FaceEjection::InjectionDataTable\\[\\]","{".$InjectionDataTable."}","main/ParticleInjection.cpp");             
+    }
+    else {
+      #the injection model is turned off 
+      ampsConfigLib::ChangeValueOfVariable("int Orbiter::InjectionModel::FaceEjection::InjectionDataTableLength","0","main/ParticleInjection.cpp");
+    }    
+  }
+  
+  #parameters of the upstream gas injection source 
+  elsif ($InputLine eq "UPSTREAMSOURCEMODE") {    
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ON") {
+      ampsConfigLib::ChangeValueOfVariable("bool Orbiter::UpstreamBC::UpstreamSourceMode","true","main/Orbiter.cpp"); 
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::ChangeValueOfVariable("bool Orbiter::UpstreamBC::UpstreamSourceMode","false","main/Orbiter.cpp");
+    }
+    else {
+      die "Option is unknown in the 'Point Source' section, line=$InputFileLineNumber, option=$InputLine,  ($InputFileName)\n";
+    } 
+  }
   elsif ($InputLine eq "UPSTREAMVELOCITY") {
     my @v=(0)x3;
     
