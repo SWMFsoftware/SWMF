@@ -69,7 +69,7 @@ contains
     ! OrientationCME : The counter-clockwise angle between the fluxrope
     !                  axis and the solar equator.
     ! cme_a1 : The sign of cme_a1 (magnitude of the fluxrope field strength)
-    !          sets the helicity. Positive (negative) value results in
+    !          sets the helicity Positive (negative) value results in
     !          postive or left handed or sinistral (negative or right handed
     !          or dextral) helicity.
     !\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\//////////////////////////////////
@@ -289,8 +289,16 @@ contains
     Bphi2   = alpha0*A2/(sin_theta2*r_2)
     
     if(cme_a1 > 0.0) then   !helicity switch 
-      Br2 = -Br2
-      Btheta2 = -Btheta2
+      Br2         = -Br2
+      Btheta2     = -Btheta2
+      !\
+      ! Bug is fixed. Below, the magnetic pressure gradient
+      ! is calculated including Br2*dBr2dr1 + Btheta2*dBtheta2dr1.
+      ! Therefore, the sign in the magnetic field derivatives should 
+      ! be changed too.
+      !/ 
+      dBr2dr1     = -dBr2dr1
+      dBtheta2dr1 = -dBtheta2dr1
     endif 
 
     !\
