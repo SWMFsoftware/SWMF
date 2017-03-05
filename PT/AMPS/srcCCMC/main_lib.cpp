@@ -358,7 +358,7 @@ void amps_init() {
 	  double xCenter,dx;
 
 	  xCenter=0.5*(PIC::CCMC::Domain::xmax[idim]+PIC::CCMC::Domain::xmin[idim]);
-	  dx=(1.0-1.0E-5)*(PIC::CCMC::Domain::xmax[idim]-PIC::CCMC::Domain::xmin[idim]);
+	  dx=0.8*(PIC::CCMC::Domain::xmax[idim]-PIC::CCMC::Domain::xmin[idim]);
 
 	  PIC::CCMC::Domain::xmin[idim]=xCenter-0.5*dx;
 	  PIC::CCMC::Domain::xmax[idim]=xCenter+0.5*dx;
@@ -450,7 +450,7 @@ PIC::Mover::Init();
 	//init the particle buffer
 	PIC::ParticleBuffer::Init(10000000);
 
-  //PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 }
 
 
