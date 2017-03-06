@@ -34,7 +34,7 @@ contains
 
   subroutine read_boundary_geometry_param(NameCommand)
 
-    use ModMain,      ONLY: UseSolidState, TypeBc_I
+    use ModMain,      ONLY: UseSolidState, TypeCellBc_I, TypeFaceBc_I
     use ModMain,      ONLY: Coord1MinBc_, xMinBc_
     use ModReadParam, ONLY: read_var
     use BATL_size,    ONLY: nDim
@@ -50,11 +50,11 @@ contains
        call read_var('UseSolidState', UseSolidState)
     case("#OUTERBOUNDARY")
        do i = Coord1MinBc_, 2*nDim
-          call read_var('TypeBc', TypeBc_I(i))
+          call read_var('TypeCellBc', TypeCellBc_I(i))
        end do
     case("#BOXBOUNDARY")
        do i = xMinBc_, xMinBc_-1+2*nDim
-          call read_var('TypeBc', TypeBc_I(i))
+          call read_var('TypeFaceBc', TypeFaceBc_I(i))
        end do
        
     !case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
@@ -77,7 +77,7 @@ contains
 
     use ModMain, ONLY: Body1, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
-         ProcTest, BlkTest, iTest, jTest, kTest, TypeBc_I, &
+         ProcTest, BlkTest, iTest, jTest, kTest, TypeFaceBc_I, &
          Coord1MinBc_, Coord1MaxBc_ , Coord2MinBc_, Coord2MaxBc_, &
          Coord3MinBc_, Coord3MaxBc_, xMinBc_, xMaxBc_, &
          yMinBc_, yMaxBc_, zMinBc_, zMaxBc_
@@ -157,8 +157,8 @@ contains
          iBoundary_GB(:,:,:,iBlock) = body1_
     end if
 
-    ! No face BC is applied for TypeBc_I(7:12) if not set in PARAM.in   
-    if(.not. all(TypeBc_I(xMinBc_:zMaxBc_)=='none') )then
+    ! No face BC is applied for TypeFaceBc_I(1:6) if not set in PARAM.in   
+    if(.not. all(TypeFaceBc_I(xMinBc_:zMaxBc_)=='none') )then
        where( Xyz_DGB(x_,:,:,:,iBlock) < x1 ) &
             iBoundary_GB(:,:,:,iBlock) = xMinBc_
        where( Xyz_DGB(x_,:,:,:,iBlock) > x2 ) &
