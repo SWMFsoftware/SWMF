@@ -5,7 +5,7 @@ module ModMain
 
   use ModSize, ONLY: &
        nDim, nLat, nLon, nNode, &
-       ROrigin, iParticleMin, iParticleMax, nParticle,&
+       iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
   
   use ModWrite, ONLY: &
@@ -16,7 +16,7 @@ module ModMain
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       LatMin, LatMax, LonMin, LonMax, RSc, &
+       LatMin, LatMax, LonMin, LonMax, RSc, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
@@ -38,7 +38,7 @@ module ModMain
   ! Methods and variables from ModSize
   public:: &
        nDim, nLat, nLon, nNode, &
-       ROrigin, iParticleMin, iParticleMax, nParticle,&
+       iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
 
   ! Methods and variables from ModGrid
@@ -47,7 +47,7 @@ module ModMain
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, RSc, &
+       TypeCoordSystem, LatMin, LatMax, LonMin, LonMax, RSc, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        get_node_indexes
 

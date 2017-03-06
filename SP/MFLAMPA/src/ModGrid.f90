@@ -2,7 +2,7 @@ module ModGrid
 
   use ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nMomentumBin, nPitchAngleBin, &
-       ROrigin, iParticleMin, iParticleMax, nParticle,&
+       iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
 
   implicit none
@@ -14,7 +14,7 @@ module ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax, RSc
+  public:: LatMin, LatMax, LonMin, LonMax, RSc, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
   public:: State_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
@@ -35,6 +35,8 @@ module ModGrid
   ! Grid info
   ! Containers for coordinates and data
   !----------------------------------------------------------------------------
+  ! Starting position of field lines in Rs
+  real:: ROrigin = 2.5
   ! Size of angular grid, latitude and longitude, at origin surface R=ROrigin
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
@@ -154,6 +156,7 @@ contains
     use ModNumConst, ONLY: cPi
     character(len=*), parameter:: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
+    call read_var('ROrigin', ROrigin)
     call read_var('RSc', RSc)
     call read_var('LonMin', LonMin)
     call read_var('LonMax', LonMax)

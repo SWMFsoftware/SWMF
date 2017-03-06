@@ -8,16 +8,12 @@ module ModSize
   private ! except
   public:: &
        nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
-       ROrigin, &
        Particle_, OriginLat_, OriginLon_, &
        nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle
 
   ! Dimensionality
   integer, parameter:: nDim = 3
-
-  ! Starting position of field lines in Rs
-  real, parameter:: ROrigin = 2.5
 
   ! Indices of internal cooridnates
   integer, parameter:: &

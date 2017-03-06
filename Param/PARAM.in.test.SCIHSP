@@ -507,6 +507,7 @@ F			DoTraceShock
 F			UseDiffusion
 
 #GRID
+2.5			ROrigin
 21			RSc
 0			LonMin
 40			LonMax
