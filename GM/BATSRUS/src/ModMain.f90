@@ -122,13 +122,14 @@ module ModMain
        Coord1MinBc_ = 1, Coord1MaxBc_ = 2, &
        Coord2MinBc_ = 3, Coord2MaxBc_ = 4, &
        Coord3MinBc_ = 5, Coord3MaxBc_ = 6, &
-       xMinBc_ =  7, xMaxBc_ =  8, &
-       yMinBc_ =  9, yMaxBc_ = 10, &
-       zMinBc_ = 11, zMaxBc_ = 12
-  integer, parameter :: MinBoundary_ = SolidBc_, MaxBoundary_ = zMaxBc_
+       xMinBc_ = 1, xMaxBc_ = 2, &
+       yMinBc_ = 3, yMaxBc_ = 4, &
+       zMinBc_ = 5, zMaxBc_ = 6
 
   ! Inner and outer boundary conditions
-  character (len=20) :: TypeBc_I(SolidBc_:12) = 'none'
+  character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
+  character(len=20) :: TypeFaceBc_I(SolidBc_:6)='none'
+
 
   ! Logicals for bodies
   logical:: Body1    = .false.
