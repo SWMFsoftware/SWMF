@@ -92,6 +92,24 @@ contains
     !   Feb  22, 2002 derivative of B2*2/dr1 is fixed
     !   Feb  22, 2002 angles in 2nd coordinate system are redefined
     !
+    !Igor 2017-03-03 Bug is found. Formulae from the Gibson-Low paper 
+    !were derived in CGS system with the use of 1/4\pi factor in the 
+    !magnetic pressure and magnetic force density. In the existing 
+    !version of the eruptive event generator, the dimensionless formulation 
+    !of the MHD equations are employed, with no 1/4\pi coefficient. To keep 
+    !some backward compatibility, the coefficient 4\pi is retained in the
+    !definition of a1scl, hence old input parameters will provide same
+    !distribution for the magnetic field, however, the perturbations of
+    !pressure and density will be a factor of 4\pi times larger.
+    !
+    !Igor 2017-03-04 Fix a bug  Before the 'helicity switch' was
+    !implemented as follows:
+    !if(cme_a1 > 0.0) then;Br2 = -Br2; Btheta2 = -Btheta2; end if
+    !However, below, the magnetic pressure gradient
+    !is calculated including Br2*dBr2dr1 + Btheta2*dBtheta2dr1.
+    !Therefore, the sign in the magnetic field derivatives should
+    !be changed too. Add two more operators prior to end if:
+    !dBr2dr1     = -dBr2dr1; dBtheta2dr1 = -dBtheta2dr1
     !------------------------------------------------------------------------
     use ModNumConst,       ONLY: cPi, cDegToRad
     use ModCoordTransform, ONLY: rot_matrix_y, rot_matrix_z
