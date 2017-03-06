@@ -139,6 +139,8 @@ ifeq ($(TESTMODE),on)
 endif
 
 install:
+	rm -f output
+	ln -s data/output output
 	@echo "AMPS installed"
 
 
@@ -147,6 +149,7 @@ distclean:
 
 allclean: clean
 	rm -rf main srcTemp *.input* amps Makefile.local .amps.conf
+	rm -f output
 
 rundir:
 	mkdir -p ${RUNDIR}/PT
