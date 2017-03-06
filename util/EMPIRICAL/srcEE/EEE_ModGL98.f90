@@ -13,7 +13,7 @@ module EEE_ModGL98
   public :: adjust_GL98_fluxrope
 
   real :: cme_a=0.0, cme_r1=0.0, cme_r0=0.0, cme_a1=0.0, cme_alpha=0.0
-  real :: cme_rho1=0.0, cme_rho2=0.0
+  real :: pBackgroundDim =0.0, cme_rho2=0.0
 
   real :: ModulationRho=0.0, ModulationP=0.0
 
@@ -35,7 +35,7 @@ contains
        call read_var('cme_r0',          cme_r0)
        call read_var('cme_a1',          cme_a1)
        call read_var('cme_alpha',       cme_alpha)
-       call read_var('cme_rho1',        cme_rho1)
+       call read_var('pBackground',     pBackgroundDim)
        call read_var('cme_rho2',        cme_rho2)
        call read_var('ModulationRho',   ModulationRho)
        call read_var('ModulationP',     ModulationP)
@@ -47,7 +47,7 @@ contains
        call read_var('Distance',    cme_r1)
        call read_var('Radius',      cme_r0)
        call read_var('Bstrength',   cme_a1)
-       call read_var('Density',     cme_rho1)
+       call read_var('pBackground',     pBackgroundDim)
        call read_var('ModulationRho',   ModulationRho)
        call read_var('ModulationP',     ModulationP)
     case default
@@ -139,7 +139,7 @@ contains
     real, dimension(3,3), save :: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
 
-    real :: a1scl,rho1scl,rho2scl
+    real :: a1scl,pBackground,rho2scl
     !------------------------------------------------------------------------
     if (DoFirst_GL) then
        DoFirst_GL=.false.
@@ -167,7 +167,7 @@ contains
           write(*,*) prefix, 'cme_r1 = ',cme_r1,'[rSun]'
           write(*,*) prefix, 'cme_r0 = ',cme_r0,'[rSun]'
           write(*,*) prefix, 'cme_a1 = ',cme_a1,'[Gauss/rSun^2]'
-          write(*,*) prefix, 'cme_rho1 = ',cme_rho1,'[kg/m^3]'
+          write(*,*) prefix, 'pBackground = ', pBackgroundDim, '[dyne/cm^2]'
           write(*,*) prefix, 'cme_rho2 = ',cme_rho2,'[kg/m^3]'
           write(*,*) prefix, 'ModulationRho = ',ModulationRho
           write(*,*) prefix, 'ModulationP   = ',ModulationP
@@ -184,7 +184,7 @@ contains
     ! is included into a definition of A1Scaled
     a1scl   = abs(cme_a1)*Io2No_V(UnitB_)&!
          *4.0*cPi     
-    rho1scl = cme_rho1*Si2No_V(UnitRho_)
+    pBackground = pBackgroundDim*Si2No_V(UnitP_)
     rho2scl = cme_rho2*Si2No_V(UnitRho_)
 
     delta = 0.1
@@ -355,7 +355,7 @@ contains
        !\
        ! Compute kinetic gas pressure
        !/
-       pres_1     = inv_g*rho1scl + a1scl*A2
+       pres_1     = pBackground + a1scl*A2
        dpres_1dr1 = a1scl*(dA2dr*dr2dr1 + dA2dth*dth2dr1)
        !\
        ! MAGNETIC FIELD transformed with stretching transformation
