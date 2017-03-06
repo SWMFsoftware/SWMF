@@ -61,7 +61,7 @@ contains
   subroutine read_face_boundary_param(NameCommand)
 
     use ModReadParam,  ONLY: read_var
-    use ModMain,       ONLY: UseBody2, TypeBc_I, body1_, body2_
+    use ModMain,       ONLY: UseBody2, TypeFaceBc_I, body1_, body2_
     use ModMultiFluid, ONLY: iFluid, nFluid, IonFirst_
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
@@ -71,8 +71,8 @@ contains
     !----------------------------------------------------------------------
     select case(NameCommand)
     case("#INNERBOUNDARY")
-       call read_var('TypeBcInner',TypeBc_I(body1_))
-       if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
+       call read_var('TypeBcInner',TypeFaceBc_I(body1_))
+       if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_)) 
 
     case("#POLARBOUNDARY")
        do iFluid = IonFirst_, nFluid
@@ -219,7 +219,7 @@ contains
        DoTest = .false.; DoTestMe = .false.
     end if
 
-    if(TypeBc_I(body1_) == 'polarwind') then
+    if(TypeFaceBc_I(body1_) == 'polarwind') then
        GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
        Cos2PolarTheta = cos(PolarTheta)**2
     end if
@@ -236,7 +236,6 @@ contains
     !\
     ! Apply face boundary conditions as required.
     !/                            
-
     B0Face_D = 0.0
 
     do k = kMinFace, kMaxFace
@@ -453,7 +452,7 @@ contains
            iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
 
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
-      TypeBc = TypeBc_I(iBoundary)
+      TypeBc = TypeFaceBc_I(iBoundary)
 
       if(DoTestCell)write(*,*) NameSubSub,' iBoundary, TypeBc=', &
            iBoundary, TypeBc
@@ -466,7 +465,6 @@ contains
          call user_set_face_boundary(VarsGhostFace_V)
          RETURN
       end if
-
 
       if(iBoundary==body2_)then
          FaceCoords_D(x_)= FaceCoords_D(x_) - xBody2
@@ -940,7 +938,7 @@ contains
 
 
       case default
-         call stop_mpi('Incorrect TypeBc_I='//TypeBc)
+         call stop_mpi('Incorrect TypeFaceBc_I='//TypeBc)
       end select
 
 
@@ -961,7 +959,7 @@ contains
             VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iUz_I)
 
          case default
-            call stop_mpi('Coupling with IE is not compatible with TypeBc_I=' &
+            call stop_mpi('Coupling with IE is not compatible with TypeFaceBc_I=' &
                  //TypeBc)
          end select
       end if
@@ -983,7 +981,7 @@ contains
             VarsGhostFace_V(iUy_I) = 2*uRot_D(y_) + VarsGhostFace_V(iUy_I)
             VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iUz_I)
          case default
-            call stop_mpi('UseRotatingBc is not compatible with TypeBc_I=' &
+            call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
                  //TypeBc) 
          end select
       end if

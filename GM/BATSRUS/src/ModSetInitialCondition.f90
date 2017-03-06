@@ -86,9 +86,7 @@ subroutine set_ics(iBlock)
         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
            if(.not.true_cell(i,j,k,iBlock))then
               iBoundary = iBoundary_GB(i,j,k,iBlock)
-              ! Note the variables are saved in CellState_VI with index 1:6,
-              ! but face boundary indexes are -3,-2,-1,0,7:12
-              if(iBoundary>Coord3MaxBc_) iBoundary = iBoundary - 6
+
               State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,iBoundary)
            elseif(.not.UseShockTube)then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MinBc_)  

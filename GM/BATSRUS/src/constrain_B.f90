@@ -70,7 +70,7 @@ subroutine bound_VxB(iBlock)
   ! Apply boundary conditions on VxB 
 
   use ModSize
-  use ModMain, ONLY : TypeBc_I, Coord1MaxBc_
+  use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
   use ModParallel, ONLY : NOBLK,&
@@ -100,7 +100,7 @@ subroutine bound_VxB(iBlock)
   if(neiLwest(iBlock)==NOBLK)then
      ! fixed inflow!
      !VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
-     select case(TypeBc_I(Coord1MaxBc_))
+     select case(TypeCellBc_I(Coord1MaxBc_))
      case('inflow','vary','fixed')
         VxB_y(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
         VxB_z(nI+1,:,:,iBlock)=SW_Ux*SW_By-SW_Uy*SW_Bx

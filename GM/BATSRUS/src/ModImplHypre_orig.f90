@@ -623,7 +623,7 @@ contains
 
     ! Set the maxtrix elements corresponding to iBlockSemi
 
-    use ModMain, ONLY: TypeBc_I
+    use ModMain, ONLY: TypeCellBc_I
 
     integer, intent(in):: iBlockSemi
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
@@ -649,35 +649,35 @@ contains
 
     ! DoDebug = iProc == ProcTest
 
-    if(TypeBc_I(1)=='reflect' .and. &
+    if(TypeCellBc_I(1)=='reflect' .and. &
          DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)&
          Jacobian_CI(1,:,:,Stencil1_) = Jacobian_CI(1,:,:,Stencil1_) &
          + Jacobian_CI(1,:,:,Stencil2_)
 
-    if(TypeBc_I(2)=='reflect' .and. &
+    if(TypeCellBc_I(2)=='reflect' .and. &
          DiLevelNei_IIIB(+1,0,0,iBlock) == Unset_)&
          Jacobian_CI(nI,:,:,Stencil1_) = Jacobian_CI(nI,:,:,Stencil1_) &
          + Jacobian_CI(nI,:,:,Stencil3_)
 
     if(nJ > 1)then
-       if(TypeBc_I(3)=='reflect' .and. &
+       if(TypeCellBc_I(3)=='reflect' .and. &
             DiLevelNei_IIIB(0,-1,0,iBlock) == Unset_)&
             Jacobian_CI(:,1,:,Stencil1_) = Jacobian_CI(:,1,:,Stencil1_) &
             + Jacobian_CI(:,1,:,Stencil4_)
 
-       if(TypeBc_I(4)=='reflect' .and. &
+       if(TypeCellBc_I(4)=='reflect' .and. &
             DiLevelNei_IIIB(0,+1,0,iBlock) == Unset_)&
             Jacobian_CI(:,nJ,:,Stencil1_) = Jacobian_CI(:,nJ,:,Stencil1_) &
             + Jacobian_CI(:,nJ,:,Stencil5_)
     end if
 
     if(nK > 1)then
-       if(TypeBc_I(5)=='reflect' .and. &
+       if(TypeCellBc_I(5)=='reflect' .and. &
             DiLevelNei_IIIB(0,0,-1,iBlock) == Unset_)&
             Jacobian_CI(:,:,1,Stencil1_) = Jacobian_CI(:,:,1,Stencil1_) &
             + Jacobian_CI(:,:,1,Stencil6_)
 
-       if(TypeBc_I(6)=='reflect' .and. &
+       if(TypeCellBc_I(6)=='reflect' .and. &
             DiLevelNei_IIIB(0,0,+1,iBlock) == Unset_)&
             Jacobian_CI(:,:,1,Stencil1_) = Jacobian_CI(:,:,1,Stencil1_) &
             + Jacobian_CI(:,:,1,Stencil7_)

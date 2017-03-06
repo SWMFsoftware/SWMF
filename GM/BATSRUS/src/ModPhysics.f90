@@ -5,8 +5,7 @@ module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst
-  use ModMain, ONLY: body2_, SolidBc_, Coord3MaxBc_, &
-       MinBoundary_ , MaxBoundary_
+  use ModMain, ONLY: body2_, SolidBc_, zMaxBc_, Coord3MaxBc_
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
@@ -172,10 +171,10 @@ module ModPhysics
  
 
   ! Logicals for using Boundary State              
-  logical :: UseBoundaryState_I(MinBoundary_:MaxBoundary_) = .false.
+  logical :: UseBoundaryState_I(SolidBc_:zMaxBc_) = .false.
 
   ! State for the boundary conditions
-  real, dimension(nVar,MinBoundary_:MaxBoundary_):: &
+  real, dimension(nVar,SolidBc_:zMaxBc_):: &
        FaceState_VI, FaceStateDim_VI
   real, dimension(nVar,SolidBc_:Coord3MaxBc_):: CellState_VI
 
@@ -431,8 +430,7 @@ contains
 
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
-    do iBoundary=MinBoundary_,MaxBoundary_
-       if(iBoundary>=Coord1MinBc_ .and. iBoundary<=Coord3MaxBc_) cycle
+    do iBoundary=SolidBc_,zMaxBc_
        FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
     end do
 
@@ -521,12 +519,12 @@ contains
           end do
           ! Fix total pressure if necessary (density and temperature are kept)
           if(UseMultiIon .and. IsMhd) FaceState_VI(P_,xMinBc_:zMaxBc_) = &
-               pCoef*sum(FaceState_VI(iPIon_I,7))
+               pCoef*sum(FaceState_VI(iPIon_I,xMinBc_))
        end if
     end if
 
 
-    do iBoundary = MinBoundary_, MaxBoundary_
+    do iBoundary = SolidBc_, zMaxBc_
        if (.not.UseBoundaryState_I(iBoundary)) CYCLE
        FaceState_VI( : , iBoundary) = &
             FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)

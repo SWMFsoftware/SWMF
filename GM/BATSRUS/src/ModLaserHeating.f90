@@ -17,7 +17,7 @@ module ModLaserHeating
   use ModMpi
   use ModCoordTransform
   use ModPhysics,  ONLY: No2Si_V, UnitRho_, UnitX_
-  use ModMain,     ONLY: TypeBC_I, UseLaserHeating
+  use ModMain,     ONLY: TypeCellBc_I, UseLaserHeating
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D
 
   implicit none
@@ -519,8 +519,8 @@ contains
        ! One (ten-thousandth) hundredth of average step 
        StepMin = 1e-2*sum(DeltaS_I)/nRay
        do iDim=1,nDim
-          TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
-          TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
+          TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
+          TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
        end do
        !if(iProc==0)then
        !   write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D

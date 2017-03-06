@@ -23,8 +23,8 @@ contains
   subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn)
 
-    ! Set ghost cells values in State_VG based on TypeBc_I.
-    ! TypeBcIn can override the boundary condition defined in TypeBc_I
+    ! Set ghost cells values in State_VG based on TypeCellBc_I.
+    ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
 
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Hyp_, p_, iRho_I, DefaultState_V, &
          NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
@@ -34,7 +34,7 @@ contains
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb, &
-         UseUserOuterBcs, TypeBc_I, time_accurate, time_loop, &
+         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop, &
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
@@ -138,8 +138,8 @@ contains
        ! Also skips periodic boundaries
        if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
 
-       ! Apply cell BC when TypeBc_I(1:6) is set
-       if(TypeBc_I(iSide)=='none') CYCLE
+       ! Apply cell BC when TypeCellBc_I(1:6) is set
+       if(TypeCellBc_I(iSide)=='none') CYCLE
 
        ! Do not apply cell boundary conditions at the pole 
        ! This is either handled by message passing or supercell
@@ -188,7 +188,7 @@ contains
        if(present(TypeBcIn))then
           TypeBc = TypeBcIn
        else
-          TypeBc = TypeBc_I(iSide)
+          TypeBc = TypeCellBc_I(iSide)
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
        end if
 

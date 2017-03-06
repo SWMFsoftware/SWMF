@@ -1836,7 +1836,7 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseExtraBoundary', UseExtraBoundary)
         if(UseExtraBoundary)then
-           call read_var('TypeBc_I(ExtraBc_)', TypeBc_I(ExtraBc_))      
+           call read_var('TypeFaceBc_I(ExtraBc_)', TypeFaceBc_I(ExtraBc_))  
         end if
 
      case('#SOLIDSTATE')
@@ -2401,8 +2401,6 @@ contains
 
        ! Boundary Conditions
        ! Default boundary type is 'none'.
-       !TypeBc_I(1:6)  = 'float'
-       !TypeBc_I(body1_)      = 'unknown'
 
        BodyTDim_I            = 2.85E06    ! K
        BodyNDim_I(IonFirst_) = 1.50E8     ! /cc  protons
@@ -2428,10 +2426,6 @@ contains
 
        ! Boundary Conditions and Normalization
        ! Default BC type is 'none'.
-       !TypeBc_I(1)        ='outflow'
-       !TypeBc_I(2)        ='inflow'
-       !TypeBc_I(3:6)      ='fixed'
-       !TypeBc_I(body1_)   ='ionosphere'
        
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
@@ -2442,7 +2436,7 @@ contains
 
     end select
 
-    TypeBc_I(SolidBc_) = 'reflectall'
+    TypeFaceBc_I(SolidBc_) = 'reflectall'
 
   end subroutine set_defaults
 
@@ -2689,12 +2683,13 @@ contains
     UseBdf2 = nStage > 1 .and. time_accurate
 
     ! Make sure periodic boundary conditions are symmetric
-    do i=Coord1MinBc_,zMinBc_,2
-       if(any(TypeBc_I(i:i+1)=='periodic')) TypeBc_I(i:i+1)='periodic'
+    do i=Coord1MinBc_,Coord3MinBc_,2
+       if(any(TypeCellBc_I(i:i+1)=='periodic')) TypeCellBc_I(i:i+1)='periodic'
+       if(any(TypeFaceBc_I(i:i+1)=='periodic')) TypeFaceBc_I(i:i+1)='periodic'
     end do
 
     ! Set UseBufferGrid logical 
-    UseBufferGrid = any(TypeBc_I=='buffergrid')
+    UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 
     if(UseConstrainB .and. .not.time_accurate)then
        if(iProc==0)then
@@ -3125,7 +3120,7 @@ contains
     end if
 
     call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
-         TypeGeometryBatl, TypeBc_I(1:2*nDim-1:2) == 'periodic', &
+         TypeGeometryBatl, TypeCellBc_I(1:2*nDim-1:2) == 'periodic', &
          nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
