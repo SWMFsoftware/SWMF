@@ -1808,7 +1808,7 @@ some numerical diffusion applied between the cells on the opposite
 side of the axis. This diffusion may smooth out some artifacts that 
 show up when a discontinuity crosses the axis.
 
-When UseAxis is true, the cells around the pole are merged into pairs, if
+When UseCoarseAxis is true, the cells around the pole are merged into pairs, if
 nCoarseLayer=1. If nCoarseLayer=2, then around the pole each 4 cells are merged
 and in the second (from the pole) layer each 2 cells are merged.
 
@@ -2211,7 +2211,8 @@ The "parcond" option solves for field aligned electron heat conduction only.
 The "cond" option solves for electron heat conduction only.
 
 The "resistivity" option solves for the magnetic field with dissipative 
-and/or Hall resistivity. 
+and/or Hall resistivity. The "resist" option does NOT solve Hall term
+with semi-implicit. The "resisthall" option does NOT solve dissipative resistivity.
 
 The default is UseSemiImplicit false.
 </command>
