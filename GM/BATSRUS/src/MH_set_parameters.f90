@@ -2685,7 +2685,6 @@ contains
     ! Make sure periodic boundary conditions are symmetric
     do i=Coord1MinBc_,Coord3MinBc_,2
        if(any(TypeCellBc_I(i:i+1)=='periodic')) TypeCellBc_I(i:i+1)='periodic'
-       if(any(TypeFaceBc_I(i:i+1)=='periodic')) TypeFaceBc_I(i:i+1)='periodic'
     end do
 
     ! Set UseBufferGrid logical 
