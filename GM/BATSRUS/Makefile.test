@@ -1155,7 +1155,7 @@ test_mercurysph:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mercurysph_compile:
-	./Config.pl -u=Mercury -e=Mhd -g=4,4,4,600,100
+	./Config.pl -u=Mercury -e=MhdPe -g=8,8,8,400,100
 	$(MAKE) BATSRUS
 	make PIDL
 

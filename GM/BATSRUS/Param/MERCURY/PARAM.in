@@ -1,27 +1,40 @@
 #ECHO
-T			DoEcho
-
-#STRICT
 T
 
 #DESCRIPTION
-Spherical test run based on May 4 1998 storm
+MESSENGER M2 flyby run using the new layered inner boundary condition
+
+#PLANET
+MERCURY			NamePlanet
+
+#ROTATION
+F			UseRotation
+
+#MAGNETICAXIS
+T                       IsMagAxisPrimary (rest of parameters read if true)
+180.0
+0.0
+
+#MAGNETICCENTER
+0.0			MagCenterX
+0.0             	MagCenterY
+0.2             	MagCenterZ
 
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#STARTTIME
-1998			iYear
-05			iMonth
-04			iDay
-02			iHour
-00			iMinute
-00			iSecond
 
+------grid begin------
+
+#GRIDGEOMETRY
+spherical_lnr           TypeGeometry
+
+
+! This grid is only used for test.
 #GRID
-4			nRootBlockX
+10			nRootBlockX
 4			nRootBlockY
-4			nRootBlockZ
+8			nRootBlockZ
 -8.			xMin
  8.			xMax
 -8.			yMin
@@ -29,90 +42,243 @@ F			DoTimeAccurate
 -8.			zMin
  8.			zMax
 
-#GRIDGEOMETRY
-spherical_lnr		TypeGeometry
+#LIMITRADIUS
+0.1                	rMin
+14		        rMax
 
-! test message passing across the pole with grid resolution
+
+! Turn on the following grid related commands for a realistic simulation.
+
+GRID
+14                       proc_dims(1)		nRootBlockX
+8                        proc_dims(2)		nRootBlockY
+8                        proc_dims(3),		nRootBlockZ
+-64                      x1		xMin
+ 8                       x2		xMax
+-32                      y1		yMin
+ 32                      y2		yMax
+-32                      z1		zMin
+ 32                      z2		zMax
+
+LIMITRADIUS
+0.8			rMin		RadiusMin
+80.0                 	rMax 		RadiusMax
+
+GRIDLEVEL
+1			nLevelArea
+initial			TypeRegion
+
+GRIDLEVEL
+1			nLevelArea
+box_gen			TypeRegion
+1.2             	rmin		xMinBox
+135             	LonMin		yMinBox
+-40.0           	LatMin		zMinBox
+3.0           		rmax		xMaxBox
+225.0           	LonMax		yMaxBox
+40.0            	LatMax		zMaxBox
+
+
+GRIDLEVEL
+1			nLevelArea
+box			NameArea
+-5.0			xMinBox
+-1.0			yMinBox
+-0.7			zMinBox
+-1.2			xMaxBox
+1.0			yMaxBox
+0.7			zMaxBox
+
+
+--------grid end-----
+
+
+#BORIS
+F			UseBorisCorr
+0.02			BorisFactor
+
+
+TEST
+krylov show_pmin 
+
+
+#STARTTIME
+2000			iYear
+3                   	iMonth
+21                  	iDay
+10                  	iHour
+45                  	iMinute
+0                   	iSecond
+
+#MINIMUMPRESSURE
+0.000001		pMinDim
+0.000001		PeMin
+
+#MINIMUMDENSITY
+0.0001			RhoMinDim
+
+
+#PLASMA
+1.0			FluidMass [amu]
+1.0                     IonCharge [e]  
+1.0                     ElectronTemperatureRatio
+
+
+#SOLARWIND
+40.0			SW_rho_dim [n/cc]		SwNDim
+0.174e6/2         	SW_T_dim [K]  			SwTDim
+-400.0              	SW_Ux_dim [km/s]		SwUxDim
+0.0                	SW_Uy_dim [km/s]		SwUyDim
+0.0                 	SW_Uz_dim [km/s]		SwUzDim
+-15.21              	SW_Bx_dim [nT] change sign for SW from +x to -x
+8.40                	SW_By_dim [nT] change sign for SW from +x to -x
+-8.51               	SW_Bz_dim [nT]		SwBzDim
+
+
 #UNIFORMAXIS
-F                       UseUniformAxis
+T			UseUniformAxis
 
-#PLANET
-mercury
+
+!------------------ Axis-------------------------------------
+! These commands are used to handle the shape density/pressure jump across the z-axis. 
+#IMPLICITENERGY                     
+F                     	UseImplicitEnergy  
+                 
+#FIXAXIS                                              
+F                       UsePoleDiffusion 
+F                   	DoFixAxis                 
+1.2              	rFixAxis
+-1.0                	r2FixAxis                         
+
+! This command is helpful. But for this test with very coarse grid the code will
+! crash with this command.
+COARSEAXIS                            
+F                       UsePoleDiffusion              
+T                       UseCoarseAxis                  
+1                       nCoarseLayer         
+
+!-------------------------------------------------------------
 
 #BODY
 T			UseBody (rest of parameters read if true)
-.1			rBody (user units)
+0.8			rBody (user units)
 1.0			rCurrents (only read for GM component)
 1.0			BodyNDim (/cc) for fluid 1
-1.0			BodyTDim (K)   for fluid 1
+0.1e6			BodyTDim (K)   for fluid 1
 
-#LIMITRADIUS
-0.1                	rMin
-6.0		        rMax > (sqrt(224^2+128^2+128^2))
-
-#GRIDLEVEL
-1
-initial
-
-! the left half of the grid (create res. change across the pole)
-#GRIDLEVEL
-2                      Resolution
-box                    NameArea
--8.0                   xMinBox
--1.0                   yMinBox
--1.0                   zMinBox
--0.0001                xMaxBox
- 1.0                   yMaxBox
- 1.0                   zMaxBox
-
-#ROTATION 
-F                       UseRotation
 
 #TIMESTEPPING
-2			nStage
-0.40			CflExlp
+2                       nStage
+0.8                    	CflExlp         CflExpl
+
+#SCHEME
+2                       nOrder (1 or 2)
+Rusanov
+mc3                     TypeLimiter
+1.2                     LimiterBeta
+
+
+! --------------- Hall ------------------------------------------
+
+#HALLRESISTIVITY
+T			UseHallResist (rest of parameters read only if true)
+1.0             	HallFactorMax
+0.1             	HallCmaxFactor
+
+#REGION
+hallbox1		NameRegion
+box tapered             NameHallRegion
+-5  			xMinBox
+-4			yMinBox
+-4			zMinBox
+5			xMaxBox
+4			yMaxBox
+4			zMaxBox
+0.5			Taper
+
+#REGION
+hallsphere		NameRegion
+sphere0 tapered		StringShape
+1.05			Radius
+0.05			Taper
+
+#REGION
+polars			NameRegion
+doubleconez0 tapered	StringShape
+12	     		Height
+2.0			Radius
+0.2			Taper			
+
+#HALLREGION
++hallbox1 -hallsphere -polars 
+0
+
+
+! Turn on semi-implicit for both  for time accurate run.
+#SEMIIMPLICIT
+F                       UseSemiImplicit
+resistivity             TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
+0.001           	ErrorMaxKrylov  
+200             	MaxMatvecKrylov 
+
+#SEMIPRECONDITIONER
+T			DoPrecond (rest of parameters are read if true)
+MBILU           	TypePrecond (MBILU, BILU, DILU, GS, BLOCKJACOBI, JACOBI, HYPRE)
+0.5             	GustafssonPar (0 to 1, read for MBILU preconditioner only)
+
+
+
+! ---------------------------------------------------------------
 
 #OUTERBOUNDARY
-none			TypeBc1
-none			TypeBc2
-periodic		TypeBc3
-periodic		TypeBc4
-periodic		TypeBc5
-periodic		TypeBc6
+outflow			TypeBcEast
+inflow			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
 
 #INNERBOUNDARY
-reflect                 TyepBcInner
+reflect             	TyepBcInner		
 
 #USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+F        	        UseUserOuterBcs
+T                   	UseUserICs
+F                   	UseUserSpecifyRefinement
+F                   	UseUserLogFiles
+F                   	UseUserWritePlot
+F                   	UseUserAMR
+F                  	UseUserEchoInput
+F                   	UseUserB0
+T                   	UseUserInitSession
+F                   	UseUserUpdateStates
 
-#SCHEME
-2			nOrder
-Sokolov			TypeFlux
-mc3
-1.5
+#RESTARTOUTFILE
+one			TypeRestartOutFile
+
+#NONCONSERVATIVE
+T                  	UseNonConservative
+
+#CONSERVATIVECRITERIA
+1			nConservCrit
+parabola            	TypeConservCrit
+1.2                 	xParabolaConserv
+1.5                 	yParabolaConserv
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR			StringLogfile
+RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax status
 
-#SAVETECPLOT
-T			DoSaveOneTecFile
+#SAVEINITIAL
+T			DoSaveInitial
 
 #SAVEPLOT
 2			DnSavePlot
@@ -128,47 +294,36 @@ g rbody
 rho ux uy uz b1x b1y b1z bx by bz p eta jx jy jz
 g rbody
 
-#SAVEINITIAL
-T
-
-#SOLARWIND
-5.0                     SwNDim  [n/cc]
-25000.0                 SwTDim  [K]
--400.0                  SwUxDim [km/s]
-0.0                     SwUyDim [km/s]
-0.0                     SwUzDim [km/s]
-0.0                     SwBxDim [nT]
-0.0                     SwByDim [nT]
--5.0                    SwBzDim [nT]
-
-
 #RESISTIVITY
-T
-user
-0.0
-
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si
 
 #USERINPUTBEGIN --------------------
 
 #RESISTIVEPLANET
-5e-21                  PlanetDensity
--1                     PlanetPressure
-1.0 		       PlanetRadius
-4		       nResistivPoints
-1.0		       Radius
-0.0		       Resistivety
-0.7		       Radius
-1.0e13                 Resistivety
-0.6		       Radius
-0.7e13                 Resistivety
-0.4                    Radius
-0.0                    Resistivety
+5e-11			Density		PlanetDensitySi
+1E-11                  	Pressure		PlanetPressureSi
+1.0                    	PlanetRadius
+5                      	nResistivPoints
+1.02                   	Radius
+0.0                    	Resistivety
+0.95                   	Radius
+1.0e13                  Resistivety
+0.85                    Radius
+1.0e13                  Resistivety
+0.83                   	Radius
+1.0e7	               	Resistivety
+0.8                    	Radius
+0.0                   	Resistivety
 
 #USERINPUTEND ----------------------
 
 
+
 #STOP
-100                     MaxIteration
--1.			tSimulationMax
+100			MaxIteration
+-1			tSimulationMax
 
 #END
+
