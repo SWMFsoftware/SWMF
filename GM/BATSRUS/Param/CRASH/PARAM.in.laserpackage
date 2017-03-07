@@ -25,18 +25,7 @@ GMRES			TypeKrylov
 T			DoPrecond
 HYPRE			TypePrecond
 
-#SOLIDSTATE
-T			UseSolidState
-
 #USERINPUTBEGIN ------------------------
-
-! Temperatures are in eV
-#VAPORIZATIONTEMPERTURE
-0.0			VaporizationTiXe
-0.0			VaporizationTiBe
-0.07			VaporizationTiPl
-0.28			VaporizationTiAu
-0.06			VaporizationTiAy
 
 LEVELSET
 F			UseNonConsLevelSet
