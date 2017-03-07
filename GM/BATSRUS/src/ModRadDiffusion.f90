@@ -1542,7 +1542,7 @@ contains
     use ModImplicit, ONLY: UseFullImplicit, nStencil, Stencil1_, Stencil2_, &
          Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap,&
          UseSemiImplicit, iTeImpl
-    use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
+    use ModMain,     ONLY: nI, nJ, nK, TypeCellBc_I
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvClight
     use ModGeometry, ONLY: true_cell
@@ -1668,7 +1668,7 @@ contains
 
     ! Apply boundary conditions
     if(DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)then
-       select case(TypeBc_I(1))
+       select case(TypeCellBc_I(1))
        case('float','outflow')
           Coeff0 = 2*InvClight/CellSize_DB(1,iBlock)
           do iDiff = iDiffRadMin, iDiffRadMax
@@ -1687,7 +1687,7 @@ contains
     end if
 
     if(DiLevelNei_IIIB(+1,0,0,iBlock) == Unset_)then
-       select case(TypeBc_I(2))
+       select case(TypeCellBc_I(2))
        case('float','outflow')
           Coeff0 = 2*InvClight/CellSize_DB(1,iBlock)
           do iDiff = iDiffRadMin, iDiffRadMax
@@ -1708,7 +1708,7 @@ contains
 
     if(nJ > 1)then
        if(DiLevelNei_IIIB(0,-1,0,iBlock) == Unset_)then
-          select case(TypeBc_I(3))
+          select case(TypeCellBc_I(3))
           case('float','outflow')
              Coeff0 = 2*InvClight/CellSize_DB(2,iBlock)
              do iDiff = iDiffRadMin, iDiffRadMax
@@ -1726,7 +1726,7 @@ contains
        end if
 
        if(DiLevelNei_IIIB(0,+1,0,iBlock) == Unset_)then
-          select case(TypeBc_I(4))
+          select case(TypeCellBc_I(4))
           case('float','outflow')
              Coeff0 = 2*InvClight/CellSize_DB(2,iBlock)
              do iDiff = iDiffRadMin, iDiffRadMax
@@ -1746,7 +1746,7 @@ contains
 
     if(nK > 1)then
        if(DiLevelNei_IIIB(0,0,-1,iBlock) == Unset_)then
-          select case(TypeBc_I(5))
+          select case(TypeCellBc_I(5))
           case('float','outflow')
              Coeff0 = 2*InvClight/CellSize_DB(3,iBlock)
              do iDiff = iDiffRadMin, iDiffRadMax
@@ -1764,7 +1764,7 @@ contains
        end if
 
        if(DiLevelNei_IIIB(0,0,+1,iBlock) == Unset_)then
-          select case(TypeBc_I(6))
+          select case(TypeCellBc_I(6))
           case('float','outflow')
              Coeff0 = 2*InvClight/CellSize_DB(3,iBlock)
              do iDiff = iDiffRadMin, iDiffRadMax
