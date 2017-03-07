@@ -295,7 +295,7 @@ contains
 
   subroutine GM_init_session(iSession, TimeSimulation)
 
-    use ModMain,     ONLY: UseIe, UsePw, TypeBC_I, body1_
+    use ModMain,     ONLY: UseIe, UsePw, TypeCellBc_I, TypeFaceBc_I, body1_
     use ModMain,     ONLY: UseIM
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
 
@@ -315,16 +315,16 @@ contains
     UseIe = Couple_CC(IE_,GM_) % DoThis
 
     ! Check if the boundary condition is properly set
-    if(UsePw) TypeBC_I(body1_) = 'polarwind'
+    if(UsePw) TypeFaceBc_I(body1_) = 'polarwind'
 
-    if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeBc_I(2)=='coupled'))then
+    if(Couple_CC(IH_,GM_) % DoThis .neqv. (TypeCellBc_I(2)=='coupled'))then
        if(Couple_CC(IH_,GM_) % DoThis) then
-          TypeBc_I(2)='coupled'
+          TypeCellBc_I(2)='coupled'
        else
           if(iProc==0)write(*,*)NameSub, &
                ' WARNING: IH and GM are not coupled,',&
                ' changing west boundary type from "coupled" to "vary"'
-          TypeBc_I(2)='vary'
+          TypeCellBc_I(2)='vary'
        end if
     end if
 

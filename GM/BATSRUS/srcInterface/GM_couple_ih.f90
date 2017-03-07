@@ -110,7 +110,7 @@ contains
 
     use ModVarIndexes
     use ModPhysics, ONLY: Si2No_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
-    use ModMain, ONLY: TypeBc_I
+    use ModMain, ONLY: TypeCellBc_I
 
     character(len=*), intent(in) :: NameCoordIn
     integer,          intent(in) :: nYIn, nZIn
@@ -138,7 +138,7 @@ contains
        allocate(State_VII(nVar,nY,nZ))
 
        ! Make sure that GM uses the IH buffer
-       TypeBc_I(2) = 'ihbuffer'
+       TypeCellBc_I(2) = 'ihbuffer'
 
        ! Debugging
        !write(*,*)'!!! NameCoord, nY, nZ=',NameCoord,nY,nZ

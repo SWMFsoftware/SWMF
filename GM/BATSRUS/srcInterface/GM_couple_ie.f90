@@ -28,7 +28,7 @@ contains
   !============================================================================
   subroutine GM_get_info_for_ie(nVar, NameVar_I)
 
-    use ModMain,             ONLY: TypeBc_I, body1_
+    use ModMain,             ONLY: TypeFaceBc_I, body1_
     use ModGroundMagPerturb, ONLY: nMagTotal
 
     ! Pass number and names of variables requested from IE
@@ -46,7 +46,7 @@ contains
     if(present(NameVar_I)) NameVar_I(nVar) = 'potential'
 
     ! Joule heating is needed for empirical inner boundary
-    if(TypeBc_I(body1_) == 'ionosphereoutflow')then
+    if(TypeFaceBc_I(body1_) == 'ionosphereoutflow')then
        nVar = nVar+1
        if(present(NameVar_I)) NameVar_I(nVar) = 'jouleheat'
     end if

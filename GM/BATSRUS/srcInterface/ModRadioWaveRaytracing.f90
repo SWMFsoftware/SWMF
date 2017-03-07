@@ -12,7 +12,7 @@ module ModRadioWaveRaytracing
   use ModProcMH, ONLY: iProc
 !  use ModAbsorption, ONLY: AbsorptionCoeff_I
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MaxDim
-  use ModMain,     ONLY: TypeBC_I
+  use ModMain,     ONLY: TypeCellBc_I
 
   implicit none
 
@@ -180,8 +180,8 @@ contains !=========================================================
        ! One (ten-thousandth) hundredth of average step 
        StepMin = 1e-2*sum(DeltaS_I)/nRay
        do iDim=1,MaxDim
-          TypeBoundaryDown_D(iDim) = trim(TypeBc_I(2*iDim-1))
-          TypeBoundaryUp_D(iDim)   = trim(TypeBc_I(2*iDim))
+          TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
+          TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
        end do
        if(iProc==0)then
           write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
