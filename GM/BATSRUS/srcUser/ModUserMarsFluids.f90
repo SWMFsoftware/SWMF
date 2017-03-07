@@ -828,16 +828,11 @@ contains
        FaceState_VI(P_,body1_)=BodyP_I(1)*(1+ElectronPressureRatio)
     end if
 
-    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)
-    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
+    CellState_VI = FaceState_VI
 
-    do iBoundary=body1_,ExtraBc_  
+    do iBoundary=body1_,Coord3MaxBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)       
-    end do
-    do iBoundary=Coord1MinBc_, Coord3MaxBc_
-       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
-            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
     end do
 
     if(.not.allocated(nDenNuSpecies_CBI))then

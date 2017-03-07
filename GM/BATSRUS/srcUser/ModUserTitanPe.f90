@@ -978,7 +978,7 @@ contains
 
   !==============================================================================
   subroutine user_init_session
-    use ModMain, ONLY:BODY1_
+    use ModMain, ONLY: Body1_, xMinBc_, zMaxBc_
     use ModPhysics
     use ModVarIndexes, ONLY: ScalarFirst_,ScalarLast_, &
          rhoUx_, rhoUz_,  UnitUser_V
@@ -991,7 +991,7 @@ contains
        write(*,*)'electrontemperatureratio=', ElectronTemperatureRatio
     end if
 
-    do iBoundary=1,6
+    do iBoundary=xMinBc_,zMaxBc_
        FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)  = cTiny8/1.0e5     
        if(UseElectronPressure)then
           sw_pe=SW_P*ElectronTemperatureRatio
@@ -1019,8 +1019,8 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(SpeciesFirst_:SpeciesLast_,body1_) = BodyRhoSpecies_I
 
-    CellState_VI(:,body1_:6)=FaceState_VI(:,body1_:6)
-    do iBoundary=body1_,6  
+    CellState_VI(:,body1_:zMaxBc_)=FaceState_VI(:,body1_:zMaxBc_)
+    do iBoundary=body1_,zMaxBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do

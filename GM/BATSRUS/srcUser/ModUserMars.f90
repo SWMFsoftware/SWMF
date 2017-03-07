@@ -865,16 +865,13 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
-    CellState_VI(:,body1_:ExtraBc_)=FaceState_VI(:,body1_:ExtraBc_)    
-    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
-    do iBoundary=body1_,ExtraBc_  
+
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
+    do iBoundary=body1_,Coord3MaxBc_  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
-    do iBoundary=Coord1MinBc_,Coord3MaxBc_
-       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
-            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
-    end do
+
 
     UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
 
