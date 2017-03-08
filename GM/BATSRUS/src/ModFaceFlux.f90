@@ -2801,6 +2801,18 @@ contains
       Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Normal_D*State_V(HypE_)
       Flux_V(HypE_) = C2light*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
+      if(DoTestCell)then
+         write(*,*)'ChargeDens_I    =', &
+              ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+         write(*,*)'Normal_D        =', Normal_D
+         write(*,*)'Bx,By,Bz        =', Bx,By,Bz
+         write(*,*)'Ex,Ey,Ez        =', Ex,Ey,Ez
+         write(*,*)'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
+         write(*,*)'Flux_V(Ex_:Ez_) =', Flux_V(Ex_:Ez_)
+         write(*,*)'State_V(HypE_)  =', State_V(HypE_)
+         write(*,*)'Flux_V(HypE_)   =', Flux_V(HypE_)
+      end if
+
     end subroutine get_electro_magnetic_flux
     !==========================================================================
     subroutine get_hd_flux
