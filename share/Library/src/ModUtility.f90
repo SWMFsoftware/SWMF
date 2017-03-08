@@ -128,9 +128,9 @@ contains
        k = index(NameDir(i:l), '/')
        if(k > 1) j = i + k - 1
 
-       ! Create (sub)directory
-       iError = &
-            make_dir_c(NameDir(1:j)//C_NULL_CHAR, iPermission, iErrorNumber)
+       ! Create (sub)directory. This line should NOT be broken so that
+       ! target LIB_NO_C works!
+       iError = make_dir_c(NameDir(1:j)//C_NULL_CHAR,iPermission,iErrorNumber)
 
        ! Check for errors
        if(iError /= 0)then
