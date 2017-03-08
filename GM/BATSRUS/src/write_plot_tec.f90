@@ -23,8 +23,8 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
        Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block, &
        iMortonNode_A, iNode_B
   use ModMpi
-  use ModWriteTecplot, ONLY: textDateTime, textNandT, write_tecplot_setinfo, &
-       write_tecplot_auxdata
+  use ModWriteTecplot, ONLY: textDateTime, textNandT, CharNewLine, &
+       write_tecplot_setinfo, write_tecplot_auxdata
 
   implicit none
 
@@ -45,7 +45,6 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   character(len=500) :: stmp
 
   ! parameters for saving 3d tecplot in a single file
-  character (len=1),parameter  :: CharNewLine = char(10)
   character (len=80) :: formatData
   integer :: iRec
 
@@ -155,7 +154,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            iRec = nIJK*(iMortonNode_A(iNode_B(iBLK)) - 1)
            do k=1,nK; do j=1,nJ; do i=1,nI
               iRec = iRec + 1
-              write(UnitTmp2_,'(8(i8,1x),a)', REC=iRec) &
+              write(UnitTmp2_,'(8i11,a)', REC=iRec) &
                    NodeNumberGlobal_NB(i  ,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j+1,k  ,iBLK), &
@@ -180,7 +179,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
            end do; end do; end do
            ! Write point connectivity
            do k=1,nK; do j=1,nJ; do i=1,nI
-              write(UnitTmp2_,'(8(i8,1x))') &
+              write(UnitTmp2_,'(8i11)') &
                    NodeNumberGlobal_NB(i  ,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j  ,k  ,iBLK), &
                    NodeNumberGlobal_NB(i+1,j+1,k  ,iBLK), &

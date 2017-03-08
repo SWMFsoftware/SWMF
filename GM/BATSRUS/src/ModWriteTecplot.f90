@@ -52,22 +52,28 @@ module ModWriteTecplot
 
   character(len=23), public :: textDateTime
   character(len=22), public :: textNandT
-
+  character, public, parameter:: CharNewLine = char(10)
+  integer,   public, parameter:: lRecConnect = 8*11+1 ! for (8i11,\) format
+  
   ! Local variables
   character (len=23) :: textDateTime0
 
   ! Total number of connectivity bricks
   integer:: nBrickAll
 
+  integer:: iRecData = -1
+  character(len=80) :: StringFormat
+
 contains
   !===========================================================================
   subroutine write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
 
-    use BATL_lib,  ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         Xyz_DGB
-    use ModIO,     ONLY: nPlotVarMax
+    use BATL_lib,  ONLY: nI, nJ, nK, nIJK, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc
+    use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile
     use ModIoUnit, ONLY: UnitTmp_
-    use ModMain,   ONLY: BlkTest
+    use ModAdvance,ONLY: iTypeAdvance_BP, SkippedBlock_
+    use ModMain,   ONLY: nBlockMax, BlkTest
 
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
@@ -84,37 +90,69 @@ contains
     end if
     if(DoTestMe) write(*,*) NameSub,' starting with nPlotVar=', nPlotVar
 
-    do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       write(UnitTmp_,"(50(ES14.6))")         &
-            Xyz_DGB(1:3,i,j,k,iBlock),       &
-            PlotVar_GV(i,j,k,1:nPlotVar)
-    end do; end do; end do
-  
+    if(DoSaveOneTecFile)then
+       if(iRecData < 0)then
+          ! Initialize the record index based on number of used blocks 
+          iRecData = 0
+          if(iProc > 0) iRecData = nIJK* &
+               count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+          write(StringFormat, '(a,i2,a)') "(", nPlotVar+3, "(ES14.6), a)"
+       end if
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          iRecData = iRecData + 1
+          write(UnitTmp_, StringFormat, REC=iRecData) &
+               Xyz_DGB(1:3,i,j,k,iBlock),             &
+               PlotVar_GV(i,j,k,1:nPlotVar),          &
+               CharNewLine
+       end do; end do; end do
+    else
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          write(UnitTmp_,"(50(ES14.6))")            &
+               Xyz_DGB(1:3,i,j,k,iBlock),           &
+               PlotVar_GV(i,j,k,1:nPlotVar)
+       end do; end do; end do
+    end if
+
+    if(DoTestMe) write(*,*) NameSub,' finished'
+
   end subroutine write_tecplot_data
 
   !========================================================================
-  subroutine write_tecplot_connect(NameFile)
+  subroutine write_tecplot_connect(iFile, NameFile)
     
     use ModProcMH,    ONLY: iProc, nProc, iComm
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
+    use ModIO,        ONLY: DoSaveOneTecFile
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModMain,      ONLY: nBlockMax
-    use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar
+    use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
+         MPI_allgather, MPI_INTEGER
     use BATL_lib,     ONLY: nI, nJ, nK, nIJK, MaxBlock, nBlock, Unused_B, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
 
-    character(len=*), intent(in):: NameFile
+    integer,          intent(in):: iFile     ! index of plot file
+    character(len=*), intent(in):: NameFile  ! name of connectivity file
 
-    integer:: nBlockBefore, jProc, iCell, iBlock, iError
+    integer:: nBlockBefore, iCell, iBlock, iError
 
     integer:: i0, i1, j0, j1, k0, k1, i, j, k
 
     ! This is a real array for sake of message passing only
-    real, allocatable, save:: CellIndex_GB(:,:,:,:)
-    integer, allocatable, save:: iCell_G(:,:,:)
+    real, allocatable:: CellIndex_GB(:,:,:,:)
+    integer, allocatable:: iCell_G(:,:,:)
+
+    ! Number of bricks for this and all processors
+    integer:: nBrick
+    integer, allocatable:: nBrick_P(:)
+
+    ! Multiple stages may be needed
+    integer:: iStage, nStage
+
+    ! Record index
+    integer:: iRec
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_tecplot_connect'
@@ -123,20 +161,20 @@ contains
 
     if(DoTestMe)write(*,*) NameSub,' starting with NameFile=', NameFile
 
-    if(.not.allocated(CellIndex_GB)) allocate( &
+    allocate( &
          CellIndex_GB(0:nI+1,0:nJ+1,0:nK+1,MaxBlock), &
          iCell_G(0:nI+1,0:nJ+1,0:nK+1))
 
     ! count number of cells written by processors before this one
     nBlockBefore = 0
-    do jProc = 0, iProc - 1
-       nBlockBefore = nBlockBefore + &
-            count(iTypeAdvance_BP(1:nBlockMax,jProc) /= SkippedBlock_)
-    end do
+    if(iProc > 0) nBlockBefore = &
+         count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+
     if(DoTestMe)write(*,*) NameSub,' nBlockBefore=', nBlockBefore
 
     ! initial cell index
     iCell = nIJK*nBlockBefore
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        CellIndex_GB(:,:,:,iBlock) = 0
@@ -154,55 +192,105 @@ contains
     ! switch off "fake" periodicity so there are no connections
     call set_tree_periodic(.false.)
 
-    call open_file(File=NameFile)
-    nBrickAll = 0
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
+    if(DoSaveOneTecFile)then
+       nStage = 2
+       nBrick = 0
+       allocate(nBrick_P(0:nProc-1))
+       call open_file(File=NameFile, ACCESS='direct', RECL=lRecConnect)
+    else
+       nStage = 1
+       nBrickAll = 0
+       ! Open connectivity file
+       call open_file(File=NameFile)
+    end if
 
-       iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
+    do iStage = 1, nStage
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
 
-       ! Get the index limits for the lower left corner
-       ! of the connectivity bricks.
+          ! Get the index limits for the lower left corner
+          ! of the connectivity bricks.
 
-       ! Start connectivity bricks from index 1 
-       ! unless left neighbor is coarser
-       i0 = 1
-       if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1) i0 = 0
-       j0 = 1
-       if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) j0 = 0
-       k0 = 1
-       if(DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
-       ! Finish at nI unless there is no block on the right
-       ! or it is finer
-       i1 = nI
-       if(DiLevelNei_IIIB(1,0,0,iBlock) < 0) i1 = nI-1
-       j1 = nJ
-       if(DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
-       k1 = nK
-       if(DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
+          ! Start connectivity brick from index 1 unless coarser left neighbor
+          i0 = 1
+          if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1) i0 = 0
+          j0 = 1
+          if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) j0 = 0
+          k0 = 1
+          if(DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
 
-       do i = i0, i1; do j = j0, j1; do k = k0, k1
-          nBrickAll = nBrickAll + 1
-          write(UnitTmp_,'(8i11)') &
-               iCell_G(i  ,j  ,k  ), &
-               iCell_G(i+1,j  ,k  ), &
-               iCell_G(i+1,j+1,k  ), &
-               iCell_G(i  ,j+1,k  ), &
-               iCell_G(i  ,j  ,k+1), &
-               iCell_G(i+1,j  ,k+1), &
-               iCell_G(i+1,j+1,k+1), &
-               iCell_G(i  ,j+1,k+1)
-       end do; end do; end do
+          ! Finish at nI unless there is no block on the right or it is finer
+          i1 = nI
+          if(DiLevelNei_IIIB(1,0,0,iBlock) < 0) i1 = nI-1
+          j1 = nJ
+          if(DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
+          k1 = nK
+          if(DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
 
-    end do
+          if(iStage < nStage)then
+             ! Simply count the number of bricks for this processor
+             nBrick = nBrick + (i1-i0+1)*(j1-j0+1)*(k1-k0+1)
+             CYCLE
+          end if
+
+          iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
+
+          if(DoSaveOneTecFile)then
+
+             do i = i0, i1; do j = j0, j1; do k = k0, k1
+                iRec      = iRec + 1
+                write(UnitTmp_,'(8i11,a)', REC=iRec) &
+                     iCell_G(i  ,j  ,k  ), &
+                     iCell_G(i+1,j  ,k  ), &
+                     iCell_G(i+1,j+1,k  ), &
+                     iCell_G(i  ,j+1,k  ), &
+                     iCell_G(i  ,j  ,k+1), &
+                     iCell_G(i+1,j  ,k+1), &
+                     iCell_G(i+1,j+1,k+1), &
+                     iCell_G(i  ,j+1,k+1), &
+                     CharNewLine
+             end do; end do; end do
+          else
+             do i = i0, i1; do j = j0, j1; do k = k0, k1
+                nBrickAll = nBrickAll + 1
+                write(UnitTmp_,'(8i11)') &
+                     iCell_G(i  ,j  ,k  ), &
+                     iCell_G(i+1,j  ,k  ), &
+                     iCell_G(i+1,j+1,k  ), &
+                     iCell_G(i  ,j+1,k  ), &
+                     iCell_G(i  ,j  ,k+1), &
+                     iCell_G(i+1,j  ,k+1), &
+                     iCell_G(i+1,j+1,k+1), &
+                     iCell_G(i  ,j+1,k+1)
+             end do; end do; end do
+          end if 
+       end do ! iBlock
+       if(iStage < nStage)then
+          ! Collect number of bricks from all processors
+          call MPI_allgather(nBrick, 1, MPI_INTEGER, &
+               nBrick_P, 1, MPI_INTEGER, iComm, iError)
+          ! Add up number of bricks on previous prorecssors
+          iRec = 0
+          if(iProc > 0) iRec = sum(nBrick_P(0:iProc-1))
+       end if
+    end do ! iStage
     call close_file
 
     ! Reset periodicity as it was
     call set_tree_periodic(.true.)
 
+    ! Reset iRec for next plot
+    iRecData = -1
+
     ! Calculate total number of bricks
-    if(nProc > 1) &
-         call mpi_reduce_integer_scalar(nBrickAll, MPI_SUM, 0, iComm, iError)
+    if(DoSaveOneTecFile)then
+       if(iProc == 0) nBrickAll = sum(nBrick_P)
+       deallocate(nBrick_P)
+    elseif(nProc > 1)then
+       call mpi_reduce_integer_scalar(nBrickAll, MPI_SUM, 0, iComm, iError)
+    end if
+
+    deallocate(CellIndex_GB, iCell_G)
 
     if(DoTestMe)write(*,*) NameSub,' done with nBrickAll=', nBrickAll
 
