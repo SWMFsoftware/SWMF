@@ -1171,10 +1171,15 @@ class InterfaceFluid
       cout<<" getFluidPpar has not implemented for multifluid/multispecies!!"<<endl;
       abort();      
     }
+    if(useMhdPe){
+      if(is==0) getInterpolatedValue(x,y,z,&P,iPe); // Electron
+      if(is==1) getInterpolatedValue(x,y,z,&P,iPpar_I[0]); //Ion
+    }else{
+      getInterpolatedValue(x,y,z,&P,iPpar_I[0]);
+      if(is == 0) P *= PeRatio;
+      else if(is == 1) P *= (1 - PeRatio);	
+    }
 
-    getInterpolatedValue(x,y,z,&P,iPpar_I[0]);
-    if(is == 0) P *= PeRatio;
-    else if(is > 0) P *= (1 - PeRatio);		
     return(P);
   }
   
