@@ -1165,6 +1165,37 @@ This command defines how the ghost cells are filled in at the
 face based boundaries. TypeBcXmin, ..., TypeBcZmax describe the boundaries
 at the faces of the brick-shaped domain set in #GRID.
 
+General notes: face based boundary conditions are 1st order accurate
+in general, while cell based boundary conditions can be 2nd order accurate.
+Sometimes, however, it is easier to define a face value than the state
+of the ghost cells that are outside the computational domain. Depending
+on the shape of the boundary it can also happen that the same ghost cell
+is used by multiple physical cells and this may be a problem. In our
+current implementation cell based boundaries can be used only when the
+physical boundary coincides with the boundary of the grid blocks.
+
+Face based boundaries are allowed even when the physical boundary cuts
+through the grid blocks. In this case each cell center is marked as either
+physical or boundary cell, and the boundary conditions are applied at
+cell faces between a physical and a boundary cell center.
+
+For Cartesian coordinates the inner (body2=-2 and body1=-1)
+and extra (0) boundaries have to be face based because these are
+not aligned with the block boundaries.
+The outer boundaries (east=1 to top=6) are cell based by default,
+but they can also be face based if desired.
+
+For spherical and cylindircal grids the default is face based boundaries
+everywhere. The outer boundaries have to be face based if a brick-shaped
+computational domain is cut out from the sphere/cylinder
+(see the #LIMITRADIUS and #GRID commands) because the boundary is not 
+aligned with the block boundaries.
+If the computational domain is the full sphere/cylinder, then cell based 
+boundaries can be used. (See #OUTERBOUNDARY)
+For spherical grids the 'inner boundary' is simply at the minimum radius
+that normally coincides with the body radius, therefore it can be cell or
+face based.
+
 Possible values:
 \begin{verbatim}
 float         - zero gradient for all variables except:
@@ -1311,10 +1342,10 @@ For the second body TypeBcBody2 can have the following values:
 however, the corotation and ionospheric drift velocities 
 are zero for the second body.
 
-Default value for TypeBcBody is 'ionosphere' for the GM component,
-and 'unknown' for the EE, SC, IH and OH components, so the inner boundary 
-must be set for the non-GM components.
-Default value for TypeBcBody2 is 'reflect'.
+Default value for TypeBcBody is 'none' for the GM, EE, SC, IH and OH components, 
+so the inner boundary must be set by this command except the cell boundary for
+spherical coordinates case.
+Default value for TypeBcBody2 is 'none'.
 </command>
 
 <command name="MAGNETICINNERBOUNDARY">
@@ -1400,9 +1431,8 @@ If UseExtraBoundary is true, the user can define an extra face boundary
 condition in the user files. The location of this boundary is defined
 in the user_set_boundary_cells routine, while the boundary condition
 itself is implemented into the user_set_face_boundary. The extra boundary
-has index ExtraBc_=0, which is important to know for the proper settings
-in the #FACEBOUNDARY command. The TypeExtraBoundary parameter can be used
-to select from multiple boundary conditions implemented in the user module.
+has index ExtraBc_=0. The TypeExtraBoundary parameter can be used to 
+select from multiple boundary conditions implemented in the user module.
 </command>
 
 <command name="FACEBOUNDARY" if="$_IsFirstSession">
@@ -5324,7 +5354,7 @@ The TypeLimiter is still used inside the region specified by
 the #LOWORDERREGION command and where the stencil is not
 large enough for the high order scheme but sufficient
 for the second order scheme, which happens near face boundaries 
-(see the #FACEBOUNDARY command). 
+(see the #BOXBOUNDARY and #INNERBOUNDARY command). 
 Possible values for TypeLimiter:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
