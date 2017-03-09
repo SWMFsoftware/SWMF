@@ -42,7 +42,6 @@ module IH_wrapper
   public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
-  public:: IH_get_r_min
 
   ! Coupling with GM
   public:: IH_get_for_gm
@@ -1366,17 +1365,6 @@ contains
        Coord_II(1:nDim, iParticle) = Coord_D
     end do
   end subroutine IH_get_scatter_line
-
-  !============================================================================
-
-  subroutine IH_get_r_min(RMinOut)
-    ! get the radius of the central body;
-    ! if no body present, return 0.0
-    use IH_ModGeometry, ONLY: RadiusMin
-    real, intent(out):: RMinOut
-    !--------------------------------------------
-    RMinOut = RadiusMin
-  end subroutine IH_get_r_min
 
   !============================================================================
 

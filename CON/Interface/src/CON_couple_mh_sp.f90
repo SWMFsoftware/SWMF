@@ -27,7 +27,7 @@ module CON_couple_mh_sp
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line, SC_get_r_min                    !^CMP IF SC
+       SC_get_scatter_line                                  !^CMP IF SC
 
   use CON_global_message_pass
   use CON_axes
@@ -127,8 +127,7 @@ contains
        call exchange_lines(SC_)
        ! get the lower boundary of the domain in SC
        ! and put this info to SP
-       call SC_get_r_min(RMin)
-       call SP_put_r_min(RMin)
+       call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
     end if
 
     if(use_comp(IH_))then
