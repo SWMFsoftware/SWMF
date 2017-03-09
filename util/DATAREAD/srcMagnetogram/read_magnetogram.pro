@@ -3,15 +3,13 @@
 FUNCTION read_magnetogram, file, PlotRadius, UseBATS
 
   if UseBATS then begin
-  ;Setup common block for BATSRUS/Idl
-  common file_head, $
-     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
-     rbody
+                                ; Setup common block for BATSRUS/Idl
+     common getpict_param, filename
+     common file_head
+     common plot_data, grid, x, w
 
-     gettype, file, filetype, npictinfile
-     openfile, 10, file, filetype
-     get_pict, 10, file, filetype, 1, x, var, error
-     close, 10
+     filename = file
+     read_data
 
      if gencoord then begin
         print, 'file '+file+' should contain a regular grid'
@@ -46,10 +44,10 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
 
            mag_info.longitude = x(*,*,0)*!dtor
            mag_info.latitude  = x(*,*,1)*!dtor
-           mag_info.br_field = var(*,*,0)
+           mag_info.br_field = w(*,*,0)
            mag_info.eqpar    = eqpar
-           if nw ge 2 then mag_info.bphi_field = var(*,*,1)
-           if nw ge 3 then mag_info.btheta_field = var(*,*,2)
+           if nw ge 2 then mag_info.bphi_field = w(*,*,1)
+           if nw ge 3 then mag_info.btheta_field = w(*,*,2)
            
         end
 
@@ -77,13 +75,13 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
            longitude = x(0,*,*,1)
            latitude  = x(0,*,*,2)
            
-           ; find index for the cut                                             
+                                ; find index for the cut                                             
            d = abs(radius - PlotRadius)
            icut = where( d eq min(d) )
-           br_field     = var(icut,*,*,0)
-           bphi_field   = var(icut,*,*,1)
-           btheta_field = var(icut,*,*,2)
-          
+           br_field     = w(icut,*,*,0)
+           bphi_field   = w(icut,*,*,1)
+           btheta_field = w(icut,*,*,2)
+           
            mag_info.br_field = reform(br_field[0,0:nlon-1,*])
            mag_info.bphi_field = reform(bphi_field[0,0:nlon-1,*])
            mag_info.btheta_field = reform(btheta_field[0,0:nlon-1,*])
@@ -106,13 +104,13 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
      nlat=s[2]
      
      mag_info = {nlon:nlon,$
-                       nlat:nlat,$
-                       longitude:fltarr(nlon,nlat),$
-                       latitude:fltarr(nlon,nlat),$
-                       br_field:fltarr(nlon,nlat),$
-                       bphi_field:fltarr(nlon,nlat),$
-                       btheta_field:fltarr(nlon,nlat),$
-                       neqpar:0, eqpar:fltarr(1)}
+                 nlat:nlat,$
+                 longitude:fltarr(nlon,nlat),$
+                 latitude:fltarr(nlon,nlat),$
+                 br_field:fltarr(nlon,nlat),$
+                 bphi_field:fltarr(nlon,nlat),$
+                 btheta_field:fltarr(nlon,nlat),$
+                 neqpar:0, eqpar:fltarr(1)}
 
      lat=findgen(nlat)*2./nlat
      lat=asin(lat-lat[nlat-1]/2.)
@@ -131,6 +129,6 @@ FUNCTION read_magnetogram, file, PlotRadius, UseBATS
      mag_info.br_field=br_field
   endelse
 
-return, mag_info
+  return, mag_info
 
 end
