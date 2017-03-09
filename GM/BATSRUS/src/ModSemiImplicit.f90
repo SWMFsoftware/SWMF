@@ -449,7 +449,7 @@ contains
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
 
     use ModAdvance,        ONLY: time_BLK
-    use ModMain,           ONLY: time_accurate, dt, Cfl
+    use ModMain,           ONLY: time_accurate, dt, Cfl, UseDtLimit
     use ModGeometry,       ONLY: far_field_BCs_BLK, Xyz_DGB, true_cell
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
@@ -541,7 +541,7 @@ contains
        do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not. time_accurate) &
+             if(.not. time_accurate .or. UseDtLimit) &
                   DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
              RhsSemi_VCB(:,i,j,k,iBlockSemi) = &
                   RhsSemi_VCB(:,i,j,k,iBlockSemi) &
@@ -577,7 +577,7 @@ contains
 
     use ModAdvance,  ONLY: time_BLK
     use ModGeometry, ONLY: far_field_BCs_BLK
-    use ModMain, ONLY: dt, time_accurate, Cfl
+    use ModMain, ONLY: dt, time_accurate, Cfl, UseDtLimit
     use ModSize, ONLY: nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
     use ModCellBoundary,   ONLY: set_cell_boundary
@@ -649,7 +649,7 @@ contains
           DtLocal = Dt
           if(UseSplitSemiImplicit)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(.not.time_accurate) &
+                if(.not.time_accurate .or. UseDtLimit) &
                      DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
                 Volume = CellVolume_GB(i,j,k,iBlock)/DtLocal
                 n = n + 1
@@ -660,7 +660,7 @@ contains
              end do; enddo; enddo
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(.not.time_accurate) &
+                if(.not.time_accurate .or. UseDtLimit) &
                      DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
                 Volume = CellVolume_GB(i,j,k,iBlock) !!! /DtLocal ???
                 do iVar = 1, nVarSemi
@@ -699,7 +699,7 @@ contains
        DtLocal = dt
        if(UseSplitSemiImplicit)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.time_accurate) &
+             if(.not.time_accurate .or. UseDtLimit) &
                   DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
              Volume = CellVolume_GB(i,j,k,iBlock)
              n = n + 1
@@ -709,7 +709,7 @@ contains
           end do; enddo; enddo
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.time_accurate) &
+             if(.not.time_accurate .or. UseDtLimit) &
                   DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
              Volume = CellVolume_GB(i,j,k,iBlock)
              do iVar = 1, nVarSemi
@@ -947,7 +947,7 @@ contains
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: time_BLK
-    use ModMain,    ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
+    use ModMain,    ONLY: nI, nJ, nK, Dt, time_accurate, Cfl, UseDtLimit
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: UseNoOverlap
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
@@ -984,7 +984,7 @@ contains
        end do; end do; end do; end do
        DtLocal = dt
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.time_accurate) &
+          if(.not.time_accurate .or. UseDtLimit) &
                DtLocal = max(1.0e-30, Cfl*time_BLK(i,j,k,iBlock))
           Coeff = CellVolume_GB(i,j,k,iBlock)/DtLocal
           if(UseSplitSemiImplicit)then
