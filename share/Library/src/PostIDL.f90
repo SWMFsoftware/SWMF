@@ -185,6 +185,7 @@ program post_idl
         enddo
 
      case('#PLOTRESOLUTION')
+        CellSizePlot_D = 1
         do i = 1, nDimSim
            call read_var('CellSizePlot', CellSizePlot_D(i))
         enddo
