@@ -14,8 +14,9 @@ module ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax, RSc, ROrigin
+  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
+  public:: CoordMin_DI
   public:: State_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
@@ -40,6 +41,8 @@ module ModGrid
   ! Size of angular grid, latitude and longitude, at origin surface R=ROrigin
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
+  ! Lower boundary of the domain in Rs
+  real:: RMin=1.0
   ! Boundary of the solar corona in Rs
   real:: RSc =21.0
   ! Mark that grid has been set
@@ -51,6 +54,11 @@ module ModGrid
   ! 1st index - three spherical coordinates (R is added for completeness)
   ! 2nd index - node number (equivalent to line number)
   real,    allocatable:: CoordOrigin_DA(:,:)
+  !----------------------------------------------------------------------------
+  ! Foot-prints of the traced field lines on the surface R=RMin;
+  ! 1st index - three spherical coordinates (R is added for completeness)
+  ! 2nd index - block number
+  real, allocatable:: CoordMin_DI(:,:)
   !----------------------------------------------------------------------------
   ! Node number based on the field line identified by 2 angular grid indices,
   ! latitude and longitude;
@@ -221,6 +229,8 @@ contains
     call check_allocate(iError, NameSub//'iGridLocal_IB')
     allocate(CoordOrigin_DA(nDim, nNode), stat=iError)
     call check_allocate(iError, NameSub//'CoordOrigin_DA')
+    allocate(CoordMin_DI(nDim, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'CoordMin_DI')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
     allocate(Distribution_IIB(&

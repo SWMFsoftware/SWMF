@@ -42,6 +42,7 @@ module IH_wrapper
   public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
+  public:: IH_get_r_min
 
   ! Coupling with GM
   public:: IH_get_for_gm
@@ -282,7 +283,13 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_scatter_line
-
+  !===================================================================!
+  subroutine IH_get_r_min(R)
+    real, intent(out):: R
+    character(len=*), parameter :: NameSub='IH_get_r_min'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_r_min
   !===================================================================!
   subroutine IH_get_a_line_point(&
        nPartial,iGetStart,Get,W,State_V,nVar)

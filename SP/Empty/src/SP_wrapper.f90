@@ -25,6 +25,7 @@ module SP_wrapper
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
   public:: SP_get_solar_corona_boundary
+  public:: SP_put_r_min
 
 contains
 
@@ -105,6 +106,14 @@ contains
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')
   end subroutine SP_get_solar_corona_boundary
+
+  !===================================================================
+
+  subroutine SP_put_r_min(R)
+    real, intent(in)::R
+    character(len=*), parameter:: NameSub='SP_put_r_min'
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine SP_put_r_min
 
   !===================================================================
   subroutine SP_get_request(nLine, nCoord, CoordOut_DI, iIndexOut_II,&

@@ -27,7 +27,7 @@ module CON_couple_mh_sp
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line                                  !^CMP IF SC
+       SC_get_scatter_line, SC_get_r_min                    !^CMP IF SC
 
   use CON_global_message_pass
   use CON_axes
@@ -35,7 +35,7 @@ module CON_couple_mh_sp
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
        SP_put_line, SP_get_request, SP_get_grid_descriptor_param, &
-       SP_get_line_all, SP_get_solar_corona_boundary
+       SP_get_line_all, SP_get_solar_corona_boundary, SP_put_r_min
 
   implicit none
 
@@ -87,7 +87,7 @@ contains
          iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
 
     ! solar corona boundary
-    real:: RSc
+    real:: RSc, RMin
 
     character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
@@ -125,6 +125,10 @@ contains
             Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
        call set_couple_var_info(SC_, SP_)
        call exchange_lines(SC_)
+       ! get the lower boundary of the domain in SC
+       ! and put this info to SP
+       call SC_get_r_min(RMin)
+       call SP_put_r_min(RMin)
     end if
 
     if(use_comp(IH_))then

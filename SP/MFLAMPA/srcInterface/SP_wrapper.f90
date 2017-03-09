@@ -13,8 +13,9 @@ module SP_wrapper
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
-       RSc, LatMin, LatMax, LonMin, LonMax, &
+       RMin, RSc, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
+       CoordMin_DI, &
        Block_, Proc_, Begin_, End_, &
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use ModBufferQueue, ONLY: TypeBufferQueue, &
@@ -51,6 +52,7 @@ module SP_wrapper
   public:: SP_get_grid_descriptor_param
   public:: SP_get_line_all
   public:: SP_get_solar_corona_boundary
+  public:: SP_put_r_min
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -246,6 +248,53 @@ contains
     !-----------------------------------------------------------------
     RScOut = RSc
   end subroutine SP_get_solar_corona_boundary
+
+  !===================================================================
+
+  subroutine SP_put_r_min(RMinIn)
+    ! save the lower boundary of the domain as set in other components;
+    ! compute coordinates of the footprints of field lines
+    real, intent(in):: RMinIn
+    
+    ! exisiting particle with lowest index along line
+    real:: Coord1_D(nDim), Xyz1_D(nDim) 
+    ! direction of the field at Xyz1_D
+    real:: Dir1_D(nDim) 
+    ! dot product Xyz1 and Dir1 and its sign
+    real:: Dot, S
+    ! variable to compute coords of the footprints
+    real:: Alpha
+
+    ! the footprint
+    real:: Coord0_D(nDim), Xyz0_D(nDim) 
+
+    integer:: iBlock    ! loop variable
+    !-----------------------------------------------------------------
+    RMin = RMinIn
+
+    ! compute coordinates of footprints for each field lines
+    do iBlock = 1, nBlock
+       ! get the coordinates of lower particle
+       Coord1_D = &
+            State_VIB((/R_, Lon_, Lat_/), iGridLocal_IB(Begin_,iBlock), iBlock)
+       call rlonlat_to_xyz(Coord1_D, Xyz1_D) 
+
+       ! get the field direction at this location
+       Dir1_D = &
+            State_VIB((/Bx_, By_, Bz_/), iGridLocal_IB(Begin_,iBlock), iBlock)
+       Dir1_D = Dir1_D / sqrt(sum(Dir1_D**2))
+       
+       ! their dot product and its sign
+       Dot = sum(Dir1_D*Xyz1_D)
+       S   = sign(1.0, Dot)
+
+       ! Xyz0 is distance Alpha away from Xyz1:
+       ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
+       Alpha = S * sqrt(Dot**2 - Coord1_D(R_)**2 + RMin**2) - Dot
+       Xyz0_D = Xyz1_D + Alpha * Dir1_D
+       call xyz_to_rlonlat(Xyz0_D, CoordMin_DI(:,iBlock)) 
+    end do
+  end subroutine SP_put_r_min
 
   !===================================================================
   subroutine SP_get_request( &
