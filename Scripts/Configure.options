@@ -55,7 +55,7 @@ PC			OFF			#^CMP IF PC
 PS			OFF			#^CMP IF PS
 PT			OFF			#^CMP IF PT
 PW			OFF			#^CMP IF PW
-RB                      OFF			#^CMP IF RB
+RB                      ON			#^CMP IF RB
 SC			OFF NEEDS GM		#^CMP IF SC
 SP			OFF			#^CMP IF SP
 UA			OFF NEEDS IE		#^CMP IF UA
