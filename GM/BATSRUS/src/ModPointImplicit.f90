@@ -119,7 +119,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon, iRho_I, nFluid
     use ModGeometry,ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
-         Rho_, DefaultState_V
+         Rho_, DefaultState_V, NameVar_V
     use ModEnergy, ONLY: calc_energy_cell
     use ModPhysics, ONLY: RhoMin_I
 
@@ -327,7 +327,7 @@ contains
 
     if(DoTestMe)then
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
-          write(*,*)NameSub,': DsDu(',iVar,',:)=',&
+          write(*,'(a,a,i5,a,100es15.6)')NameSub,': DsDu(',iVar,',:)=',  &
                (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
                iJVar = 1, nVarPointImpl)
        end do
@@ -365,7 +365,18 @@ contains
        !call timing_stop('pointimplmatrix')
 
        if (DoTestCell) then
-          write(*,*) NameSub,': Matrix_II  ='
+          write(*,*) NameSub,' DtCell  =', DtCell
+          write(*,*) NameSub,&
+               ' StateExpl_VC, StateOld_VCB, Source_VC, initial Rhs_I      ='
+          do iIVar = 1, nVarPointImpl
+             iVar = iVarPointImpl_I(iIVar)
+             write(*,'(a,100es15.6)') NameVar_V(iVar),                    &
+             StateExpl_VC(iVar,iTest,jTest,kTest),                        &
+                  StateOld_VCB(iVar,iTest,jTest,kTest,BlkTest),           &
+                  Source_VC(iVar,iTest,jTest,kTest),                      &
+                  Rhs_I(iIvar)
+          end do
+          write(*,*) NameSub,' initial Matrix_II  ='
           do iIVar = 1, nVarPointImpl
              write(*,'(100es15.6)') Matrix_II(:,iIvar)
           end do
@@ -376,6 +387,14 @@ contains
        !call timing_start('pointimplsolve')
        call linear_equation_solver(nVarPointImpl, Matrix_II, Rhs_I)
        !call timing_stop('pointimplsolve')
+
+       if (DoTestCell) then
+          write(*,*) NameSub,': Rhs_I  ='
+          do iIVar = 1, nVarPointImpl
+             iVar = iVarPointImpl_I(iIVar)
+             write(*,'(a, 100es15.6)') NameVar_V(iVar),Rhs_I(iIvar)
+          end do
+       end if
 
        !call timing_start('pointimplupdate')
 
@@ -417,12 +436,16 @@ contains
     !call timing_stop('pointimplenergy')
 
     if(DoTestMe)then
-       write(*,*) NameSub, ': StateOld=',&
-            StateOld_VCB(:,iTest,jTest,kTest,iBlock)
-       write(*,*) NameSub, ': StateExp=',&
-            StateExpl_VC(:,iTest,jTest,kTest)
-       write(*,*) NameSub, ': StateNew=',&
-            State_VGB(:,iTest,jTest,kTest,iBlock)
+       write(*,*) NameSub, ':'
+       write(*,*) &
+            'NameVar, StateOld,     StateExp,      StateNew='
+       do iIVar = 1, nVarPointImpl
+          iVar = iVarPointImpl_I(iIVar)
+          write(*,'(a,3es15.6, f9.3)') NameVar_V(iVar),           &
+               StateOld_VCB(iVar,iTest,jTest,kTest,iBlock), &
+               StateExpl_VC(iVar,iTest,jTest,kTest),        &
+               State_VGB(iVar,iTest,jTest,kTest,iBlock)
+       end do
     end if
 
     ! Switch back to explicit user sources
