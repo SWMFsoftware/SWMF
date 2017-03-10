@@ -86,9 +86,6 @@ c_Solver::~c_Solver()
   if(nPlotFile>0){
     delArr2(plotRange_ID,2*nDimMax);
     delArr2(plotIndexRange_ID, 2*nDimMax);
-
-
-
     
     for(int iPlot=0;iPlot<nPlotFile;iPlot++){
       for(int inode=0;inode<nNodeMax;inode++){
@@ -101,6 +98,7 @@ c_Solver::~c_Solver()
     delete [] Var_II;
 
     delete [] nextOutputTime_I;
+    delete [] lastOutputCycle_I;
     delete [] nVar_I;
     delete [] nCell_I;
     delete [] nameSnapshot_I;
@@ -577,9 +575,9 @@ bool c_Solver::ParticlesMover()
   return (false);
 }
 
-void c_Solver::WriteOutput(int cycle) {
+void c_Solver::WriteOutput(int cycle, bool doForceOutput) {
 #ifdef BATSRUS
-  write_plot_idl(cycle);
+  write_plot_idl(cycle, doForceOutput);
   if(col->getWriteMethod()=="pvtk" && col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
     WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
   }
@@ -998,7 +996,21 @@ void c_Solver::SetCycle(int iCycle){
   col->setCycle(iCycle);
 }
 
-void c_Solver:: write_plot_idl(int cycle){
+void c_Solver:: write_plot_idl(int cycle, bool doForceOutput){
+  /*
+    This method is called from WriteOutput(). WriteOutput() is called from 
+    ipic3d_interface.cpp after each iteration or at the finalization stage.
+    There are three situations when output is needed:
+    1) 'cycle' reaches the output cycle.
+    2) Simulation time reaches the output point.
+    3) doForceOutput is true. 
+
+    At the finalization stage, this method will be called with doForceOutput = true.
+    If the information at the same cycle has been written on the disk, then 
+    the output will be skipped.
+   */
+
+  
   string nameSub = "write_plot_idl";
   bool doTestFunc;
   doTestFunc = do_test_func(nameSub);
@@ -1014,12 +1026,16 @@ void c_Solver:: write_plot_idl(int cycle){
     dnOutput = col->getdnOutput(iPlot);
     dtOutput = col->getdtOutput(iPlot);
     timeNow  = col->getSItime();
-    if(  (dnOutput > 0 && cycle % dnOutput==0) ||
-	 (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])  ){
+    if(  (doForceOutput || (dnOutput > 0 && cycle % dnOutput==0) ||
+	  (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])) &&
+	 lastOutputCycle_I[iPlot] != cycle){
       if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
 	nextOutputTime_I[iPlot] = floor(timeNow/dtOutput+1)*dtOutput;
       }
+
       
+
+      lastOutputCycle_I[iPlot] = cycle;
       set_output_unit(iPlot);
       write_plot_data(iPlot,cycle);
 
@@ -1057,6 +1073,7 @@ void c_Solver:: write_plot_init(){
   doOutputParticles_I=new bool[nPlotFile];
   iSpeciesOutput_I  = new int[nPlotFile];
   nextOutputTime_I  = new double[nPlotFile];
+  lastOutputCycle_I = new long[nPlotFile];
   Var_II            = new std::string*[nPlotFile];
   isSat_I           = new bool[nPlotFile];
   pointList_IID     = new double**[nPlotFile];
@@ -1076,6 +1093,7 @@ void c_Solver:: write_plot_init(){
   for(int i=0;i<nPlotFile;i++){
     doOutputParticles_I[i] = false;
     nextOutputTime_I[i] = 0;
+    lastOutputCycle_I[i] = -100;
     isSat_I[i] = false;
     nCell_I[i] = 0;
     //doSaveTrajectory_I[i] = false;

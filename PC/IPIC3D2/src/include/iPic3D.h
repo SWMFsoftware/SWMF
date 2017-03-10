@@ -81,7 +81,7 @@ namespace iPic3D {
     void WriteFields(int cycle);
     void WriteParticles(int cycle);
     void WriteTestParticles(int cycle);
-    void WriteOutput(int cycle);
+    void WriteOutput(int cycle, bool doForceOutput);
     void Finalize();
 
     int FirstCycle() { return (first_cycle); }
@@ -199,10 +199,11 @@ namespace iPic3D {
     string *satInputFile_I;
     int *iSpeciesOutput_I;
     double *nextOutputTime_I;
+    long *lastOutputCycle_I;
     double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
     
     // IDL output related methods. 
-    void write_plot_idl(int cycle);
+    void write_plot_idl(int cycle, bool doForceOutput);
     void write_plot_init();
     void write_plot_header(int iPlot, int cycle);
     void write_plot_data(int iPlot, int cycle);

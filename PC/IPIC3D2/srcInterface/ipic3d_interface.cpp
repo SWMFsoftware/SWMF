@@ -122,7 +122,7 @@ int ipic3d_finalize_init_(){
     SimRun[i]->Init(0, dummy, timenow);
     SimRun[i]->CalculateMoments();   
     iSimCycle[i] = SimRun[i]->FirstCycle();
-    SimRun[i]->WriteOutput(iSimCycle[i]);
+    SimRun[i]->WriteOutput(iSimCycle[i],true);
   }
   timing_stop(nameFunc);
   return(0);
@@ -169,7 +169,7 @@ int ipic3d_run_(double *time){
     SimRun[i]->updateSItime();
     
     timing_start("PC: WriteOutput");  
-    SimRun[i]->WriteOutput(iSimCycle[i]+1);
+    SimRun[i]->WriteOutput(iSimCycle[i]+1,false);
     timing_stop("PC: WriteOutput");
     
     SimRun[i]->WriteConserved(iSimCycle[i]+1);
@@ -280,6 +280,7 @@ int ipic3d_end_(){
   try {
     for(int i = 0; i < nIPIC; i++){
       //SimRun[i]->Finalize();
+      SimRun[i]->WriteOutput(iSimCycle[i],true);
       delete SimRun[i];
     }
     delete[] SimRun;
