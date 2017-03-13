@@ -18,8 +18,6 @@ module SP_wrapper
        CoordMin_DI, &
        Block_, Proc_, Begin_, End_, &
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
-  use ModBufferQueue, ONLY: TypeBufferQueue, &
-       init_queue, reset_queue, add_to_queue, reset_peek_queue, peek_queue
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -30,7 +28,7 @@ module SP_wrapper
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_
   use CON_world, ONLY: is_proc0
-  use CON_comp_param, ONLY: SP_
+  use CON_comp_param, ONLY: SP_, SC_, IH_
 
   implicit none
 
@@ -47,10 +45,10 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_put_input_time
   public:: SP_put_from_mh
-  public:: SP_get_request
+  public:: SP_get_request_for_sc
+  public:: SP_get_request_for_ih
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
-  public:: SP_get_line_all
   public:: SP_get_solar_corona_boundary
   public:: SP_put_r_min
 
@@ -58,14 +56,73 @@ module SP_wrapper
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
 
-  ! particles that need to be requested from MH component
-  type(TypeBufferQueue):: QueueRequest
+  ! particles that need to be requested from MH component:
+  ! 1st index - the request's index in buffer
+  ! 2nd index - content of the request
+  integer, pointer:: iRequestSc_II(:,:)=>null(), iRequestIh_II(:,:)=>null()
   ! indices that define a request: field line and particle indices
   integer, parameter  :: nRequestIndex = 2
+  ! current size of the request
+  integer:: nRequestSc, nRequestIh
   ! estimated number of requests per field line
   integer, parameter  :: nRequestPerLine = nParticle / 100
 
 contains
+
+  subroutine add_to_request(iComp, iRequest_I)
+    ! auxilary function to add request to the appropriate buffer
+    !-------------------------------------------------------------------
+    ! component to be requested from
+    integer, intent(in):: iComp
+    ! request to be added
+    integer, intent(in):: iRequest_I(nRequestIndex)
+
+    character(len=100):: StringError
+    character(len=*), parameter:: NameSub='SP:add_to_request'
+    !------------------------------------------------------------
+    ! each component has its own request buffer
+    select case(iComp)
+    case(SC_)
+       ! add the request to SC buffer
+       nRequestSc = nRequestSc + 1
+       ! if the current size of the buffer is exceeded -> double its size
+       if(nRequestSc >  ubound(iRequestSc_II,1)) &
+            call double_buffer(iRequestSc_II)
+       ! put the request to buffer
+       iRequestSc_II(nRequestSc,:) = iRequest_I
+    case(IH_)
+       ! add the request to IH buffer
+       nRequestIh = nRequestIh + 1
+       ! if the current size of the buffer is exceeded -> double its size
+       if(nRequestIh >  ubound(iRequestIh_II,1)) &
+            call double_buffer(iRequestIh_II)
+       ! put the request to buffer
+       iRequestIh_II(nRequestIh,:) = iRequest_I
+    case default
+       ! requesting from iComp isn't implemented -> ERROR
+       write(StringError,'(a,i2)') &
+            ": isn't implemented for requesting data from component ", iComp
+       call CON_stop(NameSub//StringError)
+    end select
+  contains
+    subroutine double_buffer(iBuffer_II)
+      ! double the size of the buffer
+      integer, pointer, intent(inout):: iBuffer_II(:,:)
+      ! auxilary pointer
+      integer, pointer:: iAux_II(:,:)
+      !------------------------------------------------------
+      ! allocated memeory of doubled size
+      allocate(iAux_II(2*ubound(iBuffer_II,1), nRequestIndex))
+      ! transfer data to new buffer
+      iAux_II(1:ubound(iBuffer_II,1),:) = iBuffer_II
+      ! deallocated the old buffer
+      deallocate(iBuffer_II)
+      ! reassign pointers
+      iBuffer_II => iAux_II; nullify(iAux_II)
+    end subroutine double_buffer
+  end subroutine add_to_request
+
+  !========================================================================
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
     real,intent(inout)::TimeSimulation
@@ -78,8 +135,6 @@ contains
   !========================================================================
 
   subroutine SP_init_session(iSession,TimeSimulation)
-
-
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -94,8 +149,6 @@ contains
   !======================================================================
 
   subroutine SP_finalize(TimeSimulation)
-
-
     real,intent(in)::TimeSimulation
     !--------------------------------------------------------------------------
     call finalize
@@ -104,7 +157,6 @@ contains
   !=========================================================
 
   subroutine SP_set_param(CompInfo,TypeAction)
-
     type(CompInfoType),intent(inout):: CompInfo
     character(len=*),  intent(in)   :: TypeAction
 
@@ -134,7 +186,6 @@ contains
   !=========================================================
 
   subroutine SP_save_restart(TimeSimulation) 
-
     real,     intent(in) :: TimeSimulation 
     call CON_stop('Can not call SP_save restart')
   end subroutine SP_save_restart
@@ -142,7 +193,6 @@ contains
   !=========================================================
 
   subroutine SP_put_input_time(TimeIn)
-
     real,     intent(in)::TimeIn
     call CON_stop('Can not call SP_get_input_time')
   end subroutine SP_put_input_time
@@ -211,7 +261,6 @@ contains
   !===================================================================
 
   subroutine SP_set_grid
-
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
          GridID_ = SP_,&
@@ -297,11 +346,42 @@ contains
   end subroutine SP_put_r_min
 
   !===================================================================
-  subroutine SP_get_request( &
+  subroutine SP_get_request_for_sc(&
        nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-    ! request coordinates & indices of field lines' beginning/origin/end
-    ! for the current processor
+    ! request data at give locations from SC
     !---------------------------------------------------------------
+    integer,              intent(out):: nRequestOut
+    integer,              intent(out):: nCoordOut
+    real,    allocatable, intent(out):: CoordOut_DI(:, :)
+    integer, allocatable, intent(out):: iIndexOut_II(:,:)
+    integer,              intent(out):: nAux
+    real,    allocatable, intent(out):: AuxOut_VI(:,:)
+    !---------------------------------------------------------------
+    call SP_get_request(SC_,&
+         nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+  end subroutine SP_get_request_for_sc
+  !===================================================================
+  subroutine SP_get_request_for_ih(&
+       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+    ! request data at give locations from IH
+    !---------------------------------------------------------------
+    integer,              intent(out):: nRequestOut
+    integer,              intent(out):: nCoordOut
+    real,    allocatable, intent(out):: CoordOut_DI(:, :)
+    integer, allocatable, intent(out):: iIndexOut_II(:,:)
+    integer,              intent(out):: nAux
+    real,    allocatable, intent(out):: AuxOut_VI(:,:)
+    !---------------------------------------------------------------
+    call SP_get_request(IH_,&
+         nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+  end subroutine SP_get_request_for_ih
+  !===================================================================
+  subroutine SP_get_request(iComp, &
+       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+    ! generic function to provide the locations where data must be 
+    ! requested from the component iComp
+    !---------------------------------------------------------------
+    integer,              intent(in ):: iComp
     integer,              intent(out):: nRequestOut
     integer,              intent(out):: nCoordOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
@@ -313,23 +393,47 @@ contains
     integer:: iParticle, iBlock, iNode, iRequest
     integer:: iRequest_I(nRequestIndex)
 
+    ! pointer to the request buffer
+    integer, pointer:: iRequest_II(:,:)
+
     logical, save:: IsFirstCall = .true.
+    character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_get_request'
     !----------------------------------------------------------------
     if(IsFirstCall)then
        IsFirstCall = .false.
-       ! need to initalize request buffer:
-       ! size of request buffer is estimated average number of requests 
-       ! per line times number of lines on this proc
-       call init_queue(QueueRequest, nRequestPerLine * nBlock, nRequestIndex)
-       ! the initial request contains the origin points only
+       ! need to initalize request buffer;
+       ! initial size = number of lines:
+       allocate(iRequestSc_II(nBlock,nRequestIndex))
+       allocate(iRequestIh_II(nBlock,nRequestIndex))
+       
+       ! fill the request buffer for SC
        do iBlock = 1, nBlock
-          call add_to_queue(QueueRequest, (/iBlock, 0/))
+          iRequestSc_II(iBlock,:) = (/iBlock, 0/)
        end do
+       
+       ! reset the sizes of requests
+       nRequestSc = nBlock
+       nRequestIh = 0
     end if
 
+    ! choose the request buffer based iComp and reset its size counter
+    select case(iComp)
+    case(SC_)
+       iRequest_II => iRequestSc_II
+       nRequestOut =  nRequestSc
+       nRequestSc  =  0 ! reset the requests size as kept within wrapper
+    case(IH_)
+       iRequest_II => iRequestIh_II
+       nRequestOut =  nRequestIh
+       nRequestIh  =  0 ! reset the requests size as kept within wrapper
+    case default
+       write(StringError,'(a,i2)') &
+            ": isn't implemented for requesting data from component ", iComp
+       call CON_stop(NameSub//StringError)
+    end select
+
     ! size of the request
-    nRequestOut = QueueRequest % nRecordAll
     nCoordOut   = nDim
     nAux        = 2
 
@@ -341,12 +445,10 @@ contains
     if(allocated(AuxOut_VI)) deallocate(AuxOut_VI)
     allocate(AuxOut_VI(nAux, nRequestOut))
     
-    ! go over the request queue
-    call reset_peek_queue(QueueRequest)
+    ! go over the request buffer
     do iRequest = 1, nRequestOut
-       call peek_queue(QueueRequest, iRequest_I)
-       iBlock    = iRequest_I(1)
-       iParticle = iRequest_I(2)
+       iBlock    = iRequest_II(iRequest, 1)
+       iParticle = iRequest_II(iRequest, 2)
        iNode     = iNode_B(iBlock)
        CoordOut_DI(:, iRequest) = &
             State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
@@ -357,9 +459,6 @@ contains
        AuxOut_VI(1, iRequest) = real(iNode)
        AuxOut_VI(2, iRequest) = real(iParticle)
     end do
-
-    ! request is complete => reset queue
-    call reset_queue(QueueRequest)
 
   end subroutine SP_get_request
 
@@ -419,11 +518,11 @@ contains
        IsInSc   = Coord_DI( R_, iPut)              < RSc
        if(.not.WasUndef .and. WasInSc .and. .not. IsInSc)then
           ! particle existed and crossed SC boundary
-          call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+          call add_to_request(IH_,(/iBlock, iParticle/))
        elseif(.not.DoneExtractSolarCorona_B(iBlock) .and. &
             WasUndef .and. .not. IsInSc)then
           ! particle didn't exist, is the 1st beyond SC
-          call add_to_queue(QueueRequest, (/iBlock, iParticle/))
+          call add_to_request(IH_,(/iBlock, iParticle/))
           DoneExtractSolarCorona_B(iBlock) = .true.
        end if
 
@@ -450,34 +549,5 @@ contains
     iGridMax_D = (/iParticleMax, 1, 1/)
     Displacement_D = 0.0
   end subroutine SP_get_grid_descriptor_param
-
-  !===================================================================
-
-  subroutine SP_get_line_all(Xyz_DI)
-    use ModMpi
-    real, pointer:: Xyz_DI(:, :)
-
-    integer:: iNode, iParticle, iBlock, iError
-    ! radius-lon-lat coordinates
-    real:: Coord_D(nDim)
-    !-----------------------------------------
-    Xyz_DI = 0.0
-    do iNode = 1, nNode
-       if(iGridGlobal_IA(Proc_, iNode) /= iProc)&
-            CYCLE
-       iBlock = iGridGlobal_IA(Block_, iNode)
-       do iParticle = iParticleMin, iParticleMax
-          if(  iParticle < iGridLocal_IB(Begin_, iBlock) .or. &
-               iParticle > iGridLocal_IB(End_,   iBlock)) &
-               CYCLE
-          Coord_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-          call rlonlat_to_xyz(Coord_D, &
-               Xyz_DI(:, (iNode-1)*nParticle+iParticle-iParticleMin+1) )
-       end do
-    end do
-    call MPI_Allreduce(MPI_IN_PLACE, Xyz_DI, nParticle*nNode*nDim, MPI_REAL, &
-         MPI_SUM, iComm, iError)
-
-  end subroutine SP_get_line_all
 
 end module SP_wrapper

@@ -34,8 +34,9 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
-       SP_put_line, SP_get_request, SP_get_grid_descriptor_param, &
-       SP_get_line_all, SP_get_solar_corona_boundary, SP_put_r_min
+       SP_put_line, SP_get_request_for_sc, SP_get_request_for_ih, &
+       SP_get_grid_descriptor_param, &
+       SP_get_solar_corona_boundary, SP_put_r_min
 
   implicit none
 
@@ -184,7 +185,7 @@ contains
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
-              get_request_target   = SP_get_request, &
+              get_request_target   = SP_get_request_for_sc, &
               transform            = transform_sp_to_sc, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = SC_put_request)
@@ -210,7 +211,7 @@ contains
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIhSp, &
-              get_request_target   = SP_get_request, &
+              get_request_target   = SP_get_request_for_ih, &
               transform            = transform_sp_to_ih, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = IH_put_request)
@@ -462,7 +463,7 @@ contains
          GridDescriptorSource = IH_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &
          Router               = RouterIhSp, &
-         get_request_target   = SP_get_request, &
+         get_request_target   = SP_get_request_for_ih, &
          transform            = transform_sp_to_ih, &
          interpolate_source   = interpolation_amr_gc, &
          put_request_source   = IH_put_request)

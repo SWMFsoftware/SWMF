@@ -7,7 +7,7 @@ include Makefile.DEPEND
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
-OBJECTS = SP_wrapper.o ModBufferQueue.o
+OBJECTS = SP_wrapper.o
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
