@@ -116,10 +116,9 @@ contains
   end subroutine SP_put_r_min
 
   !===================================================================
-  subroutine SP_get_request_for_sc(nLine, nCoord, CoordOut_DI, iIndexOut_II,&
+  subroutine SP_get_request_for_sc(nLine, CoordOut_DI, iIndexOut_II,&
        nAux, AuxOut_VI)
     integer,              intent(out):: nLine
-    integer,              intent(out):: nCoord
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
@@ -128,10 +127,9 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_get_request_for_sc
   !===================================================================
-  subroutine SP_get_request_for_ih(nLine, nCoord, CoordOut_DI, iIndexOut_II,&
+  subroutine SP_get_request_for_ih(nLine, CoordOut_DI, iIndexOut_II,&
        nAux, AuxOut_VI)
     integer,              intent(out):: nLine
-    integer,              intent(out):: nCoord
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
