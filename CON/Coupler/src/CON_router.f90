@@ -68,6 +68,11 @@ Module CON_router
      integer::iCommUnion,iProc0Source,iProc0Target
      integer,dimension(:),pointer::iTranslated_P
 !\end{verbatim}
+!PE ranks in router's communicator are used for communications  !
+!\begin{verbatim}
+     integer,dimension(:),pointer::iProcRankRouterCommSource_I
+     integer,dimension(:),pointer::iProcRankRouterCommTarget_I
+!\end{verbatim}
 !As the default we use iCB indexes to construct the router,     !
 !hence the grid point is characterized by the                   !
 !GridDescriptor%nDim grid point indexes plus one more index for !
@@ -128,8 +133,9 @@ contains
     integer::iPE,iError,LocalCompID_
     integer::nProc
     integer::iProc0Source,iProc0Target,iProcUnion
-    integer::iGroupUnion,iGroupSource,iGroupTarget
-
+    integer::iGroupUnion,iGroupSource,iGroupTarget, iGroup
+    integer, allocatable:: iProc_I(:)
+    integer:: iCompTarget, iCompSource
     !---------------------------------------------------------------!
     !Check if the grids are both local or both global               !
 
@@ -236,6 +242,38 @@ contains
        call CON_stop(&
             'Do not couple a Local grid with a global one')
     end if
+
+
+    ! translate local ranks of PEs (within its component)
+    ! to ranks in the global communicator
+    
+    ! identify components
+    iCompSource = compid_grid(GridDescriptorSource%DD%Ptr)
+    iCompTarget = compid_grid(GridDescriptorTarget%DD%Ptr)
+
+    ! containers for global ranks
+    allocate(Router%iProcRankRouterCommTarget_I(n_proc(iCompTarget)))
+    allocate(Router%iProcRankRouterCommSource_I(n_proc(iCompSource)))
+    
+    allocate(iProc_I(n_proc()))
+    call check_allocate(iError,'iAux_P')
+    do iPE=1,n_proc()
+       iProc_I(iPE)=iPE-1
+    end do
+
+    ! group associated with router's communicator
+    call MPI_Comm_group(Router % iComm, iGroup, iError)
+    ! translates ranks of the Source component
+    call MPI_Group_translate_ranks(&
+         i_group(iCompSource), n_proc(iCompSource), iProc_I, &
+         iGroup, Router%iProcRankRouterCommSource_I, iError)
+    ! translates ranks of the Target component
+    call MPI_Group_translate_ranks(&
+         i_group(iCompTarget), n_proc(iCompTarget), iProc_I, &
+         iGroup, Router%iProcRankRouterCommTarget_I, iError)
+
+    ! free memory
+    deallocate(iProc_I)
 
 
     Router%nIndexesSource=ndim_grid(&
@@ -1436,9 +1474,6 @@ contains
     integer::nSendCumSum, nRecvCumSum
     ! aux arrays to put data in BufferS_II in the correct order
     integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
-    ! translated ranks of processors
-    integer, allocatable:: iProcTargetTranslated_I(:)
-    integer, allocatable:: iProcSourceTranslated_I(:)
     ! MPI-related variables
     integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
     integer:: nRequestR, nRequestS, iError, iTag=0
@@ -1498,10 +1533,6 @@ contains
     Router%nPut_P  = 0
     Router%nSend_P = 0
     Router%nRecv_P = 0
-
-    ! based on number  of processor on the component, 1 to n_proc(iComp), 
-    ! need to know its rank in the router communicator, 0 to Router%nProc-1
-    call translate_ranks
 
     ! reset sizes of send and recv buffers (BOTH may be used on this proc )
     nBufferS = 0; nBufferR = 0
@@ -1673,7 +1704,7 @@ contains
        ! currently iOrderSend_I contains indices WITHIN these chunks
        nSendCumSum = 0
        do iProcSource = 1, nProcSource
-          iProcTo = iProcSourceTranslated_I(iProcSource)
+          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
           where(iProcImage_I(1:nBufferS) == iProcTo)&
                iOrderSend_I(1:nBufferS)= iOrderSend_I(1:nBufferS)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
@@ -1689,7 +1720,7 @@ contains
        ! fill these containers
        nRecvCumSum = 0
        do iProcSource = 1, nProcSource
-          iProcTo = iProcSourceTranslated_I(iProcSource)
+          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
           iStart = nRecvCumSum + 1
           iEnd = nRecvCumSum + Router%nPut_P(iProcTo)
           Router%iPut_P( iProcTo) % &
@@ -1731,7 +1762,7 @@ contains
     nRequestR = 0
     if(is_proc(iCompSource))then
        do iProcTarget = 1, nProcTarget
-          iProcFrom = iProcTargetTranslated_I(iProcTarget)
+          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nSend_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -1742,7 +1773,7 @@ contains
     nRequestS = 0
     if(is_proc(iCompTarget))then
        do iProcSource = 1, nProcSource
-          iProcTo = iProcSourceTranslated_I(iProcSource)
+          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -1767,7 +1798,7 @@ contains
 
        nRecvCumSum = 0
        do iProcTarget = 1, nProcTarget
-          iProcFrom = iProcTargetTranslated_I(iProcTarget)
+          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
@@ -1783,7 +1814,7 @@ contains
     if(is_proc(iCompTarget))then
        nSendCumSum = 0
        do iProcSource = 1, nProcSource
-          iProcTo = iProcSourceTranslated_I(iProcSource)
+          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
           nRequestS = nRequestS + 1
@@ -1802,7 +1833,7 @@ contains
     if(is_proc(iCompSource))then
        ! prepare containers for router information of Source side
        do iProcTarget = 1, nProcTarget
-          iProcFrom = iProcTargetTranslated_I(iProcTarget)
+          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
           Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
        end do
        call check_router_allocation(Router,iProc,nProc)
@@ -1810,7 +1841,7 @@ contains
        ! fill these containers
        nRecvCumSum = 0
        do iProcTarget = 1, nProcTarget
-          iProcFrom = iProcTargetTranslated_I(iProcTarget)
+          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
           if(iEnd < iStart)&
@@ -1835,7 +1866,7 @@ contains
           nData = 0
           nRecvCumSum = 0
           do iProcTarget = 1, nProcTarget
-             iProcFrom = iProcTargetTranslated_I(iProcTarget)
+             iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
              iData  = -1
@@ -1944,32 +1975,6 @@ contains
          call CON_stop(NameSub // ': incorrect call')
       end select
     end subroutine check_size
-    !=========================================================================!
-    subroutine translate_ranks
-      integer:: i, iGroup 
-      integer, allocatable:: iProc_I(:)
-      !---------------------------------
-      ! aux array that contains integers from 0 to n_proc()-1
-      if(.not.allocated(iProc_I))then
-         allocate(iProc_I(n_proc()))
-         do i = 1, n_proc()
-            iProc_I(i) = i-1
-         end do
-      end if
-      ! check if arrays are large enough
-      call check_size(1, (/nProcTarget/), iBuffer_I = iProcTargetTranslated_I)
-      call check_size(1, (/nProcSource/), iBuffer_I = iProcSourceTranslated_I)
-      ! group associated with router's communicator
-      call MPI_Comm_group(Router % iComm, iGroup, iError)
-      ! translates ranks of the Source component
-      call MPI_Group_translate_ranks(&
-                 i_group(iCompSource), nProcSource, iProc_I, &
-                 iGroup, iProcSourceTranslated_I, iError)
-      ! translates ranks of the Target component
-      call MPI_Group_translate_ranks(&
-                 i_group(iCompTarget), nProcTarget, iProc_I, &
-                 iGroup, iProcTargetTranslated_I, iError)
-    end subroutine translate_ranks
   end subroutine set_router_from_target_2_stage
   !===========================================================================!
   subroutine set_router_from_source_2_stage(&
@@ -2101,9 +2106,6 @@ contains
     integer:: nSendCumSum, nRecvCumSum
     ! aux arrays to put data in BufferS_II in the correct order
     integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
-    ! translated ranks of processors
-    integer, allocatable:: iProcTargetTranslated_I(:)
-    integer, allocatable:: iProcSourceTranslated_I(:)
     ! MPI-realated variables
     integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
     integer:: nRequestR, nRequestS, iError, iTag=0
@@ -2162,10 +2164,6 @@ contains
     Router%nPut_P  = 0
     Router%nSend_P = 0
     Router%nRecv_P = 0
-
-    ! based on number  of processor on the component, 1 to n_proc(iComp), 
-    ! need to know its rank in the router communicator, 0 to Router%nProc-1
-    call translate_ranks
 
     ! reset sizes of send and recv buffers (BOTH may be used on this proc )
     nBufferS = 0; nBufferR = 0
@@ -2364,7 +2362,7 @@ contains
        ! currently iOrderSend_I contains indices within these chunks
        nSendCumSum = 0
        do iProcTarget = 1, nProcTarget
-          iProcTo = iProcTargetTranslated_I(iProcTarget)
+          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
           where(iProcImage_I(1:nBufferS) == iProcTo)&
                iOrderSend_I(1:nBufferS) = iOrderSend_I(1:nBufferS)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
@@ -2379,7 +2377,7 @@ contains
        ! fill these containers
        nSendCumSum = 0
        do iProcTarget = 1, nProcTarget
-          iProcTo = iProcTargetTranslated_I(iProcTarget)
+          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
           iStart = nSendCumSum + 1
           iEnd = nSendCumSum + Router%nGet_P(iProcTo)
           Router%iGet_P( iProcTo) % &
@@ -2409,7 +2407,7 @@ contains
     nRequestR = 0
     if(is_proc(iCompTarget))then
        do iProcSource = 1, nProcSource
-          iProcFrom = iProcSourceTranslated_I(iProcSource)
+          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -2420,7 +2418,7 @@ contains
     nRequestS = 0
     if(is_proc(iCompSource))then
        do iProcTarget = 1, nProcTarget
-          iProcTo = iProcTargetTranslated_I(iProcTarget)
+          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -2444,7 +2442,7 @@ contains
 
        nRecvCumSum = 0
        do iProcSource = 1, nProcSource
-          iProcFrom = iProcSourceTranslated_I(iProcSource)
+          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
           if(Router%nRecv_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
@@ -2460,7 +2458,7 @@ contains
     if(is_proc(iCompSource))then
        nSendCumSum = 0
        do iProcTarget = 1, nProcTarget
-          iProcTo = iProcTargetTranslated_I(iProcTarget)
+          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
           if(Router % nSend_P(iProcTo) == 0) &
                CYCLE
           nRequestS = nRequestS + 1
@@ -2480,7 +2478,7 @@ contains
 
        ! prepare containers for router information of Target side
        do iProcSource = 1, nProcSource
-          iProcFrom = iProcSourceTranslated_I(iProcSource)
+          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
           Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
        end do
        call check_router_allocation(Router, iProc, nProc)
@@ -2488,7 +2486,7 @@ contains
        ! fill these containers
        nRecvCumSum = 0
        do iProcSource = 1, nProcSource
-          iProcFrom = iProcSourceTranslated_I(iProcSource)
+          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
           if(iEnd < iStart) &
@@ -2516,7 +2514,7 @@ contains
           nData = 0 
           nRecvCumSum = 0
           do iProcSource = 1, nProcSource
-             iProcFrom = iProcSourceTranslated_I(iProcSource)
+             iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
              iData  = -1
@@ -2622,32 +2620,6 @@ contains
          call CON_stop(NameSub // ': incorrect call')
       end select
     end subroutine check_size
-
-    subroutine translate_ranks
-      integer:: i, iGroup 
-      integer, allocatable:: iProc_I(:)
-      !-------------
-      ! aux array that contains integers from 0 to n_proc()-1
-      if(.not.allocated(iProc_I))then
-         allocate(iProc_I(n_proc()))
-         do i = 1, n_proc()
-            iProc_I(i) = i-1
-         end do
-      end if
-      ! check if arrays are large enough
-      call check_size(1, (/nProcTarget/), iBuffer_I = iProcTargetTranslated_I)
-      call check_size(1, (/nProcSource/), iBuffer_I = iProcSourceTranslated_I)
-      ! group associated with router's communicator
-      call MPI_Comm_group(Router % iComm, iGroup, iError)
-      ! translates ranks of the Source component
-      call MPI_Group_translate_ranks(&
-                 i_group(iCompSource), nProcSource, iProc_I, &
-                 iGroup, iProcSourceTranslated_I, iError)
-      ! translates ranks of the Target component
-      call MPI_Group_translate_ranks(&
-                 i_group(iCompTarget), nProcTarget, iProc_I, &
-                 iGroup, iProcTargetTranslated_I, iError)
-    end subroutine translate_ranks
   end subroutine set_router_from_source_2_stage
 !====================END========================================!
 end Module CON_router
