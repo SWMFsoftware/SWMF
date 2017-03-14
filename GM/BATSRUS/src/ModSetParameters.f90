@@ -2583,7 +2583,7 @@ contains
        FluxType='Sokolov'
     case('GODUNOV','Godunov')
        FluxType='Godunov'
-    case('HLLD', 'HLLDW', 'LFDW')
+    case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub // &
@@ -2599,7 +2599,7 @@ contains
     select case(TypeFluxNeutral)
     case('default')
        select case(FluxType)
-       case('Rusanov', 'Linde', 'Sokolov', 'Godunov','HLLDW', 'LFDW')
+       case('Rusanov', 'Linde', 'Sokolov', 'Godunov','HLLDW', 'LFDW', 'HLLC')
           TypeFluxNeutral = FluxType
        case default
           TypeFluxNeutral = 'Linde'
@@ -2612,7 +2612,7 @@ contains
        TypeFluxNeutral = 'Sokolov'
     case('GODUNOV','Godunov')
        TypeFluxNeutral = 'Godunov'
-    case('HLLDW', 'LFDW')
+    case('HLLDW', 'LFDW', 'HLLC')
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub// &
@@ -2640,7 +2640,7 @@ contains
        FluxTypeImpl='Sokolov'
     case('GODUNOV','Godunov')
        FluxTypeImpl='Godunov'
-    case('HLLD', 'HLLDW', 'LFDW')
+    case('HLLD', 'HLLDW', 'LFDW', 'HLLC')
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub// &

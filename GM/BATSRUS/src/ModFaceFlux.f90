@@ -75,7 +75,7 @@ module ModFaceFlux
   logical :: DoSimple, DoLf, DoHll, DoLfdw, DoHlldw, DoHlld, &
        DoAw, DoRoeOld, DoRoe
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
-       DoAwNeutral, DoGodunovNeutral
+       DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
 
   ! 1D Burgers' equation, works for Hd equations. 
   logical:: DoBurgers = .false.
@@ -406,6 +406,7 @@ contains
     DoHlldwNeutral   = TypeFluxNeutral == 'HLLDW'
     DoAwNeutral      = TypeFluxNeutral == 'Sokolov'
     DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
+    DoHllcNeutral    = TypeFluxNeutral == 'HLLC'
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
@@ -1262,8 +1263,8 @@ contains
 
     if(DoLf .or. DoHll .or. DoLfdw .or. DoHlldw .or. DoAw .or. &
          DoRoe .or. DoRoeOld .or. &
-         DoLfNeutral .or. DoHllNeutral .or. &
-         DoLfdwNeutral .or. DoHlldwNeutral .or. DoAwNeutral)then
+         DoLfNeutral .or. DoHllNeutral .or. DoLfdwNeutral .or. &
+         DoHlldwNeutral .or. DoAwNeutral .or. DoHllcNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
@@ -1357,6 +1358,8 @@ contains
           call artificial_wind
        elseif(DoGodunovNeutral)then
           call godunov_flux
+       elseif(DoHllcNeutral)then
+          call hllc_flux
        else
           call stop_mpi(NameSub//': Unknown flux type for neutrals')
        end if
@@ -2160,6 +2163,79 @@ contains
       end if
 
     end subroutine godunov_flux
+
+    !==========================================================================
+
+    subroutine hllc_flux
+      ! The HLLC scheme works for single ion fluid only
+      ! HYDRO ONLY (NO MHD)
+      implicit none
+
+      real :: StateStarCons_V(nFlux)
+      real :: UnStar
+
+      ! Left and right state (scalars and extra variables only)
+      real :: RhoL, totalPresL, sL
+      real :: RhoR, totalPresR, sR
+
+      real :: CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
+      real :: CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
+      !-----------------------------------------------------------------------
+
+      call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
+           Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
+
+      call get_speed_max(StateRight_V, B0x, B0y, B0z, &
+           Cleft_I = CleftStateRight_I, Cright_I = CrightStateRight_I)
+
+      sL = min(CleftStateLeft_I(1),  CleftStateRight_I(1))
+      sR = max(CrightStateLeft_I(1), CrightStateRight_I(1))
+
+      Cmax   = max(sR, -sL)
+      CmaxDt = Cmax
+
+      !=======================================================================
+      ! Calculate intermediate states
+      !=======================================================================
+
+      RhoL = StateLeft_V(Rho_)
+      RhoR = StateRight_V(Rho_)
+      totalPresL = StateLeft_V(p_)  + PeLeft  + PwaveLeft
+      totalPresR = StateRight_V(p_) + PeRight + PwaveRight
+
+      ! Rotate vector variables into a coordinate system orthogonal to the face
+      call rotate_state_vectors
+
+      ! Normal velocity component
+      ! UnStarL = UnStarR = UnStar
+      UnStar = (RhoR*UnR*(sR-UnR) - RhoL*UnL*(sL-UnL) +totalPresL -totalPresR)&
+           /(RhoR*(sR-UnR) - RhoL*(sL-UnL))
+
+      if(sL >= 0.)then
+         Flux_V    = FluxLeft_V
+         Unormal_I = UnLeft_I
+      elseif(sL < 0. .and. UnStar >= 0.)then
+         StateStarCons_V = StateLeftCons_V
+         StateStarCons_V(RhoUx_+iDimFace-x_) = StateLeftCons_V(Rho_)*UnStar
+         StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
+              + (UnStar-UnL)*(RhoL*UnStar + totalPresL/(sL-UnL))
+         StateStarCons_V = StateStarCons_V*(sL-UnL)/(sL-UnStar)
+         Flux_V    = FluxLeft_V  + sL*(StateStarCons_V - StateLeftCons_V)
+         Unormal_I = UnStar
+      elseif(UnStar < 0. .and. sR >= 0.)then
+         StateStarCons_V = StateRightCons_V
+         StateStarCons_V(RhoUx_+iDimFace-x_) = StateRightCons_V(Rho_)*UnStar
+         StateStarCons_V(Energy_) = StateStarCons_V(Energy_) &
+              + (UnStar-UnR)*(RhoR*UnStar + totalPresR/(sR-UnR))
+         StateStarCons_V = StateStarCons_V*(sR-UnR)/(sR-UnStar)
+         Flux_V    = FluxRight_V + sR*(StateStarCons_V - StateRightCons_V)
+         Unormal_I = UnStar
+      else
+         Flux_V    = FluxRight_V
+         Unormal_I = UnRight_I
+      endif
+
+    end subroutine hllc_flux
 
     !==========================================================================
 
