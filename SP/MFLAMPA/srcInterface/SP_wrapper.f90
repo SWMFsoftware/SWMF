@@ -347,43 +347,40 @@ contains
 
   !===================================================================
   subroutine SP_get_request_for_sc(&
-       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     ! request data at give locations from SC
     !---------------------------------------------------------------
     integer,              intent(out):: nRequestOut
-    integer,              intent(out):: nCoordOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     !---------------------------------------------------------------
     call SP_get_request(SC_,&
-         nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+         nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
   end subroutine SP_get_request_for_sc
   !===================================================================
   subroutine SP_get_request_for_ih(&
-       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     ! request data at give locations from IH
     !---------------------------------------------------------------
     integer,              intent(out):: nRequestOut
-    integer,              intent(out):: nCoordOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     !---------------------------------------------------------------
     call SP_get_request(IH_,&
-         nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+         nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
   end subroutine SP_get_request_for_ih
   !===================================================================
   subroutine SP_get_request(iComp, &
-       nRequestOut, nCoordOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
+       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
     ! generic function to provide the locations where data must be 
     ! requested from the component iComp
     !---------------------------------------------------------------
     integer,              intent(in ):: iComp
     integer,              intent(out):: nRequestOut
-    integer,              intent(out):: nCoordOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
     integer,              intent(out):: nAux
@@ -434,7 +431,6 @@ contains
     end select
 
     ! size of the request
-    nCoordOut   = nDim
     nAux        = 2
 
     ! prepare containers to hold the request

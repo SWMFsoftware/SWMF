@@ -1388,15 +1388,13 @@ contains
 
     interface
        subroutine get_request_target(&
-            nData, nCoord, Coord_II, iIndex_II, nAux, Aux_VI)
+            nData, Coord_II, iIndex_II, nAux, Aux_VI)
          ! this subroutine returns info that identifies location of the data
          ! in the domain, may be as generic as needed, i.e. Coord_II need NOT
          ! to be the actual coordinates
          implicit none
          ! number of data entries
          integer,              intent(out):: nData
-         ! number of coordinates per data entry
-         integer,              intent(out):: nCoord
          ! data locations themselves
          real,    allocatable, intent(out):: Coord_II(:,:)
          ! indices to access the data locations on Target
@@ -1416,7 +1414,7 @@ contains
        end subroutine transform
        !----------------------------------------------------------------------!
        subroutine interpolate_source(&
-            nCoord, Coord_I, GridDescriptor, &
+            nDim, Xyz_D, GridDescriptor, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -1424,9 +1422,9 @@ contains
          use CON_grid_descriptor
          implicit none
          ! number of indices per data entry
-         integer, intent(in):: nCoord
+         integer, intent(in):: nDim
          ! data location on Source
-         real,    intent(inout):: Coord_I(nCoord)
+         real,    intent(inout):: Xyz_D(nDim)
          ! grid descriptor
          type(GridDescriptorType):: GridDescriptor
          ! indices of images, their number and interpolation weights
@@ -1456,9 +1454,6 @@ contains
     !-------------------------------------------------------------------------!
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
-    ! number of generlized coordinates per data location:
-    ! includes coordinates plus any aux info that facilitates interpolation
-    integer:: nCoordSource, nCoordTarget
     ! number of indices (e.g. cell indices) on components
     integer:: nIndexSource, nIndexTarget
     ! number of data locations on the current processor
@@ -1577,7 +1572,7 @@ contains
     !/
     if(is_proc(iCompTarget))then
        ! get the data locations on Target as well as corresponding indices
-       call get_request_target(nData, nCoordTarget, Coord_II, iIndex_II, &
+       call get_request_target(nData, Coord_II, iIndex_II, &
             nAux, Aux_VI)
 
        ! if auxilary data are sent, correct size of the buffer
@@ -1591,8 +1586,6 @@ contains
                ": trying to pass auxilary data but buffer is not allocated")
        end if
 
-       ! find the correct number of coordinates to be used on Source
-       nCoordSource = nCoordTarget - nDimTarget + nDimSource
        ! max size of buffer to be sent
        nBufferSMax = nImageMax * nData
 
@@ -1600,7 +1593,7 @@ contains
        ! if they are => they are not reallocated
        
        ! passed to interpolation subroutine
-       call check_size(1, (/nCoordSource/), Buffer_I = Coord_I)
+       call check_size(1, (/nDimSource/), Buffer_I = Coord_I)
        ! send buffer
        call check_size(2, (/nVar,nBufferSMax/), Buffer_II = BufferS_II)
        ! aux array that holds indices for request location
@@ -1618,9 +1611,6 @@ contains
        ! go over the list of requested data location
        do iData = 1, nData
 
-          ! transform coordinates of a data location if needed
-          Coord_I(nDimSource+1:nCoordSource) = &
-               Coord_II(nDimTarget+1:nCoordTarget, iData)
           if(DoTransform)then
              call transform(&
                   nDimTarget, Coord_II(1:nDimTarget, iData), &
@@ -1631,8 +1621,8 @@ contains
           ! indices identifying images,
           ! one data entry may be split into several images
           call interpolate_source(&
-               nCoord         = nCoordSource, &
-               Coord_I        = Coord_I(1:nCoordSource), &
+               nDim           = nDimSource, &
+               Xyz_D          = Coord_I(1:nDimSource), &
                GridDescriptor = GridDescriptorSource, &
                nIndex         = nIndexSource, &
                iIndex_II      = iIndexGet_II, &
@@ -1641,10 +1631,10 @@ contains
 
           ! check if interpolation has succeeded
           if(nImage < 1)then
-             write(StringErrorFormat,'(a,i3,a)') '(a,',nCoordSource,'es15.7)'
+             write(StringErrorFormat,'(a,i3,a)') '(a,',nDimSource,'es15.7)'
              write(StringErrorMessage,StringErrorFormat)&
                   NameSub//': Interpolation failed at location ', &
-                  Coord_I(1:nCoordSource)
+                  Coord_I(1:nDimSource)
              call CON_stop(StringErrorMessage)
           end if
 
@@ -2623,9 +2613,5 @@ contains
   end subroutine set_router_from_source_2_stage
 !====================END========================================!
 end Module CON_router
-!end Module CON_router
-!\end{verbatim}                     !^CFG UNCOMMENT IF PRINTPS  !
-!\end{document}                     !^CFG UNCOMMENT IF PRINTPS  !
-!=============================LINE 912==========================!
 
 
