@@ -70,8 +70,8 @@ Module CON_router
 !\end{verbatim}
 !PE ranks in router's communicator are used for communications  !
 !\begin{verbatim}
-     integer,dimension(:),pointer::iProcRankRouterCommSource_I
-     integer,dimension(:),pointer::iProcRankRouterCommTarget_I
+     integer,dimension(:),pointer::iProcRankRouterCommSource_P
+     integer,dimension(:),pointer::iProcRankRouterCommTarget_P
 !\end{verbatim}
 !As the default we use iCB indexes to construct the router,     !
 !hence the grid point is characterized by the                   !
@@ -99,6 +99,14 @@ Module CON_router
      type(DoAddPtrType), dimension(:), pointer :: DoAdd_P
      type(WeightPtrType), dimension(:),pointer :: Get_P
      type(WeightPtrType), dimension(:),pointer :: Put_P
+!\end{verbatim}
+!Buffers that contain unprocessed router information           !
+!\begin{verbatim}
+    real, dimension(:,:), pointer:: BufferSource_II
+    real, dimension(:,:), pointer:: BufferTarget_II
+!\end{verbatim}
+!\begin{verbatim}
+    integer:: nBufferSource, nBufferTarget
 !\end{verbatim}
   end type RouterType
 !EOP
@@ -252,13 +260,13 @@ contains
     iCompTarget = compid_grid(GridDescriptorTarget%DD%Ptr)
 
     ! containers for global ranks
-    allocate(Router%iProcRankRouterCommTarget_I(n_proc(iCompTarget)))
-    allocate(Router%iProcRankRouterCommSource_I(n_proc(iCompSource)))
+    allocate(Router%iProcRankRouterCommTarget_P(0:n_proc(iCompTarget)-1))
+    allocate(Router%iProcRankRouterCommSource_P(0:n_proc(iCompSource)-1))
     
-    allocate(iProc_I(n_proc()))
+    allocate(iProc_I(0:n_proc()-1))
     call check_allocate(iError,'iAux_P')
-    do iPE=1,n_proc()
-       iProc_I(iPE)=iPE-1
+    do iPE=0,n_proc()-1
+       iProc_I(iPE)=iPE
     end do
 
     ! group associated with router's communicator
@@ -266,11 +274,11 @@ contains
     ! translates ranks of the Source component
     call MPI_Group_translate_ranks(&
          i_group(iCompSource), n_proc(iCompSource), iProc_I, &
-         iGroup, Router%iProcRankRouterCommSource_I, iError)
+         iGroup, Router%iProcRankRouterCommSource_P, iError)
     ! translates ranks of the Target component
     call MPI_Group_translate_ranks(&
          i_group(iCompTarget), n_proc(iCompTarget), iProc_I, &
-         iGroup, Router%iProcRankRouterCommTarget_I, iError)
+         iGroup, Router%iProcRankRouterCommTarget_P, iError)
 
     ! free memory
     deallocate(iProc_I)
@@ -334,6 +342,9 @@ contains
        nullify(Router%DoAdd_P(iPE)%DoAdd_I)
        call allocate_put_arrays(Router,iPE,1)
     end do
+
+    nullify(Router%BufferSource_II)
+    nullify(Router%BufferTarget_II)
 
     Router%nGet_P=0
     Router%nPut_P=0
@@ -1364,6 +1375,7 @@ contains
     if(UseMask)nullify(Used_I)
   end subroutine construct_router_from_source
   !===========================================================================!
+  !===========================================================================!
   subroutine set_router_from_target_2_stage(&
        ! the GridDescriptor for the Source component
        GridDescriptorSource, &
@@ -1462,9 +1474,9 @@ contains
     integer:: iIndex, iData, iBuffer, iImage
     integer:: iProcSource, iProcTarget, iProcFrom, iProcTo
     ! send and recv buffers
-    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
+!    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! buffers' size
-    integer:: nBufferSMax, nBufferS, nBufferR, nVar
+    integer:: nBufferSMax, nVar
     ! offsets in buffers
     integer::nSendCumSum, nRecvCumSum
     ! aux arrays to put data in BufferS_II in the correct order
@@ -1530,7 +1542,7 @@ contains
     Router%nRecv_P = 0
 
     ! reset sizes of send and recv buffers (BOTH may be used on this proc )
-    nBufferS = 0; nBufferR = 0
+    Router%nBufferTarget = 0; Router%nBufferSource = 0
 
     ! determine which optional actions should be taken
     DoGetRequestTarget = present(get_request_target)
@@ -1595,7 +1607,8 @@ contains
        ! passed to interpolation subroutine
        call check_size(1, (/nDimSource/), Buffer_I = Coord_I)
        ! send buffer
-       call check_size(2, (/nVar,nBufferSMax/), Buffer_II = BufferS_II)
+       call check_size(2, (/nVar,nBufferSMax/), &
+            PBuffer_II = Router%BufferTarget_II)
        ! aux array that holds indices for request location
        call check_size(2, (/nIndexTarget+1,nBufferSMax/), iBuffer_II = iCB_II)
        ! aux array that holds whether image of the request is the 1st
@@ -1667,50 +1680,50 @@ contains
              ! fill the buffer to be sent
 
              ! indices on the source processor
-             BufferS_II(1:nIndexSource,iBuffer) = &
+             Router%BufferTarget_II(1:nIndexSource,iBuffer) = &
                   iIndexGet_II(1:nIndexSource,iImage)
              ! corresponding interpolation weight
-             BufferS_II(iVarWeight, iBuffer) = Weight_I(iImage)
+             Router%BufferTarget_II(iVarWeight, iBuffer) = Weight_I(iImage)
 
              if(DoPutRequestSource)then
                 ! coordinates on Source
-                BufferS_II(iVarDimStart:iVarDimEnd,iBuffer)=&
+                Router%BufferTarget_II(iVarDimStart:iVarDimEnd,iBuffer)=&
                      Coord_I(1:nDimSource)
                 ! index of request location for current target processor
-                BufferS_II(iVarData, iBuffer) = iData
+                Router%BufferTarget_II(iVarData, iBuffer) = iData
                 ! auxilary data
                 if(nAux > 0)&
-                     BufferS_II(iAuxStart:iAuxEnd, iBuffer) = &
+                     Router%BufferTarget_II(iAuxStart:iAuxEnd, iBuffer) = &
                      Aux_VI(1:nAux, iData)
              end if
           end do
        end do
 
        ! all data locations are processed, save the actual size of the buffer
-       nBufferS = iBuffer
-
+       Router%nBufferTarget = iBuffer
        ! fix the order of Buffer_I so contiguous chunks of data can be sent
        ! to the appropriate processors of Source,
        ! currently iOrderSend_I contains indices WITHIN these chunks
        nSendCumSum = 0
-       do iProcSource = 1, nProcSource
-          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
-          where(iProcImage_I(1:nBufferS) == iProcTo)&
-               iOrderSend_I(1:nBufferS)= iOrderSend_I(1:nBufferS)+nSendCumSum
+       do iProcSource = 0, nProcSource-1
+          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
+          where(iProcImage_I(1:Router%nBufferTarget) == iProcTo)&
+               iOrderSend_I(1:Router%nBufferTarget)= iOrderSend_I(1:Router%nBufferTarget)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
        end do
 
        ! the correct order is found, apply it
-       BufferS_II(:,iOrderSend_I(1:nBufferS)) = BufferS_II(:,1:nBufferS)
-       iCB_II(:,    iOrderSend_I(1:nBufferS)) = iCB_II(:,    1:nBufferS)
-       DoAdd_I(     iOrderSend_I(1:nBufferS)) = DoAdd_I(     1:nBufferS)
+       Router%BufferTarget_II(:,iOrderSend_I(1:Router%nBufferTarget)) = &
+            Router%BufferTarget_II(:,1:Router%nBufferTarget)
+       iCB_II(:,    iOrderSend_I(1:Router%nBufferTarget)) = iCB_II(:,    1:Router%nBufferTarget)
+       DoAdd_I(     iOrderSend_I(1:Router%nBufferTarget)) = DoAdd_I(     1:Router%nBufferTarget)
 
        ! prepare containers for router information on Target side
        call check_router_allocation(Router,iProc,nProc)
        ! fill these containers
        nRecvCumSum = 0
-       do iProcSource = 1, nProcSource
-          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
           iStart = nRecvCumSum + 1
           iEnd = nRecvCumSum + Router%nPut_P(iProcTo)
           Router%iPut_P( iProcTo) % &
@@ -1751,8 +1764,8 @@ contains
     ! post recvs
     nRequestR = 0
     if(is_proc(iCompSource))then
-       do iProcTarget = 1, nProcTarget
-          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nSend_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -1762,8 +1775,8 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(iCompTarget))then
-       do iProcSource = 1, nProcSource
-          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -1781,18 +1794,19 @@ contains
     nRequestR = 0
     if(is_proc(iCompSource))then
        ! size of the recv buffer
-       nBufferR = sum(Router%nSend_P)
+       Router%nBufferSource = sum(Router%nSend_P)
 
-       call check_size(2, (/nVar, nBufferR/), Buffer_II=BufferR_II)
-       BufferR_II = 0
+       call check_size(2, (/nVar, Router%nBufferSource/),&
+            PBuffer_II=Router%BufferSource_II)
+       Router%BufferSource_II = 0
 
        nRecvCumSum = 0
-       do iProcTarget = 1, nProcTarget
-          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
-          call MPI_Irecv(BufferR_II(1,1+nRecvCumSum), &
+          call MPI_Irecv(Router%BufferSource_II(1,1+nRecvCumSum), &
                Router%nSend_P(iProcFrom)*nVar, MPI_REAL,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
@@ -1803,12 +1817,12 @@ contains
     nRequestS = 0
     if(is_proc(iCompTarget))then
        nSendCumSum = 0
-       do iProcSource = 1, nProcSource
-          iProcTo = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
           nRequestS = nRequestS + 1
-          call MPI_Isend(BufferS_II(1,1+nSendCumSum), &
+          call MPI_Isend(Router%BufferTarget_II(1,1+nSendCumSum), &
                Router%nRecv_P(iProcTo)*nVar, MPI_REAL,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
@@ -1822,16 +1836,16 @@ contains
     ! prcoess the data that has been received
     if(is_proc(iCompSource))then
        ! prepare containers for router information of Source side
-       do iProcTarget = 1, nProcTarget
-          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
           Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
        end do
        call check_router_allocation(Router,iProc,nProc)
        
        ! fill these containers
        nRecvCumSum = 0
-       do iProcTarget = 1, nProcTarget
-          iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
           if(iEnd < iStart)&
@@ -1841,28 +1855,28 @@ contains
                iCB_II(0,1:Router%nGet_P(iProcFrom)) = 1
           Router%iGet_P(iProcFrom) % &
                iCB_II(1:nIndexSource,1:Router%nGet_P(iProcFrom)) = &
-               nint( BufferR_II(1:nIndexSource, iStart:iEnd) )
+               nint( Router%BufferSource_II(1:nIndexSource, iStart:iEnd) )
           ! interpolation weights
           Router%Get_P(iProcFrom) % Weight_I(1:Router%nGet_P(iProcFrom)) = &
-               BufferR_II(iVarWeight, iStart:iEnd)
+               Router%BufferSource_II(iVarWeight, iStart:iEnd)
           ! increment the offset
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
 
        ! put request on Source if needed
        if(DoPutRequestSource)then
-          call check_size(1, (/nBufferR/), iBuffer_I = iUnique_I)
+          call check_size(1, (/Router%nBufferSource/), iBuffer_I = iUnique_I)
           ! identify unique data location: some may have many images
           nData = 0
           nRecvCumSum = 0
-          do iProcTarget = 1, nProcTarget
-             iProcFrom = Router%iProcRankRouterCommTarget_I(iProcTarget)
+          do iProcTarget = 0, nProcTarget-1
+             iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
              iData  = -1
              do iBuffer = iStart, iEnd
-                if(nint(BufferR_II(iVarData, iBuffer))/=iData)then
-                   iData = nint(BufferR_II(iVarData, iBuffer))
+                if(nint(Router%BufferSource_II(iVarData, iBuffer))/=iData)then
+                   iData = nint(Router%BufferSource_II(iVarData, iBuffer))
                    nData = nData + 1
                    iUnique_I(nData) = iBuffer
                 end if
@@ -1874,97 +1888,14 @@ contains
           ! put these data locations
           call put_request_source(&
                nData, nDimSource,  &
-               BufferR_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
+               Router%BufferSource_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
                nIndexSource,&
-               nint(BufferR_II(1:nIndexSource, iUnique_I(1:nData))),&
+               nint(Router%BufferSource_II(1:nIndexSource, iUnique_I(1:nData))),&
                nAux, &
-               BufferR_II(iAuxStart:iAuxEnd, iUnique_I(1:nData)))
+               Router%BufferSource_II(iAuxStart:iAuxEnd, iUnique_I(1:nData)))
        end if
     end if
 
-  contains
-
-    subroutine check_size(nRank, nSize_I, &
-         Buffer_I, Buffer_II, iBuffer_I, iBuffer_II, DoBuffer_I)
-      ! check if size of a given array is sufficient;
-      ! can call the subroutine for only one array at a time
-      integer,                     intent(in)   :: nRank
-      integer,                     intent(in)   :: nSize_I(nRank)
-      real,   allocatable,optional,intent(inout)::  Buffer_I(:), Buffer_II(:,:)
-      integer,allocatable,optional,intent(inout):: iBuffer_I(:),iBuffer_II(:,:)
-      logical,allocatable,optional,intent(inout)::DoBuffer_I(:)
-
-      logical:: IsPresent_I(5)
-      character(len=*), parameter:: NameSub= &
-           'CON_router:set_router_from_target_2_stage:check_buffer'
-      !-----------------------------------------------------------------------!
-      IsPresent_I = (/&
-           present(  Buffer_I), present( Buffer_II), &
-           present( iBuffer_I), present(iBuffer_II), &
-           present(DoBuffer_I)/)
-
-      if(count(IsPresent_I) /= 1)&
-           call CON_stop(NameSub // ': incorrect call')
-
-      select case(nRank)
-      case(1)
-         if(present(Buffer_I))then
-            if(allocated(Buffer_I))then
-               if(any(ubound(Buffer_I) < nSize_I))then
-                  deallocate(Buffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(Buffer_I(nSize_I(1)))
-            RETURN
-         elseif(present(iBuffer_I))then
-            if(allocated(iBuffer_I))then
-               if(any(ubound(iBuffer_I) < nSize_I))then
-                  deallocate(iBuffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(iBuffer_I(nSize_I(1)))
-            RETURN
-         elseif(present(DoBuffer_I))then
-            if(allocated(DoBuffer_I))then
-               if(any(ubound(DoBuffer_I) < nSize_I))then
-                  deallocate(DoBuffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(DoBuffer_I(nSize_I(1)))
-            RETURN
-         end if
-      case(2)
-         if(present(Buffer_II))then
-            if(allocated(Buffer_II))then
-               if(any(ubound(Buffer_II) < nSize_I))then
-                  deallocate(Buffer_II)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(Buffer_II(nSize_I(1), nSize_I(2)))
-            RETURN
-         elseif(present(iBuffer_II))then
-            if(allocated(iBuffer_II))then
-               if(any(ubound(iBuffer_II) < nSize_I))then
-                  deallocate(iBuffer_II)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(iBuffer_II(nSize_I(1), nSize_I(2)))
-            RETURN
-         end if
-      case default
-         call CON_stop(NameSub // ': incorrect call')
-      end select
-    end subroutine check_size
   end subroutine set_router_from_target_2_stage
   !===========================================================================!
   subroutine set_router_from_source_2_stage(&
@@ -2089,9 +2020,9 @@ contains
     integer:: iIndex, iData, iBuffer, iImageTarget, iImageSource
     integer:: iProcSource, iProcTarget, iProcFrom, iProcTo
     ! send and recv buffers
-    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
+!    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! biffers' size
-    integer:: nBufferR, nBufferS, nBufferSMax, nVar
+    integer:: nBufferSMax, nVar
     ! offsets in buffers
     integer:: nSendCumSum, nRecvCumSum
     ! aux arrays to put data in BufferS_II in the correct order
@@ -2156,7 +2087,7 @@ contains
     Router%nRecv_P = 0
 
     ! reset sizes of send and recv buffers (BOTH may be used on this proc )
-    nBufferS = 0; nBufferR = 0
+    Router%nBufferSource = 0; Router%nBufferTarget = 0
 
     ! determine which optional actions should be taken
     DoGetScatterSource = present(get_scatter_source)
@@ -2221,7 +2152,8 @@ contains
        ! passed to interpolation subroutine
        call check_size(1, (/nCoordTarget/), Buffer_I = Coord_I)
        ! send buffer
-       call check_size(2, (/nVar, nBufferSMax/), Buffer_II = BufferS_II)
+       call check_size(2, (/nVar, nBufferSMax/), PBuffer_II = Router%BufferSource_II)
+       allocate(Router%BufferSource_II(nVar, nBufferSMax))
        ! aux array that holds indices of scatter locations
        call check_size(2, (/nIndexSource+1,nBufferSMax/), iBuffer_II=iCB_II)
        ! which processor holds a current image
@@ -2328,46 +2260,46 @@ contains
              ! fill the buffer to be sent
 
              ! indices on the target processor
-             BufferS_II(1:nIndexTarget, iBuffer) = &
+             Router%BufferSource_II(1:nIndexTarget, iBuffer) = &
                   iIndexPut_II(1:nIndexTarget,iImageTarget)
              ! corresponding interpolation weight
-             BufferS_II(iVarWeight, iBuffer) = &
+             Router%BufferSource_II(iVarWeight, iBuffer) = &
                   WeightTarget_I(iImageTarget) * WeightSource_I(iImageSource)
 
              if(DoPutScatterTarget)then
                 ! coordinates on Target
-                BufferS_II(iVarDimStart:iVarDimEnd, iBuffer)=&
+                Router%BufferSource_II(iVarDimStart:iVarDimEnd, iBuffer)=&
                      Coord_I(1:nDimTarget)
                 ! index of scatterd location for current source processor
-                BufferS_II(iVarData, iBuffer) = iData
+                Router%BufferSource_II(iVarData, iBuffer) = iData
              end if
           end do; end do
        end do
 
        ! all data locations are processed, save the actual size of the buffer
-       nBufferS = iBuffer
+       Router%nBufferSource = iBuffer
 
        ! fix the order of Buffer_I so contiguous chunks of data can be sent
        ! to the appropriate processors of Target,
        ! currently iOrderSend_I contains indices within these chunks
        nSendCumSum = 0
-       do iProcTarget = 1, nProcTarget
-          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
-          where(iProcImage_I(1:nBufferS) == iProcTo)&
-               iOrderSend_I(1:nBufferS) = iOrderSend_I(1:nBufferS)+nSendCumSum
+       do iProcTarget = 0, nProcTarget-1
+          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
+          where(iProcImage_I(1:Router%nBufferSource) == iProcTo)&
+               iOrderSend_I(1:Router%nBufferSource) = iOrderSend_I(1:Router%nBufferSource)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
        end do
 
        ! the correct order is found, apply it
-       BufferS_II(:,iOrderSend_I(1:nBufferS)) = BufferS_II(:,1:nBufferS)
-       iCB_II(:,    iOrderSend_I(1:nBufferS)) = iCB_II(:,    1:nBufferS)
+       Router%BufferSource_II(:,iOrderSend_I(1:Router%nBufferSource)) = Router%BufferSource_II(:,1:Router%nBufferSource)
+       iCB_II(:,    iOrderSend_I(1:Router%nBufferSource)) = iCB_II(:,    1:Router%nBufferSource)
 
        ! prepare containers for router information on Source side
        call check_router_allocation(Router, iProc, nProc)
        ! fill these containers
        nSendCumSum = 0
-       do iProcTarget = 1, nProcTarget
-          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
           iStart = nSendCumSum + 1
           iEnd = nSendCumSum + Router%nGet_P(iProcTo)
           Router%iGet_P( iProcTo) % &
@@ -2396,8 +2328,8 @@ contains
     ! post recvs
     nRequestR = 0
     if(is_proc(iCompTarget))then
-       do iProcSource = 1, nProcSource
-          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -2407,8 +2339,8 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(iCompSource))then
-       do iProcTarget = 1, nProcTarget
-          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -2426,17 +2358,17 @@ contains
     nRequestR = 0
     if(is_proc(iCompTarget))then
        ! size of the recv buffer
-       nBufferR = sum(Router%nRecv_P)
-       call check_size(2, (/nVar, nBufferR/), Buffer_II=BufferR_II)
-       BufferR_II = 0
+       Router%nBufferTarget = sum(Router%nRecv_P)
+       call check_size(2, (/nVar, Router%nBufferTarget/), PBuffer_II=Router%BufferTarget_II)
+       Router%BufferTarget_II = 0
 
        nRecvCumSum = 0
-       do iProcSource = 1, nProcSource
-          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
           if(Router%nRecv_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
-          call MPI_Irecv(BufferR_II(1,1+nRecvCumSum), &
+          call MPI_Irecv(Router%BufferTarget_II(1,1+nRecvCumSum), &
                Router%nRecv_P(iProcFrom)*nVar, MPI_REAL,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
@@ -2447,12 +2379,12 @@ contains
     nRequestS = 0
     if(is_proc(iCompSource))then
        nSendCumSum = 0
-       do iProcTarget = 1, nProcTarget
-          iProcTo = Router%iProcRankRouterCommTarget_I(iProcTarget)
+       do iProcTarget = 0, nProcTarget-1
+          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
           if(Router % nSend_P(iProcTo) == 0) &
                CYCLE
           nRequestS = nRequestS + 1
-          call MPI_Isend(BufferS_II(1,1+nSendCumSum), &
+          call MPI_Isend(Router%BufferSource_II(1,1+nSendCumSum), &
                Router%nSend_P(iProcTo)*nVar, MPI_REAL,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
@@ -2467,16 +2399,16 @@ contains
     if(is_proc(iCompTarget))then
 
        ! prepare containers for router information of Target side
-       do iProcSource = 1, nProcSource
-          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
           Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
        end do
        call check_router_allocation(Router, iProc, nProc)
 
        ! fill these containers
        nRecvCumSum = 0
-       do iProcSource = 1, nProcSource
-          iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
+       do iProcSource = 0, nProcSource-1
+          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
           if(iEnd < iStart) &
@@ -2486,10 +2418,10 @@ contains
                iCB_II(0,  1:Router%nPut_P(iProcFrom)) = 1
           Router%iPut_P(iProcFrom) % &
                iCB_II(1:nIndexTarget,  1:Router%nPut_P(iProcFrom)) = &
-               nint( BufferR_II(1:nIndexTarget, iStart:iEnd) )
+               nint( Router%BufferTarget_II(1:nIndexTarget, iStart:iEnd) )
           ! interpolation weights
           Router% Put_P(iProcFrom) % Weight_I(1:Router%nPut_P(iProcFrom)) = &
-               BufferR_II(1+nIndexTarget,  iStart:iEnd)
+               Router%BufferTarget_II(1+nIndexTarget,  iStart:iEnd)
           ! fill DoAdd_I
           Router%DoAdd_P(iProcFrom) % &
                DoAdd_I(1:Router%nPut_P(iProcFrom)) = .true.
@@ -2499,18 +2431,18 @@ contains
 
        ! put scatter coordinates
        if(DoPutScatterTarget)then
-          call check_size(1, (/nBufferR/), iBuffer_I = iUnique_I)
+          call check_size(1, (/Router%nBufferTarget/), iBuffer_I = iUnique_I)
           ! identify unique data location: some may have many images
           nData = 0 
           nRecvCumSum = 0
-          do iProcSource = 1, nProcSource
-             iProcFrom = Router%iProcRankRouterCommSource_I(iProcSource)
+          do iProcSource = 0, nProcSource-1
+             iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
              iData  = -1
              do iBuffer = iStart, iEnd
-                if(nint(BufferR_II(iVarData, iBuffer))/=iData)then
-                   iData = nint(BufferR_II(iVarData, iBuffer))
+                if(nint(Router%BufferTarget_II(iVarData, iBuffer))/=iData)then
+                   iData = nint(Router%BufferTarget_II(iVarData, iBuffer))
                    nData = nData + 1
                    iUnique_I(nData) = iBuffer
                 end if
@@ -2521,96 +2453,119 @@ contains
           ! put these data locations
           call put_scatter_target(&
                nData, nDimTarget, &
-               BufferR_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
+               Router%BufferTarget_II(iVarDimStart:iVarDimEnd, iUnique_I(1:nData)),&
                nIndexTarget, &
-               nint(BufferR_II(1:nIndexTarget, iUnique_I(1:nData))))
+               nint(Router%BufferTarget_II(1:nIndexTarget, iUnique_I(1:nData))))
        end if
     end if
 
-  contains
-
-    subroutine check_size(nRank, nSize_I, &
-         Buffer_I, Buffer_II, iBuffer_I, iBuffer_II, DoBuffer_I)
-      ! check if size of a given array is sufficient;
-      ! can call the subroutine for only one array at a time
-      integer,                     intent(in)   :: nRank
-      integer,                     intent(in)   :: nSize_I(nRank)
-      real,   allocatable,optional,intent(inout)::  Buffer_I(:), Buffer_II(:,:)
-      integer,allocatable,optional,intent(inout):: iBuffer_I(:),iBuffer_II(:,:)
-      logical,allocatable,optional,intent(inout)::DoBuffer_I(:)
-
-      logical:: IsPresent_I(5)
-      character(len=*), parameter:: NameSub= &
-           'CON_router:set_router_from_target_2_stage:check_buffer'
-      !-----------------------------------------------------------------------!
-      IsPresent_I = (/&
-           present(  Buffer_I), present( Buffer_II), &
-           present( iBuffer_I), present(iBuffer_II), &
-           present(DoBuffer_I)/)
-
-      if(count(IsPresent_I) /= 1)&
-           call CON_stop(NameSub // ': incorrect call')
-
-      select case(nRank)
-      case(1)
-         if(present(Buffer_I))then
-            if(allocated(Buffer_I))then
-               if(any(ubound(Buffer_I) < nSize_I))then
-                  deallocate(Buffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(Buffer_I(nSize_I(1)))
-            RETURN
-         elseif(present(iBuffer_I))then
-            if(allocated(iBuffer_I))then
-               if(any(ubound(iBuffer_I) < nSize_I))then
-                  deallocate(iBuffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(iBuffer_I(nSize_I(1)))
-            RETURN
-         elseif(present(DoBuffer_I))then
-            if(allocated(DoBuffer_I))then
-               if(any(ubound(DoBuffer_I) < nSize_I))then
-                  deallocate(DoBuffer_I)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(DoBuffer_I(nSize_I(1)))
-            RETURN
-         end if
-      case(2)
-         if(present(Buffer_II))then
-            if(allocated(Buffer_II))then
-               if(any(ubound(Buffer_II) < nSize_I))then
-                  deallocate(Buffer_II)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(Buffer_II(nSize_I(1), nSize_I(2)))
-            RETURN
-         elseif(present(iBuffer_II))then
-            if(allocated(iBuffer_II))then
-               if(any(ubound(iBuffer_II) < nSize_I))then
-                  deallocate(iBuffer_II)
-               else
-                  RETURN
-               end if
-            end if
-            allocate(iBuffer_II(nSize_I(1), nSize_I(2)))
-            RETURN
-         end if
-      case default
-         call CON_stop(NameSub // ': incorrect call')
-      end select
-    end subroutine check_size
   end subroutine set_router_from_source_2_stage
+!===============================================================!
+  subroutine check_size(nRank, nSize_I, &
+       Buffer_I, Buffer_II, PBuffer_I, PBuffer_II,&
+       iBuffer_I, iBuffer_II, DoBuffer_I)
+    ! check if size of a given array is sufficient;
+    ! can call the subroutine for only one array at a time
+    integer,                     intent(in)   :: nRank
+    integer,                     intent(in)   :: nSize_I(nRank)
+    real,   allocatable,optional,intent(inout)::  Buffer_I(:), Buffer_II(:,:)
+    real,   pointer,    optional,intent(inout):: PBuffer_I(:),PBuffer_II(:,:)
+    integer,allocatable,optional,intent(inout):: iBuffer_I(:),iBuffer_II(:,:)
+    logical,allocatable,optional,intent(inout)::DoBuffer_I(:)
+
+    logical:: IsPresent_I(7)
+    character(len=*), parameter:: NameSub= &
+         'CON_router:set_router_from_target_2_stage:check_buffer'
+    !-----------------------------------------------------------------------!
+    IsPresent_I = (/&
+         present(  Buffer_I), present( Buffer_II), &
+         present( PBuffer_I), present(PBuffer_II), &
+         present( iBuffer_I), present(iBuffer_II), &
+         present(DoBuffer_I)/)
+
+    if(count(IsPresent_I) /= 1)&
+         call CON_stop(NameSub // ': incorrect call')
+
+    select case(nRank)
+    case(1)
+       if(present(Buffer_I))then
+          if(allocated(Buffer_I))then
+             if(any(ubound(Buffer_I) < nSize_I))then
+                deallocate(Buffer_I)
+             else
+                RETURN
+             end if
+          end if
+          allocate(Buffer_I(nSize_I(1)))
+          RETURN
+       elseif(present(PBuffer_I))then
+          if(associated(PBuffer_I))then
+             if(any(ubound(PBuffer_I) < nSize_I))then
+                deallocate(PBuffer_I)
+             else
+                RETURN
+             end if
+          end if
+          allocate(PBuffer_I(nSize_I(1)))
+          RETURN
+       elseif(present(iBuffer_I))then
+          if(allocated(iBuffer_I))then
+             if(any(ubound(iBuffer_I) < nSize_I))then
+                deallocate(iBuffer_I)
+             else
+                RETURN
+             end if
+          end if
+          allocate(iBuffer_I(nSize_I(1)))
+          RETURN
+       elseif(present(DoBuffer_I))then
+          if(allocated(DoBuffer_I))then
+             if(any(ubound(DoBuffer_I) < nSize_I))then
+                deallocate(DoBuffer_I)
+             else
+                RETURN
+             end if
+          end if
+          allocate(DoBuffer_I(nSize_I(1)))
+          RETURN
+       end if
+    case(2)
+       if(present(Buffer_II))then
+          if(allocated(Buffer_II))then
+             if(any(ubound(Buffer_II) < nSize_I))then
+                deallocate(Buffer_II)
+             else
+                RETURN
+             end if
+          end if
+          allocate(Buffer_II(nSize_I(1), nSize_I(2)))
+          RETURN
+       elseif(present(iBuffer_II))then
+          if(allocated(iBuffer_II))then
+             if(any(ubound(iBuffer_II) < nSize_I))then
+                deallocate(iBuffer_II)
+             else
+                RETURN
+             end if
+          end if
+          allocate(iBuffer_II(nSize_I(1), nSize_I(2)))
+          RETURN
+       elseif(present(PBuffer_II))then
+          if(associated(PBuffer_II))then
+             if(any(ubound(PBuffer_II) < nSize_I))then
+                deallocate(PBuffer_II)
+             else
+                RETURN
+             end if
+          end if
+          allocate(PBuffer_II(nSize_I(1), nSize_I(2)))
+          RETURN
+       end if
+    case default
+       call CON_stop(NameSub // ': incorrect call')
+    end select
+  end subroutine check_size
+
 !====================END========================================!
 end Module CON_router
 
