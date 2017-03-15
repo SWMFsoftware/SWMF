@@ -1352,7 +1352,6 @@ contains
        interpolate_source, &
        ! subroutine to process the requested coordinates on Source side
        put_request_source)
-    use CON_world, ONLY: is_proc, n_proc
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
@@ -1434,17 +1433,16 @@ contains
     integer:: iIndex, iData, iBuffer, iImage
     integer:: iProcFrom, iProcTo
     ! send and recv buffers
-!    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! buffers' size
     integer:: nBufferSMax, nVar
     ! offsets in buffers
-    integer::nSendCumSum, nRecvCumSum
+    integer::nSendCumSum, nRecvCumSum, nRecvCumSumMy
     ! aux arrays to put data in BufferS_II in the correct order
     integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
     ! MPI-related variables
     integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
     integer:: nRequestR, nRequestS, iError, iTag=0
-    integer:: iProc, nProc, nProcTarget, nProcSource
+    integer:: iProc, nProc
     ! components ids
     integer:: iCompSource, iCompTarget
     ! interpolation-related variables
@@ -1492,8 +1490,6 @@ contains
 
     ! total number of processors and on components
     nProc       = Router%nProc
-    nProcTarget = n_proc(iCompTarget)
-    nProcSource = n_proc(iCompSource)
 
     ! reset basic coupling information
     Router%nGet_P  = 0
@@ -1726,6 +1722,10 @@ contains
     if(is_proc(iCompSource))then
        do iProcFrom = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
             i_proc_stride(iCompTarget)
+          !\
+          ! Do not wait for the message from self
+          !/
+          if(iProc==iProcFrom)CYCLE
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nSend_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -1737,6 +1737,13 @@ contains
     if(is_proc(iCompTarget))then
        do iProcTo =  i_proc0(iCompSource), i_proc_last(iCompSource), &
             i_proc_stride(iCompSource)
+          !\
+          !Copy, if needed
+          !/
+          if(iProc==iProcTo)then
+             Router % nSend_P(iProc) = Router % nRecv_P(iProc)
+             CYCLE
+          end if
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -1765,10 +1772,17 @@ contains
             i_proc_stride(iCompTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
-          nRequestR = nRequestR + 1
-          call MPI_Irecv(Router%BufferSource_II(1,1+nRecvCumSum), &
-               Router%nSend_P(iProcFrom)*nVar, MPI_REAL,&
-               iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
+          !\
+          ! Do not wait for the message from self
+          !/
+          if(iProc==iProcFrom)then
+             nRecvCumSumMy = nRecvCumSum
+          else
+             nRequestR = nRequestR + 1
+             call MPI_Irecv(Router%BufferSource_II(1,1+nRecvCumSum), &
+                  Router%nSend_P(iProcFrom)*nVar, MPI_REAL,&
+                  iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
+          end if
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
     end if
@@ -1781,10 +1795,15 @@ contains
             i_proc_stride(iCompSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
-          nRequestS = nRequestS + 1
-          call MPI_Isend(Router%BufferTarget_II(1,1+nSendCumSum), &
-               Router%nRecv_P(iProcTo)*nVar, MPI_REAL,&
-               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          if(iProcTo==iProc)then
+             Router%BufferSource_II(:,1+nRecvCumSumMy:nRecvCumSumMy+Router%nSend_P(iProc)) = &
+                  Router%BufferTarget_II(:,1+nSendCumSum:Router%nRecv_P(iProcTo))
+          else
+             nRequestS = nRequestS + 1
+             call MPI_Isend(Router%BufferTarget_II(1,1+nSendCumSum), &
+                  Router%nRecv_P(iProcTo)*nVar, MPI_REAL,&
+                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          end if
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
        end do
     end if
@@ -1792,7 +1811,9 @@ contains
     ! Finalize transfer                                                       
     call MPI_waitall(nRequestR, iRequestR_I, iStatus_II, iError)
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
-
+    !\
+    ! Stage 3 set semi-router for source
+    !/
     ! prcoess the data that has been received
     if(is_proc(iCompSource))then
        ! prepare containers for router information of Source side
@@ -1876,7 +1897,6 @@ contains
        interpolate_source, &
        ! subroutine to process the scatterd coordinates on Target side
        put_scatter_target)
-    use CON_world, ONLY: is_proc, n_proc
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
@@ -1984,13 +2004,13 @@ contains
     ! biffers' size
     integer:: nBufferSMax, nVar
     ! offsets in buffers
-    integer:: nSendCumSum, nRecvCumSum
+    integer:: nSendCumSum, nRecvCumSum, nRecvCumSumMy
     ! aux arrays to put data in BufferS_II in the correct order
     integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
     ! MPI-realated variables
     integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
     integer:: nRequestR, nRequestS, iError, iTag=0
-    integer:: iProc, nProc, nProcTarget, nProcSource
+    integer:: iProc, nProc
     ! components ids
     integer:: iCompSource, iCompTarget   
     !interpolation-interpolated variables
@@ -2037,9 +2057,6 @@ contains
 
     ! total number of processors
     nProc       = Router%nProc
-    nProcTarget = n_proc(iCompTarget)
-    nProcSource = n_proc(iCompSource)
-
     ! reset basic coupling information
     Router%nGet_P  = 0
     Router%nPut_P  = 0
@@ -2274,7 +2291,6 @@ contains
        end do
     end if
 
-
     !\
     ! Stage 2:
     ! send the router info to Target:
@@ -2290,6 +2306,10 @@ contains
     if(is_proc(iCompTarget))then
        do iProcFrom =  i_proc0(iCompSource), i_proc_last(iCompSource), &
             i_proc_stride(iCompSource)
+          !\
+          ! Do not expect the message from self
+          !/
+          if(iProcFrom==iProc)CYCLE
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -2301,6 +2321,10 @@ contains
     if(is_proc(iCompSource))then
        do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
             i_proc_stride(iCompTarget)
+          if(iProc==iProcTo)then
+             Router % nRecv_P(iProc) = Router % nSend_P(iProc)
+             CYCLE
+          end if
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -2327,11 +2351,15 @@ contains
             i_proc_stride(iCompSource)
           if(Router%nRecv_P(iProcFrom) == 0)&
                CYCLE
-          nRequestR = nRequestR + 1
-          call MPI_Irecv(Router%BufferTarget_II(1,1+nRecvCumSum), &
-               Router%nRecv_P(iProcFrom)*nVar, MPI_REAL,&
-               iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
-          nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
+          if(iProc==iProcFrom)then
+             nRecvCumSumMy = nRecvCumSum
+          else
+             nRequestR = nRequestR + 1
+             call MPI_Irecv(Router%BufferTarget_II(1,1+nRecvCumSum), &
+                  Router%nRecv_P(iProcFrom)*nVar, MPI_REAL,&
+                  iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
+          end if
+             nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
        end do
     end if
 
@@ -2343,10 +2371,17 @@ contains
             i_proc_stride(iCompTarget)
           if(Router % nSend_P(iProcTo) == 0) &
                CYCLE
-          nRequestS = nRequestS + 1
-          call MPI_Isend(Router%BufferSource_II(1,1+nSendCumSum), &
-               Router%nSend_P(iProcTo)*nVar, MPI_REAL,&
-               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          if(iProc==iProcTo)then
+             Router%BufferTarget_II(:,&
+                  1+nRecvCumSumMy:Router%nRecv_P(iProc)+nRecvCumSumMy) = &
+                  Router%BufferSource_II(:,&
+                  1+nSendCumSum:Router%nSend_P(iProc)+nSendCumSum)
+          else
+             nRequestS = nRequestS + 1
+             call MPI_Isend(Router%BufferSource_II(1,1+nSendCumSum), &
+                  Router%nSend_P(iProcTo)*nVar, MPI_REAL,&
+                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
+          end if
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
        end do
     end if
