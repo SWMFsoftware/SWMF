@@ -38,7 +38,7 @@ module ModUser
        NameTecUnit_V, NameIdlUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
        UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, &
        UnitTemperature_, UnitT_, UnitRhoU_, &
-       CellState_VI
+       FaceState_VI
   use ModNumConst,      ONLY: cRadToDeg, cTwoPi
   use ModConst,         ONLY: cBoltzmann, cProtonMass
   use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
@@ -1781,6 +1781,7 @@ contains
 
     use ModGeometry, ONLY: ExtraBc_, Xyz_DGB
     use ModBoundaryGeometry, ONLY: iBoundary_GB
+    use ModMultiFluid
 
     integer, intent(in):: iBlock
     integer:: i, j, k
@@ -1797,7 +1798,17 @@ contains
        ! Set internal state to "body" values with high ion temperature
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(iBoundary_GB(i,j,k,iBlock)==ExtraBc_)then
-             State_VGB(:,i,j,k,iBlock) = CellState_VI(:,body1_)
+             State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
+             ! Convert velocity to momentum
+             do iFluid = 1, nFluid
+                call select_fluid
+                State_VGB(iRhoUx,i,j,k,iBlock) = &
+                     FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUy,i,j,k,iBlock) = &
+                     FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUz,i,j,k,iBlock) = &
+                     FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+             end do
              ! Make sure the temperature is higher than the heliopause threshold
              State_VGB(p_,i,j,k,iBlock) = &
                   State_VGB(rho_,i,j,k,iBlock)*TempHelioPause*2
