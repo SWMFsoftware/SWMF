@@ -116,35 +116,37 @@ contains
 
     if(use_comp(SC_))then  
        ! Set pair SC-SP
+       call set_couple_var_info(SC_, SP_)
        call set_standard_grid_descriptor(SC_,GridDescriptor=&
             SC_GridDescriptor)
        call init_router(SC_GridDescriptor,SP_GridDescriptor,&
             RouterScSp)
-       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
-            RouterScSp%iCommUnion)
-       ScToSp_DD=transform_matrix(tNow,&                 
-            Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-       call set_couple_var_info(SC_, SP_)
-       call exchange_lines(SC_)
-       ! get the lower boundary of the domain in SC
-       ! and put this info to SP
+       if(RouterScSp%IsProc)then
+          call SC_synchronize_refinement(RouterScSp%iProc0Source,&
+               RouterScSp%iCommUnion)
+          ScToSp_DD=transform_matrix(tNow,&                 
+               Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+          call exchange_lines(SC_)
+       end if
+       ! put the lower boundary of the domain in SC to SP
        call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
     end if
 
     if(use_comp(IH_))then
        ! Set pair IH-SP
+       call set_couple_var_info(IH_, SP_)
        call set_standard_grid_descriptor(IH_,GridDescriptor=&
             IH_GridDescriptor)
        call init_router(IH_GridDescriptor,SP_GridDescriptor,&
             RouterIhSp)
-       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
-            RouterIhSp%iCommUnion)
-       IhToSp_DD=transform_matrix(tNow,&                 
-            Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-       call set_couple_var_info(IH_, SP_)
-       call exchange_lines(IH_)
+       if(RouterIhSp%IsProc)then
+          call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
+               RouterIhSp%iCommUnion)
+          IhToSp_DD=transform_matrix(tNow,&                 
+               Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+          call exchange_lines(IH_)
+       end if
     end if
-
   contains
     !================================================================    
     subroutine exchange_lines(iMHComp)
