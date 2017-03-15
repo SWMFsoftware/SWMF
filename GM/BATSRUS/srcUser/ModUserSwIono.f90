@@ -25,14 +25,12 @@ contains
   !=====================================================================
   subroutine user_init_session
 
-  use ModVarIndexes
-  use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
-  use ModNumConst, ONLY: cTiny
-  use ModMain, ONLY: body1_
-  integer :: iBoundary
-
+    use ModVarIndexes
+    use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
+    use ModNumConst, ONLY: cTiny
+    use ModMain, ONLY: body1_, xMinBc_, zMaxBc_
+    integer :: iBoundary
     !-------------------------------------------------------------------
-
     !\
     ! We are using this routine to initialize the arrays that control the
     ! default value for the inner body and hence the boundary condition.
@@ -53,11 +51,17 @@ contains
     ! used for only some outerboundary cases (fixed, for example) and
     ! are ignored for vary and other types.  We code them as in set_physics
     ! just to be safe.
-    do iBoundary = 1, 6
+    do iBoundary = xMinBc_, zMaxBc_
        FaceState_VI(rhosw_, iBoundary)  = SW_rho
        FaceState_VI(rhoion_, iBoundary) = cTiny*sw_rho
     end do
-    CellState_VI=FaceState_VI
+
+    CellState_VI=FaceState_VI(:,xMinBc_:zMaxBc_)
+    ! Convert velocity to momentum
+    do iBoundary=1,zMaxBc_
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
+    end do
 
   end subroutine user_init_session
 

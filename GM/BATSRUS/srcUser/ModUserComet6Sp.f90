@@ -176,10 +176,14 @@ contains
     FaceState_VI(rhoH2Op_,body1_) = BodyRho_I(H2Op_)
     FaceState_VI(rhoHp_  ,body1_) = cTiny
 
-    CellState_VI(SpeciesFirst_:SpeciesLast_,SolidBc_:ExtraBc_) = &
-         FaceState_VI(SpeciesFirst_:SpeciesLast_,SolidBc_:ExtraBc_)
     CellState_VI(SpeciesFirst_:SpeciesLast_,Coord1MinBc_:Coord3MaxBc_) = &
          FaceState_VI(SpeciesFirst_:SpeciesLast_,xMinBc_:zMaxBc_)
+    ! Convert velocity to momentum
+    do iBoundary=1,Coord3MaxBc_
+       CellState_VI(SpeciesFirst_:SpeciesLast_,iBoundary) = &
+            FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)&
+            *FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)
+    end do
 
     kin=kin_cc*1E-6
     Unr=Unr_km*1E3
@@ -204,6 +208,7 @@ contains
     use ModGeometry,ONLY: Xyz_DGB,R_BLK
     use ModNumConst
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitU_
+    use ModMain, ONLY: Coord1MinBc_
 
     integer, intent(in) :: iBlock
 
@@ -214,7 +219,7 @@ contains
 
     if(.not.restart)then
        do iVar=1,nVar
-          State_VGB(iVar,:,:,:,iBlock)   = CellState_VI(iVar,1)
+          State_VGB(iVar,:,:,:,iBlock)   = CellState_VI(iVar,Coord1MinBc_)
        end do
     end if
 

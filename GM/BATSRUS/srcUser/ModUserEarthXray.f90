@@ -40,7 +40,7 @@ contains
     use ModVarIndexes
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
     use ModMain, ONLY: body1_
-    use BATL_size, ONLY: nIJK
+    use BATL_size, ONLY: nIJK,nDim
     use ModBlockData, ONLY: MaxBlockData
     integer :: iBoundary
 
@@ -69,11 +69,17 @@ contains
     ! used for only some outerboundary cases (fixed, for example) and
     ! are ignored for vary and other types.  We code them as in set_physics
     ! just to be safe.
-    do iBoundary=1,6
+    do iBoundary=1,2*nDim
        FaceState_VI(rhosw_, iBoundary)  = SW_rho
        FaceState_VI(rhoion_, iBoundary) = cTiny*sw_rho
     end do
-    CellState_VI=FaceState_VI
+
+    CellState_VI = FaceState_VI(:,xMinBc_:zMaxBc_)
+    ! Convert velocity to momentum
+    do iBoundary=1,2*nDim
+       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
+            FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
+    end do
 
   end subroutine user_init_session
 

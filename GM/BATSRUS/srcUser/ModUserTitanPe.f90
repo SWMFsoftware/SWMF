@@ -978,6 +978,7 @@ contains
 
   !==============================================================================
   subroutine user_init_session
+    use ModSize, ONLY: nDim
     use ModMain, ONLY: Body1_, xMinBc_, zMaxBc_
     use ModPhysics
     use ModVarIndexes, ONLY: ScalarFirst_,ScalarLast_, &
@@ -1019,12 +1020,12 @@ contains
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(SpeciesFirst_:SpeciesLast_,body1_) = BodyRhoSpecies_I
 
-    CellState_VI(:,body1_:zMaxBc_)=FaceState_VI(:,body1_:zMaxBc_)
-    do iBoundary=body1_,zMaxBc_  
+    CellState_VI = FaceState_VI(:,xMinBc_:zMaxBc_)
+    do iBoundary=1,2*nDim  
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
-    write(*,*)'CellState_VI, body1_=',CellState_VI(:,body1_)
+
     write(*,*)'CellState_VI, 6=',CellState_VI(:,6)
     write(*,*)'CellState_VI, 1=',CellState_VI(:,1)    
     write(*,*)'sw_pi=', sw_pi, '  sw_pe=',sw_pe 
@@ -1039,11 +1040,12 @@ contains
   subroutine user_set_ICs(iBlock)
 
     use ModProcMH, ONLY : iProc
-    use ModMain, ONLY: Body1_,ProcTest,itest,jtest,ktest,BLKtest
+    use ModMain, ONLY: Body1_,ProcTest,itest,jtest,ktest,BLKtest,Coord1MinBc_
     use ModAdvance
     use ModGeometry, ONLY : x2,y2,z2,Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
+    use ModMultiFluid
 
     integer, intent(in) :: iBlock
 
@@ -1064,9 +1066,19 @@ contains
 
        do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
           if (R_BLK(i,j,k,iBlock)< Rbody) then
-             State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
+             State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
+             ! Convert velocity to momentum                                  
+             do iFluid = 1, nFluid
+                call select_fluid
+                State_VGB(iRhoUx,i,j,k,iBlock) = &
+                     FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUy,i,j,k,iBlock) = &
+                     FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUz,i,j,k,iBlock) = &
+                     FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+             end do
           else
-             State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
+             State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MinBc_)
              State_VGB(Bx_:Bz_,i,j,k,iBlock)=0.0
           end if
        end do;end do; end do;

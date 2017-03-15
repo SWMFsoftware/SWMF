@@ -222,7 +222,7 @@ contains
 
     !    use ModAdvance,  ONLY: Source_VC,Energy_
     !    use ModNumConst, ONLY: cZero
-    integer :: i, j, k,iFluid,n
+    integer :: i, j, k,n
     real    ::vdtmin
     real :: inv_rho,inv_rho2,uu2,Productrate,kTi,kTe
     real    :: NumDens, InvNumDens
@@ -828,11 +828,11 @@ contains
        FaceState_VI(P_,body1_)=BodyP_I(1)*(1+ElectronPressureRatio)
     end if
 
-    CellState_VI = FaceState_VI
-
-    do iBoundary=body1_,Coord3MaxBc_  
+    CellState_VI(:,Coord1MinBc_:Coord3MaxBc_)=FaceState_VI(:,xMinBc_:zMaxBc_)
+    ! Convert velocity to momentum
+    do iBoundary=Coord1MinBc_, Coord3MaxBc_
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
-            FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)       
+            FaceState_VI(Ux_:Uz_,iBoundary+6)*FaceState_VI(rho_,iBoundary+6)
     end do
 
     if(.not.allocated(nDenNuSpecies_CBI))then
@@ -1441,7 +1441,7 @@ contains
 
 
     case default
-       call stop_mpi('unknow solar condition '//SolarCond)
+       call stop_mpi('unknown solar condition '//SolarCond)
     end select
 
 
@@ -1609,7 +1609,7 @@ contains
     integer, intent(in) :: iBlock
 
     real ::CosSZA
-    integer :: i,j,k,iFluid
+    integer :: i,j,k
     real, dimension(nIonFluid)::Temp_I
     character (len=*), parameter :: NameSub = 'user_set_ics'
     logical:: DoTest, DoTestMe
@@ -1657,13 +1657,23 @@ contains
           cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
-          State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
+          State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
+          ! Convert velocity to momentum                                  
+          do iFluid = 1, nFluid
+             call select_fluid
+             State_VGB(iRhoUx,i,j,k,iBlock) = &
+                  FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUy,i,j,k,iBlock) = &
+                  FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUz,i,j,k,iBlock) = &
+                  FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+          end do
           State_VGB(OpRho_,i,j,k,iBlock)= &
-               CellState_VI(OpRho_,body1_)*cosSZA
+               FaceState_VI(OpRho_,body1_)*cosSZA
           State_VGB(O2pRho_,i,j,k,iBlock)= &
-               CellState_VI(O2pRho_,body1_)*sqrt(cosSZA)
+               FaceState_VI(O2pRho_,body1_)*sqrt(cosSZA)
           State_VGB(CO2pRho_,i,j,k,iBlock)= &
-               CellState_VI(CO2pRho_,body1_)*cosSZA
+               FaceState_VI(CO2pRho_,body1_)*cosSZA
           State_VGB(rho_,i,j,k,iBlock)  = &
                sum( State_VGB(iRho_I(2:nFluid),i,j,k,iBlock))
 
@@ -1677,30 +1687,10 @@ contains
                   max(SW_p,sum(State_VGB(iPIon_I,i,j,k,iBlock)))
           end if
        else
-
-          State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
-
-          !write(*,*)'CellState_VI(HpRho_,1_)=',CellState_VI(HpRho_,1)
-          !write(*,*)'State_VGB(HpRho_,i,j,k,iBlock)=',State_VGB(HpRho_,i,j,k,iBlock)
-!!$           write(*,*)'State_VGB(rho_,i,j,k,iBlock)=',State_VGB(rho_,i,j,k,iBlock)
-          State_VGB(Ux_:bz_,i,j,k,iBlock)   =0.0
+          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MinBc_)
+          State_VGB(Ux_:bz_,i,j,k,iBlock) = 0.0
        end if
-
-
     end do;end do; end do;
-
-    if(DoTestMe)then
-       write(*,*)'!!!!in set_ics 0 '
-       write(*,*)'State_VGB(iRhoIon_I)=',State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKtest)
-       write(*,*)'State_VGB(iPIon_I(1:nIonFluid),i,j,k,iBlock)==',State_VGB(iPIon_I(1:nIonFluid),iTest,jTest,kTest,BLKtest)
-       write(*,*)'sum(State_VGB(iRhoIon_I))=',sum(State_VGB(iRhoIon_I,iTest,jTest,kTest,BLKtest))
-       write(*,*)'State_VGB(Rho_)=',State_VGB(Rho_,iTest,jTest,kTest,BLKtest)
-    end if
-
-
-!!$    if(DoTestMe)&
-!!$         write(*,*)'state_VGB(body1_)=',&
-!!$         CellState_VI(:,body1_),'cell_state_VI(:,1)=',CellState_VI(:,1)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        State_VGB(iRhoUx_I,i,j,k,iBlock) = 0.0

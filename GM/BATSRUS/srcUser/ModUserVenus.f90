@@ -635,6 +635,7 @@ contains
 
   !============================================================================
   subroutine user_init_session
+    use ModSize, ONLY: nDim
     use ModMain
     use ModPhysics
     use ModVarIndexes
@@ -658,8 +659,9 @@ contains
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
     FaceState_VI(P_,body1_)=BodyP_I(1)
 
-    CellState_VI = FaceState_VI
-    do iBoundary=body1_,Coord3MaxBc_  
+    CellState_VI = FaceState_VI(:,xMinBc_:zMaxBc_)
+    ! Convert velocity to momentum 
+    do iBoundary=1,2*nDim
        CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
@@ -678,6 +680,7 @@ contains
     use ModGeometry, ONLY :Xyz_DGB,R_BLK,true_cell
     use ModIO, ONLY : restart
     use ModPhysics
+    use ModMultiFluid
 
     integer, intent(in) :: iBlock
 
@@ -745,17 +748,28 @@ contains
              cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                   Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                   1.0e-3
-             State_VGB(:,i,j,k,iBlock)   =  CellState_VI(:,body1_)
+
+             State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
+             ! Convert velocity to momentum                                
+             do iFluid = 1, nFluid
+                call select_fluid
+                State_VGB(iRhoUx,i,j,k,iBlock) = &
+                     FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUy,i,j,k,iBlock) = &
+                     FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+                State_VGB(iRhoUz,i,j,k,iBlock) = &
+                     FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+             end do
              !           State_VGB(rhoOp_,i,j,k,iBlock)= 0.0
              !           State_VGB(rhoO2p_,i,j,k,iBlock)= 0.0
              !           State_VGB(rhoCO2p_,i,j,k,iBlock)= 0.0
 
              State_VGB(rhoOp_,i,j,k,iBlock)= &
-                  CellState_VI(rhoOp_,body1_)*cosSZA
+                  FaceState_VI(rhoOp_,body1_)*cosSZA
              State_VGB(rhoO2p_,i,j,k,iBlock)= &
-                  CellState_VI(rhoOp_,body1_)*sqrt(cosSZA)
+                  FaceState_VI(rhoOp_,body1_)*sqrt(cosSZA)
              State_VGB(rhoCO2p_,i,j,k,iBlock)= &
-                  CellState_VI(rhoOp_,body1_)*cosSZA
+                  FaceState_VI(rhoOp_,body1_)*cosSZA
              State_VGB(rho_,i,j,k,iBlock)  = &
                   sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
              State_VGB(P_,i,j,k,iBlock) = max(SW_p, &
@@ -763,16 +777,12 @@ contains
                   /MassSpecies_I(1:MaxSpecies))*kTp0 )
 
           else
-             State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,1)
-             State_VGB(Bx_:Bz_,i,j,k,iBlock)   = 0.0
-             State_VGB(Ux_:Uz_,i,j,k,iBlock)   = 0.0
+             State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Coord1MinBc_)
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+             State_VGB(Ux_:Uz_,i,j,k,iBlock) = 0.0
 
           end if
        end do;end do; end do;
-
-       if(1==2.and.iBlock==43)&
-            write(*,*)'state_VGB(body1_)=',&
-            CellState_VI(:,body1_),'(1)=',CellState_VI(:,1)
 
        do k=1,nK; do j=1,nJ; do i=1,nI
           

@@ -4071,7 +4071,7 @@ contains
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, UnitRho_, &
-         UnitRhoU_, UnitP_, CellState_VI, UnitU_
+         UnitRhoU_, UnitP_, FaceState_VI, UnitU_
     use ModGeometry, ONLY: true_cell
 
     integer, intent(in) :: iBlock
@@ -4087,7 +4087,17 @@ contains
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        if (.not.true_cell(i,j,k,iBlock)) then
-          State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Body1_)
+          State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,Body1_)
+          ! Convert velocity to momentum                                     
+          do iFluid = 1, nFluid
+             call select_fluid
+             State_VGB(iRhoUx,i,j,k,iBlock) = &
+                  FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUy,i,j,k,iBlock) = &
+                  FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUz,i,j,k,iBlock) = &
+                  FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+          end do
        else
           call user_preset_conditions(i,j,k,iBlock)
        end if
