@@ -14,11 +14,12 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_get_log_var,                &
-       IMPLEMENTED5 => user_set_cell_boundary,          &
-       IMPLEMENTED6 => user_set_resistivity,            &
-       IMPLEMENTED7 => user_calc_sources,               &
-       IMPLEMENTED8 => user_init_point_implicit,        &
-       IMPLEMENTED9 => user_get_b0
+       IMPLEMENTED5 => user_set_plot_var,               &
+       IMPLEMENTED6 => user_set_cell_boundary,          &
+       IMPLEMENTED7 => user_set_resistivity,            &
+       IMPLEMENTED8 => user_calc_sources,               &
+       IMPLEMENTED9 => user_init_point_implicit,        &
+       IMPLEMENTED10=> user_get_b0
 
   include 'user_module.h' !list of public methods
 
@@ -522,6 +523,109 @@ contains
 
   !============================================================================
 
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+    use ModAdvance,        ONLY: UseElectronPressure, UseAnisoPressure, &
+         State_VGB, Source_VC
+    use ModB0,             ONLY: set_b0_face
+    use ModChromosphere,   ONLY: DoExtendTransitionRegion, extension_factor, &
+         TeSi_C, get_tesi_c
+    use ModCoronalHeating, ONLY: IsNewBlockAlfven, CoronalHeating_C, &
+         apportion_coronal_heating, get_block_heating, get_wave_reflection
+    use ModFaceValue,      ONLY: calc_face_value
+    use ModMultiFluid,     ONLY: IonLast_
+    use ModPhysics,        ONLY: No2Si_V, UnitT_, UnitEnergyDens_
+    use ModVarIndexes,     ONLY: WaveFirst_, WaveLast_
+
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
+
+    integer :: i, j, k
+    real :: QPerQtotal_I(IonFirst_:IonLast_)
+    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QePerQtotal
+
+    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+
+    IsFound = .true.
+
+    select case(NameVar)
+    case('refl')
+       Source_VC(WaveFirst_:WaveLast_,:,:,:) = 0.0
+       call set_b0_face(iBlock)
+       call calc_face_value(.false., iBlock)
+       IsNewBlockAlfven = .true.
+       call get_wave_reflection(iBlock)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          PlotVar_G(i,j,k) = Source_VC(WaveLast_,i,j,k) &
+               /sqrt(State_VGB(WaveFirst_,i,j,k,iBlock) &
+               *     State_VGB(WaveLast_,i,j,k,iBlock))/No2Si_V(UnitT_)
+          Source_VC(WaveFirst_:WaveLast_,i,j,k) = 0.0
+       end do; end do; end do
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+    case('qheat')
+       call get_block_heating(iBlock)
+       if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
+               CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+          PlotVar_G(i,j,k) = CoronalHeating_C(i,j,k) &
+               *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       end do; end do; end do
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
+    case('qebyq', 'qparbyq')
+       ! Not yet generalized to multi-fluid
+       if(UseElectronPressure)then
+          call set_b0_face(iBlock)
+          call calc_face_value(.false., iBlock)
+          call get_block_heating(iBlock)
+          if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
+                  CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
+             call apportion_coronal_heating(i, j, k, iBlock, &
+                  CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
+                  QePerQtotal)
+             select case(NameVar)
+             case('qebyq')
+                PlotVar_G(i,j,k) = QePerQtotal
+             case('qparbyq')
+                if(UseAnisoPressure) &
+                     PlotVar_G(i,j,k) = QparPerQtotal_I(IonFirst_)
+             end select
+          end do; end do; end do
+       else
+          PlotVar_G(i,j,k) = 0.0
+       end if
+       NameIdlUnit = 'J/m^3/s'
+       NameTecUnit = 'J/m^3/s'
+
+    case default
+       IsFound = .false.
+    end select
+
+    UsePlotVarBody = .false.
+    PlotVarBody    = 0.0
+
+  end subroutine user_set_plot_var
+
+  !============================================================================
+
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
@@ -734,7 +838,7 @@ contains
                 ! u_ghost = 2*u_par - u_cell                  
                 u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
                 u_D = u_D + Urot_D
-                
+
                 State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                      u_D*State_VGB(iRho,i,j,k,iBlock)
              end do
@@ -995,7 +1099,7 @@ contains
 
   end subroutine user_init_point_implicit
 
- !===================================================================== 
+  !===================================================================== 
 
   subroutine user_get_b0(x, y, z, B0_D)
 
