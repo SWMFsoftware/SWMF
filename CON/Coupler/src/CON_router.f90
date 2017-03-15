@@ -68,11 +68,6 @@ Module CON_router
      integer::iCommUnion,iProc0Source,iProc0Target
      integer,dimension(:),pointer::iTranslated_P
 !\end{verbatim}
-!PE ranks in router's communicator are used for communications  !
-!\begin{verbatim}
-     integer,dimension(:),pointer::iProcRankRouterCommSource_P
-     integer,dimension(:),pointer::iProcRankRouterCommTarget_P
-!\end{verbatim}
 !As the default we use iCB indexes to construct the router,     !
 !hence the grid point is characterized by the                   !
 !GridDescriptor%nDim grid point indexes plus one more index for !
@@ -142,8 +137,6 @@ contains
     integer::nProc
     integer::iProc0Source,iProc0Target,iProcUnion
     integer::iGroupUnion,iGroupSource,iGroupTarget, iGroup
-    integer, allocatable:: iProc_I(:)
-    integer:: iCompTarget, iCompSource
     !---------------------------------------------------------------!
     !Check if the grids are both local or both global               !
 
@@ -250,39 +243,6 @@ contains
        call CON_stop(&
             'Do not couple a Local grid with a global one')
     end if
-
-
-    ! translate local ranks of PEs (within its component)
-    ! to ranks in the global communicator
-    
-    ! identify components
-    iCompSource = compid_grid(GridDescriptorSource%DD%Ptr)
-    iCompTarget = compid_grid(GridDescriptorTarget%DD%Ptr)
-
-    ! containers for global ranks
-    allocate(Router%iProcRankRouterCommTarget_P(0:n_proc(iCompTarget)-1))
-    allocate(Router%iProcRankRouterCommSource_P(0:n_proc(iCompSource)-1))
-    
-    allocate(iProc_I(0:n_proc()-1))
-    call check_allocate(iError,'iAux_P')
-    do iPE=0,n_proc()-1
-       iProc_I(iPE)=iPE
-    end do
-
-    ! group associated with router's communicator
-    call MPI_Comm_group(Router % iComm, iGroup, iError)
-    ! translates ranks of the Source component
-    call MPI_Group_translate_ranks(&
-         i_group(iCompSource), n_proc(iCompSource), iProc_I, &
-         iGroup, Router%iProcRankRouterCommSource_P, iError)
-    ! translates ranks of the Target component
-    call MPI_Group_translate_ranks(&
-         i_group(iCompTarget), n_proc(iCompTarget), iProc_I, &
-         iGroup, Router%iProcRankRouterCommTarget_P, iError)
-
-    ! free memory
-    deallocate(iProc_I)
-
 
     Router%nIndexesSource=ndim_grid(&
        GridDescriptorSource%DD%Ptr)+1
@@ -1472,7 +1432,7 @@ contains
     integer:: nData
     ! loop variables
     integer:: iIndex, iData, iBuffer, iImage
-    integer:: iProcSource, iProcTarget, iProcFrom, iProcTo
+    integer:: iProcFrom, iProcTo
     ! send and recv buffers
 !    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! buffers' size
@@ -1705,8 +1665,8 @@ contains
        ! to the appropriate processors of Source,
        ! currently iOrderSend_I contains indices WITHIN these chunks
        nSendCumSum = 0
-       do iProcSource = 0, nProcSource-1
-          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcTo = i_proc0(iCompSource), i_proc_last(iCompSource), &
+               i_proc_stride(iCompSource)
           where(iProcImage_I(1:Router%nBufferTarget) == iProcTo)&
                iOrderSend_I(1:Router%nBufferTarget)= iOrderSend_I(1:Router%nBufferTarget)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
@@ -1722,8 +1682,7 @@ contains
        call check_router_allocation(Router,iProc,nProc)
        ! fill these containers
        nRecvCumSum = 0
-       do iProcSource = 0, nProcSource-1
-          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcTo =  i_proc0(iCompSource), i_proc_last(iCompSource), i_proc_stride(iCompSource)
           iStart = nRecvCumSum + 1
           iEnd = nRecvCumSum + Router%nPut_P(iProcTo)
           Router%iPut_P( iProcTo) % &
@@ -1764,8 +1723,7 @@ contains
     ! post recvs
     nRequestR = 0
     if(is_proc(iCompSource))then
-       do iProcTarget = 0, nProcTarget-1
-          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcFrom = i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nSend_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -1775,8 +1733,7 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(iCompTarget))then
-       do iProcSource = 0, nProcSource-1
-          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcTo =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nRecv_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -1801,8 +1758,7 @@ contains
        Router%BufferSource_II = 0
 
        nRecvCumSum = 0
-       do iProcTarget = 0, nProcTarget-1
-          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcFrom =  i_proc0(iCompTarget), i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
@@ -1817,8 +1773,7 @@ contains
     nRequestS = 0
     if(is_proc(iCompTarget))then
        nSendCumSum = 0
-       do iProcSource = 0, nProcSource-1
-          iProcTo = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcTo =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
           nRequestS = nRequestS + 1
@@ -1836,16 +1791,14 @@ contains
     ! prcoess the data that has been received
     if(is_proc(iCompSource))then
        ! prepare containers for router information of Source side
-       do iProcTarget = 0, nProcTarget-1
-          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcFrom = i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
        end do
        call check_router_allocation(Router,iProc,nProc)
        
        ! fill these containers
        nRecvCumSum = 0
-       do iProcTarget = 0, nProcTarget-1
-          iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcFrom =  i_proc0(iCompTarget), i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
           if(iEnd < iStart)&
@@ -1869,8 +1822,7 @@ contains
           ! identify unique data location: some may have many images
           nData = 0
           nRecvCumSum = 0
-          do iProcTarget = 0, nProcTarget-1
-             iProcFrom = Router%iProcRankRouterCommTarget_P(iProcTarget)
+          do iProcFrom =  i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
              iData  = -1
@@ -2018,7 +1970,7 @@ contains
     integer:: nData 
     ! loop variables
     integer:: iIndex, iData, iBuffer, iImageTarget, iImageSource
-    integer:: iProcSource, iProcTarget, iProcFrom, iProcTo
+    integer:: iProcFrom, iProcTo
     ! send and recv buffers
 !    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! biffers' size
@@ -2283,8 +2235,7 @@ contains
        ! to the appropriate processors of Target,
        ! currently iOrderSend_I contains indices within these chunks
        nSendCumSum = 0
-       do iProcTarget = 0, nProcTarget-1
-          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcTo =  i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           where(iProcImage_I(1:Router%nBufferSource) == iProcTo)&
                iOrderSend_I(1:Router%nBufferSource) = iOrderSend_I(1:Router%nBufferSource)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
@@ -2298,8 +2249,7 @@ contains
        call check_router_allocation(Router, iProc, nProc)
        ! fill these containers
        nSendCumSum = 0
-       do iProcTarget = 0, nProcTarget-1
-          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcTo =  i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           iStart = nSendCumSum + 1
           iEnd = nSendCumSum + Router%nGet_P(iProcTo)
           Router%iGet_P( iProcTo) % &
@@ -2328,8 +2278,7 @@ contains
     ! post recvs
     nRequestR = 0
     if(is_proc(iCompTarget))then
-       do iProcSource = 0, nProcSource-1
-          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcFrom =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           nRequestR = nRequestR + 1
           call MPI_Irecv(Router % nRecv_P(iProcFrom), 1, MPI_INTEGER,&
                iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
@@ -2339,8 +2288,7 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(iCompSource))then
-       do iProcTarget = 0, nProcTarget-1
-          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcTo =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           nRequestS = nRequestS + 1
           call MPI_Isend(Router % nSend_P(iProcTo), 1, MPI_INTEGER,&
                iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
@@ -2363,8 +2311,7 @@ contains
        Router%BufferTarget_II = 0
 
        nRecvCumSum = 0
-       do iProcSource = 0, nProcSource-1
-          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcFrom = i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           if(Router%nRecv_P(iProcFrom) == 0)&
                CYCLE
           nRequestR = nRequestR + 1
@@ -2379,8 +2326,7 @@ contains
     nRequestS = 0
     if(is_proc(iCompSource))then
        nSendCumSum = 0
-       do iProcTarget = 0, nProcTarget-1
-          iProcTo = Router%iProcRankRouterCommTarget_P(iProcTarget)
+       do iProcTo =  i_proc0(iCompTarget),i_proc_last(iCompTarget),i_proc_stride(iCompTarget)
           if(Router % nSend_P(iProcTo) == 0) &
                CYCLE
           nRequestS = nRequestS + 1
@@ -2399,16 +2345,14 @@ contains
     if(is_proc(iCompTarget))then
 
        ! prepare containers for router information of Target side
-       do iProcSource = 0, nProcSource-1
-          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcFrom =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
        end do
        call check_router_allocation(Router, iProc, nProc)
 
        ! fill these containers
        nRecvCumSum = 0
-       do iProcSource = 0, nProcSource-1
-          iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
+       do iProcFrom =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
           if(iEnd < iStart) &
@@ -2435,8 +2379,7 @@ contains
           ! identify unique data location: some may have many images
           nData = 0 
           nRecvCumSum = 0
-          do iProcSource = 0, nProcSource-1
-             iProcFrom = Router%iProcRankRouterCommSource_P(iProcSource)
+          do iProcFrom =  i_proc0(iCompSource),i_proc_last(iCompSource),i_proc_stride(iCompSource)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
              iData  = -1
