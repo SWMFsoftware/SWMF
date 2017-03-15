@@ -1335,7 +1335,59 @@ contains
     if(UseMask)nullify(Used_I)
   end subroutine construct_router_from_source
   !===========================================================================!
-  !===========================================================================!
+  subroutine get_target_interface_points(&
+       ! the GridDescriptor for the Target component
+       GridDescriptorTarget,  &
+       !Logical function which allows to skip the block if there is no !
+       !interface points in it. Optional, if not present then all the  !
+       !blocks are checked for the presence of the interface points    !
+       is_interface_block,    &
+       !The subroutine which defines if the grid point is inside the   !
+       !interface layer. Optional, if not present, then all the grid   !
+       !points (at the target grid) are considered as the interface    !
+       !layer points 
+       interface_point_coords,&
+       nData, &
+       Coord_II, &
+       iIndex_II, &
+       nAux, &
+       Aux_VI)
+    interface
+       logical function is_interface_block(lGlobalNode)
+         implicit none
+         integer,intent(in)::lGlobalNode 
+       end function is_interface_block
+       subroutine interface_point_coords(&
+            GridDescriptor,&
+            lGlobalTreeNode,&
+            nDim,&
+            Xyz_D,&
+            nIndexes,&
+            iIndex_I,&
+            IsInterfacePoint)
+         use CON_grid_descriptor
+         implicit none
+         type(GridDescriptorType),intent(in)::GridDescriptor
+         integer,intent(in)::lGlobalTreeNode,nIndexes
+         logical,intent(out)::IsInterfacePoint
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
+         integer,intent(inout)::iIndex_I(nIndexes)
+       end subroutine interface_point_coords
+    end interface
+    type(GridDescriptorType),intent(in)::GridDescriptorTarget
+    ! number of data entries
+    integer,              intent(out):: nData
+    ! data locations themselves
+    real,    allocatable, intent(out):: Coord_II(:,:)
+    ! indices to access the data locations on Target
+    integer, allocatable, intent(out):: iIndex_II(:,:)
+    ! number of auxilary variables
+    integer,              intent(out):: nAux
+    ! auxilary variables themselves
+    real,    allocatable, intent(out):: Aux_VI(:,:)
+  end subroutine get_target_interface_points
+  !===============================================
   subroutine set_router_from_target_2_stage(&
        ! the GridDescriptor for the Source component
        GridDescriptorSource, &
@@ -1343,6 +1395,15 @@ contains
        GridDescriptorTarget, &
        ! the router to be set
        Router, &
+       !Logical function which allows to skip the block if there is no !
+       !interface points in it. Optional, if not present then all the  !
+       !blocks are checked for the presence of the interface points    !
+       is_interface_block,&
+       !The subroutine which defines if the grid point is inside the   !
+       !interface layer. Optional, if not present, then all the grid   !
+       !points (at the target grid) are considered as the interface    !
+       !layer points                                                   !     
+       interface_point_coords, &
        ! the subroutine that provides the location where data is needed
        ! on Target; this information may be as generic as needed
        get_request_target, &
@@ -1356,8 +1417,29 @@ contains
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
     type(RouterType),        intent(inout):: Router
-
+    !INPUT ARGUMENTS:
     interface
+       logical function is_interface_block(lGlobalNode)
+         implicit none
+         integer,intent(in)::lGlobalNode 
+       end function is_interface_block
+       subroutine interface_point_coords(&
+                  GridDescriptor,&
+                  lGlobalTreeNode,&
+                  nDim,&
+                  Xyz_D,&
+                  nIndexes,&
+                  iIndex_I,&
+                  IsInterfacePoint)
+         use CON_grid_descriptor
+         implicit none
+         type(GridDescriptorType),intent(in)::GridDescriptor
+         integer,intent(in)::lGlobalTreeNode,nIndexes
+         logical,intent(out)::IsInterfacePoint
+         integer,intent(in)::nDim
+         real,intent(inout)::Xyz_D(nDim)
+         integer,intent(inout)::iIndex_I(nIndexes)
+       end subroutine interface_point_coords
        subroutine get_request_target(&
             nData, Coord_II, iIndex_II, nAux, Aux_VI)
          ! this subroutine returns info that identifies location of the data
@@ -1418,6 +1500,8 @@ contains
          real,    intent(in):: Aux_VI(nAux, nData)
        end subroutine put_request_source
     end interface
+    optional:: is_interface_block
+    optional:: interface_point_coords
     optional:: get_request_target
     optional:: transform
     optional:: interpolate_source
@@ -1505,9 +1589,6 @@ contains
     DoTransform        = present(transform)
     DoInterpolateSource= present(interpolate_source)
     DoPutRequestSource = present(put_request_source)
-    if(.not.DoGetRequestTarget .or. .not. DoInterpolateSource)&
-         call CON_stop(NameSub//': this type of call is not implemented yet')
-
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
@@ -1539,10 +1620,22 @@ contains
     ! how much data is to be requested from them
     !/
     if(is_proc(iCompTarget))then
-       ! get the data locations on Target as well as corresponding indices
-       call get_request_target(nData, Coord_II, iIndex_II, &
+       if(.not.DoGetRequestTarget)then
+          call get_target_interface_points(&
+               GridDescriptorTarget,  &
+               is_interface_block,    &
+               interface_point_coords,&
+               nData, &
+               Coord_II, &
+               iIndex_II, &
+               nAux, &
+               Aux_VI)
+       else
+          ! get the data locations on Target as well as
+          !corresponding indices
+          call get_request_target(nData, Coord_II, iIndex_II, &
             nAux, Aux_VI)
-
+       end if
        ! if auxilary data are sent, correct size of the buffer
        if(nAux > 0)then
           nVar = nVar + nAux
