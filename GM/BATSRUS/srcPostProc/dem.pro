@@ -1,5 +1,5 @@
-; procedure for synthetic DEM calculation
-
+; JSzente 2017
+; Procedure for synthetic DEM calculation
 pro dem
 
   common getpict_param
@@ -7,24 +7,71 @@ pro dem
   common file_head
 
 ; Constants
-  Mp = 1.6726e-27
+  Mp = 1.6726e-27 * 1e3         ; proton mass in g
+  KB = 1.38064852e-16           ; Boltzmann Constant in cm2 g s-2 K-1
+  RSun = 7e10                   ; solar radius in cm
 
-; Testing or not
-  read, test, prompt = ' testing ? (1 means yes ) = '
+; Set IsDebug flag
+  read, IsDebug, prompt = 'Debug mode? (1 means yes ) ='
 
+; IsDebug setup
+  if IsDebug eq 1 then begin
+     IsTest = 0
+     IsVerbose = 0
+
+     NameFile = 'box8.out'
+
+     iRho = 0
+     IsTe = 0
+     iTe = 12
+     iPe = 10
+
+     Tmin = 1e4
+     Tmax = 1e9
+     DT = 1e4
+     NameFileOut = 'IsDebug-box8'
+
+     !x.margin=[10,3]
+  endif else begin
+; Command-line setup
+     read, IsTest, prompt = ' Testing? (1 means yes ) = '
+     read, IsVerbose, prompt = ' Verbose? (1 means yes ) = '
 ; String holders
-  filename = ''
-  filenameout=''
+     filename = ''
+     NameFileOut=''
+; Non-testing setup
+     if IsTest ne 1 then begin 
+        read, filename, prompt = 'data file = '
+        read, NameFileOut, prompt = 'name of output file (.pdf)= '
+; Get indexes of variables
+        read,iRho, prompt = 'index of electron density variable = '
+        read,IsTe, prompt = $
+             'use electron pressure (0) or electron temperature (1) ='
+        if IsTe eq 0 then read,iPe, prompt = $
+                               'index of electron pressure variable = '
+        if IsTe eq 1 then read,iTe, prompt = $
+                               'index of electron temperature variable  = '
+        iRho = fix(iRho)
+        if IsTe eq 0 then iPe = fix(iPe)
+        if IsTe eq 1 then iTe = fix(iTe)
+; Get temperature grid information
+        read, Tmin, prompt = 'Tmin = '
+        read, Tmax, prompt = 'Tmax = '
+        read, DT, prompt = 'DT = '
+     endif
+  endelse
 
-; If test is on do not use prompt
-  if test eq 1 then begin 
+; Generate test-data
+  if IsTest eq 1 then begin 
      filename = 'dem-test-box.out'
-     filenameout = 'dem-test-out.eps'
+     NameFileOut = 'dem-test-out.eps'
      read_data
 
-     tmin = 1
-     tmax = 101
-     dt = 1
+     Tmin = 1
+     Tmax = 101
+     DT = 1
+
+     IsTe = 1
 
      iRho = 0
      iTe = 11
@@ -32,55 +79,48 @@ pro dem
      w[0:10,*,*,iTe] = 10
      w[11:1000,*,*,iTe] = 99
      
-     w[0:10,*,*,iRho] = 1* 1e-3*Mp
-     w[11:1000,*,*,iRho] = 100* 1e-3*Mp
+     w[0:10,*,*,iRho] = Mp
+     w[11:1000,*,*,iRho] = 100*Mp
 
-  endif else begin 
-; Get data file
-     read, filename, prompt = 'filename = '
-     read_data
-; Indexes of variables
-     read,iRho, prompt = 'index of electron density variable = '
-     read,iTe, prompt = 'index of electron temperature variable = '
-     iRho = fix(iRho)
-     iTe = fix(iTe)
+     DX = 1./RSun
 
-; Set up temperature grid
-     read, tmin, prompt = 'Tmin = '
-     read, tmax, prompt = 'Tmax = '
-     read, dt, prompt = 'dT = '
-     read, filenameout, prompt = 'name of output pdf file = '
-  endelse
-
-; Set up temperature and dem arrays
-  nt = round((tmax-tmin)/dt)
-  tarray = tmin+dt*FINDGEN(nt+1)
-  demarray = tarray*0.
-
-; Grid size
-  sizex = size(x)
-  nx = sizex[1]
-  ny = sizex[2]
-  nz = sizex[3]
-  dx = (max(x[*,0,0,0]) - min(x[*,0,0,0]))/max([1,nx-1])
-  dy = (max(x[*,0,0,1]) - min(x[*,0,0,1]))/max([1,ny-1])
-  dz = (max(x[*,0,0,2]) - min(x[*,0,0,2]))/max([1,nz-1])
-
-; In case of testing print temperatre array and overwrite dx
-  if test eq 1 then begin
-     dx = 1./7e8
-     print, 'tarray = ', tarray
   endif
 
+; Data grid size
+  sizex = size(x)
+  nX = sizex[1]
+  nY = sizex[2]
+  nZ = sizex[3]
+  DX = (max(x[*,0,0,0]) - min(x[*,0,0,0]))/max([1,nX-1])
+  DY = (max(x[0,*,0,1]) - min(x[0,*,0,1]))/max([1,nY-1])
+  DZ = (max(x[0,0,*,2]) - min(x[0,0,*,2]))/max([1,nZ-1])
+
+; Set up temperature grid
+  NT = round((Tmax-Tmin)/DT)
+  Tarray = Tmin+DT*FINDGEN(NT+1)
+  DEMarray = Tarray*0. + 1e-10
+
+; In case of verbose print grid information
+  if IsVerbose eq 1 then begin
+     print, 'Tarray = ', Tarray
+     print, 'nX, nY, nZ = ',nX,nY,nZ
+     print, 'DX, DY, DZ = ',DX,DY,DZ
+  endif
+  
 ; Main loop
-  dh = dx * 7e8 ; width of observed plasma
-  for k = 0, nz-1 do begin
-     for j = 0, ny-1 do begin
-        for i = 0, nx-1 do begin
-           if w[i,j,k,0] eq 0 then continue ;avoid body cells
-           for l = 0, nt-2 do begin ; check temperature
-              if (w[i,j,k,iTe] lt tarray[l+1]) and (w[i,j,k,iTe] ge tarray[l])then begin 
-                 demarray[l] = demarray[l] + (w[i,j,k,iRho]*1e3/Mp)^2*dh/dt
+; Width of observed plasma
+  Dh = DX * RSun             
+  for k = 0, nZ-1 do begin
+     for j = 0, nY-1 do begin
+        for i = 0, nX-1 do begin
+; Avoid body cells
+           if w[i,j,k,0] eq 0 then continue 
+; Locate on temperature grid
+           for l = 0, NT-2 do begin         
+              if IsTe eq 0 then Te = w[i,j,k,iPe]/w[i,j,k,iRho] * Mp/KB
+              if IsTe eq 1 then Te = w[i,j,k,iTe]
+              if (Te lt Tarray[l+1]) and (Te ge Tarray[l])then begin 
+                 DEMarray[l] = DEMarray[l] + (w[i,j,k,iRho]/Mp)^2*Dh/DT
                  break
               endif
            endfor
@@ -88,9 +128,9 @@ pro dem
      endfor
   endfor
   
-; Print dem array if testing
-  if test eq 1 then begin
-     print, 'demarray = ', demarray
+; Print if IsVerbose is on                                
+  if IsVerbose eq 1 then begin
+     print, 'DEMarray = ', DEMarray
   endif
 
 ; Set plotting environment
@@ -100,14 +140,24 @@ pro dem
   !p.background=255
   !p.thick = 4
   bottomline=0
-
-; Save plot
-  set_device,filenameout,/eps,/land
-  !x.margin=[4,2]
   !p.title = 'Synthetic Differential Emission Measure'
   !x.title = 'Temperature [K] '
   !y.title = 'DEM [K!U-1 !Ncm!U-5!N]'
-  plot,tarray,demarray,/ylog, psym=2, symsize=2, linestyle=2, thick=3
-  close_device, /pdf
+
+; Save plot when not debugging
+  if IsDebug ne 1 then begin
+     set_device,NameFileOut,/eps,/land
+     !x.margin=[4,2]
+  endif
+
+  plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2,$
+       yrange=[1e18,1e28], xrange=[1e4, 1e7]
+
+  if IsDebug ne 1 then  close_device, /pdf
+
+; Plot on screen
+  set_plot,'X'
+  window, 1
+  plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2
 
 end
