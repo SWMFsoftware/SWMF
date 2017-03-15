@@ -5,7 +5,8 @@ module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst
-  use ModMain, ONLY: body2_, SolidBc_, zMaxBc_, Coord3MaxBc_
+  use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
+       Coord1MinBc_, Coord3MaxBc_ 
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
@@ -171,12 +172,14 @@ module ModPhysics
  
 
   ! Logicals for using Boundary State              
-  logical :: UseBoundaryState_I(SolidBc_:zMaxBc_) = .false.
+  logical :: UseFaceBoundaryState_I(SolidBc_:zMaxBc_) = .false.
+  logical :: UseCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = .false.
 
   ! State for the boundary conditions
   real, dimension(nVar,SolidBc_:zMaxBc_):: &
        FaceState_VI, FaceStateDim_VI
-  real, dimension(nVar,SolidBc_:Coord3MaxBc_):: CellState_VI
+  real, dimension(nVar,Coord1MinBc_:Coord3MaxBc_):: &
+       CellState_VI, CellStateDim_VI
 
   !\
   ! Units for normalization of variables
@@ -438,7 +441,7 @@ contains
     FaceState_VI(iRho_I, Body1_) = BodyRho_I
     FaceState_VI(iP_I,   Body1_) = BodyP_I
 
-    if (UseMultiSpecies) then
+    if(UseMultiSpecies)then
        FaceState_VI(SpeciesFirst_, Body1_) = &
             BodyRho_I(1)*(1.0 - LowDensityRatio*(SpeciesLast_-SpeciesFirst_))
        FaceState_VI(SpeciesFirst_+1:SpeciesLast_, Body1_) = &
@@ -523,26 +526,29 @@ contains
        end if
     end if
 
-
-    do iBoundary = SolidBc_, zMaxBc_
-       if (.not.UseBoundaryState_I(iBoundary)) CYCLE
-       FaceState_VI( : , iBoundary) = &
-            FaceStateDim_VI(: , iBoundary) * Io2No_V(iUnitPrim_V)
+    ! Use values from #FACEBOUNDARYSTATE commands
+    do iBoundary = SolidBc_, 2*nDim
+       if (.not.UseFaceBoundaryState_I(iBoundary)) CYCLE
+       FaceState_VI(:,iBoundary) = &
+            FaceStateDim_VI(:,iBoundary) * Io2No_V(iUnitPrim_V)
     end do
 
-    ! Cell State is used for filling the ghostcells
-    CellState_VI(:,SolidBc_:ExtraBc_) = FaceState_VI(:,SolidBc_:ExtraBc_)
+    ! By default use the box boundary state for the outer BC state
     CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
+
+    ! Use values from #CELLBOUNDARYSTATE commands given in primitive variables
+    do iBoundary = 1, 2*nDim 
+       if (.not.UseCellBoundaryState_I(iBoundary)) CYCLE
+       CellState_VI(:,iBoundary) = &
+            CellStateDim_VI(:,iBoundary) * Io2No_V(iUnitPrim_V)
+    end do
 
     ! Convert velocity to momentum for all fluids and boundaries
     do iFluid = 1, nFluid
        call select_fluid
-       CellState_VI(iRhoUx,Coord1MinBc_:Coord3MaxBc_) = &
-           FaceState_VI(iUx,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
-       CellState_VI(iRhoUy,Coord1MinBc_:Coord3MaxBc_) = &
-           FaceState_VI(iUy,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
-       CellState_VI(iRhoUz,Coord1MinBc_:Coord3MaxBc_) = &
-           FaceState_VI(iUz,xMinBc_:zMaxBc_)*FaceState_VI(iRho,xMinBc_:zMaxBc_)
+       CellState_VI(iRhoUx,:) = CellState_VI(iUx,:)*CellState_VI(iRho,:)
+       CellState_VI(iRhoUy,:) = CellState_VI(iUy,:)*CellState_VI(iRho,:)
+       CellState_VI(iRhoUz,:) = CellState_VI(iUz,:)*CellState_VI(iRho,:)
     end do
 
     if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)

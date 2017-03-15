@@ -87,7 +87,19 @@ subroutine set_ics(iBlock)
            if(.not.true_cell(i,j,k,iBlock))then
               iBoundary = iBoundary_GB(i,j,k,iBlock)
 
-              State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,iBoundary)
+              State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,iBoundary)
+
+              ! Convert velocity to momentum
+              do iFluid = 1, nFluid
+                 call select_fluid
+                 State_VGB(iRhoUx,i,j,k,iBlock) = &
+                      FaceState_VI(iUx,iBoundary)*FaceState_VI(iRho,iBoundary)
+                 State_VGB(iRhoUy,i,j,k,iBlock) = &
+                      FaceState_VI(iUy,iBoundary)*FaceState_VI(iRho,iBoundary)
+                 State_VGB(iRhoUz,i,j,k,iBlock) = &
+                      FaceState_VI(iUz,iBoundary)*FaceState_VI(iRho,iBoundary)
+              end do
+
            elseif(.not.UseShockTube)then
               State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MinBc_)  
            else

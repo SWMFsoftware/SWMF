@@ -281,12 +281,13 @@ contains
 
     use ModAdvance,  ONLY: State_VGB, nVar, time_BLK
     use ModB0,       ONLY: set_b0_cell
-    use ModPhysics,  ONLY: CellState_VI, rBody2
+    use ModPhysics,  ONLY: FaceState_VI, rBody2
     use ModGeometry, ONLY: body_BLK, true_blk, true_cell, R2_BLK
     use ModMain,     ONLY: TypeCellBC_I, body1_, UseB0, UseBody2, body2_, &
          dt_BLK, time_accurate, UseDtFixed, Dt
     use ModParallel, ONLY: neiLwest, NOBLK
     use ModConserveFlux, ONLY: init_cons_flux
+    use ModMultiFluid
 
     use BATL_size, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
@@ -304,14 +305,34 @@ contains
     if(body_BLK(iBlock)) then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(true_cell(i,j,k,iBlock)) CYCLE
-          State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,body1_)
+          State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body1_)
+          ! Convert velocity to momentum
+          do iFluid = 1, nFluid
+             call select_fluid
+             State_VGB(iRhoUx,i,j,k,iBlock) = &
+                  FaceState_VI(iUx,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUy,i,j,k,iBlock) = &
+                  FaceState_VI(iUy,body1_)*FaceState_VI(iRho,body1_)
+             State_VGB(iRhoUz,i,j,k,iBlock) = &
+                  FaceState_VI(iUz,body1_)*FaceState_VI(iRho,body1_)
+          end do
        end do;end do; end do
     end if
 
     if(UseBody2)then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(R2_Blk(i,j,k,iBlock) > rBody2) CYCLE
-          State_VGB(1:nVar,i,j,k,iBlock) = CellState_VI(1:nVar,body2_)
+          State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
+          ! Convert velocity to momentum                                    
+          do iFluid = 1, nFluid
+             call select_fluid
+             State_VGB(iRhoUx,i,j,k,iBlock) = &
+                  FaceState_VI(iUx,body2_)*FaceState_VI(iRho,body2_)
+             State_VGB(iRhoUy,i,j,k,iBlock) = &
+                  FaceState_VI(iUy,body2_)*FaceState_VI(iRho,body2_)
+             State_VGB(iRhoUz,i,j,k,iBlock) = &
+                  FaceState_VI(iUz,body2_)*FaceState_VI(iRho,body2_)
+          end do
        end do;end do; end do
     end if
 

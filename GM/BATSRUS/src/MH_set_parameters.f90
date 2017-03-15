@@ -127,7 +127,7 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iFile, i, j
   logical :: IsUninitialized      = .true.
   real :: local_root_dx
-  integer :: iBoundary
+
   !  logical :: HdfUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
@@ -171,6 +171,13 @@ subroutine MH_set_parameters(TypeAction)
   ! in VAR string
   character(len(plot_vars1)+2) :: NamePlotVar
   integer :: l1, l2
+
+  ! Variables for #BOUNDARYSTATE command
+  character(len=lStringLine) :: StringBoundary
+  ! The enames of face and cell boundaries
+  character(len=10) :: NameBoundary_I(zMaxBc_-SolidBc_+1+Coord3MaxBc_)
+  integer :: iNameBoundary, nNameBoundary
+  real    :: BoundaryStateDim_V(1:nVar)
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
@@ -1844,7 +1851,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case('#FACEBOUNDARY')
         if(iProc==0) &
-           call stop_mpi('#FACEBOUNDARY command is no longer used!')
+             call stop_mpi('#FACEBOUNDARY command is no longer used!')
 
      case("#SOLARWIND")
         !if(.not.is_first_session())CYCLE READPARAM
@@ -1905,17 +1912,75 @@ subroutine MH_set_parameters(TypeAction)
            end if
         end if
 
-     case("#BOUNDARYSTATE")
-         call read_var('iBoundary',iBoundary)
-         if (iBoundary > 6 .or. iBoundary < SolidBc_) then
-            call stop_mpi(NameSub//' ERROR: iBoundary is out of the range')
-         else
-            UseBoundaryState_I(iBoundary) = .true.
-         end if
-         do iVar = 1, nVar
-            call read_var('FaceStateDim', FaceStateDim_VI(iVar, iBoundary))
-         end do
-         
+
+     case("#BOUNDARYSTATE")        
+        ! Read boundary states for multiple boundaries.
+        call read_var('StringBoundary', StringBoundary, IsLowerCase=.true.)
+        do iVar = 1, nVar
+           call read_var('BoundaryStateDim', BoundaryStateDim_V(iVar))
+        end do
+
+        call split_string(StringBoundary, NameBoundary_I, nNameBoundary)
+
+        do iNameBoundary = 1, nNameBoundary
+           select case(NameBoundary_I(iNameBoundary))
+
+           case('solid','-3')
+              UseFaceBoundaryState_I(SolidBc_) = .true.
+              FaceStateDim_VI(:,SolidBc_) = BoundaryStateDim_V
+           case('body2','-2')
+              UseFaceBoundaryState_I(body2_) = .true.
+              FaceStateDim_VI(:,body2_) = BoundaryStateDim_V
+           case('body','-1')
+              UseFaceBoundaryState_I(body1_) = .true.
+              FaceStateDim_VI(:,body1_) = BoundaryStateDim_V
+           case('extra','0')
+              UseFaceBoundaryState_I(ExtraBc_) = .true.
+              FaceStateDim_VI(:,ExtraBc_) = BoundaryStateDim_V
+           case('xminbox')
+              UseFaceBoundaryState_I(xMinBc_) = .true.
+              FaceStateDim_VI(:,xMinBc_) = BoundaryStateDim_V
+           case('xmaxbox')
+              UseFaceBoundaryState_I(xMaxBc_) = .true.
+              FaceStateDim_VI(:,xMaxBc_) = BoundaryStateDim_V
+           case('yminbox')
+              UseFaceBoundaryState_I(yMinBc_) = .true.
+              FaceStateDim_VI(:,yMinBc_) = BoundaryStateDim_V
+           case('ymaxbox')
+              UseFaceBoundaryState_I(yMaxBc_) = .true.
+              FaceStateDim_VI(:,yMaxBc_) = BoundaryStateDim_V
+           case('zminbox')
+              UseFaceBoundaryState_I(zMinBc_) = .true.
+              FaceStateDim_VI(:,zMinBc_) = BoundaryStateDim_V
+           case('zmaxbox')
+              UseFaceBoundaryState_I(zMaxBc_) = .true.
+              FaceStateDim_VI(:,zMaxBc_) = BoundaryStateDim_V
+
+           case('coord1min','1')
+              UseCellBoundaryState_I(Coord1MinBc_) = .true.
+              CellStateDim_VI(:,Coord1MinBc_) = BoundaryStateDim_V
+           case('coord1max','2')
+              UseCellBoundaryState_I(Coord1MaxBc_) = .true.
+              CellStateDim_VI(:,Coord1MaxBc_) = BoundaryStateDim_V
+           case('coord2min','3')
+              UseCellBoundaryState_I(Coord2MinBc_) = .true.
+              CellStateDim_VI(:,Coord2MinBc_) = BoundaryStateDim_V
+           case('coord2max','4')
+              UseCellBoundaryState_I(Coord2MaxBc_) = .true.
+              CellStateDim_VI(:,Coord2MaxBc_) = BoundaryStateDim_V
+           case('coord3min','5')
+              UseCellBoundaryState_I(Coord3MinBc_) = .true.
+              CellStateDim_VI(:,Coord3MinBc_) = BoundaryStateDim_V
+           case('coord3max','6')
+              UseCellBoundaryState_I(Coord3MaxBc_) = .true.
+              CellStateDim_VI(:,Coord3MaxBc_) = BoundaryStateDim_V
+
+           case default
+              call stop_mpi(NameSub//' ERROR: incorrect boundary name='//&
+                   NameBoundary_I(iNameBoundary))   
+           end select
+        end do
+
      case("#DIPOLEBODY2")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('BdpDimBody2x',BdpDimBody2_D(1))
@@ -2426,7 +2491,7 @@ contains
 
        ! Boundary Conditions and Normalization
        ! Default BC type is 'none'.
-       
+
        BodyTDim_I    = 25000.0          ! K
        BodyNDim_I    = 5.0              ! /cc
 
@@ -3430,7 +3495,7 @@ contains
              end if
           end do
        end if
-       
+
        ! Replace '{default}' with StringParam
        plot_pars1 = plot_pars(iFile)
        plot_pars(iFile) = plot_pars1(1:l-1)//trim(adjustl(StringParam))// &

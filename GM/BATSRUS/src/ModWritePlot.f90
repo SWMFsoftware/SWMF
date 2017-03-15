@@ -1002,7 +1002,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModB0, ONLY: B0_DGB
   use ModGeometry
   use ModBoundaryGeometry, ONLY: iBoundary_GB
-  use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
+  use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
        ElectronPressureRatio, RhoBody2, pBody2, rBody2
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRayTrace, ONLY : ray,rayface
@@ -1663,7 +1663,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            if(NamePlotVar /= NameVar) CYCLE
            PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
            if(DefaultState_V(jVar) > cTiny) &
-                plotvar_inBody(iVar) = CellState_VI(jVar,body1_)
+                plotvar_inBody(iVar) = FaceState_VI(jVar,body1_)
            EXIT
         end do
         if(jVar > nVar) then

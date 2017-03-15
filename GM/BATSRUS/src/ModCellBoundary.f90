@@ -321,6 +321,8 @@ contains
           end if
        case('fixedb1')
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
+       case('fixedb1_semi')
+          State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0   
        case('shear', 'shear_semi')
           call set_shear_bc
        case('none')
