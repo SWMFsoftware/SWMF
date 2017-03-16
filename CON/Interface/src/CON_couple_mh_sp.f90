@@ -183,16 +183,8 @@ contains
       !----------------------------------------------------------------
       select case(iMHComp)
       case(SC_)
-         !call set_router_from_target_2_stage(&
-         !     GridDescriptorSource = SC_GridDescriptor, &
-         !     GridDescriptorTarget = SP_GridDescriptor, &
-         !     Router               = RouterScSp, &
-         !     get_request_target   = SP_get_request_for_sc, &
-         !     transform            = transform_sp_to_sc, &
-         !     interpolate_source   = interpolation_amr_gc, &
-         !     put_request_source   = SC_put_request)
-
-         call set_semi_router_from_target(&
+         if(is_proc(SP_))&
+              call set_semi_router_from_target(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
@@ -200,15 +192,19 @@ contains
               transform            = transform_sp_to_sc, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = SC_put_request)
-         call synchronize_router(SC_, SP_, RouterScSp)
-         call update_semi_router_at_source(SC_, SP_, RouterScSp,&
+         call synchronize_router_target_to_source(SC_, SP_, RouterScSp)
+         if(is_proc(SC_))&
+              call update_semi_router_at_source(&
+              SC_, SP_, &
+              RouterScSp,&
               put_request_source   = SC_put_request)
 
          if(is_proc(SC_))&
               call SC_extract_line(&
               ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceOrigin,&
               ubound(iAuxStored_II,1),iAuxStored_II, RSc)
-         call set_router_from_source_2_stage(&
+         if(is_proc(SC_))&
+              call set_semi_router_from_source(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
@@ -217,21 +213,20 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
+         call synchronize_router_source_to_target(SC_, SP_, RouterScSp)
+         if(is_proc(SP_))&
+              call update_semi_router_at_target(&
+              SC_, SP_, &
+              RouterScSp,&
+              put_scatter_target   = SP_put_scatter_from_mh)
+
          call global_message_pass(RouterScSp, &
               nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
       case(IH_)
-!         call set_router_from_target_2_stage(&
-!              GridDescriptorSource = IH_GridDescriptor, &
-!              GridDescriptorTarget = SP_GridDescriptor, &
-!              Router               = RouterIhSp, &
-!              get_request_target   = SP_get_request_for_ih, &
-!              transform            = transform_sp_to_ih, &
-!              interpolate_source   = interpolation_amr_gc, &
-!              put_request_source   = IH_put_request)
-
-         call set_semi_router_from_target(&
+         if(is_proc(SP_))&
+              call set_semi_router_from_target(&
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIHSp, &
@@ -239,8 +234,11 @@ contains
               transform            = transform_sp_to_IH, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = SC_put_request)
-         call synchronize_router(IH_, SP_, RouterIHSp)
-         call update_semi_router_at_source(IH_, SP_, RouterIHSp,&
+         call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
+         if(is_proc(IH_))&
+              call update_semi_router_at_source(&
+              IH_, SP_, &
+              RouterIHSp,&
               put_request_source   = IH_put_request)
 
 
@@ -249,7 +247,9 @@ contains
               call IH_extract_line(&
               ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceEnd,&
               ubound(iAuxStored_II,1),iAuxStored_II)
-         call set_router_from_source_2_stage(&
+
+         if(is_proc(IH_))&
+              call set_semi_router_from_source(&
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIhSp, &
@@ -258,6 +258,14 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
+         call synchronize_router_source_to_target(IH_, SP_, RouterIhSp)
+         if(is_proc(SP_))&
+              call update_semi_router_at_target(&
+              IH_, SP_, &
+              RouterIhSp,&
+              put_scatter_target   = SP_put_scatter_from_mh)
+
+
          call global_message_pass(RouterIhSp, &
               nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
@@ -489,19 +497,28 @@ contains
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
-    call set_router_from_target_2_stage(&
+    if(is_proc(SP_))&
+         call set_semi_router_from_target(&
          GridDescriptorSource = IH_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &
-         Router               = RouterIhSp, &
-         get_request_target   = SP_get_request_for_ih, &
-         transform            = transform_sp_to_ih, &
+         Router               = RouterIHSp, &
+         get_request_target   = SP_get_request_for_IH, &
+         transform            = transform_sp_to_IH, &
          interpolate_source   = interpolation_amr_gc, &
          put_request_source   = IH_put_request)
+    call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
+    if(is_proc(IH_))&
+         call update_semi_router_at_source(&
+         IH_, SP_, &
+         RouterIHSp,&
+         put_request_source   = IH_put_request)
+
     if(is_proc(IH_))&
          call IH_add_to_line(&
          ubound(XyzStored_DI,2),   XyzStored_DI, &
          ubound(iAuxStored_II,1), iAuxStored_II)
-    call set_router_from_source_2_stage(&
+    if(is_proc(IH_))&
+         call set_semi_router_from_source(&
          GridDescriptorSource = IH_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &
          Router               = RouterIhSp, &
@@ -510,13 +527,20 @@ contains
          interpolate_source   = interpolation_amr_gc, &
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
+    call synchronize_router_source_to_target(IH_, SP_, RouterIhSp)
+    if(is_proc(SP_))&
+         call update_semi_router_at_target(&
+         IH_, SP_, &
+         RouterIhSp,&
+         put_scatter_target   = SP_put_scatter_from_mh)
+
     call global_message_pass(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_mh)
-!    if(is_proc(SP_))then
-!       call SP_put_input_time(DataInputTime)
-!    end if
+    !    if(is_proc(SP_))then
+    !       call SP_put_input_time(DataInputTime)
+    !    end if
     !^CMP IF SC BEGIN
     !This coupler is performed after SC-SP coupling, so that 
     !on SP the updated coordinates are available for those
@@ -556,8 +580,8 @@ contains
   subroutine couple_sc_sp(DataInputTime)
     use CON_global_message_pass
 
-   real,intent(in)::DataInputTime
-   !-------------------------------------------------------
+    real,intent(in)::DataInputTime
+    !-------------------------------------------------------
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
@@ -566,7 +590,8 @@ contains
 
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
-    call set_router_from_source_2_stage(&
+    if(is_proc(SC_))&
+         call set_semi_router_from_source(&
          GridDescriptorSource = SC_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &
          Router               = RouterScSp, &
@@ -575,14 +600,21 @@ contains
          interpolate_source   = interpolation_amr_gc, &
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
+    call synchronize_router_source_to_target(SC_, SP_, RouterScSp)
+    if(is_proc(SP_))&
+         call update_semi_router_at_target(&
+         SC_, SP_, &
+         RouterScSp,&
+         put_scatter_target   = SP_put_scatter_from_mh)
+
     call global_message_pass(RouterScSp, &
          nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_mh)
-!    if(is_proc(SP_))then
-!       call SP_put_input_time(DataInputTime)  
-!       call transform_to_sp_from(SC_)
-!    end if
+    !    if(is_proc(SP_))then
+    !       call SP_put_input_time(DataInputTime)  
+    !       call transform_to_sp_from(SC_)
+    !    end if
   end subroutine couple_sc_sp
   !-------------------------------------------------------------------------
   logical function is_in_sc(Xyz_D)
