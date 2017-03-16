@@ -406,7 +406,7 @@ contains
        
        ! fill the request buffer for SC
        do iBlock = 1, nBlock
-          iRequestSc_II(iBlock,:) = (/iBlock, 0/)
+          iRequestSc_II(iBlock,:) = (/iBlock, 1/)
        end do
        
        ! reset the sizes of requests

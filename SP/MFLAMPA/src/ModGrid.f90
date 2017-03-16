@@ -248,8 +248,8 @@ contains
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
-             iGridLocal_IB(Begin_,   iBlock) = 0
-             iGridLocal_IB(End_,     iBlock) = 0
+             iGridLocal_IB(Begin_,   iBlock) = 1
+             iGridLocal_IB(End_,     iBlock) = 1
              iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
              iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
           end if
@@ -274,7 +274,7 @@ contains
                (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGridGlobal_IA(Block_, iNode)
           if(iProc == iGridGlobal_IA(Proc_, iNode))&
-               State_VIB(1:nDim,0,iBlock) = CoordOrigin_DA(:,iNode)
+               State_VIB(1:nDim,1,iBlock) = CoordOrigin_DA(:,iNode)
        end do
     end do
   end subroutine init_grid

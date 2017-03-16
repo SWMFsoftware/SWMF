@@ -1228,7 +1228,7 @@ test15_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe
-	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000,1800,4,4
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -1247,7 +1247,7 @@ test15_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/SP/IO2/MH_data.ref
 	cat ${TESTDIR}/SP/IO2/MH_data_*_*_n000001.out > \
 	    ${TESTDIR}/SP/IO2/MH_data.out
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-8 -r=1e-8 -b \
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-8 -r=1e-8 -b -l=100000\
 		${TESTDIR}/SP/IO2/MH_data.out \
 		${TESTDIR}/SP/IO2/MH_data.ref \
 		> test15_scihsp.diff)

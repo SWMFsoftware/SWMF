@@ -168,7 +168,6 @@ contains
 
   subroutine init_particle_line
     ! allocate containers for particles
-    integer:: iLine ! loop variable
     !------------------------------------------------------------------------
     Particle_I(KindReg_)%nParticleMax = 10000 * nFieldLineMax
     Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
@@ -231,7 +230,7 @@ contains
 
     character(len=*),parameter:: NameSub = "trace_particle_line"
     !------------------------------------------------------------------------
-    ! set a pointers to parameters of end particles
+    ! set pointers to parameters of end particles
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
@@ -390,11 +389,11 @@ contains
 
     character(len=*), parameter:: NameSub='extract_particle_line'
     !------------------------------------------------------------------------
-    ! set a pointers to parameters of end particles
+    ! set pointers to parameters of end particles
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
-    ! set a pointers to parameters of regular particles
+    ! set pointers to parameters of regular particles
     StateReg_VI  => Particle_I(KindReg_)%State_VI
     iIndexReg_II => Particle_I(KindReg_)%iIndex_II
 
@@ -462,7 +461,10 @@ contains
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
-
+    !\
+    ! Offset in id_
+    !/
+    call offset_id(nFieldLine - nLineAllProc+1,nFieldLine)
   contains
 
     subroutine start_line(XyzStart_D, iIndexStart_I)
@@ -508,6 +510,51 @@ contains
       iIndexEnd_II(id_, Particle_I(KindEnd_)%nParticle) = iIndexStart_I(id_)
       iIndexEnd_II(0,   Particle_I(KindEnd_)%nParticle) = iBlockOut
     end subroutine start_line
+    !=============
+    subroutine  offset_id(iLineStartIn,iLineEndIn)
+      use ModMpi
+      use BATL_mpi, ONLY: iComm, nProc
+      integer, optional, intent(in) :: iLineStartIn, iLineEndIn
+      integer:: iLineStart, iLineEnd, iParticle, nParticle, iLine, iError
+      integer:: iOffsetLocal_I(1:nFieldLineMax), iOffset_I(1:nFieldLineMax)
+      integer, pointer:: iIndex_II(:,:)
+      !-----------------------------
+      iLineStart = 1 
+      if(present(iLineStartIn))iLineStart = iLineStartIn
+      iLineEnd = nFieldLineMax
+      if(present(iLineEndIn))iLineEnd = iLineEndIn
+      iOffsetLocal_I = 0; iOffset_I = 0  
+      !\
+      ! set a pointer to parameters of regular particles
+      !/
+      iIndex_II => Particle_I(KindReg_)%iIndex_II
+      nParticle = Particle_I(KindReg_)%nParticle
+      do iParticle = 1, nParticle
+         iLine = iIndex_II(fl_,iParticle)
+         !\
+         ! Reset offset, if id_ is less than one
+         !/
+         iOffsetLocal_I(iLine) = max(iOffsetLocal_I(iLine),&
+              1 - iIndex_II(id_,iParticle))
+      end do
+      ! find maximim offset from all processors
+      if(nProc > 1) then
+         call MPI_Allreduce(iOffsetLocal_I(iLineStart), &
+              iOffset_I(iLineStart), 1 + iLineEnd - iLineStart, &
+              MPI_INTEGER, MPI_MAX, iComm, iError)
+      else
+         iOffset_I(iLineStart:iLineEnd) = &
+              iOffset_I(iLineStart:iLineEnd)
+      end if
+      do iParticle = 1, nParticle
+         iLine = iIndex_II(fl_,iParticle)
+         !\
+         ! Apply offset
+         !/
+         iIndex_II(id_,iParticle) = iIndex_II(id_,iParticle) + &
+         iOffsetLocal_I(iLine)
+      end do
+    end subroutine offset_id
     !========================================================================
     function do_exclude(Xyz_D, iBlock) result(DoExcludeOut)
       use ModMain, ONLY: UseB0
@@ -708,7 +755,7 @@ contains
     if(.not.time_accurate) &
          RETURN
 
-    ! set a pointers to parameters of particles
+    ! set pointers to parameters of particles
     State_VI  => Particle_I(KindReg_)%State_VI
     iIndex_II => Particle_I(KindReg_)%iIndex_II
 
