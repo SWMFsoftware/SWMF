@@ -353,11 +353,10 @@ contains
   end subroutine allocate_put_arrays
 !============================PRIVATE============================!
 !
-  subroutine check_router_allocation(Router,iProc,nProc)
-    integer,intent(in)::iProc,nProc
+  subroutine check_router_allocation(Router)
     type(RouterType),intent(inout)::Router
-    integer::iError,iPE,lLength
-    do iPE=0,nProc-1
+    integer::iPE
+    do iPE=0,Router%nProc-1
        if(ubound(&
             Router%iPut_P(iPE)%iCB_II,2)<&
             Router%nPut_P(iPE))then
@@ -589,7 +588,7 @@ contains
 
     DoCountOnly=.true. !To enter the loop
     do while(DoCountOnly)
-       call check_router_allocation(Router,iProc,nProc)
+       call check_router_allocation(Router)
 
 
 !Store Upper bounds to control if the alllocated index array    !
@@ -1058,7 +1057,7 @@ contains
 
     DoCountOnly=.true. !To enter the loop
     do while(DoCountOnly)
-       call check_router_allocation(Router,iProc,nProc)
+       call check_router_allocation(Router)
 
 
        !Store Upper bounds to control if the alllocated index array    !
@@ -1857,7 +1856,7 @@ contains
        DoAdd_I(     iOrderSend_I(1:Router%nBufferTarget)) = DoAdd_I(     1:Router%nBufferTarget)
 
        ! prepare containers for router information on Target side
-       call check_router_allocation(Router,iProc,nProc)
+       call check_router_allocation(Router)
        ! fill these containers
        nRecvCumSum = 0
        do iProcTo =  i_proc0(iCompSource), i_proc_last(iCompSource), &
@@ -2097,7 +2096,7 @@ contains
             i_proc_stride(iCompTarget)
           Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
        end do
-       call check_router_allocation(Router,iProc,nProc)
+       call check_router_allocation(Router)
 
        ! fill these containers
        nRecvCumSum = 0
@@ -2547,7 +2546,7 @@ contains
        iCB_II(:,    iOrderSend_I(1:Router%nBufferSource)) = iCB_II(:,    1:Router%nBufferSource)
 
        ! prepare containers for router information on Source side
-       call check_router_allocation(Router, iProc, nProc)
+       call check_router_allocation(Router)
        ! fill these containers
        nSendCumSum = 0
        do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
@@ -2772,7 +2771,7 @@ contains
             i_proc_stride(iCompSource)
           Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
        end do
-       call check_router_allocation(Router, iProc, nProc)
+       call check_router_allocation(Router)
 
        ! fill these containers
        nRecvCumSum = 0
