@@ -47,10 +47,6 @@ Overwrite the start time
 #INNERBOUNDARY
 user			TypeInnerBc
 
-#FACEBOUNDARY
--1			MinFaceBc
--1			MaxFaceBc
-
 #LOOKUPTABLE
 AiaXrt				NameTable
 load                    	TypeAction
