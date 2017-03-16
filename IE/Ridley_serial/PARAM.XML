@@ -202,6 +202,9 @@ The default values are shown by the example above.
 
 #GEOMAGINDICES
 
+THIS COMMAND IS DEPRECIATED.  Control of virtual magnetometers and related
+outputs is handled by the GM component only.
+
 This command activates the ionospheric contribution to GM's calculation of 
 geomagnetic indices, activated by the GM command of the same name.  While it is 
 possible to run the GM version without an IE contribution, it is not recommended.
@@ -219,6 +222,9 @@ This command currently has no parameters associated with it.
 magin.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
+
+THIS COMMAND IS DEPRECIATED.  Control of virtual magnetometers and related
+outputs is handled by the GM component only.
 
 The #MAGNETOMETER command is used for the calculation of the ground perturbations
 caused by two current systems: Hall and Pedersen currents. 
@@ -346,6 +352,34 @@ ihp			NameOfAuroralModel
 xyz			NameOfSolarModel
 
 This command cannot be used in the SWMF.
+</command>
+
+<command name="AURORALOVAL">
+  <parameter name="UseOval" type="logical" default="T"/>
+  <if expr="$UseOval">
+    <parameter name="UseOvalShift"          type="logical" default="T"/>
+    <parameter name="UseSubOvalConductance" type="logical" default="F"/>
+  </if>
+  
+  #AURORALOVAL
+  T             UseOval (rest of parameters read if true)
+  T             UseOvalShift
+  F             UseSubOvalConductance
+
+  This command controls the behavior of the auroral oval for conductance
+  iModel=5.  If UseOval is set to True, an auroral oval is constructed from
+  the upward FAC pattern and added to the other sources of ionospheric
+  conductance.  UseOvalShift dictates whether or not the oval has a day-night
+  positional shift.  If False, the oval will always be centered about the
+  magnetic pole.  If True, the oval will be shifted daywards or nightwards
+  to best fit the FAC pattern.  UseSubOvalConductance controls if conductance
+  from FACs is restricted at latitudes below the auroral oval.  If True,
+  conductance is not restricted at lower latitudes.  If False, conductance
+  below auroral latitudes falls off exponentially, producing a sharp
+  conductance gradient about the oval.
+
+  Default values are shown above.
+  
 </command>
 
 <command name="CONDUCTANCE">
