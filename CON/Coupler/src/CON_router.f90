@@ -1337,6 +1337,7 @@ contains
   end subroutine construct_router_from_source
   !===========================================================================!
   subroutine get_target_interface_points(&
+       iProc, nIndexes,&
        ! the GridDescriptor for the Target component
        GridDescriptorTarget,  &
        !Logical function which allows to skip the block if there is no !
@@ -1376,6 +1377,7 @@ contains
          integer,intent(inout)::iIndex_I(nIndexes)
        end subroutine interface_point_coords
     end interface
+    integer, intent(in):: iProc, nIndexes
     type(GridDescriptorType),intent(in)::GridDescriptorTarget
     ! number of data entries
     integer,              intent(out):: nData
@@ -1387,6 +1389,89 @@ contains
     integer,              intent(out):: nAux
     ! auxilary variables themselves
     real,    allocatable, intent(out):: Aux_VI(:,:)
+    optional::is_interface_block,interface_point_coords
+    !EOP
+    integer::lGlobalNode, iBlockAll, nDim, iProcTo, iBlockTo
+    integer::iGlobalGridPoint, nGridPointsPerBlock
+    logical::IsInterfacePoint, DoCountOnly, DoCheckBlock,DoCheckPoint
+    integer::iCount, iData, iIndex_I(nIndexes)
+    real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
+    integer,dimension(GridDescriptorTarget%nDim)::iCell_D
+    logical::DoTest,DoTestMe
+    character(LEN=*),parameter::NameSub='get_target_interface_points'
+    !-------------------------
+    DoTest=.false.; DoTestMe=.false.
+    nDim = GridDescriptorTarget%nDim
+    DoCheckBlock=present(is_interface_block)
+    DoCheckPoint=present(interface_point_coords)
+
+    !Check dimensions
+    do iCount = 1,2
+       DoCountOnly = iCount==1 
+       nGridPointsPerBlock=n_grid_points_per_block(&
+            GridDescriptorTarget)
+       iData = 0
+       !Block loop                                                     !
+       do iBlockAll = 1, n_block_total(GridDescriptorTarget%DD%Ptr)
+
+          lGlobalNode=i_global_node_a(&
+               GridDescriptorTarget%DD%Ptr,iBlockAll)
+
+          call pe_and_blk(&
+               GridDescriptorTarget%DD%Ptr,lGlobalNode,&
+               iProcTo,iBlockTo)
+          if(iProc/=iProcTo)CYCLE
+          !Skip the block if desired: if there is known to be no interface!
+          !point in it                                                    !
+          if( DoCheckBlock)then
+             if(.not.is_interface_block(lGlobalNode))CYCLE
+          end if
+          !GlobalCellNumber Loop, for a given (octree) block              !
+          do iGlobalGridPoint=&
+                         1+nGridPointsPerBlock*(iBlockAll-1),&
+                         nGridPointsPerBlock*iBlockAll
+                          
+             iIndex_I(1)=iGlobalGridPoint
+
+             call global_i_grid_point_to_icb(&
+                  GridDescriptorTarget,&
+                  iGlobalGridPoint,&
+                  lGlobalNode,& 
+                  iCell_D)
+                
+             if(nIndexes/=1)then
+                iIndex_I(nIndexes)=iBlockTo
+                iIndex_I(1:nDim)=&
+                     iCell_D
+             end if
+             XyzTarget_D=xyz_grid_d(&
+                  GridDescriptorTarget,&
+                  lGlobalNode,&
+                  iCell_D)
+             if( DoCheckPoint)then
+                call interface_point_coords(&
+                     GridDescriptorTarget,&
+                     lGlobalNode,&
+                     nDim,&
+                     XyzTarget_D,&
+                     nIndexes,&
+                     iIndex_I,&
+                     IsInterfacePoint)
+                if(.not.IsInterfacePoint)CYCLE
+                iData = iData +1
+                if(.not.DoCountOnly)then
+                   Coord_II(1:nDim,iData) = XyzTarget_D
+                   iIndex_II(1:nIndexes,iData) = iIndex_I
+                end if
+             end if
+          end do   !iGlobalPoints
+       end do      !iGlobalNode
+       if(DoCountOnly)then
+          nData = iData
+          call check_size(2, (/nDim, nData/), Buffer_II =  Coord_II)
+          call check_size(2, (/nIndexes, nData/), iBuffer_II = iIndex_II)
+       end if
+    end do         !iCount
   end subroutine get_target_interface_points
   !===============================================
   subroutine set_semi_router_from_target(&
@@ -1625,6 +1710,7 @@ contains
     if(is_proc(iCompTarget))then
        if(.not.DoGetRequestTarget)then
           call get_target_interface_points(&
+               iProc, nIndexTarget,   &
                GridDescriptorTarget,  &
                is_interface_block,    &
                interface_point_coords,&
@@ -2298,6 +2384,7 @@ contains
     if(is_proc(iCompTarget))then
        if(.not.DoGetRequestTarget)then
           call get_target_interface_points(&
+               iProc, nIndexTarget,   &
                GridDescriptorTarget,  &
                is_interface_block,    &
                interface_point_coords,&
@@ -3239,7 +3326,7 @@ contains
 
     logical:: IsPresent_I(7)
     character(len=*), parameter:: NameSub= &
-         'CON_router:set_router_from_target_2_stage:check_buffer'
+         'CON_router:check_buffer'
     !-----------------------------------------------------------------------!
     IsPresent_I = (/&
          present(  Buffer_I), present( Buffer_II), &
