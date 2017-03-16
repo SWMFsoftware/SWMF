@@ -21,11 +21,13 @@ watch.pfe.pl SWMF >& watch.log &
 
 my @results;
 my $running;
+my $user = $ENV{USER};
 LOOP:{
     @results = `qstat -u \$USER | grep $pattern`;
     my $ids;
     foreach (@results){
-	/^(\d+)[^:]+:\d\d ([A-Z]) (\d\d:\d\d)/;
+	#/^(\d+)[^:]+:\d\d ([A-Z]) +((\dd\+)?\d\d:\d\d)/;
+	/^(\d+).*([A-Z]) +(\S+)/;
 	print "id=$1 status=$2 wait=$3\n";
 	$ids .= " $1";
 	$running = $1 if $2 eq "R";
