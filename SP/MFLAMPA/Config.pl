@@ -89,7 +89,7 @@ sub set_grid_size{
 
     $GridSize = $NewGridSize if $NewGridSize;
 
-    if($GridSize =~ /^[0-9]\d*,[0-9]\d*,[1-9]\d*,[1-9]\d*$/){
+    if($GridSize =~ /^[1-9]\d*,[1-9]\d*,[1-9]\d*$/){
 	($nP,$nLon,$nLat) = split(',', $GridSize);
     }elsif($GridSize){
 	die "$ERROR -g=$GridSize must be 3 integers\n";
