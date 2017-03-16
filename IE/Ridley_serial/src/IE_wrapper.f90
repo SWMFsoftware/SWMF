@@ -94,7 +94,8 @@ contains
       use ModReadParam
       use ModIE_Interface
       use ModFiles
-      use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
+      use ModConductance, ONLY: UseOval, DoOvalShift, UseSubOvalCond
+      use ModUtilities,   ONLY: fix_dir_name, check_dir, lower_case
 
       ! The name of the command
       character (len=100) :: NameCommand
@@ -277,7 +278,14 @@ contains
             if(DoSaveLogfile)then
                if(iProc==0)call check_dir(NameIonoDir)
             endif
-
+            
+         case("#AURORALOVAL")
+            call read_var('UseOval', UseOval)
+            if(UseOval)then
+               call read_var('UseOvalShift',          DoOvalShift)
+               call read_var('UseSubOvalConductance', UseSubOvalCond)
+            end if
+            
          case("#CONDUCTANCE")
             call read_var('OvalWidthFactor',OvalWidthFactor)
             call read_var('OvalStrengthFactor',OvalStrengthFactor)

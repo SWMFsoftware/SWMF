@@ -28,4 +28,7 @@ Module ModConductance
   integer, parameter :: eflux_    = 3
   integer, parameter :: avee_     = 4
 
+  ! Auroral oval config for iModel=5:
+  logical :: UseOval=.true., DoOvalShift=.true., UseSubOvalCond=.false.
+  
 end Module ModConductance

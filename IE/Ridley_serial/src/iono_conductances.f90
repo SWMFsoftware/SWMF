@@ -25,6 +25,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   use ModIonosphere
   use IE_ModMain
   use ModNumConst
+  use ModConductance, ONLY: UseSubOvalCond, UseOval
   implicit none
 
   integer, intent(in) :: iModel  ! model number, 
@@ -362,7 +363,15 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               endif
 
-              distance = (IONO_NORTH_Theta(i,j) - Loc_of_Oval(j))
+              ! "Distance" sets if auroral oval is used/relevant.
+              ! To turn off auroral oval, set to large negative number.
+              ! This will put all locations in polar cap AND reduce
+              ! impact of oval conductance to near-zero.
+              if(UseOval)then
+                 distance = (IONO_NORTH_Theta(i,j) - Loc_of_Oval(j))
+              else
+                 distance = -1E9
+              end if
 
               if (distance > 0.0) then
                  polarcap = .false.
@@ -385,7 +394,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
                  ! We want minimal conductance lower than the oval
                  !
 
-                 if (.not.polarcap) then
+                 if (.not.polarcap .and. .not.UseSubOvalCond) then
                     distance = distance/3.0
                     hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
                     ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
@@ -523,8 +532,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               endif
 
-              distance = (IONO_SOUTH_Theta(i,j)-Loc_of_Oval(j))
-
+              ! Use "distance" to turn oval off/on (see above comment).
+              if(UseOval)then
+                 distance = (IONO_SOUTH_Theta(i,j) - Loc_of_Oval(j))
+              else
+                 distance = 1E9 ! Switch sign for southern hemisphere.
+              end if
+              
               if (distance < 0.0) then
                  polarcap = .false.
               else
@@ -539,7 +553,8 @@ subroutine FACs_to_fluxes(iModel, iBlock)
                       OvalStrengthFactor*( &
                       ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
               else  ! iModel=5
-                 if (.not.polarcap) then
+                 ! Restrict FAC-related conductance outside auroral oval.
+                 if (.not.polarcap .and. .not.UseSubOvalCond) then
                     distance = distance/3.0
                     hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
                     ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
@@ -1273,6 +1288,11 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   !
 
   use ModIonosphere
+  use IE_ModIo,       ONLY: NameIonoDir
+  use ModConductance, ONLY: DoOvalShift
+  use ModIoUnit,      ONLY: UnitTMP_
+  use IE_ModMain,     ONLY: Time_Array, nSolve
+
   implicit none
 
   !
@@ -1306,6 +1326,14 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
 
   integer :: i, j, n, nloc, dJ, J_Start, J_End
 
+  ! Testing & output variables:
+  character(len=100), save    :: NameFile, StringFormat
+  character(len=*), parameter :: NameSub = 'Determine_Oval_Characteristics'
+  logical, save :: IsFirstWrite = .true.
+  logical       :: DoTest, DoTestMe
+
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+  
   !
   ! Reverse the Arrays for Southern Hemisphere:
   !
@@ -1401,6 +1429,8 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
   if (mean_colat < 15.0*cDegToRad) then
      mean_colat = 15.0*cDegToRad
      dev_colat = 0.0
+  else if(.not.DoOvalShift) then
+     dev_colat = 0.0
   else
      dev_colat = ((day_colat - mean_colat) * day_fac - &
           (midnight_colat - mean_colat) * midnight_fac) / &
@@ -1432,6 +1462,32 @@ subroutine Determine_Oval_Characteristics(Current_in, Theta_in, Psi_in, &
           (Night_Strength - Day_Strength)*sin(Psi(1,j)/2.0)
   enddo
 
+  ! For testing purposes, write oval info to file.
+  if(.not.DoTestMe .or. .not.north) return
+  
+  if(IsFirstWrite)then
+     ! Open file:
+     write(NameFile,'(a,i8.8,a)')trim(NameIonoDir)//'aurora_n',nSolve,'.txt'
+     open(unit=UnitTmp_, file=NameFile, status='replace')
+     ! Write header w/ longitudes:
+     write(UnitTmp_, '(a)', advance='NO')'Auroral oval location at Lon='
+     do j=1, IONO_nPsi
+        write(UnitTmp_,'(1x,f6.2)', advance='NO') Psi(1,j)*cRadToDeg
+     end do
+     write(UnitTmp_,'(a)')'','YYYY MM DD HH MN SS msc oval_colat'
+
+     ! Set format codes for writing output:
+     write(StringFormat,'("(i4,5i3,i4,", i4,"(1x,f6.2))")') IONO_nPsi
+     IsFirstWrite=.false.
+  else
+     ! Open file in append mode:
+     open(unit=UnitTmp_, file=NameFile, status='old', position='append')
+  end if
+
+  ! Write record:
+  write(UnitTmp_, StringFormat) Time_Array(1:7), Loc_of_oval(:)*cRadToDeg
+
+  close(UnitTmp_)
 end subroutine Determine_Oval_Characteristics
 
 
