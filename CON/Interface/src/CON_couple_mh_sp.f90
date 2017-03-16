@@ -183,7 +183,16 @@ contains
       !----------------------------------------------------------------
       select case(iMHComp)
       case(SC_)
-         call set_router_from_target_2_stage(&
+         !call set_router_from_target_2_stage(&
+         !     GridDescriptorSource = SC_GridDescriptor, &
+         !     GridDescriptorTarget = SP_GridDescriptor, &
+         !     Router               = RouterScSp, &
+         !     get_request_target   = SP_get_request_for_sc, &
+         !     transform            = transform_sp_to_sc, &
+         !     interpolate_source   = interpolation_amr_gc, &
+         !     put_request_source   = SC_put_request)
+
+         call set_semi_router_from_target(&
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
@@ -191,6 +200,10 @@ contains
               transform            = transform_sp_to_sc, &
               interpolate_source   = interpolation_amr_gc, &
               put_request_source   = SC_put_request)
+         call synchronize_router(SC_, SP_, RouterScSp)
+         call update_semi_router_at_source(SC_, SP_, RouterScSp,&
+              put_request_source   = SC_put_request)
+
          if(is_proc(SC_))&
               call SC_extract_line(&
               ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceOrigin,&
@@ -209,14 +222,29 @@ contains
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
       case(IH_)
-         call set_router_from_target_2_stage(&
+!         call set_router_from_target_2_stage(&
+!              GridDescriptorSource = IH_GridDescriptor, &
+!              GridDescriptorTarget = SP_GridDescriptor, &
+!              Router               = RouterIhSp, &
+!              get_request_target   = SP_get_request_for_ih, &
+!              transform            = transform_sp_to_ih, &
+!              interpolate_source   = interpolation_amr_gc, &
+!              put_request_source   = IH_put_request)
+
+         call set_semi_router_from_target(&
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
-              Router               = RouterIhSp, &
-              get_request_target   = SP_get_request_for_ih, &
-              transform            = transform_sp_to_ih, &
+              Router               = RouterIHSp, &
+              get_request_target   = SP_get_request_for_IH, &
+              transform            = transform_sp_to_IH, &
               interpolate_source   = interpolation_amr_gc, &
+              put_request_source   = SC_put_request)
+         call synchronize_router(IH_, SP_, RouterIHSp)
+         call update_semi_router_at_source(IH_, SP_, RouterIHSp,&
               put_request_source   = IH_put_request)
+
+
+
          if(is_proc(IH_))&
               call IH_extract_line(&
               ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceEnd,&
