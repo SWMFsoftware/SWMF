@@ -1813,7 +1813,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_dimensional, plot_type1
-  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V
+  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V, IsMhd
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
 
@@ -1880,9 +1880,8 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      call lower_case(NamePlotVar)
      String = NamePlotVar
      call extract_fluid_name(String)
-     if(iFluid == 1)then
-        NameTecFluid = ''
-     else
+     NameTecFluid = ''
+     if(iFluid > 1 .or. .not. IsMhd)then
         do i = 1, len_trim(NameFluid)
            NameTecFluid(2*i-1:2*i) = '^'//NameFluid(i:i)
         end do
