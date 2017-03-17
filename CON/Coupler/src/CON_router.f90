@@ -1497,7 +1497,7 @@ contains
        ! interpolation subroutine for the Source's grid
        interpolate_source, &
        ! subroutine to process the requested coordinates on Source side
-       put_request_source)
+       UseRequestSource)
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
@@ -1571,26 +1571,14 @@ contains
          integer, intent(out):: nImage
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
        end subroutine interpolate_source
-       !----------------------------------------------------------------------!
-       subroutine put_request_source(nData, &
-            nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
-         ! via this subroutine user can process transferred coordinates
-         ! on the Source component
-         implicit none
-         integer, intent(in):: nData, nDim
-         real,    intent(in):: Coord_DI(nDim, nData)
-         integer, intent(in):: nIndex
-         integer, intent(in):: iIndex_II(nIndex, nData)
-         integer, intent(in):: nAux
-         real,    intent(in):: Aux_VI(nAux, nData)
-       end subroutine put_request_source
     end interface
+    logical, intent(in)::UseRequestSource
     optional:: is_interface_block
     optional:: interface_point_coords
     optional:: get_request_target
     optional:: transform
     optional:: interpolate_source
-    optional:: put_request_source
+    optional:: UseRequestSource
     !-------------------------------------------------------------------------!
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
@@ -1603,7 +1591,7 @@ contains
     integer:: iProcFrom, iProcTo
     ! send and recv buffers
     ! buffers' size
-    integer:: nBufferSMax!, nVar
+    integer:: nBufferSMax
     ! offsets in buffers
     integer::nSendCumSum, nRecvCumSum, nRecvCumSumMy
     ! aux arrays to put data in BufferS_II in the correct order
@@ -1671,7 +1659,7 @@ contains
     DoGetRequestTarget = present(get_request_target)
     DoTransform        = present(transform)
     DoInterpolateSource= present(interpolate_source)
-    DoPutRequestSource = present(put_request_source)
+    DoPutRequestSource = present(UseRequestSource)
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
@@ -2277,7 +2265,7 @@ contains
     ! send and recv buffers
     !    real, allocatable:: BufferS_II(:,:), BufferR_II(:,:)
     ! biffers' size
-    integer:: nBufferSMax, nVar
+    integer:: nBufferSMax
     ! offsets in buffers
     integer:: nSendCumSum, nRecvCumSum, nRecvCumSumMy
     ! aux arrays to put data in BufferS_II in the correct order

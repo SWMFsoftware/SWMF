@@ -191,7 +191,7 @@ contains
               get_request_target   = SP_get_request_for_sc, &
               transform            = transform_sp_to_sc, &
               interpolate_source   = interpolation_amr_gc, &
-              put_request_source   = SC_put_request)
+              UseRequestSource     = .true.)
          call synchronize_router_target_to_source(SC_, SP_, RouterScSp)
          if(is_proc(SC_))&
               call update_semi_router_at_source(&
@@ -233,16 +233,13 @@ contains
               get_request_target   = SP_get_request_for_IH, &
               transform            = transform_sp_to_IH, &
               interpolate_source   = interpolation_amr_gc, &
-              put_request_source   = SC_put_request)
+              UseRequestSource   = .true.)
          call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
          if(is_proc(IH_))&
               call update_semi_router_at_source(&
               IH_, SP_, &
               RouterIHSp,&
               put_request_source   = IH_put_request)
-
-
-
          if(is_proc(IH_))&
               call IH_extract_line(&
               ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceEnd,&
@@ -264,8 +261,6 @@ contains
               IH_, SP_, &
               RouterIhSp,&
               put_scatter_target   = SP_put_scatter_from_mh)
-
-
          call global_message_pass(RouterIhSp, &
               nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
@@ -505,14 +500,13 @@ contains
          get_request_target   = SP_get_request_for_IH, &
          transform            = transform_sp_to_IH, &
          interpolate_source   = interpolation_amr_gc, &
-         put_request_source   = IH_put_request)
+         UseRequestSource   = .true.)
     call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
     if(is_proc(IH_))&
          call update_semi_router_at_source(&
          IH_, SP_, &
          RouterIHSp,&
          put_request_source   = IH_put_request)
-
     if(is_proc(IH_))&
          call IH_add_to_line(&
          ubound(XyzStored_DI,2),   XyzStored_DI, &
