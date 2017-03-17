@@ -54,8 +54,11 @@ module CON_couple_mh_sp
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
 
   logical,save::DoInit=.true.
-  real,   allocatable:: XyzStored_DI(  :,:)
-  integer,allocatable:: iAuxStored_II(:,:)
+
+  integer,parameter::  nAux = 2
+  integer::nStored
+  real,   pointer:: XyzStored_DI(  :,:)=>null()
+  integer,pointer:: iAuxStored_II(:,:)=>null()
 
   integer::iError
   real,save::rBoundIh=21.0                !^CMP IF IH
@@ -120,7 +123,7 @@ contains
        call set_standard_grid_descriptor(SC_,GridDescriptor=&
             SC_GridDescriptor)
        call init_router(SC_GridDescriptor,SP_GridDescriptor,&
-            RouterScSp,nMappedPointIndex=2)
+            RouterScSp,nMappedPointIndex=nAux)
        if(RouterScSp%IsProc)then
           call SC_synchronize_refinement(RouterScSp%iProc0Source,&
                RouterScSp%iCommUnion)
@@ -138,7 +141,7 @@ contains
        call set_standard_grid_descriptor(IH_,GridDescriptor=&
             IH_GridDescriptor)
        call init_router(IH_GridDescriptor,SP_GridDescriptor,&
-            RouterIhSp,nMappedPointIndex=2)
+            RouterIhSp,nMappedPointIndex=nAux)
        if(RouterIhSp%IsProc)then
           call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
                RouterIhSp%iCommUnion)
@@ -191,17 +194,18 @@ contains
               get_request_target   = SP_get_request_for_sc, &
               transform            = transform_sp_to_sc, &
               interpolate          = interpolation_amr_gc)
-         call synchronize_router_target_to_source(SC_, SP_, RouterScSp)
-         if(is_proc(SC_))&
-              call update_semi_router_at_source(&
-              SC_, SP_, &
-              RouterScSp,&
-              put_request_source   = SC_put_request)
-
-         if(is_proc(SC_))&
-              call SC_extract_line(&
-              ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceOrigin,&
-              ubound(iAuxStored_II,1),iAuxStored_II, RSc)
+         call synchronize_router_target_to_source(RouterScSp)
+         if(is_proc(SC_))then
+            if(.not.associated(XyzStored_DI))then
+               allocate(XyzStored_DI(3,10))
+               allocate(iAuxStored_II(2,10))
+            end if
+            nStored = 0
+            call access_router_buffer_source(RouterScSp, access_request_sc)
+            call SC_extract_line(&
+                 nStored,  XyzStored_DI, iInterfaceOrigin,&
+                 nAux, iAuxStored_II, RSc)
+         end if
          if(is_proc(SC_))&
               call set_semi_router_from_source(&
               GridDescriptorSource = SC_GridDescriptor, &
@@ -212,10 +216,9 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
-         call synchronize_router_source_to_target(SC_, SP_, RouterScSp)
+         call synchronize_router_source_to_target(RouterScSp)
          if(is_proc(SP_))&
               call update_semi_router_at_target(&
-              SC_, SP_, &
               RouterScSp,&
               put_scatter_target   = SP_put_scatter_from_mh)
 
@@ -232,17 +235,18 @@ contains
               get_request_target   = SP_get_request_for_IH, &
               transform            = transform_sp_to_IH, &
               interpolate          = interpolation_amr_gc)
-         call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
-         if(is_proc(IH_))&
-              call update_semi_router_at_source(&
-              IH_, SP_, &
-              RouterIHSp,&
-              put_request_source   = IH_put_request)
-         if(is_proc(IH_))&
-              call IH_extract_line(&
-              ubound(XyzStored_DI,2),  XyzStored_DI, iInterfaceEnd,&
-              ubound(iAuxStored_II,1),iAuxStored_II)
-
+         call synchronize_router_target_to_source(RouterIHSp)
+         if(is_proc(IH_))then
+            if(.not.associated(XyzStored_DI))then
+               allocate(XyzStored_DI(3,10))
+               allocate(iAuxStored_II(2,10))
+            end if
+            nStored = 0
+            call access_router_buffer_source(RouterIhSp, access_request_ih)
+            call IH_extract_line(&
+                 nStored,  XyzStored_DI, iInterfaceEnd,&
+                 nAux,iAuxStored_II)
+         end if
          if(is_proc(IH_))&
               call set_semi_router_from_source(&
               GridDescriptorSource = IH_GridDescriptor, &
@@ -253,10 +257,9 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp, &
               put_scatter_target   = SP_put_scatter_from_mh)
-         call synchronize_router_source_to_target(IH_, SP_, RouterIhSp)
+         call synchronize_router_source_to_target(RouterIhSp)
          if(is_proc(SP_))&
               call update_semi_router_at_target(&
-              IH_, SP_, &
               RouterIhSp,&
               put_scatter_target   = SP_put_scatter_from_mh)
          call global_message_pass(RouterIhSp, &
@@ -363,77 +366,103 @@ contains
     call transform(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine transform_ih_to_sp
   !==================================================================!
-  subroutine put_request(iComp, nData, &
-       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
+  subroutine access_request(&
+       iComp, &
+       nPartial, iGetStart,&
+       Get,Weight,&
+       iBuffer, Buff_I, nVar)
+    ! general implementation of the method accessing buffer info
+    ! for both SC and IH
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    integer, intent(in):: iComp
-    integer, intent(in):: nData
-    integer, intent(in):: nDim
-    real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nData)
-    integer, intent(in):: nAux
-    real,    intent(in):: Aux_VI(nAux,nData)
-    integer:: iData
-    real:: Xyz_D(nDim)
+    integer,intent(in)::iComp,nPartial,iGetStart,nVar,iBuffer
+    type(IndexPtrType),intent(in)::Get
+    type(WeightPtrType),intent(in)::Weight
+    real,intent(in)::Buff_I(nVar)
+
     character(len=100):: TypeGeometry
-    character(len=*),parameter::NameSub='CON_couple_mh_sp:put_request'
-    !----------------------------------------------------------
-    if(allocated(XyzStored_DI)) deallocate(XyzStored_DI)
-    allocate(XyzStored_DI(nDim, nData))
-    if(allocated(iAuxStored_II)) deallocate(iAuxStored_II)
-    allocate(iAuxStored_II(nAux,nData))
+    real,   pointer:: Tmp_DI(:,:)
+    integer,pointer::iTmp_II(:,:)
+    integer,parameter:: nDim = 3
+    real:: Xyz_D(nDim)
+    !----------------------------------------------
+    ! check if exceeded the current size of the Stored buffers
+    if(nStored == ubound(XyzStored_DI,2))then
+       ! double the size of buffers and save the data inside
+       !  buffer with coordinates
+       allocate(Tmp_DI(nDim,2*nStored))
+       Tmp_DI(:,1:nStored) = XyzStored_DI(:,1:nStored)
+       deallocate(XyzStored_DI)
+       XyzStored_DI => Tmp_DI
+       nullify(Tmp_DI)
+       !  buffer with auxilary indices
+       allocate(iTmp_II(nAux,2*nStored))
+       iTmp_II(:,1:nStored) = iAuxStored_II(:,1:nStored)
+       deallocate(iAuxStored_II)
+       iAuxStored_II => iTmp_II
+       nullify(iTmp_II)
+    end if
 
-    if(nData==0)&
-         RETURN
+    ! put the new data entry
+    nStored = nStored + 1
 
-    ! coordinates of requested field lines' origins
-    XyzStored_DI = Coord_DI
-    ! indices of paritcles along the field lines
-    iAuxStored_II = nint(Aux_VI)
-    ! perform transformations based on the type of geometry
+    ! coordinates and indices
+    XyzStored_DI( :,nStored) = Buff_I(nDim+2+1:nDim+2+nDim)
+    iAuxStored_II(:,nStored) = nint(Buff_I(nVar-nAux+1:nVar))
+
+    ! FOR CURRENT IMPLEMENTATION:
+    ! check whether this particular entry has already been stored,
+    ! in this case indices would be the same as the previous entry
+    if(nStored>1)then
+       if(all(iAuxStored_II(:,nStored)==iAuxStored_II(:,nStored-1)))then
+          nStored = nStored-1
+          RETURN
+       end if
+    end if
+
+    ! convert coodtinates if needed
     TypeGeometry = Grid_C(iComp)%TypeGeometry
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
        ! convert to radius from log(radius)
-       XyzStored_DI(1,:) = exp(XyzStored_DI(1,:))
-       do iData = 1, nData
-          call rlonlat_to_xyz(XyzStored_DI(:, iData), Xyz_D)
-          XyzStored_DI(:, iData) = Xyz_D
-       end do
+       XyzStored_DI(1,nStored) = exp(XyzStored_DI(1,nStored))
+       call rlonlat_to_xyz(XyzStored_DI(:, nStored), Xyz_D)
+       XyzStored_DI(:, nStored) = Xyz_D
     elseif(index(TypeGeometry, 'cartesian') > 0 )then
        ! do nothing
     else
        call CON_stop(NameSub//': unkown type of geometry '//trim(TypeGeometry))
     end if
-  end subroutine put_request
+
+  end subroutine access_request
   !==================================================================!
-  subroutine SC_put_request(nData, &
-       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
-    integer, intent(in):: nData
-    integer, intent(in):: nDim
-    real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nData)
-    integer, intent(in):: nAux
-    real,    intent(in):: Aux_VI(nAux, nData)
-    !----------------------------------------------------------
-    call put_request(SC_, nData, nDim, Coord_DI, nIndex, iIndex_II, &
-         nAux, Aux_VI)
-  end subroutine SC_put_request
+  subroutine access_request_sc(&
+       nPartial, iGetStart,&
+       Get,Weight,&
+       iBuffer, Buff_I, nVar)
+    ! access_request as passed by SC component
+    integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
+    type(IndexPtrType),intent(in)::Get
+    type(WeightPtrType),intent(in)::Weight
+    real,intent(in)::Buff_I(nVar)
+    !-----
+    call access_request(SC_,nPartial, iGetStart,&
+       Get,Weight,&
+       iBuffer, Buff_I, nVar)
+  end subroutine access_request_sc
   !==================================================================!
-  subroutine IH_put_request(nData, &
-       nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
-    integer, intent(in):: nData
-    integer, intent(in):: nDim
-    real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nData)
-    integer, intent(in):: nAux
-    real,    intent(in):: Aux_VI(nAux, nData)
-    !----------------------------------------------------------
-    call put_request(IH_, nData, nDim, Coord_DI, nIndex, iIndex_II, &
-         nAux, Aux_VI)
-  end subroutine IH_put_request
+  subroutine access_request_ih(&
+       nPartial, iGetStart,&
+       Get,Weight,&
+       iBuffer, Buff_I, nVar)
+    ! access_request as passed by IH component
+    integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
+    type(IndexPtrType),intent(in)::Get
+    type(WeightPtrType),intent(in)::Weight
+    real,intent(in)::Buff_I(nVar)
+    !-----
+    call access_request(IH_,nPartial, iGetStart,&
+       Get,Weight,&
+       iBuffer, Buff_I, nVar)
+  end subroutine access_request_ih
   !==================================================================!
   subroutine SP_put_scatter_from_mh(nData, nDim, Coord_DI, nIndex, iIndex_II)
     integer, intent(in):: nDim
@@ -498,16 +527,14 @@ contains
          get_request_target   = SP_get_request_for_IH, &
          transform            = transform_sp_to_IH, &
          interpolate          = interpolation_amr_gc)
-    call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
-    if(is_proc(IH_))&
-         call update_semi_router_at_source(&
-         IH_, SP_, &
-         RouterIHSp,&
-         put_request_source   = IH_put_request)
-    if(is_proc(IH_))&
+    call synchronize_router_target_to_source(RouterIHSp)
+    if(is_proc(IH_))then
+       nStored=0
+       call access_router_buffer_source(RouterIhSp, access_request_ih)
          call IH_add_to_line(&
-         ubound(XyzStored_DI,2),   XyzStored_DI, &
-         ubound(iAuxStored_II,1), iAuxStored_II)
+         nStored,   XyzStored_DI, &
+         nAux, iAuxStored_II)
+      end if
     if(is_proc(IH_))&
          call set_semi_router_from_source(&
          GridDescriptorSource = IH_GridDescriptor, &
@@ -518,10 +545,9 @@ contains
          interpolate_source   = interpolation_amr_gc, &
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
-    call synchronize_router_source_to_target(IH_, SP_, RouterIhSp)
+    call synchronize_router_source_to_target(RouterIhSp)
     if(is_proc(SP_))&
          call update_semi_router_at_target(&
-         IH_, SP_, &
          RouterIhSp,&
          put_scatter_target   = SP_put_scatter_from_mh)
 
@@ -591,10 +617,9 @@ contains
          interpolate_source   = interpolation_amr_gc, &
          interpolate_target   = interpolate_sp, &
          put_scatter_target   = SP_put_scatter_from_mh)
-    call synchronize_router_source_to_target(SC_, SP_, RouterScSp)
+    call synchronize_router_source_to_target(RouterScSp)
     if(is_proc(SP_))&
          call update_semi_router_at_target(&
-         SC_, SP_, &
          RouterScSp,&
          put_scatter_target   = SP_put_scatter_from_mh)
 

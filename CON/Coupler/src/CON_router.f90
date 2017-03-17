@@ -1887,9 +1887,7 @@ contains
     end if
   end subroutine set_semi_router_from_target
   !===============================================
-  subroutine synchronize_router_target_to_source(iCompSource, iCompTarget, Router)
-    integer, intent(in):: iCompSource
-    integer, intent(in):: iCompTarget
+  subroutine synchronize_router_target_to_source(Router)
     type(RouterType),        intent(inout):: Router
 
 
@@ -1916,7 +1914,7 @@ contains
     nProc       = Router%nProc
 
 
-    if(is_proc0(iCompTarget))&
+    if(is_proc0(Router%iCompTarget))&
          iVarSync_I = (/&
          Router%nVar,       Router%iWeight,  Router%iData,&
          Router%iCoordStart,Router%iCoordEnd,Router%iAuxStart,Router%iAuxEnd/)
@@ -1926,7 +1924,7 @@ contains
          Router%iProc0Target, Router%iCommUnion, iError)
 
     ! adjust relevant info outside of Target
-    if(.not.is_proc(iCompTarget))then
+    if(.not.is_proc(Router%iCompTarget))then
        Router%nVar       = iVarSync_I(1)
        Router%iWeight    = iVarSync_I(2)
        Router%iData      = iVarSync_I(3)
@@ -1948,9 +1946,9 @@ contains
 
     ! post recvs
     nRequestR = 0
-    if(is_proc(iCompSource))then
-       do iProcFrom = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-            i_proc_stride(iCompTarget)
+    if(is_proc(Router%iCompSource))then
+       do iProcFrom = i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+            i_proc_stride(Router%iCompTarget)
           !\
           ! Do not wait for the message from self
           !/
@@ -1963,9 +1961,9 @@ contains
 
     ! post sends
     nRequestS = 0
-    if(is_proc(iCompTarget))then
-       do iProcTo =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+    if(is_proc(Router%iCompTarget))then
+       do iProcTo =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           !\
           !Copy, if needed
           !/
@@ -1988,7 +1986,7 @@ contains
     !/
     ! post recvs
     nRequestR = 0
-    if(is_proc(iCompSource))then
+    if(is_proc(Router%iCompSource))then
        ! size of the recv buffer
        Router%nBufferSource = sum(Router%nSend_P)
 
@@ -1997,8 +1995,8 @@ contains
        Router%BufferSource_II = 0
 
        nRecvCumSum = 0
-       do iProcFrom =  i_proc0(iCompTarget), i_proc_last(iCompTarget),&
-            i_proc_stride(iCompTarget)
+       do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget),&
+            i_proc_stride(Router%iCompTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
           !\
@@ -2018,10 +2016,10 @@ contains
 
     ! post sends
     nRequestS = 0
-    if(is_proc(iCompTarget))then
+    if(is_proc(Router%iCompTarget))then
        nSendCumSum = 0
-       do iProcTo =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+       do iProcTo =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
           if(iProcTo==iProc)then
@@ -2042,38 +2040,9 @@ contains
     call MPI_waitall(nRequestS, iRequestS_I, iStatus_II, iError)
   end subroutine synchronize_router_target_to_source
   !===============================================
-  subroutine update_semi_router_at_source(&
-       iCompSource, &
-       iCompTarget, &
-       Router,&
-       put_request_source)
-    integer, intent(in):: iCompSource
-    integer, intent(in):: iCompTarget
+  subroutine update_semi_router_at_source(Router)
     type(RouterType),        intent(inout):: Router
 
-    interface
-       !----------------------------------------------------------------------!
-       subroutine put_request_source(nData, &
-            nDim, Coord_DI, nIndex, iIndex_II, nAux, Aux_VI)
-         ! via this subroutine user can process transferred coordinates
-         ! on the Source component
-         implicit none
-         integer, intent(in):: nData, nDim
-         real,    intent(in):: Coord_DI(nDim, nData)
-         integer, intent(in):: nIndex
-         integer, intent(in):: iIndex_II(nIndex, nData)
-         integer, intent(in):: nAux
-         real,    intent(in):: Aux_VI(nAux, nData)
-       end subroutine put_request_source
-
-    end interface
-
-    optional:: put_request_source
-
-    ! arrays to distinguish unique locations in a series of images
-    integer, allocatable:: iUnique_I(:)
-
-    logical:: DoPutRequest
 
     integer:: nRecvCumSum
     integer:: iStart, iEnd, iProcFrom, iProcTo, iBuffer, iData, nData
@@ -2094,23 +2063,23 @@ contains
     !/
     ! process the data that has been received
 
-    DoPutRequest = present(put_request_source)
+!    DoPutRequest = present(put_request_source)
     nAux = Router%iAuxEnd-Router%iAuxStart + 1
     nDimSource  = Router%nIndexesSource-1
     nIndexSource= Router%nIndexesSource
 
-    if(is_proc(iCompSource))then
+    if(is_proc(Router%iCompSource))then
        ! prepare containers for router information of Source side
-       do iProcFrom = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-            i_proc_stride(iCompTarget)
+       do iProcFrom = i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+            i_proc_stride(Router%iCompTarget)
           Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
        end do
        call check_router_allocation(Router)
 
        ! fill these containers
        nRecvCumSum = 0
-       do iProcFrom =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-            i_proc_stride(iCompTarget)
+       do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+            i_proc_stride(Router%iCompTarget)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
           if(iEnd < iStart)&
@@ -2128,37 +2097,6 @@ contains
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
 
-       ! put request on Source if needed
-       if(DoPutRequest)then
-          call check_size(1, (/Router%nBufferSource/), iBuffer_I = iUnique_I)
-          ! identify unique data location: some may have many images
-          nData = 0
-          nRecvCumSum = 0
-          do iProcFrom =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-               i_proc_stride(iCompTarget)
-             iStart = nRecvCumSum + 1
-             iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
-             iData  = -1
-             do iBuffer = iStart, iEnd
-                if(nint(Router%BufferSource_II(Router%iData, iBuffer))/=iData)then
-                   iData = nint(Router%BufferSource_II(Router%iData, iBuffer))
-                   nData = nData + 1
-                   iUnique_I(nData) = iBuffer
-                end if
-             end do
-             ! increment the offest
-             nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
-          end do
-          ! put these data locations
-          call put_request_source(&
-               nData, nDimSource,  &
-               Router%BufferSource_II(Router%iCoordStart:Router%iCoordEnd, iUnique_I(1:nData)),&
-               nIndexSource,&
-               nint(Router%BufferSource_II(1:nIndexSource, iUnique_I(1:nData))),&
-               nAux, &
-               Router%BufferSource_II(Router%iAuxStart:Router%iAuxEnd, iUnique_I(1:nData)))
-
-       end if
     end if
 
   end subroutine update_semi_router_at_source
@@ -2575,8 +2513,7 @@ contains
     end if
   end subroutine set_semi_router_from_source
   !===========================================================================!
-  subroutine synchronize_router_source_to_target(iCompSource, iCompTarget, Router)
-    integer, intent(in):: iCompSource, iCompTarget
+  subroutine synchronize_router_source_to_target(Router)
     type(RouterType), intent(inout):: Router
     integer:: nRecvCumSum, nRecvCumSumMy, nSendCumSum
 
@@ -2601,7 +2538,7 @@ contains
     nProc       = Router%nProc
 
 
-    if(is_proc0(iCompSource))then
+    if(is_proc0(Router%iCompSource))then
        Router%iAuxStart = 0
        Router%iAuxEnd   =-1
        iVarSync_I = (/&
@@ -2614,7 +2551,7 @@ contains
          Router%iProc0Target, Router%iCommUnion, iError)
 
     ! adjust relevant info outside of Target
-    if(.not.is_proc0(iCompSource))then
+    if(.not.is_proc0(Router%iCompSource))then
        Router%nVar       = iVarSync_I(1)
        Router%iWeight    = iVarSync_I(2)
        Router%iData      = iVarSync_I(3)
@@ -2638,9 +2575,9 @@ contains
 
     ! post recvs
     nRequestR = 0
-    if(is_proc(iCompTarget))then
-       do iProcFrom =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+    if(is_proc(Router%iCompTarget))then
+       do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           !\
           ! Do not expect the message from self
           !/
@@ -2653,9 +2590,9 @@ contains
 
     ! post sends
     nRequestS = 0
-    if(is_proc(iCompSource))then
-       do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-            i_proc_stride(iCompTarget)
+    if(is_proc(Router%iCompSource))then
+       do iProcTo =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+            i_proc_stride(Router%iCompTarget)
           if(iProc==iProcTo)then
              Router % nRecv_P(iProc) = Router % nSend_P(iProc)
              CYCLE
@@ -2675,15 +2612,15 @@ contains
     !/
     ! post recvs
     nRequestR = 0
-    if(is_proc(iCompTarget))then
+    if(is_proc(Router%iCompTarget))then
        ! size of the recv buffer
        Router%nBufferTarget = sum(Router%nRecv_P)
        call check_size(2, (/Router%nVar, Router%nBufferTarget/), PBuffer_II=Router%BufferTarget_II)
        Router%BufferTarget_II = 0
 
        nRecvCumSum = 0
-       do iProcFrom = i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+       do iProcFrom = i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           if(Router%nRecv_P(iProcFrom) == 0)&
                CYCLE
           if(iProc==iProcFrom)then
@@ -2700,10 +2637,10 @@ contains
 
     ! post sends
     nRequestS = 0
-    if(is_proc(iCompSource))then
+    if(is_proc(Router%iCompSource))then
        nSendCumSum = 0
-       do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-            i_proc_stride(iCompTarget)
+       do iProcTo =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+            i_proc_stride(Router%iCompTarget)
           if(Router % nSend_P(iProcTo) == 0) &
                CYCLE
           if(iProc==iProcTo)then
@@ -2727,13 +2664,9 @@ contains
 
   end subroutine synchronize_router_source_to_target
   !===========================================================================!
-  subroutine update_semi_router_at_target(&
-       iCompSource, &
-       iCompTarget, Router,&
+  subroutine update_semi_router_at_target(Router,&
        put_scatter_target)
 
-    integer, intent(in):: iCompSource
-    integer, intent(in):: iCompTarget
     type(RouterType), intent(inout):: Router
     !----------------------------------------------------------------------!
     interface
@@ -2773,19 +2706,19 @@ contains
     DoPutScatterTarget = present(put_scatter_target)
     
     ! process the data that has been received
-    if(is_proc(iCompTarget))then
+    if(is_proc(Router%iCompTarget))then
 
        ! prepare containers for router information of Target side
-       do iProcFrom =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+       do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
        end do
        call check_router_allocation(Router)
 
        ! fill these containers
        nRecvCumSum = 0
-       do iProcFrom =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-            i_proc_stride(iCompSource)
+       do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+            i_proc_stride(Router%iCompSource)
           iStart = nRecvCumSum + 1
           iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
           if(iEnd < iStart) &
@@ -2812,8 +2745,8 @@ contains
           ! identify unique data location: some may have many images
           nData = 0 
           nRecvCumSum = 0
-          do iProcFrom =  i_proc0(iCompSource), i_proc_last(iCompSource), &
-               i_proc_stride(iCompSource)
+          do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+               i_proc_stride(Router%iCompSource)
              iStart = nRecvCumSum + 1
              iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
              iData  = -1
@@ -2838,7 +2771,42 @@ contains
 
   end subroutine update_semi_router_at_target
   !===========================================================================!
-
+  subroutine access_router_buffer_source(Router, access_buffer)
+    !----------------------------------------------------------------------!
+    ! Method to access data that is stored in the Buffer at Source
+    type(RouterType), intent(in):: Router
+    external access_buffer
+    ! the interface for the method provided from outside                   !
+    !       SUBROUTINE access_buffer(nPartial, iGetStart, iBuffer, &
+    !            Get, Weight,&
+    !            Buff_I,nVar)
+    !         implicit none
+    !         integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
+    !         type(IndexPtrType),intent(in)::Get
+    !         type(WeightPtrType),intent(in)::Weight
+    !         real,dimension(nVar),intent(in)::Buff_I
+    !       END SUBROUTINE access_buffer
+    !----------------------------------------------------------------------!
+    integer:: iBuffer, iGet, iPe, iV, nPartialGet
+    !----------------------------------------------------------------------!
+    iBuffer=1
+    do iPE=0,Router%nProc-1
+       if(Router%nSend_P(iPE)==0) CYCLE
+       iGet=1
+       do iV=1,Router%nSend_P(iPE)
+          nPartialGet=Router%iGet_P(iPE)%iCB_II(0,iGet)
+          call access_buffer(nPartialGet,&
+               iGet,iBuffer,&
+               Router%iGet_P(iPE),&
+               Router%Get_P(iPE), &
+               Router%BufferSource_II(1:Router%nVar,iBuffer),&
+               Router%nVar)
+          iGet   = iGet   +nPartialGet
+          iBuffer= iBuffer+1
+       end do
+    end do
+  end subroutine access_router_buffer_source
+  !===========================================================================!
   subroutine check_size(nRank, nSize_I, &
        Buffer_I, Buffer_II, PBuffer_I, PBuffer_II,&
        iBuffer_I, iBuffer_II, DoBuffer_I)
