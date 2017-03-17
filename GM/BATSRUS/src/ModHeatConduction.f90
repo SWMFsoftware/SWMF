@@ -35,13 +35,23 @@ module ModHeatConduction
   character(len=20), public :: TypeIonHeatConduction = 'spitzer'
   logical :: DoUserIonHeatConduction
 
-  ! Dimensionless heat conduction coefficients
-  real :: HeatCondPar, IonHeatCondPar
+  ! These variables can be used in ModUser::user_material_properties
+  ! to set the fraction of the field-algined heat conduction if
+  ! DoWeakFieldConduction is set to true.
+  real, public:: FractionFieldAligned  = -1.0
+  real, public:: ElectronCollisionRate = -1.0
 
   ! Parameters for heat conduction in regions of weak magnetic field
   logical :: DoWeakFieldConduction = .false.
-  real :: BmodifySi = 1.0e-7, DeltaBmodifySi = 1.0e-8 ! modify about 1 mG
-  real :: Bmodify, DeltaBmodify
+
+  ! Dimensionless heat conduction coefficients
+  real :: HeatCondPar, IonHeatCondPar
+
+  ! Unit conversion factor for heat conduction coefficients
+  real :: Si2NoHeatCoef
+
+  ! Coefficient for the electron-ion collision rate formula
+  real :: ElectronIonCollisionCoef
 
   ! electron/ion temperature used for calculating heat flux
   real, allocatable :: Te_G(:,:,:), Ti_G(:,:,:)
@@ -109,10 +119,6 @@ contains
 
     case("#WEAKFIELDCONDUCTION")
        call read_var('DoWeakFieldConduction', DoWeakFieldConduction)
-       if(DoWeakFieldConduction)then
-          call read_var('BmodifySi', BmodifySi)
-          call read_var('DeltaBmodifySi', DeltaBmodifySi)
-       end if
 
     case("#IONHEATCONDUCTION")
        call read_var('UseIonHeatConduction', UseIonHeatConduction)
@@ -150,8 +156,8 @@ contains
     use ModRadiativeCooling, ONLY: UseRadCooling
     use ModResistivity,  ONLY: UseHeatExchange
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         UnitU_, UnitX_, UnitB_, UnitT_, No2Si_V, UnitN_, &
-         ElectronTemperatureRatio, AverageIonCharge 
+         UnitU_, UnitX_, UnitT_, No2Si_V, UnitN_, &
+         ElectronTemperatureRatio, AverageIonCharge
     use ModVarIndexes, ONLY: nVar
 
     real, parameter:: CoulombLog = 20.0
@@ -189,6 +195,14 @@ contains
             /(1 + AverageIonCharge*ElectronTemperatureRatio)
        TeFraction = TiFraction*ElectronTemperatureRatio
     end if
+
+    ! Conversion factor for heat conduction coefficient
+    Si2NoHeatCoef = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+         *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
+    ! Electron-ion collision rate coefficient for the formula
+    ! ElectronIonCollision = ElectronIonCollisionCoef*Ne/Te^1.5
+    ElectronIonCollisionCoef = 54.4 !!!
 
     ! electron heat conduct coefficient for single charged ions
     ! = 9.2e-12 W/(m*K^(7/2))
@@ -258,11 +272,6 @@ contains
 
     DoUserHeatConduction    = TypeHeatConduction == 'user'
     DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
-
-    if(DoWeakFieldConduction)then
-       Bmodify = BmodifySi*Si2No_V(UnitB_)
-       DeltaBmodify = DeltaBmodifySi*Si2No_V(UnitB_)
-    end if
 
     if(UseSemiImplicit.and..not.allocated(HeatCond_DFDB))then
        allocate( &
@@ -452,7 +461,7 @@ contains
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: cTolerance
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_
+         ElectronGyroFreqCoef
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
     use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
@@ -463,7 +472,7 @@ contains
     real, intent(out):: HeatCond_D(3)
 
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
-    real :: HeatCoefSi, HeatCoef, FractionFieldAligned
+    real :: HeatCoefSi, HeatCoef
 
     character(len=*), parameter :: &
          NameSub = 'ModHeatConduction::get_heat_cond_coef'
@@ -487,6 +496,7 @@ contains
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
+    ! Calculate the electron temperature in SI units
     if(UseIdealEos)then
        if(UseMultiIon)then
           Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -502,26 +512,30 @@ contains
        !region we may need the temperature in Kelvin.
        !/
        TeSi = Te*No2Si_V(UnitTemperature_)    
+    else
+       call user_material_properties(State_V, TeOut=TeSi)
+       Te = TeSi*Si2No_V(UnitTemperature_)
+    end if
 
-       if(DoUserHeatConduction)then
-          call user_material_properties(State_V, TeIn=TeSi, &
-               HeatCondOut=HeatCoefSi)
-          HeatCoef = HeatCoefSi &
-               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-       else
-          ! Spitzer form for collisional regime
+    if(DoWeakFieldConduction)then
+       ! Initialize these public variables. The user can change them in 
+       ! user_material_properties when HeatCondOut is present
+       ElectronCollisionRate = 0.0
+       FractionFieldAligned  = -1.0
+    end if
+
+    if(DoUserHeatConduction .or. .not.UseIdealEos)then
+       call user_material_properties(State_V, TeIn=TeSi, &
+            HeatCondOut=HeatCoefSi)
+       if(HeatCoefSi < 0.0)then
+          ! Spitzer conductivity if user sets negative HeatCoefSi
           HeatCoef = HeatCondPar*Te**2.5
+       else
+          HeatCoef = HeatCoefSi * Si2NoHeatCoef
        end if
     else
-       ! Note we assume that the heat conduction formula for the
-       ! ideal state is still applicable for the non-ideal state
-       call user_material_properties(State_V, TeOut=TeSi, &
-            HeatCondOut=HeatCoefSi)
-
-       HeatCoef = HeatCoefSi &
-            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       ! Spitzer conductivity for collisional regime
+       HeatCoef = HeatCondPar*Te**2.5
     end if
 
     ! Artificial modified heat conduction for a smoother transition
@@ -529,11 +543,23 @@ contains
     if(DoExtendTransitionRegion) HeatCoef = HeatCoef*extension_factor(TeSi)
 
     if(DoWeakFieldConduction)then
-       FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
+       ! If the user did not set the field-aligned fraction, calculate it as
+       ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
+       ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
+       ! The collision rate is the sum of the user supplied value 
+       ! (can be the neutral-electron rate) and
+       ! the ion-electron collision rate.
+       if(FractionFieldAligned < 0.0)then
+          ElectronCollisionRate = ElectronCollisionRate + &
+               ElectronIonCollisionCoef* &
+               sum(State_V(iRhoIon_I)/MassIon_I*ChargeIon_I**2)/Te**1.5
+          FractionFieldAligned = &
+               1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
+       end if
 
        HeatCond_D = HeatCoef*( &
             FractionFieldAligned*sum(Bunit_D*Normal_D)*Bunit_D &
-            + (1.0 - FractionFieldAligned)*Normal_D )
+            + (1 - FractionFieldAligned)*Normal_D )
     else
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
@@ -614,8 +640,6 @@ contains
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModMain,       ONLY: UseB0
     use ModNumConst,   ONLY: cTolerance
-    use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         UnitU_, UnitX_
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_
     use ModUserInterface ! user_material_properties
 
@@ -657,9 +681,7 @@ contains
        call stop_mpi(NameSub//': no ion heat conduction yet for non-ideal eos')
 
        call user_material_properties(State_V, IonHeatCondOut=IonHeatCoefSi)
-       IonHeatCoef = IonHeatCoefSi &
-            *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-            *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       IonHeatCoef = IonHeatCoefSi*Si2NoHeatCoef
     end if
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
@@ -1094,11 +1116,12 @@ contains
       use ModGeometry,   ONLY: r_BLK
       use ModMain,       ONLY: UseB0
       use ModNumConst,   ONLY: cTolerance
-      use ModPhysics,    ONLY: UnitTemperature_, &
-           UnitEnergyDens_, UnitU_, UnitX_, AverageIonCharge, UnitPoynting_
+      use ModPhysics,    ONLY: UnitTemperature_, AverageIonCharge, &
+           UnitPoynting_, ElectronGyroFreqCoef
       use ModRadDiffusion, ONLY: HeatFluxLimiter
       use ModVarIndexes, ONLY: Bx_, Bz_
-      use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
+      use ModRadiativeCooling, ONLY: &
+           DoExtendTransitionRegion, extension_factor
       use ModUserInterface ! user_material_properties
 
       real, intent(in) :: State_V(nVar)
@@ -1108,10 +1131,10 @@ contains
       real :: HeatCoefSi, HeatCoef
       real :: Factor, r
       real :: Bnorm, B_D(3), Bunit_D(3)
-      real :: FractionFieldAligned
       integer :: iDim
       !------------------------------------------------------------------------
 
+      ! Calculate Ne, NeSi, Te, TeSi
       if(UseIdealEos)then
          if(UseMultiIon)then
             Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
@@ -1123,27 +1146,34 @@ contains
          TeSi = Te*No2Si_V(UnitTemperature_)
          NeSi = Ne*No2Si_V(UnitN_)
 
-         ! Spitzer form for collisional regime
-         if(DoUserHeatConduction)then
-            call user_material_properties(State_V, i, j, k, iBlock, &
-                 TeIn=TeSi, HeatCondOut=HeatCoefSi)
-            HeatCoef = HeatCoefSi &
-                 *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-                 *Si2No_V(UnitU_)*Si2No_V(UnitX_)
-         else
-            ! Heat conduction coefficient for proton-electron plasma
-            HeatCoef = HeatCondPar*Te**2.5
-         end if
       else
          call user_material_properties(State_V, i, j, k, iBlock, &
-              TeOut=TeSi, HeatCondOut=HeatCoefSi, NatomicOut = NatomicSi, &
-              AverageIonChargeOut = Zav)
-
-         HeatCoef = HeatCoefSi &
-              *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
-              *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+              TeOut=TeSi, NatomicOut = NatomicSi, AverageIonChargeOut = Zav)
 
          NeSi = Zav*NatomicSi
+         Ne = NeSi*Si2No_V(UnitN_)
+         Te = TeSi*Si2No_V(UnitTemperature_)
+      end if
+
+      if(DoWeakFieldConduction)then
+         ! Initialize these public variables. The user can change them in 
+         ! user_material_properties when HeatCondOut is present
+         ElectronCollisionRate = 0.0
+         FractionFieldAligned  = -1.0
+      end if
+
+      if(DoUserHeatConduction .or. .not.UseIdealEos)then
+         call user_material_properties(State_V, i, j, k, iBlock, &
+              TeIn=TeSi, HeatCondOut=HeatCoefSi)
+         if(HeatCoefSi < 0.0)then
+            ! Spitzer conductivity if user sets negative HeatCoefSi
+            HeatCoef = HeatCondPar*Te**2.5
+         else
+            HeatCoef = HeatCoefSi*Si2NoHeatCoef
+         end if
+      else
+         ! Spitzer form for collisional regime
+         HeatCoef = HeatCondPar*Te**2.5
       end if
 
       ! Artificial modified heat conduction for a smoother transition
@@ -1182,8 +1212,19 @@ contains
       Bunit_D = B_D / max( Bnorm, cTolerance )
 
       if(DoWeakFieldConduction)then
-         FractionFieldAligned = 0.5*(1.0+tanh((Bnorm-Bmodify)/DeltaBmodify))
-
+         ! If the user did not set the field-aligned fraction, calculate it as
+         ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
+         ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
+         ! The collision rate is the sum of the user supplied value 
+         ! (can be the neutral-electron rate) and
+         ! the ion-electron collision rate
+         if(FractionFieldAligned < 0.0)then
+            ElectronCollisionRate = ElectronCollisionRate + &
+                 ElectronIonCollisionCoef* &
+                 sum(State_V(iRhoIon_I)/MassIon_I*ChargeIon_I**2)/Te**1.5
+            FractionFieldAligned = &
+                 1/(1 + ElectronCollisionRate/(Bnorm*ElectronGyroFreqCoef))
+         end if
          do iDim = 1, 3
             bb_DDG(:,iDim,i,j,k) = ( &
                  FractionFieldAligned*Bunit_D*Bunit_D(iDim) &
@@ -1199,7 +1240,7 @@ contains
 
   end subroutine get_impl_heat_cond_state
 
-  !============================================================================
+  !===========================================================================
 
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
