@@ -353,7 +353,7 @@ contains
     integer,              intent(out):: nRequestOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(out):: nAux
+    integer,              intent(in):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     !---------------------------------------------------------------
     call SP_get_request(SC_,&
@@ -367,7 +367,7 @@ contains
     integer,              intent(out):: nRequestOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(out):: nAux
+    integer,              intent(in):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     !---------------------------------------------------------------
     call SP_get_request(IH_,&
@@ -383,7 +383,7 @@ contains
     integer,              intent(out):: nRequestOut
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(out):: nAux
+    integer,              intent(in):: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
 
     ! loop variables
@@ -430,8 +430,6 @@ contains
        call CON_stop(NameSub//StringError)
     end select
 
-    ! size of the request
-    nAux        = 2
 
     ! prepare containers to hold the request
     if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)

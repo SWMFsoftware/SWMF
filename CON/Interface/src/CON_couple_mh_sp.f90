@@ -120,7 +120,7 @@ contains
        call set_standard_grid_descriptor(SC_,GridDescriptor=&
             SC_GridDescriptor)
        call init_router(SC_GridDescriptor,SP_GridDescriptor,&
-            RouterScSp)
+            RouterScSp,nMappedPointIndex=2)
        if(RouterScSp%IsProc)then
           call SC_synchronize_refinement(RouterScSp%iProc0Source,&
                RouterScSp%iCommUnion)
@@ -138,7 +138,7 @@ contains
        call set_standard_grid_descriptor(IH_,GridDescriptor=&
             IH_GridDescriptor)
        call init_router(IH_GridDescriptor,SP_GridDescriptor,&
-            RouterIhSp)
+            RouterIhSp,nMappedPointIndex=2)
        if(RouterIhSp%IsProc)then
           call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
                RouterIhSp%iCommUnion)
@@ -190,8 +190,7 @@ contains
               Router               = RouterScSp, &
               get_request_target   = SP_get_request_for_sc, &
               transform            = transform_sp_to_sc, &
-              interpolate_source   = interpolation_amr_gc, &
-              UseRequestSource     = .true.)
+              interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(SC_, SP_, RouterScSp)
          if(is_proc(SC_))&
               call update_semi_router_at_source(&
@@ -232,8 +231,7 @@ contains
               Router               = RouterIHSp, &
               get_request_target   = SP_get_request_for_IH, &
               transform            = transform_sp_to_IH, &
-              interpolate_source   = interpolation_amr_gc, &
-              UseRequestSource   = .true.)
+              interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
          if(is_proc(IH_))&
               call update_semi_router_at_source(&
@@ -499,8 +497,7 @@ contains
          Router               = RouterIHSp, &
          get_request_target   = SP_get_request_for_IH, &
          transform            = transform_sp_to_IH, &
-         interpolate_source   = interpolation_amr_gc, &
-         UseRequestSource   = .true.)
+         interpolate          = interpolation_amr_gc)
     call synchronize_router_target_to_source(IH_, SP_, RouterIHSp)
     if(is_proc(IH_))&
          call update_semi_router_at_source(&

@@ -112,7 +112,10 @@ Module CON_router
      integer :: nMappedPointIndex
 !\end{verbatim}
 !\begin{verbatim}
-     integer:: nBufferSource, nBufferTarget
+     integer :: nBufferSource, nBufferTarget
+     integer :: iPointGlobal_      
+     integer :: iPointInBlock_
+     integer :: iNodeGlobal_
      integer:: nVar, iWeight, iCoordStart, iCoordEnd, iData, iAuxStart, iAuxEnd
 !\end{verbatim}
   end type RouterType
@@ -281,6 +284,27 @@ contains
           write(*,*)'IndexMin=',Router%nIndexesTarget-1
           call CON_stop('nIndexesTarget should be at least IndexMin')
        end if
+    end if
+    Router%nMappedPointIndex   = 0
+    Router%iPointGlobal_       = 0
+    Router%iPointInBlock_      = 0
+    Router%iNodeGlobal_        = 0
+    if(present(nMappedPointIndex))then
+       Router%nMappedPointIndex = &
+            nMappedPointIndex
+       select case(nMappedPointIndex)
+       case(1)
+          Router%iPointGlobal_       = 1
+          Router%iPointInBlock_      = 0
+          Router%iNodeGlobal_        = 0
+       case(2)        
+          Router%iPointGlobal_       = 0
+          Router%iPointInBlock_      = 1
+          Router%iNodeGlobal_        = 2
+       case default
+          call CON_stop(&
+               'Illegal number of mapped point indexes')
+       end select
     end if
     nProc=Router%nProc
 
@@ -1508,9 +1532,7 @@ contains
        ! transformation of the location coordinates between components
        transform, &
        ! interpolation subroutine for the Source's grid
-       interpolate_source, &
-       ! subroutine to process the requested coordinates on Source side
-       UseRequestSource)
+       interpolate)
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
@@ -1551,7 +1573,7 @@ contains
          ! indices to access the data locations on Target
          integer, allocatable, intent(out):: iIndex_II(:,:)
          ! number of auxilary variables
-         integer,              intent(out):: nAux
+         integer,              intent(in):: nAux
          ! auxilary variables themselves
          real,    allocatable, intent(out):: Aux_VI(:,:)
        end subroutine get_request_target
@@ -1564,7 +1586,7 @@ contains
          real,    intent(out):: CoordOut_D(nDimOut)
        end subroutine transform
        !----------------------------------------------------------------------!
-       subroutine interpolate_source(&
+       subroutine interpolate(&
             nDim, Xyz_D, GridDescriptor, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
@@ -1583,15 +1605,13 @@ contains
          integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
          integer, intent(out):: nImage
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
-       end subroutine interpolate_source
+       end subroutine interpolate
     end interface
-    logical, intent(in)::UseRequestSource
     optional:: is_interface_block
     optional:: interface_point_coords
     optional:: get_request_target
     optional:: transform
-    optional:: interpolate_source
-    optional:: UseRequestSource
+    optional:: interpolate
     !-------------------------------------------------------------------------!
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
@@ -1610,7 +1630,7 @@ contains
     ! aux arrays to put data in BufferS_II in the correct order
     integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
     ! MPI-related variables
-    integer:: iProc, nProc
+    integer:: iProc
     ! components ids
     integer:: iCompSource, iCompTarget
     ! interpolation-related variables
@@ -1622,7 +1642,7 @@ contains
     ! optional actions to be taken
     logical:: &
          DoGetRequestTarget, DoTransform, &
-         DoInterpolateSource, DoPutRequestSource
+         DoInterpolateSource
     ! aux variables to go through a buffer
     integer:: iStart, iEnd
     ! variable indices
@@ -1639,16 +1659,14 @@ contains
     logical, allocatable:: DoAdd_I(:)
     ! aux array to hold coordinate of a location currently being processed
     real, allocatable:: Coord_I(:)
-    ! arrays to distinguish unique locations in a series of images
-    integer, allocatable:: iUnique_I(:)
     ! error message containers
     character(len=200):: StringErrorFormat, StringErrorMessage
     character(len=*),parameter:: NameSub = &
          'CON_router:set_semi_router_from_target'
     !-------------------------------------------------------------------------!
     ! identify components
-    iCompSource = compid_grid(GridDescriptorSource%DD%Ptr)
-    iCompTarget = compid_grid(GridDescriptorTarget%DD%Ptr)
+    iCompSource = Router%iCompSource
+    iCompTarget = Router%iCompTarget
 
     !For given PE the index in the communicator is:
     iProc = Router % iProc
@@ -1656,8 +1674,6 @@ contains
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
 
-    ! total number of processors and on components
-    nProc       = Router%nProc
 
     ! reset basic coupling information
     Router%nGet_P  = 0
@@ -1671,8 +1687,7 @@ contains
     ! determine which optional actions should be taken
     DoGetRequestTarget = present(get_request_target)
     DoTransform        = present(transform)
-    DoInterpolateSource= present(interpolate_source)
-    DoPutRequestSource = present(UseRequestSource)
+    DoInterpolateSource= present(interpolate)
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
@@ -1684,24 +1699,18 @@ contains
     ! cell and block indexes are sent
     Router%nVar = nIndexSource + 1
     ! by default no auxilary variables are passed
-    nAux = 0
+    nAux = Router%nMappedPointIndex
     ! indices of variables
     Router%iWeight = nIndexSource + 1
     ! coordinates may be sent: nDimSource variables plus
     ! last index is to identify images of the same data location
-    if(DoPutRequestSource) then
-       Router%nVar       = Router%nVar + nDimSource + 1
-       Router%iCoordStart= nIndexSource + 2
-       Router%iCoordEnd  = nIndexSource + 1 + nDimSource
-       Router%iData      = nIndexSource + 2 + nDimSource
-       Router%iAuxStart= 0
-       Router%iAuxEnd  =-1
-    else
-       Router%iCoordStart= 0
-       Router%iCoordEnd  = 0
-       Router%iData      = 0
-    end if
-
+    
+    Router%nVar       = Router%nVar + nDimSource + 1
+    Router%iCoordStart= nIndexSource + 2
+    Router%iCoordEnd  = nIndexSource + 1 + nDimSource
+    Router%iData      = nIndexSource + 2 + nDimSource
+    Router%iAuxStart= 0
+    Router%iAuxEnd  =-1
     !\
     ! Stage 1:
     ! on Target PE determine the sources of data and
@@ -1771,7 +1780,7 @@ contains
           ! interpolation procedure yields data-holding PE of Source and
           ! indices identifying images,
           ! one data entry may be split into several images
-          call interpolate_source(&
+          call interpolate(&
                nDim           = nDimSource, &
                Xyz_D          = Coord_I(1:nDimSource), &
                GridDescriptor = GridDescriptorSource, &
@@ -1823,17 +1832,16 @@ contains
              ! corresponding interpolation weight
              Router%BufferTarget_II(Router%iWeight, iBuffer) = Weight_I(iImage)
 
-             if(DoPutRequestSource)then
-                ! coordinates on Source
-                Router%BufferTarget_II(Router%iCoordStart:Router%iCoordEnd,iBuffer)=&
-                     Coord_I(1:nDimSource)
-                ! index of request location for current target processor
-                Router%BufferTarget_II(Router%iData, iBuffer) = iData
-                ! auxilary data
-                if(nAux > 0)&
-                     Router%BufferTarget_II(Router%iAuxStart:Router%iAuxEnd, iBuffer) = &
-                     Aux_VI(1:nAux, iData)
-             end if
+             
+             ! coordinates on Source
+             Router%BufferTarget_II(Router%iCoordStart:Router%iCoordEnd,iBuffer)=&
+                  Coord_I(1:nDimSource)
+             ! index of request location for current target processor
+             Router%BufferTarget_II(Router%iData, iBuffer) = iData
+             ! auxilary data
+             if(nAux > 0)&
+                  Router%BufferTarget_II(Router%iAuxStart:Router%iAuxEnd, iBuffer) = &
+                  Aux_VI(1:nAux, iData)
           end do
        end do
 
