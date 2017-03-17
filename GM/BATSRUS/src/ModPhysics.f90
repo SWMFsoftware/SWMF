@@ -35,6 +35,9 @@ module ModPhysics
   ! electron charge in normalized units (actually proton charge/mass)
   real:: ElectronCharge
 
+  ! electron gyro-frequency coefficient in normalized units
+  real:: ElectronGyroFreqCoef
+
   ! plasma parameters
   real:: AverageIonCharge         = 1.0
   real:: ElectronTemperatureRatio = 0.0
@@ -339,6 +342,10 @@ contains
     ! in the multi-ion momentum equation. It is used in some user modules,
     ! so we keep the name.
     ElectronCharge = 1.0/IonMassPerCharge
+
+    ! Electron gyro-frequency coefficient in normalized units
+    ! GyroFreq = ElectronGyroFreqCoef * |B|  [1/time]
+    ElectronGyroFreqCoef = cGyroElectron*No2Si_V(UnitB_)/Si2No_V(UnitT_)
 
     ! For single ion fluid the average ion mass per charge is constant
     if(ChargeIon_I(1) /= 0 .and. nIonFluid == 1 .and. .not. UseMultiSpecies) &
