@@ -53,7 +53,7 @@ Module CON_router
   type RouterType
 !The router can be set between the grids of different dimensions!
      character(LEN=3)::Name
-
+     integer:: iCompTarget, iCompSource
 !For the router between LOCAL grids of a component we use the   !
 !communicator of the model for sending-receiving the data,      !
 !otherwise the global communicator                              !
@@ -95,10 +95,21 @@ Module CON_router
      type(WeightPtrType), dimension(:),pointer :: Get_P
      type(WeightPtrType), dimension(:),pointer :: Put_P
 !\end{verbatim}
-!Buffers that contain unprocessed router information           !
+!Mapped gird points. Fully identical to global mapping vector, however, is
+! not present on all processors, only on those which control either the target
+! (source) points or the images of the mapped point on source (target)  
 !\begin{verbatim}
      real, dimension(:,:), pointer:: BufferSource_II
      real, dimension(:,:), pointer:: BufferTarget_II
+!\end{verbatim}
+!As long as we do not keep the entire mapping vector, we may wabt to know 
+!a list of global point numbers for the mapped points, i.e. nMappedPointIndex=1
+!integer per each mapped point. It may be convenient to keep more than one 
+!index (say, a global tree node number, global block number or so, with the 
+!only restriction that these indexes are sufficient to recover the global 
+!point number for the mapped point.) 
+!\begin{verbatim}
+     integer :: nMappedPointIndex
 !\end{verbatim}
 !\begin{verbatim}
      integer:: nBufferSource, nBufferTarget
@@ -125,7 +136,8 @@ contains
        GridDescriptorTarget,&
        Router,&
        nIndexesSource,&
-       nIndexesTarget)
+       nIndexesTarget,&
+       nMappedPointIndex)
     !INPUT ARGUMENTS:
     type(GridDescriptorType),intent(in)::&
          GridDescriptorSource,&
@@ -133,30 +145,36 @@ contains
     type (RouterType),intent(out)::Router
     integer,intent(in),optional::nIndexesSource
     integer,intent(in),optional::nIndexesTarget
+    integer,intent(in),optional::nMappedPointIndex
     !EOP
-    integer::iPE,iError,LocalCompID_
+    integer::iPE,iError
     integer::nProc
     integer::iProc0Source,iProc0Target,iProcUnion
     integer::iGroupUnion,iGroupSource,iGroupTarget, iGroup
     !---------------------------------------------------------------!
-    !Check if the grids are both local or both global               !
-
+    !\
+    ! Check grid registration
+    !/
+    Router%iCompSource = compid_grid(GridDescriptorSource%DD%Ptr)
+    Router%iCompTarget = compid_grid(GridDescriptorTarget%DD%Ptr)
+    !\
+    !Check if the grids are both local or both global  
+    !/             !
     if(is_local_grid(GridDescriptorSource%DD%Ptr).and.&
          is_local_grid(GridDescriptorTarget%DD%Ptr))then
        Router%IsLocal=.true.
-       LocalCompID_=compid_grid(GridDescriptorSource%DD%Ptr)
-       if( LocalCompID_/=&
-            compid_grid(GridDescriptorTarget%DD%Ptr))&
+
+       if( Router%iCompSource /= Router%iCompTarget)&
             call CON_stop(&
             'Do not couple Local grids of different components!')
 
-       Router%iProc=i_proc(LocalCompID_)
-       Router%nProc=n_proc(LocalCompID_)
-       Router%iComm=i_comm(LocalCompID_)
+       Router%iProc=i_proc(Router%iCompTarget)
+       Router%nProc=n_proc(Router%iCompTarget)
+       Router%iComm=i_comm(Router%iCompTarget)
        Router%iCommUnion=Router%iComm
        Router%iProc0Source=0
        Router%iProc0Target=0
-       Router%IsProc=is_proc(LocalCompID_)
+       Router%IsProc=is_proc(Router%iCompTarget)
 
     elseif((.not.is_local_grid(GridDescriptorSource%DD%Ptr))&
          .and.(.not.is_local_grid(GridDescriptorTarget%DD%Ptr)))&
@@ -166,11 +184,8 @@ contains
        Router%nProc=n_proc()
        Router%iComm=i_comm()
        Router%IsProc=is_proc()
-       iProc0Source=i_proc0(&
-            compid_grid(GridDescriptorSource%DD%Ptr))
-       iProc0Target=i_proc0(&
-            compid_grid(GridDescriptorTarget%DD%Ptr))
-
+       iProc0Source=i_proc0(Router%iCompSource)
+       iProc0Target=i_proc0(Router%iCompTarget)
 
        if(UseUnionComm)then
           if(.not.allocated(iAux_P))then
@@ -184,10 +199,8 @@ contains
           allocate(Router%iTranslated_P(0:nProc-1),stat=iError)
           call check_allocate(iError,'iTranslated_P')
 
-          iGroupSource=i_group(&
-               compid_grid(GridDescriptorSource%DD%Ptr))
-          iGroupTarget=i_group(&
-               compid_grid(GridDescriptorTarget%DD%Ptr))
+          iGroupSource=i_group(Router%iCompSource)
+          iGroupTarget=i_group(Router%iCompTarget)
           if(iProc0Target>iProc0Source)then
              call MPI_GROUP_UNION(&
                   iGroupSource,&
