@@ -292,9 +292,16 @@ contains
     Router%iPointGlobal_       = 0
     Router%iPointInBlock_      = 0
     Router%iNodeGlobal_        = 0
+    Router%iCoordStart         = 1
+    Router%iCoordEnd = GridDescriptorSource%nDim
+    Router%nVar      = Router%iCoordEnd
+    Router%iAuxStart = Router%iCoordEnd + 1
+    Router%iAuxEnd   = Router%iCoordEnd
     if(present(nMappedPointIndex))then
        Router%nMappedPointIndex = &
             nMappedPointIndex
+       Router%nVar      = Router%iCoordEnd + nMappedPointIndex
+       Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
        select case(nMappedPointIndex)
        case(1)
           Router%iPointGlobal_       = 1
