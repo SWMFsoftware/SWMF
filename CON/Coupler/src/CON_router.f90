@@ -288,6 +288,7 @@ contains
           call CON_stop('nIndexTarget should be at least IndexMin')
        end if
     end if
+
     Router%nMappedPointIndex   = 0
     !\
     ! Temporary, to be removed
@@ -358,7 +359,7 @@ contains
     call allocate_buffer_source(Router, nProc)
     nullify(Router%BufferTarget_II)
     call allocate_buffer_target(Router, nProc)
- 
+
     Router%nGet_P=0
     Router%nPut_P=0
     Router%nSend_P=0
@@ -372,6 +373,7 @@ contains
     end do
     Router%BufferSource_II(:,:)       = 0.0
     Router%BufferTarget_II(:,:)       = 0.0    
+
   end subroutine init_router
 !============================PRIVATE============================!
   subroutine  allocate_get_arrays(Router,iPE,nLength)
@@ -425,19 +427,19 @@ contains
     !----------------
     if(associated(Router%BufferTarget_II))&
          deallocate(Router%Buffertarget_II)
-    allocate(Router%BufferSource_II(&
+    allocate(Router%BufferTarget_II(&
          Router%nVar,nLength),stat=iError)
-    call check_allocate(iError,'BufferSource_II')
+    call check_allocate(iError,'BufferTarget_II')
   end subroutine allocate_buffer_target
   !=========================================================!
   integer function nlength_buffer_source(Router)
     type(RouterType),intent(inout)::Router
-    nlength_buffer_source = sum(Router%nRecv_P(:))
+    nlength_buffer_source = sum(Router%nSend_P(:))
   end function nlength_buffer_source
   !---------------------------------
   integer function nlength_buffer_target(Router)
     type(RouterType),intent(inout)::Router
-    nlength_buffer_target = sum(Router%nSend_P(:))
+    nlength_buffer_target = sum(Router%nRecv_P(:))
   end function nlength_buffer_target
   !============================PRIVATE======================!
   subroutine check_router_allocation(Router)
@@ -2030,7 +2032,8 @@ contains
              nRecvCumSumMy = nRecvCumSum
           else
              nRequestR = nRequestR + 1
-             call MPI_Irecv(Router%BufferSource_II(1,1+nRecvCumSum), &
+             call MPI_Irecv(Router%BufferSource_II(1:Router%nVar,&
+                  1+nRecvCumSum:Router%nSend_P(iProcFrom)+nRecvCumSum), &
                   Router%nSend_P(iProcFrom)*Router%nVar, MPI_REAL,&
                   iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           end if
@@ -2051,7 +2054,8 @@ contains
                   Router%BufferTarget_II(:,1+nSendCumSum:nSendCumSum+Router%nRecv_P(iProcTo))
           else
              nRequestS = nRequestS + 1
-             call MPI_Isend(Router%BufferTarget_II(1,1+nSendCumSum), &
+             call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
+                  1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
                   Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
                   iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           end if
@@ -2707,7 +2711,8 @@ contains
              nRecvCumSumMy = nRecvCumSum
           else
              nRequestR = nRequestR + 1
-             call MPI_Irecv(Router%BufferTarget_II(1,1+nRecvCumSum), &
+             call MPI_Irecv(Router%BufferTarget_II(1:Router%nVar,&
+                  1+nRecvCumSum:Router%nRecv_P(iProcFrom)+nRecvCumSum), &
                   Router%nRecv_P(iProcFrom)*Router%nVar, MPI_REAL,&
                   iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           end if
@@ -2730,7 +2735,8 @@ contains
                   1+nSendCumSum:Router%nSend_P(iProc)+nSendCumSum)
           else
              nRequestS = nRequestS + 1
-             call MPI_Isend(Router%BufferSource_II(1,1+nSendCumSum), &
+             call MPI_Isend(Router%BufferSource_II(1:Router%nVar,&
+                  1+nSendCumSum:Router%nSend_P(iProcTo)+nSendCumSum), &
                   Router%nSend_P(iProcTo)*Router%nVar, MPI_REAL,&
                   iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           end if
