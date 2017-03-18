@@ -2077,36 +2077,34 @@ contains
     nDimSource  = Router%nIndexesSource-1
     nIndexSource= Router%nIndexesSource
 
-    if(is_proc(Router%iCompSource))then
-       ! prepare containers for router information of Source side
-       do iProcFrom = i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
-            i_proc_stride(Router%iCompTarget)
-          Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
-       end do
-       call check_router_allocation(Router)
-
-       ! fill these containers
-       nRecvCumSum = 0
-       do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
-            i_proc_stride(Router%iCompTarget)
-          iStart = nRecvCumSum + 1
-          iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
-          if(iEnd < iStart)&
-               CYCLE
-          ! indices 
-          Router%iGet_P(iProcFrom) % &
-               iCB_II(0,1:Router%nGet_P(iProcFrom)) = 1
-          Router%iGet_P(iProcFrom) % &
-               iCB_II(1:nIndexSource,1:Router%nGet_P(iProcFrom)) = &
-               nint( Router%BufferSource_II(1:nIndexSource, iStart:iEnd) )
-          ! interpolation weights
-          Router%Get_P(iProcFrom) % Weight_I(1:Router%nGet_P(iProcFrom)) = &
-               Router%BufferSource_II(Router%iWeight, iStart:iEnd)
-          ! increment the offset
-          nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
-       end do
-
-    end if
+    if(.not.is_proc(Router%iCompSource))RETURN
+    ! prepare containers for router information of Source side
+    do iProcFrom = i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+         i_proc_stride(Router%iCompTarget)
+       Router%nGet_P(iProcFrom) = Router%nSend_P(iProcFrom)
+    end do
+    call check_router_allocation(Router)
+    
+    ! fill these containers
+    nRecvCumSum = 0
+    do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
+         i_proc_stride(Router%iCompTarget)
+       iStart = nRecvCumSum + 1
+       iEnd   = nRecvCumSum + Router%nGet_P(iProcFrom)
+       if(iEnd < iStart)&
+            CYCLE
+       ! indices 
+       Router%iGet_P(iProcFrom) % &
+            iCB_II(0,1:Router%nGet_P(iProcFrom)) = 1
+       Router%iGet_P(iProcFrom) % &
+            iCB_II(1:nIndexSource,1:Router%nGet_P(iProcFrom)) = &
+            nint( Router%BufferSource_II(1:nIndexSource, iStart:iEnd) )
+       ! interpolation weights
+       Router%Get_P(iProcFrom) % Weight_I(1:Router%nGet_P(iProcFrom)) = &
+            Router%BufferSource_II(Router%iWeight, iStart:iEnd)
+       ! increment the offset
+       nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
+    end do
 
   end subroutine update_semi_router_at_source
   !===========================================================================!
