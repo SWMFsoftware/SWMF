@@ -368,17 +368,15 @@ contains
   !==================================================================!
   subroutine access_request(&
        iComp, &
-       nPartial, iGetStart,&
-       Get,Weight,&
-       iBuffer, Buff_I, nVar)
+       nPartial, nIndex, &
+       iIndex_II, Weight_I, Buff_V, nVar)
     ! general implementation of the method accessing buffer info
     ! for both SC and IH
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    integer,intent(in)::iComp,nPartial,iGetStart,nVar,iBuffer
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::Weight
-    real,intent(in)::Buff_I(nVar)
-
+    integer,intent(in) :: iComp, nPartial, nIndex, nVar
+    integer,intent(in) :: iIndex_II(1:nIndex,1:nPartial)
+    real,   intent(in) :: Weight_I(1:nPartial)
+    real,   intent(in) :: Buff_V(nVar)
     character(len=100):: TypeGeometry
     real,   pointer:: Tmp_DI(:,:)
     integer,pointer::iTmp_II(:,:)
@@ -406,8 +404,8 @@ contains
     nStored = nStored + 1
 
     ! coordinates and indices
-    XyzStored_DI( :,nStored) = Buff_I(nDim+2+1:nDim+2+nDim)
-    iAuxStored_II(:,nStored) = nint(Buff_I(nVar-nAux+1:nVar))
+    XyzStored_DI( :,nStored) = Buff_V(nDim+2+1:nDim+2+nDim)
+    iAuxStored_II(:,nStored) = nint(Buff_V(nVar-nAux+1:nVar))
 
     ! FOR CURRENT IMPLEMENTATION:
     ! check whether this particular entry has already been stored,
@@ -418,7 +416,6 @@ contains
           RETURN
        end if
     end if
-
     ! convert coodtinates if needed
     TypeGeometry = Grid_C(iComp)%TypeGeometry
     if( index(TypeGeometry, 'spherical_lnr') > 0 )then
@@ -435,33 +432,26 @@ contains
   end subroutine access_request
   !==================================================================!
   subroutine access_request_sc(&
-       nPartial, iGetStart,&
-       Get,Weight,&
-       iBuffer, Buff_I, nVar)
-    ! access_request as passed by SC component
-    integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::Weight
-    real,intent(in)::Buff_I(nVar)
+       nPartial, nIndex, iIndex_II, Weight_I, Buff_V, nVar)
+    integer,intent(in) :: nPartial, nIndex, nVar
+    integer,intent(in) :: iIndex_II(1:nIndex,1:nPartial)
+    real,   intent(in) :: Weight_I(1:nPartial)
+    real,   intent(in) :: Buff_V(nVar)
     !-----
-    call access_request(SC_,nPartial, iGetStart,&
-       Get,Weight,&
-       iBuffer, Buff_I, nVar)
+    call access_request(SC_, nPartial, &
+         nIndex, iIndex_II, Weight_I, Buff_V, nVar)
   end subroutine access_request_sc
   !==================================================================!
   subroutine access_request_ih(&
-       nPartial, iGetStart,&
-       Get,Weight,&
-       iBuffer, Buff_I, nVar)
+       nPartial, nIndex, iIndex_II, Weight_I, Buff_V, nVar)
     ! access_request as passed by IH component
-    integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::Weight
-    real,intent(in)::Buff_I(nVar)
+    integer,intent(in) :: nPartial, nIndex, nVar
+    integer,intent(in) :: iIndex_II(1:nIndex,1:nPartial)
+    real,   intent(in) :: Weight_I(1:nPartial)
+    real,   intent(in) :: Buff_V(nVar)
     !-----
-    call access_request(IH_,nPartial, iGetStart,&
-       Get,Weight,&
-       iBuffer, Buff_I, nVar)
+    call access_request(IH_, nPartial, &
+         nIndex, iIndex_II, Weight_I, Buff_V, nVar)
   end subroutine access_request_ih
   !==================================================================!
   subroutine SP_put_scatter_from_mh(nData, nDim, Coord_DI, nIndex, iIndex_II)

@@ -2782,17 +2782,16 @@ contains
     !----------------------------------------------------------------------!
     ! Method to access data that is stored in the Buffer at Source
     type(RouterType), intent(in):: Router
-    external access_buffer
-    ! the interface for the method provided from outside                   !
-    !       SUBROUTINE access_buffer(nPartial, iGetStart, iBuffer, &
-    !            Get, Weight,&
-    !            Buff_I,nVar)
-    !         implicit none
-    !         integer,intent(in)::nPartial,iGetStart,nVar,iBuffer
-    !         type(IndexPtrType),intent(in)::Get
-    !         type(WeightPtrType),intent(in)::Weight
-    !         real,dimension(nVar),intent(in)::Buff_I
-    !       END SUBROUTINE access_buffer
+    interface 
+       subroutine access_buffer(nPartial, nIndex, &
+                iIndex_II, Weight_I, Buff_V,nVar)
+         implicit none
+         integer,intent(in) :: nPartial, nIndex, nVar
+         integer,intent(in) :: iIndex_II(1:nIndex,1:nPartial)
+         real,   intent(in) :: Weight_I(1:nPartial)
+         real,   intent(in) :: Buff_V(nVar)
+       end subroutine access_buffer
+    end interface
     !----------------------------------------------------------------------!
     integer:: iBuffer, iGet, iPe, iV, nPartialGet
     !----------------------------------------------------------------------!
@@ -2802,12 +2801,16 @@ contains
        iGet=1
        do iV=1,Router%nSend_P(iPE)
           nPartialGet=Router%iGet_P(iPE)%iCB_II(0,iGet)
-          call access_buffer(nPartialGet,&
-               iGet,iBuffer,&
-               Router%iGet_P(iPE),&
-               Router%Get_P(iPE), &
-               Router%BufferSource_II(1:Router%nVar,iBuffer),&
-               Router%nVar)
+          call access_buffer(nPartialGet,   &
+               nIndex=Router%nIndexesSource,&
+               iIndex_II=Router%iGet_P(iPE)%iCB_II(&
+               1:Router%nIndexesSource,&
+               iGet:iGet+nPartialGet-1),    &
+               Weight_I=Router%Get_P(iPE)%Weight_I(  &
+               iGet:iGet+nPartialGet-1),    &
+               Buff_V=Router%BufferSource_II(&
+               1:Router%nVar,iBuffer),&
+               nVar=Router%nVar)
           iGet   = iGet   +nPartialGet
           iBuffer= iBuffer+1
        end do
