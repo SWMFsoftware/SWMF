@@ -196,6 +196,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
+            call update_semi_router_at_source(RouterScSp,&
+                 SC_GridDescriptor,interpolation_amr_gc)
             if(.not.associated(XyzStored_DI))then
                allocate(XyzStored_DI(3,10))
                allocate(iAuxStored_II(2,10))
@@ -237,6 +239,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
+            call update_semi_router_at_source(RouterIhSp,&
+                 IH_GridDescriptor,interpolation_amr_gc)
             if(.not.associated(XyzStored_DI))then
                allocate(XyzStored_DI(3,10))
                allocate(iAuxStored_II(2,10))
@@ -404,9 +408,8 @@ contains
     nStored = nStored + 1
 
     ! coordinates and indices
-    XyzStored_DI( :,nStored) = Buff_V(nDim+2+1:nDim+2+nDim)
+    XyzStored_DI( :,nStored) = Buff_V(1:nDim)
     iAuxStored_II(:,nStored) = nint(Buff_V(nVar-nAux+1:nVar))
-
     ! FOR CURRENT IMPLEMENTATION:
     ! check whether this particular entry has already been stored,
     ! in this case indices would be the same as the previous entry
@@ -519,6 +522,8 @@ contains
          interpolate          = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)
     if(is_proc(IH_))then
+       call update_semi_router_at_source(RouterIhSp,&
+            Ih_GridDescriptor,interpolation_amr_gc)
        nStored=0
        call access_router_buffer_source(RouterIhSp, access_request_ih)
          call IH_add_to_line(&
