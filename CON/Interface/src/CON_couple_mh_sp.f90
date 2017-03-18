@@ -196,8 +196,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
-            call update_semi_router_at_source(RouterScSp,&
-                 SC_GridDescriptor,interpolation_amr_gc)
+!            call update_semi_router_at_source(RouterScSp,&
+!                 SC_GridDescriptor,interpolation_amr_gc)
             if(.not.associated(XyzStored_DI))then
                allocate(XyzStored_DI(3,10))
                allocate(iAuxStored_II(2,10))
@@ -239,8 +239,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
-            call update_semi_router_at_source(RouterIhSp,&
-                 IH_GridDescriptor,interpolation_amr_gc)
+!            call update_semi_router_at_source(RouterIhSp,&
+!                 IH_GridDescriptor,interpolation_amr_gc)
             if(.not.associated(XyzStored_DI))then
                allocate(XyzStored_DI(3,10))
                allocate(iAuxStored_II(2,10))
@@ -522,13 +522,13 @@ contains
          interpolate          = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)
     if(is_proc(IH_))then
-       call update_semi_router_at_source(RouterIhSp,&
-            Ih_GridDescriptor,interpolation_amr_gc)
+!       call update_semi_router_at_source(RouterIhSp,&
+!            IH_GridDescriptor, interpolation_amr_gc)
        nStored=0
        call access_router_buffer_source(RouterIhSp, access_request_ih)
-         call IH_add_to_line(&
-         nStored,   XyzStored_DI, &
-         nAux, iAuxStored_II)
+       call IH_add_to_line(&
+            nStored,   XyzStored_DI, &
+            nAux, iAuxStored_II)
       end if
     if(is_proc(IH_))&
          call set_semi_router_from_source(&
@@ -657,7 +657,6 @@ contains
     ! get buffer with variables
     call SC_get_for_sp(&
          nPartial,iGetStart,Get,w,State_V,nVar)
-!write(*,*)State_V
     ! indices of variables 
     iVarBx = iVar_V(BxCouple_)
     iVarBz = iVar_V(BzCouple_)
