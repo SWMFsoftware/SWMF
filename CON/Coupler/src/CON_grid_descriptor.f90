@@ -1284,11 +1284,15 @@ contains
     logical, intent(out)  :: IsOut
     
     integer:: iNode
+    logical:: IsPeriodic_D(nDim)
     !--------------------------------------------------------------------------
     ! check if point's inside the domain
+    IsPeriodic_D = GridDescriptorAMR%DD%Ptr%IsPeriodic_D 
     IsOut = &
-         any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D) .or. &
-         any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D)
+         any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D&
+         .and..not.IsPeriodic_D) .or. &
+         any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D&
+         .and..not.IsPeriodic_D)
     if(IsOut) &
          RETURN
 
