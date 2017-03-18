@@ -20,7 +20,7 @@ contains
          SourceGD,&
          TargetGD,&
          RouterToBuffer,&
-         nIndexesTarget=1)
+         nIndexTarget=1)
     if(is_proc(compid_grid(TargetGD%DD%Ptr)))&
          call allocate_vector(NameBuffer,nVar,TargetGD)
     if(is_proc0(compid_grid(TargetGD%DD%Ptr)))&

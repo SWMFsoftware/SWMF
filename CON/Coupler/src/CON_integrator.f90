@@ -45,7 +45,7 @@ contains
          SourceGD,& !GridDesctriptor for the source field (in) 
          LineGD,&   !GirdDescriptor,save,intent(out)
          Router,&   !resulting router, intent(out)
-         nIndexesTarget=1)
+         nIndexTarget=1)
   end subroutine init_router_for_vector
   !=============================================================!
   subroutine check_if_can_integrate(NameVector)

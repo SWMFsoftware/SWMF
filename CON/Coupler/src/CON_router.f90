@@ -76,7 +76,7 @@ Module CON_router
 !only seems to be of sence for the component which is localized !
 !at one PE only, or which has exactly one block per PE          !
 !\begin{verbatim}
-     integer::nIndexesSource,nIndexesTarget  
+     integer::nIndexSource,nIndexTarget  
 !\end{verbatim}
 !The total amounts of the buffer segments to be sent-received   !
 !to/from the PE. The total amounts of the grid points from which!
@@ -126,6 +126,8 @@ Module CON_router
 !PUBLIC MEMBER FUNCTIONS:
   private::allocate_get_arrays
   private::allocate_put_arrays
+  private::allocate_buffer_target
+  private::allocate_buffer_source
   private::check_router_allocation
   private::iAux_P
 !EOP
@@ -139,16 +141,16 @@ contains
        GridDescriptorSource,&
        GridDescriptorTarget,&
        Router,&
-       nIndexesSource,&
-       nIndexesTarget,&
+       nIndexSource,&
+       nIndexTarget,&
        nMappedPointIndex)
     !INPUT ARGUMENTS:
     type(GridDescriptorType),intent(in)::&
          GridDescriptorSource,&
          GridDescriptorTarget
     type (RouterType),intent(out)::Router
-    integer,intent(in),optional::nIndexesSource
-    integer,intent(in),optional::nIndexesTarget
+    integer,intent(in),optional::nIndexSource
+    integer,intent(in),optional::nIndexTarget
     integer,intent(in),optional::nMappedPointIndex
     !EOP
     integer::iPE,iError
@@ -262,28 +264,28 @@ contains
             'Do not couple a Local grid with a global one')
     end if
 
-    Router%nIndexesSource = &
+    Router%nIndexSource = &
          GridDescriptorSource%nDim + 1
-    if(present(nIndexesSource))then
-       if(nIndexesSource>=Router%nIndexesSource-1&
-            .or.nIndexesSource==1)then
-          Router%nIndexesSource=nIndexesSource
+    if(present(nIndexSource))then
+       if(nIndexSource>=Router%nIndexSource-1&
+            .or.nIndexSource==1)then
+          Router%nIndexSource=nIndexSource
        else
-          write(*,*)'IndexMin=',Router%nIndexesSource-1
-          call CON_stop('nIndexesSource should be at least IndexMin')
+          write(*,*)'IndexMin=',Router%nIndexSource-1
+          call CON_stop('nIndexSource should be at least IndexMin')
        end if
     end if
 
-    Router%nIndexesTarget = &
+    Router%nIndexTarget = &
          GridDescriptorTarget%nDim + 1
 
-    if(present(nIndexesTarget))then
-       if(nIndexesTarget>=Router%nIndexesTarget-1&
-            .or.nIndexesTarget==1)then
-          Router%nIndexesTarget=nIndexesTarget
+    if(present(nIndexTarget))then
+       if(nIndexTarget>=Router%nIndexTarget-1&
+            .or.nIndexTarget==1)then
+          Router%nIndexTarget=nIndexTarget
        else
-          write(*,*)'IndexMin=',Router%nIndexesTarget-1
-          call CON_stop('nIndexesTarget should be at least IndexMin')
+          write(*,*)'IndexMin=',Router%nIndexTarget-1
+          call CON_stop('nIndexTarget should be at least IndexMin')
        end if
     end if
     Router%nMappedPointIndex   = 0
@@ -353,19 +355,23 @@ contains
     end do
 
     nullify(Router%BufferSource_II)
+    call allocate_buffer_source(Router, nProc)
     nullify(Router%BufferTarget_II)
+    call allocate_buffer_target(Router, nProc)
  
     Router%nGet_P=0
     Router%nPut_P=0
     Router%nSend_P=0
     Router%nRecv_P=0
     do iPE=0,nProc-1
-       Router%iGet_P(iPE)%iCB_II(:,:)=0
-       Router%iPut_P(iPE)%iCB_II(:,:)=0
-       Router%Put_P(iPE)%Weight_I(:)=cZero
-       Router%Get_P(iPE)%Weight_I(:)=cZero
-       Router%DoAdd_P(iPE)%DoAdd_I(:)=.false.
+       Router%iGet_P(iPE)%iCB_II(:,:) = 0
+       Router%iPut_P(iPE)%iCB_II(:,:) = 0
+       Router%Put_P(iPE)%Weight_I(:)  = 0.0
+       Router%Get_P(iPE)%Weight_I(:)  = 0.0
+       Router%DoAdd_P(iPE)%DoAdd_I(:) = .false.
     end do
+    Router%BufferSource_II(:,:)       = 0.0
+    Router%BufferTarget_II(:,:)       = 0.0    
   end subroutine init_router
 !============================PRIVATE============================!
   subroutine  allocate_get_arrays(Router,iPE,nLength)
@@ -377,12 +383,24 @@ contains
     if(associated(Router%Get_P(iPE)%Weight_I))&
          deallocate(Router%Get_P(iPE)%Weight_I)
     allocate(Router%iGet_P(iPE)%iCB_II(&
-         0:Router%nIndexesSource,nLength),stat=iError)
+         0:Router%nIndexSource,nLength),stat=iError)
     call check_allocate(iError,'iGet_P%iCB_II')
     allocate(Router%Get_P(iPE)%Weight_I(nLength),stat=iError)
     call check_allocate(iError,'Get_P%Weight_I')
   end subroutine allocate_get_arrays
-!============================PRIVATE============================!
+  !==========================PRIVATE===========================!
+  subroutine allocate_buffer_source(Router, nLength)
+    type(RouterType),intent(inout) :: Router
+    integer,         intent(in)    :: nLength
+    integer::iError
+    !----------------
+    if(associated(Router%BufferSource_II))&
+         deallocate(Router%BufferSource_II)
+    allocate(Router%BufferSource_II(&
+         Router%nVar,nLength),stat=iError)
+    call check_allocate(iError,'BufferSource_II')
+  end subroutine allocate_buffer_source
+  !============================PRIVATE======================!
   subroutine allocate_put_arrays(Router,iPE,nLength)
     type(RouterType),intent(inout)::Router
     integer,intent(in)::iPE,nLength
@@ -392,15 +410,36 @@ contains
     if(associated(Router%DoAdd_P(iPE)%DoAdd_I))&
          deallocate(Router%DoAdd_P(iPE)%DoAdd_I)
     allocate(Router%iPut_P(iPE)%iCB_II(&
-         0:Router%nIndexesTarget,nLength),stat=iError)
+         0:Router%nIndexTarget,nLength),stat=iError)
     call check_allocate(iError,'iPut_P%iCB_II') 
     allocate(Router%Put_P(iPE)%Weight_I(nLength),stat=iError)
     call check_allocate(iError,'Put_P%Weight_I')   
     allocate(Router%DoAdd_P(iPE)%DoAdd_I(nLength),stat=iError)
     call check_allocate(iError,'DoAdd_P%DoAdd_I')
   end subroutine allocate_put_arrays
-!============================PRIVATE============================!
-!
+  !============================PRIVATE======================!
+  subroutine allocate_buffer_target(Router, nLength)
+    type(RouterType),intent(inout) :: Router
+    integer,         intent(in)    :: nLength
+    integer::iError
+    !----------------
+    if(associated(Router%BufferTarget_II))&
+         deallocate(Router%Buffertarget_II)
+    allocate(Router%BufferSource_II(&
+         Router%nVar,nLength),stat=iError)
+    call check_allocate(iError,'BufferSource_II')
+  end subroutine allocate_buffer_target
+  !=========================================================!
+  integer function nlength_buffer_source(Router)
+    type(RouterType),intent(inout)::Router
+    nlength_buffer_source = sum(Router%nRecv_P(:))
+  end function nlength_buffer_source
+  !---------------------------------
+  integer function nlength_buffer_target(Router)
+    type(RouterType),intent(inout)::Router
+    nlength_buffer_target = sum(Router%nSend_P(:))
+  end function nlength_buffer_target
+  !============================PRIVATE======================!
   subroutine check_router_allocation(Router)
     type(RouterType),intent(inout)::Router
     integer :: iPE, nTotalPut, nTotalGet
@@ -498,17 +537,17 @@ contains
             lGlobalTreeNode,&
             nDim,&
             Xyz_D,&
-            nIndexes,&
+            nIndex,&
             iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
          type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)::lGlobalTreeNode,nIndexes
+         integer,intent(in)::lGlobalTreeNode,nIndex
          logical,intent(out)::IsInterfacePoint
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
-         integer,intent(inout)::iIndex_I(nIndexes)
+         integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
 
        subroutine mapping(&
@@ -524,18 +563,18 @@ contains
             nDim,&
             Xyz_D,&
             GridDescriptor,&
-            nIndexes, &
+            nIndex, &
             iIndex_II,&
-            nImages,  &
+            nImage,  &
             Weight_I)
          use CON_grid_descriptor
          implicit none
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
          type(GridDescriptorType)::GridDescriptor     
-         integer,intent(in)::nIndexes
-         integer,     intent(out):: iIndex_II(0:nIndexes,2**nDim)
-         integer,intent(out)::nImages
+         integer,intent(in)::nIndex
+         integer,     intent(out):: iIndex_II(0:nIndex,2**nDim)
+         integer,intent(out)::nImage
          real,dimension(2**nDim),intent(out)::Weight_I
        end subroutine interpolate
     end interface
@@ -554,7 +593,7 @@ contains
     integer::lGlobalNode,iBlockAll
     integer::iGlobalGridPoint,nGridPointsPerBlock
     logical::IsInterfacePoint
-    integer::iImages,nImages,nImagesPart,iToGet
+    integer::iImage,nImage,nImagePart,iToGet
     integer::iProcTo,iBlockTo,iProcFrom,iProcDoNotAdd,iPE
     integer,dimension(0:Router%nProc-1)::&
          nGetUbound_P,nPutUbound_P
@@ -563,8 +602,8 @@ contains
     real,dimension(GridDescriptorSource%nDim)::&
          XyzSource_D,XyzStored_D
     integer,dimension(GridDescriptorTarget%nDim)::iCell_D
-    integer, dimension(Router%nIndexesTarget)::iIndexRecv_I
-    integer,dimension(0:Router%nIndexesSource,&
+    integer, dimension(Router%nIndexTarget)::iIndexRecv_I
+    integer,dimension(0:Router%nIndexSource,&
          2**GridDescriptorSource%nDim)::&
          iIndexGet_II
     integer,dimension(2**GridDescriptorSource%nDim)::&
@@ -655,7 +694,7 @@ contains
           open(iFile,file=trim(NameFile),status='replace')
           write(iFile,*)'iPointGlobal Xyz_D'
           write(iFile,*)'iProcFrom   iCB indexes  Weitht  Sum(Weight)'//&
-               'iImages '
+               'iImage '
        end if
 
 
@@ -696,7 +735,7 @@ contains
              end if
 
              iIndexRecv_I(1)=iGlobalGridPoint
-             if(Router%nIndexesTarget==1.and.&
+             if(Router%nIndexTarget==1.and.&
                   UseMappingVector)then
 
                 XyzSource_D=XyzMapping_DI(&
@@ -709,8 +748,8 @@ contains
                      lGlobalNode,& 
                      iCell_D)
 
-                if(Router%nIndexesTarget/=1)then
-                   iIndexRecv_I(Router%nIndexesTarget)=iBlockTo
+                if(Router%nIndexTarget/=1)then
+                   iIndexRecv_I(Router%nIndexTarget)=iBlockTo
                    iIndexRecv_I(1:GridDescriptorTarget%nDim)=&
                         iCell_D
                 end if
@@ -729,7 +768,7 @@ contains
                            lGlobalNode,&
                            GridDescriptorTarget%nDim,&
                            XyzTarget_D,&
-                           Router%nIndexesTarget,&
+                           Router%nIndexTarget,&
                            iIndexRecv_I,&
                            IsInterfacePoint)
                       if(.not.IsInterfacePoint)CYCLE 
@@ -757,47 +796,47 @@ contains
                      GridDescriptorSource%nDim,&
                      XyzSource_D,&
                      GridDescriptorSource,&
-                     Router%nIndexesSource,&
+                     Router%nIndexSource,&
                      iIndexGet_II,&
-                     nImages,&
+                     nImage,&
                      Weight_I)
              else
                 call nearest_grid_points(&
                      GridDescriptorSource%nDim,&
                      XyzSource_D,&
                      GridDescriptorSource,&
-                     Router%nIndexesSource,&
+                     Router%nIndexSource,&
                      iIndexGet_II,&
-                     nImages,&
+                     nImage,&
                      Weight_I)
              end if
-             if(nImages<1)then
-                write(*,*)'nImages=', nImages
+             if(nImage<1)then
+                write(*,*)'nImage=', nImage
                 call CON_stop('interpolation failed')
              end if
              if(DoTestMe)then
-                do iImages=1,nImages
-                   if(iImages==1)then
-                      write(iFile,*)iIndexGet_II(:,iImages),Weight_I(iImages),&
-                           sum(Weight_I(1:nImages))
+                do iImage=1,nImage
+                   if(iImage==1)then
+                      write(iFile,*)iIndexGet_II(:,iImage),Weight_I(iImage),&
+                           sum(Weight_I(1:nImage))
                    else
-                      write(iFile,*)iIndexGet_II(:,iImages),Weight_I(iImages),&
-                           iImages
+                      write(iFile,*)iIndexGet_II(:,iImage),Weight_I(iImage),&
+                           iImage
                    end if
                 end do
-                if(Router%nIndexesSource==&
+                if(Router%nIndexSource==&
                      GridDescriptorSource%nDim+1)then
-                   XyzSource_D=cZero
-                   do iImages=1,nImages
+                   XyzSource_D=0.0
+                   do iImage=1,nImage
                       XyzSource_D=&
                            XyzSource_D+&
                            xyz_grid_d(GridDescriptorSource,&
                            i_global_node_bp(&
                            GridDescriptorSource%DD%Ptr,&
-                           iIndexGet_II(Router%nIndexesSource,iImages),&
-                           iIndexGet_II(0,iImages)),&
+                           iIndexGet_II(Router%nIndexSource,iImage),&
+                           iIndexGet_II(0,iImage)),&
                            iIndexGet_II(1:GridDescriptorSource%nDim,&
-                           iImages))*Weight_I(iImages)
+                           iImage))*Weight_I(iImage)
 
                    end do
                    write(iFile,*)'Interpolated coordinate values=',&
@@ -809,15 +848,15 @@ contains
              ! call timing_stop('set_router_interp')
 !--------------------------------------------------------------!
 !Lookup
-             nImagesPart=0     !At all CPUs
+             nImagePart=0     !At all CPUs
 
 
-             do iImages=1,nImages
-                iProcFrom=iIndexGet_II(0,iImages)
+             do iImage=1,nImage
+                iProcFrom=iIndexGet_II(0,iImage)
 !At the source PEs the number of terms in the partial sums are !
 !found                                                         !
                 if(iProc==iProcFrom)then
-                   nImagesPart=nImagesPart+1
+                   nImagePart=nImagePart+1
                    Router%nGet_P(iProcTo)=&
                         Router%nGet_P(iProcTo)+1
                    DoCountOnly=DoCountOnly.or.&
@@ -828,7 +867,7 @@ contains
 !At the target processor the PE list is defined which will send!
 !partial sums                                                 !
                 if(iProc==iProcTo)then
-                   if(iImages==1)then
+                   if(iImage==1)then
                       iProcLookUp_I(1)=iProcFrom
                       nProcToGet=1
                       Router%nPut_P(iProcFrom)=&
@@ -855,30 +894,30 @@ contains
                 end if
              end do
 
-             if(nImagesPart>0)Router%nSend_P(iProcTo)=&
+             if(nImagePart>0)Router%nSend_P(iProcTo)=&
                   Router%nSend_P(iProcTo)+1
 
              if(.not.DoCountOnly)then
-                do iImages=1,nImages
-                   iProcFrom=iIndexGet_II(0,iImages)
+                do iImage=1,nImage
+                   iProcFrom=iIndexGet_II(0,iImage)
                    if(iProc==iProcFrom)then
-                      iToGet=Router%nGet_P(iProcTo)+1-nImagesPart
+                      iToGet=Router%nGet_P(iProcTo)+1-nImagePart
                       Router%iGet_P(iProcTo)%iCB_II(:,iToGet)&
-                           =iIndexGet_II(:,iImages)
+                           =iIndexGet_II(:,iImage)
                       Router%iGet_P(iProcTo)%iCB_II(0,iToGet)&
-                           =nImagesPart
+                           =nImagePart
                       Router%Get_P(iProcTo)%Weight_I(iToGet)&
-                           =Weight_I(iImages)
-                      nImagesPart=nImagesPart-1
+                           =Weight_I(iImage)
+                      nImagePart=nImagePart-1
                    end if
                 end do
                 if(iProc==iProcTo)then
                    do iProcToGet=1,nProcToGet
                       iProcFrom=iProcLookUp_I(iProcToGet)
                       Router%iPut_P(iProcFrom)%&
-                           iCB_II(1:Router%nIndexesTarget,&
+                           iCB_II(1:Router%nIndexTarget,&
                            Router%nPut_P(iProcFrom))&
-                           =iIndexRecv_I(1:Router%nIndexesTarget)
+                           =iIndexRecv_I(1:Router%nIndexTarget)
                       Router%iPut_P(iProcFrom)%&
                            iCB_II(0,Router%nPut_P(iProcFrom))&
                            =1
@@ -959,17 +998,17 @@ contains
             lGlobalTreeNode,&
             nDim,&
             Xyz_D,&
-            nIndexes,&
+            nIndex,&
             iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
          type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)::lGlobalTreeNode,nIndexes
+         integer,intent(in)::lGlobalTreeNode,nIndex
          logical,intent(out)::IsInterfacePoint
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
-         integer,intent(inout)::iIndex_I(nIndexes)
+         integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
 
        subroutine mapping(&
@@ -985,18 +1024,18 @@ contains
             nDim,&
             Xyz_D,&
             GridDescriptor,&
-            nIndexes,&
+            nIndex,&
             iIndex_II,&
-            nImages,&
+            nImage,&
             Weight_I)
          use CON_grid_descriptor
          implicit none
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
          type(GridDescriptorType)::GridDescriptor     
-         integer,intent(in)::nIndexes
-         integer,     intent(out):: iIndex_II(0:nIndexes,2**nDim)
-         integer,intent(out)::nImages
+         integer,intent(in)::nIndex
+         integer,     intent(out):: iIndex_II(0:nIndex,2**nDim)
+         integer,intent(out)::nImage
          real,dimension(2**nDim),intent(out)::Weight_I
        end subroutine interpolate
     end interface
@@ -1015,7 +1054,7 @@ contains
     integer::lGlobalNode,iBlockAll
     integer::iGlobalGridPoint,nGridPointsPerBlock
     logical::IsInterfacePoint
-    integer::iImages,nImages,nImagesPart,iToPut
+    integer::iImage,nImage,nImagePart,iToPut
     integer::iProcTo,iBlockFrom,iProcFrom,iPE
     integer,dimension(0:Router%nProc-1)::&
          nGetUbound_P,nPutUbound_P
@@ -1025,9 +1064,9 @@ contains
     real,dimension(GridDescriptorSource%nDim)::XyzSource_D
 
     integer,dimension(GridDescriptorSource%nDim)::iCell_D
-    integer, dimension(Router%nIndexesSource)::iIndexGet_I
+    integer, dimension(Router%nIndexSource)::iIndexGet_I
 
-    integer,dimension(0:Router%nIndexesTarget,&
+    integer,dimension(0:Router%nIndexTarget,&
          2**GridDescriptorTarget%nDim)::&
          iIndexPut_II
 
@@ -1126,7 +1165,7 @@ contains
           open(iFile,file=NameFile,status='replace')
           write(iFile,*)'iPointGlobal Xyz_D'
           write(iFile,*)'iProcTo   iCB indexes  Weitht  Sum(Weight)'//&
-               'iImages '
+               'iImage '
        end if
 
 
@@ -1176,7 +1215,7 @@ contains
              iIndexGet_I(1) = iGlobalGridPoint
              !This value will be rewritten otherwise
 
-             if(Router%nIndexesSource==1.and.&
+             if(Router%nIndexSource==1.and.&
                   UseMappingVector)then
                 XyzTarget_D=XyzMapping_DI(&
                      1:GridDescriptorTarget%nDim,&
@@ -1187,8 +1226,8 @@ contains
                      iGlobalGridPoint,&
                      lGlobalNode, &
                      iCell_D) 
-                if(Router%nIndexesSource/=1)then
-                   iIndexGet_I(Router%nIndexesSource)=iBlockFrom
+                if(Router%nIndexSource/=1)then
+                   iIndexGet_I(Router%nIndexSource)=iBlockFrom
                    iIndexGet_I(1:GridDescriptorSource%nDim) =&
                         iCell_D
                 end if
@@ -1210,7 +1249,7 @@ contains
                            lGlobalNode,&
                            GridDescriptorSource%nDim,&
                            XyzSource_D,&
-                           Router%nIndexesSource,&
+                           Router%nIndexSource,&
                            iIndexGet_I,&
                            IsInterfacePoint)
                       if(.not.IsInterfacePoint)CYCLE 
@@ -1236,47 +1275,47 @@ contains
                      GridDescriptorTarget%nDim,&
                      XyzTarget_D,&
                      GridDescriptorTarget,&
-                     Router%nIndexesTarget,&
+                     Router%nIndexTarget,&
                      iIndexPut_II,&
-                     nImages,&
+                     nImage,&
                      Weight_I)
              else
                 call nearest_grid_points(&
                      GridDescriptorTarget%nDim,&   
                      XyzTarget_D,&
                      GridDescriptorTarget,&
-                     Router%nIndexesTarget,&
+                     Router%nIndexTarget,&
                      iIndexPut_II,&
-                     nImages,&
+                     nImage,&
                      Weight_I)
              end if
-             if(nImages<1)then
-                write(*,*)'nImages=', nImages
+             if(nImage<1)then
+                write(*,*)'nImage=', nImage
                 call CON_stop('interpolation failed in router from source')
              end if
              if(DoTestMe)then
-                do iImages=1,nImages
-                   if(iImages==1)then
-                      write(iFile,*)iIndexPut_II(:,iImages),Weight_I(iImages),&
-                           sum(Weight_I(1:nImages))
+                do iImage=1,nImage
+                   if(iImage==1)then
+                      write(iFile,*)iIndexPut_II(:,iImage),Weight_I(iImage),&
+                           sum(Weight_I(1:nImage))
                    else
-                      write(iFile,*)iIndexPut_II(:,iImages),Weight_I(iImages),&
-                           iImages
+                      write(iFile,*)iIndexPut_II(:,iImage),Weight_I(iImage),&
+                           iImage
                    end if
                 end do
-                if(Router%nIndexesTarget==&
+                if(Router%nIndexTarget==&
                      GridDescriptorTarget%nDim+1)then
-                   XyzTarget_D=cZero
-                   do iImages=1,nImages
+                   XyzTarget_D=0.0
+                   do iImage=1,nImage
                       XyzTarget_D=&
                            XyzTarget_D+&
                            xyz_grid_d(GridDescriptorTarget,&
                            i_global_node_bp(&
                            GridDescriptorTarget%DD%Ptr,&
-                           iIndexPut_II(Router%nIndexesTarget,iImages),&
-                           iIndexPut_II(0,iImages)),&
+                           iIndexPut_II(Router%nIndexTarget,iImage),&
+                           iIndexPut_II(0,iImage)),&
                            iIndexPut_II(1:GridDescriptorTarget%nDim,&
-                           iImages))*Weight_I(iImages)
+                           iImage))*Weight_I(iImage)
 
                    end do
                    write(iFile,*)'Interpolated coordinate values=',&
@@ -1289,15 +1328,15 @@ contains
              !--------------------------------------!
              !Lookup
 
-             nImagesPart=0     !At all CPUs
+             nImagePart=0     !At all CPUs
 
-             do iImages=1,nImages
-                iProcTo=iIndexPut_II(0,iImages)
+             do iImage=1,nImage
+                iProcTo=iIndexPut_II(0,iImage)
                 !At the target PEs the number of terms 
                 !in the partial sums are found
 
                 if(iProc==iProcTo)then
-                   nImagesPart=nImagesPart+1
+                   nImagePart=nImagePart+1
                    Router%nPut_P(iProcFrom)=&
                         Router%nPut_P(iProcFrom)+1
                    DoCountOnly=DoCountOnly.or.&
@@ -1308,7 +1347,7 @@ contains
                 !At the source processor the PE list is defined !
                 !which will get the  partial sums
                 if(iProc==iProcFrom)then
-                   if(iImages==1)then
+                   if(iImage==1)then
                       iProcLookUp_I(1)=iProcTo
                       nProcToPut=1
                       Router%nGet_P(iProcTo)=&
@@ -1335,33 +1374,33 @@ contains
                 end if
              end do
 
-             if(nImagesPart>0)Router%nRecv_P(iProcFrom)=&
+             if(nImagePart>0)Router%nRecv_P(iProcFrom)=&
                   Router%nRecv_P(iProcFrom)+1
 
              if(.not.DoCountOnly)then
-                do iImages=1,nImages
-                   iProcTo=iIndexPut_II(0,iImages)
+                do iImage=1,nImage
+                   iProcTo=iIndexPut_II(0,iImage)
                    if(iProc==iProcTo)then
                       iToPut= Router%nPut_P(iProcFrom)+1&
-                           -nImagesPart
+                           -nImagePart
                       Router%iPut_P(iProcFrom)%iCB_II(:,iToPut)&
-                           =iIndexPut_II(:,iImages)
+                           =iIndexPut_II(:,iImage)
                       Router%iPut_P(iProcFrom)%iCB_II(0,iToPut)&
-                           =nImagesPart
+                           =nImagePart
                       Router%Put_P(iProcFrom)%Weight_I(iToPut)&
-                           =Weight_I(iImages)
+                           =Weight_I(iImage)
                       Router%DoAdd_P(iProcFrom)%&
                            DoAdd_I(iToPut)=.true.
-                      nImagesPart=nImagesPart-1
+                      nImagePart=nImagePart-1
                    end if
                 end do
                 if(iProc==iProcFrom)then
                    do iProcToPut=1,nProcToPut
                       iProcTo=iProcLookUp_I(iProcToPut)
                       Router%iGet_P(iProcTo)%&
-                           iCB_II(1:Router%nIndexesSource,&
+                           iCB_II(1:Router%nIndexSource,&
                            Router%nGet_P(iProcTo))&
-                           =iIndexGet_I(1:Router%nIndexesSource)
+                           =iIndexGet_I(1:Router%nIndexSource)
                       Router%iGet_P(iProcTo)%&
                            iCB_II(0,Router%nGet_P(iProcTo))&
                            =1
@@ -1384,7 +1423,7 @@ contains
   end subroutine construct_router_from_source
   !===========================================================================!
   subroutine get_target_interface_points(&
-       iProc, nIndexes,&
+       iProc, nIndex,&
        ! the GridDescriptor for the Target component
        GridDescriptorTarget,  &
        !Logical function which allows to skip the block if there is no !
@@ -1411,20 +1450,20 @@ contains
             lGlobalTreeNode,&
             nDim,&
             Xyz_D,&
-            nIndexes,&
+            nIndex,&
             iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
          type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)::lGlobalTreeNode,nIndexes
+         integer,intent(in)::lGlobalTreeNode,nIndex
          logical,intent(out)::IsInterfacePoint
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
-         integer,intent(inout)::iIndex_I(nIndexes)
+         integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
     end interface
-    integer, intent(in):: iProc, nIndexes
+    integer, intent(in):: iProc, nIndex
     type(GridDescriptorType),intent(in)::GridDescriptorTarget
     ! number of data entries
     integer,              intent(out):: nData
@@ -1441,7 +1480,7 @@ contains
     integer::lGlobalNode, iBlockAll, nDim, iProcTo, iBlockTo
     integer::iGlobalGridPoint, nGridPointsPerBlock
     logical::IsInterfacePoint, DoCountOnly, DoCheckBlock,DoCheckPoint
-    integer::iCount, iData, iIndex_I(nIndexes)
+    integer::iCount, iData, iIndex_I(nIndex)
     real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
     integer,dimension(GridDescriptorTarget%nDim)::iCell_D
     logical::DoTest,DoTestMe
@@ -1486,8 +1525,8 @@ contains
                   lGlobalNode,& 
                   iCell_D)
                 
-             if(nIndexes/=1)then
-                iIndex_I(nIndexes)=iBlockTo
+             if(nIndex/=1)then
+                iIndex_I(nIndex)=iBlockTo
                 iIndex_I(1:nDim)=&
                      iCell_D
              end if
@@ -1501,14 +1540,14 @@ contains
                      lGlobalNode,&
                      nDim,&
                      XyzTarget_D,&
-                     nIndexes,&
+                     nIndex,&
                      iIndex_I,&
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE
                 iData = iData +1
                 if(.not.DoCountOnly)then
                    Coord_II(1:nDim,iData) = XyzTarget_D
-                   iIndex_II(1:nIndexes,iData) = iIndex_I
+                   iIndex_II(1:nIndex,iData) = iIndex_I
                 end if
              end if
           end do   !iGlobalPoints
@@ -1516,7 +1555,7 @@ contains
        if(DoCountOnly)then
           nData = iData
           call check_size(2, (/nDim, nData/), Buffer_II =  Coord_II)
-          call check_size(2, (/nIndexes, nData/), iBuffer_II = iIndex_II)
+          call check_size(2, (/nIndex, nData/), iBuffer_II = iIndex_II)
        end if
     end do         !iCount
   end subroutine get_target_interface_points
@@ -1559,17 +1598,17 @@ contains
             lGlobalTreeNode,&
             nDim,&
             Xyz_D,&
-            nIndexes,&
+            nIndex,&
             iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
          type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)::lGlobalTreeNode,nIndexes
+         integer,intent(in)::lGlobalTreeNode,nIndex
          logical,intent(out)::IsInterfacePoint
          integer,intent(in)::nDim
          real,intent(inout)::Xyz_D(nDim)
-         integer,intent(inout)::iIndex_I(nIndexes)
+         integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
        subroutine get_request_target(&
             nData, Coord_II, iIndex_II, nAux, Aux_VI)
@@ -1649,7 +1688,7 @@ contains
          0:GridDescriptorSource%nDim+1, &
          2**GridDescriptorSource%nDim),&
          iProcLookup_I(2**GridDescriptorSource%nDim)
-    integer:: iImages, nImage, nImageMax
+    integer:: nImage, nImageMax
     real:: Weight_I(2**GridDescriptorSource%nDim)
     ! optional actions to be taken
     logical:: &
@@ -1701,8 +1740,8 @@ contains
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
-    nIndexTarget = Router%nIndexesTarget
-    nIndexSource = Router%nIndexesSource
+    nIndexTarget = Router%nIndexTarget
+    nIndexSource = Router%nIndexSource
     nImageMax    = 2**nDimSource
 
     ! some data will be sent to Source, determine amount:
@@ -2065,7 +2104,7 @@ contains
          2**GridDescriptorSource%nDim)
     real :: XyzSource_D(GridDescriptorSource%nDim)
     real :: Weight_I(2**GridDescriptorSource%nDim)
-    integer:: iImages, nImages, nImageMax, nImagesPart
+    integer:: iImage, nImage, nImageMax, nImagePart
     integer:: nAux, nDimSource, nIndexSource
 
 
@@ -2092,7 +2131,7 @@ contains
     Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
     Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
     nDimSource  = GridDescriptorSource%nDim
-    nIndexSource= Router%nIndexesSource
+    nIndexSource= Router%nIndexSource
 
     if(.not.is_proc(Router%iCompSource))RETURN
     nImageMax = 2**nDimSource
@@ -2117,23 +2156,23 @@ contains
                GridDescriptorSource,&
                nIndexSource,&
                iIndexGet_II,&
-               nImages,&
+               nImage,&
                Weight_I)
-          nImagesPart = count(iIndexGet_II(0,1:nImages)==iProc)
-          Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagesPart
-          if(nImagesPart==0)call CON_stop('No image on the requested PE')
+          nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
+          Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
+          if(nImagePart==0)call CON_stop('No image on the requested PE')
           ! indices
-          do iImages=1,nImages
-             iProcFrom = iIndexGet_II(0,iImages)
+          do iImage=1,nImage
+             iProcFrom = iIndexGet_II(0,iImage)
              if(iProc==iProcFrom)then
-                iToGet=Router%nGet_P(iProcTo)+1-nImagesPart
+                iToGet=Router%nGet_P(iProcTo)+1-nImagePart
                 Router%iGet_P(iProcTo)%iCB_II(:,iToGet)&
-                     =iIndexGet_II(:,iImages)
+                     =iIndexGet_II(:,iImage)
                 Router%iGet_P(iProcTo)%iCB_II(0,iToGet)&
-                     =nImagesPart
+                     =nImagePart
                 Router%Get_P(iProcTo)%Weight_I(iToGet)&
-                     =Weight_I(iImages)
-                nImagesPart=nImagesPart-1
+                     =Weight_I(iImage)
+                nImagePart=nImagePart-1
              end if
           end do
        end do
@@ -2341,8 +2380,8 @@ contains
     ! introduced for a better readability
     nDimTarget      = GridDescriptorTarget%nDim
     nDimSource      = GridDescriptorSource%nDim
-    nIndexTarget    = Router%nIndexesTarget
-    nIndexSource    = Router%nIndexesSource
+    nIndexTarget    = Router%nIndexTarget
+    nIndexSource    = Router%nIndexSource
     nImageTargetMax = 2**nDimTarget
 
     ! if interpolation for source is not provided,
@@ -2741,8 +2780,8 @@ contains
     ! total number of processors and on components
     nProc       = Router%nProc
 
-    nDimTarget  = Router%nIndexesTarget-1
-    nIndexTarget= Router%nIndexesTarget
+    nDimTarget  = Router%nIndexTarget-1
+    nIndexTarget= Router%nIndexTarget
 
     DoPutScatterTarget = present(put_scatter_target)
     
@@ -2836,9 +2875,9 @@ contains
        do iV=1,Router%nSend_P(iPE)
           nPartialGet=Router%iGet_P(iPE)%iCB_II(0,iGet)
           call access_buffer(nPartialGet,   &
-               nIndex=Router%nIndexesSource,&
+               nIndex=Router%nIndexSource,&
                iIndex_II=Router%iGet_P(iPE)%iCB_II(&
-               1:Router%nIndexesSource,&
+               1:Router%nIndexSource,&
                iGet:iGet+nPartialGet-1),    &
                Weight_I=Router%Get_P(iPE)%Weight_I(  &
                iGet:iGet+nPartialGet-1),    &
