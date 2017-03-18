@@ -121,7 +121,7 @@ contains
     integer,              intent(out):: nLine
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(out):: nAux
+    integer,              intent(in) :: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     character(len=*), parameter:: NameSub='SP_get_request_for_sc'
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
@@ -132,7 +132,7 @@ contains
     integer,              intent(out):: nLine
     real,    allocatable, intent(out):: CoordOut_DI(:, :)
     integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(out):: nAux
+    integer,              intent(in) :: nAux
     real,    allocatable, intent(out):: AuxOut_VI(:,:)
     character(len=*), parameter:: NameSub='SP_get_request_for_ih'
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
