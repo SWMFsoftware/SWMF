@@ -292,7 +292,7 @@ subroutine advance_horizontal(iBlock)
           NewTemp_C-Temperature(1:nLons,1:nLats,iAlt,iBlock)
 
      Temperature(1:nLons,1:nLats,iAlt,iBlock)             = NewTemp_C
-     VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)         = VertVel_CV
+     VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)         = NewVertVel_CV
 
      if (minval(NewNum_CV) < 0.0) then
         write(*,*) "Negative Density after horizontal advection!!"
@@ -613,17 +613,21 @@ contains
 
     real, dimension(1:nLats+1) :: VarNorth, VarSouth, DiffFlux
     real :: InvdLat(nLats), InvdLon
+    real :: TempVar(-1:nLats+2)
 
     integer :: iLon
 
     ! Calculate gradient and diffusive flux with respect to latitude
 
     do iLon = 1, nLons
-
+       TempVar(-1:nLats+2) = Var(iLon,-1:nLats+2)
        InvdLat = InvDLatDist_GB(iLon, 1:nLats,iAlt,iBlock)
 
-       call calc_facevalues_lats(iLon, iAlt, iBlock, Var(iLon,:), &
+       call calc_facevalues_lats(iLon, iAlt, iBlock, TempVar, &
             VarSouth, VarNorth)
+
+!       call calc_facevalues_lats(iLon, iAlt, iBlock, Var(iLon,:), &
+!            VarSouth, VarNorth)
 
        ! Gradient based on averaged Left/Right values
 
@@ -710,6 +714,7 @@ subroutine calc_facevalues_lats(iLon, iAlt, iBlock, Var, VarLeft, VarRight)
   implicit none
   
   integer, intent(in) :: iLon, iAlt, iBlock
+
   real, intent(in)    :: Var(-1:nLats+2)
   real, intent(out)   :: VarLeft(1:nLats+1), VarRight(1:nLats+1)
 
