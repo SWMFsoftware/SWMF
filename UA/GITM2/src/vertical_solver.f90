@@ -391,14 +391,13 @@ subroutine advance_vertical_1stage( &
   use ModPlanet
   use ModSizeGitm
   use ModVertical, only : &
-       Heating, EddyCoef_1D, ViscCoef_1d,Centrifugal, Coriolis, &
+       EddyCoef_1D, Centrifugal, Coriolis, &
        MeanMajorMass_1d, Gamma_1d, InvRadialDistance_C, &
-       KappaTemp_1d, ViscCoefS_1d, &
+       KappaTemp_1d, &
        Gravity_G, Altitude_G,Cv_1D, dAlt_F
   use ModTime
   use ModInputs
   use ModConstants
-  use ModSources, only : EddyCondAdia
   implicit none
 
   real, intent(in) :: LogRho(-1:nAlts+2)
@@ -413,12 +412,10 @@ subroutine advance_vertical_1stage( &
   real, intent(inout) :: NewLogNS(-1:nAlts+2,nSpecies)
   real, intent(inout) :: NewLogINS(-1:nAlts+2,nIons)
   real, intent(inout) :: NewVel_GD(-1:nAlts+2,3)
-  real :: NewVel2_G(-1:nAlts+2)
   real, intent(inout) :: NewTemp(-1:nAlts+2)
   real, intent(out) :: NewVertVel(-1:nAlts+2,nSpecies)
-  real :: NS(-1:nAlts+2,nSpecies), Pressure1D(-1:nAlts+2)
+  real :: NS(-1:nAlts+2,nSpecies)
   real :: Rho(-1:nAlts+2)
-
   real :: LogNum(-1:nAlts+2)
 
   real, dimension(1:nAlts)    :: GradLogRho, DivVel, GradTemp, GradTempKoM, &
@@ -430,36 +427,27 @@ subroutine advance_vertical_1stage( &
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
        GradVertVel, DiffVertVel, DivVertVel
   real, dimension(1:nAlts,nIons) :: GradLogINS, DiffLogINS
-  real :: NewSumRho, NewLogSumRho, rat, ed
+  real :: NewSumRho, NewLogSumRho
 
   integer :: iAlt, iSpecies, jSpecies, iDim
 
   real, dimension(-1:nAlts+2)    :: NT
-  real, dimension(-1:nAlts+2)    :: Press, LogPress
-  real, dimension(1:nAlts)    :: DiffLogPress, GradLogPress
-  real, dimension(1:nAlts,nSpecies)    :: EddyDiffusionVel
 
   real :: nVel(1:nAlts,1:nSpecies)
   integer :: nFilter, iFilter
   real :: LowFilter
-
-!! WAVEDRAG Heating  Hickey et al [2000]
-  real, dimension(1:nAlts)    :: StressHeating
 !\
 ! Parameters Used for the Sponge
 ! This Sponge is useful to dampen out spurious modes
 ! oscillating between the bottom and top of the model.
-
   integer :: nAltsSponge = 12
   real :: kSP, NuSP, AmpSP
-
   ! JMB:  Adding Eddy Diffusion Variables here
   ! Note:  These are used in the calc_neutral_friction
   !--------------------------------------------------------------------------
   !! Eddy Diffusion Variables
   real, dimension(1:nAlts,nSpecies)    :: GradLogConS
   real, dimension(-1:nAlts+2,nSpecies)    :: ConS, LogConS
-  real, dimension(1:nAlts,nSpecies)    :: EddyCoefRatio_1d
   !--------------------------------------------------------------------------
   ! 4th Order Gradients on a Non-Uniform Mesh (5-point Stencil)
   ! Used for calculating the d(ln[Chi])/dr -> Log of the concentration gradient
@@ -469,25 +457,13 @@ subroutine advance_vertical_1stage( &
   real :: MeshCoef0, MeshCoef1, &
           MeshCoef2, MeshCoef3, &
           MeshCoef4
-  ! ----------------------------------------------------
-  ! JMB: 06/27/2016:---- THERMAL CONDUCTION & VISCOSITY
-  ! ----------------------------------------------------
-  real, dimension(1:nAlts)    :: VertVisc
-  real, dimension(1:nAlts)    :: ThermalCond
-
   !--------------------------------------------------------------------------
   NS = exp(LogNS)
   Rho = exp(LogRho)
   LogNum = alog(sum(NS,dim=2))
   nFilter = 10
-  
   NT(-1:nAlts+2) = exp(LogNum(-1:nAlts+2))
-  do iAlt = -1, nAlts + 2
-    Press(iAlt) = NT(iAlt)*Boltzmanns_Constant*Temp(iAlt)
-    LogPress(iAlt) = alog(Press(iAlt))
-  enddo
 
-  call calc_rusanov_alts(LogPress ,GradLogPress,  DiffLogPress)
   call calc_rusanov_alts(LogRho ,GradLogRho,  DiffLogRho)
   call calc_rusanov_alts(LogNum ,GradLogNum,  DiffLogNum)
   call calc_rusanov_alts(Temp   ,GradTemp,    DiffTemp)
@@ -503,7 +479,6 @@ subroutine advance_vertical_1stage( &
   DiviVel = GradiVel_CD(:,iUp_) + 2*iVel(1:nAlts,iUp_)*InvRadialDistance_C(1:nAlts)
 
   do iSpecies=1,nSpecies
-
      call calc_rusanov_alts(LogNS(:,iSpecies),GradTmp, DiffTmp)
      GradLogNS(:,iSpecies) = GradTmp
      DiffLogNS(:,iSpecies) = DiffTmp
@@ -513,7 +488,6 @@ subroutine advance_vertical_1stage( &
      DiffVertVel(:,iSpecies) = DiffTmp
      DivVertVel(:,iSpecies) = GradVertVel(:,iSpecies) + &
           2*VertVel(1:nAlts,iSpecies)*InvRadialDistance_C(1:nAlts)
-
   enddo
 
   do iSpecies=1,nIons-1
@@ -577,15 +551,10 @@ subroutine advance_vertical_1stage( &
     enddo ! iAlt Loop
   endif ! End Check for Boqueho And Blelly 
 
-
   AmpSP = (1.0/(10.0*Dt))
   kSP = nAltsSponge + 1
 
   do iAlt = 1,nAlts
-
-     NewLogRho(iAlt) = NewLogRho(iAlt) - Dt * &
-          (DivVel(iAlt) + Vel_GD(iAlt,iUp_) * GradLogRho(iAlt) ) &
-          + Dt * DiffLogRho(iAlt)
 
      do iSpecies=1,nSpecies
         NewLogNS(iAlt,iSpecies) = LogNS(iAlt,iSpecies) - Dt * &
@@ -607,16 +576,9 @@ subroutine advance_vertical_1stage( &
         endif
      enddo
 
-!     ! dVr/dt = -[ (V grad V)_r + grad T + T grad ln Rho - g ]
-!     ! and V grad V contains the centripetal acceleration 
-!     ! (Vphi**2+Vtheta**2)/R
-!     NewVel_GD(iAlt,iUp_) = NewVel_GD(iAlt,iUp_) - Dt * &
-!          (Vel_GD(iAlt,iUp_)*GradVel_CD(iAlt,iUp_) &
-!          - (Vel_GD(iAlt,iNorth_)**2 + Vel_GD(iAlt,iEast_)**2) &
-!          * InvRadialDistance_C(iAlt) &
-!          - Gravity_G(iAlt)) &
-!          + Dt * DiffVel_CD(iAlt,iUp_)
 
+     ! Bulk Velocity defined as the mass-weighted average of the
+     ! species' velocities
      NewVel_GD(iAlt,iUp_) = 0.0
 
      if (iAlt >= (nAlts - nAltsSponge)) then
@@ -675,19 +637,6 @@ subroutine advance_vertical_1stage( &
      NewVertVel(1:nAlts,1:nSpecies) = nVel(1:nAlts,1:nSpecies)
   endif 
 
-  ! Update with vertical viscosity
-  do iSpecies = 1, nSpecies
-     call calc_vertviscosity(NewVertVel(-1:nAlts+2,iSpecies), &
-                           ViscCoefS_1d( 0:nAlts+1,iSpecies) + &
-                            EddyCoef_1d( 0:nAlts+1)*&
-                                     NS( 0:nAlts+1,iSpecies)*Mass(iSpecies), &
-                                     NS( 0:nAlts+1,iSpecies)*Mass(iSpecies), &
-                               VertVisc( 1:nAlts)) 
-
-     NewVertVel(1:nAlts,iSpecies) = NewVertVel(1:nAlts,iSpecies) + &
-                                      VertVisc(1:nAlts)
-  enddo 
-
   do iAlt = 1, nAlts
 
      do iSpecies=1,nSpecies
@@ -705,24 +654,6 @@ subroutine advance_vertical_1stage( &
 
   enddo
 
-  StressHeating = 0.0
-
-  if (UseStressHeating) then
-
-    do iAlt = 1, nAlts 
-
-      StressHeating(iAlt) = ViscCoef_1d(iAlt)* &
-       (  (  (Gamma_1d(iAlt) - 1.0)/ ( NT(iAlt)*Boltzmanns_Constant) ) * &
-           (  &
-              (4.0/3.0)*GradVel_CD(iAlt,iUp_)**2 +    &
-                        GradVel_CD(iAlt,iNorth_)**2 + &
-                        GradVel_CD(iAlt,iEast_)**2    &
-           )  )
-
-    enddo
-
-  endif
-
   do iAlt = 1, nAlts
 
      ! dVphi/dt = - (V grad V)_phi
@@ -737,57 +668,13 @@ subroutine advance_vertical_1stage( &
 
      ! dT/dt = -(V.grad T + (gamma - 1) T div V +  &
      !        (gamma - 1) * g  * grad (KeH^2  * rho) /rho 
-
-!     if (UseTurbulentCond) then
-!        NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
-!             (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
-!             (Gamma_1d(iAlt) - 1.0) * Temp(iAlt)*DivVel(iAlt))&
-!             + Dt * DiffTemp(iAlt)
-!     else
-
         NewTemp(iAlt)   = NewTemp(iAlt) - Dt * &
              (Vel_GD(iAlt,iUp_)*GradTemp(iAlt) + &
              (Gamma_1d(iAlt) - 1.0) * ( &
              Temp(iAlt)*DivVel(iAlt))) &
-             + Dt * DiffTemp(iAlt) & 
-             + Dt * StressHeating(iAlt) 
-
-!        NewTemp(iAlt)   = NewTemp(iAlt) + &
-!             Dt*Vel_GD(iAlt,iUp_)* &
-!             ( (Gamma_1d(iAlt) - 1.0)/Gamma_1d(iAlt) )*&
-!               Temp(iAlt)*GradLogPress(iAlt)
+             + Dt * DiffTemp(iAlt) 
 
   end do
-  ! Add the Horizontal Wind Viscosity
-     call calc_vertviscosity(NewVel_GD(-1:nAlts+2,iEast_), &
-                           ViscCoef_1d( 0:nAlts+1) + &
-                           EddyCoef_1d( 0:nAlts+1)*Rho(0:nAlts+1), &
-                                    Rho(0:nAlts+1), &
-                              VertVisc( 1:nAlts)) 
-
-     NewVel_GD(1:nAlts,iEast_) = NewVel_GD(1:nAlts,iEast_) + &
-                                      VertVisc(1:nAlts)
-
-  ! Add the Horizontal Wind Viscosity
-     call calc_vertviscosity(NewVel_GD(-1:nAlts+2,iNorth_), &
-                           ViscCoef_1d( 0:nAlts+1) + &
-                           EddyCoef_1d( 0:nAlts+1)*Rho(0:nAlts+1), &
-                                    Rho(0:nAlts+1), &
-                              VertVisc( 1:nAlts)) 
-
-     NewVel_GD(1:nAlts,iNorth_) = NewVel_GD(1:nAlts,iNorth_) + &
-                                      VertVisc(1:nAlts)
-
-  ! Add Conduction in the vertical solver
-  call calc_vertviscosity(NewTemp(-1:nAlts+2), &
-                         KappaTemp_1d( 0:nAlts+1) + &
-                          EddyCoef_1d( 0:nAlts+1)*&
-                                  Rho( 0:nAlts+1)*Cv_1d(0:nAlts+1), &
-                                  Rho( 0:nAlts+1)*Cv_1d(0:nAlts+1), &
-                          ThermalCond( 1:nAlts)) 
-
-  NewTemp(1:nAlts) = NewTemp(1:nAlts) + ThermalCond(1:nAlts)
-
   do iAlt = 1, nAlts
      NewSumRho    = sum( Mass(1:nSpecies)*exp(NewLogNS(iAlt,1:nSpecies)) )
      NewLogRho(iAlt) = alog(NewSumRho)

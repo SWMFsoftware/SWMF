@@ -44,21 +44,6 @@ subroutine add_sources
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
      !! To turn off Conduction, turn UseConduction=.false. in UAM.in
 
-!     Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
-!          Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
-!          LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-!          /TempUnit(1:nLons,1:nLats,1:nAlts)&
-!         - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-!           + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-!           + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-!           + AuroralHeating &
-!           + JouleHeating &
-!           + ElectronHeating &
-!           ) &
-!           + Conduction &
-!           + ChemicalHeatingRate &
-!           + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
-
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
@@ -69,7 +54,8 @@ subroutine add_sources
            + AuroralHeating &
            + JouleHeating &
            + ElectronHeating &
-           ) & 
+           ) &
+           + Conduction &
            + ChemicalHeatingRate &
            + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
 
@@ -137,15 +123,10 @@ iAlt = 10
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
 
 
-!     Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
-!          Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
-!          IonDrag) + Viscosity + GWAccel
-
      Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
           Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
-          IonDrag) + GWAccel
+          IonDrag) + Viscosity + GWAccel
 
-     
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
      !! To turn off NeutralFriction, turn UseNeutralFriction=.false. in UAM.in
 
@@ -159,18 +140,9 @@ iAlt = 10
      enddo
 
     
-     call planet_limited_fluxes(iBlock)
-
      call calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating,lame,lami)
 
      !! To turn off Diffusion, turn UseDiffusion=.false. in UAM.in
-
-!     do iSpecies = 1, nSpecies
-!        NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) =  &
-!             NDensityS(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock)+ &
-!             Diffusion(1:nLons, 1:nLats, 1:nAlts, iSpecies)*Dt
-!     enddo
-
      do iLon = 1, nLons
         do iLat = 1, nLats
            do iAlt = 1, nAlts
