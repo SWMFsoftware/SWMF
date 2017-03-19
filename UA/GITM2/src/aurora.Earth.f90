@@ -29,6 +29,9 @@ subroutine aurora(iBlock)
   real :: de1, de2, de3, de4, de5, detotal, h
 
   real :: LocalVar, HPn, HPs, avepower, ratio
+  
+  HPn = 0.0
+  HPs = 0.0
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
@@ -287,9 +290,10 @@ subroutine aurora(iBlock)
 
         if (HasSomeAurora) then
 
-           do n=1,ED_N_Energies
-              UserData2d(j,i,1,7+n,iBlock) = ED_flux(n)
-           enddo
+
+!           do n=1,ED_N_Energies
+!              UserData2d(j,i,1,7+n,iBlock) = ED_flux(n)
+!           enddo
 
            call R_ELEC_EDEP (ED_Flux, 15, ED_Energies, 3, ED_Ion, 7)
            call R_ELEC_EDEP (ED_Flux, 15, ED_Energies, 3, ED_Heating, 11)
