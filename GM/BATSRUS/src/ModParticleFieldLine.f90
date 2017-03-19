@@ -347,7 +347,9 @@ contains
   !==========================================================================
 
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
-       iIndexStart_II)
+       iIndexStart_II,&
+       UseInputInGenCoord)
+    use BATL_geometry, ONLY: coord_to_xyz
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -361,7 +363,11 @@ contains
     integer,optional,intent(in)::iTraceModeIn
     ! initial particle indices for starting particles
     integer,optional,intent(in)::iIndexStart_II(nIndexParticleReg,nFieldLineIn)
-
+    !\
+    ! An input can be in generalized coordinates
+    !/
+    logical, optional,intent(in) :: UseInputInGenCoord 
+    logical :: DoTransformCoordToXyz
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
     integer :: iFieldLine    ! loop variable
@@ -396,7 +402,9 @@ contains
     ! set pointers to parameters of regular particles
     StateReg_VI  => Particle_I(KindReg_)%State_VI
     iIndexReg_II => Particle_I(KindReg_)%iIndex_II
-
+    DoTransformCoordToXyz = .false.
+    if(present(UseInputInGenCoord))&
+         DoTransformCoordToXyz = UseInputInGenCoord
     !\
     ! Trace field lines
     !/
@@ -405,7 +413,11 @@ contains
     nLineThisProc = 0
     nParticleOld  = Particle_I(KindReg_)%nParticle
     do iFieldLine = 1, nFieldLineIn
-       XyzStart_D = XyzStart_DI(:, iFieldLine) 
+       if(DoTransformCoordToXyz)then
+          call coord_to_xyz(XyzStart_DI(:, iFieldLine), XyzStart_D)
+       else
+          XyzStart_D = XyzStart_DI(:, iFieldLine) 
+       end if
        if(present(iIndexStart_II)) then
           iIndexStart_I = iIndexStart_II(:,iFieldLine)
        else
@@ -686,12 +698,22 @@ contains
   end subroutine get_b_dir
 
   !========================================================================
-  subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II)
+  subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
+       UseInputInGenCoord)
+    !\
+    ! Very strange, but this is the first use of the BATL procedure to 
+    ! transform the generalized to cartesian coords in BATSRUS
+    !/
+    use BATL_geometry, ONLY: coord_to_xyz
     ! add particles with specified coordinates to the already existing lines
     integer, intent(in):: nParticleIn
     real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
     integer, intent(in):: iIndexIn_II(nIndexParticleReg, nParticleIn)
-
+    !\
+    ! An input can be in generalized coordinates
+    !/
+    logical, optional,intent(in) :: UseInputInGenCoord 
+    logical :: DoTransformCoordToXyz
     real   :: Xyz_D(MaxDim)
     integer:: iIndex_I(nIndexParticleReg)
     integer:: iParticle
@@ -705,9 +727,15 @@ contains
     !----------------------------------------------------------------------
     StateReg_VI => Particle_I(KindReg_)%State_VI
     iIndexReg_II=> Particle_I(KindReg_)%iIndex_II
-
+    DoTransformCoordToXyz = .false.
+    if(present(UseInputInGenCoord))&
+         DoTransformCoordToXyz = UseInputInGenCoord
     do iParticle = 1, nParticleIn
-       Xyz_D   = XyzIn_DI(:,   iParticle)
+       if(DoTransformCoordToXyz)then
+          call coord_to_xyz(XyzIn_DI(:,   iParticle), Xyz_D)
+       else
+          Xyz_D   = XyzIn_DI(:,   iParticle)
+       end if
        iIndex_I= iIndexIn_II(:,iParticle)
 
        ! find block and processor suitable for interpolation
