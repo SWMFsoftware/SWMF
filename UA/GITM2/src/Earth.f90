@@ -196,15 +196,15 @@ subroutine calc_planet_sources(iBlock)
        35.0*1.602e-19*&
        ( &
        EuvIonRateS(:,:,:,iO2P_,iBlock)* &
-       nDensitys(:,:,1:nAlts,iO2_,iBlock) + &
+       NDensityS(1:nLons,1:nLats,1:nAlts,iO2_,iBlock) + &
        EuvIonRateS(:,:,:,iN2P_,iBlock)* &
-       nDensitys(:,:,1:nAlts,iN2_,iBlock) + &
+       NDensityS(1:nLons,1:nLats,1:nAlts,iN2_,iBlock) + &
        EuvIonRateS(:,:,:,iO_4SP_,iBlock)* &
-       nDensitys(:,:,1:nAlts,iO_3P_,iBlock) + &
+       NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) + &
        EuvIonRateS(:,:,:,iO_2DP_,iBlock)* &
-       nDensitys(:,:,1:nAlts,iO_3P_,iBlock) + &
+       NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock) + &
        EuvIonRateS(:,:,:,iO_2PP_,iBlock)* &
-       nDensitys(:,:,1:nAlts,iO_3P_,iBlock))
+       NDensityS(1:nLons,1:nLats,1:nAlts,iO_3P_,iBlock))
   
   PhotoElectronHeating(:,:,:,iBlock) = &
        PhotoElectronHeating(:,:,:,iBlock) / &
@@ -325,6 +325,3 @@ subroutine set_planet_defaults
 
 end subroutine set_planet_defaults
 
-subroutine planet_limited_fluxes(iBlock)
-!! Do Nothing
-end subroutine planet_limited_fluxes

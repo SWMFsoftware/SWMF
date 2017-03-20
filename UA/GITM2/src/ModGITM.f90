@@ -209,7 +209,7 @@ contains
     allocate(KappaTemp(nLons, nLats, 0:nAlts+1, nBlocks))
     allocate(Ke(nLons, nLats, 0:nAlts+1, nBlocks))
     allocate(dKe(nLons, nLats, 0:nAlts+1, nBlocks))
-    allocate(cp(nLons,nLats,0:nAlts+1,nBlocks))
+    allocate(cp(nLons,nLats,-1:nAlts+2,nBlocks))
     allocate(B0(-1:nLons+2,-1:nLats+2,-1:nAlts+2,4,nBlocks))
     allocate(MLatitude(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocks))
     allocate(MLongitude(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocks))
