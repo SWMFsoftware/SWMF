@@ -1475,10 +1475,10 @@ contains
          use CON_grid_descriptor
          implicit none
          type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)::lGlobalTreeNode,nIndex
+         integer,intent(in) ::lGlobalTreeNode,nIndex
          logical,intent(out)::IsInterfacePoint
-         integer,intent(in)::nDim
-         real,intent(inout)::Xyz_D(nDim)
+         integer,intent(in) ::nDim
+         real,intent(inout) ::Xyz_D(nDim)
          integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
     end interface
@@ -1490,16 +1490,21 @@ contains
     real,    allocatable, intent(out):: Coord_II(:,:)
     ! indices to access the data locations on Target
     integer, allocatable, intent(out):: iIndex_II(:,:)
-    ! number of auxilary variables
-    integer,              intent(out):: nAux
-    ! auxilary variables themselves
+    integer, intent(in) :: nAux
+    ! auxilary variables
     real,    allocatable, intent(out):: Aux_VI(:,:)
     optional::is_interface_block,interface_point_coords
-    !EOP
+    !\
+    ! Makes no sense: all the variables below should be actually a part 
+    ! of router
+    !/
+    integer, parameter:: iPointGlobal_ = 0,  &    
+         iPointInBlock_ = 2, iBlockAll_ = 1 
     integer::lGlobalNode, iBlockAll, nDim, iProcTo, iBlockTo
-    integer::iGlobalGridPoint, nGridPointsPerBlock
+    integer::iGlobalGridPoint, iGlobalPointLast, iPointInBlock 
+    integer::nGridPointsPerBlock
     logical::IsInterfacePoint, DoCountOnly, DoCheckBlock,DoCheckPoint
-    integer::iCount, iData, iIndex_I(nIndex)
+    integer::iCount, iData, iIndex_I(nIndex), iAux_I(0:nAux), iAux
     real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
     integer,dimension(GridDescriptorTarget%nDim)::iCell_D
     logical::DoTest,DoTestMe
@@ -1531,11 +1536,14 @@ contains
           if( DoCheckBlock)then
              if(.not.is_interface_block(lGlobalNode))CYCLE
           end if
-          !GlobalCellNumber Loop, for a given (octree) block              !
-          do iGlobalGridPoint=&
-                         1+nGridPointsPerBlock*(iBlockAll-1),&
-                         nGridPointsPerBlock*iBlockAll
-                          
+          !GlobalCellNumber Loop, for a given (octree) block 
+          !\
+          ! Global number of the last grid point in the previous
+          ! global block, with the global block number = nBlockAll-1
+          !/
+          iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
+          do iPointInBlock  = 1, nGridPointsPerBlock
+             iGlobalGridPoint =   iGlobalPointLast + iPointInBlock            
              iIndex_I(1)=iGlobalGridPoint
 
              call global_i_grid_point_to_icb(&
@@ -1549,7 +1557,7 @@ contains
                 iIndex_I(1:nDim)=&
                      iCell_D
              end if
-             XyzTarget_D=xyz_grid_d(&
+             XyzTarget_D = xyz_grid_d(&
                   GridDescriptorTarget,&
                   lGlobalNode,&
                   iCell_D)
@@ -1567,14 +1575,22 @@ contains
                 if(.not.DoCountOnly)then
                    Coord_II(1:nDim,iData) = XyzTarget_D
                    iIndex_II(1:nIndex,iData) = iIndex_I
+                   iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
+                   iAux_I(iPointInBlock_) = iPointInBlock
+                   iAux_I(iBlockAll_    ) = iBlockAll
+                   do iAux = 1, nAux
+                      Aux_VI(iAux,iData) = real(iAux_I(iAux))
+                   end do
                 end if
              end if
           end do   !iGlobalPoints
-       end do      !iGlobalNode
+       end do      !iGlobalBlock
        if(DoCountOnly)then
           nData = iData
           call check_size(2, (/nDim, nData/), Buffer_II =  Coord_II)
           call check_size(2, (/nIndex, nData/), iBuffer_II = iIndex_II)
+          if(nAux > 0)&
+               call check_size(2, (/nAux, nData/), Buffer_II = Aux_VI)
        end if
     end do         !iCount
   end subroutine get_target_interface_points
