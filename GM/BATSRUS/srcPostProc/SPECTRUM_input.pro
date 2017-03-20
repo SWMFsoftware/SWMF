@@ -57,6 +57,13 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
            'co','ni','cu','zn']
 
   nElement=n_elements(Element)
+
+; Atomic weight of elements
+  Aelement=[ 1.008,  4.003,  6.94 ,  9.012, 10.81 , 12.011, 14.007, 15.999, $
+            18.998, 20.18 , 22.99 , 24.305, 26.982, $
+            28.085, 30.974, 32.06 , 35.45 , 39.948, 39.098, 40.078, 44.956, $
+            47.867, 50.942, 51.996, 54.938 ,55.845, $
+            58.933, 58.693, 63.546, 65.38]
   
 ; Set CHIANTI version (if keyword 'notstandard' is set)
   if keyword_set(notstandard) then begin 
@@ -112,8 +119,8 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,LogNmin,LogNmax,dLogN
   printf,10,LogTmin,LogTmax,dLogT
   printf,10,'number of ions = ',nIon,format='(a17,i3)'
-  printf,10,'ion ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
-         'logG(n,T) ',format='(a4,2a5,a11,2a5,a9)'
+  printf,10,'ion ','atomic mass ','lvl1 ','lvl2 ','wavelength ','logn ','logT ',$
+         'logG(n,T) ',format='(a4,a12,2a5,a11,2a5,a9)'
   printf,10,'in units [A] [cm^-3] [K] [erg cm^3 s^-1]'
   printf,10,'#START',format='(a)'
 
@@ -124,6 +131,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      position=strpos(MasterList(i),'_')
      LocalElement=strmid(MasterList(i),0,position)
      zElem=where(Element eq LocalElement)+1
+     Aion = Aelement(where(Element eq LocalElement)) 
      zElem=zElem(0)
      Ion=MasterList(i)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
@@ -198,16 +206,16 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
            for j=0,nLogN-1 do begin
               for l=0,nLogT-1 do begin
                  if Flag(k) eq 0 then begin
-                    printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
+                    printf,10,MasterList(i),Aion,LevelFrom(k),LevelTo(k),$
                            Wavelength(k),LogN(j),$
                            LogT(l),LogG(l,j,k),$
-                           format='(a6,2i5,f13.3,2f13.4,f13.3)'
+                           format='(a6,f13.3,2i5,f13.3,2f13.4,f13.3)'
                  endif
                  if Flag(k) lt 0 then begin
-                    printf,10,MasterList(i),LevelFrom(k),LevelTo(k),$
+                    printf,10,MasterList(i),Aion,LevelFrom(k),LevelTo(k),$
                            Wavelength(k)*Flag(k),$
                            LogN(j),LogT(l),LogG(l,j,k),$
-                           format='(a6,2i5,f13.3,2f13.4,f13.3)'
+                           format='(a6,f13.3,2i5,f13.3,2f13.4,f13.3)'
                  endif
               endfor
            endfor
