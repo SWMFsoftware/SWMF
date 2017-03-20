@@ -1296,7 +1296,7 @@ contains
   !============================================================================
 
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, nIndex, &
-       iIndexOrigin_II, RSoftBoundary)
+       iIndexOrigin_II, RSoftBoundary,UseInputInGenCoord)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
          ONLY: extract_particle_line, set_soft_boundary
@@ -1306,19 +1306,21 @@ contains
     integer,          intent(in) :: nIndex
     integer,          intent(in) :: iIndexOrigin_II(nIndex, nLine)
     real,    optional,intent(in) :: RSoftBoundary
-
+    logical, optional,intent(in) :: UseInputInGenCoord
     character(len=*), parameter:: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
     ! set the soft boundary if provided
     if(present(RSoftBoundary))&
          call set_soft_boundary(RSoftBoundary)
     ! extract field lines starting at input points
-    call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_II)
+    call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_II,&
+         UseInputInGenCoord)
   end subroutine IH_extract_line
 
   !============================================================================
 
-  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II)
+  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II,&
+       UseInputInGenCoord)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, ONLY: add_to_particle_line
     ! add particles with specified coordinates to the already existing lines
@@ -1326,8 +1328,10 @@ contains
     real,    intent(in):: Xyz_DI(nDim, nParticle)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nParticle)
+    logical, optional,intent(in) :: UseInputInGenCoord
     !------------------------------------------------------------------------
-    call add_to_particle_line(nParticle, Xyz_DI, iIndex_II)
+    call add_to_particle_line(nParticle, Xyz_DI, iIndex_II, &
+             UseInputInGenCoord)
   end subroutine IH_add_to_line
   
   !============================================================================
