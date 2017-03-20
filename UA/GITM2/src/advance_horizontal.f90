@@ -292,7 +292,8 @@ subroutine advance_horizontal(iBlock)
           NewTemp_C-Temperature(1:nLons,1:nLats,iAlt,iBlock)
 
      Temperature(1:nLons,1:nLats,iAlt,iBlock)             = NewTemp_C
-     VerticalVelocity(:,:,iAlt,1:nSpecies,iBlock)         = NewVertVel_CV
+     VerticalVelocity(1:nLons,1:nLats,iAlt,1:nSpecies,iBlock)         = &
+         NewVertVel_CV
 
      if (minval(NewNum_CV) < 0.0) then
         write(*,*) "Negative Density after horizontal advection!!"
