@@ -16,8 +16,6 @@ program spectrum
   logical                     :: IsDataFile = .false. ! Use input file or not
 
   integer                     :: iError 
-  ! Constants 
-  real                        :: Dist = 0.99 * cAU * 1e2 ! Sun-L1 distance [cm]
 
   ! Variables for output file
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
@@ -46,10 +44,6 @@ program spectrum
   integer                     :: n1Block, n2Block, n3Block ! Define data size
   ! Rotation angles for box variable rotation
   integer                     :: iDimLOS, iDimVertical, iDimHorizontal
-
-  ! Size of observed plasma
-  real                        :: Dx, Da ! dx is plasma thickness along the LOS
-  real                        :: Dy, Dz ! in case of boxdata used
 
   ! Variables to read solar wind data file in
   integer                     :: nVar   ! Number of variables   
@@ -179,8 +173,6 @@ contains
     integer                        :: MinWavelength, Maxwavelength
     character(len=*), parameter    :: NameSub = 'set_data_block'
     !------------------------------------------------------------------------
-
-    if(IsVerbose)write(*,*)'Dx, Da = ',Dx,Da,' inside set_data_block'
 
     n1 = n1Block
     n2 = n2Block
@@ -484,7 +476,7 @@ contains
              if(Gint<0.0)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = Gint !* (10.0**LogNe)**2
+             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi)
              
              if(IsVerbose)then
                 write(*,*)'                                                   '
@@ -501,7 +493,8 @@ contains
 
              ! Fill in LabelTabel%Lambda,FluxMono
              LabelTable_III(iLine,:,:)%Lambda = Lambda
-             LabelTable_III(iLine,jPixel,kPixel)%FluxMono = FluxMono
+             LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
+                  FluxMono /(sqrt(2*cPi) * DLambda)
 
              call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
           end do
@@ -537,14 +530,15 @@ contains
     do iBegin = 1, nWaveBin - 1
        if (LambdaBegin < SpectrumTable_I(iInterval)%SpectrumGrid_I(iBegin+1))&
             EXIT
-    end do                                                                                                                                                           
+    end do                          
+
     ! Start at iBegin for efficiency and
     ! stop at nWaveBin-1 so iEnd = mWaveBin if no EXIT was performed
     do iEnd = iBegin, nWaveBin-1
        if (LambdaEnd < SpectrumTable_I(iInterval)%SpectrumGrid_I(iEnd)) EXIT
     end do
 
-    InvNorm   = 1/(sqrt(2*cPi) * DLambda) 
+    InvNorm   = 1/(sqrt(2*cPi) * DLambda)
     InvSigma2 = 1/(2*DLambda**2) 
 
     ! Update bins between begin and end indices by adding the Gaussian 
@@ -633,11 +627,6 @@ contains
           call read_var('n1',n1Block)
           call read_var('n2',n2Block)
           call read_var('n3',n3Block)
-          call read_var('Dx',Dx)
-          call read_var('Dy',Dy)
-          call read_var('Dz',Dz)
-          Dx = Dx*rSun*1e2 ! Convert to CGS
-          Da = Dy*rSun*1e2 *Dz*rSun*1e2
 
        case("#INSTRUMENT")
           IsInstrument = .true.
@@ -843,22 +832,22 @@ contains
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
-       Var_VIII(rho_,1:n1,1:n2,1:n3) = rhoUni * 1e6 * cProtonMass
+       Var_VIII(rho_,1:n1,1:n2,1:n3)   = rhoUni * 1e6 * cProtonMass
        ! km/s --> m/s
-       Var_VIII(ux_,1:n1,1:n2,1:n3)   = uxUni * 1e3
-       Var_VIII(uy_,1:n1,1:n2,1:n3)   = uyUni * 1e3
-       Var_VIII(uz_,1:n1,1:n2,1:n3)   = uzUni * 1e3
+       Var_VIII(ux_,1:n1,1:n2,1:n3)    = uxUni * 1e3
+       Var_VIII(uy_,1:n1,1:n2,1:n3)    = uyUni * 1e3
+       Var_VIII(uz_,1:n1,1:n2,1:n3)    = uzUni * 1e3
        ! G --> T
-       Var_VIII(bx_,1:n1,1:n2,1:n3)   = bxUni * 1e-4
-       Var_VIII(by_,1:n1,1:n2,1:n3)   = byUni * 1e-4
-       Var_VIII(bz_,1:n1,1:n2,1:n3)   = bzUni * 1e-4
+       Var_VIII(bx_,1:n1,1:n2,1:n3)    = bxUni * 1e-4
+       Var_VIII(by_,1:n1,1:n2,1:n3)    = byUni * 1e-4
+       Var_VIII(bz_,1:n1,1:n2,1:n3)    = bzUni * 1e-4
        ! K
-       Var_VIII(tpar_,1:n1,1:n2,1:n3) = tparUni
+       Var_VIII(tpar_,1:n1,1:n2,1:n3)  = tparUni
        Var_VIII(tperp_,1:n1,1:n2,1:n3) = tperpUni
-       Var_VIII(te_,1:n1,1:n2,1:n3)   = teUni
+       Var_VIII(te_,1:n1,1:n2,1:n3)    = teUni
        ! erg cm^-3 --> J m^-3
-       Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
-       Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
+       Var_VIII(I01_,1:n1,1:n2,1:n3)   = I01Uni * 1e-1
+       Var_VIII(I02_,1:n1,1:n2,1:n3)   = I02Uni * 1e-1
 
     else
        do iVar=1, nVar
@@ -900,7 +889,7 @@ contains
                   / cBoltzmann
              IsPpar = .true.
           case('pperp')
-             Var_VIII(tperp_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
+             Var_VIII(tperp_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)&
                   * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass &
                   / cBoltzmann
              IsPperp = .true.
@@ -995,20 +984,6 @@ contains
        Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
        write(*,*)"IsNoAlfven ON !!!"
     endif
-
-    ! Convert to CGS
-    if(.not. IsDataBlock)then
-       Dx = (CoordMax_D(1) - CoordMin_D(1))/n1 *rSun*1e2
-       Dy = (CoordMax_D(2) - CoordMin_D(2))/n2 *rSun*1e2
-       Dz = (CoordMax_D(3) - CoordMin_D(3))/n3 *rSun*1e2
-       if(Dy*Dz /= 0) then 
-          Da = Dy*Dz 
-       else 
-          Da = max(Dy**2,Dz**2)
-       end if
-    endif
-
-    if(IsVerbose)write(*,*)'Dx, Da = ',Dx,Da
 
   end subroutine read_data
 
@@ -1107,7 +1082,6 @@ contains
           iN = nint(LogN/DLogN)
           iT = nint(LogT/DLogT)
           g_II(iN,iT) = 10.0**LogG
-          write(*,*)LineWavelength,iN,iT,LogG
           CYCLE READLOOP
        end if
 
@@ -1160,7 +1134,7 @@ contains
 
           ! Store ion name and wavelength 
           LineTable_I(iLine)%NameIon        = NameIon
-          LineTable_I(iLine)%Aion        = Aion
+          LineTable_I(iLine)%Aion           = Aion
           LineTable_I(iLine)%nLevelFrom     = nLevelFrom
           LineTable_I(iLine)%nLevelTo       = nLevelTo
           LineTable_I(iLine)%LineWavelength = LineWavelength
