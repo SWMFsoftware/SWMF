@@ -1226,51 +1226,64 @@ There are no default values. User must set face boundary type if face boundary
 conditions are used for the outer boundaries.
 </command>
 
-
 <command name="BOUNDARYSTATE">
 	 <parameter name="StringBoundary" type="character"/>
 	 <parameter name="BoundaryStateDim_V" type="real"/>
 
 #BOUNDARYSTATE
 body1 1 2 xminbox	StringBoundary
-1.0			BoundaryStateNDim  [/cc]
-1.0			BoundaryStateUxDim [km/s]
-1.0			BoundaryStateUyDim [km/s]
-1.0			BoundaryStateUzDim [km/s]
-0.0			BoundaryStateBxDim [nT]
-0.0			BoundaryStateByDim [nT]
-0.0			BoundaryStateBzDim [n]
-1.0			BoundaryStatePDim  [nPa]  
+1.0			BoundaryStateDim_V Rho  
+1.0			BoundaryStateDim_V Ux
+1.0			BoundaryStateDim_V Uy
+1.0			BoundaryStateDim_V Uz
+0.0			BoundaryStateDim_V Bx
+0.0			BoundaryStateDim_V By
+0.0			BoundaryStateDim_V Bz
+1.0			BoundaryStateDim_V P
 
-This command sets the primitive variables at boundaries. StringBoundary 
-contains the names or indexes of the desired boundaries to be set with cell or
-face type. BoundaryStateDim are the primitive variables used at the boundary. 
+This command sets the primitive variables BoundaryState_V
+at one or more boundaries. 
+The first parameter StringBoundary contains a space separated list
+of the names or indexes of the desired boundaries to be set. 
+Both face and cell type boundaries can be listed. 
 
-Possible values for StringBoundary:
+The BoundaryStateDim_V are the nVar primitive variables used at the boundary
+in the order defined in the equation module ModEquation. 
+The values are given in I/O units (see #IOUNITS command). 
+
+All boundaries can be identified with strings. Some boundaries can
+also be idenitified with an index between -3 and 6.
+Possible idenitfiers that can be listed in StringBoundary:
 \begin{verbatim}
-solid/-3	- solid face boundary
-body2/-2	- second body face boundary
-body1/-1	- first body face boundary
-extra/0		- extra face boundary
-xminbox		- minimum x coordinate face boundary
-xmaxbox		- maximum x coordinate face boundary
-yminbox		- minimum y coordinate face boundary
-ymaxbox		- maximum y coordinate face boundary
-zminbox		- minimum z coordinate face boundary
-zmaxbox		- maximum z coordinate face boundary
-coord1min/1	- minimum first generalized coordinate cell boundary  
-coord1max/2	- maximum first generalized coordinate cell boundary
-coord2min/3     - minimum second generalized coordinate cell boundary
-coord2max/4     - maximum second generalized coordinate cell boundary
-coord3min/5     - minimum third generalized coordinate cell boundary
-coord3max/6     - maximum third	generalized coordinate cell boundary
+solid, -3	- solid face boundary            (#SOLIDSTATE)
+body2, -2	- second body face boundary      (#INNERBOUNDARY, #BODY)
+body1, -1	- first body face boundary       (#INNERBOUNDARY, #SECONDBODY)
+extra,  0	- extra face boundary            (#EXTRABOUNDARY)
+xminbox		- min x coordinate face boundary (#BOXBOUNDARY, #GRID)
+xmaxbox		- max x coordinate face boundary
+yminbox		- min y coordinate face boundary
+ymaxbox		- max y coordinate face boundary
+zminbox		- min z coordinate face boundary
+zmaxbox		- max z coordinate face boundary
+coord1min, 1	- min 1st (gen. coord.) cell boundary (#OUTERBOUNDARY)
+coord1max, 2	- max 1st (gen. coord.) cell boundary (#GRIDGEOMETRY)
+coord2min, 3    - min 2nd (gen. coord.) cell boundary (#LIMITRADIUS)
+coord2max, 4    - max 2nd (gen. coord.) cell boundary (#GRIDGEOMETRYLIMIT)
+coord3min, 5    - min 3rd (gen. coord.) cell boundary
+coord3max 6     - max 3rd (gen. coord.) cell boundary
 \end{verbatim}
+
+For each boundary name/index the commands controlling the boundary are 
+shown on the right. Note that for Cartesian grids the outer boundaries
+are always cell based and the box boundary cannot be used. 
+For non-cartesian grids the cell based outer boundaries refer to the edges 
+of the domain given in generalized coordinates (for example rMin or rMax), 
+while the face based box boundaries refer to a box cut out of the 
+non-cartesian grid at the values xMin ... zMax given in the #GRID command.
 
 There are no default values. The boundary name(s)/index(es) and primitive
 state values must be given.
-
 </command>
-
 
 <command name="OUTFLOWPRESSURE">
 	<parameter name="UseOutflowPressure" type="logical" default="F"/>
@@ -6724,8 +6737,6 @@ the PolarNDim and PolarTDim parameters are read for each fluid.
 
 The default is to couple the IM pressure only and no fix is applied 
 in the polar region.
-
-
 </command>
 
 <command name="IMCOUPLINGSMOOTH">
