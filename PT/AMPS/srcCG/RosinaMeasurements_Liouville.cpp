@@ -29,7 +29,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressur
 
   const int nTotalTests=10;
 
-  const double ThrehondSourceRate=1.0E15;
+  const double ThrehondSourceRate=1.0E18;
 
 /*  //set the location of the Sun, and shadowing flags according top the time of the observation
   SpiceDouble et,lt,xSun[3];
@@ -283,7 +283,7 @@ void RosinaSample::Liouville::Evaluate() {
   FILE *fout[PIC::nTotalSpecies];
   FILE *fGroundTrack=NULL;
 
-  const int Step=2;
+  const int Step=12;
   const int SurfaceOutputSter=2;
 
   if (PIC::ThisThread==0) {
