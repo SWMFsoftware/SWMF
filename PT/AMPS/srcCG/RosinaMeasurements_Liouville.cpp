@@ -29,6 +29,8 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressur
 
   const int nTotalTests=10;
 
+  const double ThrehondSourceRate=1.0E15;
+
 /*  //set the location of the Sun, and shadowing flags according top the time of the observation
   SpiceDouble et,lt,xSun[3];
   double HeliocentricDistance,subSolarPointZenith,subSolarPointAzimuth,positionSun[3];
@@ -85,6 +87,11 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressur
       double SourceRate,Temperature,cosSubSolarAngle,x_LOCAL_SO_OBJECT[3]={0.0,0.0,0.0};
 
       SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+      if (SourceRate<ThrehondSourceRate) {
+        productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+        SourceRate=ThrehondSourceRate;
+      }
 
       cosSubSolarAngle=Vector3D::DotProduct(CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,positionSun)/Vector3D::Length(positionSun);
       if (CutCell::BoundaryTriangleFaces[iSurfaceElement].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
@@ -285,7 +292,7 @@ void RosinaSample::Liouville::Evaluate() {
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       sprintf(fname,"Liouville.spec=%s.dat",PIC::MolecularData::GetChemSymbol(spec));
       fout[spec]=fopen(fname,"w");
-      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\" \n");
+      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measuremetns\", \"Ram Gauge COPS Measurements\" \n");
     }
 
     fGroundTrack=fopen("GroundTracks.dat","w");
@@ -353,18 +360,20 @@ void RosinaSample::Liouville::Evaluate() {
       if (PIC::ThisThread==0) {
         fprintf(fGroundTrack,"%e %e %e\n",Rosina[iPoint].xNucleusClosestPoint[0],Rosina[iPoint].xNucleusClosestPoint[1],Rosina[iPoint].xNucleusClosestPoint[2]);
 
-        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
-            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea);
+            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea,
+            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
 
 
-        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
-            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea);
+            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea,
+            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
       }
     }
 
