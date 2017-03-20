@@ -1771,7 +1771,7 @@ Outside rRound0 the grid is stretched outward so that it becomes perfectly
 round at rRound1 and remains round at the outer boundary. 
 For this case the transformation does not affect the
 main diagonals and the maximum stretching is applied along the main axes. 
-If rRound1 is larger than rRound1 then the grid is 
+If rRound0 is larger than rRound1 then the grid is 
 contracted inwards. At the origin there is no distortion. Moving outward
 the distortion is increased so that at rRound1 the grid becomes round.
 From rRound1 to rRound0 the grid becomes Cartesian again. This can 
