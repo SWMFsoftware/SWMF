@@ -154,7 +154,7 @@ void RosinaSample::Init(double etMin,double etMax) {
       Rosina[i].RamGauge.NucleusSolidAngle=0.0;
 
       //solid angle occupied by the nucleus by the nude gauge
-      int t,nTotalTests=10000,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
+      int t,nTotalTests=100000,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
       double l[3],xIntersection[3];
 
       int iStartTest,iFinishTest,nTestThread;
