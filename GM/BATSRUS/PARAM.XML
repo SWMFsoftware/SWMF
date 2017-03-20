@@ -1227,6 +1227,51 @@ conditions are used for the outer boundaries.
 </command>
 
 
+<command name="BOUNDARYSTATE">
+	 <parameter name="StringBoundary" type="character"/>
+	 <parameter name="BoundaryStateDim_V" type="real"/>
+
+#BOUNDARYSTATE
+body1 1 2 xminbox	StringBoundary
+1.0			BoundaryStateNDim  [/cc]
+1.0			BoundaryStateUxDim [km/s]
+1.0			BoundaryStateUyDim [km/s]
+1.0			BoundaryStateUzDim [km/s]
+0.0			BoundaryStateBxDim [nT]
+0.0			BoundaryStateByDim [nT]
+0.0			BoundaryStateBzDim [n]
+1.0			BoundaryStatePDim  [nPa]  
+
+This command sets the primitive variables at boundaries. StringBoundary 
+contains the names or indexes of the desired boundaries to be set with cell or
+face type. BoundaryStateDim are the primitive variables used at the boundary. 
+
+Possible values for StringBoundary:
+\begin{verbatim}
+solid/-3	- solid face boundary
+body2/-2	- second body face boundary
+body1/-1	- first body face boundary
+extra/0		- extra face boundary
+xminbox		- minimum x coordinate face boundary
+xmaxbox		- maximum x coordinate face boundary
+yminbox		- minimum y coordinate face boundary
+ymaxbox		- maximum y coordinate face boundary
+zminbox		- minimum z coordinate face boundary
+zmaxbox		- maximum z coordinate face boundary
+coord1min/1	- minimum first generalized coordinate cell boundary  
+coord1max/2	- maximum first generalized coordinate cell boundary
+coord2min/3     - minimum second generalized coordinate cell boundary
+coord2max/4     - maximum second generalized coordinate cell boundary
+coord3min/5     - minimum third generalized coordinate cell boundary
+coord3max/6     - maximum third	generalized coordinate cell boundary
+\end{verbatim}
+
+There are no default values. The boundary name(s)/index(es) and primitive
+state values must be given.
+
+</command>
+
+
 <command name="OUTFLOWPRESSURE">
 	<parameter name="UseOutflowPressure" type="logical" default="F"/>
 	<parameter name="pOutflowSi" type="real" min="0" defaulte="1e5"

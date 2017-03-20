@@ -1931,7 +1931,7 @@ subroutine MH_set_parameters(TypeAction)
            case('body2','-2')
               UseFaceBoundaryState_I(body2_) = .true.
               FaceStateDim_VI(:,body2_) = BoundaryStateDim_V
-           case('body','-1')
+           case('body1','-1')
               UseFaceBoundaryState_I(body1_) = .true.
               FaceStateDim_VI(:,body1_) = BoundaryStateDim_V
            case('extra','0')
