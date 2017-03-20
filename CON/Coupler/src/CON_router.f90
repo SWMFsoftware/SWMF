@@ -289,23 +289,25 @@ contains
        end if
     end if
 
-    Router%nMappedPointIndex   = 0
-    !\
-    ! Temporary, to be removed
-    !/
+    Router%nMappedPointIndex   = -1 !Buffers will not be initialized
+
     Router%iPointGlobal_       = 0
     Router%iPointInBlock_      = 0
     Router%iNodeGlobal_        = 0
     Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorSource%nDim
-    Router%nVar      = Router%iCoordEnd
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%iAuxEnd   = Router%iCoordEnd
+    Router%iCoordEnd           = 0
+    Router%iAuxStart           = 1
+    Router%iAuxEnd             = 0
+    Router%nVar                = 0
     if(present(nMappedPointIndex))then
        Router%nMappedPointIndex = &
             nMappedPointIndex
-       Router%nVar      = Router%iCoordEnd + nMappedPointIndex
+       Router%iCoordStart         = 1
+       Router%iCoordEnd           = &
+            GridDescriptorSource%nDim
+       Router%iAuxStart = Router%iCoordEnd + 1
        Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
+       Router%nVar      = Router%iAuxEnd
        select case(nMappedPointIndex)
        case(1)
           Router%iPointGlobal_       = 1
@@ -315,10 +317,18 @@ contains
           Router%iPointGlobal_       = 0
           Router%iPointInBlock_      = 1
           Router%iNodeGlobal_        = 2
+       case(0)
+          !Do nothing, send coordinates only
        case default
           call CON_stop(&
                'Illegal number of mapped point indexes')
        end select
+       nullify(Router%BufferSource_II)
+       call allocate_buffer_source(Router, nProc)
+       Router%nBufferSource = nProc
+       nullify(Router%BufferTarget_II)
+       call allocate_buffer_target(Router, nProc)
+       Router%nBufferTarget = nProc
     end if
     nProc=Router%nProc
 
@@ -354,26 +364,12 @@ contains
        nullify(Router%DoAdd_P(iPE)%DoAdd_I)
        call allocate_put_arrays(Router,iPE,1)
     end do
-
-    nullify(Router%BufferSource_II)
-    call allocate_buffer_source(Router, nProc)
-    nullify(Router%BufferTarget_II)
-    call allocate_buffer_target(Router, nProc)
-
-    Router%nGet_P=0
-    Router%nPut_P=0
-    Router%nSend_P=0
-    Router%nRecv_P=0
-    do iPE=0,nProc-1
-       Router%iGet_P(iPE)%iCB_II(:,:) = 0
-       Router%iPut_P(iPE)%iCB_II(:,:) = 0
-       Router%Put_P(iPE)%Weight_I(:)  = 0.0
-       Router%Get_P(iPE)%Weight_I(:)  = 0.0
-       Router%DoAdd_P(iPE)%DoAdd_I(:) = .false.
-    end do
-    Router%BufferSource_II(:,:)       = 0.0
-    Router%BufferTarget_II(:,:)       = 0.0    
-
+ 
+    Router%nGet_P  = 0
+    Router%nPut_P  = 0
+    Router%nSend_P = 0
+    Router%nRecv_P = 0
+    call check_router_allocation(Router)
   end subroutine init_router
 !============================PRIVATE============================!
   subroutine  allocate_get_arrays(Router,iPE,nLength)
@@ -387,8 +383,10 @@ contains
     allocate(Router%iGet_P(iPE)%iCB_II(&
          0:Router%nIndexSource,nLength),stat=iError)
     call check_allocate(iError,'iGet_P%iCB_II')
+    Router%iGet_P(iPE)%iCB_II = 0
     allocate(Router%Get_P(iPE)%Weight_I(nLength),stat=iError)
     call check_allocate(iError,'Get_P%Weight_I')
+    Router%Get_P(iPE)%Weight_I = 0.0
   end subroutine allocate_get_arrays
   !==========================PRIVATE===========================!
   subroutine allocate_buffer_source(Router, nLength)
@@ -401,6 +399,8 @@ contains
     allocate(Router%BufferSource_II(&
          Router%nVar,nLength),stat=iError)
     call check_allocate(iError,'BufferSource_II')
+    Router%BufferSource_II = 0.0
+    Router%nBufferSource = nLength
   end subroutine allocate_buffer_source
   !============================PRIVATE======================!
   subroutine allocate_put_arrays(Router,iPE,nLength)
@@ -414,10 +414,13 @@ contains
     allocate(Router%iPut_P(iPE)%iCB_II(&
          0:Router%nIndexTarget,nLength),stat=iError)
     call check_allocate(iError,'iPut_P%iCB_II') 
+    Router%iPut_P(iPE)%iCB_II = 0
     allocate(Router%Put_P(iPE)%Weight_I(nLength),stat=iError)
-    call check_allocate(iError,'Put_P%Weight_I')   
+    call check_allocate(iError,'Put_P%Weight_I')  
+    Router%Put_P(iPE)%Weight_I = 0.0
     allocate(Router%DoAdd_P(iPE)%DoAdd_I(nLength),stat=iError)
     call check_allocate(iError,'DoAdd_P%DoAdd_I')
+    Router%DoAdd_P(iPE)%DoAdd_I = .false.
   end subroutine allocate_put_arrays
   !============================PRIVATE======================!
   subroutine allocate_buffer_target(Router, nLength)
@@ -426,10 +429,12 @@ contains
     integer::iError
     !----------------
     if(associated(Router%BufferTarget_II))&
-         deallocate(Router%Buffertarget_II)
+         deallocate(Router%BufferTarget_II)
     allocate(Router%BufferTarget_II(&
          Router%nVar,nLength),stat=iError)
     call check_allocate(iError,'BufferTarget_II')
+    Router%BufferTarget_II = 0.0
+    Router%nBufferTarget   = nLength
   end subroutine allocate_buffer_target
   !=========================================================!
   integer function nlength_buffer_source(Router)
@@ -444,7 +449,7 @@ contains
   !============================PRIVATE======================!
   subroutine check_router_allocation(Router)
     type(RouterType),intent(inout)::Router
-    integer :: iPE, nTotalPut, nTotalGet
+    integer :: iPE, nTotalPut, nTotalGet, UBound_I(2)
     do iPE=0,Router%nProc-1
        if(ubound(&
             Router%iPut_P(iPE)%iCB_II,2)<&
@@ -459,6 +464,18 @@ contains
                (Router,iPE,Router%nGet_P(iPE))
        end if
     end do
+    if(Router%nVar > 0)then
+       UBound_I = ubound(Router%BufferTarget_II)
+       if(  Ubound_I(1)/=Router%nVar.or.&
+            UBound_I(2) < nlength_buffer_target(Router))&
+            call allocate_buffer_target(Router, &
+            nlength_buffer_target(Router))
+       UBound_I = ubound(Router%BufferSource_II)
+       if(  Ubound_I(1)/=Router%nVar.or.&
+            UBound_I(2) < nlength_buffer_source(Router))&
+            call allocate_buffer_source(Router, &
+            nlength_buffer_source(Router))
+    end if
   end subroutine check_router_allocation
 !===============================================================!
 !Done up to this place 7.21.03                                  !
@@ -2863,12 +2880,11 @@ contains
     type(RouterType), intent(in):: Router
     interface 
        subroutine access_buffer(nPartial, nIndex, &
-                iIndex_II, Weight_I, Buff_V,nVar)
+                iIndex_II, Weight_I)
          implicit none
-         integer,intent(in) :: nPartial, nIndex, nVar
+         integer,intent(in) :: nPartial, nIndex
          integer,intent(in) :: iIndex_II(1:nIndex,1:nPartial)
          real,   intent(in) :: Weight_I(1:nPartial)
-         real,   intent(in) :: Buff_V(nVar)
        end subroutine access_buffer
     end interface
     !----------------------------------------------------------------------!
@@ -2886,10 +2902,7 @@ contains
                1:Router%nIndexSource,&
                iGet:iGet+nPartialGet-1),    &
                Weight_I=Router%Get_P(iPE)%Weight_I(  &
-               iGet:iGet+nPartialGet-1),    &
-               Buff_V=Router%BufferSource_II(&
-               1:Router%nVar,iBuffer),&
-               nVar=Router%nVar)
+               iGet:iGet+nPartialGet-1))
           iGet   = iGet   +nPartialGet
           iBuffer= iBuffer+1
        end do
@@ -2967,7 +2980,8 @@ contains
     case(2)
        if(present(Buffer_II))then
           if(allocated(Buffer_II))then
-             if(any(ubound(Buffer_II) < nSize_I))then
+             if(ubound(Buffer_II,1)/=nSize_I(1).or.&
+                  ubound(Buffer_II,2)<nSize_I(2))then
                 deallocate(Buffer_II)
              else
                 RETURN
@@ -2977,7 +2991,8 @@ contains
           RETURN
        elseif(present(iBuffer_II))then
           if(allocated(iBuffer_II))then
-             if(any(ubound(iBuffer_II) < nSize_I))then
+             if(ubound(iBuffer_II,1)/=nSize_I(1).or.&
+                  ubound(iBuffer_II,2)<nSize_I(2))then
                 deallocate(iBuffer_II)
              else
                 RETURN
@@ -2987,7 +3002,8 @@ contains
           RETURN
        elseif(present(PBuffer_II))then
           if(associated(PBuffer_II))then
-             if(any(ubound(PBuffer_II) < nSize_I))then
+             if(ubound(PBuffer_II,1)/=nSize_I(1).or.&
+                  ubound(PBuffer_II,2)<nSize_I(2))then
                 deallocate(PBuffer_II)
              else
                 RETURN

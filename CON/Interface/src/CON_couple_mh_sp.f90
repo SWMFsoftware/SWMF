@@ -194,8 +194,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
-            !call update_semi_router_at_source(RouterScSp,&
-            !     SC_GridDescriptor,interpolation_amr_gc)
+            call update_semi_router_at_source(RouterScSp,&
+                 SC_GridDescriptor,interpolation_amr_gc)
             nLength = nlength_buffer_source(RouterScSp)
             call SC_extract_line(&
                  nLine           = nLength,                                   &
@@ -238,8 +238,8 @@ contains
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
-            !call update_semi_router_at_source(RouterIhSp,&
-            !     IH_GridDescriptor,interpolation_amr_gc)
+            call update_semi_router_at_source(RouterIhSp,&
+                 IH_GridDescriptor,interpolation_amr_gc)
             nLength = nlength_buffer_source(RouterIhSp)
             call IH_extract_line(&
                  nLine           = nLength,                                   &
@@ -435,8 +435,8 @@ contains
          interpolate          = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)
     if(is_proc(IH_))then
-       !call update_semi_router_at_source(RouterIhSp,&
-       !     IH_GridDescriptor, interpolation_amr_gc)
+       call update_semi_router_at_source(RouterIhSp,&
+            IH_GridDescriptor, interpolation_amr_gc)
        nLength = nlength_buffer_source(RouterIhSp)
        call IH_add_to_line(&
             nParticle = nLength,&
