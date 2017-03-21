@@ -18,6 +18,8 @@ module MH_domain_decomposition
   public:: MH_update_local_decomposition
 
   type(DomainDecompositionType), public:: MH_DomainDecomposition
+  type(DomainDecompositionType), public:: MH_LineDecomposition
+
 
   ! Local variables and constants
   logical:: UseMHGridDescriptor=.true. 
@@ -41,7 +43,7 @@ module MH_domain_decomposition
        0,1,1, &
        1,1,1 /), (/3,8/))
 
-  private:: show_domain_decomp, get_batl_tree, &
+  private:: get_batl_tree, &
        MH_get_roots_dd, MH_get_roots_id
 
 contains
@@ -86,7 +88,7 @@ contains
        write(*,*) iNode, Dd%iDecomposition_II(:,iNode)
     end do
 
-    write(*,*)'!!! iNode, XyzBlock_DI'
+    write(*,*)'!!! iNode, XyzBlock_DI,  DXyz_DI'
     do iNode = 1, Dd%nTreeNodes
        write(*,*) iNode, Dd%XyzBlock_DI(:,iNode), Dd%DXyzCell_DI(:,iNode)
     enddo
