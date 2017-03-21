@@ -1,9 +1,13 @@
 *_planet.f
 ModCommonPlanet.f90
+ModCommonPlanet_planet.f90
 ModGlow.f90
+ModGlow_planet.f90
 get_rate.f90
+neutral_atmosphere_planet.f90
 print_plot.f90
 upper_heat_conduction.f90
+upper_heat_conduction_planet.f90
 PLANET
 Makefile.planet
 Makefile.DEPEND
