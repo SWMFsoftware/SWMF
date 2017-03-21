@@ -279,4 +279,4 @@ allclean:
 	cd src; make distclean
 	cd srcInterface; make distclean
 	cd doc/Tex; make distclean
-	rm -rf Makefile.planet *~ bin
+	rm -rf Makefile.planet *~ bin ${INSTALLFILES}
