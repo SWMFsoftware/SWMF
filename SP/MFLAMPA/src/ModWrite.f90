@@ -1,14 +1,14 @@
-module ModWrite
+module SP_ModWrite
 
   ! This module contains methods for writing output files
 
-  use ModSize, ONLY: &
+  use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle,&
        nMomentumBin, &
        Particle_, OriginLat_, OriginLon_
 
-  use ModGrid, ONLY: &
+  use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iComm, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
@@ -538,4 +538,4 @@ contains
 
   end subroutine write_output
 
-end module ModWrite
+end module SP_ModWrite

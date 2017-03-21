@@ -7,7 +7,7 @@ module SP_wrapper
   use ModNumConst, ONLY: cHalfPi
   use ModConst, ONLY: rSun, cProtonMass
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
-  use ModMain, ONLY: &
+  use SP_ModMain, ONLY: &
        run, initialize, finalize, check, read_param,&
        get_node_indexes, &
        iComm, iProc, nProc, &

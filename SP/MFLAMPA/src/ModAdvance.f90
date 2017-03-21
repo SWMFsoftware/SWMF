@@ -1,4 +1,4 @@
-module ModAdvance
+module SP_ModAdvance
 
   ! The module contains methods for advancing the solution in time
 
@@ -8,9 +8,9 @@ module ModAdvance
 
   use ModCoordTransform, ONLY: rlonlat_to_xyz
 
-  use ModSize, ONLY: iParticleMin, iParticleMax, nMomentumBin, nDim
+  use SP_ModSize, ONLY: iParticleMin, iParticleMax, nMomentumBin, nDim
 
-  use ModGrid, ONLY: &
+  use SP_ModGrid, ONLY: &
        R_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_, &
        Begin_, End_, Shock_, ShockOld_, EFlux_,&
        nBlock, &
@@ -19,9 +19,9 @@ module ModAdvance
        DMomentumOverDEnergy_I, &
        distance_to_next
 
-  use ModDiffusion, ONLY: advance_diffusion
+  use SP_ModDiffusion, ONLY: advance_diffusion
 
-  use ModLogAdvection, ONLY: advance_log_advection
+  use SP_ModLogAdvection, ONLY: advance_log_advection
 
   implicit none
 
@@ -434,4 +434,4 @@ contains
     TimeGlobal = TimeLimit
   end subroutine advance
   
-end module ModAdvance
+end module SP_ModAdvance

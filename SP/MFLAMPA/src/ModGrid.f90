@@ -1,6 +1,6 @@
-module ModGrid
+module SP_ModGrid
 
-  use ModSize, ONLY: &
+  use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nMomentumBin, nPitchAngleBin, &
        iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
@@ -403,4 +403,4 @@ contains
   !============================================================================
 
 
-end module ModGrid
+end module SP_ModGrid

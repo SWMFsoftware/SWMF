@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModLogAdvection
+module SP_ModLogAdvection
   implicit none
   !Revision history
   !Prototype: Sokolov&Roussev, FLAMPA code, 2004
@@ -185,4 +185,4 @@ contains
     end function df_lim
   end subroutine advance_log_advection
   !===========================================================================!
-end module ModLogAdvection
+end module SP_ModLogAdvection

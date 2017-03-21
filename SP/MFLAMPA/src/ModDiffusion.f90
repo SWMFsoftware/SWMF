@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModDiffusion
+module SP_ModDiffusion
   implicit none
   PRIVATE
   public:: advance_diffusion
@@ -119,4 +119,4 @@ contains
     R_I = F_I
     call tridiag(n,Lower_I,Main_I,Upper_I,R_I,F_I)
   end subroutine advance_diffusion
-end module ModDiffusion
+end module SP_ModDiffusion

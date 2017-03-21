@@ -1,17 +1,17 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
 ! portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModMain
+module SP_ModMain
 
-  use ModSize, ONLY: &
+  use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, &
        iParticleMin, iParticleMax, nParticle,&
        Particle_, OriginLat_, OriginLon_
   
-  use ModWrite, ONLY: &
+  use SP_ModWrite, ONLY: &
        set_write_param, write_output, NamePlotDir
 
-  use ModGrid, ONLY: &
+  use SP_ModGrid, ONLY: &
        nVar, &
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
@@ -21,7 +21,7 @@ module ModMain
        CoordMin_DI, &
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
-  use ModAdvance, ONLY: &
+  use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        advance, set_injection_param, init_advance_const
 
@@ -160,4 +160,4 @@ contains
     !--------------------------------------------------------------------------
   end subroutine finalize
 
-end module ModMain
+end module SP_ModMain

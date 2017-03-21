@@ -1,7 +1,7 @@
   !  Copyright (C) 2002 Regents of the University of Michigan,
   !  portions used with permission
   !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModSize
+module SP_ModSize
 
   implicit none
 
@@ -41,4 +41,4 @@ module ModSize
   ! whether to use pitch-angle averaged equations
   logical, parameter:: IsPitchAngleAveraged = nPitchAngleBin == 1
 
-end module ModSize
+end module SP_ModSize
