@@ -125,8 +125,7 @@ MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]\?[0-9]$$//'`
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd CON;			make install
-	cd ESMF/ESMF_SWMF;	make install #^CMP IF ESMF
-
+	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make install; fi #^CMP IF ESMF
 	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "EE/BATSRUS" ]); \
 			then cp GM/BATSRUS/Config.pl EE/BATSRUS; \
@@ -280,7 +279,7 @@ clean: ENV_CHECK
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
 		do (echo Cleaning $$i; cd $$i; make clean); done
-	-(cd ESMF/ESMF_SWMF;	make clean) #^CMP IF ESMF
+	-@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make clean; fi #^CMP IF ESMF
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -305,7 +304,8 @@ allclean: ENV_CHECK rmdir
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
 		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
-	-(cd ESMF/ESMF_SWMF;	make distclean) #^CMP IF ESMF
+	
+	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -342,7 +342,7 @@ dist:
 	tar -rf tmp.tar  util
 	if([ -d gui ]); then tar -rf tmp.tar  gui; fi
 	tar -rf tmp.tar  CON
-	tar -rf tmp.tar  ESMF			#^CMP IF ESMF
+	@if([ -d ESMF ]); then tar -rf tmp.tar  ESMF; fi #^CMP IF ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
 		do (echo Tarring $$i; tar -rf tmp.tar $$i); done
 	@echo ' '
