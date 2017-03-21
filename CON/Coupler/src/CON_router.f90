@@ -1440,161 +1440,7 @@ contains
     if(UseMappingVector)nullify(XyzMapping_DI)
     if(UseMask)nullify(Used_I)
   end subroutine construct_router_from_source
-  !===========================================================================!
-  subroutine get_target_interface_points(&
-       iProc, nIndex,&
-       ! the GridDescriptor for the Target component
-       GridDescriptorTarget,  &
-       !Logical function which allows to skip the block if there is no !
-       !interface points in it. Optional, if not present then all the  !
-       !blocks are checked for the presence of the interface points    !
-       is_interface_block,    &
-       !The subroutine which defines if the grid point is inside the   !
-       !interface layer. Optional, if not present, then all the grid   !
-       !points (at the target grid) are considered as the interface    !
-       !layer points 
-       interface_point_coords,&
-       nData, &
-       Coord_II, &
-       iIndex_II, &
-       nAux, &
-       Aux_VI)
-    interface
-       logical function is_interface_block(lGlobalNode)
-         implicit none
-         integer,intent(in)::lGlobalNode 
-       end function is_interface_block
-       subroutine interface_point_coords(&
-            GridDescriptor,&
-            lGlobalTreeNode,&
-            nDim,&
-            Xyz_D,&
-            nIndex,&
-            iIndex_I,&
-            IsInterfacePoint)
-         use CON_grid_descriptor
-         implicit none
-         type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in) ::lGlobalTreeNode,nIndex
-         logical,intent(out)::IsInterfacePoint
-         integer,intent(in) ::nDim
-         real,intent(inout) ::Xyz_D(nDim)
-         integer,intent(inout)::iIndex_I(nIndex)
-       end subroutine interface_point_coords
-    end interface
-    integer, intent(in):: iProc, nIndex
-    type(GridDescriptorType),intent(in)::GridDescriptorTarget
-    ! number of data entries
-    integer,              intent(out):: nData
-    ! data locations themselves
-    real,    allocatable, intent(out):: Coord_II(:,:)
-    ! indices to access the data locations on Target
-    integer, allocatable, intent(out):: iIndex_II(:,:)
-    integer, intent(in) :: nAux
-    ! auxilary variables
-    real,    allocatable, intent(out):: Aux_VI(:,:)
-    optional::is_interface_block,interface_point_coords
-    !\
-    ! Makes no sense: all the variables below should be actually a part 
-    ! of router
-    !/
-    integer, parameter:: iPointGlobal_ = 0,  &    
-         iPointInBlock_ = 2, iBlockAll_ = 1 
-    integer::lGlobalNode, iBlockAll, nDim, iProcTo, iBlockTo
-    integer::iGlobalGridPoint, iGlobalPointLast, iPointInBlock 
-    integer::nGridPointsPerBlock
-    logical::IsInterfacePoint, DoCountOnly, DoCheckBlock,DoCheckPoint
-    integer::iCount, iData, iIndex_I(nIndex), iAux_I(0:nAux), iAux
-    real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
-    integer,dimension(GridDescriptorTarget%nDim)::iCell_D
-    logical::DoTest,DoTestMe
-    character(LEN=*),parameter::NameSub='get_target_interface_points'
-    !-------------------------
-    DoTest=.false.; DoTestMe=.false.
-    nDim = GridDescriptorTarget%nDim
-    DoCheckBlock=present(is_interface_block)
-    DoCheckPoint=present(interface_point_coords)
-
-    !Check dimensions
-    do iCount = 1,2
-       DoCountOnly = iCount==1 
-       nGridPointsPerBlock=n_grid_points_per_block(&
-            GridDescriptorTarget)
-       iData = 0
-       !Block loop                                                     !
-       do iBlockAll = 1, n_block_total(GridDescriptorTarget%DD%Ptr)
-
-          lGlobalNode=i_global_node_a(&
-               GridDescriptorTarget%DD%Ptr,iBlockAll)
-
-          call pe_and_blk(&
-               GridDescriptorTarget%DD%Ptr,lGlobalNode,&
-               iProcTo,iBlockTo)
-          if(iProc/=iProcTo)CYCLE
-          !Skip the block if desired: if there is known to be no interface!
-          !point in it                                                    !
-          if( DoCheckBlock)then
-             if(.not.is_interface_block(lGlobalNode))CYCLE
-          end if
-          !GlobalCellNumber Loop, for a given (octree) block 
-          !\
-          ! Global number of the last grid point in the previous
-          ! global block, with the global block number = nBlockAll-1
-          !/
-          iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
-          do iPointInBlock  = 1, nGridPointsPerBlock
-             iGlobalGridPoint =   iGlobalPointLast + iPointInBlock            
-             iIndex_I(1)=iGlobalGridPoint
-
-             call global_i_grid_point_to_icb(&
-                  GridDescriptorTarget,&
-                  iGlobalGridPoint,&
-                  lGlobalNode,& 
-                  iCell_D)
-                
-             if(nIndex/=1)then
-                iIndex_I(nIndex)=iBlockTo
-                iIndex_I(1:nDim)=&
-                     iCell_D
-             end if
-             XyzTarget_D = xyz_grid_d(&
-                  GridDescriptorTarget,&
-                  lGlobalNode,&
-                  iCell_D)
-             if( DoCheckPoint)then
-                call interface_point_coords(&
-                     GridDescriptorTarget,&
-                     lGlobalNode,&
-                     nDim,&
-                     XyzTarget_D,&
-                     nIndex,&
-                     iIndex_I,&
-                     IsInterfacePoint)
-                if(.not.IsInterfacePoint)CYCLE
-                iData = iData +1
-                if(.not.DoCountOnly)then
-                   Coord_II(1:nDim,iData) = XyzTarget_D
-                   iIndex_II(1:nIndex,iData) = iIndex_I
-                   iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
-                   iAux_I(iPointInBlock_) = iPointInBlock
-                   iAux_I(iBlockAll_    ) = iBlockAll
-                   do iAux = 1, nAux
-                      Aux_VI(iAux,iData) = real(iAux_I(iAux))
-                   end do
-                end if
-             end if
-          end do   !iGlobalPoints
-       end do      !iGlobalBlock
-       if(DoCountOnly)then
-          nData = iData
-          call check_size(2, (/nDim, nData/), Buffer_II =  Coord_II)
-          call check_size(2, (/nIndex, nData/), iBuffer_II = iIndex_II)
-          if(nAux > 0)&
-               call check_size(2, (/nAux, nData/), Buffer_II = Aux_VI)
-       end if
-    end do         !iCount
-  end subroutine get_target_interface_points
-  !===============================================
+  !====================================
   subroutine set_semi_router_from_target(&
        ! the GridDescriptor for the Source component
        GridDescriptorSource, &
@@ -1677,6 +1523,39 @@ contains
     optional:: transform
     optional:: interpolate
     !-------------------------------------------------------------------------!
+    !==========================Declarations from set_target===================!
+    !EOP
+    ! MPI-related variables
+    integer::iProc,nProc
+    integer::lGlobalNode,iBlockAll
+    integer::iGlobalGridPoint,nGridPointsPerBlock
+    logical::IsInterfacePoint
+    integer::iImage,nImage !!!,nImagePart,iToGet
+    integer::iProcTo,iBlockTo,iProcFrom,iProcDoNotAdd !!!,iPE
+    integer,dimension(0:Router%nProc-1)::&
+         nGetUbound_P,nPutUbound_P
+
+    real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
+    real,dimension(GridDescriptorSource%nDim)::&
+         XyzSource_D,XyzStored_D
+    integer,dimension(GridDescriptorTarget%nDim)::iCell_D
+    integer, dimension(Router%nIndexTarget)::iIndexRecv_I
+    integer,dimension(0:Router%nIndexSource,&
+         2**GridDescriptorSource%nDim)::&
+         iIndexGet_II
+    integer,dimension(2**GridDescriptorSource%nDim)::&
+         iProcLookUp_I
+    integer::nProcToGet,iProcToGet
+    logical::DoCountOnly,DoCountRed
+    real,dimension(2**GridDescriptorSource%nDim)::Weight_I
+    logical::UseMappingFunction
+
+    logical::DoCheckBlock,DoCheckPoint,DoInterpolate
+    integer::iError
+    logical::DoTest,DoTestMe
+    character(LEN=*),parameter::NameSub='Router'
+    character(LEN=100):: NameFile
+    !==========================End of declaration from set_target=============!
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
     ! number of indices (e.g. cell indices) on components
@@ -1684,33 +1563,22 @@ contains
     ! number of data locations on the current processor
     integer:: nData
     ! loop variables
-    integer:: iIndex, iData, iBuffer, iImage
-    integer:: iProcFrom
+    integer:: iIndex, iData, iBuffer
     ! send and recv buffers
     ! buffers' size
     integer:: nBufferSMax
     ! offsets in buffers
     integer:: nSendCumSum, nRecvCumSum
     ! aux arrays to put data in BufferS_II in the correct order
-    integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)
-    ! MPI-related variables
-    integer:: iProc
+    integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)   
     ! components ids
     integer:: iCompSource, iCompTarget
     ! interpolation-related variables
-    integer:: iIndexGet_II(&
-         0:GridDescriptorSource%nDim+1, &
-         2**GridDescriptorSource%nDim),&
-         iProcLookup_I(2**GridDescriptorSource%nDim)
-    integer:: nImage, nImageMax
-    real:: Weight_I(2**GridDescriptorSource%nDim)
+    integer:: nImageMax
     ! optional actions to be taken
-    logical:: &
-         DoGetRequestTarget, DoTransform, &
-         DoInterpolateSource
     ! aux variables to go through a buffer
     integer:: iStart, iEnd
-    integer:: nProcToGet, iProcDoNotAdd, iAuxStart, iAuxEnd
+    integer:: iAuxStart, iAuxEnd !nProcToGet, iProcDoNotAdd, iAuxStart, iAuxEnd
     ! number of auxilary variables passed via request
     integer:: nAux
     ! storage for requests
@@ -1722,10 +1590,17 @@ contains
     logical, allocatable:: DoAdd_I(:)
     ! aux array to hold coordinate of a location currently being processed
     real, allocatable:: Coord_I(:)
+    integer, parameter:: iPointGlobal_ = 0,  &    
+         iPointInBlock_ = 2, iBlockAll_ = 1 
+    integer:: nDim
+    integer::iGlobalPointLast, iPointInBlock 
+    integer::iCount, iAux_I(0:2), iAux
+    !real,dimension(GridDescriptorTarget%nDim)::XyzTarget_D
+    !integer,dimension(GridDescriptorTarget%nDim)::iCell_D
     ! error message containers
     character(len=200):: StringErrorFormat, StringErrorMessage
-    character(len=*),parameter:: NameSub = &
-         'CON_router:set_semi_router_from_target'
+    !character(len=*),parameter:: NameSub = &
+    !     'CON_router:set_semi_router_from_target'
     !-------------------------------------------------------------------------!
     ! identify components
     iCompSource = Router%iCompSource
@@ -1748,8 +1623,8 @@ contains
     Router%nBufferTarget = 0; Router%nBufferSource = 0
 
     ! determine which optional actions should be taken
-    DoTransform        = present(transform)
-    DoInterpolateSource= present(interpolate)
+    UseMappingFunction        = present(transform)
+    DoInterpolate             = present(interpolate)
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
@@ -1774,16 +1649,86 @@ contains
     ! how much data is to be requested from them
     !/
     if(.not.is_proc(iCompTarget))RETURN
-    call get_target_interface_points(&
-         iProc, nIndexTarget,   &
-         GridDescriptorTarget,  &
-         is_interface_block,    &
-         interface_point_coords,&
-         nData, &
-         Coord_II, &
-         iIndex_II, &
-         nAux, &
-         Aux_VI)
+nDim = GridDescriptorTarget%nDim
+    DoCheckBlock=present(is_interface_block)
+    DoCheckPoint=present(interface_point_coords)
+
+    !Check dimensions
+    do iCount = 1,2
+       DoCountOnly = iCount==1 
+       nGridPointsPerBlock=n_grid_points_per_block(&
+            GridDescriptorTarget)
+       iData = 0
+       !Block loop                                                     !
+       do iBlockAll = 1, n_block_total(GridDescriptorTarget%DD%Ptr)
+
+          lGlobalNode=i_global_node_a(&
+               GridDescriptorTarget%DD%Ptr,iBlockAll)
+
+          call pe_and_blk(&
+               GridDescriptorTarget%DD%Ptr,lGlobalNode,&
+               iProcTo,iBlockTo)
+          if(iProc/=iProcTo)CYCLE
+          !Skip the block if desired: if there is known to be no interface!
+          !point in it                                                    !
+          if( DoCheckBlock)then
+             if(.not.is_interface_block(lGlobalNode))CYCLE
+          end if
+          !GlobalCellNumber Loop, for a given (octree) block 
+          !\
+          ! Global number of the last grid point in the previous
+          ! global block, with the global block number = nBlockAll-1
+          !/
+          iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
+          do iPointInBlock  = 1, nGridPointsPerBlock
+             iGlobalGridPoint =   iGlobalPointLast + iPointInBlock
+             call global_i_grid_point_to_icb(&
+                  GridDescriptorTarget,&
+                  iGlobalGridPoint,&
+                  lGlobalNode,& 
+                  iCell_D)
+                
+             if(Router%nIndexTarget/=1)then
+                iIndexRecv_I(Router%nIndexTarget)=iBlockTo
+                iIndexRecv_I(1:nDim)=&
+                     iCell_D
+             end if
+             XyzTarget_D = xyz_grid_d(&
+                  GridDescriptorTarget,&
+                  lGlobalNode,&
+                  iCell_D)
+             if( DoCheckPoint)then
+                call interface_point_coords(&
+                     GridDescriptorTarget,&
+                     lGlobalNode,&
+                     nDim,&
+                     XyzTarget_D,&
+                     Router%nIndexTarget,&
+                     iIndexRecv_I,&
+                     IsInterfacePoint)
+                if(.not.IsInterfacePoint)CYCLE
+                iData = iData +1
+                if(.not.DoCountOnly)then
+                   Coord_II(1:nDim,iData) = XyzTarget_D
+                   iIndex_II(1:Router%nIndexTarget,iData) = iIndexRecv_I
+                   iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
+                   iAux_I(iPointInBlock_) = iPointInBlock
+                   iAux_I(iBlockAll_    ) = iBlockAll
+                   do iAux = 1, nAux
+                      Aux_VI(iAux,iData) = real(iAux_I(iAux))
+                   end do
+                end if
+             end if
+          end do   !iGlobalPoints
+       end do      !iGlobalBlock
+       if(DoCountOnly)then
+          nData = iData
+          call check_size(2, (/nDim, nData/), Buffer_II =  Coord_II)
+          call check_size(2, (/Router%nIndexTarget, nData/), iBuffer_II = iIndex_II)
+          if(nAux > 0)&
+               call check_size(2, (/nAux, nData/), Buffer_II = Aux_VI)
+       end if
+    end do         !iCount
     ! if auxilary data are sent, correct size of the buffer
     if(nAux > 0)then
        ! check correctness
@@ -1817,7 +1762,7 @@ contains
     ! go over the list of requested data location
     do iData = 1, nData
 
-       if(DoTransform)then
+       if(UseMappingFunction)then
           call transform(&
                nDimTarget, Coord_II(1:nDimTarget, iData), &
                nDimSource, Coord_I( 1:nDimSource))
