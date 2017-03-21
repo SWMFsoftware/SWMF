@@ -446,8 +446,9 @@ contains
              Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)  
              
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
-             ! and divide by cProtonMass in kg so Ne is in cm^-3  
-             LogNe = log10(Rho*1e-6/cProtonMass)
+             ! and divide by cProtonMass in kg so Ne is in cm^-3
+             ! 1 : 0.83  electron to proton ratio is assumed
+             LogNe = log10(Rho*1e-6/cProtonMass/0.83)
              LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
 
              ! Convert to SI
@@ -476,7 +477,7 @@ contains
              if(Gint<0.0)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi)
+             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) *0.83
              
              if(IsVerbose)then
                 write(*,*)'                                                   '
