@@ -248,25 +248,28 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
   !===================================================================!
-  subroutine IH_extract_line(nLine, CoordOrigin_DI, iTraceMode, &
-       nIndex, iIndexOrigin_II, RSoft)
+  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, &
+       nIndex, iIndexOrigin_II, RSoftBoundary, UseInputInGenCoord)
     integer,          intent(in) :: nLine
-    real,             intent(in) :: CoordOrigin_DI(3, 1)
+    real,             intent(in) :: XyzOrigin_DI(3, 1)
     integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: nIndex
     integer,          intent(in) :: iIndexOrigin_II(1,1) 
-    real,    optional,intent(in) :: RSoft
+    real,    optional,intent(in) :: RSoftBoundary
+    logical, optional,intent(in) :: UseInputInGenCoord
 
     character(len=*), parameter :: NameSub='IH_extract_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_extract_line
   !============================================================================
-  subroutine IH_add_to_line(nParticle, Coord_DI, nIndex, iIndex_II)
+  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II,&
+       UseInputInGenCoord)
     integer, intent(in) :: nParticle
-    real,    intent(in) :: Coord_DI(3, 1)
+    real,    intent(in) :: Xyz_DI(3, 1)
     integer, intent(in) :: nIndex
-    integer, intent(in) :: iIndex_II(1,1) 
+    integer, intent(in) :: iIndex_II(1,1)
+    logical, optional,intent(in) :: UseInputInGenCoord 
     character(len=*), parameter :: NameSub='IH_add_to_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
