@@ -162,16 +162,18 @@ contains
     !USES:
     use MH_domain_decomposition
     use CON_coupler
-    use CON_test_global_message_pass
-    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, test_string
+    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, test_string, &
+         UseParticles
     use ModPhysics,      ONLY: No2Si_V, UnitX_
     use ModVarIndexes,   ONLY: nVar
     use ModAdvance,      ONLY: State_VGB
     use CON_comp_param,  ONLY: GM_
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D
-
+    use ModParticleFieldLine
     logical:: DoTest,DoTestMe
+    logical:: UseParticleLine = .false.
+    integer:: nParticle = 0, iError = 0
     character(len=*), parameter:: NameSub = 'GM_set_grid'
     !----------------------------------------------------------
     !REVISION HISTORY:
@@ -198,11 +200,6 @@ contains
 
     if(is_proc(GM_)) Grid_C(GM_)%State_VGB => State_VGB
 
-    if(index(test_string,'NOCOUPLINGTOOLKIT') > 0)then
-       if(iProc==0) write(*,*) NameSub, ': NOCOUPLINGTOOLKIT !'
-       RETURN
-    end if
-
     if(is_proc(GM_))then
        call init_decomposition(&
             MH_DomainDecomposition,GM_,3,.true.)
@@ -212,14 +209,31 @@ contains
     end if
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
 
-
     if(is_proc0(GM_))call MH_get_root_decomposition(GM_)
 
     call bcast_decomposition(GM_)
 
     call synchronize_refinement(GM_,MH_domaindecomposition)
-
-    if(DoTest) call test_global_message_pass(GM_)
+    ! Check if the decomosition for lines is needed
+    if(is_proc0(GM_))UseParticleLine = UseParticles
+    call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
+         i_proc0(GM_),i_comm(),iError)
+    if(UseParticleLine)then
+       call init_decomposition_dd(&
+       MH_LineDecomposition, GM_, nDim=1)
+       if(is_proc0(GM_))then
+          nParticle = n_particle_reg()
+          call get_root_decomposition_dd(&
+               MH_LineDecomposition, &
+               (/n_proc(GM_)/),      &
+               (/0.50/),              &
+               (/real(n_proc(GM_)*nParticle) + 0.50/), &
+               (/nParticle/))
+       end if
+       call bcast_decomposition_dd(MH_LineDecomposition)
+       if(DoTest.and.is_proc0(GM_))call show_domain_decomp(&
+            MH_LineDecomposition)
+    end if
   end subroutine GM_set_grid
   !===================================================================!
   !BOP

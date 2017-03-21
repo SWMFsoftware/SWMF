@@ -401,12 +401,19 @@ contains
     use CON_comp_param
     use IH_domain_decomposition
     use CON_coupler
-    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
+    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, &
+         UseParticles
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
     use IH_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D
+    use IH_ModParticleFieldLine
+    logical:: DoTest,DoTestMe
+    logical:: UseParticleLine = .false.
+    integer:: nParticle = 0, iError = 0
+    character(len=*), parameter:: NameSub = 'IH_set_grid'
     !--------------------------------------------------------------------------
 
+    DoTest=.false.;DoTestMe=.false.
     ! Here we should set the IH (MH) grid descriptor
     if(done_dd_init(IH_))return
     call init_decomposition(&
@@ -444,7 +451,7 @@ contains
 
        MH_DomainDecomposition%IsLocal=.true.
     end if
-
+    call CON_set_do_test('test_grids',DoTest,DoTestMe)
     !Repeat the initialization at the global grid level:
     !Octree root array:
     if(is_proc0(IH_))call MH_get_root_decomposition(IH_)
@@ -456,7 +463,25 @@ contains
     call synchronize_refinement(&
          GridID_=IH_,&
          localDD=MH_domaindecomposition)
-
+    if(is_proc0(IH_))UseParticleLine = UseParticles
+    call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
+         i_proc0(IH_),i_comm(),iError)
+    if(UseParticleLine)then
+       call init_decomposition_dd(&
+       MH_LineDecomposition, IH_, nDim=1)
+       if(is_proc0(IH_))then
+          nParticle = n_particle_reg()
+          call get_root_decomposition_dd(&
+               MH_LineDecomposition, &
+               (/n_proc(IH_)/),      &
+               (/0.50/),              &
+               (/real(n_proc(IH_)*nParticle) + 0.50/), &
+               (/nParticle/))
+       end if
+       call bcast_decomposition_dd(MH_LineDecomposition)
+       if(DoTest.and.is_proc0(IH_))call show_domain_decomp(&
+            MH_LineDecomposition)
+    end if
   end subroutine IH_set_grid
 
   !===============================================================

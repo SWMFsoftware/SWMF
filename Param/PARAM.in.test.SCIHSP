@@ -23,6 +23,9 @@ T			DoSaveRestart
 50000			DnSaveRestart
 -1			DtSaveRestart
 
+#TEST
+test_grids
+
 
 #BEGIN_COMP SC --------------------------------------------------------------
 

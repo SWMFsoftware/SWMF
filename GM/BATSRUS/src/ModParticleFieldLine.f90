@@ -35,6 +35,7 @@ module ModParticleFieldLine
   public:: get_particle_data
   public:: set_soft_boundary
   public:: apply_soft_boundary
+  public:: n_particle_reg
 
   ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
@@ -100,7 +101,9 @@ module ModParticleFieldLine
   real, allocatable:: XyzLineInit_DI(:,:)
 
 contains
-
+  integer function n_particle_reg()
+    n_particle_reg = Particle_I(KindReg_)%nParticleMax
+  end function n_particle_reg
   subroutine read_particle_line_param(NameCommand)
 
     use ModMain,      ONLY: UseParticles
