@@ -21,8 +21,8 @@ module SP_wrapper
   public:: SP_put_input_time
   public:: SP_put_from_mh
   public:: SP_put_line
-  public:: SP_get_request_for_sc
-  public:: SP_get_request_for_ih
+  public:: SP_interface_point_coords_for_ih
+  public:: SP_interface_point_coords_for_sc
   public:: SP_get_grid_descriptor_param
   public:: SP_get_solar_corona_boundary
   public:: SP_put_r_min
@@ -116,27 +116,38 @@ contains
   end subroutine SP_put_r_min
 
   !===================================================================
-  subroutine SP_get_request_for_sc(nLine, CoordOut_DI, iIndexOut_II,&
-       nAux, AuxOut_VI)
-    integer,              intent(out):: nLine
-    real,    allocatable, intent(out):: CoordOut_DI(:, :)
-    integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(in) :: nAux
-    real,    allocatable, intent(out):: AuxOut_VI(:,:)
-    character(len=*), parameter:: NameSub='SP_get_request_for_sc'
+  subroutine SP_interface_point_coords_for_sc(&
+       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex,iIndex_I,&
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)   :: lGlobalTreeNode
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    character(len=*), parameter:: NameSub='SP_interface_point_coords_for_sc'
+    !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_get_request_for_sc
+  end subroutine SP_interface_point_coords_for_sc
   !===================================================================
-  subroutine SP_get_request_for_ih(nLine, CoordOut_DI, iIndexOut_II,&
-       nAux, AuxOut_VI)
-    integer,              intent(out):: nLine
-    real,    allocatable, intent(out):: CoordOut_DI(:, :)
-    integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(in) :: nAux
-    real,    allocatable, intent(out):: AuxOut_VI(:,:)
-    character(len=*), parameter:: NameSub='SP_get_request_for_ih'
+  subroutine SP_interface_point_coords_for_ih(&
+       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex, iIndex_I,&
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)   :: lGlobalTreeNode
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    character(len=*), parameter:: NameSub='SP_interface_point_coords_for_ih'
+    !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_get_request_for_ih
+  end subroutine SP_interface_point_coords_for_ih
+
   !===================================================================
   subroutine SP_put_line(nParticle, Coord_DI, iIndex_II)
     integer, intent(in):: nParticle

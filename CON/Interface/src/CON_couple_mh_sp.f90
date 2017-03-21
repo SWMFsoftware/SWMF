@@ -34,9 +34,10 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
-       SP_put_line, SP_get_request_for_sc, SP_get_request_for_ih, &
+       SP_put_line, &
        SP_get_grid_descriptor_param, &
-       SP_get_solar_corona_boundary, SP_put_r_min
+       SP_get_solar_corona_boundary, SP_put_r_min, &
+       SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc
 
   implicit none
   
@@ -189,7 +190,7 @@ contains
               GridDescriptorSource = SC_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
-              get_request_target   = SP_get_request_for_sc, &
+              interface_point_coords= SP_interface_point_coords_for_sc, &
               transform            = transform_sp_to_sc, &
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
@@ -233,7 +234,7 @@ contains
               GridDescriptorSource = IH_GridDescriptor, &
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIHSp, &
-              get_request_target   = SP_get_request_for_IH, &
+              interface_point_coords= SP_interface_point_coords_for_ih, &
               transform            = transform_sp_to_IH, &
               interpolate          = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterIHSp)
@@ -430,7 +431,7 @@ contains
          GridDescriptorSource = IH_GridDescriptor, &
          GridDescriptorTarget = SP_GridDescriptor, &
          Router               = RouterIHSp, &
-         get_request_target   = SP_get_request_for_IH, &
+         interface_point_coords= SP_interface_point_coords_for_ih, &
          transform            = transform_sp_to_IH, &
          interpolate          = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)

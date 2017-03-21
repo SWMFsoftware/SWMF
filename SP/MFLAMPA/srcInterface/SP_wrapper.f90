@@ -45,8 +45,8 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_put_input_time
   public:: SP_put_from_mh
-  public:: SP_get_request_for_sc
-  public:: SP_get_request_for_ih
+  public:: SP_interface_point_coords_for_ih
+  public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
   public:: SP_get_solar_corona_boundary
@@ -64,6 +64,8 @@ module SP_wrapper
   integer, parameter  :: nRequestIndex = 2
   ! current size of the request
   integer:: nRequestSc, nRequestIh
+  ! whether the request has been sent
+  logical:: IsSentRequestSc, IsSentRequestIh
   ! estimated number of requests per field line
   integer, parameter  :: nRequestPerLine = nParticle / 100
 
@@ -86,18 +88,18 @@ contains
        ! add the request to SC buffer
        nRequestSc = nRequestSc + 1
        ! if the current size of the buffer is exceeded -> double its size
-       if(nRequestSc >  ubound(iRequestSc_II,1)) &
+       if(nRequestSc >  ubound(iRequestSc_II,2)) &
             call double_buffer(iRequestSc_II)
        ! put the request to buffer
-       iRequestSc_II(nRequestSc,:) = iRequest_I
+       iRequestSc_II(:,nRequestSc) = iRequest_I
     case(IH_)
        ! add the request to IH buffer
        nRequestIh = nRequestIh + 1
        ! if the current size of the buffer is exceeded -> double its size
-       if(nRequestIh >  ubound(iRequestIh_II,1)) &
+       if(nRequestIh >  ubound(iRequestIh_II,2)) &
             call double_buffer(iRequestIh_II)
        ! put the request to buffer
-       iRequestIh_II(nRequestIh,:) = iRequest_I
+       iRequestIh_II(:,nRequestIh) = iRequest_I
     case default
        ! requesting from iComp isn't implemented -> ERROR
        write(StringError,'(a,i2)') &
@@ -112,9 +114,9 @@ contains
       integer, pointer:: iAux_II(:,:)
       !------------------------------------------------------
       ! allocated memeory of doubled size
-      allocate(iAux_II(2*ubound(iBuffer_II,1), nRequestIndex))
+      allocate(iAux_II(nRequestIndex,2*ubound(iBuffer_II,2)))
       ! transfer data to new buffer
-      iAux_II(1:ubound(iBuffer_II,1),:) = iBuffer_II
+      iAux_II(:,1:ubound(iBuffer_II,2)) = iBuffer_II
       ! deallocated the old buffer
       deallocate(iBuffer_II)
       ! reassign pointers
@@ -346,115 +348,110 @@ contains
   end subroutine SP_put_r_min
 
   !===================================================================
-  subroutine SP_get_request_for_sc(&
-       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-    ! request data at give locations from SC
-    !---------------------------------------------------------------
-    integer,              intent(out):: nRequestOut
-    real,    allocatable, intent(out):: CoordOut_DI(:, :)
-    integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(in):: nAux
-    real,    allocatable, intent(out):: AuxOut_VI(:,:)
-    !---------------------------------------------------------------
-    call SP_get_request(SC_,&
-         nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-  end subroutine SP_get_request_for_sc
-  !===================================================================
-  subroutine SP_get_request_for_ih(&
-       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-    ! request data at give locations from IH
-    !---------------------------------------------------------------
-    integer,              intent(out):: nRequestOut
-    real,    allocatable, intent(out):: CoordOut_DI(:, :)
-    integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(in):: nAux
-    real,    allocatable, intent(out):: AuxOut_VI(:,:)
-    !---------------------------------------------------------------
-    call SP_get_request(IH_,&
-         nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-  end subroutine SP_get_request_for_ih
-  !===================================================================
-  subroutine SP_get_request(iComp, &
-       nRequestOut, CoordOut_DI, iIndexOut_II, nAux, AuxOut_VI)
-    ! generic function to provide the locations where data must be 
-    ! requested from the component iComp
-    !---------------------------------------------------------------
-    integer,              intent(in ):: iComp
-    integer,              intent(out):: nRequestOut
-    real,    allocatable, intent(out):: CoordOut_DI(:, :)
-    integer, allocatable, intent(out):: iIndexOut_II(:,:)
-    integer,              intent(in):: nAux
-    real,    allocatable, intent(out):: AuxOut_VI(:,:)
 
-    ! loop variables
-    integer:: iParticle, iBlock, iNode, iRequest
+  subroutine SP_interface_point_coords(iComp,&
+       nDim, Xyz_D, nIndex, iIndex_I, IsInterfacePoint)
+    ! interface points (request), which needed to be communicated
+    ! to other components to perform field line extraction and
+    ! perform further coupling with SP:
+    ! the framework tries to determine Xyz_D of such points,
+    ! SP changes them to the correct values
+    integer, intent(in)  :: iComp
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    !---------------------------------------------------------------
+    integer:: iBlock, iRequest     ! loop variables
     integer:: iRequest_I(nRequestIndex)
-
-    ! pointer to the request buffer
-    integer, pointer:: iRequest_II(:,:)
-
     logical, save:: IsFirstCall = .true.
     character(len=100):: StringError
-    character(len=*), parameter:: NameSub='SP_get_request'
+    character(len=*), parameter:: NameSub='SP_interface_point_coords'
     !----------------------------------------------------------------
     if(IsFirstCall)then
        IsFirstCall = .false.
        ! need to initalize request buffer;
        ! initial size = number of lines:
-       allocate(iRequestSc_II(nBlock,nRequestIndex))
-       allocate(iRequestIh_II(nBlock,nRequestIndex))
+       allocate(iRequestSc_II(nRequestIndex,nBlock))
+       allocate(iRequestIh_II(nRequestIndex,nBlock))
        
        ! fill the request buffer for SC
        do iBlock = 1, nBlock
-          iRequestSc_II(iBlock,:) = (/iBlock, 1/)
+          iRequestSc_II(:,iBlock) = (/iBlock, 1/)
        end do
        
        ! reset the sizes of requests
        nRequestSc = nBlock
        nRequestIh = 0
+
+       IsSentRequestSc = .false.
+       IsSentRequestIh = .false.
     end if
 
     ! choose the request buffer based iComp and reset its size counter
     select case(iComp)
     case(SC_)
-       iRequest_II => iRequestSc_II
-       nRequestOut =  nRequestSc
-       nRequestSc  =  0 ! reset the requests size as kept within wrapper
+       if(.not.IsSentRequestSc) IsSentRequestSc = .true.
+       call check_request(iRequestSc_II, nRequestSc, IsInterfacePoint)
     case(IH_)
-       iRequest_II => iRequestIh_II
-       nRequestOut =  nRequestIh
-       nRequestIh  =  0 ! reset the requests size as kept within wrapper
+       if(.not.IsSentRequestIh) IsSentRequestIh = .true.
+       call check_request(iRequestIh_II, nRequestIh, IsInterfacePoint)
     case default
        write(StringError,'(a,i2)') &
-            ": isn't implemented for requesting data from component ", iComp
+            ": isn't implemented for interface with component ", iComp
        call CON_stop(NameSub//StringError)
     end select
+  contains
+    subroutine check_request(iRequest_II, nRequest, IsInterfacePointLocal)
+      ! check whether the point is requested and return its correct coordinates
+      integer, pointer, intent(inout):: iRequest_II(:,:)
+      integer,          intent(inout):: nRequest
+      logical,          intent(out)  :: IsInterfacePointLocal
+      !--------------------------------------------------------------
+      do iRequest = 1, nRequest
+         if(all(iRequest_II(:,iRequest)==iIndex_I((/nIndex,1/))))then
+            IsInterfacePointLocal = .true.
+            Xyz_D = State_VIB((/R_,Lon_,Lat_/),iIndex_I(1),iIndex_I(nIndex))
+            RETURN
+         end if
+      end do
+      IsInterfacePointLocal = .false.
+    end subroutine check_request
+  end subroutine SP_interface_point_coords
 
-
-    ! prepare containers to hold the request
-    if(allocated(CoordOut_DI)) deallocate(CoordOut_DI)
-    allocate(CoordOut_DI(nDim, nRequestOut))
-    if(allocated(iIndexOut_II)) deallocate(iIndexOut_II)
-    allocate(iIndexOut_II(nDim+1, nRequestOut))! 3 cell + 1 block index
-    if(allocated(AuxOut_VI)) deallocate(AuxOut_VI)
-    allocate(AuxOut_VI(nAux, nRequestOut))
-    
-    ! go over the request buffer
-    do iRequest = 1, nRequestOut
-       iBlock    = iRequest_II(iRequest, 1)
-       iParticle = iRequest_II(iRequest, 2)
-       iNode     = iNode_B(iBlock)
-       CoordOut_DI(:, iRequest) = &
-            State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
-       iIndexOut_II(1, iRequest) = iParticle
-       call get_node_indexes(iNode, &
-            iIndexOut_II(2, iRequest), iIndexOut_II(3, iRequest))
-       iIndexOut_II(4, iRequest) = iBlock
-       AuxOut_VI(1, iRequest) = real(iNode)
-       AuxOut_VI(2, iRequest) = real(iParticle)
-    end do
-
-  end subroutine SP_get_request
+  !===================================================================
+  subroutine SP_interface_point_coords_for_sc(&
+       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex,iIndex_I,&
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)   :: lGlobalTreeNode
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    !---------------------------------------------------------------
+    call SP_interface_point_coords(SC_,&
+         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
+  end subroutine SP_interface_point_coords_for_sc
+  !===================================================================
+  subroutine SP_interface_point_coords_for_ih(&
+       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex, iIndex_I,&
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)   :: lGlobalTreeNode
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    !---------------------------------------------------------------
+    call SP_interface_point_coords(IH_,&
+         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
+  end subroutine SP_interface_point_coords_for_ih
 
   !===================================================================
 
@@ -492,11 +489,16 @@ contains
        DoneExtractSolarCorona_B = .false.
     end if
 
+    ! if the request has been sent to other components -> reset its size
+    if(IsSentRequestSc) nRequestSc = 0
+    if(IsSentRequestIh) nRequestIh = 0
+
     ! store passed particles
     do iPut = 1, nPut
        iBlock = iIndex_II(4, iPut)
        iLine  = iNode_B(iBlock)
        iParticle = iIndex_II(1, iPut)
+
        if(iParticle < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
        if(iParticle > iParticleMax)&

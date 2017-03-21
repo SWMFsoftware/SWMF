@@ -1611,9 +1611,6 @@ contains
        !points (at the target grid) are considered as the interface    !
        !layer points                                                   !     
        interface_point_coords, &
-       ! the subroutine that provides the location where data is needed
-       ! on Target; this information may be as generic as needed
-       get_request_target, &
        ! transformation of the location coordinates between components
        transform, &
        ! interpolation subroutine for the Source's grid
@@ -1645,23 +1642,6 @@ contains
          real,intent(inout)::Xyz_D(nDim)
          integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
-       subroutine get_request_target(&
-            nData, Coord_II, iIndex_II, nAux, Aux_VI)
-         ! this subroutine returns info that identifies location of the data
-         ! in the domain, may be as generic as needed, i.e. Coord_II need NOT
-         ! to be the actual coordinates
-         implicit none
-         ! number of data entries
-         integer,              intent(out):: nData
-         ! data locations themselves
-         real,    allocatable, intent(out):: Coord_II(:,:)
-         ! indices to access the data locations on Target
-         integer, allocatable, intent(out):: iIndex_II(:,:)
-         ! number of auxilary variables
-         integer,              intent(in):: nAux
-         ! auxilary variables themselves
-         real,    allocatable, intent(out):: Aux_VI(:,:)
-       end subroutine get_request_target
        !----------------------------------------------------------------------!
        subroutine transform(nDimIn, CoordIn_D, nDimOut, CoordOut_D)
          ! this subroutine transforms coordinates between components
@@ -1694,7 +1674,6 @@ contains
     end interface
     optional:: is_interface_block
     optional:: interface_point_coords
-    optional:: get_request_target
     optional:: transform
     optional:: interpolate
     !-------------------------------------------------------------------------!
@@ -1769,7 +1748,6 @@ contains
     Router%nBufferTarget = 0; Router%nBufferSource = 0
 
     ! determine which optional actions should be taken
-    DoGetRequestTarget = present(get_request_target)
     DoTransform        = present(transform)
     DoInterpolateSource= present(interpolate)
     ! introduced for a better readability
@@ -1796,23 +1774,16 @@ contains
     ! how much data is to be requested from them
     !/
     if(.not.is_proc(iCompTarget))RETURN
-    if(.not.DoGetRequestTarget)then
-       call get_target_interface_points(&
-            iProc, nIndexTarget,   &
-            GridDescriptorTarget,  &
-            is_interface_block,    &
-            interface_point_coords,&
-            nData, &
-            Coord_II, &
-            iIndex_II, &
-            nAux, &
-            Aux_VI)
-    else
-       ! get the data locations on Target as well as
-       !corresponding indices
-       call get_request_target(nData, Coord_II, iIndex_II, &
-            nAux, Aux_VI)
-    end if
+    call get_target_interface_points(&
+         iProc, nIndexTarget,   &
+         GridDescriptorTarget,  &
+         is_interface_block,    &
+         interface_point_coords,&
+         nData, &
+         Coord_II, &
+         iIndex_II, &
+         nAux, &
+         Aux_VI)
     ! if auxilary data are sent, correct size of the buffer
     if(nAux > 0)then
        ! check correctness

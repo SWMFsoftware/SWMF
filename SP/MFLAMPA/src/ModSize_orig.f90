@@ -25,7 +25,7 @@ module SP_ModSize
 
   ! Min and Max possible index of a particle along a field line,
   ! both are set by Config.pl
-  integer, parameter:: iParticleMin = 0
+  integer, parameter:: iParticleMin = 1
   integer, parameter:: nParticle    = 1000
   integer, parameter:: iParticleMax = iParticleMin + nParticle - 1
 

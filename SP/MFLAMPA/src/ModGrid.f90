@@ -214,8 +214,6 @@ contains
     !/
     if(nLat <= 0 .or. nLon <= 0)&
          call CON_stop('Origin surface grid is invalid:'//NameSub)
-    if(iParticleMin > 0 .or. iParticleMax < 0)&
-         call CON_stop('Origin surface is not included:'//NameSub)
     !\
     ! allocate data and grid containers
     !/
