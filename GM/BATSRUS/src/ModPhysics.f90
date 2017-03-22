@@ -355,7 +355,7 @@ contains
     ! set the (corrected) speed of light and get normalization
     !/
     if(ClightDim > 0.0)then
-       Clight   = ClightDim * Si2No_V(UnitU_)
+       Clight   = ClightDim * Io2No_V(UnitU_)
     else
        Clight   = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
     end if
