@@ -1,6 +1,7 @@
 #main
 
-SpeciesList=H2O CO2 DUST DUST DUST DUST
+SpeciesList=H2O CO2
+!DUST DUST DUST DUST
 !CO CO2
 
 DebuggerMode=off !on,off
@@ -77,10 +78,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   RequestedParticleBufferLength=15000000
 
 
-  ReferenceInjectionParticleNumber=1000  !!00
+  ReferenceInjectionParticleNumber=2000  !!00
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=10
+  InitialSampleLength=500
   TestRunTotalIteration=50
 
   NastranSurfaceUserData=on
@@ -130,8 +131,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   define _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION_  _PIC__PARTICLE_COLLISION_MODEL__CROSS_SECTION__HS_
   define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
 
-  define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
-  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) 
+! define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+! define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) 
 
 !  define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
@@ -150,7 +151,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 
 #ParticleCollisions
-  model = NTC !!off !HS ! HS, off
+  model = off !!NTC !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
@@ -271,7 +272,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 
   !!Dust parameters
-  DustMode=on !!on,off
+  DustMode=off !!!!on !!on,off
   DustTotalMassProductionRate=1.0
   PowerLawIndex=3.4	  
   dustRmin=1.0e-7
