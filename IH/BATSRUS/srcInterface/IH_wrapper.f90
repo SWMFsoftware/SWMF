@@ -3,7 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
-
+  use IH_ModParticleFieldLine, ONLY: IH_n_particle=>n_particle_reg
+  use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
 
   implicit none
@@ -25,6 +26,8 @@ module IH_wrapper
   public:: IH_get_for_mh
   public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
+  public:: IH_n_particle
+  public:: IH_LineDD
 
   ! Coupling with SC
   public:: IH_set_buffer_grid

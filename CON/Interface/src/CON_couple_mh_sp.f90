@@ -23,11 +23,12 @@ module CON_couple_mh_sp
 
   use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
        IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
-       IH_get_scatter_line, IH_add_to_line                  !^CMP IF IH
+       IH_get_scatter_line, IH_add_to_line, IH_n_particle,& !^CMP IF IH
+       IH_LineDD                                            !^CMP IF IH
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line                                  !^CMP IF SC
+       SC_get_scatter_line, SC_n_particle, SC_LineDD        !^CMP IF SC
 
   use CON_global_message_pass
   use CON_axes
@@ -50,9 +51,13 @@ module CON_couple_mh_sp
 
   type(GridDescriptorType),save::IH_GridDescriptor !Source  !^CMP IF IH
   type(RouterType),save,private::RouterIhSp                 !^CMP IF IH
+  type(GridDescriptorType),save::IH_LineGridDesc            !^CMP IF IH
+  type(RouterType),save,private::RouterLineIhSp             !^CMP IF IH
 
   type(GridDescriptorType),save::SC_GridDescriptor !Source  !^CMP IF SC
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
+  type(GridDescriptorType),save::SC_LineGridDesc            !^CMP IF SC
+  type(RouterType),save,private::RouterLineScSp             !^CMP IF SC
 
   logical,save::DoInit=.true.
 
@@ -124,6 +129,10 @@ contains
             SC_GridDescriptor)
        call init_router(SC_GridDescriptor,SP_GridDescriptor,&
             RouterScSp,nMappedPointIndex=nAux)
+       call set_standard_grid_descriptor(SC_LineDD,GridDescriptor=&
+            SC_LineGridDesc)
+       call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
+            nMappedPointIndex=0)
        if(RouterScSp%IsProc)then
           call SC_synchronize_refinement(RouterScSp%iProc0Source,&
                RouterScSp%iCommUnion)
@@ -142,6 +151,10 @@ contains
             IH_GridDescriptor)
        call init_router(IH_GridDescriptor,SP_GridDescriptor,&
             RouterIhSp,nMappedPointIndex=nAux)
+       call set_standard_grid_descriptor(IH_LineDD,GridDescriptor=&
+            IH_LineGridDesc)
+       call init_router(IH_LineGridDesc, SP_GridDescriptor, RouterLineIhSp,&
+            nMappedPointIndex=0)
        if(RouterIhSp%IsProc)then
           call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
                RouterIhSp%iCommUnion)

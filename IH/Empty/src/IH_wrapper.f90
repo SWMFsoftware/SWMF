@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
-
+  use CON_domain_decomposition
   ! Wrapper for an "empty" Inner Heliosphere (IH) component
 
   implicit none
@@ -25,6 +25,8 @@ module IH_wrapper
   public:: IH_get_for_mh
   public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
+  public:: IH_n_particle
+  type(DomainDecompositionType), public:: IH_LineDD
 
   ! Coupling with SC
   public:: IH_set_buffer_grid
@@ -461,8 +463,13 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_put_from_ee
+  !============================
+  integer function IH_n_particle()
+    character(len=*), parameter :: NameSub='IH_n_particle'
 
-
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end function IH_n_particle
+  
 end module IH_wrapper
 
 !==============================================================================
