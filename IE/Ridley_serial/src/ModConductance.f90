@@ -30,5 +30,8 @@ Module ModConductance
 
   ! Auroral oval config for iModel=5:
   logical :: UseOval=.true., DoOvalShift=.true., UseSubOvalCond=.false.
+
+  ! Option to turn on new oval:
+  logical :: UseNewOval = .false.
   
 end Module ModConductance

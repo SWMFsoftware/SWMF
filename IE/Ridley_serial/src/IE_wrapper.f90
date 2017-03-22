@@ -94,7 +94,7 @@ contains
       use ModReadParam
       use ModIE_Interface
       use ModFiles
-      use ModConductance, ONLY: UseOval, DoOvalShift, UseSubOvalCond
+      use ModConductance, ONLY: UseOval, UseNewOval, DoOvalShift, UseSubOvalCond
       use ModUtilities,   ONLY: fix_dir_name, check_dir, lower_case
 
       ! The name of the command
@@ -284,6 +284,7 @@ contains
             if(UseOval)then
                call read_var('UseOvalShift',          DoOvalShift)
                call read_var('UseSubOvalConductance', UseSubOvalCond)
+               call read_var('UseAdvancedOval',       UseNewOval)
             end if
             
          case("#CONDUCTANCE")

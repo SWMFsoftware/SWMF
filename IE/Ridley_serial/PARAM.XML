@@ -359,12 +359,14 @@ This command cannot be used in the SWMF.
   <if expr="$UseOval">
     <parameter name="UseOvalShift"          type="logical" default="T"/>
     <parameter name="UseSubOvalConductance" type="logical" default="F"/>
+    <parameter name="UseAdvancedOval"       type="logical" default="F"/>
   </if>
   
   #AURORALOVAL
   T             UseOval (rest of parameters read if true)
   T             UseOvalShift
   F             UseSubOvalConductance
+  F             UseAdvancedOval
 
   This command controls the behavior of the auroral oval for conductance
   iModel=5.  If UseOval is set to True, an auroral oval is constructed from
@@ -376,7 +378,10 @@ This command cannot be used in the SWMF.
   from FACs is restricted at latitudes below the auroral oval.  If True,
   conductance is not restricted at lower latitudes.  If False, conductance
   below auroral latitudes falls off exponentially, producing a sharp
-  conductance gradient about the oval.
+  conductance gradient about the oval.  If UseAdvancedOval is set to True, an
+  updated oval calculation is used.  While similar to the old approach, the new
+  algorithm provides a more continuous oval position as a fucntion of time and
+  yields a more reasonable day/night shift than the old version.  
 
   Default values are shown above.
   

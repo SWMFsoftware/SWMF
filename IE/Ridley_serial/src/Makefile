@@ -44,6 +44,7 @@ OBJECTS = \
 	IE_Initialize.o\
 	IE_Library.o\
 	IE_gather.o\
+	create_auroral_oval.o\
         iono_conductances.o\
 	iono_currents.o\
 	iono_joule.o\

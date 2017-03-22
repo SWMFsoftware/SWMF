@@ -25,7 +25,7 @@ subroutine FACs_to_fluxes(iModel, iBlock)
   use ModIonosphere
   use IE_ModMain
   use ModNumConst
-  use ModConductance, ONLY: UseSubOvalCond, UseOval
+  use ModConductance, ONLY: UseSubOvalCond, UseOval, UseNewOval
   implicit none
 
   integer, intent(in) :: iModel  ! model number, 
@@ -121,12 +121,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         ! Do North first -----------------------------------------------------
         !/
 
-        call Determine_Oval_Characteristics(IONO_NORTH_JR, &
-             IONO_NORTH_Theta, &
-             IONO_NORTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
+        if(UseNewOval)then
+           call Create_Auroral_Oval(IONO_NORTH_JR, IONO_NORTH_Theta, &
+                IONO_NORTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        else
+           call Determine_Oval_Characteristics(IONO_NORTH_JR, IONO_NORTH_Theta,&
+                IONO_NORTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        end if
 
         ave_e_peak_lon = 0.0
 
@@ -183,12 +184,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
         ! Do South next --------------------------------------------------------
         !/
 
-        call Determine_Oval_Characteristics(IONO_SOUTH_JR, &
-             IONO_SOUTH_Theta, &
-             IONO_SOUTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
+        if(UseNewOval)then
+           call Create_Auroral_Oval(IONO_SOUTH_JR, IONO_SOUTH_Theta, &
+                IONO_SOUTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        else
+           call Determine_Oval_Characteristics(IONO_SOUTH_JR, IONO_SOUTH_Theta,&
+                IONO_SOUTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        end if
 
         Loc_of_Oval = cPi - Loc_of_Oval
 
@@ -272,12 +274,13 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      case(1)
         !  Do North First
 
-        call Determine_Oval_Characteristics(IONO_NORTH_JR, &
-             IONO_NORTH_Theta, &
-             IONO_NORTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
+        if(UseNewOval)then
+           call Create_Auroral_Oval(IONO_NORTH_JR, IONO_NORTH_Theta, &
+                IONO_NORTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        else
+           call Determine_Oval_Characteristics(IONO_NORTH_JR, IONO_NORTH_Theta,&
+                IONO_NORTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        end if
 
         do j = 1, IONO_nPsi
            do i = 1, IONO_nTheta
@@ -438,13 +441,14 @@ subroutine FACs_to_fluxes(iModel, iBlock)
      case(2)
         !  Do South Next
 
-        call Determine_Oval_Characteristics(IONO_SOUTH_JR, &
-             IONO_SOUTH_Theta, &
-             IONO_SOUTH_Psi, &
-             Loc_of_Oval, &
-             Width_of_Oval, &
-             Strength_of_Oval)
-
+        if(UseNewOval)then
+           call Create_Auroral_Oval(IONO_SOUTH_JR, IONO_SOUTH_Theta, &
+                IONO_SOUTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        else
+           call Determine_Oval_Characteristics(IONO_SOUTH_JR, IONO_SOUTH_Theta,&
+                IONO_SOUTH_Psi, Loc_of_Oval, Width_of_Oval,Strength_of_Oval)
+        end if
+        
         Loc_of_Oval = cPI - Loc_of_Oval
 
         do j = 1, IONO_nPsi
