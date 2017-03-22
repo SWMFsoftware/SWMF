@@ -364,7 +364,7 @@ void RosinaSample::Liouville::Evaluate() {
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
-            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea,
+            ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
             RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
 
 
@@ -372,7 +372,7 @@ void RosinaSample::Liouville::Evaluate() {
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
-            productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea,
+            ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
             RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
       }
     }
