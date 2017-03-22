@@ -382,7 +382,7 @@ contains
        else
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              call user_material_properties( &
-                  State_VGB(:,i,j,k,iBlock),i,j,k,iBlock,TeOut=TeSi)
+                  State_VGB(:,i,j,k,iBlock), i, j, k, iBlock, TeOut=TeSi)
              Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
        end if
@@ -436,9 +436,11 @@ contains
           CvR = InvGammaElectronMinus1*NumDensR
        end if
     else
-       call user_material_properties(StateLeft_V, CvOut = CvSi)
+       call user_material_properties(StateLeft_V, &
+            iFace, jFace, kFace, iBlock, iDir, CvOut = CvSi)
        CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-       call user_material_properties(StateRight_V, CvOut = CvSi)
+       call user_material_properties(StateRight_V, &
+            iFace, jFace, kFace, iBlock, iDir, CvOut = CvSi)
        CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
 
@@ -453,7 +455,7 @@ contains
 
   !============================================================================
 
-  subroutine get_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
+  subroutine get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
     use ModAdvance,      ONLY: UseIdealEos, UseElectronPressure
@@ -467,7 +469,7 @@ contains
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
 
-    integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: HeatCond_D(3)
 
@@ -479,7 +481,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(UseB0)then
-       select case(iDim)
+       select case(iDir)
        case(1)
           B_D = State_V(Bx_:Bz_) + B0_DX(:,iFace,jFace,kFace)
        case(2)
@@ -513,7 +515,8 @@ contains
        !/
        TeSi = Te*No2Si_V(UnitTemperature_)    
     else
-       call user_material_properties(State_V, TeOut=TeSi)
+       call user_material_properties(State_V, &
+            iFace, jFace, kFace, iBlock, iDir, TeOut=TeSi)
        Te = TeSi*Si2No_V(UnitTemperature_)
     end if
 
@@ -525,8 +528,9 @@ contains
     end if
 
     if(DoUserHeatConduction .or. .not.UseIdealEos)then
-       call user_material_properties(State_V, TeIn=TeSi, &
-            HeatCondOut=HeatCoefSi)
+       call user_material_properties(State_V, &
+            iFace, jFace, kFace, iBlock, iDir, &
+            TeIn=TeSi, HeatCondOut=HeatCoefSi)
        if(HeatCoefSi < 0.0)then
           ! Spitzer conductivity if user sets negative HeatCoefSi
           HeatCoef = HeatCondPar*Te**2.5
@@ -633,7 +637,7 @@ contains
 
   !============================================================================
 
-  subroutine get_ion_heat_cond_coef(iDim, iFace, jFace, kFace, iBlock, &
+  subroutine get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
        State_V, Normal_D, HeatCond_D)
 
     use ModAdvance,    ONLY: UseIdealEos
@@ -643,7 +647,7 @@ contains
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_
     use ModUserInterface ! user_material_properties
 
-    integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
+    integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
     real, intent(out):: HeatCond_D(3)
 
@@ -655,7 +659,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(UseB0)then
-       select case(iDim)
+       select case(iDir)
        case(1)
           B_D = State_V(Bx_:Bz_) + B0_DX(:,iFace,jFace,kFace)
        case(2)
@@ -680,7 +684,8 @@ contains
     else
        call stop_mpi(NameSub//': no ion heat conduction yet for non-ideal eos')
 
-       call user_material_properties(State_V, IonHeatCondOut=IonHeatCoefSi)
+       call user_material_properties(State_V, &
+            iFace, jFace, kFace, iBlock, iDir, IonHeatCondOut=IonHeatCoefSi)
        IonHeatCoef = IonHeatCoefSi*Si2NoHeatCoef
     end if
 
@@ -851,7 +856,8 @@ contains
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
-    real,optional,intent(out)::DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, optional, intent(out):: &
+         DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     logical, optional, intent(in):: DoCalcDeltaIn
 
     logical :: DoCalcDelta
@@ -1148,7 +1154,7 @@ contains
 
       else
          call user_material_properties(State_V, i, j, k, iBlock, &
-              TeOut=TeSi, NatomicOut = NatomicSi, AverageIonChargeOut = Zav)
+              TeOut=TeSi, NatomicOut=NatomicSi, AverageIonChargeOut=Zav)
 
          NeSi = Zav*NatomicSi
          Ne = NeSi*Si2No_V(UnitN_)
