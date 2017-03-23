@@ -38,6 +38,17 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
     OriginalSourceRate+=SourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
     ModifiedSourceRate+=((SourceRate>ThrehondSourceRate) ? SourceRate : ThrehondSourceRate)*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+
+    //evaluate the cosine between the external normal of teh face and the pointing to the spacecraft
+    double x[3],l=0.0,c=0.0;
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].GetCenterPosition(x);
+
+    for (int idim=0;idim<3;idim++) {
+      c+=CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal[idim]*(Rosina[iPoint].x[idim]-x[idim]);
+      l+=pow(Rosina[iPoint].x[idim]-x[idim],2);
+    }
+
+    CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.CrossProduct_FaceNormal_SpacecraftLocation=c/sqrt(l);
   }
 
 
@@ -238,7 +249,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
   if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishTest=nTotalTests;
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#pragma omp parallel for schedule(dynamic) default(none) shared(CutCell::BoundaryTriangleFaces,iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
 #endif
   for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
     //generate a ranfom direction
@@ -250,7 +261,10 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
     //determine whether an intersection with the nucleus is found
     iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
 
-    if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+    if (iIntersectionFace!=-1) {
+      NucleusIntersectionCounter++;
+      CutCell::BoundaryTriangleFaces[iIntersectionFace].UserData.FieldOfView_NudeGauge=true;
+    }
   }
 
   MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
@@ -260,7 +274,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
   NucleusIntersectionCounter=0;
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
+#pragma omp parallel for schedule(dynamic) default(none) shared(CutCell::BoundaryTriangleFaces,iStartTest,iFinishTest,Rosina,iPoint) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
 #endif
   for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
     //generate a ranfom direction
@@ -272,7 +286,10 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
     //determine whether an intersection with the nucleus is found
     iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
 
-    if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
+    if (iIntersectionFace!=-1) {
+      NucleusIntersectionCounter++;
+      CutCell::BoundaryTriangleFaces[iIntersectionFace].UserData.FieldOfView_RamGauge=true;
+    }
   }
 
   MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
@@ -366,6 +383,11 @@ void RosinaSample::Liouville::Evaluate() {
     Comet::BjornNASTRAN::Init();
 
 
+    //reset the fiew of view flags
+    for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+      CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_NudeGauge=false;
+      CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_RamGauge=false;
+    }
 
     //simulate the solid angles and the measuremetns
     GetSolidAngle(NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,iPoint);
@@ -374,7 +396,15 @@ void RosinaSample::Liouville::Evaluate() {
     double TotalOriginalSourceRate=0.0,TotalModifiedSourceRate=0.0,TotalNudeGaugePressure=0.0;
     double TotalNudeGaugeDensity=0.0,TotalNudeGaugeFlux=0.0,TotalRamGaugePressure=0.0,TotalRamGaugeDensity=0.0,TotalRamGaugeFlux=0.0;
 
+
+
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+      //save the original source rate of the species
+      for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++)  {
+        CutCell::BoundaryTriangleFaces[iface].UserData.OriginalSourceRate[spec]=productionDistributionNASTRAN[spec][iface]/CutCell::BoundaryTriangleFaces[iface].SurfaceArea;
+      }
+
+      //evaluate the location
       EvaluateLocation(spec,OriginalSourceRate,ModifiedSourceRate,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
 
       TotalOriginalSourceRate+=OriginalSourceRate;
@@ -385,6 +415,12 @@ void RosinaSample::Liouville::Evaluate() {
       TotalRamGaugePressure+=RamGaugePressure;
       TotalRamGaugeDensity+=RamGaugeDensity;
       TotalRamGaugeFlux+=RamGaugeFlux;
+
+      //save the modified source rate of the species
+      for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++)  {
+        CutCell::BoundaryTriangleFaces[iface].UserData.ModifiedSourceRate[spec]=productionDistributionNASTRAN[spec][iface]/CutCell::BoundaryTriangleFaces[iface].SurfaceArea;
+      }
+
 
       if (PIC::ThisThread==0) {
         fprintf(fGroundTrack,"%e %e %e\n",Rosina[iPoint].xNucleusClosestPoint[0],Rosina[iPoint].xNucleusClosestPoint[1],Rosina[iPoint].xNucleusClosestPoint[2]);
@@ -417,6 +453,7 @@ void RosinaSample::Liouville::Evaluate() {
           RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
           OriginalSourceRate,ModifiedSourceRate);
     }
+
 
     //save the surface properties
     if ((iPoint/Step)%SurfaceOutputSter==0) {
