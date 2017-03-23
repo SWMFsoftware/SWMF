@@ -1,0 +1,8 @@
+//$Id$
+//Definitions for the end of the mission Rosina/COPS measurements
+//the default setting will reproduce the results of the "end of the mission COPS model" presented at the Rosetta SWT MArch 15, 2017
+
+#include "RosinaMeasurementsDefinitions.dfn"
+
+//the mode of the normal distribution of the injected particle Maxwellian distribution
+#define _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE_ _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__NORMAL_

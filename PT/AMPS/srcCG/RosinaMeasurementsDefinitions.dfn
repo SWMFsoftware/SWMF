@@ -1,0 +1,6 @@
+//$Id$
+//Definitions for the end of the mission Rosina/COPS measurements
+
+//the distribution of the direction of the Maxwellian distribution when calculating the injected gas direction with the Liouville theorem method
+#define _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__RANDOM_  0
+#define _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__NORMAL_  1 
