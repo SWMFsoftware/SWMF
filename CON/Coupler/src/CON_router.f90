@@ -2050,19 +2050,12 @@ contains
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
        end subroutine interpolate
     end interface
-    !optional:: interpolate
-    integer:: nRecvCumSum
-    integer:: iStart, iEnd, iProcTo, iBuffer, iProcFrom, iToGet
-    integer:: iProc, nProc
-    ! interpolation-related variables
-    integer:: iIndexGet_II(&
-         0:GridDescriptorSource%nDim+1, &
-         2**GridDescriptorSource%nDim)
-    real :: XyzSource_D(GridDescriptorSource%nDim)
-    real :: Weight_I(2**GridDescriptorSource%nDim)
-    integer:: iImage, nImage, nImageMax, nImagePart
-    integer:: nAux, nDimSource, nIndexSource
-
+    optional:: interpolate
+    integer :: nRecvCumSum
+    integer :: iStart, iEnd, iProcTo, iBuffer, iProcFrom, iToGet
+    integer :: iProc, nProc
+    integer :: nAux, nDimSource, nIndexSource, nImageMax
+    logical :: DoInterpolate
 
     !For given PE the index in the communicator is:
     iProc = Router % iProc
@@ -2071,9 +2064,11 @@ contains
     if(iProc<0) RETURN
     ! identify components
     iCompSource = Router%iCompSource
+    if(.not.is_proc(Router%iCompSource))RETURN
     iCompTarget = Router%iCompTarget
     ! total number of processors and on components
     nProc       = Router%nProc
+    DoInterpolate = present(interpolate)
     !\
     ! Stage 3 set semi-router for source
     !/
@@ -2089,7 +2084,6 @@ contains
     nDimSource  = GridDescriptorSource%nDim
     nIndexSource= Router%nIndexSource
 
-    if(.not.is_proc(Router%iCompSource))RETURN
     nImageMax = 2**nDimSource
     ! prepare containers for router information of Source side
     do iProcTo = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
@@ -2099,42 +2093,73 @@ contains
     call check_router_allocation(Router)
     Router%nGet_P = 0
     ! fill these containers
-    nRecvCumSum = 0
+    !\
+    ! First process the buffered info from this PE
+    !/
+    iProcTo = iProc
+    do iBuffer = 1, Router%nSend_P(iProc)
+       call put_point_to_semirouter
+    end do
+    nRecvCumSum = Router%nSend_P(iProc)
     do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
          i_proc_stride(iCompTarget)
+       if(iProcTo == iProc)CYCLE
        do iBuffer = nRecvCumSum + 1, &
             nRecvCumSum + Router%nSend_P(iProcTo)
-          XyzSource_D = Router%BufferSource_II(&
-               Router%iCoordStart:Router%iCoordEnd, iBuffer)
-          call interpolate(&
-               GridDescriptorSource%nDim,&
-               XyzSource_D,&
-               GridDescriptorSource,&
-               nIndexSource,&
-               iIndexGet_II,&
-               nImage,&
-               Weight_I)
-          nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
-          Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
-          if(nImagePart==0)call CON_stop('No image on the requested PE')
-          ! indices
-          do iImage=1,nImage
-             iProcFrom = iIndexGet_II(0,iImage)
-             if(iProc==iProcFrom)then
-                iToGet=Router%nGet_P(iProcTo)+1-nImagePart
-                Router%iGet_P(iProcTo)%iCB_II(:,iToGet)&
-                     =iIndexGet_II(:,iImage)
-                Router%iGet_P(iProcTo)%iCB_II(0,iToGet)&
-                     =nImagePart
-                Router%Get_P(iProcTo)%Weight_I(iToGet)&
-                     =Weight_I(iImage)
-                nImagePart=nImagePart-1
-             end if
-          end do
+          call put_point_to_semirouter
        end do
        ! increment the offset
        nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcTo)
     end do
+    contains
+      subroutine put_point_to_semirouter
+        ! interpolation-related variables
+        integer:: iIndexGet_II(&
+             0:GridDescriptorSource%nDim+1, &
+             2**GridDescriptorSource%nDim)
+        real :: XyzSource_D(GridDescriptorSource%nDim)
+        real :: Weight_I(2**GridDescriptorSource%nDim)
+        integer:: iImage, nImage, nImagePart
+        !-----------------------------
+        XyzSource_D = Router%BufferSource_II(&
+             Router%iCoordStart:Router%iCoordEnd, iBuffer)
+        if( DoInterpolate)then
+           call interpolate(&
+                nDim           = nDimSource, &
+                Xyz_D          = XyzSource_D, &
+                GridDescriptor = GridDescriptorSource, &
+                nIndex         = nIndexSource, &
+                iIndex_II      = iIndexGet_II, &
+                nImage         = nImage, &
+                Weight_I       = Weight_I)
+        else
+           call nearest_grid_points(&
+                nDim           = nDimSource, &
+                Xyz_D          = XyzSource_D, &
+                GridDescriptor = GridDescriptorSource, &
+                nIndex         = nIndexSource, &
+                iIndex_II      = iIndexGet_II, &
+                nImage         = nImage, &
+                Weight_I       = Weight_I)
+        end if
+        nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
+        Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
+        if(nImagePart==0)call CON_stop('No image on the requested PE')
+        ! indices
+        do iImage=1,nImage
+           iProcFrom = iIndexGet_II(0,iImage)
+           if(iProc==iProcFrom)then
+              iToGet=Router%nGet_P(iProcTo)+1-nImagePart
+              Router%iGet_P(iProcTo)%iCB_II(:,iToGet)&
+                   =iIndexGet_II(:,iImage)
+              Router%iGet_P(iProcTo)%iCB_II(0,iToGet)&
+                   =nImagePart
+              Router%Get_P(iProcTo)%Weight_I(iToGet)&
+                   =Weight_I(iImage)
+              nImagePart=nImagePart-1
+           end if
+        end do
+      end subroutine put_point_to_semirouter
   end subroutine update_semi_router_at_source
   !===========================================================================!
   subroutine set_semi_router_from_source(&
