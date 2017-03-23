@@ -1086,9 +1086,9 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   if (definedFluxBjorn[spec]==false) {
     if (spec==_H2O_SPEC_) {
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-      double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
+      double Qmin=10.0*0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
-      double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.8)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.8)*600;
+      double Qmin=10.0*0.02/pow(HeliocentricDistance/_AU_,4.8)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.8)*600;
 #endif      
       for (i=0;i<90;i++) {
         angle=(double) i;
@@ -1219,16 +1219,10 @@ void Comet::BjornNASTRAN::Init() {
   if (TotalSourceRate_H2O==NULL) TotalSourceRate_H2O=new double [CutCell::nBoundaryTriangleFaces];
 
 
-  for (specIn=-1;specIn<PIC::nTotalSpecies;specIn++) {
+  for (specIn=0;specIn<PIC::nTotalSpecies;specIn++) for (pass=0;pass<2;pass++) {
     int spec;
 
-    if (specIn==-1) {
-      spec=_H2O_SPEC_;
-    }
-    else {
-      spec=specIn;
-      if (spec==_H2O_SPEC_) continue;
-    }
+    spec=(pass==0) ? _H2O_SPEC_ : specIn;
 
     if (probabilityFunctionDefinedNASTRAN[spec]==true) continue;
 
@@ -1406,10 +1400,8 @@ void Comet::BjornNASTRAN::Init() {
       }
 
 //      if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
-      if ( (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__OFF_) ||
-          ((_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_)&&((spec<_DUST_SPEC_)||(spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups))) ) {
         SurfaceInjectionProbability[spec].InitArray(productionDistributionNASTRAN[spec],totalSurfaceElementsNumber,10*totalSurfaceElementsNumber);
-      }
+//      }
 
 
       probabilityFunctionDefinedNASTRAN[spec]=true;
