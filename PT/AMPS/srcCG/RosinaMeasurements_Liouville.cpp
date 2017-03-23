@@ -27,7 +27,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   double c,l[3],*xLocation,rLocation,xIntersection[3],beta;
   double SampledNudeGaugeDensity=0.0,SampledRamGaugeFlux=0.0;
 
-  const int nTotalTests=10;
+  const int nTotalTests=_ROSINA_SAMPLE__LIOUVILLE__EVALUATE_LOCATION__TEST_NUMBER_;
   const double ThrehondSourceRate=1.8E18;
 
   //estimate the total source rate
@@ -235,11 +235,12 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
   RamGaugeNucleusSolidAngle=0.0;
 
   //solid angle occupied by the nucleus by the nude gauge
-  int t,nTotalTests=10000,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
+  int t,nTotalTests,iTest,iIntersectionFace,NucleusIntersectionCounter=0;
   double l[3],xIntersection[3];
 
   int iStartTest,iFinishTest,nTestThread;
 
+  nTotalTests=_ROSINA_SAMPLE__LIOUVILLE__GET_SOLID_ANGLE__TEST_NUMBER_;
   iStartTest=(nTotalTests/PIC::nTotalThreads)*PIC::ThisThread;
   iFinishTest=(nTotalTests/PIC::nTotalThreads)*(PIC::ThisThread+1);
 

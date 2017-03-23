@@ -6,3 +6,7 @@
 
 //the mode of the normal distribution of the injected particle Maxwellian distribution
 #define _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE_ _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__NORMAL_
+
+//the number of the tests used in the Monte Carlo tests
+#define _ROSINA_SAMPLE__LIOUVILLE__EVALUATE_LOCATION__TEST_NUMBER_  10 
+#define _ROSINA_SAMPLE__LIOUVILLE__GET_SOLID_ANGLE__TEST_NUMBER_    10000
