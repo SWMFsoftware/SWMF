@@ -701,8 +701,7 @@ contains
     DomainDecomposition%iDecomposition_II&
          (FirstChild_,1:DomainDecomposition%nTreeNodes)=None_
     do lBlock=1,DomainDecomposition%nTreeNodes
-       DomainDecomposition%iDecomposition_II&
-            (Parent_,1:DomainDecomposition%nTreeNodes)=lBlock
+       DomainDecomposition%iDecomposition_II(Parent_,lBlock)=lBlock
     end do
 
     if(DomainDecomposition%IsTreeDecomposition)then
