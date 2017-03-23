@@ -28,6 +28,7 @@ my %Compiler = (
                 "kraken-gsi"          => "ifortftn",
                 "yslogin"             => "ifortmpif90,iccmpicxx",
                 "h2ologin"            => "ifortftn,intelcc",
+                "slogin"              => "ifortftn,intelcc",
                 "cetuslac"            => "mpixlf2008,mpixlc",
                 "miralac"             => "mpixlf2008,mpixlc",
 		);
