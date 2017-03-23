@@ -81,7 +81,7 @@ namespace iPic3D {
     void WriteFields(int cycle);
     void WriteParticles(int cycle);
     void WriteTestParticles(int cycle);
-    void WriteOutput(int cycle, bool doForceOutput);
+    void WriteOutput(int cycle, bool doForceOutput=false);
     void Finalize();
 
     int FirstCycle() { return (first_cycle); }

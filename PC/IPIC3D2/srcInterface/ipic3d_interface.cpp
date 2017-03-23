@@ -169,7 +169,7 @@ int ipic3d_run_(double *time){
     SimRun[i]->updateSItime();
     
     timing_start("PC: WriteOutput");  
-    SimRun[i]->WriteOutput(iSimCycle[i]+1,false);
+    SimRun[i]->WriteOutput(iSimCycle[i]+1);
     timing_stop("PC: WriteOutput");
     
     SimRun[i]->WriteConserved(iSimCycle[i]+1);
