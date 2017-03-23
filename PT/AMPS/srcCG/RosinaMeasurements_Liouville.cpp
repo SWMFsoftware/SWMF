@@ -22,30 +22,23 @@ extern bool *definedFluxBjorn;
 extern double positionSun[3];
 extern double **productionDistributionNASTRAN;
 
-void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
+void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
   double c,l[3],*xLocation,rLocation,xIntersection[3],beta;
   double SampledNudeGaugeDensity=0.0,SampledRamGaugeFlux=0.0;
 
   const int nTotalTests=10;
-
   const double ThrehondSourceRate=1.8E18;
 
-/*  //set the location of the Sun, and shadowing flags according top the time of the observation
-  SpiceDouble et,lt,xSun[3];
-  double HeliocentricDistance,subSolarPointZenith,subSolarPointAzimuth,positionSun[3];
+  //estimate the total source rate
+  OriginalSourceRate=0.0,ModifiedSourceRate=0.0;
 
-  utc2et_c(ObservationTime[iPoint],&et);
-  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
-  reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
+  for (int iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
+    double SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
 
-  HeliocentricDistance*=1.0E3;
-
-  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),
-      HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),
-      HeliocentricDistance*cos(subSolarPointZenith)};
-
-  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);*/
+    OriginalSourceRate+=SourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+    ModifiedSourceRate+=((SourceRate>ThrehondSourceRate) ? SourceRate : ThrehondSourceRate)*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+  }
 
 
   //set the angular limit for the ray direction generation
@@ -108,9 +101,26 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& NudeGaugePressur
 
       if (PIC::RayTracing::FindFistIntersectedFace(x,l,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement)==-1) {
         //there is the direct access from the point on teh surface to the point of the observation ->  sample the number density and flux
+        double ExternalNormal[3];
+
+        switch (_ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE_) {
+        case _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__NORMAL_:
+          memcpy(ExternalNormal,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,3*sizeof(double));
+          break;
+        case _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__RANDOM_:
+          do {
+            Vector3D::Distribution::Uniform(ExternalNormal);
+          }
+          while (Vector3D::DotProduct(ExternalNormal,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal)<0.0);
+
+          Vector3D::Normalize(ExternalNormal);
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error: the option is not found");
+        }
 
         r=Vector3D::Length(l);
-        cosTheta=Vector3D::DotProduct(l,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal)/r;
+        cosTheta=Vector3D::DotProduct(l,ExternalNormal)/r;
 
         if (Vector3D::DotProduct(l,Rosina[iPoint].NudeGauge.LineOfSight)<0.0) {
           //the particle flux can access the nude gauge
@@ -276,12 +286,14 @@ void RosinaSample::Liouville::Evaluate() {
 #ifndef _NO_SPICE_CALLS_  //the function will be compiled only when SPICE is used (bacause SPICE is needed to adjust the model parameters for each point of the observations
   double NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux;
   double NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle;
+  double OriginalSourceRate,ModifiedSourceRate;
   int iPoint,idim,spec;
   SpiceDouble lt,et,xRosetta[3],etStart;
   SpiceDouble       xform[6][6];
 
   FILE *fout[PIC::nTotalSpecies];
   FILE *fGroundTrack=NULL;
+  FILE *fAllSpecies;
 
   const int Step=12;
   const int SurfaceOutputSter=2;
@@ -292,10 +304,14 @@ void RosinaSample::Liouville::Evaluate() {
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       sprintf(fname,"Liouville.spec=%s.dat",PIC::MolecularData::GetChemSymbol(spec));
       fout[spec]=fopen(fname,"w");
-      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measuremetns\", \"Ram Gauge COPS Measurements\" \n");
+      fprintf(fout[spec],"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\" \n");
     }
 
+    fAllSpecies=fopen("Liouville.spec=SUM.dat","w");
+    fprintf(fAllSpecies,"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\" \n");
+
     fGroundTrack=fopen("GroundTracks.dat","w");
+    printf("VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\" \n");
   }
 
   for (iPoint=0;iPoint<RosinaSample::nPoints;iPoint+=Step) {
@@ -351,30 +367,55 @@ void RosinaSample::Liouville::Evaluate() {
 
 
 
-    //simulate teh solid angles and the measuremetns
+    //simulate the solid angles and the measuremetns
     GetSolidAngle(NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,iPoint);
 
+    //evaluate the location
+    double TotalOriginalSourceRate=0.0,TotalModifiedSourceRate=0.0,TotalNudeGaugePressure=0.0;
+    double TotalNudeGaugeDensity=0.0,TotalNudeGaugeFlux=0.0,TotalRamGaugePressure=0.0,TotalRamGaugeDensity=0.0,TotalRamGaugeFlux=0.0;
+
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-      EvaluateLocation(spec,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
+      EvaluateLocation(spec,OriginalSourceRate,ModifiedSourceRate,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,iPoint);
+
+      TotalOriginalSourceRate+=OriginalSourceRate;
+      TotalModifiedSourceRate+=ModifiedSourceRate;
+      TotalNudeGaugePressure+=NudeGaugePressure;
+      TotalNudeGaugeDensity+=NudeGaugeDensity;
+      TotalNudeGaugeFlux+=NudeGaugeFlux;
+      TotalRamGaugePressure+=RamGaugePressure;
+      TotalRamGaugeDensity+=RamGaugeDensity;
+      TotalRamGaugeFlux+=RamGaugeFlux;
 
       if (PIC::ThisThread==0) {
         fprintf(fGroundTrack,"%e %e %e\n",Rosina[iPoint].xNucleusClosestPoint[0],Rosina[iPoint].xNucleusClosestPoint[1],Rosina[iPoint].xNucleusClosestPoint[2]);
 
-        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        fprintf(fout[spec],"%i %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
             ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
-            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
+            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+            OriginalSourceRate,ModifiedSourceRate);
 
 
-        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
+        printf("%i (%s) %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,PIC::MolecularData::GetChemSymbol(spec),NudeGaugePressure,NudeGaugeDensity,NudeGaugeFlux,RamGaugePressure,RamGaugeDensity,RamGaugeFlux,
             Rosina[iPoint].SecondsFromBegining,
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
             ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
-            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint]);
+            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+            OriginalSourceRate,ModifiedSourceRate);
       }
+    }
+
+    if (PIC::ThisThread==0) {
+      fprintf(fAllSpecies,"%i %e %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",iPoint,TotalNudeGaugePressure,TotalNudeGaugeDensity,TotalNudeGaugeFlux,TotalRamGaugePressure,TotalRamGaugeDensity,TotalRamGaugeFlux,
+          Rosina[iPoint].SecondsFromBegining,
+          NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
+          Rosina[iPoint].Altitude,
+          ((Rosina[iPoint].Altitude>0.0) ? (productionDistributionNASTRAN[_H2O_SPEC_][Rosina[iPoint].iNucleusClosestFace]+productionDistributionNASTRAN[_CO2_SPEC_][Rosina[iPoint].iNucleusClosestFace])/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
+          RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+          OriginalSourceRate,ModifiedSourceRate);
     }
 
     //save the surface properties
@@ -397,6 +438,7 @@ void RosinaSample::Liouville::Evaluate() {
 
   if (PIC::ThisThread==0) {
     fclose(fGroundTrack);
+    fclose(fAllSpecies);
     for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
   }
 #endif //_NO_SPICE_CALLS_

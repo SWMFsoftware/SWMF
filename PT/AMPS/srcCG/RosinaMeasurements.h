@@ -3,6 +3,8 @@
 #ifndef _ROSINA_SAMPLE_
 #define _ROSINA_SAMPLE_
 
+#include "RosinaMeasurements.dfn"
+
 namespace RosinaSample {
   const int nPoints=1150;
 
@@ -3514,7 +3516,7 @@ namespace RosinaSample {
 
   //evaluate density and pressure using the Liouville's theoreme
   namespace Liouville {
-    void EvaluateLocation(int spec,double& NudeGausePressure,double& NudeGaugeDensity,double& NudeGaugeFlux,double& RamGausePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint);
+    void EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate, double& NudeGausePressure,double& NudeGaugeDensity,double& NudeGaugeFlux,double& RamGausePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint);
     void Evaluate();
     void GetSolidAngle(double& NudeGaugeNucleusSolidAngle,double& RamGaugeNucleusSolidAngle,int iPoint);
   }
