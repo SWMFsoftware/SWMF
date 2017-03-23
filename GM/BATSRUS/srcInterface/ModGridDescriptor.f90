@@ -67,7 +67,6 @@ contains
     write(*,*)'!!! nDimTree           =', Dd%nDimTree
     write(*,*)'!!! nChildren          =', Dd%nChildren
     write(*,*)'!!! nDim               =', Dd%nDim
-    write(*,*)'!!! IsTreeDecomposition=', Dd%IsTreeDecomposition
     write(*,*)'!!! nTreeNodes         =', Dd%nTreeNodes
     write(*,*)'!!! nAllocatedNodes    =', Dd%nAllocatedNodes
     write(*,*)'!!! IsPeriodic_D       =', Dd%IsPeriodic_D
@@ -77,12 +76,12 @@ contains
     write(*,*)'!!! MinBlock           =', Dd%MinBlock
     write(*,*)'!!! MaxBlock           =', Dd%MaxBlock
     write(*,*)'!!! nBlockAll          =', Dd%nBlockAll
-
-    write(*,*)'!!! iChild, iShift_DI'
-    do iChild = 1, Dd%nChildren
-       write(*,*) iChild, Dd%iShift_DI(:,iChild)
-    end do
-
+    if(Dd%IsTreeDecomposition)then
+       write(*,*)'!!! iChild, iShift_DI'
+       do iChild = 1, Dd%nChildren
+          write(*,*) iChild, Dd%iShift_DI(:,iChild)
+       end do
+    end if
     write(*,*)'!!! iNode, iDecomposition_II'
     do iNode = 1, Dd%nTreeNodes
        write(*,*) iNode, Dd%iDecomposition_II(:,iNode)
