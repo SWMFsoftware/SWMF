@@ -1883,13 +1883,16 @@ contains
   subroutine synchronize_router_target_to_source(Router)
     type(RouterType),        intent(inout):: Router
 
-    integer:: nRecvCumSum, nSendCumSum, iBuffer
+    integer :: nRecvCumSum, nSendCumSum, iBuffer
 
     ! MPI-related variables
-    integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
-    integer:: nRequestR, nRequestS, iError, iTag=0
-    integer:: iProc, nProc
-    integer:: iProcFrom, iProcTo
+    integer :: iStatus_II(MPI_STATUS_SIZE, 2*Router%nProc)
+    integer :: iRequestS_I(Router%nProc), iRequestR_I(Router%nProc)
+    integer :: nRequestR, nRequestS, iError, iTag=0
+    integer :: iProc, nProc
+    integer :: iProcFrom, iProcTo
+    integer :: iProc0Source, iProcLastSource, iProcStrideSource
+    integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
     !-------------------------------------------------------------------------!
     !For given PE the index in the communicator is:
     iProc = Router % iProc
@@ -1899,6 +1902,19 @@ contains
     ! identify components
     ! total number of processors and on components
     nProc       = Router%nProc
+    if(Router%IsLocal)then
+       iProc0Source = 0;  iProcStrideSource = 1
+       iProcLastSource = nProc-1
+       iProc0target = 0;  iProcStrideTarget = 1
+       iProcLastTarget = nProc-1
+    else
+      iProc0Target      = i_proc0(Router%iCompTarget) 
+      iProcLastTarget   = i_proc_last(Router%iCompTarget)
+      iProcStrideTarget = i_proc_stride(Router%iCompTarget)
+      iProc0Source      = i_proc0(Router%iCompSource)
+      iProcLastSource   = i_proc_last(Router%iCompSource)
+      iProcStrideSource = i_proc_stride(Router%iCompSource)
+    end if
     !\
     ! Temporary: to be removed
     !/
@@ -1913,15 +1929,11 @@ contains
     ! first, send the amount of data to be received,
     ! then the info itself (stored in buffer on Target)
     !/
-    call check_size(1, (/nProc/), iBuffer_I = iRequestS_I)
-    call check_size(1, (/nProc/), iBuffer_I = iRequestR_I)
-    call check_size(2, (/MPI_STATUS_SIZE, 2*nProc/), iBuffer_II = iStatus_II)
-
+   
     ! post recvs
     nRequestR = 0
     if(is_proc(Router%iCompSource))then
-       do iProcFrom = i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget), &
-            i_proc_stride(Router%iCompTarget)
+       do iProcFrom = iProc0Target, iProcLastTarget, iProcStrideTarget
           !\
           ! Do not wait for the message from self
           !/
@@ -1935,8 +1947,7 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(Router%iCompTarget))then
-       do iProcTo =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
-            i_proc_stride(Router%iCompSource)
+       do iProcTo =  iProc0Source, iProcLastSource, iProcStrideSource
           !\
           !Copy, if needed
           !/
@@ -1959,19 +1970,15 @@ contains
     !/
     ! post recvs
     nRequestR = 0
+    call check_router_allocation(Router)
     if(is_proc(Router%iCompSource))then
        ! size of the recv buffer
-       Router%nBufferSource = sum(Router%nSend_P)
-
-       call check_size(2, (/Router%nVar, Router%nBufferSource/),&
-            PBuffer_II=Router%BufferSource_II)
        Router%BufferSource_II = 0
        !\
        ! Copy for the data exchange on the same PE
        !/
        nRecvCumSum = Router%nSend_P(iProc)
-       do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget),&
-            i_proc_stride(Router%iCompTarget)
+       do iProcFrom = iProc0Target, iProcLastTarget, iProcStrideTarget 
           if(Router%nSend_P(iProcFrom) == 0)&
                CYCLE
           !\
@@ -1996,10 +2003,8 @@ contains
        Router%BufferSource_II(:,1:Router%nSend_P(iProc)) = &
                   Router%BufferTarget_II(:,1:Router%nRecv_P(iProc))
        nSendCumSum = Router % nRecv_P(iProc)
-       do iProcTo =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
-            i_proc_stride(Router%iCompSource)
-          if(Router % nRecv_P(iProcTo) == 0)&
-               CYCLE
+       do iProcTo = iProc0Source, iProcLastSource, iProcStrideSource 
+          if(Router % nRecv_P(iProcTo) == 0) CYCLE
           if(iProcTo==iProc)CYCLE
           nRequestS = nRequestS + 1
           call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
