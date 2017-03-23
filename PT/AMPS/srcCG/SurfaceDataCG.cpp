@@ -14,8 +14,11 @@ void cSurfaceDataCG::PrintVarableList(FILE* fout) {
   for (spec=0;spec<PIC::nTotalSpecies;spec++) fprintf(fout,", \"Probability Density[s=%i]\"",spec);
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-    fprintf(fout,", \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Flux Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Flux Contribution[s=%i]\"",spec,spec,spec,spec);
+    fprintf(fout,", \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Flux Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Flux Contribution[s=%i]\", \"Original SourceRate[s=%i]\", \"Modified SourceRate[s=%i]\"",spec,spec,spec,spec,spec,spec);
   }
+
+  fprintf(fout,", \"Scalar Product of the surface external notmal to the vector pf the spacecraft location\"");
+  fprintf(fout,", \"Ram Gauge Field of View\", \"Nude Gauge Field of View\"");
 }
 
 void cSurfaceDataCG::Gather(CMPI_channel* pipe) {
@@ -44,8 +47,12 @@ void cSurfaceDataCG::Flush() {
 
     NudeGaugeDensityContribution[spec]=0.0,NudeGaugeFluxContribution[spec]=0.0;
     RamGaugeDensityContribution[spec]=0.0,RamGaugeFluxContribution[spec]=0.0;
+
+    OriginalSourceRate[spec]=0.0,ModifiedSourceRate[spec]=0.0;
   }
 
+  CrossProduct_FaceNormal_SpacecraftLocation=0.0;
+  FieldOfView_NudeGauge=false,FieldOfView_RamGauge=false;
 }
 
 void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int *Stencil,int StencilLength) {
@@ -89,7 +96,7 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
   }
 
   //output contribution of the oarticular surface elements to the ram nad nude gauges measuremetns
-  // \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Pressure Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Pressure Contribution[s=%i]
+  // \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Pressure Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Pressure Contribution[s=%i], \"Original SourceRate[s=%i]\", \"Modified SourceRate[s=%i]\"
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
 
     for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->NudeGaugeDensityContribution[spec];
@@ -104,7 +111,26 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
     for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->RamGaugeFluxContribution[spec];
     fprintf(fout," %e",t);
 
+    //the original source rate
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->OriginalSourceRate[spec];
+    fprintf(fout," %e",t);
+
+    //the modified source rate
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->ModifiedSourceRate[spec];
+    fprintf(fout," %e",t);
   }
 
+  //the scalar product of the local external normal and the vector of the direction toward the spacecraft
+  for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->CrossProduct_FaceNormal_SpacecraftLocation;
+  fprintf(fout," %e",t);
 
+  //ram and hude gauges fields of view
+  double RamGaugeFieldOfVewFlag=-1.0,NudeGaugeFieldOfVewFlag=-1.0;
+
+  for (i=0;i<StencilLength;i++) {
+    if (InterpolationFaceList[i]->FieldOfView_NudeGauge>0.0) NudeGaugeFieldOfVewFlag=1.0;
+    if (InterpolationFaceList[i]->FieldOfView_RamGauge>0.0) RamGaugeFieldOfVewFlag=1.0;
+  }
+
+  fprintf(fout," %e  %e",RamGaugeFieldOfVewFlag,NudeGaugeFieldOfVewFlag);
 }

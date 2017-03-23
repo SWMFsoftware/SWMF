@@ -13,6 +13,15 @@ public:
   double NudeGaugeDensityContribution[_TOTAL_SPECIES_NUMBER_],NudeGaugeFluxContribution[_TOTAL_SPECIES_NUMBER_];
   double RamGaugeDensityContribution[_TOTAL_SPECIES_NUMBER_],RamGaugeFluxContribution[_TOTAL_SPECIES_NUMBER_];
 
+  //save and output of the original and modified sources rates
+  double OriginalSourceRate[_TOTAL_SPECIES_NUMBER_],ModifiedSourceRate[_TOTAL_SPECIES_NUMBER_];
+
+  //save and output the scalar product of the external normal to the surface element and the vector pointing to the spacecraft location
+  double CrossProduct_FaceNormal_SpacecraftLocation;
+
+  //the marker saying that the surface element can be seen from the spacecraft location by the ram/nude gauge
+  bool FieldOfView_NudeGauge,FieldOfView_RamGauge;
+
   void PrintVarableList(FILE* fout);  
   void Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int *Stencil,int StencilLength);
   void Flush();  
