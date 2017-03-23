@@ -1239,6 +1239,7 @@ body1 1 2 xminbox	StringBoundary
 0.0			BoundaryStateDim_V Bx
 0.0			BoundaryStateDim_V By
 0.0			BoundaryStateDim_V Bz
+0.0			BoundaryStateDim_V Hyp
 1.0			BoundaryStateDim_V P
 
 This command sets the primitive variables BoundaryState_V
@@ -1256,8 +1257,8 @@ also be idenitified with an index between -3 and 6.
 Possible idenitfiers that can be listed in StringBoundary:
 \begin{verbatim}
 solid, -3	- solid face boundary            (#SOLIDSTATE)
-body2, -2	- second body face boundary      (#INNERBOUNDARY, #BODY)
-body1, -1	- first body face boundary       (#INNERBOUNDARY, #SECONDBODY)
+body2, -2	- second body face boundary      (#INNERBOUNDARY, #SECONDBODY)
+body1, -1	- first body face boundary       (#INNERBOUNDARY, #BODY)
 extra,  0	- extra face boundary            (#EXTRABOUNDARY)
 xminbox		- min x coordinate face boundary (#BOXBOUNDARY, #GRID)
 xmaxbox		- max x coordinate face boundary
