@@ -53,6 +53,7 @@ void RosinaSample::Init(double etMin,double etMax) {
   SpiceDouble       xform[6][6];
 
   FILE *fTrajectory=NULL;
+  FILE *fTrajectoryZones=NULL;
 
   if (PIC::ThisThread==0) {
    char fname[1000];
@@ -62,9 +63,13 @@ void RosinaSample::Init(double etMin,double etMax) {
    et2utc_c(etMax,"ISOC",4,100,TimeStampEnd);
    printf("Setting sampling flags: data will be sampled for the time interval of %s - %s\n",TimeStampStart,TimeStampEnd);
 
-   sprintf(fname,"%s/TrajectoryLastMeasuremetns.dat",PIC::OutputDataFileDirectory);
+   sprintf(fname,"%s/TrajectoryLastMeasurements.dat",PIC::OutputDataFileDirectory);
    fTrajectory=fopen(fname,"w");
-   fprintf(fTrajectory,"VARIABLES=\"X\", \"Y\", \"Z\"\n");
+   fprintf(fTrajectory,"VARIABLES=\"X\", \"Y\", \"Z\", \"iPoint\" \n");
+
+   sprintf(fname,"%s/TrajectoryLastMeasurementsZones.dat",PIC::OutputDataFileDirectory);
+   fTrajectoryZones=fopen(fname,"w");
+   fprintf(fTrajectoryZones,"VARIABLES=\"X\", \"Y\", \"Z\" \n");
   }
 
   for (i=0;i<nPoints;i++) {
@@ -130,7 +135,12 @@ void RosinaSample::Init(double etMin,double etMax) {
       }
     }
 
-    if (PIC::ThisThread==0) fprintf(fTrajectory,"%e %e %e\n",xRosetta[0],xRosetta[1],xRosetta[2]);
+    if (PIC::ThisThread==0) {
+      fprintf(fTrajectory,"%e %e %e %i\n",xRosetta[0],xRosetta[1],xRosetta[2],i);
+
+      fprintf(fTrajectoryZones,"ZONE T=\"Point=%i\" F=POINT\n",i);
+      fprintf(fTrajectoryZones,"%e  %e  %e\n",xRosetta[0],xRosetta[1],xRosetta[2]);
+    }
 
     sxform_c("ROS_SPACECRAFT","67P/C-G_CK",et,xform);
 
@@ -221,6 +231,7 @@ void RosinaSample::Init(double etMin,double etMax) {
 
   if (PIC::ThisThread==0) {
     fclose(fTrajectory);
+    fclose(fTrajectoryZones);
     printf("$PREFIX: RosinaSample::Init is complete.....\n");
   }
 #endif  
