@@ -1458,7 +1458,7 @@ contains
        !layer points                                                   !     
        interface_point_coords, &
        ! transformation of the location coordinates between components
-       transform, &
+       mapping, &
        ! interpolation subroutine for the Source's grid
        interpolate)
     !-------------------------------------------------------------------------!
@@ -1489,13 +1489,15 @@ contains
          integer,intent(inout)::iIndex_I(nIndex)
        end subroutine interface_point_coords
        !----------------------------------------------------------------------!
-       subroutine transform(nDimIn, CoordIn_D, nDimOut, CoordOut_D)
-         ! this subroutine transforms coordinates between components
+       subroutine mapping(nDimIn, CoordIn_D, nDimOut, CoordOut_D, &
+            IsInterfacePoint)
+         ! this subroutine mapss coordinates between components
          integer, intent(in) :: nDimIn
          real,    intent(in) :: CoordIn_D(nDimIn)
          integer, intent(in) :: nDimOut
          real,    intent(out):: CoordOut_D(nDimOut)
-       end subroutine transform
+         logical, intent(out):: IsInterfacePoint
+       end subroutine mapping
        !----------------------------------------------------------------------!
        subroutine interpolate(&
             nDim, Xyz_D, GridDescriptor, &
@@ -1520,7 +1522,7 @@ contains
     end interface
     optional:: is_interface_block
     optional:: interface_point_coords
-    optional:: transform
+    optional:: mapping
     optional:: interpolate
     !-------------------------------------------------------------------------!
     !==========================Declarations from set_target===================!
@@ -1596,7 +1598,7 @@ contains
     if(iProc<0) RETURN
 
     ! determine which optional actions should be taken
-    UseMappingFunction        = present(transform)
+    UseMappingFunction        = present(mapping)
     DoInterpolate             = present(interpolate)
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
@@ -1706,11 +1708,12 @@ contains
                 if(.not.IsInterfacePoint)CYCLE POINTS
              end if
              if(UseMappingFunction)then
-                call transform(&
+                call mapping(&
                      nDimTarget,&
                      XyzTarget_D,&
                      nDimSource,&
-                     XyzSource_D)
+                     XyzSource_D, &
+                     IsInterfacePoint)
              else
                 XyzSource_D=XyzTarget_D
              end if
@@ -2104,14 +2107,12 @@ contains
        ! the subroutine that provides the location of data on the Source;
        ! this information may be as generic as needed
        get_scatter_source, &
-       ! transformation of the location coordinates between components
-       transform, &
+       ! mapping of the location coordinates between components
+       mapping, &
        ! interpolation subroutine for the Target's grid
        interpolate_target, &
        ! interpolation subroutine for the Source's grid
-       interpolate_source, &
-       ! subroutine to process the scatterd coordinates on Target side
-       put_scatter_target)
+       interpolate_source)
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
     type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
@@ -2119,33 +2120,36 @@ contains
 
     interface
        subroutine get_scatter_source(&
-            nData, nCoord,  &
-            Coord_II, iIndex_II)
+            nData,  &
+            Coord_II, iIndex_II, nAux, iAux_II)
          ! this subroutine returns info that identifies location of the data
          ! in the domain, may be as generic as needed, i.e. Coord_II need NOT
          ! to be the actual coordinates
          implicit none
          ! number of data entries
          integer,       intent(out):: nData
-         ! number of coordinates and indices per data entry
-         integer,       intent(out):: nCoord
          ! data locations themselves
          real,    allocatable, intent(out):: Coord_II(:,:)
          ! indices to access the data locations on Source
          integer, allocatable, intent(out):: iIndex_II(:,:)
+         integer, intent(in):: nAux
+         integer, allocatable, intent(out):: iAux_II(:,:)
        end subroutine get_scatter_source
        !----------------------------------------------------------------------!
-       subroutine transform(nDimIn, CoordIn_D, nDimOut, CoordOut_D)
-         ! this subroutine tranforms location coordinates between components
+       subroutine mapping(nDimIn, CoordIn_D, nDimOut, CoordOut_D, &
+            IsInterfacePoint)
+         ! this subroutine maps location coordinates between components
          integer, intent(in) :: nDimIn
          real,    intent(in) :: CoordIn_D(nDimIn)
          integer, intent(in) :: nDimOut
          real,    intent(out):: CoordOut_D(nDimOut)
-       end subroutine transform
+         logical, intent(out):: IsInterfacePoint
+       end subroutine mapping
        !----------------------------------------------------------------------!
        subroutine interpolate_target(&
             nCoord, Coord_I, GridDescriptor, &
-            nIndex, iIndex_II, nImage, Weight_I)
+            nIndex, iIndex_II, nImage, Weight_I,&
+            nAux, iAux_I)
          ! interpolation on Target's grid; 
          ! provides PE and indices to access images of
          ! data location and interpolation weights
@@ -2162,6 +2166,8 @@ contains
          integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
          integer, intent(out):: nImage
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         integer, intent(in)::nAux
+         integer, intent(in)::iAux_I(nAux)
        end subroutine interpolate_target
        !----------------------------------------------------------------------!
        subroutine interpolate_source(&
@@ -2184,29 +2190,17 @@ contains
          integer, intent(out):: nImage
          real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
        end subroutine interpolate_source
-       !----------------------------------------------------------------------!
-       subroutine put_scatter_target(nData, nDim, Coord_DI, nIndex, iIndex_II)
-         ! via this subroutine user can utilize transferred coordinates
-         ! on the Target compnent
-         implicit none
-         integer, intent(in):: nData
-         integer, intent(in):: nDim
-         real,    intent(in):: Coord_DI(nDim, nData)
-         integer, intent(in):: nIndex
-         integer, intent(in):: iIndex_II(nIndex, nData)
-       end subroutine put_scatter_target
     end interface
     optional:: get_scatter_source
-    optional:: transform
+    optional:: mapping
     optional:: interpolate_target
     optional:: interpolate_source
-    optional:: put_scatter_target
     !-------------------------------------------------------------------------!
     ! dimensionality of components
     integer:: nDimTarget, nDimSource
     ! number of generlized coordinates per data location:
     ! includes coordinates plus any aux info that facilitates interpolation
-    integer:: nCoordSource, nCoordTarget
+
     ! number of indices (e.g. cell indices) on components
     integer:: nIndexSource, nIndexTarget
     ! number of data locations on the current processor
@@ -2239,26 +2233,32 @@ contains
     integer:: nImageSource, nImageSourceMax
     real:: WeightTarget_I(2**GridDescriptorTarget%nDim)
     real:: WeightSource_I(2**GridDescriptorSource%nDim)
+
+    integer:: iProcLookup_I(2**GridDescriptorTarget%nDim)
     ! optional actions to be taken
     logical:: &
-         DoGetScatterSource, DoTransform, &
-         DoInterpolateSource, DoInterpolateTarget, DoPutScatterTarget
+         DoGetScatterSource, UseMappingFunction, &
+         DoInterpolateSource, DoInterpolateTarget
     ! aux variable to go through a buffer
-    integer::  iStart, iEnd
+    integer::  iStart, iEnd, iGet, iOffset
     ! variable indices
-    integer:: iVarWeight, iVarDimStart, iVarDimEnd, iVarData
+    integer:: iVarWeight, iVarDimStart, iVarDimEnd, iVarData, nAux
+    integer:: nProcToPut
+
+    logical:: IsInterfacePoint
     ! storage for scatter
     real,    allocatable:: Coord_II(:,:)
     integer, allocatable:: iIndex_II(:,:)
+    integer, allocatable:: iAux_II(:,:)
     ! aux array that hold router information on Source
     integer, allocatable:: iCB_II(:,:)
+    ! interpolation weights on Source
+    real,    allocatable:: WeightSource_II(:,:)
     ! aux array to hold coordinate of a location currently being processed
-    real, allocatable:: Coord_I(:)
-    ! arrays to distinguish unique locations in a series of images
-    integer, allocatable:: iUnique_I(:)
+    real, allocatable:: Coord_D(:)
     ! error message containers
     character(len=200):: StringErrorFormat, StringErrorMessage
-    character(len=*),parameter:: NameSub = 'CON_router:set_router_from_source_2_stage'
+    character(len=*),parameter:: NameSub = 'CON_router:set_semi_router_from_source'
     !-------------------------------------------------------------------------!
     ! identify components
     iCompSource = compid_grid(GridDescriptorSource%DD%Ptr)
@@ -2283,10 +2283,9 @@ contains
 
     ! determine which optional actions should be taken
     DoGetScatterSource = present(get_scatter_source)
-    DoTransform        = present(transform)
+    UseMappingFunction= present(mapping)
     DoInterpolateSource= present(interpolate_source)
     DoInterpolateTarget= present(interpolate_target)
-    DoPutScatterTarget = present(put_scatter_target)
     if(.not.DoGetScatterSource .or. .not. DoInterpolateTarget)&
          call CON_stop(NameSub//': this type of call is not implemented yet')
 
@@ -2297,26 +2296,14 @@ contains
     nIndexSource    = Router%nIndexSource
     nImageTargetMax = 2**nDimTarget
 
+    nAux = Router%nMappedPointIndex
+
     ! if interpolation for source is not provided,
     ! it is assumed that each data locations is the only image of itself
     if(DoInterpolateSource)then
        nImageSourceMax = 2**nDimSource
     else
        nImageSourceMax = 1
-    end if
-
-    ! some data will be sent to Target, determine amount:
-    ! cell and block indexes are sent
-    Router%nVar = nIndexTarget + 1
-    ! indices of variables
-    Router%iWeight = nIndexTarget + 1
-    ! coordinates may be sent: nDimSource variables plus
-    ! last index is to identify images of the same data location
-    if(DoPutScatterTarget) then
-       Router%nVar        = Router%nVar + nDimTarget + 1
-       Router%iCoordStart= nIndexTarget + 2
-       Router%iCoordEnd  = nIndexTarget + 1 + nDimTarget
-       Router%iData    = nIndexTarget + 2 + nDimTarget
     end if
 
     !\
@@ -2327,14 +2314,13 @@ contains
     if(is_proc(iCompSource))then
 
        ! get the data locations Source as well as corresponding indices
-       call get_scatter_source( nData, nCoordSource,&
-            Coord_II, iIndex_II)
+       call get_scatter_source( nData, &
+            Coord_II, iIndex_II, nAux, iAux_II)
        if(.not.allocated(iIndex_II) .and. .not. DoInterpolateSource)&
             call CON_stop(NameSub//&
             ': incorrect call, scatter indices are not provided')
 
-       ! find the correct number of coordinates to be used on Target
-       nCoordTarget = nCoordSource - nDimSource + nDimTarget
+
        ! max size of buffer to be sent
        nBufferSMax= nImageTargetMax * nImageSourceMax * nData
 
@@ -2342,11 +2328,13 @@ contains
        ! if they are => they are not reallocated
 
        ! passed to interpolation subroutine
-       call check_size(1, (/nCoordTarget/), Buffer_I = Coord_I)
+       call check_size(1, (/nDimTarget/), Buffer_I = Coord_D)
        ! send buffer
        call check_size(2, (/Router%nVar, nBufferSMax/), PBuffer_II = Router%BufferSource_II)
        ! aux array that holds indices of scatter locations
-       call check_size(2, (/nIndexSource+1,nBufferSMax/), iBuffer_II=iCB_II)
+       call check_size(2, (/(nIndexSource+1)*nImageSourceMax,nBufferSMax/), iBuffer_II=iCB_II)
+       ! interpolation weights on Source
+       call check_size(2, (/nImageSourceMax,nBufferSMax/), Buffer_II=WeightSource_II)
        ! which processor holds a current image
        call check_size(1, (/nBufferSMax/), iBuffer_I = iProcImage_I)
        ! correct order of images in the send buffer
@@ -2358,33 +2346,33 @@ contains
        ! go over the list of scattered data location
        do iData = 1, nData
 
-          ! transform coordinates of a data location if needed
-          Coord_I(nDimTarget+1:nCoordTarget) = &
-               Coord_II(nDimSource+1:nCoordSource, iData)
-          if(DoTransform)then
-             call transform(&
+          ! map coordinates of a data location if needed
+          if(UseMappingFunction)then
+             call mapping(&
                   nDimSource, Coord_II(1:nDimSource, iData), &
-                  nDimTarget, Coord_I( 1:nDimTarget))
+                  nDimTarget, Coord_D( 1:nDimTarget), IsInterfacePoint)
           end if
 
           ! interpolation procedure yields recepient PE of Target and
           ! indices identifying images,
           ! one data entry may be split into several images
           call interpolate_target(&
-               nCoord         = nCoordTarget, &
-               Coord_I        = Coord_I(1:nCoordTarget), &
+               nCoord         = nDimTarget, &
+               Coord_I        = Coord_D(1:nDimTarget), &
                GridDescriptor = GridDescriptorTarget, &
                nIndex         = nIndexTarget, &
                iIndex_II      = iIndexPut_II, &
                nImage         = nImageTarget, &
-               Weight_I       = WeightTarget_I)
+               Weight_I       = WeightTarget_I,&
+               nAux           = nAux, &
+               iAux_I         = iAux_II(1:nAux,iData))
 
           ! check if interpolation has succeeded
           if(nImageTarget < 1)then
-             write(StringErrorFormat,'(a,i3,a)') '(a,',nCoordTarget,'es15.7)'
+             write(StringErrorFormat,'(a,i3,a)') '(a,',nDimTarget,'es15.7)'
              write(StringErrorMessage,StringErrorFormat)&
                   NameSub//': Interpolation failed on Target at location ', &
-                  Coord_I(1:nCoordTarget)
+                  Coord_D(1:nDimTarget)
              call CON_stop(StringErrorMessage)
           end if
 
@@ -2402,7 +2390,7 @@ contains
                 write(StringErrorFormat,'(a,i3,a)') '(a,',nDimSource,'es15.7)'
                 write(StringErrorMessage,StringErrorFormat)&
                      NameSub//': Interpolation on Source failed at location ',&
-                     Coord_I(1:nDimSource)
+                     Coord_D(1:nDimSource)
                 call CON_stop(StringErrorMessage)
              end if
 
@@ -2424,23 +2412,43 @@ contains
           end if
 
           ! go over the list of images and process the result of interpolation
-          do iImageTarget = 1, nImageTarget; do iImageSource = 1, nImageSource
-
-             ! index of current data entry in the buffer
-             iBuffer = iBuffer + 1
+          do iImageTarget = 1, nImageTarget
 
              ! processor of target the image belongs to
              iProcTo = iIndexPut_II(0, iImageTarget)
 
+             if(iImageTarget==1)then
+                iProcLookUp_I(1)=iProcTo
+                nProcToPut=1
+             else
+                if(.not.any(iProcLookUp_I(&
+                     1:nProcToPut)==iProcTo))then
+                   nProcToPut=nProcToPut+1
+                   iProcLookUp_I(nProcToPut)=iProcTo
+                else
+                   CYCLE
+                end if
+             end if
+
+             ! index of current data entry in the buffer
+             iBuffer = iBuffer + 1
+
              ! update router info
              Router%nSend_P(iProcTo) = Router%nSend_P(iProcTo) + 1
-             Router%nGet_P( iProcTo) = Router%nGet_P( iProcTo) + 1
+             Router%nGet_P( iProcTo) = Router%nGet_P( iProcTo) + nImageSource
 
              ! indices of the location where data has to be fetched from
              ! NOTE:number if images is last entry here,but in router it is 0th
-             iCB_II(1+nIndexSource, iBuffer) = 1
-             iCB_II(1:nIndexSource, iBuffer) = &
-                  iIndexGet_II(1:nIndexSource,iImageSource)
+             do iImageSource = 1, nImageSource
+                WeightSource_II(iImageSource,iBuffer) = &
+                  WeightSource_I(iImageSource)
+                iCB_II((1+nIndexSource)*iImageSource, iBuffer) = &
+                     nImageSource + 1 - iImageSource
+                iStart =  (1+nIndexSource)*(iImageSource-1)+1
+                iEnd   =  (1+nIndexSource)*(iImageSource-1)+nIndexSource
+                iCB_II(iStart:iEnd, iBuffer) = &
+                     iIndexGet_II(1:nIndexSource,iImageSource)
+             end do
 
              ! store processor id for later use
              iProcImage_I(iBuffer) = iProcTo
@@ -2449,23 +2457,14 @@ contains
              iOrderSend_I(iBuffer) = Router%nSend_P(iProcTo)
 
              ! fill the buffer to be sent
-
-             ! indices on the target processor
-             Router%BufferSource_II(1:nIndexTarget, iBuffer) = &
-                  iIndexPut_II(1:nIndexTarget,iImageTarget)
-             ! corresponding interpolation weight
-             Router%BufferSource_II(Router%iWeight, iBuffer) = &
-                  WeightTarget_I(iImageTarget) * WeightSource_I(iImageSource)
-
-             if(DoPutScatterTarget)then
-                ! coordinates on Target
-                Router%BufferSource_II(Router%iCoordStart:Router%iCoordEnd, iBuffer)=&
-                     Coord_I(1:nDimTarget)
-                ! index of scatterd location for current source processor
-                Router%BufferSource_II(Router%iData, iBuffer) = iData
-             end if
-          end do; end do
-       end do
+             Router%BufferSource_II(&
+                  Router%iCoordStart:Router%iCoordEnd, iBuffer) = &
+                  Coord_D(1:nDimTarget) 
+              Router%BufferSource_II(&
+                  Router%iAuxStart:Router%iAuxEnd,iBuffer) = &
+                  real(iAux_II(1:nAux,iData))
+           end do !iImageTarget
+        end do !iData
 
        ! all data locations are processed, save the actual size of the buffer
        Router%nBufferSource = iBuffer
@@ -2477,13 +2476,18 @@ contains
        do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
             i_proc_stride(iCompTarget)
           where(iProcImage_I(1:Router%nBufferSource) == iProcTo)&
-               iOrderSend_I(1:Router%nBufferSource) = iOrderSend_I(1:Router%nBufferSource)+nSendCumSum
+               iOrderSend_I(1:Router%nBufferSource) = &
+               iOrderSend_I(1:Router%nBufferSource)+nSendCumSum
           nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
        end do
 
        ! the correct order is found, apply it
-       Router%BufferSource_II(:,iOrderSend_I(1:Router%nBufferSource)) = Router%BufferSource_II(:,1:Router%nBufferSource)
-       iCB_II(:,    iOrderSend_I(1:Router%nBufferSource)) = iCB_II(:,    1:Router%nBufferSource)
+       Router%BufferSource_II(:,iOrderSend_I(1:Router%nBufferSource)) = &
+            Router%BufferSource_II(:,1:Router%nBufferSource)
+       iCB_II(:,iOrderSend_I(1:Router%nBufferSource)) = &
+            iCB_II(:,1:Router%nBufferSource)
+       WeightSource_II(:,iOrderSend_I(1:Router%nBufferSource)) = &
+            WeightSource_II(:,1:Router%nBufferSource)
 
        ! prepare containers for router information on Source side
        call check_router_allocation(Router)
@@ -2491,17 +2495,21 @@ contains
        nSendCumSum = 0
        do iProcTo =  i_proc0(iCompTarget), i_proc_last(iCompTarget), &
             i_proc_stride(iCompTarget)
+          iGet = 1
           iStart = nSendCumSum + 1
-          iEnd = nSendCumSum + Router%nGet_P(iProcTo)
-          Router%iGet_P( iProcTo) % &
-               iCB_II(1:nIndexSource,       1:Router%nGet_P(iProcTo)) =  & 
-               iCB_II(1:nIndexSource, iStart:iEnd )
-          Router%iGet_P( iProcTo) % &
-               iCB_II(0,                   1:Router%nGet_P(iProcTo)) =  & 
-               iCB_II(1+nIndexSource, iStart:iEnd )
-          Router%Get_P( iProcTo) % &
-               Weight_I(1:Router%nGet_P(iProcTo)) =  1.0 
-          nSendCumSum = nSendCumSum + Router%nGet_P(iProcTo)
+          iEnd = nSendCumSum + Router%nSend_P(iProcTo)
+          do iBuffer = iStart, iEnd
+             do iImageSource = 1, iCB_II(1+nIndexSource, iBuffer)
+                iOffset = (1+nIndexSource) * (iImageSource-1)
+                Router%iGet_P( iProcTo) % iCB_II(0:nIndexSource, iGet) =  &
+                     cshift(&
+                     iCB_II(1+iOffset:1+nIndexSource+iOffset, iBuffer), -1)
+                Router%Get_P(iProcTo) % Weight_I(iGet) = &
+                     WeightSource_II(iImageSource, iBuffer)
+                iGet = iGet+1
+             end do
+          end do
+          nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
        end do
     end if
   end subroutine set_semi_router_from_source
@@ -2515,10 +2523,8 @@ contains
     integer:: nRequestR, nRequestS, iError, iTag=0
     integer:: iProc, nProc
     integer:: iProcFrom, iProcTo
-
-    ! data to be synchronized
-    integer,parameter:: nVarSync = 7
-    integer:: iVarSync_I(nVarSync)
+    character(len=*),parameter:: NameSub = &
+         'CON_router:synchronize_router_source_to_target'
     !-------------------------------------------------------------------------!
 
     !For given PE the index in the communicator is:
@@ -2529,32 +2535,6 @@ contains
 
     ! total number of processors and on components
     nProc       = Router%nProc
-
-
-    if(is_proc0(Router%iCompSource))then
-       Router%iAuxStart = 0
-       Router%iAuxEnd   =-1
-       iVarSync_I = (/&
-            Router%nVar,       Router%iWeight,  Router%iData,&
-            Router%iCoordStart,Router%iCoordEnd,Router%iAuxStart,Router%iAuxEnd/)
-      end if
-
-    ! synchronize number of auxilary variables passed during the request
-    call MPI_Bcast(iVarSync_I(1), nVarSync, MPI_INTEGER, &
-         Router%iProc0Target, Router%iCommUnion, iError)
-
-    ! adjust relevant info outside of Target
-    if(.not.is_proc0(Router%iCompSource))then
-       Router%nVar       = iVarSync_I(1)
-       Router%iWeight    = iVarSync_I(2)
-       Router%iData      = iVarSync_I(3)
-       Router%iCoordStart= iVarSync_I(4)
-       Router%iCoordEnd  = iVarSync_I(5)
-       Router%iAuxStart  = iVarSync_I(6)
-       Router%iAuxEnd    = iVarSync_I(7)
-    end if
-
-
 
     !\
     ! Stage 2:
@@ -2660,30 +2640,51 @@ contains
   end subroutine synchronize_router_source_to_target
   !===========================================================================!
   subroutine update_semi_router_at_target(Router,&
-       put_scatter_target)
+    GridDescriptorTarget,interpolate)
 
     type(RouterType), intent(inout):: Router
+    type(GridDescriptorType), intent(in):: GridDescriptorTarget
     !----------------------------------------------------------------------!
     interface
-       subroutine put_scatter_target(nData, nDim, Coord_DI, nIndex, iIndex_II)
-         ! via this subroutine user can utilize transferred coordinates
-         ! on the Target compnent
+       subroutine interpolate(&
+            nDim, Xyz_D, GridDescriptor, &
+            nIndex, iIndex_II, nImage, Weight_I,&
+            nAux, iAux_I)
+         ! interpolation on Source's grid;
+         ! provides PE and indices to access images of
+         ! data location and interpolation weights
+         use CON_grid_descriptor
          implicit none
-         integer, intent(in):: nData
+         ! number of indices per data entry
          integer, intent(in):: nDim
-         real,    intent(in):: Coord_DI(nDim, nData)
-         integer, intent(in):: nIndex
-         integer, intent(in):: iIndex_II(nIndex, nData)
-       end subroutine put_scatter_target
+         ! data location on Source
+         real,    intent(inout):: Xyz_D(nDim)
+         ! grid descriptor
+         type(GridDescriptorType):: GridDescriptor
+         ! indices of images, their number and interpolation weights
+         integer, intent(in) :: nIndex
+         integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
+         integer, intent(out):: nImage
+         real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         integer, intent(in) :: nAux
+         integer, intent(in) :: iAux_I(nAux)
+       end subroutine interpolate
     end interface
-    optional:: put_scatter_target
     !----------------------------------------------------------------------!
-    logical:: DoPutScatterTarget
-    integer:: iProc, nProc, iProcFrom, iProcTo, iStart, iEnd, iData, nData
-    integer:: iBuffer
+    integer:: iProc, nProc, iProcFrom, iStart, iEnd
+    integer:: iBuffer, iPut, iImage, nImage
     integer:: nRecvCumSum
     integer:: nIndexTarget, nDimTarget
-    integer, allocatable:: iUnique_I(:)
+    integer, dimension(&
+         0:GridDescriptorTarget%nDim+1, &
+         2**GridDescriptorTarget%nDim):: iIndex_II
+    integer:: nImageMax
+    real, dimension(2**GridDescriptorTarget%nDim):: Weight_I
+    real, dimension(   GridDescriptorTarget%nDim):: Coord_D
+    integer:: iAux_I(0:2)
+
+    character(len=*),parameter:: NameSub = &
+         'CON_router:update_router_at_target'
     !----------------------------------------------------------------------!
 
     !For given PE the index in the communicator is:
@@ -2691,79 +2692,67 @@ contains
 
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
-
+    
     ! total number of processors and on components
     nProc       = Router%nProc
-
+    
     nDimTarget  = Router%nIndexTarget-1
     nIndexTarget= Router%nIndexTarget
-
-    DoPutScatterTarget = present(put_scatter_target)
+    nImageMax   = 2**nDimTarget
     
     ! process the data that has been received
     if(is_proc(Router%iCompTarget))then
-
+       
        ! prepare containers for router information of Target side
-       do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
+       do iProcFrom = i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
             i_proc_stride(Router%iCompSource)
-          Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)
+          Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)*nImageMax
        end do
+       
+       
        call check_router_allocation(Router)
-
+       
        ! fill these containers
        nRecvCumSum = 0
        do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
             i_proc_stride(Router%iCompSource)
+          
           iStart = nRecvCumSum + 1
-          iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
+          iEnd   = nRecvCumSum + Router%nRecv_P(iProcFrom)
           if(iEnd < iStart) &
                CYCLE
-          ! indices
-          Router%iPut_P(iProcFrom) % &
-               iCB_II(0,  1:Router%nPut_P(iProcFrom)) = 1
-          Router%iPut_P(iProcFrom) % &
-               iCB_II(1:nIndexTarget,  1:Router%nPut_P(iProcFrom)) = &
-               nint( Router%BufferTarget_II(1:nIndexTarget, iStart:iEnd) )
-          ! interpolation weights
-          Router% Put_P(iProcFrom) % Weight_I(1:Router%nPut_P(iProcFrom)) = &
-               Router%BufferTarget_II(1+nIndexTarget,  iStart:iEnd)
-          ! fill DoAdd_I
-          Router%DoAdd_P(iProcFrom) % &
-               DoAdd_I(1:Router%nPut_P(iProcFrom)) = .true.
+          iPut = 1
+          do iBuffer = iStart, iEnd
+             Coord_D(1:nDimTarget) = &
+                  Router%BufferTarget_II(Router%iCoordStart:Router%iCoordEnd, iBuffer)
+             iAux_I(1:Router%nMappedPointIndex) = &
+                  Router%BufferTarget_II(Router%iAuxStart:Router%iAuxEnd, iBuffer)
+             call interpolate(&
+                  nDim         = nDimTarget, &
+                  Xyz_D        = Coord_D(1:nDimTarget), &
+                  nAux           = Router%nMappedPointIndex, &
+                  iAux_I         = iAux_I(1:Router%nMappedPointIndex),&
+                  GridDescriptor = GridDescriptorTarget, &
+                  nIndex         = nIndexTarget, &
+                  iIndex_II      = iIndex_II, &
+                  nImage         = nImage, &
+                  Weight_I       = Weight_I)
+             
+             do iImage = 1, nImage
+                Router%iPut_P(iProcFrom) % iCB_II(0,iPut) = &
+                     nImage + 1 - iImage
+                Router%iPut_P(iProcFrom) % iCB_II(1:nIndexTarget,iPut) =&
+                     iIndex_II(1:nIndexTarget, iImage)
+                Router%Put_P(iProcFrom) % Weight_I(iPut)=Weight_I(iImage)
+                Router%DoAdd_P(iProcFrom)%DoAdd_I(iPut) = iImage/=1
+                iPut = iPut+1
+             end do
+             
+          end do
           ! increment the offest
           nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
        end do
-
-       ! put scatter coordinates
-       if(DoPutScatterTarget)then
-          call check_size(1, (/Router%nBufferTarget/), iBuffer_I = iUnique_I)
-          ! identify unique data location: some may have many images
-          nData = 0 
-          nRecvCumSum = 0
-          do iProcFrom =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
-               i_proc_stride(Router%iCompSource)
-             iStart = nRecvCumSum + 1
-             iEnd   = nRecvCumSum + Router%nPut_P(iProcFrom)
-             iData  = -1
-             do iBuffer = iStart, iEnd
-                if(nint(Router%BufferTarget_II(Router%iData, iBuffer))/=iData)then
-                   iData = nint(Router%BufferTarget_II(Router%iData, iBuffer))
-                   nData = nData + 1
-                   iUnique_I(nData) = iBuffer
-                end if
-             end do
-             ! increment the offest
-             nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
-          end do
-          ! put these data locations
-          call put_scatter_target(&
-               nData, nDimTarget, &
-               Router%BufferTarget_II(Router%iCoordStart:Router%iCoordEnd, iUnique_I(1:nData)),&
-               nIndexTarget, &
-               nint(Router%BufferTarget_II(1:nIndexTarget, iUnique_I(1:nData))))
-       end if
     end if
-
   end subroutine update_semi_router_at_target
   !===========================================================================!
   subroutine access_router_buffer_source(Router, access_buffer)

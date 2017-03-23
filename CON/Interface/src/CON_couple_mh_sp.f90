@@ -200,12 +200,12 @@ contains
       case(SC_)
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
-              GridDescriptorSource = SC_GridDescriptor, &
-              GridDescriptorTarget = SP_GridDescriptor, &
-              Router               = RouterScSp, &
+              GridDescriptorSource  = SC_GridDescriptor, &
+              GridDescriptorTarget  = SP_GridDescriptor, &
+              Router                = RouterScSp, &
               interface_point_coords= SP_interface_point_coords_for_sc, &
-              transform            = transform_sp_to_sc, &
-              interpolate          = interpolation_amr_gc)
+              mapping               = mapping_sp_to_sc, &
+              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
             call update_semi_router_at_source(RouterScSp,&
@@ -228,28 +228,33 @@ contains
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterScSp, &
               get_scatter_source   = SC_get_scatter_line, &
-              transform            = transform_sc_to_sp, &
+              mapping              = mapping_sc_to_sp, &
               interpolate_source   = interpolation_amr_gc, &
-              interpolate_target   = interpolate_sp, &
-              put_scatter_target   = SP_put_scatter_from_mh)
+              interpolate_target   = interpolate_sp)
          call synchronize_router_source_to_target(RouterScSp)
-         if(is_proc(SP_))&
-              call update_semi_router_at_target(&
-              RouterScSp,&
-              put_scatter_target   = SP_put_scatter_from_mh)
-         call global_message_pass(RouterScSp, &
+         if(is_proc(SP_))then
+            call update_semi_router_at_target(&
+                 RouterScSp, SP_GridDescriptor,&
+                 interpolate   = interpolate_SP)
+            nLength = nlength_buffer_target(RouterScSp)
+            call SP_put_scatter_from_mh(nLength,&
+                 RouterScSp%BufferTarget_II(1:nDim,1:nLength),&
+                 nint(RouterScSp%BufferTarget_II(RouterScSp%nVar ,1:nLength)),&
+                 nint(RouterScSp%BufferTarget_II(RouterScSp%nVar-1,1:nLength)))
+         end if
+            call global_message_pass(RouterScSp, &
               nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
       case(IH_)
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
-              GridDescriptorSource = IH_GridDescriptor, &
-              GridDescriptorTarget = SP_GridDescriptor, &
-              Router               = RouterIHSp, &
+              GridDescriptorSource  = IH_GridDescriptor, &
+              GridDescriptorTarget  = SP_GridDescriptor, &
+              Router                = RouterIHSp, &
               interface_point_coords= SP_interface_point_coords_for_ih, &
-              transform            = transform_sp_to_IH, &
-              interpolate          = interpolation_amr_gc)
+              mapping               = mapping_sp_to_IH, &
+              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
             call update_semi_router_at_source(RouterIhSp,&
@@ -271,15 +276,21 @@ contains
               GridDescriptorTarget = SP_GridDescriptor, &
               Router               = RouterIhSp, &
               get_scatter_source   = IH_get_scatter_line, &
-              transform            = transform_ih_to_sp, &
+              mapping              = mapping_ih_to_sp, &
               interpolate_source   = interpolation_amr_gc, &
-              interpolate_target   = interpolate_sp, &
-              put_scatter_target   = SP_put_scatter_from_mh)
+              interpolate_target   = interpolate_sp)
          call synchronize_router_source_to_target(RouterIhSp)
-         if(is_proc(SP_))&
-              call update_semi_router_at_target(&
-              RouterIhSp,&
-              put_scatter_target   = SP_put_scatter_from_mh)
+         if(is_proc(SP_))then
+            call update_semi_router_at_target(&
+                 RouterIhSp, SP_GridDescriptor,&
+                 interpolate   = interpolate_SP)
+            nLength = nlength_buffer_target(RouterIhSp)
+            call SP_put_scatter_from_mh(nLength,&
+                 RouterIhSp%BufferTarget_II(1:nDim,1:nLength),&
+                 nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar ,1:nLength)),&
+                 nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar-1,1:nLength)))
+         end if
+
          call global_message_pass(RouterIhSp, &
               nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
@@ -290,8 +301,8 @@ contains
   end subroutine couple_mh_sp_init
   !==================================================================!
 
-  subroutine transform(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
-    ! transform from generalized coordinates in CompIn 
+  subroutine mapping(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
+    ! mapping from generalized coordinates in CompIn 
     ! to generalized coordinates in CompOut
     use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
     integer, intent(in) :: iCompIn
@@ -304,7 +315,7 @@ contains
     character(len=100):: TypeGeometryIn, TypeGeometryOut
     real:: XyzTemp_D(nDimOut), CoordTemp_D(nDimIn)
     real:: Convert_DD(nDimIn, nDimOut)
-    character(len=*), parameter:: NameSub='CON_couple_mh_sp:transform'
+    character(len=*), parameter:: NameSub='CON_couple_mh_sp:mapping'
     !------------------------------------------------------------
     if(nDimIn /= 3 .or. nDimOut /= 3)&
          call CON_stop(NameSub//': MH or SP component is not 3D')
@@ -345,58 +356,76 @@ contains
        call CON_stop(NameSub//&
             ': unkown type of geometry '//trim(TypeGeometryOut))
     end if
-  end subroutine transform
+  end subroutine mapping
 
   !==================================================================!
-  subroutine transform_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+       IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
+    logical, intent(out):: IsInterfacePoint
     !------------------------------------------
-    call transform(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine transform_sp_to_sc
+    IsInterfacePoint = .true.
+    call mapping(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine mapping_sp_to_sc
   !==================================================================!
-  subroutine transform_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+       IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
+    logical, intent(out):: IsInterfacePoint
     !------------------------------------------
-    call transform(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine transform_sp_to_ih
+    IsInterfacePoint = .true.
+    call mapping(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine mapping_sp_to_ih
   !==================================================================!
-  subroutine transform_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  subroutine mapping_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+       IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
+    logical, intent(out):: IsInterfacePoint
     !------------------------------------------
-    call transform(SC_, SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine transform_sc_to_sp
+    IsInterfacePoint = .true.
+    call mapping(SC_, SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine mapping_sc_to_sp
   !==================================================================!
-  subroutine transform_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  subroutine mapping_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+       IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
+    logical, intent(out):: IsInterfacePoint
     !------------------------------------------
-    call transform(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine transform_ih_to_sp
+    IsInterfacePoint = .true.
+    call mapping(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine mapping_ih_to_sp
   !=================================================================!
-  subroutine SP_put_scatter_from_mh(nData, nDim, Coord_DI, nIndex, iIndex_II)
-    integer, intent(in):: nDim
+  subroutine SP_put_scatter_from_mh(nData, Coord_DI, iIndex1_I,&
+       iIndex2_I)
     integer, intent(in):: nData
     real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nData)
+    integer, intent(in):: iIndex1_I(nData)
+    integer, intent(in):: iIndex2_I(nData)
+
+    integer:: iIndex_II(4, nData)
     !--------------------------------------------------------
+    iIndex_II(1,:) = iIndex1_I
+    iIndex_II(2,:) = 1
+    iIndex_II(3,:) = 1
+    iIndex_II(4,:) = iIndex2_I
     call SP_put_line(nData, Coord_DI, iIndex_II)
   end subroutine SP_put_scatter_from_mh
   !==================================================================!
   subroutine interpolate_sp(&
        nCoord, Coord_I, GridDescriptor, &
-       nIndex, iIndex_II, nImage, Weight_I)
+       nIndex, iIndex_II, nImage, Weight_I, nAux, iAux_I)
     use CON_grid_descriptor
     ! number of indices per data entry
     integer, intent(in):: nCoord
@@ -408,14 +437,17 @@ contains
     integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
     integer, intent(out):: nImage
     real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+    integer, intent(in)::nAux
+    integer, intent(in)::iAux_I(nAux)
+
     integer:: iLine
     !--------------------------
     nImage = 1
     Weight_I(1) = 1.0
-    iLine = nint(Coord_I(4))
+    iLine = iAux_I(1)
 
     iIndex_II(0,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(PE_,iLine)
-    iIndex_II(1,  1) = nint(Coord_I(5))
+    iIndex_II(1,  1) = iAux_I(2)
     iIndex_II(2:3,1) = (/1,1/)
     iIndex_II(4,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(BLK_,iLine)
   end subroutine interpolate_sp
@@ -427,6 +459,7 @@ contains
 
     real,intent(in)::DataInputTime
     real,dimension(3)::Xyz_D
+    integer:: nLength
     !-------------------------------------------------------------------------
     if(.not.RouterIhSp%IsProc)return
 
@@ -441,12 +474,12 @@ contains
          RouterIhSp%iCommUnion)
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
-         GridDescriptorSource = IH_GridDescriptor, &
-         GridDescriptorTarget = SP_GridDescriptor, &
-         Router               = RouterIHSp, &
+         GridDescriptorSource  = IH_GridDescriptor, &
+         GridDescriptorTarget  = SP_GridDescriptor, &
+         Router                = RouterIHSp, &
          interface_point_coords= SP_interface_point_coords_for_ih, &
-         transform            = transform_sp_to_IH, &
-         interpolate          = interpolation_amr_gc)
+         mapping               = mapping_sp_to_IH, &
+         interpolate           = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)
     if(is_proc(IH_))then
        call update_semi_router_at_source(RouterIhSp,&
@@ -463,19 +496,24 @@ contains
     end if
     if(is_proc(IH_))&
          call set_semi_router_from_source(&
-         GridDescriptorSource = IH_GridDescriptor, &
-         GridDescriptorTarget = SP_GridDescriptor, &
-         Router               = RouterIhSp, &
-         get_scatter_source   = IH_get_scatter_line, &
-         transform            = transform_ih_to_sp, &
-         interpolate_source   = interpolation_amr_gc, &
-         interpolate_target   = interpolate_sp, &
-         put_scatter_target   = SP_put_scatter_from_mh)
+         GridDescriptorSource  = IH_GridDescriptor, &
+         GridDescriptorTarget  = SP_GridDescriptor, &
+         Router                = RouterIhSp, &
+         get_scatter_source    = IH_get_scatter_line, &
+         mapping               = mapping_ih_to_sp, &
+         interpolate_source    = interpolation_amr_gc, &
+         interpolate_target    = interpolate_sp)
     call synchronize_router_source_to_target(RouterIhSp)
-    if(is_proc(SP_))&
-         call update_semi_router_at_target(&
-         RouterIhSp,&
-         put_scatter_target   = SP_put_scatter_from_mh)
+    if(is_proc(SP_))then
+       call update_semi_router_at_target(&
+            RouterIhSp, SP_GridDescriptor,&
+            interpolate   = interpolate_SP)
+       nLength = nlength_buffer_target(RouterIhSp)
+       call SP_put_scatter_from_mh(nLength,&
+            RouterIhSp%BufferTarget_II(1:nDim,1:nLength),&
+            nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar  ,1:nLength)),&
+            nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar-1,1:nLength)))
+    end if
 
     call global_message_pass(RouterIhSp, &
          nVar = nVarBuffer, &
@@ -524,6 +562,7 @@ contains
     use CON_global_message_pass
 
     real,intent(in)::DataInputTime
+    integer:: nLength
     !-------------------------------------------------------
     if(.not.RouterScSp%IsProc)return
 
@@ -539,15 +578,20 @@ contains
          GridDescriptorTarget = SP_GridDescriptor, &
          Router               = RouterScSp, &
          get_scatter_source   = SC_get_scatter_line, &
-         transform            = transform_sc_to_sp, &
+         mapping              = mapping_sc_to_sp, &
          interpolate_source   = interpolation_amr_gc, &
-         interpolate_target   = interpolate_sp, &
-         put_scatter_target   = SP_put_scatter_from_mh)
+         interpolate_target   = interpolate_sp)
     call synchronize_router_source_to_target(RouterScSp)
-    if(is_proc(SP_))&
-         call update_semi_router_at_target(&
-         RouterScSp,&
-         put_scatter_target   = SP_put_scatter_from_mh)
+    if(is_proc(SP_))then
+       call update_semi_router_at_target(&
+            RouterScSp, SP_GridDescriptor,&
+            interpolate   = interpolate_SP)
+       nLength = nlength_buffer_target(RouterScSp)
+       call SP_put_scatter_from_mh(nLength,&
+            RouterScSp%BufferTarget_II(1:nDim,1:nLength),&
+            nint(RouterScSp%BufferTarget_II(RouterScSp%nVar  ,1:nLength)),&
+            nint(RouterScSp%BufferTarget_II(RouterScSp%nVar-1,1:nLength)))
+    end if
 
     call global_message_pass(RouterScSp, &
          nVar = nVarBuffer, &

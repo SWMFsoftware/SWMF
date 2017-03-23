@@ -278,11 +278,12 @@ contains
   end subroutine IH_add_to_line
   !============================================================================
 
-  subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)
+  subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
     integer,              intent(out):: nParticle
-    integer,              intent(out):: nCoord
-    real,    allocatable, intent(out):: Coord_II(:,:)
+    real,    allocatable, intent(out):: Coord_DI(:,:)
     integer, allocatable, intent(out):: iIndex_II(:,:)
+    integer,              intent(in) :: nAux
+    integer, allocatable, intent(out):: iAux_II(:,:)
     character(len=*), parameter :: NameSub='IH_get_scatter_line'
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')

@@ -1364,37 +1364,51 @@ contains
   
   !============================================================================
 
-  subroutine IH_get_scatter_line(nParticle, nCoord, Coord_II, iIndex_II)
+  subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
     use IH_BATL_lib, ONLY: nDim, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: &
          get_particle_data, apply_soft_boundary
     integer,              intent(out):: nParticle
-    integer,              intent(out):: nCoord
-    real,    allocatable, intent(out):: Coord_II(:,:)
+    real,    allocatable, intent(out):: Coord_DI(:,:)
     integer, allocatable, intent(out):: iIndex_II(:,:)
+    integer,              intent(in) :: nAux
+    integer, allocatable, intent(out):: iAux_II(:,:)
 
     integer:: iParticle
+    real, allocatable:: Buff_II(:,:)
     real:: Coord_D(nDim)
+    integer, parameter:: nCoord = 5
     character(len=*), parameter:: NameSub='IH_get_scatter_line'
     !--------------------------------------------------------------------------
-    ! return cordinates, line id and indices of particles along field lines
-    nCoord = nDim + 2
-
-    if(allocated(Coord_II)) deallocate(Coord_II)
-    ! Coord_II is allocated inside the next call
-    call get_particle_data(nCoord, 'xx yy zz fl id', Coord_II, nParticle)
-
+    
+    if(allocated(Coord_DI)) deallocate(Coord_DI)
+    if(allocated(iAux_II)) deallocate(iAux_II)
+    
+    if(allocated(Buff_II)) deallocate(Buff_II)
+    ! Buff_II is allocated inside the next call
+    call get_particle_data(nCoord, 'xx yy zz fl id', Buff_II, nParticle)
+    
+    
     ! remove particles that have crossed the boundary between components
     call apply_soft_boundary
-    
+
     ! indices to get state vector are not available yet,
     ! they should be determined outside of this subroutine
     if(allocated(iIndex_II)) deallocate(iIndex_II)
 
+
+
+    allocate(Coord_DI(nDim,nParticle))
+    allocate(iAux_II(nAux,nParticle))
+
+    Coord_DI(1:nDim,1:nParticle) = Buff_II(1:nDim,1:nParticle)
+    iAux_II(1:nAux,1:nParticle) = nint(Buff_II(nDim+1:nDim+nAux,1:nParticle))
+    deallocate(Buff_II)
+
     ! transform to generalized coordinates
     do iParticle = 1, nParticle
-       call xyz_to_coord(Coord_II(1:nDim, iParticle), Coord_D)
-       Coord_II(1:nDim, iParticle) = Coord_D
+       call xyz_to_coord(Coord_DI(1:nDim, iParticle), Coord_D)
+       Coord_DI(1:nDim, iParticle) = Coord_D
     end do
   end subroutine IH_get_scatter_line
 
