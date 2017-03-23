@@ -533,7 +533,7 @@ contains
        end if
     end if
 
-    ! Use values from #FACEBOUNDARYSTATE commands
+    ! Use face values from #BOUNDARYSTATE commands
     do iBoundary = SolidBc_, 2*nDim
        if (.not.UseFaceBoundaryState_I(iBoundary)) CYCLE
        FaceState_VI(:,iBoundary) = &
@@ -543,7 +543,7 @@ contains
     ! By default use the box boundary state for the outer BC state
     CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
 
-    ! Use values from #CELLBOUNDARYSTATE commands given in primitive variables
+    ! Use cell values from #BOUNDARYSTATE commands given in primitive variables
     do iBoundary = 1, 2*nDim 
        if (.not.UseCellBoundaryState_I(iBoundary)) CYCLE
        CellState_VI(:,iBoundary) = &
