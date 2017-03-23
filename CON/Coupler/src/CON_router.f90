@@ -23,7 +23,7 @@ Module CON_router
 ! phone(734)647-4705                                          !
 !EOP
   implicit none
-
+  SAVE
   logical,parameter:: UseUnionComm=.true.
 !BOP
 !DESCRIPTION:
@@ -121,7 +121,8 @@ Module CON_router
 !\end{verbatim}
   end type RouterType
 !EOP
-  integer,allocatable,dimension(:),save::iAux_P
+  ! aux integer arrays to put data in BufferS_II in the correct order
+  integer, allocatable :: iAux_P(:), iProcImage_I(:), iOrderSend_I(:) 
 !BOP
 !PUBLIC MEMBER FUNCTIONS:
   private::allocate_get_arrays
@@ -1524,40 +1525,27 @@ contains
     optional:: interface_point_coords
     optional:: mapping
     optional:: interpolate
-    !-------------------------------------------------------------------------!
-    !==========================Declarations from set_target===================!
+    !----------------------
     !EOP
-    ! MPI-related variables
-    integer :: iProc, nProc
-    integer :: lGlobalNode, iBlockAll
-    integer :: iGlobalGridPoint, nGridPointsPerBlock
-    logical :: IsInterfacePoint
-    integer :: iImage, nImage !!!,nImagePart,iToGet
-    integer :: iProcTo, iBlockTo, iProcFrom, iProcDoNotAdd, iPE
-    integer, dimension(0:Router%nProc-1)::&
-         nGetUbound_P,nPutUbound_P
-
-    real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
-    real,    dimension(GridDescriptorSource%nDim) ::&
-         XyzSource_D !,XyzStored_D
-    integer, dimension(GridDescriptorTarget%nDim) ::iCell_D
-    integer, dimension(Router%nIndexTarget)       :: iIndexRecv_I
-    integer, dimension(0:Router%nIndexSource,&
-         2**GridDescriptorSource%nDim)            :: iIndexGet_II
-    integer, dimension(2**GridDescriptorSource%nDim) :: &
-         iProcLookUp_I
-    integer :: nProcToGet, iProcToGet
-    logical :: DoCountOnly, DoCountRed
-    real,    dimension(2**GridDescriptorSource%nDim) :: Weight_I
     !\
     ! The presunce of optional parameters
     !/
     logical :: UseMappingFunction, &
          DoCheckBlock ,DoCheckPoint,DoInterpolate
+    ! MPI-related variables
+    integer :: iProc, nProc
+    logical :: DoCountOnly
+    integer :: lGlobalNode, iBlockAll
+    integer :: iGlobalGridPoint, nGridPointsPerBlock
+    integer :: iGlobalPointLast, iPointInBlock
+    logical :: IsInterfacePoint
+    integer :: iProcTo, iBlockTo, iPE, iProcSource
+    integer, dimension(0:Router%nProc-1)::nPutUbound_P
 
-    !integer :: iError
-    !logical :: DoTest,DoTestMe
-    !==========================End of declaration from set_target=============!
+    real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
+    real,    dimension(GridDescriptorSource%nDim) :: XyzSource_D 
+    integer, dimension(GridDescriptorTarget%nDim) :: iCell_D
+    integer, dimension(Router%nIndexTarget)       :: iIndexRecv_I
     ! components ids
     integer:: iCompSource, iCompTarget
     ! dimensionality of components
@@ -1565,51 +1553,47 @@ contains
     ! number of indices (e.g. cell indices) on components
     integer:: nIndexSource, nIndexTarget
     ! loop variables
-    integer:: iIndex, iBuffer
-    ! send and recv buffers
-    ! buffers' size
-    integer:: nBufferSMax, nBufferTarget
-    ! offsets in buffers
-    integer:: nSendCumSum
-    ! aux arrays to put data in BufferS_II in the correct order
-    integer, allocatable:: iProcImage_I(:), iOrderSend_I(:)   
+    integer:: nBuffer
+    ! offset in buffer
+    integer:: nSendCumSum  
     ! optional actions to be taken
-    ! aux variables to go through a buffer
-    integer:: iAuxStart, iAuxEnd 
     ! number of auxilary variables passed via request
     integer:: nAux
-    integer, parameter:: iPointGlobal_ = 0,  &    
-         iPointInBlock_ = 2, iBlockAll_ = 1 
-    integer :: iGlobalPointLast, iPointInBlock 
-    integer :: iAux_I(0:2), iAux
-    ! error message containers
-    character(len=200):: StringErrorFormat, StringErrorMessage
     character(len=*),parameter:: NameSub = &
          'CON_router:set_semi_router_from_target'
     !-------------------------------------------------------------------------!
-    ! identify components
-    iCompSource = Router%iCompSource
-    iCompTarget = Router%iCompTarget
-
     !For given PE the index in the communicator is:
     iProc = Router % iProc
-
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
 
+    ! identify components
+    iCompTarget = Router%iCompTarget
+    !\
+    ! Stage 1:
+    ! on Target PE determine the sources of data and
+    ! how much data is to be requested from them
+    !/
+    if(.not.is_proc(iCompTarget))RETURN
+    iCompSource = Router%iCompSource
+
+    nProc = Router%nProc
     ! determine which optional actions should be taken
     UseMappingFunction        = present(mapping)
+    if(.not.UseMappingFunction.and.&
+         nDimTarget /= nDimSource )&
+         call CON_stop(&
+         NameSub//': Mapping is needed for Target%nDim/=Source%nDim')
     DoInterpolate             = present(interpolate)
+    DoCheckBlock=present(is_interface_block)
+    DoCheckPoint=present(interface_point_coords)
+
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
     nDimSource   = GridDescriptorSource%nDim
     nIndexTarget = Router%nIndexTarget
     nIndexSource = Router%nIndexSource
-    if(.not.UseMappingFunction.and.&
-         nDimTarget /= nDimSource )&
-         call CON_stop(&
-         'Mapping is needed for Target%nDim/=Source%nDim')
-    nProc=Router%nProc
+
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
@@ -1621,15 +1605,7 @@ contains
     Router%iAuxStart = Router%iCoordEnd + 1
     Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
     Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
-    !\
-    ! Stage 1:
-    ! on Target PE determine the sources of data and
-    ! how much data is to be requested from them
-    !/
-    if(.not.is_proc(iCompTarget))RETURN
-    DoCheckBlock=present(is_interface_block)
-    DoCheckPoint=present(interface_point_coords)
-
+ 
     !Check dimensions
     DoCountOnly=.true. !To enter the loop
     do while(DoCountOnly)
@@ -1648,7 +1624,7 @@ contains
        Router%nPut_P  = 0
        Router%nRecv_P = 0
        ! reset index of a current data entry in the buffer
-       iBuffer = 0
+       nBuffer        = 0
        DoCountOnly=.false.
        !\
        !If the check shows that the allocated array is not 
@@ -1657,45 +1633,77 @@ contains
        !/
        nGridPointsPerBlock=n_grid_points_per_block(&
             GridDescriptorTarget)
-                                                            !
+       !\
+       ! Loop over global block number (to be revised)             
+       !/
        BLOCKS: do iBlockAll = 1, &
             n_block_total(GridDescriptorTarget%DD%Ptr)
-
+          !\
+          ! Convert to a global node number on the 
+          ! enumerated tree structure for the domain decomposition
+          !/
           lGlobalNode=i_global_node_a(&
                GridDescriptorTarget%DD%Ptr,iBlockAll)
-
+          !\
+          ! Convert to the local block number
+          !/
           call pe_and_blk(&
                GridDescriptorTarget%DD%Ptr,lGlobalNode,&
                iProcTo, iBlockTo)
+          !\
+          ! To be revised: the loop should rather run
+          ! over the local block number
+          !/ 
           if(iProc /= iProcTo)CYCLE BLOCKS 
           !Skip the block if desired: if there is known to be no interface!
           !point in it                                                    !
           if( DoCheckBlock)then
              if(.not.is_interface_block(lGlobalNode))CYCLE BLOCKS
           end if
-          !GlobalCellNumber Loop, for a given (octree) block 
           !\
-          ! Global number of the last grid point in the previous
+          ! Prepare a GlobalCellNumber Loop, for a given (octree) block
+          !/ 
+          !\
+          ! 1. Global number of the last grid point in the previous
           ! global block, with the global block number = nBlockAll-1
           !/
           iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
+          !\
+          ! Now the subloop runs over the iPointBlock within 
+          ! the current local block
+          !/
           POINTS:do iPointInBlock  = 1, nGridPointsPerBlock
+             !\
+             ! Recover the global grid point number
+             !/
              iGlobalGridPoint =   iGlobalPointLast + iPointInBlock
+             !\
+             ! Get cell index for this grid point in target.
+             !/
              call global_i_grid_point_to_icb(&
                   GridDescriptorTarget,&
                   iGlobalGridPoint,&
                   lGlobalNode,& 
                   iCell_D)
-             
-             if(nIndexTarget/=1)then
-                iIndexRecv_I(nIndexTarget) = iBlockTo
-                iIndexRecv_I(1:nDimTarget) = &
-                     iCell_D
-             end if
+             !\
+             ! Shape an index array for this grid point in target
+             !/
+             iIndexRecv_I(nIndexTarget) = iBlockTo
+             iIndexRecv_I(1:nDimTarget) = iCell_D
+             !\
+             ! Generalized coordinates of the target
+             ! grid point
+             !/
              XyzTarget_D = xyz_grid_d(&
                   GridDescriptorTarget,&
                   lGlobalNode,&
                   iCell_D)
+             !\
+             ! Using the grid descriptor for the target we may want
+             ! 1. To select or deselect this point from the interface
+             ! 2. To convert (with no change in the dimensions) the
+             ! grid point coordinates (say, from generalized to 
+             ! Cartesian), that is why XyzTarget_D has intent inout
              if( DoCheckPoint)then
                 call interface_point_coords(&
                      GridDescriptorTarget,&
@@ -1706,149 +1714,176 @@ contains
                      iIndexRecv_I,&
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
+                !\
+                ! Otherwise, no point is deselected, 
+                ! the generalized coordinates keep unchanged
+                !/
              end if
              if(UseMappingFunction)then
+                !\
+                ! This is a mapping of the
+                ! target point coordinates to the generalized
+                ! coordinates of source
+                !/
                 call mapping(&
                      nDimTarget,&
                      XyzTarget_D,&
                      nDimSource,&
                      XyzSource_D, &
                      IsInterfacePoint)
+                if(.not.IsInterfacePoint)CYCLE POINTS
              else
+                !\
+                ! Otherwise, the coordinates in the source
+                ! are the same as those in the oputput from 
+                !
                 XyzSource_D=XyzTarget_D
              end if
-               
-             if( DoInterpolate)then
-                call interpolate(&
-                     nDim           = nDimSource, &
-                     Xyz_D          = XyzSource_D, &
-                     GridDescriptor = GridDescriptorSource, &
-                     nIndex         = nIndexSource, &
-                     iIndex_II      = iIndexGet_II, &
-                     nImage         = nImage, &
-                     Weight_I       = Weight_I)
-             else
-                call nearest_grid_points(&
-                     nDim           = nDimSource, &
-                     Xyz_D          = XyzSource_D, &
-                     GridDescriptor = GridDescriptorSource, &
-                     nIndex         = nIndexSource, &
-                     iIndex_II      = iIndexGet_II, &
-                     nImage         = nImage, &
-                     Weight_I       = Weight_I)
-             end if
-             if(nImage < 1)then
-                write(StringErrorFormat,'(a,i3,a)') '(a,',nDimSource,'es15.7)'
-                write(StringErrorMessage,StringErrorFormat)&
-                     NameSub//': Interpolation failed at location ', &
-                     XyzSource_D
-                call CON_stop(StringErrorMessage)
-             end if
-
-             ! go over the list of images and process result of interpolation
-             IMAGES1:do iImage = 1, nImage
-                iProcFrom = iIndexGet_II(0, iImage)
-                if(iImage==1)then
-                   iProcLookUp_I(1)=iProcFrom
-                   nProcToGet=1
-                else
-                   if(.not.any(iProcLookUp_I(&
-                        1:nProcToGet)==iProcFrom))then
-                      nProcToGet=nProcToGet+1
-                      iProcLookUp_I(nProcToGet)=iProcFrom
-                   else
-                      CYCLE IMAGES1
-                   end if
-                end if
-                ! index of current data entry in the buffer
-                Router%nPut_P(iProcFrom)=&
-                     Router%nPut_P(iProcFrom) + 1
-                Router%nRecv_P(iProcFrom)=&
-                     Router%nRecv_P(iProcFrom) + 1
-                
-                DoCountOnly = DoCountOnly.or.&
-                     Router%nPut_P(iProcFrom)>&
-                     nPutUbound_P(iProcFrom)  
-             end do IMAGES1 
-             if(.not.DoCountOnly)then
-                PROCFROM:do iProcToGet=1,nProcToGet
-                   iProcFrom=iProcLookUp_I(iProcToGet)
-                   Router%iPut_P(iProcFrom)%&
-                        iCB_II(1:Router%nIndexTarget,&
-                        Router%nPut_P(iProcFrom))&
-                        =iIndexRecv_I(1:Router%nIndexTarget)
-                   Router%iPut_P(iProcFrom)%&
-                        iCB_II(0,Router%nPut_P(iProcFrom))&
-                        =1
-                   Router%Put_P(iProcFrom)%&
-                        Weight_I(Router%nPut_P(iProcFrom))&
-                        = 1.0
-                   Router%DoAdd_P(iProcFrom)%&
-                        DoAdd_I(Router%nRecv_P(iProcFrom))=&
-                        .true.
-                   ! indices of the location where data has to be put
-                   ! store processor id for later use
-                   iBuffer = iBuffer + 1
-                   iProcImage_I(iBuffer) = iProcFrom
-                   
-                   ! index of the image in the buffer FOR CURRENT source processor
-                   iOrderSend_I(iBuffer) = Router%nRecv_P(iProcFrom)
-                   
-                   ! fill the buffer to be sent
-                   ! coordinates on Source
-                   Router%BufferTarget_II(&
-                        Router%iCoordStart:Router%iCoordEnd,iBuffer)=&
-                        XyzSource_D
-                   if(nAux > 0)then
-                      iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
-                      iAux_I(iPointInBlock_) = iPointInBlock
-                      iAux_I(iBlockAll_    ) = iBlockAll
-                      Router%BufferTarget_II(&
-                           Router%iAuxStart:Router%iAuxEnd,iBuffer) = &
-                           real(iAux_I(1:nAux))
-                   end if
-                end do PROCFROM
-                !DoAdd should be set to .false. for the same PE or for
-                !the minimal PE
-                if(any(iProcLookUp_I(&
-                     1:nProcToGet)==iProcTo))then
-                   iProcDoNotAdd=iProcTo
-                else
-                   iProcDoNotAdd=minval(&
-                        iProcLookUp_I(1:nProcToGet))
-                end if
-                Router%DoAdd_P(iProcDoNotAdd)%&
-                     DoAdd_I(Router%nRecv_P(iProcDoNotAdd))=&
-                     .false.
-                
-             end if
+             !\
+             ! Now, we put the point indexes to the router 
+             ! and its coordinates (and, probably, 
+             ! its global point number) to the buffer 
+             call put_point_to_semirouter
           end do POINTS   !iGlobalPoints
        end do BLOCKS      !iGlobalBlock
-    end do         !
-
-    ! all data locations are processed, save the actual size of the buffer
-    nBufferTarget = iBuffer
+    end do
     ! fix the order of Buffer_I so contiguous chunks of data can be sent
     ! to the appropriate processors of Source,
     ! currently iOrderSend_I contains indices WITHIN these chunks
-    nSendCumSum = 0
-    do iProcFrom = i_proc0(iCompSource), i_proc_last(iCompSource), &
+    nSendCumSum = Router%nRecv_P(iProc)
+    do iProcSource = i_proc0(iCompSource), i_proc_last(iCompSource), &
          i_proc_stride(iCompSource)
-       where(iProcImage_I(1:Router%nBufferTarget) == iProcFrom)&
-            iOrderSend_I(1:Router%nBufferTarget)= &
-            iOrderSend_I(1:Router%nBufferTarget)+nSendCumSum
-       nSendCumSum = nSendCumSum + Router%nRecv_P(iProcFrom)
+       if(iProcSource == iProc)CYCLE
+       where(iProcImage_I(1:nBuffer) == iProcSource)&
+            iOrderSend_I( 1:nBuffer) = &
+            iOrderSend_I( 1:nBuffer) + nSendCumSum
+       nSendCumSum = nSendCumSum + Router%nRecv_P(iProcSource)
     end do
 
     ! the correct order is found, apply it
-    Router%BufferTarget_II(:,iOrderSend_I(1:nBufferTarget)) = &
-         Router%BufferTarget_II(:,1:nBufferTarget)
+    Router%BufferTarget_II(:,iOrderSend_I(1:nBuffer)) = &
+         Router%BufferTarget_II(:,1:nBuffer)
+    contains
+      subroutine put_point_to_semirouter
+        integer :: iIndexGet_II(0:Router%nIndexSource,&
+             2**GridDescriptorSource%nDim)              
+        real    :: Weight_I(2**GridDescriptorSource%nDim) 
+        integer :: iImage, nImage, iProcFrom, iProcDoNotAdd
+        integer :: iProcLookUp_I(2**GridDescriptorSource%nDim)             
+        integer :: nProcToGet, iProcToGet
+        integer, parameter:: iPointGlobal_ = 0,  &    
+             iPointInBlock_ = 2, iBlockAll_ = 1  
+        integer :: iAux_I(0:2)!, iAux
+        ! error message containers
+        character(len=200):: &
+             StringErrorFormat, StringErrorMessage
+        !--------------------      
+        if( DoInterpolate)then
+           call interpolate(&
+                nDim           = nDimSource, &
+                Xyz_D          = XyzSource_D, &
+                GridDescriptor = GridDescriptorSource, &
+                nIndex         = nIndexSource, &
+                iIndex_II      = iIndexGet_II, &
+                nImage         = nImage, &
+                Weight_I       = Weight_I)
+        else
+           call nearest_grid_points(&
+                nDim           = nDimSource, &
+                Xyz_D          = XyzSource_D, &
+                GridDescriptor = GridDescriptorSource, &
+                nIndex         = nIndexSource, &
+                iIndex_II      = iIndexGet_II, &
+                nImage         = nImage, &
+                Weight_I       = Weight_I)
+        end if
+        if(nImage < 1)then
+           write(StringErrorFormat,'(a,i3,a)') '(a,',nDimSource,'es15.7)'
+           write(StringErrorMessage,StringErrorFormat)&
+                NameSub//': Interpolation failed at location ', &
+                XyzSource_D
+           call CON_stop(StringErrorMessage)
+        end if
+        
+        ! go over the list of images and process result of interpolation
+        IMAGES1:do iImage = 1, nImage
+           iProcFrom = iIndexGet_II(0, iImage)
+           if(iImage==1)then
+              iProcLookUp_I(1)=iProcFrom
+              nProcToGet=1
+           else
+              if(.not.any(iProcLookUp_I(&
+                   1:nProcToGet)==iProcFrom))then
+                 nProcToGet=nProcToGet+1
+                 iProcLookUp_I(nProcToGet)=iProcFrom
+              else
+                 CYCLE IMAGES1
+              end if
+           end if
+           ! index of current data entry in the buffer
+           Router%nPut_P(iProcFrom)=&
+                Router%nPut_P(iProcFrom) + 1
+           Router%nRecv_P(iProcFrom)=&
+                Router%nRecv_P(iProcFrom) + 1
+           
+           DoCountOnly = DoCountOnly.or.&
+                Router%nPut_P(iProcFrom)>&
+                nPutUbound_P(iProcFrom)  
+        end do IMAGES1
+        if(.not.DoCountOnly)then
+           PROCFROM:do iProcToGet=1,nProcToGet
+              iProcFrom=iProcLookUp_I(iProcToGet)
+              Router%iPut_P(iProcFrom)%&
+                   iCB_II(1:Router%nIndexTarget,&
+                   Router%nPut_P(iProcFrom))&
+                   = iIndexRecv_I(1:Router%nIndexTarget)
+              Router%iPut_P(iProcFrom)%&
+                   iCB_II(0,Router%nPut_P(iProcFrom)) = 1
+              Router%Put_P(iProcFrom)%&
+                   Weight_I(Router%nPut_P(iProcFrom)) = 1.0
+              Router%DoAdd_P(iProcFrom)%&
+                   DoAdd_I(Router%nRecv_P(iProcFrom)) = .true.
+              ! indices of the location where data has to be put
+              ! store processor id for later use
+              nBuffer = nBuffer + 1
+              iProcImage_I(nBuffer) = iProcFrom
+              !\
+              ! index of the image in the buffer FOR CURRENT 
+              !source processor
+              !/
+              iOrderSend_I(nBuffer) = Router%nRecv_P(iProcFrom)
+              
+              ! fill the buffer to be sent
+              ! coordinates on Source
+              Router%BufferTarget_II(&
+                   Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
+                   XyzSource_D
+              if(nAux > 0)then
+                 iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
+                 iAux_I(iPointInBlock_) = iPointInBlock
+                 iAux_I(iBlockAll_    ) = iBlockAll
+                 Router%BufferTarget_II(&
+                      Router%iAuxStart:Router%iAuxEnd,nBuffer) = &
+                      real(iAux_I(1:nAux))
+              end if
+           end do PROCFROM
+           !DoAdd should be set to .false. for the same PE or for
+           !the minimal PE
+           if(any(iProcLookUp_I(1:nProcToGet) == iProc))then
+              iProcDoNotAdd = iProc
+           else
+              iProcDoNotAdd = minval(iProcLookUp_I(1:nProcToGet))
+           end if
+           Router%DoAdd_P(iProcDoNotAdd)%&
+                DoAdd_I(Router%nRecv_P(iProcDoNotAdd)) = .false. 
+        end if
+      end subroutine put_point_to_semirouter
   end subroutine set_semi_router_from_target
   !===============================================
   subroutine synchronize_router_target_to_source(Router)
     type(RouterType),        intent(inout):: Router
 
-    integer:: nRecvCumSum, nRecvCumSumMy, nSendCumSum
+    integer:: nRecvCumSum, nSendCumSum, iBuffer
 
     ! MPI-related variables
     integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
@@ -1931,8 +1966,10 @@ contains
        call check_size(2, (/Router%nVar, Router%nBufferSource/),&
             PBuffer_II=Router%BufferSource_II)
        Router%BufferSource_II = 0
-
-       nRecvCumSum = 0
+       !\
+       ! Copy for the data exchange on the same PE
+       !/
+       nRecvCumSum = Router%nSend_P(iProc)
        do iProcFrom =  i_proc0(Router%iCompTarget), i_proc_last(Router%iCompTarget),&
             i_proc_stride(Router%iCompTarget)
           if(Router%nSend_P(iProcFrom) == 0)&
@@ -1940,15 +1977,12 @@ contains
           !\
           ! Do not wait for the message from self
           !/
-          if(iProc==iProcFrom)then
-             nRecvCumSumMy = nRecvCumSum
-          else
-             nRequestR = nRequestR + 1
-             call MPI_Irecv(Router%BufferSource_II(1:Router%nVar,&
-                  1+nRecvCumSum:Router%nSend_P(iProcFrom)+nRecvCumSum), &
-                  Router%nSend_P(iProcFrom)*Router%nVar, MPI_REAL,&
-                  iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
-          end if
+          if(iProc==iProcFrom)CYCLE
+          nRequestR = nRequestR + 1
+          call MPI_Irecv(Router%BufferSource_II(1:Router%nVar,&
+               1+nRecvCumSum:Router%nSend_P(iProcFrom)+nRecvCumSum), &
+               Router%nSend_P(iProcFrom)*Router%nVar, MPI_REAL,&
+               iProcFrom, iTag, Router%iComm, iRequestR_I(nRequestR), iError)
           nRecvCumSum = nRecvCumSum + Router%nSend_P(iProcFrom)
        end do
     end if
@@ -1956,21 +1990,22 @@ contains
     ! post sends
     nRequestS = 0
     if(is_proc(Router%iCompTarget))then
-       nSendCumSum = 0
+       !\
+       ! Copy for the data exchange on the same PE
+       !/
+       Router%BufferSource_II(:,1:Router%nSend_P(iProc)) = &
+                  Router%BufferTarget_II(:,1:Router%nRecv_P(iProc))
+       nSendCumSum = Router % nRecv_P(iProc)
        do iProcTo =  i_proc0(Router%iCompSource), i_proc_last(Router%iCompSource), &
             i_proc_stride(Router%iCompSource)
           if(Router % nRecv_P(iProcTo) == 0)&
                CYCLE
-          if(iProcTo==iProc)then
-             Router%BufferSource_II(:,1+nRecvCumSumMy:nRecvCumSumMy+Router%nSend_P(iProc)) = &
-                  Router%BufferTarget_II(:,1+nSendCumSum:nSendCumSum+Router%nRecv_P(iProcTo))
-          else
-             nRequestS = nRequestS + 1
-             call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
-                  1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
-                  Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
-                  iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
-          end if
+          if(iProcTo==iProc)CYCLE
+          nRequestS = nRequestS + 1
+          call MPI_Isend(Router%BufferTarget_II(1:Router%nVar,&
+               1+nSendCumSum:Router%nRecv_P(iProcTo)+nSendCumSum), &
+               Router%nRecv_P(iProcTo)*Router%nVar, MPI_REAL,&
+               iProcTo, iTag, Router%iComm, iRequestS_I(nRequestS), iError)
           nSendCumSum = nSendCumSum + Router%nRecv_P(iProcTo)
        end do
     end if
