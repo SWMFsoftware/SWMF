@@ -109,7 +109,7 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModLinearSolver,  ONLY: &
          BlockJacobi_, GaussSeidel_, Bilu_
-
+    use ModAdvance,       ONLY: UseEfield
 
     character(len=*), intent(in) :: NameCommand
 
@@ -154,6 +154,8 @@ contains
     case('#IMPLSCHEME', '#IMPLICITSCHEME')
        call read_var('nOrderImpl', nOrderImpl)
        call read_var('TypeFluxImpl', FluxTypeImpl, IsUpperCase=.true.)
+       ! For 5-moment equation all schemes are equivalent with Rusanov
+       if(UseEField) FluxTypeImpl = 'RUSANOV'
 
     case('#IMPLSTEP', '#IMPLICITSTEP')
        call read_var('ImplCoeff ', ImplCoeff0)

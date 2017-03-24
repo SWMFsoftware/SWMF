@@ -567,7 +567,7 @@ subroutine MH_set_parameters(TypeAction)
           "#IMPLENERGY", "#IMPLICITENERGY", &
           "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
           "#KRYLOV", "#KRYLOVSIZE")
-        call read_part_impl_param(NameCommand)           
+        call read_part_impl_param(NameCommand)
 
      case("#SEMIIMPL", "#SEMIIMPLICIT", &
           "#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF", &
@@ -1190,6 +1190,9 @@ subroutine MH_set_parameters(TypeAction)
         UseHalfStep = nStage <= 2
 
         call read_var('TypeFlux',FluxType, IsUpperCase=.true.)
+        ! For 5-moment equation all schemes are equivalent with Rusanov
+        if(UseEfield) FluxType = 'RUSANOV'
+
         BetaLimiter = 1.0
         if(nOrder > 1 .and. FluxType /= "SIMPLE")then
            call read_var('TypeLimiter', TypeLimiter)
