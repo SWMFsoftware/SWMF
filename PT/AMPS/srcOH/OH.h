@@ -35,7 +35,23 @@ namespace OH {
   extern double DomainXMax[3];
   extern double DomainDXMin;
   extern double DomainDXMax;
-  
+
+  // creating a variable that holds location designator of where it was created
+  extern long int OffsetOriginTag;
+
+  // gets origin tag from each particle for output
+  inline int GetOriginTag(PIC::ParticleBuffer::byte* ParticleData){
+    return *((int*) (ParticleData + OffsetOriginTag));
+  }
+
+  // setting the origin tag for each particle
+  // iRegion is the variable that holds the integer for each population
+  inline void SetOriginTag(int iRegion, PIC::ParticleBuffer::byte* ParticleData){
+    *((int*) (ParticleData + OffsetOriginTag)) = iRegion;
+  }
+
+  // determines what the origin tag for each particle should be based on loacl plasma parameters where it was created
+  int GetEnaOrigin(double PlasmaNumberDensity, double PlasmaPressure, double *PlasmaBulkVelocity);
 
   void Init_BeforeParser();
   
