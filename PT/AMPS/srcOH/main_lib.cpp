@@ -42,11 +42,29 @@ double localResolution(double *x) {
 //set up the local time step
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
-  double CharacteristicSpeed=5.0E4;
+  double CharacteristicSpeed;
 
   if (PIC::ParticleWeightTimeStep::GlobalTimeStep) 
     if(PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] > 0.0)
       return PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+
+  switch (spec) {
+  case _H_SPEC_: 
+    if (PIC::nTotalSpecies == 1) CharacteristicSpeed=50.0E3;
+    else CharacteristicSpeed=25.0E3;
+    break;
+  case _H_ENA_V1_SPEC_:
+    CharacteristicSpeed=75.0E3;
+    break;
+  case _H_ENA_V2_SPEC_:
+    CharacteristicSpeed=250.0E3;
+    break;
+  case _H_ENA_V3_SPEC_:
+    CharacteristicSpeed=650.0E3;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the species is unknown");
+  }
 
   CellSize=startNode->GetCharacteristicCellSize();
   return 0.3*CellSize/CharacteristicSpeed;
@@ -132,6 +150,12 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 	   PIC::ParticleBuffer::SetV(v,newParticleData);
 	   PIC::ParticleBuffer::SetI(spec,newParticleData);
 	   PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+
+	   // tagging the particle to the right population that it was created
+	   double InjectionPressure = 0.0;
+	   InjectionPressure = 2.0*OH::InjectionNDensity*Kbol*OH::InjectionTemperature;
+
+	   OH::SetOriginTag(OH::GetEnaOrigin(OH::InjectionNDensity,InjectionPressure,OH::InjectionVelocity), newParticleData);
 
 	   //inject the particle into the system
 	   _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
@@ -284,8 +308,17 @@ void amps_init() {
    //set up the particle weight
    PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H_SPEC_);
-   
-   
+   //setting the stat weight of the charge-exchange species such that wieght/dt is const.
+   if (_H_ENA_V1_SPEC_>=0) {
+     PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(_H_ENA_V1_SPEC_,PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H_SPEC_]*PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_ENA_V1_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_SPEC_]);
+   }   
+   if (_H_ENA_V2_SPEC_>=0) {
+     PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(_H_ENA_V2_SPEC_,PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H_SPEC_]*PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_ENA_V2_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_SPEC_]);
+   }   
+   if (_H_ENA_V3_SPEC_>=0) {
+     PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(_H_ENA_V3_SPEC_,PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H_SPEC_]*PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_ENA_V3_SPEC_]/PIC::ParticleWeightTimeStep::GlobalTimeStep[_H_SPEC_]);
+   }   
+
    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
    if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
    
