@@ -9,8 +9,8 @@ double ChargeExchange::LindsayStebbings::LifeTime(int      spec,
   // for notation see Lindsay & Stebbings, JGR, vol. 110, A12213, 2005
   double a1 = 4.15, a2 = 0.531, a3 = 67.3, v, v2, energy, omega=0.0, sigma;
 
-  // this model is for atomic hydrogen only
-  if(spec != _H_SPEC_) return 1E+100;
+  // this model is for atomic hydrogen and three charge exchange species only
+  if(spec != _H_SPEC_ && spec != _H_ENA_V1_SPEC_ && spec != _H_ENA_V2_SPEC_ && spec != _H_ENA_V3_SPEC_) return 1E+100;
  
   for(int idim = 0; idim < 3; idim++ )
     v2 += pow(vParticle[idim]-vPlasma[idim], 2.0);
