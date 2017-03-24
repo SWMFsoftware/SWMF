@@ -94,8 +94,17 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
 
       if (SourceRate<ThrehondSourceRate) {
-        productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-        SourceRate=ThrehondSourceRate;
+        switch (spec) {
+        case _H2O_SPEC_:
+          productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+          SourceRate=ThrehondSourceRate;
+          break;
+        default:
+          if (0.98*productionDistributionNASTRAN[_H2O_SPEC_][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea<ThrehondSourceRate) {
+            productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
+            SourceRate=ThrehondSourceRate;
+          }
+        }
       }
 
       cosSubSolarAngle=Vector3D::DotProduct(CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,positionSun)/Vector3D::Length(positionSun);
