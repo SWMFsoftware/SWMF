@@ -17,7 +17,8 @@ double OH::DomainXMax[3] = { 2.25E14, 2.25E14, 2.25E14};
 double OH::DomainDXMin   = 1.8E13;
 double OH::DomainDXMax   = 1.8E13;
 
-
+// Declaring origin offset variable
+long int OH::OffsetOriginTag = -1;
 
 // OUTPUT ---------------------------------------------------------------------
 int OH::Output::TotalDataLength = 0; 
@@ -157,10 +158,11 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
   PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
   PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
 
+  // change this to false to turn off charge-exchange
   PhotolyticReactionAllowedFlag=true;
 
-  // the model has hydrogen only
-  if (spec!=_H_SPEC_) {
+  // this model has hydrogen and three charge-exchange species only
+  if (spec!=_H_SPEC_ && spec != _H_ENA_V1_SPEC_ && spec != _H_ENA_V2_SPEC_ && spec != _H_ENA_V3_SPEC_) {
     PhotolyticReactionAllowedFlag=false;
     return -1.0;
   }
@@ -173,8 +175,17 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
   case _H_SPEC_:
     lifetime= ChargeExchange::LifeTime(_H_SPEC_, v, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
     break;
+  case _H_ENA_V1_SPEC_:
+    lifetime= ChargeExchange::LifeTime(_H_ENA_V1_SPEC_, v, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
+    break;
+  case _H_ENA_V2_SPEC_:
+    lifetime= ChargeExchange::LifeTime(_H_ENA_V2_SPEC_, v, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
+    break;
+  case _H_ENA_V3_SPEC_:
+    lifetime= ChargeExchange::LifeTime(_H_ENA_V3_SPEC_, v, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
+    break;
   default:
-    exit(__LINE__,__FILE__,"Error: unknown specie");
+    exit(__LINE__,__FILE__,"Error: unknown species");
   }
 
   return lifetime;
@@ -240,42 +251,57 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
     double PlasmaBulkVelocity[3];
     double PlasmaNumberDensity, PlasmaPressure, PlasmaTemperature;
     double vp[3];
-    {
-      PIC::CPLR::InitInterpolationStencil(xParent,node);
-      PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
-      PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
-      PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
-      PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
+    
+    PIC::CPLR::InitInterpolationStencil(xParent,node);
+    PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+    PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+    PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
+    PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
+    
+    // calculating the random velocity of the proton from the maxwellian velocity of the local plasma
+    PIC::Distribution::MaxwellianVelocityDistribution(vp,PlasmaBulkVelocity,PlasmaTemperature,spec);
 
-      // calculating the random velocity of the proton from the maxwellian velocity of the local plasma
-      PIC::Distribution::MaxwellianVelocityDistribution(vp,PlasmaBulkVelocity,PlasmaTemperature,spec);
+    // charge exchange process transfers momentum and energy to plasma
+    PIC::Mesh::cDataCenterNode *CenterNode;
+    char *offset;
 
-      // charge exchange process transfers momentum and energy to plasma
-      PIC::Mesh::cDataCenterNode *CenterNode;
-      char *offset;
+    CenterNode=PIC::Mesh::Search::FindCell(xParent); ///node->block->GetCenterNode(nd);
+    offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
+    double vh2 = 0.0, vp2 = 0.0;
+    double c = ParentParticleWeight
+      / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
+      / CenterNode->Measure;
+    *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0;
 
-      CenterNode=PIC::Mesh::Search::FindCell(xParent); ///node->block->GetCenterNode(nd);
-      offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
-      double vh2 = 0.0, vp2 = 0.0;
-      double c = ParentParticleWeight
-                     / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
-                     / CenterNode->Measure;
-      *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0;
-
-      for(int idim=0; idim<3; idim++){
-        *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) +=
-	  c*_MASS_(_H_)*(vParent[idim]-vp[idim]);
-        vh2      +=vParent[idim]*vParent[idim];
-        vp2+=vp[idim]*vp[idim];
-      }
-      *((double*)(offset+OH::Output::ohSourceEnergyOffset)) +=
-        c*0.5*_MASS_(_H_)*(vh2-vp2);
+    for(int idim=0; idim<3; idim++){
+      *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) +=
+	c*_MASS_(_H_)*(vParent[idim]-vp[idim]);
+      vh2      +=vParent[idim]*vParent[idim];
+      vp2+=vp[idim]*vp[idim];
     }
+    *((double*)(offset+OH::Output::ohSourceEnergyOffset)) +=
+      c*0.5*_MASS_(_H_)*(vh2-vp2);
+   
     // creating new neutral particle with the velocity of the selected proton
-    PIC::ParticleBuffer::SetV(vp,(PIC::ParticleBuffer::byte*)ParticleData);
+    PIC::ParticleBuffer::SetV(vp,ParticleData);
+    // adding neutral to correct species depending on its velocity
+    if (_H_ENA_V3_SPEC_ >= 0 && sqrt(vp2) >= 500.0E3) {
+      PIC::ParticleBuffer::SetI(_H_ENA_V3_SPEC_,ParticleData);
+    }
+    else if (_H_ENA_V2_SPEC_ >=0 && sqrt(vp2)>=150.0E3 && sqrt(vp2)<500.0E3) {
+      PIC::ParticleBuffer::SetI(_H_ENA_V2_SPEC_,ParticleData);
+    }
+    else if (_H_ENA_V1_SPEC_ >=0 && sqrt(vp2)>=50.0E3 && sqrt(vp2)<150.0E3) {
+      PIC::ParticleBuffer::SetI(_H_ENA_V1_SPEC_,ParticleData);
+    }
+    else {
+      PIC::ParticleBuffer::SetI(_H_SPEC_,ParticleData);
+    }
+    // tagging the particle to the right population that it was created
+    OH::SetOriginTag(OH::GetEnaOrigin(PlasmaNumberDensity,PlasmaPressure,PlasmaBulkVelocity), ParticleData);
   }
 
-  //add the particle to the list of the particles exisoting in the system after reaction
+  //add the particle to the list of the particles existing in the system after reaction
   PIC::ParticleBuffer::SetNext(FirstParticleCell,ptr);
   PIC::ParticleBuffer::SetPrev(-1,ptr);
 
@@ -286,6 +312,7 @@ void OH::Loss::ReactionProcessor(long int ptr,long int& FirstParticleCell,cTreeN
 
 void OH::Init_BeforeParser(){
   Exosphere::Init_BeforeParser();
+  PIC::ParticleBuffer::RequestDataStorage(OH::OffsetOriginTag, sizeof(int));
   OH::Output::Init();
 
   //set the coupling procedure
@@ -369,4 +396,41 @@ double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_
 
 
   return 100.0;
+}
+
+int OH::GetEnaOrigin(double PlasmaNumberDensity, double PlasmaPressure, double *PlasmaBulkVelocity){
+  // determines which population the ENA should be added to based on where in the heliosphere it was created
+  // 0 = SSSW
+  // 1 = inner heliosheath
+  // 2 = disturbed ISM / Outer heliosheath
+  // 3 = Prisine ISM
+
+  double mach=0.0;
+  double PlasmaBulkSpeed=0.0,PlasmaBulkSpeed2=0.0;
+  double PlasmaTemperature=0.0;
+
+  PlasmaTemperature   = PlasmaPressure / (2*Kbol * PlasmaNumberDensity);
+
+  for(int idim=0; idim<3; idim++) PlasmaBulkSpeed2 += PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
+  PlasmaBulkSpeed = sqrt(PlasmaBulkSpeed2);
+
+  mach=PlasmaBulkSpeed*sqrt(3.0*PlasmaNumberDensity*_MASS_(_H_)/(5.0*PlasmaPressure));
+
+  // adding neutral to correct population where it underwent charge exchange
+  if (mach >= 1.0 && PlasmaBulkSpeed < 100.0E3) {
+    // particle is in the pristine ISM - population 4
+    return 3;
+  }
+  else if (mach < 1.0 && PlasmaTemperature < 3.28E5 && PlasmaBulkSpeed < 100.0E3) {
+    // particle is in the disturbed ISM / Outer heliosheath - population 3
+    return 2;
+  }
+  else if (mach < 1.0 && PlasmaTemperature >= 3.28E5) {
+    // particle is in the HS / inner heliosheath - population 2
+    return 1;
+  }
+  else {
+    // particle is in the super sonic SW - population 1
+    return 0;
+  }
 }
