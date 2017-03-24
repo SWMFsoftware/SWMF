@@ -21,6 +21,7 @@ extern double HeliocentricDistance,subSolarPointAzimuth,subSolarPointZenith;
 extern bool *definedFluxBjorn;
 extern double positionSun[3];
 extern double **productionDistributionNASTRAN;
+extern bool *probabilityFunctionDefinedNASTRAN;
 
 void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
@@ -376,7 +377,8 @@ void RosinaSample::Liouville::Evaluate() {
     PIC::RayTracing::SetCutCellShadowAttribute(positionSun,false);
 
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-      definedFluxBjorn[spec]=false;
+      definedFluxBjorn[spec]=false,probabilityFunctionDefinedNASTRAN[spec]=false;
+
       Comet::GetTotalProductionRateBjornNASTRAN(spec);
     }
 
