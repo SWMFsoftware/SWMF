@@ -1791,6 +1791,7 @@ contains
         integer :: iIndexGet_II(0:Router%nIndexSource,&
              2**GridDescriptorSource%nDim)              
         real    :: Weight_I(2**GridDescriptorSource%nDim) 
+        real    :: XyzPass_D(GridDescriptorSource%nDim) 
         integer :: iImage, nImage, iProcFrom, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridDescriptorSource%nDim)             
         integer :: nProcToGet, iProcToGet
@@ -1801,10 +1802,11 @@ contains
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
         !--------------------      
+        XyzPass_D = XyzSource_D
         if( DoInterpolate)then
            call interpolate(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzSource_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -1813,7 +1815,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzSource_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -2140,15 +2142,17 @@ contains
              0:GridDescriptorSource%nDim+1, &
              2**GridDescriptorSource%nDim)
         real :: XyzSource_D(GridDescriptorSource%nDim)
+        real :: XyzPass_D(GridDescriptorSource%nDim) 
         real :: Weight_I(2**GridDescriptorSource%nDim)
         integer:: iImage, nImage, nImagePart
         !-----------------------------
         XyzSource_D = Router%BufferSource_II(&
              Router%iCoordStart:Router%iCoordEnd, iBuffer)
+        XyzPass_D = XyzSource_D
         if( DoInterpolate)then
            call interpolate(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzSource_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -2157,7 +2161,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzSource_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -2511,6 +2515,7 @@ contains
         integer :: iIndexPut_II(0:Router%nIndexTarget,&
              2**GridDescriptorTarget%nDim)              
         real    :: Weight_I(2**GridDescriptorTarget%nDim) 
+        real    :: XyzPass_D(GridDescriptorTarget%nDim) 
         integer :: iImage, nImage, iProcTo, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridDescriptorTarget%nDim)             
         integer :: nProcToPut, iProcToPut
@@ -2521,10 +2526,11 @@ contains
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
         !--------------------      
+        XyzPass_D = XyzTarget_D
         if( DoInterpolate)then
            call interpolate(&
                 nDim           = nDimTarget, &
-                Xyz_D          = XyzTarget_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorTarget, &
                 nIndex         = nIndexTarget, &
                 iIndex_II      = iIndexPut_II, &
@@ -2533,7 +2539,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimTarget, &
-                Xyz_D          = XyzTarget_D, &
+                Xyz_D          = XyzPass_D, &
                 GridDescriptor = GridDescriptorTarget, &
                 nIndex         = nIndexTarget, &
                 iIndex_II      = iIndexPut_II, &
@@ -3193,6 +3199,7 @@ contains
          2**GridDescriptorTarget%nDim)
     real :: XyzTarget_D(GridDescriptorTarget%nDim)
     real :: Weight_I(2**GridDescriptorTarget%nDim)
+    real   :: XyzPass_D(GridDescriptorTarget%nDim) 
     integer:: iImage, nImage, nImageMax, nImagePart
     integer:: nAux, nDimTarget, nIndexTarget
     
@@ -3240,9 +3247,10 @@ contains
             nRecvCumSum + Router%nRecv_P(iProcFrom)
           XyzTarget_D = Router%BufferTarget_II(&
                Router%iCoordStart:Router%iCoordEnd, iBuffer)
+          XyzPass_D = XyzTarget_D
           call interpolate(&
                nDimTarget,&
-               XyzTarget_D,&
+               XyzPass_D,&
                GridDescriptorTarget,&
                nIndexTarget,&
                iIndexPut_II,&
