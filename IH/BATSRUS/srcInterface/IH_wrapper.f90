@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
-  use IH_ModParticleFieldLine, ONLY: IH_n_particle=>n_particle_reg
+  use IH_ModParticleFieldLine, ONLY: IH_n_particle=>n_particle_reg_max
   use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
 
@@ -44,7 +44,9 @@ module IH_wrapper
   public:: IH_extract_line
   public:: IH_add_to_line
   public:: IH_get_scatter_line
+  public:: IH_get_particle_indexes
   public:: IH_get_a_line_point
+  public:: IH_line_interface_point
 
   ! Coupling with GM
   public:: IH_get_for_gm
@@ -473,7 +475,7 @@ contains
        call init_decomposition_dd(&
        MH_LineDecomposition, IH_, nDim=1)
        if(is_proc0(IH_))then
-          nParticle = n_particle_reg()
+          nParticle = n_particle_reg_max()
           call get_root_decomposition_dd(&
                MH_LineDecomposition, &
                (/n_proc(IH_)/),      &
@@ -1361,13 +1363,32 @@ contains
     call add_to_particle_line(nParticle, Xyz_DI, iIndex_II, &
              UseInputInGenCoord)
   end subroutine IH_add_to_line
-  
+
+  !==================================================================!
+  subroutine IH_line_interface_point(&
+       GridDescriptor,&
+       lGlobalTreeNode,&
+       nDim, Xyz_D, nIndex, iIndex_I,&
+       IsInterfacePoint)
+    use CON_router, ONLY: GridDescriptorType
+    use IH_ModParticleFieldLine, ONLY: n_particle_reg, n_particle_reg_max
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)    :: lGlobalTreeNode,nIndex
+    logical,intent(out)   :: IsInterfacePoint
+    integer,intent(in)    :: nDim
+    real,   intent(inout) :: Xyz_D(nDim)
+    integer,intent(inout) :: iIndex_I(nIndex)
+    !----------------------------------------------------------
+    IsInterfacePoint = iIndex_I(1) <= n_particle_reg()
+    Xyz_D(1) = mod(Xyz_D(1), real(n_particle_reg_max()))
+  end subroutine IH_line_interface_point
+
   !============================================================================
 
   subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
     use IH_BATL_lib, ONLY: nDim, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data, apply_soft_boundary
+         get_particle_data, apply_soft_boundary, n_particle_reg
     integer,              intent(out):: nParticle
     real,    allocatable, intent(out):: Coord_DI(:,:)
     integer, allocatable, intent(out):: iIndex_II(:,:)
@@ -1377,7 +1398,6 @@ contains
     integer:: iParticle
     real, allocatable:: Buff_II(:,:)
     real:: Coord_D(nDim)
-    integer, parameter:: nCoord = 5
     character(len=*), parameter:: NameSub='IH_get_scatter_line'
     !--------------------------------------------------------------------------
     
@@ -1385,8 +1405,10 @@ contains
     if(allocated(iAux_II)) deallocate(iAux_II)
     
     if(allocated(Buff_II)) deallocate(Buff_II)
+    nParticle = n_particle_reg()
+    allocate(Buff_II(5,nParticle))
     ! Buff_II is allocated inside the next call
-    call get_particle_data(nCoord, 'xx yy zz fl id', Buff_II, nParticle)
+    call get_particle_data(5, 'xx yy zz fl id', Buff_II)!, nParticle)
     
     
     ! remove particles that have crossed the boundary between components
@@ -1411,6 +1433,22 @@ contains
        Coord_DI(1:nDim, iParticle) = Coord_D
     end do
   end subroutine IH_get_scatter_line
+
+  !============================================================================
+
+  subroutine IH_get_particle_indexes(iParticle, iIndex_I)
+    use IH_BATL_lib, ONLY: nDim, xyz_to_coord
+    use IH_ModParticleFieldLine, ONLY: &
+         get_particle_data, apply_soft_boundary, n_particle_reg
+    integer, intent(in) :: iParticle
+    integer, intent(out):: iIndex_I(2)
+
+    real:: Buff_I(2)
+    character(len=*), parameter:: NameSub='IH_get_particle_indexes'
+    !--------------------------------------------------------------------------
+    call get_particle_data(2, 'fl id', Buff_I, iParticle)
+    iIndex_I = nint(Buff_I)
+  end subroutine IH_get_particle_indexes
 
   !============================================================================
 

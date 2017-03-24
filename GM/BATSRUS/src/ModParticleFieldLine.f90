@@ -35,7 +35,16 @@ module ModParticleFieldLine
   public:: get_particle_data
   public:: set_soft_boundary
   public:: apply_soft_boundary
+  public:: n_particle_reg_max
   public:: n_particle_reg
+
+
+  interface get_particle_data
+     module procedure get_particle_data_all
+     module procedure get_particle_data_i_particle
+  end interface
+
+  
 
   ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
@@ -63,6 +72,15 @@ module ModParticleFieldLine
        ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
        ! when magnetic field general direction may be inward
        Alignment_ = 3
+
+  ! data that can be requested and returned to outside this module
+  ! ORDER MUST CORRESPOND TO INDICES ABOVE
+  integer, parameter:: nVarAvail = 3, nIndexAvail = 2
+  character(len=2), parameter:: NameVarAvail_V(nVarAvail) = &
+       (/'xx', 'yy', 'zz'/)
+  character(len=2), parameter:: NameIndexAvail_I(0:nIndexAvail) = &
+       (/'bk','fl', 'id'/)
+
 
   ! spatial step limits at the field line extraction
   real   :: SpaceStepMin = 0.0
@@ -101,9 +119,14 @@ module ModParticleFieldLine
   real, allocatable:: XyzLineInit_DI(:,:)
 
 contains
+  integer function n_particle_reg_max()
+    n_particle_reg_max = Particle_I(KindReg_)%nParticleMax
+  end function n_particle_reg_max
+  !==========================================================================
   integer function n_particle_reg()
-    n_particle_reg = Particle_I(KindReg_)%nParticleMax
+    n_particle_reg = Particle_I(KindReg_)%nParticle
   end function n_particle_reg
+  !==========================================================================
   subroutine read_particle_line_param(NameCommand)
 
     use ModMain,      ONLY: UseParticles
@@ -883,14 +906,52 @@ contains
   end subroutine check_soft_boundary
 
   !========================================================================
+  
+  subroutine process_request(StringRequest, &
+       nVarReturn, DoReturnVar_V, nIndexReturn, DoReturnIndex_I, iOrder_I)
+    ! finds if variable Name is requested via StringRequest,
+    ! this function is called in get_particle_data to identify the variable
+    ! being requested from outside this module;
+    ! the function also returns the position iPos of Name in StringRequest
+    character(len=*),intent(in)  :: StringRequest
+    integer,         intent(out) :: nVarReturn
+    logical,         intent(out) :: DoReturnVar_V(nVarAvail)
+    integer,         intent(out) :: nIndexReturn
+    logical,         intent(out) :: DoReturnIndex_I(0:nIndexAvail)
+    integer,         intent(out) :: iOrder_I(nVarAvail+nIndexAvail+1)
 
-  subroutine get_particle_data(nData, NameVar, DataOut_VI, nParticle)
+    logical:: IsRequested
+    integer:: iPos, iVar
+    !--------------------------------------------------------------------
+    do iVar = 1, nVarAvail
+       iPos = index(StringRequest, NameVarAvail_V(iVar))
+       DoReturnVar_V(iVar) = iPos > 0
+       iOrder_I(iVar) = iPos
+    end do
+    nVarReturn = count(DoReturnVar_V)
+    do iVar = 0, nIndexAvail
+       iPos = index(StringRequest, NameIndexAvail_I(iVar))
+       DoReturnIndex_I(iVar) = iPos > 0
+       iOrder_I(nVarAvail + iVar + 1) = iPos
+    end do
+    nIndexReturn = count(DoReturnIndex_I)
+
+    do iVar = 1, nVarReturn+nIndexReturn
+       iPos = minloc(iOrder_I, 1, MASK = iOrder_I >= iVar)
+       iOrder_I(iPos) = iVar
+    end do
+  end subroutine process_request
+  
+  !========================================================================
+
+  subroutine get_particle_data_all(nData, NameVar, DataOut_VI)
     ! the subroutine gets variables specified in the string StringVar
-    ! and writes them into DataOut_VI
-    integer,            intent(in) :: nData
-    character(len=*),   intent(in) :: NameVar
-    real, allocatable,  intent(out):: DataOut_VI(:,:)
-    integer,            intent(out):: nParticle
+    ! and writes them into DataOut_VI;
+    ! data is for all particles otherwise
+    ! NOTE: function n_particle_reg can be used to find size beforehand
+    integer, intent(in) :: nData
+    real,    intent(out):: DataOut_VI(nData,Particle_I(KindReg_)%nParticle)
+    character(len=*),intent(in) :: NameVar
 
     ! mask for returning variables
     logical:: DoReturnVar_V(nVarParticleReg)
@@ -898,19 +959,12 @@ contains
     ! number of variables/indices found in the request string
     integer:: nVarOut, nIndexOut
     ! loop variables
-    integer:: iParticle, iData
+    integer:: iParticle
     ! permutation of between data order of the request and order in which
     ! data are checked to be present in the request
-    integer:: iDataPermutation_I(nData)
+    integer:: iOrder_I(nVarAvail+nIndexAvail+1)
 
-    ! data that can be return
-    integer, parameter:: nVarAvail = 3, nIndexAvail = 2
-    character(len=2), parameter:: NameVarAvail_V(nVarAvail) = &
-         (/'xx', 'yy', 'zz'/)
-    character(len=2), parameter:: NameIndexAvail_I(nIndexAvail) = &
-         (/'fl', 'id'/)
-
-    character(len=*), parameter:: NameSub = 'get_particle_data'
+    character(len=*), parameter:: NameSub = 'get_particle_data_all'
     !----------------------------------------------------------------------
     !\
     ! first, determine which data are requested
@@ -918,17 +972,8 @@ contains
     DoReturnVar_V   = .false.
     DoReturnIndex_I = .false.
     ! determine which variables are requested
-    nVarOut = 0
-    do iData = 1, nVarAvail
-       DoReturnVar_V(iData)   = is_var(NameVarAvail_V(iData))
-    end do
-    nVarOut = count(DoReturnVar_V)
-    ! determine which indices are requested
-    nIndexOut = 0
-    do iData = 1, nIndexAvail
-       DoReturnIndex_I(iData) = is_var(NameIndexAvail_I(iData))
-    end do
-    nIndexOut = count(DoReturnIndex_I)
+    call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
+         nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
     ! check that number of data found is the same as requested
     if(nData /= nVarOut + nIndexOut)&
          call CON_stop(NameSub//': incorrect number of data is requested')
@@ -936,10 +981,7 @@ contains
     !\
     ! return data
     !/
-    if(allocated(DataOut_VI)) deallocate(DataOut_VI)
-    nParticle = Particle_I(KindReg_)%nParticle
-    allocate( DataOut_VI(nData, nParticle) )
-    do iParticle = 1, nParticle
+    do iParticle = 1, Particle_I(KindReg_)%nParticle
        ! store variables
        DataOut_VI(1:nVarOut,      iParticle) = PACK(&
             Particle_I(KindReg_)%State_VI( :,iParticle),&
@@ -950,26 +992,56 @@ contains
             MASK = DoReturnIndex_I)
     end do
     ! permute data order so it corresponds to the order of the request
-    DataOut_VI(:, :) = DataOut_VI(iDataPermutation_I, :)
+    DataOut_VI( pack(iOrder_I,iOrder_I>0), :) = DataOut_VI(:, :)
+  end subroutine get_particle_data_all
 
-  contains
+  !========================================================================
 
-    function is_var(Name) result(IsPresent)
-      ! finds if datum Name is present
-      character(len=*), intent(in):: Name
-      logical:: IsPresent
-      integer:: i
-      !--------------------------------------------------------------------
-      i = index(NameVar, Name)
-      if(i==0)then
-         IsPresent = .false.
-         RETURN
-      end if
-      IsPresent = .true.
-      ! save datum's order in the original request
-      iDataPermutation_I(i/3 + 1) = nVarOut + iData
-    end function is_var
+  subroutine get_particle_data_i_particle(nData, NameVar, DataOut_V, iParticle)
+    ! the subroutine gets variables specified in the string StringVar
+    ! and writes them into DataOut_V;
+    ! data is for a single particle specified as iParticle
+    integer, intent(in) :: nData
+    integer, intent(in) :: iParticle
+    real,    intent(out):: DataOut_V(nData)
+    character(len=*),intent(in) :: NameVar
 
-  end subroutine get_particle_data
+    ! mask for returning variables
+    logical:: DoReturnVar_V(nVarParticleReg)
+    logical:: DoReturnIndex_I(0:nIndexParticleReg)
+    ! number of variables/indices found in the request string
+    integer:: nVarOut, nIndexOut
+    ! permutation of between data order of the request and order in which
+    ! data are checked to be present in the request
+    integer:: iOrder_I(nVarAvail+nIndexAvail+1)
+
+    character(len=*), parameter:: NameSub = 'get_particle_data_all'
+    !----------------------------------------------------------------------
+    !\
+    ! first, determine which data are requested
+    !/
+    DoReturnVar_V   = .false.
+    DoReturnIndex_I = .false.
+    ! determine which variables are requested
+    call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
+         nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
+    ! check that number of data found is the same as requested
+    if(nData /= nVarOut + nIndexOut)&
+         call CON_stop(NameSub//': incorrect number of data is requested')
+
+    !\
+    ! return data
+    !/
+    ! store variables
+    DataOut_V(1:nVarOut) = PACK(&
+         Particle_I(KindReg_)%State_VI( :,iParticle),&
+         MASK = DoReturnVar_V)
+    ! store indexes
+    DataOut_V(nVarOut+1:nData) = PACK(&
+         Particle_I(KindReg_)%iIndex_II(:,iParticle),&
+         MASK = DoReturnIndex_I)
+    ! permute data order so it corresponds to the order of the request
+    DataOut_V( pack(iOrder_I,iOrder_I>0)) = DataOut_V(:)
+  end subroutine get_particle_data_i_particle
 
 end module ModParticleFieldLine

@@ -263,6 +263,7 @@ contains
   !===================================================================
 
   subroutine SP_set_grid
+
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
          GridID_ = SP_,&
@@ -273,9 +274,9 @@ contains
     if(is_proc0(SP_))&
          call get_root_decomposition(&
          GridID_       = SP_,&
-         iRootMapDim_D = (/1, nLat, nLon/),&
-         XyzMin_D      = (/real(iParticleMin), LatMin, LonMin/),&
-         XyzMax_D      = (/real(iParticleMax), LatMax, LonMax/),&
+         iRootMapDim_D = (/1, nLon, nLat/),&
+         XyzMin_D      = (/real(iParticleMin)-0.5, LonMin, LatMin/),&
+         XyzMax_D      = (/real(iParticleMax)+0.5, LonMax, LatMax/),&
          nCells_D      = (/nParticle , 1, 1/),&
          PE_I          = iGridGlobal_IA(Proc_,:),&
          iBlock_I      = iGridGlobal_IA(Block_,:))

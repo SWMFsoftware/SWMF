@@ -80,7 +80,9 @@ subroutine write_plot_particle(iFile)
   end if
 
   ! get the data on this processor
-  call get_particle_data(5, 'xx yy zz fl id', PlotVar_VI, nParticle)
+  if(allocated(PlotVar_VI)) deallocate(PlotVar_VI)
+  allocate(PlotVar_VI(5,n_particle_reg()))
+  call get_particle_data(5, 'xx yy zz fl id', PlotVar_VI)
 
   call save_plot_file(&
        NameFile, &

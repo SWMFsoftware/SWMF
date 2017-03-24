@@ -44,6 +44,8 @@ module IH_wrapper
   public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
+  public:: IH_get_particle_indexes
+  public:: IH_line_interface_point
 
   ! Coupling with GM
   public:: IH_get_for_gm
@@ -249,6 +251,31 @@ contains
 
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_for_sp
+  !===================================================================!
+  subroutine IH_line_interface_point(&
+       GridDescriptor,&
+       lGlobalTreeNode,&
+       nDim, Xyz_D, nIndex, iIndex_I,&
+       IsInterfacePoint)
+    use CON_router, ONLY: GridDescriptorType
+    type(GridDescriptorType),intent(in)::GridDescriptor
+    integer,intent(in)    :: lGlobalTreeNode,nIndex
+    logical,intent(out)   :: IsInterfacePoint
+    integer,intent(in)    :: nDim
+    real,   intent(inout) :: Xyz_D(nDim)
+    integer,intent(inout) :: iIndex_I(nIndex)
+    character(len=*), parameter :: NameSub='IH_line_interface_point'
+    !----------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_line_interface_point
+  !===================================================================!
+  subroutine IH_get_particle_indexes(iParticle, iIndex_I)
+    integer, intent(in) :: iParticle
+    integer, intent(out):: iIndex_I(2)
+    character(len=*), parameter:: NameSub='IH_get_particle_indexes'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_particle_indexes
   !===================================================================!
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, &
        nIndex, iIndexOrigin_II, RSoftBoundary, UseInputInGenCoord)

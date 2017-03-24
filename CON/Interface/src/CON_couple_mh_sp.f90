@@ -24,11 +24,14 @@ module CON_couple_mh_sp
   use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
        IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
        IH_get_scatter_line, IH_add_to_line, IH_n_particle,& !^CMP IF IH
-       IH_LineDD                                            !^CMP IF IH
+       IH_LineDD, IH_line_interface_point, &                !^CMP IF IH
+       IH_get_particle_indexes                              !^CMP IF IH
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line, SC_n_particle, SC_LineDD        !^CMP IF SC
+       SC_get_scatter_line, SC_n_particle, SC_LineDD, &     !^CMP IF SC
+       SC_line_interface_point,&                            !^CMP IF SC
+       SC_get_particle_indexes                              !^CMP IF IH
 
   use CON_global_message_pass
   use CON_axes
@@ -232,6 +235,16 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp)
          call synchronize_router_source_to_target(RouterScSp)
+         !+++++++++++++
+!         if(is_proc(SC_))&
+!              call set_semi_router_from_source_new(&
+!              GridDescriptorSource = SC_LineGridDesc, &
+!              GridDescriptorTarget = SP_GridDescriptor, &
+!              Router               = RouterLineScSp, &
+!              interface_point_coords=SC_line_interface_point,&
+!              mapping              = mapping_line_sc_to_sp)
+!         call synchronize_router_source_to_target(RouterLineScSp)
+         !+++++++++++++
          if(is_proc(SP_))then
             call update_semi_router_at_target(&
                  RouterScSp, SP_GridDescriptor,&
@@ -382,6 +395,23 @@ contains
     IsInterfacePoint = .true.
     call mapping(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine mapping_sp_to_ih
+  !==================================================================!
+  subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    integer, intent(in) :: nDimIn
+    real,    intent(in) :: XyzIn_D(nDimIn)
+    integer, intent(in) :: nDimOut
+    real,    intent(out):: CoordOut_D(nDimOut)
+    logical, intent(out):: IsInterfacePoint
+    
+    integer:: iIndex_I(2), iParticle
+    !------------------------------------------
+    IsInterfacePoint = .true.
+    iParticle = nint(XyzIn_D(1))
+    call SC_get_particle_indexes(iParticle, iIndex_I)
+    CoordOut_D = xyz_cell_d(SP_GridDescriptor%DD%Ptr, iIndex_I(1), (/iIndex_I(2),1,1/))
+  end subroutine mapping_line_sc_to_sp
   !==================================================================!
   subroutine mapping_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
