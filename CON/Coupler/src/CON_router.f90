@@ -382,10 +382,10 @@ contains
     if(associated(Router%Get_P(iPE)%Weight_I))&
          deallocate(Router%Get_P(iPE)%Weight_I)
     allocate(Router%iGet_P(iPE)%iCB_II(&
-         0:Router%nIndexSource,nLength),stat=iError)
+         0:Router%nIndexSource,max(1,nLength)),stat=iError)
     call check_allocate(iError,'iGet_P%iCB_II')
     Router%iGet_P(iPE)%iCB_II = 0
-    allocate(Router%Get_P(iPE)%Weight_I(nLength),stat=iError)
+    allocate(Router%Get_P(iPE)%Weight_I(max(1,nLength)),stat=iError)
     call check_allocate(iError,'Get_P%Weight_I')
     Router%Get_P(iPE)%Weight_I = 0.0
   end subroutine allocate_get_arrays
@@ -413,13 +413,13 @@ contains
     if(associated(Router%DoAdd_P(iPE)%DoAdd_I))&
          deallocate(Router%DoAdd_P(iPE)%DoAdd_I)
     allocate(Router%iPut_P(iPE)%iCB_II(&
-         0:Router%nIndexTarget,nLength),stat=iError)
+         0:Router%nIndexTarget,max(1,nLength)),stat=iError)
     call check_allocate(iError,'iPut_P%iCB_II') 
     Router%iPut_P(iPE)%iCB_II = 0
-    allocate(Router%Put_P(iPE)%Weight_I(nLength),stat=iError)
+    allocate(Router%Put_P(iPE)%Weight_I(max(1,nLength)),stat=iError)
     call check_allocate(iError,'Put_P%Weight_I')  
     Router%Put_P(iPE)%Weight_I = 0.0
-    allocate(Router%DoAdd_P(iPE)%DoAdd_I(nLength),stat=iError)
+    allocate(Router%DoAdd_P(iPE)%DoAdd_I(max(1,nLength)),stat=iError)
     call check_allocate(iError,'DoAdd_P%DoAdd_I')
     Router%DoAdd_P(iPE)%DoAdd_I = .false.
   end subroutine allocate_put_arrays
@@ -470,12 +470,12 @@ contains
        if(  Ubound_I(1)/=Router%nVar.or.&
             UBound_I(2) < nlength_buffer_target(Router))&
             call allocate_buffer_target(Router, &
-            nlength_buffer_target(Router))
+            max(Router%nProc,nlength_buffer_target(Router)))
        UBound_I = ubound(Router%BufferSource_II)
        if(  Ubound_I(1)/=Router%nVar.or.&
             UBound_I(2) < nlength_buffer_source(Router))&
             call allocate_buffer_source(Router, &
-            nlength_buffer_source(Router))
+            max(Router%nProc,nlength_buffer_source(Router)))
     end if
   end subroutine check_router_allocation
 !===============================================================!
@@ -2318,8 +2318,6 @@ contains
     if(.not.is_proc(iCompSource))RETURN
     iCompTarget = Router%iCompTarget
 
-
-
     nProc = Router%nProc
     ! determine which optional actions should be taken
     UseMappingFunction = present(mapping)
@@ -2345,7 +2343,7 @@ contains
     ! Temporary: to be removed
     !/
     Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorSource%nDim
+    Router%iCoordEnd = GridDescriptorTarget%nDim
     Router%iAuxStart = Router%iCoordEnd + 1
     Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
     Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
@@ -2360,6 +2358,7 @@ contains
        do iPE = 0, nProc-1
           nGetUbound_P(iPE) = ubound(Router%iGet_P(iPE)%iCB_II,2)
        end do     
+
        ! which processor holds a current image
        call check_size(1, (/Router%nBufferSource/), iBuffer_I = iProc_I)
        ! correct order of images in the send buffer
