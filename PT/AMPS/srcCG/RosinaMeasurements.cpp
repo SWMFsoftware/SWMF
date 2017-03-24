@@ -177,48 +177,8 @@ void RosinaSample::Init(double etMin,double etMax) {
       iFinishTest=iStartTest+nTestThread;
       if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishTest=nTotalTests;
 
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,i) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
-#endif
-      for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
-        //generate a ranfom direction
-        do {
-          Vector3D::Distribution::Uniform(l);
-        }
-        while (Vector3D::DotProduct(l,Rosina[i].NudeGauge.LineOfSight)<0.0);
-
-        //determine whether an intersection with the nucleus is found
-        iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[i].x,l,xIntersection,NULL);
-
-        if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
-      }
-
-      MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-      Rosina[i].NudeGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
-
-      //solid angle occupied by the nucleus by the ram gauge
-      NucleusIntersectionCounter=0;
-
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic) default(none) shared(iStartTest,iFinishTest,Rosina,i) private(iTest,l,xIntersection,iIntersectionFace) reduction(+:NucleusIntersectionCounter)
-#endif
-      for (iTest=iStartTest;iTest<iFinishTest;iTest++) {
-        //generate a ranfom direction
-        do {
-          Vector3D::Distribution::Uniform(l);
-        }
-        while (Vector3D::DotProduct(l,Rosina[i].RamGauge.LineOfSight)<0.0);
-
-        //determine whether an intersection with the nucleus is found
-        iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[i].x,l,xIntersection,NULL);
-
-        if (iIntersectionFace!=-1) NucleusIntersectionCounter++;
-      }
-
-      MPI_Allreduce(&NucleusIntersectionCounter,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-      Rosina[i].RamGauge.NucleusSolidAngle=2.0*Pi*double(t)/double(nTotalTests);
-
-      //estimate distance to the nucleus
+      //get the solid angles, and estimate distance to the nucleus
+      Liouville::GetSolidAngle(Rosina[i].NudeGauge.NucleusSolidAngle,Rosina[i].RamGauge.NucleusSolidAngle,i);
       Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x,Rosina[i].xNucleusClosestPoint,Rosina[i].iNucleusClosestFace);
     }
 
