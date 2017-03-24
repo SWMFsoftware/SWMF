@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=H
+SpeciesList=H !,H_ENA_V1,H_ENA_V2,H_ENA_V3 ! to add multiple species based on ENA velocity to run code faster
 
 
 !settings of the directories
