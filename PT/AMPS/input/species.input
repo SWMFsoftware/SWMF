@@ -142,5 +142,16 @@
   mass=16*_AMU_
   charge=1.0     
 
+#component=H_ENA_V1
+  mass=1.0*_AMU_
+  charge=0.0     
+
+#component=H_ENA_V2
+  mass=1.0*_AMU_
+  charge=0.0
+     
+#component=H_ENA_V3
+  mass=1.0*_AMU_
+  charge=0.0     
 
 #endspecies
