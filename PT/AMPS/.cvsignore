@@ -9,3 +9,5 @@ Makefile.local
 *.input*
 test_*
 run*
+.general.conf
+Makefile.test
