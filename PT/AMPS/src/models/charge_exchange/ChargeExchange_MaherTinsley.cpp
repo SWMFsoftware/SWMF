@@ -8,8 +8,8 @@ double ChargeExchange::MaherTinsley::LifeTime(int      spec,
   // for notation see Heerikhuisen et al., JGR, Vol.111, A06110
   double v_th, v_rel, omega=0.0, sigma;
 
-  // this model is for atomic hydrogen only
-  if(spec != _H_SPEC_) return 1E+100;
+  // this model is for atomic hydrogen and three charge exchange species only
+  if(spec != _H_SPEC_ && spec != _H_ENA_V1_SPEC_ && spec != _H_ENA_V2_SPEC_ && spec != _H_ENA_V3_SPEC_) return 1E+100;
  
   v_th = sqrt(2.0 * Kbol * PlasmaTemperature / _MASS_(_H_));
   for(int idim = 0; idim < 3; idim++ )
