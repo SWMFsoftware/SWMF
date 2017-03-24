@@ -38,7 +38,7 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_mh, SP_put_input_time, &
-       SP_put_line, &
+       SP_put_line, SP_n_particle,        &
        SP_get_grid_descriptor_param, &
        SP_get_solar_corona_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc
@@ -206,6 +206,7 @@ contains
               GridDescriptorSource  = SC_GridDescriptor, &
               GridDescriptorTarget  = SP_GridDescriptor, &
               Router                = RouterScSp, &
+              n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
               mapping               = mapping_sp_to_sc, &
               interpolate           = interpolation_amr_gc)
@@ -265,6 +266,7 @@ contains
               GridDescriptorSource  = IH_GridDescriptor, &
               GridDescriptorTarget  = SP_GridDescriptor, &
               Router                = RouterIHSp, &
+              n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_ih, &
               mapping               = mapping_sp_to_IH, &
               interpolate           = interpolation_amr_gc)
@@ -507,6 +509,7 @@ contains
          GridDescriptorSource  = IH_GridDescriptor, &
          GridDescriptorTarget  = SP_GridDescriptor, &
          Router                = RouterIHSp, &
+         n_interface_point_in_block = SP_n_particle,&
          interface_point_coords= SP_interface_point_coords_for_ih, &
          mapping               = mapping_sp_to_IH, &
          interpolate           = interpolation_amr_gc)

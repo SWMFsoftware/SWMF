@@ -51,6 +51,7 @@ module SP_wrapper
   public:: SP_get_grid_descriptor_param
   public:: SP_get_solar_corona_boundary
   public:: SP_put_r_min
+  public:: SP_n_particle
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -70,7 +71,11 @@ module SP_wrapper
   integer, parameter  :: nRequestPerLine = nParticle / 100
 
 contains
-
+  !========================
+  integer function SP_n_particle(iBlockLocal)
+    integer, intent(in) :: iBlockLocal
+    SP_n_particle = iGridLocal_IB(End_,  iBlockLocal)
+  end function SP_n_particle
   subroutine add_to_request(iComp, iRequest_I)
     ! auxilary function to add request to the appropriate buffer
     !-------------------------------------------------------------------

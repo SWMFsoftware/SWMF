@@ -26,7 +26,7 @@ module SP_wrapper
   public:: SP_get_grid_descriptor_param
   public:: SP_get_solar_corona_boundary
   public:: SP_put_r_min
-
+  public:: SP_n_particle
 contains
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
@@ -165,6 +165,10 @@ contains
     !-----------------------------------------
     call CON_stop('Can not get grid descriptor parameters')
   end subroutine SP_get_grid_descriptor_param
-
-
+  !===========================
+  integer function SP_n_particle(iBlockLocal)
+    integer, intent(in) :: iBlockLocal
+    !----------------------------
+    call CON_stop('Can not find nParticle for empty SP')
+  end function SP_n_particle
 end module SP_wrapper
