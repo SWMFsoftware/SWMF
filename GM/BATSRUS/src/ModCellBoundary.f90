@@ -15,13 +15,13 @@ module ModCellBoundary
 
   ! Local variables 
   ! (but we could make them public for ModUser::user_set_cell_boundary)
-  integer:: iMin, iMax, jMin, jMax, kMin, kMax, iSide
+  integer:: iMin, iMax, jMin, jMax, kMin, kMax, iSide, iSideMin, iSideMax
 
 contains
 
   !============================================================================
-  subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
-       iImplBlock, IsLinear, TypeBcIn)
+  recursive subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
+       iImplBlock, IsLinear, TypeBcIn, iSideIn)
 
     ! Set ghost cells values in State_VG based on TypeCellBc_I.
     ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
@@ -62,6 +62,7 @@ contains
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
     character(len=*), optional, intent(in):: TypeBcIn
+    integer,          optional, intent(in):: iSideIn
 
     ! Type of boundary for one side
     character(len=30):: TypeBc
@@ -130,9 +131,16 @@ contains
 
     allocate(SymmCoeff_V(nVarState))
 
+    if(present(iSideIn)) then
+       iSideMin = iSideIn
+       iSideMax = iSideIn
+    else
+       iSideMin = 1
+       iSideMax = 2*nDim
+    end if
 
     ! Loop through all sides
-    do iSide = 1, 2*nDim
+    do iSide = iSideMin, iSideMax
 
        ! Check if this side of the block is indeed an outer boundary
        ! Also skips periodic boundaries
