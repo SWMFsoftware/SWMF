@@ -4165,34 +4165,77 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
     use ModSize,     ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib,    ONLY: nG
     use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
+    use ModMain,     ONLY: BLKtest, PROCtest, iTest, jTest, kTest
+    use ModCellBoundary, ONLY: set_cell_boundary
+    use ModVarIndexes,   ONLY: NameVar_V
 
     integer,          intent(in)  :: iBlock, iSide
-    character(len=*),intent(in)  :: TypeBc
+    character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer:: i, j, k
+    integer:: i, j, k, iVar
     real :: TeSi
+
+    logical :: DoTest, DoTestMe
 
     character(len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !-------------------------------------------------------------------
+
+    if(iBlock==BLKtest.and.iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    endif
+
     IsFound = .true.
+
+    if (TypeBc == 'userfixed' .and. iSide /= 2)  &
+         call stop_mpi(NameSub  &
+         //' iSide should be 2 for userfixed, correct PARAM.in')
+
+    if (TypeBc == 'userfixed') then
+       call set_cell_boundary(nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock), &
+            iSideIn = iSide, TypeBcIn = 'fixed')
+
+       if(DoTestMe)then
+          do iVar=1,nVar
+             write(*,'(a,a,a,3es15.6)') 'initial ',            &
+                  NameVar_V(iVar), '  cell,ghost,ghost2 =',    &
+                  State_VGB(iVar, iTest,  jTest,kTest,BLkTest),&
+                  State_VGB(iVar, iTest+1,jTest,kTest,BLkTest),&
+                  State_VGB(iVar, iTest+2,jTest,kTest,BLkTest)
+          end do
+       end if
+
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, nI+nG
+          State_VGB(Neu1Rho_:Neu1P_,i,j,k,iBlock) = &
+               State_VGB(Neu1Rho_:Neu1P_,nI,j,k,iBlock)
+       end do; end do; end do
+
+       if(DoTestMe)then
+          do iVar=1,nVar
+             write(*,'(a,a,a,3es15.6)') 'final ',              &
+                  NameVar_V(iVar), '  cell,ghost,ghost2 =',    &
+                  State_VGB(iVar, iTest,  jTest,kTest,BLkTest),&
+                  State_VGB(iVar, iTest+1,jTest,kTest,BLkTest),&
+                  State_VGB(iVar, iTest+2,jTest,kTest,BLkTest)
+          end do
+       end if
+    end if
 
     if(TypeBc == 'usersemi')then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
-
           call user_preset_conditions(i,j,k,iBlock)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeOut=TeSi)
           StateSemi_VGB(iTeImpl,i,j,k,iBlock) = TeSi*Si2No_V(UnitTemperature_)
-
        end do; end do; end do
-
        RETURN
     elseif(TypeBc == 'usersemilinear')then
        RETURN
     end if
-
 
   end subroutine user_set_cell_boundary
 
