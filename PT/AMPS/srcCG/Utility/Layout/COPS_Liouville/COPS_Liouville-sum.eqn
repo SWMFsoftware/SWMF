@@ -1,0 +1,6 @@
+#!MC 1400
+# Created by Tecplot 360 build 14.0.0.25211
+$!ALTERDATA 
+  EQUATION = 'v21=0.05*(6.5*v17+3*v18)*0.5'
+$!ALTERDATA 
+  EQUATION = 'v22=0.05*(6.5*v19+3*v20)*0.5'
