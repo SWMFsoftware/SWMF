@@ -311,16 +311,6 @@ end subroutine CON_set_do_test
 ! The subroutines and functions below are defined in srcInterface for SWMF. 
 !============================================================================
 
-!============ interface to BATS_methods====================
-subroutine update_lagrangian_grid(tStart,tFinal)
-  implicit none
-  real,intent(in)::tStart,tFinal
-  ! call stop_mpi('ERROR: update_lagrangian_grid is for SWMF')
-end subroutine update_lagrangian_grid
-!============================================================================
-subroutine save_advected_points
-  ! call stop_mpi('ERROR: save_advected_points is for SWMF')
-end subroutine save_advected_points
 !============================================================================
 subroutine get_ray_bunch_intensity
   call stop_mpi('ERROR: get_ray_bunch_intensity is for SWMF')

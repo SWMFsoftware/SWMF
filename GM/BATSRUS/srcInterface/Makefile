@@ -21,7 +21,6 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
 	GM_wrapper.o\
-	update_lagrangian_grid.o\
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\

@@ -421,7 +421,6 @@ EE/BATSRUS/src/Makefile:
 						  ../../../EE/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../EE/BATSRUS/srcInterface
@@ -455,15 +454,13 @@ EEBATSRUS: EE/BATSRUS/src/Makefile \
 
 IH/BATSRUS/src/Makefile:
 	cd IH/BATSRUS; \
-		rm -rf src srcBATL srcUser srcEquation srcInterface/Mod*.f90 \
-			srcInterface/update_lagrangian_grid.f90; \
+		rm -rf src srcBATL srcUser srcEquation srcInterface/Mod*.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
 					../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
@@ -506,7 +503,6 @@ OH/BATSRUS/src/Makefile:
 					../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../OH/BATSRUS/srcInterface/
@@ -560,7 +556,6 @@ SC/BATSRUS/src/Makefile:
 			../../SC/BATSRUS/
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface

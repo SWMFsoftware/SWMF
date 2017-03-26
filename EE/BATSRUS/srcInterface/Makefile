@@ -10,7 +10,6 @@ include Makefile.DEPEND
 OBJECTS = \
 	EE_wrapper.o \
 	ModBuffer.o \
-	update_lagrangian_grid.o \
 	ModRadioWaveImage.o \
 	ModGridDescriptor.o \
 	ModRadioWaveRaytracing.o \

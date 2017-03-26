@@ -11,7 +11,6 @@ include Makefile.DEPEND
 OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
-	update_lagrangian_grid.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
 	ModDensityAndGradient.o\

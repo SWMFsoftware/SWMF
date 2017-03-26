@@ -9,7 +9,6 @@ OBJECTS = \
 	ModBuffer.o\
 	ModGridDescriptor.o\
 	SC_wrapper.o\
-	update_lagrangian_grid.o\
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o

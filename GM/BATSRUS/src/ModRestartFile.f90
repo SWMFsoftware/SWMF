@@ -220,7 +220,6 @@ contains
     case default
        call stop_mpi('Unknown TypeRestartOutFile='//TypeRestartOutFile)
     end select
-    if(iProc==0)call save_advected_points
     if(DoWriteIndices .and. iProc==0)call write_geoind_restart
 
     if(DoWriteBlockData .and. n_step > 0) &
