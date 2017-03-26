@@ -2069,9 +2069,9 @@ contains
          type(GridDescriptorType):: GridDescriptor
          ! indices of images, their number and interpolation weights
          integer, intent(in) :: nIndex
-         integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
+         integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out):: nImage
-         real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         real,    intent(out):: Weight_I(2**nDim)
        end subroutine interpolate
     end interface
     optional:: interpolate
@@ -2312,6 +2312,16 @@ contains
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
 
+    !\
+    ! Temporary: to be removed
+    !/
+    Router%iCoordStart         = 1
+    Router%iCoordEnd = GridDescriptorTarget%nDim
+    Router%iAuxStart = Router%iCoordEnd + 1
+    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
+    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
+
+
     ! identify components
     iCompSource = Router%iCompSource
     !\
@@ -2343,14 +2353,6 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorTarget%nDim
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
  
     !Check dimensions
     DoCountOnly=.true. !To enter the loop
@@ -2667,7 +2669,7 @@ contains
        end subroutine mapping
        !----------------------------------------------------------------------!
        subroutine interpolate_target(&
-            nCoord, Coord_I, GridDescriptor, &
+            nDim, Coord_D, GridDescriptor, &
             nIndex, iIndex_II, nImage, Weight_I,&
             nAux, iAux_I)
          ! interpolation on Target's grid; 
@@ -2676,22 +2678,22 @@ contains
          use CON_grid_descriptor
          implicit none
          ! number of indices per data entry
-         integer, intent(in):: nCoord
+         integer, intent(in):: nDim
          ! data location on Target
-         real,    intent(inout):: Coord_I(nCoord)
+         real,    intent(inout):: Coord_D(nDim)
          ! grid descriptor
          type(GridDescriptorType):: GridDescriptor
          ! indices of images, their number and interpolation weights
          integer, intent(in) :: nIndex
-         integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
+         integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out):: nImage
-         real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         real,    intent(out):: Weight_I(2**nDim)
          integer, intent(in)::nAux
          integer, intent(in)::iAux_I(nAux)
        end subroutine interpolate_target
        !----------------------------------------------------------------------!
        subroutine interpolate_source(&
-            nCoord, Coord_I, GridDescriptor, &
+            nDim, Coord_D, GridDescriptor, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -2699,16 +2701,16 @@ contains
          use CON_grid_descriptor
          implicit none
          ! number of indices per data entry
-         integer, intent(in):: nCoord
+         integer, intent(in):: nDim
          ! data location on Source
-         real,    intent(inout):: Coord_I(nCoord)
+         real,    intent(inout):: Coord_D(nDim)
          ! grid descriptor
          type(GridDescriptorType):: GridDescriptor
          ! indices of images, their number and interpolation weights
          integer, intent(in) :: nIndex
-         integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
+         integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out):: nImage
-         real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         real,    intent(out):: Weight_I(2**nDim)
        end subroutine interpolate_source
     end interface
     optional:: get_scatter_source
@@ -2877,8 +2879,8 @@ contains
           ! indices identifying images,
           ! one data entry may be split into several images
           call interpolate_target(&
-               nCoord         = nDimTarget, &
-               Coord_I        = Coord_D(1:nDimTarget), &
+               nDim         = nDimTarget, &
+               Coord_D        = Coord_D(1:nDimTarget), &
                GridDescriptor = GridDescriptorTarget, &
                nIndex         = nIndexTarget, &
                iIndex_II      = iIndexPut_II, &
@@ -2899,8 +2901,8 @@ contains
           ! interpolate on Source if necessary
           if(DoInterpolateSource)then
              call interpolate_source(&
-                  nCoord         = nDimSource, &
-                  Coord_I        = Coord_II(1:nDimSource, iData), &
+                  nDim         = nDimSource, &
+                  Coord_D        = Coord_II(1:nDimSource, iData), &
                   GridDescriptor = GridDescriptorSource, &
                   nIndex         = nIndexSource, &
                   iIndex_II      = iIndexGet_II, &
@@ -3189,7 +3191,7 @@ contains
          real,    intent(out):: Weight_I(2**nDim)
        end subroutine interpolate
     end interface
-    !optional:: interpolate
+    optional:: interpolate
     integer:: nRecvCumSum
     integer:: iStart, iEnd, iProcTo, iBuffer, iProcFrom, iToPut
     integer:: iProc, nProc
@@ -3202,7 +3204,7 @@ contains
     real   :: XyzPass_D(GridDescriptorTarget%nDim) 
     integer:: iImage, nImage, nImageMax, nImagePart
     integer:: nAux, nDimTarget, nIndexTarget
-    
+    logical:: DoInterpolate
     character(len=*), parameter:: NameSub='update_semi_router_at_target'
 
     !For given PE the index in the communicator is:
@@ -3215,6 +3217,9 @@ contains
     iCompTarget = Router%iCompTarget
     ! total number of processors and on components
     nProc       = Router%nProc
+
+    DoInterpolate = present(interpolate)
+
     !\
     ! Stage 3 set semi-router for source
     !/
@@ -3235,7 +3240,7 @@ contains
     ! prepare containers for router information of Source side
     do iProcFrom = i_proc0(iCompSource), i_proc_last(iCompSource), &
          i_proc_stride(iCompSource)
-       Router%nPut_P(iProcTo) = Router%nRecv_P(iProcFrom)*nImageMax
+       Router%nPut_P(iProcFrom) = Router%nRecv_P(iProcFrom)*nImageMax
     end do
     call check_router_allocation(Router)
     Router%nPut_P = 0
@@ -3248,16 +3253,27 @@ contains
           XyzTarget_D = Router%BufferTarget_II(&
                Router%iCoordStart:Router%iCoordEnd, iBuffer)
           XyzPass_D = XyzTarget_D
-          call interpolate(&
-               nDimTarget,&
-               XyzPass_D,&
-               GridDescriptorTarget,&
-               nIndexTarget,&
-               iIndexPut_II,&
-               nImage,&
-               Weight_I)
+          if(DoInterpolate)then
+             call interpolate(&
+                  nDimTarget,&
+                  XyzPass_D,&
+                  GridDescriptorTarget,&
+                  nIndexTarget,&
+                  iIndexPut_II,&
+                  nImage,&
+                  Weight_I)
+          else
+             call nearest_grid_points(&
+                  nDim           = nDimTarget, &
+                  Xyz_D          = XyzPass_D, &
+                  GridDescriptor = GridDescriptorTarget, &
+                  nIndex         = nIndexTarget, &
+                  iIndex_II      = iIndexPut_II, &
+                  nImage         = nImage, &
+                  Weight_I       = Weight_I)
+          end if
           nImagePart = count(iIndexPut_II(0,1:nImage)==iProc)
-          Router%nPut_P(iProcTo) = Router%nPut_P(iProcTo) + nImagePart
+          Router%nPut_P(iProcFrom) = Router%nPut_P(iProcFrom) + nImagePart
           if(nImagePart==0)&
                call CON_stop(NameSub//'No image on the receiving PE')
           ! indices
@@ -3305,9 +3321,9 @@ contains
          type(GridDescriptorType):: GridDescriptor
          ! indices of images, their number and interpolation weights
          integer, intent(in) :: nIndex
-         integer, intent(out):: iIndex_II(0:nIndex,2**GridDescriptor%nDim)
+         integer, intent(out):: iIndex_II(0:nIndex,2**nDim)
          integer, intent(out):: nImage
-         real,    intent(out):: Weight_I(2**GridDescriptor%nDim)
+         real,    intent(out):: Weight_I(2**nDim)
          integer, intent(in) :: nAux
          integer, intent(in) :: iAux_I(nAux)
        end subroutine interpolate

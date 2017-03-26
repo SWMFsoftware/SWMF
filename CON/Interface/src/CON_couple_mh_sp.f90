@@ -115,12 +115,14 @@ contains
     ! Initialize routers
     !/
     call SP_get_grid_descriptor_param(iGridMin_D, iGridMax_D, Disp_D)
-    call set_grid_descriptor_id(SP_,&
-         nDim = 3, &
-         iGridPointMin_D = iGridMin_D, &
-         iGridPointMax_D = iGridMax_D, &
-         Displacement_D  = Disp_D, &
-         GridDescriptor  = SP_GridDescriptor)
+!    call set_grid_descriptor_id(SP_,&
+!         nDim = 3, &
+!         iGridPointMin_D = iGridMin_D, &
+!         iGridPointMax_D = iGridMax_D, &
+!         Displacement_D  = Disp_D, &
+!         GridDescriptor  = SP_GridDescriptor)
+       call set_standard_grid_descriptor(SP_,GridDescriptor=&
+            SP_GridDescriptor)
 
     ! get the value of solar corona boundary as set in SP
     call SP_get_solar_corona_boundary(RSc)
@@ -208,8 +210,8 @@ contains
               Router                = RouterScSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
-              mapping               = mapping_sp_to_sc) !!!, &
-!!!              interpolate           = interpolation_amr_gc)
+              mapping               = mapping_sp_to_sc, &
+              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
             call update_semi_router_at_source(RouterScSp,&
@@ -236,17 +238,18 @@ contains
               interpolate_source   = interpolation_amr_gc, &
               interpolate_target   = interpolate_sp)
          call synchronize_router_source_to_target(RouterScSp)
-         !+++++++++++++
-!         if(is_proc(SC_))&
-!              call set_semi_router_from_source_new(&
-!              GridDescriptorSource = SC_LineGridDesc, &
-!              GridDescriptorTarget = SP_GridDescriptor, &
-!              Router               = RouterLineScSp, &
-!              interface_point_coords=SC_line_interface_point,&
-!              mapping              = mapping_line_sc_to_sp)
-!         call synchronize_router_source_to_target(RouterLineScSp)
-         !+++++++++++++
+         if(is_proc(SC_))then
+            call set_semi_router_from_source_new(&
+                 GridDescriptorSource = SC_LineGridDesc, &
+                 GridDescriptorTarget = SP_GridDescriptor, &
+                 Router               = RouterLineScSp, &
+                 interface_point_coords=SC_line_interface_point,&
+                 mapping              = mapping_line_sc_to_sp)
+         end if
+         call synchronize_router_source_to_target(RouterLineScSp)
          if(is_proc(SP_))then
+            call update_semi_router_at_target_new(&
+                 RouterLineScSp, SP_GridDescriptor)
             call update_semi_router_at_target(&
                  RouterScSp, SP_GridDescriptor,&
                  interpolate   = interpolate_SP)
@@ -256,7 +259,7 @@ contains
                  nint(RouterScSp%BufferTarget_II(RouterScSp%nVar ,1:nLength)),&
                  nint(RouterScSp%BufferTarget_II(RouterScSp%nVar-1,1:nLength)))
          end if
-            call global_message_pass(RouterScSp, &
+         call global_message_pass(RouterScSp, &
               nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_mh)
@@ -268,8 +271,8 @@ contains
               Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_ih, &
-              mapping               = mapping_sp_to_IH ) !!!, &
-!!!              interpolate           = interpolation_amr_gc) 
+              mapping               = mapping_sp_to_IH, &
+              interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
             call update_semi_router_at_source(RouterIhSp,&
@@ -412,7 +415,7 @@ contains
     IsInterfacePoint = .true.
     iParticle = nint(XyzIn_D(1))
     call SC_get_particle_indexes(iParticle, iIndex_I)
-    CoordOut_D = xyz_cell_d(SP_GridDescriptor%DD%Ptr, iIndex_I(1), (/iIndex_I(2),1,1/))
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iIndex_I(2),1,1/))
   end subroutine mapping_line_sc_to_sp
   !==================================================================!
   subroutine mapping_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
