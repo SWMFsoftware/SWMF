@@ -208,8 +208,8 @@ contains
               Router                = RouterScSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
-              mapping               = mapping_sp_to_sc, &
-              interpolate           = interpolation_amr_gc)
+              mapping               = mapping_sp_to_sc) !!!, &
+!!!              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
             call update_semi_router_at_source(RouterScSp,&
@@ -268,8 +268,8 @@ contains
               Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_ih, &
-              mapping               = mapping_sp_to_IH, &
-              interpolate           = interpolation_amr_gc)
+              mapping               = mapping_sp_to_IH ) !!!, &
+!!!              interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
             call update_semi_router_at_source(RouterIhSp,&
@@ -511,8 +511,8 @@ contains
          Router                = RouterIHSp, &
          n_interface_point_in_block = SP_n_particle,&
          interface_point_coords= SP_interface_point_coords_for_ih, &
-         mapping               = mapping_sp_to_IH, &
-         interpolate           = interpolation_amr_gc)
+         mapping               = mapping_sp_to_IH) !!!, &
+!!!         interpolate           = interpolation_amr_gc)
     call synchronize_router_target_to_source(RouterIHSp)
     if(is_proc(IH_))then
        call update_semi_router_at_source(RouterIhSp,&
