@@ -1,9 +1,0 @@
-//$Id$
-
-#include "SurfaceDefinitions.dfn"
-
-//surface temperature model
-#define _SURFACE__TEMPERATURE_MODEL_ _SURFACE__TEMPERATURE_MODEL__ISOTHERMAL_
-
-//particle-surface interaction model
-#define _SURFACE__GAS_SURFACE_INTERACTION_MODEL_ _SURFACE__GAS_SURFACE_INTERACTION_MODEL__SPECULAR_REFLECTION_

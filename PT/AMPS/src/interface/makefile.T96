@@ -1,4 +1,0 @@
-t96 : 
-	${COMPILE.f77} ${Cflag3} T96.for 
-	${COMPILE.mpicxx} ${FLAGC} T96Interface.cpp -o T96Interface.o
-	ar -src T96.a T96.o T96Interface.o 
