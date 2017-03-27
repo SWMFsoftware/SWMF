@@ -3196,23 +3196,13 @@ contains
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
     !--------------------------------------------------------------------------
-    if(UseEfield)then
-       if(present(Cleft_I))  Cleft_I  = -cLight
-       if(present(CRight_I)) Cright_I = cLight
-       if(present(Cmax_I))   Cmax_I   = cLight
-       CmaxDt_I = cLight
-       CmaxDt =   cLight
-
-       RETURN
-    end if
-
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
 
-       if(iFluid == 1 .and. UseB)then
+       if(iFluid == 1 .and. UseB .and. .not.UseEfield)then
           if(UseAwSpeed)then
              ! For AW flux UnLeft_I,UnRight_I 
              ! are already set by get_physical_flux
@@ -3226,7 +3216,7 @@ contains
              call get_mhd_speed
           endif
 
-       elseif(iFluid > 1 .and. iFluid <= IonLast_)then
+       elseif(iFluid > 1 .and. iFluid <= IonLast_ .and. .not.UseEfield)then
           if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
           if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
           if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
@@ -3244,6 +3234,24 @@ contains
        end if
 
     end do
+
+    if(UseEfield .and. iFluidMin <= nIonFluid)then
+       ! The light speed in the five-moment equations should exceed
+       ! all the fluid wave speeds. Only Lax-Friedrichs scheme can be
+       ! used because the left/right/max wave speeds are the same = Clight.
+       if(maxval(Cmax_I(1:nIonFluid)) > Clight)then
+          write(*,*)'cLight                      =',cLight
+          write(*,*)'maxval(Cmax_I(1:nIonFluid)) =',maxval(Cmax_I(1:nIonFluid))
+          write(*,*)'Cmax_I(1:nIonFluid)         =',Cmax_I(1:nIonFluid)
+          call stop_mpi('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
+       end if
+       Cmax_I(1:nIonFluid)   = cLight
+       CmaxDt_I(1:nIonFluid) = cLight
+       CmaxDt                = cLight
+
+       RETURN
+    end if
+
 
     ! Take time step limit for the fluids that were calculated so far
     if (present(Cmax_I)) &
