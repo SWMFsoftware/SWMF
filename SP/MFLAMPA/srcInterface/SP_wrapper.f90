@@ -57,77 +57,12 @@ module SP_wrapper
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
 
-  ! particles that need to be requested from MH component:
-  ! 1st index - the request's index in buffer
-  ! 2nd index - content of the request
-  integer, pointer:: iRequestSc_II(:,:)=>null(), iRequestIh_II(:,:)=>null()
-  ! indices that define a request: field line and particle indices
-  integer, parameter  :: nRequestIndex = 2
-  ! current size of the request
-  integer:: nRequestSc, nRequestIh
-  ! whether the request has been sent
-  logical:: IsSentRequestSc, IsSentRequestIh
-  ! estimated number of requests per field line
-  integer, parameter  :: nRequestPerLine = nParticle / 100
-
 contains
   !========================
   integer function SP_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
     SP_n_particle = iGridLocal_IB(End_,  iBlockLocal)
   end function SP_n_particle
-  subroutine add_to_request(iComp, iRequest_I)
-    ! auxilary function to add request to the appropriate buffer
-    !-------------------------------------------------------------------
-    ! component to be requested from
-    integer, intent(in):: iComp
-    ! request to be added
-    integer, intent(in):: iRequest_I(nRequestIndex)
-
-    character(len=100):: StringError
-    character(len=*), parameter:: NameSub='SP:add_to_request'
-    !------------------------------------------------------------
-    ! each component has its own request buffer
-    select case(iComp)
-    case(SC_)
-       ! add the request to SC buffer
-       nRequestSc = nRequestSc + 1
-       ! if the current size of the buffer is exceeded -> double its size
-       if(nRequestSc >  ubound(iRequestSc_II,2)) &
-            call double_buffer(iRequestSc_II)
-       ! put the request to buffer
-       iRequestSc_II(:,nRequestSc) = iRequest_I
-    case(IH_)
-       ! add the request to IH buffer
-       nRequestIh = nRequestIh + 1
-       ! if the current size of the buffer is exceeded -> double its size
-       if(nRequestIh >  ubound(iRequestIh_II,2)) &
-            call double_buffer(iRequestIh_II)
-       ! put the request to buffer
-       iRequestIh_II(:,nRequestIh) = iRequest_I
-    case default
-       ! requesting from iComp isn't implemented -> ERROR
-       write(StringError,'(a,i2)') &
-            ": isn't implemented for requesting data from component ", iComp
-       call CON_stop(NameSub//StringError)
-    end select
-  contains
-    subroutine double_buffer(iBuffer_II)
-      ! double the size of the buffer
-      integer, pointer, intent(inout):: iBuffer_II(:,:)
-      ! auxilary pointer
-      integer, pointer:: iAux_II(:,:)
-      !------------------------------------------------------
-      ! allocated memeory of doubled size
-      allocate(iAux_II(nRequestIndex,2*ubound(iBuffer_II,2)))
-      ! transfer data to new buffer
-      iAux_II(:,1:ubound(iBuffer_II,2)) = iBuffer_II
-      ! deallocated the old buffer
-      deallocate(iBuffer_II)
-      ! reassign pointers
-      iBuffer_II => iAux_II; nullify(iAux_II)
-    end subroutine double_buffer
-  end subroutine add_to_request
 
   !========================================================================
 
@@ -369,61 +304,35 @@ contains
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
     !---------------------------------------------------------------
-    integer:: iBlock, iRequest     ! loop variables
-    integer:: iRequest_I(nRequestIndex)
-    logical, save:: IsFirstCall = .true.
+    integer:: iParticle, iBlock
+    logical:: IsSc
     character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_interface_point_coords'
     !----------------------------------------------------------------
-    if(IsFirstCall)then
-       IsFirstCall = .false.
-       ! need to initalize request buffer;
-       ! initial size = number of lines:
-       allocate(iRequestSc_II(nRequestIndex,nBlock))
-       allocate(iRequestIh_II(nRequestIndex,nBlock))
-       
-       ! fill the request buffer for SC
-       do iBlock = 1, nBlock
-          iRequestSc_II(:,iBlock) = (/iBlock, 1/)
-       end do
-       
-       ! reset the sizes of requests
-       nRequestSc = nBlock
-       nRequestIh = 0
-
-       IsSentRequestSc = .false.
-       IsSentRequestIh = .false.
-    end if
-
     ! choose the request buffer based iComp and reset its size counter
     select case(iComp)
     case(SC_)
-       if(.not.IsSentRequestSc) IsSentRequestSc = .true.
-       call check_request(iRequestSc_II, nRequestSc, IsInterfacePoint)
+       IsSc = .true.
     case(IH_)
-       if(.not.IsSentRequestIh) IsSentRequestIh = .true.
-       call check_request(iRequestIh_II, nRequestIh, IsInterfacePoint)
+       IsSc = .false.
     case default
        write(StringError,'(a,i2)') &
             ": isn't implemented for interface with component ", iComp
        call CON_stop(NameSub//StringError)
     end select
-  contains
-    subroutine check_request(iRequest_II, nRequest, IsInterfacePointLocal)
-      ! check whether the point is requested and return its correct coordinates
-      integer, pointer, intent(inout):: iRequest_II(:,:)
-      integer,          intent(inout):: nRequest
-      logical,          intent(out)  :: IsInterfacePointLocal
-      !--------------------------------------------------------------
-      do iRequest = 1, nRequest
-         if(all(iRequest_II(:,iRequest)==iIndex_I((/nIndex,1/))))then
-            IsInterfacePointLocal = .true.
-            Xyz_D = State_VIB((/R_,Lon_,Lat_/),iIndex_I(1),iIndex_I(nIndex))
-            RETURN
-         end if
-      end do
-      IsInterfacePointLocal = .false.
-    end subroutine check_request
+
+    iParticle = iIndex_I(1)
+    iBlock    = iIndex_I(4)
+    ! first, check whether the particle is within bounds
+    IsInterfacePoint = &
+         iParticle >= iGridLocal_IB(Begin_,iBlock) .and. &
+         iParticle <= iGridLocal_IB(End_,iBlock)
+    ! second, check whether the particle is within the appropriate domain
+    if(IsInterfacePoint)&
+         IsInterfacePoint = XOR(IsSc, State_VIB(R_, iParticle, iBlock)>Rsc)
+    ! lastly, fix coordinates
+    if(IsInterfacePoint)&
+         Xyz_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
   end subroutine SP_interface_point_coords
 
   !===================================================================
@@ -479,26 +388,12 @@ contains
     integer:: iLine, iParticle
     integer:: iMin_A(nNode),iMax_A(nNode)
     integer:: iError
-    ! which field lines are being extracted
-    logical:: WasInSc, IsInSc, WasUndef
-    logical, save:: IsFirstCall = .true.
-    logical, save,allocatable:: DoneExtractSolarCorona_B(:)
+
     integer, parameter:: nVarReset  = 8
     integer, parameter:: &
          VarReset_I(nVarReset) = (/Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
-    if(IsFirstCall)then
-       ! initialize information of which 
-       IsFirstCall = .false.
-       allocate(DoneExtractSolarCorona_B(nBlock))
-       DoneExtractSolarCorona_B = .false.
-    end if
-
-    ! if the request has been sent to other components -> reset its size
-    if(IsSentRequestSc) nRequestSc = 0
-    if(IsSentRequestIh) nRequestIh = 0
-
     ! store passed particles
     do iPut = 1, nPut
        iBlock = iIndex_II(4, iPut)
@@ -514,20 +409,6 @@ contains
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        
-       ! check if the particle has crossed the solar corona boundary
-       WasUndef = State_VIB(R_, iParticle, iBlock) < 0.0
-       WasInSc  = State_VIB(R_, iParticle, iBlock) < RSc
-       IsInSc   = Coord_DI( R_, iPut)              < RSc
-       if(.not.WasUndef .and. WasInSc .and. .not. IsInSc)then
-          ! particle existed and crossed SC boundary
-          call add_to_request(IH_,(/iBlock, iParticle/))
-       elseif(.not.DoneExtractSolarCorona_B(iBlock) .and. &
-            WasUndef .and. .not. IsInSc)then
-          ! particle didn't exist, is the 1st beyond SC
-          call add_to_request(IH_,(/iBlock, iParticle/))
-          DoneExtractSolarCorona_B(iBlock) = .true.
-       end if
-
        ! keep some variables as "old" state
        State_VIB((/RhoOld_,BOld_/),  iParticle, iBlock) = &
             State_VIB((/Rho_,B_/),   iParticle, iBlock)
