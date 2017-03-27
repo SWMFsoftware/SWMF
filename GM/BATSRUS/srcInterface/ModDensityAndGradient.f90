@@ -67,7 +67,7 @@ contains
          GridDescriptorTarget=LineGrid,&
          Router=Router,&
          NameMappingVector=NameVector,&
-         interpolate=interpolation_fix_reschange)
+         interpolate=interpolation_amr_gc)
    
     call global_message_pass(Router=Router,&
          nVar=MaxDim+1+1,&

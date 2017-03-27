@@ -105,7 +105,7 @@ contains
          Router=Router,&
          NameMappingVector=NameVector,&
          NameMask=NameMask,&
-         interpolate=interpolation_fix_reschange)
+         interpolate=interpolation_amr_gc)
     XyzStored_DI(1:nDim,1:nU_I(2))=&
          Xyz_DI(1:nDim,1:nU_I(2))! Store Xyz_DI
     tNow=tStart
@@ -127,7 +127,7 @@ contains
          Router=Router,&
          NameMappingVector=NameVector,&
          NameMask=NameMask,&
-         interpolate=interpolation_fix_reschange)
+         interpolate=interpolation_amr_gc)
     call global_message_pass(Router,&
          nVar=nDim,&
          fill_buffer=d_xyz,&

@@ -157,7 +157,7 @@ contains
             is_interface_block=GM_is_west_block,&
             interface_point_coords=GM_west_cells, &
             mapping=map_gm_ih,&
-            interpolate=interpolation_fix_reschange)
+            interpolate=interpolation_amr_gc)
 
        IH_iGridRealization = i_realization(IH_)
        GM_iGridRealization = i_realization(GM_)
