@@ -107,6 +107,7 @@ program spectrum
      integer                  :: iMin, jMin, iMax, jMax  
      real                     :: LineWavelength 
      real, allocatable        :: g_II(:,:)
+     real                     :: StartLogT
   end type LineTableType
 
   type(LineTableType), allocatable :: LineTable_I(:)
@@ -365,7 +366,7 @@ contains
     real, allocatable              :: Glambda_II(:,:)
     real                           :: Tlos
     real                           :: Aion
-
+    real                           :: TShift
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
 
@@ -451,6 +452,15 @@ contains
              LogNe = log10(Rho*1e-6/cProtonMass/0.83)
              LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
 
+             ! Some lines grid start at t+0.05 (on logT scale)
+             ! These grids are shifted by 0.05, we shift the temperatures as 
+             ! well so the interpolation happens at the right place.
+             if(LineTable_I(iLine)%StartLogT*10 - & 
+                  int(LineTable_I(iLine)%StartLogT*10)==0.5)then
+                TShift=0.05
+                LogTe = LogTe - TShift
+             end if
+
              ! Convert to SI
              LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
@@ -474,21 +484,25 @@ contains
                   (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
 
              ! When Gint becomes negative due to extrapolation -> move to next
-             if(Gint<0.0)CYCLE 
+             if(Gint<1e-40)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
              FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) *0.83
              
-             if(IsVerbose)then
+             if(iLine ==4 )then
                 write(*,*)'                                                   '
+                write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
                 write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
                 write(*,*)'Gint = ',log10(Gint),' FluxMono = ',FluxMono
                 write(*,*)'LogNe, DLogN = ',LogNe,DLogN
                 write(*,*)'LogTe ,DLogT = ',LogTe,DLogT
+                write(*,*)'Aion = ',Aion
                 write(*,*)'LambdaSI =',LambdaSI
                 write(*,*)'DLambdaSI, DLambda =', DLambdaSI, DLambda
                 write(*,*)'Uth, Unth = ',sqrt(Uth2), sqrt(Unth2)
                 write(*,*)'LogTlos = ',log10(Tlos)
+                write(*,*)'iLine = ',iLine
+                write(*,*)'Glambda_II = ',Glambda_II
                 write(*,*)'                                                   '
              endif
 
@@ -524,8 +538,6 @@ contains
     ! Beginning and end of gaussian truncated to +/-5 sigma in [A]
     LambdaBegin = (Lambda - 5*DLambda)
     LambdaEnd   = (Lambda + 5*DLambda)
-    write(*,*)'LambdaBegin,LambdaEnd = ',LambdaBegin,LambdaEnd
-    write(*,*)'Lambda,DLambda = ',Lambda,DLambda
 
     ! Find the corresponding wavelength bin for starting wavelength
     do iBegin = 1, nWaveBin - 1
@@ -1044,9 +1056,6 @@ contains
        end if
     end do READGRID
 
-    ! Refine Temperature grid because of inconsistent centers
-    DLogT =  DLogT/10.
-
     ! Set up maximum size grid to store tabulated values by wavelength
     MinI = nint(MinLogN/DLogN)
     MaxI = nint(MaxLogN/DLogN)
@@ -1088,11 +1097,14 @@ contains
 
        if(DoStore)then
           ! Store last indexes as the maximum indexes for N and T
-          iMax = iN; jMax = iT
-          LineTable_I(iLine)%iMax = iMax; LineTable_I(iLine)%jMax = jMax
+          iMax = iN
+          jMax = iT
+          LineTable_I(iLine)%iMax = iMax
+          LineTable_I(iLine)%jMax = jMax
 
           ! Extract min indexes into scalars
-          iMin = LineTable_I(iLine)%iMin; jMin = LineTable_I(iLine)%jMin
+          iMin = LineTable_I(iLine)%iMin
+          jMin = LineTable_I(iLine)%jMin
 
           ! Create intensity table
           allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
@@ -1122,16 +1134,16 @@ contains
           endif
 
           ! New line of interest found, decide to store it
-          DoStore    = .true.
           iLine      = iLine + 1
-          nLineFound = nLineFound + 1
-
-          ! Change reference line 
-          FirstLineWavelength = LineWavelength
-
+          write(*,*)iLine,NameIon,LineWavelength
           ! Check if there are too many lines already
           if(iLine > nMaxLine)&
                call CON_stop('Too many lines are found, increase MaxWave')
+
+          ! Change reference line 
+          FirstLineWavelength = LineWavelength
+          DoStore    = .true.
+          nLineFound = nLineFound + 1
 
           ! Store ion name and wavelength 
           LineTable_I(iLine)%NameIon        = NameIon
@@ -1140,9 +1152,12 @@ contains
           LineTable_I(iLine)%nLevelTo       = nLevelTo
           LineTable_I(iLine)%LineWavelength = LineWavelength
 
+          if(IsVerbose)write(*,*)'NameIon, LineWavelength = ',NameIon,LineWavelength
+
           ! Calculate indexes and store as the minimum indexes
           iN                      = nint(LogN/DLogN)
           iT                      = nint(LogT/DLogT)
+          LineTable_I(iLine)%StartLogT = LogT
           LineTable_I(iLine)%iMin = iN
           LineTable_I(iLine)%jMin = iT
 
