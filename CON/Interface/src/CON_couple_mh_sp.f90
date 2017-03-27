@@ -114,7 +114,6 @@ contains
     ! Set grid descriptors for components
     ! Initialize routers
     !/
-    call SP_get_grid_descriptor_param(iGridMin_D, iGridMax_D, Disp_D)
     call set_standard_grid_descriptor(SP_,GridDescriptor=&
          SP_GridDescriptor)
 
@@ -208,8 +207,6 @@ contains
               interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
-            call update_semi_router_at_source(RouterScSp,&
-                 SC_GridDescriptor,interpolation_amr_gc)
             nLength = nlength_buffer_source(RouterScSp)
             call SC_extract_line(&
                  nLine           = nLength,                                   &
@@ -223,7 +220,7 @@ contains
                  UseInputInGenCoord = .true.)
          end if
          if(is_proc(SC_))then
-            call set_semi_router_from_source_new(&
+            call set_semi_router_from_source(&
                  GridDescriptorSource = SC_LineGridDesc, &
                  GridDescriptorTarget = SP_GridDescriptor, &
                  Router               = RouterLineScSp, &
@@ -232,7 +229,7 @@ contains
          end if
          call synchronize_router_source_to_target(RouterLineScSp)
          if(is_proc(SP_))then
-            call update_semi_router_at_target_new(&
+            call update_semi_router_at_target(&
                  RouterLineScSp, SP_GridDescriptor)
          end if
          call global_message_pass(RouterLineScSp, &
@@ -270,8 +267,6 @@ contains
               interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIHSp)
          if(is_proc(IH_))then
-            call update_semi_router_at_source(RouterIhSp,&
-                 IH_GridDescriptor,interpolation_amr_gc)
             nLength = nlength_buffer_source(RouterIhSp)
             call IH_extract_line(&
                  nLine           = nLength,                                   &
@@ -284,7 +279,7 @@ contains
                  UseInputInGenCoord = .true.)
          end if
          if(is_proc(IH_))then
-            call set_semi_router_from_source_new(&
+            call set_semi_router_from_source(&
                  GridDescriptorSource = IH_LineGridDesc, &
                  GridDescriptorTarget = SP_GridDescriptor, &
                  Router               = RouterLineIhSp, &
@@ -293,7 +288,7 @@ contains
          end if
          call synchronize_router_source_to_target(RouterLineIhSp)
          if(is_proc(SP_))then
-            call update_semi_router_at_target_new(&
+            call update_semi_router_at_target(&
                  RouterLineIhSp, SP_GridDescriptor)
          end if
          call global_message_pass(RouterLineIhSp, &
@@ -501,35 +496,6 @@ contains
     call SP_put_line(1, Buff_II, iIndex_II)
   end subroutine SP_put_line_from_mh
   !==================================================================!
-  subroutine interpolate_sp(&
-       nCoord, Coord_I, GridDescriptor, &
-       nIndex, iIndex_II, nImage, Weight_I, nAux, iAux_I)
-    use CON_grid_descriptor
-    ! number of indices per data entry
-    integer, intent(in):: nCoord
-    ! data location on Source
-    real,    intent(inout):: Coord_I(nCoord)
-    ! grid descriptor
-    type(GridDescriptorType):: GridDescriptor
-    integer, intent(in) :: nIndex
-    integer, intent(out):: iIndex_II(0:nIndex,2**nCoord)
-    integer, intent(out):: nImage
-    real,    intent(out):: Weight_I(2**nCoord)
-    integer, intent(in)::nAux
-    integer, intent(in)::iAux_I(nAux)
-
-    integer:: iLine
-    !--------------------------
-    nImage = 1
-    Weight_I(1) = 1.0
-    iLine = iAux_I(1)
-
-    iIndex_II(0,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(PE_,iLine)
-    iIndex_II(1,  1) = iAux_I(2)
-    iIndex_II(2:3,1) = (/1,1/)
-    iIndex_II(4,  1) = GridDescriptor%DD%Ptr%iDecomposition_II(BLK_,iLine)
-  end subroutine interpolate_sp
-  !==================================================================
   !^CMP IF IH BEGIN
   subroutine couple_ih_sp(DataInputTime)     
 
@@ -550,19 +516,36 @@ contains
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
+
+    if(is_proc(IH_))then
+       call set_semi_router_from_source(&
+            GridDescriptorSource = IH_LineGridDesc, &
+            GridDescriptorTarget = SP_GridDescriptor, &
+            Router               = RouterLineIhSp, &
+            interface_point_coords=IH_line_interface_point,&
+            mapping              = mapping_line_ih_to_sp)
+    end if
+    call synchronize_router_source_to_target(RouterLineIhSp)
+    if(is_proc(SP_))then
+       call update_semi_router_at_target(&
+            RouterLineIhSp, SP_GridDescriptor)
+    end if
+    call global_message_pass(RouterLineIhSp, &
+         nVar = 3, &
+         fill_buffer = IH_get_line_for_sp_and_transform, &
+         apply_buffer= SP_put_line_from_mh)
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
          GridDescriptorSource  = IH_GridDescriptor, &
          GridDescriptorTarget  = SP_GridDescriptor, &
-         Router                = RouterIHSp, &
+         Router                = RouterIhSp, &
          n_interface_point_in_block = SP_n_particle,&
          interface_point_coords= SP_interface_point_coords_for_ih, &
-         mapping               = mapping_sp_to_IH) !!!, &
-!!!         interpolate           = interpolation_amr_gc)
-    call synchronize_router_target_to_source(RouterIHSp)
+         mapping               = mapping_sp_to_ih, &
+         interpolate           = interpolation_amr_gc)
+    call synchronize_router_target_to_source(RouterIhSp)
+    
     if(is_proc(IH_))then
-       call update_semi_router_at_source(RouterIhSp,&
-            IH_GridDescriptor, interpolation_amr_gc)
        nLength = nlength_buffer_source(RouterIhSp)
        call IH_add_to_line(&
             nParticle = nLength,&
@@ -571,33 +554,16 @@ contains
             nIndex    = nAux,   &
             iIndex_II = nint(RouterIhSp%BufferSource_II(&
             nDim+1:nDim+nAux, 1:nLength)),&      
-            UseInputInGenCoord = .true.)
+            UseInputInGenCoord = .true.,&
+            DoReplace = .true.)
+       call update_semi_router_at_source(RouterIhSp,&
+            IH_GridDescriptor,interpolation_amr_gc)
     end if
-    if(is_proc(IH_))&
-         call set_semi_router_from_source(&
-         GridDescriptorSource  = IH_GridDescriptor, &
-         GridDescriptorTarget  = SP_GridDescriptor, &
-         Router                = RouterIhSp, &
-         get_scatter_source    = IH_get_scatter_line, &
-         mapping               = mapping_ih_to_sp, &
-         interpolate_source    = interpolation_amr_gc, &
-         interpolate_target    = interpolate_sp)
-    call synchronize_router_source_to_target(RouterIhSp)
-    if(is_proc(SP_))then
-       call update_semi_router_at_target(&
-            RouterIhSp, SP_GridDescriptor,&
-            interpolate   = interpolate_SP)
-       nLength = nlength_buffer_target(RouterIhSp)
-       call SP_put_scatter_from_mh(nLength,&
-            RouterIhSp%BufferTarget_II(1:nDim,1:nLength),&
-            nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar  ,1:nLength)),&
-            nint(RouterIhSp%BufferTarget_II(RouterIhSp%nVar-1,1:nLength)))
-    end if
-
+    
     call global_message_pass(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_mh)
+              apply_buffer= SP_put_from_mh)
     !    if(is_proc(SP_))then
     !       call SP_put_input_time(DataInputTime)
     !    end if
@@ -669,7 +635,7 @@ contains
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
     if(is_proc(SC_))then
-       call set_semi_router_from_source_new(&
+       call set_semi_router_from_source(&
             GridDescriptorSource = SC_LineGridDesc, &
             GridDescriptorTarget = SP_GridDescriptor, &
             Router               = RouterLineScSp, &
@@ -678,7 +644,7 @@ contains
     end if
     call synchronize_router_source_to_target(RouterLineScSp)
     if(is_proc(SP_))then
-       call update_semi_router_at_target_new(&
+       call update_semi_router_at_target(&
             RouterLineScSp, SP_GridDescriptor)
     end if
     call global_message_pass(RouterLineScSp, &

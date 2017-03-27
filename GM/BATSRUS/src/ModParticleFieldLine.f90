@@ -725,7 +725,7 @@ contains
 
   !========================================================================
   subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
-       UseInputInGenCoord)
+       UseInputInGenCoord, DoReplace)
     !\
     ! Very strange, but this is the first use of the BATL procedure to 
     ! transform the generalized to cartesian coords in BATSRUS
@@ -739,6 +739,10 @@ contains
     ! An input can be in generalized coordinates
     !/
     logical, optional,intent(in) :: UseInputInGenCoord 
+    !\
+    ! Whether to replace ALL old particles with the input
+    !/
+    logical, optional, intent(in):: DoReplace
     logical :: DoTransformCoordToXyz
     real   :: Xyz_D(MaxDim)
     integer:: iIndex_I(nIndexParticleReg)
@@ -756,6 +760,9 @@ contains
     DoTransformCoordToXyz = .false.
     if(present(UseInputInGenCoord))&
          DoTransformCoordToXyz = UseInputInGenCoord
+    if(present(DoReplace))then
+       if(DoReplace) Particle_I(KindReg_)%nParticle = 0
+    end if
     do iParticle = 1, nParticleIn
        if(DoTransformCoordToXyz)then
           call coord_to_xyz(XyzIn_DI(:,   iParticle), Xyz_D)

@@ -302,12 +302,13 @@ contains
   end subroutine IH_extract_line
   !============================================================================
   subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II,&
-       UseInputInGenCoord)
+       UseInputInGenCoord, DoReplace)
     integer, intent(in) :: nParticle
     real,    intent(in) :: Xyz_DI(3, 1)
     integer, intent(in) :: nIndex
     integer, intent(in) :: iIndex_II(1,1)
-    logical, optional,intent(in) :: UseInputInGenCoord 
+    logical, intent(in) :: UseInputInGenCoord 
+    logical, intent(in) :: DoReplace
     character(len=*), parameter :: NameSub='IH_add_to_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')

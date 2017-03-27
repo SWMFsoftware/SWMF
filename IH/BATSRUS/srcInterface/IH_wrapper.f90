@@ -1351,7 +1351,7 @@ contains
   !============================================================================
 
   subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II,&
-       UseInputInGenCoord)
+       UseInputInGenCoord, DoReplace)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, ONLY: add_to_particle_line
     ! add particles with specified coordinates to the already existing lines
@@ -1359,10 +1359,11 @@ contains
     real,    intent(in):: Xyz_DI(nDim, nParticle)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nParticle)
-    logical, optional,intent(in) :: UseInputInGenCoord
+    logical, intent(in) :: UseInputInGenCoord
+    logical, intent(in) :: DoReplace
     !------------------------------------------------------------------------
     call add_to_particle_line(nParticle, Xyz_DI, iIndex_II, &
-             UseInputInGenCoord)
+         UseInputInGenCoord, DoReplace)
   end subroutine IH_add_to_line
 
   !==================================================================!
