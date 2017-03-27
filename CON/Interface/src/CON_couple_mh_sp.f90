@@ -668,27 +668,37 @@ contains
 
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
-    if(is_proc(SC_))&
-         call set_semi_router_from_source(&
-         GridDescriptorSource = SC_GridDescriptor, &
-         GridDescriptorTarget = SP_GridDescriptor, &
-         Router               = RouterScSp, &
-         get_scatter_source   = SC_get_scatter_line, &
-         mapping              = mapping_sc_to_sp, &
-         interpolate_source   = interpolation_amr_gc, &
-         interpolate_target   = interpolate_sp)
-    call synchronize_router_source_to_target(RouterScSp)
-    if(is_proc(SP_))then
-       call update_semi_router_at_target(&
-            RouterScSp, SP_GridDescriptor,&
-            interpolate   = interpolate_SP)
-       nLength = nlength_buffer_target(RouterScSp)
-       call SP_put_scatter_from_mh(nLength,&
-            RouterScSp%BufferTarget_II(1:nDim,1:nLength),&
-            nint(RouterScSp%BufferTarget_II(RouterScSp%nVar  ,1:nLength)),&
-            nint(RouterScSp%BufferTarget_II(RouterScSp%nVar-1,1:nLength)))
+    if(is_proc(SC_))then
+       call set_semi_router_from_source_new(&
+            GridDescriptorSource = SC_LineGridDesc, &
+            GridDescriptorTarget = SP_GridDescriptor, &
+            Router               = RouterLineScSp, &
+            interface_point_coords=SC_line_interface_point,&
+            mapping              = mapping_line_sc_to_sp)
     end if
-
+    call synchronize_router_source_to_target(RouterLineScSp)
+    if(is_proc(SP_))then
+       call update_semi_router_at_target_new(&
+            RouterLineScSp, SP_GridDescriptor)
+    end if
+    call global_message_pass(RouterLineScSp, &
+         nVar = 3, &
+         fill_buffer = SC_get_line_for_sp_and_transform, &
+         apply_buffer= SP_put_line_from_mh)
+    if(is_proc(SP_))&
+         call set_semi_router_from_target(&
+         GridDescriptorSource  = SC_GridDescriptor, &
+         GridDescriptorTarget  = SP_GridDescriptor, &
+         Router                = RouterScSp, &
+         n_interface_point_in_block = SP_n_particle,&
+         interface_point_coords= SP_interface_point_coords_for_sc, &
+         mapping               = mapping_sp_to_sc, &
+         interpolate           = interpolation_amr_gc)
+    call synchronize_router_target_to_source(RouterScSp)
+    if(is_proc(SC_))then
+       call update_semi_router_at_source(RouterScSp,&
+            SC_GridDescriptor,interpolation_amr_gc)
+    end if
     call global_message_pass(RouterScSp, &
          nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
