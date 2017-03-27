@@ -73,8 +73,8 @@ test_spectrum:
 	$(MAKE) test_spectrum_check
 
 test_spectrum_compile:
-	rm -f SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out test-spectrum.eps
-	cp SPECTRUM.test.in SPECTRUM.in
+	rm -f SPECTRUM.in test_spectrum.diff spectrum.log test-spectrum.out test-spectrum.eps
+	cp test-SPECTRUM.in SPECTRUM.in
 	make SPECTRUM
 
 test_spectrum_run:
@@ -82,10 +82,9 @@ test_spectrum_run:
 
 test_spectrum_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		spectrum.out \
-		spectrum.ref > test_spectrum.diff
+		test-spectrum.out \
+		test-spectrum.ref > test_spectrum.diff
 	@ls -l test_spectrum.diff
-	idl test_spectrum.pro
 
 #
 #	cleaning

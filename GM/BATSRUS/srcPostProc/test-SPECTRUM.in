@@ -1,0 +1,74 @@
+Test imput file for spectrum code
+#ECHO
+F				DoEcho
+
+#VERBOSE
+F				IsVerbose
+
+#OUTFILE
+test-spectrum.out		NameSpectrumFile
+test-label.out			NameLabelFile
+
+DATAFILE
+box.out				NameDataFile
+real4				TypeDataFile
+
+#TABLEFILE
+SPECTRUM.input.erg		NameTableFile
+1000				nMaxLine	
+
+#WAVELENGTHINTERVAL
+5				nWavelengthInterval
+200.				IntervalMin
+210.				IntervalMax
+300.				IntervalMin
+310.				IntervalMax
+400.				IntervalMin
+410.				IntervalMax
+945.                    	IntervalMin	
+955.				IntervalMax
+960.                         	IntervalMin
+974.				IntervalMax
+0.001				SizeWavelengthBin
+
+#DATABLOCK
+1				n1
+1				n2
+1				n3
+0.001				Dx
+0.001				Dy
+0.001				Dz
+
+INSTRUMENT
+EIS				NameInstrument
+
+#UNIFORMDATA
+T				IsPpar
+T				IsPe
+8.3e7				RhoUni
+0				UxUni
+0				UyUni
+0				UzUni
+0				BxUni
+0				ByUni
+0				BzUni
+1122019.0			TparUni
+1122019.0			TperpUni
+1122019.0			TeUni
+0				I01Uni
+0				I02Uni
+
+#NOALFVEN
+T				IsNoAlfven
+
+ISPERMUTEAXIS
+F				IsPermuteAxis
+1				iDimLOS
+2				iDimVertical
+3				iDimHorizontal
+
+#ISALLLINES
+F				IsAllLines
+
+#ISDOPPLER			
+F				IsDoppler
