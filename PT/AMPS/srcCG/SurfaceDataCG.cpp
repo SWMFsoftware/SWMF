@@ -19,6 +19,8 @@ void cSurfaceDataCG::PrintVarableList(FILE* fout) {
 
   fprintf(fout,", \"Scalar Product of the surface external notmal to the vector pf the spacecraft location\"");
   fprintf(fout,", \"Ram Gauge Field of View\", \"Nude Gauge Field of View\"");
+  fprintf(fout,", \"ExternalNormX\", \"ExternalNormY\", \"ExternalNormZ\"");
+  fprintf(fout,", \"Face ID\"");
 }
 
 void cSurfaceDataCG::Gather(CMPI_channel* pipe) {
@@ -126,11 +128,20 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
 
   //ram and hude gauges fields of view
   double RamGaugeFieldOfVewFlag=-1.0,NudeGaugeFieldOfVewFlag=-1.0;
+  double ExternalNormX=0.0,ExternalNormY=0.0,ExternalNormZ=0.0,*l;
 
   for (i=0;i<StencilLength;i++) {
     if (InterpolationFaceList[i]->FieldOfView_NudeGauge>0.0) NudeGaugeFieldOfVewFlag=1.0;
     if (InterpolationFaceList[i]->FieldOfView_RamGauge>0.0) RamGaugeFieldOfVewFlag=1.0;
+
+    l=CutCell::BoundaryTriangleFaces[Stencil[i]].ExternalNormal;
+
+    ExternalNormX+=InterpolationWeightList[i]*l[0];
+    ExternalNormY+=InterpolationWeightList[i]*l[1];
+    ExternalNormZ+=InterpolationWeightList[i]*l[2];
+
   }
 
   fprintf(fout," %e  %e",RamGaugeFieldOfVewFlag,NudeGaugeFieldOfVewFlag);
+  fprintf(fout," %e  %e  %e %i",ExternalNormX,ExternalNormY,ExternalNormZ,Stencil[0]);
 }
