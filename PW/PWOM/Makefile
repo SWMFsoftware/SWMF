@@ -116,9 +116,6 @@ test:
 	-@(make test_earth_stet)
 
 
-
-
-
 test_earth:	
 	@echo "starting..." > test_Earth_plots.diff
 	@echo "test_compile..." > test_Earth.diff
@@ -218,7 +215,7 @@ test_check:
 		${TESTDIR}/PW/restartOUT/restart_iline0008.dat \
 		data/output/${PLANET}/${SEDIR}/restart_iline0008.dat \
 		>> test_${PLANET}${MYTEST}.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
 		data/output/${PLANET}/${SEDIR}/north_plots_iline0001.out \
 		> test_${PLANET}${MYTEST}_plots.diff)
