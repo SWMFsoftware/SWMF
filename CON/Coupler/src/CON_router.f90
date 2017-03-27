@@ -1464,7 +1464,7 @@ contains
        interpolate)
     !-------------------------------------------------------------------------!
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
-    type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
+    type(LocalGDType),       intent(in)   :: GridDescriptorTarget
     type(RouterType),        intent(inout):: Router
     !INPUT ARGUMENTS:
     interface
@@ -1486,17 +1486,17 @@ contains
        !=======================================
        subroutine interface_point_coords(&
             GridDescriptor,&
-            lGlobalTreeNode,&
+            iBlockUsed,    &
             nDim, Xyz_D, nIndex, iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
-         type(GridDescriptorType),intent(in)::GridDescriptor
-         integer,intent(in)    :: lGlobalTreeNode,nIndex
-         logical,intent(out)   :: IsInterfacePoint
-         integer,intent(in)    :: nDim
-         real,   intent(inout) :: Xyz_D(nDim)
-         integer,intent(inout) :: iIndex_I(nIndex)
+         type(LocalGDType),intent(in) ::GridDescriptor
+         integer,          intent(in) :: iBlockUsed, nIndex
+         logical,         intent(out) :: IsInterfacePoint
+         integer,          intent(in) :: nDim
+         real,          intent(inout) :: Xyz_D(nDim)
+         integer,       intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
        !----------------------------------------------------------------------!
        subroutine mapping(nDimIn, CoordIn_D, nDimOut, CoordOut_D, &
@@ -1544,8 +1544,8 @@ contains
     integer :: iProc, nProc
     logical :: DoCountOnly
     integer :: lGlobalNode, iBlockAll
-    integer :: iGlobalGridPoint, nGridPointsPerBlock
-    integer :: iGlobalPointLast, iPointInBlock, nInterfacePoints
+    integer :: iLocalGridPoint
+    integer :: iLocalPointLast, iPointInBlock, nInterfacePoints
     logical :: IsInterfacePoint
     integer :: iBlockTo, iProcFrom
     integer, dimension(0:Router%nProc-1)::nPutUbound_P
@@ -1567,9 +1567,7 @@ contains
     !\
     ! Variables to operate with local block numbers
     !/
-    integer :: nBlock, MinBlock, MaxBlock, nBlockUsed 
-    integer :: iGlobalNode_B(GridDescriptorTarget%DD%Ptr%MinBlock:&
-         GridDescriptorTarget%DD%Ptr%MaxBlock)
+    integer :: iBlockMisc, iBlockUsed
     ! number of auxilary variables passed via request
     integer:: nAux
     character(len=*),parameter:: NameSub = &
@@ -1589,12 +1587,6 @@ contains
     !/
     if(.not.is_proc(iCompTarget))RETURN
     iCompSource = Router%iCompSource
-    !\
-    ! Get the local block number related parameters for the target
-    !/
-    MinBlock      = GridDescriptorTarget%DD%Ptr%MinBlock
-    MaxBlock      = GridDescriptorTarget%DD%Ptr%MaxBlock
-    iGlobalNode_B = GridDescriptorTarget%DD%Ptr%iGlobal_BP(:,iProc)
 
     nProc = Router%nProc
     ! determine which optional actions should be taken
@@ -1651,27 +1643,23 @@ contains
        !sufficient, then DoCountOnly will be set to true. The loop 
        !then will be repeated for the second time
        !/
-       nGridPointsPerBlock=n_grid_points_per_block(&
-            GridDescriptorTarget)
        !\
        ! Loop over global block number (to be revised)             
        !/
-       BLOCKS: do iBlockTo = MinBlock, MaxBlock 
+       BLOCKS: do iBlockUsed = 1, GridDescriptorTarget%nBlock 
           !\
           ! Convert to a global node number on the 
           ! enumerated tree structure for the domain decomposition
           !/
-          lGlobalNode = iGlobalNode_B(iBlockTo)
-          !\
-          ! Check if the given local block number is used
-          ! at a given PE
-          !/
-          if(lGlobalNode == None_) CYCLE BLOCKS
+          lGlobalNode = GridDescriptorTarget%iIndex_IB(&
+               GlobalTreeNode_,iBlockUsed)
           !\
           ! Convert to the global block number
           !/
-          iBlockAll = i_global_block(&
-               GridDescriptorTarget%DD%Ptr,lGlobalNode)
+          iBlockAll = GridDescriptorTarget%iIndex_IB(&
+               GlobalTreeNode_,iBlockUsed)
+          iBlockTo = GridDescriptorTarget%iIndex_IB(&
+               BLK_,iBlockUsed)
           !\
           ! To be revised: the loop should rather run
           ! over the local block number
@@ -1685,8 +1673,9 @@ contains
           ! 1. Global number of the last grid point in the previous
           ! global block, with the global block number = nBlockAll-1
           !/
-          iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
-          nInterfacePoints = nGridPointsPerBlock 
+          iLocalPointLast = GridDescriptorTarget%nPointPerBlock*&
+               (iBlockUsed - 1)
+          nInterfacePoints = GridDescriptorTarget%nPointPerBlock
           if( DoCheckBlock)then
              nInterfacePoints = min(nInterfacePoints,&
                   n_interface_point_in_block(iBlockTo))
@@ -1699,15 +1688,15 @@ contains
              !\
              ! Recover the global grid point number
              !/
-             iGlobalGridPoint =   iGlobalPointLast + iPointInBlock
+             iLocalGridPoint =   iLocalPointLast + iPointInBlock
              !\
              ! Get cell index for this grid point in target.
              !/
              call global_i_grid_point_to_icb(&
                   GridDescriptorTarget,&
-                  iGlobalGridPoint,&
-                  lGlobalNode,& 
-                  iCell_D)
+                  iLocalGridPoint,&
+                  iBlockMisc,     & !The output is iBlockUsed, which is 
+                  iCell_D)          !the loop variable, cannot be affected
              !\
              ! Shape an index array for this grid point in target
              !/
@@ -1717,9 +1706,9 @@ contains
              ! Generalized coordinates of the target
              ! grid point
              !/
-             XyzTarget_D = xyz_grid_d(&
+             XyzTarget_D = xyz_grid_d( &
                   GridDescriptorTarget,&
-                  lGlobalNode,&
+                  iBlockUsed,          &
                   iCell_D)
              !\
              ! Using the grid descriptor for the target we may want
@@ -1730,11 +1719,11 @@ contains
              if( DoCheckPoint)then
                 call interface_point_coords(&
                      GridDescriptorTarget,&
-                     lGlobalNode,&
-                     nDimTarget,&
-                     XyzTarget_D,&
-                     nIndexTarget,&
-                     iIndexRecv_I,&
+                     iBlockUsed,          &
+                     nDimTarget,          &
+                     XyzTarget_D,         &
+                     nIndexTarget,        &
+                     iIndexRecv_I,        &
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
                 !\
@@ -1797,7 +1786,7 @@ contains
         integer :: nProcToGet, iProcToGet
         integer, parameter:: iPointGlobal_ = 0,  &    
              iPointInBlock_ = 2, iBlockAll_ = 1  
-        integer :: iAux_I(0:2)!, iAux
+        integer :: iAux_I(0:2)
         ! error message containers
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
@@ -1882,8 +1871,7 @@ contains
               Router%BufferTarget_II(&
                    Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
                    XyzSource_D
-              if(nAux > 0)then
-                 iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
+              if(nAux > 0)then   
                  iAux_I(iPointInBlock_) = iPointInBlock
                  iAux_I(iBlockAll_    ) = iBlockAll
                  Router%BufferTarget_II(&

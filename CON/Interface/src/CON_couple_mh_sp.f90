@@ -51,7 +51,7 @@ module CON_couple_mh_sp
   public::couple_sc_sp              !^CMP IF SC
 
   type(GridDescriptorType),save::SP_GridDescriptor !Target
-
+  type(LocalGDType),       save::SP_LocalGD
   type(GridDescriptorType),save::IH_GridDescriptor !Source  !^CMP IF IH
   type(RouterType),save,private::RouterIhSp                 !^CMP IF IH
   type(GridDescriptorType),save::IH_LineGridDesc            !^CMP IF IH
@@ -116,6 +116,11 @@ contains
     !/
     call set_standard_grid_descriptor(SP_,GridDescriptor=&
          SP_GridDescriptor)
+    if(is_proc(SP_))call set_local_gd(&
+         iProc = i_proc(), &
+         GridDescriptor = SP_GridDescriptor, &
+         LocalGD = SP_LocalGD)
+
 
     ! get the value of solar corona boundary as set in SP
     call SP_get_solar_corona_boundary(RSc)
@@ -199,7 +204,7 @@ contains
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = SC_GridDescriptor, &
-              GridDescriptorTarget  = SP_GridDescriptor, &
+              GridDescriptorTarget  = SP_LocalGD, &
               Router                = RouterScSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
@@ -239,7 +244,7 @@ contains
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = SC_GridDescriptor, &
-              GridDescriptorTarget  = SP_GridDescriptor, &
+              GridDescriptorTarget  = SP_LocalGD, &
               Router                = RouterScSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
@@ -259,7 +264,7 @@ contains
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = IH_GridDescriptor, &
-              GridDescriptorTarget  = SP_GridDescriptor, &
+              GridDescriptorTarget  = SP_LocalGD, &
               Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_ih, &
@@ -298,7 +303,7 @@ contains
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = IH_GridDescriptor, &
-              GridDescriptorTarget  = SP_GridDescriptor, &
+              GridDescriptorTarget  = SP_LocalGD, &
               Router                = RouterIhSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_ih, &
@@ -537,8 +542,8 @@ contains
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
          GridDescriptorSource  = IH_GridDescriptor, &
-         GridDescriptorTarget  = SP_GridDescriptor, &
-         Router                = RouterIhSp, &
+         GridDescriptorTarget  = SP_LocalGD, &
+         Router                = RouterIHSp, &
          n_interface_point_in_block = SP_n_particle,&
          interface_point_coords= SP_interface_point_coords_for_ih, &
          mapping               = mapping_sp_to_ih, &
@@ -654,7 +659,7 @@ contains
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
          GridDescriptorSource  = SC_GridDescriptor, &
-         GridDescriptorTarget  = SP_GridDescriptor, &
+         GridDescriptorTarget  = SP_LocalGD, &
          Router                = RouterScSp, &
          n_interface_point_in_block = SP_n_particle,&
          interface_point_coords= SP_interface_point_coords_for_sc, &

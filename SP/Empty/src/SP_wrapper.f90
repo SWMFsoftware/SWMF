@@ -117,11 +117,11 @@ contains
 
   !===================================================================
   subroutine SP_interface_point_coords_for_sc(&
-       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex,iIndex_I,&
+       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
-    type(GridDescriptorType),intent(in)::GridDescriptor
-    integer,intent(in)   :: lGlobalTreeNode
+    type(LocalGDType),intent(in)::GridDescriptor
+    integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
@@ -133,11 +133,11 @@ contains
   end subroutine SP_interface_point_coords_for_sc
   !===================================================================
   subroutine SP_interface_point_coords_for_ih(&
-       GridDescriptor, lGlobalTreeNode, nDim, Xyz_D, nIndex, iIndex_I,&
+       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
-    type(GridDescriptorType),intent(in)::GridDescriptor
-    integer,intent(in)   :: lGlobalTreeNode
+    type(LocalGDType),intent(in)::GridDescriptor
+    integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
