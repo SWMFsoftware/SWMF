@@ -45,6 +45,7 @@ module IH_wrapper
   public:: IH_get_scatter_line
   public:: IH_get_a_line_point
   public:: IH_get_particle_indexes
+  public:: IH_get_particle_coords
   public:: IH_line_interface_point
 
   ! Coupling with GM
@@ -276,6 +277,14 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_particle_indexes
+  !===================================================================!
+  subroutine IH_get_particle_coords(iParticle, Xyz_D)
+    integer, intent(in) :: iParticle
+    real,    intent(out):: Xyz_D(3)
+    character(len=*), parameter:: NameSub='IH_get_particle_coords'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_get_particle_coords
   !===================================================================!
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, &
        nIndex, iIndexOrigin_II, RSoftBoundary, UseInputInGenCoord)

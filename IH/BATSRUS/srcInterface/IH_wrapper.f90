@@ -45,6 +45,7 @@ module IH_wrapper
   public:: IH_add_to_line
   public:: IH_get_scatter_line
   public:: IH_get_particle_indexes
+  public:: IH_get_particle_coords
   public:: IH_get_a_line_point
   public:: IH_line_interface_point
 
@@ -1412,7 +1413,7 @@ contains
     
     
     ! remove particles that have crossed the boundary between components
-    call apply_soft_boundary
+    !    call apply_soft_boundary
 
     ! indices to get state vector are not available yet,
     ! they should be determined outside of this subroutine
@@ -1437,9 +1438,8 @@ contains
   !============================================================================
 
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
-    use IH_BATL_lib, ONLY: nDim, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data, apply_soft_boundary, n_particle_reg
+         get_particle_data
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
 
@@ -1449,6 +1449,20 @@ contains
     call get_particle_data(2, 'fl id', Buff_I, iParticle)
     iIndex_I = nint(Buff_I)
   end subroutine IH_get_particle_indexes
+
+  !============================================================================
+
+  subroutine IH_get_particle_coords(iParticle, Xyz_D)
+    use IH_BATL_lib, ONLY: nDim
+    use IH_ModParticleFieldLine, ONLY: &
+         get_particle_data
+    integer, intent(in) :: iParticle
+    real,    intent(out):: Xyz_D(nDim)
+
+    character(len=*), parameter:: NameSub='IH_get_particle_indexes'
+    !--------------------------------------------------------------------------
+    call get_particle_data(3, 'xx yy zz', Xyz_D, iParticle)
+  end subroutine IH_get_particle_coords
 
   !============================================================================
 
