@@ -55,7 +55,7 @@ contains
     use ModPhysics,    ONLY: InvGammaMinus1,OmegaBody,Si2No_V, &
          UnitB_,UnitU_,UnitRho_,UnitP_, No2Si_V, UnitX_, &
          UseBody2Orbit, xBody2, yBody2, OrbitPeriod, FaceState_VI
-    use ModNumConst,   ONLY:cTwoPi, cZero
+    use ModNumConst,   ONLY:cTwoPi
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, TimeBc, &
          iFace, jFace, kFace, iSide, iBlockBc,iBoundary
 
@@ -181,10 +181,9 @@ contains
     ! This subroutine computes the cell values for density and pressure 
     ! assuming an isothermal atmosphere
     
-    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
-    use ModNumConst
-    use ModPhysics,    ONLY: GBody,BodyRho_I,Si2No_V,UnitTemperature_
-    use ModExpansionFactors,  ONLY: UMin,CoronalT0Dim
+    use ModGeometry,   ONLY: r_BLK
+    use ModPhysics,    ONLY: Gbody, BodyRho_I, Si2No_V, UnitTemperature_
+    use ModExpansionFactors,  ONLY: Umin, CoronalT0Dim
     use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
