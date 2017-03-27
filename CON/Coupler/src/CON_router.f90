@@ -1547,7 +1547,7 @@ contains
     integer :: iGlobalGridPoint, nGridPointsPerBlock
     integer :: iGlobalPointLast, iPointInBlock, nInterfacePoints
     logical :: IsInterfacePoint
-    integer :: iProcTo, iBlockTo, iPE, iProcSource
+    integer :: iBlockTo, iProcFrom
     integer, dimension(0:Router%nProc-1)::nPutUbound_P
 
     real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
@@ -1633,8 +1633,8 @@ contains
        !\
        !Store Upper bounds to control if the alllocated     !
        !index arrays have sufficient size
-       do iPE = 0, nProc-1
-          nPutUbound_P(iPE) = ubound(Router%iPut_P(iPE)%iCB_II,2)
+       do iProcFrom = 0, nProc-1
+          nPutUbound_P(iProcFrom) = ubound(Router%iPut_P(iProcFrom)%iCB_II,2)
        end do     
        ! which processor holds a current image
        call check_size(1, (/Router%nBufferTarget/), iBuffer_I = iProc_I)
@@ -1774,13 +1774,13 @@ contains
     ! to the appropriate processors of Source,
     ! currently iOrder_I contains indices WITHIN these chunks
     nSendCumSum = Router%nRecv_P(iProc)
-    do iProcSource = i_proc0(iCompSource), i_proc_last(iCompSource), &
+    do iProcFrom = i_proc0(iCompSource), i_proc_last(iCompSource), &
          i_proc_stride(iCompSource)
-       if(iProcSource == iProc)CYCLE
-       where(iProc_I(1:nBuffer) == iProcSource)&
+       if(iProcFrom == iProc)CYCLE
+       where(iProc_I(1:nBuffer) == iProcFrom)&
             iOrder_I( 1:nBuffer) = &
             iOrder_I( 1:nBuffer) + nSendCumSum
-       nSendCumSum = nSendCumSum + Router%nRecv_P(iProcSource)
+       nSendCumSum = nSendCumSum + Router%nRecv_P(iProcFrom)
     end do
 
     ! the correct order is found, apply it
@@ -1792,7 +1792,7 @@ contains
              2**GridDescriptorSource%nDim)              
         real    :: Weight_I(2**GridDescriptorSource%nDim) 
         real    :: XyzPass_D(GridDescriptorSource%nDim) 
-        integer :: iImage, nImage, iProcFrom, iProcDoNotAdd
+        integer :: iImage, nImage, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridDescriptorSource%nDim)             
         integer :: nProcToGet, iProcToGet
         integer, parameter:: iPointGlobal_ = 0,  &    
@@ -2076,7 +2076,7 @@ contains
     end interface
     optional:: interpolate
     integer :: nRecvCumSum
-    integer :: iStart, iEnd, iProcTo, iBuffer, iProcFrom, iToGet
+    integer :: iStart, iEnd, iProcTo, iBuffer  
     integer :: iProc, nProc
     integer :: nAux, nDimSource, nIndexSource, nImageMax
     logical :: DoInterpolate
@@ -2144,7 +2144,7 @@ contains
         real :: XyzSource_D(GridDescriptorSource%nDim)
         real :: XyzPass_D(GridDescriptorSource%nDim) 
         real :: Weight_I(2**GridDescriptorSource%nDim)
-        integer:: iImage, nImage, nImagePart
+        integer:: iImage, nImage, nImagePart, iToGet
         !-----------------------------
         XyzSource_D = Router%BufferSource_II(&
              Router%iCoordStart:Router%iCoordEnd, iBuffer)
@@ -2173,8 +2173,7 @@ contains
         if(nImagePart==0)call CON_stop('No image on the requested PE')
         ! indices
         do iImage=1,nImage
-           iProcFrom = iIndexGet_II(0,iImage)
-           if(iProc==iProcFrom)then
+           if(iProc==iIndexGet_II(0,iImage))then
               iToGet=Router%nGet_P(iProcTo)+1-nImagePart
               Router%iGet_P(iProcTo)%iCB_II(:,iToGet)&
                    =iIndexGet_II(:,iImage)
