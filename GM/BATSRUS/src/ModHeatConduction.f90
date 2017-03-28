@@ -157,10 +157,9 @@ contains
     use ModResistivity,  ONLY: UseHeatExchange
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitT_, No2Si_V, UnitN_, &
-         ElectronTemperatureRatio, AverageIonCharge
+         ElectronTemperatureRatio, AverageIonCharge, CoulombLog
     use ModVarIndexes, ONLY: nVar
 
-    real, parameter:: CoulombLog = 20.0
     real :: HeatCondParSi, IonHeatCondParSi
     real::  cTeTiExchangeRateSi
     character(len=*), parameter :: &
@@ -201,8 +200,15 @@ contains
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
     ! Electron-ion collision rate coefficient for the formula
-    ! ElectronIonCollision = ElectronIonCollisionCoef*Ne/Te^1.5
-    ElectronIonCollisionCoef = 54.4 !!!
+    ! ElectronIonCollision = ElectronIonCollisionCoef*Nion*Zion**2/Te^1.5
+    ElectronIonCollisionCoef = &
+         CoulombLog*(cElectronCharge**2/cEps)**2/(3*(cTwoPi*cBoltzmann)**1.5)
+
+    ! To obtain the effective electron-ion collision frequency, this
+    ! coefficient still need to be multiplied by Nion*Zion**2/Te**1.5.
+    ! Here, we already take care of the units.
+    ElectronIonCollisionCoef = ElectronIonCollisionCoef &
+         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! electron heat conduct coefficient for single charged ions
     ! = 9.2e-12 W/(m*K^(7/2))
