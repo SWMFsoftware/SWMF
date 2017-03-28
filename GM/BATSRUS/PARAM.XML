@@ -1061,10 +1061,10 @@ so this command is always present in the current restart header files.
 <command name="OUTERBOUNDARY">
 	<for name="iSide" from="1" to="2*$nDim">
 		<parameter name="TypeBc$iSide" type="string" input="select">
-			<option name="gradpot"/>
+			<option name="none" default="T"/>
 			<option name="coupled" />
 			<option name="periodic"/>
-			<option name="float"          default="T"/>
+			<option name="float"/>
 			<option name="outflow" />
 			<option name="reflect"/>
 			<option name="linetied"/>
@@ -1074,7 +1074,6 @@ so this command is always present in the current restart header files.
 			<option name="ihbuffer"/>
 			<option name="shear"/>
 			<option name="fieldlinethreads"/>
-			<option name="none" />
 			<option name="user"/>
 		</parameter>
 	</for>
@@ -1098,18 +1097,19 @@ float                   TypeBc4 (only read in 2D and 3D)
 float                   TypeBc5 (only read in 3D)
 float                   TypeBc6 (only read in 3D)
 
-This command defines how the ghost cells are filled in at the 
-cell based boundaries. TypeBc1 and TypeBc2 describe the boundaries
-at the minimum and maximum values of the first coordinate. 
-TypeBc3 and TypeBc4 describe the boundaries
-at the minimum and maximum values of the second coordinate for 2D and 3D grids.
-TypeBc5 and TypeBc6 describe the boundaries at the minimum and maximum values 
-of the third coordinate for 3D grids.
+This command defines how the ghost cells are filled in at the cell
+based boundaries at the edges of the grid.  TypeBc1 and TypeBc2
+describe the boundaries at the minimum and maximum values of the first
+(generalized) coordinate.  For a Cartesian grid these are at xMin and
+xMax, while for a spherical or cylindrical grid these are at rMin and
+rMax.  TypeBc3 and TypeBc4 describe the boundaries at the minimum and
+maximum values of the second (generalized) coordinate for 2D and 3D
+grids.  TypeBc5 and TypeBc6 describe the boundaries at the minimum and
+maximum values of the third (generalized) coordinate for 3D grids.
 
 Possible values:
 \begin{verbatim}
-gradpot	      -
-coupled       - set from coupling with another component (e.g. IH to GM)
+coupled       - set from coupling with another component
 periodic      - periodic
 float         - zero gradient for all variables except:
                 Phi=0 set for the scalar in hyperbolic div B control (see #HYPERBOLICDIVB)
@@ -1122,37 +1122,42 @@ fixed         - fixed solarwind values, total B is set
 fixedB1       - fixed solarwind values, B1 is set
 inflow/vary   - time dependent boundary based on solar wind input file (#SOLARWINDFILE)
 shear         - sheared (intended for shock tube problem only)
-ihbuffer      -
-none          - do not change ghost cells. This is useful for simple tests only.
+ihbuffer      - values obtained from the IH component (this is set automatically)
+none          - do not change ghost cells. This is useful if the outer boundary is not used.
 fieldlinethreads - threaded magnetic field BC for AWSOM-R solar model
 user          - user defined
 \end{verbatim}
 
-The default values are 'none' on all sides for EE,SC,IH,OH and GM components. 
+Here are some tips for spherical grids. If the box defined in the #GRID command is completely inside 
+the spherical grid (defined by #LIMITRADIUS) then the outer cell boundary at rMax is not used. 
+If a "body" is used (see #BODY command) with a radius larger or equal than the minimum radius 
+of the spherical grid (defined by #LIMITRADIUS) then the cell boundary at rMin is not used.
+On the other hand, if the box defined by #GRID is completely outside the spherical grid then
+the rMax cell boundary is used, and if there is no body defined, or if it has smaller radius than
+rMin, then the cell boundary at rMin is used.
+One can mix cell and face based boundaries. For example the xMin defined by #GRID may cut through the 
+spherical grid, while the xMax ... zMax may be outside. This can be used to define inflow at the 
+face based boundary at xMin using the #BOXBOUNDARY command, while the cell boundaries at the rMax boundary 
+can be set to outflow using the #OUTERBOUNDARY command.
+
+The default values are 'none' on all sides. 
 </command>
 
 <command name="BOXBOUNDARY">
         <for name="iSide" from="1" to="2*$nDim">
                 <parameter name="TypeBc$iSide" type="string" input="select">
-                        <option name="linetied/ionospherefloat"/>
                         <option name="float"          default="T"/>
                         <option name="outflow"/>
 			<option name="reflect"/>
 			<option name="reflectb"/>
 			<option name="reflectall"/>
-			<option name="ionosphere"/>
-			<option name="polarwind"/>
-			<option name="ionosphereoutflow"/>
-			<option name="absorb"/>
-			<option name="buffergrid"/>
-			<option name="Body2Orbit"/>
                         <option name="fixed"/>
-					<option value="fixedb1" name="fixed B1"/>
+			<option value="fixedB1" name="fixed B1"/>
 			<option name="zeroB1"/>
                         <option name="inflow/vary"/>
                         <option name="user"/>
                 </parameter>
-	<for/>
+	</for>
 #BOXBOUNDARY
 outflow                 TypeBcXmin
 inflow                  TypeBcXmax
@@ -1161,69 +1166,53 @@ float                   TypeBcYmax (only read in 2D and 3D)
 float                   TypeBcZmin (only read in 3D)
 float                   TypeBcZmax (only read in 3D)
 
-This command defines how the ghost cells are filled in at the
-face based boundaries. TypeBcXmin, ..., TypeBcZmax describe the boundaries
-at the faces of the brick-shaped domain set in #GRID.
+This command defines how the face boundary values are set at the
+brick-shaped box cut out of a generalized coordinate grid.  Normally
+this command should not be used for a Cartesian grid, but it is still
+allowed.  The size of the box is defined by the xMin ... zMax
+parameters of the #GRID command.
 
 General notes: face based boundary conditions are 1st order accurate
 in general, while cell based boundary conditions can be 2nd order accurate.
 Sometimes, however, it is easier to define a face value than the state
-of the ghost cells that are outside the computational domain. Depending
-on the shape of the boundary it can also happen that the same ghost cell
-is used by multiple physical cells and this may be a problem. In our
-current implementation cell based boundaries can be used only when the
-physical boundary coincides with the boundary of the grid blocks.
+of the ghost cells that are outside the computational domain. 
+In our current implementation cell based boundaries can be used only at the
+outer edges of the grid. 
 
-Face based boundaries are allowed even when the physical boundary cuts
-through the grid blocks. In this case each cell center is marked as either
+On the other hand, face based boundaries can be applied
+anywhere. For a face boundary each cell center is marked as either
 physical or boundary cell, and the boundary conditions are applied at
 cell faces between a physical and a boundary cell center.
+The actual boundary will be ragged (along the cell faces) and this can 
+in fact cause numerical problems. For supersonic outflow, the dot product 
+of the face normal and the flow velocity should be positive, for inflow
+it should be negative. 
 
-For Cartesian coordinates the inner (body2=-2 and body1=-1)
-and extra (0) boundaries have to be face based because these are
-not aligned with the block boundaries.
-The outer boundaries (east=1 to top=6) are cell based by default,
-but they can also be face based if desired.
-
-For spherical and cylindircal grids the default is face based boundaries
-everywhere. The outer boundaries have to be face based if a brick-shaped
+The outer boundaries have to be face based if a brick-shaped
 computational domain is cut out from the sphere/cylinder
 (see the #LIMITRADIUS and #GRID commands) because the boundary is not 
-aligned with the block boundaries.
+aligned with the grid boundaries.
 If the computational domain is the full sphere/cylinder, then cell based 
-boundaries can be used. (See #OUTERBOUNDARY)
-For spherical grids the 'inner boundary' is simply at the minimum radius
-that normally coincides with the body radius, therefore it can be cell or
-face based.
+boundaries can be used (see #OUTERBOUNDARY).
 
 Possible values:
 \begin{verbatim}
 float         - zero gradient for all variables except:
-                Phi=0 set for the scalar in hyperbolic div B control (see #HYPERB\
-OLICDIVB)
-                radiative outflow boundaries are applied for radiation energy den\
-sities
-outflow       - same as 'float' but the pressure is set to pOutflow from #OUTFLOW\
-PRESSURE
-reflect       - reflective (anti-symmetric for the normal components of V and B,
-                            symmetric for all other variables)
-linetied      - symmetric for density, anti-symmetric for momentum, float all oth\
-ers
-fixed         - fixed solarwind values, total B is set
-fixedB1       - fixed solarwind values, B1 is set
-zeroB1	      - fixed solarwind values, B1 is set to zero
-inflow/vary   - time dependent boundary based on solar wind input file (#SOLARWIN\
-DFILE)
-polarwind     - 
-ionospheroutflow -
-buffergrid    -
-body2Orbit    -
-inflow	      -
+                Phi=0 set for the scalar in hyperbolic div B control (see #HYPERBOLICDIVB)
+                radiative outflow boundaries are applied for radiation energy densities
+outflow       - same as 'float' but the pressure is set to pOutflow from #OUTFLOWPRESSURE
+reflect       - reflect the normal component of B1, reflect the full velocity vector
+reflectb      - reflect the normal component of full B, reflect the full velocity vector
+reflectall    - reflect the normal component of B1 and velocity, symmetric for all other
+linetied      - reflective for velocity, float for all others
+fixed         - fixed values (set by #SOLARWIND or #BOUNDARYSTATE), total B is set
+fixedB1       - fixed values (set by #SOLARWIND or #BOUNDARYSTATE), B1 is set
+zeroB1	      - B1 is reflected, all other variables float
+inflow/vary   - time dependent boundary based on solar wind input file (#SOLARWINDFILE)
 user          - user defined
 \end{verbatim}
 
-There are no default values. User must set face boundary type if face boundary
-conditions are used for the outer boundaries.
+There are no default values. User must set face boundary type if a box is cut out of a non-Cartesian grid.
 </command>
 
 <command name="BOUNDARYSTATE">
@@ -7236,6 +7225,11 @@ T			UseBody (rest of parameters read if true)
 10000.0			BodyTDim (K)   for fluid 1
 0.01			BodyNDim (/cc) for fluid 2
 300.0			BodyTDim (K)   for fluid 2
+
+Note that the #BODY command is most useful for Cartesian grids so that a sphere
+can be cut out as the inner boundary.
+For spherical grids the cell based boundary at the minimum radius
+can be controlled with the #OUTERBOUNDARY and #BOUNDARYSTATE commands.
 
 If UseBody is true, the inner boundary is a spherical surface
 with radius rBody. The rBody is defined in units of the planet/solar
