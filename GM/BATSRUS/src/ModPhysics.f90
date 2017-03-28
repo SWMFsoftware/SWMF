@@ -38,6 +38,9 @@ module ModPhysics
   ! electron gyro-frequency coefficient in normalized units
   real:: ElectronGyroFreqCoef
 
+  ! Coulomb logarithm (spatially independent)
+  real:: CoulombLog = 20.0
+
   ! plasma parameters
   real:: AverageIonCharge         = 1.0
   real:: ElectronTemperatureRatio = 0.0
