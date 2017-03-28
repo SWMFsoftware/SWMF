@@ -445,7 +445,6 @@ contains
     integer :: nDim, nBlock, nPointPerBlock, nBlockAll
     integer :: iBlock, iError
     integer, pointer:: iDD_II(:,:), iGlobal_A(:)
-    real, pointer:: DXyz_DB(:,:), XyzBLock_DB(:,:)
     !----------------------------------
     nDim                     = GridDescriptor%nDim
     LocalGD%nDim             = nDim
@@ -472,18 +471,20 @@ contains
          LocalGD%iIndex_IB(GlobalTreeNode_,:))
     LocalGD%iIndex_IB(GlobalBlock_,:) = iDD_II(GlobalBlock_,&
          LocalGD%iIndex_IB(GlobalTreeNode_,:))
+    allocate(LocalGD%DXyz_DB(1:nDim,1:nBlock),stat=iError)
+    call check_allocate(iError,'LocalGD%DXyz_DB')
+    allocate(LocalGD%XyzBlock_DB(1:nDim,1:nBlock),stat=iError)
+    call check_allocate(iError,'LocalGD%XyzBlock_DB')
     do iBlock = 1, nBlock
        LocalGD%iIndex_IB(GridPointFirst_,iBlock) = (iBlock - 1)*&
             nPointPerBlock + 1
-       DXyz_DB(1:nDim,iBlock:iBlock) => &
+       LocalGD%DXyz_DB(1:nDim,iBlock)     = &
             GridDescriptor%DD%Ptr%DXyzCell_DI(1:nDim, &
             LocalGD%iIndex_IB(GlobalTreeNode_,iBlock))
-       XyzBlock_DB(1:nDim,iBlock:iBlock) => &
+       LocalGD%XyzBlock_DB(1:nDim,iBlock) = &
             GridDescriptor%DD%Ptr%XyzBlock_DI(1:nDim, &
             LocalGD%iIndex_IB(GlobalTreeNode_,iBlock))
     end do
-    LocalGD%DXyz_DB=>DXyz_DB(1:nDim,1:nBlock)
-    LocalGD%XyzBlock_DB=>XyzBlock_DB(1:nDim,1:nBlock)
   end subroutine set_local_gd
   !===============================================================!
   !BOP
