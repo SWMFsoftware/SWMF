@@ -1,8 +1,6 @@
 !instrumental broadening
-!comments!!!
-!verbose levels
-!isothermal.pro
-!dataname
+!test
+!check boxes
 
 program spectrum
 
@@ -12,7 +10,7 @@ program spectrum
   implicit none
 
   ! Logical variables of running modes
-  logical                     :: IsVerbose =  .false.
+  logical                     :: IsVerbose =  .false., IsDebug = .false.
   logical                     :: IsDataFile = .false. ! Use input file or not
 
   integer                     :: iError 
@@ -52,6 +50,8 @@ program spectrum
   integer                     :: n1, n2, n3 ! Data box size
   real                        :: CoordMin_D(3), CoordMax_D(3)        
   real,allocatable            :: Var_VIII(:,:,:,:)
+  ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
+  real                        :: ProtonElectronRatio = 0.83
 
   ! Variables for uniform data
   logical                     :: IsUniData = .false. ! Overwrite data w/ const
@@ -449,7 +449,7 @@ contains
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3
              ! 1 : 0.83  electron to proton ratio is assumed
-             LogNe = log10(Rho*1e-6/cProtonMass/0.83)
+             LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
              LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
 
              ! Some lines grid start at t+0.05 (on logT scale)
@@ -487,9 +487,10 @@ contains
              if(Gint<1e-40)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) *0.83
+             ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
+             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) 
              
-             if(iLine ==4 )then
+             if(IsDebug)then
                 write(*,*)'                                                   '
                 write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
                 write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
@@ -604,6 +605,9 @@ contains
 
        case("#VERBOSE")
           call read_var('IsVerbose', IsVerbose)
+
+       case("#DEBUG")
+          call read_var('IsDebug', IsDebug)
 
        case("#OUTFILE")
           call read_var('NameSpectrumFile',NameSpectrumFile)
