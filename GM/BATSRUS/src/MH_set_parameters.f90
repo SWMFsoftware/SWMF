@@ -633,6 +633,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
         call read_heatflux_param(NameCommand)
 
+     case("#COULOMBLOG")
+       call read_var('CoulombLog', CoulombLog)
+
      case("#PARTICLELINE")
         call read_particle_line_param(NameCommand)
 
