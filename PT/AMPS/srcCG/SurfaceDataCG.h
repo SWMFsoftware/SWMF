@@ -17,7 +17,7 @@ public:
   double OriginalSourceRate[_TOTAL_SPECIES_NUMBER_],ModifiedSourceRate[_TOTAL_SPECIES_NUMBER_];
 
   //save and output the scalar product of the external normal to the surface element and the vector pointing to the spacecraft location
-  double CrossProduct_FaceNormal_SpacecraftLocation;
+  double ScalarProduct_FaceNormal_SpacecraftLocation;
 
   //the marker saying that the surface element can be seen from the spacecraft location by the ram/nude gauge
   bool FieldOfView_NudeGauge,FieldOfView_RamGauge;

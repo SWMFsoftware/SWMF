@@ -34,11 +34,28 @@ void cSurfaceDataCG::Gather(CMPI_channel* pipe) {
 
         pipe->recv(t,thread);
         MassInjectionFlux[spec]+=t;
+
+        pipe->recv(t,thread);
+        NudeGaugeDensityContribution[spec]+=t;
+
+        pipe->recv(t,thread);
+        NudeGaugeFluxContribution[spec]+=t;
+
+        pipe->recv(t,thread);
+        RamGaugeDensityContribution[spec]+=t;
+
+        pipe->recv(t,thread);
+        RamGaugeFluxContribution[spec]+=t;
       }
     }
     else {
       pipe->send(InjectionFlux[spec]);
       pipe->send(MassInjectionFlux[spec]);
+
+      pipe->send(NudeGaugeDensityContribution[spec]);
+      pipe->send(NudeGaugeFluxContribution[spec]);
+      pipe->send(RamGaugeDensityContribution[spec]);
+      pipe->send(RamGaugeFluxContribution[spec]);
     }
   }
 }
@@ -53,7 +70,7 @@ void cSurfaceDataCG::Flush() {
     OriginalSourceRate[spec]=0.0,ModifiedSourceRate[spec]=0.0;
   }
 
-  CrossProduct_FaceNormal_SpacecraftLocation=0.0;
+  ScalarProduct_FaceNormal_SpacecraftLocation=0.0;
   FieldOfView_NudeGauge=false,FieldOfView_RamGauge=false;
 }
 
@@ -123,7 +140,7 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
   }
 
   //the scalar product of the local external normal and the vector of the direction toward the spacecraft
-  for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->CrossProduct_FaceNormal_SpacecraftLocation;
+  for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->ScalarProduct_FaceNormal_SpacecraftLocation;
   fprintf(fout," %e",t);
 
   //ram and hude gauges fields of view
