@@ -3,7 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
-  use IH_ModParticleFieldLine, ONLY: IH_n_particle=>n_particle_reg_max
   use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
 
@@ -1369,13 +1368,13 @@ contains
   !==================================================================!
   subroutine IH_line_interface_point(&
        GridDescriptor,&
-       lGlobalTreeNode,&
+       iBlockUsed,    &
        nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
-    use CON_router, ONLY: GridDescriptorType
+    use CON_router, ONLY: LocalGDType
     use IH_ModParticleFieldLine, ONLY: n_particle_reg, n_particle_reg_max
-    type(GridDescriptorType),intent(in)::GridDescriptor
-    integer,intent(in)    :: lGlobalTreeNode,nIndex
+    type(LocalGDType),intent(in)::GridDescriptor
+    integer,intent(in)    :: iBlockUsed,nIndex
     logical,intent(out)   :: IsInterfacePoint
     integer,intent(in)    :: nDim
     real,   intent(inout) :: Xyz_D(nDim)
@@ -2282,6 +2281,12 @@ contains
          NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, Data_VI)
 
   end subroutine IH_get_for_ee
-
+  !===========================
+  integer function IH_n_particle(iBlockLocal)
+    use IH_ModParticleFieldLine, ONLY: n_particle_reg
+    integer, intent(in) :: iBlockLocal
+    !---------------------------------
+    IH_n_particle = n_particle_reg()
+  end function IH_n_particle
 
 end module IH_wrapper

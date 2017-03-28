@@ -113,11 +113,7 @@ Module CON_router
 !\end{verbatim}
 !\begin{verbatim}
      integer :: nBufferSource, nBufferTarget
-     integer :: iPointGlobal_      
-     integer :: iPointInBlock_
-     integer :: iNodeGlobal_
      integer :: nVar, iCoordStart, iCoordEnd, iAuxStart, iAuxEnd
-     integer :: iWeight, iData
 !\end{verbatim}
   end type RouterType
 !EOP
@@ -291,10 +287,6 @@ contains
     end if
 
     Router%nMappedPointIndex   = -1 !Buffers will not be initialized
-
-    Router%iPointGlobal_       = 0
-    Router%iPointInBlock_      = 0
-    Router%iNodeGlobal_        = 0
     Router%iCoordStart         = 1
     Router%iCoordEnd           = 0
     Router%iAuxStart           = 1
@@ -310,14 +302,7 @@ contains
        Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
        Router%nVar      = Router%iAuxEnd
        select case(nMappedPointIndex)
-       case(1)
-          Router%iPointGlobal_       = 1
-          Router%iPointInBlock_      = 0
-          Router%iNodeGlobal_        = 0
        case(2)        
-          Router%iPointGlobal_       = 0
-          Router%iPointInBlock_      = 1
-          Router%iNodeGlobal_        = 2
        case(0)
           !Do nothing, send coordinates only
        case default
@@ -1444,22 +1429,30 @@ contains
   !====================================
   subroutine set_semi_router_from_target(&
        ! the GridDescriptor for the Source component
-       GridDescriptorSource, &
+       GridDescriptorSource,      &
        ! the GridDescriptor for the Target component
-       GridDescriptorTarget, &
+       GridDescriptorTarget,      &
        ! the router to be set
-       Router, &
-       !Logical function which allows to skip the block if there is no !
-       !interface points in it. Optional, if not present then all the  !
-       !blocks are checked for the presence of the interface points    !
+       Router,                    &
+       !Logical function which allows to skip the block if there is no 
+       !interface points in it. Optional, if not present then all the  
+       !blocks are checked for the presence of the interface points    
+       is_interface_block,        &    
+       !The function may be also used for sparse 1D grids
+       !in which the real information is available only in the first
+       !n grid points, for the given plocks, the other points being
+       !unused. For this purpose, the function should return this 
+       !number of used points. It is not applied, if the rurned value
+       !is larger than the total number of grid points, in the given 
+       !plock.
        n_interface_point_in_block,&
-       !The subroutine which defines if the grid point is inside the   !
-       !interface layer. Optional, if not present, then all the grid   !
-       !points (at the target grid) are considered as the interface    !
-       !layer points                                                   !     
-       interface_point_coords, &
+       !The subroutine which defines if the grid point is inside the   
+       !interface layer. Optional, if not present, then all the grid   
+       !points (at the target grid) are considered as the interface    
+       !layer points                                                        
+       interface_point_coords,    &
        ! transformation of the location coordinates between components
-       mapping, &
+       mapping,                   &
        ! interpolation subroutine for the Source's grid
        interpolate)
     !-------------------------------------------------------------------------!
@@ -1468,25 +1461,19 @@ contains
     type(RouterType),        intent(inout):: Router
     !INPUT ARGUMENTS:
     interface
+       logical function is_interface_block(iBlockLocal)
+         implicit none
+         integer, intent(in)::iBlockLocal
+       end function is_interface_block
+       !==============================
        integer function n_interface_point_in_block(iBlockLocal)
-         !\
-         ! To be applicable for the original purposes, the function
-         ! should return 0 (or less) for local blocks in which there is
-         ! no interface points. It may be also used for sparse 1D grids
-         ! in which the real information is available only in the first
-         ! n grid points, for the given plocks, the other points being
-         ! unused. For this purpose, the function should return this 
-         ! number of used points. It is not applied, if the rurned value
-         ! is larger than the total number of grid points, in the given 
-         ! plock.
-         !/
          implicit none
          integer,intent(in) :: iBlockLocal
        end function n_interface_point_in_block
        !=======================================
-       subroutine interface_point_coords(&
-            GridDescriptor,&
-            iBlockUsed,    &
+       subroutine interface_point_coords( &
+            GridDescriptor,               &
+            iBlockUsed,                   &
             nDim, Xyz_D, nIndex, iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
@@ -1498,7 +1485,7 @@ contains
          real,          intent(inout) :: Xyz_D(nDim)
          integer,       intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
-       !----------------------------------------------------------------------!
+       !-----------------------------------------------------------!
        subroutine mapping(nDimIn, CoordIn_D, nDimOut, CoordOut_D, &
             IsInterfacePoint)
          ! this subroutine mapss coordinates between components
@@ -1530,6 +1517,7 @@ contains
          real,    intent(out)     :: Weight_I(2**nDim)
        end subroutine interpolate
     end interface
+    optional:: is_interface_block
     optional:: n_interface_point_in_block
     optional:: interface_point_coords
     optional:: mapping
@@ -1539,15 +1527,14 @@ contains
     !\
     ! The presence of optional parameters
     !/
-    logical :: UseMappingFunction, DoCheckBlock ,DoCheckPoint,DoInterpolate
+    logical :: UseMappingFunction, DoCheckBlock, DoCheckBlockSize, &
+         DoCheckPoint, DoInterpolate
     ! MPI-related variables
-    integer :: iProc, nProc
+    integer :: iProc
     logical :: DoCountOnly
-    integer :: lGlobalNode, iBlockAll
-    integer :: iLocalGridPoint
-    integer :: iLocalPointLast, iPointInBlock, nInterfacePoints
-    logical :: IsInterfacePoint
-    integer :: iBlockTo, iProcFrom
+    integer :: iBlockTo, iProcFrom, iLocalGridPoint
+    integer :: iLocalPointLast, iPointInBlock, nInterfacePoint
+    logical :: IsInterfacePoint 
     integer, dimension(0:Router%nProc-1)::nPutUbound_P
 
     real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
@@ -1555,45 +1542,48 @@ contains
     integer, dimension(GridDescriptorTarget%nDim) :: iCell_D
     integer, dimension(Router%nIndexTarget)       :: iIndexRecv_I
     ! components ids
-    integer:: iCompSource, iCompTarget
+    integer:: iCompSource, iProc0Source, iProcLastSource, &
+         iProcStrideSource
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
     ! number of indices (e.g. cell indices) on components
     integer:: nIndexSource, nIndexTarget
     ! loop variables
-    integer:: nBuffer
+    integer:: nBuffer, iBlockUsed
     ! offset in buffer
-    integer:: nSendCumSum  
+    integer:: nRecvCumSum  
     !\
-    ! Variables to operate with local block numbers
+    ! Misc
     !/
-    integer :: iBlockMisc, iBlockUsed
-    ! number of auxilary variables passed via request
-    integer:: nAux
+    integer :: iBlockMisc,  nAux
     character(len=*),parameter:: NameSub = &
          'CON_router:set_semi_router_from_target'
     !-------------------------------------------------------------------------!
     !For given PE the index in the communicator is:
     iProc = Router % iProc
     !Return if the processor does not belong to the communicator
-    if(iProc<0) RETURN
-
-    ! identify components
-    iCompTarget = Router%iCompTarget
+    if(iProc<0) RETURN 
     !\
     ! Stage 1:
     ! on Target PE determine the sources of data and
     ! how much data is to be requested from them
     !/
-    if(.not.is_proc(iCompTarget))RETURN
+    if(.not.is_proc(Router%iCompTarget))RETURN
     iCompSource = Router%iCompSource
-
-    nProc = Router%nProc
+    if(Router%IsLocal)then
+       iProc0Source = 0;  iProcStrideSource = 1
+       iProcLastSource = Router%nProc - 1
+    else
+      iProc0Source      = i_proc0(      iCompSource)
+      iProcLastSource   = i_proc_last(  iCompSource)
+      iProcStrideSource = i_proc_stride(iCompSource)
+    end if
     ! determine which optional actions should be taken
-    UseMappingFunction        = present(mapping)
-    DoInterpolate             = present(interpolate)
-    DoCheckBlock=present(n_interface_point_in_block)
-    DoCheckPoint=present(interface_point_coords)
+    UseMappingFunction = present(mapping)
+    DoInterpolate      = present(interpolate)
+    DoCheckBlock       = present(is_interface_block)
+    DoCheckBlockSize   = present(n_interface_point_in_block)
+    DoCheckPoint       = present(interface_point_coords)
 
     ! introduced for a better readability
     nDimTarget   = GridDescriptorTarget%nDim
@@ -1609,14 +1599,6 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorSource%nDim
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
  
     !Check dimensions
     DoCountOnly=.true. !To enter the loop
@@ -1625,8 +1607,9 @@ contains
        !\
        !Store Upper bounds to control if the alllocated     !
        !index arrays have sufficient size
-       do iProcFrom = 0, nProc-1
-          nPutUbound_P(iProcFrom) = ubound(Router%iPut_P(iProcFrom)%iCB_II,2)
+       do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
+          nPutUbound_P(iProcFrom) = &
+               ubound(Router%iPut_P(iProcFrom)%iCB_II,2)
        end do     
        ! which processor holds a current image
        call check_size(1, (/Router%nBufferTarget/), iBuffer_I = iProc_I)
@@ -1637,7 +1620,7 @@ contains
        Router%nRecv_P = 0
        ! reset index of a current data entry in the buffer
        nBuffer        = 0
-       DoCountOnly=.false.
+       DoCountOnly    = .false.
        !\
        !If the check shows that the allocated array is not 
        !sufficient, then DoCountOnly will be set to true. The loop 
@@ -1648,24 +1631,17 @@ contains
        !/
        BLOCKS: do iBlockUsed = 1, GridDescriptorTarget%nBlock 
           !\
-          ! Convert to a global node number on the 
-          ! enumerated tree structure for the domain decomposition
+          ! Convert to the local block number
           !/
-          lGlobalNode = GridDescriptorTarget%iIndex_IB(&
-               GlobalTreeNode_,iBlockUsed)
-          !\
-          ! Convert to the global block number
-          !/
-          iBlockAll = GridDescriptorTarget%iIndex_IB(&
-               GlobalTreeNode_,iBlockUsed)
           iBlockTo = GridDescriptorTarget%iIndex_IB(&
                BLK_,iBlockUsed)
           !\
-          ! To be revised: the loop should rather run
-          ! over the local block number
-          !/ 
           !Skip the block if desired: if there is known to be no interface!
-          !point in it                                                    !
+          !point in it
+          !/                                                    !
+          if(DoCheckBlock)then
+             if(.not.is_interface_block(iBlockTo))CYCLE BLOCKS
+          end if
           !\
           ! Prepare a GlobalCellNumber Loop, for a given (octree) block
           !/ 
@@ -1673,18 +1649,18 @@ contains
           ! 1. Global number of the last grid point in the previous
           ! global block, with the global block number = nBlockAll-1
           !/
-          iLocalPointLast = GridDescriptorTarget%nPointPerBlock*&
-               (iBlockUsed - 1)
-          nInterfacePoints = GridDescriptorTarget%nPointPerBlock
-          if( DoCheckBlock)then
-             nInterfacePoints = min(nInterfacePoints,&
+          iLocalPointLast = GridDescriptorTarget%iIndex_IB(&
+               GridPointFirst_,iBlockUsed) - 1
+          nInterfacePoint = GridDescriptorTarget%nPointPerBlock
+          if( DoCheckBlockSize)then
+             nInterfacePoint = min(nInterfacePoint,&
                   n_interface_point_in_block(iBlockTo))
           end if
           !\
           ! Now the subloop runs over the iPointBlock within 
           ! the current local block
           !/
-          POINTS:do iPointInBlock  = 1, nInterfacePoints
+          POINTS:do iPointInBlock  = 1, nInterfacePoint
              !\
              ! Recover the global grid point number
              !/
@@ -1695,7 +1671,7 @@ contains
              call global_i_grid_point_to_icb(&
                   GridDescriptorTarget,&
                   iLocalGridPoint,&
-                  iBlockMisc,     & !The output is iBlockUsed, which is 
+                  iBlockMisc,     & !<=The output is iBlockUsed, which is 
                   iCell_D)          !the loop variable, cannot be affected
              !\
              ! Shape an index array for this grid point in target
@@ -1745,10 +1721,6 @@ contains
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
              else
-                !\
-                ! Otherwise, the coordinates in the source
-                ! are the same as those in the oputput from 
-                !
                 XyzSource_D=XyzTarget_D
              end if
              !\
@@ -1762,16 +1734,15 @@ contains
     ! fix the order of Buffer_I so contiguous chunks of data can be sent
     ! to the appropriate processors of Source,
     ! currently iOrder_I contains indices WITHIN these chunks
-    nSendCumSum = Router%nRecv_P(iProc)
-    do iProcFrom = i_proc0(iCompSource), i_proc_last(iCompSource), &
-         i_proc_stride(iCompSource)
+    nRecvCumSum = Router%nRecv_P(iProc)
+    do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
        if(iProcFrom == iProc)CYCLE
        where(iProc_I(1:nBuffer) == iProcFrom)&
             iOrder_I( 1:nBuffer) = &
-            iOrder_I( 1:nBuffer) + nSendCumSum
-       nSendCumSum = nSendCumSum + Router%nRecv_P(iProcFrom)
+            iOrder_I( 1:nBuffer) + nRecvCumSum
+       nRecvCumSum = nRecvCumSum + Router%nRecv_P(iProcFrom)
     end do
-
+    !\
     ! the correct order is found, apply it
     Router%BufferTarget_II(:,iOrder_I(1:nBuffer)) = &
          Router%BufferTarget_II(:,1:nBuffer)
@@ -1784,9 +1755,8 @@ contains
         integer :: iImage, nImage, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridDescriptorSource%nDim)             
         integer :: nProcToGet, iProcToGet
-        integer, parameter:: iPointGlobal_ = 0,  &    
-             iPointInBlock_ = 2, iBlockAll_ = 1  
-        integer :: iAux_I(0:2)
+        integer, parameter :: iPointInBlock_ = 2, iBlockAll_ = 1  
+        integer :: iAux_I(1:2), iBlockAll
         ! error message containers
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
@@ -1820,19 +1790,15 @@ contains
         end if
         
         ! go over the list of images and process result of interpolation
+        nProcToGet = 0
         IMAGES1:do iImage = 1, nImage
            iProcFrom = iIndexGet_II(0, iImage)
-           if(iImage==1)then
-              iProcLookUp_I(1)=iProcFrom
-              nProcToGet=1
-           else
-              if(.not.any(iProcLookUp_I(1:nProcToGet)==iProcFrom))then
-                 nProcToGet=nProcToGet+1
-                 iProcLookUp_I(nProcToGet)=iProcFrom
-              else
-                 CYCLE IMAGES1
-              end if
+           if(nProcToGet > 0)then
+              if( any(iProcLookUp_I(1:nProcToGet) == iProcFrom)  &
+                   )CYCLE IMAGES1
            end if
+           nProcToGet=nProcToGet+1
+           iProcLookUp_I(nProcToGet)=iProcFrom
            ! index of current data entry in the buffer
            Router%nPut_P(iProcFrom)=&
                 Router%nPut_P(iProcFrom) + 1
@@ -1844,8 +1810,8 @@ contains
                 nPutUbound_P(iProcFrom)  
         end do IMAGES1
         if(.not.DoCountOnly)then
-           PROCFROM:do iProcToGet=1,nProcToGet
-              iProcFrom=iProcLookUp_I(iProcToGet)
+           PROCFROM:do iProcToGet = 1, nProcToGet
+              iProcFrom = iProcLookUp_I(iProcToGet)
               Router%iPut_P(iProcFrom)%&
                    iCB_II(1:Router%nIndexTarget,&
                    Router%nPut_P(iProcFrom))&
@@ -1856,8 +1822,10 @@ contains
                    Weight_I(Router%nPut_P(iProcFrom)) = 1.0
               Router%DoAdd_P(iProcFrom)%&
                    DoAdd_I(Router%nRecv_P(iProcFrom)) = .true.
+              !\
               ! indices of the location where data has to be put
               ! store processor id for later use
+              !/
               nBuffer = nBuffer + 1
               iProc_I(nBuffer) = iProcFrom
               !\
@@ -1872,6 +1840,8 @@ contains
                    Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
                    XyzSource_D
               if(nAux > 0)then   
+                 iBlockAll = GridDescriptorTarget%iIndex_IB(&
+                      GlobalBlock_,iBlockUsed)
                  iAux_I(iPointInBlock_) = iPointInBlock
                  iAux_I(iBlockAll_    ) = iBlockAll
                  Router%BufferTarget_II(&
@@ -1879,8 +1849,10 @@ contains
                       real(iAux_I(1:nAux))
               end if
            end do PROCFROM
+           !\
            !DoAdd should be set to .false. for the same PE or for
            !the minimal PE
+           !/
            if(any(iProcLookUp_I(1:nProcToGet) == iProc))then
               iProcDoNotAdd = iProc
            else
@@ -1901,8 +1873,7 @@ contains
     integer :: iStatus_II(MPI_STATUS_SIZE, 2*Router%nProc)
     integer :: iRequestS_I(Router%nProc), iRequestR_I(Router%nProc)
     integer :: nRequestR, nRequestS, iError, iTag=0
-    integer :: iProc, nProc
-    integer :: iProcFrom, iProcTo
+    integer :: iProc, nProc, iProcFrom, iProcTo
     integer :: iProc0Source, iProcLastSource, iProcStrideSource
     integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
     !-------------------------------------------------------------------------!
@@ -1927,14 +1898,6 @@ contains
       iProcLastSource   = i_proc_last(Router%iCompSource)
       iProcStrideSource = i_proc_stride(Router%iCompSource)
     end if
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = 3!!!!!!!!!!!!!!!!!
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
     !\
     ! Stage 2:
     ! send the router info to Source:
@@ -2036,7 +1999,7 @@ contains
        Router,              &
        GridDescriptorSource,&
        interpolate)
-    integer :: iCompSource
+    !integer :: iCompSource
     integer :: iCompTarget
     type(RouterType),        intent(inout):: Router
     type(GridDescriptorType),intent(in)   :: GridDescriptorSource
@@ -2064,42 +2027,40 @@ contains
     end interface
     optional:: interpolate
     integer :: nRecvCumSum
-    integer :: iStart, iEnd, iProcTo, iBuffer  
-    integer :: iProc, nProc
-    integer :: nAux, nDimSource, nIndexSource, nImageMax
+    integer :: iProcTo, iBuffer  
+    integer :: iProc 
+    integer :: nDimSource, nIndexSource, nImageMax
     logical :: DoInterpolate
-
+    integer :: iProc0Target, iProcLastTarget, iProcStrideTarget
     !For given PE the index in the communicator is:
     iProc = Router % iProc
 
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
     ! identify components
-    iCompSource = Router%iCompSource
     if(.not.is_proc(Router%iCompSource))RETURN
     iCompTarget = Router%iCompTarget
+    if(Router%IsLocal)then
+       iProc0target = 0;  iProcStrideTarget = 1
+       iProcLastTarget = Router%nProc-1
+    else
+      iProc0Target      = i_proc0(Router%iCompTarget) 
+      iProcLastTarget   = i_proc_last(Router%iCompTarget)
+      iProcStrideTarget = i_proc_stride(Router%iCompTarget)
+    end if
     ! total number of processors and on components
-    nProc       = Router%nProc
+    !nProc       = Router%nProc
     DoInterpolate = present(interpolate)
     !\
     ! Stage 3 set semi-router for source
     !/
     ! process the data that has been received
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorSource%nDim
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
     nDimSource  = GridDescriptorSource%nDim
     nIndexSource= Router%nIndexSource
 
     nImageMax = 2**nDimSource
     ! prepare containers for router information of Source side
-    do iProcTo = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-         i_proc_stride(iCompTarget)
+    do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
        Router%nGet_P(iProcTo) = Router%nSend_P(iProcTo)*nImageMax
     end do
     call check_router_allocation(Router)
@@ -2177,35 +2138,61 @@ contains
   !===========================================================================!
   subroutine set_semi_router_from_source(&
        ! the GridDescriptor for the Source component
-       GridDescriptorSource, &
+       GridDescriptorSource,       &
        ! the GridDescriptor for the Target component
-       GridDescriptorTarget, &
+       GridDescriptorTarget,       &
        ! the router to be set
-       Router, &
+       Router,                     &
        !Logical function which allows to skip the block if there is no !
        !interface points in it. Optional, if not present then all the  !
        !blocks are checked for the presence of the interface points    !
-       is_interface_block,&
+       is_interface_block,         &
+       !\
+       ! The function may be used for sparse 1D grids
+       ! in which the real information is available only in the first
+       ! n grid points, for the given plocks, the other points being
+       ! unused. For this purpose, the function should return this 
+       ! number of used points. It is not applied, if the rurned value
+       ! is larger than the total number of grid points, in the given 
+       ! plock.
+       !/
+       n_interface_point_in_block, &
        !The subroutine which defines if the grid point is inside the   !
        !interface layer. Optional, if not present, then all the grid   !
        !points (at the source grid) are considered as the interface    !
        !layer points                                                   !     
-       interface_point_coords, &
+       interface_point_coords,     &
        ! transformation of the location coordinates between components
-       mapping, &
+       mapping,                    &
        ! interpolation subroutine for the Target's grid
        interpolate)
     !-------------------------------------------------------------------------!
-    type(GridDescriptorType),intent(in)   :: GridDescriptorSource
-    type(GridDescriptorType),intent(in)   :: GridDescriptorTarget
-    type(RouterType),        intent(inout):: Router
+    type(LocalGDType),        intent(in) :: GridDescriptorSource
+    type(GridDescriptorType), intent(in) :: GridDescriptorTarget
+    type(RouterType),      intent(inout) :: Router
     !INPUT ARGUMENTS:
     interface
-       logical function is_interface_block(lGlobalNode)
+       logical function is_interface_block(iBlockLocal)
          implicit none
-         integer,intent(in)::lGlobalNode 
+         integer,intent(in)::iBlockLocal
        end function is_interface_block
-       !----------------------------------------------------------------------!
+       !=============================
+       integer function n_interface_point_in_block(iBlockLocal)
+         !\
+         ! To be applicable for the original purposes, the function
+         ! should return 0 (or less) for local blocks in which there is
+         ! no interface points. It may be also used for sparse 1D grids
+         ! in which the real information is available only in the first
+         ! n grid points, for the given plocks, the other points being
+         ! unused. For this purpose, the function should return this 
+         ! number of used points. It is not applied, if the rurned value
+         ! is larger than the total number of grid points, in the given 
+         ! plock.
+         !/
+         implicit none
+         integer,intent(in) :: iBlockLocal
+       end function n_interface_point_in_block
+       !==============================
        subroutine interface_point_coords(&
             GridDescriptor,&
             lGlobalTreeNode,&
@@ -2213,14 +2200,14 @@ contains
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
-         type(GridDescriptorType),intent(in)::GridDescriptor
+         type(LocalGDType),intent(in)::GridDescriptor
          integer,intent(in)    :: lGlobalTreeNode,nIndex
          logical,intent(out)   :: IsInterfacePoint
          integer,intent(in)    :: nDim
          real,   intent(inout) :: Xyz_D(nDim)
          integer,intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
-       !----------------------------------------------------------------------!
+       !====================================
        subroutine mapping(nDimIn, CoordIn_D, nDimOut, CoordOut_D, &
             IsInterfacePoint)
          ! this subroutine mapss coordinates between components
@@ -2230,7 +2217,7 @@ contains
          real,    intent(out) :: CoordOut_D(nDimOut)
          logical, intent(out) :: IsInterfacePoint
        end subroutine mapping
-       !----------------------------------------------------------------------!
+       !=====================
        subroutine interpolate(&
             nDim, Xyz_D, GridDescriptor, &
             nIndex, iIndex_II, nImage, Weight_I)
@@ -2253,6 +2240,7 @@ contains
        end subroutine interpolate
     end interface
     optional:: is_interface_block
+    optional:: n_interface_point_in_block
     optional:: interface_point_coords
     optional:: mapping
     optional:: interpolate
@@ -2262,15 +2250,14 @@ contains
     !\
     ! The presence of optional parameters
     !/
-    logical :: UseMappingFunction, DoCheckBlock ,DoCheckPoint,DoInterpolate
+    logical :: UseMappingFunction, DoCheckBlock, DoCheckBlockSize, &
+         DoCheckPoint ,DoInterpolate
     ! MPI-related variables
-    integer :: iProc, nProc
+    integer :: iProc
     logical :: DoCountOnly
-    integer :: lGlobalNode, iBlockAll
-    integer :: iGlobalGridPoint, nGridPointsPerBlock
-    integer :: iGlobalPointLast, iPointInBlock
+    integer :: iProcTo, iBlockFrom, iLocalGridPoint
+    integer :: iLocalPointLast, iPointInBlock, nInterfacePoint
     logical :: IsInterfacePoint
-    integer :: iProcTo, iBlockTo, iPE, iProcTarget
     integer, dimension(0:Router%nProc-1)::nGetUbound_P
 
     real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
@@ -2278,52 +2265,48 @@ contains
     integer, dimension(GridDescriptorSource%nDim) :: iCell_D
     integer, dimension(Router%nIndexSource)       :: iIndexSend_I
     ! components ids
-    integer:: iCompSource, iCompTarget
+    integer:: iCompTarget, iProc0Target, iProcLastTarget, &
+         iProcStrideTarget
     ! dimensionality of components
     integer:: nDimSource, nDimTarget
     ! number of indices (e.g. cell indices) on components
     integer:: nIndexSource, nIndexTarget
     ! loop variables
-    integer:: nBuffer
+    integer:: nBuffer, iBlockUsed
     ! offset in buffer
     integer:: nSendCumSum  
-    ! optional actions to be taken
-    ! number of auxilary variables passed via request
-    integer:: nAux
+    !\
+    ! Misc
+    !/
+    integer :: iBlockMisc,  nAux
     character(len=*),parameter:: NameSub = &
          'CON_router:set_semi_router_from_source'
     !-------------------------------------------------------------------------!
     !For given PE the index in the communicator is:
     iProc = Router % iProc
-
     !Return if the processor does not belong to the communicator
     if(iProc<0) RETURN
-
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = GridDescriptorTarget%nDim
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
-
-
-    ! identify components
-    iCompSource = Router%iCompSource
     !\
     ! Stage 1:
     ! on Source PE determine the sources of data and
     ! how much data is to be sent from them
     !/
-    if(.not.is_proc(iCompSource))RETURN
+    ! identify components
+    if(.not.is_proc(Router%iCompSource))RETURN
     iCompTarget = Router%iCompTarget
-
-    nProc = Router%nProc
+    if(Router%IsLocal)then
+       iProc0Target = 0;  iProcStrideTarget = 1
+       iProcLastTarget = Router%nProc - 1
+    else
+      iProc0Target      = i_proc0(      iCompTarget)
+      iProcLastTarget   = i_proc_last(  iCompTarget)
+      iProcStrideTarget = i_proc_stride(iCompTarget)
+    end if
     ! determine which optional actions should be taken
     UseMappingFunction = present(mapping)
     DoInterpolate      = present(interpolate)
     DoCheckBlock       = present(is_interface_block)
+    DoCheckBlockSize   = present(n_interface_point_in_block)
     DoCheckPoint       = present(interface_point_coords)
 
     ! introduced for a better readability
@@ -2340,7 +2323,8 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
- 
+    Router%iCoordEnd  = nDimTarget
+    Router%nVar       = nDimTarget
     !Check dimensions
     DoCountOnly=.true. !To enter the loop
     do while(DoCountOnly)
@@ -2348,8 +2332,9 @@ contains
        !\
        ! Store Upper bounds to control if the alllocated
        ! index arrays have sufficient size
-       do iPE = 0, nProc-1
-          nGetUbound_P(iPE) = ubound(Router%iGet_P(iPE)%iCB_II,2)
+       do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
+          nGetUbound_P(iProcTo) = &
+               ubound(Router%iGet_P(iProcTo)%iCB_II,2)
        end do     
 
        ! which processor holds a current image
@@ -2367,34 +2352,20 @@ contains
        !sufficient, then DoCountOnly will be set to true. The loop 
        !then will be repeated for the second time
        !/
-       nGridPointsPerBlock=n_grid_points_per_block(&
-            GridDescriptorSource)
        !\
-       ! Loop over global block number (to be revised)             
+       ! Loop over local blocks             
        !/
-       BLOCKS: do iBlockAll = 1, &
-            n_block_total(GridDescriptorSource%DD%Ptr)
-          !\
-          ! Convert to a global node number on the 
-          ! enumerated tree structure for the domain decomposition
-          !/
-          lGlobalNode=i_global_node_a(&
-               GridDescriptorSource%DD%Ptr,iBlockAll)
+       BLOCKS: do iBlockUsed = 1, GridDescriptorSource%nBlock
           !\
           ! Convert to the local block number
           !/
-          call pe_and_blk(&
-               GridDescriptorSource%DD%Ptr,lGlobalNode,&
-               iProcTo, iBlockTo)
-          !\
-          ! To be revised: the loop should rather run
-          ! over the local block number
-          !/ 
-          if(iProc /= iProcTo)CYCLE BLOCKS 
+          iBlockFrom = GridDescriptorSource%iIndex_IB(&
+               BLK_,iBlockUsed)
+
           !Skip the block if desired: if there is known to be no interface!
           !point in it                                                    !
           if( DoCheckBlock)then
-             if(.not.is_interface_block(lGlobalNode))CYCLE BLOCKS
+             if(.not.is_interface_block(iBlockFrom))CYCLE BLOCKS
           end if
           !\
           ! Prepare a GlobalCellNumber Loop, for a given (octree) block
@@ -2403,28 +2374,34 @@ contains
           ! 1. Global number of the last grid point in the previous
           ! global block, with the global block number = nBlockAll-1
           !/
-          iGlobalPointLast = nGridPointsPerBlock*(iBlockAll-1)
+          iLocalPointLast = GridDescriptorSource%iIndex_IB(&
+               GridPointFirst_,iBlockUsed) - 1
+          nInterfacePoint = GridDescriptorSource%nPointPerBlock
+          if( DoCheckBlockSize)then
+             nInterfacePoint = min(nInterfacePoint,&
+                  n_interface_point_in_block(iBlockFrom))
+          end if
           !\
           ! Now the subloop runs over the iPointBlock within 
           ! the current local block
           !/
-          POINTS:do iPointInBlock  = 1, nGridPointsPerBlock
+          POINTS:do iPointInBlock  = 1, nInterfacePoint
              !\
              ! Recover the global grid point number
              !/
-             iGlobalGridPoint =   iGlobalPointLast + iPointInBlock
+             iLocalGridPoint =   iLocalPointLast + iPointInBlock
              !\
              ! Get cell index for this grid point in source.
              !/
              call global_i_grid_point_to_icb(&
                   GridDescriptorSource,&
-                  iGlobalGridPoint,&
-                  lGlobalNode,& 
-                  iCell_D)
+                  iLocalGridPoint,&
+                  iBlockMisc,     & !<=The output is iBlockUsed, which is 
+                  iCell_D)          !the loop variable, cannot be affected
              !\
              ! Shape an index array for this grid point in source
              !/
-             iIndexSend_I(nIndexSource) = iBlockTo
+             iIndexSend_I(nIndexSource) = iBlockFrom
              iIndexSend_I(1:nDimSource) = iCell_D
              !\
              ! Generalized coordinates of the Source
@@ -2432,7 +2409,7 @@ contains
              !/
              XyzSource_D = xyz_grid_d(&
                   GridDescriptorSource,&
-                  lGlobalNode,&
+                  iBlockUsed,&
                   iCell_D)
              !\
              ! Using the grid descriptor for the Source we may want
@@ -2443,7 +2420,7 @@ contains
              if( DoCheckPoint)then
                 call interface_point_coords(&
                      GridDescriptorSource,&
-                     lGlobalNode,&
+                     iBlockUsed,&
                      nDimSource,&
                      XyzSource_D,&
                      nIndexSource,&
@@ -2487,13 +2464,12 @@ contains
     ! to the appropriate processors of Source,
     ! currently iOrder_I contains indices WITHIN these chunks
     nSendCumSum = 0!Router%nSend_P(iProc)
-    do iProcTarget = i_proc0(iCompTarget), i_proc_last(iCompTarget), &
-         i_proc_stride(iCompTarget)
+    do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
        !if(iProcTarget == iProc)CYCLE
-       where(iProc_I(1:nBuffer) == iProcTarget)&
+       where(iProc_I(1:nBuffer) == iProcTo)&
             iOrder_I( 1:nBuffer) = &
             iOrder_I( 1:nBuffer) + nSendCumSum
-       nSendCumSum = nSendCumSum + Router%nSend_P(iProcTarget)
+       nSendCumSum = nSendCumSum + Router%nSend_P(iProcTo)
     end do
 
     ! the correct order is found, apply it
@@ -2505,7 +2481,7 @@ contains
              2**GridDescriptorTarget%nDim)              
         real    :: Weight_I(2**GridDescriptorTarget%nDim) 
         real    :: XyzPass_D(GridDescriptorTarget%nDim) 
-        integer :: iImage, nImage, iProcTo, iProcDoNotAdd
+        integer :: iImage, nImage!, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridDescriptorTarget%nDim)             
         integer :: nProcToPut, iProcToPut
         integer, parameter:: iPointGlobal_ = 0,  &    
@@ -2593,10 +2569,10 @@ contains
               Router%BufferSource_II(&
                    Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
                    XyzTarget_D
-              if(nAux > 0)then
-                 iAux_I(iPointGlobal_ ) = iGlobalGridPoint   
+              if(nAux > 0)then  
                  iAux_I(iPointInBlock_) = iPointInBlock
-                 iAux_I(iBlockAll_    ) = iBlockAll
+                 iAux_I(iBlockAll_    ) = GridDescriptorSource%iIndex_IB(&
+                      GlobalBlock_,iBlockUsed)
                  Router%BufferSource_II(&
                       Router%iAuxStart:Router%iAuxEnd,nBuffer) = &
                       real(iAux_I(1:nAux))

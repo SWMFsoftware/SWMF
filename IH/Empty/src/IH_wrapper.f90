@@ -255,12 +255,12 @@ contains
   !===================================================================!
   subroutine IH_line_interface_point(&
        GridDescriptor,&
-       lGlobalTreeNode,&
+       iBlockUsed,    &
        nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
-    use CON_router, ONLY: GridDescriptorType
-    type(GridDescriptorType),intent(in)::GridDescriptor
-    integer,intent(in)    :: lGlobalTreeNode,nIndex
+    use CON_router, ONLY: LocalGDType
+    type(LocalGDType),intent(in)::GridDescriptor
+    integer,intent(in)    :: iBlockUsed,nIndex
     logical,intent(out)   :: IsInterfacePoint
     integer,intent(in)    :: nDim
     real,   intent(inout) :: Xyz_D(nDim)
@@ -502,7 +502,8 @@ contains
 
   end subroutine IH_put_from_ee
   !============================
-  integer function IH_n_particle()
+  integer function IH_n_particle(iBlockLocal)
+    integer, intent(in) :: iBlockLocal
     character(len=*), parameter :: NameSub='IH_n_particle'
 
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')

@@ -55,11 +55,13 @@ module CON_couple_mh_sp
   type(GridDescriptorType),save::IH_GridDescriptor !Source  !^CMP IF IH
   type(RouterType),save,private::RouterIhSp                 !^CMP IF IH
   type(GridDescriptorType),save::IH_LineGridDesc            !^CMP IF IH
+  type(LocalGDType),       save::IH_LocalLineGD             !^CMP IF IH
   type(RouterType),save,private::RouterLineIhSp             !^CMP IF IH
 
   type(GridDescriptorType),save::SC_GridDescriptor !Source  !^CMP IF SC
   type(RouterType),save,private::RouterScSp                 !^CMP IF SC
   type(GridDescriptorType),save::SC_LineGridDesc            !^CMP IF SC
+  type(LocalGDType),save::SC_LocalLineGD                    !^CMP IF SC
   type(RouterType),save,private::RouterLineScSp             !^CMP IF SC
 
   logical,save::DoInit=.true.
@@ -134,6 +136,10 @@ contains
             RouterScSp,nMappedPointIndex=nAux)
        call set_standard_grid_descriptor(SC_LineDD,GridDescriptor=&
             SC_LineGridDesc)
+       if(is_proc(SC_))call set_local_gd(&
+            iProc = i_proc(), &
+            GridDescriptor = SC_LineGridDesc, &
+            LocalGD = SC_LocalLineGD)
        call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
             nMappedPointIndex=0)
        if(RouterScSp%IsProc)then
@@ -156,6 +162,10 @@ contains
             RouterIhSp,nMappedPointIndex=nAux)
        call set_standard_grid_descriptor(IH_LineDD,GridDescriptor=&
             IH_LineGridDesc)
+       if(is_proc(IH_))call set_local_gd(&
+            iProc = i_proc(), &
+            GridDescriptor = IH_LineGridDesc, &
+            LocalGD = IH_LocalLineGD)
        call init_router(IH_LineGridDesc, SP_GridDescriptor, RouterLineIhSp,&
             nMappedPointIndex=0)
        if(RouterIhSp%IsProc)then
@@ -226,9 +236,10 @@ contains
          end if
          if(is_proc(SC_))then
             call set_semi_router_from_source(&
-                 GridDescriptorSource = SC_LineGridDesc, &
-                 GridDescriptorTarget = SP_GridDescriptor, &
-                 Router               = RouterLineScSp, &
+                 GridDescriptorSource = SC_LocalLineGD,     &
+                 GridDescriptorTarget = SP_GridDescriptor,  &
+                 Router               = RouterLineScSp,     &
+                 n_interface_point_in_block = SC_n_particle,&
                  interface_point_coords=SC_line_interface_point,&
                  mapping              = mapping_line_sc_to_sp)
          end if
@@ -285,9 +296,10 @@ contains
          end if
          if(is_proc(IH_))then
             call set_semi_router_from_source(&
-                 GridDescriptorSource = IH_LineGridDesc, &
-                 GridDescriptorTarget = SP_GridDescriptor, &
-                 Router               = RouterLineIhSp, &
+                 GridDescriptorSource = IH_LocalLineGD,         &
+                 GridDescriptorTarget = SP_GridDescriptor,      &
+                 Router               = RouterLineIhSp,         &
+                 n_interface_point_in_block = IH_n_particle,    &
                  interface_point_coords=IH_line_interface_point,&
                  mapping              = mapping_line_ih_to_sp)
          end if
@@ -524,9 +536,10 @@ contains
 
     if(is_proc(IH_))then
        call set_semi_router_from_source(&
-            GridDescriptorSource = IH_LineGridDesc, &
-            GridDescriptorTarget = SP_GridDescriptor, &
-            Router               = RouterLineIhSp, &
+            GridDescriptorSource = IH_LocalLineGD,         &
+            GridDescriptorTarget = SP_GridDescriptor,      &
+            Router               = RouterLineIhSp,         &
+            n_interface_point_in_block = IH_n_particle,    &
             interface_point_coords=IH_line_interface_point,&
             mapping              = mapping_line_ih_to_sp)
     end if
@@ -641,9 +654,10 @@ contains
          RouterScSp%iCommUnion)
     if(is_proc(SC_))then
        call set_semi_router_from_source(&
-            GridDescriptorSource = SC_LineGridDesc, &
-            GridDescriptorTarget = SP_GridDescriptor, &
-            Router               = RouterLineScSp, &
+            GridDescriptorSource = SC_LocalLineGD,         &
+            GridDescriptorTarget = SP_GridDescriptor,      &
+            Router               = RouterLineScSp,         &
+            n_interface_point_in_block = SC_n_particle,    &
             interface_point_coords=SC_line_interface_point,&
             mapping              = mapping_line_sc_to_sp)
     end if
