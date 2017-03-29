@@ -12,143 +12,29 @@
 ;   * Add the calculation of temperature
 ; June 10, 2008
 ;   * The pressure calculation is valid in relativitic limit.
+; March 29, 2017
+;   * G. Toth rewrote into a procedure with optional arguments
 ;-------------------------------------------------------------------------------
 
 
-;-------------------------------------------------------------------------------
-pro plot_equator,var,vmax,vmin,xi,bar_lab,halfl,ro,mlto,lat,x_wsize,y_wsize, $
-                 dir,blackc,g_thick,iround
-;-------------------------------------------------------------------------------
-
-; Make levels
-nlevel=59
-lvl=fltarr(nlevel)    &    colr=intarr(nlevel)
-dlvl=(vmax-vmin)/(nlevel-1)
-colrmax=254          
-colrmin=1
-ncolor=colrmax-colrmin+1
-dcolr=(float(colrmax)-float(colrmin))/(nlevel-1)
-for i=0,nlevel-1 do begin
-    lvl(i)=vmin+i*dlvl
-    colr(i)=round(float(colrmin)+i*dcolr)
-endfor
-yi=0.30
-plt_size=y_wsize*0.5
-xf=xi+plt_size/x_wsize
-yf=yi+plt_size/y_wsize
-
-; force var equal or gt vmin 
-if (min(var) lt vmin) then var(where(var le vmin))=vmin
-
-; polyfill background color in black
-polyfill,[xi,xf,xf,xi,xi],[yi,yi,yf,yf,yi],color=blackc,/normal
-
-; plot flux or PA anisotropy
-if (dir eq 1) then phi=mlto               ; Sun to the left
-if (dir eq 2) then phi=mlto+!pi           ; Sun to the right
-polar_contour,var,phi,ro,xrange=[-halfl,halfl],yrange=[-halfl,halfl], $
-      levels=lvl,c_colors=colr,xstyle=1,ystyle=1,xticks=4,yticks=4, $
-      xtitle='RE',pos=[xi,yi,xf,yf],color=blackc,/fill,/noerase
-dim=size(ro)
-for i=0,dim(1)-1 do begin
-    if (lat(i) ge 58.) then begin
-       ihigh=i
-;      print,'ihigh = ',ihigh
-       goto,continue
-    endif
-endfor
-continue:
-;for j=0,dim(2)-1 do oplot,ro(0:dim(1)-1,j),phi(0:dim(1)-1,j),/polar
-;for i=0,dim(1)-1 do oplot,ro(i,0:dim(2)-1),phi(i,0:dim(2)-1),/polar
-;oplot,ro(ihigh,0:dim(2)-1),phi(ihigh,0:dim(2)-1),/polar,color=254
-
-; Add color bar and label
-xb=xi
-yb=0.090
-dx=0.006
-y1=yb+0.05
-for i=0,nlevel-1 do begin
-    x1=xb+i*dx
-    x2=x1+dx*1.02
-    polyfill,[x1,x2,x2,x1,x1],[yb,yb,y1,y1,yb],color=colr(i),/normal
-endfor
-v_min=string(vmin,'(f4.1)')
-if (vmax lt 100.) then v_max=string(vmax,'(f4.1)')
-if (vmax ge 100.) then v_max=string(vmax,'(e7.1)')
-;if (bar_lab eq 'pitch angle anisotropy') then v_min='field aligned'
-;if (bar_lab eq 'pitch angle anisotropy') then v_max='perpendicular'
-if (bar_lab eq 'pitch angle anisotropy') then v_min='-1.0' 
-if (bar_lab eq 'pitch angle anisotropy') then v_max='1.0'
-xyouts,xb,0.6*yb,v_min,alignment=0.5,size=1.2,color=blackc,/normal
-xyouts,x2,0.6*yb,v_max,alignment=0.5,size=1.2,color=blackc,/normal
-if (bar_lab eq 'pitch angle anisotropy') then begin
-   xyouts,xb,0.20*yb,'field aligned',alignment=0.5,size=1.2,color=blackc,/normal
-   xyouts,x2,0.20*yb,'perpendicular',alignment=0.5,size=1.2,color=blackc,/normal
-endif
-xyouts,0.5*(x2+xb),1.7*yb,bar_lab,alignment=0.5,size=1.1,color=blackc,/normal
-
-; fill cirle of radius ro(0,0) centered the earth with color2
-color2=colrmin
-if (bar_lab eq 'pitch angle anisotropy') then begin
-   m=(nlevel-1)/2
-   color2=colr(m)
-endif
-
-; Draw earth , geosynchronous, round background if iround=1
-npt=400                             ; no. of points in a circle
-npt2=npt/2
-night_x=fltarr(npt2+2)     &    day_x=night_x
-night_y=fltarr(npt2+2)     &    day_y=night_y
-e1x=fltarr(npt+1)    &   e1y=e1x
-del = 2.0 * !pi / npt
-for i = 0,npt do begin
-    i1 = i - npt2
-    if (dir eq 1) then ang = float(i) * del + !pi/2. 
-    if (dir eq 2) then ang = float(i) * del - !pi/2.
-    cosa = cos(ang)
-    sina = sin(ang)
-    if (i le npt2) then day_x(i) = cosa
-    if (i le npt2) then day_y(i) = sina
-    if (i ge npt2) then night_x(i1) = cosa
-    if (i ge npt2) then night_y(i1) = sina
-    e1x(i) = 6.6 * cosa
-    e1y(i) = 6.6 * sina
-endfor
-day_x(npt2+1) = day_x(0)
-day_y(npt2+1) = day_y(0)
-night_x(npt2+1) = night_x(0)
-night_y(npt2+1) = night_y(0)
-polyfill,ro(0,0)*night_x,ro(0,0)*night_y,color=color2
-polyfill,ro(0,0)*day_x,ro(0,0)*day_y,color=color2
-polyfill,night_x,night_y,color=blackc
-polyfill,day_x,day_y,color=255
-if (iround eq 1) then begin
-   e2x=fltarr(npt+6)   &   e2y=e2x
-   e2x(0:npt)=e1x(0:npt)*halfl/6.6
-   e2y(0:npt)=e1y(0:npt)*halfl/6.6
-   e2x(npt+1:npt+5)=[-halfl,-halfl,halfl,halfl,0]
-   if (dir eq 1) then e2y(npt+1:npt+5)=[halfl,-halfl,-halfl,halfl,halfl]
-   if (dir eq 2) then e2y(npt+1:npt+5)=[-halfl,halfl,halfl,-halfl,-halfl]
-   polyfill,e2x,e2y,color=blackc
-endif
-oplot,e1x,e1y,color=255,thick=g_thick     ; plot geosynchronous
-
-return
-end
-
-
-pro plot_fls, fhead=fhead, ntime=ntime, ilog=ilog, dir=dir, halfl=halfl, $
-              iround=iround, ie1=ie1, ie2=ie2, iopt=iopt, iunit=iunit, $
-              nframe=nframe, $
-              interactive=interactive
 ;-----------------------------------------------------------------------------
 ; main routine
 ;-----------------------------------------------------------------------------
+pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl, $
+              iround=iround, ie1=ie1, ie2=ie2, iopt=iopt, iunit=iunit, $
+              fmin=fmin, fmax=fmax, nframe=nframe, $
+              interactive=interactive
 
   close,/all
 
-; get colors for color table palette
-;;  read,'color table, 1=rainbow with white, 2=HENA-type => ',icr
+; get colors for color table palette. Default is rainbow
+  if n_elements(icr) eq 0 then begin
+     if keyword_set(interactive) then $
+        read,'color table, 1=rainbow with white, 2=HENA-type => ',icr $
+     else $
+        icr=1
+  endif
+
   icr = 1
   if (icr eq 1) then begin
      loadct,39                  ;  rainbow with white
@@ -334,17 +220,23 @@ new_plot:
 
 ; setup plot ranges
   yon=' '
-  fmax=max(plsfluxa)    
-  print,' fmax = ',fmax
-  fmin=0.   
-  if (ilog eq 1) then fmin=fmax-3.   
-  print,' fmin = ',fmin
+  if n_elements(fmax) eq 0 then begin
+     fmax=max(plsfluxa)    
+     print,' fmax = ',fmax
+     if keyword_set(interactive) then begin
+        read,' Do you want to change fmax? (y/n) => ',yon
+        if (yon eq 'y') then read,' enter new fmax => ',fmax
+     endif
+  endif
+  if n_elements(fmin) eq 0 then begin
+     fmin=0.   
+     if (ilog eq 1) then fmin=fmax-3.   
+     print,' fmin = ',fmin
 
-  if n_elements(interactive) ne 0 then begin
-     read,' Do you want to change fmax? (y/n) => ',yon
-     if (yon eq 'y') then read,' enter new fmax => ',fmax
-     read,' Do you want to change fmin? (y/n) => ',yon
-     if (yon eq 'y') then read,' enter new fmin => ',fmin
+     if keyword_set(interactive) then begin
+        read,' Do you want to change fmin? (y/n) => ',yon
+        if (yon eq 'y') then read,' enter new fmin => ',fmin
+     endif
   endif
   amax=1.
   amin=-1.
@@ -448,9 +340,133 @@ new_plot:
 close_gif:
   write_gif,fhead+'_'+fmiddle+'.gif',/close
   device,/close
-  if n_elements(interactive) ne 0 then begin
+  if keyword_set(interactive) then begin
      read,'Do you want to continue?  (y)yes, (n)no => ',yon
      if (yon eq 'y') then goto,new_plot
   endif
 
 end
+
+;=================================================================================
+
+;-------------------------------------------------------------------------------
+pro plot_equator,var,vmax,vmin,xi,bar_lab,halfl,ro,mlto,lat,x_wsize,y_wsize, $
+                 dir,blackc,g_thick,iround
+;-------------------------------------------------------------------------------
+
+; Make levels
+nlevel=59
+lvl=fltarr(nlevel)    &    colr=intarr(nlevel)
+dlvl=(vmax-vmin)/(nlevel-1)
+colrmax=254          
+colrmin=1
+ncolor=colrmax-colrmin+1
+dcolr=(float(colrmax)-float(colrmin))/(nlevel-1)
+for i=0,nlevel-1 do begin
+    lvl(i)=vmin+i*dlvl
+    colr(i)=round(float(colrmin)+i*dcolr)
+endfor
+yi=0.30
+plt_size=y_wsize*0.5
+xf=xi+plt_size/x_wsize
+yf=yi+plt_size/y_wsize
+
+; force var equal or gt vmin 
+if (min(var) lt vmin) then var(where(var le vmin))=vmin
+
+; polyfill background color in black
+polyfill,[xi,xf,xf,xi,xi],[yi,yi,yf,yf,yi],color=blackc,/normal
+
+; plot flux or PA anisotropy
+if (dir eq 1) then phi=mlto               ; Sun to the left
+if (dir eq 2) then phi=mlto+!pi           ; Sun to the right
+polar_contour,var,phi,ro,xrange=[-halfl,halfl],yrange=[-halfl,halfl], $
+      levels=lvl,c_colors=colr,xstyle=1,ystyle=1,xticks=4,yticks=4, $
+      xtitle='RE',pos=[xi,yi,xf,yf],color=blackc,/fill,/noerase
+dim=size(ro)
+for i=0,dim(1)-1 do begin
+    if (lat(i) ge 58.) then begin
+       ihigh=i
+;      print,'ihigh = ',ihigh
+       goto,continue
+    endif
+endfor
+continue:
+;for j=0,dim(2)-1 do oplot,ro(0:dim(1)-1,j),phi(0:dim(1)-1,j),/polar
+;for i=0,dim(1)-1 do oplot,ro(i,0:dim(2)-1),phi(i,0:dim(2)-1),/polar
+;oplot,ro(ihigh,0:dim(2)-1),phi(ihigh,0:dim(2)-1),/polar,color=254
+
+; Add color bar and label
+xb=xi
+yb=0.090
+dx=0.006
+y1=yb+0.05
+for i=0,nlevel-1 do begin
+    x1=xb+i*dx
+    x2=x1+dx*1.02
+    polyfill,[x1,x2,x2,x1,x1],[yb,yb,y1,y1,yb],color=colr(i),/normal
+endfor
+v_min=string(vmin,'(f4.1)')
+if (vmax lt 100.) then v_max=string(vmax,'(f4.1)')
+if (vmax ge 100.) then v_max=string(vmax,'(e7.1)')
+;if (bar_lab eq 'pitch angle anisotropy') then v_min='field aligned'
+;if (bar_lab eq 'pitch angle anisotropy') then v_max='perpendicular'
+if (bar_lab eq 'pitch angle anisotropy') then v_min='-1.0' 
+if (bar_lab eq 'pitch angle anisotropy') then v_max='1.0'
+xyouts,xb,0.6*yb,v_min,alignment=0.5,size=1.2,color=blackc,/normal
+xyouts,x2,0.6*yb,v_max,alignment=0.5,size=1.2,color=blackc,/normal
+if (bar_lab eq 'pitch angle anisotropy') then begin
+   xyouts,xb,0.20*yb,'field aligned',alignment=0.5,size=1.2,color=blackc,/normal
+   xyouts,x2,0.20*yb,'perpendicular',alignment=0.5,size=1.2,color=blackc,/normal
+endif
+xyouts,0.5*(x2+xb),1.7*yb,bar_lab,alignment=0.5,size=1.1,color=blackc,/normal
+
+; fill cirle of radius ro(0,0) centered the earth with color2
+color2=colrmin
+if (bar_lab eq 'pitch angle anisotropy') then begin
+   m=(nlevel-1)/2
+   color2=colr(m)
+endif
+
+; Draw earth , geosynchronous, round background if iround=1
+npt=400                             ; no. of points in a circle
+npt2=npt/2
+night_x=fltarr(npt2+2)     &    day_x=night_x
+night_y=fltarr(npt2+2)     &    day_y=night_y
+e1x=fltarr(npt+1)    &   e1y=e1x
+del = 2.0 * !pi / npt
+for i = 0,npt do begin
+    i1 = i - npt2
+    if (dir eq 1) then ang = float(i) * del + !pi/2. 
+    if (dir eq 2) then ang = float(i) * del - !pi/2.
+    cosa = cos(ang)
+    sina = sin(ang)
+    if (i le npt2) then day_x(i) = cosa
+    if (i le npt2) then day_y(i) = sina
+    if (i ge npt2) then night_x(i1) = cosa
+    if (i ge npt2) then night_y(i1) = sina
+    e1x(i) = 6.6 * cosa
+    e1y(i) = 6.6 * sina
+endfor
+day_x(npt2+1) = day_x(0)
+day_y(npt2+1) = day_y(0)
+night_x(npt2+1) = night_x(0)
+night_y(npt2+1) = night_y(0)
+polyfill,ro(0,0)*night_x,ro(0,0)*night_y,color=color2
+polyfill,ro(0,0)*day_x,ro(0,0)*day_y,color=color2
+polyfill,night_x,night_y,color=blackc
+polyfill,day_x,day_y,color=255
+if (iround eq 1) then begin
+   e2x=fltarr(npt+6)   &   e2y=e2x
+   e2x(0:npt)=e1x(0:npt)*halfl/6.6
+   e2y(0:npt)=e1y(0:npt)*halfl/6.6
+   e2x(npt+1:npt+5)=[-halfl,-halfl,halfl,halfl,0]
+   if (dir eq 1) then e2y(npt+1:npt+5)=[halfl,-halfl,-halfl,halfl,halfl]
+   if (dir eq 2) then e2y(npt+1:npt+5)=[-halfl,halfl,halfl,-halfl,-halfl]
+   polyfill,e2x,e2y,color=blackc
+endif
+oplot,e1x,e1y,color=255,thick=g_thick     ; plot geosynchronous
+
+return
+end
+
