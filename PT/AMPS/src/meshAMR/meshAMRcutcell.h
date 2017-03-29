@@ -209,7 +209,8 @@ unsigned long int GetTriangulationSignature();
     cTriangleFace *next,*prev;
 
     //the variables used by AMPS to determine the surface elements that are in the shadow. The values are modified by pic__ray_tracing.cpp
-    unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
+    unsigned int pic__shadow_attribute; //,pic__RayTracing_TestDirectAccessCounterValue;
+    char *pic__RayTracingOperationCounterTable;
     double pic__cosine_illumination_angle;
 
     //the user defined data structure
@@ -524,7 +525,7 @@ unsigned long int GetTriangulationSignature();
       SurfaceArea=0.0,CharacteristicFaceSize=0.0;
       for (int i=0;i<3;i++) ExternalNormal[i]=0.0,e0Orthogonal[i]=0.0,e1Orthogonal[i]=0.0;
 
-      pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
+      pic__shadow_attribute=0,pic__RayTracingOperationCounterTable=NULL;
       pic__cosine_illumination_angle=0.0;
       Temp_ID=-1,MeshFileID=-1;
     }
