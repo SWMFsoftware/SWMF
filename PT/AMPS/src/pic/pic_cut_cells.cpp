@@ -16,6 +16,9 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 
   int nStartFace,nFinishFace,nTotalThreads,ThisThread,nFaceThread;
 
+  //init the ray tracing module if needed
+  PIC::RayTracing::Init();
+
   //check whether external normal vectors are already have been determined for the surface trianguletion
   unsigned long int TriangulationSignature;
   char fname[_MAX_STRING_LENGTH_PIC_];

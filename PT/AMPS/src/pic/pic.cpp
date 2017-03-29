@@ -1800,6 +1800,10 @@ void PIC::Init_AfterParser() {
   if (Mesh::IrregularSurface::nCutFaceInformationCopyAttempts!=0) {
     for (int i=0;i<Mesh::IrregularSurface::nCutFaceInformationCopyAttempts;i++) Mesh::IrregularSurface::CopyCutFaceInformation(); 
   }
+
+  //init the ray tracking module if needed
+  PIC::RayTracing::Init();
+
 }
 
 //====================================================

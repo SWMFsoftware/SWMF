@@ -27,7 +27,56 @@ using namespace std;
 
 #include "pic.h"
 
-unsigned int PIC::RayTracing::nCallsTestDirectAccess=0;
+char *PIC::RayTracing::FaceAccessCounterTable=NULL;
+char *PIC::RayTracing::FaceRayTracingOperationIDTable=NULL;
+
+//init the ray tracking module
+void PIC::RayTracing::Init() {
+  int nThreadsOpenMP=1;
+
+  static int AllocatedTableLength=-1;
+
+  //get the number of the OpenMP threads
+
+
+  if (AllocatedTableLength!=CutCell::nBoundaryTriangleFaces) {
+    //reallocate the table
+
+    if (FaceAccessCounterTable!=NULL) {
+      delete [] FaceRayTracingOperationIDTable;
+      delete [] FaceAccessCounterTable;
+    }
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp parallel shared(nThreadsOpenMP)
+    {
+      #pragma omp single
+     {
+       nThreadsOpenMP=omp_get_num_threads();
+     }
+   }
+   #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
+    AllocatedTableLength=CutCell::nBoundaryTriangleFaces;
+
+    FaceAccessCounterTable=new char [nThreadsOpenMP];
+    FaceRayTracingOperationIDTable=new char [nThreadsOpenMP*CutCell::nBoundaryTriangleFaces];
+
+    int i,imax=nThreadsOpenMP*CutCell::nBoundaryTriangleFaces;
+    for (i=0;i<imax;i++) FaceRayTracingOperationIDTable[i]=0;
+
+    for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) CutCell::BoundaryTriangleFaces[iface].pic__RayTracingOperationCounterTable=FaceRayTracingOperationIDTable+iface*nThreadsOpenMP;
+  }
+}
+
+//reset the face access counter
+void PIC::RayTracing::FlushFaceRayTracingOperationIDTable(int iThreadOpenMP) {
+  int iface;
+
+  for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+    CutCell::BoundaryTriangleFaces[iface].pic__RayTracingOperationCounterTable[iThreadOpenMP]=(char)0;
+  }
+}
 
 //calculate the exist point of the ray from a given block
 bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace) {
@@ -186,14 +235,20 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 	node=PIC::Mesh::mesh.findTreeNode(xStart);
 	if (node==NULL) return false;
 
+	//determine the thread number
+	int thread=0;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  thread=omp_get_thread_num();
+  #endif
+
 	//increment the call counter
-	nCallsTestDirectAccess++;
+  FaceAccessCounterTable[thread]++;
 
-	if (nCallsTestDirectAccess==0) {
+	if (FaceAccessCounterTable[thread]==(char)0xff) {
 		//if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
-		nCallsTestDirectAccess=1;
-
-		for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+	  FaceAccessCounterTable[thread]=(char)1;
+		FlushFaceRayTracingOperationIDTable(thread);
 	}
 
 	//trace the ray
@@ -206,7 +261,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 
 		if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
+        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread]) {
           code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
 
           if ((code==true)&&(IntersectionTime>PIC::Mesh::mesh.EPS)) {
@@ -215,7 +270,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 
             return false;
           }
-          else TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
+          else TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
         }
       }
 		}
@@ -262,14 +317,20 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
   node=PIC::Mesh::mesh.findTreeNode(xStart);
   if (node==NULL) return false;
 
+  //determine the thread number
+  int thread=0;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  thread=omp_get_thread_num();
+  #endif
+
   //increment the call counter
-  nCallsTestDirectAccess++;
+  FaceAccessCounterTable[thread]++;
 
-  if (nCallsTestDirectAccess==0) {
+  if (FaceAccessCounterTable[thread]==(char)0xff) {
     //if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
-    nCallsTestDirectAccess=1;
-
-    for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+    FaceAccessCounterTable[thread]=(char)1;
+    FlushFaceRayTracingOperationIDTable(thread);
   }
 
   //trace the ray
@@ -282,13 +343,13 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
 
     if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
+        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread]) {
           if ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) {
             code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
             if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
           }
 
-          TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
+          TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
         }
       }
     }
@@ -325,16 +386,23 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
   node=PIC::Mesh::mesh.findTreeNode(x0Ray);
   if (node==NULL) return false;
 
+  //determine the thread number
+  int thread=0;
+
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  thread=omp_get_thread_num();
+  #endif
+
   //increment the call counter
-  nCallsTestDirectAccess++;
-  memcpy(x,x0Ray,3*sizeof(double));
+  FaceAccessCounterTable[thread]++;
 
-  if (nCallsTestDirectAccess==0) {
+  if (FaceAccessCounterTable[thread]==(char)0xff) {
     //if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
-    nCallsTestDirectAccess=1;
-
-    for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+    FaceAccessCounterTable[thread]=(char)1;
+    FlushFaceRayTracingOperationIDTable(thread);
   }
+
+  memcpy(x,x0Ray,3*sizeof(double));
 
   //trace the ray
   PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
@@ -349,7 +417,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
 
     if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
+        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread])  {
           code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
 
           if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
@@ -360,7 +428,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
             }
           }
 
-          TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
+          TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
         }
       }
     }
@@ -397,6 +465,9 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
 void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool ParallelExecution) {
   double xTriangle[3],c;
   int i,idim,iStart,iFinish,nFaceThread;
+
+  //init the ray traciing module if needed
+  PIC::RayTracing::Init();
 
   if (ParallelExecution==true) {
     nFaceThread=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads;

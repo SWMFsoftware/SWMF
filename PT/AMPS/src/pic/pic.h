@@ -1347,7 +1347,10 @@ namespace PIC {
 
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
-    extern unsigned int nCallsTestDirectAccess;
+    extern char *FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
+    extern char *FaceAccessCounterTable; //the conter of the Ray Tracking operations
+
+    void Init();
 
     bool GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace);
     bool TestDirectAccess(double *xStart,double *xTarget);
@@ -1355,6 +1358,7 @@ namespace PIC {
     int FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace=NULL);
 
     void SetCutCellShadowAttribute(double *xLightSource, bool ParallelExecution=false);
+    void FlushFaceRayTracingOperationIDTable(int iThreadOpenMP);
   }
 
   //define the test-run parameters
