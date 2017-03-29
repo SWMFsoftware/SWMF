@@ -117,17 +117,12 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   double x[3],r,ll[3],cosTheta,A,t;
   double tNudeGaugeDensity=0.0,tRamGaugeFlux=0.0,tRamGaugeDensity=0.0;
 
-/*
+
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic) default(none) shared(iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
   private(xIntersection,beta,iSurfaceElement,iTest,idim,c,x,r,cosTheta,A,t,tNudeGaugeDensity,tRamGaugeFlux,tRamGaugeDensity,ll) reduction(+:localNudeGaugeDensity) reduction(+:localNudeGaugeFlux) reduction(+:localRamGaugeFlux) reduction(+:localRamGaugeDensity)
 #endif
-*/
   for (iSurfaceElement=iStartSurfaceElement;iSurfaceElement<iFinishSurfaceElement;iSurfaceElement++) {
-/*    int iTest,idim;
-    double c=0.0,x[3],l[3],r,cosTheta,A,t;
-    double tNudeGaugeDensity=0.0,tRamGaugeFlux=0.0,tRamGaugeDensity=0.0;*/
-
     CutCell::BoundaryTriangleFaces[iSurfaceElement].GetCenterPosition(x);
     c=0.0,tNudeGaugeDensity=0.0,tRamGaugeFlux=0.0,tRamGaugeDensity=0.0;
 
@@ -138,17 +133,6 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       //parameters of the primary species source at that surface element
       double SourceRate,Temperature,cosSubSolarAngle,x_LOCAL_SO_OBJECT[3]={0.0,0.0,0.0};
       double ThrehondSourceRate;
-
-
-/*
-      //DEBUG
-      if ((x[0]>-900.0)&&(x[0]<50.0)) {
-        double cc=0.0;
-        printf("CC\n");
-      }
-      //END DEBUG
-*/
-
 
       switch (spec) {
       case _H2O_SPEC_:
@@ -162,33 +146,6 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       }
 
       SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-
-/*      if (SourceRate<ThrehondSourceRate) {
-        switch (spec) {
-        case _H2O_SPEC_:
-          productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-          SourceRate=ThrehondSourceRate;
-          break;
-        default:
-          if (0.98*productionDistributionNASTRAN[_H2O_SPEC_][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea<ThrehondSourceRate) {
-            //the source rate can be increase only at the bootem of the duck: condition - no intersection with -x
-            double x[3],xIntersection[3],lTestX[3]={-1.0,0.0,0.0},lTestY[3]={0.0,1.0,0.0};
-            int iIntersectionFaceX,iIntersectionFaceY;
-
-            CutCell::BoundaryTriangleFaces[iSurfaceElement].GetCenterPosition(x);
-
-            iIntersectionFaceX=PIC::RayTracing::FindFistIntersectedFace(x,lTestX,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement);
-            iIntersectionFaceY=PIC::RayTracing::FindFistIntersectedFace(x,lTestY,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement);
-
-
-            if ((iIntersectionFaceX==-1)&&(iIntersectionFaceY==-1) && (x[1]<700.0)) {
-              productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-              SourceRate=ThrehondSourceRate;
-            }
-
-          }
-        }
-      }*/
 
       cosSubSolarAngle=Vector3D::DotProduct(CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,positionSun)/Vector3D::Length(positionSun);
       if (CutCell::BoundaryTriangleFaces[iSurfaceElement].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
@@ -244,18 +201,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       //nude gauge density
       t=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
       localNudeGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-
-/*
-      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution;
-
-      #pragma omp atomic
-      t_ptr[spec]+=t;
-      #else
-*/
-
       CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution[spec]+=t;
-//      #endif
 
       //nude gauge flux
       localNudeGaugeFlux=0.0;
@@ -263,34 +209,13 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       //ram gauge density
       t=tRamGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
       localRamGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-
-/*
-      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution;
-
-      #pragma omp atomic
-      t_ptr[spec]+=t;
-      #else
-*/
       CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution[spec]+=t;
-//      #endif
 
 
       //ram gauge flux
       t=tRamGaugeFlux*A/2.0 / nTotalTests;
       localRamGaugeFlux+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
-
-/*
-      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      t_ptr=CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution;
-
-      #pragma omp atomic
-      t_ptr[spec]+=t;
-      #else
-*/
       CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution[spec]+=t;
-//      #endif
-
 
     }
   }
