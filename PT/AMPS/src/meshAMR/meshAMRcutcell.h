@@ -595,6 +595,9 @@ unsigned long int GetTriangulationSignature();
   extern fCheckPointInsideDomain CheckPointInsideDomain;
   bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
 
+  typedef void (*fInitRayTracingModule)();
+  extern fInitRayTracingModule InitRayTracingModule;
+  void InitRayTracingModule_default();
 
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
 

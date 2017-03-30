@@ -40,6 +40,7 @@ list<CutCell::cTriangleEdge> CutCell::BoundaryTriangleEdges;
 cAMRstack<CutCell::cTriangleFaceDescriptor> CutCell::BoundaryTriangleFaceDescriptor;
 
 CutCell::fCheckPointInsideDomain CutCell::CheckPointInsideDomain=CutCell::CheckPointInsideDomain_default;
+CutCell::fInitRayTracingModule CutCell::InitRayTracingModule=CutCell::InitRayTracingModule_default;
 
 /*struct cNodeCoordinates {
   double *x;
@@ -959,6 +960,11 @@ void CutCell::GetSurfaceSizeLimits(double* xmin,double *xmax) {
   }
 }
 
+
+//init the ray tracing module of AMPS
+void CutCell::InitRayTracingModule_default() {
+  PIC::RayTracing::Init();
+}
 
 //check weather a point (x0) in insed the domain:
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain

@@ -9539,7 +9539,12 @@ nMPIops++;
     static bool ThisThreadBlockFound;
     static long int nAllocatedBlocks;
 
-    if (startNode==rootTree) ThisThreadBlockFound=false,nAllocatedBlocks=0;
+    if (startNode==rootTree) {
+      ThisThreadBlockFound=false,nAllocatedBlocks=0;
+
+      //init the ray tracing module if needed
+      CutCell::InitRayTracingModule();
+    }
 
 
     if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
