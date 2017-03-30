@@ -13,6 +13,21 @@ pro plot_fls_L_Time, fhead=fhead, iplt=iplt, alt=alt, ntime=ntime, ilog=ilog, $
                      ie1=ie1, ie2=ie2, iunit=iunit, fmin=fmin, fmax=fmax, $
                      interactive=interacive
 
+  ;; Optional arguments
+  ;; fhead       - filename without extension. No default.
+  ;; iplt        - plot area: 1=equator, 2=ionosphere. Default is 1.
+  ;; alt         - altitude for ionosphere plot in km. Default is 100.
+  ;; ntime       - number of time steps in file. Has to be more than 1. No default.
+  ;; ilog        - 1=logarithmic scale, 0=linear scale. Default is 1.
+  ;; ie1         - index of lowest energy bin. Default is 0.
+  ;; ie2         - index of highest energy bin. Default is 11.
+  ;; iunit       - flux units: 1= /keV cm2 s sr, 2= /cm2 s sr. Default is 1.
+  ;; fmin        - minimum value of (log)flux. Default is 0 (linear) or fmax-3 (log).
+  ;; fmax        - maximum value of (log)flux. Default is maximum found in output.
+  ;; interactive - interactive mode requiring user input. Default is 0 (false).
+
+  if not keyword_set(interactive) then interactive=0
+
   close,/all
   ;;write_gif,/close
 
@@ -37,10 +52,11 @@ pro plot_fls_L_Time, fhead=fhead, iplt=iplt, alt=alt, ntime=ntime, ilog=ilog, $
   readf,2,lat
 
   if n_elements(iplt) eq 0 then $
-     read,'plot flux at  1 = equator,  2 = ionosphere => ',iplt
+     if interactive then read,'plot flux at  1 = equator,  2 = ionosphere => ',iplt $
+     else iplt = 1
   if n_elements(alt) eq 0 then begin
-     alt=9999.
-     if (iplt eq 2) then read,'altitude (km) => ',alt
+     alt=100.
+     if (interactive and iplt eq 2) then read,'altitude (km) => ',alt
   endif
   ri=(alt+6375.)/6375.          ; ionosphere distance in RE
   rim=ri*6.375e6                ; ionosphere distance in m
@@ -49,8 +65,14 @@ pro plot_fls_L_Time, fhead=fhead, iplt=iplt, alt=alt, ntime=ntime, ilog=ilog, $
   if n_elements(ntime) eq 0 then $
      read,'number of data set in time => ',ntime
 
+  if ntime lt 2 then begin
+     print,'The file ',fhead,' has to contain at least 2 snapshots to make this plot.'
+     retall
+  endif
+
   if n_elements(ilog) eq 0 then $
-     read,'flux in?  0 = linear scale, or 1 = log scale => ',ilog
+     if interactive then read,'flux in?  0 = linear scale, or 1 = log scale => ',ilog $
+     else ilog=1
 
   ;; Calculate L-values
   Lshell=lat
@@ -128,9 +150,12 @@ new_plot:
   for i=0,je-1 do print,i,Ebound(i:i+1),format='("  (",i2,") ",f6.1," - ",f6.1)'
 
   if n_elements(ie1) eq 0 or n_elements(ie2) eq 0 then $
-     read, 'lower and upper energy bins (ie1,ie2) => ',ie1,ie2
+     if interactive then read, 'lower and upper energy bins (ie1,ie2) => ',ie1,ie2 $
+     else ie1=0 & ie2=11
+
   if n_elements(iunit) eq 0 then $
-     read,'unit? (1)flux/(keV cm2 s sr), (2)flux/(cm2 s sr) => ',iunit
+     if interactive then read,'unit? (1)flux/(keV cm2 s sr), (2)flux/(cm2 s sr) => ',iunit $
+     else iunit=1
   e0=Ebound(ie1)
   e1=Ebound(ie2+1)
   fmiddle=string(round(e0),ilab)+'-'+string(round(e1),ilab)+'keV'
@@ -207,7 +232,7 @@ new_plot:
   plsfluxs=plsflux
   hours=hour
 
-  if keyword_set(interactive) then begin
+  if interactive then begin
      read,'Do you want to reduce the temporal resolution? y(yes), n(no) => ',yon
      if (yon eq 'y') then begin
         read,'enter number of time sector => ',ntsec
@@ -264,7 +289,7 @@ plotFlux:
   goto,plotFlux
 
 newPlot:
-  if keyword_set(interactive) then begin
+  if interactive then begin
      read,'Do you want to continue?  (y)yes, (n)no => ',yon
      if (yon eq 'y') then goto,new_plot
   endif
