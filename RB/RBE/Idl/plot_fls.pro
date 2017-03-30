@@ -20,14 +20,34 @@
 ;-----------------------------------------------------------------------------
 ; main routine
 ;-----------------------------------------------------------------------------
-pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl, $
-              iround=iround, ie1=ie1, ie2=ie2, iopt=iopt, iunit=iunit, $
+pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, $
+              dir=dir, halfl=halfl, iround=iround, $
+              ie1=ie1, ie2=ie2, iopt=iopt, iunit=iunit, $
               fmin=fmin, fmax=fmax, nframe=nframe, $
               interactive=interactive
 
   close,/all
 
-; get colors for color table palette. Default is rainbow
+  ;; Optional arguments
+  ;; fhead      - filename without extension. No default.
+  ;; ntime      - number of time steps in file. Default is 1.
+  ;; icr        - color table: 1=rainbow, other values for "hena". Default is 1.
+  ;; ilog       - 1=logarithmic scale, 0=linear scale. Default is 1.
+  ;; dir        - 1=Sun on the left, 2=Sun on the right. Default is 1.
+  ;; halfl      - Size of the plot from origin in RE. Default is 20.
+  ;; iround     - 0=square, 1=round plot. Default is 1.
+  ;; ie1        - index of lowest energy bin. Default is 0.
+  ;; ie2        - index of highest energy bin. Default is 11.
+  ;; iopt       - plot 1=flux, 2=pressure, 3=density 4=temperature. Default is 1 (flux).
+  ;; iunit      - flux units: 1= /keV cm2 s sr, 2= /cm2 s sr. Default is 1.
+  ;; fmin       - minimum value of (log)flux. Default is 0 (linear) or fmax-3 (log).
+  ;; fmax       - maximum value of (log)flux. Default is maximum found in output.
+  ;; nframe     - number of frames to use for smoothing. Default is 0 (no smoothing).
+  ;; interactive- interactive mode requiring user input. Default is 0 (false).
+
+  if not keyword_set(interactive) then interactive=0
+
+  ;; get colors for color table palette. Default is rainbow
   if n_elements(icr) eq 0 then begin
      if keyword_set(interactive) then $
         read,'color table, 1=rainbow with white, 2=HENA-type => ',icr $
@@ -35,7 +55,6 @@ pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl
         icr=1
   endif
 
-  icr = 1
   if (icr eq 1) then begin
      loadct,39                  ;  rainbow with white
      tvlct, red, green, blue, /get
@@ -66,11 +85,21 @@ pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl
   readf,2,energy
   readf,2,sina
   readf,2,lat
-  if n_elements(ntime)  eq 0 then read,'number of data set in time => ',ntime
-  if n_elements(ilog)   eq 0 then read,'scale?  0 = linear scale, or 1 = log scale => ',ilog
-  if n_elements(dir)    eq 0 then read,'Sun to the?   1 = left,  2 = right => ',dir
-  if n_elements(halfl)  eq 0 then read,'half length of the plot => ', halfl
-  if n_elements(iround) eq 0 then read,'shape of the plot?  0 = square,  1 =  round => ',iround
+  if n_elements(ntime)  eq 0 then $
+     if interactive then read,'number of data set in time => ',ntime $
+     else ntime = 1
+  if n_elements(ilog)   eq 0 then $
+     if interactive then read,'scale?  0 = linear scale, or 1 = log scale => ',ilog $
+     else ilog=1
+  if n_elements(dir)    eq 0 then $
+     if interactive then read,'Sun to the?   1 = left,  2 = right => ',dir $
+     else dir = 1
+  if n_elements(halfl)  eq 0 then $
+     if interactive then read,'half length of the plot => ', halfl $
+     else halfl = 20.0
+  if n_elements(iround) eq 0 then $
+     if interactive then read,'shape of the plot?  0 = square,  1 =  round => ',iround $
+     else iround=1
 
 ; Calculate Ebound    
   for k=1,je-1 do Ebound(k)=sqrt(energy(k-1)*energy(k))
@@ -110,19 +139,19 @@ pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl
   dE=fltarr(je)
   for k=0,je-1 do dE(k)=Ebound(k+1)-Ebound(k)
 
-; factor of calculating ion pressure, density and temperature
+  ;; factor of calculating ion pressure, density and temperature
   pf=8.*!pi/3.*1.e6*1.6e-16*1.e9  ; pressure in nPa
   nf=4.*!pi                       ; density in cm-3
   Tf=2./3.                        ; T = 2/3 * mean E
 
-; Calculate ece, (E+Eo)/c/sqrt(E(E+2Eo)). c in cm/s
+  ;; Calculate ece, (E+Eo)/c/sqrt(E(E+2Eo)). c in cm/s
   if (spe eq '_h' or spe eq '_s' or spe eq 'Po' or spe eq 'Pl') then mass=1.
   if (spe eq '_o') then mass=16.
   if (spe eq '_e') then mass=5.4462e-4
   Eo=mass*1.673e-27*3.e8*3.e8/1.6e-16 ; rest-mass energy in keV
   for k=0,je-1 do ece(k)=(energy(k)+Eo)/3.e10/sqrt(energy(k)*(energy(k)+2.*Eo))
-
-; Read fluxes and calculate PA anisotropy
+  
+  ;; Read fluxes and calculate PA anisotropy
   for n=0,ntime-1 do begin
      readf,2,hour
      houra(n)=hour
@@ -130,13 +159,13 @@ pro plot_fls, fhead=fhead, ntime=ntime, icr=icr, ilog=ilog, dir=dir, halfl=halfl
      for i=0,nr-1 do begin
         for j=0,nmlt-1 do begin
            readf,2,lat1,mlt,ro1,mlto1,bo ;,irm1,iba1
-;           irm(n,j)=irm1
-                                ; iba(n,j)=iba1
+           ;; irm(n,j)=irm1
+           ;; iba(n,j)=iba1
            roa(n,i,j)=ro1
            mltoa(n,i,j)=mlto1
            for k=0,je-1 do begin
               readf,2,fy
-                                ; calculate pitch-angle (PA) averaged flux and PA anisotropy
+              ;; calculate pitch-angle (PA) averaged flux and PA anisotropy
               plsfluxk(n,i,j,k)=0.
               anisok(n,i,j,k)=0.
               fpara=0.
@@ -171,12 +200,18 @@ new_plot:
   for i=0,je-1 do print,i,Ebound(i:i+1),format='("  (",i2,") ",f7.2," - ",f7.2)'
 
   if n_elements(ie1) eq 0 or n_elements(ie2) eq 0 then $
-     read, 'lower and upper energy bins (ie1,ie2) => ',ie1,ie2
+     if interactive then read, 'lower and upper energy bins (ie1,ie2) => ',ie1,ie2 $
+     else ie1=0 & ie2=11
   if n_elements(iopt) eq 0 then $
-     read,'plot? (1)flux,  (2)pressure,  (3)density,  (4)temperature => ',iopt
-  iunit=0
-  if iopt eq 1 and n_elements(iunit) eq 0 then $
-     read,'unit? (1)flux/(keV cm2 s sr), (2)flux/(cm2 s sr) => ',iunit
+     if interactive then read,'plot? (1)flux, (2)pressure, (3)density, (4)temperature => ',$
+                              iopt $
+     else iopt=1
+
+  if n_elements(iunit) eq 0 then begin
+     iunit=1
+     if iopt eq 1 and interactive then $
+        read,'unit? (1)flux/(keV cm2 s sr), (2)flux/(cm2 s sr) => ',iunit
+  endif
   e0=Ebound(ie1)
   e1=Ebound(ie2+1)
   fmiddle=string(round(e0),ilab)+'-'+string(round(e1),ilab)+'keV'
@@ -185,7 +220,7 @@ new_plot:
   if (iopt eq 3) then fmiddle=fmiddle+'_density'
   if (iopt eq 4) then fmiddle=fmiddle+'_temperature'
 
-; calculate energy-integrated flux or pressure or density or temperature
+  ;; calculate energy-integrated flux or pressure or density or temperature
   for n=0,ntime-1 do begin
      for i=0,nr-1 do begin
         for j=0,nmlt do begin
@@ -218,12 +253,12 @@ new_plot:
      endfor
   endfor
 
-; setup plot ranges
+  ;; setup plot ranges
   yon=' '
   if n_elements(fmax) eq 0 then begin
      fmax=max(plsfluxa)    
      print,' fmax = ',fmax
-     if keyword_set(interactive) then begin
+     if interactive then begin
         read,' Do you want to change fmax? (y/n) => ',yon
         if (yon eq 'y') then read,' enter new fmax => ',fmax
      endif
@@ -233,7 +268,7 @@ new_plot:
      if (ilog eq 1) then fmin=fmax-3.   
      print,' fmin = ',fmin
 
-     if keyword_set(interactive) then begin
+     if interactive then begin
         read,' Do you want to change fmin? (y/n) => ',yon
         if (yon eq 'y') then read,' enter new fmin => ',fmin
      endif
@@ -243,15 +278,17 @@ new_plot:
 
   ;; smooth data
   if n_elements(nframe) eq 0 then begin
-     read,' Do you want to smooth the data? (y/n) => ',yon
      nframe=0
-     if (yon eq 'y') then read,' enter number of intermediate frame => ',nframe
+     if interactive then begin
+        read,' Do you want to smooth the data? (y/n) => ',yon
+        if (yon eq 'y') then read,' enter number of intermediate frame => ',nframe
+     endif
   endif
 
   ntnew=(ntime-1)*(nframe+1)+1
   ronew=fltarr(ntnew,nr,nmlt+1)  &  mltonew=ronew  
   anisonew=ronew                 &  plsfluxnew=ronew
-  if (nframe eq 0) then begin
+  if nframe eq 0 then begin
      hournew=houra        
      ronew=roa        
      mltonew=mltoa   
@@ -269,14 +306,14 @@ new_plot:
      endfor
   endelse
 
-; Setup window
+  ;; Setup window
   ips=0
   set_plot,'x'
   x_wsize=684
   y_wsize=480
   window,1,xpos=200,ypos=100,xsize=x_wsize,ysize=y_wsize
 
-; Plot plasma flux (or pressure, or density) and pitch angle anisotropy
+  ;; Plot plasma flux (or pressure, or density) and pitch angle anisotropy
   for n=0,ntnew-1 do begin
      plot_flux:
      polyfill,[0.,1.,1.,0.,0.],[0.,0.,1.,1.,0.],color=255,/normal ; white BG
@@ -340,9 +377,9 @@ new_plot:
 close_gif:
   write_gif,fhead+'_'+fmiddle+'.gif',/close
   device,/close
-  if keyword_set(interactive) then begin
+  if interactive then begin
      read,'Do you want to continue?  (y)yes, (n)no => ',yon
-     if (yon eq 'y') then goto,new_plot
+     if yon eq 'y' then goto, new_plot
   endif
 
 end
