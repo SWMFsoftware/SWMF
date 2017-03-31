@@ -14,7 +14,7 @@ box.out				NameDataFile
 real4				TypeDataFile
 
 #TABLEFILE
-SPECTRUM.input.erg		NameTableFile
+SPECTRUM_chianti_tbl.dat	NameTableFile
 1000				nMaxLine	
 
 #WAVELENGTHINTERVAL
