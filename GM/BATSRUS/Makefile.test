@@ -13,6 +13,7 @@ timing:
 
 test: 
 	@rm -f *.diff
+	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
 	-@($(MAKE) test_shockramp)
@@ -108,6 +109,7 @@ test_help:
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shockramp             (run shockramp test)"
+	@echo "    test_spectrum	      (run spectrum post-processing test)"
 	@echo "    test_titan                 (run Titan tests)"
 	@echo "    test_titan_start           (run first Titan test)"
 	@echo "    test_titan_restart         (run titan restart test)"
@@ -1634,3 +1636,8 @@ test_L1toBC_check:
 		Param/EARTH/TestOutput/L1toBC.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_L1toBC.diff)
 	ls -l test_L1toBC.diff
+
+### TEST FOR POST-PROCESSING SPECTRUM CODE#####################################
+
+test_spectrum:
+	cd srcPostProc; $(MAKE) test_spectrum
