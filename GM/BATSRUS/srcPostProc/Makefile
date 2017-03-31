@@ -74,6 +74,7 @@ test_spectrum:
 test_spectrum_compile:
 	rm -f SPECTRUM.in test_spectrum.diff spectrum.log test-spectrum.out test-spectrum.eps
 	cp test-SPECTRUM.in SPECTRUM.in
+	gunzip -c ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz > SPECTRUM_chianti_tbl.dat
 	make SPECTRUM
 
 test_spectrum_run:
@@ -84,6 +85,7 @@ test_spectrum_check:
 		test-spectrum.out \
 		test-spectrum.ref > test_spectrum.diff
 	@ls -l test_spectrum.diff
+	mv test_spectrum.diff ../
 
 #
 #	cleaning
@@ -91,6 +93,6 @@ test_spectrum_check:
 clean: cleanfiles
 
 distclean: clean
-	rm -f SPECTRUM.exe SPECTRUM.in test_spectrum.diff spectrum.log spectrum.out test-spectrum.eps
+	rm -f SPECTRUM.exe SPECTRUM.in spectrum.log test-spectrum.out SPECTRUM_chianti_tbl.dat
 
 # keep this line

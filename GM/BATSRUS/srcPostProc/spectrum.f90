@@ -1008,6 +1008,7 @@ contains
   subroutine read_table
 
     use ModIoUnit, ONLY: UnitTmp_
+    use ModUtilities, ONLY: open_file, close_file
 
     ! Data read from the file
     character(len=6)            :: NameIon
@@ -1044,7 +1045,7 @@ contains
     IsHeader            = .true.
 
     ! Start to read data file
-    open(UnitTmp_, FILE=NameTableFile)
+    call open_file(FILE=NameTableFile, STATUS='old')
 
     ! Read grid size information from header
     READGRID: do
@@ -1180,7 +1181,7 @@ contains
        if(iError /= 0) EXIT READLOOP
 
     end do READLOOP
-    close(UnitTmp_)
+    call close_file
 
     deallocate(g_II)
 
