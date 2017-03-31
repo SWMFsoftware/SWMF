@@ -164,6 +164,13 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("double OH::DomainDXMax",$s1,"main/OH.cpp");   
   }
   
+  #the number of the ENAs source regions for sampling of the number density of particles produced in each individual source region
+  elsif ($InputLine eq "SOURCEREGIONNUMBER") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    ampsConfigLib::ChangeValueOfVariable("int OH::Sampling::OriginLocation::nSampledOriginLocations",$InputLine,"main/OH.cpp")
+  }
+  
   elsif ($InputLine eq "#ENDBLOCK") {
     last;
   }   
