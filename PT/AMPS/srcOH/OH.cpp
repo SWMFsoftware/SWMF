@@ -29,6 +29,9 @@ int OH::Output::ohSourceEnergyOffset  =-1;
 
 void OH::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
   fprintf(fout,",\"ohSourceDensity\",\"ohSourceMomentumX\",\"ohSourceMomentumY\",\"ohSourceMomentumZ\",\"ohSourceEnergy\"");
+
+  //if DataSetNumber is 0, and  OH::Sampling::OriginLocation::nSampledOriginLocations!=-1 -> output density of particles produced in each source region
+  if (DataSetNumber==0) for (int i=0;i<OH::Sampling::OriginLocation::nSampledOriginLocations;i++) fprintf(fout,", \"ENA Density (Source Region ID=%i)\"",i);
 }
 
 void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode){
@@ -58,6 +61,19 @@ void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doub
   memcpy(offset+OH::Output::ohSourceDensityOffset, &S1,  sizeof(double));
   memcpy(offset+OH::Output::ohSourceMomentumOffset,&S2,3*sizeof(double));
   memcpy(offset+OH::Output::ohSourceEnergyOffset,  &S3,  sizeof(double));
+
+  //evaluate density of ENAs produced in each source region
+  for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations;iSource++) {
+    double t=0.0;
+
+    for (i=0;i<nInterpolationCoeficients;i++) {
+      offset=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
+      t+=(*(iSource+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample)))*InterpolationCoeficients[i];
+    }
+
+    offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
+    *(iSource+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample))=t;
+  }
 
 }
 
@@ -101,6 +117,20 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
     fprintf(fout,"%e ",t);
   }
   else pipe->send(t);
+
+  //density of the ENAs produced in specific origin regions
+  if (DataSetNumber==0) for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations;iSource++) {
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *(iSource+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetDensitySample));
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+      fprintf(fout,"%e ",t/PIC::LastSampleLength);
+    }
+    else pipe->send(t);
+  }
 
 }
 
@@ -317,6 +347,9 @@ void OH::Init_BeforeParser(){
 
   //set the coupling procedure
   PIC::CPLR::SWMF::SendCenterPointData.push_back(Coupling::Send);
+
+  //request sampling data
+  PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::OriginLocation::RequestSamplingData);
 }
 
 // User defined functions -----------------------------------------------------
@@ -432,5 +465,32 @@ int OH::GetEnaOrigin(double PlasmaNumberDensity, double PlasmaPressure, double *
   else {
     // particle is in the super sonic SW - population 1
     return 0;
+  }
+}
+
+//=====================================================================================================
+//sampling of the ENAs density individually for each origin region
+int OH::Sampling::OriginLocation::nSampledOriginLocations=-1;
+int OH::Sampling::OriginLocation::OffsetDensitySample=-1;
+
+int OH::Sampling::OriginLocation::RequestSamplingData(int offset) {
+  int res=0;
+
+  if (nSampledOriginLocations!=-1) {
+    OffsetDensitySample=offset;
+    res=nSampledOriginLocations*sizeof(double);
+  }
+
+  return res;
+}
+
+void OH::Sampling::OriginLocation::SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
+  int OriginID;
+
+  if (nSampledOriginLocations!=-1) {
+    OriginID=OH::GetOriginTag((PIC::ParticleBuffer::byte*)ParticleData);
+
+    if (OriginID>=nSampledOriginLocations) exit(__LINE__,__FILE__,"Error: OriginID is out of range. Update the input file with the corrected value of the number of the source regions");
+    *(OriginID+(double*)(SamplingBuffer+OffsetDensitySample))+=LocalParticleWeight;
   }
 }

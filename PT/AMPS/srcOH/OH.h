@@ -60,6 +60,21 @@ namespace OH {
   //---------------------------------------------------------------------------
   namespace Sampling{
     using namespace Exosphere::Sampling;
+
+    //sample the particle density separately for each source location
+    namespace OriginLocation {
+      extern int nSampledOriginLocations;
+
+      //offset of the sampled density data in the AMPS' sanpling vector
+      extern int OffsetDensitySample;
+
+      //init the sampling module
+      int RequestSamplingData(int offset);
+      void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);
+
+
+
+    }
   }
 
   namespace Coupling {
