@@ -11,7 +11,6 @@ include Makefile.RULES
 # Other required libraries
 LIBSHARE  = ${LIBDIR}/libSHARE.a
 
-
 #
 # Post processing executables
 #
@@ -85,7 +84,6 @@ test_spectrum_check:
 		test-spectrum.out \
 		test-spectrum.ref > test_spectrum.diff
 	@ls -l test_spectrum.diff
-	idl test_spectrum.pro
 
 #
 #	cleaning
