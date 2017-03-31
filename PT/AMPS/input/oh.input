@@ -75,9 +75,13 @@ CouplerMode=swmf !ices !!off, ices, swmf
   !DomainBoundaryParticleIntersection=user-defined \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
   !  function = OH::user_set_face_boundary
 
+  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) OH::Sampling::OriginLocation::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
+
 #endGeneral
 
 #block ../input/oh.input.pl !process the settings of the Outer Heliosphere model
+
+  SourceRegionNumber=10
   
   ! user defined global time step
   UserGlobalTimeStep=-1.0   ! default = -1.0 (i.e. use time step defined by AMPS)
