@@ -236,6 +236,7 @@ contains
   !==========================================================================
 
   subroutine trace_particle_line(iDirTrace)
+    use ModCoordTransform, ONLY: cross_product
     ! the subroutine is the tracing loop;
     ! tracing starts at KindEnd_ particles and proceeds in a given direction
     !------------------------------------------------------------------------
@@ -245,7 +246,7 @@ contains
     integer :: iParticle     ! loop variable
 
     ! direction of the magnetic field
-    real:: Dir1_D(MaxDim), Dir2_D(MaxDim)
+    real:: Dir1_D(MaxDim), Dir2_D(MaxDim), Dir3_D(MaxDim)
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -253,6 +254,10 @@ contains
 
     ! constant in Ralston's method
     real, parameter:: cTwoThird = 2.0 / 3.0
+    real, parameter:: cHalf     = 0.5
+
+    ! logicals to switch between integration methods
+    logical:: DoTraceRK2 = .true., DoTraceGirard = .false.
 
     character(len=*),parameter:: NameSub = "trace_particle_line"
     !------------------------------------------------------------------------
@@ -260,7 +265,8 @@ contains
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
-    TRACE: do
+    TRACE_RK2: do while(DoTraceRK2)
+       if(DoTraceGirard) DoTraceRK2 = .false.
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
           call check_soft_boundary(KindEnd_)
@@ -348,7 +354,99 @@ contains
             iDirTrace
        call copy_end_to_regular
 
-    end do TRACE
+    end do TRACE_RK2
+
+    TRACE_GIRARD: do while(DoTraceGirard)
+       ! check if particles are beyond the soft boundary
+       if(RBoundarySoft > 0.0)then
+          call check_soft_boundary(KindEnd_)
+          call remove_undefined_particles(KindEnd_)
+       end if
+
+       ! copy last known coordinates to Auxilary 
+       StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
+            StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
+       !\
+       ! First stage: move by half-step
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the direction of the magnetic field at original location
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = Dir1_D)
+          ! find the step size
+          StateEnd_VI(Aux_, iParticle) = &
+               MIN(SpaceStepMax, MAX(SpaceStepMin,&
+               0.1*SQRT(&
+               sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
+               )))
+          ! get middle location
+          StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
+               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+               cHalf * Dir1_D * &
+               iIndexEnd_II(Alignment_, iParticle)
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       !\
+       ! Second stage:
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the direction of the magnetic field in the middle
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = Dir2_D)
+          ! direction at the 1st stage
+          Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
+          ! store for the next iteration
+          StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir2_D
+          ! the "force" is normal to tangential direction, apply rotation
+          call rotate_girard(Dir1_D, cross_product(Dir1_D, Dir2_D), Dir3_D)
+          ! get final location
+          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
+               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
+               Dir3_D * iIndexEnd_II(Alignment_, iParticle)
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       ! increase particle index & copy to regular
+       iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+            iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+            iDirTrace
+       call copy_end_to_regular
+
+       
+    end do TRACE_GIRARD
 
   contains
     !========================================================================
@@ -367,7 +465,20 @@ contains
       call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
            MPI_LOGICAL, MPI_LAND, iComm, iError)               
     end function is_complete
+    !========================================================================
+    subroutine rotate_girard(DirIn_D, Omega_D, DirOut_D)
+      ! apply Girard's method for integrating
+      !----------------------------------------------
+      real, intent(in) :: DirIn_D(MaxDim)
+      real, intent(in) :: Omega_D(MaxDim)
+      real, intent(out):: DirOut_D(MaxDim)
 
+      real:: DirAux_D(MaxDim)
+      !----------------------------------------------------------------------
+      DirAux_D = DirIn_D + 0.50*cross_product(DirIn_D, Omega_D)
+      DirOut_D = DirIn_D + &
+           cross_product(DirAux_D, Omega_D)/ (1 + 0.25*sum(Omega_D**2))
+    end subroutine rotate_girard
   end subroutine trace_particle_line
   
   !==========================================================================
