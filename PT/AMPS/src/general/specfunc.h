@@ -327,6 +327,19 @@ namespace Vector3D {
       for (int i=0;i<3;i++) a[i]=sqrt(-log(rnd()))*cos(PiTimes2*rnd());
       Vector3D::Normalize(a);
     }
+
+    namespace Circle {
+       inline void Uniform(double *a, double Radius) {
+         double phi,r;
+
+         phi=PiTimes2*rnd();
+         r=sqrt(rnd())*Radius;
+
+         a[0]=r*sin(phi);
+         a[1]=r*cos(phi);
+       }
+    }
+
   }
 }
   
