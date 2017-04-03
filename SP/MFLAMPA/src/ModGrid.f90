@@ -290,6 +290,11 @@ contains
        iBegin = iGridLocal_IB(Begin_,iBlock)
        iEnd   = iGridLocal_IB(End_,  iBlock)
        do iParticle = iBegin, iEnd
+          ! if particle has left the domain -> cut the rest of the line
+          if(State_VIB(R_, iParticle, iBlock) > RIh)then
+             iGridLocal_IB(End_,  iBlock) = iParticle - 1
+             EXIT
+          end if
           ! plasma speed
           State_VIB(U_,iParticle, iBlock) = &
                sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
