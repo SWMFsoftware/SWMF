@@ -105,7 +105,7 @@ contains
     character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')
-  end subroutine SP_get_solar_corona_boundary
+  end subroutine SP_get_domain_boundary
 
   !===================================================================
 
