@@ -24,7 +24,7 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih
   public:: SP_interface_point_coords_for_sc
   public:: SP_get_grid_descriptor_param
-  public:: SP_get_solar_corona_boundary
+  public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
 contains
@@ -99,9 +99,9 @@ contains
   end subroutine SP_get_line_param
   !===================================================================
 
-  subroutine SP_get_solar_corona_boundary(RScOut)
+  subroutine SP_get_domain_boundary(RScOut, RIhOut)
     ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut
+    real, intent(out):: RScOut, RIhOut
     character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')

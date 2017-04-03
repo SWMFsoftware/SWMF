@@ -13,7 +13,7 @@ module SP_wrapper
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
-       RMin, RSc, LatMin, LatMax, LonMin, LonMax, &
+       RMin, RSc, RIh, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
        CoordMin_DI, &
        Block_, Proc_, Begin_, End_, &
@@ -49,7 +49,7 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
-  public:: SP_get_solar_corona_boundary
+  public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
 
@@ -234,12 +234,13 @@ contains
 
   !===================================================================
 
-  subroutine SP_get_solar_corona_boundary(RScOut)
+  subroutine SP_get_domain_boundary(RScOut, RIhOut)
     ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut
+    real, intent(out):: RScOut, RIhOut
     !-----------------------------------------------------------------
     RScOut = RSc
-  end subroutine SP_get_solar_corona_boundary
+    RIhOut = RIh
+  end subroutine SP_get_domain_boundary
 
   !===================================================================
 
@@ -404,6 +405,7 @@ contains
             call CON_stop(NameSub//': particle index is below limit')
        if(iParticle > iParticleMax)&
             call CON_stop(NameSub//': particle index is above limit')
+
        iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
        iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&

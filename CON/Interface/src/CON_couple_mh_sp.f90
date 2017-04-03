@@ -40,7 +40,7 @@ module CON_couple_mh_sp
        SP_put_from_mh, SP_put_input_time, &
        SP_put_line, SP_n_particle,        &
        SP_get_grid_descriptor_param, &
-       SP_get_solar_corona_boundary, SP_put_r_min, &
+       SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc
 
   implicit none
@@ -101,7 +101,7 @@ contains
          iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
 
     ! solar corona boundary
-    real:: RSc, RMin
+    real:: RSc, RIh, RMin
 
     character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
@@ -124,8 +124,8 @@ contains
          LocalGD = SP_LocalGD)
 
 
-    ! get the value of solar corona boundary as set in SP
-    call SP_get_solar_corona_boundary(RSc)
+    ! get the value of SC and IH boundary as set in SP
+    call SP_get_domain_boundary(RSc, RIh)
 
     if(use_comp(SC_))then  
        ! Set pair SC-SP
@@ -292,6 +292,7 @@ contains
                  nIndex          = nAux,                                      &
                  iIndexOrigin_II = &
                  nint(RouterIhSp%BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
+                 RSoftBoundary   =  RIh,                                      &
                  UseInputInGenCoord = .true.)
          end if
          if(is_proc(IH_))then

@@ -14,7 +14,7 @@ module SP_ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, ROrigin
+  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, RIh, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
   public:: CoordMin_DI
   public:: State_VIB, Distribution_IIB
@@ -45,6 +45,8 @@ module SP_ModGrid
   real:: RMin=1.0
   ! Boundary of the solar corona in Rs
   real:: RSc =21.0
+  ! Boundary of the inner heliosphere in Rs
+  real:: RIh =220.0
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
