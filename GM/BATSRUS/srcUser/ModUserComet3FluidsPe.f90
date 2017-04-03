@@ -2528,6 +2528,7 @@ contains
 
   subroutine user_set_boundary_cells(iBlock)
 
+    use ModMain,             ONLY: xMaxBc_
     use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, x2
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
@@ -2540,7 +2541,7 @@ contains
     !--------------------------------------------------------------------------
     ! For inflow in negative x direction
     where( Xyz_DGB(x_,:,:,:,iBlock) > x2 ) &
-         iBoundary_GB(:,:,:,iBlock) = 8    
+         iBoundary_GB(:,:,:,iBlock) = xMaxBc_
 
   end subroutine user_set_boundary_cells
 
