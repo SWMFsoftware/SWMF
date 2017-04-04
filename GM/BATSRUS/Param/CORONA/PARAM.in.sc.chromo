@@ -231,7 +231,7 @@ T			DoAddFluxRope
 GL			TypeCme
 0.7			Stretch
 1.8			Distance
-1.0			Radius
+1.03			Radius
 0.1			Bstrength
 0.0			pBackground
 0.8			ModulationRho
