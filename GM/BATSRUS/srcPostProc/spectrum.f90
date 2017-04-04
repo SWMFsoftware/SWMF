@@ -171,7 +171,7 @@ contains
   subroutine set_data_block
     ! When no data file input is used set up uniform data values in defined box
     integer, parameter             :: iUnitOut = 18
-    integer                        :: MinWavelength, Maxwavelength
+    real                           :: MinWavelength, Maxwavelength
     character(len=*), parameter    :: NameSub = 'set_data_block'
     !------------------------------------------------------------------------
 
@@ -223,7 +223,6 @@ contains
                = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
-
   end subroutine set_data_block
   !==========================================================================
   subroutine save_label
@@ -445,7 +444,7 @@ contains
              ! Calculate thermal and non-thermal broadening
              Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
              Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)  
-             
+
              ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
              ! and divide by cProtonMass in kg so Ne is in cm^-3
              ! 1 : 0.83  electron to proton ratio is assumed
@@ -489,21 +488,24 @@ contains
              ! Calculate flux and spread it on the Spectrum_II grids
              ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
              FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) 
-             
+
              if(IsDebug)then
                 write(*,*)'                                                   '
                 write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
                 write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
                 write(*,*)'Gint = ',log10(Gint),' FluxMono = ',FluxMono
-                write(*,*)'LogNe, DLogN = ',LogNe,DLogN
-                write(*,*)'LogTe ,DLogT = ',LogTe,DLogT
                 write(*,*)'Aion = ',Aion
                 write(*,*)'LambdaSI =',LambdaSI
                 write(*,*)'DLambdaSI, DLambda =', DLambdaSI, DLambda
                 write(*,*)'Uth, Unth = ',sqrt(Uth2), sqrt(Unth2)
                 write(*,*)'LogTlos = ',log10(Tlos)
                 write(*,*)'iLine = ',iLine
-                write(*,*)'Glambda_II = ',Glambda_II
+                write(*,*)'iCenter , iInterval = ',iCenter, iInterval
+                write(*,*)'jTMin, jTMax = ', jTMin, jTMax
+                write(*,*)'iNMin, iNMax = ', iNMin, iNMax
+                write(*,*)'LogNe,DLogN , LogTe,DLogT = ',LogNe,DLogN , LogTe,DLogT
+                write(*,*)'LogNe/DLogN , LogTe/DLogT = ',LogNe/DLogN , LogTe/DLogT
+                write(*,*)'Gint = ',Gint
                 write(*,*)'                                                   '
              endif
 
@@ -846,7 +848,7 @@ contains
                = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
-
+    
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
        Var_VIII(rho_,1:n1,1:n2,1:n3)   = rhoUni * 1e6 * cProtonMass
