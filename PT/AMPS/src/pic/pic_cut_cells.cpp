@@ -68,6 +68,11 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
     fcptr->GetCenterPosition(xStart);
     norm=fcptr->ExternalNormal;
 
+    if (Vector3D::Length(norm)<0.1) {
+      if (fcptr->SurfaceArea>1.0E-15) exit(__LINE__,__FILE__,"Error: something is wrong with the face normal. The length of the normal is zero, while the surface area of the face is not zero");
+      continue;
+    }
+
     do {
       for (idim=0,l=0.0,l0=0.0;idim<3;idim++) {
         xFinish[idim]=sqrt(-2.0*log(rnd()))*cos(2.0*3.1415926*rnd());
