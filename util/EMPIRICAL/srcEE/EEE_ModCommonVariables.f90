@@ -57,8 +57,8 @@ module EEE_ModCommonVariables
   ! Switch on CME (boundary and/or initial conditions)
   logical:: UseCme = .false.
   
-  ! Use Gibbson-Law, Titov-Demoulin flux ropes
-  logical:: UseGL  = .false., UseTD = .false.
+  ! Use Gibbson-Law, Titov-Demoulin, spheromak flux ropes
+  logical:: UseGL  = .false., UseTD = .false., UseSpheromak = .false.
   
   ! Use shear-flow boundary condition, use arcade magnetic field
   logical:: UseShearFlow = .false., UseArch = .false.

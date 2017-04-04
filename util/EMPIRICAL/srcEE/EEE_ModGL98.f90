@@ -16,11 +16,53 @@ module EEE_ModGL98
   real :: pBackgroundDim =0.0, cme_rho2=0.0
 
   real :: ModulationRho=0.0, ModulationP=0.0
-
+  !\
+  !The derivative of current over flux function
+  !(\mu_0)dI/d\psi) has the dimentions of inverse length
+  !/
+  real :: Alpha0
+  !\
+  ! Characteristic value of magnetic field of the spheromak
+  ! configuration: the field in the center of configuration
+  ! equals 2(1/3 -\beta_0)B_0 \approx 0.7 B_0:
+  !/ 
+  real :: B0
+  !\
+  ! Characteristic ratio of plasma pressure to B_0^2/\mu_0
+  ! Exact definition in terms of the pressure derivative over
+  ! the flux function: \beta_0=\mu_0/(B_0 Alpha_0^2) dp/d\psi 
+  !/
+  real :: Beta0
+  !\
+  ! Dimensionless product of R0 by Alpha0. For any given \beta_0,
+  ! this product is found from the equation, 
+  !
+  ! j_1(\alpha_0r_0)/(\alpha_0r_0)=\beta_0, (*)
+  !
+  ! where j_1(x)=sin(x)/x^2 -cos(x)/x is the spherical Bessel function.
+  ! With this equation satisfied, the radial and phi- components of the
+  ! spheromak field as well as the flux function, current function and
+  ! pressure all turn to zero at the external boundary of configuration, 
+  ! at r=r_0, while theta-component of the field is non-zero and 
+  ! proportional to j_2(\alpha_0r_0). The GL paper chooses a special case of
+  ! (negative) \beta_0. Specifically, the product \alpha_0r_0 is chosen
+  ! to be a first zero of j_2 function, and then \beta_0 is chosen to satisfy
+  ! Eq (*) with this value of .     
+  !/
+  real :: Alpha0R0
+  !\
+  ! Vector characteristic of the configuration: radius vector of the
+  ! configuration center and B0 multiplied by unit vector along
+  ! the axis of symmetry
+  !/
+  real,dimension(3) :: XyzCenterConf_D, BConf_D
+  !\
+  !Misc
+  !/
+  real :: delta
+  real :: pBackground,rho2scl 
 contains
-
-  !============================================================================
-
+  !=========================================
   subroutine set_parameters_GL98(NameCommand)
     use ModReadParam, ONLY: read_var
     character(len=*), intent(in):: NameCommand
@@ -58,7 +100,7 @@ contains
 
   !============================================================================
 
-  subroutine get_GL98_fluxrope(R_GL98_D,rho_GL98,p_GL98,B_GL98_D)
+  subroutine get_GL98_fluxrope(XyzIn_D,rho_GL98,p_GL98,B_D,U_D)
     !--------------------------------------------------------------------------
     ! Definition of Parameters used for the initial state
     !   cme_a    = contraction distance as in   r --> r -a
@@ -112,46 +154,72 @@ contains
     !dBr2dr1     = -dBr2dr1; dBtheta2dr1 = -dBtheta2dr1
     !------------------------------------------------------------------------
     use ModNumConst,       ONLY: cPi, cDegToRad
-    use ModCoordTransform, ONLY: rot_matrix_y, rot_matrix_z
+    use ModCoordTransform, ONLY: rot_matrix_y, rot_matrix_z, cross_product
     implicit none
-    real, dimension(3), intent(in) :: R_GL98_D
-    real, dimension(3), intent(out) :: B_GL98_D
+    !\
+    ! Coordinates of the input point
+    !/
+    real, intent(in) :: XyzIn_D(3)
+    !\
+    ! OUTPUTS
+    !/
+    !\
+    ! Magnetic field
+    !/
+    real, intent(out) :: B_D(3)
+    !\
+    ! Optional: velocity of self-similar expansion
+    !/
+    real, intent(out),optional :: U_D(3)
+    !\
+    ! Density, pressure
+    !/
     real, intent(out) :: rho_GL98,p_GL98
     !\
     ! User declared local variables go here::
     !/
-    real :: x,y,z,  x_1,y_1,z_1,  x_2,y_2,z_2
-    real :: r,cos_theta,sin_theta,cos_phi,sin_phi
-    real :: r_1,cos_theta1,sin_theta1,cos_phi1,sin_phi1,lambda
-    real :: r_2,cos_theta2,sin_theta2,cos_phi2,sin_phi2
-    real :: dr2dr1,dth2dr1
-    real :: Br,  Btheta, Bphi
-    real :: Br1, Btheta1, Bphi1 
-    real :: Br2, Btheta2, Bphi2
-    real :: Bx_1, By_1, Bz_1
-    real :: Bx_2, By_2, Bz_2
-    real :: dBr2dr1, dBtheta2dr1,dBphi2dr1
-    real :: dBr2dr2, dBth2dr2, dBphi2dr2
-    real :: dBr2dth2, dBth2dth2, dBphi2dth2
-    real :: A2,dA2dr, dA2dth, d2A2dr2, d2A2drdth, d2A2dth2
-    real :: pres_1,dpres_1dr1,F_grav,alpha0,ga0r0,delta 
-    real, dimension(3) :: R1_GL98_D,B1_GL98_D
-    real, dimension(3,3), save :: RotateGL98_DD
+    !\
+    ! Radial coordinate of the input point
+    !/
+    real :: R
+    !\
+    ! Coordinates of the input point after
+    ! stretching transformation
+    !/
+    real :: RTransformed, XyzTransformed_D(3)
+    !\
+    ! Ccordinate vector originating at the center of
+    ! the magnetic configuration and its module
+    !/
+    real :: Distance2ConfCenter,XyzConf_D(3)
+    !\
+    ! Local pressure in the magnetic configuration
+    !/ 
+    real :: PConf
+    !\
+    ! Variables needed to calculate parameters of the
+    ! stretched magnetic configuration:
+    !/
+    ! 1. Unit vector of radial direction and the magnetic 
+    ! field projection onto it:
+    real :: eBoldR_D(3), Br1
+    ! 2. Magnetic field squared, total pressure gradient
+    ! and its projection on the radial direction 
+    real ::  BSquared, DPTotalDR1, GradPTotal_D(3)
+    ! 3. Radial tension of stretched field
+    real :: RadialTension
+    ! 4. Local acceleration of the gravitational force
+    real :: gGravity
+    !\ 
+    ! Misc
+    !/
+    real :: Alpha0R2
+    real, dimension(3) :: R2CrossB0_D
+    real, dimension(3,3):: RotateGL98_DD
     logical, save :: DoFirst_GL=.true.
-
-    real :: a1scl,pBackground,rho2scl
     !------------------------------------------------------------------------
     if (DoFirst_GL) then
        DoFirst_GL=.false.
-       !\
-       ! Construct the rotational matrix RotateGL98_DD,
-       !/
-       RotateGL98_DD  = matmul( &
-            rot_matrix_z(-OrientationCme*cDegToRad),&
-            rot_matrix_y((LatitudeCme-90)*cDegToRad))
-       RotateGL98_DD = matmul(RotateGL98_DD, &
-            rot_matrix_z(-LongitudeCme*cDegToRad))
-
        if(iProc==0)then
           write(*,*) prefix
           write(*,*) prefix, &
@@ -176,225 +244,120 @@ contains
           write(*,*) prefix, 'OrientationCme = ',OrientationCme,'[degrees]'
           write(*,*) prefix
        end if
-    end if
-    !\
-    ! 4\pi in the formula below is incorrect. The GL98 paper is in
-    ! CGS system, while in dimensionless formulae used below it may not
-    ! appear. To mantain the capability with EEGGL, the muliplier 4\pi
-    ! is included into a definition of A1Scaled
-    a1scl   = abs(cme_a1)*Io2No_V(UnitB_)&!
-         *4.0*cPi     
-    pBackground = pBackgroundDim*Si2No_V(UnitP_)
-    rho2scl = cme_rho2*Si2No_V(UnitRho_)
-
-    delta = 0.1
-    !\
-    ! Compute R1_GL98_D::
-    !/
-    R1_GL98_D = matmul(RotateGL98_DD, R_GL98_D)
-    !\
-    ! CALCULATE CELL CENTER FOR GLOBAL CARTESIAN COORDINATES 
-    !/
-    x = R1_GL98_D(x_)
-    y = R1_GL98_D(y_)
-    z = R1_GL98_D(z_)
-    !\
-    ! CALCULATE CELL CENTER FOR GLOBAL SPHERICAL COORDINATES 
-    !/
-    r = sqrt(x**2 + y**2 + z**2)
-    cos_theta = z/r
-    sin_theta = sqrt(x**2 + y**2)/r
-    cos_phi   = x/sqrt(x**2 + y**2)
-    sin_phi   = y/sqrt(x**2 + y**2)
-    if (r <= delta) then 
-       r = delta
-       x = delta*sin_theta*cos_phi
-       y = delta*sin_theta*sin_phi
-       z = delta*cos_theta
-    end if
-    !\
-    ! CALCULATE CELL CENTER FOR TRANSFORMED SPHERICAL COORDINATES 
-    ! stretching transformation of variables r --> r - a
-    !/
-    lambda = r + cme_a
-    r_1    = lambda
-    cos_theta1 = cos_theta
-    sin_theta1 = sin_theta 
-    cos_phi1   = cos_phi
-    sin_phi1   = sin_phi
-    !\
-    ! CALCULATE CELL CENTER FOR TRANSFORMED CARTESIAN COORDINATES 
-    !/
-    x_1 = lambda*sin_theta1*cos_phi1
-    y_1 = lambda*sin_theta1*sin_phi1
-    z_1 = lambda*cos_theta1
-    !---------------------------FLUX ROPE REGION---------------------
-    ! CALCULATE CELL CENTER CARTESIAN COORDINATES for CME FLUX ROPE
-    ! stretching transformation r = r --> r - a
-    !----------------------------------------------------------------
-    x_2 = x_1
-    y_2 = y_1 
-    z_2 = z_1 - cme_r1 
-    !\
-    ! CALCULATE CELL CENTER SPHERICAL COORDINATES for CME FLUX ROPE
-    !/
-    r_2 = sqrt(x_2**2 + y_2**2 + z_2**2)
-    cos_theta2 = x_2/r_2
-    sin_theta2 = sqrt(z_2**2 + y_2**2)/r_2
-    cos_phi2   = y_2/sqrt(z_2**2 + y_2**2)
-    sin_phi2   = z_2/sqrt(z_2**2 + y_2**2)
-
-    if (r_2 <= delta) then
-       r_2 = delta
-       y_2 = delta*sin_theta2*cos_phi2
-       z_2 = delta*sin_theta2*sin_phi2
-       x_2 = delta*cos_theta2
-    end if
-    alpha0 = 5.763854/cme_r0
-    ga0r0 = sin(alpha0*cme_r0)/(alpha0*cme_r0) - cos(alpha0*cme_r0)
-    A2 = (a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
-         *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
-         *sin_theta2**2
-    dA2dr = (a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
-         *(cos(alpha0*r_2)/r_2 - sin(alpha0*r_2)/(alpha0*r_2**2) &
-         + alpha0*sin(alpha0*r_2)) - 2.0*r_2)*sin_theta2**2
-    dA2dth = (2.0*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
-         *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
-         *sin_theta2*cos_theta2 
-    d2A2dr2 = (a1scl/alpha0**2)*sin_theta2**2 &
-         *( (cme_r0**2/ga0r0)*(2.0*sin(alpha0*r_2)/(alpha0*r_2**3) &
-         - 2.0*cos(alpha0*r_2)/(r_2**2) - alpha0*sin(alpha0*r_2)/r_2 &
-         + (alpha0**2)*cos(alpha0*r_2)) - 2.0)  
-    d2A2drdth = (2.0*a1scl/alpha0**2)*sin_theta2*cos_theta2 &
-         *((cme_r0**2/ga0r0)*(cos(alpha0*r_2)/r_2 &
-         - sin(alpha0*r_2)/(alpha0*r_2**2) &
-         + alpha0*sin(alpha0*r_2)) - 2.0*r_2) 
-    d2A2dth2 = (2.0*a1scl/alpha0**2)*((cme_r0**2/ga0r0) &
-         *(sin(alpha0*r_2)/(alpha0*r_2) - cos(alpha0*r_2)) - r_2**2) &
-         *(cos_theta2**2 - sin_theta2**2)
-    dr2dr1  =  (x_2/r_2)*sin_theta1*cos_phi1 &
-         + (y_2/r_2)*sin_theta1*sin_phi1 &
-         + (z_2/r_2)*cos_theta1
-    dth2dr1 =  (1.0/r_2)*(-sin_theta2*sin_theta1*cos_phi1 &
-         + cos_theta2*cos_phi2*sin_theta1*sin_phi1 &
-         + cos_theta2*sin_phi2*cos_theta1)
-    !\
-    ! Derivatives of field components in flux rope spherical coordinates
-    !/
-    dBr2dr2 = -2.0*dA2dth/(sin_theta2*r_2**3) &
-         + d2A2drdth/(sin_theta2*r_2**2)
-    dBr2dth2 = -cos_theta2*dA2dth/(r_2**2*sin_theta2**2) & 
-         + d2A2dth2/(sin_theta2*r_2**2)
-    dBth2dr2 = dA2dr/(sin_theta2*r_2**2) &
-         - d2A2dr2/(r_2 *sin_theta2)
-    dBth2dth2 = cos_theta2*dA2dr/(r_2*sin_theta2**2) &
-         - d2A2drdth/(r_2*sin_theta2)
-    dBphi2dr2 = alpha0*dA2dr/(r_2*sin_theta2) &
-         - alpha0*A2 /(sin_theta2*r_2**2)
-    dBphi2dth2 = alpha0*dA2dth/(r_2*sin_theta2) &
-         - alpha0*cos_theta2*A2/(r_2*sin_theta2**2)
-    !\
-    ! Total derivative of the flux rope field components in terms of `r1'
-    !/
-    dBr2dr1     = dBr2dr2  *dr2dr1 + dBr2dth2  *dth2dr1
-    dBtheta2dr1 = dBth2dr2 *dr2dr1 + dBth2dth2 *dth2dr1
-    dBphi2dr1   = dBphi2dr2*dr2dr1 + dBphi2dth2*dth2dr1
-    !\
-    ! Magnetic field components in the flux rope spherical coordinates
-    !/
-    Br2     = dA2dth/(sin_theta2*r_2**2)
-    Btheta2 = -dA2dr/(sin_theta2*r_2)
-    Bphi2   = alpha0*A2/(sin_theta2*r_2)
-    
-    if(cme_a1 > 0.0) then   !helicity switch 
-      Br2         = -Br2
-      Btheta2     = -Btheta2
-      !\
-      ! Bug is fixed. Below, the magnetic pressure gradient
-      ! is calculated including Br2*dBr2dr1 + Btheta2*dBtheta2dr1.
-      ! Therefore, the sign in the magnetic field derivatives should 
-      ! be changed too.
-      !/ 
-      dBr2dr1     = -dBr2dr1
-      dBtheta2dr1 = -dBtheta2dr1
-    endif 
-
-    !\
-    ! Magnetic field components in the second cartesian coordinates
-    ! X-COMPONENT OF MAGNETIC FIELD
-    !/
-    Bx_2 = Br2*cos_theta2 &
-         - Btheta2*sin_theta2
-    ! Y-COMPONENT OF MAGNETIC FIELD
-    By_2 = Br2*sin_theta2*cos_phi2 &
-         + Btheta2*cos_theta2*cos_phi2 &
-         - Bphi2*sin_phi2
-    ! Z-COMPONENT OF MAGNETIC FIELD
-    Bz_2 = Br2*sin_theta2*sin_phi2 &
-         + Btheta2*cos_theta2*sin_phi2 &
-         + Bphi2*cos_phi2
-    !\
-    ! Define the magnetic field in the global cartesian coordinates
-    ! INSIDE THE MAGNETIC FLUX ROPE REGION
-    !/
-    if (sqrt(x_2**2 + y_2**2 + z_2**2) <= cme_r0) then
-       Bx_1 = Bx_2 
-       By_1 = By_2 
-       Bz_1 = Bz_2 
+       pBackground = pBackgroundDim*Si2No_V(UnitP_)
+       rho2scl = cme_rho2*Si2No_V(UnitRho_)
+       delta = 0.1
+       Alpha0R0 = 5.763854
+       alpha0 = Alpha0R0/cme_r0
+       Beta0 = (sin(Alpha0R0) - Alpha0R0*cos(Alpha0R0))/Alpha0R0**3
        !\
-       ! Magnetic field components in global sperical coordinates
+       ! The constant coefficient, Beta0 = -2.8723629148938019E-02 
+       ! This is Beta0 parameter for the GL particular configuration
        !/
-       Br1 = Bx_1*sin_theta1*cos_phi1 &
-            + By_1*sin_theta1*sin_phi1 &
-            + Bz_1*cos_theta1
-       Btheta1 = Bx_1*cos_theta1*cos_phi1 &
-            + By_1*cos_theta1*sin_phi1 &
-            - Bz_1*sin_theta1
-       Bphi1 = -Bx_1*sin_phi1 &
-            + By_1*cos_phi1
+       !/
+       !\
+       ! 4\pi in the formula below is incorrect. The GL98 paper is in
+       ! CGS system, while in dimensionless formulae used below it may not
+       ! appear. To mantain the capability with EEGGL, the multiplier 4\pi
+       ! is included into a definition of A1Scaled
+       !/    
+       B0 = - cme_a1*Io2No_V(UnitB_)/(Beta0*Alpha0**2) &
+            *4.0*cPi
+       !\
+       ! The costant coefficient,
+       ! -4.0*cPi/(Beta0*Alpha0R0**2) = 13.1687517342067082
+       !/
+       !\
+       ! Construct the rotational matrix RotateGL98_DD,
+       !/
+       RotateGL98_DD  = matmul( &
+            rot_matrix_z(-OrientationCme*cDegToRad),&
+            rot_matrix_y((LatitudeCme-90)*cDegToRad))
+       RotateGL98_DD = matmul(RotateGL98_DD, &
+            rot_matrix_z(-LongitudeCme*cDegToRad))
+       !\
+       ! In the rotated coordinates the coordinate vector from 
+       ! the heiocenter to the center of configuration is
+       ! (/0.0, 0.0, cme_r1/). Find this vector in the original
+       ! coodinate frame.
+       !/
+       XyzCenterConf_D = matmul((/0.0, 0.0, cme_r1/), RotateGL98_DD)
+       !\
+       ! The same for the magnetic field of configuration
+       !/
+       BConf_D = matmul((/B0, 0.0, 0.0/), RotateGL98_DD)
+    end if
+
+    R = sqrt(sum(XyzIn_D**2))
+    ! Unit vector of radial direction
+    eBoldR_D = XyzIn_D/R
+    !\
+    ! Stretched CARTESIAN COORDINATES 
+    !/
+    RTransformed = R + cme_a
+    XyzTransformed_D = eBoldR_D*RTransformed
+    !COORDINATES RELATIVE TO CME FLUX ROPE CENTER
+    !----------------------------------------------------------------
+    XyzConf_D = XyzTransformed_D - XyzCenterConf_D 
+    Distance2ConfCenter = sqrt(sum(XyzConf_D**2))
+    if (Distance2ConfCenter <= delta) then
+       XyzConf_D = XyzConf_D*(delta/Distance2ConfCenter)
+       Distance2ConfCenter = delta
+    end if
+    if (Distance2ConfCenter <= cme_r0) then
+       !\
+       ! INSIDE THE MAGNETIC FLUX ROPE REGION
+       !/
+       !\
+       !An argument of spherical Bessel functions
+       !/
+       Alpha0R2 = Alpha0*Distance2ConfCenter 
+       !\
+       ! Magnetic field components
+       !/ 
+       R2CrossB0_D = cross_product(XyzConf_D,BConf_D) 
+       B_D = (2.0*BConf_D &
+            + sign(Alpha0,cme_a1)* &  !Helicity
+            R2CrossB0_D)*(spher_bessel_1_over_x(Alpha0R2) - Beta0) &
+            + spher_bessel_2(Alpha0R2)/Distance2ConfCenter**2*&
+            cross_product(XyzConf_D,R2CrossB0_D) 
        !\
        ! Compute kinetic gas pressure
        !/
-       pres_1     = pBackground + a1scl*A2
-       dpres_1dr1 = a1scl*(dA2dr*dr2dr1 + dA2dth*dth2dr1)
+       PConf     = pBackground + Beta0*(Alpha0**2)*&
+            sum(R2CrossB0_D**2)*(spher_bessel_1_over_x(Alpha0R2) - Beta0)
+       !If we use stretch:
+       Br1 = sum(eBoldR_D*B_D) 
+       BSquared = sum(B_D**2)
+       GradPTotal_D =&
+            Alpha0**2*(B0**2*XyzConf_D - BConf_D*sum(BConf_D*XyzConf_D))*&
+            (spher_bessel_1_over_x(Alpha0R2)**2 - Beta0**2)&
+            -Alpha0*(XyzConf_D/Distance2ConfCenter**3)*sum(R2CrossB0_D**2)*&
+            spher_bessel_2(Alpha0R2)*spher_bessel_1(Alpha0R2) &
+            -4.0*B0**2*(XyzConf_D/Distance2ConfCenter**2)*&
+            spher_bessel_2(Alpha0R2)*(spher_bessel_1_over_x(Alpha0R2) - Beta0)&
+            +(XyzConf_D*sum(BConf_D*XyzConf_D)**2/Distance2ConfCenter**4 - &
+            BConf_D*sum(BConf_D*XyzConf_D)/Distance2ConfCenter**2&
+            )*(spher_bessel_2(Alpha0R2)**2 - 4.0*spher_bessel_2(Alpha0R2)*&
+            (spher_bessel_1_over_x(Alpha0R2) - Beta0)) +&
+            Alpha0*(XyzConf_D/Distance2ConfCenter**3)*sum(R2CrossB0_D**2)*(&
+            (spher_bessel_1(Alpha0R2) - 3.0*spher_bessel_2(Alpha0R2)/Alpha0R2)*&
+            (spher_bessel_2(Alpha0R2) - 2.0*&
+            (spher_bessel_1_over_x(Alpha0R2) - Beta0)) + &
+            2.0*spher_bessel_2(Alpha0R2)**2/Alpha0R2 )        
+       DPTotalDR1 = sum(GradPTotal_D*eBoldR_D)
        !\
        ! MAGNETIC FIELD transformed with stretching transformation
        !/
-       Br     = Br1    *(lambda/r)**2
-       Btheta = Btheta1*(lambda/r)
-       Bphi   = Bphi1  *(lambda/r)
-       !\
-       ! Magnetic field components in global cartesian coordinates
-       !/
-       B1_GL98_D(x_) = Br*sin_theta1*cos_phi1 &
-            + Btheta*cos_theta1*cos_phi1 &
-            - Bphi*sin_phi1
-       !\
-       ! Y-COMPONENT OF MAGNETIC FIELD:: (x,y,z)_BATSRUS -> (x,y,z)
-       !/
-       B1_GL98_D(y_) = Br*sin_theta1*sin_phi1 &
-            + Btheta*cos_theta1*sin_phi1 &
-            + Bphi*cos_phi1
-       !\
-       ! Z-COMPONENT OF MAGNETIC FIELD:: (x,y,z)_BATSRUS -> (x,y,z)
-       !/
-       B1_GL98_D(z_) = Br*cos_theta1 - Btheta*sin_theta1
-       !\
-       ! Transform back to the original coordinates
-       ! given by R_GL98_D:: 
-       !/
-       B_GL98_D  = matmul(B1_GL98_D, RotateGL98_DD)
+       B_D = (RTransformed/r)*B_D + cme_a*XyzTransformed_D*Br1/r**2
        !\
        ! PLASMA DENSITY with stretching transformation
        !/
-       F_grav   = (abs(Gbody)/(r**2) + cme_alpha*r)
-       rho_GL98 = (1.0/ F_grav)*(((lambda/r)**2) &
-            *((lambda/r)**2 - 1.0)*(dpres_1dr1 +  &
-            Br2*dBr2dr1 + Btheta2*dBtheta2dr1 + Bphi2*dBphi2dr1) &
-            + 2.0*lambda*cme_a*pres_1/r**3 + cme_a*lambda &
-            /r**3*(1.0 - 2.0*(lambda/r)**2)*Br1**2 &
-            + ((lambda/r)**2)*((cme_a/r)**2 +2.0*cme_a/r)*(Btheta1**2 &
-            + Bphi1**2)/lambda)
+       gGravity   = (abs(Gbody)/(r**2) + cme_alpha*r)
+       RadialTension = (cme_a/r)*(RTransformed/r)**2*(&
+            (2.0 + cme_a/r)*(BSquared/RTransformed + DPTotalDR1) &
+           + 2.0*PConf/RTransformed - (3.0 + 2.0*cme_a/r)*Br1**2/r)
+       rho_GL98 = RadialTension/gGravity
        !\
        ! Add background density
        !/
@@ -402,8 +365,8 @@ contains
        !\
        ! PLASMA PRESSURE with contraction transformation
        !/
-       p_GL98 = pres_1*(lambda/r)**2 &
-            - (1.0/2.0)*((lambda/r)**2)*((lambda/r)**2 - 1.0)*Br1**2 
+       p_GL98 = PConf*(RTransformed/r)**2 &
+            - (1.0/2.0)*((RTransformed/r)**2)*((RTransformed/r)**2 - 1.0)*Br1**2 
        !\
        ! Add background pressure
        !/
@@ -411,15 +374,40 @@ contains
 
        rho_GL98 = rho_GL98*No2Si_V(UnitRho_)
        p_GL98 = p_GL98*No2Si_V(UnitP_)
-       B_GL98_D = B_GL98_D*No2Si_V(UnitB_)
+       B_D = B_D*No2Si_V(UnitB_)
 
     else
-       B_GL98_D = 0.0; rho_GL98 = 0.0; p_GL98 = 0.0
+       B_D = 0.0; rho_GL98 = 0.0; p_GL98 = 0.0
     endif
-
+  contains
+    real function spher_bessel_0(x)
+      real, intent(in) :: x
+      spher_bessel_0 = sin(x)/x
+    end function spher_bessel_0
+    !===================
+    real function spher_bessel_1(x)
+      real, intent(in) :: x
+      spher_bessel_1 = (sin(x) - x*cos(x))/x**2
+    end function spher_bessel_1
+    !===================
+    real function spher_bessel_1_over_x(x)
+      real, intent(in) :: x
+      if(x==0.0)then
+         spher_bessel_1_over_x = 1.0/3.0
+      else
+         spher_bessel_1_over_x = (sin(x) - x*cos(x))/x**3
+      end if
+    end function spher_bessel_1_over_x
+    !===================
+    real function spher_bessel_2(x)
+      real, intent(in) :: x
+      spher_bessel_2 = &
+           3.0*spher_bessel_1_over_x(x) - spher_bessel_0(x)
+    end function spher_bessel_2
+    !===================
   end subroutine get_GL98_fluxrope
 
-  !============================================================================
+  !===================================================
 
   subroutine adjust_GL98_fluxrope(Rho,p)
 

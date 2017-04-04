@@ -107,7 +107,8 @@ contains
     use EEE_ModCms,       ONLY: set_parameters_cms
     use EEE_ModCommonVariables, ONLY: &
          UseCme, DoAddFluxRope, UseTD, UseGL, UseShearFLow, UseArch, &
-         DoAddFluxRope, LongitudeCme, LatitudeCme, OrientationCme, UseCms
+         DoAddFluxRope, LongitudeCme, LatitudeCme, OrientationCme, &
+         UseCms, UseSpheromak
 
     character(len=*), intent(in) :: NameCommand
 
@@ -131,6 +132,9 @@ contains
           case("GIBSON-LOW", "GL")
              UseGL = .true.
              call set_parameters_GL98(NameCommand)
+          case("SPHEROMAK")
+             UseSpheromak = .true.
+             call set_parameters_GL98("#SPHEROMAK")
           case("BREAKOUT")
              UseShearFlow = .true.
              call set_parameters_shearflow(NameCommand)
@@ -170,7 +174,7 @@ contains
   subroutine EEE_get_state_BC(x_D,Rho,U_D,B_D,p,Time,n_step,iteration_number)
 
     use EEE_ModCommonVariables, ONLY: UseCme, UseTD, UseShearFlow, UseGL, &
-         UseCms
+         UseCms, UseSpheromak
     use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope, DoBqField
     use EEE_ModShearFlow, ONLY: get_shearflow
     use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
@@ -202,6 +206,10 @@ contains
        call get_GL98_fluxrope(x_D, Rho1, p1, B1_D)
        B_D = B_D + B1_D
     endif
+   if(UseSpheromak)then
+       call get_GL98_fluxrope(x_D, Rho1, p1, B1_D, U1_D)
+       B_D = B_D + B1_D; U_D = U_D + U1_D
+    endif
 
     if(UseShearFlow)then
        call get_shearflow(x_D, Time, U1_D, iteration_number)
@@ -218,7 +226,7 @@ contains
   subroutine EEE_get_state_init(x_D, Rho, B_D, p, n_step, iteration_number)
 
     use EEE_ModCommonVariables, ONLY: UseCme, DoAddFluxRope, UseTD, UseGL, &
-         UseCms
+         UseCms, UseSpheromak
     use EEE_ModGL98, ONLY: get_GL98_fluxrope, adjust_GL98_fluxrope
     use EEE_ModTD99, ONLY: get_transformed_TD99fluxrope
     use EEE_ModCms,  ONLY: get_cms
@@ -250,6 +258,11 @@ contains
        Rho = Rho + Rho1; B_D = B_D + B1_D; p = p + p1
     end if
 
+    if(UseSpheromak)then
+       call get_GL98_fluxrope(x_D, Rho1, p1, B1_D, U1_D)
+       Rho = Rho + Rho1; B_D = B_D + B1_D
+       p = p + p1; U_D = U_D + U1_D
+    end if
     if(UseCms) call get_cms(x_D, B_D)
 
   end subroutine EEE_get_state_init
