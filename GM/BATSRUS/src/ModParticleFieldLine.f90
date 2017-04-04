@@ -18,7 +18,7 @@ module ModParticleFieldLine
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
   use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
   use ModPhysics, ONLY: rBody
 
@@ -510,7 +510,6 @@ contains
     integer :: nLineThisProc ! number of new field lines initialized locally
     integer :: nLineAllProc  ! number of new field lines initialized globally
     integer :: iFieldLine    ! loop variable
-    integer :: iBlock
     integer :: nParticleOld  ! number of already existing regular particles
 
     ! direction of tracing: -1 -> backward, +1 -> forward
@@ -622,7 +621,6 @@ contains
       real,    intent(inout):: XyzStart_D(MaxDim)
       integer, intent(in)   :: iIndexStart_I(nIndexParticleReg)
 
-      real   :: Coord_D(MaxDim) ! generalized coordinates
       integer:: iProcOut, iBlockOut
       ! container for error message 
       character(len=100):: StringError
@@ -913,7 +911,7 @@ contains
 
   subroutine advect_particle_line
     ! advect particles with the local plasma velocity
-    use ModMain, ONLY: time_accurate, Dt, nStage
+    use ModMain, ONLY: time_accurate, Dt
     ! parameters of particles
     real,    pointer:: State_VI(:,:)
     integer, pointer:: iIndex_II(:,:)
@@ -1040,7 +1038,6 @@ contains
     logical,         intent(out) :: DoReturnIndex_I(0:nIndexAvail)
     integer,         intent(out) :: iOrder_I(nVarAvail+nIndexAvail+1)
 
-    logical:: IsRequested
     integer:: iPos, iVar
     !--------------------------------------------------------------------
     do iVar = 1, nVarAvail
