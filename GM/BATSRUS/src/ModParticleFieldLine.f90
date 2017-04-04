@@ -356,7 +356,9 @@ contains
 
     end do TRACE_RK2
 
-    TRACE_GIRARD: do while(DoTraceGirard)
+    TRACE_GIRARD: do 
+       if(.not.DoTraceGirard) EXIT TRACE_GIRARD
+
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
           call check_soft_boundary(KindEnd_)
