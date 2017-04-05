@@ -13,7 +13,9 @@
 #ifndef _RND_
 #define _RND_
 
+#ifndef _DO_NOT_LOAD_GLOBAL_H_
 #include "global.h"
+#endif 
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #include <omp.h>
