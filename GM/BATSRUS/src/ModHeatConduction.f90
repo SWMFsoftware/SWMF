@@ -1139,6 +1139,15 @@ contains
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
 
+      ! Set HeatCoef_G(i,j,k) and bb_DDG(:,iDim,i,j,k) tensor and optionally
+      ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
+      ! indexed by i,j,k of block iBlock based on its state State_V.
+      ! The actual heat conduction tensor is 
+      ! HeatCoef_G(i,j,k)*bb_DDG(:,iDim,i,j,k)
+      ! so in general bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND 
+      ! an isotropic part. The isotropic part can be set as a fraction
+      ! of the field aligned heat conduction.
+
       real :: TeSi, Te, NatomicSi, Ne, NeSi, Zav
       real :: HeatCoefSi, HeatCoef
       real :: Factor, r
