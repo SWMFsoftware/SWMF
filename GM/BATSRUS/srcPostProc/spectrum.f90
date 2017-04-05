@@ -209,7 +209,7 @@ contains
     do iWavelengthInterval=1, nWavelengthInterval
        MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
-       nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
+       nWavelengthBin = nint((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
        allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
             nWavelengthBin))
@@ -457,7 +457,8 @@ contains
              if(LineTable_I(iLine)%StartLogT*10 - & 
                   int(LineTable_I(iLine)%StartLogT*10)==0.5)then
                 TShift=0.05
-                LogTe = LogTe - TShift
+write(*,*)'shifting line = ', LineTable_I(iLine)%LineWavelength
+                LogTe = LogTe + TShift
              end if
 
              ! Convert to SI
@@ -832,7 +833,7 @@ contains
     do iWavelengthInterval=1, nWavelengthInterval
        MinWavelength = WavelengthInterval_II(1,iWavelengthInterval)
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
-       nWavelengthBin = int((MaxWavelength-MinWavelength)/SizeWavelengthBin)
+       nWavelengthBin = nint((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
 
        allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
@@ -1015,6 +1016,7 @@ contains
     ! Data read from the file
     character(len=6)            :: NameIon
     integer                     :: nLevelFrom, nLevelTo
+    integer                     :: nFirstLevelFrom, nFirstLevelTo
     real                        :: LineWavelength, FirstLineWavelength
     real                        :: LogN, LogT, LogG, Aion 
 
@@ -1042,6 +1044,8 @@ contains
     allocate(LineTable_I(nMaxLine))
     nLineFound          = 0
     iLine               = 0
+    nFirstLevelFrom     = -1
+    nFirstLevelTo       = -1
     FirstLineWavelength = -1.0
     DoStore             = .false.
     IsHeader            = .true.
@@ -1094,7 +1098,10 @@ contains
        endif
 
        ! Check if current line belongs to the same wavelength as previous one
-       if(LineWavelength == FirstLineWavelength .and. iError == 0) then
+       if(LineWavelength == FirstLineWavelength .and. &
+            nLevelFrom == nFirstLevelFrom .and. &
+            nLevelTo == nFirstLevelTo .and. &
+            iError == 0) then
           ! Calculate index and store extra elements of LogG in oversized g_II
           iN = nint(LogN/DLogN)
           iT = nint(LogT/DLogT)
@@ -1149,6 +1156,8 @@ contains
 
           ! Change reference line 
           FirstLineWavelength = LineWavelength
+          nFirstLevelFrom = nLevelFrom
+          nFirstLEvelTo = nLevelTo
           DoStore    = .true.
           nLineFound = nLineFound + 1
 
