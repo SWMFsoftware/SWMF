@@ -154,8 +154,11 @@ contains
     if(.not.allocated(Eta_GB)) &
          allocate(Eta_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(TypeResistivity == 'constant')then
+       if(DoTestMe) write(*,*)NameSub, ': setting Eta_GB=Eta0=',Eta0
        Eta_GB = Eta0
     else
+       if(DoTestMe) write(*,*)NameSub, ': setting Eta_GB=0.0 TypeResistivity=', &
+            TypeResistivity 
        Eta_GB = 0.0
     end if
 
