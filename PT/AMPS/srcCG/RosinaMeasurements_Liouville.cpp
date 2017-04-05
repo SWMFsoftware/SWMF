@@ -32,6 +32,10 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   const double ThrehondSourceRateH2O=0.9E18;
   const double ThrehondSourceRateCO2=1.8E18;
 
+  //species dependent COPS "bata-factors"
+  const double BetaFactorH2O=0.893;
+  const double BetaFactorCO2=0.704;
+
   //estimate the total source rate
   OriginalSourceRate=0.0,ModifiedSourceRate=0.0;
 
@@ -41,7 +45,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     //sample the original source rate
     OriginalSourceRate+=SourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
 
-    //changethe soeuce rate if needed
+    //change the source rate if needed
     switch (spec) {
     case _H2O_SPEC_:
       ThrehondSourceRate=ThrehondSourceRateH2O;
@@ -81,7 +85,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     }
 
 
-    //sample the dedified sources rate
+    //sample the modified sources rate
     ModifiedSourceRate+=SourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
 
     //evaluate the cosine between the external normal of the face and the pointing to the spacecraft
@@ -132,18 +136,6 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       //determine the surface temeprature, production rate, and the normalization coefficient
       //parameters of the primary species source at that surface element
       double SourceRate,Temperature,cosSubSolarAngle,x_LOCAL_SO_OBJECT[3]={0.0,0.0,0.0};
-      double ThrehondSourceRate;
-
-      switch (spec) {
-      case _H2O_SPEC_:
-        ThrehondSourceRate=ThrehondSourceRateH2O;
-        break;
-      case _CO2_SPEC_:
-        ThrehondSourceRate=ThrehondSourceRateCO2;
-        break;
-      default:
-        exit(__LINE__,__FILE__,"Error: the option is not known");
-      }
 
       SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
 
@@ -184,7 +176,10 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
           if (Vector3D::DotProduct(ll,Rosina[iPoint].NudeGauge.LineOfSight)<0.0) {
             //the particle flux can access the nude gauge
-            tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3);
+            double sinLineOfSightAngle=sqrt(1.0-pow(Vector3D::DotProduct(ll,Rosina[iPoint].NudeGauge.LineOfSight)/r,2));
+
+
+            tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+sinLineOfSightAngle/3.8);
           }
 
           if ((c=Vector3D::DotProduct(ll,Rosina[iPoint].RamGauge.LineOfSight))<0.0)  {
@@ -228,15 +223,26 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   MPI_Allreduce(&localRamGaugeDensity,&RamGaugeDensity,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
   //convert the sampled fluxes and density into the nude and ram gauges pressures
+  double BetaFactor;
+
   const double rgTemperature=293.0;
   const double ngTemperature=293.0;
 
   beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*rgTemperature));
 
-//  RamGaugePressure=Kbol*rgTemperature*Pi*beta/2.0*RamGaugeFlux;
-  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)));
+  switch (spec) {
+  case _H2O_SPEC_:
+    BetaFactor=BetaFactorH2O;
+    break;
+  case _CO2_SPEC_:
+    BetaFactor=BetaFactorCO2;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the species is unknown");
+  }
 
-  NudeGaugePressure=NudeGaugeDensity*Kbol*ngTemperature;
+  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)))/BetaFactor;
+  NudeGaugePressure=NudeGaugeDensity*Kbol*ngTemperature/BetaFactor;
 
 
 /* EXAMPLE OF CALCULATING THE PRESSURES
