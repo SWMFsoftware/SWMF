@@ -186,7 +186,6 @@ contains
     ! on the numeric grid size
 
     use ModProcMH, ONLY: nProc, iComm
-    use ModPhysics, ONLY:No2Si_V, UnitRho_
     use BATL_lib, ONLY: nDim, MaxDim, CellSize_DB, interpolate_grid
     use ModUserInterface ! user_material_properties
 
@@ -201,7 +200,7 @@ contains
     real:: ZaverageL, ZaverageR, NatomicSiL, NatomicSiR
 
     ! Variables interpolated to ray positions
-    integer, parameter:: GradXNe_=1, GradYNe_=2, GradZNe_=3, Ne_=4, &
+    integer, parameter:: GradXNe_=1, GradZNe_=3, Ne_=4, &
          Absorption_=5, CellSize_=6, nVarRay = CellSize_
     real, allocatable:: RayValue_VI(:,:), RayValueAll_VI(:,:)
 
@@ -472,7 +471,6 @@ contains
 
     logical, save:: IsNewEntry = .true.
 
-    integer, parameter :: nSplitDeltaS = 2
 
     real,    save, dimension(3)       :: Slope1_D, Omega_D
     real,    save, dimension(3)       :: ProjSlopeOnMinusGradEps_D

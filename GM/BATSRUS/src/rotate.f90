@@ -79,7 +79,7 @@ subroutine add_rotational_velocity(iSign, iBlock)
      iBlockFirst = iBlock; iBlockLast = iBlock
   end if
 
-  do iBlk = 1, nBlock
+  do iBlk = iBlockFirst, iBlockLast
      if(Unused_B(iBlk))CYCLE
      do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
         if(.not.true_Cell(i,j,k,iBlk)) CYCLE

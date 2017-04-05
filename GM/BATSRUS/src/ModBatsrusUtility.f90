@@ -445,7 +445,7 @@ real function maxval_abs_ALL(qnum,qa)
 
   use ModProcMH
   use ModSize, ONLY: &
-       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
   use ModMain, ONLY: Unused_B
   use ModMpi
   implicit none

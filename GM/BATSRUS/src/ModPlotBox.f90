@@ -6,7 +6,6 @@ module ModPlotBox
 
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I
-  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
   use ModNumConst, ONLY: cDegToRad
 
   implicit none
@@ -115,7 +114,6 @@ contains
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
 
-    use ModGeometry,    ONLY: rMin_BLK
     use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &

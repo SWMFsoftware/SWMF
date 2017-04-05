@@ -2914,7 +2914,6 @@ contains
     subroutine set_low_order_face
 
       use BATL_lib, ONLY: block_inside_regions
-      use ModGeometry, ONLY: r_BLK, Rmin_BLK
 
       ! Set which faces should use low (up to second) order scheme
       ! Set logicals for the current block

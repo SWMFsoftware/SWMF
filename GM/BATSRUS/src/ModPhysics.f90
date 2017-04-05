@@ -930,16 +930,13 @@ contains
     ! Set default I/O units and unit names for the state variables 
     ! in MHD type equations
 
-    use ModProcMH,  ONLY: iProc
     use ModVarIndexes
     use ModMultiFluid
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
          UseEfield
     use ModMain,    ONLY: UseB
-    use ModUtilities, ONLY: lower_case
 
     integer :: iVar
-    character (len=len(NameVar_V)) :: NameVar
     character (len=*), parameter :: NameSub="init_mhd_variables"
     !--------------------------------------------------------------------------
 

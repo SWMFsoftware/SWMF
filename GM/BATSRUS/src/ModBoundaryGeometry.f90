@@ -78,11 +78,9 @@ contains
     use ModMain, ONLY: Body1, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
          ProcTest, BlkTest, iTest, jTest, kTest, TypeFaceBc_I, &
-         Coord1MinBc_, Coord1MaxBc_ , Coord2MinBc_, Coord2MaxBc_, &
-         Coord3MinBc_, Coord3MaxBc_, xMinBc_, xMaxBc_, &
-         yMinBc_, yMaxBc_, zMinBc_, zMaxBc_
+         xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_
     use ModGeometry, ONLY: &
-         R_BLK, R2_BLK, Rmin_BLK, Rmin2_BLK, Body_BLK, &
+         R_BLK, R2_BLK, Rmin2_BLK, Body_BLK, &
          far_field_BCs_BLK, true_blk, true_cell,&
          x1, x2, y1, y2, z1, z2
     use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
@@ -96,7 +94,7 @@ contains
     integer, intent(in) :: iBlock
     logical, intent(in), optional :: DoSolveSolidIn
 
-    integer :: i, j, k, iBoundary
+    integer :: i, j, k
     logical :: DoSolveSolid
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='fix_block_geometry'
@@ -227,7 +225,7 @@ subroutine fix_boundary_ghost_cells
 
   implicit none
 
-  integer:: iBlock, iBoundary
+  integer:: iBlock
   integer:: iGridHere = -1, iDecompositionHere = -1
 
   logical:: DoTest, DoTestMe

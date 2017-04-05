@@ -17,7 +17,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   use ModKind,     ONLY: nByteReal
   use ModIoUnit,   ONLY: UnitTmp_
   use BATL_size,   ONLY: nGI, nGJ, nGK, nDim
-  use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, IsCartesianGrid, &
+  use BATL_lib,    ONLY: IsRLonLat, IsCylindrical, &
        CoordMin_D, CoordMax_D, CoordMin_DB, CellSize_DB, &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        Xyz_DGB, x_, y_, z_, Phi_

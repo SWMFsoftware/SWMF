@@ -3,7 +3,7 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 !=========================================!Master module!======================
 module ModCoronalHeating
-  use ModMain,       ONLY: nBLK, nI, nJ, nK
+  use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
@@ -41,7 +41,6 @@ module ModCoronalHeating
   ! model in the ExpansionFactors module essentially do this, so will
   ! need to call them
   logical, public :: DoOpenClosedHeat = .false.
-  real :: WsaT0 = 3.50
 
   ! Abbett's model -------------
 
@@ -528,11 +527,11 @@ contains
   subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
     use ModGeometry,       ONLY: r_BLK
-    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
-         No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
+    use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
+         No2Io_V, UnitB_
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: Xyz_DGB
@@ -557,7 +556,6 @@ contains
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
 
-    real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     real :: WaveDissipation_V(WaveFirst_:WaveLast_)
     !--------------------------------------------------------------------------
 
@@ -631,11 +629,11 @@ contains
   subroutine get_block_heating(iBlock)
 
     use ModGeometry,       ONLY: r_BLK
-    use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitEnergyDens_, UnitT_, &
-         No2Io_V, UnitB_,UnitRho_,UnitX_,UnitU_
+    use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitT_, &
+         No2Io_V, UnitB_
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
-    use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModAdvance,    ONLY: State_VGB
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: Xyz_DGB
@@ -660,7 +658,6 @@ contains
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
 
-    real :: RhoSI, RSI, UMagSI, BMagSI, QHeatSI
     !--------------------------------------------------------------------------
 
     if(UseAlfvenWaveDissipation)then
@@ -788,7 +785,6 @@ contains
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
-    use BATL_size, ONLY: nDim
     use ModAdvance, ONLY: State_VGB
     use ModB0, ONLY: B0_DGB
     use ModMain, ONLY: UseB0
@@ -837,7 +833,7 @@ contains
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModGeometry, ONLY: true_cell, Xyz_DGB, R_BLK
+    use ModGeometry, ONLY: true_cell
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMultiFluid, ONLY: iRho_I, IonFirst_
@@ -1096,7 +1092,7 @@ contains
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
-         Rho_, Bx_, Bz_, Pe_
+         Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C

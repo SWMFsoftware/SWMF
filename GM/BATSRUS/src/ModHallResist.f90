@@ -103,7 +103,6 @@ contains
   subroutine read_hall_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use ModSemiImplVar, ONLY: IsDynamicSemiImpl
 
     character(len=*), intent(in):: NameCommand
 
@@ -200,10 +199,6 @@ contains
   subroutine set_hall_factor_cell(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions
-    use ModCurrent, ONLY: get_current
-    use ModAdvance, ONLY: State_VGB
-    use ModMultiFluid, ONLY: iRhoIon_I
-    use ModPhysics, ONLY: Io2No_V, UnitU_
 
     integer, intent(in):: iBlock
     logical, optional, intent(in):: UseIonMassPerCharge
@@ -213,9 +208,6 @@ contains
     ! If UseIonMassPerCharge is present and FALSE, the hall factor is
     ! NOT multiplied with the ion mass per charge averaged to the face
 
-    integer:: i, j, k
-    real:: Current_D(MaxDim)
-    real:: Rho
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
@@ -246,10 +238,6 @@ contains
   subroutine set_hall_factor_face(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions, nDim, nINode, nJNode, nKNode
-    use ModAdvance, ONLY: State_VGB
-    use ModMultiFluid, ONLY: iRhoIon_I
-    use ModPhysics, ONLY: Io2No_V, UnitU_
-    use ModCurrent, ONLY: get_current
 
     integer, intent(in):: iBlock
     logical, optional, intent(in):: UseIonMassPerCharge
@@ -261,10 +249,6 @@ contains
 
     integer:: i, j, k
 
-    real, allocatable, save:: j2_G(:,:,:)
-    real:: Current_D(MaxDim)
-    real:: Rho
-    logical:: IsNewBlock
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_DF)) &
          allocate(HallFactor_DF(nDim,nINode,nJNode,nKNode))

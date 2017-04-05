@@ -132,9 +132,6 @@ contains
     integer :: iR,iPhi,iTheta
     integer :: iBcast, iStart, nSize, iError,iIteration
     real,allocatable,dimension(:,:) :: Phi_IJ,Theta_IJ
-    real,parameter :: WSAPowerIndex=2.0/7.0
-    real,parameter :: cLoopLifetime=8.0*cSecondPerHour
-    real,parameter :: cFiskQ=1.64E+16 !m^2/s
 
     ! Allocate factors arrays
     if(allocated(ExpansionFactorInv_N))deallocate(ExpansionFactorInv_N)

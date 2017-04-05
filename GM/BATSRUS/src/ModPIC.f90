@@ -4,8 +4,6 @@
 
 module ModPIC
 
-  use ModMain,      ONLY: UseB0
-  use ModB0,        ONLY: B0_DGB
   ! Variables and methods for coupling BATSRUS with a PIC code
 
   implicit none
@@ -34,7 +32,6 @@ module ModPIC
   real, public  :: mUnitPicSi  = 1.0
 
   ! File sent by the PIC code
-  character(len=100):: NameFilePic = 'GM/IO2/ipic3d.dat'
 
   ! PIC regions
   integer, public :: nRegionPic = 0
@@ -101,35 +98,24 @@ contains
   subroutine pic_init_region
 
     use ModProcMH,    ONLY: iProc
-    use ModMain,      ONLY: Dt
-    use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
-    use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitMass_, UnitCharge_
+    use BATL_lib,     ONLY: nDim, MaxDim
+    use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist,ONLY: HallFactorMax
     use ModPhysics,   ONLY: IonMassPerCharge
     use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
 
-    ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
-    integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
-         PparPic_=8, pPic_=9, JxPic_=10, JzPic_=12, nVarPic = 12
-
-    ! Coordinate, variable and parameter names
-    character(len=*), parameter:: NameVarPic = &
-         'x y rho ux uy uz bx by bz ppar p jx jy jz dt xUnitPic uUnitPic mUnitPic'
-
     ! PIC grid indexes
-    integer:: iPic, jPic, kPic, nPic_D(MaxDim), iRegion
+    integer:: nPic_D(MaxDim), iRegion
 
     ! MHD grid indexes
-    integer:: i, j, k, iBlock, iProcFound
+    integer:: i
 
     ! Cell indexes in an array
-    integer:: iCell_D(MaxDim)
 
     ! Location of PIC node
     real:: XyzPic_D(MaxDim)
 
     ! The PIC variable array
-    real, allocatable:: StatePic_VC(:,:,:,:)
 
     ! mass per charge SI
     real:: IonMassPerChargeSi 
@@ -218,9 +204,8 @@ contains
 
   subroutine pic_find_node()
     ! Find out the blocks that overlaped with PIC region(s). 
-    use ModProcMH, ONLY: iProc
-    use BATL_lib,  ONLY: nDim, MaxDim, nBlock, MaxBlock, find_grid_block, &
-         x_, y_, z_, iTree_IA, MaxNode, Block_
+    use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
+         x_, y_, z_, MaxNode
     integer:: nIJK_D(1:MaxDim), ijk_D(1:MaxDim)
     real:: Xyz_D(1:MaxDim)
     integer:: iRegion, iBlock, i, j, k, iProcFound, iNode

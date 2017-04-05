@@ -51,7 +51,7 @@ subroutine write_plot_los(iFile)
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
        time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
-       Body1,body1_, StartTime
+       Body1, StartTime
   use ModGeometry, ONLY: &
        XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &

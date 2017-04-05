@@ -255,8 +255,8 @@ contains
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
          UnitTemperature_, UnitElectric_, rCurrents
     use ModCurrent,    ONLY: get_current
-    use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
-    use ModNumConst,   ONLY: cSqrtTwo, cTiny
+    use BATL_lib,      ONLY: Xyz_DGB, masked_amr_criteria
+    use ModNumConst,   ONLY: cTiny
     use ModVarIndexes, ONLY: SignB_
     use ModUserInterface ! user_amr_criteria
 

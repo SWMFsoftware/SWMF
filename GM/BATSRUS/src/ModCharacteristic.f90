@@ -62,23 +62,23 @@ contains
   !============================================================================
   function flux_from_pseudochar(PseudoChar_V,U_D,B_D,XH)
 
-    !Again: "flux" means the flux difference recovered from the jumps in
-    !pseudocharacterictic variables
+    ! "flux" means the flux difference recovered from the jumps in
+    ! pseudocharacterictic variables
 
-    real,dimension(nVar+1)::flux_from_pseudochar
-    real,dimension(nVar)::PseudoChar_V(nVar)
-    real,dimension(3),intent(in)::U_D,B_D
-    real,intent(in)::XH
-    flux_from_pseudochar(1:nVar)=PseudoChar_V
-    flux_from_pseudochar(RhoUx_:RhoUz_)=&
-         PseudoChar_V(RhoUx_:RhoUz_)+&
-         PseudoChar_V(Rho_)*U_D
-    flux_from_pseudochar(nVar+1)=PseudoChar_V(P_)*InvGammaMinus1+&
-         sum(PseudoChar_V(RhoUx_:RhoUz_)*U_D)+&
-         sum(PseudoChar_V(Bx_:Bz_)*B_D)+&
-         PseudoChar_V(Rho_)*&
-         (0.5*sum(U_D**2)+(1.0-InvGammaMinus1)*XH)
-    flux_from_pseudochar(P_)=PseudoChar_V(P_) - XH*PseudoChar_V(Rho_)
+    real, intent(in)::U_D(3), B_D(3)
+    real, intent(in)::XH
+
+    real::flux_from_pseudochar(nVar+1)
+    real:: PseudoChar_V(nVar)
+
+    !--------------------------------------------------------------------------
+    flux_from_pseudochar(1:nVar) = PseudoChar_V
+    flux_from_pseudochar(RhoUx_:RhoUz_) = &
+         PseudoChar_V(RhoUx_:RhoUz_) + PseudoChar_V(Rho_)*U_D
+    flux_from_pseudochar(nVar+1) = PseudoChar_V(P_)*InvGammaMinus1+&
+         sum(PseudoChar_V(RhoUx_:RhoUz_)*U_D) + sum(PseudoChar_V(Bx_:Bz_)*B_D) + &
+         PseudoChar_V(Rho_)*(0.5*sum(U_D**2) + (1 - InvGammaMinus1)*XH)
+    flux_from_pseudochar(P_) = PseudoChar_V(P_) - XH*PseudoChar_V(Rho_)
 
   end function flux_from_pseudochar
 
@@ -105,48 +105,49 @@ contains
          Eigenvalue_V, EigenvalueL_V, EigenvalueR_V
 
     ! Jump in the state
-    real, dimension(nVar) :: dState_V
-    ! Jumps in variables
-    real::dRho,dBn,dBt1,dBt2,dUnRho,dUt1Rho,dUt2Rho,dP
+    real:: dState_V(nVar)
 
-    !Vectors of the coordinate system associated with the averaged nagnetic
-    !field: Tangent1_D is the vector of a unity length directed towards the 
-    !tangential part of the averaged magnetic field, 
-    !Tangent2_D=Normal_D x Tangent1_D
-    real,dimension(3):: Tangent1_D, Tangent2_D
+    ! Jumps in variables
+    real:: dRho,dBn,dBt1,dBt2,dUnRho,dUt1Rho,dUt2Rho,dP
+
+    ! Vectors of the coordinate system associated with the averaged nagnetic
+    ! field: Tangent1_D is the vector of unit length directed towards the 
+    ! tangential part of the averaged magnetic field, 
+    ! Tangent2_D=Normal_D x Tangent1_D
+    real:: Tangent1_D(3), Tangent2_D(3)
 
     ! B0Face
     real:: B0n, B0Tangent_D(3)
 
     ! Left face
-    real :: RhoL,UL_D(3),BL_D(3)
-    real :: BnL,aL,CsL,CaL,CfL
+    real :: RhoL, UL_D(3), BL_D(3)
+    real :: BnL, aL, CsL, CaL, CfL
 
     ! Right face
-    real :: RhoR,UR_D(3),BR_D(3)
-    real :: BnR,aR,CsR,CaR,CfR
+    real :: RhoR, UR_D(3), BR_D(3)
+    real :: BnR, aR, CsR, CaR, CfR
 
     ! Average (hat)
-    real :: BH_D(3),XnH
-    real :: BnH,aH,CsH,CaH,CfH
+    real :: BH_D(3), XnH
+    real :: BnH, aH, CsH, CaH, CfH
 
-    !Used in averaging
-    real :: WeightInv , ScalarAvr
-    integer::iScalar
+    ! Used in averaging
+    real :: WeightInv, ScalarAvr
+    integer:: iScalar
 
-    !Normalization coefficient for left eigenvectors
+    ! Normalization coefficient for left eigenvectors
     real:: NormCoef
 
-    !More face variables
+    ! More face variables
 
-    real :: AlphaS, AlphaF, SignBnH
+    real:: AlphaS, AlphaF, SignBnH
 
-    real :: RhoInvL , RhoInvR , RhoInvH
-    real :: RhoSqrtH, RhoSqrtL, RhoSqrtR
+    real:: RhoInvL , RhoInvR , RhoInvH
+    real:: RhoSqrtH, RhoSqrtL, RhoSqrtR
 
-    real ::BTang2 !Reusable tangential magnetic field squared
+    real:: BTang2 !Reusable tangential magnetic field squared
 
-    real ::Tmp    
+    real:: Tmp    
     !--------------------------------------------------------------------------
 
     dState_V=StateL_V-StateR_V

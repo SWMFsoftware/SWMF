@@ -3,7 +3,7 @@
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModConserveFlux
 
-  use BATL_size, ONLY: nDim, MaxDim
+  use BATL_size, ONLY: nDim
   use ModSize, ONLY: nI, nJ, nK, MaxBlock
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
 

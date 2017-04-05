@@ -33,7 +33,7 @@
 !
 subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
   use ModProcMH
-  use ModMain, ONLY : nI,nJ,nK,nBLK
+  use ModMain, ONLY :nBLK
   use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
   use ModProject
   implicit none

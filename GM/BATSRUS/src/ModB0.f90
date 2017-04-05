@@ -552,7 +552,7 @@ contains
     ! Get B0 at location Xyz_D
 
     use ModMain,          ONLY : Time_Simulation, NameThisComp, &
-         TypeCoordSystem, IsStandAlone
+         TypeCoordSystem
     use ModPhysics,       ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
          MonopoleStrength
     use CON_planet_field, ONLY: get_planet_field

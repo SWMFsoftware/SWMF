@@ -176,7 +176,6 @@ contains
     use ModVarIndexes,  ONLY: nWave, WaveFirst_
     use ModWaves,       ONLY: UseWavePressure, GammaWave
 
-    integer :: iVarImpl
     real :: TradMin
 
     character(len=*), parameter :: NameSub = "init_rad_diffusion"
@@ -470,7 +469,7 @@ contains
     real :: HeatCondSi, HeatCond, TeTiRelaxSi
     real :: InvDx2, InvDy2, InvDz2
     real :: NatomicSi, Natomic, Zav, CveSi, Cve, Cvi, Ti
-    real :: TeTiCoef, TeTiCoefPrime
+    real :: TeTiCoef
 
     integer :: iMin, iMax, jMin, jMax, kMin, kMax
     integer :: iDim, Di, Dj, Dk, iDiff
@@ -1135,7 +1134,7 @@ contains
          CellFace_DFB, CellSize_DB, CellVolume_GB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: set_block_field3
-    use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
+    use ModImplicit,     ONLY: nVarSemi, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
     use ModMain,         ONLY: nI, nJ, nK
@@ -1149,8 +1148,8 @@ contains
     logical, intent(in) :: IsLinear
 
     real :: InvDcoord_D(MaxDim)
-    real :: Area, EnergyExchange
-    integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iRelax, iVar
+    real :: Area
+    integer :: iDim, i, j, k, Di, Dj, Dk, iDiff, iVar
 
     real :: StateImpl1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real :: StateImpl_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -1541,7 +1540,7 @@ contains
          CellFace_DB, CellFace_DFB, CellVolume_B, CellVolume_GB
     use ModImplicit, ONLY: UseFullImplicit, nStencil, Stencil1_, Stencil2_, &
          Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap,&
-         UseSemiImplicit, iTeImpl
+         UseSemiImplicit
     use ModMain,     ONLY: nI, nJ, nK, TypeCellBc_I
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvClight
@@ -1551,8 +1550,8 @@ contains
     integer, intent(in) :: nVarImpl
     real, intent(inout) :: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
-    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
-    real :: DiffLeft, DiffRight, PlanckWeight
+    integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff
+    real :: DiffLeft, DiffRight
     real :: InvDcoord_D(MaxDim), CoeffLeft, CoeffRight
     real :: Coeff0, Coeff
     !--------------------------------------------------------------------------

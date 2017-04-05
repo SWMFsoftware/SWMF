@@ -5,8 +5,8 @@ module ModIonElectron
   use ModVarIndexes
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY:  UseUserSource, &
-       iTest, jTest, kTest, VarTest, BlkTest, ProcTest
-  use ModAdvance, ONLY: StateOld_VCB, State_VGB, Source_VC, time_BLK
+       BlkTest, ProcTest
+  use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB

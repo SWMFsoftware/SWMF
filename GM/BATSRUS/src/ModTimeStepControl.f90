@@ -107,8 +107,8 @@ contains
 
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, DtFixed, Dt, Dt_BLK, Cfl, &
-         iTest, jTest, kTest, BlkTest, time_accurate, UseDtLimit, DtLimit
+    use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
+         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure

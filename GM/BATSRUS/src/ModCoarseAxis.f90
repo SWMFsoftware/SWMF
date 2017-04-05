@@ -53,7 +53,7 @@ contains
     integer, intent(in):: iBlock, iHemisphere
     !Misc
     !Loop variables
-    integer :: i, j, k, jMerge, jStart, jLast, iVar, kLayer, kStride
+    integer :: i, j, k, jMerge, jStart, jLast, kLayer, kStride
     real:: VDt
     character(len=*), parameter:: NameSub = 'calc_coarse_axis_timestep'
     !---------

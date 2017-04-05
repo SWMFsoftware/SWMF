@@ -243,7 +243,7 @@ contains
   !==============================================================================
   subroutine set_threads
     use ModMain,     ONLY: MaxBlock, Unused_B,&
-         nDim, nJ, nK
+         nJ, nK
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
     use ModProcMH
@@ -333,7 +333,7 @@ contains
     use ModGeometry, ONLY: Xyz_DGB
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
                            UnitTemperature_, UnitX_, UnitB_
-    use ModMain,     ONLY: nDim, nJ, nK, jTest, kTest, BlkTest
+    use ModMain,     ONLY: nJ, nK, jTest, kTest, BlkTest
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB

@@ -167,6 +167,7 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'calc_inductive_e'
     !----------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub, ' starting'
 
     if(nStepLast == n_step) RETURN
