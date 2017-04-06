@@ -22,17 +22,18 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 ;
 ; 2 - It does not deal with dielectronic satellite lines
 ;
-; 3 - Delta logT = 0.1
+; 3 - Delta logT = as in ioneq file
 ;
-; 4 - logG(logT,logNe) are calculated at temperatures 1e3-1e9 K
-;     and densities 1e6-1e14 cm^3.
+; 4 - logG(logT,logNe) are calculated at temperatures defined in
+;     ionequation file and densities 1e6-1e14 cm^3.
 ;
 ; VERSION
 ;
 ;  This is a modified version of crea_files.pro.  
 ;
-; 30-Mar-2016 - Output into one file only for BATSRUS
+; 06-Apr-2017 - Generating full tables into one file.
   version='8.0'
+
 ; Close lun=10 because we are going to use that for writing the output file
   close,10
 
@@ -55,7 +56,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   Element=['h' ,'he','li','be','b' ,'c' ,'n' ,'o' ,'f' ,'ne','na','mg','al', $
            'si','p' ,'s' ,'cl','ar','k' ,'ca','sc','ti','v' ,'cr','mn','fe', $
            'co','ni','cu','zn']
-
   nElement=n_elements(Element)
 
 ; Atomic weight of elements
@@ -79,12 +79,11 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 
 ; Input the ion fraction file
   read_ioneq,'',t_ioneq,ioneq,ref
-;  help,t_ioneq,ioneq
 
 ; Input the abundance file
   if keyword_set(abund_unity) then abundance=fltarr(nElement)+1.0d0
   if not keyword_set(abund_unity) then read_abund,'',abundance,ref
-;  print,'!!!!!!!! read_abund in SPECTRUM = ', ref
+
 ; Provide photoexcitation parameters (if keyword 'photoexc' is set)
   if keyword_set(photoexc) then begin
      read,'rPhot = ',rPhot
@@ -101,7 +100,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      position=strpos(MasterList(i),'d')
      if position ge 2 then Dielectronic=[Dielectronic,i]
   endfor
-
   if n_elements(Dielectronic) gt 1 then begin
      Dielectronic=Dielectronic(1:*)
      remove,Dielectronic,MasterList
@@ -113,7 +111,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 
 ; Write header into the output file
   openw,10,NameFileOut
-  
   printf,10,'log(G(LogN,LogT)) table created with CHIANTI : ',version, $
          format='(a42)'
   printf,10,'#GRID',format='(a)'
@@ -125,66 +122,24 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   printf,10,'in units [A] [cm^-3] [K] [erg cm^3 s^-1]'
   printf,10,'#START',format='(a)'
 
-;  iNe6 = where(MasterList eq 'ne_6')
-;  iNe6 = iNe6(0)
-;  print,'!!!!! i, MasterList = ',iNe6, MasterList(iNe6)
-
-  
-;  print,'!!!! Element=', Element
-
-
 ; START main loop f calculation and writing
   for i=0L,nIon-1 do begin
-;;;for i=iNe6,iNe6 do begin
+
 ; Select ion
      position=strpos(MasterList(i),'_')
      LocalElement=strmid(MasterList(i),0,position)
      zElem=where(Element eq LocalElement)+1
      Aion = Aelement(where(Element eq LocalElement)) 
      zElem=zElem(0)
-
      Ion=MasterList(i)
      zIon=float(strmid(Ion,position+1,strlen(Ion)))
-
-;     print,'!!!! i, LocalElement, zElem=', i, LocalElement, zElem
      print,'doing ',MasterList(i),' which is the ',i+1,'th ion out of ',nIon
 
 ; Select ioneq
-
      ion_eq=ioneq(*,zElem-1,zIon-1)
-;     help,ion_eq,zElem,zIon
-;     print,'!!!!!!!!!!!! t_ioneq, ioneq = '
-
-;      for it = 0,100 do print, t_ioneq(it),ion_eq(it)
-
-; Limit LogT range to fraction > limit_ioneq
-;     limit_ioneq = 0. ;;;;1e-6
-
-;     if zElem-1 eq 0 and zIon-1 eq 0 then begin
-;        location = where(ion_eq gt limit_ioneq/100.)
-;     endif else begin
-;        location = where(ion_eq gt limit_ioneq)
-;     endelse
-;     LogTmin=t_ioneq(min(location))
-;     LogTmax=t_ioneq(max(location))
-;     dLogT=0.1
-;     nLogT=(LogTmax-LogTmin)/dLogT
-;     LogT=LogTmin+dLogT*findgen(nLogT+1)
-;     nLogT=n_elements(LogT)
-     
-;     dt1=t_ioneq(min(location)+1)-t_ioneq(min(location))
-;     if dt1 lt 0.09 then begin
-;        q1=location(2*findgen(nLogT))
-;        location=q1
-;     endif
-
-;print,location
-;stop
-
 
 ; Calculate the emissivities
      data=emiss_calc(zElem,zIon,dens=LogN,temp=LogT,/quiet)
-     
      if keyword_set(photoexc) then data=emiss_calc(zElem,zIon,dens=LogN,$
                                                    temp=LogT,rphot=rPhot,$
                                                    radtemp=RadTemp,/quiet)
@@ -209,35 +164,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      Missing=where(strcompress(string(LogG),/remove_all) eq '-NaN')
      LogG(Missing)=1.0d-45
 
-
-     if 1 eq 0 then begin
-        print,'i = ', i
-        print,' abundance(zElem-1) = ', abundance(zElem-1)
-        print, 'ElementAbundance = ', ElementAbundance
-        print, 'ElementAbundance*0.83 = ',ElementAbundance*0.83
-        j = 2
-        l = 4
-        k = 2765
-   ;;; k = where(abs(wavelength-300.562) lt 0.001)
-        print, 'j, LogN = ', j, LogN(j)
-        print, 'l, LogT = ', l, LogT(l)
-        print, 'k, WaveL= ', k, Wavelength(k)
-        g = LogG(l,j,k)
-        print, 'LogG=', g
-        g = g*ElementAbundance*0.83
-        print, 'LogG*abund*0.83=', g
-        print,'10^LogN(j)=',10^LogN(j)
-        print,'location(k)=', location(l)
-        ioneq_ = ion_eq(location(l))/(10^LogN(j))
-        print,'ion_eq=', ioneq_
-        g = g*ioneq_
-        print, 'LogG*abund*0.83*ioneq=', g
-        
-     endif
-
-;print, 'LogG = ',LogG
-
-     LogG=LogG*ElementAbundance ;;;; *0.83
+     LogG=LogG*ElementAbundance 
      for l=0,nLogT-1 do begin
         for j=0,nLogN-1 do begin
            LogG(l,j,*)=LogG(l,j,*)*ion_eq(l)/(10^LogN(j))
@@ -247,6 +174,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      LogG=alog10(LogG)
      Missing=where(strcompress(string(LogG),/remove_all) eq '-Infinity')
      LogG(Missing)=-100.
+
 ; Write into output file
      nTransition=n_elements(data)   
      help,nTransition
@@ -259,7 +187,6 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
                            Wavelength(k),LogN(j),$
                            LogT(l),LogG(l,j,k),$
                            format='(a6,f13.3,2i5,f13.3,2f13.4,f13.3)'
-                    
                  endif
                  if Flag(k) lt 0 then begin
                     printf,10,MasterList(i),Aion,LevelFrom(k),LevelTo(k),$

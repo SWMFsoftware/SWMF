@@ -1,5 +1,4 @@
 !instrumental broadening
-!test
 !check boxes
 
 program spectrum
@@ -451,16 +450,6 @@ contains
              LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
              LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
 
-             ! Some lines grid start at t+0.05 (on logT scale)
-             ! These grids are shifted by 0.05, we shift the temperatures as 
-             ! well so the interpolation happens at the right place.
-             if(LineTable_I(iLine)%StartLogT*10 - & 
-                  int(LineTable_I(iLine)%StartLogT*10)==0.5)then
-                TShift=0.05
-write(*,*)'shifting line = ', LineTable_I(iLine)%LineWavelength
-                LogTe = LogTe + TShift
-             end if
-
              ! Convert to SI
              LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
@@ -484,7 +473,7 @@ write(*,*)'shifting line = ', LineTable_I(iLine)%LineWavelength
                   (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
 
              ! When Gint becomes negative due to extrapolation -> move to next
-             if(Gint<1e-40)CYCLE 
+             if(Gint<=0)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
              ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
@@ -940,7 +929,7 @@ write(*,*)'shifting line = ', LineTable_I(iLine)%LineWavelength
           Rot_DD = matmul(rot_matrix_z(-Zangle), &
                matmul(rot_matrix_y(-Yangle), rot_matrix_x(-Xangle)))
 
-          if(IsVerbose)then
+          if(IsDebug)then
              write(*,*)'angles = ',Param_I
              write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
              write(*,*)'Rot_DD=', Rot_DD
@@ -952,7 +941,7 @@ write(*,*)'shifting line = ', LineTable_I(iLine)%LineWavelength
              Var_VIII(bx_:bz_,i,j,k) = matmul(Rot_DD, Var_VIII(bx_:bz_,i,j,k))
           end do; end do; end do
 
-          if(IsVerbose)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
+          if(IsDebug)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
 
        end if
     endif
