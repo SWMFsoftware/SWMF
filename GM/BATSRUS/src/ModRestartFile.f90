@@ -24,9 +24,11 @@ module ModRestartFile
   use ModUtilities,  ONLY: open_file, close_file
   use ModGroundMagPerturb, ONLY: DoWriteIndices
   use ModBoundaryGeometry, ONLY: fix_block_geometry
-  use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
-       IsCartesian, IsCartesianGrid, IsGenRadius, IsRoundCube, rRound0, rRound1, &
-       nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+  use BATL_lib,      ONLY: &
+       write_tree_file, iMortonNode_A, iNode_B, &
+       nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
+       IsCartesian, IsCartesianGrid, IsGenRadius, &
+       IsRoundCube, rRound0, rRound1
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
 
   implicit none
@@ -855,19 +857,18 @@ contains
        if (UseRestartOutSeries) &
             call string_append_iter(NameFile,iteration_number)
 
-       ! Delete and open file (only from proc 0 for type 'one')
-       if(iProc==0 .or. TypeRestartOutFile == 'proc') &
-            call open_file(FILE=NameFile, &
-            RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-            NameCaller=NameSub//':write direct proc0')
+       ! Delete and open restart files
+       if(TypeRestartOutFile == 'proc') &
+            call open_file(FILE=NameFile, FORM='unformatted', &
+            RECL = lRecord, ACCESS = 'direct',                &
+            NameCaller=NameSub//':write direct proc')
 
-       if(TypeRestartOutFile == 'one') then
-          ! Make sure that all processors wait until the file is re-opened
-          call barrier_mpi
-          if(iProc > 0) call open_file(FILE=NameFile, &
-               RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
-               STATUS = 'old', NameCaller=NameSub//':write direct iProc>0')
-       end if
+       ! Pass iComm=iComm so only processor 0 deletes the file
+       if(TypeRestartOutFile == 'one') &
+            call open_file(FILE=NameFile, FORM='unformatted', &
+            RECL = lRecord, ACCESS = 'direct', iComm=iComm,   &
+            NameCaller=NameSub//':write direct one')
+
     end if
 
   end subroutine open_direct_restart_file
