@@ -124,8 +124,9 @@ subroutine write_plot_common(iFile)
   PlotRange_I = plot_range(:,iFile)
 
   ! DoSaveOneTecFile = T only works for 3D tecplot file right now
-  DoSaveOneTecFile = DoSaveOneTecFileOrig .and. plot_type1(1:3)=='3d_' &
-       .and. (plot_form(iFile)=='tec' .or. plot_form(iFile)=='tcp')
+  DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
+       (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
+       .or. plot_form(iFile)=='tcp')
 
   if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
        ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile
@@ -228,16 +229,29 @@ subroutine write_plot_common(iFile)
      iUnit = UnitTmp_
   end if
 
-  if (DoSaveOneTecFile) then
+  ! Calculate the record length for direct access data files
+  ! The output format for data is ES14.6, so each cell has 
+  ! (nplotvar+3)*14 data, plus a new line character
+  lRecData    = (nPlotvar + 3)*14 + 1
+
+  if(plot_form(iFile)=='tcp')then
+     ! Calculate and write connectivity file
+     call write_tecplot_connect(iFile,trim(NameSnapshot)//"_2"//trim(NameProc))
+     ! Open one file for data
+     filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
+     if(DoSaveOneTecFile)then
+        call open_file(&
+             FILE=filename_n, ACCESS='DIRECT', RECL = lRecData, iComm=iComm, &
+             NameCaller=NameSub//'_tcp_direct_data')
+     else
+        call open_file(FILE=filename_n, NameCaller=NameSub//'_tcp_data')
+     end if
+  elseif (DoSaveOneTecFile) then
      ! filename_h stores the header, filename_n stores the data and
      ! filename_s stores the connectivity
      filename_h = trim(NameSnapshot)//"_0.tec"
      filename_n = trim(NameSnapshot)//"_1.tec"
      filename_s = trim(NameSnapshot)//"_2.tec"
-
-     ! The output format for data is ES14.6, so each cell has 
-     ! (nplotvar+3)*14 data, plus a new line character
-     lRecData    = (nPlotvar + 3)*14 + 1
 
      if (oktest_me) then
         write(*,*) 'filename_h =', filename_h
@@ -251,22 +265,14 @@ subroutine write_plot_common(iFile)
 
      ! only iProc == 0 opens the header file
      ! we should do this at the end (?)
-     if (iProc == 0)then
-        call open_file(iUnit,  FILE=filename_h)
-
-        call open_file(FILE=filename_n, FORM=TypeForm, ACCESS='DIRECT', &
-             RECL = lRecData)
-        call open_file(UnitTmp2_, FILE=filename_s, FORM=TypeForm, ACCESS='DIRECT', &
-             RECL = lRecConnect)
-     end if
-     ! Make sure that all processors wait until the file is re-opened      
-     call barrier_mpi
-     if (iProc > 0) then
-        call open_file(FILE=filename_n, FORM=TypeForm, ACCESS='DIRECT', &
-             RECL = lRecData, STATUS='old')
-        call open_file(UnitTmp2_, FILE=filename_s, FORM=TypeForm, ACCESS='DIRECT', &
-             RECL = lRecConnect, STATUS='old')
-     end if
+     if (iProc == 0) call open_file(iUnit, FILE=filename_h, &
+          NameCaller=NameSub//'_tec_head')
+     call open_file(FILE=filename_n, &
+          ACCESS='DIRECT', RECL=lRecData, iComm=iComm, &
+          NameCaller=NameSub//'_tec_direct_data')
+     call open_file(UnitTmp2_, FILE=filename_s, &
+          ACCESS='DIRECT', RECL=lRecConnect, iComm=iComm, &
+          NameCaller=NameSub//'_tec_direct_connect')
   elseif(DoPlotBox)then
      ! Initialize the box grid for this file
      call init_plot_box(iFile, nPlotVar)
@@ -292,10 +298,6 @@ subroutine write_plot_common(iFile)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      call open_file(UnitTmp_,  FILE=filename_n)
      call open_file(UnitTmp2_, FILE=filename_s)
-  elseif(plot_form(iFile)=='tcp')then
-     ! Open one file for data
-     filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
-     call open_file(UnitTmp_,  FILE=filename_n)
   elseif(plot_form(iFile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
@@ -538,7 +540,6 @@ subroutine write_plot_common(iFile)
 
   if(plot_form(iFile)=='tcp') then
      ! Write out connectivity and header files
-     call write_tecplot_connect(iFile, trim(NameSnapshot)//"_2"//trim(NameProc))
      call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
   end if
 
