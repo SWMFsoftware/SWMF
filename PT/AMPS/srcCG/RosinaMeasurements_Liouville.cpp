@@ -514,7 +514,7 @@ void RosinaSample::Liouville::Evaluate() {
           NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
           Rosina[iPoint].Altitude,
           ((Rosina[iPoint].Altitude>0.0) ? (productionDistributionNASTRAN[_H2O_SPEC_][Rosina[iPoint].iNucleusClosestFace]+productionDistributionNASTRAN[_CO2_SPEC_][Rosina[iPoint].iNucleusClosestFace])/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
-          RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+          100.0*RosinaSample::NudeGaugeReferenceData[iPoint],100.0*RosinaSample::RamGaugeReferenceData[iPoint],
           OriginalSourceRate,ModifiedSourceRate,
           H2ORamGaugePressure,CO2RamGaugePressure,H2ONudeGaugePressure,CO2NudeGaugePressure);
     }
