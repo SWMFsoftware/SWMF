@@ -58,6 +58,16 @@ module ModWriteTecplot
   ! Local variables
   character (len=23) :: textDateTime0
 
+  ! Cuts
+  logical:: DoCut
+  real:: CutMin_D(3), CutMax_D(3)
+
+  ! Global cell index. It is a real array for sake of message passing only.
+  real, allocatable:: CellIndex_GB(:,:,:,:)
+
+  ! Total number of cells written into file
+  integer:: nPointAll
+
   ! Total number of connectivity bricks
   integer:: nBrickAll
 
@@ -68,12 +78,11 @@ contains
   !===========================================================================
   subroutine write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
 
-    use BATL_lib,  ONLY: nI, nJ, nK, nIJK, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, iProc
+    use BATL_lib,  ONLY: nI, nJ, nK, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
     use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile
     use ModIoUnit, ONLY: UnitTmp_
-    use ModAdvance,ONLY: iTypeAdvance_BP, SkippedBlock_
-    use ModMain,   ONLY: nBlockMax, BlkTest
+    use ModMain,   ONLY: BlkTest
 
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
@@ -91,15 +100,12 @@ contains
     if(DoTestMe) write(*,*) NameSub,' starting with nPlotVar=', nPlotVar
 
     if(DoSaveOneTecFile)then
-       if(iRecData < 0)then
-          ! Initialize the record index based on number of used blocks 
-          iRecData = 0
-          if(iProc > 0) iRecData = nIJK* &
-               count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
-          write(StringFormat, '(a,i2,a)') "(", nPlotVar+3, "(ES14.6), a)"
-       end if
+       write(StringFormat, '(a,i2,a)') "(", nPlotVar+3, "(ES14.6), a)"
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          iRecData = iRecData + 1
+          ! Record index is the global cell index
+          iRecData = nint(CellIndex_GB(i,j,k,iBlock))
+          ! Skip points outside the cut
+          if(iRecData == 0) CYCLE
           write(UnitTmp_, StringFormat, REC=iRecData) &
                Xyz_DGB(1:3,i,j,k,iBlock),             &
                PlotVar_GV(i,j,k,1:nPlotVar),          &
@@ -107,6 +113,8 @@ contains
        end do; end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          ! Skip points outside the cut
+          if(CellIndex_GB(i,j,k,iBlock) == 0.0) CYCLE
           write(UnitTmp_,"(50(ES14.6))")            &
                Xyz_DGB(1:3,i,j,k,iBlock),           &
                PlotVar_GV(i,j,k,1:nPlotVar)
@@ -122,13 +130,15 @@ contains
     
     use ModProcMH,    ONLY: iProc, nProc, iComm
     use ModAdvance,   ONLY: iTypeAdvance_BP, SkippedBlock_
-    use ModIO,        ONLY: DoSaveOneTecFile
+    use ModIO,        ONLY: DoSaveOneTecFile, plot_type1, plot_range
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
     use ModMain,      ONLY: nBlockMax
     use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
          MPI_allgather, MPI_INTEGER
-    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, MaxBlock, nBlock, Unused_B, &
+    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, nIJK_D, &
+         MaxBlock, nBlock, Unused_B, nNodeUsed, &
+         CoordMin_DB, CoordMax_DB, CellSize_DB, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
@@ -140,8 +150,7 @@ contains
 
     integer:: i0, i1, j0, j1, k0, k1, i, j, k
 
-    ! This is a real array for sake of message passing only
-    real, allocatable:: CellIndex_GB(:,:,:,:)
+    ! Cell index to be written into the connectivity file
     integer, allocatable:: iCell_G(:,:,:)
 
     ! Number of bricks for this and all processors
@@ -154,35 +163,100 @@ contains
     ! Record index
     integer:: iRec
 
+    ! Cut related variables
+    real:: BlockMin_D(3), BlockMax_D(3), CellSize_D(3)
+    integer:: iStart_D(3), iEnd_D(3)
+    integer, allocatable:: nCell_P(:)
+
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_tecplot_connect'
     !------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with NameFile=', NameFile
+    DoCut = plot_type1(1:3) == 'cut'
+
+    if(DoTestMe)write(*,*) NameSub,' starting with NameFile, DoCut=', &
+         NameFile, DoCut
 
     allocate( &
          CellIndex_GB(0:nI+1,0:nJ+1,0:nK+1,MaxBlock), &
          iCell_G(0:nI+1,0:nJ+1,0:nK+1))
 
-    ! count number of cells written by processors before this one
-    nBlockBefore = 0
-    if(iProc > 0) nBlockBefore = &
-         count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+    if(DoCut)then
+       CutMin_D = plot_range(1:5:2,iFile)
+       CutMax_D = plot_range(2:6:2,iFile)
 
-    if(DoTestMe)write(*,*) NameSub,' nBlockBefore=', nBlockBefore
+       ! Count number of cells inside the cut written by this processor
+       iCell = 0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          BlockMin_D = CoordMin_DB(:,iBlock)
+          BlockMax_D = CoordMax_DB(:,iBlock)
+          ! Check if block is fully outside of the cut
+          if(any(BlockMin_D > CutMax_D)) CYCLE
+          if(any(BlockMax_D < CutMin_D)) CYCLE
 
-    ! initial cell index
-    iCell = nIJK*nBlockBefore
+          ! Calculate start and ending indexes
+          CellSize_D = CellSize_DB(:,iBlock)
+          iStart_D = max(     1, nint(0.49+(CutMin_D - BlockMin_D)/CellSize_D))
+          iEnd_D   = min(nIJK_D, nint(1.51+(CutMax_D - BlockMin_D)/CellSize_D))
+          iCell = iCell + product(max(0, iEnd_D - iStart_D + 1))
+       end do
+       ! Gather the number of cells written by other processors
+       allocate(nCell_P(0:nProc-1))
+       call MPI_allgather(iCell, 1, MPI_INTEGER, &
+            nCell_P, 1, MPI_INTEGER, iComm, iError)
 
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       CellIndex_GB(:,:,:,iBlock) = 0
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          iCell = iCell + 1
-          CellIndex_GB(i,j,k,iBlock) = iCell
-       end do; end do; end do
-    end do
+       ! Add up number of cells written by the previous processors
+       iCell = 0
+       if(iProc > 0) iCell = sum(nCell_P(0:iProc-1))
+
+       ! Set global cell index for each cell inside the cut
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          ! Set cell index to 0 (indicates cells outside the cut)
+          CellIndex_GB(:,:,:,iBlock) = 0
+
+          ! Check if block is fully outside of the cut
+          BlockMin_D = CoordMin_DB(:,iBlock)
+          BlockMax_D = CoordMax_DB(:,iBlock)
+          if(any(BlockMin_D > CutMax_D)) CYCLE
+          if(any(BlockMax_D < CutMin_D)) CYCLE
+
+          ! Calculate start and ending indexes
+          CellSize_D = CellSize_DB(:,iBlock)
+          iStart_D = max(     1, nint(0.49+(CutMin_D - BlockMin_D)/CellSize_D))
+          iEnd_D   = min(nIJK_D, nint(1.51+(CutMax_D - BlockMin_D)/CellSize_D))
+          do k = iStart_D(3), iEnd_D(3)
+             do j = iStart_D(2), iEnd_D(2)
+                do i = iStart_D(1), iEnd_D(1)
+                   iCell = iCell + 1
+                   CellIndex_GB(i,j,k,iBlock) = iCell
+                end do
+             end do
+          end do
+       end do
+    else
+       ! Full 3D plot
+       ! count number of cells written by processors before this one
+       nBlockBefore = 0
+       if(iProc > 0) nBlockBefore = &
+            count(iTypeAdvance_BP(1:nBlockMax,0:iProc-1) /= SkippedBlock_)
+
+       if(DoTestMe)write(*,*) NameSub,' nBlockBefore=', nBlockBefore
+
+       ! initial cell index
+       iCell = nIJK*nBlockBefore
+
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          CellIndex_GB(:,:,:,iBlock) = 0
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             iCell = iCell + 1
+             CellIndex_GB(i,j,k,iBlock) = iCell
+          end do; end do; end do
+       end do
+    end if
 
     ! Set the global cell indexes for the ghost cells. First order prolongation
     ! is used, so fine ghost cells are set to the index of the coarse cell.
@@ -196,17 +270,25 @@ contains
        nStage = 2
        nBrick = 0
        allocate(nBrick_P(0:nProc-1))
-       call open_file(File=NameFile, ACCESS='direct', RECL=lRecConnect)
+       call open_file(File=NameFile, ACCESS='direct', RECL=lRecConnect, &
+            iComm=iComm, NameCaller=NameSub//'_direct_connect')
     else
        nStage = 1
        nBrickAll = 0
        ! Open connectivity file
-       call open_file(File=NameFile)
+       call open_file(File=NameFile,  NameCaller=NameSub//'_connect')
     end if
 
     do iStage = 1, nStage
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
+          if(DoCut)then
+             ! Check if block is fully outside of the cut
+             BlockMin_D = CoordMin_DB(:,iBlock)
+             BlockMax_D = CoordMax_DB(:,iBlock)
+             if(any(BlockMin_D > CutMax_D)) CYCLE
+             if(any(BlockMax_D < CutMin_D)) CYCLE
+          end if
 
           ! Get the index limits for the lower left corner
           ! of the connectivity bricks.
@@ -227,17 +309,27 @@ contains
           k1 = nK
           if(DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
 
+          iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
+
           if(iStage < nStage)then
-             ! Simply count the number of bricks for this processor
-             nBrick = nBrick + (i1-i0+1)*(j1-j0+1)*(k1-k0+1)
+             ! Count the number of bricks for this processor
+             if(DoCut)then
+                do i = i0, i1; do j = j0, j1; do k = k0, k1
+                   ! Skip bricks that are not fully inside cut
+                   if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
+                   nBrick = nBrick + 1
+                end do; end do; end do
+             else
+                nBrick = nBrick + (i1-i0+1)*(j1-j0+1)*(k1-k0+1)
+             end if
+             ! In stage 1 only count bricks
              CYCLE
           end if
-
-          iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
 
           if(DoSaveOneTecFile)then
 
              do i = i0, i1; do j = j0, j1; do k = k0, k1
+                if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
                 iRec      = iRec + 1
                 write(UnitTmp_,'(8i11,a)', REC=iRec) &
                      iCell_G(i  ,j  ,k  ), &
@@ -252,6 +344,7 @@ contains
              end do; end do; end do
           else
              do i = i0, i1; do j = j0, j1; do k = k0, k1
+                if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
                 nBrickAll = nBrickAll + 1
                 write(UnitTmp_,'(8i11)') &
                      iCell_G(i  ,j  ,k  ), &
@@ -282,7 +375,7 @@ contains
     ! Reset iRec for next plot
     iRecData = -1
 
-    ! Calculate total number of bricks
+    ! Calculate and store total number of bricks for header file
     if(DoSaveOneTecFile)then
        if(iProc == 0) nBrickAll = sum(nBrick_P)
        deallocate(nBrick_P)
@@ -290,9 +383,18 @@ contains
        call mpi_reduce_integer_scalar(nBrickAll, MPI_SUM, 0, iComm, iError)
     end if
 
-    deallocate(CellIndex_GB, iCell_G)
+    ! Calculate and store total number of cells for header file
+    if(DoCut)then
+       if(iProc == 0) nPointAll = sum(nCell_P)
+       deallocate(nCell_P)
+    elseif(iProc == 0)then
+       nPointAll = nNodeUsed*nIJK
+    end if
 
-    if(DoTestMe)write(*,*) NameSub,' done with nBrickAll=', nBrickAll
+    deallocate(iCell_G)
+
+    if(DoTestMe)write(*,*) NameSub,' done with nPointAll, nBrickAll=', &
+         nPointAll, nBrickAll
 
   end subroutine write_tecplot_connect
 
@@ -302,7 +404,6 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
-    use BATL_lib,     ONLY: nNodeUsed, nIJK
 
     ! Write out tecplot header file
 
@@ -312,16 +413,22 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_tecplot_connect'
     !---------------------------------------------------------------------
+    if(allocated(CellIndex_GB)) deallocate(CellIndex_GB)
+
     call write_tecplot_setinfo
     if(iProc /= 0) RETURN
 
     call open_file(File=NameFile)
-    write(UnitTmp_,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+    if(DoCut)then
+       write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
+    else
+       write(UnitTmp_,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+    end if
     write(UnitTmp_,'(a)') trim(StringUnit)
     write(UnitTmp_,'(a,a,i12,a,i12,a)') &
          'ZONE T="3D   '//textNandT//'"', &
-         ', N=',nNodeUsed*nIJK, &
-         ', E=',nBrickAll,      &
+         ', N=',nPointAll, &
+         ', E=',nBrickAll, &
          ', F=FEPOINT, ET=BRICK'
     call write_tecplot_auxdata
     call close_file
