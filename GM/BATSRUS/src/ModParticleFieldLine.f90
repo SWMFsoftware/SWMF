@@ -112,6 +112,10 @@ module ModParticleFieldLine
   !   public method apply_soft_boundary
   real:: RBoundarySoft = -1.0
 
+  ! logical to switch between integration methods
+  logical:: DoTraceGirard = .false.
+
+
   !\
   ! initialization related info
   !/
@@ -252,12 +256,16 @@ contains
     real,    pointer:: StateEnd_VI(:,:)
     integer, pointer:: iIndexEnd_II(:,:)
 
-    ! constant in Ralston's method
-    real, parameter:: cTwoThird = 2.0 / 3.0
-    real, parameter:: cHalf     = 0.5
-
-    ! logicals to switch between integration methods
-    logical:: DoTraceRK2 = .true., DoTraceGirard = .false.
+    ! constants in RK2 method:
+    ! dy/dt   = f(t,y)
+    ! y_{n+1} = y_n + step * ( beta * k1 + (1-beta)*k2)
+    ! k1      = f(t_n, y_n)
+    ! k2      = f(t_n, y_n + step * alpha * k1)
+    real:: AlphaRK2, BetaRK2
+    real, parameter:: cTwoThird = 2.0 / 3.0! alpha in Ralston's method
+    real, parameter:: cHalf     = 0.5      ! alpha in midpoint  method
+    real, parameter:: cZero     = 0.0      ! beta  in Ralston's method
+    real, parameter:: cQuarter  = 0.25     ! beta  in midpoint  method
 
     character(len=*),parameter:: NameSub = "trace_particle_line"
     !------------------------------------------------------------------------
@@ -265,8 +273,16 @@ contains
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
-    TRACE_RK2: do while(DoTraceRK2)
-       if(DoTraceGirard) DoTraceRK2 = .false.
+    ! change const in RK2 based on which method is to be used
+    if(DoTraceGirard)then
+       AlphaRK2 = cHalf
+       BetaRK2  = cZero
+    else
+       AlphaRK2 = cTwoThird   
+       BetaRK2  = cQuarter
+    end if
+
+    TRACE_RK2: do
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
           call check_soft_boundary(KindEnd_)
@@ -277,7 +293,7 @@ contains
        StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
             StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
        !\
-       ! First stage of Ralston's method
+       ! First stage of RK2 method
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
           ! get the direction of the magnetic field at original location
@@ -296,7 +312,7 @@ contains
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               cTwoThird * Dir1_D * &
+               AlphaRK2 * Dir1_D * &
                iIndexEnd_II(Alignment_, iParticle)
        end do
        !\
@@ -316,7 +332,7 @@ contains
        if(is_complete()) RETURN
 
        !\
-       ! Second stage of Ralston's method
+       ! Second stage of RK2 method
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
           ! get the direction of the magnetic field in the middle
@@ -329,7 +345,7 @@ contains
           ! get final location
           StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
                iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               (0.25 * Dir1_D + 0.75 * Dir2_D) * &
+               (BetaRK2 * Dir1_D + (1.0 - BetaRK2) * Dir2_D) * &
                iIndexEnd_II(Alignment_, iParticle)
        end do
        !\
@@ -353,6 +369,8 @@ contains
             iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
             iDirTrace
        call copy_end_to_regular
+
+       if(DoTraceGirard) EXIT
 
     end do TRACE_RK2
 
@@ -419,7 +437,7 @@ contains
           ! store for the next iteration
           StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir2_D
           ! the "force" is normal to tangential direction, apply rotation
-          call rotate_girard(Dir1_D, cross_product(Dir1_D, Dir2_D), Dir3_D)
+          call rotate_girard(Dir1_D, cross_product(Dir2_D, Dir1_D), Dir3_D)
           ! get final location
           StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
                iDirTrace * StateEnd_VI(Aux_, iParticle) * &
