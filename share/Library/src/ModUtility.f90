@@ -227,7 +227,7 @@ contains
 
   !============================================================================
   subroutine open_file(iUnitIn, File, Form, Status, Position, Access, Recl, &
-       NameCaller)
+       iComm, NameCaller)
 
     use ModIoUnit, ONLY: UNITTMP_
 
@@ -241,6 +241,10 @@ contains
     ! Default position is 'rewind' (not asis) as it is well defined.
     ! Default access is 'sequential' as in the open statement.
     ! There is no default record length Recl.
+    ! If the MPI communicator iComm is present together with Recl,
+    ! the file will be opened with status='replace' on processor 0,
+    ! and with status='old' on other processors with an MPI_barrier
+    ! in between.
 
     integer, optional, intent(in):: iUnitIn
     character(len=*), optional, intent(in):: File
@@ -249,12 +253,13 @@ contains
     character(len=*), optional, intent(in):: Position
     character(len=*), optional, intent(in):: Access
     integer,          optional, intent(in):: Recl
+    integer,          optional, intent(in):: iComm
     character(len=*), optional, intent(in):: NameCaller
 
     character(len=20):: TypeForm, TypeStatus, TypePosition, TypeAccess
 
     integer:: iUnit
-    integer:: iError
+    integer:: iError, iProc, nProc
 
     character(len=*), parameter:: NameSub = 'open_file'
     !----------------------------------------------------------------------
@@ -274,8 +279,33 @@ contains
     if(present(Access)) TypeAccess = Access
 
     if(present(Recl))then
-       open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
-            ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+       if(present(iComm))then
+          ! Get iProc and nProc
+          call MPI_comm_size(iComm, nProc, iError)
+          call MPI_comm_rank(iComm, iProc, iError)
+          ! Open file with status "replace" on processor 0
+          if(iProc == 0) &
+               open(iUnit, FILE=File, FORM=TypeForm, STATUS='replace', &
+               ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+          if(nProc > 1)then
+             ! Check if open worked on processor 0
+             if(iProc == 0 .and. iError /= 0)then
+                write(*,*) NameSub,' iUnit, iError=', iUnit, iError
+                if(present(NameCaller)) write(*,*) 'NameCaller=', NameCaller
+                call CON_stop(NameSub// &
+                     ' processor 0 could not open file='//trim(File))
+             end if
+             ! Make sure all processors wait until proc 0 has opened file
+             call MPI_barrier(iComm, iError)
+             ! Other processors open with status "old"
+             if(iProc > 0) &
+                  open(iUnit, FILE=File, FORM=TypeForm, STATUS='old', &
+                  ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+          end if
+       else
+          open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
+               ACCESS=TypeAccess, RECL=Recl, IOSTAT=iError)
+       end if
     else
        open(iUnit, FILE=File, FORM=TypeForm, STATUS=TypeStatus, &
             POSITION=TypePosition, ACCESS=TypeAccess, IOSTAT=iError)
