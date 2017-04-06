@@ -15,7 +15,7 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 # Post processing executables
 #
 ${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
-	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag2} 
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
@@ -64,28 +64,31 @@ TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 # test for spectrum
 #
 test_spectrum:
-	@echo "test_spectrum_compile..." > test_spectrum.diff
+	@echo "test_spectrum_compile..." > ../test_spectrum.diff
 	$(MAKE) test_spectrum_compile
-	@echo "test_spectrum_run..." >> test_spectrum.diff
+	@echo "test_spectrum_run..." >> ../test_spectrum.diff
 	$(MAKE) test_spectrum_run
-	@echo "test_spectrum_check..." >> test_spectrum.diff
+	@echo "test_spectrum_check..." >> ../test_spectrum.diff
 	$(MAKE) test_spectrum_check
 
-test_spectrum_compile:
-	rm -f SPECTRUM.in test_spectrum.diff spectrum.log test-spectrum.out test-spectrum.eps
+SPECTRUM_chianti_tbl.dat: ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz
+	gunzip -c ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz \
+	> SPECTRUM_chianti_tbl.dat
+
+test_spectrum_compile: SPECTRUM_chianti_tbl.dat
+	rm -f SPECTRUM.in ../test_spectrum.diff \
+		test-spectrum.log test-spectrum.out test-spectrum.eps
 	cp test-SPECTRUM.in SPECTRUM.in
-	gunzip -c ../data/SPECTRUM/SPECTRUM_chianti_tbl.dat.gz > SPECTRUM_chianti_tbl.dat
 	make SPECTRUM
 
 test_spectrum_run:
-	./SPECTRUM.exe > spectrum.log
+	./SPECTRUM.exe > test-spectrum.log
 
 test_spectrum_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		test-spectrum.out \
-		test-spectrum.ref > test_spectrum.diff
-	@ls -l test_spectrum.diff
-	mv test_spectrum.diff ../
+		test-spectrum.ref > ../test_spectrum.diff
+	@ls -l ../test_spectrum.diff
 
 #
 #	cleaning
@@ -93,6 +96,6 @@ test_spectrum_check:
 clean: cleanfiles
 
 distclean: clean
-	rm -f SPECTRUM.exe SPECTRUM.in spectrum.log test-spectrum.out SPECTRUM_chianti_tbl.dat
+	rm -f SPECTRUM.exe SPECTRUM.in test-spectrum.log \
+		test-spectrum.out test-label.out SPECTRUM_chianti_tbl.dat
 
-# keep this line
