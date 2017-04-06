@@ -23,6 +23,9 @@ extern double positionSun[3];
 extern double **productionDistributionNASTRAN;
 extern bool *probabilityFunctionDefinedNASTRAN;
 
+static bool SphericalNucleusTest=false;
+static bool AdaptSurfaceInjectionRate=false;
+
 void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
   double c,l[3],*xLocation,rLocation,xIntersection[3],beta;
@@ -38,6 +41,10 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
   //estimate the total source rate
   OriginalSourceRate=0.0,ModifiedSourceRate=0.0;
+
+  //sample particle flux and density at the spacecraft location without accounting for shielding, and instrument orientation (used for debugging)
+  bool DisregardInstrumentOrientationFlag=(SphericalNucleusTest==true) ? true : false;
+
 
   for (iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
     double ThrehondSourceRate,SourceRate=productionDistributionNASTRAN[spec][iSurfaceElement]/CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
@@ -57,7 +64,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       exit(__LINE__,__FILE__,"Error: the option is not known");
     }
 
-    if (SourceRate<ThrehondSourceRate) {
+    if ((SourceRate<ThrehondSourceRate)&&(AdaptSurfaceInjectionRate==true)) {
       switch (spec) {
       case _H2O_SPEC_:
         productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
@@ -123,7 +130,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel for schedule(dynamic) default(none) shared(iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
+#pragma omp parallel for schedule(dynamic) default(none) shared(DisregardInstrumentOrientationFlag,SphericalNucleusTest,iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
   private(xIntersection,beta,iSurfaceElement,iTest,idim,c,x,r,cosTheta,A,t,tNudeGaugeDensity,tRamGaugeFlux,tRamGaugeDensity,ll) reduction(+:localNudeGaugeDensity) reduction(+:localNudeGaugeFlux) reduction(+:localRamGaugeFlux) reduction(+:localRamGaugeDensity)
 #endif
   for (iSurfaceElement=iStartSurfaceElement;iSurfaceElement<iFinishSurfaceElement;iSurfaceElement++) {
@@ -143,6 +150,14 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       if (CutCell::BoundaryTriangleFaces[iSurfaceElement].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
 
       Temperature=Comet::GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
+
+
+//DEBUG: BEGIN
+      if (SphericalNucleusTest==true) {
+        Temperature=200.0;
+        SourceRate=1.0;
+      }
+//DEBUG: END
 
       beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*Temperature));
       A=2.0*SourceRate/Pi*pow(beta,4);
@@ -174,17 +189,25 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
           r=Vector3D::Length(ll);
           cosTheta=Vector3D::DotProduct(ll,ExternalNormal)/r;
 
-          if (Vector3D::DotProduct(ll,Rosina[iPoint].NudeGauge.LineOfSight)<0.0) {
+          if ((Vector3D::DotProduct(ll,Rosina[iPoint].NudeGauge.LineOfSight)<0.0)||(DisregardInstrumentOrientationFlag==true)) {
             //the particle flux can access the nude gauge
             double sinLineOfSightAngle=sqrt(1.0-pow(Vector3D::DotProduct(ll,Rosina[iPoint].NudeGauge.LineOfSight)/r,2));
+
+            if (DisregardInstrumentOrientationFlag==true) {
+              sinLineOfSightAngle=0.0;
+            }
 
 
             tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+sinLineOfSightAngle/3.8);
           }
 
-          if ((c=Vector3D::DotProduct(ll,Rosina[iPoint].RamGauge.LineOfSight))<0.0)  {
+          if (((c=Vector3D::DotProduct(ll,Rosina[iPoint].RamGauge.LineOfSight))<0.0)||(DisregardInstrumentOrientationFlag==true))  {
              //the particle flux can bedetected by the ram gauge
             double cosLineOfSightAngle=-c/r;
+
+            if (DisregardInstrumentOrientationFlag==true) {
+              cosLineOfSightAngle=1.0;
+            }
 
             tRamGaugeFlux+=cosTheta/(2.0*pow(r,2)*pow(beta,4)) * cosLineOfSightAngle;
             tRamGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3);
@@ -471,7 +494,7 @@ void RosinaSample::Liouville::Evaluate() {
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
             ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
-            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+            100.0*RosinaSample::NudeGaugeReferenceData[iPoint],100.0*RosinaSample::RamGaugeReferenceData[iPoint],
             OriginalSourceRate,ModifiedSourceRate);
 
 
@@ -480,7 +503,7 @@ void RosinaSample::Liouville::Evaluate() {
             NudeGaugeNucleusSolidAngle,RamGaugeNucleusSolidAngle,
             Rosina[iPoint].Altitude,
             ((Rosina[iPoint].Altitude>0.0) ? productionDistributionNASTRAN[spec][Rosina[iPoint].iNucleusClosestFace]/CutCell::BoundaryTriangleFaces[Rosina[iPoint].iNucleusClosestFace].SurfaceArea : 0.0),
-            RosinaSample::NudeGaugeReferenceData[iPoint],RosinaSample::RamGaugeReferenceData[iPoint],
+            100.0*RosinaSample::NudeGaugeReferenceData[iPoint],100.0*RosinaSample::RamGaugeReferenceData[iPoint],
             OriginalSourceRate,ModifiedSourceRate);
       }
     }
