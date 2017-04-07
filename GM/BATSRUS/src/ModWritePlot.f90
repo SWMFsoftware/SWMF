@@ -538,10 +538,9 @@ subroutine write_plot_common(iFile)
      call close_file
   end if
 
-  if(plot_form(iFile)=='tcp') then
-     ! Write out connectivity and header files
-     call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
-  end if
+  ! Write out header file for tcp format
+  if(plot_form(iFile)=='tcp') &
+       call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
 
   if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
