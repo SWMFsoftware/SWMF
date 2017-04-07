@@ -3702,9 +3702,16 @@ No magnetometer grid file is saved by default.
 	</for>
 #SAVEPLOT
 16			nPlotFile
-3d  MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
+cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
+-1.			DtSavePlot
+-10.			Coord1MinCut
+10.			Coord1MaxCut    
+-10.			Coord2MinCut    
+10.			Coord2MaxCut    
+-10.			Coord3MinCut    
+10.			Coord3MaxCut    
 2d  FUL hdf		StringPlot ! 2d HDF plot with a lot of data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -3721,12 +3728,12 @@ y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 cut ray idl_real8	StringPlot ! 3D cut plot with raytrace info
 1			DnSavePlot
 -1.			DtSavePlot
--10.			xMinCut    
-10.			xMaxCut    
--10.			yMinCut    
-10.			yMaxCut    
--10.			zMinCut    
-10.			zMaxCut    
+-10.			Coord1MinCut    
+10.			Coord1MaxCut    
+-10.			Coord2MinCut    
+10.			Coord2MaxCut    
+-10.			Coord3MinCut    
+10.			Coord3MaxCut    
 -1.			DxSavePlot ! unstructured grid (for IDL plots)
 sph flx idl_ascii	StringPlot ! spherical surface plot
 -1			DnSavePlot
@@ -3864,7 +3871,7 @@ Each of these parts can have different values. Most (but not all) combinations a
 The PlotForm can have one of the following values:
 \begin{verbatim}
 tec             - Node based Tecplot format
-tcp             - Cell centered Tecplot format (implemented for 3d only)
+tcp             - Cell centered Tecplot format (implemented for 3d and cut only)
 hdf             - HDF5 format (for VisIt)
 idl/idl_real4   - Single precision binary "IDL" format
 idl_real8       - Double precision binary "IDL" format
@@ -3889,7 +3896,7 @@ The PlotArea string defines a 1, 2, or 3D volume for plotting:
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
-cut   - 3D, 2D or 1D cut along (curvilinear) coordinates (IDL) 
+cut   - 3D, 2D or 1D cut along (curvilinear) coordinates (IDL and TCP) 
         or a 2D rectangular cut (node based Tecplot)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
@@ -3909,7 +3916,8 @@ The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
 This can be used for reconstructing the full grid and use the data
 with the READAMR library, for example. 
 
-For IDL plots the PlotArea = 'cut' can be used to create cuts
+For IDL and cell centered Tecplot (tcp) plots the PlotArea = 'cut' 
+can be used to create cuts. 
 
 The PlotVar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
@@ -3958,7 +3966,7 @@ values or as non-dimensional values:
 Depending on StringPlot, the following parameters are also read 
 from the parameter file in this order:
 \begin{verbatim}
- xMinCut ... zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
+ xMinCut...zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
  nRadius nLon            if PlotArea is 'eqr' or 'eqb'
  TypeCoordPlot           if PlotArea is 'shl' or 'box'
  RadiusMin RadiusMax     if PlotArea is 'eqr', 'eqb', or 'shl'
@@ -3996,9 +4004,15 @@ latitude (in degrees) coordinates instead of the X, Y, Z coordinates.
 If possible, the data will be averaged to the 2D cut surface during 
 the postprocessing.
 
+For cell centered Tecplot files the cuts work the same way as for IDL,
+but 0 width cuts will produce two cells across instead of interpolating
+to the central plane. On the other hand, the cell centered Tecplot 
+output retains the original AMR grid structure.
+
 For Tecplot plots (PlotForm='tec') and PlotArea='dpl' or 'slc' the plot range 
 clips the cut plane.
-For Tecplot files with PlotArea 'cut', the xMin .. zMax parameters are read
+For node based Tecplot files with PlotArea 'cut', 
+the xMin .. zMax parameters are read
 but interpreted differently from IDL.
 Cuts are entire x, y, or z equal constant planes (1D or 3D cuts are not
 implemented).  For x constant, for example, the y and z ranges 
@@ -4111,8 +4125,9 @@ and the adiabatic index of electrons (ge) if it is different from gamma.\\
 
 Most plot files are written in parallel: each processor
 writes out part of the data. These intermediate files are ASCII in 'tec'
-and 'tcp' format and can be either binary or ASCII in 'idl' format as chosen with
-the #SAVEBINARY command (default is binary). The name of the files are
+and 'tcp' format and can be either binary or ASCII in 'idl' format 
+as chosen with the #SAVEBINARY command (default is binary). 
+The name of the files are
 \begin{verbatim}
  IO2/PlotArea_PlotVar_PlotNumber_TIMESTAMP_PEnumber.extension
 \end{verbatim}
