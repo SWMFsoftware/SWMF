@@ -133,7 +133,7 @@ program spectrum
   !---------------------------------------------------------------------------
   write(*,*)'Spectrum.exe starting'
 
-  call MPI_init(iError)
+!!!  call MPI_init(iError)
 
   call read_param
 
@@ -162,7 +162,7 @@ program spectrum
   if(IsVerbose)write(*,*)'done with save_label'
   write(*,*)'Spectrum.exe ending'
 
-  call MPI_finalize(iError)
+!!!  call MPI_finalize(iError)
 
 contains
 
@@ -572,6 +572,7 @@ contains
   !==========================================================================
   subroutine read_param
 
+    use ModMPI, ONLY: MPI_COMM_SELF
     use ModReadParam
 
     character(len=200)      :: NameCommand
@@ -579,7 +580,7 @@ contains
     integer                     :: iPixel
     character(len=*), parameter :: NameSub='read_param'
     !------------------------------------------------------------------------
-    call read_file('SPECTRUM.in')
+    call read_file('SPECTRUM.in', iCommIn=MPI_COMM_SELF)
 
     call read_init('  ') 
 
@@ -1203,7 +1204,7 @@ subroutine CON_stop(String)
   write(*,*)'CON_stop called on with String='
   write(*,*) String
 
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
+!!!  call MPI_abort(MPI_COMM_WORLD, nError, iError)
   stop
   
 end subroutine CON_stop
