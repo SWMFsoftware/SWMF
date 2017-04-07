@@ -867,11 +867,6 @@ contains
     FaceState_VI(P_,body1_)=BodyP_I(1)
 
     CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
-    ! Convert velocity to momentum
-    do iBoundary=body1_,Coord3MaxBc_  
-       CellState_VI(rhoUx_:rhoUz_,iBoundary) = &
-            FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
-    end do
 
     UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
 
