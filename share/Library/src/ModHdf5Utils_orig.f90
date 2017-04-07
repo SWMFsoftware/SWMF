@@ -397,9 +397,10 @@ contains
   subroutine open_hdf5_file(FileID, Filename, iComm)
 
     character (len=80), intent(in) :: Filename
-    integer :: iErrorHdf, AccessTemplate
+    integer :: iErrorHdf
+    integer (HID_T) :: AccessTemplate
     integer, optional, intent(in) :: iComm
-    integer, intent(inout) :: FileID
+    integer (HID_T), intent(inout) :: FileID
     integer :: iHdfMajor, iHdfMinor, iHdfRelease
 
     call h5open_f(iErrorHdf)                    
