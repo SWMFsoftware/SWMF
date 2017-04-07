@@ -38,6 +38,8 @@ module ModWriteTecplot
   !
   ! Possibly limit to a cut region (?) Things get complicated.
 
+  use ModNumConst,  ONLY: cHalfPi
+
   implicit none
 
   SAVE
@@ -71,15 +73,17 @@ module ModWriteTecplot
   ! Total number of connectivity bricks
   integer:: nBrickAll
 
-  integer:: iRecData = -1
   character(len=80) :: StringFormat
 
 contains
   !===========================================================================
   subroutine write_tecplot_data(iBlock, nPlotVar, PlotVar_GV)
 
-    use BATL_lib,  ONLY: nI, nJ, nK, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+    use BATL_lib,  ONLY: MaxDim, nDim, nI, nJ, nK, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+         r_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
+         IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
+    use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain,   ONLY: BlkTest
@@ -87,7 +91,8 @@ contains
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
 
-    integer:: i, j, k
+    integer:: i, j, k, iRecData
+    real:: Xyz_D(MaxDim)
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_tecplot_data'
@@ -106,22 +111,45 @@ contains
           iRecData = nint(CellIndex_GB(i,j,k,iBlock))
           ! Skip points outside the cut
           if(iRecData == 0) CYCLE
+          call set_xyz_d
           write(UnitTmp_, StringFormat, REC=iRecData) &
-               Xyz_DGB(1:3,i,j,k,iBlock),             &
-               PlotVar_GV(i,j,k,1:nPlotVar),          &
-               CharNewLine
+                  Xyz_D(1:nDim), PlotVar_GV(i,j,k,1:nPlotVar), &
+                  CharNewLine
        end do; end do; end do
     else
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! Skip points outside the cut
           if(CellIndex_GB(i,j,k,iBlock) == 0.0) CYCLE
+          call set_xyz_d
           write(UnitTmp_,"(50(ES14.6))")            &
-               Xyz_DGB(1:3,i,j,k,iBlock),           &
-               PlotVar_GV(i,j,k,1:nPlotVar)
+               Xyz_D(1:nDim), PlotVar_GV(i,j,k,1:nPlotVar)
        end do; end do; end do
     end if
 
     if(DoTestMe) write(*,*) NameSub,' finished'
+
+  contains
+
+    subroutine set_xyz_d
+
+      ! Set the coordinates and fix them to fill the hole at the pole
+
+      Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
+      if(.not.IsAnyAxis) RETURN
+
+      if(IsLatitudeAxis)then
+         if(  k==1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
+              k==nK .and. CoordMax_DB(Lat_,iBlock) >= +cHalfPi) &
+              Xyz_D(1:2) = 0.0
+      elseif(IsSphericalAxis)then
+         if(  j==1  .and. CoordMin_DB(Theta_,iBlock) <= 0.0 .or. &
+              j==nJ .and. CoordMax_DB(Theta_,iBlock) >= cPi) &
+              Xyz_D(1:2) = 0.0
+      elseif(IsCylindricalAxis)then
+         if(  i==1 .and. CoordMin_DB(r_,iBlock) <= 0.0) &
+              Xyz_D(1:2) = 0.0
+      end if
+    end subroutine set_xyz_d
 
   end subroutine write_tecplot_data
 
@@ -186,56 +214,67 @@ contains
        CutMin_D = plot_range(1:5:2,iFile)
        CutMax_D = plot_range(2:6:2,iFile)
 
-       ! Count number of cells inside the cut written by this processor
+       if(DoTestMe)write(*,*) NameSub,' CutMin_D, CutMax_D=', &
+            CutMin_D, CutMax_D
+
+       ! For more than 1 processors: 
+       ! in stage 1 count number of cells written by this processor
+       ! In stage 2 set global cell index
+       nStage = min(2, nProc)
+
        iCell = 0
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          BlockMin_D = CoordMin_DB(:,iBlock)
-          BlockMax_D = CoordMax_DB(:,iBlock)
-          ! Check if block is fully outside of the cut
-          if(any(BlockMin_D > CutMax_D)) CYCLE
-          if(any(BlockMax_D < CutMin_D)) CYCLE
+       do iStage = 1, nStage
+          do iBlock = 1, nBlock
+             if(iStage == nStage) CellIndex_GB(:,:,:,iBlock) = 0.0
+             if(Unused_B(iBlock)) CYCLE
+             BlockMin_D = CoordMin_DB(:,iBlock)
+             BlockMax_D = CoordMax_DB(:,iBlock)
 
-          ! Calculate start and ending indexes
-          CellSize_D = CellSize_DB(:,iBlock)
-          iStart_D = max(     1, nint(0.49+(CutMin_D - BlockMin_D)/CellSize_D))
-          iEnd_D   = min(nIJK_D, nint(1.51+(CutMax_D - BlockMin_D)/CellSize_D))
-          iCell = iCell + product(max(0, iEnd_D - iStart_D + 1))
-       end do
-       ! Gather the number of cells written by other processors
-       allocate(nCell_P(0:nProc-1))
-       call MPI_allgather(iCell, 1, MPI_INTEGER, &
-            nCell_P, 1, MPI_INTEGER, iComm, iError)
+             ! Check if block is fully outside of the cut
+             if(any(BlockMin_D > CutMax_D)) CYCLE
+             if(any(BlockMax_D < CutMin_D)) CYCLE
 
-       ! Add up number of cells written by the previous processors
-       iCell = 0
-       if(iProc > 0) iCell = sum(nCell_P(0:iProc-1))
+             ! Calculate start and ending indexes
+             ! The 0.01 is used to make sure that there are at least
+             ! 2 cells around a 0 width dimension.
+             CellSize_D = CellSize_DB(:,iBlock)
+             iStart_D=max(1,nint(-0.01 + (CutMin_D-BlockMin_D)/CellSize_D))
+             iEnd_D  =min(nIJK_D,nint(1.01 + (CutMax_D-BlockMin_D)/CellSize_D))
+             
+             if(iStage < nStage)then
+                ! Just count the number of cells inside the cut
+                iCell = iCell + product(max(0, iEnd_D - iStart_D + 1))
+                CYCLE
+             end if
 
-       ! Set global cell index for each cell inside the cut
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          ! Set cell index to 0 (indicates cells outside the cut)
-          CellIndex_GB(:,:,:,iBlock) = 0
-
-          ! Check if block is fully outside of the cut
-          BlockMin_D = CoordMin_DB(:,iBlock)
-          BlockMax_D = CoordMax_DB(:,iBlock)
-          if(any(BlockMin_D > CutMax_D)) CYCLE
-          if(any(BlockMax_D < CutMin_D)) CYCLE
-
-          ! Calculate start and ending indexes
-          CellSize_D = CellSize_DB(:,iBlock)
-          iStart_D = max(     1, nint(0.49+(CutMin_D - BlockMin_D)/CellSize_D))
-          iEnd_D   = min(nIJK_D, nint(1.51+(CutMax_D - BlockMin_D)/CellSize_D))
-          do k = iStart_D(3), iEnd_D(3)
-             do j = iStart_D(2), iEnd_D(2)
-                do i = iStart_D(1), iEnd_D(1)
-                   iCell = iCell + 1
-                   CellIndex_GB(i,j,k,iBlock) = iCell
+             ! Set global cell index for each cell inside the cut
+             do k = iStart_D(3), iEnd_D(3)
+                do j = iStart_D(2), iEnd_D(2)
+                   do i = iStart_D(1), iEnd_D(1)
+                      iCell = iCell + 1
+                      CellIndex_GB(i,j,k,iBlock) = iCell
+                   end do
                 end do
              end do
           end do
+          if(iStage < nStage)then
+             ! Collect the number of cells written by other processors
+             allocate(nCell_P(0:nProc-1))
+             call MPI_allgather(iCell, 1, MPI_INTEGER, &
+                  nCell_P, 1, MPI_INTEGER, iComm, iError)
+             if(iProc == 0)then
+                iCell = 0
+                ! Store total number of points saved
+                nPointAll = sum(nCell_P)
+             else
+                ! Add up number of cells written by the previous processors
+                iCell = sum(nCell_P(0:iProc-1))
+             end if
+             deallocate(nCell_P)
+          end if
        end do
+       ! Store total number of points saved when running on 1 processor
+       if(nStage == 1) nPointAll = iCell
     else
        ! Full 3D plot
        ! count number of cells written by processors before this one
@@ -267,9 +306,11 @@ contains
     call set_tree_periodic(.false.)
 
     if(DoSaveOneTecFile)then
+       ! Two stages are needed to figure out the global brick indexes
        nStage = 2
        nBrick = 0
        allocate(nBrick_P(0:nProc-1))
+       ! Open connectivity file as direct access
        call open_file(File=NameFile, ACCESS='direct', RECL=lRecConnect, &
             iComm=iComm, NameCaller=NameSub//'_direct_connect')
     else
@@ -310,7 +351,7 @@ contains
           if(DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
 
           iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
-
+          
           if(iStage < nStage)then
              ! Count the number of bricks for this processor
              if(DoCut)then
@@ -327,7 +368,6 @@ contains
           end if
 
           if(DoSaveOneTecFile)then
-
              do i = i0, i1; do j = j0, j1; do k = k0, k1
                 if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
                 iRec      = iRec + 1
@@ -372,9 +412,6 @@ contains
     ! Reset periodicity as it was
     call set_tree_periodic(.true.)
 
-    ! Reset iRec for next plot
-    iRecData = -1
-
     ! Calculate and store total number of bricks for header file
     if(DoSaveOneTecFile)then
        if(iProc == 0) nBrickAll = sum(nBrick_P)
@@ -384,12 +421,7 @@ contains
     end if
 
     ! Calculate and store total number of cells for header file
-    if(DoCut)then
-       if(iProc == 0) nPointAll = sum(nCell_P)
-       deallocate(nCell_P)
-    elseif(iProc == 0)then
-       nPointAll = nNodeUsed*nIJK
-    end if
+    if(.not. DoCut .and. iProc == 0) nPointAll = nNodeUsed*nIJK
 
     deallocate(iCell_G)
 
