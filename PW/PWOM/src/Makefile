@@ -106,4 +106,4 @@ clean: cleanfiles
 	rm -rf Tmp_
 
 distclean: clean
-	rm -f PLANET *_planet.f *_planet.f90
+	rm -f PLANET *_planet.f *_planet.f90 Makefile.planet
