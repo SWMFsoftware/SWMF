@@ -35,7 +35,7 @@ subroutine MH_set_parameters(TypeAction)
   use CON_axes,         ONLY: init_axes, get_axes, &
        dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
   use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
-       split_string, join_string, open_file
+       split_string, join_string, open_file, lower_case
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModReadParam
@@ -178,6 +178,9 @@ subroutine MH_set_parameters(TypeAction)
   character(len=10) :: NameBoundary_I(zMaxBc_-SolidBc_+1+Coord3MaxBc_)
   integer :: iNameBoundary, nNameBoundary
   real    :: BoundaryStateDim_V(1:nVar)
+
+  integer :: iTestVar, iError
+  character(len=10) :: NameTestVar, NameVar
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
@@ -491,7 +494,18 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('iProcTest',PROCtest)
 
      case("#TESTVAR")
-        call read_var('iVarTest ',VARtest)
+        call read_var('NameTestVar', NameTestVar, IsLowerCase=.true.)
+        VarTest = -1
+        do iTestVar =1,nVar
+           NameVar = NameVar_V(iTestVar)
+           call lower_case(NameVar)
+           if (NameTestVar /= NameVar) CYCLE
+           VarTest = iTestVar
+           EXIT
+        end do
+        if(VarTest < 0) read(NameTestVar,*,iostat=iError) VarTest
+        if (iError /= 0) call stop_mpi(NameSub//': unknown NameTestVar =' &
+             //trim(NameTestVar))
 
      case("#TESTDIM")
         call read_var('iDimTest ',DIMtest)
