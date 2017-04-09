@@ -204,7 +204,9 @@ int main() {
 
     //increment the sampled parameters 
     DensitySample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3));
-    FluxSample+=cosTheta/(2.0*r2*pow(beta,4));
+
+//    FluxSample+=cosTheta/(2.0*r2*pow(beta,4));
+    FluxSample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3)) * 2.0/(beta*sqrt(Pi)); 
   }
 
   DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests;
