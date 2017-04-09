@@ -19,8 +19,13 @@ const double Temp=200.0;
 const double MolMass=_H2O__MASS_;
 
 const double SamplingTime=3600.0;
-const int nTotalTests=10000;
+const int nTotalTests=100000;
 const int nRadialIntervals=200;
+
+const int VelocityDistributionMode__Maxwellian=0;
+const int VelocityDistributionMode__Random=1;
+
+const int VelocityDistributionMode=VelocityDistributionMode__Maxwellian;
 
 //====================================================
 //Get the particle velocity that is injected with Maxwellian distribution
@@ -98,18 +103,23 @@ double InjectMaxwellianDistribution(double *v,double *ExternalNormal) {
 
 int main() {
   int i,iTest,idim;
-  double ParticleWeight,TimeStep,x[3],v[3],ExternalNormal[3],r;
+  double speed,f,fmax,beta,ParticleWeight,TimeStep,x[3],v[3],ExternalNormal[3],r;
 
   //init the sampling mesh
   double *SamplingBufferDensity=new double[nRadialIntervals];
   double *SamplingBufferFlux=new double[nRadialIntervals];
   double dr=MaxAltitude/nRadialIntervals;
+  double MeanGeneratedSpeed=0.0;
 
   for (i=0;i<nRadialIntervals;i++) SamplingBufferDensity[i]=0.0,SamplingBufferFlux[i]=0.0;
   
   //get the particle weight, and the time step 
   ParticleWeight=Flux*4.0*Pi*pow(R0,2) * SamplingTime/nTotalTests;
   TimeStep=dr/1.0E3/8.0;
+  
+  beta=sqrt(MolMass/(2.0*Kbol*Temp)); 
+  fmax=2.0*pow(1.0/beta,2)*exp(-1.0);
+  
 
   //perform testing
   for (iTest=0;iTest<nTotalTests;iTest++) {
@@ -121,7 +131,28 @@ int main() {
       x[idim]*=R0;
     }
 
-    InjectMaxwellianDistribution(v,ExternalNormal); 
+    switch (VelocityDistributionMode) {
+    case VelocityDistributionMode__Maxwellian: 
+      InjectMaxwellianDistribution(v,ExternalNormal); 
+      break;
+    case VelocityDistributionMode__Random:
+      //distribute the direction of the vector
+      do {
+        Vector3D::Distribution::Uniform(v);
+      }
+      while(Vector3D::DotProduct(v,x)<=0.0); 
+
+      //distribute the speed 
+      do {
+        speed=5.0/beta*rnd();
+      }
+      while (pow(speed,2)*exp(-pow(speed*beta,2))/fmax<rnd()); 
+  
+//speed=4.848213e+02;
+
+      for (idim=0;idim<3;idim++) v[idim]*=speed;
+      MeanGeneratedSpeed+=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); 
+    }
 
     //trace the particle until it left the domain 
     do {
@@ -139,13 +170,56 @@ int main() {
   }
 
   //output sampled results 
-  printf("VAIABLES=\"r\", \"Altitude\", \"Density\", \"Total Flux\"\n");
+  printf("Mean Generated Speed=%e\n",MeanGeneratedSpeed/nTotalTests); 
+  printf("VAIABLES=\"r\", \"Altitude\", \"Density\", \"Total Flux\", \"Mean Speed\"\n");
 
   for (i=0;i<nRadialIntervals;i++) {
     double Volume=4.0/3.0*Pi*(pow(R0+(i+1)*dr,3)-pow(R0+i*dr,3));
 
-    printf("%e %e %e %e\n",R0+(i+0.5)*dr,(i+0.5)*dr,SamplingBufferDensity[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingTime/Volume);
+    printf("%e %e %e %e %e\n",R0+(i+0.5)*dr,(i+0.5)*dr,SamplingBufferDensity[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingBufferDensity[i]);
   }
+
+  //evaluate the density, velocity, and flux with a Monte Carlo technique 
+  double A,r2,cosTheta,SpeedSample=0.0,DensitySample,FluxSample,ll[3];  
+  double xSample[3]={0.0,0.0,18.6E3}; //IMPORTANT: the pont of sampling is on the POSITIVE Z-AXIS 
+
+  DensitySample=0.0,FluxSample=0.0;
+  A=Flux*2.0*pow(beta,4)/Pi;
+
+  for (iTest=0;iTest<nTotalTests;iTest++) { 
+    Vector3D::Distribution::Uniform(x);
+    r2=0.0,cosTheta=0.0; 
+
+    if (x[2]<0.0) continue; //the sampling point cannot be seen from the point 'x'
+
+    for (idim=0;idim<3;idim++) {
+      x[idim]*=R0;
+
+      ll[idim]=xSample[idim]-x[idim];
+      r2+=pow(ll[idim],2);
+      cosTheta+=x[idim]*ll[idim];
+    }
+
+    cosTheta/=R0*sqrt(r2);
+
+    //increment the sampled parameters 
+    DensitySample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3));
+    FluxSample+=cosTheta/(2.0*r2*pow(beta,4));
+  }
+
+  DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests;
+  FluxSample*=A*(4.0*Pi*pow(R0,2))/nTotalTests;
  
+  printf("Monte Carlo Test at xSample=%e, %e,%e\nDensity=%e\nFlux=%e\nSpeed=%e\n",xSample[0],xSample[1],xSample[2],DensitySample,FluxSample,FluxSample/DensitySample);
+
+  std::cout << "2.0/(beta*sqrt(Pi))=" << 2.0/(beta*sqrt(Pi)) << std::endl;
+
+  //macrospcopic paramters obtaind with the parmicle model at the same altitude
+   i=(sqrt(xSample[0]*xSample[0]+-xSample[1]*xSample[1]+xSample[2]*xSample[2])-R0)/dr;
+
+  printf("VAIABLES=\"r\", \"Altitude\", \"Density\", \"Total Flux\", \"Mean Speed\"\n");
+  double Volume=4.0/3.0*Pi*(pow(R0+(i+1)*dr,3)-pow(R0+i*dr,3));
+  printf("%e %e %e %e %e\n",R0+(i+0.5)*dr,(i+0.5)*dr,SamplingBufferDensity[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingBufferDensity[i]);
+          
   return 1;
 }
