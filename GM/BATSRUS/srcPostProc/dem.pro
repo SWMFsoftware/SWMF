@@ -11,39 +11,66 @@ pro dem
   KB = 1.38064852e-16           ; Boltzmann Constant in cm2 g s-2 K-1
   RSun = 7e10                   ; solar radius in cm
 
-; Set IsDebug flag
+; Set Debug flag
   read, IsDebug, prompt = 'Debug mode? (1 means yes ) ='
 
-; IsDebug setup
+; Debug setup
   if IsDebug eq 1 then begin
      IsTest = 0
-     IsVerbose = 0
+     IsVerbose = 1
 
-     NameFile = 'box8.out'
+     filename = 'debug-box.out'
+     read_data
 
      iRho = 0
      IsTe = 0
-     iTe = 12
      iPe = 10
 
-     Tmin = 1e4
-     Tmax = 1e9
-     DT = 1e4
-     NameFileOut = 'IsDebug-box8'
+     LogTmin = 5
+     LogTmax = 7
+     DLogT = .05
 
-     !x.margin=[10,3]
   endif else begin
-; Command-line setup
+
+; Test setup 
      read, IsTest, prompt = ' Testing? (1 means yes ) = '
-     read, IsVerbose, prompt = ' Verbose? (1 means yes ) = '
-; String holders
-     filename = ''
-     NameFileOut=''
-; Non-testing setup
-     if IsTest ne 1 then begin 
+     if IsTest eq 1 then begin 
+        IsDebug = 0
+        IsVerbose = 1
+        NameFileOut = 'test-dem.eps'
+
+        iRho = 0
+        IsTe = 1
+        iTe = 1
+
+        LogTmin = 1
+        LogTmax = 3
+        DLogT = 1
+
+        w =  MAKE_ARRAY(1000, 1, 1, 3, /DOUBLE, VALUE = 0.)
+        x = w
+        x[0,*,*] = 1.
+
+        w[0:10,*,*,iTe] = 10
+        w[11:999,*,*,iTe] = 99
+        
+        w[0:10,*,*,iRho] = Mp
+        w[11:999,*,*,iRho] = 100*Mp
+
+        DX = 1./RSun
+
+     endif else begin
+
+; Command-line setup
+        IsDebug = 0
+        IsTest = 0
+        read, IsVerbose, prompt = ' Verbose? (1 means yes ) = '
+        filename = ''
+        NameFileOut=''
+        read, NameFileOut, prompt = 'output file = '
         read, filename, prompt = 'data file = '
-        read, NameFileOut, prompt = 'name of output file (.pdf)= '
-; Get indexes of variables
+        read_data
+
         read,iRho, prompt = 'index of electron density variable = '
         read,IsTe, prompt = $
              'use electron pressure (0) or electron temperature (1) ='
@@ -54,37 +81,12 @@ pro dem
         iRho = fix(iRho)
         if IsTe eq 0 then iPe = fix(iPe)
         if IsTe eq 1 then iTe = fix(iTe)
-; Get temperature grid information
-        read, Tmin, prompt = 'Tmin = '
-        read, Tmax, prompt = 'Tmax = '
-        read, DT, prompt = 'DT = '
-     endif
+
+        read, LogTmin, prompt = 'LogTmin = '
+        read, LogTmax, prompt = 'LogTmax = '
+        read, DLogT, prompt = 'DLogT = '
+     endelse
   endelse
-
-; Generate test-data
-  if IsTest eq 1 then begin 
-     filename = 'dem-test-box.out'
-     NameFileOut = 'dem-test-out.eps'
-     read_data
-
-     Tmin = 1
-     Tmax = 101
-     DT = 1
-
-     IsTe = 1
-
-     iRho = 0
-     iTe = 11
-
-     w[0:10,*,*,iTe] = 10
-     w[11:1000,*,*,iTe] = 99
-     
-     w[0:10,*,*,iRho] = Mp
-     w[11:1000,*,*,iRho] = 100*Mp
-
-     DX = 1./RSun
-
-  endif
 
 ; Data grid size
   sizex = size(x)
@@ -96,13 +98,17 @@ pro dem
   DZ = (max(x[0,0,*,2]) - min(x[0,0,*,2]))/max([1,nZ-1])
 
 ; Set up temperature grid
-  NT = round((Tmax-Tmin)/DT)
-  Tarray = Tmin+DT*FINDGEN(NT+1)
-  DEMarray = Tarray*0. + 1e-10
+  NT = round((LogTmax - LogTmin) / DLogT)
+  Tarray = MAKE_ARRAY(NT+1, /DOUBLE, VALUE = 0.)
+  for i = 0,NT do begin
+     Tarray[i] = 10.^LogTmin * 10.^(DLogT * i)
+  endfor
+  DEMarray = MAKE_ARRAY(NT+1, /DOUBLE, VALUE = 1e-10)
 
 ; In case of verbose print grid information
   if IsVerbose eq 1 then begin
-     print, 'Tarray = ', Tarray
+     print, 'LogTmin, LogTmax, DLogT, NT, Tarray = ', $
+            LogTmin, LogTmax, DLogT, NT, Tarray
      print, 'nX, nY, nZ = ',nX,nY,nZ
      print, 'DX, DY, DZ = ',DX,DY,DZ
   endif
@@ -120,7 +126,7 @@ pro dem
               if IsTe eq 0 then Te = w[i,j,k,iPe]/w[i,j,k,iRho] * Mp/KB
               if IsTe eq 1 then Te = w[i,j,k,iTe]
               if (Te lt Tarray[l+1]) and (Te ge Tarray[l])then begin 
-                 DEMarray[l] = DEMarray[l] + (w[i,j,k,iRho]/Mp)^2*Dh/DT
+                 DEMarray[l] = DEMarray[l] + (w[i,j,k,iRho]/Mp)^2*Dh/10.^DLogT
                  break
               endif
            endfor
@@ -153,11 +159,12 @@ pro dem
   plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2,$
        yrange=[1e18,1e28], xrange=[1e4, 1e7]
 
-  if IsDebug ne 1 then  close_device, /pdf
-
+  if IsDebug ne 1 then begin
+     close_device, /pdf
+  endif else begin
 ; Plot on screen
-  set_plot,'X'
-  window, 1
-  plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2
-
+     set_plot,'X'
+     window, 1
+     plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2
+  endelse
 end
