@@ -605,7 +605,8 @@ The time step and physical time to start testing.
 #TESTVAR
 1                       iVarTest
 
-Index of variable to be tested. Default is rho_="1", i.e. density.
+Index or the name of the variable to be tested.
+Default is rho_="1", i.e. density.
 </command>
 
 <command name="TESTDIM">
