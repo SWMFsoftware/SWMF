@@ -24,8 +24,9 @@ const int nRadialIntervals=200;
 
 const int VelocityDistributionMode__Maxwellian=0;
 const int VelocityDistributionMode__Random=1;
+const int VelocityDistributionMode__RandomMaxwellian=2;
 
-const int VelocityDistributionMode=VelocityDistributionMode__Maxwellian;
+const int VelocityDistributionMode=VelocityDistributionMode__Random;
 
 //====================================================
 //Get the particle velocity that is injected with Maxwellian distribution
@@ -103,7 +104,7 @@ double InjectMaxwellianDistribution(double *v,double *ExternalNormal) {
 
 int main() {
   int i,iTest,idim;
-  double speed,f,fmax,beta,ParticleWeight,TimeStep,x[3],v[3],ExternalNormal[3],r;
+  double speed,f,fmax,beta,ParticleWeight,TimeStep,x[3],v[3],ExternalNormal[3],r,norm[3];
 
   //init the sampling mesh
   double *SamplingBufferDensity=new double[nRadialIntervals];
@@ -135,6 +136,14 @@ int main() {
     case VelocityDistributionMode__Maxwellian: 
       InjectMaxwellianDistribution(v,ExternalNormal); 
       break;
+    case VelocityDistributionMode__RandomMaxwellian:
+      do {
+        Vector3D::Distribution::Uniform(norm);
+      }
+      while (Vector3D::DotProduct(norm,x)>0.0); 
+
+      InjectMaxwellianDistribution(v,norm);
+      break;
     case VelocityDistributionMode__Random:
       //distribute the direction of the vector
       do {
@@ -144,7 +153,7 @@ int main() {
 
       //distribute the speed 
       do {
-        speed=5.0/beta*rnd();
+        speed=10.0/beta*rnd();
       }
       while (pow(speed,2)*exp(-pow(speed*beta,2))/fmax<rnd()); 
   
@@ -203,14 +212,27 @@ int main() {
     cosTheta/=R0*sqrt(r2);
 
     //increment the sampled parameters 
-    DensitySample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3));
+    switch (VelocityDistributionMode) {
+    case VelocityDistributionMode__Maxwellian:
+      DensitySample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3));
 
-//    FluxSample+=cosTheta/(2.0*r2*pow(beta,4));
-    FluxSample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3)) * 2.0/(beta*sqrt(Pi)); 
+      //FluxSample+=cosTheta/(2.0*r2*pow(beta,4));
+      FluxSample+=cosTheta*sqrt(Pi)/(4.0*r2*pow(beta,3)) * 2.0/(beta*sqrt(Pi)); 
+
+      //tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+      //tRamGaugeFlux+=cosTheta/(pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,2) *2.0/sqrt(Pi);
+
+      break;
+    case VelocityDistributionMode__Random:  
+      A=2.0* Flux*pow(beta,3)/(Pi*sqrt(Pi));
+  
+      DensitySample+=1.0/(2.0*r2*pow(beta,2)); 
+      FluxSample+=sqrt(Pi)/(4.0*r2*pow(beta,3)); 
+    }
   }
 
-  DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests;
-  FluxSample*=A*(4.0*Pi*pow(R0,2))/nTotalTests;
+  DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests   *sqrt(Pi)/2.0;
+  FluxSample*=A*(4.0*Pi*pow(R0,2))/nTotalTests  *sqrt(Pi)/2.0;
  
   printf("Monte Carlo Test at xSample=%e, %e,%e\nDensity=%e\nFlux=%e\nSpeed=%e\n",xSample[0],xSample[1],xSample[2],DensitySample,FluxSample,FluxSample/DensitySample);
 
