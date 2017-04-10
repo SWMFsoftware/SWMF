@@ -231,8 +231,8 @@ subroutine write_plot_common(iFile)
 
   ! Calculate the record length for direct access data files
   ! The output format for data is ES14.6, so each cell has 
-  ! (nplotvar+3)*14 data, plus a new line character
-  lRecData    = (nPlotvar + 3)*14 + 1
+  ! (nDim + nPlotvar)*14 data, plus a new line character
+  lRecData = (nDim + nPlotvar)*14 + 1
 
   if(plot_form(iFile)=='tcp')then
      ! Calculate and write connectivity file
@@ -1816,6 +1816,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V, IsMhd
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
+  use BATL_lib,      ONLY: nDim
 
   implicit none
 
@@ -1866,10 +1867,12 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
-             // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
+             // '", "Y ' // trim(NameTecUnit_V(UnitX_))
+        if(nDim==3) StringVarTec = trim(StringVarTec) &
              // '", "Z ' // trim(NameTecUnit_V(UnitX_))
      else
-        StringVarTec = 'VARIABLES = "X", "Y", "Z'
+        if(nDim==2) StringVarTec = 'VARIABLES = "X", "Y'
+        if(nDim==3) StringVarTec = 'VARIABLES = "X", "Y", "Z'
      end if
 
   end if
