@@ -503,9 +503,12 @@ subroutine MH_set_parameters(TypeAction)
            VarTest = iTestVar
            EXIT
         end do
+        ! Try reading VarTest as an index.
         if(VarTest < 0) read(NameTestVar,*,iostat=iError) VarTest
         if (iError /= 0) call stop_mpi(NameSub//': unknown NameTestVar =' &
              //trim(NameTestVar))
+        ! Make sure VarTest is in a valid range
+        VarTest = max(1, min(nVar, VarTest))
 
      case("#TESTDIM")
         call read_var('iDimTest ',DIMtest)
