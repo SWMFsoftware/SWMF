@@ -601,12 +601,19 @@ The time step and physical time to start testing.
 </command>
 
 <command name="TESTVAR">
-	<parameter name="iVarTest" type="integer" min="1" default="1"/>
+	<parameter name="NameTestVar" type="string" length="20" case="lower"
+		   default="1" />
 #TESTVAR
-1                       iVarTest
+12		     NameTestVar
 
-Index or the name of the variable to be tested.
-Default is rho_="1", i.e. density.
+#TESTVAR
+p                    NameTestVar
+
+Index or the name of the variable to be tested. The name should agree with
+one of the names in the NameVar_V array in ModEquation.f90 (case insensitive). 
+If an index is given instead of a name, it should be in the range 1 to nVar. 
+
+Default is the first variable that is usually density.
 </command>
 
 <command name="TESTDIM">
