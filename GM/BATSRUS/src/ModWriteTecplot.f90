@@ -38,7 +38,7 @@ module ModWriteTecplot
   !
   ! Possibly limit to a cut region (?) Things get complicated.
 
-  use ModNumConst,  ONLY: cHalfPi
+  use BATL_size,     ONLY: nDim
 
   implicit none
 
@@ -55,7 +55,7 @@ module ModWriteTecplot
   character(len=23), public :: textDateTime
   character(len=22), public :: textNandT
   character, public, parameter:: CharNewLine = char(10)
-  integer,   public, parameter:: lRecConnect = 8*11+1 ! for (8i11,\) format
+  integer,   public, parameter:: lRecConnect = 2**nDim*11+1
   
   ! Local variables
   character (len=23) :: textDateTime0
@@ -105,7 +105,7 @@ contains
     if(DoTestMe) write(*,*) NameSub,' starting with nPlotVar=', nPlotVar
 
     if(DoSaveOneTecFile)then
-       write(StringFormat, '(a,i2,a)') "(", nPlotVar+3, "(ES14.6), a)"
+       write(StringFormat, '(a,i2,a)') "(", nDim+nPlotVar, "(ES14.6), a)"
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! Record index is the global cell index
           iRecData = nint(CellIndex_GB(i,j,k,iBlock))
@@ -164,7 +164,7 @@ contains
     use ModMain,      ONLY: nBlockMax
     use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
          MPI_allgather, MPI_INTEGER
-    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, nIJK_D, &
+    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, nIJK_D, k0_, nKp1_, kDim_, &
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
          CoordMin_DB, CoordMax_DB, CellSize_DB, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
@@ -207,8 +207,8 @@ contains
          NameFile, DoCut
 
     allocate( &
-         CellIndex_GB(0:nI+1,0:nJ+1,0:nK+1,MaxBlock), &
-         iCell_G(0:nI+1,0:nJ+1,0:nK+1))
+         CellIndex_GB(0:nI+1,0:nJ+1,k0_:nKp1_,MaxBlock), &
+         iCell_G(0:nI+1,0:nJ+1,k0_:nKp1_))
 
     if(DoCut)then
        CutMin_D = plot_range(1:5:2,iFile)
@@ -340,7 +340,7 @@ contains
           j0 = 1
           if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) j0 = 0
           k0 = 1
-          if(DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
+          if(nDim == 3 .and. DiLevelNei_IIIB(0,0,-1,iBlock) == 1) k0 = 0
 
           ! Finish at nI unless there is no block on the right or it is finer
           i1 = nI
@@ -348,7 +348,7 @@ contains
           j1 = nJ
           if(DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
           k1 = nK
-          if(DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
+          if(nDim==3 .and. DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
 
           iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
           
@@ -357,7 +357,7 @@ contains
              if(DoCut)then
                 do i = i0, i1; do j = j0, j1; do k = k0, k1
                    ! Skip bricks that are not fully inside cut
-                   if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
+                   if(any(iCell_G(i:i+1,j:j+1,k:k+kDim_)==0)) CYCLE
                    nBrick = nBrick + 1
                 end do; end do; end do
              else
@@ -368,34 +368,61 @@ contains
           end if
 
           if(DoSaveOneTecFile)then
-             do i = i0, i1; do j = j0, j1; do k = k0, k1
-                if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
-                iRec      = iRec + 1
-                write(UnitTmp_,'(8i11,a)', REC=iRec) &
-                     iCell_G(i  ,j  ,k  ), &
-                     iCell_G(i+1,j  ,k  ), &
-                     iCell_G(i+1,j+1,k  ), &
-                     iCell_G(i  ,j+1,k  ), &
-                     iCell_G(i  ,j  ,k+1), &
-                     iCell_G(i+1,j  ,k+1), &
-                     iCell_G(i+1,j+1,k+1), &
-                     iCell_G(i  ,j+1,k+1), &
-                     CharNewLine
-             end do; end do; end do
+             select case(nDim)
+             case(2)
+                do i = i0, i1; do j = j0, j1
+                   if(any(iCell_G(i:i+1,j:j+1,1)==0)) CYCLE
+                   iRec      = iRec + 1
+                   write(UnitTmp_,'(4i11,a)', REC=iRec) &
+                        iCell_G(i  ,j  ,1), &
+                        iCell_G(i+1,j  ,1), &
+                        iCell_G(i+1,j+1,1), &
+                        iCell_G(i  ,j+1,1), &
+                        CharNewLine
+                end do; end do
+             case(3)
+                do i = i0, i1; do j = j0, j1; do k = k0, k1
+                   if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
+                   iRec      = iRec + 1
+                   write(UnitTmp_,'(8i11,a)', REC=iRec) &
+                        iCell_G(i  ,j  ,k  ), &
+                        iCell_G(i+1,j  ,k  ), &
+                        iCell_G(i+1,j+1,k  ), &
+                        iCell_G(i  ,j+1,k  ), &
+                        iCell_G(i  ,j  ,k+1), &
+                        iCell_G(i+1,j  ,k+1), &
+                        iCell_G(i+1,j+1,k+1), &
+                        iCell_G(i  ,j+1,k+1), &
+                        CharNewLine
+                end do; end do; end do
+             end select
           else
-             do i = i0, i1; do j = j0, j1; do k = k0, k1
-                if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
-                nBrickAll = nBrickAll + 1
-                write(UnitTmp_,'(8i11)') &
-                     iCell_G(i  ,j  ,k  ), &
-                     iCell_G(i+1,j  ,k  ), &
-                     iCell_G(i+1,j+1,k  ), &
-                     iCell_G(i  ,j+1,k  ), &
-                     iCell_G(i  ,j  ,k+1), &
-                     iCell_G(i+1,j  ,k+1), &
-                     iCell_G(i+1,j+1,k+1), &
-                     iCell_G(i  ,j+1,k+1)
-             end do; end do; end do
+             select case(nDim)
+             case(2)
+                do i = i0, i1; do j = j0, j1
+                   if(any(iCell_G(i:i+1,j:j+1,1)==0)) CYCLE
+                   nBrickAll = nBrickAll + 1
+                   write(UnitTmp_,'(4i11)') &
+                        iCell_G(i  ,j  ,1), &
+                        iCell_G(i+1,j  ,1), &
+                        iCell_G(i+1,j+1,1), &
+                        iCell_G(i  ,j+1,1)
+                end do; end do
+             case(3)
+                do i = i0, i1; do j = j0, j1; do k = k0, k1
+                   if(any(iCell_G(i:i+1,j:j+1,k:k+1)==0)) CYCLE
+                   nBrickAll = nBrickAll + 1
+                   write(UnitTmp_,'(8i11)') &
+                        iCell_G(i  ,j  ,k  ), &
+                        iCell_G(i+1,j  ,k  ), &
+                        iCell_G(i+1,j+1,k  ), &
+                        iCell_G(i  ,j+1,k  ), &
+                        iCell_G(i  ,j  ,k+1), &
+                        iCell_G(i+1,j  ,k+1), &
+                        iCell_G(i+1,j+1,k+1), &
+                        iCell_G(i  ,j+1,k+1)
+                end do; end do; end do
+             end select
           end if 
        end do ! iBlock
        if(iStage < nStage)then
@@ -454,14 +481,24 @@ contains
     if(DoCut)then
        write(UnitTmp_,'(a)')'TITLE="BATSRUS: cut Data, '//textDateTime//'"'
     else
-       write(UnitTmp_,'(a)')'TITLE="BATSRUS: 3D Data, '//textDateTime//'"'
+       write(UnitTmp_,'(a,i1,a)') &
+            'TITLE="BATSRUS: ', nDim,'D Data,'//textDateTime//'"'
     end if
     write(UnitTmp_,'(a)') trim(StringUnit)
-    write(UnitTmp_,'(a,a,i12,a,i12,a)') &
-         'ZONE T="3D   '//textNandT//'"', &
-         ', N=',nPointAll, &
-         ', E=',nBrickAll, &
-         ', F=FEPOINT, ET=BRICK'
+    select case(nDim)
+    case(2)
+       write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+            'ZONE T="2D   '//textNandT//'"', &
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=QUADRILATERAL'
+    case(3)
+       write(UnitTmp_,'(a,a,i12,a,i12,a)') &
+            'ZONE T="3D   '//textNandT//'"', &
+            ', N=', nPointAll, &
+            ', E=', nBrickAll, &
+            ', F=FEPOINT, ET=BRICK'
+    end select
     call write_tecplot_auxdata
     call close_file
     
