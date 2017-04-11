@@ -122,7 +122,15 @@ module ModUser
 
   ! If this variable is set .true., then use the Haser neutral background
   ! Only for testing purpose
-  logical :: DoUseNeuBackground = .false.
+  logical :: DoUseHaserBackground = .false.
+
+  ! If this variable is set .true., then use the uniform neutral background
+  ! Only for testing purpose
+  logical :: DoUseUniformNeuBackground = .false.
+  real :: nNeuUniformSi, UxNeuUniformSi, UyNeuUniformSi, UzNeuUniformSi, &
+       TNeuUniformSi
+  real :: nNeuUniform, UxNeuUniform, UyNeuUniform, UzNeuUniform, &
+       pNeuUniform
 
   ! Increase ionization near a field line
   logical :: DoUseFieldlineFile = .false.
@@ -193,8 +201,17 @@ contains
        case("#USECGSHAPE")
           call read_var('DoUseCGShape',     DoUseCGShape)
           call read_var('rSphericalBodySi', rSphericalBodySi)
-       case("#USENEUBACKGROUND")
-          call read_var('DoUseNeuBackground', DoUseNeuBackground)
+       case("#USEHASERBACKGROUND")
+          call read_var('DoUseHaserBackground', DoUseHaserBackground)
+       case("#USEUNIFORMNEUBACKGROUND")
+          call read_var('DoUseUniformNeuBackground', DoUseUniformNeuBackground)
+          if (DoUseUniformNeuBackground) then
+             call read_var('nNeuUniformSi',  nNeuUniformSi)
+             call read_var('UxNeuUniformSi', UxNeuUniformSi)
+             call read_var('UyNeuUniformSi', UyNeuUniformSi)
+             call read_var('UzNeuUniformSi', UzNeuUniformSi)
+             call read_var('TNeuUniformSi',  TNeuUniformSi)
+          end if
        case("#SUNDIRECTION")
           call read_var('LatSun', LatSun)
           call read_var('LonSun', LonSun)
@@ -444,6 +461,14 @@ contains
        nStepEnhanceNeu = n_step
     end if
 
+    if (DoUseUniformNeuBackground) then
+       nNeuUniform  = nNeuUniformSi*Si2No_V(UnitN_)
+       UxNeuUniform = UxNeuUniformSi*Si2No_V(UnitU_)
+       UyNeuUniform = UyNeuUniformSi*Si2No_V(UnitU_)
+       UzNeuUniform = UzNeuUniformSi*Si2No_V(UnitU_)
+       pNeuUniform  = nNeuUniform*TNeuUniformSi*Si2No_V(UnitTemperature_)
+    end if
+
     if(iProc==0)then
        write(*,*) 'rSphericalBodySi, rSphericalBody       =', &
             rSphericalBodySi, rSphericalBody
@@ -503,6 +528,19 @@ contains
                PerturbedSwByIO, PerturbedSwBy
           write(*,*) 'PerturbedSwBzIO, PerturbedSwBz =', &
                PerturbedSwBzIO, PerturbedSwBz
+       end if
+       if (DoUseUniformNeuBackground) then
+          write(*,*) 'DoUseUniformNeuBackground    =', DoUseUniformNeuBackground
+          write(*,*) 'nNeuUniformSi, nNeuUniform   =', &
+               nNeuUniformSi, nNeuUniform
+          write(*,*) 'UxNeuUniformSi, UxNeuUniform =', &
+               UxNeuUniformSi, UxNeuUniform
+          write(*,*) 'UyNeuUniformSi, UyNeuUniform =', &
+               UyNeuUniformSi, UyNeuUniform
+          write(*,*) 'UzNeuUniformSi, UzNeuUniform =', &
+               UzNeuUniformSi, UzNeuUniform
+          write(*,*) 'TNeuUniformSi, pNeuUniform =', &
+               TNeuUniformSi, pNeuUniform
        end if
     end if
   end subroutine user_init_session
@@ -1707,7 +1745,7 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModPhysics,    ONLY: SW_Ux, SW_Uy, SW_Uz, Si2No_V, No2Si_V, &
          UnitEnergyDens_, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, &
-         UnitB_, UnitJ_, UnitRhoU_, UnitTemperature_, &
+         UnitB_, UnitJ_, UnitRhoU_, UnitTemperature_, UnitX_,       &
          ElectronPressureRatio, ElectronCharge
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes,    ONLY: MassFluid_I
@@ -1799,6 +1837,27 @@ contains
     SPTerm_IIC     = 0.
     SPe_C          = 0.
     SPeTerm_IC     = 0.
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       if (DoUseHaserBackground) then
+          State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/ &
+               (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
+               exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)* &
+               Si2No_V(UnitN_) * MassFluid_I(nFluid)
+          State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = &
+               State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)*&
+               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+          State_VGB(Neu1P_,i,j,k,iBlock)     = &
+               State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
+               *TempNeuMinSi*Si2No_V(UnitTemperature_)
+       else if (DoUseUniformNeuBackground) then
+          State_VGB(Neu1Rho_,i,j,k,iBlock) = nNeuUniform*MassFluid_I(nFluid)
+          State_VGB(Neu1Ux_, i,j,k,iBlock) = UxNeuUniform
+          State_VGB(Neu1Uy_, i,j,k,iBlock) = UyNeuUniform
+          State_VGB(Neu1Uz_, i,j,k,iBlock) = UzNeuUniform
+          State_VGB(Neu1P_,  i,j,k,iBlock) = pNeuUniform
+       end if
+    end do; end do; end do
 
     ! nElec_C is the electron/ion density in SI units ( n_e=sum(n_i*Zi) )
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -3313,7 +3372,7 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
        if (.not. true_cell(i,j,k,iBlock)) CYCLE
 
-       if (DoUseNeuBackground) then
+       if (DoUseHaserBackground) then
           State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/ &
                (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
                exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)* &
@@ -3324,6 +3383,12 @@ contains
           State_VGB(Neu1P_,i,j,k,iBlock)     = &
                State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
                *TempNeuMinSi*Si2No_V(UnitTemperature_)
+       else if (DoUseUniformNeuBackground) then
+          State_VGB(Neu1Rho_,i,j,k,iBlock) = nNeuUniform*MassFluid_I(nFluid)
+          State_VGB(Neu1Ux_, i,j,k,iBlock) = UxNeuUniform
+          State_VGB(Neu1Uy_, i,j,k,iBlock) = UyNeuUniform
+          State_VGB(Neu1Uz_, i,j,k,iBlock) = UzNeuUniform
+          State_VGB(Neu1P_,  i,j,k,iBlock) = pNeuUniform
        end if
 
        ! If the cometary ion fluid mass density is less than the solar wind 
