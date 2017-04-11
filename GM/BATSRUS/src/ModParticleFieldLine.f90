@@ -58,14 +58,18 @@ module ModParticleFieldLine
        ! storage for particle's position at the beginning of the step
        XOld_ = 4, YOld_ = 5, ZOld_ = 6, & 
        ! stepsize during line extraction
-       Ds_   = 7, &
+       Ds_   = 7, DsOld_ = 8, DsFactor_ = 9, &
        ! direction the tangent to the line
-       DirRX_    =  8, DirRY_    =  9, DirRZ_    = 10,&
-       DirRXOld_ = 11, DirRYOld_ = 12, DirRZOld_ = 13, &
+       DirRX_    = 10, DirRY_    = 11, DirRZ_    = 12, &
+       DirRXOld_ = 13, DirRYOld_ = 14, DirRZOld_ = 15, &
        ! direction of the magnetic field
-       DirBX_    = 14, DirBY_    = 15, DirBZ_    = 16, &
+       DirBX_    = 16, DirBY_    = 17, DirBZ_    = 18, &
+
        ! correction to prevent lines from closing
-       CorrX_    = 17, CorrY_    = 18, CorrZ_    = 19
+       CorrX_    = 19, CorrY_    = 20, CorrZ_    = 21
+
+
+
 
   ! indices of a particle
   integer, parameter:: &
@@ -76,7 +80,10 @@ module ModParticleFieldLine
        ! alignment of particle numbering with direction of B field:
        ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
        ! when magnetic field general direction may be inward
-       Alignment_ = 3
+       Alignment_ = 3, &
+       ! whether to copy the end particle to regular; 
+       ! may need to skip copying if step size was changed
+       DoCopy_    = 4
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
@@ -97,11 +104,11 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 19
+  integer, parameter:: nVarParticleEnd = 21
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
-  integer, parameter:: nIndexParticleEnd = 3
+  integer, parameter:: nIndexParticleEnd = 4
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
@@ -264,7 +271,7 @@ contains
     real, dimension(MaxDim):: Corr_D
 
     ! cosine of angle between direction of field and radial direction
-    real:: CosBR
+    real:: CosBR, DCosBR
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -296,6 +303,11 @@ contains
        BetaRK2  = cQuarter
     end if
 
+    ! initialize factor to apply to step size to 1
+    ! as well as mark a particle for copying
+    StateEnd_VI(DsFactor_,1:Particle_I(KindEnd_)%nParticle) = 1.0
+    iIndexEnd_II(  DoCopy_,  1:Particle_I(KindEnd_)%nParticle) = 1
+
     TRACE_RK2: do
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
@@ -320,7 +332,9 @@ contains
                MIN(SpaceStepMax, MAX(SpaceStepMin,&
                0.1*SQRT(&
                sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-               )))
+               ))) * &
+               StateEnd_VI(DsFactor_, iParticle)
+          
           ! save direction for the second stage
           StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBCurr_D
           DirRCurr_D = DirBCurr_D * &
@@ -365,12 +379,55 @@ contains
           StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
                StateEnd_VI(Ds_, iParticle) * &
                DirRNext_D
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+
+       !\
+       ! Stage 3:
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+
+          ! get the direction of the magnetic field
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = DirBCurr_D)
+
+          DCosBR = abs(&
+               sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
+               sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
+               sum(StateEnd_VI(XOld_:ZOld_,iParticle) * StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
+               sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
+          if(DCosBR > 0.05)then
+             iIndexEnd_II(DoCopy_, iParticle) = 0
+             StateEnd_VI(DsFactor_, iParticle) = &
+                  0.5 * StateEnd_VI(DsFactor_, iParticle) * 0.05 / DCosBR  
+             StateEnd_VI(x_:z_, iParticle) = &
+                  StateEnd_VI(XOld_:ZOld_, iParticle)
+             CYCLE
+          end if
+
+          iIndexEnd_II(DoCopy_, iParticle) = 1
+          StateEnd_VI(DsFactor_, iParticle) = 1.0
 
           if(DoTraceGirard)then
              ! for the extraciotn using Girard's method
              ! save direction of the field and curve's tangent at half-step
              StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
              StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
+             StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
           end if
        end do
        !\
@@ -390,9 +447,11 @@ contains
        if(is_complete()) RETURN
 
        ! increase particle index & copy to regular
-       iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-            iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-            iDirTrace
+       where(iIndexEnd_II(DoCopy_,1:Particle_I(KindEnd_)%nParticle)==1)
+          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+               iDirTrace
+       end where
        call copy_end_to_regular
 
        if(DoTraceGirard) EXIT
@@ -434,14 +493,14 @@ contains
 
           ! get the correction if line starts closing
           CosBR = &
-               sum(StateEnd_VI(x_:z_,iParticle) * DirBPrev_D) / &
+               sum(StateEnd_VI(x_:z_,iParticle) * DirBCurr_D) / &
                sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
           if(abs(CosBR) < 0.5)then
              call get_grad_cosbr(&
                   Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                   iBlock=iIndexEnd_II(0,iParticle),&
                   Grad_D = Corr_D)
-             Corr_D = Corr_D * StateEnd_VI(Ds_,iParticle) * &
+             Corr_D = Corr_D * &
                   (1.0/CosBR - 2.0 * sign(1.0, CosBR))
           else
              Corr_D = 0.0
@@ -452,12 +511,19 @@ contains
           ! get tangent at the current location
           call rotate_girard(&
                DirRPrev_D,&
-               cross_product(Corr_D + (DirBCurr_D-DirBPrev_D), DirRPrev_D)*&
+               cross_product(&
+               Corr_D * cHalf * StateEnd_VI(DsOld_,iParticle) + &
+               (DirBCurr_D-DirBPrev_D), DirRPrev_D)*&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
                DirRCurr_D)
           StateEnd_VI(DirRX_:DirRZ_, iParticle) = DirRCurr_D
 
-          ! get middle location
+          ! correct step - size
+!          StateEnd_VI(Ds_, iParticle) = StateEnd_VI(Ds_, iParticle) / &
+!               MAX(1.0, StateEnd_VI(Ds_, iParticle)*sqrt(sum(DirBDotGradDirB_D**2))/0.1)
+
+
+          ! get next half-step location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                StateEnd_VI(Ds_, iParticle) * &
                cHalf * DirRCurr_D
@@ -503,13 +569,17 @@ contains
           ! tangent at next half-step
           call rotate_girard(&
                DirRPrev_D,&
-               cross_product(Corr_D + (DirBNext_D - DirBPrev_D), DirRCurr_D) *&
+               cross_product(&
+               Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle)) +&
+               (DirBNext_D - DirBPrev_D), DirRCurr_D) *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
                DirRNext_D)
 
           ! store for the next iteration
           StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
           StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
+          StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
+
           ! the "force" is normal to tangential direction, apply rotation
 
           ! get final location
@@ -883,7 +953,7 @@ contains
       use ModMain, ONLY: UseB0
       use ModB0, ONLY: get_b0
       use ModCellGradient, ONLY: calc_gradient
-      integer :: iBlock, i, j, k
+      integer :: iBlock, i, j, k, iDim
       real    :: XyzCell_D(MaxDim), BCell_D(MaxDim)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
@@ -907,18 +977,19 @@ contains
     ! copies indicated variables of known end particles to regular particles
     integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
     integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
+    integer:: iParticle
     !----------------------------------------------------------------------
-    Particle_I(KindReg_)%State_VI(iVarCopy_I,&
-         Particle_I(KindReg_)%nParticle+1:&
-         Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
-         Particle_I(KindEnd_)%State_VI(iVarCopy_I, 1:Particle_I(KindEnd_)%nParticle)
-    Particle_I(KindReg_)%iIndex_II(iIndexCopy_I,&
-         Particle_I(KindReg_)%nParticle+1:&
-         Particle_I(KindReg_)%nParticle+Particle_I(KindEnd_)%nParticle) =&
-         Particle_I(KindEnd_)%iIndex_II(iIndexCopy_I, 1:Particle_I(KindEnd_)%nParticle)
-    Particle_I(KindReg_)%nParticle = &
-         Particle_I(KindReg_)%nParticle + &
-         Particle_I(KindEnd_)%nParticle
+    do iParticle = 1, Particle_I(KindEnd_)%nParticle
+       if(Particle_I(KindEnd_)%iIndex_II(DoCopy_,iParticle)==0)&
+            CYCLE
+       Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
+       Particle_I(KindReg_)%State_VI(iVarCopy_I, &
+            Particle_I(KindReg_)%nParticle) =&
+            Particle_I(KindEnd_)%State_VI(iVarCopy_I, iParticle)
+       Particle_I(KindReg_)%iIndex_II(iIndexCopy_I,&
+            Particle_I(KindReg_)%nParticle) =&
+            Particle_I(KindEnd_)%iIndex_II(iIndexCopy_I, iParticle)
+    end do
   end subroutine copy_end_to_regular
 
   !========================================================================
