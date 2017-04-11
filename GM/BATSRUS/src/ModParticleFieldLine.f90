@@ -13,7 +13,7 @@ module ModParticleFieldLine
        iProc,&
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
-       Particle_I, CellSize_DB, &
+       Particle_I, CellSize_DB, Xyz_DGB, nG, nI, nJ, nK, nBlock, &
        allocate_particles,&
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
@@ -63,7 +63,9 @@ module ModParticleFieldLine
        DirRX_    =  8, DirRY_    =  9, DirRZ_    = 10,&
        DirRXOld_ = 11, DirRYOld_ = 12, DirRZOld_ = 13, &
        ! direction of the magnetic field
-       DirBX_    = 14, DirBY_    = 15, DirBZ_    = 16
+       DirBX_    = 14, DirBY_    = 15, DirBZ_    = 16, &
+       ! correction to prevent lines from closing
+       CorrX_    = 17, CorrY_    = 18, CorrZ_    = 19
 
   ! indices of a particle
   integer, parameter:: &
@@ -95,7 +97,7 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 16
+  integer, parameter:: nVarParticleEnd = 19
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
@@ -117,7 +119,10 @@ module ModParticleFieldLine
 
   ! logical to switch between integration methods
   logical:: DoTraceGirard = .false.
-
+  !\
+  ! Cosine between direction of the field and radial direction: for correcting
+  ! the line's direction to prevent it from closing
+  real, allocatable:: CosBR_GB(:,:,:,:), GradCosBR_DGB(:,:,:,:,:)
 
   !\
   ! initialization related info
@@ -255,6 +260,11 @@ contains
     real, dimension(MaxDim):: DirBPrev_D, DirBCurr_D, DirBNext_D
     ! direction of the tangent to the line
     real, dimension(MaxDim):: DirRPrev_D, DirRCurr_D, DirRNext_D
+    ! correction to prevent line from closing
+    real, dimension(MaxDim):: Corr_D
+
+    ! cosine of angle between direction of field and radial direction
+    real:: CosBR
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -422,10 +432,27 @@ contains
           DirBPrev_D = StateEnd_VI(DirBX_:DirBZ_,iParticle)
           DirRPrev_D = StateEnd_VI(DirRXOld_:DirRZOld_, iParticle)
 
+          ! get the correction if line starts closing
+          CosBR = &
+               sum(StateEnd_VI(x_:z_,iParticle) * DirBPrev_D) / &
+               sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+          if(abs(CosBR) < 0.5)then
+             call get_grad_cosbr(&
+                  Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+                  iBlock=iIndexEnd_II(0,iParticle),&
+                  Grad_D = Corr_D)
+             Corr_D = Corr_D * StateEnd_VI(Ds_,iParticle) * &
+                  (1.0/CosBR - 2.0 * sign(1.0, CosBR))
+          else
+             Corr_D = 0.0
+          end if
+          StateEnd_VI(CorrX_:CorrZ_, iParticle) = Corr_D
+
+
           ! get tangent at the current location
           call rotate_girard(&
                DirRPrev_D,&
-               cross_product(DirBCurr_D-DirBPrev_D,DirRPrev_D)*&
+               cross_product(Corr_D + (DirBCurr_D-DirBPrev_D), DirRPrev_D)*&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
                DirRCurr_D)
           StateEnd_VI(DirRX_:DirRZ_, iParticle) = DirRCurr_D
@@ -470,10 +497,13 @@ contains
           ! tangent to line at the beginning of time-step
           DirRCurr_D = StateEnd_VI(DirRX_:DirRZ_, iParticle)
 
+          ! the correction to prevent line from closing
+          Corr_D = StateEnd_VI(CorrX_:CorrZ_, iParticle)
+
           ! tangent at next half-step
           call rotate_girard(&
                DirRPrev_D,&
-               cross_product(DirBNext_D - DirBPrev_D, DirRCurr_D) *&
+               cross_product(Corr_D + (DirBNext_D - DirBPrev_D), DirRCurr_D) *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
                DirRNext_D)
 
@@ -605,6 +635,16 @@ contains
     DoTransformCoordToXyz = .false.
     if(present(UseInputInGenCoord))&
          DoTransformCoordToXyz = UseInputInGenCoord
+
+    !\
+    ! allocate containers for cosine of angle between B and radial direction
+    !/
+    if(DoTraceGirard)then
+       allocate(CosBR_GB(            1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG,nBlock))
+       allocate(GradCosBR_DGB(MaxDim,1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG,nBlock))
+       call compute_grad_cosbr
+    end if
+
     !\
     ! Trace field lines
     !/
@@ -677,6 +717,14 @@ contains
     ! Offset in id_
     !/
     call offset_id(nFieldLine - nLineAllProc+1,nFieldLine)
+
+    !\
+    ! free space
+    if(DoTraceGirard)then
+       deallocate(CosBR_GB)
+       deallocate(GradCosBR_DGB)
+    end if
+
   contains
 
     subroutine start_line(XyzStart_D, iIndexStart_I)
@@ -830,7 +878,28 @@ contains
               nint( SIGN(1.0, sum(Dir_D*StateEnd_VI(x_:z_,iParticle))) )
       end do
     end subroutine get_alignment
-
+    !========================================================================
+    subroutine compute_grad_cosbr()
+      use ModMain, ONLY: UseB0
+      use ModB0, ONLY: get_b0
+      use ModCellGradient, ONLY: calc_gradient
+      integer :: iBlock, i, j, k
+      real    :: XyzCell_D(MaxDim), BCell_D(MaxDim)
+      !------------------------------------------------------------------------
+      do iBlock = 1, nBlock
+         do i=1-nG,nI+nG; do j=1-nG,nJ+nG; do k=1-nG,nK+nG
+            XyzCell_D(1:nDim) = Xyz_DGB(1:nDim, i, j, k, iBlock)
+            BCell_D = 0
+            if(UseB0)call get_b0(XyzCell_D, BCell_D)
+            BCell_D = BCell_D + State_VGB(Bx_:Bz_, i, j, k, iBlock)
+            CosBR_GB(i,j,k, iBlock) = &
+                 sum(BCell_D * XyzCell_D) / &
+                 sqrt(sum(BCell_D**2) * sum(XyzCell_D**2))
+         end do;end do;end do
+         call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
+              GradCosBR_DGB(:,:,:,:,iBlock))
+      end do
+    end subroutine compute_grad_cosbr
   end subroutine extract_particle_line
 
   !========================================================================
@@ -895,7 +964,35 @@ contains
     ! normalize vector to unity
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
   end subroutine get_b_dir
+  !========================================================================
+  subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D)
+    use ModMain, ONLY: UseB0
+    use ModB0, ONLY: get_b0
+    ! returns the direction of magnetic field 
+    ! as well as the block used for interpolation
+    real,          intent(in) :: Xyz_D(MaxDim)
+    integer,       intent(in) :: iBlock
+    real,          intent(out):: Grad_D(MaxDim)
 
+    ! interpolation data: number of cells, cell indices, weights
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    real   :: Weight_I(2**nDim)
+    integer:: iCell ! loop variable
+    integer:: i_D(MaxDim)
+    character(len=200):: StringError
+    character(len=*), parameter:: NameSub = "get_grad_cosbr"
+    !----------------------------------------------------------------------
+    Grad_D = 0
+    ! get the remaining part of the magnetic field
+    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+    ! interpolate magnetic field value
+    do iCell = 1, nCell
+       i_D = 1
+       i_D(1:nDim) = iCell_II(1:nDim, iCell)
+       Grad_D = Grad_D + &
+            GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+    end do
+  end subroutine get_grad_cosbr
   !========================================================================
   subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
        UseInputInGenCoord, DoReplace)
