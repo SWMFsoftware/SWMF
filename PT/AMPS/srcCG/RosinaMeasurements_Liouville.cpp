@@ -24,8 +24,10 @@ extern double **productionDistributionNASTRAN;
 extern bool *probabilityFunctionDefinedNASTRAN;
 
 static bool SphericalNucleusTest=false;
-static bool AdaptSurfaceInjectionRate=false;
+static bool AdjustSurfaceInjectionRate=false;
 static double NudeGaugeDensitySinCorrectionFactor=1.0/3.8;
+
+static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_;
 
 void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
@@ -65,7 +67,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       exit(__LINE__,__FILE__,"Error: the option is not known");
     }
 
-    if ((SourceRate<ThrehondSourceRate)&&(AdaptSurfaceInjectionRate==true)) {
+    if ((SourceRate<ThrehondSourceRate)&&(AdjustSurfaceInjectionRate==true)) {
       switch (spec) {
       case _H2O_SPEC_:
         productionDistributionNASTRAN[spec][iSurfaceElement]=ThrehondSourceRate*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
@@ -190,7 +192,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       MPI_Recv(&iFinishSurfaceElement,1,MPI_INT,0,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp parallel for schedule(dynamic,1) default(none) shared(NudeGaugeDensitySinCorrectionFactor,DisregardInstrumentOrientationFlag,SphericalNucleusTest,iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
+    #pragma omp parallel for schedule(dynamic,1) default(none) shared(VelocityInjectionMode,NudeGaugeDensitySinCorrectionFactor,DisregardInstrumentOrientationFlag,SphericalNucleusTest,iPoint,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
       private(xIntersection,beta,iSurfaceElement,iTest,idim,c,x,r,cosTheta,A,t,tNudeGaugeDensity,tRamGaugeFlux,tRamGaugeDensity,ll) reduction(+:localNudeGaugeDensity) reduction(+:localNudeGaugeFlux) reduction(+:localRamGaugeFlux) reduction(+:localRamGaugeDensity)
     #endif
       for (iSurfaceElement=iStartSurfaceElement;iSurfaceElement<iFinishSurfaceElement;iSurfaceElement++) {
@@ -230,11 +232,12 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
               //there is the direct access from the point on teh surface to the point of the observation ->  sample the number density and flux
               double ExternalNormal[3];
 
-              switch (_ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE_) {
-              case _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__NORMAL_:
+              switch (VelocityInjectionMode) {
+              case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
+              case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
                 memcpy(ExternalNormal,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,3*sizeof(double));
                 break;
-              case _ROSINA_SAMPLE__LIOUVILLE__INJECTED_GAS_DIRECTION_DISTRIBUTION_MODE__RANDOM_:
+              case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
                 do {
                   Vector3D::Distribution::Uniform(ExternalNormal);
                 }
@@ -257,8 +260,27 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                   sinLineOfSightAngle=0.0;
                 }
 
+/*  PREVIOUS IMPLEMENTATION
+                //tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                //t=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
+*/
 
-                tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                switch (VelocityInjectionMode) {
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
+                  tNudeGaugeDensity+=A*cosTheta/pow(r,2)/pow(beta,3) *sqrt(Pi)/4.0  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                  break;
+
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
+                  A=SourceRate*pow(beta,3)/(Pi*sqrt(Pi));
+                  tNudeGaugeDensity+=1.0/(2.0*pow(r,2)*pow(beta,2))  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                  break;
+
+                default:
+                  exit(__LINE__,__FILE__,"Error: not implemented");
+                }
+
+
               }
 
               if (((c=Vector3D::DotProduct(ll,Rosina[iPoint].RamGauge.LineOfSight))<0.0)||(DisregardInstrumentOrientationFlag==true))  {
@@ -269,15 +291,36 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                   cosLineOfSightAngle=1.0;
                 }
 
-                tRamGaugeFlux+=cosTheta/(2.0*pow(r,2)*pow(beta,4)) * cosLineOfSightAngle;
-                tRamGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3);
+/* PREVIOUS IMPLEMENTATION
+                //tRamGaugeFlux+=cosTheta/(pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,2) *2.0/sqrt(Pi);
+                //t=tRamGaugeFlux*A/4.0 / nTotalTests;
+*/
+
+
+                switch (VelocityInjectionMode) {
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
+                  tRamGaugeFlux+=A*cosTheta/(2.0*pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,2)    *1.0/sqrt(Pi)  ;
+                  tRamGaugeDensity+=A*cosTheta/pow(r,2)/pow(beta,3) *sqrt(Pi)/4.0;
+                  break;
+
+                case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
+                  A=SourceRate*pow(beta,3)/(Pi*sqrt(Pi));
+                  tRamGaugeFlux+=sqrt(Pi)/(4.0*pow(r,2)*pow(beta,3)) * pow(cosLineOfSightAngle,2);
+                  break;
+
+                default:
+                  exit(__LINE__,__FILE__,"Error: not implemented");
+                }
+
+
               }
             }
           }
 
           //sample the contribution of the surface element to the isntrument observation
           //nude gauge density
-          t=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
+          t=tNudeGaugeDensity/nTotalTests;
           localNudeGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution[spec]+=t;
 
@@ -285,13 +328,13 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
           localNudeGaugeFlux=0.0;
 
           //ram gauge density
-          t=tRamGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
+          t=tRamGaugeDensity/nTotalTests;
           localRamGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution[spec]+=t;
 
 
           //ram gauge flux
-          t=tRamGaugeFlux*A/2.0 / nTotalTests;
+          t=tRamGaugeFlux/nTotalTests;
           localRamGaugeFlux+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution[spec]+=t;
 
