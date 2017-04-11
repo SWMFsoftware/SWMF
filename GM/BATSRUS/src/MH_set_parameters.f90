@@ -504,9 +504,11 @@ subroutine MH_set_parameters(TypeAction)
            EXIT
         end do
         ! Try reading VarTest as an index.
-        if(VarTest < 0) read(NameTestVar,*,iostat=iError) VarTest
-        if (iError /= 0) call stop_mpi(NameSub//': unknown NameTestVar =' &
-             //trim(NameTestVar))
+        if(VarTest < 0) then
+           read(NameTestVar,*,iostat=iError) VarTest
+           if (iError /= 0) call stop_mpi(NameSub//': unknown NameTestVar =' &
+                //trim(NameTestVar))
+        end if
         ! Make sure VarTest is in a valid range
         VarTest = max(1, min(nVar, VarTest))
 
