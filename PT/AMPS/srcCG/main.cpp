@@ -304,7 +304,11 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*18.0)/1.5; //4.5
+  register double a=18.0*t->CharacteristicSize();
+
+  return ((1.0>a) ? 1 : a)/1.5;
+
+//  return max(1.0,t->CharacteristicSize()*18.0)/1.5; //4.5
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -539,10 +543,19 @@ int main(int argc,char **argv) {
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
+//  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
+//PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5.bdf",PIC::UserModelInputDataPath);
+//PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg-spc-shap5-v1.5-cheops-001m.bdf",PIC::UserModelInputDataPath,1.0E3);
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("sphere.bdf",1.0E-3)
+
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
 #endif
+
+
+;
+
+
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -643,6 +656,7 @@ int main(int argc,char **argv) {
     }
   }
 
+  if (_COMET_SAMPLE_ROSINA_DATA_ != _PIC_MODE_ON_)  {
   PIC::Mesh::mesh.SetParallelLoadMeasure(InitLoadMeasure);
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
 
@@ -667,6 +681,7 @@ int main(int argc,char **argv) {
   //init the volume of the cells'
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure(PIC::UserModelInputDataPath);
+  }
 
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
@@ -913,6 +928,10 @@ int main(int argc,char **argv) {
   if (_COMET_SAMPLE_ROSINA_DATA_ == _PIC_MODE_ON_) {
     RosinaSample::Init();
     RosinaSample::Liouville::Evaluate();
+
+    MPI_Finalize();
+    printf("Simulation is done\n");
+    return EXIT_SUCCESS;
   }
 
   //init the dust particle tracing condition
