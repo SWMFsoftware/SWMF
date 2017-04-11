@@ -55,12 +55,15 @@ module ModParticleFieldLine
   integer, parameter:: &
        ! coordinates of a particle
        x_    = 1, y_    = 2, z_    = 3, & 
-       ! auxilary position, e.g. middle step in Runge-Kutta 2 method
-       AuxX_ = 4, AuxY_ = 5, AuxZ_ = 6, & 
-       ! auxilary field, e.g. stepsize
-       Aux_  = 7, &
-       ! auxilary vector, used on End particles at extraction 
-       AuxVx_ = 8, AuxVy_ = 9, AuxVz_ = 10 
+       ! storage for particle's position at the beginning of the step
+       XOld_ = 4, YOld_ = 5, ZOld_ = 6, & 
+       ! stepsize during line extraction
+       Ds_   = 7, &
+       ! direction the tangent to the line
+       DirRX_    =  8, DirRY_    =  9, DirRZ_    = 10,&
+       DirRXOld_ = 11, DirRYOld_ = 12, DirRZOld_ = 13, &
+       ! direction of the magnetic field
+       DirBX_    = 14, DirBY_    = 15, DirBZ_    = 16
 
   ! indices of a particle
   integer, parameter:: &
@@ -91,8 +94,8 @@ module ModParticleFieldLine
   integer, parameter:: Field_ = 0, Radius_  = 1
 
   ! number of variables in the state vector
-  integer, parameter:: nVarParticleReg = 7
-  integer, parameter:: nVarParticleEnd = 10
+  integer, parameter:: nVarParticleReg = 6
+  integer, parameter:: nVarParticleEnd = 16
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
@@ -246,11 +249,12 @@ contains
     !------------------------------------------------------------------------
     integer, intent(in):: iDirTrace
 
-
     integer :: iParticle     ! loop variable
 
     ! direction of the magnetic field
-    real:: Dir1_D(MaxDim), Dir2_D(MaxDim), Dir3_D(MaxDim)
+    real, dimension(MaxDim):: DirBPrev_D, DirBCurr_D, DirBNext_D
+    ! direction of the tangent to the line
+    real, dimension(MaxDim):: DirRPrev_D, DirRCurr_D, DirRNext_D
 
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
@@ -290,7 +294,7 @@ contains
        end if
 
        ! copy last known coordinates to Auxilary 
-       StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
+       StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
             StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
        !\
        ! First stage of RK2 method
@@ -300,20 +304,22 @@ contains
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = Dir1_D)
+               Dir_D = DirBCurr_D)
           ! find the step size
-          StateEnd_VI(Aux_, iParticle) = &
+          StateEnd_VI(Ds_, iParticle) = &
                MIN(SpaceStepMax, MAX(SpaceStepMin,&
                0.1*SQRT(&
                sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
                )))
           ! save direction for the second stage
-          StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir1_D
+          StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBCurr_D
+          DirRCurr_D = DirBCurr_D * &
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle)
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               AlphaRK2 * Dir1_D * &
-               iIndexEnd_II(Alignment_, iParticle)
+               StateEnd_VI(Ds_, iParticle) * &
+               AlphaRK2 * DirRCurr_D
+               
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -339,14 +345,23 @@ contains
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = Dir2_D)
+               Dir_D = DirBNext_D)
           ! direction at the 1st stage
-          Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
+          DirBCurr_D = StateEnd_VI(DirBX_:DirBZ_, iParticle)
+
+          DirRNext_D = (BetaRK2 * DirBCurr_D + (1.0 - BetaRK2) * DirBNext_D) *&
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle)
           ! get final location
-          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
-               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               (BetaRK2 * Dir1_D + (1.0 - BetaRK2) * Dir2_D) * &
-               iIndexEnd_II(Alignment_, iParticle)
+          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
+               StateEnd_VI(Ds_, iParticle) * &
+               DirRNext_D
+
+          if(DoTraceGirard)then
+             ! for the extraciotn using Girard's method
+             ! save direction of the field and curve's tangent at half-step
+             StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
+             StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
+          end if
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -384,7 +399,7 @@ contains
        end if
 
        ! copy last known coordinates to Auxilary 
-       StateEnd_VI(AuxX_:AuxZ_,1:Particle_I(KindEnd_)%nParticle) = &
+       StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
             StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
        !\
        ! First stage: move by half-step
@@ -394,18 +409,33 @@ contains
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = Dir1_D)
+               Dir_D = DirBCurr_D)
+
           ! find the step size
-          StateEnd_VI(Aux_, iParticle) = &
+          StateEnd_VI(Ds_, iParticle) = &
                MIN(SpaceStepMax, MAX(SpaceStepMin,&
                0.1*SQRT(&
                sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
                )))
+
+          ! direction of tangent and magnetic field at previous half-step
+          DirBPrev_D = StateEnd_VI(DirBX_:DirBZ_,iParticle)
+          DirRPrev_D = StateEnd_VI(DirRXOld_:DirRZOld_, iParticle)
+
+          ! get tangent at the current location
+          call rotate_girard(&
+               DirRPrev_D,&
+               cross_product(DirBCurr_D-DirBPrev_D,DirRPrev_D)*&
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
+               DirRCurr_D)
+          StateEnd_VI(DirRX_:DirRZ_, iParticle) = DirRCurr_D
+
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               cHalf * Dir1_D * &
-               iIndexEnd_II(Alignment_, iParticle)
+               StateEnd_VI(Ds_, iParticle) * &
+               cHalf * DirRCurr_D
+
+
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -431,17 +461,31 @@ contains
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = Dir2_D)
-          ! direction at the 1st stage
-          Dir1_D = StateEnd_VI(AuxVx_:AuxVz_, iParticle)
+               Dir_D = DirBNext_D)
+          
+          ! directions at previous half-step
+          DirRPrev_D = StateEnd_VI(DirRXOld_:DirRZOld_, iParticle)
+          DirBPrev_D = StateEnd_VI(DirBX_:DirBZ_, iParticle)
+
+          ! tangent to line at the beginning of time-step
+          DirRCurr_D = StateEnd_VI(DirRX_:DirRZ_, iParticle)
+
+          ! tangent at next half-step
+          call rotate_girard(&
+               DirRPrev_D,&
+               cross_product(DirBNext_D - DirBPrev_D, DirRCurr_D) *&
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
+               DirRNext_D)
+
           ! store for the next iteration
-          StateEnd_VI(AuxVx_:AuxVz_, iParticle) = Dir2_D
+          StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
+          StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
           ! the "force" is normal to tangential direction, apply rotation
-          call rotate_girard(Dir1_D, cross_product(Dir2_D, Dir1_D), Dir3_D)
+
           ! get final location
-          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(AuxX_:AuxZ_,iParticle)+&
-               iDirTrace * StateEnd_VI(Aux_, iParticle) * &
-               Dir3_D * iIndexEnd_II(Alignment_, iParticle)
+          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
+               StateEnd_VI(Ds_, iParticle) * &
+               DirRNext_D
        end do
        !\
        ! Message pass: some particles may have moved to different procs
