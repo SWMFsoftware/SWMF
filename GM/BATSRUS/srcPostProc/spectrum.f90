@@ -895,22 +895,22 @@ contains
              ! dyne/cm2 --> N/m2
              ! T = p/rho * M / kB
              Var_VIII(tpar_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
                   / cBoltzmann
              IsPpar = .true.
           case('pperp')
              Var_VIII(tperp_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)&
-                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
                   / cBoltzmann
              IsPperp = .true.
           case('pe')
              Var_VIII(te_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
                   / cBoltzmann
              IsPe = .true.
           case('p')
              Var_VIII(t_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / Var_VIII(rho_,1:n1,1:n2,1:n3) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
                   / cBoltzmann
           case('i01')
              ! erg/cm^3 --> J/m^3
@@ -1046,6 +1046,10 @@ contains
     ! Read grid size information from header
     READGRID: do
        read(UnitTmp_,'(a)',iostat=iError) StringLine
+       if(iError  /= 0)then
+          write(*,*)'iError = ',iError
+          call CON_stop('failed reading header of chianti table')
+       end if
        if(StringLine == "#GRID")then
           read(UnitTmp_,*)MinLogN, MaxLogN, DLogN
           read(UnitTmp_,*)MinLogT, MaxLogT, DLogT
@@ -1069,6 +1073,10 @@ contains
        ! Read remaining header lines of table file
        if(IsHeader)then
           read(UnitTmp_,'(a)',iostat=iError) StringLine
+          if(iError  /= 0)then
+             write(*,*)'iError = ',iError
+             call CON_stop('failed reading remaining header part of chianti table')
+          end if
           if(IsVerbose) write(*,'(a)') StringLine
           if(StringLine == "#START") IsHeader = .false.
           CYCLE READLOOP
@@ -1078,6 +1086,13 @@ contains
        read(UnitTmp_,*,iostat=iError) &
             NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG
+
+       if(iError  /= 0 .and. iError /= -1)then
+          write(*,*)'iError = ',iError
+          write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
+               LineWavelength, LogN, LogT, LogG
+          call CON_stop('failed reading chianti table')
+       end if
 
        ! Unobserved lines are stored with negative wavelength
        ! If interested in unobserved lines, use absolute value of wavelength
