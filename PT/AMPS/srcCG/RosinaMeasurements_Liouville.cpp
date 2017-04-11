@@ -27,7 +27,8 @@ static bool SphericalNucleusTest=false;
 static bool AdjustSurfaceInjectionRate=false;
 static double NudeGaugeDensitySinCorrectionFactor=1.0/3.8;
 
-static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_;
+//static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_;
+static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_;
 
 void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,int iPoint) {
   int iTest,iSurfaceElement;
@@ -234,9 +235,9 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
               switch (VelocityInjectionMode) {
               case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
-              case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
                 memcpy(ExternalNormal,CutCell::BoundaryTriangleFaces[iSurfaceElement].ExternalNormal,3*sizeof(double));
                 break;
+              case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
               case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
                 do {
                   Vector3D::Distribution::Uniform(ExternalNormal);
@@ -259,11 +260,6 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                 if (DisregardInstrumentOrientationFlag==true) {
                   sinLineOfSightAngle=0.0;
                 }
-
-/*  PREVIOUS IMPLEMENTATION
-                //tNudeGaugeDensity+=cosTheta/pow(r,2)/pow(beta,3)  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
-                //t=tNudeGaugeDensity * A*sqrt(Pi)/4.0 / nTotalTests;
-*/
 
                 switch (VelocityInjectionMode) {
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
@@ -291,16 +287,10 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                   cosLineOfSightAngle=1.0;
                 }
 
-/* PREVIOUS IMPLEMENTATION
-                //tRamGaugeFlux+=cosTheta/(pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,2) *2.0/sqrt(Pi);
-                //t=tRamGaugeFlux*A/4.0 / nTotalTests;
-*/
-
-
                 switch (VelocityInjectionMode) {
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
-                  tRamGaugeFlux+=A*cosTheta/(2.0*pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,2)    *1.0/sqrt(Pi)  ;
+                  tRamGaugeFlux+=A*cosTheta/(2.0*pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,1); //    *1.0/sqrt(Pi)  ;
                   tRamGaugeDensity+=A*cosTheta/pow(r,2)/pow(beta,3) *sqrt(Pi)/4.0;
                   break;
 
@@ -370,18 +360,10 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     exit(__LINE__,__FILE__,"Error: the species is unknown");
   }
 
-  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)))/BetaFactor;
+//  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)))/BetaFactor;
+
+  RamGaugePressure=RamGaugeFlux*sqrt(Kbol*rgTemperature*Pi*PIC::MolecularData::GetMass(spec)/2.0)/BetaFactor;
   NudeGaugePressure=NudeGaugeDensity*Kbol*ngTemperature/BetaFactor;
-
-
-/* EXAMPLE OF CALCULATING THE PRESSURES
-   if (_H2O_SPEC_>=0) {
-    beta=sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/(2.0*Kbol*rgTemperature));
-    rgTotalPressure+=Kbol*rgTemperature*Pi*beta/2.0*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies];
-
-//        rgTotalPressure+=4.0*Kbol*rgTemperature*FluxRamGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(_H2O_SPEC_)));
-    ngTotalPressure+=DensityNudeGauge[_H2O_SPEC_+i*PIC::nTotalSpecies]*Kbol*ngTemperature;
-  }*/
 
 }
 
