@@ -543,10 +543,10 @@ int main(int argc,char **argv) {
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
 #if _NUCLEUS_SHAPE__MODE_ == _SHAP5_
-//  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
 //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5.bdf",PIC::UserModelInputDataPath);
 //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg-spc-shap5-v1.5-cheops-001m.bdf",PIC::UserModelInputDataPath,1.0E3);
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("sphere.bdf",1.0E-3)
+//  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("sphere.bdf",1.0E-3)
 
 #elif _NUCLEUS_SHAPE__MODE_ == _SHAP5_1_
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
