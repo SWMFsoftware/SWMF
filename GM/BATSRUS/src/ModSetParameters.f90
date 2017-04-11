@@ -968,9 +968,15 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'tec')>0)then 
               plot_form(iFile)  = 'tec'
               TypeFile_I(iFile) = 'tec'
-           elseif(index(plot_string,'tcp')>0)then 
-              plot_form(iFile)  = 'tcp'
-              TypeFile_I(iFile) = 'tcp'
+           elseif(index(plot_string,'tcp')>0)then
+              if(nDim == 1)then
+                 plot_form(iFile)  = 'idl'
+                 TypeFile_I(iFile) = 'tec'
+                 plot_dx(1,iFile)  = -1.0
+              else
+                 plot_form(iFile)  = 'tcp'
+                 TypeFile_I(iFile) = 'tcp'
+              end if
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)
