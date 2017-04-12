@@ -1947,8 +1947,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#BOUNDARYSTATE")        
         ! Read boundary states for multiple boundaries.
         call read_var('StringBoundary', StringBoundary, IsLowerCase=.true.)
+        call split_string(NamePrimitiveVar, nVar, NamePrimitive_V, nVarRead)
+        if (nVar /= nVarRead) &
+             call stop_mpi(NameVar//' check NamePrimitiveVar in ModEquation')
         do iVar = 1, nVar
-           call read_var('BoundaryStateDim', BoundaryStateDim_V(iVar))
+           call read_var(NamePrimitive_V(iVar), BoundaryStateDim_V(iVar))
         end do
 
         call split_string(StringBoundary, NameBoundary_I, nNameBoundary)
