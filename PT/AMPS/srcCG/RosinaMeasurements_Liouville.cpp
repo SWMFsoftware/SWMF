@@ -138,7 +138,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   if (PIC::ThisThread==0) {
     //administrator
     int iSurfaceElementStep=max(CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads/10,1);
-    int thread,SygnalTable[PIC::nTotalThreads];
+    int thread,SignalTable[PIC::nTotalThreads];
     MPI_Request request[PIC::nTotalThreads];
     MPI_Status status;
     int SendNegativeStartElementNumberCounter=0;
@@ -147,7 +147,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     iFinishSurfaceElement=iSurfaceElementStep;
 
     //initiate the all recieve
-    for (thread=1;thread<PIC::nTotalThreads;thread++) MPI_Irecv(SygnalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
+    for (thread=1;thread<PIC::nTotalThreads;thread++) MPI_Irecv(SignalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
 
     do {
       //waite for any recieved occured
@@ -163,7 +163,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       }
       else {
         //initiate recieve from thread
-        MPI_Irecv(SygnalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
+        MPI_Irecv(SignalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
       }
 
       //update the surface element counter
@@ -182,13 +182,13 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     while (SendNegativeStartElementNumberCounter!=PIC::nTotalThreads-1);
   }
   else {
-    //send the "ready" sygnal
+    //send the "ready" signal
     MPI_Request request;
     MPI_Status status;
-    int Sygnal=0;
+    int Signal=0;
 
     do {
-      MPI_Isend(&Sygnal,1,MPI_INT,0,0,MPI_GLOBAL_COMMUNICATOR,&request);
+      MPI_Isend(&Signal,1,MPI_INT,0,0,MPI_GLOBAL_COMMUNICATOR,&request);
       MPI_Wait(&request,&status);
 
       //recieve the limits of the surface element number
@@ -270,11 +270,11 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                 switch (VelocityInjectionMode) {
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
-                  tNudeGaugeDensity+=A*cosTheta/pow(r,2)/pow(beta,3) *sqrt(Pi)/4.0  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                  tNudeGaugeDensity+=A*cosTheta/(pow(r,2)*pow(beta,3)) *sqrtPi/4.0  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
                   break;
 
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
-                  A=SourceRate*pow(beta,3)/(Pi*sqrt(Pi));
+                  A=SourceRate*pow(beta,3)/(Pi*sqrtPi);
                   tNudeGaugeDensity+=1.0/(2.0*pow(r,2)*pow(beta,2))  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
                   break;
 
@@ -304,12 +304,12 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_:
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_:
                   tRamGaugeFlux+=A*cosTheta/(2.0*pow(r,2)*pow(beta,4)) * pow(cosLineOfSightAngle,1); //    *1.0/sqrt(Pi)  ;
-                  tRamGaugeDensity+=A*cosTheta/pow(r,2)/pow(beta,3) *sqrt(Pi)/4.0;
+                  tRamGaugeDensity+=A*cosTheta/(pow(r,2)*pow(beta,3)) *sqrtPi/4.0;
                   break;
 
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
-                  A=SourceRate*pow(beta,3)/(Pi*sqrt(Pi));
-                  tRamGaugeFlux+=sqrt(Pi)/(4.0*pow(r,2)*pow(beta,3)) * pow(cosLineOfSightAngle,2);
+                  A=SourceRate*pow(beta,3)/(Pi*sqrtPi);
+                  tRamGaugeFlux+=sqrtPi/(4.0*pow(r,2)*pow(beta,3)) * pow(cosLineOfSightAngle,2);
                   break;
 
                 default:
