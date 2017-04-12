@@ -6093,6 +6093,14 @@ if (ncheckMeshConsistencyCalls==38) {
   void buildMesh() {
     int level;
     bool flag;
+
+    //begin function message
+    int rank;
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+
+    if (rank==0) {
+      std::cout << "$PREFIX: Building mesh.....  " << std::endl << std::flush;
+    }
  
     for (level=0;level<=_MAX_REFINMENT_LEVEL_;level++) {
       flag=buildMesh_OneLevelRefinment(rootTree,0,level);
@@ -6103,11 +6111,22 @@ if (ncheckMeshConsistencyCalls==38) {
       #endif
       #endif
 
+      if (rank==0) {
+        printf("\r$PREFIX: Building mesh [completed level: %i]\n",level);
+        fflush(stdout);
+      }
+
       if (flag==false) break;
     }
 
     //determine the resolution limits for each block
     SetNodeNeibResolutionLevelLimit();
+
+    //end function message
+    if (rank==0) {
+      printf("$PREFIX: Building mesh.....   done\n");
+      fflush(stdout);
+    }
   }  
   
 //==============================================================
@@ -9524,14 +9543,22 @@ nMPIops++;
 
     int rank;
     MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
-    if (rank==0) printf("$PREFIX: Allocating tree blocks.....  ");
+
+    if (rank==0) {
+      printf("$PREFIX: Allocating tree blocks.....  ");
+      fflush(stdout);
+    }
 
 #if _AMR__CUT_CELL__MODE_ == _AMR__CUT_CELL__MODE__ON_
     if (rootTree->FirstTriangleCutFace!=NULL) flag=_BLOCK_INTERSECTS_DOMAIN__ALLOCATE_TREE_BLOCKS_;
 #endif
 
     AllocateTreeBlocks(rootTree,flag);
-    if (rank==0) printf("done.\n");
+
+    if (rank==0) {
+      printf("done.\n");
+      fflush(stdout);
+    }
   }
 
 
