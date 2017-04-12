@@ -31,18 +31,27 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 
   if (fExternalVectorFile!=NULL) {
     //the binary file containing the external normal information exists -> load it
-    if (PIC::ThisThread==0) printf("$PREFIX: Binary file with the external normals (%s) is found: loading.... ",fname);
+    if (PIC::ThisThread==0) {
+      printf("$PREFIX: Binary file with the external normals (%s) is found: loading.... ",fname);
+      fflush(stdout);
+    }
 
     for (nface=0;nface<nBoundaryTriangleFaces;nface++) fread(BoundaryTriangleFaces[nface].ExternalNormal,sizeof(double),3,fExternalVectorFile);
 
     fclose(fExternalVectorFile);
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-    if (PIC::ThisThread==0) printf("done\n");
+    if (PIC::ThisThread==0) {
+      printf("done\n");
+      fflush(stdout);
+    }
 
     return;
   }
 
-  if (PIC::ThisThread==0) printf("$PREFIX: Binary file with the external normals is not found: generating.... "); 
+  if (PIC::ThisThread==0) {
+    printf("$PREFIX: Binary file with the external normals is not found: generating.... ");
+    fflush(stdout);
+  }
 
   MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
   MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
@@ -129,7 +138,10 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-  if (PIC::ThisThread==0) printf("done\n");
+  if (PIC::ThisThread==0) {
+    printf("done\n");
+    fflush(stdout);
+  }
 }
 
 //check weather a point (x0) in insed the domain:
