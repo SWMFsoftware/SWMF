@@ -13,8 +13,8 @@ module ModParticleFieldLine
        iProc,&
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
-       Particle_I, CellSize_DB, Xyz_DGB, nG, nI, nJ, nK, nBlock, &
-       allocate_particles,&
+       Particle_I, CellSize_DB, Xyz_DGB, nI, nJ, nK, nBlock, &
+       jDim_, kDim_, allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
   use ModAdvance, ONLY: State_VGB
@@ -129,7 +129,10 @@ module ModParticleFieldLine
   !\
   ! Cosine between direction of the field and radial direction: for correcting
   ! the line's direction to prevent it from closing
-  real, allocatable:: CosBR_GB(:,:,:,:), GradCosBR_DGB(:,:,:,:,:)
+  !/
+  integer, parameter :: nG = 1
+  real, allocatable:: CosBR_GB(:,:,:,:), CosBR2_GB(:,:,:,:), &
+       GradCosBR_DGB(:,:,:,:,:)
 
   !\
   ! initialization related info
@@ -408,7 +411,8 @@ contains
           DCosBR = abs(&
                sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
                sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-               sum(StateEnd_VI(XOld_:ZOld_,iParticle) * StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
+               sum(StateEnd_VI(XOld_:ZOld_,iParticle)* &
+               StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
                sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
           if(DCosBR > 0.05)then
              iIndexEnd_II(DoCopy_, iParticle) = 0
@@ -518,10 +522,6 @@ contains
                DirRCurr_D)
           StateEnd_VI(DirRX_:DirRZ_, iParticle) = DirRCurr_D
 
-          ! correct step - size
-!          StateEnd_VI(Ds_, iParticle) = StateEnd_VI(Ds_, iParticle) / &
-!               MAX(1.0, StateEnd_VI(Ds_, iParticle)*sqrt(sum(DirBDotGradDirB_D**2))/0.1)
-
 
           ! get next half-step location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
@@ -570,7 +570,8 @@ contains
           call rotate_girard(&
                DirRPrev_D,&
                cross_product(&
-               Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle)) +&
+               Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle) + &
+               StateEnd_VI(DsOld_,iParticle)) + &
                (DirBNext_D - DirBPrev_D), DirRCurr_D) *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
                DirRNext_D)
@@ -583,7 +584,7 @@ contains
           ! the "force" is normal to tangential direction, apply rotation
 
           ! get final location
-          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
+          StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(XOld_:ZOld_,iParticle)+&
                StateEnd_VI(Ds_, iParticle) * &
                DirRNext_D
        end do
@@ -710,8 +711,15 @@ contains
     ! allocate containers for cosine of angle between B and radial direction
     !/
     if(DoTraceGirard)then
-       allocate(CosBR_GB(            1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG,nBlock))
-       allocate(GradCosBR_DGB(MaxDim,1-nG:nI+nG,1-nG:nJ+nG,1-nG:nK+nG,nBlock))
+       allocate(CosBR_GB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
+            1-nG*kDim_:nK+nG*kDim_,nBlock))
+       CosBR_GB = 0.0
+       allocate(CosBR2_GB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
+            1-nG*kDim_:nK+nG*kDim_,nBlock))
+       CosBR2_GB = 0.0
+       allocate(GradCosBR_DGB(MaxDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
+            1-nG*kDim_:nK+nG*kDim_,nBlock))
+       GradCosBR_DGB = 0.0
        call compute_grad_cosbr
     end if
 
@@ -790,10 +798,8 @@ contains
 
     !\
     ! free space
-    if(DoTraceGirard)then
-       deallocate(CosBR_GB)
-       deallocate(GradCosBR_DGB)
-    end if
+    if(DoTraceGirard)&
+       deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
 
   contains
 
@@ -950,22 +956,28 @@ contains
     end subroutine get_alignment
     !========================================================================
     subroutine compute_grad_cosbr()
+      use BATL_pass_cell, ONLY: message_pass_cell
       use ModMain, ONLY: UseB0
-      use ModB0, ONLY: get_b0
+      use ModB0, ONLY: B0_DGB
+      use ModGeometry, ONLY: R_BLK
       use ModCellGradient, ONLY: calc_gradient
       integer :: iBlock, i, j, k, iDim
       real    :: XyzCell_D(MaxDim), BCell_D(MaxDim)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
-         do i=1-nG,nI+nG; do j=1-nG,nJ+nG; do k=1-nG,nK+nG
+         if(Unused_B(iBlock))CYCLE
+         do i = 1, nI; do j = 1, nJ; do k = 1, nK
             XyzCell_D(1:nDim) = Xyz_DGB(1:nDim, i, j, k, iBlock)
             BCell_D = 0
-            if(UseB0)call get_b0(XyzCell_D, BCell_D)
+            if(UseB0)BCell_D = B0_DGB(:,i,j,k,iBlock)
             BCell_D = BCell_D + State_VGB(Bx_:Bz_, i, j, k, iBlock)
             CosBR_GB(i,j,k, iBlock) = &
                  sum(BCell_D * XyzCell_D) / &
-                 sqrt(sum(BCell_D**2) * sum(XyzCell_D**2))
+                 (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
          end do;end do;end do
+      end do
+      do iBlock = 1, nBlock
+         if(Unused_B(iBlock))CYCLE
          call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
               GradCosBR_DGB(:,:,:,:,iBlock))
       end do
