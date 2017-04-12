@@ -60,13 +60,13 @@ module ModParticleFieldLine
        ! stepsize during line extraction
        Ds_   = 7, DsOld_ = 8, DsFactor_ = 9, &
        ! direction the tangent to the line
-       DirRX_    = 10, DirRY_    = 11, DirRZ_    = 12, &
-       DirRXOld_ = 13, DirRYOld_ = 14, DirRZOld_ = 15, &
+       DirX_    = 10, DirY_    = 11, DirZ_    = 12, &
+       DirXOld_ = 13, DirYOld_ = 14, DirZOld_ = 15, &
        ! direction of the magnetic field
        DirBX_    = 16, DirBY_    = 17, DirBZ_    = 18, &
-
+       DirBXOld_ = 19, DirBYOld_ = 20, DirBZOld_ = 21, &
        ! correction to prevent lines from closing
-       CorrX_    = 19, CorrY_    = 20, CorrZ_    = 21
+       CorrX_    = 22, CorrY_    = 23, CorrZ_    = 24
 
 
 
@@ -83,7 +83,11 @@ module ModParticleFieldLine
        Alignment_ = 3, &
        ! whether to copy the end particle to regular; 
        ! may need to skip copying if step size was changed
-       DoCopy_    = 4
+       DoCopy_    = 4, &
+       ! whether to ignore the end particle in extraction loop;
+       ! girard's method is initialized by RK2 method, if stepsize is reduced 
+       ! for some lines, loop is run over for them, while the rest are ignored
+       DoIgnore_  = 5
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
@@ -104,11 +108,11 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 21
+  integer, parameter:: nVarParticleEnd = 24
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
-  integer, parameter:: nIndexParticleEnd = 4
+  integer, parameter:: nIndexParticleEnd = 5
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
@@ -269,7 +273,7 @@ contains
     ! direction of the magnetic field
     real, dimension(MaxDim):: DirBPrev_D, DirBCurr_D, DirBNext_D
     ! direction of the tangent to the line
-    real, dimension(MaxDim):: DirRPrev_D, DirRCurr_D, DirRNext_D
+    real, dimension(MaxDim):: DirPrev_D, DirCurr_D, DirNext_D
     ! correction to prevent line from closing
     real, dimension(MaxDim):: Corr_D
 
@@ -310,6 +314,7 @@ contains
     ! as well as mark a particle for copying
     StateEnd_VI(DsFactor_,1:Particle_I(KindEnd_)%nParticle) = 1.0
     iIndexEnd_II(  DoCopy_,  1:Particle_I(KindEnd_)%nParticle) = 1
+    iIndexEnd_II(DoIgnore_,  1:Particle_I(KindEnd_)%nParticle) = 0
 
     TRACE_RK2: do
        ! check if particles are beyond the soft boundary
@@ -325,6 +330,7 @@ contains
        ! First stage of RK2 method
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
           ! get the direction of the magnetic field at original location
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -339,13 +345,13 @@ contains
                StateEnd_VI(DsFactor_, iParticle)
           
           ! save direction for the second stage
-          StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBCurr_D
-          DirRCurr_D = DirBCurr_D * &
+          StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = DirBCurr_D
+          DirCurr_D = DirBCurr_D * &
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                StateEnd_VI(Ds_, iParticle) * &
-               AlphaRK2 * DirRCurr_D
+               AlphaRK2 * DirCurr_D
                
        end do
        !\
@@ -368,20 +374,29 @@ contains
        ! Second stage of RK2 method
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
           ! get the direction of the magnetic field in the middle
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
                Dir_D = DirBNext_D)
           ! direction at the 1st stage
-          DirBCurr_D = StateEnd_VI(DirBX_:DirBZ_, iParticle)
+          DirBCurr_D = StateEnd_VI(DirBXOld_:DirBZOld_, iParticle)
 
-          DirRNext_D = (BetaRK2 * DirBCurr_D + (1.0 - BetaRK2) * DirBNext_D) *&
+          DirNext_D = (BetaRK2 * DirBCurr_D + (1.0 - BetaRK2) * DirBNext_D) *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
           ! get final location
           StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
                StateEnd_VI(Ds_, iParticle) * &
-               DirRNext_D
+               DirNext_D
+          
+          if(DoTraceGirard)then
+             ! for the extraction using Girard's method
+             ! save direction of the field and curve's tangent at half-step
+             StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
+             StateEnd_VI(DirX_ :DirZ_,  iParticle) = DirNext_D
+          end if
+
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -401,7 +416,7 @@ contains
        ! Stage 3:
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
-
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
           ! get the direction of the magnetic field
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -412,7 +427,7 @@ contains
                sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
                sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
                sum(StateEnd_VI(XOld_:ZOld_,iParticle)* &
-               StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
+               StateEnd_VI(DirBXOld_:DirBZOld_,iParticle)) / &
                sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
           if(DCosBR > 0.05)then
              iIndexEnd_II(DoCopy_, iParticle) = 0
@@ -427,11 +442,14 @@ contains
           StateEnd_VI(DsFactor_, iParticle) = 1.0
 
           if(DoTraceGirard)then
-             ! for the extraciotn using Girard's method
+             ! for the extraction using Girard's method
              ! save direction of the field and curve's tangent at half-step
-             StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
-             StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
+             StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = &
+                  StateEnd_VI(DirBX_:DirBZ_, iParticle)
+             StateEnd_VI(DirXOld_ :DirZOld_,  iParticle) = &
+                  StateEnd_VI(DirX_ :DirZ_,  iParticle)
              StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
+             iIndexEnd_II(DoIgnore_, iParticle) = 1
           end if
        end do
        !\
@@ -451,14 +469,20 @@ contains
        if(is_complete()) RETURN
 
        ! increase particle index & copy to regular
-       where(iIndexEnd_II(DoCopy_,1:Particle_I(KindEnd_)%nParticle)==1)
+       where(&
+            iIndexEnd_II(DoCopy_,  1:Particle_I(KindEnd_)%nParticle)==1 .and. &
+            iIndexEnd_II(DoIgnore_,1:Particle_I(KindEnd_)%nParticle)==0)
           iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
                iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
                iDirTrace
        end where
        call copy_end_to_regular
 
-       if(DoTraceGirard) EXIT
+       if(DoTraceGirard .and.all(&
+            iIndexEnd_II(DoCopy_,1:Particle_I(KindEnd_)%nParticle)==1))then
+          iIndexEnd_II(DoIgnore_,1:Particle_I(KindEnd_)%nParticle) = 0
+          EXIT
+       end if
 
     end do TRACE_RK2
 
@@ -478,6 +502,7 @@ contains
        ! First stage: move by half-step
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
           ! get the direction of the magnetic field at original location
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -492,8 +517,8 @@ contains
                )))
 
           ! direction of tangent and magnetic field at previous half-step
-          DirBPrev_D = StateEnd_VI(DirBX_:DirBZ_,iParticle)
-          DirRPrev_D = StateEnd_VI(DirRXOld_:DirRZOld_, iParticle)
+          DirBPrev_D = StateEnd_VI(DirBXOld_:DirBZOld_,iParticle)
+          DirPrev_D = StateEnd_VI(DirXOld_ :DirZOld_, iParticle)
 
           ! get the correction if line starts closing
           CosBR = &
@@ -514,19 +539,18 @@ contains
 
           ! get tangent at the current location
           call rotate_girard(&
-               DirRPrev_D,&
+               DirPrev_D,&
                cross_product(&
                Corr_D * cHalf * StateEnd_VI(DsOld_,iParticle) + &
-               (DirBCurr_D-DirBPrev_D), DirRPrev_D)*&
+               (DirBCurr_D-DirBPrev_D), DirPrev_D)*&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
-               DirRCurr_D)
-          StateEnd_VI(DirRX_:DirRZ_, iParticle) = DirRCurr_D
-
+               DirCurr_D)
+          StateEnd_VI(DirX_:DirZ_, iParticle) = DirCurr_D
 
           ! get next half-step location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                StateEnd_VI(Ds_, iParticle) * &
-               cHalf * DirRCurr_D
+               cHalf * DirCurr_D
 
 
        end do
@@ -550,6 +574,7 @@ contains
        ! Second stage:
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
           ! get the direction of the magnetic field in the middle
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -557,36 +582,83 @@ contains
                Dir_D = DirBNext_D)
           
           ! directions at previous half-step
-          DirRPrev_D = StateEnd_VI(DirRXOld_:DirRZOld_, iParticle)
-          DirBPrev_D = StateEnd_VI(DirBX_:DirBZ_, iParticle)
+          DirPrev_D = StateEnd_VI(DirXOld_:DirZOld_, iParticle)
+          DirBPrev_D = StateEnd_VI(DirBXOld_:DirBZOld_, iParticle)
 
           ! tangent to line at the beginning of time-step
-          DirRCurr_D = StateEnd_VI(DirRX_:DirRZ_, iParticle)
+          DirCurr_D = StateEnd_VI(DirX_:DirZ_, iParticle)
 
           ! the correction to prevent line from closing
           Corr_D = StateEnd_VI(CorrX_:CorrZ_, iParticle)
 
           ! tangent at next half-step
           call rotate_girard(&
-               DirRPrev_D,&
+               DirPrev_D,&
                cross_product(&
-               Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle) + &
-               StateEnd_VI(DsOld_,iParticle)) + &
-               (DirBNext_D - DirBPrev_D), DirRCurr_D) *&
+               Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle)+&
+               StateEnd_VI(DsOld_,iParticle)) +&
+               (DirBNext_D - DirBPrev_D), DirCurr_D) *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
-               DirRNext_D)
+               DirNext_D)
 
-          ! store for the next iteration
-          StateEnd_VI(DirRXOld_:DirRZOld_, iParticle) = DirRNext_D
-          StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
-          StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
 
-          ! the "force" is normal to tangential direction, apply rotation
+          StateEnd_VI(DirX_ :DirZ_, iParticle) = DirNext_D
+          StateEnd_VI(DirBX_:DirBZ_,iParticle) = DirBNext_D
 
           ! get final location
           StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(XOld_:ZOld_,iParticle)+&
                StateEnd_VI(Ds_, iParticle) * &
-               DirRNext_D
+               DirNext_D
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       !\
+       ! Stage 3:
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(DoIgnore_, iParticle) == 1) CYCLE
+          ! get the direction of the magnetic field
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = DirBCurr_D)
+
+          DCosBR = abs(&
+               sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
+               sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
+               sum(StateEnd_VI(XOld_:ZOld_,iParticle) * &
+               StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
+               sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
+          if(DCosBR > 0.05)then
+             iIndexEnd_II(DoCopy_, iParticle) = 0
+             StateEnd_VI(DsFactor_, iParticle) = &
+                  0.5 * StateEnd_VI(DsFactor_, iParticle) * 0.05 / DCosBR  
+             StateEnd_VI(x_:z_, iParticle) = &
+                  StateEnd_VI(XOld_:ZOld_, iParticle)
+             CYCLE
+          end if
+
+          iIndexEnd_II(DoCopy_, iParticle) = 1
+          StateEnd_VI(DsFactor_, iParticle) = 1.0
+
+          ! store for the next iteration
+          StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
+          StateEnd_VI(DirXOld_:DirZOld_, iParticle) = &
+               StateEnd_VI(DirX_:DirZ_, iParticle)
+          StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = &
+               StateEnd_VI(DirBX_:DirBZ_, iParticle)
+
        end do
        !\
        ! Message pass: some particles may have moved to different procs
