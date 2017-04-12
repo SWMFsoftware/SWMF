@@ -15,7 +15,7 @@ pro dem
   read, IsDebug, prompt = 'Debug mode? (1 means yes ) ='
 
 ; Debug setup
-  if IsDebug eq 1 then begin
+  if IsDebug then begin
      IsTest = 0
      IsVerbose = 1
 
@@ -34,7 +34,7 @@ pro dem
 
 ; Test setup 
      read, IsTest, prompt = ' Testing? (1 means yes ) = '
-     if IsTest eq 1 then begin 
+     if IsTest then begin 
         IsDebug = 0
         IsVerbose = 1
         NameFileOut = 'test-dem.eps'
@@ -74,13 +74,13 @@ pro dem
         read,iRho, prompt = 'index of electron density variable = '
         read,IsTe, prompt = $
              'use electron pressure (0) or electron temperature (1) ='
-        if IsTe eq 0 then read,iPe, prompt = $
+        if not IsTe then read,iPe, prompt = $
                                'index of electron pressure variable = '
-        if IsTe eq 1 then read,iTe, prompt = $
+        if IsTe then read,iTe, prompt = $
                                'index of electron temperature variable  = '
         iRho = fix(iRho)
-        if IsTe eq 0 then iPe = fix(iPe)
-        if IsTe eq 1 then iTe = fix(iTe)
+        if IsTe then iPe = fix(iPe)
+        if IsTe then iTe = fix(iTe)
 
         read, LogTmin, prompt = 'LogTmin = '
         read, LogTmax, prompt = 'LogTmax = '
@@ -105,8 +105,12 @@ pro dem
   endfor
   DEMarray = MAKE_ARRAY(NT+1, /DOUBLE, VALUE = 1e-10)
 
+; Normalization
+  IsNormalize = 1
+  counter = MAKE_ARRAY(NT+1, /DOUBLE, VALUE = 0.)
+
 ; In case of verbose print grid information
-  if IsVerbose eq 1 then begin
+  if IsVerbose then begin
      print, 'LogTmin, LogTmax, DLogT, NT, Tarray = ', $
             LogTmin, LogTmax, DLogT, NT, Tarray
      print, 'nX, nY, nZ = ',nX,nY,nZ
@@ -123,9 +127,10 @@ pro dem
            if w[i,j,k,0] eq 0 then continue 
 ; Locate on temperature grid
            for l = 0, NT-2 do begin         
-              if IsTe eq 0 then Te = w[i,j,k,iPe]/w[i,j,k,iRho] * Mp/KB
-              if IsTe eq 1 then Te = w[i,j,k,iTe]
-              if (Te lt Tarray[l+1]) and (Te ge Tarray[l])then begin 
+              if not IsTe then Te = w[i,j,k,iPe]/w[i,j,k,iRho] * Mp/KB
+              if IsTe then Te = w[i,j,k,iTe]
+              if (Te lt Tarray[l+1]) and (Te ge Tarray[l])then begin
+                 counter[l] = counter[l]+1
                  DEMarray[l] = DEMarray[l] + (w[i,j,k,iRho]/Mp)^2*Dh/10.^DLogT
                  break
               endif
@@ -134,9 +139,17 @@ pro dem
      endfor
   endfor
   
+; Normalization
+  if IsNormalize then begin
+     for l = 0, NT-2 do begin
+        if counter[l] gt 0 then DEMarray[l] = DEMarray[l]/counter[l]
+     endfor
+  endif
+
 ; Print if IsVerbose is on                                
-  if IsVerbose eq 1 then begin
+  if IsVerbose then begin
      print, 'DEMarray = ', DEMarray
+     print, 'counter = ', counter
   endif
 
 ; Set plotting environment
@@ -151,18 +164,18 @@ pro dem
   !y.title = 'DEM [K!U-1 !Ncm!U-5!N]'
 
 ; Save plot when not debugging
-  if IsDebug ne 1 then begin
+  if not IsDebug then begin
      set_device,NameFileOut,/eps,/land
      !x.margin=[4,2]
   endif
 
-  plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2,$
-       yrange=[1e18,1e28], xrange=[1e4, 1e7]
+  plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2
 
-  if IsDebug ne 1 then begin
+  if not IsDebug then begin
      close_device, /pdf
   endif else begin
 ; Plot on screen
+     plot_spacex=8
      set_plot,'X'
      window, 1
      plot,Tarray,DEMarray,/xlog,/ylog, psym=2, symsize=1, linestyle=2, thick=2
