@@ -18,7 +18,7 @@ module ModParticleFieldLine
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
   use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
   use ModPhysics, ONLY: rBody
 
@@ -1034,19 +1034,17 @@ contains
       use ModGeometry, ONLY: R_BLK
       use ModCellGradient, ONLY: calc_gradient
       integer :: iBlock, i, j, k, iDim
-      real    :: XyzCell_D(MaxDim), BCell_D(MaxDim)
+      real    :: XyzCell_D(nDim), BCell_D(nDim)
       !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(Unused_B(iBlock))CYCLE
-         do i = 1, nI; do j = 1, nJ; do k = 1, nK
-            XyzCell_D(1:nDim) = Xyz_DGB(1:nDim, i, j, k, iBlock)
-            BCell_D = 0
-            if(UseB0)BCell_D = B0_DGB(:,i,j,k,iBlock)
-            BCell_D = BCell_D + State_VGB(Bx_:Bz_, i, j, k, iBlock)
-            CosBR_GB(i,j,k, iBlock) = &
-                 sum(BCell_D * XyzCell_D) / &
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            XyzCell_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
+            Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
+            if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
+            CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
                  (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
-         end do;end do;end do
+         end do; end do; end do
       end do
       do iBlock = 1, nBlock
          if(Unused_B(iBlock))CYCLE
