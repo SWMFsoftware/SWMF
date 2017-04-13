@@ -66,7 +66,9 @@ module ModParticleFieldLine
        DirBX_    = 16, DirBY_    = 17, DirBZ_    = 18, &
        DirBXOld_ = 19, DirBYOld_ = 20, DirBZOld_ = 21, &
        ! correction to prevent lines from closing
-       CorrX_    = 22, CorrY_    = 23, CorrZ_    = 24
+       CorrX_    = 22, CorrY_    = 23, CorrZ_    = 24, &
+       ! value of CosBR at the beginning of extraction iteration
+       CosBR_    = 25
 
 
 
@@ -109,7 +111,7 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 24
+  integer, parameter:: nVarParticleEnd = 25
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
@@ -436,6 +438,13 @@ contains
       StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = DirBCurr_D
       DirCurr_D = DirBCurr_D * &
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+
+      ! cosine of angle between field and radial direction at beginning of step
+      CosBR = &
+           sum(StateEnd_VI(x_:z_,iParticle) * DirBCurr_D) / &
+           sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+      StateEnd_VI(CosBR_, iParticle) = CosBR
+
       ! get middle location
       StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
            StateEnd_VI(Ds_, iParticle) * &
@@ -476,9 +485,7 @@ contains
       DCosBR = abs(&
            sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
            sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-           sum(StateEnd_VI(XOld_:ZOld_,iParticle)* &
-           StateEnd_VI(DirBXOld_:DirBZOld_,iParticle)) / &
-           sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
+           StateEnd_VI(CosBR_,iParticle))
       if(DCosBR > 0.05)then
          iIndexEnd_II(DoCopy_, iParticle) = 0
          StateEnd_VI(DsFactor_, iParticle) = &
@@ -515,7 +522,8 @@ contains
            MIN(SpaceStepMax, MAX(SpaceStepMin,&
            0.1*SQRT(&
            sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-           )))
+           ))) * &
+           StateEnd_VI(DsFactor_, iParticle)
 
       ! direction of tangent and magnetic field at previous half-step
       DirBPrev_D = StateEnd_VI(DirBXOld_:DirBZOld_,iParticle)
@@ -525,6 +533,8 @@ contains
       CosBR = &
            sum(StateEnd_VI(x_:z_,iParticle) * DirBCurr_D) / &
            sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+      StateEnd_VI(CosBR_, iParticle) = CosBR
+
       if(abs(CosBR) < 0.5)then
          call get_grad_cosbr(&
               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -601,9 +611,7 @@ contains
       DCosBR = abs(&
            sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
            sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-           sum(StateEnd_VI(XOld_:ZOld_,iParticle) * &
-           StateEnd_VI(DirBX_:DirBZ_,iParticle)) / &
-           sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2)**0.5)
+           StateEnd_VI(CosBR_,iParticle))
       if(DCosBR > 0.05)then
          iIndexEnd_II(DoCopy_, iParticle) = 0
          StateEnd_VI(DsFactor_, iParticle) = &
