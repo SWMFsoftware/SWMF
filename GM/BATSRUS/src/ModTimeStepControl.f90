@@ -108,7 +108,7 @@ contains
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit
+         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit, UseLocalTimeStep
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -278,15 +278,15 @@ contains
          time_BLK(:,:,:,iBlock) = DtFixed
 
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
-    if(UseDtLimit) &
+    if(UseDtLimit .or. UseLocalTimeStep) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
 
     if(DoTestMe .and. UseDtFixed) &
          write(*,*) NameSub,' after UseDtFixed, time_BLK =', &
          time_BLK(Itest,Jtest,Ktest,iBlock)
 
-    if(DoTestMe .and. UseDtLimit) &
-         write(*,*) NameSub,' after UseDtLimit, time_BLK =', &
+    if(DoTestMe .and. (UseDtLimit .or. UseLocalTimeStep)) &
+         write(*,*) NameSub,' after limiting, time_BLK =', &
          time_BLK(Itest,Jtest,Ktest,iBlock)
 
     ! Set time step to zero inside body.
@@ -491,7 +491,7 @@ contains
 
     use ModMain,     ONLY: nBlock, nI, nJ, nK, Unused_B, Dt, Cfl, CflOrig, &
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
-         DtLimit, DtLimitOrig, UseDtLimit
+         DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
     use ModAdvance,  ONLY: Rho_, p_, &
          State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
@@ -578,9 +578,10 @@ contains
     if(UseDtFixed)then
        ! Do not exceed DtFixedOrig
        DtFixed = min(DtFixedOrig, DtFixed*Factor)
-    elseif(UseDtLimit)then
+    elseif(UseDtLimit .or. UseLocalTimeStep)then
        ! Do not exceed DtLimitOrig
        DtLimit = min(DtLimitOrig, DtLimit*Factor)
+       Cfl     = min(CflOrig, Cfl*Factor)
     else
        ! Do not exceed CflOrig
        Cfl     = min(CflOrig, Cfl*Factor)
@@ -592,7 +593,7 @@ contains
        if(UseDtFixed)then
           write(*,*) NameSub,': Dt, DtFixed, Cfl=',&
                Dt*No2Si_V(UnitT_), DtFixed*No2Si_V(UnitT_), Cfl
-       elseif(UseDtLimit)then
+       elseif(UseDtLimit .or. UseLocalTimeStep)then
           write(*,*) NameSub,': Dt, DtLimit, Cfl=',&
                Dt*No2Si_V(UnitT_), DtLimit*No2Si_V(UnitT_), Cfl
        else

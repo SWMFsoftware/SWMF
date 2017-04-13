@@ -62,6 +62,10 @@ module ModMain
   logical :: UseDtLimit
   real    :: DtLimit, DtLimitOrig, DtLimitDim
 
+  ! Local time stepping (subcycling)
+  logical:: UseLocalTimeStep    = .false.
+  logical:: UseLocalTimeStepNew = .false. ! if just switched on
+
   !\
   ! Model Coupling variables
   !/

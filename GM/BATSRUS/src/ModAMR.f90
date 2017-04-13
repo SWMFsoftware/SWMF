@@ -64,7 +64,8 @@ contains
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
          lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
-         iNewGrid, iNewDecomposition, UseHighOrderAMR, time_loop
+         iNewGrid, iNewDecomposition, UseHighOrderAMR, time_loop, &
+         UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
@@ -82,7 +83,6 @@ contains
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModMessagePass,   ONLY: exchange_messages
     use ModPartSteady,    ONLY: UsePartSteady
-    use ModLocalTimeStep, ONLY: UseLocalTimeStep
     use ModVarIndexes, ONLY: DefaultState_V
 
     logical, intent(in) :: DoFullMessagePass

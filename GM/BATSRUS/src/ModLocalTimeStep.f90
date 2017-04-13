@@ -5,6 +5,7 @@
 module ModLocalTimeStep
 
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
+  use ModMain, ONLY: UseLocalTimeStep, UseLocalTimeStepNew, DtLimitDim
   use ModTimeStepControl, ONLY: UseMaxTimeStep
 
   implicit none
@@ -13,8 +14,6 @@ module ModLocalTimeStep
 
   public:: advance_localstep    ! time accurate mode with subcycling
   public:: read_localstep_param ! read parameters for algorithm
-  logical, public:: UseLocalTimeStep    = .false.
-  logical, public:: UseLocalTimeStepNew = .false. ! if just switched on
 
   ! Local variables
   real:: DtMinSi, DtMaxSi
@@ -36,7 +35,10 @@ contains
        UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
 
        call read_var('UseLocalTimeStep', UseLocalTimeStep)
-       call read_var('UseMaxTimeStep',   UseMaxTimeStep)
+       if(UseLocalTimeStep)then
+          call read_var('UseMaxTimeStep',   UseMaxTimeStep)
+          call read_var('DtLimitDim',       DtLimitDim)
+       end if
 
        ! Check if the local time stepping was just switched on
        UseLocalTimeStepNew = UseLocalTimeStepNew .and. UseLocalTimeStep

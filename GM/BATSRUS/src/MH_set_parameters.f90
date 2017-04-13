@@ -3446,10 +3446,10 @@ contains
        Cfl         = 1.0       ! UseDtFixed only works with time accurate
     end if
 
-    if(UseDtLimit)then
+    if(UseDtLimit .or. UseLocalTimeStep)then
        DtLimit     = DtLimitDim * Io2No_V(UnitT_)
-       DtLimitOrig = DtLimit             ! Store the initial setting
-       if(time_accurate) Dt  = DtLimit   ! Dt = 0 if steady state
+       DtLimitOrig = DtLimit                              ! Store the initial setting
+       if(time_accurate .and. UseDtLimit) Dt  = DtLimit   ! Dt = 0 if steady state
     end if
 
     if(UseTimeStepControl)then

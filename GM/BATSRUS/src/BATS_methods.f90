@@ -276,7 +276,7 @@ subroutine BATS_init_session
 
   use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
-       UseProjection, UseConstrainB, UseParticles
+       UseProjection, UseConstrainB, UseParticles, UseLocalTimeStepNew
   use ModCT,   ONLY: DoInitConstrainB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
   use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
@@ -286,7 +286,6 @@ subroutine BATS_init_session
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
   use ModUserInterface ! user_initial_perturbation
-  use ModLocalTimestep, ONLY: UseLocalTimeStepNew
   use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: init_amr_criteria
   use ModLoadBalance, ONLY: load_balance, select_stepping
@@ -392,7 +391,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
   use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
   use ModMultiFluid, ONLY: UseMultiIon
-  use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
+  use ModLocalTimeStep, ONLY: advance_localstep
   use ModPartImplicit, ONLY: advance_part_impl
   use ModHeatConduction, ONLY: calc_ei_heat_exchange
   use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_

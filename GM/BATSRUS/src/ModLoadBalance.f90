@@ -240,7 +240,6 @@ contains
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
          Used_, iNode_B, regrid_batl
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
-    use ModLocalTimeStep, ONLY: UseLocalTimeStep
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
     use ModUserInterface ! user_action
 
