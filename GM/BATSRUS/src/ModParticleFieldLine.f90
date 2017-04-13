@@ -1033,11 +1033,9 @@ contains
       use ModB0, ONLY: B0_DGB
       use ModGeometry, ONLY: R_BLK
       use ModCellGradient, ONLY: calc_gradient
-      use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
+      use ModFaceGradient, ONLY: set_block_field2
       integer :: iBlock, i, j, k ! loop variables
-      logical :: IsNewBlock
-      real    :: XyzCell_D(nDim), BCell_D(nDim), GradCosBR_D(MaxDim)
-      integer, parameter:: iDirX = 1, iDirY = 2, iDirZ = 3
+      real    :: XyzCell_D(nDim), BCell_D(nDim)
       !------------------------------------------------------------------------
       ! precompute CosBR on the grid for all active blocks
       do iBlock = 1, nBlock
@@ -1052,64 +1050,28 @@ contains
       end do
       ! fill ghost celss via message pass
       call message_pass_cell(&
-           nG       = 1, &
-           State_GB = CosBR_GB)
+           nG              = 1, &
+           State_GB        = CosBR_GB, &
+           nProlongOrderIn = 1)
+      
       do iBlock = 1, nBlock
          if(Unused_B(iBlock))CYCLE
-
          ! correct ghost cells
          call set_block_field2(&
               iBlock    = iBlock, &
               nVar      = 1, &
               Field1_VG = CosBR2_GB, &
               Field_VG  = CosBR_GB)
-
-         ! compute gradient in block's interior (where ghost cells aren't involved)
+         ! compute gradient
          call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
               GradCosBR_DGB(:,:,:,:,iBlock))
-
-         ! loop over physical cells and find face gradients
-         IsNewBlock = .false.
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            ! the cell needs to be near the boundary
-            if(  all((/i,j,k/) > 1) .and. &
-                 all((/i,j,k/) < (/nI, nJ, nK/))) CYCLE
-
-            ! determine the direction of adjacent face(s)
-            ! and compute the gradient accross it (them)
-            
-            ! gradient along X axis
-            if(i == 1 .or. i == nI)then
-               call get_face_gradient(&
-                    iDir       = iDirX, i = i, j = j, k = k,&
-                    iBlock     = iBlock, &
-                    IsNewBlock = IsNewBlock, &
-                    Scalar_G   = CosBR_GB(:,:,:,iBlock),&
-                    FaceGrad_D = GradCosBR_D)
-               GradCosBR_DGB(iDirX, i,j,k, iBlock) = GradCosBR_D(iDirX)
-            end if
-            ! gradient along Y axis
-            if(j == 1 .or. j == nJ)then
-               call get_face_gradient(&
-                    iDir       = iDirY, i = i, j = j, k = k,&
-                    iBlock     = iBlock, &
-                    IsNewBlock = IsNewBlock, &
-                    Scalar_G   = CosBR_GB(:,:,:,iBlock),&
-                    FaceGrad_D = GradCosBR_D)
-               GradCosBR_DGB(iDirY, i,j,k, iBlock) = GradCosBR_D(iDirY)
-            end if
-            ! gradient along Z axis
-            if(k == 1 .or. k == nK)then
-               call get_face_gradient(&
-                    iDir       = iDirZ, i = i, j = j, k = k,&
-                    iBlock     = iBlock, &
-                    IsNewBlock = IsNewBlock, &
-                    Scalar_G   = CosBR_GB(:,:,:,iBlock),&
-                    FaceGrad_D = GradCosBR_D)
-               GradCosBR_DGB(iDirZ, i,j,k, iBlock) = GradCosBR_D(iDirZ)
-            end if
-         end do;end do;end do
       end do
+      ! fill ghost cells for gradient via message pass
+      call message_pass_cell(&
+           nVar            = nDim,&
+           nG              = 1, &
+           State_VGB       = GradCosBR_DGB, &
+           nProlongOrderIn = 1)
     end subroutine compute_grad_cosbr
   end subroutine extract_particle_line
 
