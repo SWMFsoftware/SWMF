@@ -490,7 +490,16 @@ void OH::Sampling::OriginLocation::SampleParticleData(char *ParticleData,double 
   if (nSampledOriginLocations!=-1) {
     OriginID=OH::GetOriginTag((PIC::ParticleBuffer::byte*)ParticleData);
 
-    if (OriginID>=nSampledOriginLocations) exit(__LINE__,__FILE__,"Error: OriginID is out of range. Update the input file with the corrected value of the number of the source regions");
+    if (OriginID>=nSampledOriginLocations) {
+      char msg[500];
+
+      sprintf(msg,"$PREFIX:Error: OriginID is out of range. Update the input file with the corrected value of the number of the source regions");
+      sprintf(msg,"%s\n$PREFIX:Error: OriginID=%i",msg,OriginID);
+      sprintf(msg,"%s\n$PREFIX:Error: nSampledOriginLocations=%i\n",msg,nSampledOriginLocations);
+
+      exit(__LINE__,__FILE__,msg);
+    }
+
     *(OriginID+(double*)(SamplingBuffer+OffsetDensitySample))+=LocalParticleWeight;
   }
 }
