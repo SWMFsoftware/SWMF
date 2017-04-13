@@ -466,6 +466,11 @@ void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool Parall
   double xTriangle[3],c;
   int i,idim,iStart,iFinish,nFaceThread;
 
+  if (PIC::ThisThread==0) {
+    printf("$PREFIX: Setting the cell shadow attribute.... ");
+    fflush(stdout);
+  }
+
   //init the ray traciing module if needed
   PIC::RayTracing::Init();
 
@@ -477,6 +482,10 @@ void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool Parall
   }
   else iStart=0,iFinish=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
 
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  #pragma omp parallel for schedule(dynamic,1) default (none) private (i,c,idim,xTriangle) shared (iStart,iFinish,PIC::Mesh::IrregularSurface::BoundaryTriangleFaces,xLightSource)
+#endif
   for (i=iStart;i<iFinish;i++) {
     PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].GetCenterPosition(xTriangle);
     for (c=0.0,idim=0;idim<3;idim++) c+=(xLightSource[idim]-xTriangle[idim])*PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].ExternalNormal[idim];
@@ -497,7 +506,6 @@ void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool Parall
   }
 
   //collect the attributes when the search is performed in parallel model
-
   if (ParallelExecution==true) {
     char sendBuffer[2*nFaceThread];
     int thread,cnt;
@@ -534,5 +542,11 @@ void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool Parall
     }
 
     PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__cosine_illumination_angle=c/sqrt(l);
+  }
+
+  //the function return diagnostic message
+  if (PIC::ThisThread==0) {
+    printf("done\n");
+    fflush(stdout);
   }
 }
