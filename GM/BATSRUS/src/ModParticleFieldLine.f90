@@ -279,6 +279,8 @@ contains
     real, dimension(MaxDim):: DirPrev_D, DirCurr_D, DirNext_D
     ! correction to prevent line from closing
     real, dimension(MaxDim):: Corr_D
+    ! vector used in the Girard's method
+    real, dimension(MaxDim):: Omega_D
 
     ! cosine of angle between direction of field and radial direction
     real:: CosBR, DCosBR
@@ -549,13 +551,11 @@ contains
 
 
       ! get tangent at the current location
-      call rotate_girard(&
-           DirPrev_D,&
-           cross_product(&
+      Omega_D = cross_product(&
            Corr_D * cHalf * StateEnd_VI(DsOld_,iParticle) + &
-           (DirBCurr_D-DirBPrev_D), DirPrev_D)*&
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
-           DirCurr_D)
+           (DirBCurr_D-DirBPrev_D), &
+           DirPrev_D) * iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+      DirCurr_D = DirPrev_D + cross_product(DirPrev_D, Omega_D)
       StateEnd_VI(DirX_:DirZ_, iParticle) = DirCurr_D
 
       ! get next half-step location
@@ -582,14 +582,11 @@ contains
       Corr_D = StateEnd_VI(CorrX_:CorrZ_, iParticle)
 
       ! tangent at next half-step
-      call rotate_girard(&
-           DirPrev_D,&
-           cross_product(&
-           Corr_D * cHalf* (StateEnd_VI(Ds_,iParticle)+&
-           StateEnd_VI(DsOld_,iParticle)) +&
-           (DirBNext_D - DirBPrev_D), DirCurr_D) *&
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle),&
-           DirNext_D)
+      Omega_D = cross_product(&
+           Corr_D*cHalf*( StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle) ) +&
+           (DirBNext_D - DirBPrev_D), &
+           DirCurr_D) * iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+      call rotate_girard(DirPrev_D, Omega_D, DirNext_D)
 
 
       StateEnd_VI(DirX_ :DirZ_, iParticle) = DirNext_D
@@ -608,10 +605,20 @@ contains
            iBlock=iIndexEnd_II(0,iParticle),&
            Dir_D = DirBCurr_D)
 
+      CosBR = StateEnd_VI(CosBR_,iParticle)
+      if(sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) * CosBR < 0.0)then
+         iIndexEnd_II(DoCopy_, iParticle) = 0
+         StateEnd_VI(DsFactor_, iParticle) = &
+              0.5 * StateEnd_VI(DsFactor_, iParticle)
+         StateEnd_VI(x_:z_, iParticle) = &
+              StateEnd_VI(XOld_:ZOld_, iParticle)
+         RETURN
+      end if
+
       DCosBR = abs(&
            sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
            sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-           StateEnd_VI(CosBR_,iParticle))
+           CosBR)
       if(DCosBR > 0.05)then
          iIndexEnd_II(DoCopy_, iParticle) = 0
          StateEnd_VI(DsFactor_, iParticle) = &
@@ -734,7 +741,7 @@ contains
        allocate(CosBR2_GB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
             1-nG*kDim_:nK+nG*kDim_,nBlock))
        CosBR2_GB = 0.0
-       allocate(GradCosBR_DGB(MaxDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
+       allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
             1-nG*kDim_:nK+nG*kDim_,nBlock))
        GradCosBR_DGB = 0.0
        call compute_grad_cosbr
@@ -1108,7 +1115,7 @@ contains
     do iCell = 1, nCell
        i_D = 1
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
-       Grad_D = Grad_D + &
+       Grad_D(1:nDim) = Grad_D(1:nDim) + &
             GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
   end subroutine get_grad_cosbr
