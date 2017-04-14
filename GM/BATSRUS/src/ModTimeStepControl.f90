@@ -108,7 +108,7 @@ contains
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit, UseLocalTimeStep
+         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -278,14 +278,14 @@ contains
          time_BLK(:,:,:,iBlock) = DtFixed
 
     ! Limit local time step so that Cfl*time_BLK <= DtLimit,
-    if(UseDtLimit .or. UseLocalTimeStep) &
+    if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
 
     if(DoTestMe .and. UseDtFixed) &
          write(*,*) NameSub,' after UseDtFixed, time_BLK =', &
          time_BLK(Itest,Jtest,Ktest,iBlock)
 
-    if(DoTestMe .and. (UseDtLimit .or. UseLocalTimeStep)) &
+    if(DoTestMe .and. UseDtLimit) &
          write(*,*) NameSub,' after limiting, time_BLK =', &
          time_BLK(Itest,Jtest,Ktest,iBlock)
 
@@ -356,8 +356,8 @@ contains
                MASK=iTypeAdvance_B(1:nBlock) == ExplBlock_)
        else
           DtMinPE = minval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
-          if(UseMaxTimeStep) DtMax = &
-               maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock))
+          if(UseMaxTimeStep) DtMax = min(DtLimit/Cfl, &
+               maxval(Dt_BLK(1:nBlock), MASK=.not.Unused_B(1:nBlock)))
        end if
 
        ! Set Dt to minimum time step over all the PE-s
@@ -412,8 +412,12 @@ contains
           if(nProc > 1) call MPI_allreduce(&
                MPI_IN_PLACE, DtMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
 
+          if(DoTestMe) write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
+
           ! Make DtMax a power of 2 multiple of DtMin
           DtMax = DtMin*2.0**floor(log(DtMax/DtMin)/log(2.0))
+
+          if(DoTestMe)write(*,*)NameSub,' DtMax after rounding=',DtMax
 
           Dt = DtMax
        end if
