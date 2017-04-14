@@ -56,6 +56,7 @@ contains
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
          Flux_VX, Flux_VY, Flux_VZ, time_BLK
+    use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
     use ModFaceBoundary, ONLY: set_face_boundary
@@ -175,6 +176,10 @@ contains
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
+
+          ! Calculate interface values for L/R states of each face
+          !   and apply BCs for interface states as needed.
+          call set_b0_face(iBlock)
 
           ! Skip block that already exceeded the current time of the stage
           if(Time_B(iBlock) > TimeStage + DtSiTiny) CYCLE
