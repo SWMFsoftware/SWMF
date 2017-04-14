@@ -36,17 +36,6 @@ public:
   double FlagTableLengthIncrement; //increment of the table length (persents) when re-allocated
 
   void AllocateTable(int size,int iThreadOpenMP) {
-//    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-//    #pragma omp critical
-//    {
-//    #endif
-
-      if (size>10000000) printf("asdasdlkahjds\n");
-      if (iThreadOpenMP>=16) printf("zXCMfgaksjhdfb\n");
-
-      if (FlagTableLength==NULL) printf("xkljghfdslkghjs\n");
-      if (FlagTable==NULL)  printf("xzxvdhbkjhv\n");
-
     if (size>FlagTableLength[iThreadOpenMP]) {
       //allocate the new table
       unsigned char *tmpTable=new unsigned char [size];
@@ -64,10 +53,6 @@ public:
       FlagTable[iThreadOpenMP]=tmpTable;
       FlagTableLength[iThreadOpenMP]=size;
     }
-
-//    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-//    }
-//    #endif
   }
 
   void SetDefaultParameters() {
@@ -138,8 +123,6 @@ public:
     iByte=GlobalBitePosition/8;
     iBit=GlobalBitePosition%8;
 
-//    printf("%i %i %i %i %i \n",iThreadOpenMP,GlobalBitePosition,iByte,iBit,FlagTableLength[iThreadOpenMP]);
-
     if (iByte>=FlagTableLength[iThreadOpenMP]) {
       //re-allocate the table
       int NewFlagTableSize;
@@ -147,13 +130,8 @@ public:
       NewFlagTableSize=(FlagTableLength[iThreadOpenMP]==0) ? DefaultFlagTableLength : (int)(FlagTableLengthIncrement*FlagTableLength[iThreadOpenMP]);
       if (NewFlagTableSize<=iByte) NewFlagTableSize=(int)(FlagTableLengthIncrement*iByte);
 
-
-//      printf("!!!!!!  1: %i %i %i %i\n",iThreadOpenMP,iByte,iBit,FlagTableLength[iThreadOpenMP]);
       AllocateTable(NewFlagTableSize,iThreadOpenMP);
-//      printf("!!!!!!  2: %i %i %i %i\n",iThreadOpenMP,iByte,iBit,FlagTableLength[iThreadOpenMP]);
     }
-
-
 
     if (flag==true) {
       mask=(unsigned char)(1<<iBit);
