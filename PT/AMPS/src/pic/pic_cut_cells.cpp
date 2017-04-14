@@ -527,13 +527,46 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
 double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace) {
   double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],xIntersectionLocal[3],IntersectionTime,t;
   int iFace,idim,iPoint;
+  int nThreadsOpenMP=1;
 
   //determine whether the point is insde the triangulated surface
   if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0)==false) return -1.0;
 
   //loop through the cut-faces to detemine the closest distance to the surface
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+   #pragma omp parallel shared(nThreadsOpenMP)
+   {
+     #pragma omp single
+     {
+       nThreadsOpenMP=omp_get_num_threads();
+     }
+   }
 
-  for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) {
+   double AltitudeTable[nThreadsOpenMP];
+   double **xClosestPointTable=new double* [nThreadsOpenMP];
+   int iClosestTriangularFaceTable[nThreadsOpenMP];
+
+
+   xClosestPointTable[0]=new double [3*nThreadsOpenMP];
+   for (int i=1;i<nThreadsOpenMP;i++) xClosestPointTable[i]=xClosestPointTable[0]+3*i;
+
+   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,x,iFace,ExternNormal,c,idim,t,l) shared (PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
+   {
+   int iThreadOpenMP=omp_get_thread_num();
+
+   AltitudeTable[iThreadOpenMP]=-1.0;
+   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) if (iFace/nThreadsOpenMP==iThreadOpenMP) {
+#else
+   int iThreadOpenMP=0;
+   double AltitudeTable[1]={-1.0};
+   double **xClosestPointTable=new double* [1];
+   int iClosestTriangularFaceTable[1];
+
+   xClosestPointTable[0]=new double[3];
+
+   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) {
+#endif
+
     //the external point has to be pointed in the direction of the point of test
     ExternNormal=CutCell::BoundaryTriangleFaces[iFace].ExternalNormal;
 
@@ -545,10 +578,10 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
     //the extermal normal of the face is derected toward the tested point ==>
     //evaluate the distance to the face at the center, corners of the face, and in the direction normal to the surface
     t=Vector3D::Length(l);
-    if ((t<Altitude)||(Altitude<0.0)) {
-      Altitude=t;
-      memcpy(xClosestPoint,xFace,3*sizeof(double));
-      iClosestTriangularFace=iFace;
+    if ((t<AltitudeTable[iThreadOpenMP])||(AltitudeTable[iThreadOpenMP]<0.0)) {
+      AltitudeTable[iThreadOpenMP]=t;
+      memcpy(xClosestPointTable[iThreadOpenMP],xFace,3*sizeof(double));
+      iClosestTriangularFaceTable[iThreadOpenMP]=iFace;
     }
 
     //the closest point to the face is that along the normal check intersecion of the line along the normal with the surface element
@@ -559,10 +592,10 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
 
       t=sqrt(c);
 
-      if (t<Altitude) {
-        Altitude=t;
-        memcpy(xClosestPoint,xIntersection,3*sizeof(double));
-        iClosestTriangularFace=iFace;
+      if (t<AltitudeTable[iThreadOpenMP]) {
+        AltitudeTable[iThreadOpenMP]=t;
+        memcpy(xClosestPointTable[iThreadOpenMP],xIntersection,3*sizeof(double));
+        iClosestTriangularFaceTable[iThreadOpenMP]=iFace;
       }
     }
     else {
@@ -587,14 +620,31 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
 
         t=sqrt(c);
 
-        if (t<Altitude) {
-          Altitude=t;
-          memcpy(xClosestPoint,xFace,3*sizeof(double));
-          iClosestTriangularFace=iFace;
+        if (t<AltitudeTable[iThreadOpenMP]) {
+          AltitudeTable[iThreadOpenMP]=t;
+          memcpy(xClosestPointTable[iThreadOpenMP],xFace,3*sizeof(double));
+          iClosestTriangularFaceTable[iThreadOpenMP]=iFace;
         }
       }
     }
   }
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  }
+#endif
+
+  //collect altitude information from all OpenMP threads
+  Altitude=AltitudeTable[0];
+  memcpy(xClosestPoint,xClosestPointTable[0],3*sizeof(double));
+  iClosestTriangularFace=iClosestTriangularFaceTable[0];
+
+  for (int thread=1;thread<nThreadsOpenMP;thread++) if (Altitude=AltitudeTable[thread]) {
+    Altitude=AltitudeTable[thread];
+    memcpy(xClosestPoint,xClosestPointTable[thread],3*sizeof(double));
+    iClosestTriangularFace=iClosestTriangularFaceTable[thread];
+  }
+
+  delete [] xClosestPointTable[0];
+  delete [] xClosestPointTable;
 
   return Altitude;
 }
