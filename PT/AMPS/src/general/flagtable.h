@@ -131,7 +131,6 @@ public:
     int iBit,iByte,iThreadOpenMP=0;
     unsigned char mask;
 
-
     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
     iThreadOpenMP=omp_get_thread_num();
     #endif
@@ -154,13 +153,15 @@ public:
 //      printf("!!!!!!  2: %i %i %i %i\n",iThreadOpenMP,iByte,iBit,FlagTableLength[iThreadOpenMP]);
     }
 
-    mask=(unsigned char)(1<<iBit);
+
 
     if (flag==true) {
+      mask=(unsigned char)(1<<iBit);
       FlagTable[iThreadOpenMP][iByte]|=mask;
     }
     else {
-      FlagTable[iThreadOpenMP][iByte]^=mask;
+      mask=(unsigned char)(0xff^(1<<iBit));
+      FlagTable[iThreadOpenMP][iByte]&=mask;
     }
   }
 
