@@ -1542,8 +1542,9 @@ contains
        v_II = v_II*1e-9
     else
 ! opacity corrections based on Haser, still need some fecth fectors
-       NCol = Qprod/4.0/(uHaser)/(sqrt(DistProjection2)*NO2SI_V(UnitX_)) * &
-            (0.5-1.0/cPi*atan(Xyz_DGB(x_,i,j,k,iBlock)/sqrt(DistProjection2)))
+!       NCol = Qprod/4.0/(uHaser)/(sqrt(DistProjection2)*NO2SI_V(UnitX_)) * &
+!            (0.5-1.0/cPi*atan(Xyz_DGB(x_,i,j,k,iBlock)/sqrt(DistProjection2)))
+       NCol = 0.0
        v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
     end if
 
