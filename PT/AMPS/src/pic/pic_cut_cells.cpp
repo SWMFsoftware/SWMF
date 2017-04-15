@@ -550,7 +550,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
    xClosestPointTable[0]=new double [3*nThreadsOpenMP];
    for (int i=1;i<nThreadsOpenMP;i++) xClosestPointTable[i]=xClosestPointTable[0]+3*i;
 
-   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,x,iFace,ExternNormal,c,idim,t,l) shared (PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
+   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,iFace,ExternNormal,c,idim,t,l) shared (x,PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
    {
    int iThreadOpenMP=omp_get_thread_num();
 
