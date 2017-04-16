@@ -542,10 +542,11 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
      }
    }
 
-   double AltitudeTable[nThreadsOpenMP];
+   double * AltitudeTable=new double [nThreadsOpenMP];
    double **xClosestPointTable=new double* [nThreadsOpenMP];
    int iClosestTriangularFaceTable[nThreadsOpenMP];
 
+   for (int i=0;i<nThreadsOpenMP;i++) AltitudeTable[i]=-1.0;
 
    xClosestPointTable[0]=new double [3*nThreadsOpenMP];
    for (int i=1;i<nThreadsOpenMP;i++) xClosestPointTable[i]=xClosestPointTable[0]+3*i;
@@ -554,14 +555,14 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
    {
    int iThreadOpenMP=omp_get_thread_num();
 
-   AltitudeTable[iThreadOpenMP]=-1.0;
-   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) if (iFace/nThreadsOpenMP==iThreadOpenMP) {
+   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) if (iFace%nThreadsOpenMP==iThreadOpenMP) {
 #else
    int iThreadOpenMP=0;
-   double AltitudeTable[1]={-1.0};
+   double *AltitudeTable=new double [1];
    double **xClosestPointTable=new double* [1];
    int iClosestTriangularFaceTable[1];
 
+   AltitudeTable[0]=-1.0;
    xClosestPointTable[0]=new double[3];
 
    for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) {
@@ -637,7 +638,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
   memcpy(xClosestPoint,xClosestPointTable[0],3*sizeof(double));
   iClosestTriangularFace=iClosestTriangularFaceTable[0];
 
-  for (int thread=1;thread<nThreadsOpenMP;thread++) if (Altitude=AltitudeTable[thread]) {
+  for (int thread=1;thread<nThreadsOpenMP;thread++) if (Altitude<AltitudeTable[thread]) {
     Altitude=AltitudeTable[thread];
     memcpy(xClosestPoint,xClosestPointTable[thread],3*sizeof(double));
     iClosestTriangularFace=iClosestTriangularFaceTable[thread];
@@ -645,6 +646,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
 
   delete [] xClosestPointTable[0];
   delete [] xClosestPointTable;
+  delete [] AltitudeTable;
 
   return Altitude;
 }
