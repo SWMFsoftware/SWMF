@@ -531,7 +531,7 @@ void RosinaSample::Liouville::Evaluate() {
     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
     positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
 
-    PIC::RayTracing::SetCutCellShadowAttribute(positionSun,false);
+    PIC::RayTracing::SetCutCellShadowAttribute(positionSun,true);
 
     for (spec=0;spec<PIC::nTotalSpecies;spec++) {
       definedFluxBjorn[spec]=false,probabilityFunctionDefinedNASTRAN[spec]=false;
