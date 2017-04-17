@@ -320,4 +320,7 @@ at the end of each time step
 //Free flow injection boundary mode
 #define _PIC_BC__OPEN_FLOW_INJECTION__MODE_  _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_
 
+//the number of bytes used to store the access counter of the ray tracing prorations 
+#define _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ 2
+
 #endif //_PIC_GLOBAL_DEFINITIONS_H_  
