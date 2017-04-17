@@ -13,7 +13,8 @@ module ModParticleFieldLine
        iProc,&
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
-       Particle_I, CellSize_DB, Xyz_DGB, nI, nJ, nK, nBlock, &
+       Particle_I, CellSize_DB, Xyz_DGB, &
+       MinI,MinJ,MinK, MaxI,MaxJ,MaxK, nI, nJ, nK, nBlock, &
        jDim_, kDim_, allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
@@ -542,8 +543,7 @@ contains
               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
               iBlock=iIndexEnd_II(0,iParticle),&
               Grad_D = Corr_D)
-         Corr_D = Corr_D * &
-              (1.0/CosBR - 2.0 * sign(1.0, CosBR))
+         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
       else
          Corr_D = 0.0
       end if
@@ -553,9 +553,12 @@ contains
       ! get tangent at the current location
       Omega_D = cross_product(&
            Corr_D * cHalf * StateEnd_VI(DsOld_,iParticle) + &
-           (DirBCurr_D-DirBPrev_D), &
-           DirPrev_D) * iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+           (DirBCurr_D-DirBPrev_D) * &
+           iDirTrace * iIndexEnd_II(Alignment_, iParticle), &
+           DirPrev_D)
       DirCurr_D = DirPrev_D + cross_product(DirPrev_D, Omega_D)
+      ! fix the length of the vector
+      DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
       StateEnd_VI(DirX_:DirZ_, iParticle) = DirCurr_D
 
       ! get next half-step location
@@ -583,11 +586,12 @@ contains
 
       ! tangent at next half-step
       Omega_D = cross_product(&
-           Corr_D*cHalf*( StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle) ) +&
-           (DirBNext_D - DirBPrev_D), &
-           DirCurr_D) * iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+           Corr_D*cHalf*&
+           ( StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle) ) +&
+           (DirBNext_D - DirBPrev_D) * &
+           iDirTrace * iIndexEnd_II(Alignment_, iParticle), &
+           DirCurr_D)
       call rotate_girard(DirPrev_D, Omega_D, DirNext_D)
-
 
       StateEnd_VI(DirX_ :DirZ_, iParticle) = DirNext_D
       StateEnd_VI(DirBX_:DirBZ_,iParticle) = DirBNext_D
@@ -735,11 +739,9 @@ contains
     ! allocate containers for cosine of angle between B and radial direction
     !/
     if(DoTraceGirard)then
-       allocate(CosBR_GB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-            1-nG*kDim_:nK+nG*kDim_,nBlock))
+       allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
        CosBR_GB = 0.0
-       allocate(CosBR2_GB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-            1-nG*kDim_:nK+nG*kDim_,nBlock))
+       allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
        CosBR2_GB = 0.0
        allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
             1-nG*kDim_:nK+nG*kDim_,nBlock))
@@ -1002,7 +1004,7 @@ contains
       end do
       ! fill ghost celss via message pass
       call message_pass_cell(&
-           nG              = 1, &
+!           nG              = 1, &
            State_GB        = CosBR_GB, &
            nProlongOrderIn = 1)
       
