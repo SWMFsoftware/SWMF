@@ -124,13 +124,20 @@ pro set_default_values
 
 ; Animation parameters for the movie
   common animate_param, $
-     firstpict, dpict, npictmax, savemovie, wsubtract, timediff
+     firstpict, dpict, npictmax, savemovie, wsubtract, timediff, $
+     videosave, videofile, videorate, videoobject, videostream, videoimage
   firstpict=1        ; a scalar or array (per file) of the index of first frame
   dpict=1            ; a scalar or array (per file) of distance between frames
   npictmax=500       ; maximum number of frames in an animation
   savemovie='n'      ; save movie into 'ps', 'png', 'tiff', 'bmp', 'jpeg' files
   wsubtract=0        ; Array subtracted from w during animation
   timediff=0         ; take time derivative of w during animation if timediff=1
+  videosave=0        ; save video?
+  videofile='movie'  ; name of video file with extension .savemovie
+  videorate=10       ; number of frames per second
+  videoobject=0      ; video object
+  videostream=0      ; video stream object
+  videoimage=0       ; byte array of 3 x width x height
 
 ; Parameters for .r slice
   common slice_param, $
@@ -359,6 +366,9 @@ pro set_default_values
   eqpar    = 0.                 ; values of scalar parameters
   variables= ''                 ; array of coordinate/variable/param names
   wnames   = ''                 ; array of variables names
+
+; The byte arrays in the colors common block are set by loadct
+  common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
 
 end
 ;===========================================================================
@@ -675,6 +685,7 @@ pro animate_data
   common ask_param
   common plot_param
   common plotfunc_param
+  common colors
 
   ;; Initialize storage for running maxima and averages
   iplotstore = 0
@@ -839,8 +850,15 @@ pro animate_data
      npict1=1
   endelse
 
-  if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
-  if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
+  videosave = savemovie eq 'mp4' or savemovie eq 'avi'
+  if videosave then begin
+     videoobject = IDLffVideoWrite(videofile+'.'+savemovie)
+     videostream = videoobject.AddVideoStream(!d.x_size,!d.y_size,videorate)
+     videoimage = bytarr(3,!d.x_size,!d.y_size)
+  endif else begin
+     if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
+     if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
+  endelse
 
   doanimate= npict gt npict1 and !d.name eq 'X'
   if !d.name eq 'X' then begin
@@ -945,15 +963,17 @@ pro animate_data
      if ipict1 eq npict1-1 or ipict eq npict-1 then begin
         if doanimate then $
            xinteranimate,frame=iplot,window=!d.window
-        if savemovie eq 'ps' then begin
+        if videosave then begin
+           videotime = videoobject.put(videostream, tvrd(true=1))
+        endif else if savemovie eq 'ps' then begin
            print,FORMAT='(" (Movie/",i4.4,".ps)",$)',iplot+1
            device,/close
         endif else if savemovie ne 'n' and !d.name eq 'X' then begin
            imagefile=string(FORMAT='("Movie/",i4.4,".",a)',iplot+1,savemovie)
            print,FORMAT='("(",a,")",$)',imagefile
-           common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
-           write_image,imagefile,savemovie, $
-                       tvrd( order=(savemovie eq 'tiff'), true=1),r_curr, g_curr, b_curr
+           write_image, imagefile, savemovie, $
+                       tvrd( order=(savemovie eq 'tiff'), true=1), $
+                       r_curr, g_curr, b_curr
         endif
      endif
 
@@ -972,6 +992,7 @@ pro animate_data
   !p.title=''
   !z.title=''
 
+  if videosave then videoobject = 0 ; close video file
   if savemovie eq 'ps' then set_plot,'X'
   ;; Restore velpos array
   velpos=velpos0 & velpos0=0
@@ -4077,10 +4098,7 @@ pro plot_func
         endelse
 
                                 ; restore colors
-        if white then begin
-           common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
-           tvlct, r_curr, g_curr, b_curr
-        endif
+        if white then tvlct, r_curr, g_curr, b_curr
 
      endif
 
@@ -6162,7 +6180,7 @@ pro makect, color
 
 ; Create color table corresponding to color='mid','blue','red','rwb','bwr'
 
-common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
+common colors
 
 ; Get number of colors
 n=!d.table_size
