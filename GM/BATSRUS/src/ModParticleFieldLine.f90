@@ -913,7 +913,7 @@ contains
          ! Apply offset
          !/
          iIndex_II(id_,iParticle) = iIndex_II(id_,iParticle) + &
-         iOffsetLocal_I(iLine)
+              iOffset_I(iLine)
       end do
     end subroutine offset_id
     !========================================================================
