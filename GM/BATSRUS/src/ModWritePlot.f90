@@ -1590,10 +1590,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(1:nI,1:nJ,1:nK,iVar) = time_BLK(1:nI,1:nJ,1:nK,iBLK)
      case('dtblk')
         PlotVar(:,:,:,iVar) = dt_BLK(iBLK)
-        if(.not.true_BLK(iBLK))then
-           if(.not.any(true_cell(1:nI,1:nJ,1:nK,iBLK)))&
-                PlotVar(:,:,:,iVar) = 0.0
-        end if
+        !if(.not.true_BLK(iBLK))then
+        !   if(.not.any(true_cell(:,:,:,iBLK)))&
+        !        PlotVar(:,:,:,iVar) = 0.0
+        !end if
      case('cons')
         if(allocated(IsConserv_CB))then
            where(IsConserv_CB(:,:,:,iBLK)) PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.
