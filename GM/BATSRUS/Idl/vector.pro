@@ -3,8 +3,8 @@
 ;^CFG COPYRIGHT VAC_UM
 ;=============================================================================
 PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
-                  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
-                  NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
+               XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,SEED=seed,$
+               NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ;+
 ; NAME:
@@ -67,7 +67,7 @@ PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
 ;	coordinates and the triangles from their triangulation.
 ;
 ; COMMON BLOCKS:
-;	None.
+;	colors
 ;
 ; SIDE EFFECTS:
 ;	A plot is drawn on the current graphics device.
@@ -87,30 +87,32 @@ PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
 ;       05/16/07- G. Toth extracted from existing code.
 ;-
 
+  common colors                 
+
 ; normalize vectors
-norm = sqrt(u^2+v^2+1.e-30) & u1 = u/norm & v1 = v/norm
+  norm = sqrt(u^2+v^2+1.e-30) & u1 = u/norm & v1 = v/norm
 
 ; draw arrows
-vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
-  NSTEP=6,LENGTH=0.012,HEAD=0.5,$
-  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
-  DYNAMIC=0,SEED=seed,X0=x0,$
-  NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
+  vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+         NSTEP=6,LENGTH=0.012,HEAD=0.5,$
+         XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+         DYNAMIC=0,SEED=seed,X0=x0,$
+         NOERASE=noerase,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ; draw streamline along u1;v1
-vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
-  NSTEP=1000,LENGTH=2.,HEAD=0.,$
-  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
-  DYNAMIC=0,SEED=seed,X0=x0,$
-  /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
+  vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+         NSTEP=1000,LENGTH=2.,HEAD=0.,$
+         XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+         DYNAMIC=0,SEED=seed,X0=x0,$
+         /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 ; draw streamline in the other direction
-u1=-u1 & v1=-v1
-vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
-  NSTEP=1000,LENGTH=2.,HEAD=0.,$
-  XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
-  DYNAMIC=0,SEED=seed,X0=x0,$
-  /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
+  u1=-u1 & v1=-v1
+  vector,u1,v1,xx,yy,NVECS=nvecs,MAXVAL=1.,$
+         NSTEP=1000,LENGTH=2.,HEAD=0.,$
+         XXOLD=xxold,YYOLD=yyold,TRIANGLES=triangles,$
+         DYNAMIC=0,SEED=seed,X0=x0,$
+         /NOERASE,WHITE=white,XSTYLE=xstyle,YSTYLE=ystyle
 
 end
 ;=============================================================================
@@ -465,8 +467,7 @@ plot,[xmin,xmax],[ymin,ymax],/nodata,XSTYLE=xstyle,YSTYLE=ystyle,NOERASE=noerase
 if keyword_set(white) then begin
     tvlct,bytarr(256,3)+255       ; change to white
     for i=0,nvecs-1 do plots,x(i,*,0),x(i,*,1),NOCLIP=0,color=127
-    common colors                 ; restore colors
-    tvlct,r_curr,g_curr,b_curr
+    tvlct,r_curr,g_curr,b_curr  ; restore colors
 endif else $
   for i=0,nvecs-1 do plots,x(i,*,0),x(i,*,1),NOCLIP=0
 
