@@ -353,14 +353,16 @@ namespace PIC {
 
     public:
       long int Temp_ID;
+      bool ActiveFlag; //used to prevent multiple deallocation of the Vertix 
 
       cFieldLineVertex() {
-	      IsSet = 0;
+        IsSet=0;
 
-	      for (int idim=0; idim<DIM; idim++) x[idim]=0;
+        for (int idim=0;idim<DIM;idim++) x[idim]=0;
 
-	      prev = (next = NULL);
-	      Temp_ID = 0;
+        prev=NULL,next=NULL;
+        Temp_ID=0;
+        ActiveFlag=false;
       }
 
       //.......................................................................
@@ -1348,7 +1350,7 @@ namespace PIC {
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
     extern char *FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
-    extern char *FaceAccessCounterTable; //the conter of the Ray Tracking operations
+    extern unsigned int *FaceAccessCounterTable; //the conter of the Ray Tracking operations
 
     void Init();
 
@@ -2108,33 +2110,35 @@ namespace PIC {
       //      long int FirstCellParticle,tempParticleMovingList;
       
       char *associatedDataPointer;
+      bool ActiveFlag;
       
       inline int AssociatedDataLength() {
-	      return totalAssociatedDataLength;
+        return totalAssociatedDataLength;
       }
       
       void SetAssociatedDataBufferPointer(char* ptr) {
-	      associatedDataPointer=ptr;
+        associatedDataPointer=ptr;
       }
       
       inline char* GetAssociatedDataBufferPointer() {
-	      return associatedDataPointer;
+        return associatedDataPointer;
       }
           
       //clean the sampling buffers
       void cleanDataBuffer() {
-	      cBasicCenterNode::cleanDataBuffer();
+        cBasicCenterNode::cleanDataBuffer();
 	
-	      int i,length=totalAssociatedDataLength/sizeof(double);
-	      double *ptr;
-	      for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
+        int i,length=totalAssociatedDataLength/sizeof(double);
+        double *ptr;
+        for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
 	
-	      if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
+        if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
       }
       
       //init the buffers
       cDataCenterNode() : cBasicCenterNode() {
-	      associatedDataPointer=NULL;
+        associatedDataPointer=NULL;
+        ActiveFlag=false;
       }
         
       // access sampled macroscopic parameters;
@@ -2346,6 +2350,11 @@ namespace PIC {
     //the class that contains the run information for the cell's corners
     class cDataCornerNode : public cBasicCornerNode {
     public:
+      bool ActiveFlag;
+
+      cDataCornerNode() {
+        ActiveFlag=false;
+      }
     };
   
     //the data stored in a block
@@ -2366,6 +2375,7 @@ namespace PIC {
       static int UserAssociatedDataOffset;
       long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
+      bool ActiveFlag; //used for debugging to prevent repeatable de-allocation of the block
 
       //the flag defined whether all internal data is allocated
       static bool InternalDataInitFlag;
@@ -2441,6 +2451,7 @@ namespace PIC {
 
       cDataBlockAMR () : cBasicBlockAMR<cDataCornerNode,cDataCenterNode> () {
         if (InternalDataInitFlag==false) InitInternalData();
+        ActiveFlag=false;
       }
 
     
