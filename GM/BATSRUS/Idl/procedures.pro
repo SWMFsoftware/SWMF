@@ -850,7 +850,7 @@ pro animate_data
      npict1=1
   endelse
 
-  videosave = savemovie eq 'mp4' or savemovie eq 'avi'
+  videosave = savemovie eq 'mp4' or savemovie eq 'avi' or savemovie eq 'mov'
   if videosave then begin
      videoobject = IDLffVideoWrite(videofile+'.'+savemovie)
      videostream = videoobject.AddVideoStream(!d.x_size,!d.y_size,videorate)
