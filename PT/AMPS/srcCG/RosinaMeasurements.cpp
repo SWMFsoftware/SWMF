@@ -112,7 +112,12 @@ void RosinaSample::Init(double etMin,double etMax) {
       Rosina[i].LocationCode=-1; //outside of the domain
     }
     else {
-      if (CutCell::CheckPointInsideDomain(xRosetta,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0)==false) {
+      int InsideDomainFlag;
+
+      if (PIC::ThisThread==0) InsideDomainFlag=CutCell::CheckPointInsideDomain(xRosetta,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0);
+      MPI_Bcast(&InsideDomainFlag,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+
+      if (InsideDomainFlag==false) {
         Rosina[i].LocationCode=-2; //the point is inside the body
       }
       else {
@@ -120,18 +125,35 @@ void RosinaSample::Init(double etMin,double etMax) {
         Rosina[i].CharacteristicCellSize=sqrt(pow(node->xmax[0]-node->xmin[0],2)+pow(node->xmax[1]-node->xmin[1],2)+pow(node->xmax[2]-node->xmin[2],2));
 
         //determine the closest distance to the comet
+        int nTestThread,iStartTest,iFinishTest;
+        double MinAltitude=-1.0,MinAltitudeTable[PIC::nTotalThreads];
+
+        nTestThread=CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads;
+        iStartTest=nTestThread*PIC::ThisThread;
+        iFinishTest=iStartTest+nTestThread;
+        if (PIC::ThisThread==PIC::nTotalThreads-1) iFinishTest=CutCell::nBoundaryTriangleFaces;
 
 
-        for (int ii=0;ii<CutCell::nBoundaryTriangleFaces;ii++) {
+        for (int ii=iStartTest;ii<iFinishTest;ii++) {
           double r,xCenter[3];
           int idim;
 
           CutCell::BoundaryTriangleFaces[ii].GetCenterPosition(xCenter);
           for (idim=0,r=0.0;idim<3;idim++) r+=pow(xCenter[idim]-xRosetta[idim],2);
 
-          r=sqrt(r);
-          if ((Rosina[i].CometDistance<0.0)||(r<Rosina[i].CometDistance)) Rosina[i].CometDistance=r;
+          if ((MinAltitude<0.0)||(MinAltitude>r)) MinAltitude=r;
+
+//          r=sqrt(r);
+//          if ((Rosina[i].CometDistance<0.0)||(r<Rosina[i].CometDistance)) Rosina[i].CometDistance=r;
         }
+
+        //collect the altitude data from all processors
+        MPI_Allgather(&MinAltitude,1,MPI_DOUBLE,MinAltitudeTable,1,MPI_DOUBLE,MPI_GLOBAL_COMMUNICATOR);
+        for (int thread=0;thread<PIC::nTotalThreads;thread++) if (((MinAltitude<0.0)||(MinAltitude>MinAltitudeTable[thread])) && (MinAltitude>MinAltitudeTable[thread]>0.0)) MinAltitude=MinAltitudeTable[thread];
+
+        MinAltitude=sqrt(MinAltitude);
+        if ((Rosina[i].CometDistance<0.0)||(MinAltitude<Rosina[i].CometDistance)) Rosina[i].CometDistance=MinAltitude;
+
       }
     }
 
