@@ -544,8 +544,18 @@ contains
               iBlock=iIndexEnd_II(0,iParticle),&
               Grad_D = Corr_D)
          Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
+         !reduce step size if Corr_D is too large
+         if(sqrt(sum(Corr_D**2))* StateEnd_VI(Ds_,iParticle) > 0.1)then
+            StateEnd_VI(Ds_,iParticle) = 0.5 * StateEnd_VI(Ds_,iParticle) * &
+                 0.1/sqrt(sum(Corr_D**2))
+         end if
       else
          Corr_D = 0.0
+         ! additional correction to prevent line from diverging away
+         ! from the field once other corrections are completed
+         Corr_D = DirBCurr_D / (10*StateEnd_VI(Ds_,iParticle)) * &
+              iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+
       end if
       StateEnd_VI(CorrX_:CorrZ_, iParticle) = Corr_D
 
@@ -905,7 +915,7 @@ contains
               MPI_INTEGER, MPI_MAX, iComm, iError)
       else
          iOffset_I(iLineStart:iLineEnd) = &
-              iOffset_I(iLineStart:iLineEnd)
+              iOffsetLocal_I(iLineStart:iLineEnd)
       end if
       do iParticle = 1, nParticle
          iLine = iIndex_II(fl_,iParticle)
