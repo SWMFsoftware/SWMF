@@ -125,11 +125,12 @@ pro set_default_values
 ; Animation parameters for the movie
   common animate_param, $
      firstpict, dpict, npictmax, savemovie, wsubtract, timediff, $
-     videosave, videofile, videorate, videoobject, videostream, videoimage
+     videosave, videofile, videorate, videoobject, videostream, videotime
   firstpict=1        ; a scalar or array (per file) of the index of first frame
   dpict=1            ; a scalar or array (per file) of distance between frames
   npictmax=500       ; maximum number of frames in an animation
-  savemovie='n'      ; save movie into 'ps', 'png', 'tiff', 'bmp', 'jpeg' files
+  savemovie='n'      ; save animation frames into ps/png/tiff/bmp/jpeg files
+                     ; or into a 'mov/mp4/avi' video file.
   wsubtract=0        ; Array subtracted from w during animation
   timediff=0         ; take time derivative of w during animation if timediff=1
   videosave=0        ; save video?
@@ -137,7 +138,7 @@ pro set_default_values
   videorate=10       ; number of frames per second
   videoobject=0      ; video object
   videostream=0      ; video stream object
-  videoimage=0       ; byte array of 3 x width x height
+  videotime=0        ; length of video
 
 ; Parameters for .r slice
   common slice_param, $
@@ -692,11 +693,15 @@ pro animate_data
   plotstore  = 0
   timestore  = 0
 
+  videosave = savemovie eq 'mp4' or savemovie eq 'avi' or savemovie eq 'mov'
+
   print,'======= CURRENT ANIMATION PARAMETERS ================'
   print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
         FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
         +string(n_elements(dpict))+'i4,a,i4)'
-  print,'savemovie (n/ps/png/tiff/bmp/jpeg)=',savemovie
+  print,'savemovie (n/avi/mp4/mov/ps/png/tiff/bmp/jpeg)=',savemovie
+  if videosave then print,'videofile=',videofile,'(.',savemovie,')',$
+                          ', videorate=',videorate
   print,'colorlevel=',colorlevel,', contourlevel=',contourlevel,$
         ', velvector=',velvector,', velspeed (0..5)=',velspeed,$
         FORMAT='(a,i3,a,i3,a,i4,a,i2)'
@@ -850,11 +855,9 @@ pro animate_data
      npict1=1
   endelse
 
-  videosave = savemovie eq 'mp4' or savemovie eq 'avi' or savemovie eq 'mov'
   if videosave then begin
      videoobject = IDLffVideoWrite(videofile+'.'+savemovie)
      videostream = videoobject.AddVideoStream(!d.x_size,!d.y_size,videorate)
-     videoimage = bytarr(3,!d.x_size,!d.y_size)
   endif else begin
      if savemovie ne 'n' then spawn,'/bin/mkdir -p Movie'
      if savemovie eq 'ps' then set_plot,'PS',/INTERPOLATE
@@ -992,7 +995,10 @@ pro animate_data
   !p.title=''
   !z.title=''
 
-  if videosave then videoobject = 0 ; close video file
+  if videosave then begin
+     videoobject = 0            ; close video file
+     print,'Created ',videotime,' sec long video file ',videofile+'.'+savemovie
+  endif
   if savemovie eq 'ps' then set_plot,'X'
   ;; Restore velpos array
   velpos=velpos0 & velpos0=0
