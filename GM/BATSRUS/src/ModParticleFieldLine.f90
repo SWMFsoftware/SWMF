@@ -383,7 +383,6 @@ contains
        end if
        call remove_undefined_particles(KindEnd_)
 
-
        !\
        ! Stage 3:
        !/
@@ -395,6 +394,7 @@ contains
              call stage3_girard
           end select
        end do
+       call remove_undefined_particles(KindEnd_)
        !\
        ! Message pass: some particles may have moved to different procs
        !/
@@ -448,6 +448,27 @@ contains
            sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
       StateEnd_VI(CosBR_, iParticle) = CosBR
 
+      ! get the correction if line starts closing
+      Corr_D = 0.0
+      if(abs(CosBR) < 0.5)then
+         call get_grad_cosbr(&
+              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+              iBlock=iIndexEnd_II(0,iParticle),&
+              Grad_D = Corr_D)
+         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
+         if(sum(Corr_D*DirCurr_D) < 0.0)then
+            ! correct the direction to prevent the line from closing
+            DirCurr_D = DirCurr_D +  Corr_D * min(&
+                 AlphaRK2 * StateEnd_VI(Ds_, iParticle), &
+                 abs(sum(Corr_D*DirCurr_D)) / sum(Corr_D**2) )
+            DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
+         else
+            Corr_D = 0.0
+         end if
+      else
+         Corr_D = 0.0
+      end if
+
       ! get middle location
       StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
            StateEnd_VI(Ds_, iParticle) * &
@@ -465,6 +486,30 @@ contains
 
       DirNext_D = (BetaRK2 * DirBCurr_D + (1.0 - BetaRK2) * DirBNext_D) *&
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+
+      ! correct the direction
+      CosBR = &
+           sum(StateEnd_VI(x_:z_,iParticle) * DirBNext_D) / &
+           sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+      if(abs(CosBR) < 0.5)then
+         call get_grad_cosbr(&
+              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+              iBlock=iIndexEnd_II(0,iParticle),&
+              Grad_D = Corr_D)
+         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
+         if(sum(Corr_D*DirNext_D) < 0.0)then
+            ! correct the direction to prevent the line from closing
+            DirNext_D = DirNext_D + Corr_D * min(&
+                 StateEnd_VI(Ds_, iParticle), &
+                 abs(sum(Corr_D*DirNext_D)) / sum(Corr_D**2) )
+            DirNext_D = DirNext_D / sqrt(sum(DirNext_D**2))
+         else
+            Corr_D = 0.0
+         end if
+      else
+         Corr_D = 0.0
+      end if
+
       ! get final location
       StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
            StateEnd_VI(Ds_, iParticle) * &
@@ -485,16 +530,10 @@ contains
            iBlock=iIndexEnd_II(0,iParticle),&
            Dir_D = DirBCurr_D)
 
-      DCosBR = abs(&
-           sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
-           sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-           StateEnd_VI(CosBR_,iParticle))
-      if(DCosBR > 0.05)then
-         iIndexEnd_II(DoCopy_, iParticle) = 0
-         StateEnd_VI(DsFactor_, iParticle) = &
-              0.5 * StateEnd_VI(DsFactor_, iParticle) * 0.05 / DCosBR  
-         StateEnd_VI(x_:z_, iParticle) = &
-              StateEnd_VI(XOld_:ZOld_, iParticle)
+      ! if the line starts to close -> remove it
+      CosBR = StateEnd_VI(CosBR_,iParticle)
+      if(sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) * CosBR < 0.0)then
+         call mark_undefined(KindEnd_, iParticle)
          RETURN
       end if
 
@@ -748,16 +787,14 @@ contains
     !\
     ! allocate containers for cosine of angle between B and radial direction
     !/
-    if(DoTraceGirard)then
-       allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
-       CosBR_GB = 0.0
-       allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
-       CosBR2_GB = 0.0
-       allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-            1-nG*kDim_:nK+nG*kDim_,nBlock))
-       GradCosBR_DGB = 0.0
-       call compute_grad_cosbr
-    end if
+    allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
+    CosBR_GB = 0.0
+    allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
+    CosBR2_GB = 0.0
+    allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
+         1-nG*kDim_:nK+nG*kDim_,nBlock))
+    GradCosBR_DGB = 0.0
+    call compute_grad_cosbr
 
     !\
     ! Trace field lines
@@ -834,8 +871,7 @@ contains
 
     !\
     ! free space
-    if(DoTraceGirard)&
-       deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
+    deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
 
   contains
 
@@ -1014,10 +1050,10 @@ contains
       end do
       ! fill ghost celss via message pass
       call message_pass_cell(&
-!           nG              = 1, &
+           !           nG              = 1, &
            State_GB        = CosBR_GB, &
            nProlongOrderIn = 1)
-      
+
       do iBlock = 1, nBlock
          if(Unused_B(iBlock))CYCLE
          ! correct ghost cells
