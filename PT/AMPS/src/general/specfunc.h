@@ -338,6 +338,26 @@ namespace Vector3D {
          a[0]=r*sin(phi);
          a[1]=r*cos(phi);
        }
+
+       inline void Uniform(double *x, double *e0,double *e1,double Radius) {
+         double xPlane_e0_e1[2];
+
+         //location of the generated point in the e0-e1 plane
+         Distribution::Circle::Uniform(xPlane_e0_e1,Radius);
+
+         //a global coordinate of the point
+         for (int idim=0;idim<3;idim++) x[idim]=xPlane_e0_e1[0]*e0[idim]+xPlane_e0_e1[1]*e1[idim];
+       }
+
+      inline void Uniform(double *x, double *e0,double *e1,double *xCicleCenterLocation,double Radius) {
+        double xPlane_e0_e1[2];
+
+        //location of the generated point in the e0-e1 plane
+        Distribution::Circle::Uniform(xPlane_e0_e1,Radius);
+
+        //a global coordinate of the point
+        for (int idim=0;idim<3;idim++) x[idim]=xCicleCenterLocation[idim]+xPlane_e0_e1[0]*e0[idim]+xPlane_e0_e1[1]*e1[idim];
+      }
     }
 
   }
