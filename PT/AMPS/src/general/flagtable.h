@@ -99,12 +99,12 @@ public:
     }
   }
 
-  bool Test(int GlobalBitePosition) {
+  bool Test(int GlobalBitPosition) {
     int iBit,iByte;
     unsigned char mask;
 
-    iByte=GlobalBitePosition/8;
-    iBit=GlobalBitePosition%8;
+    iByte=GlobalBitPosition/8;
+    iBit=GlobalBitPosition%8;
 
     if (iByte>=FlagTableLength[0]) exit(__LINE__,__FILE__,"Error: iByte exeeds the size of the data bufer");
 
@@ -112,7 +112,7 @@ public:
     return ((FlagTable[0][iByte]&mask)!=0) ? true : false;
   }
 
-  void SetFlag(bool flag,int GlobalBitePosition) {
+  void SetFlag(bool flag,int GlobalBitPosition) {
     int iBit,iByte,iThreadOpenMP=0;
     unsigned char mask;
 
@@ -120,8 +120,8 @@ public:
     iThreadOpenMP=omp_get_thread_num();
     #endif
 
-    iByte=GlobalBitePosition/8;
-    iBit=GlobalBitePosition%8;
+    iByte=GlobalBitPosition/8;
+    iBit=GlobalBitPosition%8;
 
     if (iByte>=FlagTableLength[iThreadOpenMP]) {
       //re-allocate the table
