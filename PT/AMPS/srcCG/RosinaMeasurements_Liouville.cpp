@@ -619,7 +619,7 @@ void RosinaSample::Liouville::Evaluate() {
     double minTotalRamGaugePressure=-1.0,maxTotalRamGaugePressure=-1.0;
     double minTotalNudeGaugePressure=-1.0,maxTotalNudeGaugePressure=-1.0;
 
-    int iLocationTest,nLocationTestPoints=(TrajectoryUnsertanties::Search==false) ? 1 :1+TrajectoryUnsertanties::nTest;
+    int iLocationTest,nLocationTestPoints=(TrajectoryUncertanties::Search==false) ? 1 :1+TrajectoryUncertanties::nTest;
 
 
     //evaluate the location
@@ -656,58 +656,68 @@ void RosinaSample::Liouville::Evaluate() {
 
         Vector3D::Normalize(e2);
         Vector3D::GetNormFrame(e0,e1,e2);
-        Vector3D::Distribution::Circle::Uniform(RosinaLocation.x,e0,e1,Rosina[iPoint].x,min(0.1*Rosina[iPoint].Altitude,TrajectoryUnsertanties::Radius));
+        Vector3D::Distribution::Circle::Uniform(RosinaLocation.x,e0,e1,Rosina[iPoint].x,min(0.1*Rosina[iPoint].Altitude,TrajectoryUncertanties::Radius));
         MPI_Bcast(RosinaLocation.x,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
-        if (TrajectoryUnsertanties::PointingSearch==true) {
+        if (TrajectoryUncertanties::PointingSearch==true) {
           //generate a new coordinate frame of the spacecraft, and then recalculate pointing directions of the gauges
-          double e0p[3],e1p[3],e2new[3],e,e0new[3],e1new[3];
-          int iFrameSearchTests,FrameSelectedThread=-1;
-          double CosCutoff=cos(TrajectoryUnsertanties::AngularLimit/180.0*Pi);
+          int idim;
+          double phi,CosPhi,SinPhi,e0new[3],e1new[3],e2new[3],e0[3]={1.0,0.0,0.0},e1[3]={0.0,1.0,0.0},e2[3]={0.0,0.0,1.0};
 
-          const int nFrameSearchTests=100;
+          if (PIC::ThisThread==0) {
+            //rotation in e0-e1 plane
+            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            CosPhi=cos(phi);
+            SinPhi=sin(phi);
 
-          do {
-            for (iFrameSearchTests=0;(iFrameSearchTests<nFrameSearchTests)&&(FrameSelectedThread=-1);iFrameSearchTests++) {
-              //create a randomly oriented frame of reference
-              Vector3D::Distribution::Uniform(e2new);
-              if (e2new[2]<CosCutoff) continue;
-
-              Vector3D::GetNormFrame(e0p,e1p,e2new);
-              Vector3D::Distribution::Circle::Uniform(e0new,e0p,e1p,1.0);
-              Vector3D::CrossProduct(e1new,e2new,e0new);
-
-              //the frame is selected if the angles of rotation are within the limit
-              if ((e0new[0]>CosCutoff)&&(e1new[1]>CosCutoff)&&(e2new[2]>CosCutoff)) FrameSelectedThread=PIC::ThisThread;
+            for (idim=0;idim<3;idim++) {
+              e0new[idim]=CosPhi*e0[idim]+SinPhi*e1[idim];
+              e1new[idim]=-SinPhi*e0[idim]+CosPhi*e1[idim];
             }
 
-            //collect information from all processors
-            int FrameSelectedThreadTable[PIC::nTotalThreads];
+            Vector3D::Copy(e0,e0new);
+            Vector3D::Copy(e1,e1new);
 
-            MPI_Gather(&FrameSelectedThread,1,MPI_INT,FrameSelectedThreadTable,1,MPI_INT,0, MPI_GLOBAL_COMMUNICATOR);
-            if (PIC::ThisThread==0) for (int thread=0;thread<PIC::nTotalThreads;thread++) if ((FrameSelectedThread=FrameSelectedThreadTable[thread])>=0) break;
-            MPI_Bcast(&FrameSelectedThread,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+            //rotation ins the e0-e2 plane
+            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            CosPhi=cos(phi);
+            SinPhi=sin(phi);
 
-            //if the frame is selected than push it on all processors. otherwise continue search
-            if (FrameSelectedThread>=0) {
-              MPI_Bcast(e0new,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
-              MPI_Bcast(e1new,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
-              MPI_Bcast(e2new,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
-              break;
+            for (idim=0;idim<3;idim++) {
+              e0new[idim]=CosPhi*e0[idim]+SinPhi*e2[idim];
+              e2new[idim]=-SinPhi*e0[idim]+CosPhi*e2[idim];
             }
+
+            Vector3D::Copy(e0,e0new);
+            Vector3D::Copy(e2,e2new);
+
+            //rotation ins the e1-e2 plane
+            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            CosPhi=cos(phi);
+            SinPhi=sin(phi);
+
+            for (idim=0;idim<3;idim++) {
+              e1new[idim]=CosPhi*e1[idim]+SinPhi*e2[idim];
+              e2new[idim]=-SinPhi*e1[idim]+CosPhi*e2[idim];
+            }
+
+            Vector3D::Copy(e1,e1new);
+            Vector3D::Copy(e2,e2new);
+
+            //recalculate pointing directions of the nude and ram gauges
+            double NudeGaugeNewPointing[3],RamGaugeNewPointing[3];
+
+            for (int i=0;i<3;i++) {
+              NudeGaugeNewPointing[i]=RosinaLocation.NudeGauge.LineOfSight[0]*e0[i]+RosinaLocation.NudeGauge.LineOfSight[1]*e1[i]+RosinaLocation.NudeGauge.LineOfSight[2]*e2[i];
+              RamGaugeNewPointing[i]=RosinaLocation.RamGauge.LineOfSight[0]*e0[i]+RosinaLocation.RamGauge.LineOfSight[1]*e1[i]+RosinaLocation.RamGauge.LineOfSight[2]*e2[i];
+            }
+
+            memcpy(RosinaLocation.NudeGauge.LineOfSight,NudeGaugeNewPointing,3*sizeof(double));
+            memcpy(RosinaLocation.RamGauge.LineOfSight,RamGaugeNewPointing,3*sizeof(double));
           }
-          while (true);
 
-          //recalculate pointing directions of the nude and ram gauges
-          double NudeGaugeNewPointing[3],RamGaugeNewPointing[3];
-
-          for (int i=0;i<3;i++) {
-            NudeGaugeNewPointing[i]=RosinaLocation.NudeGauge.LineOfSight[0]*e0new[i]+RosinaLocation.NudeGauge.LineOfSight[1]*e1new[i]+RosinaLocation.NudeGauge.LineOfSight[2]*e2new[i];
-            RamGaugeNewPointing[i]=RosinaLocation.RamGauge.LineOfSight[0]*e0new[i]+RosinaLocation.RamGauge.LineOfSight[1]*e1new[i]+RosinaLocation.RamGauge.LineOfSight[2]*e2new[i];
-          }
-
-          memcpy(RosinaLocation.NudeGauge.LineOfSight,NudeGaugeNewPointing,3*sizeof(double));
-          memcpy(RosinaLocation.RamGauge.LineOfSight,RamGaugeNewPointing,3*sizeof(double));
+          MPI_Bcast(RosinaLocation.NudeGauge.LineOfSight,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+          MPI_Bcast(RosinaLocation.RamGauge.LineOfSight,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
         }
       }
 
@@ -792,15 +802,30 @@ void RosinaSample::Liouville::Evaluate() {
 
         if ((maxTotalNudeGaugePressure==0.0)||((TotalNudeGaugePressure>0.0)&&(maxTotalNudeGaugePressure<TotalNudeGaugePressure))) maxTotalNudeGaugePressure=TotalNudeGaugePressure;
         if ((minTotalNudeGaugePressure==0.0)||((TotalNudeGaugePressure>0.0)&&(minTotalNudeGaugePressure>TotalNudeGaugePressure))) minTotalNudeGaugePressure=TotalNudeGaugePressure;
-
-        if (PIC::ThisThread==0) {
-          std::cout << "s/c location/orientation perturbation: iLocationTest=" <<  iLocationTest <<
-              ", TotalRamGaugePressure=" << minTotalRamGaugePressure << " < " << trajectoryTotalRamGaugePressure << " <" << maxTotalRamGaugePressure <<
-              ", TotalNudeGaugePressure=" << minTotalNudeGaugePressure << " < " << trajectoryTotalNudeGaugePressure << " <" << maxTotalNudeGaugePressure <<
-              " (" << __LINE__ << "@" << __FILE__ << ")" << std::endl << std::flush;
-        }
-
       }
+
+
+      if (PIC::ThisThread==0) {
+        double CosNudeGaugeAngle,CosRamGaugeAngle,NudeGaugeAngle,RamGaugeAngle;
+
+        CosNudeGaugeAngle=Vector3D::DotProduct(Rosina[iPoint].NudeGauge.LineOfSight,RosinaLocation.NudeGauge.LineOfSight);
+        NudeGaugeAngle=acos((CosNudeGaugeAngle<1.0)? CosNudeGaugeAngle : 1.0-1.0E-15)/Pi*180.0;
+
+        CosRamGaugeAngle=Vector3D::DotProduct(Rosina[iPoint].RamGauge.LineOfSight,RosinaLocation.RamGauge.LineOfSight);
+        RamGaugeAngle=acos((CosRamGaugeAngle<1.0)? CosRamGaugeAngle : 1.0-1.0E-15)/Pi*180.0;
+
+
+
+        std::cout << "s/c location/orientation perturbation: iLocationTest=" <<  iLocationTest <<
+            ",\t TotalRamGaugePressure=" << minTotalRamGaugePressure << " < " << trajectoryTotalRamGaugePressure << " <" << maxTotalRamGaugePressure <<
+            ", TotalNudeGaugePressure=" << minTotalNudeGaugePressure << " < " << trajectoryTotalNudeGaugePressure << " <" << maxTotalNudeGaugePressure <<
+            ", d=" << sqrt(pow(Rosina[iPoint].x[0]-RosinaLocation.x[0],2)+pow(Rosina[iPoint].x[1]-RosinaLocation.x[1],2)+pow(Rosina[iPoint].x[2]-RosinaLocation.x[2],2)) <<
+            ",\t angles=" << NudeGaugeAngle << ",  " << RamGaugeAngle <<
+            ", cos(angles)=" << CosNudeGaugeAngle << ",  " << CosRamGaugeAngle <<
+            " (" << __LINE__ << "@" << __FILE__ << ")" << std::endl << std::flush;
+      }
+
+
     }
 
 
