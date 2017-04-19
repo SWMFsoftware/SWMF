@@ -49,7 +49,7 @@ void RosinaSample::Init(double etMin,double etMax) {
   CallCounter++;
 
   //init line-of-sight vectors
-  SpiceDouble lt,et,xRosetta[3],etStart;
+  SpiceDouble lt,et,etStart,RosettaState[6],ltlocal;
   SpiceDouble       xform[6][6];
 
   FILE *fTrajectory=NULL;
@@ -74,26 +74,27 @@ void RosinaSample::Init(double etMin,double etMax) {
 
   for (i=0;i<nPoints;i++) {
     utc2et_c(ObservationTime[i],&et);
-    spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xRosetta,&lt);
-    for (idim=0;idim<3;idim++) xRosetta[idim]*=1.0E3;
+    spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",RosettaState,&ltlocal);
+
+    for (idim=0;idim<6;idim++) RosettaState[idim]*=1.0E3;
 
     if (i==0) etStart=et;
 
-    node=PIC::Mesh::mesh.findTreeNode(xRosetta,NULL);
+    node=PIC::Mesh::mesh.findTreeNode(RosettaState,NULL);
 
     if (node!=NULL) {
-      nd=PIC::Mesh::mesh.fingCellIndex(xRosetta,iCell,jCell,kCell,node);
+      nd=PIC::Mesh::mesh.fingCellIndex(RosettaState,iCell,jCell,kCell,node);
     }
     else nd=-1,iCell=-1,jCell=-1,kCell-1;
 
-    for (idim=0;idim<3;idim++) Rosina[i].x[idim]=xRosetta[idim];
+    for (idim=0;idim<3;idim++) Rosina[i].x[idim]=RosettaState[idim],Rosina[i].v[idim]=RosettaState[3+idim];
     Rosina[i].nd=nd;
     Rosina[i].node=node;
     Rosina[i].iCell=iCell;
     Rosina[i].jCell=jCell;
     Rosina[i].kCell=kCell;
 
-    Rosina[i].RadiusVectorLeangth=sqrt(xRosetta[0]*xRosetta[0]+xRosetta[1]*xRosetta[1]+xRosetta[2]*xRosetta[2]);
+    Rosina[i].RadiusVectorLeangth=sqrt(RosettaState[0]*RosettaState[0]+RosettaState[1]*RosettaState[1]+RosettaState[2]*RosettaState[2]);
     Rosina[i].CometDistance=-1.0;
     Rosina[i].SecondsFromBegining=et-etStart;
     Rosina[i].CharacteristicCellSize=-1.0;
@@ -104,9 +105,9 @@ void RosinaSample::Init(double etMin,double etMax) {
     dySubCell=(Rosina[i].node->xmax[1]-Rosina[i].node->xmin[1])/_BLOCK_CELLS_Y_/CellFractionationFactor;
     dzSubCell=(Rosina[i].node->xmax[2]-Rosina[i].node->xmin[2])/_BLOCK_CELLS_Z_/CellFractionationFactor;
 
-    Rosina[i].iLocalSubCell=(int)((xRosetta[0]-Rosina[i].node->xmin[0])/dxSubCell);
-    Rosina[i].jLocalSubCell=(int)((xRosetta[1]-Rosina[i].node->xmin[1])/dySubCell);
-    Rosina[i].kLocalSubCell=(int)((xRosetta[2]-Rosina[i].node->xmin[2])/dzSubCell);
+    Rosina[i].iLocalSubCell=(int)((RosettaState[0]-Rosina[i].node->xmin[0])/dxSubCell);
+    Rosina[i].jLocalSubCell=(int)((RosettaState[1]-Rosina[i].node->xmin[1])/dySubCell);
+    Rosina[i].kLocalSubCell=(int)((RosettaState[2]-Rosina[i].node->xmin[2])/dzSubCell);
 
     if (node==NULL) {
       Rosina[i].LocationCode=-1; //outside of the domain
@@ -114,7 +115,7 @@ void RosinaSample::Init(double etMin,double etMax) {
     else {
       int InsideDomainFlag;
 
-      if (PIC::ThisThread==0) InsideDomainFlag=CutCell::CheckPointInsideDomain(xRosetta,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0);
+      if (PIC::ThisThread==0) InsideDomainFlag=CutCell::CheckPointInsideDomain(RosettaState,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0);
       MPI_Bcast(&InsideDomainFlag,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
       if (InsideDomainFlag==false) {
@@ -139,7 +140,7 @@ void RosinaSample::Init(double etMin,double etMax) {
           int idim;
 
           CutCell::BoundaryTriangleFaces[ii].GetCenterPosition(xCenter);
-          for (idim=0,r=0.0;idim<3;idim++) r+=pow(xCenter[idim]-xRosetta[idim],2);
+          for (idim=0,r=0.0;idim<3;idim++) r+=pow(xCenter[idim]-RosettaState[idim],2);
 
           if ((MinAltitude<0.0)||(MinAltitude>r)) MinAltitude=r;
 
@@ -158,10 +159,10 @@ void RosinaSample::Init(double etMin,double etMax) {
     }
 
     if (PIC::ThisThread==0) {
-      fprintf(fTrajectory,"%e %e %e %i\n",xRosetta[0],xRosetta[1],xRosetta[2],i);
+      fprintf(fTrajectory,"%e %e %e %i\n",RosettaState[0],RosettaState[1],RosettaState[2],i);
 
       fprintf(fTrajectoryZones,"ZONE T=\"Point=%i\" F=POINT\n",i);
-      fprintf(fTrajectoryZones,"%e  %e  %e\n",xRosetta[0],xRosetta[1],xRosetta[2]);
+      fprintf(fTrajectoryZones,"%e  %e  %e\n",RosettaState[0],RosettaState[1],RosettaState[2]);
     }
 
     sxform_c("ROS_SPACECRAFT","67P/C-G_CK",et,xform);
@@ -201,7 +202,7 @@ void RosinaSample::Init(double etMin,double etMax) {
 
       //get the solid angles, and estimate distance to the nucleus
       Liouville::GetSolidAngle(Rosina[i].NudeGauge.NucleusSolidAngle,Rosina[i].RamGauge.NucleusSolidAngle,i);
-      Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x,Rosina[i].xNucleusClosestPoint,Rosina[i].iNucleusClosestFace);
+      Rosina[i].Altitude=PIC::Mesh::IrregularSurface::GetClosestDistance(Rosina[i].x,Rosina[i].xNucleusClosestPoint,Rosina[i].iNucleusClosestFace,true);
     }
 
     //init the sampling point
