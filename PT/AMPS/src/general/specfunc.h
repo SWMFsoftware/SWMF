@@ -256,6 +256,10 @@ namespace Vector3D {
     return sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
   }
 
+  inline void Copy(double *target,double *source,int length=3) {
+    memcpy(target,source,length*sizeof(double));
+  }
+
   inline double DotProduct(double *a,double *b) {
     int i;
     double res=0.0;
@@ -356,6 +360,27 @@ namespace Vector3D {
         Distribution::Circle::Uniform(xPlane_e0_e1,Radius);
 
         //a global coordinate of the point
+        for (int idim=0;idim<3;idim++) x[idim]=xCicleCenterLocation[idim]+xPlane_e0_e1[0]*e0[idim]+xPlane_e0_e1[1]*e1[idim];
+      }
+
+      inline void Gaussian(double *x, double *e0,double *e1,double *xCicleCenterLocation,double Radius,double ProbabilityAtRadius=1.0E-10) {
+        double A,phi,r,xPlane_e0_e1[2];
+
+        //distribute the radius of the point f=exp(-A*t^2)
+        A=-log(ProbabilityAtRadius)/sqrt(Radius);
+
+        do {
+          r=Radius*rnd();
+        }
+        while (exp(-A*r*r)<rnd());
+
+        //distribute the angle
+        phi=PiTimes2*rnd();
+
+        //calculate the vector
+        xPlane_e0_e1[0]=r*sin(phi);
+        xPlane_e0_e1[1]=r*cos(phi);
+
         for (int idim=0;idim<3;idim++) x[idim]=xCicleCenterLocation[idim]+xPlane_e0_e1[0]*e0[idim]+xPlane_e0_e1[1]*e1[idim];
       }
     }
