@@ -274,7 +274,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
     if (FaceAccessCounter==0xffffffff) FlushAccessCounterTableFlag=true;
     break;
   default:
-    exit(__LINE__,__FILE__,"Error: the caae is not implemented");
+    exit(__LINE__,__FILE__,"Error: the case is not implemented");
   }
 
 
@@ -380,7 +380,7 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
     if (FaceAccessCounter==0xffffffff) FlushAccessCounterTableFlag=true;
     break;
   default:
-    exit(__LINE__,__FILE__,"Error: the caae is not implemented");
+    exit(__LINE__,__FILE__,"Error: the case is not implemented");
   }
 
 
@@ -473,7 +473,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
     if (FaceAccessCounter==0xffffffff) FlushAccessCounterTableFlag=true;
     break;
   default:
-    exit(__LINE__,__FILE__,"Error: the caae is not implemented");
+    exit(__LINE__,__FILE__,"Error: the case is not implemented");
   }
 
 
