@@ -144,6 +144,8 @@ contains
        DoTest=.false.; DoTestMe=.false.
     endif
 
+    if(DoTestMe)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
+
     ! Calculate time step limit based on maximum speeds across 6 faces
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock)) then
@@ -260,6 +262,7 @@ contains
     !\
     ! Compute maximum stable time step for this solution block 
     !/
+
     if(true_BLK(iBlock)) then
        Dt_BLK(iBlock) = minval(time_BLK(:,:,:,iBlock))
     else
@@ -267,6 +270,10 @@ contains
        Dt_BLK(iBlock) = min(1e20, &
             minval(time_BLK(:,:,:,iBlock), &
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
+
+       if(DoTestMe)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
+            minval(time_BLK(:,:,:,iBlock), &
+            MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
     end if
 
     if(DoTestMe)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
@@ -334,8 +341,8 @@ contains
     ! if calc_timestep is tested, test this routine too
     if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
-         TimeSimulationLimit
+    if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
+         TimeSimulationLimit, dt_BLK(BlkTest), time_BLK(iTest,jTest,kTest,BlkTest)
 
     if(UseDtFixed)then
        Dt = DtFixed
@@ -364,15 +371,16 @@ contains
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
        Dt = DtMin
 
-       if(DoTest .and. DtMinPE == Dt)then
+       if(DoTestMe .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
              if(Dt_BLK(iBlock) /= Dt) CYCLE
              write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
-                  ' s  is controlled by block with iProc, iBlock=', &
-                  iProc, iBlock
-             write(*,*) NameSub, 'coordinates of (1,1,1) cell center are ',&
-                  XyzStart_BLK(:,iBlock)
+                  ' s  is controlled by block with iProc, iBlock, true_BLK, true_cell =', &
+                  iProc, iBlock, true_BLK(iBlock), all(true_cell(1:nI,1:nJ,1:nK,iBlock)), &
+		  any(true_cell(1:nI,1:nJ,1:nK,iBlock))
+             write(*,*) NameSub, ' X,Y,Z coordinates of (1,1,1) cell center are ',&
+                  Xyz_DGB(:,1,1,1,iBlock)
              write(*,*) NameSub, ' cell size in normalized and SI units:', &
                   CellSize_DB(:,iBlock), ', ', &
                   CellSize_DB(:,iBlock)*No2Si_V(UnitX_),' m'
@@ -442,8 +450,11 @@ contains
        if(UseMaxTimeStep .and. Dt_BLK(iBlock) > 0)then
           ! Make block time step power of 2 multiple of DtMin that is < Dt_BLK
           ! Limit by DtMax in case DtMax was limited by TimeSimulationLimit
-          Dt_BLK(iBlock) = min(DtMax, &
-               DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0)))
+          if(Dt_BLK(iBlock) >= DtMax)then
+             Dt_BLK(iBlock) = DtMax
+          else
+             Dt_BLK(iBlock) = DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+          end if
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
           time_BLK(:,:,:,iBlock) = Dt
@@ -485,7 +496,8 @@ contains
        end if
     end if
 
-    if(DoTestMe)write(*,*) NameSub, ' finished with Dt=', Dt
+    if(DoTestMe)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
+         Dt, dt_BLK(BlkTest), time_BLK(iTest,jTest,kTest,BlkTest)
 
   end subroutine set_global_timestep
 
