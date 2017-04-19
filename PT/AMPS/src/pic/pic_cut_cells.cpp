@@ -517,20 +517,31 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
  
 
 //========================================================================================================================
-double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x) {
+double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,bool ParallelExecutionModeMPI) {
   double xClosestPoint[3];
   int iClosestTriangularFace;
 
-  return GetClosestDistance(x,xClosestPoint,iClosestTriangularFace);
+  return GetClosestDistance(x,xClosestPoint,iClosestTriangularFace,ParallelExecutionModeMPI);
 }
 
-double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace) {
+double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace,bool ParallelExecutionModeMPI) {
   double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],xIntersectionLocal[3],IntersectionTime,t;
   int iFace,idim,iPoint;
   int nThreadsOpenMP=1;
 
   //determine whether the point is insde the triangulated surface
   if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0)==false) return -1.0;
+
+  //limits of the loop over the surface model faces
+  int iFaceStart=0,iFaceFinish=CutCell::nBoundaryTriangleFaces;
+
+  if (ParallelExecutionModeMPI==true) {
+    int nSurfaceElementThread=CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads;
+
+    iFaceStart=nSurfaceElementThread*PIC::ThisThread;
+    iFaceFinish=iFaceStart+nSurfaceElementThread;
+    if (PIC::ThisThread==PIC::nTotalThreads-1) iFaceFinish=CutCell::nBoundaryTriangleFaces;
+  }
 
   //loop through the cut-faces to detemine the closest distance to the surface
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
@@ -542,7 +553,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
      }
    }
 
-   double * AltitudeTable=new double [nThreadsOpenMP];
+   double *AltitudeTable=new double [nThreadsOpenMP];
    double **xClosestPointTable=new double* [nThreadsOpenMP];
    int iClosestTriangularFaceTable[nThreadsOpenMP];
 
@@ -551,11 +562,11 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
    xClosestPointTable[0]=new double [3*nThreadsOpenMP];
    for (int i=1;i<nThreadsOpenMP;i++) xClosestPointTable[i]=xClosestPointTable[0]+3*i;
 
-   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,iFace,ExternNormal,c,idim,t,l) shared (x,PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
+   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,iFace,ExternNormal,c,idim,t,l) shared (iFaceStart,iFaceFinish,x,PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
    {
    int iThreadOpenMP=omp_get_thread_num();
 
-   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) if (iFace%nThreadsOpenMP==iThreadOpenMP) {
+   for (iFace=iFaceStart;iFace<iFaceFinish;iFace++) if (iFace%nThreadsOpenMP==iThreadOpenMP) {
 #else
    int iThreadOpenMP=0;
    double *AltitudeTable=new double [1];
@@ -565,7 +576,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
    AltitudeTable[0]=-1.0;
    xClosestPointTable[0]=new double[3];
 
-   for (iFace=0;iFace<CutCell::nBoundaryTriangleFaces;iFace++) {
+   for (iFace=iFaceStart;iFace<iFaceFinish;iFace++) {
 #endif
 
     //the external point has to be pointed in the direction of the point of test
@@ -638,7 +649,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
   memcpy(xClosestPoint,xClosestPointTable[0],3*sizeof(double));
   iClosestTriangularFace=iClosestTriangularFaceTable[0];
 
-  for (int thread=1;thread<nThreadsOpenMP;thread++) if (Altitude<AltitudeTable[thread]) {
+  for (int thread=1;thread<nThreadsOpenMP;thread++) if ((Altitude<0.0)||(Altitude>AltitudeTable[thread])) {
     Altitude=AltitudeTable[thread];
     memcpy(xClosestPoint,xClosestPointTable[thread],3*sizeof(double));
     iClosestTriangularFace=iClosestTriangularFaceTable[thread];
@@ -647,6 +658,37 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
   delete [] xClosestPointTable[0];
   delete [] xClosestPointTable;
   delete [] AltitudeTable;
+
+  //if MPI parallel mode is ParallelExecutionModeMPI==true then collect the min altitude data from all processors
+  if (ParallelExecutionModeMPI==true) {
+    double MpiAltitudeTable[PIC::nTotalThreads];
+    int MinAltitudeThread=PIC::ThisThread;
+
+    MPI_Gather(&Altitude,1,MPI_DOUBLE,MpiAltitudeTable,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (PIC::ThisThread==0) {
+      MinAltitudeThread=0,Altitude=MpiAltitudeTable[0];
+      for (int thread=1;thread<PIC::nTotalThreads;thread++) if (Altitude>MpiAltitudeTable[thread]) Altitude=MpiAltitudeTable[thread],MinAltitudeThread=thread;
+    }
+
+    MPI_Bcast(&MinAltitudeThread,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+
+    MPI_Bcast(&Altitude,1,MPI_DOUBLE,MinAltitudeThread,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(xClosestPoint,3,MPI_DOUBLE,MinAltitudeThread,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(&iClosestTriangularFace,1,MPI_INT,MinAltitudeThread,MPI_GLOBAL_COMMUNICATOR);
+  }
+
+/*
+  //DEBUG: BEGING
+  if (PIC::ThisThread==0) {
+  static int cnt=0;
+
+  cnt++;
+  std::cout << cnt << "  " << Altitude << std::endl << std::flush;
+  }
+  //DEBUG: END
+*/
+
 
   return Altitude;
 }

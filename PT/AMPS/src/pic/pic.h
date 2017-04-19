@@ -2575,8 +2575,8 @@ namespace PIC {
 
       //determine the closes distance to the triangulated surface
       //if the point is inside the body -> the distance is -1
-      double GetClosestDistance(double *x);
-      double GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace);
+      double GetClosestDistance(double *x,bool ParallelExecutionModeMPI=false);
+      double GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace,bool ParallelExecutionModeMPI=false);
 
     }
 
