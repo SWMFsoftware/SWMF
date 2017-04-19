@@ -649,7 +649,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
   memcpy(xClosestPoint,xClosestPointTable[0],3*sizeof(double));
   iClosestTriangularFace=iClosestTriangularFaceTable[0];
 
-  for (int thread=1;thread<nThreadsOpenMP;thread++) if ((Altitude<0.0)||(Altitude>AltitudeTable[thread])) {
+  for (int thread=1;thread<nThreadsOpenMP;thread++) if (AltitudeTable[thread]>0.0) if ((Altitude<0.0)||(Altitude>AltitudeTable[thread])) {
     Altitude=AltitudeTable[thread];
     memcpy(xClosestPoint,xClosestPointTable[thread],3*sizeof(double));
     iClosestTriangularFace=iClosestTriangularFaceTable[thread];
@@ -668,7 +668,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
 
     if (PIC::ThisThread==0) {
       MinAltitudeThread=0,Altitude=MpiAltitudeTable[0];
-      for (int thread=1;thread<PIC::nTotalThreads;thread++) if (Altitude>MpiAltitudeTable[thread]) Altitude=MpiAltitudeTable[thread],MinAltitudeThread=thread;
+      for (int thread=1;thread<PIC::nTotalThreads;thread++) if ((Altitude>MpiAltitudeTable[thread])&&(MpiAltitudeTable[thread]>0.0)) Altitude=MpiAltitudeTable[thread],MinAltitudeThread=thread;
     }
 
     MPI_Bcast(&MinAltitudeThread,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
