@@ -514,8 +514,8 @@ F			UseDiffusion
 21			RSc
 0			LonMin
 40			LonMax
-10			LatMin
-30			LatMax
+-10			LatMin
+10			LatMax
 
 #SAVEPLOT
 1

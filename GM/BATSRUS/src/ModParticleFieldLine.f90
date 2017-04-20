@@ -14,7 +14,7 @@ module ModParticleFieldLine
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
        Particle_I, CellSize_DB, Xyz_DGB, &
-       MinI,MinJ,MinK, MaxI,MaxJ,MaxK, nI, nJ, nK, nBlock, &
+       MinI,MinJ,MinK, MaxI,MaxJ,MaxK, MaxBlock, nI, nJ, nK, nBlock, &
        jDim_, kDim_, allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
@@ -442,19 +442,17 @@ contains
       DirCurr_D = DirBCurr_D * &
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
 
-      ! cosine of angle between field and radial direction at beginning of step
-      CosBR = &
-           sum(StateEnd_VI(x_:z_,iParticle) * DirBCurr_D) / &
-           sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
-      StateEnd_VI(CosBR_, iParticle) = CosBR
-
       ! get the correction if line starts closing
       Corr_D = 0.0
+
+      ! cosine of angle between field and radial direction and its gradient
+      call get_grad_cosbr(&
+           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+           iBlock=iIndexEnd_II(0,iParticle),&
+           Grad_D = Corr_D, CosBR = CosBR)
+      StateEnd_VI(CosBR_, iParticle) = CosBR
+
       if(abs(CosBR) < 0.5)then
-         call get_grad_cosbr(&
-              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-              iBlock=iIndexEnd_II(0,iParticle),&
-              Grad_D = Corr_D)
          Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
          if(sum(Corr_D*DirCurr_D) < 0.0)then
             ! correct the direction to prevent the line from closing
@@ -465,8 +463,6 @@ contains
          else
             Corr_D = 0.0
          end if
-      else
-         Corr_D = 0.0
       end if
 
       ! get middle location
@@ -488,14 +484,13 @@ contains
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
 
       ! correct the direction
-      CosBR = &
-           sum(StateEnd_VI(x_:z_,iParticle) * DirBNext_D) / &
-           sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+      Corr_D = 0.0
+      call get_grad_cosbr(&
+           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+           iBlock=iIndexEnd_II(0,iParticle),&
+           Grad_D = Corr_D, CosBR = CosBR)
+
       if(abs(CosBR) < 0.5)then
-         call get_grad_cosbr(&
-              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-              iBlock=iIndexEnd_II(0,iParticle),&
-              Grad_D = Corr_D)
          Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
          if(sum(Corr_D*DirNext_D) < 0.0)then
             ! correct the direction to prevent the line from closing
@@ -506,8 +501,6 @@ contains
          else
             Corr_D = 0.0
          end if
-      else
-         Corr_D = 0.0
       end if
 
       ! get final location
@@ -524,15 +517,14 @@ contains
     end subroutine stage2_rk2
     !========================================================================
     subroutine stage3_rk2
-      ! get the direction of the magnetic field
-      call get_b_dir(&
+      ! get the cosine between the magnetic field and the radial direction
+      call get_grad_cosbr(&
            Xyz_D = StateEnd_VI(x_:z_, iParticle),&
            iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBCurr_D)
-
+           Grad_D = Corr_D, CosBR = CosBR)
+      
       ! if the line starts to close -> remove it
-      CosBR = StateEnd_VI(CosBR_,iParticle)
-      if(sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) * CosBR < 0.0)then
+      if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
          call mark_undefined(KindEnd_, iParticle)
          RETURN
       end if
@@ -572,16 +564,13 @@ contains
       DirPrev_D = StateEnd_VI(DirXOld_ :DirZOld_, iParticle)
 
       ! get the correction if line starts closing
-      CosBR = &
-           sum(StateEnd_VI(x_:z_,iParticle) * DirBCurr_D) / &
-           sum(StateEnd_VI(x_:z_,iParticle)**2)**0.5
+      call get_grad_cosbr(&
+           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+           iBlock=iIndexEnd_II(0,iParticle),&
+           Grad_D = Corr_D, CosBR = CosBR)
       StateEnd_VI(CosBR_, iParticle) = CosBR
 
       if(abs(CosBR) < 0.5)then
-         call get_grad_cosbr(&
-              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-              iBlock=iIndexEnd_II(0,iParticle),&
-              Grad_D = Corr_D)
          Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
          !reduce step size if Corr_D is too large
          if(sqrt(sum(Corr_D**2))* StateEnd_VI(Ds_,iParticle) > 0.1)then
@@ -589,7 +578,6 @@ contains
                  0.1/sqrt(sum(Corr_D**2))
          end if
       else
-         Corr_D = 0.0
          ! additional correction to prevent line from diverging away
          ! from the field once other corrections are completed
          Corr_D = DirBCurr_D / (10*StateEnd_VI(Ds_,iParticle)) * &
@@ -653,13 +641,12 @@ contains
     !========================================================================
     subroutine stage3_girard
       ! get the direction of the magnetic field
-      call get_b_dir(&
+      call get_grad_cosbr(&
            Xyz_D = StateEnd_VI(x_:z_, iParticle),&
            iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBCurr_D)
+           Grad_D = Corr_D, CosBR = CosBR)
 
-      CosBR = StateEnd_VI(CosBR_,iParticle)
-      if(sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) * CosBR < 0.0)then
+      if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
          iIndexEnd_II(DoCopy_, iParticle) = 0
          StateEnd_VI(DsFactor_, iParticle) = &
               0.5 * StateEnd_VI(DsFactor_, iParticle)
@@ -668,10 +655,7 @@ contains
          RETURN
       end if
 
-      DCosBR = abs(&
-           sum(StateEnd_VI(x_:z_, iParticle) * DirBCurr_D) /&
-           sum(StateEnd_VI(x_:z_, iParticle)**2)**0.5- &
-           CosBR)
+      DCosBR = abs(CosBR - StateEnd_VI(CosBR_,iParticle))
       if(DCosBR > 0.05)then
          iIndexEnd_II(DoCopy_, iParticle) = 0
          StateEnd_VI(DsFactor_, iParticle) = &
@@ -787,12 +771,12 @@ contains
     !\
     ! allocate containers for cosine of angle between B and radial direction
     !/
-    allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
+    allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, MaxBlock))
     CosBR_GB = 0.0
-    allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, nBlock))
+    allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, MaxBlock))
     CosBR2_GB = 0.0
     allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-         1-nG*kDim_:nK+nG*kDim_,nBlock))
+         1-nG*kDim_:nK+nG*kDim_,MaxBlock))
     GradCosBR_DGB = 0.0
     call compute_grad_cosbr
 
@@ -1044,8 +1028,12 @@ contains
             XyzCell_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
             Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
             if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
-            CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
-                 (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
+            if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
+               CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
+                    (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
+            else
+               CosBR_GB(i,j,k,iBlock) = 0.0
+            end if
          end do; end do; end do
       end do
       ! fill ghost celss via message pass
@@ -1139,7 +1127,7 @@ contains
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
   end subroutine get_b_dir
   !========================================================================
-  subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D)
+  subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D, CosBR)
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
     ! returns the direction of magnetic field 
@@ -1147,6 +1135,7 @@ contains
     real,          intent(in) :: Xyz_D(MaxDim)
     integer,       intent(in) :: iBlock
     real,          intent(out):: Grad_D(MaxDim)
+    real,          intent(out):: CosBR
 
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
@@ -1156,7 +1145,7 @@ contains
     character(len=200):: StringError
     character(len=*), parameter:: NameSub = "get_grad_cosbr"
     !----------------------------------------------------------------------
-    Grad_D = 0
+    Grad_D = 0; CosBR = 0
     ! get the remaining part of the magnetic field
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
     ! interpolate magnetic field value
@@ -1165,6 +1154,8 @@ contains
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
        Grad_D(1:nDim) = Grad_D(1:nDim) + &
             GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+       CosBR = CosBR + &
+            CosBR_GB(i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
   end subroutine get_grad_cosbr
   !========================================================================
