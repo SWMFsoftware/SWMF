@@ -469,6 +469,7 @@ contains
              iNMax  = LineTable_I(iLine)%iMax
              jTMax  = LineTable_I(iLine)%jMax
              Glambda_II = LineTable_I(iLine)%g_II(:,:)
+
              Gint = bilinear(Glambda_II, iNMin, iNMax, jTMin, jTMax, &
                   (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
 
@@ -1154,7 +1155,7 @@ contains
 
           ! New line of interest found, decide to store it
           iLine      = iLine + 1
-          write(*,*)iLine,NameIon,LineWavelength
+          if(IsVerbose)write(*,*)iLine,NameIon,LineWavelength
           ! Check if there are too many lines already
           if(iLine > nMaxLine)&
                call CON_stop('Too many lines are found, increase MaxWave')

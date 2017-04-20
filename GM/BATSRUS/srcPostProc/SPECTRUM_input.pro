@@ -1,4 +1,4 @@
-pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=photoexc
+pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=photoexc,interval=interval
 
 ; This program calculates the emissivities logG(logT,logNe) for all the ions in
 ; the CHIANTI database and prints out into one file to be used for BATS-R-US.
@@ -52,6 +52,14 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   LogT=LogTmin+dLogT*findgen(nLogT+1.0)
   nLogT=n_elements(LogT)
 
+; Wavelengthrange
+  wmin = 10
+  wmax = 1000
+  if keyword_set(interval) then begin
+     read,'minimum wavelength [A]= ',wmin
+     read,'minimum wavelength [A]= ',wmax
+  endif
+
 ; List of elements
   Element=['h' ,'he','li','be','b' ,'c' ,'n' ,'o' ,'f' ,'ne','na','mg','al', $
            'si','p' ,'s' ,'cl','ar','k' ,'ca','sc','ti','v' ,'cr','mn','fe', $
@@ -78,11 +86,14 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   endif
 
 ; Input the ion fraction file
-  read_ioneq,'',t_ioneq,ioneq,ref
+  ioneqfile = '/Applications/ssw/packages/chianti/dbase/ioneq/chianti.ioneq'
+  read_ioneq,ioneqfile,t_ioneq,ioneq,ref
 
 ; Input the abundance file
+  abundancefile= '/Applications/ssw/packages/chianti/dbase/abundance/sun_coronal_1992_feldman.abund'
+
   if keyword_set(abund_unity) then abundance=fltarr(nElement)+1.0d0
-  if not keyword_set(abund_unity) then read_abund,'',abundance,ref
+  if not keyword_set(abund_unity) then read_abund,abundancefile,abundance,ref
 
 ; Provide photoexcitation parameters (if keyword 'photoexc' is set)
   if keyword_set(photoexc) then begin
@@ -91,7 +102,8 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
   endif
 
 ; Input the masterlist file
-  read_masterlist,'',MasterList
+  masterfile='/Applications/ssw/packages/chianti/dbase/masterlist/masterlist.ions'
+  read_masterlist,masterfile,MasterList
   nIon=n_elements(MasterList)
   Dielectronic=100.
 
@@ -109,6 +121,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 ; Set output file name
   NameFileOut='SPECTRUM_chianti_tbl.dat'
 
+
 ; Write header into the output file
   openw,10,NameFileOut
   printf,10,'log(G(LogN,LogT)) table created with CHIANTI : ',version, $
@@ -124,7 +137,7 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
 
 ; START main loop f calculation and writing
   for i=0L,nIon-1 do begin
-
+     
 ; Select ion
      position=strpos(MasterList(i),'_')
      LocalElement=strmid(MasterList(i),0,position)
@@ -151,48 +164,67 @@ pro SPECTRUM_input,abund_unity=abund_unity,notstandard=notstandard,photoexc=phot
      LevelFrom=data.level1
      LevelTo=data.level2
      Flag=data.flag
-     LogG=data.em
+     G=data.em
      Wavelength=data.lambda
-     Missing=where(LogG lt 1.0d-99)
-     LogG(Missing)=1.0d-45
-     Missing=where(strcompress(string(LogG),/remove_all) eq 'Infinity')
-     LogG(Missing)=1.0d-45
-     Missing=where(strcompress(string(LogG),/remove_all) eq '-Infinity')
-     LogG(Missing)=1.0d-45
-     Missing=where(strcompress(string(LogG),/remove_all) eq 'NaN')
-     LogG(Missing)=1.0d-45
-     Missing=where(strcompress(string(LogG),/remove_all) eq '-NaN')
-     LogG(Missing)=1.0d-45
 
-     LogG=LogG*ElementAbundance 
+     Missing1=where(G lt 1.0d-99)
+     Missing2=where(strcompress(string(G),/remove_all) eq 'Infinity')
+     Missing3=where(strcompress(string(G),/remove_all) eq '-Infinity')
+     Missing4=where(strcompress(string(G),/remove_all) eq 'NaN')
+     Missing5=where(strcompress(string(G),/remove_all) eq '-NaN')
+
+     G(Missing1)=1.0d-100
+     G(Missing2)=1.0d-100
+     G(Missing3)=1.0d-100
+     G(Missing4)=1.0d-100
+     G(Missing5)=1.0d-100
+     
+     G=G*ElementAbundance 
      for l=0,nLogT-1 do begin
         for j=0,nLogN-1 do begin
-           LogG(l,j,*)=LogG(l,j,*)*ion_eq(l)/(10^LogN(j))
-           position=abs(logT(l)-t_ioneq)
+           G(l,j,*)=G(l,j,*)*ion_eq(l)/(10^LogN(j))
+           position=abs(LogT(l)-t_ioneq)
         endfor
      endfor
-     LogG=alog10(LogG)
-     Missing=where(strcompress(string(LogG),/remove_all) eq '-Infinity')
-     LogG(Missing)=-100.
+     
+     LogG=alog10(G)
+     Missing6=where(strcompress(string(LogG),/remove_all) eq '-Infinity')
+     
+     LogG(Missing1)=-100
+     LogG(Missing2)=-100
+     LogG(Missing3)=-100
+     LogG(Missing4)=-100
+     LogG(Missing5)=-100
+     LogG(Missing6)=-100
 
 ; Write into output file
      nTransition=n_elements(data)   
      help,nTransition
      for k=0L,nTransition-1 do begin
-        if max(LogG(*,*,k)) gt -26.0 then begin
+        if Wavelength(k) gt wmin and $
+           Wavelength(k) lt wmax and $
+           max(LogG(*,*,k)) gt -26 then begin 
            for j=0,nLogN-1 do begin
               for l=0,nLogT-1 do begin
                  if Flag(k) eq 0 then begin
-                    printf,10,MasterList(i),Aion,LevelFrom(k),LevelTo(k),$
-                           Wavelength(k),LogN(j),$
-                           LogT(l),LogG(l,j,k),$
-                           format='(a6,f13.3,2i5,f13.3,2f13.4,f13.3)'
+                    printf,10,strtrim(MasterList(i),2)+STRING(9B)+ $
+                           strtrim(string(Aion,format='(f13.3)'),2)+STRING(9B)+ $
+                           strtrim(string(LevelFrom(k)),2)+STRING(9B)+ $
+                           strtrim(string(LevelTo(k)),2)+STRING(9B)+ $
+                           strtrim(string(Wavelength(k),format='(f13.3)'),2)+STRING(9B)+ $
+                           strtrim(string(LogN(j),format='(f13.1)'),2)+STRING(9B)+ $
+                           strtrim(string(LogT(l),format='(f13.2)'),2)+STRING(9B)+ $
+                           strtrim(string(LogG(l,j,k),format='(f13.3)'),2)
                  endif
                  if Flag(k) lt 0 then begin
-                    printf,10,MasterList(i),Aion,LevelFrom(k),LevelTo(k),$
-                           Wavelength(k)*Flag(k),$
-                           LogN(j),LogT(l),LogG(l,j,k),$
-                           format='(a6,f13.3,2i5,f13.3,2f13.4,f13.3)'
+                    printf,10,strtrim(MasterList(i),2)+STRING(9B)+ $
+                           strtrim(string(Aion,format='(f13.3)'),2)+STRING(9B)+ $
+                           strtrim(string(LevelFrom(k)),2)+STRING(9B)+ $
+                           strtrim(string(LevelTo(k)),2)+STRING(9B)+ $
+                           strtrim(string(Wavelength(k)*Flag(k),format='(f13.3)'),2)+STRING(9B)+ $
+                           strtrim(string(LogN(j),format='(f13.1)'),2)+STRING(9B)+ $
+                           strtrim(string(LogT(l),format='(f13.2)'),2)+STRING(9B)+ $
+                           strtrim(string(LogG(l,j,k),format='(f13.3)'),2)
                  endif
               endfor
            endfor
