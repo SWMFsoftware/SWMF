@@ -511,7 +511,7 @@ void RosinaSample::Liouville::Evaluate() {
     fprintf(fAllSpecies,"\"SecondsFromBegining\", ");
     fprintf(fAllSpecies,"\"NudeGaugeNucleusSolidAngle\", \"RamGaugeNucleusSolidAngle\", ");
     fprintf(fAllSpecies,"\"productionDistributionNASTRAN iNucleusClosestFace\", ");
-    fprintf(fAllSpecies,"\"100.0*NudeGaugeReferenceData[iPoint]\", \"RamGaugeReferenceData[iPoint]\", ");
+    fprintf(fAllSpecies,"\"100.0*NudeGaugeReferenceData[iPoint]\", \"100.0*RamGaugeReferenceData[iPoint]\", ");
     fprintf(fAllSpecies,"\"125.0*NudeGaugeReferenceData[iPoint]\", \"125.0*RamGaugeReferenceData[iPoint]\", ");
     fprintf(fAllSpecies,"\"75.0*NudeGaugeReferenceData[iPoint]\", \"75.0*RamGaugeReferenceData[iPoint]\", ");
     fprintf(fAllSpecies,"\"OriginalSourceRate\", \"ModifiedSourceRate\", ");
