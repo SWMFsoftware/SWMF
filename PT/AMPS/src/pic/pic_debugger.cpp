@@ -12,6 +12,14 @@
 
 //Save particle data into a debugger data stream
 void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length,int nline,const char* fname) {
+  char msg[_MAX_STRING_LENGTH_PIC_];
+
+  sprintf(msg,"%s, line %i",fname,nline);
+  PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(data,length,msg);
+}
+
+
+void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length,const char* msg) {
   int i;
 
   struct cStreamBuffer {
@@ -46,7 +54,7 @@ void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length
   //save the checksum in the buffer
   StreamBuffer[BufferPointer].CollCounter=CallCounter;
   StreamBuffer[BufferPointer].CheckSum=CheckSum.checksum();
-  sprintf(StreamBuffer[BufferPointer].CallPoint,"%s, line %i",fname,nline);
+  sprintf(StreamBuffer[BufferPointer].CallPoint,"%s",msg);
   BufferPointer++;
 
   if (BufferPointer>=CheckSumBufferLength) {

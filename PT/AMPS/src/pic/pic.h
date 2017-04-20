@@ -1030,6 +1030,7 @@ namespace PIC {
   namespace Debugger {
     //save a sequence of the particle data checksums into a file
     void SaveParticleDataIntoDebuggerDataStream(void*,int,int,const char*);
+    void SaveParticleDataIntoDebuggerDataStream(void*,int,const char*);
   }
 
   //the particle trajectory tracing
