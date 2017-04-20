@@ -252,7 +252,7 @@ contains
     logical, optional, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
 
     ! Number of different block types
-    integer :: nType
+    integer :: nType = 0
 
     integer :: iError
     integer:: iNode, iBlock
@@ -356,6 +356,9 @@ contains
 
           end if
 
+          if(.not.allocated(iType_I))       allocate(iType_I(0:iTypeMax))
+          if(.not.allocated(IsTypeExist_I)) allocate(IsTypeExist_I(0:iTypeMax))     
+
           do iBlock = 1, nBlock
 
              if(iTypeAdvance_B(iBlock) == SkippedBlock_) CYCLE
@@ -428,8 +431,6 @@ contains
                MPI_INTEGER, MPI_SUM, iComm, iError)
 
           ! Find all different block types that occur (ignore skipped blocks of type 0)
-          if(.not.allocated(iType_I))       allocate(iType_I(0:iTypeMax))
-          if(.not.allocated(IsTypeExist_I)) allocate(IsTypeExist_I(0:iTypeMax))     
           IsTypeExist_I = .false.
           do iNode = 1, nNode
              if(iTypeBalance_A(iNode) >= 0)&
