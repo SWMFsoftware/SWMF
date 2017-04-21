@@ -252,7 +252,7 @@ contains
     logical, optional, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
 
     ! Number of different block types
-    integer :: nType = 0
+    integer :: nType
 
     integer :: iError
     integer:: iNode, iBlock
@@ -265,7 +265,7 @@ contains
 
     logical, allocatable:: IsTypeExist_I(:)
 
-    integer, allocatable:: iTypeConvert_I(:)
+    integer, allocatable:: iTypeConvert_I(:) ! reverse conversion
 
     logical :: IsSemiImplBlock_B(MaxBlock)
     integer :: i
@@ -356,8 +356,8 @@ contains
 
           end if
 
-          if(.not.allocated(iType_I))       allocate(iType_I(0:iTypeMax))
-          if(.not.allocated(IsTypeExist_I)) allocate(IsTypeExist_I(0:iTypeMax))     
+          ! Arrays to store indexes for different block types
+          allocate(iType_I(0:iTypeMax), IsTypeExist_I(0:iTypeMax))
 
           do iBlock = 1, nBlock
 
@@ -400,11 +400,17 @@ contains
              end if
 
              if(UseMaxTimeStep .and. DtMax > DtMin .and. DtMin > 0)then
+                ! For subcycling the time step of the block determines
+                ! which time level it belongs to. It can only belong
+                ! to one time level, so the type is the time level
+                ! times a constant iSubCycleBlock that leaves enough bits 
+                ! for the other block type criteria.
                 iType = iType + iSubCycleBlock &
                      *nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
 
-                if(iType > iTypeMax)then
-                   write(*,*) NameSub,' ERROR for iBlock, iProc=', iBlock, iProc
+                if(iType < iSubCycleBlock .or. iType > iTypeMax)then
+                   write(*,*) NameSub,' ERROR for iBlock, iProc=', &
+                        iBlock, iProc
                    write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
                    write(*,*) NameSub,' iSubCycleBlock =', iSubCycleBlock
                    write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
@@ -430,7 +436,7 @@ contains
           call MPI_allreduce(MPI_IN_PLACE, iTypeBalance_A, MaxNode, &
                MPI_INTEGER, MPI_SUM, iComm, iError)
 
-          ! Find all different block types that occur (ignore skipped blocks of type 0)
+          ! Find all different block types that occur 
           IsTypeExist_I = .false.
           do iNode = 1, nNode
              if(iTypeBalance_A(iNode) >= 0)&
@@ -494,9 +500,9 @@ contains
        end do
        iTypeAdvance_B(1:nBlockMax)  = iTypeAdvance_BP(1:nBlockMax,iProc)
 
-       if(DoTestMe .and. nType > 0) then
+       if(DoTestMe .and. nType > 0 .and. allocated(iType_I)) then
           ! Create the table so that we can check the status of a block.
-          if(.not.allocated(iTypeConvert_I)) allocate(iTypeConvert_I(nType))
+          allocate(iTypeConvert_I(nType), nTypeProc_PI(0:nProc-1,nType))
           nCount = 1
           do iType = 1, iTypeMax
              if(iType_I(iType) > 0) then
@@ -504,18 +510,19 @@ contains
                 nCount = nCount + 1           
              endif
           enddo
-          allocate(nTypeProc_PI(0:nProc-1,nType))
+
           nTypeProc_PI = 0
           do iNode = 1, nNode
              if(iTree_IA(Status_,iNode) /= Used_) CYCLE
              nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode)) = &
                   nTypeProc_PI(iTree_IA(Proc_,iNode),iTypeBalance_A(iNode))+1
           end do
+          write(*,*) NameSub,' nType, iSubCycleBlock=', nType, iSubCycleBlock
           do i=1, nType
              write(*,*) 'iType= ',iTypeConvert_I(i), &
                   ' nCount= ',sum(nTypeProc_PI(:,i))
           enddo
-          deallocate(nTypeProc_PI)
+          deallocate(nTypeProc_PI, iTypeConvert_I)
        endif ! DoTestMe
 
        deallocate(iTypeAdvance_A)
@@ -527,8 +534,8 @@ contains
 
     call find_test_cell
 
-    if(allocated(iType_I))       deallocate(iType_I)
-    if(allocated(IsTypeExist_I)) deallocate(IsTypeExist_I)
+    if(allocated(iType_I)) deallocate(iType_I, IsTypeExist_I)
+
     call timing_stop(NameSub)
 
     ! Allow the user to do something after load balancing was done
