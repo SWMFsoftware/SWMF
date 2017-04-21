@@ -338,13 +338,17 @@ contains
     if(UseEfield .and. ChargeIon_I(nIonFluid) > 0.0) &
          ChargeIon_I(nIonFluid) = -1.0
 
-    ChargePerMass_I = ChargeIon_I/MassIon_I
-
     ! Electron charge in normalized units (actually it is proton charge/mass)
     ! This is useful in formulas like n_s q_s (u_s - u_+) x B 
     ! in the multi-ion momentum equation. It is used in some user modules,
     ! so we keep the name.
     ElectronCharge = 1.0/IonMassPerCharge
+
+    ! Charge per mass in normalized units, This is needed in 
+    ! formulas like rho_s q_s/m_s (E + u_s x B)
+    ! Note that ChargeIon_I is for charge state Z, which is not
+    ! in normalized units.
+    ChargePerMass_I = ChargeIon_I/MassIon_I*ElectronCharge
 
     ! Electron gyro-frequency coefficient in normalized units
     ! GyroFreq = ElectronGyroFreqCoef * |B|  [1/time]
