@@ -994,7 +994,7 @@ contains
       ! determine alignment of particle indexing with direction 
       ! of the magnetic field
       integer:: iParticle
-      real:: Dir_D(MaxDim)
+      real:: CosBR, Grad_D(MaxDim)
       !------------------------------------------------------------------------
       if(iOrderMode == Field_)then
          iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
@@ -1002,12 +1002,12 @@ contains
       end if
 
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         call get_b_dir(&
+         call get_grad_cosbr(&
               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
               iBlock=iIndexEnd_II(0,iParticle),&
-              Dir_D = Dir_D)
+              Grad_D = Grad_D, CosBR = CosBR)
          iIndexEnd_II(Alignment_, iParticle) = &
-              nint( SIGN(1.0, sum(Dir_D*StateEnd_VI(x_:z_,iParticle))) )
+              nint( SIGN(1.0, CosBR) )
       end do
     end subroutine get_alignment
     !========================================================================
