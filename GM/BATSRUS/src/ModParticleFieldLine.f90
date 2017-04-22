@@ -678,7 +678,7 @@ contains
     !========================================================================
     function is_complete() result(IsCompleteOut)
       use ModMpi
-      use BATL_mpi, ONLY: iComm
+      use BATL_mpi, ONLY: iComm, nProc
       ! returns true if tracing is complete for all field line on all procs
       logical:: IsComplete, IsCompleteOut
       integer:: iError
@@ -688,8 +688,12 @@ contains
            ": negative number of particles of KindEnd_")
       IsComplete = Particle_I(KindEnd_)%nParticle == 0
       ! reduce IsComplete variable from all processors
-      call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
-           MPI_LOGICAL, MPI_LAND, iComm, iError)               
+      if(nProc>1)then
+         call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
+              MPI_LOGICAL, MPI_LAND, iComm, iError)     
+      else
+         IsCompleteOut = IsComplete
+      end if
     end function is_complete
     !========================================================================
     subroutine rotate_girard(DirIn_D, Omega_D, DirOut_D)
@@ -983,11 +987,15 @@ contains
       ! gather information from all processors on how many new field lines
       ! have been started
       use ModMpi
-      use BATL_mpi, ONLY: iComm
+      use BATL_mpi, ONLY: iComm, nProc
       integer:: iError
       !------------------------------------------------------------------------
-      call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
-           MPI_INTEGER, MPI_SUM, iComm, iError)
+      if(nProc>1)then
+         call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
+              MPI_INTEGER, MPI_SUM, iComm, iError)
+      else
+         nLineAllProc = nLineThisProc
+      end if
     end subroutine count_new_lines
     !========================================================================
     subroutine get_alignment()
