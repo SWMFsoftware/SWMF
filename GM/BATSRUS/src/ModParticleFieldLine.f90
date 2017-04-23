@@ -28,16 +28,15 @@ module ModParticleFieldLine
 
   private !except
 
+  public:: n_particle_reg_max
+  public:: n_particle_reg
   public:: read_particle_line_param
   public:: init_particle_line
+  public:: set_soft_boundary
   public:: extract_particle_line
   public:: add_to_particle_line
   public:: advect_particle_line
   public:: get_particle_data
-  public:: set_soft_boundary
-  public:: apply_soft_boundary
-  public:: n_particle_reg_max
-  public:: n_particle_reg
 
 
   interface get_particle_data
@@ -59,20 +58,9 @@ module ModParticleFieldLine
        ! storage for particle's position at the beginning of the step
        XOld_ = 4, YOld_ = 5, ZOld_ = 6, & 
        ! stepsize during line extraction
-       Ds_   = 7, DsOld_ = 8, DsFactor_ = 9, &
-       ! direction the tangent to the line
-       DirX_    = 10, DirY_    = 11, DirZ_    = 12, &
-       DirXOld_ = 13, DirYOld_ = 14, DirZOld_ = 15, &
-       ! direction of the magnetic field
-       DirBX_    = 16, DirBY_    = 17, DirBZ_    = 18, &
-       DirBXOld_ = 19, DirBYOld_ = 20, DirBZOld_ = 21, &
-       ! correction to prevent lines from closing
-       CorrX_    = 22, CorrY_    = 23, CorrZ_    = 24, &
+       Ds_   = 7, &
        ! value of CosBR at the beginning of extraction iteration
-       CosBR_    = 25
-
-
-
+       CosBR_    = 8
 
   ! indices of a particle
   integer, parameter:: &
@@ -86,12 +74,7 @@ module ModParticleFieldLine
        Alignment_ = 3, &
        ! whether to copy the end particle to regular; 
        ! may need to skip copying if step size was changed
-       DoCopy_    = 4, &
-       ! method used for extraction of field line
-       Method_    = 5
-
-  ! extraction methods
-  integer, parameter:: RK2_ = 1, GIRARD_ = 2
+       DoCopy_    = 4
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
@@ -112,11 +95,11 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 25
+  integer, parameter:: nVarParticleEnd = 8
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
-  integer, parameter:: nIndexParticleEnd = 5
+  integer, parameter:: nIndexParticleEnd = 4
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
@@ -128,12 +111,8 @@ module ModParticleFieldLine
   ! "soft" means that particles are allowed beyond this boundary BUT:
   ! - during extraction first particle that crosses it is kept but extraction 
   !   of this line is stopped
-  ! - all of the particles beyond the boundary are removed via
-  !   public method apply_soft_boundary
   real:: RBoundarySoft = -1.0
 
-  ! logical to switch between integration methods
-  logical:: DoTraceGirard = .false.
   !\
   ! Cosine between direction of the field and radial direction: for correcting
   ! the line's direction to prevent it from closing
@@ -149,6 +128,7 @@ module ModParticleFieldLine
   real, allocatable:: XyzLineInit_DI(:,:)
 
 contains
+  !==========================================================================
   integer function n_particle_reg_max()
     n_particle_reg_max = Particle_I(KindReg_)%nParticleMax
   end function n_particle_reg_max
@@ -253,466 +233,7 @@ contains
     end if
   end subroutine set_soft_boundary
 
-  !==========================================================================
-
-  subroutine apply_soft_boundary
-    ! check which particles went beyond soft boundary and remove them
-    !----------------------------------------------------
-    if(RBoundarySoft < 0.0) RETURN
-    call check_soft_boundary(KindReg_)
-    call remove_undefined_particles(KindReg_)
-  end subroutine apply_soft_boundary
-
-  !==========================================================================
-
-  subroutine trace_particle_line(iDirTrace)
-    use ModCoordTransform, ONLY: cross_product
-    ! the subroutine is the tracing loop;
-    ! tracing starts at KindEnd_ particles and proceeds in a given direction
-    !------------------------------------------------------------------------
-    integer, intent(in):: iDirTrace
-
-    integer :: iParticle     ! loop variable
-
-    ! direction of the magnetic field
-    real, dimension(MaxDim):: DirBPrev_D, DirBCurr_D, DirBNext_D
-    ! direction of the tangent to the line
-    real, dimension(MaxDim):: DirPrev_D, DirCurr_D, DirNext_D
-    ! correction to prevent line from closing
-    real, dimension(MaxDim):: Corr_D
-    ! vector used in the Girard's method
-    real, dimension(MaxDim):: Omega_D
-
-    ! cosine of angle between direction of field and radial direction
-    real:: CosBR, DCosBR
-
-    ! parameters of end particles
-    real,    pointer:: StateEnd_VI(:,:)
-    integer, pointer:: iIndexEnd_II(:,:)
-
-    ! constants in RK2 method:
-    ! dy/dt   = f(t,y)
-    ! y_{n+1} = y_n + step * ( beta * k1 + (1-beta)*k2)
-    ! k1      = f(t_n, y_n)
-    ! k2      = f(t_n, y_n + step * alpha * k1)
-    real:: AlphaRK2, BetaRK2
-    real, parameter:: cTwoThird = 2.0 / 3.0! alpha in Ralston's method
-    real, parameter:: cHalf     = 0.5      ! alpha in midpoint  method
-    real, parameter:: cZero     = 0.0      ! beta  in Ralston's method
-    real, parameter:: cQuarter  = 0.25     ! beta  in midpoint  method
-
-    character(len=*),parameter:: NameSub = "trace_particle_line"
-    !------------------------------------------------------------------------
-    ! set pointers to parameters of end particles
-    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
-    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
-
-    ! change const in RK2 based on which method is to be used
-    if(DoTraceGirard)then
-       AlphaRK2 = cHalf
-       BetaRK2  = cZero
-    else
-       AlphaRK2 = cTwoThird   
-       BetaRK2  = cQuarter
-    end if
-
-    ! initialize factor to apply to step size to 1
-    ! as well as mark a particle for copying
-    StateEnd_VI(DsFactor_,1:Particle_I(KindEnd_)%nParticle) = 1.0
-    iIndexEnd_II(  DoCopy_,  1:Particle_I(KindEnd_)%nParticle) = 1
-    iIndexEnd_II(Method_,  1:Particle_I(KindEnd_)%nParticle) = RK2_
-
-    TRACE: do
-       ! check if particles are beyond the soft boundary
-       if(RBoundarySoft > 0.0)then
-          call check_soft_boundary(KindEnd_)
-          call remove_undefined_particles(KindEnd_)
-       end if
-
-       ! copy last known coordinates to Auxilary 
-       StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
-            StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
-       !\
-       ! First stage of RK2 method
-       !/
-       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-          select case(iIndexEnd_II(Method_, iParticle))
-          case(RK2_)
-             call stage1_rk2
-          case(GIRARD_)
-             call stage1_girard
-          end select
-       end do
-       !\
-       ! Message pass: some particles may have moved to different procs
-       !/
-       call message_pass_particles(KindEnd_)
-
-       !\
-       ! remove particles that went outside of the domain
-       !/
-       if(Body1)then ! check if there is an inner body
-          call check_inner_boundary(KindEnd_)
-       end if
-       call remove_undefined_particles(KindEnd_)
-
-       ! check if all field lines have been completed
-       if(is_complete()) RETURN
-
-       !\
-       ! Second stage of RK2 method
-       !/
-       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-          select case(iIndexEnd_II(Method_, iParticle))
-          case(RK2_)
-             call stage2_rk2
-          case(GIRARD_)
-             call stage2_girard
-          end select
-       end do
-       !\
-       ! Message pass: some particles may have moved to different procs
-       !/
-       call message_pass_particles(KindEnd_)
-
-       !\
-       ! remove particles that went outside of the domain
-       !/
-       if(Body1)then ! check if there is an inner body
-          call check_inner_boundary(KindEnd_)
-       end if
-       call remove_undefined_particles(KindEnd_)
-
-       !\
-       ! Stage 3:
-       !/
-       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-          select case(iIndexEnd_II(Method_, iParticle))
-          case(RK2_)
-             call stage3_rk2
-          case(GIRARD_)
-             call stage3_girard
-          end select
-       end do
-       call remove_undefined_particles(KindEnd_)
-       !\
-       ! Message pass: some particles may have moved to different procs
-       !/
-       call message_pass_particles(KindEnd_)
-
-       !\
-       ! remove particles that went outside of the domain
-       !/
-       if(Body1)then ! check if there is an inner body
-          call check_inner_boundary(KindEnd_)
-       end if
-       call remove_undefined_particles(KindEnd_)
-
-       ! check if all field lines have been completed
-       if(is_complete()) RETURN
-
-       ! increase particle index & copy to regular
-       where(iIndexEnd_II(DoCopy_,  1:Particle_I(KindEnd_)%nParticle)==1)
-          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-               iDirTrace
-       end where
-       call copy_end_to_regular
-
-    end do TRACE
-
-  contains
-    !========================================================================
-    subroutine stage1_rk2
-      ! get the direction of the magnetic field at original location
-      call get_b_dir(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBCurr_D)
-      ! find the step size
-      StateEnd_VI(Ds_, iParticle) = &
-           MIN(SpaceStepMax, MAX(SpaceStepMin,&
-           0.1*SQRT(&
-           sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-           ))) * &
-           StateEnd_VI(DsFactor_, iParticle)
-
-      ! save direction for the second stage
-      StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = DirBCurr_D
-      DirCurr_D = DirBCurr_D * &
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-
-      ! get the correction if line starts closing
-      Corr_D = 0.0
-
-      ! cosine of angle between field and radial direction and its gradient
-      call get_grad_cosbr(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Grad_D = Corr_D, CosBR = CosBR)
-      StateEnd_VI(CosBR_, iParticle) = CosBR
-
-      if(abs(CosBR) < 0.5)then
-         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
-         if(sum(Corr_D*DirCurr_D) < 0.0)then
-            ! correct the direction to prevent the line from closing
-            DirCurr_D = DirCurr_D +  Corr_D * min(&
-                 AlphaRK2 * StateEnd_VI(Ds_, iParticle), &
-                 abs(sum(Corr_D*DirCurr_D)) / sum(Corr_D**2) )
-            DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
-         else
-            Corr_D = 0.0
-         end if
-      end if
-
-      ! get middle location
-      StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-           StateEnd_VI(Ds_, iParticle) * &
-           AlphaRK2 * DirCurr_D
-    end subroutine stage1_rk2
-    !========================================================================
-    subroutine stage2_rk2
-      ! get the direction of the magnetic field in the middle
-      call get_b_dir(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBNext_D)
-      ! direction at the 1st stage
-      DirBCurr_D = StateEnd_VI(DirBXOld_:DirBZOld_, iParticle)
-
-      DirNext_D = (BetaRK2 * DirBCurr_D + (1.0 - BetaRK2) * DirBNext_D) *&
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-
-      ! correct the direction
-      Corr_D = 0.0
-      call get_grad_cosbr(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Grad_D = Corr_D, CosBR = CosBR)
-
-      if(abs(CosBR) < 0.5)then
-         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
-         if(sum(Corr_D*DirNext_D) < 0.0)then
-            ! correct the direction to prevent the line from closing
-            DirNext_D = DirNext_D + Corr_D * min(&
-                 StateEnd_VI(Ds_, iParticle), &
-                 abs(sum(Corr_D*DirNext_D)) / sum(Corr_D**2) )
-            DirNext_D = DirNext_D / sqrt(sum(DirNext_D**2))
-         else
-            Corr_D = 0.0
-         end if
-      end if
-
-      ! get final location
-      StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
-           StateEnd_VI(Ds_, iParticle) * &
-           DirNext_D
-
-      if(DoTraceGirard)then
-         ! for the extraction using Girard's method
-         ! save direction of the field and curve's tangent at half-step
-         StateEnd_VI(DirBX_:DirBZ_, iParticle) = DirBNext_D
-         StateEnd_VI(DirX_ :DirZ_,  iParticle) = DirNext_D
-      end if
-    end subroutine stage2_rk2
-    !========================================================================
-    subroutine stage3_rk2
-      ! get the cosine between the magnetic field and the radial direction
-      call get_grad_cosbr(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Grad_D = Corr_D, CosBR = CosBR)
-      
-      ! if the line starts to close -> remove it
-      if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
-         call mark_undefined(KindEnd_, iParticle)
-         RETURN
-      end if
-
-      iIndexEnd_II(DoCopy_, iParticle) = 1
-      StateEnd_VI(DsFactor_, iParticle) = 1.0
-
-      if(DoTraceGirard)then
-         ! for the extraction using Girard's method
-         ! save direction of the field and curve's tangent at half-step
-         StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = &
-              StateEnd_VI(DirBX_:DirBZ_, iParticle)
-         StateEnd_VI(DirXOld_ :DirZOld_,  iParticle) = &
-              StateEnd_VI(DirX_ :DirZ_,  iParticle)
-         StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
-         iIndexEnd_II(Method_, iParticle) = GIRARD_
-      end if
-    end subroutine stage3_rk2
-    !========================================================================
-    subroutine stage1_girard
-      ! get the direction of the magnetic field at original location
-      call get_b_dir(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBCurr_D)
-
-      ! find the step size
-      StateEnd_VI(Ds_, iParticle) = &
-           MIN(SpaceStepMax, MAX(SpaceStepMin,&
-           0.1*SQRT(&
-           sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-           ))) * &
-           StateEnd_VI(DsFactor_, iParticle)
-
-      ! direction of tangent and magnetic field at previous half-step
-      DirBPrev_D = StateEnd_VI(DirBXOld_:DirBZOld_,iParticle)
-      DirPrev_D = StateEnd_VI(DirXOld_ :DirZOld_, iParticle)
-
-      ! get the correction if line starts closing
-      call get_grad_cosbr(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Grad_D = Corr_D, CosBR = CosBR)
-      StateEnd_VI(CosBR_, iParticle) = CosBR
-
-      if(abs(CosBR) < 0.5)then
-         Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
-         !reduce step size if Corr_D is too large
-         if(sqrt(sum(Corr_D**2))* StateEnd_VI(Ds_,iParticle) > 0.1)then
-            StateEnd_VI(Ds_,iParticle) = 0.5 * StateEnd_VI(Ds_,iParticle) * &
-                 0.1/sqrt(sum(Corr_D**2))
-         end if
-      else
-         ! additional correction to prevent line from diverging away
-         ! from the field once other corrections are completed
-         Corr_D = DirBCurr_D / (10*StateEnd_VI(Ds_,iParticle)) * &
-              iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-
-      end if
-      StateEnd_VI(CorrX_:CorrZ_, iParticle) = Corr_D
-
-
-      ! get tangent at the current location
-      Omega_D = cross_product(&
-           Corr_D * cHalf * StateEnd_VI(DsOld_,iParticle) + &
-           (DirBCurr_D-DirBPrev_D) * &
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle), &
-           DirPrev_D)
-      DirCurr_D = DirPrev_D + cross_product(DirPrev_D, Omega_D)
-      ! fix the length of the vector
-      DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
-      StateEnd_VI(DirX_:DirZ_, iParticle) = DirCurr_D
-
-      ! get next half-step location
-      StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
-           StateEnd_VI(Ds_, iParticle) * &
-           cHalf * DirCurr_D
-    end subroutine stage1_girard
-    !========================================================================
-    subroutine stage2_girard
-      ! get the direction of the magnetic field in the middle
-      call get_b_dir(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirBNext_D)
-
-      ! directions at previous half-step
-      DirPrev_D = StateEnd_VI(DirXOld_:DirZOld_, iParticle)
-      DirBPrev_D = StateEnd_VI(DirBXOld_:DirBZOld_, iParticle)
-
-      ! tangent to line at the beginning of time-step
-      DirCurr_D = StateEnd_VI(DirX_:DirZ_, iParticle)
-
-      ! the correction to prevent line from closing
-      Corr_D = StateEnd_VI(CorrX_:CorrZ_, iParticle)
-
-      ! tangent at next half-step
-      Omega_D = cross_product(&
-           Corr_D*cHalf*&
-           ( StateEnd_VI(Ds_,iParticle)+StateEnd_VI(DsOld_,iParticle) ) +&
-           (DirBNext_D - DirBPrev_D) * &
-           iDirTrace * iIndexEnd_II(Alignment_, iParticle), &
-           DirCurr_D)
-      call rotate_girard(DirPrev_D, Omega_D, DirNext_D)
-
-      StateEnd_VI(DirX_ :DirZ_, iParticle) = DirNext_D
-      StateEnd_VI(DirBX_:DirBZ_,iParticle) = DirBNext_D
-
-      ! get final location
-      StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(XOld_:ZOld_,iParticle)+&
-           StateEnd_VI(Ds_, iParticle) * &
-           DirNext_D
-    end subroutine stage2_girard
-    !========================================================================
-    subroutine stage3_girard
-      ! get the direction of the magnetic field
-      call get_grad_cosbr(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Grad_D = Corr_D, CosBR = CosBR)
-
-      if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
-         iIndexEnd_II(DoCopy_, iParticle) = 0
-         StateEnd_VI(DsFactor_, iParticle) = &
-              0.5 * StateEnd_VI(DsFactor_, iParticle)
-         StateEnd_VI(x_:z_, iParticle) = &
-              StateEnd_VI(XOld_:ZOld_, iParticle)
-         RETURN
-      end if
-
-      DCosBR = abs(CosBR - StateEnd_VI(CosBR_,iParticle))
-      if(DCosBR > 0.05)then
-         iIndexEnd_II(DoCopy_, iParticle) = 0
-         StateEnd_VI(DsFactor_, iParticle) = &
-              0.5 * StateEnd_VI(DsFactor_, iParticle) * 0.05 / DCosBR  
-         StateEnd_VI(x_:z_, iParticle) = &
-              StateEnd_VI(XOld_:ZOld_, iParticle)
-         RETURN
-      end if
-
-      iIndexEnd_II(DoCopy_, iParticle) = 1
-      StateEnd_VI(DsFactor_, iParticle) = 1.0
-
-      ! store for the next iteration
-      StateEnd_VI(DsOld_, iParticle) = StateEnd_VI(Ds_, iParticle)
-      StateEnd_VI(DirXOld_:DirZOld_, iParticle) = &
-           StateEnd_VI(DirX_:DirZ_, iParticle)
-      StateEnd_VI(DirBXOld_:DirBZOld_, iParticle) = &
-           StateEnd_VI(DirBX_:DirBZ_, iParticle)
-    end subroutine stage3_girard
-    !========================================================================
-    function is_complete() result(IsCompleteOut)
-      use ModMpi
-      use BATL_mpi, ONLY: iComm, nProc
-      ! returns true if tracing is complete for all field line on all procs
-      logical:: IsComplete, IsCompleteOut
-      integer:: iError
-      !----------------------------------------------------------------------
-      if(Particle_I(KindEnd_)%nParticle < 0)&
-           call CON_stop(NameThisComp//":"//NameSub//&
-           ": negative number of particles of KindEnd_")
-      IsComplete = Particle_I(KindEnd_)%nParticle == 0
-      ! reduce IsComplete variable from all processors
-      if(nProc>1)then
-         call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
-              MPI_LOGICAL, MPI_LAND, iComm, iError)     
-      else
-         IsCompleteOut = IsComplete
-      end if
-    end function is_complete
-    !========================================================================
-    subroutine rotate_girard(DirIn_D, Omega_D, DirOut_D)
-      ! apply Girard's method for integrating
-      !----------------------------------------------
-      real, intent(in) :: DirIn_D(MaxDim)
-      real, intent(in) :: Omega_D(MaxDim)
-      real, intent(out):: DirOut_D(MaxDim)
-
-      real:: DirAux_D(MaxDim)
-      !----------------------------------------------------------------------
-      DirAux_D = DirIn_D + 0.50*cross_product(DirIn_D, Omega_D)
-      DirOut_D = DirIn_D + &
-           cross_product(DirAux_D, Omega_D)/ (1 + 0.25*sum(Omega_D**2))
-    end subroutine rotate_girard
-  end subroutine trace_particle_line
-  
-  !==========================================================================
-
+  !=========================================================================
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
        iIndexStart_II,&
        UseInputInGenCoord)
@@ -860,9 +381,7 @@ contains
     !\
     ! free space
     deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
-
   contains
-
     subroutine start_line(XyzStart_D, iIndexStart_I)
       real,    intent(inout):: XyzStart_D(MaxDim)
       integer, intent(in)   :: iIndexStart_I(nIndexParticleReg)
@@ -1070,7 +589,232 @@ contains
            nProlongOrderIn = 1)
     end subroutine compute_grad_cosbr
   end subroutine extract_particle_line
+  !=======================================================================
+  subroutine trace_particle_line(iDirTrace)
+    use ModCoordTransform, ONLY: cross_product
+    ! the subroutine is the tracing loop;
+    ! tracing starts at KindEnd_ particles and proceeds in a given direction
+    !------------------------------------------------------------------------
+    integer, intent(in):: iDirTrace
 
+    integer :: iParticle     ! loop variable
+
+    ! direction of the magnetic field
+    real, dimension(MaxDim) :: DirBCurr_D, DirBNext_D
+    ! direction of the tangent to the line
+    real, dimension(MaxDim) :: DirCurr_D, DirNext_D
+    ! correction to prevent line from closing
+    real, dimension(MaxDim):: Corr_D
+
+    ! cosine of angle between direction of field and radial direction
+    real:: CosBR
+
+    ! parameters of end particles
+    real,    pointer:: StateEnd_VI(:,:)
+    integer, pointer:: iIndexEnd_II(:,:)
+
+    character(len=*),parameter:: NameSub = "trace_particle_line"
+    !------------------------------------------------------------------------
+    ! set pointers to parameters of end particles
+    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
+    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
+
+    ! initialize factor to apply to step size to 1
+    ! as well as mark a particle for copying
+    iIndexEnd_II(  DoCopy_,  1:Particle_I(KindEnd_)%nParticle) = 1
+
+    TRACE: do
+       ! check if particles are beyond the soft boundary
+       if(RBoundarySoft > 0.0)then
+          call check_soft_boundary(KindEnd_)
+          call remove_undefined_particles(KindEnd_)
+       end if
+
+       ! copy last known coordinates to Auxilary 
+       StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
+            StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
+       !\
+       ! First stage of RK2 method
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+                ! get the direction of the magnetic field at original location
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = DirBCurr_D)
+          ! find the step size
+          StateEnd_VI(Ds_, iParticle) = &
+               MIN(SpaceStepMax, MAX(SpaceStepMin,&
+               0.1*SQRT(&
+               sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
+               ))) 
+          
+          ! save direction for the second stage
+          DirCurr_D = DirBCurr_D * &
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+          
+          ! get the correction if line starts closing
+          Corr_D = 0.0
+          
+          ! cosine of angle between field and radial direction and its gradient
+          call get_grad_cosbr(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Grad_D = Corr_D, CosBR = CosBR)
+          StateEnd_VI(CosBR_, iParticle) = CosBR
+          
+          if(abs(CosBR) < 0.5)then
+             Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
+             if(sum(Corr_D*DirCurr_D) < 0.0)then
+                ! correct the direction to prevent the line from closing
+                DirCurr_D = DirCurr_D +  Corr_D * min(&
+                     0.50 * StateEnd_VI(Ds_, iParticle), &
+                     abs(sum(Corr_D*DirCurr_D)) / sum(Corr_D**2) )
+                DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
+             else
+                Corr_D = 0.0
+             end if
+          end if
+          
+          ! get middle location
+          StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
+               StateEnd_VI(Ds_, iParticle) * &
+               0.50 * DirCurr_D
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       !\
+       ! Second stage of RK2 
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the direction of the magnetic field in the middle
+          call get_b_dir(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Dir_D = DirBNext_D)
+          ! direction at the 1st stage 
+          DirNext_D = DirBNext_D *&
+               iDirTrace * iIndexEnd_II(Alignment_, iParticle)
+          
+          ! correct the direction
+          Corr_D = 0.0
+          call get_grad_cosbr(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Grad_D = Corr_D, CosBR = CosBR)
+          
+          if(abs(CosBR) < 0.5)then
+             Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
+             if(sum(Corr_D*DirNext_D) < 0.0)then
+                ! correct the direction to prevent the line from closing
+                DirNext_D = DirNext_D + Corr_D * min(&
+                     StateEnd_VI(Ds_, iParticle), &
+                     abs(sum(Corr_D*DirNext_D)) / sum(Corr_D**2) )
+                DirNext_D = DirNext_D / sqrt(sum(DirNext_D**2))
+             else
+                Corr_D = 0.0
+             end if
+          end if
+          
+          ! get final location
+          StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
+               StateEnd_VI(Ds_, iParticle) * &
+               DirNext_D
+       end do
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       !\
+       ! Stage 3:
+       !/
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! get the cosine between the magnetic field and the radial direction
+          call get_grad_cosbr(&
+               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
+               iBlock=iIndexEnd_II(0,iParticle),&
+               Grad_D = Corr_D, CosBR = CosBR)
+          
+          ! if the line starts to close -> remove it
+          if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
+             call mark_undefined(KindEnd_, iParticle)
+             CYCLE
+          end if
+          
+          iIndexEnd_II(DoCopy_, iParticle) = 1
+       end do
+       call remove_undefined_particles(KindEnd_)
+       !\
+       ! Message pass: some particles may have moved to different procs
+       !/
+       call message_pass_particles(KindEnd_)
+
+       !\
+       ! remove particles that went outside of the domain
+       !/
+       if(Body1)then ! check if there is an inner body
+          call check_inner_boundary(KindEnd_)
+       end if
+       call remove_undefined_particles(KindEnd_)
+
+       ! check if all field lines have been completed
+       if(is_complete()) RETURN
+
+       ! increase particle index & copy to regular
+       where(iIndexEnd_II(DoCopy_,  1:Particle_I(KindEnd_)%nParticle)==1)
+          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+               iDirTrace
+       end where
+       call copy_end_to_regular
+
+    end do TRACE
+
+  contains
+    !========================
+    function is_complete() result(IsCompleteOut)
+      use ModMpi
+      use BATL_mpi, ONLY: iComm, nProc
+      ! returns true if tracing is complete for all field line on all procs
+      logical:: IsComplete, IsCompleteOut
+      integer:: iError
+      !----------------------------------------------------------------------
+      if(Particle_I(KindEnd_)%nParticle < 0)&
+           call CON_stop(NameThisComp//":"//NameSub//&
+           ": negative number of particles of KindEnd_")
+      IsComplete = Particle_I(KindEnd_)%nParticle == 0
+      ! reduce IsComplete variable from all processors
+      if(nProc>1)then
+         call MPI_Allreduce(IsComplete, IsCompleteOut, 1, &
+              MPI_LOGICAL, MPI_LAND, iComm, iError)     
+      else
+         IsCompleteOut = IsComplete
+      end if
+    end function is_complete
+  end subroutine trace_particle_line
   !========================================================================
   subroutine copy_end_to_regular
     ! copies indicated variables of known end particles to regular particles
