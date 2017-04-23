@@ -77,6 +77,7 @@ my %PlotDir = (
     "PT"     => "PT/plots",
     "RB"     => "RB/plots",
     "SC"     => "SC/IO2",
+    "SP"     => "SP/IO2",
     "UA"     => "UA/Output,UA/data",
     "STDOUT" => "STDOUT",
 	    );
