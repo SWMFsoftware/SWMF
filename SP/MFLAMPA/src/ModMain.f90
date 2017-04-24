@@ -30,11 +30,11 @@ module SP_ModMain
   SAVE
 
   private ! except
-
+  real :: DataInputTime
   ! Methods and variables from this module 
   public:: &
        read_param, initialize, run, finalize, check,&
-       TimeGlobal, iIterGlobal
+       TimeGlobal, iIterGlobal, DataInputTime
 
   ! Methods and variables from ModSize
   public:: &

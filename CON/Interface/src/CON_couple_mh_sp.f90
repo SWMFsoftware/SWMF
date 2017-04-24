@@ -111,7 +111,7 @@ contains
     !The initialization can be done only once
 
     call get_time(tSimulationOut=tNow)
-
+    if(is_proc(SP_))call SP_put_input_time(tNow)
     !\
     ! Set grid descriptors for components
     ! Initialize routers
@@ -526,6 +526,7 @@ contains
     if(.not.RouterIhSp%IsProc)return
 
     tNow=DataInputTime
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
     IhToSp_DD=transform_matrix(tNow,&
          Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     ScToIh_DD=transform_matrix(tNow,&                   !^CMP IF SC
@@ -648,6 +649,7 @@ contains
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
 

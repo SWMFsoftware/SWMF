@@ -15,7 +15,7 @@ module SP_wrapper
        iParticleMin, iParticleMax, nParticle,&
        RMin, RSc, RIh, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
-       CoordMin_DI, &
+       CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, &
        R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
@@ -136,7 +136,7 @@ contains
 
   subroutine SP_put_input_time(TimeIn)
     real,     intent(in)::TimeIn
-    call CON_stop('Can not call SP_get_input_time')
+    DataInputTime = TimeIn
   end subroutine SP_put_input_time
 
   !===================================================================
