@@ -216,9 +216,7 @@ contains
          ! extract initial field lines
          call extract_particle_line(nLineInit, XyzLineInit_DI)
   end subroutine init_particle_line
-
   !==========================================================================
-
   subroutine set_soft_boundary(RBoundarySoftIn)
     ! set additional boundary imposed by user
     real, intent(in):: RBoundarySoftIn
@@ -232,7 +230,6 @@ contains
             ': soft boundary may be set only once and may not be changed!')
     end if
   end subroutine set_soft_boundary
-
   !=========================================================================
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
        iIndexStart_II,&
@@ -244,7 +241,7 @@ contains
     ! requested coordinates may be different for different processor,
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
-    !------------------------------------------------------------------------
+    !-----------------------------------------------------------------------
     integer,         intent(in)::nFieldLineIn
     real,            intent(in)::XyzStart_DI(MaxDim, nFieldLineIn)
     ! mode of tracing (forward, backward or both ways)
@@ -281,7 +278,7 @@ contains
     integer, pointer:: iIndexReg_II(:,:)
 
     character(len=*), parameter:: NameSub='extract_particle_line'
-    !------------------------------------------------------------------------
+    !----------------------------------------------------------------------
     ! set pointers to parameters of end particles
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
@@ -382,6 +379,58 @@ contains
     ! free space
     deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
   contains
+    !========================================================================
+    subroutine compute_grad_cosbr()
+      use BATL_pass_cell, ONLY: message_pass_cell
+      use ModMain, ONLY: UseB0
+      use ModB0, ONLY: B0_DGB
+      use ModGeometry, ONLY: R_BLK
+      use ModCellGradient, ONLY: calc_gradient
+      use ModFaceGradient, ONLY: set_block_field2
+      integer :: iBlock, i, j, k ! loop variables
+      real    :: XyzCell_D(nDim), BCell_D(nDim)
+      !------------------------------------------------------------------------
+      ! precompute CosBR on the grid for all active blocks
+      do iBlock = 1, nBlock
+         if(Unused_B(iBlock))CYCLE
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
+            XyzCell_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
+            Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
+            if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
+            if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
+               CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
+                    (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
+            else
+               CosBR_GB(i,j,k,iBlock) = 0.0
+            end if
+         end do; end do; end do
+      end do
+      ! fill ghost celss via message pass
+      call message_pass_cell(&
+           !           nG              = 1, &
+           State_GB        = CosBR_GB, &
+           nProlongOrderIn = 1)
+
+      do iBlock = 1, nBlock
+         if(Unused_B(iBlock))CYCLE
+         ! correct ghost cells
+         call set_block_field2(&
+              iBlock    = iBlock, &
+              nVar      = 1, &
+              Field1_VG = CosBR2_GB, &
+              Field_VG  = CosBR_GB)
+         ! compute gradient
+         call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
+              GradCosBR_DGB(:,:,:,:,iBlock))
+      end do
+      ! fill ghost cells for gradient via message pass
+      call message_pass_cell(&
+           nVar            = nDim,&
+           nG              = 1, &
+           State_VGB       = GradCosBR_DGB, &
+           nProlongOrderIn = 1)
+    end subroutine compute_grad_cosbr
+    !========================================================================
     subroutine start_line(XyzStart_D, iIndexStart_I)
       real,    intent(inout):: XyzStart_D(MaxDim)
       integer, intent(in)   :: iIndexStart_I(nIndexParticleReg)
@@ -508,7 +557,7 @@ contains
       use ModMpi
       use BATL_mpi, ONLY: iComm, nProc
       integer:: iError
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
       if(nProc>1)then
          call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
               MPI_INTEGER, MPI_SUM, iComm, iError)
@@ -537,57 +586,7 @@ contains
               nint( SIGN(1.0, CosBR) )
       end do
     end subroutine get_alignment
-    !========================================================================
-    subroutine compute_grad_cosbr()
-      use BATL_pass_cell, ONLY: message_pass_cell
-      use ModMain, ONLY: UseB0
-      use ModB0, ONLY: B0_DGB
-      use ModGeometry, ONLY: R_BLK
-      use ModCellGradient, ONLY: calc_gradient
-      use ModFaceGradient, ONLY: set_block_field2
-      integer :: iBlock, i, j, k ! loop variables
-      real    :: XyzCell_D(nDim), BCell_D(nDim)
-      !------------------------------------------------------------------------
-      ! precompute CosBR on the grid for all active blocks
-      do iBlock = 1, nBlock
-         if(Unused_B(iBlock))CYCLE
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI
-            XyzCell_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
-            Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
-            if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
-            if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
-               CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
-                    (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
-            else
-               CosBR_GB(i,j,k,iBlock) = 0.0
-            end if
-         end do; end do; end do
-      end do
-      ! fill ghost celss via message pass
-      call message_pass_cell(&
-           !           nG              = 1, &
-           State_GB        = CosBR_GB, &
-           nProlongOrderIn = 1)
 
-      do iBlock = 1, nBlock
-         if(Unused_B(iBlock))CYCLE
-         ! correct ghost cells
-         call set_block_field2(&
-              iBlock    = iBlock, &
-              nVar      = 1, &
-              Field1_VG = CosBR2_GB, &
-              Field_VG  = CosBR_GB)
-         ! compute gradient
-         call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
-              GradCosBR_DGB(:,:,:,:,iBlock))
-      end do
-      ! fill ghost cells for gradient via message pass
-      call message_pass_cell(&
-           nVar            = nDim,&
-           nG              = 1, &
-           State_VGB       = GradCosBR_DGB, &
-           nProlongOrderIn = 1)
-    end subroutine compute_grad_cosbr
   end subroutine extract_particle_line
   !=======================================================================
   subroutine trace_particle_line(iDirTrace)
@@ -891,14 +890,16 @@ contains
 
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim)
+    real   :: Weight_I(2**nDim), DirB_D(MaxDim)
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
     character(len=*), parameter:: NameSub = "get_grad_cosbr"
     !----------------------------------------------------------------------
-    Grad_D = 0; CosBR = 0
+    Grad_D = 0
     ! get the remaining part of the magnetic field
+    call get_b_dir(Xyz_D = Xyz_D, iBlock = iBlock, Dir_D = DirB_D)
+    CosBR = sum(Xyz_D*DirB_D)/sqrt(sum(Xyz_D**2))
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
     ! interpolate magnetic field value
     do iCell = 1, nCell
@@ -906,8 +907,8 @@ contains
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
        Grad_D(1:nDim) = Grad_D(1:nDim) + &
             GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-       CosBR = CosBR + &
-            CosBR_GB(i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+       !CosBR = CosBR + &
+       !     CosBR_GB(i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
   end subroutine get_grad_cosbr
   !========================================================================
