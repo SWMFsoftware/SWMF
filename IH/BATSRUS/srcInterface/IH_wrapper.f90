@@ -1389,7 +1389,7 @@ contains
   subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
     use IH_BATL_lib, ONLY: nDim, xyz_to_coord
     use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data, apply_soft_boundary, n_particle_reg
+         get_particle_data, n_particle_reg
     integer,              intent(out):: nParticle
     real,    allocatable, intent(out):: Coord_DI(:,:)
     integer, allocatable, intent(out):: iIndex_II(:,:)
@@ -1411,10 +1411,6 @@ contains
     ! Buff_II is allocated inside the next call
     call get_particle_data(5, 'xx yy zz fl id', Buff_II)!, nParticle)
     
-    
-    ! remove particles that have crossed the boundary between components
-    !    call apply_soft_boundary
-
     ! indices to get state vector are not available yet,
     ! they should be determined outside of this subroutine
     if(allocated(iIndex_II)) deallocate(iIndex_II)
