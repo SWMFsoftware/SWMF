@@ -408,7 +408,7 @@ contains
                 iType = iType + iSubCycleBlock &
                      *nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
 
-                if(iType < iSubCycleBlock .or. iType > iTypeMax)then
+                if(dt_BLK(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
                    write(*,*) NameSub,'iType, iTypeMax =', iType, iTypeMax
@@ -490,6 +490,8 @@ contains
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A)
           call set_batsrus_grid
        end if
+
+       if(.not.IsNewBlock) call fix_boundary_ghost_cells
 
        ! Go up to nBlockMax instead of nBlock (!) to clean up beyond nBlock
        iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
