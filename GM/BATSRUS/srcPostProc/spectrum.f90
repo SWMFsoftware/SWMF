@@ -647,9 +647,8 @@ contains
 
           select case(NameInstrument)
           case("EIS")
-             if(.not.IsDataBlock)then
-                nPixel = 1024
-             endif
+             nWavelengthInterval = 2
+             nPixel = 512
              allocate(DLambdaInstr_I(nPixel))
 
              do iPixel=1,nPixel
@@ -660,7 +659,7 @@ contains
              if(IsNoInstrument)then
                 write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
              else
-                allocate(WavelengthInterval_II(2,2))
+                allocate(WavelengthInterval_II(2,nWavelengthInterval))
                 WavelengthInterval_II(:,1) = (/ 170 ,210 /)
                 WavelengthInterval_II(:,2) = (/ 250 ,290 /)
              endif
@@ -967,28 +966,8 @@ contains
     ! te = t
     if(.not. IsPe)Var_VIII(te_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
 
-    if(IsInstrument .and. nPixel /= n3) then
-       write(*,*)'interpolate from n3 to nPixel! nPixel=',nPixel,' /= n3=',n3
-       allocate(VarIn_VIII(nVar,n1,n2,n3))
-
-       VarIn_VIII =  Var_VIII
-       deallocate(Var_VIII)
-       allocate(Var_VIII(nVar,n1,n2,nPixel))
-
-       ! Interpolate to new grid
-       do k = 1, nPixel
-          Coord = 1 + real(n3-1)/real(nPixel-1)*real(k-1)
-          k1 = floor(Coord)
-          k2 = k1+1
-          Dz1 = Coord - real(k1)
-          Dz2 = 1.0 - Dz1
-
-          Var_VIII(:,:,:,k) = Dz2*VarIn_VIII(:,:,:,k1)+Dz1*VarIn_VIII(:,:,:,k2)
-       end do
-
-       n3 = nPixel
-       deallocate(VarIn_VIII)
-    endif
+    if(IsInstrument .and. nPixel /= n3)write(*,*) &
+         '!!! nPixel= ',nPixel,' /= n3  = ',n3,' -> we use n3 '
 
     if(IsNoAlfven)then
        Var_VIII(I01_,1:n1,1:n2,1:n3) = 0
