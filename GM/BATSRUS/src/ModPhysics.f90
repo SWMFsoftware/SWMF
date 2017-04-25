@@ -4,7 +4,9 @@
 module ModPhysics
 
   use ModNumConst, ONLY: cDegToRad
-  use ModConst
+  use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &
+       cProtonMass, cElectronCharge, cGyroElectron, cLightSpeed, &
+       cRadiation, cGravitation, cAU, cBoltzmann, cMu, cRadToDeg
   use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ 
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
@@ -367,8 +369,8 @@ contains
        Clight   = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
     end if
     C2light     = cLIGHT**2
-    InvClight   = cOne/cLight
-    Inv_C2light = cOne/c2LIGHT
+    InvClight   = 1.0/cLight
+    Inv_C2light = 1.0/c2LIGHT
 
     ! normalize the radiation constant
     cRadiationNo = cRadiation &
