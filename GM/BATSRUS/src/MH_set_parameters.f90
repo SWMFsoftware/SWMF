@@ -3276,19 +3276,22 @@ contains
     ! Largest cell size and a much smaller distance for 2D cuts
     CellSizeMax_D = (CoordMax_D - CoordMin_D)/(nIJK_D*nRoot_D)
 
-    if(nByteReal == 8)then
-       SmallSize_D   = 1e-9*CellSizeMax_D
-    else
-       SmallSize_D   = 1e-6*CellSizeMax_D
-    end if
-
     if(DoTestMe)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
 
     PLOTFILELOOP: do iFile = Plot_+1, Plot_ + nPlotFile
 
        plot_area = plot_type(iFile)(1:3)
 
-       if(DoTestMe)write(*,*)'iFile, plot_area=',iFile, plot_area
+       if(plot_form(iFile) == 'tcp')then
+          SmallSize_D = 0.0
+       elseif(nByteReal == 8)then
+          SmallSize_D   = 1e-9*CellSizeMax_D
+       else
+          SmallSize_D   = 1e-6*CellSizeMax_D
+       end if
+
+       if(DoTestMe)write(*,*)'iFile, plot_form, plot_area=',&
+            iFile, plot_form(iFile), plot_area
 
        ! Fix plot range for various plot areas
        select case(plot_area)
