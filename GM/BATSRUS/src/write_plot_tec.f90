@@ -20,8 +20,8 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
   use BATL_lib, ONLY: IsCartesianGrid, IsRLonLat,                    &
        nNodeUsed, iNodeMorton_I, iTree_IA, Block_, Proc_,            &
-       Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block, &
-       iMortonNode_A, iNode_B
+       Xyz_DGB, MinI, MaxI, MinJ, MaxJ, MinK, MaxK,                  &
+       find_grid_block, iMortonNode_A, iNode_B
   use ModMpi
   use ModWriteTecplot, ONLY: textDateTime, textNandT, CharNewLine, &
        write_tecplot_setinfo, write_tecplot_auxdata
@@ -32,8 +32,8 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   integer, intent(in) :: ifile, nPlotVar
   character (LEN=1000), intent(in) :: unitstr_TEC
   real, intent(in) :: PlotVarBLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVarMax)
-  real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,1:1+nI,1:1+nJ,1:1+nK,nBlock)
-  real, intent(in) :: PlotXYZNodes_DNB(3,1:1+nI,1:1+nJ,1:1+nK,nBlock)
+  real, intent(in) :: PlotVarNodes_VNB(nPlotVarMax,nI+1,nJ+1,nK+1,nBlock)
+  real, intent(in) :: PlotXYZNodes_DNB(3,nI+1,nJ+1,nK+1,nBlock)
   real, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
   integer, intent(in) :: iUnit
 
