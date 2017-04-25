@@ -1694,7 +1694,8 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   use ModProcMH
   use ModMain, ONLY: BlkTest, ProcTest
   use ModPhysics
-  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V   
+  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V
+  use ModNumConst, ONLY: cTiny
   use ModUtilities,  ONLY: lower_case
   use ModMultiFluid, ONLY: extract_fluid_name
   use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK

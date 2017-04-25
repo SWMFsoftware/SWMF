@@ -612,7 +612,8 @@ contains
     ! Note that ThetaTilt is positive when the north magnetic pole
     ! points AWAY from the sun.
 
-    use ModPhysics, ONLY: Bdp, CosThetaTilt, SinThetaTilt, cTiny, &
+    use ModNumConst, ONLY: cTiny
+    use ModPhysics, ONLY: Bdp, CosThetaTilt, SinThetaTilt, &
          rBody, Qqp, Oop
     
     real, intent(in) :: Xyz_D(3)

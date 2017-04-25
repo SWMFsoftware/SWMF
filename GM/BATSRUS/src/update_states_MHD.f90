@@ -539,7 +539,7 @@ contains
        ! for half+full step method. But it cannot be used for RK schemes!
 
        do k=1,nK; do j=1,nJ; do i=1,nI
-          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + cHalf*( &
+          Energy_GBI(i,j,k,iBlock,1) = Energy_GBI(i,j,k,iBlock,1) + 0.5*( &
                Source_VC(Bx_,i,j,k)**2 + &
                Source_VC(By_,i,j,k)**2 + &
                Source_VC(Bz_,i,j,k)**2)

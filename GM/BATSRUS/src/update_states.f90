@@ -375,7 +375,7 @@ subroutine update_check
      !    LOCAL TIMESTEPPING
      !///
      report_tf = 1.
-     PercentChangePE = cZero
+     PercentChangePE = 0.
      do iBlock = 1, nBlockMax
         if (Unused_B(iBlock)) CYCLE
         if(UseB0)then
@@ -646,7 +646,7 @@ contains
 
        if(IsConserv)then
           ! e_boris = e + 0.5/c^2 * (V x B)^2
-          E_o_Boris = EnergyOld_CBI(i,j,k,iBlock,1) + (cHalf/c2LIGHT)*( &
+          E_o_Boris = EnergyOld_CBI(i,j,k,iBlock,1) + (0.5/c2LIGHT)*( &
                ((StateOld_VCB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -StateOld_VCB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(StateOld_VCB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -665,7 +665,7 @@ contains
        UdotBc2= (State_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
             State_VGB(rhoUy_,i,j,k,iBlock)*fullBy + &
             State_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
-       gA2_Boris=cOne+fullBB/rhoc2
+       gA2_Boris = 1 + fullBB/rhoc2
 
 
        ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 
@@ -677,7 +677,7 @@ contains
 
        if(IsConserv)then
           ! e_boris = e + 0.5/c^2 * (V x B)^2
-          E_Boris = Energy_GBI(i,j,k,iBlock,1) + (cHalf/c2LIGHT)*( &
+          E_Boris = Energy_GBI(i,j,k,iBlock,1) + (0.5/c2LIGHT)*( &
                ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -691,28 +691,28 @@ contains
        !For possible extension to multifluid
        !State_VGB(iRho_I,i,j,k,iBlock) = &
        !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
-       !     (cOne-time_fraction) * StateOld_VCB(iRho_I,i,j,k,iBlock)
+       !     (1.0-time_fraction) * StateOld_VCB(iRho_I,i,j,k,iBlock)
        State_VGB(rho_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(rho_,i,j,k,iBlock) + &
-            (cOne-time_fraction) * StateOld_VCB(rho_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VCB(rho_,i,j,k,iBlock)
        rhoUx_Boris = &
             (   time_fraction) * rhoUx_Boris + &
-            (cOne-time_fraction) * rhoUx_o_Boris
+            (1.0-time_fraction) * rhoUx_o_Boris
        rhoUy_Boris = &
             (   time_fraction) * rhoUy_Boris + &
-            (cOne-time_fraction) * rhoUy_o_Boris
+            (1.0-time_fraction) * rhoUy_o_Boris
        rhoUz_Boris = &
             (   time_fraction) * rhoUz_Boris + &
-            (cOne-time_fraction) * rhoUz_o_Boris
+            (1.0-time_fraction) * rhoUz_o_Boris
        State_VGB(Bx_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(Bx_,i,j,k,iBlock) + &
-            (cOne-time_fraction) * StateOld_VCB(Bx_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VCB(Bx_,i,j,k,iBlock)
        State_VGB(By_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(By_,i,j,k,iBlock) + &
-            (cOne-time_fraction) * StateOld_VCB(By_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VCB(By_,i,j,k,iBlock)
        State_VGB(Bz_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(Bz_,i,j,k,iBlock) + &
-            (cOne-time_fraction) * StateOld_VCB(Bz_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VCB(Bz_,i,j,k,iBlock)
 
        ! Convert Back
        fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
@@ -722,7 +722,7 @@ contains
        rhoc2  = State_VGB(rho_,i,j,k,iBlock)*c2LIGHT
        UdotBc2= (rhoUx_Boris*fullBx + rhoUy_Boris*fullBy + rhoUz_Boris*fullBz)&
             /rhoc2
-       gA2_Boris= cOne/(cOne+fullBB/rhoc2)
+       gA2_Boris= 1.0/(1.0+fullBB/rhoc2)
 
        ! rhoU = 1/(rho c^2 + B^2) * (I rho c^2 + B B) * rhoU_Boris
        !      = 1/[1+BB/(rho c^2)]* (rhoU_Boris + (rhoUBorisdotB/(rho c^2) * B)
@@ -734,10 +734,10 @@ contains
        if(IsConserv)then
           E_boris= &
                (   time_fraction) * E_Boris + &
-               (cOne-time_fraction) * E_o_Boris
+               (1.0-time_fraction) * E_o_Boris
 
           ! E = E_boris - 0.5/c^2 * (V x B)^2
-          Energy_GBI(i,j,k,iBlock,1) = E_Boris - (cHalf/c2LIGHT)*( &
+          Energy_GBI(i,j,k,iBlock,1) = E_Boris - (0.5/c2LIGHT)*( &
                ((State_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
                -State_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
                +(State_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
@@ -750,7 +750,7 @@ contains
           if((nStage==1.and..not.time_accurate).or.&
                (nStage>1.and.iStage==1)) &
                Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
-               (cHalf/time_fraction - cHalf)*&
+               (0.5/time_fraction - 0.5)*&
                ((State_VGB(Bx_,i,j,k,iBlock) - &
                StateOld_VCB(Bx_,i,j,k,iBlock))**2 +&
                (State_VGB(By_,i,j,k,iBlock) - &
@@ -765,12 +765,12 @@ contains
           ! For possible extension to multifluid
           !State_VGB(iP_I,i,j,k,iBlock) = &
           !     (   time_fraction) *   State_VGB(iP_I,i,j,k,iBlock) + &
-          !     (cOne-time_fraction) * StateOld_VCB(iP_I,i,j,k,iBlock)
+          !     (1.0-time_fraction) * StateOld_VCB(iP_I,i,j,k,iBlock)
           !call calc_energy_point(i,j,k,iBlock)
 
           State_VGB(p_,i,j,k,iBlock) = &
                (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
-               (cOne-time_fraction) * StateOld_VCB(p_,i,j,k,iBlock)
+               (1.0-time_fraction) * StateOld_VCB(p_,i,j,k,iBlock)
 
           call calc_energy(i,i,j,j,k,k,iBlock,1,1)
        end if
@@ -778,17 +778,17 @@ contains
 
        State_VGB(1:nVar,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
-            (cOne-time_fraction) * StateOld_VCB(1:nVar,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VCB(1:nVar,i,j,k,iBlock)
        if(IsConserv)then
           Energy_GBI(i,j,k,iBlock,:) = &
                (   time_fraction) *   Energy_GBI(i,j,k,iBlock,:) + &
-               (cOne-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
+               (1.0-time_fraction) * EnergyOld_CBI(i,j,k,iBlock,:)
 
           if(IsMhd .and. (nStage==1.and..not.time_accurate).or.&
                (nStage>1.and.iStage==1)) then
              Energy_GBI(i,j,k,iBlock,1) = &
                   Energy_GBI(i,j,k,iBlock,1) - &
-                  (cHalf/time_fraction - cHalf)*&
+                  (0.5/time_fraction - 0.5)*&
                   sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
                   StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
           end if

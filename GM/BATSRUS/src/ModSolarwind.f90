@@ -621,12 +621,14 @@ contains
     !
     ! Finally the solar wind data is interpolated to the propagated time. 
     ! If the propagated time is before the first or after the last time read
-    ! from the solar wind file, then use the first or last data values, respectively.
+    ! from the solar wind file, then use the first or last data values, 
+    ! respectively.
 
     use ModKind
     use ModMain
     use ModPhysics
     use ModVarIndexes
+    use ModNumConst, ONLY: cTiny
     use ModGeometry, ONLY: x1, x2
     use ModUtilities, ONLY: sleep
 
