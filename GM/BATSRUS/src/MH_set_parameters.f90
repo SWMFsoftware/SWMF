@@ -83,7 +83,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModLocalTimeStep,   ONLY: read_localstep_param
   use ModIoUnit, ONLY: io_unit_new
-  use ModNumConst, ONLY: cDegToRad
+  use ModNumConst, ONLY: cDegToRad, cTiny, cHalfPi
   use ModSort, ONLY: sort_quick
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
@@ -3362,7 +3362,8 @@ contains
        case('y=0')
           plot_range(1:5:2, iFile) = CoordMin_D
           plot_range(2:6:2, iFile) = CoordMax_D
-          if(plot_form(iFile) == 'idl' .and. (IsRLonLat .or. IsCylindrical) &
+          if((plot_form(iFile) == 'idl' .or. plot_form(iFile) == 'tcp') &
+               .and. (IsRLonLat .or. IsCylindrical) &
                .and. CoordMin_D(2) < cPi .and. CoordMax_D(2) > cPi) then
              ! Limit plot range in Phi direction to be small around 180 degs
              plot_range(3, iFile) = cPi - SmallSize_D(y_)
