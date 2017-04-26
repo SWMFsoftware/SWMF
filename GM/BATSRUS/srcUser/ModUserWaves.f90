@@ -277,7 +277,8 @@ contains
           do iVar = 1, nVarsUpdate
              read(VarsUpdate_I(iVar),*) iVarsUpdate_I(iVar)
           end do
-
+          
+          UseUserUpdateStates = .true.
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
