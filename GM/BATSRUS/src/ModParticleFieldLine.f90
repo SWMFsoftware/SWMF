@@ -570,7 +570,7 @@ contains
       ! determine alignment of particle indexing with direction 
       ! of the magnetic field
       integer:: iParticle
-      real:: CosBR, Grad_D(MaxDim)
+      real   :: DirB_D(MaxDim)
       !------------------------------------------------------------------------
       if(iOrderMode == Field_)then
          iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
@@ -578,12 +578,12 @@ contains
       end if
 
       do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         call get_grad_cosbr(&
+         call get_b_dir(&
               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
               iBlock=iIndexEnd_II(0,iParticle),&
-              Grad_D = Grad_D, CosBR = CosBR)
+              Dir_D = DirB_D)
          iIndexEnd_II(Alignment_, iParticle) = &
-              nint( SIGN(1.0, CosBR) )
+              nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
       end do
     end subroutine get_alignment
 
@@ -659,7 +659,9 @@ contains
           call get_grad_cosbr(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Grad_D = Corr_D, CosBR = CosBR)
+               Grad_D = Corr_D)
+          CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBCurr_D)/&
+               sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
           StateEnd_VI(CosBR_, iParticle) = CosBR
           
           if(abs(CosBR) < 0.5)then
@@ -714,8 +716,9 @@ contains
           call get_grad_cosbr(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Grad_D = Corr_D, CosBR = CosBR)
-          
+               Grad_D = Corr_D)
+          CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBNext_D)/&
+               sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
           if(abs(CosBR) < 0.5)then
              Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
              if(sum(Corr_D*DirNext_D) < 0.0)then
@@ -752,10 +755,13 @@ contains
        !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
           ! get the cosine between the magnetic field and the radial direction
-          call get_grad_cosbr(&
-               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-               iBlock=iIndexEnd_II(0,iParticle),&
-               Grad_D = Corr_D, CosBR = CosBR)
+          call get_b_dir(&
+               Xyz_D  = StateEnd_VI(x_:z_, iParticle),&
+               iBlock = iIndexEnd_II(0,iParticle),&
+               Dir_D  = DirBNext_D)
+          CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBNext_D)/&
+               sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+
           
           ! if the line starts to close -> remove it
           if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
@@ -878,7 +884,7 @@ contains
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
   end subroutine get_b_dir
   !========================================================================
-  subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D, CosBR)
+  subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D)
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
     ! returns the direction of magnetic field 
@@ -886,7 +892,6 @@ contains
     real,          intent(in) :: Xyz_D(MaxDim)
     integer,       intent(in) :: iBlock
     real,          intent(out):: Grad_D(MaxDim)
-    real,          intent(out):: CosBR
 
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
@@ -898,8 +903,6 @@ contains
     !----------------------------------------------------------------------
     Grad_D = 0
     ! get the remaining part of the magnetic field
-    call get_b_dir(Xyz_D = Xyz_D, iBlock = iBlock, Dir_D = DirB_D)
-    CosBR = sum(Xyz_D*DirB_D)/sqrt(sum(Xyz_D**2))
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
     ! interpolate magnetic field value
     do iCell = 1, nCell
@@ -907,8 +910,6 @@ contains
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
        Grad_D(1:nDim) = Grad_D(1:nDim) + &
             GradCosBR_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
-       !CosBR = CosBR + &
-       !     CosBR_GB(i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
   end subroutine get_grad_cosbr
   !========================================================================
