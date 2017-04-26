@@ -49,7 +49,7 @@ contains
           refineBlock=.false. !Do not refine body or outer boundary
        else
           !refine heliosheath
-          BDotRMin=cZero
+          BDotRMin=0.0
           do k=0,nK+1;do j=1,nJ
              BDotRMin=min( BDotRMin,minval(&
                   State_VGB(Bx_,1:nI,j,k,iBLK)*&
@@ -59,7 +59,7 @@ contains
                   State_VGB(Bz_,1:nI,j,k,iBLK)*&
                   Xyz_DGB(z_,1:nI,j,k,iBLK)))
           end do;end do
-          BDotRMax=cZero
+          BDotRMax=0.0
           do k=0,nK+1;do j=1,nJ
              BDotRMax=max( BDotRMax,maxval(&
                   State_VGB(Bx_,1:nI,j,k,iBLK)*&
@@ -69,8 +69,8 @@ contains
                   State_VGB(Bz_,1:nI,j,k,iBLK)*&
                   Xyz_DGB(z_,1:nI,j,k,iBLK)))
           end do;end do
-          refineBlock=BDotRMin<-cTiny.and.&
-               BDotRMax>cTiny
+          refineBlock=BDotRMin<-1e-6.and.&
+               BDotRMax>1e-6
        end if
        found=.true.
     end select

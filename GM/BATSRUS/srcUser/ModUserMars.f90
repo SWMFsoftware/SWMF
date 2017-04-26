@@ -1,4 +1,4 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+tin!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
@@ -403,13 +403,10 @@ contains
   subroutine user_impl_source(iBlock)
 
     use ModAdvance, ONLY: Source_VC
-    use ModNumConst,ONLY: cZero
     use ModVarIndexes,ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
-    !    use ModAdvance,  ONLY: Source_VC,Energy_
-    !    use ModNumConst, ONLY: cZero
 
     integer, intent(in) :: iBlock
 
@@ -422,16 +419,16 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SE     = cZero
+    Srho   = 0.0
+    SrhoSpecies=0.0
+    SrhoUx = 0.0
+    SrhoUy = 0.0
+    SrhoUz = 0.0
+    SBx    = 0.0
+    SBy    = 0.0
+    SBz    = 0.0
+    SP     = 0.0
+    SE     = 0.0
 
     if(DoTestMe)then
        !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
@@ -852,9 +849,9 @@ contains
     !For Outer Boundaries
     do iBoundary=xMinBc_,zMaxBc_
        FaceState_VI(rhoHp_,iBoundary)    = SW_rho
-       FaceState_VI(rhoO2p_,iBoundary)   = cTiny8
-       FaceState_VI(rhoOp_,iBoundary)    = cTiny8
-       FaceState_VI(rhoCO2p_,iBoundary)  = cTiny8     
+       FaceState_VI(rhoO2p_,iBoundary)   = 1e-10
+       FaceState_VI(rhoOp_,iBoundary)    = 1e-10
+       FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10     
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Mars
@@ -930,7 +927,7 @@ contains
 
     do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
 
@@ -971,7 +968,7 @@ contains
        if (true_cell(i,j,k,iBlock).and. &
             R_BLK(i,j,k,iBlock)<1.5*Rbody) then
 
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
 
@@ -1865,7 +1862,6 @@ contains
   end subroutine Mars_input
 
   !============================================================================
-  !============================================================================
   subroutine set_neutral_density(iBlock)
 
     use ModProcMH, ONLY : iProc
@@ -1915,7 +1911,7 @@ contains
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.UseChapman)then  
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
                +5.0e-4
           Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&

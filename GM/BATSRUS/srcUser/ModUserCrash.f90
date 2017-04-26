@@ -1442,12 +1442,12 @@ contains
     use ModMain,       ONLY: nI, UseERadInput
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
-         InvGammaMinus1, UnitEnergyDens_, cKToEV
+         InvGammaMinus1, UnitEnergyDens_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
     use ModLookupTable,ONLY: interpolate_lookup_table
-    use ModConst,      ONLY: cAtomicMass
+    use ModConst,      ONLY: cAtomicMass, cKToEV
     use CRASH_ModInterfaceNLTE, ONLY: NLTE_EOS
 
     real, intent(in) :: State_V(nVar)

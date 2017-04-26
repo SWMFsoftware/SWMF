@@ -293,7 +293,6 @@ contains
     use ModAdvance,   ONLY: State_VGB 
     use ModPhysics,   ONLY: InvGammaMinus1,BodyTDim_I
     use ModGeometry
-    use ModNumConst,  ONLY: cTolerance
     use BATL_lib, ONLY: IsCartesianGrid, CoordMax_D
 
     integer, intent(in) :: iBlock
@@ -320,7 +319,7 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
-       R = max(R_BLK(i,j,k,iBlock),cTolerance)
+       R = max(R_BLK(i,j,k,iBlock),1e-10)
        ROne = max(1.0,R)
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
        call get_plasma_parameters_cell(i,j,k,iBlock,&

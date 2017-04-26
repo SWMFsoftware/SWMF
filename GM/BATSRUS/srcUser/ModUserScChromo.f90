@@ -581,7 +581,7 @@ contains
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModConst,      ONLY: cPi, cTolerance
+    use ModNumConst,   ONLY: cPi
     use ModIO,         ONLY : restart
     use ModProcMH,     ONLY: iProc
 

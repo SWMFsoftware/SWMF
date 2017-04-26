@@ -263,13 +263,10 @@ contains
   subroutine user_impl_source(iBlock)
 
     use ModAdvance, ONLY: Source_VC
-    use ModNumConst,ONLY: cZero
     use ModVarIndexes,ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
-    !    use ModAdvance,  ONLY: Source_VC,Energy_
-    !    use ModNumConst, ONLY: cZero
 
     integer, intent(in) :: iBlock
 
@@ -282,16 +279,16 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
      
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SE     = cZero
+    Srho   = 0.0
+    SrhoSpecies=0.0
+    SrhoUx = 0.0
+    SrhoUy = 0.0
+    SrhoUz = 0.0
+    SBx    = 0.0
+    SBy    = 0.0
+    SBz    = 0.0
+    SP     = 0.0
+    SE     = 0.0
 
     if(oktest_me)then
        !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
@@ -345,7 +342,7 @@ contains
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
-    real :: SourceLossMax, vdtmin, chalf=0.5
+    real :: SourceLossMax, vdtmin, 0.5=0.5
 
 
     integer:: iLastGrid = -1, iLastDecomposition = -1, iBlockLoop
@@ -389,7 +386,7 @@ contains
           end do; end do; end do
           ! calculate optical depth and producation rate
           do k=1,nK; do j=1,nJ; do i=1,nI
-             cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlockLoop)))*&
+             cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlockLoop)))*&
                   Xyz_DGB(x_,i,j,k,iBlockLoop)/max(R_BLK(i,j,k,iBlockLoop),1.0e-3)&
                   +5.0e-4
              Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlockLoop,1:MaxNuSpecies)*&
@@ -645,9 +642,9 @@ contains
     !For Outer Boundaries
     do iBoundary=xMinBc_, zMaxBc_
        FaceState_VI(rhoHp_,iBoundary)    = SW_rho
-       FaceState_VI(rhoO2p_,iBoundary)   = cTiny8
-       FaceState_VI(rhoOp_,iBoundary)    = cTiny8
-       FaceState_VI(rhoCO2p_,iBoundary)  = cTiny8     
+       FaceState_VI(rhoO2p_,iBoundary)   = 1e-10
+       FaceState_VI(rhoOp_,iBoundary)    = 1e-10
+       FaceState_VI(rhoCO2p_,iBoundary)  = 1e-10     
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Rvenus
@@ -727,7 +724,7 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&

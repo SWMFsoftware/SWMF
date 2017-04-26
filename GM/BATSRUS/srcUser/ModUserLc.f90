@@ -256,7 +256,6 @@ contains
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D, &
          iSide, iFace, jFace, kFace, iBlockBc
     use ModMain,        ONLY: x_, y_, z_, UseRotatingFrame, nI, nJ, nK
-    use ModNumConst,    ONLY: cTolerance
     use ModPhysics,     ONLY: OmegaBody, BodyRho_I, BodyTDim_I, &
          UnitTemperature_, Si2No_V, No2Si_V, UnitN_, UnitEnergyDens_, &
          UnitT_, UnitX_

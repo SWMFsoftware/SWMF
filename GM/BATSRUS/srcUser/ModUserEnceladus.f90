@@ -389,7 +389,7 @@ contains
 
   !=========================================================================
   real function neutral_density(R0)
-    use ModPhysics, ONLY :Rbody,cZero
+    use ModPhysics, ONLY :Rbody
 
     real, intent(in) :: R0
     real, parameter:: n0_H2O=2.8143082e+7

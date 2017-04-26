@@ -169,12 +169,12 @@ contains
     !--------------------------------------------------------------------------
     !For Outer Boundaries
     do iBoundary=xMinBc_,zMaxBc_
-       FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary) = cTiny8
+       FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary) = 1e-10
        FaceState_VI(rhoHp_,iBoundary) = SW_rho
     end do
     FaceState_VI(SpeciesFirst_:SpeciesLast_,body1_) = BodyRho_I(1)/100.
     FaceState_VI(rhoH2Op_,body1_) = BodyRho_I(H2Op_)
-    FaceState_VI(rhoHp_  ,body1_) = cTiny
+    FaceState_VI(rhoHp_  ,body1_) = 1e-6
 
     CellState_VI(SpeciesFirst_:SpeciesLast_,Coord1MinBc_:Coord3MaxBc_) = &
          FaceState_VI(SpeciesFirst_:SpeciesLast_,xMinBc_:zMaxBc_)
@@ -260,7 +260,7 @@ contains
             (4*cPi*Unr*R_BLK(0:nI+1,0:nJ+1,0:nK+1,iBlock)**2* &
             No2Si_V(UnitX_)**2 * 6)
     endif
-    if(nNuSpecies < 2) NNeu_BLK(:,:,:,iBlock,2:MaxNuSpecies) = cTiny
+    if(nNuSpecies < 2) NNeu_BLK(:,:,:,iBlock,2:MaxNuSpecies) = 1e-6
 
   end subroutine user_set_ICs
 
@@ -392,10 +392,10 @@ contains
           elseif (rkm >= 10000. .and. rkm < 50000.) then
              fi = 1.5-0.31067*log(rkm/10000.)           ! jpattern=12, regluar case with electron temperature
           else                                          !      profile measureed by Giotto
-	     fi = cOne
+	     fi = 1.0
           endif
        else
-	  fi = cOne
+	  fi = 1.0
        endif	! jpattern
        if (jpattern == 10 .or. jpattern == 12 ) then
 	  if ( Rkm <= 1584.893 ) then
@@ -422,9 +422,9 @@ contains
 
        !define recombination terms ion by ion
        AlphaN_I(H2Op_) = alphaTe
-       AlphaN_I(Hp_  ) = cZero
+       AlphaN_I(Hp_  ) = 0.0
        AlphaN_I(H3Op_) = alphaTe
-       AlphaN_I(Op_  ) = cZero
+       AlphaN_I(Op_  ) = 0.0
        AlphaN_I(OHp_ ) = 3.8E-8*sqrt(300./Te)
        AlphaN_I(COp_ ) = 1.E-7*(300./Te)**0.46
        ! normalize
@@ -436,7 +436,7 @@ contains
        Source_I(Hp_  ) = IoniRate_I(H2O_Hp_  )*nn_I(H2O_) + &
             IoniRate_I(H_Hp_  )*nn_I(H_  ) + &
             IoniRate_I(OH_Hp_ )*nn_I(OH_ )
-       Source_I(H3Op_) = cZero
+       Source_I(H3Op_) = 0.0
        Source_I(OHp_ ) = IoniRate_I(H2O_OHp_ )*nn_I(H2O_) + &
             IoniRate_I(OH_OHp_)*nn_I(OH_ )
        Source_I(Op_  ) = IoniRate_I(H2O_Op_  )*nn_I(H2O_) + &
@@ -485,7 +485,7 @@ contains
             CxRate_I(H2Op_H2O__H3Op_OH_)*nn_I(H_ ) + &	!using H2O mirror for H mirror
             CxRate_I(Hp_OH__OHp_H_    )*nn_I(OH_ ) + &
             CxRate_I(Hp_O__Op_H_      )*nn_I(O_  )
-       Loss_I(H3Op_) = cZero
+       Loss_I(H3Op_) = 0.0
        Loss_I(OHp_ ) = CxRate_I(OHp_H2O__H3Op_O_  )*nn_I(H2O_) + &
             CxRate_I(OHp_H2O__H2Op_OH_)*nn_I(H2O_) + &
             CxRate_I(OHp_CO__COp_OH_  )*nn_I(CO_ )
@@ -529,11 +529,11 @@ contains
        Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
             (1.0/3.0)*(totalSourceRho-Source_H3Op+collisn)* &
             dot_product( (Un-U) , (Un-U) ) - &
-            cHalf  *State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
+            0.5  *State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
             ( (totalNumLoss-NumLoss_H3Op+collisn/mbar) + sum(AlphaN_I/MassSpecies_V* &
             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, iBlock)) )
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
-            cHalf*( (totalSourceRho-Source_H3Op+collisn)*Unsqr - &
+            0.5*( (totalSourceRho-Source_H3Op+collisn)*Unsqr - &
             (totalLossRho-Loss_H3Op+collisn)*usqr - &
             InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
             ((totalNumLoss-NumLoss_H3Op+collisn/mbar) + sum(AlphaN_I/MassSpecies_V* &

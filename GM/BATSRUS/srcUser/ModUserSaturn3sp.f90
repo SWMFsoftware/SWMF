@@ -1,23 +1,20 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! You must set UseUserInitSession, UseUserSetIcs and UseUserOuterBcs 
 ! to .true. for this user module to be effective.
 
 !========================================================================
 module ModUser
-  use ModNumConst, ONLY: cHalf,cTwo,cThree,&
-       cFour,cE1,cHundred,cHundredth,cZero,&
-       cOne,cTiny
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
   use ModSize,     ONLY: nI,nJ,nK
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &
-       IMPLEMENTED3 => user_set_cell_boundary,               &
+       IMPLEMENTED3 => user_set_cell_boundary,          &
        IMPLEMENTED4 => user_read_inputs,                &
        IMPLEMENTED5 => user_calc_sources
-
 
   include 'user_module.h' !list of public methods
  
@@ -41,7 +38,6 @@ contains
 
     use ModVarIndexes
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
-    use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: body1_, xMinBc_, zMaxBc_
     integer :: iBoundary
     !-------------------------------------------------------------------
@@ -59,8 +55,8 @@ contains
     ! the correct values here for the extra species will assure that 
     ! the inner boundary is done correctly.
     FaceState_VI(RhoH_,body1_)   = BodyRho_I(1)
-    FaceState_VI(RhoH2O_,body1_) = cTiny*BodyRho_I(1)
-    FaceState_VI(RhoN_,body1_)   = cTiny*BodyRho_I(1)
+    FaceState_VI(RhoH2O_,body1_) = 1e-6*BodyRho_I(1)
+    FaceState_VI(RhoN_,body1_)   = 1e-6*BodyRho_I(1)
 
     ! We set the following array for the outer boundaries.  Although
     ! only CellState_VI is used we set both.  Note that these are 
@@ -69,8 +65,8 @@ contains
     ! just to be safe.
     do iBoundary = xMinBc_, zMaxBc_
        FaceState_VI(RhoH_, iBoundary)   = SW_rho
-       FaceState_VI(RhoH2O_, iBoundary) = cTiny*sw_rho
-       FaceState_VI(RhoN_, iBoundary)   = cTiny*sw_rho
+       FaceState_VI(RhoH2O_, iBoundary) = 1e-6*sw_rho
+       FaceState_VI(RhoN_, iBoundary)   = 1e-6*sw_rho
     end do
 
     CellState_VI=FaceState_VI(:,xMinBc_:zMaxBc_)
@@ -87,19 +83,18 @@ contains
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoH_, rhoH2O_, rhoN_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
-    use ModNumConst, ONLY: cTiny
 
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
        State_VGB(RhoH_,:,:,:,iBlock)   = BodyRho_I(1)
-       State_VGB(RhoH2O_,:,:,:,iBlock) = cTiny*sw_rho
-       State_VGB(RhoN_,:,:,:,iBlock)   = cTiny*sw_rho
+       State_VGB(RhoH2O_,:,:,:,iBlock) = 1e-6*sw_rho
+       State_VGB(RhoN_,:,:,:,iBlock)   = 1e-6*sw_rho
     elsewhere
        State_VGB(RhoH_,:,:,:,iBlock)   = sw_rho
-       State_VGB(RhoH2O_,:,:,:,iBlock) = cTiny*BodyRho_I(1)
-       State_VGB(RhoN_,:,:,:,iBlock)   = cTiny*BodyRho_I(1)
+       State_VGB(RhoH2O_,:,:,:,iBlock) = 1e-6*BodyRho_I(1)
+       State_VGB(RhoN_,:,:,:,iBlock)   = 1e-6*BodyRho_I(1)
     end where
 
   end subroutine user_set_ics
@@ -138,8 +133,8 @@ contains
     ! The solar wind species is the only one at the upstream boundary.
     ! The ionosphere species is zero.
     State_VGB(RhoH_,:,:,:,iBlock)   = State_VGB(rho_,:,:,:,iBlock)
-    State_VGB(RhoH2O_,:,:,:,iBlock) = cTiny*State_VGB(rho_,:,:,:,iBlock)
-    State_VGB(RhoN_,:,:,:,iBlock)   = cTiny*State_VGB(rho_,:,:,:,iBlock)
+    State_VGB(RhoH2O_,:,:,:,iBlock) = 1e-6*State_VGB(rho_,:,:,:,iBlock)
+    State_VGB(RhoN_,:,:,:,iBlock)   = 1e-6*State_VGB(rho_,:,:,:,iBlock)
 
     found = .true.
 

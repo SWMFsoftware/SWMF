@@ -578,7 +578,7 @@ contains
        SinTheta = sqrt(x**2+y**2)/r
 
        ! for the neutrals thetaN angle is relative to the X axis
-       ! thetaN = atan(sqrt(y**2+z**2)/(x+cTiny))
+       ! thetaN = atan(sqrt(y**2+z**2)/(x+1e-6))
        ! sinThetaN=sqrt(y**2+z**2)/r
        ! lambda = 4.0
        !so pra iniciar eu fixei lambda como 4.0 

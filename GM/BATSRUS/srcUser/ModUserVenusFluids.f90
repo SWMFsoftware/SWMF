@@ -204,21 +204,16 @@ contains
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: InvGammaMinus1,Rbody,GammaMinus1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
-         UnitT_,UnitN_,ElectronPressureRatio
+    use ModPhysics, ONLY: InvGammaMinus1, Rbody, GammaMinus1, &
+         UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
+         UnitT_, UnitN_, ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,Xyz_DGB,R_BLK
-    use ModNumConst,ONLY: cZero,cHalf,cOne,cTolerance
-!!$    use ModVarIndexes,ONLY: Rho_, HpRho_, O2pRho_, OpRho_, CO2pRho_, &
-!!$         RhoUx_, RhoUy_, RhoUz_, HpP_,O2pP_,OpP_,CO2pP_, P_, Energy_, Bx_, By_, Bz_
     use ModVarIndexes
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
     use BATL_lib, ONLY: CellVolume_GB
-
-    !    use ModAdvance,  ONLY: Source_VC,Energy_
-    !    use ModNumConst, ONLY: cZero
 
     integer, intent(in) :: iBlock
 
@@ -299,7 +294,7 @@ contains
 
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
             +1.0e-4
        Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
@@ -1077,7 +1072,7 @@ contains
 
     ! calculate optical depth and producation rate                                                                                                             
     !  do k=1,nK; do j=1,nJ; do i=1,nI
-    ! cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+    ! cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
     !      Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
     !      +5.0e-4
 
@@ -1093,7 +1088,7 @@ contains
     !    end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       !  cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       !  cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
        !       Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
        !       +1.0e-4
        !  Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
@@ -1152,7 +1147,7 @@ contains
        else  !old way of optical depth calculation, 
           !production rate drops to 1.0e-5 for SZA > 90
 
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
                +1.0e-5
           Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
@@ -1169,7 +1164,7 @@ contains
     nu1_BLK(:,:,:,iBlock)=nu_BLK(:,:,:,iBlock)
     do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
 
@@ -1235,7 +1230,7 @@ contains
        if (.not. (true_cell(i,j,k,iBlock).and. &
             R_BLK(i,j,k,iBlock)<1.5*Rbody) ) CYCLE
 
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
             1.0e-3
 
@@ -1322,8 +1317,10 @@ contains
     use ModMain,       ONLY: UseRotatingBc, iTest, jTest, kTest, ProcTest, &
          BlkTest, ExtraBc_, Body1_, xMinBc_
     use ModProcMH,   ONLY: iProc
-    use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_,HpP_,O2pP_,OpP_,CO2pP_,iRhoUx_I,iRhoUy_I,iRhoUz_I
-    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim,ElectronPressureRatio,FaceState_VI
+    use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_, HpP_,&
+         O2pP_, OpP_, CO2pP_, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim, ElectronPressureRatio, &
+         FaceState_VI
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBoundary, iBlockBc
 
@@ -1860,7 +1857,7 @@ contains
 
     ! calculate optical depth and producation rate
     !  do k=1,nK; do j=1,nJ; do i=1,nI
-    !     cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+    !     cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
     !          Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
     !          +5.0e-4
 
@@ -1877,7 +1874,7 @@ contains
     !    end do; end do; end do
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-       !cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       !cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
        !     Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-4)&
        !     +1.0e-4
        !Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&
@@ -1936,7 +1933,7 @@ contains
        else  !old way of optical depth calculation, 
           !production rate drops to 1.0e-5 for SZA > 90
 
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-5)&
                +1.0e-5
           Optdep =max( sum(nDenNuSpecies_CBI(i,j,k,iBlock,1:MaxNuSpecies)*&

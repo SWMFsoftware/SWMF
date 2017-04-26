@@ -1813,7 +1813,6 @@ contains
     use ModResistivity,  ONLY: Eta0SI
     use ModProcMH,       ONLY: iProc
     use ModGeometry,     ONLY: Xyz_DGB
-    use ModNumConst,     ONLY: cTiny
 
     !------------------------------------------------------------------------
     ! The State_V vector is in normalized units

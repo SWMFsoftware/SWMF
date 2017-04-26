@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
   ! This is the user module for Mars 
@@ -219,9 +220,7 @@ contains
     use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in) :: iBlock
-
-    !    use ModAdvance,  ONLY: Source_VC,Energy_
-    !    use ModNumConst, ONLY: cZero
+    
     integer :: i, j, k,n
     real    ::vdtmin
     real :: inv_rho,inv_rho2,uu2,Productrate,kTi,kTe
@@ -1630,7 +1629,7 @@ contains
 
     ! calculate optical depth and producation rate                                                                                                             
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
 
@@ -1648,7 +1647,7 @@ contains
 
     do k=MinK,MaxK;do j=MinJ,MaxJ; do i=MinI,MaxI
        if (R_BLK(i,j,k,iBlock)< Rbody) then
-          cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+          cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
                Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
                1.0e-3
           State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
@@ -1697,7 +1696,7 @@ contains
             R_BLK(i,j,k,iBlock)<1.5*Rbody) ) CYCLE
 
 
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)+&
             1.0e-3
 
@@ -2365,7 +2364,7 @@ contains
 
     ! calculate optical depth and producation rate
     do k=1,nK; do j=1,nJ; do i=1,nI
-       cosSZA=(cHalf+sign(cHalf,Xyz_DGB(x_,i,j,k,iBlock)))*&
+       cosSZA=(0.5+sign(0.5,Xyz_DGB(x_,i,j,k,iBlock)))*&
             Xyz_DGB(x_,i,j,k,iBlock)/max(R_BLK(i,j,k,iBlock),1.0e-3)&
             +5.0e-4
 
@@ -2502,7 +2501,6 @@ contains
     end if
   end subroutine set_neutral_density
   !============================================================================
-  !===================================================================
   subroutine user_get_b0(X1,Y1,Z1,B1)
     use ModMain
     use ModPhysics 

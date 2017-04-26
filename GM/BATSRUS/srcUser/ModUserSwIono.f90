@@ -5,10 +5,7 @@
 
 !========================================================================
 Module ModUser
-  use ModNumConst, ONLY: cHalf,cTwo,cThree,&
-       cFour,cE1,cHundred,cHundredth,cZero,&
-       cOne,cTiny
-  use ModSize,     ONLY: nI,nJ,nK
+  use ModSize, ONLY: nI,nJ,nK
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_set_ics,                    &
@@ -27,7 +24,6 @@ contains
 
     use ModVarIndexes
     use ModPhysics, ONLY: FaceState_VI, CellState_VI, SW_rho, BodyRho_I
-    use ModNumConst, ONLY: cTiny
     use ModMain, ONLY: body1_, xMinBc_, zMaxBc_
     integer :: iBoundary
     !-------------------------------------------------------------------
@@ -43,7 +39,7 @@ contains
     ! FaceState_VI is used to set the inner boundary condition.  Setting
     ! the correct values here for the extra species will assure that 
     ! the inner boundary is done correctly.
-    FaceState_VI(rhosw_,body1_) =cTiny*BodyRho_I(1)
+    FaceState_VI(rhosw_,body1_) =1e-6*BodyRho_I(1)
     FaceState_VI(rhoion_,body1_)=BodyRho_I(1)
 
     ! We set the following array for the outer boundaries.  Although
@@ -53,7 +49,7 @@ contains
     ! just to be safe.
     do iBoundary = xMinBc_, zMaxBc_
        FaceState_VI(rhosw_, iBoundary)  = SW_rho
-       FaceState_VI(rhoion_, iBoundary) = cTiny*sw_rho
+       FaceState_VI(rhoion_, iBoundary) = 1e-6*sw_rho
     end do
 
     CellState_VI=FaceState_VI(:,xMinBc_:zMaxBc_)
@@ -71,16 +67,15 @@ contains
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
-    use ModNumConst, ONLY: cTiny
 
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
        State_VGB(rhoion_,:,:,:,iBlock) = BodyRho_I(1)
-       State_VGB(rhosw_,:,:,:,iBlock)  = cTiny*sw_rho
+       State_VGB(rhosw_,:,:,:,iBlock)  = 1e-6*sw_rho
     elsewhere
-       State_VGB(rhoion_,:,:,:,iBlock) = cTiny*BodyRho_I(1)
+       State_VGB(rhoion_,:,:,:,iBlock) = 1e-6*BodyRho_I(1)
        State_VGB(rhosw_,:,:,:,iBlock)  = sw_rho
     end where
 
@@ -120,7 +115,7 @@ contains
     ! The solar wind species is the only one at the upstream boundary.
     ! The ionosphere species is zero.
     State_VGB(rhosw_,:,:,:,iBlock)   = State_VGB(rho_,:,:,:,iBlock)
-    State_VGB(rhoion_,:,:,:,iBlock)  = cTiny*State_VGB(rho_,:,:,:,iBlock)
+    State_VGB(rhoion_,:,:,:,iBlock)  = 1e-6*State_VGB(rho_,:,:,:,iBlock)
 
     found = .true.
 

@@ -854,7 +854,7 @@ contains
     ElectronTemperatureRatio = 1.0   !default was 0.0
 
     do iBoundary=xMinBc_, zMaxBc_
-       FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = cTiny8/1.0e5     
+       FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 1e-15
        !  FaceState_VI(ScalarFirst_:ScalarLast_,iBoundary)  = 0.0
        FaceState_VI(RhoLp_,iBoundary)=SW_LP
        FaceState_VI(RhoMp_,iBoundary)=SW_MP
@@ -1214,13 +1214,13 @@ contains
 
   !============================================================================
   real function neutral_density(R0,iNu)
-    use ModPhysics, ONLY :Rbody,cZero
+    use ModPhysics, ONLY: Rbody
 
     real, intent(in) :: R0
     integer, intent(in) :: iNu
 
     !-----------------------------------------------------------------------
-    neutral_density = cZero
+    neutral_density = 0.0
     if( R0 >= 0.9*Rbody .and. R0< 3.0*Rbody ) &
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 
@@ -1640,9 +1640,8 @@ contains
 
 
     use ModAdvance, ONLY: Source_VC
-    use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: Rho_, &
-          RhoUx_, RhoUy_, RhoUz_, P_, &
+         RhoUx_, RhoUy_, RhoUz_, P_, &
          Energy_, Bx_, By_, Bz_
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
@@ -1659,16 +1658,16 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SE     = cZero
+    Srho   = 0.0
+    SrhoSpecies=0.0
+    SrhoUx = 0.0
+    SrhoUy = 0.0
+    SrhoUz = 0.0
+    SBx    = 0.0
+    SBy    = 0.0
+    SBz    = 0.0
+    SP     = 0.0
+    SE     = 0.0
     if(oktest_me)then
        !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)

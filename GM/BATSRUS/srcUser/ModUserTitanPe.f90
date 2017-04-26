@@ -469,7 +469,6 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,  ONLY: Source_VC,Energy_
-    use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: rhoUx_, rhoUy_, rhoUz_
     use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
@@ -993,7 +992,7 @@ contains
     end if
 
     do iBoundary=xMinBc_,zMaxBc_
-       FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)  = cTiny8/1.0e5     
+       FaceState_VI(SpeciesFirst_:SpeciesLast_,iBoundary)  = 1e-15     
        if(UseElectronPressure)then
           sw_pe=SW_P*ElectronTemperatureRatio
           sw_pi=SW_P-sw_pe
@@ -1402,13 +1401,13 @@ contains
 
   !============================================================================
   real function neutral_density(R0,iNu)
-    use ModPhysics, ONLY :Rbody,cZero
+    use ModPhysics, ONLY: Rbody
 
     real, intent(in) :: R0
     integer, intent(in) :: iNu
 
     !-----------------------------------------------------------------------
-    neutral_density = cZero
+    neutral_density = 0.0
     if( R0 >= 0.9*Rbody .and. R0< 3.0*Rbody ) &
          neutral_density= exp(-(R0-Rbody)/HNuSpecies_I(iNu))
 
@@ -1767,7 +1766,7 @@ contains
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -1847,7 +1846,6 @@ contains
     use ModPhysics, ONLY: InvGammaMinus1
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: r_BLK
-    use ModNumConst, ONLY: cZero
     use ModVarIndexes, ONLY: Rho_, RhoLp_, RhoMp_, RhoH1p_, RhoH2p_, &
          RhoMHCp_ , RhoHHCp_, RhoHNIp_ , RhoUx_, RhoUy_, RhoUz_, P_, &
          Energy_, Bx_, By_, Bz_
@@ -1868,17 +1866,17 @@ contains
        oktest=.false.; oktest_me=.false.
     end if
 
-    Srho   = cZero
-    SrhoSpecies=cZero
-    SrhoUx = cZero
-    SrhoUy = cZero
-    SrhoUz = cZero
-    SBx    = cZero
-    SBy    = cZero
-    SBz    = cZero
-    SP     = cZero
-    SPe    = cZero
-    SE     = cZero
+    Srho   = 0.0
+    SrhoSpecies=0.0
+    SrhoUx = 0.0
+    SrhoUy = 0.0
+    SrhoUz = 0.0
+    SBx    = 0.0
+    SBy    = 0.0
+    SBz    = 0.0
+    SP     = 0.0
+    SPe    = 0.0
+    SE     = 0.0
     if(oktest_me)then
        !   write(*,*)'before Source(rhoU)=', Source_VC(6:8,itest,jtest,ktest)
        write(*,*)'Source(p,E)', Source_VC(P_:P_+1,iTest,jTest,kTest)

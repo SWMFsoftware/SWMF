@@ -70,7 +70,7 @@ contains
 
     use ModMain,     ONLY: body1, UseRotatingBc, nRefineLevel
     use ModPhysics,  ONLY: rBody, rCurrents
-    use ModNumConst, ONLY: cPi, cTiny
+    use ModNumConst, ONLY: cPi
     use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, &
          CellSize_DB, CoordMin_DB, TypeGeometry, CoordMin_D, CoordMax_D
 
@@ -5426,8 +5426,8 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                 if(TypeGeometry=='cartesian')&
                      DoRefine = .true.
                 if(TypeGeometry=='spherical')&
-                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+cTiny.or.&
-                     CellSize_DB(3,iBLK)>cPi/128+cTiny
+                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+1e-6.or.&
+                     CellSize_DB(3,iBLK)>cPi/128+1e-6
              end if
           end if
        end if
@@ -5517,8 +5517,8 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                      DoRefine = .true.
                 if(TypeGeometry=='spherical'.or.&
                      TypeGeometry=='spherical_lnr')&
-                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+cTiny.or.&
-                     CellSize_DB(3,iBLK)>cPi/128+cTiny
+                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+1e-6.or.&
+                     CellSize_DB(3,iBLK)>cPi/128+1e-6
              end if
 
              minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
