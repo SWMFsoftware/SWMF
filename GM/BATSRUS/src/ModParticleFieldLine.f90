@@ -59,8 +59,10 @@ module ModParticleFieldLine
        XOld_ = 4, YOld_ = 5, ZOld_ = 6, & 
        ! stepsize during line extraction
        Ds_   = 7, &
+       !grad CosBR at the beginning of extraction iteration
+       GradX_= 8, GradZ_ = 10, &
        ! value of CosBR at the beginning of extraction iteration
-       CosBR_    = 8
+       CosBR_    = 11
 
   ! indices of a particle
   integer, parameter:: &
@@ -95,7 +97,7 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 8
+  integer, parameter:: nVarParticleEnd = 11
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
@@ -604,7 +606,10 @@ contains
     real, dimension(MaxDim) :: DirCurr_D, DirNext_D
     ! correction to prevent line from closing
     real, dimension(MaxDim):: Corr_D
-
+    !\
+    ! radii and vector of radial direction
+    !/
+    real :: ROld, RNew, DirR_D(MaxDim)
     ! cosine of angle between direction of field and radial direction
     real:: CosBR
 
@@ -652,8 +657,6 @@ contains
           DirCurr_D = DirBCurr_D * &
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
           
-          ! get the correction if line starts closing
-          Corr_D = 0.0
           
           ! cosine of angle between field and radial direction and its gradient
           call get_grad_cosbr(&
@@ -663,13 +666,14 @@ contains
           CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBCurr_D)/&
                sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
           StateEnd_VI(CosBR_, iParticle) = CosBR
+          StateEnd_VI(GradX_:GradZ_,iParticle) = Corr_D
           
           if(abs(CosBR) < 0.5)then
              Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
              if(sum(Corr_D*DirCurr_D) < 0.0)then
                 ! correct the direction to prevent the line from closing
                 DirCurr_D = DirCurr_D +  Corr_D * min(&
-                     0.50 * StateEnd_VI(Ds_, iParticle), &
+                     StateEnd_VI(Ds_, iParticle), &
                      abs(sum(Corr_D*DirCurr_D)) / sum(Corr_D**2) )
                 DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
              else
@@ -710,15 +714,9 @@ contains
           ! direction at the 1st stage 
           DirNext_D = DirBNext_D *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-          
-          ! correct the direction
-          Corr_D = 0.0
-          call get_grad_cosbr(&
-               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-               iBlock=iIndexEnd_II(0,iParticle),&
-               Grad_D = Corr_D)
-          CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBNext_D)/&
-               sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+
+          CosBR = StateEnd_VI(CosBR_, iParticle)  
+          Corr_D = StateEnd_VI(GradX_:GradZ_,iParticle)         
           if(abs(CosBR) < 0.5)then
              Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
              if(sum(Corr_D*DirNext_D) < 0.0)then
@@ -733,9 +731,15 @@ contains
           end if
           
           ! get final location
+          ROld = sqrt(sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2))
+          DirR_D = StateEnd_VI(XOld_:ZOld_,iParticle)/ROld
           StateEnd_VI(x_:z_,iParticle)=StateEnd_VI(XOld_:ZOld_,iParticle)+&
                StateEnd_VI(Ds_, iParticle) * &
                DirNext_D
+          RNew = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+          StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle)/RNew*&
+               (ROld + StateEnd_VI(Ds_, iParticle) * &
+               sum(DirNext_D*DirR_D))
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -761,8 +765,6 @@ contains
                Dir_D  = DirBNext_D)
           CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBNext_D)/&
                sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
-
-          
           ! if the line starts to close -> remove it
           if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
              call mark_undefined(KindEnd_, iParticle)
