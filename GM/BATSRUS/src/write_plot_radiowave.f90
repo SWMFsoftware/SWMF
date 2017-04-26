@@ -73,8 +73,8 @@ subroutine write_plot_radiowave(iFile)
   XyzObserv_D = ObsPos_DI(:,iFile)
   nXPixel = n_Pix_X(iFile)
   nYPixel = n_Pix_Y(iFile)
-  HalfImageRangeX = cHalf*X_Size_Image(iFile)
-  HalfImageRangeY = cHalf*Y_Size_Image(iFile)
+  HalfImageRangeX = 0.5*X_Size_Image(iFile)
+  HalfImageRangeY = 0.5*Y_Size_Image(iFile)
   ImageRange_I = (/-HalfImageRangeX, -HalfImageRangeY, &
        HalfImageRangeX, HalfImageRangeY/)
   nRay = nXPixel*nYPixel
@@ -161,7 +161,7 @@ subroutine write_plot_radiowave(iFile)
   end select
 
   allocate(Intensity_III(nYPixel,nXPixel,nFreq))
-  Intensity_III = cZero
+  Intensity_III = 0.0
 
   if (DoTiming) call timing_start('rfr_raytrace_loop')
 
@@ -194,9 +194,9 @@ subroutine write_plot_radiowave(iFile)
      if (iProc .eq. 0) write(*,*) 'RAYTRACE END'
      !if (iProc .eq. 0) then
      !   do iPixel = 1, nXPixel
-     !      XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
+     !      XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
      !      do jPixel = 1, nYPixel
-     !         YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
+     !         YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
      !         write(*,fmt="(30(E14.6))") XPixel, YPixel, &
      !              Intensity_III(jPixel,iPixel,1:nFreq)
      !      end do
@@ -252,9 +252,9 @@ subroutine write_plot_radiowave(iFile)
              ', I=',nXPixel,', J=',nYPixel,', F=POINT'
         ! Write point values
         do iPixel = 1, nXPixel
-           XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
+           XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
            do jPixel = 1, nYPixel
-              YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
+              YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
               write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
                    Intensity_III(jPixel,iPixel,1:nFreq)
            end do
@@ -281,9 +281,9 @@ subroutine write_plot_radiowave(iFile)
 
         ! Data
         do iPixel = 1, nXPixel
-           XPixel = XLower + (real(iPixel) - cHalf)*XPixelSize
+           XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
            do jPixel = 1, nYPixel
-              YPixel = YLower + (real(jPixel) - cHalf)*YPixelSize
+              YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
               write(UnitTmp_,fmt="(30(1pe13.5))") &
                    XPixel, YPixel, Intensity_III(jPixel,iPixel,1:nFreq)
            end do
