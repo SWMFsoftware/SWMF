@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModHdf5
 
@@ -13,15 +14,17 @@ module ModHdf5
 
   private ! except
 
-  public write_var_hdf5
-  public write_plot_hdf5
-  public write_sph_var_hdf5
-  public init_hdf5_plot
-  public init_sph_hdf5_plot
-  public close_sph_hdf5_plot
+  public:: write_var_hdf5
+  public:: write_plot_hdf5
+  public:: write_sph_var_hdf5
+  public:: init_hdf5_plot
+  public:: init_sph_hdf5_plot
+  public:: close_sph_hdf5_plot
 
-  real,    allocatable :: PlotVarIdx(:,:,:,:,:)
-  real,    allocatable :: PlotXYZNodes(:,:,:,:,:)
+  real, parameter:: cHalfMinusTiny = 0.5*(1.0 - 1e-6)
+
+  real, allocatable :: PlotVarIdx(:,:,:,:,:)
+  real, allocatable :: PlotXYZNodes(:,:,:,:,:)
   real, allocatable :: CellData(:,:)
 
   integer, allocatable :: UsedBlocks(:)
@@ -96,8 +99,6 @@ contains
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
 
     real :: ySqueezed
-
-    real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
     character(len=*), parameter :: NameSub = 'write_var_hdf5'
     save
@@ -416,8 +417,6 @@ contains
     real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
 
     real :: ySqueezed
-
-    real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
 
     character(len=*), parameter :: NameSub = 'write_var_hdf5'
     save
@@ -1146,9 +1145,9 @@ contains
     real :: GlobalVarMin(nPlotVar), GlobalVarMax(nPlotVar)
     real :: minCoords(3), maxCoords(3)
     character (len=lnamevar+4) :: DatasetNameTemp
-    real, parameter:: cHalfMinusTiny=cHalf*(cOne-cTiny)
-    logical :: isCutFile
 
+    logical :: isCutFile
+    !--------------------------------------------------------------------------
     if(MPI_COMM_NULL == iplotComm ) RETURN
 
     if (NotACut) then
@@ -1698,7 +1697,7 @@ contains
 
   real function minmod(x,y)
     real, intent(in) :: x,y
-    minmod = max(cZero,min(abs(x),sign(cOne,x)*y))
+    minmod = max(0.0, min(abs(x), sign(1.0,x)*y))
   end function minmod
   !=====================================================================
 end module ModHdf5
