@@ -342,7 +342,7 @@ contains
     real :: inv_rho, inv_rho2, uu2, cosSZA, Productrate,kTi, kTe
     real :: totalPSNumRho=0.0,totalRLNumRhox=0.0, temps
     logical:: oktest,oktest_me
-    real :: SourceLossMax, vdtmin, 0.5=0.5
+    real :: SourceLossMax, vdtmin
 
 
     integer:: iLastGrid = -1, iLastDecomposition = -1, iBlockLoop

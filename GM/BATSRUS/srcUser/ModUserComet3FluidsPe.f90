@@ -117,8 +117,8 @@ contains
   subroutine user_neutral_atmosphere(iBlock)
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data, MaxBlockData
-    use ModPhysics,    ONLY: cPi, rPlanetSi, cProtonMass, No2SI_V, &
-         cRadToDeg, UnitX_
+    use ModPhysics,    ONLY: rPlanetSi, cProtonMass, No2SI_V, UnitX_
+    use ModNumConst,   ONLY: cPi, cRadToDeg
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
          BlkTest, PROCtest, iteration_number 
     use ModProcMH,     ONLY: iProc 
