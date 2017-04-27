@@ -21,7 +21,7 @@ module ModWriteTecplot
   !     Indexes belonging to ghost cells are taken from the neighbor.
   !     These are obtained by message passing the cell indexes.
 
-  use BATL_size,     ONLY: nDim
+  use BATL_size, ONLY: nDim
 
   implicit none
 
@@ -45,6 +45,9 @@ module ModWriteTecplot
 
   ! Dimensionality of plot
   integer:: nPlotDim = nDim
+
+  ! Index limits inside the block based on the cut
+  integer:: IjkMin_D(3), IjkMax_D(3)
 
   ! Cuts
   logical:: DoCut
@@ -75,30 +78,25 @@ contains
 
     use BATL_lib,  ONLY: MaxDim, nDim, nJ, nK, nIjk_D, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
-         r_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, CellSize_DB, &
+         r_, Phi_, Theta_, Lat_, CoordMin_DB, CoordMax_DB, &
          IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis
     use ModNumConst, ONLY: cPi, cHalfPi
     use ModIO,     ONLY: nPlotVarMax, DoSaveOneTecFile
     use ModIoUnit, ONLY: UnitTmp_
     use ModMain,   ONLY: BlkTest
-    use ModNumConst, ONLY: i_DD
 
     integer, intent(in):: iBlock, nPlotVar
     real,    intent(in):: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotvarMax)
 
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
-    integer:: IjkMin_D(3), IjkMax_D(3)
     integer:: iRecData
 
     real:: Xyz_D(MaxDim)
     real, allocatable:: PlotVar_V(:)
 
-    ! Block geometry
-    real:: BlockMin_D(3), CellSize_D(3)
-
     ! Interpolation
     integer:: Di, Dj, Dk
-    real:: CutCoordNorm, CoefL, CoefR
+    real:: CoefL, CoefR
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_tecplot_data'
@@ -114,27 +112,8 @@ contains
     IjkMax_D = nIjk_D
 
     if(DoCut)then
-       CellSize_D = CellSize_DB(:,iBlock)
-       BlockMin_D = CoordMin_DB(:,iBlock)
-
-       IjkMin_D = max(1, &
-            nint(-0.01 +          (CutMin_D - BlockMin_D)/CellSize_D))
-       IjkMax_D = min(nIJK_D, &
-            nint(0.01 + iPlot_D + (CutMax_D - BlockMin_D)/CellSize_D))
-
-       ! No cells in this block 
-       ! These blocks should be skipped in the external block loop !
-       if(any(IjkMax_D < IjkMin_D)) RETURN
-
-       if(iCutDim > 0)then
-          ! Cell index shift in the normal direction for interpolation
-          Di = i_DD(1,iCutDim); Dj = i_DD(2,iCutDim); Dk = i_DD(3,iCutDim)
-          ! Normalized (to block index) coordinate of the cut
-          CutCoordNorm = 0.5 + &
-               (CutMin_D(iCutDim) - BlockMin_D(iCutDim))/CellSize_D(iCutDim)
-          CoefR = CutCoordNorm - IjkMin_D(iCutDim)
-          CoefL = 1.0 - CoefR
-       end if
+       ! Check if block is inside cut and set interpolation info if needed
+       if(do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR)) RETURN
     endif
 
     iMin = IjkMin_D(1); iMax = IjkMax_D(1)
@@ -185,7 +164,9 @@ contains
               +      CoefR*PlotVar_GV(i+Di,j+Dj,k+Dk,1:nPlotVar)
       end if
 
-      if(.not.IsAnyAxis) RETURN
+      ! No need to push points to the pole if there is no axis
+      ! or the 2D cut is along the Phi direction
+      if(.not.IsAnyAxis .or. iCutDim == Phi_) RETURN
 
       if(IsLatitudeAxis)then
          if(  k==1  .and. CoordMin_DB(Lat_,iBlock) <= -cHalfPi .or. &
@@ -214,9 +195,12 @@ contains
     use ModMain,      ONLY: nBlockMax
     use ModMpi,       ONLY: MPI_SUM, mpi_reduce_integer_scalar, &
          MPI_allgather, MPI_INTEGER
-    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, nIJK_D, k0_, nKp1_, &
+    use ModNumConst,  ONLY: cHalfPi, cPi
+    use BATL_lib,     ONLY: nI, nJ, nK, nIJK, k0_, nKp1_, &
          MaxBlock, nBlock, Unused_B, nNodeUsed, &
-         CoordMin_DB, CoordMax_DB, CellSize_DB, &
+         CoordMin_DB, CoordMax_DB, Xyz_DGB, &
+         IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsCylindricalAxis, &
+         r_, Phi_, Theta_, Lat_, &
          DiLevelNei_IIIB, message_pass_cell, set_tree_periodic
 
     ! Write out connectivity file
@@ -242,8 +226,6 @@ contains
     integer:: iPlotDim, jPlotDim, kPlotDim
     logical:: IsPlotDim1, IsPlotDim2, IsPlotDim3
 
-    real:: BlockMin_D(3), BlockMax_D(3), CellSize_D(3)
-    integer:: iStart_D(3), iEnd_D(3)
     integer, allocatable:: nCell_P(:)
 
     logical:: DoTest, DoTestMe
@@ -302,34 +284,20 @@ contains
        do iStage = 1, nStage
           do iBlock = 1, nBlock
              if(iStage == nStage) CellIndex_GB(:,:,:,iBlock) = 0.0
-             if(Unused_B(iBlock)) CYCLE
-             BlockMin_D = CoordMin_DB(:,iBlock)
-             BlockMax_D = CoordMax_DB(:,iBlock)
 
-             ! Check if block is fully outside of the cut
-             if(any(BlockMin_D > CutMax_D)) CYCLE
-             if(any(BlockMax_D < CutMin_D)) CYCLE
-
-             ! Calculate start and ending indexes
-             ! The +-0.01 is used to avoid rounding errors and make sure 
-             ! that there are at least 1 cells in zero-width directions,
-             ! and 2 cells in non-zero width directions.
-             CellSize_D = CellSize_DB(:,iBlock)
-             iStart_D = max(1, &
-                  nint(-0.01 + (CutMin_D-BlockMin_D)/CellSize_D))
-             iEnd_D   = min(nIJK_D, &
-                  nint(0.01 + iPlot_D + (CutMax_D-BlockMin_D)/CellSize_D))
+             ! Check if block is inside cut and set IjkMin_D, IjkMax_D...
+             if(do_skip_block(iBlock)) CYCLE
 
              if(iStage < nStage)then
                 ! Just count the number of cells inside the cut
-                iCell = iCell + product(max(0, iEnd_D - iStart_D + 1))
+                iCell = iCell + product(max(0, IjkMax_D - IjkMin_D + 1))
                 CYCLE
              end if
 
              ! Set global cell index for each cell inside the cut
-             do k = iStart_D(3), iEnd_D(3)
-                do j = iStart_D(2), iEnd_D(2)
-                   do i = iStart_D(1), iEnd_D(1)
+             do k = IjkMin_D(3), IjkMax_D(3)
+                do j = IjkMin_D(2), IjkMax_D(2)
+                   do i = IjkMin_D(1), IjkMax_D(1)
                       iCell = iCell + 1
                       CellIndex_GB(i,j,k,iBlock) = iCell
                    end do
@@ -410,14 +378,8 @@ contains
     nBrick = 0
     do iStage = 1, nStage
        do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-          if(DoCut)then
-             ! Check if block is fully outside of the cut
-             BlockMin_D = CoordMin_DB(:,iBlock)
-             BlockMax_D = CoordMax_DB(:,iBlock)
-             if(any(BlockMin_D > CutMax_D)) CYCLE
-             if(any(BlockMax_D < CutMin_D)) CYCLE
-          end if
+          ! Check if block is used and inside cut
+          if(do_skip_block(iBlock)) CYCLE
 
           ! Get the index limits for the lower left corner
           ! of the connectivity bricks.
@@ -437,6 +399,23 @@ contains
           if(IsPlotDim2 .and. DiLevelNei_IIIB(0,1,0,iBlock) < 0) j1 = nJ-1
           k1 = nK
           if(IsPlotDim3 .and. DiLevelNei_IIIB(0,0,1,iBlock) < 0) k1 = nK-1
+
+          ! For cuts in the Phi direction we want connectivity across poles
+          ! Both sides are at either minimum or maximum so we use the 
+          ! Y coordinate to select which side takes care of the connection
+          ! We assume no resolution change across the poles for simplicity
+          if(iCutDim == Phi_ .and. IsAnyAxis &
+               .and. Xyz_DGB(2,1,1,1,iBlock) > 0.0)then
+             if(IsLatitudeAxis)then
+                if(CoordMin_DB(Lat_,iBlock) <= -cHalfPi) k0 = 0
+                if(CoordMax_DB(Lat_,iBlock) >= +cHalfPi) k1 = nK - 1
+             elseif(IsSphericalAxis)then
+                if(CoordMin_DB(Theta_,iBlock) <= 0.0) j0 = 0
+                if(CoordMax_DB(Theta_,iBlock) >= cPi) j1 = nJ - 1
+             elseif(IsCylindricalAxis)then
+                if(CoordMin_DB(r_,iBlock) <= 0.0) i0 = 0
+             end if
+          end if
 
           iCell_G = nint(CellIndex_GB(:,:,:,iBlock))
 
@@ -794,5 +773,87 @@ contains
     write(textDateTime ,format) iTime_I
 
   end subroutine write_tecplot_setinfo
+  !=========================================================================
+  logical function do_skip_block(iBlock, Di, Dj, Dk, CoefL, CoefR)
+
+    ! Set the logical value to false if the block is unused
+    ! or if it is outside the cut.
+    ! If the block intersects the cut, then set IjkMin_D and IjkMax_D
+    ! index limits. 
+    ! If the index shifts Di, Dj, Dk and the interpolation coefficients 
+    ! CoefL and CoefR are present
+    ! and iCutDim is not zero, set the index shifts and 
+    ! interpolation coefficients to interpolate onto the cut plane.
+
+    use BATL_lib, ONLY: Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB, &
+         nIjk_D, Phi_
+    use ModNumConst, ONLY: i_DD, cPi, cHalfPi
+
+    integer, intent(in):: iBlock
+
+    integer, intent(out), optional:: Di, Dj, Dk
+    real,    intent(out), optional:: CoefL, CoefR
+
+    ! Arrays describing block geometry
+    real:: BlockMin_D(3), BlockMax_D(3), CellSize_D(3)
+
+    real:: PhiCut, PhiBlock, CutCoordNorm
+    !---------------------------------------------------------------------
+    do_skip_block = UnUsed_B(iBlock)
+    if(do_skip_block) RETURN
+
+    ! There is nothing else to check if there is no cut
+    if(.not.DoCut) RETURN
+
+    ! Block coordinates
+    BlockMin_D = CoordMin_DB(:,iBlock)
+    BlockMax_D = CoordMax_DB(:,iBlock)
+
+    ! Shift Phi coordinate for 2D cuts along the Phi coordinate
+    ! e.g. x=0 and y=0 cuts of a spherical grid.
+    if(iCutDim == Phi_)then
+       ! Blocks "far" from the phi cut are shifted 180 degrees towards cut
+       ! This will capture both sides of the sphere/cylinder and is the
+       ! expected behavior for x=0 and y=0 cuts. But also works for other.
+       PhiCut = CutMin_D(Phi_)
+       PhiBlock = 0.5*(BlockMin_D(Phi_)+BlockMax_D(Phi_))
+
+       if(PhiBlock - PhiCut > cHalfPi)then
+          BlockMin_D(Phi_) = BlockMin_D(Phi_) - cPi
+          BlockMax_D(Phi_) = BlockMax_D(Phi_) - cPi
+       elseif(PhiCut - PhiBlock > cHalfPi)then
+          BlockMin_D(Phi_) = BlockMin_D(Phi_) + cPi
+          BlockMax_D(Phi_) = BlockMax_D(Phi_) + cPi
+       end if
+
+    end if
+
+    ! Check if block is inside the cut
+    do_skip_block = any(BlockMin_D > CutMax_D) .or. any(BlockMax_D < CutMin_D)
+    if(do_skip_block) RETURN
+
+    ! Calculate start and ending indexes of cut
+    ! The +-0.01 is used to avoid rounding errors and make sure 
+    ! that there are at least 1 cells in zero-width directions,
+    ! and 2 cells in non-zero width directions.
+    CellSize_D = CellSize_DB(:,iBlock)
+    IjkMin_D = max(1, &
+         nint(-0.01 +          (CutMin_D - BlockMin_D)/CellSize_D))
+    IjkMax_D = min(nIJK_D, &
+         nint(0.01 + iPlot_D + (CutMax_D - BlockMin_D)/CellSize_D))
+
+    ! Nothing else to do if there is no 2D cut or Di is not present
+    if(iCutDim == 0 .or. .not. present(Di)) RETURN
+
+    ! Cell index shift in the normal direction for interpolation
+    Di = i_DD(1,iCutDim); Dj = i_DD(2,iCutDim); Dk = i_DD(3,iCutDim)
+
+    ! Normalized (to block index) coordinate of the cut
+    CutCoordNorm = 0.5 + &
+         (CutMin_D(iCutDim) - BlockMin_D(iCutDim))/CellSize_D(iCutDim)
+    CoefR = CutCoordNorm - IjkMin_D(iCutDim)
+    CoefL = 1.0 - CoefR
+
+  end function do_skip_block
 
 end module ModWriteTecplot
