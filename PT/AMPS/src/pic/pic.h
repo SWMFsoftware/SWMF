@@ -4590,6 +4590,12 @@ namespace PIC {
     extern char recoverParticleDataRestartFileName[_MAX_STRING_LENGTH_PIC_]; //the file name FROM WHICH the particle data will be read
     extern bool ParticleDataRestartFileOverwriteMode;
 
+    //save used-defined data in the partcle data restart file
+    typedef void (*fUserAdditionalRestartData)(FILE*);
+    extern fUserAdditionalRestartData UserAdditionalRestartDataSave;
+    extern fUserAdditionalRestartData UserAdditionalRestartDataRead;
+    void SetUserAdditionalRestartData(fUserAdditionalRestartData fRead,fUserAdditionalRestartData fSave);
+
     void SaveParticleData(const char*);
     void SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
 

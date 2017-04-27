@@ -15,6 +15,15 @@ int PIC::Restart::SamplingData::maxReadFileNumber=-1;
 PIC::Restart::SamplingData::fDataRecoveryManager PIC::Restart::SamplingData::DataRecoveryManager=NULL;
 bool PIC::Restart::SamplingData::PreplotRecoveredData=false;
 
+//additional used-defined data saved in the restart file
+PIC::Restart::fUserAdditionalRestartData PIC::Restart::UserAdditionalRestartDataSave=NULL;
+PIC::Restart::fUserAdditionalRestartData PIC::Restart::UserAdditionalRestartDataRead=NULL;
+
+//-------------------------------------- Set user function for saving.reading additional restart data ---------------------------------
+void PIC::Restart::SetUserAdditionalRestartData(PIC::Restart::fUserAdditionalRestartData fRead,PIC::Restart::fUserAdditionalRestartData fSave) {
+  UserAdditionalRestartDataSave=fSave;
+  UserAdditionalRestartDataRead=fRead;
+}
 
 //-------------------------------------- Save/Load Sampling Data Restart File ---------------------------------------------------------
 //save sampling data
@@ -179,9 +188,15 @@ void PIC::Restart::SaveParticleData(const char* fname) {
   //init the MPI channel and open the restart file
   CMPI_channel pipe(10000000);
 
+  //open the restart file
+  if (PIC::Mesh::mesh.ThisThread==0) fRestart=fopen(fname,"w");
+
+  //call the user-defined function for saving additional data into the restart file
+  if (UserAdditionalRestartDataSave!=NULL) UserAdditionalRestartDataSave(fRestart);
+
+  //open the pipe
   if (PIC::Mesh::mesh.ThisThread==0) {
     pipe.openRecvAll();
-    fRestart=fopen(fname,"w");
   }
   else pipe.openSend(0);
 
@@ -356,6 +371,9 @@ void PIC::Restart::ReadParticleData(const char* fname) {
     sprintf(msg,"Error: restart file %s is not found",fname);
     exit(__LINE__,__FILE__,msg);
   }
+
+  //call the user function for recovering the additional user information
+  if (UserAdditionalRestartDataRead!=NULL) UserAdditionalRestartDataRead(fRestart);
 
   ReadParticleDataBlock(PIC::Mesh::mesh.rootTree,fRestart);
   fclose(fRestart);
