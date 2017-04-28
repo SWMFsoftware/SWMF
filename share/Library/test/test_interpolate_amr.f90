@@ -393,9 +393,9 @@ contains
       end if
 
       ! coordinates of block's junction
-      where(    iDiscr_D == 1)
+      where(    iDiscr_D(1:nDim) == 1)
          XyzCentral_D = Xyz_DGB(:,nCell,nCell,nCell,iBlockIn)  + 0.5 * Dxyz_D
-      elsewhere(iDiscr_D ==-1)
+      elsewhere(iDiscr_D(1:nDim) ==-1)
          XyzCentral_D = Xyz_DGB(:,1,1,1,iBlockIn)  - 0.5 * Dxyz_D
       elsewhere
          XyzCentral_D = Xyz_D
