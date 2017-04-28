@@ -4591,6 +4591,9 @@ namespace PIC {
     extern bool ParticleDataRestartFileOverwriteMode;
 
     //save used-defined data in the partcle data restart file
+    const int UserAdditionalRestartDataCompletedMarkerLength=43;
+    extern char UserAdditionalRestartDataCompletedMarker[UserAdditionalRestartDataCompletedMarkerLength]; //="PARTICLE-RESTART-FILE--END-USER-ADDITIONAL";
+
     typedef void (*fUserAdditionalRestartData)(FILE*);
     extern fUserAdditionalRestartData UserAdditionalRestartDataSave;
     extern fUserAdditionalRestartData UserAdditionalRestartDataRead;

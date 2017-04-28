@@ -19,6 +19,8 @@ bool PIC::Restart::SamplingData::PreplotRecoveredData=false;
 PIC::Restart::fUserAdditionalRestartData PIC::Restart::UserAdditionalRestartDataSave=NULL;
 PIC::Restart::fUserAdditionalRestartData PIC::Restart::UserAdditionalRestartDataRead=NULL;
 
+char PIC::Restart::UserAdditionalRestartDataCompletedMarker[PIC::Restart::UserAdditionalRestartDataCompletedMarkerLength]="PARTICLE-RESTART-FILE--END-USER-ADDITIONAL";
+
 //-------------------------------------- Set user function for saving.reading additional restart data ---------------------------------
 void PIC::Restart::SetUserAdditionalRestartData(PIC::Restart::fUserAdditionalRestartData fRead,PIC::Restart::fUserAdditionalRestartData fSave) {
   UserAdditionalRestartDataSave=fSave;
@@ -196,6 +198,9 @@ void PIC::Restart::SaveParticleData(const char* fname) {
 
   //open the pipe
   if (PIC::Mesh::mesh.ThisThread==0) {
+    //save the end-of-the-user-data-marker
+    fwrite(UserAdditionalRestartDataCompletedMarker,sizeof(char),UserAdditionalRestartDataCompletedMarkerLength,fRestart);
+
     pipe.openRecvAll();
   }
   else pipe.openSend(0);
@@ -374,6 +379,14 @@ void PIC::Restart::ReadParticleData(const char* fname) {
 
   //call the user function for recovering the additional user information
   if (UserAdditionalRestartDataRead!=NULL) UserAdditionalRestartDataRead(fRestart);
+
+  //read the end-of-the-user-data-marker
+  char msg[UserAdditionalRestartDataCompletedMarkerLength];
+  fread(msg,sizeof(char),UserAdditionalRestartDataCompletedMarkerLength,fRestart);
+
+  if (memcmp(msg,UserAdditionalRestartDataCompletedMarker,sizeof(char)*UserAdditionalRestartDataCompletedMarkerLength)!=0) {
+    exit(__LINE__,__FILE__,"Error: the end-of-the additional used data in the input file is mislocated. Something wrong with the user-defined additional restart data save/read procedures.");
+  }
 
   ReadParticleDataBlock(PIC::Mesh::mesh.rootTree,fRestart);
   fclose(fRestart);
