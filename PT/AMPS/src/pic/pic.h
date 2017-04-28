@@ -1350,8 +1350,18 @@ namespace PIC {
 
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
-    extern char *FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
+
+    #if _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 1
+    extern unsigned char *FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
+    extern unsigned char *FaceAccessCounterTable; //the conter of the Ray Tracking operations
+
+    #elif _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 4
+    extern unsigned int *FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
     extern unsigned int *FaceAccessCounterTable; //the conter of the Ray Tracking operations
+
+    #else
+    #error _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of range
+    #endif //_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_
 
     void Init();
 
