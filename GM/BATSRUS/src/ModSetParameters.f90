@@ -3047,6 +3047,28 @@ contains
     if(DoFixAxis .and. .not. UseUniformAxis) &
          call stop_mpi("DoFixAxis=T only works with UseUniformAxis=T!")
 
+    if(UseLocalTimeStep)then
+       if(DoFixAxis)then
+          if(iProc == 0)then
+             write(*,'(a)') NameSub//&
+                  ' WARNING: Subcycling and fix axis are incompatible!'
+             if(UseStrict)call stop_mpi('Correct PARAM.in!')
+             write(*,*) NameSub//' setting DoFixAxis to false'
+          end if
+          DoFixAxis = .false.
+       end if
+
+       if(nStage > 2)then
+          if(iProc == 0)then
+             write(*,'(a)') NameSub//&
+                  ' WARNING: Subcycling works with 1 and 2 stage schemes only!'
+             if(UseStrict)call stop_mpi('Correct PARAM.in!')
+             write(*,*) NameSub//' setting nStage=2'
+          end if
+          nStage = 2
+       end if
+    end if
+
     if(NameThisComp == 'SC' .and. TypeCoordSystem == 'HGI')then
        if(iProc == 0)then
           write(*,'(a)') NameSub//&
