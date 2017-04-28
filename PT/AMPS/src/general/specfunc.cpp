@@ -29,55 +29,6 @@ long int nint(double a)
    return n;
 }
 
-/*
-void rnd_seed(int seed=-1) {
-  static char random_state_buffer[256];
-
-#ifdef MPI_ON
-  int thread;
-  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&thread);
-
-  if (seed==-1) seed=thread; //+time(NULL)
-
-  initstate(seed,random_state_buffer,256);
-#else  
-
-  if (seed==-1) seed=0;  //time(NULL)
-
-  initstate(seed,random_state_buffer,256);
-#endif
-}
-
-//===================================================
-double rnd() {
- return ((double)(random())+1.0)/2147483649.0;
-
-}*/
-
-/*
-int rndLastSeed=0;
-
-
-void rnd_seed(int seed=-1) {
-  int thread;
-  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&thread);
-
-  if (seed==-1) seed=thread;
-
-  rndLastSeed=seed;
-}
-*/
-
-/*
-double rnd() {
-  rndLastSeed*=48828125;
-  if (rndLastSeed<0) rndLastSeed=(rndLastSeed+2147483647)+1;
-  if (rndLastSeed==0) rndLastSeed=1;
-
-  return rndLastSeed/2147483647.0;
-}
-
-*/
 
 //===================================================
 /*
@@ -97,10 +48,9 @@ double erf(double s) {
   if (s<0.0) d=-d;
   return d;
 }  
-*/
+
 
 //===================================================
-/*
 double gam(double x) {
   double a,y;
 

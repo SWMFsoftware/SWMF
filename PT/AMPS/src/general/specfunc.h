@@ -15,31 +15,19 @@
 #include "rnd.h"
 #include "constants.h"
 
-
 #define _STDOUT_ERRORLOG_MODE__ON_   0
 #define _STDOUT_ERRORLOG_MODE__OFF_  1
 #define _STDOUT_ERRORLOG_MODE_ _STDOUT_ERRORLOG_MODE__ON_
 
-
-//extern int DIM;
 extern int ThisThread;
 extern int TotalThreadsNumber;
 
-long int nint(double);
-
-
-
-//void rnd_seed(int seed=-1);
-//double rnd();
-
-
-
-
-/////////////////////
 /* gamma and error functions used from g++ math library
 double erf(double);
 double gam(double);
 */
+
+long int nint(double);
 
 void PrintErrorLog(const char*);
 void PrintErrorLog(long int,const char*,const char*);
