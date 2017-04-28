@@ -27,6 +27,8 @@
 #include "specfunc.h"
 #include "mpichannel.h"
 
+#include "picGlobal.dfn"
+
 
 #ifndef _CUT_CELL_MESHAMR_
 #define _CUT_CELL_MESHAMR_
@@ -210,8 +212,16 @@ unsigned long int GetTriangulationSignature();
 
     //the variables used by AMPS to determine the surface elements that are in the shadow. The values are modified by pic__ray_tracing.cpp
     unsigned int pic__shadow_attribute; //,pic__RayTracing_TestDirectAccessCounterValue;
-    char *pic__RayTracingOperationCounterTable;
     double pic__cosine_illumination_angle;
+
+    //counter of the ray-tracing operations
+    #if _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 1
+    unsigned char *pic__RayTracingOperationCounterTable;
+    #elif _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 4
+    unsigned int *pic__RayTracingOperationCounterTable;
+    #else
+    #error _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of range
+    #endif //_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_
 
     //the user defined data structure
     #if _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ == _ON_AMR_MESH_
@@ -721,12 +731,14 @@ unsigned long int GetTriangulationSignature();
     cTriangleFaceDescriptor *next,*prev;
 
     int Temp_ID;
+    bool ActiveFlag;
 
     void cleanDataBuffer() {
       TriangleFace=NULL,Temp_ID=-1,next=NULL,prev=NULL;
     }
 
     cTriangleFaceDescriptor() {
+      ActiveFlag=false;
       cleanDataBuffer();
     }
   };
