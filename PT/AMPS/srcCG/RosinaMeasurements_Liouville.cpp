@@ -634,132 +634,71 @@ void RosinaSample::Liouville::Evaluate() {
         InitFlag=true;
         CorrectionMaskTable=new double [CutCell::nBoundaryTriangleFaces];
 
-        FILE *fReference1,*fReference2,*fReference3,*fReference4,*fReference5,*fReference6,*fReference7;
+
+        class cCorectionEntry {
+        public:
+          double refMax,refMean,refMin;
+          double *refData;
+
+          void Set(const char *fname) {
+            FILE *fRef=fopen(fname,"r");
+
+            refData=new double [CutCell::nBoundaryTriangleFaces];
+            fread(refData,CutCell::nBoundaryTriangleFaces,sizeof(double),fRef);
+
+            refMax=refData[0];
+            refMin=refData[0];
+            refMean=0.0;
+
+            for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+              if (refMax<refData[iface]) refMax=refData[iface];
+              if (refMin>refData[iface]) refMin=refData[iface];
+              refMean+=refData[iface];
+            }
+
+            refMean/=CutCell::nBoundaryTriangleFaces;
+
+            std::cout << std::endl << "Ref Data File=" << fname << ", refMin=" << refMin << ", refMean=" << refMean << ", refMax=" << refMax << std::endl << std::flush;
+            fclose(fRef);
+          }
+
+          cCorectionEntry() {
+            refMax=-1.0,refMin=-1.0,refMean=-1.0;
+            refData=NULL;
+          }
+
+          cCorectionEntry(const char* fname) {
+            refMax=-1.0,refMin=-1.0,refMean=-1.0;
+            refData=NULL;
+
+            Set(fname);
+          }
+        };
+
+
         char fname[1000];
         int iface,spec;
-
-        double *Reference1,*Reference2,*Reference3,*Reference4,*Reference5,*Reference6,*Reference7;
         double RefMaxValue=0.0;
-
         double RefThrehold=0.75;
         double RefMultiplier=0.5;
 
-double ref3Max=0.0,ref4Max=0.0,ref5Max=0.0,ref6Max=0.0,ref7Max=0.0;
-double ref3Mean=0.0,ref4Mean=0.0,ref5Mean=0.0,ref6Mean=0.0,ref7Mean=0.0;
-
-        //allocate memory buffers
-        Reference1=new double [CutCell::nBoundaryTriangleFaces];
-        Reference2=new double [CutCell::nBoundaryTriangleFaces];
-Reference3=new double [CutCell::nBoundaryTriangleFaces];
-Reference4=new double [CutCell::nBoundaryTriangleFaces];
-Reference5=new double [CutCell::nBoundaryTriangleFaces];
-Reference6=new double [CutCell::nBoundaryTriangleFaces];
-Reference7=new double [CutCell::nBoundaryTriangleFaces];
-
         //open the reference files
-        fReference1=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1046.bin","r");
-        fReference2=fopen("NudeGaugeDensityContribution.spec=0.iPoint=948.bin","r");
-fReference3=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1058.bin","r");
-fReference4=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1046.bin","r");
-
-fReference5=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1028.bin","r"); 
-fReference6=fopen("NudeGaugeDensityContribution.spec=1.iPoint=1028.bin","r");  
-
-fReference7=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1043.bin","r"); 
-
-        //read the reference data
-        fread(Reference1,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference1);
-        fread(Reference2,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference2);
-fread(Reference3,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference3);
-fread(Reference4,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference4);
-
-fread(Reference5,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference5);
-fread(Reference6,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference6);
-
-fread(Reference7,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference7);
-
-        fclose(fReference1);
-        fclose(fReference2);
-fclose(fReference3);
-fclose(fReference4);
-
-fclose(fReference5);
-fclose(fReference6);
-
-fclose(fReference7);
-
-        //get the maximum value
-        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-          double t=Reference1[iface]*Reference2[iface];
-
-          if (RefMaxValue<t) RefMaxValue=t;
-if (ref3Max<Reference3[iface]) ref3Max=Reference3[iface]; 
-if (ref4Max<Reference4[iface]) ref4Max=Reference4[iface];
-
-if (ref5Max<Reference5[iface]) ref5Max=Reference5[iface];
-if (ref6Max<Reference6[iface]) ref6Max=Reference6[iface];
-
-if (ref7Max<Reference7[iface]) ref7Max=Reference7[iface];
-
-
-ref3Mean+=Reference3[iface];
-ref4Mean+=Reference4[iface];
-ref5Mean+=Reference5[iface];
-ref6Mean+=Reference6[iface];
-ref7Mean+=Reference7[iface];
-        }
-
-ref3Mean/=CutCell::nBoundaryTriangleFaces;
-ref4Mean/=CutCell::nBoundaryTriangleFaces;
-ref5Mean/=CutCell::nBoundaryTriangleFaces;
-ref6Mean/=CutCell::nBoundaryTriangleFaces;
-ref7Mean/=CutCell::nBoundaryTriangleFaces;
-
-if (PIC::ThisThread==0) {
-  std::cout << std::endl << std::endl << "ref3Mean=" << ref3Mean << ",  ref4Mean=" << ref4Mean << ",  ref5Mean=" << ref5Mean << ",  ref6Mean=" << ref6Mean << ",  ref7Mean=" << ref7Mean << std::endl;  
-  std::cout << "ref3Max=" << ref3Max << ",  ref4Max=" << ref4Max << ",  ref5Max=" << ref5Max << ",  ref6Max=" << ref6Max << ",  ref7Max=" << ref7Max << std::endl << std::endl;
-}
-
-
-//fReference1=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1046.bin","r");
-//fReference2=fopen("NudeGaugeDensityContribution.spec=0.iPoint=948.bin","r");
-//fReference3=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1058.bin","r");
-//fReference4=fopen("NudeGaugeDensityContribution.spec=1.iPoint=1026.bin","r");
-//fReference5=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1028.bin","r");
-//fReference6=fopen("NudeGaugeDensityContribution.spec=1.iPoint=1028.bin","r");
-//fReference7=fopen("NudeGaugeDensityContribution.spec=0.iPoint=1043.bin","r");
+       cCorectionEntry p1046spec0("NudeGaugeDensityContribution.spec=0.iPoint=1046.bin");
+       cCorectionEntry p1058spec0("NudeGaugeDensityContribution.spec=0.iPoint=1058.bin");
+       cCorectionEntry p948spec0("NudeGaugeDensityContribution.spec=0.iPoint=948.bin");
+       cCorectionEntry p1028spec0("NudeGaugeDensityContribution.spec=0.iPoint=1028.bin");
+       cCorectionEntry p1028spec1("NudeGaugeDensityContribution.spec=1.iPoint=1028.bin");
+       cCorectionEntry p1043spec0("NudeGaugeDensityContribution.spec=0.iPoint=1043.bin");
 
         //create the correction mask table
         for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-          double t=Reference1[iface]*Reference2[iface];
+          CorrectionMaskTable[iface]=1.0; //0.0001*ref3Mean*ref7Mean;
+          //if (Reference7[iface]*Reference5[iface]>ref5Mean*ref7Mean) CorrectionMaskTable[iface]*=Reference7[iface]*Reference3[iface];
 
-          CorrectionMaskTable[iface]=(t>RefThrehold*RefMaxValue) ? 1.0 : RefMultiplier;
-         if (Reference3[iface]>0.5*ref3Max) CorrectionMaskTable[iface]/=4.0; 
-
-          if (Reference4[iface]>0.1*ref4Max) CorrectionMaskTable[iface]=0.0; // /=14000.0;
-
-          if (Reference5[iface]>0.5*ref5Max) CorrectionMaskTable[iface]=0.0; ///=1400.0;
-          if (Reference6[iface]>160.5*ref6Mean) CorrectionMaskTable[iface]/=2.0;
-
-//REDO THE MASK!!!!!!
-
-CorrectionMaskTable[iface]=1.0; //0.0001*ref3Mean*ref7Mean;
-//if (Reference7[iface]*Reference5[iface]>ref5Mean*ref7Mean) CorrectionMaskTable[iface]*=Reference7[iface]*Reference3[iface];
-
-if ((Reference5[iface]/ref5Max>5.0E-2) && (Reference7[iface]/ref7Max<1.0E-1) )  CorrectionMaskTable[iface]/=2.0E0;
-//if (Reference3[iface]>0.0) CorrectionMaskTable[iface]*=Reference3[iface]/ref3Max;
-//if (Reference7[iface]/ref7Max>8.0E-1) CorrectionMaskTable[iface]*=2.0;
-
+          if ( (p1028spec0.refData[iface]/p1028spec0.refMax>5.0E-2) && (p1043spec0.refData[iface]/p1043spec0.refMax<1.0E-1) )  CorrectionMaskTable[iface]/=2.0E0;
+          //if (Reference3[iface]>0.0) CorrectionMaskTable[iface]*=Reference3[iface]/ref3Max;
+          //if (Reference7[iface]/ref7Max>8.0E-1) CorrectionMaskTable[iface]*=2.0;
         }
-
-        delete [] Reference2;
-        delete [] Reference1;
-delete [] Reference3;
-delete [] Reference4;
-
-delete [] Reference5;
-delete [] Reference6;
-delete [] Reference7;
       }
 
       //apply the correction mask
