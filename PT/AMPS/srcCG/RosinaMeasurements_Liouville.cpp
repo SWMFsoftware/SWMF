@@ -603,6 +603,87 @@ void RosinaSample::Liouville::Evaluate() {
     }
 
 
+    //save surface source rate corresponding to the point of the obervation
+    if ((PIC::ThisThread==0)&&((iPoint/Step)%SurfaceOutputSter==0)) {
+       FILE *fSource;
+       char fname[1000];
+       int iface,spec;
+
+       for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+         sprintf(fname,"%s/SoruceRate.spec=%i.iPoint=%i.bin",PIC::OutputDataFileDirectory,spec,iPoint);
+         fSource=fopen(fname,"w");
+
+         for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+           double t=productionDistributionNASTRAN[spec][iface];
+
+           fwrite(&t,sizeof(double),1,fSource);
+         }
+
+         fclose(fSource);
+       }
+    }
+
+
+    //correct the source rate
+    if (false) {
+      static bool InitFlag=false;
+      static double *CorrectionMaskTable=NULL;
+
+      if (InitFlag==false) {
+        //init the CorrectionMaskTable
+        CorrectionMaskTable=new double [CutCell::nBoundaryTriangleFaces];
+
+        FILE *fReference1,*fReference2;
+        char fname[1000];
+        int iface,spec;
+
+        double *Reference1,*Reference2;
+        double RefMaxValue=0.0;
+
+        double RefThrehold=0.5;
+        double RefMultiplier=0.5;
+
+        //allocate memory buffers
+        Reference1=new double [CutCell::nBoundaryTriangleFaces];
+        Reference2=new double [CutCell::nBoundaryTriangleFaces];
+
+        //open the reference files
+        fReference1=fopen("SoruceRate.spec=0.iPoint=1000.bin","r");
+        fReference2=fopen("SoruceRate.spec=0.iPoint=1000.bin","r");
+
+        //read the reference data
+        fread(Reference1,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference1);
+        fread(Reference2,CutCell::nBoundaryTriangleFaces,sizeof(double),fReference2);
+
+        fclose(fReference1);
+        fclose(fReference2);
+
+        //get the maximum value
+        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+          double t=Reference1[iface]*Reference2[iface];
+
+          if (RefMaxValue<t) RefMaxValue=t;
+        }
+
+        //create the correction mask table
+        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+          double t=Reference1[iface]*Reference2[iface];
+
+          CorrectionMaskTable[iface]=(t>RefThrehold*RefMaxValue) ? 1.0 : RefMultiplier;
+        }
+
+        delete [] Reference2;
+        delete [] Reference1;
+      }
+
+      //apply the correction mask
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+         productionDistributionNASTRAN[spec][iface]*=CorrectionMaskTable[iface];
+        }
+      }
+    }
+
 
     //evaluate the location
     RosinaSample::cRosinaSamplingLocation RosinaLocation=Rosina[iPoint];
@@ -853,6 +934,31 @@ void RosinaSample::Liouville::Evaluate() {
 
       sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
       CutCell::PrintSurfaceData(fname);
+
+      //save binary file of the surface contribution
+      FILE *fSource;
+      int iface,spec;
+
+
+      double *t=new double [CutCell::nBoundaryTriangleFaces];
+      double *tall=new double [CutCell::nBoundaryTriangleFaces];
+
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++)  t[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeDensityContribution[spec];
+
+        MPI_Reduce(t,tall,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+        if (PIC::ThisThread==0) {
+          sprintf(fname,"%s/NudeGaugeDensityContribution.spec=%i.iPoint=%i.bin",PIC::OutputDataFileDirectory,spec,iPoint);
+          fSource=fopen(fname,"w");
+          fwrite(tall,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fclose(fSource);
+        }
+      }
+
+      delete [] t;
+      delete [] tall;
+
 
       //clear the samplign buffers
       for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
