@@ -946,7 +946,7 @@ void c_Solver::SyncWithFluid(int cycle){
   if(iSyncTimeStep > 0 ) EMf->SyncWithFluid(col,grid,vct);
 }
 
-void c_Solver::GetNgridPnt(int *nPoint){
+void c_Solver::GetNgridPnt(int &nPoint){
   col->GetNgridPnt(nPoint);
 }
 

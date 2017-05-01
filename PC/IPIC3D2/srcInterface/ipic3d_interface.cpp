@@ -198,7 +198,7 @@ int ipic3d_get_ngridpoints_(int *nPoint){
   
   *nPoint = 0;
   for(int i = 0; i < nIPIC; i++){
-    SimRun[i]->GetNgridPnt(&nGridPntSim[i]);
+    SimRun[i]->GetNgridPnt(nGridPntSim[i]);
     nShiftGridPntSim[i] = *nPoint;
     *nPoint += nGridPntSim[i];
   }

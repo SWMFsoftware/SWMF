@@ -163,7 +163,7 @@ namespace iPic3D {
     void SetParam(int *paramint, double *griddim, double *paramreal, stringstream *ss);
     void SyncWithFluid(int cycle);
 
-    void GetNgridPnt(int *nPoint);
+    void GetNgridPnt(int &nPoint);
     void GetGridPnt(double *Pos_I);
     void setStateVar(double *State_I, int *iPoint_I);
     void getStateVar(int nDim, int nPoint, double *Xyz_I, double *data_I, int nVar);

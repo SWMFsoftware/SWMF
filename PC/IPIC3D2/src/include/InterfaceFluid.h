@@ -39,27 +39,30 @@ class InterfaceFluid
 { 
  private:
   
-  //Error codes
-  static const int readEOF=11;
+  int nDim;        // number of dimentions
 
-  // BATSRUS output header file name 
-  string FilenameFluid,FilenameRoot;
-  // variables to read data from header file
-  string TempString;  
-  int INnProc;      // number of processors in the fluid code
-  int INnStep;      // iteration number
-  int INnPlotvar;   // number of variables in the fluid file
-  int INnEqpar;     // number of equation parameters
-  int INnRoot_D[3]; // number of root blocks
-  int INdim;        // number of dimentions
-  int INstep;       // from which step we read the file
-  int INnIJK_D[3];  // number of cells per block
-  double INtime,INxRange_I[6],INplotDx_D[3],INgridDx_D[3],INdt;
+  // The meaning of INdt is not clear -Yuxi
+  double INdt;
 
+  // Min and Max of the physical domain in normalized PIC units. 
+  double phyMin_D[3], phyMax_D[3];
+
+  // In normalized PIC units, but in MHD coordinates.
+  double gstMin_D[3], gstMax_D[3];
+
+  // The length of the computational domain in normalized PIC units, including
+  // the ghost cell layers. 
+  double lenGst_D[3];
+  
+  // Cell Size
+  double dx_D[3];
+
+  const int x_=0, y_=1, z_=2;
+
+  // Number of cells/nodes in each direction, including the ghost cell layers. 
+  int nCellGst_D[3], nNodeGst_D[3];
+    
   double SItime; // time in SI units
-
-  int nIJK_D[3];    // number of cells in the passed uniform grid
-  double XYZ_D[3];  // physical size of the passed domain
   
   double ****Bc_GD;    // cell centered B 
   double ****State_GV; // node centered state variables
@@ -237,21 +240,21 @@ class InterfaceFluid
  public:  inline void getGlobalIndex(const int il, const int jl, const int kl,
                              int *ig, int *jg, int *kg)const{
     *ig =StartIdx_D[0] + il - 1 ;      
-    if(nIJK_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl - 1;
-    if(nIJK_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl - 1;
+    if(nNodeGst_D[1] == 1) *jg = 0; else *jg =StartIdx_D[1] + jl - 1;
+    if(nNodeGst_D[2] == 1) *kg = 0; else *kg =StartIdx_D[2] + kl - 1;
   }
 
   /** Only correct for State_GV because of the ignored dimension. */
  public:  inline void getLocalIndex(int *i, int *j, int *k)const
   {
     *i = *i - StartIdx_D[0] + 1;      
-    if(nIJK_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1] + 1;
-    if(nIJK_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2] + 1;
+    if(nNodeGst_D[1] == 1) *j = 0; else *j = *j - StartIdx_D[1] + 1;
+    if(nNodeGst_D[2] == 1) *k = 0; else *k = *k - StartIdx_D[2] + 1;
   }
   
   inline void getInterpolatedValue(int i, int j,  int k, double *Var, int iVar)const{
-    if(nIJK_D[1] == 1) j=0;
-    if(nIJK_D[2] == 1) k=0;
+    if(nNodeGst_D[1] == 1) j=0;
+    if(nNodeGst_D[2] == 1) k=0;
     *Var = State_GV[i][j][k][iVar];
   }
   
@@ -263,14 +266,14 @@ class InterfaceFluid
     double dx1,dx2,dy1,dy2,dz1,dz2;
   
     // Get the index of the for the nodes surounding the cell
-    i1 = max(floor(x/INgridDx_D[0]),0.0)+1; i2=i1+1;
-    if(nIJK_D[1] == 1){j1=0; j2=0;} else{j1 = max(floor(y/INgridDx_D[1]),0.0)+1; j2=j1+1;}
-    if(nIJK_D[2] == 1){k1=0; k2=0;} else{k1 = max(floor(z/INgridDx_D[2]),0.0)+1; k2=k1+1;}
+    i1 = max(floor(x/dx_D[0]),0.0)+1; i2=i1+1;
+    if(nNodeGst_D[1] == 1){j1=0; j2=0;} else{j1 = max(floor(y/dx_D[1]),0.0)+1; j2=j1+1;}
+    if(nNodeGst_D[2] == 1){k1=0; k2=0;} else{k1 = max(floor(z/dx_D[2]),0.0)+1; k2=k1+1;}
   
     // Get distenc form the cell walls
-    dx1 = x/INgridDx_D[0] - i1+1; dx2 = 1.0-dx1;	
-    if(nIJK_D[1] == 1){dy1=0.5; dy2=0.5;} else{dy1 = y/INgridDx_D[1] - j1+1; dy2 = 1.0-dy1;}
-    if(nIJK_D[2] == 1){dz1=0.5; dz2=0.5;} else{dz1 = z/INgridDx_D[2] - k1+1; dz2 = 1.0-dz1;}
+    dx1 = x/dx_D[0] - i1+1; dx2 = 1.0-dx1;	
+    if(nNodeGst_D[1] == 1){dy1=0.5; dy2=0.5;} else{dy1 = y/dx_D[1] - j1+1; dy2 = 1.0-dy1;}
+    if(nNodeGst_D[2] == 1){dz1=0.5; dz2=0.5;} else{dz1 = z/dx_D[2] - k1+1; dz2 = 1.0-dz1;}
 
     getLocalIndex(&i1,&j1,&k1);
     getLocalIndex(&i2,&j2,&k2);
@@ -364,11 +367,13 @@ class InterfaceFluid
   {
     // Normalization
     for(int i =0; i<3; i++){
-      INgridDx_D[i]   *= Si2NoL;
-      XYZ_D[i]        *= Si2NoL;
+      dx_D[i]         *= Si2NoL;
+      lenGst_D[i]     *= Si2NoL;
+      gstMin_D[i]     *= Si2NoL;
+      gstMax_D[i]     *= Si2NoL;
+      phyMin_D[i] = gstMin_D[i] + dx_D[i];
+      phyMax_D[i] = gstMax_D[i] - dx_D[i];
     }
-  
-    for(int i =0; i<6; i++){ INxRange_I[i]*=Si2NoL;}
   }	
   
   
@@ -389,37 +394,10 @@ class InterfaceFluid
     int i,j,k;
     double Rhot; 
 
-    if(INdim == 1) {
-      k = 0;
-      j  =0;
-      for(i = 0; i < nxnLG; i++){
-	if(doGetFromGM(i,0,0)){
-	  if(useMultiSpecies){
-	    Rhot=0;
-	    for(int iIon=0; iIon<nIon; ++iIon){
-	      // Rho = sum(Rhoi) + Rhoe;
-	      Rhot +=
-		State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
-	    }// iIon
-
-	    State_GV[i][j][k][iUx_I[0]] /= Rhot;
-	    State_GV[i][j][k][iUy_I[0]] /= Rhot;
-	    State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
-	  }else{
-	    for(int iIon=0; iIon<nIon; ++iIon){
-	      State_GV[i][j][k][iUx_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	      State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	      State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	    }// iIon
-	  } // else
-	}
-      } // i
-    }
-    else if (INdim == 2){
-      k = 0;
-      for(i = 0; i < nxnLG; i++){
-	for(j = 0; j < nynLG; j++){
-	  if(doGetFromGM(i,j,0)){
+    for(i = 0; i < nxnLG; i++)
+      for(j = 0; j < nynLG; j++)
+	for(k = 0; k < nznLG; k++){
+	  if(doGetFromGM(i,j,k)){
 	    if(useMultiSpecies){
 	      Rhot=0;
 	      for(int iIon=0; iIon<nIon; ++iIon){
@@ -427,6 +405,7 @@ class InterfaceFluid
 		Rhot +=
 		  State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
 	      }// iIon
+
 	      State_GV[i][j][k][iUx_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUy_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
@@ -439,36 +418,7 @@ class InterfaceFluid
 	    } // else
 	  }
 	}
-      }
-    }
-    else{ 
-      for(i = 0; i < nxnLG; i++){
-	for(j = 0; j < nynLG; j++){
-	  for(k = 0; k < nznLG; k++){
-	    if(doGetFromGM(i,j,k)){
-	      if(useMultiSpecies){
-		Rhot=0;
-		for(int iIon=0; iIon<nIon; ++iIon){
-		  // Rho = sum(Rhoi) + Rhoe;
-		  Rhot +=
-		    State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
-		}// iIon
 
-		State_GV[i][j][k][iUx_I[0]] /= Rhot;
-		State_GV[i][j][k][iUy_I[0]] /= Rhot;
-		State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
-	      }else{
-		for(int iIon=0; iIon<nIon; ++iIon){
-		  State_GV[i][j][k][iUx_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-		  State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-		  State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-		}// iIon
-	      } // else
-	    }
-	  }
-	}
-      }
-    }    
   }
          
  public:
@@ -532,24 +482,6 @@ class InterfaceFluid
     }    
   }
 
-  /** return min X for fluid grid without ghostcell */
-  inline double getFluidStartX()const{return(INxRange_I[0]+INgridDx_D[0]);}
-  
-  /** return min Y for fluid grid without ghostcell */
-  inline double getFluidStartY()const{return(INxRange_I[2]+INgridDx_D[1]);}
-  
-  /** return min Z for fluid grid without ghostcell */
-  inline double getFluidStartZ()const{return(INxRange_I[4]+INgridDx_D[2]);}
-
-  // return planet radius in SI unit.
-  inline double getrPlanet()const{return(rPlanetSi);}
-
-  // return MhdNo2SiL
-  inline double getMhdNo2SiL()const{return(MhdNo2SiL);}
-
-  // BATSRUS normalized unit -> PIC normalized unit;
-  inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
-  
   /** Find out if we will sync with fluid solution at this time/cycle */
   inline unsigned long doSyncWithFluid(unsigned long cycle)
   {
@@ -622,8 +554,8 @@ class InterfaceFluid
     nzcLocal=1;
     
     nxcLocal = getFluidNxc()/(double)_vct->getXLEN();
-    if(INdim > 1) nycLocal = getFluidNyc()/(double)_vct->getYLEN();
-    if(INdim > 2) nzcLocal = getFluidNzc()/(double)_vct->getZLEN();
+    if(nDim > 1) nycLocal = getFluidNyc()/(double)_vct->getYLEN();
+    if(nDim > 2) nzcLocal = getFluidNzc()/(double)_vct->getZLEN();
 
     myrank = _vct-> getCartesian_rank();
 
@@ -662,8 +594,8 @@ class InterfaceFluid
     EndIdx_D[2] = StartIdx_D[2];
 
     EndIdx_D[0] += nxcLocal - 1;    
-    if(INdim > 1) EndIdx_D[1] += nycLocal - 1;    
-    if(INdim > 2) EndIdx_D[2] += nzcLocal - 1;
+    if(nDim > 1) EndIdx_D[1] += nycLocal - 1;    
+    if(nDim > 2) EndIdx_D[2] += nzcLocal - 1;
 
     nxnLG = nxcLocal + 3;
     nynLG = nycLocal + 3;
@@ -763,18 +695,18 @@ class InterfaceFluid
     int iPx, iPy, iPz;
     myrank = vct-> getCartesian_rank();
 
-    for(int i =0; i<nPoint*INdim; i++)
+    for(int i =0; i<nPoint*nDim; i++)
       Xyz_I[i]*=Si2NoL; 
        
     // Estimated inversed length of a sub domain for each dimension. 
-    invLx = (double)vct->getXLEN()/(INgridDx_D[0]*getFluidNxc());
-    invLy = (double)vct->getYLEN()/(INgridDx_D[1]*getFluidNyc());
-    invLz = (double)vct->getZLEN()/(INgridDx_D[2]*getFluidNzc());
+    invLx = (double)vct->getXLEN()/(dx_D[0]*getFluidNxc());
+    invLy = (double)vct->getYLEN()/(dx_D[1]*getFluidNyc());
+    invLz = (double)vct->getZLEN()/(dx_D[2]*getFluidNzc());
 
 
     for(int i = 0; i < nPoint; i++){
-      if(isThisRun(&Xyz_I[i*INdim])){
-	double xp = Xyz_I[i*INdim] - getPhyXMin();
+      if(isThisRun(&Xyz_I[i*nDim])){
+	double xp = Xyz_I[i*nDim] - getPhyXMin();
 	// Estimated process index in x direction. It can be shifted because the
 	// domain size on different processor may different, so the
 	// while loop is used to do the correction.
@@ -784,17 +716,17 @@ class InterfaceFluid
 	    if(xp < xStart_I[iPx])iPx--;
 	  }
 
-	double yp = Xyz_I[i*INdim + 1]-getPhyYMin();
+	double yp = Xyz_I[i*nDim + 1]-getPhyYMin();
 	iPy = (int)(yp*invLy);
 	while( yp > yEnd_I[iPy] || yp < yStart_I[iPy] ){
 	    if(yp > yEnd_I[iPy]) iPy++;
 	    if(yp < yStart_I[iPy])iPy--;
 	  }
 
-	  if(INdim<3)
+	  if(nDim<3)
 	    iPz = 0;
 	  else{
-	    double zp = Xyz_I[i*INdim + 2]-getPhyZMin();
+	    double zp = Xyz_I[i*nDim + 2]-getPhyZMin();
 	    iPz = (int)(zp*invLz);
 	    while( zp > zEnd_I[iPz] || zp < zStart_I[iPz] ){
 	      if(zp > zEnd_I[iPz]) iPz++;
@@ -812,9 +744,9 @@ class InterfaceFluid
     if(doTest && myrank==0){
       for(int iPoint=0; iPoint<nPoint; iPoint++){
 	cout<<"ipoint= "<<iPoint
-	    <<" x = "<<Xyz_I[iPoint*INdim  ] - getPhyXMin()
-	    <<" y = "<<Xyz_I[iPoint*INdim+1] - getPhyYMin()
-	    <<" z = "<<Xyz_I[iPoint*INdim+2] - getPhyZMin()
+	    <<" x = "<<Xyz_I[iPoint*nDim  ] - getPhyXMin()
+	    <<" y = "<<Xyz_I[iPoint*nDim+1] - getPhyYMin()
+	    <<" z = "<<Xyz_I[iPoint*nDim+2] - getPhyZMin()
 	    <<" proc= "<<iProc_I[iPoint]
 	    <<endl;
 	  }
@@ -839,10 +771,10 @@ class InterfaceFluid
 
     isThisProcReturn = true;
     if(Pos_D[0] < xmin || Pos_D[0] > xmax) isThisProcReturn = false;
-    if(INdim > 1){
+    if(nDim > 1){
       if(Pos_D[1] < ymin || Pos_D[1] > ymax) isThisProcReturn = false;
     }
-    if(INdim > 2){
+    if(nDim > 2){
       if(Pos_D[2] < zmin || Pos_D[2] > zmax) isThisProcReturn = false;
     }
 
@@ -872,49 +804,49 @@ class InterfaceFluid
 
     isThisRunReturn = true;
     if(Pos_D[0] < xmin || Pos_D[0] > xmax) isThisRunReturn = false;
-    if(INdim > 1){
+    if(nDim > 1){
       if(Pos_D[1] < ymin || Pos_D[1] > ymax) isThisRunReturn = false;
     }
-    if(INdim > 2){
+    if(nDim > 2){
       if(Pos_D[2] < zmin || Pos_D[2] > zmax) isThisRunReturn = false;
     }
     
     return isThisRunReturn;
   }
 
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNxc() const{ return(nIJK_D[0]-3*NG); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNxc() const{ return(nNodeGst_D[0]-3*NG); }
   
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNyc() const{ if(nIJK_D[1] > 3*NG) return(nIJK_D[1]-3*NG); else return(1); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNyc() const{ if(nNodeGst_D[1] > 3*NG) return(nNodeGst_D[1]-3*NG); else return(1); }
   
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNzc() const{ if(nIJK_D[2] > 3*NG) return(nIJK_D[2]-3*NG); else return(1); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNzc() const{ if(nNodeGst_D[2] > 3*NG) return(nNodeGst_D[2]-3*NG); else return(1); }
   
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNxn() { return(nIJK_D[0]-2*NG); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNxn() { return(nNodeGst_D[0]-2*NG); }
   
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNyn() { if(nIJK_D[1] > 3*NG) return(nIJK_D[1]-2*NG); else return(1); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNyn() { if(nNodeGst_D[1] > 3*NG) return(nNodeGst_D[1]-2*NG); else return(1); }
   
-  /** nIJK_D includes 1 guard/ghost cell layer... */
-  inline double getFluidNzn() { if(nIJK_D[2] > 3*NG) return(nIJK_D[2]-2*NG); else return(1); }
+  /** nNodeGst_D includes 1 guard/ghost cell layer... */
+  inline double getFluidNzn() { if(nNodeGst_D[2] > 3*NG) return(nNodeGst_D[2]-2*NG); else return(1); }
   
   /** Get physical dimetntions to the simulation domain, without ghost cells */
-  inline double getFluidLx(){ return(XYZ_D[0]-NG*2*INgridDx_D[0]); }
+  inline double getFluidLx(){ return(lenGst_D[0]-NG*2*dx_D[0]); }
   
   /** Get physical dimetntions to the simulation domain, without ghost cells */
   inline double getFluidLy()
   { 
-    if(nIJK_D[1] > 3*NG) return(XYZ_D[1]-NG*2*INgridDx_D[1]); 
-    else return(XYZ_D[1]); 
+    if(nNodeGst_D[1] > 3*NG) return(lenGst_D[1]-NG*2*dx_D[1]); 
+    else return(lenGst_D[1]); 
   }
   
   /** Get physical dimetntions to the simulation domain, without ghost cells */
   inline double getFluidLz()
   { 
-    if(nIJK_D[2] > 3*NG) return(XYZ_D[2]-NG*2*INgridDx_D[2]); 
-    else return(XYZ_D[2]); 
+    if(nNodeGst_D[2] > 3*NG) return(lenGst_D[2]-NG*2*dx_D[2]); 
+    else return(lenGst_D[2]); 
   }
   
   /** place holder for all variables like charge density that we know is 0.0 */
@@ -1236,8 +1168,8 @@ class InterfaceFluid
     if(doGetFromGM(ii,jj,kk)){
       int i,j,k;
       i=ii;j=jj;k=kk;
-      if(nIJK_D[1] == 1) j=0;
-      if(nIJK_D[2] == 1) k=0;
+      if(nNodeGst_D[1] == 1) j=0;
+      if(nNodeGst_D[2] == 1) k=0;
 
       //cout<<"mhd: E = - Ue x B"<<endl;
       // Ue = Ui - J/ne
@@ -1254,7 +1186,7 @@ class InterfaceFluid
   // Data recived from SWMF coupler
   void ReadFromGMinit(int *paramint, double *griddim, double *paramreal, stringstream *ss){
 
-    INdim       = paramint[0];
+    nDim       = paramint[0];
     nVarFluid   = paramint[2]; 
     nIonFluid   = paramint[3];
     nSpecies    = paramint[4];      
@@ -1323,33 +1255,24 @@ class InterfaceFluid
     iJy = iJx + 1;
     iJz = iJx + 2;
 
-    /* cout<<" iPe = "<<iPe<<" iBx = "<<iBx<<" iBy = "<<iBy<<" iBz = "<<iBz<<endl; */
-    /* for (int iIon = 0; iIon<nIon; ++iIon){ */
-    /*   cout<<" iIon = "<<iIon<<endl; */
-    /*   cout<<" iRho = "<<iRho_I[iIon]<<" iRhoUx = "<<iRhoUx_I[iIon] */
-    /* 	  <<" iRhoUy = "<<iRhoUy_I[iIon]<<" iRhoUz = "<<iRhoUz_I[iIon] */
-    /* 	  <<" iPpar = "<<iPpar_I[iIon]<<" iP = "<<iP_I[iIon]<<endl; */
-    /* } */
-    /* cout<<" iJx = "<<iJx<<" iJy = "<<iJy<<" iJz = "<<iJz<<endl; */
-
     Si2No_V = new double[nVarCoupling];
     No2Si_V = new double[nVarCoupling];
     for(int i =0; i<nVarCoupling; i++) Si2No_V[i] = 1;
     
     n = 0; 
     for(int i =0; i<3; i++){
-      INxRange_I[2*i]     = griddim[n++];      // Lmin
-      INxRange_I[2*i + 1] = griddim[n++]; // Lmax
-      INgridDx_D[i]       = griddim[n++]; //dx
-      XYZ_D[i] = (INxRange_I[2*i+1] - INxRange_I[2*i]);      
+      gstMin_D[i] = griddim[n++];      // Lmin
+      gstMax_D[i] = griddim[n++]; // Lmax
+      dx_D[i]       = griddim[n++]; //dx
+      lenGst_D[i] = (gstMax_D[i] - gstMin_D[i]);      
     }
 
     for(int i =0; i<3; i++)
-      nIJK_D[i] = (int)(XYZ_D[i]/INgridDx_D[i] +0.5);
+      nNodeGst_D[i] = (int)(lenGst_D[i]/dx_D[i] +0.5);
 
     // Add 1 as we count the nodes not cells
-    for(int i =0; i<INdim; i++)
-      nIJK_D[i] += 1;
+    for(int i =0; i<nDim; i++)
+      nNodeGst_D[i] += 1;
     
     QoQi_S = new double[nS];
     MoMi_S = new double[nS];
@@ -1384,13 +1307,13 @@ class InterfaceFluid
 
   /** Check the parameters passed or calculated from BATSRUS*/
   void checkParam(){
-    assert_ge(XYZ_D[0],0.0);
-    assert_ge(XYZ_D[1],0.0);
-    assert_ge(XYZ_D[2],0.0);
+    assert_ge(lenGst_D[0],0.0);
+    assert_ge(lenGst_D[1],0.0);
+    assert_ge(lenGst_D[2],0.0);
 
-    assert_ge(INgridDx_D[0],0.0);
-    assert_ge(INgridDx_D[1],0.0);
-    assert_ge(INgridDx_D[2],0.0);
+    assert_ge(dx_D[0],0.0);
+    assert_ge(dx_D[1],0.0);
+    assert_ge(dx_D[2],0.0);
 
     assert_eq(QoQi_S[0],-1.0*QoQi_S[1]);
     for(int iIon = 1; iIon<nIon; ++iIon){
@@ -1420,8 +1343,8 @@ class InterfaceFluid
       int jg = StartIdx_D[1] + j -1; int nyg = getFluidNyc()+3;
       int kg = StartIdx_D[2] + k -1; int nzg = getFluidNzc()+3;
       minDn = min(ig, nxg -ig -1);
-      if(INdim>1) minDn = min(minDn, min(jg, nyg - jg - 1));
-      if(INdim>2) minDn = min(minDn, min(kg, nzg - kg - 1));
+      if(nDim>1) minDn = min(minDn, min(jg, nyg - jg - 1));
+      if(nDim>2) minDn = min(minDn, min(kg, nzg - kg - 1));
       if(minDn <nBCLayer) doGetGM = true;
     }else{
       doGetGM = true;
@@ -1430,67 +1353,84 @@ class InterfaceFluid
   }
   
   /** get the number of cordinate points used by the simulation. recived from GM */
-  void GetNgridPnt(int *nPoint){
-    int i,j,k;
-    *nPoint = 0;
-    if(INdim == 1) {
-      for(i = 0; i <= nxcLocal + 2*NG; i++)
-	if(doGetFromGM(i,0,0)) *nPoint +=1;
-    }
-    else if (INdim == 2){
-      for(j = 0; j <=  nycLocal + 2*NG; j++)
-	for(i = 0; i <= nxcLocal + 2*NG; i++){
-	  if(doGetFromGM(i,j,0)) *nPoint +=1;
-	}
-    }
-    else{
-      for(k = 0; k <= nzcLocal + 2*NG; k++)
-	for(j = 0; j <= nycLocal + 2*NG; j++)
-	  for(i = 0; i <= nxcLocal + 2*NG; i++){
-	    if(doGetFromGM(i,j,k)) *nPoint +=1;
-	  }
-    }
-    *nPoint *= INdim;
+  void GetNgridPnt(int &nPoint){
+    double *Pos_I, *state_I;
+    int *iPoint_I;
+    bool doCount, doGetPos, doSetData;
+    
+    doCount = true; doGetPos = false; doSetData = false;    
+    get_region_points(doCount, doGetPos, doSetData, nPoint, Pos_I,
+		      state_I, iPoint_I);
   }
 
+  void get_region_points(bool doCount, bool doGetPos, bool doSetData,
+			 int &nPoint, double *pos_I, double *state_I, int *iPoint_I){
+    int i, j, k, iMin, iMax, jMin, jMax, kMin, kMax;
+    double pic_D[3];
+
+    iMin = 0; iMax = 1 ; jMin = 0; jMax = 1; kMin = 0; kMax = 1; 
+    iMax = nxnLG;
+    if(nDim >= 2) jMax = nynLG;
+    if(nDim == 3) kMax = nznLG;
+
+    int n = 0, ii = 0; 
+    nPoint = 0;
+    for(k = kMin; k < kMax; k++)
+      for(j = jMin; j < jMax; j++)
+	for(i = iMin; i < iMax; i++){
+	  if(doGetFromGM(i,j,k)){
+
+	    if(doCount) nPoint +=nDim;
+
+	    if(doGetPos){
+	      pic_D[0] = (i + StartIdx_D[0] - 1)*dx_D[0] + gstMin_D[0];
+	      pic_D[1] = (j + StartIdx_D[1] - 1)*dx_D[1] + gstMin_D[1];
+	      pic_D[2] = (k + StartIdx_D[2] - 1)*dx_D[2] + gstMin_D[2]; 
+	      
+	      for (int iDim=0; iDim<nDim; iDim++){
+		pos_I[n++] = pic_D[iDim]*No2SiL;
+	      }
+
+	    }// doGetPos
+
+	    if(doSetData){
+	      for(int iVar=0; iVar < nVarFluid; iVar++){
+		int idx; 
+		idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
+		State_GV[i][j][k][iVar] = state_I[idx];
+	      }
+	      ii++;
+	    }
+	    
+	  }
+	}// i j k 
+
+    if(doSetData && nDim==2){
+      // Fill in the data in the ignored dimension. 
+      int k0 = 0;      
+      for(i = iMin; i < iMax; i++)
+	for(j = jMin; j < jMax; j++)
+	  for(k = 1; k < nznLG; k++)
+	    for( int iVar=0; iVar < nVarFluid; iVar++){
+	      State_GV[i][j][k][iVar] = State_GV[i][j][k0][iVar];
+	    }
+    }
+    
+  }
+  
   /** Get index of node points recived from GM */ 
   void GetGridPnt(double *Pos_I){
-    int n, i, j, k;
-
-    n=0;
-    if(INdim == 1) {
-      // There is 1 ghost cell layer. Index i is node. 
-      for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++)
-	if(doGetFromGM(i-StartIdx_D[0]+1,0,0))
-	  Pos_I[i] = i*INgridDx_D[0]  + INxRange_I[0];
-    }
-    else if (INdim == 2){
-      for(j = StartIdx_D[1] - 1; j <=  EndIdx_D[1] + 2; j++)
-	for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++){
-	  if(doGetFromGM(i-StartIdx_D[0]+1,j-StartIdx_D[1]+1,0)){
-	    Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
-	    Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
-	  }
-	}
-    }
-    else{ 
-      for(k = StartIdx_D[2] - 1; k <=  EndIdx_D[2] + 2; k++)
-        for(j = StartIdx_D[1] - 1; j <=  EndIdx_D[1] + 2; j++)
-	  for(i = StartIdx_D[0] - 1; i <= EndIdx_D[0] + 2; i++){
-	    if(doGetFromGM(i-StartIdx_D[0]+1,j-StartIdx_D[1]+1,k-StartIdx_D[2]+1)){
-	      Pos_I[n++] = i*INgridDx_D[0] + INxRange_I[0];
-	      Pos_I[n++] = j*INgridDx_D[1] + INxRange_I[2];
-	      Pos_I[n++] = k*INgridDx_D[2] + INxRange_I[4];
-	    }
-	  }
-    }
-    //to SI
-    for(i = 0; i<n; i++){
-      Pos_I[i] *= No2SiL;
-    }
+    double *state_I;
+    int *iPoint_I, nPoint;
+    bool doCount, doGetPos, doSetData;
+    
+    doCount = false; doGetPos = true; doSetData = false;    
+    get_region_points(doCount, doGetPos, doSetData, nPoint, Pos_I,
+		      state_I, iPoint_I);
   }
 
-  void setStateVar(double *State_I, int *iPoint_I){
+
+  void setStateVar(double *state_I, int *iPoint_I){
     const int x_=0, y_=1, z_=2;
     int i, j, k, iVar;
     int ii, jj, kk;
@@ -1504,92 +1444,19 @@ class InterfaceFluid
       Bc_GD = newArr4(double,nxnLG-1,nynLG-1,nznLG-1,3);
     }
 
-    // The order to loop through State_GV should be the same as the
-    // order to find out the posion, which is in GetGridPnt().
-    if(INdim == 1) {
-      k = 0;
-      j  =0;
-      ii = 0;
-      for(i = 0; i < nxnLG; i++){
-	if(doGetFromGM(i,0,0)){
-	  for(iVar=0; iVar < nVarFluid; iVar++){
- 	    // convert 3D index to 1D
- 	    idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
-	    State_GV[i][j][k][iVar] = State_I[idx];
-	  }
-          ii++;
-	}
-      }
-    }
-    else if (INdim == 2){
-      k = 0;
-      ii = 0;
-      for(j = 0; j < nynLG; j++){
-	for(i = 0; i < nxnLG; i++){
-	  if(doGetFromGM(i,j,0)){
-	    for(iVar=0; iVar < nVarFluid; iVar++){
-	      idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
-	      State_GV[i][j][k][iVar] = State_I[idx];
-	    }
-	    ii++;
-	  }
-	}
-      }
-    }
-    else{
-      ii = 0;
-      for(k = 0; k < nznLG; k++){
-	for(j = 0; j < nynLG; j++){           
-	  for(i = 0; i < nxnLG; i++){
-	    if(doGetFromGM(i,j,k)){
-	      for(iVar=0; iVar < nVarFluid; iVar++){
-		idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
-		State_GV[i][j][k][iVar] = State_I[idx];
-	      }
-	      ii++;
-	    }
-	  }
-	}
-      }
-    }
+    //-----------------Put data to State_GV--------------------
+    double *Pos_I;
+    int nPoint;
+    bool doCount, doGetPos, doSetData;
+    doCount = false; doGetPos = false; doSetData = true;    
+    get_region_points(doCount, doGetPos, doSetData, nPoint, Pos_I,
+		      state_I, iPoint_I);
+    //-----------------------------------------------------------
 
-
-    // Get magnetic field B in the cell center form node values   
-
-    if(INdim == 1){
-      for(i = 0; i < nxnLG-1; i++){
-	if(doGetFromGM(i,0,0)){
-	Bc_GD[i][0][0][x_] = 0.5 *(State_GV[i][0][0][iBx] + State_GV[i+1][0][0][iBx]);
-           
-	Bc_GD[i][0][0][y_] = 0.5 *(State_GV[i][0][0][iBy] + State_GV[i+1][0][0][iBy]);
-           
-	Bc_GD[i][0][0][z_] = 0.5 *(State_GV[i][0][0][iBz] + State_GV[i+1][0][0][iBz]);
-      } 
-    }
-    }
-    else if(INdim == 2){
-      for(i = 0; i < nxnLG-1; i++)
-	for(j = 0; j < nynLG-1; j++){
-	  if(doGetFromGM(i,j,0)){
-	  Bc_GD[i][j][0][x_] = 0.25 *(
-				      State_GV[i][j][0][iBx] + State_GV[i+1][j][0][iBx] +
-				      State_GV[i][j+1][0][iBx] + State_GV[i+1][j+1][0][iBx]);
-           
-	  Bc_GD[i][j][0][y_] = 0.25 *(
-				      State_GV[i][j][0][iBy] + State_GV[i+1][j][0][iBy] +
-				      State_GV[i][j+1][0][iBy] + State_GV[i+1][j+1][0][iBy]);
-           
-	  Bc_GD[i][j][0][z_] = 0.25 *( 
-				      State_GV[i][j][0][iBz] + State_GV[i+1][j][0][iBz] +
-				      State_GV[i][j+1][0][iBz] + State_GV[i+1][j+1][0][iBz]);
-	}          
-    }
-    }
-    else if(INdim == 3){
-      for(i = 0; i < nxnLG-1; i++)
-        for(j = 0; j < nynLG-1; j++)
-	  for(k = 0; k < nznLG-1; k++) {
-	    if(doGetFromGM(i,j,k)){
+    for(i = 0; i < nxnLG-1; i++)
+      for(j = 0; j < nynLG-1; j++)
+	for(k = 0; k < nznLG-1; k++) {
+	  if(doGetFromGM(i,j,k)){
 	    Bc_GD[i][j][k][x_] = 0.125 *(
 					 State_GV[i][j][k][iBx] + State_GV[i+1][j][k][iBx] +
 					 State_GV[i][j+1][k][iBx] + State_GV[i+1][j+1][k][iBx] +
@@ -1608,100 +1475,21 @@ class InterfaceFluid
 					 State_GV[i][j][k+1][iBz] + State_GV[i+1][j][k+1][iBz] +
 					 State_GV[i][j+1][k+1][iBz] + State_GV[i+1][j+1][k+1][iBz]);
 	  }          
-    }
-    }
+	}
 
     // J = curl B/ mu0
     double invdx, invdy, invdz;
     double compZdx, compXdy, compYdz, compXdz, compZdy, compYdx;
 
-
     // 1/(dx*mu0)  
-    invdx = 1.0/(INgridDx_D[x_]*No2SiL*4.0*3.14159265359*1.0e-7);
-    invdy = 1.0/(INgridDx_D[y_]*No2SiL*4.0*3.14159265359*1.0e-7);
-    invdz = 1.0/(INgridDx_D[z_]*No2SiL*4.0*3.14159265359*1.0e-7);
+    invdx = 1.0/(dx_D[x_]*No2SiL*4.0*3.14159265359*1.0e-7);
+    invdy = 1.0/(dx_D[y_]*No2SiL*4.0*3.14159265359*1.0e-7);
+    invdz = 1.0/(dx_D[z_]*No2SiL*4.0*3.14159265359*1.0e-7);
 
-    if(INdim == 1){
-      j = 0;
-      k = 0;
-      for(i = 0; i < nxnLG-2; i++){
-	if(doGetFromGM(i,0,0)){
-	compZdx = invdx*( 
-			 Bc_GD[i+1][j  ][k  ][z_] - Bc_GD[i  ][j  ][k  ][z_]);
-
-	compYdx = invdx*( 
-			 Bc_GD[i+1][j  ][k  ][y_] - Bc_GD[i  ][j  ][k  ][y_]);
-
-	State_GV[i+1][j][k][iJx] =  0.0;
-	State_GV[i+1][j][k][iJy] =  - compZdx;
-	State_GV[i+1][j][k][iJz] =  compYdx;
-      }
-      }
-      // fill in the ghost cell, constant value
-      // Only the "real" ghost cells, which are at the boundaries are useful.
-      State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
-      State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
-      State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
-
-      State_GV[nxnLG-1][j][k][iJx] = State_GV[nynLG-2][j][k][iJx];
-      State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
-      State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
-    }
-    else if(INdim == 2){
-      k = 0;      
-      for(i = 0; i < nxnLG-2; i++)
-	for(j = 0; j < nynLG-2; j++){
-	  if(doGetFromGM(i,j,0)){
-	  compZdy = 0.5*invdy*( 
-			       Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
-			       Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_]);
-
-	  compXdy = 0.5*invdy*( 
-			       Bc_GD[i  ][j+1][k  ][x_] - Bc_GD[i  ][j][k  ][x_] +
-			       Bc_GD[i+1][j+1][k  ][x_] - Bc_GD[i+1][j][k  ][x_]);
-
-	  compZdx = 0.5*invdx*( 
-			       Bc_GD[i+1][j  ][k  ][z_] - Bc_GD[i  ][j  ][k  ][z_] +
-			       Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i  ][j+1][k  ][z_]);
-
-	  compYdx = 0.5*invdx*( 
-			       Bc_GD[i+1][j  ][k  ][y_] - Bc_GD[i  ][j  ][k  ][y_] +
-			       Bc_GD[i+1][j+1][k  ][y_] - Bc_GD[i  ][j+1][k  ][y_]);
-
-	  State_GV[i+1][j+1][k][iJx] =   compZdy;
-	  State_GV[i+1][j+1][k][iJy] = - compZdx;
-	  State_GV[i+1][j+1][k][iJz] =   compYdx - compXdy;
-	 
-	  }
-	}
-
-      // fill in the ghost cell, constant value
-      for(j=1;j<nynLG-1;j++){
-	State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
-	State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
-	State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
-
-	State_GV[nxnLG-1][j][k][iJx] = State_GV[nxnLG-2][j][k][iJx];
-	State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
-	State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
-      }
-
-      for(i=0;i<nxnLG;i++){
-	State_GV[i][0][k][iJx] = State_GV[i][1][k][iJx];
-	State_GV[i][0][k][iJy] = State_GV[i][1][k][iJy];
-	State_GV[i][0][k][iJz] = State_GV[i][1][k][iJz];
-
-	State_GV[i][nynLG-1][k][iJx] = State_GV[i][nynLG-2][k][iJx];
-	State_GV[i][nynLG-1][k][iJy] = State_GV[i][nynLG-2][k][iJy];
-	State_GV[i][nynLG-1][k][iJz] = State_GV[i][nynLG-2][k][iJz];
-      }
-  
-    }
-    else if(INdim == 3){
-      for(i = 0; i < nxnLG-2; i++)
-        for(j = 0; j < nynLG-2; j++)
-	  for(k = 0; k < nznLG-2; k++){
-	    if(doGetFromGM(i,j,k)){
+    for(i = 0; i < nxnLG-2; i++)
+      for(j = 0; j < nynLG-2; j++)
+	for(k = 0; k < nznLG-2; k++){
+	  if(doGetFromGM(i,j,k)){
 	    compZdy = 0.25*invdy*( 
 				  Bc_GD[i  ][j+1][k  ][z_] - Bc_GD[i  ][j][k  ][z_] +
 				  Bc_GD[i+1][j+1][k  ][z_] - Bc_GD[i+1][j][k  ][z_] +
@@ -1741,10 +1529,42 @@ class InterfaceFluid
 	    State_GV[i+1][j+1][k+1][iJx] =  compZdy - compYdz;
 	    State_GV[i+1][j+1][k+1][iJy] =  compXdz - compZdx;
 	    State_GV[i+1][j+1][k+1][iJz] =  compYdx - compXdy;
-	    }   
-	  }
-      // fill in the ghost cell, constant value
 
+	    if(nDim == 2 ){
+	      for(int kk = 0; kk<=nznLG-1; kk += nznLG-1)
+		for (int iVar = iJx; iVar <= iJz; iVar++){
+		  State_GV[i+1][j+1][kk][iVar] = State_GV[i+1][j+1][k+1][iVar];
+		}	      
+	    }
+	    
+	  }   
+	}
+
+    // Fill in ghost cells. This part can be further simplified. - Yuxi
+    if(nDim == 2){
+      k = 0;
+      for(j=1;j<nynLG-1;j++){
+	State_GV[0][j][k][iJx] = State_GV[1][j][k][iJx];
+	State_GV[0][j][k][iJy] = State_GV[1][j][k][iJy];
+	State_GV[0][j][k][iJz] = State_GV[1][j][k][iJz];
+
+	State_GV[nxnLG-1][j][k][iJx] = State_GV[nxnLG-2][j][k][iJx];
+	State_GV[nxnLG-1][j][k][iJy] = State_GV[nxnLG-2][j][k][iJy];
+	State_GV[nxnLG-1][j][k][iJz] = State_GV[nxnLG-2][j][k][iJz];
+      }
+
+      for(i=0;i<nxnLG;i++){
+	State_GV[i][0][k][iJx] = State_GV[i][1][k][iJx];
+	State_GV[i][0][k][iJy] = State_GV[i][1][k][iJy];
+	State_GV[i][0][k][iJz] = State_GV[i][1][k][iJz];
+
+	State_GV[i][nynLG-1][k][iJx] = State_GV[i][nynLG-2][k][iJx];
+	State_GV[i][nynLG-1][k][iJy] = State_GV[i][nynLG-2][k][iJy];
+	State_GV[i][nynLG-1][k][iJz] = State_GV[i][nynLG-2][k][iJz];
+      }
+  
+    }
+    else if(nDim == 3){
       for(i=1;i<nxnLG-1;i++)
 	for(j=1;j<nynLG-1;j++){
 	  State_GV[i][j][0][iJx] = State_GV[i][j][1][iJx];
@@ -1883,8 +1703,8 @@ class InterfaceFluid
     
     // dl = 0.25*min(dx,dy,dz); The parameter 0.25 can be changed. 0.5 may be
     // good enough. 
-    dl = INgridDx_D[0]<INgridDx_D[1]? INgridDx_D[0]:INgridDx_D[1];
-    if(INdim>2) dl = dl<INgridDx_D[2]? dl:INgridDx_D[2];
+    dl = dx_D[0]<dx_D[1]? dx_D[0]:dx_D[1];
+    if(nDim>2) dl = dl<dx_D[2]? dl:dx_D[2];
     dl *=0.25;
 
     isFirstPoint=true;
@@ -1892,7 +1712,7 @@ class InterfaceFluid
       x = satInfo_III[iSat][iLine][1];
       y = satInfo_III[iSat][iLine][2];
       z = satInfo_III[iSat][iLine][3];
-      if(INdim<3) z = 0;
+      if(nDim<3) z = 0;
 
 
       
@@ -2185,8 +2005,7 @@ class InterfaceFluid
   }
 
   inline void divide_processors(int &npx, int &npy, int &npz, int nprocs){
-    int divisor1, divisor2, divisor3, nprocs0, npmax, nDim;
-    nDim = INdim;
+    int divisor1, divisor2, divisor3, nprocs0, npmax;
 
     if(nDim<3){
       divisor1 = 1;
@@ -2226,12 +2045,12 @@ class InterfaceFluid
 
     // The edge for PIC domain is node with index 1. It is different from
     // standalone PIC
-    iMin = min(ig-1,nIJK_D[0]-ig-2);
-    jMin = min(jg-1,nIJK_D[1]-jg-2);
-    kMin = min(kg-1,nIJK_D[2]-kg-2);
+    iMin = min(ig-1,nNodeGst_D[0]-ig-2);
+    jMin = min(jg-1,nNodeGst_D[1]-jg-2);
+    kMin = min(kg-1,nNodeGst_D[2]-kg-2);
     idxMin = min(iMin,jMin);
 
-    if(INdim>2) idxMin = min(idxMin,kMin);
+    if(nDim>2) idxMin = min(idxMin,kMin);
     
     double ix;
     if(idxMin<nBoundarySmooth){
@@ -2272,18 +2091,18 @@ class InterfaceFluid
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
-  double getPhyXMin(){return(INxRange_I[0] + INgridDx_D[0]);}
-  double getPhyYMin(){return(INxRange_I[2] + INgridDx_D[1]);}
-  double getPhyZMin(){return(INxRange_I[4] + INgridDx_D[2]);}
-  double getPhyXMax(){return(INxRange_I[1] - INgridDx_D[0]);}
-  double getPhyYMax(){return(INxRange_I[3] - INgridDx_D[1]);}
-  double getPhyZMax(){return(INxRange_I[5] - INgridDx_D[2]);}
+  double getPhyXMin(){return phyMin_D[0];}
+  double getPhyYMin(){return phyMin_D[1];}
+  double getPhyZMin(){return phyMin_D[2];}
+  double getPhyXMax(){return phyMax_D[0];}
+  double getPhyYMax(){return phyMax_D[1];}
+  double getPhyZMax(){return phyMax_D[2];}
 
 
   void setiRegion(int i){iRegion = i;}
   int getiRegion()const{return(iRegion);}
   
-  int getnDim()const{return(INdim);}
+  int getnDim()const{return(nDim);}
 
   int getnVarFluid(){return(nVarFluid);}
 
@@ -2323,7 +2142,7 @@ class InterfaceFluid
     return plotRange_ID[iPlot][i];
   };
   bool getdoSaveBinary()const{return doSaveBinary;};
-  double getSatRadius()const{return drSat*INgridDx_D[0];};
+  double getSatRadius()const{return drSat*dx_D[0];};
   void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
   void setxStart(double v){xStart=v;};
   void setxEnd(double v){xEnd=v;};
@@ -2335,6 +2154,24 @@ class InterfaceFluid
   bool getdoSmoothAll()const{return doSmoothAll;};
   double getMiSpecies(int i)const{return MoMi_S[i];};
   double getcLightSI()const{return Unorm/100;/*Unorm is in cgs unit*/};
+
+
+  // Replace these functions. --Yuxi
+    /** return min X for fluid grid without ghostcell */  
+  inline double getFluidStartX()const{return phyMin_D[x_];}
+  /** return min Y for fluid grid without ghostcell */
+  inline double getFluidStartY()const{return phyMin_D[y_];}
+  /** return min Z for fluid grid without ghostcell */
+  inline double getFluidStartZ()const{return phyMin_D[z_];}
+
+  
+  // return planet radius in SI unit.
+  inline double getrPlanet()const{return(rPlanetSi);}
+  // return MhdNo2SiL
+  inline double getMhdNo2SiL()const{return(MhdNo2SiL);}
+  // BATSRUS normalized unit -> PIC normalized unit;
+  inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
+  
 };
 
 
