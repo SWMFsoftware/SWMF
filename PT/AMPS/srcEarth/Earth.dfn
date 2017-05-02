@@ -3,3 +3,4 @@
 
 #define _PIC_EARTH_SEP__MODE_   _PIC_MODE_ON_
 #define _PIC_EARTH_GCR__MODE_   _PIC_MODE_ON_
+#define _PIC_EARTH_ELECTRON__MODE_ _PIC_MODE_ON_
