@@ -399,7 +399,13 @@ namespace Relativistic {
     return mass*Speed/sqrt(1.0-(Speed*Speed)/(SpeedOfLight*SpeedOfLight));
   }
 
+  inline double Momentum2Speed(double Momentum,double mass) {
+    return Momentum*SpeedOfLight/sqrt(Momentum*Momentum+pow(mass*SpeedOfLight,2));
+  }
 
+  inline double Momentum2Speed(double* MomentumVector,double mass) {
+    return Momentum2Speed(Vector3D::Length(MomentumVector),mass);
+  }
 
   //get gyro frequency
   inline double GetGyroFrequency(double *v,double ParticleRestMass, double ElectricCharge, double* B) {
