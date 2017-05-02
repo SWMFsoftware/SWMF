@@ -13,7 +13,7 @@ module ModParticleFieldLine
        iProc,&
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
-       Particle_I, CellSize_DB, Xyz_DGB, &
+       Particle_I, CellSize_DB, Xyz_DGB, CellVolume_GB, &
        MinI,MinJ,MinK, MaxI,MaxJ,MaxK, MaxBlock, nI, nJ, nK, nBlock, &
        jDim_, kDim_, allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
@@ -647,16 +647,17 @@ contains
                iBlock=iIndexEnd_II(0,iParticle),&
                Dir_D = DirBCurr_D)
           ! find the step size
+          call get_step_size(&
+               Xyz_D   = StateEnd_VI(x_:z_,iParticle),&
+               iBlock  =iIndexEnd_II(0,iParticle),&
+               StepSize= StateEnd_VI(Ds_,iParticle))
           StateEnd_VI(Ds_, iParticle) = &
                MIN(SpaceStepMax, MAX(SpaceStepMin,&
-               0.1*SQRT(&
-               sum(CellSize_DB(1:nDim,iIndexEnd_II(0,iParticle))**2)&
-               ))) 
-          
+               StateEnd_VI(Ds_, iParticle)))
+
           ! save direction for the second stage
           DirCurr_D = DirBCurr_D * &
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-          
           
           ! cosine of angle between field and radial direction and its gradient
           call get_grad_cosbr(&
@@ -841,7 +842,35 @@ contains
             Particle_I(KindEnd_)%iIndex_II(iIndexCopy_I, iParticle)
     end do
   end subroutine copy_end_to_regular
+  !========================================================================
+  subroutine get_step_size(Xyz_D, iBlock, StepSize)
+    ! returns interpolate step size to be used during extraction; 
+    ! based on cell size of cells to be used in the interpolation stencil
+    real,    intent(in) :: Xyz_D(MaxDim)
+    integer, intent(in) :: iBlock
+    real,    intent(out):: StepSize
 
+    ! interpolation data: number of cells, cell indices, weights
+    integer:: nCell, iCell_II(0:nDim, 2**nDim)
+    real   :: Weight_I(2**nDim)
+    integer:: iCell ! loop variable
+    integer:: i_D(MaxDim)
+    character(len=200):: StringError
+    character(len=*), parameter:: NameSub = "get_b_dir"
+    !----------------------------------------------------------------------
+    StepSize = 0.0
+    ! get the interpolation stencil
+    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+    ! interpolate cell sizes; for non-cartesian grids the metic tensor is used
+    do iCell = 1, nCell
+       i_D = 1
+       i_D(1:nDim) = iCell_II(1:nDim, iCell)
+       StepSize = StepSize + &
+            CellVolume_GB(i_D(1),i_D(2),i_D(3),iBlock) * Weight_I(iCell) 
+    end do
+    ! take a fraction of cubic root of inteprolated cell volume as step size
+    StepSize = 0.1 * StepSize**(1.0/3.0)
+  end subroutine get_step_size
   !========================================================================
   subroutine get_b_dir(Xyz_D, iBlock, Dir_D)
     use ModMain, ONLY: UseB0
