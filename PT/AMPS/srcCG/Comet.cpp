@@ -47,7 +47,7 @@ double Comet::DustInitialVelocity::RotationAxis[3]={1.0,0.0,0.0};
 double Comet::DustInitialVelocity::InjectionConstantVelocity=0.001;
 
 static bool probabilityFunctionDefinedUniformNASTRAN=false;
-double *productionDistributionUniformNASTRAN,*cumulativeProductionDistributionUniformNASTRAN;
+double *productionDistributionUniformNASTRAN;
 
 static bool probabilityFunctionDefinedJetNASTRAN=false;
 
@@ -56,7 +56,7 @@ static double azimuthCenter;
 static double zenithCenter;
 static cInternalRotationBodyData* Nucleus;
 
-double **productionDistributionNASTRAN,**cumulativeProductionDistributionNASTRAN;
+double **productionDistributionNASTRAN;
 static double *BjornProductionANALYTICAL;
 bool *definedFluxBjorn,*probabilityFunctionDefinedNASTRAN;
 static double **fluxBjorn;
@@ -175,20 +175,18 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   productionDistributionNASTRAN=new double* [PIC::nTotalSpecies];
   productionDistributionNASTRAN[0]=new double [PIC::nTotalSpecies*CutCell::nBoundaryTriangleFaces];
 
-  cumulativeProductionDistributionNASTRAN=new double* [PIC::nTotalSpecies];
-  cumulativeProductionDistributionNASTRAN[0]=new double [PIC::nTotalSpecies*CutCell::nBoundaryTriangleFaces];
+ 
 
   for(int i=0;i<PIC::nTotalSpecies;i++) {
     productionDistributionNASTRAN[i]=productionDistributionNASTRAN[0]+i*CutCell::nBoundaryTriangleFaces;
-    cumulativeProductionDistributionNASTRAN[i]=cumulativeProductionDistributionNASTRAN[0]+i*CutCell::nBoundaryTriangleFaces;
+  
     for(int j=0;j<CutCell::nBoundaryTriangleFaces;j++) {
       productionDistributionNASTRAN[i][j]=0.0;
-      cumulativeProductionDistributionNASTRAN[i][j]=0.0;
+    
     }  
   }
 
   productionDistributionUniformNASTRAN=new double[CutCell::nBoundaryTriangleFaces];
-  cumulativeProductionDistributionUniformNASTRAN=new double[CutCell::nBoundaryTriangleFaces];
   BjornProductionANALYTICAL=new double[PIC::nTotalSpecies];
   definedFluxBjorn=new bool[PIC::nTotalSpecies];
   probabilityFunctionDefinedNASTRAN=new bool[PIC::nTotalSpecies];
@@ -200,7 +198,6 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
 
   for(int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
     productionDistributionUniformNASTRAN[i]=0.0;
-    cumulativeProductionDistributionUniformNASTRAN[i]=0.0;
   }
 
   for(int i=0;i<PIC::nTotalSpecies;i++) {
@@ -548,7 +545,8 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
    FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_]=Comet::GetTotalProductionRateUniformNASTRAN(_H2O_SPEC_);
    FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalProductionRateJetNASTRAN(_H2O_SPEC_);
  }
- TotalFlux=Comet::GetTotalProductionRateBjornNASTRAN(_H2O_SPEC_)+Comet::GetTotalProductionRateUniformNASTRAN(_H2O_SPEC_)+Comet::GetTotalProductionRateJetNASTRAN(_H2O_SPEC_);;
+ TotalFlux=Comet::GetTotalProductionRateBjornNASTRAN(_H2O_SPEC_)+Comet::GetTotalProductionRateUniformNASTRAN(_H2O_SPEC_)+Comet::GetTotalProductionRateJetNASTRAN(_H2O_SPEC_);
+
 #endif
 
 /* double CalculatedSourceRate[PIC::nTotalSpecies][1+_exosphere__SOURCE_MAX_ID_VALUE_];
@@ -574,7 +572,8 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 
    if (TotalGasMassProductionRate<0.0) {
      TotalGasMassProductionRate=0.0;
-
+     
+  
      for (int s=0;s<PIC::nTotalSpecies;s++) if ((s<_DUST_SPEC_)||(_DUST_SPEC_>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
        TotalGasMassProductionRate+=PIC::MolecularData::GetMass(s)*
            (Comet::GetTotalProductionRateBjornNASTRAN(s)+Comet::GetTotalProductionRateUniformNASTRAN(s)+Comet::GetTotalProductionRateJetNASTRAN(s));
@@ -851,7 +850,7 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 */
 
 #endif //_COMPILATION_MODE_
-while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
+       while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //determine the source process to generate a particle's properties                                               
   do {
     SourceProcessID=(int)(rnd()*(1+_exosphere__SOURCE_MAX_ID_VALUE_));
@@ -1307,14 +1306,8 @@ void Comet::BjornNASTRAN::Init() {
         }
       }
 
-      cumulativeProductionDistributionNASTRAN[spec][0]=0.0;
-      for (i=0;i<totalSurfaceElementsNumber;i++) {
-        if (i==0) {
-          cumulativeProductionDistributionNASTRAN[spec][i]+=productionDistributionNASTRAN[spec][i]/total;
-        }else{
-          cumulativeProductionDistributionNASTRAN[spec][i]=cumulativeProductionDistributionNASTRAN[spec][i-1]+productionDistributionNASTRAN[spec][i]/total;
-        }
-      }
+     
+    
 
       //the cumulative distributino of dust has to be the same as of water
       if (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_) {
@@ -1322,9 +1315,7 @@ void Comet::BjornNASTRAN::Init() {
           //water must be defined before dust
           if (probabilityFunctionDefinedNASTRAN[_H2O_SPEC_]==false) exit(__LINE__,__FILE__,"Error: water cumulative distribution has to be defined before that of the dust");
 
-          //copy water cumulative distribution into that of the dust
-          for (i=0;i<totalSurfaceElementsNumber;i++) cumulativeProductionDistributionNASTRAN[spec][i]=cumulativeProductionDistributionNASTRAN[_H2O_SPEC_][i];
-
+         
 
           //load correction to the dust injection distribution if needed
           double rate[totalSurfaceElementsNumber];
@@ -1413,7 +1404,7 @@ void Comet::BjornNASTRAN::Init() {
 
         }
 
-      }
+      } // if (PIC_MODEL_DUST_MODE_ON_)
 
 //      if (SurfaceInjectionProbability[spec].CumulativeDistributionTable==NULL) {
       if ( (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__OFF_) ||
@@ -1719,15 +1710,8 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
       total+=productionDistributionUniformNASTRAN[i];
     }
       
-    cumulativeProductionDistributionUniformNASTRAN[0]=0.0;
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      if (i==0) {
-	cumulativeProductionDistributionUniformNASTRAN[i]+=productionDistributionUniformNASTRAN[i]/total;
-      }else{
-	cumulativeProductionDistributionUniformNASTRAN[i]=cumulativeProductionDistributionUniformNASTRAN[i-1]+productionDistributionUniformNASTRAN[i]/total;
-      }
-      
-    }
+   
+  
     probabilityFunctionDefinedUniformNASTRAN=true;
   }
   
