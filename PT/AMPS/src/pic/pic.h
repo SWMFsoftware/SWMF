@@ -582,7 +582,7 @@ namespace PIC {
     };
 
     //class cFieldLineVertex --------------------------------------------------
-    class cFieldLineSegment{
+    class cFieldLineSegment {
     private:
       //flag segment has been set (i.e. both vertices are set)
       char IsSet;
@@ -606,12 +606,14 @@ namespace PIC {
       cFieldLineVertex* end;
     public:
       long int Temp_ID;
+      bool ActiveFlag;
 
       cFieldLineSegment(){
-	      Temp_ID = 0;
-	      IsSet=0, length=0.0;
-	      prev  = (next = NULL);
-	      begin = (end  = NULL);
+        Temp_ID = 0;
+        IsSet=0, length=0.0;
+        prev  = (next = NULL);
+        begin = (end  = NULL);
+        ActiveFlag=false;
       }
 
       //.......................................................................
