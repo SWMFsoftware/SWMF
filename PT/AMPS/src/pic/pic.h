@@ -3325,18 +3325,12 @@ namespace PIC {
 
       void Init_BeforeParser();
       void Init();
-      void InitiateMagneticMoment(int spec, double *x, double *v, 
-				  long int ptr, void *node);
+      void InitiateMagneticMoment(int spec, double *x, double *v, long int ptr, void *node);
+      void InitiateMagneticMoment(int spec, double *x, double *v, PIC::ParticleBuffer::byte *ParticleData, void *node);
 
       //mover
-      void GuidingCenterMotion_default(double *Vguide, double &ForceParal, 
-				       double &BAbsValue, double *BDirection, 
-				       double *PParal,
-				       int spec,long int ptr,
-				       double *x, double *v,
-				       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
-      int Mover_SecondOrder(long int ptr,double dtTotal,
-			    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+      void GuidingCenterMotion_default(double *Vguide, double &ForceParal, double &BAbsValue, double *BDirection, double *PParal,int spec,long int ptr,double *x, double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+      int Mover_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     }
 
 
