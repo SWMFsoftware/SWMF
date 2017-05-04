@@ -74,7 +74,7 @@ program post_idl
 
   logical :: IsStructured, DoReadBinary=.false.
   character (len=100) :: NameFile, NameFileHead, NameCoord
-  character (len=500) :: NameVar, NameUnit
+  character (len=lStringLine) :: NameVar, NameUnit
   integer :: l, iProc
 
   ! Variables for the 2D lookup table
