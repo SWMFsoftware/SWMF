@@ -66,5 +66,52 @@ The possible arguments are:
 
 
 \section {Restart Files}
+AMPS allows users to save particle data at a customed frequency and also to restart from saved particle data. One can also choose overwrite existing restart files (``overwrite'') or create new files (``newfile'') when saving the restart files. \\
+\begin{verbatim}
+Examples in input files:
+(save restart files)
+ SaveParticleRestartFile=on \\  !on,off
+ file=ParticleData.restart \\
+ SaveMode=overwrite  \\ !overwrite, newfile
+ IterationInterval=20
+
+(read restart files)
+RecoverParticleData=on    \\ !on, off
+file=ParticleData.restart
+ 
+\end{verbatim}
+Users can also choose to save and read additional data in the restart files. In order to do this, users need to define the functions to save and read the customized additional information in the restart data. The argument of the functions are pointers to the restart file. Then the function PIC::Restart::SetUserAdditionalRestartData() is called to  pass the user defined functions to core modules. \\
+Below is one example of applying the functions.
+\begin{verbatim} 
+...
+
+void saveRestartData(FILE* fname){
+// Only the root processor can write.
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    fwrite(&iterNumber, sizeof(long int),1, fname);
+    std::cout<<"save iter number="<<iterNumber<<std::endl;
+  }
+}
+
+void readRestartData(FILE* fname){
+  fread(&iterNumber, sizeof(long int),1, fname);
+  std::cout<<"read iter number="<<iterNumber<<std::endl;
+}
+
+...
+
+int main(){
+...
+ PIC::Restart::SetUserAdditionalRestartData(&readRestartData,&saveRestartData);         
+// should be put before the iteration loop.
+...
+  for (long int niter=0;niter<nTotalIterations;niter++) {
+
+...
+  }
 
 
+
+}
+
+\end{verbatim}
