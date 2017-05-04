@@ -128,12 +128,12 @@ module ModFieldLineThread
   !/
   integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
   integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
-  integer,public,parameter:: LambdaSi_=5, DLogLambdaOverLogT_ = 6
+  integer,public,parameter:: LambdaSi_=5, DLogLambdaOverDLogT_ = 6
   !\
   ! Global arrays used in calculating the tables
   !/
   real,dimension(1:500):: TeSi_I, LambdaSi_I, &
-       LPe_I, UHeat_I, dFluxXLengthOverDU_I, DLogLambdaOverLogT_I 
+       LPe_I, UHeat_I, dFluxXLengthOverDU_I, DLogLambdaOverDLogT_I 
 
   public:: set_threads       !(Re)Sets threads in the inner boundary blocks
 
@@ -898,19 +898,19 @@ contains
        !\
        ! Calculate dLogLambda/DLogTe
        !/
-       DLogLambdaOverLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
+       DLogLambdaOverDLogT_I(1) = log(LambdaSi_I(2)/LambdaSi_I(1))/&
             DeltaLogTe
        do iTe = 2,499
-          DLogLambdaOverLogT_I(iTe) = log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/&
+          DLogLambdaOverDLogT_I(iTe) = log(LambdaSi_I(iTe+1)/LambdaSi_I(iTe-1))/&
             (2*DeltaLogTe)
        end do
-       DLogLambdaOverLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
+       DLogLambdaOverDLogT_I(500) = log(LambdaSi_I(500)/LambdaSi_I(499))/&
             DeltaLogTe
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V(LengthPAvrSi_:DLogLambdaOverLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
+    Value_V(LengthPAvrSi_:DLogLambdaOverDLogT_) = (/ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe), &
-         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverLogT_I(iTe)/)
+         LambdaSi_I(iTe)/cBoltzmann**2, DLogLambdaOverDLogT_I(iTe)/)
 
   end subroutine calc_tr_table
   !============================================================================

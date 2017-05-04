@@ -5,7 +5,7 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       LambdaSi_, DLogLambdaOverLogT_,                           &
+       LambdaSi_, DLogLambdaOverDLogT_,                           &
        DoInit_, Done_, Enthalpy_, Heat_
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
        QeRatio
@@ -47,7 +47,7 @@ module ModThreadedLC
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
        TeSi_I, TeSiOld_I, TeSiStart_I, PSi_I, Xi_I, Cons_I, &
        TiSi_I, TiSiOld_I, TiSiStart_I, SpecIonHeat_I, DeltaIonEnergy_I,&
-       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDT_I, &
+       VaLog_I, DXi_I, ResHeating_I, ResCooling_I, DResCoolingOverDLogT_I, &
        ResEnthalpy_I, ResHeatCond_I, ResGravity_I, SpecHeat_I, DeltaEnergy_I,&
        ExchangeRate_I
   !\
@@ -138,7 +138,7 @@ contains
 
     allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
     allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
-    allocate(DResCoolingOverDT_I(nPointThreadMax)); DResCoolingOverDT_I = 0.0
+    allocate(DResCoolingOverDLogT_I(nPointThreadMax)); DResCoolingOverDLogT_I = 0.0
     allocate(ResEnthalpy_I(nPointThreadMax));ResEnthalpy_I = 0.0
     allocate(ResHeatCond_I(nPointThreadMax));ResHeatCond_I = 0.0
     allocate( ResGravity_I(nPointThreadMax)); ResGravity_I = 0.0
@@ -992,7 +992,7 @@ contains
       M_VVI(Cons_,LogP_,1:nPoint-1) = &
            -2*ResCooling_I(1:nPoint-1) !=-dCooling/dLogPe
       M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
-           (-DResCoolingOverDT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
+           (-DResCoolingOverDLogT_I(1:nPoint-1) + 2*ResCooling_I(1:nPoint-1)/&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))*Z*TeSi_I(1:nPoint-1))/&
            (3.50*Cons_I(1:nPoint-1))   !=-dCooling/dCons
       M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
@@ -1021,8 +1021,8 @@ contains
               -BoundaryThreads_B(iBlock)%DsOverBSi_III(iPoint-nPoint,j,k)&
               *Value_V(LambdaSI_)*Z*&
               (PSi_I(iPoint)/(Z*TeSi_I(iPoint)+TiSi_I(iPoint)))**2
-         DResCoolingOverDT_I(iPoint) = &
-              ResCooling_I(iPoint)*Value_V(DLogLambdaOverLogT_)
+         DResCoolingOverDLogT_I(iPoint) = &
+              ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
       end do
     end subroutine get_cooling
     !=========================
