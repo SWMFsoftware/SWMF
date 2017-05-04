@@ -13,7 +13,6 @@
 #include "Dust.h"
 #include "Comet.h"
 #include "SingleVariableDiscreteDistribution.h"
-
 #include "RosinaMeasurements.h"
 
 //the object name and the names of the frames
@@ -1079,6 +1078,59 @@ double sphericalHarmonic(int i,double colatitude,double longitude){
 }
 
 
+void useDustActiveRegion(double * productionRateArray){
+
+
+#if _COMET_DUST_USE_ACTIVE_REGION_ == _PIC_MODE_ON_
+  
+  long int totalSurfaceElementsNumber,i,j;
+  int idim;
+  const int numActiveRegion=2;
+  // const double locActiveRegion[numActiveRegion][2]={{0.,0.},{150,0}}; // location of active region
+  const double locActiveRegion[numActiveRegion][2]={{90.,0.},{290,0}};
+  double widthActiveRegion= 5.0; // in degree
+  double distInDegree;
+
+  totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
+    
+  for (i=0;i<totalSurfaceElementsNumber;i++) {
+
+    double colatitude,longitude,latitude;
+    double xCenter[3];
+      
+    productionRateArray[i]=0.0;
+    CutCell::BoundaryTriangleFaces[i].GetCenterPosition(xCenter);
+     
+    colatitude=acos(xCenter[2]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]+xCenter[2]*xCenter[2]));
+    latitude=90.0-colatitude/Pi*180.0;
+    if (xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]==0.0) {
+      longitude=0.0;
+    }else if(xCenter[1]>0.0) {
+      longitude=acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]));
+    }else{
+      longitude=-acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]))+2*Pi;
+    }
+    longitude = longitude/Pi*180.0;
+      
+    for (j=0;j<numActiveRegion;j++){
+      distInDegree = fmod(fabs(longitude-locActiveRegion[j][0]),360);
+      distInDegree = sqrt(pow(distInDegree,2)+pow(latitude-locActiveRegion[j][1],2));
+	
+      //set value for triangle surface in active region
+      if(distInDegree<widthActiveRegion){
+	productionRateArray[i] =CutCell::BoundaryTriangleFaces[i].SurfaceArea; //with uniform flux
+	break;
+      }
+	
+    }
+      
+  }
+
+  
+#endif 
+}
+
+
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   double c=0.0,X=0.0,totalProductionRate=0.0;
   double x[3],norm[3],xMiddle[3],lattitude,factor=1.0;
@@ -1320,7 +1372,12 @@ void Comet::BjornNASTRAN::Init() {
           //load correction to the dust injection distribution if needed
           double rate[totalSurfaceElementsNumber];
 
+#if _COMET_DUST_USE_ACTIVE_REGION_ == _PIC_MODE_ON_
+	  useDustActiveRegion(rate);
+#else
           for (i=0;i<totalSurfaceElementsNumber;i++) rate[i]=productionDistributionNASTRAN[_H2O_SPEC_][i];
+#endif
+
 
           //init surface injection probability for dust
           if (_DUST_INJECTION_RATE_CORRECTION_MODE_ != _DUST_INJECTION_RATE_CORRECTION_MODE__OFF_) {
