@@ -2233,7 +2233,7 @@ void EMfields3D::calculateE(int cycle)
     eqValue(0.0, dxkrylov, n3SolveNode);
 
     if (PoissonCorrection &&  cycle%PoissonCorrectionCycle == 0) {
-                double PoissonTol = GMREStol*1e3;
+                double PoissonTol = 0.1;
 		double *xkrylovPoisson = new double[nSolveCell];
 		double *bkrylovPoisson = new double[nSolveCell];
 		eqValue(0.0, xkrylovPoisson, nSolveCell);
