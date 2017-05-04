@@ -3180,7 +3180,7 @@ contains
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUz, iP
     use ModWaves, ONLY: UseWavePressure, UseWavePressureLtd, &
          GammaWave, UseAlfvenWaves
-    use ModMain, ONLY: Climit
+    use ModMain, ONLY: time_accurate, Climit
     use ModPhysics, ONLY: Clight
 
     real,    intent(in) :: State_V(nVar)
@@ -3239,15 +3239,15 @@ contains
        ! The light speed in the five-moment equations should exceed
        ! all the fluid wave speeds. Only Lax-Friedrichs scheme can be
        ! used because the left/right/max wave speeds are the same = Clight.
-       if(maxval(Cmax_I(1:nIonFluid)) > Clight)then
+       if(time_accurate .and. maxval(Cmax_I(1:nIonFluid)) > Clight)then
           write(*,*)'cLight                      =',cLight
           write(*,*)'maxval(Cmax_I(1:nIonFluid)) =',maxval(Cmax_I(1:nIonFluid))
           write(*,*)'Cmax_I(1:nIonFluid)         =',Cmax_I(1:nIonFluid)
           call stop_mpi('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
        end if
-       Cmax_I(1:nIonFluid)   = cLight
-       CmaxDt_I(1:nIonFluid) = cLight
-       CmaxDt                = cLight
+       Cmax_I(1:nIonFluid)   = max(cLight, Cmax_I(1:nIonFluid))
+       CmaxDt_I(1:nIonFluid) = max(cLight, Cmax_I(1:nIonFluid))
+       CmaxDt                = maxval(CmaxDt_I(1:nIonFluid))
 
        RETURN
     end if
