@@ -30,11 +30,11 @@ contains
     character(len=*), parameter:: NameSub = 'read_localstep_param'
     !-------------------------------------------------------------------
     select case(NameCommand)
-    case('#LOCALTIMESTEP')
+    case('#LOCALTIMESTEP', '#SUBCYCLING')
        ! Check if we had it on already
        UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
 
-       call read_var('UseLocalTimeStep', UseLocalTimeStep)
+       call read_var('UseSubcycling', UseLocalTimeStep)
        if(UseLocalTimeStep)then
           call read_var('UseMaxTimeStep',   UseMaxTimeStep)
           call read_var('DtLimitDim',       DtLimitDim)
