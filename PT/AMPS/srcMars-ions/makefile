@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = main_lib.o mars-ions_init.o mars-ions_boundary.o mars-ions_exosphere.o mars-ions_source.o mars-ions.o
+MAINLIBOBJ = main_lib.o mars-ions_init.o mars-ions_boundary.o mars-ions_exosphere.o mars-ions_source.o mars-ions.o mars-sampling.o
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
