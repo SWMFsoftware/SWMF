@@ -22,7 +22,18 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   return res;
 }
 
+namespace BATL {
+  const double rSphere=_MARS__RADIUS_;
+  double *xmin,*xmax;
 
+  double localResolution(double *x) {
+    double l=0.0;
+
+    for (int idim=0;idim<3;idim++) l+=pow(xmax[idim]-xmin[idim],2);
+
+    return sqrt(l)/20;
+  }
+}
 
 void amps_init_mesh() {
   PIC::InitMPI();
@@ -37,10 +48,6 @@ void amps_init_mesh() {
 
   //init the particle solver
   PIC::Init_BeforeParser();
-
-  MarsIon::Init_AfterParser();
-
-
 
   //register the sphere
   static const bool SphereInsideDomain=true;
@@ -83,14 +90,34 @@ void amps_init_mesh() {
   //init the solver
   PIC::Mesh::initCellSamplingDataBuffer();
 
+  MarsIon::Init_AfterParser();
+
   //init the mesh
   cout << "Init the mesh" << endl;
 
   double xmin[3],xmax[3];
 
-  for (int idim=0;idim<DIM;idim++) {
-    xmax[idim]=4*_RADIUS_(_TARGET_);
-    xmin[idim]=-4*_RADIUS_(_TARGET_);
+  switch (_PIC_NIGHTLY_TEST_MODE_) {
+  case _PIC_MODE_ON_:
+    for (int idim=0;idim<DIM;idim++) {
+      xmax[idim]=4*_RADIUS_(_TARGET_);
+      xmin[idim]=-4*_RADIUS_(_TARGET_);
+    }
+
+    break;
+  default:
+    if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_) {
+  //    PIC::CPLR::DATAFILE::BATSRUS::Init("3d__mhd_1_n00000001.idl");
+
+      PIC::CPLR::DATAFILE::BATSRUS::Init("3d__ful_2_n00050000.out");
+
+      PIC::CPLR::DATAFILE::BATSRUS::GetDomainLimits(xmin,xmax);
+      PIC::CPLR::DATAFILE::BATSRUS::UnitLength=BATL::rSphere;
+    }
+    else for (int idim=0;idim<DIM;idim++) {
+      xmax[idim]=10*_RADIUS_(_TARGET_);
+      xmin[idim]=-10*_RADIUS_(_TARGET_);
+    }
   }
 
   //generate only the tree
@@ -99,7 +126,7 @@ void amps_init_mesh() {
   PIC::Mesh::mesh.memoryAllocationReport();
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  char mesh[200]="!!!!amr.sig=0xd7058cc2a680a3a2.mesh.bin";
   bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
@@ -114,14 +141,21 @@ void amps_init_mesh() {
     NewMeshGeneratedFlag=true;
 
     if (PIC::Mesh::mesh.ThisThread==0) {
-       PIC::Mesh::mesh.buildMesh();
+      std::cout << "The mesh file  does not exist. Generating the mesh...  "  << std::endl << std::flush;
+    }
+
+    PIC::Mesh::mesh.buildMesh();
+
+    if (PIC::Mesh::mesh.ThisThread==0)  {
        PIC::Mesh::mesh.saveMeshFile("mesh.msh");
        MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     }
     else {
        MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+      // PIC::Mesh::mesh.readMeshFile("mesh.msh");
     }
+
+
   }
 
   //allocate the mesh data buffers
@@ -219,27 +253,52 @@ void amps_init() {
       PIC::CPLR::DATAFILE::LoadBinaryFile("MARS-BATSRUS");
     }
     else {
-      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
-
+      double xminTECPLOT[3]={-15.1,-15.1,-15.1},xmaxTECPLOT[3]={15.1,15.1,15.1};
       double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
 
       //  1  0  0
       //  0  1  0
       //  0  0  1
 
-      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+      switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
+      case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
+        PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
 
-      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_MARS__RADIUS_;
-      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
-      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
+        if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+          PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_MARS__RADIUS_;
+          PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+          PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
 
-      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(39,1.0E3);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(26,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(22,1.0E6/16.);
-      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=41;
-      PIC::CPLR::DATAFILE::TECPLOT::ImportData("data_mhd_PERmax-SSLONG180U.plt");
+          PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(39,1.0E3);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(26,1.0E-9);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(22,1.0E6/16.);
+          PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=41;
+          PIC::CPLR::DATAFILE::TECPLOT::ImportData("data_mhd_PERmax-SSLONG180U.plt");
+        }
+        else {
+          PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_MARS__RADIUS_;
+          PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+          PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.04,8.0);
+
+          PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(11,1.0E-9);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+          PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6/16.);
+          PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=38;
+          PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__ful_1_n00050000.plt"); //"data_mhd_PERmax-SSLONG180U.plt");
+        }
+
+        break;
+      case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+        PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is not recognized");
+      }
 
       PIC::CPLR::DATAFILE::SaveBinaryFile("MARS-BATSRUS");
     }
