@@ -552,7 +552,7 @@ subroutine MH_set_parameters(TypeAction)
         ExplCfl = Cfl
         UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
 
-     case('#LOCALTIMESTEP')
+     case("#LOCALTIMESTEP", "#SUBCYCLING")
         call read_localstep_param(NameCommand, iSession)
 
      case( "#TIMESTEPLIMIT")
