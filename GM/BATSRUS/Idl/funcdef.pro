@@ -137,6 +137,7 @@ function funcdef,xx,w,func
   common phys_units
   common phys_convert
   common phys_const
+  common plot_param  ; rcut
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
