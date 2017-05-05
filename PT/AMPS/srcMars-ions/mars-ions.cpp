@@ -33,6 +33,16 @@ int MarsIon::Output::OplusSource::BulkVelocityOffset=-1;
 int MarsIon::Output::OplusSource::TemperatureOffset=-1;
 
 
+//prameters of the flux sampling sphres
+bool MarsIon::Sampling::SphericalShells::SamplingMode=false;
+double MarsIon::Sampling::SphericalShells::SampleSphereRadii[MarsIon::Sampling::SphericalShells::nSphericalShells];
+double MarsIon::Sampling::SphericalShells::minSampledEnergy=0.0;
+double MarsIon::Sampling::SphericalShells::maxSampledEnergy=0.0;
+double MarsIon::Sampling::SphericalShells::dLogEnergy=0.0;
+int MarsIon::Sampling::SphericalShells::nSampledLevels=0;
+cInternalSphericalData MarsIon::Sampling::SphericalShells::SamplingSphericlaShell[MarsIon::Sampling::SphericalShells::nSphericalShells];
+int Earth_Sampling_Fluency_nSampledLevels=0;
+
 void MarsIon::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
   fprintf(fout,",\"OplusSource: Rate\",\"OplusSource: Bulk Velocity[0]\",\"OplusSource: Bulk Velocity[1]\",\"OplusSource: Bulk Velocity[2]\",\"OplusSource: Temperature\"");
 }
@@ -143,6 +153,30 @@ void MarsIon::Init_BeforeParser() {
   //set the injection function
   PIC::BC::UserDefinedParticleInjectionFunction=SourceProcesses::InjectParticles;
 
+  //set output of the particle flux sampling
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SamplingManager,Sampling::PrintManager);
+}
+
+void MarsIon::Init_AfterParser() {
+  //set sampling of the partilce flux
+  if (Sampling::SphericalShells::SamplingMode==true) {
+    //set parameters of the fluency sampling
+    Earth_Sampling_Fluency_nSampledLevels=Sampling::SphericalShells::nSampledLevels;
+    Sampling::SphericalShells::dLogEnergy=log10(Sampling::SphericalShells::maxSampledEnergy/Sampling::SphericalShells::minSampledEnergy)/Sampling::SphericalShells::nSampledLevels;
+
+    //init the shells
+     for (int iShell=0;iShell<Sampling::SphericalShells::nSphericalShells;iShell++) {
+       double sx0[3]={0.0,0.0,0.0};
+
+       Sampling::SphericalShells::SamplingSphericlaShell[iShell].PrintDataStateVector=Sampling::SphericalShells::Output::PrintDataStateVector;
+       Sampling::SphericalShells::SamplingSphericlaShell[iShell].PrintTitle=Sampling::SphericalShells::Output::PrintTitle;
+       Sampling::SphericalShells::SamplingSphericlaShell[iShell].PrintVariableList=Sampling::SphericalShells::Output::PrintVariableList;
+
+       Sampling::SphericalShells::SamplingSphericlaShell[iShell].SetSphereGeometricalParameters(sx0,Sampling::SphericalShells::SampleSphereRadii[iShell]);
+       Sampling::SphericalShells::SamplingSphericlaShell[iShell].Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,1,Sampling::SphericalShells::SamplingSphericlaShell+iShell);
+     }
+   }
+
 }
 
 
@@ -162,7 +196,6 @@ void MarsIon::InitBackgroundData() {
 
     while (node!=NULL) {
       block=node->block;
-
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
         LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -184,6 +217,168 @@ void MarsIon::InitBackgroundData() {
 }
 
 
+//particle mover: call relativistic Boris, ans sample particle flux
+int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+  double xInit[3],xFinal[3];
+  int res,iShell;
+
+  PIC::ParticleBuffer::GetX(xInit,ptr);
+
+  switch (PIC::ParticleBuffer::GetI(ptr)) {
+  case _ELECTRON_SPEC_:
+    res=PIC::Mover::GuidingCenter::Mover_SecondOrder(ptr,dtTotal,startNode);
+    break;
+  default:
+    res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
+  }
+
+  if ((Sampling::SphericalShells::SamplingMode==true)&&(res==_PARTICLE_MOTION_FINISHED_)) {
+    //trajectory integration was successfully completed
+    double r0,r1;
+
+    PIC::ParticleBuffer::GetX(xFinal,ptr);
+    r0=sqrt(xInit[0]*xInit[0]+xInit[1]*xInit[1]+xInit[2]*xInit[2]);
+    r1=sqrt(xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2]);
+
+    //search for a shell that was intersected by the trajectory segment
+    for (iShell=0;iShell<Sampling::SphericalShells::nSphericalShells;iShell++) if ((r0-Sampling::SphericalShells::SampleSphereRadii[iShell])*(r1-Sampling::SphericalShells::SampleSphereRadii[iShell])<=0.0) {
+      //the trajectory segment has intersected a sampling shell
+      //get the point of intersection
+      double l[3],t=-1.0,a=0.0,b=0.0,c=0.0,d4,t1,t2;
+      int idim;
+
+      for (idim=0;idim<3;idim++) {
+        a+=pow(xFinal[idim]-xInit[idim],2);
+        b+=xInit[idim]*(xFinal[idim]-xInit[idim]);
+        c+=pow(xInit[idim],2);
+      }
+
+      c-=pow(Sampling::SphericalShells::SampleSphereRadii[iShell],2);
+      d4=sqrt(b*b-a*c);
+
+      if ((isfinite(d4)==true)&&(a!=0.0)) {
+        //the determinent is real
+        t1=(-b+d4)/a;
+        t2=(-b-d4)/a;
+
+        if ((0.0<t1)&&(t1<1.0)) t=t1;
+        if ((0.0<t2)&&(t2<1.0)) if ((t<0.0)||(t2<t)) t=t2;
+
+        if (t>0.0) {
+          //the point of intersection is found. Sample flux and rigidity at that location
+          double xIntersection[3];
+          long int iSurfaceElementNumber,iZenithElement,iAzimuthalElement;
+
+          for (idim=0;idim<3;idim++) xIntersection[idim]=xInit[idim]+t*(xFinal[idim]-xInit[idim]);
+
+          Sampling::SphericalShells::SamplingSphericlaShell[iShell].GetSurfaceElementProjectionIndex(xIntersection,iZenithElement,iAzimuthalElement);
+          iSurfaceElementNumber=Sampling::SphericalShells::SamplingSphericlaShell[iShell].GetLocalSurfaceElementNumber(iZenithElement,iAzimuthalElement);
+
+          //increment sampling counters
+          double ParticleWeight,Rigidity;
+          int spec;
+
+
+          spec=PIC::ParticleBuffer::GetI(ptr);
+          ParticleWeight=startNode->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+
+
+          #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+          double *t;
+          t=Sampling::SamplingSphericlaShell[iShell].Flux[spec]+iSurfaceElementNumber;
+
+          #pragma omp atomic
+          *t+=ParticleWeight;
+          #else
+          Sampling::SphericalShells::SamplingSphericlaShell[iShell].Flux[spec][iSurfaceElementNumber]+=ParticleWeight;
+          #endif
+
+          //Fluence Sampling Energy level
+          int iEnergyLevel=-1;
+          double Energy,Speed,v[3];
+
+          PIC::ParticleBuffer::GetV(v,ptr);
+          Speed=Vector3D::Length(v);
+          Energy=Relativistic::Speed2E(Speed,PIC::MolecularData::GetMass(spec));
+
+          if ((Sampling::SphericalShells::minSampledEnergy<Energy)&&(Energy<Sampling::SphericalShells::maxSampledEnergy)) {
+            iEnergyLevel=(int)(log10(Energy/Sampling::SphericalShells::minSampledEnergy)/Sampling::SphericalShells::dLogEnergy);
+
+            if ((iEnergyLevel<0)||(iEnergyLevel>=Sampling::SphericalShells::nSampledLevels)) iEnergyLevel=-1;
+          }
+          else iEnergyLevel=-1;
+
+          if (r0>Sampling::SphericalShells::SampleSphereRadii[iShell]) {
+            //the particle moves toward hte Earth
+            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxDown[spec]+iSurfaceElementNumber;
+
+            #pragma omp atomic
+            *t+=ParticleWeight;
+
+            if (iEnergyLevel!=-1) {
+              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber]+iEnergyLevel;
+
+              #pragma omp atomic
+              *t+=ParticleWeight;
+
+              //Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            }
+
+
+            #else //_COMPILATION_MODE__HYBRID_
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluxDown[spec][iSurfaceElementNumber]+=ParticleWeight;
+            if (iEnergyLevel!=-1) Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            #endif //_COMPILATION_MODE__HYBRID_
+
+          }
+          else {
+            //the particle moves outward the Earth
+            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxUp[spec]+iSurfaceElementNumber;
+
+            #pragma omp atomic
+            *t+=ParticleWeight;
+
+            if (iEnergyLevel!=-1) {
+              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber]+iEnergyLevel;
+
+              #pragma omp atomic
+              *t+=ParticleWeight;
+
+              //Sampling::SamplingSphericlaShell[i].ParticleFluencyUp[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            }
+
+            #else //_COMPILATION_MODE__HYBRID_
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluxUp[spec][iSurfaceElementNumber]+=ParticleWeight;
+            if (iEnergyLevel!=-1) Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber][iEnergyLevel]+=ParticleWeight;
+            #endif //_COMPILATION_MODE__HYBRID_
+          }
+
+          //calculate particle rigidity
+          double ElectricCharge;
+
+          ElectricCharge=fabs(PIC::MolecularData::GetElectricCharge(spec));
+
+          if (ElectricCharge>0.0) {
+            Rigidity=Relativistic::Speed2Momentum(Speed,PIC::MolecularData::GetMass(spec))/PIC::MolecularData::GetElectricCharge(spec);
+
+            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+            #pragma omp critical
+            #endif
+            {
+              if ((Sampling::SphericalShells::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber]<0.0) || (Rigidity<Sampling::SphericalShells::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber])) {
+                Sampling::SphericalShells::SamplingSphericlaShell[iShell].minRigidity[spec][iSurfaceElementNumber]=Rigidity;
+              }
+            }
+
+          }
+        }
+      }
+
+    }
+  }
+}
 
 
 
