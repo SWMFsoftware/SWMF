@@ -56,6 +56,13 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   GhostCells=2,2,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
+  !trajecgtory tracing
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=10000
+  
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__RUNTIME_OUTPUT_ _PIC_MODE_ON_
+
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
@@ -72,8 +79,10 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
 
   define _PIC_COUPLER_MODE_ _PIC_COUPLER_MODE__DATAFILE_ 
   define _PIC_COUPLER_DATAFILE_READER_MODE_ _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_ 
+! define _PIC_COUPLER_DATAFILE_READER_MODE_ _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
 
-  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) MarsIon::ParticleMover(ptr,LocalTimeStep,node)
 
   
 #endGeneral
@@ -87,9 +96,20 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   SPICE=off 
   addPhysicalModelHeader=mars-ions.h
 
+  SurfaceDataStructure=SurfaceDataStructure.h
+
 
   Source:DefineSourceID=PHOTO_IONIZATION
   
+#endblock
+
+#block ../input/mars-ions.input.pl
+  SphericalShells=on \\
+    x=1.07*_RADIUS_(_TARGET_),1.09*_RADIUS_(_TARGET_), \\
+       1.5*_RADIUS_(_TARGET_),2.0*_RADIUS_(_TARGET_),5.0*_RADIUS_(_TARGET_)  \\
+    emin=0.001*KeV2J \\
+    emax=40.0*MeV2J \\
+    nLevels=10
 #endblock
 
 
