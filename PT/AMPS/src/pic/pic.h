@@ -4245,11 +4245,16 @@ namespace PIC {
        for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          exit(__LINE__,__FILE__,"not implemented");
+
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
+
+         #elif _PIC_COUPLER_MODE_ ==_PIC_COUPLER_MODE__T96_
+         DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
+
          #else
          exit(__LINE__,__FILE__,"not implemented");
-         #endif
+         #endif //_PIC_COUPLER_MODE_ 
 
          for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=Stencil.Weight[iStencil]*t[idim];
        }
