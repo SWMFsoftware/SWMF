@@ -125,16 +125,21 @@ to accelerate the convergence towards steady state.
 The default is time accurate mode.
 </command>
 
-<command name="LOCALTIMESTEP">
-        <parameter name="UseLocalTimeStep" type="logical" default="F" />
+<command name="SUBCYCLING" alias="LOCALTIMESTEP">
+        <parameter name="UseSubcycling" type="logical" default="F" />
+	<parameter name="UseMaxTimeStep" type="logical" default="T" 
+		   if="$UseSubcycling"/>
+	<parameter name="DtLimitDim" type="real" min="0"
+		   if="$UseSubcycling"/>
 
-#LOCALTIMESTEP
-T               UseLocalTimeStep
+#SUBCYCLING
+T               UseSubcycling (rest read if UseSubcycling is true)
 T		UseMaxTimeStep
+10.0		DtLimitDim
 
 This command controls how the time stepping works in time accurate mode.
 
-If UseLocalTimeStep is true, the time step size in each grid block 
+If UseSubcycling is true, the time step size in each grid block 
 can be different.
 This algorithm is sometimes called "subcycling" because some of the blocks
 will take several small time steps during a single global time step. 
@@ -143,7 +148,7 @@ This should not be confused with the "steady state" mode
 time steps and the result is only valid if a steady state is reached.
 
 If UseMaxTimeStep is true, each blocks takes the time step determined by
-the local stability condition. This algorithm is still under development.
+the local stability condition but limited by the DtLimitDim parameter.
 
 If UseMaxTimeStep is false, then the local time step will be set by
 the AMR level.  For Cartesian grids the time step will be proportional
@@ -155,9 +160,21 @@ the other hand, the normal velocity, normal magnetic/electric field
 etc. used in some source terms are not "corrected", which is different
 from the default uniform time step algorithm.
 
+The DtLimitDim parameter sets an upper limit on the time step for
+all the grid blocks in dimensional time units (typically seconds). 
+Setting this parameter to a reasonable value can greatly improve the 
+accuracy and robustness of the scheme with minimal effect on the 
+computational speed, since typically there are relatively few blocks that 
+would allow very large time steps. Setting DtLimitDim to a very large
+value will result in a global time step based on the block with the 
+largest stable time step.
+
 Currently the subcycling algorithm is either first or second order
 accurate in time depending on the value of nStage set in the
 #TIMESTEPPING command.
+
+For spherical grids the #FIXAXIS command does not work with the subcycling 
+algorithm, on the other hand the #COARSENAXIS command can be used.
 
 See also the #PARTSTEADY and #TIMESTEPLIMIT commands for related
 time stepping algorithms.
