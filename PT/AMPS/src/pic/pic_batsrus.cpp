@@ -70,6 +70,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::Init() {
 void PIC::CPLR::DATAFILE::BATSRUS::Init(const char *fname) {
   int length;
   
+  if (InitFlag==true) exit(__LINE__,__FILE__,"Error: an attempt to open a new data file while the previously opened file has not need closed");
   InitFlag=true;
 
   //get the full file name
@@ -353,6 +354,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     delete [] PhysicalVariableUnitConversionTable;
 
     batsrus2amps_closefile_();
+
+    //the flag is reset the default value after the data file is closed to prevent further operations with the closed file
+    InitFlag=false;
   }
 }
 
