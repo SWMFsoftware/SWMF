@@ -685,6 +685,7 @@ pro animate_data
   common file_head
   common ask_param
   common plot_param
+  common plot_data
   common plotfunc_param
   common colors
 
