@@ -39,7 +39,7 @@ i.e. ">>>" is empty (see Mars test), but ">>>\n>>>" is non-empty
 ===============================================================================
 
 #>
-Name=Mars-ions 
+Name=test/Mars-ions 
 Time=2
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180@@(0+srbwks73465-01)
