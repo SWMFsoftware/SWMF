@@ -381,7 +381,12 @@ namespace Vector3D {
 //Relativistic functions
 namespace Relativistic {
   inline double Speed2E(double Speed,double mass) {
-    return mass*pow(SpeedOfLight,2)*(1.0/sqrt(1.0-pow(Speed/SpeedOfLight,2))-1.0);
+    double beta2,gamma2;
+
+    //relativistic kinetic energy: KE=(gamma-1) \times m_0 \times c^2
+    beta2=pow(Speed/SpeedOfLight,2);
+    gamma2=1.0/(1.0-beta);
+    return beta2*gamma2/(1.0+sqrt(gamma2)); //(gamma-1)=(gamma^2-1)/(gamma+1)
   }
 
   inline double E2Speed(double E,double mass) {
