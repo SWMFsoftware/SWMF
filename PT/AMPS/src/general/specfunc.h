@@ -385,7 +385,7 @@ namespace Relativistic {
 
     //relativistic kinetic energy: KE=(gamma-1) \times m_0 \times c^2
     beta2=pow(Speed/SpeedOfLight,2);
-    gamma2=1.0/(1.0-beta);
+    gamma2=1.0/(1.0-beta2);
     return beta2*gamma2/(1.0+sqrt(gamma2)); //(gamma-1)=(gamma^2-1)/(gamma+1)
   }
 
