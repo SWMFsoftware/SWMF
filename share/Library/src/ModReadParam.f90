@@ -185,7 +185,7 @@ module ModReadParam
   integer           :: iLine=0             ! Current line number
   integer           :: nLine=0             ! Last line number
   integer           :: iSession=0          ! Session number
-  logical           :: DoEcho = .true.     ! Do we echo parameters?
+  logical           :: DoEcho = .false.    ! Do we echo parameters?
 
   ! Storage for all the commands for all sessions:
   ! the command index is increased from 1 to iCommand in every session
@@ -264,6 +264,7 @@ contains
 
     ! Read all input file(s) into memory and broadcast
     if(iProc == 0)then
+       DoEcho = .true.
        iFile = 1
        nLine = 0
        if(DoReadStdin) then
