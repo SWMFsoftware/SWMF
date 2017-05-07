@@ -35,6 +35,25 @@ namespace BATL {
   }
 }
 
+bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  bool ExternalFaces[6];
+  double ExternalNormal[3],ModelParticlesInjectionRate;
+  int nface;
+
+  static double v[3]={-1000.0,000.0,000.0},n=5.0E6,temp=8.0E4;
+
+  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
+    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
+      startNode->GetExternalNormal(ExternalNormal,nface);
+      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,0); //the check is performed for cpecies with the index '0' regardless of the species type
+
+      if (ModelParticlesInjectionRate>0.0) return true;
+    }
+  }
+
+  return false;
+}
+
 void amps_init_mesh() {
   PIC::InitMPI();
 
@@ -47,6 +66,7 @@ void amps_init_mesh() {
   MarsIon::Init_BeforeParser();
 
   //init the particle solver
+  Exosphere::Init_BeforeParser();
   PIC::Init_BeforeParser();
 
   //register the sphere
@@ -115,8 +135,8 @@ void amps_init_mesh() {
       PIC::CPLR::DATAFILE::BATSRUS::UnitLength=BATL::rSphere;
     }
     else for (int idim=0;idim<DIM;idim++) {
-      xmax[idim]=10*_RADIUS_(_TARGET_);
-      xmin[idim]=-10*_RADIUS_(_TARGET_);
+      xmax[idim]=5*_RADIUS_(_TARGET_);
+      xmin[idim]=-5*_RADIUS_(_TARGET_);
     }
   }
 
@@ -197,6 +217,9 @@ void amps_init_mesh() {
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
+  //init bounding block injection list
+  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
+  PIC::BC::InitBoundingBoxInjectionBlockList();
 
   PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
   if (PIC::ThisThread==0) cout << "AMPS' Initialization is complete" << endl;
