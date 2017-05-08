@@ -76,6 +76,24 @@ public :
   double ***SampleSpeciesSurfaceSourceRate;
   double **SampleSpeciesSurfaceAreaDensity,**SampleSpeciesSurfaceReturnFlux,**SampleSpeciesSurfaceInjectionFlux;
 
+  //sampling of the velocity of the particles that passing down into the spehrical shell
+  class cVelocitySample {
+  public:
+    double SampledParticleWeight;
+    double SampledParticleSpeed;
+
+    void flush() {
+      SampledParticleWeight=0.0,SampledParticleSpeed=0.0;
+    }
+
+    cVelocitySample() {
+      flush();
+    }
+  };
+
+  cVelocitySample **VelocitySampleUp;
+  cVelocitySample **VelocitySampleDown;
+
   //bulk velocity of returning particles
   double **SampleReturnFluxBulkSpeed;
 
@@ -106,6 +124,8 @@ public :
     maxIntersectedNodeTimeStep=NULL;
 
     minRigidity=NULL,Flux=NULL;
+
+    VelocitySampleUp=NULL,VelocitySampleDown=NULL;
 
     ParticleFluxUp=NULL,ParticleFluxDown=NULL;
     ParticleFluencyUp=NULL,ParticleFluencyDown=NULL;
@@ -177,6 +197,12 @@ public :
       }
     }
 
+    //flush speed sampling buffers
+    for (s=0;s<nTotalSpecies;s++) for (el=1;el<TotalSurfaceElementNumber;el++) {
+      VelocitySampleUp[s][el].flush();
+      VelocitySampleDown[s][el].flush();
+    }
+
 #if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
     for (el=0;el<TotalSurfaceElementNumber;el++) SurfaceData0[el].flush();
 #endif
@@ -241,6 +267,17 @@ public :
     }
     }
 
+    //allocate buffers for sampling of the particle volocity crossing the shell
+    VelocitySampleUp=new cVelocitySample* [nTotalSpecies];
+    VelocitySampleDown=new cVelocitySample* [nTotalSpecies];
+
+    VelocitySampleUp[0]=new  cVelocitySample[nTotalSpecies*TotalSurfaceElementNumber];
+    VelocitySampleDown[0]=new  cVelocitySample[nTotalSpecies*TotalSurfaceElementNumber];
+
+    for (int spec=1;spec<nTotalSpecies;spec++) {
+      VelocitySampleUp[spec]=VelocitySampleUp[0]+spec*TotalSurfaceElementNumber;
+      VelocitySampleDown[spec]=VelocitySampleDown[0]+spec*TotalSurfaceElementNumber;
+    }
 
     //allocate the buffers for collecting the sodium surface density
     SurfaceElementDesorptionFluxUP=new double*[nTotalSpecies];
