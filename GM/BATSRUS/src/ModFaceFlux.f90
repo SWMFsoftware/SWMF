@@ -2480,7 +2480,7 @@ contains
           Hyp  = State_V(Hyp_)
 
           Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + Normal_D*Hyp
-          Flux_V(Hyp_)    = SpeedHyp2*FullBn
+          Flux_V(Hyp_)    = SpeedHyp2*Bn
 
           if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
        elseif(Hyp_ > 1)then
