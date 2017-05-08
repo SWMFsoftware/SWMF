@@ -355,6 +355,50 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
             #endif //_COMPILATION_MODE__HYBRID_
           }
 
+          //sampling of the speed of the particle
+          if (r0>Sampling::SphericalShells::SampleSphereRadii[iShell]) {
+            //the particle moves toward the Earth
+            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+            double *t,c;
+
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleDown[spec][iSurfaceElementNumber].SampledParticleWeight;
+
+            #pragma omp atomic
+            *t+=ParticleWeight;
+
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleDown[spec][iSurfaceElementNumber].SampledParticleSpeed;
+            c=Speed*ParticleWeight;
+
+            #pragma omp atomic
+            *t+=c;
+
+            #else //_COMPILATION_MODE__HYBRID_
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleDown[spec][iSurfaceElementNumber].SampledParticleWeight+=ParticleWeight;
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleDown[spec][iSurfaceElementNumber].SampledParticleSpeed+=Speed*ParticleWeight;
+            #endif //_COMPILATION_MODE__HYBRID_
+          }
+          else {
+            //the particle moves outward of the Earth
+            #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+            double *t,c;
+
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleUp[spec][iSurfaceElementNumber].SampledParticleWeight;
+
+            #pragma omp atomic
+            *t+=ParticleWeight;
+
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleUp[spec][iSurfaceElementNumber].SampledParticleSpeed;
+            c=Speed*ParticleWeight;
+
+            #pragma omp atomic
+            *t+=c;
+
+            #else //_COMPILATION_MODE__HYBRID_
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleUp[spec][iSurfaceElementNumber].SampledParticleWeight+=ParticleWeight;
+            Sampling::SphericalShells::SamplingSphericlaShell[iShell].VelocitySampleUp[spec][iSurfaceElementNumber].SampledParticleSpeed+=Speed*ParticleWeight;
+            #endif //_COMPILATION_MODE__HYBRID_
+          }
+
           //calculate particle rigidity
           double ElectricCharge;
 
