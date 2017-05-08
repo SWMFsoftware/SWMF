@@ -12,7 +12,18 @@ double GCR_BADAVI2011ASR::Hydrogen::GetDiffFlux(double E) {
   double logE,a,eMeV=E*J2MeV;
   int n;
 
-  if ((eMeV<Emin)||(eMeV>Emax)) exit(__LINE__,__FILE__,"Error: out of the energy limit");
+  const int EPS=1.0E-4;
+
+  if ((eMeV<Emin)||(eMeV>Emax)) {
+    char msg[200];
+
+    if (eMeV>Emin*(1.0-EPS)) eMeV=Emin;
+    else if (eMeV<Emax*(1.0+EPS)) eMeV=Emax; 
+    else {
+      sprintf(msg,"Error: out of the energy limit (E=%e MeV)",eMeV);
+      exit(__LINE__,__FILE__,msg);
+     }
+  }
 
   logE=log10(eMeV/Emin);
   n=(int)(logE/dLogE);
