@@ -2844,8 +2844,33 @@ namespace PIC {
       }
     }
 
+    //use stopping power for determeinig energy loss of simulated species interactinf with the background atmosphere
+    namespace StoppingPowerModel {
+      //Sampling of the model data
+      extern int TotalModelParticleEnergyLossRateOffset;
+
+      //souce and loss rate of the model particles in interactions with the background atmosphere
+      extern double **TotalModelParticleEnergyLossRate;
+
+      //init the model
+      void Init_BeforeParser();
+      void Init_AfterParser();
+
+      //output sampled model parameters
+      void OutputSampledModelData(int);
+      void SampleModelData();
+
+      int RequestSamplingData(int offset);
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+      double GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+      void ModelProcessor();
+    }
+
     //collisions with the background atmosphere
-#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+//#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
     namespace BackgroundAtmosphere {
 
       //the total number of the background species, the mass table, the table of cosntant collision cross sections with the model species
@@ -2856,36 +2881,6 @@ namespace PIC {
 
       inline int GetTotalNumberBackgroundSpecies() {return nTotalBackgroundSpecies;}
       inline double GetBackgroundMolecularMass(int spec) {return BackgroundSpeciesMassTable[spec];}
-
-
-/*
-      //the default value of the user-defined function that calculates the collision cross section
-      #define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_CROSS_SECTION_FUNCTION_(spec,BackgroundSpecieNumber,modelParticleData,BackgroundAtmosphereParticleData,TranslationalEnergy,cr2) (0.0)
-
-      //get local, cell mean, and cell maximum density of the background species
-      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_LOCAL_DENSITY_(x,BackgroundSpecieNumber,cell,node) (0.0)
-      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_CELL_MEAN_DENSITY_(BackgroundSpecieNumber,cell,node) (0.0)
-      #define _PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_SPECIES_CELL_MAXIMUM_DENSITY_(BackgroundSpecieNumber,cell,node) (0.0)
-
-      //the user-defined function for calcualtion of the scattering angle
-      #define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_SCATTERING_ANGLE_(Vrel,TranslationalEnergy,spec,BackgroundSpecieNumber) (0.0)
-
-      //the condition the remove the model particle from the simulation after the collision with the background particle
-      #define _PIC_BACKGROUND_ATMOSPHERE__REMOVE_CONDITION_MODEL_PARTICLE_(modelParticleData) (true)
-
-      //the conditions to inject the background atmosphere particle after a collision with the model particle
-      #define _PIC_BACKGROUND_ATMOSPHERE__INJECT_CONDITION_BACKGROUND_PARTICLE_(BackgroundAtmosphereParticleData) (false)
-
-      //Evaluate GetSigmaCrMax in a cell
-      #define _PIC_BACKGROUND_ATMOSPHERE__GET_SIGMA_CR_MAX(spec,BackgroundSpecieNumber,modelParticleData) (0.0)
-
-      //generate the background atmosphere particle
-      #define _PIC_BACKGROUND_ATMOSPHERE__GENERATE_BACKGROUND_PARTICLE_(BackgroundAtmosphereParticleData,BackgroundSpecieNumber,cell,node) (exit(__LINE__,__FILE__,"Error: _PIC_BACKGROUND_ATMOSPHERE__GENERATE_BACKGROUND_PARTICLE_ was not set"))
-
-      //define the mode for loading the definition file
-      #define _PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_ _PIC_MODE_OFF_
-      #define _PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_ "UserDefinition.PIC.BackgroundAtmosphere.h"
-*/
 
       //define functions for calculation of the properties of the background atmosphere species
       double GetCollisionCrossSectionBackgoundAtmosphereParticle(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData,PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,double TranslationalEnergy,double cr2);
@@ -2901,12 +2896,6 @@ namespace PIC {
 
       //the conditions to keep the background particle or remove a model particle after a collision
       bool KeepConditionModelParticle(PIC::ParticleBuffer::byte *ModelParticleData);
-
-      //use stopping power for determeinig energy loss of simulated species interactinf with the background atmosphere
-      double GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-      void StoppingPowerProcessor();
-
-
 
       //include the user defined properties of the background atmosphere
       #if _PIC_BACKGROUND_ATMOSPHERE__LOAD_USER_DEFINITION__MODE_ ==  _PIC_MODE_ON_
@@ -2937,7 +2926,7 @@ namespace PIC {
       void CollisionProcessor();
       void RemoveThermalBackgroundParticles();
     }
-#endif
+//#endif
 
   }
 
