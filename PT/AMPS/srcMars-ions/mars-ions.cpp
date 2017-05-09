@@ -229,7 +229,7 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
     res=PIC::Mover::GuidingCenter::Mover_SecondOrder(ptr,dtTotal,startNode);
     break;
   default:
-    res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
+    res=PIC::Mover::Boris(ptr,dtTotal,startNode);
   }
 
   if ((Sampling::SphericalShells::SamplingMode==true)&&(res==_PARTICLE_MOTION_FINISHED_)) {
@@ -285,7 +285,7 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
 
           #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
           double *t;
-          t=Sampling::SamplingSphericlaShell[iShell].Flux[spec]+iSurfaceElementNumber;
+          t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].Flux[spec][iSurfaceElementNumber];
 
           #pragma omp atomic
           *t+=ParticleWeight;
@@ -311,13 +311,13 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
           if (r0>Sampling::SphericalShells::SampleSphereRadii[iShell]) {
             //the particle moves toward hte Earth
             #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxDown[spec]+iSurfaceElementNumber;
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluxDown[spec][iSurfaceElementNumber];
 
             #pragma omp atomic
             *t+=ParticleWeight;
 
             if (iEnergyLevel!=-1) {
-              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber]+iEnergyLevel;
+              t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluencyDown[spec][iSurfaceElementNumber][iEnergyLevel];
 
               #pragma omp atomic
               *t+=ParticleWeight;
@@ -335,13 +335,13 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
           else {
             //the particle moves outward the Earth
             #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-            t=Sampling::SamplingSphericlaShell[iShell].ParticleFluxUp[spec]+iSurfaceElementNumber;
+            t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluxUp[spec][iSurfaceElementNumber];
 
             #pragma omp atomic
             *t+=ParticleWeight;
 
             if (iEnergyLevel!=-1) {
-              t=Sampling::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber]+iEnergyLevel;
+              t=&Sampling::SphericalShells::SamplingSphericlaShell[iShell].ParticleFluencyUp[spec][iSurfaceElementNumber][iEnergyLevel];
 
               #pragma omp atomic
               *t+=ParticleWeight;
