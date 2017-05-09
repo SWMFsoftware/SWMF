@@ -242,7 +242,7 @@ void amps_init() {
 
 
    //init the particle buffer
-   PIC::ParticleBuffer::Init(10000000);
+//   PIC::ParticleBuffer::Init(10000000);
    int LastDataOutputFileNumber=-1;
 
 
