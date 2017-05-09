@@ -197,10 +197,10 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
 #pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (LocalCellNumber, \
       node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
-      block,localTimeStep,EndTime,StartTime,thread) \
+      block,EndTime,StartTime,thread) \
      \
-    shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
-      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
+    shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
+      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh, \
       PIC::Mesh::collectingCellSampleDataPointerOffset, \
       PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
 #else
@@ -208,8 +208,8 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
       node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, block, \
       EndTime,StartTime,thread) \
      \
-    shared(centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
-      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh,ModelParticleEnergyExchangeRate, \
+    shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
+      PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh, \
       PIC::Mesh::collectingCellSampleDataPointerOffset, \
       PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
 #endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
