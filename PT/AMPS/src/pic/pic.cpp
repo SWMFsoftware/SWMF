@@ -222,6 +222,8 @@ int PIC::TimeStep() {
   #endif //_PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_
 
   BackgroundAtmosphereCollisionTime=MPI_Wtime()-BackgroundAtmosphereCollisionTime;
+#elif _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__STOPPING_POWER_
+  MolecularCollisions::StoppingPowerModel::ModelProcessor();
 #endif //_PIC_BACKGROUND_ATMOSPHERE_MODE_
 
   //particle photochemistry model
@@ -1686,6 +1688,11 @@ void PIC::Init_BeforeParser() {
   PIC::MolecularCollisions::BackgroundAtmosphere::Init_BeforeParser();
 #endif
 
+  //init the stopping power model
+#if  _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
+  PIC::MolecularCollisions::StoppingPowerModel::Init_BeforeParser();
+#endif
+
   //init the particle collision procedure
 #if _PIC__PARTICLE_COLLISION_MODEL__MODE_ == _PIC_MODE_ON_
   PIC::MolecularCollisions::ParticleCollisionModel::Init();
@@ -1767,6 +1774,11 @@ void PIC::Init_AfterParser() {
   //init the background atmosphere model
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
   PIC::MolecularCollisions::BackgroundAtmosphere::Init_AfterParser();
+#endif
+
+  //init the stopping power model
+#if  _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
+  PIC::MolecularCollisions::StoppingPowerModel::Init_AfterParser();
 #endif
 
   //init particle trajectory sampling
