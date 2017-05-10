@@ -1,6 +1,6 @@
 
 #main
-SpeciesList=o_plus 
+SpeciesList=o_plus,h_plus 
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=off ! on,off 
@@ -48,11 +48,13 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   InitialSampleLength=800
   TestRunTotalIteration=50
 
+  RequestedParticleBufferLength=1500000
+
 ! ReferenceInjectionParticleNumber=200
 ! MaxMeshRefinmentLevel=8! 2 !4
 ! EnforceRequestedMeshResolution=off !on,off
 
-  BlockCells=5,5,5
+  BlockCells=6,6,6
   GhostCells=2,2,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
@@ -84,11 +86,24 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
 ! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) MarsIon::ParticleMover(ptr,LocalTimeStep,node)
 
+define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
   
 #endGeneral
 
+#interface
+  cell_centered_linear_interpolation_mode=amps 
+  cell_centered_linear_interpolation_src=default
+#endinterface
 
 #include species.input
+
+#BackgroundSpecies
+  BackgroundSpecies=StoppingPower !!on,off
+
+  SpeciesList=CO2 
+#endBackgroundSpecies
+
+
 
 #block ../exosphere.pl
   define _TARGET_ _MARS_
@@ -98,8 +113,13 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Mar
 
   SurfaceDataStructure=SurfaceDataStructure.h
 
-
   Source:DefineSourceID=PHOTO_IONIZATION
+
+  !injection of the background solar wind protons
+  BackgroundIonInjection=on \\ !on,off
+    InjectionMode=SteadyState \\ ! SteadyState, TimeDependent
+    vmax=1500.0e3 \\ !the maximum velocity of the injected particles
+    IonNumberDensityFraction(H_PLUS)=1.0
   
 #endblock
 
