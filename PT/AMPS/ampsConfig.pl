@@ -2789,6 +2789,9 @@ sub ReadBackgroundAtmosphereBlock {
       elsif ($s0 eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
       }
+      elsif ($s0 eq "STOPPINGPOWER") {
+        ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__STOPPING_POWER_","pic/picGlobal.dfn");
+      }
       else {
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
