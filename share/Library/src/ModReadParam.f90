@@ -403,7 +403,11 @@ contains
     else
        NameComp = ''
     end if
-    if(present(iLineIn)) iLine = iLineIn
+    if(present(iLineIn))then
+       iLine = iLineIn
+    else
+       iLine = 0
+    end if
     if(present(nLineIn))then
        nLine     = nLineIn
     else
