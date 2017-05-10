@@ -4082,7 +4082,9 @@ namespace PIC {
 
         void GetDomainLimits(double *xmin,double *xmax);
         void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-
+	void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+	
+	
 	      //the offsets of the physical variables in the .idl file
         extern int rhoBATSRUS2AMPS;
         extern int mxBATSRUS2AMPS,myBATSRUS2AMPS,mzBATSRUS2AMPS;
