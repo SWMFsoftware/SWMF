@@ -150,6 +150,8 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
 
   // as a final step, need to sort schedule by time
   sort(Schedule.begin(), Schedule.end(), _compare);
+ 
+  
 }
 
 //=============================================================================
@@ -231,6 +233,9 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
     ARMS::LoadDataFile(fname);
     break;
+  case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+    BATSRUS::LoadDataFile(fname);
+    break;
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
@@ -265,6 +270,7 @@ void PIC::CPLR::DATAFILE::Init() {
   Offset::InitFlag=true;
 
   //initialize common offsets
+
   PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
   PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
   PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
