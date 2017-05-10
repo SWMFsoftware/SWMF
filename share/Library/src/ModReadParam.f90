@@ -239,11 +239,8 @@ contains
     ! If true, then read for stdin.
     logical:: DoReadStdin
     
-    logical :: Done=.false., DoInclude
+    logical :: DoInclude
     !-----------------------------------------------------------------------
-    if(Done)call CON_stop(NameSub//&
-         ' ERROR: the parameter file should be read only once!')
-
     if(present(iCommIn))then
        iComm = iCommIn
     else
@@ -365,8 +362,6 @@ contains
 
     if(iProc==0)write(*,'(a,i4,a)') NameSub// &
          ': read and broadcast nLine=',nLine,' lines of text'
-
-    Done = .true.
 
   end subroutine read_file
 
