@@ -70,7 +70,6 @@ void PIC::CPLR::DATAFILE::BATSRUS::Init() {
 void PIC::CPLR::DATAFILE::BATSRUS::Init(const char *fname) {
   int length;
   
-  if (InitFlag==true) exit(__LINE__,__FILE__,"Error: an attempt to open a new data file while the previously opened file has not need closed");
   InitFlag=true;
 
   //get the full file name
@@ -83,6 +82,20 @@ void PIC::CPLR::DATAFILE::BATSRUS::Init(const char *fname) {
   //init BATSRUS' fiile reader
   for (length=0;length<_MAX_STRING_LENGTH_PIC_;length++) if (filename[length]==0) break;
   batsrus2amps_read_file_header_(filename,&length);
+
+  //init variable index 
+  rhoBATSRUS2AMPS=-2;
+  mxBATSRUS2AMPS =-2;
+  myBATSRUS2AMPS =-2;
+  mzBATSRUS2AMPS =-2;
+  uxBATSRUS2AMPS =-2;
+  uyBATSRUS2AMPS =-2;
+  uzBATSRUS2AMPS =-2;
+  bxBATSRUS2AMPS =-2;
+  byBATSRUS2AMPS =-2;
+  bzBATSRUS2AMPS =-2;
+  pBATSRUS2AMPS  =-2;
+
 } 
 
 void  PIC::CPLR::DATAFILE::BATSRUS::GetDomainLimits(double *xmin,double *xmax) {
@@ -151,24 +164,29 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
       if (strcmp(vname,"ux")==0) uxBATSRUS2AMPS=n;
       if (strcmp(vname,"uy")==0) uyBATSRUS2AMPS=n;
       if (strcmp(vname,"uz")==0) uzBATSRUS2AMPS=n;
-
+      
       if (strcmp(vname,"bx")==0) bxBATSRUS2AMPS=n;
       if (strcmp(vname,"by")==0) byBATSRUS2AMPS=n;
       if (strcmp(vname,"bz")==0) bzBATSRUS2AMPS=n;
-
+      
       if (strcmp(vname,"p")==0) pBATSRUS2AMPS=n;
 
       i0=i1;
       while ((NameVar[i0]!=0)&&(NameVar[i0]==' ')) i0++;
     }
 
+   
+
     //the first element in the state vector is the "weight" -> adjust the offsets
     rhoBATSRUS2AMPS++;
     mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
     uxBATSRUS2AMPS++,uyBATSRUS2AMPS++,uzBATSRUS2AMPS++;
-    bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
-    pBATSRUS2AMPS++;
-
+    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
+      bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
+      pBATSRUS2AMPS++;
+    }else if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_!=_PIC_MODE_OFF_){
+      exit(__LINE__,__FILE__,"Error:_PIC_COUPLER_DATAFILE_READ_B_FIELD_ is not well defined.");
+    }
     //check whether the state vector containes all nessesary physical quantaties
     if (rhoBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: rho is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
@@ -176,14 +194,16 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     if ((myBATSRUS2AMPS==-1)&&(uyBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: My or uy is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
     if ((mzBATSRUS2AMPS==-1)&&(uzBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mz or uz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
-    if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if (bzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){
+      if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+      if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+      if (bzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    }
 
     if (pBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: p is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
 
-
+  
     //parse the unit line
     char UnitVar[_MAX_STRING_LENGTH_PIC_],uname[200];
 
@@ -206,6 +226,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
       // planetary units --------
       if (strcmp(uname,"r")==0) --n; //the special coordinate is not a part of the vector that is returned by the interpolation routine
+      if (strcmp(uname,"km")==0) --n; //represents the location
       if (strcmp(uname,"mp/cc")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E6/PlasmaSpeciesAtomicMass;
       if (strcmp(uname,"km/s")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E3;
       if (strcmp(uname,"nt")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E-9;
@@ -225,8 +246,13 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     }
 
     //check whether the unit conversion factors are defined for all physical variables
-    if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || \
-        (PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[byBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[bzBATSRUS2AMPS]==0.0) || \
+    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_== _PIC_MODE_ON_){
+      if ((PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[byBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[bzBATSRUS2AMPS]==0.0)) {
+	exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
+      }
+    }
+ 
+    if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || 
         (PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]==0.0)) {
       exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
     }
@@ -235,8 +261,8 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
        ((uxBATSRUS2AMPS>=0) && ((PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[uyBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[uzBATSRUS2AMPS]==0.0))) ) {
       exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
     }
-
-
+    
+       
     std::cout << PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset<< "  " << PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset << "  " << PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset <<  "   "  <<  PIC::CPLR::DATAFILE::Offset::MagneticField.offset <<  "   " << PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset << std::endl;
 
 
@@ -308,8 +334,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
         //bulk velocity and magnetic field
         for (idim=0;idim<3;idim++) {
-          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
-
+	  if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){ 
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
+	  }
           if (uxBATSRUS2AMPS>=0) {
             *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=State[uxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS];
           }
@@ -319,33 +346,50 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
         }
 
         //calculate the electric field
-        double *E,*B,*v;
+	if(_PIC_COUPLER_DATAFILE_CALC_E_FIELD_== _PIC_MODE_ON_){
+	  if(_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){       
+	      double *E,*B,*v;
 
-        v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
-        B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
-        E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+	      v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
+	      B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
+	      E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+      
+	      E[0]=-(v[1]*B[2]-B[1]*v[2]);
+	      E[1]=+(v[0]*B[2]-B[0]*v[2]);
+	      E[2]=-(v[0]*B[1]-B[0]*v[1]);
+	    }else exit(__LINE__,__FILE__,"Error: B field is not read from BATSRUS output");
+	    
+	    }else if(_PIC_COUPLER_DATAFILE_CALC_E_FIELD_== _PIC_MODE_OFF_){
+	      if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset!=-1){
+		double *E;
+		E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+		E[0]=0.0;
+		E[1]=0.0;
+		E[2]=0.0;
+	      }
+	  
+	    }else exit(__LINE__,__FILE__,"Error:_PIC_COUPLER_DATAFILE_CALC_E_FIELD_ is not well defined.");
+	  
+	}
+	else {
+	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
+	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
+	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
 
-        E[0]=-(v[1]*B[2]-B[1]*v[2]);
-        E[1]=+(v[0]*B[2]-B[0]*v[2]);
-        E[2]=-(v[0]*B[1]-B[0]*v[1]);
-      }
-      else {
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
-
-        for (idim=0;idim<3;idim++) {
-          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
-          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
-        }
-      }
+	  for (idim=0;idim<3;idim++) {
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
+	    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){
+	      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+	    }
+	  }
+	}
     }
   }
   else {
     for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) LoadDataFile(startNode->downNode[nDownNode]);
   }
-
-
+ 
+  
   if (startNode==PIC::Mesh::mesh.rootTree) {
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
@@ -355,9 +399,15 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
     batsrus2amps_closefile_();
 
+   
     //the flag is reset the default value after the data file is closed to prevent further operations with the closed file
     InitFlag=false;
   }
+}
+
+void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(const char *fname, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  Init(fname);
+  LoadDataFile();
 }
 
 
