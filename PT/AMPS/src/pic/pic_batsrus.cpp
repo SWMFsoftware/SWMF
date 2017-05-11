@@ -181,12 +181,14 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     rhoBATSRUS2AMPS++;
     mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
     uxBATSRUS2AMPS++,uyBATSRUS2AMPS++,uzBATSRUS2AMPS++;
+
     if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
       bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
       pBATSRUS2AMPS++;
-    }else if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_!=_PIC_MODE_OFF_){
+    } else if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_!=_PIC_MODE_OFF_) {
       exit(__LINE__,__FILE__,"Error:_PIC_COUPLER_DATAFILE_READ_B_FIELD_ is not well defined.");
     }
+
     //check whether the state vector containes all nessesary physical quantaties
     if (rhoBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: rho is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
@@ -194,15 +196,13 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     if ((myBATSRUS2AMPS==-1)&&(uyBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: My or uy is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
     if ((mzBATSRUS2AMPS==-1)&&(uzBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mz or uz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
-    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){
+    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
       if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
       if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
       if (bzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
     }
 
     if (pBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: p is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-
-
   
     //parse the unit line
     char UnitVar[_MAX_STRING_LENGTH_PIC_],uname[200];
@@ -246,14 +246,13 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     }
 
     //check whether the unit conversion factors are defined for all physical variables
-    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_== _PIC_MODE_ON_){
+    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_== _PIC_MODE_ON_) {
       if ((PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[byBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[bzBATSRUS2AMPS]==0.0)) {
-	exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
+        exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
       }
     }
  
-    if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || 
-        (PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]==0.0)) {
+    if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]==0.0)) {
       exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
     }
 
@@ -264,8 +263,6 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     
        
     std::cout << PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset<< "  " << PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset << "  " << PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset <<  "   "  <<  PIC::CPLR::DATAFILE::Offset::MagneticField.offset <<  "   " << PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset << std::endl;
-
-
   } //end of the initialization
 
 
@@ -334,9 +331,11 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
         //bulk velocity and magnetic field
         for (idim=0;idim<3;idim++) {
-	  if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){ 
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
-	  }
+          if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
+            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
+           }
+           else if (PIC::CPLR::DATAFILE::Offset::MagneticField.offset!=-1) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+
           if (uxBATSRUS2AMPS>=0) {
             *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=State[uxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS];
           }
@@ -346,43 +345,50 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
         }
 
         //calculate the electric field
-	if(_PIC_COUPLER_DATAFILE_CALC_E_FIELD_== _PIC_MODE_ON_){
-	  if(_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){       
-	      double *E,*B,*v;
+        switch (_PIC_COUPLER_DATAFILE_CALC_E_FIELD_) {
+        case _PIC_MODE_ON_:
+          if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
+            double *E,*B,*v;
 
-	      v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
-	      B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
-	      E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+            v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
+            B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
+            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
       
-	      E[0]=-(v[1]*B[2]-B[1]*v[2]);
-	      E[1]=+(v[0]*B[2]-B[0]*v[2]);
-	      E[2]=-(v[0]*B[1]-B[0]*v[1]);
-	    }else exit(__LINE__,__FILE__,"Error: B field is not read from BATSRUS output");
-	    
-	    }else if(_PIC_COUPLER_DATAFILE_CALC_E_FIELD_== _PIC_MODE_OFF_){
-	      if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset!=-1){
-		double *E;
-		E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
-		E[0]=0.0;
-		E[1]=0.0;
-		E[2]=0.0;
-	      }
-	  
-	    }else exit(__LINE__,__FILE__,"Error:_PIC_COUPLER_DATAFILE_CALC_E_FIELD_ is not well defined.");
-	  
-	}
-	else {
-	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
-	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
-	  *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
+            E[0]=-(v[1]*B[2]-B[1]*v[2]);
+            E[1]=+(v[0]*B[2]-B[0]*v[2]);
+            E[2]=-(v[0]*B[1]-B[0]*v[1]);
+          }
+          else exit(__LINE__,__FILE__,"Error: B field is not read from BATSRUS output");
 
-	  for (idim=0;idim<3;idim++) {
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
-	    if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_){
-	      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
-	    }
-	  }
-	}
+          break;
+        case _PIC_MODE_OFF_:
+          if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset!=-1) {
+            double *E;
+
+            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+            E[0]=0.0;
+            E[1]=0.0;
+            E[2]=0.0;
+          }
+
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error:_PIC_COUPLER_DATAFILE_CALC_E_FIELD_ is not well defined.");
+        }
+      }
+      else {
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
+
+        for (idim=0;idim<3;idim++) {
+          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
+
+          if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
+            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+          }
+        }
+      }
     }
   }
   else {
