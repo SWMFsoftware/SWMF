@@ -6,6 +6,7 @@
 //the general functions for the pic solver
 
 #include "pic.h"
+#include "global.h"
 #include "PhotolyticReactions.h"
 
 
@@ -21,9 +22,10 @@ int PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationC
 PIC::Sampling::ExternalSamplingLocalVariables::fSamplingProcessor *PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor=NULL;
 PIC::Sampling::ExternalSamplingLocalVariables::fPrintOutputFile *PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile=NULL;
 
-
 int PIC::Sampling::minIterationNumberForDataOutput=0;
 bool *PIC::Sampling::SaveOutputDataFile=NULL;
+
+int *PIC::Sampling::SimulatedSpeciesParticleNumber=NULL;
 
 
 //====================================================
@@ -333,6 +335,7 @@ int PIC::TimeStep() {
     long int nInjectedParticles;
     double UserDefinedMPI_RoutineExecutionTime;
     double UserDefinedParticleProcessingTime;
+    int SimulatedModelParticleNumber[PIC::nTotalSpecies];
   };
 
   struct cStatExchangeControlParameters {
@@ -365,6 +368,8 @@ int PIC::TimeStep() {
     localRunStatisticData.nInjectedParticles=PIC::BC::nTotalInjectedParticles;
     localRunStatisticData.UserDefinedMPI_RoutineExecutionTime=UserDefinedMPI_RoutineExecutionTime;
     localRunStatisticData.UserDefinedParticleProcessingTime=UserDefinedParticleProcessingTime;
+
+    for (int s=0;s<PIC::nTotalSpecies;s++) localRunStatisticData.SimulatedModelParticleNumber[s]=PIC::Sampling::SimulatedSpeciesParticleNumber[s];
 
     PIC::BC::nTotalInjectedParticles=0;
 
@@ -449,6 +454,13 @@ int PIC::TimeStep() {
       if (nExchangeStatisticsIterationNumberSteps!=0) nTotalInjectedParticels/=nExchangeStatisticsIterationNumberSteps;
 
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Total number of particles: %ld\n",nTotalModelParticles);
+
+      //output the number of model particles for each species individually
+      for (thread=1;thread<PIC::nTotalThreads;thread++) for (int s=0;s<PIC::nTotalSpecies;s++) ExchangeBuffer[0].SimulatedModelParticleNumber[s]+=ExchangeBuffer[thread].SimulatedModelParticleNumber[s];
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Total number of model particles of each species:\n");
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:i\tSymbol\tParticle Number:\n");
+      for (int s=0;s<PIC::nTotalSpecies;s++) fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%s\t%ld\n",s,PIC::MolecularData::GetChemSymbol(s),ExchangeBuffer[0].SimulatedModelParticleNumber[s]);
+
 
       //exchange statistics of the particle production
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Species dependent particle production:\nSpecie\tInjected Particles\tProductionRate\tMassProductionRate\n");
@@ -657,6 +669,24 @@ void PIC::Sampling::Sampling() {
   const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
 
 
+  //reset the particle counter
+  static int **localSimulatedSpeciesParticleNumber=NULL;
+
+  if (localSimulatedSpeciesParticleNumber==NULL) {
+    localSimulatedSpeciesParticleNumber=new int *[PIC::nTotalThreadsOpenMP];
+    localSimulatedSpeciesParticleNumber[0]=new int [PIC::nTotalThreadsOpenMP*PIC::nTotalSpecies];
+
+    for (int iThreadOpenMP=0;iThreadOpenMP<PIC::nTotalThreadsOpenMP;iThreadOpenMP++) {
+      localSimulatedSpeciesParticleNumber[iThreadOpenMP]=localSimulatedSpeciesParticleNumber[0]+iThreadOpenMP*PIC::nTotalSpecies;
+
+      for (int s=0;s<PIC::nTotalSpecies;s++) localSimulatedSpeciesParticleNumber[iThreadOpenMP][s]=0;
+    }
+  }
+  else {
+    for (int iThreadOpenMP=0;iThreadOpenMP<PIC::nTotalThreadsOpenMP;iThreadOpenMP++) {
+      for (int s=0;s<PIC::nTotalSpecies;s++) localSimulatedSpeciesParticleNumber[iThreadOpenMP][s]=0;
+    }
+  }
 
   //parallel efficientcy measure
 //#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
@@ -677,7 +707,7 @@ void PIC::Sampling::Sampling() {
 #pragma omp parallel for schedule(dynamic,1) reduction(+:nTotalSampledParticles) default(none) \
   private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,sampledVelocityOffset,node, \
     sampledVelocity2Offset,tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeProcessingTime,TreeNodeTotalParticleNumber)  \
-  shared (PIC::Mesh::mesh,sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset,sampledParticleVelocityRelativeOffset, \
+  shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh,sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset,sampledParticleVelocityRelativeOffset, \
      DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable,sampledParticleVelocity2RelativeOffset,sampleSetDataLength,sampledParticleSpeedRelativeOffset,collectingCellSampleDataPointerOffset,ParticleDataLength, \
      PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
      PIC::Mesh::DatumParticleParallelVelocity2,PIC::Mesh::DatumParticleParallelVelocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
@@ -686,14 +716,17 @@ void PIC::Sampling::Sampling() {
 
 #endif //_COMPILATION_MODE_
   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    int iThreadOpenMP=0;
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
+
+     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+     iThreadOpenMP=omp_get_thread_num();
+     #endif
 
 //  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
     
     memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
-    
-    
     
     
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
@@ -821,6 +854,8 @@ void PIC::Sampling::Sampling() {
 
               s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData);
               v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData);
+
+              localSimulatedSpeciesParticleNumber[iThreadOpenMP][s]++;
 
               LocalParticleWeight=block->GetLocalParticleWeight(s);
               LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
@@ -977,6 +1012,18 @@ void PIC::Sampling::Sampling() {
 
 //    node=node->nextNodeThisThread;
   }
+
+
+  //collect the model parricle numbers individual for each species from determined by all OpenMP threads
+  for (int s=0;s<PIC::nTotalSpecies;s++) {
+    SimulatedSpeciesParticleNumber[s]=0;
+
+    for (int iThreadOpenMP=0;iThreadOpenMP<PIC::nTotalThreadsOpenMP;iThreadOpenMP++) {
+      SimulatedSpeciesParticleNumber[s]+=localSimulatedSpeciesParticleNumber[iThreadOpenMP][s];
+    }
+  }
+
+
 #elif _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__DURING_PARTICLE_MOTION_
   //do nothing
 #else
@@ -1765,6 +1812,10 @@ void PIC::Init_AfterParser() {
     PIC::BC::nInjectedParticles[spec]=0,PIC::BC::ParticleProductionRate[spec]=0.0;
     PIC::BC::ParticleMassProductionRate[spec]=0.0;
   }
+
+  //init buffer sor sampling of the simulated particle number
+  PIC::Sampling::SimulatedSpeciesParticleNumber=new int [PIC::nTotalSpecies];
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) PIC::Sampling::SimulatedSpeciesParticleNumber[spec]=0;
 
   //init the model of volume particle injections
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_

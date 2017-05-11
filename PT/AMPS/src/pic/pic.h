@@ -2704,6 +2704,9 @@ namespace PIC {
     //the number of the first output file that is printed
     static const int FirstPrintedOutputFile=-1;
 
+    //sample the total number of the modeled particle for each simulated species individually
+    extern int *SimulatedSpeciesParticleNumber;
+
     namespace ExternalSamplingLocalVariables {
 
       //the external procedures for sampling particle data
