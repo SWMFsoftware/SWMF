@@ -209,17 +209,17 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
   // compose a name for the next file to load
   //  char fullname[_MAX_STRING_LENGTH_PIC_];
   //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
-  PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
+  if (iFileLoadNext<nFile) PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
 
   #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   //swap data offsets
   PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
 
-  if(CurrDataFileOffset == 0) {
+  if (CurrDataFileOffset == 0) {
     CurrDataFileOffset = NextDataFileOffset;
     NextDataFileOffset = 0;
   }
-  else{
+  else {
     NextDataFileOffset = CurrDataFileOffset;
     CurrDataFileOffset = 0;
   }
@@ -230,7 +230,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
   iFileLoadNext++;
 
   //check whether the last file has been reached
-  ReachedLastFile = iFileLoadNext >= nFile;
+  ReachedLastFile = (iFileLoadNext >= nFile) ? true : false;
 }
 
 
