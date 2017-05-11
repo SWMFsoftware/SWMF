@@ -268,35 +268,44 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
         #endif //_PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_
 
         //get the change of the particle energy and the new velocity vector
-        double l,dE,speed2,SpeedOld,SpeedNew,c0;
+        double l=0.0,dl,lTotal,dE,dSpeed2,SpeedOld2,SpeedNew2,c0,Speed2Init;
 
-        speed2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
-        l=sqrt(speed2)*node->block->GetLocalTimeStep(spec);
-        dE=StoppingPower*l;
+        SpeedOld2=v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+        lTotal=sqrt(SpeedOld2)*node->block->GetLocalTimeStep(spec);
+        dl=lTotal;
+        SpeedNew2=SpeedOld2;
+        Speed2Init=SpeedOld2;
 
-        SpeedOld=sqrt(speed2);
-        SpeedNew=speed2-dE*2.0/PIC::MolecularData::GetMass(spec);
+        while (l<lTotal) {
+          dE=StoppingPower*dl;
+          dSpeed2=dE*2.0/PIC::MolecularData::GetMass(spec);
 
-        if (SpeedNew<0.0) {
-          //the particle has been stopped -> remove it
-          long int nextModelParticle;
+          if ((SpeedOld2-dSpeed2<0.0)||(fabs(dSpeed2/SpeedOld2)>1.0E-1)) {
+            if (dl>1.0E-4*lTotal) dl/=2.0;
+            else {
+              SpeedNew2=SpeedOld2;
+              break;
+            }
+          }
+          else {
+            l+=dl;
+            SpeedNew2=SpeedOld2-dSpeed2;
+            for (idim=0,c0=sqrt(SpeedNew2/SpeedOld2);idim<3;idim++) v[idim]*=c0;
 
-          nextModelParticle=PIC::ParticleBuffer::GetNext(modelParticle);
-          PIC::ParticleBuffer::DeleteParticle(modelParticle,block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]);
+            #if _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
+            StoppingPower=GetStoppingPower(x,v,spec,cell,node);
+            #endif
 
-          modelParticle=nextModelParticle;
-          continue;
+            SpeedOld2=SpeedNew2;
+          }
         }
-
-        SpeedNew=sqrt(SpeedNew);
-        for (idim=0,c0=SpeedNew/SpeedOld;idim<3;idim++) v[idim]*=c0;
 
         //save the velocity vector with in the particle data vector
         PIC::ParticleBuffer::SetV(v,modelParticleData);
 
         //sample the ebergy exchange rate
         //sample energy exchabge rate
-        double EnergyLoss=0.5*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]-speed2)*PIC::MolecularData::GetMass(spec)*
+        double EnergyLoss=0.5*(Speed2Init-(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]))*PIC::MolecularData::GetMass(spec)*
             node->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(modelParticleData)/
             node->block->GetLocalTimeStep(spec);
 
