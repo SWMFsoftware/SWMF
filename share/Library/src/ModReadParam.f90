@@ -398,11 +398,11 @@ contains
     else
        NameComp = ''
     end if
-    if(present(iLineIn))then
-       iLine = iLineIn
-    else
-       iLine = 0
-    end if
+
+    ! Set iLine to 0 for session 1 only (multi-session uses previous value)
+    if(iSession == 1) iLine = 0
+    if(present(iLineIn)) iLine = iLineIn
+
     if(present(nLineIn))then
        nLine     = nLineIn
     else
