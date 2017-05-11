@@ -14,190 +14,25 @@
 
 //number of file to be loaded
 int PIC::CPLR::DATAFILE::MULTIFILE::nFile=0;
+
 //schedule for loading multiple data files
 vector<PIC::CPLR::DATAFILE::MULTIFILE::cScheduleItem> PIC::CPLR::DATAFILE::MULTIFILE::Schedule;
+
 //name of file with table defining schedule
 char PIC::CPLR::DATAFILE::MULTIFILE::FileTable[_MAX_STRING_LENGTH_PIC_]="Schedule";
 
 //variable to track whether to break simulation at the last datafile
 bool PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile  = true;
+
 //variable to track whether the last datafile has been reached
 bool PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile  = false;
+
 //offset to the current datafiles relative to beginning of data buffer
 int PIC::CPLR::DATAFILE::MULTIFILE::CurrDataFileOffset = -1;
 int PIC::CPLR::DATAFILE::MULTIFILE::NextDataFileOffset = -1;
 
 // next file to load
 int PIC::CPLR::DATAFILE::MULTIFILE::iFileLoadNext = -1;
-
-//==============================================================================
-void PIC::CPLR::DATAFILE::MULTIFILE::Init(bool BreakAtLastFileIn,
-					  int  FileNumberFirst){
-  //-----------------------------------------
-  //load schedule from file
-  GetSchedule();
-  iFileLoadNext = FileNumberFirst;
-
-  CurrDataFileOffset = 0;
-#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  NextDataFileOffset = nTotalBackgroundVariables*sizeof(double);
-#else
-  NextDataFileOffset = 0;
-#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-
-  BreakAtLastFile= BreakAtLastFileIn;
-  // set the global time counter value
-  PIC::SimulationTime::SetInitialValue(Schedule[iFileLoadNext].Time);
-  // load the first file
-  UpdateDataFile();
-#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  // load the second file
-  UpdateDataFile();
-#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-
-}
-
-
-//=============================================================================
-void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
-  //compose full name of the file table file with path
-  char fullname[_MAX_STRING_LENGTH_PIC_];
-  sprintf(fullname,"%s/%s", 
-	  PIC::CPLR::DATAFILE::path,
-	  PIC::CPLR::DATAFILE::MULTIFILE::FileTable);
-  //read the schedule; the format is the following:
-  //---------------------------------------------------------------------------
-  // Comment lines             | Comment lines           
-  // #NFILE                    | #NFILE                  
-  // nFile                     | nFile                   
-  // #FILELIST                OR #FILESCHEDULE               
-  // <name of the file 1>      | <time of file1> <name of the file 1>    
-  // ...                       | ...                     
-  // <name of the file nFile>  | <time of file nFile> <name of the file nFile>
-  // Ignored part of the file  | Ignored part of the file
-  //---------------------------------------------------------------------------
-  // indicating times is optional provided that reader is able to extract them
-  // from the data files themselves, otherwise using #FILESCHEDULE is mandatory
-  //---------------------------------------------------------------------------
-  // read schedule using class CiFileOperations (see src/general/ifileopr.h)
-  CiFileOperations fin;
-  // containers for a line from file's contents
-  char str[_MAX_STRING_LENGTH_PIC_], str1[_MAX_STRING_LENGTH_PIC_];
-  fin.openfile(fullname);
-
-  // read the file's contents; first find number of files
-  //---------------------------------------------------------------------------
-  while(fin.eof()==false) {
-    // get a line from the file
-    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
-    // check if found keyword "#NFILE"
-    fin.CutInputStr(str1, str);
-    if(strcmp("#NFILE",str1)==0){
-      fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
-      nFile = strtol(str, NULL,10);
-      break;
-    }
-  }
-  // check if successfully found number of input files
-  if(nFile == -1)
-    exit(__LINE__,__FILE__,
-	 "Can't read number of input data files from schedule file");
-
-  // check correctness of the found value
-  if(nFile < 1)
-    exit(__LINE__,__FILE__,
-	 "Number of input data files in schedule file is invalid");
-  //---------------------------------------------------------------------------
-
-  // now read the actual table
-  //---------------------------------------------------------------------------
-  //first, clear the schedule
-  Schedule.clear();
-  // whether times are provided in the table
-  bool IsSchedule;
-  //find the beginning of the table
-  while(fin.eof()==false) {
-    // get a line from the file
-    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
-    // check if found keyword "#NFILE"
-    fin.CutInputStr(str1, str);
-    if(strcmp("#FILELIST",    str1)==0) {IsSchedule = false; break;}
-    if(strcmp("#FILESCHEDULE",str1)==0) {IsSchedule = true;  break;}
-    }
-  // check if successfully found the beginning of the table
-  if(fin.eof()==true)
-    exit(__LINE__,__FILE__,"Can't locate the beginning of the actual file table in the schedule file");
-  //read file names
-  cScheduleItem Item;
-  for(int iFile=0; iFile<nFile; iFile++){
-    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_, false);
-    if(IsSchedule){
-      // time is provided in the table
-      fin.CutInputStr(str1, str);
-      Item.Time     = strtod(str1, NULL);
-      sprintf(Item.FileName,"%s",str);
-    }
-    else {
-      // time has to be extracted from the file itself
-      sprintf(Item.FileName,"%s",str);
-      Item.Time     = GetFileTime(str);
-    }
-    Schedule.push_back(Item);
-  }
-  //---------------------------------------------------------------------------
-  // the rest of the file is ignored; close file
-  fin.closefile();
-
-  // as a final step, need to sort schedule by time
-  sort(Schedule.begin(), Schedule.end(), _compare);
- 
-  
-}
-
-//=============================================================================
-double PIC::CPLR::DATAFILE::MULTIFILE::GetFileTime(const char* FileName){
-  double res=-1.0;
-
-  //the particular  reader
-  switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
-  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
-    exit(__LINE__,__FILE__,"TECPLOT reader mode is not able to extract time from the input data file");
-    break;
-  case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
-    res=ARMS::GetFileTime(FileName);
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the option is unknown");
-  }
-
-  return res; 
-}
-
-//=============================================================================
-void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
-  // compose a name for the next file to load
-  //  char fullname[_MAX_STRING_LENGTH_PIC_];
-  //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
-  PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
-#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  //swap data offsets
-  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= 
-    NextDataFileOffset - CurrDataFileOffset;
-  if(CurrDataFileOffset == 0){
-    CurrDataFileOffset = NextDataFileOffset; NextDataFileOffset = 0;}
-  else{
-    NextDataFileOffset = CurrDataFileOffset; CurrDataFileOffset = 0;}
-#else
-  
-#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  
-  if(PIC::ThisThread==0)
-    std::cout << "Data file "<<Schedule[iFileLoadNext].FileName<<
-      " has been loaded"<<std::endl;
-  iFileLoadNext++;
-  //check whether the last file has been reached
-  ReachedLastFile = iFileLoadNext >= nFile;
-}
 
 //path to the location of the datafiles
 char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
@@ -221,6 +56,185 @@ PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldGr
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFluxFunction={false,false,1,"\"FluxFunction\"",-1};
 
 
+//==============================================================================
+void PIC::CPLR::DATAFILE::MULTIFILE::Init(bool BreakAtLastFileIn,int  FileNumberFirst) {
+  //load schedule from file
+  GetSchedule();
+  iFileLoadNext = FileNumberFirst;
+
+  CurrDataFileOffset = 0;
+
+  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  NextDataFileOffset = nTotalBackgroundVariables*sizeof(double);
+  #else
+  NextDataFileOffset = 0;
+  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+
+  BreakAtLastFile= BreakAtLastFileIn;
+  // set the global time counter value
+  PIC::SimulationTime::SetInitialValue(Schedule[iFileLoadNext].Time);
+  // load the first file
+  UpdateDataFile();
+
+  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  // load the second file
+  UpdateDataFile();
+  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+}
+
+
+//=============================================================================
+void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule() {
+  char fullname[_MAX_STRING_LENGTH_PIC_];
+
+  //compose full name of the file table file with path
+  sprintf(fullname,"%s/%s", PIC::CPLR::DATAFILE::path,PIC::CPLR::DATAFILE::MULTIFILE::FileTable);
+
+  //read the schedule; the format is the following:
+  //---------------------------------------------------------------------------
+  // Comment lines             | Comment lines           
+  // #NFILE                    | #NFILE                  
+  // nFile                     | nFile                   
+  // #FILELIST                OR #FILESCHEDULE               
+  // <name of the file 1>      | <time of file1> <name of the file 1>    
+  // ...                       | ...                     
+  // <name of the file nFile>  | <time of file nFile> <name of the file nFile>
+  // Ignored part of the file  | Ignored part of the file
+  //---------------------------------------------------------------------------
+  // indicating times is optional provided that reader is able to extract them
+  // from the data files themselves, otherwise using #FILESCHEDULE is mandatory
+  //---------------------------------------------------------------------------
+  // read schedule using class CiFileOperations (see src/general/ifileopr.h)
+  CiFileOperations fin;
+  // containers for a line from file's contents
+  char str[_MAX_STRING_LENGTH_PIC_], str1[_MAX_STRING_LENGTH_PIC_];
+  fin.openfile(fullname);
+
+  // read the file's contents; first find number of files
+  //---------------------------------------------------------------------------
+  while (fin.eof()==false) {
+    // get a line from the file
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+
+    // check if found keyword "#NFILE"
+    fin.CutInputStr(str1, str);
+
+    if (strcmp("#NFILE",str1)==0) {
+      fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+      nFile = strtol(str, NULL,10);
+      break;
+    }
+  }
+
+  // check if successfully found number of input files
+  if (nFile == -1) exit(__LINE__,__FILE__,"Can't read number of input data files from schedule file");
+
+  // check correctness of the found value
+  if (nFile < 1) exit(__LINE__,__FILE__,"Number of input data files in schedule file is invalid");
+  //---------------------------------------------------------------------------
+
+  // now read the actual table
+  //---------------------------------------------------------------------------
+  //first, clear the schedule
+  Schedule.clear();
+
+  // whether times are provided in the table
+  bool IsSchedule;
+
+  //find the beginning of the table
+  while(fin.eof()==false) {
+    // get a line from the file
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    // check if found keyword "#NFILE"
+    fin.CutInputStr(str1, str);
+    if(strcmp("#FILELIST",    str1)==0) {IsSchedule = false; break;}
+    if(strcmp("#FILESCHEDULE",str1)==0) {IsSchedule = true;  break;}
+  }
+
+  //check if successfully found the beginning of the table
+  if (fin.eof()==true) exit(__LINE__,__FILE__,"Can't locate the beginning of the actual file table in the schedule file");
+
+  //read file names
+  cScheduleItem Item;
+
+  for(int iFile=0;iFile<nFile;iFile++) {
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_, false);
+
+    if (IsSchedule) {
+      //time is provided in the table
+      fin.CutInputStr(str1, str);
+      Item.Time=strtod(str1, NULL);
+      sprintf(Item.FileName,"%s",str);
+    }
+    else {
+      //time has to be extracted from the file itself
+      sprintf(Item.FileName,"%s",str);
+      Item.Time=GetFileTime(str);
+    }
+
+    Schedule.push_back(Item);
+  }
+
+  //---------------------------------------------------------------------------
+  // the rest of the file is ignored; close file
+  fin.closefile();
+
+  // as a final step, need to sort schedule by time
+  sort(Schedule.begin(), Schedule.end(), _compare);
+}
+
+//=============================================================================
+double PIC::CPLR::DATAFILE::MULTIFILE::GetFileTime(const char* FileName) {
+  double res=-1.0;
+
+  //the particular  reader
+  switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
+  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
+    exit(__LINE__,__FILE__,"TECPLOT reader mode is not able to extract time from the input data file");
+    break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
+    res=ARMS::GetFileTime(FileName);
+    break;
+
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
+  }
+
+  return res; 
+}
+
+//=============================================================================
+void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
+  // compose a name for the next file to load
+  //  char fullname[_MAX_STRING_LENGTH_PIC_];
+  //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
+  PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
+
+  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  //swap data offsets
+  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
+
+  if(CurrDataFileOffset == 0) {
+    CurrDataFileOffset = NextDataFileOffset;
+    NextDataFileOffset = 0;
+  }
+  else{
+    NextDataFileOffset = CurrDataFileOffset;
+    CurrDataFileOffset = 0;
+  }
+  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  
+  if (PIC::ThisThread==0) std::cout << "Data file " << Schedule[iFileLoadNext].FileName << " has been loaded" << std::endl;
+
+  iFileLoadNext++;
+
+  //check whether the last file has been reached
+  ReachedLastFile = iFileLoadNext >= nFile;
+}
+
+
+//=============================================================================
 //load new data file
 //IMPORTANT! The list of the data that are loaded has to be indicated before PIC::Init_BeforeParser
 void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
@@ -241,17 +255,15 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
   }
   
   //may need to generate additional data
-  if(Offset::MagneticFieldGradient.allocate){
-#if _PIC_COUPLER__INTERPOLATION_MODE_==_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+  if (Offset::MagneticFieldGradient.allocate) {
+    #if _PIC_COUPLER__INTERPOLATION_MODE_==_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
     exit(__LINE__,__FILE__,"ERROR: magnetic field gradient can't be computed with 0th order interpolation method");
-#endif
-    for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-	 node!=NULL;
-	 node=node->nextNodeThisThread) {
-    GenerateMagneticFieldGradient(node);
+    #endif
+
+    for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+      GenerateMagneticFieldGradient(node);
     }
   }
-
 }
 
 //initialize the data reading namespace
@@ -396,14 +408,11 @@ void PIC::CPLR::DATAFILE::Init() {
   }
 
 
-#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-    // double the reserved memory for time inteprolation mode
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
-#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  // double the reserved memory for time inteprolation mode
+  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
+  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   
-
-
-
   if (nTotalBackgroundVariables==0) {
     exit(__LINE__,__FILE__,"Error: no background variables will be loaded. The background variables to load has to be indicated before call of the PIC::Init_BeforeParser()");
   }
@@ -412,7 +421,6 @@ void PIC::CPLR::DATAFILE::Init() {
   PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
-
 }
 
 
@@ -430,7 +438,6 @@ bool PIC::CPLR::DATAFILE::BinaryFileExists(const char *fNameBase) {
   }
 
   return false;
-
 }
 
 
@@ -911,7 +918,7 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
 // the function to produce additional data based on the imported parameters
 
 //generate magnetic field gradient in the given block
-void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
+void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
   if (DIM < 3) exit(__LINE__,__FILE__,"This function is tested for 3D case, may require further testing and development for lower dimensional case!");
 
@@ -923,9 +930,7 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
   //block's mesh parameters
   double  *xNodeMin=node->xmin;
   double  *xNodeMax=node->xmax;
-  double  dXCell[3]= {(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_,
-		      (xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_,
-		      (xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_};
+  double  dXCell[3]= {(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_,(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_,(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_};
 
   //  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
   //  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
@@ -939,7 +944,7 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
   double xCenter[3]={0.0,0.0,0.0},x[3]={0.0,0.0,0.0};   //locations
   double Bplus[3]={0.0,0.0,0.0}, Bminus[3]={0.0,0.0,0.0}; //values of the field
 
-  for (int k=kMin;k<=kMax;k++)for(int j=jMin;j<=jMax;j++)for (int i=iMin;i<=iMax;i++) {
+  for (int k=kMin;k<=kMax;k++) for (int j=jMin;j<=jMax;j++) for (int i=iMin;i<=iMax;i++) {
     //cell center
     xCenter[0]=xNodeMin[0]+dXCell[0]*(0.5+i);
     xCenter[1]=xNodeMin[1]+dXCell[1]*(0.5+j);
