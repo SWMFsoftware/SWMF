@@ -120,7 +120,7 @@ bool PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(
 }
 
 //calculate the stopping power
-double PIC::MolecularCollisions::BackgroundAtmosphere::GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+double PIC::MolecularCollisions::StoppingPowerModel::GetStoppingPower(double *x,double *v,int spec,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   double mass,charge;
 
   struct cStoppingPowerData {
@@ -165,7 +165,7 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetStoppingPower(double *
   //get the totan background species number density
   double nTotalNumberDensity=0.0;
   for (int nBackgroundSpec=0;nBackgroundSpec<GetTotalNumberBackgroundSpecies();nBackgroundSpec++) {
-    nTotalNumberDensity+=GetBackgroundLocalNumberDensity(nBackgroundSpec,x);
+    nTotalNumberDensity+=PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberDensity(nBackgroundSpec,x);
   }
  
   return 2.0*(Se+Sn)*eV2J*1.0e-4*nTotalNumberDensity;
