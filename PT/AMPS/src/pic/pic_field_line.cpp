@@ -10,8 +10,8 @@ int PIC::FieldLine::cFieldLineVertex::sampleDataLength=-1;
 int PIC::FieldLine::cFieldLineVertex::CollectingSamplingOffset=-1;
 int PIC::FieldLine::cFieldLineVertex::CompletedSamplingOffset=-1;
 
-namespace PIC{
-  namespace FieldLine{
+namespace PIC {
+  namespace FieldLine {
 
     cDatumStored DatumAtVertexElectricField(3,"\"Ex [V/m]\",\"Ey [V/m]\",\"Ez [V/m]\",",false);
     cDatumStored DatumAtVertexMagneticField(3,"\"Bx [nT]\",\"By [nT]\",\"Bz [nT]\",",true);
@@ -41,124 +41,132 @@ namespace PIC{
     double TimeLastUpdate = -1;
 
     //=========================================================================
-    bool cFieldLine::is_broken(){
+    bool cFieldLine::is_broken() {
       int count;
       cFieldLineSegment* Segment;
       //  cFieldLineVertex*  Vertex; 
       
       //check connectivity forward
       count = 1, Segment = FirstSegment;//, Vertex  = FirstVertex;
-      for(int iSegment=0; iSegment<nSegment; iSegment++){
-	if(Segment->GetNext()==NULL //|| Vertex->GetNext()==NULL) break;
-	   )break;
-	Segment = Segment->GetNext();
-	//    Vertex  = Vertex->GetNext();
-	count++;
+
+      for (int iSegment=0; iSegment<nSegment; iSegment++) {
+        if (Segment->GetNext()==NULL) break; //|| Vertex->GetNext()==NULL) break;
+
+        Segment = Segment->GetNext();
+        //    Vertex  = Vertex->GetNext();
+
+        count++;
       }
-      if(count<nSegment || Segment != LastSegment)// || Vertex != LastVertex)
-	return true;
       
+      if ((count<nSegment) || (Segment != LastSegment)) return true; // || Vertex != LastVertex)
+
       //check connectivity backward
       count = 1, Segment = LastSegment;//, Vertex  = LastVertex;
-      for(int iSegment=0; iSegment<nSegment; iSegment++){
-	if(Segment->GetPrev()==NULL// || Vertex->GetPrev()==NULL) break;
-	   )break;
-	Segment = Segment->GetPrev();
-	//    Vertex  = Vertex->GetPrev();
-	count++;
+
+      for (int iSegment=0; iSegment<nSegment; iSegment++) {
+	      if (Segment->GetPrev()==NULL) break; // || Vertex->GetPrev()==NULL) break;
+
+	      Segment = Segment->GetPrev();
+	      //    Vertex  = Vertex->GetPrev();
+
+	      count++;
       }
-      if(count<nSegment || Segment != FirstSegment)// || Vertex != FirstVertex)
-	return true;
       
+      if ((count<nSegment) || (Segment != FirstSegment)) return true; // || Vertex != FirstVertex)
+
       //the line is fully connected
       return false;
     }
     
     //=========================================================================
-    cFieldLineVertex* cFieldLine::Add(double *xIn){
+    cFieldLineVertex* cFieldLine::Add(double *xIn) {
       // check if field lineis unset
-      if(IsSet == 0){
-	if(FirstVertex==NULL){
-	  //allocate the first vertex
-	  LastVertex = (FirstVertex = VerticesAll.newElement());
-	  FirstVertex->SetX(xIn);
-	  //the first segment can't be allocated yet
-	  nSegment = 0; TotalLength = 0.0; IsSet = 0;
-	}
-	else{
-	  //allocate the second vertex 
-	  LastVertex = VerticesAll.newElement();
-	  LastVertex->SetX(xIn);
-	  LastVertex->SetPrev(FirstVertex);
-	  FirstVertex->SetNext(LastVertex);
-	  //allocate the first segment
-	  LastSegment = (FirstSegment = SegmentsAll.newElement());
-	  LastSegment->SetVertices(LastVertex->GetPrev(), LastVertex);
-	  nSegment++; TotalLength+= LastSegment->GetLength(); IsSet = 1;
-	}
-	return LastVertex;
-      }
-      
-      //allocate vertex
-      cFieldLineVertex* newVertex;
-      newVertex = VerticesAll.newElement();
-      newVertex->SetX(xIn);
-      
-      //connect it to the last vertex in the field line
-      LastVertex->SetNext(newVertex);
-      newVertex->SetPrev(LastVertex);
-      
-      //now the new vertex is the last one
-      LastVertex = newVertex;
-      
-      //allocate segment
-      cFieldLineSegment* newSegment;
-      newSegment = SegmentsAll.newElement();
-      newSegment->SetVertices(LastVertex->GetPrev(), LastVertex);
-      
-      //connect it to the last segment in the line
-      LastSegment->SetNext(newSegment);
-      newSegment->SetPrev(LastSegment);
-      
-      //now the new segment is the last one
-      LastSegment = newSegment;
-      
-      //update house-keeping data
-      nSegment++;
-      TotalLength += LastSegment->GetLength();
+      if (IsSet == 0) {
+        if (FirstVertex==NULL) {
+          //allocate the first vertex
+          LastVertex = (FirstVertex = VerticesAll.newElement());
+          FirstVertex->SetX(xIn);
 
-      return LastVertex;
-    }
+          //the first segment can't be allocated yet
+          nSegment = 0; TotalLength = 0.0; IsSet = 0;
+        }
+        else{
+         //allocate the second vertex
+         LastVertex = VerticesAll.newElement();
+         LastVertex->SetX(xIn);
+         LastVertex->SetPrev(FirstVertex);
+         FirstVertex->SetNext(LastVertex);
+
+         //allocate the first segment
+         LastSegment = (FirstSegment = SegmentsAll.newElement());
+         LastSegment->SetVertices(LastVertex->GetPrev(), LastVertex);
+         nSegment++; TotalLength+= LastSegment->GetLength(); IsSet = 1;
+       }
+
+       return LastVertex;
+     }
+      
+     //allocate vertex
+     cFieldLineVertex* newVertex;
+     newVertex = VerticesAll.newElement();
+     newVertex->SetX(xIn);
+      
+     //connect it to the last vertex in the field line
+     LastVertex->SetNext(newVertex);
+     newVertex->SetPrev(LastVertex);
+      
+     //now the new vertex is the last one
+     LastVertex = newVertex;
+      
+     //allocate segment
+     cFieldLineSegment* newSegment;
+     newSegment = SegmentsAll.newElement();
+     newSegment->SetVertices(LastVertex->GetPrev(), LastVertex);
+      
+     //connect it to the last segment in the line
+     LastSegment->SetNext(newSegment);
+     newSegment->SetPrev(LastSegment);
+      
+     //now the new segment is the last one
+     LastSegment = newSegment;
+      
+     //update house-keeping data
+     nSegment++;
+     TotalLength += LastSegment->GetLength();
+
+     return LastVertex;
+   }
 
     //=========================================================================
-    void cFieldLine::ResetSegmentWeights(){
+    void cFieldLine::ResetSegmentWeights() {
       cFieldLineSegment *Segment = FirstSegment;
       double w[PIC::nTotalSpecies];
+
       //compute weights and normalize them
-	for(int spec=0; spec < PIC::nTotalSpecies; spec++)
-	  TotalWeight[spec] = 0;
-      for(int iSegment=0; iSegment<nSegment; iSegment++){
-	//compute weights
-	_FIELDLINE_SEGMENT_WEIGHT_(w, Segment);
-	//set segment's weight
-	Segment->SetWeight(w);
-	for(int spec=0; spec < PIC::nTotalSpecies; spec++)
-	  TotalWeight[spec] += w[spec];
-	//get the next one
-	Segment = Segment->GetNext();
+      for(int spec=0; spec < PIC::nTotalSpecies; spec++) TotalWeight[spec] = 0;
+
+      for(int iSegment=0; iSegment<nSegment; iSegment++) {
+        //compute weights
+        _FIELDLINE_SEGMENT_WEIGHT_(w, Segment);
+
+        //set segment's weight
+        Segment->SetWeight(w);
+        for(int spec=0; spec < PIC::nTotalSpecies; spec++) TotalWeight[spec] += w[spec];
+
+        //get the next one
+        Segment = Segment->GetNext();
       }
     }
 
     //=========================================================================
-    void cFieldLine::GetSegmentRandom(int& iSegment,//cFieldLineSegment *SegmentOut,
-				      double& WeightCorrectionFactor,
-				      int spec){
-      // choose a random segment on field line and return pointer SegmentOut;
-      // since statistical weights may vary, compute a correction factor
-      // for a particle to be injected on this segment
-      //-----------------------------------------------------------------------
-      // choose uniformly a segment, i.e. weight_uniform = 1.0 / nSegment
+    // choose a random segment on field line and return pointer SegmentOut;
+    // since statistical weights may vary, compute a correction factor
+    // for a particle to be injected on this segment
+    //-----------------------------------------------------------------------
+    // choose uniformly a segment, i.e. weight_uniform = 1.0 / nSegment
+    void cFieldLine::GetSegmentRandom(int& iSegment,double& WeightCorrectionFactor,int spec) {
       int iSegmentChoice = (int)(nSegment * rnd());
+
       WeightCorrectionFactor = 1.0;
       iSegment = iSegmentChoice;
       // cycle through segment until get the chosen one
@@ -174,7 +182,7 @@ namespace PIC{
     }
     
     //=========================================================================
-    long int InjectParticle(int spec){
+    long int InjectParticle(int spec) {
       // this is a wrapper that can call either the default injection procedure
       // or a user-defined procedure
       //      return InjectParticle_default(spec);
@@ -182,9 +190,10 @@ namespace PIC{
     }
     
     //=========================================================================
-    long int InjectParticle_default(int spec){
+    long int InjectParticle_default(int spec) {
       //namespace alias
       namespace PB = PIC::ParticleBuffer;
+
       // pointer particle to the particle to be injected
       long int ptr;
       PB::byte* ptrData;
@@ -199,8 +208,8 @@ namespace PIC{
       // pick a random field line
       int iFieldLine = (int)(nFieldLine * rnd());
       PB::SetFieldLineId(iFieldLine, ptrData);
+
       // inject particle onto this field line
-      
       int iSegment;
       double WeightCorrection;
       //    FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,
@@ -208,14 +217,14 @@ namespace PIC{
       
       //Inject at the beginning of the field line FOR PARKER SPIRAL
       iSegment = 0;
-      FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,
-						 WeightCorrection, spec);
+      FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,WeightCorrection, spec);
       
       
       cFieldLineSegment* Segment=FieldLinesAll[iFieldLine].GetSegment(iSegment);
       double S = iSegment + rnd();
       PB::SetFieldLineCoord(S, ptrData);
       double x[3], v[3];
+
       FieldLinesAll[iFieldLine].GetCartesian(x, S);
       PB::SetX(x, ptrData);
       
@@ -234,6 +243,7 @@ namespace PIC{
       double pvmin = pow(vmin, 1-q), pvmax = pow(vmax, 1-q);
       double r= rnd();
       double absv = pow( (1-r)*pvmin + r*pvmax, 1.0/(1-q));
+
       //direction of velocity: INJECT ALONG HE FIELD LINE FOR PARKER SPIRAL
       double cosPhi =  1 - 2*rnd();
 
@@ -243,7 +253,7 @@ namespace PIC{
 
       //velocity is paral to the field line
       Segment->GetDir(v);
-      for(int i=0; i<3; i++)v[i]*=vpar;
+      for (int i=0; i<3; i++) v[i]*=vpar;
       PB::SetV(v, ptrData);
       
       //magnetic field
@@ -257,12 +267,11 @@ namespace PIC{
       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
       node=PIC::Mesh::mesh.findTreeNode(x);
       
-      long int res=PB::InitiateParticle(x,v,NULL,NULL,
-					ptrData,
-					_PIC_INIT_PARTICLE_MODE__ADD2LIST_,
-					(void*)node);
+      long int res=PB::InitiateParticle(x,v,NULL,NULL,ptrData,_PIC_INIT_PARTICLE_MODE__ADD2LIST_,(void*)node);
+
       delete [] ptrData;
       double misc = PB::GetFieldLineCoord(res);
+
       return res;
     }
 
@@ -270,100 +279,104 @@ namespace PIC{
     void cFieldLine::SetMagneticField(double *BIn, int iVertex){
       cFieldLineVertex *Vertex;
       int nVertex = (is_loop()) ? nSegment : nSegment+1;
-      if(iVertex == -1)
-	Vertex = LastVertex;
-      else if(iVertex > 0.5*nSegment && iVertex <= nVertex){
-	Vertex = LastVertex;
-	for(int i=nSegment; i>iVertex; i--)
-	  Vertex = Vertex->GetPrev();
+
+      if (iVertex == -1) Vertex = LastVertex;
+      else if ((iVertex > 0.5*nSegment) && (iVertex <= nVertex)) {
+        Vertex = LastVertex;
+
+        for (int i=nSegment; i>iVertex; i--) Vertex = Vertex->GetPrev();
       }
-      else if(iVertex >= 0){
-	Vertex = FirstVertex;
-	for(int i=0; i<iVertex; i++)
-	  Vertex = Vertex->GetNext();
+      else if (iVertex >= 0) {
+        Vertex = FirstVertex;
+
+        for (int i=0; i<iVertex; i++) Vertex = Vertex->GetNext();
       }
-      else
-	exit(__LINE__, __FILE__, "ERROR: invalid index of vertex");
+      else exit(__LINE__, __FILE__, "ERROR: invalid index of vertex");
+
       Vertex->SetMagneticField(BIn);
     }
     //=========================================================================
-    void cFieldLine::GetMagneticField(double* BOut, double S){
+    void cFieldLine::GetMagneticField(double* BOut, double S) {
       // check correctness
-      if(S < 0.0 || S > nSegment)
-	exit(__LINE__,__FILE__,
-	     "ERROR: trying to get magnetic field at an invalid location");
+      if ((S < 0.0) || (S > nSegment))exit(__LINE__,__FILE__,"ERROR: trying to get magnetic field at an invalid location");
 
       // interpolate the magnetic field at the location S:
       //  floor(S) is the number of the segment,
       //  S - floor(S) is the location along segment (between 0 & 1)
       //-----------------------------------------------------------------------
+
       // number of the begin vertex
       int iSegment = (int) S;
+
       cFieldLineSegment* Segment = GetSegment(iSegment);
       Segment->GetMagneticField(S - iSegment, BOut);
     }    
 
     //=========================================================================
-    void cFieldLine::Output(FILE* fout, bool GeometryOnly=false){
+    void cFieldLine::Output(FILE* fout, bool GeometryOnly=false) {
       
-      if(!GeometryOnly)
-	exit(__LINE__, __FILE__,"Not implemented for multiple processors");
+      if (!GeometryOnly)	exit(__LINE__, __FILE__,"Not implemented for multiple processors");
       
       cFieldLineVertex *Vertex=FirstVertex;
       int nVertex = (is_loop()) ? nSegment : nSegment+1;
-      for(int iVertex=0; iVertex<=nVertex; iVertex++){
 
-	//print coordinates
-	double x[DIM];
-	Vertex->GetX(x);
-	for(int idim=0; idim<DIM; idim++) {fprintf(fout, "%e ", x[idim]);}
+      for (int iVertex=0; iVertex<=nVertex; iVertex++) {
+        //print coordinates
+        double x[DIM];
+        double Value[3];
+        vector<cDatumStored*>::iterator itrDatumStored;
 
-	double Value[3];
+        Vertex->GetX(x);
 
-	vector<cDatumStored*>::iterator itrDatumStored;
-	for(itrDatumStored = DataStoredAtVertex.begin();
-	    itrDatumStored!= DataStoredAtVertex.end();  itrDatumStored++)
-	  if((*itrDatumStored)->doPrint){
-	    Vertex->GetDatum(*(*itrDatumStored), Value);
-	    for(int i=0; i<(*itrDatumStored)->length; i++){
-	      fprintf(fout, "%e ", Value[i]);}
-	  }
-      
-	vector<cDatumSampled*>::iterator itrDatum;
-	for(itrDatum = DataSampledAtVertex.begin();
-	    itrDatum!= DataSampledAtVertex.end();  itrDatum++)
-	  if((*itrDatum)->doPrint){
-	    cDatumTimed*    ptrDatumTimed;
-	    cDatumWeighted* ptrDatumWeighted;
-	    if((*itrDatum)->type == PIC::Datum::cDatumSampled::Timed_){
-	      ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatum));
-	      Vertex->GetDatumAverage(*ptrDatumTimed, Value, 0);}
-	    else {
-	      ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatum));
-	      Vertex->GetDatumAverage(*ptrDatumWeighted, Value, 0);}
-	    for(int i=0; i<(*itrDatum)->length; i++){
-	      fprintf(fout, "%e ", Value[i]);}
-	  }
-	
+        for (int idim=0; idim<DIM; idim++) fprintf(fout, "%e ", x[idim]);
 
-	fprintf(fout,"\n");
-	//flush completed sampling buffer
-	Vertex->flushCollectingSamplingBuffer();
-	Vertex = Vertex->GetNext();
+        for (itrDatumStored = DataStoredAtVertex.begin();itrDatumStored!= DataStoredAtVertex.end();  itrDatumStored++) {
+          if ((*itrDatumStored)->doPrint) {
+            Vertex->GetDatum(*(*itrDatumStored), Value);
+            for (int i=0; i<(*itrDatumStored)->length; i++) fprintf(fout, "%e ", Value[i]);
+          }
+        }
+
+        vector<cDatumSampled*>::iterator itrDatum;
+
+        for(itrDatum = DataSampledAtVertex.begin();itrDatum!= DataSampledAtVertex.end();itrDatum++) if ((*itrDatum)->doPrint) {
+          cDatumTimed*    ptrDatumTimed;
+          cDatumWeighted* ptrDatumWeighted;
+
+          if ((*itrDatum)->type == PIC::Datum::cDatumSampled::Timed_) {
+            ptrDatumTimed = static_cast<cDatumTimed*> ((*itrDatum));
+            Vertex->GetDatumAverage(*ptrDatumTimed, Value, 0);
+          }
+          else {
+            ptrDatumWeighted = static_cast<cDatumWeighted*> ((*itrDatum));
+            Vertex->GetDatumAverage(*ptrDatumWeighted, Value, 0);
+          }
+
+          for(int i=0; i<(*itrDatum)->length; i++) {
+            fprintf(fout, "%e ", Value[i]);
+          }
+        }
+
+
+        fprintf(fout,"\n");
+
+        //flush completed sampling buffer
+        Vertex->flushCollectingSamplingBuffer();
+        Vertex = Vertex->GetNext();
       }
     }
     
     //=========================================================================
-    void Init(){
+    void Init() {
       
-      if(PIC::nTotalThreads > 1)
-	exit(__LINE__, __FILE__,"Not implemented for multiple processors");
+      if(PIC::nTotalThreads > 1) exit(__LINE__, __FILE__,"Not implemented for multiple processors");
       
       // allocate container for field lines
       FieldLinesAll = new cFieldLine [nFieldLineMax];
 
       // activate data storage
       long int Offset = 0;
+
       // activate data that are stored but NOT sampled
       DatumAtVertexMagneticField.       activate(Offset, &DataStoredAtVertex);
       DatumAtVertexElectricField.       activate(Offset, &DataStoredAtVertex);
@@ -372,8 +385,11 @@ namespace PIC{
       DatumAtVertexPlasmaTemperature.   activate(Offset, &DataStoredAtVertex);
       DatumAtVertexPlasmaPressure.      activate(Offset, &DataStoredAtVertex);
       DatumAtVertexMagneticFluxFunction.activate(Offset, &DataStoredAtVertex);
+
       // activate data that is sampled
-      long int SamplingOffset = Offset; Offset = 0;
+      long int SamplingOffset = Offset;
+      Offset = 0;
+
       DatumAtVertexParticleWeight.  activate(Offset, &DataSampledAtVertex);
       DatumAtVertexParticleNumber.  activate(Offset, &DataSampledAtVertex);
       DatumAtVertexNumberDensity.   activate(Offset, &DataSampledAtVertex);
@@ -386,11 +402,10 @@ namespace PIC{
     }
     
     //=========================================================================
-    void Output(char* fname, bool GeometryOnly){
+    void Output(char* fname, bool GeometryOnly) {
 
       //swap sampling offsets
       cFieldLineVertex::swapSamplingBuffers();
-      
       FILE* fout;
       fout = fopen(fname,"w");
       
@@ -401,26 +416,26 @@ namespace PIC{
       vector<cDatumStored*>::iterator itrDatumStored;
       vector<cDatumSampled*>::iterator itrDatum;
       //      double* Value;
-      for(itrDatumStored = DataStoredAtVertex.begin();
-	  itrDatumStored!= DataStoredAtVertex.end();  itrDatumStored++)
-	if((*itrDatumStored)->doPrint)
-	  (*itrDatumStored)->PrintName(fout);
-      for(itrDatum = DataSampledAtVertex.begin();
-	  itrDatum!= DataSampledAtVertex.end();  itrDatum++)
-	if((*itrDatum)->doPrint)
-	  (*itrDatum)->PrintName(fout);
+
+      for (itrDatumStored = DataStoredAtVertex.begin();itrDatumStored!= DataStoredAtVertex.end(); itrDatumStored++) {
+        if ((*itrDatumStored)->doPrint) (*itrDatumStored)->PrintName(fout);
+      }
+
+      for (itrDatum = DataSampledAtVertex.begin(); itrDatum!= DataSampledAtVertex.end(); itrDatum++) {
+        if ((*itrDatum)->doPrint) (*itrDatum)->PrintName(fout);
+      }
+
       fprintf(fout,"\n");
 #else 
       exit(__LINE__,__FILE__,"not implemented");
 #endif
       
-      for(int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++){
-	fprintf(fout,"ZONE T=\"Field-line %i\" F=POINT\n",iFieldLine);
-	FieldLinesAll[iFieldLine].Output(fout, true);
+      for (int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++) {
+        fprintf(fout,"ZONE T=\"Field-line %i\" F=POINT\n",iFieldLine);
+        FieldLinesAll[iFieldLine].Output(fout, true);
       }
       
       fclose(fout);
-      
     }
 
     //=========================================================================
@@ -437,7 +452,9 @@ namespace PIC{
 
       //magnetic field
       double B[3];
+
       FieldLinesAll[iFieldLine].GetMagneticField(B,S);
+
       double AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5);
 
       //magnetic moment, mass, velocity and energy
@@ -445,8 +462,10 @@ namespace PIC{
       int spec = PB::GetI(ptr);
       double v[3];
       double x[3];
+
       PB::GetV(v, ptr);
       PB::GetX(x, ptr);
+
       double m0= PIC::MolecularData::GetMass(spec);
       double absv=pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], 0.5);
       double E = mu*AbsB + 0.5 * m0 * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
@@ -457,17 +476,10 @@ namespace PIC{
       const double B0 = 1.83E-6;
 
 
-
-
-
       // FIX LATER=====================================
       // take gyroradius of electron with 10^7 m/s speed at B0 (~30 m)
       volume *= 3.14 * 900 * (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]) / (R0*R0);
       // FIX LATER=====================================
-
-
-
-
 
       //sample to vertices
       cFieldLineVertex* V=FieldLinesAll[iFieldLine].GetSegment(S)->GetBegin();
@@ -487,9 +499,8 @@ namespace PIC{
     }
 
     //=========================================================================
-    void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment){
-      for(int spec=0; spec<PIC::nTotalSpecies; spec++)
-	Weight[spec] = 1.0;
+    void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment) {
+      for(int spec=0; spec<PIC::nTotalSpecies; spec++) Weight[spec] = 1.0;
     }
 
     //=========================================================================
@@ -497,18 +508,18 @@ namespace PIC{
 		    double DArc,     //increment in the angle of arc 
 		    double DMin,     //min allowed length of the arc
 		    double DMax      //max allowed length of the arc
-		    ){
+		    ) {
       // in 2D case (e.g. cylindrical symmetry) generate a magnetic field line;
       // magnetic flux function, psi, is utilized:
       // loop is a line of constant value
       //-----------------------------------------------------------------------
       // check correctness
-#if _PIC_SYMMETRY_MODE_ != _PIC_SYMMETRY_MODE__AXIAL_
+      #if _PIC_SYMMETRY_MODE_ != _PIC_SYMMETRY_MODE__AXIAL_
       exit(__LINE__, __FILE__,"ERROR: implemented only for axial symmetry!");
-#endif
+      #endif
+
       // check for limit of number of field lines allowed
-      if(nFieldLine == nFieldLineMax)
-	exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
+      if (nFieldLine == nFieldLineMax) exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
 
       // mark time of extraction
       TimeLastUpdate = PIC::SimulationTime::Get();
@@ -517,38 +528,50 @@ namespace PIC{
       //.......................................................................
       // current location
       double x[3] = {xStart[0], xStart[1], xStart[2]};
+
       // candidate location
       //      double xNew[3] = {0.0, 0.0, 0.0};
       // the first location; used to close the loop
-      double xFirst[3] = {xStart[0], xStart[1], xStart[2]};;
+      double xFirst[3] = {xStart[0], xStart[1], xStart[2]};
+
       // min value resolved for magnetic field (squared)
       const double epsB2 = 1E-30;
       const double epsB  = 1E-15;
+
       // plasma velocity, stored at vertex
       double V[3] = {0.0, 0.0, 0.0};
+
       //plasma velocity
       double T = 0;
+
       // magnetic field vector, unit vector and magnitude
       // NOTE: y-component is ignored!!!
       double B[3] = {0.0, 0.0, 0.0};
       double b[3] = {0.0, 0.0, 0.0};
       double absB =  0.0;
+
       // flux function
       double Psi0 = 0.0, Psi = 0.0;
+
       //housekeeping for controlling loop's generation
       // Arc = curvature * Length
       double Arc = 0.0;
+
       // direction of new segment
       double Dir[3] = {0.0, 0.0, 0.0};
+
       // angle swiped by the loop so far
       double Angle = 0.0;
+
       // estimate for the next segment's length
       double Length = 0.5*(DMin + DMax);
+
       // position and magnetic field and next candidate vertex
       double xNew[3] = {0.0,0.0,0.0};
       double BNew[3] = {0.0,0.0,0.0};
       double bNew[3] = {0.0,0.0,0.0};
       double absBNew;
+
       // new vertex
       cFieldLineVertex *Vertex;
       //.......................................................................
@@ -570,12 +593,11 @@ namespace PIC{
       Psi0 = CPLR::GetBackgroundMagneticFluxFunction();
 
       // check correctness: need to have non-zero components in x-z plane
-      if(B[0]*B[0] + B[2]*B[2] < epsB2)
-	exit(__LINE__,__FILE__, 
-	     "ERROR: magnetic field magnitude is below min resolved value");
+      if (B[0]*B[0] + B[2]*B[2] < epsB2) exit(__LINE__,__FILE__, "ERROR: magnetic field magnitude is below min resolved value");
       
       //add the initial vertex
       Vertex = FieldLinesAll[nFieldLine-1].Add(x);
+
       //      FieldLinesAll[nFieldLine-1].SetMagneticField(B,0);
       Vertex -> SetMagneticField(B);
       Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
@@ -597,125 +619,139 @@ namespace PIC{
       // 2) iterate towards point with same value of FLUX via gradient descent
       //......................................................................
       
-      while(fabs(Angle) < 4*Pi){
+      while (fabs(Angle) < 4*Pi) {
+        // get the first guess
+        //------------------------------------------------------------------
+        // control inner while loop
+        int count;
+        const  int countMax = 100;
+        count = 0;
 
-	// get the first guess
-	//------------------------------------------------------------------
-	// control inner while loop
-	int count;
-	const  int countMax = 100;
-	count = 0;
-	//predictor
-	bool DoBreak = false;
-	while(true){
-	  count++;
-	  if(count > countMax)
-	    exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
-	  // get new location
-	  xNew[0] = x[0] + Length * b[0];
-	  xNew[2] = x[2] + Length * b[2];
+        //predictor
+        bool DoBreak = false;
 
-	  // get magnetic field at this location
-	  CPLR::InitInterpolationStencil(xNew);
-	  CPLR::GetBackgroundMagneticField(BNew);
-	  absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
-	  // need to have non-zero field 
-	  if(absBNew < epsB)
-	    exit(__LINE__,__FILE__, 
-		 "ERROR: magnetic field magnitude is below min resolved");
-	  bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
-	  // find angle of arc to the new location
-	  Arc = fabs(b[0]*bNew[2] - b[2]*bNew[0]);
-	  if(DoBreak) break;
-	  //check condition to exit loop
-	  if(Arc < 0.5 * DArc || Arc > DArc)
-	    // too small or too large step; factor -> 1 as count grows
-	    // to avoid reaching stationary points and infinite loop
-	    Length *= 1. + (0.75 * DArc / max(Arc, 0.075*DArc) - 1.) / count;
-	  else
-	    break;
-	  if(Length < DMin) {Length = DMin; DoBreak = true;}
-	  if(Length > DMax) {Length = DMax; DoBreak = true;}
-	}
-	
-	// corrector
-	{
-	  Dir[0] = 0.5*(BNew[0]+B[0]);
-	  Dir[1] = 0;
-	  Dir[2] = 0.5*(BNew[2]+B[2]);
-	  double misc = pow(Dir[0]*Dir[0] + Dir[2]*Dir[2], 0.5);
-	  Dir[0]/= misc; Dir[2]/= misc;
-	  //new vertex location
-	  xNew[0] = x[0] +  Length * Dir[0];
-	  xNew[2] = x[2] +  Length * Dir[2];
-	}	
-	//------------------------------------------------------------------
+        while(true) {
+          count++;
 
-	// iterate towards location with needed value of flux function
-	//------------------------------------------------------------------
-	//get magnetic field at the candidate location
-	CPLR::InitInterpolationStencil(xNew);
-	CPLR::GetBackgroundMagneticField(BNew);
-	// need to have non-zero field
-	if(BNew[0]*BNew[0]+BNew[2]*BNew[2] < epsB2)
-	  exit(__LINE__,__FILE__, 
-	       "ERROR: magnetic field magnitude is below min resolved");
-	// flux function
-	Psi = CPLR::GetBackgroundMagneticFluxFunction();
+          if(count > countMax) exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
 
-	// correct the initial guess until flux function is close enough
-	// to the original value
-	//------------------------------------------------------------------
-	while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5){
-	  double misc = BNew[0]*BNew[0] + BNew[2]*BNew[2];
-	  xNew[0]+=-0.001 * (Psi-Psi0) * BNew[2] / misc;
-	  xNew[2]+= 0.001 * (Psi-Psi0) * BNew[0] / misc;
-	  CPLR::InitInterpolationStencil(xNew);
-	  CPLR::GetBackgroundMagneticField(BNew);
-	  Psi = CPLR::GetBackgroundMagneticFluxFunction();
-	}
-	//------------------------------------------------------------------
+          // get new location
+          xNew[0] = x[0] + Length * b[0];
+          xNew[2] = x[2] + Length * b[2];
 
-	// next vertex is found;
-	// add it to the field line and update information
-	absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
-	bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
+          // get magnetic field at this location
+          CPLR::InitInterpolationStencil(xNew);
+          CPLR::GetBackgroundMagneticField(BNew);
+          absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
 
-	//housekeeping
-	Angle += asin(b[0]*bNew[2] - b[2]*bNew[0]);
-	
-	//add this vertex
-	Vertex = FieldLinesAll[nFieldLine-1].Add(xNew);
-	//	FieldLinesAll[nFieldLine-1].SetMagneticField(BNew);
-	Vertex -> SetMagneticField(BNew);
-	Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
-	CPLR::GetBackgroundPlasmaVelocity(V);
-	Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
-	T = CPLR::GetBackgroundPlasmaTemperature();
-	Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);	
+          // need to have non-zero field
+          if (absBNew < epsB) exit(__LINE__,__FILE__, "ERROR: magnetic field magnitude is below min resolved");
 
-	//check conditions for completing the loop
-	cFieldLineSegment* First=FieldLinesAll[nFieldLine-1].GetFirstSegment();
-	cFieldLineSegment* Last =FieldLinesAll[nFieldLine-1].GetLastSegment();
-	double Dist = 0.0; //distance between last and first verticies
-	double DirFirst[3], DirLast[3];
-	First->GetDir(DirFirst); Last->GetDir(DirLast);
-	for(int idim=0; idim<DIM; idim++){
-	  Dist  += pow(xNew[idim]-xFirst[idim], 2);
-	}
-	Dist   = pow(Dist, 0.5);
-	if( fabs( 0.5*fabs(Angle)/Pi - 1) < 0.1 &&
-	    Dist < Length){
-	  FieldLinesAll[nFieldLine-1].close_loop();
-	  return;
-	}
+          bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
 
-	//save current location and magnetic field
-	x[0] = xNew[0]; x[1] = xNew[1]; x[2] = xNew[2];
-	b[0] = bNew[0]; b[1] = bNew[1]; b[2] = bNew[2];
-	B[0] = BNew[0]; B[1] = BNew[1]; B[2] = BNew[2];
-	absB = absBNew;
+          // find angle of arc to the new location
+          Arc = fabs(b[0]*bNew[2] - b[2]*bNew[0]);
+          if (DoBreak) break;
+
+          //check condition to exit loop
+          if ((Arc < 0.5 * DArc) || (Arc > DArc)) {
+            // too small or too large step; factor -> 1 as count grows
+            // to avoid reaching stationary points and infinite loop
+            Length *= 1. + (0.75 * DArc / max(Arc, 0.075*DArc) - 1.) / count;
+          }
+          else break;
+
+          if (Length < DMin) {Length = DMin; DoBreak = true;}
+          if (Length > DMax) {Length = DMax; DoBreak = true;}
+        }
+
+        // corrector
+        {
+          Dir[0] = 0.5*(BNew[0]+B[0]);
+          Dir[1] = 0;
+          Dir[2] = 0.5*(BNew[2]+B[2]);
+
+          double misc = pow(Dir[0]*Dir[0] + Dir[2]*Dir[2], 0.5);
+          Dir[0]/= misc; Dir[2]/= misc;
+
+          //new vertex location
+          xNew[0] = x[0] +  Length * Dir[0];
+          xNew[2] = x[2] +  Length * Dir[2];
+        }
+        //------------------------------------------------------------------
+
+        // iterate towards location with needed value of flux function
+        //------------------------------------------------------------------
+        //get magnetic field at the candidate location
+        CPLR::InitInterpolationStencil(xNew);
+        CPLR::GetBackgroundMagneticField(BNew);
+
+        // need to have non-zero field
+        if(BNew[0]*BNew[0]+BNew[2]*BNew[2] < epsB2) exit(__LINE__,__FILE__,"ERROR: magnetic field magnitude is below min resolved");
+
+        // flux function
+        Psi = CPLR::GetBackgroundMagneticFluxFunction();
+
+        // correct the initial guess until flux function is close enough
+        // to the original value
+        //------------------------------------------------------------------
+        while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5) {
+          double misc = BNew[0]*BNew[0] + BNew[2]*BNew[2];
+
+          xNew[0]+=-0.001 * (Psi-Psi0) * BNew[2] / misc;
+          xNew[2]+= 0.001 * (Psi-Psi0) * BNew[0] / misc;
+          CPLR::InitInterpolationStencil(xNew);
+          CPLR::GetBackgroundMagneticField(BNew);
+          Psi = CPLR::GetBackgroundMagneticFluxFunction();
+        }
+        //------------------------------------------------------------------
+
+        // next vertex is found;
+        // add it to the field line and update information
+        absBNew = pow(BNew[0]*BNew[0]+BNew[2]*BNew[2],0.5);
+        bNew[0] = BNew[0]/absBNew; bNew[1] = 0; bNew[2] = BNew[2]/absBNew;
+
+        //housekeeping
+        Angle += asin(b[0]*bNew[2] - b[2]*bNew[0]);
+
+        //add this vertex
+        Vertex = FieldLinesAll[nFieldLine-1].Add(xNew);
+
+        //	FieldLinesAll[nFieldLine-1].SetMagneticField(BNew);
+        Vertex -> SetMagneticField(BNew);
+        Vertex -> SetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
+        CPLR::GetBackgroundPlasmaVelocity(V);
+        Vertex -> SetDatum(DatumAtVertexPlasmaVelocity, V);
+        T = CPLR::GetBackgroundPlasmaTemperature();
+        Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);
+
+        //check conditions for completing the loop
+        cFieldLineSegment* First=FieldLinesAll[nFieldLine-1].GetFirstSegment();
+        cFieldLineSegment* Last =FieldLinesAll[nFieldLine-1].GetLastSegment();
+
+        double Dist = 0.0; //distance between last and first verticies
+        double DirFirst[3], DirLast[3];
+
+        First->GetDir(DirFirst); Last->GetDir(DirLast);
+
+        for (int idim=0; idim<DIM; idim++) {
+          Dist  += pow(xNew[idim]-xFirst[idim], 2);
+        }
+
+        Dist   = pow(Dist, 0.5);
+
+        if ((fabs( 0.5*fabs(Angle)/Pi - 1) < 0.1) && (Dist < Length)) {
+          FieldLinesAll[nFieldLine-1].close_loop();
+          return;
+        }
+
+        //save current location and magnetic field
+        x[0] = xNew[0]; x[1] = xNew[1]; x[2] = xNew[2];
+        b[0] = bNew[0]; b[1] = bNew[1]; b[2] = bNew[2];
+        B[0] = BNew[0]; B[1] = BNew[1]; B[2] = BNew[2];
+        absB = absBNew;
       }
+
       exit(__LINE__, __FILE__,"ERROR: can't generate field-line loop ");
     }
 
@@ -725,76 +761,85 @@ namespace PIC{
       cFieldLineVertex*  Vertex;
       cFieldLineSegment* Segment;
       double dt = PIC::SimulationTime::Get() - TimeLastUpdate;
+
       TimeLastUpdate += dt;
-      for(int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++){
-	int cnt = 0;
-	bool done = false;
-	for(Vertex = FieldLinesAll[iFieldLine].GetFirstVertex() ;
-	    true;
-	    Vertex = Vertex->GetNext(), cnt++){
-	  done = Vertex==FieldLinesAll[iFieldLine].GetLastVertex() && cnt!=0;
-	  if(done) break;
-	  double X[3],B[3],V[3];
-	  Vertex->GetX(X);
-	  Vertex->GetPlasmaVelocity(V);
-	  for(int i=0; i<DIM; i++) X[i] += V[i] * dt;
-         #if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
-	  // rotate to the y=0 plane
-	  X[0] = pow(X[0]*X[0]+X[1]*X[1], 0.5);
-	  X[1] = 0.0;
-         #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_ 
-         #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-	  // flux function
-	  CPLR::InitInterpolationStencil(X);
-	  CPLR::GetBackgroundMagneticField(B);
-	  double Psi = CPLR::GetBackgroundMagneticFluxFunction();
-	  double Psi0;
-	  Vertex->GetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
 
-	  // correct the initial guess until flux function is close enough
-	  // to the original value
-	  //------------------------------------------------------------------
-	  while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5){
-	    double misc = B[0]*B[0] + B[2]*B[2];
-	    X[0]+=-0.001 * (Psi-Psi0) * B[2] / misc;
-	    X[2]+= 0.001 * (Psi-Psi0) * B[0] / misc;
-	    CPLR::InitInterpolationStencil(X);
-	    CPLR::GetBackgroundMagneticField(B);
-	    Psi = CPLR::GetBackgroundMagneticFluxFunction();
-	  }
-	  //------------------------------------------------------------------
+      for (int iFieldLine=0; iFieldLine<nFieldLine; iFieldLine++) {
+        int cnt = 0;
+        bool done = false;
+
+        for (Vertex = FieldLinesAll[iFieldLine].GetFirstVertex();true;Vertex = Vertex->GetNext(), cnt++) {
+          double X[3],B[3],V[3];
+
+          done = ((Vertex==FieldLinesAll[iFieldLine].GetLastVertex()) && (cnt!=0)) ? true : false;
+          if (done) break;
+
+          Vertex->GetX(X);
+          Vertex->GetPlasmaVelocity(V);
+
+          for (int i=0; i<DIM; i++) X[i] += V[i] * dt;
+
+          #if _PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
+          // rotate to the y=0 plane
+          X[0] = pow(X[0]*X[0]+X[1]*X[1], 0.5);
+          X[1] = 0.0;
+          #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
+
+          #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+           // flux function
+          CPLR::InitInterpolationStencil(X);
+          CPLR::GetBackgroundMagneticField(B);
+
+          double Psi = CPLR::GetBackgroundMagneticFluxFunction();
+          double Psi0;
+          Vertex->GetDatum(DatumAtVertexMagneticFluxFunction, Psi0);
+
+          // correct the initial guess until flux function is close enough
+          // to the original value
+          //------------------------------------------------------------------
+          while(fabs(2*(Psi-Psi0)/(Psi+Psi0)) > 1E-5) {
+            double misc = B[0]*B[0] + B[2]*B[2];
+
+            X[0]+=-0.001 * (Psi-Psi0) * B[2] / misc;
+            X[2]+= 0.001 * (Psi-Psi0) * B[0] / misc;
+
+            CPLR::InitInterpolationStencil(X);
+            CPLR::GetBackgroundMagneticField(B);
+            Psi = CPLR::GetBackgroundMagneticFluxFunction();
+          }
+	        //------------------------------------------------------------------
          #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-	  Vertex->SetX(X);
-	  // update background data
-	  PIC::CPLR::InitInterpolationStencil(X);
-	  PIC::CPLR::GetBackgroundMagneticField(B);
-	  PIC::CPLR::GetBackgroundPlasmaVelocity(V);
-	  Vertex->SetDatum(DatumAtVertexMagneticField, B);
-	  Vertex->SetDatum(DatumAtVertexPlasmaVelocity,V);
-	  double T = CPLR::GetBackgroundPlasmaTemperature();
-	  Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);	
 
-	}
-	cnt = 0; done = false;
-	for(Segment = FieldLinesAll[iFieldLine].GetFirstSegment();
-	    !done; 
-	    Segment = Segment->GetNext(), cnt++){
-	  done = Segment==FieldLinesAll[iFieldLine].GetLastSegment()&&cnt!=0;
-	  Segment->SetVertices(Segment->GetBegin(),
-			       Segment->GetEnd());
-	}
+          Vertex->SetX(X);
+
+          // update background data
+          PIC::CPLR::InitInterpolationStencil(X);
+          PIC::CPLR::GetBackgroundMagneticField(B);
+          PIC::CPLR::GetBackgroundPlasmaVelocity(V);
+          Vertex->SetDatum(DatumAtVertexMagneticField, B);
+          Vertex->SetDatum(DatumAtVertexPlasmaVelocity,V);
+
+          double T = CPLR::GetBackgroundPlasmaTemperature();
+          Vertex -> SetDatum(DatumAtVertexPlasmaTemperature, T);
+	     }
+
+	      cnt = 0; done = false;
+
+	      for (Segment = FieldLinesAll[iFieldLine].GetFirstSegment();!done; Segment = Segment->GetNext(), cnt++) {
+	        done = Segment==FieldLinesAll[iFieldLine].GetLastSegment()&&cnt!=0;
+	        Segment->SetVertices(Segment->GetBegin(),Segment->GetEnd());
+        }
       }
     }
 
     //=========================================================================
-    void InitSimpleParkerSpiral(double *xStart){
+    void InitSimpleParkerSpiral(double *xStart) {
       
 #if DIM != 3
       exit(__LINE__,__FILE__,"Implemetned only for 3D case");
 #endif
 
-      if(nFieldLine == nFieldLineMax)
-	exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
+      if(nFieldLine == nFieldLineMax) exit(__LINE__,__FILE__,"ERROR: reached limit for field line number");
 
       //increase counter of field lines
       nFieldLine++;
@@ -805,19 +850,25 @@ namespace PIC{
            
       //Parker spiral starts @ 10 Sun radii
       const double R0 = 10 *_SUN__RADIUS_;
+
       //magnetic field at this location
       const double B0 = 1.83E-6;
+
       //velocity of solar wind
       const double SpeedSolarWind = 4.0E5;
+
       //rate of solar rotation at equator (rad/sec)
       const double Omega = 2.97211E-6;      
 
       //position of the Sun
-      double xSun[DIM]={0};
+      double xSun[DIM]={0.0,0.0,0.0};
+
       //relative position to Sun
-      double x2Sun[DIM]={0};
+      double x2Sun[DIM]={0.0,0.0,0.0};
+
       //distance to Sun
       double R2Sun=0;
+
       //distance to sun in equatorial plane
       double r2Sun=0;
 
@@ -834,46 +885,42 @@ namespace PIC{
 
 
       //if too close to the Sun => move to distance R0
-      if(R2Sun < R0)
-	for(int idim=0; idim<DIM; idim++) 
-	  x[idim] = xSun[idim] + x2Sun[idim] * R0/R2Sun;
+      if (R2Sun < R0) for (int idim=0; idim<DIM; idim++) x[idim] = xSun[idim] + x2Sun[idim] * R0/R2Sun;
+
+      for (int iSegment=0;iSegment<nSegment; iSegment++) {
+        //distances to sun
+        for(int idim=0; idim<DIM; idim++) x2Sun[idim]=x[idim]-xSun[idim];
+
+        R2Sun = sqrt(x2Sun[0]*x2Sun[0]+x2Sun[1]*x2Sun[1]+x2Sun[2]*x2Sun[2]);
+        r2Sun = sqrt(x2Sun[0]*x2Sun[0]+x2Sun[1]*x2Sun[1]);
+
+        //angle in the equatorial plane
+        double cosphi = x2Sun[0]/r2Sun, sinphi=x2Sun[1]/r2Sun;
+
+        double misc1 = B0 * pow(R0/R2Sun, 2);
+        double misc2 = (R2Sun - R0) * Omega/SpeedSolarWind * sintheta;
       
+        //magnetic field at location x
+        double B[DIM];
+
+        B[0] = misc1 * (sintheta*cosphi + misc2 * sinphi);
+        B[1] = misc1 * (sintheta*sinphi - misc2 * cosphi);
+        B[2] = misc1 *  costheta;
       
-      for(int iSegment=0;iSegment<nSegment; iSegment++){
+        //add vertex to the spiral
+        FieldLinesAll[nFieldLine-1].Add(x);
+        FieldLinesAll[nFieldLine-1].SetMagneticField(B,iSegment);
+      
+        //magnitude of the magnetic field
+        double AbsB = sqrt(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]);
 
-	//distances to sun
-	for(int idim=0; idim<DIM; idim++) x2Sun[idim]=x[idim]-xSun[idim];
-	R2Sun = sqrt(x2Sun[0]*x2Sun[0]+x2Sun[1]*x2Sun[1]+x2Sun[2]*x2Sun[2]);
-	r2Sun = sqrt(x2Sun[0]*x2Sun[0]+x2Sun[1]*x2Sun[1]);
+        //direction of the magnetic field
+        double b[DIM] = {B[0]/AbsB, B[1]/AbsB, B[2]/AbsB};
 
-	//angle in the equatorial plane
-	double cosphi = x2Sun[0]/r2Sun, sinphi=x2Sun[1]/r2Sun;
-
-	double misc1 = B0 * pow(R0/R2Sun, 2);
-	double misc2 = (R2Sun - R0) * Omega/SpeedSolarWind * sintheta;
-
-	//magnetic field at location x
-	double B[DIM];
-	B[0] = misc1 * (sintheta*cosphi + misc2 * sinphi);
-	B[1] = misc1 * (sintheta*sinphi - misc2 * cosphi);
-	B[2] = misc1 *  costheta;
-
-	//add vertex to the spiral
-	FieldLinesAll[nFieldLine-1].Add(x);
-	FieldLinesAll[nFieldLine-1].SetMagneticField(B,iSegment);
-
-	//magnitude of the magnetic field
-	double AbsB = sqrt(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]);
-	
-	//direction of the magnetic field
-	double b[DIM] = {B[0]/AbsB, B[1]/AbsB, B[2]/AbsB};
-	
-	// next vertex of the spiral
-	x[0]+=b[0]*Ds; x[1]+=b[1]*Ds; x[2]+=b[2]*Ds;
+        // next vertex of the spiral
+        x[0]+=b[0]*Ds; x[1]+=b[1]*Ds; x[2]+=b[2]*Ds;
       }
-      
     }
-    
   }
 
   //---------------------------------------------------------------------------
@@ -881,11 +928,7 @@ namespace PIC{
 namespace Mover{
 namespace FieldLine{
   // procedure that returns parameters of the guiding center motion
-  void GuidingCenterMotion(double& ForceParal, 
-			   double& AbsB,
-			   int spec,long int ptr,
-			   int   iFieldLine,
-			   double FieldLineCoord){
+  void GuidingCenterMotion(double& ForceParal, double& AbsB,int spec,long int ptr,int   iFieldLine,double FieldLineCoord) {
     /* function returns guiding center velocity in direction perpendicular
      * to the magnetic field and the force parallel to it
      * for Lorentz force (considered here)
@@ -914,37 +957,34 @@ namespace FieldLine{
     double E[3],B[3],B0[3],B1[3], AbsBDeriv;
     double mu     = PIC::ParticleBuffer::GetMagneticMoment(ptr);
     double q      = PIC::MolecularData::GetElectricCharge(spec);
+
     FL::FieldLinesAll[iFieldLine].GetMagneticField(B0, (int)FieldLineCoord);
     FL::FieldLinesAll[iFieldLine].GetMagneticField(B,       FieldLineCoord);
     FL::FieldLinesAll[iFieldLine].GetMagneticField(B1, (int)FieldLineCoord+1-1E-7);
     AbsB_LOC   = pow(B[0]*B[0] + B[1]*B[1] + B[2]*B[2], 0.5);
-    AbsBDeriv = (pow(B1[0]*B1[0] + B1[1]*B1[1] + B1[2]*B1[2], 0.5) -
-		 pow(B0[0]*B0[0] + B0[1]*B0[1] + B0[2]*B0[2], 0.5)) / 
-      FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoord);
     
+    AbsBDeriv = (pow(B1[0]*B1[0] + B1[1]*B1[1] + B1[2]*B1[2], 0.5) -
+        pow(B0[0]*B0[0] + B0[1]*B0[1] + B0[2]*B0[2], 0.5)) /  FL::FieldLinesAll[iFieldLine].GetSegmentLength(FieldLineCoord);
+
     //parallel force
-#if _PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+    #if _PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
     // in this case E = - V \cross B => E_{\paral} = E*b = 0
     ForceParal_LOC = - mu * AbsBDeriv;
-#else
+    #else
     exit(__LINE__, __FILE__, "not implemented");
-#endif//_PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+    #endif//_PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
     
     
     //#endif//_FORCE_LORENTZ_MODE_
-    
     ForceParal = ForceParal_LOC;
     AbsB       = AbsB_LOC;
-    
   }
   
   // mover itself
-  int Mover_SecondOrder(long int ptr, double dtTotal, 
-			cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode){
+  int Mover_SecondOrder(long int ptr, double dtTotal, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
     //aliases
     namespace FL = PIC::FieldLine;
     namespace PB = PIC::ParticleBuffer;
-
 
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
     double dtTemp;
@@ -980,10 +1020,13 @@ namespace FieldLine{
     PIC::ParticleBuffer::GetV(vInit,ParticleData);
     PIC::ParticleBuffer::GetX(xInit,ParticleData);
     spec=PIC::ParticleBuffer::GetI(ParticleData);
+
     double m0 = PIC::MolecularData::GetMass(spec);
     double mu = PIC::ParticleBuffer::GetMagneticMoment(ptr);
+
     iFieldLine = PIC::ParticleBuffer::GetFieldLineId(ptr);
     FieldLineCoordInit = PIC::ParticleBuffer::GetFieldLineCoord(ptr);
+
     static long int nCall=0;
     nCall++;
     
@@ -993,29 +1036,23 @@ namespace FieldLine{
     MovingTimeFinished=true;
     
     // predictor step
-#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
-    
-    GuidingCenterMotion(ForceParalInit,
-			AbsBInit,
-			spec,ptr,iFieldLine,FieldLineCoordInit);
-    
-#endif
+    #if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
+    GuidingCenterMotion(ForceParalInit,AbsBInit,spec,ptr,iFieldLine,FieldLineCoordInit);
+    #endif
     
     FL::FieldLinesAll[iFieldLine].GetSegmentDirection(dirInit, FieldLineCoordInit);
     vparInit = vInit[0]*dirInit[0]+vInit[1]*dirInit[1]+vInit[2]*dirInit[2];
     
     
     dtTemp=dtTotal/2.0;
+
     // advance coordinates half-step
-    FieldLineCoordMiddle = 
-      FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, 
-					 dtTemp * vparInit);
+    FieldLineCoordMiddle = FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, dtTemp * vparInit);
+
     // advance momentum half-step
-    vparMiddle = vparInit + 
-      dtTemp * ForceParalInit/m0; 
+    vparMiddle = vparInit + dtTemp * ForceParalInit/m0;
     
-    if(FL::FieldLinesAll[iFieldLine].is_loop())
-      FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordMiddle);
+    if (FL::FieldLinesAll[iFieldLine].is_loop()) FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordMiddle);
     
     // check if a particle has left the domain
     if (FL::FieldLinesAll[iFieldLine].GetSegment(FieldLineCoordMiddle)==NULL) { 
@@ -1023,57 +1060,49 @@ namespace FieldLine{
       int code=_PARTICLE_DELETED_ON_THE_FACE_;
       
       //call the function to processes particles that left the domain
-      switch(code){
+      switch(code) {
       case _PARTICLE_DELETED_ON_THE_FACE_:
-	PIC::ParticleBuffer::DeleteParticle(ptr);
-	return _PARTICLE_LEFT_THE_DOMAIN_;
-	break;
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+
+        break;
       default:
-	exit(__LINE__,__FILE__,"Error: not implemented");
+        exit(__LINE__,__FILE__,"Error: not implemented");
       }
-      
     }
     
     
     // corrector step
-    
-#if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
-    GuidingCenterMotion(ForceParalMiddle,
-			AbsBMiddle,
-			spec,ptr,iFieldLine,FieldLineCoordMiddle);
-#endif
+    #if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
+    GuidingCenterMotion(ForceParalMiddle,AbsBMiddle,spec,ptr,iFieldLine,FieldLineCoordMiddle);
+    #endif
     
 
     // advance coordinates full-step
-    FieldLineCoordFinal = 
-      FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, 
-					 dtTotal * vparMiddle);
+    FieldLineCoordFinal = FL::FieldLinesAll[iFieldLine].move(FieldLineCoordInit, dtTotal * vparMiddle);
 
     // advance momentum full-step
     vparFinal =vparInit + dtTotal * ForceParalMiddle/m0; 
 
-    if(FL::FieldLinesAll[iFieldLine].is_loop())
-      FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordFinal);
+    if (FL::FieldLinesAll[iFieldLine].is_loop()) FL::FieldLinesAll[iFieldLine].fix_coord(FieldLineCoordFinal);
 
    
     //advance the particle's position and velocity
     //interaction with the faces of the block and internal surfaces
-  
     if (FL::FieldLinesAll[iFieldLine].GetSegment(FieldLineCoordFinal)==NULL) {
-      
       //the particle left the computational domain
       int code=_PARTICLE_DELETED_ON_THE_FACE_;
       
       //call the function that process particles that leaved the coputational domain
-      switch(code){
+      switch (code) {
       case _PARTICLE_DELETED_ON_THE_FACE_:
-	PIC::ParticleBuffer::DeleteParticle(ptr);
-	return _PARTICLE_LEFT_THE_DOMAIN_;
-      break;
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+        break;
+
       default:
-      exit(__LINE__,__FILE__,"Error: not implemented");
+        exit(__LINE__,__FILE__,"Error: not implemented");
       }
-      
     }
 
     FL::FieldLinesAll[iFieldLine].GetSegmentDirection(vFinal, FieldLineCoordFinal);
@@ -1082,7 +1111,6 @@ namespace FieldLine{
     
     newNode=PIC::Mesh::Search::FindBlock(xFinal);
     
-
     PIC::ParticleBuffer::SetV(vFinal,ParticleData);
     PIC::ParticleBuffer::SetX(xFinal,ParticleData);
     PB::SetFieldLineCoord(FieldLineCoordFinal, ParticleData);

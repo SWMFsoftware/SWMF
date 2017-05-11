@@ -122,53 +122,52 @@ void PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction() {
   double LocalParticleWeight,e,mass,speed,CellMeasure;
 
   for (node=SampleNodes[0],iProbe=0;iProbe<nSamleLocations;node=SampleNodes[++iProbe]) if (node->Thread==PIC::ThisThread) {
-      double *v;
-      PIC::ParticleBuffer::byte *ParticleData;
-      int i,j,k;
-      PIC::Mesh::cDataCenterNode *cell;
+    double *v;
+    PIC::ParticleBuffer::byte *ParticleData;
+    int i,j,k;
+    PIC::Mesh::cDataCenterNode *cell;
 
-      PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[iProbe],i,j,k);
-      cell=node->block->GetCenterNode(SampleLocalCellNumber[iProbe]);
-      CellMeasure=cell->Measure;
-      if (CellMeasure<=0.0) CellMeasure=1.0;
+    PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[iProbe],i,j,k);
+    cell=node->block->GetCenterNode(SampleLocalCellNumber[iProbe]);
+    CellMeasure=cell->Measure;
+    if (CellMeasure<=0.0) CellMeasure=1.0;
 
-      ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+    ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-      while (ptr!=-1) {
-        ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-        spec=PIC::ParticleBuffer::GetI(ParticleData);
-        v=PIC::ParticleBuffer::GetV(ParticleData);
+    while (ptr!=-1) {
+      ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+      spec=PIC::ParticleBuffer::GetI(ParticleData);
+      v=PIC::ParticleBuffer::GetV(ParticleData);
 
-        mass=PIC::MolecularData::GetMass(spec);
+      mass=PIC::MolecularData::GetMass(spec);
 
-        LocalParticleWeight=node->block->GetLocalParticleWeight(spec);
-        LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+      LocalParticleWeight=node->block->GetLocalParticleWeight(spec);
+      LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
-        switch (EnergySamplingMode) {
-        case _LINEAR_SAMPLING_SCALE_:
-          speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-          e=Relativistic::Speed2E(speed,mass)*J2eV;
+      switch (EnergySamplingMode) {
+      case _LINEAR_SAMPLING_SCALE_:
+        speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        e=Relativistic::Speed2E(speed,mass)*J2eV;
 
-          i=(int)((e-eMin)/dE);
-          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
+        i=(int)((e-eMin)/dE);
+        if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
 
-          break;
-        case _LOGARITHMIC_SAMPLING_SCALE_:
-          speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-          e=Relativistic::Speed2E(speed,mass)*J2eV;
+        break;
+      case _LOGARITHMIC_SAMPLING_SCALE_:
+        speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        e=Relativistic::Speed2E(speed,mass)*J2eV;
 
-          i=(int)((log10(e)-log10eMin)/log10dE);
-          if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
+        i=(int)((log10(e)-log10eMin)/log10dE);
+        if ((i>=0)&&(i<nSampledFunctionPoints)) SamplingBuffer[iProbe][spec][i]+=LocalParticleWeight/CellMeasure;
 
-          break;
-        default:
-          exit(__LINE__,__FILE__,"Error: the option is unknown");
-        }
-
-        ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
       }
-    }
 
+      ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+    }
+  }
 }
 
 

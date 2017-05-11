@@ -34,8 +34,7 @@ void PIC::PitchAngleDistributionSample::Init() {//double ProbeLocations[][DIM],i
 #endif
 
 
-  if(DIM < 3)
-    exit(__LINE__,__FILE__,"Error: DIM < 3, pitch angle calculations are not meaningful ");
+  if (DIM < 3) exit(__LINE__,__FILE__,"Error: DIM < 3, pitch angle calculations are not meaningful ");
 
   //  nSampleLocations=nProbeLocations;
   SamplingInitializedFlag=true;
@@ -51,21 +50,16 @@ void PIC::PitchAngleDistributionSample::Init() {//double ProbeLocations[][DIM],i
   //allocate the sampling buffers
   SampleLocalCellNumber=new long int [nSampleLocations];
   SampleNodes=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nSampleLocations];
-  //  SamplingLocations=new double* [nProbeLocations];
-  //  SamplingLocations[0]=new double [DIM*nProbeLocations];
 
   SamplingBuffer=new double* [nSampleLocations];
   SamplingBuffer[0]=new double [nSampleLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1)];
 
   for (nProbe=1;nProbe<nSampleLocations;nProbe++) {
-    //    SamplingLocations[nProbe]=SamplingLocations[nProbe-1]+DIM;
     SamplingBuffer[nProbe]=SamplingBuffer[nProbe-1]+PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1);
   }
 
   //init the sampling informations
   for (nProbe=0;nProbe<nSampleLocations;nProbe++) {
-    //    for (idim=0;idim<DIM;idim++) SamplingLocations[nProbe][idim]=ProbeLocations[nProbe][idim];
-
     SampleNodes[nProbe]=PIC::Mesh::mesh.findTreeNode(SamplingLocations[nProbe]);
     if (SampleNodes[nProbe]==NULL) exit(__LINE__,__FILE__,"Error: the point is outside of the domain");
 
@@ -101,54 +95,43 @@ void PIC::PitchAngleDistributionSample::SampleDistributionFnction() {
   long int ptr,nProbe,spec,idim,offset;
   double LocalParticleWeight, speed, CosPA;
 
-/*
-    for (node=NULL,nProbe=0;nProbe<nSampleLocations;nProbe++) if (sampleNode==SampleNodes[nProbe]) {
-      node=sampleNode;
-      break;
-    }
-
-    if (node!=NULL) if (node->block!=NULL) {
-    */
-
   for (node=SampleNodes[0],nProbe=0;nProbe<nSampleLocations;node=SampleNodes[++nProbe]) if (node->Thread==PIC::ThisThread) {
-      double *v;
-      double B[3], Bdir[3], Babs;
-      PIC::ParticleBuffer::byte *ParticleData;
-      int i,j,k;
+    double *v;
+    double B[3], Bdir[3], Babs;
+    PIC::ParticleBuffer::byte *ParticleData;
+    int i,j,k;
 
-      PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[nProbe],i,j,k);
-      ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+    PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[nProbe],i,j,k);
+    ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-      PIC::CPLR::InitInterpolationStencil(SamplingLocations[nProbe],node);
-      PIC::CPLR::GetBackgroundMagneticField(B);
+    PIC::CPLR::InitInterpolationStencil(SamplingLocations[nProbe],node);
+    PIC::CPLR::GetBackgroundMagneticField(B);
 
-      Babs = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5);
-      if(Babs==0.0) continue;
-      for(idim=0;idim<DIM; ++idim)
-	Bdir[idim] = B[idim] / Babs;
+    Babs = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5);
+    if (Babs==0.0) continue;
 
-      while (ptr!=-1) {
-        ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-        spec=PIC::ParticleBuffer::GetI(ParticleData);
-        v=PIC::ParticleBuffer::GetV(ParticleData);
-	speed = pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], 0.5);
+    for(idim=0;idim<DIM; ++idim) Bdir[idim] = B[idim] / Babs;
 
-        LocalParticleWeight=node->block->GetLocalParticleWeight(spec);
-        LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+    while (ptr!=-1) {
+      ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+      spec=PIC::ParticleBuffer::GetI(ParticleData);
+      v=PIC::ParticleBuffer::GetV(ParticleData);
+      speed = pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], 0.5);
 
-        for (CosPA=0.0,idim=0;idim<DIM;idim++)
-	  CosPA+=Bdir[idim]*v[idim];
+      LocalParticleWeight=node->block->GetLocalParticleWeight(spec);
+      LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
-	CosPA /= speed;
-	i=(int)((CosPA-CosPAMin)/dCosPA);
-	offset=GetSampleDataOffset(spec,Sample_PitchAngle_Offset);
+      for (CosPA=0.0,idim=0;idim<DIM;idim++) CosPA+=Bdir[idim]*v[idim];
 
-	if ((i>=0)&&(i<nSampledFunctionPoints-1)) SamplingBuffer[nProbe][offset+i]+=LocalParticleWeight;
+      CosPA /= speed;
+      i=(int)((CosPA-CosPAMin)/dCosPA);
+      offset=GetSampleDataOffset(spec,Sample_PitchAngle_Offset);
 
-        ptr=PIC::ParticleBuffer::GetNext(ParticleData);
-      }
+      if ((i>=0)&&(i<nSampledFunctionPoints-1)) SamplingBuffer[nProbe][offset+i]+=LocalParticleWeight;
+
+      ptr=PIC::ParticleBuffer::GetNext(ParticleData);
     }
-
+  }
 }
 
 
@@ -190,8 +173,8 @@ void PIC::PitchAngleDistributionSample::printDistributionFunction(char *fname,in
         offset=GetSampleDataOffset(spec,nVariable);
 
         for (i=0;i<nSampledFunctionPoints-1;i++) {
-	  if (nVariable==Sample_PitchAngle_Offset) dInterval=dCosPA;
-	  else exit(__LINE__,__FILE__,"Error: unknown option");
+          if (nVariable==Sample_PitchAngle_Offset) dInterval=dCosPA;
+          else exit(__LINE__,__FILE__,"Error: unknown option");
 
           norm+=SamplingBuffer[nProbe][i+offset]*dInterval;
         }
@@ -202,13 +185,12 @@ void PIC::PitchAngleDistributionSample::printDistributionFunction(char *fname,in
       //print the output file
       for (i=0;i<nSampledFunctionPoints-1;i++) {
         double CosPA=0.0;
-	CosPA=CosPAMin+i*dCosPA;
 
+        CosPA=CosPAMin+i*dCosPA;
         fprintf(fout,"%e ",CosPA);
 
         offset=GetSampleDataOffset(spec,Sample_PitchAngle_Offset);
         fprintf(fout,"  %e\n",SamplingBuffer[nProbe][i+offset]);
-
       }
 
       //close the output file
@@ -225,6 +207,7 @@ void PIC::PitchAngleDistributionSample::printDistributionFunction(char *fname,in
         }
       }
     }
+
   }
 
   if (PIC::Mesh::mesh.ThisThread==0) pipe.closeRecvAll();
