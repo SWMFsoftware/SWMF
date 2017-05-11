@@ -385,10 +385,9 @@ _StartParticleCollisionLoop_:
 
 
         //DEBUG
-
-        if (spec!=0) {
-          printf("sdfkghsdjfhvgslkgjhvldafjkghvlsdfhzghvlkjdafg\n");
-        }
+//        if (spec!=0) {
+//          printf("sdfkghsdjfhvgslkgjhvldafjkghvlsdfhzghvlkjdafg\n");
+//        }
 
         //END DEBUG
 
