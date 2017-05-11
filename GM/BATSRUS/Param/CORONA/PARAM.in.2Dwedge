@@ -188,10 +188,6 @@ RAW			StringLogfile
 INNERBOUNDARY
 user			TypeBcInner
 
-#FACEBOUNDARY
-6			MinBoundary
--2			MaxBoundary
-
 #OUTERBOUNDARY
 user			TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2

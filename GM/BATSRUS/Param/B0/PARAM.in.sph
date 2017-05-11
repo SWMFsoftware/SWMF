@@ -46,10 +46,6 @@ F			DoSaveRestart
 #GRIDGEOMETRY
 spherical		TypeGeometry
 
-#FACEBOUNDARY
-6			MinFaceBoundary
--2			MaxFaceBoundary
-
 #LIMITRADIUS
 3.0			RadiusMin
 16.0			RadiusMax

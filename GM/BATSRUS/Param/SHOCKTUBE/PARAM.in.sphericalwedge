@@ -117,10 +117,6 @@ TOPHAT
 
 #USERINPUTEND ---------------------
 
-#FACEBOUNDARY
-6		MinFaceBoundary
--2		MaxFaceBoundary
-
 #OUTERBOUNDARY
 reflect			rMin
 reflect			rMax
