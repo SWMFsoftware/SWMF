@@ -319,7 +319,8 @@ contains
          UnitX_, UnitU_, UnitT_, UnitB_, UnitRho_, UnitP_, Gamma
     use ModNumConst
     use ModMpi
-    use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB
+    use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB, &
+         MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel
 
     real, intent(in) :: TimeSimulationLimit !Simulation time not to be exceeded
 
@@ -341,8 +342,16 @@ contains
     ! if calc_timestep is tested, test this routine too
     if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
-         TimeSimulationLimit, dt_BLK(BlkTest), time_BLK(iTest,jTest,kTest,BlkTest)
+    if(DoTestMe)write(*,*) NameSub, &
+         ' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
+         TimeSimulationLimit, dt_BLK(BlkTest), &
+         time_BLK(iTest,jTest,kTest,BlkTest)
+
+    if(UseMaxTimeStep)then
+       if(.not.allocated(iTimeLevel_A)) allocate(iTimeLevel_A(MaxNode))
+       iTimeLevel_A(1:nNode) = 0
+       nTimeLevel = 0
+    end if
 
     if(UseDtFixed)then
        Dt = DtFixed
@@ -376,10 +385,12 @@ contains
              if(Unused_B(iBlock)) CYCLE
              if(Dt_BLK(iBlock) /= Dt) CYCLE
              write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
-                  ' s  is controlled by block with iProc, iBlock, true_BLK, true_cell =', &
-                  iProc, iBlock, true_BLK(iBlock), all(true_cell(1:nI,1:nJ,1:nK,iBlock)), &
+                  ' s  is controlled by block with ',&
+                  'iProc, iBlock, true_BLK, true_cell =', &
+                  iProc, iBlock, true_BLK(iBlock), &
+                  all(true_cell(1:nI,1:nJ,1:nK,iBlock)), &
 		  any(true_cell(1:nI,1:nJ,1:nK,iBlock))
-             write(*,*) NameSub, ' X,Y,Z coordinates of (1,1,1) cell center are ',&
+             write(*,*) NameSub, ' X,Y,Z coordinates of (1,1,1) cell center=',&
                   Xyz_DGB(:,1,1,1,iBlock)
              write(*,*) NameSub, ' cell size in normalized and SI units:', &
                   CellSize_DB(:,iBlock), ', ', &
@@ -423,7 +434,8 @@ contains
           if(DoTestMe) write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
 
           ! Make DtMax a power of 2 multiple of DtMin
-          DtMax = DtMin*2.0**floor(log(DtMax/DtMin)/log(2.0))
+          nTimeLevel = floor(log(DtMax/DtMin)/log(2.0))
+          DtMax = DtMin * 2**nTimeLevel
 
           if(DoTestMe)write(*,*)NameSub,' DtMax after rounding=',DtMax
 
@@ -440,7 +452,8 @@ contains
        if(UseMaxTimeStep)then
           DtMax = Dt
           DtMin = min(DtMin, Dt)
-          DtMin = DtMax/2.0**ceiling(log(DtMax/DtMin)/log(2.0))
+          nTimeLevel = ceiling(log(DtMax/DtMin)/log(2.0))
+          DtMin = DtMax/2**nTimeLevel
        end if
     end if
 
@@ -453,7 +466,11 @@ contains
           if(Dt_BLK(iBlock) >= DtMax)then
              Dt_BLK(iBlock) = DtMax
           else
-             Dt_BLK(iBlock) = DtMin*2**floor(log(Dt_BLK(iBlock)/DtMin)/log(2.0))
+             ! Time level of this block
+             iTimeLevel_A(iNode_B(iBlock)) = &
+                  ceiling(log(DtMax/Dt_BLK(iBlock))/log(2.0))
+             ! Time step rounded to power of 2 fraction of DtMax
+             Dt_BLK(iBlock) = DtMax / 2**iTimeLevel_A(iNode_B(iBlock))
           end if
           time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
        else
@@ -467,6 +484,10 @@ contains
        end if
 
     end do
+
+    ! Collect time level information from all processors
+    if(UseMaxTimeStep .and. nProc > 1) call MPI_allreduce(MPI_IN_PLACE, &
+         iTimeLevel_A, nNode, MPI_INTEGER, MPI_SUM, iComm, iError)
 
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
