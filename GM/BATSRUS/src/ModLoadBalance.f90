@@ -238,7 +238,7 @@ contains
     use ModPIC, ONLY: UsePic, pic_find_node, IsPicNode_A, DoBalancePicBlock
 
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
-         Used_, iNode_B, regrid_batl
+         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
     use ModUserInterface ! user_action
@@ -282,6 +282,7 @@ contains
 
     call select_stepping(DoMoveCoord)
 
+  
     if (nProc > 1 .and. index(test_string,'NOLOADBALANCE') < 1) then
        if(.not.allocated(iTypeBalance_A)) allocate(iTypeBalance_A(MaxNode))
        iTypeBalance_A = 0
@@ -350,9 +351,9 @@ contains
 
              ! First bit used by time levels
              iSubCycleBlock = 2*iCrit
-             ! Number of time levels is log_2(DtMax/DtMin)
-             iTypeMax = iTypeMax &
-                  + iSubCycleBlock*nint(alog(DtMax/DtMin) / alog(2.0))
+
+             ! Maximum type
+             iTypeMax = iTypeMax + iSubCycleBlock*nTimeLevel
 
           end if
 
@@ -405,9 +406,8 @@ contains
                 ! to one time level, so the type is the time level
                 ! times a constant iSubCycleBlock that leaves enough bits 
                 ! for the other block type criteria.
-                iType = iType + iSubCycleBlock &
-                     *nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
-
+                iType = iType + iSubCycleBlock*iTimeLevel_A(iNode_B(iBlock))
+                
                 if(dt_BLK(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
@@ -416,7 +416,7 @@ contains
                    write(*,*) NameSub,' DtMin, DtMax   =', DtMin, DtMax
                    write(*,*) NameSub,' dt_BLK         =', dt_BLK(iBlock)
                    write(*,*) NameSub,' time level     =', &
-                        nint(alog(dt_BLK(iBlock)/DtMin) / alog(2.0))
+                        iTimeLevel_A(iNode_B(iBlock))
                 end if
              end if
 
