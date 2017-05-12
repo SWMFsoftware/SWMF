@@ -1030,7 +1030,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModFaceValue, ONLY: iRegionLowOrder_I
   use ModPIC, ONLY: pic_find_region
   use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
-       AmrCrit_IB, nAmrCrit, IsCartesian, &
+       iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
        Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
 
   use ModUserInterface ! user_set_plot_var
@@ -1578,6 +1578,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
              PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
      case('amrlevel')
         PlotVar(:,:,:,iVar) = iTree_IA(Level_,iNode_B(iBLK))
+     case('timelevel')
+        if(allocated(iTimeLevel_A)) &
+             PlotVar(:,:,:,iVar) = iTimeLevel_A(iNode_B(iBLK))
      case('dvol')
         PlotVar(:,:,:,iVar) = CellVolume_GB(:,:,:,iBLK)
      case('dx')
