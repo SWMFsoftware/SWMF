@@ -184,6 +184,10 @@ module BATL_tree
   ! Check for changes in resolution change
   logical, public:: DoCheckResChange = .false.
 
+  ! Time level information for subcycling algorithm
+  integer, public:: nTimeLevel = 0
+  integer, public, allocatable:: iTimeLevel_A(:)
+
   ! Local variables -----------------------------------------------
   character(len=*), parameter:: NameMod = "BATL_tree"
 
@@ -1895,9 +1899,10 @@ contains
 
   !==========================================================================
 
-  integer function min_tree_level(iStage)
+  integer function min_tree_level(iStage, UseTimeLevel)
 
     integer, intent(in):: iStage
+    logical, intent(in), optional:: UseTimeLevel
 
     ! If iStage-1 contains 2^n in its prime factorization
     ! then grid blocks with grid levels between 
@@ -1910,7 +1915,11 @@ contains
 
     if(iStage == 1)then
        ! All blocks are advanced in the first stage
-       min_tree_level = nLevelMin
+       if(present(UseTimeLevel))then
+          min_tree_level = 0
+       else
+          min_tree_level = nLevelMin
+       end if
        RETURN
     end if
 
@@ -1924,7 +1933,11 @@ contains
           EXIT
        end if
     end do
-    min_tree_level = max(nLevelMin, nLevelMax - 1 - n)
+    if(UseTimeLevel)then
+       min_tree_level = max(0, nTimeLevel - n)
+    else
+       min_tree_level = max(nLevelMin, nLevelMax - 1 - n)
+    end if
 
   end function min_tree_level
 

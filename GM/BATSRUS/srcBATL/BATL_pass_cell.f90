@@ -64,7 +64,7 @@ contains
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_, &
-         find_neighbor_for_anynode
+         iTimeLevel_A, find_neighbor_for_anynode
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
 
@@ -110,7 +110,9 @@ contains
     ! DoResChangeOnlyIn determines if only ghost cells next to resolution
     !    changes are filled in. Default is false.
     ! iLevelMin and iLevelMax restrict the communication for blocks with
-    !    grid levels in the iLevelMin..iLevelMax range.
+    !    grid or time (if Time_B is present) levels in the 
+    !    iLevelMin..iLevelMax range.
+    !    Default is message passing among all levels. 
     ! TimeOld_B and Time_B are the simulation times associated with the
     !    ghost cells and physical cells of State_VGB, respectively. 
     !    If these arguments are present, the ghost cells are interpolated 
@@ -138,7 +140,7 @@ contains
     logical :: DoResChangeOnly
     character(len=3) :: NameOperator
     logical:: UseMin, UseMax  ! logicals for min and max operators
-    logical :: UseTime        ! true if Time_B and TimeOld_B are present
+    logical :: UseTime        ! true if time interpolation is to be done
     logical :: DoTest
     logical :: UseHighResChange
 
@@ -291,11 +293,6 @@ contains
        call CON_stop(NameSub// &
             ': Time_B can not be used with '//trim(NameOperator))
     end if
-
-    if(present(Time_B) .neqv. present(iLevelMin))then
-       call CON_stop(NameSub// &
-            ': Time_B and iLevelMin can only be used together')
-    end if
        
     if(DoTest)write(*,*) NameSub, &
          ': Width, Prolong, Coarse, Corner, RestrictFace, ResChangeOnly=', &
@@ -331,7 +328,7 @@ contains
          allocate(IsAccurateFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK, nBlock))
     if(UseHighResChange) then
        ! WARNING!!!!!!!!!!!!!!!!!!!
-       ! HighResChange has a issue with boudary condition so far. One       
+       ! HighResChange has a issue with boundary conditions so far. One       
        ! boundary block's corner/edge neighbors may be not defined (like
        ! reflect boundary) and the ghost cell values are not accurate (the
        ! values may be 777 after AMR). This problem only occures with 
@@ -341,7 +338,6 @@ contains
        ! To solve the problem, fill in these corner/edge ghost cells with
        ! the nearby face ghost cell value (see ModCellBoundary::set_edge_
        ! corner_ghost)
-
 
        ! stage 1: first order prolongation and do_equal.
        ! stage 2: 
@@ -432,11 +428,11 @@ contains
                 iNodeSend = iNode_B(iBlockSend)
 
                 ! Skip if the sending block level is not in the level range
-                if(present(iLevelMin))then
+                if(present(iLevelMin) .and. .not.present(Time_B))then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend < iLevelMin) CYCLE
                 end if
-                if(present(iLevelMax))then
+                if(present(iLevelMax) .and. .not.present(Time_B))then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend > iLevelMax) CYCLE
                 end if
@@ -478,13 +474,17 @@ contains
 
                          ! Level difference = own_level - neighbor_level
                          DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
-
-                         ! Skip if the receiving block level is not in range
-                         if(present(iLevelMin))then
-                            if(iLevelSend - DiLevel < iLevelMin) CYCLE
-                         end if
-                         if(present(iLevelMax))then
-                            if(iLevelSend - DiLevel > iLevelMax) CYCLE
+                         
+                         ! Skip if the receiving block grid level is not 
+                         ! in range. Time levels of the receiving block(s)
+                         ! will be checked later (if Time_B is present).
+                         if(.not.present(Time_B))then
+                            if(present(iLevelMin))then
+                               if(iLevelSend - DiLevel < iLevelMin) CYCLE
+                            end if
+                            if(present(iLevelMax))then
+                               if(iLevelSend - DiLevel > iLevelMax) CYCLE
+                            end if
                          end if
 
                          ! Do prolongation in the second stage if 
@@ -2509,6 +2509,17 @@ contains
       kSend = (3*kDir + 3)/2
 
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
+
+      ! Skip blocks with a time level outside the range
+      if(present(Time_B))then
+         if(present(iLevelMin))then
+            if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
+         end if
+         if(present(iLevelMax))then
+            if(iTimeLevel_A(iNodeRecv) > iLevelMax) RETURN
+         end if
+      end if
+
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
@@ -2661,6 +2672,17 @@ contains
       kSend = (3*kDir + 3 + kSide)/2
 
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
+
+      ! Skip blocks with a time level outside the range
+      if(present(Time_B))then
+         if(present(iLevelMin))then
+            if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
+         end if
+         if(present(iLevelMax))then
+            if(iTimeLevel_A(iNodeRecv) > iLevelMax) RETURN
+         end if
+      end if
+
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
@@ -3012,11 +3034,23 @@ contains
                iRecv = iSend - 3*iDir
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
+               
+               ! Skip blocks with a time level outside the range
+               if(present(Time_B))then
+                  if(present(iLevelMin))then
+                     if(iTimeLevel_A(iNodeRecv) < iLevelMin) CYCLE
+                  end if
+                  if(present(iLevelMax))then
+                     if(iTimeLevel_A(iNodeRecv) > iLevelMax) CYCLE
+                  end if
+               end if
+
+
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
                if(iSendStage == 3 .and. nK > 1 .and. &
-                    abs(iDir)+abs(jDir)+abs(kDir) .eq. 1 ) then 
+                    abs(iDir)+abs(jDir)+abs(kDir) == 1 ) then 
                   ! Do_prolongation for edge/corner ghost cells and for 
                   ! some special face cells. 
                   DoSendFace = is_only_corner_fine(iNodeRecv,-iDir,-jDir,-kDir)
