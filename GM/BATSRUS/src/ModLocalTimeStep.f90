@@ -51,11 +51,12 @@ contains
   !===========================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
-    use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage
+    use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
+         nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
-         Flux_VX, Flux_VY, Flux_VZ, time_BLK
+         Flux_VX, Flux_VY, Flux_VZ
     use ModB0,         ONLY: set_b0_face
     use ModConserveFlux, ONLY: DoConserveFlux
     use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
@@ -92,7 +93,6 @@ contains
     real   :: TimeStage, TimeEnd, DtSiTiny
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
-    real:: DtBlkOld
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'advance_localstep'
@@ -152,17 +152,29 @@ contains
     do iStageLocal = 1, nStage*nTimeStage
 
        ! Number of grid levels involved in this stage
-       iLevelMin = min_tree_level(iStageLocal)
-       if(UseMaxTimeStep) iLevelMin = 0 !!!
+       iLevelMin = min_tree_level(iStageLocal, UseTimeLevel=.true.)
        if(DoTestMe)write(*,*)'iStageLocal, iLevelMin=', iStageLocal, iLevelMin
 
+       !write(*,*)'!!! left TimeOld, Time=', TimeOld_B(13), Time_B(13)
+       !write(*,*)'!!! rite TimeOld, Time=', TimeOld_B(14), Time_B(14)
+       !write(*,*)'!!! Bef left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
+       !write(*,*)'!!! Bef rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
+
        call timing_start('message_pass_cell')
-       call message_pass_cell(nVar, State_VGB, &
-            DoSendCornerIn=.true., &
-            nProlongOrderIn=1, &
-            DoRestrictFaceIn=.true., & 
-            TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
+       if(nOrder > 1 .and. nOrderProlong == 2)then
+          call message_pass_cell(nVar, State_VGB, &
+               TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
+       else
+          call message_pass_cell(nVar, State_VGB, &
+               DoSendCornerIn=.true., &
+               nProlongOrderIn=1, &
+               DoRestrictFaceIn=.true., & 
+               TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
+       end if
        call timing_stop('message_pass_cell')
+
+       !write(*,*)'!!! Aft left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
+       !write(*,*)'!!! Aft rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
 
        ! Calculate coronal heat factor
        ! This routine involves MPI_allreduce, so it cannot be done per block
