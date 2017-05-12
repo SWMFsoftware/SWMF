@@ -293,6 +293,11 @@ contains
        call CON_stop(NameSub// &
             ': Time_B can not be used with '//trim(NameOperator))
     end if
+
+    if(present(Time_B) .neqv. present(iLevelMin))then
+       call CON_stop(NameSub// &
+            ': Time_B and iLevelMin can only be used together')
+    end if
        
     if(DoTest)write(*,*) NameSub, &
          ': Width, Prolong, Coarse, Corner, RestrictFace, ResChangeOnly=', &
@@ -428,11 +433,11 @@ contains
                 iNodeSend = iNode_B(iBlockSend)
 
                 ! Skip if the sending block level is not in the level range
-                if(present(iLevelMin) .and. .not.present(Time_B))then
+                if(present(iLevelMin) .and. .not.allocated(iTimeLevel_A))then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend < iLevelMin) CYCLE
                 end if
-                if(present(iLevelMax) .and. .not.present(Time_B))then
+                if(present(iLevelMax) .and. .not.allocated(iTimeLevel_A))then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend > iLevelMax) CYCLE
                 end if
@@ -478,7 +483,7 @@ contains
                          ! Skip if the receiving block grid level is not 
                          ! in range. Time levels of the receiving block(s)
                          ! will be checked later (if Time_B is present).
-                         if(.not.present(Time_B))then
+                         if(.not.allocated(iTimeLevel_A))then
                             if(present(iLevelMin))then
                                if(iLevelSend - DiLevel < iLevelMin) CYCLE
                             end if
@@ -2511,7 +2516,7 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
 
       ! Skip blocks with a time level outside the range
-      if(present(Time_B))then
+      if(allocated(iTimeLevel_A))then
          if(present(iLevelMin))then
             if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
          end if
@@ -2674,7 +2679,7 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
 
       ! Skip blocks with a time level outside the range
-      if(present(Time_B))then
+      if(allocated(iTimeLevel_A))then
          if(present(iLevelMin))then
             if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
          end if
@@ -3036,7 +3041,7 @@ contains
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
                
                ! Skip blocks with a time level outside the range
-               if(present(Time_B))then
+               if(allocated(iTimeLevel_A))then
                   if(present(iLevelMin))then
                      if(iTimeLevel_A(iNodeRecv) < iLevelMin) CYCLE
                   end if
