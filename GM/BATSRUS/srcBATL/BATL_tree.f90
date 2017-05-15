@@ -185,11 +185,11 @@ module BATL_tree
   logical, public:: DoCheckResChange = .false.
 
   ! Time level information for subcycling algorithm
+  logical, public:: UseTimeLevel = .false.
   integer, public:: nTimeLevel = 0
   integer, public, allocatable:: iTimeLevel_A(:)
 
   ! Local variables -----------------------------------------------
-  character(len=*), parameter:: NameMod = "BATL_tree"
 
   integer :: iNodeNew = 0
 
@@ -206,6 +206,8 @@ module BATL_tree
 
   ! Use uniform resolution around axis
   logical:: UseUniformAxis = .false.
+
+  character(len=*), parameter:: NameMod = "BATL_tree"
 
 contains
   !===========================================================================
@@ -1899,10 +1901,10 @@ contains
 
   !==========================================================================
 
-  integer function min_tree_level(iStage, UseTimeLevel)
+  integer function min_tree_level(iStage, UseTimeLevelIn)
 
     integer, intent(in):: iStage
-    logical, intent(in), optional:: UseTimeLevel
+    logical, intent(in), optional:: UseTimeLevelIn
 
     ! If iStage-1 contains 2^n in its prime factorization
     ! then grid blocks with grid levels between 
@@ -1912,10 +1914,11 @@ contains
 
     integer:: i, n
     !------------------------------------------------------------------------
+    if(present(UseTimeLevelIn)) UseTimeLevel = UseTimeLevelIn
 
     if(iStage == 1)then
        ! All blocks are advanced in the first stage
-       if(present(UseTimeLevel))then
+       if(UseTimeLevel)then
           min_tree_level = 0
        else
           min_tree_level = nLevelMin
