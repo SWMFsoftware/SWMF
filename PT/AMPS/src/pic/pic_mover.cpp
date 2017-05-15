@@ -2773,7 +2773,9 @@ exit(__LINE__,__FILE__,"Error: not implemented");
       //if a particle crossed a face, the time step and particle weight are changed
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-    //do nothing
+       //do nothing
+#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+      // do nothing  
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
       double WeightCorrectionFactor,TimeStepRatio;
 
