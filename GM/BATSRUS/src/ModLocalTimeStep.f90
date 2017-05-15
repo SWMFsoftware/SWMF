@@ -152,7 +152,7 @@ contains
     do iStageLocal = 1, nStage*nTimeStage
 
        ! Number of grid levels involved in this stage
-       iLevelMin = min_tree_level(iStageLocal, UseTimeLevel=.true.)
+       iLevelMin = min_tree_level(iStageLocal, UseTimeLevelIn=UseMaxTimeStep)
        if(DoTestMe)write(*,*)'iStageLocal, iLevelMin=', iStageLocal, iLevelMin
 
        !write(*,*)'!!! left TimeOld, Time=', TimeOld_B(13), Time_B(13)
