@@ -500,6 +500,8 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
     LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
 #else
@@ -1999,6 +2001,8 @@ void Comet::StepOverTime() {
 	  
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   LocalTimeStep=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ptr)); //   node->Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
 #else
@@ -2303,6 +2307,8 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   ParentTimeStep=node->block->GetLocalTimeStep(spec);
 #else
@@ -2337,6 +2343,8 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
 #endif
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
      ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
      ProductTimeStep=node->block->GetLocalTimeStep(specProduct);
