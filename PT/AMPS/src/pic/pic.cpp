@@ -1918,7 +1918,22 @@ void PIC::Mesh::cDataBlockAMR::SetLocalTimeStep(double dt, int spec) {
   if ((PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]<0.0)||(PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]>dt)) {
     PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]=dt;
   }
-
+  
+  #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  
+  if (PIC::ParticleWeightTimeStep::GlobalTimeStep==NULL) {
+    PIC::ParticleWeightTimeStep::GlobalTimeStep=new double [PIC::nTotalSpecies];
+    for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalTimeStep[s]=-1.0;
+  }
+  
+  if ((PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]<0.0)||(PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]>dt)) {
+    for (int s=0;s<spec;s++){
+      //make sure dt is the minimum positive time step of all speices.
+      if (PIC::ParticleWeightTimeStep::GlobalTimeStep[s]>0.0 && PIC::ParticleWeightTimeStep::GlobalTimeStep[s]< dt)  dt=PIC::ParticleWeightTimeStep::GlobalTimeStep[s]; 
+    }
+    PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]=dt;
+  }
+  
 
   #else
   exit(__LINE__,__FILE__,"not implemented");
@@ -1932,6 +1947,8 @@ double PIC::Mesh::cDataBlockAMR::GetLocalTimeStep(int spec) {
   res=spec+(double *)(associatedDataPointer+LocalTimeStepOffset);
   return *res;
   #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  return  PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
   return  PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
   #else
   exit(__LINE__,__FILE__,"not implemented");
