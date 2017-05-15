@@ -1318,7 +1318,8 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
   int time;
   time = getSItime(); // double to int.
 
-  ss<<"_"<<iPlot
+  ss<<"_region"<<col->getiRegion()
+    <<"_"<<iPlot
     <<"_t"<<setfill('0')<<setw(8)<<col->second_to_clock_time(time)
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<".h";
@@ -1456,7 +1457,8 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
     nLength = 4;
   }
   
-  ss<<"_"<<iPlot
+  ss<<"_region"<<col->getiRegion()
+    <<"_"<<iPlot
     <<"_t"<<setfill('0')<<setw(8)<<col->second_to_clock_time(time)
     <<"_n"<<setfill('0')<<setw(8)<<cycle
     <<"_pe"<<setfill('0')<<setw(nLength)<<myrank

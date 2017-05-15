@@ -1802,7 +1802,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	4                       zMin
 	5                       zMax
 	1.            DxOutput: output one particle of every DxOutput particles.
-	3d particles real4 si   StringPlot
+	3d particles real4 si region0 regioin1  StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	10.          DxOutput: output one particle of every DxOutput particles.
@@ -1813,43 +1813,78 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	2) DxOutput is only functional for particles and 3d field output now.
 	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
 	4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
+	5) If the keyword 'region' exists, only output the specified region, otherwise,
+	   all regions are saved.
       */
-      
-      string::size_type pos;
-      read_var(param, "nPlotFile", &nPlotFile);
 
-      if(nPlotFile>0){
-	dnOutput_I   = new int[nPlotFile];
-	dtOutput_I   = new double[nPlotFile];
-	plotDx_I     = new double[nPlotFile];
-	plotString_I = new string[nPlotFile];
-	plotVar_I    = new string[nPlotFile];
-	plotRange_ID = newArr2(double, nPlotFile, 2*nDimMax);
+      int nPlotFileMax; // nPlotFile <= nPlotFileMax
+      string::size_type pos;      
+      read_var(param, "nPlotFile", &nPlotFileMax);
+
+      if(nPlotFileMax>0){
+	dnOutput_I   = new int[nPlotFileMax];
+	dtOutput_I   = new double[nPlotFileMax];
+	plotDx_I     = new double[nPlotFileMax];
+	plotString_I = new string[nPlotFileMax];
+	plotVar_I    = new string[nPlotFileMax];
+	plotRange_ID = newArr2(double, nPlotFileMax, 2*nDimMax);
+      }
+
+      nPlotFile=0;
+      for(int iPlot=0; iPlot<nPlotFileMax; iPlot++){
+	string plotString;
+	read_var(param, "plotString", &plotString);
+
+	// Check save this region or not.
+	bool doSaveThisRegion;
+	doSaveThisRegion=true;
+	if(plotString.find("region")!=string::npos){
+	  doSaveThisRegion = plotString.find((getsRegion()).c_str())!=string::npos;
 	}
-      
-      for(int iPlot=0; iPlot<nPlotFile; iPlot++){
-	read_var(param, "plotString", &plotString_I[iPlot]);	
-	read_var(param, "dnSavePlot", &dnOutput_I[iPlot]);
-	read_var(param, "dtSavePlot", &dtOutput_I[iPlot]);
 	
-	pos = plotString_I[iPlot].find_first_not_of(' ');
-	if(pos !=string::npos) plotString_I[iPlot].erase(0,pos);
-	if(plotString_I[iPlot].substr(0,3)=="cut"){
+	if(doSaveThisRegion){
+	  plotString_I[nPlotFile] =plotString;
+	  pos = plotString_I[nPlotFile].find_first_not_of(' ');
+	  if(pos !=string::npos) plotString_I[nPlotFile].erase(0,pos);
+	}
+	
+	if(doSaveThisRegion){	
+	  read_var(param, "dnSavePlot", &dnOutput_I[nPlotFile]);
+	  read_var(param, "dtSavePlot", &dtOutput_I[nPlotFile]);
+	}else{
+	  // Is there a better way to skip the unnecessary lines?
+	  skip_lines(param,2);
+	}
+	
+	if(plotString.substr(0,3)=="cut"){
 	  for(int i=0; i<nDimMax; i++){
 	    // Always read 3 dimension.
 	    // plotRange_ID should be in normalized BATSRUS unit.
-	    read_var(param, "CoordMin", &plotRange_ID[iPlot][2*i]);
-	    read_var(param, "CoordMax", &plotRange_ID[iPlot][2*i+1]);
+	    if(doSaveThisRegion){	
+	      read_var(param, "CoordMin", &plotRange_ID[nPlotFile][2*i]);
+	      read_var(param, "CoordMax", &plotRange_ID[nPlotFile][2*i+1]);
+	    }else{
+	      skip_lines(param,2);
+	    }
 	  }
 	}
 	
-	read_var(param, "dxSavePlot", &plotDx_I[iPlot]);
-
-	pos = plotString_I[iPlot].find("var");
-	if(pos !=string::npos){
-	  read_var(param, "plotVar", &plotVar_I[iPlot]);
+	if(doSaveThisRegion){	
+	  read_var(param, "dxSavePlot", &plotDx_I[nPlotFile]);
+	}else{
+	  skip_lines(param,1);
 	}
-	//if(plotString_I[iPlot].find("sat") !=string::npos) nSatellite++;
+
+	pos = plotString.find("var");
+	if(pos !=string::npos){
+	  if(doSaveThisRegion){	
+	    read_var(param, "plotVar", &plotVar_I[nPlotFile]);
+	  }else{
+	    skip_lines(param,1);
+	  }
+	}
+
+	if(doSaveThisRegion) nPlotFile++;	
       } // iPlot  			        
     } // Command
 

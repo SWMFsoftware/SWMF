@@ -115,6 +115,7 @@ class InterfaceFluid
   bool isFirstTime;
 
   int iRegion;
+  string sRegion;
 
   // Do not include ghost cells.
   int nxcLocal, nycLocal, nzcLocal;
@@ -2099,8 +2100,13 @@ class InterfaceFluid
   double getPhyZMax(){return phyMax_D[2];}
 
 
-  void setiRegion(int i){iRegion = i;}
+  void setiRegion(int i){
+    iRegion = i;
+    stringstream ss;
+    sRegion=ss.str();
+  }
   int getiRegion()const{return(iRegion);}
+  string getsRegion()const{return sRegion;}
   
   int getnDim()const{return(nDim);}
 
