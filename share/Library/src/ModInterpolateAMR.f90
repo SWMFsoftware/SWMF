@@ -2908,8 +2908,8 @@ contains
        ! Find if point Xyz is from the same side of the plane as point 2 is
        ! or as point 3 is
        !/
-       if(sum((Xyz_D - XyzGrid_DI(:,1))*&
-            (XyzGrid_DI(:,6) - XyzGrid_DI(:,7))) > 0)then
+       if(sum((Xyz_D(x_:y_) - XyzGrid_DI(x_:y_,1))/&
+            (XyzGrid_DI(x_:y_,6) - XyzGrid_DI(x_:y_,7))) > 0)then
           iGrid = 2
        else
           iGrid = 3
