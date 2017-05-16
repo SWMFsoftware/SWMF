@@ -58,6 +58,9 @@ namespace MarsIon {
 
   int ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
 
+  //background atmosphere density
+  double GetBackgroundAtmosphereDensity(double *x,int spec);
+
   //sampling of the ions fluxs
   namespace Sampling {
     //sampling of the fluxes passing through the spherical shells
