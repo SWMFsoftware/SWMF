@@ -480,7 +480,9 @@ contains
                MH_LineDecomposition, &
                (/n_proc(IH_)/),      &
                (/0.50/),              &
-               (/real(n_proc(IH_)*nParticle) + 0.50/), &
+               ! factors are converted separately to prevent
+               ! integer overflow
+               (/real(n_proc(IH_))*real(nParticle) + 0.50/), &
                (/nParticle/))
        end if
        call bcast_decomposition_dd(MH_LineDecomposition)
