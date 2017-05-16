@@ -59,6 +59,8 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  RequestedParticleBufferLength=150000
+
   !the mode of counting the escaping particles:
   define _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_
 
