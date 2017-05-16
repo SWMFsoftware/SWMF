@@ -41,7 +41,8 @@ module CON_couple_mh_sp
        SP_put_line, SP_n_particle,        &
        SP_get_grid_descriptor_param, &
        SP_get_domain_boundary, SP_put_r_min, &
-       SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc
+       SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
+       SP_copy_old_state
 
   implicit none
   
@@ -650,6 +651,14 @@ contains
 
     tNow=DataInputTime
     if(is_proc(SP_))call SP_put_input_time(DataInputTime)
+
+    ! IMPORTANT: 
+    ! couple_sc_sp is called BEFORE couple_ih_sp; 
+    ! save the current state as old,
+    ! separate subroutine is used in order to avoid intersections 
+    ! as fluid elements transfer from SC to IH
+    if(is_proc(SP_))call SP_copy_old_state
+    
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
 

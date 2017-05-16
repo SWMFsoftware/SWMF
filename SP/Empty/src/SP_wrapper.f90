@@ -27,6 +27,7 @@ module SP_wrapper
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
+  public:: SP_copy_old_state
 contains
 
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
@@ -35,7 +36,6 @@ contains
     real,intent(in)::TimeSimulationLimit
     call CON_stop('Can not call SP_run')
   end subroutine SP_run
-  !========================================================================
   !======================================================================
   subroutine SP_init_session(iSession,TimeSimulation)
 
@@ -171,4 +171,11 @@ contains
     !----------------------------
     call CON_stop('Can not find nParticle for empty SP')
   end function SP_n_particle
+  !========================================================================
+  subroutine SP_copy_old_state
+    character(len=*), parameter:: NameSub='SP_copy_old_state'
+    !---------------------------------------------------------------
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine SP_copy_old_state
+
 end module SP_wrapper

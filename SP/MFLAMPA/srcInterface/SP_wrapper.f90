@@ -52,6 +52,7 @@ module SP_wrapper
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
+  public:: SP_copy_old_state
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -411,9 +412,6 @@ contains
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        
-       ! keep some variables as "old" state
-       State_VIB((/RhoOld_,BOld_/),  iParticle, iBlock) = &
-            State_VIB((/Rho_,B_/),   iParticle, iBlock)
        ! reset others 
        State_VIB(VarReset_I,         iParticle, iBlock) = 0.0
        ! put coordinates
@@ -434,5 +432,18 @@ contains
     iGridMax_D = (/iParticleMax, 1, 1/)
     Displacement_D = 0.0
   end subroutine SP_get_grid_descriptor_param
+  !========================================================================
+
+  subroutine SP_copy_old_state
+    ! copy current state to old state for all field lines
+    integer:: iBegin, iEnd, iBlock
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       iBegin = iGridLocal_IB(Begin_,iBlock)
+       iEnd   = iGridLocal_IB(End_,  iBlock)
+       State_VIB((/RhoOld_,BOld_/), iBegin:iEnd, iBlock) = &
+            State_VIB((/Rho_,B_/),  iBegin:iEnd, iBlock)
+    end do
+  end subroutine SP_copy_old_state
 
 end module SP_wrapper
