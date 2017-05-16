@@ -16,7 +16,7 @@
 
 //the mesh resolution at the lower boundary
 double localSphericalSurfaceResolution(double *x) {
-  return _RADIUS_(_TARGET_)/20.0;
+  return _RADIUS_(_TARGET_)/150.0;
 }
 
 //the mesh resulution within the domain
@@ -34,7 +34,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     CharacteristicSpeed=1.0E6;
     break;
   default:
-    CharacteristicSpeed=1.0E5;
+    CharacteristicSpeed=1.0E6;
   }
 
   return 0.3*CellSize/CharacteristicSpeed;

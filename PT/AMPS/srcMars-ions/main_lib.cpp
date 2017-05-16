@@ -58,7 +58,7 @@ void amps_init_mesh() {
   PIC::InitMPI();
 
   //SetUp the alarm
-  //  PIC::Alarm::SetAlarm(2000);
+    PIC::Alarm::SetAlarm(28*3600-10*60);
 
   rnd_seed();
 
@@ -343,9 +343,15 @@ void amps_init() {
 
     for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
       PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(spec);
+
+      PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*=3000;
     }
 
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+
+
+//    if (_H_PLUS_SPEC_!=-1) PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H_PLUS_SPEC_]*=10;
+
+//  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
 }
 
 
