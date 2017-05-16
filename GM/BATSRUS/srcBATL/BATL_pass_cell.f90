@@ -64,7 +64,7 @@ contains
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
          iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_, &
-         iTimeLevel_A, find_neighbor_for_anynode
+         UseTimeLevel, iTimeLevel_A, find_neighbor_for_anynode
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
 
@@ -433,11 +433,11 @@ contains
                 iNodeSend = iNode_B(iBlockSend)
 
                 ! Skip if the sending block level is not in the level range
-                if(present(iLevelMin) .and. .not.allocated(iTimeLevel_A))then
+                if(present(iLevelMin) .and. .not.UseTimeLevel)then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend < iLevelMin) CYCLE
                 end if
-                if(present(iLevelMax) .and. .not.allocated(iTimeLevel_A))then
+                if(present(iLevelMax) .and. .not.UseTimeLevel)then
                    iLevelSend = iTree_IA(Level_,iNodeSend)
                    if(iLevelSend > iLevelMax) CYCLE
                 end if
@@ -483,13 +483,11 @@ contains
                          ! Skip if the receiving block grid level is not 
                          ! in range. Time levels of the receiving block(s)
                          ! will be checked later (if Time_B is present).
-                         if(.not.allocated(iTimeLevel_A))then
-                            if(present(iLevelMin))then
-                               if(iLevelSend - DiLevel < iLevelMin) CYCLE
-                            end if
-                            if(present(iLevelMax))then
-                               if(iLevelSend - DiLevel > iLevelMax) CYCLE
-                            end if
+                         if(present(iLevelMin) .and. .not.UseTimeLevel)then
+                            if(iLevelSend - DiLevel < iLevelMin) CYCLE
+                         end if
+                         if(present(iLevelMax) .and. .not.UseTimeLevel)then
+                            if(iLevelSend - DiLevel > iLevelMax) CYCLE
                          end if
 
                          ! Do prolongation in the second stage if 
@@ -1201,7 +1199,7 @@ contains
          ! Are the ghost cells close to the opposite face accurate?
          ! For the more than 2 levels refinement case. 
          IsAccurateGhost = all(DiLevelNei_IIIB(-iDir1,:,:,iBlock) /= -1)
-         DoSymInterp = nI .ge. 8 .or. IsAccurateGhost
+         DoSymInterp = nI >= 8 .or. IsAccurateGhost
 
          if(iDir1 == -1) then
             ! i0 is the index of the origin block. 
@@ -1266,7 +1264,7 @@ contains
          DoResChange_D(2) = .true.
 
          IsAccurateGhost = all(DiLevelNei_IIIB(:,-jDir1,:,iBlock) /= -1)
-         DoSymInterp = nJ .ge. 8 .or. IsAccurateGhost
+         DoSymInterp = nJ >= 8 .or. IsAccurateGhost
 
          if(jDir1 == -1) then
             j0 = 1; jC = 1
@@ -1341,7 +1339,7 @@ contains
          DoResChange_D(3) = .true.
 
          IsAccurateGhost = all(DiLevelNei_IIIB(:,:,-kDir1,iBlock) /= -1)
-         DoSymInterp = nK .ge. 8 .or. IsAccurateGhost
+         DoSymInterp = nK >= 8 .or. IsAccurateGhost
 
          if(kDir1 == -1) then
             k0 = 1; kC = 1
@@ -2516,13 +2514,9 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
 
       ! Skip blocks with a time level outside the range
-      if(allocated(iTimeLevel_A))then
-         if(present(iLevelMin))then
-            if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
-         end if
-         if(present(iLevelMax))then
-            if(iTimeLevel_A(iNodeRecv) > iLevelMax) RETURN
-         end if
+      if(UseTimeLevel .and. present(iLevelMin))then
+         if(  iTimeLevel_A(iNodeRecv) < iLevelMin .and. &
+              iTimeLevel_A(iNodeSend) < iLevelMin) RETURN
       end if
 
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
@@ -2544,9 +2538,9 @@ contains
       if(iSendStage == 3) then
          ! Only edge/corner cells need to be overwritten. 
          nWithin = 0
-         if(.not.(iRMin .ge. 0 .and. iRMin .le. nI)) nWithin = nWithin + 1
-         if(.not.(jRMin .ge. 0 .and. jRMin .le. nJ)) nWithin = nWithin + 1
-         if(.not.(kRMin .ge. 0 .and. kRMin .le. nK)) nWithin = nWithin + 1
+         if(.not.(iRMin >= 0 .and. iRMin <= nI)) nWithin = nWithin + 1
+         if(.not.(jRMin >= 0 .and. jRMin <= nJ)) nWithin = nWithin + 1
+         if(.not.(kRMin >= 0 .and. kRMin <= nK)) nWithin = nWithin + 1
          if(nWithin < 1) RETURN
       endif
 
@@ -2679,13 +2673,9 @@ contains
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
 
       ! Skip blocks with a time level outside the range
-      if(allocated(iTimeLevel_A))then
-         if(present(iLevelMin))then
-            if(iTimeLevel_A(iNodeRecv) < iLevelMin) RETURN
-         end if
-         if(present(iLevelMax))then
-            if(iTimeLevel_A(iNodeRecv) > iLevelMax) RETURN
-         end if
+      if(UseTimeLevel .and. present(iLevelMin))then
+         if(  iTimeLevel_A(iNodeRecv) < iLevelMin .and. &
+              iTimeLevel_A(iNodeSend) < iLevelMin) RETURN
       end if
 
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
@@ -3041,15 +3031,10 @@ contains
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
                
                ! Skip blocks with a time level outside the range
-               if(allocated(iTimeLevel_A))then
-                  if(present(iLevelMin))then
-                     if(iTimeLevel_A(iNodeRecv) < iLevelMin) CYCLE
-                  end if
-                  if(present(iLevelMax))then
-                     if(iTimeLevel_A(iNodeRecv) > iLevelMax) CYCLE
-                  end if
+               if(UseTimeLevel .and. present(iLevelMin))then
+                  if(  iTimeLevel_A(iNodeRecv) < iLevelMin .and. &
+                       iTimeLevel_A(iNodeSend) < iLevelMin) CYCLE
                end if
-
 
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
