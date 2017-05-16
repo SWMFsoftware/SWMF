@@ -1,3 +1,0 @@
-animate_data
-
-end

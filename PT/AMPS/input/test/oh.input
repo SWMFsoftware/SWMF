@@ -1,9 +1,0 @@
-
-#include input/oh.input
-
-#General
-  define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 15
-  define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5
-
-  define _OH_STAND_ALONG_MODE_  _PIC_MODE_ON_
-#endGeneral

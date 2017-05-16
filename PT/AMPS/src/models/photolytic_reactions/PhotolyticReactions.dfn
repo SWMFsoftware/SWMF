@@ -1,6 +1,0 @@
-//$Id$
-//settings of the photolytic reaction model
-
-#include "PhotolyticReactionsDefinitions.dfn"
-
-#define _PHOTOLYTIC_REACTIONS__SUN_ _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_
