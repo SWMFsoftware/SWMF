@@ -426,7 +426,34 @@ int MarsIon::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::c
 
 
 
+//density of the background atmoshere
+double MarsIon::GetBackgroundAtmosphereDensity(double *x,int spec) {
+  double Alt=0.0;
+  int idim;
 
+  //calcualte the altitude
+  for (idim=0;idim<3;idim++) Alt+=pow(x[idim],2);
+  if (sqrt(Alt)<3.5E6) return 0.0;
+  Alt=sqrt(Alt)-3396000.0; // in m where R_Mars=3396000.0 m
+
+  //estimate the atmospheric density
+  double res;
+
+  switch (spec) {
+  case _CO2_SPEC_:case -1:
+    res=6.04e18*1.0E6*exp(-Alt/6.98E3);
+    break;
+
+  case _O_SPEC_:
+    res=5.85e13*1.0E6*exp(-Alt/10.56E3);
+    break;
+
+  default:
+    exit(__LINE__,__FILE__,"Error: there is no density information for this species");
+  }
+
+  return res;
+}
 
 
 
