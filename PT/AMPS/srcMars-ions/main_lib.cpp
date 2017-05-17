@@ -344,7 +344,7 @@ void amps_init() {
     for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
       PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(spec);
 
-      PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*=3000;
+//      PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*=3000;
     }
 
 
