@@ -218,7 +218,7 @@ subroutine fix_boundary_ghost_cells
 
   use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
   use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-       BlkTest, iTest, jTest, kTest, iteration_number
+       BlkTest, iTest, jTest, kTest, iteration_number, nOrderProlong
   use ModGeometry, ONLY: true_cell, body_BLK
   !use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: message_pass_cell
@@ -246,10 +246,15 @@ subroutine fix_boundary_ghost_cells
   ! file that has no ghost cell information saved. This can only happen
   ! at the very beginning of a run when iteration_number == 0.
 
-  call message_pass_cell(iBoundary_GB, &
-       nProlongOrderIn=1, nCoarseLayerIn=2, &
-       DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-       DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+  if(nOrderProlong > 1)then
+     call message_pass_cell(iBoundary_GB, &
+          DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+  else
+     call message_pass_cell(iBoundary_GB, &
+          nProlongOrderIn=1, nCoarseLayerIn=2, &
+          DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
+          DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+  end if
 
   if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
        iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
