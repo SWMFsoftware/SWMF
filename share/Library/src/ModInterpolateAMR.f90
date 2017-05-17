@@ -4251,7 +4251,7 @@ contains
       !\
       !Discriminators
       !/
-      integer:: iDiscr_D(3), iDiscr1_D(3)
+      integer:: iDiscr_D(3), iDiscr1_D(3), iGridSeenFrom
       integer:: iCellIndexesStored_D(nDim), iCellIndexes_D(nDim)
       !\
       !Displacement measured in grid sizes or in their halfs
@@ -4294,10 +4294,25 @@ contains
          iProc_I(iGrid ) = iProcStored
          iBlock_I(iGrid) = iBlockStored
          iLevelSubGrid_I(iGrid) = Fine_
+         if(iGrid==iGridBasic)then
+            !\
+            ! Determine, where Xyz point is located with respect to
+            ! the subgrid at basic grid node
+            !/
+            XyzMisc_D = (Xyz_D - XyzGrid_DII(:,0,iGridBasic))*DXyzInv_D
+            iDiscr1_D = 0
+            iDiscr1_D(1:nDim) = nint(sign(0.50, XyzMisc_D + 0.25) + &
+                 SIGN(0.50, XyzMisc_D - 0.25))
+            iGridSeenFrom = &
+                 sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + iGridBasic
+         else
+            iGridSeenFrom = iGridBasic
+         end if
          nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
-              iLog2NDimOverNSubgrid_II(iGrid,iGridBasic))
+              iLog2NDimOverNSubgrid_II(iGrid,iGridSeenFrom))
+              !iLog2NDimOverNSubgrid_II(iGrid,iGridBasic))
          do iOrderSubgrid = 1, nSubgrid_I(iGrid)
-            iSubGrid = iSubgridOrder_III(iOrderSubgrid,iGrid,iGridBasic)
+            iSubGrid = iSubgridOrder_III(iOrderSubgrid,iGrid,iGridSeenFrom)
             iShift_D = iShift_DI(1:nDim,iSubGrid)
             XyzGrid_DII(:,iOrderSubgrid,iGrid) = &
                  XyzGrid_DII(:,0,iGrid) + DxyzFine_D*(iShift_D -0.50)
