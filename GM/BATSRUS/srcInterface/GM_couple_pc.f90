@@ -42,8 +42,8 @@ contains
          iRhoIon_I, iRhoUxIon_I, iPparIon_I, iPIon_I
     use ModAdvance,    ONLY: nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
-    use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
+    use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
+         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi, LenPic_DI, R_DDI
     use BATL_lib,      ONLY: x_, y_, z_, nDim
 
     integer, intent(inout) :: nParamInt, nParamReal
@@ -52,7 +52,7 @@ contains
     real,    optional, intent(out):: Param_I(nParamReal)
 
     integer :: iFluid, iSpecies, iRegion 
-    integer :: i, n
+    integer :: i, j, n
     !--------------------------------------------------------------------------
     if(.not.present(iParam_I))then
        ! nDim, nRegion
@@ -62,11 +62,10 @@ contains
        nParamInt = 7 + nIonFluid*4
 
        ! Charge and mass per species/fluid
-       ! XyzMin_D, XyzMax_D, Dxzy_D for each region
-       ! PePerPtotal
-       ! xUnitPicSi, uUnitPicSi, mUnitPicSi
-       ! rPlanet, No2Si_V(UnitX_)
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*9 + 6
+       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD = 19 variables for each region
+       ! PePerPtotal + xUnitPicSi + uUnitPicSi + mUnitPicSi + rPlanet
+       ! + No2Si_V(UnitX_) = 6 variables
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*19 + 6
 
        RETURN
     end if
@@ -83,32 +82,37 @@ contains
     ! The second part describes the species/fluids
     n = 1
     do iRegion = 1, nRegionPic
-       Param_I(n) = XyzMinPic_DI(x_,iRegion); n = n+1
-       Param_I(n) = XyzMaxPic_DI(x_,iRegion); n = n+1
-       Param_I(n) = DxyzPic_DI(x_,iRegion)  ; n = n+1
+       Param_I(n) = XyzMinPic_DI(x_,iRegion)*No2Si_V(UnitX_); n = n+1
+       Param_I(n) = LenPic_DI(x_,iRegion)*No2Si_V(UnitX_);    n = n+1
+       Param_I(n) = DxyzPic_DI(x_,iRegion)*No2Si_V(UnitX_);   n = n+1
        if(nDim > 1) then
-          Param_I(n) = XyzMinPic_DI(y_,iRegion); n = n+1
-          Param_I(n) = XyzMaxPic_DI(y_,iRegion); n = n+1
-          Param_I(n) = DxyzPic_DI(y_,iRegion); n = n+1
+          Param_I(n) = XyzMinPic_DI(y_,iRegion)*No2Si_V(UnitX_); n = n+1
+          Param_I(n) = LenPic_DI(y_,iRegion)*No2Si_V(UnitX_);    n = n+1
+          Param_I(n) = DxyzPic_DI(y_,iRegion)*No2Si_V(UnitX_);   n = n+1
        else
           ! Single cell in Y direction with dy = dx
           Param_I(n) = 0.0; n = n+1
-          Param_I(n:n+1) = DxyzPic_DI(x_,iRegion); n = n+2
+          Param_I(n:n+1) = DxyzPic_DI(x_,iRegion)*No2Si_V(UnitX_); n = n+2
        end if
        if(nDim > 2) then
-          Param_I(n) = XyzMinPic_DI(z_,iRegion); n = n+1
-          Param_I(n) = XyzMaxPic_DI(z_,iRegion); n = n+1
-          Param_I(n) = DxyzPic_DI(z_,iRegion); n = n+1
+          Param_I(n) = XyzMinPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
+          Param_I(n) = LenPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
+          Param_I(n) = DxyzPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
        else
           ! Single cell in Z direction with dz = max(dx, dy)
           Param_I(n)     = 0.0; n = n+1
-          Param_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegion)); n = n+2
+          Param_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegion))*No2Si_V(UnitX_); n = n+2
        endif
-    end do
 
-    ! convert to SI units
-    do i = 1, n -  1
-       Param_I(i) = Param_I(i) * No2Si_V(UnitX_)
+       ! The rotation matrix
+       do i = 1, 3; do j = 1, 3
+          if (i <= nDim .and. j<= nDim) then
+             Param_I(n) = R_DDI(j,i,iRegion)
+          else
+             Param_I(n) = 0
+          endif
+          n = n+1
+       enddo; enddo              
     end do
 
     ! Send charge and mass of each species/fluids
@@ -230,8 +234,8 @@ contains
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
-    use ModPIC,       ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
-         nRegionPic, nGhostPic
+    use ModPIC,       ONLY: XyzPic0_DI, DxyzPic_DI, LenPic_DI, & 
+         nRegionPic, nGhostPic, mhd_to_pic_vec
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
@@ -254,6 +258,8 @@ contains
     real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
 
     real    :: State_V(nVar)
+
+    real    :: CoordPic_D(nDim)
     
     character(len=*), parameter :: NameSub='GM_get_regions'
     !--------------------------------------------------------------------------
@@ -277,11 +283,11 @@ contains
     do iRegion = 1, nRegionPic
 
        ! (nGhostPic +1) where +1 is from the IPIC3D ghost layer
-       XyzMaxRegion_D = XyzMaxPic_DI(1:nDim,iRegion) - &
+       ! XyzMaxRegion_D and XyzMinRegion_D are in the rotated PIC coordinates.
+       XyzMaxRegion_D = LenPic_DI(1:nDim,iRegion) - &
             (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
-       XyzMinRegion_D = XyzPic0_DI(1:nDim,iRegion) + &
-            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
+       XyzMinRegion_D = (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
 
        do iBlock=1, nBlock
@@ -292,9 +298,10 @@ contains
              ! Intersection with body is not handled yet ???
 
              ! Check if cell center is inside the PIC region
-             if(any(Xyz_DGB(1:nDim,i,j,k,iBlock) > XyzMaxRegion_D)) CYCLE
-             
-             if(any(Xyz_DGB(1:nDim,i,j,k,iBlock) < XyzMinRegion_D)) CYCLE
+             call mhd_to_pic_vec(iRegion, Xyz_DGB(1:nDim,i,j,k,iBlock), &
+                  CoordPic_D)             
+             if(any(CoordPic_D > XyzMaxRegion_D)) CYCLE             
+             if(any(CoordPic_D < XyzMinRegion_D)) CYCLE
 
              if(DoCountOnly)then
                 nPoint = nPoint + 1

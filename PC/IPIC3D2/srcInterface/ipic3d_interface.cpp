@@ -97,8 +97,8 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
     starttime[i] = timenow;
     SimRun[i]  = new iPic3D::c_Solver;
     SimRun[i]->Init(0, dummy, timenow, param, i, paramint,
-		    &paramreal[(i - firstIPIC)*9], 
-		    &paramreal[(nIPIC - firstIPIC)*9], ss,true);
+		    &paramreal[(i - firstIPIC)*18], 
+		    &paramreal[(nIPIC - firstIPIC)*18], ss,true);
     SimRun[i]->SetCycle(0);
   }
   timing_stop(nameFunc);

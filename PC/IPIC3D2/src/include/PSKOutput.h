@@ -917,9 +917,9 @@ public:
     Pxz = _field->getp0XZsn();
     Pyz = _field->getp0YZsn();
 
-    xmin = _col->getPhyXMin(); 
-    ymin = _col->getPhyYMin();
-    zmin = _col->getPhyZMin();
+    xmin = _col->getphyMin(0); 
+    ymin = _col->getphyMin(1);
+    zmin = _col->getphyMin(2);
 
     for(int i = 0; i<nPoint*nDim; i++){
       Xyz_I[i] *= _col->getSi2NoL();
@@ -928,27 +928,17 @@ public:
 
 
     for(int iPoint = 0; iPoint < nPoint; iPoint++){
-      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){
-	double pos_D[3];
-	pos_D[0] = Xyz_I[iPoint*nDim ] - xmin;
-	pos_D[1] = Xyz_I[iPoint*nDim+1] - ymin;
-	pos_D[2] = Xyz_I[iPoint*nDim+2] - zmin;
-	if(! _col->isThisProc(&pos_D[0],true)){
-	  cout<<" proc= "<<_vct->getCartesian_rank()
-	      <<" xp= "<<Xyz_I[iPoint*nDim]
-	      <<" yp= "<<Xyz_I[iPoint*nDim+1]
-	      <<" zp= "<<Xyz_I[iPoint*nDim+2]
-	      <<" xmin= "<<xmin
-	      <<" ymin= "<<ymin
-	      <<" zmin= "<<zmin
-	      <<endl;
-	}
-	xp = Xyz_I[iPoint*nDim] - xmin;
-	yp = (nDim > 1) ? Xyz_I[iPoint*nDim + 1] - ymin : 0.0;
-	zp = (nDim > 2) ? Xyz_I[iPoint*nDim + 2] - zmin : 0.0;
+      double mhd_D[3],pic_D[3];
+      mhd_D[0] = Xyz_I[iPoint*nDim ];
+      mhd_D[1] = Xyz_I[iPoint*nDim+1];
+      mhd_D[2] = Xyz_I[iPoint*nDim+2];
+      _col->mhd_to_Pic_Vec(mhd_D,pic_D);
 
-	
-	
+      if(_col->isThisRun(pic_D)){
+	xp = pic_D[0];
+	yp = (nDim > 1) ? pic_D[1] : 0.0;
+	zp = (nDim > 2) ? pic_D[2] : 0.0;
+		
 	double weight_I[8];
 	int ix, iy, iz;
 	_grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);
@@ -1121,26 +1111,25 @@ public:
 	  if(useMhdPe) data_I[n + _col->iP_I[0]]  = (PitXX + PitYY + PitZZ)/3;
 	  else data_I[n + _col->iP_I[0]]  = (PtXX + PtYY + PtZZ)/3;
 	}
-	
-      }
 
-    }
-    
-    // Convert to SI units
-    for(int iPoint = 0; iPoint < nPoint; iPoint++){
-      if(_col->isThisRun(&Xyz_I[iPoint*nDim])){	
-	n = iPoint*nVar;
+	// Convert to SI units
 	for (int iVar=0; iVar<nVar; ++iVar){
 	  data_I[n+iVar] *= _col->getNo2Si_V(iVar);
 	}
-      }
-    }
 
-    // if it used later (remove if it is useless)
-    for(int i = 0; i<nPoint*nDim; i++){
-      Xyz_I[i] *= _col->getNo2SiL();
-    }
-      
+	for(int iVec=0; iVec < _col->nVec; iVec++){
+	  int idx0;
+	  idx0 = _col->vecIdxStart_I[iVec];
+	  for (int iVar = idx0; iVar<idx0+nDim; iVar++)
+	    pic_D[iVar-idx0]=data_I[n+iVar];
+	  _col->pic_to_Mhd_Vec(pic_D,mhd_D,true);
+	  for (int iVar = idx0; iVar<idx0+nDim; iVar++)
+	    data_I[n+iVar] = mhd_D[iVar-idx0];	 	  
+	} // iVec
+		
+      }
+
+    }          
   }
 #endif
   

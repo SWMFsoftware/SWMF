@@ -16,6 +16,8 @@ module ModPIC
   public:: pic_init_region
   public:: pic_find_node
   public:: pic_find_region
+  public:: mhd_to_pic_vec
+  
   
   logical, public:: UsePic = .false.
   
@@ -35,8 +37,20 @@ module ModPIC
 
   ! PIC regions
   integer, public :: nRegionPic = 0
-  real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
+
+  ! 1) LenPic_D, XyzMinPic_DI and XyzMaxPic_DI include the ghost cell layers.
+  !    An 2D example: XyzMinPic_DI is the bottom left point, XyzMaxPic_DI
+  !      is the bottom right point. Note the PIC box can be rotated.
+  ! 2) R_DDI: mhd coordinates to pic coordinates.
+  real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), &
+       LenPic_DI(:,:), DxyzPic_DI(:,:), R_DDI(:,:,:)
+
+  ! The PIC regon can rotate around x, y and z axis. The rotation rule is the
+  ! same as the rotation for #REGION command.
+  ! In the rotated coordinates, XyzMinPic_DI instead of
+  ! XyzPic0_DI is the origin point.
   real, public, allocatable:: XyzPic0_DI(:,:)
+  logical, public :: DoRotatePIC = .false.
 
   ! Is the node overlaped with PIC domain?
   logical, public,allocatable:: IsPicNode_A(:)
@@ -49,10 +63,15 @@ contains
     use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_var
     use BATL_lib,     ONLY: x_, y_, z_, nDim
+    use ModNumConst,  ONLY: cDegToRad
+    use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z, &
+         rot_matrix
 
     character(len=*), intent(in):: NameCommand
 
     integer:: iRegion
+
+    real :: xRotate, yRotate, zRotate 
 
     character(len=*), parameter:: NameSub = 'read_pic_param'
     !------------------------------------------------------------------------
@@ -73,6 +92,8 @@ contains
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
             XyzPic0_DI(nDim,nRegionPic), &
+            LenPic_DI(nDim,nRegionPic), &
+            R_DDI(3,3,nRegionPic),       &
             DxyzPic_DI(nDim,nRegionPic))
        do iRegion = 1, nRegionPic
           call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
@@ -87,7 +108,56 @@ contains
 
           ! Origo point for the IPIC3D grid for this region
           XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
+
+          LenPic_DI(1:nDim, iRegion) = XyzMaxPic_DI(1:nDim,iRegion) - &
+               XyzMinPic_DI(1:nDim,iRegion)
+          R_DDI(:,:,iRegion) = 0
+          R_DDI(1,1,iRegion) = 1
+          R_DDI(2,2,iRegion) = 1
+          R_DDI(3,3,iRegion) = 1
+          
        end do
+    case("#PICREGIONROTATE")
+       DoRotatePIC = .true.
+       call read_var('nPicRegion', nRegionPic)
+       UsePic = nRegionPic > 0
+       if(allocated(XyzMinPic_DI)) deallocate( &
+            XyzMinPic_DI, XyzMaxPic_DI, LenPic_DI, DxyzPic_DI,XyzPic0_DI)
+       allocate( &
+            XyzMinPic_DI(nDim,nRegionPic), &
+            XyzMaxPic_DI(nDim,nRegionPic), &
+            XyzPic0_DI(nDim,nRegionPic), &
+            DxyzPic_DI(nDim,nRegionPic), &
+            LenPic_DI(nDim,nRegionPic),  &
+            R_DDI(3,3,nRegionPic))
+       R_DDI=0
+       do iRegion = 1, nRegionPic
+          call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
+          call              read_var('xLenPic', LenPic_DI(x_,iRegion))
+          if(nDim > 1) call read_var('yMinPic', XyzMinPic_DI(y_,iRegion))
+          if(nDim > 1) call read_var('yLenPic', LenPic_DI(y_,iRegion))
+          if(nDim > 2) call read_var('zMinPic', XyzMinPic_DI(z_,iRegion))
+          if(nDim > 2) call read_var('zLenPic', LenPic_DI(z_,iRegion))
+          call              read_var('DxPic',   DxyzPic_DI(x_,iRegion))
+          if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
+          if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
+          if(nDim==2 ) then
+             call read_var('zRotate', zRotate)
+             R_DDI(1:2,1:2,iRegion) = rot_matrix(-zRotate*cDegToRad)
+          elseif(nDim==3) then
+             call              read_var('xRotate', xRotate)
+             call              read_var('yRotate', yRotate)
+             call              read_var('zRotate', zRotate)
+          endif
+
+          XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
+
+          ! Rotation matrix rotates around X, Y and Z axes in this order
+          R_DDI(:,:,iRegion) = matmul( matmul( &
+               rot_matrix_z(-zRotate*cDegToRad),&
+               rot_matrix_y(-yRotate*cDegToRad)),&
+               rot_matrix_x(-xRotate*cDegToRad))
+       end do             
     case default
        if(iProc==0) call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -114,8 +184,6 @@ contains
 
     ! Location of PIC node
     real:: XyzPic_D(MaxDim)
-
-    ! The PIC variable array
 
     ! mass per charge SI
     real:: IonMassPerChargeSi 
@@ -177,16 +245,12 @@ contains
        ! extending the region sizes with 1 ghost cell
        do i=1, nDim
           ! Number of nodes (not cells!)
-          nCell = nint( &
-               (XyzMaxPic_DI(i,iRegion) - XyzMinPic_DI(i,iRegion)) &
-               /DxyzPic_DI(i,iRegion) )
-
-          ! Adding 1 ghost cell layer at max and 1 at min
-          XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-               + (nCell + 1)*DxyzPic_DI(i,iRegion)
-          XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-               - DxyzPic_DI(i,iRegion)
+          nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
+          ! 1 ghost cell layer at each side
+          LenPic_DI(i,iRegion) = (nCell+2)*DxyzPic_DI(i,iRegion)
        end do
+
+       XyzMinPic_DI(:,iRegion) = XyzPic0_DI(:,iRegion) - DxyzPic_DI(:,iRegion)       
     end do
 
     if(iProc == 0) then
@@ -207,7 +271,7 @@ contains
     use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
          x_, y_, z_, MaxNode
     integer:: nIJK_D(1:MaxDim), ijk_D(1:MaxDim)
-    real:: Xyz_D(1:MaxDim)
+    real:: PIC_D(1:MaxDim), MHD_D(1:MaxDim)
     integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
 
     logical:: DoTest, DoTestMe
@@ -218,13 +282,13 @@ contains
 
     if(.not.allocated(IsPicNode_A)) allocate(IsPicNode_A(MaxNode))
     IsPicNode_A = .false.
-    nIJK_D = 1; Xyz_D = 0
+
+    nIJK_D = 1; PIC_D = 0; MHD_D=0
     
     do iRegion = 1, nRegionPic
        ! nIJK_D includes two ghost cells. 
        nIJK_D(1:nDim) = int(&
-            (XyzMaxPic_DI(1:nDim,iRegion)- XyzMinPic_DI(1:nDim,iRegion)) &
-            /DxyzPic_DI(1:nDim,iRegion) + 0.5)
+            LenPic_DI(1:nDim,iRegion)/DxyzPic_DI(1:nDim,iRegion) + 0.5)
 
        if(DoTestMe) write(*,*) NameSub,' iRegion = ',iRegion, &
             ' nIJK_D = ',nIJK_D(1:nDim)
@@ -232,9 +296,9 @@ contains
        do k=1, nIJK_D(z_); do j=1, nIJK_D(y_); do i=1, nIJK_D(x_)
           ! Loop through all the PIC node points. 
           ijk_D(x_) = i - 1; ijk_D(y_) = j - 1; ijk_D(z_) = k - 1
-          Xyz_D(1:nDim) = XyzMinPic_DI(1:nDim,iRegion) &
-               + ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
-          call find_grid_block(Xyz_D, iProcFound, iBlock, iNodeOut=iNode)
+          PIC_D(1:nDim) = ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
+          call pic_to_mhd_vec(iRegion,PIC_D,MHD_D)
+          call find_grid_block(MHD_D, iProcFound, iBlock, iNodeOut=iNode)
           IsPicNode_A(iNode) = .true.
        enddo; enddo; enddo
        
@@ -253,19 +317,115 @@ contains
 
     integer:: iStatus
     integer:: iRegion
-    real:: xyz_D(nDim)
-
+    real:: xyz_D(nDim), PIC_D(nDim)
+    character(len=*), parameter:: NameSub = 'pic_find_region'
+    
     xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
 
     iStatus=0
     do iRegion = 1, nRegionPic    
-       if( &
-            all(xyz_D>XyzMinPic_DI(1:nDim,iRegion)+DxyzPic_DI(1:nDim,iRegion)).and.&
-            all(Xyz_D<XyzMaxPic_DI(1:nDim,iRegion)-DxyzPic_DI(1:nDim,iRegion))) &
+       call mhd_to_pic_vec(iRegion, xyz_D, PIC_D)
+       
+       if(  all(PIC_D > 0 ).and.&
+            all(PIC_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
             iStatus = 1
     enddo
 
     pic_find_region=iStatus
   end function pic_find_region
+  !===========================================================================
+  
+  subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)    
+    ! Transfer Pic coordinates to Mhd coordinates. Origin_D
+    ! is the origin of the PIC coordinates.
+    !------------------------------------------
+    use BATL_lib, ONLY: nDim
+
+    integer, intent(in) :: iRegion
+    real, intent(in)    :: CoordIn_D(nDim)
+    real, intent(out)   :: CoordOut_D(nDim)
+    real, intent(in), optional :: OriginIn_D(nDim)
+    real :: Origin_D(nDim), coord_D(nDim), R_DD(3, 3)
+
+    integer :: ix, in, ii, jj
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='pic_to_mhd_vec'
+    !-----------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' is called'
+
+    Origin_D = XyzMinPic_DI(:,iRegion)
+    if(present(OriginIn_D)) Origin_D = OriginIn_D
+
+    Coord_D = 0
+
+    ! R_pic2mhd = transpose(R_mhd2pic)
+    coord_D = CoordIn_D
+    do ii = 1, nDim; do jj = 1, nDim
+       R_DD(ii,jj) = R_DDI(jj,ii,iRegion)
+    enddo; enddo
+
+    CoordOut_D = 0
+    do ix = 1, nDim       
+       CoordOut_D(ix) = sum(R_DD(ix,1:nDim)*coord_D)
+    enddo
+
+    CoordOut_D = CoordOut_D + Origin_D
+
+    if(DoTestMe) then
+       write(*,*) 'Origin_D   = ', Origin_D
+       write(*,*) 'CoordIn_D  = ', CoordIn_D
+       write(*,*) 'CoordOut_D = ', CoordOut_D
+       do ix = 1, nDim
+          write(*,*) 'ix = ', ix, 'R = ', R_DD(ix,:)
+       enddo
+    endif
+
+  end subroutine pic_to_mhd_vec
+  !===========================================================================
+
+  subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)    
+    ! DoMhd2Pic == true: transfer Mhd coordinates to a coordinates
+    !   that is parallel to the PIC coordinates but the origin point is
+    !   defined by Origin_D.
+    !------------------------------------------
+    use BATL_lib, ONLY: nDim
+
+    integer, intent(in) :: iRegion
+    real, intent(in)    :: CoordIn_D(nDim)
+    real, intent(out)   :: CoordOut_D(nDim)
+    real, intent(in), optional :: OriginIn_D(nDim)
+    real :: Origin_D(nDim), coord_D(nDim), R_DD(3, 3)
+
+    integer :: ix
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='mhd_to_pic_vec'
+    !-----------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' is called'
+
+    Origin_D = XyzMinPic_DI(:,iRegion)
+    if(present(OriginIn_D)) Origin_D = OriginIn_D
+
+    Coord_D = CoordIn_D - Origin_D
+
+    CoordOut_D = 0
+    do ix = 1, nDim       
+       CoordOut_D(ix) = sum(R_DDI(ix,1:nDim,iRegion)*coord_D)
+    enddo
+
+    if(DoTestMe) then
+       write(*,*) 'Origin_D   = ', Origin_D
+       write(*,*) 'CoordIn_D  = ', CoordIn_D
+       write(*,*) 'CoordOut_D = ', CoordOut_D
+       do ix = 1, nDim
+          write(*,*) 'ix = ', ix, 'R = ', R_DD(ix,:)
+       enddo
+    endif
+
+  end subroutine mhd_to_pic_vec
+
   !===========================================================================
 end module ModPIC

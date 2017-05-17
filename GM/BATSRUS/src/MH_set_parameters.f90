@@ -597,7 +597,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#HYPRE")
         call hypre_read_param
 
-     case("#PIC", "#PICREGION", "#PICUNIT", "#PICCOUPLE", "#PICBALANCE", "#PICGHOST")
+     case("#PIC", "#PICREGION", '#PICREGIONROTATE', "#PICUNIT", "#PICCOUPLE", &
+        "#PICBALANCE", "#PICGHOST")
         call pic_read_param(NameCommand)
 
      case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
@@ -3068,7 +3069,7 @@ contains
           nStage = 2
        end if
     end if
-
+    
     if(NameThisComp == 'SC' .and. TypeCoordSystem == 'HGI')then
        if(iProc == 0)then
           write(*,'(a)') NameSub//&

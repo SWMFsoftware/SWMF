@@ -38,6 +38,8 @@ using namespace std;
 class InterfaceFluid
 { 
  private:
+
+  static const int iErr = 11; 
   
   int nDim;        // number of dimentions
 
@@ -57,6 +59,11 @@ class InterfaceFluid
   // Cell Size
   double dx_D[3];
 
+  // Rotation matrix. 
+  double R_DD[3][3];
+
+  bool doRotate;
+      
   const int x_=0, y_=1, z_=2;
 
   // Number of cells/nodes in each direction, including the ghost cell layers. 
@@ -181,6 +188,10 @@ class InterfaceFluid
   bool doSmoothAll; // Smooth jh and rhoh?. 
   double innerSmoothFactor, boundarySmoothFactor;
   double nBoundarySmooth;
+
+  // At most 10 vectors are supported during the coupling.
+  static const int nVecMax = 10; 
+  int vecIdxStart_I[nVecMax], nVec;
   
  private:
   
@@ -706,8 +717,14 @@ class InterfaceFluid
 
 
     for(int i = 0; i < nPoint; i++){
-      if(isThisRun(&Xyz_I[i*nDim])){
-	double xp = Xyz_I[i*nDim] - getPhyXMin();
+      double mhd_D[3],pic_D[3];
+      mhd_D[0] = Xyz_I[i*nDim ];
+      mhd_D[1] = Xyz_I[i*nDim+1];
+      mhd_D[2] = Xyz_I[i*nDim+2];
+      mhd_to_Pic_Vec(mhd_D,pic_D);
+
+      if(isThisRun(pic_D)){
+	double xp = pic_D[0];
 	// Estimated process index in x direction. It can be shifted because the
 	// domain size on different processor may different, so the
 	// while loop is used to do the correction.
@@ -717,7 +734,7 @@ class InterfaceFluid
 	    if(xp < xStart_I[iPx])iPx--;
 	  }
 
-	double yp = Xyz_I[i*nDim + 1]-getPhyYMin();
+	double yp = pic_D[1];
 	iPy = (int)(yp*invLy);
 	while( yp > yEnd_I[iPy] || yp < yStart_I[iPy] ){
 	    if(yp > yEnd_I[iPy]) iPy++;
@@ -727,7 +744,7 @@ class InterfaceFluid
 	  if(nDim<3)
 	    iPz = 0;
 	  else{
-	    double zp = Xyz_I[i*nDim + 2]-getPhyZMin();
+	    double zp = pic_D[2];
 	    iPz = (int)(zp*invLz);
 	    while( zp > zEnd_I[iPz] || zp < zStart_I[iPz] ){
 	      if(zp > zEnd_I[iPz]) iPz++;
@@ -745,9 +762,9 @@ class InterfaceFluid
     if(doTest && myrank==0){
       for(int iPoint=0; iPoint<nPoint; iPoint++){
 	cout<<"ipoint= "<<iPoint
-	    <<" x = "<<Xyz_I[iPoint*nDim  ] - getPhyXMin()
-	    <<" y = "<<Xyz_I[iPoint*nDim+1] - getPhyYMin()
-	    <<" z = "<<Xyz_I[iPoint*nDim+2] - getPhyZMin()
+	    <<" x = "<<Xyz_I[iPoint*nDim  ] - phyMin_D[x_]
+	    <<" y = "<<Xyz_I[iPoint*nDim+1] - phyMin_D[y_]
+	    <<" z = "<<Xyz_I[iPoint*nDim+2] - phyMin_D[z_]
 	    <<" proc= "<<iProc_I[iPoint]
 	    <<endl;
 	  }
@@ -795,13 +812,13 @@ class InterfaceFluid
     double xmin, ymin, zmin, xmax, ymax, zmax;
     double csmall; 
     csmall = 1e-7;
-      
-    xmin = getPhyXMin() - csmall;
-    ymin = getPhyYMin() - csmall;
-    zmin = getPhyZMin() - csmall;
-    xmax = getPhyXMax() + csmall;
-    ymax = getPhyYMax() + csmall;
-    zmax = getPhyZMax() + csmall;
+
+    xmin = - csmall;
+    ymin = - csmall;
+    zmin = - csmall;
+    xmax = lenGst_D[x_] - 2*dx_D[x_] + csmall;
+    ymax = lenGst_D[y_] - 2*dx_D[y_] + csmall;
+    zmax = lenGst_D[z_] - 2*dx_D[z_] + csmall;
 
     isThisRunReturn = true;
     if(Pos_D[0] < xmin || Pos_D[0] > xmax) isThisRunReturn = false;
@@ -814,7 +831,7 @@ class InterfaceFluid
     
     return isThisRunReturn;
   }
-
+  
   /** nNodeGst_D includes 1 guard/ghost cell layer... */
   inline double getFluidNxc() const{ return(nNodeGst_D[0]-3*NG); }
   
@@ -1248,6 +1265,14 @@ class InterfaceFluid
 	iP_I[iIon]       = paramint[n++] - 1;
     }
 
+    nVec = nIon + 1;
+    if(nVec>nVecMax){
+      if(myrank==0) cout<<"Error: nVec > nVecMax!!!!"<<endl;
+      MPI_Abort(MPI_COMM_MYSIM,iErr);
+    }
+    for (int iVec = 0; iVec<nIon; iVec++) vecIdxStart_I[iVec] = iRhoUx_I[iVec];
+    vecIdxStart_I[nVec-1] = iBx;
+
     // See GM/BATSRUS/src/ModExtraVariables.f90. 
     useAnisoP = iPpar_I[0] != 0;
     useMhdPe  = iPe != 0;
@@ -1263,10 +1288,25 @@ class InterfaceFluid
     n = 0; 
     for(int i =0; i<3; i++){
       gstMin_D[i] = griddim[n++];      // Lmin
-      gstMax_D[i] = griddim[n++]; // Lmax
+      lenGst_D[i] = griddim[n++]; 
+      //gstMax_D[i] = griddim[n++]; // Lmax
       dx_D[i]       = griddim[n++]; //dx
-      lenGst_D[i] = (gstMax_D[i] - gstMin_D[i]);      
+      gstMax_D[i] =  gstMin_D[i] + lenGst_D[i];
     }
+
+    for (int i=0; i<3; i++){
+      for(int j=0; j<3; j++){
+    	R_DD[i][j] = griddim[n++];
+    	if(myrank == 0) cout<<"i= "<<i<<" j= "<<j<<" R = "<<R_DD[i][j]<<endl;
+      }      
+    }
+
+    doRotate = false;
+    double csmall = 1e-7;
+    for (int i=0; i<nDim; i++)
+      if(fabs(R_DD[i][i]-1) > csmall){
+	doRotate = true;
+      }
 
     for(int i =0; i<3; i++)
       nNodeGst_D[i] = (int)(lenGst_D[i]/dx_D[i] +0.5);
@@ -1355,8 +1395,8 @@ class InterfaceFluid
   
   /** get the number of cordinate points used by the simulation. recived from GM */
   void GetNgridPnt(int &nPoint){
-    double *Pos_I, *state_I;
-    int *iPoint_I;
+    double *Pos_I=nullptr, *state_I=nullptr;
+    int *iPoint_I=nullptr;
     bool doCount, doGetPos, doSetData;
     
     doCount = true; doGetPos = false; doSetData = false;    
@@ -1367,7 +1407,7 @@ class InterfaceFluid
   void get_region_points(bool doCount, bool doGetPos, bool doSetData,
 			 int &nPoint, double *pos_I, double *state_I, int *iPoint_I){
     int i, j, k, iMin, iMax, jMin, jMax, kMin, kMax;
-    double pic_D[3];
+    double pic_D[3], mhd_D[3];
 
     iMin = 0; iMax = 1 ; jMin = 0; jMax = 1; kMin = 0; kMax = 1; 
     iMax = nxnLG;
@@ -1384,12 +1424,12 @@ class InterfaceFluid
 	    if(doCount) nPoint +=nDim;
 
 	    if(doGetPos){
-	      pic_D[0] = (i + StartIdx_D[0] - 1)*dx_D[0] + gstMin_D[0];
-	      pic_D[1] = (j + StartIdx_D[1] - 1)*dx_D[1] + gstMin_D[1];
-	      pic_D[2] = (k + StartIdx_D[2] - 1)*dx_D[2] + gstMin_D[2]; 
-	      
+	      pic_D[x_] = (i + StartIdx_D[x_] - 2)*dx_D[x_];
+	      pic_D[y_] = (j + StartIdx_D[y_] - 2)*dx_D[y_];
+	      pic_D[z_] = (k + StartIdx_D[z_] - 2)*dx_D[z_]; 
+	      pic_to_Mhd_Vec(pic_D,mhd_D);
 	      for (int iDim=0; iDim<nDim; iDim++){
-		pos_I[n++] = pic_D[iDim]*No2SiL;
+		pos_I[n++] = mhd_D[iDim]*No2SiL;
 	      }
 
 	    }// doGetPos
@@ -1401,7 +1441,22 @@ class InterfaceFluid
 		State_GV[i][j][k][iVar] = state_I[idx];
 	      }
 	      ii++;
-	    }
+
+	      // Convert vectors from MHD coordinates to PIC coordinates----------
+	      for (int iVec = 0; iVec<nVec; iVec++){
+		int idx0, idx1;
+		idx0 = vecIdxStart_I[iVec];
+		idx1 = idx0 + nDim;
+		for (int iVar = idx0; iVar< idx1; iVar++)
+		  mhd_D[iVar - idx0] = State_GV[i][j][k][iVar];
+		mhd_to_Pic_Vec(mhd_D,pic_D,true);
+		for (int iVar = idx0; iVar< idx1; iVar++){
+		  State_GV[i][j][k][iVar] = pic_D[iVar-idx0];
+		}
+	      }
+	      //------------------------------------------------------------------
+	      
+	    } // doSetData
 	    
 	  }
 	}// i j k 
@@ -1421,10 +1476,10 @@ class InterfaceFluid
   
   /** Get index of node points recived from GM */ 
   void GetGridPnt(double *Pos_I){
-    double *state_I;
-    int *iPoint_I, nPoint;
+    double *state_I=nullptr;
+    int *iPoint_I=nullptr, nPoint;
     bool doCount, doGetPos, doSetData;
-    
+
     doCount = false; doGetPos = true; doSetData = false;    
     get_region_points(doCount, doGetPos, doSetData, nPoint, Pos_I,
 		      state_I, iPoint_I);
@@ -1446,7 +1501,7 @@ class InterfaceFluid
     }
 
     //-----------------Put data to State_GV--------------------
-    double *Pos_I;
+    double *Pos_I=nullptr;
     int nPoint;
     bool doCount, doGetPos, doSetData;
     doCount = false; doGetPos = false; doSetData = true;    
@@ -2088,17 +2143,57 @@ class InterfaceFluid
     }
     return inVars;
   }
+
+  void pic_to_Mhd_Vec(double const *vecIn_D, double *vecOut_D, bool isZeroOrigin=false){
+    /** 1) Change a vector in coupling PIC coordinates to MHD coordinates. 
+	If not isZeroOrigin, then shifting the origin of the coupling 
+	PIC coordinates to INxRange_I.
+     **/
+
+    for(int iDim=0; iDim < nDim; iDim++){
+      vecOut_D[iDim] = 0;
+      for(int jDim=0; jDim<nDim; jDim++){
+	vecOut_D[iDim] +=R_DD[iDim][jDim]*vecIn_D[jDim];
+      }
+      if(!isZeroOrigin) vecOut_D[iDim] += phyMin_D[iDim];
+    }    
+  }
+  
+  void mhd_to_Pic_Vec(double const *vecIn_D, double *vecOut_D, bool isZeroOrigin=false){    
+    /** 1) Change a vector in MHD coordinates to coupling PIC coordinates. 
+	If not isZeroOrigin, then shifting the origin of the coupling 
+	PIC coordinates to phyMin_D.
+    **/
+    
+    double vec_D[3];
+    if(!isZeroOrigin){
+      for(int iDim=0; iDim < nDim; iDim++)
+	vec_D[iDim] = vecIn_D[iDim] - phyMin_D[iDim];
+    }else{
+      for(int iDim=0; iDim < nDim; iDim++)
+	vec_D[iDim] = vecIn_D[iDim];
+    }
+    
+    for(int iDim=0; iDim < nDim; iDim++){
+      vecOut_D[iDim] = 0;
+      for(int jDim=0; jDim<nDim; jDim++){
+	vecOut_D[iDim] +=R_DD[jDim][iDim]*vec_D[jDim];
+      }
+    } // iDim   
+  }
   
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
-  double getPhyXMin(){return phyMin_D[0];}
-  double getPhyYMin(){return phyMin_D[1];}
-  double getPhyZMin(){return phyMin_D[2];}
-  double getPhyXMax(){return phyMax_D[0];}
-  double getPhyYMax(){return phyMax_D[1];}
-  double getPhyZMax(){return phyMax_D[2];}
-
+  /* double getPhyXMin()const{return phyMin_D[0];} */
+  /* double getPhyYMin()const{return phyMin_D[1];} */
+  /* double getPhyZMin()const{return phyMin_D[2];} */
+  /* double getPhyXMax()const{return phyMax_D[0];} */
+  /* double getPhyYMax()const{return phyMax_D[1];} */
+  /* double getPhyZMax()const{return phyMax_D[2];} */
+  double getphyMin(int i)const{return phyMin_D[i];}
+  bool getdoRotate()const{return doRotate;}
+  double getRDD(int i, int j)const{return R_DD[i][j];}
 
   void setiRegion(int i){
     iRegion = i;
@@ -2110,23 +2205,23 @@ class InterfaceFluid
   
   int getnDim()const{return(nDim);}
 
-  int getnVarFluid(){return(nVarFluid);}
+  int getnVarFluid()const{return(nVarFluid);}
 
-  int getnIon(){return(nIon);}
+  int getnIon()const{return(nIon);}
 
-  double getSi2NoL(){return(Si2NoL);}
-  double getNo2SiL(){return(No2SiL);}
-  double getNo2SiRho(){return(1./Si2NoRho);}
-  double getNo2SiV(){return(1./Si2NoV);}
-  double getNo2SiB(){return(1./Si2NoB);}
-  double getNo2SiP(){return(1./Si2NoP);}
-  double getNo2SiJ(){return(1./Si2NoJ);}
+  double getSi2NoL()const{return(Si2NoL);}
+  double getNo2SiL()const{return(No2SiL);}
+  double getNo2SiRho()const{return(1./Si2NoRho);}
+  double getNo2SiV()const{return(1./Si2NoV);}
+  double getNo2SiB()const{return(1./Si2NoB);}
+  double getNo2SiP()const{return(1./Si2NoP);}
+  double getNo2SiJ()const{return(1./Si2NoJ);}
 
-  int getNxcLocal(){return nxcLocal;}
-  int getNycLocal(){return nycLocal;}
-  int getNzcLocal(){return nzcLocal;}
+  int getNxcLocal()const{return nxcLocal;}
+  int getNycLocal()const{return nycLocal;}
+  int getNzcLocal()const{return nzcLocal;}
 
-  bool getdoNeedBCOnly(){return(doNeedBCOnly);};
+  bool getdoNeedBCOnly()const{return(doNeedBCOnly);};
   void setdoNeedBCOnly(bool doBCOnly){doNeedBCOnly=doBCOnly;};
   void setCycle(int iCycleIn){iCycle=iCycleIn;};
   int getCycle()const{return iCycle;};
