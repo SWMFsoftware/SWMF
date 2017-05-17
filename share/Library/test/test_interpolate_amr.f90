@@ -28,6 +28,11 @@ module ModTestInterpolateAMR
   integer,parameter:: Out_  = -100
   integer,parameter:: nCell = 2
   integer,parameter:: nG    = 1
+  !\
+  ! Ratio of lengths in different dimensions
+  !/
+  real, parameter:: SizeRatio_D(3) = (/1.0, 100.0, 0.01/)
+  
 contains
   !==================================================================
   subroutine test_interpolate_amr(nDim,nSample, UseGeneric, UseGhostCell)
@@ -64,11 +69,11 @@ contains
     integer:: iSeed = 1
     !-------------------------------------------------------------------
     nCell_D = 1; nCell_D(1:nDim) = nCell
-    DxyzDomain_D      = 2*nCell
-    DxyzCoarseBlock_D = nCell
-    DxyzFineBlock_D   = 0.5*nCell
-    DxyzCoarse_D      = 1
-    DxyzFine_D        = 0.5
+    DxyzDomain_D      = 2*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarseBlock_D = nCell*SizeRatio_D(1:nDim)
+    DxyzFineBlock_D   = 0.5*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarse_D      = 1*SizeRatio_D(1:nDim)
+    DxyzFine_D        = 0.5*SizeRatio_D(1:nDim)
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,(2**nDim)*(2**nDim+1)))
     DiLevelNei_IIIB = 0
     allocate(Xyz0_DGB(nDim, 1-nG:nCell_D(1)+nG, &
@@ -222,7 +227,8 @@ contains
           ! Test continuity
           !/
           do iDir =1, nDim
-             XyzCont_D(iDir) = Xyz_D(iDir) + (0.02*random_real(iSeed) - 0.01)
+             XyzCont_D(iDir) = Xyz_D(iDir) + &
+                  SizeRatio_D(iDir)*(0.02*random_real(iSeed) - 0.01)
           end do
           !\
           ! call interpolate_amr
@@ -585,11 +591,11 @@ contains
          (/1, 2, 3, 4, 5, 6, 7, 8/),(/2, 2, 2/))
     logical, dimension(nDim) :: IsAboveCenter_D
     !------------------- 
-    DxyzDomain_D      = 2*nCell
-    DxyzCoarseBlock_D = nCell
-    DxyzFineBlock_D   = 0.5*nCell
-    DxyzCoarse_D      = 1
-    DxyzFine_D        = 0.5
+    DxyzDomain_D      = 2*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarseBlock_D = nCell*SizeRatio_D(1:nDim)
+    DxyzFineBlock_D   = 0.5*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarse_D      = 1*SizeRatio_D(1:nDim)
+    DxyzFine_D        = 0.5*SizeRatio_D(1:nDim)
     iProc = 0; iBlock=0; XyzCorner_D=0.0; Dxyz_D = 0.0
     IsOut = any(Xyz_D < 0.0 .or. Xyz_D >= DxyzDomain_D)
     if(IsOut) RETURN
