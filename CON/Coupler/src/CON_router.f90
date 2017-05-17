@@ -1536,6 +1536,7 @@ contains
     integer :: iLocalPointLast, iPointInBlock, nInterfacePoint
     logical :: IsInterfacePoint 
     integer, dimension(0:Router%nProc-1)::nPutUbound_P
+    integer::nRecvUbound
 
     real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
     real,    dimension(GridDescriptorSource%nDim) :: XyzSource_D 
@@ -1599,18 +1600,21 @@ contains
     ! some data will be sent to Source, determine amount:
     ! cell and block indexes are sent
     nAux = Router%nMappedPointIndex
- 
+
     !Check dimensions
     DoCountOnly=.true. !To enter the loop
     do while(DoCountOnly)
        call check_router_allocation(Router)
        !\
-       !Store Upper bounds to control if the alllocated     !
+       !Store Upper bounds to control if the allocated      !
        !index arrays have sufficient size
        do iProcFrom = iProc0Source, iProcLastSource, iProcStrideSource
           nPutUbound_P(iProcFrom) = &
                ubound(Router%iPut_P(iProcFrom)%iCB_II,2)
        end do     
+       ! and also the buffer size
+       nRecvUbound = ubound(Router%BufferTarget_II, 2)
+
        ! which processor holds a current image
        call check_size(1, (/Router%nBufferTarget/), iBuffer_I = iProc_I)
        ! correct order of images in the send buffer
@@ -1788,7 +1792,7 @@ contains
                 XyzSource_D
            call CON_stop(StringErrorMessage)
         end if
-        
+
         ! go over the list of images and process result of interpolation
         nProcToGet = 0
         IMAGES1:do iImage = 1, nImage
@@ -1806,8 +1810,9 @@ contains
                 Router%nRecv_P(iProcFrom) + 1
            
            DoCountOnly = DoCountOnly.or.&
-                Router%nPut_P(iProcFrom)>&
-                nPutUbound_P(iProcFrom)  
+                Router%nPut_P(iProcFrom) > nPutUbound_P(iProcFrom) .or. &
+           sum(Router%nRecv_P(:)) > nRecvUbound
+           
         end do IMAGES1
         if(.not.DoCountOnly)then
            PROCFROM:do iProcToGet = 1, nProcToGet
@@ -2259,6 +2264,7 @@ contains
     integer :: iLocalPointLast, iPointInBlock, nInterfacePoint
     logical :: IsInterfacePoint
     integer, dimension(0:Router%nProc-1)::nGetUbound_P
+    integer::nSendUbound
 
     real,    dimension(GridDescriptorTarget%nDim) :: XyzTarget_D
     real,    dimension(GridDescriptorSource%nDim) :: XyzSource_D 
@@ -2335,7 +2341,9 @@ contains
        do iProcTo = iProc0Target, iProcLastTarget, iProcStrideTarget
           nGetUbound_P(iProcTo) = &
                ubound(Router%iGet_P(iProcTo)%iCB_II,2)
-       end do     
+       end do
+       ! and also the buffer size
+       nSendUbound = ubound(Router%BufferSource_II, 2)
 
        ! which processor holds a current image
        call check_size(1, (/Router%nBufferSource/), iBuffer_I = iProc_I)
@@ -2540,8 +2548,8 @@ contains
                 Router%nSend_P(iProcTo) + 1
            
            DoCountOnly = DoCountOnly.or.&
-                Router%nGet_P(iProcTo)>&
-                nGetUbound_P(iProcTo)  
+                Router%nGet_P(iProcTo) > nGetUbound_P(iProcTo).or.&
+                sum(Router%nSend_P(:)) > nSendUbound
         end do IMAGES1
         if(.not.DoCountOnly)then
            PROCTO:do iProcToPut=1,nProcToPut
