@@ -13,7 +13,7 @@ module SP_wrapper
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
-       RMin, RSc, RIh, LatMin, LatMax, LonMin, LonMax, &
+       RMin, RSc, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
        CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, &
@@ -235,12 +235,12 @@ contains
 
   !===================================================================
 
-  subroutine SP_get_domain_boundary(RScOut, RIhOut)
+  subroutine SP_get_domain_boundary(RScOut, RMaxOut)
     ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut, RIhOut
+    real, intent(out):: RScOut, RMaxOut
     !-----------------------------------------------------------------
-    RScOut = RSc
-    RIhOut = RIh
+    RScOut  = RSc
+    RMaxOut = RMax
   end subroutine SP_get_domain_boundary
 
   !===================================================================

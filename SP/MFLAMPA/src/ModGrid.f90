@@ -14,7 +14,7 @@ module SP_ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, RIh, ROrigin
+  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
   public:: CoordMin_DI
   public:: State_VIB, Distribution_IIB
@@ -42,11 +42,11 @@ module SP_ModGrid
   real:: LatMin, LatMax, DLat
   real:: LonMin, LonMax, DLon
   ! Lower boundary of the domain in Rs
-  real:: RMin=1.0
+  real:: RMin=-1.
   ! Boundary of the solar corona in Rs
-  real:: RSc =21.0
-  ! Boundary of the inner heliosphere in Rs
-  real:: RIh =220.0
+  real:: RSc =-1.
+  ! Upper boundary of the domain in Rs
+  real:: RMax=-1.
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
@@ -168,10 +168,17 @@ contains
     !--------------------------------------------------------------------------
     call read_var('ROrigin', ROrigin)
     call read_var('RSc', RSc)
+    call read_var('RMax',RMax)
+    if(ROrigin < 0.0 .or. RSc < 0.0 .or. RMax < 0.0)&
+         call CON_stop(NameSub//&
+         ': all values ROrigin, RSc, RMax msut be set to positive values')
+    if(RMax < RSc .or. RMax < ROrigin)&
+         call CON_stop(NameSub//&
+         ': value of RMax is inconsistent with ROrigin or RSc')
     call read_var('LonMin', LonMin)
     call read_var('LonMax', LonMax)
     if(LonMax <= LonMin)&
-         call CON_stop('Origin surface grid is inconsistent:'//NameSub)
+         call CON_stop(NameSub//': Origin surface grid is inconsistent')
     ! convert angels from degrees to radians
     LonMax = LonMax * cPi / 180
     LonMin = LonMin * cPi / 180
@@ -181,7 +188,7 @@ contains
     call read_var('LatMin', LatMin)
     call read_var('LatMax', LatMax)
     if(LatMax <= LatMin)&
-         call CON_stop('Origin surface grid is inconsistent:'//NameSub)
+         call CON_stop(NameSub//': Origin surface grid is inconsistent')
     ! convert angels from degrees to radians
     LatMax = LatMax * cPi / 180
     LatMin = LatMin * cPi / 180
@@ -209,13 +216,13 @@ contains
     ! distribute nodes between processors
     !/
     if(nNode < nProc)&
-         call CON_stop('There are more processors than field lines:'//NameSub)
+         call CON_stop(NameSub//': There are more processors than field lines')
     nBlock = ((iProc+1)*nNode) / nProc - (iProc*nNode) / nProc
     !\
     ! check consistency
     !/
     if(nLat <= 0 .or. nLon <= 0)&
-         call CON_stop('Origin surface grid is invalid:'//NameSub)
+         call CON_stop(NameSub//': Origin surface grid is invalid')
     !\
     ! allocate data and grid containers
     !/
@@ -291,7 +298,7 @@ contains
        iEnd   = iGridLocal_IB(End_,  iBlock)
        do iParticle = iBegin, iEnd
           ! if particle has left the domain -> cut the rest of the line
-          if(State_VIB(R_, iParticle, iBlock) > RIh)then
+          if(State_VIB(R_, iParticle, iBlock) > RMax)then
              iGridLocal_IB(End_,  iBlock) = iParticle - 1
              EXIT
           end if
@@ -365,6 +372,14 @@ contains
          2*State_VIB(R_,iParticle,iBlock)*State_VIB(R_,iParticle+1,iBlock) * &
          (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2))
   end function distance_to_next
+
+  !============================================================================
+
+  !  subroutine check_append_particle
+  ! subroutine checks whether 1st particle has moved far enough from the Sun 
+  ! and appends a new one to the begninning if necessary
+  !--------------------------------------------------------------------------
+  !  end subroutine check_append_particle
 
   !============================================================================
 
