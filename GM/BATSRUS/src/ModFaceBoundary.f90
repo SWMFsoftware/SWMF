@@ -938,9 +938,13 @@ contains
 
 
       case default
-         call stop_mpi('Incorrect TypeFaceBc_I='//TypeBc)
+         write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
+              iTrue, jTrue, kTrue, iBlockBc
+         write(*,*) NameSub,': iGhost,jGhost,kGhost,iBoundary=',&
+              iGhost, jGhost, kGhost, iBoundary
+         write(*,*) NameSub,': FaceCoords_D=', FaceCoords_D
+         call stop_mpi(NameSub//': incorrect TypeFaceBc_I='//TypeBc)
       end select
-
 
       if (UseIe .and. iBoundary == Body1_) then
          ! Get the E x B / B^2 velocity
