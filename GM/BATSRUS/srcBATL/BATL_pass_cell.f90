@@ -3163,19 +3163,7 @@ contains
                   if(jDir /= 0) jRatioRestr = 1
                   if(kDir /= 0) kRatioRestr = 1
                end if
-               ! if(DoTest)then
-               !    write(*,*)'iNodeSend, iProc    , iBlockSend=', &
-               !         iNodeSend, iProc, iBlockSend
-               !    write(*,*)'iNodeRecv, iProcRecv, iBlockRecv=', &
-               !         iNodeRecv, iProcRecv, iBlockRecv
-               !    write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
-               !    write(*,*)'iSend,jSend,kSend=',iSend,jSend,kSend
-               !    write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
-               !    write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
-               !         iSMin,iSmax,jSMin,jSMax,kSMin,kSmax
-               !    write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
-               !         iRMin,iRmax,jRMin,jRMax,kRMin,kRmax
-               ! end if
+
 
                if(nProlongOrder == 2)then
                   ! Add up 2nd order corrections for all AMR dimensions
@@ -3214,6 +3202,24 @@ contains
 
                            if(iRatio == 1) iS1 = iS
                            if(iRatio == 2) iS1 = iS + DiR*(1 - 2*modulo(iR,2))
+                           
+                           if(UseMin)then
+                              ! Store min value of the stencil into Slope_VG
+                              Slope_VG(:,iR,jR,kR) = min( &
+                                   State_VGB(:,iS,jS,kS,iBlockSend), &
+                                   State_VGB(:,iS1,jS,kS,iBlockSend), &
+                                   State_VGB(:,iS,jS1,kS,iBlockSend), &
+                                   State_VGB(:,iS,jS,kS1,iBlockSend)  )
+                              CYCLE
+                           elseif(UseMax)then
+                              ! Store max value of the stencil into Slope_VG
+                              Slope_VG(:,iR,jR,kR) = max( &
+                                   State_VGB(:,iS,jS,kS,iBlockSend), &
+                                   State_VGB(:,iS1,jS,kS,iBlockSend), &
+                                   State_VGB(:,iS,jS1,kS,iBlockSend), &
+                                   State_VGB(:,iS,jS,kS1,iBlockSend)  )
+                              CYCLE
+                           end if
 
                            if(UseSimpleWeights)then
                               ! For Cartesian-like grids the weights are 0.25
@@ -3269,24 +3275,6 @@ contains
                                     WeightJ = WeightJ / Weight
                                     WeightK = WeightK / Weight
                                  end if
-
-
-                                 !if(IsSphericalAxis .and. &
-                                 !     iNodeSend==20 .and. iNodeRecv==26 .and.&
-                                 !     iR==7 .and. jR==7 .and. kR==-1)then
-                                 !   write(*,*)'!!! iNodeSend, iBlockSend=', &
-                                 !        iNodeSend, iBlockSend
-                                 !   write(*,*)'!!! iS,jS,kS,iS1,jS1,kS1=', &
-                                 !        iS,jS,kS,iS1,jS1,kS1
-                                 !   write(*,*)'!!! Xyz_D=',Xyz_D
-                                 !   write(*,*)'!!! dI_D =',dI_D
-                                 !   write(*,*)'!!! dJ_D =',dJ_D
-                                 !   write(*,*)'!!! dK_D =',dK_D
-                                 !   write(*,*)'!!! dR_D =',dR_D
-                                 !   write(*,*)'InvV,WeightI, J, K=',&
-                                 !        InvV, WeightI, WeightJ, WeightK
-                                 !end if
-
 
                               end if
                            end if
@@ -3391,9 +3379,16 @@ contains
                                  iS = iSMin + abs((iR+9)/iRatioRestr &
                                       -           (iRMin+9)/iRatioRestr)
 
-                                 State_VGB(:,iR,jR,kR,iBlockRecv) = &
-                                      State_VGB(:,iS,jS,kS,iBlockSend) &
-                                      + Slope_VG(:,iR,jR,kR)
+                                 if(nProlongOrder==2 .and. &
+                                      (UseMin .or. UseMax))then
+                                    ! Assign min/max value stored in Slope_VG
+                                    State_VGB(:,iR,jR,kR,iBlockRecv) = &
+                                         Slope_VG(:,iR,jR,kR)
+                                 else
+                                    State_VGB(:,iR,jR,kR,iBlockRecv) = &
+                                         State_VGB(:,iS,jS,kS,iBlockSend) &
+                                         + Slope_VG(:,iR,jR,kR)
+                                 end if
                               end do
                            end do
                         end do
@@ -3465,9 +3460,16 @@ contains
                            do iR = iRMin, iRMax, DiR
                               iS = iSMin + abs((iR+9)/iRatioRestr &
                                    -           (iRMin+9)/iRatioRestr)
-                              BufferS_I(iBufferS+1:iBufferS+nVar)= &
-                                   State_VGB(:,iS,jS,kS,iBlockSend) &
-                                   + Slope_VG(:,iR,jR,kR)
+
+                              if(nProlongOrder==2 .and. (UseMin.or.UseMax))then
+                                 ! Assign min/max value stored in Slope_VG
+                                 BufferS_I(iBufferS+1:iBufferS+nVar)= &
+                                      Slope_VG(:,iR,jR,kR)
+                              else
+                                 BufferS_I(iBufferS+1:iBufferS+nVar)= &
+                                      State_VGB(:,iS,jS,kS,iBlockSend) &
+                                      + Slope_VG(:,iR,jR,kR)
+                              end if
                               iBufferS = iBufferS + nVar
                            end do
                         end do
