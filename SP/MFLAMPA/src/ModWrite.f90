@@ -14,7 +14,7 @@ module SP_ModWrite
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, R_, Lat_, Lon_, Bx_, By_, Bz_, &
+       Proc_, Begin_, End_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
@@ -193,7 +193,7 @@ contains
       File_I(iFile) % nVarPlot = 0
       File_I(iFile) % DoPlot_V = .false.
       ! coordinates are always printed
-      File_I(iFile) % DoPlot_V((/R_, Lon_, Lat_/)) = .true.
+      File_I(iFile) % DoPlot_V((/X_, Y_, Z_/)) = .true.
       File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       ! distance along line -----
       if(index(StringPlot,' dist ') > 0)then
@@ -373,6 +373,8 @@ contains
       integer:: iFirst, iLast
       ! index of particle just above the radius
       integer:: iAbove
+      ! radii of particles, added for readability
+      real:: Radius0, Radius1
       ! interpolation weight
       real:: Weight
       ! for better readability
@@ -406,7 +408,8 @@ contains
 
          ! find the particle just above the given radius
          do iParticle = iFirst , iLast
-            if(State_VIB(R_, iParticle, iBlock) > File_I(iFile) % Radius) EXIT
+            Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
+            if( Radius0 > File_I(iFile) % Radius**2) EXIT
             ! check if reached the end, i.e. there is no intersection
             if(iParticle == iLast) &
                  DoPrint_I(iNode) = .false.
@@ -422,9 +425,9 @@ contains
          iAbove = iParticle
          
          ! interpolate data and fill buffer
-         Weight = &
-              (File_I(iFile)%Radius        - State_VIB(R_,iAbove-1,iBlock)) /&
-              (State_VIB(R_,iAbove,iBlock) - State_VIB(R_,iAbove-1,iBlock))
+         Radius0 = sum(State_VIB(X_:Z_, iAbove-1, iBlock)**2)**0.5
+         Radius1 = sum(State_VIB(X_:Z_, iAbove,   iBlock)**2)**0.5
+         Weight  = (File_I(iFile)%Radius - Radius0) / (Radius1 - Radius0)
          ! interpolate each requested variable
          do iVarPlot = 1, nVarPlot
             iVarIndex = File_I(iFile) % iVarPlot_V(iVarPlot)

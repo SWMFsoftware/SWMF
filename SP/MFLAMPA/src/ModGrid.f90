@@ -21,9 +21,10 @@ module SP_ModGrid
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_
-  public:: nVar, R_, Lon_, Lat_, D_, S_
+  public:: nVar, X_, Y_, Z_, D_, S_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_, EFlux_
   public:: NameVar_V
+  public:: TypeCoordSystem
 
   !\
   ! MPI information
@@ -102,9 +103,9 @@ module SP_ModGrid
   ! Number of variables in the state vector and their identifications
   integer, parameter:: nVar = 18
   integer, parameter:: &
-       R_     = 1, & ! Radial coordinate
-       Lon_   = 2, & ! Longitude
-       Lat_   = 3, & ! Latitude
+       X_     = 1, & ! 
+       Y_     = 2, & ! Cartesian coordinates
+       Z_     = 3, & ! 
        D_     = 4, & ! Distance to the next particle
        S_     = 5, & ! Distance from the beginning of the line
        ! Current values
@@ -125,9 +126,9 @@ module SP_ModGrid
        EFlux_ =18    ! Integrated particle flux
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
-       'R     ', &
-       'Lon   ', &
-       'Lat   ', &
+       'X     ', &
+       'Y     ', &
+       'Z     ', &
        'D     ', &
        'S     ', &
        'Rho   ', &
@@ -157,6 +158,9 @@ module SP_ModGrid
   real, target:: EnergyScale_I(nMomentumBin)
   real, target:: LogEnergyScale_I(nMomentumBin)
   real, target:: DMomentumOverDEnergy_I(nMomentumBin)
+  !----------------------------------------------------------------------------
+  ! Coordinate system and geometry
+  character(len=3) :: TypeCoordSystem = 'HGI'
   !/
 
 contains
@@ -203,6 +207,7 @@ contains
   subroutine init_grid
     ! allocate the grid used in this model
     use ModUtilities, ONLY: check_allocate
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     integer:: iError
     integer:: iLat, iLon, iNode, iBlock, iProcNode
     character(LEN=*),parameter:: NameSub='SP:init_grid'
@@ -281,7 +286,8 @@ contains
                (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGridGlobal_IA(Block_, iNode)
           if(iProc == iGridGlobal_IA(Proc_, iNode))&
-               State_VIB(1:nDim,1,iBlock) = CoordOrigin_DA(:,iNode)
+               call rlonlat_to_xyz(&
+               CoordOrigin_DA(:,iNode), State_VIB(X_:Z_,1,iBlock))
        end do
     end do
   end subroutine init_grid
@@ -298,7 +304,7 @@ contains
        iEnd   = iGridLocal_IB(End_,  iBlock)
        do iParticle = iBegin, iEnd
           ! if particle has left the domain -> cut the rest of the line
-          if(State_VIB(R_, iParticle, iBlock) > RMax)then
+          if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
              iGridLocal_IB(End_,  iBlock) = iParticle - 1
              EXIT
           end if
@@ -354,71 +360,11 @@ contains
     integer, intent(in):: iParticle
     integer, intent(in):: iBlock
     real               :: Distance
-
-    real:: CosLat1xCosLat2, SinLat1xSinLat2, CosLon1MinusLon2
-    real:: CosLat1PlusLat2, CosLat1MinusLat2
     !--------------------------------------------------------------------
-    CosLat1PlusLat2 = cos(&
-         State_VIB(Lat_,iParticle,iBlock) + State_VIB(Lat_,iParticle+1,iBlock))
-    CosLat1MinusLat2 = cos(&
-         State_VIB(Lat_,iParticle,iBlock) - State_VIB(Lat_,iParticle+1,iBlock))
-    CosLon1MinusLon2 = cos(&
-         State_VIB(Lon_,iParticle,iBlock) - State_VIB(Lon_,iParticle+1,iBlock))
-    CosLat1xCosLat2 = 0.5 * (CosLat1MinusLat2 + CosLat1PlusLat2)
-    SinLat1xSinLat2 = 0.5 * (CosLat1MinusLat2 - CosLat1PlusLat2)
-    Distance = sqrt(&
-         State_VIB(R_,iParticle,  iBlock)**2 + &
-         State_VIB(R_,iParticle+1,iBlock)**2 - &
-         2*State_VIB(R_,iParticle,iBlock)*State_VIB(R_,iParticle+1,iBlock) * &
-         (CosLat1xCosLat2 * CosLon1MinusLon2 + SinLat1xSinLat2))
+    Distance = sqrt(sum((&
+         State_VIB(X_:Z_, iParticle,   iBlock) - &
+         State_VIB(X_:Z_, iParticle+1, iBlock))**2))
   end function distance_to_next
-
-  !============================================================================
-
-  !  subroutine check_append_particle
-  ! subroutine checks whether 1st particle has moved far enough from the Sun 
-  ! and appends a new one to the begninning if necessary
-  !--------------------------------------------------------------------------
-  !  end subroutine check_append_particle
-
-  !============================================================================
-
-  subroutine get_cell(CoordIn_D, iCellOut_D)
-    real,    intent(in) :: CoordIn_D(nDim)
-    integer, intent(out):: iCellOut_D(nDim)
-    !--------------------------------------------------------------------------
-    iCellOut_D(Particle_)  = nint( CoordIn_D(Particle_))
-    iCellOut_D(OriginLat_) = nint((CoordIn_D(OriginLat_)-LatMin)/DLat + 0.5)
-    iCellOut_D(OriginLon_) = nint((CoordIn_D(OriginLon_)-LonMin)/DLon + 0.5)
-  end subroutine get_cell
-
-  !============================================================================
-  
-  subroutine get_node(CoordIn_D, iNodeOut)
-    real,    intent(in) :: CoordIn_D(nDim)
-    integer, intent(out):: iNodeOut
-    ! angular grid indices
-    integer:: iLat, iLon
-    !--------------------------------------------------------------------------
-    iLat = nint((CoordIn_D(OriginLat_)-LatMin)/DLat + 0.5)
-    iLon = nint((CoordIn_D(OriginLon_)-LonMin)/DLon + 0.5)
-    iNodeOut = iNode_II(iLon, iLat)
-  end subroutine get_node
-
-  !============================================================================
-
-  subroutine convert_to_hgi(CoordIn_D, CoordOut_D)
-    real, intent(in) :: CoordIn_D(nDim)
-    real, intent(out):: CoordOut_D(nDim)
-
-    integer:: iBlock, iCell_D(nDim)
-    !--------------------------------------------------------------------------
-    call get_cell(CoordIn_D, iCell_D)
-    iBlock = &
-         iGridGlobal_IA(Block_, iNode_II(iCell_D(OriginLon_), iCell_D(OriginLat_)))
-    CoordOut_D((/R_, Lat_, Lon_/)) = &
-         State_VIB((/R_,Lat_,Lon_/), iCell_D(Particle_), iBlock)
-  end subroutine convert_to_hgi
 
   !============================================================================
 

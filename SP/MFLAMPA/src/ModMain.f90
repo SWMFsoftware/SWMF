@@ -13,12 +13,12 @@ module SP_ModMain
 
   use SP_ModGrid, ONLY: &
        nVar, &
-       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
+       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
        LatMin, LatMax, LonMin, LonMax, RMin, RSc, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       CoordMin_DI, &
+       CoordMin_DI, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
   
   use SP_ModAdvance, ONLY: &
@@ -45,20 +45,17 @@ module SP_ModMain
   ! Methods and variables from ModGrid
   public:: &
        nVar, &
-       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
+       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       TypeCoordSystem, LatMin,LatMax, LonMin,LonMax, RMin, RSc,RMax,ROrigin,&
+       LatMin,LatMax, LonMin,LonMax, RMin, RSc,RMax,ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       CoordMin_DI, & 
+       CoordMin_DI, TypeCoordSystem,& 
        get_node_indexes
 
   ! Methods and variables from ModWrite
 
   ! Methods and variables from ModAdvance
-
-  ! Coordinate system
-  character(len=3) :: TypeCoordSystem = 'HGI'
 
   !\
   ! Logicals for actions
@@ -100,7 +97,7 @@ contains
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
           call set_write_param
-       case('#COORDSYSTEM')
+       case('#COORDSYSTEM',"#COORDINATESYSTEM")
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_injection_param

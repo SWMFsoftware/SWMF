@@ -629,14 +629,11 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    
-    real:: XyzTemp_D(3)
     !------------------------------------------------------------
     ! get buffer with variables
-    call IH_get_particle_coords(Get%iCB_II(1,iGetStart),XyzTemp_D)
+    call IH_get_particle_coords(Get%iCB_II(1,iGetStart),State_V)
     ! perform transformation before returning
-    XyzTemp_D = matmul(IhToSp_DD,XyzTemp_D)
-    call xyz_to_rlonlat(XyzTemp_D, State_V)
+    State_V = matmul(IhToSp_DD,State_V)
   end subroutine IH_get_line_for_sp_and_transform
   !^CMP END IH
   !=========================================================================
@@ -749,14 +746,11 @@ contains
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
-    
-    real:: XyzTemp_D(3)
     !------------------------------------------------------------
     ! get buffer with variables
-    call SC_get_particle_coords(Get%iCB_II(1,iGetStart),XyzTemp_D)
+    call SC_get_particle_coords(Get%iCB_II(1,iGetStart),State_V)
     ! perform transformation before returning
-    XyzTemp_D = matmul(ScToSp_DD,XyzTemp_D)
-    call xyz_to_rlonlat(XyzTemp_D, State_V)
+    State_V = matmul(ScToSp_DD,State_V)
   end subroutine SC_get_line_for_sp_and_transform
   !==================================================================!        
   !^CMP END SC

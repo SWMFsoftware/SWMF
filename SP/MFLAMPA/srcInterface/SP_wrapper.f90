@@ -14,10 +14,10 @@ module SP_wrapper
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
        RMin, RSc, RMax, LatMin, LatMax, LonMin, LonMax, &
-       iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem,&
+       iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem, &
        CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, &
-       R_, Lat_, Lon_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
+       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -228,7 +228,7 @@ contains
     call set_coord_system(&
          GridID_      = SP_, &
          TypeCoord    = TypeCoordSystem, &
-         TypeGeometry = 'spherical', &
+         TypeGeometry = 'cartesian', &
          NameVar      = NameVarCouple, &
          UnitX        = rSun)
   end subroutine SP_set_grid
@@ -250,17 +250,14 @@ contains
     ! compute coordinates of the footprints of field lines
     real, intent(in):: RMinIn
     
-    ! exisiting particle with lowest index along line
-    real:: Coord1_D(nDim), Xyz1_D(nDim) 
+    ! existing particle with lowest index along line
+    real:: Xyz1_D(nDim)
     ! direction of the field at Xyz1_D
     real:: Dir1_D(nDim) 
     ! dot product Xyz1 and Dir1 and its sign
     real:: Dot, S
     ! variable to compute coords of the footprints
     real:: Alpha
-
-    ! the footprint
-    real:: Coord0_D(nDim), Xyz0_D(nDim) 
 
     integer:: iBlock    ! loop variable
     !-----------------------------------------------------------------
@@ -269,9 +266,7 @@ contains
     ! compute coordinates of footprints for each field lines
     do iBlock = 1, nBlock
        ! get the coordinates of lower particle
-       Coord1_D = &
-            State_VIB((/R_, Lon_, Lat_/), iGridLocal_IB(Begin_,iBlock), iBlock)
-       call rlonlat_to_xyz(Coord1_D, Xyz1_D) 
+       Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
 
        ! get the field direction at this location
        Dir1_D = &
@@ -282,11 +277,10 @@ contains
        Dot = sum(Dir1_D*Xyz1_D)
        S   = sign(1.0, Dot)
 
-       ! Xyz0 is distance Alpha away from Xyz1:
+       ! Xyz0, the footprint, is distance Alpha away from Xyz1:
        ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
-       Alpha = S * sqrt(Dot**2 - Coord1_D(R_)**2 + RMin**2) - Dot
-       Xyz0_D = Xyz1_D + Alpha * Dir1_D
-       call xyz_to_rlonlat(Xyz0_D, CoordMin_DI(:,iBlock)) 
+       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+       CoordMin_DI(:,iBlock) = Xyz1_D + Alpha * Dir1_D
     end do
   end subroutine SP_put_r_min
 
@@ -331,10 +325,11 @@ contains
          iParticle <= iGridLocal_IB(End_,iBlock)
     ! second, check whether the particle is within the appropriate domain
     if(IsInterfacePoint)&
-         IsInterfacePoint = .not.(IsSc.eqv.State_VIB(R_, iParticle, iBlock)>Rsc)
+         IsInterfacePoint = &
+         .not.(IsSc.eqv.sum(State_VIB(X_:Z_, iParticle, iBlock)**2)>Rsc**2)
     ! lastly, fix coordinates
     if(IsInterfacePoint)&
-         Xyz_D = State_VIB((/R_,Lon_,Lat_/), iParticle, iBlock)
+         Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
   end subroutine SP_interface_point_coords
 
   !===================================================================
@@ -391,9 +386,6 @@ contains
     integer:: iMin_A(nNode),iMax_A(nNode)
     integer:: iError
 
-    integer, parameter:: nVarReset  = 8
-    integer, parameter:: &
-         VarReset_I(nVarReset) = (/Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     ! store passed particles
@@ -412,11 +404,8 @@ contains
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
        
-       ! reset others 
-       State_VIB(VarReset_I,         iParticle, iBlock) = 0.0
        ! put coordinates
-       State_VIB((/R_, Lon_, Lat_/), iParticle, iBlock) = &
-            Coord_DI(1:nDim, iPut)
+       State_VIB(X_:Z_, iParticle, iBlock) = Coord_DI(X_:Z_, iPut)
     end do
   end subroutine SP_put_line
 
@@ -437,12 +426,17 @@ contains
   subroutine SP_copy_old_state
     ! copy current state to old state for all field lines
     integer:: iBegin, iEnd, iBlock
+    integer, parameter:: nVarReset  = 8
+    integer, parameter:: &
+         VarReset_I(nVarReset) = (/Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
        iBegin = iGridLocal_IB(Begin_,iBlock)
        iEnd   = iGridLocal_IB(End_,  iBlock)
        State_VIB((/RhoOld_,BOld_/), iBegin:iEnd, iBlock) = &
             State_VIB((/Rho_,B_/),  iBegin:iEnd, iBlock)
+       ! reset other variables
+       State_VIB(VarReset_I,iBegin:iEnd, iBlock) = 0.0
     end do
   end subroutine SP_copy_old_state
 

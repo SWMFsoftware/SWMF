@@ -11,7 +11,7 @@ module SP_ModAdvance
   use SP_ModSize, ONLY: iParticleMin, iParticleMax, nMomentumBin, nDim
 
   use SP_ModGrid, ONLY: &
-       R_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_, &
+       X_, Y_, Z_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
        Begin_, End_, Shock_, ShockOld_, EFlux_,&
        nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
@@ -71,7 +71,7 @@ module SP_ModAdvance
   ! variables shared between subroutines in this module
   integer:: iBegin, iEnd, iBlock, iShock
   real, dimension(iParticleMin:iParticleMax):: Rho_I, RhoOld_I, U_I, T_I
-  real, dimension(iParticleMin:iParticleMax):: B_I,   BOld_I
+  real, dimension(iParticleMin:iParticleMax):: Radius_I, B_I,   BOld_I
   real, dimension(iParticleMin:iParticleMax):: FermiFirst_I
   !-----------------------------
   ! df/dt = DOuter * d(DInner * df/dx)/dx
@@ -167,8 +167,7 @@ contains
             State_VIB(Rho_,iShockOld  :iEnd-1,iBlock)/ &
             State_VIB(Rho_,iShockOld+1:iEnd  ,iBlock)   ) &
             / State_VIB(D_,iShockOld  :iEnd-1,iBlock),&
-            1, &
-            MASK = State_VIB(R_,iShockOld:iEnd-1,iBlock) > 2.0)
+            1, MASK = Radius_I(iShockOld:iEnd-1) > 2.0)
     end do
   end subroutine get_shock_location
 
@@ -261,6 +260,7 @@ contains
 
   subroutine set_diffusion
     ! set diffusion coefficient for the current line
+    integer:: i
     !--------------------------------------------------------------------------
     DOuter_I(iBegin:iEnd) = B_I(iBegin:iEnd)
     if(.not.UseRealDiffusionUpstream)then
@@ -273,10 +273,10 @@ contains
     else
        ! diffusion is different up- and down-stream
        ! Sokolov et al. 2004, paragraphs before and after eq (4)
-       where(State_VIB(R_,iBegin:iEnd,iBlock)>State_VIB(R_,iShock,iBlock)*1.1)
+       where(Radius_I(iBegin:iEnd) > 1.1 * Radius_I(iShock))
           ! upstream:
           DInnerInj_I(iBegin:iEnd) = &
-               2.0/3.0 * State_VIB(R_,iBegin:iEnd,iBlock) *RSun * &
+               2.0/3.0 * Radius_I(iBegin:iEnd) *RSun * &
                (MomentumInj*cLightSpeed**2)/(B_I(iBegin:iEnd)*EnergyInj)*&
                (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
        elsewhere
@@ -284,8 +284,7 @@ contains
           DInnerInj_I(iBegin:iEnd)=&
                cGyroRadius*(MomentumInj*cLightSpeed)**2/&
                (B_I(iBegin:iEnd)**2*EnergyInj)/(10.0*CInj*MachAlfven) / &
-               min(1.0, 1.0/0.9 * &
-               State_VIB(R_,iBegin:iEnd,iBlock)/State_VIB(R_,iShock,iBlock))
+               min(1.0, 1.0/0.9 * Radius_I(iBegin:iEnd)/Radius_I(iShock))
        end where
     end if
     ! set the boundary condition for diffusion
@@ -344,6 +343,8 @@ contains
        iBegin = iGridLocal_IB(Begin_, iBlock)
        iEnd   = iGridLocal_IB(End_, iBlock)
        ! various data along the line
+       Radius_I(iBegin:iEnd) = &
+            sqrt(sum(State_VIB(X_:Z_, iBegin:iEnd, iBlock)**2, 1))
        U_I(     iBegin:iEnd) = State_VIB(U_,     iBegin:iEnd,iBlock)
        T_I(     iBegin:iEnd) = State_VIB(T_,     iBegin:iEnd,iBlock)
        BOld_I(  iBegin:iEnd) = State_VIB(BOld_,  iBegin:iEnd,iBlock)
@@ -409,8 +410,7 @@ contains
                      momentum_to_energy(         MomentumInj,NameParticle)/&
                      momentum_to_energy(Momentum*MomentumInj,NameParticle)
                 if(UseRealDiffusionUpstream)then
-                   where(State_VIB(R_,iBegin:iEnd,iBlock) > &
-                        State_VIB(R_,iShock,iBlock)*1.1)
+                   where(Radius_I(iBegin:iEnd) > Radius_I(iShock)*1.1)
                       ! upstream:
                       DInner_I(iBegin:iEnd) = &
                            DInner_I(iBegin:iEnd) / Momentum**(2.0/3)
