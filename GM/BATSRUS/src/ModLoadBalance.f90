@@ -54,6 +54,7 @@ module ModLoadBalance
   integer :: &
        iPartImplBlock       = -1, & ! Implicit or explicit.
        iSemiImplBlock       = -1, & ! Semi-implicit or not.
+       iPointImplBlock      = -1, & ! Point-implicit or not.
        iFieldLineThreadBlock= -1, & ! Threaded file line BC or not.
        iPicBlock            = -1, & ! Overlaped with PIC or not.
        iSteadyBlock         = -1, & ! Steady block or not.
@@ -224,8 +225,9 @@ contains
 
     use ModProcMH
     use ModMain
-    use ModImplicit, ONLY : UsePartImplicit, UseSemiImplicit, &
+    use ModImplicit, ONLY: UsePartImplicit, UseSemiImplicit, &
          TypeSemiImplicit, iBlockFromSemi_B, nBlockSemi
+    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModAdvance, ONLY: &
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
@@ -318,6 +320,12 @@ contains
              iSemiImplBlock = iCrit
           end if
 
+          ! next bit: point-implicit     -> 1, otherwise -> 0
+          if(UsePointImplicit)then
+             iCrit = 2*iCrit
+             iPointImplBlock = iCrit
+          end if
+
           ! next bit: threaded field BC -> 1, otherwise -> 0
           if(UseFieldLineThreads)then
              iCrit = 2*iCrit
@@ -377,6 +385,10 @@ contains
 
              if(UseSemiImplicit)then
                 if(IsSemiImplBlock_B(iBlock)) iType = iType + iSemiImplBlock
+             end if
+
+             if(UsePointImplicit)then
+                if(UsePointImplicit_B(iBlock)) iType = iType + iPointImplBlock
              end if
 
              if(UseFieldLineThreads)then
