@@ -62,6 +62,9 @@ module SP_ModGrid
   ! 1st index - three spherical coordinates (R is added for completeness)
   ! 2nd index - block number
   real, allocatable:: CoordMin_DI(:,:)
+  ! the initial length of segment 1-2: to control its as new particles
+  ! are appended to the beginnings of lines
+  real, allocatable:: Length_I(:)
   !----------------------------------------------------------------------------
   ! Node number based on the field line identified by 2 angular grid indices,
   ! latitude and longitude;
@@ -148,8 +151,7 @@ module SP_ModGrid
   ! Distribution vector;
   ! Number of bins in the distribution is set in ModSize
   ! 1st index - log(momentum) bin
-  ! 2nd index - cos(pitch-angle) bin
-  ! 3rd index - particle index along the field line
+  ! 2nd index - particle index along the field line
   ! 4th index - local block number
   real, allocatable:: Distribution_IIB(:,:,:)
   ! scale with respect to Momentum and log(Momentum)
@@ -243,6 +245,8 @@ contains
     call check_allocate(iError, NameSub//'CoordOrigin_DA')
     allocate(CoordMin_DI(nDim, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'CoordMin_DI')
+    allocate(Length_I(nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'Length_I')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
     allocate(Distribution_IIB(&
@@ -368,5 +372,40 @@ contains
 
   !============================================================================
 
+  subroutine append_particles
+    !appends a new particle at the beginning of lines if necessary
+    integer:: iBlock
+    real:: DistanceToMin, Alpha
+
+    character(len=*), parameter:: NameSub = 'append_particles'
+    !--------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       ! check if the beginning of the line moved far enough from its 
+       ! footprint on the solar surface
+       DistanceToMin = sqrt(sum((&
+            State_VIB(X_:Z_, 1, iBlock) - CoordMin_DI(:,iBlock))**2))
+       ! skip the line if it's still close to the Sun
+       if(DistanceToMin <= Length_I(iBlock)) CYCLE
+       
+       ! append a new particle
+       !-----------------------
+       ! check if have enough space
+       if(nParticle == iGridLocal_IB(End_, iBlock))&
+            call CON_Stop(NameSub//&
+            ': not enough memory allocated to append a new particle')
+       ! shift the grid:
+       State_VIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
+            State_VIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
+       Distribution_IIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
+            Distribution_IIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
+       iGridLocal_IB(End_, iBlock) = iGridLocal_IB(End_, iBlock) + 1
+       ! compute new coordinates
+       ! TO BE CHANGED: NOW NEW PARTICLE IS ON THE LINE CONNECTING 
+       ! THE CURRENT BEGINNING WITH MIN 
+       Alpha = Length_I(iBlock) / DistanceToMin
+       State_VIB(X_:Z_, 1, iBlock) = Alpha * CoordMin_DI(:,iBlock) + &
+            (1 - Alpha) * State_VIB(X_:Z_, 2, iBlock)
+    end do
+  end subroutine append_particles
 
 end module SP_ModGrid
