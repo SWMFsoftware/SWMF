@@ -1235,6 +1235,9 @@ test15_rundir:
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIHSP ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+
 
 test15_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1244,7 +1247,7 @@ test15_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_n000001.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-8 -r=1e-8 -b \
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_scihsp.diff)
