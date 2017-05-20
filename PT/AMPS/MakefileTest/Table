@@ -164,7 +164,7 @@ Ref=3{gcc}@@(0+pleiades)
 <#
 -------------------------------------------------------------------------------
 #>
-Name=Tempel1@@(0+valeriy+stampede) 
+Name=Tempel1@@(0+) 
 Time=3
 
 Ref=2{icc}@@(0+valeriy)
