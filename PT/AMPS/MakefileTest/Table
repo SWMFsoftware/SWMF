@@ -270,6 +270,26 @@ Check=
 >>>@ls -l test_Earth.diff
 
 <#
+
+-------------------------------------------------------------------------------
+#> 
+Name=test/Earth-T96
+Time=5
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
+Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
+
+Check=
+>>>@echo "test_Earth-T96_check..." >> test_Earth-T96.diff
+>>>@${TESTEarth-T96DIR}/../utility/ReduceFile.pl ${TESTEarth-T96DIR}/loaded.SavedCellData.dat 1000
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTEarth-T96DIR}/loaded.SavedCellData.dat.Reduced.Step=1000         \
+>>>${TESTEarth-T96KEYS}/output-sig=0x103010036592e5d/test_Earth-T96_loaded.SavedCellData.dat.Reduced.Step=1000.ref_np`ls $(TESTEarth-T96DIR)/PT/thread* |wc -l |tr -d ' '`  > test_Earth-T96--Background_Magnetosphere.diff
+>>>@ls -l test_Earth-T96--Background_Magnetosphere.diff
+
+>>>@cat test_Earth-T96--Background_Magnetosphere.diff > test_Earth-T96.diff
+>>>@ls -l test_Earth-T96.diff
+<#
+
 -------------------------------------------------------------------------------
 
 #>
