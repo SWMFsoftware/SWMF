@@ -342,6 +342,7 @@ Rundir=
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mv 111016/AMPS/srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--onDIR)
+>>>@rm -rf 111016
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Run=
@@ -396,38 +397,42 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--off@@(0+) 
+Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
 Time=20
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
->>>@cd srcCG-PostProcess; ./Config.pl -mode=dust
->>>@cd srcCG-PostProcess; ./Config.pl -out=7
->>>@cd srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
->>>@cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${PTDIR}
+>>>mkdir -p 111016
+>>>@cd 111016; cvs co -D "11/10/2016 6 pm" AMPS
+>>>@cd 111016/AMPS; ./Config.pl -install
+>>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -mode=dust
+>>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -out=7
+>>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
+>>>@cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${PTDIR}/111016/AMPS 
 
->>>@touch .amps.conf
->>>@touch .general.conf
->>>@touch Makefile.local
+>>>@touch 111016/AMPS/.amps.conf
+>>>@touch 111016/AMPS/.general.conf
+>>>@touch 111016/AMPS/Makefile.local
 
->>>-@cp .amps.conf .amps.conf.tmp
->>>-@cp .general.conf .general.conf.tmp
->>>-@cp Makefile.local Makefile.local.tmp
+>>>-@cp 111016/AMPS/.amps.conf 111016/AMPS/.amps.conf.tmp
+>>>-@cp 111016/AMPS/.general.conf 111016/AMPS/.general.conf.tmp
+>>>-@cp 111016/AMPS/Makefile.local 111016/AMPS/Makefile.local.tmp
 
->>>@./Config.pl -openmp=on
->>>@cd srcCG-PostProcess; make  
->>>@./Config.pl -openmp=off
+>>>@111016/AMPS/Config.pl -openmp=on
+>>>@cd 111016/AMPS/srcCG-PostProcess; make  
+>>>@111016/AMPS/Config.pl -openmp=off
 
->>>-@mv .amps.conf.tmp .amps.conf
->>>-@mv .general.conf.tmp .general.conf
->>>-@mv Makefile.local.tmp Makefile.local
+>>>-@mv 111016/AMPS/.amps.conf.tmp 111016/AMPS/.amps.conf
+>>>-@mv 111016/AMPS/.general.conf.tmp 111016/AMPS/.general.conf
+>>>-@mv 111016/AMPS/Makefile.local.tmp 111016/AMPS/Makefile.local
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Rundir=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--offDIR)
->>>@mv srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--offDIR) 
+>>>@mv 111016/AMPS/srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--offDIR) 
+>>>@rm -rf 111016
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Run=
