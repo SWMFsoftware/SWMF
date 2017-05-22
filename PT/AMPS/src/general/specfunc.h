@@ -438,6 +438,21 @@ namespace Relativistic {
     return ParticleRestMass*GetGamma(v)*VelocityPerp/(fabs(ElectricCharge)*absB);
   }
 
+  namespace GuidingCeneter {
+    inline double GetGamma(double v_parallel,double p_perp,double mass) {
+      return sqrt((1.0+pow(p_perp/(mass*SpeedOfLight),2))/(1.0-pow(v_parallel/SpeedOfLight,2)));
+    }
+
+    inline double GetEnergy(double v_parallel,double p_perp,double mass) {
+      double gamma,t2;
+
+      gamma=GetGamma(v_parallel,p_perp,mass);
+      t2=pow(v_parallel/SpeedOfLight,2);
+
+      return (t2+pow(p_perp/(mass*SpeedOfLight),2))/((1.0-t2)*(gamma+1));
+    }
+  }
+
 }
 
 #endif
