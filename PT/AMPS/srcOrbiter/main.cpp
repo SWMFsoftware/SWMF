@@ -209,15 +209,24 @@ int main(int argc,char **argv) {
 
 
   //load the NASTRAN mesh
-  sprintf(fname,"%s/%s",PIC::UserModelInputDataPath,Orbiter::SurfaceModel::MeshFileName);
+  list<CutCell::cSurfaceMeshFile> SurfaceMeshFileList;
+  CutCell::cSurfaceMeshFile MeshFile;
+
+  //load the surface model
+  for (int iSurfaceModelPart=0;iSurfaceModelPart<Orbiter::SurfaceModel::nTotalSurfaceModelFiles;iSurfaceModelPart++) {
+    MeshFile.faceat=Orbiter::SurfaceModel::SurfaceModelSet[iSurfaceModelPart].faceat;
+    sprintf(MeshFile.MeshFileName,"%s/%s",PIC::UserModelInputDataPath,Orbiter::SurfaceModel::SurfaceModelSet[iSurfaceModelPart].FileName);
+
+    SurfaceMeshFileList.push_back(MeshFile);
+  }
 
   switch (Orbiter::SurfaceModel::MeshFileFormat) {
   case Orbiter::SurfaceModel::MeshFileFormat_CEA:
-    PIC::Mesh::IrregularSurface::ReadCEASurfaceMeshLongFormat(fname,Orbiter::SurfaceModel::ScalingFactor);
+    PIC::Mesh::IrregularSurface::ReadCEASurfaceMeshLongFormat(SurfaceMeshFileList,Orbiter::SurfaceModel::ScalingFactor);
     break;
 
   case Orbiter::SurfaceModel::MeshFileFormat_NASTRAN:
-    PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname,Orbiter::SurfaceModel::ScalingFactor);
+    PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(SurfaceMeshFileList,Orbiter::SurfaceModel::ScalingFactor);
     break;
 
   default:
