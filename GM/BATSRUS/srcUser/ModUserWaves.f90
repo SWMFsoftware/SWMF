@@ -701,10 +701,28 @@ contains
           if( .not.IsPowerProfile_V(iVar)) CYCLE
           ! set up the power profile for iVar
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+
+             ! Convert momentum to velocity
+             State_VGB(iUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
+                  /State_VGB(iRho_I,i,j,k,iBlock)
+             State_VGB(iUy_I,i,j,k,iBlock) = State_VGB(iRhoUy_I,i,j,k,iBlock) &
+                  /State_VGB(iRho_I,i,j,k,iBlock)
+             State_VGB(iUz_I,i,j,k,iBlock) = State_VGB(iRhoUz_I,i,j,k,iBlock) &
+                  /State_VGB(iRho_I,i,j,k,iBlock)
+
              State_VGB(iVar,i,j,k,iBlock) = ShockLeftState_V(iVar) &
                   + CoeffX_V(iVar)*Xyz_DGB(x_,i,j,k,iBlock)**nPowerX_V(iVar) &
                   + CoeffY_V(iVar)*Xyz_DGB(y_,i,j,k,iBlock)**nPowerY_V(iVar) &
                   + CoeffZ_V(iVar)*Xyz_DGB(z_,i,j,k,iBlock)**nPowerZ_V(iVar)
+
+             ! Convert velocity to momentum
+             State_VGB(iRhoUx_I,i,j,k,iBlock) = State_VGB(iUx_I,i,j,k,iBlock) &
+                  *State_VGB(iRho_I,i,j,k,iBlock)
+             State_VGB(iRhoUy_I,i,j,k,iBlock) = State_VGB(iUy_I,i,j,k,iBlock) &
+                  *State_VGB(iRho_I,i,j,k,iBlock)
+             State_VGB(iRhoUz_I,i,j,k,iBlock) = State_VGB(iUz_I,i,j,k,iBlock) &
+                  *State_VGB(iRho_I,i,j,k,iBlock)
+
           end do; end do; end do
        end do
 
