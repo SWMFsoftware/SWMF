@@ -26,7 +26,7 @@ double Orbiter::SurfaceModel::ScalingFactor=1.0;
 bool Orbiter::Sampling::DragCoefficient::SamplingMode=false;
 double Orbiter::ProjectionOrbiterSurfaceArea=0.0;
 
-char Orbiter::SurfaceModel::MeshFileName[_MAX_STRING_LENGTH_PIC_]="Orbiter";
+Orbiter::SurfaceModel::cSurfaceModelSet Orbiter::SurfaceModel::SurfaceModelSet[]={{0,"Orbiter"}};
 int Orbiter::SurfaceModel::MeshFileFormat=Orbiter::SurfaceModel::MeshFileFormat_NASTRAN;
 
 double Orbiter::DomainSize::xMinOffset[3]={0.1,0.1,0.1};

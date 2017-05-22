@@ -150,7 +150,15 @@ using namespace Exosphere;
     const int MeshFileFormat_NASTRAN=0;
     const int MeshFileFormat_CEA=1;
 
-    extern char MeshFileName[_MAX_STRING_LENGTH_PIC_];
+    const int nTotalSurfaceModelFiles=0;
+
+    //description of the surface model that will be used in the model
+    struct cSurfaceModelSet {
+      int faceat;
+      char FileName[_MAX_STRING_LENGTH_PIC_];
+    };
+
+    extern cSurfaceModelSet SurfaceModelSet[];
     extern int MeshFileFormat;
 
     //scale the size of the surface mesh
