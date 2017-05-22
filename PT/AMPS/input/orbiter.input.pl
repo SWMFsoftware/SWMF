@@ -86,11 +86,49 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("char Orbiter::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
   }
   elsif ($InputLine eq "SURFACEMODEL") {
-    $line=~s/[=():]/ /g;
+    my (@fnameTable,$faceat,@faceatTable,$t,$res,$cnt,$i);
+    
+    $line=~s/[,=():]/ /g;
+    $faceat=-1;
+    $cnt=0;
+    
     ($InputLine,$line)=split(' ',$line,2);
-    ($InputLine,$line)=split(' ',$line,2);
-
-    ampsConfigLib::ChangeValueOfVariable("char Orbiter::SurfaceModel::MeshFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
+    
+    while (defined $line) {
+      ($InputLine,$line)=split(' ',$line,2);
+      
+      $InputLine=uc($InputLine);
+            
+      if ($InputLine eq "FACEAT") {
+        ($faceat,$line)=split(' ',$line,2);     
+      }
+      elsif ($InputLine eq "MESHFILE") {
+        ($t,$line)=split(' ',$line,2);
+        
+        push @faceatTable, $faceat;
+        push @fnameTable, $t;
+        $cnt++;
+      }
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    
+    #save the resulted setting string into the model sources 
+    $res="{";
+    
+    for ($i=0;$i<$cnt;$i++) {
+      $res=$res."{".$faceatTable[$i].",\"".$fnameTable[$i]."\"}";
+      
+      if ($i!=$cnt-1) {
+        $res=$res.",";
+      }
+    }
+    
+    $res=$res."}";
+    
+    ampsConfigLib::ChangeValueOfVariable("const int nTotalSurfaceModelFiles",$cnt,"main/Orbiter.h");
+    ampsConfigLib::ChangeValueOfVariable("Orbiter::SurfaceModel::cSurfaceModelSet Orbiter::SurfaceModel::SurfaceModelSet\\[\\]",$res,"main/Orbiter.cpp");
   }   
   elsif ($InputLine eq "SURFACEMESHSCALINGFACTOR") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
