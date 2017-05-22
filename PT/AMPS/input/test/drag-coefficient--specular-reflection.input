@@ -113,7 +113,11 @@ ParticleWeightCorrectionMode=on
 
   UpstreamTemperature=293.0
 
-  SurfaceModel=sphere.bdf !box-mesh.mail 
+! SurfaceModel=sphere.bdf !box-mesh.mail 
+
+  SurfaceModel \\
+    faceat=-1,meshfile=sphere.bdf
+
   SurfaceModelFormat=NASTRAN !CEA, NASTRAN
   SurfaceMeshScalingFactor=5.0E-7
   
