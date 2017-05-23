@@ -32,7 +32,8 @@ contains
 
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
-         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_
+         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_, &
+         UseTimeLevel, iTimeLevel_A
 
     use BATL_geometry, ONLY: &
          IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
@@ -63,8 +64,8 @@ contains
     ! DoResChangeOnlyIn determines if the flux correction is applied at
     !     resolution changes only. True is the default.
     !
-    ! MinLevelSendIn determines the lowest level of refinement that should
-    ! be sending face fluxes.
+    ! MinLevelSendIn determines the lowest level of grid or time level
+    ! that should be sending face fluxes.
 
     ! Local variables
 
@@ -108,6 +109,9 @@ contains
     DoResChangeOnly = .true.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
+    if(.not. DoReschangeOnly .and. .not. UseTimeLevel) call CON_stop( &
+         NameSub//' called with DoResChangeOnly=F while UseTimeLevel=F')
+
     ! Set index ranges based on arguments
     call set_range
 
@@ -137,8 +141,8 @@ contains
 
        iNode = iNode_B(iBlock)
 
-       if(present(MinLevelSendIn))then
-          ! Do not send or receive below MinLevelSendIn-1
+       if(present(MinLevelSendIn) .and. .not. UseTimeLevel)then
+          ! Do not send or receive below MinLevelSendIn-1 grid level
           if(iTree_IA(Level_,iNode) < MinLevelSendIn - 1) CYCLE
        end if
 
@@ -178,14 +182,23 @@ contains
              end if
 
              if(DiLevel == 0)then
-                ! call do_equal !!!
+                if(present(MinLevelSendIn) .and. UseTimeLevel)then
+                   ! Do not send below MinLevelSendIn
+                   if(iTimeLevel_A(iNode) < MinLevelSendIn) CYCLE
+                end if
+                call do_equal
              elseif(DiLevel == 1)then
                 if(present(MinLevelSendIn))then
                    ! Do not send below MinLevelSendIn
-                   if(iTree_IA(Level_,iNode) < MinLevelSendIn) CYCLE
+                   if(UseTimeLevel)then
+                      if(iTimeLevel_A(iNode) < MinLevelSendIn) CYCLE
+                   else
+                      if(iTree_IA(Level_,iNode) < MinLevelSendIn) CYCLE
+                   end if
                 end if
                 call do_restrict
              elseif(DiLevel == -1)then
+                ! Set the buffer size for the coarse block
                 call do_receive
              endif
 
@@ -371,9 +384,54 @@ contains
       end do
 
     end subroutine buffer_to_flux
-
     !==========================================================================
+    subroutine do_equal
 
+      integer:: nSize
+      !------------------------------------------------------------------------
+
+      ! Convert iDir,jDir,kDir = -1,0,1 into iSend,jSend,kSend = 0,1,3
+      iSend = (3*iDir + 3)/2
+      jSend = (3*jDir + 3)/2
+      kSend = (3*kDir + 3)/2
+      
+      iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
+
+      ! Check if the time levels are different
+      if(iTimeLevel_A(iNode) == iTimeLevel_A(iNodeRecv)) RETURN
+
+      iProcRecv  = iTree_IA(Proc_,iNodeRecv)
+      iBlockRecv = iTree_IA(Block_,iNodeRecv)
+
+      ! For part steady/implicit schemes
+      if(Unused_BP(iBlockRecv,iProcRecv)) RETURN
+
+      if(iTimeLevel_A(iNode) > iTimeLevel_A(iNodeRecv))then
+         ! modify fluxes. Send 1 for Dn1 and Dn2 arguments (equal resolution)
+         ! The iSide1, iSide2 arguments are ignored (sending 0)
+         select case(iDim)
+         case(1)
+            call do_flux(2, 3, nJ, nK, 1, 1, 0, 0, Flux_VXB)
+         case(2)
+            call do_flux(1, 3, nI, nK, 1, 1, 0, 0, Flux_VYB)
+         case(3)
+            call do_flux(1, 2, nI, nJ, 1, 1, 0, 0, Flux_VZB)
+         end select
+      elseif(iProc /= iProcRecv)then
+         ! Add the size of the face + the tag to the recv buffer
+         select case(iDim)
+         case(1)
+            nSize = nVar*nJ*nK
+         case(2)
+            nSize = nVar*nI*nK
+         case(3)
+            nSize = nVar*nI*nJ
+         end select
+         iBufferR_P(iProcRecv) = iBufferR_P(iProcRecv) + 1 + nSize
+      end if
+
+    end subroutine do_equal
+    !==========================================================================
     subroutine do_restrict
 
       !------------------------------------------------------------------------
@@ -411,6 +469,13 @@ contains
     subroutine do_flux(iDim1, iDim2, n1, n2, Dn1, Dn2, iSide1, iSide2, &
          Flux_VFB)
 
+      ! Modify fluxes on the n1 x n2 size face along dimensions iDim1,iDim2.
+
+      ! For Dn1=1 set iSubFace1=0 (full face) and ignore iSide1.
+      ! For Dn1=2 set iSubFace1=1+iSide1 where iSide1=0/1 for lower/upper
+      ! For Dn2=1 set iSubFace2=0 (full face) and ignore iSide2.
+      ! For Dn2=2 set iSubFace2=1+iSide2 where iSide2=0/1 for lower/upper
+      
       integer, intent(in):: iDim1, iDim2, n1, n2, Dn1, Dn2, iSide1, iSide2
       real, intent(inout):: Flux_VFB(nVar,n1,n2,2,MaxBlock)
 
@@ -420,8 +485,6 @@ contains
       integer:: iVar, iBufferS
       !---------------------------------------------------------------------
 
-      ! For Dn1=1 set iSubFace1=0 (full face),
-      ! for Dn1=2 set iSubFace1=1 (2) for lower (upper) half
       iSubFace1 = (1 + iSide1)*(Dn1 - 1)
       iSubFace2 = (1 + iSide2)*(Dn2 - 1)
 
@@ -512,6 +575,11 @@ contains
                iSend = (3*iDir + 3 + iSide)/2
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
+
+               if(UseTimeLevel .and. present(MinLevelSendIn))then
+                  if(iTree_IA(Level_,iNodeRecv) < MinLevelSendIn) CYCLE
+               end if
+
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
@@ -570,7 +638,8 @@ contains
 
     ! Put Flux_VFD into Flux_VXB, Flux_VYB, Flux_VZB for the appropriate faces.
     ! The coarse face flux is also stored unless DoStoreCoarseFluxIn is false.
-    ! Multiply by flux by DtIn if present.
+    ! Multiply flux by DtIn if present and add to previously stored flux 
+    ! so there is a time integral for subcycling.
 
     use BATL_size, ONLY: nDim, nI, nJ, nK, MaxBlock
     use BATL_tree, ONLY: DiLevelNei_IIIB
@@ -698,7 +767,7 @@ contains
 
   !============================================================================
 
-  subroutine apply_flux_correction(nVar,nFluid, State_VGB, Energy_GBI,&
+  subroutine apply_flux_correction(nVar, nFluid, State_VGB, Energy_GBI,&
        Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn, iStageIn)
 
     ! Correct State_VGB based on the flux differences stored in
@@ -706,7 +775,8 @@ contains
 
     use BATL_size, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock, nBlock
-    use BATL_tree, ONLY: nLevelMax, Unused_B, iNode_B, iTree_IA, Level_
+    use BATL_tree, ONLY: nLevelMax, Unused_B, iNode_B, iTree_IA, Level_, &
+         UseTimeLevel, nTimeLevel
 
     integer, intent(in):: nVar, nFluid
     real, intent(inout):: &
@@ -726,7 +796,11 @@ contains
     ! If iStageIn is a multiple of 2^p then the finest p levels should 
     ! send fluxes. 
     if(present(iStageIn))then
-       MinLevelSend = nLevelMax + 1
+       if(UseTimeLevel)then
+          MinLevelSend = nTimeLevel + 1
+       else
+          MinLevelSend = nLevelMax + 1
+       end if
        iStage = iStageIn
        do
           ! Check if iStage is still an even number
