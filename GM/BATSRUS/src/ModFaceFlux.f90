@@ -2247,12 +2247,13 @@ contains
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
       write(*,*)'Un =',0.5*(StateLeft_V(U_+iDimFace)+StateRight_V(U_+iDimFace))
       write(*,*)'P  =',0.5*(StateLeft_V(P_)+StateRight_V(P_))
-      write(*,*)'B  =', &
-           0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + (/B0x,B0y,B0z/)
-      write(*,*)'BB =', &
-           sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
-           + (/B0x,B0y,B0z/))**2)
-
+      if(UseB)then
+         write(*,*)'B  =', &
+              0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) + (/B0x,B0y,B0z/)
+         write(*,*)'BB =', &
+              sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
+              + (/B0x,B0y,B0z/))**2)
+      end if
       write(*,*)'Fluxes for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
