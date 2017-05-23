@@ -59,6 +59,9 @@ if(-f SWMF.DONE) exit
 # Link latest restart files
 ./Restart.pl
 
+# Switch on RESTART command 
+#/usr/bin/perl -pi -e 's/^RESTART$/#RESTART/' PARAM.in
+
 # Provide a PARAM.in.restart file if you wish and uncomment these lines:
 #if(! -f PARAM.in.start) cp PARAM.in PARAM.in.start
 #if(-f PARAM.in.restart) cp PARAM.in.restart PARAM.in
