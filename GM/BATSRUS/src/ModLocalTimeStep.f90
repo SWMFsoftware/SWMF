@@ -52,7 +52,7 @@ contains
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
-         nOrder, nOrderProlong
+         nOrder, nOrderProlong, VarTest, iTest, jTest, kTest, BlkTest
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
@@ -102,8 +102,6 @@ contains
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
     if(UseMaxTimeStep)then
-       ! Flux conservation to be implemented for max time step algorithm!!!
-       DoConserveFlux = .false.
        ! DtMin and DtMax are set by ModTimeStepControl::set_global_timestep
        DtMinSi = DtMin*No2Si_V(UnitT_)*Cfl
        DtMaxSi = DtMax*No2Si_V(UnitT_)*Cfl
@@ -129,6 +127,10 @@ contains
        Flux_VXB = 0.0
        Flux_VYB = 0.0
        Flux_VZB = 0.0
+
+
+       if(DoTestMe)write(*,*) NameSub,' initialized conservative flux arrays'
+
     end if
 
     ! Initialize time and stage info for all blocks
@@ -242,7 +244,11 @@ contains
              
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
-                  DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.)
+                  DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
+                  DoReschangeOnlyIn = .not.UseMaxTimeStep)
+
+             if(DoTestMe)write(*,*) NameSub,' stored conservative flux'
+
           end if
 
           ! Update block time
@@ -292,10 +298,16 @@ contains
        enddo ! iBlock
 
        ! Apply flux correction at the end of full steps
-       if(DoConserveFlux .and. modulo(iStageLocal, 2*nStage) == 0) &
-            call apply_flux_correction( &
-            nVar, nFluid, State_VGB, Energy_GBI, &
-            Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/nStage)
+       if(DoConserveFlux .and. modulo(iStageLocal, 2*nStage) == 0)then
+          call apply_flux_correction( &
+               nVar, nFluid, State_VGB, Energy_GBI, &
+               Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/nStage, &
+               DoReschangeOnlyIn=.not.UseMaxTimeStep)
+
+          if(DoTestMe)write(*,*) NameSub, &
+               ' applied conservative flux, test var=',&
+               State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
+       end if
 
        ! Update time for the stage
        TimeStage = TimeStage + DtMinSi/nStage
