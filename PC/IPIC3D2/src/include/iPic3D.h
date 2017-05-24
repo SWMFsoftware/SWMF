@@ -174,12 +174,14 @@ namespace iPic3D {
     double calSIDt();
     void updateSItime();
     void SetCycle(int iCycle);
-
-    // IDL output. Begin-----------------
+        
+  private:
+    static const int x_=0, y_=1, z_=2;
     static const int nDimMax=3;
+    // IDL output. Begin-----------------
     int nPlotFile;
-    double **plotRange_ID;
-    int **plotIndexRange_ID; // Local index range.
+    double **plotMin_ID, **plotMax_ID;
+    int **plotIdxLocMin_ID, **plotIdxLocMax_ID; // Local index range.
     double ***pointList_IID;// Output location. Indexes:iplot,ipoint,idim
     long *nPoint_I; 
     string *nameSnapshot_I;
@@ -202,6 +204,7 @@ namespace iPic3D {
     long *lastOutputCycle_I;
     double No2OutL, No2OutV, No2OutB, No2OutRho, No2OutP, No2OutJ;
     
+  public:    
     // IDL output related methods. 
     void write_plot_idl(int cycle, bool doForceOutput);
     void write_plot_init();

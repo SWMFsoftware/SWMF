@@ -84,8 +84,10 @@ c_Solver::~c_Solver()
   finalize_debug_SWMF();
 
   if(nPlotFile>0){
-    delArr2(plotRange_ID,2*nDimMax);
-    delArr2(plotIndexRange_ID, 2*nDimMax);
+    delArr2(plotMin_ID,nDimMax);
+    delArr2(plotMax_ID,nDimMax);
+    delArr2(plotIdxLocMin_ID, nDimMax);
+    delArr2(plotIdxLocMax_ID, nDimMax);
     
     for(int iPlot=0;iPlot<nPlotFile;iPlot++){
       for(int inode=0;inode<nNodeMax;inode++){
@@ -1032,9 +1034,7 @@ void c_Solver:: write_plot_idl(int cycle, bool doForceOutput){
       if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
 	nextOutputTime_I[iPlot] = floor(timeNow/dtOutput+1)*dtOutput;
       }
-
       
-
       lastOutputCycle_I[iPlot] = cycle;
       set_output_unit(iPlot);
       write_plot_data(iPlot,cycle);
@@ -1062,8 +1062,10 @@ void c_Solver:: write_plot_init(){
 
   IsBinary = col->getdoSaveBinary();
   
-  plotRange_ID      = newArr2(double, nPlotFile, 2*nDimMax);
-  plotIndexRange_ID = newArr2(int, nPlotFile, 2*nDimMax);
+  plotMin_ID      = newArr2(double, nPlotFile, nDimMax);
+  plotMax_ID      = newArr2(double, nPlotFile, nDimMax);
+  plotIdxLocMin_ID = newArr2(int, nPlotFile, nDimMax);
+  plotIdxLocMax_ID = newArr2(int, nPlotFile, nDimMax);
   nameSnapshot_I    = new string[nPlotFile];
   nVar_I            = new int[nPlotFile];
   nCell_I           = new long[nPlotFile];
@@ -1123,54 +1125,54 @@ void c_Solver:: write_plot_init(){
 
     double No2NoL = col->getMhdNo2NoL();
     
-    // plotRange_ID is the range of the whole plot domain, it can be larger
+    // plotMin_ID/plotRangeMax_I is the range of the whole plot domain, it can be larger
     // than the simulation domain on this processor.
     stringstream ss;
     if(subString.substr(0,2)=="x="){
       subString.erase(0,2);
       ss<<subString;
-      ss>>plotRange_ID[iPlot][0];
-      plotRange_ID[iPlot][0] = plotRange_ID[iPlot][0]*No2NoL - col->getFluidStartX();
-      plotRange_ID[iPlot][1] = plotRange_ID[iPlot][0] + 1e-10;
+      ss>>plotMin_ID[iPlot][x_];
+      plotMin_ID[iPlot][x_] = plotMin_ID[iPlot][x_]*No2NoL - col->getFluidStartX();
+      plotMax_ID[iPlot][x_] = plotMin_ID[iPlot][x_] + 1e-10;
 
-      plotRange_ID[iPlot][2] = 0;
-      plotRange_ID[iPlot][3] = col->getLy();
-      plotRange_ID[iPlot][4] = 0;
-      plotRange_ID[iPlot][5] = col->getLz();
+      plotMin_ID[iPlot][y_] = 0;
+      plotMax_ID[iPlot][y_] = col->getLy();
+      plotMin_ID[iPlot][z_] = 0;
+      plotMax_ID[iPlot][z_] = col->getLz();
     }else if(subString.substr(0,2)=="y="){
       subString.erase(0,2);
       ss<<subString;
-      plotRange_ID[iPlot][0] = 0;
-      plotRange_ID[iPlot][1] = col->getLx();
-      ss>>plotRange_ID[iPlot][2];
-      plotRange_ID[iPlot][2] = plotRange_ID[iPlot][2]*No2NoL - col->getFluidStartY();
-      plotRange_ID[iPlot][3] = plotRange_ID[iPlot][2] + 1e-10;
-      plotRange_ID[iPlot][4] = 0;
-      plotRange_ID[iPlot][5] = col->getLz();
+      plotMin_ID[iPlot][x_] = 0;
+      plotMax_ID[iPlot][x_] = col->getLx();
+      ss>>plotMin_ID[iPlot][y_];
+      plotMin_ID[iPlot][y_] = plotMin_ID[iPlot][y_]*No2NoL - col->getFluidStartY();
+      plotMax_ID[iPlot][y_] = plotMin_ID[iPlot][y_] + 1e-10;
+      plotMin_ID[iPlot][z_] = 0;
+      plotMax_ID[iPlot][z_] = col->getLz();
     }else if(subString.substr(0,2)=="z="){
       subString.erase(0,2);
       ss<<subString;
-      plotRange_ID[iPlot][0] = 0;
-      plotRange_ID[iPlot][1] = col->getLx();
-      plotRange_ID[iPlot][2] = 0;
-      plotRange_ID[iPlot][3] = col->getLy();
-      ss>>plotRange_ID[iPlot][4];
-      plotRange_ID[iPlot][4] = plotRange_ID[iPlot][4]*No2NoL - col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = plotRange_ID[iPlot][4] + 1e-10;
+      plotMin_ID[iPlot][x_] = 0;
+      plotMax_ID[iPlot][x_] = col->getLx();
+      plotMin_ID[iPlot][y_] = 0;
+      plotMax_ID[iPlot][y_] = col->getLy();
+      ss>>plotMin_ID[iPlot][z_];
+      plotMin_ID[iPlot][z_] = plotMin_ID[iPlot][z_]*No2NoL - col->getFluidStartZ();
+      plotMax_ID[iPlot][z_] = plotMin_ID[iPlot][z_] + 1e-10;
     }else if(subString.substr(0,2)=="3d"){
-      plotRange_ID[iPlot][0] = 0;
-      plotRange_ID[iPlot][1] = col->getLx();
-      plotRange_ID[iPlot][2] = 0;
-      plotRange_ID[iPlot][3] = col->getLy();
-      plotRange_ID[iPlot][4] = 0;
-      plotRange_ID[iPlot][5] = col->getLz();
+      plotMin_ID[iPlot][x_] = 0;
+      plotMin_ID[iPlot][y_] = 0;
+      plotMin_ID[iPlot][z_] = 0;
+      plotMax_ID[iPlot][x_] = col->getLx();
+      plotMax_ID[iPlot][y_] = col->getLy();
+      plotMax_ID[iPlot][z_] = col->getLz();
     }else if(subString.substr(0,3)=="cut"){
-      plotRange_ID[iPlot][0] = col->getplotRange(iPlot,0)*No2NoL - col->getFluidStartX();
-      plotRange_ID[iPlot][1] = col->getplotRange(iPlot,1)*No2NoL - col->getFluidStartX();
-      plotRange_ID[iPlot][2] = col->getplotRange(iPlot,2)*No2NoL - col->getFluidStartY();
-      plotRange_ID[iPlot][3] = col->getplotRange(iPlot,3)*No2NoL - col->getFluidStartY();
-      plotRange_ID[iPlot][4] = col->getplotRange(iPlot,4)*No2NoL - col->getFluidStartZ();
-      plotRange_ID[iPlot][5] = col->getplotRange(iPlot,5)*No2NoL - col->getFluidStartZ();
+      plotMin_ID[iPlot][x_] = col->getplotRangeMin(iPlot,x_)*No2NoL - col->getFluidStartX();
+      plotMax_ID[iPlot][x_] = col->getplotRangeMax(iPlot,x_)*No2NoL - col->getFluidStartX();
+      plotMin_ID[iPlot][y_] = col->getplotRangeMin(iPlot,y_)*No2NoL - col->getFluidStartY();
+      plotMax_ID[iPlot][y_] = col->getplotRangeMax(iPlot,y_)*No2NoL - col->getFluidStartY();
+      plotMin_ID[iPlot][z_] = col->getplotRangeMin(iPlot,z_)*No2NoL - col->getFluidStartZ();
+      plotMax_ID[iPlot][z_] = col->getplotRangeMax(iPlot,z_)*No2NoL - col->getFluidStartZ();
     }else if(subString.substr(0,3)=="sat"){
       // sat_satFileName.sat
 
@@ -1179,13 +1181,13 @@ void c_Solver:: write_plot_init(){
       ss<<subString;      
       ss>>satInputFile_I[iPlot];
 
-      // For satellite output,plotRange_ID is not meaningful. 
-      plotRange_ID[iPlot][0] = 0;
-      plotRange_ID[iPlot][1] = col->getLx();
-      plotRange_ID[iPlot][2] = 0;
-      plotRange_ID[iPlot][3] = col->getLy();
-      plotRange_ID[iPlot][4] = 0;
-      plotRange_ID[iPlot][5] = col->getLz();
+      // For satellite output,plotRange is not meaningful. 
+      plotMin_ID[iPlot][x_] = 0;
+      plotMin_ID[iPlot][y_] = 0;
+      plotMin_ID[iPlot][z_] = 0;
+      plotMax_ID[iPlot][1] = col->getLx();
+      plotMax_ID[iPlot][3] = col->getLy();
+      plotMax_ID[iPlot][5] = col->getLz();
     }else{
       if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
       abort();
@@ -1274,18 +1276,18 @@ void c_Solver:: write_plot_init(){
       cout<<"length sub = "<<subString.size()
 	  <<" length plotstring= "<<plotString.size()<<endl;
       cout<<"iplot = "<<iPlot<<"\n"
-	  <<" plotRange0 = "<<plotRange_ID[iPlot][0]
-	  <<" plotRange1 = "<<plotRange_ID[iPlot][1]<<"\n"
-	  <<" plotRange2 = "<<plotRange_ID[iPlot][2]
-	  <<" plotRange3 = "<<plotRange_ID[iPlot][3]<<"\n"
-	  <<" plotRange4 = "<<plotRange_ID[iPlot][4]
-	  <<" plotRange5 = "<<plotRange_ID[iPlot][5]<<"\n"
-	  <<" plotIndexRange0 = "<<plotIndexRange_ID[iPlot][0]
-	  <<" plotIndexRange1 = "<<plotIndexRange_ID[iPlot][1]<<"\n"
-	  <<" plotIndexRange2 = "<<plotIndexRange_ID[iPlot][2]
-	  <<" plotIndexRange3 = "<<plotIndexRange_ID[iPlot][3]<<"\n"
-	  <<" plotIndexRange4 = "<<plotIndexRange_ID[iPlot][4]
-	  <<" plotIndexRange5 = "<<plotIndexRange_ID[iPlot][5]<<"\n"
+	  <<" plotRangeMin_x = "<<plotMin_ID[iPlot][x_]
+	  <<" plotRangeMax_x = "<<plotMax_ID[iPlot][x_]<<"\n"
+	  <<" plotRangeMin_y = "<<plotMin_ID[iPlot][y_]
+	  <<" plotRangeMax_y = "<<plotMax_ID[iPlot][y_]<<"\n"
+	  <<" plotRangeMin_z = "<<plotMin_ID[iPlot][z_]
+	  <<" plotRangeMax_z = "<<plotMax_ID[iPlot][z_]<<"\n"
+	  <<" plotIndexMin_x = "<<plotIdxLocMin_ID[iPlot][x_]
+	  <<" plotIndexMax_x = "<<plotIdxLocMax_ID[iPlot][x_]<<"\n"
+	  <<" plotIndexMin_y = "<<plotIdxLocMin_ID[iPlot][y_]
+	  <<" plotIndexMax_y = "<<plotIdxLocMax_ID[iPlot][y_]<<"\n"
+	  <<" plotIndexMin_z = "<<plotIdxLocMin_ID[iPlot][z_]
+	  <<" plotIndexMax_z = "<<plotIdxLocMax_ID[iPlot][z_]<<"\n"
 	  <<" namesnapshot = "<<nameSnapshot_I[iPlot]
 	  <<endl;
       cout<<"doOutputParticles = "<<doOutputParticles_I[iPlot]<<endl;
@@ -1363,14 +1365,14 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     for(int i=0; i<col->getnDim();i++){
       double x0=0;
       if(doOutputParticles_I[iPlot] || isSat_I[iPlot]){
-	// For field output, plotRange_ID is already in MHD coordinates. 
+	// For field output, plotMin_ID is already in MHD coordinates. 
 	
 	if(i==0) x0 = col->getFluidStartX();
 	if(i==1) x0 = col->getFluidStartY();
 	if(i==2) x0 = col->getFluidStartZ();
       }
-      outFile<<(plotRange_ID[iPlot][2*i]+x0)*No2OutL<<"\t coord"<<i<<"Min\n";
-      outFile<<(plotRange_ID[iPlot][2*i+1]+x0)*No2OutL<<"\t coord"<<i<<"Max\n";
+      outFile<<(plotMin_ID[iPlot][i]+x0)*No2OutL<<"\t coord"<<i<<"Min\n";
+      outFile<<(plotMax_ID[iPlot][i]+x0)*No2OutL<<"\t coord"<<i<<"Max\n";
     }
     outFile<<"\n";
 
@@ -1479,12 +1481,12 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
     }
     part[iSpecies].write_plot_particles(filename,dnOutput,
 					nPartOutputLocal,
-					plotRange_ID[iPlot][0],
-					plotRange_ID[iPlot][1],
-					plotRange_ID[iPlot][2],
-					plotRange_ID[iPlot][3],
-					plotRange_ID[iPlot][4],
-					plotRange_ID[iPlot][5],
+					plotMin_ID[iPlot][x_],
+					plotMax_ID[iPlot][x_],
+					plotMin_ID[iPlot][y_],
+					plotMax_ID[iPlot][y_],
+					plotMin_ID[iPlot][z_],
+					plotMax_ID[iPlot][z_],
 					pointList_IID[iPlot], nPoint_I[iPlot],
 					isSat_I[iPlot],
 					No2OutL, No2OutV
@@ -1559,7 +1561,7 @@ void c_Solver:: find_output_list(int iPlot){
   if(!isSat_I[iPlot]){
     /*
       Find out the node index for output. Only useful for non-satellite field
-      output. Also prove useful information for non-satellite particle outpu,
+      output. Also provide useful information for non-satellite particle outpu,
       eventhough the information has not been used in the current code. 
     */
 
@@ -1611,13 +1613,13 @@ void c_Solver:: find_output_list(int iPlot){
        and nodes with local node index 1, 2 or 3 on proc 2 are saved.        
     */
 
-    // Calcualte plotIndexRange_ID, which is the local index, based on
+    // Calcualte plotIdxLoc, which is the local index, based on
     // plot range.
 
     int ig, jg, kg;
     
-    plotIndexRange_ID[iPlot][0]= 30000;
-    plotIndexRange_ID[iPlot][1]=-30000;
+    plotIdxLocMin_ID[iPlot][x_]= 30000;
+    plotIdxLocMax_ID[iPlot][x_]=-30000;
 
     int iEnd;
     iEnd = grid->getNXN()-2;
@@ -1627,15 +1629,15 @@ void c_Solver:: find_output_list(int iPlot){
       col->getGlobalIndex(i,1,1,&ig,&jg,&kg);
 
       if(ig % plotDx == 0 &&
-	 grid->getXN(i)>=plotRange_ID[iPlot][0] - 0.5*col->getDx() &&
-	 grid->getXN(i)<plotRange_ID[iPlot][1] + 0.5*col->getDx()){
-	if(i<plotIndexRange_ID[iPlot][0]) plotIndexRange_ID[iPlot][0] = i;
-	if(i>plotIndexRange_ID[iPlot][1]) plotIndexRange_ID[iPlot][1] = i;
+	 grid->getXN(i)>=plotMin_ID[iPlot][x_] - 0.5*col->getDx() &&
+	 grid->getXN(i)< plotMax_ID[iPlot][x_] + 0.5*col->getDx()){
+	if(i<plotIdxLocMin_ID[iPlot][x_]) plotIdxLocMin_ID[iPlot][x_] = i;
+	if(i>plotIdxLocMax_ID[iPlot][x_]) plotIdxLocMax_ID[iPlot][x_] = i;
       }
     }
 
-    plotIndexRange_ID[iPlot][2]= 30000;
-    plotIndexRange_ID[iPlot][3]=-30000;
+    plotIdxLocMin_ID[iPlot][y_]= 30000;
+    plotIdxLocMax_ID[iPlot][y_]=-30000;
 
     iEnd = grid->getNYN()-2;
     if(vct->getYright_neighbor()==MPI_PROC_NULL) iEnd++;
@@ -1644,15 +1646,15 @@ void c_Solver:: find_output_list(int iPlot){
       col->getGlobalIndex(1,i,1,&ig,&jg,&kg);
 
       if(jg % plotDx == 0 &&
-	 grid->getYN(i)>=plotRange_ID[iPlot][2] - 0.5*col->getDy() &&
-	 grid->getYN(i)<plotRange_ID[iPlot][3] + 0.5*col->getDy()){
-	if(i<plotIndexRange_ID[iPlot][2]) plotIndexRange_ID[iPlot][2] = i;
-	if(i>plotIndexRange_ID[iPlot][3]) plotIndexRange_ID[iPlot][3] = i;
+	 grid->getYN(i)>=plotMin_ID[iPlot][y_] - 0.5*col->getDy() &&
+	 grid->getYN(i)< plotMax_ID[iPlot][y_] + 0.5*col->getDy()){
+	if(i<plotIdxLocMin_ID[iPlot][y_]) plotIdxLocMin_ID[iPlot][y_] = i;
+	if(i>plotIdxLocMax_ID[iPlot][y_]) plotIdxLocMax_ID[iPlot][y_] = i;
       }
     }
     
-    plotIndexRange_ID[iPlot][4]= 30000;
-    plotIndexRange_ID[iPlot][5]=-30000;
+    plotIdxLocMin_ID[iPlot][z_]= 30000;
+    plotIdxLocMax_ID[iPlot][z_]=-30000;
 
     iEnd = grid->getNZN()-2;
     if(vct->getZright_neighbor()==MPI_PROC_NULL) iEnd++;
@@ -1661,26 +1663,26 @@ void c_Solver:: find_output_list(int iPlot){
       col->getGlobalIndex(1,1,i,&ig,&jg,&kg);
 
       if(kg % plotDx == 0 &&
-	 grid->getZN(i)>=plotRange_ID[iPlot][4] - 0.5*col->getDz() &&
-	 grid->getZN(i)<plotRange_ID[iPlot][5] + 0.5*col->getDz()){
-	if(i<plotIndexRange_ID[iPlot][4]) plotIndexRange_ID[iPlot][4] = i;
-	if(i>plotIndexRange_ID[iPlot][5]) plotIndexRange_ID[iPlot][5] = i;
+	 grid->getZN(i)>=plotMin_ID[iPlot][z_] - 0.5*col->getDz() &&
+	 grid->getZN(i)< plotMax_ID[iPlot][z_] + 0.5*col->getDz()){
+	if(i<plotIdxLocMin_ID[iPlot][z_]) plotIdxLocMin_ID[iPlot][z_] = i;
+	if(i>plotIdxLocMax_ID[iPlot][z_]) plotIdxLocMax_ID[iPlot][z_] = i;
       }
     }
     
     if(col->getnDim()==2) {
       // When IPIC3D coupled with MHD, the 2D plane is always XY plane.
-      plotIndexRange_ID[iPlot][4] = 1;
-      plotIndexRange_ID[iPlot][5] = 1;
+      plotIdxLocMin_ID[iPlot][z_] = 1;
+      plotIdxLocMax_ID[iPlot][z_] = 1;
     }
 
     if(!doOutputParticles_I[iPlot]){
-      const int minI = plotIndexRange_ID[iPlot][0];
-      const int maxI = plotIndexRange_ID[iPlot][1];
-      const int minJ = plotIndexRange_ID[iPlot][2];
-      const int maxJ = plotIndexRange_ID[iPlot][3];
-      const int minK = plotIndexRange_ID[iPlot][4];
-      const int maxK = plotIndexRange_ID[iPlot][5];
+      const int minI = plotIdxLocMin_ID[iPlot][x_];
+      const int maxI = plotIdxLocMax_ID[iPlot][x_];
+      const int minJ = plotIdxLocMin_ID[iPlot][y_];
+      const int maxJ = plotIdxLocMax_ID[iPlot][y_];
+      const int minK = plotIdxLocMin_ID[iPlot][z_];
+      const int maxK = plotIdxLocMax_ID[iPlot][z_];
     
       long nPoint;
       nPoint =
@@ -1719,30 +1721,30 @@ void c_Solver:: find_output_list(int iPlot){
       double drSat = col->getSatRadius(); 
 
       // Find out a cube can contain all the satellite sampling points. 
-      plotRange_ID[iPlot][0] = plotRange_I[0] - drSat;
-      plotRange_ID[iPlot][1] = plotRange_I[1] + drSat;
-      plotRange_ID[iPlot][2] = plotRange_I[2] - drSat;
-      plotRange_ID[iPlot][3] = plotRange_I[3] + drSat;
-      plotRange_ID[iPlot][4] = plotRange_I[4] - drSat;
-      plotRange_ID[iPlot][5] = plotRange_I[5] + drSat;
+      plotMin_ID[iPlot][x_] = plotRange_I[0] - drSat;
+      plotMax_ID[iPlot][x_] = plotRange_I[1] + drSat;
+      plotMin_ID[iPlot][y_] = plotRange_I[2] - drSat;
+      plotMax_ID[iPlot][y_] = plotRange_I[3] + drSat;
+      plotMin_ID[iPlot][z_] = plotRange_I[4] - drSat;
+      plotMax_ID[iPlot][z_] = plotRange_I[5] + drSat;
       
     }
     
   }// if(isSat_I)
     
   // Do not correct plot range for 'particles' now. Because the position of
-  // particle does not depend on grid. But plotIndexRange_ID may be useful.
+  // particle does not depend on grid. But plotIdxLoc may be useful.
   // It can give us some feelings about where the output particles are. 
   if(!doOutputParticles_I[iPlot] && !isSat_I[iPlot]){
-    // Correct PlotRange_ID based on PlotIndexRange_ID-----begin
+    // Correct PlotRange based on plotIdxLoc-----begin
            
     double xMinL_I[nDimMax], xMaxL_I[nDimMax],
       xMinG_I[nDimMax], xMaxG_I[nDimMax];
 
     // x
-    if(plotIndexRange_ID[iPlot][1]>=plotIndexRange_ID[iPlot][0]){
-      xMinL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][0]);
-      xMaxL_I[0] = grid->getXN(plotIndexRange_ID[iPlot][1]);
+    if(plotIdxLocMax_ID[iPlot][x_]>=plotIdxLocMin_ID[iPlot][x_]){
+      xMinL_I[0] = grid->getXN(plotIdxLocMin_ID[iPlot][x_]);
+      xMaxL_I[0] = grid->getXN(plotIdxLocMax_ID[iPlot][x_]);
     }else{
       // This processor does not output any node.
       xMinL_I[0] = 2*col->getLx();
@@ -1750,9 +1752,9 @@ void c_Solver:: find_output_list(int iPlot){
     }
 
     // y
-    if(plotIndexRange_ID[iPlot][3]>=plotIndexRange_ID[iPlot][2]){
-      xMinL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][2]);
-      xMaxL_I[1] = grid->getYN(plotIndexRange_ID[iPlot][3]);
+    if(plotIdxLocMax_ID[iPlot][y_]>=plotIdxLocMin_ID[iPlot][y_]){
+      xMinL_I[1] = grid->getYN(plotIdxLocMin_ID[iPlot][y_]);
+      xMaxL_I[1] = grid->getYN(plotIdxLocMax_ID[iPlot][y_]);
     }else{
       // This processor does not output any node.
       xMinL_I[1] = 2*col->getLy();
@@ -1760,9 +1762,9 @@ void c_Solver:: find_output_list(int iPlot){
     }
 
     // z
-    if(plotIndexRange_ID[iPlot][5]>=plotIndexRange_ID[iPlot][4]){
-      xMinL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][4]);
-      xMaxL_I[2] = grid->getZN(plotIndexRange_ID[iPlot][5]);
+    if(plotIdxLocMax_ID[iPlot][z_]>=plotIdxLocMin_ID[iPlot][z_]){
+      xMinL_I[2] = grid->getZN(plotIdxLocMin_ID[iPlot][z_]);
+      xMaxL_I[2] = grid->getZN(plotIdxLocMax_ID[iPlot][z_]);
     }else{
       // This processor does not output any node.
       xMinL_I[2] = 2*col->getLz();
@@ -1773,16 +1775,16 @@ void c_Solver:: find_output_list(int iPlot){
     MPI_Reduce(xMaxL_I, xMaxG_I,nDimMax,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_MYSIM);
 
 
-    // Change plotRange_ID into MHD coordinates. The field outputs are also
+    // Change plotRange into MHD coordinates. The field outputs are also
     // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
-    plotRange_ID[iPlot][0] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
-    plotRange_ID[iPlot][1] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
-    plotRange_ID[iPlot][2] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
-    plotRange_ID[iPlot][3] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
-    plotRange_ID[iPlot][4] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
-    plotRange_ID[iPlot][5] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+    plotMin_ID[iPlot][x_] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
+    plotMax_ID[iPlot][x_] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
+    plotMin_ID[iPlot][y_] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
+    plotMax_ID[iPlot][y_] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
+    plotMin_ID[iPlot][z_] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+    plotMax_ID[iPlot][z_] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
       
-    // Correct PlotRange_ID based on PlotIndexRange_ID-----end
+    // Correct PlotRange based on plotIdxLoc-----end
   }    
 
 }

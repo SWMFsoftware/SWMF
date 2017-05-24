@@ -4783,11 +4783,13 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     value *= No2OutV;
   }else if(var.substr(0,2)=="Ex"){
     value = Ex[i][j][k];
-    // !!!!!!! how to convert E ???????????
+    value *= No2OutV*No2OutB;
   }else if(var.substr(0,2)=="Ey"){
     value = Ey[i][j][k];
+    value *= No2OutV*No2OutB;
   }else if(var.substr(0,2)=="Ez"){
     value = Ez[i][j][k];
+    value *= No2OutV*No2OutB;
   }else if(var.substr(0,2)=="Bx"){
     value  = Bxn[i][j][k];
     value *= No2OutB;
@@ -4800,12 +4802,25 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
   }else if(var.substr(0,6)=="smooth"){
     value = col->getSmoothFactor(i,j,k);
   }else if(var.substr(0,1)=="X"){
-    value = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
+    if(col->getdoRotate()){
+      // Save coord in PIC coordinates.
+      value = (grid->getXN(i))*No2OutL;
+    }else{
+      // Save in MHD coordinates.
+      value = (grid->getXN(i) + col->getFluidStartX())*No2OutL;
+    }
   }else if(var.substr(0,1)=="Y"){
-    value = (grid->getYN(j) + col->getFluidStartY())*No2OutL;
+    if(col->getdoRotate()){
+      value = (grid->getYN(j))*No2OutL;
+    }else{
+      value = (grid->getYN(j) + col->getFluidStartY())*No2OutL;
+    }
   }else if(var.substr(0,1)=="Z"){
+    double z0=0;
+    if(!(col->getdoRotate())) z0 = col->getFluidStartZ();
+     z0 = col->getFluidStartZ();    
     value = col->getnDim()==2?
-      0:(grid->getZN(k) + col->getFluidStartZ())*No2OutL;	  
+      0:(grid->getZN(k) + z0)*No2OutL;	  
   }else{
     value = 0;
   }

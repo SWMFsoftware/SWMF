@@ -1811,10 +1811,14 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	Note:
 	1) Available output variables are listed in EMfields3D.cpp::getVar().
 	2) DxOutput is only functional for particles and 3d field output now.
-	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
+	3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.????
 	4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
-	5) If the keyword 'region' exists, only output the specified region, otherwise,
-	   all regions are saved.
+	5) If the keyword 'region' exists, only output the specified region,
+	   otherwise, all regions are saved.
+	6) If the PIC box is aligned (doRotate == false) with MHD XYZ 
+	   coordinates, PIC save its node
+	   location in MHD coordinates, otherwise, PIC save locations in PIC 
+	   coordinates.
       */
 
       int nPlotFileMax; // nPlotFile <= nPlotFileMax
@@ -1827,7 +1831,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	plotDx_I     = new double[nPlotFileMax];
 	plotString_I = new string[nPlotFileMax];
 	plotVar_I    = new string[nPlotFileMax];
-	plotRange_ID = newArr2(double, nPlotFileMax, 2*nDimMax);
+	plotRangeMin_ID = newArr2(double, nPlotFileMax, nDimMax);
+	plotRangeMax_ID = newArr2(double, nPlotFileMax, nDimMax);
       }
 
       nPlotFile=0;
@@ -1859,10 +1864,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	if(plotString.substr(0,3)=="cut"){
 	  for(int i=0; i<nDimMax; i++){
 	    // Always read 3 dimension.
-	    // plotRange_ID should be in normalized BATSRUS unit.
+	    // plotRangeMin_ID should be in normalized BATSRUS unit.
 	    if(doSaveThisRegion){	
-	      read_var(param, "CoordMin", &plotRange_ID[nPlotFile][2*i]);
-	      read_var(param, "CoordMax", &plotRange_ID[nPlotFile][2*i+1]);
+	      read_var(param, "CoordMin", &plotRangeMin_ID[nPlotFile][i]);
+	      read_var(param, "CoordMax", &plotRangeMax_ID[nPlotFile][i]);
 	    }else{
 	      skip_lines(param,2);
 	    }

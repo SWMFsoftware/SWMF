@@ -62,9 +62,7 @@ class InterfaceFluid
   // Rotation matrix. 
   double R_DD[3][3];
 
-  bool doRotate;
-      
-  const int x_=0, y_=1, z_=2;
+  bool doRotate;     
 
   // Number of cells/nodes in each direction, including the ghost cell layers. 
   int nCellGst_D[3], nNodeGst_D[3];
@@ -141,13 +139,15 @@ class InterfaceFluid
   int iCycle;
 
  protected:
+  static const int x_=0, y_=1, z_=2;
+  
   // Variables for IDL format output.
   static const int nDimMax=3;
   int nPlotFile;
   int *dnOutput_I;
   double *dtOutput_I, *plotDx_I;
   //The second dimension: xmin, xmax, ymin, ymax, zmin, zmax. 
-  double **plotRange_ID; 
+  double **plotRangeMin_ID, **plotRangeMax_ID; 
   string *plotString_I;
   string *plotVar_I;
   bool doSaveBinary;
@@ -490,7 +490,8 @@ class InterfaceFluid
       delete [] plotDx_I;
       delete [] plotString_I;
       delete [] plotVar_I;
-      delArr2(plotRange_ID,2*nDimMax);
+      delArr2(plotRangeMin_ID,nDimMax);
+      delArr2(plotRangeMax_ID,nDimMax);
     }    
   }
 
@@ -1289,7 +1290,6 @@ class InterfaceFluid
     for(int i =0; i<3; i++){
       gstMin_D[i] = griddim[n++];      // Lmin
       lenGst_D[i] = griddim[n++]; 
-      //gstMax_D[i] = griddim[n++]; // Lmax
       dx_D[i]       = griddim[n++]; //dx
       gstMax_D[i] =  gstMin_D[i] + lenGst_D[i];
     }
@@ -1297,7 +1297,6 @@ class InterfaceFluid
     for (int i=0; i<3; i++){
       for(int j=0; j<3; j++){
     	R_DD[i][j] = griddim[n++];
-    	if(myrank == 0) cout<<"i= "<<i<<" j= "<<j<<" R = "<<R_DD[i][j]<<endl;
       }      
     }
 
@@ -2238,10 +2237,15 @@ class InterfaceFluid
   string getplotString(int i)const{return plotString_I[i];};
   double getplotDx(int i)const{return plotDx_I[i]>0 ? plotDx_I[i]:1;};
   string getplotVar(int i)const{return plotVar_I[i];};
-  double getplotRange(int iPlot,int i)const{
-    // plotRange_ID is only set from PARAM.in for 'cut'!!!!
-    return plotRange_ID[iPlot][i];
+  double getplotRangeMin(int iPlot,int i)const{
+    // plotRangeMin_ID is only set from PARAM.in for 'cut'!!!!
+    return plotRangeMin_ID[iPlot][i];
   };
+  double getplotRangeMax(int iPlot,int i)const{
+    // plotRangeMin_ID is only set from PARAM.in for 'cut'!!!!
+    return plotRangeMax_ID[iPlot][i];
+  };
+
   bool getdoSaveBinary()const{return doSaveBinary;};
   double getSatRadius()const{return drSat*dx_D[0];};
   void setmaxDt(double dt){maxDt = dt/(Si2NoL/Si2NoV);};
