@@ -57,6 +57,65 @@ Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL
 <#
 -------------------------------------------------------------------------------
 #>
+Name=test/X-Wing@@(0+valeriy) 
+Time=5
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
+Keys=-cplr-data-path=${PTDIR}/${TESTX-WingDIR} -model-data-path=${PTDIR}/${TESTX-WingDIR} 
+
+Run=
+>>>@echo "test_X-Wing_run..." >> test_X-Wing$(TESTX-Wing-REF).diff
+
+>>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/X-Wing.mail  ${TESTX-WingDIR}/X-Wing.mail 
+>>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/amr.sig=0xe8cfde3e165d2d69.TriangulationExternalNormalVector.bin  ${TESTX-WingDIR}/amr.sig=0xe8cfde3e165d2d69.TriangulationExternalNormalVector.bin 
+>>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/amr.sig=0xebcfdf3f8bd4d9ea.CenterNodeMeasure.bin  ${TESTX-WingDIR}/amr.sig=0xebcfdf3f8bd4d9ea.CenterNodeMeasure.bin 
+>>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/amr.sig=0xebcfdf3f8bd4d9ea.mesh.bin  ${TESTX-WingDIR}/amr.sig=0xebcfdf3f8bd4d9ea.mesh.bin 
+
+>>>cd $(TESTX-WingDIR); ${MPIRUN} ./amps 
+>>>@echo "test_X-Wing_run... done" >> test_X-Wing$(TESTX-Wing-REF).diff
+
+Check=
+>>>@echo "test_X-Wing_check..." >> test_X-Wing.diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/OrbiterProjectionArea.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/OrbiterProjectionArea.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/OrbiterProjectionArea.dat.Reduced.Step=100.ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Projection.diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/SurfaceTriangulation.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/SurfaceTriangulation.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/SurfaceTriangulation.dat.Reduced.Step=100.ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Triangulation.diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/SurfaceTriangulation-shadow.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/SurfaceTriangulation-shadow.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/SurfaceTriangulation-shadow.dat.Reduced.Step=100.ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Triangulation-shadow.diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/VolumeMesh.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/VolumeMesh.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/VolumeMesh.dat.Reduced.Step=100.ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Volume-Mesh.diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/amps.cut-cell.surface-data.out=2.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/amps.cut-cell.surface-data.out=2.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/amps.cut-cell.surface-data.out=2.dat.Reduced.Step=100$(TESTX-Wing-REF).ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Surface-Sample$(TESTX-Wing-REF).diff
+
+>>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/pic.H2O.s=0.out=2.dat 100
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/pic.H2O.s=0.out=2.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/pic.H2O.s=0.out=2.dat.Reduced.Step=100$(TESTX-Wing-REF).ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Volume-Sample$(TESTX-Wing-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/test_Orbiter.dat ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/test_Orbiter.dat$(TESTX-Wing-REF).ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Particle-Sample$(TESTX-Wing-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/test_Orbiter_Drag_Coefficient.dat ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/test_Orbiter_Drag_Coefficient.dat$(TESTX-Wing-REF).ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Drag-Coefficient$(TESTX-Wing-REF).diff
+
+
+>>>@cat test_X-Wing-Projection.diff test_X-Wing-Triangulation.diff test_X-Wing-Triangulation-shadow.diff test_X-Wing-Volume-Mesh.diff  test_X-Wing-Surface-Sample$(TESTX-Wing-REF).diff test_X-Wing-Volume-Sample$(TESTX-Wing-REF).diff test_X-Wing-Particle-Sample$(TESTX-Wing-REF).diff test_X-Wing-Drag-Coefficient$(TESTX-Wing-REF).diff  > test_X-Wing$(TESTX-Wing-REF).diff
+
+>>>@ls -l test_X-Wing$(TESTX-Wing-REF).diff
+>>>@ls -l test_X-Wing-Projection.diff 
+>>>@ls -l test_X-Wing-Triangulation.diff 
+>>>@ls -l test_X-Wing-Triangulation-shadow.diff 
+>>>@ls -l test_X-Wing-Volume-Mesh.diff  
+>>>@ls -l test_X-Wing-Surface-Sample$(TESTX-Wing-REF).diff 
+>>>@ls -l test_X-Wing-Volume-Sample$(TESTX-Wing-REF).diff 
+>>>@ls -l test_X-Wing-Particle-Sample$(TESTX-Wing-REF).diff 
+>>>@ls -l test_X-Wing-Drag-Coefficient$(TESTX-Wing-REF).diff 
+<#
+-------------------------------------------------------------------------------
+#>
 Name=CCMC
 Time=3
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
