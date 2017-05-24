@@ -1,0 +1,13 @@
+
+#include input/x-wing.input
+
+#General
+  ReferenceInjectionParticleNumber=200
+  RequestedParticleBufferLength=150000
+
+ define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+#endGeneral
+
+#block ../input/orbiter.input.pl
+  MeshSignature=0xebcfdf3f8bd4d9ea
+#endblock
