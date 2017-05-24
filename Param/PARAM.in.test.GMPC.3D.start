@@ -82,8 +82,8 @@ T			UseNonConservative
 +8.6                    xMaxCut
 -2.6                    yMinCut
 +2.6                    yMaxCut
--1.0                    yMinCut
-+1.0                    yMaxCut
+-1.0                    zMinCut
++1.0                    zMaxCut
 0.2                     DxPic
 0.1                     DyPic
 0.1                     DyPic
@@ -187,6 +187,19 @@ g
 1.0e-4			CGtol : CG solver stopping criterium tolerance
 1.0e-4			GMREStol : GMRES solver stopping criterium tolerance
 3			NiterMover : mover predictor corrector iteration
+
+#SAVEIDL
+1				nPlot
+cut all ascii planet		StringPlot
+1				DnOutput
+-1				DtOutput
+-2				xMin
+2				xMax
+-1				yMin
+1				yMax
+-0.5				zMin
+0.5				zMax
+2				DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
