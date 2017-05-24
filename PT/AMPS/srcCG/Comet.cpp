@@ -214,13 +214,14 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
 
   //recalculate the location of the Sun
   #ifndef _NO_SPICE_CALLS_
+
   if ((Comet::Time::RecalculateSunLocationFlag==true)||(Comet::Time::InitSunLocationFlag==true)) {
     SpiceDouble lt,et,xSun[3];
-
+   
     utc2et_c(Comet::Time::SimulationStartTimeString,&et);
     spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
     reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
-
+    
     HeliocentricDistance*=1.0E3;
 
     if (PIC::ThisThread==0) {
@@ -236,6 +237,7 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
   positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
   positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
 
+ 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
   ElectricallyChargedDust::Init_AfterParser();
@@ -430,7 +432,7 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
 long int Comet::InjectionBoundaryModel_Limited() {
   int spec;
   long int res=0;
-
+  
   for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel_Limited(spec);
 
   return res;
@@ -1205,6 +1207,8 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
     
+    if(PIC::ThisThread==0) printf("Position of the Sun: %6.3f %6.3f %6.3f \n",positionSun[0],positionSun[1],positionSun[2]); 
+
     for (i=0;i<totalSurfaceElementsNumber;i++) {
       for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
       CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); 
