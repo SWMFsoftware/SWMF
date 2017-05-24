@@ -14,7 +14,7 @@ DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log'
 OutputDirectory=out
 
 
-DebuggerMode=on !on,off
+DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=off  ! on,off 
 
 
@@ -92,7 +92,7 @@ ParticleWeightCorrectionMode=on
  define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
 
   !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
-  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 #endGeneral
 
 
@@ -113,7 +113,11 @@ ParticleWeightCorrectionMode=on
 
   UpstreamTemperature=293.0
 
-  SurfaceModel=X-Wing.mail 
+  SurfaceModel \\ 
+    faceat=-1,meshfile=X-Wing.mail 
+
+
+
   SurfaceModelFormat=CEA !CEA, NASTRAN
   
   MeshSignature=0xb2402143d4da3e7c !0xb34223430d42e4e3 !!0xb04120433bbd263f !0xb3422242b9bcb538
@@ -145,4 +149,4 @@ ParticleWeightCorrectionMode=on
   #endblock
 
 
-#end
+!#end
