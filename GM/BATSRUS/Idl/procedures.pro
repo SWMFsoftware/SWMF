@@ -3447,7 +3447,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      uH0  = Mi                  ; uH     = j/rho*Mi           = uH0*j/rho
      op0  = 1.0/Mi              ; omegap = sqrt(rho)/Mi       = op0*sqrt(rho)
      oc0  = 1.0/Mi              ; omegac = b/Mi               = oc0*b
-     rg0  = sqrt(Mi)            ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     rg0  = Mi                  ; rg = sqrt(p/rho)/b          = rg0*sqrt(p/rho)/b
      di0  = c0*Mi               ; di = c0/sqrt(rho)*Mi        = di0/sqrt(rho)
      ld0  = Mi                  ; ld = sqrt(p)/(rho*c0)*Mi    = ld0*sqrt(p)/rho
   endif else if typeunit eq 'PIC' then begin
@@ -3458,7 +3458,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      uH0  = Mi                  ; uH     = j/rho*Mi           = uH0*j/rho        
      op0  = sqrt(4*!pi)/Mi      ; omegap = sqrt(4*!pi*rho)/Mi = op0*sqrt(rho)    
      oc0  = 1.0/Mi              ; omegac = b/Mi               = oc0*b            
-     rg0  = sqrt(Mi)            ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     rg0  = Mi                  ; rg = sqrt(p/rho)/b          = rg0*sqrt(p/rho)/b
      di0  = 1.0/sqrt(4*!pi)     ; di = 1/sqrt(4*!pi*rho)*Mi   = di0/sqrt(rho)
      ld0  = 1.0/sqrt(4*!pi)     ; ld = sqrt(p/(4*!pi))/rho*Mi = ld0*sqrt(p)/rho
   endif else begin
@@ -3470,9 +3470,9 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      uH0  = moq*jSI/rhoSI/uSI               ; uH=j/(ne)   = uH0*j/rho
      op0  = qom*sqrt(rhoSI/e0SI)*tSI        ; omegap      = op0*sqrt(rho)
      oc0  = qom*bSI*tSI                     ; omegac      = oc0*b
-     rg0  = moq*sqrt(pSI/rhoSI)/bSI/xSI/sqrt(Mi) ; rg     = rg0*sqrt(p/rho)/b
-     di0  = cSI/(op0/tSI)/xSI                    ; di=c/omegap = di0/sqrt(rho)
-     ld0  = moq*sqrt(pSI)/rhoSI/xSI              ; ld          = ld0*sqrt(p)/rho
+     rg0  = moq*sqrt(pSI/rhoSI)/bSI/xSI     ; rg          = rg0*sqrt(p/rho)/b
+     di0  = cSI/(op0/tSI)/xSI               ; di=c/omegap = di0/sqrt(rho)
+     ld0  = moq*sqrt(pSI)/rhoSI/xSI         ; ld          = ld0*sqrt(p)/rho
   endelse
 
 end
