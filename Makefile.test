@@ -1599,7 +1599,7 @@ test12_3d_check:
 		>> test12_3d_gm.diff)
 	gunzip -c output/test12/cut_all.out.ref.3d.gz \
                 > ${TESTDIR}/RESULTS/4step/PC/cut.ref	
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-7 \
 		${TESTDIR}/RESULTS/4step/PC/cut_all_region0_0_t00000000_n00000003.out \
 		${TESTDIR}/RESULTS/4step/PC/cut.ref \
 		> test12_3d_pc.diff)
