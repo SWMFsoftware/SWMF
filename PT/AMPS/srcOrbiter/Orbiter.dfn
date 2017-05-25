@@ -10,9 +10,9 @@
 #define _ORBITER_DESORPTION_MODEL__MODE__OFF_                             0
 #define _ORBITER_DESORPTION_MODEL__MODE__CONSTANT_RATE_                   1  
 
-
-
-
 //set up the appropriate macros
 #define _ORBITER_ADSORPTION_MODEL__MODE_ _ORBITER_ADSORPTION_MODEL__MODE__CONSTANT_STICKING_COEFFICIENT_
 #define _ORBITER_DESORPTION_MODEL__MODE_ _ORBITER_DESORPTION_MODEL__MODE__OFF_
+
+//processor of the particle/surface interaction model
+#define _ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode) Orbiter::ParticleSurfaceInteractionProcessor_default(ptr,xInit,vInit,TriangleCutFace,startNode) 

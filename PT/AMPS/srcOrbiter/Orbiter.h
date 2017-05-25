@@ -144,6 +144,9 @@ using namespace Exosphere;
   extern double ProjectionOrbiterSurfaceArea;
   double CalculateProjectionArea();
 
+  //particle/surface interaction model
+  int ParticleSurfaceInteractionProcessor_default(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+
   //the name of the surace mesh file
   namespace SurfaceModel {
     //constant defining the mesh file formats

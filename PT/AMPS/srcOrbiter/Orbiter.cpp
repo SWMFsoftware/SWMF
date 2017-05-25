@@ -52,6 +52,20 @@ void Orbiter::Sampling::DragCoefficient::Init() {
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SamplingProcessor,PrintOutputFile);
 }
 
+
+//=======================================================================================
+//particle/surface interaction model
+int Orbiter::ParticleSurfaceInteractionProcessor_default(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+  double c;
+
+  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
+  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
+  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
+
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
+}
+
 //=======================================================================================
 //sampling functions that are used in calculating of the drag coefficient 
 void Orbiter::Sampling::DragCoefficient::SamplingProcessor() {}
