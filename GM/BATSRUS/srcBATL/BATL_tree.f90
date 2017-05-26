@@ -2015,28 +2015,39 @@ contains
 
   !==========================================================================
 
-  subroutine show_tree(String, DoShowNei)
+  subroutine show_tree(String, DoShowNei, DoShowTimeLevel)
 
     character(len=*), intent(in):: String
-    logical, optional,intent(in):: DoShowNei
+    logical, optional,intent(in):: DoShowNei, DoShowTimeLevel
 
     ! Show complete tree information. Also write out string as an identifier.
 
     character(len=10) :: Name
     character(len=200):: StringHeader
+    logical:: DoShowTime
     integer:: iInfo, iNode, iBlock
     !-----------------------------------------------------------------------
+    DoShowTime = .false.
+    if(present(DoShowTimeLevel)) DoShowTime = DoShowTimeLevel
+
+
     StringHeader = 'iNode'
     do iInfo = 1, nInfo
        Name = NameTreeInfo_I(iInfo)
        StringHeader(7*iInfo+1:7*(iInfo+1)-1) = Name(1:6)
     end do
 
+    if(DoShowTime) StringHeader = trim(StringHeader)//' iTimeLevel'
+
     write(*,*) String
     write(*,*) trim(StringHeader)
     do iNode = 1, MaxNode
        if(iTree_IA(Status_, iNode) == Unset_) CYCLE
-       write(*,'(100i7)') iNode, iTree_IA(:, iNode)
+       if(DoShowTime)then
+          write(*,'(100i7)') iNode, iTree_IA(:, iNode), iTimeLevel_A(iNode)
+       else
+          write(*,'(100i7)') iNode, iTree_IA(:, iNode)
+       end if
     end do
 
     if(.not.present(DoShowNei)) RETURN
