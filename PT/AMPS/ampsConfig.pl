@@ -523,7 +523,7 @@ sub ReadMainBlock {
           $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
 
           #magnetic moment needs to be saved when guiding center particle mover is used
-          ampsConfigLib::RedefineMacro("_USE_MAGNETIC_MOMENT_","_PIC_MODE_ON_","pic/picGlobal.dfn")
+          ampsConfigLib::RedefineMacro("_USE_MAGNETIC_MOMENT_","_PIC_MODE_ON_","pic/picGlobal.dfn"); 
 	}
 	elsif($s0 eq "FIELDLINE") {
           $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__FIELD_LINE_';
