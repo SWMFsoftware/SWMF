@@ -193,6 +193,12 @@ contains
             iAreaIdx_II,&
             nAreaPerCritAll_I)
     endif
+    
+    if (allocated(iResolutionLimit_I)) deallocate(iResolutionLimit_I)
+    if (allocated(iAreaIdx_II)) deallocate(iAreaIdx_II)
+    if (allocated(nAreaPerCritAll_I)) deallocate(nAreaPerCritAll_I)
+    if (allocated(ResolutionLimit_I)) deallocate(ResolutionLimit_I)
+
     allocate(RefineCritAll_I(nCrit),&
          CoarsenCritAll_I(nCrit),&
          iVarCritAll_I(nCrit),&
