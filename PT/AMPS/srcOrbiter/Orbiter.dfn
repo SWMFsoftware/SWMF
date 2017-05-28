@@ -16,3 +16,6 @@
 
 //processor of the particle/surface interaction model
 #define _ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode) Orbiter::ParticleSurfaceInteractionProcessor_default(ptr,xInit,vInit,TriangleCutFace,startNode) 
+
+//reduce the mesh resolution for the nightly tests
+#define _ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_ _PIC_MODE_ON_

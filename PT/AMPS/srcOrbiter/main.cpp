@@ -43,19 +43,33 @@ return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
   return res;
 }
 
+
+
+namespace ParticleSurfaceInterationModel {
+  int COPS(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+    double BulkFlowVelocity[3]={0.0,0.0,0.0},Twall=293.0;
+    int spec;
+
+    spec=PIC::ParticleBuffer::GetI(ptr); 
+
+    //reflect particles from the walls with themerature of 293 K;
+    do {
+      PIC::Distribution::MaxwellianVelocityDistribution(vInit,BulkFlowVelocity,Twall,spec);
+    }
+    while (Vector3D::DotProduct(vInit,TriangleCutFace->ExternalNormal)<=0.0);
+
+    return _PARTICLE_REJECTED_ON_THE_FACE_; 
+  }
+}
+
+
+
+
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
   int code,spec;
 
   memcpy(vInitUnchanged,vInit,3*sizeof(double));
-
-/*
-  c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
-  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
-  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
-  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
-*/
-
   code=_ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode);
 
   //sample the energy and momentum transfer rates
@@ -151,9 +165,9 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
   else res=0.25;
 
   //reduce the mesh resolution when run tests
-  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  if (res<0.20) res=0.20;
-  #endif
+  if ((_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_)&&(_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_==_PIC_MODE_ON_)) {  
+    res*=_PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_;
+  }
 
   return res;
 }
@@ -443,7 +457,7 @@ int main(int argc,char **argv) {
   //in the test-mode run 100 iterations and than output the particle data statistics
   int nIterations,nTotalIterations=100000001;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=700;
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=_PIC_NIGHTLY_TEST__TOTAL_ITERATION_NUMBER_;
 
   //time step
   for (long int niter=0;niter<nTotalIterations;niter++) {
