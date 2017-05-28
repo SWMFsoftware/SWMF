@@ -643,8 +643,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
   ! Convert initial position to block coordinates
   XyzCur_D = XyzInOut_D
-  call xyz_to_ijk(XyzCur_D,IjkCur_D,iBlock, &
-       XyzCur_D,XyzStart_BLK(:,iBlock),Dxyz_D)
+  call xyz_to_ijk(XyzCur_D, IjkCur_D, iBlock, &
+       XyzCur_D, XyzStart_BLK(:,iBlock), Dxyz_D)
 
   ! Set flag if checking on the ionosphere is necessary
   if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
@@ -793,39 +793,40 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
               HALF2: do
                  ! Try new half step in XYZ space (and get IJK from it)
                  XyzMid_D = XyzIni_D + 0.5*dl*bNormIni_D
-                 call xyz_to_ijk(XyzMid_D,IjkMid_D,iBlock, &
-                      XyzIni_D,XyzStart_BLK(:,iBlock),Dxyz_D)
+                 call xyz_to_ijk(XyzMid_D, IjkMid_D, iBlock, &
+                      XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
 
                  ! Check if it stepped too far, cut step if needed
                  if(any(IjkMid_D<(xmin-0.5)) .or. any(IjkMid_D>(xmax+0.5)))then
                     ! Step too far, reduce and try again
                     dl=0.5*dl
 
-                    if(abs(dl)<dlMin)then
+                    if(abs(dl) < dlMin)then
                        ! Cannot reduce dl further
-                       dl=0.
-                       ! Obtain a point outside the block by mirroring the block
-                       ! center Ijk_D to the starting location of this step IjkIni_D
+                       dl = 0.
+                       ! Obtain a point outside the block by mirroring block
+                       ! center Ijk_D to starting location of step IjkIni_D
                        IjkMid_D=2.*IjkIni_D-Ijk_D
+
                        ! Reduce length of Ijk_D --> IjkMid_D vector to end 
                        ! something like a 10th of a cell outside the block
                        dlp = 1.1*(1.-maxval(max(xmin-IjkMid_D,IjkMid_D-xmax) &
                             /(abs(IjkMid_D-IjkIni_D)+dlTiny)))
                        IjkMid_D=IjkIni_D+dlp*(IjkMid_D-IjkIni_D)
 
-                       ! Make sure that IjkMid_D is just outside the control volume
-                       IjkMid_D=max(xmin-.1,IjkMid_D)
-                       IjkMid_D=min(xmax+.1,IjkMid_D)
-                       call interpolate_xyz(IjkMid_D,XyzMid_D)
+                       ! Make sure IjkMid_D is just outside the control volume
+                       IjkMid_D = max(xmin-0.1, IjkMid_D)
+                       IjkMid_D = min(xmax+0.1, IjkMid_D)
+                       call interpolate_xyz(IjkMid_D, XyzMid_D)
                        call interpolate_b(IjkMid_D, b_D, bNormMid_D)
                        IjkCur_D=IjkMid_D; XyzCur_D=XyzMid_D
 
-                       ! We exited the block and have a good location to continued from
-                       IsWall=.true.
+                       ! We exited block and have good location to continued
+                       IsWall = .true.
                        EXIT HALF2
                     end if
                  else
-                    !Step was OK, continue
+                    ! Step was OK, continue
                     EXIT HALF2
                  end if
               end do HALF2
@@ -836,10 +837,11 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
         else
            ! Too accurate, increase dl if possible
            if(abs(dl) < dlMax - dlTiny)then
-              dlNext = sign(min(dlMax,abs(dl)/sqrt(dxRel)),dl)
+              dlNext = sign(min(dlMax, abs(dl)/sqrt(dxRel)), dl)
 
               if(oktest_ray.and.okdebug) write(*,*) &
-                   'new increased dlNext: me,iBlock,dlNext=',iProc,iBlock,dlNext
+                   'new increased dlNext: me,iBlock,dlNext=', &
+                   iProc, iBlock, dlNext
            end if
            EXIT STEP
         end if
@@ -852,15 +854,15 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
            XyzCur_D = XyzStart_BLK(:,iBlock) + Dxyz_D*(IjkCur_D - 1.)
         else
            XyzCur_D = XyzIni_D + dl*bNormMid_D
-           call xyz_to_ijk(XyzCur_D,IjkCur_D,iBlock, &
-                XyzIni_D,XyzStart_BLK(:,iBlock),Dxyz_D)
+           call xyz_to_ijk(XyzCur_D, IjkCur_D, iBlock, &
+                XyzIni_D, XyzStart_BLK(:,iBlock), Dxyz_D)
 
            ! Check if it stepped too far, use midpoint if it did
-           if(any(IjkCur_D<(xmin-0.5)) .or. any(IjkCur_D>(xmax+0.5)))then
+           if(any(IjkCur_D < (xmin-0.5)) .or. any(IjkCur_D > (xmax+0.5)))then
               IjkCur_D=IjkMid_D; XyzCur_D=XyzMid_D
            end if
         end if
-     end if  !! .not.IsWall
+     end if  ! .not.IsWall
 
      ! Update number of segments
      nSegment = nSegment + 1
@@ -879,7 +881,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
      ! Check SM equator crossing for ray integral (GM -> RCM) 
      ! or if we map to the equator (HEIDI/RAM-SCB -> GM)
-     ! but don't check if we map the equator to the ionosphere (GM -> HEIDI/RAM-SCB)
+     ! but don't check if we map equator to ionosphere (GM -> HEIDI/RAM-SCB)
      if(DoIntegrateRay .or. (DoMapEquatorRay .and. .not.DoMapRay))then
         ! Check if we crossed the z=0 plane in the SM coordinates
         ! Stop following ray if the function returns true
@@ -2819,44 +2821,62 @@ end subroutine write_plot_line
 !============================================================================
 
 subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
-  use ModNumConst,  ONLY: cPi, cHalfPi, cTwoPi
-  use ModGeometry,  ONLY: TypeGeometry
-  use ModMain,      ONLY: Phi_,Theta_,x_,y_,z_, nJ
-  use BATL_lib,     ONLY: IsCartesianGrid, IsRLonLat, xyz_to_coord
+
+  use ModNumConst,  ONLY: cPi, cTwoPi
+  use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, nIjk_D, &
+       IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
+       CoordMin_D, CoordMax_D, xyz_to_coord
+
   implicit none
 
-  integer,intent(in) :: iBlock
-  real,   intent(in) :: XyzIn_D(3), XyzRef_D(3), GenRef_D(3), dGen_D(3)
-  real,   intent(out):: IjkOut_D(3)
-  real:: Gen_D(3)
-  !--------------------------------------------------------------------------
-  if(IsCartesianGrid)then
-     Gen_D=XyzIn_D
-  elseif(IsRLonLat)then
-     call xyz_to_coord(XyzIn_D, Gen_D)
+  integer, intent(in) :: iBlock
+  real,    intent(in) :: XyzIn_D(3), XyzRef_D(3), GenRef_D(3), dGen_D(3)
+  real,    intent(out):: IjkOut_D(3)
 
-     ! Did I cross the pole?
+  real:: Gen_D(3), PhiSize
+  !--------------------------------------------------------------------------
+  call xyz_to_coord(XyzIn_D, Gen_D)
+
+  ! Did the ray cross the pole?
+  if(IsAnyAxis)then
      if( (XyzIn_D(x_)*XyzRef_D(x_) + XyzIn_D(y_)*XyzRef_D(y_)) < 0.)then
-        Gen_D(Phi_)=Gen_D(Phi_) + GenRef_D(Phi_) &
-             - modulo((cPi+GenRef_D(Phi_)),cTwoPi)
-        if(XyzIn_D(z_)>0.)then
-           Gen_D(Theta_)=Gen_D(Theta_)+2.*(+cHalfPi-Gen_D(Theta_))
-        else
-           Gen_D(Theta_)=Gen_D(Theta_)+2.*(-cHalfPi-Gen_D(Theta_))
+        ! Shift Phi by +/-pi (tricky, but works)
+        ! E.g. PhiRef=  5deg, Phi=186deg -->   6deg 
+        ! or   PhiRef=185deg, Phi=  6deg --> 186deg
+        Gen_D(Phi_) = Gen_D(Phi_) &
+             + GenRef_D(Phi_) - modulo((cPi + GenRef_D(Phi_)), cTwoPi)
+
+        if(IsLatitudeAxis .or. IsSphericalAxis)then
+           if(Gen_D(Theta_) > 0.5*(CoordMax_D(Theta_)+CoordMin_D(Theta_)))then
+              ! Mirror theta/latitude to maximum coordinate
+              ! E.g. Lat=85 deg --> 95 deg, Theta=175 deg --> 185 deg
+              Gen_D(Theta_) = 2*CoordMax_D(Theta_) - Gen_D(Theta_)
+           else
+              ! Mirror theta/latitude to minimum coordinate
+              ! E.g. Lat=-85 deg --> -95 deg, Theta = 5 deg --> -5 deg
+              Gen_D(Theta_) = 2*CoordMin_D(Theta_) - Gen_D(Theta_)
+           end if
         end if
      end if
-
-     ! Did I cross periodic boundary?
-     if    ((+Gen_D(Phi_)-GenRef_D(Phi_))/dGen_D(Phi_) > 2*nJ)then
-        Gen_D(Phi_)=Gen_D(Phi_)-cTwoPi
-     elseif((-Gen_D(Phi_)+GenRef_D(Phi_))/dGen_D(Phi_) > 1*nJ)then 
-        Gen_D(Phi_)=Gen_D(Phi_)+cTwoPi
-     end if
-  else
-     call stop_mpi('xyz_to_ijk: cannot handle TypeGeometry='//TypeGeometry)
   end if
 
-  ! Gen_D is set, now compute Ijk
+  ! Did the ray cross the periodic Phi boundary?
+  if(Phi_ > 1)then
+     if(IsPeriodicCoord_D(Phi_))then
+        PhiSize = dGen_D(Phi_)*nIjk_D(Phi_)
+        if    (Gen_D(Phi_) - GenRef_D(Phi_) > PhiSize)then
+           ! Crossed from small phi direction, make Gen_D negative
+           ! E.g. PhiRef=5deg Phi=355deg -> -5deg
+           Gen_D(Phi_) = Gen_D(Phi_) - cTwoPi
+        elseif(GenRef_D(Phi_) - Gen_D(Phi_) > PhiSize)then 
+           ! Crossed from phi~2pi direction, make Gen_D larger than 2pi
+           ! E.g. PhiRef=355deg Phi=5deg -> 365deg
+           Gen_D(Phi_) = Gen_D(Phi_) + cTwoPi
+        end if
+     end if
+  end if
+
+  ! Gen_D is set, now compute normalized generalized coordinate IjkOut_D
   IjkOut_D = (Gen_D - GenRef_D)/dGen_D + 1.
 
 end subroutine xyz_to_ijk
