@@ -189,6 +189,9 @@ module BATL_tree
   integer, public:: nTimeLevel = 0
   integer, public, allocatable:: iTimeLevel_A(:)
 
+  ! Function generalizing the DiLevelNei_IIIB array for time levels
+  public:: di_level_nei
+
   ! Local variables -----------------------------------------------
 
   integer :: iNodeNew = 0
@@ -1943,6 +1946,47 @@ contains
     end if
 
   end function min_tree_level
+
+  !==========================================================================
+  function di_level_nei(iDir, jDir, kDir, iBlock, DoResChangeOnly) &
+       RESULT(DiLevel)
+
+    integer, intent(in):: iDir, jDir, kDir, iBlock
+    logical, intent(in), optional:: DoResChangeOnly
+
+    integer:: DiLevel
+
+    ! Generalize the DiLevelNei_IIIB array for time levels
+    ! If DoReschangeOnly is present and false and the grid levels
+    ! are the same (DiLevelNei_IIIB == 0) then set
+    ! DiLevel according to the time level difference.
+
+    integer:: iTimeLevel, iNodeNei, iTimeLevelNei
+
+    character(len=*), parameter:: NameSub = 'di_level_nei'
+    !----------------------------------------------------------------------
+    DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlock)
+
+    if(DiLevel /= 0) RETURN
+    if(.not.present(DoResChangeOnly)) RETURN
+    if(DoResChangeOnly) RETURN
+
+    if(.not.allocated(iTimeLevel_A)) call CON_stop(NameSub// &
+         ' called with DoResChangeOnly=F while iTimeLevel_A is not allocated')
+
+    iTimeLevel    = iTimeLevel_A(iNode_B(iBlock))
+
+    ! Get the neighbor node index and time level
+    iNodeNei = iNodeNei_IIIB((3*iDir+3)/2,(3*jDir+3)/2,(3*kDir+3)/2,iBlock)
+    iTimeLevelNei = iTimeLevel_A(iNodeNei)
+
+    if(iTimeLevel == iTimeLevelNei) RETURN
+
+    ! Set DiLevel = 1 if time level of the block is larger than its neighbor's
+    ! otherwise set -1.
+    DiLevel = sign(1, iTimeLevel - iTimeLevelNei)
+
+  end function di_level_nei
 
   !==========================================================================
  
