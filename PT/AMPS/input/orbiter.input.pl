@@ -85,6 +85,24 @@ while ($line=<InputFile>) {
 
     ampsConfigLib::ChangeValueOfVariable("char Orbiter::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Orbiter.cpp");
   }
+  elsif ($InputLine eq "PARTICLESURFACEINTERACTIONPROCESSOR") {
+    $line=~s/[=()]/ /g;
+    ($InputLine,$line)=split(' ',$line,2);
+    ($InputLine,$line)=split(' ',$line,2);
+
+    ampsConfigLib::AddLine2File("#undef _ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_","main/Orbiter.dfn");
+    ampsConfigLib::AddLine2File("#define _ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode)  $InputLine(ptr,xInit,vInit,TriangleCutFace,startNode)","main/Orbiter.dfn");
+  }
+  elsif ($InputLine eq "NIGHTLYTESTREDUCERESOLUTION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2); 
+
+    if ($InputLine eq "ON") {
+      ampsConfigLib::RedefineMacro("_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_","_PIC_MODE_ON_","main/Orbiter.dfn"); 
+    }
+    else {
+      ampsConfigLib::RedefineMacro("_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_","_PIC_MODE_OFF_","main/Orbiter.dfn");  
+    }
+  }
   elsif ($InputLine eq "SURFACEMODEL") {
     my (@fnameTable,$faceat,@faceatTable,$t,$res,$cnt,$i);
     
