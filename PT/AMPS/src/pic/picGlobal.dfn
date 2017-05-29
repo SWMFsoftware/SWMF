@@ -296,6 +296,10 @@ at the end of each time step
 //the grid resolution mutiplier used to reduce the runtime during the nightly tests
 #define _PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_  2.0 
 
+//the grid resolution floor that is used in the nightly test to reduce the runtime during the nightly tests
+//if negative -> there is no floor value; the value can be reset in the input file 
+#define _PIC_NIGHTLY_TEST__GRID_RESOLUTION_FLOOR_VALUE_  -1.0
+
 //the spatial symmetry mode
 #define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
