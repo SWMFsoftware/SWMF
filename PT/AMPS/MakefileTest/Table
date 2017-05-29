@@ -55,6 +55,46 @@ Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@
 Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
 Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+stampede)
 <#
+
+-------------------------------------------------------------------------------
+#>
+Name=test/COPS@@(0+valeriy) 
+Time=15
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
+Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS 
+
+Check=
+>>>@echo "test_COPS_check..." >> test_COPS$(TESTCOPS-REF).diff
+
+>>>@${TESTCOPSDIR}/../utility/ReduceFile.pl ${TESTCOPSDIR}/PT/plots/pic.H2O.s=0.out=13.dat 10
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/pic.H2O.s=0.out=13.dat.Reduced.Step=10 ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/pic.H2O.s=0.out=13.dat.Reduced.Step=10$(TESTCOPS-REF).ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Volume$(TESTCOPS-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/SurfaceTriangulation-shadow.dat ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/SurfaceTriangulation-shadow.dat.ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Triangulation-shadow.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/SurfaceTriangulation.dat ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/SurfaceTriangulation.dat.ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Triangulation.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/amps.cut-cell.surface-data.out=13.dat ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/amps.cut-cell.surface-data.out=13.dat$(TESTCOPS-REF).ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Surface-Data$(TESTCOPS-REF).diff
+
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/test_Orbiter.dat ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/test_Orbiter.dat$(TESTCOPS-REF).ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Particle-Data$(TESTCOPS-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCOPSDIR}/PT/plots/test_Orbiter_Drag_Coefficient.dat ${PTDIR}/../../../AMPS_DATA_TEST/COPS/output/test_Orbiter_Drag_Coefficient.dat$(TESTCOPS-REF).ref_np`ls $(TESTCOPSDIR)/PT/thread* |wc -l |tr -d ' '`  > test_COPS-Drag-Coefficient$(TESTCOPS-REF).diff
+
+>>>@cat test_COPS-Volume$(TESTCOPS-REF).diff test_COPS-Triangulation-shadow.diff test_COPS-Triangulation.diff test_COPS-Surface-Data$(TESTCOPS-REF).diff test_COPS-Particle-Data$(TESTCOPS-REF).diff test_COPS-Drag-Coefficient$(TESTCOPS-REF).diff > test_COPS$(TESTCOPS-REF).diff
+
+>>>@ls -l test_COPS-Volume$(TESTCOPS-REF).diff 
+>>>@ls -l test_COPS-Triangulation-shadow.diff 
+>>>@ls -l test_COPS-Triangulation.diff
+>>>@ls -l test_COPS-Surface-Data$(TESTCOPS-REF).diff 
+>>>@ls -l test_COPS-Particle-Data$(TESTCOPS-REF).diff 
+>>>@ls -l test_COPS-Drag-Coefficient$(TESTCOPS-REF).diff  
+>>>@ls -l test_COPS$(TESTCOPS-REF).diff
+
+
+<#
 -------------------------------------------------------------------------------
 #>
 Name=test/X-Wing@@(0+valeriy) 
@@ -77,7 +117,7 @@ Run=
 >>>@echo "test_X-Wing_run... done" >> test_X-Wing$(TESTX-Wing-REF).diff
 
 Check=
->>>@echo "test_X-Wing_check..." >> test_X-Wing.diff
+>>>@echo "test_X-Wing_check..." >> test_X-Wing$(TESTX-Wing-REF).diff
 
 >>>@${TESTX-WingDIR}/../utility/ReduceFile.pl ${TESTX-WingDIR}/PT/plots/OrbiterProjectionArea.dat 100
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTX-WingDIR}/PT/plots/OrbiterProjectionArea.dat.Reduced.Step=100 ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/output/OrbiterProjectionArea.dat.Reduced.Step=100.ref_np`ls $(TESTX-WingDIR)/PT/thread* |wc -l |tr -d ' '`  > test_X-Wing-Projection.diff
