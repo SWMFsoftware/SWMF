@@ -165,8 +165,13 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
   else res=0.25;
 
   //reduce the mesh resolution when run tests
-  if ((_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_)&&(_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_==_PIC_MODE_ON_)) {  
-    res*=_PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_;
+  if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) { 
+    if (_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_==_PIC_MODE_ON_) {  
+      res*=_PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_;
+    }
+
+    //limit the grid resolution with the floor value 
+    if (res<_PIC_NIGHTLY_TEST__GRID_RESOLUTION_FLOOR_VALUE_) res=_PIC_NIGHTLY_TEST__GRID_RESOLUTION_FLOOR_VALUE_; 
   }
 
   return res;
