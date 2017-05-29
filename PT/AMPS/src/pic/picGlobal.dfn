@@ -293,6 +293,9 @@ at the end of each time step
 //the number of iteratoin performed in a test
 #define _PIC_NIGHTLY_TEST__TOTAL_ITERATION_NUMBER_    700
 
+//the grid resolution mutiplier used to reduce the runtime during the nightly tests
+#define _PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_  2.0 
+
 //the spatial symmetry mode
 #define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
