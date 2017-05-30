@@ -62,8 +62,8 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=20
-  MaxMeshRefinmentLevel=7 !2 !4
+  ReferenceInjectionParticleNumber=10
+  MaxMeshRefinmentLevel=6 !2 !4
   EnforceRequestedMeshResolution=off !on,off
 
   RequestedParticleBufferLength=1500000
@@ -111,7 +111,7 @@ ParticleWeightCorrectionMode=on
   define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_  _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
   define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Orbiter::ExchangeModelData()
 
-  define _PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_ 4.0
+  define _PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_ 16.01
 
 #endGeneral
 
