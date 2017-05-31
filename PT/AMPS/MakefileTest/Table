@@ -95,6 +95,60 @@ Check=
 
 
 <#
+
+-------------------------------------------------------------------------------
+#>
+Name=test/SC-Cont@@(0+valeriy) 
+Time=15
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+
+Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CYGNSS -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/CYGNSS 
+
+Compile=
+>>>@echo "test_SC-Cont_compile..." > test_SC-Cont$(TESTSC-Cont-REF).diff
+>>>./Config.pl -application=test/sc-contamination -spice-path=nospice -spice-kernels=nospice -model-data-path=$(PTDIR)/data/input/SC-Cont  -amps-test=on $(TESTSC-ContKEYS)
+>>>rm -rf srcTemp
+>>>@($(MAKE) amps)
+>>>@echo "test_SC-Cont_compile... done" >> test_SC-Cont$(TESTSC-Cont-REF).diff
+
+Run=
+>>>@echo "test_SC-Cont_run..." >> test_SC-Cont$(TESTSC-Cont-REF).diff
+>>>cd $(TESTSC-ContDIR); mpirun -np 8 ./amps
+>>>@echo "test_SC-Cont_run... done" >> test_SC-Cont$(TESTSC-Cont-REF).diff
+
+Check=
+>>>@echo "test_SC-Cont_check..." >> test_SC-Cont$(TESTSC-Cont-REF).diff
+
+>>>@${TESTSC-ContDIR}/../utility/ReduceFile.pl ${TESTSC-ContDIR}/PT/plots/SurfaceTriangulation.dat 10
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/SurfaceTriangulation.dat.Reduced.Step=10 ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/SurfaceTriangulation.dat.Reduced.Step=10.ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-Cont-Triangulation.diff
+
+>>>@${TESTSC-ContDIR}/../utility/ReduceFile.pl ${TESTSC-ContDIR}/PT/plots/VolumeMesh.dat 1000
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/VolumeMesh.dat.Reduced.Step=1000 ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/VolumeMesh.dat.Reduced.Step=1000.ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-Cont-VolumeMesh.diff
+
+>>>@${TESTSC-ContDIR}/../utility/ReduceFile.pl ${TESTSC-ContDIR}/PT/plots/amps.TrajectoryTracking.out=2.s=0.H2O.dat 10
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/amps.TrajectoryTracking.out=2.s=0.H2O.dat.Reduced.Step=10 ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/amps.TrajectoryTracking.out=2.s=0.H2O.dat.Reduced.Step=10$(TESTSC-Cont-REF).ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-TrajectoryTracking$(TESTSC-Cont-REF).diff
+
+>>>@${TESTSC-ContDIR}/../utility/ReduceFile.pl ${TESTSC-ContDIR}/PT/plots/amps.cut-cell.surface-data.out=2.dat 50
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/amps.cut-cell.surface-data.out=2.dat.Reduced.Step=50 ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/amps.cut-cell.surface-data.out=2.dat.Reduced.Step=50$(TESTSC-Cont-REF).ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-Surface-Sample$(TESTSC-Cont-REF).diff
+
+>>>@${TESTSC-ContDIR}/../utility/ReduceFile.pl ${TESTSC-ContDIR}/PT/plots/pic.H2O.s=0.out=2.dat 1000
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/pic.H2O.s=0.out=2.dat.Reduced.Step=1000 ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/pic.H2O.s=0.out=2.dat.Reduced.Step=1000$(TESTSC-Cont-REF).ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-Volume-Sample$(TESTSC-Cont-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTSC-ContDIR}/PT/plots/test_Orbiter.dat ${PTDIR}/../../../AMPS_DATA_TEST/CYGNSS/ContaminationTestOutput/test_Orbiter.dat$(TESTSC-Cont-REF).ref_np`ls $(TESTSC-ContDIR)/PT/thread* |wc -l |tr -d ' '`  > test_SC-Particle-Sample$(TESTSC-Cont-REF).diff
+
+>>>@cat test_SC-Cont-Triangulation.diff test_SC-Cont-VolumeMesh.diff test_SC-TrajectoryTracking$(TESTSC-Cont-REF).diff test_SC-Surface-Sample$(TESTSC-Cont-REF).diff test_SC-Volume-Sample$(TESTSC-Cont-REF).diff test_SC-Particle-Sample$(TESTSC-Cont-REF).diff > test_SC-Cont$(TESTSC-Cont-REF).diff 
+
+>>>@ls -l test_SC-Cont-Triangulation.diff
+>>>@ls -l test_SC-Cont-VolumeMesh.diff
+>>>@ls -l test_SC-TrajectoryTracking$(TESTSC-Cont-REF).diff
+>>>@ls -l test_SC-Surface-Sample$(TESTSC-Cont-REF).diff
+>>>@ls -l test_SC-Volume-Sample$(TESTSC-Cont-REF).diff
+>>>@ls -l test_SC-Particle-Sample$(TESTSC-Cont-REF).diff
+>>>@ls -l test_SC-Cont$(TESTSC-Cont-REF).diff
+
+<#
 -------------------------------------------------------------------------------
 #>
 Name=test/X-Wing@@(0+valeriy) 
