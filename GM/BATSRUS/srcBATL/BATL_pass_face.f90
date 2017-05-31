@@ -182,10 +182,6 @@ contains
              end if
 
              if(DiLevel == 0)then
-                if(present(MinLevelSendIn) .and. UseTimeLevel)then
-                   ! Do not send below MinLevelSendIn
-                   if(iTimeLevel_A(iNode) < MinLevelSendIn) CYCLE
-                end if
                 call do_equal
              elseif(DiLevel == 1)then
                 if(present(MinLevelSendIn))then
@@ -218,24 +214,28 @@ contains
     ! post requests
     iRequestR = 0
     do iProcSend = 0, nProc - 1
+       if(DoTest) write(*,*) NameSub, ': recv iProc, iProcSend, size=',&
+            iProc, iProcSend, iBufferR_P(iProcSend)
+
        if(iBufferR_P(iProcSend) == 0) CYCLE
        iRequestR = iRequestR + 1
 
        call MPI_irecv(BufferR_IP(1,iProcSend), iBufferR_P(iProcSend), &
-            MPI_REAL, iProcSend, 20, iComm, iRequestR_I(iRequestR), &
-            iError)
-
+            MPI_REAL, iProcSend, 20, iComm, iRequestR_I(iRequestR), iError)
     end do
 
     ! post sends
     iRequestS = 0
     do iProcRecv = 0, nProc-1
+       if(DoTest) write(*,*) NameSub, ': send iProc, iProcRecv, size=',&
+            iProc, iProcRecv, iBufferS_P(iProcRecv)
+
        if(iBufferS_P(iProcRecv) == 0) CYCLE
        iRequestS = iRequestS + 1
 
        call MPI_isend(BufferS_IP(1,iProcRecv), iBufferS_P(iProcRecv), &
-            MPI_REAL, iProcRecv, 20, iComm, iRequestS_I(iRequestS), &
-            iError)
+            MPI_REAL, iProcRecv, 20, iComm, iRequestS_I(iRequestS), iError)
+
     end do
 
     ! wait for all requests to be completed
@@ -263,9 +263,6 @@ contains
 
       real, pointer :: OldBuffer_IP(:,:)
       !------------------------------------------------------------------------
-      !write(*,*)'extend_buffer called with ',&
-      !     'DoCopy, MaxBufferOld, MaxBufferNew=', &
-           !     DoCopy, MaxBufferOld, MaxBufferNew
 
       if(MaxBufferOld < 0 .or. .not.DoCopy)then
          if(MaxBufferOld > 0) deallocate(Buffer_IP)
@@ -387,7 +384,7 @@ contains
     !==========================================================================
     subroutine do_equal
 
-      integer:: nSize
+      integer:: iTimeLevel, iTimeLevelNei, nSize
       !------------------------------------------------------------------------
 
       ! Convert iDir,jDir,kDir = -1,0,1 into iSend,jSend,kSend = 0,1,3
@@ -397,8 +394,17 @@ contains
       
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
 
+      iTimeLevel    = iTimeLevel_A(iNode)
+      iTimeLevelNei = iTimeLevel_A(iNodeRecv)
+
       ! Check if the time levels are different
-      if(iTimeLevel_A(iNode) == iTimeLevel_A(iNodeRecv)) RETURN
+      if(iTimeLevel == iTimeLevelNei) RETURN
+
+      if(present(MinLevelSendIn))then
+         ! If both time levels are below MinLevel then there is nothing to do
+         if(iTimeLevel < MinLevelSendIn-1 .or. iTimeLevelNei < MinLevelSendIn-1) &
+              RETURN
+      end if
 
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
@@ -419,6 +425,7 @@ contains
          end select
       elseif(iProc /= iProcRecv)then
          ! Add the size of the face + the tag to the recv buffer
+         ! In this case "iNodeRecv" is the sender (!)
          select case(iDim)
          case(1)
             nSize = nVar*nJ*nK
@@ -521,6 +528,7 @@ contains
                end if
             end do
          end do
+
       else
 
          ! Send via buffer
@@ -776,7 +784,7 @@ contains
     use BATL_size, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock, nBlock
     use BATL_tree, ONLY: nLevelMax, Unused_B, iNode_B, iTree_IA, Level_, &
-         UseTimeLevel, nTimeLevel
+         UseTimeLevel, nTimeLevel, iTimeLevel_A
 
     integer, intent(in):: nVar, nFluid
     real, intent(inout):: &
@@ -790,17 +798,19 @@ contains
     logical, intent(in), optional:: DoResChangeOnlyIn
     integer, intent(in), optional:: iStageIn
 
-    integer:: iBlock, iNode, iLevel, iStage, MinLevelSend
+    integer:: iBlock, iNode, iLevel, iStage, MinLevelSend, MaxLevel
     !-------------------------------------------------------------------------
     ! Set the levels MinLevelSend .. nLevelMax which need to send fluxes
     ! If iStageIn is a multiple of 2^p then the finest p levels should 
     ! send fluxes. 
+    if(UseTimeLevel)then
+       MaxLevel = nTimeLevel
+    else
+       MaxLevel = nLevelmax
+    end if
+
     if(present(iStageIn))then
-       if(UseTimeLevel)then
-          MinLevelSend = nTimeLevel + 1
-       else
-          MinLevelSend = nLevelMax + 1
-       end if
+       MinLevelSend = MaxLevel + 1
        iStage = iStageIn
        do
           ! Check if iStage is still an even number
@@ -812,17 +822,22 @@ contains
     else
        MinLevelSend = 1
     end if
+
     call message_pass_face(nVar+nFluid, Flux_VXB, Flux_VYB, Flux_VZB, &
-         DoResChangeOnlyIn, MinLevelSendIn = MinLevelSend)
+         DoResChangeOnlyIn=DoResChangeOnlyIn, MinLevelSendIn = MinLevelSend)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        iNode = iNode_B(iBlock)
-       iLevel = iTree_IA(Level_,iNode)
+       if(UseTimeLevel)then
+          iLevel = iTimeLevel_A(iNode)
+       else
+          iLevel = iTree_IA(Level_,iNode)
+       end if
        ! highest level should never be corrected
-       if(iLevel == nLevelMax) CYCLE
+       if(iLevel == MaxLevel) CYCLE
        if(present(iStageIn))then
-          ! Check if this block has received any flux correction
+          ! Check if this block should receive any flux correction
           if(iLevel < MinLevelSend - 1) CYCLE
        end if
 
@@ -842,7 +857,6 @@ contains
 
   end subroutine apply_flux_correction
 
-
   !============================================================================
 
   subroutine apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
@@ -851,7 +865,7 @@ contains
     ! Put Flux_VXB, Flux_VYB, Flux_VZB into State_VGB for the appropriate faces
 
     use BATL_size, ONLY: nI, nJ, nK, jDim_, kDim_, MaxBlock
-    use BATL_tree, ONLY: DiLevelNei_IIIB
+    use BATL_tree, ONLY: di_level_nei
     use BATL_geometry, ONLY: IsCartesian
     use BATL_grid, ONLY: CellVolume_B, CellVolume_GB
 
@@ -880,7 +894,7 @@ contains
 
     if(IsCartesian) InvVolume = 1.0/CellVolume_B(iBlock)
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(-1,0,0,iBlock)==-1)then
+    if(di_level_nei(-1,0,0,iBlock,DoResChangeOnly)==-1)then
        do k = 1, nK; do j = 1, nJ
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(1,j,k,iBlock)
           State_VG(:,1,j,k) = State_VG(:,1,j,k) &
@@ -891,7 +905,7 @@ contains
        Flux_VXB(:,:,:,1,iBlock) = 0.0
     end if
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(+1,0,0,iBlock)==-1)then
+    if(di_level_nei(+1,0,0,iBlock,DoResChangeOnly)==-1)then
        do k = 1, nK; do j = 1, nJ
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(nI,j,k,iBlock)
           State_VG(:,nI,j,k) = State_VG(:,nI,j,k) &
@@ -902,7 +916,7 @@ contains
        Flux_VXB(:,:,:,2,iBlock) = 0.0
     end if
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,-1,0,iBlock)==-1)then
+    if(di_level_nei(0,-1,0,iBlock,DoResChangeOnly)==-1)then
        do k = 1, nK; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,1,k,iBlock)
           State_VG(:,i,1,k) = State_VG(:,i,1,k) &
@@ -914,7 +928,7 @@ contains
        Flux_VYB(:,:,:,1,iBlock) = 0.0
     end if
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,+1,0,iBlock)==-1)then
+    if(di_level_nei(0,+1,0,iBlock,DoResChangeOnly)==-1)then
        do k = 1, nK; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,nJ,k,iBlock)
           State_VG(:,i,nJ,k) = State_VG(:,i,nJ,k) &
@@ -925,7 +939,7 @@ contains
        Flux_VYB(:,:,:,2,iBlock) = 0.0
     end if
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,0,-1,iBlock)==-1)then
+    if(di_level_nei(0,0,-1,iBlock,DoResChangeOnly)==-1)then
        do j = 1, nJ; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,j,1,iBlock)
           State_VG(:,i,j,1) = State_VG(:,i,j,1) &
@@ -936,7 +950,7 @@ contains
        Flux_VZB(:,:,:,1,iBlock) = 0.0
     end if
 
-    if(.not.DoResChangeOnly .or. DiLevelNei_IIIB(0,0,+1,iBlock)==-1)then
+    if(di_level_nei(0,0,+1,iBlock,DoResChangeOnly)==-1)then
        do j = 1, nJ; do i = 1, nI
           if(.not.IsCartesian) InvVolume = 1.0/CellVolume_GB(i,j,nK,iBlock)
           State_VG(:,i,j,nK) = State_VG(:,i,j,nK) &
@@ -957,8 +971,8 @@ contains
     use BATL_size, ONLY: MaxDim, nDim, nI, nJ, nK, nBlock
     use BATL_tree, ONLY: init_tree, set_tree_root, find_tree_node, &
          refine_tree_node, distribute_tree, show_tree, clean_tree, &
-         Unused_B, DiLevelNei_IIIB, UseTimeLevel, iTimeLevel_A, nNode, &
-         iTree_IA, Level_, iNode_B, iNodeNei_IIIB
+         Unused_B, UseTimeLevel, iTimeLevel_A, nNode, &
+         iTree_IA, Level_, iNode_B, di_level_nei
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
          Xyz_DGB, CellFace_DB
     use BATL_geometry, ONLY: init_geometry
@@ -978,7 +992,7 @@ contains
     integer:: iResChangeOnly
     logical:: DoResChangeOnly
 
-    integer:: iNode, iBlock, i, j, k, iDim, DiLevel, iNodeNei
+    integer:: iNode, iBlock, i, j, k, iDim, DiLevel
     integer:: iStage, nStage, iTimeLevel
     real:: Flux, FluxGood, FluxUnset=-77.0
 
@@ -1053,38 +1067,26 @@ contains
           iTimeLevel = iTimeLevel_A(iNode_B(iBlock))
 
           ! Set the fluxes to the unset value except on the fine side
-          if(DiLevelNei_IIIB(-1,0,0,iBlock) < 1 .and. &
-               .not.(UseTimeLevel .and. &
-               iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(0,1,1,iBlock)))) &
+          if(di_level_nei(-1,0,0,iBlock,DoResChangeOnly) < 1) &
                Flux_VXB(:,:,:,1,iBlock) = FluxUnset
 
-          if(DiLevelNei_IIIB(1,0,0,iBlock) < 1 .and. &
-               .not.(UseTimeLevel .and. &
-               iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(3,1,1,iBlock)))) &
+          if(di_level_nei(+1,0,0,iBlock,DoResChangeOnly) < 1) &
                Flux_VXB(:,:,:,2,iBlock) = FluxUnset
 
           if(nDim > 1)then
-             if(DiLevelNei_IIIB(0,-1,0,iBlock) < 1 .and. &
-                  .not.(UseTimeLevel .and. &
-                  iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(1,0,1,iBlock)))) &
+             if(di_level_nei(0,-1,0,iBlock,DoResChangeOnly) < 1) &
                   Flux_VYB(:,:,:,1,iBlock) = FluxUnset
 
-             if(DiLevelNei_IIIB(0,+1,0,iBlock) < 1 .and. &
-                  .not.(UseTimeLevel .and. &
-                  iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(1,3,1,iBlock)))) &
+             if(di_level_nei(0,+1,0,iBlock,DoResChangeOnly) < 1) &
                   Flux_VYB(:,:,:,2,iBlock) = FluxUnset
 
           end if
 
           if(nDim > 2)then
-             if(DiLevelNei_IIIB(0,0,-1,iBlock) < 1 .and. &
-                  .not.(UseTimeLevel .and.  &
-                  iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(1,1,0,iBlock)))) &
+             if(di_level_nei(0,0,-1,iBlock,DoResChangeOnly) < 1) &
                   Flux_VZB(:,:,:,1,iBlock) = FluxUnset
 
-             if(DiLevelNei_IIIB(0,0,+1,iBlock) < 1 .and. &
-                  .not.(UseTimeLevel .and. &
-                  iTimeLevel > iTimeLevel_A(iNodeNei_IIIB(1,1,3,iBlock)))) &
+             if(di_level_nei(0,0,+1,iBlock,DoResChangeOnly) < 1) &
                   Flux_VZB(:,:,:,2,iBlock) = FluxUnset
 
           end if
@@ -1103,11 +1105,10 @@ contains
           call set_flux
 
           ! Check min X face
-          DiLevel = DiLevelNei_IIIB(-1,0,0,iBlock)
-
+          DiLevel = di_level_nei(-1,0,0,iBlock,DoResChangeOnly)
           do k = 1, nK; do j = 1, nJ; do iDim = 1, nDim
              Flux = Flux_VXB(iDim,j,k,1,iBlock)
-             FluxGood = flux_good(1, Flux_VFD(iDim,1,j,k,1))
+             FluxGood = flux_good(DiLevel, 1, Flux_VFD(iDim,1,j,k,1))
 
              if(  abs(Flux - FluxGood) > Tolerance )then
                 write(*,*)'Error at min X face: ', &
@@ -1118,9 +1119,10 @@ contains
           end do; end do; end do
 
           ! Check max X face
+          DiLevel = di_level_nei(+1,0,0,iBlock,DoResChangeOnly)
           do k = 1, nK; do j = 1, nJ; do iDim = 1, nDim
              Flux     = Flux_VXB(iDim,j,k,2,iBlock)
-             FluxGood = flux_good(2, Flux_VFD(iDim,nI+1,j,k,1))
+             FluxGood = flux_good(DiLevel, 1, Flux_VFD(iDim,nI+1,j,k,1))
              if(  abs(Flux - FluxGood) > Tolerance ) &
                   write(*,*)'Error at max X face: ', &
                   'iNode,DiLevel,j,k,iDim,Flux,Good=', &
@@ -1129,9 +1131,10 @@ contains
 
           if(nDim > 1)then
              ! Check min Y face
+             DiLevel = di_level_nei(0,-1,0,iBlock,DoResChangeOnly)
              do k = 1, nK; do i = 1, nI; do iDim = 1, nDim
                 Flux     = Flux_VYB(iDim,i,k,1,iBlock)
-                FluxGood = flux_good(3, Flux_VFD(iDim,i,1,k,2))
+                FluxGood = flux_good(DiLevel, 2, Flux_VFD(iDim,i,1,k,2))
                 if(  abs(Flux - FluxGood) > Tolerance ) &
                      write(*,*)'Error at min Y face: ', &
                      'iNode,DiLevel,i,k,iDim,Flux,Good=', &
@@ -1139,9 +1142,10 @@ contains
              end do; end do; end do
 
              ! Check max Y face
+             DiLevel = di_level_nei(0,+1,0,iBlock,DoResChangeOnly)
              do k = 1, nK; do i = 1, nI; do iDim = 1, nDim
                 Flux     = Flux_VYB(iDim,i,k,2,iBlock)
-                FluxGood = flux_good(4, Flux_VFD(iDim,i,nJ+1,k,2))
+                FluxGood = flux_good(DiLevel, 2, Flux_VFD(iDim,i,nJ+1,k,2))
                 if(  abs(Flux - FluxGood) > Tolerance ) &
                      write(*,*)'Error at max Y face: ', &
                      'iNode,DiLevel,i,k,iDim,Flux,Good=', &
@@ -1151,9 +1155,10 @@ contains
 
           if(nDim > 2)then
              ! Check min Z face
+             DiLevel = di_level_nei(0,0,-1,iBlock,DoResChangeOnly)
              do j = 1, nJ; do i = 1, nI; do iDim = 1, nDim
                 Flux     = Flux_VZB(iDim,i,j,1,iBlock)
-                FluxGood = flux_good(5, Flux_VFD(iDim,i,j,1,3))
+                FluxGood = flux_good(DiLevel, 3, Flux_VFD(iDim,i,j,1,3))
                 if(  abs(Flux - FluxGood) > Tolerance ) &
                      write(*,*)'Error at min Z face: ', &
                      'iNode,DiLevel,i,j,iDim,Flux,Good=', &
@@ -1161,9 +1166,10 @@ contains
              end do; end do; end do
 
              ! Check max Z face
+             DiLevel = di_level_nei(0,0,+1,iBlock,DoResChangeOnly)
              do j = 1, nJ; do i = 1, nI; do iDim = 1, nDim
                 Flux     = Flux_VZB(iDim,i,j,2,iBlock)
-                FluxGood = flux_good(6, Flux_VFD(iDim,i,j,nK+1,3))
+                FluxGood = flux_good(DiLevel, 3, Flux_VFD(iDim,i,j,nK+1,3))
                 if(  abs(Flux - FluxGood) > Tolerance ) &
                      write(*,*)'Error at max Z face: ', &
                      'iNode,DiLevel,i,j,iDim,Flux,Good=', &
@@ -1202,50 +1208,19 @@ contains
     end subroutine set_flux
 
     !========================================================================
-    real function flux_good(iSide, XyzCellFace)
+    real function flux_good(DiLevel, iDir, XyzCellFace)
 
-      integer, intent(in):: iSide
+      integer, intent(in):: DiLevel, iDir
       real,    intent(in):: XyzCellFace
 
-      ! Calculate the correct flux solution based on the 
-      ! grid/time level changes at the given face given by iDir,jDir,kDir.
+      ! Calculate the correct flux solution in direction iDir based on the 
+      ! grid/time level change DiLevel at the given face.
       ! The coordinate XyzCellFace is the correct answer on the coarse side.
       ! Zero is the correct value on the fine side. 
       ! FluxUnset is the correct value everywhere else.
 
       real:: CellFace
       !---------------------------------------------------------------------
-
-      select case(iSide)
-      case(1)
-         DiLevel  = DiLevelNei_IIIB(-1,0,0,iBlock)
-         iNodeNei =   iNodeNei_IIIB( 0,1,1,iBlock)
-      case(2)
-         DiLevel  = DiLevelNei_IIIB(+1,0,0,iBlock)
-         iNodeNei =   iNodeNei_IIIB( 3,1,1,iBlock)
-      case(3)
-         DiLevel  = DiLevelNei_IIIB(0,-1,0,iBlock)
-         iNodeNei =   iNodeNei_IIIB(1, 0,1,iBlock)
-      case(4)
-         DiLevel  = DiLevelNei_IIIB(0,+1,0,iBlock)
-         iNodeNei =   iNodeNei_IIIB(1, 3,1,iBlock)
-      case(5)
-         DiLevel  = DiLevelNei_IIIB(0,0,-1,iBlock)
-         iNodeNei =   iNodeNei_IIIB(1,1, 0,iBlock)
-      case(6)
-         DiLevel  = DiLevelNei_IIIB(0,0,+1,iBlock)
-         iNodeNei =   iNodeNei_IIIB(1,1, 3,iBlock)
-      case default
-         call CON_stop(NameSub//' invalid value for iSide')
-      end select
-
-      
-      ! Overwrite DiLevel=0 with time level difference if UseTimeLevel is true
-      if(UseTimeLevel .and. DiLevel == 0)then
-         DiLevel = iTimeLevel_A(iNode_B(iBlock)) - iTimeLevel_A(iNodeNei)
-         DiLevel = DiLevel/max(1, abs(DiLevel))
-      end if
-
       select case(DiLevel)
       case(0)
          flux_good = FluxUnset
@@ -1257,7 +1232,7 @@ contains
          flux_good = XyzCellFace
 
          ! Fix periodic coordinates. Flux = Coordinate*CellArea
-         if(iDim == (iSide + 1)/2)then
+         if(iDim == iDir)then
             CellFace = CellFace_DB(iDim,iBlock)
             if(abs(XyzCellFace/CellFace - DomainMin_D(iDim)) < Tolerance) &
                  flux_good = DomainMax_D(iDim)*CellFace
