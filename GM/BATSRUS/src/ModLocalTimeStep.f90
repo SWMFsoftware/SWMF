@@ -7,6 +7,7 @@ module ModLocalTimeStep
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
   use ModMain, ONLY: UseLocalTimeStep, UseLocalTimeStepNew, DtLimitDim
   use ModTimeStepControl, ONLY: UseMaxTimeStep
+  use BATL_lib, ONLY: UseTimeLevel
 
   implicit none
 
@@ -37,6 +38,7 @@ contains
        call read_var('UseSubcycling', UseLocalTimeStep)
        if(UseLocalTimeStep)then
           call read_var('UseMaxTimeStep',   UseMaxTimeStep)
+          UseTimeLevel = UseMaxTimeStep
           call read_var('DtLimitDim',       DtLimitDim)
        end if
 
@@ -154,7 +156,7 @@ contains
     do iStageLocal = 1, nStage*nTimeStage
 
        ! Number of grid levels involved in this stage
-       iLevelMin = min_tree_level(iStageLocal, UseTimeLevelIn=UseMaxTimeStep)
+       iLevelMin = min_tree_level(iStageLocal)
        if(DoTestMe)write(*,*)'iStageLocal, iLevelMin=', iStageLocal, iLevelMin
 
        !write(*,*)'!!! left TimeOld, Time=', TimeOld_B(13), Time_B(13)
@@ -302,7 +304,7 @@ contains
           call apply_flux_correction( &
                nVar, nFluid, State_VGB, Energy_GBI, &
                Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStageLocal/nStage, &
-               DoReschangeOnlyIn=.not.UseMaxTimeStep)
+               DoReschangeOnlyIn=.not.UseMaxTimeStep, DoTestIn=DoTestMe)
 
           if(DoTestMe)write(*,*) NameSub, &
                ' applied conservative flux, test var=',&
