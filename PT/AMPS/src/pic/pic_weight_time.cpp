@@ -211,7 +211,6 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight() {
 
 //====================================================
 //set particle's local time step
-
 void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   cInternalBoundaryConditionsDescriptor *descriptor;
   cInternalSphericalData *Sphere;
@@ -361,7 +360,7 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
             Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
             Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
             break;
-	        case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+          case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
             RotationBody=(cInternalRotationBodyData*)ptr->BoundaryElement;
             RotationBody->maxIntersectedNodeTimeStep[s]=blockTimeStep;
             break;
@@ -396,34 +395,19 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
       }
 
 #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-      double tGlobal=-1.0;
-      for (s=0;s<PIC::nTotalSpecies;s++) {
-        double t;
+      double t;
 
-        t=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->GetLocalTimeStep(s);
+      t=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->GetLocalTimeStep(0);
+      MPI_Gather(&t,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
-        MPI_Gather(&t,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+      if (PIC::ThisThread==0) {
+        for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]<t) t=buffer[thread];
 
-        if (PIC::ThisThread==0) {
-          for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]<t) t=buffer[thread];
-	  if (tGlobal<0.0) {
-	    tGlobal=t;
-	  }else{
-	    if (t<tGlobal) tGlobal=t; 
-	    //tGlobal is the min time step of all species.
-	  }
-	}
-	
+        printf("$PREFIX: Single Global Time Step = %e (file=%s,line=%i)\n",t,__FILE__,__LINE__);
       }
 
-      MPI_Bcast(&tGlobal,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
-      for (s=0;s<PIC::nTotalSpecies;s++) {
-	if (PIC::ThisThread==0) {
-	  printf("$PREFIX: Global Time Step (%s) = %e (file=%s,line=%i)\n",PIC::MolecularData::GetChemSymbol(s),tGlobal,__FILE__,__LINE__);
-        }
-        PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->SetLocalTimeStep(tGlobal,s);
-      } 
-
+      MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+      PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->SetLocalTimeStep(t,0);
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
       //do nothing
 #else
@@ -448,8 +432,7 @@ void PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(int specTarget,i
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   GlobalTimeStep[specTarget]=ProportionaltyCoefficient*GlobalTimeStep[specSource];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-  GlobalTimeStep[specTarget]=GlobalTimeStep[specSource];
-  //global time step is the same for all   
+  //global time step is the same for all  => no nothing 
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
 
   class cCopyTimeStepDistribution {
