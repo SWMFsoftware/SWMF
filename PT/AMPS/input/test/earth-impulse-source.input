@@ -1,0 +1,9 @@
+
+#include input/earth-impulse-source.input
+
+#General 
+  RequestedParticleBufferLength=150000
+  ReferenceInjectionParticleNumber=600
+
+  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+#endGeneral
