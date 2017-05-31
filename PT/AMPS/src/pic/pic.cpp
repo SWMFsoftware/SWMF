@@ -21,6 +21,7 @@ const int PIC::Sampling::ExternalSamplingLocalVariables::nMaxSamplingRoutines=12
 int PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter=0;
 PIC::Sampling::ExternalSamplingLocalVariables::fSamplingProcessor *PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor=NULL;
 PIC::Sampling::ExternalSamplingLocalVariables::fPrintOutputFile *PIC::Sampling::ExternalSamplingLocalVariables::PrintOutputFile=NULL;
+double PIC::Sampling::SampleTimeInterval=-1;
 
 int PIC::Sampling::minIterationNumberForDataOutput=0;
 bool *PIC::Sampling::SaveOutputDataFile=NULL;
@@ -35,14 +36,41 @@ int PIC::TimeStep() {
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
    double UserDefinedParticleProcessingTime=0.0;
    static double summIterationExecutionTime=0.0;
-
+   
    //Set the exit error code
    ExitErrorCode=_PIC__EXIT_CODE__LAST_FUNCTION__PIC_TimeStep_;
-
+   
    //update the local block list
    ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__UpdateBlockTable_;
    DomainBlockDecomposition::UpdateBlockTable();
+   
+   //init required sample length if the sample output mode is by time interval 
+   static bool SampleTimeInitialized=false;
+   
+   if (_PIC_SAMPLE_OUTPUT_MODE_==_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_ && !SampleTimeInitialized ){
+     if (_SIMULATION_TIME_STEP_MODE_ != _SINGLE_GLOBAL_TIME_STEP_) 
+       exit(__LINE__,__FILE__,"Error: the option is only implemented for single global time step");
+     
+     if (PIC::Sampling::SampleTimeInterval<0)
+       exit(__LINE__,__FILE__,"Error: the sample time interval is negative");
+     
+     if (PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0)<0){
+       exit(__LINE__,__FILE__,"Error: the global time step is negative");
+     }else{
+       
+       PIC::RequiredSampleLength=(long int)(PIC::Sampling::SampleTimeInterval/PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0)+0.5);
+       
+       if (PIC::RequiredSampleLength==0){
+         char msg[600];
+         sprintf(msg,"Error: the required sample length is 0, PIC::Sampling::SampleTimeInterval:%e, PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0):%e", PIC::Sampling::SampleTimeInterval,PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0));
+         exit(__LINE__,__FILE__,msg);
+       }
 
+       SampleTimeInitialized=true;
+       if (PIC::ThisThread==0) printf("PIC::RequiredSampleLength is set to %ld \n", PIC::RequiredSampleLength);
+     }  
+   }
+   
    //recover the sampling data from the sampling data restart file, print the TECPLOT files and quit
    if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_==_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_) {
      static bool RestartFileReadFlag=false;
