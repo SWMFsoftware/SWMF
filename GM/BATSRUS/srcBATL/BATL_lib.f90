@@ -55,7 +55,7 @@ module BATL_lib
   public:: iStatusNew_A, Refine_, Coarsen_, Unset_
   public:: iTree_IA, Status_,  Level_, MinLevel_, MaxLevel_, Block_, Proc_, &
        Coord0_, Coord1_, Coord2_, Coord3_, Used_
-  public:: nTimeLevel, iTimeLevel_A
+  public:: UseTimeLevel, nTimeLevel, iTimeLevel_A
   public:: IsNewDecomposition, IsNewTree
   public:: iAmrChange_B
   public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_

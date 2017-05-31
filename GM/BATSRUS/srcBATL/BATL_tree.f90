@@ -1904,11 +1904,10 @@ contains
 
   !==========================================================================
 
-  integer function min_tree_level(iStage, UseTimeLevelIn)
+  integer function min_tree_level(iStage)
 
     integer, intent(in):: iStage
-    logical, intent(in), optional:: UseTimeLevelIn
-
+ 
     ! If iStage-1 contains 2^n in its prime factorization
     ! then grid blocks with grid levels between 
     ! nLevelMax-n and nLevelMax are advanced in this stage.
@@ -1917,8 +1916,6 @@ contains
 
     integer:: i, n
     !------------------------------------------------------------------------
-    if(present(UseTimeLevelIn)) UseTimeLevel = UseTimeLevelIn
-
     if(iStage == 1)then
        ! All blocks are advanced in the first stage
        if(UseTimeLevel)then
