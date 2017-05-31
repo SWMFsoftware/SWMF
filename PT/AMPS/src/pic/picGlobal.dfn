@@ -306,6 +306,8 @@ at the end of each time step
 //integrator mode
 #define _PIC_MOVER_INTEGRATOR_MODE_ _PIC_MOVER_INTEGRATOR_MODE__DIRECT_
 
+//sample output mode
+#define _PIC_SAMPLE_OUTPUT_MODE_  _PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_
 
 //ideal MHD mode
 #define _PIC__IDEAL_MHD_MODE_ _PIC_MODE_ON_
