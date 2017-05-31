@@ -1338,6 +1338,43 @@ sub ReadGeneralBlock {
 	($s0,$s1,$s2)=split(' ',$InputLine,3);
 	ampsConfigLib::ChangeValueOfVariable("long int PIC::RequiredSampleLength",$s1,"pic/pic.cpp");
     }
+    
+    elsif ($InputLine eq "SAMPLEOUTPUTMODE") {
+	($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+	if ($InputLine eq "TIMEINTERVAL"){
+	    ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_","pic/picGlobal.dfn");	    
+	    chomp($line);
+	    $line=~s/[();]/ /g;
+	    $line=~s/(=)/ /;
+	    $line=~s/(=)/ /;
+
+	    my $s0;
+	    ($s0,$line)=split(' ',$line,2);
+	    ($s0,$line)=split(' ',$line,2);
+
+	    while (defined $line) {
+		($s0,$line)=split(' ',$line,2);
+		$s0=uc($s0);
+		print "test: $s0";
+		if ($s0 eq "SAMPLETIMEINTERVAL") {
+		    ($s0,$line)=split(' ',$line,2);
+		    ampsConfigLib::ChangeValueOfVariable("double PIC::Sampling::SampleTimeInterval",$s0,"pic/pic.cpp");
+		    $line=~s/(=)/ /;
+		}
+		else {
+		    die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+		}
+	    }
+	}
+	elsif ($InputLine eq "ITERATIONNUMBER") {
+	    ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_","pic/picGlobal.dfn");	    
+	}
+	else {
+	    die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+	}
+    }
+    
 
     elsif ($InputLine eq "BLOCKCELLS") {
       ($InputLine,$InputComment)=split('!',$line,2);
