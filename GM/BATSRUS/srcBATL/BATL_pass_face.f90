@@ -22,7 +22,7 @@ module BATL_pass_face
 contains
 
   subroutine message_pass_face(nVar, Flux_VXB, Flux_VYB, Flux_VZB, &
-       DoSubtractIn, DoResChangeOnlyIn, MinLevelSendIn, DoTestIn)
+       DoSubtractIn, DoResChangeOnlyIn, MinLevelIn, DoTestIn)
 
     use BATL_size, ONLY: MaxBlock, &
          nBlock, nI, nJ, nK, nIjk_D, &
@@ -55,7 +55,7 @@ contains
     logical, optional, intent(in) :: DoSubtractIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
     logical, optional, intent(in) :: DoTestIn
-    integer, optional, intent(in) :: MinLevelSendIn
+    integer, optional, intent(in) :: MinLevelIn
 
     ! Send sum of fine fluxes to coarse neighbors and 
     ! subtract it from the coarse flux if DoSubtractIn is true (default), or
@@ -64,12 +64,14 @@ contains
     ! DoResChangeOnlyIn determines if the flux correction is applied at
     !     resolution changes only. True is the default.
     !
-    ! MinLevelSendIn determines the lowest level of grid or time level
-    ! that should be sending face fluxes.
+    ! MinLevelIn determines the lowest level of grid or time level
+    ! that should be receiving face fluxes:
+    ! the coarsest level that has completed a full time step in the subcycling.
 
     ! Local variables
 
     logical :: DoSubtract, DoReschangeOnly
+    integer :: MinLevel, iLevel
 
     integer :: iDim, iDimSide, iRecvSide, iSign
     integer :: iSend, jSend, kSend, iSide, jSide, kSide
@@ -112,6 +114,12 @@ contains
     if(.not. DoReschangeOnly .and. .not. UseTimeLevel) call CON_stop( &
          NameSub//' called with DoResChangeOnly=F while UseTimeLevel=F')
 
+    MinLevel = 0
+    if(present(MinLevelIn)) MinLevel = MinLevelIn
+
+    if(DoTest)write(*,*) NameSub,' DoSubtract, DoResChangeOnly, MinLevel=', &
+         DoSubtract, DoResChangeOnly, MinLevel
+
     ! Set index ranges based on arguments
     call set_range
 
@@ -141,10 +149,15 @@ contains
 
        iNode = iNode_B(iBlock)
 
-       if(present(MinLevelSendIn) .and. .not. UseTimeLevel)then
-          ! Do not send or receive below MinLevelSendIn-1 grid level
-          if(iTree_IA(Level_,iNode) < MinLevelSendIn - 1) CYCLE
+       ! Set grid / time level of this block
+       if(DoReschangeOnly)then
+          iLevel = iTree_IA(Level_,iNode)
+       else
+          iLevel = iTimeLevel_A(iNode)
        end if
+
+       ! Do not send or receive fluxes below MinLevel grid level
+       if(iLevel < MinLevel) CYCLE
 
        do iDim = 1, nDim
 
@@ -184,17 +197,12 @@ contains
              if(DiLevel == 0)then
                 call do_equal
              elseif(DiLevel == 1)then
-                if(present(MinLevelSendIn))then
-                   ! Do not send below MinLevelSendIn
-                   if(UseTimeLevel)then
-                      if(iTimeLevel_A(iNode) < MinLevelSendIn) CYCLE
-                   else
-                      if(iTree_IA(Level_,iNode) < MinLevelSendIn) CYCLE
-                   end if
-                end if
+                ! If the fine side is at grid level <= MinLevel
+                ! then the receiving side is below MinLevel
+                if(DoResChangeOnly .and. iLevel <= MinLevel) CYCLE
                 call do_restrict
              elseif(DiLevel == -1 .and. nProc > 1)then
-                ! Set the buffer size for the coarse block
+                ! Set the buffer size for the coarse receiving block
                 call do_receive
              endif
 
@@ -397,14 +405,11 @@ contains
       iTimeLevel    = iTimeLevel_A(iNode)
       iTimeLevelNei = iTimeLevel_A(iNodeRecv)
 
-      ! Check if the time levels are different
+      ! If the time levels are equal, there is nothing to do
       if(iTimeLevel == iTimeLevelNei) RETURN
 
-      if(present(MinLevelSendIn))then
-         ! If both time levels are below MinLevel then there is nothing to do
-         if(iTimeLevel < MinLevelSendIn-1 .or. iTimeLevelNei < MinLevelSendIn-1) &
-              RETURN
-      end if
+      ! Return if the time level of the neighbor is below MinLevel
+      if(iTimeLevelNei < MinLevel)  RETURN
 
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
@@ -451,11 +456,18 @@ contains
       jSide = 0; if(jRatio==2) jSide = modulo(iTree_IA(Coord2_,iNode)-1, 2)
       kSide = 0; if(kRatio==2) kSide = modulo(iTree_IA(Coord3_,iNode)-1, 2)
 
+      ! + iSide may be unnecessary here !?
       iSend = (3*iDir + 3 + iSide)/2
       jSend = (3*jDir + 3 + jSide)/2
       kSend = (3*kDir + 3 + kSide)/2
 
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
+
+      ! Check if the receiving side is below MinLevel
+      if(.not.DoResChangeOnly)then
+         if(iTimeLevel_A(iNodeRecv) < MinLevel) RETURN
+      end if
+
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
@@ -583,10 +595,6 @@ contains
                iSend = (3*iDir + 3 + iSide)/2
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
-
-               if(UseTimeLevel .and. present(MinLevelSendIn))then
-                  if(iTree_IA(Level_,iNodeRecv) < MinLevelSendIn) CYCLE
-               end if
 
                iProcRecv  = iTree_IA(Proc_,iNodeRecv)
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
@@ -776,7 +784,7 @@ contains
   !============================================================================
 
   subroutine apply_flux_correction(nVar, nFluid, State_VGB, Energy_GBI,&
-       Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn, iStageIn)
+       Flux_VXB, Flux_VYB, Flux_VZB, DoResChangeOnlyIn, iStageIn, DoTestIn)
 
     ! Correct State_VGB based on the flux differences stored in
     ! Flux_VXB, Flux_VYB and Flux_VZB.
@@ -784,7 +792,7 @@ contains
     use BATL_size, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock, nBlock
     use BATL_tree, ONLY: nLevelMax, Unused_B, iNode_B, iTree_IA, Level_, &
-         UseTimeLevel, nTimeLevel, iTimeLevel_A
+         UseTimeLevel, nTimeLevel, iTimeLevel_A, min_tree_level
 
     integer, intent(in):: nVar, nFluid
     real, intent(inout):: &
@@ -797,49 +805,56 @@ contains
          Flux_VZB(nVar+nFluid,nI,nJ,2,MaxBlock)
     logical, intent(in), optional:: DoResChangeOnlyIn
     integer, intent(in), optional:: iStageIn
+    logical, intent(in), optional:: DoTestIn
 
-    integer:: iBlock, iNode, iLevel, iStage, MinLevelSend, MaxLevel
+    logical:: DoReschangeOnly, DoTest
+    integer:: iBlock, iNode, iLevel, MinLevel, MaxLevel
+
+    character(*), parameter:: NameSub = 'BATL_pass_face::apply_flux_correction'
     !-------------------------------------------------------------------------
-    ! Set the levels MinLevelSend .. nLevelMax which need to send fluxes
-    ! If iStageIn is a multiple of 2^p then the finest p levels should 
-    ! send fluxes. 
-    if(UseTimeLevel)then
-       MaxLevel = nTimeLevel
-    else
+    DoTest = .false.
+    if(present(DoTestIn)) DoTest = DoTestIn
+
+    DoResChangeOnly = .true.
+    if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
+    if(.not. DoReschangeOnly .and. .not. UseTimeLevel) call CON_stop( &
+         NameSub//' called with DoResChangeOnly=F while UseTimeLevel=F')
+
+    ! Set the levels MinLevel .. MaxLevel-1 which need to receive fluxes.
+    if(DoResChangeOnly)then
        MaxLevel = nLevelmax
+    else
+       MaxLevel = nTimeLevel
     end if
 
     if(present(iStageIn))then
-       MinLevelSend = MaxLevel + 1
-       iStage = iStageIn
-       do
-          ! Check if iStage is still an even number
-          if(modulo(iStage,2) == 1)EXIT
-          ! Remove 2 factor from iStage and add another level for sending flux
-          iStage = iStage/2
-          MinLevelSend = MinLevelSend - 1
-       end do
+       ! The flux correction is to be applied to the blocks that have
+       ! just completed their time step. These are the same as the blocks 
+       ! that need to message pass information in the next stage
+       MinLevel = min_tree_level(iStageIn+1)
+       if(DoTest)write(*,*) NameSub,': iStageIn=', iStageIn
     else
-       MinLevelSend = 1
+       MinLevel = 0
     end if
 
+    if(DoTest)write(*,*) NameSub, &
+         ': nVar, nFluid, DoResChangeOnly, MinLevel, MaxLevel=',&
+         nVar, nFluid, DoResChangeOnly, MinLevel, MaxLevel
+
     call message_pass_face(nVar+nFluid, Flux_VXB, Flux_VYB, Flux_VZB, &
-         DoResChangeOnlyIn=DoResChangeOnlyIn, MinLevelSendIn = MinLevelSend)
+         DoResChangeOnlyIn=DoResChangeOnlyIn, MinLevelIn = MinLevel, &
+         DoTestIn = DoTest)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        iNode = iNode_B(iBlock)
-       if(UseTimeLevel)then
-          iLevel = iTimeLevel_A(iNode)
-       else
+       if(DoResChangeOnly)then
           iLevel = iTree_IA(Level_,iNode)
+       else
+          iLevel = iTimeLevel_A(iNode)
        end if
-       ! highest level should never be corrected
-       if(iLevel == MaxLevel) CYCLE
-       if(present(iStageIn))then
-          ! Check if this block should receive any flux correction
-          if(iLevel < MinLevelSend - 1) CYCLE
-       end if
+       ! levels below MinLevel and highest level should never be corrected
+       if(iLevel < MinLevel .or. iLevel >= MaxLevel) CYCLE
 
        if(present(Energy_GBI))then
           call apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
