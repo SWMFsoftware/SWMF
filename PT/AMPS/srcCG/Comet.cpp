@@ -503,9 +503,9 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
+  LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
@@ -2003,15 +2003,15 @@ void Comet::StepOverTime() {
 	      if (PIC::ParticleBuffer::GetI(ptr)==_H2O_SPEC_) {
 		ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);		
 	  
-#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
-#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
-#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  LocalTimeStep=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ptr)); //   node->Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
-#else
-  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
-#endif
+                #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+                LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+                #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+                LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+                #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+                LocalTimeStep=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ptr)); //   node->Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+                #else
+                exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+                #endif //_SIMULATION_TIME_STEP_MODE_ 
 
 		Erot=PIC::IDF::LB::GetRotE(ParticleData);
 		Erot-=radiativeCoolingRate*LocalTimeStep;
@@ -2312,7 +2312,7 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-  ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   ParentTimeStep=node->block->GetLocalTimeStep(spec);
 #else
@@ -2349,7 +2349,7 @@ int Comet::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIni
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
      ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
+     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
      ProductTimeStep=node->block->GetLocalTimeStep(specProduct);
 #else
