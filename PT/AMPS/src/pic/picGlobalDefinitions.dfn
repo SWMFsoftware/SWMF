@@ -157,6 +157,10 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_             1
 #define _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__FUNSTION_CALCULATED_NORMAL_DIRECTION_  2
 
+//definitions of sampling output mode 
+#define _PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_	      0
+#define _PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_     1	 
+
 //definitions for the internal degrees of freedom model
 #define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__LB_   0
 #define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__QLB_  1
