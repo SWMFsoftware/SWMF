@@ -103,7 +103,8 @@ Note:
 5) The unit of current and electric field are not well defined so far.
 </command>
 
-<command name="COMPONENT">
+<command name="SATELLITERADIUS">
+  <parameter name="SatRadius" type="integer" default="2">
 #SATELLITERADIUS
 2                 SatRadius
 
@@ -112,12 +113,12 @@ SatRadius*dx, where dx is the cell size in x direction, this particle will be
 saved in the output file. 
 </command>
 
-<command name="COMPONENT">
+<command name="SMOOTH">
 	 <parameter name="DoSmoothAll" type="logical" default="T"/>
-	 <parameter name="nSmooth" type="integer" minimum="0" default="5"/>
-	 <parameter name="InnerSmoothFactor" type="real" minimum="0" maximum="1" default="0.5"/>
-         <parameter name="BoundarySmoothFactor" type="real" minimum="0" default="0.5"/>
-	 <parameter name="nBoundarySmooth" type="integer" minimum="0" default="5"/>
+	 <parameter name="nSmooth" type="integer" minimum="0" default="0"/>
+	 <parameter name="InnerSmoothFactor" type="real" minimum="0" maximum="1" default="1.0"/>
+         <parameter name="BoundarySmoothFactor" type="real" minimum="0" default="1.0"/>
+	 <parameter name="nBoundarySmooth" type="integer" minimum="0" default="1"/>
 
 #SMOOTHE
 T                     DoSmoothAll
@@ -148,6 +149,19 @@ The value of 'smooth' calculated from innerSmoothFactor and boundarySmoothFactor
 is limited to be smaller than 1 and larger than 0.
 
 Default is nSmooth=0, so no smoothing is done.
+</command>
+
+
+<command name="SUBCYCLING" alias="LOCALTIMESTEP">
+  <parameter name="doSubCycling" type="logical" default="F" />
+  
+#SUBCYCLING
+T               doSubCycling
+
+If doSubCycling is true, the time step for the update of each particle will
+be reset to make sure: dt <= T/8, where T is the gyroperiod with local magnetic
+field strength. 
+
 </command>
 
 </commandList>

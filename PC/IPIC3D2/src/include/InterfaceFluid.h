@@ -140,6 +140,8 @@ class InterfaceFluid
 
  protected:
   static const int x_=0, y_=1, z_=2;
+
+  bool doSubCycling;
   
   // Variables for IDL format output.
   static const int nDimMax=3;
@@ -2276,6 +2278,8 @@ class InterfaceFluid
   inline double getMhdNo2SiL()const{return(MhdNo2SiL);}
   // BATSRUS normalized unit -> PIC normalized unit;
   inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
+
+  bool getdoSubCycling()const{return doSubCycling;}
   
 };
 

@@ -1591,6 +1591,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   drSat = 2;
 
+  doSubCycling = false;
+
   nPartGhost = 1; 
   while(*param){
     get_next_command(param,&Command);
@@ -1940,6 +1942,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#USEOLDRESTART"){
       read_var(param,"doUseOldRestart", &doUseOldRestart);
+    }
+    else if( Command == "#SUBCYCLING"){
+      read_var(param,"doSubCycling", &doSubCycling);      
     }
     else if( Command == "#TEST"){
       read_var(param,"testFuncs", &testFuncs);
