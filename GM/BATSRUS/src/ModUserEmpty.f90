@@ -309,8 +309,13 @@ contains
     call stop_user(NameSub)
 
   end subroutine user_material_properties
-
-  !=====================================================================
+  !============================================================================
+  integer function user_block_type(iBlock)
+    integer, intent(in), optional:: iBlock
+    !--------------------------------------------------------------------------
+    user_block_type = 0
+  end function user_block_type
+  !============================================================================
   subroutine stop_user(NameSub)
     ! Note that this routine is not a user routine but just a routine
     ! which warns the user if they try to use an unimplemented user routine.

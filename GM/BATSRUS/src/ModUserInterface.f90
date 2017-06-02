@@ -228,6 +228,12 @@ module ModUserInterface
        real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
      end subroutine user_material_properties
+     !=====================================================================
+     integer function user_block_type(iBlock)
+       implicit none
+       integer, intent(in), optional:: iBlock
+     end function user_block_type
+
   end interface
 
 end module ModUserInterface
