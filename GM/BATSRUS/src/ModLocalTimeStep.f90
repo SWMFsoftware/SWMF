@@ -71,6 +71,7 @@ contains
     use ModBlockData,  ONLY: set_block_data
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
+    use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
@@ -310,6 +311,9 @@ contains
                ' applied conservative flux, test var=',&
                State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
        end if
+
+       ! Coarsen the axis cells if requested
+       if(UseCoarseAxis)call coarsen_axis_cells
 
        ! Update time for the stage
        TimeStage = TimeStage + DtMinSi/nStage
