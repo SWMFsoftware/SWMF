@@ -59,6 +59,7 @@ module ModLoadBalance
        iPicBlock            = -1, & ! Overlaped with PIC or not.
        iSteadyBlock         = -1, & ! Steady block or not.
        iHighOrderBlock      = -1, & ! Use high-order scheme or not. 
+       iUserTypeBlock       = -1, & ! User defined block types
        iSubCycleBlock       = -1    ! First bit of time level info
 
 contains
@@ -243,7 +244,7 @@ contains
          Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
-    use ModUserInterface ! user_action
+    use ModUserInterface ! user_action, user_block_type
 
     ! Load balance grid using space filling (Morton) ordering of blocks
     ! Coordinates are moved if DoMoveCoord is true.
@@ -254,7 +255,7 @@ contains
     logical, optional, intent(in) :: DoMoveCoord, DoMoveData, IsNewBlock
 
     ! Number of different block types
-    integer :: nType
+    integer :: nType, nTypeUser
 
     integer :: iError
     integer:: iNode, iBlock
@@ -351,6 +352,14 @@ contains
              iHighOrderBlock = iCrit
           end if
 
+          ! Set number of user defined block types (no iBlock argument)
+          nTypeUser = user_block_type()
+          if(nTypeUser > 0)then
+             ! User defined block types
+             iUserTypeBlock = 2*iCrit    ! first bit of the user types
+             iCrit = 2**nTypeUser*iCrit  ! max bit of the user types
+          end if
+          
           ! Maximum possible value is when all the bits are 1 from 0 to iCrit.
           iTypeMax = max(1, 2*iCrit - 1)
 
@@ -410,6 +419,11 @@ contains
                 ! High-order scheme block: some faces use high-order scheme
                 if(.not.IsLowOrderOnly_B(iBlock)) &
                      iType = iType + iHighOrderBlock
+             end if
+
+             if(nTypeUser > 0)then
+                ! Add user type bit(s)
+                iType = iType + iUserTypeBlock*user_block_type(iBlock)
              end if
 
              if(UseMaxTimeStep .and. DtMax > DtMin .and. DtMin > 0)then
