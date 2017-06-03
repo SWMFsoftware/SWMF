@@ -1352,21 +1352,21 @@ contains
        ! Update the boundary conditions for these blocks
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin) CYCLE
+          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin-1) CYCLE
           call set_boundary_block(iBlock, Time_B(iBlock))
        end do
 
        ! Messagepass for blocks between iLevelMin-1 and up.
        call timing_start('message_pass')
        call message_pass_cell(nVar, State_VGB, &
-            TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
+            TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin-1)
        call timing_stop('message_pass')
 
        ! Update the boundary conditions for Linear variable
        ! for periodic boundaries. Normally this is not really needed.
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin) CYCLE
+          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin-1) CYCLE
           call set_boundary_block(iBlock, Time_B(iBlock))
        end do
 
