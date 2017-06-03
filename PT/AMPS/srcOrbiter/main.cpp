@@ -3,6 +3,7 @@
 
 #include "pic.h"
 #include "constants.h"
+#include "Surface.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,24 +64,251 @@ namespace ParticleSurfaceInterationModel {
 }
 
 
+//namespace containing function used in the nightly test 
+namespace DragCoefficientTest {
+  int iTestCode=0;
+
+  const int TestCode__Adsorption=0;
+  const int TestCode__DiffuseReflection=1;
+  const int TestCode__MaxwellReflection=2; 
+  const int TestCode__QuasiSpecularReflection=3;
+  const int TestCode__SpecularReflection=4;
+  const int TestCode__CLL=5; 
+
+  const int nTotalTestCodes=6;
+
+  int ParticleSurfaceInteractionProcessor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+    int res=_PARTICLE_REJECTED_ON_THE_FACE_;
+
+    switch (iTestCode) {
+    case TestCode__Adsorption:
+      res=_PARTICLE_DELETED_ON_THE_FACE_;
+      break;
+
+    case TestCode__DiffuseReflection:
+      res=Surface::DiffuseReflection::Processor(ptr,xInit,vInit,TriangleCutFace,startNode); 
+      break; 
+
+    case TestCode__MaxwellReflection:
+      res=Surface::MaxwellReflection::Processor(ptr,xInit,vInit,TriangleCutFace,startNode);
+      break;
+
+    case TestCode__QuasiSpecularReflection: 
+   //   res=Surface::QuasiSpecularReflection::Processor(ptr,xInit,vInit,TriangleCutFace,startNode);
+
+      res=_PARTICLE_DELETED_ON_THE_FACE_;
+      break;
+
+    case TestCode__SpecularReflection:
+      res=Surface::SpecularReflection::Processor(ptr,xInit,vInit,TriangleCutFace,startNode);
+      break;
+
+    case TestCode__CLL:
+      //res=Surface::CLL::Processor(ptr,xInit,vInit,TriangleCutFace,startNode);
+
+      res=_PARTICLE_DELETED_ON_THE_FACE_;
+      break;
+
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is unknown"); 
+    } 
+
+    return res;
+  }
+
+  void RemoveAllParticles() {
+    int Ptr,nextPrt;
+
+    //reset particle lists in all cells
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    PIC::Mesh::cDataBlockAMR *block;
+    int i,j,k;
+
+    for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+      node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+
+      if ((block=node->block)!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) if ((Ptr=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)])!=-1) {
+        block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1; 
+
+        do {
+          nextPrt=PIC::ParticleBuffer::GetNext(Ptr);
+          PIC::ParticleBuffer::DeleteParticle(Ptr);
+  
+          Ptr=nextPrt;
+        }
+        while (Ptr!=-1); 
+
+      }
+    }
+  }
+
+  void ExecuteTest() {
+    int LastDataOutputFileNumber=-1,nTotalIterations=600;   
+    int initRequiredSampleLength=PIC::RequiredSampleLength; 
+
+    RemoveAllParticles(); 
+    PIC::DataOutputFileNumber=0;
+
+    //time step
+    for (long int niter=0;;niter++) {
+      static int LastDataOutputFileNumber=-1;
+
+      PIC::TimeStep();
+
+      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+        if (niter>nTotalIterations) break;
+
+        PIC::RequiredSampleLength*=2;
+        if (PIC::RequiredSampleLength>1000) PIC::RequiredSampleLength=1000;
+
+
+        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+      }
+
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        time_t TimeValue=time(NULL);
+        tm *ct=localtime(&TimeValue);
+
+        printf(": (%i/%i %i:%i:%i), Iteration: %ld  (current iTest=%i, current sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,iTestCode,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+    }
+  }
+
+    //output the particle statistics for the nightly tests
+    char fname[400];
+
+    switch (iTestCode) {
+    case TestCode__Adsorption:
+      sprintf(fname,"%s/test_Orbiter--Adsorption.dat",PIC::OutputDataFileDirectory);
+      
+      if (PIC::ThisThread==0) {
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--Adsorption.dat"); 
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--Adsorption.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--Adsorption.dat"); 
+      }
+
+      break;
+    case TestCode__DiffuseReflection:
+      sprintf(fname,"%s/test_Orbiter--DiffuseReflection.dat",PIC::OutputDataFileDirectory);
+
+      if (PIC::ThisThread==0) {
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat");
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--DiffuseReflection.dat");
+      }
+
+      break;
+    case TestCode__MaxwellReflection:
+      sprintf(fname,"%s/test_Orbiter--MaxwellReflection.dat",PIC::OutputDataFileDirectory);
+   
+      if (PIC::ThisThread==0) {
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--MaxwellReflection.dat");
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--MaxwellReflection.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--MaxwellReflection.dat");
+      }
+
+      break;
+    case TestCode__QuasiSpecularReflection:
+      sprintf(fname,"%s/test_Orbiter--QuasiSpecularReflection.dat",PIC::OutputDataFileDirectory);
+
+      if (PIC::ThisThread==0) { 
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--QuasiSpecularReflection.dat");
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--QuasiSpecularReflection.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--QuasiSpecularReflection.dat");
+      }
+
+      break;
+    case TestCode__SpecularReflection:
+      sprintf(fname,"%s/test_Orbiter--SpecularReflection.dat",PIC::OutputDataFileDirectory);
+
+      if (PIC::ThisThread==0) {
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--SpecularReflection.dat");
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--SpecularReflection.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--SpecularReflection.dat");
+      }
+
+      break;
+    case TestCode__CLL:
+      sprintf(fname,"%s/test_Orbiter--CLL.dat",PIC::OutputDataFileDirectory);
+ 
+      if (PIC::ThisThread==0) {
+        system("mv PT/plots/amps.cut-cell.surface-data.out=2.dat PT/plots/amps.cut-cell.surface-data.out=2--CLL.dat");
+        system("mv PT/plots/pic.H2O.s=0.out=2.dat PT/plots/pic.H2O.s=0.out=2--CLL.dat");
+        system("mv PT/plots/test_Orbiter_Drag_Coefficient.dat PT/plots/test_Orbiter_Drag_Coefficient--CLL.dat");
+      }
+
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is unknown");
+    }
+
+    //output the run statistics
+    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+
+    //reset the required sample length
+    PIC::RequiredSampleLength=initRequiredSampleLength;
+  }
+
+
+  void ExecuteAllTests() {
+
+    //set the test conditions 
+    Surface::Temeprature::Isothremal::Temp=300.0;
+    Surface::MaxwellReflection::AccommodationCoefficient[0]=0.5;
+
+    if (PIC::nTotalSpecies!=1) exit(__LINE__,__FILE__,"Error: the test is set to be exdcuted only with a single model speceis");
+
+
+    //execute the tests
+    for (iTestCode=0;iTestCode<nTotalTestCodes;iTestCode++) ExecuteTest();  
+
+    MPI_Finalize();
+    cout << "End of the run:" << PIC::nTotalSpecies << endl;
+
+    exit(EXIT_SUCCESS); 
+  }
+}  
+
 
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
-  double dt,c,vInitUnchanged[3],LocalParticleWeight,RateFactor,mass;
+  double dt,c,vInitUnchanged[3],ParticleWeight,RateFactor,mass;
   int code,spec;
 
-  memcpy(vInitUnchanged,vInit,3*sizeof(double));
-  code=_ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode);
-
-  //sample the energy and momentum transfer rates
   spec=PIC::ParticleBuffer::GetI(ptr);
   mass=PIC::MolecularData::GetMass(spec);
+  ParticleWeight=startNode->block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr); 
 
-  LocalParticleWeight=startNode->block->GetLocalParticleWeight(spec);
-  LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+  memcpy(vInitUnchanged,vInit,3*sizeof(double));
 
+  //process particle/surface interaction event
+  code=_ORBITER__PARTICLE_SURFACE_INTERACTION_PROCESSOR_(ptr,xInit,vInit,TriangleCutFace,startNode);
+
+  //check for adsorption of the particle on teh face 
+  if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+    if (_ORBITER_ADSORPTION_MODEL__MODE_ == _ORBITER_ADSORPTION_MODEL__MODE__OFF_) {
+      exit(__LINE__,__FILE__,"Error: with the surrent settings only refrection on the surface is permitted. Change the model settings");
+    }
+
+    //the particle has been adsorbed on the surface
+    vInit[0]=0.0,vInit[1]=0.0,vInit[2]=0.0;  //this is needed to calculating of the momentum transfer to the surface
+
+    //update the adsorption flux
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    double *p=TriangleCutFace->UserData.AdsorptionFlux;
+
+    #pragma omp atomic
+    p[spec]+=ParticleWeight;
+
+    #else
+    TriangleCutFace->UserData.AdsorptionFlux[spec]+=ParticleWeight;
+    #endif
+  }
+
+
+  //sample the energy and momentum transfer rates
   dt=startNode->block->GetLocalTimeStep(spec);
-  RateFactor=mass*LocalParticleWeight/dt; 
+  RateFactor=mass*ParticleWeight/dt; 
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   double *xx,dp,de; 
@@ -101,7 +329,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   xx[spec]+=dp/TriangleCutFace->SurfaceArea;
 
   de=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
-      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
+      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor/1.0;
   xx=TriangleCutFace->UserData.EnergyTransferRate;
   xx[spec]+=de/TriangleCutFace->SurfaceArea;
 
@@ -138,7 +366,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
   //dE
   de=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
-      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor;
+      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor/1.0;
   xx=TriangleCutFace->UserData.EnergyTransferRate; 
   de/=TriangleCutFace->SurfaceArea; 
 
@@ -151,7 +379,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 
-  return _PARTICLE_REJECTED_ON_THE_FACE_;
+  return code;
 }
 
 
@@ -462,7 +690,14 @@ int main(int argc,char **argv) {
   //in the test-mode run 100 iterations and than output the particle data statistics
   int nIterations,nTotalIterations=100000001;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=_PIC_NIGHTLY_TEST__TOTAL_ITERATION_NUMBER_;
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+
+    if (_ORBITER_EXECUTE_NEW_TEST_==_PIC_MODE_ON_) {
+      DragCoefficientTest::ExecuteAllTests();
+    }
+
+    nTotalIterations=_PIC_NIGHTLY_TEST__TOTAL_ITERATION_NUMBER_;   
+  } 
 
   //time step
   for (long int niter=0;niter<nTotalIterations;niter++) {
