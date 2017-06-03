@@ -1908,11 +1908,12 @@ contains
 
     integer, intent(in):: iStage
  
-    ! If iStage-1 contains 2^n in its prime factorization
-    ! then grid blocks with grid levels between 
-    ! nLevelMax-n and nLevelMax are advanced in this stage.
-    ! But communication is needed at one lower level too
-    ! to get the ghost cells at resolution changes.
+    ! Usage: in the iStage stage of the subcycling scheme the 
+    ! grid blocks at or above min_tree_level(iStage) are advanced.
+
+    ! Theory: if iStage-1 contains 2^n in its prime factorization
+    ! then grid blocks with grid/time levels equal or above Maxlevel-n
+    ! are advanced.
 
     integer:: i, n
     !------------------------------------------------------------------------
@@ -1939,7 +1940,7 @@ contains
     if(UseTimeLevel)then
        min_tree_level = max(0, nTimeLevel - n)
     else
-       min_tree_level = max(nLevelMin, nLevelMax - 1 - n)
+       min_tree_level = max(nLevelMin, nLevelMax - n)
     end if
 
   end function min_tree_level
