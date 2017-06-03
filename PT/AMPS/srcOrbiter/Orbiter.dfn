@@ -19,3 +19,6 @@
 
 //reduce the mesh resolution for the nightly tests
 #define _ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_ _PIC_MODE_ON_
+
+//TEMPORARY: execute new tests
+#define _ORBITER_EXECUTE_NEW_TEST_ _PIC_MODE_OFF_
