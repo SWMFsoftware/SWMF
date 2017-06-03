@@ -4818,7 +4818,6 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
   }else if(var.substr(0,1)=="Z"){
     double z0=0;
     if(!(col->getdoRotate())) z0 = col->getFluidStartZ();
-     z0 = col->getFluidStartZ();    
     value = col->getnDim()==2?
       0:(grid->getZN(k) + z0)*No2OutL;	  
   }else{

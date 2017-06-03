@@ -1364,7 +1364,7 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     outFile<<"#PLOTRANGE\n";      
     for(int i=0; i<col->getnDim();i++){
       double x0=0;
-      if(doOutputParticles_I[iPlot] || isSat_I[iPlot]){
+      if((doOutputParticles_I[iPlot] || isSat_I[iPlot]) && !col->getdoRotate()){
 	// For field output, plotMin_ID is already in MHD coordinates. 
 	
 	if(i==0) x0 = col->getFluidStartX();
@@ -1777,12 +1777,21 @@ void c_Solver:: find_output_list(int iPlot){
 
     // Change plotRange into MHD coordinates. The field outputs are also
     // in MHD coordinates, see EMfields3D.cpp:write_plot_field().
-    plotMin_ID[iPlot][x_] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
-    plotMax_ID[iPlot][x_] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
-    plotMin_ID[iPlot][y_] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
-    plotMax_ID[iPlot][y_] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
-    plotMin_ID[iPlot][z_] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
-    plotMax_ID[iPlot][z_] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+    if(col->getdoRotate()){
+      plotMin_ID[iPlot][x_] = xMinG_I[0] - 0.4*col->getDx()*plotDx;
+      plotMax_ID[iPlot][x_] = xMaxG_I[0] + 0.4*col->getDx()*plotDx;
+      plotMin_ID[iPlot][y_] = xMinG_I[1] - 0.4*col->getDy()*plotDx;
+      plotMax_ID[iPlot][y_] = xMaxG_I[1] + 0.4*col->getDy()*plotDx;
+      plotMin_ID[iPlot][z_] = xMinG_I[2] - 0.4*col->getDz()*plotDx;
+      plotMax_ID[iPlot][z_] = xMaxG_I[2] + 0.4*col->getDz()*plotDx;
+    }else{
+      plotMin_ID[iPlot][x_] = xMinG_I[0] - 0.4*col->getDx()*plotDx + col->getFluidStartX();
+      plotMax_ID[iPlot][x_] = xMaxG_I[0] + 0.4*col->getDx()*plotDx + col->getFluidStartX();
+      plotMin_ID[iPlot][y_] = xMinG_I[1] - 0.4*col->getDy()*plotDx + col->getFluidStartY();
+      plotMax_ID[iPlot][y_] = xMaxG_I[1] + 0.4*col->getDy()*plotDx + col->getFluidStartY();
+      plotMin_ID[iPlot][z_] = xMinG_I[2] - 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+      plotMax_ID[iPlot][z_] = xMaxG_I[2] + 0.4*col->getDz()*plotDx + col->getFluidStartZ();
+    }
       
     // Correct PlotRange based on plotIdxLoc-----end
   }    
