@@ -8,7 +8,7 @@ test_<APP>_compile:
 	@echo "test_<APP>_compile..." > test_<APP>$(TEST<APP>-REF).diff
 	./Config.pl -application=<APPPATH> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(PTDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
 	rm -rf srcTemp
-	@($(MAKE) amps)
+	@($(MAKE) -j amps)
 	@echo "test_<APP>_compile... done" >> test_<APP>$(TEST<APP>-REF).diff	
 
 test_<APP>_rundir:
