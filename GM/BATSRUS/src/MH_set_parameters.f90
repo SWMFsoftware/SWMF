@@ -1284,10 +1284,14 @@ subroutine MH_set_parameters(TypeAction)
            DoConserveFlux   = .false. 
         endif
 
-        if(UseHighResChange) then
-           UseTvdReschange = .false. 
-           UseAccurateResChange = .false. 
-        endif
+        ! UseTvdResChange and UseAccurateResChange should always be .false.
+        UseTvdResChange      = .false.
+        UseAccurateResChange = .false.
+
+        if(.not.UseHighResChange) then
+           nOrderProlong  = 2
+           DoConserveFlux = .true.
+        end if
 
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
