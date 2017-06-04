@@ -5,13 +5,14 @@ module ModIonElectron
   use ModVarIndexes
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY:  UseUserSource, &
-       BlkTest, ProcTest
+       BlkTest, ProcTest, iTest,jTest,kTest, VarTest
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: nIonFluid, &
-       iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, ChargePerMass_I
+       iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+       ChargePerMass_I, MassIon_I, ChargeIon_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
 
   implicit none
@@ -57,20 +58,26 @@ contains
     integer, intent(in)          :: iBlock
 
     real:: State_V(nVar), b_D(3)
-    integer:: i, j, k
+    integer:: i, j, k, iVar
     integer:: iIon, iRhoUx, iRhoUy, iRhoUz
     real:: ChargePerMass
+
+
     logical :: DoTest, DoTestMe, DotestCell
     character(len=*), parameter :: NameSub = 'ion_electron_source_impl'
     !-----------------------------------------------------------------------
-    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
+       call set_oktest(NameSub,DoTest,DoTestMe)
     else
        DoTest = .false.; DoTestMe = .false.
     end if
     DoTestCell = .false.
+
+    if(UsePointImplicit .and. .not. IsPointImplSource) then
+       if (DoTestMe) write(*,*) NameSub, ' initial return'
+       RETURN
+    end if
 
     ! Add user defined point implicit source terms here
     ! Explicit user sources are added in calc_sources
@@ -78,9 +85,15 @@ contains
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
     ! (needed for the user source terms) 
-    if(IsPointImplPerturbed .and. IsAnalyticJacobian) RETURN
+    if(IsPointImplPerturbed .and. IsAnalyticJacobian) then
+       if (DoTestMe) write(*,*) &
+            NameSub, ' no evaluation in the numerical Jacobian calculation'
+       RETURN
+    end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        State_V = State_VGB(:,i,j,k,iBlock)
@@ -88,24 +101,41 @@ contains
        b_D = State_V(Bx_:Bz_)
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
+       if (DoTestCell) then
+          write(*,*) NameSub,' initial Source(testvar) =', &
+               Source_VC(VarTest,i,j,k)
+       end if
+
        ! d(rhou)/dt += q/m*(rho*E + rhou x B)
        Source_VC(iRhoUxIon_I,i,j,k) = Source_VC(iRhoUxIon_I,i,j,k) &
-            + ChargePerMass_I *                &
-            ( State_V(iRhoIon_I)*State_V(Ex_)  &
-            + State_V(iRhoUyIon_I)*b_D(z_)     &
+            + ChargePerMass_I *               &
+            ( State_V(iRhoIon_I)*State_V(Ex_) &
+            + State_V(iRhoUyIon_I)*b_D(z_)    &
             - State_V(iRhoUzIon_I)*b_D(y_) )
 
        Source_VC(iRhoUyIon_I,i,j,k) = Source_VC(iRhoUyIon_I,i,j,k) &
-            + ChargePerMass_I *                &
-            ( State_V(iRhoIon_I)*State_V(Ey_)  &
-            + State_V(iRhoUzIon_I)*b_D(x_)     &
+            + ChargePerMass_I *               &
+            ( State_V(iRhoIon_I)*State_V(Ey_) &
+            + State_V(iRhoUzIon_I)*b_D(x_)    &
             - State_V(iRhoUxIon_I)*b_D(z_) )
 
        Source_VC(iRhoUzIon_I,i,j,k) = Source_VC(iRhoUzIon_I,i,j,k) &
-            + ChargePerMass_I *                &
-            ( State_V(iRhoIon_I)*State_V(Ez_)  &
-            + State_V(iRhoUxIon_I)*b_D(y_)     &
+            + ChargePerMass_I *               &
+            ( State_V(iRhoIon_I)*State_V(Ez_) &
+            + State_V(iRhoUxIon_I)*b_D(y_)    &
             - State_V(iRhoUyIon_I)*b_D(x_) )
+
+       if (DoTestCell) then
+          do iIon = 1, nIonFluid
+          write(*,*) NameSub,' iIon   =', iIon
+          write(*,*) NameSub,' uIon_D =', &
+               State_V(iRhoUxIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
+               State_V(iRhoUyIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
+               State_V(iRhoUzIon_I(iIOn))/State_V(iRhoIon_I(iIon))
+          write(*,*) NameSub,' E_D    =', State_V(Ex_:Ez_)
+          write(*,*) NameSub,' b_D    =', b_D
+       end do
+    end if
 
        ! dE/dt += -c^2*J = -c^2*sum(q/m*rho*u)
        Source_VC(Ex_,i,j,k) = &
@@ -149,6 +179,16 @@ contains
                   + ChargePerMass*b_D(y_)
              DsDu_VVC(iRhoUz,iRhoUy,i,j,k) = DsDu_VVC(iRhoUz,iRhoUy,i,j,k) &
                   - ChargePerMass*b_D(x_)
+          end do
+       end if
+
+       if (DoTestCell) then
+          write(*,*) NameSub, ' ChargePerMass_I, net charge =',&
+               ChargePerMass_I, sum(ChargePerMass_I*State_V(iRhoIon_I))
+          write(*,*) NameSub, ' Source_VC='
+          do iVar = 1, nVar
+             write(*,'(a,100es15.6)') &
+                  NameVar_V(iVar), Source_VC(iVar,iTest,jTest,kTest)
           end do
        end if
 
