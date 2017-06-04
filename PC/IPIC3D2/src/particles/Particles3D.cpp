@@ -778,8 +778,10 @@ void Particles3D::mover_PC_AoS(Field * EMf)
     //const double dto2 = .5 * dt, qdto2mc = qom * dto2 / c;
 #pragma omp for schedule(static)
 
-    bool doSubCycling;
+    bool doSubCycling=false;
+#ifdef BATSRUS
     doSubCycling = col->getdoSubCycling();
+#endif
     int sub_cycles;
     double dto2_sub, qdto2mc_sub,dt_sub;
     double subcycle_sum = 0;
