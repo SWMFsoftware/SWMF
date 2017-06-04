@@ -2863,7 +2863,7 @@ subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
   ! Did the ray cross the periodic Phi boundary?
   if(Phi_ > 1)then
      if(IsPeriodicCoord_D(Phi_))then
-        PhiSize = dGen_D(Phi_)*nIjk_D(Phi_)
+        PhiSize = 2*dGen_D(Phi_)*nIjk_D(Phi_)
         if    (Gen_D(Phi_) - GenRef_D(Phi_) > PhiSize)then
            ! Crossed from small phi direction, make Gen_D negative
            ! E.g. PhiRef=5deg Phi=355deg -> -5deg
