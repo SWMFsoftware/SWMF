@@ -1287,9 +1287,9 @@ contains
        bCrossArea_D = cross_product(AreaX, AreaY, AreaZ, State_V(Bx_:Bz_))
 
        if(DoTestCell)then
-          write(*,*)'bCrossArea_D=',bCrossArea_D
-          write(*,*)'AreaX, AreaY, AreaZ=',AreaX, AreaY, AreaZ
-          write(*,*)'State_V(Bx_:Bz_)=',State_V(Bx_:Bz_)
+          write(*,'(a,3es13.5)')'bCrossArea_D        =',bCrossArea_D
+          write(*,'(a,3es13.5)')'AreaX, AreaY, AreaZ =',AreaX, AreaY, AreaZ
+          write(*,'(a,3es13.5)')'State_V(Bx_:Bz_)    =',State_V(Bx_:Bz_)
        end if
     end if
 
@@ -2242,7 +2242,7 @@ contains
     subroutine write_test_info
       integer :: iVar
       !--------------------------------------------------------------------
-      write(*,*)'Hat state for dir=',iDimFace,&
+      write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
       write(*,*)'Un =',0.5*(StateLeft_V(U_+iDimFace)+StateRight_V(U_+iDimFace))
@@ -2254,10 +2254,10 @@ contains
               sum( (0.5*(StateLeft_V(Bx_:Bz_) + StateRight_V(Bx_:Bz_)) &
               + (/B0x,B0y,B0z/))**2)
       end if
-      write(*,*)'Fluxes for dir=',iDimFace,&
+      write(*,'(1x,4(a,i4))') 'Fluxes for dir    =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
-      write(*,*)'Flux*Area for dir=',iDimFace,&
+      write(*,'(1x,4(a,i4),a,es13.5)') 'Flux*Area for dir =',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace,' Area=',Area
 
       write(*,*)'Eigenvalue_maxabs=', Cmax
@@ -2879,15 +2879,15 @@ contains
       Flux_V(HypE_) = C2light*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
       if(DoTestCell)then
-         write(*,*)'ChargeDens_I    =', &
+         write(*,'(a,3es13.5)')'ChargeDens_I    =', &
               ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
-         write(*,*)'Normal_D        =', Normal_D
-         write(*,*)'Bx,By,Bz        =', Bx,By,Bz
-         write(*,*)'Ex,Ey,Ez        =', Ex,Ey,Ez
-         write(*,*)'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
-         write(*,*)'Flux_V(Ex_:Ez_) =', Flux_V(Ex_:Ez_)
-         write(*,*)'State_V(HypE_)  =', State_V(HypE_)
-         write(*,*)'Flux_V(HypE_)   =', Flux_V(HypE_)
+         write(*,'(a,3es13.5)')'Normal_D        =', Normal_D
+         write(*,'(a,3es13.5)')'Bx,By,Bz        =', Bx,By,Bz
+         write(*,'(a,3es13.5)')'Ex,Ey,Ez        =', Ex,Ey,Ez
+         write(*,'(a,3es13.5)')'Flux_V(Bx_:Bz_) =', Flux_V(Bx_:Bz_)
+         write(*,'(a,3es13.5)')'Flux_V(Ex_:Ez_) =', Flux_V(Ex_:Ez_)
+         write(*,'(a,3es13.5)')'State_V(HypE_)  =', State_V(HypE_)
+         write(*,'(a,3es13.5)')'Flux_V(HypE_)   =', Flux_V(HypE_)
       end if
 
     end subroutine get_electro_magnetic_flux
@@ -3183,6 +3183,7 @@ contains
          GammaWave, UseAlfvenWaves
     use ModMain, ONLY: time_accurate, Climit
     use ModPhysics, ONLY: Clight
+    use ModAdvance, ONLY: State_VGB
 
     real,    intent(in) :: State_V(nVar)
     real,    intent(in) :: B0x, B0y, B0z
@@ -3241,6 +3242,12 @@ contains
        ! all the fluid wave speeds. Only Lax-Friedrichs scheme can be
        ! used because the left/right/max wave speeds are the same = Clight.
        if(time_accurate .and. maxval(Cmax_I(1:nIonFluid)) > Clight)then
+          write(*,'(a,10es15.6)')'Xyz_DGB =', &
+               Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
+          write(*,'(a,10es15.6)')'Rho     =', &
+               State_VGB(iRho_I,iFace,jFace,kFace,iBLockFace)
+          write(*,'(a,10es15.6)')'P       =', &
+               State_VGB(iP_I,iFace,jFace,kFace,iBLockFace)
           write(*,*)'cLight                      =',cLight
           write(*,*)'maxval(Cmax_I(1:nIonFluid)) =',maxval(Cmax_I(1:nIonFluid))
           write(*,*)'Cmax_I(1:nIonFluid)         =',Cmax_I(1:nIonFluid)
@@ -3682,7 +3689,10 @@ contains
       character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed'
       !------------------------------------------------------------------------
 
-      if(DoTestCell)write(*,*) NameSub,' State_V=',State_V(iRho:iP)
+      if(DoTestCell) then 
+         write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
+         write(*,'(1x,a,a,30es13.5)') NameSub,' State_V  =',State_V(iRho:iP)
+      end if
 
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
@@ -3744,7 +3754,7 @@ contains
       if(DoTestCell)then
          write(*,*)NameSub,' Un     =',Un
          write(*,*)NameSub,' Csound =',Sound
-         if(present(Cmax_I))write(*,*)NameSub,' Cmax=',Cmax_I(iFluid)
+         if(present(Cmax_I))write(*,*)NameSub,' Cmax   =',Cmax_I(iFluid)
       end if
 
     end subroutine get_hd_speed
