@@ -110,7 +110,7 @@ Compile=
 >>>@echo "test_SC-Cont_compile..." > test_SC-Cont$(TESTSC-Cont-REF).diff
 >>>./Config.pl -application=test/sc-contamination -spice-path=nospice -spice-kernels=nospice -model-data-path=$(PTDIR)/data/input/SC-Cont  -amps-test=on $(TESTSC-ContKEYS)
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_SC-Cont_compile... done" >> test_SC-Cont$(TESTSC-Cont-REF).diff
 
 Run=
@@ -221,7 +221,7 @@ Compile=
 >>>@echo "test_CCMC_compile..." > test_CCMC.diff
 >>>./Config.pl -application=test/ccmc-test -spice-path=nospice -spice-kernels=nospice -model-data-path=$(PTDIR)/input  -amps-test=on $(TESTCCMCKEYS) 
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_CCMC_compile... done" >> test_CCMC.diff
 <#
 -------------------------------------------------------------------------------
@@ -736,7 +736,7 @@ Compile=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile..." > test_CCMC-Individual_Trajectories--KAMELEON.diff
 >>>./Config.pl -application=CCMC-Individual_Trajectories--kameleon -cplr-data-path=. -model-data-path=.  -boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -link-option=-lc++  -amps-test=on -cplr-data-path=./ -model-data-path=./
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile... done" >> test_CCMC-Individual_Trajectories--KAMELEON.diff
 
 Run=
@@ -769,7 +769,7 @@ Compile=
 >>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>./Config.pl -application=test/Mover-guiding-center -cplr-data-path=${TESTMover-guiding-centerKEYS} -model-data-path=${TESTMover-guiding-centerKEYS}   -link-option=-lc++  -amps-test=on 
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-guiding-center_compile... done" >> test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 
 Check=
@@ -795,7 +795,7 @@ Compile=
 >>>@echo "test_Mover-guiding-center_compile..." > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>./Config.pl -application=test/Mover-guiding-center -cplr-data-path=${TESTMover-guiding-centerKEYS} -model-data-path=${TESTMover-guiding-centerKEYS}   -amps-test=on
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-guiding-center_compile... done" >> test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 
 Check=
@@ -818,7 +818,7 @@ Compile=
 >>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>./Config.pl -application=test/Mover-Boris -cplr-data-path=${TESTMover-BorisKEYS} -model-data-path=${TESTMover-BorisKEYS} -link-option=-lc++ -amps-test=on
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Boris_compile... done" >> test_Mover-Boris${TESTMover-Boris-REF}.diff
 
 Check=
@@ -845,7 +845,7 @@ Compile=
 >>>@echo "test_Mover-Boris_compile..." > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>./Config.pl -application=test/Mover-Boris -cplr-data-path=${TESTMover-BorisKEYS} -model-data-path=${TESTMover-BorisKEYS}  -amps-test=on
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Boris_compile... done" >> test_Mover-Boris${TESTMover-Boris-REF}.diff
 
 Check=
@@ -868,7 +868,7 @@ Compile=
 >>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>./Config.pl -application=test/Mover-Boris-relativistic -cplr-data-path=${TESTMover-Boris-relativisticKEYS} -model-data-path=${TESTMover-Boris-relativisticKEYS}  -link-option=-lc++  -amps-test=on
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Boris-relativistic_compile... done" >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 
 Check=
@@ -895,7 +895,7 @@ Compile=
 >>>@echo "test_Mover-Boris-relativistic_compile..." > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>./Config.pl -application=test/Mover-Boris-relativistic -cplr-data-path=${TESTMover-Boris-relativisticKEYS} -model-data-path=${TESTMover-Boris-relativisticKEYS}   -amps-test=on
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Boris-relativistic_compile... done" >> test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 
 Check=
@@ -1111,7 +1111,7 @@ Compile=
 >>>./Config.pl -application=test/Mars-Hot-Oxygen -spice-path=nospice -spice-kernels=nospice  -amps-test=on ${TESTMars-Hot-OxygenKEYS}
 >>>cd srcMars; cvs update -r Mars_HotO_DRofO2p_PERMAX
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mars-Hot-Oxygen_compile... done" >> test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
 Check=
@@ -1131,7 +1131,7 @@ Compile=
 >>>./Config.pl -application=test/Mars-Hot-Carbon -spice-path=nospice -spice-kernels=nospice  -amps-test=on -model-data-path=/Volumes/Data01/AMPS_DATA/MARS 
 >>>cd srcMars; cvs update -r HotC_DRofCOp_EL
 >>>rm -rf srcTemp
->>>@($(MAKE) amps)
+>>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mars-Hot-Carbon_compile... done" >> test_Mars-Hot-Carbon.diff
 
 Run=
