@@ -15,7 +15,7 @@ OutputDirectory=out
 
 
 DebuggerMode=on !on,off
-ForceRepeatableSimulationPath=off  ! on,off 
+ForceRepeatableSimulationPath=on  ! on,off 
 
 
 makefile  SOURCES=src
@@ -104,7 +104,7 @@ ParticleWeightCorrectionMode=on
  define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
 
   !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
-  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
 
   !user-defined MPI exchenge model data procedure 
