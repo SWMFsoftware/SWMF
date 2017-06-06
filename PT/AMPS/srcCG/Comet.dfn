@@ -52,3 +52,6 @@
 
 //add user defined active region
 #define _COMET_DUST_USE_ACTIVE_REGION_  _PIC_MODE_OFF_
+
+//read gas drag force from BATL
+#define _COMET_READ_DRAG_FORCE_FROM_BATL_  _PIC_MODE_OFF_
