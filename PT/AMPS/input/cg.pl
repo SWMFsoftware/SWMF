@@ -432,7 +432,7 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_3DGRAVITY__MODE_","_3DGRAVITY__MODE__OFF_","main/Comet.dfn");
       }
   }
-   elsif ($InputLine eq "ACTIVEREGION") {
+  elsif ($InputLine eq "ACTIVEREGION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
       if ($InputLine eq "ON") {
@@ -440,6 +440,16 @@ while ($line=<InputFile>) {
       }
       elsif ($InputLine eq "OFF") {
 	  ampsConfigLib::RedefineMacro("_COMET_DUST_USE_ACTIVE_REGION_","_PIC_MODE_OFF_","main/Comet.dfn");
+      }
+  }
+  elsif ($InputLine eq "READDRAGFORCEFROMBATL") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_COMET_READ_DRAG_FORCE_FROM_BATL_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_COMET_READ_DRAG_FORCE_FROM_BATL_","_PIC_MODE_OFF_","main/Comet.dfn");
       }
   }
   elsif ($InputLine eq "SAVEOUTPUTBINARY") {
