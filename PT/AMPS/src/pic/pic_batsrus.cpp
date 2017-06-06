@@ -323,7 +323,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
         }
 
         //the order of the state vector: number density, temperature
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS];
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=(State[rhoBATSRUS2AMPS]>0.0)? State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS] : 0.0;
         *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=(State[rhoBATSRUS2AMPS]>0.0) ? PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]*State[pBATSRUS2AMPS]/(Kbol*State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]) : 0.0;
 
         //get pressure
