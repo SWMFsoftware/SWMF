@@ -262,63 +262,85 @@ namespace Comet {
       double GasNumberDensity,GasMassDensity;
       double GrainRadius=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
       double GrainMass=ElectricallyChargedDust::GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
-     
-      if (_CG_DUST_FORCE_MODE__DRAG_FORCE_ == _PIC_MODE_ON_) for (int s=0;;s++) {
-        if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_OFF_) {
-          if (s>=PIC::nTotalSpecies) break;
-          if ((_DUST_SPEC_<=s) && (s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) continue;
-
-          startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,s);
-          GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(s);
-
-          GasMassDensity=GasNumberDensity*PIC::MolecularData::GetMass(s);
-        }
-        else if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_ON_) {
-          if (s>=Comet::CometData::GetnNeutrals()) break;
-
-          Comet::CometData::GetNeutralsVelocity(GasBulkVelocity,s,nd,startNode);
-          GasMassDensity=Comet::CometData::GetNeutralsMassDensity(s,nd,startNode);
-        }
-
+      
+      // read gas drag force from BATL
+      if (_CG_DUST_FORCE_MODE__DRAG_FORCE_ == _PIC_MODE_ON_ && _COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_){
+        
+        PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+        
+        GasMassDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity()*18.*1.673e-27;
+        
+        // Atomic mass is  1. MassDensity = NumberDensity
+        PIC::CPLR::GetBackgroundPlasmaVelocity(GasBulkVelocity);
+        
         cr2=(v_LOCAL[0]-GasBulkVelocity[0])*(v_LOCAL[0]-GasBulkVelocity[0])+
-         (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
-         (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
-
+          (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
+          (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
+        
         A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
-
+        
         accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);
         accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);
         accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);
-
-        //Generation of the tangential force corresponding to diffusion
-        double e0[3],e1[3]={0.0,0.0,0.0},e2[3]={0.0,0.0,0.0};
-        double norm=0,drag=0,fraction=0.02;
-        double theta=2*Pi*rnd();
-
-        for (idim=0;idim<DIM;idim++) {
-          e0[idim]=GasBulkVelocity[idim]-v_LOCAL[idim];
-          norm+=pow(e0[idim],2.0);
-          drag+=pow(A*(GasBulkVelocity[idim]-v_LOCAL[idim]),2.0);
-        }
-        norm=sqrt(norm);
-        drag=sqrt(drag);
-
-        for (idim=0;idim<DIM;idim++) e0[idim]/=norm;
-
-        norm=0.0;
-
-        if (fabs(e0[0])>1.0E-5) e1[0]=-e0[1],e1[1]=e0[0],e1[2]=0.0;
-        else e1[0]=0.0,e1[1]=e0[2],e1[2]=-e0[1];
-
-        double l=sqrt((e1[0]*e1[0])+(e1[1]*e1[1])+(e1[2]*e1[2]));
-        e1[0]/=l,e1[1]/=l,e1[2]/=l;
-
-        e2[0]=+(e0[1]*e1[2]-e1[1]*e0[2]);
-        e2[1]=-(e0[0]*e1[2]-e1[0]*e0[2]);
-        e2[2]=+(e0[0]*e1[1]-e1[0]*e0[1]);
-
-        if (_CG_DUST_FORCE_MODE__DRAG_FORCE__TANGENTIAL_COMPONENT_ == _PIC_MODE_ON_) for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]+=drag*fraction*(cos(theta)*e1[idim]+sin(theta)*e2[idim]);
+	
       }
+
+      if (_CG_DUST_FORCE_MODE__DRAG_FORCE_ == _PIC_MODE_ON_ && _COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_OFF_) for (int s=0;;s++) {
+          if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_OFF_) {
+            if (s>=PIC::nTotalSpecies) break;
+            if ((_DUST_SPEC_<=s) && (s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) continue;
+
+            startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,s);
+            GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(s);
+
+            GasMassDensity=GasNumberDensity*PIC::MolecularData::GetMass(s);
+          }
+          else if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_ON_) {
+            if (s>=Comet::CometData::GetnNeutrals()) break;
+
+            Comet::CometData::GetNeutralsVelocity(GasBulkVelocity,s,nd,startNode);
+            GasMassDensity=Comet::CometData::GetNeutralsMassDensity(s,nd,startNode);
+          }
+
+          cr2=(v_LOCAL[0]-GasBulkVelocity[0])*(v_LOCAL[0]-GasBulkVelocity[0])+
+            (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
+            (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
+
+          A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
+
+          accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);
+          accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);
+          accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);
+
+          //Generation of the tangential force corresponding to diffusion
+          double e0[3],e1[3]={0.0,0.0,0.0},e2[3]={0.0,0.0,0.0};
+          double norm=0,drag=0,fraction=0.02;
+          double theta=2*Pi*rnd();
+
+          for (idim=0;idim<DIM;idim++) {
+            e0[idim]=GasBulkVelocity[idim]-v_LOCAL[idim];
+            norm+=pow(e0[idim],2.0);
+            drag+=pow(A*(GasBulkVelocity[idim]-v_LOCAL[idim]),2.0);
+          }
+          norm=sqrt(norm);
+          drag=sqrt(drag);
+
+          for (idim=0;idim<DIM;idim++) e0[idim]/=norm;
+
+          norm=0.0;
+
+          if (fabs(e0[0])>1.0E-5) e1[0]=-e0[1],e1[1]=e0[0],e1[2]=0.0;
+          else e1[0]=0.0,e1[1]=e0[2],e1[2]=-e0[1];
+
+          double l=sqrt((e1[0]*e1[0])+(e1[1]*e1[1])+(e1[2]*e1[2]));
+          e1[0]/=l,e1[1]/=l,e1[2]/=l;
+
+          e2[0]=+(e0[1]*e1[2]-e1[1]*e0[2]);
+          e2[1]=-(e0[0]*e1[2]-e1[0]*e0[2]);
+          e2[2]=+(e0[0]*e1[1]-e1[0]*e0[1]);
+
+          if (_CG_DUST_FORCE_MODE__DRAG_FORCE__TANGENTIAL_COMPONENT_ == _PIC_MODE_ON_) for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]+=drag*fraction*(cos(theta)*e1[idim]+sin(theta)*e2[idim]);
+        }
       
       //the Lorentz force
       double E[3],B[3],GrainCharge;
