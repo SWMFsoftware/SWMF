@@ -628,12 +628,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   logical :: okdebug=.false.
 
   logical :: IsWall
-
-  integer :: iIonSecond
   !--------------------------------------------------------------------------
-
-  iIonSecond = min(IonFirst_+1, IonLast_)
-
   if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
        'Starting follow_ray_block: me,iBlock,iRay,XyzInOut_D=',&
        iProc,iBlock,iRay,XyzInOut_D
@@ -1522,14 +1517,11 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   real    :: Theta, Phi, Lat, Lon, XyzIono_D(3), Xyz_D(3)
   integer :: iBlock, iLat, iLon, iHemisphere, iRay
   integer :: iProcFound, iBlockFound, i, j, k
-  integer :: nStateVar, iIonSecond
+  integer :: nStateVar
   integer :: iError
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate'
   !-------------------------------------------------------------------------
-
-  iIonSecond = min(IonFirst_+1, IonLast_)
-
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,&
@@ -1720,14 +1712,11 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   real    :: Xyz_D(3)
   integer :: iPt
   integer :: iProcFound, iBlockFound, i, j, k, iBlock
-  integer :: nStateVar, iIonSecond
+  integer :: nStateVar
   integer :: iError
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate_1d'
   !-------------------------------------------------------------------------
-
-  iIonSecond = min(IonFirst_+1, IonLast_)
-
   call set_oktest(NameSub, DoTest, DoTestMe)
 
   if(DoTest)write(*,*)NameSub,' starting on iProc=',iProc,' with nPts=',nPts
@@ -2823,7 +2812,7 @@ end subroutine write_plot_line
 subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
 
   use ModNumConst,  ONLY: cPi, cTwoPi
-  use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, nIjk_D, &
+  use BATL_lib,     ONLY: Phi_, Theta_, x_, y_, &
        IsAnyAxis, IsLatitudeAxis, IsSphericalAxis, IsPeriodicCoord_D, &
        CoordMin_D, CoordMax_D, xyz_to_coord
 
@@ -2833,7 +2822,7 @@ subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
   real,    intent(in) :: XyzIn_D(3), XyzRef_D(3), GenRef_D(3), dGen_D(3)
   real,    intent(out):: IjkOut_D(3)
 
-  real:: Gen_D(3), PhiSize
+  real:: Gen_D(3)
   !--------------------------------------------------------------------------
   call xyz_to_coord(XyzIn_D, Gen_D)
 
@@ -2863,12 +2852,11 @@ subroutine xyz_to_ijk(XyzIn_D, IjkOut_D, iBlock, XyzRef_D, GenRef_D, dGen_D)
   ! Did the ray cross the periodic Phi boundary?
   if(Phi_ > 1)then
      if(IsPeriodicCoord_D(Phi_))then
-        PhiSize = 2*dGen_D(Phi_)*nIjk_D(Phi_)
-        if    (Gen_D(Phi_) - GenRef_D(Phi_) > PhiSize)then
+        if    (Gen_D(Phi_) - GenRef_D(Phi_) > cPi)then
            ! Crossed from small phi direction, make Gen_D negative
            ! E.g. PhiRef=5deg Phi=355deg -> -5deg
            Gen_D(Phi_) = Gen_D(Phi_) - cTwoPi
-        elseif(GenRef_D(Phi_) - Gen_D(Phi_) > PhiSize)then 
+        elseif(GenRef_D(Phi_) - Gen_D(Phi_) > cPi)then 
            ! Crossed from phi~2pi direction, make Gen_D larger than 2pi
            ! E.g. PhiRef=355deg Phi=5deg -> 365deg
            Gen_D(Phi_) = Gen_D(Phi_) + cTwoPi
