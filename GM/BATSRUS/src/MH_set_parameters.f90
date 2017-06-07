@@ -1231,17 +1231,17 @@ subroutine MH_set_parameters(TypeAction)
            TypeLimiter = "no"
         end if
 
-        if(nOrder==5) then
-           ! The commands below can be reset in #SCHEME5
+        if(nOrder == 5) then
+           ! Some of the settings below can be overwritten by #SCHEME5
            UseFDFaceFlux    = .true. 
            UseCweno         = .false.
-           !HighResChange does not work for 1D.
-           if(nJ > 1) UseHighResChange = .true. 
+           ! HighResChange does not work for 1D, but works for 2D and 3D
+           UseHighResChange = nDIm > 1
            UseHighOrderAMR  = .true. 
 
-           DoConserveFlux = .false. 
            UseTvdReschange = .false. 
            UseAccurateResChange = .false.            
+           DoConserveFlux = .false. 
         endif
 
      case("#SCHEME4")
@@ -1253,10 +1253,7 @@ subroutine MH_set_parameters(TypeAction)
         if(nDim == 1) UseFaceIntegral4 = .false.
 
      case("#SCHEME5")
-        ! DoInterpolateFlux may not be used anymore. 
-        ! call read_var('DoInterpolateFlux', DoInterpolateFlux)
-
-        ! If UseFDFaceFlux is true. Use ECHO scheme, which based on:
+        ! If UseFDFaceFlux is true, use ECHO scheme, which is based on
         ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
         ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
         call read_var('UseFDFaceFlux', UseFDFaceFlux)
@@ -1280,13 +1277,8 @@ subroutine MH_set_parameters(TypeAction)
         !    call sort_smooth_indicator
         ! endif
 
-        if(UseFDFaceFlux) then
-           DoConserveFlux   = .false. 
-        endif
-
-        ! UseTvdResChange and UseAccurateResChange should always be .false.
-        UseTvdResChange      = .false.
-        UseAccurateResChange = .false.
+        if(UseFDFaceFlux .and. UseHighResChange) &
+             DoConserveFlux   = .false. 
 
         if(.not.UseHighResChange) then
            nOrderProlong  = 2
