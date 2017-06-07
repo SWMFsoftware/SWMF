@@ -168,6 +168,32 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     //initiate the all recieve
     for (thread=1;thread<PIC::nTotalThreads;thread++) MPI_Irecv(SignalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
 
+    //for the nightly tests: use predefined range of the surface elements to be processed
+    if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) {
+      MPI_Status status[PIC::nTotalThreads];
+
+      iSurfaceElementStep=(CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads-1);
+
+      MPI_Waitall(PIC::nTotalThreads-1,request,status);
+
+      for (thread=1;thread<PIC::nTotalThreads;thread++) {
+        iStartSurfaceElement=iSurfaceElementStep*(thread-1);
+        iFinishSurfaceElement=iStartSurfaceElement+iSurfaceElementStep;
+
+        if (iFinishSurfaceElement>=CutCell::nBoundaryTriangleFaces) iFinishSurfaceElement=CutCell::nBoundaryTriangleFaces;
+
+        MPI_Send(&iStartSurfaceElement,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Send(&iFinishSurfaceElement,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR);
+      }
+
+      //there is no more surface elements to be processed
+      iStartSurfaceElement=-1;
+      iFinishSurfaceElement=-1;
+
+      //re-initiate recieve
+      for (thread=1;thread<PIC::nTotalThreads;thread++) MPI_Irecv(SignalTable+thread-1,1,MPI_INT,thread,0,MPI_GLOBAL_COMMUNICATOR,request+thread-1);
+    }
+
     do {
       //waite for any recieved occured
       MPI_Waitany(PIC::nTotalThreads-1,request,&thread,&status);
@@ -494,6 +520,8 @@ void RosinaSample::Liouville::Evaluate() {
   int Step=2*12;
   const int SurfaceOutputSter=1;
 
+  if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) Step=400;
+
   if (PIC::ThisThread==0) {
     char fname[200];
 
@@ -539,10 +567,12 @@ void RosinaSample::Liouville::Evaluate() {
     if (ProcessPoinFlag==false) continue;
 
     //cange Step with the altitude
-    if (Rosina[iPoint].Altitude<500) Step=12;
-    if (Rosina[iPoint].Altitude<100) Step=6;
-    if (Rosina[iPoint].Altitude<50) Step=3;
-    if (Rosina[iPoint].Altitude<20) Step=1;
+    if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) {
+      if (Rosina[iPoint].Altitude<500) Step=12;
+      if (Rosina[iPoint].Altitude<100) Step=6;
+      if (Rosina[iPoint].Altitude<50) Step=3;
+      if (Rosina[iPoint].Altitude<20) Step=1;
+    }
 
     //set the vectors, location of the Sub for the observation
     //init line-of-sight vectors
@@ -625,7 +655,12 @@ void RosinaSample::Liouville::Evaluate() {
 
 
     //correct the source rate
-    if (true) { //(false) {
+    bool FluxCorrectionFlag=false;
+
+ 
+    if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) FluxCorrectionFlag=false; 
+
+    if (FluxCorrectionFlag==true) { //(false) {
       static bool InitFlag=false;
       static double *CorrectionMaskTable=NULL;
 
