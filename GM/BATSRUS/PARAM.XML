@@ -5605,26 +5605,28 @@ is applied.
 TypeLimiter5 can be MP5 or CWENO, which is used to limit 5th order space 
 interpolation. The MP5 scheme is recommended.
 
-If UseHighResChange is ture the ghost cells are filled in
+If UseHighResChange is true the ghost cells are filled in
 with 5th order accurate values at the grid resolution changes
 so the scheme becomes 5th order accurate even at the resolution 
-changes.
+changes. If it is set to false, we switch to the second order
+prolongation algorithm (see #PROLONGATION) and also switch on
+the DoConserveFlux parameter of the #CONSERVEFLUX command.
 
 If UseHighOrderAMR is true, 5th order interpolation is used for 
 grid refinement and coarsening, so the scheme is 5th order accurate
-even with dynamic AMR.
+even with dynamic AMR. If false, the second order refinement and
+coarsening algorithms are used.
 
-NOTE 1: The high order accurate flux conservation scheme is not yet implemented,
-so the DoConserveFlux parameter of the #CONSERVEFLUX command is set to false 
-when UseFDFaceFlux is true. This can be overwritten with the #CONSERVEFLUX
-command AFTER the #SCHEME5 command.
+NOTE 1: This command has no effect unless nOrder is set to 5 in 
+the #SCHEME command.
 
 NOTE 2: this command has to be used after the #SCHEME command, because the
 #SCHEME command sets the default values.
 
-NOTE 3: This command has no effect unless nOrder is set to 5 in the #SCHEME command.
+NOTE 3: The DoConserveFlux parameter of the #CONSERVEFLUX can be 
+overwritten with the #CONSERVEFLUX command AFTER the #SCHEME5 command.
 
-The default values are shown above.
+The default values are shown above (assuming nOrder=5 is set in #SCHEME).
 </command>
 
 <command name="CONSERVEFLUX">
@@ -6216,6 +6218,33 @@ T		UseTvdResChange
 
 This command is kept for backwards compatibility.
 See description at the #RESOLUTIONCHANGE command.
+</command>
+
+<command name="PROLONGATION">
+	 <parameter name="nOrderProlong" type="integer" min="1" max="2"
+	 	    default="2"/>
+
+#PROLONGATION
+2		nOrderProlong  (1 or 2)
+
+The nOrderProlong parameter determines if the fine ghost cells are filled
+in with first order or second order accurate values at the resolution change. 
+The first order value is simply a copy of the coarse cell that covers the
+fine ghost cell. The second order value is obtained from linear interpolation
+of coarse cells covering and surrounding the fine ghost cell. This command
+sets the "UseAccurateResChange" and "UseTvdResChange" parameters to false 
+(see #RESOLUTIONCHANGE command). Since the subcylcing algorithm 
+(see #SUBCYCLING) is not quite compatible with the "accurate res. change"
+and "TVD res. change" algorithms, this command provides an alternative
+approach that is compatible. 
+
+Note that the 5th order scheme (see #SCHEME command) uses a 5th order 
+accurate prolongation procedure unless the "UseHighResChange" parameter 
+is set to false in the #SCHEME5 command. 
+
+The default is using 1st order prolongation for the first order scheme
+(nOrder=1 in the #SCHEME command) the "TVD reschange" algorithm for the 
+2nd order scheme, and the 5th order prolongation for the 5th order scheme.
 </command>
 
 <command name="LIMITER">
