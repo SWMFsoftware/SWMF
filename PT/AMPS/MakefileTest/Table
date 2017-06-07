@@ -130,7 +130,7 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test_SC-Cont@@(0+valeriy) 
+Name=test/SC-Cont@@(0+valeriy) 
 Time=15
 
 Ref=2{icc}@@(0+valeriy)
