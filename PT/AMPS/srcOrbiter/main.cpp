@@ -61,6 +61,23 @@ namespace ParticleSurfaceInterationModel {
 
     return _PARTICLE_REJECTED_ON_THE_FACE_; 
   }
+
+  int ParticleSurfaceInteraction_CYCNSS(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+    double BulkFlowVelocity[3]={0.0,0.0,0.0},Twall=50.0+273.0;
+    int spec;
+
+    spec=PIC::ParticleBuffer::GetI(ptr);
+
+    if (TriangleCutFace->attribute==8) Twall=100.0+273.0;
+
+    //reflect particles from the walls with themerature of 293 K;
+    do {
+      PIC::Distribution::MaxwellianVelocityDistribution(vInit,BulkFlowVelocity,Twall,spec);
+    }
+    while (Vector3D::DotProduct(vInit,TriangleCutFace->ExternalNormal)<=0.0);
+
+    return _PARTICLE_REJECTED_ON_THE_FACE_;
+  }
 }
 
 
@@ -77,7 +94,7 @@ namespace DragCoefficientTest {
 
   const int nTotalTestCodes=6;
 
-  int ParticleSurfaceInteractionProcessor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+  int ParticleSurfaceInteractionProcessor_TEST(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
     int res=_PARTICLE_REJECTED_ON_THE_FACE_;
 
     switch (iTestCode) {
