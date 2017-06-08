@@ -180,6 +180,27 @@ using namespace Exosphere;
 
        void SamplingProcessor();
        void PrintOutputFile(int);
+
+
+       //calculate the drag coefficient for different directions of the upstream flow
+       namespace ResetUpstreamFlowDirection {
+         extern bool ResetUpstreamFlowMode;
+
+         extern int nTotalDirectionResets; //the total number of the changes of the direction number
+         extern double StartFlowDirection[3],EndFlowDirection[3],BulkFlowSpeed; //
+         extern int ResetOutputNumberInterval; //the number of the output files after which the flow directino is reset
+
+         //remove all particles from the system and start sampling again
+         void RemoveAllParticles();
+
+         //tables the saves the calculatino results
+         struct cSampledData {
+           double AngleStartingDirection,Cd;
+         };
+
+         extern cSampledData *SampledData;
+
+       }
      }
 
   }

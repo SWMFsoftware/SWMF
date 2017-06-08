@@ -38,6 +38,15 @@ double *Orbiter::Sampling::DragCoefficient::dpX=NULL;
 double *Orbiter::Sampling::DragCoefficient::dpY=NULL;
 double *Orbiter::Sampling::DragCoefficient::dpZ=NULL;
 
+Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::cSampledData *Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::SampledData=NULL;
+double Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::EndFlowDirection[3]={0.0,0.0,0.0};
+double Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::StartFlowDirection[3]={0.0,0.0,0.0};
+bool Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::ResetUpstreamFlowMode=false;
+int Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::ResetOutputNumberInterval=1;
+double Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::BulkFlowSpeed=0.0;
+int Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::nTotalDirectionResets=0;
+
+
 void Orbiter::Sampling::DragCoefficient::Init() {
   dpX=new double [PIC::nTotalThreadsOpenMP];
   dpY=new double [PIC::nTotalThreadsOpenMP];
@@ -50,8 +59,53 @@ void Orbiter::Sampling::DragCoefficient::Init() {
   }
 
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(SamplingProcessor,PrintOutputFile);
+
+  //init the module that veried the direction of the upstream flow
+  if (ResetUpstreamFlowDirection::ResetUpstreamFlowMode==true) {
+    int i;
+
+    memcpy(ResetUpstreamFlowDirection::StartFlowDirection,Orbiter::UpstreamBC::Velocity,3*sizeof(double));
+
+    ResetUpstreamFlowDirection::BulkFlowSpeed=Vector3D::Length(Orbiter::UpstreamBC::Velocity);
+    Vector3D::Normalize(ResetUpstreamFlowDirection::StartFlowDirection);
+    Vector3D::Normalize(ResetUpstreamFlowDirection::EndFlowDirection);
+
+    ResetUpstreamFlowDirection::SampledData=new ResetUpstreamFlowDirection::cSampledData[ResetUpstreamFlowDirection::ResetOutputNumberInterval];
+
+    for (i=0;i<ResetUpstreamFlowDirection::ResetOutputNumberInterval;i++) {
+      ResetUpstreamFlowDirection::SampledData[i].Cd=-1.0;
+      ResetUpstreamFlowDirection::SampledData[i].AngleStartingDirection=0.0;
+    }
+  }
 }
 
+//=======================================================================================
+//remove all model particles to restart particle sampling for a new boundary condition case
+void Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::RemoveAllParticles() {
+  int Ptr,nextPrt;
+
+  //reset particle lists in all cells
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataBlockAMR *block;
+  int i,j,k;
+
+  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+
+    if ((block=node->block)!=NULL) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) if ((Ptr=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)])!=-1) {
+      block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+
+      do {
+        nextPrt=PIC::ParticleBuffer::GetNext(Ptr);
+        PIC::ParticleBuffer::DeleteParticle(Ptr);
+
+        Ptr=nextPrt;
+      }
+      while (Ptr!=-1);
+    }
+
+  }
+}
 
 //=======================================================================================
 //particle/surface interaction model
@@ -104,6 +158,20 @@ void Orbiter::Sampling::DragCoefficient::PrintOutputFile(int nfile) {
     printf("$PREFIX: ProjectionOrbiterSurfaceArea=%e\n",ProjectionOrbiterSurfaceArea);
     printf("$PREFIX: Calculated Drag Coefficient = %e\n",Cd);
     
+    //output sampeled drag coefficients calculated for different directions of the upstream flow
+    if (ResetUpstreamFlowDirection::ResetUpstreamFlowMode==true) {
+      int iResetCycle=nfile/ResetUpstreamFlowDirection::ResetOutputNumberInterval;
+      ResetUpstreamFlowDirection::SampledData[iResetCycle].Cd=Cd;
+
+      printf("Drag Coefricient Sampled for Multiple Upstream Directions\n,i\tAngle\tCd\n");
+
+      for (int i=0;i<ResetUpstreamFlowDirection::nTotalDirectionResets;i++) {
+        printf("%i\t%e\t%e\n",i,ResetUpstreamFlowDirection::SampledData[i].AngleStartingDirection,ResetUpstreamFlowDirection::SampledData[i].Cd);
+      }
+
+      printf("\n");
+    }
+
     //output the particle statistics for the nightly tests
     if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
       char fname[400];
@@ -128,6 +196,32 @@ void Orbiter::Sampling::DragCoefficient::PrintOutputFile(int nfile) {
     dpY[thread]=0.0;
     dpZ[thread]=0.0;
   }  
+
+  //reset the direction of the unstrean flow if needed
+  if ((ResetUpstreamFlowDirection::ResetUpstreamFlowMode==true)&&(nfile!=0)&&(nfile%ResetUpstreamFlowDirection::ResetOutputNumberInterval==0)) {
+     int iResetCycle=nfile/ResetUpstreamFlowDirection::ResetOutputNumberInterval;
+
+     if (iResetCycle<ResetUpstreamFlowDirection::nTotalDirectionResets) {
+       //save the previously lates drag coefficient value
+//       ResetUpstreamFlowDirection::SampledData[iResetCycle-1].Cd=Cd;
+
+       //remove all particles and then reset the direcion of the upstream flow
+       ResetUpstreamFlowDirection::RemoveAllParticles();
+
+       //the new direction of the upstream flow
+       double l[3],c;
+       int idim;
+
+       c=double(iResetCycle)/double(ResetUpstreamFlowDirection::nTotalDirectionResets);
+
+       for (idim=0;idim<3;idim++) l[idim]=c*ResetUpstreamFlowDirection::StartFlowDirection[idim]+(1.0-c)*ResetUpstreamFlowDirection::EndFlowDirection[idim];
+       Vector3D::Normalize(l);
+       for (idim=0;idim<3;idim++) Orbiter::UpstreamBC::Velocity[idim]=ResetUpstreamFlowDirection::BulkFlowSpeed*l[idim];
+
+       ResetUpstreamFlowDirection::SampledData[iResetCycle].AngleStartingDirection=180.0/Pi*acos(Vector3D::DotProduct(l,ResetUpstreamFlowDirection::StartFlowDirection));
+     }
+  }
+
 } 
   
 
