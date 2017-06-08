@@ -91,9 +91,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
   //save the location and determine the node
   for (idim=0;idim<3;idim++) x[idim]=xLocation[idim];
 
-  if ((node=PIC::Mesh::mesh.findTreeNode(x))==NULL) exit(__LINE__,__FILE__,"Error: the location of the sampling point is not found");
-  PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,node);
-
+  
   //determine lon and lat of the secondary direction
   long int nZenithElement,nAzimuthalElement;
   double t[3];
@@ -103,6 +101,15 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
 
   Lat_xSecondary=(Pi/2.0-Lat_xSecondary)*180.0/Pi;
   Lon_xSecondary*=180.0/Pi;
+
+  if ((node=PIC::Mesh::mesh.findTreeNode(x))==NULL) {
+    iCell=-1; jCell=-1; kCell=-1;
+    node = NULL;
+    return;
+  }else{ 
+    PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,node);
+  }
+
 }
 
 
@@ -129,7 +136,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Allocate() {
 //sampling procedure
 void ElectricallyChargedDust::Sampling::FluxMap::Sampling() {
   int nSamplePoint;
-
+      
   for (nSamplePoint=0;nSamplePoint<SampleLocations.size();nSamplePoint++) SampleLocations[nSamplePoint].Sampling();
 }
 
@@ -140,6 +147,15 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
   double v[3],ParticleWeight,GrainRadius,Measure;
   PIC::ParticleBuffer::byte *ParticleData;
   int spec,SizeGroup;
+  
+  // if the sample point is outside the computional domain and warning is not issued   
+  if (node==NULL && !WarningIssuedFlag){
+    fprintf(PIC::DiagnospticMessageStream,"WARNING:the sample point %f,%f,%f is outside the domain\n",x[0],x[1],x[2]);
+    WarningIssuedFlag=true;
+    return;
+  }
+  
+  if (node==NULL) return;
 
   //data is sampled only of the currect processor
   if (node->Thread!=PIC::ThisThread) return;
@@ -197,6 +213,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
   FILE *fout=NULL;
   double x[3];
 
+  if(node==NULL){
+    if (PIC::ThisThread==0) printf("PrintSurfaceData: The sample location is not in the computational domain \n");
+    return;
+  }
   //collect all sampling data
   for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
     double TempBuffer[nZenithSurfaceElements*nAzimuthalSurfaceElements];
@@ -345,6 +365,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(con
   int SizeGroup;
   FILE *fout2d=NULL;
 
+  if(node==NULL){
+    if (PIC::ThisThread==0) printf("Print2dMap: The sample location is not in the computational domain \n");
+    return;
+  }
   //output the data file
   if (PIC::ThisThread==0) {
     char fname2d[300];
