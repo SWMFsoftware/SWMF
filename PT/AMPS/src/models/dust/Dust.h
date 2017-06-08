@@ -222,6 +222,7 @@ namespace ElectricallyChargedDust {
         double **SampleData_NumberDensityFlux,**SampleData_NumberDensity;
         double e0[3],e1[3],e2[3]; //frame of the reference associated with the sampling location
         double Lat_xSecondary,Lon_xSecondary; //latitude and longitude that corresponds to the secondary direction
+        bool WarningIssuedFlag; //show if the warning that the sampling location is outside of the domain is issued. 
 
         void SetLocation(double *xLocation,double *xPrimary,double *xSecondary);
         void Allocate();
@@ -238,6 +239,7 @@ namespace ElectricallyChargedDust {
           Lat_xSecondary=0.0,Lon_xSecondary=0.0;
 
           SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
+          WarningIssuedFlag=false;
         }
       };
 
