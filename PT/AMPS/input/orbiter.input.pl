@@ -103,6 +103,38 @@ while ($line=<InputFile>) {
       ampsConfigLib::RedefineMacro("_ORBITER__NIGHTLY_TEST_REDUCE_RESOLUTION_MODE_","_PIC_MODE_OFF_","main/Orbiter.dfn");  
     }
   }
+  
+  #calculate the drag coefficient for multiple directions of the upstream flow
+  elsif ($InputLine eq "RESETUPSTREAMFLOWDIRECTION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ON") {
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("bool Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::ResetUpstreamFlowMode","true","main/Orbiter.cpp");
+        
+        
+        if ($InputLine eq "RESETOUTPUTNUMBERINTERVAL") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("int Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::ResetOutputNumberInterval",$InputLine,"main/Orbiter.cpp");
+        }
+        elsif ($InputLine eq "NTOTALDIRECTIONRESETS") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("int Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::nTotalDirectionResets",$InputLine,"main/Orbiter.cpp");          
+        }
+        elsif ($InputLine eq "ENDFLOWDIRECTION") {
+          my ($lx,$ly,$lz);
+          
+          ($lx,$ly,$lz,$InputComment)=split(' ',$InputComment,4);
+          ampsConfigLib::ChangeValueOfVariable("double Orbiter::Sampling::DragCoefficient::ResetUpstreamFlowDirection::EndFlowDirection\\[3\\]","{".$lx.",".$ly.",".$lz."}","main/Orbiter.cpp");                    
+        }
+        else {
+          die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+        }
+      }
+    }    
+  }
+   
   elsif ($InputLine eq "SURFACEMODEL") {
     my (@fnameTable,$faceat,@faceatTable,$t,$res,$cnt,$i);
     

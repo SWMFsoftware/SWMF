@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H2O  
+SpeciesList=O  
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -132,10 +132,15 @@ ParticleWeightCorrectionMode=on
   NightlyTestReduceResolution=on
 
   UpstreamNumberDensity= \\
-    const(H2O)=1.5E21
+    const(O)=1.5E21
 
   UpstreamTemperature=293.0
   UpstreamSourceMode=on
+
+  ResetUpstreamFlowDirection=on \\
+    ResetOutputNumberInterval=10  \\
+    nTotalDirectionResets=5 \\ 
+    EndFlowDirection=0.0,0.0,1.0   
 
 
   SurfaceModel \\
