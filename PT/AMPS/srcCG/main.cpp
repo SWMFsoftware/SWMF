@@ -837,11 +837,13 @@ int main(int argc,char **argv) {
     }
 
 
-    if (PIC::Mesh::mesh.findTreeNode(xSampleLocation)==NULL) continue;
+
 
     ElectricallyChargedDust::Sampling::FluxMap::SetSamplingLocation(xSampleLocation,xPrimary,xSun);
 
     if (PIC::ThisThread==0) {
+      
+      if (ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[n].node==NULL) continue;
       //determine projection of the nucleus
       double r,rmin,rmax,*x,*e1,*e2,phi,t,lmax,rProjection[3],ZenithAngle,AzimuthalAngle,r1,r2;
       double rNimb,xNimb[3];
