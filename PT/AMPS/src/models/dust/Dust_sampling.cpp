@@ -149,8 +149,8 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
   int spec,SizeGroup;
   
   // if the sample point is outside the computional domain and warning is not issued   
-  if (node==NULL && !WarningIssuedFlag){
-    fprintf(PIC::DiagnospticMessageStream,"WARNING:the sample point %f,%f,%f is outside the domain\n",x[0],x[1],x[2]);
+  if ((node==NULL)&&(WarningIssuedFlag==false)) {
+    fprintf(PIC::DiagnospticMessageStream,"WARNING:the sample point %f,%f,%f is outside the domain (file=%s, line=%ld)\n",x[0],x[1],x[2],__FILE__,__LINE__);
     WarningIssuedFlag=true;
     return;
   }
