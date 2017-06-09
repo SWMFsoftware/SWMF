@@ -66,7 +66,7 @@ subroutine init_RIM()
   if (nEmpiricalLats > 0) then 
 
      Lines(1) = "#BACKGROUND"
-     Lines(2) = "IE/Input/"
+     Lines(2) = "EIE/"
      Lines(3) = NameEFieldModel
      Lines(4) = NameAuroralModel
      Lines(5) = NameSolarModel

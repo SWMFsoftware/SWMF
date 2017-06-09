@@ -12,6 +12,7 @@ rundir:
 	cd ${RUNDIR}; ln -s ${DIR}/UA/GITM2/src/PostProcess.exe PostGITM.exe; cd ${DIR}
 	cd ${DIR}/UA/GITM2 ; make POST ; cd ${DIR}
 	cd ${RUNDIR}/IE; ln -s ${IEDIR}/src/pIE .; cd ${DIR}
+	cd ${RUNDIR};    ln -s ${EMPIRICALIEDIR}/data EIE
 
 clean:
 	@touch src/Makefile.DEPEND src/Makefile.RULES
