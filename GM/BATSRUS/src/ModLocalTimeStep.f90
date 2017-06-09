@@ -301,7 +301,13 @@ contains
        enddo ! iBlock
 
        ! Apply flux correction at the end of full steps
-       if(DoConserveFlux .and. modulo(iStageLocal, 2*nStage) == 0)then
+       if(DoConserveFlux .and. &
+            (modulo(iStageLocal,2*nStage) == 0 .or. iStageLocal == nStage))then
+
+          if(DoTestMe)write(*,*) NameSub, &
+               ' before  conservative flux, test var=',&
+               State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
+
           call apply_flux_correction( &
                nVar, nFluid, State_VGB, Energy_GBI, &
                Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStageLocal/nStage, &
