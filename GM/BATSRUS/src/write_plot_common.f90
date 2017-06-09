@@ -1014,6 +1014,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        set_hall_factor_cell, HallFactor_C, IsHallBlock
   use ModResistivity, ONLY: Eta_GB, Eta0
   use ModFaceGradient, ONLY: get_face_curl
+  use ModCellGradient, ONLY: calc_gradient
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
        UseMultiIon, nIonFluid, MassIon_I, &
@@ -1047,6 +1048,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   real:: tmp1Var, tmp2Var
   real, allocatable :: J_DC(:,:,:,:)
+  real, allocatable :: GradPe_DG(:,:,:,:), Var_G(:,:,:)
 
   integer :: iVar, itmp, jtmp, jVar, iIon
   integer :: i,j,k
@@ -1273,6 +1275,33 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('pperp')
         PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBLK) & 
              -State_VGB(Ppar_,:,:,:,iBLK))/2.0
+
+     case('gradpex','gradpey', 'gradpez', 'gradper')
+
+        if(.not. allocated(GradPe_DG)) allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+        if(.not. allocated(Var_G)) allocate(Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+        if(UseElectronPressure)then
+           Var_G= State_VGB(Pe_,:,:,:,iBLK)
+        else
+           Var_G= State_VGB(P_,:,:,:,iBLK)*ElectronPressureRatio
+        endif
+        call calc_gradient(iBLK, Var_G, nG, GradPe_DG)
+        
+        select case(String)
+        case('gradpex')
+           PlotVar(:,:,:,iVar) = GradPe_DG(1,:,:,:)
+        case('gradpey')
+           PlotVar(:,:,:,iVar) = GradPe_DG(2,:,:,:)
+        case('gradpez')
+           PlotVar(:,:,:,iVar) = GradPe_DG(3,:,:,:)
+        case('gradper')
+           do k = Mink,MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+              PlotVar(i,j,k,iVar) = &
+                   sum(GradPe_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBLK)) &
+                   / max(1e-30, r_BLK(i,j,k,iBLK))
+           end do; end do; end do
+        end select
+
      case('jx','jy', 'jz', 'jr')
 
         if(.not. allocated(J_DC)) allocate(J_DC(3,nI,nJ,nK))
@@ -1767,6 +1796,10 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
              (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
      case('ux','uy','uz','uxrot','uyrot','uzrot')
         PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
+
+     case('gradpex','gradpey','gradpez','gradper')
+        PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) &
+             *No2Io_V(UnitP_)/No2Si_V(UnitX_)
      case('jx','jy','jz','jr',&
           'jxe','jye','jze','jxw','jyw','jzw', &
           'jxs','jys','jzs','jxn','jyn','jzn', &
@@ -2025,7 +2058,19 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = NameTecUnit_V(UnitElectric_)
      case('ezind')                                 
         NameTecVar = 'Eind_z'
-        NameUnit   = NameTecUnit_V(UnitElectric_)
+        NameUnit   = NameTecUnit_V(UnitElectric_)         
+     case('gradpex')
+        NameTecVar = 'GradPe_x'
+        NameUnit   = 'nPa/m'
+     case('gradpey')
+        NameTecVar = 'GradPe_y'
+        NameUnit   = 'nPa/m'
+     case('gradpez')
+        NameTecVar = 'GradPe_z'
+        NameUnit   = 'nPa/m'
+     case('gradper')
+        NameTecVar = 'GradPe_r'
+        NameUnit   = 'nPa/m'
      case('pote')
         NameTecVar = 'PotE'
         NameUnit   = 'V'
@@ -2183,6 +2228,8 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = NameIdlUnit_V(UnitTemperature_)
      case('ux','uy','uz','ur','uxrot','uyrot','uzrot')
         NameUnit = NameIdlUnit_V(UnitU_)
+     case('gradpex','gradpey','gradpez','gradper')
+        NameUnit = 'nPa/m'
      case('jx','jy','jz','jr',&
           'jxe','jye','jze','jxw','jyw','jzw', &
           'jxs','jys','jzs','jxn','jyn','jzn', &
