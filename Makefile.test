@@ -19,6 +19,7 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
+	@echo "    test_psie		      (run PS/DGCPM-IE/RIM coupling test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
@@ -236,6 +237,37 @@ test_ps_check:
 	ls -ltr test_ps*.diff
 
 
+#### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
+#
+test_psie:
+	@echo "starting..." > test_psie.diff
+	@echo "test_psie_compile..." >> test_psie.diff
+	${MAKE} test_psie_compile
+	@echo "test_psie_rundir..." >> test_psie.diff
+	${MAKE} test_psie_rundir
+	@echo "test_psie_run..." >> test_psie.diff
+	${MAKE} test_psie_run
+	@echo "test_psie_check..." >> test_psie.diff
+	${MAKE} test_psie_check	
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_psie_compile:
+	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
+	${MAKE} SWMF
+
+test_psie_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.PSIE  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.PSIE ${TESTDIR}/LAYOUT.in
+	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
+
+test_psie_run:
+	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_psie_check:
+	
 #### Radiation belt model test ###
 #
 test_rb:
