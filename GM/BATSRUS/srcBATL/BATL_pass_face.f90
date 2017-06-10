@@ -808,7 +808,7 @@ contains
     logical, intent(in), optional:: DoTestIn
 
     logical:: DoReschangeOnly, DoTest
-    integer:: iBlock, iNode, iLevel, MinLevel, MaxLevel
+    integer:: iBlock, iNode, iLevel, MinLevel
 
     character(*), parameter:: NameSub = 'BATL_pass_face::apply_flux_correction'
     !-------------------------------------------------------------------------
@@ -820,13 +820,7 @@ contains
     if(.not. DoReschangeOnly .and. .not. UseTimeLevel) call CON_stop( &
          NameSub//' called with DoResChangeOnly=F while UseTimeLevel=F')
 
-    ! Set the levels MinLevel .. MaxLevel-1 which need to receive fluxes.
-    if(DoResChangeOnly)then
-       MaxLevel = nLevelmax
-    else
-       MaxLevel = nTimeLevel
-    end if
-
+    ! Set the levels MinLevel and up which need to receive fluxes.
     if(present(iStageIn))then
        ! The flux correction is to be applied to the blocks that have
        ! just completed their time step. These are the same as the blocks 
@@ -838,8 +832,8 @@ contains
     end if
 
     if(DoTest)write(*,*) NameSub, &
-         ': nVar, nFluid, DoResChangeOnly, MinLevel, MaxLevel=',&
-         nVar, nFluid, DoResChangeOnly, MinLevel, MaxLevel
+         ': nVar, nFluid, DoResChangeOnly, MinLevel=',&
+         nVar, nFluid, DoResChangeOnly, MinLevel
 
     call message_pass_face(nVar+nFluid, Flux_VXB, Flux_VYB, Flux_VZB, &
          DoResChangeOnlyIn=DoResChangeOnlyIn, MinLevelIn = MinLevel, &
@@ -850,11 +844,16 @@ contains
        iNode = iNode_B(iBlock)
        if(DoResChangeOnly)then
           iLevel = iTree_IA(Level_,iNode)
+          ! grid levels below MinLevel and at top level can be skipped
+          if(iLevel < MinLevel .or. iLevel >= nLevelMax) CYCLE
        else
           iLevel = iTimeLevel_A(iNode)
+          ! skip time levels below MinLevel and 
+          ! blocks at maximum time AND grid level
+          if(iLevel < MinLevel .or. &
+               iLevel >= nTimeLevel .and. iTree_IA(Level_,iNode) >= nLevelMax)&
+               CYCLE
        end if
-       ! levels below MinLevel and highest level should never be corrected
-       if(iLevel < MinLevel .or. iLevel >= MaxLevel) CYCLE
 
        if(present(Energy_GBI))then
           call apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
