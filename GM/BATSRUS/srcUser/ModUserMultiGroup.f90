@@ -222,7 +222,7 @@ contains
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, &
+    use ModImplicit,   ONLY: StateSemi_VGB, iErImplFirst, iErImplLast, &
          UseSplitSemiImplicit
     use ModSemiImplicit, ONLY: iVarSemi
     use ModMain,       ONLY: nI, nJ, nK
@@ -269,17 +269,17 @@ contains
           case('diffusionfront')
              Temperature = 100.0*cEVToK*Si2No_V(UnitTemperature_)
              do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
+                StateSemi_VGB(iErImplFirst,0,j,k,iBlock) = &
                      cRadiationNo*Temperature**4
              end do; end do
           case default
              if(nWave == 1)then
                 ! set Erad
                 do k = 1, nK; do j = 1, nJ
-                   StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
+                   StateSemi_VGB(iErImplFirst,0,j,k,iBlock) = 1.0
                 end do; end do
              elseif(UseSplitSemiImplicit)then
-                if(iVarSemi == iTrImplFirst)then
+                if(iVarSemi == iErImplFirst)then
                    StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = 1.0
                 else
                    StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = &
@@ -287,9 +287,9 @@ contains
                 end if
              else
                 do k = 1, nK; do j = 1, nJ
-                   StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
-                   StateSemi_VGB(iTrImplFirst+1:iTrImplLast,0,j,k,iBlock) = &
-                        StateSemi_VGB(iTrImplFirst+1:iTrImplLast,1,j,k,iBlock)
+                   StateSemi_VGB(iErImplFirst,0,j,k,iBlock) = 1.0
+                   StateSemi_VGB(iErImplFirst+1:iErImplLast,0,j,k,iBlock) = &
+                        StateSemi_VGB(iErImplFirst+1:iErImplLast,1,j,k,iBlock)
                 end do; end do
              end if
           end select
@@ -306,11 +306,11 @@ contains
        case('usersemi')
           if(nWave == 1)then
              do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
+                StateSemi_VGB(iErImplFirst,nI+1,j,k,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,nI,j,k,iBlock)
              end do; end do
           elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
+             if(iVarSemi == iErImplFirst)then
                 StateSemi_VGB(1,nI+1,1:nJ,1:nK,iBlock) = &
                      StateSemi_VGB(1,nI,1:nJ,1:nK,iBlock)
              else
@@ -319,9 +319,9 @@ contains
           else
              ! bin 2 starts on the right
              do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,nI+1,j,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,nI,j,k,iBlock)
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,nI+1,j,k,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst,nI+1,j,k,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,nI,j,k,iBlock)
+                StateSemi_VGB(iErImplFirst+1:iErImplLast,nI+1,j,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -336,10 +336,10 @@ contains
        case('usersemi')
           if(nWave == 1)then
              do k = 1, nK; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst,i,0,k,iBlock) = 1.0
              end do; end do
           elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
+             if(iVarSemi == iErImplFirst)then
                 StateSemi_VGB(1,1:nI,0,1:nK,iBlock) = 1.0
              else
                 StateSemi_VGB(1,1:nI,0,1:nK,iBlock) = &
@@ -348,9 +348,9 @@ contains
           else
              ! bin 1 starts on the left
              do k = 1, nK; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,0,k,iBlock) = 1.0
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,0,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,1,k,iBlock)
+                StateSemi_VGB(iErImplFirst,i,0,k,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst+1:iErImplLast,i,0,k,iBlock) = &
+                     StateSemi_VGB(iErImplFirst+1:iErImplLast,i,1,k,iBlock)
              end do; end do
           end if
        end select
@@ -366,11 +366,11 @@ contains
        case('usersemi')
           if(nWave == 1)then
              do k = 1, nK; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
+                StateSemi_VGB(iErImplFirst,i,nJ+1,k,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,i,nJ,k,iBlock)
              end do; end do
           elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
+             if(iVarSemi == iErImplFirst)then
                 StateSemi_VGB(1,1:nI,nJ+1,1:nK,iBlock) = &
                      StateSemi_VGB(1,1:nI,nJ,1:nK,iBlock)
              else
@@ -379,9 +379,9 @@ contains
           else
              ! bin 2 starts on the right
              do k = 1, nK; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,nJ+1,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,i,nJ,k,iBlock)
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,nJ+1,k,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst,i,nJ+1,k,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,i,nJ,k,iBlock)
+                StateSemi_VGB(iErImplFirst+1:iErImplLast,i,nJ+1,k,iBlock) = 1.0
              end do; end do
           end if
        end select
@@ -397,10 +397,10 @@ contains
           ! bin 1 starts on the left
           if(nWave == 1)then
              do j = 1, nJ; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst,i,j,0,iBlock) = 1.0
              end do; end do
           elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
+             if(iVarSemi == iErImplFirst)then
                 StateSemi_VGB(1,1:nI,1:nJ,0,iBlock) = 1.0
              else
                 StateSemi_VGB(1,1:nI,1:nJ,0,iBlock) = &
@@ -408,9 +408,9 @@ contains
              end if
           else
              do j = 1, nJ; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,j,0,iBlock) = 1.0
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,0,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,1,iBlock)
+                StateSemi_VGB(iErImplFirst,i,j,0,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst+1:iErImplLast,i,j,0,iBlock) = &
+                     StateSemi_VGB(iErImplFirst+1:iErImplLast,i,j,1,iBlock)
              end do; end do
           end if
        end select
@@ -426,11 +426,11 @@ contains
        case('usersemi')
           if(nWave == 1)then
              do j = 1, nJ; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
+                StateSemi_VGB(iErImplFirst,i,j,nK+1,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,i,j,nK,iBlock)
              end do; end do
           elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
+             if(iVarSemi == iErImplFirst)then
                 StateSemi_VGB(1,1:nI,1:nJ,nK+1,iBlock) = &
                      StateSemi_VGB(1,1:nI,1:nJ,nK,iBlock)
              else
@@ -439,9 +439,9 @@ contains
           else
              ! bin 2 starts on the right
              do j = 1, nJ; do i = 1, nI
-                StateSemi_VGB(iTrImplFirst,i,j,nK+1,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst,i,j,nK,iBlock)
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,i,j,nK+1,iBlock) = 1.0
+                StateSemi_VGB(iErImplFirst,i,j,nK+1,iBlock) = &
+                     StateSemi_VGB(iErImplFirst,i,j,nK,iBlock)
+                StateSemi_VGB(iErImplFirst+1:iErImplLast,i,j,nK+1,iBlock) = 1.0
              end do; end do
           end if
        end select

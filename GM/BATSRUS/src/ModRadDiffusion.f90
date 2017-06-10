@@ -110,8 +110,6 @@ module ModRadDiffusion
   ! temporary electron temperature array needed by set_block_field
   real, allocatable :: Te1_G(:,:,:)
 
-  logical :: UseTemperature
-
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
 
 contains
@@ -170,7 +168,7 @@ contains
          MaxBlock
     use ModImplicit,    ONLY: UseFullImplicit, &
          UseSemiImplicit, TypeSemiImplicit, &
-         nVarSemi, iEradImpl, iTeImpl, iTrImplFirst, iTrImplLast
+         nVarSemi, iEradImpl, iTeImpl, iErImplFirst, iErImplLast
     use ModPhysics,     ONLY: Si2No_V, UnitTemperature_, &
          cRadiationNo
     use ModVarIndexes,  ONLY: nWave, WaveFirst_
@@ -214,52 +212,39 @@ contains
        allocate(Te1_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
        ! Default to zero, unless reset
-       iTeImpl = 0; iTrImplFirst = 0; iTrImplLast = 0;
+       iTeImpl = 0; iErImplFirst = 0; iErImplLast = 0;
+       iDiffHeat = 0; iDiffRadFirst = 0; iDiffRadLast = 0
+       nDiff = 0
 
-       UseTemperature = .false.
-
-       select case(TypeSemiImplicit)
-       case('radiation')
-          if(UseElectronPressure)then
-             call stop_mpi(NameSub//": Te/=Ti requires Te,Ti relaxation")
-          end if
-
-          nDiff = nWave
-          allocate(iDiff_I(nDiff))
-
-          ! Radiation-material exchange is done point-implicitly
-          iTrImplFirst = 1
-          iTrImplLast  = nWave
-          nPoint       = nWave
-          iDiff_I = 1
-          iDiffHeat = 0; iDiffRadFirst = 1; iDiffRadLast = nWave
-
-       case('radcond')
-          iTeImpl = 1; iTrImplFirst = 2; iTrImplLast = iTrImplFirst + nWave - 1
-          nDiff = 1 + nWave
-          allocate(iDiff_I(nDiff))
-          iDiffHeat = 1; iDiffRadFirst = 2; iDiffRadLast = nWave + 1
-
-          UseTemperature = .true.
-          iDiff_I = 1
-          nPoint  = 1 + nWave
-
-       case('cond')
-          UseTemperature = .true.
+       if(index(TypeSemiImplicit,'cond') > 0)then
           iTeImpl = 1
           nDiff = 1
-          allocate(iDiff_I(nDiff))
-          iDiff_I = iTeImpl
-          iDiffHeat = 1; iDiffRadFirst = 0; iDiffRadLast = 0
+          iDiffHeat = 1
           if(UseElectronPressure)then
              nPoint = 1
           else
              nPoint = 0
           end if
+       end if
 
-       end select
+       if(index(TypeSemiImplicit,'rad') > 0)then
+          iErImplFirst = iTeImpl + 1
+          iErImplLast = iErImplFirst + nWave - 1
+          nDiff = nDiff + nWave
+          iDiffRadFirst = iDiffHeat + 1
+          iDiffRadLast = iDiffRadFirst + nWave - 1
+          nPoint = nPoint + nWave
+       end if
 
-       iEradImpl = iTrImplFirst
+       if(UseElectronpressure .and. index(TypeSemiImplicit,'rad') > 0 .and. &
+            index(TypeSemiImplicit,'cond') == 0)then
+          call stop_mpi(NameSub//": Te/=Ti requires Te,Ti relaxation")
+       end if
+
+       allocate(iDiff_I(nDiff))
+       iDiff_I = 1
+
+       iEradImpl = iErImplFirst
 
        if(nPoint>0)then
           allocate(PointCoef_VCB(nPoint,nI,nJ,nK,MaxBlock))
@@ -276,7 +261,7 @@ contains
        if(UseAccurateRadiation) &
             allocate(FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim))
 
-       if(TypeSemiImplicit=='radiation' .or. TypeSemiImplicit=='radcond')then
+       if(index(TypeSemiImplicit,'rad') > 0)then
           allocate(PlanckWeight_WCB(nWave,nI,nJ,nK,MaxBlock))
           PlanckWeight_WCB = 1.0
        end if
@@ -444,7 +429,7 @@ contains
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
          nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
-         TypeSemiImplicit, SemiImplCoeff, iTeImpl, iTrImplFirst, iTrImplLast
+         TypeSemiImplicit, SemiImplCoeff, iTeImpl, iErImplFirst, iErImplLast
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
@@ -475,7 +460,7 @@ contains
     integer :: iDim, Di, Dj, Dk, iDiff
     real :: Coeff, InvDCoord_D(nDim)
 
-    real :: PlanckSi_W(nWave), Planck_W(nWave), Planck
+    real :: PlanckSi_W(nWave), Planck_W(nWave)
 
     real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
@@ -512,8 +497,8 @@ contains
        if(DoCalcDelta) then
           iVarSemi_ = p_
           if(iTeImpl > 0)then
-             ! The ghost cells in Te_G are only needed for the electron heat flux
-             ! limiter.
+             ! The ghost cells in Te_G are only needed for the electron heat
+             ! flux limiter.
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 State_V = State_VGB(:,i,j,k,iBlock)
                 State_V(iVarSemi_) = State_V(iVarSemi_) &
@@ -524,21 +509,14 @@ contains
                 Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
              end do; end do; end do
 
-             if(UseTemperature)then
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
-                end do; end do; end do
-             else
-                do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                   StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
-                        cRadiationNo*Te_G(i,j,k)**4
-                end do; end do; end do
-             end if
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                StarSemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+             end do; end do; end do
           end if
 
-          if(iTrImplFirst > 0)then
+          if(iErImplFirst > 0)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StarSemiAll_VCB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
+                StarSemiAll_VCB(iErImplFirst:iErImplLast,i,j,k,iBlockSemi) = &
                      State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) + &
                      Source_VCB(WaveFirst_:WaveLast_,i,j,k,iBlock)
              end do; end do; end do
@@ -555,21 +533,14 @@ contains
              Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
           end do; end do; end do
 
-          if(UseTemperature)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
-             end do; end do; end do
-          else
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
-                     cRadiationNo*Te_G(i,j,k)**4
-             end do; end do; end do
-          end if
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+          end do; end do; end do
        end if
 
-       if(iTrImplFirst > 0)then
+       if(iErImplFirst > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             SemiAll_VCB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
+             SemiAll_VCB(iErImplFirst:iErImplLast,i,j,k,iBlockSemi) = &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           end do; end do; end do
        end if
@@ -603,12 +574,7 @@ contains
              Natomic = NatomicSi*Si2No_V(UnitN_)
              Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
              Cvi = InvGammaMinus1*Natomic
-             Te = TeSi*Si2No_V(UnitTemperature_)
              Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-             if(.not.UseTemperature)then
-                Cvi = Cvi/(4.0*cRadiationNo*Ti**3)
-                Cve = Cve/(4.0*cRadiationNo*Te**3)
-             end if
              TeTiCoef = Natomic*TeTiRelaxSi/Si2No_V(UnitT_)
           else
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
@@ -620,57 +586,15 @@ contains
                   CvOut = CvSi, TeOut = TeSi, NatomicOut = NatomicSi, &
                   HeatCondOut=HeatCondSi, PlanckOut_W = PlanckSi_W)
 
-             Te = TeSi*Si2No_V(UnitTemperature_)
              Cv = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
-             if(.not.UseTemperature) Cv = Cv/(4.0*cRadiationNo*Te**3)
           end if
 
+          Te = TeSi*Si2No_V(UnitTemperature_)
           OpacityPlanck_W = OpacityPlanckSi_W/Si2No_V(UnitX_)
           OpacityEmission_W = OpacityEmissionSi_W/Si2No_V(UnitX_)
           Planck_W = PlanckSi_W*Si2No_V(UnitEnergyDens_)
-          Planck   = cRadiationNo*Te**4
 
-          select case(TypeSemiImplicit)
-          case('radiation')
-             if(nWave == 1)then
-                ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
-                PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityEmission_W(1) &
-                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) / Cv)
-                PointCoef2_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
-                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) / Cv)
-
-                ! This is just the Planck function at time level * saved
-                PointImpl_VCB(:,i,j,k,iBlock) = Planck
-             else
-                ! Store information for Opacity_g*(Erad_g - B_g) term
-                PointCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityEmission_W
-                PointCoef2_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
-                PointImpl_VCB(:,i,j,k,iBlock) = Planck_W
-             end if
-
-          case('radcond')
-             if(UseElectronPressure)then
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
-             else
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
-             end if
-
-             if(UseElectronPressure)then
-                PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
-                     /(1.0 + SemiImplCoeff*Dt*TeTiCoef/Cvi)
-                PointCoef2_VCB(1,i,j,k,iBlock)=PointCoef_VCB(1,i,j,k,iBlock)
-                PointImpl_VCB(1,i,j,k,iBlock) = Ti
-             end if
-
-             ! The radiation-material energy exchange is point-implicit
-             PointCoef_VCB(iTrImplFirst:,i,j,k,iBlock) &
-                  = Clight*OpacityEmission_W
-             PointCoef2_VCB(iTrImplFirst:,i,j,k,iBlock) &
-                  = Clight*OpacityPlanck_W
-             PointImpl_VCB(iTrImplFirst:,i,j,k,iBlock) &
-                  = Planck_W
-
-          case('cond')
+          if(index(TypeSemiImplicit,'cond') > 0)then
              if(UseElectronPressure)then
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
 
@@ -681,7 +605,27 @@ contains
              else
                 DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
              end if
-          end select
+          end if
+
+          if(index(TypeSemiImplicit,'rad') > 0)then
+             ! The radiation-material energy exchange is point-implicit
+             PointCoef_VCB(iErImplFirst:,i,j,k,iBlock) &
+                  = Clight*OpacityEmission_W
+             PointCoef2_VCB(iErImplFirst:,i,j,k,iBlock) &
+                  = Clight*OpacityPlanck_W
+             PointImpl_VCB(iErImplFirst:,i,j,k,iBlock) &
+                  = Planck_W
+
+             if(nWave == 1 .and. index(TypeSemiImplicit,'cond') == 0)then
+                ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
+                PointCoef_VCB(1,i,j,k,iBlock) = PointCoef_VCB(1,i,j,k,iBlock) &
+                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) &
+                     * 4.0*cRadiationNo*Te**3 / Cv)
+                PointCoef2_VCB(1,i,j,k,iBlock)= PointCoef2_VCB(1,i,j,k,iBlock)&
+                     /(1 + SemiImplCoeff*Dt*Clight*OpacityEmission_W(1) &
+                     * 4.0*cRadiationNo*Te**3 / Cv)
+             end if
+          end if
 
           call get_diffusion_coef
 
@@ -1012,13 +956,7 @@ contains
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
-         if(UseTemperature)then
-            DiffSemiCoef_VGB(iDiffHeat,i,j,k,iBlock) = HeatCond
-         else
-            Te = TeSi*Si2No_V(UnitTemperature_)
-            DiffSemiCoef_VGB(iDiffHeat,i,j,k,iBlock) = HeatCond &
-                 /(4.0*cRadiationNo*Te**3)
-         end if
+         DiffSemiCoef_VGB(iDiffHeat,i,j,k,iBlock) = HeatCond
       end if
 
     end subroutine get_diffusion_coef
@@ -1793,7 +1731,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
     use ModEnergy,     ONLY: calc_energy_cell
-    use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iTrImplFirst, SemiImplCoeff
+    use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iErImplFirst, SemiImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
          No2Si_V, Si2No_V, UnitEnergyDens_, &
@@ -1818,7 +1756,7 @@ contains
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        if(UseRadDiffusion)then
           do iWave = 1, nWave
-             iVarImpl = iTrImplFirst - 1 + iWave
+             iVarImpl = iErImplFirst - 1 + iWave
              iVar = WaveFirst_ - 1 + iWave
 
              NewSemiAll_VC(iVarImpl,i,j,k) = &

@@ -38,7 +38,7 @@ module ModSemiImplVar
   integer, public, allocatable:: iVectorSemi_I(:)
 
   ! Named indices for semi-implicit variables
-  integer, public :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
+  integer, public :: iTeImpl=0, iErImplFirst=0, iErImplLast=0, iEradImpl=0
 
   ! Number of semi-implicit grid blocks
   integer, public:: nBlockSemi = -1

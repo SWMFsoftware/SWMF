@@ -44,7 +44,7 @@ contains
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
-         iTrImplFirst, iTrImplLast
+         iErImplFirst, iErImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
@@ -229,14 +229,14 @@ contains
 
        case('float_semi', 'outflow_semi')
           do iVar = iVarSemiMin, iVarSemiMax
-             if(iVar < iTrImplFirst .or. iVar > iTrImplLast)then
+             if(iVar < iErImplFirst .or. iVar > iErImplLast)then
                 ! For non-radiation variables
                 if(IsLinear)then
                    State_VG(iVar,imin:imax,jmin:jmax,kmin:kmax) = 0.0
                 else
                    call set_float_bc(iVar, iVar)
                 end if
-             elseif(iVar == iTrImplFirst .or. nVarState == 1)then
+             elseif(iVar == iErImplFirst .or. nVarState == 1)then
                 ! For radiation variables (only call once when unsplit)
                 call set_rad_outflow_bc(iSide, iBlock, iImplBlock, &
                      State_VG, IsLinear)
