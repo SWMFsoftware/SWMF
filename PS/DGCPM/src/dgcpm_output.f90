@@ -77,10 +77,11 @@ SUBROUTINE WRESULT()
   ! Write data according to OutputType
   SELECT CASE (OutputType)
   CASE ('SHORT')
-     write(UNITTMP_,*) 'I J N POT'
+     write(UNITTMP_,*) 'I J THETA PHI X Y N POT'
      do j=1, nPhiCells; do i=1, nThetaCells
-        write(UnitTMP_, '( 2(1x,i4), 2(1x, E14.7))') &
-             i, j, mgridden(i,j), mgridpot(i,j)
+        write(UnitTMP_, '( 2(1x,i4), 6(1x, E14.7))') &
+             i, j, 90.0-vthetacells(i,j), vphicells(i,j), &
+             mgridx(i,j), mgridy(i,j), mgridden(i,j), mgridpot(i,j)
      end do; end do
      
   CASE ('VELOCITY')

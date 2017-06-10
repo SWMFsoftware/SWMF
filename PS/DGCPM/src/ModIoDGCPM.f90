@@ -148,6 +148,8 @@ contains
           endif
        enddo
     enddo
+
+    if(DoTestMe) write(*,*)'PS: Restart file loaded successfully.'
     
   end subroutine load_restart_file
   !===========================================================================
