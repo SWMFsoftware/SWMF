@@ -43,6 +43,15 @@
 #include "SpiceUsr.h"
 #endif
 
+extern bool *definedFluxBjorn;
+extern bool *probabilityFunctionDefinedNASTRAN;
+extern double positionSun[3];
+
+
+bool UpdateBoundaryConditionFlag=false;
+double updateBoundaryConditionPeriod=-1.0;
+double updateBoundaryConditionTimer=0.0;
+
 static double SampleFluxDown[200000];
 
 void FlushElementSampling(double *sample) {
@@ -315,6 +324,12 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     double CellSize;
     double CharacteristicSpeed;
     double dt;
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+    CharacteristicSpeed = 20.;
+    CellSize=startNode->GetCharacteristicCellSize();
+    return 0.3*CellSize/CharacteristicSpeed;
+#endif        
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
@@ -601,6 +616,12 @@ int main(int argc,char **argv) {
     if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
       xmin[i]=-100.0e3,xmax[i]=100.0e3;
       sprintf(mesh,"amr.sig=0xd7058cc2a680a3a2.mesh.bin");
+      
+      //testcase for reading drag force from BATL
+      if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_){
+        xmin[i]=-35.0e3,xmax[i]=35.0e3;
+        sprintf(mesh,"amr.sig=0xd7078fc3e79936c1.mesh.bin");
+      }
     }
     else {
       if (strcmp(Comet::Mesh::sign,"")==0) {
@@ -698,6 +719,12 @@ int main(int argc,char **argv) {
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
+  if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_){
+    PIC::CPLR::DATAFILE::BATSRUS::UnitLength=1e3;
+    PIC::CPLR::DATAFILE::MULTIFILE::Init(true,0);
+  }   
+
+
 #if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
   Comet::CometData::LoadBinaryFile("CG-Binary-Output");
 
@@ -766,6 +793,13 @@ int main(int argc,char **argv) {
     */
   }
   #endif
+
+  //init the updateBC timer if updateBoundaryConditionFlag is true
+  if (UpdateBoundaryConditionFlag){
+    if (updateBoundaryConditionPeriod<=0.2) exit(__LINE__,__FILE__,"Error: updateBoundaryConditionPeriod is too small");
+    updateBoundaryConditionTimer = updateBoundaryConditionPeriod;
+  }
+
 
   double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
@@ -967,6 +1001,12 @@ int main(int argc,char **argv) {
       PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(spec,_H2O_SPEC_,yield);
     }
 #endif  
+  
+  if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_){
+  //scale the H2O and CO2 particle weight
+  PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*=1e30;
+  PIC::ParticleWeightTimeStep::GlobalParticleWeight[_CO2_SPEC_]*=1e30;
+  }
 
   //scale the particle weight of the dust species
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if ((spec>=_DUST_SPEC_) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
@@ -1031,6 +1071,7 @@ int main(int argc,char **argv) {
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
     nTotalIterations=10; //50
     PIC::RequiredSampleLength=10;
+    if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_)  nTotalIterations=30;       
   }
 
 
@@ -1098,7 +1139,7 @@ int main(int argc,char **argv) {
         }
 
         //update the sampling direction and cell
-        if (_CG_DUST_FORCE_MODE__FRAME_ROTATION_ == _PIC_MODE_ON_) {
+        if (_CG_DUST_FORCE_MODE__FRAME_ROTATION_ == _PIC_MODE_ON_  && _COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_OFF_){
           ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[nFluxSamplePoints].SetLocation(xSampleLocation_CK,xPrimary,xSun_CK);
         }
       }
@@ -1137,6 +1178,32 @@ int main(int argc,char **argv) {
       */
     }
     #endif
+
+    //update BC iff  updateBoundaryConditionPeriod is reached 
+    if (UpdateBoundaryConditionFlag){
+
+      if (updateBoundaryConditionTimer <0.0){
+      positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+      positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+      positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+      
+
+      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+	definedFluxBjorn[spec]=false,probabilityFunctionDefinedNASTRAN[spec]=false;
+	
+	Comet::GetTotalProductionRateBjornNASTRAN(spec);
+      }
+      if (PIC::ThisThread==0) printf("The boundary condition is updated.");
+      Comet::BjornNASTRAN::Init();
+      updateBoundaryConditionTimer= updateBoundaryConditionPeriod;
+      } else{
+	updateBoundaryConditionTimer-=PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0);
+      }
+      
+
+    }
+    
+
 
 
 //    Comet::CometData::PrintCheckSum();
@@ -1196,7 +1263,11 @@ int main(int argc,char **argv) {
 	FlushElementSampling(SampleElement[counter]);
       }
 #endif
-
+      
+      if (_PIC_SAMPLE_OUTPUT_MODE_==_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_){
+        Comet::IncrementSamplingLengthFlag=false;
+      }
+      
       if (Comet::IncrementSamplingLengthFlag==true) {
         PIC::RequiredSampleLength*=2;
         if (PIC::RequiredSampleLength>700) PIC::RequiredSampleLength=700;
@@ -1228,7 +1299,13 @@ int main(int argc,char **argv) {
     char fname[400];
 
     if (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_) {
-      sprintf(fname,"%s/test_CG-dust-test.dat",PIC::OutputDataFileDirectory);
+      
+      if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_OFF_){
+        sprintf(fname,"%s/test_CG-dust-test.dat",PIC::OutputDataFileDirectory);
+      }else{
+        sprintf(fname,"%s/test_CG-batsrus-dust-coupling.dat",PIC::OutputDataFileDirectory);
+      }
+
     }
     else {
       sprintf(fname,"%s/test_CG.dat",PIC::OutputDataFileDirectory); 
