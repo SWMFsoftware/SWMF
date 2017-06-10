@@ -3,6 +3,9 @@
 
 !-----------------------------------------------------------------------
 module read_data
+
+  use ModIoUnit, ONLY: UnitTmp_
+
   implicit none
 !
 ! Data read from W05scEpot.dat or W05scBpot.dat:
@@ -39,14 +42,14 @@ subroutine read_potential(infile)
 ! Local:
 !
   character(len=16) :: fname
-  integer :: i,lu=20
+  integer :: i
   integer :: csize_rd,d1_rd,d2_rd
 !
 !  PRINT *,infile
-  open(lu,file=infile,status='old')
-  read(lu,"(a)") fname
-  read(lu,"(28i3)") ab
-  read(lu,"(3i3)") csize_rd,d1_rd,d2_rd
+  open(UnitTmp_,file=infile,status='old')
+  read(UnitTmp_,"(a)") fname
+  read(UnitTmp_,"(28i3)") ab
+  read(UnitTmp_,"(3i3)") csize_rd,d1_rd,d2_rd
   if (csize_rd /= csize) then 
     write(6,"('>>> read_potential: file ',a,': incompatable csize: ',&
       &'csize_rd=',i4,' csize=',i4)") fname,csize_rd,csize
@@ -63,14 +66,14 @@ subroutine read_potential(infile)
     stop 'd2'
   endif
   do i=1,csize
-    read(lu,"(6e20.9)") alschfits(:,i)
+    read(UnitTmp_,"(6e20.9)") alschfits(:,i)
   enddo
-  read(lu,"(2f10.3)") ex_pot
-  read(lu,"(28i3)") ls
-  read(lu,"(2i3)") maxl_pot,maxm_pot
-  read(lu,"(28i3)") ms
+  read(UnitTmp_,"(2f10.3)") ex_pot
+  read(UnitTmp_,"(28i3)") ls
+  read(UnitTmp_,"(2i3)") maxl_pot,maxm_pot
+  read(UnitTmp_,"(28i3)") ms
   do i=1,csize 
-    read(lu,"(6e20.9)") schfits(:,i)
+    read(UnitTmp_,"(6e20.9)") schfits(:,i)
   enddo
 
 !  write(6,"(/,'read_potential: Opened file ',a)") infile
@@ -88,7 +91,7 @@ subroutine read_potential(infile)
 ! do i=1,csize 
 !   write(6,"('i=',i3,' schfits(:,i)=',/,(6e20.9))") i,schfits(:,i)
 ! enddo
-  close(lu)
+  close(UnitTmp_)
 !  write(6,"('read_potential: Closed file ',a)") infile
 end subroutine read_potential
 !-----------------------------------------------------------------------
@@ -105,17 +108,17 @@ subroutine read_schatable(infile)
 ! Local:
 !
   character(len=16) :: fname
-  integer :: i,j,lu=20
+  integer :: i,j
 !
-  open(lu,file=infile,status='old')
-  read(lu,"(a)") fname
-  read(lu,"(2i3)") maxk_scha,maxm_scha
+  open(UnitTmp_,file=infile,status='old')
+  read(UnitTmp_,"(a)") fname
+  read(UnitTmp_,"(2i3)") maxk_scha,maxm_scha
   do i=1,d3_scha
     do j=1,d2_scha
-      read(lu,"(6e20.9)") allnkm(:,j,i)
+      read(UnitTmp_,"(6e20.9)") allnkm(:,j,i)
     enddo
   enddo
-  read(lu,"(8f10.4)") th0s
+  read(UnitTmp_,"(8f10.4)") th0s
 !
 ! write(6,"(/,'read_schatable: Opened file ',a)") infile
 ! write(6,"('maxk_scha=',i4,' maxm_scha=',i4)") maxk_scha,maxm_scha
@@ -126,7 +129,7 @@ subroutine read_schatable(infile)
 !   enddo
 ! enddo
 ! write(6,"('th0s=',/,(8f10.4))") th0s
-  close(lu)
+  close(UnitTmp_)
 ! write(6,"('read_schatable: Closed file ',a)") infile
 end subroutine read_schatable
 !-----------------------------------------------------------------------
@@ -143,11 +146,11 @@ subroutine read_bndy(infile)
 ! Local:
 !
   character(len=16) :: fname
-  integer :: rd_na,rd_nb,lu=20
+  integer :: rd_na,rd_nb
 !
-  open(lu,file=infile,status='old')
-  read(lu,"(a)") fname
-  read(lu,"(2i3)") rd_na,rd_nb
+  open(UnitTmp_,file=infile,status='old')
+  read(UnitTmp_,"(a)") fname
+  read(UnitTmp_,"(2i3)") rd_na,rd_nb
   if (rd_na /= na) then 
     write(6,"('>>> read_potential: file ',a,': incompatable na: ',&
       &'rd_na=',i4,' na=',i4)") fname,rd_na,na
@@ -158,16 +161,16 @@ subroutine read_bndy(infile)
       &'rd_nb=',i4,' nb=',i4)") fname,rd_nb,nb
     stop 'nb'
   endif
-  read(lu,"(8e20.9)") bndya
-  read(lu,"(8e20.9)") bndyb
-  read(lu,"(8e20.9)") ex_bndy
+  read(UnitTmp_,"(8e20.9)") bndya
+  read(UnitTmp_,"(8e20.9)") bndyb
+  read(UnitTmp_,"(8e20.9)") ex_bndy
 !
 ! write(6,"(/,'read_bndy: Opened file ',a)") infile
 ! write(6,"('na=',i3,' nb=',i3)") na,nb
 ! write(6,"('bndya=',/,(8e20.9))") bndya
 ! write(6,"('bndyb=',/,(8e20.9))") bndyb
 ! write(6,"('ex_bndy=',(8e20.9))") ex_bndy
-  close(lu)
+  close(UnitTmp_)
 ! write(6,"('read_bndy: Closed file ',a)") infile
 end subroutine read_bndy
 !-----------------------------------------------------------------------
