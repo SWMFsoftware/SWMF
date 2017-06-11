@@ -330,6 +330,9 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
   double *xx,dp,de; 
 
+  Orbiter::Sampling::DragCoefficient::Flux[0]+=ParticleWeight/dt;
+  Orbiter::Sampling::DragCoefficient::ModelParticleCounter[0]++;
+
   dp=-(vInit[0]-vInitUnchanged[0])*RateFactor;  //the rate of the momentu gain by the orbiter's surface
   Orbiter::Sampling::DragCoefficient::dpX[0]+=dp;
   xx=TriangleCutFace->UserData.MomentumTransferRateX;
@@ -346,13 +349,16 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   xx[spec]+=dp/TriangleCutFace->SurfaceArea;
 
   de=(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2] -
-      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor/1.0;
+      vInitUnchanged[0]*vInitUnchanged[0]-vInitUnchanged[1]*vInitUnchanged[1]-vInitUnchanged[2]*vInitUnchanged[2])*RateFactor/2.0;
   xx=TriangleCutFace->UserData.EnergyTransferRate;
   xx[spec]+=de/TriangleCutFace->SurfaceArea;
 
 #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   double *xx,dp,de; 
   int thread=omp_get_thread_num();
+
+  Orbiter::Sampling::DragCoefficient::Flux[thread]+=ParticleWeight/dt;
+  Orbiter::Sampling::DragCoefficient::ModelParticleCounter[thread]++;
 
   //dpX
   dp=(vInit[0]-vInitUnchanged[0])*RateFactor;
