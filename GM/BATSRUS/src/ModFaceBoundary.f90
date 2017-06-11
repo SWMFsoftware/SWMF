@@ -5,6 +5,7 @@
 module ModFaceBoundary
 
   use ModVarIndexes, ONLY: nVar
+  use ModMultiFluid, ONLY: nIonFluid
   use ModNumConst, ONLY: cDegToRad
 
   implicit none
@@ -51,7 +52,7 @@ module ModFaceBoundary
 
   ! CPCP dependent density function at the inner boundary
   logical:: UseCpcpBc = .false.
-  real:: Rho0Cpcp = 18.0, RhoPerCpcp = 0.2
+  real:: Rho0Cpcp_I(nIonFluid) = 18.0, RhoPerCpcp_I(nIonFluid) = 0.2
 
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
@@ -86,10 +87,10 @@ contains
     case("#CPCPBOUNDARY")
        call read_var('UseCpcpBc', UseCpcpBc)
        if(UseCpcpBc)then
-          if(nFluid > 1)call stop_mpi(NameSub// &
-               "CPCBOUNDARY works for single fluid only")
-          call read_var('Rho0Cpcp',   Rho0Cpcp)
-          call read_var('RhoPerCpcp', RhoPerCpcp)
+          do iFluid = 1, nIonFluid
+             call read_var('Rho0Cpcp',   Rho0Cpcp_I(iFluid))
+             call read_var('RhoPerCpcp', RhoPerCpcp_I(iFluid))
+          end do
        end if
     case("#MAGNETICINNERBOUNDARY")
        call read_var('DoReflectInnnerB1', DoReflectInnerB1)
@@ -207,7 +208,7 @@ contains
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
     ! External function for ionosphere
-    real:: RhoCpcp
+    real:: RhoCpcp_I(nIonFluid)
 
     character (len=*), parameter :: NameSub = 'set_face_bc'
     logical :: DoTest, DoTestMe
@@ -228,7 +229,7 @@ contains
     ! Calculate inner BC density from cross polar cap potential if required
     ! Use KeV units for Cpcp and amu/cc for density.
     if(UseCpcpBc .and. UseIe) &
-         RhoCpcp = Io2No_V(UnitRho_)*(Rho0Cpcp + RhoPerCpcp &
+         RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
          * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
          * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
 
@@ -619,7 +620,8 @@ contains
             end where
 
             ! Apply CPCP dependent density if required
-            if(UseCpcpBc .and. UseIe) VarsGhostFace_V(Rho_) = RhoCpcp
+            if(UseCpcpBc .and. UseIe) &
+                 VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I
 
             ! Set pressures, including electron pressure, to float.
             VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
