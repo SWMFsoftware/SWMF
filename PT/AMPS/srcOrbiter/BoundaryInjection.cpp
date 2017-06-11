@@ -54,14 +54,14 @@ long int Orbiter::UpstreamBC::BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Me
        TimeCounter=0.0;
 
        //injection boundary conditions: -x -> inflow, other -> open boundary
-       double c=0.0;
+/*       double c=0.0;
 
        for (idim=0;idim<3;idim++) c+=Orbiter::UpstreamBC::Velocity[idim]*ExternalNormal[idim];
 
        if (-c<0.9) {
          nInjectedParticles+=PIC::BC::ExternalBoundary::OpenFlow::InjectBlock(spec,startNode,nface);
          continue;
-       }
+       }*/
 
        double t=Orbiter::UpstreamBC::NumberDensity[spec];
        ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(t,Orbiter::UpstreamBC::Temperature,Orbiter::UpstreamBC::Velocity,ExternalNormal,spec);
