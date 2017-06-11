@@ -25,6 +25,8 @@
      use ModTimeDGCPM
      use ModFunctionsDGCPM
 
+     use ModIoUnit, ONLY: UnitTMP_
+     
         implicit none
 
         real OldN(nrcells,nphicells), OldDen(nrcells,nphicells)
@@ -81,15 +83,15 @@
 
 ! Write output file
 
-        open(unit=15, file='Filling_Test.dat', form='formatted')
-        write(15,'(F5.2)') Delt
-        write(15,'(I3)') nrcells 
-        write(15,'(I3)') nphicells
-        write(15,*) vrcells
-        write(15,*) mgridx
-        write(15,*) mgridy
-        write(15,*) MaxFilling
-        close(unit = 15)
+        open(unit=UnitTmp_, file='Filling_Test.dat', form='formatted')
+        write(UnitTmp_,'(F5.2)') Delt
+        write(UnitTmp_,'(I3)') nrcells 
+        write(UnitTmp_,'(I3)') nphicells
+        write(UnitTmp_,*) vrcells
+        write(UnitTmp_,*) mgridx
+        write(UnitTmp_,*) mgridy
+        write(UnitTmp_,*) MaxFilling
+        close(unit = UnitTmp_)
 
 ! Fix mgridn and mgridden
 

@@ -80,7 +80,7 @@ SUBROUTINE WRESULT()
      write(UNITTMP_,*) 'I J THETA PHI X Y N POT'
      do j=1, nPhiCells; do i=1, nThetaCells
         write(UnitTMP_, '( 2(1x,i4), 6(1x, E14.7))') &
-             i, j, 90.0-vthetacells(i,j), vphicells(i,j), &
+             i, j, 90.0-vthetacells(i), vphicells(j), &
              mgridx(i,j), mgridy(i,j), mgridden(i,j), mgridpot(i,j)
      end do; end do
      
@@ -285,7 +285,8 @@ subroutine write_mltslice
              cOutputDir, floor(MltNow), floor(100.0*(MltNow-floor(MltNow))), &
              StringFileTime
         iUnitMlt(i) = io_unit_new()
-        if(DoTestMe) write(*,*)'DGCPM: Opening file ', NameMltFiles(i)
+        if(DoTestMe) write(*,*)'DGCPM: Opening file i=', &
+             iUnitMlt(i), NameMltFiles(i)
         open(iUnitMlt(i), FILE=NameMltFiles(i), STATUS='REPLACE')
         write(iUnitMlt(i), '(a, f5.2)') 'Density (cm-3) at MLT = ', MltNow
         write(iUnitMlt(i), '(a)') trim(StringHeader)             

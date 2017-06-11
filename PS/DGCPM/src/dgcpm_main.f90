@@ -64,10 +64,6 @@ program dgcpm
 
   do i3=nst,nstep			! begin time loop
     
-     open(unit=17, file='test.txt', format='formatted', access='APPEND') 
-     write(17,*) 'i3:', i3, ' T:', t, ' kp:', kp
-     close(17)
-
      call getkpa()
 
      call magconv()

@@ -200,7 +200,8 @@ ccc entry setpot ccc
 cccccccccccccccccccc
 
       entry setpot(thetagrid,nt,phigrid,np,pot)
-
+c     Take potential on polar grid of thetagrid,phigrid of size nt, np
+c      and interpolate onto DGCPM's grid.
       call interpol2dpolar(thetagrid,nt,phigrid,np,pot,
      *   vthetacells,nthetacells,vphicells,nphicells,mgridpot)
 
@@ -2010,17 +2011,17 @@ cccccccccccccccccccccccccc
 !
 !      real parmod(10)
 !
-!      open(unit = 10, file='t96_2.dato', status = 'old',
+!      open(unit = HARDCODED, file='t96_2.dato', status = 'old',
 !     *   form = 'formatted')
-!      read(10,*) parmod
-!      read(10,*) nthetacells, nphicells
-!      read(10,*) vthetacells
-!      read(10,*) vphicells
-!      read(10,*) mgridx
-!      read(10,*) mgridy
-!      read(10,*) mgridvol
-!      read(10,*) mgridoc
-!      close(unit = 10)
+!      read(HARDCODED,*) parmod
+!      read(HARDCODED,*) nthetacells, nphicells
+!      read(HARDCODED,*) vthetacells
+!      read(HARDCODED,*) vphicells
+!      read(HARDCODED,*) mgridx
+!      read(HARDCODED,*) mgridy
+!      read(HARDCODED,*) mgridvol
+!      read(HARDCODED,*) mgridoc
+!      close(unit = HARDCODED)
 !
 !      return
 !      end
