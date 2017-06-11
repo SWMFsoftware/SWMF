@@ -253,7 +253,7 @@ test_psie:
 
 test_psie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
-	${MAKE} SWMF
+	${MAKE} SWMF PIONO
 
 test_psie_rundir:
 	rm -rf ${TESTDIR}
@@ -264,6 +264,7 @@ test_psie_rundir:
 
 test_psie_run:
 	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}/IE; ./pIE
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_psie_check:
