@@ -174,7 +174,8 @@ using namespace Exosphere;
      //sampling of the drag coefficient
      namespace DragCoefficient {
        extern bool SamplingMode;
-       extern double *dpX,*dpY,*dpZ;
+       extern double *dpX,*dpY,*dpZ,*Flux;
+       extern int *ModelParticleCounter;
 
        void Init();
 
