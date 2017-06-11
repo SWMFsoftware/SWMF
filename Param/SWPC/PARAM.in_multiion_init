@@ -336,6 +336,7 @@ IMCOUPLINGSMOOTH
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa] H+
 1e-5			pMinDim [nPa] P+
+1e-5			pMinDim     extra for MhdIons
 
 #SAVEPLOT
 4                       nPlotFiles
