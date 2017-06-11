@@ -22,7 +22,7 @@ subroutine logfileRIM(dir)
            open(unit=UnitTmp_, &
                 file=trim(dir)//"/IE.log",status="replace")
            write(UnitTmp_,'(a)')  &
-                'Ridley Ionosphere Model, [deg] and [kV]'
+                'Ridley Ionosphere Model, [deg] and [V]'
            write(UnitTmp_,'(a)') &
                 'nsolve t yy mm dd hh mm ss ms tilt cpcpn cpcps'
         else
