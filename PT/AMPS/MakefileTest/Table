@@ -116,14 +116,14 @@ Run=
 Check=
 >>>@echo "test_CG-Rosina-Liouville_check..." >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/GroundTracks.dat   output/test_CG-Rosina-Liouville/GroundTracks$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville—GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/GroundTracks.dat   output/test_CG-Rosina-Liouville/GroundTracks$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/Liouville.spec=SUM.dat   output/test_CG-Rosina-Liouville/Liouville.spec=SUM$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville—SUM$(TESTCG-Rosina-Liouville-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/Liouville.spec=SUM.dat   output/test_CG-Rosina-Liouville/Liouville.spec=SUM$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff
 
->>>@cat test_CG-Rosina-Liouville—GroundTracks$(TESTCG-Rosina-Liouville-REF).diff test_CG-Rosina-Liouville—SUM$(TESTCG-Rosina-Liouville-REF).diff > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff 
+>>>@cat test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff 
 
->>>@ls -l test_CG-Rosina-Liouville—GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
->>>@ls -l test_CG-Rosina-Liouville—SUM$(TESTCG-Rosina-Liouville-REF).diff
+>>>@ls -l test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
+>>>@ls -l test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff
 >>>@ls -l test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
 <#
@@ -372,7 +372,7 @@ Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vt
 <#
 -------------------------------------------------------------------------------
 #>
-Name=test/batl-reader
+Name=test/BATL-reader
 Time=2
 
 Ref=1{pgcc}@@(0+pleiades)
@@ -380,14 +380,14 @@ Ref=1{icc}@@(0+pleiades)
 Ref=1{gcc}@@(0+pleiades)
 
 Compile=
->>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
+>>>@echo "test_BATL-reader_compile..." > test_BATL-reader.diff 
 >>>echo "Installing BATL....." 
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
 >>>@echo "Install AMPS......"  
->>>./Config.pl -install -application=test/batl-reader -spice-path=nospice -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
+>>>./Config.pl -install -application=test/BATL-reader -spice-path=nospice -BATL-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
 >>>make
->>>@echo "test_batl-reader_compile... done" >> test_batl-reader.diff
+>>>@echo "test_BATL-reader_compile... done" >> test_BATL-reader.diff
 <#
 -------------------------------------------------------------------------------
 
@@ -404,7 +404,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -BATL-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -amps-test=on
 >>>./Config.pl -link-option=-lc++ 
@@ -437,7 +437,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -BATL-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -amps-test=on
 >>>make
@@ -1330,50 +1330,50 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test/CG-batsrus-dust-coupling@@(0+valeriy)
+Name=test/CG-BATSRUS-dust-coupling@@(0+valeriy)
 Time=5
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit-120316/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 
 Compile=
->>>@echo "test_CG-batsrus-dust-coupling_compile..." > test_CG-batsrus-dust-coupling.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_compile..." > test_CG-BATSRUS-dust-coupling.diff
 >>>echo "Installing BATL....."
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB;
->>>./Config.pl  -application=CG-batsrus-dust-coupling-test  -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -amps-test=on  $(TESTCG-batsrus-dust-couplingKEYS)
+>>>./Config.pl  -application=CG-BATSRUS-dust-coupling-test  -BATL-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -amps-test=on  $(TESTCG-BATSRUS-dust-couplingKEYS)
 >>>rm -rf srcTemp
 >>>make amps
->>>@echo "test_CG-batsrus-dust-coupling_compile... done" >> test_CG-batsrus-dust-coupling.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_compile... done" >> test_CG-BATSRUS-dust-coupling.diff
 
 Run=
->>>@echo "test_CG-batsrus-dust-coupling_run..." >> test_CG-batsrus-dust-coupling-test${TESTCG-batsrus-dust-coupling-REF}.diff
->>>cd $(TESTCG-batsrus-dust-couplingDIR);${MPIRUN}  ./amps
->>>@echo "test_CG-batsrus-dust-coupling_run... done" >> test_CG-batsrus-dust-coupling${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_run..." >> test_CG-BATSRUS-dust-coupling-test${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>cd $(TESTCG-BATSRUS-dust-couplingDIR);${MPIRUN}  ./amps
+>>>@echo "test_CG-BATSRUS-dust-coupling_run... done" >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
 Check=
->>>@echo "test_CG-batsrus-dust-coupling-test_check..." >> test_CG-batsrus-dust-coupling${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling-test_check..." >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
->>>@${TESTCG-batsrus-dust-couplingDIR}/../utility/ReduceFile.pl ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/pic.H2O.s=0.out=0.dat 1000
->>>@mv ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/test_CG-batsrus-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat
+>>>@${TESTCG-BATSRUS-dust-couplingDIR}/../utility/ReduceFile.pl ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/pic.H2O.s=0.out=0.dat 1000
+>>>@mv ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/test_CG-BATSRUS-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/test_CG-batsrus-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-batsrus-dust-coupling/test_CG-batsrus-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000${TESTCG-batsrus-dust-coupling-REF}.ref_np`ls ${TESTCG-batsrus-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-batsrus-dust-coupling--H2O${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/test_CG-BATSRUS-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
+>>>output/test_CG-BATSRUS-dust-coupling/test_CG-BATSRUS-dust-coupling--pic.H2O.s=0.out=0.dat.Reduced.Step=1000${TESTCG-BATSRUS-dust-coupling-REF}.ref_np`ls ${TESTCG-BATSRUS-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-BATSRUS-dust-coupling--H2O${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
->>>@${TESTCG-batsrus-dust-couplingDIR}/../utility/ReduceFile.pl ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat 1000
->>>@mv ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000 ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/test_CG-batsrus-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat
+>>>@${TESTCG-BATSRUS-dust-couplingDIR}/../utility/ReduceFile.pl ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat 1000
+>>>@mv ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000 ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/test_CG-BATSRUS-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/test_CG-batsrus-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat         \
->>>output/test_CG-batsrus-dust-coupling/test_CG-batsrus-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000${TESTCG-batsrus-dust-coupling-REF}.ref_np`ls ${TESTCG-batsrus-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-batsrus-dust-coupling--DUST${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/test_CG-BATSRUS-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat         \
+>>>output/test_CG-BATSRUS-dust-coupling/test_CG-BATSRUS-dust-coupling--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000${TESTCG-BATSRUS-dust-coupling-REF}.ref_np`ls ${TESTCG-BATSRUS-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-BATSRUS-dust-coupling--DUST${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-batsrus-dust-couplingDIR}/PT/plots/test_CG-batsrus-dust-coupling.dat         \
->>>output/test_CG-batsrus-dust-coupling/test_CG-batsrus-dust-coupling${TESTCG-batsrus-dust-coupling-REF}.ref_np`ls ${TESTCG-batsrus-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-batsrus-dust-coupling--Particle${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-BATSRUS-dust-couplingDIR}/PT/plots/test_CG-BATSRUS-dust-coupling.dat         \
+>>>output/test_CG-BATSRUS-dust-coupling/test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.ref_np`ls ${TESTCG-BATSRUS-dust-couplingDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-BATSRUS-dust-coupling--Particle${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
->>>@cat test_CG-batsrus-dust-coupling--H2O${TESTCG-batsrus-dust-coupling-REF}.diff test_CG-batsrus-dust-coupling--DUST${TESTCG-batsrus-dust-coupling-REF}.diff test_CG-batsrus-dust-coupling--Particle${TESTCG-batsrus-dust-coupling-REF}.diff > test_CG-batsrus-dust-coupling${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>@cat test_CG-BATSRUS-dust-coupling--H2O${TESTCG-BATSRUS-dust-coupling-REF}.diff test_CG-BATSRUS-dust-coupling--DUST${TESTCG-BATSRUS-dust-coupling-REF}.diff test_CG-BATSRUS-dust-coupling--Particle${TESTCG-BATSRUS-dust-coupling-REF}.diff > test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
->>>@ls -l test_CG-batsrus-dust-coupling--H2O${TESTCG-batsrus-dust-coupling-REF}.diff
->>>@ls -l test_CG-batsrus-dust-coupling--DUST${TESTCG-batsrus-dust-coupling-REF}.diff
->>>@ls -l test_CG-batsrus-dust-coupling--Particle${TESTCG-batsrus-dust-coupling-REF}.diff
->>>@ls -l test_CG-batsrus-dust-coupling${TESTCG-batsrus-dust-coupling-REF}.diff
+>>>@ls -l test_CG-BATSRUS-dust-coupling--H2O${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>@ls -l test_CG-BATSRUS-dust-coupling--DUST${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>@ls -l test_CG-BATSRUS-dust-coupling--Particle${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>@ls -l test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
 <#
 
