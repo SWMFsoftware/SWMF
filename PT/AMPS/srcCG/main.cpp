@@ -721,7 +721,7 @@ int main(int argc,char **argv) {
 
   if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_ON_){
     PIC::CPLR::DATAFILE::BATSRUS::UnitLength=1e3;
-    PIC::CPLR::DATAFILE::MULTIFILE::Init(true,0);
+    PIC::CPLR::DATAFILE::MULTIFILE::Init(false,0);
   }   
 
 
