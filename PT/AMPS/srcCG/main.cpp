@@ -1076,6 +1076,8 @@ int main(int argc,char **argv) {
 
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
+    
+  
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     //update the location of the flux sampling points
@@ -1150,7 +1152,11 @@ int main(int argc,char **argv) {
 //    Comet::CometData::PrintCheckSum();
 
     //perform the next time step
-    PIC::TimeStep();
+     
+    int returnCode;
+    returnCode=PIC::TimeStep();
+    if (returnCode==_PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_) break;
+   
 
     //update the location of the Sun  is needed
     //recalculate the location of the Sun
