@@ -372,7 +372,7 @@ Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vt
 <#
 -------------------------------------------------------------------------------
 #>
-Name=test/BATL-reader
+Name=test/batl-reader
 Time=2
 
 Ref=1{pgcc}@@(0+pleiades)
@@ -380,14 +380,14 @@ Ref=1{icc}@@(0+pleiades)
 Ref=1{gcc}@@(0+pleiades)
 
 Compile=
->>>@echo "test_BATL-reader_compile..." > test_BATL-reader.diff 
+>>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
 >>>echo "Installing BATL....." 
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
 >>>@echo "Install AMPS......"  
->>>./Config.pl -install -application=test/BATL-reader -spice-path=nospice -BATL-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
+>>>./Config.pl -install -application=test/BATL-reader -spice-path=nospice -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
 >>>make
->>>@echo "test_BATL-reader_compile... done" >> test_BATL-reader.diff
+>>>@echo "test_batl-reader_compile... done" >> test_batl-reader.diff
 <#
 -------------------------------------------------------------------------------
 
@@ -404,7 +404,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -BATL-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -amps-test=on
 >>>./Config.pl -link-option=-lc++ 
@@ -437,7 +437,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -BATL-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
+>>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -amps-test=on
 >>>make
@@ -1340,7 +1340,7 @@ Compile=
 >>>echo "Installing BATL....."
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB;
->>>./Config.pl  -application=CG-BATSRUS-dust-coupling-test  -BATL-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -amps-test=on  $(TESTCG-BATSRUS-dust-couplingKEYS)
+>>>./Config.pl  -application=CG-BATSRUS-dust-coupling-test  -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -amps-test=on  $(TESTCG-BATSRUS-dust-couplingKEYS)
 >>>rm -rf srcTemp
 >>>make amps
 >>>@echo "test_CG-BATSRUS-dust-coupling_compile... done" >> test_CG-BATSRUS-dust-coupling.diff
