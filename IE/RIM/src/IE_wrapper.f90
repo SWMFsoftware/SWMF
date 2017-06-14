@@ -816,30 +816,51 @@ contains
 
   subroutine IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
-    use ModRIM, ONLY: PotentialAll
+    use ModIoUnit,  ONLY: UnitTmp_
+    use ModRIM,     ONLY: PotentialAll, LatitudeAll, LongitudeAll
     use ModSizeRim, ONLY: nLats, nLonsall
-    use ModParamRIM, ONLY: NameEFieldModel
-
-    character (len=*),parameter :: NameSub='IE_get_for_ps'
-
-    character(len=100) :: FieldModel
 
     integer, intent(out)          :: iSize, jSize
     real, intent(out)             :: Buffer_II(nLats+2,nLonsAll+1)
     real, intent(in)              :: tSimulation
 
-    real                          :: tSimulationTmp
+    integer :: i, j
+    real    :: tSimulationTmp
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'IE_get_for_ps'
     !--------------------------------------------------------------------------
-    iSize = nLats
-    jSize = nLonsall
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    ! Include ghost cells.
+    iSize = nLats + 2
+    jSize = nLonsall + 1
 
     ! Make sure that the most recent result is provided
     tSimulationTmp = tSimulation
     call IE_run(tSimulationTmp,tSimulation)
 
     Buffer_II(:,:) = PotentialAll(:,:)
-
-    FieldModel = NameEFieldModel
+    
+    if(DoTestMe)then
+       ! Write info to screen:
+       write(*,*) "IE: Preparing potential for PS"
+       write(*,'(a,f11.1,a,f11.1,a,f11.1,a)') "CPCP == ", &
+            maxval(PotentialAll), ' - ', minval(PotentialAll), ' = ', &
+            maxval(PotentialAll)    -    minval(PotentialAll)
+       write(*,*) "IE: Size of pot array = ", size(Buffer_II), &
+            size(Buffer_II,1), size(Buffer_II,2)
+       ! Write potential to file:
+       open(unit=UnitTmp_, file='ie_potential.txt', status='replace')
+       write(UnitTmp_,*)'Colat   Lat   CPCP(V)'
+       do i=1, iSize
+          do j=1, jSize
+             write(UnitTmp_, '(f6.3, 1x, f6.3, 1x, f9.1)') &
+                  LatitudeAll(i,j), LongitudeAll(i,j), Buffer_II(i,j)
+          end do
+       end do
+       close(UnitTmp_)
+    end if
 
   end subroutine IE_get_for_PS
 
