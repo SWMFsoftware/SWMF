@@ -221,13 +221,12 @@ SUBROUTINE THERMAL
 
   If (delt.gt.0.) then
      if (isCoupled) then
-         mgridpot = coupled_potential
+        call setpot(IeTheta_I, nThetaIe, IePhi_I, nPhiIe, IePot_II)
      else
-         call magconv
+        call magconv
+        call setpot(vthetacells,nthetacells,vphicells,nphicells,mgridpot)
      endif
 
-     call setpot(vthetacells,nthetacells,vphicells,nphicells,mgridpot)
-    
     ! Shue Magnetopause - Still in testing
     If (UseShue) then
         call shue()

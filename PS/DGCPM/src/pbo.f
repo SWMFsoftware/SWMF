@@ -238,7 +238,7 @@ c delt in units of seconds
        print*, 'Maximum azimuthal velocity = ',maxvp,' degrees/sec'
        print*, 'Maximum azimuthal time step = ',deltp,' seconds'
        print*, 'deltmax,deltp,deltr = ',deltmax,deltp,deltr
-       stop
+       call CON_stop('PS::setpot: error in electric pot')
       end if
 
       return
