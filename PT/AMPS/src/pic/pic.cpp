@@ -47,20 +47,18 @@ int PIC::TimeStep() {
    //init required sample length if the sample output mode is by time interval 
    static bool SampleTimeInitialized=false;
    
-   if (_PIC_SAMPLE_OUTPUT_MODE_==_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_ && !SampleTimeInitialized ){
-     if (_SIMULATION_TIME_STEP_MODE_ != _SINGLE_GLOBAL_TIME_STEP_) 
-       exit(__LINE__,__FILE__,"Error: the option is only implemented for single global time step");
+   if ((_PIC_SAMPLE_OUTPUT_MODE_==_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_) && (SampleTimeInitialized==false)) {
+     if (_SIMULATION_TIME_STEP_MODE_ != _SINGLE_GLOBAL_TIME_STEP_) exit(__LINE__,__FILE__,"Error: the option is only implemented for single global time step");
      
-     if (PIC::Sampling::SampleTimeInterval<0)
-       exit(__LINE__,__FILE__,"Error: the sample time interval is negative");
+     if (PIC::Sampling::SampleTimeInterval<0) exit(__LINE__,__FILE__,"Error: the sample time interval is negative");
      
-     if (PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0)<0){
+     if (PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0)<0) {
        exit(__LINE__,__FILE__,"Error: the global time step is negative");
-     }else{
-       
+     }
+     else {
        PIC::RequiredSampleLength=(long int)(PIC::Sampling::SampleTimeInterval/PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0)+0.5);
        
-       if (PIC::RequiredSampleLength==0){
+       if (PIC::RequiredSampleLength==0) {
          char msg[600];
          sprintf(msg,"Error: the required sample length is 0, PIC::Sampling::SampleTimeInterval:%e, PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0):%e", PIC::Sampling::SampleTimeInterval,PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0));
          exit(__LINE__,__FILE__,msg);
@@ -327,15 +325,11 @@ int PIC::TimeStep() {
   PIC::SimulationTime::Update();
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
   //update data
-  if(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()){
-    //check if reached the last file
-    if(PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile){
-      //end simulation if needed
-      if(PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile)
-	return _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_;
-    }
-    else //load data file
-      PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
+  if (PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile==true) {
+    if (PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile==true) return _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_;
+  }
+  else if (PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()==true) {
+    PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
   }
 #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
   // update field lines
@@ -747,9 +741,9 @@ void PIC::Sampling::Sampling() {
     int iThreadOpenMP=0;
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
-     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-     iThreadOpenMP=omp_get_thread_num();
-     #endif
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    iThreadOpenMP=omp_get_thread_num();
+    #endif
 
 //  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
@@ -771,40 +765,31 @@ void PIC::Sampling::Sampling() {
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
       for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
         for (i=0;i<_BLOCK_CELLS_X_;i++) {
-	  
-	  ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+          ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-	  if (ptr!=-1) {
-	    
+          if (ptr!=-1) {
             LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
             cell=block->GetCenterNode(LocalCellNumber);
 	    
-            SamplingData=
-	      cell->GetAssociatedDataBufferPointer() + 
-	      collectingCellSampleDataPointerOffset;
+            SamplingData=cell->GetAssociatedDataBufferPointer() + collectingCellSampleDataPointerOffset;
+            memcpy((void*)tempSamplingBuffer,(void*)SamplingData,sampleSetDataLength);
 
-            memcpy((void*)tempSamplingBuffer,
-		   (void*)SamplingData,sampleSetDataLength);
-	    
-	    
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+            #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
             for (s=0;s<PIC::nTotalSpecies;s++) PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingData+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
-#endif
-#endif
-
+            #endif
+            #endif
 
             ptrNext=ptr;
             ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
             //===================    DEBUG ==============================
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
             if (cell->Measure<=0.0) {
               cout << "$PREFIX:" << __FILE__<< __LINE__ << std::endl;
               exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
             }
-
-#endif
+            #endif
             //===================   END DEBUG ==============================
 
             while (ptrNext!=-1) {
@@ -812,13 +797,11 @@ void PIC::Sampling::Sampling() {
               ParticleData=ParticleDataNext;
               nTotalSampledParticles++;
 
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+              #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
               TreeNodeTotalParticleNumber++;
-#endif
+              #endif
 
-
-              memcpy((void*)tempParticleData,
-		     (void*)ParticleData,ParticleDataLength);
+              memcpy((void*)tempParticleData,(void*)ParticleData,ParticleDataLength);
 
               ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);
 
@@ -826,20 +809,20 @@ void PIC::Sampling::Sampling() {
               if (ptrNext!=-1) {
                 ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptrNext);
 
-#if _PIC_MEMORY_PREFETCH_MODE_ == _PIC_MEMORY_PREFETCH_MODE__ON_
+                #if _PIC_MEMORY_PREFETCH_MODE_ == _PIC_MEMORY_PREFETCH_MODE__ON_
                 int iPrefetch,iPrefetchMax=1+(int)(ParticleDataLength/_PIC_MEMORY_PREFETCH__CHACHE_LINE_);
 
                 for (iPrefetch=0;iPrefetch<iPrefetchMax;iPrefetch++) {
                   _mm_prefetch(iPrefetch*_PIC_MEMORY_PREFETCH__CHACHE_LINE_+(char*)ptrNext,_MM_HINT_T1);
                 }
-#endif
+                #endif
               }
 
 
               //================ End prefetch particle data
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING__PARTICLE_COORDINATES_ == _PIC_DEBUGGER_MODE_ON_
+              #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+              #if _PIC_DEBUGGER_MODE__SAMPLING__PARTICLE_COORDINATES_ == _PIC_DEBUGGER_MODE_ON_
               //check position of the particle:
               //the particle must be within the computational domain and outside of the internal boundarues
               list<cInternalBoundaryConditionsDescriptor>::iterator InternalBoundaryListIterator;
@@ -874,9 +857,8 @@ void PIC::Sampling::Sampling() {
 
                 for (idim=0;idim<DIM;idim++) if ((x[idim]<node->xmin[idim])||(x[idim]>node->xmax[idim])) exit(__LINE__,__FILE__,"Error: particle is outside of the block");
               }
-#endif
-#endif
-
+              #endif //_PIC_DEBUGGER_MODE__SAMPLING__PARTICLE_COORDINATES_
+              #endif //_PIC_DEBUGGER_MODE_
 	    
               Speed2=0.0;
 
@@ -888,48 +870,46 @@ void PIC::Sampling::Sampling() {
               LocalParticleWeight=block->GetLocalParticleWeight(s);
               LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+              #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+              #if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
               PIC::Debugger::CatchOutLimitValue(v,DIM,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue(LocalParticleWeight,__LINE__,__FILE__);
-#endif
-#endif
+              #endif //_PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_
+              #endif //_PIC_DEBUGGER_MODE_ON_
 
 
-	      // sample data
-	      cell->SampleDatum(PIC::Mesh::DatumParticleWeight,
-				LocalParticleWeight, s);
-	      cell->SampleDatum(PIC::Mesh::DatumParticleNumber, 1.0, s);
-	      cell->SampleDatum(PIC::Mesh::DatumNumberDensity, 
-				LocalParticleWeight/cell->Measure, s);
+	            //sample data
+              cell->SampleDatum(PIC::Mesh::DatumParticleWeight,LocalParticleWeight, s);
+              cell->SampleDatum(PIC::Mesh::DatumParticleNumber, 1.0, s);
+              cell->SampleDatum(PIC::Mesh::DatumNumberDensity,
+              LocalParticleWeight/cell->Measure, s);
 
-	      double miscv2[3];
-	      for (idim=0;idim<3;idim++) {
-		v2=v[idim]*v[idim];
-		Speed2+=v2;
-		miscv2[idim]=v2;
-	      }
-	      cell->SampleDatum(PIC::Mesh::DatumParticleVelocity,
-				v, s, LocalParticleWeight);
-	      cell->SampleDatum(PIC::Mesh::DatumParticleVelocity2,
-				miscv2, s, LocalParticleWeight);
-	      cell->SampleDatum(PIC::Mesh::DatumParticleSpeed,
-				sqrt(Speed2), s, LocalParticleWeight);
+              double miscv2[3];
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+              for (idim=0;idim<3;idim++) {
+                v2=v[idim]*v[idim];
+                Speed2+=v2;
+                miscv2[idim]=v2;
+              }
+
+              cell->SampleDatum(PIC::Mesh::DatumParticleVelocity,v, s, LocalParticleWeight);
+              cell->SampleDatum(PIC::Mesh::DatumParticleVelocity2,miscv2, s, LocalParticleWeight);
+              cell->SampleDatum(PIC::Mesh::DatumParticleSpeed,sqrt(Speed2), s, LocalParticleWeight);
+
+              #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+              #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
               PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__); 
               PIC::Debugger::CatchOutLimitValue(sampledVelocityOffset,DIM,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue(sampledVelocity2Offset,DIM,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
-#endif
-#endif
+              #endif //_PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_
+              #endif // _PIC_DEBUGGER_MODE_
 
 
               //sample the data for calculation the normal and tangential kinetic temepratures
-            #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+              #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
               //do nothing
-            #else
+              #else //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
               //calcualte the direction of the normal
               double l[3];
 
@@ -947,23 +927,20 @@ void PIC::Sampling::Sampling() {
               c=sqrt((l[0]*l[0])+(l[1]*l[1])+(l[2]*l[2]));
 
               l[0]/=c,l[1]/=c,l[2]/=c;
-              #else
+              #else //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
               exit(__LINE__,__FILE__,"Error: the option is not defined");
-              #endif
+              #endif //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
 
               double vParallel=(l[0]*v[0])+(l[1]*v[1])+(l[2]*v[2]);
 	      
-	      cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity,
-				vParallel, s, LocalParticleWeight);
-	      cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity2,
-				vParallel*vParallel, s, LocalParticleWeight);
-#endif
+              cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity,vParallel, s, LocalParticleWeight);
+              cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity2,vParallel*vParallel, s, LocalParticleWeight);
+              #endif //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
 
               //sample data for the internal degrees of freedom model
-
-#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
+              #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
               //do mothing
-#elif _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+              #elif _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
               //save the total particle weight used for further interpolation
               *(s+(double*)(SamplingData+IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
 
@@ -989,56 +966,47 @@ void PIC::Sampling::Sampling() {
                   break;
                 }
               }
-              #endif
+              #endif //_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_
 
-
-#else
+              #else //_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_
               exit(__LINE__,__FILE__,"the option is not defined");
-#endif
+              #endif //_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_
 
               //call sampling procedures of indivudual models
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+              #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
               ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);
-#endif
+              #endif //_PIC_MODEL__DUST__MODE_
 
-	      //call sampling procedures of indivudual models
+              //call sampling procedures of indivudual models
+              #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+              PIC::Mover::GuidingCenter::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
+              #endif //_PIC_MOVER_INTEGRATOR_MODE_
 
-#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-	      PIC::Mover::GuidingCenter::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
-#endif //_PIC_MOVER_INTEGRATOR_MODE_ 
-
-#if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
-	      PIC::FieldLine::Sampling(ptr,LocalParticleWeight, SamplingData);
-#endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_ 
+              #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
+              PIC::FieldLine::Sampling(ptr,LocalParticleWeight, SamplingData);
+              #endif//_PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
 
               //call user defined particle sampling procedure
-#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
+              #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
               _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s);
-#endif
+              #endif
 
-#ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ //call a user-defind particle sampling procedure with passing the node information
+              #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ //call a user-defind particle sampling procedure with passing the node information
               _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(tempParticleData,LocalParticleWeight,SamplingData,s,node);
-#endif
-
-            }
-
-	    //            memcpy((void*)SamplingData,(void*)tempSamplingBuffer,/*PIC::Mesh::*/sampleSetDataLength);
-
+              #endif
             }
           }
-       }
+        }
+      }
     }
 
 
     //Sample the parallel load: the total particle number
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
     node->ParallelLoadMeasure+=TreeNodeTotalParticleNumber;
-#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     node->ParallelLoadMeasure+=MPI_Wtime()-TreeNodeProcessingTime;
-#endif
-
-
-//    node=node->nextNodeThisThread;
+    #endif
   }
 
 
@@ -1059,11 +1027,11 @@ void PIC::Sampling::Sampling() {
 #endif
 
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+   #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
    CatchOutLimitSampledValue();
-#endif
-#endif
+   #endif
+   #endif
 
    //check if the number of sampled particles coinsides with the number of particles in the buffer
    if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particle buffer");
@@ -1074,42 +1042,42 @@ void PIC::Sampling::Sampling() {
 
     for (nfunc=0;nfunc<nfuncTotal;nfunc++) PIC::IndividualModelSampling::SamplingProcedure[nfunc]();
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
-   CatchOutLimitSampledValue();
-#endif
-#endif
+    #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+    #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+    CatchOutLimitSampledValue();
+    #endif
+    #endif
   }
 
   //sample local data sets of the user defined functions
   for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor[nfunc]();
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
-   CatchOutLimitSampledValue();
-#endif
-#endif
+  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+  CatchOutLimitSampledValue();
+  #endif
+  #endif
 
 
   //sample the distribution functions
-#if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
+  #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
   if (PIC::EnergyDistributionSampleRelativistic::SamplingInitializedFlag==true) PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
   if (_PIC_COUPLER_MODE_!=_PIC_COUPLER_MODE__OFF_) if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
-#endif
+  #endif
 
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
-   CatchOutLimitSampledValue();
-#endif
-#endif
+  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+  CatchOutLimitSampledValue();
+  #endif
+  #endif
 
   //Sample size distribution parameters of dust grains
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDistributionFnction();
   ElectricallyChargedDust::Sampling::FluxMap::Sampling();
-#endif
+  #endif
 
   //END OF THE PARTICLE SAMPLING SECTION
   #endif //<-- end of the particle sampling section
