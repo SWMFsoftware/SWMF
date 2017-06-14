@@ -285,26 +285,76 @@ contains
   end subroutine PS_get_for_ie
 
   !============================================================================
-  subroutine PS_put_from_ie(nTheta, nPhi, Potential_Out)
+  subroutine PS_put_from_ie(nThetaIn, nPhiIn, BufferIn_II)
 
+    use ModNumConst, ONLY: cRadToDeg
+    use ModIoUnit,   ONLY: UnitTmp_
+    use CON_coupler, ONLY: Grid_C, IE_
+    !use ModMainDGCPM
     use ModCoupleDGCPM
-    use ModMainDGCPM
 
-    integer, intent(in):: nTheta, nPhi
-    real,    intent(in):: Potential_out(nTheta, nPhi)
+    integer, intent(in):: nThetaIn, nPhiIn
+    real,    intent(in):: BufferIn_II(nThetaIn, nPhiIn)
 
-    integer :: i,j
-    character(len=100):: NameFile 
+    logical, save :: IsInitialized=.false.
 
-    !-------------------------------------------------------------------------
-    coupled_potential = Potential_out
-
-    write(*,*) "PS: received potential from IE!!"
-    write(*,*) "CPCP == ", maxval(coupled_potential), ' - ', &
-         minval(coupled_potential), ' = ', &
-         maxval(coupled_potential) - minval(coupled_potential)
+    integer :: i, j
     
-    !    EFieldModel = FieldModel
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'PS_put_from_ie'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    ! Check for initialization.
+    if(.not. IsInitialized)then
+       if(DoTestMe) write(*,*)NameSub//': Intializing coupling...'
+
+       ! Allocate variables:
+       allocate(IePot_II(nThetaIn, nPhiIn))
+       allocate(IeTheta_I(nThetaIn), IePhi_I(nPhiIn))
+
+       ! Get IE grid from coupling info:
+       nThetaIe  = nThetaIn
+       nPhiIe    = nPhiIn
+       IeTheta_I = Grid_C(IE_)%Coord1_I
+       IePhi_I   = Grid_C(IE_)%Coord2_I
+
+       ! Set initialization state:
+       IsInitialized = .true.
+
+       ! Write debug info:
+       if(DoTestMe)then
+          write(*,*)NameSub//': IE Grid Info:'
+          write(*,*)'  Theta size, min, max = ', &
+               nThetaIn, IeTheta_I(1)*cRadToDeg,IeTheta_I(nThetaIn)*cRadToDeg
+          write(*,*)'  Phi size, min, max = ', &
+               nPhiIn, IePhi_I(1)*cRadToDeg, IePhi_I(nPhiIn)*cRadToDeg
+       end if
+    end if
+
+    ! Transfer potential to module-level variables:
+    IePot_II = BufferIn_II/1000.0 !Volts to kiloVolts.
+
+    if(DoTestMe)then
+       ! Print CPCP to screen:
+       write(*,*) "PS: received potential from IE!!"
+       write(*,'(a,f8.2,a,f8.2,a,f8.2,a)') "CPCP == ", maxval(IePot_II),' - ',&
+            minval(IePot_II), ' = ', &
+            maxval(IePot_II) - minval(IePot_II), 'kV'
+       write(*,*) "PS: Size of pot array = ", size(BufferIn_II), &
+            size(BufferIn_II,1), size(BufferIn_II,2)
+       ! Write potential to file:
+       open(unit=UnitTmp_, file='ps_potential.txt', status='replace')
+       write(UnitTmp_,*)'Colat   Lat   CPCP(V)'
+       do i=1, nThetaIn
+          do j=1, nPhiIn
+             write(UnitTmp_, '(f6.3, 1x, f6.3, 1x, f9.1)') &
+                  IeTheta_I(i), IePhi_I(j), BufferIn_II(i,j)
+          end do
+       end do
+       close(UnitTmp_)
+    end if
+    
     isCoupled = .true.
 
     RETURN
@@ -330,7 +380,7 @@ contains
     use CON_physics,    ONLY: get_time, get_planet, get_axes
     use CON_time,       ONLY: tSimulationMax
     use ModTimeConvert, ONLY: TimeType, time_real_to_int
-    use ModCoupleDGCPM, ONLY: IsCoupled, coupled_potential
+    use ModCoupleDGCPM
     use ModIoDGCPM
     use ModMainDGCPM
     use ModTimeDGCPM
@@ -391,12 +441,12 @@ contains
     call thermal()
 
     ! Initialize electric field values:
-    if (isCoupled) then
-         mgridpot = coupled_potential
-     else
-         call magconv
-     endif
-     call setpot(vthetacells,nthetacells,vphicells,nphicells,mgridpot)
+    if (IsCoupled) then
+       call setpot(IeTheta_I, nThetaIe, IePhi_I, nPhiIe, IePot_II)
+    else
+       call magconv
+       call setpot(vthetacells,nthetacells,vphicells,nphicells,mgridpot)
+    endif
      
     if (TestFill.gt.0) call TestFilling(1.0)
     
@@ -417,6 +467,7 @@ contains
     use ModProcPS
     use CON_physics, ONLY: get_time
     use ModIoDGCPM,  ONLY: iUnitSlice, DoMltSlice, iUnitMlt, nMltSlice
+    use ModCoupleDGCPM
 
     !INPUT PARAMETERS:
     real,     intent(in) :: tSimulation   ! seconds from start time
@@ -438,6 +489,11 @@ contains
        end do
        deallocate(iUnitMlt)
     end if
+
+    ! Deallocate coupling variables.
+    if(allocated(IePot_II))  deallocate(IePot_II)
+    if(allocated(IeTheta_I)) deallocate(IeTheta_I)
+    if(allocated(IePhi_I))   deallocate(IePhi_I)
 
   end subroutine PS_finalize
 
