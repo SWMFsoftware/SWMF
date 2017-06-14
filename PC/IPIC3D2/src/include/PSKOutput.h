@@ -1130,6 +1130,10 @@ public:
       }
 
     }          
+
+    for(int i = 0; i<nPoint*nDim; i++){
+      Xyz_I[i] *= _col->getNo2SiL();
+    }
   }
 #endif
   
