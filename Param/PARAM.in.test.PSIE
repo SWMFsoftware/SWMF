@@ -1,6 +1,9 @@
 #ECHO
 T
 
+#TEST
+IE_get_for_ps PS_put_from_ie
+
 #PROGRESS
 1000                    DnShowProgressShort
 50000                   DnShowProgressLong
