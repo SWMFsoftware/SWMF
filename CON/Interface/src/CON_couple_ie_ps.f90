@@ -46,7 +46,6 @@ module CON_couple_ie_ps
 
   ! Variables for the simple coupler
   logical, save :: UseMe
-  integer, save :: nTheta, nPhi
   integer, save :: iProc0Ie, iProc0Ps, iCommWorld
 
   ! Name of this interface
@@ -71,17 +70,10 @@ contains
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    ! This coupler does not work for RAM, because RAM grid is not on the
-    ! ionosphere. 
-    call get_comp_info(PS_,NameVersion=NameVersionPs)
-
-    !    if(NameVersionPs(1:3) == 'DGC')then
     ! IE-PS coupling uses MPI
     UseMe = is_proc(IE_) .or. is_proc(PS_)
 
-    nTheta = size(Grid_C(IE_) % Coord1_I)
-    nPhi   = size(Grid_C(IE_) % Coord2_I)
-
+    ! Get useful node information:
     iProc0Ps   = i_proc0(PS_)
     iProc0Ie   = i_proc0(IE_)
     iCommWorld = i_comm()
@@ -152,10 +144,7 @@ contains
       real, dimension(:,:), allocatable ::Potential_Out
       ! MPI status variable
       integer :: iStatus_I(MPI_STATUS_SIZE)
-      integer :: i,j
-      integer :: iPS_Size, jPS_Size, iSize, jSize
-      real :: iPS(Grid_C(PS_) % nCoord_D(1))
-      real :: jPS(Grid_C(PS_) % nCoord_D(2))
+      integer :: iSize, jSize
       real :: Buffer_II(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
 
       ! General error code
@@ -168,37 +157,27 @@ contains
       if(DoTest)write(*,*)NameSubSub,', iProc, iProc0Ie, iProc0Ps=', &
            iProcWorld, iProc0Ie, iProc0Ps
 
-      ! Get Plasmasphere grid size
-      iPs_Size = Grid_C(PS_) % nCoord_D(1)
-      jPs_Size = Grid_C(PS_) % nCoord_D(2)
+      ! Ensure that grids are compatable.  Dynamic transformations forthcoming.
+      if(Grid_C(IE_)%TypeCoord /= Grid_C(PS_)%TypeCoord) call CON_stop( &
+           NameSub//' ERROR: PS/IE use different coordinate systems.')
 
-      ! Get Plasmasphere Grid
-      iPS = 90.0 - (Grid_C(PS_) % Coord1_I)
-      jPS = (Grid_C(PS_) % Coord2_I)-180.    
-
-      do j=1, jPS_Size
-         if (jPS(j) < 0) then
-            jPS(j) = jPS(j) + 360
-         else 
-            jPS(j) = jPS(j)
-         endif
-      enddo
-
-      ! Allocate buffers both on PS and IE root processors
-      allocate(Potential_out(iPS_Size,jPS_Size))
-
-      ! Get Potential from IE, then Bilinear Interpolate
+      ! Size of IE grid:
+      iSize = Grid_C(IE_) % nCoord_D(1)
+      jSize = Grid_C(IE_) % nCoord_D(2)
+      
+      ! Get Potential from IE:
       if(is_proc0(IE_)) &
            call IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
-      ! Transfer variables from IE to PS
+      ! Transfer variables from IE to PS if on different nodes:
       if(iProc0Ie /= iProc0Ps)then
+         ! Share electric potential (Buffer_II) from IE to PS:
          if(is_proc0(IE_)) &
-              call MPI_send(Potential_out, size(Potential_out), &
-              MPI_REAL, iProc0Ps, 1, iCommWorld, iError)
+              call MPI_send(Buffer_II, size(Buffer_II), &
+              MPI_REAL, iProc0Ie, 1, iCommWorld, iError)
          if(is_proc0(PS_)) &
-              call MPI_recv(Potential_out, size(Potential_out), &
-              MPI_REAL, iProc0Ie, 1, iCommWorld, iStatus_I, iError)
+              call MPI_recv(Buffer_II, size(Buffer_II), &
+              MPI_REAL, iProc0Ps, 1, iCommWorld, iStatus_I, iError)
       end if
 
       if(DoTest) write(*,* )NameSubSub,', variables transferred iProc:', &
@@ -206,15 +185,8 @@ contains
 
       ! Put variables into PS
       if(is_proc0(PS_)) &
-           call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out)
+           call PS_put_from_ie(iSize, jSize, Buffer_II)
 
-      !\
-      ! Deallocate buffer to save memory
-      !/
-      deallocate(Potential_Out)
-
-      if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
-           ', iProc:',iProcWorld
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_mpi
