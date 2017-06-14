@@ -62,10 +62,10 @@ contains
        nParamInt = 7 + nIonFluid*4
 
        ! Charge and mass per species/fluid
-       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD = 19 variables for each region
+       ! XyzMin_D + LenPic_D + Dxzy_D + R_DD = 18 variables for each region
        ! PePerPtotal + xUnitPicSi + uUnitPicSi + mUnitPicSi + rPlanet
        ! + No2Si_V(UnitX_) = 6 variables
-       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*19 + 6
+       nParamReal = max(nSpecies, nIonFluid)*2 + nRegionPic*18 + 6
 
        RETURN
     end if
