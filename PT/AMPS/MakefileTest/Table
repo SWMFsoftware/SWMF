@@ -1336,17 +1336,17 @@ Time=5
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit-120316/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 
 Compile=
->>>@echo "test_CG-BATSRUS-dust-coupling_compile..." > test_CG-BATSRUS-dust-coupling.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_compile..." > test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 >>>echo "Installing BATL....."
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB;
 >>>./Config.pl  -application=CG-BATSRUS-dust-coupling-test  -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -amps-test=on  $(TESTCG-BATSRUS-dust-couplingKEYS)
 >>>rm -rf srcTemp
 >>>make amps
->>>@echo "test_CG-BATSRUS-dust-coupling_compile... done" >> test_CG-BATSRUS-dust-coupling.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_compile... done" >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
 Run=
->>>@echo "test_CG-BATSRUS-dust-coupling_run..." >> test_CG-BATSRUS-dust-coupling-test${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>@echo "test_CG-BATSRUS-dust-coupling_run..." >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 >>>cd $(TESTCG-BATSRUS-dust-couplingDIR);${MPIRUN}  ./amps
 >>>@echo "test_CG-BATSRUS-dust-coupling_run... done" >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
