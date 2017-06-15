@@ -296,29 +296,56 @@ contains
     integer, intent(in):: nThetaIn, nPhiIn
     real,    intent(in):: BufferIn_II(nThetaIn, nPhiIn)
 
+    integer, save :: jShift
     logical, save :: IsInitialized=.false.
 
-    integer :: i, j
+    real    :: IeLong_I(nPhiIn)
+    integer :: i, j, nIeGhost=0
     
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'PS_put_from_ie'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-
+    
     ! Check for initialization.
     if(.not. IsInitialized)then
        if(DoTestMe) write(*,*)NameSub//': Intializing coupling...'
 
-       ! Allocate variables:
-       allocate(IePot_II(nThetaIn, nPhiIn))
-       allocate(IeTheta_I(nThetaIn), IePhi_I(nPhiIn))
-
-       ! Get IE grid from coupling info:
+       ! Determine number of IE ghost cells in longitude.
+       ! We do not want to have extra points.
+       IeLong_I = Grid_C(IE_)%Coord2_I*cRadToDeg ! copy for convenience.
+       do j=1, nPhiIn
+          ! Ghost cells have same longitude, +360:
+          if(IeLong_I(j)+360./=IeLong_I(nPhiIn+1-j)) exit
+       end do
+       nIeGhost=j-1
+       
+       if(DoTestMe)write(*,*)NameSub//': Number of IE ghost cells: ', nIeGhost
+       
+       ! Get IE grid size:
        nThetaIe  = nThetaIn
-       nPhiIe    = nPhiIn
-       IeTheta_I = Grid_C(IE_)%Coord1_I*cRadToDeg
-       IePhi_I   = Grid_C(IE_)%Coord2_I*cRadToDeg
+       nPhiIe    = nPhiIn-nIeGhost+2 !!! Make our longitude have 2 ghost cells.
+       
+       ! Allocate variables:
+       allocate(IePot_II(nThetaIe, nPhiIe))
+       allocate(IeTheta_I(nThetaIe), IePhi_I(nPhiIe))
 
+       ! Get IE grid from coupling info.
+       IeTheta_I           = Grid_C(IE_)%Coord1_I*cRadToDeg
+       IePhi_I(2:nPhiIe-1) = Grid_C(IE_)%Coord2_I(:nPhiIn-nIeGhost)*cRadToDeg
+
+       ! Get index for rotation:
+       do j=1, nPhiIn-j
+          if(IePhi_I(j+1)>180.)exit
+       end do
+       jShift=j
+       if(DoTestMe)write(*,*)NameSub//': jShift = ', jshift
+       
+       ! Wrap first and last longitudes to create ghost cells.
+       ! This will enforce continuity during interpolation.
+       IePhi_I(1)      = IePhi_I(nPhiIe-1) -360.0
+       iePhi_I(nPhiIe) = IePhi_I(2)        +360.0
+       
        ! Set initialization state:
        IsInitialized = .true.
 
@@ -332,24 +359,30 @@ contains
        end if
     end if
 
-    ! Transfer potential to module-level variables:
-    IePot_II = BufferIn_II
+    ! Transfer potential to module-level variables.
+    ! Rotate 180 degrees without filling ghost cells.
+    IePot_II(:,     2:nPhiIe-jShift-1)=BufferIn_II(:,jShift+1:nPhiIn-nIeGhost)
+    IePot_II(:,nPhiIe-jShift:nPhiIe-1)=BufferIn_II(:,        :jShift)
+
+    ! Wrap values in longitude to ensure continuity:
+    IePot_II(:, 1)      = IePot_II(:,nPhiIe-1)
+    IePot_II(:, nPhiIe) = IePot_II(:,2)
 
     if(DoTestMe)then
        ! Print CPCP to screen:
        write(*,*) "PS: received potential from IE!!"
-       write(*,'(a,f8.2,a,f8.2,a,f8.2,a)') "CPCP == ", maxval(IePot_II),' - ',&
-            minval(IePot_II), ' = ', &
-            maxval(IePot_II) - minval(IePot_II), 'kV'
+       write(*,'(a,f11.1,a,f11.1,a,f11.1,a)') "PS CPCP == ", &
+            maxval(IePot_II), ' - ', minval(IePot_II), ' = ', &
+            maxval(IePot_II) - minval(IePot_II), 'V'
        write(*,*) "PS: Size of pot array = ", size(BufferIn_II), &
             size(BufferIn_II,1), size(BufferIn_II,2)
        ! Write potential to file:
        open(unit=UnitTmp_, file='ps_potential.txt', status='replace')
-       write(UnitTmp_,*)'Colat   Lat   CPCP(V)'
-       do i=1, nThetaIn
-          do j=1, nPhiIn
-             write(UnitTmp_, '(f6.3, 1x, f6.3, 1x, f9.1)') &
-                  IeTheta_I(i), IePhi_I(j), BufferIn_II(i,j)
+       write(UnitTmp_,*)'Colat   Lon   Potential(V)'
+       do i=1, nThetaIe
+          do j=2, nPhiIe-1
+             write(UnitTmp_, '(f6.2, 1x, f6.2, 1x, f9.1)') &
+                  IeTheta_I(i), IePhi_I(j), IePot_II(i,j)
           end do
        end do
        close(UnitTmp_)
