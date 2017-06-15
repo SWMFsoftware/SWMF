@@ -316,8 +316,8 @@ contains
        ! Get IE grid from coupling info:
        nThetaIe  = nThetaIn
        nPhiIe    = nPhiIn
-       IeTheta_I = Grid_C(IE_)%Coord1_I
-       IePhi_I   = Grid_C(IE_)%Coord2_I
+       IeTheta_I = Grid_C(IE_)%Coord1_I*cRadToDeg
+       IePhi_I   = Grid_C(IE_)%Coord2_I*cRadToDeg
 
        ! Set initialization state:
        IsInitialized = .true.
@@ -326,14 +326,14 @@ contains
        if(DoTestMe)then
           write(*,*)NameSub//': IE Grid Info:'
           write(*,*)'  Theta size, min, max = ', &
-               nThetaIn, IeTheta_I(1)*cRadToDeg,IeTheta_I(nThetaIn)*cRadToDeg
+               nThetaIn, IeTheta_I(1),IeTheta_I(nThetaIn)
           write(*,*)'  Phi size, min, max = ', &
-               nPhiIn, IePhi_I(1)*cRadToDeg, IePhi_I(nPhiIn)*cRadToDeg
+               nPhiIn, IePhi_I(1), IePhi_I(nPhiIn)
        end if
     end if
 
     ! Transfer potential to module-level variables:
-    IePot_II = BufferIn_II/1000.0 !Volts to kiloVolts.
+    IePot_II = BufferIn_II
 
     if(DoTestMe)then
        ! Print CPCP to screen:
