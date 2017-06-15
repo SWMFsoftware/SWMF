@@ -185,6 +185,15 @@ public:
     PrintChecksum(message);
   };
 
+  void PrintChecksumThread(long int nline,const char* fname,int ThisThread=-1) {
+    char message[1000];
+
+    sprintf(message," line=%ld, file=%s",nline,fname);
+    if (ThisThread!=-1)  sprintf(message,"%s, thread=%i",message,ThisThread);
+
+    printf("$PREFIX:CRC32 checksum=0x%lx, message=%s\n",checksum(),message);
+  };
+
   void PrintChecksum(char* message=NULL) {
     unsigned long int *buffer=new unsigned long int[TotalThreadsNumber];
     long int thread;
