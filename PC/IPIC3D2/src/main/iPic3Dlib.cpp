@@ -1717,7 +1717,7 @@ void c_Solver:: find_output_list(int iPlot){
 			 grid->getZstart(), grid->getZend());
     MPI_Reduce(&nPoint_I[iPlot], &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 
-    if(doOutputParticles_I[iPlot] && nCell_I[iPlot]>0){
+    if(nCell_I[iPlot]>0){
       double drSat = col->getSatRadius(); 
 
       // Find out a cube can contain all the satellite sampling points. 
