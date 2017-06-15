@@ -48,7 +48,7 @@ CIRrn                  NAME
 F                       WriteStatic
 T                       WriteDynamic
 300.                    OutputInterval
-OLD                     OutputType
+SHORT                   OutputType
 DIPOLE                  MagneticType
 
 #MLTSLICE
