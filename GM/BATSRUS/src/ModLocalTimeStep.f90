@@ -250,7 +250,8 @@ contains
                   DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
                   DoReschangeOnlyIn = .not.UseMaxTimeStep)
 
-             if(DoTestMe)write(*,*) NameSub,' stored conservative flux'
+             if(DoTestMe .and. iBlock == BlkTest) &
+                  write(*,*) NameSub,' stored conservative flux'
 
           end if
 
