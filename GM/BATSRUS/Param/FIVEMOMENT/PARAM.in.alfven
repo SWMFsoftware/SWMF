@@ -1,0 +1,178 @@
+#DESCRIPTION
+Five-moment test with Alfven waves
+
+#UPDATECHECK
+F
+
+#POINTIMPLICIT
+T			UsePointImplicit
+0.5			BetaPointImplicit
+F			IsAssymetric
+F			DoNormalizeCell
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.30			VersionUserModule
+
+#CHECKGRIDSIZE
+     100                              nI
+       1                              nJ
+       1                              nK
+      10                     MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#LIGHTSPEED
+100.0			cLightDim
+
+#PLASMA
+1.0			IonMass
+0.01			ElectronMass
+1.0			IonCharge
+-1.0			ElectronCharge
+1.0			ElectronTemperatureRatio
+
+#UNIFORMSTATE
+1.0			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+1.0			Bx
+0.0			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.01			P
+0.01			eRho
+0.0			eUx
+0.0			eUy
+0.0			eUz
+0.01			eP
+
+#GRID
+1                    	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-10000.                	xMin
+ 10000.               	xMax
+-1.                   	yMin
+ 1.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#USERINPUTBEGIN ----------------
+
+Bx  = 1
+Rho = 1
+cA  = 1
+Bz  = 0
+Uz  = 0
+
+#WAVE
+6			By_       = Ampl*cos(2pi/LambdaX*x)
+10000.0			Width
+0.1			Amplitude = 0.1
+10000.0			LambdaX   = 1e4
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+3			Uy_ = cA * By / Bx
+10000.0			Width
+0.1			Amplitude
+10000.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+14			ElUy_ = Uey = Uy  since Jy=0
+10000.0			Width
+0.1			Amplitude
+10000.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+15			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi) 
+10000.0			Width       = 2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
+6.2831852e-05		Amplitude     2e-5*pi
+10000.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase       sin(x) = cos(x-90)
+
+#WAVE
+9			Ey_  = -Uez * Bx = -2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
+10000.0			Width
+-6.2831852e-05		Amplitude 2e-4*pi
+10000.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
+
+#WAVE
+10			Ez_ = +Uey * Bx
+10000.0			Width
+0.1			Amplitude
+10000.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#USERINPUTEND   ----------------
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+1d mhd idl_ascii       StringPlot
+-1			DnOutput
+500.0			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+10000.0			tSimulationMax
+
