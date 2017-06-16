@@ -1310,19 +1310,58 @@ contains
 
   end subroutine IE_run
 
-  !=================================================================
+  !============================================================================
   subroutine IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
-    character (len=*),parameter :: NameSub='IE_get_for_ps'
-
+    use ModNumConst,   ONLY: cRadToDeg
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModIonosphere, ONLY: IONO_nPsi, IONO_nTheta, &
+         IONO_Phi, IONO_NORTH_Theta,IONO_NORTH_Psi 
+    
     integer, intent(in) :: iSize, jSize
     real,    intent(out):: Buffer_II(iSize,jSize)
     real,    intent(in) :: tSimulation
 
-    !NOTE: The Buffer variables must be collected to i_proc0(IE_) before return
+    integer :: i, j
+    real    :: tSimulationTmp
 
-    write(*,*) NameSub,' -- called but not yet implemented.'
+    logical :: DoTest, DoTestMe
+    character (len=*),parameter :: NameSub='IE_get_for_ps'
+    !--------------------------------------------------------------------------
+    if(iSize /= IONO_nTheta*2-1 .or. jSize /= IONO_nPsi)then
+       write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
+            ' IONO_nTheta,IONO_nPsi=',IONO_nTheta, IONO_nPsi
+       call CON_stop(NameSub//' ERROR in IE-PS coupling.')
+    end if
 
+    ! Make sure that the most recent result is provided
+    tSimulationTmp = tSimulation
+    call IE_run(tSimulationTmp, tSimulation)
+
+        ! Pass potential to coupler:
+    Buffer_II = IONO_Phi
+    
+    if(DoTestMe)then
+       ! Write info to screen:
+       write(*,*) "IE: Preparing potential for PS"
+       write(*,'(a,f11.1,a,f11.1,a,f11.1,a)') "IE CPCP == ", &
+            maxval(IONO_Phi), ' - ', minval(IONO_Phi), ' = ', &
+            maxval(IONO_Phi)    -    minval(IONO_Phi)
+       write(*,*) "IE: Size of pot array = ", size(Buffer_II), &
+            size(Buffer_II,1), size(Buffer_II,2)
+       ! Write potential to file:
+       open(unit=UnitTmp_, file='ie_potential.txt', status='replace')
+       write(UnitTmp_,*)'Colat   Lon   Potential(V)'
+       do i=1, iSize
+          do j=1, jSize
+             write(UnitTmp_, '(f6.2, 1x, f6.2, 1x, f9.1)') &
+                  IONO_North_Theta(i,j)*cRadToDeg, &
+                  IONO_North_Psi(i,j)*cRadToDeg, Buffer_II(i,j)
+          end do
+       end do
+       close(UnitTmp_)
+    end if
+    
   end subroutine IE_get_for_ps
 
   !============================================================================
