@@ -1,0 +1,142 @@
+#DESCRIPTION
+5-moment test with Langmuir waves
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.30			VersionUserModule
+
+#CHECKGRIDSIZE
+      50                              nI
+      50                              nJ
+       1                              nK
+      10                     MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#GRID
+2                  	nRootBlockX
+2                     	nRootBlockY
+1                     	nRootBlockZ
+-0.5                 	xMin
++0.5                 	xMax
+-0.5                   	yMin
+ 0.5                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+
+#POINTIMPLICIT
+T			UsePointImplicit
+0.5			BetaPointImplicit
+F			IsAssymetric
+F			DoNormalizeCell
+
+#LIGHTSPEED
+1.0			cLightDim
+
+#PLASMA
+1.0			IonMass
+1/100.0			ElectronMass
+1.0			IonCharge
+-1.0			ElectronCharge
+1.0			ElectronTemperatureRatio
+
+#UNIFORMSTATE
+1.0			Rho Left
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.0			HypE
+5e-5			P
+1.0/100.0		ElRho
+0.0			ElUx
+0.0			ElUy
+0.0			ElUz
+5.e-5			ElP
+
+#SHOCKPOSITION
+0.0			ShockPosition
+1.0			ShockSlope
+
+#USERINPUTBEGIN ----------------
+
+#WAVE
+14			ElUx
+1000.0			Width
+1e-2			Amplitude
+0.707106781186		LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#USERINPUTEND ---------------
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+periodic                TypeBcSouth
+periodic                TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
+
+#HYPERBOLICDIVE
+0.5			HypEDecay
+
+FIXEDTIMESTEP
+T			UseFixedTimeStep
+1.2566/30.0
+
+TIMESTEPPING
+2			nStage
+0.4			CflExpl
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2
+1d mhd idl              StringPlot
+-1			DnOutput
+0.01			DtOutput
+0.			DxOutput
+z=0 MHD idl             StringPlot
+-1			DnOutput
+0.01			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+0.1			tSimulationMax
+
+1.2566			tSimulationMax
