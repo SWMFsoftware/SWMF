@@ -63,7 +63,7 @@ module ModPointImplicit
   logical, public :: UsePointImplicit = UseMultiIon .or. UseEfield 
   logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon .or. UseEfield 
   integer, public, allocatable :: &
-       iVarPointImpl_I(:)                        ! Indexes of point impl. vars
+       iVarPointImpl_I(:)          ! Indexes of point implicit variables
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
   logical, public :: IsPointImplMatrixSet=.false.! Is dS/dU matrix analytic?
   logical, public :: IsPointImplPerturbed=.false.! Is the state perturbed?
@@ -73,12 +73,17 @@ module ModPointImplicit
        EpsPointImpl_V(:)          ! absolute perturbation per variable
   real, public    :: EpsPointImpl ! relative perturbation
 
-  public update_point_implicit    ! do update with point implicit scheme
-  public read_point_implicit_param
+  public:: update_point_implicit    ! do update with point implicit scheme
+  public:: read_point_implicit_param
+  public:: init_point_implicit_num
 
   ! Local variables
-  ! Number of point implicit variables
-  integer :: nVarPointImpl = 0    
+  ! Number of point implicit variables 
+  integer :: nVarPointImpl = 0
+
+  ! Number and indexes of variables with numerical derivatives
+  integer :: nVarPointImplNum = 0
+  integer, allocatable :: iVarPointImplNum_I(:)       
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
   real:: BetaPointImpl = 1.0  
@@ -174,7 +179,7 @@ contains
              EpsPointImpl   = 1.e-9
           end if
        else
-          ! Precision of 8-byte arithmetic is roughly P = 1e-6
+          ! Precision of 4-byte arithmetic is roughly P = 1e-6
           if(IsAsymmetric)then
              ! Optimal value is the square root of P for 1-sided derivative
              EpsPointImpl   = 1.e-3
@@ -188,29 +193,44 @@ contains
        ! too small otherwise the error in the source term becomes large.
        EpsPointImpl_V = EpsPointImpl
 
-       ! This call should allocate and set the iVarPointImpl_I index array,
-       ! set IsPointImplMatrixSet=.true. if the dS/dU matrix is analytic,
-       ! it may also modify the EpsPointImpl and EpsPointImpl_V parameters.
+       ! This call should allocate and set the iVarPointImpl_I index array.
+       ! If IsPointImplMatrixSet=.true. is set then the dS/dU matrix is analytic.
+       ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and 
+       ! the iVarPointImplNum_I index array may be set with the number and indexes
+       ! of point implicit variables that require numerical derivatives 
+       ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
+       ! Finally, init_point_implicit  may also modify the EpsPointImpl and 
+       ! EpsPointImpl_V parameters.
 
+       nVarPointImplNum = 0
        call init_point_implicit
 
        if(.not.allocated(iVarPointImpl_I)) call stop_mpi( NameSub // &
             ': init_point_implicit did not set iVarPointImpl_I')
 
+       ! If IsPointImplMatrixSet is false and the iVarPointImplNum_I array is
+       ! not set, then all variables require numerical derivatives, 
+       ! so we simply copy iVarPointImpl_I into iVarPointImplNum_I
+       if(.not.IsPointImplMatrixSet .and. nVarPointImplNum == 0) &
+            call init_point_implicit_num
+
        nVarPointImpl = size(iVarPointImpl_I)
 
        allocate( &
-            DsDu_VVC(nVar, nVar, nI, nJ, nK), &
-            Matrix_II(nVarPointImpl, nVarPointImpl), &
+            DsDu_VVC(nVar,nVar,nI,nJ,nK), &
+            Matrix_II(nVarPointImpl,nVarPointImpl), &
             Rhs_I(nVarPointImpl))
 
        if(iProc==0 .and. index(Test_String, NameSub)>0)then
-          write(*,*)NameSub,' allocated arrays: ',DoTest,DoTestMe
-          write(*,*)NameSub,': iVarPointImpl_I=',iVarPointImpl_I
-          write(*,*)NameSub,': IsPointImplMatrixSet=',IsPointImplMatrixSet
+          write(*,*)NameSub,' allocated arrays'
+          write(*,*)NameSub,': nVarPointImpl  =', nVarPointImpl
+          write(*,*)NameSub,': iVarPointImpl_I=', iVarPointImpl_I
+          write(*,*)NameSub,': IsPointImplMatrixSet=', IsPointImplMatrixSet
           if(.not.IsPointImplMatrixSet)then
-             write(*,*)NameSub,': EpsPointImpl  =',EpsPointImpl
-             write(*,*)NameSub,': EpsPointImpl_V=',EpsPointImpl_V
+             write(*,*)NameSub,': nVarPointImplNum  =', nVarPointImplNum
+             write(*,*)NameSub,': iVarPointImplNum_I=', iVarPointImplNum_I
+             write(*,*)NameSub,': EpsPointImpl  =', EpsPointImpl
+             write(*,*)NameSub,': EpsPointImpl_V=', EpsPointImpl_V
           end if
        end if
     end if
@@ -228,6 +248,8 @@ contains
     StateExpl_VC = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
 
     ! Put back old values into the implicit variables
+    ! so the update is relative to the time level n
+    ! (this is a steady state preserving scheme).
     do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar = 1,nVarPointImpl
        iVar = iVarPointImpl_I(iIvar)
        State_VGB(iVar,i,j,k,iBlock) = StateOld_VCB(iVar,i,j,k,iBlock)
@@ -247,6 +269,7 @@ contains
 
     ! Calculate (part of) Jacobean numerically if necessary
     if(.not.IsPointImplMatrixSet)then
+
        ! Let the source subroutine know that the state is perturbed
        IsPointImplPerturbed = .true.
 
@@ -254,7 +277,7 @@ contains
        Source0_VC = Source_VC(1:nVar,:,:,:)
 
        ! Perturb all point implicit variables one by one
-       do iIVar = 1,nVarPointImpl; iVar = iVarPointImpl_I(iIvar)
+       do iIVar = 1,nVarPointImplNum; iVar = iVarPointImplNum_I(iIvar)
 
           ! Store unperturbed state
           State0_C = State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock)
@@ -265,7 +288,7 @@ contains
           elseif(true_BLK(iBlock))then
              Norm_C = sum(abs(State0_C))/nIJK
           else
-             Norm_C = sum(abs(State0_C), mask=true_cell(1:nI,1:nJ,1:nK,iBlock)) &
+             Norm_C = sum(abs(State0_C),MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))&
                   /max(count(true_cell(1:nI,1:nJ,1:nK,iBlock)),1)
           end if
 
@@ -288,7 +311,7 @@ contains
           if(IsAsymmetric)then
 
              ! Calculate dS/dU matrix elements
-             do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      (Source_VC(jVar,:,:,:) - Source0_VC(jVar,:,:,:))/Epsilon_C
              end do
@@ -305,7 +328,7 @@ contains
              call calc_point_impl_source(iBlock)
 
              ! Calculate dS/dU matrix elements with symmetric differencing
-             do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+             do iJVar = 1,nVarPointImplNum; jVar = iVarPointImplNum_I(iJVar)
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
@@ -454,6 +477,20 @@ contains
     call timing_stop(NameSub)
 
   end subroutine update_point_implicit
+
+
+  !============================================================================
+  subroutine init_point_implicit_num
+
+    ! Set iVarPointImplicitNum_I, the list of variables to be perturbed
+    ! by copying iVarPointImplicit_I
+
+    if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
+    nVarPointImplNum = size(iVarPointImpl_I)
+    allocate(iVarPointImplNum_I(nVarPointImplNum))
+    iVarPointImplNum_I = iVarPointImpl_I
+
+  end subroutine init_point_implicit_num
 
   !============================================================================
 

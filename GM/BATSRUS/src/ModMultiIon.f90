@@ -735,7 +735,8 @@ contains
     ! of the ion momenta and the variables selected (if any) in 
     ! ModUser::user_init_point_implicit
 
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
+         init_point_implicit_num
     use ModUserInterface ! user_init_point_implicit
 
     logical :: IsPointImpl_V(nVar)
@@ -749,6 +750,8 @@ contains
        call user_init_point_implicit
        if(allocated(iVarPointImpl_I)) then
           IsPointImpl_V(iVarPointImpl_I) = .true.
+          ! Set index array for variables to be perturbed
+          if(.not.IsPointImplMatrixSet) call init_point_implicit_num
           deallocate(iVarPointImpl_I)
        end if
     end if
