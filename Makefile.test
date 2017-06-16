@@ -19,7 +19,8 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
-	@echo "    test_psie		      (run PS/DGCPM-IE/RIM coupling test)"
+	@echo "    test_psie		       (run PS/DGCPM-IE/RIM coupling test)"
+	@echo "    test_psgmie		       (run PS/DGCPM-IE/Ridley_serial-GM/BATS-R-US coupling test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
@@ -268,7 +269,51 @@ test_psie_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_psie_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	        ${TESTDIR}/RESULTS/IE/IE.log                         \
+		${PSDIR}/Output/IE_test_psie.ref                     \
+		> test_psie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	        ${TESTDIR}/RESULTS/PS/PS_t20000321_104500_000.log    \
+		${PSDIR}/Output/PS_test_psie.ref                     \
+		>> test_psie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	        ${TESTDIR}/RESULTS/PS/dgcpm_t20000321_105500_000.dat \
+		${PSDIR}/Output/dgcpm_testpsie.ref                   \
+		>> test_psie.diff)
+	ls -ltr test_psie*.diff
 	
+#### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
+#
+test_psgmie:
+	@echo "starting..." > test_psgmie.diff
+	@echo "test_psgmie_compile..." >> test_psgmie.diff
+	${MAKE} test_psgmie_compile
+	@echo "test_psgmie_rundir..." >> test_psgmie.diff
+	${MAKE} test_psgmie_rundir
+	@echo "test_psgmie_run..." >> test_psgmie.diff
+	${MAKE} test_psgmie_run
+	@echo "test_psgmie_check..." >> test_psgmie.diff
+	${MAKE} test_psgmie_check	
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_psgmie_compile:
+	./Config.pl -v=Empty,PS/DGCPM,IE/Ridley_serial,GM/BATSRUS
+	${MAKE} SWMF PIONO PIDL PSPH
+
+test_psgmie_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMIEPS  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEPS ${TESTDIR}/LAYOUT.in
+
+test_psgmie_run:
+	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_psgmie_check:
+	ls -ltr test_psgmie*.diff
+
 #### Radiation belt model test ###
 #
 test_rb:
