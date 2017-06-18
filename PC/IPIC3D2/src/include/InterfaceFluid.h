@@ -773,7 +773,8 @@ class InterfaceFluid
 	  }
     }
 
-    
+    for(int i =0; i<nPoint*nDim; i++)
+      Xyz_I[i]*=No2SiL;     
 
   }
 
