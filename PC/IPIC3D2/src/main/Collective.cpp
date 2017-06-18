@@ -1766,7 +1766,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	3.0                     DtOutput
 	0.                      DxOutput
 	rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
-	sat_satInputFile.sat particles real4 si   StringPlot
+	sat_satInputFile.sat particles0 real4 si   StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	10.          DxOutput: output one particle of every DxOutput particles.
@@ -1794,7 +1794,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	4                       zMin
 	5                       zMax
 	0.                      DxOutput
-	cut particles real4 si  StringPlot
+	cut particles1 real4 si  StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	0                       xMin
@@ -1804,7 +1804,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	4                       zMin
 	5                       zMax
 	1.            DxOutput: output one particle of every DxOutput particles.
-	3d particles real4 si region0 regioin1  StringPlot
+	3d particles0 real4 si region0 regioin1  StringPlot
 	1                       DnOutput
 	-0.05                   DtOutput
 	10.          DxOutput: output one particle of every DxOutput particles.

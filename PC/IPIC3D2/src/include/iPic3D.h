@@ -188,7 +188,9 @@ namespace iPic3D {
     static const int nVarMax = 50; 
     string **Var_II;
     int *nVar_I;
-    long *nCell_I;
+    long *nCell_I; // Total number of the output points for this plot.
+    // Is there any information needs to be saved from this processor?
+    bool *doSaveCellLoc_I; 
     bool IsBinary;
     int nByte;
     long nNodeMax;

@@ -103,6 +103,7 @@ c_Solver::~c_Solver()
     delete [] lastOutputCycle_I;
     delete [] nVar_I;
     delete [] nCell_I;
+    delete [] doSaveCellLoc_I;
     delete [] nameSnapshot_I;
     delete [] outputFormat_I;
     delete [] outputUnit_I;
@@ -1069,6 +1070,7 @@ void c_Solver:: write_plot_init(){
   nameSnapshot_I    = new string[nPlotFile];
   nVar_I            = new int[nPlotFile];
   nCell_I           = new long[nPlotFile];
+  doSaveCellLoc_I   = new bool[nPlotFile];
   outputFormat_I    = new std::string[nPlotFile];
   outputUnit_I      = new std::string[nPlotFile];  
   plotVar_I         = new std::string[nPlotFile];
@@ -1098,6 +1100,7 @@ void c_Solver:: write_plot_init(){
     lastOutputCycle_I[i] = -100;
     isSat_I[i] = false;
     nCell_I[i] = 0;
+    doSaveCellLoc_I[i] = false;
     //doSaveTrajectory_I[i] = false;
   }
 
@@ -1445,7 +1448,12 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
   bool doTestFunc;
   doTestFunc = do_test_func(nameSub);
   //-------------------
-
+  // For particle output, we already know if it is necessary to write file on
+  // this processor, but we do not know how many particles should be saved.
+  // MPI_Reduced should be called later to count the total number of output
+  // particles. 
+  if(!doSaveCellLoc_I[iPlot] && !doOutputParticles_I[iPlot]) return;
+  
   string filename;
   stringstream ss;
   int time;
@@ -1468,30 +1476,32 @@ void c_Solver:: write_plot_data(int iPlot, int cycle){
   filename = nameSnapshot_I[iPlot] +ss.str();
 
   if(doOutputParticles_I[iPlot]){
-    int iSpecies;
-    iSpecies = iSpeciesOutput_I[iPlot];
-    
     long nPartOutputLocal;
     nPartOutputLocal = 0;
-    int dnOutput;
-    dnOutput = col->getplotDx(iPlot);
-    if(dnOutput<1) {
-      if(myrank==1) cout<<" Error: dnOutput = "<<dnOutput<<" which should be an positive integer !!!!!!!"<<endl;
-      abort();
-    }
-    part[iSpecies].write_plot_particles(filename,dnOutput,
-					nPartOutputLocal,
-					plotMin_ID[iPlot][x_],
-					plotMax_ID[iPlot][x_],
-					plotMin_ID[iPlot][y_],
-					plotMax_ID[iPlot][y_],
-					plotMin_ID[iPlot][z_],
-					plotMax_ID[iPlot][z_],
-					pointList_IID[iPlot], nPoint_I[iPlot],
-					isSat_I[iPlot],
-					No2OutL, No2OutV
-					);
+
+    if(doSaveCellLoc_I[iPlot]){
+      int iSpecies;
+      iSpecies = iSpeciesOutput_I[iPlot];
     
+      int dnOutput;
+      dnOutput = col->getplotDx(iPlot);
+      if(dnOutput<1) {
+	if(myrank==1) cout<<" Error: dnOutput = "<<dnOutput<<" which should be an positive integer !!!!!!!"<<endl;
+	abort();
+      }
+      part[iSpecies].write_plot_particles(filename,dnOutput,
+					  nPartOutputLocal,
+					  plotMin_ID[iPlot][x_],
+					  plotMax_ID[iPlot][x_],
+					  plotMin_ID[iPlot][y_],
+					  plotMax_ID[iPlot][y_],
+					  plotMin_ID[iPlot][z_],
+					  plotMax_ID[iPlot][z_],
+					  pointList_IID[iPlot], nPoint_I[iPlot],
+					  isSat_I[iPlot],
+					  No2OutL, No2OutV
+					  );
+    }
     MPI_Reduce(&nPartOutputLocal, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
 
   }else{          
@@ -1561,7 +1571,7 @@ void c_Solver:: find_output_list(int iPlot){
   if(!isSat_I[iPlot]){
     /*
       Find out the node index for output. Only useful for non-satellite field
-      output. Also provide useful information for non-satellite particle outpu,
+      output. Also provide useful information for non-satellite particle output,
       eventhough the information has not been used in the current code. 
     */
 
@@ -1576,9 +1586,9 @@ void c_Solver:: find_output_list(int iPlot){
        |   |   |   |   |
        |___|___|___|___|
        0   1   2   3      global node index
-       0   1   2        global cell index
+         0   1   2        global cell index
        0   1   2   3   4  local node index
-       0   1   2   3    local cell index
+         0   1   2   3    local cell index
 
        proc 2
        _________________
@@ -1588,12 +1598,12 @@ void c_Solver:: find_output_list(int iPlot){
        |___|___|___|___|
        |   |   |   |   |
        |___|___|___|___|
-       3   4   5   6   global node index
-       3   4   5     global cell index
-       0   1   2   3   4   local node index
-       0   1   2   3     local cell index
+           3   4   5   6       global node index
+             3   4   5         global cell index
+       0   1   2   3   4       local node index
+         0   1   2   3         local cell index
 
-       In X-directoin, assume the global cell index is 0 - 6, then the 
+       In X-directoin, assume the global cell index is 0 - 5, then the 
        global node index is 0 - 6. 
 
 	
@@ -1676,23 +1686,29 @@ void c_Solver:: find_output_list(int iPlot){
       plotIdxLocMax_ID[iPlot][z_] = 1;
     }
 
-    if(!doOutputParticles_I[iPlot]){
-      const int minI = plotIdxLocMin_ID[iPlot][x_];
-      const int maxI = plotIdxLocMax_ID[iPlot][x_];
-      const int minJ = plotIdxLocMin_ID[iPlot][y_];
-      const int maxJ = plotIdxLocMax_ID[iPlot][y_];
-      const int minK = plotIdxLocMin_ID[iPlot][z_];
-      const int maxK = plotIdxLocMax_ID[iPlot][z_];
+
+    const int minI = plotIdxLocMin_ID[iPlot][x_];
+    const int maxI = plotIdxLocMax_ID[iPlot][x_];
+    const int minJ = plotIdxLocMin_ID[iPlot][y_];
+    const int maxJ = plotIdxLocMax_ID[iPlot][y_];
+    const int minK = plotIdxLocMin_ID[iPlot][z_];
+    const int maxK = plotIdxLocMax_ID[iPlot][z_];
     
-      long nPoint;
-      nPoint =
-	floor((maxI-minI)/plotDx + 1)*
-	floor((maxJ-minJ)/plotDx + 1)*
-	floor((maxK-minK)/plotDx + 1);
-      if( minI>maxI || minJ>maxJ || minK>maxK) nPoint=0;
-      nPoint = nPoint>0? nPoint:0;
+    long nPoint;
+    nPoint =
+      floor((maxI-minI)/plotDx + 1)*
+      floor((maxJ-minJ)/plotDx + 1)*
+      floor((maxK-minK)/plotDx + 1);
+    if( minI>maxI || minJ>maxJ || minK>maxK) nPoint=0;
+    if(nPoint>0){
+      doSaveCellLoc_I[iPlot] = true;
+    }else{
+      nPoint = 0; 
+    }
+      
+    if(!doOutputParticles_I[iPlot]){
       MPI_Reduce(&nPoint, &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
-	
+      
       nPoint_I[iPlot] = nPoint;
       long iCount = 0; 
       for(int i=minI; i<= maxI; i+=plotDx)
@@ -1716,6 +1732,7 @@ void c_Solver:: find_output_list(int iPlot){
 			 grid->getYstart(), grid->getYend(),
 			 grid->getZstart(), grid->getZend());
     MPI_Reduce(&nPoint_I[iPlot], &nCell_I[iPlot],1,MPI_LONG,MPI_SUM,0,MPI_COMM_MYSIM);
+    if(nPoint_I[iPlot]>0) doSaveCellLoc_I[iPlot] = true;
 
     if(nCell_I[iPlot]>0){
       double drSat = col->getSatRadius(); 
