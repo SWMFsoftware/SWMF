@@ -105,6 +105,13 @@ rundir:
 
 
 test:
+	-@(make test_saturn)
+	-@(make test_restart)
+	rm -f src/neutral_atmosphere_planet.f90
+	-@(make test_earth)
+	-@(make test_restart)
+
+test_orig:
 	-@(make test_jupiter)
 	-@(make test_saturn)
 	-@(make test_restart)
