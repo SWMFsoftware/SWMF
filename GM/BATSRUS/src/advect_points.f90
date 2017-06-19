@@ -163,7 +163,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
 
   use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
-  use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
+  use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B, BlkTest, ProcTest
   use ModAdvance, ONLY: State_VGB, StateOld_VCB
   use ModParallel, ONLY: NeiLev
   use ModGeometry, ONLY: XyzStart_BLK
@@ -216,7 +216,11 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   ! Testing
   logical :: DoTest, DoTestMe
   !----------------------------------------------------------------------------
-  call set_oktest('get_point_data', DoTest, DoTestMe)
+  if(iProc == ProcTest .and. iBlockMin <= BlkTest .and. iBlockMax >= BlkTest)then
+     call set_oktest('get_point_data', DoTest, DoTestMe)
+  else
+     DoTest = .false.; DoTestMe = .false.
+  end if
 
   ! Calculate maximum index and the number of state variables
   iStateMax = min(iVarMax, nVar)
