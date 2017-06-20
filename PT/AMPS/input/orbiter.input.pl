@@ -199,6 +199,34 @@ while ($line=<InputFile>) {
     }
   }
   
+  #define faces through which injection from the external domain boundary is allowed
+  elsif  ($InputLine eq "EXTERNALFACEINJECTIONLIST")  {
+    my @FaceTable;
+    my $iface;
+    
+    for ($iface=0;$iface<6;$iface++) {
+      push @FaceTable, "false";
+    }
+    
+    while (defined $InputComment) {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ALL") {
+        for ($iface=0;$iface<6;$iface++) {
+          $FaceTable[$iface]="true";
+        }
+      }
+      elsif ($InputLine =~ /^\d+?$/) {
+        $FaceTable[$InputLine]="true";
+      }
+      else {
+        die "Something wrong in the line=$InputFileLineNumber ($InputFileName)\n";
+      }       
+    }   
+    
+    ampsConfigLib::ChangeValueOfArray("bool Orbiter::UpstreamBC::ExternalFaceInjectionAllowedFlag\\[6\\]",\@FaceTable,"main/BoundaryInjection.cpp");
+  }
+  
   #point particle source 
   elsif ($InputLine eq "POINTSOURCE") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
