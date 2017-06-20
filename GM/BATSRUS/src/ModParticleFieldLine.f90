@@ -604,8 +604,6 @@ contains
     real, dimension(MaxDim) :: DirBCurr_D, DirBNext_D
     ! direction of the tangent to the line
     real, dimension(MaxDim) :: DirCurr_D, DirNext_D
-    ! correction to prevent line from closing
-    real, dimension(MaxDim):: Corr_D
     !\
     ! radii and vector of radial direction
     !/
@@ -663,25 +661,16 @@ contains
           call get_grad_cosbr(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Grad_D = Corr_D)
-          CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBCurr_D)/&
+               Grad_D= StateEnd_VI(GradX_:GradZ_,iParticle))
+
+          CosBR = iDirTrace * iIndexEnd_II(Alignment_, iParticle) * &
+               sum(StateEnd_VI(x_:z_, iParticle)*DirCurr_D) / &
                sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
           StateEnd_VI(CosBR_, iParticle) = CosBR
-          StateEnd_VI(GradX_:GradZ_,iParticle) = Corr_D
           
-          if(abs(CosBR) < 0.5)then
-             Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
-             if(sum(Corr_D*DirCurr_D) < 0.0)then
-                ! correct the direction to prevent the line from closing
-                DirCurr_D = DirCurr_D +  Corr_D * min(&
-                     StateEnd_VI(Ds_, iParticle), &
-                     abs(sum(Corr_D*DirCurr_D)) / sum(Corr_D**2) )
-                DirCurr_D = DirCurr_D / sqrt(sum(DirCurr_D**2))
-             else
-                Corr_D = 0.0
-             end if
-          end if
-          
+          ! correct the direction to prevent the line from closing
+          call correct(DirCurr_D)
+
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                StateEnd_VI(Ds_, iParticle) * &
@@ -715,21 +704,10 @@ contains
           ! direction at the 1st stage 
           DirNext_D = DirBNext_D *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
-
           CosBR = StateEnd_VI(CosBR_, iParticle)  
-          Corr_D = StateEnd_VI(GradX_:GradZ_,iParticle)         
-          if(abs(CosBR) < 0.5)then
-             Corr_D = Corr_D / CosBR * (1.0 - abs(CosBR) / 0.5)
-             if(sum(Corr_D*DirNext_D) < 0.0)then
-                ! correct the direction to prevent the line from closing
-                DirNext_D = DirNext_D + Corr_D * min(&
-                     StateEnd_VI(Ds_, iParticle), &
-                     abs(sum(Corr_D*DirNext_D)) / sum(Corr_D**2) )
-                DirNext_D = DirNext_D / sqrt(sum(DirNext_D**2))
-             else
-                Corr_D = 0.0
-             end if
-          end if
+
+          ! correct the direction to prevent the line from closing
+          call correct(DirNext_D)
           
           ! get final location
           ROld = sqrt(sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2))
@@ -767,7 +745,7 @@ contains
           CosBR = sum(StateEnd_VI(x_:z_, iParticle)*DirBNext_D)/&
                sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
           ! if the line starts to close -> remove it
-          if(StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
+          if(.false..and.StateEnd_VI(CosBR_,iParticle) * CosBR < 0.0)then
              call mark_undefined(KindEnd_, iParticle)
              CYCLE
           end if
@@ -802,6 +780,63 @@ contains
     end do TRACE
 
   contains
+     !========================
+    subroutine correct(Dir_D)
+      ! corrects the direction to prevent the line from closing:
+      ! if CosBR is far enough from the value of the alginment (+/-1),
+      ! Dir_D is changed:
+      ! - component along \nabla CosBR is reduced or inverted
+      !   => avoid reaching region with opposite sign of CosBR
+      ! - component \perp \nabla CosBR is increased
+      !   => move closer to region with open field lines
+      !-----------------------------------
+      ! current direction
+      real, intent(inout):: Dir_D(MaxDim)
+      ! aux vectors
+      real, dimension(MaxDim):: E_D, H_D, T_D, C_D
+      ! scalar to define how strong the correction is
+      real:: Misc
+      !-----------------------------------
+      ! if CosBR is sufficiently close to value of alignment, +/- 1
+      ! => don't correct
+      if(abs(CosBR-iIndexEnd_II(Alignment_,iParticle)) < 0.15)&
+           RETURN
+
+      ! if current direction corresponds change of CosBR towards alignment
+      ! => don't correct
+      if(sum(StateEnd_VI(GradX_:GradZ_, iParticle)*Dir_D)*&
+           iIndexEnd_II(Alignment_,iParticle) > 0)&
+           RETURN
+
+      ! unit vector along the direction of gradient
+      ! with alignment accounted for
+      C_D = iIndexEnd_II(Alignment_, iParticle) * &
+           StateEnd_VI(GradX_:GradZ_, iParticle)/ &
+           sqrt(sum(StateEnd_VI(GradX_:GradZ_, iParticle)**2))
+      
+      ! unit vector in radial direction
+      E_D = iDirTrace * StateEnd_VI(x_:z_, iParticle) / &
+           sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+      ! subtract from it a direction along \nabla CosBR 
+      H_D = E_D - sum(E_D*C_D)*C_D
+      if(any(H_D/=0.0))&
+           H_D = H_D / sqrt(sum(H_D**2)) ! make it unit vector
+
+
+
+      ! remove from C_D component alon \perp to H_D and current direction:
+      ! prevents the line to divert sideways because of the correction 
+      T_D = cross_product(H_D, Dir_D)
+      C_D = C_D - T_D * sum(T_D*C_D)
+      C_D = C_D / sqrt(sum(C_D**2)) ! make it unit vector
+
+      ! the strength of the correction:
+      ! Misc=1 -> reflection from surface CosBR=0 
+      Misc = min(1.0,abs(iIndexEnd_II(Alignment_,iParticle)-CosBR))
+      ! correct the direction to prevent the line from closing
+      Dir_D = Dir_D - 2*Misc * C_D * sum(C_D*Dir_D) + Misc * H_D
+
+    end subroutine correct
     !========================
     function is_complete() result(IsCompleteOut)
       use ModMpi
