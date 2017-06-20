@@ -17,6 +17,17 @@
 namespace Orbiter {
 using namespace Exosphere;
 
+  //analytical expressions for the drag coefficnet of simple geometrical objects
+  namespace DragCoefficent{
+    namespace ClosedFormExpressions {
+      namespace AccommodationCoefficient {
+        double Sphere(double Mass,double Speed,double AccommodationCoefficient,double Tw,double Tinf);
+        double Plate(double Mass,double Speed,double AccommodationCoefficient,double Tw,double Tinf);
+        double Cylinder(double Mass,double Speed,double AccommodationCoefficient,double Tw,double Tinf,double Length,double Diameter);
+      }
+    }
+  }
+
   //Exchange model data
   void ExchangeModelData();
 
