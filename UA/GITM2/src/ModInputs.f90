@@ -199,6 +199,7 @@ module ModInputs
   real    :: MaxResidual            = 1.0
 
   logical :: UseImprovedIonAdvection = .false.
+  logical :: UseNighttimeIonBCs = .false.
 
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
