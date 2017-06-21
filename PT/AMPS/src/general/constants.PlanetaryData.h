@@ -81,6 +81,18 @@
 #define _CG__MASS_ 1.01E13
 #define _CG__RADIUS_ 2.0E3
 
+
+/*-------------------------- END COMET CHURYUMOV-GERASIMENCO  ----------------*/
+
+/*--------------------------   SATURN   -----------------------------*/
+
+#define _SATURN__ID_  10
+#define _SATURN__RADIUS_  54.364E3
+#define _SATURN__MASS_    5.6836E26
+
+/*--------------------------  END SATURN   -----------------------------*/
+
+
 /*-------------------------- NONE ----------------*/
 //this target is used when no astronomical body is inside the domain. the definition is needed to satisfy the compiler
 #define _TARGET_NONE__ID_ 10
