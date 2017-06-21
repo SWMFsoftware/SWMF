@@ -788,11 +788,15 @@ subroutine set_inputs
 
         case ("#USEIMPROVEDIONADVECTION")
            call read_in_logical(UseImprovedIonAdvection, iError)
+           if (UseImprovedIonAdvection) then
+              call read_in_logical(UseNighttimeIonBCs, iError)
+           endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''
               write(*,*) '#USEIMPROVEDIONADVECTION'
               write(*,*) "UseImprovedIonAdvection      (logical)"
+              write(*,*) "UseNighttimeIonBCs           (logical)"
            endif
 
         case ("#DYNAMO")
@@ -815,7 +819,6 @@ subroutine set_inputs
            call read_in_logical(UseIonPressureGradient, iError)
            call read_in_logical(UseIonGravity, iError)
            call read_in_logical(UseNeutralDrag, iError)
-           call read_in_logical(UseDynamo, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #IONFORCING:'
               write(*,*) ''
@@ -824,7 +827,6 @@ subroutine set_inputs
               write(*,*) "UseIonPressureGradient (logical)"
               write(*,*) "UseIonGravity          (logical)"
               write(*,*) "UseNeutralDrag         (logical)"
-              write(*,*) "UseDynamo              (logical)"
               IsDone = .true.
            endif
 
