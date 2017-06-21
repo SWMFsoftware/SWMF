@@ -25,6 +25,7 @@ module ModVertical
 
   real, dimension(-1:nAlts+2,nIons) :: NewLogINS
   real, dimension(-1:nAlts+2,nIons) :: LogINS
+!  real, dimension(1:2,nIons) :: OldLogINSc
 
 
   real, dimension(-1:nAlts+2, nSpecies) :: LogNS, VertVel
@@ -33,7 +34,8 @@ module ModVertical
   real, dimension(0:nAlts+1) :: cMax
   
   real :: SZAVertical
-
+  real :: MLatVertical
+ 
   integer :: iLon1D, iLat1D, iBlock1D
 
   real :: Heating(nAlts)
