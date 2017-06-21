@@ -421,19 +421,22 @@ contains
   !============================================================================
   subroutine set_log_var
 
-    use ModMain,      ONLY: x_, y_, z_
+    use ModMain,      ONLY: x_, y_, z_, TypeCoordSystem, Time_Simulation
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
     use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
     use ModIO,        ONLY: lNameLogVar
     use ModIeCoupling,ONLY: logvar_ionosphere
+    use ModCoordTransform, ONLY: cross_product
+    use CON_axes,     ONLY: transform_matrix
     use ModUserInterface ! user_get_log_var
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
     real :: Current_D(3)
     real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
+    real :: Convert_DD(3,3)
 
     integer :: jVar
     character(len=lNameLogVar) :: NameVar, NameLogVarLower
@@ -594,6 +597,41 @@ contains
              tmp1_BLK(i,j,k,iBLK) = ( &
                   -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBLK) &
                   +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBLK) ) / r_BLK(i,j,k,iBLK)**3
+          end do; end do; end do
+       end do
+       ! The /4pi is part of the Biot-Savart formula
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
+
+    case('dst_sm')
+       ! Calculate the Biot-Savart formula for the center of the Earth:
+       ! B = (1/4 Pi)*integral( (curl B) x R / R**3 dV)
+       ! where R is the vector FROM the CURRENT to the FIELD POINT!
+       ! Since the field point is at the origin, R = (-x,-y,-z)
+       ! Only the SM Z component is calculated here: 
+       !   (J x R)_z = Sum_i GMtoSM_z,i * (curl B x R)_i
+
+       ! Conversion from GM coordinate system to SMG
+       Convert_DD = transform_matrix(Time_Simulation, &
+            TypeCoordSystem, 'SMG')
+
+       ! Calculate 
+       do iBLK = 1, nBlock
+          if(Unused_B(iBLK))cycle           
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
+                  Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
+                  Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
+                  Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
+                  Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
+                  Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
+                  Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
+                tmp1_BLK(i,j,k,iBLK)=0.0
+                CYCLE
+             end if
+             call get_current(i,j,k,iBlk,Current_D)
+             tmp1_BLK(i,j,k,iBLK) = &
+                  sum(Convert_DD(3,:)*cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlk))) &
+                  / r_BLK(i,j,k,iBLK)**3
           end do; end do; end do
        end do
        ! The /4pi is part of the Biot-Savart formula
@@ -1087,7 +1125,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      case('rhoux','rhouy','rhouz', 'rhouxpnt','rhouypnt','rhouzpnt')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitRhoU_)
      case('bx','by','bz','bxpnt','bypnt','bzpnt','b1xpnt','b1ypnt','b1zpnt', &
-          'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb')
+          'b1x','b1y','b1z','b0x','b0y','b0z','dst','dstdivb','dst_sm')
         LogVar_I(iVarTot)= LogVar_I(iVarTot)*No2Io_V(UnitB_)
      case('e','epnt','ew','erad')
         LogVar_I(iVarTot) = LogVar_I(iVarTot)*No2Io_V(UnitEnergyDens_)
