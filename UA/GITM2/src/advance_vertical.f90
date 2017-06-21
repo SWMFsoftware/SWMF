@@ -25,7 +25,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        ViscCoefS_1d, &
        KappaTemp_1d, &
        Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, &
-        Cv_1D, dAltdLon_1D, dAltdLat_1D, SZAVertical
+       Cv_1D, dAltdLon_1D, dAltdLat_1D, SZAVertical, MLatVertical
   
 
   implicit none
@@ -40,6 +40,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   iBlock1D = iBlock
 
   SZAVertical = SZA(iLon,iLat,iBlock)
+  MLatVertical=MLatitude(iLon,iLat,nAlts,iBlock)
 
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
   dAltdLon_1D = dAltdLon_CB(iLon,iLat,1,iBlock)
