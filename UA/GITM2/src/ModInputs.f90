@@ -269,6 +269,17 @@ module ModInputs
   logical                   :: UseEUVData =.false.
   character (len=iCharLen_) :: cEUVFile
 
+  !\
+  ! Eclipse Information
+  !/
+  logical :: IncludeEclipse = .false.
+  real(Real8_) :: EclipseStartTime
+  real(Real8_) :: EclipseEndTime
+  real :: EclipseStartY, EclipseEndY
+  real :: EclipseStartZ, EclipseEndZ
+  real :: EclipsePeak, EclipseMaxDistance
+  real :: EclipseExpAmp, EclipseExpWidth
+  
   ! These are Mars Specific, but ignored by other codes:
   ! Some are modified in Planet.f90 (set_planet_defaults)
   real :: DtLTERadiation = 100.0*Rotation_Period

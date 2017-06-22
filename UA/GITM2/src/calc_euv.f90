@@ -108,7 +108,7 @@ subroutine euv_ionization_heat(iBlock)
      enddo
   enddo
 
-
+  if (IncludeEclipse) call calc_eclipse_effects
   call night_euv_ionization
 
   EuvIonRateS = EuvIonRateS + nEuvIonRateS
@@ -140,6 +140,95 @@ subroutine euv_ionization_heat(iBlock)
 
 contains 
 
+  !\
+  ! -------------------------------------------------------------
+  !/
+
+  subroutine calc_eclipse_effects
+
+    real :: x,y,z,xp,yp,zp, distance, PercentDone
+    real :: yPos, zPos, e
+    real :: factor(nLons,nLats,nAlts)
+
+    Factor = 1.0
+    
+    if ( CurrentTime > EclipseStartTime .and. &
+         CurrentTime < EclipseEndTime) then
+
+       PercentDone = (CurrentTime - EclipseStartTime) / &
+            (EclipseEndTime - EclipseStartTime)
+
+       yPos = EclipseStartY + (EclipseEndY - EclipseStartY) * PercentDone
+       zPos = EclipseStartZ + (EclipseEndZ - EclipseStartZ) * PercentDone
+
+       ! Need to rotate lat/lon/alt into solar coordinate X,Y,Z system
+
+       !   x = r * cos(localtime-!pi) * cos(lats*!dtor)
+       !   y = r * sin(localtime-!pi) * cos(lats*!dtor)
+       !   z = r * sin(lats*!dtor)
+       !
+       !   xp = x * cos(tilt) - z * sin(tilt)
+       !   zp = x * sin(tilt) + z * cos(tilt)
+       
+       do iLon = 1,nLons 
+          do iLat = 1,nLats
+             do iAlt = 1,nAlts
+                ! Calculate X,Y,Z for points on Earth (in lat/localtime/alt)
+                x = &
+                     RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
+                     cos(localtime(iLon)*pi/12.0) * &
+                     cos(Latitude(iLat,iBlock))
+                y = &
+                     RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
+                     sin(localtime(iLon)*pi/12.0) * &
+                     cos(Latitude(iLat,iBlock))
+                z = &
+                     RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
+                     sin(Latitude(iLat,iBlock))
+
+                ! rotate around y-axis for the Earth Tilt:
+                xp = x * cos(SunDeclination) - z * sin(SunDeclination)
+                yp = y
+                zp = x * sin(SunDeclination) + z * cos(SunDeclination)
+
+                distance = sqrt( (yPos - yp)**2 + (zPos-zp)**2 )
+       
+                ! If it is close to the eclipse, do calculations
+                
+                if (Distance < EclipseMaxDistance + EclipseExpWidth*2) then
+
+                   ! Assume a linearly decreasing effect:
+                   e = EclipsePeak - EclipsePeak * distance/EclipseMaxDistance
+                   if (e < 0) e = 0
+
+                   ! Towards the edge, assume an exponential:
+                   e = e + EclipseExpAmp * exp(-((Distance-EclipseMaxDistance)/EclipseExpWidth)**2)
+                   Factor(iLon,iLat,iAlt) = 1.0 - e
+
+                   ! Change the ionization rate and heating rate by the factor:
+                   do iIon = 1, nIons-1
+                      EuvIonRateS(iLon,iLat,iAlt,iIon,iBlock) = &
+                           EuvIonRateS(iLon,iLat,iAlt,iIon,iBlock) * &
+                           Factor(iLon,iLat,iAlt)
+                   enddo
+                   EuvHeating(iLon,iLat,iAlt,iBlock) = &
+                        EuvHeating(iLon,iLat,iAlt,iBlock) * &
+                        Factor(iLon,iLat,iAlt)
+
+                endif
+                
+             enddo
+          enddo
+       enddo
+                       
+    endif
+
+  end subroutine calc_eclipse_effects
+
+  !\
+  ! -------------------------------------------------------------
+  !/
+  
   subroutine night_euv_ionization
 
 !!! Nighttime EUV Ionization
@@ -433,8 +522,9 @@ subroutine calc_scaled_euv
      Solar_Flux(N) = RFLUX(N) + (XFLUX(N)-RFLUX(N)) * f107_Ratio
   enddo
 
-  iModelSolar = Tobiska_EUV91
+!  iModelSolar = Tobiska_EUV91
 !  iModelSolar = Hinteregger_Contrast_Ratio
+  iModelSolar = Hinteregger_Linear_Interp
 
   select case(iModelSolar)
 

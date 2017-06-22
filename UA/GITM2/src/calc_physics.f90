@@ -17,7 +17,7 @@ subroutine calc_physics(iBlock)
   integer :: itime(7)
   real*8 :: VernalDay
   real :: JulianDayEq, DaysInYear, OrbitAngle
-  real :: SunDeclination, SinDec, CosDec
+  real :: SinDec, CosDec
 
   real :: DayNumber,TimeHour,Cy
   real :: MeanAnomaly,RMeanAnomaly,DMeanAnomaly

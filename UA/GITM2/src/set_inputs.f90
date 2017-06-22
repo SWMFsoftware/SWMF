@@ -1368,6 +1368,41 @@ subroutine set_inputs
               write(*,*) 'cEUVFile              (string)'
            endif
 
+        case ("#ECLIPSE")
+           IncludeEclipse = .true.
+           call read_in_time(EclipseStartTime, iError)
+           call read_in_time(EclipseEndTime, iError)
+           call read_in_real(EclipseStartY, iError)
+           call read_in_real(EclipseStartZ, iError)
+           call read_in_real(EclipseEndY, iError)
+           call read_in_real(EclipseEndZ, iError)
+           call read_in_real(EclipsePeak, iError)
+           call read_in_real(EclipseMaxDistance, iError)
+           call read_in_real(EclipseExpAmp, iError)
+           call read_in_real(EclipseExpWidth, iError)
+
+           EclipseStartY = EclipseStartY * 1000.0
+           EclipseStartZ = EclipseStartZ * 1000.0
+           EclipseEndY = EclipseEndY * 1000.0
+           EclipseEndZ = EclipseEndZ * 1000.0
+           EclipseMaxDistance = EclipseMaxDistance * 1000.0
+           EclipseExpWidth = EclipseExpWidth * 1000.0
+           
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #ECLIPSE'
+              write(*,*) '#ECLIPSE'
+              write(*,*) 'start y m d h m s            (int x 6)'
+              write(*,*) 'end   y m d h m s            (int x 6)'
+              write(*,*) 'start-y-gse                  (real)'
+              write(*,*) 'start-z-gse                  (real)'
+              write(*,*) 'end-y-gse                    (real)'
+              write(*,*) 'end-z-gse                    (real)'
+              write(*,*) 'peak                         (real)'
+              write(*,*) 'Max Distance                 (real)'
+              write(*,*) 'ExpAmp                       (real)'
+              write(*,*) 'ExpWidth                     (real)'
+           endif
+
         case ("#GLOW")
            call read_in_logical(UseGlow, iError) 
            call read_in_real(dTGlow, iError)
