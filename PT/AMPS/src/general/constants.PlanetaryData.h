@@ -87,7 +87,7 @@
 /*--------------------------   SATURN   -----------------------------*/
 
 #define _SATURN__ID_  10
-#define _SATURN__RADIUS_  54.364E3
+#define _SATURN__RADIUS_  58232.0E3
 #define _SATURN__MASS_    5.6836E26
 
 /*--------------------------  END SATURN   -----------------------------*/
