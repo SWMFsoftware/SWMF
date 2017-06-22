@@ -81,9 +81,15 @@ T                       UseBody
 #MULTIFLUIDIM
 T                       DoMultiFluidIMCoupling
 
+#COLLISION
+-1.0                    CollisionCoefDim
+1.0e3                   TauCutOffDim [s]
+100.0                   uCutOffDim [km/s] read if TauCutOffDim positive
+2                       nPowerCutOff read if TauCutOffDim positive
+
 #TIMESTEPPING
 1			nStage
-0.30			CflExlp
+0.40			CflExlp
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -220,7 +226,7 @@ mc3                     TypeLimiter
 
 #TIMESTEPPING
 2			nStage
-0.30			CflExlp
+0.60			CflExlp
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -297,6 +303,11 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#CHECKTIMESTEP
+T			DoCheckTimeStep
+2			nCheckTimeStep
+1e-6			TimeStepMin
+
 #NONCONSERVATIVE
 T                       UseNonConservative
 
@@ -367,7 +378,7 @@ lcb nul tec             StringPlot  !last closed field line plots with integrals
 
 #BORIS
 T			UseBorisCorrection
-0.01			BorisClightFactor
+0.02			BorisClightFactor
 
 #TIMESTEPPING
 1			nStage
