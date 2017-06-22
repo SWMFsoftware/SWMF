@@ -1357,7 +1357,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
 
   //save the surface properties
-  if (PIC::ThisThread==0) {
+  if ((PIC::ThisThread==0)&&(Exosphere::Planet!=NULL)) {
     char fname[300];
 
     sprintf(fname,"%s/pic.SurfaceProperties.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
