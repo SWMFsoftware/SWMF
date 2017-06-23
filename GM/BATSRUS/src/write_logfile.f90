@@ -630,7 +630,7 @@ contains
              end if
              call get_current(i,j,k,iBlk,Current_D)
              tmp1_BLK(i,j,k,iBLK) = &
-                  sum(Convert_DD(3,:)*cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlk))) &
+                  -sum(Convert_DD(3,:)*cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlk))) &
                   / r_BLK(i,j,k,iBLK)**3
           end do; end do; end do
        end do
