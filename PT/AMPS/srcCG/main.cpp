@@ -778,7 +778,7 @@ int main(int argc,char **argv) {
     utc2et_c(Comet::Time::SimulationStartTimeString,&Comet::Time::et);
     spkpos_c("SUN",Comet::Time::et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
     reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
-
+    subSolarPointZenith = Pi/2- subSolarPointZenith;
     HeliocentricDistance*=1.0E3;
 /*
     et = spice.str2et(timeStamp)
@@ -1169,7 +1169,7 @@ int main(int argc,char **argv) {
 //      utc2et_c(Comet::Time::SimulationStartTimeString,&Comet::Time::et);
       spkpos_c("SUN",Comet::Time::et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
       reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
-
+      subSolarPointZenith = Pi/2 -subSolarPointZenith;
       HeliocentricDistance*=1.0E3;
   /*
       et = spice.str2et(timeStamp)
