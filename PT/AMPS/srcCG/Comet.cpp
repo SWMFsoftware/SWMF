@@ -221,7 +221,7 @@ void Comet::Init_AfterParser(const char *DataFilePath) {
     utc2et_c(Comet::Time::SimulationStartTimeString,&et);
     spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
     reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
-    
+    subSolarPointZenith = Pi/2 - subSolarPointZenith;
     HeliocentricDistance*=1.0E3;
 
     if (PIC::ThisThread==0) {

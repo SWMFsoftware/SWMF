@@ -47,7 +47,7 @@ void Comet::SunLocationUpdate::Processor() {
     //update the location of the Sun and the nucleus shadowing
     spkpos_c("SUN",StartTime_et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
     reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
-
+    subSolarPointZenith = Pi/2 - subSolarPointZenith;
     HeliocentricDistance*=1.0E3;
 
     double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),
