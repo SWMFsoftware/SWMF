@@ -1,0 +1,11 @@
+//$Id$
+//definitions of the model of the outer planets
+
+#ifndef _MOP_DEFIBITIONS_
+#define _MOP_DEFIBITIONS_
+
+#include "MOP_Definitions.dfn"
+
+#define _PLANET_SYSTEM_  _SATURNIAN_SYSTEM_
+
+#endif

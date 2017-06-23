@@ -1,0 +1,5 @@
+//$Id$
+//Definitions used in the model of the magnetospheres of the outer planets
+
+#define _SATURNIAN_SYSTEM_   0
+#define _JUPITER_SYSTEM_     1
