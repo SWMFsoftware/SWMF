@@ -176,11 +176,11 @@ contains
                 ! Calculate X,Y,Z for points on Earth (in lat/localtime/alt)
                 x = &
                      RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
-                     cos(localtime(iLon)*pi/12.0) * &
+                     cos(localtime(iLon)*pi/12.0 - pi) * &
                      cos(Latitude(iLat,iBlock))
                 y = &
                      RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
-                     sin(localtime(iLon)*pi/12.0) * &
+                     sin(localtime(iLon)*pi/12.0 - pi) * &
                      cos(Latitude(iLat,iBlock))
                 z = &
                      RadialDistance_GB(iLon,iLat,iAlt,iBlock) * &
