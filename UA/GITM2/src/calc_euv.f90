@@ -187,9 +187,9 @@ contains
                      sin(Latitude(iLat,iBlock))
 
                 ! rotate around y-axis for the Earth Tilt:
-                xp = x * cos(SunDeclination) - z * sin(SunDeclination)
+                xp = x * cos(-SunDeclination) - z * sin(-SunDeclination)
                 yp = y
-                zp = x * sin(SunDeclination) + z * cos(SunDeclination)
+                zp = x * sin(-SunDeclination) + z * cos(-SunDeclination)
 
                 distance = sqrt( (yPos - yp)**2 + (zPos-zp)**2 )
        
