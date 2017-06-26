@@ -10,6 +10,8 @@ module ModLoadBalance
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
+  use ModPointImplicit, ONLY: UsePointImplicit_B, &
+       DoBalancePointImplicit, IsDynamicPointImplicit
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRaytrace, ONLY: ray
   use ModAdvance, ONLY: nVar
@@ -33,7 +35,6 @@ module ModLoadBalance
   ! We should switch to these variables instead of _BP indexes !!!
   integer, allocatable, public:: iTypeBalance_A(:)
 
-
   integer, allocatable:: iTypeAdvance_A(:)
 
 
@@ -43,7 +44,7 @@ module ModLoadBalance
   logical, parameter :: DoMoveExtraData = .false.
 
   ! Number of scalars passed in the buffer
-  integer, parameter :: nScalarData = 1
+  integer, parameter :: nScalarData = 2
 
   logical:: DoSendRay
 
@@ -104,7 +105,15 @@ contains
        call stop_mpi(NameSub//': MaxBlockData has to be set in ModUser')
     end if
 
-    Buffer_I(1)  = real(nDynamicData)
+    Buffer_I(1) = real(nDynamicData)
+
+    if(DoBalancePointImplicit)then
+       if(UsePointImplicit_B(iBlock))then
+          Buffer_I(2) = 1.0
+       else
+          Buffer_I(2) = 0.0
+       end if
+    end if
 
     iData = nScalarData
 
@@ -175,6 +184,9 @@ contains
     ! Amount of user defined data for this block
     nDynamicData = nint(Buffer_I(1))
 
+    if(DoBalancePointImplicit) &
+         UsePointImplicit_B(iBlock) = Buffer_I(2) > 0.5
+
     ! Read rest of the blockData buffer
     iData = nScalarData
 
@@ -228,7 +240,6 @@ contains
     use ModMain
     use ModImplicit, ONLY: UsePartImplicit, UseSemiImplicit, &
          TypeSemiImplicit, iBlockFromSemi_B, nBlockSemi
-    use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModAdvance, ONLY: &
          State_VGB, iTypeAdvance_B, iTypeAdvance_BP,                 &
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
@@ -322,7 +333,7 @@ contains
           end if
 
           ! next bit: point-implicit     -> 1, otherwise -> 0
-          if(UsePointImplicit)then
+          if(DoBalancePointImplicit)then
              iCrit = 2*iCrit
              iPointImplBlock = iCrit
           end if
@@ -396,7 +407,7 @@ contains
                 if(IsSemiImplBlock_B(iBlock)) iType = iType + iSemiImplBlock
              end if
 
-             if(UsePointImplicit)then
+             if(DoBalancePointImplicit)then
                 if(UsePointImplicit_B(iBlock)) iType = iType + iPointImplBlock
              end if
 
@@ -730,6 +741,7 @@ contains
   subroutine load_balance_blocks
 
     use ModProcMH
+    use ModMain, ONLY: iteration_number
     use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
     use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
     use ModTimeStepControl, ONLY: UseMaxTimeStep
@@ -741,10 +753,12 @@ contains
     !--------------------------------------------------------------------------
 
     ! Select and load balance blocks
-    if(  UseMaxTimeStep .or. &                         ! subcycling scheme
-         UsePartImplicit .or. &                        ! part implicit scheme
-         UsePartSteady .and. IsNewSteadySelect .or. &  ! part steady scheme
-         nBlockSemi >= 0 .and. DoBalanceSemiImpl) then ! semi-implicit scheme
+    if(  UseMaxTimeStep .or.                              &! subcycling scheme
+         UsePartImplicit .or.                             &! part implicit
+         UsePartSteady .and. IsNewSteadySelect .or.       &! part steady scheme
+         nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit 
+         DoBalancePointImplicit .and. iteration_number>1  &! point-implicit
+         ) then ! semi-implicit scheme
 
        ! Redo load balancing
        call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
@@ -755,6 +769,10 @@ contains
        ! Repeated semi implicit load balancing is only needed if the
        ! semi-implicit condition is changing dynamically. 
        DoBalanceSemiImpl = IsDynamicSemiImpl
+
+       ! Repeated point implicit load balancing is only needed if the
+       ! semi-implicit condition is changing dynamically. 
+       DoBalancePointImplicit = IsDynamicPointImplicit
     end if
 
   end subroutine load_balance_blocks
