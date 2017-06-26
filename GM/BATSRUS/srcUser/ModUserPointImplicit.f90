@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is an example user module demonstrating the use of the 
@@ -69,17 +69,19 @@ contains
     !-----------------------------------------------------------------------
 
     ! Only blocks within radius rFriction need to be point implicit
+    ! This array is also used for load balancing 
+    ! if DoBalancePointImplicit is set to true in user_init_point_implicit.
     UsePointImplicit_B(iBlock) = rMin_BLK(iBlock) < rFriction
 
     ! Check if point implicit scheme is on (part implicit may switch it off)
     ! Also check if this particular block is point implicit or not
-    if(.not.(UsePointImplicit .and. UsePointImplicit_B(iBlock)))then
+    if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
        call user_expl_source
-       call user_impl_source
+       if(UsePointImplicit_B(iBlock)) call user_impl_source
     elseif(IsPointImplSource)then
        ! Add implicit sources only
-       call user_impl_source
+       if(UsePointImplicit_B(iBlock)) call user_impl_source
     else
        ! Add explicit sources only
        call user_expl_source
@@ -149,7 +151,8 @@ contains
   subroutine user_init_point_implicit
 
     use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
+         DoBalancePointImplicit, IsDynamicPointImplicit
     !------------------------------------------------------------------------
 
     ! Allocate and set iVarPointImpl_I
@@ -166,6 +169,16 @@ contains
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set below.
     IsPointImplMatrixSet = .true.
+
+    ! Tell the load balancing scheme if point implicit blocks should be
+    ! load balanced. If set to true, UsePointImplicit_B should be set in 
+    ! user_calc_sources. Default is false.
+    DoBalancePointImplicit = .true.
+
+    ! Tell the load balancing scheme if the assignment of UsePointImplicit_B
+    ! keeps changing so load balancing is needed every time step. 
+    ! Default is false.
+    IsDynamicPointImplicit = .true.
 
   end subroutine user_init_point_implicit
 
