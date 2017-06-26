@@ -60,8 +60,13 @@ module ModPointImplicit
   private ! except
 
   ! Default is true for multi-ion and ion-electron equations
-  logical, public :: UsePointImplicit = UseMultiIon .or. UseEfield 
-  logical, public :: UsePointImplicit_B(nBLK) = UseMultiIon .or. UseEfield 
+  logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield 
+  logical, public:: UsePointImplicit_B(nBLK) = UseMultiIon .or. UseEfield 
+
+  ! balance point implicit blocks once or multiple times?
+  logical, public:: DoBalancePointImplicit = .false. 
+  logical, public:: IsDynamicPointImplicit = .false. 
+
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
   logical, public :: IsPointImplSource=.false.   ! Ask for implicit source
