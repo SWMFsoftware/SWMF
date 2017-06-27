@@ -124,20 +124,24 @@ contains
     call init_grid
   end subroutine initialize
 
+  !============================================================================
+
   subroutine run(TimeLimit)
     ! advance the solution in time
     real, intent(in):: TimeLimit
     !------------------------------
-    iIterGlobal = iIterGlobal + 1
+    if(DataInputTime <= TimeGlobal)&
+         RETURN
     call fix_grid_consistency
-    if(DoRun) then
-       ! run the model
-       call advance(TimeLimit)
-    else
-       ! update global time 
-       TimeGlobal = TimeLimit
-    end if
+    if(DoRun) &
+         ! run the model
+         call advance(min(DataInputTime,TimeLimit))
+    ! update time & iteration counters
+    iIterGlobal = iIterGlobal + 1
+    TimeGlobal = min(DataInputTime,TimeLimit)
+    
     call write_output(TimeGlobal, iIterGlobal)
+
   end subroutine run
 
   !============================================================================

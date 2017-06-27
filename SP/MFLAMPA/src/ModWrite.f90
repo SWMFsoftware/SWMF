@@ -320,8 +320,9 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,'_n',iIter,&
+         write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
+              '_t',floor(Time),'_n',iIter,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
@@ -397,10 +398,10 @@ contains
          iNode = iNode_B(iBlock)
 
          ! set the file name
-         write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
+         write(NameFile,'(a,i4.4,f0.2,a,i8.8,a,i6.6,a)') &
               trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-              '_n', iIter, File_I(iFile) % NameFormat
+              '_t',floor(Time),'_n', iIter, File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
@@ -505,8 +506,9 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,'_n',iIter,&
+         write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+              trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
+              '_t',floor(Time),'_n',iIter,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line

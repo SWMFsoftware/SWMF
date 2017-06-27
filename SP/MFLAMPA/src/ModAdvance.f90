@@ -322,8 +322,6 @@ contains
     if(IsFirstCall)then
        IsFirstCall = .false.
        call set_initial_condition
-       TimeGlobal = TimeLimit
-       RETURN
     end if
 
     ! identify shock in the data
@@ -430,8 +428,6 @@ contains
     end do
     ! compute energy flux
     call get_integral_energy_flux
-    ! update time counter
-    TimeGlobal = TimeLimit
   end subroutine advance
   
 end module SP_ModAdvance

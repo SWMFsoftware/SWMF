@@ -1323,7 +1323,7 @@ test15_run:
 
 test15_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_n000001.out > \
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000021_n000001.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
 	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
