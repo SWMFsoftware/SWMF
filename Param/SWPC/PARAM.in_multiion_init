@@ -138,7 +138,7 @@ T			DoSaveLo5Dgfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 3.0			StringRFlux
 
 #SAVEPLOT
@@ -246,7 +246,7 @@ T			DoTimeAccurate
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
-60.0                    DtSaveRestart
+600.0                    DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
@@ -257,7 +257,7 @@ GM			NameCompCheckKill
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-60.0			DtCheckStop
+600.0			DtCheckStop
 
 CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
