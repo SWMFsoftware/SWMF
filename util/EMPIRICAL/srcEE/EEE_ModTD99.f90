@@ -208,8 +208,8 @@ contains
     InvH0_TD99 = cGravitation*Msun/Rsun*Si2No_V(UnitU_)**2   ! in [-]
     AlphaRope  = 2.0*acos(d_TD99/Rtube_TD99)                 ! in [rad]
     FootSepar  = Rtube_TD99*sin(0.5*AlphaRope)/1.0e6         ! in [Mm]
-    LInduct    = cMu*(0.5*AlphaRope/cPi)*Rtube_TD99*log(2.0**3 &
-         *(Rtube_TD99-d_TD99)/atube_TD99-2.0+0.25)           ! in [H]
+    LInduct    = cMu*(0.5*AlphaRope/cPi)*Rtube_TD99*(log(8.0 &
+         *(Rtube_TD99-d_TD99)/atube_TD99) - 1.75)            ! in [H]
     WFRope     = 0.5*LInduct*Itube_TD99**2*1.0e7             ! in [ergs]
 
     ! Compute the average density inside the flux rope assuming that the
