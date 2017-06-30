@@ -14,6 +14,7 @@
 ! AGB 10/18/13: Added gravity, collision frequency, and pressure gradient
 !               to 3DION output
 ! AGB 12/20/13: Removed gravity from 3DION output
+! AJR 06/30/17: Added in 3DLST - A list of variables
 !----------------------------------------------------------------------------
 
 integer function bad_outputtype()
@@ -30,6 +31,7 @@ integer function bad_outputtype()
      IsFound = .false.
 
      if (OutputType(iOutputType) == '3DALL')     IsFound = .true.
+     if (OutputType(iOutputType) == '3DLST')     IsFound = .true.
      if (OutputType(iOutputType) == '3DNEU')     IsFound = .true.
      if (OutputType(iOutputType) == '3DION')     IsFound = .true.
      if (OutputType(iOutputType) == '3DTHM')     IsFound = .true.
@@ -91,7 +93,7 @@ subroutine output(dir, iBlock, iOutputType)
   character (len=5) :: proc_str,cBlock, cType
   character (len=24) :: cTime='', cTimeSave=''
   integer :: iiLat, iiLon, iiAlt, nGCs, cL=0
-  integer :: iLon,iLat,iAlt, nVars_to_Write, nlines, iBLK,iSpecies
+  integer :: iLon,iLat,iAlt, nVars_to_Write, nlines, iBLK,iSpecies, i
   logical :: done, IsFirstTime = .true., IsThere
 
   real :: LatFind, LonFind, AltFind
@@ -246,6 +248,28 @@ subroutine output(dir, iBlock, iOutputType)
 
      nvars_to_write = 13+nSpeciesTotal+nSpecies+nIons
      call output_3dall(iBlock)
+
+  case ('3DLST')
+
+     nvars_to_write = 3
+     if (iRhoOutputList) nvars_to_write = nvars_to_write+1
+     do iSpecies = 1,nSpeciesTotal
+        if (iNeutralDensityOutputList(iSpecies)) nvars_to_write = nvars_to_write+1
+     enddo
+     do i = 1,3
+        if (iNeutralWindOutputList(i)) nvars_to_write = nvars_to_write+1
+     enddo
+     do iSpecies = 1,nIons
+        if (iIonDensityOutputList(iSpecies)) nvars_to_write = nvars_to_write+1
+     enddo
+     do i = 1,3
+        if (iIonWindOutputList(i)) nvars_to_write = nvars_to_write+1
+     enddo
+     do i = 1,3
+        if (iTemperatureOutputList(i)) nvars_to_write = nvars_to_write+1
+     enddo
+
+     call output_3dlst(iBlock)
 
   case ('3DNEU')
 
@@ -443,6 +467,69 @@ contains
     write(iOutputUnit_,"(I7,A1,a)")  1, " ", "Longitude"
     write(iOutputUnit_,"(I7,A1,a)")  2, " ", "Latitude"
     write(iOutputUnit_,"(I7,A1,a)")  3, " ", "Altitude"
+
+    if (cType(3:5) == "LST") then
+
+       iOff = 4
+       if (iRhoOutputList) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Rho (kg/m3)"
+          iOff = iOff+1
+       endif
+       do iSpecies = 1,nSpeciesTotal
+          if (iNeutralDensityOutputList(iSpecies)) then
+             write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", &
+                  "["//cSpecies(iSpecies)//"] (/m3)"
+             iOff = iOff+1
+          endif
+       enddo
+       if (iNeutralWindOutputList(1)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vn (east) (m/s)"
+          iOff=iOff+1
+       endif
+       if (iNeutralWindOutputList(2)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vn (north) (m/s)" 
+          iOff=iOff+1
+       endif
+       if (iNeutralWindOutputList(3)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vn (up) (m/s)"
+          iOff=iOff+1
+       endif
+
+       do iSpecies = 1,nIons
+          if (iIonDensityOutputList(iSpecies)) then
+             write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", &
+                  "["//cIons(iSpecies)//"] (/m3)"
+             iOff = iOff+1
+          endif
+       enddo
+
+       if (iIonWindOutputList(1)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vi (east) (m/s)"
+          iOff=iOff+1
+       endif
+       if (iIonWindOutputList(2)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vi (north) (m/s)" 
+          iOff=iOff+1
+       endif
+       if (iIonWindOutputList(3)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Vi (up) (m/s)"
+          iOff=iOff+1
+       endif
+
+       if (iTemperatureOutputList(1)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Neutral Temperature (K)"
+          iOff=iOff+1
+       endif
+       if (iTemperatureOutputList(2)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Ion Temperature (K)" 
+          iOff=iOff+1
+       endif
+       if (iTemperatureOutputList(3)) then
+          write(iOutputUnit_,"(I7,A1,a)")  iOff, " ", "Electron Temperature (K)"
+          iOff=iOff+1
+       endif
+
+    end if
 
     if (cType(3:5) == "MAG") then
        write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
@@ -924,6 +1011,89 @@ subroutine output_3dall(iBlock)
   enddo
 
 end subroutine output_3dall
+
+!----------------------------------------------------------------
+!
+!----------------------------------------------------------------
+
+subroutine output_3dlst(iBlock)
+
+  use ModGITM
+  use ModInputs
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iAlt, iLat, iLon, iiAlt, iiLat, iiLon, iOff, iSpecies, i
+
+  ! lat/lon/alt + rho + nSpecies + nIons + neu vel + ion vel + temps
+  real :: tmp(3+1+nSpeciesTotal+nIons+3+3+3)
+  
+  do iAlt=-1,nAlts+2
+     iiAlt = max(min(iAlt,nAlts),1)
+     do iLat=-1,nLats+2
+        iiLat = min(max(iLat,1),nLats)
+        do iLon=-1,nLons+2
+           iiLon = min(max(iLon,1),nLons)
+
+           tmp(1) = Longitude(iLon,iBlock)
+           tmp(2) = Latitude(iLat,iBlock)
+           tmp(3) = Altitude_GB(iLon,iLat,iAlt,iBlock)
+
+           iOff = 3
+           if (iRhoOutputList) then
+              iOff = iOff+1
+              tmp(iOff) = Rho(iLon,iLat,iAlt,iBlock)
+           endif
+
+           do iSpecies = 1,nSpeciesTotal
+              if (iNeutralDensityOutputList(iSpecies)) then
+                 iOff = iOff+1
+                 tmp(iOff) = NDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+              endif
+           enddo
+           
+           do i = 1,3
+              if (iNeutralWindOutputList(i)) then
+                 iOff = iOff+1
+                 tmp(iOff) = Velocity(iLon,iLat,iAlt,i,iBlock)
+              endif
+           enddo
+           
+           do iSpecies = 1,nIons
+              if (iIonDensityOutputList(iSpecies)) then
+                 iOff = iOff+1
+                 tmp(iOff) = IDensityS(iLon,iLat,iAlt,iSpecies,iBlock)
+              endif
+           enddo
+           
+           do i = 1,3
+              if (iIonWindOutputList(i)) then
+                 iOff = iOff+1
+                 tmp(iOff) = IVelocity(iLon,iLat,iAlt,i,iBlock)
+              endif
+           enddo
+           
+           if (iTemperatureOutputList(1)) then
+              iOff=iOff+1
+              tmp(iOff) = Temperature(iLon,iLat,iAlt,iBlock)*TempUnit(iLon,iLat,iAlt)
+           endif
+           if (iTemperatureOutputList(2)) then
+              iOff=iOff+1
+              tmp(iOff) = ITemperature(iLon,iLat,iAlt,iBlock)
+           endif
+           if (iTemperatureOutputList(3)) then
+              iOff=iOff+1
+              tmp(iOff) = eTemperature(iLon,iLat,iAlt,iBlock)
+           endif
+
+           write(iOutputUnit_) tmp(1:iOff)
+           
+        enddo
+     enddo
+  enddo
+
+end subroutine output_3dlst
 
 !----------------------------------------------------------------
 !

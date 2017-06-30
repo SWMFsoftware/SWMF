@@ -4,11 +4,18 @@
 module ModInputs
 
   use ModConstants
-  use ModPlanet, only : nSpecies, Rotation_Period
+  use ModPlanet, only : nSpecies, Rotation_Period, nSpeciesTotal, nIons
   use ModIoUnit, only : UnitTmp_
   use ModKind, only:    Real8_
 
   implicit none
+
+  logical :: iRhoOutputList=.true.
+  logical :: iNeutralDensityOutputList(nSpeciesTotal)=.true.
+  logical :: iNeutralWindOutputList(3)=.true.
+  logical :: iIonDensityOutputList(nIons)=.true.
+  logical :: iIonWindOutputList(3)=.true.
+  logical :: iTemperatureOutputList(3)=.true.
 
   integer                   :: useDART = 0 !alexey, default is to not use DART
 

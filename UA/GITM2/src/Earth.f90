@@ -319,8 +319,28 @@ end subroutine calc_eddy_diffusion_coefficient
 
 subroutine set_planet_defaults
 
+  use ModPlanet
   use ModInputs
 
+  implicit none
+  
+  iNeutralDensityOutputList(iN_4S_)=.false.
+  iNeutralDensityOutputList(iHe_)=.false.
+  iNeutralDensityOutputList(iN_2D_)=.false.
+  iNeutralDensityOutputList(iN_2P_)=.false.
+  iNeutralDensityOutputList(iH_)=.false.
+  iNeutralDensityOutputList(iCO2_)=.false.
+  iNeutralDensityOutputList(iO_1D_)=.false.
+
+  iIonDensityOutputList(iNP_)=.false.
+  iIonDensityOutputList(iO_2DP_)=.false.
+  iIonDensityOutputList(iO_2PP_)=.false.
+  iIonDensityOutputList(iHP_)=.false.
+  iIonDensityOutputList(iHeP_)=.false.
+
+  iTemperatureOutputList(2)=.false.
+  iTemperatureOutputList(3)=.false.
+  
   return
 
 end subroutine set_planet_defaults
