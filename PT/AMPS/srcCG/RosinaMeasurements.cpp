@@ -54,6 +54,7 @@ void RosinaSample::Init(double etMin,double etMax) {
 
   FILE *fTrajectory=NULL;
   FILE *fTrajectoryZones=NULL;
+  FILE *fTrajectoryAll=NULL;
 
   if (PIC::ThisThread==0) {
    char fname[1000];
@@ -70,6 +71,38 @@ void RosinaSample::Init(double etMin,double etMax) {
    sprintf(fname,"%s/TrajectoryLastMeasurementsZones.dat",PIC::OutputDataFileDirectory);
    fTrajectoryZones=fopen(fname,"w");
    fprintf(fTrajectoryZones,"VARIABLES=\"X\", \"Y\", \"Z\" \n");
+
+   sprintf(fname,"%s/TrajectoryAll.dat",PIC::OutputDataFileDirectory);
+   fTrajectoryAll=fopen(fname,"w");
+   fprintf(fTrajectoryAll,"VARIABLES=\"X\", \"Y\", \"Z\", \"xRosetta\", \"yRosetta\", \"zRosetta\", \"Altitude\" \n");
+
+   //output the full trajectory 
+   FILE *fCG_CK,*fCG_FIXED;
+
+   sprintf(fname,"%s/FullTrajectory.CG_CK.dat",PIC::OutputDataFileDirectory);
+   fCG_CK=fopen(fname,"w");
+   fprintf(fCG_CK,"VARIABLES=\"X\", \"Y\", \"Z\" \n");
+
+   sprintf(fname,"%s/FullTrajectory.CG_FIXED.dat",PIC::OutputDataFileDirectory);
+   fCG_FIXED=fopen(fname,"w");
+   fprintf(fCG_FIXED,"VARIABLES=\"X\", \"Y\", \"Z\" \n"); 
+
+   for (i=0;i<nPoints;i++) {
+     utc2et_c(ObservationTime[i],&et);
+     cout << "i=" << i << ",  etc=" << ObservationTime[i] << ", et=" << et << endl;
+
+     spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",RosettaState,&ltlocal);
+     fprintf(fCG_CK,"%e %e %e\n",1.0E3*RosettaState[0],1.0E3*RosettaState[1],1.0E3*RosettaState[2]);
+
+     spkezr_c("ROSETTA",et,"67P/C-G_FIXED","none","CHURYUMOV-GERASIMENKO",RosettaState,&ltlocal);
+     fprintf(fCG_FIXED,"%e %e %e\n",1.0E3*RosettaState[0],1.0E3*RosettaState[1],1.0E3*RosettaState[2]);
+   }
+
+   fclose(fCG_CK);
+   fclose(fCG_FIXED);
+
+   exit(__LINE__,__FILE__,"Done.");
+
   }
 
   for (i=0;i<nPoints;i++) {
@@ -154,7 +187,6 @@ void RosinaSample::Init(double etMin,double etMax) {
 
         MinAltitude=sqrt(MinAltitude);
         if ((Rosina[i].CometDistance<0.0)||(MinAltitude<Rosina[i].CometDistance)) Rosina[i].CometDistance=MinAltitude;
-
       }
     }
 
@@ -210,11 +242,24 @@ void RosinaSample::Init(double etMin,double etMax) {
 
     utc2et_c(ObservationTime[i],&et);
     Rosina[i].SamplingParticleDataFlag=((etMin<=et)&&(et<etMax)) ? true : false;
+
+    //Save the trajectory point
+    if (PIC::ThisThread==0) {
+      double *xTrack=Rosina[i].xNucleusClosestPoint;
+
+      //VARIABLES=\"X\", \"Y\", \"Z\", \"xRosetta\", \"yRosetta\", \"zRosetta\", \"Altitude\" \n
+      fprintf(fTrajectoryAll," %e %e %e  %e %e %e  %e\n",
+          xTrack[0],xTrack[1],xTrack[2],
+          Rosina[i].x[0],Rosina[i].x[1],Rosina[i].x[2],
+          sqrt(pow(xTrack[0]-Rosina[i].x[0],2)+pow(xTrack[1]-Rosina[i].x[1],2)+pow(xTrack[2]-Rosina[i].x[2],2)));
+    }
+
   }
 
   if (PIC::ThisThread==0) {
     fclose(fTrajectory);
     fclose(fTrajectoryZones);
+    fclose(fTrajectoryAll);
     printf("$PREFIX: RosinaSample::Init is complete.....\n");
   }
 #endif  
