@@ -120,8 +120,16 @@ subroutine euv_ionization_heat(iBlock)
   !/
 
   if (UseSolarHeating) then
+
+     EuvHeating2d = 0.0
+
      do iAlt = 1, nAlts
 
+        EuvHeating2d(1:nLons,1:nLats) = &
+             EuvHeating2d(1:nLons,1:nLats) + &
+             EuvHeating(:,:,iAlt,iBlock)  * &
+             dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+                     
         EuvHeating(:,:,iAlt,iBlock) = EuvHeating(:,:,iAlt,iBlock) / &
            Rho(1:nLons,1:nLats,iAlt,iBlock) / &
            cp(1:nLons,1:nLats,iAlt,iBlock) / &

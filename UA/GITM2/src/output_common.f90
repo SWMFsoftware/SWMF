@@ -44,6 +44,7 @@ integer function bad_outputtype()
      if (OutputType(iOutputType) == '2DMEL')     IsFound = .true.
      if (OutputType(iOutputType) == '2DUSR')     IsFound = .true.
      if (OutputType(iOutputType) == '2DTEC')     IsFound = .true.
+     if (OutputType(iOutputType) == '2DION')     IsFound = .true.
 
      if (OutputType(iOutputType) == '1DALL')     IsFound = .true.
      if (OutputType(iOutputType) == '0DALL')     IsFound = .true.
@@ -335,6 +336,11 @@ subroutine output(dir, iBlock, iOutputType)
      nvars_to_write = 5
      call output_2dtec(iBlock)
 
+  case ('2DION')
+
+     nvars_to_write = 13
+     call output_2dion(iBlock)
+
   case('1DALL')
 
      nGCs = 0
@@ -451,7 +457,9 @@ contains
           write(iOutputUnit_,"(I7,A)") nMagLons+1, " nLongitudes"
           write(iOutputUnit_,*) " "
           write(iOutputUnit_,*) "NO GHOSTCELLS"
-       elseif (cType(3:5) =="GEL".or.cType(3:5)=="TEC") then
+       elseif (cType(3:5) =="GEL".or. &
+            cType(3:5)=="TEC".or. &
+            cType(1:5)=="2DION") then
           write(iOutputUnit_,"(I7,A)") nLats, " nLatitude"
           write(iOutputUnit_,"(I7,A)") nLons, " nLongitudes"
           write(iOutputUnit_,*) " "
@@ -552,6 +560,21 @@ contains
        write(iOutputUnit_,"(I7,A1,a)") 11, " ", "Hall FL Conductance"
        write(iOutputUnit_,"(I7,A1,a)") 12, " ", "DivJu FL"
        write(iOutputUnit_,"(I7,A1,a)") 13, " ", "FL Length"
+
+    endif
+    
+    if(cType(1:5) == "2DION") then
+
+       write(iOutputUnit_,"(I7,A1,a)")  4, " ", "Solar Zenith Angle"
+       write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Vertical TEC"
+       write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Potential (V)"
+       write(iOutputUnit_,"(I7,A1,a)")  7, " ", "Pedersen Conductance (mhos)"
+       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "Hall Conductance (mhos)"
+       write(iOutputUnit_,"(I7,A1,a)")  9, " ", "Electron Average Energy (eV)"
+       write(iOutputUnit_,"(I7,A1,a)")  10, " ", "Electron Energy Flux (W/m2)"
+       write(iOutputUnit_,"(I7,A1,a)")  11, " ", "AltIntegral of DivJ"
+       write(iOutputUnit_,"(I7,A1,a)")  12, " ", "AltIntJouleHeating (W/m2)"
+       write(iOutputUnit_,"(I7,A1,a)")  13, " ", "AltIntEuvHeating (W/m2)"
 
     endif
 
@@ -1477,6 +1500,48 @@ subroutine output_2dtec(iBlock)
   enddo
 
 end subroutine output_2dtec
+
+!-------------------------------------------------------------------------------
+! AJR: Routine to output a 2D ION file that includes:
+! lat, lon, SZA, VTEC, potential, energy flux, average energy, etc.
+!-------------------------------------------------------------------------------
+
+subroutine output_2dion(iBlock)
+
+  use ModGITM
+  use ModElectrodynamics
+  use ModInputs
+  use ModEUV, only : Sza
+  use ModSources, only : JouleHeating2d, EuvHeating2d
+
+  implicit none
+
+  integer, intent(in) :: iBlock
+  integer :: iLat, iLon, iAlt, iiLat, iiLon
+
+  call calc_vtec(iBlock)
+
+  iAlt = nAlts
+  do iLat=1,nLats
+     do iLon=1,nLons
+        write(iOutputUnit_)       &
+             Longitude(iLon,iBlock), &
+             Latitude(iLat,iBlock),&
+             Altitude_GB(iLon,iLat,iAlt,iBlock), &
+             Sza(iLon,iLat,iBlock), &
+             VTEC(iLon,iLat,iBlock), &
+             Potential(iLon,iLat,iAlt,iBlock), &
+             PedersenConductance(iLon,iLat,iBlock), &
+             HallConductance(iLon,iLat,iBlock), &
+             ElectronAverageEnergy(iLon,iLat), &
+             ElectronEnergyFlux(iLon,iLat), &
+             DivJuAlt(iLon,iLat), &
+             JouleHeating2d(iLon,iLat), &
+             EuvHeating2d(iLon,iLat)
+     enddo
+  enddo
+
+end subroutine output_2dion
 
 !-------------------------------------------------------------------------------
 ! AGB: Routine to output a 3D Mag file that includes the geomagnetic field info

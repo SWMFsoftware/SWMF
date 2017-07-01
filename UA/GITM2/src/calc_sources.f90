@@ -31,7 +31,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: LogConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
   real :: GradLogConS(nLons,nLats,1:nAlts,1:nSpecies)
 
-
 ! Temporary
   real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
 
@@ -99,7 +98,6 @@ subroutine calc_GITM_sources(iBlock)
           cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
      
      Prandtl = 0.0
-  
 
      call calc_conduction(iBlock, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &

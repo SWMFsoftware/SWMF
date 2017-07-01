@@ -15,6 +15,9 @@ module ModSources
        AuroralHeating, JouleHeating, IonPrecipHeating, &
        EddyCond,EddyCondAdia,MoleConduction
 
+  real, dimension(nLons, nLats) :: &
+       JouleHeating2d, EuvHeating2d
+       
   real, allocatable :: EuvHeating(:,:,:,:)
   real, allocatable :: eEuvHeating(:,:,:,:)
   real, allocatable :: PhotoElectronHeating(:,:,:,:)
@@ -35,7 +38,7 @@ module ModSources
 
   
   integer, parameter :: nReactions = 26
- real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
+  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
   real :: ChemicalHeatingS(nReactions)
   real :: NeutralSourcesTotal(nAlts, nSpeciesTotal)
   real :: NeutralLossesTotal(nAlts, nSpeciesTotal)

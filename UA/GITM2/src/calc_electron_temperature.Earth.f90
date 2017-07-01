@@ -1004,7 +1004,14 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
 !     JouleHeating = (Qnic_t(1:nLons,1:nLats,1:nAlts) + Qnic_v(1:nLons,1:nLats,1:nAlts))/ &
 !          TempUnit(1:nLons,1:nLats,1:nAlts) / &
 !          cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
-      
+     JouleHeating2d = 0.0
+     do iAlt=1,nAlts
+        JouleHeating2d(1:nLons, 1:nLats) = &
+             JouleHeating2d(1:nLons, 1:nLats) + &
+             (Qnic_v(1:nLons,1:nLats,iAlt) * 2.) * &
+             dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+     enddo
+
      JouleHeating = (Qnic_v(1:nLons,1:nLats,1:nAlts) * 2.)/ &
           TempUnit(1:nLons,1:nLats,1:nAlts) / &
           cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
