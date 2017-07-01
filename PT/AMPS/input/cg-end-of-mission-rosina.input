@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O CO2
+SpeciesList=H2O CO2 
 !DUST DUST DUST DUST
 !CO CO2
 
@@ -78,10 +78,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   RequestedParticleBufferLength=15000000
 
 
-  ReferenceInjectionParticleNumber=2000  !!00
+  ReferenceInjectionParticleNumber=100000  !!00
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=500
+  InitialSampleLength=200
   TestRunTotalIteration=50
 
   NastranSurfaceUserData=on
@@ -151,7 +151,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 
 #ParticleCollisions
-  model = off !!NTC !!off !HS ! HS, off
+  model = off !NTC !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
@@ -189,7 +189,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   define _READ_NEUTRALS_FROM_BINARY_MODE_ _READ_NEUTRALS_FROM_BINARY_MODE_OFF_
 
   !MeshSignature=0xd7058cc2a680a3a2
-  MeshSignature=0xd5058fc3e01a454f
+ ! MeshSignature=0xd5058fc3e01a454f
 
   RosinaDataSampling=on !on,off 
 
@@ -272,7 +272,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 
   !!Dust parameters
-  DustMode=off !!!!on !!on,off
+  DustMode=off !!on,off
   DustTotalMassProductionRate=1.0
   PowerLawIndex=3.4	  
   dustRmin=1.0e-7
@@ -309,10 +309,9 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   SPICE=on !!!!off!, off
   SpiceKernels="../../NAIF/naif0010.tls", "../../NAIF/de430.bsp", "../../NAIF/pck00010.tpc",  \\ 
-  "ck/RATT_DV_121_01_01____00190.BC", \\ 
   "ck/CATT_DV_121_01_______00190.BC", \\ 
   "fk/ROS_CHURYUMOV_V01.TF", \\ 
-  "fk/ROS_V24.TF", \\ 
+  "fk/ROS_V27.TF", \\ 
   "fk/RSSD0002.TF", \\ 
   "ik/ROS_ALICE_V16.TI", \\ 
   "ik/ROS_MIRO_V10.TI", \\ 
@@ -324,12 +323,11 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   "pck/cg-spc-shap5-v0.1.tpc", \\ 
   "sclk/ROS_150701_STEP.TSC", \\ 
   "spk/DE405.BSP", \\ 
-  "spk/RORB_DV_121_01_______00190.BSP", \\ 
-  "spk/CORB_DV_121_01_______00190.BSP", \\ 
-  "sclk/ROS_160929_STEP.TSC", \\
-  "spk/CORB_DV_257_02___T19_00344.BSP", \\ 
   "spk/RORB_DV_257_02___T19_00344.BSP", \\ 
-  "ck/RATT_DV_257_02_02____00344.BC" 
+  "spk/CORB_DV_257_02___T19_00344.BSP", \\ 
+  "sclk/ROS_160929_STEP.TSC", \\
+  "ck/RATT_DV_257_02_04____00344.BC", \\
+  "ck/RATM_DM_005_01____A__00015.BC" 
   
   define _TARGET_ _CG_
 !  define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
