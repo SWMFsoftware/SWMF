@@ -699,13 +699,13 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
 
 
 
-/*
+      /*
     //apply condition of tracking the particle
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::InitParticleID(tempParticleData);
     PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData,(void*)startNode);
     #endif
-*/
+      */
 
 
     //generate a new particle
@@ -713,11 +713,13 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
     memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
+    /*
     //apply condition of tracking the particle
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::InitParticleID(newParticleData);
     PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,newParticleData,(void*)startNode);
     #endif
+    */
 
     //determine the initial charge of the dust grain
     #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
