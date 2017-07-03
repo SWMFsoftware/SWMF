@@ -1051,7 +1051,7 @@ pro slice_data
         ', nslicemax=',nslicemax,', savemovie (y/n)=',savemovie,$
         FORMAT='(a,i4,a,i4,a,i4,a,a)'
   print,'colorlevel=',colorlevel,', contourlevel=',contourlevel,$
-        ', velvector=',velvector,', $
+        ', velvector=',velvector, $
         FORMAT='(a,i3,a,i3,a,i4)'
   if keyword_set(multiplot) then begin
      siz=size(multiplot)
@@ -1556,21 +1556,25 @@ pro get_file_types
         filetypes(ifile)    = 'log'
         npictinfiles(ifile) = 1
      endif else begin
-        if strpos(filenames(ifile),'settings_region') ge 0 then begin
-           ; For example if 
-           ; filenames(ifile) = 'output/settings_region0.hdf'   then 
-           ; dirname          = 'output/'                       and
-           ; regionname       =                '_region0.hdf'.
-           
-           ibegin     = strpos(filenames(ifile), 'settings_region')
+        if strpos(filenames(ifile),'setting') ge 0 then begin
+                                ; For example if 
+                                ; filenames(ifile) = 'output/settings_region0.hdf'   then 
+                                ; dirname          = 'output/'                       and
+                                ; regionname       =                '_region0.hdf'.                      
+           ibegin     = strpos(filenames(ifile), 'settings')
            dirname    = strmid(filenames(ifile), 0, ibegin)
-           regionname = strmid(filenames(ifile), ibegin  + strlen('settings'))
+
+           regionname ='.hdf'
+           if strpos(filenames(ifile),'settings_region') ge 0 then begin
+              regionname = strmid(filenames(ifile), ibegin  + strlen('settings'))
+           endif
            file_id    = H5F_OPEN(dirname+'proc0'+regionname)
            group_id   = H5G_OPEN(file_id, '/fields/Bx')
            npictinfiles(ifile) = H5G_GET_NUM_OBJS(group_id)
            h5G_CLOSE, group_id
            H5F_CLOSE, file_id
            filetypes(ifile)   ='IPIC3D'
+
         endif else begin
            ;; Obtain filetype based on the length info in the first 4 bytes
            close,10
@@ -1760,7 +1764,6 @@ pro get_file_head, unit, filename, filetype, pictsize=pictsize
 
   ;; Set variables array
   string_to_array,varname,variables,nvar,/arraysyntax
-
 end
 
 ;=============================================================================
@@ -1771,11 +1774,14 @@ pro get_pict_hdf, filename, npict, error, getdata
 
     ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
   
-  ibegin     = strpos(filename, 'settings_region')
+  ibegin     = strpos(filename, 'settings')
   dirname    = strmid(filename, 0, ibegin)
-  regionname = strmid(filename, ibegin  + strlen('settings'))
+  regionname ='.hdf'
+  if strpos(filename,'settings_region') ge 0 then begin
+     regionname = strmid(filename, ibegin  + strlen('settings'))
+  endif
 
-  Param = H5_PARSE(filename)
+  Param = H5_PARSE(filename) ; It seems IDL 8.5 version of H5_PARSE does not work. -Yuxi
 
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
@@ -2020,12 +2026,12 @@ pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 end
 ;=============================================================================
 pro get_pict, unit, filename, filetype, npict, error
-
+  
   on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
-     get_pict_hdf, filename, npict, x, w, error, 1
+     get_pict_hdf, filename, npict, error, 1
 
   endif else begin
 
