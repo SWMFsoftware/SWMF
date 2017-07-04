@@ -799,6 +799,15 @@ subroutine set_inputs
               write(*,*) "UseNighttimeIonBCs           (logical)"
            endif
 
+        case ("#USETESTVISCOSITY")
+           call read_in_logical(UseTestViscosity, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) ''
+              write(*,*) '#USETESTVISCOSITY'
+              write(*,*) "UseTestViscosity      (logical)"
+           endif
+
         case ("#DYNAMO")
            call read_in_logical(UseDynamo, iError)
            call read_in_real(DynamoHighLatBoundary, iError)

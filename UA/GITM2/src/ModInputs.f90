@@ -185,6 +185,7 @@ module ModInputs
   logical :: UseGravity          = .true.
   logical :: UseIonDrag          = .true.
   logical :: UseViscosity        = .true.
+  logical :: UseTestViscosity    = .false.
   logical :: UseCoriolis         = .true.
   logical :: UseGravityWave         = .false.
 

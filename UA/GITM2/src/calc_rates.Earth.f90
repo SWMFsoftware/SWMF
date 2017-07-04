@@ -201,20 +201,28 @@ end subroutine calc_collisions
 subroutine calc_viscosity(iBlock)
 
   use ModGITM
-
+  use ModInputs, only: UseTestViscosity
   implicit none
 
   integer, intent(in) :: iBlock
 
   integer :: iSpecies
   ! This is Earth-based, and 
-  ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 4.5e-5 * &
-       (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
-       TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
 
+  if (UseTestViscosity) then
+     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 1.25e7 * &
+          sqrt(Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
+          TempUnit(1:nLons,1:nLats,0:nAlts+1) * &
+          MeanMajorMass(1:nLons,1:nLats,0:nAlts+1))
+  else
+     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 4.5e-5 * &
+          (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
+          TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
+  endif
+  
   do iSpecies = 1, nSpecies
      ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
-      ViscCoef(1:nLons,1:nLats,0:nAlts+1)
+          ViscCoef(1:nLons,1:nLats,0:nAlts+1)
   enddo 
 
 end subroutine calc_viscosity
