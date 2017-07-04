@@ -206,7 +206,8 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   grid = new Grid3DCU(col, vct);  // Create the local grid
   EMf = new EMfields3D(col, grid, vct);  // Create Electromagnetic Fields Object
 
-  if      (col->getCase()=="GEMnoPert") 		EMf->initGEMnoPert();
+  if      (col->getCase()=="Uniform") 		EMf->initUniform();
+  else if (col->getCase()=="GEMnoPert") 		EMf->initGEMnoPert();
   else if (col->getCase()=="ForceFree") 		EMf->initForceFree();
   else if (col->getCase()=="GEM")       		EMf->initGEM();
   else if (col->getCase()=="GEMDoubleHarris")  	EMf->initGEMDoubleHarris();

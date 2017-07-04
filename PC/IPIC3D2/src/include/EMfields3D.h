@@ -50,6 +50,8 @@ class EMfields3D                // :public Field
     void init();
     /*! init beam */
     void initBEAM(double x_center, double y_center, double z_center, double radius);
+    /* init uniform field*/
+    void initUniform();
     /*! initialize GEM challenge */
     void initGEM();
     void initOriginalGEM();

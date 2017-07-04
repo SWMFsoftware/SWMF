@@ -4881,6 +4881,62 @@ double EMfields3D:: calPyz(const int is, const int i, const int j, const int k, 
 
 #endif
 
+
+/*! initiliaze uniform EM */
+void EMfields3D::initUniform()
+{
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  if (restart1 == 0) {
+    // initialize
+    if (get_vct().getCartesian_rank() == 0) {
+      cout << "------------------------------------------" << endl;
+      cout << "Initialize Uniform EM field" << endl;
+      cout << "------------------------------------------" << endl;
+      cout << "B0x                              = " << B0x << endl;
+      cout << "B0y                              = " << B0y << endl;
+      cout << "B0z                              = " << B0z << endl;
+      for (int i = 0; i < ns; i++) {
+        cout << "rho species " << i << " = " << rhoINIT[i];
+        if (DriftSpecies[i])
+          cout << " DRIFTING " << endl;
+        else
+          cout << " BACKGROUND " << endl;
+      }
+      cout << "-------------------------" << endl;
+    }
+    for (int i = 0; i < nxn; i++)
+      for (int j = 0; j < nyn; j++)
+        for (int k = 0; k < nzn; k++) {
+          for (int is = 0; is < ns; is++) {
+              rhons[is][i][j][k] = rhoINIT[is] / FourPI;
+          }	  
+          Ex[i][j][k] = 0.0;
+          Ey[i][j][k] = 0.0;
+          Ez[i][j][k] = 0.0;
+          Bxn[i][j][k] = B0x;
+          Byn[i][j][k] = B0y; 
+          Bzn[i][j][k] = B0z;
+        }
+    
+    // initialize B on centers
+    for (int i = 0; i < nxc; i++)
+      for (int j = 0; j < nyc; j++)
+        for (int k = 0; k < nzc; k++) {
+          // Magnetic field
+          Bxc[i][j][k] = B0x;
+          Byc[i][j][k] = B0y; 
+          Bzc[i][j][k] = B0z;
+        }
+    for (int is = 0; is < ns; is++)
+      grid->interpN2C(rhocs, is, rhons);
+  }
+  else {
+    init(); // use the fields from restart file
+  }
+}
+
 /*! initiliaze EM for GEM challange */
 void EMfields3D::initGEM()
 {
