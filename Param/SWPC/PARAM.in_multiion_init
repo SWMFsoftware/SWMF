@@ -89,7 +89,7 @@ T                       DoMultiFluidIMCoupling
 
 #TIMESTEPPING
 1			nStage
-0.40			CflExlp
+0.30			CflExlp
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -226,7 +226,7 @@ mc3                     TypeLimiter
 
 #TIMESTEPPING
 2			nStage
-0.60			CflExlp
+0.30			CflExlp
 
 #END_COMP GM -----------------------------------------------------------------
 
