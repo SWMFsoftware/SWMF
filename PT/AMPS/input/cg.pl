@@ -78,6 +78,8 @@ while ($line=<InputFile>) {
   
   
   ($InputLine,$InputComment)=split('!',$line,2);
+  $line=$InputLine;
+  
   $InputLine=uc($InputLine);
   chomp($InputLine);
  
@@ -147,6 +149,209 @@ while ($line=<InputFile>) {
     else {
       die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
     }
+  }
+
+  #define settingsof the End-of-Mission model
+  elsif ($InputLine eq "ENDOFMISSION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    ### EndOfMission::Test ####
+    if ($InputLine eq "TEST") {
+      #settings of the spherical test 
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+      if ($InputLine eq "MODE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+        if ($InputLine eq "ON") {
+          ampsConfigLib::ChangeValueOfVariable("bool SphericalNucleusTest","true","main/RosinaMeasurements_Liouville.cpp"); 
+        }
+        elsif ($InputLine eq "OFF") {
+          ampsConfigLib::ChangeValueOfVariable("bool SphericalNucleusTest","false","main/RosinaMeasurements_Liouville.cpp"); 
+        }
+        else {
+          warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+          die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+        }
+      }
+      elsif ($InputLine eq "SOURCERATE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("static double SphericalNucleusTest_SourceRate",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+      }         
+      elsif ($InputLine eq "TEMPERATURE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("static double SphericalNucleusTest_Temperature",$InputLine,"main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "LOCATION") {
+        my (@x,$i);
+        
+        for ($i=0;$i<3;$i++) {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @x, $InputLine;
+        }
+        
+        ampsConfigLib::ChangeValueOfArray("static double SphericalNucleusTest_Location\\[3\\]",\@x,"main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "LINEOFSIGHTRG") {
+        my (@x,$i);
+        
+        for ($i=0;$i<3;$i++) {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @x, $InputLine;
+        }
+        
+        ampsConfigLib::ChangeValueOfArray("static double SphericalNucleusTest_LineOfSightRG\\[3\\]",\@x,"main/RosinaMeasurements_Liouville.cpp");
+      }  
+      elsif ($InputLine eq "LINEOFSIGHTNG") {
+        my (@x,$i);
+        
+        for ($i=0;$i<3;$i++) {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          push @x, $InputLine;
+        }
+        
+        ampsConfigLib::ChangeValueOfArray("static double SphericalNucleusTest_LineOfSightNG\\[3\\]",\@x,"main/RosinaMeasurements_Liouville.cpp");
+      }          
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    
+    
+    #### EndOfMission::Correction ###
+    elsif ($InputLine eq "CORRECTION") {
+      #settings of the correction model
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if ($InputLine eq "ADJUSTSURFACEINJECTIONRATE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "ON") {
+          ampsConfigLib::ChangeValueOfVariable("static bool AdjustSurfaceInjectionRate","true","main/RosinaMeasurements_Liouville.cpp");
+        }
+        else{
+          ampsConfigLib::ChangeValueOfVariable("static bool AdjustSurfaceInjectionRate","false","main/RosinaMeasurements_Liouville.cpp");
+        }
+      }
+      ### EndOfMission::Correction::NG ###
+      elsif ($InputLine eq "NG") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+                
+        if ($InputLine eq "MODE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          
+          if ($InputLine eq "OFF") {
+            ampsConfigLib::ChangeValueOfVariable("static double NudeGaugeDensitySinCorrectionFactor","0.0","main/RosinaMeasurements_Liouville.cpp");
+          }
+          elsif ($InputLine eq "DENSITYSINCORRECTIONFACTOR") {
+            ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            ampsConfigLib::ChangeValueOfVariable("static double NudeGaugeDensitySinCorrectionFactor",$InputLine,"main/RosinaMeasurements_Liouville.cpp");            
+          }
+          else {
+            warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+            die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+          }
+        }               
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");        
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    
+    ### EndOfMission::Limit ####
+    elsif ($InputLine eq "LIMIT" ) {
+      #settings of the limits 
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "NG") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "SOLIDANGLECUTOFF") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("static double CutoffNudeGaugeSolidAngle",$InputLine,"main/RosinaMeasurements_Liouville.cpp");                  
+        }
+        else {
+          warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");          
+          die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+        }
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+      }
+
+    }
+    
+    ### REFERENCE FILE CORRECTION
+    elsif ($InputLine eq "REFERENCEFILECORRECTION" ) {
+      my ($refname,$mode,$t);
+      
+      $mode="false";
+      $line=~s/[=():,]/ /g;
+      ($InputLine,$line)=split(' ',$line,2);
+      ($InputLine,$line)=split(' ',$line,2);
+      
+      print "$line\n";
+      
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ($t,$line)=split(' ',$line,2);
+        
+        if ($InputLine eq "MODE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ($t,$line)=split(' ',$line,2);
+          
+          if ($InputLine eq "ON") {
+            $mode="true";
+          }  
+          else {
+            $mode="false";
+          }        
+         
+          ampsConfigLib::ChangeValueOfVariable("bool ApplyRefCorrection_$refname",$mode,"main/RosinaMeasurements_Liouville.cpp");
+        }
+        elsif ($InputLine eq "REF") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ($refname,$line)=split(' ',$line,2);     
+        }
+        else {
+          warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+          die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+        }    
+      }            
+    }
+          
+    ###INDIVIDUAL COMMANDS ###
+    elsif ($InputLine eq "SIMULATIONDATAPOINTSTEP") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("static int RosinaDataSimulationStep",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }
+    
+    elsif ($InputLine eq "INJECTIONDISTRIBUTIONMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "FLUX") {
+        ampsConfigLib::ChangeValueOfVariable("static int VelocityInjectionMode","_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_","main/RosinaMeasurements_Liouville.cpp");                         
+      }
+      elsif ($InputLine eq "RANDOMFLUX") {
+        ampsConfigLib::ChangeValueOfVariable("static int VelocityInjectionMode","_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_","main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "VELOCITY") {
+        ampsConfigLib::ChangeValueOfVariable("static int VelocityInjectionMode","_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_","main/RosinaMeasurements_Liouville.cpp");
+      }      
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    } 
+    else {
+      warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+      die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  
+    ### END Of EndOfMission###
   }
 
   #redefine a value of a macro 
