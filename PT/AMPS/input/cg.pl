@@ -322,13 +322,59 @@ while ($line=<InputFile>) {
         }    
       }            
     }
+    
+    ### UNSERTANTIES DUE TO LOCATION AND ORIENTATION OF THE SPACECRAFT ###
+    elsif ($InputLine eq "TRAJECTORYUNSERTANTY") {
+      my ($Mode,$nTests,$Radius,$AngularLimit);
+
+      $Mode="false";
+      $nTests=10;
+      $Radius=50.0;
+      $AngularLimit=5.0;
+
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "NTESTS") { ($nTests,$InputComment)=split(' ',$InputComment,2);}
+        elsif ($InputLine eq "RADIUS") {($Radius,$InputComment)=split(' ',$InputComment,2);}
+        elsif ($InputLine eq "ANGULARLIMIT") {($AngularLimit,$InputComment)=split(' ',$InputComment,2);}
+        elsif ($InputLine eq "MODE") {
+          ($Mode,$InputComment)=split(' ',$InputComment,2);
+          
+          if ($Mode eq "ON") {$Mode="true";}
+          elsif ($Mode eq "OFF") {$Mode="false";}
+          else {
+            warn("Option is unknown ($Mode), line=$InputFileLineNumber ($InputFileName)");
+            die "Option is unknown ($Mode), line=$InputFileLineNumber ($InputFileName)\n";
+          }
+        }
+      }
+
+      #save trajectory unsertanty quantification parameters
+      ampsConfigLib::ChangeValueOfVariable("int TrajectoryUncertanties_nTest",$nTests,"main/RosinaMeasurements_Liouville.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double TrajectoryUncertanties_Radius",$Radius,"main/RosinaMeasurements_Liouville.cpp");
+      ampsConfigLib::ChangeValueOfVariable("bool TrajectoryUncertanties_Search",$Mode,"main/RosinaMeasurements_Liouville.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double TrajectoryUncertanties_AngularLimit",$AngularLimit,"main/RosinaMeasurements_Liouville.cpp");
+    }
           
     ###INDIVIDUAL COMMANDS ###
     elsif ($InputLine eq "SIMULATIONDATAPOINTSTEP") {  
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("static int RosinaDataSimulationStep",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
     }
-    
+
+    #the number of the test in calcualtion of the solid angle occupied by the nucleus
+    elsif ($InputLine eq "SOLIDANGLETEST") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::RedefineMacro("_ROSINA_SAMPLE__LIOUVILLE__GET_SOLID_ANGLE__TEST_NUMBER_","$InputLine","main/RosinaMeasurements.dfn");
+    }
+
+    #the number of the test points on each surface element when evaluating flux from the element that reaches the instrument
+    elsif ($InputLine eq "LOCATIONTEST") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::RedefineMacro("_ROSINA_SAMPLE__LIOUVILLE__EVALUATE_LOCATION__TEST_NUMBER_","$InputLine","main/RosinaMeasurements.dfn");
+    }
+        
     elsif ($InputLine eq "INJECTIONDISTRIBUTIONMODE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
