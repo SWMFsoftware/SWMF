@@ -201,6 +201,35 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   StartSamplingTime=2016-09-30T00:00:00
   EndSamplingTime=2016-09-30T01:00:00
 
+  EndOfMission::Test::Mode=on
+  EndOfMission::Test::SourceRate=2.0
+  EndOfMission::Test::Temperature=200.0
+  EndofMission::Test::Location=5000.0,0.0,0.0
+  EndOfMission::Test::LineOfSightRG=-2.0,0.0,0.0 
+  EndOfMission::Test::LineOfSightNG=0,1.0,0.0
+
+  EndOfMission::Correction::NG::Mode=off
+  EndOfMission::Correction::NG::DensitySinCorrectionFactor=1.0/3.8
+  EndofMission::Correction::AdjustSurfaceInjectionRate=false
+ 
+  EndOfMission::Limit::NG::SolidAngleCutoff=0.006
+
+  EndOfMission::InjectionDistributionMode=flux !!!Flux, RandomFlux, Velocity 
+  EndOfMission::SimulationDataPointStep=15
+
+  EndOfMission::ReferenceFileCorrection \\
+    ref=p1046spec0, mode=on \\
+    ref=p1028spec0, mode=off  
+
+  EndOfMission:SolidAngleTest=100
+  EndOfMission::LocationTest=20
+
+  EndOfMission::TrajectoryUnsertanty \\
+    Mode=on \\ 
+    nTests=10 \\ 
+    Radius=50.0 \\ 
+    AngularLimit=5.0  
+
   Forces::Gravity=on 
   Forces::FrameRotation=off
   Forces::RadiationPressure=off
@@ -308,26 +337,18 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=on !!!!off!, off
-  SpiceKernels="../../NAIF/naif0010.tls", "../../NAIF/de430.bsp", "../../NAIF/pck00010.tpc",  \\ 
-  "ck/CATT_DV_121_01_______00190.BC", \\ 
+  SpiceKernels="../../NAIF/NAIF0011.TLS", "../../NAIF/pck00010.tpc",  \\ 
   "fk/ROS_CHURYUMOV_V01.TF", \\ 
   "fk/ROS_V27.TF", \\ 
   "fk/RSSD0002.TF", \\ 
-  "ik/ROS_ALICE_V16.TI", \\ 
-  "ik/ROS_MIRO_V10.TI", \\ 
-  "ik/ROS_OSIRIS_V12.TI", \\ 
-  "ik/ROS_VIRTIS_V13.TI", \\ 
-  "lsk/NAIF0011.TLS", \\ 
-  "pck/PCK00010.TPC", \\ 
   "pck/ROS_CGS_RSOC_V03.TPC", \\ 
   "pck/cg-spc-shap5-v0.1.tpc", \\ 
-  "sclk/ROS_150701_STEP.TSC", \\ 
   "spk/DE405.BSP", \\ 
-  "spk/RORB_DV_257_02___T19_00344.BSP", \\ 
   "spk/CORB_DV_257_02___T19_00344.BSP", \\ 
-  "sclk/ROS_160929_STEP.TSC", \\
-  "ck/RATT_DV_257_02_04____00344.BC", \\
-  "ck/RATM_DM_005_01____A__00015.BC" 
+  "spk/RORB_DV_257_02___T19_00344.BSP", \\ 
+  "ck/CATT_DV_257_02_______00344.BC", \\ 
+  "sclk/ROS_160929_STEP.TSC", \\ 
+  "ck/RATT_DV_257_02_04____00344.BC" 
   
   define _TARGET_ _CG_
 !  define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
