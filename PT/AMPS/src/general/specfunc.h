@@ -315,6 +315,20 @@ namespace Vector3D {
     CrossProduct(e1,z,e0);
   }
 
+  inline void GetRandomNormFrame(double *e0,double *e1,double *z) {
+    double e0temp[3],e1temp[3],theta,sin_theta,cos_theta;
+
+    GetNormFrame(e0temp,e1temp,z);
+    theta=rnd()*PiTimes2;
+    sin_theta=sin(theta);
+    cos_theta=cos(theta);
+
+    for (int idim=0;idim<3;idim++) {
+      e0[idim]=cos_theta*e0temp[idim]+sin_theta*e1temp[idim];
+      e1[idim]=-sin_theta*e0temp[idim]+cos_theta*e1temp[idim];
+    }
+  }
+
   inline void Normalize(double *x) {
     double l=Length(x);
 
