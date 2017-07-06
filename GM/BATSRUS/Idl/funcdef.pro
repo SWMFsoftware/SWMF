@@ -130,7 +130,19 @@ function funcdef,xx,w,func
                 ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $ ; j perpendicular to field line
                 ['jpxbx'    , '{jpy}*{bz}-{jpz}*{by}'                   ], $ ; (j x b)_x
                 ['jpxby'    , '{jpz}*{bx}-{jpx}*{bz}'                   ], $ ; (j x b)_y
-                ['jpxbz'    , '{jpx}*{by}-{jpy}*{bx}'                   ]  $ ; (j x b)_z
+                ['jpxbz'    , '{jpx}*{by}-{jpy}*{bx}'                   ], $ ; (j x b)_z
+                ['p11S0'    , '{pXXS0}*x1^2+{pyyS0}*y1^2+{pzzS0}*z1^2+2*({pxyS0}*x1*y1+{pxzS0}*x1*z1+{pyzS0}*y1*z1)'], $;
+                ['p22S0'    , '{pXXS0}*x2^2+{pyyS0}*y2^2+{pzzS0}*z2^2+2*({pxyS0}*x2*y1+{pxzS0}*x2*z2+{pyzS0}*y2*z2)'], $;
+                ['p33S0'    , '{pXXS0}*x3^2+{pyyS0}*y3^2+{pzzS0}*z3^2+2*({pxyS0}*x3*y1+{pxzS0}*x3*z3+{pyzS0}*y3*z3)'], $;
+                ['p12S0'    , '{pXXS0}*x1*x2+{pyyS0}*y1*y2+{pzzS0}*z1*z2+{pxyS0}*(x1*y2+y1*x2)+{pxzS0}*(x1*z2+z1*x2)+{pyzS0}*(y1*z2+z1*y2)'], $;
+                ['p13S0'    , '{pXXS0}*x1*x3+{pyyS0}*y1*y3+{pzzS0}*z1*z3+{pxyS0}*(x1*y3+y1*x3)+{pxzS0}*(x1*z3+z1*x3)+{pyzS0}*(y1*z3+z1*y3)'], $;
+                ['p23S0'    , '{pXXS0}*x2*x3+{pyyS0}*y2*y3+{pzzS0}*z2*z3+{pxyS0}*(x2*y3+y2*x3)+{pxzS0}*(x2*z3+z2*x3)+{pyzS0}*(y2*z3+z2*y3)'], $;
+                ['p11S1'    , '{pXXS1}*x1^2+{pyyS1}*y1^2+{pzzS1}*z1^2+2*({pxyS1}*x1*y1+{pxzS1}*x1*z1+{pyzS1}*y1*z1)'], $;
+                ['p22S1'    , '{pXXS1}*x2^2+{pyyS1}*y2^2+{pzzS1}*z2^2+2*({pxyS1}*x2*y1+{pxzS1}*x2*z2+{pyzS1}*y2*z2)'], $;
+                ['p33S1'    , '{pXXS1}*x3^2+{pyyS1}*y3^2+{pzzS1}*z3^2+2*({pxyS1}*x3*y1+{pxzS1}*x3*z3+{pyzS1}*y3*z3)'], $;
+                ['p12S1'    , '{pXXS1}*x1*x2+{pyyS1}*y1*y2+{pzzS1}*z1*z2+{pxyS1}*(x1*y2+y1*x2)+{pxzS1}*(x1*z2+z1*x2)+{pyzS1}*(y1*z2+z1*y2)'], $;
+                ['p13S1'    , '{pXXS1}*x1*x3+{pyyS1}*y1*y3+{pzzS1}*z1*z3+{pxyS1}*(x1*y3+y1*x3)+{pxzS1}*(x1*z3+z1*x3)+{pyzS1}*(y1*z3+z1*y3)'], $;
+                ['p23S1'    , '{pXXS1}*x2*x3+{pyyS1}*y2*y3+{pzzS1}*z2*z3+{pxyS1}*(x2*y3+y2*x3)+{pxzS1}*(x2*z3+z2*x3)+{pyzS1}*(y2*z3+z2*y3)']  $;
                                      ]))
 
   common file_head
@@ -305,6 +317,18 @@ function funcdef,xx,w,func
      c4 = 4*gs/mu0A
      cc = gs*p + bb/mu0A
   end
+
+  ;; Calculate x1, x2, ..., z3 field aligned basis vectors if needed
+  ;; Unit vectors of field aligned coordinate system b, b x y, b x (b x y):
+  ;; ( bx    by         bz  )/b
+  ;; (-by    bx         0   )/b
+  ;; (-bx*by -bx^2-bz^2  by*bz )/bb
+
+  if stregex(f,'p[123][123]') ge 0 then begin
+     x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30) ; b = B/|B|   vector
+     x2 = -y1          & y2 = x1            & z2 = 0.0          ; z x b       vector
+     x3 = -z1*y2       & y3 = z1*x2         & z3 = x1*y2-y1*x2  ; b x (z x b) vector
+  endif
 
   ;; Add functions to the basic variable list
   functions = [strlowcase(variables), functiondef(*,0)]
