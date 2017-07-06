@@ -201,7 +201,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   StartSamplingTime=2016-09-30T00:00:00
   EndSamplingTime=2016-09-30T01:00:00
 
-  EndOfMission::Test::Mode=on
+  EndOfMission::Test::Mode=random !point, random, off 
   EndOfMission::Test::SourceRate=2.0
   EndOfMission::Test::Temperature=200.0
   EndofMission::Test::Location=5000.0,0.0,0.0
@@ -223,6 +223,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   EndOfMission:SolidAngleTest=100
   EndOfMission::LocationTest=20
+
+  EndOfMission::DisregardInstrumentOrientation=off
 
   EndOfMission::TrajectoryUnsertanty \\
     Mode=on \\ 

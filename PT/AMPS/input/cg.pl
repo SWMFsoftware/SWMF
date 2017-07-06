@@ -163,11 +163,14 @@ while ($line=<InputFile>) {
       if ($InputLine eq "MODE") {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
-        if ($InputLine eq "ON") {
-          ampsConfigLib::ChangeValueOfVariable("bool SphericalNucleusTest","true","main/RosinaMeasurements_Liouville.cpp"); 
+        if ($InputLine eq "POINT") {
+          ampsConfigLib::ChangeValueOfVariable("int SphericalNucleusTest_Mode","SphericalNucleusTestMode_Point","main/RosinaMeasurements_Liouville.cpp"); 
+        }
+        elsif ($InputLine eq "RANDOM") {
+          ampsConfigLib::ChangeValueOfVariable("int SphericalNucleusTest_Mode","SphericalNucleusTestMode_Random","main/RosinaMeasurements_Liouville.cpp"); 
         }
         elsif ($InputLine eq "OFF") {
-          ampsConfigLib::ChangeValueOfVariable("bool SphericalNucleusTest","false","main/RosinaMeasurements_Liouville.cpp"); 
+          ampsConfigLib::ChangeValueOfVariable("int SphericalNucleusTest_Mode","SphericalNucleusTestMode_OFF","main/RosinaMeasurements_Liouville.cpp"); 
         }
         else {
           warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
@@ -362,6 +365,22 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("static int RosinaDataSimulationStep",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
     }
+    
+    #disregard instrument orientation flag
+    elsif ($InputLine eq "DISREGARDINSTRUMENTORIENTATION") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+      if ($InputLine eq "ON") {
+        ampsConfigLib::ChangeValueOfVariable("bool DisregardInstrumentOrientationFlag","true","main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::ChangeValueOfVariable("bool DisregardInstrumentOrientationFlag","false","main/RosinaMeasurements_Liouville.cpp");
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }   
 
     #the number of the test in calcualtion of the solid angle occupied by the nucleus
     elsif ($InputLine eq "SOLIDANGLETEST") {
