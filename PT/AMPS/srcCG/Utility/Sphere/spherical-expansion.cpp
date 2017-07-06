@@ -26,7 +26,7 @@ const int VelocityDistributionMode__Maxwellian=0;
 const int VelocityDistributionMode__Random=1;
 const int VelocityDistributionMode__RandomMaxwellian=2;
 
-const int VelocityDistributionMode=VelocityDistributionMode__Random;
+const int VelocityDistributionMode=VelocityDistributionMode__Maxwellian;
 
 //====================================================
 //Get the particle velocity that is injected with Maxwellian distribution
@@ -172,7 +172,7 @@ int main() {
 
       if (i<nRadialIntervals) {
         SamplingBufferDensity[i]+=ParticleWeight*TimeStep;
-        SamplingBufferFlux[i]+=ParticleWeight*sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])*TimeStep;
+        SamplingBufferFlux[i]+=ParticleWeight*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2])/r*TimeStep;
       }
     }
     while (i<nRadialIntervals); 
@@ -224,15 +224,16 @@ int main() {
 
       break;
     case VelocityDistributionMode__Random:  
-      A=2.0* Flux*pow(beta,3)/(Pi*sqrt(Pi));
+      A=Flux*pow(beta,3)/(Pi*sqrt(Pi));
+//A=8.0*Flux*pow(beta,3)/pow(Pi,5.0/2.0);
   
       DensitySample+=1.0/(2.0*r2*pow(beta,2)); 
       FluxSample+=sqrt(Pi)/(4.0*r2*pow(beta,3)); 
     }
   }
 
-  DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests   *sqrt(Pi)/2.0;
-  FluxSample*=A*(4.0*Pi*pow(R0,2))/nTotalTests  *sqrt(Pi)/2.0;
+  DensitySample*=A*(4.0*Pi*pow(R0,2))/nTotalTests   *sqrt(Pi);
+  FluxSample*=A*(4.0*Pi*pow(R0,2))/nTotalTests  *sqrt(Pi);
  
   printf("Monte Carlo Test at xSample=%e, %e,%e\nDensity=%e\nFlux=%e\nSpeed=%e\n",xSample[0],xSample[1],xSample[2],DensitySample,FluxSample,FluxSample/DensitySample);
 
