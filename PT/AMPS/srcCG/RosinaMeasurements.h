@@ -5,6 +5,11 @@
 
 #include "RosinaMeasurements.dfn"
 
+const int SphericalNucleusTestMode_OFF=0;
+const int SphericalNucleusTestMode_Point=1;
+const int SphericalNucleusTestMode_Random=2;
+extern int SphericalNucleusTest_Mode;
+
 namespace RosinaSample {
   const int nPoints=1150;
 
