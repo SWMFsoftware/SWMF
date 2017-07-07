@@ -356,9 +356,7 @@ while ($line=<InputFile>) {
       $line=~s/[=():,]/ /g;
       ($InputLine,$line)=split(' ',$line,2);
       ($InputLine,$line)=split(' ',$line,2);
-      
-      print "$line\n";
-      
+            
       while (defined $InputComment) {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         ($t,$line)=split(' ',$line,2);
@@ -420,12 +418,40 @@ while ($line=<InputFile>) {
       ampsConfigLib::ChangeValueOfVariable("bool TrajectoryUncertanties_Search",$Mode,"main/RosinaMeasurements_Liouville.cpp");
       ampsConfigLib::ChangeValueOfVariable("double TrajectoryUncertanties_AngularLimit",$AngularLimit,"main/RosinaMeasurements_Liouville.cpp");
     }
-          
+     
+     
     ###INDIVIDUAL COMMANDS ###
+          
+    ### EndOfMission::TemperatureRG ###
+    elsif ($InputLine eq "TEMPERATURERG") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("const double rgTemperature",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }
+
+    ### EndOfMission::TemperatureNG ###
+    elsif ($InputLine eq "TEMPERATURENG") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("const double ngTemperature",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }
+
+    ### EndOfMission::SpeciesSencitivityH2O ###
+    elsif ($InputLine eq "SPECIESSENCITIVITYH2O") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("const double BetaFactorH2O",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }
+
+    ### EndOfMission::SpeciesSencitivityCO2 ###
+    elsif ($InputLine eq "SPECIESSENCITIVITYCO2") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("const double BetaFactorCO2",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }
+    
+    ### Increment between succesive simulated data points ###
     elsif ($InputLine eq "SIMULATIONDATAPOINTSTEP") {  
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("static int RosinaDataSimulationStep",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
     }
+
     
     #disregard instrument orientation flag
     elsif ($InputLine eq "DISREGARDINSTRUMENTORIENTATION") {  

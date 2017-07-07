@@ -188,6 +188,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   define _READ_NEUTRALS_FROM_BINARY_MODE_ _READ_NEUTRALS_FROM_BINARY_MODE_OFF_
 
+  define _NUCLEUS_SHAPE__MODE_  _SHAP5_
+! define _NUCLEUS_SHAPE__MODE_  _RMOC_
+
+
   !MeshSignature=0xd7058cc2a680a3a2
  ! MeshSignature=0xd5058fc3e01a454f
 
@@ -201,7 +205,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   StartSamplingTime=2016-09-30T00:00:00
   EndSamplingTime=2016-09-30T01:00:00
 
-  EndOfMission::Test::Mode=random !point, random, off 
+  EndOfMission::Test::Mode=off !!random !point, random, off 
   EndOfMission::Test::SourceRate=2.0
   EndOfMission::Test::Temperature=200.0
   EndofMission::Test::Location=5000.0,0.0,0.0
@@ -217,6 +221,9 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   EndOfMission::InjectionDistributionMode=flux !!!Flux, RandomFlux, Velocity 
   EndOfMission::SimulationDataPointStep=15
 
+  EndOfMission::SpeciesSencitivityMode=off !on,off
+  EndOfMission::PressureCalculationModeRG=CalibrationPressure |CalibrationPressure,FluxBalance
+
   EndOfMission::ReferenceFileCorrection \\
     ref=p1046spec0, mode=on \\
     ref=p1028spec0, mode=off  
@@ -225,6 +232,12 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   EndOfMission::LocationTest=20
 
   EndOfMission::DisregardInstrumentOrientation=off
+
+  EndOfMission::TemperatureRG=293.0
+  EndOfMission::TemperatureNG=293.0
+
+  EndOfMission::SpeciesSencitivityH2O=0.893  
+  EndOfMission::SpeciesSencitivityCO2=0.704  
 
   EndOfMission::TrajectoryUnsertanty \\
     Mode=on \\ 
