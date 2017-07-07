@@ -221,6 +221,35 @@ while ($line=<InputFile>) {
       }
     }
     
+    ### EndOfMission::SelfShadowingNG
+    elsif ($InputLine eq "SELFSHADOWINGNG") {          
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+        if ($InputLine eq "MODE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          
+          if ($InputLine eq "OFF") {
+            ampsConfigLib::ChangeValueOfVariable("static const int SelfShadowingNGMode","SelfShadowingNG_ModeOff","main/RosinaMeasurements_Liouville.cpp");          
+          }
+          elsif ($InputLine eq "SIMPLE") {
+            ampsConfigLib::ChangeValueOfVariable("static const int SelfShadowingNGMode","SelfShadowingNG_ModeSimple","main/RosinaMeasurements_Liouville.cpp");          
+          }
+          else {
+            warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+            die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";          
+          }
+        }
+        elsif ($InputLine eq "COSANGLELIMIT") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("static const double SelfShadowingNGCosAngleLimit",$InputLine,"main/RosinaMeasurements_Liouville.cpp");                  
+        }
+        else {
+          warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+          die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";          
+        }
+      }
+    }
     
     #### EndOfMission::Correction ###
     elsif ($InputLine eq "CORRECTION") {
