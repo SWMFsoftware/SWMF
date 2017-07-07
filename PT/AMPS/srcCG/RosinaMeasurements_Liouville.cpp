@@ -39,6 +39,21 @@ static double NudeGaugeDensitySinCorrectionFactor=1.0/3.8;
 
 static double CutoffNudeGaugeSolidAngle=0.006;
 
+//registering of particles that moved in the direction of the line of sight by NG
+static const int SelfShadowingNG_ModeOff=0;
+static const int SelfShadowingNG_ModeSimple=1;
+
+static const int SelfShadowingNGMode=SelfShadowingNG_ModeOff;
+static const double SelfShadowingNGCosAngleLimit=0.0;
+
+//account for the species depencent sensitivity of COPS
+static const bool SpeciesSensitivityMode=_PIC_MODE_OFF_;
+
+
+//the model of calculating of the RG pressure
+static const int PressureCalculationRG_ModeCalibrationPressure=0;
+static const int PressureCalculationRG_ModeFluxBalance=1;
+static const int PressureCalculationRGMode=PressureCalculationRG_ModeCalibrationPressure;
 
 //estimate the unsertanties due to the trajectory
 int TrajectoryUncertanties_nTest=10;
@@ -353,7 +368,8 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
               if (cosTheta<0.0) continue; //the external normal has to be in the direction of the spacecraft
 
-              if ((Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)<0.0)||(DisregardInstrumentOrientationFlag==true) || (-Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)/Vector3D::Length(ll)<0.5)) {
+              if ((Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)<0.0)||(DisregardInstrumentOrientationFlag==true) ||
+                  ((SelfShadowingNGMode!=SelfShadowingNG_ModeOff)&&(-Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)/Vector3D::Length(ll)<SelfShadowingNGCosAngleLimit)) ) {
                 //the particle flux can access the nude gauge
                 double sinLineOfSightAngle=sqrt(1.0-pow(Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)/r,2));
 
@@ -454,14 +470,14 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
   MPI_Allreduce(&localSurfaceFluxContributedNudeGaugeMeasurements,&SurfaceFluxContributedNudeGaugeMeasurements,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
   //convert the sampled fluxes and density into the nude and ram gauges pressures
-  double BetaFactor;
+  double BetaFactor=1.0;
 
   const double rgTemperature=293.0;
   const double ngTemperature=293.0;
 
   beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*rgTemperature));
 
-  switch (spec) {
+  if (SpeciesSensitivityMode==_PIC_MODE_ON_) switch (spec) {
   case _H2O_SPEC_:
     BetaFactor=BetaFactorH2O;
     break;
@@ -472,9 +488,17 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
     exit(__LINE__,__FILE__,"Error: the species is unknown");
   }
 
-//  RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)))/BetaFactor;
+  switch (PressureCalculationRGMode) {
+  case PressureCalculationRG_ModeCalibrationPressure:
+    RamGaugePressure=RamGaugeFlux*sqrt(Kbol*rgTemperature*Pi*PIC::MolecularData::GetMass(spec)/2.0)/BetaFactor;
+    break;
+  case PressureCalculationRG_ModeFluxBalance:
+    RamGaugePressure=4.0*Kbol*rgTemperature*RamGaugeFlux/sqrt(8.0*Kbol*rgTemperature/(Pi*PIC::MolecularData::GetMass(spec)))/BetaFactor;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
+  }
 
-  RamGaugePressure=RamGaugeFlux*sqrt(Kbol*rgTemperature*Pi*PIC::MolecularData::GetMass(spec)/2.0)/BetaFactor;
   NudeGaugePressure=NudeGaugeDensity*Kbol*ngTemperature/BetaFactor;
 
 }

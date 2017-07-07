@@ -101,7 +101,7 @@ void RosinaSample::Init(double etMin,double etMax) {
    fclose(fCG_CK);
    fclose(fCG_FIXED);
 
-   exit(__LINE__,__FILE__,"Done.");
+//   exit(__LINE__,__FILE__,"Done.");
 
   }
 
