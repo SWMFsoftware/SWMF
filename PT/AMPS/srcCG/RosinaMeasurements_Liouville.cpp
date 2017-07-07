@@ -23,30 +23,29 @@ extern double positionSun[3];
 extern double **productionDistributionNASTRAN;
 extern bool *probabilityFunctionDefinedNASTRAN;
 
-static bool SphericalNucleusTest=false;
+//Parameters of the tests
+int SphericalNucleusTest_Mode=SphericalNucleusTestMode_OFF;
+static double SphericalNucleusTest_SourceRate=1.0;
+static double SphericalNucleusTest_Temperature=100.0;
+static double SphericalNucleusTest_Location[3]={1.0E4,0.0,0.0};
+static double SphericalNucleusTest_LineOfSightRG[3]={-1.0,0.0,0.0};
+static double SphericalNucleusTest_LineOfSightNG[3]={-1.0,0.0,0.0};
+
+//step between simulated observation points
+static int RosinaDataSimulationStep=1;
+
 static bool AdjustSurfaceInjectionRate=false;
 static double NudeGaugeDensitySinCorrectionFactor=1.0/3.8;
 
 static double CutoffNudeGaugeSolidAngle=0.006;
 
+
 //estimate the unsertanties due to the trajectory
-namespace TrajectoryUncertanties {
+int TrajectoryUncertanties_nTest=10;
+bool TrajectoryUncertanties_Search=true;
+double TrajectoryUncertanties_Radius=50.0;
+double TrajectoryUncertanties_AngularLimit=5.0;
 
-  int ModeLogarithmic=0;
-  int ModeLinear=1;
-
-  int Mode=ModeLinear;
-
-  double LogarithmicModeProbabilityAtBoundary=1.0E-4;
-
-  bool Search=true;
-  bool PointingSearch=true;
-  int nTest=10;
-  double Radius=50.0;
-  double AngularLimit=5.0;
-}
-
-//static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VERTICAL_FLUX_MAXWELLIAN_;
 static int VelocityInjectionMode=_ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__RANDOMLY_DIRECTED_FLUX_MAXWELLAIN_;
 
 void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRate, double& ModifiedSourceRate,double& NudeGaugePressure,double& NudeGaugeDensity,double& NudeGaugeFlux, double& RamGaugePressure,double& RamGaugeDensity,double& RamGaugeFlux,cRosinaSamplingLocation RosinaLocation,
@@ -69,7 +68,56 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
 
   //sample particle flux and density at the spacecraft location without accounting for shielding, and instrument orientation (used for debugging)
-  bool DisregardInstrumentOrientationFlag=(SphericalNucleusTest==true) ? true : false;
+  bool DisregardInstrumentOrientationFlag=false;
+
+  //change the location and orientation of the spacecraft in the case of the sperical nucleus test
+  //DEBUG: BEGIN
+  switch (SphericalNucleusTest_Mode) {
+  case SphericalNucleusTestMode_Point:
+    for (int idim=0;idim<3;idim++) {
+      RosinaLocation.x[idim]=SphericalNucleusTest_Location[idim];
+      RosinaLocation.RamGauge.LineOfSight[idim]=SphericalNucleusTest_LineOfSightRG[idim];
+      RosinaLocation.NudeGauge.LineOfSight[idim]=SphericalNucleusTest_LineOfSightNG[idim];
+    }
+    break;
+
+  case SphericalNucleusTestMode_Random:
+    {
+      double e1[3],rTest;
+      int idim;
+
+      //generate a random location
+      rTest=Vector3D::Length(SphericalNucleusTest_Location);
+      Vector3D::Distribution::Uniform(SphericalNucleusTest_Location);
+
+      for (idim=0;idim<3;idim++) {
+        SphericalNucleusTest_LineOfSightRG[idim]=-SphericalNucleusTest_Location[idim];
+        SphericalNucleusTest_Location[idim]*=rTest;
+      }
+
+      Vector3D::GetRandomNormFrame(SphericalNucleusTest_LineOfSightNG,e1,SphericalNucleusTest_LineOfSightRG);
+
+      //copy the location to all processors
+      MPI_Bcast(SphericalNucleusTest_LineOfSightRG,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Bcast(SphericalNucleusTest_LineOfSightNG,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Bcast(SphericalNucleusTest_Location,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+      //output the location of the test point
+      if (PIC::ThisThread==0) {
+        printf("$PREFIX: Test Location=%e, %e, %e\tLine of sight RG=%e %e %e\tLine of sight NG=%e %e %e\n",
+            SphericalNucleusTest_Location[0],SphericalNucleusTest_Location[1],SphericalNucleusTest_Location[2],
+            SphericalNucleusTest_LineOfSightRG[0],SphericalNucleusTest_LineOfSightRG[1],SphericalNucleusTest_LineOfSightRG[2],
+            SphericalNucleusTest_LineOfSightNG[0],SphericalNucleusTest_LineOfSightNG[1],SphericalNucleusTest_LineOfSightNG[2]);
+      }
+    }
+
+    for (int idim=0;idim<3;idim++) {
+      RosinaLocation.x[idim]=SphericalNucleusTest_Location[idim];
+      RosinaLocation.RamGauge.LineOfSight[idim]=SphericalNucleusTest_LineOfSightRG[idim];
+      RosinaLocation.NudeGauge.LineOfSight[idim]=SphericalNucleusTest_LineOfSightNG[idim];
+    }
+  }
+  //DEBUG: END
 
 
   for (iSurfaceElement=0;iSurfaceElement<CutCell::nBoundaryTriangleFaces;iSurfaceElement++) {
@@ -136,7 +184,6 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
   //set the angular limit for the ray direction generation
   xLocation=RosinaLocation.x;
-
   NudeGaugeDensity=0.0,NudeGaugeFlux=0.0;
   RamGaugeFlux=0.0,RamGaugeDensity=0.0;
 
@@ -267,9 +314,9 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
 
     //DEBUG: BEGIN
-          if (SphericalNucleusTest==true) {
-            Temperature=200.0;
-            SourceRate=1.0;
+          if (SphericalNucleusTest_Mode!=SphericalNucleusTestMode_OFF) {
+            Temperature=SphericalNucleusTest_Temperature;
+            SourceRate=SphericalNucleusTest_SourceRate;
           }
     //DEBUG: END
 
@@ -306,7 +353,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
               if (cosTheta<0.0) continue; //the external normal has to be in the direction of the spacecraft
 
-              if ((Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)<0.0)||(DisregardInstrumentOrientationFlag==true)) {
+              if ((Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)<0.0)||(DisregardInstrumentOrientationFlag==true) || (-Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)/Vector3D::Length(ll)<0.5)) {
                 //the particle flux can access the nude gauge
                 double sinLineOfSightAngle=sqrt(1.0-pow(Vector3D::DotProduct(ll,RosinaLocation.NudeGauge.LineOfSight)/r,2));
 
@@ -517,15 +564,20 @@ void RosinaSample::Liouville::Evaluate() {
   FILE *fGroundTrack=NULL;
   FILE *fAllSpecies;
 
-  int Step=2*12;
   const int SurfaceOutputSter=1;
 
-  if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) Step=400;
+  if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) RosinaDataSimulationStep=400;
+
+  //normalize the line of sight vector of the "spherical nucleus test"
+  Vector3D::Normalize(SphericalNucleusTest_LineOfSightRG);
+  Vector3D::Normalize(SphericalNucleusTest_LineOfSightNG);
 
   if (PIC::ThisThread==0) {
     char fname[200];
 
-    fAllSpecies=fopen("Liouville.spec=SUM.dat","w");
+    sprintf(fname,"%s/Liouville.spec=SUM.dat",PIC::OutputDataFileDirectory);
+    fAllSpecies=fopen(fname,"w");
+
 //    fprintf(fAllSpecies,"VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\", \
          \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\", \"Ram Gauge Pressure H2O\", \"Ram Gauge Pressure CO2\", \"Nude Gauge Pressure H2O\", \"Nude Gauge Pressure CO2\", \"Total surface area that can contribute to the Nude Gauge measurements\", \"Integrated flux from the surface that could contribute to the nude Gauge measurements\" \n");
 
@@ -552,7 +604,7 @@ void RosinaSample::Liouville::Evaluate() {
     printf("VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\" \n");
   }
 
-  for (iPoint=0*950;iPoint<RosinaSample::nPoints;iPoint+=Step) {
+  for (iPoint=0*950;iPoint<RosinaSample::nPoints;iPoint+=RosinaDataSimulationStep) {
     //process the location only if the Nude gauge solid angle is above the cutoff 'CutoffNudeGaugeSolidAngle'
     int ProcessPoinFlag=true;
 
@@ -568,10 +620,10 @@ void RosinaSample::Liouville::Evaluate() {
 
     //cange Step with the altitude
     if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) {
-      if (Rosina[iPoint].Altitude<500) Step=12;
-      if (Rosina[iPoint].Altitude<100) Step=6;
-      if (Rosina[iPoint].Altitude<50) Step=3;
-      if (Rosina[iPoint].Altitude<20) Step=1;
+      if (Rosina[iPoint].Altitude<500) RosinaDataSimulationStep=12;
+      if (Rosina[iPoint].Altitude<100) RosinaDataSimulationStep=6;
+      if (Rosina[iPoint].Altitude<50) RosinaDataSimulationStep=3;
+      if (Rosina[iPoint].Altitude<20) RosinaDataSimulationStep=1;
     }
 
     //set the vectors, location of the Sub for the observation
@@ -634,7 +686,7 @@ void RosinaSample::Liouville::Evaluate() {
 
 
     //save surface source rate corresponding to the point of the obervation
-    if ((PIC::ThisThread==0)&&((iPoint/Step)%SurfaceOutputSter==0)) {
+    if ((PIC::ThisThread==0)&&((iPoint/RosinaDataSimulationStep)%SurfaceOutputSter==0)) {
        FILE *fSource;
        char fname[1000];
        int iface,spec;
@@ -725,12 +777,22 @@ void RosinaSample::Liouville::Evaluate() {
        cCorectionEntry p1028spec1("NudeGaugeDensityContribution.spec=1.iPoint=1028.bin");
        cCorectionEntry p1043spec0("NudeGaugeDensityContribution.spec=0.iPoint=1043.bin");
 
+       bool ApplyRefCorrection_p1046spec0=false;
+       bool ApplyRefCorrection_p1058spec0=false;
+       bool ApplyRefCorrection_p948spec0=false;
+       bool ApplyRefCorrection_p1028spec0=false;
+       bool ApplyRefCorrection_p1028spec1=false;
+       bool ApplyRefCorrection_p1043spec0=false;
+
         //create the correction mask table
         for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
           CorrectionMaskTable[iface]=1.0; //0.0001*ref3Mean*ref7Mean;
           //if (Reference7[iface]*Reference5[iface]>ref5Mean*ref7Mean) CorrectionMaskTable[iface]*=Reference7[iface]*Reference3[iface];
 
-          if ( (p1028spec0.refData[iface]/p1028spec0.refMax>5.0E-2) && (p1043spec0.refData[iface]/p1043spec0.refMax<1.0E-1) )  CorrectionMaskTable[iface]/=2.0E0;
+          if (ApplyRefCorrection_p1028spec0==true) {
+            if ( (p1028spec0.refData[iface]/p1028spec0.refMax>5.0E-2) && (p1043spec0.refData[iface]/p1043spec0.refMax<1.0E-1) )  CorrectionMaskTable[iface]/=2.0E0;
+          }
+
           //if (Reference3[iface]>0.0) CorrectionMaskTable[iface]*=Reference3[iface]/ref3Max;
           //if (Reference7[iface]/ref7Max>8.0E-1) CorrectionMaskTable[iface]*=2.0;
         }
@@ -760,7 +822,7 @@ void RosinaSample::Liouville::Evaluate() {
     double minTotalRamGaugePressure=-1.0,maxTotalRamGaugePressure=-1.0;
     double minTotalNudeGaugePressure=-1.0,maxTotalNudeGaugePressure=-1.0;
 
-    int iLocationTest,nLocationTestPoints=(TrajectoryUncertanties::Search==false) ? 1 :1+TrajectoryUncertanties::nTest;
+    int iLocationTest,nLocationTestPoints=(TrajectoryUncertanties_Search==false) ? 1 :1+TrajectoryUncertanties_nTest;
 
 
     //evaluate the location
@@ -797,17 +859,17 @@ void RosinaSample::Liouville::Evaluate() {
 
         Vector3D::Normalize(e2);
         Vector3D::GetNormFrame(e0,e1,e2);
-        Vector3D::Distribution::Circle::Uniform(RosinaLocation.x,e0,e1,Rosina[iPoint].x,min(0.1*Rosina[iPoint].Altitude,TrajectoryUncertanties::Radius));
+        Vector3D::Distribution::Circle::Uniform(RosinaLocation.x,e0,e1,Rosina[iPoint].x,min(0.1*Rosina[iPoint].Altitude,TrajectoryUncertanties_Radius));
         MPI_Bcast(RosinaLocation.x,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
-        if (TrajectoryUncertanties::PointingSearch==true) {
+        if (TrajectoryUncertanties_Search==true) {
           //generate a new coordinate frame of the spacecraft, and then recalculate pointing directions of the gauges
           int idim;
           double phi,CosPhi,SinPhi,e0new[3],e1new[3],e2new[3],e0[3]={1.0,0.0,0.0},e1[3]={0.0,1.0,0.0},e2[3]={0.0,0.0,1.0};
 
           if (PIC::ThisThread==0) {
             //rotation in e0-e1 plane
-            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            phi=TrajectoryUncertanties_AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
             CosPhi=cos(phi);
             SinPhi=sin(phi);
 
@@ -820,7 +882,7 @@ void RosinaSample::Liouville::Evaluate() {
             Vector3D::Copy(e1,e1new);
 
             //rotation ins the e0-e2 plane
-            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            phi=TrajectoryUncertanties_AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
             CosPhi=cos(phi);
             SinPhi=sin(phi);
 
@@ -833,7 +895,7 @@ void RosinaSample::Liouville::Evaluate() {
             Vector3D::Copy(e2,e2new);
 
             //rotation ins the e1-e2 plane
-            phi=TrajectoryUncertanties::AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
+            phi=TrajectoryUncertanties_AngularLimit/180.0*Pi*(2.0*rnd()-1.0);
             CosPhi=cos(phi);
             SinPhi=sin(phi);
 
@@ -988,7 +1050,7 @@ void RosinaSample::Liouville::Evaluate() {
 
 
     //save the surface properties
-    if ((iPoint/Step)%SurfaceOutputSter==0) {
+    if ((iPoint/RosinaDataSimulationStep)%SurfaceOutputSter==0) {
       //create the surface output file, and clean the buffers
       char fname[200];
 
