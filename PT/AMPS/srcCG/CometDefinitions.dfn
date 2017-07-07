@@ -46,6 +46,7 @@
 
 #define _SHAP5_ 0
 #define _SHAP5_1_ 1
+#define _RMOC_ 2
 
 //dust injection correction factors
 #define _DUST_INJECTION_RATE_CORRECTION_MODE__OFF_              0
