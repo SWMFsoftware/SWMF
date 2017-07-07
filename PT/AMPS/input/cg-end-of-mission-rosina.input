@@ -232,6 +232,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
     Radius=50.0 \\ 
     AngularLimit=5.0  
 
+  EndOfMission::SelfShadowingNG \\    
+    mode=simple \\ !off, simple
+    CosAngleLimit=0.5 
+
   Forces::Gravity=on 
   Forces::FrameRotation=off
   Forces::RadiationPressure=off
