@@ -251,6 +251,38 @@ while ($line=<InputFile>) {
       }
     }
     
+    ### EndOfMission::SpeciesSencitivityMode ###
+    elsif ($InputLine eq "SPECIESSENCITIVITYMODE") { 
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::ChangeValueOfVariable("static const bool SpeciesSensitivityMode","_PIC_MODE_ON_","main/RosinaMeasurements_Liouville.cpp");          
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::ChangeValueOfVariable("static const bool SpeciesSensitivityMode","_PIC_MODE_OFF_","main/RosinaMeasurements_Liouville.cpp");                 
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";          
+      }      
+    }
+    
+    ### EndOfMission::PressureCalculationModeRG ###
+    elsif ($InputLine eq "PRESSURECALCULATIONMODERG") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if ($InputLine eq "CALIBRATIONPRESSURE") {
+        ampsConfigLib::ChangeValueOfVariable("static const int PressureCalculationRGMode","PressureCalculationRG_ModeCalibrationPressure","main/RosinaMeasurements_Liouville.cpp");          
+      }
+      elsif ($InputLine eq "FLUXBALANCE") {
+        ampsConfigLib::ChangeValueOfVariable("static const int PressureCalculationRGMode","PressureCalculationRG_ModeFluxBalance","main/RosinaMeasurements_Liouville.cpp");                  
+      }    
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";          
+      }   
+    }
+    
     #### EndOfMission::Correction ###
     elsif ($InputLine eq "CORRECTION") {
       #settings of the correction model
