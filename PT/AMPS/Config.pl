@@ -91,6 +91,7 @@ foreach (@Arguments) {
      print "-compiler-option=opt\t\tadd option \'opt\' into the compiler argument line\n";
      print "-f-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe fortran compiler is used as a linker \n";
      print "-cpp-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe c++ compiler is used as a linker \n";
+     print "-cpp-compiler=opt\treplace C++ compiler name defined by the variable COMPILE.mpicxx in Makefile.conf\n";
      exit;
    }
    
@@ -327,6 +328,30 @@ foreach (@Arguments) {
     `echo EXTRACOMPILEROPTIONS+=$options >> Makefile.local`;
     next;
   }
+  
+  if (/^-cpp-compiler=(.*)$/) {
+    my $options=$1; 
+
+    #replace COMPILE.mpicxx variable in Makefile.conf    
+    `mv Makefile.conf Makefile.conf.bak`;
+    
+    open(fMakefileIn,"<Makefile.conf.bak") || die "Cannot open Makefile.conf.bak";
+    open(fMakefileOut,">Makefile.conf") || die "Cannot open Makefile.conf.bak";
+    
+    my $line;
+    while ($line=<fMakefileIn>) {
+      if ($line=~m/COMPILE.mpicxx=/) {
+        print fMakefileOut "COMPILE.mpicxx = $options\n";
+      }
+      else {
+        print fMakefileOut "$line";
+      }
+    }
+    
+    close(fMakefileIn);
+    close(fMakefileOut);
+    next;
+  }  
 
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
