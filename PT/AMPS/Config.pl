@@ -336,7 +336,7 @@ foreach (@Arguments) {
     `mv Makefile.conf Makefile.conf.bak`;
     
     open(fMakefileIn,"<Makefile.conf.bak") || die "Cannot open Makefile.conf.bak";
-    open(fMakefileOut,">Makefile.conf") || die "Cannot open Makefile.conf.bak";
+    open(fMakefileOut,">Makefile.conf") || die "Cannot open Makefile.conf";
     
     my $line;
     while ($line=<fMakefileIn>) {
