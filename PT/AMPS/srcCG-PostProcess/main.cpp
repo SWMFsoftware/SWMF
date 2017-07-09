@@ -1183,7 +1183,7 @@ return 1;
 
 
   //load the nucleus mesh
-  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/data/AMPS_DATA/ROSETTA");
+  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2");
   amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
 
