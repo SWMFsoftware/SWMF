@@ -516,6 +516,7 @@ Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>mkdir -p 111016
 >>>@cd 111016; cvs co -D "11/10/2016 6 pm" AMPS
+>>>@cd 111016/AMPS/srcCG-PostProcess; cvs update -r1.34 main.cpp 
 >>>@cd 111016/AMPS; ./Config.pl -install
 >>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -mode=dust
 >>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -out=7
@@ -603,6 +604,7 @@ Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>mkdir -p 111016
 >>>@cd 111016; cvs co -D "11/10/2016 6 pm" AMPS
+>>>@cd 111016/AMPS/srcCG-PostProcess; cvs update -r1.34 main.cpp
 >>>@cd 111016/AMPS; ./Config.pl -install
 >>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -mode=dust
 >>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -out=7
