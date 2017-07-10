@@ -220,6 +220,7 @@ while ($line=<InputFile>) {
     last;
   }
   else {
+    warn("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
     die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
   }
   
@@ -235,13 +236,13 @@ if ($CompileProcessedCodeFlag==1) {
   close (MAKEFILEFILE);
         
   foreach (@makefilelines) {
-      if ($_=~/\${CC} -o \${EXE}/) {
-        $_=~s/^#/\t/;
+    if ($_=~/\${CC} -o \${EXE}/) {
+      $_=~s/^#/\t/;
         
-        if ($CompilationMode ne "AMPS") {
-          $_=~s/^\t/#/;
-        }
+      if ($CompilationMode ne "AMPS") {
+        $_=~s/^\t/#/;
       }
+    }
   }
         
   open (MAKEFILEFILE,">Makefile.local") || die "Cannot open Makefile.local\n";
@@ -266,55 +267,60 @@ if ($CompileProcessedCodeFlag==1) {
 #  $Overload: if true => redefine PARAMETER if present,
 #             if false=> keep old value of PARAMETER if present
 sub add_line_makefile_local{
-    # create Makefile.local if it doesn't exist
-    `touch Makefile.local` unless (-e "Makefile.local");
+  # create Makefile.local if it doesn't exist
+  `touch Makefile.local` unless (-e "Makefile.local");
     
-    # check that there are exactly 2 arguments
-    my $nArg = @_;
-    die "ERROR: add_line_makefile_local takes exactly 2 arguments" 
-	unless ($nArg==2);
+  # check that there are exactly 2 arguments
+  my $nArg = @_;
+  die "ERROR: add_line_makefile_local takes exactly 2 arguments"  unless ($nArg==2);
 
-    # get the name of parameter being defined
-    my $Parameter = '';
-    if($_[0] =~ m/(.*?)=(.*)/){
-#	$Parameter = $_[0];
-	$Parameter = $1;
-    }
-    else{die "Try to add invalid line to Makefile.local: $_[0]\n";}
+  # get the name of parameter being defined
+  my $Parameter = '';
+   
+  if($_[0] =~ m/(.*?)=(.*)/) {
+    #$Parameter = $_[0];
+    $Parameter = $1;
+  }
+  else
+  {
+    die "Try to add invalid line to Makefile.local: $_[0]\n";
+  }
 
-    # trim the parameter name as well as newline symbol at the end
-    $Parameter =~ s/^\s+//; $Parameter =~ s/\s+\n*$//;
+  # trim the parameter name as well as newline symbol at the end
+  $Parameter =~ s/^\s+//; $Parameter =~ s/\s+\n*$//;
 
-    # read the current content
-    open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-    my @makefilelines=<MAKEFILE>;
-    close(MAKEFILE);
-
-#    print "$Parameter\n@makefilelines\n\n\n\n";
+  # read the current content
+  open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
+  my @makefilelines=<MAKEFILE>;
+  close(MAKEFILE);
      
-    # check if this parameter has already been defined
-    my $IsPresent = 0;
-    foreach (@makefilelines) {
-	if ($_ =~ m/\s*$Parameter\s*=.*/){
-	    return unless $_[1];
-#	    print "==========>$_";
+  # check if this parameter has already been defined
+  my $IsPresent = 0;
+   
+  foreach (@makefilelines) {
+    if ($_ =~ m/\s*$Parameter\s*=.*/) {
+      return unless $_[1];
 	    $_ = $_[0]; chomp($_); $_ = "$_\n";
 	    $IsPresent = 1;
-#    last;
-	}
-    }
+      #last;
+	  }
+  }
     
-    # if the parameter hasn't been defined before, add its definition
-    unless ($IsPresent) {
-        # temporary variable for storing a line to be printed
-        my $tmp; $tmp = $_[0]; chomp($tmp); #$tmp = "$tmp\n";
-        push(@makefilelines,"$tmp\n")
-    }
+  # if the parameter hasn't been defined before, add its definition
+  unless ($IsPresent) {
+    # temporary variable for storing a line to be printed
+    my $tmp; 
+     
+    $tmp = $_[0]; 
+    chomp($tmp); 
+    #$tmp = "$tmp\n";
+    push(@makefilelines,"$tmp\n")
+  }
     
-    # write changed content of Makefile.local
-    open (MAKEFILE,">","Makefile.local");   
-    print MAKEFILE  @makefilelines;
-    close (MAKEFILE);
+  # write changed content of Makefile.local
+  open (MAKEFILE,">","Makefile.local");   
+  print MAKEFILE  @makefilelines;
+  close (MAKEFILE);
 }
 
 
@@ -332,63 +338,63 @@ sub AssambleInputFile {
   open (my $Input,"<",$_[0]) || die "Cannot find file \"$_[0]\"\n";
   
   while ($line=<$Input>) {
-   $nline++;
+    $nline++;
         
-   ($line,$InputLine)=split('!',$line,2); 
-   $line=~s/^\s+//; #remove spaces from the begining of the line
-   $line=~s/\s+$//; #remove spaces from the end of the line
+    ($line,$InputLine)=split('!',$line,2); 
+    $line=~s/^\s+//; #remove spaces from the begining of the line
+    $line=~s/\s+$//; #remove spaces from the end of the line
    
-   if ((!defined $line) || ($line eq '')) {
-     if ($LineBreak==1) {
-       print "The next line after a line break cannot be empty or fully commented (file=$_[0],line=$nline)\n";
-       die;
-     }
-   }
+    if ((!defined $line) || ($line eq '')) {
+      if ($LineBreak==1) {
+        print "The next line after a line break cannot be empty or fully commented (file=$_[0],line=$nline)\n";
+        die;
+      }
+    }
    
-   $LineBreak=0;
-   if ($line=~/\\/) {
-     $LineBreak=1;
-   }
+    $LineBreak=0;
+   
+    if ($line=~/\\/) {
+      $LineBreak=1;
+    }
     
-   $InputLine=uc($line);
-   chomp($InputLine);
-   ($s0,$InputLine)=split(' ',$InputLine,2);
+    $InputLine=uc($line);
+    chomp($InputLine);
+    ($s0,$InputLine)=split(' ',$InputLine,2);
    
-   if (!defined $s0) {
-     $s0="nothing";
-   }
+    if (!defined $s0) {
+      $s0="nothing";
+    }
    
-   if ($s0 eq "#INCLUDE") {
-     #include a file into the main input file
-     chomp($line);
-     $line=~s/\s+$//;
-     ($s0,$line)=split(' ',$line,2);
-     ($s0,$line)=split(' ',$line,2);     
+    if ($s0 eq "#INCLUDE") {
+      #include a file into the main input file
+      chomp($line);
+      $line=~s/\s+$//;
+      ($s0,$line)=split(' ',$line,2);
+      ($s0,$line)=split(' ',$line,2);     
      
-     AssambleInputFile($s0);
-   }
-   else {   
-     no warnings 'uninitialized';
+      AssambleInputFile($s0);
+    }
+    else {   
+      no warnings 'uninitialized';
        
-     if (length $line) {
-       if ($StatmentEnd==1) {
-         print AssembledInputFile "$nline $_[0]\n";
-       }
+      if (length $line) {
+        if ($StatmentEnd==1) {
+          print AssembledInputFile "$nline $_[0]\n";
+        }
        
-       if ($line=~m/\\\\$/) {
-         $line=~s/\\\\$//;
-         chomp($line);
-         print AssembledInputFile "$line  ";
-         $StatmentEnd=0;
-       }
-       else {
-         print AssembledInputFile "$line\n";
-         $StatmentEnd=1;
-       }
-     }
-   }
-}
-  
+        if ($line=~m/\\\\$/) {
+          $line=~s/\\\\$//;
+          chomp($line);
+          print AssembledInputFile "$line  ";
+          $StatmentEnd=0;
+        }
+        else {
+          print AssembledInputFile "$line\n";
+          $StatmentEnd=1;
+        }
+      }
+    }
+  }  
 }
 
 
@@ -499,42 +505,39 @@ sub ReadMainBlock {
       else {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
-    }
-    
-    
-    elsif($s0 eq "MOVERINTEGRATORMODE"){
-	$s1=~s/[();]/ /g;
-	($s0,$s1)=split(' ',$s1,2);
+    }   
+    elsif ($s0 eq "MOVERINTEGRATORMODE") {
+      $s1=~s/[();]/ /g;
+      ($s0,$s1)=split(' ',$s1,2);
 
-	if($s0 eq "DIRECT") {
-          $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__DIRECT_';
-          $MoverIntegrator='PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder';
-	}
-	elsif($s0 eq "BORIS") {
-          $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
-          $MoverIntegrator='PIC::Mover::Boris';
-	}
-        elsif($s0 eq "BORIS-RELATIVISTIC") {
-          $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
-          $MoverIntegrator='PIC::Mover::Relativistic::Boris';
-        }
-	elsif($s0 eq "GUIDINGCENTER") {
-          $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
-          $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
+      if ($s0 eq "DIRECT") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__DIRECT_';
+        $MoverIntegrator='PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder';
+      }
+      elsif ($s0 eq "BORIS") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+        $MoverIntegrator='PIC::Mover::Boris';
+      }
+      elsif ($s0 eq "BORIS-RELATIVISTIC") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+        $MoverIntegrator='PIC::Mover::Relativistic::Boris';
+      }
+      elsif ($s0 eq "GUIDINGCENTER") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
+        $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
 
-          #magnetic moment needs to be saved when guiding center particle mover is used
-          ampsConfigLib::RedefineMacro("_USE_MAGNETIC_MOMENT_","_PIC_MODE_ON_","pic/picGlobal.dfn"); 
-	}
-	elsif($s0 eq "FIELDLINE") {
-          $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__FIELD_LINE_';
-          $MoverIntegrator='PIC::Mover::FieldLine::Mover_SecondOrder';
-          ampsConfigLib::RedefineMacro("_PIC_FIELD_LINE_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn"); 
-	}
-	else {
-          die "UNRECOGNIZED/UNDEFINED integrator mode $s0!\n";
-	}
-    }
-        
+        #magnetic moment needs to be saved when guiding center particle mover is used
+        ampsConfigLib::RedefineMacro("_USE_MAGNETIC_MOMENT_","_PIC_MODE_ON_","pic/picGlobal.dfn"); 
+      }
+      elsif ($s0 eq "FIELDLINE") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__FIELD_LINE_';
+        $MoverIntegrator='PIC::Mover::FieldLine::Mover_SecondOrder';
+        ampsConfigLib::RedefineMacro("_PIC_FIELD_LINE_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn"); 
+      }
+      else {
+        die "UNRECOGNIZED/UNDEFINED integrator mode $s0!\n";
+      }
+    }       
     elsif ($s0 eq "COUPLERMODE") {
       $s1=~s/[();]/ /g;
       ($s0,$s1)=split(' ',$s1,2);
@@ -557,45 +560,52 @@ sub ReadMainBlock {
         elsif ($s0 eq "BATSRUS") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_";}
         elsif ($s0 eq "T96") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__T96_";}
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }
 
-	#check if mask for input files is provided is given 
-	my $Mask='';
-	if($line =~ m/\(\s*$s0\s*,\s*mask\s*=\s*(.*)\s*\)/i){$Mask = $1;}
-	if($Mask){
-	    if(-e "$CPLRDATA\/Schedule"){
-		print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
-		system("cp $CPLRDATA/Schedule $CPLRDATA/Schedule.autocopy.".`date "+%Y_%m_%d__%Hh%Mm%Ss"`);
-	    }
+	      #check if mask for input files is provided is given 
+        my $Mask='';
+      
+        if ($line =~ m/\(\s*$s0\s*,\s*mask\s*=\s*(.*)\s*\)/i) {$Mask = $1;}
+  
+        if ($Mask) {
+	        if (-e "$CPLRDATA\/Schedule") {
+		        print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
+		        system("cp $CPLRDATA/Schedule $CPLRDATA/Schedule.autocopy.".`date "+%Y_%m_%d__%Hh%Mm%Ss"`);
+	        }
 	    
-	    my @FileList=`ls $CPLRDATA/$Mask | xargs -n 1 basename`;
-	    my $nFile = @FileList;
-	    my @schedulelines;
-	    push(@schedulelines,"Schedule file is automatically created using user-defined mask:\n$Mask \non ".`date`);
-	    push(@schedulelines, "\#NFILE\n$nFile\n\#FILELIST\n");
-	    foreach (@FileList){
-		#remove leading and trailing spaces
-		if($_ =~ m/^\s*(.*)\s*/){$_ = $1}
-		push(@schedulelines, "$_\n");
-	    }
-	    # write final schedule file
-	    open (SCHEDULEFILE,">","$CPLRDATA/Schedule");   
-	    print SCHEDULEFILE  @schedulelines;
-	    close (SCHEDULEFILE);
-
-	}
+	        my @FileList=`ls $CPLRDATA/$Mask | xargs -n 1 basename`;
+	        my $nFile = @FileList;
+	        my @schedulelines;
+	        push(@schedulelines,"Schedule file is automatically created using user-defined mask:\n$Mask \non ".`date`);
+	        push(@schedulelines, "\#NFILE\n$nFile\n\#FILELIST\n");
+	    
+	        foreach (@FileList) {
+		        #remove leading and trailing spaces
+		        if ($_ =~ m/^\s*(.*)\s*/) {$_ = $1}
+		        push(@schedulelines, "$_\n");
+	        }
+	    
+	        # write final schedule file
+	        open (SCHEDULEFILE,">","$CPLRDATA/Schedule");   
+	        print SCHEDULEFILE  @schedulelines;
+	        close (SCHEDULEFILE);
+        }
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
-    
+  
+    ###  WORKINGSOURCEDIRECTORY  ###
     elsif ($s0 eq "WORKINGSOURCEDIRECTORY") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
       $InputLine=~s/ //g;
       $InputLine=~s/=/ /;
+      
       my $oldWSD = $ampsConfigLib::WorkingSourceDirectory;
       ($InputLine,$ampsConfigLib::WorkingSourceDirectory)=split(' ',$InputLine,2);
 
@@ -603,6 +613,7 @@ sub ReadMainBlock {
         system("mv $oldWSD $ampsConfigLib::WorkingSourceDirectory");
       }
     }
+    ### SOURCEDIRECTORY ###
     elsif ($s0 eq "SOURCEDIRECTORY") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -611,8 +622,7 @@ sub ReadMainBlock {
       
       ($InputLine,$SourceDirectory)=split(' ',$InputLine,2);
     } 
-    
-    
+    ### PROJECTSOURCEDIRECTORY ###
     elsif ($s0 eq "PROJECTSOURCEDIRECTORY") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -621,20 +631,21 @@ sub ReadMainBlock {
       
       ($InputLine,$ProjectSpecificSourceDirectory)=split(' ',$InputLine,2);
     }
-       
-    
+    ### TRAJECTORYINTERSECTIONWITHBLOCKFACES ###       
     elsif ($s0 eq "TRAJECTORYINTERSECTIONWITHBLOCKFACES") {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-	 $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";
+	      $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";
       } elsif ($s0 eq "OFF") {
         $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";
-      } else {
+      } 
+      else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }       
-    
+    ### STDOUTERRORLOG ###
     elsif ($s0 eq "STDOUTERRORLOG") {
       ($s0,$s1)=split(' ',$s1,2);
       
@@ -645,11 +656,11 @@ sub ReadMainBlock {
         $StdoutErrorLog='_STDOUT_ERRORLOG_MODE__OFF_';
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
-    }    
-    
-    
+    }        
+    ### TIMESTEPMODE ###
     elsif ($s0 eq "TIMESTEPMODE") {
       ($s0,$s1)=split(' ',$s1,2);
       
@@ -666,9 +677,11 @@ sub ReadMainBlock {
         $SimulationTimeStepMode='_SPECIES_DEPENDENT_LOCAL_TIME_STEP_';
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }    
+    ### PARTICLEWEIGHTMODE ###
     elsif ($s0 eq "PARTICLEWEIGHTMODE") {
       ($s0,$s1)=split(' ',$s1,2);
       
@@ -685,9 +698,11 @@ sub ReadMainBlock {
         $SimulationParticleWeightMode='_SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_';
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
+    ### PARTICLEWEIGHTCORRECTIONMODE ###
     elsif ($s0 eq "PARTICLEWEIGHTCORRECTIONMODE") {
       ($s0,$s1)=split(' ',$s1,2);
       
@@ -698,10 +713,11 @@ sub ReadMainBlock {
         $SimulationParticleWeightCorrectionMode='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_'
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
-   
+    ### ERRORLOG ###
     elsif ($s0 eq "ERRORLOG") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -710,6 +726,7 @@ sub ReadMainBlock {
       
       ($InputLine,$ErrorLog)=split(' ',$InputLine,2);
     } 
+    ### PREFIX ###
     elsif ($s0 eq "PREFIX") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -719,6 +736,7 @@ sub ReadMainBlock {
       ($InputLine,$Prefix)=split(' ',$InputLine,2);
       $Prefix=$Prefix.":";
     }
+    ### DIAGNOSTICSTREAM ###
     elsif ($s0 eq "DIAGNOSTICSTREAM") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -731,6 +749,7 @@ sub ReadMainBlock {
         $DiagnosticStream='stdout';
       }
     }  
+    ### OUTPUTDIRECTORY ###
     elsif ($s0 eq "OUTPUTDIRECTORY") {
       chomp($line);
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -739,6 +758,7 @@ sub ReadMainBlock {
       
       ($InputLine,$OutputDirectory)=split(' ',$InputLine,2);
     }  
+    ### INPUTDIRECTORY ###
     elsif ($s0 eq "INPUTDIRECTORY") {
       my $l;
       
@@ -752,7 +772,7 @@ sub ReadMainBlock {
          
       $InputDirectory=$l."/".$InputDirectory;
     }    
-    
+    ### ENDMAIN ###
     elsif ($s0 eq "#ENDMAIN") {
       last;
     }
@@ -761,6 +781,7 @@ sub ReadMainBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -888,6 +909,7 @@ sub UserDefinitions {
         ampsConfigLib::RedefineMacro("_PIC_USER_DEFINITION_MODE_","_PIC_USER_DEFINITION_MODE__DISABLED_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }
@@ -901,6 +923,7 @@ sub UserDefinitions {
         ampsConfigLib::RedefineMacro("_AMR__LOAD_USER_DEFINITION__MODE_","_AMR__LOAD_USER_DEFINITION__MODE__OFF_","meshAMR/meshAMRdef.h");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }
@@ -914,6 +937,7 @@ sub UserDefinitions {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -938,8 +962,6 @@ sub ReadGeneralBlock {
     #substitute separators by 'spaces'
     $InputLine=~s/[()=,:]/ /g;
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
-    
-   
     
     if ($InputLine eq "MAXMESHREFINMENTLEVEL") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -977,6 +999,7 @@ sub ReadGeneralBlock {
         #do nothing
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -994,6 +1017,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::ChangeValueOfVariable("int PIC::Mesh::IrregularSurface::nCutFaceInformationCopyAttempts","0","pic/pic_cut_cells.cpp");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }
@@ -1027,6 +1051,7 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_","_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_","pic/picGlobal.dfn");
       }  
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }    
       
@@ -1081,6 +1106,7 @@ sub ReadGeneralBlock {
             last;
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "11: $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1092,6 +1118,7 @@ sub ReadGeneralBlock {
           ($Header,$InputComment)=split(' ',$InputComment,2);
         }
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }  
       }
@@ -1141,11 +1168,10 @@ sub ReadGeneralBlock {
         print MESHFILEINOUT @FileContent;
         close (MESHFILEIN);
       }
-
-    
     }
-    
-   elsif ($InputLine eq "RECOVERMACROSCOPICSAMPLEDDATA") {
+   
+    ### RECOVERMACROSCOPICSAMPLEDDATA ### 
+    elsif ($InputLine eq "RECOVERMACROSCOPICSAMPLEDDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
       if ($InputLine eq "ON") {
@@ -1188,6 +1214,7 @@ sub ReadGeneralBlock {
               ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::SamplingData::PreplotRecoveredData","false","pic/pic_restart.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1212,11 +1239,13 @@ sub ReadGeneralBlock {
               ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__CONTINUE_","pic/picGlobal.dfn");                            
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
-            
+             
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
           
@@ -1229,12 +1258,13 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     } 
     
-    
-   elsif ($InputLine eq "RECOVERPARTICLEDATA") {
+    ### RECOVERPARTICLEDATA ### 
+    elsif ($InputLine eq "RECOVERPARTICLEDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
             
       if ($InputLine eq "ON") {
@@ -1256,6 +1286,7 @@ sub ReadGeneralBlock {
             ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::recoverParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "45: $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1266,9 +1297,12 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
-    }    
+    }
+   
+    ### SAVEPARTICLERESTARTFILE ###    
     elsif ($InputLine eq "SAVEPARTICLERESTARTFILE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
@@ -1289,7 +1323,7 @@ sub ReadGeneralBlock {
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2);      
             ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::saveParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
-            
+             
             $line=~s/(=)/ /;
           }
           elsif ($s0 eq "SAVEMODE") {
@@ -1298,11 +1332,12 @@ sub ReadGeneralBlock {
             
             if ($s0 eq "OVERWRITE") {
               ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::ParticleDataRestartFileOverwriteMode","true","pic/pic_restart.cpp");
-            }
+             }
             elsif ($s0 eq "NEWFILE") {
               ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::ParticleDataRestartFileOverwriteMode","false","pic/pic_restart.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           
@@ -1315,6 +1350,7 @@ sub ReadGeneralBlock {
             $line=~s/(=)/ /;
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1325,57 +1361,61 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     } 
     
-
+    ### INITIALSAMPLELENGTH ###
     elsif ($InputLine eq "INITIALSAMPLELENGTH") {
-	($InputLine,$InputComment)=split('!',$line,2);
-	chomp($InputLine);
-	$InputLine=~s/[=();]/ /g;
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/[=();]/ /g;
 
-	($s0,$s1,$s2)=split(' ',$InputLine,3);
-	ampsConfigLib::ChangeValueOfVariable("long int PIC::RequiredSampleLength",$s1,"pic/pic.cpp");
+      ($s0,$s1,$s2)=split(' ',$InputLine,3);
+      ampsConfigLib::ChangeValueOfVariable("long int PIC::RequiredSampleLength",$s1,"pic/pic.cpp");
     }
     
+    ### SAMPLEOUTPUTMODE ### 
     elsif ($InputLine eq "SAMPLEOUTPUTMODE") {
-	($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
-	if ($InputLine eq "TIMEINTERVAL"){
-	    ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_","pic/picGlobal.dfn");	    
-	    chomp($line);
-	    $line=~s/[();]/ /g;
-	    $line=~s/(=)/ /;
-	    $line=~s/(=)/ /;
+      if ($InputLine eq "TIMEINTERVAL") {
+	      ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_","pic/picGlobal.dfn");	    
+	      chomp($line);
+	      $line=~s/[();]/ /g;
+	      $line=~s/(=)/ /;
+	      $line=~s/(=)/ /;
 
-	    my $s0;
-	    ($s0,$line)=split(' ',$line,2);
-	    ($s0,$line)=split(' ',$line,2);
+	      my $s0;
+	      ($s0,$line)=split(' ',$line,2);
+	      ($s0,$line)=split(' ',$line,2);
 
-	    while (defined $line) {
-		($s0,$line)=split(' ',$line,2);
-		$s0=uc($s0);
-		print "test: $s0";
-		if ($s0 eq "SAMPLETIMEINTERVAL") {
-		    ($s0,$line)=split(' ',$line,2);
-		    ampsConfigLib::ChangeValueOfVariable("double PIC::Sampling::SampleTimeInterval",$s0,"pic/pic.cpp");
-		    $line=~s/(=)/ /;
-		}
-		else {
-		    die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-		}
+	      while (defined $line) {
+          ($s0,$line)=split(' ',$line,2);
+          $s0=uc($s0);
+         
+          if ($s0 eq "SAMPLETIMEINTERVAL") {
+            ($s0,$line)=split(' ',$line,2);
+	  	       ampsConfigLib::ChangeValueOfVariable("double PIC::Sampling::SampleTimeInterval",$s0,"pic/pic.cpp");
+            $line=~s/(=)/ /;
+          }
+          else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+            die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
 	    }
-	}
-	elsif ($InputLine eq "ITERATIONNUMBER") {
-	    ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_","pic/picGlobal.dfn");	    
-	}
-	else {
-	    die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
-	}
+      elsif ($InputLine eq "ITERATIONNUMBER") {
+	      ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_","pic/picGlobal.dfn");	    
+      }
+      else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
     }
-    
-
+   
+    ### BLOCKCELLS ###
     elsif ($InputLine eq "BLOCKCELLS") {
       ($InputLine,$InputComment)=split('!',$line,2);
       chomp($InputLine);
@@ -1386,6 +1426,8 @@ sub ReadGeneralBlock {
       ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Y_",$s1,"meshAMR/meshAMRdef.h");
       ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
     } 
+   
+    ### GHOSTCELLS ###
     elsif ($InputLine eq "GHOSTCELLS") {
       ($InputLine,$InputComment)=split('!',$line,2);
       chomp($InputLine);
@@ -1397,9 +1439,10 @@ sub ReadGeneralBlock {
       ampsConfigLib::RedefineMacro("_GHOST_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
     }
 
+    ### ENFORCEREQUESTEDMESHRESOLUTION ###
     elsif ($InputLine eq "ENFORCEREQUESTEDMESHRESOLUTION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      
+       
       if ($InputLine eq "ON") {
         ampsConfigLib::RedefineMacro("_AMR_ENFORCE_CELL_RESOLUTION_MODE_","_AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_","meshAMR/meshAMRdef.h");
       }
@@ -1407,13 +1450,15 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_AMR_ENFORCE_CELL_RESOLUTION_MODE_","_AMR_ENFORCE_CELL_RESOLUTION_MODE_OFF_","meshAMR/meshAMRdef.h");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }
   
+    ### CONTROLPARTICLEINSIDENASTRANSURFACE ###
     elsif ($InputLine eq "CONTROLPARTICLEINSIDENASTRANSURFACE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      
+     
       if ($InputLine eq "ON") {
         ampsConfigLib::RedefineMacro("_PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
       }
@@ -1421,10 +1466,12 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }  
 
+    ### TRAJECTORYTRACING ###
     elsif ($InputLine eq "TRAJECTORYTRACING") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
@@ -1435,14 +1482,18 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_PARTICLE_TRACKER_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown ($line)\n";
       }
     }
+   
+    ### MAXSAMPLEDTRAJECTORYNUMBER ###
     elsif ($InputLine eq "MAXSAMPLEDTRAJECTORYNUMBER") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("int PIC::ParticleTracker::maxSampledTrajectoryNumber",$InputLine,"pic/pic_pt.cpp");
     }
   
+   ### NASTRANSURFACEUSERDATA ###
     elsif ($InputLine eq "NASTRANSURFACEUSERDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
@@ -1453,35 +1504,40 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_","_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_OFF_","meshAMR/meshAMRdef.h");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "The option is unknown($line)\n";
       }
     }      
-    
+   
+    ### REQUESTEDPARTICLEBUFFERLENGTH ### 
     elsif ($InputLine eq "REQUESTEDPARTICLEBUFFERLENGTH") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("const int RequestedParticleBufferLength",$InputLine,"pic/pic.cpp");      
     }
-    
+  
+    ### DEFINE ###  
     elsif ($InputLine eq "DEFINE") {
       my ($macro,$value,$s0,$s1);
-  
+   
       ($InputLine,$InputComment)=split('!',$line,2);
       ($s0,$macro,$value,$s1)=split(' ',$InputLine,4);
-  
+   
       $s0=$macro;
       $s0=~s/[()=]/ /g;
       ($s0,$s1)=split(' ',$s0,2);
   
       ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","pic/picGlobal.dfn");
     }
+   
+    ### DEFINELOCATION ###
     elsif ($InputLine eq "DEFINELOCATION") {
       my ($macro,$value,$location,$s0,$s1);
-  
+   
       $line=~s/[()=]/ /g;
-  
+   
       ($InputLine,$InputComment)=split('!',$line,2);
       ($s0,$location,$macro,$value,$s1)=split(' ',$InputLine,5);
-  
+ 
       $s0=$macro;
       $s0=~s/[()=]/ /g;
       ($s0,$s1)=split(' ',$s0,2);
@@ -1527,10 +1583,12 @@ sub ReadGeneralBlock {
         ampsConfigLib::RedefineMacro("_PIC_BC__OPEN_FLOW_INJECTION__MODE_","_PIC_BC__OPEN_FLOW_INJECTION__MODE_ON_","pic/picGlobal.dfn");        
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
-     
+   
+    ### ENDGENERAL ###
     elsif ($InputLine eq "#ENDGENERAL") {
       last;
     }
@@ -1539,6 +1597,7 @@ sub ReadGeneralBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         print "Keyword $InputLine is unknown ($line)\n";
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
@@ -1586,9 +1645,11 @@ sub Sampling {
           
         }
         elsif ($InputLine eq "FUNCTION") {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "function is not implemented\n";
         }
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Cannot recognize the option\n";
         }
         
@@ -1596,6 +1657,7 @@ sub Sampling {
 #       ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }  
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Unknown option\n";
       }
     }
@@ -1634,6 +1696,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::DistributionFunctionSample::vMin",$InputLine,"pic/pic_sample_distribution_function.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#1 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1644,6 +1707,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::DistributionFunctionSample::vMax",$InputLine,"pic/pic_sample_distribution_function.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#2 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1654,6 +1718,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("long int PIC::DistributionFunctionSample::nSampledFunctionPoints",$InputLine,"pic/pic_sample_distribution_function.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#3 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1662,6 +1727,7 @@ sub Sampling {
             $ReadSampleLocations=1;
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "#4 $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1730,6 +1796,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::EnergyDistributionSampleRelativistic::eMin",$InputLine,"pic/pic_sample_energy_distribution_relativistic.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#1 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1740,6 +1807,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::EnergyDistributionSampleRelativistic::eMax",$InputLine,"pic/pic_sample_energy_distribution_relativistic.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#2 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1760,6 +1828,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("long int PIC::EnergyDistributionSampleRelativistic::nSampledFunctionPoints",$InputLine,"pic/pic_sample_energy_distribution_relativistic.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#3 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1768,6 +1837,7 @@ sub Sampling {
             $ReadSampleLocations=1;
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "#4 $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1838,6 +1908,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::PitchAngleDistributionSample::CosPAMin",$InputLine,"pic/pic_sample_pitch_angle_distribution.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#1 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1848,6 +1919,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("double PIC::PitchAngleDistributionSample::CosPAMax",$InputLine,"pic/pic_sample_pitch_angle_distribution.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#2 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1858,6 +1930,7 @@ sub Sampling {
               ampsConfigLib::ChangeValueOfVariable("long int PIC::PitchAngleDistributionSample::nSampledFunctionPoints",$InputLine,"pic/pic_sample_pitch_angle_distribution.cpp");
             }
             else {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "#3 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           }
@@ -1866,6 +1939,7 @@ sub Sampling {
             $ReadSampleLocations=1;
           }
           else {
+            warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
             die "#4 $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
@@ -1910,6 +1984,7 @@ sub Sampling {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -1952,6 +2027,7 @@ sub ParticleCollisionModel {
         $ModelIsOnFlag=0;
       }  
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Unknown option (line=$line)\n";
       }
     }
@@ -1972,6 +2048,7 @@ sub ParticleCollisionModel {
         ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option\n";
       }
     }
@@ -1980,6 +2057,7 @@ sub ParticleCollisionModel {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "FUNCTION") {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "not implemented\n";
       }
       elsif ($InputLine eq "CONST") {
@@ -2017,6 +2095,7 @@ sub ParticleCollisionModel {
           
           if ($ModelIsOnFlag == 1) {    
             if (($s0 eq -1) || ($s1 eq -1)) {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "Cannot recognize model specie (line=$InputFileLineNumber)\n";
             }
                 
@@ -2056,6 +2135,7 @@ sub ParticleCollisionModel {
         
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Unknown option\n";
       }
     }
@@ -2068,6 +2148,7 @@ sub ParticleCollisionModel {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -2114,7 +2195,10 @@ sub ReadInterfaceBlock {
    	  if  (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
       elsif (uc($InputLine) eq "SWMF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_SWMF;}
 	    elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
-	    else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+	    else  {
+	      warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+	      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+	    }
     }
     elsif (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_SRC") {
       #set ABSOLUTE path to external source code
@@ -2138,7 +2222,10 @@ sub ReadInterfaceBlock {
       elsif (uc($InputLine) eq "OFF") {
         $GEOPACK_MODE_=$GEOPACK_MODE__OFF;
       }
-      else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+      else  {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
     }
     
     #Tsyganenko T96
@@ -2151,7 +2238,10 @@ sub ReadInterfaceBlock {
       elsif (uc($InputLine) eq "OFF") {
         $T96_MODE_=$T96_MODE__OFF;
       }
-      else  {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}
+      else  {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
     }
         
     elsif (uc($InputLine) eq "#ENDINTERFACE") {
@@ -2237,6 +2327,7 @@ sub ReadInterfaceBlock {
       chomp($line);
 	
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
 	      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
 	    }
     }
@@ -2275,6 +2366,7 @@ sub ReadDustBlock {
 	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
 	      die "Unknown option\n";
       }
     }
@@ -2289,6 +2381,7 @@ sub ReadDustBlock {
 	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__INJECTION_MODEL__MODE_","_PIC_MODEL__DUST__INJECTION_MODEL__MODE__SPHERICAL_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
 	      die "Unknown option\n";
       }
     }   
@@ -2308,6 +2401,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__FORCE__GRAVITY__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }   
@@ -2321,6 +2415,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__FORCE__FRAME_ROTATION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }
@@ -2334,6 +2429,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__FORCE__RADIATION_PRESSURE__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }
@@ -2347,6 +2443,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__FORCE__LORENTZ_FORCE__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }       
@@ -2360,6 +2457,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__FORCE__DRAG_FORCE__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }
@@ -2375,10 +2473,12 @@ sub ReadDustBlock {
           ampsConfigLib::AddLine2File("_DUST__FORCE__USER_DEFINED__".$ForceId."__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
       }
     }
@@ -2398,6 +2498,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__CHARGING__ELECTRON_COLLECTION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }    
       }
@@ -2411,6 +2512,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__CHARGING__ION_COLLECTION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }    
       }
@@ -2424,6 +2526,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }    
       }
@@ -2437,6 +2540,7 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }    
       }
@@ -2457,11 +2561,13 @@ sub ReadDustBlock {
           ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_","pic/picGlobal.dfn");
         } 
         else {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
         }    
       }    
       
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
       }
     } 
@@ -2480,6 +2586,7 @@ sub ReadDustBlock {
         ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"models/dust/Dust.cpp");   
       }     
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
       }     
     }
@@ -2541,6 +2648,7 @@ sub ReadDustBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -2596,6 +2704,7 @@ sub ReadIDF {
         $ModelIsOnFlag=0;
       }  
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Unknown option\n";
       }
     }
@@ -2610,6 +2719,7 @@ sub ReadIDF {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VV_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option\n";
       }
     }
@@ -2623,6 +2733,7 @@ sub ReadIDF {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option\n";
       }
     }
@@ -2636,6 +2747,7 @@ sub ReadIDF {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM__RT_RELAXATION_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option\n";
       }
     }
@@ -2650,6 +2762,7 @@ sub ReadIDF {
           if ((defined $s0)&&(defined $s1)) {
             $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
             if ($nspec==-1) {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           
@@ -2668,6 +2781,7 @@ sub ReadIDF {
           if ((defined $s0)&&(defined $s1)) {
             $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
             if ($nspec==-1) {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           
@@ -2686,6 +2800,7 @@ sub ReadIDF {
           if ((defined $s0)&&(defined $s1)) {
             $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
             if ($nspec==-1) {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           
@@ -2704,6 +2819,7 @@ sub ReadIDF {
           if ((defined $s0)&&(defined $s1)) {
             $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
             if ($nspec==-1) {
+              warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
               die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
             }
           
@@ -2718,12 +2834,14 @@ sub ReadIDF {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);     
         $s0=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
         if ($s0==-1) {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }
         
         ($InputLine,$InputComment)=split(' ',$InputComment,2);     
         $s1=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
         if ($s1==-1) {
+          warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
           die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }      
         
@@ -2741,6 +2859,7 @@ sub ReadIDF {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -2830,6 +2949,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__STOPPING_POWER_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
     }
@@ -2902,6 +3022,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option");
         die "Cannot recognize the option\n";
       }
     }
@@ -2998,6 +3119,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::RedefineMacroFunction("_PIC_BACKGROUND_ATMOSPHERE__COLLISION_CROSS_SECTION_FUNCTION_","(t1,t2,t3,t4,t5,t6) ($FunctionName(t1,t2,t3,t4,t5,t6))","pic/pic.h");  
       }
       else {
+        warn ("Cannot recognize the option");
         die "Cannot recognize the option\n";
       }
       
@@ -3031,6 +3153,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }  
     }
@@ -3045,6 +3168,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
     }
@@ -3059,6 +3183,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
     }
@@ -3085,6 +3210,7 @@ sub ReadBackgroundAtmosphereBlock {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
 
@@ -3099,6 +3225,7 @@ sub ReadBackgroundAtmosphereBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -3148,6 +3275,7 @@ sub ReadUnimolecularReactions {
         $ReactionFlag=false;
       }
       else {
+        warn("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
     }
@@ -3201,6 +3329,7 @@ sub ReadUnimolecularReactions {
               #do nothing
             }
             elsif ($spec == -1) {
+              warn ("Cannot recognize specie $s2 ($line) in $InputFileName.Assembled (Unimolecular Block)");
               die "Cannot recognize specie $s2 ($line) in $InputFileName.Assembled (Unimolecular Block)\n";
             }
             else {
@@ -3218,6 +3347,7 @@ sub ReadUnimolecularReactions {
           push(@LifeTime,$lt);
         }
         else {
+          warn ("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
           die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }
         
@@ -3284,7 +3414,6 @@ sub ReadUnimolecularReactions {
       my $nMaxSpeciesReactionNumber=0;
       my @TotalSpecieReactionRate=((0)x$TotalSpeciesNumber);
       my $SpeciesReactionList="";
-#      my $cnt;
       
       for ($spec=0;$spec<$nTotalReactions;$spec++) {
         if ($nSpeciesReactionNumber[$spec]>$nMaxSpeciesReactionNumber) {
@@ -3344,6 +3473,7 @@ sub ReadUnimolecularReactions {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled"); 
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -3388,6 +3518,7 @@ sub ReadMeshBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
@@ -3559,48 +3690,55 @@ sub ReadSpeciesBlock {
 
 #=============================== Process AMPS' settings from .ampsConfig
 sub ampsConfigSettings {
-    if (-e ".amps.conf") {
-	my @Settings;
+  if (-e ".amps.conf") {
+	  my @Settings;
 	
-	open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
-	@Settings=<AMPSSETTINGS>;
-	close (AMPSSETTINGS);
+	  open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
+	  @Settings=<AMPSSETTINGS>;
+	  close (AMPSSETTINGS);
 	
-	
-	foreach (@Settings){
+	  foreach (@Settings) {
 	    chomp($_);
 	    next unless $_;
 
-            if ($_ =~/APPEND/) {
-              next;
-            }
+      if ($_ =~/APPEND/) {
+        next;
+      }
 
 	    add_line_makefile_local($_,1);
-	    if(/^InputFileAMPS=(.*)$/i){
-		$InputFileName = $1;
-		next
+	    
+	    if (/^InputFileAMPS=(.*)$/i) {
+        $InputFileName = $1;
+        next;
 	    }
+	     
 	    if (/^SPICEKERNELS=(.*)$/i) {
-		ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); 
-		next};
+        ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); 
+		    next;
+	    }
+	      
 	    if (/^ICESLOCATION=(.*)$/i) {
-		ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); 
-		next}; 
+	      ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); 
+        next;
+	    } 
 	    
-	    if (/^CPLRDATA=(.*)$/i) {
-		ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_datafile.cpp"); 
-		$CPLRDATA = $1;
-		next};
+      if (/^CPLRDATA=(.*)$/i) {
+        ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_datafile.cpp"); 
+        $CPLRDATA = $1;
+        next;
+      };
 
-	    if (/^MODELINPUTDATA=(.*)$/i) {
-		ampsConfigLib::ChangeValueOfVariable("char PIC::UserModelInputDataPath\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
-		next};
+      if (/^MODELINPUTDATA=(.*)$/i) {
+        ampsConfigLib::ChangeValueOfVariable("char PIC::UserModelInputDataPath\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
+        next;
+      };
 	    
-	    if (/^OUTPUT=(.*)$/i) {
-		ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
-		next}
-	}    
-    }
+      if (/^OUTPUT=(.*)$/i) {
+        ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
+        next;
+      }
+    }    
+  }
 }
 
 =comment

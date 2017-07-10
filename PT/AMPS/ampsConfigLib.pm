@@ -33,9 +33,6 @@ sub ChangeValueOfVariable {
   
   foreach (@FileContent) {
     if ($_=~/($Variable)/) {
-#      $Variable=~s/\\//g;
-#      $_=$Variable."=".$Value.";\n";
-
       my $t=$Variable;
       
       $t=~s/\\//g;
@@ -64,7 +61,6 @@ sub RedefineMacro {
   
   foreach (@FileContent) {
     if ($_=~/\#define $Macro /) {
-#      print "\#define $Macro $Value\n";
       $_="\#define $Macro $Value\n";
     }
     
@@ -89,7 +85,6 @@ sub RedefineMacroFunction {
   
   foreach (@FileContent) {
     if ($_=~/\#define $Macro/) {
-#      print "\#define $Macro$Value\n";
       $_="\#define $Macro$Value\n";
     }
     
@@ -240,8 +235,7 @@ sub RecursiveSubstitute {
   closedir(DIR);
   
   foreach $fname (@FileList) {
-    #check if '$fname' is a directory
-    
+    #check if '$fname' is a directory    
     if (($fname eq '.')||($fname eq '..')||($fname eq 'CVS')||($fname eq 'RCS')) {
       next;
     }
