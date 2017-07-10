@@ -1,16 +1,17 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
+subroutine calc_neutral_friction(DtIn,oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
                                  GradLogCon, Temp)
 
   use ModGITM
   use ModSources
   use ModPlanet, only: Diff0, DiffExp, IsEarth
-  use ModInputs, only: UseNeutralFriction, UseBoquehoAndBlelly
+  use ModInputs, only: UseNeutralFriction
 
   implicit none
 
+  real,intent(in) :: DtIn
   real,intent(inout) :: oVel(1:nAlts,1:nSpecies)
   real,intent(in) :: EddyCoef_1d(1:nAlts)
   real,intent(in) :: NDensity_1d(1:nAlts)
@@ -67,20 +68,13 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 ! These coefficients demand that 
 ! (1) NDensity be in cm^-3 (hence the 1.0e-06) factor below
 ! (2) Additionally, the Dij's are in cm^2/s, thus the 1.0e-04 factor
-
            TempDij = (1.0e-04)*&              ! Scales the Dij from cm^2/s -> m^2/s
-                (   Diff0(iSpecies,jSpecies)*( Temp(iAlt)**DiffExp(iSpecies,jSpecies) )   ) / &
-                (   NDensity_1d(iAlt)*(1.0e-06) )     ! Converts to #/cm^-3
+              (   Diff0(iSpecies,jSpecies)*( Temp(iAlt)**DiffExp(iSpecies,jSpecies) )   ) / &
+              (   NDensity_1d(iAlt)*(1.0e-06) )     ! Converts to #/cm^-3
 
-           if (UseBoquehoAndBlelly) then
-              CoefMatrix(iSpecies, jSpecies) = &
-                   kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / &
-                   (TempDij+EddyCoef_1d(iAlt))
-           else 
-              CoefMatrix(iSpecies, jSpecies) = &
-                   kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / &
-                   TempDij
-           endif
+           CoefMatrix(iSpecies, jSpecies) = &
+                kTOverM * denscale * NDensityS_1d(iAlt, jSpecies) / &
+                TempDij
 
            InvDij(iSpecies) = InvDij(iSpecies) + &
                 denscale*NDensityS_1d(iAlt, jSpecies)/ &
@@ -88,39 +82,21 @@ subroutine calc_neutral_friction(oVel, EddyCoef_1d, NDensity_1d, NDensityS_1d, &
 
         enddo  ! End DO over jSpecies
 
-        ! Eddy Diffusion Contribution in Momentum Equation
-        if (UseBoquehoAndBlelly) then
-           EddyContribution(iSpecies) =  &
-                Dt * EddyCoef_1d(iAlt)/&
-                (1.0/InvDij(iSpecies) + EddyCoef_1d(iAlt))*&
-                GradLogCon(iAlt,iSpecies) 
-        else
-            EddyContribution(iSpecies) =  &
-                 -1.0*EddyCoef_1d(iAlt)*GradLogCon(iAlt,iSpecies) 
-        endif
+        EddyContribution(iSpecies) =  &
+             -1.0*EddyCoef_1d(iAlt)*GradLogCon(iAlt,iSpecies) 
+
      enddo  !End DO Over iSpecies
 
-     if (UseBoquehoAndBlelly) then
-         Vel(1:nSpecies) = Vel(1:nSpecies) + EddyContribution(1:nSpecies)
-     endif
-
-     Matrix = -dt*CoefMatrix
-
+     Matrix = -DtIn*CoefMatrix
      do iSpecies = 1, nSpecies
         Matrix(iSpecies,iSpecies) = &
-             1.0 + dt*(sum(CoefMatrix(iSpecies,:)))
+             1.0 + DtIn*(sum(CoefMatrix(iSpecies,:)))
      enddo
-
      call ludcmp(Matrix, nSpecies, nSpecies, iPivot, Parity)
      call lubksb(Matrix, nSpecies, nSpecies, iPivot, Vel)
 
-     if (UseBoquehoAndBlelly) then
-        oVel(iAlt, 1:nSpecies) = Vel(1:nSpecies) 
-     else
-        oVel(iAlt, 1:nSpecies) = Vel(1:nSpecies) + & 
-            EddyContribution(1:nSpecies) 
-     endif
-
+     oVel(iAlt, 1:nSpecies) = Vel(1:nSpecies) + & 
+         EddyContribution(1:nSpecies) 
   enddo
 
 end subroutine calc_neutral_friction

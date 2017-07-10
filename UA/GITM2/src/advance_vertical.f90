@@ -6,7 +6,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
   use ModSources, only: EUVHeating, KappaEddyDiffusion
-  use ModInputs, only: UseIonAdvection, iDebugLevel, UseImprovedIonAdvection
+  use ModInputs, only: UseAUSMSolver,UseIonAdvection, iDebugLevel, UseImprovedIonAdvection
   use ModVertical, ONLY: &
        LogRho, &
        cMax1      => cMax,&
@@ -111,7 +111,19 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   SpeciesDensityOld(iLon,iLat,:,nSpeciesTotal+1:nSpeciesAll,iBlock) = &
        IDensityS(iLon,iLat,:,1:nIons-1,iBlock)
 
-  call advance_vertical_1d
+  
+! Old Version
+ ! call advance_vertical_1d
+
+  if (UseAUSMSolver) then
+     write(*,*) 'Using AUSM'
+     call advance_vertical_1d_ausm
+  else
+     write(*,*) 'NOT Using AUSM'
+     ! Default case
+     call advance_vertical_1d_rusanov
+  endif
+  
 
    Rho(iLon,iLat,:,iBlock)                  = exp(LogRho)
 

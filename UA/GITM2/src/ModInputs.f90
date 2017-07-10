@@ -174,7 +174,6 @@ module ModInputs
   logical :: UseDamping = .false.
 
 !! EddyVelocity Terms
-  logical :: UseBoquehoAndBlelly = .false.
   real    :: MaximumVerticalVelocity = 1000.0
 
   !\
@@ -192,6 +191,8 @@ module ModInputs
   logical :: UseHorAdvection     = .true.
   logical :: UseVerAdvection     = .true.
   logical :: UseNeutralFriction  = .true.
+
+  logical :: UseAUSMSolver     = .false.
 
   logical :: UseIonPressureGradient = .true.
   logical :: UseIonGravity          = .true.
@@ -225,9 +226,6 @@ module ModInputs
   logical :: UseTurbulentCond = .false.
   logical :: UseUpdatedTurbulentCond = .false.
   real :: EddyScaling = 1.0
-
-!! WAVE DRAG FORCINGS
-  logical :: UseStressHeating  = .false.
 
   real :: PhotoElectronHeatingEfficiency = 0.0
   real :: NeutralHeatingEfficiency = 0.05
@@ -364,7 +362,6 @@ contains
     
     if (IsEarth) then 
        PhotoElectronHeatingEfficiency = 0.06
-       UseBoquehoAndBlelly = .true.
     endif
 
     tSimulation = 0.0

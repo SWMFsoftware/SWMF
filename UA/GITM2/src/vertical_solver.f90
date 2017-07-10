@@ -109,7 +109,7 @@ subroutine advance_vertical_1d
 
 
 !!! Now calculate, k1 = f(tn, yn)
-  call advance_vertical_1stage(&
+  call advance_vertical_1stage_rusanov(&
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 
@@ -186,7 +186,7 @@ subroutine advance_vertical_1d
 
 !!!!! Calculate K2
 
-  call advance_vertical_1stage(&
+  call advance_vertical_1stage_rusanov(&
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 
@@ -260,7 +260,7 @@ subroutine advance_vertical_1d
 !
 !!!!!! Calculate K3
 !
-  call advance_vertical_1stage(&
+  call advance_vertical_1stage_rusanov(&
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 !
@@ -332,7 +332,7 @@ subroutine advance_vertical_1d
   
 !! Calculate K4 (Final Coefficient)
 
-  call advance_vertical_1stage(&
+  call advance_vertical_1stage_rusanov(&
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
   
@@ -397,7 +397,7 @@ subroutine advance_vertical_1d
 end subroutine advance_vertical_1d
 
 !=============================================================================
-subroutine advance_vertical_1stage( &
+subroutine advance_vertical_1stage_rusanov( &
      LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
      LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 
@@ -513,60 +513,46 @@ subroutine advance_vertical_1stage( &
      DiffLogINS(:,iSpecies) = DiffTmp
   enddo
 
-  !! -------- Check the Method for Eddy Diffusion 
-  if (UseBoquehoAndBlelly) then
-     !! Boqueho And Blelly [2005] Method
-     !! Analytical Approximation to the Concentration gradient
-     do iAlt = 1, nAlts
-        do iSpecies = 1, nSpecies
-            GradLogConS(iAlt,iSpecies) = &
-                 -1.0*Gravity_G(iAlt)*&
-                 (1.0 -  (MeanMajorMass_1d(iAlt)/Mass(iSpecies)) )
-        enddo
-     enddo
-  else 
-     ! Use Colegrove Method
-     ! Step 1:  Calculate Ln(rho_{s}/Rho)
+  ! Use Colegrove Method
+  ! Step 1:  Calculate Ln(rho_{s}/Rho)
+  do iSpecies = 1, nSpecies
+    LogConS(-1:nAlts+2,iSpecies) = &
+         alog(Mass(iSpecies)*NS(-1:nAlts+2,iSpecies)/Rho(-1:nAlts+2))
+  enddo 
+
+  do iAlt = 1, nAlts
+
+     ! 4th Order Concentration Gradient
+     ! On Non-Uniform Mesh requires 5-pt Stencil
+     h1 = dAlt_F(iAlt-1)
+     h2 = dAlt_F(iAlt+0)
+     h3 = dAlt_F(iAlt+1)
+     h4 = dAlt_F(iAlt+2)
+
+     MeshH2 = h2 + h1
+     MeshH3 = h3 + h2 + h1
+     MeshH4 = h4 + h3 + h2 + h1
+
+     MeshCoef0 = (h2*h3*(h3+h4))/(h1*MeshH2*MeshH3*MeshH4)
+     MeshCoef1 = -1.0*(MeshH2*h3*(h3 + h4))/(h1*h2*(h2+h3)*(h2+h3+h4))
+     MeshCoef3 = MeshH2*h2*(h4 + h3)/(MeshH3*(h2+h3)*h3*h4) 
+     MeshCoef4 = -1.0*MeshH2*h2*h3/(MeshH4*(h2+h3+h4)*(h3+h4)*h4)
+
+     MeshCoef2 = (h2*h3*(h3+h4) + &
+                  MeshH2*h3*(h3+h4) - &
+                  MeshH2*h2*(h3+h4) - &
+                  MeshH2*h2*h3)/&
+                  (MeshH2*h2*h3*(h3+h4))
+
      do iSpecies = 1, nSpecies
-       LogConS(-1:nAlts+2,iSpecies) = &
-            alog(Mass(iSpecies)*NS(-1:nAlts+2,iSpecies)/Rho(-1:nAlts+2))
-     enddo 
-
-     do iAlt = 1, nAlts
-
-        ! 4th Order Concentration Gradient
-        ! On Non-Uniform Mesh requires 5-pt Stencil
-        h1 = dAlt_F(iAlt-1)
-        h2 = dAlt_F(iAlt+0)
-        h3 = dAlt_F(iAlt+1)
-        h4 = dAlt_F(iAlt+2)
-
-        MeshH2 = h2 + h1
-        MeshH3 = h3 + h2 + h1
-        MeshH4 = h4 + h3 + h2 + h1
-
-        MeshCoef0 = (h2*h3*(h3+h4))/(h1*MeshH2*MeshH3*MeshH4)
-        MeshCoef1 = -1.0*(MeshH2*h3*(h3 + h4))/(h1*h2*(h2+h3)*(h2+h3+h4))
-        MeshCoef3 = MeshH2*h2*(h4 + h3)/(MeshH3*(h2+h3)*h3*h4) 
-        MeshCoef4 = -1.0*MeshH2*h2*h3/(MeshH4*(h2+h3+h4)*(h3+h4)*h4)
-
-        MeshCoef2 = (h2*h3*(h3+h4) + &
-                     MeshH2*h3*(h3+h4) - &
-                     MeshH2*h2*(h3+h4) - &
-                     MeshH2*h2*h3)/&
-                     (MeshH2*h2*h3*(h3+h4))
-
-        do iSpecies = 1, nSpecies
-           GradLogConS(iAlt,iSpecies) =  &
-             MeshCoef0*LogConS(iAlt-2,iSpecies)&
-          +  MeshCoef1*LogConS(iAlt-1,iSpecies)&
-          +  MeshCoef2*LogConS(iAlt  ,iSpecies)&
-          +  MeshCoef3*LogConS(iAlt+1,iSpecies)&
-          +  MeshCoef4*LogConS(iAlt+2,iSpecies)
-        enddo  ! iSpecies Loop
-
-    enddo ! iAlt Loop
-  endif ! End Check for Boqueho And Blelly 
+        GradLogConS(iAlt,iSpecies) =  &
+          MeshCoef0*LogConS(iAlt-2,iSpecies)&
+       +  MeshCoef1*LogConS(iAlt-1,iSpecies)&
+       +  MeshCoef2*LogConS(iAlt  ,iSpecies)&
+       +  MeshCoef3*LogConS(iAlt+1,iSpecies)&
+       +  MeshCoef4*LogConS(iAlt+2,iSpecies)
+     enddo  ! iSpecies Loop
+  enddo ! iAlt Loop
 
   AmpSP = (1.0/(10.0*Dt))
   kSP = nAltsSponge + 1
@@ -697,7 +683,7 @@ subroutine advance_vertical_1stage( &
      NewLogRho(iAlt) = alog(NewSumRho)
   enddo
 
-end subroutine advance_vertical_1stage
+end subroutine advance_vertical_1stage_rusanov
 
 !=============================================================================
 subroutine nighttime_timeconstant(UpdatValue,OldBCs) 

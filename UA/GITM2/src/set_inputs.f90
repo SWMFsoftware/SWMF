@@ -722,22 +722,13 @@ subroutine set_inputs
               write(*,*) "MaximumVerticalVelocity      (real)"
            endif
 
-        case ("#EDDYVELOCITY")
-           call read_in_logical(UseBoquehoAndBlelly, iError)
+        case ("#AUSMSOLVER")
+           call read_in_logical(UseAUSMSolver, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #VERTICALSOURCES:'
               write(*,*) ''
-              write(*,*) '#EDDYVELOCITY'
-              write(*,*) "UseBoquehoAndBlelly              (logical)"
-           endif
-
-        case ("#WAVEDRAG")
-           call read_in_logical(UseStressHeating, iError)
-           if (iError /= 0) then
-              write(*,*) 'Incorrect format for #WAVEDRAG:'
-              write(*,*) ''
-              write(*,*) '#WAVEDRAG'
-              write(*,*) "UseStressHeating              (logical)"
+              write(*,*) '#AUSMSOLVER'
+              write(*,*) "Use AUSM Solver      (logical)"
            endif
 
         case ("#DIFFUSION")

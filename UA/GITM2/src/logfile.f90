@@ -446,14 +446,6 @@ subroutine write_code_information(dir)
      write(iCodeInfoFileUnit_,*) MaximumVerticalVelocity
      write(iCodeInfoFileUnit_,*) ""
 
-     write(iCodeInfoFileUnit_,*) "#EDDYVELOCITY"
-     write(iCodeInfoFileUnit_,*) UseBoquehoAndBlelly
-     write(iCodeInfoFileUnit_,*) ""
-
-     write(iCodeInfoFileUnit_,*) "#WAVEDRAG"
-     write(iCodeInfoFileUnit_,*) UseStressHeating
-     write(iCodeInfoFileUnit_,*) ""
-
      write(iCodeInfoFileUnit_,*) "#DYNAMO"
      write(iCodeInfoFileUnit_,*) UseDynamo
      write(iCodeInfoFileUnit_,*) DynamoHighLatBoundary
