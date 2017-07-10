@@ -8,6 +8,9 @@
  *      Author: vtenishe
  */
 
+#include <iostream>
+#include <iomanip>
+
 #include "pic.h"
 #include "RosinaMeasurements.h"
 #include "Comet.h"
@@ -588,7 +591,7 @@ void RosinaSample::Liouville::Evaluate() {
   FILE *fGroundTrack=NULL;
   FILE *fAllSpecies;
 
-  const int SurfaceOutputSter=1;
+  const int SurfaceOutputStep=1;
 
   if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) RosinaDataSimulationStep=400;
 
@@ -710,7 +713,7 @@ void RosinaSample::Liouville::Evaluate() {
 
 
     //save surface source rate corresponding to the point of the obervation
-    if ((PIC::ThisThread==0)&&((iPoint/RosinaDataSimulationStep)%SurfaceOutputSter==0)) {
+    if ((PIC::ThisThread==0)&&((iPoint/RosinaDataSimulationStep)%SurfaceOutputStep==0)) {
        FILE *fSource;
        char fname[1000];
        int iface,spec;
@@ -1046,7 +1049,7 @@ void RosinaSample::Liouville::Evaluate() {
         std::cout << "s/c location/orientation perturbation: iLocationTest=" <<  iLocationTest <<
             ",\t TotalRamGaugePressure=" << minTotalRamGaugePressure << " < " << trajectoryTotalRamGaugePressure << " <" << maxTotalRamGaugePressure <<
             ", TotalNudeGaugePressure=" << minTotalNudeGaugePressure << " < " << trajectoryTotalNudeGaugePressure << " <" << maxTotalNudeGaugePressure <<
-            ", d=" << sqrt(pow(Rosina[iPoint].x[0]-RosinaLocation.x[0],2)+pow(Rosina[iPoint].x[1]-RosinaLocation.x[1],2)+pow(Rosina[iPoint].x[2]-RosinaLocation.x[2],2)) <<
+            ", d=" << std::setprecision(5) << sqrt(pow(Rosina[iPoint].x[0]-RosinaLocation.x[0],2)+pow(Rosina[iPoint].x[1]-RosinaLocation.x[1],2)+pow(Rosina[iPoint].x[2]-RosinaLocation.x[2],2)) <<
             ",\t angles=" << NudeGaugeAngle << ",  " << RamGaugeAngle <<
             ", cos(angles)=" << CosNudeGaugeAngle << ",  " << CosRamGaugeAngle <<
             " (" << __LINE__ << "@" << __FILE__ << ")" << std::endl << std::flush;
@@ -1074,7 +1077,7 @@ void RosinaSample::Liouville::Evaluate() {
 
 
     //save the surface properties
-    if ((iPoint/RosinaDataSimulationStep)%SurfaceOutputSter==0) {
+    if ((iPoint/RosinaDataSimulationStep)%SurfaceOutputStep==0) {
       //create the surface output file, and clean the buffers
       char fname[200];
 
@@ -1115,6 +1118,26 @@ void RosinaSample::Liouville::Evaluate() {
       delete [] t;
       delete [] tall;
 
+      //determine the "field of view map" for the given configuration and output the surface data file
+      for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+        bool FieldOfViewRG=false,FieldOfViewNG=false;
+        double x[3],ll[3],xIntersection[3];
+
+        CutCell::BoundaryTriangleFaces[iface].GetRandomPosition(x);
+        for (idim=0;idim<3;idim++) ll[idim]=Rosina[iPoint].x[idim]-x[idim];
+
+        if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,CutCell::BoundaryTriangleFaces+iface)==-1) {
+          //the location can be seen from the spacecraft.
+          //veryfy whether the location can be seen by the instruments
+          if (Vector3D::DotProduct(Rosina[iPoint].RamGauge.LineOfSight,ll)<0.0) FieldOfViewRG=true;
+          if (Vector3D::DotProduct(Rosina[iPoint].NudeGauge.LineOfSight,ll)<0.0) FieldOfViewNG=true;
+        }
+
+        for (int i=0;i<3;i++) {
+          if (FieldOfViewRG==true) CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_RamGauge=true;
+          if (FieldOfViewNG==true) CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_NudeGauge=true;
+        }
+      }
 
       sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
       CutCell::PrintSurfaceData(fname);
