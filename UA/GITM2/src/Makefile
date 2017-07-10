@@ -49,6 +49,8 @@ OBJECTS = \
 	init_grid.o\
 	time_routines.o\
 	vertical_solver.o\
+	vertical_solver_ausm.o\
+	vertical_solver_rusanov.o\
 	library.o\
 	stretch_grid.o\
 	init_mpi.o\
