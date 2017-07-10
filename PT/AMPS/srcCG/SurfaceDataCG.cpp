@@ -15,6 +15,7 @@ void cSurfaceDataCG::PrintVarableList(FILE* fout) {
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     fprintf(fout,", \"Nude Gauge Density Contribution[s=%i]\",  \"Nude Gauge Flux Contribution[s=%i]\", \"Ram Gauge Density Contribution[s=%i]\",  \"Ram Gauge Flux Contribution[s=%i]\", \"Original SourceRate[s=%i]\", \"Modified SourceRate[s=%i]\"",spec,spec,spec,spec,spec,spec);
+    fprintf(fout,", \"Source Rate Correction[s=%i]\"",spec);
   }
 
   fprintf(fout,", \"Scalar Product of the surface external notmal to the vector pf the spacecraft location\"");
@@ -68,6 +69,7 @@ void cSurfaceDataCG::Flush() {
     RamGaugeDensityContribution[spec]=0.0,RamGaugeFluxContribution[spec]=0.0;
 
     OriginalSourceRate[spec]=0.0,ModifiedSourceRate[spec]=0.0;
+    SourceRateCorrection[spec]=0.0;
   }
 
   ScalarProduct_FaceNormal_SpacecraftLocation=0.0;
@@ -136,6 +138,10 @@ void cSurfaceDataCG::Print(FILE *fout,double* InterpolationWeightList,cSurfaceDa
 
     //the modified source rate
     for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->ModifiedSourceRate[spec];
+    fprintf(fout," %e",t);
+
+    //correction of the source rate
+    for (i=0,t=0.0;i<StencilLength;i++) t+=InterpolationWeightList[i]*InterpolationFaceList[i]->SourceRateCorrection[spec];
     fprintf(fout," %e",t);
   }
 

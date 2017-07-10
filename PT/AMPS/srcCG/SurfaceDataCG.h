@@ -22,6 +22,13 @@ public:
   //the marker saying that the surface element can be seen from the spacecraft location by the ram/nude gauge
   bool FieldOfView_NudeGauge,FieldOfView_RamGauge;
 
+  //correction of teh source rate
+  double SourceRateCorrection[_TOTAL_SPECIES_NUMBER_];
+
+  cSurfaceDataCG() {
+    for (int spec=0;spec<_TOTAL_SPECIES_NUMBER_;spec++) SourceRateCorrection[spec]=1.0;
+  }
+
   void PrintVarableList(FILE* fout);  
   void Print(FILE *fout,double* InterpolationWeightList,cSurfaceDataCG** InterpolationFaceList,int *Stencil,int StencilLength);
   void Flush();  
