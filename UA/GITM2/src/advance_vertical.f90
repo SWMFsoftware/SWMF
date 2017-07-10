@@ -116,10 +116,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
  ! call advance_vertical_1d
 
   if (UseAUSMSolver) then
-     write(*,*) 'Using AUSM'
      call advance_vertical_1d_ausm
   else
-     write(*,*) 'NOT Using AUSM'
      ! Default case
      call advance_vertical_1d_rusanov
   endif
