@@ -12,7 +12,7 @@
 #include "pic.h"
 #include "Exosphere.h"
 
-Exosphere::Sampling::ReferenceGroundBasedObservations::cObservationTag Exosphere::Sampling::ReferenceGroundBasedObservations::RemoteObservationList[nReferenceGroundBasedObservations];
+Exosphere::Sampling::ReferenceGroundBasedObservations::cObservationTag Exosphere::Sampling::ReferenceGroundBasedObservations::RemoteObservationList[1+nReferenceGroundBasedObservations];
 
 void Exosphere::Sampling::ReferenceGroundBasedObservations::init() {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_

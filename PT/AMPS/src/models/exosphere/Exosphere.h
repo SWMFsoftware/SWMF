@@ -148,7 +148,7 @@ namespace Exosphere {
          int nOutputFile;
        };
 
-       extern cObservationTag RemoteObservationList[nReferenceGroundBasedObservations];
+       extern cObservationTag RemoteObservationList[1+nReferenceGroundBasedObservations];
        void init();
        void OutputSampledData(SpiceDouble etStartInterval,SpiceDouble etFinishInterval,int nObjectOutputFile);
     }
