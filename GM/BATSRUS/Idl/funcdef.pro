@@ -149,7 +149,7 @@ function funcdef,xx,w,func
   common phys_units
   common phys_convert
   common phys_const
-  common plot_param  ; rcut
+  common plot_param  ; rcut, vec0
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
@@ -319,15 +319,13 @@ function funcdef,xx,w,func
   end
 
   ;; Calculate x1, x2, ..., z3 field aligned basis vectors if needed
-  ;; Unit vectors of field aligned coordinate system b, z x b, b x (z x b):
-  ;; (x1, y1, z1) = ( bx    by         bz  )/b
-  ;; (x2, y2, z2) = (-by    bx         0   )/sqrt(bx*bx+by*by)
-  ;; (x3, y3, z3) = (-z1*y2, z1*x2, x1*y2-y1*x2)
-
   if stregex(f,'p[123][123]') ge 0 then begin
-     x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30) ; b = B/|B|   vector
-     x2 = -y1/(sqrt(x1^2+y1^2)>1e-30)  & y2 = x1/(sqrt(x1^2+y1^2)>1e-30)  & z2 = 0.0 ; z x b       vector
-     x3 = -z1*y2       & y3 = z1*x2         & z3 = x1*y2-y1*x2 ; b x (z x b) vector
+     x0 = vec0(0)      & y0 = vec0(1)       & z0 = vec0(2)     ; vec0 from common phys_convert
+     x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30); vec1 = (bx, by, bz)/b
+     x2 = y0*z1-z0*y1  & y2 = z0*x1-x0*z1   & z2 = x0*y1-y0*x1 ; vec2 = vec0 x vec1 / norm
+     z3 = sqrt(x2^2 + y2^2 + z2^2) > 1e-30                     ; use z3 for normalization
+     x2 /= z3          & y2 /= z3           & z2 /= z3         ; normalize vec2
+     x3 = y1*z2-z1*y2  & y3 = z1*x2-x1*z2   & z3 = x1*y2-y1*x2 ; vec3 = vec1 x vec2
   endif
 
   ;; Add functions to the basic variable list

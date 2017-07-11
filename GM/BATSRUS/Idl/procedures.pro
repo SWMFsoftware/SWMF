@@ -337,7 +337,7 @@ pro set_default_values
 
 ; conversion factors that are useful to calculate various derived quantities
   common phys_convert, $
-     ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+     ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0, vec0
 
   ti0  = 1.0                    ; ion temperature = ti0*p/rho*Mi
   cs0  = 1.0                    ; sound speed     = sqrt(cs0*gamma*p/rho)
@@ -350,6 +350,7 @@ pro set_default_values
   rg0  = 1.0                    ; ion gyro radius = rg0*sqrt(p/rho)/b*sqrt(Mi)
   di0  = 1.0                    ; inertial length = di0*sqrt(rho)*Mi
   ld0  = 1.0                    ; Debye length    = ld0*sqrt(p)/rho*Mi
+  vec0 = [0.0, 0.0, 1.0]        ; vector to define field aligned coordinates
 
 ; information obtained from the last file header
   common file_head, $
