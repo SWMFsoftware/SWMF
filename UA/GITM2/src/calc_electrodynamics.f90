@@ -37,8 +37,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   integer, external :: jday
 
-  integer :: i,j,k,bs, iError, iBlock, iDir, iLon, iLat, iAlt, ip, im
+  integer :: i,j,k,bs, iError, iBlock, iDir, iLon, iLat, iAlt, ip, im, iOff
 
+  integer :: iEquator
+  
   real :: GeoLat, GeoLon, GeoAlt, xAlt, len, ped, hal
   real :: sp_d1d1_d, sp_d2d2_d, sp_d1d2_d, sh
   real :: xmag, ymag, zmag, bmag, signz, magpot, lShell
@@ -46,7 +48,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   real :: kpm_s, klm_s, xstretch, ystretch   !, temp
   real :: sinIm, spp, sll, shh, scc, sccline, sppline, sllline, shhline, be3
 
-  real :: q2, dju,dl, cD, ReferenceAlt, Maxi
+  real :: q2, dju,dl, cD, ReferenceAlt
 
   real :: magloctime_local(0:nLons+1,0:nLats+1)
 
@@ -86,9 +88,14 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   call report("UA_calc_electrodynamics",1)
   call start_timing("calc_electrodyn")
 
+  iEquator = DynamoHighLatBoundary/MagLatRes + 1
+     
   if (IsFirstTime) then
 
      IsFirstTime = .false.
+
+     nMagLats = (2*DynamoHighLatBoundary)/MagLatRes+1
+     nMagLons = 360.0 / MagLonRes
 
      allocate(DivJuAltMC(nMagLons+1,nMagLats), &
           SigmaHallMC(nMagLons+1,nMagLats), &
@@ -187,9 +194,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      iStart = float(iProc)/nProcs * (nMagLons+1) + 1
      iEnd   = float(iProc+1)/nProcs * (nMagLons+1)
 
-!iStart = 1
-!iEnd = nMagLons+1
-
      GeoLatMC = -1.0e32
      GeoLonMC = -1.0e32
 
@@ -201,17 +205,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
              write(*,*) "==> Calculating Apex->Geo", i, iStart, iEnd
         do j=1,nMagLats
 
-!           MagLatMC(i,j)     = 180.0 * (float(j)-0.5) / float(nMagLats) - 90.0
-           MagLatMC(i,j)     = &
-                (2*DynamoHighLatBoundary) * &
-                (float(j)-0.5) / float(nMagLats) - DynamoHighLatBoundary
+           MagLatMC(i,j)     = float(j-1) * MagLatRes &
+                - DynamoHighLatBoundary
 
            MagLonMC(i,j)     = 360.0 * float(i-1) / float(nMagLons)
-
-           ! we could also use the stretch_grid function....
-!MAGSTRECH        xstretch =(float(j)-0.5)/float(nMagLats/2) - 1.0
-!MAGSTRECH       call stretch_grid(xstretch,ystretch)
-!MAGSTRECH       MagLatMC(i,j) = ystretch * 90.0
 
            if (UseApex) then 
 
@@ -271,11 +268,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      MagBufferMC = MagLonMC
      call MPI_AllREDUCE(MagBufferMC, MagLonMC,  &
           bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
-
-!     write(*,*) "min : ",minval(GeoLatMC)*180/3.1415, maxval(GeoLatMC)*180/3.1415, &
-!          minval(GeoLonMC)*180/3.1415, maxval(GeoLonMC)*180/3.1415
-
-!     if (iProc == 1)         call CON_stop("stopping")
 
      do i=1,nMagLons+1
         do j=2,nMagLats-1
@@ -703,8 +695,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            call find_mag_point(jul, shl, spl, length, spp, sll, shh, scc, &
                 kdpm_s, kdlm_s, be3, kpm_s, klm_s)
 
-   ! write(*,*) "find_mag_points : ", i,j,mLatMC, mltMC, length
-
            if (length > 0) then
               DivJuAltMC(i,j)      = jul
               SigmaHallMC(i,j)     = shl
@@ -818,103 +808,150 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   call MPI_AllREDUCE(MagBufferMC, KpmMC,  &
        bs, MPI_REAL, MPI_MAX, iCommGITM, iError)
 
-!!  write(*,*) "min max : ", minval(sigmallmc), maxval(sigmallmc)
-
-
   ! Let's find as close to noon as possible
 
   iLonNoon = 1
   do iLon = 1, nMagLons
-     if ( MagLocTimeMC(iLon,  nMagLats/2) <= 12.0 .and. &
-          MagLocTimeMC(iLon+1,nMagLats/2) >= 12.0) iLonNoon = iLon
+     if ( MagLocTimeMC(iLon,  iEquator) <= 12.0 .and. &
+          MagLocTimeMC(iLon+1,iEquator) >= 12.0) iLonNoon = iLon
   enddo
-
+  
   ! Now we want to find out how far away we have to go away from the equator,
   ! before we need to start filling in values.
 
+  ! Make sure we go at least 2 degrees off the equator:
+  iOff = 2.0/MagLatRes
+
   ! Hall Conductance First
 
-  Maxi = 0.0
-  iEnd = nMagLats/2
-  do iLat = nMagLats/2, (3*nMagLats)/4
-     if (SigmaHHMC(iLonNoon,iLat) > SigmaHHMC(iLonNoon,iEnd)) iEnd = iLat
+  iEnd = iOff
+  
+  do iLat = iOff, nMagLats/4
+     if ( SigmaHHMC(iLonNoon, iEquator + iLat) + &
+          SigmaHHMC(iLonNoon, iEquator - iLat) > &
+          SigmaHHMC(iLonNoon, iEquator + iEnd) + &
+          SigmaHHMC(iLonNoon, iEquator - iEnd)) iEnd = iLat
   enddo
 
-  Maxi = 0.0
-  iStart = nMagLats/2
-  do iLat = nMagLats/2, nMagLats/4, -1
-     if (SigmaHHMC(iLonNoon,iLat) > SigmaHHMC(iLonNoon,iStart)) iStart = iLat
-  enddo
-
-!  write(*,*) "iStart Hall : ", iStart, nMagLats/2, iEnd
+  iStart = iEquator - iEnd
+  iEnd   = iEquator + iEnd
 
   do i = 1,nMagLons+1
-     do j= iStart,nMagLats/2
+     do j= iStart+1,iEquator-1
         SigmaHHMC(i,j) = 0.85* SigmaHHMC(i,j-1)
      enddo
-     do j= iEnd, nMagLats/2+1, -1
+     do j= iEnd-1, iEquator+1, -1
         SigmaHHMC(i,j) = 0.85* SigmaHHMC(i,j+1)
      enddo
+     SigmaHHMC(i,iEquator) = 0.85 * (SigmaHHMC(i,iEquator-1)+SigmaHHMC(i,iEquator+1))/2.0
+!     do j= 1,nMagLats
+!        if (isnan(SigmaHHMC(i,j))) write(*,*) 'sigmahh is nan : ',i,j
+!     enddo
   enddo
 
   ! LL Conductance
 
-  Maxi = 0.0
-  iEnd = nMagLats/2
-  iStart = nMagLats/2
-  do iLat = nMagLats/2, (3*nMagLats)/4
-     if (abs(SigmaLLMC(iLonNoon,iLat)) > &
-          abs(SigmaLLMC(iLonNoon,iEnd))) iEnd = iLat
-  enddo
-  do iLat = nMagLats/2, nMagLats/4, -1
-     if (abs(SigmaLLMC(iLonNoon,iLat)) > &
-          abs(SigmaLLMC(iLonNoon,iStart))) iStart = iLat
+  iEnd = iOff
+  
+  do iLat = iOff, nMagLats/4
+     if ( SigmaLLMC(iLonNoon, iEquator + iLat) + &
+          SigmaLLMC(iLonNoon, iEquator - iLat) > &
+          SigmaLLMC(iLonNoon, iEquator + iEnd) + &
+          SigmaLLMC(iLonNoon, iEquator - iEnd)) iEnd = iLat
   enddo
 
-!  write(*,*) "iStart LL : ", iStart, nMagLats/2, iEnd
+  iStart = iEquator - iEnd
+  iEnd   = iEquator + iEnd
 
   do i = 1,nMagLons+1
-     do j= iStart,nMagLats/2
+     do j= iStart+1,iEquator-1
         SigmaLLMC(i,j) = 0.85* SigmaLLMC(i,j-1)
      enddo
-     do j= iEnd, nMagLats/2+1, -1
+     do j= iEnd-1, iEquator+1, -1
         SigmaLLMC(i,j) = 0.85* SigmaLLMC(i,j+1)
      enddo
+     SigmaLLMC(i,iEquator) = 0.85 * (SigmaLLMC(i,iEquator-1)+SigmaLLMC(i,iEquator+1))/2.0
+!     do j= 1,nMagLats
+!        if (isnan(SigmaLLMC(i,j))) write(*,*) 'sigmall is nan : ',i,j
+!     enddo
   enddo
+
+  
+!  iEnd = nMagLats/2 + iOff
+!  iStart = nMagLats/2 - iOff
+!  do iLat = nMagLats/2 + iOff, (3*nMagLats)/4
+!     if (abs(SigmaLLMC(iLonNoon,iLat)) > &
+!          abs(SigmaLLMC(iLonNoon,iEnd))) iEnd = iLat
+!  enddo
+!  do iLat = nMagLats/2 - iOff, nMagLats/4, -1
+!     if (abs(SigmaLLMC(iLonNoon,iLat)) > &
+!          abs(SigmaLLMC(iLonNoon,iStart))) iStart = iLat
+!  enddo
+!
+!  write(*,*) "iStart LL : ", iStart, nMagLats/2, iEnd
+!
+!  do i = 1,nMagLons+1
+!     do j= iStart,nMagLats/2
+!        SigmaLLMC(i,j) = 0.85* SigmaLLMC(i,j-1)
+!     enddo
+!     do j= iEnd, nMagLats/2+1, -1
+!        SigmaLLMC(i,j) = 0.85* SigmaLLMC(i,j+1)
+!     enddo
+!  enddo
 
   ! PP Conductance
 
-  Maxi = 0.0
-  iEnd = nMagLats/2
-  iStart = nMagLats/2
-  do iLat = nMagLats/2, (3*nMagLats)/4
-     if (abs(SigmaPPMC(iLonNoon,iLat)) > &
-          abs(SigmaPPMC(iLonNoon,iEnd))) iEnd = iLat
-  enddo
-  do iLat = nMagLats/2, nMagLats/4, -1
-     if (abs(SigmaPPMC(iLonNoon,iLat)) > &
-          abs(SigmaPPMC(iLonNoon,iStart))) iStart = iLat
+  iEnd = iOff
+  do iLat = iOff, nMagLats/4
+     if ( abs(SigmaPPMC(iLonNoon, iEquator + iLat)) + &
+          abs(SigmaPPMC(iLonNoon, iEquator - iLat)) > &
+          abs(SigmaPPMC(iLonNoon, iEquator + iEnd)) + &
+          abs(SigmaPPMC(iLonNoon, iEquator - iEnd))) iEnd = iLat
   enddo
 
+!  iEnd = nMagLats/2+iOff
+!  iStart = nMagLats/2-iOff
+!  do iLat = nMagLats/2+iOff, (3*nMagLats)/4
+!     if (abs(SigmaPPMC(iLonNoon,iLat)) > &
+!          abs(SigmaPPMC(iLonNoon,iEnd))) iEnd = iLat
+!  enddo
+!  do iLat = nMagLats/2-iOff, nMagLats/4, -1
+!     if (abs(SigmaPPMC(iLonNoon,iLat)) > &
+!          abs(SigmaPPMC(iLonNoon,iStart))) iStart = iLat
+!  enddo
+
   do i = 1,nMagLons+1
-     do j= iStart,nMagLats/2
+     do j= iStart+1,iEquator-1
         SigmaPPMC(i,j) = 0.9* SigmaPPMC(i,j-1)
         SigmaCCMC(i,j) = 0.9* SigmaCCMC(i,j-1)
         SigmaPLMC(i,j) = - (sigmahhmc(i,j) - sigmaccmc(i,j))
         SigmaLPMC(i,j) = + (sigmahhmc(i,j) + sigmaccmc(i,j))
      enddo
-     do j= iEnd, nMagLats/2+1, -1
+     do j= iEnd-1, iEquator+1, -1
         SigmaPPMC(i,j) = 0.9* SigmaPPMC(i,j+1)
         SigmaCCMC(i,j) = 0.9* SigmaCCMC(i,j+1)
         SigmaPLMC(i,j) = + (sigmahhmc(i,j) - sigmaccmc(i,j))
         SigmaLPMC(i,j) = - (sigmahhmc(i,j) + sigmaccmc(i,j))
      enddo
+     j = iEquator
+     SigmaPPMC(i,j) = 0.9* (SigmaPPMC(i,j-1)+SigmaPPMC(i,j+1))/2.0
+     SigmaCCMC(i,j) = 0.9* (SigmaCCMC(i,j-1)+SigmaCCMC(i,j-1))/2.0
+     SigmaPLMC(i,j) = - (sigmahhmc(i,j) - sigmaccmc(i,j))
+     SigmaLPMC(i,j) = + (sigmahhmc(i,j) + sigmaccmc(i,j))
+
+!     do j= 1,nMagLats
+!        if (isnan(SigmaPPMC(i,j))) write(*,*) 'sigmapp is nan : ',i,j
+!        if (isnan(SigmaCCMC(i,j))) write(*,*) 'sigmacc is nan : ',i,j
+!        if (isnan(SigmaPLMC(i,j))) write(*,*) 'sigmapl is nan : ',i,j
+!        if (isnan(SigmaLPMC(i,j))) write(*,*) 'sigmalp is nan : ',i,j
+!     enddo
+
   enddo
 
   do i = 1,nMagLons+1
-     do j= 1, nMagLats/2    ! Southern hemisphere
+     do j= 1, iEquator-1    ! Southern hemisphere
 
-        k= nMagLats-j+1
+        k= nMagLats-j+1     ! Mirror point in the Northern hemisphere
 
         SigmaLLMC(i,j) = SigmaLLMC(i,j) +SigmaLLMC(i,k)
         SigmaPPMC(i,j) = SigmaPPMC(i,j) + SigmaPPMC(i,k)
@@ -922,7 +959,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         SigmaPLMC(i,j) = SigmaPLMC(i,k) - SigmaPLMC(i,j)
         SigmaLPMC(i,j) = SigmaLPMC(i,k) - SigmaLPMC(i,j)
         KDlmMC(i,j) = KDlmMC(i,k) - KDlmMC(i,j)
-!  For Northern hemisphere
+
+        !  For Northern hemisphere
         SigmaPPMC(i,k) = SigmaPPMC(i,j)
         SigmaLLMC(i,k) = SigmaLLMC(i,j)
         KDpmMC(i,k) = KDpmMC(i,j)
@@ -934,6 +972,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
              write(*,*)'SigmaLLMC:',iproc,MagLonMC(i,j),MagLatMC(i,j), MagLatMC(i,k),SigmaLLMC(i,j)
      enddo
 
+
+
   enddo
 
   where (SigmaPLMC < 0.001) SigmaPLMC = 0.001
@@ -942,48 +982,97 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 !==========
   ! KDlmMC 
 
-  Maxi = 0.0
-  iEnd = 3*nMagLats/4
-  iStart = nMagLats/4
-  do iLat =  (3*nMagLats)/4, nMagLats/2, -1
-     if (abs(KDlmMC(iLonNoon,iLat)) > &
-          abs(KDlmMC(iLonNoon,iEnd))) iEnd = iLat
-  enddo
-  do iLat = nMagLats/4, nMagLats/2
-     if (abs(KDlmMC(iLonNoon,iLat)) > &
-          abs(KDlmMC(iLonNoon,iStart))) iStart = iLat
+  iEnd = iOff
+  do iLat = iOff, nMagLats/4
+     if ( abs(KDlmMC(iLonNoon, iEquator + iLat)) + &
+          abs(KDlmMC(iLonNoon, iEquator - iLat)) > &
+          abs(KDlmMC(iLonNoon, iEquator + iEnd)) + &
+          abs(KDlmMC(iLonNoon, iEquator - iEnd))) iEnd = iLat
   enddo
 
+  ! In this case, iEnd may need to be set to something like 15 deg
+  
+  iStart = iEquator - iEnd
+  iEnd   = iEquator + iEnd
+
+!  iEnd = 3*nMagLats/4
+!  iStart = nMagLats/4
+!  do iLat =  (3*nMagLats)/4, nMagLats/2, -1
+!     if (abs(KDlmMC(iLonNoon,iLat)) > &
+!          abs(KDlmMC(iLonNoon,iEnd))) iEnd = iLat
+!  enddo
+!  do iLat = nMagLats/4, nMagLats/2
+!     if (abs(KDlmMC(iLonNoon,iLat)) > &
+!          abs(KDlmMC(iLonNoon,iStart))) iStart = iLat
+!  enddo
+
+
   do i = 1,nMagLons+1
-     do j= nMagLats/2 -15,nMagLats/2
+!     do j= nMagLats/2 -15,nMagLats/2
+!        KDlmMC(i,j) = 0.92* KDlmMC(i,j-1)
+!     enddo
+!     do j=  nMagLats/2 +16, nMagLats/2+1, -1
+!        KDlmMC(i,j) = 0.92* KDlmMC(i,j+1)
+!     enddo
+     do j= iStart+1,iEquator-1
         KDlmMC(i,j) = 0.92* KDlmMC(i,j-1)
      enddo
-     do j=  nMagLats/2 +16, nMagLats/2+1, -1
+     do j= iEnd-1, iEquator+1
         KDlmMC(i,j) = 0.92* KDlmMC(i,j+1)
      enddo
+     KDlmMC(i,iEquator) = 0.92* (KDlmMC(i,iEquator-1)+KDlmMC(i,iEquator+1))/2
+
+!     do j= 1,nMagLats
+!        if (isnan(KDlmMC(i,j))) write(*,*) 'KDlmMC is nan : ',i,j
+!     enddo
+
   enddo
 
   ! KDpmMC
 
-  Maxi = 0.0
-  iEnd = 3*nMagLats/4
-  iStart = nMagLats/4
-  do iLat =  (3*nMagLats)/4, nMagLats/2, -1
-     if (abs(KDpmMC(iLonNoon,iLat)) > &
-          abs(KDpmMC(iLonNoon,iEnd))) iEnd = iLat
-  enddo
-  do iLat = nMagLats/4, nMagLats/2
-     if (abs(KDpmMC(iLonNoon,iLat)) > &
-          abs(KDpmMC(iLonNoon,iStart))) iStart = iLat
+  iEnd = iOff
+  do iLat = iOff, nMagLats/4
+     if ( abs(KDpmMC(iLonNoon, iEquator + iLat)) + &
+          abs(KDpmMC(iLonNoon, iEquator - iLat)) > &
+          abs(KDpmMC(iLonNoon, iEquator + iEnd)) + &
+          abs(KDpmMC(iLonNoon, iEquator - iEnd))) iEnd = iLat
   enddo
 
+  ! In this case, iEnd may need to be set to something like 15 deg
+  
+  iStart = iEquator - iEnd
+  iEnd   = iEquator + iEnd
+
+!  iEnd = 3*nMagLats/4
+!  iStart = nMagLats/4
+!  do iLat =  (3*nMagLats)/4, nMagLats/2, -1
+!     if (abs(KDpmMC(iLonNoon,iLat)) > &
+!          abs(KDpmMC(iLonNoon,iEnd))) iEnd = iLat
+!  enddo
+!  do iLat = nMagLats/4, nMagLats/2
+!     if (abs(KDpmMC(iLonNoon,iLat)) > &
+!          abs(KDpmMC(iLonNoon,iStart))) iStart = iLat
+!  enddo
+
   do i = 1,nMagLons+1
-     do j= nMagLats/2 -15,nMagLats/2
+!     do j= nMagLats/2 -15,nMagLats/2
+!        KDpmMC(i,j) = 0.92* KDpmMC(i,j-1)
+!     enddo
+!     do j=  nMagLats/2 +16, nMagLats/2+1, -1
+!        KDpmMC(i,j) = 0.92* KDpmMC(i,j+1)
+!     enddo
+     do j= iStart+1,iEquator-1
         KDpmMC(i,j) = 0.92* KDpmMC(i,j-1)
      enddo
-     do j=  nMagLats/2 +16, nMagLats/2+1, -1
+     do j=  iEnd-1, iEquator+1, -1
         KDpmMC(i,j) = 0.92* KDpmMC(i,j+1)
      enddo
+     KDpmMC(i,iEquator) = 0.92* (KDpmMC(i,iEquator-1)+KDpmMC(i,iEquator+1))/2
+
+!     do j= 1,nMagLats
+!        if (isnan(KDpmMC(i,j))) write(*,*) 'KDpmMC is nan : ',i,j
+!     enddo
+
   enddo
 !============
 
@@ -1055,12 +1144,47 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   solver_s_mc =  4 * deltalmc**2 * deltapmc**2 * (RBody) * &
        (dkdlmdlMC + dKDpmdpMC)
 
-  do i = 1, nMagLons+1
-     do j= nMagLats/2 - 7,  nMagLats/2 + 8
+!  if (iProc == 0) then 
+!
+!     do i= 1,nMagLons
+!        do j= 1,nMagLats
+!
+!           if (isnan(deltalmc(i,j))) write(*,*) 'deltalmc is nan : ',i,j
+!           if (isnan(deltapmc(i,j))) write(*,*) 'deltapmc is nan : ',i,j
+!           if (isnan(dSigmaPLdpMC(i,j))) write(*,*) 'dSigmaPLdpMC is nan : ',i,j
+!           if (isnan(sigmallmc(i,j))) write(*,*) 'sigmallmc is nan : ',i,j
+!           if (isnan(dSigmaLLdlMC(i,j))) write(*,*) 'dSigmaLLdlMC is nan : ',i,j
+!
+!           if (isnan(solver_a_mc(i,j))) write(*,*) 'solver_a_mc is nan : ',i,j
+!           if (isnan(solver_b_mc(i,j))) write(*,*) 'solver_b_mc is nan : ',i,j
+!           if (isnan(solver_c_mc(i,j))) write(*,*) 'solver_c_mc is nan : ',i,j
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j, solver_d_mc(i,j)
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j, deltalmc(i,j)
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j, deltapmc(i,j)
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j,sigmallmc(i,j)
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j,dSigmaPLdpMC(i,j)
+!           if (isnan(solver_d_mc(i,j))) write(*,*) 'solver_d_mc is nan : ',i,j,dSigmaLLdlMC(i,j)
+!                
+!                
+!           if (isnan(solver_e_mc(i,j))) write(*,*) 'solver_e_mc is nan : ',i,j
+!           if (isnan(solver_s_mc(i,j))) write(*,*) 'solver_s_mc is nan : ',i,j
+!        enddo
+!     enddo
+!
+!  endif
+  
+  ! Do the cowling conductivity within +/- 6 deg of equator
+
+  istart = iEquator - 6.0/MagLatRes
+  iend   = iEquator + 6.0/MagLatRes
+
+   do i = 1, nMagLons+1
+     do j= iStart, iEnd
         SigmaCowlingMC(i,j) = SigmaPPMC(i,j) - (SigmaPLMC(i,j) * SigmaLPMC(i,j)/SigmaLLMC(i,j))
      enddo
   enddo
-  do j= nMagLats/2 - 6,  nMagLats/2 + 7     
+  do j= iStart+1,  iEnd-1     
      do i = 2, nMagLons
         dSigmaCowlingdpMC(i,j) = 0.5*(SigmaCowlingMC(i+1,j) - SigmaCowlingMC(i-1,j))/deltapmc(i,j)
         dSigmaLLdpMC(i,j) = 0.5*(SigmaLLMC(i+1,j) - SigmaLLMC(i-1,j))/deltapmc(i,j)
@@ -1075,8 +1199,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      dKDlmdpMC(nMagLons+1,j) = dKDlmdpMC(1,j)
    enddo
 
-   istart = (nMagLats/2) - 6
-   iend = (nMagLats/2) + 7
+!   istart = (nMagLats/2) - 6
+!   iend = (nMagLats/2) + 7
 
    IncludeCowling = .true.
 
@@ -1108,6 +1232,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            - SigmaPLMC(:,iStart:iEnd)*dSigmaLLdpMC(:,iStart:iEnd)))
 
    endif
+
 
    ! Add this to make sure solver_a never goes below 0
    where(solver_a_mc < 0.001) solver_a_mc = 0.001
