@@ -13,12 +13,11 @@
 #include <string.h>
 #include <list>
 #include <utility>
-#include <math.h>
+#include <cmath>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <time.h>
-#include <iostream>
 #include <iostream>
 #include <fstream>
 #include <signal.h>
@@ -3889,7 +3888,7 @@ namespace PIC {
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
 
 #if  _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-        if (isnan(Time)) Time = PIC::SimulationTime::Get();
+        if (std::isnan(Time)) Time = PIC::SimulationTime::Get();
 
         offset = (double*)(DataOffsetBegin+MULTIFILE::NextDataFileOffset+cell->GetAssociatedDataBufferPointer());
 

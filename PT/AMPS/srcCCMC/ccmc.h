@@ -4,7 +4,7 @@
 
 //$Id$
 
-#include <math.h>
+#include <cmath>
 
 #include "pic.h"
 #include "Exosphere.h"
@@ -84,7 +84,7 @@ namespace CCMC {
     }
 
 
-    if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
+    if (std::isnan(accl_LOCAL[0])||std::isnan(accl_LOCAL[1])||std::isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
 
 
 /*    //account for the planetary rotation around the Sun

@@ -392,8 +392,6 @@ inline double ProductionRateCaluclation_HotO(double *x) {
             double Eslope=E.Interpolate(veccutoff)/E.Interpolate(x);
             double Oslope=O2p.Interpolate(veccutoff)/O2p.Interpolate(x);
             
-            bool isnan(localHE);
-            
             if (/*localHE<=0.0 &&*/ localHO2p>0.0) {
                 tE=E.Interpolate(x)*exp(-(Altitude-cutoffAlt)/localHO2p);
             }
@@ -521,11 +519,11 @@ inline double ProductionRateCaluclation_HotC(double *x) {
         }
         
         double localH=10E3/(log(COp.Interpolate(vectop)/COp.Interpolate(vectop2)));
-        bool isnan(localH);
+
         if (localH<COpScaleHeight/3) {
             localH=COpScaleHeight/2;
         }
-        else if (isnan(localH)==true) {
+        else if (std::isnan(localH)==true) {
             localH=COpScaleHeight;
         }
         else if (localH>COpScaleHeight) {
@@ -538,11 +536,8 @@ inline double ProductionRateCaluclation_HotC(double *x) {
         else if (Altitude>=Altitude2){t=(COp.Interpolate(vectop)*exp((Altitude2-z0)/localH))*exp(-(Altitude-Altitude2)/COpScaleHeight);}
         
         //	if (nz>100E3){exit(__LINE__,__FILE__,"Error");}
-        bool isnan(t);
-        bool isinf(t);
-        
         double nz=1E3,tt=0.0;
-        while (isnan(t)==true) {
+        while (std::isnan(t)==true) {
             if (nz>=Altitude) {t=1.0;}
             for (idim=0;idim<DIM;idim++) {vectop2[idim]= (3388.25E3+(Altitude-nz))*(x[idim]/r);}
             t=COp.Interpolate(vectop2);
