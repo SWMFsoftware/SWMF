@@ -20,20 +20,6 @@ subroutine calc_GITM_sources(iBlock)
   real :: ScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
-! Potential Temperature
-! Used in New Eddy Conduction Calculations:  Bell 1-15-2009
-  real :: Theta(nLons, nLats, -1:nAlts+2)
-  real :: GammaScale(nLons, nLats, -1:nAlts+2)
-  real :: P0(nLons, nLats, -1:nAlts+2)
-
-!! Eddy Velocity Terms
-  real :: ConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
-  real :: LogConS(nLons,nLats,-1:nAlts+2,1:nSpecies)
-  real :: GradLogConS(nLons,nLats,1:nAlts,1:nSpecies)
-
-! Temporary
-  real :: EddyCoefRatio(nLons, nLats, 1:nAlts,nSpecies)
-
   call report("calc_GITM_sources",1)
 
   ! calc_rate is used to determine reaction rates, heating coefficients,
@@ -52,7 +38,6 @@ subroutine calc_GITM_sources(iBlock)
 
   RhoI = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
        MeanIonMass(1:nLons,1:nLats,1:nAlts)
-
   !\
   ! ---------------------------------------------------------------
   ! These terms are for Neutral Temperature
@@ -108,74 +93,15 @@ subroutine calc_GITM_sources(iBlock)
      
       Conduction = MoleConduction/TempUnit(1:nLons, 1:nLats,1:nAlts) 
 
+      ! JMB:  07/11/2017.
+      !  This accounts for turbulent thermal conduction.
+      !  Currently assume that the K_turbulent is proportional to
+      !  rho*cp*Ke, consistent with the TIEGCM formulation.
+      !  This can be found on the NCAR TIEGCM documentation site.
       if (UseTurbulentCond) then
-
-         if (UseUpdatedTurbulentCond) then
-
-            do iAlt = -1,nAlts+2
-               P0(1:nLons,1:nLats,iAlt) = Pressure(1:nLons,1:nLats,0,iBlock)
-            enddo
-
-!! Set the Exponent for the Potential Temperature as (Gamma - 1/Gamma)
-!! Must span the range from -1 to nAlts + 2  (same as Theta)
-
-            do iLon = 1, nLons
-               do iLat = 1, nLats
-                  do iAlt = 1,nAlts
-                     GammaScale(iLon,iLat,iAlt) = &
-                          (Gamma(iLon,iLat,iAlt,iBlock)-1.0) / &
-                          Gamma(iLon,iLat,iAlt,iBlock)
-                  enddo
-               enddo
-            enddo
-
-            do iAlt = -1,0
-               GammaScale(1:nLons,1:nLats,iAlt) = &
-                    GammaScale(1:nLons,1:nLats,1) 
-            enddo
-
-            do iAlt = nAlts,nAlts+2
-               GammaScale(1:nLons,1:nLats,iAlt) = &
-                    GammaScale(1:nLons,1:nLats,nAlts) 
-            enddo
-
-            Theta(1:nLons,1:nLats,-1:nAlts+2) = &
-                 Temperature(1:nLons,1:nLats,-1:nAlts+2,iBlock) * &
-                 TempUnit(1:nLons,1:nLats,-1:nAlts+2)*&
-                 (P0(1:nLons,1:nLats,-1:nAlts+2)/ &
-                 Pressure(1:nLons,1:nLats,-1:nAlts+2,iBlock))**&
-                 GammaScale(1:nLons,1:nLats,-1:nAlts+2)
- 
-!! Prandtl is the Eddy Heat Conduction Coefficient After Hickey et al [2000] 
-
-            Prandtl = &
-                 KappaEddyDiffusion(1:nLons,1:nLats,0:nAlts+1,iBlock) * &
-                 Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)
-
-            tmp2(1:nLons,1:nLats,0:nAlts+1) = &
-                 Rho(1:nLons,1:nLats,0:nAlts+1,iBlock)/&
-                 Gamma(1:nLons,1:nLats,0:nAlts+1,iBlock)
-
-            call calc_conduction(&
-                 iBlock, &
-                 Theta,   &
-                 Prandtl, &
-                 tmp2,    &
-                 EddyCond)
-
-!! Eddy Scaling is Set in UAM.in.  Defaults to 1.0
-
-            EddyCondAdia = &
-                 (1.0/EddyScaling)* &
-                 (Temperature(1:nLons,1:nLats,1:nAlts,iBlock) / &
-                 Theta(1:nLons,1:nLats,1:nAlts))*EddyCond
-            
-         else  !! Use The Old Version
-
-            Prandtl = & 
-                 KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-                 Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-                 Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+            Prandtl = KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+                                     Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
+                                      Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
             call calc_conduction(iBlock, &
                  Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
@@ -186,23 +112,6 @@ subroutine calc_GITM_sources(iBlock)
 
             Conduction = Conduction + &
                  EddyCond/TempUnit(1:nLons, 1:nLats,1:nAlts) 
-
-            tmp3 = &
-                 Prandtl      / &
-                 Gamma(1:nLons,1:nLats, 0:nAlts+1,iBlock) / &
-                 Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock)  / &
-                 Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
-
-            call calc_conduction(iBlock, &
-                 Pressure(1:nLons, 1:nLats,-1:nAlts+2,iBlock), &
-                 tmp3, &
-                 tmp2, &
-                 EddyCondAdia)
-   
-            Conduction = Conduction - &
-                 EddyCondAdia/TempUnit(1:nLons, 1:nLats,1:nAlts)
-   
-         endif  !! UseUpdatedTurbulentCond Check
       endif  ! THE USETurbulentCond Check
 
   else
@@ -274,6 +183,22 @@ subroutine calc_GITM_sources(iBlock)
           Viscosity(1:nLons, 1:nLats,1:nAlts, iEast_))
 
      Viscosity(:,:,:,iUp_) = 0.0
+
+     ! JMB:  07/11/2017
+     ! --- Updated to include vertical viscosity for the vertical winds.
+     !     provides stability to velocity calculations.
+     do iSpecies = 1, nSpecies
+        call calc_conduction(iBlock, &
+             VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies, iBlock), &
+             ViscCoef(1:nLons, 1:nLats,0:nAlts+1), &
+             Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock), &
+             Viscosity(1:nLons, 1:nLats,1:nAlts, iUp_))
+
+        VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) = &
+        VerticalVelocity(1:nLons,1:nLats,1:nAlts,iSpecies,iBlock) + &
+               Viscosity(1:nLons,1:nLats,1:nAlts, iUp_)
+
+     enddo 
 
   else
      Viscosity = 0.0
