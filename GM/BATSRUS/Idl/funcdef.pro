@@ -319,15 +319,15 @@ function funcdef,xx,w,func
   end
 
   ;; Calculate x1, x2, ..., z3 field aligned basis vectors if needed
-  ;; Unit vectors of field aligned coordinate system b, b x y, b x (b x y):
-  ;; ( bx    by         bz  )/b
-  ;; (-by    bx         0   )/b
-  ;; (-bx*by -bx^2-bz^2  by*bz )/bb
+  ;; Unit vectors of field aligned coordinate system b, z x b, b x (z x b):
+  ;; (x1, y1, z1) = ( bx    by         bz  )/b
+  ;; (x2, y2, z2) = (-by    bx         0   )/sqrt(bx*bx+by*by)
+  ;; (x3, y3, z3) = (-z1*y2, z1*x2, x1*y2-y1*x2)
 
   if stregex(f,'p[123][123]') ge 0 then begin
      x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30) ; b = B/|B|   vector
-     x2 = -y1/(sqrt(x1^2+y1^2)>1e-30)  & y2 = x1/(sqrt(x1^2+y1^2)>1e-30)  & z2 = 0.0          ; z x b       vector
-     x3 = -z1*y2       & y3 = z1*x2         & z3 = x1*y2-y1*x2  ; b x (z x b) vector
+     x2 = -y1/(sqrt(x1^2+y1^2)>1e-30)  & y2 = x1/(sqrt(x1^2+y1^2)>1e-30)  & z2 = 0.0 ; z x b       vector
+     x3 = -z1*y2       & y3 = z1*x2         & z3 = x1*y2-y1*x2 ; b x (z x b) vector
   endif
 
   ;; Add functions to the basic variable list
