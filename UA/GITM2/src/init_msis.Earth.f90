@@ -117,6 +117,8 @@ subroutine init_msis
   real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
   real*4 :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
+  character(250) :: path = './DataIn/'
+
   call report("init_msis",0)
 
   !--------------------------------------------------------------------------
@@ -195,11 +197,18 @@ subroutine init_msis
         do iLon=-1,nLons+2
            do iLat=-1,nLats+2
 
-              geo_lat = Latitude(iLat,iBlock)*180.0/pi
-              if (geo_lat < -90.0) geo_lat = -180.0-geo_lat
-              if (geo_lat >  90.0) geo_lat =  180.0-geo_lat
-              geo_lon = Longitude(iLon,iBlock)*180.0/pi
+              geo_lon = mod(Longitude(iLon,iBlock)*180.0/pi + 360.0, 360.0)
 
+              geo_lat = Latitude(iLat,iBlock)*180.0/pi
+              if (geo_lat < -90.0) then
+                 geo_lat = -180.0-geo_lat
+                 geo_lon = mod(geo_lon+180.0,360.0)
+              endif
+              if (geo_lat >  90.0) then
+                 geo_lat =  180.0-geo_lat
+                 geo_lon = mod(geo_lon+180.0,360.0)
+              endif
+              
               geo_alt = Altitude_GB(iLon, iLat, iAlt, iBlock)/1000.0
               geo_lst = mod(utime/3600.0+geo_lon/15.0,24.0)
 
@@ -273,7 +282,7 @@ subroutine init_msis
 !                   log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
 
               ffactor = 6.36*log(f107)-13.8
-              no = (ffactor * 1.0e13 + 8.0e13)*12.4 ! 12.4 is roughly exp
+              no = (ffactor * 1.0e13 + 8.0e13)* 0.124 ! 12.4 ! 12.4 is roughly exp
 
               h = -Boltzmanns_Constant * msis_temp(2) / &
                    (Gravity_GB(iLon,iLat,iAlt,iBlock) * Mass(iNO_)) /1000.0
@@ -287,7 +296,6 @@ subroutine init_msis
               LogNS(iLon,iLat,iAlt,1:nSpecies,iBlock) = &
                    log(NDensityS(iLon,iLat,iAlt,1:nSpecies,iBlock))
 
-
               hwm_utime = utime
               hwm_alt = geo_alt
               hwm_lat = geo_lat
@@ -296,10 +304,12 @@ subroutine init_msis
               hwm_f107a = f107a
               hwm_f107 = f107
               hwm_ap(1) = -1.0
-              hwm_ap(2) = -1.0
+              hwm_ap(2) =  4.0
               
-              call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
-                   hwm_f107a,hwm_f107,hwm_ap,qw)
+!              call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+!                   hwm_f107a,hwm_f107,hwm_ap,qw)
+              call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+                   hwm_f107a,hwm_f107,hwm_ap,path,qw)
 
               ! qw is north&east
               Velocity(iLon,iLat,iAlt,iEast_,iBlock) = qw(2)
@@ -332,7 +342,7 @@ end subroutine init_msis
 !
 !--------------------------------------------------------------
 
-subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
+subroutine msis_bcs(iJulianDay,UTime,Alt,LatIn,LonIn,Lst, &
      F107A,F107,AP,LogNS, Temp, LogRho, v)
 
   use ModTime, only : iTimeArray
@@ -343,10 +353,12 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   implicit none
 
   integer, intent(in) :: iJulianDay
-  real, intent(in) :: uTime, Alt, Lat, Lon, LST, f107a, f107
+  real, intent(in) :: uTime, Alt, LatIn, LonIn, LST, f107a, f107
   real, intent(in):: ap
   real, intent(out) :: LogNS(nSpecies), Temp, LogRho, v(2)
 
+  real :: lat, lon
+  
   real :: msis_temp(2)
   real :: msis_dens(9)
   real :: AP_I(7), ffactor, no
@@ -355,6 +367,20 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   real*4 :: hwm_utime, hwm_alt, hwm_lat, hwm_lon, hwm_lst
   real*4 :: hwm_f107a, hwm_f107, hwm_ap(2), qw(2)
 
+  character(250) :: path = './DataIn/'
+  
+  lat = LatIn
+  lon = mod(LonIn + 360.0,360.0)
+  
+  if (lat >  90) then
+     lat =  180 - lat
+     lon = mod(lon + 180.0, 360.0)
+  endif
+  if (lat < -90) then
+     lat = -180 - lat
+     lon = mod(lon + 180.0, 360.0)
+  endif
+  
   !----------------------------------------------------------------------------
   AP_I = AP
   CALL GTD7(iJulianDay,uTime,Alt,Lat,Lon,LST, &
@@ -390,8 +416,11 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   hwm_ap(1) = -1.0
   hwm_ap(2) = -1.0
 
-  call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
-       hwm_f107a,hwm_f107,hwm_ap,qw)
+!  call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+!       hwm_f107a,hwm_f107,hwm_ap,qw)
+
+  call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+       hwm_f107a,hwm_f107,hwm_ap,path,qw)
 
   ! qw is north&east
   V(1) = qw(2)

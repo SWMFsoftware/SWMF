@@ -31,7 +31,7 @@ MODULES = \
 	ModMagTrace.o\
 	ModChemistry.o\
 	ModGITMImplicit.o\
-	ModHwm.o\
+	ModHwm14.o\
 	ModUser.o \
 	ModRCMR.o \
 	apexsh.o
