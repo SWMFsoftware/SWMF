@@ -17,6 +17,7 @@ subroutine euv_ionization_heat(iBlock)
   integer, intent(in) :: iBlock
 
   integer :: iAlt, iWave, iSpecies, iIon, iError, iLon,iLat
+  integer :: iRxn
   real, dimension(nLons,nLats) :: Tau, Intensity
 
   logical :: IsFirstTime(nBlocksMax) = .true.
@@ -54,6 +55,11 @@ subroutine euv_ionization_heat(iBlock)
   photoabs(1:Num_Wavelengths_High,1:nSpeciesTotal)= 0.0
   photodis(1:Num_Wavelengths_High,1:nSpeciesTotal) = 0.0
 
+   N2PERateS(:,:,:,:,iBlock) = 0.0
+  CH4PERateS(:,:,:,:,iBlock) = 0.0
+   O2PERateS(:,:,:,:,iBlock) = 0.0
+    OPERateS(:,:,:,:,iBlock) = 0.0
+
   ! This transfers the specific photo absorption and ionization cross
   ! sections into general variables, so we can use loops...
 
@@ -86,6 +92,34 @@ subroutine euv_ionization_heat(iBlock)
                 EuvDissRateS(:,:,iAlt,iSpecies,iBlock) + &
                 Intensity*PhotoDis(iWave,iSpecies)
         enddo
+
+        ! Total Photoelectron rates are relative to the total ionization 
+        ! rate only
+        ! Thus, we use the total ionization rates for each species.
+        ! Note: that we are missing the dissociative ionizatoin of O2->O + O+
+        do iRxn = 1, 3
+            O2PERateS(:,:,iAlt,iRxn,iBlock) = & 
+            O2PERateS(:,:,iAlt,iRxn,iBlock) + & 
+               Intensity*(photoion(iWave,iO2P_))*&
+                pelecratio_O2(iWave,iRxn)
+        enddo 
+!
+        do iRxn = 1, 3
+            N2PERateS(:,:,iAlt,iRxn,iBlock) = & 
+            N2PERateS(:,:,iAlt,iRxn,iBlock) + & 
+               Intensity*(photoion(iWave,iN2P_) + &
+                          photoion(iWave,iNP_))*&
+                pelecratio_N2(iWave,iRxn)
+        enddo 
+
+        do iRxn = 1, 3
+            OPERateS(:,:,iAlt,iRxn,iBlock) = & 
+            OPERateS(:,:,iAlt,iRxn,iBlock) + & 
+               Intensity*(photoion(iWave,iO_4SP_) + &
+                          photoion(iWave,iO_2DP_) + &
+                          photoion(iWave,iO_2PP_))*&
+                pelecratio_O(iWave,iRxn)
+        enddo 
 
         do iSpecies = 1, nSpecies
            EHeat = EHeat + &

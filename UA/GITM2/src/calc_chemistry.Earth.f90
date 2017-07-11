@@ -314,7 +314,8 @@ subroutine calc_chemistry(iBlock)
               ! ----------------------------------------------------------
               ! O2 -> 2O
               ! ----------------------------------------------------------
-              rr=EuvDissRateS(iLon,iLat,iAlt,iO2_,iBlock)
+              rr=EuvDissRateS(iLon,iLat,iAlt,iO2_,iBlock) + &
+                  O2PERateS(iLon,iLat,iAlt,1,iBlock)
 
               Reaction = rr * &
                          Neutrals(iO2_)
@@ -345,7 +346,10 @@ subroutine calc_chemistry(iBlock)
               ! ----------------------------------------------------------
 
               Reaction = EuvDissRateS(iLon,iLat,iAlt,iN2_,iBlock) * &
-                   Neutrals(iN2_)
+                          Neutrals(iN2_) + &
+                          N2PERateS(iLon,iLat,iAlt,1,iBlock)*Neutrals(iN2_)
+              !rr=N2DissRateS(iLon,iLat,iAlt,1,iBlock) + &
+              !     N2PERateS(iLon,iLat,iAlt,1,iBlock)
 
               NeutralLosses(iN2_) = NeutralLosses(iN2_) + Reaction
               NeutralSources(iN_4S_) = NeutralSources(iN_4S_) + .25*Reaction
@@ -358,7 +362,8 @@ subroutine calc_chemistry(iBlock)
               ! ----------------------------------------------------------
 
               Reaction = EuvIonRateS(iLon,iLat,iAlt,iN2P_,iBlock) * &
-                   Neutrals(iN2_)
+                          Neutrals(iN2_) + &
+                          N2PERateS(iLon,iLat,iAlt,3,iBlock)*Neutrals(iN2_)
 
               IonSources(iN2P_)   = IonSources(iN2P_)   + Reaction
               NeutralLosses(iN2_) = NeutralLosses(iN2_) + Reaction
@@ -575,7 +580,9 @@ subroutine calc_chemistry(iBlock)
               ! -----------
 
               Reaction = EuvIonRateS(iLon,iLat,iAlt,iO2P_,iBlock) * &
-                   Neutrals(iO2_)
+                         Neutrals(iO2_) + &
+                         O2PERateS(iLon,iLat,iAlt,2,iBlock)*&
+                         Neutrals(iO2_) 
            
               IonSources(iO2P_)   = IonSources(iO2P_)   + Reaction
               NeutralLosses(iO2_) = NeutralLosses(iO2_) + Reaction
@@ -951,8 +958,12 @@ subroutine calc_chemistry(iBlock)
 
               ! Solar EUV
 
-              Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock) * &
-                   Neutrals(iO_3P_)
+!              Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock) * &
+!                   Neutrals(iO_3P_)
+
+              rr=EuvIonRateS(iLon,iLat,iAlt,iO_4SP_,iBlock) + &
+                    OPERateS(iLon,iLat,iAlt,1,iBlock)
+              Reaction = rr*Neutrals(iO_3P_)
 
               IonSources(iO_4SP_) = IonSources(iO_4SP_) + Reaction
               NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
@@ -1256,8 +1267,12 @@ subroutine calc_chemistry(iBlock)
 
               ! Solar EUV
 
-              Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock) * &
-                   Neutrals(iO_3P_)
+!              Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock) * &
+!                   Neutrals(iO_3P_)
+
+              rr=EuvIonRateS(iLon,iLat,iAlt,iO_2DP_,iBlock) + &
+                    OPERateS(iLon,iLat,iAlt,2,iBlock)
+              Reaction = rr * Neutrals(iO_3P_)
 
               IonSources(iO_2DP_) = IonSources(iO_2DP_) + Reaction
               NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
@@ -1367,8 +1382,43 @@ subroutine calc_chemistry(iBlock)
 
               ! Solar EUV
 
-              Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock) * &
-                   Neutrals(iO_3P_)
+              !Reaction = EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock) * &
+              !     Neutrals(iO_3P_)
+!              rr=EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock) 
+
+              rr=EuvIonRateS(iLon,iLat,iAlt,iO_2PP_,iBlock) + &
+                    OPERateS(iLon,iLat,iAlt,3,iBlock)
+              Reaction = rr*Neutrals(iO_3P_)
+
+                 IonSources(iO_2PP_) = IonSources(iO_2PP_) + Reaction
+              NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction
+
+! ----------------------------
+! Atomic N Photoionization
+! ----------------------------
+              ! ----------------------------------------------------------
+              ! N(4S) + hv -> N+
+              ! ----------------------------------------------------------
+              Reaction = EuvIonRateS(iLon,iLat,iAlt,iNP_,iBlock) * &
+                   Neutrals(iN_4S_)
+
+                 IonSources(iNP_) = IonSources(iNP_) + Reaction
+              NeutralLosses(iN_4S_)  = NeutralLosses(iN_4S_)  + Reaction
+
+! ----------------------------
+! Atomic He Photoionization
+! ----------------------------
+              ! ----------------------------------------------------------
+              ! He + hv --> He+  + e-
+              ! ----------------------------------------------------------
+              Reaction = EuvIonRateS(iLon,iLat,iAlt,iHeP_,iBlock) * &
+                   Neutrals(iHe_)
+
+              NeutralLosses(iHe_) = NeutralLosses(iHe_) + Reaction
+              IonSources(iHeP_) = IonSources(iHeP_) + Reaction
+
+! ----------------------------
+! NO Photoionization
 
               IonSources(iO_2PP_) = IonSources(iO_2PP_) + Reaction
               NeutralLosses(iO_3P_)  = NeutralLosses(iO_3P_)  + Reaction

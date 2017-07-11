@@ -67,9 +67,19 @@ subroutine fill_photo(photoion, photoabs, photodis)
 
   enddo
 
-  !     Ion_Rate_Eff_N2(:,:,:) = Ion_Rate_Eff_N2(:,:,:) +              &
-  !          Intensity(:,:,:,N) * (PhotoAbs_N2(N) - PhotoIon_N2(N)) *  &
-  !          NDensity(:,:,:,N_N2,index)
+  ! PE Ratio:  N2 + e- -> N(2D) + N(4S)
+  pelecratio_N2(:,1) = PhotoElec_N2_N4S
+  ! PE Ratio:  N2 + e- -> N+ + N(4S)
+  pelecratio_N2(:,2) = PhotoElec_N2_NPlus
+  ! PE Ratio:  N2 + e- -> N2+
+  pelecratio_N2(:,3) = PhotoElec_N2_N2Plus
+
+  ! PE Ratio:  O2 + e- -> O(4S) + O(3P)
+  pelecratio_O2(:,1) = PhotoElec_O2_O3P
+  ! PE Ratio:  O2 + e- -> O2+
+  pelecratio_O2(:,2) = PhotoElec_O2_O2Plus
+  ! PE Ratio:  O2 + e- -> O(4S)+ + O(3P)
+  pelecratio_O2(:,3) = PhotoElec_O2_OPlus
 
 end subroutine fill_photo
 
