@@ -421,6 +421,11 @@ while ($line=<InputFile>) {
      
      
     ###INDIVIDUAL COMMANDS ###
+    ### EndOfMission::TemperatureCorrectionFactor ###
+    elsif ($InputLine eq "SURFACETEMPERATURECORRECTIONFACTOR") {  
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("static const double SurfaceTemperatureCorrectionFactor",$InputLine,"main/RosinaMeasurements_Liouville.cpp"); 
+    }    
           
     ### EndOfMission::TemperatureRG ###
     elsif ($InputLine eq "TEMPERATURERG") {  

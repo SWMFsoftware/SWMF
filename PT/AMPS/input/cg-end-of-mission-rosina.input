@@ -51,7 +51,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
 #General
 
-  
+  define _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ 4  
 
   DomainBoundaryParticleIntersection=delete ! \\SpecularReflection \\ !user-defined \\ !delete \\ !!delete, SpecularReflection, PeriodicCondition, user-defined \\
 !   function = werew  
@@ -219,6 +219,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   EndOfMission::Limit::NG::SolidAngleCutoff=0.006
 
   EndOfMission::InjectionDistributionMode=flux !!!Flux, RandomFlux, Velocity 
+  EndOfMission::SurfaceTemperatureCorrectionFactor=1.0
   EndOfMission::SimulationDataPointStep=15
 
   EndOfMission::SpeciesSencitivityMode=off !on,off
@@ -240,7 +241,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   EndOfMission::SpeciesSencitivityCO2=0.704  
 
   EndOfMission::TrajectoryUnsertanty \\
-    Mode=on \\ 
+    Mode=off \\ 
     nTests=10 \\ 
     Radius=50.0 \\ 
     AngularLimit=5.0  
