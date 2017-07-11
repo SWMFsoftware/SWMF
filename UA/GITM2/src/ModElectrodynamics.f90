@@ -72,7 +72,9 @@ module ModElectrodynamics
 
   integer :: nMagLats = 140  ! 1 degrees
   integer :: nMagLons = 90  ! 4 degrees
-
+  real :: MagLatRes = 0.5
+  real :: MagLonRes = 4.0
+  
   !----------------------------------------------------------------------
   ! These are in geographic coordinates : 
 
