@@ -308,7 +308,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
       MPI_Recv(&iFinishSurfaceElement,1,MPI_INT,0,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
     #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp parallel for schedule(dynamic,1) default(none) shared(VelocityInjectionMode,NudeGaugeDensitySinCorrectionFactor,DisregardInstrumentOrientationFlag,SphericalNucleusTest,RosinaLocation,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
+    #pragma omp parallel for schedule(dynamic,1) default(none) shared(VelocityInjectionMode,NudeGaugeDensitySinCorrectionFactor,DisregardInstrumentOrientationFlag,SphericalNucleusTest_Mode,SphericalNucleusTest_Temperature,SphericalNucleusTest_SourceRate,RosinaLocation,iStartSurfaceElement,iFinishSurfaceElement,Rosina,xLocation,CutCell::BoundaryTriangleFaces,productionDistributionNASTRAN,spec,positionSun) \
       private(xIntersection,beta,iSurfaceElement,iTest,idim,c,x,r,cosTheta,A,t,tNudeGaugeDensity,tRamGaugeFlux,tRamGaugeDensity,ll) reduction(+:localNudeGaugeDensity) reduction(+:localNudeGaugeFlux) reduction(+:localRamGaugeFlux) reduction(+:localRamGaugeDensity) \
       reduction(+:localSurfaceAreaContributedNudeGaugeMeasurements) reduction(+:localSurfaceFluxContributedNudeGaugeMeasurements)
     #endif
@@ -689,11 +689,14 @@ void RosinaSample::Liouville::Evaluate() {
     spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
     reclat_c(xSun,&HeliocentricDistance,&subSolarPointAzimuth,&subSolarPointZenith);
 
+    subSolarPointZenith = Pi/2 - subSolarPointZenith;
     HeliocentricDistance*=1.0E3;
 
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+/*    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);*/
+
+    for (idim=0;idim<3;idim++) positionSun[idim]=1.0E3*xSun[idim];
 
     PIC::RayTracing::SetCutCellShadowAttribute(positionSun,true);
 
@@ -1083,43 +1086,6 @@ void RosinaSample::Liouville::Evaluate() {
       //create the surface output file, and clean the buffers
       char fname[200];
 
-//      sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
-//      CutCell::PrintSurfaceData(fname);
-
-      //save binary file of the surface contribution
-      FILE *fSource;
-      int iface,spec;
-
-
-      double *t=new double [CutCell::nBoundaryTriangleFaces];
-      double *tall=new double [CutCell::nBoundaryTriangleFaces];
-
-      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++)  t[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeDensityContribution[spec];
-
-        MPI_Reduce(t,tall,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-
-        if (PIC::ThisThread==0) {
-          double minNudeGaugeDensityContribution=-1.0,maxNudeGaugeDensityContribution=-1.0;
-
-          for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-            if ((minNudeGaugeDensityContribution<0.0)||(minNudeGaugeDensityContribution>t[iface])) minNudeGaugeDensityContribution=t[iface];
-            if ((maxNudeGaugeDensityContribution<0.0)||(maxNudeGaugeDensityContribution<tall[iface])) maxNudeGaugeDensityContribution=tall[iface];
-          }
-
-          std::cout << "minNudeGaugeDensityContribution(spec=" << spec <<")=" << minNudeGaugeDensityContribution << std::endl << std::flush;
-          std::cout << "maxNudeGaugeDensityContribution(spec=" << spec <<")=" << maxNudeGaugeDensityContribution << std::endl << std::flush;
-
-          sprintf(fname,"%s/NudeGaugeDensityContribution.spec=%i.iPoint=%i.bin",PIC::OutputDataFileDirectory,spec,iPoint);
-          fSource=fopen(fname,"w");
-          fwrite(tall,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
-          fclose(fSource);
-        }
-      }
-
-      delete [] t;
-      delete [] tall;
-
       //determine the "field of view map" for the given configuration and output the surface data file
       for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
         bool FieldOfViewRG=false,FieldOfViewNG=false;
@@ -1141,6 +1107,66 @@ void RosinaSample::Liouville::Evaluate() {
         }
       }
 
+//      sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
+//      CutCell::PrintSurfaceData(fname);
+
+      //save binary file of the surface contribution
+      FILE *fSource;
+      int iface,spec;
+
+
+      double *t=new double [CutCell::nBoundaryTriangleFaces];
+      double *tallNG=new double [CutCell::nBoundaryTriangleFaces];
+      double *tallRG=new double [CutCell::nBoundaryTriangleFaces];
+      bool *VisibilityFlagNG=new bool [CutCell::nBoundaryTriangleFaces];
+      bool *VisibilityFlagRG=new bool [CutCell::nBoundaryTriangleFaces];
+
+      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++)  {
+          t[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeDensityContribution[spec];
+          VisibilityFlagNG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_NudeGauge;
+        }
+
+        MPI_Reduce(t,tallNG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+        for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+          t[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.RamGaugeFluxContribution[spec];
+          VisibilityFlagRG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_RamGauge;
+        }
+
+        MPI_Reduce(t,tallRG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+
+        if (PIC::ThisThread==0) {
+          double minNudeGaugeDensityContribution=-1.0,maxNudeGaugeDensityContribution=-1.0;
+
+          for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+            if ((minNudeGaugeDensityContribution<0.0)||(minNudeGaugeDensityContribution>t[iface])) minNudeGaugeDensityContribution=t[iface];
+            if ((maxNudeGaugeDensityContribution<0.0)||(maxNudeGaugeDensityContribution<tallNG[iface])) maxNudeGaugeDensityContribution=tallNG[iface];
+          }
+
+          std::cout << "minNudeGaugeDensityContribution(spec=" << spec <<")=" << minNudeGaugeDensityContribution << std::endl << std::flush;
+          std::cout << "maxNudeGaugeDensityContribution(spec=" << spec <<")=" << maxNudeGaugeDensityContribution << std::endl << std::flush;
+
+          sprintf(fname,"%s/SurfaceContributions.spec=%i.iPoint=%i.bin",PIC::OutputDataFileDirectory,spec,iPoint);
+          fSource=fopen(fname,"w");
+
+          fwrite(tallNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(VisibilityFlagNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+
+          fwrite(tallNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(VisibilityFlagRG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+
+          fclose(fSource);
+        }
+      }
+
+      delete [] t;
+      delete [] tallNG;
+      delete [] tallRG;
+      delete [] VisibilityFlagNG;
+      delete [] VisibilityFlagRG;
+
+      //output surface data file
       sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
       CutCell::PrintSurfaceData(fname);
 
