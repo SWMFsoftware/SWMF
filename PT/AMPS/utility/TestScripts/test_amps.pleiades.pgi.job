@@ -19,8 +19,8 @@
 # run AMPS tests compiled with PGI
 cd PGI/AMPS
 module purge
-module load comp-pgi/15.3
-module load mpi-sgi/mpt.2.12r16
-module load tecplot/360_2013
+module load comp-pgi/17.1
+module load mpi-sgi/mpt
+module load tecplot/2017r2
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
