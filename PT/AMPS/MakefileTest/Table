@@ -92,7 +92,7 @@ Check=
 >>>@ls -l test_COPS-Particle-Data$(TESTCOPS-REF).diff 
 >>>@ls -l test_COPS-Drag-Coefficient$(TESTCOPS-REF).diff  
 >>>@ls -l test_COPS$(TESTCOPS-REF).diff
-
+>>>@echo Test test_COPS has finished: `date`
 
 <#
 
@@ -110,6 +110,7 @@ Compile=
 
 Run=
 >>>@echo "test_CG-Rosina-Liouville_run..." >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
+>>>@echo Test test_CG-Rosina-Liouville has started: `date`
 >>>cd $(TESTCG-Rosina-LiouvilleDIR); mpirun -np 8 ./amps
 >>>@echo "test_CG-Rosina-Liouville_run... done" >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
@@ -125,7 +126,7 @@ Check=
 >>>@ls -l test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
 >>>@ls -l test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff
 >>>@ls -l test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
-
+>>>@echo Test test_CG-Rosina-Liouville has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -147,6 +148,7 @@ Compile=
 
 Run=
 >>>@echo "test_SC-Cont_run..." >> test_SC-Cont$(TESTSC-Cont-REF).diff
+>>>@echo Test test_SC-Cont has started: `date`
 >>>cd $(TESTSC-ContDIR); mpirun -np 8 ./amps
 >>>@echo "test_SC-Cont_run... done" >> test_SC-Cont$(TESTSC-Cont-REF).diff
 
@@ -179,7 +181,7 @@ Check=
 >>>@ls -l test_SC-Volume-Sample$(TESTSC-Cont-REF).diff
 >>>@ls -l test_SC-Particle-Sample$(TESTSC-Cont-REF).diff
 >>>@ls -l test_SC-Cont$(TESTSC-Cont-REF).diff
-
+>>>@echo Test test_SC-Cont has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -193,7 +195,7 @@ Keys=-cplr-data-path=${PTDIR}/${TESTX-WingDIR} -model-data-path=${PTDIR}/${TESTX
 
 Run=
 >>>@echo "test_X-Wing_run..." >> test_X-Wing$(TESTX-Wing-REF).diff
-
+>>>@echo Test test_X-Wing has started: `date`
 >>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/X-Wing.mail  ${TESTX-WingDIR}/X-Wing.mail 
 >>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/amr.sig=0xe8cfde3e165d2d69.TriangulationExternalNormalVector.bin  ${TESTX-WingDIR}/amr.sig=0xe8cfde3e165d2d69.TriangulationExternalNormalVector.bin 
 >>>@ln ${PTDIR}/../../../AMPS_DATA_TEST/X-WING/amr.sig=0xebcfdf3f8bd4d9ea.CenterNodeMeasure.bin  ${TESTX-WingDIR}/amr.sig=0xebcfdf3f8bd4d9ea.CenterNodeMeasure.bin 
@@ -239,6 +241,7 @@ Check=
 >>>@ls -l test_X-Wing-Volume-Sample$(TESTX-Wing-REF).diff 
 >>>@ls -l test_X-Wing-Particle-Sample$(TESTX-Wing-REF).diff 
 >>>@ls -l test_X-Wing-Drag-Coefficient$(TESTX-Wing-REF).diff 
+>>>@echo Test test_X-Wing has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -266,6 +269,8 @@ Time=2
 Name=Moon-restart
 Time=2
 Run=
+>>>@echo "test_Moon-restart_run..." >> test_Moon-restart.diff
+>>>@echo Test test_Moon-restart has started: `date`
 >>>@echo "Copying restart files created by the test_Moon to the run directory of test_Moon-restart..." >> test_Moon-restart.diff
 >>>cp ${TESTMoonDIR}/ParticleData.restart* ${TESTMoon-restartDIR}
 >>>@echo "Copying restart files... done" >> test_Moon-restart.diff
@@ -297,6 +302,7 @@ Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/BINARY-READER@@(0+valeriy)
 
 Run=
 >>>@echo "test_binary_reader_run..." >> test_binary-reader.diff
+>>>@echo Test test_binary_reader has started: `date`
 >>>cd ${TESTbinary-readerDIR}; ${MPIRUN} ./amps
 >>>rm ${TESTbinary-readerDIR}/PT/plots/test_tecplot-reader.dat
 >>>cd ${TESTbinary-readerDIR}; ${MPIRUN} ./amps
@@ -306,7 +312,7 @@ Check=
 >>>@echo "test_binary_reader_check..." >> test_binary-reader.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_binary-reader/PT/plots/test_tecplot-reader.dat output/test_tecplot-reader/test_tecplot-reader.ref_np`ls $(TESTbinary-readerDIR)/PT/thread* |wc -l |tr -d ' '` > test_binary-reader.diff 
 >>>@ls -l test_binary-reader.diff 
-
+>>>@echo Test test_binary_reader has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -421,7 +427,7 @@ Check=
 
 >>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
 >>>@ls -l test_Earth.diff
-
+>>>@echo Test test_Earth has finished: `date`
 <#
 
 #>
@@ -453,7 +459,7 @@ Check=
 
 >>>@cat test_Earth--Background_Magnetosphere.diff > test_Earth.diff
 >>>@ls -l test_Earth.diff
-
+>>>@echo Test test_Earth has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -473,6 +479,7 @@ Check=
 
 >>>@cat test_Earth-T96--Background_Magnetosphere.diff > test_Earth-T96.diff
 >>>@ls -l test_Earth-T96.diff
+>>>@echo Test test_Earth-T96 has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -504,6 +511,7 @@ Ref=2{icc}@@(0+pleiades)
 Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
 >>>@echo "test_SEP3D_run..." >> test_SEP3D${TESTSEP3D-REF}.diff
+>>>@echo Test test_SEP3D has started: `date`
 >>>cd ${TESTSEP3DDIR}; ${MPIRUN} -np 4 ./amps
 >>>@echo "test_SEP3D_run... done" >> test_SEP3D${TESTSEP3D-REF}.diff
 <#
@@ -547,7 +555,7 @@ Rundir=
 
 Run=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run..." >> test_CG-PostProcess--Read-Trajectories--on.diff
-
+>>>@echo Test test_CG-PostProcess--Read-Trajectories--on has started: `date`
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/Comet.InjectedDustSizeDistribution.out=7.dat  ${TESTCG-PostProcess--Read-Trajectories--onDIR}/Comet.InjectedDustSizeDistribution.out=7.dat
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=0.H2O.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=0.H2O.dat
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=1.CO2.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=1.CO2.dat
@@ -594,6 +602,7 @@ Check=
 >>>@cat test_CG-PostProcess--Read-Trajectories--on--VIRTIS-MAP.diff test_CG-PostProcess--Read-Trajectories--on--TRAJECTORIES.diff test_CG-PostProcess--Read-Trajectories--on--SURFACE-DATA.diff > test_CG-PostProcess--Read-Trajectories--on.diff 
 
 >>>@ls -l test_CG-PostProcess--Read-Trajectories--on.diff
+>>>@echo Test test_CG-PostProcess--Read-Trajectories--on has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -638,7 +647,7 @@ Rundir=
 
 Run=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run..." >> test_CG-PostProcess--Read-Trajectories--off.diff
-
+>>>@echo Test test_CG-PostProcess--Read-Trajectories--off has started: `date`
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/Comet.InjectedDustSizeDistribution.out=7.dat  ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Comet.InjectedDustSizeDistribution.out=7.dat
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=0.H2O.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=0.H2O.dat
 >>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=1.CO2.dat ${TESTCG-PostProcess--Read-Trajectories--offDIR}/amps.TrajectoryTracking.out=7.s=1.CO2.dat
@@ -671,6 +680,7 @@ Check=
 >>>@cat test_CG-PostProcess--Read-Trajectories--off--VIRTIS-MAP.diff > test_CG-PostProcess--Read-Trajectories--off.diff 
 
 >>>ls -l test_CG-PostProcess--Read-Trajectories--off.diff
+>>>@echo Test test_CG-PostProcess--Read-Trajectories--off has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -712,6 +722,7 @@ Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vt
 
 Run=
 >>>@echo "test_CG-dust-test_run..." >> test_CG-dust-test${TESTCG-dust-test-REF}.diff
+>>>@echo Test test_CG-dust-test has started: `date`
 >>>cp ${PTDIR}/srcCG/ModelData/CorrectedFluxRelativeDUST.bin  ${TESTCG-dust-testDIR}
 >>>cd ${TESTCG-dust-testDIR}; ${MPIRUN}  ./amps
 >>>@echo "test_CG-dust-test_run... done" >> test_CG-dust-test${TESTCG-dust-test-REF}.diff
@@ -736,6 +747,7 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test.dat         \
 >>>output/test_CG-dust-test/test_CG-dust-test${TESTCG-dust-test-REF}.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test${TESTCG-dust-test-REF}.diff
 >>>@ls -l test_CG-dust-test${TESTCG-dust-test-REF}.diff
+>>>@echo Test test_CG-dust-test has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -775,6 +787,7 @@ Compile=
 
 Run=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_run..." >> test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>@echo Test test_CCMC-Individual_Trajectories--KAMELEON has started: `date`
 >>>cp /Volumes/Data01/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/amps.Background.data.cdf
 >>>cp input/ccmc.InjectionLocation.dat ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}
 >>>cd ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}; ${MPIRUN}  ./amps
@@ -811,6 +824,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-guiding-center-REF}.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>@ls -l test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
+>>>@echo Test test_Mover-guiding-center has finished: `date`
 <#
 
 
@@ -837,6 +851,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl -r=2.0e-5 ${TESTMover-guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-guiding-centerKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-guiding-center-REF}.ref_np`ls ${TESTMover-guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>@ls -l test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
+>>>@echo Test test_Mover-guiding-center has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -860,6 +875,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Boris-REF}.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>@ls -l test_Mover-Boris${TESTMover-Boris-REF}.diff
+>>>@echo Test test_Mover-Boris has finished: `date`
 <#
 
 
@@ -887,6 +903,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-BorisKEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Boris-REF}.ref_np`ls ${TESTMover-BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris${TESTMover-Boris-REF}.diff
 >>>@ls -l test_Mover-Boris${TESTMover-Boris-REF}.diff
+>>>@echo Test test_Mover-Boris has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -910,6 +927,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories${TESTMover-Boris-relativistic-REF}.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>@ls -l test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
+>>>@echo Test test_Mover-Boris-relativistic has finished: `date`
 <#
 
 
@@ -937,6 +955,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
 >>>${TESTMover-Boris-relativisticKEYS}/output-relativistic/test_CCMC-Individual_Trajectories${TESTMover-Boris-relativistic-REF}.ref_np`ls ${TESTMover-Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
 >>>@ls -l test_Mover-Boris-relativistic${TESTMover-Boris-relativistic-REF}.diff
+>>>@echo Test test_Mover-Boris-relativistic has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -953,6 +972,7 @@ Check=
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTEuropa-test1DIR}/PT/plots/test_Europa.dat         \
 >>>output/test_Europa-test1/test_Europa-test1.ref_np`ls ${TESTEuropa-test1DIR}/PT/thread* |wc -l |tr -d ' '` > test_Europa-test1.diff   
 >>>@ls -l test_Europa-test1.diff
+>>>@echo Test test_Europa-test1 has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
@@ -967,7 +987,7 @@ Rundir=
 
 Run=
 >>>@echo "test_LOS_run..." >> test_LOS.diff
-
+>>>@echo Test test_LOS has started: `date`
 >>>cd ${PTDIR}/utility/LOS/ && julia Config.jl --kernelFile /Volumes/Data01/AMPS_DATA_TEST/LOS/kernels.tm
 >>>cd ${PTDIR}/utility/LOS/ && julia Config.jl --meshFile /Volumes/Data01/AMPS_DATA_TEST/LOS/SHAP5_stefano.ply
 >>>cd ${PTDIR}/utility/LOS/ && julia Config.jl --meshFileShadow /Volumes/Data01/AMPS_DATA_TEST/LOS/SHAP5_shadow.ply
@@ -1030,6 +1050,7 @@ Check=
 >>>@ls -l test_LOS-gas--shadow=yes.diff
 >>>@ls -l test_LOS-gas--shadow=no.diff
 >>>@ls -l test_LOS.diff
+>>>@echo Test test_LOS has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -1066,7 +1087,7 @@ Check=
 >>>@ls -l test_Collision-Test-NTC4-1.diff
 
 >>>@ls -l test_Collision-Test-NTC.diff
-
+>>>@echo Test test_Collision-Test-NTC has finished: `date`
 <#
 
 
@@ -1103,7 +1124,7 @@ Check=
 >>>@ls -l test_Collision-Test-MF4-1.diff
 
 >>>@ls -l test_Collision-Test-MF.diff
-
+>>>@echo Test test_Collision-Test-MF has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -1122,7 +1143,7 @@ Check=
 >>>@ls -l test_Chemistry-Test2.diff
 
 >>>@ls -l test_Chemistry-Test.diff
-
+>>>@echo Test test_Chemistry-Test has finished: `date`
 <#
 
 /------------------------------------------------------------------------------
@@ -1153,6 +1174,7 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-OxygenDIR}/PT/plots/test_Mars.dat output/test_Mars-HotO/test_Mars-HotO$(TESTMars-Hot-Oxygen-REF).ref_np`ls $(TESTMars-Hot-OxygenDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
 
 >>>@ls -l test_Mars-Hot-Oxygen$(TESTMars-Hot-Oxygen-REF).diff
+>>>@echo Test test_Mars-Hot-Oxygen has finished: `date`
 <#
 
 /------------------------------------------------------------------------------
@@ -1169,15 +1191,19 @@ Compile=
 >>>@echo "test_Mars-Hot-Carbon_compile... done" >> test_Mars-Hot-Carbon.diff
 
 Run=
+>>>@echo "test_Mars-Hot-Carbon_run..." >> test_Mars-Hot-Carbon.diff
+>>>@echo Test test_TESTMars-Hot-Carbon has started: `date`
 >>>mkdir ${TESTMars-Hot-CarbonDIR}/PT
 >>>mkdir ${TESTMars-Hot-CarbonDIR}/PT/plots
 >>>touch ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat 
+>>>@echo "test_Mars-Hot-Carbon_run... done" >> test_Mars-Hot-Carbon.diff
 
 Check=
 >>>@echo "test_Mars-Hot-Carbon_check..." >> test_Mars-Hot-Carbon.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat output/test_Mars-HotC-PDCO/test_Mars-HotC-PDCO.ref_np`ls $(TESTMars-Hot-CarbonDIR)/PT/thread* |wc -l |tr -d ' '` > test_Mars-Hot-Carbon.diff
 
 >>>@ls -l test_Mars-Hot-Carbon.diff
+>>>@echo Test test_Mars-Hot-Carbon has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -1186,12 +1212,14 @@ Name=test/InterpolateAMR-test
 Time=3
 Run=
 >>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
+>>>@echo Test test_InterpolateAMR-test has started: `date`
 >>>cd ${TESTInterpolateAMR-testDIR}; ${TESTMPIRUN1} ./amps
 >>>@echo "test_InterpolateAMR-test_run... done" >> test_InterpolateAMR-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
 >>>@ls -l test_InterpolateAMR-test.diff 
+>>>@echo Test test_InterpolateAMR-test has finished: `date`
 <#
 
 #>
@@ -1199,12 +1227,14 @@ Name=test/InterpolateAMR-AMPS-test
 Time=3
 Run=
 >>>@echo "test_InterpolateAMR-AMPS-test_run..." >> test_InterpolateAMR-AMPS-test.diff
+>>>@echo Test test_InterpolateAMR-AMPS-test has started: `date`
 >>>cd ${TESTInterpolateAMR-AMPS-testDIR}; ${TESTMPIRUN1} ./amps
 >>>@echo "test_InterpolateAMR-AMPS-test_run... done" >> test_InterpolateAMR-AMPS-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-AMPS-test_check..." >> test_InterpolateAMR-AMPS-test.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-AMPS-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-AMPS-test.diff
 >>>@ls -l test_InterpolateAMR-AMPS-test.diff
+>>>@echo Test test_InterpolateAMR-AMPS-test has finished: `date`
 <#
 
 
@@ -1245,6 +1275,7 @@ Check=
 >>>@ls -l test_Drag-Coefficient--Specular-Reflection--Projection-Map$(TESTDrag-Coefficient--Specular-Reflection-REF).diff
 
 >>>@ls -l test_Drag-Coefficient--Specular-Reflection$(TESTDrag-Coefficient--Specular-Reflection-REF).diff
+>>>@echo Test test_Drag-Coefficient--Specular-Reflection has finished: `date`
 <#
 
 
@@ -1327,7 +1358,7 @@ Check=
 >>>@ls -l test_Sphere-drag-coefficient-SpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff 
 >>>@ls -l test_Sphere-drag-coefficient-SpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff  
 >>>@ls -l test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
-
+>>>@echo Test test_Sphere-drag-coefficient has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -1349,6 +1380,7 @@ Compile=
 
 Run=
 >>>@echo "test_CG-BATSRUS-dust-coupling_run..." >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
+>>>@echo Test test_CG-BATSRUS-dust-coupling has started: `date`
 >>>cd $(TESTCG-BATSRUS-dust-couplingDIR);${MPIRUN}  ./amps
 >>>@echo "test_CG-BATSRUS-dust-coupling_run... done" >> test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
 
@@ -1376,7 +1408,7 @@ Check=
 >>>@ls -l test_CG-BATSRUS-dust-coupling--DUST${TESTCG-BATSRUS-dust-coupling-REF}.diff
 >>>@ls -l test_CG-BATSRUS-dust-coupling--Particle${TESTCG-BATSRUS-dust-coupling-REF}.diff
 >>>@ls -l test_CG-BATSRUS-dust-coupling${TESTCG-BATSRUS-dust-coupling-REF}.diff
-
+>>>@echo Test test_CG-BATSRUS-dust-coupling has finished: `date`
 <#
 
 
