@@ -837,7 +837,7 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
   do iAlt = 1,nAlts
      do iSpecies=1,nSpecies
 
-        if (SubtractHydrostatic(iAlt,iSpecies) .eq. .false.) then
+        if (.not. SubtractHydrostatic(iAlt,iSpecies)) then
            NewMomentumS(iAlt,iSpecies) = MomentumS(iAlt,iSpecies) - &
                  DtIn*(AUSMMomentumSFluxes(iAlt,iSpecies)) + &
                  DtIn*RhoS(iAlt,iSpecies)*EffectiveGravity(iAlt) 
@@ -1649,10 +1649,10 @@ subroutine calc_all_fluxes_hydro(DtIn, RhoS, PressureS, HydroPressureS, HydroRho
             HydroPressureSRight_M12(1:nAlts,1:nSpecies))
 
   MeanRhoS_P12(1:nAlts,1:nSpecies) = &
-        0.5*(RhoSLeft_P12(1:nAlts,1:nSpecies) + RhoSRight_P12(1:nAlts,1:nSpecies))
+       0.5*(RhoSLeft_P12(1:nAlts,1:nSpecies) + RhoSRight_P12(1:nAlts,1:nSpecies))
 
   MeanRhoS_M12(1:nAlts,1:nSpecies) = &
-        0.5*(RhoSLeft_M12(1:nAlts,1:nSpecies) + RhoSRight_M12(1:nAlts,1:nSpecies))
+       0.5*(RhoSLeft_M12(1:nAlts,1:nSpecies) + RhoSRight_M12(1:nAlts,1:nSpecies))
 
   do iAlt = 1, nAlts 
      MeanCS_P12(iAlt) = InterfaceCS_P12(iAlt)
@@ -1822,7 +1822,7 @@ subroutine calc_all_fluxes_hydro(DtIn, RhoS, PressureS, HydroPressureS, HydroRho
 
 !!!!! Non-Hydrostatic Species Should use this version
 
-       if (SubtractHydrostatic(iAlt,iSpecies) .eq. .false.) then
+       if (.not. SubtractHydrostatic(iAlt,iSpecies)) then
 
        MPress_P12(iAlt,iSpecies) = &
           LiouKpS(iAlt,iSpecies)*max( (1.0 - M2Bar_P12(iAlt,iSpecies)), 0.0)*&
@@ -1889,7 +1889,7 @@ subroutine calc_all_fluxes_hydro(DtIn, RhoS, PressureS, HydroPressureS, HydroRho
                   (RhoSLeft_M12(iAlt,iSpecies) )* VelLeft_M12(iAlt,iSpecies) )
 
       
-       if (SubtractHydrostatic(iAlt,iSpecies) .eq. .false.) then
+       if (.not. SubtractHydrostatic(iAlt,iSpecies)) then
 
              NumericalPressure_P12(iAlt,iSpecies) = &
                (MeanPressureS_P12(iAlt,iSpecies) )&
