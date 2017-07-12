@@ -20,6 +20,7 @@ test_<APP>_rundir:
 
 test_<APP>_run:
 	@echo "test_<APP>_run..." >> test_<APP>$(TEST<APP>-REF).diff
+	@echo Test test_<APP> has started: `date`
 	cd $(TEST<APP>DIR); ${MPIRUN} ./amps
 	@echo "test_<APP>_run... done" >> test_<APP>$(TEST<APP>-REF).diff
 
@@ -30,5 +31,6 @@ test_<APP>_check:
 	output/test_<APP>/$(OUT)$(TEST<APP>-REF).ref_np`ls $(TEST<APP>DIR)/PT/thread* |wc -l |tr -d ' '` \
 	> test_<APP>$(TEST<APP>-REF).diff);)
 	@ls -l test_<APP>$(TEST<APP>-REF).diff
+	@echo Test test_<APP> has finished: `date`
 
 
