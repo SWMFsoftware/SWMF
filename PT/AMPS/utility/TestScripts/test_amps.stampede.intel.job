@@ -23,3 +23,4 @@ module load mvapich2/2.1
 make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
 cd ../..
 cat test_intel.out >> Intel/AMPS/test_amps.log
+echo Done > AmpsTestDone

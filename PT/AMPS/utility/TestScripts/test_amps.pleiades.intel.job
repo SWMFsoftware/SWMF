@@ -33,3 +33,4 @@ module load mpi-sgi
 module load tecplot/2017r2 
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
+echo Done > AmpsTestDone
