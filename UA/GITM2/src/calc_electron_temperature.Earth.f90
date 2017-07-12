@@ -14,7 +14,8 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   implicit none
 
   integer, intent(in) :: iBlock
-  real(kind=8), intent(in), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: eHeatingp, iHeatingp, eHeatingm, &
+  real(kind=8), intent(in), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
+       eHeatingp, iHeatingp, eHeatingm, &
        iHeatingm, iHeating, lame, lami
  
   real, dimension(nLons,nLats,0:nAlts+1) :: tn, te, ti, etemp, itemp, nn, ni, ne
@@ -26,7 +27,7 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   real, dimension(nLons,nLats,0:nAlts+1) :: alts 
   real :: tipct = 1.1
 
-! calc thermoelectric currents                                                                                                              
+  ! calc thermoelectric currents                                      
   real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2) :: PartialJPara
   real, dimension(-1:nLons+2,-1:nLats+2) :: JParaAlt
 
@@ -42,7 +43,7 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   integer, external :: jday
   integer :: DoY
 
-! for Tridiagnal solver
+  ! for Tridiagnal solver
   real(kind=8), dimension(nAlts) :: a, b, c, d, u, testm     !
   real(kind=8) :: zu, zl, lamu, laml, nne, tte, nni, tti, neu, nel, uiu, uil
   real(kind=8) :: xcoef, hcoef, fcoef, ilam, m
@@ -58,10 +59,10 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   uiup = IVelocity(1:nLons,1:nLats,0:nAlts+1,iUp_,iBlock)  
   alts = Altitude_GB(1:nLons,1:nLats,0:nAlts+1,iBlock)  
 
-!!!! Upper Boundary Conditions!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!![Reference: 1. J.T. Hastings and R.G. Roble, Planet. Space Sci., Vol.25, pp.209, 1977.  Equation(31)
-!!!!!!!           2. M.W. Liemohn et al, J. Geohys. Res., Vol.105, pp.27,767, 2000   Plate 1.            ]
-
+!!!!   Upper Boundary Conditions!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!! [Reference: 1. J.T. Hastings and R.G. Roble, Planet. Space Sci., Vol.25, pp.209, 1977.
+!!!!!! Equation(31)
+!!!!!!   2. M.W. Liemohn et al, J. Geohys. Res., Vol.105, pp.27,767, 2000   Plate 1.
 
   Kp=2.0
   Dst=-Kp*20.0
@@ -119,210 +120,205 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
  ! where(mlats .GE. 50. .AND. mlats .LE. -50.) eflux=1.e-5
 
 
-sinI2 =  (B0(0:nLons+1,0:nLats+1,0:nAlts+1,iUp_,iBlock)/B0(0:nLons+1,0:nLats+1,0:nAlts+1,iMag_,iBlock))**2
-where(sinI2 .LE. 0.01) sinI2=0.01
-sinI = sqrt(sinI2)
+  sinI2 =  (B0(0:nLons+1,0:nLats+1,0:nAlts+1,iUp_,iBlock) / &
+       B0(0:nLons+1,0:nLats+1,0:nAlts+1,iMag_,iBlock))**2
+  where(sinI2 .LE. 0.01) sinI2=0.01
+  sinI = sqrt(sinI2)
 
+  te = eTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock)
+  ti = iTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) 
 
-te = eTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock)
-ti = iTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) 
-
- !!!! Calculate electron temperature
+  ! Calculate electron temperature
     
-lam_e = lame * sinI2
+  lam_e = lame * sinI2
 
-JParaAlt = 0.0
-PartialJPara = 0.0
+  JParaAlt = 0.0
+  PartialJPara = 0.0
 
-call calc_thermoelectric_current
-UserData3D(:,:,:,2,iBlock) = 0.0
-UserData3D(1:nLons,1:nLats,nAlts,2,iBlock) = JParaAlt(1:nLons,1:nLats)
+  call calc_thermoelectric_current
+  UserData3D(:,:,:,2,iBlock) = 0.0
+  UserData3D(1:nLons,1:nLats,nAlts,2,iBlock) = JParaAlt(1:nLons,1:nLats)
 
-! Use tri-diagnal solver to solve the equation
-do iLon = 1, nLons
-   do iLat = 1, nLats 
+  ! Use tri-diagnal solver to solve the equation
+  do iLon = 1, nLons
+     do iLat = 1, nLats 
       
-      do iAlt = 1, nAlts 
-         zu = alts(iLon,iLat,iAlt+1) - alts(iLon,iLat,iAlt)
-         zl = alts(iLon,iLat,iAlt  ) - alts(iLon,iLat,iAlt-1)
+        do iAlt = 1, nAlts 
+           zu = alts(iLon,iLat,iAlt+1) - alts(iLon,iLat,iAlt)
+           zl = alts(iLon,iLat,iAlt  ) - alts(iLon,iLat,iAlt-1)
          
-         lamu = lam_e(iLon,iLat,iAlt+1) - lam_e(iLon,iLat,iAlt)
-         laml = lam_e(iLon,iLat,iAlt) - lam_e(iLon,iLat,iAlt-1)
-         nne  = ne(iLon,iLat,iAlt) 
-         tte  = te(iLon,iLat,iAlt)
+           lamu = lam_e(iLon,iLat,iAlt+1) - lam_e(iLon,iLat,iAlt)
+           laml = lam_e(iLon,iLat,iAlt) - lam_e(iLon,iLat,iAlt-1)
+           nne  = ne(iLon,iLat,iAlt) 
+           tte  = te(iLon,iLat,iAlt)
 
-         neu = ne(iLon,iLat,iAlt+1) - ne(iLon,iLat,iAlt)
-         nel = ne(iLon,iLat,iAlt) - ne(iLon,iLat,iAlt-1)
+           neu = ne(iLon,iLat,iAlt+1) - ne(iLon,iLat,iAlt)
+           nel = ne(iLon,iLat,iAlt) - ne(iLon,iLat,iAlt-1)
 
-         uiu = uiup(iLon,iLat,iAlt+1) - uiup(iLon,iLat,iAlt)
-         uil = uiup(iLon,iLat,iAlt) - uiup(iLon,iLat,iAlt-1)
+           uiu = uiup(iLon,iLat,iAlt+1) - uiup(iLon,iLat,iAlt)
+           uil = uiup(iLon,iLat,iAlt) - uiup(iLon,iLat,iAlt-1)
 
-         ilam = lam_e(iLon,iLat,iAlt)
+           ilam = lam_e(iLon,iLat,iAlt)
 
-         hcoef = zu*zl*(zu+zl)  
-         xcoef = 1.5*Boltzmanns_Constant*nne/Dt   
-         fcoef = (zl/hcoef)**2*lamu + (zu/hcoef)**2*laml
+           hcoef = zu*zl*(zu+zl)  
+           xcoef = 1.5*Boltzmanns_Constant*nne/Dt   
+           fcoef = (zl/hcoef)**2*lamu + (zu/hcoef)**2*laml
 
-         c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
-         b(iAlt) = -xcoef - 2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2) - eHeatingp(iLon,iLat,iAlt)
-         a(iAlt) = 2*ilam/hcoef*zu - fcoef*zu**2
-         d(iAlt) = -xcoef*tte - eHeatingm(iLon,iLat,iAlt)
+           c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
+           b(iAlt) = -xcoef - 2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2) - eHeatingp(iLon,iLat,iAlt)
+           a(iAlt) = 2*ilam/hcoef*zu - fcoef*zu**2
+           d(iAlt) = -xcoef*tte - eHeatingm(iLon,iLat,iAlt)
 
-         eConduction(iLon,iLat,iAlt) = c(iAlt)*te(iLon,iLat,iAlt+1) + &
-              a(iAlt)*te(iLon,iLat,iAlt+1) + &
-              (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tte
+           eConduction(iLon,iLat,iAlt) = c(iAlt)*te(iLon,iLat,iAlt+1) + &
+                a(iAlt)*te(iLon,iLat,iAlt+1) + &
+                (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tte
 
+           if (abs(MLatitude(iLon,iLat,nAlts,iBlock)) .GE. 45.) then
 
-         if (abs(MLatitude(iLon,iLat,nAlts,iBlock)) .GE. 45.) then
+              eThermo(iLon,iLat,iAlt) = &
+                   5./2.*Boltzmanns_Constant &
+                   /Element_Charge &
+                   *JParaAlt(iLon,iLat) &
+                   * ((te(iLon,iLat,iAlt+1)-te(iLon,iLat,iAlt))  *zl**2 &
+                   +  (te(iLon,iLat,iAlt)  -te(iLon,iLat,iAlt-1))*zu**2)/hcoef
 
-            eThermo(iLon,iLat,iAlt) = &
-                 5./2.*Boltzmanns_Constant &
-                 /Element_Charge &
-                 *JParaAlt(iLon,iLat) &
-                 * ((te(iLon,iLat,iAlt+1)-te(iLon,iLat,iAlt))  *zl**2 &
-                 +  (te(iLon,iLat,iAlt)  -te(iLon,iLat,iAlt-1))*zu**2)/hcoef
+              eHeatadv(iLon,iLat,iAlt) = eThermo(iLon,iLat,iAlt)/5.*3.
 
-            eHeatadv(iLon,iLat,iAlt) = eThermo(iLon,iLat,iAlt)/5.*3.
+              eAdiab(iLon,iLat,iAlt) = &
+                   - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
+                   /nne/Element_Charge * tte *&
+                   (zl**2*neu+zu**2*nel)/hcoef
+              
+              ! use thermoelectric heating                                                
 
+              a(iAlt) = a(iAlt)-4*Boltzmanns_Constant &
+                   /Element_Charge &
+                   *JParaAlt(iLon,iLat)*zu**2/hcoef   
+              !     *sinI(iLon,iLat,iAlt)
 
-            eAdiab(iLon,iLat,iAlt) = &
-                 - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
-                 /nne/Element_Charge * tte *&
-                 (zl**2*neu+zu**2*nel)/hcoef
+              !     +1.5*nne*Boltzmanns_Constant* &
+              !     uiup(iLon,iLat,iAlt) &
+              !     *zu**2/hcoef
 
+              b(iAlt) = b(iAlt) + 4*Boltzmanns_Constant &
+                   /Element_Charge * &
+                   JParaAlt(iLon,iLat)*(zu**2-zl**2)/hcoef & 
+                   !     *sinI(iLon,iLat,iAlt) &
 
-!!!! use thermoelectric heating                                                
-
-            a(iAlt) = a(iAlt)-4*Boltzmanns_Constant &
-                 /Element_Charge &
-                 *JParaAlt(iLon,iLat)*zu**2/hcoef   
-            !     *sinI(iLon,iLat,iAlt)
-
-            !     +1.5*nne*Boltzmanns_Constant* &
-            !     uiup(iLon,iLat,iAlt) &
-            !     *zu**2/hcoef
-
-            b(iAlt) = b(iAlt) + 4*Boltzmanns_Constant &
-                 /Element_Charge * &
-                 JParaAlt(iLon,iLat)*(zu**2-zl**2)/hcoef & 
-            !     *sinI(iLon,iLat,iAlt) &
-
-                 - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
-                 /nne/Element_Charge * &
-                 (zl**2*neu+zu**2*nel)/hcoef 
+                   - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
+                   /nne/Element_Charge * &
+                   (zl**2*neu+zu**2*nel)/hcoef 
                  
-            !     - Boltzmanns_Constant * nne * &
-            !     (zl**2*uiu+zu**2*uil)/hcoef &
+              !     - Boltzmanns_Constant * nne * &
+              !     (zl**2*uiu+zu**2*uil)/hcoef &
 
-            !     - 1.5*nne*Boltzmanns_Constant* &
-            !     uiup(iLon,iLat,iAlt) * &
-            !     (zu**2-zl**2)/hcoef
+              !     - 1.5*nne*Boltzmanns_Constant* &
+              !     uiup(iLon,iLat,iAlt) * &
+              !     (zu**2-zl**2)/hcoef
 
-
-            c(iAlt) = c(iAlt)+4*Boltzmanns_Constant &
-                 /Element_Charge &
-                 *JParaAlt(iLon,iLat)*zl**2/hcoef 
-            !     *sinI(iLon,iLat,iAlt)
+              c(iAlt) = c(iAlt)+4*Boltzmanns_Constant &
+                   /Element_Charge &
+                   *JParaAlt(iLon,iLat)*zl**2/hcoef 
+              !     *sinI(iLon,iLat,iAlt)
                  
-            !     -1.5*nne*Boltzmanns_Constant* &
-            !     uiup(iLon,iLat,iAlt) &
-            !     *zl**2/hcoef
+              !     -1.5*nne*Boltzmanns_Constant* &
+              !     uiup(iLon,iLat,iAlt) &
+              !     *zl**2/hcoef
                                    
-         endif
+           endif
 
-      enddo
+        enddo
 
-     ! Bottom Bounday Te = Tn
-      a(1)=0
-      b(1)=1
-      c(1)=0
-      d(1)=Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
+        ! Bottom Bounday Te = Tn
+        a(1)=0
+        b(1)=1
+        c(1)=0
+        d(1)=Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
   
-      a(nAlts) =  -1
-      b(nAlts) =  1
-      c(nAlts) =  0
-      d(nAlts) =  dAlt_GB(iLon,iLat,nAlts,iBlock)*eflux(iLon,iLat) &
-           /lam_e(iLon,iLat,nAlts)
+        a(nAlts) =  -1
+        b(nAlts) =  1
+        c(nAlts) =  0
+        d(nAlts) =  dAlt_GB(iLon,iLat,nAlts,iBlock)*eflux(iLon,iLat) &
+             /lam_e(iLon,iLat,nAlts)
 
-      call tridag(a, b, c, d, u)
+        call tridag(a, b, c, d, u)
 
-      etemp(iLon,iLat,1:nAlts) = u(1:nAlts)
-      etemp(iLon,iLat,nAlts+1) = etemp(iLon,iLat,nAlts)
-      etemp(iLon,iLat,0) = etemp(iLon,iLat,1)
+        etemp(iLon,iLat,1:nAlts) = u(1:nAlts)
+        etemp(iLon,iLat,nAlts+1) = etemp(iLon,iLat,nAlts)
+        etemp(iLon,iLat,0) = etemp(iLon,iLat,1)
        
-   enddo
-enddo
+     enddo
+  enddo
 
-lam_i = lami * sinI2
-! Use tri-diagnal solver to solve the equation
+  lam_i = lami * sinI2
+  ! Use tri-diagnal solver to solve the equation
 
-do iLon = 1, nLons
-   do iLat = 1, nLats 
+  do iLon = 1, nLons
+     do iLat = 1, nLats 
       
-      do iAlt = 1, nAlts 
-         zu = alts(iLon,iLat,iAlt+1) - alts(iLon,iLat,iAlt)
-         zl = alts(iLon,iLat,iAlt  ) - alts(iLon,iLat,iAlt-1)
+        do iAlt = 1, nAlts 
+           zu = alts(iLon,iLat,iAlt+1) - alts(iLon,iLat,iAlt)
+           zl = alts(iLon,iLat,iAlt  ) - alts(iLon,iLat,iAlt-1)
+           
+           lamu = lam_i(iLon,iLat,iAlt+1) - lam_i(iLon,iLat,iAlt)
+           laml = lam_i(iLon,iLat,iAlt) - lam_i(iLon,iLat,iAlt-1)
+           nni  = ni(iLon,iLat,iAlt) 
+           tti  = ti(iLon,iLat,iAlt)
+           ilam = lam_i(iLon,iLat,iAlt)
          
-         lamu = lam_i(iLon,iLat,iAlt+1) - lam_i(iLon,iLat,iAlt)
-         laml = lam_i(iLon,iLat,iAlt) - lam_i(iLon,iLat,iAlt-1)
-         nni  = ni(iLon,iLat,iAlt) 
-         tti  = ti(iLon,iLat,iAlt)
-         ilam = lam_i(iLon,iLat,iAlt)
+           hcoef = zu*zl*(zu+zl)  
+           xcoef = 1.5*Boltzmanns_Constant*nni/Dt    
+           fcoef = (zl/hcoef)**2*lamu + (zu/hcoef)**2*laml      
+
+           a(iAlt) = 2*ilam/hcoef*zu - fcoef*zu**2
+           b(iAlt) = -xcoef - 2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2) - iHeatingp(iLon,iLat,iAlt)
+           c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
+           d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
+
+           if (iAlt .EQ. nAlts) then
+              a(iAlt) = 0.
+              b(iAlt) = -xcoef - iHeatingp(iLon,iLat,iAlt)
+              c(iAlt) = 0.
+              d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
+           endif
          
-         hcoef = zu*zl*(zu+zl)  
-         xcoef = 1.5*Boltzmanns_Constant*nni/Dt    
-         fcoef = (zl/hcoef)**2*lamu + (zu/hcoef)**2*laml      
-
-         a(iAlt) = 2*ilam/hcoef*zu - fcoef*zu**2
-         b(iAlt) = -xcoef - 2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2) - iHeatingp(iLon,iLat,iAlt)
-         c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
-         d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
-
-         if (iAlt .EQ. nAlts) then
-            a(iAlt) = 0.
-            b(iAlt) = -xcoef - iHeatingp(iLon,iLat,iAlt)
-            c(iAlt) = 0.
-            d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
-         endif
-         
-
-         iConduction(iLon,iLat,iAlt) = c(iAlt)*ti(iLon,iLat,iAlt+1) + &
-              a(iAlt)*ti(iLon,iLat,iAlt+1) + &
-              (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tti
-
-      enddo
+           iConduction(iLon,iLat,iAlt) = c(iAlt)*ti(iLon,iLat,iAlt+1) + &
+                a(iAlt)*ti(iLon,iLat,iAlt+1) + &
+                (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tti
+        enddo
       
-      ! Bottom Bounday Ti = Tn
-      a(1)=0
-      b(1)=1
-      c(1)=0
-      d(1)=Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
+        ! Bottom Bounday Ti = Tn
+        a(1)=0
+        b(1)=1
+        c(1)=0
+        d(1)=Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
       
-      call tridag(a, b, c, d, u)
+        call tridag(a, b, c, d, u)
 
-      itemp(iLon,iLat,1:nAlts) = u(1:nAlts) 
-      itemp(iLon,iLat,nAlts+1) = itemp(iLon,iLat,nAlts)
-      itemp(iLon,iLat,0) = itemp(iLon,iLat,1)
-   enddo
-enddo
+        itemp(iLon,iLat,1:nAlts) = u(1:nAlts) 
+        itemp(iLon,iLat,nAlts+1) = itemp(iLon,iLat,nAlts)
+        itemp(iLon,iLat,0) = itemp(iLon,iLat,1)
+     enddo
+  enddo
 
-!!!! Check if reasonable temperatures
-where(etemp .LT. tn) etemp=tn
-where(etemp .GT. 6000.) etemp = 6000.
+  ! Check if reasonable temperatures
+  where(etemp .LT. tn) etemp=tn
+  where(etemp .GT. 6000.) etemp = 6000.
 
-eTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) = etemp(1:nLons,1:nLats,0:nAlts+1) 
-eTemperature(1:nLons,1:nLats,-1,iBlock) = etemp(1:nLons,1:nLats,0)
-eTemperature(1:nLons,1:nLats,nAlts+2,iBlock) = etemp(1:nLons,1:nLats,nAlts+1)
+  eTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) = etemp(1:nLons,1:nLats,0:nAlts+1) 
+  eTemperature(1:nLons,1:nLats,-1,iBlock) = etemp(1:nLons,1:nLats,0)
+  eTemperature(1:nLons,1:nLats,nAlts+2,iBlock) = etemp(1:nLons,1:nLats,nAlts+1)
 
-where(itemp .GT. tipct * etemp) itemp = tipct * etemp
-where(itemp .LT. tn) itemp = tn
-where(itemp .GT. 6000.) itemp = 6000.
+  where(itemp .GT. tipct * etemp) itemp = tipct * etemp
+  where(itemp .LT. tn) itemp = tn
+  where(itemp .GT. 6000.) itemp = 6000.
 
-iTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) = itemp(1:nLons,1:nLats,0:nAlts+1) 
-iTemperature(1:nLons,1:nLats,-1,iBlock) = itemp(1:nLons,1:nLats,0)
-iTemperature(1:nLons,1:nLats,nAlts+2,iBlock) = itemp(1:nLons,1:nLats,nAlts+1)
+  iTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) = itemp(1:nLons,1:nLats,0:nAlts+1) 
+  iTemperature(1:nLons,1:nLats,-1,iBlock) = itemp(1:nLons,1:nLats,0)
+  iTemperature(1:nLons,1:nLats,nAlts+2,iBlock) = itemp(1:nLons,1:nLats,nAlts+1)
 
 contains
+
   Subroutine tridag(a,b,c,d,u)
 
     use ModSizeGitm
@@ -801,7 +797,13 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   where(tr .GT. 275.) nu_nnp = 3.83e-11 * nnr*1.e-6 * tr**0.5 * (1 - 0.063*log10(tr))**2
   where(tr .GT. 235.) nu_oop = 3.67e-11 * no*1.e-6 * tr**0.5 * (1 - 0.064*log10(tr))**2
   where(tr .GT. 800.) nu_o2o2p = 2.59e-11 * no2*1.e-6 * tr**0.5 * (1 - 0.073*log10(tr))**2
-  where(tr .GT. 170.) nu_n2n2p = 5.14e-11 * nn2*1.e-6 * tr**0.5 * (1 - 0.069*log10(tr))**2
+  !where(tr .GT. 170.) nu_n2n2p = 5.14e-11 * nn2*1.e-6 * tr**0.5 * (1 - 0.069*log10(tr))**2
+  nu_n2n2p = 5.14e-11 * nn2*1.e-6 * tr**0.5 * (1 - 0.069*log10(tr))**2
+  ! Banks:
+  where(tr <= 800) nu_o2o2p = 8.2e-10 * no2*1.0e-6  ! T < 1600
+  where(tr <= 235) nu_oop = 8.6e-10 * no*1.0e-6 ! T < 470
+  where(tr <= 275) nu_nnp = 1.0e-9 * nnr*1.0e-6 ! T < 550
+
   nu_o2op = 6.64 * 1.e-10 * no2*1.e-6
   nu_n2op = 6.82*1.e-10 * nn2*1.e-6
   nu_n2o2p = 4.13*1.e-10 * nn2*1.e-6
