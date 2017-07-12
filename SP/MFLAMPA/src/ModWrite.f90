@@ -410,7 +410,7 @@ contains
          ! find the particle just above the given radius
          do iParticle = iFirst , iLast
             Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
-            if( Radius0 > File_I(iFile) % Radius**2) EXIT
+            if( Radius0 > File_I(iFile) % Radius) EXIT
             ! check if reached the end, i.e. there is no intersection
             if(iParticle == iLast) &
                  DoPrint_I(iNode) = .false.
