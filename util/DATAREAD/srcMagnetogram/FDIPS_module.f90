@@ -26,8 +26,7 @@ module ModPotentialField
   real             :: Tolerance          = 1e-10
 
   ! magnetogram parameters
-  logical           :: IsNewMagnetogramStyle = .false.
-  character(len=100):: NameFileIn = 'fitsfile.dat'  ! filename
+  character(len=100):: NameFileIn = 'fitsfile.out'  ! filename
   logical           :: UseCosTheta  = .true. 
   real              :: BrMax = 3500.0               ! Saturation level of MDI
 
@@ -136,18 +135,14 @@ contains
           call read_var('nProcTheta', nProcTheta)
           call read_var('nProcPhi'  , nProcPhi)
        case("#MAGNETOGRAMFILE")
-          IsNewMagnetogramStyle = .true.
           call read_var('NameFileIn' , NameFileIn)
           call read_var('BrMax'      , BrMax)
+       case('#CHANGEPOLARFIELD')
           call read_var('DoChangePolarField', DoChangePolarField)
           if(DoChangePolarField)then
              call read_var('PolarFactor',   PolarFactor)
              call read_var('PolarExponent', PolarExponent)
           end if
-       case("#MAGNETOGRAM")
-          call read_var('NameFileIn' , NameFileIn)
-          call read_var('UseCosTheta', UseCosTheta)
-          call read_var('BrMax'      , BrMax)
        case("#TIMING")
           call read_var('UseTiming', UseTiming)
        case("#TEST")
@@ -219,91 +214,57 @@ contains
   !===========================================================================
   subroutine read_magnetogram
 
-    use ModIoUnit, ONLY: UnitTmp_
     use ModPlotFile, ONLY: read_plot_file
     use ModNumConst, ONLY: cDegToRad
 
     ! Read the raw magnetogram file into a 2d array
 
     integer:: iError
-    integer:: nCarringtonRotation
     integer:: nTheta0, nPhi0, nThetaRatio, nPhiRatio
     integer:: iTheta, iPhi, iTheta0, iTheta1, jPhi0, jPhi1, jPhi, kPhi
     real :: BrAverage, Weight
-    character (len=100) :: String
 
     real, allocatable:: Br0_II(:,:), Var_II(:,:), Phi0_I(:), Lat0_I(:)
     real:: Param_I(1)
 
     character(len=*), parameter:: NameSub = 'read_magnetogram'
     !------------------------------------------------------------------------
-    if(IsNewMagnetogramStyle)then
+    call read_plot_file(NameFileIn, n1Out = nPhi0, n2Out = nTheta0, &
+         ParamOut_I=Param_I, iErrorOut=iError)
 
-       call read_plot_file(NameFileIn, n1Out = nPhi0, n2Out = nTheta0, &
-            ParamOut_I=Param_I, iErrorOut=iError)
+    if(iError /= 0) call CON_stop(NameSub// &
+         ': could not read header from file'//trim(NameFileIn))
 
-       if(iError /= 0) call CON_stop(NameSub// &
-            ': could not read header from file'//trim(NameFileIn))
+    write(*,*)'nTheta0, nPhi0, LongitudeShift: ', nTheta0, nPhi0, Param_I
 
-       write(*,*)'nTheta0, nPhi0, LongitudeShift: ', nTheta0, nPhi0, Param_I
+    allocate(Phi0_I(nPhi0), Lat0_I(nTheta0), Var_II(nPhi0,nTheta0), &
+         Br0_II(nTheta0,nPhi0))
 
-       allocate(Phi0_I(nPhi0), Lat0_I(nTheta0), Var_II(nPhi0,nTheta0), &
-            Br0_II(nTheta0,nPhi0))
-       
-       call read_plot_file(NameFileIn, &
-            Coord1Out_I=Phi0_I, Coord2Out_I=Lat0_I, VarOut_II = Var_II, &
-            iErrorOut=iError)
+    call read_plot_file(NameFileIn, &
+         Coord1Out_I=Phi0_I, Coord2Out_I=Lat0_I, VarOut_II = Var_II, &
+         iErrorOut=iError)
 
-       if(iError /= 0) call CON_stop(NameSub// &
-            ': could not read data from file'//trim(NameFileIn))
+    if(iError /= 0) call CON_stop(NameSub// &
+         ': could not read data from file'//trim(NameFileIn))
 
-       if(DoChangePolarField)then
-          do iTheta = 1, nTheta0
-             Var_II(:,iTheta) = Var_II(:,iTheta) &
-                  *(1 + (PolarFactor-1)*abs(sin(cDegToRad*Lat0_I(iTheta)))**PolarExponent)
-          end do
-       end if
-
-       ! Check if the latitude coordinate is uniform or not
-       UseCosTheta = abs(Lat0_I(3) - 2*Lat0_I(2) + Lat0_I(1)) > 1e-6
-
-       ! Convert Var_II(iLon,iLat) -> Br0_II(iTheta,iPhi)
-       do iTheta = 1, nTheta0, 1
-          do iPhi = 1, nPhi0
-             Br0_II(iTheta,iPhi) = Var_II(iPhi,nTheta0+1-iTheta)
-          end do
+    if(DoChangePolarField)then
+       do iTheta = 1, nTheta0
+          Var_II(:,iTheta) = Var_II(:,iTheta) * (1 + &
+               (PolarFactor-1)*abs(sin(cDegToRad*Lat0_I(iTheta)))**PolarExponent)
        end do
-       deallocate(Var_II)
-
-    else
-       open(UnitTmp_, file=NameFileIn, status='old', iostat=iError)
-       if(iError /= 0) call CON_stop(NameSub// &
-            ': could not open input file'//trim(NameFileIn))
-       do 
-          read(UnitTmp_,'(a)', iostat = iError ) String
-          if(index(String,'#CR')>0)then
-             read(UnitTmp_,*) nCarringtonRotation
-          endif
-          if(index(String,'#ARRAYSIZE')>0)then
-             read(UnitTmp_,*) nPhi0
-             read(UnitTmp_,*) nTheta0
-          endif
-          if(index(String,'#START')>0) EXIT
-       end do
-
-       write(*,*)'nCarringtonRotation, nTheta0, nPhi0: ',&
-            nCarringtonRotation, nTheta0, nPhi0
-
-       allocate(Br0_II(nTheta0,nPhi0))
-
-       ! input file is in longitude, latitude
-       do iTheta = nTheta0, 1, -1
-          do iPhi = 1, nPhi0
-             read(UnitTmp_,*) Br0_II(iTheta,iPhi)
-          end do
-       end do
-       close(UnitTmp_)
     end if
+
+    ! Check if the latitude coordinate is uniform or not
+    UseCosTheta = abs(Lat0_I(3) - 2*Lat0_I(2) + Lat0_I(1)) > 1e-6
+
+    ! Convert Var_II(iLon,iLat) -> Br0_II(iTheta,iPhi)
+    do iTheta = 1, nTheta0, 1
+       do iPhi = 1, nPhi0
+          Br0_II(iTheta,iPhi) = Var_II(iPhi,nTheta0+1-iTheta)
+       end do
+    end do
+    deallocate(Var_II)
+
 
     ! Fix too large values of Br
     where (abs(Br0_II) > BrMax) Br0_II = sign(BrMax, Br0_II)
