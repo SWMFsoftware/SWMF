@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-subroutine calc_conduction_sub(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_cond)
+subroutine calc_conduction(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_cond)
 
   use ModSizeGitm
   use ModGITM, only: dAlt_GB, Latitude, Longitude, Altitude_GB, &
@@ -121,4 +121,4 @@ subroutine calc_conduction_sub(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTd
 
   call end_timing("conduction")
 
-end subroutine calc_conduction_sub
+end subroutine calc_conduction
