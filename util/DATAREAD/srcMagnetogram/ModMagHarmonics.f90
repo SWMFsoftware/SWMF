@@ -106,7 +106,7 @@ contains
           call read_var('NameFileOut', NameFileOut)
        case("#CHEBYSHEV")
           call read_var('UseChebyshevNode', UseChebyshevNode)
-       case("#SCALINGB0")
+       case("#CHANGEWEAKFIELD")
           call read_var('BrFactor', BrFactor)
           call read_var('BrMin', BrMin)
        case default
