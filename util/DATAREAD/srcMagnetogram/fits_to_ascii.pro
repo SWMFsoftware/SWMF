@@ -11,7 +11,7 @@ pro fits_to_ascii, FileIn, FileOut, silent=silent
 ;
 ; FileIn  - name of the fits file. Default is fitsfile.fits
 ; FileOut - first part of the names of the output files. Default is fitsfile
-;           so the files will by fitstfile.H, fitsfile.dat 
+;           so the files will be fitstfile.H, fitsfile_tec.dat, fitsfile.out
 
 ; /silent - suppress verbose information.
 
@@ -21,16 +21,15 @@ if n_elements(FileOut) eq 0 then FileOut = 'fitsfile'
 nMax=180
 
 FileHeader= FileOut + '.H'
-FileDat   = FileOut + '.dat'
 FileTec   = FileOut + '_tec.dat'
-FileIdl   = FileOut + '_idl.out' 
+FileIdl   = FileOut + '.out' 
 DataName  = 'Br [G]'  
 
 Data = read_fits(FileIn, ImHeader, silent=silent)
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing header file ',FileHeader
+    print,'Writing file with fitsfile header info: ',FileHeader
     print,''
 endif
 
@@ -45,7 +44,7 @@ nLat=s(2)
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing TecPlot file for plotting Br:',FileTec
+    print,'Writing TecPlot file for plotting Br: ',FileTec
     print,''
 endif
 
@@ -61,7 +60,7 @@ free_lun, lun
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing IDL file to be read by HARMONICS/FDIPS.exe:', FileIdl
+    print,'Writing output file to be read by HARMONICS/FDIPS.exe: ', FileIdl
     print,''
 endif
 
