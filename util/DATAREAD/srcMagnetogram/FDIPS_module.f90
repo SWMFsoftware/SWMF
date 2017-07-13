@@ -138,11 +138,9 @@ contains
           call read_var('NameFileIn' , NameFileIn)
           call read_var('BrMax'      , BrMax)
        case('#CHANGEPOLARFIELD')
-          call read_var('DoChangePolarField', DoChangePolarField)
-          if(DoChangePolarField)then
-             call read_var('PolarFactor',   PolarFactor)
-             call read_var('PolarExponent', PolarExponent)
-          end if
+          DoChangePolarField = .true.
+          call read_var('PolarFactor',   PolarFactor)
+          call read_var('PolarExponent', PolarExponent)
        case("#TIMING")
           call read_var('UseTiming', UseTiming)
        case("#TEST")
