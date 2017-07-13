@@ -10,6 +10,13 @@ CHANGEPOLARFIELD
 3.0                     	PolarFactor
 2.0                     	PolarExponent
 
+! The observed magnetic field is increased
+! Br=sign(BrObserved)*min(BrFactor*|BrObserved|, BrMin + |BrObserved|)
+! Default BrFactor = 1.0, BrMin = 0.0 (no change)
+#CHANGEWEAKFIELD
+3.75				BrFactor
+5.0				BrMin
+
 ! Default output file name is harmonics.dat
 #OUTPUT
 harmonics11uniform.dat		NameFileOut
@@ -22,11 +29,4 @@ harmonics11uniform.dat		NameFileOut
 ! Default is true
 #CHEBYSHEV
 F				UseChebyshevNode
-
-! Default Scaling4SmallB0 = 1.0, B0Min = 0.0
-! The observed magnetic field is scaled as 
-! Br=sign(BrObserved)*min(BrFactor*|BrObserved|, BrMin + |BrObserved|)
-#SCALINGB0
-3.75				BrFactor
-5.0				BrMin
 
