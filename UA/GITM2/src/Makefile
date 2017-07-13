@@ -80,7 +80,6 @@ OBJECTS = \
 	output_common.o\
 	logfile.o\
 	calc_conduction.o\
-	calc_conduction_sub.o\
 	calc_physics.o\
 	calc_avesza.o\
 	calc_euv.o\
