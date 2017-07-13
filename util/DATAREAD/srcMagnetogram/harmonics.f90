@@ -19,7 +19,9 @@ program harmonics
 
 end program harmonics
 !==============================================================================
-subroutine CON_stop(TypeMessage)
-  character(LEN=*),intent(in)::TypeMessage
+subroutine CON_stop(StringMessage)
+  character(LEN=*),intent(in):: StringMessage
+
+  write(*,*)'HAROMONICS.exe error:', StringMessage
   stop
 end subroutine CON_stop
