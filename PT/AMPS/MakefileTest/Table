@@ -49,7 +49,7 @@ Keys=-cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERm
 -------------------------------------------------------------------------------
 #>
 Name=Titan
-Time=4
+Time=3
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+valeriy)
 Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+srbwks73465-01)
 Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9@@(0+pleiades)
@@ -59,7 +59,7 @@ Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL
 -------------------------------------------------------------------------------
 #>
 Name=test/COPS@@(0+valeriy) 
-Time=15
+Time=20 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -99,7 +99,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=CG-Rosina-Liouville@@(0+valeriy)
-Time=10
+Time=3
 
 Compile=
 >>>@echo "test_CG-Rosina-Liouville_compile..." > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
@@ -132,7 +132,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/SC-Cont@@(0+valeriy) 
-Time=15
+Time=60 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -186,7 +186,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/X-Wing@@(0+valeriy) 
-Time=5
+Time=54 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -246,7 +246,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=CCMC
-Time=3
+Time=4
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/CCMC@@(0+pleiades)
@@ -288,13 +288,13 @@ Keys=-ices-path=/Users/dborovik/MyICES/ICES@@(0+srbwks73465-01)
 <#
 -------------------------------------------------------------------------------
 #>
-Time=2
+Time=1
 Name=test/tecplot-reader@@(0+valeriy+srbwks73465-01+pleiades)  
 Keys=-cplr-data-path=${PTDIR}/data/input/Europa/Martin-Multifluid 
 <#
 
 #>
-Time=2
+Time=1
 Name=test/binary-reader@@(0+valeriy+stampede+pleiades)
 
 Keys=-cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/BINARY-READER@@(0+stampede+pleiades)
@@ -329,7 +329,7 @@ Keys=-cplr-data-path=${PTDIR}/data/input/Enceladus
 -------------------------------------------------------------------------------
 #>
 Name=Rosetta 
-Time=3
+Time=17 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -399,7 +399,7 @@ Compile=
 
 #>
 Name=Earth@@(0+valeriy) 
-Time=5 
+Time=2 
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy) 
 Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
@@ -432,7 +432,7 @@ Check=
 
 #>
 Name=Earth@@(0+stampede+pleiades)
-Time=5
+Time=2
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
 Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
@@ -465,7 +465,7 @@ Check=
 -------------------------------------------------------------------------------
 #> 
 Name=test/Earth-T96
-Time=5
+Time=3
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
 Keys=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
@@ -485,7 +485,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Earth-Impulse-Source@@(0+valeriy) 
-Time=10 
+Time=6 
 
 Outs=test_Earth
 
@@ -518,7 +518,7 @@ Run=
 -------------------------------------------------------------------------------
 #>
 Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy) 
-Time=20
+Time=26
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile..." >> test_CG-PostProcess--Read-Trajectories--on.diff
@@ -607,7 +607,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
-Time=20
+Time=2
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
@@ -685,7 +685,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=CG@@(0+valeriy+pleiades+stampede)
-Time=3
+Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -705,7 +705,7 @@ Keys=-model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd705
 -------------------------------------------------------------------------------
 #>
 Name=CG-dust-test@@(0+valeriy+pleiades+stampede)
-Time=5
+Time=3
 
 Ref=1{gcc}@@(0+valeriy)
 Ref=2{icc}@@(0+valeriy)
@@ -757,7 +757,7 @@ Time=2
 -------------------------------------------------------------------------------
 #>
 Name=CCMC-Individual_Trajectories 
-Time=3
+Time=4
 Keys= -model-data-path=${PTDIR}/input  
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC@@(0+srbwks73465-01)
@@ -772,11 +772,12 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_TrajectoriesDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
 >>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_TrajectoriesDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories.diff
 >>>@ls -l test_CCMC-Individual_Trajectories.diff
+>>>@echo Test test_CCMC-Individual_Trajectories has finished: `date`
 <#
 -------------------------------------------------------------------------------
 #>
 Name=CCMC-Individual_Trajectories--KAMELEON@@(0+valeriy)
-Time=3
+Time=4
 
 Compile=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile..." > test_CCMC-Individual_Trajectories--KAMELEON.diff
@@ -801,6 +802,7 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
 >>>output/test_CCMC-Individual_Trajectories/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON.diff
+>>>@echo Test test_CCMC-Individual_Trajectories--KAMELEON has finished: `date`
 <#
 
 -------------------------------------------------------------------------------
@@ -857,7 +859,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris@@(0+valeriy)
-Time=3
+Time=7
 
 Ref=1{gcc}@@(0+valeriy)
 
@@ -881,7 +883,7 @@ Check=
 
 #>
 Name=test/Mover-Boris@@(0+stampede+pleiades)
-Time=3
+Time=7
 
 Ref=2{gcc}@@(0+pleiades)
 Ref=2{pgcc}@@(0+pleiades)
@@ -909,7 +911,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
-Time=3
+Time=5
 
 Ref=1{gcc}@@(0+valeriy)
 
@@ -933,7 +935,7 @@ Check=
 
 #>
 Name=test/Mover-Boris-relativistic@@(0+stampede+pleiades)
-Time=3
+Time=5
 
 Ref=2{gcc}@@(0+pleiades)
 Ref=2{pgcc}@@(0+pleiades)
@@ -977,7 +979,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=LOS@@(0+valeriy) 
-Time=2
+Time=4
 Compile=
 >>>cd ${PTDIR}/utility/LOS/ && julia Config.jl --tmpDir ${PTDIR}/utility/LOS/Tmp
 
@@ -1056,7 +1058,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Collision-Test-NTC 
-Time=3
+Time=2
 
 Check=
 >>>@echo "test_Collision-Test-NTC_check..." >> test_Collision-Test-NTC.diff
@@ -1093,7 +1095,7 @@ Check=
 
 #>
 Name=test/Collision-Test-MF
-Time=3
+Time=2
 
 Check=
 >>>@echo "test_Collision-Test-MF_check..." >> test_Collision-Test-MF.diff
@@ -1130,7 +1132,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Chemistry-Test
-Time=3
+Time=2
 
 Check=
 >>>@echo "test_Chemistry-Test_check..." >> test_Chemistry-Test.diff
@@ -1149,7 +1151,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Mars-Hot-Oxygen
-Time=5
+Time=17 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -1180,7 +1182,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Mars-Hot-Carbon 
-Time=5
+Time=1
 
 Compile=
 >>>@echo "test_Mars-Hot-Carbon_compile..." > test_Mars-Hot-Carbon.diff
@@ -1192,7 +1194,7 @@ Compile=
 
 Run=
 >>>@echo "test_Mars-Hot-Carbon_run..." >> test_Mars-Hot-Carbon.diff
->>>@echo Test test_TESTMars-Hot-Carbon has started: `date`
+>>>@echo Test test_Mars-Hot-Carbon has started: `date`
 >>>mkdir ${TESTMars-Hot-CarbonDIR}/PT
 >>>mkdir ${TESTMars-Hot-CarbonDIR}/PT/plots
 >>>touch ${TESTMars-Hot-CarbonDIR}/PT/plots/test_Mars.dat 
@@ -1209,7 +1211,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/InterpolateAMR-test
-Time=3
+Time=2
 Run=
 >>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
 >>>@echo Test test_InterpolateAMR-test has started: `date`
@@ -1224,7 +1226,7 @@ Check=
 
 #>
 Name=test/InterpolateAMR-AMPS-test
-Time=3
+Time=2
 Run=
 >>>@echo "test_InterpolateAMR-AMPS-test_run..." >> test_InterpolateAMR-AMPS-test.diff
 >>>@echo Test test_InterpolateAMR-AMPS-test has started: `date`
@@ -1283,7 +1285,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Sphere-drag-coefficient@@(0+valeriy)
-Time=20
+Time=32
 
 Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
 
@@ -1364,7 +1366,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/CG-BATSRUS-dust-coupling@@(0+valeriy)
-Time=5
+Time=2
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit-120316/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
 
