@@ -43,41 +43,9 @@ s=size(Data)
 nLon=s(1)
 nLat=s(2)
 
-;;; This makes no sense...
-;;; ; Removing missing data by multiply B by sin(lat)^8
-;;; for i=0L,nLat-1 do begin
-;;;     theta = !PI*float(i)/float(nLat)
-;;;     for j=0L,nLon-1 do begin
-;;;         if(abs(Data(i*nLon+j)) ge 5000.0) then $
-;;;             Data(i*nLon+j) = Data(i*nLon+j)*sin(theta)^8
-;;;     endfor
-;;; endfor
-
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing simple data file ',FileDat
-    print,''
-endif
-
-openw,lun,FileDat,/get_lun
-printf,lun,'#nMax'
-printf,lun,nMax
-printf,lun,'#ARRAYSIZE'
-printf,lun,strtrim(nLon,2)
-printf,lun,strtrim(nLat,2)
-printf,lun,'#START'
-
-for i=0L,nLat-1 do begin
-    for j=0L,nLon-1 do begin
-        printf,lun, format = '(1e14.6)',Data(j,i)
-    endfor
-endfor
-
-free_lun, lun
-
-if not keyword_set(silent) then begin
-    print,''
-    print,'Writing TecPlot file ',FileTec
+    print,'Writing TecPlot file for plotting Br:',FileTec
     print,''
 endif
 
@@ -93,7 +61,7 @@ free_lun, lun
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing IDL file ',FileIdl
+    print,'Writing IDL file to be read by HARMONICS/FDIPS.exe:', FileIdl
     print,''
 endif
 
