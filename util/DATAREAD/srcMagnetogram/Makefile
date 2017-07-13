@@ -96,7 +96,8 @@ test_harmonics:
 	make DIPOLE11
 	./DIPOLE11.exe
 	@echo "test_harmonics_run..." >> test_harmonics.diff
-	perl -pe 's/#SCALINGB0/SCALINGB0/' HARMONICS.in.orig > HARMONICS.in
+	perl -pe 's/#CHANGEWEAKFIELD/CHANGEWEAKFIELD/' HARMONICS.in.orig \
+		> HARMONICS.in
 	${SERIAL} ./HARMONICS.exe > harmonics.log
 	@echo "test_harmonics_check..." >> test_harmonics.diff
 	make test_harmonics_check
