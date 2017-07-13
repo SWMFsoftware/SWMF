@@ -46,8 +46,6 @@ to be installed on your machine.
 
    The idl routine generates four files:
 
-	fitsfile.dat - obsolete ASCII file that was used by 
-                       HARMONICS.exe and FDIPS.exe 
 	fitsfile.H - the header of the original fits file with information 
                      about the magnetogram source.
 	fitsfile_tec.dat - a Tecplot file to display the original magnetogram.

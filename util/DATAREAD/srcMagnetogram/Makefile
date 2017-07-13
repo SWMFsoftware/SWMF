@@ -56,13 +56,6 @@ ${HARMONICSEXE}: ${OBJECTS_HARMONICS}
 	${LINK.f90} -o ${HARMONICSEXE} ${OBJECTS_HARMONICS} \
 		-L${LIBDIR} -lSHARE ${Lflag1}
 
-DIPOLE:
-	make DIPOLE.exe
-
-DIPOLE.exe: dipole.o
-	${LINK.f90} -o DIPOLE.exe dipole.o \
-		-L${LIBDIR} -lSHARE ${Lflag1}
-
 DIPOLE11:
 	make DIPOLE11.exe
 
