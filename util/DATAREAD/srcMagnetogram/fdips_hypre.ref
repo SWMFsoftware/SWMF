@@ -1,9 +1,10 @@
-ModReadParam::read_file: read and broadcast nLine=  95 lines of text
+ModReadParam::read_file: read and broadcast nLine=  99 lines of text
 
 #MAGNETOGRAMFILE
 dipole11.out		NameFileIn
 3500.0			BrMax
-T			DoChangePolarField
+
+#CHANGEPOLARFIELD
 3.0			PolarFactor
 2.0			PolarExponent
 
@@ -38,11 +39,11 @@ ascii			TypeFileField (ascii, real4 or real8)
 bxyz			TypeOutput    (field, bxyz, potential, or tecplot)
 fdips_bxyz.out		NameFileField		NameFileBxyz
 ascii			TypeFileField (ascii, real4 or real8)		TypeFileBxyz
- nTheta0, nPhi0, LongitudeShift:          180         360   0.0000000000000000     
- nThetaLgr =           10 nThetaSml =           10
- nPhiLgr   =           10 nPhiSml   =           10
- Partitioning in nThetaAll gives:           20 Actual nThetaAll is:           20
- Partitioning in nPhiAll gives:             20 Actual nPhiAll is:             20
+ nTheta0, nPhi0, LongitudeShift:  180 360   0.0000000000000000
+ nThetaLgr =  10 nThetaSml =  10
+ nPhiLgr   =  10 nPhiSml   =  10
+ Partitioning in nThetaAll gives:  20 Actual nThetaAll is:  20
+ Partitioning in nPhiAll gives:    20 Actual nPhiAll is:    20
 L2 norm of b: 4.093478e+02
 Initial L2 norm of residual: 4.093478e+02
 =============================================
@@ -59,10 +60,10 @@ Iters     resid.norm     conv.rate  rel.res.norm
     8    2.472245e-08    0.043704   6.039473e-11
 
 
-Final L2 norm of residual: 2.472247e-08
+Final L2 norm of residual: 2.472244e-08
 
 
 
- nIter, Tolerance, iError=       10000   1.0000000000000000E-010           0
- max(abs(divb)) =    3.7496912241863356E-009
- nProcTheta, nProcPhi=           2           2
+ nIter, Tolerance, iError= 10000   1.0000000000000000E-10 0
+ max(abs(divb)) =    3.7497036586842114E-09
+ nProcTheta, nProcPhi= 2 2
