@@ -12,6 +12,7 @@ subroutine add_sources
   implicit none
 
   integer :: iBlock, iLon, iLat, iAlt, iSpecies
+  integer :: iDir
   logical :: IsFirstTime=.true.
 
   real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: eHeatingp, iHeatingp, eHeatingm, iHeatingm, iHeating, &
@@ -44,6 +45,9 @@ subroutine add_sources
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
      !! To turn off Conduction, turn UseConduction=.false. in UAM.in
 
+     ! JMB:  07/13/2017.
+     ! 2nd order conduction update:  Separately add Conduction to this
+     ! because Conduction now spans(0:nAlts+1)
      Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
@@ -55,9 +59,13 @@ subroutine add_sources
            + JouleHeating &
            + ElectronHeating &
            ) &
-           + Conduction &
            + ChemicalHeatingRate &
            + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
+
+     Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) = &
+          Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) + &
+           + Conduction(1:nLons,1:nLats,0:nAlts+1)
+
 
 
      !-------------------------------------------
@@ -121,11 +129,15 @@ iAlt = 10
           sum(Conduction(:,:,iAlt))
 
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
+     do iDir = 1, 3
+       Velocity(1:nLons, 1:nLats, 1:nAlts, iDir, iBlock) = &
+            Velocity(1:nLons, 1:nLats, 1:nAlts, iDir, iBlock) + &
+            Dt*IonDrag(:,:,:,iDir) + GWAccel(:,:,:,iDir)
 
-
-     Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) = &
-          Velocity(1:nLons, 1:nLats, 1:nAlts, :, iBlock) + Dt * ( &
-          IonDrag) + Viscosity + GWAccel
+       Velocity(1:nLons, 1:nLats, 0:nAlts+1, iDir, iBlock) = &
+            Velocity(1:nLons, 1:nLats, 0:nAlts+1, iDir, iBlock) + &
+            Viscosity(1:nLons,1:nLats, 0:nAlts+1,iDir)
+     enddo 
 
      !! To turn off IonDrag, turn UseIonDrag=.false. in UAM.in
      !! To turn off NeutralFriction, turn UseNeutralFriction=.false. in UAM.in
@@ -135,8 +147,10 @@ iAlt = 10
              VerticalVelocity(1:nLons, 1:nLats, 1:nAlts, iSpecies, iBlock) + &
              Dt*(VerticalIonDrag(:,:,:,iSpecies)) + &
              NeutralFriction(:,:,:,iSpecies) 
-   
-   
+
+        VerticalVelocity(1:nLons, 1:nLats, 0:nAlts+1, iSpecies, iBlock) =&
+        VerticalVelocity(1:nLons, 1:nLats, 0:nAlts+1, iSpecies, iBlock) +&
+                VerticalViscosityS(1:nLons,1:nLats,0:nAlts+1,iSpecies)
      enddo
 
     

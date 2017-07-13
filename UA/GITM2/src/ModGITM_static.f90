@@ -101,8 +101,18 @@ real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nSpeciesAll, nBlocksMax) :: 
 
   real :: cMax_GDB(0:nLons+1, 0:nLats+1, 0:nAlts+1, 3, nBlocksMax)
 
+  !07/13/2017:  Updated for the 2nd Order Viscosity and Conduction
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) :: &
-       IonDrag, Viscosity
+       IonDrag
+
+  ! JMB:  07/13/2017
+  ! 2nd Order Viscosity Terms
+  real, dimension(1:nLons, 1:nLats, 0:nAlts+1, 3) :: &
+       Viscosity
+  ! Added this for the Vertical Winds.  Calculated in calc_sources
+  ! and used in add_sources
+  real, dimension(1:nLons, 1:nLats, 0:nAlts+1, 1:nSpecies) :: &
+       VerticalViscosityS
 
  ! AGB: Added pressure gradient
   real, dimension(1:nLons, 1:nLats, 1:nAlts, 3, nBlocksMax) :: &
