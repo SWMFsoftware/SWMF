@@ -282,7 +282,7 @@ subroutine init_msis
 !                   log(NDensityS(iLon,iLat,iAlt,iNO_,iBlock))
 
               ffactor = 6.36*log(f107)-13.8
-              no = (ffactor * 1.0e13 + 8.0e13)* 0.124 ! 12.4 ! 12.4 is roughly exp
+              no = (ffactor * 1.0e13 + 8.0e13)* 1.24 ! 12.4 ! 12.4 is roughly exp
 
               h = -Boltzmanns_Constant * msis_temp(2) / &
                    (Gravity_GB(iLon,iLat,iAlt,iBlock) * Mass(iNO_)) /1000.0
@@ -398,7 +398,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,LatIn,LonIn,Lst, &
 
   if (nSpecies >= iNO_) then
      ffactor = 6.36*log(f107)-13.8
-     no = ffactor * 1.0e13 + 8.0e13
+     no = (ffactor * 1.0e13 + 8.0e13)
      LogNS(min(nSpecies,iNO_))   = alog(no)
   endif
 
