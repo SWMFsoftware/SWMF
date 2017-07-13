@@ -17,9 +17,8 @@ module ModMagHarmonics
   ! ********************************************************************
 
   ! Name of input file
-  character (len=100):: NameFileIn = 'fitsfile.dat'
-  logical:: IsNewMagnetogramStyle = .false.
-  real:: BrMax = 1900.0
+  character (len=100):: NameFileIn = 'fitsfile.out'
+  real:: BrMax = 3500.0
 
   ! Name of output file
   character (len=100):: NameFileOut='harmonics.dat'
@@ -97,7 +96,6 @@ contains
        case("#HARMONICS")
           call read_var('nHarmonics', nHarmonicsIn)
        case("#MAGNETOGRAMFILE")
-          IsNewMagnetogramStyle = .true.
           call read_var('NameFileIn', NameFileIn)
           call read_var('BrMax',      BrMax)
        case("#CHANGEPOLARFIELD")
@@ -146,71 +144,36 @@ contains
 
     ! Read the raw magnetogram file into a 2d array
 
-    integer :: iPhi, iTheta, iUnit, iError
-    character (len=100) :: line
+    integer :: iTheta, iError
     real, allocatable:: Phi_I(:), Latitude_I(:)
     real:: Param_I(1)
 
     character(len=*), parameter:: NameSub = 'read_raw_magnetogram'
     !--------------------------------------------------------------------------
-    if(IsNewMagnetogramStyle)then
-       call read_plot_file(NameFileIn, n1Out = nPhi, n2Out = nTheta, &
-            ParamOut_I=Param_I, iErrorOut=iError)
+    call read_plot_file(NameFileIn, n1Out = nPhi, n2Out = nTheta, &
+         ParamOut_I=Param_I, iErrorOut=iError)
 
-       if(iError /= 0) call CON_stop(NameSub// &
-            ': could not read header from file'//trim(NameFileIn))
+    if(iError /= 0) call CON_stop(NameSub// &
+         ': could not read header from file'//trim(NameFileIn))
 
-       write(*,*)'nTheta, nPhi, LongitudeShift: ', nTheta, nPhi, Param_I
+    write(*,*)'nTheta, nPhi, LongitudeShift: ', nTheta, nPhi, Param_I
 
-       allocate(Phi_I(nPhi), Latitude_I(nTheta), Br_II(0:nPhi-1,0:nTheta-1))
+    allocate(Phi_I(nPhi), Latitude_I(nTheta), Br_II(0:nPhi-1,0:nTheta-1))
 
-       call read_plot_file(NameFileIn, &
-            Coord1Out_I=Phi_I, Coord2Out_I=Latitude_I, VarOut_II = Br_II, &
-            iErrorOut=iError)
+    call read_plot_file(NameFileIn, &
+         Coord1Out_I=Phi_I, Coord2Out_I=Latitude_I, VarOut_II = Br_II, &
+         iErrorOut=iError)
 
-       if(iError /= 0) call CON_stop(NameSub// &
-            ': could not read date from file'//trim(NameFileIn))
+    if(iError /= 0) call CON_stop(NameSub// &
+         ': could not read date from file'//trim(NameFileIn))
 
-       ! Check if the theta coordinate is uniform or not
-       UseSinLatitudeGrid = &
-            abs(Latitude_I(3) - 2*Latitude_I(2) + Latitude_I(1)) > 1e-6
+    ! Check if the theta coordinate is uniform or not
+    UseSinLatitudeGrid = &
+         abs(Latitude_I(3) - 2*Latitude_I(2) + Latitude_I(1)) > 1e-6
 
-       ! There is no point using Chebyshev transform if the original grid
-       ! is already uniform in theta
-       if(.not.UseSinLatitudeGrid) UseChebyshevNode = .false.
-
-    else
-       iUnit = 9
-       open(iUnit, file=NameFileIn, status='old', iostat=iError)
-
-       do 
-          read(iUnit,'(a)', iostat = iError ) line
-          if(index(line,'#CR')>0)then
-             read(iUnit,*) CarringtonRotation
-          endif
-          if(index(line,'#nMax')>0)then
-             read(iUnit,*) nHarmonicsIn
-          endif
-          if(index(line,'#ARRAYSIZE')>0)then
-             read(iUnit,*) nPhi
-             read(iUnit,*) nTheta
-          endif
-          if(index(line,'#START')>0) EXIT
-       end do
-
-       write(*,*)'Magnetogram size - Theta,Phi: ',nTheta,nPhi
-
-       ! Allocate the magnetic field array
-       allocate(Br_II(0:nPhi-1,0:nTheta-1),Latitude_I(nTheta))
-
-       do iTheta = nTheta - 1, 0, -1
-          Latitude_I(iTheta) = asin((2*iTheta-nTheta+1.0)/nTheta)*cRadToDeg
-          do iPhi = 0, nPhi - 1
-             read(iUnit,*) Br_II(iPhi,iTheta)
-          end do
-       end do
-       close(iUnit)
-    end if
+    ! There is no point using Chebyshev transform if the original grid
+    ! is already uniform in theta
+    if(.not.UseSinLatitudeGrid) UseChebyshevNode = .false.
 
     ! Apply polar field change if option
     if(DoChangePolarField)then
