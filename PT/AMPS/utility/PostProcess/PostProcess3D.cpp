@@ -442,10 +442,18 @@ void cPostProcess3D::GetInterpolationStencil(double *x,cStencil* stencil) {
   //determine the cell in the block
   int iCell[3];
   double w[3],InterpolationWeight;
+  int nBlockCell[3]={nBlockCellX,nBlockCellY,nBlockCellZ};
 
-  for (i=0;i<3;i++) {
+  for (i=0;i<3;i++) {    
     iCell[i]=(x[i]-bl->xmin[i])/bl->dx[i];
     w[i]=(x[i]-bl->xmin[i])/bl->dx[i]-iCell[i];
+   
+    // if x is at the boundary surface, displace x a little inside the block 
+    if (iCell[i]==nBlockCell[i]) {
+      double t=x[i]-1e-8*bl->dx[i];
+      iCell[i]=t/bl->dx[i];
+      w[i]=(t-bl->xmin[i])/bl->dx[i]-iCell[i];
+    }
   }
 
   for (i=0;i<2;i++) for (j=0;j<2;j++) for (k=0;k<2;k++) {
