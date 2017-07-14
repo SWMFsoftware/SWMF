@@ -54,7 +54,7 @@ cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
 ./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    
 
 cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
-./Config.pl -install -compiler=ifortmpif90,iccmpicxx >& test_amps.log    
+./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >>& test_amps.log
 
 #>PGIAll ###################################################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
