@@ -776,7 +776,6 @@ void Particles3D::mover_PC_AoS(Field * EMf)
     const_arr4_pfloat fieldForPcls = EMf->get_fieldForPcls();
 
     //const double dto2 = .5 * dt, qdto2mc = qom * dto2 / c;
-#pragma omp for schedule(static)
 
     bool doSubCycling=false;
 #ifdef BATSRUS
@@ -786,6 +785,7 @@ void Particles3D::mover_PC_AoS(Field * EMf)
     double dto2_sub, qdto2mc_sub,dt_sub;
     double subcycle_sum = 0;
 
+#pragma omp for schedule(static)
     for (int pidx = 0; pidx < getNOP(); pidx++) {
       // copy the particle
       SpeciesParticle* pcl = &_pcls[pidx];
