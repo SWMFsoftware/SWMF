@@ -57,7 +57,6 @@ test:
 	-@(${MAKE} test_ccmc_small)
 	-@(${MAKE} test_swpc)
 	-@(${MAKE} test1)
-	-@(${MAKE} test2)
 	-@(${MAKE} test4)
 	-@(${MAKE} test5)
 	-@(${MAKE} test6)
