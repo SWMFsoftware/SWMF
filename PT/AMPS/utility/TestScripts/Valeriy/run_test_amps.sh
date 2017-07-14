@@ -45,6 +45,10 @@ cd AMPS
 cvs co -D "`date +%m/%d/%Y` 23:20" AMPS_data 
 cd ..
 
+#Create separate folders for different compilers
+mkdir -p GNU;   cp -r AMPS GNU/;
+mkdir -p Intel; cp -r AMPS Intel/;
+
 #Install AMPS
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
 ./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    
@@ -57,6 +61,6 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
 
 #Execute the tests
-$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllGNU.sh &
-$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllIntel.sh &
+$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllGNU.sh & 
+$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllIntel.sh &   
 
