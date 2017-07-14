@@ -28,6 +28,8 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = -lmpi
 #MPILIB = -L${LIBDIR} -lNOMPI
 
+OPENMPFLAG = -fopenmp
+
 # Define where modules are stored and add it to the search path.
 # INCL_EXTRA can be defined to add more search directories.
 SEARCH = -module ${INCLDIR} ${INCL_EXTRA}
@@ -43,7 +45,7 @@ OPT4 = -O4
 
 # Add -xHost for better speed, possibly
 
-CFLAG = ${SEARCH} -c -w -diag-disable remark ${DEBUG}
+CFLAG = ${SEARCH} -c -w -diag-disable remark ${OPENMPFLAG} ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
@@ -57,8 +59,8 @@ CFLAGS = ${CFLAG} ${OPT2} -save
 
 # Link flags: Lflag1 for MPI parallel code, Lflag2 for serial code
 # Sometimes it's a good idea not to worry about unused undefined symbols
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
-Lflag2  = ${PRECISION} ${DEBUG} -Wl,--unresolved-symbols=ignore-in-object-files
+Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${DEBUG}
+Lflag2  = ${PRECISION} ${OPENMPFLAG} ${DEBUG} -Wl,--unresolved-symbols=ignore-in-object-files
 
 # BLAS and LAPACK libraries
 LBLAS =

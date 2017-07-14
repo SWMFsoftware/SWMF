@@ -11,7 +11,7 @@ CPPLIB = -lstdc++ -lmpi_cxx
 
 .SUFFIXES: .c .cpp
 
-FLAGC = ${SEARCH_C} ${FLAGC_EXTRA} -c ${OPT3} ${DEBUGC}
+FLAGC = ${SEARCH_C} ${FLAGC_EXTRA} -c ${OPT3} ${OPENMPFLAG} ${DEBUGC}
 
 .c.o:
 	${COMPILE.c} ${FLAGC} $< -o $@
