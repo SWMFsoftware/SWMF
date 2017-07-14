@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro thermo_plot_new,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
                 cnt1,cnt2,cnt3,ghostcells,no,yeslog,  	  $
                 nolog,nalts,nlats,nlons,yeswrite_cnt,$
@@ -378,26 +376,26 @@ if ghostcells eq 0 then begin
 
     if (cnt1) then begin 
 
-        if (not polar) then begin
-            locx = where(x(*,0) ge   0.0 and x(*,0) le 360.0,nx)
-            locy = where(y(0,*) ge -90.0 and y(0,*) le  90.0,ny)
-            d2 = fltarr(nx,ny)
-            d2Second = fltarr(nx,ny)
-            x2 = fltarr(nx,ny)
-            y2 = fltarr(nx,ny)
-            for i=nx/2, nx-1 do begin
-                d2(i-nx/2,0:ny-1)  = datatoplot(locx(i),locy)
-                if (iSecondVar gt -1) then $
-                   d2Second(i-nx/2,0:ny-1)  = dataSecond(locx(i),locy)
-                x2(i-nx/2,0:ny-1)  = x(locx(i),locy)
-                y2(i-nx/2,0:ny-1)  = y(locx(i),locy)
-                d2(i,0:ny-1)  = datatoplot(locx(i-nx/2),locy)
-                if (iSecondVar gt -1) then $
-                   d2Second(i,0:ny-1)  = dataSecond(locx(i-nx/2),locy)
-                x2(i,0:ny-1)  = x(locx(i-nx/2),locy)
-                y2(i,0:ny-1)  = y(locx(i-nx/2),locy)
-            endfor
-        endif else begin
+;        if (not polar) then begin
+;            locx = where(x(*,0) ge   0.0 and x(*,0) le 360.0,nx)
+;            locy = where(y(0,*) ge -90.0 and y(0,*) le  90.0,ny)
+;            d2 = fltarr(nx,ny)
+;            d2Second = fltarr(nx,ny)
+;            x2 = fltarr(nx,ny)
+;            y2 = fltarr(nx,ny)
+;            for i=nx/2, nx-1 do begin
+;                d2(i-nx/2,0:ny-1)  = datatoplot(locx(i),locy)
+;                if (iSecondVar gt -1) then $
+;                   d2Second(i-nx/2,0:ny-1)  = dataSecond(locx(i),locy)
+;                x2(i-nx/2,0:ny-1)  = x(locx(i),locy)
+;                y2(i-nx/2,0:ny-1)  = y(locx(i),locy)
+;                d2(i,0:ny-1)  = datatoplot(locx(i-nx/2),locy)
+;                if (iSecondVar gt -1) then $
+;                   d2Second(i,0:ny-1)  = dataSecond(locx(i-nx/2),locy)
+;                x2(i,0:ny-1)  = x(locx(i-nx/2),locy)
+;                y2(i,0:ny-1)  = y(locx(i-nx/2),locy)
+;            endfor
+;        endif else begin
             d2 = datatoplot
             if (iSecondVar gt -1) then $
                d2Second = dataSecond
@@ -405,13 +403,14 @@ if ghostcells eq 0 then begin
             y2 = y
             ny = n_elements(y2(0,*))
             nx = n_elements(x2(0,*))
-        endelse
+;        endelse
 
         if (not polar) then begin
 
             !p.position = pos
+
             map_set, title=variable+' at '+location+' at '+$
-              strmid(stime,0,15)+' UT'
+              strmid(stime,0,15)+' UT', limit = [min(y),min(x),max(y),max(x)]
 
         endif else begin
 

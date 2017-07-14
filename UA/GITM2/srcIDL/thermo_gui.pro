@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;This program can do vectors. User select factor from the slider bar.
 ;Select vector step from the slider bar. 
 ;Polar Plot and select MinLat to do polar plot.

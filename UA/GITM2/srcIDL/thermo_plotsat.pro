@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 pro labelvalue, btr, etr, mini, maxi, value, title, sAlt
 
@@ -65,12 +63,21 @@ if n_elements(nfiles) gt 0 then begin
     if (GetNewData eq 'n') then GetNewData = 0 else GetNewData = 1
 endif
 
-help, filelist_new, getnewdata, nsats
-
 if (GetNewData) then begin
 
-    thermo_readsat, filelist_new, data, time, nTimes, Vars, nAlts, nSats, Files
-    nFiles = n_elements(filelist_new)
+;    thermo_readsat, filelist_new, data, time, nTimes, Vars, nAlts, nSats, Files
+;    nFiles = n_elements(filelist_new)
+
+    gitm_read_bin, filelist_new, data, time, nVars, Vars, version
+    nTimes = n_elements(time)
+    nAlts = n_elements(data(0,0,0,0,*))
+    
+    ; Need to reform the data
+    newdata = dblarr(1,nTimes,nVars,nAlts)
+    newdata(0,*,*,*) = data(*,*,0,0,*)
+    data = newdata
+
+    nSats = 1
 
 endif
 

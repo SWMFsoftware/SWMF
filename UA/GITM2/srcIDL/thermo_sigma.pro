@@ -1,32 +1,30 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 filelist = "b0016_t980321_030001.3DALL"
 
 read_thermosphere_file, filelist, nvars, nalts, nlats, nlons,vars,data
 
-op_  = 15
-n2p_ = 18
-o2p_ = 19
-nop_ = 20
-np_  = 21
-e_   = 22
+op_  = 24
+n2p_ = 26
+o2p_ = 25
+nop_ = 28
+np_  = 27
+e_   = 33
 
 numden = fltarr(nlons, nlats, nalts)
 B0     = fltarr(nlons, nlats, nalts)
 
 lat_save = reform(data(1,0,*,0,0))
 
-for i=3,8 do numden = numden + reform(data(i,*,*,*))
+for i=4,8 do numden = numden + reform(data(i,*,*,*))
 mmm = 0.0
-mass = [16.0,28.0,32.0,30.0,14.0,14.0]
-for i=3,8 do mmm = mmm + mass(i-3) * reform(data(i,*,*,*)) / numden
+mass = [16.0,32.0,28.0,14.0,28.0]
+for i=4,8 do mmm = mmm + mass(i-3) * reform(data(i,*,*,*)) / numden
 
 altitude = reform(data( 2,*,*,*))
-mmd      = reform(data( 9,*,*,*))
-tn       = reform(data(14,*,*,*))
-electron = reform(data(22,*,*,*))
-te       = reform(data(27,*,*,*))
+mmd      = reform(data( 3,*,*,*))
+tn       = reform(data(15,*,*,*))
+electron = reform(data(33,*,*,*))
+te       = reform(data(34,*,*,*))
 
 ec = 1.602e-19
 e2 = ec ^ 2
@@ -39,7 +37,7 @@ Ve = 5.4e-16 * (numden)*(TE^0.5)
 MeVe = me * ve
 MiVi = mi * vi
 
-B0_1d = 30000.0e-9 * (1.0 + 3.0*sin(lat_save*!dtor)^2)^0.5
+B0_1d = 31000.0e-9 * (1.0 + 3.0*sin(lat_save)^2)^0.5
 
 for i=0,nlons-1 do for k=0,nalts-1 do B0(i,*,k) = B0_1d
 
@@ -59,9 +57,8 @@ Sigma_Hall = ((1.0/MeVe) * (Ve*GyroFrequency_Electron/VeOe) - $
 Cond_Pedersen = fltarr(nlons,nlats)
 Cond_Hall     = fltarr(nlons,nlats)
 
-;for k=0,nalts-2 do begin
-for k=0,10 do begin
-  da = reform(altitude(*,*,k+1) - altitude(*,*,k))
+for k=2,nalts-3 do begin
+  da = reform(altitude(*,*,k+1) - altitude(*,*,k-1))/2
   cond_pedersen(*,*) = cond_pedersen(*,*) + da * Sigma_Pedersen(*,*,k)
   cond_hall(*,*)     = cond_hall(*,*)     + da * Sigma_Hall(*,*,k)
 endfor

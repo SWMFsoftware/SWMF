@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 if (n_elements(filelist) eq 0) then begin
    filelist = findfile("-t /*.save")
@@ -338,7 +336,6 @@ for iFile = 0, nFiles-1 do begin
           r = cRe_ + reform(data(2,*,*,*))
           area = dLon * dLat * r^2 * cos(reform(data(1,*,*,*)))
 
-          print, "here"
           xLine = fltarr(nAlts)
           for i=0,nAlts-1 do begin
              Var = reform(data(sel,2:nLons-3,2:nLats-3,i))

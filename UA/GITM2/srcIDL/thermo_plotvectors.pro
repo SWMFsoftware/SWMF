@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 pro thermo_plotvectors,vars,k,data, lat,lon, utrot, alt, nlats,nlons, nalts, $
                        cf,vi_cnt,vn_cnt,step, polar, maxran, plane, npolar
@@ -17,8 +15,17 @@ pro thermo_plotvectors,vars,k,data, lat,lon, utrot, alt, nlats,nlons, nalts, $
         result= STRCMP( var, tes, 8)
         if (result eq 1) then vieast_index = i
      endfor
-     if (vieast_index lt 0) then begin
+     if (vieast_index lt 0) then begin ; 3DALL files
         test = "V!Di!N(east)"
+        for i=0,count-1 do begin
+           var=strcompress(vars[i],/remove_all)
+           tes = strcompress(test,/remove_all)
+           result= STRCMP( var, tes, 8)
+           if (result eq 1) then vieast_index = i
+        endfor
+     endif
+     if (vieast_index lt 0) then begin ; 3DLST files
+        test = "Vn(east)(m/s)"
         for i=0,count-1 do begin
            var=strcompress(vars[i],/remove_all)
            tes = strcompress(test,/remove_all)

@@ -1,5 +1,8 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
-function tostr,value
-  return, strcompress(string(long(value)),/remove_all)
+function tostr,value,nChars
+  s = strcompress(string(long(value)),/remove_all)
+  if (n_elements(nChars) eq 0) then nChars = strlen(s)
+  if nChars lt strlen(s) then nChars = strlen(s)
+  nZ = nChars-strlen(s)
+  for i=0,nZ-1 do s = '0'+s
+  return, s
 end

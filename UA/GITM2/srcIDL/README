@@ -1,0 +1,98 @@
+
+There are a ton of codes in this directory. Sorry.
+
+Codes:
+
+--------------------------------------------------------------
+Reading GITM files:
+get_gitm_points.pro - get lat,lon,alt,time points from a bunch of GITM files.
+gitm_read_bin.pro - read a gitm binary file
+gitm_read_bin_1var.pro - same as above, but can read a subset of variables
+gitm_read_header.pro - read only the header from the gitm file
+read_thermosphere_file.pro - read a GITM file.
+thermo_vars.pro - list the header information about GITM file
+
+--------------------------------------------------------------
+GITM plotting routines:
+thermo_batch_new.pro - plot data from GITM.  Makes one ps file per GITM file.
+thermo_three.pro - similar to batch, but make polar and squar plots on one page
+thermo_compare.pro - compare two GITM simulations (works same as batch)
+thermo_plotter.pro - plots a series of times, variables, alts on one page
+thermo_gui.pro - GUI for plot files. Similar to batch, but GUI.
+thermo_batch_zoom.pro - zoom in plot on a particular location. 
+thermo_plotsat.pro - plot satellite and 1D files.
+
+thermo_champ_new.pro - comparing CHAMP and GRACE satellite files to GITM
+thermo_goce.pro - compare GITM to GOCE
+
+--------------------------------------------------------------
+Time Routines:
+c_a_to_r.pro - time stuff: convert array to real
+c_a_to_s.pro - time stuff: convert array to string
+c_r_to_a.pro - time stuff: convert real to array
+c_s_to_a.pro - time stuff: convert string to array
+jday.pro - return julian day
+
+--------------------------------------------------------------
+Postscript Files:
+setdevice.pro - open a postscript file. Very useful!
+closedevice.pro - close a postscript file
+
+--------------------------------------------------------------
+General plotting stuff:
+pos_space.pro - for making circle plots
+get_position.pro - for making circle plots
+plotmlt.pro - plot MLTs on circle plots.
+plotdumb.pro - make a non existant plot, so you can use /noerase later
+
+--------------------------------------------------------------
+Color Table stuff:
+makect.pro - makes color tables. Better than IDL color tables.
+plotct.pro - plot color table
+
+--------------------------------------------------------------
+General stuff:
+mklower.pro - makes a string lower case.
+mm.pro - return [min,max] of an array
+tostr.pro - convert integer to string
+chopr.pro - chops off leading '0's
+ask.pro - gets inputs from users
+display.pro - displays an array item by item in a list
+determine_min_max.pro - sets min and max to something like the 1% and 99% value
+
+--------------------------------------------------------------
+More GITM stuff:
+thermo_calcforce.pro
+tec_gitm_read.pro
+thermo_convert_champfiles.pro
+thermo_drag.pro
+thermo_guvi.pro
+thermo_hydro.pro
+thermo_magequator.pro
+thermo_make_summary.pro
+thermo_mkguvisat.pro
+thermo_mksatsave.pro
+thermo_mksave.pro
+thermo_mktec.pro
+thermo_no.pro
+thermo_on2.pro
+thermo_plot.pro
+thermo_plot_new.pro
+thermo_plotdist.pro
+thermo_plotlog.pro
+thermo_plotsat2.pro
+thermo_plotsat_constalt.pro
+thermo_plotsat_constalt_ON2.pro
+thermo_plotvectors.pro
+thermo_readsat.pro
+thermo_sat_to_save.pro
+thermo_sigma.pro
+thermo_superposed.pro
+thermo_tec.pro
+thermo_tec_compare.pro
+thermo_tec_new.pro
+thermo_temp.pro
+thermo_threeplot.pro
+thermosphere.pro
+thermosphere_vector2.pro
+thermosphere_vector4.pro

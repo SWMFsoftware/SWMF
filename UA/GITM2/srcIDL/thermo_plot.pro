@@ -1,5 +1,3 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles, $
                 cnt1,cnt2,cnt3,ghostcells,no,yeslog,  	  $
                 nolog,nalts,nlats,nlons,yeswrite_cnt,$
@@ -172,7 +170,8 @@ if cnt2 eq 1 then begin
         endelse
     endif
 
-xrange = [0,360]
+    if (min(lon) gt 0 and max(lon) lt 0) then xrange = mm(lon) $
+    else xrange = [0,360]
 
     ygrids=nalts
     xgrids=nlons
@@ -210,7 +209,8 @@ if cnt3 eq 1 then begin
     ygrids=nalts
     xgrids=nlats
 
-xrange = [-90,90]
+    if (min(lat) gt -90.0 and max(lat) lt 90.0) then lat = mm(lat) $
+    else xrange = [-90,90]
 
 endif
 

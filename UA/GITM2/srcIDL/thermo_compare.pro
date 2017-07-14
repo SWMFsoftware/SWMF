@@ -1,69 +1,87 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-;  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-filelist = findfile("-t *.save")
-if (strlen(filelist(0)) eq 0) then filelist = findfile("-t *.dat")
+if (n_elements(filelist) eq 0) then begin
+   filelist = findfile('*.bin')
+   filelist = filelist(0)
+endif
 
 filelist = ask('perturbation filename to plot',filelist(0))
 
-filelist_base = ask('baseline filename to plot',filelist(0))
+if (n_elements(filelist_base) eq 0) then filelist_base = filelist(0)
+filelist_base = ask('baseline filename to plot',filelist_base(0))
 
-filelist = findfile(filelist)
-nFiles = n_elements(filelist)
+filelistp = findfile(filelist)
+filelist0 = findfile(filelist_base)
 
-filelist_base = findfile(filelist_base)
-nFiles_base = n_elements(filelist_base)
+nFiles  = n_elements(filelistp)
+nFiles0 = n_elements(filelist0)
 
-if (nFiles ne nFiles_base) then begin
-   print, "Number of files in the lists have to be the same!"
-   print, "nFiles      : ",nFiles
-   print, "nFiles_base : ",nFiles_base
+if (nFiles ne nFiles0) then begin
+   print, "Number of files are not equal"
    stop
 endif
 
-for iFile = 0, nFiles-1 do begin
+for iFile = 0,nFiles-1 do begin
 
-   filename = filelist(iFile)
-   print, 'Reading file ',filename
+   file      = filelistp(iFile)
+   file_base = filelist0(iFile)
 
-   data      = 0.0
-   data_base = 0.0
-
-   read_thermosphere_file, filename, nvars, nalts, nlats, nlons, $
+   print, "Reading file : ",file
+   read_thermosphere_file, file, nvars, nalts, nlats, nlons, $
                            vars, data, rb, cb, bl_cnt, itime1
 
-   filename_base = filelist_base(iFile)
-   print, 'Reading file ',filename_base
+   print, "Reading file : ",file_base
+   read_thermosphere_file, filelist_base, nvars_base, $
+                           nalts_base, nlats_base, nlons_base, $
+                           vars_base, data_base, $
+                           rb_base, cb_base, bl_cnt_base, itime2
 
-   read_thermosphere_file, filename_base, nvars_base, $
-                           nalts_base, nlats_base, nlons_base, vars_base, $
-                           data_base, rb_base, cb_base, bl_cnt_base, itime2
+   filename = filelist(0)
 
    alt = reform(data(2,*,*,*)) / 1000.0
    lat = reform(data(1,*,*,*)) / !dtor
    lon = reform(data(0,*,*,*)) / !dtor
 
+   vars = [vars,'TEC']
+   nVars++
+
    if (iFile eq 0) then begin
 
       for i=0,nvars-1 do print, tostr(i)+'. '+vars(i)
-      sel = fix(ask('which var to plot','9'))
+      if (n_elements(sel) eq 0) then sel = 3
+      sel = fix(ask('which var to plot',tostr(sel)))
 
-      plotlog = ask('whether you want log or not (y/n)','n')
-      if (strpos(plotlog,'y') eq 0) then plotlog = 1 else plotlog = 0
+      if (n_elements(plotlog) eq 0) then plotlog = '0'
+      plotlog = fix(ask('whether you want log or not (0/1)',tostr(plotlog)))
 
-      psfile = filename+'.ps'
+      if (n_elements(psfile) eq 0) then psfile = filename+'.ps'
       psfile = ask('ps file name',psfile)
 
       for i=0,nalts-1 do print, tostr(i)+'. '+string(alt(2,2,i))
-      selset = fix(ask('which altitude to plot','0'))
+      if (n_elements(selset) eq 0) then begin
+         d = abs(reform(alt(2,2,*)-400.0))
+         l = where(d eq min(d))
+         selset = l(0)
+      endif
+      selset = fix(ask('which altitude to plot',tostr(selset)))
 
-      smini = ask('minimum (0.0 for automatic)','0.0')
-      smaxi = ask('maximum (0.0 for automatic)','0.0')
+      if (n_elements(percentage) eq 0) then percentage = 0
+      percentage = ask('percentage variation (0 for no, 1 for yes)',tostr(percentage))
 
-      plotvector = ask('whether you want vectors or not (y/n)','y')
-      if strpos(plotvector,'y') eq 0 then plotvector=1 else plotvector = 0
+      if (n_elements(smini) eq 0) then smini = '0.0'
+      if (n_elements(smaxi) eq 0) then smaxi = '0.0'
+      smini = ask('minimum (0.0 for automatic)',smini)
+      smaxi = ask('maximum (0.0 for automatic)',smaxi)
 
+      if (n_elements(plotvector) eq 0) then plotvector = 1
+      plotvector = fix(ask('whether you want vectors or not (0/1)',tostr(plotvector)))
+
+      if (n_elements(vi_cnt) eq 0) then vi_cnt = 0
       if (plotvector) then begin
+
+         vi_cnt = fix(ask('ions (1) or neutrals (0)',tostr(vi_cnt))) 
+         ; vi_cnt is whether to plot vectors of Vi
+         ; vn_cnt is whether to plot vectors of Vn
+         vn_cnt = 1-vi_cnt
          print,'-1  : automatic selection'
          factors = [1.0, 5.0, 10.0, 20.0, 25.0, $
                     50.0, 75.0, 100.0, 150.0, 200.0]
@@ -108,13 +126,16 @@ for iFile = 0, nFiles-1 do begin
       if (strpos(polestring,'p') eq 0) then polar = 1 else polar = 0
 
 ; npolar is whether we are doing the northern or southern hemisphere
+      if (n_elements(npolar) eq 0) then npolar = 1
       if (polar) then begin
-         npolestring = mklower(ask('north or south pole (n or s)','s'))
-         if (strpos(npolestring,'n') eq 0) then npolar = 1 else npolar = 0
+         npolar = mklower(ask('north (1) or south (0) pole',tostr(npolar)))
       endif
 
 ; MinLat is for polar plots:
-      MinLat = 40.0
+      if (n_elements(MinLat) eq 0) then MinLat = 40.0
+      if (polar) then begin
+         MinLat = float(ask('minimum latitude to plot',tostr(minlat)))
+      endif
 
 ; showgridyes says whether to plot the grid or not.
       showgridyes = 0
@@ -125,19 +146,15 @@ for iFile = 0, nFiles-1 do begin
 ; number of points to skip when plotting vectors:
       step = 2
 
-; vi_cnt is whether to plot vectors of Vi
-      vi_cnt = 0
-
-; vn_cnt is whether to plot vectors of Vn
-      vn_cnt = 1
-
       cursor_cnt = 0
 
       xrange = [0.0,0.0]
 
       yrange = [0.0,0.0]
 
-      test = "V!Dn!N(east)"
+      if (vi_cnt eq 0) then test = "V!Dn!N(east)" $
+      else test = "V!Di!N(east)"
+
       for i=0,nvars-1 do begin
          var=strcompress(vars[i],/remove_all)
          tes = strcompress(test,/remove_all)
@@ -145,16 +162,52 @@ for iFile = 0, nFiles-1 do begin
          if (result eq 1) then vneast_index = i
       endfor
 
+   sel_save = sel
+
    endif
 
+   sel=sel_save
+
    data_sub = data
-   data_sub(sel,*,*,*) = 100.0*(data(sel,*,*,*)-data_base(sel,*,*,*)) / $
-                         data_base(sel,*,*,*)
+;   if (min(data_sub(sel,*,*,*)) gt 0.0) then $
+;      data_sub(sel,*,*,*) = 100.0*(data_sub(sel,*,*,*) - data_base(sel,*,*,*))/data_base(sel,*,*,*) $
+;   else data_sub(sel,*,*,*) = data_sub(sel,*,*,*) - data_base(sel,*,*,*)
+
+   if (sel eq nVars-1) then begin
+
+      dalt = (alt(*,*,1:nAlts-1) - alt(*,*,0:nAlts-2))*1000.0
+
+      e   = reform(data_base(33,*,*,*))
+      dalte = dalt * e(*,*,0:nAlts-2)
+
+      tec_base = fltarr(nLons, nLats)
+      for i=2,nAlts-3 do tec_base = tec_base + dalte(*,*,i)/ 1.0e16
+
+      e   = reform(data_sub(33,*,*,*))
+      dalte = dalt * e(*,*,0:nAlts-2)
+
+      tec_sub = fltarr(nLons, nLats)
+      for i=2,nAlts-3 do tec_sub = tec_sub + dalte(*,*,i)/ 1.0e16
+
+      sel = 33
+      vars(sel) = 'TEC'
+
+      for i=0,nAlts-1 do begin
+         data_sub(sel,*,*,i) = tec_sub
+         data_base(sel,*,*,i) = tec_base
+      endfor
+
+   endif
+
+   data_sub(sel,*,*,*) = data_sub(sel,*,*,*) - data_base(sel,*,*,*)
+
+   if (percentage eq 1) then $
+      data_sub(sel,*,*,*) = 100.0*data_sub(sel,*,*,*)/data_base(sel,*,*,*)
 
    data_sub(vneast_index,*,*,*) = $
-      data(vneast_index,*,*,*) - data_base(vneast_index,*,*,*)
+      data_sub(vneast_index,*,*,*) - data_base(vneast_index,*,*,*)
    data_sub(vneast_index+1,*,*,*) = $
-      data(vneast_index+1,*,*,*) - data_base(vneast_index+1,*,*,*)
+      data_sub(vneast_index+1,*,*,*) - data_base(vneast_index+1,*,*,*)
 
    if (nFiles gt 1) then begin
       p = strpos(psfile,'.ps')
@@ -163,19 +216,30 @@ for iFile = 0, nFiles-1 do begin
    endif else begin
       psfile_final = psfile
    endelse
-
-   smini_final = smini
-   smaxi_final = smaxi
-
-   thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles,  $
+   
+   thermo_plot,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles,	$
                cnt1,cnt2,cnt3,yes,no,yeslog,  	  $
                1-yeslog,nalts,nlats,nlons,yeswrite_cnt,$
                polar,npolar,MinLat,showgridyes,	  $
                plotvectoryes,vi_cnt,vn_cnt,vector_factor,	  $
                cursor_cnt,data_sub,alt,lat,lon,	  $
-               xrange,yrange,selset,smini_final,smaxi_final,	  $
-               filename,vars, psfile_final, 0, 'mid', itime1 ;, $
-;                     plotpole = 0
+               xrange,yrange,selset,smini,smaxi,	  $
+               filename,vars, psfile_final, 0, 'mid', itime1, $
+               /portrait
+;, $
+;                     plotpole = 1
+
+
+;       thermo_plot_new,cursor_x,cursor_y,strx,stry,step,nvars,sel,nfiles,$
+;                   cnt1,cnt2,cnt3,yes,no,yeslog,  	  $
+;                   1-yeslog,nalts,nlats,nlons,yeswrite_cnt,$
+;                   polar,npolar,MinLat,showgridyes,	  $
+;                   plotvectoryes,vi_cnt,vn_cnt,vector_factor,	  $
+;                   cursor_cnt,data_sub,alt,lat,lon,	  $
+;                   xrange,yrange,selset,smini,smaxi,	  $
+;                   filename,vars, psfile_final, 0, 'mid', itime1 ;, $
+;;                       plotsquare = plotsquare
+
 
 
 endfor
