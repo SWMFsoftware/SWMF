@@ -548,6 +548,7 @@ subroutine calc_scaled_euv
 
   if (UseEUVData) call Set_Euv(iError, CurrentTime, EndTime)
 
+  ! This runs EUVAC and puts the data into EUV_Flux
   call calc_euv
 
   hlybr = 0.
@@ -564,9 +565,10 @@ subroutine calc_scaled_euv
      Solar_Flux(N) = RFLUX(N) + (XFLUX(N)-RFLUX(N)) * f107_Ratio
   enddo
 
-!  iModelSolar = Tobiska_EUV91
+  ! Tobisha is default:
+  iModelSolar = Tobiska_EUV91
 !  iModelSolar = Hinteregger_Contrast_Ratio
-  iModelSolar = Hinteregger_Linear_Interp
+!  iModelSolar = Hinteregger_Linear_Interp
 
   select case(iModelSolar)
 
@@ -620,18 +622,6 @@ subroutine calc_scaled_euv
              TCOR0(N)        + &
              TCOR1(N)*f107   + &
              TCOR2(N)*f107A
-     enddo
-
-  case (WoodsAndRottman_10Nov88)
-
-     DO N=15,55
-        Solar_Flux(N) = WAR1(N)
-     enddo
-
-  case (WoodsAndRottman_20Jun89)
-
-     DO N=15,55
-        Solar_Flux(N) = WAR2(N)
      enddo
 
   end select
@@ -688,12 +678,13 @@ subroutine calc_scaled_euv
      Flux_of_EUV(N) = Solar_Flux(N)
   enddo
 
+  ! Average with EUVAC:
   do N=1,Num_WaveLengths_Low
      NN = N+15
      Flux_of_EUV(NN) = 0.5*(EUV_Flux(N)+Solar_Flux(NN))
   enddo
 
-
+  ! Take into account the sun distance to the planet:
   Flux_of_EUV = Flux_of_EUV/(SunOrbitEccentricity**2)
 
 
