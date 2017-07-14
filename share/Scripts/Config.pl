@@ -481,11 +481,11 @@ MPIRUN   = \${PARALLEL} \${NPFLAG} \${NP}
 	}
 
 	# Remove -lmpicxx from CPPLIB definition in Makefile.conf if not needed
-	my $remove_mpicxx = (`mpicxx -show` !~ /\-lmpi_cxx/);
+	my $remove_mpicxx = (`mpicxx -show` !~ /\-lmpi(_cxx|\+\+)/);
 	if($remove_mpicxx){
 	    @ARGV = ($MakefileConf);
 	    while(<>){
-		s/ -lmpi_cxx// if /^CPPLIB/;
+		s/ -lmpi(_cxx|\+\+)// if /^CPPLIB/;
 		print;
 	    }
 	}
