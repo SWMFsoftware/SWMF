@@ -91,7 +91,8 @@ foreach (@Arguments) {
      print "-compiler-option=opt\t\tadd option \'opt\' into the compiler argument line\n";
      print "-f-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe fortran compiler is used as a linker \n";
      print "-cpp-link-option=-opt1,-opt2\tadd options \"-opt1 -opt2\" to linker whe c++ compiler is used as a linker \n";
-     print "-cpp-compiler=opt\treplace C++ compiler name defined by the variable COMPILE.mpicxx in Makefile.conf\n";
+     print "-cpp-compiler=opt\t\treplace C++ compiler name defined by the variable COMPILE.mpicxx in Makefile.conf\n";
+     print "-cpplib-rm=opt\t\t\tremove libraty flag from the list defined by variable CPPLIB in Makefile.conf\n";
      exit;
    }
    
@@ -352,6 +353,38 @@ foreach (@Arguments) {
     close(fMakefileOut);
     next;
   }  
+
+  if (/^-cpplib-rm=(.*)$/) {
+    my $options=$1;
+
+    #remove library 'options' from the list defined by variable CPPLIB in Makefile.conf 
+    `mv Makefile.conf Makefile.conf.bak`;
+
+    open(fMakefileIn,"<Makefile.conf.bak") || die "Cannot open Makefile.conf.bak";
+    open(fMakefileOut,">Makefile.conf") || die "Cannot open Makefile.conf";
+
+    my $Opt;
+    my @OptList;
+
+    $options=~s/,/ /g;
+    @OptList=split(' ',$options);
+
+    my $line;
+    while ($line=<fMakefileIn>) {
+      if ($line=~m/CPPLIB =/) {
+        #remove the library defiend by options
+        foreach $Opt (@OptList) { 
+          $line=~s/$options/ /;
+        }
+      }
+
+      print fMakefileOut "$line";
+    }
+
+    close(fMakefileIn);
+    close(fMakefileOut);
+    next;
+  }
 
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
