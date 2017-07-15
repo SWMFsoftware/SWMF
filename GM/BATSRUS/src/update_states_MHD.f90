@@ -12,7 +12,7 @@ subroutine update_states_MHD(iBlock)
   use ModSemiImplVar, ONLY: UseStableImplicit
   use ModVarIndexes, ONLY: pe_, p_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
-       update_point_implicit
+       IsDynamicPointImplicit, update_point_implicit
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
@@ -193,7 +193,8 @@ subroutine update_states_MHD(iBlock)
   end if
 
   ! Add point implicit user or multi-ion source terms
-  if (UsePointImplicit .and. UsePointImplicit_B(iBlock))then
+  if (UsePointImplicit .and. &
+       (IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock))) then
      if(UseEfield)then
         call update_point_implicit(iBlock, ion_electron_source_impl, &
              ion_electron_init_point_impl)
