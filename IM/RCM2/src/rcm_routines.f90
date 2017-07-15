@@ -3052,7 +3052,7 @@ print*,npoint
                END IF
             ELSE
                d_dj (i,j) = error_value
-!!$print*,i,j,'deriv_j'
+!! print*,i,j,'deriv_j'
             END IF 
 !
          END DO
@@ -3166,12 +3166,12 @@ do i = 1, isize
 do j = 1, jsize
   if (eeta(i,j,kc) < 0.) then
   !  print*,'eeta error_i: ',i,imin_j(j),j,kc,eeta(i,j,kc)
-!!$     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
-!!$     print*,eeta(i,:,kc)
-!!$     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
-!!$     print*,eeta(:,j,kc)
-!!$     call CON_STOP('abort')
-!!$     eeta(i,j,kc) = 0.0
+!!     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
+!!     print*,eeta(i,:,kc)
+!!     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
+!!     print*,eeta(:,j,kc)
+!!     call CON_STOP('abort')
+!!     eeta(i,j,kc) = 0.0
      eeta(i,j,kc) = 0.5*(eeta(max(1,i-1),j,kc)+eeta(min(isize,i+1),j,kc))
   end if
 end do
@@ -3222,20 +3222,20 @@ end do
 
 
            ! ss, 04/19/2005--comment this out
-!$         IF (dvefdj(i-1,j) > 0.0 .AND. dvefdj(i,j) > 0.0) THEN
-!$            loc_didt (i,j) = dvefdj (i-1,j) / fac
-!$         ELSE IF (dvefdj(i-1,j) < 0.0 .AND. dvefdj(i,j) < 0.0) THEN
-!$            loc_didt (i,j) = dvefdj (i,j) / fac
-!$         ELSE
-!$            loc_didt (i,j) = 0.5*(dvefdj(i-1,j)+dvefdj(i,j))/fac
-!$         END IF
-!$         IF (dvefdi(i,j-1) < 0.0 .AND. dvefdi(i,j) < 0.0) THEN
-!$            loc_djdt (i,j) = - dvefdi (i,j-1) / fac
-!$         ELSE IF (dvefdi(i,j-1) > 0.0 .AND. dvefdi(i,j) > 0.0) THEN
-!$            loc_djdt (i,j) = - dvefdi (i,j) / fac
-!$         ELSE
-!$            loc_djdt (i,j) = - 0.5*(dvefdi(i,j-1)+dvefdi(i,j))/fac
-!$         END IF
+!!         IF (dvefdj(i-1,j) > 0.0 .AND. dvefdj(i,j) > 0.0) THEN
+!!            loc_didt (i,j) = dvefdj (i-1,j) / fac
+!!         ELSE IF (dvefdj(i-1,j) < 0.0 .AND. dvefdj(i,j) < 0.0) THEN
+!!            loc_didt (i,j) = dvefdj (i,j) / fac
+!!         ELSE
+!!            loc_didt (i,j) = 0.5*(dvefdj(i-1,j)+dvefdj(i,j))/fac
+!!         END IF
+!!         IF (dvefdi(i,j-1) < 0.0 .AND. dvefdi(i,j) < 0.0) THEN
+!!            loc_djdt (i,j) = - dvefdi (i,j-1) / fac
+!!         ELSE IF (dvefdi(i,j-1) > 0.0 .AND. dvefdi(i,j) > 0.0) THEN
+!!            loc_djdt (i,j) = - dvefdi (i,j) / fac
+!!         ELSE
+!!            loc_djdt (i,j) = - 0.5*(dvefdi(i,j-1)+dvefdi(i,j))/fac
+!!         END IF
            ! ss, 04/19/2005--end of comment this out
 
            loc_didt (i,j) = dvefdj (i-1,j) / fac(i-1,j)
@@ -3247,8 +3247,8 @@ end do
               loc_djdt(i,j) = 0.0
            END IF
 
-!$         loc_rate (i,j) = Ratefn (fudgec(kc), alamc(kc), sini (i,j),&
-!$                                  bir (i,j), vm (i,j), mass_factor)
+!!         loc_rate (i,j) = Ratefn (fudgec(kc), alamc(kc), sini (i,j),&
+!!                                  bir (i,j), vm (i,j), mass_factor)
 !          Determine the rate of loss for a given species:
 !
            r_dist = SQRT(xmin(i,j)**2+ymin(i,j)**2)
@@ -3302,13 +3302,13 @@ end do
                    loc_Eta, loc_didt, loc_djdt, loc_rate)
      FirstTime=.false.
  
-!!$ i = 20
-!!$ j = 1
-!!$ print*,'eeta before:',i,j,kc,eeta(i,j,kc)
-!!$ print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
-!!$ print*,eeta(i,:,kc)
-!!$ print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
-!!$ print*,eeta(:,j,kc)
+!! i = 20
+!! j = 1
+!! print*,'eeta before:',i,j,kc,eeta(i,j,kc)
+!! print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
+!! print*,eeta(i,:,kc)
+!! print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
+!! print*,eeta(:,j,kc)
 
 !Copy out
      eeta (:,:,kc) = loc_eta
@@ -3322,12 +3322,12 @@ do j = 1, jsize
   if (eeta(i,j,kc) < 0.) then
      eeta(i,j,kc) = 0.0_rprec
 !     print*,'eeta error: ',i,imin_j(j),j,kc,eeta(i,j,kc)
-!!$     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
-!!$     print*,eeta(i,:,kc)
-!!$     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
-!!$     print*,eeta(:,j,kc)
-!!$     call CON_STOP('abort')
-!!$     eeta(i,j,kc) = 0.0
+!!     print*,'kc=',kc,' i=',i,' eeta(i,:,kc)='
+!!     print*,eeta(i,:,kc)
+!!     print*,'kc=',kc,' j=',j,' eeta(:,j,kc)='
+!!     print*,eeta(:,j,kc)
+!!     call CON_STOP('abort')
+!!     eeta(i,j,kc) = 0.0
 !     eeta(i,j,kc) = 0.5*(eeta(max(1,i-1),j,kc)+eeta(min(isize,i+1),j,kc))
   end if
 end do
