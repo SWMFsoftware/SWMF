@@ -182,14 +182,16 @@ contains
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
     real, intent(inout):: TimeSimulation   ! current time of component
 
-    Logical, save :: IsInitiallized = .false.
+    logical:: IsInitialized = .false.
+
+    logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='IM_run'
-
     !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if (.not. IsInitiallized) then
+    if (.not. IsInitialized) then
        call crcm_init
-       IsInitiallized = .true.
+       IsInitialized = .true.
     endif
 
     if( .not. DoTimeAccurate)then
