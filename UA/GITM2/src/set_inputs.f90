@@ -779,9 +779,8 @@ subroutine set_inputs
 
         case ("#USEIMPROVEDIONADVECTION")
            call read_in_logical(UseImprovedIonAdvection, iError)
-           if (UseImprovedIonAdvection) then
-              call read_in_logical(UseNighttimeIonBCs, iError)
-           endif
+           call read_in_logical(UseNighttimeIonBCs, iError)
+           call read_in_real(MinTEC, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''

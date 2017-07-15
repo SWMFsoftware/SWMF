@@ -10,7 +10,7 @@ subroutine advance_vertical_1d_rusanov
 
   use ModVertical
   use ModGITM, ONLY : Dt, iCommGITM, iProc
-  use ModInputs, only: UseBarriers, iDebugLevel, UseNighttimeIonBCs
+  use ModInputs, only: UseBarriers, iDebugLevel
   implicit none
   !-----------------------------------------------------------
   integer :: iError, iAlt
@@ -87,8 +87,6 @@ subroutine advance_vertical_1d_rusanov
 
   ! Step 1, Fill in Ghost Cells
   call set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp,LogINS,IVel,VertVel)
-  !!!!!!------change the gradient of LogIns on the top boundary
-  if (UseNighttimeIonBCs)    call nighttime_timeconstant_rusanov(LogINS,OldBCINS) 
 
   ! Store our original time step from GITM (CFL-limited).
 
@@ -167,9 +165,6 @@ subroutine advance_vertical_1d_rusanov
   call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
                         UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
 
-  !!!!!!------change the gradient of LogIns on the top boundary
-  if (UseNighttimeIonBCs)    call nighttime_timeconstant_rusanov(UpdatedLogINS,OldBCINS) 
-
    LogNS  = UpdatedLogNS
    LogINS = UpdatedLogINS
    LogRho = UpdatedLogRho
@@ -239,9 +234,6 @@ subroutine advance_vertical_1d_rusanov
 !! Update Boundary Conditions
   call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
                           UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
-
-  !!!!!!------change the gradient of LogIns on the top boundary
-  if (UseNighttimeIonBCs)   call nighttime_timeconstant_rusanov(UpdatedLogINS,OldBCINS)
 
   LogNS  = UpdatedLogNS
   LogINS = UpdatedLogINS
@@ -313,9 +305,6 @@ subroutine advance_vertical_1d_rusanov
   call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
                           UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
 
-  !!!!!!------change the gradient of LogIns on the top boundary
-  if (UseNighttimeIonBCs)   call nighttime_timeconstant_rusanov(UpdatedLogINS,OldBCINS)
-
   LogNS  = UpdatedLogNS
   LogINS = UpdatedLogINS
   LogRho = UpdatedLogRho
@@ -377,9 +366,6 @@ subroutine advance_vertical_1d_rusanov
 
   call set_vertical_bcs(FinalLogRho, FinalLogNS, FinalVel_GD, &
                           FinalTemp, FinalLogINS, IVel, FinalVS)
-
-  !!!!!!------change the gradient of LogIns on the top boundary
-  if (UseNighttimeIonBCs)   call nighttime_timeconstant_rusanov(UpdatedLogINS,OldBCINS)
 
 !!! Set the Updated State:  Stage 2
 
@@ -695,33 +681,6 @@ subroutine advance_vertical_1stage( &
   enddo
 
 end subroutine advance_vertical_1stage
-
-!=============================================================================
-subroutine nighttime_timeconstant_rusanov(UpdatValue,OldBCs) 
-   
-  use ModVertical
-  use ModConstants, only:pi
-  use ModTime
-  
-  implicit none
-
-  real   :: UpdatValue(-1:nAlts+2,1:nIons)
-  real   :: OldBCs(1:2,1:nIons)
-  
-  if ( SZAVertical > Pi/2 .and. &
-       (( MLatVertical > 30.0 .and. MLatVertical <70.0) .or. &
-       ( MLatVertical > -60.0 .and. MLatVertical < -30.0 ))) then
-
-     ! iVel(nAlts+2,3)=-600.0
-     ! iVel(nAlts+1,3)=-600.0
-
-     UpdatValue(nAlts+1,:) = OldBCs(1,:)
-     UpdatValue(nAlts+2,:) = OldBCs(2,:)
-     
-  endif
-
-
-end subroutine nighttime_timeconstant_rusanov
 
 !\
 ! ------------------------------------------------------------

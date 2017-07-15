@@ -209,7 +209,8 @@ module ModInputs
 
   logical :: UseImprovedIonAdvection = .false.
   logical :: UseNighttimeIonBCs = .false.
-
+  real :: MinTEC = 2.0
+  
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
   logical :: UseAuroralHeating = .true.

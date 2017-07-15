@@ -22,7 +22,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
        Altitude_G, dAlt_F, &
        MeanMajorMass_1d, &
        iLon1D, iLat1D, iBlock1D, &
-       Centrifugal, InvRadialDistance_C, Coriolis
+       Centrifugal, InvRadialDistance_C, Coriolis, &
+       MLatVertical, SZAVertical
   use ModIndicesInterfaces, only: get_HPI
   use ModTides, only: TidesNorth, TidesEast, TidesTemp
 
@@ -46,6 +47,9 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   integer :: ierror
   real    :: temptemp
 
+  real :: n0, n1, n2, n3, n4, n5
+  real :: tec
+  
   integer, dimension(25) :: sw
 
 !! JMB Added 11-03-2014 (New BC Variables)
@@ -57,6 +61,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   real :: MeanGravity, MeanMass, MeanTemp
   logical :: IsHydrostatic(1:nSpecies), IsPhotoChemical(1:nSpecies)
 
+  logical :: UsePlasmasphereBC
+  
  ! Gradient Terms
   real :: dLogNS, dTemp, dVertVel
   real :: dLogINS
@@ -519,14 +525,6 @@ iAlt = -1
   LogRho(nAlts+1) = LogRho(nAlts) + dn
   LogRho(nAlts+2) = LogRho(nAlts+1) + dn
 
-  ! Limit the slope of the ion density
-  do iSpecies=1,nIonsAdvect
-     dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
-     if (dn > -0.25*LogINS(nAlts,iSpecies)) dn = -0.25*LogINS(nAlts,iSpecies)
-     LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
-     LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
-  enddo
-
   ! Hydrostatic pressure for the neutrals
 
   do iSpecies=1,nSpecies
@@ -554,6 +552,20 @@ iAlt = -1
      enddo
   enddo
 
+  UsePlasmasphereBC = .false.
+  if (UseNighttimeIonBCs) then
+     if ( SZAVertical > Pi/2 .and. &
+          (( MLatVertical > 30.0 .and. MLatVertical <70.0) .or. &
+          ( MLatVertical > -60.0 .and. MLatVertical < -30.0 ))) then
+        UsePlasmasphereBC = .true.
+     endif
+  endif
+
+  if (UseImprovedIonAdvection) then
+     tec = sum(dAlt_f(1:nAlts) * LogINS(1:nAlts,1))/1e16
+  else
+     tec = sum(dAlt_f(1:nAlts) * exp(LogINS(1:nAlts,1)))/1e16
+  endif
 
   do iAlt = nAlts + 1, nAlts + 2
 
@@ -568,63 +580,62 @@ iAlt = -1
      MeshHm3 = hm1 + hm2 + hm3
      MeshHm4 = hm1 + hm2 + hm3 + hm4
 
-     !!! 3rd Order Mesh Coef
+     ! 3rd Order Mesh Coef
      MeshCoefm0 =  1.0*( MeshHm2*MeshHm3*MeshHm4 + MeshHm1*MeshHm3*MeshHm4 + &
-                        MeshHm1*MeshHm2*MeshHm4 + MeshHm1*MeshHm2*MeshHm3)/&
-                      (MeshHm1*MeshHm2*MeshHm3*MeshHm4) 
+          MeshHm1*MeshHm2*MeshHm4 + MeshHm1*MeshHm2*MeshHm3)/&
+          (MeshHm1*MeshHm2*MeshHm3*MeshHm4) 
      MeshCoefm1 = -1.0*( MeshHm2*MeshHm3*MeshHm4)/&
-                   (hm1*hm2*(hm2 + hm3)*(hm2 + hm3 + hm4))
+          (hm1*hm2*(hm2 + hm3)*(hm2 + hm3 + hm4))
      MeshCoefm2 =  1.0*( MeshHm1*MeshHm3*MeshHm4)/(MeshHm2*hm2*hm3*(hm3+hm4))
      MeshCoefm3 = -1.0*( MeshHm1*MeshHm2*MeshHm4)/(MeshHm3*(hm3+hm2)*hm3*hm4)
      MeshCoefm4 =  1.0*( MeshHm1*MeshHm2*MeshHm3)/&
-                   (MeshHm4*(hm2+hm3+hm4)*(hm3+hm4)*hm4)
-!!
-!!     do iSpecies=1,nIonsAdvect
-!!        dn = MeshCoefm0*LogINS(iAlt-1,iSpecies) + &  
-!!             MeshCoefm1*LogINS(iAlt-2,iSpecies) + &  
-!!             MeshCoefm2*LogINS(iAlt-3,iSpecies) + &  
-!!             MeshCoefm3*LogINS(iAlt-4,iSpecies) + &  
-!!             MeshCoefm4*LogINS(iAlt-5,iSpecies)      
-!!
-!!        LogINS(iAlt,iSpecies) = LogINS(iAlt-1,iSpecies) + &
-!!             dn*dAlt_F(iAlt)
-!!     enddo
-!
-!
-!     dn = MeshCoefm0*LogRho(iAlt-1) + &  
-!          MeshCoefm1*LogRho(iAlt-2) + &  
-!          MeshCoefm2*LogRho(iAlt-3) + &  
-!          MeshCoefm3*LogRho(iAlt-4) + &  
-!          MeshCoefm4*LogRho(iAlt-5)      
-!
-!     LogRho(iAlt) = LogRho(iAlt-1) + &
-!                     dAlt_F(iAlt)*dn
-!!
+          (MeshHm4*(hm2+hm3+hm4)*(hm3+hm4)*hm4)
+           
      do iSpecies=1,nIonsAdvect
-        dn = MeshCoefm0*LogINS(iAlt-1,iSpecies) + &  
-             MeshCoefm1*LogINS(iAlt-2,iSpecies) + &  
-             MeshCoefm2*LogINS(iAlt-3,iSpecies) + &  
-             MeshCoefm3*LogINS(iAlt-4,iSpecies) + &  
-             MeshCoefm4*LogINS(iAlt-5,iSpecies)      
 
+        if (UseImprovedIonAdvection) then
+           n0 = alog(LogINS(iAlt  ,iSpecies))
+           n1 = alog(LogINS(iAlt-1,iSpecies))
+           n2 = alog(LogINS(iAlt-2,iSpecies))
+           n3 = alog(LogINS(iAlt-3,iSpecies))
+           n4 = alog(LogINS(iAlt-4,iSpecies))
+           n5 = alog(LogINS(iAlt-5,iSpecies))
+        else
+           n0 = LogINS(iAlt  ,iSpecies)
+           n1 = LogINS(iAlt-1,iSpecies)
+           n2 = LogINS(iAlt-2,iSpecies)
+           n3 = LogINS(iAlt-3,iSpecies)
+           n4 = LogINS(iAlt-4,iSpecies)
+           n5 = LogINS(iAlt-5,iSpecies)
+        endif
 
-!      if (dn > -0.25*LogINS(nAlts,iSpecies)/dAlt_F(nAlts)) &
-!           dn = -0.25*LogINS(nAlts,iSpecies)/dAlt_F(nAlts)
-        LogINS(iAlt,iSpecies) = LogINS(iAlt-1,iSpecies) + &
-             dn*dAlt_F(iAlt)
+        dn = MeshCoefm0*n1 + &  
+             MeshCoefm1*n2 + &  
+             MeshCoefm2*n3 + &  
+             MeshCoefm3*n4 + &  
+             MeshCoefm4*n5      
+
+        if (tec < MinTEC .and. UsePlasmasphereBC) then
+           ! do nothing
+        else
+
+           ! Limit the slope of the gradient to be negative, since the ion density
+           ! should be decreasing at the top of the model.
+           
+           if (dn > -0.001*n0/dAlt_F(nAlts)) dn = -0.001*n0/dAlt_F(nAlts)
+           n0 = n1 + dn*dAlt_F(iAlt)
+
+           if (UseImprovedIonAdvection) then
+              LogINS(iAlt,iSpecies) = exp(n0)
+           else
+              LogINS(iAlt,iSpecies) = n0
+           endif
+
+        endif
+              
      enddo
 
-!     do iSpecies=1,nSpecies
-!        dn = MeshCoefm0*LogNS(iAlt-1,iSpecies) + &  
-!            MeshCoefm1*LogNS(iAlt-2,iSpecies) + &  
-!            MeshCoefm2*LogNS(iAlt-3,iSpecies) + &  
-!            MeshCoefm3*LogNS(iAlt-4,iSpecies) + &  
-!            MeshCoefm4*LogNS(iAlt-5,iSpecies)      
-!
-!        LogNS(iAlt,iSpecies) = LogNS(iAlt-1,iSpecies) + &
-!             dn*dAlt_F(iAlt)
-!     enddo 
-  enddo 
+  enddo
 
   do iAlt = nAlts+1, nAlts+2
   SumRho = 0.0     
@@ -634,7 +645,6 @@ iAlt = -1
      enddo 
   LogRho(iAlt) = alog(SumRho)
   enddo 
-!
 
 end subroutine set_vertical_bcs
 
