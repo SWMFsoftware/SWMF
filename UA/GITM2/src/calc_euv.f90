@@ -103,7 +103,7 @@ subroutine euv_ionization_heat(iBlock)
                Intensity*(photoion(iWave,iO2P_))*&
                 pelecratio_O2(iWave,iRxn)
         enddo 
-!
+
         do iRxn = 1, 3
             N2PERateS(:,:,iAlt,iRxn,iBlock) = & 
             N2PERateS(:,:,iAlt,iRxn,iBlock) + & 
@@ -256,6 +256,15 @@ contains
                    EuvHeating(iLon,iLat,iAlt,iBlock) = &
                         EuvHeating(iLon,iLat,iAlt,iBlock) * &
                         Factor(iLon,iLat,iAlt)
+
+                   N2PERateS(iLon,iLat,iAlt,:,iBlock) = &
+                        N2PERateS(iLon,iLat,iAlt,:,iBlock) * Factor(iLon,iLat,iAlt)
+                   O2PERateS(iLon,iLat,iAlt,:,iBlock) = &
+                        O2PERateS(iLon,iLat,iAlt,:,iBlock) * Factor(iLon,iLat,iAlt)
+                   OPERateS(iLon,iLat,iAlt,:,iBlock) = &
+                        OPERateS(iLon,iLat,iAlt,:,iBlock) * Factor(iLon,iLat,iAlt)
+                   CH4PERateS(iLon,iLat,iAlt,:,iBlock) = &
+                        CH4PERateS(iLon,iLat,iAlt,:,iBlock) * Factor(iLon,iLat,iAlt)
 
                 endif
                 
