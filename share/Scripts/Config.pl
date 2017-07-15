@@ -490,14 +490,14 @@ MPIRUN   = \${PARALLEL} \${NPFLAG} \${NP}
 	    die "$ERROR_ could not find $Makefile\n";
 	}
 
-	# Remove -lmpicxx from CPPLIB definition in Makefile.conf if not needed
-	my $remove_mpicxx = (`mpicxx -show` !~ /\-lmpi(_cxx|\+\+)/);
-	if($remove_mpicxx){
-	    @ARGV = ($MakefileConf);
-	    while(<>){
-		s/ -lmpi(_cxx|\+\+)// if /^CPPLIB/;
-		print;
+	# Remove -lmpicxx or -lmpi++ from CPPLIB definition in Makefile.conf if not needed
+	@ARGV = ($MakefileConf);
+	while(<>){
+	    if(/^CPPLIB/){
+		s/ -lmpi_cxx// if (`mpicxx -show` !~ /\-lmpi_cxx/);
+		s/ -lmpi\+\+// if (`mpicxx -show` !~ /\-lmpi\+\+/);;
 	    }
+	    print;
 	}
     }
 
