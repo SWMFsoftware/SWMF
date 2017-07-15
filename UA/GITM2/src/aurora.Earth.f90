@@ -143,11 +143,6 @@ subroutine aurora(iBlock)
         eflx_ergs = ElectronEnergyFlux(j,i) !/ (1.0e-7 * 100.0 * 100.0)
         av_kev    = ElectronAverageEnergy(j,i)
 
-        !p = 40.0 * eflx_ergs**0.5 * av_kev / (16.0 + av_kev**2)
-        !h = 0.45 * av_kev**0.85 * p
-        !write(*,*) "eflux, avee: ", eflx_ergs, av_kev
-        !write(*,*) "hall, ped : ", h, p
-             
         ! For diffuse auroral models
 
         ED_Flux = 0.0
@@ -157,9 +152,6 @@ subroutine aurora(iBlock)
 
            UserData2d(j,i,1,2,iBlock) = av_kev
            UserData2d(j,i,1,3,iBlock) = eflx_ergs
-
-!           if (avee > 10.0) write(*,*) "avee, eflux : ",av_kev,eflx_ergs, &
-!                j,i,MLatitude(j, i, nAlts+1, iBlock), MLT(j, i, nAlts+1)
 
            HasSomeAurora = .true.
            avee = av_kev * 1000.0        ! keV -> eV
