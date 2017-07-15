@@ -51,7 +51,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
 # Some codes only compile with the "-save" and single precision.
 # To compile with double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -fno-automatic
+CFLAGS = ${SEARCH} -c -w ${DEBUG} -fno-automatic
 
 # Link with or without the MPI library
 Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${DEBUG}
