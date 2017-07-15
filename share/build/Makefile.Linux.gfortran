@@ -23,6 +23,8 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = 
 #MPILIB = -L${LIBDIR} -lNOMPI
 
+OPENMPFLAG = -fopenmp
+
 # Define where modules are stored and add it to the search path
 # INCL_EXTRA can be defined to add more search directories.
 SEARCH = -J${INCLDIR} ${INCL_EXTRA}
@@ -36,7 +38,7 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -w ${DEBUG}
+CFLAG = ${SEARCH} -c -w ${OPENMPFLAG} ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
@@ -46,11 +48,11 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 
 # Some codes only compile with the "-save" and single precision.
 # To compile with double precision, add PRECISION flag
-CFLAGS = ${CFLAG} -fno-automatic
+CFLAGS = ${SEARCH} -c -w ${DEBUG} -fno-automatic
 
 # Link with or without the MPI library
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
-Lflag2  = ${PRECISION} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${DEBUG}
+Lflag2  = ${PRECISION} ${OPENMPFLAG} ${DEBUG}
 
 # BLAS and LAPACK libraries
 LBLAS =
