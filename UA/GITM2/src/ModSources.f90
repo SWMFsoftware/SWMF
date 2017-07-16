@@ -13,7 +13,9 @@ module ModSources
   real, dimension(nLons, nLats, nAlts) :: &
        NOCooling, OCooling, ElectronHeating, &
        AuroralHeating, JouleHeating, IonPrecipHeating, &
-       EddyCond,EddyCondAdia,MoleConduction
+       EddyCond,EddyCondAdia
+
+  real, dimension(nLons, nLats, 0:nAlts+1) :: MoleConduction
 
 ! JMB: 07/13/2017.  Conduction must extend 0:nAlts+1
 ! for the 2nd order update and 2nd order boundary conditions
