@@ -48,17 +48,17 @@ cd ..
 #Create separate folders for different compilers
 mkdir -p GNU;   cp -r AMPS GNU/;
 mkdir -p Intel; cp -r AMPS Intel/;
+mkdir -p PGI;   cp -r AMPS PGI/;
 
 #Install AMPS
-cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
+cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                         
 ./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    
 
-cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
-./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >>& test_amps.log
+cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                       
+./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log
 
-#>PGIAll ###################################################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
-#./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
+cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                         
+./Config.pl -install -compiler=pgf90,pgccmpicxx  -link-option=-lc++    >& test_amps.log    
 
 #Execute the tests
 $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllGNU.sh & 
