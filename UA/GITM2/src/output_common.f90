@@ -879,7 +879,7 @@ contains
   subroutine write_head_version
 
     write(iOutputUnit_,*) "VERSION"
-    write(iOutputUnit_,*) 3.1+PlanetNum
+    write(iOutputUnit_,*) GitmVersion+PlanetNum
     write(iOutputUnit_,*) ""
 
   end subroutine write_head_version
