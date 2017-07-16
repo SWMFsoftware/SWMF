@@ -15,9 +15,8 @@ subroutine add_sources
   integer :: iDir
   logical :: IsFirstTime=.true.
 
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: eHeatingp, iHeatingp, eHeatingm, iHeatingm, iHeating, &
-       lame, lami
-
+  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
+       eHeatingp, iHeatingp, eHeatingm, iHeatingm, iHeating, lame, lami
 
   call report("add_sources",2)
 
@@ -39,7 +38,9 @@ subroutine add_sources
      ! does not change.
 
      call calc_GITM_sources(iBlock)
-     call calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating,lame,lami)
+     call calc_electron_ion_sources(iBlock, &
+          eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating,lame,lami)
+
      !! To turn off EuvHeating, turn UseSolarHeating=.false. in UAM.in
      !! To turn off JouleHeating, turn UseJouleHeating=.false. in UAM.in
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
@@ -52,21 +53,19 @@ subroutine add_sources
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           /TempUnit(1:nLons,1:nLats,1:nAlts)&
-         - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-           + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-           + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
-           + AuroralHeating &
-           + JouleHeating &
-           + ElectronHeating &
-           ) &
-           + ChemicalHeatingRate &
-           + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
+          - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + AuroralHeating &
+          + JouleHeating &
+          + ElectronHeating &
+          ) &
+          + ChemicalHeatingRate &
+          + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
 
      Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) = &
           Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) + &
-           + Conduction(1:nLons,1:nLats,0:nAlts+1)
-
-
+          + Conduction(1:nLons,1:nLats,0:nAlts+1)
 
      !-------------------------------------------
      ! This is an example of a user output:
