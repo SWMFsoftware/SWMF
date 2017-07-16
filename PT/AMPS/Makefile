@@ -90,9 +90,9 @@ endif
 
 #when OpenMP is used add the appropriate compiler flag and library
 ifeq ($(OPENMP),on)
-	SEARCH_C+=-openmp
-	SEARCH_C_GENERAL+=-openmp
-	AMPSLINKLIB+=-openmp
+	SEARCH_C+=-fopenmp
+	SEARCH_C_GENERAL+=-fopenmp
+	AMPSLINKLIB+=-fopenmp
 endif
 
 
