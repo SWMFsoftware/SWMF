@@ -391,7 +391,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
 >>>@echo "Install AMPS......"  
->>>./Config.pl -install -application=test/BATL-reader -spice-path=nospice -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
+>>>./Config.pl -application=test/BATL-reader -spice-path=nospice -batl-path=${PTDIR}/BATL -swmf-path=${PTDIR}/SWMF -cplr-data-path=${PTDIR}/data/input/DataFileReader/BATL  
 >>>make
 >>>@echo "test_batl-reader_compile... done" >> test_batl-reader.diff
 <#
@@ -410,7 +410,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
+>>>./Config.pl -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS} 
 >>>./Config.pl -amps-test=on
 >>>./Config.pl -link-option=-lc++ 
@@ -443,7 +443,7 @@ Compile=
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=8,8,8 -r=2,2,2 -ng=0; make READAMRLIB
 >>>@echo "Install AMPS......"
->>>./Config.pl -install -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
+>>>./Config.pl -application=test/Earth-test  -compiler=${FORTRAN_COMPILER_NAME} -spice-path=nospice -batl-path=${PTDIR}/BATL -amps-test=on -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -cplr-data-path=${TESTEarthKEYS}
 >>>./Config.pl -amps-test=on
 >>>make
