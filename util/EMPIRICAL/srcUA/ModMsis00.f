@@ -1995,7 +1995,7 @@ C        FOR ON, OR 2. FOR MAIN EFFECTS OFF BUT CROSS TERMS ON
 C
 C        To get current values of SW: CALL TRETRV(SW)
 C
-      DIMENSION SV(1),SAV(25),SVV(1)
+      DIMENSION SV(25),SAV(25),SVV(25)
       COMMON/EUA_CSW/SW(25),ISW,SWC(25)
       SAVE
       DO 100 I = 1,25
