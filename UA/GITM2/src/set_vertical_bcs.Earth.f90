@@ -46,7 +46,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   real    :: HP, v(2)
   integer :: ierror
   real    :: temptemp
-
+  real    :: logNS_Species(nSpecies)
   real :: n0, n1, n2, n3, n4, n5
   real :: tec
   
@@ -122,9 +122,11 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
         Lst = mod(UTime/3600.0+Lon/15.0,24.0)
 
         call msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
-             F107A,F107,AP,LogNS(iAlt,:), temptemp, &
+             F107A,F107,AP,LogNS_Species, temptemp, &
              LogRho(iAlt),v)
 
+        LogNS(iAlt,:) = logNS_Species
+        
         if (.not. DuringPerturb) temp(iAlt) = temptemp
 
         vel_gd(iAlt,iEast_) = v(iEast_)
