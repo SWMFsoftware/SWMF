@@ -20,7 +20,7 @@ subroutine chapman_integrals(iBlock)
   real, dimension(nSpecies) :: MaxCh
 
   real :: a,b,c,d,f,g, y
-  real :: LocalLogNS, GradLogNS, Ng, Np
+  real :: LocalLogNS, GradLogNS
   real :: LocalLogIntS, GradLogIntS, Intg, Intp
   real :: GradHs, Hg, GradXp, Xg
   real :: HpUp, HpDown
