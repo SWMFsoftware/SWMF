@@ -4,25 +4,24 @@
 subroutine calc_conduction(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_cond)
 
   use ModSizeGitm
-  use ModGITM, only: dAlt_GB, Latitude, Longitude, Altitude_GB, &
-       RadialDistance_GB
+  use ModGITM, only: dAlt_GB, Latitude, Longitude, Altitude_GB, RadialDistance_GB
   use ModConstants
 
   implicit none
 
   integer, intent(in) :: iBlock
-  real, intent(in) :: DtIn
+  real, intent(in)    :: DtIn
   logical, intent(in) :: NeuBCS
-  real, intent(in) :: Quantity(nLons, nLats, -1:nAlts+2)
-  real, intent(in) :: Diff(nLons, nLats, 0:nAlts+1)
-  real, intent(in) :: MulFac(nLons, nLats,0:nAlts+1)
-  real, intent(out) :: dTdt_cond(nLons, nLats, 0:nAlts+1)
+  real, intent(in)    :: Quantity( nLons, nLats, -1:nAlts+2)
+  real, intent(in)    :: Diff(     nLons, nLats,  0:nAlts+1)
+  real, intent(in)    :: MulFac(   nLons, nLats,  0:nAlts+1)
+  real, intent(out)   :: dTdt_cond(nLons, nLats,  0:nAlts+1)
 
-  real, dimension(0:nAlts+1) :: m, du, r, du12, du22, &
-       dl, lou, dlou, di, r2
+  real, dimension(0:nAlts+1) :: &
+       m, du, r, du12, du22, dl, lou, dlou, di, r2
 
-  real :: tempold(0:nAlts+1), temp(0:nAlts+1)
-  real, dimension(0:nAlts+1) :: a,b,c,d, cp, dp
+  real, dimension(0:nAlts+1) :: tempold, temp
+  real, dimension(0:nAlts+1) :: a, b, c, d, cp, dp
   integer :: iLon, iLat, iAlt
   integer :: i
 
@@ -37,7 +36,7 @@ subroutine calc_conduction(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_co
         r2 = RadialDistance_GB(iLon,iLat, 0:nAlts+1,iBlock)**2
         di = diff(iLon,iLat,:)*r2
 
-        m = DtIn/(MulFac(iLon, iLat, 0:nAlts+1)*r2)
+        m = DtIn/(MulFac(iLon,iLat, 0:nAlts+1)*r2)
         du = Altitude_GB(iLon,iLat, 1:nAlts+2,iBlock) - &
              Altitude_GB(iLon,iLat, 0:nAlts+1,iBlock)
         dl = Altitude_GB(iLon,iLat, 0:nAlts+1,iBlock) - &
@@ -81,25 +80,23 @@ subroutine calc_conduction(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_co
 !        c(i) = 0.0
 !        d(i) = -tempold(i)/m(i)
 
-       if(NeuBCS) then
-        i = nAlts+1 
-        !a(nAlts+1) = 1.0
-        !b(nAlts+1) = -1.0
-        !c(nAlts+1) = 0.0
-        !d(nAlts+1) = 0.0
-        a(i) =  1.0*( r(i)*(1.0+r(i))*di(i)*m(i)/du22(i))
-        b(i) = -1.0*( 1.0 + r(i)*(1+r(i))*di(i)*m(i)/du22(i))
-        c(i) = 0.0
-        d(i) = -tempold(i)
-       else
-        a(nAlts+1) = 0.0
-        b(nAlts+1) = -1.0
-        c(nAlts+1) = 0.0
-        d(nAlts+1) = -tempold(nAlts+1)
-       endif
+        if(NeuBCS) then
+           i = nAlts+1 
+           !a(nAlts+1) = 1.0
+           !b(nAlts+1) = -1.0
+           !c(nAlts+1) = 0.0
+           !d(nAlts+1) = 0.0
+           a(i) =  1.0*( r(i)*(1.0+r(i))*di(i)*m(i)/du22(i))
+           b(i) = -1.0*( 1.0 + r(i)*(1+r(i))*di(i)*m(i)/du22(i))
+           c(i) = 0.0
+           d(i) = -tempold(i)
+        else
+           a(nAlts+1) = 0.0
+           b(nAlts+1) = -1.0
+           c(nAlts+1) = 0.0
+           d(nAlts+1) = -tempold(nAlts+1)
+        endif
 
-
-!
         cp(0) = c(0)/b(0)
         do iAlt = 1, nAlts+1
            cp(iAlt) = c(iAlt)/(b(iAlt)-cp(iAlt-1)*a(iAlt))
@@ -113,8 +110,8 @@ subroutine calc_conduction(iBlock, DtIn, NeuBCS, Quantity, Diff, MulFac, dTdt_co
            temp(iAlt) = dp(iAlt)-cp(iAlt)*temp(iAlt+1)
         enddo
 
-        dTdt_cond(iLon,iLat,0:nAlts+1) = temp(0:nAlts+1) - &
-             Quantity(iLon,iLat,0:nAlts+1)
+        dTdt_cond(iLon,iLat,0:nAlts+1) = &
+             temp(0:nAlts+1) - Quantity(iLon,iLat,0:nAlts+1)
 
      enddo
   enddo
