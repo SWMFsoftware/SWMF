@@ -181,20 +181,86 @@ subroutine move_satellites
 
   use ModRCMR, only: RCMRFlag
   use ModSatellites
-  use ModGITM, only: nBlocks, dt
+  use ModGITM, only: nBlocks, dt, iProc
   use ModTime, only: CurrentTime, tSimulation
   use ModConstants, only: pi !alex
   implicit none
 
   integer :: iSat, iPos, iLine = 1, i, iBlock, iOut
   real    :: r
+  character (len=8)         :: cName
   character (len=3)         :: cPos
+  character (len=iCharLen_) :: cTmp
   integer :: l1, l2
 
   iOut = -1
   if (RCMRFlag) iOut = -2
 
   do iSat = 1, nSats
+if (SatDtPlot(iSat) < 0) then
+!Then we only write the sat file if it is the time listed in the input file
+iLine = iSatCurrentIndex(iSat)
+
+if (iSatCurrentIndex(iSat) == 0) then
+
+if ( CurrentTime >= SatTime(iSat,1) .and. &
+CurrentTime <= SatTime(iSat,nSatLines(iSat))) then
+iLine = 1
+
+if (CurrentTime == SatTime(iSat,nSatLines(iSat))) then
+iLine = nSatLines(iSat)
+else
+do while (SatTime(iSat,iLine) < CurrentTime)
+iLine = iLine + 1
+enddo
+iLine = iLine - 1
+
+endif
+iSatCurrentIndex(iSat) = iLine
+iLine = 0
+endif
+else
+if (CurrentTime > SatTime(iSat,iSatCurrentIndex(iSat)+1) .and. &
+(CurrentTime-dt) < SatTime(iSat,iSatCurrentIndex(iSat)+1)) then
+
+iSatCurrentIndex(iSat) = iSatCurrentIndex(iSat) + 1
+
+endif
+
+endif
+
+if (iSatCurrentIndex(iSat) /= iLine) then
+!only plot if the index has changed!
+
+iLine = iSatCurrentIndex(iSat)
+
+do iPos = 1, nSatPos(iSat,iLine)
+do i=1,3
+if (i == 1 .and. &
+SatPos(iSat, i, iPos, iLine) > 300 .and. &
+SatPos(iSat, i, iPos, iLine+1) < 60) then
+SatCurrentPos(iSat, i, iPos) = &
+SatPos(iSat, i, iPos, iLine)
+else
+SatCurrentPos(iSat, i, iPos) = &
+SatPos(iSat, i, iPos, iLine)
+
+endif
+enddo
+
+do iBlock = 1, nBlocks
+
+write(cPos,'(i3.3)') iPos
+cTmp  = cSatFileName(iSat)
+cName = cTmp(1:4)//"_"//cPos
+CurrentSatellitePosition = SatCurrentPos(iSat,:,iPos)
+CurrentSatelliteName     = cName
+call output("UA/data/",iBlock, -1)
+enddo
+enddo
+endif
+
+else
 
      !Asad added this so that each satellite would be updated in output()
      CurrSat = iSat
@@ -286,7 +352,7 @@ subroutine move_satellites
            enddo
 
         endif
-
+    endif
      endif
 
   enddo
