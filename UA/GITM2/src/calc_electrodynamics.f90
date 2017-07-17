@@ -373,6 +373,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      enddo
 
      call report("Starting Conductances",2)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
      do k=-1,nAlts+2
         do j=-1,nLats+2
            do i=-1,nLons+2
@@ -392,7 +394,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                    Sigma_Pedersen(i,j,k) * &
                    sum(b0_d1(i,j,k,:,iBlock) * &
                        b0_d2(i,j,k,:,iBlock))/&
-                   b0_cD(i,j,k,iBlock)
+                       b0_cD(i,j,k,iBlock)
 
               ! Don't know why Richmond names these Ue1 and Ue2, when the
               ! paper describes them as being Uei = di . U
@@ -451,6 +453,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
 
+     call report("Ending Conductances",2)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
      UxB(:,:,:,iEast_)  =  &
           Velocity(:,:,:,iNorth_,iBlock)*B0(:,:,:,iUp_,iBlock)    - &
           Velocity(:,:,:,iUp_,iBlock)   *B0(:,:,:,iNorth_,iBlock)
@@ -481,6 +486,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      ! We want to take the divergence of Ju perpendicular to the
      ! magnetic field line.  
 
+     call report("JuDotB",2)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
      do iAlt = -1, nAlts+2
         do iLat = -1, nLats+2
            do iLon = -1, nLons+2
@@ -493,7 +501,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
 
-   DivJu = 0.0
+     DivJu = 0.0
+
      do iDir = 1, 3
 
         call UAM_Gradient_GC(Ju(:,:,:,iDir), Gradient_GC, iBlock)
@@ -509,6 +518,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      do k=1,nAlts
         DivJuAlt(:,:) = DivJuAlt(:,:) + DivJu(:,:,k)*dAlt_GB(:,:,k,iBlock)
      enddo
+
+     call report("Field-line integrals",2)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
      PedersenFieldLine = 0.0
      HallFieldLine     = 0.0
@@ -550,8 +562,11 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            xAlt = 1.0
            iAlt = 1
 
+           if (iDebugLevel > 9) write(*,*) "=========> Integrals iLon, iLat: ",iLon,iLat
+           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
            CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0, &
-                   XMAG,YMAG,ZMAG)
+                XMAG,YMAG,ZMAG)
            signz = sign(1.0,zmag)
 
            do while (.not. IsDone)
@@ -664,8 +679,15 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
            enddo
 
+           if (iDebugLevel > 9) write(*,*) "=========> EndWhile "
+           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
+
         enddo
      enddo
+
+     call report("Calc MLT",2)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
      call calc_mltlocal
 
@@ -692,20 +714,32 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
            gLatMC = GeoLatMC(i,j)
            gLonMC = GeoLonMC(i,j)
 
+           if (iDebugLevel > 9) write(*,*) "=========> Moving to mag grid: ",i,j,mLatMC,mltMC
+           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
            call find_mag_point(jul, shl, spl, length, spp, sll, shh, scc, &
                 kdpm_s, kdlm_s, be3, kpm_s, klm_s)
 
+!           write(*,*) "-> ", iProc, jul, shl, spl, length, spp, sll, shh, scc, &
+!                kdpm_s, kdlm_s, be3, kpm_s, klm_s
+!           flush(6)
+!           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
            if (length > 0) then
+
               DivJuAltMC(i,j)      = jul
               SigmaHallMC(i,j)     = shl
               SigmaPedersenMC(i,j) = spl
               LengthMC(i,j)        = length
 
-              sinim = abs(2.0 * sin(MagLatMC(i,j)*pi/180) / &
-                   sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))
+              sinim = abs(2.0 * sin(mLatMC*pi/180) / &
+                   sqrt(4.0 - 3.0 * cos(mLatMC*pi/180)))
 
+!              write(*,*) "more -> ", iProc, sinim
+!              flush(6)
+              
               SigmaPPMC(i,j) = spp * sinim
-              SigmaLLMC(i,j) = sll / sinim
+              SigmaLLMC(i,j) = sll / (sinim+1e-6)
 
               SigmaHHMC(i,j) = shh
               SigmaCCMC(i,j) = scc
@@ -717,10 +751,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                  SigmaLPMC(i,j) = + (shh + scc)
               endif
 
-              KDlmMC(i,j) = -sign(1.0,MagLatMC(i,j)) * kdlm_s * be3
+              KDlmMC(i,j) = -sign(1.0,mLatMC) * kdlm_s * be3
               KDpmMC(i,j) = kdpm_s * be3 * abs(sinim)
 
-              KlmMC(i,j) = -sign(1.0,MagLatMC(i,j)) * klm_s
+              KlmMC(i,j) = -sign(1.0,mLatMC) * klm_s
               KpmMC(i,j) = kpm_s * abs(sinim)
 
            endif
@@ -728,9 +762,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
         enddo
      enddo
 
+     call report("Done with find_mag_points",5)
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
   enddo
 
   if (iDebugLevel > 2) write(*,*) "===> Beginning Sum of Electrodynamics"
+  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
   DivJuAltMC(nMagLons+1,:) = DivJuAltMC(1,:)
   SigmaHallMC(nMagLons+1,:) = SigmaHallMC(1,:)
@@ -1374,7 +1412,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   DynamoPotentialMC(nMagLons+1,:) = DynamoPotentialMC(1,:)
 
-
   if(allocated(b)) deallocate(x, y, b, rhs, d_I, e_I, f_I, e1_I, f1_I)
 ! Electric fields
 
@@ -1391,22 +1428,28 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   do i=1,nMagLons+1
      do j=2,nMagLats-1
         sinim = abs(2.0 * sin(MagLatMC(i,j)*pi/180) / &
-             sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))
+             sqrt(4.0 - 3.0 * cos(MagLatMC(i,j)*pi/180)))+1e-6
         Ed2new(i,j) = (1/(RBody*sinIm))*   &
              0.5 * (DynamoPotentialMC(i,j+1)-DynamoPotentialMC(i,j-1))/deltalmc(i,j)
      enddo
      sinim = abs(2.0 * sin(MagLatMC(i,1)*pi/180) / &
-          sqrt(4.0 - 3.0 * cos(MagLatMC(i,1)*pi/180)))
+          sqrt(4.0 - 3.0 * cos(MagLatMC(i,1)*pi/180)))+1e-6
      Ed2new(i,1) = (1/(RBody*sinIm))*   &
           (DynamoPotentialMC(i,2)-DynamoPotentialMC(i,1))/deltalmc(i,1)
 
      sinim = abs(2.0 * sin(MagLatMC(i,nMagLats)*pi/180) / &
-          sqrt(4.0 - 3.0 * cos(MagLatMC(i,nMagLats)*pi/180)))
+          sqrt(4.0 - 3.0 * cos(MagLatMC(i,nMagLats)*pi/180)))+1e-6
      Ed2new(i,nMagLats) = (1/(RBody*sinIm))*   &
           (DynamoPotentialMC(i,nMagLats)-DynamoPotentialMC(i,nMagLats-1))/deltalmc(i,nMagLats)
 
   enddo
 ! End Electric field
+
+!  write(*,*) "=========> Done! ", iProc, i, j
+!  flush(6)
+!  if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+!  call MPI_FINALIZE(iError)
+!  stop
 
   call end_timing("calc_electrodyn")
 
@@ -1466,6 +1509,16 @@ contains
     shline = 0.0
     spline = 0.0
     length = 0.0
+
+    sppline = 0.0
+    sllline = 0.0
+    shhline = 0.0
+    sccline = 0.0
+    kdpline = 0.0
+    kdlline = 0.0
+    be3 = 0.0
+    kpline = 0.0
+    klline = 0.0
 
     if (gLatMC > Latitude(nLats+1,iBlock)) return
     if (gLatMC < Latitude(0,iBlock)) return
