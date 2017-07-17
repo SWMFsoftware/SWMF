@@ -69,7 +69,7 @@ subroutine calc_efield(iBlock)
 !           if (EField(j,i,k,iUp_) >  MaxEField) EField(j,i,k,iUp_) =  MaxEField
 !           if (EField(j,i,k,iUp_) < -MaxEField) EField(j,i,k,iUp_) = -MaxEField
 
-           bdir = B0(j,i,k,:,iBlock) / B0(j,i,k,iMag_,iBlock)
+           bdir = B0(j,i,k,1:3,iBlock) / B0(j,i,k,iMag_,iBlock)
 
            edotb = &
                 efield(j,i,k,iEast_) * bdir(iEast_) + &
