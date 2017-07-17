@@ -1,3 +1,10 @@
+/*
+ * main.cpp
+ *
+ *  Created on: July 1, 2017
+ *      Author: fougere 
+ */
+
 //$Id$
 
 #include "pic.h"
@@ -181,9 +188,11 @@ int readDATAlength(long int& Data_length, long int File_Header, FILE *fH){
 
 int main(int argc,char **argv) {
 
+  char fnameTimeTable[_MAX_STRING_LENGTH_PIC_]="none";
+  sprintf(fnameTimeTable,"%s/time_table.txt",PIC::UserModelInputDataPath);
 
   FILE *fTime;
-  fTime = fopen("time_table.txt","r");
+  fTime = fopen(fnameTimeTable,"r");
  
   string TimeTable[40000];
 
@@ -191,9 +200,8 @@ int main(int argc,char **argv) {
   long int timeFileHeader=0;
 
   readDATAlength(timeFileLength, timeFileHeader, fTime);
-  if (PIC::Mesh::mesh.ThisThread==0) printf("timeFileLength=%li  \n",timeFileLength);
 
-  ifstream file("time_table.txt");
+  ifstream file(fnameTimeTable);
   int ct=0;
   int ichar=0;
   if(file.is_open()) {
@@ -201,8 +209,6 @@ int main(int argc,char **argv) {
       file >> TimeTable[i];
     }
   }
-
-  if (PIC::Mesh::mesh.ThisThread==0) cout << "TimeTable[0]" << TimeTable[0] << ", " << "TimeTable[1]" << TimeTable[1] << "\n";
 
   fclose(fTime);
 
@@ -215,7 +221,7 @@ int main(int argc,char **argv) {
   double xmax[3]={1.0,1.0,2.0};
 
   //load the NASTRAN mesh
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat_km("cg-spc-shap5-v1.1-cheops_mod.bdf",PIC::UserModelInputDataPath);
 
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -247,12 +253,10 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.init(xmin,xmax,BulletLocalResolution);
   PIC::Mesh::mesh.memoryAllocationReport();
 
-  //generate mesh or read from file                                                                                                                  
+  //generate mesh or read from file                                                                                                                
   char mesh[_MAX_STRING_LENGTH_PIC_]="amr.sig=0x73712d6492b3417e.mesh.bin";  ///"amr.sig=0xd7058cc2a680a3a2.mesh.bin";                                                              
 
-  //generate mesh or read from file                                                                                                                  
-  if (PIC::Mesh::mesh.ThisThread==0) printf("Generate Mesh \n");
-  bool NewMeshGeneratedFlag=false;
+  //generate mesh or read from file                                                                                                                    bool NewMeshGeneratedFlag=false;
 
   char fullname[STRING_LENGTH];
   sprintf(fullname,"%s",mesh);
@@ -384,11 +388,18 @@ int main(int argc,char **argv) {
   double xSun[3]={0,0,0};
   double xLightSource[3];
   double sunDistance=0.0, scDistance=0.0, rAU=0.0;
-  
 
-  furnsh_c("operational_1.tm");
-  furnsh_c("operational_2.tm");
-  furnsh_c("operational_3.tm"); 
+  char fkernel1[_MAX_STRING_LENGTH_PIC_]="none";
+  char fkernel2[_MAX_STRING_LENGTH_PIC_]="none";
+  char fkernel3[_MAX_STRING_LENGTH_PIC_]="none";
+
+  sprintf(fkernel1,"%s/operational_1.tm",PIC::UserModelInputDataPath);
+  sprintf(fkernel2,"%s/operational_2.tm",PIC::UserModelInputDataPath);
+  sprintf(fkernel3,"%s/operational_3.tm",PIC::UserModelInputDataPath);
+
+  furnsh_c(fkernel1);
+  furnsh_c(fkernel2);
+  furnsh_c(fkernel3); 
 
   for (i=0;i<timeFileLength;i++) {
     
@@ -461,8 +472,8 @@ int main(int argc,char **argv) {
       for (idim=0;idim<3;idim++) scX[idim]+=rPointing[idim][i]*dl;
       rNucleus=sqrt(scX[0]*scX[0]+scX[1]*scX[1]+scX[2]*scX[2]);
       PIC::RayTracing::SetCutCellSCAttribute(scX,false);    
-      
-      //Check if the point is inside the nucleus (line of sight intersecting the nucleus)
+
+      //Check if the point is inside the nucleus (line of sight goes through the nucleus)
       for (iTriangle=0;iTriangle<CutCell::nBoundaryTriangleFaces;iTriangle++){
 	if(CutCell::BoundaryTriangleFaces[iTriangle].IntervalIntersection(scX,origin,0.0)==true){
 	  intersection=true;  
