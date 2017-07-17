@@ -1,3 +1,9 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% author: Nicolas Fougere
+% created on: July 1, 2017
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 clc;clear all; close all; 
 
 %%%%%%%%%%%%%%%%%%%%%%Definitions%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -21,8 +27,9 @@ nPixelsY=256;
 rowStart=62; %62 %87; %58;
 nDev=25;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-load('Cmatrix.dat')
+path = '/nobackupp8/nfougere/AMPS_DATA/CG/';
+fname = strcat(path,'Cmatrix.dat');
+load(fname);
 
 medfilt2(Cmatrix);
 
@@ -32,10 +39,10 @@ for i=1:nPixelsX
     end
 end
 
-%fileID = fopen('I1_0037442903_H2O_CO2.dat'); %2015-04-12T07:14:00 - 133 58
-%fileID = fopen('I1_00387481450.CAL_H2O_CO2_f3.dat'); %2015-04-12T17:57:00 - 104 87
-%fileID = fopen('I1_00387554894.CAL_H2O_CO2_f3.dat'); %2015-04-13T14:21:00 - 133 58
-fileID = fopen('I1_00387379010.CAL_H2O_CO2_f3.dat'); %2015-04-11T13:40:00 - 129 62
+%fileID = fopen(strcat(path,'I1_0037442903_H2O_CO2.dat')); %2015-04-12T07:14:00 - 133 58
+%fileID = fopen(strcat(path,'I1_00387481450.CAL_H2O_CO2_f3.dat')); %2015-04-12T17:57:00 - 104 87
+%fileID = fopen(strcat(path,'I1_00387554894.CAL_H2O_CO2_f3.dat')); %2015-04-13T14:21:00 - 133 58
+fileID = fopen(strcat(path,'I1_00387379010.CAL_H2O_CO2_f3.dat')); %2015-04-11T13:40:00 - 129 62
 A=fread(fileID,nVar*nRows*nColumns,'float');
 
 array=zeros(nVar,nRows,nColumns);
