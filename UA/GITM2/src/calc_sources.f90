@@ -17,6 +17,7 @@ subroutine calc_GITM_sources(iBlock)
   real :: tmp2(nLons, nLats, 0:nAlts+1)
   real :: tmp3(nLons, nLats, 0:nAlts+1)
   real :: RhoI(nLons, nLats, nAlts)
+  real :: Rho110(nLons, nLats, 0:nAlts+1)
   real :: ScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2)
   real :: Prandtl(nLons,nLats,0:nalts+1)
 
@@ -32,11 +33,13 @@ subroutine calc_GITM_sources(iBlock)
   real :: TemperatureF(1:nLons,1:nLats,-1:nAlts+2)
 
   ! Vertical Viscosity Variables
+  real :: VerticalVelocityStage0(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies)
   real :: VerticalVelocityStage1(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies)
   real :: VerticalVelocityH(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies)
   real :: VerticalVelocityF(1:nLons,1:nLats,-1:nAlts+2,1:nSpecies)
 
   ! Bulk Viscosity Variables
+  real :: VelocityStage0(1:nLons,1:nLats,-1:nAlts+2)
   real :: VelocityStage1(1:nLons,1:nLats,-1:nAlts+2,1:3)
   real :: VelocityH(1:nLons,1:nLats,-1:nAlts+2,1:3)
   real :: VelocityF(1:nLons,1:nLats,-1:nAlts+2,1:3)
@@ -139,6 +142,8 @@ subroutine calc_GITM_sources(iBlock)
 
   if (iDebugLevel > 4) write(*,*) "=====> conduction", iproc
   if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
+  Rho110 = Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock)
   
   if(UseConduction)then
 
@@ -146,14 +151,14 @@ subroutine calc_GITM_sources(iBlock)
      ! the gradient to be zero at the top.
 
      NeuBCS = .true.  ! Use Neumann Boundary Conditions
-     tmp2 = Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-          cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+
+     tmp2 = Rho110 * cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
 
      if (UseTurbulentCond) then
         Prandtl = &
              KappaEddyDiffusion(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-             Rho(1:nLons, 1:nLats,0:nAlts+1, iBlock) * &
-             Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
+                            Rho110 * &
+                             Cp(1:nLons, 1:nLats,0:nAlts+1, iBlock)
      else 
         Prandtl = 0.0
      endif
@@ -161,51 +166,51 @@ subroutine calc_GITM_sources(iBlock)
      DtCSLocal = Dt/2.0
      call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
-          TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
-          KappaTemp(1:nLons, 1:nLats,0:nAlts+1, iBlock) + &
-          Prandtl(1:nLons, 1:nLats,0:nAlts+1 ), &
-          tmp2, &
-          MoleConduction(1:nLons,1:nLats,0:nAlts+1))
+             TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+            KappaTemp(1:nLons, 1:nLats, 0:nAlts+1, iBlock) + &
+              Prandtl(1:nLons, 1:nLats, 0:nAlts+1), &
+                 tmp2(1:nLons, 1:nLats, 0:nAlts+1), &
+       MoleConduction(1:nLons, 1:nLats, 0:nAlts+1))
 
      TemperatureStage1(1:nLons,1:nLats,0:nAlts+1) = &
-          Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) + &
-          MoleConduction(1:nLons,1:nLats,0:nAlts+1)/&
-          TempUnit(1:nLons,1:nLats,0:nAlts+1)
+           Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) + &
+        MoleConduction(1:nLons,1:nLats,0:nAlts+1)/&
+              TempUnit(1:nLons,1:nLats,0:nAlts+1)
 
      DtCSLocal = Dt/2.0
      call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
           TemperatureStage1(1:nLons,1:nLats,-1:nAlts+2) * &
-          TempUnit(1:nLons,1:nLats,-1:nAlts+2), &
-          KappaTemp(1:nLons,1:nLats,0:nAlts+1,iBlock) + &
-          Prandtl(1:nLons,1:nLats,0:nAlts+1), &
-          tmp2, &
-          MoleConduction(1:nLons,1:nLats,0:nAlts+1))
+                   TempUnit(1:nLons,1:nLats,-1:nAlts+2), &
+                  KappaTemp(1:nLons,1:nLats,0:nAlts+1,iBlock) + &
+                    Prandtl(1:nLons,1:nLats,0:nAlts+1), &
+                       tmp2(1:nLons,1:nLats,0:nAlts+1), &
+             MoleConduction(1:nLons,1:nLats,0:nAlts+1))
 
      TemperatureH(1:nLons,1:nLats, 0:nAlts+1) = &
           TemperatureStage1(1:nLons,1:nLats,0:nAlts+1) + &
-          MoleConduction(1:nLons,1:nLats,0:nAlts+1)/&
-          TempUnit(1:nLons,1:nLats,0:nAlts+1)
+             MoleConduction(1:nLons,1:nLats,0:nAlts+1)/&
+                   TempUnit(1:nLons,1:nLats,0:nAlts+1)
 
      ! Full Time Step Update
      DtCSLocal = Dt
      call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
           Temperature(1:nLons, 1:nLats,-1:nAlts+2, iBlock) * &
-          TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
-          KappaTemp(1:nLons, 1:nLats, 0:nAlts+1, iBlock) + &
-          Prandtl(1:nLons, 1:nLats, 0:nAlts+1 ), &
-          tmp2, &
-          MoleConduction(1:nLons,1:nLats,0:nAlts+1))
+             TempUnit(1:nLons, 1:nLats,-1:nAlts+2), &
+            KappaTemp(1:nLons, 1:nLats, 0:nAlts+1, iBlock) + &
+              Prandtl(1:nLons, 1:nLats, 0:nAlts+1 ), &
+                 tmp2(1:nLons, 1:nLats, 0:nAlts+1 ), &
+       MoleConduction(1:nLons, 1:nLats, 0:nAlts+1))
 
      TemperatureF(1:nLons,1:nLats, 0:nAlts+1) = &
           Temperature(1:nLons,1:nLats, 0:nAlts+1,iBlock) + &
-          MoleConduction(1:nLons,1:nLats, 0:nAlts+1) / &
-          TempUnit(1:nLons,1:nLats, 0:nAlts+1)
+       MoleConduction(1:nLons,1:nLats, 0:nAlts+1) / &
+             TempUnit(1:nLons,1:nLats, 0:nAlts+1)
 
      ! Note that Conduction is the net temperature update
      Conduction(1:nLons,1:nLats,0:nAlts+1) = &
           (2.0*TemperatureH(1:nLons,1:nLats,0:nAlts+1) - &
-          TemperatureF(1:nLons,1:nLats,0:nAlts+1)) - &
-          Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) 
+               TemperatureF(1:nLons,1:nLats,0:nAlts+1)) - &
+                Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) 
 
   else
      Conduction = 0.0
@@ -281,12 +286,13 @@ subroutine calc_GITM_sources(iBlock)
         if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
         DtCSLocal = Dt/2.0
+        VelocityStage0 = Velocity(1:nLons, 1:nLats,-1:nAlts+2, iDir,iBlock)
         call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
-            Velocity(1:nLons, 1:nLats,-1:nAlts+2, iDir,iBlock), & 
+            VelocityStage0, & 
             ViscCoef(1:nLons, 1:nLats, 0:nAlts+1      ) + &
-                 Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock) * &
+                 Rho110 * &
   KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1, iBlock) , &
-                 Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock), &
+                 Rho110, &
            Viscosity(1:nLons, 1:nLats, 0:nAlts+1, iDir))
 
      VelocityStage1(1:nLons,1:nLats, 0:nAlts+1, iDir ) = &
@@ -300,25 +306,26 @@ subroutine calc_GITM_sources(iBlock)
         call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
               VelocityStage1(1:nLons, 1:nLats,-1:nAlts+2, iDir), & 
                     ViscCoef(1:nLons, 1:nLats, 0:nAlts+1      ) + &
-                         Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock) * &
+                         Rho110 * &
           KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1, iBlock) , &
-                         Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock), &
+                         Rho110, &
                    Viscosity(1:nLons, 1:nLats, 0:nAlts+1,iDir))
 
           VelocityH(1:nLons,1:nLats, 0:nAlts+1, iDir ) = &
      VelocityStage1(1:nLons,1:nLats, 0:nAlts+1, iDir ) + &
           Viscosity(1:nLons,1:nLats, 0:nAlts+1, iDir  )
 
-        if (iDebugLevel > 4) write(*,*) "=====> calc_conduct", iproc, iDir, 3
-        if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+     if (iDebugLevel > 4) write(*,*) "=====> calc_conduct", iproc, iDir, 3
+     if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
      DtCSLocal = Dt
+     VelocityStage0 = Velocity(1:nLons, 1:nLats,-1:nAlts+2, iDir,iBlock)
      call calc_conduction(iBlock, DtCSLocal, NeuBCS, &
-            Velocity(1:nLons, 1:nLats,-1:nAlts+2, iDir,iBlock), & 
+            VelocityStage0, & 
             ViscCoef(1:nLons, 1:nLats, 0:nAlts+1      ) + &
-                 Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock) * &
+                 Rho110 * &
   KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1, iBlock) , &
-                 Rho(1:nLons, 1:nLats, 0:nAlts+1, iBlock), &
+                 Rho110, &
            Viscosity(1:nLons, 1:nLats, 0:nAlts+1,iDir))
 
      VelocityF(1:nLons,1:nLats, 0:nAlts+1, iDir) = &
@@ -343,8 +350,9 @@ subroutine calc_GITM_sources(iBlock)
      do iSpecies = 1, nSpecies
 
           DtCSLocal = Dt/2.0
+          VelocityStage0 = VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock)
           call calc_conduction(iBlock, DtCSLocal, VertVelNeuBCS(iSpecies), &
-               VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), & 
+               VelocityStage0, & 
             (4.0/3.0)*ViscCoefS(1:nLons, 1:nLats, 0:nAlts+1, iSpecies) + &
        Mass(iSpecies)*NDensityS(1:nLons, 1:nLats, 0:nAlts+1, iSpecies, iBlock) * &
              KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1, iBlock) , &
@@ -370,8 +378,9 @@ subroutine calc_GITM_sources(iBlock)
 
           ! Full Time Step Update
           DtCSLocal = Dt
+          VelocityStage0 = VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock)
           call calc_conduction(iBlock, DtCSLocal, VertVelNeuBCS(iSpecies), &
-               VerticalVelocity(1:nLons, 1:nLats,-1:nAlts+2, iSpecies,iBlock), & 
+               VelocityStage0, &
             (4.0/3.0)*ViscCoefS(1:nLons, 1:nLats, 0:nAlts+1, iSpecies) + &
        Mass(iSpecies)*NDensityS(1:nLons, 1:nLats, 0:nAlts+1, iSpecies, iBlock) * &
              KappaEddyDiffusion(1:nLons, 1:nLats, 0:nAlts+1, iBlock) , &
