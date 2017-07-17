@@ -27,7 +27,7 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB =
 #MPILIB = -L${LIBDIR} -lNOMPI
 
-OPENMPFLAG = -fopenmp
+#OPENMPFLAG = -fopenmp
 
 # Define where modules are stored and add it to the search path
 # INCL_EXTRA can be defined to add more search directories.
