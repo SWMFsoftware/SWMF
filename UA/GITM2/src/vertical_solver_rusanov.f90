@@ -418,6 +418,7 @@ subroutine advance_vertical_1stage( &
   real, intent(inout) :: NewTemp(-1:nAlts+2)
   real, intent(out) :: NewVertVel(-1:nAlts+2,nSpecies)
   real :: NS(-1:nAlts+2,nSpecies)
+  real :: NS_small(1:nAlts,nSpecies)
   real :: Rho(-1:nAlts+2)
   real :: LogNum(-1:nAlts+2)
 
@@ -629,9 +630,10 @@ subroutine advance_vertical_1stage( &
 
   if (UseNeutralFriction) then
      nVel(1:nAlts,1:nSpecies) = NewVertVel(1:nAlts,1:nSpecies)
+     NS_small = NS(1:nAlts,1:nSpecies)
      call calc_neutral_friction(Dt,nVel(1:nAlts,1:nSpecies), &
                   EddyCoef_1d(1:nAlts), NT(1:nAlts), &
-                           NS(1:nAlts,1:nSpecies), &
+                           NS_small, &
                          GradLogConS(1:nAlts,1:nSpecies), &
                                 Temp(1:nAlts))
      NewVertVel(1:nAlts,1:nSpecies) = nVel(1:nAlts,1:nSpecies)

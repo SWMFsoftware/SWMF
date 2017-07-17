@@ -534,6 +534,8 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
           NewNS(-1:nAlts+2,1:nSpecies), &
           NewNT(-1:nAlts+2)
 
+  real :: NS_small(nAlts,nSpecies)
+  
   real :: TotalEnergy(-1:nAlts+2),&
        NewTotalEnergy(-1:nAlts+2),&
        AUSMTotalEnergyFluxes(1:nAlts), &
@@ -876,10 +878,11 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
 
   if (UseNeutralFriction) then
      nVel(1:nAlts,1:nSpecies) = NewVertVel(1:nAlts,1:nSpecies)
+     NS_small = NewNS(1:nAlts,1:nSpecies)
      call calc_neutral_friction(DtIn,nVel(1:nAlts,1:nSpecies), &
                          EddyCoef_1d(1:nAlts), &
                                NewNT(1:nAlts), &
-                               NewNS(1:nAlts,1:nSpecies), &
+                               NS_small, &
                          GradLogConS(1:nAlts,1:nSpecies), &
                                 Temp(1:nAlts))
      NewVertVel(1:nAlts,1:nSpecies) = nVel(1:nAlts,1:nSpecies)
