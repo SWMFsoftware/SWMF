@@ -221,6 +221,8 @@ subroutine logfile(dir)
      call get_sw_v(CurrentTime, Vx, iError)
      call get_hpi(CurrentTime,Hpi,iError)
 
+     if (Is1D) SSVTEC = -1.0
+     
      write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1,10f10.5,10f10.5,10f8.3)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
