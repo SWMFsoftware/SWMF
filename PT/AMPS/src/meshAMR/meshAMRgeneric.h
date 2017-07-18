@@ -269,6 +269,38 @@ public:
   long int Temp_ID;
   #endif
 
+  //descriptor of the cut-face list
+  struct cCutFaceListDescriptor {
+    cCutFaceListDescriptor* next;
+    cTreeNodeAMR<cBlockAMR>* node;
+    CutCell::cTriangleFaceDescriptor* FirstTriangleCutFace;
+  };
+
+  cCutFaceListDescriptor* neibCutFaceListDescriptorList;
+  cCutFaceListDescriptor*  neibCutFaceListDescriptorList_temp;
+
+  cTreeNodeAMR() {
+    block=NULL,upNode=NULL;
+    Temp_ID=-1;
+    neibCutFaceListDescriptorList=NULL,neibCutFaceListDescriptorList_temp=NULL;
+
+    for (int i=0;i<1<<_MESH_DIMENSION_;i++) downNode[i]=NULL;
+
+    #if _MESH_DIMENSION_ == 1
+    for (int i=0;i<2;i++) neibNodeFace[i]=NULL;
+
+    #elif _MESH_DIMENSION_ == 2
+    for (int i=0;i<4*2;i++) neibNodeFace[i]=NULL;
+    for (int i=0;i<4;i++) neibNodeCorner[i]=NULL;
+
+    #elif _MESH_DIMENSION_ == 3
+    for (int i=0;i<6*4;i++) neibNodeFace[i]=NULL;
+    for (int i=0;i<8;i++) neibNodeCorner[i]=NULL;
+    for (int i=0;i<12*2;i++) neibNodeEdge[i]=NULL;
+    #endif //_MESH_DIMENSION_
+  }
+
+
   //the pointers to members of the list of the nodes that "belongs" to this processor (or some other lists)
   cTreeNodeAMR *nextNodeThisThread,*prevNodeThisThread;
 
