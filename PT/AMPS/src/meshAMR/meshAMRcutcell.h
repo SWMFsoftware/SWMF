@@ -214,15 +214,6 @@ unsigned long int GetTriangulationSignature();
     unsigned int pic__shadow_attribute; //,pic__RayTracing_TestDirectAccessCounterValue;
     double pic__cosine_illumination_angle;
 
-    //counter of the ray-tracing operations
-    #if _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 1
-    unsigned char *pic__RayTracingOperationCounterTable;
-    #elif _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 4
-    unsigned int *pic__RayTracingOperationCounterTable;
-    #else
-    #error _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of range
-    #endif //_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_
-
     //the user defined data structure
     #if _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ == _ON_AMR_MESH_
     cTriangleFaceUserData_internal UserData;
@@ -535,7 +526,7 @@ unsigned long int GetTriangulationSignature();
       SurfaceArea=0.0,CharacteristicFaceSize=0.0;
       for (int i=0;i<3;i++) ExternalNormal[i]=0.0,e0Orthogonal[i]=0.0,e1Orthogonal[i]=0.0;
 
-      pic__shadow_attribute=0,pic__RayTracingOperationCounterTable=NULL;
+      pic__shadow_attribute=0;
       pic__cosine_illumination_angle=0.0;
       Temp_ID=-1,MeshFileID=-1;
     }
