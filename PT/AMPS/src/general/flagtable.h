@@ -173,7 +173,6 @@ public:
     if (rank==0) {
       MPI_Status status;
       unsigned char ExchangeBuffer[MaxTableLength];
-      bool flag;
 
       for (int thread=1;thread<size; thread++) {
         MPI_Recv(ExchangeBuffer,MaxTableLength,MPI_UNSIGNED_CHAR,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
