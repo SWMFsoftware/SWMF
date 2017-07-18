@@ -257,10 +257,6 @@ subroutine init_msis
               Temperature(iLon,iLat,iAlt,iBlock) = &
                    msis_temp(2)/TempUnit(iLon,iLat,iAlt)
 
-              InvScaleHeight(iLon,iLat,iAlt,iBlock)  =  &
-                   -Gravity_GB(iLon,iLat,iAlt,iBlock) / &
-                   Temperature(iLon,iLat,iAlt,iBlock)
-
               Rho(iLon,iLat,iAlt,iBlock) = msis_dens(6)
 
 !              ! The initial profile of [NO] is refered to:
@@ -442,7 +438,9 @@ subroutine calc_co2(iBlock)
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        Have, Hn2, Ho, r, Hco2, Hco2t
 
-  Have  = 1.0/InvScaleHeight(:,:,:,iBlock)
+  Have  = -Boltzmanns_Constant * &
+       Temperature(:,:,:,iBlock)*TempUnit / ( &
+       MeanMajorMass * Gravity_GB(:,:,:,iBlock))
   Hn2   = -Boltzmanns_Constant * &
        Temperature(:,:,:,iBlock)*TempUnit / ( &
        Mass(iN2_) * Gravity_GB(:,:,:,iBlock))

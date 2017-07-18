@@ -47,7 +47,6 @@ module ModGITM
 
   real, allocatable :: Rho(:,:,:,:)
   real, allocatable :: Temperature(:,:,:,:)
-  real, allocatable :: InvScaleHeight(:,:,:,:)
   real, allocatable :: Pressure(:,:,:,:)
   real, allocatable :: NDensity(:,:,:,:)
   real, allocatable :: eTemperature(:,:,:,:)
@@ -196,7 +195,6 @@ contains
     allocate(dAltDLat_CB(nLons,nLats,nAlts,nBlocks))
     allocate(Rho(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
     allocate(Temperature(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
-    allocate(InvScaleHeight(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
     allocate(Pressure(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
     allocate(NDensity(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
     allocate(eTemperature(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
@@ -271,7 +269,6 @@ contains
     deallocate(dAltDLat_CB)
     deallocate(Rho)
     deallocate(Temperature)
-    deallocate(InvScaleHeight)
     deallocate(Pressure)
     deallocate(NDensity)
     deallocate(eTemperature)
