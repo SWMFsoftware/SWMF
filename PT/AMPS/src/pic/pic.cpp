@@ -1863,6 +1863,9 @@ void PIC::Init_AfterParser() {
   //init the ray tracking module if needed
   PIC::RayTracing::Init();
 
+  //when cut-cells are used init the cut-cell access coutner
+  if (_AMR__CUT_CELL__MODE_==_AMR__CUT_CELL__MODE__ON_) PIC::Mesh::IrregularSurface::CutFaceAccessCouter::Init();
+
 }
 
 //====================================================
