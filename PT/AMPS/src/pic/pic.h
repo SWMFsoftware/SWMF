@@ -2372,7 +2372,6 @@ namespace PIC {
     //the data stored in a block
     //1. Local Time Step [NS]: depending on the model mode there will be a 'global' time step for the simulation, 'global' time step for the cell or individual time step for each simulated species
     //2. Local particle weight [NS]: depending on the model mode there will be a 'global' weight for the simulation, 'global' weight for the cell or individual weigh for each simulated species
-
     class cDataBlockAMR : public cBasicBlockAMR<cDataCornerNode,cDataCenterNode> {
     public:
       static int LocalTimeStepOffset,LocalParticleWeightOffset;
@@ -2576,6 +2575,24 @@ namespace PIC {
     //tratment of the cut-cells
     namespace IrregularSurface {
       using namespace CutCell;
+
+
+      //verify that each cut-face is processed only ones
+      namespace CutFaceAccessCouter {
+
+        //current value of the AcessOperationCoutner
+        extern unsigned int *AccessOperationCounterTable;
+        extern unsigned int **FaceAccessCounterTable;
+
+        void Init();
+
+        //procedures used to verify that a given cut-face has been accessed only onces
+        void IncrementCounter(); //set new counter at the beginig of the processing code segment
+        unsigned int GetCurrentCounterValue(int iface);
+        bool IsFirstAcecssWithAccessCounterUpdate(int iface);  //resut true -> it is the 'first' access the given access counter value; false -> the face has been already processesed
+        bool IsFirstAcecssWithAccessCounterUpdate(cTriangleFace* TriangleFace);
+        void FlushBuffer(int thread_OpenMP);
+      }
 
       //propagate the information of the cut faces to the neibbouring nodes
       extern int nCutFaceInformationCopyAttempts;
