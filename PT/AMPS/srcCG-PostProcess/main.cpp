@@ -16,13 +16,15 @@
 #include "VIRTIS-M.h"
 #include "SpiceUsr.h"
 #include "DustScatteringEfficientcy.h"
+#include "pic.h"
+
 
 #define _ON_  0
 #define _OFF_ 1
 
 
 #include "config.dfn"
-#include "config.h"
+
 
 //header of the functions for calculating of the dust scattering efficientcy
 
@@ -923,6 +925,37 @@ namespace DUST {
 
 }
 
+#if _TEST_==_COLUMN_INTEGRATION_TEST_
+namespace INTEGRAL_TEST {
+ 
+  int IntegrantVectorLength() {return 1;}
+
+  void PrintVariableList(FILE* fout) {
+   
+    fprintf(fout," \"Column Density\"");
+
+  }
+
+  void PostProcessColumnIntegralVector(double* data) {
+
+  }
+
+  void IntegrantVector(double *data,double *x) {
+    cPostProcess3D::cStencil Stencil;
+    int i;
+
+    amps.GetInterpolationStencil(x,&Stencil);
+   
+   
+    for (i=0;i<IntegrantVectorLength();i++) data[i]=0.0;
+   
+    for (i=0;i<8;i++) {
+      data[0]+=Stencil.Weight[i]*amps.data.data[Stencil.Node[i]][3];
+    }
+  }
+
+}
+#endif
 
 #include "DustScatteringEfficientcy.h"
 
@@ -948,6 +981,7 @@ MPI_Finalize();
 return 1;
 */
 
+#if _TEST_==_OFF_
 
   //output the dust brightness efficientcy
   const int RadiusTableLength=10;
@@ -976,7 +1010,33 @@ return 1;
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  furnsh_c("kernels.tm");
+  // const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Volumes/Storage/SPICE/ROSETTA/kernels";
+  // printf("SPICE_Kernels_PATH:%s\n",SPICE_Kernels_PATH);
+  // system("cp /Volumes/Storage/PostProcessor/AMPS/srcPPROC/kernels.tm /Volumes/Storage/PostProcessor/AMPS/srcPPROC/kernels_new.tm");
+
+  furnsh_c("./kernels.tm");
+  /*  furnsh_c("../../NAIF/naif0010.tls");
+  furnsh_c("../../NAIF/de430.bsp");
+  furnsh_c("../../NAIF/pck00010.tpc");
+  furnsh_c("ck/RATT_DV_121_01_01____00190.BC");
+  furnsh_c("ck/CATT_DV_121_01_______00190.BC");
+  furnsh_c("fk/ROS_CHURYUMOV_V01.TF");
+  furnsh_c("fk/ROS_V24.TF");
+  furnsh_c("fk/RSSD0002.TF");
+  furnsh_c("ik/ROS_ALICE_V16.TI");
+  furnsh_c("ik/ROS_MIRO_V10.TI");
+  furnsh_c("ik/ROS_OSIRIS_V12.TI");
+  furnsh_c("ik/ROS_VIRTIS_V13.TI");
+  furnsh_c("lsk/NAIF0011.TLS");
+  furnsh_c("pck/PCK00010.TPC");
+  furnsh_c("pck/ROS_CGS_RSOC_V03.TPC");
+  furnsh_c("pck/cg-spc-shap5-v0.1.tpc");
+  furnsh_c("sclk/ROS_150701_STEP.TSC");
+  furnsh_c("spk/DE405.BSP");
+  furnsh_c("spk/RORB_DV_121_01_______00190.BSP");
+  furnsh_c("spk/CORB_DV_121_01_______00190.BSP");
+  furnsh_c("../../ROS_NADIR.tf"); */
+
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateRosetta,&lt);
   spkezr_c("SUN",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
@@ -1000,12 +1060,12 @@ return 1;
 
     DataFileName="pic.H2O.s=0.out="+out+".dat";
 
-    amps.LoadDataFile(DataFileName.c_str(),".");
+    amps.LoadDataFile(DataFileName.c_str(),PIC::UserModelInputDataPath);
     amps.PrintVariableList();
 
     //load the surface data
     std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
-    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),".");
+    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),PIC::UserModelInputDataPath);
     amps.SurfaceData.PrintVariableList();
 
 
@@ -1017,7 +1077,7 @@ return 1;
      out=t.str();
  
      TrajectoryFileName="amps.TrajectoryTracking.out="+out+".s=0.H2O.dat";
-     amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName.c_str(),".");
+     amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName.c_str(),PIC::UserModelInputDataPath);
 
     amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.gas.uniform.dat");
     amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.gas.flux.dat");
@@ -1029,7 +1089,7 @@ return 1;
 
     t << _OUTPUT_FILE_NUMBER_;
     out=t.str();
-
+  
     for (int i=0;i<_DUST_SPEC_NUMBER_;i++) {
       std::string s1;
 
@@ -1043,12 +1103,12 @@ return 1;
 
       TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%"+s1+".dat";
     }
-
+  
     //load the trajectory data file
     std::string fDataFile="pic.DUST%0.s=2.out="+out+".dat";
-    amps.LoadDataFile(fDataFile.c_str(),".");
+    amps.LoadDataFile(fDataFile.c_str(),PIC::UserModelInputDataPath);
     amps.PrintVariableList();
-
+  
 /*    char TrajectoryFileName[nTrajectoryFiles][100]={"amps.TrajectoryTracking.out=2.s=2.DUST%0.dat","amps.TrajectoryTracking.out=2.s=3.DUST%1.dat",
         "amps.TrajectoryTracking.out=2.s=4.DUST%2.dat","amps.TrajectoryTracking.out=2.s=5.DUST%3.dat"
     };*/
@@ -1058,14 +1118,14 @@ return 1;
     };*/
 
     if (_LOAD_TRAJECTORY_FILES_==_ON_) {
-      for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),".");
+      for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath);
       amps.ParticleTrajectory.PrintVariableList();
       amps.AssignParticleTrajectoriesToCells();
     }
 
     //load the surface data
     std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
-    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),".");
+    amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),PIC::UserModelInputDataPath);
     amps.SurfaceData.PrintVariableList();
 
     //get the list of the faces that production rate above 65%
@@ -1183,7 +1243,7 @@ return 1;
 
 
   //load the nucleus mesh
-  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf","/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2");
+  CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
   amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
 
@@ -1250,6 +1310,30 @@ return 1;
     TRAJECTORY_FILTER::SaveFluxCorrectionTable();
     SURFACE::SaveCorrectedSourceRate(2.0E-6);
   }
+
+#elif _TEST_==_COLUMN_INTEGRATION_TEST_
+
+
+    std::string fDataFile="test_Column.dat";
+    amps.LoadDataFile(fDataFile.c_str(),PIC::UserModelInputDataPath);
+    amps.PrintVariableList();
+
+      //process the gas output file
+   
+    cPostProcess3D::cColumnIntegral::cColumnIntegrationSet IntegrationSet;
+
+    IntegrationSet.IntegrantVector=INTEGRAL_TEST::IntegrantVector; 
+    IntegrationSet.IntegrantVectorLength=INTEGRAL_TEST::IntegrantVectorLength;
+    IntegrationSet.PrintVariableList=INTEGRAL_TEST::PrintVariableList;
+    IntegrationSet.PostProcessColumnIntegralVector=INTEGRAL_TEST::PostProcessColumnIntegralVector;
+   
+    double xObservation[3]={0,0,0},xPrimary[3]={0,4e5,0},xSecondary[3]={4e5,4e5,0};
+    
+    amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,45,20,20,"map.dat",&IntegrationSet); 
+
+#else
+    exit(__LINE__,__FILE__,"Error: the test mode is not implemented");
+#endif
 
 
   //finish the execution with success
