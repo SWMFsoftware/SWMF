@@ -33,7 +33,6 @@ subroutine euv_ionization_heat(iBlock)
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
-     open(unit=33,file="test.f107",status='replace')
   else
      if (floor((tSimulation - dT)/dTAurora) == &
           floor(tSimulation/dTAurora)) return
@@ -777,11 +776,6 @@ subroutine calc_scaled_euv
      call end_timing("new_euv")
 
   endif
-
-  write(33,*) f107,f107a
-!  write(33,*) EUV_Flux
-  write(33,*) Flux_of_EUV
-  flush(33)
 
   ! Second Spectra, provided by Steve Bougher....
 
