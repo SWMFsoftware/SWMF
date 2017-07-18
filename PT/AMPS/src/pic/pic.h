@@ -574,8 +574,8 @@ namespace PIC {
       //access to neighbors
       inline void SetPrev(cFieldLineVertex* prevIn) {prev=prevIn;}
       inline void SetNext(cFieldLineVertex* nextIn) {next=nextIn;}
-      inline void GetPrev(cFieldLineVertex* prevOut) {prevOut=prev;}
-      inline void GetNext(cFieldLineVertex* nextOut) {nextOut=next;}
+//      inline void GetPrev(cFieldLineVertex* prevOut) {prevOut=prev;}
+//      inline void GetNext(cFieldLineVertex* nextOut) {nextOut=next;}
       inline cFieldLineVertex* GetPrev() {return prev;}
       inline cFieldLineVertex* GetNext() {return next;}
     };
@@ -681,8 +681,8 @@ namespace PIC {
 
       //.......................................................................
       //access segment's vertices
-      inline void GetBegin(cFieldLineVertex* beginOut) {beginOut = begin;}
-      inline void GetEnd(  cFieldLineVertex* endOut  ) {endOut   = end;}
+//      inline void GetBegin(cFieldLineVertex* beginOut) {beginOut = begin;}
+//      inline void GetEnd(  cFieldLineVertex* endOut  ) {endOut   = end;}
       inline cFieldLineVertex* GetBegin() {return begin;}
       inline cFieldLineVertex* GetEnd() {return end;}
 
@@ -707,8 +707,8 @@ namespace PIC {
       //access segment's neighbors
       inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
       inline void SetNext(cFieldLineSegment* nextIn){next = nextIn;}
-      inline void GetPrev(cFieldLineSegment* prevOut){prevOut = prev;}
-      inline void GetNext(cFieldLineSegment* nextOut){nextOut = next;}
+//      inline void GetPrev(cFieldLineSegment* prevOut){prevOut = prev;}
+//      inline void GetNext(cFieldLineSegment* nextOut){nextOut = next;}
       inline cFieldLineSegment* GetPrev(){return prev;}
       inline cFieldLineSegment* GetNext(){return next;}
 
@@ -780,15 +780,20 @@ namespace PIC {
     private:
       //flag whether line has been set (1 or more valid segments)
       char IsSet;
+
       //total number of segments (for house-keeping)
       int nSegment;
+
       //total length
       double TotalLength;
+
       //total statistical weight
       double TotalWeight[PIC::nTotalSpecies];
+
       //1st and last segments, vertices of the field line
       cFieldLineSegment *FirstSegment, *LastSegment;
       cFieldLineVertex  *FirstVertex,  *LastVertex;
+
       //check whether the line is broken
       bool is_broken();
     public:
@@ -883,8 +888,8 @@ namespace PIC {
       //access first/last segment
       inline cFieldLineSegment* GetFirstSegment() {return FirstSegment;}
       inline cFieldLineSegment* GetLastSegment() { return LastSegment;}
-      inline void GetFirstSegment(cFieldLineSegment* Out) {Out=FirstSegment;}
-      inline void GetLastSegment( cFieldLineSegment* Out) {Out=LastSegment;}
+//      inline void GetFirstSegment(cFieldLineSegment* Out) {Out=FirstSegment;}
+//      inline void GetLastSegment( cFieldLineSegment* Out) {Out=LastSegment;}
 
       //access an arbitrary segment
       inline cFieldLineSegment* GetSegment(int iSegment) {
@@ -929,21 +934,21 @@ namespace PIC {
       // access first/last vertex
       inline cFieldLineVertex* GetFirstVertex() {return FirstVertex;}
       inline cFieldLineVertex* GetLastVertex() {return LastVertex;}
-      inline void GetFirstVertex(cFieldLineVertex* Out) {Out=FirstVertex;}
-      inline void GetLastVertex( cFieldLineVertex* Out) {Out=LastVertex;}
+//      inline void GetFirstVertex(cFieldLineVertex* Out) {Out=FirstVertex;}
+//      inline void GetLastVertex( cFieldLineVertex* Out) {Out=LastVertex;}
 
       // access an arbitrary vertex
       inline cFieldLineVertex* GetVertex(int iVertex) {
-        cFieldLineVertex* Vertex;
+        cFieldLineVertex* Vertex=NULL;
 
-        if(iVertex > 0.5*nSegment && iVertex <= nSegment) {
+        if (iVertex > 0.5*nSegment && iVertex <= nSegment) {
           Vertex = LastVertex;
 
           for(int i=nSegment; i > iVertex; i--) Vertex = Vertex->GetPrev();
           return Vertex;
         }
 
-        if(iVertex >= 0) {
+        if (iVertex >= 0) {
           Vertex = FirstVertex;
 
           for(int i=0; i < iVertex; i++) Vertex = Vertex->GetNext();
@@ -951,6 +956,7 @@ namespace PIC {
         }
 
         exit(__LINE__,__FILE__, "ERROR: invalid index of a vertex");
+        return Vertex; //this return statment here is just to make compiler happy (because there is a return statment at the end of the function
       }
 
       //-----------------------------------------------------------------------
@@ -1860,9 +1866,8 @@ namespace PIC {
     }
 
     inline int GetInjectionFaceNumber(byte *ParticleDataStart) {
-      if (_USE_SAVE_INJECTION_FACE_ == _PIC_MODE_ON_) return *((int*) (ParticleDataStart+_PIC_PARTICLE_DATA__INJECTION_FACE_OFFSET_));
+      return (_USE_SAVE_INJECTION_FACE_ == _PIC_MODE_ON_) ? *((int*) (ParticleDataStart+_PIC_PARTICLE_DATA__INJECTION_FACE_OFFSET_)) : -1;
 
-      return -1;
     }
     //-------------------------------------------------------------------------
 
@@ -1873,9 +1878,7 @@ namespace PIC {
     }
 
     inline double GetParticleWeightOverTimeStepRatio(byte *ParticleDataStart) {
-      if (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_) return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_));
-
-      return 0.0;
+      return  (_USE_SAVE_PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_==_PIC_MODE_ON_) ? *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_OVER_TIME_STEP_OFFSET_)) : 0.0;
     }
     //-------------------------------------------------------------------------
 
@@ -2306,7 +2309,7 @@ namespace PIC {
         //return 
 	      GetTranslationalTemperature(T, s);
         #else
-        double v=0.0,v2=0.0,w=0.0,res=0.0;
+        double v=0.0,v2=0.0,res=0.0;
 
         v = GetDatumAverage(DatumParticleParallelVelocity, s);
 	      v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
