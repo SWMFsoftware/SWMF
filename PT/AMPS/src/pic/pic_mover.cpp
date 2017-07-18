@@ -1964,7 +1964,7 @@ int nLoopCycle=0;
 MovingLoop:
 
   //reset the counter
-//  PIC::Mesh::IrregularSurface::CutFaceAccessCouter::IncrementCounter();
+//  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
   nLoopCycle++;
 
@@ -2368,7 +2368,7 @@ if (nLoopCycle>100) {
       double TimeOfFlight;
       double xLocalIntersection[2],xIntersection[3];
 
-      PIC::Mesh::IrregularSurface::CutFaceAccessCouter::IncrementCounter();
+      PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
       for (int ipass=0;ipass<2;ipass++)  {
         cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor* D;
@@ -2388,7 +2388,7 @@ if (nLoopCycle>100) {
         }
 
         for (;D!=NULL;D=D->next) for (t=D->FirstTriangleCutFace;t!=NULL;t=t->next) if ((TriangleFace=t->TriangleFace)!=lastIntersectedTriangleFace) {
-          if (PIC::Mesh::IrregularSurface::CutFaceAccessCouter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
+          if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
             if (TriangleFace->RayIntersection(xInit,vInit,TimeOfFlight,xLocalIntersection,xIntersection,PIC::Mesh::mesh.EPS)==true) {
               if ((TimeOfFlight<dtMin)&&(TimeOfFlight>0.0)) {
 
@@ -3176,7 +3176,7 @@ ProcessPhotoChemistry:
       double xLocalIntersection[2],xIntersection[3];
 
       //reset the counter
-      PIC::Mesh::IrregularSurface::CutFaceAccessCouter::IncrementCounter(); 
+      PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter(); 
 
 
       for (int ipass=0;ipass<2;ipass++)  {
@@ -3197,7 +3197,7 @@ ProcessPhotoChemistry:
         }
 
         for (;D!=NULL;D=D->next) for (t=D->FirstTriangleCutFace;t!=NULL;t=t->next) if ((TriangleFace=t->TriangleFace)!=lastIntersectedTriangleFace) {
-          if (PIC::Mesh::IrregularSurface::CutFaceAccessCouter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) if (TriangleFace!=lastIntersectedTriangleFace_LastCycle)  {
+          if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) if (TriangleFace!=lastIntersectedTriangleFace_LastCycle)  {
             bool BeforeMotionFlag,AfterMotionFlag;
             double xLocalIntersection[3],xIntersection[3];
             double TimeOfFlight_Before,TimeOfFlight_After;
