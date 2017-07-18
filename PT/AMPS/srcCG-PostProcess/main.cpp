@@ -1010,33 +1010,8 @@ return 1;
   SpiceDouble StateRosetta[6],StateSun[6],et,lt;
   double xObservation[3]={1.0E6,0,0},xPrimary[3]={0,0,0},xSecondary[3]={0,1.0E6,0};
 
-  // const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Volumes/Storage/SPICE/ROSETTA/kernels";
-  // printf("SPICE_Kernels_PATH:%s\n",SPICE_Kernels_PATH);
-  // system("cp /Volumes/Storage/PostProcessor/AMPS/srcPPROC/kernels.tm /Volumes/Storage/PostProcessor/AMPS/srcPPROC/kernels_new.tm");
 
   furnsh_c("./kernels.tm");
-  /*  furnsh_c("../../NAIF/naif0010.tls");
-  furnsh_c("../../NAIF/de430.bsp");
-  furnsh_c("../../NAIF/pck00010.tpc");
-  furnsh_c("ck/RATT_DV_121_01_01____00190.BC");
-  furnsh_c("ck/CATT_DV_121_01_______00190.BC");
-  furnsh_c("fk/ROS_CHURYUMOV_V01.TF");
-  furnsh_c("fk/ROS_V24.TF");
-  furnsh_c("fk/RSSD0002.TF");
-  furnsh_c("ik/ROS_ALICE_V16.TI");
-  furnsh_c("ik/ROS_MIRO_V10.TI");
-  furnsh_c("ik/ROS_OSIRIS_V12.TI");
-  furnsh_c("ik/ROS_VIRTIS_V13.TI");
-  furnsh_c("lsk/NAIF0011.TLS");
-  furnsh_c("pck/PCK00010.TPC");
-  furnsh_c("pck/ROS_CGS_RSOC_V03.TPC");
-  furnsh_c("pck/cg-spc-shap5-v0.1.tpc");
-  furnsh_c("sclk/ROS_150701_STEP.TSC");
-  furnsh_c("spk/DE405.BSP");
-  furnsh_c("spk/RORB_DV_121_01_______00190.BSP");
-  furnsh_c("spk/CORB_DV_121_01_______00190.BSP");
-  furnsh_c("../../ROS_NADIR.tf"); */
-
   utc2et_c(SimulationStartTimeString,&et);
   spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateRosetta,&lt);
   spkezr_c("SUN",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
