@@ -27,92 +27,9 @@ using namespace std;
 
 #include "pic.h"
 
-#if _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 1
-unsigned char *PIC::RayTracing::FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
-unsigned char *PIC::RayTracing::FaceAccessCounterTable; //the conter of the Ray Tracking operations
-
-#elif _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 4
-unsigned int *PIC::RayTracing::FaceRayTracingOperationIDTable; //the number that is used to avoid checking of the same face twice
-unsigned int *PIC::RayTracing::FaceAccessCounterTable; //the conter of the Ray Tracking operations
-
-#else
-#error _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of range
-#endif //_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_
-
-
 //init the ray tracking module
 void PIC::RayTracing::Init() {
-  int nThreadsOpenMP=1;
 
-  if ((_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_!=1)&&(_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_!=2)&&(_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_!=4)) {
-    exit(__LINE__,__FILE__,"_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of implemented range. It can be either 1, 2, ot 4");
-  }
-
-  static int AllocatedTableLength=-1;
-
-  //chech size of the FaceAccessCounterTable
-  if (sizeof(unsigned int)<_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_) {
-    char msg[400];
-
-    sprintf(msg,"Error: sizeof(unsigned int)<_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_. Size of the elements of FaceAccessCounterTable (unsigned int) should be not less than _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_. Actual size of (unsigned int) is %i. Need to adjust procedues in PIC::RayTracing that uses size of int (e.g. PIC::RayTracing::TestDirectAccess), or change type of FaceAccessCounterTable",sizeof(int));
-    exit(__LINE__,__FILE__,msg);
-  }
-
-  //get the number of the OpenMP threads
-  if (AllocatedTableLength!=CutCell::nBoundaryTriangleFaces) {
-    //reallocate the table
-
-    if (FaceAccessCounterTable!=NULL) {
-      delete [] FaceRayTracingOperationIDTable;
-      delete [] FaceAccessCounterTable;
-    }
-
-    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp parallel shared(nThreadsOpenMP)
-    {
-      #pragma omp single
-     {
-       nThreadsOpenMP=omp_get_num_threads();
-     }
-   }
-   #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-
-    AllocatedTableLength=CutCell::nBoundaryTriangleFaces;
-
-
-    #if _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 1
-    FaceRayTracingOperationIDTable=new unsigned char [nThreadsOpenMP*CutCell::nBoundaryTriangleFaces];
-    FaceAccessCounterTable=new unsigned char [nThreadsOpenMP];
-
-    #elif _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ == 4
-    FaceRayTracingOperationIDTable=new unsigned int [nThreadsOpenMP*CutCell::nBoundaryTriangleFaces];
-    FaceAccessCounterTable=new unsigned int [nThreadsOpenMP];
-
-    #else
-    #error _PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_ is out of range
-    #endif //_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_
-
-    int i,imax=nThreadsOpenMP*CutCell::nBoundaryTriangleFaces;
-    for (i=0;i<imax;i++) FaceRayTracingOperationIDTable[i]=0;
-
-    for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-      CutCell::BoundaryTriangleFaces[iface].pic__RayTracingOperationCounterTable=FaceRayTracingOperationIDTable+iface*nThreadsOpenMP;
-    }
-
-    for (int iThreadOpenMP=0;iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) {
-      FaceAccessCounterTable[iThreadOpenMP]=1;
-      FlushFaceRayTracingOperationIDTable(iThreadOpenMP);
-    }
-  }
-}
-
-//reset the face access counter
-void PIC::RayTracing::FlushFaceRayTracingOperationIDTable(int iThreadOpenMP) {
-  int iface;
-
-  for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-    CutCell::BoundaryTriangleFaces[iface].pic__RayTracingOperationCounterTable[iThreadOpenMP]=0;
-  }
 }
 
 //calculate the exist point of the ray from a given block
@@ -135,14 +52,11 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
        xFace[0]=(x0Ray[1]+dt*lRay[1]-xBlockMin[1]); // /e1;
        xFace[1]=(x0Ray[2]+dt*lRay[2]-xBlockMin[2]); // /e2;
 
-       //if ((xFace[0]>=0.0-PIC::Mesh::mesh.EPS)&&(xFace[0]<=1.0+PIC::Mesh::mesh.EPS)  && (xFace[1]>=0.0-PIC::Mesh::mesh.EPS)&&(xFace[1]<=1.0+PIC::Mesh::mesh.EPS)) {
        if ((xFace[0]>=0.0-PIC::Mesh::mesh.EPS)&&(xFace[0]<=e1+PIC::Mesh::mesh.EPS)  && (xFace[1]>=0.0-PIC::Mesh::mesh.EPS)&&(xFace[1]<=e2+PIC::Mesh::mesh.EPS)) {
          dtExit=dt,nExitFace=0;
 
          xFaceExitLocal[0]=xFace[0]/e1;
          xFaceExitLocal[1]=xFace[1]/e2;
-
-         //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
        }
     }
   }
@@ -160,7 +74,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e1;
         xFaceExitLocal[1]=xFace[1]/e2;
-        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -179,7 +92,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e2;
-        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -197,7 +109,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e2;
-        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -216,7 +127,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e1;
-        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -234,7 +144,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e1;
-        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -242,9 +151,6 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
   if (nExitFace==-1) return false;
 
   //calculate the exit point from the block
-
-
-
   xBlockExit[0]=x0Ray[0]+dtExit*lRay[0];
   xBlockExit[1]=x0Ray[1]+dtExit*lRay[1];
   xBlockExit[2]=x0Ray[2]+dtExit*lRay[2];
@@ -280,24 +186,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
   #endif
 
 	//increment the call counter
-  FaceAccessCounterTable[thread]++;
-
-  switch (_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_) {
-  case 1:
-    if (FaceAccessCounterTable[thread]==(unsigned char)0xff) {
-      FaceAccessCounterTable[thread]=(unsigned char)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  case 4:
-    if (FaceAccessCounterTable[thread]==(unsigned int)0xffffffff) {
-      FaceAccessCounterTable[thread]=(unsigned int)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the case is not implemented");
-  }
+  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
 	//trace the ray
 	PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
@@ -308,8 +197,9 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 
 		if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread]) {
-          TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
+        TriangleFace=t->TriangleFace;
+
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
           if (TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS)==true) return false;
         }
       }
@@ -365,24 +255,7 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
   #endif
 
   //increment the call counter
-  FaceAccessCounterTable[thread]++;
-
-  switch (_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_) {
-  case 1:
-    if (FaceAccessCounterTable[thread]==(unsigned char)0xff) {
-      FaceAccessCounterTable[thread]=(unsigned char)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  case 4:
-    if (FaceAccessCounterTable[thread]==(unsigned int)0xffffffff) {
-      FaceAccessCounterTable[thread]=(unsigned int)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the case is not implemented");
-  }
+  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
   //trace the ray
   PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
@@ -394,13 +267,13 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
 
     if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread]) {
+        TriangleFace=t->TriangleFace;
+
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
           if ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) {
             code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
             if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
           }
-
-          TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
         }
       }
     }
@@ -445,24 +318,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
   #endif
 
   //increment the call counter
-  FaceAccessCounterTable[thread]++;
-
-  switch (_PIC__RAY_TRACING__FACE_ACCESS_COUNTER_BYTE_LENGTH_) {
-  case 1:
-    if (FaceAccessCounterTable[thread]==(unsigned char)0xff) {
-      FaceAccessCounterTable[thread]=(unsigned char)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  case 4:
-    if (FaceAccessCounterTable[thread]==(unsigned int)0xffffffff) {
-      FaceAccessCounterTable[thread]=(unsigned int)1;
-      FlushFaceRayTracingOperationIDTable(thread);
-    }
-    break;
-  default:
-    exit(__LINE__,__FILE__,"Error: the case is not implemented");
-  }
+  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
   memcpy(x,x0Ray,3*sizeof(double));
 
@@ -481,7 +337,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
       for (;t!=NULL;t=t->next) {
         TriangleFace=t->TriangleFace;
 
-        if ((TriangleFace=t->TriangleFace)->pic__RayTracingOperationCounterTable[thread]!=FaceAccessCounterTable[thread])  {
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
           code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
 
           if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
@@ -491,8 +347,6 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
               memcpy(xMinTimeIntersection,xIntersectionTemp,3*sizeof(double));
             }
           }
-
-          TriangleFace->pic__RayTracingOperationCounterTable[thread]=FaceAccessCounterTable[thread];
         }
       }
     }
