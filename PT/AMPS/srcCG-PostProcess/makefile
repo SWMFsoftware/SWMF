@@ -1,19 +1,16 @@
 SHELL =/bin/sh
 
-DEFAULT_TARGET : pproc  
-FLAGS=-O3 -fopenmp 
-EXTERNALFLAGS=
-
-LIB=../libiomp5.a 
-#LIB=
-
-pproc :
-	cd ..; Config.pl -openmp=on
-
-	rm -f *.o
-	./Config.pl
-	mpicxx ${FLAGS} ${EXTERNALFLAGS} -c -I/Users/vtenishe/SPICE/Toolkit/cspice/include -I../utility/PostProcess -I../src/meshAMR -I../src/general main.cpp DustScatteringEfficientcy.cpp VIRTIS-M.cpp 
-	cd ../utility/PostProcess; make FLAGS="${FLAGS}" 
-	mpicxx main.o DustScatteringEfficientcy.o VIRTIS-M.o ../utility/PostProcess/pproc.a /Users/vtenishe/SPICE/Toolkit/cspice/lib/cspice.a ${LIB} 
+DEFAULT_TARGET : lib  
 
 
+include ../../Makefile.conf
+MAINOBJ=main.o
+MAINLIBOBJ=main.o \
+	DustScatteringEfficientcy.o \
+	VIRTIS-M.o \
+
+lib:	$(MAINLIBOBJ)  
+	ar -rc mainlib.a $(MAINLIBOBJ) 
+
+amps:	$(MAINOBJ)	
+	ar -rc main.a $(MAINOBJ)
