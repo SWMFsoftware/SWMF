@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPlanet
 
   use ModConstants
+  use ModOrbital
   use ModSizeGITM, only: nAlts
 
   implicit none
@@ -37,7 +38,7 @@ module ModPlanet
   integer, parameter  :: nIons   = ie_
   integer, parameter  :: nIonsAdvect = 1
   integer, parameter  :: nSpeciesAll = nSpeciesTotal + nIons - 1
-  
+
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
 
@@ -52,9 +53,9 @@ module ModPlanet
   integer, parameter :: iE10400_ = 5
   integer, parameter :: iE6300_ = 6
   integer, parameter :: iE6364_ = 7
-  
+
   integer, parameter :: nEmissions = 10
-  
+
   integer, parameter :: i3371_ = 1
   integer, parameter :: i4278_ = 2
   integer, parameter :: i5200_ = 3
@@ -111,6 +112,20 @@ module ModPlanet
  real, parameter :: SunOrbit_D = 100.46435
  real, parameter :: SunOrbit_E = 129597740.63
 
+ real :: semimajoraxis_0 = semimajor_Earth
+ real :: eccentricity_0 = eccentricity_Earth
+ real :: inclination_0 = inclination_Earth
+ real :: longitudePerihelion_0 = longitudePerihelion_Earth
+ real :: longitudeNode_0 = longitudeNode_Earth
+ real :: meanLongitude_0 = meanLongitude_Earth
+ real :: semimajordot = semimajordot_Earth
+ real :: eccentricitydot = eccentricitydot_Earth
+ real :: inclinationdot = inclinationdot_Earth
+ real :: longitudePeriheliondot = longitudePeriheliondot_Earth
+ real :: longitudeNodedot = longitudeNodedot_Earth
+ real :: meanLongitudedot = meanLongitudedot_Earth
+
+
   !Used as a damping term in Vertical solver.
   real :: VertTau(nAlts)
 
@@ -121,11 +136,11 @@ module ModPlanet
   real, parameter :: PlanetNum = 0.03
 
   character (len=10) :: cPlanet = "Earth"
-  
+
   integer, parameter :: nEmissionWavelengths = 20
   integer, parameter :: nPhotoBins = 190
 
-  
+
   ! These are for the neutral friction routine...
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
@@ -228,7 +243,7 @@ module ModPlanet
        0.969,   0.969,  0.969,  0.000,  0.969, 2.939, & ! N
        0.715,   0.715,  0.527,  0.969,  0.000, 2.939, & ! NO
        3.440,   3.208,  2.939,  2.939,  2.939, 0.000  /), & !He
-       (/nSpecies,nSpecies/) ) 
+       (/nSpecies,nSpecies/) )
 
 
   ! These are the exponents
@@ -242,7 +257,7 @@ module ModPlanet
        0.774,  0.774,  0.774, 0.000,  0.774, 0.718, &      ! N
        0.750,  0.750,  0.810, 0.774,  0.000, 0.718, &      ! NO
        0.749,  0.710,  0.718, 0.718,  0.718, 0.000  /), &  ! He
-       (/nSpecies,nSpecies/) )  
+       (/nSpecies,nSpecies/) )
 
 contains
 
@@ -315,6 +330,8 @@ contains
     itime(5) = iVernalMinute
     itime(6) = iVernalSecond
     call time_int_to_real(itime, VernalTime)
+
+
 
   end subroutine init_planet
 

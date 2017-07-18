@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPlanet
 
   use ModConstants
+  use ModOrbital
   use ModSizeGITM
 
   implicit none
@@ -97,7 +98,7 @@ module ModPlanet
    integer, parameter  :: nIons   = ie_
    integer, parameter  :: nIonsAdvect = 2
    integer, parameter  :: nSpeciesAll = nSpeciesTotal + nIons - 1
-  
+
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
 
@@ -112,9 +113,9 @@ module ModPlanet
   integer, parameter :: iE10400_ = 5
   integer, parameter :: iE6300_ = 6
   integer, parameter :: iE6364_ = 7
-  
+
   integer, parameter :: nEmissions = 10
-  
+
   integer, parameter :: i3371_ = 1
   integer, parameter :: i4278_ = 2
   integer, parameter :: i5200_ = 3
@@ -171,6 +172,19 @@ module ModPlanet
  real, parameter :: SunOrbit_D = 0.00
  real, parameter :: SunOrbit_E = 0.00
 
+ real :: semimajoraxis_0 = semimajor_Titan
+ real :: eccentricity_0 = eccentricity_Titan
+ real :: inclination_0 = inclination_Titan
+ real :: longitudePerihelion_0 = longitudePerihelion_Titan
+ real :: longitudeNode_0 = longitudeNode_Titan
+ real :: meanLongitude_0 = meanLongitude_Titan
+ real :: semimajordot = semimajordot_Titan
+ real :: eccentricitydot = eccentricitydot_Titan
+ real :: inclinationdot = inclinationdot_Titan
+ real :: longitudePeriheliondot = longitudePeriheliondot_Titan
+ real :: longitudeNodedot = longitudeNodedot_Titan
+ real :: meanLongitudedot = meanLongitudedot_Titan
+
   !Used as a damping term in Vertical solver.
   real :: VertTau(nAlts)
 
@@ -181,11 +195,11 @@ module ModPlanet
   real, parameter :: PlanetNum = 0.061
 
   character (len=10) :: cPlanet = "Titan"
-  
+
   integer, parameter :: nEmissionWavelengths = 20
   integer, parameter :: nPhotoBins = 190
 
-  
+
   ! These are for the neutral friction routine...
 
   ! These are the numerical coefficients in Table 1 in m^2 instead of cm^2
@@ -194,16 +208,16 @@ module ModPlanet
 
 !  real, parameter, dimension(nSpecies, nSpecies) :: Diff0 = 1.0e16 * reshape( (/ &
 !       !-----------------------
-!       ! i=N2  CH4     Ar      
+!       ! i=N2  CH4     Ar
 !       !-----------------------
 !       0.0000, 7.3000, 6.6200,   & ! N2
 !       7.3000, 0.0000, 5.7400,   & ! CH4
 !       6.6200, 5.7400, 0.0000/), & ! Ar
-!       (/nSpecies,nSpecies/) ) 
+!       (/nSpecies,nSpecies/) )
 !
 !  real, parameter, dimension(nSpecies, nSpecies) :: DiffExp = reshape( (/ &
 !       !----------------------
-!       ! N2      CH4     Ar   
+!       ! N2      CH4     Ar
 !       !----------------------
 !       0.0000, 0.7500, 0.7520,   & ! N2
 !       0.7500, 0.0000, 0.7850,   & ! CH4
@@ -216,7 +230,7 @@ module ModPlanet
   ! in the shape of the array
 !  real, parameter, dimension(nSpecies, nSpecies) :: Diff0 = 1.0e16 * reshape( (/ &
 !  !----------------------------------------------------
-!  ! i=N2  CH4     Ar      HCN     C2H4   15N2   13CH4   
+!  ! i=N2  CH4     Ar      HCN     C2H4   15N2   13CH4
 !  !----------------------------------------------------
 !  0.0000, 7.3000, 6.6200, 5.1834, 5.090, 5.000, 7.300,& ! N2
 !  7.3000, 0.0000, 5.7400, 5.1132, 5.080, 7.300, 5.645,&! CH4
@@ -225,11 +239,11 @@ module ModPlanet
 !  5.0900, 5.0800, 5.0900, 5.0900, 0.000, 5.000, 7.300,& ! C2H4
 !  5.0000, 7.3000, 4.6050, 5.1390, 5.000, 0.000, 7.300,& ! 15N2
 !  7.3000, 5.6450, 4.6230, 4.9440, 7.300, 7.300, 0.000/),& ! 13CH4
-!  (/nSpecies,nSpecies/) ) 
+!  (/nSpecies,nSpecies/) )
 !!
 !  real, parameter, dimension(nSpecies, nSpecies) :: DiffExp = reshape( (/ &
 !  !---------------------------------------------------
-!  ! i=N2  CH4     Ar      HCN      C2H4   15N2   13CH4 
+!  ! i=N2  CH4     Ar      HCN      C2H4   15N2   13CH4
 !  !---------------------------------------------------
 !  0.0000, 0.7500, 0.7520, 0.8100, 0.810, 0.750, 0.750,&  ! N2
 !  0.7500, 0.0000, 0.7850, 0.7650, 0.765, 0.750, 0.750,&  ! CH4
@@ -246,7 +260,7 @@ module ModPlanet
   ! in the shape of the array
   real, parameter, dimension(nSpecies, nSpecies) :: Diff0 = 1.0e16 * reshape( (/ &
   !----------------------------------------------------------------------------------
-  ! i=N2  CH4     Ar      HCN     C2H4   15N2   13CH4   H      H2    H2CN   N(4S) 
+  ! i=N2  CH4     Ar      HCN     C2H4   15N2   13CH4   H      H2    H2CN   N(4S)
   !----------------------------------------------------------------------------------
   0.0000, 7.3000, 6.6200, 5.1834, 5.090, 5.000, 7.300,48.700,33.700, 5.09, 9.690,& ! N2
   7.3000, 0.0000, 5.7400, 5.1132, 5.080, 7.300, 5.645,22.900,22.920, 5.09, 6.125,&! CH4
@@ -259,7 +273,7 @@ module ModPlanet
   33.700,22.9200,15.5000,17.4510,33.700,33.700,22.900,48.700, 0.000,33.70, 33.70,& ! H2
   5.0900, 5.0800, 5.0900, 5.0900, 5.090, 5.090, 5.090,48.700,33.700, 0.00,  9.69,& ! H2CN
   9.6900, 6.1250, 9.6900, 9.6900, 9.690, 9.690, 6.125,48.700,33.700, 9.69, 0.000/), & ! N(4S)
-  (/nSpecies,nSpecies/) ) 
+  (/nSpecies,nSpecies/) )
 !!
   real, parameter, dimension(nSpecies, nSpecies) :: DiffExp = reshape( (/ &
   !---------------------------------------------------------------------------------
@@ -314,7 +328,7 @@ module ModPlanet
    real , Dimension(-1:nAlts + 2) :: InTemp
    real , Dimension(-1:nAlts + 2) :: IneTemp
    real , Dimension(-1:nAlts + 2) :: InITemp
-   real , Dimension(-1:nAlts + 2,nSpeciesTotal) :: InNDensityS 
+   real , Dimension(-1:nAlts + 2,nSpeciesTotal) :: InNDensityS
    real , Dimension(-1:nAlts + 2,nIons) :: InIDensityS
    real , Dimension(-1:nAlts + 2) :: InOP_Heating
    real , Dimension(-1:nAlts + 2) :: InHP_Heating
@@ -388,7 +402,7 @@ contains
     Mass(iH_)     =  1.00790 * AMU
     Mass(iH2_)    =  1.00790 * AMU * 2.0
     Mass(iH2CN_)  =  1.00790 * AMU * 2.0 + 14.00674 * AMU + 12.011 * AMU
-    Mass(iN4S_)   = 14.00674 * AMU 
+    Mass(iN4S_)   = 14.00674 * AMU
 
     Mass(iN2D_)  =  Mass(iN4S_)
 
@@ -412,17 +426,17 @@ contains
 !! C4
 !    Mass(iC4H2_)    =  1.0079 * AMU * 2 + 12.011 * AMU * 4
 !! C-N
-!    Mass(iCN_)      =  12.011 * AMU  + 14.00674 * AMU 
-!    Mass(iC2N_)     =  12.011*AMU*2  + 14.00674 * AMU 
-!    Mass(iC3N_)     =  12.011*AMU*3  + 14.00674 * AMU 
+!    Mass(iCN_)      =  12.011 * AMU  + 14.00674 * AMU
+!    Mass(iC2N_)     =  12.011*AMU*2  + 14.00674 * AMU
+!    Mass(iC3N_)     =  12.011*AMU*3  + 14.00674 * AMU
 ! C2-N
-!    Mass(iC2N2_)    =  12.011*AMU*2  + 14.00674 * AMU*2 
+!    Mass(iC2N2_)    =  12.011*AMU*2  + 14.00674 * AMU*2
 ! Cx-N
-!    Mass(iC4N2_)    =  12.011*AMU*4  + 14.00674 * AMU*2 
-!    Mass(iHC3N_)    =  1.0079*AMU*1 + 12.011*AMU*3  + 14.00674 * AMU*1 
+!    Mass(iC4N2_)    =  12.011*AMU*4  + 14.00674 * AMU*2
+!    Mass(iHC3N_)    =  1.0079*AMU*1 + 12.011*AMU*3  + 14.00674 * AMU*1
 
 ! Nitrogen Compounds
-!    Mass(iN4S_)     =  14.00674 * AMU 
+!    Mass(iN4S_)     =  14.00674 * AMU
 !    Mass(iNH_)      =  1.0079 * AMU + 14.00674 * AMU
 
 
@@ -506,14 +520,14 @@ contains
     Vibration(iAr_)    = 5.0
     Vibration(i13CH4_) = 6.5374 + 2.0
     Vibration(i15N2_)  = 5.0 + 2.0
-    Vibration(iH_)     = 5.0 
+    Vibration(iH_)     = 5.0
 
 !! Ions
     MassI(iHCNHP_)  =  1.0079 * AMU * 2 + 14.00674 * AMU + 12.011 * AMU
     MassI(iC2H5P_)  =  1.0079 * AMU * 5 + 12.011 * AMU * 2
     MassI(iCH5P_)   =  1.0079 * AMU * 5 + 12.011 * AMU
 !
-!    MassI(iCH2P_ )  =  1.0079 * AMU * 2 + 12.011 * AMU 
+!    MassI(iCH2P_ )  =  1.0079 * AMU * 2 + 12.011 * AMU
     MassI(iCH3P_)   =  1.0079 * AMU * 3 + 12.011 * AMU
     MassI(iCH4P_)   =  1.0079 * AMU * 4 + 12.011 * AMU
     MassI(iN2P_)    =  14.00674 * AMU * 2
@@ -528,9 +542,9 @@ contains
 !    MassI(iHCNP_)    =  14.00674 * AMU + 1.0079 * AMU + 12.011 * AMU
 !
 !
-!    MassI(iH3P_)    =  1.0079 * AMU * 3 
-!    MassI(iH2P_)    =  1.0079 * AMU * 2 
-!    MassI(iHP_ )    =  1.0079 * AMU 
+!    MassI(iH3P_)    =  1.0079 * AMU * 3
+!    MassI(iH2P_)    =  1.0079 * AMU * 2
+!    MassI(iHP_ )    =  1.0079 * AMU
 !    MassI(ie_) = Mass_Electron
 !
 !    MassI(iCHP_)    =  1.0079 * AMU + 12.011 * AMU
@@ -555,8 +569,8 @@ contains
 
 !! Placeholder subroutines (for Titan specific Phyisics)
   subroutine init_radcooling
-!\      
-! This is for titan GITM radiation code 
+!\
+! This is for titan GITM radiation code
 ! This routine simply reads in the .txt file
 ! Containing the appropriate line strenghs,
 ! Line halfwidths, and so forth.
@@ -566,9 +580,9 @@ contains
       implicit none
 
       integer :: iline
-      real, dimension(1:rotlines) :: junk1 
-      real, dimension(1:rotlines) :: junk2 
-      real, dimension(1:rotlines) :: junk3 
+      real, dimension(1:rotlines) :: junk1
+      real, dimension(1:rotlines) :: junk2
+      real, dimension(1:rotlines) :: junk3
 
   open(UNIT = UnitTmp_, FILE = 'DataIn/NewLogIntensity_Minimal.txt', STATUS='OLD', &
        ACTION = 'READ')
@@ -606,13 +620,13 @@ contains
   close(Unit = UnitTmp_)
 
       Qd(1,1) = 1.0e0
-      Qd(1:2,2) = (/.6521451548e0, .3478548451e0/) 
+      Qd(1:2,2) = (/.6521451548e0, .3478548451e0/)
       Qd(1:4,3) = (/.3626837833e0, .3137066458e0, .2223810344e0,  &
                    .1012285362e0/)
       Qd(1:8,4) = (/.1894506104e0, .1826034150e0, .1691565193e0, .1495959888e0,  &
                     .1246289712e0, .0951585116e0, .0622535239e0, .0271524594e0/)
 
-      Qf1(1,1) = .5773502691e0 
+      Qf1(1,1) = .5773502691e0
       Qf1(1:2,2) = (/.3399810435e0, .8611363115e0/)
       Qf1(1:4,3) = (/.1834346424e0, .5255324099e0, .7966664774e0,  &
                    .9602898564e0/)
@@ -672,7 +686,7 @@ contains
                              0.0153217015129347, &
                              0.0066062278475874 /)
 
-  end subroutine init_radcooling 
+  end subroutine init_radcooling
 
   subroutine init_magheat
   return

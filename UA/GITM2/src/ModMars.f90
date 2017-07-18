@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPlanet
 
   use ModConstants
+  use ModOrbital
   use ModSizeGITM
 
   implicit none
@@ -91,17 +92,30 @@ module ModPlanet
   real, parameter :: SunOrbit_D = 355.45332
   real, parameter :: SunOrbit_E = 68905103.78
 
+  real :: semimajoraxis_0 = semimajor_Mars
+  real :: eccentricity_0 = eccentricity_Mars
+  real :: inclination_0 = inclination_Mars
+  real :: longitudePerihelion_0 = longitudePerihelion_Mars
+  real :: longitudeNode_0 = longitudeNode_Mars
+  real :: meanLongitude_0 = meanLongitude_Mars
+  real :: semimajordot = semimajordot_Mars
+  real :: eccentricitydot = eccentricitydot_Mars
+  real :: inclinationdot = inclinationdot_Mars
+  real :: longitudePeriheliondot = longitudePeriheliondot_Mars
+  real :: longitudeNodedot = longitudeNodedot_Mars
+  real :: meanLongitudedot = meanLongitudedot_Mars
+
   real, parameter :: DaysPerYear = 670.0
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
-  
+
   !Used as a damping term in Vertical solver.
-  real, dimension(nAlts) :: VertTau = 1.0e9 
+  real, dimension(nAlts) :: VertTau = 1.0e9
 
   logical :: IsEarth = .false.
   logical :: IsMars = .true.
   logical :: IsTitan = .false.
   logical :: NonMagnetic = .true.
-  real, parameter :: PlanetNum = 0.04 
+  real, parameter :: PlanetNum = 0.04
   character (len=10) :: cPlanet = "Mars"
 
   integer, parameter :: i3371_ = 1
@@ -131,7 +145,7 @@ module ModPlanet
 ! integer, parameter :: iO2_     = 5
 ! integer, parameter :: iAr_     = 6
      !------------------------------------------------+
-     ! i=C02      CO      O        N2      O2      Ar  
+     ! i=C02      CO      O        N2      O2      Ar
      !------------------------------------------------+
        0.0000, 0.7762, 0.2219,  0.6580,  0.5770, 1.1920,         &  ! CO2
        0.7762, 0.0000, 0.9466,  0.9280,  0.8300, 0.6625,         &  ! CO
@@ -144,7 +158,7 @@ module ModPlanet
 
    real, parameter, dimension(6, 6) :: DiffExp = reshape( (/ &
      !------------------------------------------------+
-     ! i=C02      CO      O     N2     O2     Ar  
+     ! i=C02      CO      O     N2     O2     Ar
      !------------------------------------------------+
        0.000,  0.750,  0.750, 0.752, 0.749, 0.750,  &           ! CO2
        0.750,  0.000,  0.750, 0.710, 0.724, 0.750,  &           ! CO
@@ -152,7 +166,7 @@ module ModPlanet
        0.752,  0.710,  0.774, 0.000, 0.750, 0.752,  &           ! N2
        0.749,  0.724,  0.774, 0.750, 0.000, 0.736,  &           ! O2
        0.750,  0.750,  0.841, 0.752, 0.736, 0.000 /), (/6,6/) ) ! AR
- 
+
 !     Arrays filled in init_radcool in data statements (np = 68)
   integer, parameter :: np=68,nInAlts = 124
   real,dimension(np) :: pnbr,ef1,ef2,co2vmr,o3pvmr,n2covmr
@@ -163,7 +177,7 @@ module ModPlanet
   real , Dimension(nInAlts) :: InTemp
   real , Dimension(nInAlts) :: IneTemp
   real , Dimension(nInAlts) :: InITemp
-  real , Dimension(nInAlts,nSpeciesTotal) :: InNDensityS 
+  real , Dimension(nInAlts,nSpeciesTotal) :: InNDensityS
   real , Dimension(nInAlts,nIons) :: InIDensityS
 
   integer, parameter:: nDustLinesMax = 4000, nDustLats = 36
@@ -190,7 +204,7 @@ module ModPlanet
 !C     LL_NLAYRAD is the number of radiation code layers
 !C     LL_NLEVRAD is the number of radiation code levels.  Level N is the
 !C
-       integer, PARAMETER :: LL_NLAYRAD  = LL_LAYERS+1   
+       integer, PARAMETER :: LL_NLAYRAD  = LL_LAYERS+1
        integer, PARAMETER :: LL_NLEVRAD  = LL_LAYERS+2
 
 ! Bottom layer subsurface temperature
@@ -213,7 +227,7 @@ module ModPlanet
 !C     number of spectral intervals. . .
 !C
 !C     GCM2.0  Feb 2003
-!C 
+!C
 !C======================================================================C
 
 !C     RADIATION parameters
@@ -235,7 +249,7 @@ module ModPlanet
 !C     L_NWNGV   is L_NSPECTV*L_NGAUSS;  the total number of "intervals"
 !C               in the VISUAL
 !C
-!C     L_NPREF   is the number of reference pressures that the 
+!C     L_NPREF   is the number of reference pressures that the
 !C               k-coefficients are calculated on
 !C     L_PINT    is the number of Lagrange interpolated reference
 !C               pressures for the CO2 k-coefficients.
@@ -245,10 +259,10 @@ module ModPlanet
 !C               to this value.
 !C
 !C     L_REFH2O  The number of different water-mixing ratio values for
-!C               the k-coefficients that are now CO2+H2O. 
+!C               the k-coefficients that are now CO2+H2O.
 !C
 !C     L_NREFV   The spectral interval number of the visible reference
-!C               wavelength (i.e. the 0.67 micron band) 
+!C               wavelength (i.e. the 0.67 micron band)
 !C
 !C
 !C     L_NLTE    The number of different LTE/NLTE heating rate conversion
@@ -256,7 +270,7 @@ module ModPlanet
 !C
 !C----------------------------------------------------------------------C
 
-      
+
       integer, parameter :: L_NSPECTI =  5
       integer, parameter :: L_NSPECTV =  7
       integer, parameter :: L_NGAUSS  = 17
@@ -331,13 +345,13 @@ module ModPlanet
 !C     GI       - Asymmetry parameter - in the infrared.
 !C
 !C     VIS2IR   - VISIBLE (0.67 micron band) to IR (9 micron band) ratio.
-!C     
+!C
 !C     XLTEFACTOR - correction factor for over-prediction of heating rates
 !C                  by the LTE code.  Occurs at pressures where NLTE processes
 !C                  become important
 !C
 !C     XLTEPRESSURE - pressure regime at which each factor is to be applied
-!C     
+!C
 !C  "Include" grid.h and radinc.h before this file in code that uses
 !C  some or all of this common data set
 
@@ -368,7 +382,7 @@ module ModPlanet
       real :: WREFCO2(L_REFH2O), WREFH2O(L_REFH2O)
 
 !C  LTE/NLTE heating rate conversion factors and associated pressures
-      
+
       real :: XLTEFACTOR(L_NLTE),XLTEPRESSURE(L_NLTE)
 
 !  These are for the Gauss-split 0.95 case
@@ -477,7 +491,7 @@ contains
     use ModIoUnit, only : UnitTmp_
 
     integer :: iTime(7), iiAlt,ialt
-   
+
     !   Mass = AMU * mean molecular weight  (unlike TGCM codes)
 
     Mass(iO_)    = 15.9994 * AMU
@@ -489,8 +503,8 @@ contains
     Mass(iNO_)   = Mass(iN4S_) + Mass(iO_)
 
     Mass(iO2_)   = 2 * Mass(iO_)
-    Mass(iAr_)   = 39.948 * AMU 
-    Mass(iHe_)   = 4.0026 * AMU 
+    Mass(iAr_)   = 39.948 * AMU
+    Mass(iHe_)   = 4.0026 * AMU
     Mass(iH_)    = 1.0079 * AMU
 
     cSpecies(iO_)    = "O"
@@ -537,16 +551,16 @@ contains
          STATUS='OLD', ACTION = 'READ')
     read(67,*) dummyalbedo
     close(UNIT = 67)
-    
+
     open(UNIT = 68, FILE = 'UA/DataIn/THERMAL_ASCII', &
-         STATUS='OLD', ACTION = 'READ')  
+         STATUS='OLD', ACTION = 'READ')
     read(68,*) dummyti
     close(UNIT = 68)
 
     open(UNIT = UnitTmp_, FILE = 'UA/DataIn/NewMarsAtm_2p5km.txt', &
          STATUS='OLD', ACTION = 'READ')
 
-111 FORMAT(F6.2,1X, F8.2,1X, F8.2,1X, F8.2,1X,   &  
+111 FORMAT(F6.2,1X, F8.2,1X, F8.2,1X, F8.2,1X,   &
          ES10.3,1X, ES10.3, 1X,  ES10.3, 1X, ES10.3, 1X, &
          ES10.3, 1X, ES10.3, 1X,  ES10.3)
 
@@ -568,7 +582,7 @@ contains
                                 !
             InNDensityS(iiAlt,iO_), &
             InNDensityS(iiAlt,iAr_), &
-            
+
             InIDensityS(iiAlt,ie_)
 
     end do
@@ -576,10 +590,10 @@ contains
     InNDensityS = Alog(inNDensityS)
     close(Unit = UnitTmp_)
 
-  
+
 
     !######## Nelli, April 07 ################################
-    !              
+    !
     !C             PURPOSE IS TO SET UP THE CORRELATED K LOWER ATMOPSHERE
     !C             RADIATION CODE.
     !C             INITIALIZATION CONSISTS MAINLY OF READING INPUT VALUES,
@@ -623,7 +637,7 @@ contains
       call setspi
       call setrad
 
-!C  Scale IR opacities (Qexti and Qscati) such that 
+!C  Scale IR opacities (Qexti and Qscati) such that
 !C  TAU(0.67 micron)/TAU(9 micron) = VIS2IR, which nominally is 2.
 
       QextREF = Qextv(L_NREFV)
@@ -637,8 +651,8 @@ contains
       END DO
 
       PTOP = 10.0**PFGASREF(1)
-      
-      print*,'vis2ir=',vis2ir      
+
+      print*,'vis2ir=',vis2ir
 
     end subroutine radsetup
 
@@ -652,7 +666,7 @@ contains
 !C     on Chris McKay's SETSPV code.
 !C
 !C     AUTHOR
-!C        Jim Schaeffer 
+!C        Jim Schaeffer
 !C
 !C     UPDATES FOR
 !C        Bob Haberle
@@ -681,19 +695,19 @@ contains
 !C                  each spectral interval.  Values are for 1 AU, and
 !C                  are scaled to the Mars distance elsewhere.
 !C     TAURAY     - Array (NSPECTV elements) of the wavelength dependent
-!C                  part of Rayleigh Scattering.  The pressure dependent 
+!C                  part of Rayleigh Scattering.  The pressure dependent
 !C                  part is computed elsewhere (OPTCV).
 !C     CALLED BY
 !C        RADIATION
 !C
 !C     SUBROUTINES CALLED
-!C        NONE 
+!C        NONE
 !C
 !C**********************************************************************C
 
       implicit none
 
-     
+
 !C     BWNV - Bin wavenumber of the edges of the VISUAL spectral bins
 !C     units are inverse centimeters.  Dimension needs to be changed
 !C     if the number of VISUAL bins changes.
@@ -727,7 +741,7 @@ contains
 
 !C======================================================================C
 
-!C     Set up mean wavenumbers and wavenumber deltas.  Units of 
+!C     Set up mean wavenumbers and wavenumber deltas.  Units of
 !C     wavenumbers is cm^(-1); units of wavelengths is microns.
 
       do M=1,L_NSPECTV
@@ -736,7 +750,7 @@ contains
         WAVEV(M) = 1.0E+4/WNOV(M)
       end do
 
-!C     Sum the solar flux, and write out the result.  
+!C     Sum the solar flux, and write out the result.
 
       sum = 0.0
       do N=1,L_NSPECTV
@@ -755,7 +769,7 @@ contains
                      scalep/P0
       end do
 
-      
+
       END SUBROUTINE SETSPV
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -769,7 +783,7 @@ contains
 !C     Chris McKay's SETSPI code.
 !C
 !C     AUTHOR
-!C        Jim Schaeffer 
+!C        Jim Schaeffer
 !C
 !C     UPDATES FOR
 !C        Bob Haberle
@@ -794,12 +808,12 @@ contains
 !C     WAVEI      - Array (NSPECTI elements long) of the wavelenght
 !C                  (in microns) at the center of each IR spectral
 !C                  interval.
-!C     
+!C
 !C     CALLED BY
 !C        RADIATION
 !C
 !C     SUBROUTINES CALLED
-!C        NONE 
+!C        NONE
 !C
 !C**********************************************************************C
 
@@ -822,7 +836,7 @@ contains
       data c1 / 3.741832D-16 /     ! W m^-2
       data c2 / 1.438786D-2  /     ! m K
       data PI / 3.14159265358979D0 /
-      
+
       data x / -0.981560634246719D0,  -0.904117256370475D0,&
                -0.769902674194305D0,  -0.587317954286617D0,&
                -0.367831498998180D0,  -0.125233408511469D0,&
@@ -849,7 +863,7 @@ contains
       BWNI( 5) = 1250.000D0
       BWNI( 6) = 2500.000D0
 
-!C     Set up mean wavenumbers and wavenumber deltas.  Units of 
+!C     Set up mean wavenumbers and wavenumber deltas.  Units of
 !C     wavenumbers is cm^(-1); units of wavelengths is microns.
 
       do M=1,L_NSPECTI
@@ -879,7 +893,7 @@ contains
         end do
       END DO
 
-      
+
       end subroutine setspi
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -890,12 +904,12 @@ contains
 !C
 !C     PURPOSE:
 !C        Set up values used by the radiation code, such as the CO2 gas
-!C     absorption coefficients.  True constants are defined, and the 
-!C     time-independent quantities used by the radiation code are 
-!C     calculated. 
+!C     absorption coefficients.  True constants are defined, and the
+!C     time-independent quantities used by the radiation code are
+!C     calculated.
 !C
 !C     AUTHOR
-!C        
+!C
 !C
 !C     UPDATES FOR
 !C        Jim Pollack
@@ -910,7 +924,7 @@ contains
 !C     VERSION 2.0  OCT 2001
 !C
 !C     INPUT PARAMETERS
-!C     DTAU(L,M)      - Dust optical depth of layer L, and for aerosol 
+!C     DTAU(L,M)      - Dust optical depth of layer L, and for aerosol
 !C                      species M.
 !C     ptrop          - Pressure of the tropopause (mb)
 !C     SCALEP         - Factor to convert pressures from millibars to
@@ -934,7 +948,7 @@ contains
 !C     Qscati   - Scattering efficiency - in the infrared.
 !C     WI       - Single scattering albedo - in the infrared.
 !C     GI       - Asymmetry parameter - in the infrared.
-!C     
+!C
 !C     CALLED BY
 !C        RAD
 !C
@@ -973,13 +987,13 @@ contains
 !C     Qscat - Ockert-Bell values
 !C     VISUAL wavelengths
 
-      data qsv1 / 2.374D0, 2.637D0, 3.049D0, 3.201D0, 3.045D0,& 
+      data qsv1 / 2.374D0, 2.637D0, 3.049D0, 3.201D0, 3.045D0,&
                   2.513D0, 1.623D0                                   /
 
 !C     G - Ockert-Bell values
 !C     VISUAL wavelengths
 
-      data gv1  / 0.635D0, 0.646D0, 0.630D0, 0.630D0, 0.634D0,& 
+      data gv1  / 0.635D0, 0.646D0, 0.630D0, 0.630D0, 0.634D0,&
                   0.700D0, 0.856D0                                   /
 
 
@@ -1026,7 +1040,7 @@ contains
       tgasref(5)  = 250.0
       tgasref(6)  = 300.0
       tgasref(7)  = 350.0
- 
+
 !C     Fill the (VISUAL) arrays Qextv, Qscatv, WV, GV
 
       DO N=1,L_NSPECTV
@@ -1057,7 +1071,7 @@ contains
 
       call laginterp(pgasref,pfgasref)
 
-      
+
       end subroutine setrad
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1066,7 +1080,7 @@ contains
 
 !C  GCM2.0  Feb 2003
 
-!C  Lagrange interpolation (linear in log pressure) of the CO2 
+!C  Lagrange interpolation (linear in log pressure) of the CO2
 !C  k-coefficients in the pressure domain.  Subsequent use of these
 !C  values will use a simple linear interpolation in pressure.
 
@@ -1078,11 +1092,11 @@ contains
       real :: co2v8(L_NTREF,L_NPREF,L_REFH2O,L_NSPECTV,L_NGAUSS)
       real :: pgref(L_NPREF)
 
- 
+
       real :: x, xi(4), yi(4), ans
       real :: pint(L_PINT), pin(L_PINT), pref(L_NPREF), p
 
-      data pin / -6.0D0, -5.8D0, -5.6D0, -5.4D0, -5.2D0,&       
+      data pin / -6.0D0, -5.8D0, -5.6D0, -5.4D0, -5.2D0,&
                  -5.0D0, -4.8D0, -4.6D0, -4.4D0, -4.2D0,&
                  -4.0D0, -3.8D0, -3.6D0, -3.4D0, -3.2D0,&
                  -3.0D0, -2.8D0, -2.6D0, -2.4D0, -2.2D0,&
@@ -1142,7 +1156,7 @@ contains
               ENDDO
 	   ENDDO
 	ENDDO
-	
+
 	DO i=1,L_NSPECTI
 	   read(35,*)fzeroi(i)
 	ENDDO
@@ -1170,7 +1184,7 @@ contains
                   co2v8(nt,np,nh,nw,ng) = -200.0
                 end if
               end do
-  
+
               do nw=1,L_NSPECTI
                 if(co2i8(nt,np,nh,nw,ng).gt.1.0e-200) then
                   co2i8(nt,np,nh,nw,ng) = log10(co2i8(nt,np,nh,nw,ng))
@@ -1178,7 +1192,7 @@ contains
                   co2i8(nt,np,nh,nw,ng) = -200.0
                 end if
               end do
-      
+
             end do
           end do
         end do
@@ -1193,7 +1207,7 @@ contains
 
 !C  First, the initial interval (P=1e-6 to 1e-5)
 
-            n = 1 
+            n = 1
             do m=1,5
               x     = pint(m)
               xi(1) = pref(n)
@@ -1206,8 +1220,8 @@ contains
               yi(4) = co2i8(nt,n+3,nh,nw,ng)
               call lagrange(x,xi,yi,ans)
               co2i(nt,m,nh,nw,ng) = 10.0**ans
-            end do 
- 
+            end do
+
             do n=2,L_NPREF-2
               do m=1,5
                 i     = (n-1)*5+m
@@ -1222,13 +1236,13 @@ contains
                 yi(4) = co2i8(nt,n+2,nh,nw,ng)
                 call lagrange(x,xi,yi,ans)
                 co2i(nt,i,nh,nw,ng) = 10.0**ans
-              end do 
+              end do
             end do
 
 !C  Now, get the last interval (P=1e+3 to 1e+4)
 
             n = L_NPREF-1
-      
+
             do m=1,5
               i     = (n-1)*5+m
               x     = pint(i)
@@ -1242,7 +1256,7 @@ contains
               yi(4) = co2i8(nt,n+1,nh,nw,ng)
               call lagrange(x,xi,yi,ans)
               co2i(nt,i,nh,nw,ng) = 10.0**ans
-            end do  
+            end do
 
 !C  Fill the last pressure point
 
@@ -1262,7 +1276,7 @@ contains
 
 !C  First, the initial interval (P=1e-6 to 1e-5)
 
-            n = 1 
+            n = 1
             do m=1,5
               x     = pint(m)
               xi(1) = pref(n)
@@ -1275,8 +1289,8 @@ contains
               yi(4) = co2v8(nt,n+3,nh,nw,ng)
               call lagrange(x,xi,yi,ans)
               co2v(nt,m,nh,nw,ng) = 10.0**ans
-            end do 
- 
+            end do
+
             do n=2,L_NPREF-2
               do m=1,5
                 i     = (n-1)*5+m
@@ -1291,13 +1305,13 @@ contains
                 yi(4) = co2v8(nt,n+2,nh,nw,ng)
                 call lagrange(x,xi,yi,ans)
                 co2v(nt,i,nh,nw,ng) = 10.0**ans
-              end do 
+              end do
             end do
 
 !C  Now, get the last interval (P=1e+3 to 1e+4)
 
             n = L_NPREF-1
-      
+
             do m=1,5
               i     = (n-1)*5+m
               x     = pint(i)
@@ -1311,18 +1325,18 @@ contains
               yi(4) = co2v8(nt,n+1,nh,nw,ng)
               call lagrange(x,xi,yi,ans)
               co2v(nt,i,nh,nw,ng) = 10.0**ans
-            end do  
+            end do
 
 !C  Fill the last pressure point
 
             co2v(nt,L_PINT,nh,nw,ng) = 10.0**co2v8(nt,L_NPREF,nh,nw,ng)
-            
+
           end do
         end do
         end do
       end do
 
-      
+
       end subroutine laginterp
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1331,7 +1345,7 @@ contains
 
 !C  GCM2.0  Feb 2003
 !C
-!C  Lagrange interpolation - Polynomial interpolation at point x 
+!C  Lagrange interpolation - Polynomial interpolation at point x
 !C  xi(1) <= x <= xi(4).  Yi(n) is the functional value at XI(n).
 
       implicit none
@@ -1347,7 +1361,7 @@ contains
       fm4   = x - XI(4)
 
 !C  Get the "answer" at the requested X
- 
+
       ans = fm2*fm3*fm4*YI(1)/&
                       ((XI(1)-XI(2))*(XI(1)-XI(3))*(XI(1)-XI(4)))  +&
             fm1*fm3*fm4*YI(2)/&
@@ -1355,9 +1369,9 @@ contains
             fm1*fm2*fm4*YI(3)/&
                       ((XI(3)-XI(1))*(XI(3)-XI(2))*(XI(3)-XI(4)))  +&
             fm1*fm2*fm3*YI(4)/&
-                      ((XI(4)-XI(1))*(XI(4)-XI(2))*(XI(4)-XI(3))) 
+                      ((XI(4)-XI(1))*(XI(4)-XI(2))*(XI(4)-XI(3)))
 
-      
+
       end subroutine lagrange
 
 

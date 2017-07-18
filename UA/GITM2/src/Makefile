@@ -34,6 +34,7 @@ MODULES = \
 	ModHwm14.o\
 	ModUser.o \
 	ModRCMR.o \
+	ModOrbital.o\
 	apexsh.o
 
 OBJECTS = \
@@ -107,7 +108,7 @@ OBJECTS = \
 OBJECTS_EXE = main.o ${OBJECTS} ${MODULES}
 
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS_EXE} 
+	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS_EXE}
 
 EXE = ${BINDIR}/GITM.exe
 
@@ -171,4 +172,3 @@ distclean: clean
 		output.f90 \
 		planet.f90 \
 		set_vertical_bcs.f90
-
