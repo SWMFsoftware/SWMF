@@ -2578,7 +2578,7 @@ namespace PIC {
 
 
       //verify that each cut-face is processed only ones
-      namespace CutFaceAccessCouter {
+      namespace CutFaceAccessCounter {
 
         //current value of the AcessOperationCoutner
         extern unsigned int *AccessOperationCounterTable;
