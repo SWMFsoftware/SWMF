@@ -76,10 +76,8 @@ public:
   {
 
     SurfaceElementNormalVector=NULL;
-//    nAxisSurfaceElements=0,nAzimuthalSurfaceElements=0;
 
     cleanDataBuffer();
-//    SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
   }
 
   static void SetGeneralSurfaceMeshParameters(long int nAxisElements,long int nAzimuthalElements) {
@@ -574,10 +572,7 @@ public:
        return true;
      }
 
-
-
-
-       return false;
+     return false;
    }
 
 
@@ -590,17 +585,13 @@ public:
        }
      }
 
-
      return false;
    }
 
    //=======================================================================
    //intersection of a block with the sphere
    int BlockIntersection(double *xBlockMin,double *xBlockMax,double EPS) {
-     int idim,iSurface,i,j,k,nCounter;
-//     double x[3],locx[3],r0,rSurface;
-//     double xBlockProjectionMax=0.0,xBlockProjectionMin=0.0;
-
+     int idim,iSurface;
      bool IntersectionPossibleFlag=false;
      int iSurfaceStart=-1,iSurfaceFinish=-1;
 
@@ -669,7 +660,7 @@ public:
      if (IntersectionPossibleFlag==true) {
        //the block is 'close' to  the surface ==> check its intersection with the surface
        //2. check if the block intersects the surface elements of the body of rotation
-       double x[3],x0Projection,x1Projection,x2Projection,r1Surface,r2Surface,tgThetaCone,ezLocal[3],e1Local[3],e2Local[3],x0[3];
+       double x[3],x0Projection,x1Projection,x2Projection,r1Surface,r2Surface,tgThetaCone,ezLocal[3],e1Local[3],x0[3];
        int pnode;
 
        static const int nNode[8][3]={{0,0,0},{1,0,0},{1,1,0},{0,1,0},  {0,0,1},{1,0,1},{1,1,1},{0,1,1}};
@@ -724,7 +715,7 @@ public:
            else for (idim=0;idim<3;idim++) x[idim]=0.5*(xBlockMin[idim]+xBlockMax[idim]);
 
            //reconstruct the frame of reference where e0Local -> along the axis of symmetry, e1Local -> taward x[], and e2Local = e0Local x e1Local (not used because not needed)
-           double r=0.0,c0=0.0,c1=0.0,c2;
+           double r=0.0,c0=0.0,c1=0.0;
 
            for (idim=0;idim<3;idim++) c0+=ezLocal[idim]*(x[idim]-x0[idim]);
 
@@ -1104,7 +1095,6 @@ LevelProcessingDone:
        double djj=(levelDataPtr->xSubBlockMax[1]-levelDataPtr->xSubBlockMin[1])/nIntegrationIntervals;
        double dkk=(levelDataPtr->xSubBlockMax[2]-levelDataPtr->xSubBlockMin[2])/nIntegrationIntervals;
        int ii,jj,kk;
-       bool IntersectionFound=false;
        double xLocal[3],x[3],rSurface,kkRes,jjRes;
 
        for (ii=0,res=0.0;ii<nIntegrationIntervals+1;ii++) {
