@@ -273,6 +273,11 @@ module ModInputs
 
   real :: LogNS0(nSpecies)
 
+  logical                   :: UseEUVAC     = .true.
+  logical                   :: UseTobiska   = .true.
+  logical                   :: UseAboveHigh = .true.
+  logical                   :: UseBelowLow  = .true.
+  
   logical                   :: UseEUVData =.false.
   character (len=iCharLen_) :: cEUVFile
 

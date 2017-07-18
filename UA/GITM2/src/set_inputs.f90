@@ -1354,6 +1354,24 @@ subroutine set_inputs
               IsDone = .true.
            endif
 
+        case ("#EUVMODEL")
+           call read_in_logical(UseEUVAC, iError)
+           call read_in_logical(UseTobiska, iError)
+           call read_in_logical(UseAboveHigh, iError)
+           call read_in_logical(UseBelowLow, iError)
+
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #EUVMODEL'
+              write(*,*) 'If EUVAC   = true, use EUVAC Model'
+              write(*,*) 'If Tobiska = true, use Tobiska91 Model'
+              write(*,*) 'If both are true, average them together'
+              write(*,*) 'If UseAboveHigh, then extend the spectrum to the longer wavelengths'
+              write(*,*) 'If UseBelowLow, then extend the spectrum to the shorter wavelengths'
+              write(*,*) '#EUV_DATA'
+              write(*,*) 'UseEUVData            (logical)'
+              write(*,*) 'cEUVFile              (string)'
+           endif
+
         case ("#EUV_DATA")
            call read_in_logical(UseEUVData, iError)
            call read_in_string(cEUVFile, iError)

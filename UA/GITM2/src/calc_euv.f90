@@ -33,6 +33,7 @@ subroutine euv_ionization_heat(iBlock)
 
   if (IsFirstTime(iBlock)) then
      IsFirstTime(iBlock) = .false.
+     open(unit=33,file="test.f107",status='replace')
   else
      if (floor((tSimulation - dT)/dTAurora) == &
           floor(tSimulation/dTAurora)) return
@@ -463,7 +464,7 @@ subroutine calc_euv
 
   implicit none
 
-  integer :: i
+  integer :: i, ii
   real    :: flxfac, wavelength_ave
 
   !:::::::::::::::::::::::::::::::: EUVAC :::::::::::::::::::::::
@@ -486,14 +487,15 @@ subroutine calc_euv
   !----- The scaling factors are restricted to be greater than 0.8
   !
 
- 
   do i = 1, Num_waveLengths_Low
 
-     FLXFAC=(1.0 + AFAC(I) * (0.5*(F107+F107A) - 80.0))
+     ! This has to be backwards, due to the way that the wavelengths are defined:
+     ii = Num_waveLengths_Low - i + 1
+     FLXFAC=(1.0 + AFAC(II) * (0.5*(F107+F107A) - 80.0))
      IF(FLXFAC.LT.0.8) FLXFAC=0.8
-     EUV_Flux(i) = F74113(I) * FLXFAC * 1.0E9 * 10000.
-
- enddo
+     EUV_Flux(i) = F74113(II)* FLXFAC * 1.0E9 * 10000.
+     
+  enddo
 
 end subroutine calc_euv
 
@@ -529,6 +531,8 @@ subroutine calc_scaled_euv
   character (len=2) :: dday, dhour, dminute 
   character (len=7) :: dtime
 
+  real :: e
+  
   ! regression coefficients which reduce to solar min. spectrum:
   ! for Hinteregger_Contrast_Ratio model:
 
@@ -560,49 +564,61 @@ subroutine calc_scaled_euv
   ! This runs EUVAC and puts the data into EUV_Flux
   call calc_euv
 
+  ! This stuff is for Tobiska:
   hlybr = 0.
   fexvir = 0.
   hlya = 3.E+11 + 0.4E+10 * (f107-70.)
   heiew = 0.
 
-  f107_ratio = (f107-68.0) / (243.0-68.0)
-
   xuvfac = 4.0 - f107_ratio
   if (xuvfac < 1.0) xuvfac = 1.0
 
+  ! I think that this is the Hinteregger stuff, which goes from
+  ! 2A - 1750A, so it is used to fill in the Above and Below spectrum
+  f107_ratio = (f107-68.0) / (243.0-68.0)
   do N = 1, Num_WaveLengths_High
      Solar_Flux(N) = RFLUX(N) + (XFLUX(N)-RFLUX(N)) * f107_Ratio
   enddo
 
-  ! Tobisha is default:
-  iModelSolar = Tobiska_EUV91
-!  iModelSolar = Hinteregger_Contrast_Ratio
-!  iModelSolar = Hinteregger_Linear_Interp
+  ! This is a total hack, just comparing FISM to these fluxes:
+  Solar_flux(Num_WaveLengths_High-4) = Solar_flux(Num_WaveLengths_High-4) * 3.0
+  Solar_flux(Num_WaveLengths_High-3) = Solar_flux(Num_WaveLengths_High-3) * 3.0
+  Solar_flux(Num_WaveLengths_High-2) = Solar_flux(Num_WaveLengths_High-2) * 5.0
+  Solar_flux(Num_WaveLengths_High-1) = Solar_flux(Num_WaveLengths_High-1) * 100.0
+  Solar_flux(Num_WaveLengths_High) = Solar_flux(Num_WaveLengths_High) * 800.0
 
-  select case(iModelSolar)
-
-  case (Hinteregger_Contrast_Ratio)
-
-     if (hlybr > 0.001) then
-        r1 = hlybr
-     else
-        r1 =  B1(1) + B1(2)*(f107A-71.5) + B1(3)*(f107-f107A+3.9)
-     endif
-     if (fexvir > 0.001) THEN
-        r2 = fexvir
-     else
-        r2 =  B2(1) + B2(2)*(f107A-71.5) + B2(3)*(f107-f107A+3.9)
-     endif
-     do N = 13, Num_WaveLengths_High
-        Solar_Flux(N) = (RFLUX(N) + ((r1-1.)*SCALE1(N)              &
-             +  (r2-1.)*SCALE2(N)) / 1000.)
-     enddo
-
-  case (Hinteregger_Linear_Interp)
-
-     ! do nothing
-
-  case (Tobiska_EUV91)
+  if (.not.UseAboveHigh) Solar_flux(56:Num_WaveLengths_High) = 0
+  if (.not.UseBelowLow)  Solar_flux(1:Num_WaveLengths_Low) = 0
+  
+!  ! Tobisha is default:
+!  iModelSolar = Tobiska_EUV91
+!!  iModelSolar = Hinteregger_Contrast_Ratio
+!!  iModelSolar = Hinteregger_Linear_Interp
+!
+!  select case(iModelSolar)
+!
+!  case (Hinteregger_Contrast_Ratio)
+!
+!     if (hlybr > 0.001) then
+!        r1 = hlybr
+!     else
+!        r1 =  B1(1) + B1(2)*(f107A-71.5) + B1(3)*(f107-f107A+3.9)
+!     endif
+!     if (fexvir > 0.001) THEN
+!        r2 = fexvir
+!     else
+!        r2 =  B2(1) + B2(2)*(f107A-71.5) + B2(3)*(f107-f107A+3.9)
+!     endif
+!     do N = 13, Num_WaveLengths_High
+!        Solar_Flux(N) = (RFLUX(N) + ((r1-1.)*SCALE1(N)              &
+!             +  (r2-1.)*SCALE2(N)) / 1000.)
+!     enddo
+!
+!  case (Hinteregger_Linear_Interp)
+!
+!     ! do nothing
+!
+!  case (Tobiska_EUV91)
 
      if (HLYA > 0.001) then
 
@@ -624,6 +640,8 @@ subroutine calc_scaled_euv
         heimod = hlymod
      endif
 
+     ! hlymod is SME Lyman-alpha
+     ! heimod is He I 10,830A, scaled to Lyman-alpha
      do N=16,55
         Solar_Flux(N) = TCHR0(N)        + &
              TCHR1(N)*hlymod + &
@@ -633,7 +651,7 @@ subroutine calc_scaled_euv
              TCOR2(N)*f107A
      enddo
 
-  end select
+!  end select
 
   !
   ! Substitute in H Lyman-alpha and XUVFAC if provided:
@@ -654,6 +672,7 @@ subroutine calc_scaled_euv
 
      IF (Solar_Flux(N) < 0.0) Solar_Flux(N) = 0.0
 
+     ! I don't know why we scale this...
      IF ((WAVEL(N) < 251.0) .AND. (WAVES(N) > 15.0)) then
         Solar_Flux(N) = Solar_Flux(N)*xuvf
      endif
@@ -665,37 +684,33 @@ subroutine calc_scaled_euv
      Solar_Flux(N) = Solar_Flux(N) * 1.E9 * 10000.0
 
      !
-     ! Convert to eV/m^2/s
+     ! Calculate the energy in the bin:
      !
-
-
+     
      wavelength_ave = (WAVEL(N) + WAVES(N))/2.0
      PhotonEnergy(N)= 6.626e-34*2.998e8/(wavelength_ave*1.0e-10)
 
-     !
-     !       Solar_Flux(N) = Solar_Flux(N) * &
-     !            (Planck_Constant * Speed_Light) / &
-     !            (wavelength_ave * 1.0e-10 * Element_Charge)
-
   enddo
 
-  do N = 16,Num_WaveLengths_High
+  ! Solar_Flux has the Tobiska and Hinteregger fluxes in there already:
+  
+  do N = 1,Num_WaveLengths_High
      Flux_of_EUV(N) = Solar_Flux(N)
   enddo
 
-  do N = 1,15
-     Flux_of_EUV(N) = Solar_Flux(N)
-  enddo
-
-  ! Average with EUVAC:
-  do N=1,Num_WaveLengths_Low
-     NN = N+15
-     Flux_of_EUV(NN) = 0.5*(EUV_Flux(N)+Solar_Flux(NN))
-  enddo
-
+  if (UseEUVAC) then
+     do N=1,Num_WaveLengths_Low
+        NN = N+15
+        if (UseTobiska) then
+           Flux_of_EUV(NN) = 0.5*(EUV_Flux(N)+Solar_Flux(NN))
+        else
+           Flux_of_EUV(NN) = EUV_Flux(N)
+        endif
+     enddo
+  endif
+  
   ! Take into account the sun distance to the planet:
   Flux_of_EUV = Flux_of_EUV/(SunOrbitEccentricity**2)
-
 
   do N=1,Num_WaveLengths_High
      wvavg(N)=(WAVEL(N)+WAVES(N))/2.
@@ -762,6 +777,11 @@ subroutine calc_scaled_euv
      call end_timing("new_euv")
 
   endif
+
+  write(33,*) f107,f107a
+!  write(33,*) EUV_Flux
+  write(33,*) Flux_of_EUV
+  flush(33)
 
   ! Second Spectra, provided by Steve Bougher....
 
