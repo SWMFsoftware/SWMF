@@ -642,6 +642,7 @@ int main(int argc,char **argv) {
   }
 
   //test the shadow procedure
+  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::Init();
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,true);
 
   if (PIC::ThisThread==0) {
