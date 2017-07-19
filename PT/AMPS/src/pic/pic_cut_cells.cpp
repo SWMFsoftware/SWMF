@@ -559,25 +559,34 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
 //counter of the acess operations to the cut-faces
 unsigned int* PIC::Mesh::IrregularSurface::CutFaceAccessCounter::AccessOperationCounterTable=NULL;
 unsigned int** PIC::Mesh::IrregularSurface::CutFaceAccessCounter::FaceAccessCounterTable=NULL;
+int PIC::Mesh::IrregularSurface::CutFaceAccessCounter::FaceAccessCounterTableLength=0;
 
 void PIC::Mesh::IrregularSurface::CutFaceAccessCounter::Init() {
 
-  if (FaceAccessCounterTable==NULL) {
-    //allcate the data buffers
-    FaceAccessCounterTable=new unsigned int* [PIC::nTotalThreadsOpenMP];
-    FaceAccessCounterTable[0]=new unsigned int [PIC::nTotalThreadsOpenMP*CutCell::nBoundaryTriangleFaces];
-    AccessOperationCounterTable=new unsigned int [PIC::nTotalThreadsOpenMP];
-  }
+  if ( ((FaceAccessCounterTable==NULL)||(FaceAccessCounterTableLength<CutCell::nBoundaryTriangleFaces)||(FaceAccessCounterTableLength==0)) && (CutCell::nBoundaryTriangleFaces!=0) ) {
+    if (FaceAccessCounterTable!=NULL) {
+      delete [] FaceAccessCounterTable[0];
+      delete [] FaceAccessCounterTable;
+      delete [] AccessOperationCounterTable;
+    }
 
-  for (int thread_OpenMP=0;thread_OpenMP<PIC::nTotalThreadsOpenMP;thread_OpenMP++) {
-    FaceAccessCounterTable[thread_OpenMP]=FaceAccessCounterTable[0]+thread_OpenMP*CutCell::nBoundaryTriangleFaces;
-    for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) FaceAccessCounterTable[thread_OpenMP][iface]=0;
-    AccessOperationCounterTable[thread_OpenMP]=1;
+    //allcate the data buffers
+    FaceAccessCounterTableLength=CutCell::nBoundaryTriangleFaces;
+
+    FaceAccessCounterTable=new unsigned int* [PIC::nTotalThreadsOpenMP];
+    FaceAccessCounterTable[0]=new unsigned int [PIC::nTotalThreadsOpenMP*FaceAccessCounterTableLength];
+    AccessOperationCounterTable=new unsigned int [PIC::nTotalThreadsOpenMP];
+
+    for (int thread_OpenMP=0;thread_OpenMP<PIC::nTotalThreadsOpenMP;thread_OpenMP++) {
+      FaceAccessCounterTable[thread_OpenMP]=FaceAccessCounterTable[0]+thread_OpenMP*FaceAccessCounterTableLength;
+      for (int iface=0;iface<FaceAccessCounterTableLength;iface++) FaceAccessCounterTable[thread_OpenMP][iface]=0;
+      AccessOperationCounterTable[thread_OpenMP]=1;
+    }
   }
 }
 
 void PIC::Mesh::IrregularSurface::CutFaceAccessCounter::FlushBuffer(int thread_OpenMP) {
-  for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) FaceAccessCounterTable[thread_OpenMP][iface]=0;
+  for (int iface=0;iface<FaceAccessCounterTableLength;iface++) FaceAccessCounterTable[thread_OpenMP][iface]=0;
   AccessOperationCounterTable[thread_OpenMP]=1;
 }
 
@@ -588,6 +597,7 @@ void PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter() {
   thread_OpenMP=omp_get_thread_num();
   #endif
 
+  Init(); //call the init function to initialize the counter in case it is not initialized yet
   AccessOperationCounterTable[thread_OpenMP]++;
 
   if (AccessOperationCounterTable[thread_OpenMP]==(unsigned int)0xffffffff) FlushBuffer(thread_OpenMP);

@@ -2572,6 +2572,7 @@ namespace PIC {
         //current value of the AcessOperationCoutner
         extern unsigned int *AccessOperationCounterTable;
         extern unsigned int **FaceAccessCounterTable;
+        extern int FaceAccessCounterTableLength;
 
         void Init();
 
