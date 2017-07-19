@@ -1392,7 +1392,7 @@ Possible values for TypeBcBody are:
                     float B, fix rho, float P
 'ionospherefloat/linetied' - same as ionosphere but density floats too
 'ionosphereoutflow' - same as ionosphere but an empirical outflow formula 
-                    is applied above 55 degrees latitude
+                    is applied above 55 degrees latitude.  See #OUTFLOWCRITERIA for more information.
 'polarwind'       - same as ionosphere, but in the polar region use
                     the density and velocity from PW component if coupled,
                     or apply values read from the #POLARWIND command
@@ -1419,6 +1419,46 @@ Default value for TypeBcBody is 'none' for the GM, EE, SC, IH and OH components,
 so the inner boundary must be set by this command except the cell boundary for
 spherical coordinates case.
 Default value for TypeBcBody2 is 'none'.
+</command>
+
+<command name="OUTFLOWCRITERIA">
+  <parameter name="OutflowVelocity" type="real" min="-1" default="-1"/>
+  <parameter name="FluxAlpha" type="real" default="2.142E7"/>
+  <parameter name="FluxBeta"  type="real" default="1.265"/>
+#OUTFLOWCRITERIA
+-1              OutflowVelocity [km/s]
+2.142E7         FluxAlpha
+1.265           FluxBeta
+
+  This command configures the empirical outflow relationship that is activated
+  via the #INNERBOUNDARY command when TypeBcBody is set to 'ionosphereoutflow'.
+  The empirical relationship is based on the work of \textit{Strangeway et al.,
+  2005}:
+  \begin{equation}
+  F_{O^+} = \alpha S_{\parallel}^{\beta}
+  \end{equation}
+  ...where $F_{O^+}$ is the local upflowing oxygen flux, $S_{\parallel}$ is the
+  local field-aligned Poynting flux, and $\alpha$ and $\beta$ are fitting
+  coefficients based on observations from the FAST spacecraft.  Default values
+  for $\alpha$ and $\beta$, shown above, are taken directly from
+  \textit{Strangeway et al., 2005}.  In BATS-R-US, Poynting flux is taken
+  from coupling with the IE module.
+
+  The OutflowVelocity paramter sets the radial velocity of the outflow, which
+  also controls how flux is converted into number density:
+  \begin{equation}
+  n_{O^+} = F_{O^+} / U_{R}
+  \end{equation}
+  If OutflowVelocity is negative, the radial velocity of oxygen is set using the
+  energy of the fluid as obtained via the local Joule heating and field-aligned-
+  current conditions (obtained via IE coupling).  This is the default behavior.
+
+  For more information on the empirical relationship for flux, see
+  Strangeway, R., Ergun, J. R. E., Su, Y. J., Carlson, C. W., \& Elphic, R. C.
+  (2005). Factors controlling ionospheric outflows as observed at intermediate
+  altitudes. Journal of Geophysical Research, 110(A3), A03221.
+  http://doi.org/10.1029/2004JA010829
+  
 </command>
 
 <command name="MAGNETICINNERBOUNDARY">

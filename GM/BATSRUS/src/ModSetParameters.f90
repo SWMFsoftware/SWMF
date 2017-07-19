@@ -1910,7 +1910,7 @@ subroutine MH_set_parameters(TypeAction)
         end if
 
      case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
-          "#MAGNETICINNERBOUNDARY")
+          "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA")
         call read_face_boundary_param(NameCommand)
 
      case("#GRAVITY")

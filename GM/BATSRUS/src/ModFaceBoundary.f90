@@ -44,8 +44,12 @@ module ModFaceBoundary
 
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
-
+  
+  
   ! Local variables
+
+  ! Values for configuring empirical ionospheric outflow boundary conditions:
+  real :: FluxAlpha=2.142E7, FluxBeta=1.265, OutflowVelocity = -1.0
 
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
@@ -75,6 +79,11 @@ contains
        call read_var('TypeBcInner',TypeFaceBc_I(body1_))
        if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_)) 
 
+    case("#OUTFLOWCRITERIA")
+       call read_var('OutflowVelocity', OutflowVelocity)
+       call read_var('FluxAlpha',       FluxAlpha)
+       call read_var('FluxBeta',        FluxBeta)
+       
     case("#POLARBOUNDARY")
        do iFluid = IonFirst_, nFluid
           call read_var('PolarNDim',  PolarNDim_I(iFluid))
@@ -697,8 +706,8 @@ contains
 
                      ! get the O+ flux based on Strangeway's formula, 
                      ! and scale it
-                     FluxIono = 2.142e7*(JouleHeating * No2Si_V(UnitPoynting_)&
-                          * 1.0e3)**1.265 * 1.0e4 &
+                     FluxIono = FluxAlpha*(JouleHeating*No2Si_V(UnitPoynting_)&
+                          * 1.0e3)**FluxBeta * 1.0e4 &
                           * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
 
                      ! thermal energy = 0.1 + 1.6 * S^1.26 
@@ -725,19 +734,21 @@ contains
                         ePar = 0.
                      end if
 
-                     ! Get the velocity along B, 
-                     ! superpose the parallel velocity and the thermal velocity
-                     Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                          (MassFluid_I(IonFirst_)*cProtonMass))) &
-                          * Si2No_V(UnitU_)
-
-                     Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
-                          (MassFluid_I(iIonSecond)*cProtonMass))) &
-                          * Si2No_V(UnitU_)
-
+                     if(OutflowVelocity<0)then
+                        ! If outflowvelocity <0, 
+                        ! get the velocity along B, superpose the parallel
+                        ! velocity and the thermal velocity
+                        Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                             (MassFluid_I(IonFirst_)*cProtonMass))) &
+                             * Si2No_V(UnitU_)
+                        Ub_V(2) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
+                             (MassFluid_I(iIonSecond)*cProtonMass))) &
+                             * Si2No_V(UnitU_)
+                     else
                      ! .OR. Pick the constant velocities and thermal energy
-                     ! Ub_V(2) = 10*Io2No_V(UnitU_)  !20km/s
-                     ! Ub_V(1) = 20*Io2No_V(UnitU_) 
+                        Ub_V(2) = OutflowVelocity*Io2No_V(UnitU_)
+                        Ub_V(1) = OutflowVelocity*Io2No_V(UnitU_)
+                     end if
 
                      ! SZA x is determind by 
                      ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
@@ -780,7 +791,7 @@ contains
                      endif
 
                      ! get the densities
-                     VarsGhostFace_V(iRho_I(IonFirst_)) = FluxPw/Ub_V(1) *   &
+                     VarsGhostFace_V(iRho_I(IonFirst_))  = FluxPw/Ub_V(1)   * &
                           MassFluid_I(IonFirst_)
                      VarsGhostFace_V(iRho_I(iIonSecond)) = FluxIono/Ub_V(2) * &
                           MassFluid_I(iIonSecond)     
