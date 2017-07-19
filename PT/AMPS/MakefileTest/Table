@@ -611,9 +611,7 @@ Time=2
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
->>> ./Config.pl -application=cg-pproc-test -openmp=on  -model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS \
- -amps-test=on  -link-option=./utility/PostProcess/pproc.a -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice \
- -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels
+>>> ./Config.pl -application=test/cg-pproc-test -openmp=on  -model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -amps-test=on  -link-option=./utility/PostProcess/pproc.a -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels 
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
 >>>@($(MAKE) -j8 amps)
