@@ -35,6 +35,11 @@ module ModSources
   real, allocatable :: LowAtmosRadRate(:,:,:,:)
   real, allocatable :: UserHeatingRate(:,:,:,:)
 
+  real, allocatable :: QnirTOT(:,:,:,:)
+  real, allocatable :: QnirLTE(:,:,:,:)
+  real, allocatable :: CirLTE(:,:,:,:)
+
+
   real, dimension(nLons,nLats,nAlts,3) :: GWAccel = 0.0
 
   !\
@@ -124,6 +129,9 @@ contains
     allocate(RadCoolingErgs(nLons, nLats, nAlts,nBlocks))
     allocate(EuvHeatingErgs(nLons, nLats, nAlts,nBlocks))
     allocate(LowAtmosRadRate(nLons, nLats, nAlts,nBlocks))
+    allocate(QnirTOT(nLons, nLats, nAlts,nBlocks))
+    allocate(QnirLTE(nLons, nLats, nAlts,nBlocks))
+    allocate(CirLTE(nLons, nLats, nAlts,nBlocks))
     allocate(UserHeatingRate(nLons, nLats, nAlts,nBlocks))
     allocate(ISourcesTotal(nLons,nLats,nAlts,nIons-1,nBlocks))
     allocate(ILossesTotal(nLons,nLats,nAlts,nIons-1,nBlocks))
@@ -146,6 +154,9 @@ contains
     deallocate(RadCoolingErgs)
     deallocate(EuvHeatingErgs)
     deallocate(LowAtmosRadRate)
+    deallocate(QnirTOT)
+    deallocate(QnirLTE)
+    deallocate(CirLTE)
     deallocate(UserHeatingRate)
     deallocate(ISourcesTotal)
     deallocate(ILossesTotal)
