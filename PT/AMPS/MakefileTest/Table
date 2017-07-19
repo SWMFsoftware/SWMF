@@ -111,7 +111,7 @@ Compile=
 Run=
 >>>@echo "test_CG-Rosina-Liouville_run..." >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 >>>@echo Test test_CG-Rosina-Liouville has started: `date`
->>>cd $(TESTCG-Rosina-LiouvilleDIR); mpirun -np 8 ./amps
+>>>cd $(TESTCG-Rosina-LiouvilleDIR); mpirun -np 5 ./amps
 >>>@echo "test_CG-Rosina-Liouville_run... done" >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
 Check=
@@ -149,7 +149,7 @@ Compile=
 Run=
 >>>@echo "test_SC-Cont_run..." >> test_SC-Cont$(TESTSC-Cont-REF).diff
 >>>@echo Test test_SC-Cont has started: `date`
->>>cd $(TESTSC-ContDIR); mpirun -np 8 ./amps
+>>>cd $(TESTSC-ContDIR); mpirun -np 5 ./amps
 >>>@echo "test_SC-Cont_run... done" >> test_SC-Cont$(TESTSC-Cont-REF).diff
 
 Check=
