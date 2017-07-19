@@ -945,7 +945,7 @@ if ($MaxSourceIdNumber ne 0) {
 
 ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_TOTAL_NUMBER_",$TotalNumberOfExosphericSources,"models/exosphere/Exosphere.dfn");
 ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_MAX_ID_VALUE_",$MaxSourceIdNumber,"models/exosphere/Exosphere.dfn");
-ampsConfigLib::ChangeValueOfArray("static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]",\@SourceProcessesSymbolicID,"models/exosphere/Exosphere.h");
+ampsConfigLib::ChangeValueOfArray("const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]",\@SourceProcessesSymbolicID,"models/exosphere/Exosphere.h");
 
 ampsConfigLib::ChangeValueOfArray("static const bool Source_DeplitSurfaceSpeciesAbundance_Flag\\[\\]",\@SourceModifySurfaceSpeciesAbundance,"models/exosphere/Exosphere.h");
 

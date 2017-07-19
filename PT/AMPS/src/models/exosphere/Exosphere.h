@@ -31,7 +31,7 @@
 #include "Na.h"
 
 //define the symbolic id of source processes
-static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ExternalBoundaryInjection","ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
+const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ExternalBoundaryInjection","ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
 
 //the default value for for the list of the SPICE kernels that will be loaded
 static const int nFurnishedSPICEkernels=0;
