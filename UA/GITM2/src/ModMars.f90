@@ -2,6 +2,7 @@
 module ModPlanet
 
   use ModConstants
+  use ModOrbital
   use ModSizeGITM
 
   implicit none
@@ -102,11 +103,24 @@ module ModPlanet
 ! real, parameter :: SunOrbit_D = 0.00
 ! real, parameter :: SunOrbit_E = 0.00
 
- real, parameter :: SunOrbit_A = 1.52369
+  real, parameter :: SunOrbit_A = 1.52369
   real, parameter :: SunOrbit_B = 0.093379
   real, parameter :: SunOrbit_C = 335.538
   real, parameter :: SunOrbit_D = 355.45332
   real, parameter :: SunOrbit_E = 68905103.78
+
+  real :: semimajoraxis_0 = semimajor_Mars
+  real :: eccentricity_0 = eccentricity_Mars
+  real :: inclination_0 = inclination_Mars
+  real :: longitudePerihelion_0 = longitudePerihelion_Mars
+  real :: longitudeNode_0 = longitudeNode_Mars
+  real :: meanLongitude_0 = meanLongitude_Mars
+  real :: semimajordot = semimajordot_Mars
+  real :: eccentricitydot = eccentricitydot_Mars
+  real :: inclinationdot = inclinationdot_Mars
+  real :: longitudePeriheliondot = longitudePeriheliondot_Mars
+  real :: longitudeNodedot = longitudeNodedot_Mars
+  real :: meanLongitudedot = meanLongitudedot_Mars
 
   real, parameter :: DaysPerYear = 670.0
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
