@@ -481,7 +481,7 @@ int PIC::TimeStep() {
       for (thread=1;thread<PIC::nTotalThreads;thread++) for (int s=0;s<PIC::nTotalSpecies;s++) ExchangeBuffer[0].SimulatedModelParticleNumber[s]+=ExchangeBuffer[thread].SimulatedModelParticleNumber[s];
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:Total number of model particles of each species:\n");
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:i\tSymbol\tParticle Number:\n");
-      for (int s=0;s<PIC::nTotalSpecies;s++) fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%s\t%ld\n",s,PIC::MolecularData::GetChemSymbol(s),ExchangeBuffer[0].SimulatedModelParticleNumber[s]);
+      for (int s=0;s<PIC::nTotalSpecies;s++) fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t%s\t%d\n",s,PIC::MolecularData::GetChemSymbol(s),ExchangeBuffer[0].SimulatedModelParticleNumber[s]);
 
 
       //exchange statistics of the particle production

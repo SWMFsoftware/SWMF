@@ -14,7 +14,7 @@ void PIC::RunTimeSystemState::GetIndividualParticleFieldCheckSum_CallCounter(voi
 
   printf("$PREFIX: Particle Field Check Sum ");
   if (msg!=NULL) printf("(message=\"%s\")",msg);
-  printf(":  0x%lx [Counter=%ld]\n",CheckSum.checksum(),CallCounter);
+  printf(":  0x%lx [Counter=%d]\n",CheckSum.checksum(),CallCounter);
   CallCounter++;
 }
 
@@ -125,7 +125,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum(const char *msg) {
      for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  0x%lx",CheckSumBuffer[thread]);
      printf("\n");
 
-     for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  %ld",ParticleCounterBuffer[thread]);
+     for (int thread=0;thread<PIC::nTotalThreads;thread++) printf("  %d",ParticleCounterBuffer[thread]);
      printf("\n");
   }
 }
@@ -141,7 +141,7 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum_CallCounter(long int nlin
   char msg[_MAX_STRING_LENGTH_PIC_];
   static long int CallCounter=0;
 
-  sprintf(msg,"file=%s, line=%ld [Counter=%i]",fname,nline,CallCounter);
+  sprintf(msg,"file=%s, line=%ld [Counter=%li]",fname,nline,CallCounter);
   GetParticleFieldCheckSum(msg);
   CallCounter++;
 }
@@ -151,10 +151,10 @@ void PIC::RunTimeSystemState::GetParticleFieldCheckSum_CallCounter(const char *m
   static long int CallCounter=0;
 
   if (msg!=NULL) {
-    sprintf(buffer,"%s [Counter=%i]",msg,CallCounter);
+    sprintf(buffer,"%s [Counter=%li]",msg,CallCounter);
   }
   else {
-    sprintf(buffer,"[Counter=%i]",CallCounter);
+    sprintf(buffer,"[Counter=%li]",CallCounter);
   }
 
   GetParticleFieldCheckSum(buffer);
