@@ -9227,7 +9227,7 @@ nMPIops++;
         tm *ct=localtime(&TimeValue);
 
         LastTimeValue=TimeValue;
-        printf("MESH: InitMeasure: Processed %i blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+        printf("MESH: InitMeasure: Processed %li blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
       }
     }
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
