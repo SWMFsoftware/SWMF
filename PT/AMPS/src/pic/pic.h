@@ -2578,8 +2578,8 @@ namespace PIC {
         //procedures used to verify that a given cut-face has been accessed only onces
         void IncrementCounter(); //set new counter at the beginig of the processing code segment
         unsigned int GetCurrentCounterValue(int iface);
-        bool IsFirstAcecssWithAccessCounterUpdate(int iface);  //resut true -> it is the 'first' access the given access counter value; false -> the face has been already processesed
-        bool IsFirstAcecssWithAccessCounterUpdate(cTriangleFace* TriangleFace);
+        bool IsFirstAccecssWithAccessCounterUpdate(int iface);  //resut true -> it is the 'first' access the given access counter value; false -> the face has been already processesed
+        bool IsFirstAccecssWithAccessCounterUpdate(cTriangleFace* TriangleFace);
         void FlushBuffer(int thread_OpenMP);
       }
 

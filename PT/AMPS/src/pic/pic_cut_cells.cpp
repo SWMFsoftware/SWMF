@@ -604,7 +604,7 @@ unsigned int PIC::Mesh::IrregularSurface::CutFaceAccessCounter::GetCurrentCounte
 }
 
  //resut true -> it is the 'first' access the given access counter value; false -> the face has been already processesed
-bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(int iface) {
+bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(int iface) {
   bool res;
   int thread_OpenMP=0;
 
@@ -621,8 +621,8 @@ bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessC
   return res;
 }
 
-bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(cTriangleFace* TriangleFace) {
-  return IsFirstAcecssWithAccessCounterUpdate(TriangleFace-CutCell::BoundaryTriangleFaces);
+bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(cTriangleFace* TriangleFace) {
+  return IsFirstAccecssWithAccessCounterUpdate(TriangleFace-CutCell::BoundaryTriangleFaces);
 }
 
 

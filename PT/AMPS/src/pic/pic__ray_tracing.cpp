@@ -199,7 +199,7 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
       for (;t!=NULL;t=t->next) {
         TriangleFace=t->TriangleFace;
 
-        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
           if (TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS)==true) return false;
         }
       }
@@ -269,7 +269,7 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
       for (;t!=NULL;t=t->next) {
         TriangleFace=t->TriangleFace;
 
-        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
           if ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) {
             code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
             if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
@@ -337,7 +337,7 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
       for (;t!=NULL;t=t->next) {
         TriangleFace=t->TriangleFace;
 
-        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAcecssWithAccessCounterUpdate(TriangleFace)==true) {
+        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
           code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
 
           if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
