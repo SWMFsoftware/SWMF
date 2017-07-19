@@ -621,7 +621,7 @@ bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccess
   return res;
 }
 
-bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(cTriangleFace* TriangleFace) {
+bool PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(PIC::Mesh::IrregularSurface::cTriangleFace* TriangleFace) {
   return IsFirstAccecssWithAccessCounterUpdate(TriangleFace-CutCell::BoundaryTriangleFaces);
 }
 
