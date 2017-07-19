@@ -39,7 +39,7 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
     exit(__LINE__,__FILE__,msg);
   }  
 
-  if (PIC::ThisThread==0) printf("$PREFIX: The total particle buffer length=%i\n",BufrerLength);
+  if (PIC::ThisThread==0) printf("$PREFIX: The total particle buffer length=%li\n",BufrerLength);
 
   //init the list of particles in the buffer
   for (long int ptr=0;ptr<MaxNPart-1;ptr++) {
