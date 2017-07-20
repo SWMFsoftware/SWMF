@@ -180,6 +180,8 @@ public:
 
       //Types of the column maps integration
       void Circular(double *xObservation,double *PrimaryAxisDirection,double *SecondaryAxisDirection,double HalfMapAngle,int nAzimuthPoints,int nZenithPoints,const char *fname,cColumnIntegrationSet* IntegrationSet);
+      void Rectangular(double *xObservation,double *PrimaryAxisDirection,double *SecondaryAxisDirection,double xRange, double yRange, double *ImageOrigin, int nAzimuthPoints,int nZenithPoints,const char *fname,cColumnIntegrationSet* IntegrationSet);
+
     };
 
     cMap Map;
