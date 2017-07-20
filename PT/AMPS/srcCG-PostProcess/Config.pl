@@ -20,7 +20,7 @@ foreach (@ARGV) {
     my $line;
     while ($line=<fMakefileIn>) {
       if ($line=~m/FLAGC/) {
-        print fMakefileOut "FLAGC+ = $options\n";
+        print fMakefileOut "FLAGC+=$options\n";
       }
       else {
         print fMakefileOut "$line";
