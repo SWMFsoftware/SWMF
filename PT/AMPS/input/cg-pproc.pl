@@ -180,7 +180,7 @@ while ($line=<InputFile>) {
 	      ($s0,$line)=split(' ',$line,2);	  
 	      ampsConfigLib::RedefineMacro("_DUST_SPEC_NUMBER_",$ndust,"main/config.dfn");
 	      ampsConfigLib::RedefineMacro("_DUST_GROUP_NUMBER_",$s0,"main/config.dfn");
-	      ampsConfigLib::RedefineMacro("_DUST_CASE_","_DUST_CASE__".$ndust."_SPEC_".$s0."_GROUP_","main/config.dfn");
+	      ampsConfigLib::RedefineMacro("_DUST_CASE_","_DUST_CASE__".$ndust."SPEC_".$s0."GROUP_","main/config.dfn");
  
           }
           else {
