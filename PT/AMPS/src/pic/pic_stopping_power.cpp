@@ -195,7 +195,8 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 #endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
-#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_) default (none) firstprivate (LocalCellNumber, \
+    int TotalCell=_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
+#pragma omp parallel for schedule(dynamic,TotalCell) default (none) firstprivate (LocalCellNumber, \
       node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
       block,EndTime,StartTime,thread) \
      \
