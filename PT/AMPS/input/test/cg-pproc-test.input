@@ -41,7 +41,7 @@ ngas=2
 ndust=4 \\
 ndustgroup=10
 test=off !!!column_integration_test, off
-spicekernelspath=/Volumes/Storage/SPICE/ROSETTA/kernels
+spicekernelspath=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels 
 loadtrajectoryfiles=off
 surfaceExposureTime=off
 
