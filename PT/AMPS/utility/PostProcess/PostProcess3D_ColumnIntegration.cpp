@@ -322,3 +322,139 @@ void cPostProcess3D::cColumnIntegral::cMap::Circular(double *xObservation,double
   if (rank==0) fclose(fout);
 }
 
+
+
+
+//generate a rectangular column integral map as a function of distances
+// with x within [-xrange,xrange] and y within [-yrange,yrange] 
+void cPostProcess3D::cColumnIntegral::cMap::Rectangular(double *xObservation,double *PrimaryAxisDirection,double *SecondaryAxisDirection,double xRange, double yRange, double *ImageOrigin, int nAzimuthPoints,int nZenithPoints,const char *fname,cColumnIntegrationSet* IntegrationSet) {
+ 
+  int iZenithPoint,idim,i;
+  double e0[3],e1[3],e2[3],l[3],theta,phi;
+  double ImageOriginVector[3];
+  double ZenithAngle,AzimuthAngle;
+  double cosPhi,sinPhi,sinTheta,cosTheta;
+  
+ 
+
+  const double dx=2.0*xRange/(nZenithPoints-1); // the resolution along zenith direction 
+  const double dy=2.0*yRange/(nAzimuthPoints-1);// the resolution along azimuth direction
+  
+  //determine the frame of reference for the map capculation
+  for (i=0;i<3;i++) {
+    e0[i]=PrimaryAxisDirection[i]-xObservation[i];
+    e1[i]=SecondaryAxisDirection[i]-xObservation[i];
+    ImageOriginVector[i]=ImageOrigin[i]-xObservation[i];
+  }
+
+  Vector3D::Normalize(ImageOriginVector);
+  Vector3D::Normalize(e0);
+  Vector3D::Orthogonalize(e0,e1);  // e1 is along zenith direction
+  Vector3D::Normalize(e1);
+  Vector3D::CrossProduct(e2,e0,e1); // e2 is along azimuthal direction
+
+  printf("e0:%f,%f,%f\n",e0[0],e0[1],e0[2]);
+  printf("e1:%f,%f,%f\n",e1[0],e1[1],e1[2]);
+  printf("e2:%f,%f,%f\n",e2[0],e2[1],e2[2]);
+  printf("ImageOriginVector:%f,%f,%f\n",ImageOriginVector[0],ImageOriginVector[1],ImageOriginVector[2]);
+  
+  for (i=0;i<3;i++) {
+    if (fabs(ImageOriginVector[i]-e0[i])>1e-2)  exit(__LINE__,__FILE__,"Error: the primary axis is different from the image origin vector");
+  }
+  //create the output file and print the variable list
+  FILE *fout;
+  int rank,size;
+  MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  MPI_Comm_size(MPI_COMM_WORLD,&size);
+
+ 
+  if (rank==0) {
+    fout=fopen(fname,"w");
+    fprintf(fout,"VARIABLES=\"IPix\", \"JPix\", \"Cut-cell Projection\", ");
+    IntegrationSet->PrintVariableList(fout);
+
+    fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
+  }
+
+  //create the column integraion map
+  int StateVectorLength=IntegrationSet->IntegrantVectorLength();
+  double StateVector[StateVectorLength];
+  double DataBuffer[StateVectorLength*nAzimuthPoints];
+  double GlobalDataBuffer[StateVectorLength*nAzimuthPoints];
+  double ProjectionCodeBuffer[nAzimuthPoints];
+  double GlobalProjectionCodeBuffer[nAzimuthPoints];
+
+ 
+  for (iZenithPoint=0;iZenithPoint<nZenithPoints;iZenithPoint++) {
+ 
+    // the coordinate along zenith direction
+    double x = -xRange + iZenithPoint*dx; 
+    
+    int iAzimuthPoint;
+    int iAzimuthPointStart,iAzimuthPointFinish;
+    int nPointPerThread=nAzimuthPoints/size;
+
+    iAzimuthPointStart=rank*nPointPerThread;
+    iAzimuthPointFinish=iAzimuthPointStart+nPointPerThread-1;
+
+ 
+    if (rank==size-1) iAzimuthPointFinish=nAzimuthPoints-1;
+ 
+    //clean the data buffer
+    for (i=0;i<StateVectorLength*nAzimuthPoints;i++) DataBuffer[i]=0.0,GlobalDataBuffer[i]=0.0;
+    for (i=0;i<nAzimuthPoints;i++) ProjectionCodeBuffer[i]=0.0,GlobalProjectionCodeBuffer[i]=0.0;
+
+    for (iAzimuthPoint=iAzimuthPointStart;iAzimuthPoint<=iAzimuthPointFinish;iAzimuthPoint++) {
+ 
+      double y = -yRange + iAzimuthPoint*dy;
+ 
+      // calculate the location of the pixel (iPix, jPix)
+      for (idim=0;idim<3;idim++) l[idim]=ImageOrigin[idim]+x*e1[idim]+y*e2[idim];
+ 
+      // calculate the normalized line of sight vector  
+      for (idim=0;idim<3;idim++) l[idim]-=xObservation[idim];
+      Vector3D::Normalize(l);
+      //calculate and output of the column integral
+ 
+      ColumnIntegral->GetCoulumnIntegral(StateVector,StateVectorLength,xObservation,l,IntegrationSet->IntegrantVector);
+ 
+      //determine the cut-cell projection
+      double t,ProjectionCode=-1.0;
+      int iStartFace,iFinishFace;
+
+      iStartFace=0;
+      iFinishFace=CutCell::nBoundaryTriangleFaces;
+
+      for (i=iStartFace;i<iFinishFace;i++) {
+        if (CutCell::BoundaryTriangleFaces[i].RayIntersection(xObservation,l,t,0.0)==true) {
+          ProjectionCode=1.0;
+        }
+      }
+
+      //save the state vector in the data buffer
+      memcpy(DataBuffer+iAzimuthPoint*StateVectorLength,StateVector,StateVectorLength*sizeof(double));
+      ProjectionCodeBuffer[iAzimuthPoint]=ProjectionCode;
+    }
+
+   //collect output value of the column integral
+    MPI_Reduce(DataBuffer,GlobalDataBuffer,StateVectorLength*nAzimuthPoints,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+    MPI_Reduce(ProjectionCodeBuffer,GlobalProjectionCodeBuffer,nAzimuthPoints,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+    if (rank==0) {
+      for (iAzimuthPoint=0;iAzimuthPoint<nAzimuthPoints;iAzimuthPoint++) {
+
+        fprintf(fout,"%ld %ld %e ",iZenithPoint,iAzimuthPoint,GlobalProjectionCodeBuffer[iAzimuthPoint]);
+        IntegrationSet->PostProcessColumnIntegralVector(GlobalDataBuffer+iAzimuthPoint*StateVectorLength);
+
+        for (i=0;i<StateVectorLength;i++) fprintf(fout," %e ",GlobalDataBuffer[i+iAzimuthPoint*StateVectorLength]);
+        fprintf(fout,"\n");
+
+      }
+    }
+
+  }
+
+  //close the output file
+  if (rank==0) fclose(fout);
+}
+
