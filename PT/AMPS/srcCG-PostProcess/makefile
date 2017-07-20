@@ -4,6 +4,7 @@ DEFAULT_TARGET : lib
 
 
 include ../../Makefile.conf
+#FLAGC
 MAINOBJ=main.o
 MAINLIBOBJ=main.o \
 	DustScatteringEfficientcy.o \
