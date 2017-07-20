@@ -1303,9 +1303,9 @@ return 1;
     IntegrationSet.PostProcessColumnIntegralVector=INTEGRAL_TEST::PostProcessColumnIntegralVector;
    
     double xObservation[3]={0,0,0},xPrimary[3]={0,4e5,0},xSecondary[3]={4e5,4e5,0};
-    
+    double ImgOrigin[3]={0,4e5,0};
     amps.ColumnIntegral.Map.Circular(xObservation,xPrimary,xSecondary,45,20,20,"map.dat",&IntegrationSet); 
-
+    amps.ColumnIntegral.Map.Rectangular(xObservation,xPrimary,xSecondary,3e5,3e5,ImgOrigin,21,21,"mapXY.dat",&IntegrationSet);
 #else
     exit(__LINE__,__FILE__,"Error: the test mode is not implemented");
 #endif
