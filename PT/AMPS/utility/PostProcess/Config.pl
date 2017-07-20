@@ -11,7 +11,7 @@ foreach (@ARGV) {
   elsif (/^-extraflag=(.*)$/) {
     my $options=$1; 
 
-    #replace FLAGC variable in makefile    
+    #append FLAGC variable in makefile    
     `mv makefile makefile.bak`;
     
     open(fMakefileIn,"<makefile.bak") || die "Cannot open makefile.bak";
@@ -20,7 +20,8 @@ foreach (@ARGV) {
     my $line;
     while ($line=<fMakefileIn>) {
       if ($line=~m/FLAGC/) {
-        print fMakefileOut "FLAGC+ = $options\n";
+        chomp ($line); 
+        print fMakefileOut "$line $options\n";
       }
       else {
         print fMakefileOut "$line";
