@@ -60,13 +60,14 @@ subroutine calc_physics(iBlock)
   !computation of M for Jupiter and out is supposed to be modified by additional
   !terms for the time interval 3000BC - 30000AD... This probably doesn't matter.
   MeanAnomaly = meanLongitude - longitudePerihelion
+  MeanAnomaly = mod(MeanAnomaly,360.0)
   if (MeanAnomaly > 180) MeanAnomaly = MeanAnomaly - 360
 
   !Need to solve Kepler's equation by iterating
   DEccAnomaly = 10000.0
   tol = 1.0e-6
   eccentricityDeg = (180/pi)*eccentricity
-  EccAnomaly = MeanAnomaly+eccentricityDeg*sin(MeanAnomaly)
+  EccAnomaly = MeanAnomaly+eccentricityDeg*sin(MeanAnomaly*pi/180)
   i = 0
   do while (abs(DEccAnomaly) > tol .and. i < 100)
     dM = MeanAnomaly - (eccAnomaly - eccentricityDeg*sin(pi/180*eccAnomaly))
@@ -99,10 +100,10 @@ subroutine calc_physics(iBlock)
     (-sin(argPerihelion*pi/180.)*sin(longitudeNode*pi/180.) + &
     cos(argPerihelion*pi/180.)*cos(longitudeNode*pi/180.)*cos(inclination*pi/180.))
 
-  !Calculate orbit angle, aka Ls.
+  !Calculate orbit angle, aka Ls. In this CS, need the angle from -x axis.
   orbitAngle = atan(y_ecl/x_ecl)
-  if (orbitAngle < 0) orbitAngle = orbitAngle + 2*pi
-
+  if (x_ecl > 0) orbitangle = orbitangle+pi
+  if (x_ecl < 0 .and. y_ecl > 0) orbitangle = orbitangle + 2*pi
   SunDeclination = atan(tan(Tilt*pi/180.)*sin(OrbitAngle))
 
   SinDec = sin(SunDeclination)
