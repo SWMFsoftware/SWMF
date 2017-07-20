@@ -1315,7 +1315,7 @@ return 1;
   MPI_Barrier(MPI_COMM_WORLD);
   amps.FinalizeMPI();
   printf("done.\n");
-  return 1;
+  return EXIT_SUCCESS;
 }
 
 
