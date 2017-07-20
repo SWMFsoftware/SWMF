@@ -45,6 +45,34 @@ sub ChangeValueOfVariable {
   close (FILEOUT);
 }
 
+sub ChangeValueOfVariableNoSemiColon {
+  my $Variable=$_[0];
+  my $Value=$_[1];
+  my $File=$_[2];
+
+  my @FileContent;
+
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";
+  @FileContent=<FILEIN>;
+  close (FILEIN);
+
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File");
+
+
+  foreach (@FileContent) {
+    if ($_=~/($Variable)/) {
+      my $t=$Variable;
+
+      $t=~s/\\//g;
+      $_=$t."=".$Value."\n";
+    }
+
+    print FILEOUT "$_";
+  }
+
+  close (FILEOUT);
+}
+
 #=============================== Change a definition of a macro in a source code  =============================
 sub RedefineMacro {
   my $Macro=$_[0];
