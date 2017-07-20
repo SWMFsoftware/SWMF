@@ -25,6 +25,6 @@ KERNELS_TO_LOAD = (
   '$A/spk/DE405.BSP', 
   '$A/spk/RORB_DV_121_01_______00190.BSP', 
   '$A/spk/CORB_DV_121_01_______00190.BSP',
-  '$A/../../ROS_NADIR.tf' 
+  '$A/other/ROS_NADIR.tf' 
             )
 \begintext
