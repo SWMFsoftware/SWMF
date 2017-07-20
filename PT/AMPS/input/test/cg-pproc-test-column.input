@@ -1,0 +1,7 @@
+
+include ../input/test/cg-pproc-test.input
+
+#block ../input/cg-pproc.pl
+  test=column_integration_test   !!!column_integration_test, off
+#endblock
+
