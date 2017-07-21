@@ -1360,6 +1360,11 @@ subroutine set_inputs
            call read_in_logical(UseAboveHigh, iError)
            call read_in_logical(UseBelowLow, iError)
 
+           if ( .not. UseEUVAC     .and. &
+                .not. UseTobiska   .and. &
+                .not. UseAboveHigh .and. &
+                .not. UseBelowLow) UseRidleyEUV = .true.
+
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #EUVMODEL'
               write(*,*) 'If EUVAC   = true, use EUVAC Model'

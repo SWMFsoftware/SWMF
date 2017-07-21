@@ -3,6 +3,7 @@
 module ModEUV
 
   use ModGITM, only: nLats, nLons, nAlts,nBlocksMax,nBlocks
+  use ModInputs, only:iCharLen_
   use ModPlanet
 
   implicit none
@@ -51,6 +52,12 @@ module ModEUV
   real, dimension(nFlaresMax) :: FlareTimes
   logical :: ReReadEUVFile = .false.
 
+  character (len=iCharLen_) :: cRidleyEUVFile = 'UA/DataIn/waves.dat'
+  real :: RidleySlopes(3,Num_WaveLengths_High)
+  real :: RidleyIntercepts(Num_WaveLengths_High)
+  real :: RidleyPowers(2,Num_WaveLengths_High)
+
+  
   real, dimension(nS2WaveLengths) :: &
        S2WaveLengths, S2PhotonEnergy, S2SolarFlux, &
        S2PhotoAbsCO, S2PhotoAbsCO2, S2PhotoAbsN2, S2PhotoAbsO2, S2PhotoAbsO, &

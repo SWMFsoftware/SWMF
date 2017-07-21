@@ -277,6 +277,8 @@ module ModInputs
   logical                   :: UseTobiska   = .true.
   logical                   :: UseAboveHigh = .true.
   logical                   :: UseBelowLow  = .true.
+
+  logical                   :: UseRidleyEUV = .false.
   
   logical                   :: UseEUVData =.false.
   character (len=iCharLen_) :: cEUVFile
