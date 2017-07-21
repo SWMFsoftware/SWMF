@@ -52,7 +52,7 @@ mkdir -p PGI;   cp -r AMPS PGI/;
 
 #Install AMPS
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                         
-./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    
+./Config.pl -install -compiler=gfortran,gcc_mpicc -f-link-option=-lmpi_cxx   >& test_amps.log    
 
 cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                       
 ./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log
@@ -63,4 +63,6 @@ cd $WorkDir/Tmp_AMPS_test/PGI/AMPS
 #Execute the tests
 $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllGNU.sh & 
 $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllIntel.sh &   
+$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllPGI.sh &
+
 
