@@ -55,7 +55,7 @@ cd $WorkDir/Tmp_AMPS_test/GNU/AMPS
 ./Config.pl -install -compiler=gfortran,gcc_mpicc -f-link-option=-lmpi_cxx   >& test_amps.log    
 
 cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                       
-./Config.pl -link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log
+./Config.pl -f-link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log
 
 cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                         
 ./Config.pl -install -compiler=pgf90,pgccmpicxx  -link-option=-lc++    >& test_amps.log    
