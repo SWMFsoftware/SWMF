@@ -58,7 +58,7 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS
 ./Config.pl -f-link-option=-lc++ -install -compiler=ifort,iccmpicxx -link-option=-cxxlib >& test_amps.log
 
 cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                         
-./Config.pl -install -compiler=pgf90,pgccmpicxx  -link-option=-lc++    >& test_amps.log    
+./Config.pl -f-link-option=-lc++ -install -compiler=pgf90,pgccmpicxx  -link-option=-lc++    >& test_amps.log    
 
 #Execute the tests
 $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Valeriy/AllGNU.sh & 
