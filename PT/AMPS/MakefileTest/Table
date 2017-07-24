@@ -63,6 +63,7 @@ Time=20
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
 
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS 
 
@@ -190,6 +191,7 @@ Time=54
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
 
 Keys=-cplr-data-path=${PTDIR}/${TESTX-WingDIR} -model-data-path=${PTDIR}/${TESTX-WingDIR} 
 
@@ -676,6 +678,7 @@ Ref=4{icc}@@(0+stampede)
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
+Ref=8{pgcc}@@(0+valeriy)
 
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 @@(0+valeriy)
@@ -1256,6 +1259,7 @@ Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
 
 Check=
 >>>@echo "test_Sphere-drag-coefficient_check..." >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
