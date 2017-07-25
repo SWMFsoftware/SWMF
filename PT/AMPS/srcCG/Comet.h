@@ -362,7 +362,7 @@ namespace Comet {
       //Radiation Pressure: beta is taken from fig3-Gombosi-2015-AA
       if (_CG_DUST_FORCE_MODE__RADIATION_PRESSURE_ == _PIC_MODE_ON_) {
         static const int n_Gombosi2015AA=101;
-        static const double dR_Gombosi2015AA=0.01220*1.0E-9;
+//        static const double dR_Gombosi2015AA=0.01220*1.0E-9;
         static const double Rmin_Gombosi2015AA=0.10000*1.0E-9;
         static const double Rmax_Gombosi2015AA=10000.00000*1.0E-9;
         static const double beta_Gombosi2015AA[n_Gombosi2015AA]={0.00191, 0.00191, 0.00191, 0.00387, 0.00447, 0.00584, 0.00584, 0.00721, 0.00721, 0.00858, 0.01055, 0.01261, 0.01269,
