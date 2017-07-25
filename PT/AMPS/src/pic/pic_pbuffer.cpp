@@ -524,9 +524,9 @@ void PIC::ParticleBuffer::CheckParticleList() {
   long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_]; //,tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
 
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   int nTotalThreads_OpenMP=1,thread_OpenMP;
 
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   #pragma omp parallel default(none) shared(nTotalThreads_OpenMP)
   {
     #pragma omp single
@@ -534,7 +534,7 @@ void PIC::ParticleBuffer::CheckParticleList() {
       nTotalThreads_OpenMP=omp_get_num_threads();
     }
   }
-#endif
+  #endif
 
 
   for (int thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {

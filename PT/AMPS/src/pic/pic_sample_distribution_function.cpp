@@ -26,7 +26,7 @@ int PIC::DistributionFunctionSample::Sample_V2_Offset=0,PIC::DistributionFunctio
 //====================================================
 //init the sampling buffers
 void PIC::DistributionFunctionSample::Init() {
-  int idim,nProbe,i,j,k;
+  int nProbe,i,j,k;
 
   if (SamplingInitializedFlag==true) exit(__LINE__,__FILE__,"Error: DistributionFunctionSample is already initialized");
 

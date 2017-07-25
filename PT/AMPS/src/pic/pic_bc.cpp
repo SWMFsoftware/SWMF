@@ -450,9 +450,9 @@ void PIC::BC::ExternalBoundary::OpenFlow::Inject() {
 //=========================================================================================================
 //get the direction of the gas flow at the boundary of the computational domain
 int PIC::BC::ExternalBoundary::ExternalBoundaryFlowDirection(int spec, int nface, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
-  int i,j,nd,idim;
   double AveragedVelocity[3]={0.0,0.0,0.0};
   double BulkVelocity[3],ExternalNormal[3],c;
+  int idim;
 
   //the total number of cells along each direction
   static const int iFaceIndex[6]={1,1, 0,0, 0,0};

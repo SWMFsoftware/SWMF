@@ -20,7 +20,6 @@ void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length
 
 
 void PIC::Debugger::SaveParticleDataIntoDebuggerDataStream(void* data,int length,const char* msg) {
-  int i;
 
   struct cStreamBuffer {
     int CollCounter;
