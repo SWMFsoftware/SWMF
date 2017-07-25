@@ -53,6 +53,7 @@ Module CON_domain_decomposition
   use CON_world
   use ModNumConst                                               
   use ModMpi
+  use ModKind, ONLY: nByteReal
 
   !REVISION HISTORY:
   ! 6/18/03-7/11/03 Sokolov I.V. <igorsok@umich.edu> phone(734)647-4705
@@ -367,7 +368,10 @@ Module CON_domain_decomposition
 
   !Needed for searching and interpolating algorithms
   real, parameter:: &
-       cAlmostOne   = 1.0 - 1.0E-7,&
+       cTol  = 0.00000010, &
+       cTol2 = cTol**(nByteReal/4)
+  real, parameter:: &
+       cAlmostOne   = 1.0 - cTol2,&
        cAlmostTwo   = 2*cAlmostOne,&
        cAlmostHalf  = 0.5*cAlmostOne
 
@@ -1390,8 +1394,14 @@ contains
          :,lFound))/DomainDecomposition%DXyzBlock_DI(:,lFound)
 
     !Recursive search starts
-
     do
+
+       ! correct Discr_D to avoid having points exactly
+       ! on the boundary of a block; potentiall introduces error,
+       ! but it would matter -log_2(cTol)~23 resolution level up the tree
+       Discr_D = real(floor(Discr_D)) + &
+            min( cAlmostOne, max( cTol2, Discr_D-real(floor(Discr_D)) ) )
+
        if(any(Discr_D<cZero).or.any(Discr_D>=cOne))then
           iChild=DomainDecomposition%iDecomposition_II(&
                MyNumberAsAChild_,lFound)
@@ -1425,7 +1435,7 @@ contains
              Discr_D(1:DomainDecomposition%nDimTree)=&
                   (Discr_D(1:DomainDecomposition%nDimTree)+&
                   real(DomainDecomposition%iShift_DI(&
-                  :,iChild)))* cAlmostHalf
+                  :,iChild)))* 0.50
           end if
        elseif&
             (is_used_block_dd(DomainDecomposition,lFound))then
@@ -1435,7 +1445,7 @@ contains
           !Ascend the octree: calculate the shift                         !
           Discr_D(1:DomainDecomposition%nDimTree)=&
                Discr_D(1:DomainDecomposition%nDimTree)&
-               *cAlmostTwo
+               *2.0
           iShift_D=int(Discr_D(&
                1:DomainDecomposition%nDimTree))
           Discr_D(1:DomainDecomposition%nDimTree)=&
@@ -1454,7 +1464,6 @@ contains
     end do
     !---------------------------------------------------------------!
     !End of recursive search                                        !
-
     Xyz_D=Xyz_D-DomainDecomposition%XyzBlock_DI(:,lFound)
     lGlobalTreeNumber=lFound
     DomainDecomposition%lSearch=lFound
