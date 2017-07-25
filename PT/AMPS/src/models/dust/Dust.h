@@ -431,10 +431,9 @@ namespace ElectricallyChargedDust {
 
 
   #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-    long int nd;
     int i,j,k;
 
-    if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
+    if (PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false)==-1) {
       exit(__LINE__,__FILE__,"Error: the cell is not found");
     }
 
@@ -706,15 +705,15 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
   double plasmaTemperature,plasmaNumberDensity;
   double GrainElectricCharge,GrainElectricCharge_NEW_Iteration,GrainElectricCharge_LAST_Iteration;
 
-  PIC::Mesh::cDataCenterNode* cell;
+//  PIC::Mesh::cDataCenterNode* cell;
   int i,j,k;
-  long int LocalCellNumber;
+//  long int LocalCellNumber;
 
   //the procesure is applied only to dust
   if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
-  cell=initNode->block->GetCenterNode(LocalCellNumber);
+  if ((/*LocalCellNumber=*/PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+//  cell=initNode->block->GetCenterNode(LocalCellNumber);
 
   //ICES plasma data
 //  char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
