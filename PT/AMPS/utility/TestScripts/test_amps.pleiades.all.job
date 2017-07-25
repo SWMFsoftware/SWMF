@@ -1,0 +1,21 @@
+#
+# This job script should be executed from temporary test directory 
+#
+
+#PBS -N AMPS_pfe
+
+#PBS -q devel
+#PBS -l select=1:ncpus=24:model=has
+
+#PBS -l walltime=2:00:00
+
+#PBS -j oe
+#PBS -m e
+
+# Specify group if necessary
+#PBS -W group_list=g26135
+
+# Run AMPS tests compiled with GNU, Intel and PGI compilers 
+AMPS/utility/TestScripts/Pleiades/RunIntelPleiades.sh test_run & 
+AMPS/utility/TestScripts/Pleiades/RunPGIPleiades.sh test_run & 
+AMPS/utility/TestScripts/Pleiades/RunGNUPleiades.sh test_run & 
