@@ -302,46 +302,45 @@ sub process_option{
 }
 
 #------------------------------------------------------------------------------
-sub check_overtime{
-    # for supercomputers time in development queue is limited to 2 hours;
-    # check if test exceed the limit and create separate job-files in the case
-    #..........................................................................
-    # check if this is a supercomputer
-    return unless(
-	$hostname eq $Stampede ||
-	$hostname eq $Pleiades);
+sub check_overtime {
+  # for supercomputers time in development queue is limited to 2 hours;
+  # check if test exceed the limit and create separate job-files in the case
+  #..........................................................................
+  # check if this is a supercomputer
+  return unless(($hostname eq $Stampede) || ($hostname eq $Pleiades));
 
-    # check if went overtime
-    return if($TimeTotal < $TimeLimit);
+  # check if went overtime
+  return if ($TimeTotal < $TimeLimit);
     
-    # number of this overtime case
-    $iOvertime++;
-    # reset time counter
-    $TimeTotal -= $TimeLimit;
+  # number of this overtime case
+  $iOvertime++;
+  # reset time counter
+  $TimeTotal -= $TimeLimit;
 
-    # find line in final Makefile.test where to unsert a new target
-    for (my $i = 0; $i<=@Final-1; $i++){
-	next unless ($Final[$i] =~ m/^test_run:/);
-	# current line is the one with default target name
-	# append new target name at the next line
-	$Final[$i+1] .= "\ntest_run_OVERTIME$iOvertime:\n";	
-	last;
-    }
+  # find line in final Makefile.test where to unsert a new target
+  for (my $i = 0; $i<=@Final-1; $i++) {
+    next unless ($Final[$i] =~ m/^test_run:/);
+	
+    #current line is the one with default target name
+	  #append new target name at the next line
+    $Final[$i+1] .= "\ntest_run_OVERTIME$iOvertime:\n";	
+    last;
+  }
 
-    # create a new job file for overtimed tests for each compiler
-    # GNU
-    my $path = 'utility/TestScripts';
-    my @Compilers = ('gnu','intel','pgi');
-    foreach my $Comp (@Compilers){
-	my $original="$path/test_amps.$hostname.$Comp.job";
-	my $overtime="$path/test_amps.$hostname.$Comp.overtime$iOvertime.job";
-	if(-e $original){
-	    system("cp $original $overtime");
-	    my @lines = read_content("$overtime");
-	    foreach my $line (@lines){
-		$line =~ s/make test_run/make test_run_OVERTIME$iOvertime/;
-	    }
-	    &write_content($overtime, @lines);
+  # create a new job file for overtimed tests for each compiler
+  my $path = 'utility/TestScripts';
+ 
+  my $original="$path/test_amps.$hostname.all.job";
+  my $overtime="$path/test_amps.$hostname.all.overtime$iOvertime.job";
+	
+  if (-e $original) {
+	  system("cp $original $overtime");
+    my @lines = read_content("$overtime");
+	    
+    foreach my $line (@lines) {
+      $line =~ s/test_run/test_run_OVERTIME$iOvertime/;
+	  }
+	    
+	  &write_content($overtime, @lines);
 	}
-    }
 }
