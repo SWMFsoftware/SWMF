@@ -129,7 +129,7 @@ void PIC::CCMC::Parser::LoadControlFile() {
 
 //Read the internal boundary sphere section
 void PIC::CCMC::Parser::Read::InternalBoundarySphere(CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   while (ifile.eof()==false) {
     ifile.GetInputStr(str,sizeof(str));
@@ -159,7 +159,7 @@ void PIC::CCMC::Parser::Read::InternalBoundarySphere(CiFileOperations& ifile) {
 
 //Read individual section of the input file
 void PIC::CCMC::Parser::Read::DomainLimits(CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   while (ifile.eof()==false) {
     ifile.GetInputStr(str,sizeof(str));
@@ -244,7 +244,7 @@ double PIC::CCMC::Domain::Resolution::GetlocalResolution(double *x) {
 
 //return the characteristic particle speed
 void PIC::CCMC::Parser::Read::CharacteristicSpeedTable(CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
   int spec;
 
   if (PIC::CCMC::ParticleCharacteristicSpeedTable==NULL) {
@@ -277,7 +277,7 @@ void PIC::CCMC::Parser::Read::CharacteristicSpeedTable(CiFileOperations& ifile) 
 }
 
 void PIC::CCMC::Parser::Read::SourceRegion::Sphere(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Sphere;
 
@@ -310,7 +310,7 @@ void PIC::CCMC::Parser::Read::SourceRegion::Sphere(PIC::CCMC::ParticleInjection:
 }
 
 void PIC::CCMC::Parser::Read::SourceRegion::Circle(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Circle;
 
@@ -359,7 +359,7 @@ void PIC::CCMC::Parser::Read::SourceRegion::Circle(PIC::CCMC::ParticleInjection:
 }
 
 void PIC::CCMC::Parser::Read::SourceRegion::Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
   int i,idim;
   PIC::CCMC::ParticleInjection::cInjectionRegionTable c;
 
@@ -384,7 +384,7 @@ void PIC::CCMC::Parser::Read::SourceRegion::Table(PIC::CCMC::ParticleInjection::
 }
 
 void PIC::CCMC::Parser::Read::SourceRegion::Quadrilateral(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral;
 
@@ -416,7 +416,7 @@ void PIC::CCMC::Parser::Read::SourceRegion::Quadrilateral(PIC::CCMC::ParticleInj
 }
 
 void PIC::CCMC::Parser::Read::VelocityDistribution::Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
   int i,idim;
   PIC::CCMC::ParticleInjection::cVelocityDistributionTable c;
 
@@ -440,7 +440,7 @@ void PIC::CCMC::Parser::Read::VelocityDistribution::Table(PIC::CCMC::ParticleInj
 }
 
 void PIC::CCMC::Parser::Read::VelocityDistribution::Maxwellian(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   InjectionBlock.VelocityDistribution.Type=PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Maxwellian;
 
@@ -464,7 +464,7 @@ void PIC::CCMC::Parser::Read::VelocityDistribution::Maxwellian(PIC::CCMC::Partic
 }
 
 void PIC::CCMC::Parser::Read::VelocityDistribution::Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_];
 
   InjectionBlock.VelocityDistribution.Type=PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Constant;
 
