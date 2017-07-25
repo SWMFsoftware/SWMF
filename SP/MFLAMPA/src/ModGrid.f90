@@ -162,7 +162,7 @@ module SP_ModGrid
   real, target:: DMomentumOverDEnergy_I(nMomentumBin)
   !----------------------------------------------------------------------------
   ! Coordinate system and geometry
-  character(len=3) :: TypeCoordSystem = 'HGI'
+  character(len=3) :: TypeCoordSystem = 'HGR'
   !/
 
 contains
