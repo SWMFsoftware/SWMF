@@ -179,7 +179,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     int nd;
     PIC::Mesh::cDataCenterNode *CenterNode;
     char *offset;
-    double dX = Xpos[1] - Xpos[0], dX2 = dX*dX, twodX = 2.0 * dX;
+    double dX = Xpos[1] - Xpos[0];
     double dZ = Zpos[1] - Zpos[0];
     
     const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
@@ -189,7 +189,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     if ((startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) && (startNode->block!=NULL)) {
       double *xNodeMin=startNode->xmin;
       double *xNodeMax=startNode->xmax;
-      double x[3],T,n,p;
+      double x[3];
       
       for (int k=kMin;k<=kMax;k++)for(int j=jMin;j<=jMax;j++)for (int i=iMin;i<=iMax;i++) {
 	    //the interpolation location
@@ -210,75 +210,53 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    double wX = (radpol-Xpos[xCell]) / dX;
 	    double wZ = (x[2] - Zpos[zCell]) / dZ;
 
-	    // threshold weight to switch interpolation stencils for gradients
-	    double wXth = 0.5;
-	    double wZth = 0.5;
-	    
 	    //interpolate values
 	    double DataInterp[nvar];
-	    for(int ivar=0; ivar<nvar; ivar++)
-	      DataInterp[ivar] = 0.0;
+
+	    for(int ivar=0; ivar<nvar; ivar++) DataInterp[ivar] = 0.0;
 
 	    for(int ii=0;ii<2;ii++) 
-	      for(int jj=0;jj<2;jj++){
-		//interpolate variables stored at nodes
-		for(int ivar=0; ivar<nvar; ivar++)
-		  DataInterp[ivar] += 
-		    Data[ivar][xCell+ii][zCell+jj] * 
-		    ((1-wX)*(1-ii)+wX*ii) * ((1-wZ)*(1-jj)+wZ*jj);
+	      for(int jj=0;jj<2;jj++) {
+          //interpolate variables stored at nodes
+          for (int ivar=0; ivar<nvar; ivar++)
+            DataInterp[ivar] += Data[ivar][xCell+ii][zCell+jj] * ((1-wX)*(1-ii)+wX*ii) * ((1-wZ)*(1-jj)+wZ*jj);
 	      }
+
 	    {
 	      // rotate vetors to the current plane
 	      // initial data is in slice y=0
 	      double cosPhi    = x[0] / radpol, sinPhi   = x[1]   / radpol;
 	      double tmp;
-	      for(int ii = b_; ii==b_ || ii==v_; ii += (v_-b_) ) {
-		tmp              = DataInterp[ii]*cosPhi-DataInterp[ii+1]*sinPhi;
-		DataInterp[ii+1] = DataInterp[ii]*sinPhi+DataInterp[ii+1]*cosPhi;
-		DataInterp[ii  ] = tmp;
+
+	      for (int ii = b_; ii==b_ || ii==v_; ii += (v_-b_) ) {
+          tmp              = DataInterp[ii]*cosPhi-DataInterp[ii+1]*sinPhi;
+          DataInterp[ii+1] = DataInterp[ii]*sinPhi+DataInterp[ii+1]*cosPhi;
+          DataInterp[ii  ] = tmp;
 	      }
 	    }
   
 	    //locate the cell
 	    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-	    if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL)
-	      continue;
-	    offset = 
-	      CenterNode->GetAssociatedDataBufferPointer() + 
-	      MULTIFILE::CurrDataFileOffset;
+
+	    if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
+
+	    offset = CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
 
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
-	      *(idim+(double*)(offset+Offset::MagneticField.offset)) =
-		DataInterp[b_+idim];
-
-	      *(idim+(double*)(offset+Offset::PlasmaBulkVelocity.offset)) =
-		DataInterp[v_+idim];
+	      *(idim+(double*)(offset+Offset::MagneticField.offset)) = DataInterp[b_+idim];
+	      *(idim+(double*)(offset+Offset::PlasmaBulkVelocity.offset)) = DataInterp[v_+idim];
 	    }
+
 	    // E = -VxB
-	    *(0+(double*)(offset+Offset::ElectricField.offset)) =
-	      DataInterp[b_+1]*DataInterp[v_+2] - 
-	      DataInterp[b_+2]*DataInterp[v_+1];
-
-	    *(1+(double*)(offset+Offset::ElectricField.offset)) =
-	      DataInterp[b_+2]*DataInterp[v_+0] - 
-	      DataInterp[b_+0]*DataInterp[v_+2];
-
-	    *(2+(double*)(offset+Offset::ElectricField.offset)) =
-	      DataInterp[b_+0]*DataInterp[v_+1] - 
-	      DataInterp[b_+1]*DataInterp[v_+0];
+	    *(0+(double*)(offset+Offset::ElectricField.offset)) = DataInterp[b_+1]*DataInterp[v_+2] - DataInterp[b_+2]*DataInterp[v_+1];
+	    *(1+(double*)(offset+Offset::ElectricField.offset)) = DataInterp[b_+2]*DataInterp[v_+0] - DataInterp[b_+0]*DataInterp[v_+2];
+	    *(2+(double*)(offset+Offset::ElectricField.offset)) = DataInterp[b_+0]*DataInterp[v_+1] - DataInterp[b_+1]*DataInterp[v_+0];
     
-	    *((double*)(offset+Offset::PlasmaIonPressure.offset)) =
-	      DataInterp[p_];
-
-	    *((double*)(offset+Offset::PlasmaNumberDensity.offset)) =
-	      DataInterp[n_];
-
-	    *((double*)(offset+Offset::PlasmaTemperature.offset)) =
-	      DataInterp[t_];
-
-	    *((double*)(offset+Offset::MagneticFluxFunction.offset)) =
-	      DataInterp[flux_];
+	    *((double*)(offset+Offset::PlasmaIonPressure.offset)) = DataInterp[p_];
+	    *((double*)(offset+Offset::PlasmaNumberDensity.offset)) = DataInterp[n_];
+	    *((double*)(offset+Offset::PlasmaTemperature.offset)) = DataInterp[t_];
+	    *((double*)(offset+Offset::MagneticFluxFunction.offset)) = DataInterp[flux_];
 	  }
     }
     else {
@@ -286,17 +264,19 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     }
   }
   
-
   if (startNode==PIC::Mesh::mesh.rootTree) {
     // deallocate data containers
     delete [] Xpos;
     delete [] Zpos;  
-    for(int ivar = 0; ivar < nvar; ivar++){
-      for(int iX = 0; iX < nX; iX++){
-	delete [] Data[ivar][iX];
+
+    for (int ivar = 0; ivar < nvar; ivar++) {
+      for (int iX = 0; iX < nX; iX++) {
+        delete [] Data[ivar][iX];
       }
+
       delete [] Data[ivar];
     }
+
     delete [] Data;
   }
 }

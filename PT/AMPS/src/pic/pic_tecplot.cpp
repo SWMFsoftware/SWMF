@@ -132,9 +132,6 @@ void PIC::CPLR::DATAFILE::TECPLOT::ResetCellProcessingFlag(cTreeNodeAMR<PIC::Mes
 
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    double *xNodeMin=startNode->xmin;
-    double *xNodeMax=startNode->xmax;
-    double x[3];
     PIC::Mesh::cDataCenterNode *CenterNode;
 
     if (startNode->block==NULL) return;
