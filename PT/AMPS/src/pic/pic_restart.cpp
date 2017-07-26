@@ -223,9 +223,7 @@ void PIC::Restart::SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
   //save the data
   if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     if ((node->Thread==PIC::ThisThread)||(PIC::ThisThread==0)) {
-      int i,j,k,LocalCellNumber;
-      PIC::Mesh::cDataCenterNode *cell;
-      char* SamplingData;
+      int i,j,k;
       long int ptr;
 
       //determine the number of the model particle in the each cell of the block
@@ -440,7 +438,7 @@ void PIC::Restart::GetParticleDataBlockCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
     //calculate the chekc sum
     if (node->Thread==PIC::ThisThread) {
-      int i,j,k,LocalCellNumber;
+      int i,j,k;
       long int ptr;
       long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
       char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
