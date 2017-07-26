@@ -40,8 +40,11 @@ void Exosphere::ExchangeSurfaceAreaDensity() {
       //update the value of the local sodium surface density
       double TotalPhotonStimulatedDesorptionFlux=0.0,localMaxPhotonStimulatedDesorptionFlux=0.0;
       double TotalThermalDesorptionFlux=0.0,localMaxThermalDesorptionFlux=0.0;
-      double TotalSolarWindSputteringFlux=0.0,localMaxSolarWindSputteringFlux=0.0;
       double SurfaceElementArea[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
+
+      #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
+      double TotalSolarWindSputteringFlux=0.0,localMaxSolarWindSputteringFlux=0.0;
+      #endif
 
       memcpy(SurfaceElementArea,Sphere->SurfaceElementArea,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*sizeof(double));
 
