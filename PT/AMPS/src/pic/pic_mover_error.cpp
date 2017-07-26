@@ -21,8 +21,6 @@ std::vector<std::string> PIC::Mover::Sampling::Errors::ErrorLineID;
 int PIC::Mover::Sampling::Errors::ErrorDetectionFlag=0;
 
 void PIC::Mover::Sampling::Errors::Init() {
-  int spec;
-
   ErrorDetectionFlag=0;
 
   ErrorLineID.clear();

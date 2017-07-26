@@ -29,7 +29,7 @@ vector<vector<int> > PIC::EnergyDistributionSampleRelativistic::CombinedSpeciesD
 //====================================================
 //init the sampling buffers
 void PIC::EnergyDistributionSampleRelativistic::Init() {
-  int idim,iProbe,i,j,k,offset;
+  int iProbe,i,j,k,offset;
 
   if (SamplingInitializedFlag==true) exit(__LINE__,__FILE__,"Error: EnergyDistributionSampleRelativistic is already initialized");
 
@@ -42,9 +42,7 @@ void PIC::EnergyDistributionSampleRelativistic::Init() {
 //  nSamleLocations=nProbeLocations;
   SamplingInitializedFlag=true;
 
-  //get the lenfths of the sampling intervals
-  double t0,t1; //tempotary variables to satisfy intel c++ compiler
-
+  //get the length of the sampling intervals
   log10eMin=log10(eMin);
   log10eMax=log10(eMax);
   log10dE=(log10eMax-log10eMin)/nSampledFunctionPoints;
@@ -118,7 +116,7 @@ void PIC::EnergyDistributionSampleRelativistic::flushSamplingBuffers() {
 //Sample the distribution function
 void PIC::EnergyDistributionSampleRelativistic::SampleDistributionFnction() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
-  long int ptr,iProbe,spec,idim;
+  long int ptr,iProbe,spec;
   double LocalParticleWeight,e,mass,speed,CellMeasure;
 
   for (node=SampleNodes[0],iProbe=0;iProbe<nSamleLocations;node=SampleNodes[++iProbe]) if (node->Thread==PIC::ThisThread) {
@@ -218,7 +216,7 @@ void PIC::EnergyDistributionSampleRelativistic::printDistributionFunction(char *
       for (i=0;i<nSampledFunctionPoints;i++) tempSamplingBuffer[i]=0.0;
 
       //collect the sampled information from other processors
-      int iCombinedSpecies,tempOffsetSpec;
+      int iCombinedSpecies;
 
       for (iCombinedSpecies=0;iCombinedSpecies<CombineDistributionSpecies.size();iCombinedSpecies++) {
         s=CombineDistributionSpecies[iCombinedSpecies];
