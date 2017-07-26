@@ -15,7 +15,15 @@
 # Specify group if necessary
 #PBS -W group_list=g26135
 
+rm -f AmpsTestIntelComplete
+rm -f AmpsTestGNUComplete
+rm -f AmpsTestPGIComplete 
+
 # Run AMPS tests compiled with GNU, Intel and PGI compilers 
 AMPS/utility/TestScripts/Pleiades/RunIntelPleiades.sh test_run & 
 AMPS/utility/TestScripts/Pleiades/RunPGIPleiades.sh test_run & 
 AMPS/utility/TestScripts/Pleiades/RunGNUPleiades.sh test_run & 
+
+while ((! -f AmpsTestIntelComplete) || (! -f AmpsTestGNUComplete) || (! -f AmpsTestPGIComplete))
+  sleep 60
+end
