@@ -193,7 +193,7 @@ void ElectronImpact::Burger2010SSR::GenerateReactionProducts(double ElectronTeme
 
 void ElectronImpact::Burger2010SSR::Print(const char* fname,const char* OutputDirectory,int nReactionChannels,int nMaxReactionProducts,int *ReactionChannelProducts,double *log10RateCoefficientTable,char *ReactionChannelProductsString) {
   FILE *fout;
-  int nChannel,nprod,i;
+  int nChannel;
   char str[500];
 
   sprintf(str,"%s/%s",OutputDirectory,fname);
