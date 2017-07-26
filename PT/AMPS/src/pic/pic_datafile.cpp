@@ -629,9 +629,6 @@ void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
 //====================================================
 //output background parameters loaded with ICES from SWMF output
 void PIC::CPLR::DATAFILE::PrintVariableList(FILE* fout,int DataSetNumber) {
-  int idim;
-
-
   if (Offset::PlasmaNumberDensity.active) fprintf(fout,", %s",Offset::PlasmaNumberDensity.VarList);
   if (Offset::PlasmaBulkVelocity.active) fprintf(fout,", %s",Offset::PlasmaBulkVelocity.VarList);
   if (Offset::PlasmaTemperature.active) fprintf(fout,", %s",Offset::PlasmaTemperature.VarList);
@@ -685,7 +682,7 @@ void PIC::CPLR::DATAFILE::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *p
 //print the ion flux at a sphere
 void PIC::CPLR::DATAFILE::PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius) {
   FILE *fout=NULL;
-  int nZenithAngle,nPolarAngle,LocalCellNumber,i,j,k;
+  int nZenithAngle,nPolarAngle,i,j,k;
   double ZenithAngle,PolarAngle,x[3],n,v[3],flux;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.rootTree;
   CMPI_channel pipe(1000000);
@@ -712,7 +709,7 @@ void PIC::CPLR::DATAFILE::PrintSphereSurfaceIonFlux(char const* fname,double Sph
       x[2]=SphereRadius*sin(ZenithAngle);
 
       node=PIC::Mesh::mesh.findTreeNode(x,node);
-      if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
+      if (PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
 
       if (node->Thread==PIC::ThisThread) {
         PIC::CPLR::InitInterpolationStencil(x,node);
@@ -751,7 +748,7 @@ void PIC::CPLR::DATAFILE::EvaluateSurfaceIonFlux(double ShiftFactor) {
   cInternalSphericalData* Sphere;
   double x[3],norm[3],l,n,v[3],flux;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.rootTree;
-  int LocalCellNumber,i,j,k;
+  int i,j,k;
 
 
   for (d=PIC::Mesh::mesh.InternalBoundaryList.begin();d!=PIC::Mesh::mesh.InternalBoundaryList.end();d++) {
@@ -776,7 +773,7 @@ void PIC::CPLR::DATAFILE::EvaluateSurfaceIonFlux(double ShiftFactor) {
         x[0]+=max(ShiftFactor-1.0,0.0)*l*norm[0],x[1]+=max(ShiftFactor-1.0,0.0)*l*norm[1],x[2]+=max(ShiftFactor-1.0,0.0)*l*norm[2];
 
         node=PIC::Mesh::mesh.findTreeNode(x,node);
-        if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
+        if (PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
 
         if (node->Thread==PIC::ThisThread) {
           PIC::CPLR::InitInterpolationStencil(x,node);
