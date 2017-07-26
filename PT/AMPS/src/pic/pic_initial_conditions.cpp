@@ -18,10 +18,7 @@ long int PIC::InitialCondition::PutParticle(int spec, double *x, double *v){
   // the function places a single (for each processor) particle of spec species
   // to a given location with given velocity vector
   // this function is meant for DEBUG purposes
-  int iCell,jCell,kCell,nInjectionProcess;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  PIC::Mesh::cDataCenterNode *cell;
-  long int nd,nGlobalInjectedParticles,nLocalInjectedParticles=0;
 
   node=PIC::Mesh::mesh.findTreeNode(x);
 
@@ -32,7 +29,7 @@ long int PIC::InitialCondition::PutParticle(int spec, double *x, double *v){
 }
 
 long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,double *Velocity,double Temperature) {
-  int iCell,jCell,kCell,nInjectionProcess;
+  int iCell,jCell,kCell;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataCenterNode *cell;
   long int nd,nGlobalInjectedParticles,nLocalInjectedParticles=0;
