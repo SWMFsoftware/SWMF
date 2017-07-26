@@ -26,7 +26,7 @@ PIC::PitchAngleDistributionSample::SampleDataLength=0;
 //====================================================
 //init the sampling buffers
 void PIC::PitchAngleDistributionSample::Init() {//double ProbeLocations[][DIM],int nProbeLocations) {
-  int idim,nProbe,i,j,k;
+  int nProbe,i,j,k;
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_OFF_
   if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"WARNING: Sampling of the distribution function is prohibited in the settings of the model");
@@ -39,9 +39,7 @@ void PIC::PitchAngleDistributionSample::Init() {//double ProbeLocations[][DIM],i
   //  nSampleLocations=nProbeLocations;
   SamplingInitializedFlag=true;
 
-  //get the lenfths of the sampling intervals
-  double t0,t1; //tempotary variables to satisfy intel c++ compiler
-
+  //get the length of the sampling intervals
   dCosPA=1.001*(CosPAMax-CosPAMin)/(nSampledFunctionPoints-1);
 
   Sample_PitchAngle_Offset=0;
