@@ -174,16 +174,8 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 
   //the buffer of particles that occuping the local cell
   long int modelParticle;
-  int BackgroundSpecieNumber,spec,idim;
   PIC::ParticleBuffer::byte *modelParticleData;
-  double vModelParticle[3],xModelParticle[3],vBackgroundParticle[3],particleCollisionTime,cr2;
   PIC::Mesh::cDataBlockAMR *block;
-
-  //sample the processor load
-//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  double EndTime,StartTime=MPI_Wtime();
-//#endif
-
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
@@ -198,7 +190,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
     const int TotalCell= _BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
 #pragma omp parallel for schedule(dynamic,TotalCell) default (none) firstprivate (LocalCellNumber, \
       node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
-      block,EndTime,StartTime,thread) \
+      block,thread) \
      \
     shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
       PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh, \
@@ -207,7 +199,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 #else
 #pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (LocalCellNumber, \
       node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, block, \
-      EndTime,StartTime,thread) \
+      thread) \
      \
     shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
       PIC::DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable,PIC::Mesh::mesh, \
@@ -218,7 +210,6 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
   for (int CellCounter=0;CellCounter<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;CellCounter++) {
     int nLocalNode,ii=CellCounter;
     int kCell,jCell,iCell; //,i,j,k;
-    long int nCollidingParticles=0;
 
     nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
     ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
@@ -231,7 +222,11 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 
     iCell=ii;
 
-    StartTime=MPI_Wtime();
+    //sample the processor load
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    double StartTime=MPI_Wtime();
+    #endif
+
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     block=node->block;
     if (block==NULL) continue;
@@ -245,12 +240,11 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 
 
     {
-    LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-    cell=block->GetCenterNode(LocalCellNumber);
-    if (cell==NULL) continue;
+      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      cell=block->GetCenterNode(LocalCellNumber);
+      if (cell==NULL) continue;
 
-     modelParticle=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
-     nCollidingParticles=0;
+      modelParticle=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
       while (modelParticle!=-1) {
         double v[3],x[3],StoppingPower;
@@ -318,11 +312,9 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
     }
 
 
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    EndTime=MPI_Wtime();
-    node->ParallelLoadMeasure+=EndTime-StartTime;
-    StartTime=EndTime;
-#endif
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+    #endif
   }
 
 }
