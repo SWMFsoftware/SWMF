@@ -189,16 +189,15 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   //the trajectory is traced only if the particle trajecotry tracking flag is set 'true'
   if (ParticleTrajectoryRecord->TrajectoryTrackingFlag==false) return;
 
-  //convert pinter to the block
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *)nodeIn;
-
-
   //save physical data
   memcpy(TrajectoryRecord->data.x,x,3*sizeof(double));
   TrajectoryRecord->data.Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   TrajectoryRecord->data.spec=spec;
 
   #if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
+  //convert pinter to the block
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *)nodeIn;
+
   if (node!=NULL) {
     if (node->block!=NULL) {
       TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=node->block->GetLocalParticleWeight(spec)/node->block->GetLocalTimeStep(spec)*
@@ -271,12 +270,6 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   TrajectoryRecord->data.InjectionFaceNumber=PIC::ParticleBuffer::GetInjectionFaceNumber((PIC::ParticleBuffer::byte*)ParticleData);
 #endif
 
-/*
-  //save the ratio of the total particle weight over the local time step at the point of the particle injection
-#if _PIC_PARTICLE_TRACKER__PARTICLE_WEIGHT_OVER_LOCAL_TIME_STEP_MODE_ == _PIC_MODE_ON_
-  TrajectoryRecord->data.ParticleWeightOverLocalTimeStepRatio=PIC::ParticleBuffer::GetParticleWeightOverTimeStepRatio((PIC::ParticleBuffer::byte*)ParticleData);
-#endif
-*/
 
   //the counting number of the point along this trajectory
   TrajectoryRecord->offset=ParticleTrajectoryRecord->nSampledTrajectoryPoints;
@@ -467,8 +460,7 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
     fclose(fTrajectoryDataSet);
 
     //print the total number of saved trajectories and saved trajectory points
-    int nTotalSavedTrajectories=0,nTotalSavedTrajectoryPoints=0;
-
+    int nTotalSavedTrajectories=0;
 
     for (int thread=0;thread<PIC::nTotalThreads*PIC::nTotalThreadsOpenMP;thread++) nTotalSavedTrajectories+=nTotalSampledTrajectories[thread];
     printf("$PREFIX: The total number of sampled trajectories: %i\n",nTotalSavedTrajectories);
@@ -568,7 +560,7 @@ void PIC::ParticleTracker::CreateTrajectoryOutputFiles(const char *fname,const c
   //2. Read the table of the sampled trajectory numbers
   int nfile;
   FILE *fTrajectoryList;
-  PIC::ParticleTracker::cTrajectoryID Trajectory;
+//  PIC::ParticleTracker::cTrajectoryID Trajectory;
   unsigned long int i,length,nReadTrajectoryNumber=0;
 
   int *nSampledTrajectoryPoints=new int [nTotalTracedTrajectories];
@@ -838,37 +830,37 @@ void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,
   bool flag=false;
   cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
 
-  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  //check the tracking condition ONLY for partilces that was not tracked previously
-  if (DataRecord->TrajectoryTrackingFlag==true) return;
-  #endif
+  if (_PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_) {
+    //check the tracking condition ONLY for partilces that was not tracked previously
+    if (DataRecord->TrajectoryTrackingFlag==true) return;
+  }
 
 
   if (PIC::DataOutputFileNumber>=_PIC_PARTICLE_TRACKER__BEGIN_TRACKING_FILE_OUTPUT_NUMBER_) {
     flag=_PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData);
   }
 
-  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  DataRecord->TrajectoryTrackingFlag=flag;
+  if (_PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_) {
+    DataRecord->TrajectoryTrackingFlag=flag;
 
-  if (flag==true) {
-    int threadOpenMP=0;
+    if (flag==true) {
+      int threadOpenMP=0;
 
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    threadOpenMP=omp_get_thread_num();
-#endif
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      threadOpenMP=omp_get_thread_num();
+      #endif
 
-    DataRecord->nSampledTrajectoryPoints=0;
-    DataRecord->Trajectory.StartingThread=threadOpenMP+PIC::nTotalThreadsOpenMP*PIC::ThisThread;
-    DataRecord->Trajectory.id=SampledTrajectoryCounter[threadOpenMP];
+      DataRecord->nSampledTrajectoryPoints=0;
+      DataRecord->Trajectory.StartingThread=threadOpenMP+PIC::nTotalThreadsOpenMP*PIC::ThisThread;
+      DataRecord->Trajectory.id=SampledTrajectoryCounter[threadOpenMP];
 
-    RecordTrajectoryPoint(x,v,spec,ParticleData,nodeIn);
+      RecordTrajectoryPoint(x,v,spec,ParticleData,nodeIn);
 
-    //increment the trajectory counter
-    ++threadSampledTrajectoryNumber[spec][threadOpenMP];
-    ++SampledTrajectoryCounter[threadOpenMP];
+      //increment the trajectory counter
+      ++threadSampledTrajectoryNumber[spec][threadOpenMP];
+      ++SampledTrajectoryCounter[threadOpenMP];
+    }
   }
-  #endif
 }
 
 //apply the particle tracking condition to all particles in the simulation
