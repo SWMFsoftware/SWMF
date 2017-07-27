@@ -676,13 +676,6 @@ void PIC::Sampling::Sampling() {
   //temporaty buffer to store the copy of the particle
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
 
-
-  //global offsets
-  const int sampleSetDataLength=PIC::Mesh::sampleSetDataLength;
-  const int collectingCellSampleDataPointerOffset=PIC::Mesh::collectingCellSampleDataPointerOffset;
-  const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
-
-
   //reset the particle counter
   static int **localSimulatedSpeciesParticleNumber=NULL;
 
@@ -719,13 +712,14 @@ void PIC::Sampling::Sampling() {
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic,1) reduction(+:nTotalSampledParticles) default(none) \
-  private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,sampledVelocityOffset,node, \
-    sampledVelocity2Offset,tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeTotalParticleNumber)  \
+  private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,node, \
+    tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeTotalParticleNumber)  \
   shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh, \
-     DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable,sampleSetDataLength,collectingCellSampleDataPointerOffset,ParticleDataLength, \
+     DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable, \
      PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
      PIC::Mesh::DatumParticleParallelVelocity2,PIC::Mesh::DatumParticleParallelVelocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
-     PIC::Mesh::DatumNumberDensity,PIC::Mesh::DatumParticleNumber,PIC::Mesh::DatumParticleWeight, PIC::Sampling::constNormalDirection__SampleParallelTangentialTemperature, \
+     PIC::Mesh::DatumNumberDensity,PIC::Mesh::DatumParticleNumber,PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::Mesh::sampleSetDataLength,PIC::ParticleBuffer::ParticleDataLength, \
+     PIC::Mesh::DatumParticleWeight, PIC::Sampling::constNormalDirection__SampleParallelTangentialTemperature, \
      PIC::IDF::nTotalVibtationalModes, cout)
 
 #endif //_COMPILATION_MODE_
@@ -763,8 +757,8 @@ void PIC::Sampling::Sampling() {
             LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
             cell=block->GetCenterNode(LocalCellNumber);
 	    
-            SamplingData=cell->GetAssociatedDataBufferPointer() + collectingCellSampleDataPointerOffset;
-            memcpy((void*)tempSamplingBuffer,(void*)SamplingData,sampleSetDataLength);
+            SamplingData=cell->GetAssociatedDataBufferPointer() + PIC::Mesh::collectingCellSampleDataPointerOffset;
+            memcpy((void*)tempSamplingBuffer,(void*)SamplingData,PIC::Mesh::sampleSetDataLength);
 
             #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
             #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
@@ -793,7 +787,7 @@ void PIC::Sampling::Sampling() {
               TreeNodeTotalParticleNumber++;
               #endif
 
-              memcpy((void*)tempParticleData,(void*)ParticleData,ParticleDataLength);
+              memcpy((void*)tempParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
               ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);
 
@@ -802,7 +796,7 @@ void PIC::Sampling::Sampling() {
                 ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptrNext);
 
                 #if _PIC_MEMORY_PREFETCH_MODE_ == _PIC_MEMORY_PREFETCH_MODE__ON_
-                int iPrefetch,iPrefetchMax=1+(int)(ParticleDataLength/_PIC_MEMORY_PREFETCH__CHACHE_LINE_);
+                int iPrefetch,iPrefetchMax=1+(int)(PIC::ParticleBuffer::ParticleDataLength/_PIC_MEMORY_PREFETCH__CHACHE_LINE_);
 
                 for (iPrefetch=0;iPrefetch<iPrefetchMax;iPrefetch++) {
                   _mm_prefetch(iPrefetch*_PIC_MEMORY_PREFETCH__CHACHE_LINE_+(char*)ptrNext,_MM_HINT_T1);
@@ -891,8 +885,8 @@ void PIC::Sampling::Sampling() {
               #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
               #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
               PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
-              PIC::Debugger::CatchOutLimitValue(sampledVelocityOffset,DIM,__LINE__,__FILE__);
-              PIC::Debugger::CatchOutLimitValue(sampledVelocity2Offset,DIM,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue(PIC::Mesh::sampledVelocityOffset,DIM,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue(PIC::Mesh::sampledVelocity2Offset,DIM,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
               #endif //_PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_
               #endif // _PIC_DEBUGGER_MODE_
