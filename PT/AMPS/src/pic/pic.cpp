@@ -666,9 +666,7 @@ void PIC::Sampling::Sampling() {
   PIC::Mesh::cDataBlockAMR *block;
   char *SamplingData;
   double *v,LocalParticleWeight,Speed2,v2;
-  
-  double *sampledVelocityOffset,*sampledVelocity2Offset;
-  
+
   //the total number of the sampled particles to compare with the number of the partticles in the buffer
   long int nTotalSampledParticles=0;
   
@@ -680,13 +678,7 @@ void PIC::Sampling::Sampling() {
 
 
   //global offsets
-  const int sampledParticleWeghtRelativeOffset=PIC::Mesh::sampledParticleWeghtRelativeOffset;
-  const int sampledParticleNumberRelativeOffset=PIC::Mesh::sampledParticleNumberRelativeOffset;
-  const int sampledParticleNumberDensityRelativeOffset=PIC::Mesh::sampledParticleNumberDensityRelativeOffset;
-  const int sampledParticleVelocityRelativeOffset=PIC::Mesh::sampledParticleVelocityRelativeOffset;
-  const int sampledParticleVelocity2RelativeOffset=PIC::Mesh::sampledParticleVelocity2RelativeOffset;
   const int sampleSetDataLength=PIC::Mesh::sampleSetDataLength;
-  const int sampledParticleSpeedRelativeOffset=PIC::Mesh::sampledParticleSpeedRelativeOffset;
   const int collectingCellSampleDataPointerOffset=PIC::Mesh::collectingCellSampleDataPointerOffset;
   const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
 
@@ -714,7 +706,7 @@ void PIC::Sampling::Sampling() {
 //#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
   long int TreeNodeTotalParticleNumber;
 //#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  double TreeNodeProcessingTime;
+//  double TreeNodeProcessingTime;
 //#endif
 
   //the table of cells' particles
@@ -728,9 +720,9 @@ void PIC::Sampling::Sampling() {
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic,1) reduction(+:nTotalSampledParticles) default(none) \
   private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,sampledVelocityOffset,node, \
-    sampledVelocity2Offset,tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeProcessingTime,TreeNodeTotalParticleNumber)  \
-  shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh,sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset,sampledParticleVelocityRelativeOffset, \
-     DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable,sampledParticleVelocity2RelativeOffset,sampleSetDataLength,sampledParticleSpeedRelativeOffset,collectingCellSampleDataPointerOffset,ParticleDataLength, \
+    sampledVelocity2Offset,tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeTotalParticleNumber)  \
+  shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh, \
+     DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable,sampleSetDataLength,collectingCellSampleDataPointerOffset,ParticleDataLength, \
      PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
      PIC::Mesh::DatumParticleParallelVelocity2,PIC::Mesh::DatumParticleParallelVelocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
      PIC::Mesh::DatumNumberDensity,PIC::Mesh::DatumParticleNumber,PIC::Mesh::DatumParticleWeight, PIC::Sampling::constNormalDirection__SampleParallelTangentialTemperature, \
@@ -754,7 +746,7 @@ void PIC::Sampling::Sampling() {
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
     TreeNodeTotalParticleNumber=0;
 #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    TreeNodeProcessingTime=MPI_Wtime();
+    double TreeNodeProcessingTime=MPI_Wtime();
 #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_OFF_
     //do nothing
 #else
@@ -776,7 +768,7 @@ void PIC::Sampling::Sampling() {
 
             #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
             #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
-            for (s=0;s<PIC::nTotalSpecies;s++) PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingData+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
+            for (s=0;s<PIC::nTotalSpecies;s++) PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingData+PIC::Mesh::sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
             #endif
             #endif
 
@@ -898,10 +890,10 @@ void PIC::Sampling::Sampling() {
 
               #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
               #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
-              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__); 
+              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue(sampledVelocityOffset,DIM,__LINE__,__FILE__);
               PIC::Debugger::CatchOutLimitValue(sampledVelocity2Offset,DIM,__LINE__,__FILE__);
-              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+PIC::Mesh::sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
               #endif //_PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_
               #endif // _PIC_DEBUGGER_MODE_
 
