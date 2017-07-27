@@ -6,8 +6,9 @@
 //the function for particle's data sampling
 
 #include "pic.h"
-namespace PIC{
-  namespace Mesh{
+
+namespace PIC {
+  namespace Mesh {
     //basic macroscopic parameters sampled in the simulation
     cDatumTimed    DatumParticleWeight(1,"\"Particle Weight\"",      false);
     cDatumTimed    DatumParticleNumber(1,"\"Particle Number\"",       true);
@@ -122,13 +123,6 @@ void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber)
 }
 
 void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
-  int idim;
-
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-  static unsigned long int nCallCounter=0;
-  ++nCallCounter;
-#endif
-
   static int  nOutput=0;
   static bool IsFirstCall=true;
   static double* OutputData;
@@ -136,6 +130,11 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
   static vector<cDatumTimed*>    DataTimedPrint;
   static vector<cDatumWeighted*> DataWeightedPrint;
   static vector<cDatumDerived*>  DataDerivedPrint;
+
+  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  static unsigned long int nCallCounter=0;
+  ++nCallCounter;
+  #endif
 
   // find size of message at the first call
   if (IsFirstCall==true) {
