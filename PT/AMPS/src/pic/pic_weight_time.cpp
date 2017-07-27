@@ -487,15 +487,20 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantDensity(int spec,do
 //====================================================
 //return the value of the 'global' time step
 double PIC::ParticleWeightTimeStep::GetGlobalTimeStep(int spec) {
-  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-  return  PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
-  #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-  return  PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
-  #else
-  exit(__LINE__,__FILE__,"Function cannot ne used in this mode");
-  #endif
+  double res;
 
-  return -1.0;
+  switch (_SIMULATION_TIME_STEP_MODE_) {
+  case _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_:
+    res=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+    break;
+  case _SINGLE_GLOBAL_TIME_STEP_:
+    res=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Function cannot ne used in this mode");
+  }
+
+  return res;
 }
 
 //====================================================
@@ -519,7 +524,7 @@ void PIC::ParticleWeightTimeStep::AdjustParticleWeight_ConstantWeightOverTimeSte
 
 double PIC::ParticleWeightTimeStep::GetMinLocalParticleWeightValue(int spec,double &WeightOverTimeStepRatio,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double res=-1.0;
-  double WeightOverTimeStepRatioLocal,dt;
+  double WeightOverTimeStepRatioLocal;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     double dt;
@@ -569,9 +574,9 @@ double PIC::ParticleWeightTimeStep::GetMinLocalParticleWeightValue(int spec,doub
 
 
 void PIC::ParticleWeightTimeStep::AdjustParticleWeight_ConstantWeightOverTimeStep_KeepMinParticleWeight(int spec) {
-  double WeightOverTimeStepRatio,MinValueParticleWeight;
+  double WeightOverTimeStepRatio;
 
-  MinValueParticleWeight=GetMinLocalParticleWeightValue(spec,WeightOverTimeStepRatio);
+  GetMinLocalParticleWeightValue(spec,WeightOverTimeStepRatio);
   AdjustParticleWeight_ConstantWeightOverTimeStep(spec,WeightOverTimeStepRatio);
 }
 
