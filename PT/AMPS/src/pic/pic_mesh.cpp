@@ -249,42 +249,13 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 }
 
 void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoefficients,int nInterpolationCoefficients) {
-  int i,s,idim;
-  double c;
-
-
-
-  //==============================  DEBUGGER ===============
-           if (nInterpolationCoefficients!=0) Measure=InterpolationList[0]->Measure;
-
-           static long int nCallCounter=0;
-           nCallCounter++;
-
-  //============================== END DEBUGGER ============
-
+  int s;
 
   #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
   if (associatedDataPointer==NULL) exit(__LINE__,__FILE__,"Error: The associated data buffer is not initialized");
   #endif
 
-  double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
-  double InterpolatedParticleSpeed=0.0;
-  double pWeight;
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-  double InterpolatedBulkParallelVelocity,InterpolatedBulk2ParallelVelocity;
-#endif
-
   for (s=0;s<PIC::nTotalSpecies;s++) {
-    InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedParticleSpeed=0.0;
-    for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-    InterpolatedBulkParallelVelocity=0.0,InterpolatedBulk2ParallelVelocity=0.0;
-#endif
-
     // interpolate all sampled data
     vector<PIC::Datum::cDatumSampled*>::iterator ptrDatum;
 
