@@ -207,8 +207,8 @@ namespace TRAJECTORY_FILTER {
     FaceFluxCorrectionTable=new double [amps.SurfaceData.nCells];
     for (i=0;i<amps.SurfaceData.nCells;i++) FaceFluxCorrectionTable[i]=1.0;
 
-    AcceptedTrajectoryFootprint=new bool [amps.ParticleTrajectory.nTotalTrajectories];
-    for (i=0;i<amps.ParticleTrajectory.nTotalTrajectories;i++) AcceptedTrajectoryFootprint[i]=false;
+    AcceptedTrajectoryFootprint=new bool [amps.SurfaceData.nCells];
+    for (i=0;i<amps.SurfaceData.nCells;i++) AcceptedTrajectoryFootprint[i]=false;
 
     //go therough all corridor settings
     for (int npass=0;npass<2;npass++) {
@@ -240,7 +240,7 @@ namespace TRAJECTORY_FILTER {
         lCorridor[0]=CorridorTable[nCor].x1-CorridorTable[nCor].x0;
         lCorridor[1]=CorridorTable[nCor].y1-CorridorTable[nCor].y0;
 
-        for (nTrajectory=0;nTrajectory<=amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+        for (nTrajectory=0;nTrajectory<amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
           for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
             for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
 
