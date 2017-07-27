@@ -195,14 +195,11 @@ namespace PIC {
       namespace PB = PIC::ParticleBuffer;
 
       // pointer particle to the particle to be injected
-      long int ptr;
       PB::byte* ptrData;
       ptrData = new PB::byte[PB::GetParticleDataLength()];
       
       //default settings
       PB::SetIndividualStatWeightCorrection(1.0,ptrData);
-      
-      
       PB::SetI(spec, ptrData);
       
       // pick a random field line
@@ -218,8 +215,7 @@ namespace PIC {
       //Inject at the beginning of the field line FOR PARKER SPIRAL
       iSegment = 0;
       FieldLinesAll[iFieldLine].GetSegmentRandom(iSegment,WeightCorrection, spec);
-      
-      
+
       cFieldLineSegment* Segment=FieldLinesAll[iFieldLine].GetSegment(iSegment);
       double S = iSegment + rnd();
       PB::SetFieldLineCoord(S, ptrData);
@@ -473,7 +469,7 @@ namespace PIC {
       // volume
       double volume = FieldLinesAll[iFieldLine].GetSegment(S)->GetLength();
       const double R0 = 10 *_SUN__RADIUS_;
-      const double B0 = 1.83E-6;
+//      const double B0 = 1.83E-6;
 
 
       // FIX LATER=====================================
@@ -954,7 +950,9 @@ namespace FieldLine{
     
     //#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
     
-    double E[3],B[3],B0[3],B1[3], AbsBDeriv;
+    exit(__LINE__,__FILE__,"Error: calculation of the electric field component of the Lorentz force is not implemented");
+
+    double B[3],B0[3],B1[3], AbsBDeriv;
     double mu     = PIC::ParticleBuffer::GetMagneticMoment(ptr);
     double q      = PIC::MolecularData::GetElectricCharge(spec);
 
@@ -989,32 +987,19 @@ namespace FieldLine{
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
     double dtTemp;
     PIC::ParticleBuffer::byte *ParticleData;
-    double AbsBInit=0.0, bInit[3]={0.0};
-    double vInit[  3]={0.0}, pInit  =0.0, xInit[  3]={0.0}, gammaInit;
-    double AbsBMiddle=0.0, bMiddle[3]={0.0};
-    double vMiddle[3]={0.0}, pMiddle=0.0, xMiddle[3]={0.0}, gammaMiddle;
-    double vFinal[ 3]={0.0}, pFinal =0.0, xFinal[ 3]={0.0}, gammaFinal;
-    double c2 = SpeedOfLight*SpeedOfLight;
-    double xminBlock[3],xmaxBlock[3];
+    double AbsBInit=0.0;
+    double vInit[3]={0.0,0.0,0.0},xInit[3]={0.0,0.0,0.0};
+    double AbsBMiddle=0.0;
+    double vFinal[3]={0.0,0.0,0.0},xFinal[3]={0.0,0.0,0.0};
     int   iFieldLine = -1;
     double FieldLineCoordInit   = -1.0;
     double FieldLineCoordMiddle = -1.0;
     double FieldLineCoordFinal  = -1.0;
-    int idim;
     
     double ForceParalInit=0.0, ForceParalMiddle=0.0;
     double dirInit[3]={0.0,0.0,0.0};
     double vparInit=0.0, vparMiddle=0.0, vparFinal=0.0;
-
-    long int LocalCellNumber;
     int i,j,k,spec;
-    
-    PIC::Mesh::cDataCenterNode *cell;
-    bool MovingTimeFinished=false;
-    
-    double xmin,xmax;
-    
-    double misc;
 	
     ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
     PIC::ParticleBuffer::GetV(vInit,ParticleData);
@@ -1032,9 +1017,7 @@ namespace FieldLine{
     
     //  memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
     //  memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
-    
-    MovingTimeFinished=true;
-    
+
     // predictor step
     #if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
     GuidingCenterMotion(ForceParalInit,AbsBInit,spec,ptr,iFieldLine,FieldLineCoordInit);
@@ -1065,7 +1048,6 @@ namespace FieldLine{
         PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
 
-        break;
       default:
         exit(__LINE__,__FILE__,"Error: not implemented");
       }
@@ -1098,7 +1080,6 @@ namespace FieldLine{
       case _PARTICLE_DELETED_ON_THE_FACE_:
         PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
-        break;
 
       default:
         exit(__LINE__,__FILE__,"Error: not implemented");
@@ -1131,7 +1112,7 @@ namespace FieldLine{
 #endif
 
 
-    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+    if (PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
     
     
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
