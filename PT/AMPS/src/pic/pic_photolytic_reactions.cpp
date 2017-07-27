@@ -17,17 +17,11 @@ void PIC::ChemicalReactions::PhotolyticReactions::Init() {
   //only one particle transformation model can be used
   if (_PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_) exit(__LINE__,__FILE__,"Error: only one particle transformation model can be used");
 
-//  if (TotalLifeTime==NULL) {
-    ConstantTotalLifeTime=new double [PIC::nTotalSpecies];
-/*    ReactionProcessorTable=new fReactionProcessor[PIC::nTotalSpecies];
-    TotalLifeTime=new fTotalLifeTime [PIC::nTotalSpecies];*/
+  ConstantTotalLifeTime=new double [PIC::nTotalSpecies];
 
-    for (int i=0;i<PIC::nTotalSpecies;i++) {
-      ConstantTotalLifeTime[i]=-1.0;
-/*      ReactionProcessorTable[i]=NULL;
-      TotalLifeTime[i]=TotalLifeTime_default;*/
-    }
-//  }
+  for (int i=0;i<PIC::nTotalSpecies;i++) {
+    ConstantTotalLifeTime[i]=-1.0;
+  }
 }
 
 
@@ -76,9 +70,8 @@ int PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(double *x,lo
 void PIC::ChemicalReactions::PhotolyticReactions::InitProductStatWeight() {
   bool NewWeightFound=false;
   int s,sSource,sProduct,nProducts,i,iReaction;
-  double minWeight;
   bool UnknownWeightTableBefore[PIC::nTotalSpecies],UnknownWeightTableAfter[PIC::nTotalSpecies];
-  int nUnknownWeightsBefore,nUnknownWeightsAfter;
+  int nUnknownWeightsBefore;
 
   double StatWeight[PIC::nTotalSpecies];
 
@@ -141,7 +134,10 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   int i,j,k;
   long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
+
+  #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
   double StartTime;
+  #endif
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 
@@ -152,7 +148,10 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks)
 #endif
   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     StartTime=MPI_Wtime();
+    #endif
+
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     if (node->block!=NULL) {
 
@@ -177,9 +176,9 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
          }
       }
 
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
-#endif
+    #endif
 
     }
   }
