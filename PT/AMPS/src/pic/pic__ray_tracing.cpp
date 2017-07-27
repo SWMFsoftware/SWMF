@@ -178,13 +178,6 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 	node=PIC::Mesh::mesh.findTreeNode(xStart);
 	if (node==NULL) return false;
 
-	//determine the thread number
-	int thread=0;
-
-  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  thread=omp_get_thread_num();
-  #endif
-
 	//increment the call counter
   PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
@@ -247,13 +240,6 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
   node=PIC::Mesh::mesh.findTreeNode(xStart);
   if (node==NULL) return false;
 
-  //determine the thread number
-  int thread=0;
-
-  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  thread=omp_get_thread_num();
-  #endif
-
   //increment the call counter
   PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
@@ -300,22 +286,13 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
 }
 
 int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace) {
-  double x[3],c=0.0;
-  int idim;
-  int IntersectedFaceNumber=-1;
+  double x[3];
 
   //determine the initial block
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
 
   node=PIC::Mesh::mesh.findTreeNode(x0Ray);
   if (node==NULL) return false;
-
-  //determine the thread number
-  int thread=0;
-
-  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-  thread=omp_get_thread_num();
-  #endif
 
   //increment the call counter
   PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
