@@ -135,21 +135,17 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   int i,j,k;
   long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
 
-  #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  double StartTime;
-  #endif
-
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 
   exit(__LINE__,__FILE__,"Error: extend the module for the case of the block and cell load splitting");
 
 
-#pragma omp parallel for schedule(dynamic,1) default (none) private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext,StartTime)  \
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext)  \
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks)
 #endif
   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
     #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    StartTime=MPI_Wtime();
+    double StartTime=MPI_Wtime();
     #endif
 
     node=DomainBlockDecomposition::BlockTable[nLocalNode];

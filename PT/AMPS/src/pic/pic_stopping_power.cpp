@@ -189,7 +189,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
     const int TotalCell= _BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_;
 #pragma omp parallel for schedule(dynamic,TotalCell) default (none) firstprivate (LocalCellNumber, \
-      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, \
+      node,cell,modelParticle,modelParticleData, \
       block,thread) \
      \
     shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
@@ -198,7 +198,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
       PIC::MolecularCollisions::BackgroundAtmosphere::LocalEnergyTransferRateSamplingOffset)
 #else
 #pragma omp parallel for schedule(dynamic,1) default (none) firstprivate (LocalCellNumber, \
-      node,cell,modelParticle, BackgroundSpecieNumber,spec,idim,modelParticleData,vModelParticle,xModelParticle, block, \
+      node,cell,modelParticle,modelParticleData, block, \
       thread) \
      \
     shared(PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRate,PIC::MolecularCollisions::StoppingPowerModel::TotalModelParticleEnergyLossRateOffset,centerNodeIndexTable_Glabal,nTotalCenterNodes,centerNodeIndexTable, \
