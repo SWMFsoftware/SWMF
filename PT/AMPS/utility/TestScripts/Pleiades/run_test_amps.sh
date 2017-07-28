@@ -106,10 +106,16 @@ cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                     #
 ./Config.pl -cpplib-rm=-lmpi_cxx
 ./Config.pl -f-link-option=-lmpi++                  
 
+cd $WorkDir/Tmp_AMPS_test/PGI/AMPS
+./Config.pl -link-option=-pgf90libs,-pgc++libs
+
 cd $WorkDir/Tmp_AMPS_test
 rm -f AmpsCompilingIntelComplete
 rm -f AmpsCompilingGNUComplete
 rm -f AmpsCompilingPGIComplete
+rm -f AmpsTestGNUComplete
+rm -f AmpsTestIntelComplete
+rm -f AmpsTestPGIComplete
 
 echo " done."
 
@@ -192,20 +198,23 @@ echo Compiling of AMPS is completed
 
 #########################################
 
-foreach job (test_amps.*.job)                #
+foreach job (test_amps.pleiades.all.*job)                #
   #execute the next part of the tests
   /PBS/bin/qsub $job
 
   #waite while the set of test is finished
   #and then proceed with the new part of 
   #the tests 
-  while (! -f AmpsTestDone) 
+  while ((! -f AmpsTestIntelComplete) || (! -f AmpsTestGNUComplete) || (! -f AmpsTestPGIComplete))
     sleep 60
-  end 
+  end
 
   sleep 300 
-  rm -f AmpsTestDone
+  rm -f AmpsTestIntelComplete
+  rm -f AmpsTestGNUComplete
+  rm -f AmpsTestPGIComplete 
 end                                         
+
 
 #>Stampede ####################################
 #set submit = '/usr/bin/sbatch'              <#
