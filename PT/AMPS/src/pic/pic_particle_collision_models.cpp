@@ -156,9 +156,7 @@ shared (DomainBlockDecomposition::nLocalBlocks,s0ParticleDataList,s1ParticleData
 
     i=ii;
 
-    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     double StartTime=MPI_Wtime();
-    #endif
 
 
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
@@ -443,20 +441,26 @@ shared (DomainBlockDecomposition::nLocalBlocks,s0ParticleDataList,s1ParticleData
        }
     }
 
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    if (_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_) {
+      switch (_COMPILATION_MODE_) {
+      case _COMPILATION_MODE__MPI_:
+        node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+        break;
+      case _COMPILATION_MODE__HYBRID_:
+        {
+          int iThread_OpenMP=0;
 
-    #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
-    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
-    #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    int thread=omp_get_thread_num();
-    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=EndTime-StartTime;
-    #else
-    #error The option is unknown
-    #endif // _COMPILATION_MODE_
+          #if _COMPILATION_MODE_==_COMPILATION_MODE__HYBRID_
+          iThread_OpenMP=omp_get_thread_num();
+          #endif
 
-#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_
-
-//    node=node->nextNodeThisThread;
+          *(iThread_OpenMP+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=MPI_Wtime()-StartTime;
+        }
+        break;
+      default:
+        exit(__LINE__,__FILE__,"The option is unknown");
+      }
+    }
 
   }
 
@@ -465,16 +469,14 @@ shared (DomainBlockDecomposition::nLocalBlocks,s0ParticleDataList,s1ParticleData
     delete [] s0ParticleDataList[thread];
   }
 
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      //sum-up the balancing measure
-      for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
-        node=DomainBlockDecomposition::BlockTable[nLocalNode];
-        node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
-      }
-#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-//  }
-#endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+
+  if ((_COMPILATION_MODE_==_COMPILATION_MODE__HYBRID_)&&(_PIC_DYNAMIC_LOAD_BALANCING_MODE_==_PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_)) {
+    //sum-up the balancing measure
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+      node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
+    }
+  }
 }
 
 
@@ -562,9 +564,7 @@ shared (CollisionLimitingThrehold,DomainBlockDecomposition::nLocalBlocks,s0Parti
 
     i=ii;
 
-    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     double StartTime=MPI_Wtime();
-    #endif
 
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     block=node->block;
@@ -854,18 +854,27 @@ shared (CollisionLimitingThrehold,DomainBlockDecomposition::nLocalBlocks,s0Parti
        }
     }
 
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
-    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
-  #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    int thread=omp_get_thread_num();
-    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=EndTime-StartTime;
-  #else
-  #error The option is unknown
-  #endif // _COMPILATION_MODE_
-#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_
 
-//    node=node->nextNodeThisThread;
+    if (_PIC_DYNAMIC_LOAD_BALANCING_MODE_==_PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_) {
+      switch (_COMPILATION_MODE_) {
+      case _COMPILATION_MODE__MPI_:
+        node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+        break;
+      case _COMPILATION_MODE__HYBRID_:
+        {
+          int iThread_OpenMP=0;
+
+          #if _COMPILATION_MODE_==_COMPILATION_MODE__HYBRID_
+          iThread_OpenMP=omp_get_thread_num();
+          #endif
+
+          *(iThread_OpenMP+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=MPI_Wtime()-StartTime;
+        }
+        break;
+      default:
+        exit(__LINE__,__FILE__,"The option is unknown");
+      }
+    }
 
   }
 
@@ -874,14 +883,11 @@ shared (CollisionLimitingThrehold,DomainBlockDecomposition::nLocalBlocks,s0Parti
     delete [] s0ParticleDataList[thread];
   }
 
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      //sum-up the balancing measure
-      for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
-        node=DomainBlockDecomposition::BlockTable[nLocalNode];
-        node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
-      }
-#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-//  }
-#endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  if ((_COMPILATION_MODE_==_COMPILATION_MODE__HYBRID_)&&(_PIC_DYNAMIC_LOAD_BALANCING_MODE_==_PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_)) {
+    //sum-up the balancing measure
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+      node->ParallelLoadMeasure+=*(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset));
+    }
+  }
 }
