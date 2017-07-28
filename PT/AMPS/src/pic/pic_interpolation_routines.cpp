@@ -360,7 +360,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     PIC::Mesh::cDataBlockAMR  *block;
     PIC::Mesh::cDataCenterNode *cell;
 
-    int iThread = iIndexes_II[0    +iCellStencil*(nIndexes+1)];
+//    int iThread = iIndexes_II[0    +iCellStencil*(nIndexes+1)];
     for(int i = 0; i < DIM; i++)
       //cell indices are 1-based in FORTRAN 
       ind[i]    = iIndexes_II[1+i  +iCellStencil*(nIndexes+1)]-1;
