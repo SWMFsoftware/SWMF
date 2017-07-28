@@ -52,11 +52,10 @@ namespace CCMC {
     double elCharge;
 
     if ((elCharge=PIC::MolecularData::GetElectricCharge(spec))>0.0) {
-      long int nd;
       int i,j,k;
       double E[3],B[3];
 
-      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
+      if (PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false)==-1) {
         exit(__LINE__,__FILE__,"Error: the cell is not found");
       }
 
