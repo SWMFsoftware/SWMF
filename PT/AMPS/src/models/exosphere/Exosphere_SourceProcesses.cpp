@@ -77,7 +77,7 @@ double Exosphere::SourceProcesses::SolarWindSputtering::DefaultEnergyDistributio
 
 //calculate the total and maximum source rates
 void Exosphere::SourceProcesses::SolarWindSputtering::Init() {
-  double ElementSourceRate,maxRatePerM2,t;
+  double ElementSourceRate,t;
   int el,nTotalSurfaceElements,spec;
 
   if (Exosphere::Planet==NULL) return;
