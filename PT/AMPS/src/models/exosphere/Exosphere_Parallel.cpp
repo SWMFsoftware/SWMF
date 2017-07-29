@@ -99,14 +99,15 @@ void Exosphere::ExchangeSurfaceAreaDensity() {
   #endif
 
       for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SurfaceElementPopulation[spec][el]+=TotalFlux_GLOBAL[el];
+        double t;
+
+        t=TotalFlux_GLOBAL[el];
+        Sphere->SurfaceElementPopulation[spec][el]+=t;
 
   #if _EXOSPHERE__SURFACE_CONTENT_ == _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_
         //use the user defined function for the local surface content
         Sphere->SurfaceElementPopulation[spec][el]=SurfaceElementArea[el]*(_EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el));
   #endif
-
-
 
 
     #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
