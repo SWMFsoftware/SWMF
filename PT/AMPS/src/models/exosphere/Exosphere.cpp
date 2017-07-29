@@ -2050,12 +2050,12 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
 
   if (ModelParticlesInjectionRate*ParticleWeight*LocalTimeStep<1.0E-10) return 0;
 
-  #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-  if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
-    SpeciesWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
-    ModelParticlesInjectionRate/=SpeciesWeightCorrection;
+  if (_INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_) {
+    if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
+      SpeciesWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
+      ModelParticlesInjectionRate/=SpeciesWeightCorrection;
+    }
   }
-  #endif
 
 
 
