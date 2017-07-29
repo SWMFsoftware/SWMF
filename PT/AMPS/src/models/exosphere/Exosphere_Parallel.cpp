@@ -39,7 +39,12 @@ void Exosphere::ExchangeSurfaceAreaDensity() {
 
       //update the value of the local sodium surface density
       double TotalPhotonStimulatedDesorptionFlux=0.0,localMaxPhotonStimulatedDesorptionFlux=0.0;
+
+      #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
       double TotalThermalDesorptionFlux=0.0,localMaxThermalDesorptionFlux=0.0;
+      #endif
+
+
       double SurfaceElementArea[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
 
       #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
@@ -94,19 +99,6 @@ void Exosphere::ExchangeSurfaceAreaDensity() {
   #endif
 
       for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        register double t;
-
-
-  //====================   DEBUG ========================
-  /*
-  if (Sphere->SodiumSurfaceElementPopulation[el]+TotalFlux_GLOBAL[el]<0.0) {
-    cout << __LINE__ << "  " << __FILE__ << endl;
-  }
-  */
-  //====================  END DEBIG =====================
-
-
-
         Sphere->SurfaceElementPopulation[spec][el]+=TotalFlux_GLOBAL[el];
 
   #if _EXOSPHERE__SURFACE_CONTENT_ == _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_
