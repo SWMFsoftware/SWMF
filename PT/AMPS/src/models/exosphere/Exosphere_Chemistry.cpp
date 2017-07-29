@@ -60,7 +60,6 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
   int *ReactionProductsList,nReactionProducts;
   double *ReactionProductVelocity;
   int ReactionChannel,spec;
-  bool PhotolyticReactionRoute;
   PIC::ParticleBuffer::byte *ParticleData;
   double vParent[3],xParent[3],ParentLifeTime;
 
@@ -131,7 +130,7 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
 
   for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) if (specProduct!=spec) {
     double ProductTimeStep,ProductParticleWeight;
-    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+    double ProductWeightCorrection=1.0;
     int iProduct;
     long int newParticle;
     PIC::ParticleBuffer::byte *newParticleData;
@@ -185,9 +184,9 @@ void Exosphere::ChemicalModel::PhotochemicalModelProcessor(long int ptr,long int
        PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
        PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
 
-       #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-       #endif
+       if (_INDIVIDUAL_PARTICLE_WEIGHT_MODE_==_INDIVIDUAL_PARTICLE_WEIGHT_ON_) {
+         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+       }
 
        //apply condition of tracking the particle
        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
