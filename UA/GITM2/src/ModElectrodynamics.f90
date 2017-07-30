@@ -34,6 +34,7 @@ module ModElectrodynamics
   real, dimension(:,:), allocatable :: SigmaCCMC
   real, dimension(:,:), allocatable :: SigmaPLMC
   real, dimension(:,:), allocatable :: SigmaLPMC
+  real, dimension(:,:), allocatable :: AverageMC
 
   real, dimension(:,:), allocatable :: KDpmMC, kpmMC
   real, dimension(:,:), allocatable :: KDlmMC, klmMC
