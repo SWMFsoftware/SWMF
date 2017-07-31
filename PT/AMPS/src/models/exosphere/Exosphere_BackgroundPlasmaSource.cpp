@@ -308,7 +308,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
         //sample the source rate
         nInjectedParticles++;
 
-        #if _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_ != -7
+        #if _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_ >= 0
         Exosphere::Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
         #else
         exit(__LINE__,__FILE__,"Error: _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_ is not initialized properly");
