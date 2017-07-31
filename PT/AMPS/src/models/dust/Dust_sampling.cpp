@@ -342,7 +342,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
       nd2=1+iAzimuthalMax+(iZenith+1)*nAzimuthalSurfaceElements;
       nd3=1+iAzimuthalMin+(iZenith+1)*nAzimuthalSurfaceElements;
 
-      fprintf(fout,"%ld %ld %ld %ld\n",nd0,nd1,nd2,nd3);
+      fprintf(fout,"%d %d %d %d\n",nd0,nd1,nd2,nd3);
     }
 
     fclose(fout);
@@ -496,7 +496,6 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(con
 }
 
 double ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement) {
-  double r;
   int idim;
 
   //Normalize the velocity vector and determine its coordinates in the frame related for the observation point

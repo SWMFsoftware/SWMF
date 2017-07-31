@@ -224,25 +224,14 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
 
 
 //the generic procedure of the grain charge update
-int ElectricallyChargedDust::Charging::UpdateGrainCharge(
-                double  dt,
-		double* ParticleVelocity,
-		double* PlasmaVelocity,
-		double  PlasmaPressure,
-                double  PlasmaTemperature,
-		double  PlasmaNumberDensity,
-		double  GrainRadius, 
-		double& GrainElectricCharge,
-		int     CHARGE_INTEGRATION_MODE) {
-
+void ElectricallyChargedDust::Charging::UpdateGrainCharge(double  dt,double* ParticleVelocity,double* PlasmaVelocity,double  PlasmaPressure,double  PlasmaTemperature,double  PlasmaNumberDensity,double  GrainRadius, double& GrainElectricCharge,int CHARGE_INTEGRATION_MODE) {
   double GrainElectricCharge_NEW,InitGrainCharge;
   
   //initial grain's charge
   InitGrainCharge=GrainElectricCharge;
 
-
   //reserve space for different electron and ion temepratures
-  double Ti,Te,Je,dJe,Ji,dJi,Jpe,dJpe,Jse,dJse,pe;
+  double Ti,Te,Je,dJe,Ji,dJi,Jpe,dJpe,Jse,dJse;
 
   if (PlasmaNumberDensity<1.0E2) {
     PlasmaTemperature=200.0;
@@ -297,15 +286,13 @@ int ElectricallyChargedDust::Charging::UpdateGrainCharge(
     Jtotal=Je+Ji+Jpe+Jse;
     dJtotal=dJe+dJi+dJpe+dJse;
 
-
     switch (CHARGE_INTEGRATION_MODE) {
     case CHARGE_INTEGRATION_MODE__EQUILIBRIUM_POTENTIAL :
       ChargeIncrement=-Jtotal/dJtotal;
       break;
     case CHARGE_INTEGRATION_MODE__TIME_DEPENDENT:
       //ChargeIncrement=InitGrainCharge-dt*Jtotal/dJtotal;
-      ChargeIncrement= 
-	-((GrainElectricCharge-InitGrainCharge) - Jtotal*dt) / (1-dJtotal*dt);
+      ChargeIncrement=-((GrainElectricCharge-InitGrainCharge) - Jtotal*dt) / (1-dJtotal*dt);
       break;
     default:
       exit(__LINE__,__FILE__,"Unknown option");
@@ -356,75 +343,67 @@ int ElectricallyChargedDust::Charging::UpdateGrainCharge(
 //the generic procedure of the grain charge update
 int ElectricallyChargedDust::Charging::UpdateGrainCharge(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode,int CHARGE_INTEGRATION_MODE) {
   double PlasmaTemperature,PlasmaNumberDensity, pe;
-  double GrainElectricCharge,GrainElectricCharge_NEW,InitGrainCharge;
+  double GrainElectricCharge;
+  int ReturnCode;
 
-  PIC::Mesh::cDataCenterNode* cell;
   int i,j,k;
-  long int LocalCellNumber;
   double swVel[3];
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *finalNode=PIC::Mesh::mesh.findTreeNode(xFinal,initNode);
 
   if (_DUST__CHARGING_MODE_ == _DUST__CHARGING_MODE__OFF_) {
     //dust charing modeling is turned off
-    return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+    ReturnCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+  }
+  else {
+    //the procesure is applied only to dust
+    if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+    if (PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+
+    //get the grain electric potential
+    char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
+    double GrainRadius;
+
+    memcpy((void*)localParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+    GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)localParticleData);
+    GrainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)localParticleData);
+
+    PIC::CPLR::InitInterpolationStencil(xInit,initNode);
+    PlasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
+    PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
+    PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+    pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure();
+
+    UpdateGrainCharge(dt, v, swVel,pe, PlasmaTemperature, PlasmaNumberDensity,GrainRadius, GrainElectricCharge, CHARGE_INTEGRATION_MODE);
+
+    SetGrainCharge(GrainElectricCharge,ParticleData);
+
+    //move the particle into diferent velocity group if needed
+    int oldVelocityGroup,newVelocityGroup;
+
+    oldVelocityGroup=spec-_DUST_SPEC_;
+    newVelocityGroup=GrainVelocityGroup::GetGroupNumber(v);
+
+    if (oldVelocityGroup!=newVelocityGroup) {
+      //move the particle into different velocity group
+      double GrainWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+      GrainWeightCorrection*=finalNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/finalNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
+
+      #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+      GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+oldVelocityGroup]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+newVelocityGroup];
+      #else
+      exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+      #endif
+
+
+      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,ParticleData);
+      spec=_DUST_SPEC_+newVelocityGroup;
+      PIC::ParticleBuffer::SetI(spec,ParticleData);
+    }
+
+    ReturnCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
   }
 
-  //the procesure is applied only to dust
-  if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
-
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
-  cell=finalNode->block->GetCenterNode(LocalCellNumber);
-
-  //get the grain electric potential
-  char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
-  double M,GrainRadius,dustPotential;
-
-  memcpy((void*)localParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
-  GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)localParticleData);
-  GrainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)localParticleData);
-  InitGrainCharge=GrainElectricCharge;
-
-
-  PIC::CPLR::InitInterpolationStencil(xInit,initNode);
-  PlasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
-  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
-  PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
-  pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure();
-
-
-  UpdateGrainCharge(dt, v, 
-		    swVel,
-		    pe, PlasmaTemperature, PlasmaNumberDensity,
-		    GrainRadius, GrainElectricCharge, CHARGE_INTEGRATION_MODE);
-
-
-  SetGrainCharge(GrainElectricCharge,ParticleData);
-
-  //move the particle into diferent velocity group if needed
-  int oldVelocityGroup,newVelocityGroup;
-
-  oldVelocityGroup=spec-_DUST_SPEC_;
-  newVelocityGroup=GrainVelocityGroup::GetGroupNumber(v);
-
-  if (oldVelocityGroup!=newVelocityGroup) {
-    //move the particle into different velocity group
-    double GrainWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
-
-    GrainWeightCorrection*=finalNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/finalNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
-
-#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-    GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+oldVelocityGroup]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+newVelocityGroup];
-#else
-    exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
-#endif
-
-
-    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,ParticleData);
-    spec=_DUST_SPEC_+newVelocityGroup;
-    PIC::ParticleBuffer::SetI(spec,ParticleData);
-  }
-
-
-
-  return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+  return ReturnCode;
 }

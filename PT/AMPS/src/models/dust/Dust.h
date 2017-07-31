@@ -349,15 +349,7 @@ namespace ElectricallyChargedDust {
         );
 
     //update the dust charge
-    int UpdateGrainCharge(double  dt,
-			  double* ParticleVelocity,
-			  double* PlasmaVelocity,
-			  double  PlasmaPressure,
-			  double  PlasmaTemperature,
-			  double  PlasmaNumberDensity,
-			  double  GrainRadius, 
-			  double& GrainElectricCharge,
-			  int     CHARGE_INTEGRATION_MODE);
+    void UpdateGrainCharge(double dt,double* ParticleVelocity,double* PlasmaVelocity,double  PlasmaPressure,double  PlasmaTemperature,double  PlasmaNumberDensity,double  GrainRadius, double& GrainElectricCharge,int CHARGE_INTEGRATION_MODE);
 
     //wrapper for the function above
     int UpdateGrainCharge(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode,int CHARGE_INTEGRATION_MODE);
