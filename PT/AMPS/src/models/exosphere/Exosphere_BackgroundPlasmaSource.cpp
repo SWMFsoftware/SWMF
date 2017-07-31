@@ -52,17 +52,13 @@ void Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::getMinMax
   }
 
   //determine the max-times step and min-particle weight in the blocks that containes the boundary of the domain
-  double res=0.0,LocalParticleWeight,LocalTimeStep;
-  long int nBoundaryFace,nd;
-  int spec;
-
-  double PlasmaTemeprature,PlasmaBulkVelocity[3],PlasmaNumberDensity,ExternalNormal[3],BlockSurfaceArea,x[3],x0[3],e0[3],e1[3];
-  int nface,idim,i,j,k;
+  double LocalParticleWeight,LocalTimeStep;
+  int spec,nface;
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     maxLocalTimeStep[spec]=-1.0,minParticleWeight[spec]=-1.0;
 
-    for (nBoundaryFace=0,nodeptr=PIC::BC::boundingBoxInjectionBlocksList.begin(),end=PIC::BC::boundingBoxInjectionBlocksList.end();nodeptr!=end;nodeptr++) {
+    for (nodeptr=PIC::BC::boundingBoxInjectionBlocksList.begin(),end=PIC::BC::boundingBoxInjectionBlocksList.end();nodeptr!=end;nodeptr++) {
       node=*nodeptr;
 
       if (PIC::Mesh::mesh.ExternalBoundaryBlock(node,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
@@ -93,12 +89,12 @@ void Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::getMinMax
 
 //calculate of the source rate
 double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTotalProductionRate(int spec) {
-  double res=0.0,LocalParticleWeight,LocalTimeStep;
-  long int nBoundaryFace,nd;
+  double res=0.0;
+  long int nBoundaryFace;
   list<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* >::iterator end,nodeptr;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
   double PlasmaTemeprature,PlasmaBulkVelocity[3],PlasmaNumberDensity,ExternalNormal[3],BlockSurfaceArea,x[3],x0[3],e0[3],e1[3];
-  int nface,idim,i,j,k;
+  int nface,idim,i;
   bool ExternalFaces[6];
 
   if (IonNumberDensityFraction[spec]==0.0) return 0.0;
@@ -253,8 +249,7 @@ double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTota
 //particle injection
 long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::ParticleInjection(int spec) {
   long int nInjectedParticles=0;
-  double ModelParticlesInjectionRate,TimeCounter=0.0,TimeIncrement,Ratio,p;
-  double ProductionFractionSum=0.0,FaceProductionFraction=0.0;
+  double ModelParticlesInjectionRate,TimeCounter=0.0,Ratio,p;
   double FluxIntegrationIncrement=1.0/nFaceInjectionIntervals;
 
   if (IonNumberDensityFraction[spec]==0.0) return 0;
@@ -266,11 +261,10 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
   Ratio=minParticleWeight[spec]/maxLocalTimeStep[spec];
   ModelParticlesInjectionRate/=minParticleWeight[spec];
 
-  long int nBoundaryFace,nd;
+  long int nBoundaryFace;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
-  double PlasmaTemeprature,PlasmaBulkVelocity[3],PlasmaNumberDensity,ExternalNormal[3],BlockSurfaceArea,x[3],x0[3],e0[3],e1[3];
-  int nface,idim,i,j,k;
-  bool ExternalFaces[6];
+  double PlasmaTemeprature,PlasmaBulkVelocity[3],ExternalNormal[3],x[3],x0[3],e0[3],e1[3];
+  int nface,idim;
 
   double v[3],c0,c1;
   long int newParticle;
@@ -290,7 +284,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
 #endif //_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 
   while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<maxLocalTimeStep[spec]) {
-    double TimeStepFraction=TimeCounter/maxLocalTimeStep[spec];
+ //   double TimeStepFraction=TimeCounter/maxLocalTimeStep[spec];
 
     //determine the block and face for the particle injection
     do {
@@ -313,21 +307,23 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
 
         //sample the source rate
         nInjectedParticles++;
+
+        #if _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_ != -7
         Exosphere::Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
+        #else
+        exit(__LINE__,__FILE__,"Error: _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_ is not initialized properly");
+        #endif
+
         PIC::BC::nInjectedParticles[spec]+=1;
         PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
 
         //initiate a task for OpenMP threads
-    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp task default (shared) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement) \
+         #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+         #pragma omp task default (shared) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement) \
          firstprivate (node,nface,spec,nBoundaryFace) \
          private (x,x0,e0,e1,ExternalNormal,newParticle,newParticleData,PlasmaNumberDensity,PlasmaTemeprature,PlasmaBulkVelocity,idim,c0,c1,v)
          {
-
-           int thisThreadOpenMP=omp_get_thread_num();
-      #else
-           int thisThreadOpenMP=0;
-      #endif
+         #endif
 
           //generate the new particle position on the face
           PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,node);
@@ -358,7 +354,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
           //determine the bachground plasma conditions at the block's face
           PIC::CPLR::InitInterpolationStencil(x,node);
 
-          PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+//          PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
           PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
           PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature();
 

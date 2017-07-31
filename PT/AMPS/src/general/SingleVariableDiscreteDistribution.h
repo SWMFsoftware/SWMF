@@ -45,7 +45,7 @@ public:
 public:
   void Init(T* t) {
     double F;
-    int i,j,jStart=0,jFinish=0,iDeltaJmax=-1,DeltaJmax=-1,DeltaJ;
+    int i,jStart=0,jFinish=0,iDeltaJmax=-1,DeltaJmax=-1,DeltaJ;
 
     if (CumulativeDistributionTable==NULL) exit(__LINE__,__FILE__,"Error: the cumulative distribution buffer is not allocated");
 
