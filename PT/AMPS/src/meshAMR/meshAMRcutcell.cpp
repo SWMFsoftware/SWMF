@@ -369,7 +369,7 @@ void CutCell::ReadCEASurfaceMeshLongFormat(const char *fname,double UnitConversi
 void CutCell::ReadCEASurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
-  long int i,j,idim,nnodes=0,nfaces=0;
+  long int idim,nnodes=0,nfaces=0;
   long int nTriangulationNodes=-1,nTriangulationFaces=-1;
   int faceat,NodeNumberOffset=0;
 
@@ -427,7 +427,7 @@ void CutCell::ReadCEASurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFil
     for (int cnt=0;cnt<nTriangulationFaces;cnt++) {
       ifile.GetInputStr(str,sizeof(str));
 
-      face.faceat=0;
+      face.faceat=faceat;
 
       for (idim=0;idim<3;idim++) {
         ifile.CutInputStr(dat,str);
@@ -444,7 +444,7 @@ void CutCell::ReadCEASurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFil
 
 
   //create the surface triangulation array
-  long int nd,nfc,id;
+  long int nd,nfc;
 
   nBoundaryTriangleFaces=nfaces;
   BoundaryTriangleFaces=new cTriangleFace[nfaces];
@@ -474,7 +474,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMes
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
   long int i,j,idim,nnodes=0,nfaces=0;
-  int NodeNumberOffset=0,MeshFileID=0;
+  int MeshFileID=0;
 
   if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
@@ -749,7 +749,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMes
 void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMeshFileList,double UnitConversitonFactor) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
-  int i,j,idim,nnodes=0,nfaces=0,NodeNumberOffset=0,ThisMeshNodeCounter,MeshFileID=1;
+  int idim,nnodes=0,nfaces=0,NodeNumberOffset=0,ThisMeshNodeCounter,MeshFileID=1;
 
   if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
@@ -834,7 +834,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(list<cSurfaceMeshFile> SurfaceMes
 
 
   //create the surface triangulation array
-  int nd,nfc,id;
+  int nd,nfc;
 
   nBoundaryTriangleFaces=nfaces;
   BoundaryTriangleFaces=new cTriangleFace[nfaces];
@@ -1335,19 +1335,6 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
     }
 
     //check the consistency of the cut edges
-
-
-    static long int nCall=0;
-
-    nCall++;
-
-    if (nCall==239) {
-      double a;
-
-      a=10.0;
-    }
-
-
     for (int nedge=0;nedge<12;nedge++) {
         int cnt=0;
 
@@ -1448,7 +1435,7 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
 }
 
 void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangleNode>& nodes,list<CutCell::cConnectivityListTriangleEdge>& edges,list<CutCell::cConnectivityListTriangleFace>& faces,list<cConnectivityListTriangleEdgeDescriptor>& RecoveredEdgeDescriptorList) {
-  long int nd,nedge,nface;
+  long int nd,nface;
   int idim;
   list<cConnectivityListTriangleNode>::iterator *tempNodeIteratorVector=new list<cConnectivityListTriangleNode>::iterator [nBoundaryTriangleNodes];
 
@@ -1494,7 +1481,6 @@ void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangl
 
       //determine whether such edge already exists
       for (flag=false,ptr=n[0]->ballEdgeList;ptr!=RecoveredEdgeDescriptorList.end();ptr=ptr->next) {
-        int cnt=0,i,j;
         list<cConnectivityListTriangleNode>::iterator ballEdgeNode[2];
         list<cConnectivityListTriangleEdge>::iterator ballEdge;
 
@@ -1574,7 +1560,7 @@ void CutCell::SmoothMeshResolution(double MaxNeibSizeRatio) {
 
 
 void CutCell::SmoothRefine(double SmoothingCoefficient) {
-  long int nd,cl,idim;
+  int idim;
 
   list<cConnectivityListTriangleNode> OrigonalNodes;
   list<cConnectivityListTriangleEdge> OriginalEdges;
@@ -1760,8 +1746,6 @@ void CutCell::SmoothRefine(double SmoothingCoefficient) {
 int CutCell::cutBlockTetrahedronConnectivity(CutCell::cCutBlock* bl,list<CutCell::cTetrahedron>& indomainConnectivityList,list<CutCell::cTetrahedron>& outdomainConnectivityList,list<CutCell::cTriangleCutFace> &TriangleCutFaceConnectivity) {
     int nedge,idim,i,j,k;
     int connectivityLength=0;
-    double c,x[3];
-    long int elementPosition;
 
 
 
@@ -1822,8 +1806,10 @@ cout <<"line=" << __LINE__ << endl;
 
 ///--------
 
+    /* MAPS
     static const int faceEdges[6][4]={{4,11,7,8},{5,10,6,9},{0,9,3,8},{1,10,2,11},{0,5,1,4},{3,6,2,7}};
     static const int nodeEdges[8][3]={{0,4,8},{0,5,9},{5,10,1},{4,11,1},{8,3,7},{3,9,6},{2,10,6},{7,11,2}};
+    */
 
     static const int edgeCutNodeCoordinates[12][3]={{1,0,0},{1,2,0},{1,2,2},{1,0,2},   {0,1,0},{2,1,0},{2,1,2},{0,1,2},  {0,0,1},{2,0,1},{2,2,1},{0,2,1}};
 
@@ -2013,7 +1999,7 @@ cout <<"line=" << __LINE__ << endl;
 
     //init the mesh
     //corner nodes of the block
-    int nnode,iedge;
+//    int nnode,iedge;
 
     #define _IN_DOMAIN_      0
     #define _OUT_DOMAIN_     1
@@ -2476,7 +2462,7 @@ nodeMesh[i][j][k]->ghostNode=(globalNodeMask[i][j][k]>=0) ? false : true;
     //connect nodes:nodes in corners of a block can be connected only along coordinate directions; nodes that cut edges sould be connected to another cutting node on the same face
     cBlockNode *connectNode,*nd;
     int n,ndir;
-    bool foundflag;
+//    bool foundflag;
 
 
     //connect the corner nodes
@@ -2508,8 +2494,8 @@ nodeMesh[i][j][k]->ghostNode=(globalNodeMask[i][j][k]>=0) ? false : true;
 
 
     //connect cutting nodes: only those cutting nodes are connected that belongs to the same face
-    cBlockNode *nd0,*nd1,*nd2,*nd3,*ndcnt;
-    int nCuts,nface,pedge;
+    cBlockNode *nd0,*nd1,*nd2,*nd3;
+//    int nCuts,nface,pedge;
 
 
 
@@ -2532,7 +2518,7 @@ nodeMesh[i][j][k]->ghostNode=(globalNodeMask[i][j][k]>=0) ? false : true;
 
 
     //combine the nodes into thetrahedrones
-    int nConnections,ncnt;
+    int nConnections;
     int nnodesNumber=blNodeListLength;
 
     double *xt0ptr,xt1[3],*xt1ptr,xt2[3],*xt2ptr,xt3[3],*xt3ptr,tVolume;
@@ -2698,8 +2684,6 @@ nodeMesh[i][j][k]->ghostNode=(globalNodeMask[i][j][k]>=0) ? false : true;
 
       if (nd0==NULL) {
         return connectivityLength;
-
-        exit(__LINE__,"Error: all possible corner nodes has a zero volume tetrahedron among their connections");
       }
 
       if (nd0->nConnections==3) {
@@ -2987,7 +2971,7 @@ if (  ((nd0->ghostNode==false)&&(nd1->ghostNode==false)&&(nd2->ghostNode==false)
         e1[2]=norm[0]*e0[1]-norm[1]*e0[0];
 
         //get the angles of projections of the nodes in the plane (e0,e1,norm)
-        double phi,xplane[2];
+        double xplane[2];
         double *phi_nd0Connection=new double[nConnections];
 
         for (n=0;n<nConnections;n++) {
