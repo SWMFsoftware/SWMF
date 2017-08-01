@@ -46,8 +46,13 @@ cvs co -D "`date +%m/%d/%Y` 23:20" AMPS_data
 cd ..
 
 #Create separate folders for different compilers
+rm -rf GNU
 mkdir -p GNU;   cp -r AMPS GNU/;
+
+rm -rf Intel
 mkdir -p Intel; cp -r AMPS Intel/;
+
+rm -rf PGI
 mkdir -p PGI;   cp -r AMPS PGI/;
 
 #Install AMPS
