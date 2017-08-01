@@ -107,7 +107,7 @@ cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                     #
 ./Config.pl -f-link-option=-lmpi++                  
 
 cd $WorkDir/Tmp_AMPS_test/PGI/AMPS
-./Config.pl -link-option=-pgf90libs,-pgc++libs
+./Config.pl -f-link-option=-pgf90libs,-pgc++libs
 
 cd $WorkDir/Tmp_AMPS_test
 rm -f AmpsCompilingIntelComplete
