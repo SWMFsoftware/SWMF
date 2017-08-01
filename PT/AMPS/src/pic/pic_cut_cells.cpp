@@ -148,10 +148,8 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain
 //l -> is a random ray (intersection search) direction
 bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::Mesh::IrregularSurface::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS) {
-  int nface,nfaceStart,nfaceFinish,iIntersections;
+  int iIntersections,idim;
   double l,xFinish[3];
-  int idim;
-  bool flag=true;
 
   if (SurfaceTriangulation==NULL) return true;
 
@@ -160,7 +158,7 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
       pow(PIC::Mesh::mesh.xGlobalMax[1]-PIC::Mesh::mesh.xGlobalMin[1],2)+
       pow(PIC::Mesh::mesh.xGlobalMax[2]-PIC::Mesh::mesh.xGlobalMin[2],2));
 
-  //distribute ditrction of the search
+  //generate the direction of the search
   for (l=0.0,idim=0;idim<3;idim++) {
     xFinish[idim]=sqrt(-2.0*log(rnd()))*cos(2.0*3.1415926*rnd());
     l+=pow(xFinish[idim],2);
@@ -170,7 +168,6 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 
   //xFinish is outside of the domain -> the point outside of the surface
   //calculate the number of the face intersections between 'x' and 'xFinish'
-
   iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xFinish,-1);
 
   return (iIntersections%2==0) ? true : false;
@@ -248,7 +245,6 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
       if ((From->FirstTriangleCutFace!=NULL)||(From->neibCutFaceListDescriptorList!=NULL)) {
         //check if the node 'From' is not in To->neibCutFaceListDescriptorList already
         cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor* t;
-        bool found=false;
 
         /*
         At the fist pass check whether 'From' is akready in To->neibCutFaceListDescriptorList; if not -> add 'From' to To->neibCutFaceListDescriptorList
@@ -325,7 +321,6 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
   if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
     int i;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode;
-    double c;
 
     for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
       CopyCutFaceInformation(downNode); 
@@ -335,7 +330,7 @@ void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh:
     const int ProcessedNeibBlockTableLength=60;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ProcessedNeibBlockTable[ProcessedNeibBlockTableLength];
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* neibNode;
-    int i,j,k,iFace,iEdge,iCorner,iNeib,ProcessedNodeCounter=0;
+    int i,j,iFace,iEdge,iCorner,iNeib,ProcessedNodeCounter=0;
     bool found;
 
     //connection through corners
