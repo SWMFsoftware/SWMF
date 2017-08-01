@@ -213,7 +213,7 @@ public :
     }
 
     //allocate buffers for sampling surface sodium source rates and sodikum surface content
-    int offsetSpecie,offsetElement,s,el,i;
+    int offsetSpecie,offsetElement,s,el;
 
     SampleSpeciesSurfaceSourceRate=new double** [nTotalSpecies];
     SampleSpeciesSurfaceSourceRate[0]=new double *[nTotalSpecies*TotalSurfaceElementNumber];
