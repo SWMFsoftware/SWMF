@@ -52,6 +52,8 @@ namespace OH {
 
   // determines what the origin tag for each particle should be based on loacl plasma parameters where it was created
   int GetEnaOrigin(double PlasmaNumberDensity, double PlasmaPressure, double *PlasmaBulkVelocity);
+  void InitializeParticleWithEnaOriginTag(long int ptr, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode, int iInjectionMode);
+  
 
   void Init_BeforeParser();
   

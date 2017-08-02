@@ -419,6 +419,7 @@ sub ReadMainBlock {
   my $TrajectoryIntegrationCheckBlockFaceIntersection;
   my $MoverIntegratorMode;
   my $MoverIntegrator;
+  my $UserDefinedParticleInitialization;
   
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
@@ -645,6 +646,18 @@ sub ReadMainBlock {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }       
+    ### USERDEFINEDPARTICLEINITIALIZATION ###
+    elsif ($s0 eq "USERDEFINEDPARTICLEINITIALIZATION" ){
+	chomp($line);
+	($InputLine,$InputComment)=split('!',$line,2);
+	$InputLine=~s/ //g;
+	$InputLine=~s/=/ /;
+	
+	($InputLine,$UserDefinedParticleInitialization)=split(' ',$InputLine,2);
+	if($UserDefinedParticleInitialization eq "OFF"){
+	    $UserDefinedParticleInitialization = '';
+	}
+    }
     ### STDOUTERRORLOG ###
     elsif ($s0 eq "STDOUTERRORLOG") {
       ($s0,$s1)=split(' ',$s1,2);
@@ -818,6 +831,14 @@ sub ReadMainBlock {
   ampsConfigLib::ChangeValueOfVariable("char PIC::DiagnospticMessageStreamName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$DiagnosticStream."\"","pic/pic_init_const.cpp");
   ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$OutputDirectory."\"","pic/pic_init_const.cpp");
   ampsConfigLib::ChangeValueOfVariable("char PIC::InputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputDirectory."\"","pic/pic_init_const.cpp");
+
+  #redefine values of the macros controlling particle initialization mode
+  if($UserDefinedParticleInitialization){
+      my $FuncName='';
+      ampsConfigLib::RedefineMacro("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      if($UserDefinedParticleInitialization =~  m/(.*)(\(.*\))/){ $FuncName = $1;}
+      ampsConfigLib::RedefineMacroFunction("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_","(t1,t2,t3) ($FuncName(t1,t2,t3))","pic/picGlobal.dfn");  
+  }
   
   #redefine the value for the macro controlling output error messages into stdout
   ampsConfigLib::RedefineMacro("_STDOUT_ERRORLOG_MODE_",$StdoutErrorLog,"general/specfunc.h");

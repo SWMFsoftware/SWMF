@@ -42,6 +42,8 @@ ParticleWeightCorrectionMode=on !on,off
 
 CouplerMode=swmf !ices !!off, ices, swmf 
 
+UserDefinedParticleInitialization=OH::InitializeParticleWithEnaOriginTag(newParticle,startNode,iInjectionMode)
+
 #endmain
 
 #include species.input

@@ -431,6 +431,30 @@ double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_
   return 100.0;
 }
 
+void OH::InitializeParticleWithEnaOriginTag(long int ptr, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode, int iInjectionMode){
+
+
+  PIC::ParticleBuffer::byte *ParticleData;
+  double x[3];
+
+  // find the particle position
+  ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+  PIC::ParticleBuffer::GetX(x,ParticleData);
+
+  // get the backgroudn paramters
+  double PlasmaBulkVelocity[3];
+  double PlasmaNumberDensity, PlasmaPressure;
+  PIC::CPLR::InitInterpolationStencil(x, startNode);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+  PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+  PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
+  
+  // assign the origin tag to the particle
+  OH::SetOriginTag(OH::GetEnaOrigin(PlasmaNumberDensity,PlasmaPressure,PlasmaBulkVelocity), ParticleData);
+
+}
+
+
 int OH::GetEnaOrigin(double PlasmaNumberDensity, double PlasmaPressure, double *PlasmaBulkVelocity){
   // determines which population the ENA should be added to based on where in the heliosphere it was created
   // 0 = SSSW

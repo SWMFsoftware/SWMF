@@ -339,5 +339,8 @@ at the end of each time step
 //Free flow injection boundary mode
 #define _PIC_BC__OPEN_FLOW_INJECTION__MODE_  _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_
 
+// user-defined initilization of particles
+#define _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_ _PIC_MODE_OFF_
+#define _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_(t1,t2,t3) _DUMMY_(t1,t2,t3)
 
 #endif //_PIC_GLOBAL_DEFINITIONS_H_  
