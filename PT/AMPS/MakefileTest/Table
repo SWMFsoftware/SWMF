@@ -65,6 +65,10 @@ Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=8{pgcc}@@(0+valeriy)
 
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS@@(0+valeriy)
 Keys=-cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/COPS -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/COPS@@(0+pleiades) 
 
@@ -195,6 +199,10 @@ Time=54
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=8{pgcc}@@(0+valeriy)
+
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 
 Keys=-cplr-data-path=${PTDIR}/${TESTX-WingDIR} -model-data-path=${PTDIR}/${TESTX-WingDIR} 
 
@@ -495,6 +503,10 @@ Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=2{pgcc}@@(0+valeriy)
 
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
 Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
 <#
@@ -660,7 +672,7 @@ Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=8{pgcc}@@(0+valeriy)
 
-Ref=3{pgcc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 Ref=3{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 
@@ -1226,7 +1238,9 @@ Ref=8{pgcc}@@(0+valeriy)
 Ref=3{gcc}@@(0+stampede)
 Ref=4{icc}@@(0+stampede)
 
-Ref=5{icc}@@(0+pleiades)
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 
 
 Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
@@ -1268,49 +1282,53 @@ Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=8{pgcc}@@(0+valeriy)
 
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
 Check=
 >>>@echo "test_Sphere-drag-coefficient_check..." >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
 
 >>>@${TESTSphere-drag-coefficientDIR}/../utility/ReduceFile.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat 10
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10 /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-VolumeData.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10 ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-VolumeData.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SurfaceData.diff
-
-
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--Adsorption.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--Adsorption$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-Adsorption-ParticleData$(TESTSphere-drag-coefficient-REF).diff
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--Adsorption.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--Adsorption$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-Adsorption-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SurfaceData.diff
 
 
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--CLL.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--CLL$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-CLL-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--Adsorption.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--Adsorption$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-Adsorption-ParticleData$(TESTSphere-drag-coefficient-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--CLL.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--CLL$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-CLL-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
-
-
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--DiffuseReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--DiffuseReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-DiffuseReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--DiffuseReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--DiffuseReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-DiffuseReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--Adsorption.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--Adsorption$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-Adsorption-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
 
 
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--MaxwellReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--MaxwellReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-MaxwellReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--CLL.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--CLL$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-CLL-ParticleData$(TESTSphere-drag-coefficient-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--MaxwellReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--MaxwellReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-MaxwellReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
-
-
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--QuasiSpecularReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--QuasiSpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-QuasiSpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
-
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--QuasiSpecularReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--QuasiSpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-QuasiSpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--CLL.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--CLL$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-CLL-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
 
 
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--SpecularReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter--SpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--DiffuseReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--DiffuseReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-DiffuseReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--SpecularReflection.dat /Volumes/Data01/AMPS_DATA_TEST_TEMP/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--SpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--DiffuseReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--DiffuseReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-DiffuseReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+
+
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--MaxwellReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--MaxwellReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-MaxwellReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--MaxwellReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--MaxwellReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-MaxwellReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+
+
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--QuasiSpecularReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--QuasiSpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-QuasiSpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--QuasiSpecularReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--QuasiSpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-QuasiSpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
+
+
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter--SpecularReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter--SpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--SpecularReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--SpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
 
 
 >>>@cat test_Sphere-drag-coefficient-VolumeData.diff test_Sphere-drag-coefficient-SurfaceData.diff > test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
