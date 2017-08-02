@@ -1,6 +1,19 @@
 //$Id$
 #include "ChargeExchange.h"
 
+//Define defaut values of macro used in calculating of the life time
+#ifndef _H_ENA_V1_SPEC_
+#define _H_ENA_V1_SPEC_ _H_SPEC_
+#endif
+
+#ifndef _H_ENA_V2_SPEC_
+#define _H_ENA_V2_SPEC_ _H_SPEC_
+#endif
+
+#ifndef _H_ENA_V3_SPEC_
+#define _H_ENA_V3_SPEC_ _H_SPEC_
+#endif
+
 double ChargeExchange::LindsayStebbings::LifeTime(int spec,double* vParticle,double* vPlasma,double PlasmaTemperature,double PlasmaNumberDensity) {
   // for notation see Lindsay & Stebbings, JGR, vol. 110, A12213, 2005
   double a1 =4.15,a2=0.531,a3=67.3,v2,energy,sigma,c;
