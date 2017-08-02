@@ -60,7 +60,6 @@ using namespace std;
 */
 
 
-
 #if _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_ == _PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_
 $MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION$
 #endif
@@ -2293,8 +2292,11 @@ namespace PIC {
 
         for (idim=0;idim<3;idim++) res+=v2[idim]-v[idim]*v[idim];
 
-        //return 
-	      T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
+	// res may be negative due to rounding error, e.g.
+	// there's only 1 particle in the cell
+	if(res < 0.0) res = 1.0E-15;
+
+	T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
 
       inline double GetTranslationalTemperature(int s) {
@@ -2312,9 +2314,14 @@ namespace PIC {
         double v=0.0,v2=0.0,res=0.0;
 
         v = GetDatumAverage(DatumParticleParallelVelocity, s);
-	      v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
-	      res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
-	      T[0]=res;
+	v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
+	res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
+
+	// res may be negative due to rounding error, e.g.
+	// there's only 1 particle in the cell
+	if(res < 0.0) res = 1.0E-15;
+
+	T[0]=res;
         #endif
       }
 
