@@ -832,9 +832,9 @@ contains
              write(*,*) 'NormalFace_D  =', NormalFace_D
              write(*,*) 'P             =', VarsGhostFace_V(P_)
              write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
-             write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
-             write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
-             write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
+             write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
+             write(*,*) 'U_D           =', VarsGhostFace_V(RhoUx_:RhoUz_)
+             write(*,*) 'P             =', VarsGhostFace_V(P_)
              write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
              write(*,*) 'H2OpU_D       =', &
                   VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
@@ -962,9 +962,9 @@ contains
        write(*,*) 'CosAngle      =', CosAngle
        write(*,*) 'P             =', VarsGhostFace_V(P_)
        write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
-       write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
-       write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
-       write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
+       write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
+       write(*,*) 'U_D           =', VarsGhostFace_V(RhoUx_:RhoUz_)
+       write(*,*) 'P             =', VarsGhostFace_V(P_)
        write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
        write(*,*) 'H2OpU_D       =', VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
        write(*,*) 'H2OpUT_D      =', VarsTrueFace_V(H2OpRhoUx_:H2OpRhoUz_)
@@ -1088,28 +1088,11 @@ contains
       ! magnetic field on the comet body should be 0
       VarsGhostFace_V(Bx_:Bz_) = 0.0
 
-      VarsGhostFace_V(Rho_)   = sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUx_) = &
-           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I)) / &
-           sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUy_) = &
-           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUyIon_I)) / &
-           sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUz_) = &
-           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I)) / &
-           sum(VarsGhostFace_V(iRhoIon_I))
-
-      if(UseElectronPressure) then
-         VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
-
+      if(UseElectronPressure .and. uIonMeanNormal > 0.0) then
          ! Assume that electron velocity is the same as the mean ion velocity.
          ! Use the minimum neutral temperature as the electron temperature
          ! at the body if outflow, float otherwise
-         if(uIonMeanNormal > 0.0) &
-              VarsGhostFace_V(Pe_) = nElec*TempNeuMin
-      else
-         VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
-              *(1.+ElectronPressureRatio)
+         VarsGhostFace_V(Pe_) = nElec*TempNeuMin
       end if
     end subroutine set_ion_face_boundary
     !----------------------------------------------------------------------
@@ -1348,7 +1331,7 @@ contains
     ! e - Hp, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
     ! rate in [1/s]
     fei_I(SW_) = 54.5*ChargeIon_I(SW_)**2* &
-         State_VGB(SwRho_,i,j,k,iBlock)/MassIon_I(SW_)* &
+         State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(SW_)* &
          No2SI_V(UnitN_)/1E6/(Te*sqrtTe)
 
     if (DoTestElectronCollision) then
@@ -2727,14 +2710,6 @@ contains
        Source_VC(iPIon_I     ,i,j,k) = SP_IC(1:nIonFluid,i,j,k)      + &
             Source_VC(iPIon_I     ,i,j,k)
 
-       Source_VC(Rho_   ,i,j,k) = sum(SRho_IC(1:nIonFluid,i,j,k))    + &
-            Source_VC(Rho_   ,i,j,k)
-       Source_VC(rhoUx_ ,i,j,k) = sum(SRhoUx_IC(1:nIonFluid,i,j,k))  + &
-            Source_VC(rhoUx_ ,i,j,k)
-       Source_VC(rhoUy_ ,i,j,k) = sum(SRhoUy_IC(1:nIonFluid,i,j,k))  + &
-            Source_VC(rhoUy_ ,i,j,k)
-       Source_VC(rhoUz_ ,i,j,k) = sum(SRhoUz_IC(1:nIonFluid,i,j,k))  + &
-            Source_VC(rhoUz_ ,i,j,k)
        Source_VC(Bx_    ,i,j,k) = SBx_C(i,j,k)                       + &
             Source_VC(Bx_    ,i,j,k)
        Source_VC(By_    ,i,j,k) = SBy_C(i,j,k)                       + &
@@ -2751,13 +2726,8 @@ contains
 !                  ': User source_VC(Pe_)                      =', &
 !                  SPe_C(i,j,k)
 !          end if
-          Source_VC(P_     ,i,j,k) = sum(SP_IC(1:nIonFluid,i,j,k))   + &
-               Source_VC(P_     ,i,j,k)
           Source_VC(Pe_    ,i,j,k) = SPe_C(i,j,k)                    + &
                Source_VC(Pe_    ,i,j,k)
-       else
-          Source_VC(P_     ,i,j,k) = sum(SP_IC(1:nIonFluid,i,j,k)) * &
-               (1.+ElectronPressureRatio) + Source_VC(P_     ,i,j,k)
        end if
     end do;  end do;  end do
 
@@ -2800,24 +2770,6 @@ contains
        end do
        write(*,*)''
        write(*,*)'Total plasma phase (e- and i+):'
-       write(*,123)'Rho       = ', &
-            State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitRho_), " [kg/m^3]"
-!       write(*,123)'n         = ', State_VGB(Rho_,i,j,k,iBlock) / &
-!            MassFluid_I(nFluid)*No2SI_V(UnitN_), " [1/m^3]"
-       write(*,123)'uRhox     = ', &
-            State_VGB(RhoUx_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
-       write(*,123)'uRhoy     = ', &
-            State_VGB(RhoUy_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
-       write(*,123)'uRhoz     = ', &
-            State_VGB(RhoUz_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
-       if (UseElectronPressure) then
-          write(*,123)'Ptot      = ', &
-               (State_VGB(P_,i,j,k,iBlock)+State_VGB(Pe_,i,j,k,iBlock))* &
-               No2SI_V(UnitP_), " [kg/(m*s^2)]"
-       else
-          write(*,123)'Ptot      = ',State_VGB(P_,i,j,k,iBlock)* &
-               No2SI_V(UnitP_), " [kg/(m*s^2)]"
-       end if
        write(*,123)'Bx        = ',State_VGB(Bx_,i,j,k,iBlock)* &
             No2SI_V(UnitB_)," [T]"
        write(*,123)'By        = ',State_VGB(By_,i,j,k,iBlock)* &
@@ -2834,44 +2786,6 @@ contains
        write(*,123)'jz        = ', &
             Current_DC(3,i,j,k)*No2SI_V(UnitJ_)," [A/m^2]"
        write(*,*)''
-       write(*,123)'SRho      = ', sum(SRho_IC(1:nIonFluid,i,j,k))* &
-            No2SI_V(UnitRho_)/No2SI_V(UnitT_), &
-            " [kg/(m^3*s)]"," (", &
-            100.*sum(SRho_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock) / &
-            (State_VGB(Rho_,i,j,k,iBlock)),"%)"
-       if (State_VGB(RhoUx_,i,j,k,iBlock) /= 0.) then
-          write(*,123)'SRhoUx    = ', sum(SRhoUx_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUx_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock)/ &
-               (State_VGB(RhoUx_,i,j,k,iBlock)),"%)"
-       else
-          write(*,123)'SRhoUx    = ', sum(SRhoUx_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]"
-       end if
-       if (State_VGB(RhoUy_,i,j,k,iBlock) /= 0.) then
-          write(*,123)'SRhoUy    = ', sum(SRhoUy_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUy_IC(1:nIonFluid,i,j,k)) * &
-               time_BLK(i,j,k,iBlock)/(State_VGB(RhoUy_,i,j,k,iBlock)),"%)"
-       else
-          write(*,123)'SRhoUy    = ', sum(SRhoUy_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]"
-       end if
-       if (State_VGB(RhoUz_,i,j,k,iBlock) /= 0.) then
-          write(*,123)'SRhoUz    = ', sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
-               time_BLK(i,j,k,iBlock)/(State_VGB(RhoUz_,i,j,k,iBlock)),"%)"
-       else
-          write(*,123)'SRhoUz    = ', sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
-               No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
-               " [kg/(m^2*s^2)]"
-       end if
        if (State_VGB(Bx_,i,j,k,iBlock) /= 0.) then
           write(*,123)'SBx       = ', &
                SBx_C(i,j,k)*No2SI_V(UnitB_)/No2SI_V(UnitT_)," [T/s]"," (", &
@@ -2898,19 +2812,6 @@ contains
        else
           write(*,123)'SBz       = ', &
                SBz_C(i,j,k)*No2SI_V(UnitB_)/No2SI_V(UnitT_), " [T/s]"
-       end if
-       if(UseElectronPressure) then
-          write(*,123)'SP        = ', &
-               sum(SP_IC(1:nIonFluid,i,j,k))*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
-               " [Pa/s]"," (", &
-               100.*sum(SP_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock) / &
-               (State_VGB(P_,i,j,k,iBlock)),"%)"
-       else
-          write(*,123)'SP        = ', &
-               sum(SP_IC(1:nIonFluid,i,j,k))*No2SI_V(UnitP_)/No2SI_V(UnitT_)*&
-               (1+ElectronPressureRatio)," [Pa/s]"," (", &
-               100.*sum(SP_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock)/ &
-               (State_VGB(P_,i,j,k,iBlock))*(1+ElectronPressureRatio),"%)"
        end if
        write(*,*)''
        write(*,123)'dt        = ',time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)," [s]"
@@ -3400,13 +3301,13 @@ contains
             State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
 
           ! Velocity of the solar wind
-          Ux = State_VGB(SwRhoUx_,i,j,k,iBlock)/State_VGB(SwRho_,i,j,k,iBlock)
-          Uy = State_VGB(SwRhoUy_,i,j,k,iBlock)/State_VGB(SwRho_,i,j,k,iBlock)
-          Uz = State_VGB(SwRhoUz_,i,j,k,iBlock)/State_VGB(SwRho_,i,j,k,iBlock)
+          Ux = State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          Uy = State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          Uz = State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
 
           ! Temperature of the solar wind
-          Ti = State_VGB(SwP_,i,j,k,iBlock) / &
-               State_VGB(SwRho_,i,j,k,iBlock)*MassIon_I(Sw_)
+          Ti = State_VGB(P_,i,j,k,iBlock) / &
+               State_VGB(Rho_,i,j,k,iBlock)*MassIon_I(Sw_)
 
           State_VGB(H2OpRho_,i,j,k,iBlock) = &
                State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio
@@ -3425,7 +3326,7 @@ contains
        ! If the solar wind density is less than 1e-4, then set solar wind 
        ! density to 1e-4, and its velocity/temperature the same as the 
        ! cometary ion fluid
-       if(State_VGB(SwRho_,i,j,k,iBlock) < &
+       if(State_VGB(Rho_,i,j,k,iBlock) < &
             1.0e-4*Si2No_V(UnitN_)*MassIon_I(Sw_)) then
 
           ! Velocity of the cometary ion
@@ -3440,35 +3341,15 @@ contains
           Ti = State_VGB(H2OpP_,  i,j,k,iBlock) / &
                State_VGB(H2OpRho_,i,j,k,iBlock)*MassIon_I(H2Op_)
 
-          State_VGB(SwRho_,i,j,k,iBlock) = &
+          State_VGB(Rho_,i,j,k,iBlock) = &
                1.0e-4*Si2No_V(UnitN_)*MassIon_I(Sw_)
 
-          State_VGB(SwRhoUx_,i,j,k,iBlock) = State_VGB(SwRho_,i,j,k,iBlock)*Ux
-          State_VGB(SwRhoUy_,i,j,k,iBlock) = State_VGB(SwRho_,i,j,k,iBlock)*Uy
-          State_VGB(SwRhoUz_,i,j,k,iBlock) = State_VGB(SwRho_,i,j,k,iBlock)*Uz
+          State_VGB(RhoUx_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*Ux
+          State_VGB(RhoUy_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*Uy
+          State_VGB(RhoUz_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)*Uz
 
-          State_VGB(SwP_,i,j,k,iBlock) =  &
-               State_VGB(SwRho_,i,j,k,iBlock)/MassIon_I(Sw_)*Ti
-       end if
-
-       ! Total fluid
-       State_VGB(Rho_,i,j,k,iBlock)       = &
-            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-       State_VGB(RhoUx_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-       State_VGB(RhoUy_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-       State_VGB(RhoUz_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
-       ! Total fluid pressure
-       if(UseElectronPressure) then
-          State_VGB(P_,i,j,k,iBlock)      = &
-               sum(State_VGB(iPIon_I,i,j,k,iBlock))
-       else
-          State_VGB(P_,i,j,k,iBlock)      = &
-               sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-               (1.+ElectronPressureRatio)
+          State_VGB(P_,i,j,k,iBlock) =  &
+               State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(Sw_)*Ti
        end if
 
     end do; end do; end do   ! do k=1,nK; do j=1,nJ; do i=1,nI
@@ -4081,11 +3962,11 @@ contains
 
     !---------------------------------------------------------------------
     RhoSw = SW_rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
-    State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
-    State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
-    State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
-    State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
-    State_VGB(SwP_,i,j,k,iBlock)       = &
+    State_VGB(Rho_,i,j,k,iBlock)     = RhoSw
+    State_VGB(RhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
+    State_VGB(RhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
+    State_VGB(RhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
+    State_VGB(P_,i,j,k,iBlock)       = &
          SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
 
     State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_rho*LowDensityRatio
@@ -4106,26 +3987,13 @@ contains
          State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
          *50*Io2No_V(UnitTemperature_)
 
-    State_VGB(Rho_,i,j,k,iBlock)       = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-    State_VGB(RhoUx_,i,j,k,iBlock)     = &
-         sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-    State_VGB(RhoUy_,i,j,k,iBlock)     = &
-         sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-    State_VGB(RhoUz_,i,j,k,iBlock)     = &
-         sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
     State_VGB(Bx_,i,j,k,iBlock) = SW_Bx
     State_VGB(By_,i,j,k,iBlock) = SW_By
     State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
 
     if(UseElectronPressure) then
-       State_VGB(P_,i,j,k,iBlock)      = sum(State_VGB(iPIon_I,i,j,k,iBlock))
        State_VGB(Pe_,i,j,k,iBlock)     = &
-            State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
-    else
-       State_VGB(P_,i,j,k,iBlock)      = &
-            sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-            (1.+ElectronPressureRatio)
+            sum(State_VGB(iPIon_I,i,j,k,iBlock))*ElectronPressureRatio
     end if
 
   end subroutine user_preset_conditions
@@ -4198,26 +4066,9 @@ contains
        end do
        write(*,*)''
        write(*,*)'Total:'
-       write(*,123)'Rho       = ', &
-            State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitRho_)," [kg/m^3]"
-       write(*,123)'rhoUx     = ', &
-            State_VGB(RhoUx_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
-       write(*,123)'rhoUy     = ', &
-            State_VGB(RhoUy_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
-       write(*,123)'rhoUz     = ', &
-            State_VGB(RhoUz_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
        if (UseElectronPressure) then
-          write(*,123)'PiTot     = ', &
-               State_VGB(P_,i,j,k,iBlock)*No2SI_V(UnitP_)," [Pa]"
           write(*,123)'Pe        = ', &
                State_VGB(Pe_,i,j,k,iBlock)*No2SI_V(UnitP_)," [Pa]"
-       else
-          write(*,123)'PiTot     = ', &
-               State_VGB(P_,i,j,k,iBlock)/(1.+ElectronPressureRatio)* &
-               No2SI_V(UnitP_)," [Pa]"
-          write(*,123)'Pe        = ', &
-               State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio/&
-               (1.+ElectronPressureRatio)*No2SI_V(UnitP_)," [Pa]"
        end if
 
     end if
@@ -4461,11 +4312,11 @@ contains
              else
                 ! Far away from the comet, both ions are the same as the
                 ! solar wind conditions
-                State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
-                State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
-                State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
-                State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
-                State_VGB(SwP_,i,j,k,iBlock)       = &
+                State_VGB(Rho_,i,j,k,iBlock)     = RhoSw
+                State_VGB(RhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
+                State_VGB(RhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
+                State_VGB(RhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
+                State_VGB(P_,i,j,k,iBlock)       = &
                      SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
 
                 State_VGB(H2OpRho_,i,j,k,iBlock)  =SW_rho*LowDensityRatio
@@ -4479,58 +4330,27 @@ contains
                 State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
              end if
 
-             ! Total fluid
-             State_VGB(Rho_,i,j,k,iBlock)       = &
-                  sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-             State_VGB(RhoUx_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-             State_VGB(RhoUy_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-             State_VGB(RhoUz_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
 
              ! Electron pressure
              if(UseElectronPressure) then
-                State_VGB(P_,i,j,k,iBlock)      = &
-                     sum(State_VGB(iPIon_I,i,j,k,iBlock))
                 State_VGB(Pe_,i,j,k,iBlock)     = &
-                     State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
-             else
-                State_VGB(P_,i,j,k,iBlock)      = &
-                     sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-                     (1.+ElectronPressureRatio)
+                     sum(State_VGB(iPIon_I,i,j,k,iBlock))*ElectronPressureRatio
              end if
 
           else
              if (Xyz_DGB(x_,i,j,k,iBlock) >= xPerturbedSwMin .and. &
                   Xyz_DGB(x_,i,j,k,iBlock) <= xPerturbedSwMax) then
-                State_VGB(SwRho_,i,j,k,iBlock)   = PerturbedSwRho
-                State_VGB(SwRhoUx_,i,j,k,iBlock) = PerturbedSwUx*PerturbedSwRho
-                State_VGB(SwRhoUy_,i,j,k,iBlock) = PerturbedSwUy*PerturbedSwRho
-                State_VGB(SwRhoUz_,i,j,k,iBlock) = PerturbedSwUz*PerturbedSwRho
-                State_VGB(SwP_,i,j,k,iBlock)     = PerturbedSwN*PerturbedSwT
+                State_VGB(Rho_,i,j,k,iBlock)   = PerturbedSwRho
+                State_VGB(RhoUx_,i,j,k,iBlock) = PerturbedSwUx*PerturbedSwRho
+                State_VGB(RhoUy_,i,j,k,iBlock) = PerturbedSwUy*PerturbedSwRho
+                State_VGB(RhoUz_,i,j,k,iBlock) = PerturbedSwUz*PerturbedSwRho
+                State_VGB(P_,i,j,k,iBlock)     = PerturbedSwN*PerturbedSwT
                 State_VGB(Bx_,i,j,k,iBlock) = PerturbedSwBx
                 State_VGB(By_,i,j,k,iBlock) = PerturbedSwBy
                 State_VGB(Bz_,i,j,k,iBlock) = PerturbedSwBz
 
-                ! Total fluid
-                State_VGB(Rho_,i,j,k,iBlock)       = &
-                     sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-                State_VGB(RhoUx_,i,j,k,iBlock)     = &
-                     sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-                State_VGB(RhoUy_,i,j,k,iBlock)     = &
-                     sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-                State_VGB(RhoUz_,i,j,k,iBlock)     = &
-                     sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
                 if(UseElectronPressure) then
-                   State_VGB(P_,i,j,k,iBlock)      = &
-                        sum(State_VGB(iPIon_I,i,j,k,iBlock))
                    State_VGB(Pe_,i,j,k,iBlock)     = PerturbedSwN*PerturbedSwTe
-                else
-                   State_VGB(P_,i,j,k,iBlock)      = &
-                        sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-                        (1.+ElectronPressureRatio)
                 end if
 
              end if
