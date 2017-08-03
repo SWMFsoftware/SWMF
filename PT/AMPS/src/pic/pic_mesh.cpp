@@ -262,6 +262,44 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
     for(ptrDatum = DataSampledCenterNodeActive.begin();ptrDatum!= DataSampledCenterNodeActive.end(); ptrDatum++) {
       InterpolateDatum(**ptrDatum,InterpolationList,InterpolationCoefficients,nInterpolationCoefficients, s);
     }
+
+    //temeprature is exeption: it needs avaraging of the mean velocity and mean squate of velocity are not
+    //interpolated using the interpolation weights but are averaged
+    double TotalParticleWeight=0.0,v[3]={0.0,0.0,0.0},v2[3]={0.0,0.0,0.0},vtemp[3],v2temp[3];
+    double vParallel=0.0,vParallel2=0.0;
+    int iStencil,idim;
+
+    for (iStencil=0;iStencil<nInterpolationCoefficients;iStencil++) {
+      TotalParticleWeight+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleWeight,s);
+
+      InterpolationList[iStencil]->GetDatumCumulative(DatumParticleVelocity, vtemp, s);
+      InterpolationList[iStencil]->GetDatumCumulative(DatumParticleVelocity2,v2temp,s);
+
+      for (idim=0;idim<3;idim++) v[idim]+=vtemp[idim],v2[idim]+=v2temp[idim];
+
+      if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!= _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
+         vParallel+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleParallelVelocity,s);
+         vParallel2+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleParallelVelocity2,s);
+      }
+    }
+
+    //weight the averaged v and v2 to the interpolated value of the weight so the calculation of the temperature is consistent
+    if (TotalParticleWeight>0.0) {
+      double c;
+
+      c=GetDatumCumulative(DatumParticleWeight,s)/TotalParticleWeight;
+      for (idim=0;idim<3;idim++) v[idim]*=c,v2[idim]*=c;
+
+      SetDatum(DatumParticleVelocity,v,s);
+      SetDatum(DatumParticleVelocity2,v2,s);
+
+      if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!= _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
+        vParallel*=c,vParallel2*=c;
+        SetDatum(DatumParticleParallelVelocity,&vParallel,s);
+        SetDatum(DatumParticleParallelVelocity2,&vParallel2,s);
+      }
+    }
+
   }
 
   //print the user defind 'center node' data
