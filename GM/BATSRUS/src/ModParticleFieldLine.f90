@@ -73,10 +73,7 @@ module ModParticleFieldLine
        ! alignment of particle numbering with direction of B field:
        ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
        ! when magnetic field general direction may be inward
-       Alignment_ = 3, &
-       ! whether to copy the end particle to regular; 
-       ! may need to skip copying if step size was changed
-       DoCopy_    = 4
+       Alignment_ = 3
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
@@ -101,7 +98,7 @@ module ModParticleFieldLine
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
-  integer, parameter:: nIndexParticleEnd = 4
+  integer, parameter:: nIndexParticleEnd = 3
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
@@ -627,10 +624,6 @@ contains
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
-    ! initialize factor to apply to step size to 1
-    ! as well as mark a particle for copying
-    iIndexEnd_II(  DoCopy_,  1:Particle_I(KindEnd_)%nParticle) = 1
-
     TRACE: do
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
@@ -757,8 +750,6 @@ contains
              call mark_undefined(KindEnd_, iParticle)
              CYCLE
           end if
-          
-          iIndexEnd_II(DoCopy_, iParticle) = 1
        end do
        call remove_undefined_particles(KindEnd_)
        !\
@@ -778,11 +769,10 @@ contains
        if(is_complete()) RETURN
 
        ! increase particle index & copy to regular
-       where(iIndexEnd_II(DoCopy_,  1:Particle_I(KindEnd_)%nParticle)==1)
-          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-               iDirTrace
-       end where
+       iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+            iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+            iDirTrace
+
        call copy_end_to_regular
 
     end do TRACE
@@ -874,8 +864,6 @@ contains
     integer:: iParticle
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(KindEnd_)%nParticle
-       if(Particle_I(KindEnd_)%iIndex_II(DoCopy_,iParticle)==0)&
-            CYCLE
        Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
        Particle_I(KindReg_)%State_VI(iVarCopy_I, &
             Particle_I(KindReg_)%nParticle) =&
