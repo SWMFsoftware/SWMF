@@ -665,7 +665,7 @@ void PIC::Sampling::Sampling() {
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
   char *SamplingData;
-  double *v,LocalParticleWeight,Speed2,v2;
+  double *v,LocalParticleWeight,Speed2,v2,lParallelTemepratureSampleDirection[3]={0.0,0.0,0.0};
 
   //the total number of the sampled particles to compare with the number of the partticles in the buffer
   long int nTotalSampledParticles=0;
@@ -765,6 +765,25 @@ void PIC::Sampling::Sampling() {
             for (s=0;s<PIC::nTotalSpecies;s++) PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingData+PIC::Mesh::sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
             #endif
             #endif
+
+            //determine the direction of the parallel temeprature sampling
+            if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!=_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
+              switch (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_) {
+              case _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__FUNSTION_CALCULATED_NORMAL_DIRECTION_:
+                exit(__LINE__,__FILE__,"Error: not implemented");
+
+              case _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_:
+                lParallelTemepratureSampleDirection[0]=node->xmin[0]+(i+0.5)*(node->xmax[0]-node->xmin[0])/_BLOCK_CELLS_X_;
+                lParallelTemepratureSampleDirection[1]=node->xmin[1]+(j+0.5)*(node->xmax[1]-node->xmin[1])/_BLOCK_CELLS_Y_;
+                lParallelTemepratureSampleDirection[2]=node->xmin[2]+(k+0.5)*(node->xmax[2]-node->xmin[2])/_BLOCK_CELLS_Z_;
+
+                Vector3D::Normalize(lParallelTemepratureSampleDirection);
+                break;
+
+              default:
+                exit(__LINE__,__FILE__,"Error: the option is not implemented");
+              }
+            }
 
             ptrNext=ptr;
             ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
@@ -893,35 +912,13 @@ void PIC::Sampling::Sampling() {
 
 
               //sample the data for calculation the normal and tangential kinetic temepratures
-              #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-              //do nothing
-              #else //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
               //calcualte the direction of the normal
-              double l[3];
+              if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!=_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
+                double vParallel=(lParallelTemepratureSampleDirection[0]*v[0])+(lParallelTemepratureSampleDirection[1]*v[1])+(lParallelTemepratureSampleDirection[2]*v[2]);
 
-              #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__FUNSTION_CALCULATED_NORMAL_DIRECTION_
-              exit(__LINE__,__FILE__,"error: not developed: need a function for calculation of the local direction for the normal for calcualtion of the parallel and tengential temperatures");
-              #elif _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__CONSTANT_DIRECTION_ORIGIN_
-              double c,*x;
-
-              x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte*)tempParticleData);
-
-              l[0]=x[0]-constNormalDirection__SampleParallelTangentialTemperature[0];
-              l[1]=x[1]-constNormalDirection__SampleParallelTangentialTemperature[1];
-              l[2]=x[2]-constNormalDirection__SampleParallelTangentialTemperature[2];
-
-              c=sqrt((l[0]*l[0])+(l[1]*l[1])+(l[2]*l[2]));
-
-              l[0]/=c,l[1]/=c,l[2]/=c;
-              #else //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
-              exit(__LINE__,__FILE__,"Error: the option is not defined");
-              #endif //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
-
-              double vParallel=(l[0]*v[0])+(l[1]*v[1])+(l[2]*v[2]);
-	      
-              cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity,vParallel, s, LocalParticleWeight);
-              cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity2,vParallel*vParallel, s, LocalParticleWeight);
-              #endif //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
+                cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity,vParallel, s, LocalParticleWeight);
+                cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity2,vParallel*vParallel, s, LocalParticleWeight);
+              } //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
 
               //sample data for the internal degrees of freedom model
               #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_OFF_
