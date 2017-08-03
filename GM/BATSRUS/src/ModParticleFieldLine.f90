@@ -115,6 +115,9 @@ module ModParticleFieldLine
   !   of this line is stopped
   real:: RBoundarySoft = -1.0
 
+  ! may need to apply corrections during line tracing
+  logical:: UseCorrection=.false.
+
   !\
   ! Cosine between direction of the field and radial direction: for correcting
   ! the line's direction to prevent it from closing
@@ -198,6 +201,9 @@ contains
              call CON_stop(NameThisComp//':'//NameSub //&
                   ": unknown ordering mode")
           end if
+          !--------------------------------------------------------------
+          ! field lines may need to be corrected during tracing
+          call read_var('UseCorrection', UseCorrection)
        end if
     end select
   end subroutine read_particle_line_param
@@ -669,7 +675,8 @@ contains
           StateEnd_VI(CosBR_, iParticle) = CosBR
           
           ! correct the direction to prevent the line from closing
-          call correct(DirCurr_D)
+          if(UseCorrection) &
+               call correct(DirCurr_D)
 
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
@@ -707,7 +714,8 @@ contains
           CosBR = StateEnd_VI(CosBR_, iParticle)  
 
           ! correct the direction to prevent the line from closing
-          call correct(DirNext_D)
+          if(UseCorrection) &
+               call correct(DirNext_D)
           
           ! get final location
           ROld = sqrt(sum(StateEnd_VI(XOld_:ZOld_,iParticle)**2))

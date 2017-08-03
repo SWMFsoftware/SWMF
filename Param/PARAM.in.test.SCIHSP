@@ -228,11 +228,12 @@ pnt mhd tec		StringPlot
 -1.			DtSavePlot
 
 #PARTICLELINE
-T
--1
--1
-import
-radius
+T			UseParticles
+-1			SpaceStepMin
+-1			SpaceStepMax
+import			InitMode
+radius			OrderMode
+T			UseCorrection
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -367,11 +368,12 @@ RAW			StringLogfile
 T
 
 #PARTICLELINE
-T
--1
--1
-import
-radius
+T			UseParticles 
+-1			SpaceStepMin 
+-1			SpaceStepMax 
+import			InitMode     
+radius			OrderMode    
+T			UseCorrection
 
 #SAVEPLOT
 1			nPlotFiles
