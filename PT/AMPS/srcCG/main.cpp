@@ -1309,7 +1309,7 @@ int main(int argc,char **argv) {
       if (_COMET_READ_DRAG_FORCE_FROM_BATL_==_PIC_MODE_OFF_){
         sprintf(fname,"%s/test_CG-dust-test.dat",PIC::OutputDataFileDirectory);
       }else{
-        sprintf(fname,"%s/test_CG-batsrus-dust-coupling.dat",PIC::OutputDataFileDirectory);
+        sprintf(fname,"%s/test_CG-BATSRUS-dust-coupling.dat",PIC::OutputDataFileDirectory);
       }
 
     }
