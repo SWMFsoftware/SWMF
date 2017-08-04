@@ -62,7 +62,9 @@ module ModParticleFieldLine
        !grad CosBR at the beginning of extraction iteration
        GradX_= 8, GradZ_ = 10, &
        ! value of CosBR at the beginning of extraction iteration
-       CosBR_    = 11
+       CosBR_    = 11, &
+       ! previous direction
+       DirX_ = 12, DirZ_ = 14
 
   ! indices of a particle
   integer, parameter:: &
@@ -94,7 +96,7 @@ module ModParticleFieldLine
 
   ! number of variables in the state vector
   integer, parameter:: nVarParticleReg = 6
-  integer, parameter:: nVarParticleEnd = 11
+  integer, parameter:: nVarParticleEnd = 14
 
   ! number of indices
   integer, parameter:: nIndexParticleReg = 2
@@ -114,6 +116,7 @@ module ModParticleFieldLine
 
   ! may need to apply corrections during line tracing
   logical:: UseCorrection=.false.
+  real:: RCorrectionMin = 0.0, RCorrectionMax = Huge(1.0)
 
   !\
   ! Cosine between direction of the field and radial direction: for correcting
@@ -201,6 +204,13 @@ contains
           !--------------------------------------------------------------
           ! field lines may need to be corrected during tracing
           call read_var('UseCorrection', UseCorrection)
+          if(UseCorrection)then
+             ! use may specify the boundaries where the correction is applied
+             call read_var('RCorrectionMin', RCorrectionMin)
+             if(RCorrectionMin < 0.0) RCorrectionMin = 0.0
+             call read_var('RCorrectionMax', RCorrectionMax)
+             if(RCorrectionMax < 0.0) RCorrectionMax = Huge(1.0)
+          end if
        end if
     end select
   end subroutine read_particle_line_param
@@ -624,6 +634,13 @@ contains
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
 
+    ! Initialize the direction that corresponds to the previous step
+    do iParticle = 1, Particle_I(KindEnd_)%nParticle
+       StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
+            StateEnd_VI(x_:z_,  iParticle) / &
+            sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+    end do
+
     TRACE: do
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
@@ -720,6 +737,8 @@ contains
           StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle)/RNew*&
                (ROld + StateEnd_VI(Ds_, iParticle) * &
                sum(DirNext_D*DirR_D))
+          ! update the direction of the previous step
+          StateEnd_VI(DirX_:DirZ_,  iParticle) = DirNext_D
        end do
        !\
        ! Message pass: some particles may have moved to different procs
@@ -782,58 +801,73 @@ contains
     subroutine correct(Dir_D)
       ! corrects the direction to prevent the line from closing:
       ! if CosBR is far enough from the value of the alginment (+/-1),
-      ! Dir_D is changed:
-      ! - component along \nabla CosBR is reduced or inverted
-      !   => avoid reaching region with opposite sign of CosBR
-      ! - component \perp \nabla CosBR is increased
-      !   => move closer to region with open field lines
+      ! Dir_D is changed to a vector with max radial component 
+      ! \perp \nabla CosBR to avoid reaching region with opposite sign of CosBR
       !-----------------------------------
       ! current direction
       real, intent(inout):: Dir_D(MaxDim)
       ! aux vectors
-      real, dimension(MaxDim):: E_D, H_D, T_D, C_D
-      ! scalar to define how strong the correction is
-      real:: Misc
+      real, dimension(MaxDim):: C_D, R_D, D_D, A_D
+      ! deviation from radial direction
+      real:: DCosBR
+      ! threshold for deviation from radial direction to apply correction
+      real:: DCosBRMax = 0.15
+      ! scalars to define parameters of the correction
+      real:: Misc, Rad
+      real:: CRad, CTan
+      real:: KappaTh, Kappa
       !-----------------------------------
-      ! if CosBR is sufficiently close to value of alignment, +/- 1
-      ! => don't correct
-      if(abs(CosBR-iIndexEnd_II(Alignment_,iParticle)) < 0.15)&
-           RETURN
+      ! the deviation of the field line from radial direction
+      DCosBR = abs(CosBR-iIndexEnd_II(Alignment_,iParticle))
+      ! radius
+      Rad = sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
 
-      ! if current direction corresponds change of CosBR towards alignment
-      ! => don't correct
-      if(sum(StateEnd_VI(GradX_:GradZ_, iParticle)*Dir_D)*&
-           iIndexEnd_II(Alignment_,iParticle) > 0)&
-           RETURN
+      ! if the line deviates to much -> correct its direction
+      ! to go along surface B_R = 0 
+      if(DCosBR > DCosBRMax .and. & 
+           Rad > RCorrectionMin .and. Rad < RCorrectionMax)then
+         ! unit vector along the direction of gradient
+         ! with alignment accounted for
+         C_D = iIndexEnd_II(Alignment_, iParticle) * &
+              StateEnd_VI(GradX_:GradZ_, iParticle)/ &
+              sqrt(sum(StateEnd_VI(GradX_:GradZ_, iParticle)**2))
+         ! unit vector in radial direction
+         R_D = StateEnd_VI(x_:z_, iParticle) / Rad
+              
+         ! vector \perp C_D with max possible radial component
+         CRad = sum(C_D*R_D)
+         CTan = sqrt(1.0 - CRad**2)
+         A_D = iDirTrace * (CTan * R_D  - (C_D - CRad*R_D) * CRad / CTan)
 
-      ! unit vector along the direction of gradient
-      ! with alignment accounted for
-      C_D = iIndexEnd_II(Alignment_, iParticle) * &
-           StateEnd_VI(GradX_:GradZ_, iParticle)/ &
-           sqrt(sum(StateEnd_VI(GradX_:GradZ_, iParticle)**2))
+         ! change the direction of the line
+         Dir_D = A_D
+         RETURN
+      end if
       
-      ! unit vector in radial direction
-      E_D = iDirTrace * StateEnd_VI(x_:z_, iParticle) / &
-           sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
-      ! subtract from it a direction along \nabla CosBR 
-      H_D = E_D - sum(E_D*C_D)*C_D
-      if(any(H_D/=0.0))&
-           H_D = H_D / sqrt(sum(H_D**2)) ! make it unit vector
+      ! the line doesn't deviate much, but it may just have exited the region
+      ! where the correction above has been applied; 
+      ! to prevent sharp changes in the direction -> limit line's curvature
 
+      ! cut-off curvature is based on the local grid size
+      KappaTh = 0.1 / StateEnd_VI(Ds_, iParticle)
+      ! curvature based on uncorrected direction
+      Kappa  = &
+           sqrt(2*(1-sum(Dir_D*StateEnd_VI(DirX_:DirZ_, iParticle)))) / &
+           StateEnd_VI(Ds_, iParticle)
+      ! if curvature isn't large -> don't apply the correction
+      if(Kappa < KappaTh) &
+           RETURN
 
-
-      ! remove from C_D component alon \perp to H_D and current direction:
-      ! prevents the line to divert sideways because of the correction 
-      T_D = cross_product(H_D, Dir_D)
-      C_D = C_D - T_D * sum(T_D*C_D)
-      C_D = C_D / sqrt(sum(C_D**2)) ! make it unit vector
-
-      ! the strength of the correction:
-      ! Misc=1 -> reflection from surface CosBR=0 
-      Misc = min(1.0,abs(iIndexEnd_II(Alignment_,iParticle)-CosBR))
-      ! correct the direction to prevent the line from closing
-      Dir_D = Dir_D - 2*Misc * C_D * sum(C_D*Dir_D) + Misc * H_D
-
+      ! remove scale the component of the current direction parallel
+      ! to the one on the previous step;
+      ! components \perp to it are scaled accordingly to keep ||Dir_D|| = 1
+      Dir_D = Dir_D - &
+           sum(Dir_D*StateEnd_VI(DirX_:DirZ_,iParticle)) * &
+           StateEnd_VI(DirX_:DirZ_,iParticle)
+      Dir_D = Dir_D / sqrt(sum(Dir_D**2))
+      Misc  = 1 - 0.5 * (KappaTh*StateEnd_VI(Ds_, iParticle))**2
+      Dir_D = Misc * StateEnd_VI(DirX_:DirZ_,iParticle) +&
+           sqrt(1-Misc**2) * Dir_D
     end subroutine correct
     !========================
     function is_complete() result(IsCompleteOut)
