@@ -2194,6 +2194,10 @@ sub ReadInterfaceBlock {
   my $T96_MODE__OFF=0;
   my $T96_MODE__ON=1;
   my $T96_MODE_=$T96_MODE__OFF;
+  
+  my $KMAG_MODE__OFF=0;
+  my $KMAG_MODE__ON=1;
+  my $KMAG_MODE_=$KMAG_MODE__OFF;
 
 
   while ($line=<InputFile>) {
@@ -2264,6 +2268,22 @@ sub ReadInterfaceBlock {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
+    
+    #Khurana empirical model of magnetic field in Saturn's magnetosphere 
+    elsif (uc($InputLine) eq "KMAG") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if (uc($InputLine) eq "ON") {
+        $KMAG_MODE_=$KMAG_MODE__ON;
+      }
+      elsif (uc($InputLine) eq "OFF") {
+        $KMAG_MODE_=$KMAG_MODE__OFF;
+      }
+      else  {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }    
         
     elsif (uc($InputLine) eq "#ENDINTERFACE") {
       # the section has been read, apply changes
@@ -2307,6 +2327,14 @@ sub ReadInterfaceBlock {
 	      
 	      $UseInterface='on';
 	      $Interfaces="$Interfaces "."t96";
+	    }
+	    
+	    #KMAG interface ---------------------------------------------------------
+	    if ($KMAG_MODE_==$KMAG_MODE__ON) {
+	      ampsConfigLib::RedefineMacro("_INTERFACE__KMAG__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	      
+	      $UseInterface='on';
+	      $Interfaces="$Interfaces "."KMAG";
 	    }
 
       # read the current content of the corresponding makefile
