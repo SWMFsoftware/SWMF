@@ -12,3 +12,7 @@
 
 //interface to T96
 #define _INTERFACE__T96__MODE_ _INTERFACE_MODE_OFF_
+
+//interface to KMAG
+#define _INTERFACE__KMAG__MODE_ _INTERFACE_MODE_OFF_
+
