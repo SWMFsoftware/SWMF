@@ -7,6 +7,7 @@ include ../../Makefile.def
 include makefile.cell_centered_linear_interpolation
 include makefile.geopack2008
 include makefile.T96
+include makefile.KMAG
 
 
 INTERFACES=
