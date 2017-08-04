@@ -234,6 +234,8 @@ T			UseParticles
 import			InitMode
 radius			OrderMode
 T			UseCorrection
+1.25
+-1
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -373,7 +375,7 @@ T			UseParticles
 -1			SpaceStepMax 
 import			InitMode     
 radius			OrderMode    
-T			UseCorrection
+F			UseCorrection
 
 #SAVEPLOT
 1			nPlotFiles
