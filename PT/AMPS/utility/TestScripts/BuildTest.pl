@@ -17,6 +17,11 @@ if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/){
     $hostname = $Pleiades;
 }
 
+my $Yellowstone = 'yellowstone';
+if($hostname_full =~ m/yslogin(.*)/){
+    $hostname = $Yellowstone;
+}
+
 if($hostname_full =~ m/srbwks2014-0079.engin.umich.edu/){
     $hostname = "valeriy";
 }
@@ -307,7 +312,7 @@ sub check_overtime {
   # check if test exceed the limit and create separate job-files in the case
   #..........................................................................
   # check if this is a supercomputer
-  return unless(($hostname eq $Stampede) || ($hostname eq $Pleiades));
+  return unless(($hostname eq $Stampede) || ($hostname eq $Pleiades)|| ($hostname eq $Yellowstone));
 
   # check if went overtime
   return if ($TimeTotal < $TimeLimit);
