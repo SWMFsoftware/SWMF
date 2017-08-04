@@ -14,7 +14,7 @@ subroutine create_auroral_oval(currentIn, thetaIn, psiIn, &
   use ModNumConst,    ONLY: cDegToRad, cRadToDeg, cHalfPi, cPi
   use ModIonosphere,  ONLY: IONO_nTheta, IONO_nPsi
   use IE_ModIo,       ONLY: NameIonoDir
-  use ModConductance, ONLY: DoOvalShift
+  use ModConductance, ONLY: DoOvalShift, DoFitCircle
   use ModIoUnit,      ONLY: UnitTMP_
   use IE_ModMain,     ONLY: Time_Array, nSolve
   
@@ -34,7 +34,6 @@ subroutine create_auroral_oval(currentIn, thetaIn, psiIn, &
   real, dimension(8)         :: FacRegional=0, ColatRegional=0, ColatScaled=0
 
   ! Variables for the gradient descent fit
-  logical, parameter:: DoFitCircle = .true.
   integer, parameter:: MaxIter = 20
   integer:: nIter
   real, dimension(IONO_nPsi):: x_I, xShift_I, y2_I, r_I, w_I

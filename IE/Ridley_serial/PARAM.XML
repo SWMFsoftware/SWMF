@@ -362,11 +362,12 @@ This command cannot be used in the SWMF.
     <parameter name="UseAdvancedOval"       type="logical" default="F"/>
   </if>
   
-  #AURORALOVAL
-  T             UseOval (rest of parameters read if true)
-  T             UseOvalShift
-  F             UseSubOvalConductance
-  F             UseAdvancedOval
+#AURORALOVAL
+T             UseOval (rest of parameters read if true)
+T             UseOvalShift
+F             UseSubOvalConductance
+F             UseAdvancedOval
+T             DoFitCircle (read if UseAdvancedOval is true)
 
   This command controls the behavior of the auroral oval for conductance
   iModel=5.  If UseOval is set to True, an auroral oval is constructed from
@@ -379,24 +380,35 @@ This command cannot be used in the SWMF.
   conductance is not restricted at lower latitudes.  If False, conductance
   below auroral latitudes falls off exponentially, producing a sharp
   conductance gradient about the oval.  If UseAdvancedOval is set to True, an
-  updated oval calculation is used.  While similar to the old approach, the new
-  algorithm provides a more continuous oval position as a fucntion of time and
-  yields a more reasonable day/night shift than the old version.  
+  updated oval calculation is used.  The behavior of the new approach is
+  controlled by DoFitCircle.  If true, a real circle is fit to the upward FACs
+  via a minimization technique.  If false, an approach that is similar to the
+  original is used, but leverages FAC information from all local times.  Both
+  approaches result in an oval that more realistically reflects ionospheric
+  dynamics and is less prone to position jumps as a function of time.
 
   Default values are shown above.
   
 </command>
 
 <command name="CONDUCTANCE">
-	<parameter name="OvalWidthFactor" type="real" min="0" default="1.0"/>
-	<parameter name="OvalStrengthFactor" type="real" min="0" default="1.7"/>
+	<parameter name="OvalWidthFactor"    type="real" min="0" default="1.0"/>
+	<parameter name="OvalStrengthFactor" type="real" min="0" default="1.0"/>
+	<parameter name="ConductanceFactor"  type="real" min="0" default="1.7"/>
 
 #CONDUCTANCE
 1.0			OvalWidthFactor
-1.7			OvalStrengthFactor
+1.0                     OvalStrengthFactor
+1.7                     ConductanceFactor
 
-Modifies the conductance by adjusting the oval width/strength.
-Only works for conductance model 4!
+Modifies the conductance by adjusting the oval width/strength for conductance
+models 4 and 5.  OvalWidthFactor scales the width of the auroral oval.
+OvalStrengthFactor scales only the conductance applied to the auroral oval.
+This parameter only acts when the conductance model is iModel 5.
+ConductanceFactor scales the over all conductance from both FACs and the
+aurora.
+
+Default values are shown above.
 </command>
 
 <command name="BOUNDARY">

@@ -94,7 +94,8 @@ contains
       use ModReadParam
       use ModIE_Interface
       use ModFiles
-      use ModConductance, ONLY: UseOval, UseNewOval, DoOvalShift, UseSubOvalCond
+      use ModConductance, ONLY: UseOval, UseNewOval, DoOvalShift, &
+           UseSubOvalCond, DoFitCircle
       use ModUtilities,   ONLY: fix_dir_name, check_dir, lower_case
 
       ! The name of the command
@@ -285,15 +286,17 @@ contains
                call read_var('UseOvalShift',          DoOvalShift)
                call read_var('UseSubOvalConductance', UseSubOvalCond)
                call read_var('UseAdvancedOval',       UseNewOval)
+               if(UseNewOval) call read_var('DoFitCircle', DoFitCircle)
             end if
             
          case("#CONDUCTANCE")
-            call read_var('OvalWidthFactor',OvalWidthFactor)
+            call read_var('OvalWidthFactor',   OvalWidthFactor)
             call read_var('OvalStrengthFactor',OvalStrengthFactor)
-            if (conductance_model/=4) then
+            call read_var('ConductanceFactor', CondFactor)
+            if ( (conductance_model/=4).and.(conductance_model/=5) ) then
                write(*,'(a,i4,a)')NameSub//' IE_ERROR at line ',i_line_read(),&
                     ' command '//trim(NameCommand)// &
-                    ' can only be used with conductance model 4'
+                    ' can only be used with conductance model 4 or 5'
                if(UseStrict)call CON_stop('Correct PARAM.in!')
             end if
 

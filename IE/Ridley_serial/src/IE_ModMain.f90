@@ -22,7 +22,7 @@ module IE_ModMain
   !\
   ! Conductance model 4 factors
   !/
-  real :: OvalWidthFactor=1., OvalStrengthFactor=1.7
+  real :: OvalWidthFactor=1., OvalStrengthFactor=1., CondFactor=1.7
 
 
   !\

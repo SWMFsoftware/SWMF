@@ -387,10 +387,10 @@ subroutine FACs_to_fluxes(iModel, iBlock)
                  !    new narrower fitting of the auroral oval.  DDZ
 
                  hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                      OvalStrengthFactor*( &
+                      CondFactor*( &
                       hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
                  ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                      OvalStrengthFactor*( &
+                      CondFactor*( &
                       ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
               else  ! iModel=5
                  !
@@ -399,23 +399,23 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
                  if (.not.polarcap .and. .not.UseSubOvalCond) then
                     distance = distance/3.0
-                    hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                    ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                    hal_a0 = hal_a0 * exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
+                    ped_a0 = ped_a0 * exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
                  end if
 
                  !
                  ! A sort of correction on the fit
                  !
 
-                 hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
-                      exp(-1.0*(distance/Width_of_Oval(j))**2)
-                 ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
-                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+                 hal_a1 = hal_a0 + (OvalStrengthFactor*hal_a1 - hal_a0)*  &
+                      exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
+                 ped_a1 = ped_a0 + (OvalStrengthFactor*ped_a1 - ped_a0)*  &
+                      exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
 
                  ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
-                 hall=1.7*( &
+                 hall=CondFactor*( &
                       hal_a0-hal_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
-                 ped =1.7*( &
+                 ped =CondFactor*( &
                       ped_a0-ped_a1*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
               end if
 
@@ -551,32 +551,32 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
               if (iModel.eq.4) then
                  hall=exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                      OvalStrengthFactor*( &
+                      CondFactor*( &
                       hal_a0+(hal_a1-hal_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*hal_a2**2))
                  ped =exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2) * &
-                      OvalStrengthFactor*( &
+                      CondFactor*( &
                       ped_a0+(ped_a1-ped_a0)*exp(-abs(iono_north_jr(i,j)*1.0e9)*ped_a2**2))
               else  ! iModel=5
                  ! Restrict FAC-related conductance outside auroral oval.
                  if (.not.polarcap .and. .not.UseSubOvalCond) then
                     distance = distance/3.0
-                    hal_a0 = hal_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
-                    ped_a0 = ped_a0 * exp(-1.0*(distance/(Width_of_Oval(j)))**2)
+                    hal_a0 = hal_a0 * exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
+                    ped_a0 = ped_a0 * exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
                  endif
 
                  !
                  ! A sort of correction on the fit
                  !
 
-                 hal_a1 = hal_a0 + (hal_a1 - hal_a0)*  &
-                      exp(-1.0*(distance/Width_of_Oval(j))**2)
-                 ped_a1 = ped_a0 + (ped_a1 - ped_a0)*  &
-                      exp(-1.0*(distance/Width_of_Oval(j))**2)
+                 hal_a1 = hal_a0 + (OvalStrengthFactor*hal_a1 - hal_a0)*  &
+                      exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
+                 ped_a1 = ped_a0 + (OvalStrengthFactor*ped_a1 - ped_a0)*  &
+                      exp(-1.0*(distance/(OvalWidthFactor*Width_of_Oval(j)))**2)
 
                  ! Multiply by sqrt(3) to compensate for the 3 times narrower oval
-                 hall=1.7*( &
+                 hall=CondFactor*( &
                       hal_a0-hal_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*hal_a2**2))
-                 ped =1.7*( &
+                 ped =CondFactor*( &
                       ped_a0-ped_a1*exp(-abs(iono_south_jr(i,j)*1.0e9)*ped_a2**2))
               end if
 
