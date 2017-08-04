@@ -27,7 +27,7 @@ extern "C"{
 }
 
 
-double KMAG::et=0.0;
+double KMAG::et=536500800.000000;  //the J2000 epoch - the number of seconds since 01/01/2000; The default number corresponds to 2017-01-01 00:00:00.000
 char KMAG::Epoch[100]="J2000";
 char KMAG::FRAME[100]="KSO";
 double KMAG::SolarWind::IMF[3]={0.0,0.2,0.2};
@@ -39,12 +39,21 @@ void KMAG::SetEpochTime(double etIn,const char* EpochIn) {
 }
 
 void KMAG::GetMagneticField(double *B,double *x) {
-  double vecin[3],vecout[3]={0.0,0.0,0.0};
+  double vecin[3],vecout[3]={0.0,0.0,0.0},r2=0.0;
   char SYS3FRAME[100]="S3C";
   int idim;
 
   //convert 'x' from meters to Saturn's radii
-  for (idim=0;idim<3;idim++) vecin[idim]=x[idim]/_SATURN__RADIUS_;
+  for (idim=0;idim<3;idim++) {
+    vecin[idim]=x[idim]/_SATURN__RADIUS_;
+    r2+=pow(vecin[idim],2);
+  }
+
+  //if the point is inside the planet -> return B=0
+  if (r2<=1.0) {
+    for (idim=0;idim<3;idim++) B[idim]=0.0;
+    return;
+  }
 
   //convert the location from the solar orbiter to System III coordinate frame
   krot_(FRAME,SYS3FRAME,vecin,vecout,&et,Epoch);
