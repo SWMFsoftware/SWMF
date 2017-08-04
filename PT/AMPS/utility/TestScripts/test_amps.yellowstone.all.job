@@ -1,0 +1,30 @@
+#!/bin/csh
+#
+#BSUB -W 2:00 
+#BSUB -q small 
+#BSUB -n 8
+#BSUB -P P35201105 
+#BSUB -R "span[ptile=32]"
+#BSUB -J AMPS_test 
+#BSUB -o myjob.%J.%I.out         # output file name in which %J is replaced by the job ID
+#BSUB -e myjob.%J.%I.err         # error file name in which %J is replaced by the job ID
+
+
+if ($LSB_JOBINDEX == 1) then 
+  cd Intel/AMPS 
+  make test_run MPIRUN=mpirun.lsf 2>&1 test_amps.log
+  cd ../..
+  echo Done > AmpsTestIntelComplete
+else if ($LSB_JOBINDEX == 2) then
+  cd GNU/AMPS 
+  make test_run MPIRUN=mpirun.lsf 2>&1 test_amps.log
+  cd ../../ 
+  echo Done > AmpsTestGNUComplete
+else   
+  cd PGI/AMPS 
+  make test_run MPIRUN=mpirun.lsf 2>&1 test_amps.log
+  cd ../.. 
+  echo Done > AmpsTestPGIComplete
+endif
+
+exit 0
