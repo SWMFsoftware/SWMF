@@ -151,6 +151,13 @@ subroutine calc_planet_sources(iBlock)
           TempUnit(1:nLons,1:nLats,1:nAlts))) * &
           NDensityS(1:nLons,1:nLats,1:nAlts,iNO_,iBlock)
 
+     RadiativeCooling2d = 0.0
+     do iAlt=1,nAlts
+        RadiativeCooling2d(1:nLons, 1:nLats) = &
+             RadiativeCooling2d(1:nLons, 1:nLats) + &
+             NOCooling(1:nLons,1:nLats,iAlt) * dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+     enddo
+
      NOCooling = NOCooling / TempUnit(1:nLons,1:nLats,1:nAlts) / &
           (Rho(1:nLons,1:nLats,1:nAlts,iBlock)*cp(:,:,1:nAlts,iBlock))
 
