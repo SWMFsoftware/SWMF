@@ -795,14 +795,17 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   nu_n2o2p = 0.0
   nu_oo2p  = 0.0
   where(tr .GT. 275.) nu_nnp = 3.83e-11 * nnr*1.e-6 * tr**0.5 * (1 - 0.063*log10(tr))**2
+  where(tr <= 275) nu_nnp = 1.0e-9 * nnr*1.0e-6 ! T < 550
+
   where(tr .GT. 235.) nu_oop = 3.67e-11 * no*1.e-6 * tr**0.5 * (1 - 0.064*log10(tr))**2
+  where(tr <= 235) nu_oop = 8.6e-10 * no*1.0e-6 ! T < 470
+
   where(tr .GT. 800.) nu_o2o2p = 2.59e-11 * no2*1.e-6 * tr**0.5 * (1 - 0.073*log10(tr))**2
+  where(tr <= 800) nu_o2o2p = 8.2e-10 * no2*1.0e-6  ! T < 1600
+
   !where(tr .GT. 170.) nu_n2n2p = 5.14e-11 * nn2*1.e-6 * tr**0.5 * (1 - 0.069*log10(tr))**2
   nu_n2n2p = 5.14e-11 * nn2*1.e-6 * tr**0.5 * (1 - 0.069*log10(tr))**2
   ! Banks:
-  where(tr <= 800) nu_o2o2p = 8.2e-10 * no2*1.0e-6  ! T < 1600
-  where(tr <= 235) nu_oop = 8.6e-10 * no*1.0e-6 ! T < 470
-  where(tr <= 275) nu_nnp = 1.0e-9 * nnr*1.0e-6 ! T < 550
 
   nu_o2op = 6.64 * 1.e-10 * no2*1.e-6
   nu_n2op = 6.82*1.e-10 * nn2*1.e-6
@@ -814,60 +817,60 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
      dv2 = dv2 + (IVelocity(0:nLons+1,0:nLats+1,0:nAlts+1,iDir,iBlock) &
              -Velocity(0:nLons+1,0:nLats+1,0:nAlts+1,iDir,iBlock))**2
   enddo
+  
+  Qinc_t = nop*MassI(iO_4SP_)*nu_oop * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iO_3P_)) &
+       + nnp*MassI(iNP_)*nu_nnp * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iNP_) + Mass(iN_2P_)) &
+       + nop*MassI(iO_4SP_)*nu_o2op * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iO2_)) &
+       + nop*MassI(iO_4SP_)*nu_n2op * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iN2_)) &
+       + no2p*MassI(iO2P_)*nu_o2o2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iO2_)) &
+       + no2p*MassI(iO2P_)*nu_n2o2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iN2_)) &
+       + nn2p*MassI(iN2P_) * nu_n2n2p *(3.*Boltzmanns_Constant*(tn-ti))/(MassI(iN2P_) + Mass(iN2_)) &
+       + no2p*MassI(iO2P_)*nu_oo2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iO_3P_)) 
 
-   Qinc_t = nop*MassI(iO_4SP_)*nu_oop * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iO_3P_)) &
-        + nnp*MassI(iNP_)*nu_nnp * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iNP_) + Mass(iN_2P_)) &
-        + nop*MassI(iO_4SP_)*nu_o2op * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iO2_)) &
-        + nop*MassI(iO_4SP_)*nu_n2op * (3.*Boltzmanns_Constant*(tn-ti) )/(MassI(iO_4SP_) + Mass(iN2_)) &
-        + no2p*MassI(iO2P_)*nu_o2o2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iO2_)) &
-        + no2p*MassI(iO2P_)*nu_n2o2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iN2_)) &
-        + nn2p*MassI(iN2P_) * nu_n2n2p *(3.*Boltzmanns_Constant*(tn-ti))/(MassI(iN2P_) + Mass(iN2_)) &
-        + no2p*MassI(iO2P_)*nu_oo2p * (3.*Boltzmanns_Constant*(tn-ti))/(MassI(iO2P_) + Mass(iO_3P_)) 
+  Qinc_tp = nop*MassI(iO_4SP_)*nu_oop * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iO_3P_)) &
+       + nnp*MassI(iNP_)*nu_nnp * 3.*Boltzmanns_Constant/(MassI(iNP_) + Mass(iN_2P_)) &
+       + nop*MassI(iO_4SP_)*nu_o2op * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iO2_)) &
+       + nop*MassI(iO_4SP_)*nu_n2op * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iN2_)) &
+       + no2p*MassI(iO2P_)*nu_o2o2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iO2_)) &
+       + no2p*MassI(iO2P_)*nu_n2o2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iN2_)) &
+       + nn2p*MassI(iN2P_) * nu_n2n2p *3.*Boltzmanns_Constant/(MassI(iN2P_) + Mass(iN2_)) &
+       + no2p*MassI(iO2P_)*nu_oo2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iO_3P_)) 
 
-   Qinc_tp = nop*MassI(iO_4SP_)*nu_oop * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iO_3P_)) &
-        + nnp*MassI(iNP_)*nu_nnp * 3.*Boltzmanns_Constant/(MassI(iNP_) + Mass(iN_2P_)) &
-        + nop*MassI(iO_4SP_)*nu_o2op * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iO2_)) &
-        + nop*MassI(iO_4SP_)*nu_n2op * 3.*Boltzmanns_Constant/(MassI(iO_4SP_) + Mass(iN2_)) &
-        + no2p*MassI(iO2P_)*nu_o2o2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iO2_)) &
-        + no2p*MassI(iO2P_)*nu_n2o2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iN2_)) &
-        + nn2p*MassI(iN2P_) * nu_n2n2p *3.*Boltzmanns_Constant/(MassI(iN2P_) + Mass(iN2_)) &
-        + no2p*MassI(iO2P_)*nu_oo2p * 3.*Boltzmanns_Constant/(MassI(iO2P_) + Mass(iO_3P_)) 
-
-   Qinc_tm = Qinc_tp * tn
-
+  Qinc_tm = Qinc_tp * tn
 
   Qinc_v = nop*MassI(iO_4SP_)*nu_oop * Mass(iO_3P_)*dv2/(MassI(iO_4SP_) + Mass(iO_3P_)) &
        + nnp*MassI(iNP_)*nu_nnp * Mass(iN_2P_)*dv2/(MassI(iNP_) + Mass(iN_2P_)) &
-        + nop*MassI(iO_4SP_)*nu_o2op * Mass(iO2_)*dv2/(MassI(iO_4SP_) + Mass(iO2_)) &
-        + nop*MassI(iO_4SP_)*nu_n2op * Mass(iN2_)*dv2/(MassI(iO_4SP_) + Mass(iN2_)) &
-        + no2p*MassI(iO2P_)*nu_o2o2p * Mass(iO2_)*dv2/(MassI(iO2P_) + Mass(iO2_)) &
-        + no2p*MassI(iO2P_)*nu_n2o2p * Mass(iN2_)*dv2/(MassI(iO2P_) + Mass(iN2_)) &
-        + nn2p*MassI(iN2P_) * nu_n2n2p * Mass(iN2_)*dv2/(MassI(iN2P_) + Mass(iN2_))&
-        + no2p*MassI(iO2P_)*nu_oo2p * Mass(iO_3P_)*dv2/(MassI(iO2P_) + Mass(iO_3P_)) 
+       + nop*MassI(iO_4SP_)*nu_o2op * Mass(iO2_)*dv2/(MassI(iO_4SP_) + Mass(iO2_)) &
+       + nop*MassI(iO_4SP_)*nu_n2op * Mass(iN2_)*dv2/(MassI(iO_4SP_) + Mass(iN2_)) &
+       + no2p*MassI(iO2P_)*nu_o2o2p * Mass(iO2_)*dv2/(MassI(iO2P_) + Mass(iO2_)) &
+       + no2p*MassI(iO2P_)*nu_n2o2p * Mass(iN2_)*dv2/(MassI(iO2P_) + Mass(iN2_)) &
+       + nn2p*MassI(iN2P_) * nu_n2n2p * Mass(iN2_)*dv2/(MassI(iN2P_) + Mass(iN2_))&
+       + no2p*MassI(iO2P_)*nu_oo2p * Mass(iO_3P_)*dv2/(MassI(iO2P_) + Mass(iO_3P_)) 
 
-!!! Ion-neutral heating rate from Banks 1967
+  ! Ion-neutral heating rate from Banks 1967
+  ! because ns * ms * nu_st = nt * mt * nu_ts, the only thing that changes is the neutral mass to ion mass:
 
   Qnic_v = nop * MassI(iO_4SP_)**2 *nu_oop *dv2/(MassI(iO_4SP_) + Mass(iO_3P_)) &
        + nnp * MassI(iNP_)**2 *nu_nnp *dv2/(MassI(iNP_) + Mass(iN_2P_)) &
-        + nop * MassI(iO_4SP_)**2 *nu_o2op *dv2/(MassI(iO_4SP_) + Mass(iO2_)) &
-        + nop *MassI(iO_4SP_)**2 *nu_n2op *dv2/(MassI(iO_4SP_) + Mass(iN2_)) &
+       + nop * MassI(iO_4SP_)**2 *nu_o2op *dv2/(MassI(iO_4SP_) + Mass(iO2_)) &
+       + nop *MassI(iO_4SP_)**2 *nu_n2op *dv2/(MassI(iO_4SP_) + Mass(iN2_)) &
        + no2p *MassI(iO2P_)**2 *nu_o2o2p *dv2/(MassI(iO2P_) + Mass(iO2_)) &
-        + no2p *MassI(iO2P_)**2 *nu_n2o2p *dv2/(MassI(iO2P_) + Mass(iN2_)) &
-        + nn2p *MassI(iN2P_)**2 * nu_n2n2p *dv2/(MassI(iN2P_) + Mass(iN2_)) &
-        + no2p *MassI(iO2P_)**2 *nu_oo2p *dv2/(MassI(iO2P_) + Mass(iO_3P_)) 
+       + no2p *MassI(iO2P_)**2 *nu_n2o2p *dv2/(MassI(iO2P_) + Mass(iN2_)) &
+       + nn2p *MassI(iN2P_)**2 * nu_n2n2p *dv2/(MassI(iN2P_) + Mass(iN2_)) &
+       + no2p *MassI(iO2P_)**2 *nu_oo2p *dv2/(MassI(iO2P_) + Mass(iO_3P_)) 
 
+  ! because ns * ms * nu_st = nt * mt * nu_ts, this is symmetric:
   Qnic_t = - Qinc_t
  
-
 !!! Thermal Conduction Perpendicular to Magnetic Field Lines
-  cos2dip =  1.- (B0(1:nLons,1:nLats,0:nAlts+1,iUp_,iBlock)/B0(1:nLons,1:nLats,0:nAlts+1,iMag_,iBlock))**2
-  magh2 =  B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)**2 + B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)**2
-  cos2dec = B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)**2/magh2
-  sin2dec = B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)**2/magh2  
-  sindec = B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)/magh2**0.5
-  cosdec = B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)/magh2**0.5  
-  dLat = Latitude(1,iBlock) - Latitude(0,iBlock)
-  dLon = Longitude(1,iBlock) - Longitude(0,iBlock)
+   cos2dip =  1.- (B0(1:nLons,1:nLats,0:nAlts+1,iUp_,iBlock)/B0(1:nLons,1:nLats,0:nAlts+1,iMag_,iBlock))**2
+   magh2 =  B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)**2 + B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)**2
+   cos2dec = B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)**2/magh2
+   sin2dec = B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)**2/magh2  
+   sindec = B0(1:nLons,1:nLats,0:nAlts+1,iEast_,iBlock)/magh2**0.5
+   cosdec = B0(1:nLons,1:nLats,0:nAlts+1,iNorth_,iBlock)/magh2**0.5  
+   dLat = Latitude(1,iBlock) - Latitude(0,iBlock)
+   dLon = Longitude(1,iBlock) - Longitude(0,iBlock)
 
   ! Electron Conductivity 
   lame = 7.7e5*te**2.5/(1+3.22e4*te**2/ne*nn*1.e-16)  !Unit: eV cm-1 from Schunk and Nagy Page 147 eq 5.146
@@ -1001,22 +1004,28 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   end do
 
   
+  JouleHeating2d = 0.0
+  HeatTransfer2d = 0.0
+
   if (UseJouleHeating .and. UseIonDrag) then
 
-!     JouleHeating = (Qnic_t(1:nLons,1:nLats,1:nAlts) + Qnic_v(1:nLons,1:nLats,1:nAlts))/ &
-!          TempUnit(1:nLons,1:nLats,1:nAlts) / &
-!          cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
-     JouleHeating2d = 0.0
+     JouleHeating = (Qnic_t(1:nLons,1:nLats,1:nAlts) + Qnic_v(1:nLons,1:nLats,1:nAlts))/ &
+          TempUnit(1:nLons,1:nLats,1:nAlts) / &
+          cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
+
+     ! This is the old approximation: 
+     !     JouleHeating = (Qnic_v(1:nLons,1:nLats,1:nAlts) * 2.)/ &
+     !          TempUnit(1:nLons,1:nLats,1:nAlts) / &
+     !          cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
+
      do iAlt=1,nAlts
         JouleHeating2d(1:nLons, 1:nLats) = &
              JouleHeating2d(1:nLons, 1:nLats) + &
-             (Qnic_v(1:nLons,1:nLats,iAlt) * 2.) * &
-             dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+             Qnic_v(1:nLons,1:nLats,iAlt) * dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
+        HeatTransfer2d(1:nLons, 1:nLats) = &
+             HeatTransfer2d(1:nLons, 1:nLats) + &
+             Qnic_t(1:nLons,1:nLats,iAlt) * dAlt_GB(1:nLons,1:nLats,iAlt,iBlock)
      enddo
-
-     JouleHeating = (Qnic_v(1:nLons,1:nLats,1:nAlts) * 2.)/ &
-          TempUnit(1:nLons,1:nLats,1:nAlts) / &
-          cp(1:nLons,1:nLats,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
     
  else
 

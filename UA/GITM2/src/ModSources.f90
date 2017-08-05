@@ -23,7 +23,7 @@ module ModSources
        Conduction
 
   real, dimension(nLons, nLats) :: &
-       JouleHeating2d, EuvHeating2d
+       JouleHeating2d, EuvHeating2d, HeatTransfer2d, RadiativeCooling2d
        
   real, allocatable :: EuvHeating(:,:,:,:)
   real, allocatable :: eEuvHeating(:,:,:,:)

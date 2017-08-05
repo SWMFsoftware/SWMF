@@ -338,7 +338,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   case ('2DANC')
 
-     nvars_to_write = 8
+     nvars_to_write = 10
      call output_2danc(iBlock)
 
   case('1DALL')
@@ -569,7 +569,9 @@ contains
        write(iOutputUnit_,"(I7,A1,a)")  5, " ", "Solar Zenith Angle"
        write(iOutputUnit_,"(I7,A1,a)")  6, " ", "Vertical TEC"
        write(iOutputUnit_,"(I7,A1,a)")  7, " ", "AltIntJouleHeating (W/m2)"
-       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "AltIntEuvHeating (W/m2)"
+       write(iOutputUnit_,"(I7,A1,a)")  8, " ", "AltIntHeatingTransfer (W/m2)"
+       write(iOutputUnit_,"(I7,A1,a)")  9, " ", "AltIntEuvHeating (W/m2)"
+       write(iOutputUnit_,"(I7,A1,a)") 10, " ", "AltIntNOCooling (W/m2)"
 
     endif
 
@@ -1507,7 +1509,7 @@ subroutine output_2danc(iBlock)
   use ModElectrodynamics
   use ModInputs
   use ModEUV, only : Sza
-  use ModSources, only : JouleHeating2d, EuvHeating2d
+  use ModSources, only : JouleHeating2d, EuvHeating2d, RadiativeCooling2d, HeatTransfer2d
 
   implicit none
 
@@ -1527,7 +1529,9 @@ subroutine output_2danc(iBlock)
              Sza(iLon,iLat,iBlock), &
              VTEC(iLon,iLat,iBlock), &
              JouleHeating2d(iLon,iLat), &
-             EuvHeating2d(iLon,iLat)
+             HeatTransfer2d(iLon,iLat), &
+             EuvHeating2d(iLon,iLat), &
+             RadiativeCooling2d(iLon,iLat)
      enddo
   enddo
 
