@@ -134,14 +134,24 @@ sub process_file{
 	    $lines[$i] =~ s/\/\*.*//; $IsComment = 1;}
 
 	# find if there is a macro being used in this line
-	if($lines[$i] =~ m/\s*#(el)?if (.*)?==(.*)/){
+	if ( ($lines[$i] =~ m/\s*#(el)?if (.*)?==(.*)/) || ($lines[$i] =~ m/\s*#(el)?if (.*)?!=(.*)/) ) {
 	    # check if it is #if
 	    $iLastIf = $i if (! defined $1);
+
 	    # extract macros from matched blocks
-	    &extract_macro($2);
-	    &extract_macro($3);
+            my $t=$lines[$i];
+            my @tSplit;
+            my $iSplit;
+
+            $t=~s/[=!&|]/ /g;
+            @tSplit=split(' ',$t);
+
+            for ($iSplit=1;$iSplit<=$#tSplit;$iSplit++) {
+              &extract_macro($tSplit[$iSplit]);
+            } 
 	}
     }
+
     # add a check within the file itself
     if($DoInPlace){
 	open(my $FILE, '>', $_[0]);
