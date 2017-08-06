@@ -547,6 +547,7 @@ sub ReadMainBlock {
       elsif ($s0 eq "SWMF") {$CouplingMode="_PIC_COUPLER_MODE__SWMF_";}
       elsif ($s0 eq "GEOPACK") {$CouplingMode="_PIC_COUPLER_MODE__GEOPACK_";}
       elsif ($s0 eq "T96") {$CouplingMode="_PIC_COUPLER_MODE__T96_";}
+      elsif ($s0 eq "KMAG") {$CouplingMode="_PIC_COUPLER_MODE__KMAG_";}
       elsif ($s0 eq "FILE") {
         $CouplingMode="_PIC_COUPLER_MODE__DATAFILE_";
         $CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_";
