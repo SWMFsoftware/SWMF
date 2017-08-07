@@ -10,6 +10,9 @@
 
 #include "MOP.h"
 
+//rotation vector of Saturn
+double MOP::SaturninanSystem::Saturn::RotationAxis[3]={0.0,0.0,0.0};
+
 double MOP::SaturninanSystem::GetLocalMeshResolution(double *x) {
   double Res=1*_SATURN__RADIUS_;
 
@@ -99,7 +102,7 @@ double MOP::SaturninanSystem::Magnetosphere::GetCorotationSpeed(double *x) {
   double r,U,a,LocalCorrotationVelocity[3],lz[3]={0.0,0.0,1.0},B[3],c;
   int idim;
 
-  r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])/_SATURN__RADIUS_;
+  r=fabs(Vector3D::DotProduct(x,MOP::SaturninanSystem::Saturn::RotationAxis))/_SATURN__RADIUS_;
 
   if (r<rmin) U=CorotationVelocity[0];
   else if (r>rmax) U=CorotationVelocity[nPoints-1];
