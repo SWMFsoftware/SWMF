@@ -493,7 +493,15 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   for (idim=0;idim<3;idim++) {
     xLoc[idim]=(x[idim]-xStencilMin[idim])/(xStencilMax[idim]-xStencilMin[idim]);
 
-    if ((xLoc[idim]<0.0)||(xLoc[idim]>1.0)) exit(__LINE__,__FILE__,"Error: the local coordinate is out or range");
+    if (xLoc[idim]<0.0) {
+      if (xLoc[idim]<-1.0E-7) exit(__LINE__,__FILE__,"Error: the local coordinate is out or range");
+      else xLoc[idim]=0.0;
+    }
+    else if (xLoc[idim]>1.0) {
+      if (xLoc[idim]>1.0+1.0E-7) exit(__LINE__,__FILE__,"Error: the local coordinate is out or range");
+      else xLoc[idim]=1.0;
+    }
+
   }
 
   //cell sizes
