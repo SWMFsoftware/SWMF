@@ -226,9 +226,9 @@ int main(int argc,char **argv) {
   PIC::Alarm::SetAlarm(8.0*3600.0-15*60);
 
   //init the particle solver
-  MOP::Init();
   PIC::Init_BeforeParser();
   Exosphere::Init_BeforeParser();
+  MOP::Init();
 
 //  Enceladus::Init_BeforeParser();
 
