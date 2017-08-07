@@ -72,5 +72,73 @@ double MOP::SaturninanSystem::GetLocalMeshResolution(double *x) {
   return Res;
 }
 
+//get Saturn's magnetic dipole field
+void MOP::SaturninanSystem::Saturn::GetMagneticFieldDipole(double *B,double *x) {
+
+}
+
+//calculate electric and magnetic fields in Saturn's magnetosphere
+void MOP::SaturninanSystem::Magnetosphere::GetMagneticField(double *B,double *x) {
+  KMAG::GetMagneticField(B,x);
+}
+
+double MOP::SaturninanSystem::Magnetosphere::GetCorotationSpeed(double *x) {
+  static const double rmin=0.0;
+  static const double rmax=20.0;
+  static const int nPoints=51;
+  static const double dr=(rmax-rmin)/(nPoints-1);
+
+  //the corrotatoin velocity profile is digitized from
+  static const double CorotationVelocity[nPoints]={108.571,4110.533,9059.282,12514.883,16904.430,19956.104,23724.578,27711.359,31308.219,35543.676,39451.062,42035.762,45033.734,
+                                            48125.098,50812.531,52759.797,53344.691,56891.340,60098.277,61305.414,64553.215,73669.703,78616.109,79434.461,78681.492,78319.594,
+                                            77280.594,76308.094,75764.078,76295.250,81022.195,87594.836,94218.867,99334.547,1.027e5,1.056e5,1.080e5,1.096e5,1.115e5,1.129e5,
+                                            1.140e5,1.152e5,1.157e5,1.164e5,1.168e5,1.172e5,1.176e5,1.179e5,1.179e5,1.180e5,1.180e5};
+
+
+  //calculate the corrotation speed
+  double r,U,a,LocalCorrotationVelocity[3],lz[3]={0.0,0.0,1.0},B[3],c;
+  int idim;
+
+  r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])/_SATURN__RADIUS_;
+
+  if (r<rmin) U=CorotationVelocity[0];
+  else if (r>rmax) U=CorotationVelocity[nPoints-1];
+  else {
+    int i;
+
+    i=(int)((r-rmin)/dr);
+
+    if (i<nPoints) {
+      double t;
+
+      t=(r-rmin)/dr-i;
+      U=(1.0-t)*CorotationVelocity[i]+t*CorotationVelocity[i+1];
+    }
+    else U=CorotationVelocity[nPoints-1];
+  }
+
+  return U;
+}
+
+void MOP::SaturninanSystem::Magnetosphere::GetElectricField(double *E,double *x) {
+  double U,LocalCorrotationVelocity[3],lz[3]={0.0,0.0,1.0},B[3],c;
+  int idim;
+
+  U=GetCorotationSpeed(x);
+  Vector3D::CrossProduct(LocalCorrotationVelocity,x,lz);
+
+  for (c=0.0,idim=0;idim<3;idim++) c+=pow(LocalCorrotationVelocity[idim],2);
+  if (c>0.0) for (c=U/sqrt(c),idim=0;idim<3;idim++) LocalCorrotationVelocity[idim]*=c;
+
+  //E=-v\timesB
+  GetMagneticField(B,x);
+  Vector3D::CrossProduct(E,B,LocalCorrotationVelocity);
+}
+
+
+
+
+
+
 
 
