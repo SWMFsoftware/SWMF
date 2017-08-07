@@ -4184,20 +4184,32 @@ namespace PIC {
       memcpy(&Stencil,PIC::InterpolationRoutines::CellCentered::StencilTable,sizeof(PIC::InterpolationRoutines::CellCentered::cStencil));
       #endif
 
-      for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
-        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-        SWMF::GetBackgroundElectricField(t,Stencil.cell[iStencil]);
-        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_
-        for (int i=0;i<3;i++) t[i]=0.0;
-        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-        DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
-        #else
-        exit(__LINE__,__FILE__,"not implemented");
-        #endif
+      switch (_PIC_COUPLER_MODE_) {
+      case _PIC_COUPLER_MODE__T96_: case _PIC_COUPLER_MODE__KMAG_: 
+        if (PIC::CPLR::DATAFILE::Offset::ElectricField.allocate==true) {
+          double t[3];
 
-        for (idim=0;idim<3;idim++) E[idim]+=Stencil.Weight[iStencil]*t[idim];
-      }
-    }
+          for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
+            DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
+            for (idim=0;idim<3;idim++) E[idim]+=Stencil.Weight[iStencil]*t[idim];
+          }
+        }           
+
+        break;
+      default :
+        for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
+          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+          SWMF::GetBackgroundElectricField(t,Stencil.cell[iStencil]);
+          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+          DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
+          #else
+          exit(__LINE__,__FILE__,"not implemented");
+          #endif
+
+          for (idim=0;idim<3;idim++) E[idim]+=Stencil.Weight[iStencil]*t[idim];
+         }
+       }
+     }
 
      inline void GetBackgroundMagneticField(double *B, double Time = NAN) {
        double t[3];
@@ -4215,7 +4227,7 @@ namespace PIC {
        for (iStencil=0;iStencil<Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundMagneticField(t,Stencil.cell[iStencil]);
-         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_ || _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__KMAG_ 
          DATAFILE::GetBackgroundData(t,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticField(t,Stencil.cell[iStencil], Time);
@@ -4259,7 +4271,7 @@ namespace PIC {
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
 
-         #elif _PIC_COUPLER_MODE_ ==_PIC_COUPLER_MODE__T96_
+         #elif _PIC_COUPLER_MODE_ ==_PIC_COUPLER_MODE__T96_ || _PIC_COUPLER_MODE_ ==_PIC_COUPLER_MODE__KMAG_ 
          DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
 
          #else
@@ -4344,7 +4356,7 @@ namespace PIC {
            SWMF::GetBackgroundMagneticField(cellB,Stencil.cell[iStencil]);
 
            break;
-         case _PIC_COUPLER_MODE__T96_:
+         case _PIC_COUPLER_MODE__T96_: case _PIC_COUPLER_MODE__KMAG_: 
            for (int i=0;i<3;i++) cellE[i]=0.0;
            DATAFILE::GetBackgroundData(cellB,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
 
