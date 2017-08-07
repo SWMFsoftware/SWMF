@@ -74,6 +74,13 @@ void MOP::Init() {
   PIC::Mesh::PrintVariableListCenterNode.push_back(Sampling::Output::PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(Sampling::Output::PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Sampling::Output::Interpolate);
+
+  //get Saturn's axis of rotation
+  SpiceDouble lz_IAU_SATURN[3]={0.0,0.0,1.0},rotate[3][3];
+
+  utc2et_c(Exosphere::SimulationStartTimeString,&KMAG::et);
+  pxform_c("IAU_SATURN","SSO",KMAG::et,rotate);
+  mxv_c(rotate,lz_IAU_SATURN,MOP::SaturninanSystem::Saturn::RotationAxis);
 }
 
 //output of the sampled data into a file

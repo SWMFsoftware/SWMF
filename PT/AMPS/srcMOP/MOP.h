@@ -44,6 +44,8 @@ namespace MOP {
 
     //parameters that characterize the planet
     namespace Saturn {
+      extern double RotationAxis[3];
+
       void GetMagneticFieldDipole(double *B,double *x);
     }
 
