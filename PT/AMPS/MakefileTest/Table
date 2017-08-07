@@ -127,9 +127,9 @@ Run=
 Check=
 >>>@echo "test_CG-Rosina-Liouville_check..." >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/GroundTracks.dat   output/test_CG-Rosina-Liouville/GroundTracks$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/PT/plots/TrajectoryAll.dat   output/test_CG-Rosina-Liouville/TrajectoryAll$(TESTCG-Rosina-Liouville-REF).ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/Liouville.spec=SUM.dat   output/test_CG-Rosina-Liouville/Liouville.spec=SUM$(TESTCG-Rosina-Liouville-REF).dat.ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-LiouvilleDIR}/PT/plots/Liouville.spec=SUM.dat   output/test_CG-Rosina-Liouville/Liouville.spec=SUM.dat$(TESTCG-Rosina-Liouville-REF).ref_np`ls $(TESTCG-Rosina-LiouvilleDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff
 
 >>>@cat test_CG-Rosina-Liouville-GroundTracks$(TESTCG-Rosina-Liouville-REF).diff test_CG-Rosina-Liouville-SUM$(TESTCG-Rosina-Liouville-REF).diff > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff 
 
