@@ -39,6 +39,9 @@ const double xMaxDomain=10.0;
 const double dxMinGlobal=1.0,dxMaxGlobal=5.0;
 const double dxMinSphere=DebugRunMultiplier*4.0/100,dxMaxSphere=DebugRunMultiplier*8.0/100.0;
 
+//the function that initialize the background fields
+void InitBackgroundFields();
+
 
 //double SodiumRadiationPressureAcceleration_Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
 void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
@@ -223,6 +226,7 @@ int main(int argc,char **argv) {
   PIC::Alarm::SetAlarm(8.0*3600.0-15*60);
 
   //init the particle solver
+  MOP::Init();
   PIC::Init_BeforeParser();
   Exosphere::Init_BeforeParser();
 
@@ -414,7 +418,8 @@ int main(int argc,char **argv) {
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
 
-
+  //init the background fileds
+  InitBackgroundFields();
 
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
