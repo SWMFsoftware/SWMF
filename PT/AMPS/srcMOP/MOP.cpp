@@ -67,4 +67,44 @@ double MOP::GetLocalMeshResolution(double *x) {
   return res;
 }
 
+//init the model
+void MOP::Init() {
+  //set the printout procedures into the core
+  //print out of the otuput file
+  PIC::Mesh::PrintVariableListCenterNode.push_back(Sampling::Output::PrintVariableList);
+  PIC::Mesh::PrintDataCenterNode.push_back(Sampling::Output::PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(Sampling::Output::Interpolate);
+}
+
+//output of the sampled data into a file
+void MOP::Sampling::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
+  fprintf(fout,", \"Corotation Speed\"");
+}
+
+void MOP::Sampling::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
+  //empty function. There is nothing to interpolate yet
+  //only parameters derived from empirical modes are printed into a file
+}
+
+void MOP::Sampling::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
+
+  if (PIC::ThisThread==0) {
+    //fprintf(fout," %e ",CenterNode->GetX()[0]);
+    fprintf(fout," %e ",MOP::SaturninanSystem::Magnetosphere::GetCorotationSpeed(CenterNode->GetX()));
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
