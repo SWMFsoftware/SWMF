@@ -67,8 +67,10 @@ namespace OH {
     namespace OriginLocation {
       extern int nSampledOriginLocations;
 
-      //offset of the sampled density data in the AMPS' sanpling vector
+      //offset of the sampled density and velocity data in the AMPS' sampling vector
       extern int OffsetDensitySample;
+      extern int OffsetVelocitySample;
+      extern int OffsetV2Sample;
 
       //init the sampling module
       int RequestSamplingData(int offset);
