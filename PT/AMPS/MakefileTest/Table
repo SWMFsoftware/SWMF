@@ -531,7 +531,7 @@ Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
 >>>@echo "test_SEP3D_run..." >> test_SEP3D${TESTSEP3D-REF}.diff
 >>>@echo Test test_SEP3D has started: `date`
->>>cd ${TESTSEP3DDIR}; ${MPIRUN} -np 4 ./amps
+>>>cd ${TESTSEP3DDIR}; ${MPIRUN} ./amps
 >>>@echo "test_SEP3D_run... done" >> test_SEP3D${TESTSEP3D-REF}.diff
 <#
 -------------------------------------------------------------------------------
@@ -1205,7 +1205,7 @@ Time=2
 Run=
 >>>@echo "test_InterpolateAMR-test_run..." >> test_InterpolateAMR-test.diff
 >>>@echo Test test_InterpolateAMR-test has started: `date`
->>>cd ${TESTInterpolateAMR-testDIR}; ${TESTMPIRUN1} ./amps
+>>>cd ${TESTInterpolateAMR-testDIR}; ${MPIRUN} ./amps
 >>>@echo "test_InterpolateAMR-test_run... done" >> test_InterpolateAMR-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
@@ -1220,7 +1220,7 @@ Time=2
 Run=
 >>>@echo "test_InterpolateAMR-AMPS-test_run..." >> test_InterpolateAMR-AMPS-test.diff
 >>>@echo Test test_InterpolateAMR-AMPS-test has started: `date`
->>>cd ${TESTInterpolateAMR-AMPS-testDIR}; ${TESTMPIRUN1} ./amps
+>>>cd ${TESTInterpolateAMR-AMPS-testDIR}; ${MPIRUN} ./amps
 >>>@echo "test_InterpolateAMR-AMPS-test_run... done" >> test_InterpolateAMR-AMPS-test.diff
 Check=
 >>>@echo "test_InterpolateAMR-AMPS-test_check..." >> test_InterpolateAMR-AMPS-test.diff
