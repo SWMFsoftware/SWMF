@@ -476,7 +476,6 @@ void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   //determine the position of the limb
   SpiceDouble EarthState_SO[6],lt,SunState_SO[6];
-  double rEarth[3];
 
   spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,EarthState_SO,&lt);
   spkezr_c("SUN",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,SunState_SO,&lt);
@@ -490,7 +489,6 @@ void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,
     l1+=pow(SunState_SO[idim],2);
     c+=EarthState_SO[idim]*SunState_SO[idim];
 
-    rEarth[idim]=1.0E3*EarthState_SO[idim];
   }
 
   for (idim=0;idim<3;idim++) {
@@ -554,7 +552,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
   }
 
   if (fabs(c/sqrt(l1*l2))>1.0-1.0E-15) {
-    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%ld)\n",__FILE__,__LINE__);
+    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%i)\n",__FILE__,__LINE__);
     return;
   }
 
@@ -1601,11 +1599,16 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     PIC::MolecularData::GetChemSymbol(ChemSymbol,spec);
     if (PIC::ThisThread==0) printf("$PREFIX:%i (%s)\t",spec,ChemSymbol);
 
-#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-    LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
-#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-    exit(__LINE__,__FILE__,"Error: the time step node is not defined");
-#endif
+    switch (_SIMULATION_TIME_STEP_MODE_) {
+    case  _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_:
+      LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+      break;
+    case _SPECIES_DEPENDENT_LOCAL_TIME_STEP_:
+      exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+      break;
+    default:
+      exit(__LINE__,__FILE__,"The option is not recognized");
+    }
 
     ierr=MPI_Reduce(Exosphere::Sampling::TotalPlanetReturnFlux+spec,&TotalFlux,1,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     if (ierr!=MPI_SUCCESS) exit(__LINE__,__FILE__);
