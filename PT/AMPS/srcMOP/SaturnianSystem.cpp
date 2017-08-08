@@ -99,8 +99,7 @@ double MOP::SaturninanSystem::Magnetosphere::GetCorotationSpeed(double *x) {
 
 
   //calculate the corrotation speed
-  double r,U,a,LocalCorrotationVelocity[3],lz[3]={0.0,0.0,1.0},B[3],c;
-  int idim;
+  double r,U;
 
   r=fabs(Vector3D::DotProduct(x,MOP::SaturninanSystem::Saturn::RotationAxis))/_SATURN__RADIUS_;
 
@@ -124,18 +123,18 @@ double MOP::SaturninanSystem::Magnetosphere::GetCorotationSpeed(double *x) {
 }
 
 void MOP::SaturninanSystem::Magnetosphere::GetElectricField(double *E,double *x) {
-  double U,LocalCorrotationVelocity[3],lz[3]={0.0,0.0,1.0},B[3],c;
+  double U,LocalCorotationVelocity[3],B[3],c;
   int idim;
 
   U=GetCorotationSpeed(x);
-  Vector3D::CrossProduct(LocalCorrotationVelocity,x,lz);
+  Vector3D::CrossProduct(LocalCorotationVelocity,x,MOP::SaturninanSystem::Saturn::RotationAxis);
 
-  for (c=0.0,idim=0;idim<3;idim++) c+=pow(LocalCorrotationVelocity[idim],2);
-  if (c>0.0) for (c=U/sqrt(c),idim=0;idim<3;idim++) LocalCorrotationVelocity[idim]*=c;
+  for (c=0.0,idim=0;idim<3;idim++) c+=pow(LocalCorotationVelocity[idim],2);
+  if (c>0.0) for (c=U/sqrt(c),idim=0;idim<3;idim++) LocalCorotationVelocity[idim]*=c;
 
   //E=-v\timesB
   GetMagneticField(B,x);
-  Vector3D::CrossProduct(E,B,LocalCorrotationVelocity);
+  Vector3D::CrossProduct(E,B,LocalCorotationVelocity);
 }
 
 
