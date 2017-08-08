@@ -1541,7 +1541,7 @@ test_cometCGfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
 test_cometCGfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-17 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-16 \
 		Param/ROSETTA/TestOutput/CGfluids_log_n000000.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGfluids.diff)
 	ls -l test_cometCGfluids.diff
