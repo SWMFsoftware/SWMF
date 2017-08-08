@@ -42,13 +42,13 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=20
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
   InitialSampleLength=800
   TestRunTotalIteration=50
 
-  RequestedParticleBufferLength=1500000
+  RequestedParticleBufferLength=15000
 
 ! ReferenceInjectionParticleNumber=200
 ! MaxMeshRefinmentLevel=8! 2 !4
@@ -89,6 +89,14 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Mar
 define _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
   
 #endGeneral
+
+#Sampling
+ VelocityDistributionSampling=on \\ !on, off
+   x=(5.3E6,0.0,0.0), (3.7E6,0.0,0.0), (-3.7E6,-1.5E6,-2.7E6),(-6.2E6,4.8E6,2.1E6), (-1.2E7,6.2E6,1.3E7)  \\
+   nSampleIntervals=1000 \\
+   vmin=-700e3, vmax=700e3
+
+#endSampling
 
 #interface
   cell_centered_linear_interpolation_mode=amps 
