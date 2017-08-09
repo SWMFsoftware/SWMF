@@ -208,6 +208,7 @@ module ModInputs
   integer :: nItersMax              = 500
   real    :: MaxResidual            = 1.0
   logical :: IncludeCowling         = .false.
+  real    :: DynamoLonAverage       = 10.0
 
   logical :: UseImprovedIonAdvection = .false.
   logical :: UseNighttimeIonBCs = .false.
