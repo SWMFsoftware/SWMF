@@ -129,8 +129,7 @@ subroutine logfile(dir)
       write(iLogFileUnit_,'(a,L2)') "# Resart=", dorestart
      write(iLogFileUnit_,'(4(a,f9.3))') "# Eddy coef: ", EddyDiffusionCoef, &
           " Eddy P0: ",EddyDiffusionPressure0,&
-          " Eddy P1: ",EddyDiffusionPressure1,&
-          " Eddy Scaling: ",EddyScaling
+          " Eddy P1: ",EddyDiffusionPressure1
      write(iLogFileUnit_,'(2(a,L2))') "# Statistical Models Only: ", &
           usestatisticalmodelsonly, " Apex: ",useApex
      if (useEUVdata) then
@@ -146,8 +145,7 @@ subroutine logfile(dir)
        write(iLogFileUnit_,'(2(a,L2))') "# NO Cooling: ", useNOCooling, &
           " O Cooling: ", useOCooling
        write(iLogFileUnit_,'(3(a,L2))') "# Conduction: ",useConduction, &
-          " Turbulent Conduction: ", useTurbulentCond, &
-          " Updated Turbulent Conduction: ",useUpdatedTurbulentCond
+          " Turbulent Conduction: ", useTurbulentCond
        write(iLogFileUnit_,'(3(a,L2))') "# Pressure Grad: ", &
             usePressureGradient, " Ion Drag: ", useIonDrag, &
           " Neutral Drag: ", useNeutralDrag
@@ -356,8 +354,6 @@ subroutine write_code_information(dir)
      write(iCodeInfoFileUnit_,*) UseOCooling
      write(iCodeInfoFileUnit_,*) UseConduction
      write(iCodeInfoFileUnit_,*) UseTurbulentCond
-     write(iCodeInfoFileUnit_,*) UseUpdatedTurbulentCond
-     write(iCodeInfoFileUnit_,*) EddyScaling
      write(iCodeInfoFileUnit_,*) ""
 
      write(iCodeInfoFileUnit_,*) "#FORCING"

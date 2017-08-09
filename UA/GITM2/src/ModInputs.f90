@@ -228,8 +228,6 @@ module ModInputs
 
 !! New Turbulent (Eddy) Conduction Routines
   logical :: UseTurbulentCond = .false.
-  logical :: UseUpdatedTurbulentCond = .false.
-  real :: EddyScaling = 1.0
 
   real :: PhotoElectronHeatingEfficiency = 0.0
   real :: NeutralHeatingEfficiency = 0.05
