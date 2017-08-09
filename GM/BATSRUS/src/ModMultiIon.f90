@@ -553,10 +553,13 @@ contains
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
-             write(*,*) NameSub,' iIon =', iIon
-             write(*,*) NameSub,' uIon_D   =', uIon_D
-             write(*,*) NameSub,' u_D      =', u_D
-             write(*,*) NameSub,' Force_D  =', Force_D
+             write(*,*) NameSub,' iIon            =', iIon
+             write(*,*) NameSub,' uIon_D          =', uIon_D
+             write(*,*) NameSub,' u_D             =', u_D
+             write(*,*) NameSub,' ForceCoeff      =', ForceCoeff
+             write(*,*) NameSub,' ElectronCharge  =', ElectronCharge
+             write(*,*) NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
+             write(*,*) NameSub,' Force_D         =', Force_D
           end if
 
           ! Set corresponding matrix element
