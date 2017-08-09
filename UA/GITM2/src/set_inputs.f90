@@ -806,6 +806,7 @@ subroutine set_inputs
            call read_in_int(nItersMax, iError)
            call read_in_real(MaxResidual, iError)
            call read_in_logical(IncludeCowling, iError)
+           call read_in_real(DynamoLonAverage, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''
@@ -815,6 +816,7 @@ subroutine set_inputs
               write(*,*) "nItersMax              (integer)"
               write(*,*) "MaxResidual            (V,real)"
               write(*,*) "IncludeCowling         (logical)"
+              write(*,*) "DynamoLonAverage       (real)"
            endif
 
         case ("#IONFORCING")
