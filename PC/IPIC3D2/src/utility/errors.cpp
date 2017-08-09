@@ -66,7 +66,7 @@ using namespace std;
       << ", function " << func  \
       <<"\n\t" << type << " value: " << expr << " = " << val << endl; \
     fflush(stdout); \
-      { fprintf(stdout,ss.str().c_str()); } \
+    { fprintf(stdout,"%",ss.str().c_str()); }	\
     fflush(stdout); \
     abort(); \
   }
@@ -124,7 +124,7 @@ void eprintf_fileLine(FILE * fptr, const char *type,
   // print the message
   fflush(fptr);
     // #pragma omp critical // need this?
-    { fprintf(fptr,error_msg); }
+  { fprintf(fptr,"%s",error_msg); }
   fflush(fptr);
   abort();
 }

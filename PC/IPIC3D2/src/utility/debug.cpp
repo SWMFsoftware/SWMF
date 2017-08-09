@@ -146,7 +146,7 @@ void fprintf_fileLine(FILE * fptr,
 
   // print the message
   fflush(fptr);
-    fprintf(fptr,error_msg);
+  fprintf(fptr, "%s",error_msg);
   fflush(fptr);
 }
 
