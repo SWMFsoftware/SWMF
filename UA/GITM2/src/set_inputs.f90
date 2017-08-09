@@ -791,11 +791,13 @@ subroutine set_inputs
 
         case ("#USETESTVISCOSITY")
            call read_in_logical(UseTestViscosity, iError)
+           call read_in_real(TestViscosityFactor, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''
               write(*,*) '#USETESTVISCOSITY'
-              write(*,*) "UseTestViscosity      (logical)"
+              write(*,*) "UseTestViscosity         (logical)"
+              write(*,*) "TestViscosityFactor      (real)"
            endif
 
         case ("#DYNAMO")

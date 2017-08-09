@@ -77,16 +77,7 @@ subroutine calc_rates(iBlock)
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
           TempUnit(1:nLons,1:nLats,iAlt))**0.648
      
-
-     ViscCoef(1:nLons,1:nLats,iAlt) = 4.5e-5 * &
-          (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&
-          TempUnit(1:nLons,1:nLats,iAlt)/ 1000.)**(-0.71)
   enddo
-
-  do iSpecies = 1, nSpecies
-     ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
-      ViscCoef(1:nLons,1:nLats,0:nAlts+1)
-  enddo 
 
   ! Thermal Diffusion is zero for all but the lightest species
   ! Banks and Kockarts suggest Alpha_T = -0.38 for He
@@ -201,7 +192,7 @@ end subroutine calc_collisions
 subroutine calc_viscosity(iBlock)
 
   use ModGITM
-  use ModInputs, only: UseTestViscosity
+  use ModInputs, only: UseTestViscosity, TestViscosityFactor
   implicit none
 
   integer, intent(in) :: iBlock
@@ -210,20 +201,42 @@ subroutine calc_viscosity(iBlock)
   ! This is Earth-based, and 
 
   if (UseTestViscosity) then
-     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 1.25e7 * &
-          sqrt(Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
+
+!     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = TestViscosityFactor * 4.5e-5 * &
+!          (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
+!          TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
+ 
+     ! TempUnit is mmm/boltzman
+     ! visc should be sqrt(Tn * mmm / Boltz) * constant 
+     ! The constant sets the viscosity to roughly 3.5 times the old
+     ! viscosity for March 2-5, 2013. Not sure if this is ideal, so it
+     ! should be tested a bit.
+
+     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = TestViscosityFactor * &
+          0.00013 * sqrt(Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) * &
           TempUnit(1:nLons,1:nLats,0:nAlts+1) * &
-          MeanMajorMass(1:nLons,1:nLats,0:nAlts+1))
+          TempUnit(1:nLons,1:nLats,0:nAlts+1))
+
+
+     do iSpecies = 1, nSpecies
+        ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
+             ViscCoef(1:nLons,1:nLats,0:nAlts+1) * &
+             sqrt(Mass(iSpecies) / MeanMajorMass(1:nLons,1:nLats,0:nAlts+1))
+     enddo
+
   else
+
      ViscCoef(1:nLons,1:nLats,0:nAlts+1) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
           TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
+
+     do iSpecies = 1, nSpecies
+        ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
+             ViscCoef(1:nLons,1:nLats,0:nAlts+1)
+     enddo
+
   endif
   
-  do iSpecies = 1, nSpecies
-     ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
-          ViscCoef(1:nLons,1:nLats,0:nAlts+1)
-  enddo 
 
 end subroutine calc_viscosity
 
