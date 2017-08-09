@@ -207,6 +207,7 @@ module ModInputs
   real    :: DynamoHighLatBoundary  = 65.0
   integer :: nItersMax              = 500
   real    :: MaxResidual            = 1.0
+  logical :: IncludeCowling         = .false.
 
   logical :: UseImprovedIonAdvection = .false.
   logical :: UseNighttimeIonBCs = .false.

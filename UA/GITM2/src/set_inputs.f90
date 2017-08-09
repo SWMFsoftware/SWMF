@@ -782,7 +782,7 @@ subroutine set_inputs
            call read_in_logical(UseNighttimeIonBCs, iError)
            call read_in_real(MinTEC, iError)
            if (iError /= 0) then
-              write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) 'Incorrect format for #USEIMPROVEDIONADVECTION:'
               write(*,*) ''
               write(*,*) '#USEIMPROVEDIONADVECTION'
               write(*,*) "UseImprovedIonAdvection      (logical)"
@@ -793,7 +793,7 @@ subroutine set_inputs
            call read_in_logical(UseTestViscosity, iError)
            call read_in_real(TestViscosityFactor, iError)
            if (iError /= 0) then
-              write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) 'Incorrect format for #USETESTVISCOSITY:'
               write(*,*) ''
               write(*,*) '#USETESTVISCOSITY'
               write(*,*) "UseTestViscosity         (logical)"
@@ -805,6 +805,7 @@ subroutine set_inputs
            call read_in_real(DynamoHighLatBoundary, iError)
            call read_in_int(nItersMax, iError)
            call read_in_real(MaxResidual, iError)
+           call read_in_logical(IncludeCowling, iError)
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''
@@ -813,6 +814,7 @@ subroutine set_inputs
               write(*,*) "DynamoHighLatBoundary  (real)"
               write(*,*) "nItersMax              (integer)"
               write(*,*) "MaxResidual            (V,real)"
+              write(*,*) "IncludeCowling         (logical)"
            endif
 
         case ("#IONFORCING")

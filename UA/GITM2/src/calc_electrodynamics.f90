@@ -69,8 +69,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.False.
 
-  logical :: IncludeCowling
-
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration, iLonNoon
   integer :: nX
   integer :: iStart, iEnd
@@ -1250,8 +1248,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   ! Do the cowling conductivity within +/- 6 deg of equator
 
   SigmaCowlingMC = 0.0
-
-  IncludeCowling = .true.
 
   if (IncludeCowling) then
 
