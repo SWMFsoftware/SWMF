@@ -2865,8 +2865,9 @@ contains
 
       write(*,*) '-----------------------------------------------------'
       write(*,'(a10,i2,a)') ' Electron:'
-      write(*,TestFmt1) ' finSi_II       =', fen_IC(1, i,j,k)
-      write(*,TestFmt1) ' fiiSi_II       =', fei_IC(:, i,j,k)
+      write(*,TestFmt1) ' fenSi_II       =', fen_IC(1, i,j,k)
+      write(*,TestFmt1) ' feiSi_II       =', fei_IC(:, i,j,k)
+      write(*,TestFmt1) ' alphaSi_II     =', alpha_IC(:,i,j,k)
       write(*,TestFmt2) ' Source_VC  (NO, SI, rate)           =', &
            Source_VC(Pe_,i,j,k),                      &
            Source_VC(Pe_,i,j,k)                       &
