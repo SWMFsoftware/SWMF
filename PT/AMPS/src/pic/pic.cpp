@@ -697,7 +697,7 @@ void PIC::Sampling::Sampling() {
 
   //parallel efficientcy measure
 //#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
-  long int TreeNodeTotalParticleNumber;
+//  long int TreeNodeTotalParticleNumber;
 //#elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 //  double TreeNodeProcessingTime;
 //#endif
@@ -713,7 +713,7 @@ void PIC::Sampling::Sampling() {
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel for schedule(dynamic,1) reduction(+:nTotalSampledParticles) default(none) \
   private (s,i,j,k,idim,LocalCellNumber,ptr,ptrNext,ParticleData, ParticleDataNext,cell,block,SamplingData,v,LocalParticleWeight,Speed2,v2,node, \
-    tempSamplingBuffer,tempParticleData,FirstCellParticleTable,TreeNodeTotalParticleNumber)  \
+    tempSamplingBuffer,tempParticleData,FirstCellParticleTable)  \
   shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh, \
      DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable, \
      PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
@@ -738,7 +738,7 @@ void PIC::Sampling::Sampling() {
     
     
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
-    TreeNodeTotalParticleNumber=0;
+    int TreeNodeTotalParticleNumber=0;
 #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     double TreeNodeProcessingTime=MPI_Wtime();
 #elif _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_OFF_
