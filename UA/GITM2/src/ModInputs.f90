@@ -36,8 +36,8 @@ module ModInputs
 
   character (len=iCharLen_) :: cInputFile = "UAM.in"
 
-  character (len=iCharLen_) :: cAMIEFileSouth
-  character (len=iCharLen_) :: cAMIEFileNorth
+  character (len=iCharLen_) :: cAMIEFileSouth = "none"
+  character (len=iCharLen_) :: cAMIEFileNorth = "none"
 
   character (len=iCharLen_) :: PotentialModel
   character (len=iCharLen_) :: AuroralModel
@@ -220,14 +220,14 @@ module ModInputs
   logical :: UseNOCooling      = .true.
   logical :: UseOCooling       = .true.
   logical :: UseConduction     = .true.
+  logical :: UseTurbulentCond = .true.
+
   logical :: UseDiffusion      = .false.
   logical :: UseVerAdvectionT  = .true.
 
   logical :: UseCO2Cooling = .true.
   real    :: CO2ppm = 225.0
 
-!! New Turbulent (Eddy) Conduction Routines
-  logical :: UseTurbulentCond = .false.
 
   real :: PhotoElectronHeatingEfficiency = 0.0
   real :: NeutralHeatingEfficiency = 0.05
