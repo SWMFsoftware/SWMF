@@ -71,7 +71,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration, iLonNoon
   integer :: nX
-  integer :: iStart, iEnd
+  integer :: iStart, iEnd, iAve
 
   external :: matvec_gitm
 
@@ -90,6 +90,7 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   call start_timing("calc_electrodyn")
 
   iEquator = DynamoHighLatBoundary/MagLatRes + 1
+  iAve = (DynamoLonAverage/2) / MagLonRes
      
   if (IsFirstTime) then
 
@@ -798,13 +799,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaPPMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaPPMC = AverageMC/11.0
+  SigmaPPMC = AverageMC/(iAve*2+1)
   SigmaPPMC(nMagLons+1,:) = SigmaPPMC(1,:)
   
   MagBufferMC = SigmaLLMC
@@ -814,13 +815,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaLLMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaLLMC = AverageMC/11.0
+  SigmaLLMC = AverageMC/(iAve*2+1)
   SigmaLLMC(nMagLons+1,:) = SigmaLLMC(1,:)
   
   MagBufferMC = SigmaHHMC
@@ -830,13 +831,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaHHMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaHHMC = AverageMC/11.0
+  SigmaHHMC = AverageMC/(iAve*2+1)
   SigmaHHMC(nMagLons+1,:) = SigmaHHMC(1,:)
   
   MagBufferMC = SigmaCCMC
@@ -846,13 +847,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaCCMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaCCMC = AverageMC/11.0
+  SigmaCCMC = AverageMC/(iAve*2+1)
   SigmaCCMC(nMagLons+1,:) = SigmaCCMC(1,:)
   
   MagBufferMC = SigmaLPMC
@@ -862,13 +863,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaLPMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaLPMC = AverageMC/11.0
+  SigmaLPMC = AverageMC/(iAve*2+1)
   SigmaLPMC(nMagLons+1,:) = SigmaLPMC(1,:)
   
   MagBufferMC = SigmaPLMC
@@ -878,13 +879,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + SigmaPLMC(ii,j)
         enddo
      enddo
   enddo
-  SigmaPLMC = AverageMC/11.0
+  SigmaPLMC = AverageMC/(iAve*2+1)
   SigmaPLMC(nMagLons+1,:) = SigmaPLMC(1,:)
   
   MagBufferMC = KDlmMC
@@ -894,13 +895,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + KDlmMC(ii,j)
         enddo
      enddo
   enddo
-  KDlmMC = AverageMC/11.0
+  KDlmMC = AverageMC/(iAve*2+1)
   KDlmMC(nMagLons+1,:) = KDlmMC(1,:)
   
   MagBufferMC = KDpmMC
@@ -910,13 +911,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + KDpmMC(ii,j)
         enddo
      enddo
   enddo
-  KDpmMC = AverageMC/11.0
+  KDpmMC = AverageMC/(iAve*2+1)
   KDpmMC(nMagLons+1,:) = KDpmMC(1,:)
   
   MagBufferMC = KlmMC
@@ -926,13 +927,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + KlmMC(ii,j)
         enddo
      enddo
   enddo
-  KlmMC = AverageMC/11.0
+  KlmMC = AverageMC/(iAve*2+1)
   KlmMC(nMagLons+1,:) = KlmMC(1,:)
   
   MagBufferMC = KpmMC
@@ -942,13 +943,13 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   AverageMC = 0.0
   do j=1,nMagLats
      do i=0,nMagLons-1
-        do k = -5,5
+        do k = -iAve,iAve
            ii=mod(i+k+nMagLons,nMagLons)+1
            AverageMC(i+1,j) = AverageMC(i+1,j) + KpmMC(ii,j)
         enddo
      enddo
   enddo
-  KpmMC = AverageMC/11.0
+  KpmMC = AverageMC/(iAve*2+1)
   KpmMC(nMagLons+1,:) = KpmMC(1,:)
   
   ! Let's find as close to noon as possible
