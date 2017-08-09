@@ -36,6 +36,12 @@ namespace OH {
   extern double DomainDXMin;
   extern double DomainDXMax;
 
+  //variables to contain and initialize the physical species number and index within the model
+  extern int nPhysSpec;
+  extern int PhysSpec[PIC::nTotalSpecies];
+  extern bool DoPrintSpec[PIC::nTotalSpecies];
+  void InitPhysicalSpecies();
+  
   // creating a variable that holds location designator of where it was created
   extern long int OffsetOriginTag;
 
