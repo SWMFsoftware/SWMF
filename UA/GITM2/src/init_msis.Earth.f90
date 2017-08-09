@@ -304,12 +304,21 @@ subroutine init_msis
               
 !              call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
 !                   hwm_f107a,hwm_f107,hwm_ap,qw)
-              call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
-                   hwm_f107a,hwm_f107,hwm_ap,path,qw)
+              if (UseMsisTides) then
 
-              ! qw is north&east
-              Velocity(iLon,iLat,iAlt,iEast_,iBlock) = qw(2)
-              Velocity(iLon,iLat,iAlt,iNorth_,iBlock) = qw(1)
+                 call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+                      hwm_f107a,hwm_f107,hwm_ap,path,qw)
+
+                 ! qw is north&east
+                 Velocity(iLon,iLat,iAlt,iEast_,iBlock) = qw(2)
+                 Velocity(iLon,iLat,iAlt,iNorth_,iBlock) = qw(1)
+
+              else
+
+                 Velocity(iLon,iLat,iAlt,iEast_,iBlock) = 0.0
+                 Velocity(iLon,iLat,iAlt,iNorth_,iBlock) = 0.0
+
+              endif
 
            enddo
         enddo
@@ -343,7 +352,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,LatIn,LonIn,Lst, &
 
   use ModTime, only : iTimeArray
   use ModPlanet
-
+  use ModInputs, only: UseMSISTides
   use EUA_ModMsis00, ONLY: gtd7
 
   implicit none
@@ -415,12 +424,16 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,LatIn,LonIn,Lst, &
 !  call HWM07(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
 !       hwm_f107a,hwm_f107,hwm_ap,qw)
 
-  call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
-       hwm_f107a,hwm_f107,hwm_ap,path,qw)
-
-  ! qw is north&east
-  V(1) = qw(2)
-  V(2) = qw(1)
+  if (UseMSISTides) then
+     call hwm14(iyd,hwm_utime,hwm_alt,hwm_lat,hwm_lon,hwm_lst,&
+          hwm_f107a,hwm_f107,hwm_ap,path,qw)
+     ! qw is north&east
+     V(1) = qw(2)
+     V(2) = qw(1)
+  else
+     V(1) = 0.0
+     V(2) = 0.0
+  endif
 
 end subroutine msis_bcs
 
