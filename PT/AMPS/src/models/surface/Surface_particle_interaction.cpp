@@ -27,7 +27,7 @@ int Surface::SpecularReflection::Processor(long int ptr,double* xInit,double* vI
 
 //diffuse reflection
 int Surface::DiffuseReflection::Processor(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
-  double BulkFlowVelocity[3]={0.0,0.0,0.0},temp,*e0,*e1,*e2,ksi_n_r,ksi_t1_r,ksi_t2_r,beta,phi,c;
+  double temp,*e0,*e1,*e2,ksi_n_r,ksi_t1_r,ksi_t2_r,beta,phi,c;
   int spec;
 
   spec=PIC::ParticleBuffer::GetI(ptr);
@@ -75,7 +75,7 @@ int Surface::CLL::Processor(long int ptr,double* xInit,double* vInit,CutCell::cT
   double r1,phi2,ksi_n_m,ksi_mp_w,ksi_n_r;
   double r3,phi4,ksi_t_m,ksi_t1_r;
   double r5,phi6,ksi_t2_r;
-  double alpha_n,alpha_t;
+  double alpha_n=1.0,alpha_t=0.0;
 
   //get the internal frame of reference related to the surface element
   e0=TriangleCutFace->e0Orthogonal;
