@@ -2,12 +2,12 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMagTrace
 
-  integer, parameter :: MaxMMTPoints = 10000
+  integer, parameter :: MaxMMTPoints = 5000
   integer, allocatable :: MMTblk(:,:,:,:,:)
 
   logical, parameter :: MMTSaveInterp = .false., MMTDebug=.false.
 
-  real, parameter :: MMTlen=250.
+  real, parameter :: MMTlen=500.
   real, allocatable :: MMTalt(:,:,:,:,:), MMTlat(:,:,:,:,:), MMTlon(:,:,:,:,:)
   real, allocatable :: MMTaltLoc(:,:,:,:,:), MMTlatLoc(:,:,:,:,:), MMTlonLoc(:,:,:,:,:)
 
