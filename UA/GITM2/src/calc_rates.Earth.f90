@@ -202,10 +202,6 @@ subroutine calc_viscosity(iBlock)
 
   if (UseTestViscosity) then
 
-!     ViscCoef(1:nLons,1:nLats,0:nAlts+1) = TestViscosityFactor * 4.5e-5 * &
-!          (Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*&
-!          TempUnit(1:nLons,1:nLats,0:nAlts+1)/ 1000.)**(-0.71)
- 
      ! TempUnit is mmm/boltzman
      ! visc should be sqrt(Tn * mmm / Boltz) * constant 
      ! The constant sets the viscosity to roughly 3.5 times the old
@@ -216,7 +212,6 @@ subroutine calc_viscosity(iBlock)
           0.00013 * sqrt(Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock) * &
           TempUnit(1:nLons,1:nLats,0:nAlts+1) * &
           TempUnit(1:nLons,1:nLats,0:nAlts+1))
-
 
      do iSpecies = 1, nSpecies
         ViscCoefS(1:nLons,1:nLats,0:nAlts+1,iSpecies) = & 
