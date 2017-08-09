@@ -798,11 +798,13 @@ subroutine set_inputs
 
         case ("#DYNAMO")
            call read_in_logical(UseDynamo, iError)
-           call read_in_real(DynamoHighLatBoundary, iError)
-           call read_in_int(nItersMax, iError)
-           call read_in_real(MaxResidual, iError)
-           call read_in_logical(IncludeCowling, iError)
-           call read_in_real(DynamoLonAverage, iError)
+           if (UseDynamo) then
+              call read_in_real(DynamoHighLatBoundary, iError)
+              call read_in_int(nItersMax, iError)
+              call read_in_real(MaxResidual, iError)
+              call read_in_logical(IncludeCowling, iError)
+              call read_in_real(DynamoLonAverage, iError)
+           endif
            if (iError /= 0) then
               write(*,*) 'Incorrect format for #DYNAMO:'
               write(*,*) ''
