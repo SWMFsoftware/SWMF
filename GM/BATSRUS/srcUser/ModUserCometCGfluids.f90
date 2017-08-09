@@ -2554,151 +2554,6 @@ contains
           SPe_C(i,j,k) = sum(SPeTerm_IC(1:9,i,j,k))
        end if
 
-       if (DoSaveSource) then
-          select case(NameSource)
-          case('H2OpRho')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoTerm_IIC(1,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoTerm_IIC(2,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoTerm_IIC(3,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoTerm_IIC(4,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-          case('H2OpUx')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUxTerm_IIC(1,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUxTerm_IIC(2,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUxTerm_IIC(3,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUxTerm_IIC(4,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUxTerm_IIC(5,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('H2OpUy')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUyTerm_IIC(1,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUyTerm_IIC(2,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUyTerm_IIC(3,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUyTerm_IIC(4,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUyTerm_IIC(5,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('H2OpUz')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUzTerm_IIC(1,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUzTerm_IIC(2,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUzTerm_IIC(3,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUzTerm_IIC(4,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUzTerm_IIC(5,H2Op_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('H2OpP')
-             TestArray_IGB(1,i,j,k,iBlock) = SPTerm_IIC(1,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SPTerm_IIC(2,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SPTerm_IIC(3,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SPTerm_IIC(4,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SPTerm_IIC(5,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(6,i,j,k,iBlock) = SPTerm_IIC(6,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(7,i,j,k,iBlock) = SPTerm_IIC(7,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(8,i,j,k,iBlock) = SPTerm_IIC(8,H2Op_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-
-          case('SwRho')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoTerm_IIC(1,Sw_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoTerm_IIC(2,Sw_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoTerm_IIC(3,Sw_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoTerm_IIC(4,Sw_,i,j,k) * &
-                  No2SI_V(UnitRho_)/No2SI_V(UnitT_)
-          case('SwUx')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUxTerm_IIC(1,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUxTerm_IIC(2,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUxTerm_IIC(3,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUxTerm_IIC(4,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUxTerm_IIC(5,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('SwUy')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUyTerm_IIC(1,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUyTerm_IIC(2,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUyTerm_IIC(3,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUyTerm_IIC(4,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUyTerm_IIC(5,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('SwUz')
-             TestArray_IGB(1,i,j,k,iBlock) = SRhoUzTerm_IIC(1,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SRhoUzTerm_IIC(2,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SRhoUzTerm_IIC(3,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SRhoUzTerm_IIC(4,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SRhoUzTerm_IIC(5,Sw_,i,j,k) * &
-                  No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
-          case('SwP')
-             TestArray_IGB(1,i,j,k,iBlock) = SPTerm_IIC(1,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SPTerm_IIC(2,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SPTerm_IIC(3,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SPTerm_IIC(4,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SPTerm_IIC(5,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(6,i,j,k,iBlock) = SPTerm_IIC(6,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(7,i,j,k,iBlock) = SPTerm_IIC(7,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(8,i,j,k,iBlock) = SPTerm_IIC(8,Sw_,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-
-          case('Pe')
-             TestArray_IGB(1,i,j,k,iBlock) = SPeTerm_IC(1,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(2,i,j,k,iBlock) = SPeTerm_IC(2,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(3,i,j,k,iBlock) = SPeTerm_IC(3,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(4,i,j,k,iBlock) = SPeTerm_IC(4,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(5,i,j,k,iBlock) = SPeTerm_IC(5,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(6,i,j,k,iBlock) = SPeTerm_IC(6,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(7,i,j,k,iBlock) = SPeTerm_IC(7,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-             TestArray_IGB(8,i,j,k,iBlock) = SPeTerm_IC(8,i,j,k) * &
-                  No2SI_V(UnitP_)/No2SI_V(UnitT_)
-          case default
-             if(iProc==0) call stop_mpi( &
-                  NameSub//' invalid NameSource='//trim(NameSource))
-          end select
-       end if
-
        Source_VC(iRhoIon_I   ,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)    + &
             Source_VC(iRhoIon_I   ,i,j,k)
        Source_VC(iRhoUxIon_I ,i,j,k) = SRhoUx_IC(1:nIonFluid,i,j,k)  + &
@@ -2729,6 +2584,8 @@ contains
           Source_VC(Pe_    ,i,j,k) = SPe_C(i,j,k)                    + &
                Source_VC(Pe_    ,i,j,k)
        end if
+
+       if (DoSaveSource) call save_user_source
     end do;  end do;  end do
 
     if (DoCalcShading) then
@@ -2743,6 +2600,84 @@ contains
     if (DoTestMe) call print_test
 
   contains
+    !=======================================================================
+    subroutine save_user_source
+
+      !---------------------------------------------------------------------
+      select case(NameSource)
+      case('H2OpRho')
+         do iTerm = 1, 4
+            TestArray_IGB(iTerm,i,j,k,iBlock) =  &
+                 SRhoTerm_IIC(iTerm,H2Op_,i,j,k) &
+                 *No2SI_V(UnitRho_)/No2SI_V(UnitT_)
+         end do
+      case('H2OpUx')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =    &
+                 SRhoUxTerm_IIC(iTerm,H2Op_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('H2OpUy')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =    &
+                 SRhoUyTerm_IIC(iTerm,H2Op_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('H2OpUz')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =    &
+                 SRhoUzTerm_IIC(iTerm,H2Op_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('H2OpP')
+         do iTerm = 1, 8
+            TestArray_IGB(iTerm,i,j,k,iBlock) = &
+                 SPTerm_IIC(iTerm,H2Op_,i,j,k)  &
+                 *No2SI_V(UnitP_)/No2SI_V(UnitT_)
+         end do
+      case('SwRho')
+         do iTerm = 1, 4
+            TestArray_IGB(iTerm,i,j,k,iBlock) = &
+                 SRhoTerm_IIC(iTerm,Sw_,i,j,k)  &
+                 *No2SI_V(UnitRho_)/No2SI_V(UnitT_)
+         end do
+      case('SwUx')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =  &
+                 SRhoUxTerm_IIC(iTerm,Sw_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('SwUy')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =  &
+                 SRhoUyTerm_IIC(iTerm,Sw_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('SwUz')
+         do iTerm = 1, 5
+            TestArray_IGB(iTerm,i,j,k,iBlock) =  &
+                 SRhoUzTerm_IIC(iTerm,Sw_,i,j,k) &
+                 *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)
+         end do
+      case('SwP')
+         do iTerm = 1, 8
+            TestArray_IGB(iTerm,i,j,k,iBlock) = &
+                 SPTerm_IIC(iTerm,Sw_,i,j,k)    &
+                 *No2SI_V(UnitP_)/No2SI_V(UnitT_)
+         end do
+
+      case('Pe')
+         do iTerm = 1, 8
+            TestArray_IGB(iTerm,i,j,k,iBlock) = &
+                 SPeTerm_IC(iTerm,i,j,k)        &
+                 *No2SI_V(UnitP_)/No2SI_V(UnitT_)
+         end do
+      case default
+         if(iProc==0) call stop_mpi( &
+              NameSub//' invalid NameSource='//trim(NameSource))
+      end select
+    end subroutine save_user_source
+
     !=======================================================================
     subroutine print_test
       character(len=100) :: TestFmt1, TestFmt2, TestFmt3
@@ -2803,7 +2738,13 @@ contains
          write(*,TestFmt1) ' veSi_III       =', &
               ve_IIGB(1,iIonFluid,i,j,k,BlkTest)
          write(*,TestFmt1) ' kinSi_IIII     =', &
-              kin_IIIIC(iIonFluid,1,1,IonFirst_:IonLast_,i,j,k)
+              kin_IIIIC(iIonFluid,1,1,:,i,j,k)
+         write(*,TestFmt1) ' finSi_II       =', &
+              fin_IIC(iIonFluid, 1, i,j,k)
+         write(*,TestFmt1) ' fiiSi_II       =', &
+              fii_IIC(iIonFluid, :, i,j,k)
+         write(*,TestFmt1) ' fieSi_I        =', &
+              fie_IC(iIonFluid, i,j,k)
          write(*,TestFmt1) ' alphaSi_II     =', &
               alpha_IC(iIonFluid,i,j,k)
          write(*,*) '*****************************************************'
@@ -2924,6 +2865,8 @@ contains
 
       write(*,*) '-----------------------------------------------------'
       write(*,'(a10,i2,a)') ' Electron:'
+      write(*,TestFmt1) ' finSi_II       =', fen_IC(1, i,j,k)
+      write(*,TestFmt1) ' fiiSi_II       =', fei_IC(:, i,j,k)
       write(*,TestFmt2) ' Source_VC  (NO, SI, rate)           =', &
            Source_VC(Pe_,i,j,k),                      &
            Source_VC(Pe_,i,j,k)                       &
