@@ -1603,6 +1603,9 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
     case  _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_:
       LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
       break;
+    case  _SINGLE_GLOBAL_TIME_STEP_:
+      LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+      break;
     case _SPECIES_DEPENDENT_LOCAL_TIME_STEP_:
       exit(__LINE__,__FILE__,"Error: the time step node is not defined");
       break;
