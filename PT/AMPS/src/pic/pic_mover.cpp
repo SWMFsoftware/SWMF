@@ -1749,7 +1749,7 @@ exit(__LINE__,__FILE__,"not implemented");
   return _PARTICLE_MOTION_FINISHED_;
 }
 
-int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag,CutCell::cTriangleFace *lastIntersectedTriangleFace) {
+int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,bool FirstBoundaryFlag) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL,*middleNode=NULL;
   double dtMin=-1.0,dtTemp,dtMinInit2,dtMinInit;
   PIC::ParticleBuffer::byte *ParticleData;
@@ -1763,14 +1763,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   PIC::Mesh::cDataCenterNode *cell;
   bool MovingTimeFinished=false;
 
-  double xInitOriginal[3];
-
-  CutCell::cTriangleFace *lastIntersectedTriangleFace_LastCycle=NULL;
-
   //the descriptors of the internal surfaces
   cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*InternalBoundaryDescriptor_dtMin=NULL,*lastInternalBoundaryDescriptor=NULL;
   CutCell::cTriangleFace *IntersectionFace=NULL;
-//  CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL;
+  CutCell::cTriangleFace *lastIntersectedTriangleFace=NULL;
 
   //the description of the boundaries of the block faces
   struct cExternalBoundaryFace {
@@ -1962,9 +1958,6 @@ int nLoopCycle=0;
 
   while (MovingTimeFinished==false) {
 MovingLoop:
-
-  //reset the counter
-//  PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
   nLoopCycle++;
 
@@ -2359,74 +2352,6 @@ if (nLoopCycle>100) {
 
     double xLocalIntersectionFace[2],xIntersectionFace[3];
 
-////////////////
-    lastIntersectedTriangleFace_LastCycle=lastIntersectedTriangleFace;
-
-    if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibCutFaceListDescriptorList!=NULL)) {
-      CutCell::cTriangleFaceDescriptor *t;
-      CutCell::cTriangleFace *TriangleFace;
-      double TimeOfFlight;
-      double xLocalIntersection[2],xIntersection[3];
-
-      PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
-
-      for (int ipass=0;ipass<2;ipass++)  {
-        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor* D;
-        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor descTemp;
-
-        switch (ipass) {
-        case 0:
-          //create a temporary descriptor such that case ipass==0 and ipass==1 are processed with the same procedure
-          descTemp.next=NULL;
-          descTemp.node=startNode;
-          descTemp.FirstTriangleCutFace=startNode->FirstTriangleCutFace;
-          D=&descTemp;
-          break;
-        case 1:
-          D=startNode->neibCutFaceListDescriptorList;
-          break;
-        }
-
-        for (;D!=NULL;D=D->next) for (t=D->FirstTriangleCutFace;t!=NULL;t=t->next) if ((TriangleFace=t->TriangleFace)!=lastIntersectedTriangleFace) {
-          if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
-            if (TriangleFace->RayIntersection(xInit,vInit,TimeOfFlight,xLocalIntersection,xIntersection,PIC::Mesh::mesh.EPS)==true) {
-              if ((TimeOfFlight<dtMin)&&(TimeOfFlight>0.0)) {
-
-                //the intersection location has to be on the positive side of the previously intersected face
-                bool FaceIntersectionAccetanceFlag=true;
-
-    /*            if (lastIntersectedTriangleFace!=NULL) {
-                  double c=0.0;
-                  int idim;
-
-                  for (idim=0;idim<3;idim++) c+=(xIntersection[idim]-lastIntersectedTriangleFace->x0Face[idim])*lastIntersectedTriangleFace->ExternalNormal[idim];
-
-                  if (c<=0.0) FaceIntersectionAccetanceFlag=false;
-                }*/
-
-
-                if (FaceIntersectionAccetanceFlag==true) {
-                  dtMin=TimeOfFlight;
-                  IntersectionFace=t->TriangleFace;
-
-                  memcpy(xLocalIntersectionFace,xLocalIntersection,2*sizeof(double));
-                  memcpy(xIntersectionFace,xIntersection,3*sizeof(double));
-
-
-                  ParticleIntersectionCode=_BOUNDARY_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
-                }
-              }
-            }
-
-          }
-        }
-      }
-    }
-
-
-/////////////////
-
-/*
     if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibFirstTriangleCutFace!=NULL)) {
       CutCell::cTriangleFaceDescriptor *t;
       double TimeOfFlight;
@@ -2464,7 +2389,6 @@ if (nLoopCycle>100) {
         }
       }
     }
-*/
 
     //adjust the particle moving time
     dtTotal-=dtMin;
@@ -2849,9 +2773,7 @@ exit(__LINE__,__FILE__,"Error: not implemented");
       //if a particle crossed a face, the time step and particle weight are changed
       //adjust the value of the dtLeft to match the time step for the species 'spec'
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-       //do nothing
-#elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
-      // do nothing  
+    //do nothing
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
       double WeightCorrectionFactor,TimeStepRatio;
 
@@ -3165,74 +3087,6 @@ ProcessPhotoChemistry:
         }
       }
     }
-
-//////////////////////////////////////////////////////
-
-   //verify that sign of the time of flight before and after particle moving step has not changed
-    if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibCutFaceListDescriptorList!=NULL)) {
-      CutCell::cTriangleFaceDescriptor *t;
-      CutCell::cTriangleFace *TriangleFace;
-      double TimeOfFlight;
-      double xLocalIntersection[2],xIntersection[3];
-
-      //reset the counter
-      PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter(); 
-
-
-      for (int ipass=0;ipass<2;ipass++)  {
-        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor* D;
-        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor descTemp;
-
-        switch (ipass) {
-        case 0:
-          //create a temporary descriptor such that case ipass==0 and ipass==1 are processed with the same procedure
-          descTemp.next=NULL;
-          descTemp.node=startNode;
-          descTemp.FirstTriangleCutFace=startNode->FirstTriangleCutFace;
-          D=&descTemp;
-          break;
-        case 1:
-          D=startNode->neibCutFaceListDescriptorList;
-          break;
-        }
-
-        for (;D!=NULL;D=D->next) for (t=D->FirstTriangleCutFace;t!=NULL;t=t->next) if ((TriangleFace=t->TriangleFace)!=lastIntersectedTriangleFace) {
-          if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) if (TriangleFace!=lastIntersectedTriangleFace_LastCycle)  {
-            bool BeforeMotionFlag,AfterMotionFlag;
-            double xLocalIntersection[3],xIntersection[3];
-            double TimeOfFlight_Before,TimeOfFlight_After;
-            double c=0.0,*xFace=TriangleFace->x0Face;
-
-            for (int idim=0;idim<3;idim++ ) c+=(xFinal[idim]-xFace[idim])*(xInit[idim]-xFace[idim]);
-
-            if (false) if (c<=0.0) if ( /*(BeforeMotionFlag!=AfterMotionFlag)  ||*/ (TriangleFace->IntervalIntersection(xInit,xFinal,xIntersection,0.0)==true) ) {
-              cout << "Sign of the flight time has different before and after the motion step => probably the face has been intersected; apply the boundary condition procedure" << endl;
-
-              do {
-              int code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,t->TriangleFace,newNode) : _PARTICLE_DELETED_ON_THE_FACE_;
-
-              if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-                PIC::ParticleBuffer::DeleteParticle(ptr);
-                return _PARTICLE_LEFT_THE_DOMAIN_;
-              }
-              }
-              while (Vector3D::DotProduct(vFinal,t->TriangleFace->ExternalNormal)<=0.0);
-
-              lastIntersectedTriangleFace=t->TriangleFace;
-              TriangleFace->GetRandomPosition(xFinal,0.0);
-              newNode=PIC::Mesh::mesh.findTreeNode(xFinal,newNode);
-
-              goto ExitCorrections;
-
-            }
-          }
-        }
-      }
-    }
-    ExitCorrections:
-
-
-//////////////////////////////////////////////////////
 
     //adjust the value of 'startNode'
     startNode=newNode;

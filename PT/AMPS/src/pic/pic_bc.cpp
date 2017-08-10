@@ -400,12 +400,6 @@ int PIC::BC::ExternalBoundary::OpenFlow::InjectBlock(int spec,cTreeNodeAMR<PIC::
           PIC::ParticleBuffer::SetI(spec,newParticleData);
           PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
 
-	  // additional initialization
-          #if _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_ == _PIC_MODE_ON_
-	  int iInjectionMode = _PIC_INJECTION__OPEN_FLOW_;
-	  _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_(newParticle, startNode, iInjectionMode);
-          #endif
-
           //inject the particle into the system
           _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
         }

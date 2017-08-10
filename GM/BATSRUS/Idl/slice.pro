@@ -1,3 +1,0 @@
-slice_data
-
-end

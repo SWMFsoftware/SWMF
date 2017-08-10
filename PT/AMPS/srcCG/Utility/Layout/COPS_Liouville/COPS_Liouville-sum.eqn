@@ -1,6 +1,0 @@
-#!MC 1400
-# Created by Tecplot 360 build 14.0.0.25211
-$!ALTERDATA 
-  EQUATION = 'v21=(v17+v18)/4.5'
-$!ALTERDATA 
-  EQUATION = 'v22=(v19+v20)/4.5'

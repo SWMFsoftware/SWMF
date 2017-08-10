@@ -50,6 +50,7 @@
 
 #include "specfunc.h"
 #include "mpichannel.h"
+#include "flagtable.h"
 
 
 //define the boolian macro variables used in the mesh 
@@ -269,6 +270,8 @@ public:
   long int Temp_ID;
   #endif
 
+  bool ActiveFlag; //used to prevent repeatable de-allocation of the block from the stack
+
   //descriptor of the cut-face list
   struct cCutFaceListDescriptor {
     cCutFaceListDescriptor* next;
@@ -280,6 +283,7 @@ public:
   cCutFaceListDescriptor*  neibCutFaceListDescriptorList_temp;
 
   cTreeNodeAMR() {
+    ActiveFlag=false;
     block=NULL,upNode=NULL;
     Temp_ID=-1;
     neibCutFaceListDescriptorList=NULL,neibCutFaceListDescriptorList_temp=NULL;
@@ -300,7 +304,6 @@ public:
     #endif //_MESH_DIMENSION_
   }
 
-
   //the pointers to members of the list of the nodes that "belongs" to this processor (or some other lists)
   cTreeNodeAMR *nextNodeThisThread,*prevNodeThisThread;
 
@@ -310,11 +313,13 @@ public:
   #endif
 
 
+
   //the list of the cut-face descriptors
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
-  CutCell::cTriangleFaceDescriptor *FirstTriangleCutFace,*neibFirstTriangleCutFace,*neibFirstTriangleCutFace_temp;
+  CutCell::cTriangleFaceDescriptor *FirstTriangleCutFace; //,*neibFirstTriangleCutFace,*neibFirstTriangleCutFace_temp;
   double (*CutCellSurfaceLocalResolution)(CutCell::cTriangleFaceDescriptor*);
 #endif
+
 
   double xmin[_MESH_DIMENSION_],xmax[_MESH_DIMENSION_];
   int RefinmentLevel,minNeibRefinmentLevel,maxNeibRefinmentLevel; //min/max values are used for calculation of the interpolation stencils
@@ -345,7 +350,7 @@ public:
 
   //get the external (directed outward of the computational domain) normal
   void GetExternalNormal(double *norm,int nface) {
-    switch(nface) {
+    switch (nface) {
     case 0: case 1:
       norm[0]=(nface==0) ? -1.0 : 1.0;
       norm[1]=0.0,norm[2]=0.0;
@@ -457,7 +462,7 @@ public:
     nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
 
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
-    FirstTriangleCutFace=NULL,neibFirstTriangleCutFace=NULL,neibFirstTriangleCutFace_temp=NULL;
+    FirstTriangleCutFace=NULL; //,neibFirstTriangleCutFace=NULL,neibFirstTriangleCutFace_temp=NULL;
 #endif
 
     //Neighbors of the nodes
@@ -1078,6 +1083,9 @@ public:
   //the stream for output of the mesh diagnisotic information
   FILE *DiagnospticMessageStream;
 
+  //parallel mesh generation flag;
+  bool ParallelMeshGenerationFlag;
+
   //the function that calculates the interpolation coefficients to get an interpolated value for the block's nodes
   //return the number of the interpolation coefficients that was used in the stencil. if the return value <=0 -> the operation is not succesful
   typedef int (*cGetCornerNodesInterpolationCoefficients)(double *x,double *CoefficientsList,cCornerNode **InterpolationStencil,cTreeNodeAMR<cBlockAMR>* startNode,int nMaxCoefficients);
@@ -1614,6 +1622,43 @@ public:
 //    int i,j,k,nd,idim;
     int i,idim;
 
+#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
+    int MPIinitFlag;
+    MPI_Initialized(&MPIinitFlag);
+
+    if (MPIinitFlag==true) {
+      MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+      MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
+    }
+    else exit(__LINE__,__FILE__,"Error: MPI is not initialized");
+
+    ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
+
+    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    DomainBoundaryLayerNodesList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
+    #endif
+
+    ParallelSendRecvMap=new bool*[nTotalThreads];
+    ParallelSendRecvMap[0]=new bool [nTotalThreads*nTotalThreads];
+
+
+    for (int thread=0;thread<nTotalThreads;thread++) {
+      ParallelNodesDistributionList[thread]=NULL;
+      DomainBoundaryLayerNodesList[thread]=NULL;
+
+      ParallelSendRecvMap[thread]=ParallelSendRecvMap[0]+thread*nTotalThreads;
+      for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
+    }
+#else
+    ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[1];
+    ParallelNodesDistributionList[0]=NULL;
+
+    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+    DomainBoundaryLayerNodesList=NULL;
+    #endif
+#endif
+
+
     //check the number of bits reserved to store the number of connection's of a corner node
     if ((1<<_MAX_CORNER_NODE_CONNECTION_BITS_)<_MAX_CORNER_NODE_CONNECTION_+1) exit(__LINE__,__FILE__,"The value of _MAX_CORNER_NODE_CONNECTION_BITS_ in not sufficient to store _MAX_CORNER_NODE_CONNECTION_");
 
@@ -1636,6 +1681,8 @@ public:
       if (2*_GHOST_CELLS_Z_>=_BLOCK_CELLS_Z_) exit(__LINE__,__FILE__,"The mesh dimension is wrong");
       if (EPS>0.0001*dxRootBlock[2]/double(_BLOCK_CELLS_Z_)/(1<<_MAX_REFINMENT_LEVEL_)) EPS=0.0001*dxRootBlock[2]/double(_BLOCK_CELLS_Z_)/(1<<_MAX_REFINMENT_LEVEL_);
     }
+
+    if (EPS<=0.0) exit(__LINE__,__FILE__,"Error: EPS less that zero. Someting wrong with with setting of xMin[] and xMax[] in init()");
 
     for (idim=0;idim<_MESH_DIMENSION_;idim++) _MESH_AMR_XMAX_[idim]=xMax[idim],_MESH_AMR_XMIN_[idim]=xMin[idim]; 
 
@@ -1767,6 +1814,7 @@ public:
 //###########  END DEBUG ###############
 
 
+/*
 #if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
     int MPIinitFlag;
     MPI_Initialized(&MPIinitFlag);
@@ -1802,6 +1850,7 @@ public:
     DomainBoundaryLayerNodesList=NULL;
     #endif
 #endif
+*/
 
   }  
 
@@ -1828,6 +1877,9 @@ public:
 
      //the counter of any mesh modifications or rebalancing 
      nMeshModificationCounter=0;
+
+     //default value of the parallel mesh generation flag
+     ParallelMeshGenerationFlag=false;
 
      //set up the tree and the root block
      rootBlock=NULL;
@@ -1968,7 +2020,6 @@ Start:
     int iState=0,jState=0,kState=0,i,j,k;
     double xmin[3],xmax[3];
 
-
     if (startNode==NULL) startNode=rootTree;
 
 Start:
@@ -2028,7 +2079,28 @@ Start:
     }
 
 #if  _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+    if (res!=NULL) for (int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) {
+      char msg[5000];
+
+      sprintf(msg,"Cannot find the node for x=%e, %e, %e",x[0],x[1],x[2]);
+
+      sprintf(msg,"%s\n$PREFIX: The last tested node: xmin=%e, %e, %e, xmax=%e, %e, %e",msg,res->xmin[0],res->xmin[1],res->xmin[2],res->xmax[0],res->xmax[1],res->xmax[2]);
+      sprintf(msg,"%s\n$PREFIX: The Domain limits: xmin=%e, %e, %e",msg,xGlobalMin[0],xGlobalMin[1],xGlobalMin[2]);
+      sprintf(msg,"%s\n$PREFIX: The Domain limits: xmax=%e, %e, %e",msg,xGlobalMax[0],xGlobalMax[1],xGlobalMax[2]);
+
+
+      if (res->upNode==NULL) {
+        sprintf(msg,"%s\n$PREFIX: upNode is NULL",msg);
+      }
+      else {
+        sprintf(msg,"%s\n$PREFIX: upNode->xmin=%e, %e, %e, upNode->xmax=%e, %e, %e",msg,res->upNode->xmin[0],res->upNode->xmin[1],res->upNode->xmin[2],
+            res->upNode->xmax[0],res->upNode->xmax[1],res->upNode->xmax[2]);
+      }
+
+      sprintf(msg,"%s\n$PREFIX: Execution is terminated by thread=%i",msg,ThisThread);
+
+      exit(__LINE__,__FILE__,msg);
+    }
 #endif
     return res;
   }
@@ -5988,13 +6060,13 @@ if (CallsCounter==83) {
 
     #if _MESH_DIMENSION_ == 1 
     static const double characteristicBlockSize_max=fabs(dxRootBlock[0]/_BLOCK_CELLS_X_);
-    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
+ //   static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
     #elif _MESH_DIMENSION_ == 2 
     static const double characteristicBlockSize_max=sqrt(pow(dxRootBlock[0]/_BLOCK_CELLS_X_,2)+pow(dxRootBlock[1]/_BLOCK_CELLS_Y_,2));
-    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
+//    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
     #else 
     static const double characteristicBlockSize_max=sqrt(pow(dxRootBlock[0]/_BLOCK_CELLS_X_,2)+pow(dxRootBlock[1]/_BLOCK_CELLS_Y_,2)+pow(dxRootBlock[2]/_BLOCK_CELLS_Z_,2));
-    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
+//    static const double characteristicBlockSize_min=characteristicBlockSize_max/(1<<_MAX_REFINMENT_LEVEL_);
     #endif 
 
 
@@ -6056,14 +6128,75 @@ if (CallsCounter==83) {
         }
         #endif
 
+        //changes: the loop over the cut faces need to be taken out of the loop over the cells'
+      }
+
         //evaluate the required local resolution are the surface defined by the cut-faces
         #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
         if ((CutCellSurfaceLocalResolution!=NULL)&&(startNode->FirstTriangleCutFace!=NULL)) {
           CutCell::cTriangleFaceDescriptor* t;
+          int cnt=0;
 
-          for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
-            c=CutCellSurfaceLocalResolution(t->TriangleFace);
-            if (c<requredResolution) requredResolution=c;
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+//          static int nThreadsOpenMP=omp_get_num_threads();
+//          double requredResolutionTable[nThreadsOpenMP];
+//          int iThreadOpenMP;
+
+          static int nThreadsOpenMP=-1;
+          static double *requredResolutionTable=NULL;
+          int iThreadOpenMP;
+
+          if (requredResolutionTable==NULL) {
+            #pragma omp parallel default (none) shared (nThreadsOpenMP)
+            {
+              #pragma omp single
+              {
+                nThreadsOpenMP=omp_get_num_threads();
+              }
+            }
+
+            requredResolutionTable=new double [nThreadsOpenMP];
+          }
+
+          for (iThreadOpenMP=0;iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) requredResolutionTable[iThreadOpenMP]=requredResolution;
+
+          #pragma omp parallel default(none) private (t,c,iThreadOpenMP) firstprivate(cnt,startNode) shared (requredResolutionTable,nThreadsOpenMP)
+          {
+            iThreadOpenMP=omp_get_thread_num();
+
+            for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next,cnt++) {
+              int tThreadMPI,tThreadOpenMP; //numbering of the counted cnt=tThreadMPI+tThreadOpenMP*nTotalThreads
+
+              tThreadOpenMP=(cnt/nTotalThreads)%nThreadsOpenMP;
+              tThreadMPI=cnt%nTotalThreads;
+
+              if ( (tThreadOpenMP==iThreadOpenMP) && (tThreadMPI==ThisThread)) {
+                c=CutCellSurfaceLocalResolution(t->TriangleFace);
+                if (c<requredResolutionTable[iThreadOpenMP]) requredResolutionTable[iThreadOpenMP]=c;
+              }
+            }
+
+          }
+
+          for (iThreadOpenMP=0;iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) {
+            if (requredResolution>requredResolutionTable[iThreadOpenMP]) requredResolution=requredResolutionTable[iThreadOpenMP];
+          }
+#else //_COMPILATION_MODE__HYBRID_
+          for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next,cnt++) {
+            if (cnt%nTotalThreads==ThisThread) {
+              c=CutCellSurfaceLocalResolution(t->TriangleFace);
+              if (c<requredResolution) requredResolution=c;
+            }
+          }
+#endif //_COMPILATION_MODE__HYBRID_
+
+          if (ParallelMeshGenerationFlag==true) {
+            //gather requredResolution from all processors
+            double Table[nTotalThreads];
+
+            MPI_Gather(&requredResolution,1,MPI_DOUBLE,Table,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+            if (ThisThread==0) for (int thread=0;thread<nTotalThreads;thread++) if (Table[thread]<requredResolution) requredResolution=Table[thread];
+            MPI_Bcast(&requredResolution,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
           }
         }
         #endif
@@ -6071,7 +6204,8 @@ if (CallsCounter==83) {
         #if _AMR_ENFORCE_CELL_RESOLUTION_MODE_ == _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_
         if (c<characteristicBlockSize_min) exit(__LINE__,__FILE__,"The required resolution is smaller than the minimum resolution allowed for the mesh. Increase the value of _MAX_REFINMENT_LEVEL_");
         #endif
-      }  
+
+        //END OF CHANGES (041417)
 
 
 
@@ -6097,6 +6231,24 @@ if (ncheckMeshConsistencyCalls==38) {
 
 
         res=splitTreeNode(startNode);
+
+        //remove the cut face information from the block
+        if (startNode->FirstTriangleCutFace!=NULL) {
+          CutCell::cTriangleFaceDescriptor *t,*tNext;
+
+          t=startNode->FirstTriangleCutFace;
+
+          do {
+            tNext=t->next;
+            t->next=NULL,t->prev=NULL;
+
+            CutCell::BoundaryTriangleFaceDescriptor.deleteElement(t);
+            t=tNext;
+          }
+          while (tNext!=NULL);
+
+          startNode->FirstTriangleCutFace=NULL;
+        }
 
 
 
@@ -7964,8 +8116,19 @@ nMPIops++;
       xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
       xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
+      //create a table to storing the result of checking of the intersection checks
+      cBitwiseFlagTable IntersectionFlagTable(CutCell::nBoundaryTriangleFaces);
+
+      for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if ((nface%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+        IntersectionFlagTable.SetFlag(CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS),nface);
+      }
+
+      if (ParallelMeshGenerationFlag==true) {
+        IntersectionFlagTable.Gather();
+      }
+
       for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-        if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
+        if (IntersectionFlagTable.Test(nface)==true) { ///   (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
           //the block is intersected by the face
           CutCell::cTriangleFaceDescriptor *t=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
@@ -7997,20 +8160,71 @@ nMPIops++;
 
     //check all boundary faces for intersection with the block
     //check all boundary faces for intersection with the block
-        double xmin[3],xmax[3];
+    double xmin[3],xmax[3];
 
-        xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
-        xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
-        xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+    xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
-        xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
-        xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
-        xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+    xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
-    for (t=BoundaryFaces;t!=NULL;t=t->next) {
-      if (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
+
+    //create a table to storing the result of checking of the intersection checks
+    cBitwiseFlagTable IntersectionFlagTable;
+    int cnt=0;
+
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp parallel default(none) private (t) firstprivate(cnt,startNode) shared(BoundaryFaces,xmin,xmax,IntersectionFlagTable)
+    {
+      int iThreadOpenMP=omp_get_thread_num();
+      int nThreadsOpenMP=omp_get_num_threads();
+
+      for (t=BoundaryFaces;t!=NULL;t=t->next,cnt++) {
+        int tThreadMPI,tThreadOpenMP; //numbering of the counted cnt=tThreadMPI+tThreadOpenMP*nTotalThreads
+
+        tThreadOpenMP=(cnt/nTotalThreads)%nThreadsOpenMP;
+        tThreadMPI=cnt%nTotalThreads;
+
+        if ((tThreadOpenMP==iThreadOpenMP) && (tThreadMPI==ThisThread)) {
+          bool flag;
+
+          flag=t->TriangleFace->BlockIntersection(xmin,xmax,EPS);
+          IntersectionFlagTable.SetFlag(flag,cnt);
+        }
+      }
+    }
+    #else //_COMPILATION_MODE__HYBRID_
+    for (t=BoundaryFaces;t!=NULL;t=t->next,cnt++) {
+      if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+        bool flag;
+
+        flag=t->TriangleFace->BlockIntersection(xmin,xmax,EPS);
+        IntersectionFlagTable.SetFlag(flag,cnt);
+      }
+    }
+    #endif //_COMPILATION_MODE__HYBRID_
+
+    if ((ParallelMeshGenerationFlag==true)||(_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_)) {
+      IntersectionFlagTable.Gather();
+    }
+
+    for (cnt=0,t=BoundaryFaces;t!=NULL;t=t->next,cnt++) {
+
+      //DEBUG
+
+/*      if (t->TriangleFace->Temp_ID==1) {
+        printf("sdlfkjlkvjsd\n");
+      }*/
+
+      //END DEBUG
+
+
+      if (IntersectionFlagTable.Test(cnt)==true) { // (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
         //the block is intersected by the face
-        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
+        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement(false);
 
         startNodeBoundaryDescriptor->TriangleFace=t->TriangleFace;
 
@@ -8062,10 +8276,41 @@ nMPIops++;
     xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
     xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
+    //create a table to storing the result of checking of the intersection checks
+    cBitwiseFlagTable IntersectionFlagTable(CutCell::nBoundaryTriangleFaces);
+
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp parallel default(none) private(t) shared(CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,IntersectionFlagTable,xmin,xmax)
+    {
+      int nface,iThreadOpenMP=omp_get_thread_num();
+      int nThreadsOpenMP=omp_get_num_threads();
+
+      for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++)  {
+        int tThreadMPI,tThreadOpenMP; //numbering of the counted cnt=tThreadMPI+tThreadOpenMP*nTotalThreads
+
+        tThreadOpenMP=(nface/nTotalThreads)%nThreadsOpenMP;
+        tThreadMPI=nface%nTotalThreads;
+
+        if ((tThreadOpenMP==iThreadOpenMP) && (tThreadMPI==ThisThread)) {
+          IntersectionFlagTable.SetFlag(CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS),nface);
+        }
+      }
+    }
+    #else //_COMPILATION_MODE__HYBRID_
+    for (int nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if ((nface%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+      IntersectionFlagTable.SetFlag(CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS),nface);
+    }
+    #endif //_COMPILATION_MODE__HYBRID_
+
+    if ((ParallelMeshGenerationFlag==true)||(_COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_)) {
+      IntersectionFlagTable.Gather();
+    }
+
     for (int nface=0;nface<nBoundaryFaces;nface++)  {
-      if (BoundaryFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
+      if (IntersectionFlagTable.Test(nface)==true) { ///(BoundaryFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
         //the block is intersected by the face
-        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
+        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement(false);
 
         startNodeBoundaryDescriptor->TriangleFace=BoundaryFaces+nface;
 
@@ -8076,33 +8321,6 @@ nMPIops++;
       }
     }
   }
-
-  /*
-  //generate the list of the blocks of the mesh
-  void createMeshBlockList(cTreeNodeAMR<cBlockAMR>  *startNode=NULL) {
-    int iDownNode,jDownNode,kDownNode;  
-
-    #if _MESH_DIMENSION_ == 1
-    static const int iDownNodeMax=1,jDownNodeMax=0,kDownNodeMax=0; 
-    #elif _MESH_DIMENSION_ == 2
-    static const int iDownNodeMax=1,jDownNodeMax=1,kDownNodeMax=0;
-    #elif _MESH_DIMENSION_ == 3
-    static const int iDownNodeMax=1,jDownNodeMax=1,kDownNodeMax=1;
-    #endif
-
-    if (startNode==NULL) blockList=NULL,startNode=rootTree; 
-
-    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-      startNode->block->nextBlock=blockList;
-      blockList=(void*)startNode->block;
-    }   
-    else {
-      for (kDownNode=0;kDownNode<=kDownNodeMax;kDownNode++) for (jDownNode=0;jDownNode<=jDownNodeMax;jDownNode++) for (iDownNode=0;iDownNode<=iDownNodeMax;iDownNode++) {
-        createMeshBlockList(startNode->downNode[iDownNode+2*(jDownNode+2*kDownNode)]);
-      } 
-    }
-  }
-  */
 
 
   //determine the memory allocated by the mesh
@@ -9227,7 +9445,7 @@ nMPIops++;
         tm *ct=localtime(&TimeValue);
 
         LastTimeValue=TimeValue;
-        printf("MESH: InitMeasure: Processed %li blocks (thread=%i; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+        printf("MESH: InitMeasure: Processed %i blocks (thread=%li; %i/%i %i:%i:%i)\n",nProcessedBlocks,ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
       }
     }
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
