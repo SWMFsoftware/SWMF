@@ -665,7 +665,8 @@ void PIC::Sampling::Sampling() {
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
   char *SamplingData;
-  double *v,LocalParticleWeight,Speed2,v2,lParallelTemepratureSampleDirection[3]={0.0,0.0,0.0};
+  double *v,LocalParticleWeight,Speed2,v2;
+  double lParallelTemepratureSampleDirection[3]={0.0,0.0,0.0},l0TangentialTemepratureSampleDirection[3]={0.0,0.0,0.0},l1TangentialTemepratureSampleDirection[3]={0.0,0.0,0.0};
 
   //the total number of the sampled particles to compare with the number of the partticles in the buffer
   long int nTotalSampledParticles=0;
@@ -717,7 +718,7 @@ void PIC::Sampling::Sampling() {
   shared (localSimulatedSpeciesParticleNumber,PIC::Mesh::mesh, \
      DomainBlockDecomposition::nLocalBlocks,DomainBlockDecomposition::BlockTable, \
      PIC::IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_, PIC::IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_,PIC::IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_,  \
-     PIC::Mesh::DatumParticleParallelVelocity2,PIC::Mesh::DatumParticleParallelVelocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
+     PIC::Mesh::DatumParallelTantentialTemepratureSample_Velocity2,PIC::Mesh::DatumParallelTantentialTemepratureSample_Velocity,PIC::Mesh::DatumParticleSpeed,PIC::Mesh::DatumParticleVelocity2,PIC::Mesh::DatumParticleVelocity, \
      PIC::Mesh::DatumNumberDensity,PIC::Mesh::DatumParticleNumber,PIC::Mesh::collectingCellSampleDataPointerOffset,PIC::Mesh::sampleSetDataLength,PIC::ParticleBuffer::ParticleDataLength, \
      PIC::Mesh::DatumParticleWeight, PIC::Sampling::constNormalDirection__SampleParallelTangentialTemperature, \
      PIC::IDF::nTotalVibtationalModes, cout)
@@ -783,6 +784,9 @@ void PIC::Sampling::Sampling() {
               default:
                 exit(__LINE__,__FILE__,"Error: the option is not implemented");
               }
+
+              //determine the plane for the tangenetial temeprature sample
+              Vector3D::GetNormFrame(l0TangentialTemepratureSampleDirection,l1TangentialTemepratureSampleDirection,lParallelTemepratureSampleDirection);
             }
 
             ptrNext=ptr;
@@ -914,10 +918,18 @@ void PIC::Sampling::Sampling() {
               //sample the data for calculation the normal and tangential kinetic temepratures
               //calcualte the direction of the normal
               if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!=_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
-                double vParallel=(lParallelTemepratureSampleDirection[0]*v[0])+(lParallelTemepratureSampleDirection[1]*v[1])+(lParallelTemepratureSampleDirection[2]*v[2]);
+                double vTemepratureSample[3]={0.0,0.0,0.0},v2TemepratureSample[3];
 
-                cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity,vParallel, s, LocalParticleWeight);
-                cell->SampleDatum(PIC::Mesh::DatumParticleParallelVelocity2,vParallel*vParallel, s, LocalParticleWeight);
+                for (idim=0;idim<3;idim++) {
+                  vTemepratureSample[2]+=lParallelTemepratureSampleDirection[idim]*v[idim];
+                  vTemepratureSample[0]+=l0TangentialTemepratureSampleDirection[idim]*v[idim];
+                  vTemepratureSample[1]+=l1TangentialTemepratureSampleDirection[idim]*v[idim];
+                }
+
+                for (int i=0;i<3;i++) v2TemepratureSample[i]=pow(vTemepratureSample[i],2);
+
+                cell->SampleDatum(PIC::Mesh::DatumParallelTantentialTemepratureSample_Velocity,vTemepratureSample, s, LocalParticleWeight);
+                cell->SampleDatum(PIC::Mesh::DatumParallelTantentialTemepratureSample_Velocity2,v2TemepratureSample, s, LocalParticleWeight);
               } //_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_
 
               //sample data for the internal degrees of freedom model

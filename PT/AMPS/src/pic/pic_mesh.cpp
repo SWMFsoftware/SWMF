@@ -10,16 +10,14 @@
 namespace PIC {
   namespace Mesh {
     //basic macroscopic parameters sampled in the simulation
-    cDatumTimed    DatumParticleWeight(1,"\"Particle Weight\"",      false);
-    cDatumTimed    DatumParticleNumber(1,"\"Particle Number\"",       true);
-    cDatumTimed    DatumNumberDensity( 1,"\"Number Density[1/m^3]\"", true);
+    cDatumTimed DatumParticleWeight(1,"\"Particle Weight\"",false);
+    cDatumTimed DatumParticleNumber(1,"\"Particle Number\"",true);
+    cDatumTimed DatumNumberDensity(1,"\"Number Density[1/m^3]\"",true);
+
+    cDatumWeighted DatumParticleSpeed(1,"\"|V| [m/s]\"",true);
 
     cDatumWeighted DatumParticleVelocity(3, "\"Vx [m/s]\", \"Vy [m/s]\", \"Vz [m/s]\"", true);
     cDatumWeighted DatumParticleVelocity2(3,"\"Vx^2 [(m/s)^2]\", \"Vy^2 [(m/s)^2]\", \"Vz^2 [(m/s)^2]\"", false);
-
-    cDatumWeighted DatumParticleSpeed(1,            "\"|V| [m/s]\"",     true);
-    cDatumWeighted DatumParticleParallelVelocity(1, "\"Vpar [m/s]\"",   false);
-    cDatumWeighted DatumParticleParallelVelocity2(1,"\"Vpar^2 [(m/s)^2]\"",false);
 
     //-------------------------------------------------------------------------
     // IMPORTANT: some data may be oncluded only for certain species!!!!
@@ -28,6 +26,9 @@ namespace PIC {
     cDatumDerived DatumTranslationalTemperature(1, "\"Translational Temperature [K]\"", true);
     cDatumDerived DatumParallelTranslationalTemperature(1, "\"Parallel Translational Temperature [K]\"", true);
     cDatumDerived DatumTangentialTranslationalTemperature(1, "\"Tangential Translational Temperature [K]\"", true);
+
+    cDatumWeighted DatumParallelTantentialTemepratureSample_Velocity(3,"\"Vpar [m/s]\", \"Vt0 [m/s]\", \"Vt1 [m/s]\"",false);
+    cDatumWeighted DatumParallelTantentialTemepratureSample_Velocity2(3,"\"Vpar^2 [(m/s)^2]\", \"Vt0^2 [(m/s)^2]\", \"Vt1^2 [(m/s)^2]\"",false);
 
     // vector of active sampling data
     vector<PIC::Datum::cDatumSampled*> DataSampledCenterNodeActive;
@@ -265,21 +266,27 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
 
     //temeprature is exeption: it needs avaraging of the mean velocity and mean squate of velocity are not
     //interpolated using the interpolation weights but are averaged
-    double TotalParticleWeight=0.0,v[3]={0.0,0.0,0.0},v2[3]={0.0,0.0,0.0},vtemp[3],v2temp[3];
-    double vParallel=0.0,vParallel2=0.0;
+    double TotalParticleWeight=0.0,v[3]={0.0,0.0,0.0},v2[3]={0.0,0.0,0.0},vtemp[3],v2temp[3],w;
+    double vParallelTangentialTemperatureSample[3]={0.0,0.0,0.0},v2ParallelTangentialTemperatureSample[3]={0.0,0.0,0.0};
     int iStencil,idim;
 
     for (iStencil=0;iStencil<nInterpolationCoefficients;iStencil++) {
-      TotalParticleWeight+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleWeight,s);
+      w=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleWeight,s);
+      TotalParticleWeight+=w;
 
       InterpolationList[iStencil]->GetDatumCumulative(DatumParticleVelocity, vtemp, s);
       InterpolationList[iStencil]->GetDatumCumulative(DatumParticleVelocity2,v2temp,s);
 
       for (idim=0;idim<3;idim++) v[idim]+=vtemp[idim],v2[idim]+=v2temp[idim];
 
-      if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!= _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
-         vParallel+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleParallelVelocity,s);
-         vParallel2+=InterpolationList[iStencil]->GetDatumCumulative(DatumParticleParallelVelocity2,s);
+      if ((w>0.0)&&(_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!= _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_)) {
+         InterpolationList[iStencil]->GetDatumCumulative(DatumParallelTantentialTemepratureSample_Velocity,vtemp,s);
+         InterpolationList[iStencil]->GetDatumCumulative(DatumParallelTantentialTemepratureSample_Velocity2,v2temp,s);
+
+         for (idim=0;idim<3;idim++) {
+           vParallelTangentialTemperatureSample[idim]+=pow(vtemp[idim]/w,2)*w;  //get mean of <v>^2 over the satencil
+           v2ParallelTangentialTemperatureSample[idim]+=v2temp[idim];           // get mean <v^2> over the stencil
+         }
       }
     }
 
@@ -294,9 +301,13 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
       SetDatum(DatumParticleVelocity2,v2,s);
 
       if (_PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_!= _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_) {
-        vParallel*=c,vParallel2*=c;
-        SetDatum(DatumParticleParallelVelocity,&vParallel,s);
-        SetDatum(DatumParticleParallelVelocity2,&vParallel2,s);
+        for (idim=0;idim<3;idim++) {
+          vParallelTangentialTemperatureSample[idim]=sqrt(vParallelTangentialTemperatureSample[idim]/TotalParticleWeight)*GetDatumCumulative(DatumParticleWeight,s);  //convert back from < <v>^2 > -> <v>
+          v2ParallelTangentialTemperatureSample[idim]*=c;
+        }
+
+        SetDatum(DatumParallelTantentialTemepratureSample_Velocity,vParallelTangentialTemperatureSample,s);
+        SetDatum(DatumParallelTantentialTemepratureSample_Velocity2,v2ParallelTangentialTemperatureSample,s);
       }
     }
 
@@ -355,8 +366,8 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
   //do nothing
 #else
-  DatumParticleParallelVelocity.activate(offset, &DataSampledCenterNodeActive);
-  DatumParticleParallelVelocity2.activate(offset,&DataSampledCenterNodeActive);
+  DatumParallelTantentialTemepratureSample_Velocity.activate(offset, &DataSampledCenterNodeActive);
+  DatumParallelTantentialTemepratureSample_Velocity2.activate(offset,&DataSampledCenterNodeActive);
   DatumParallelTranslationalTemperature.activate(&cDataCenterNode::GetParallelTranslationalTemperature, &DataDerivedCenterNodeActive);
   DatumTangentialTranslationalTemperature.activate(&cDataCenterNode::GetTangentialTranslationalTemperature, &DataDerivedCenterNodeActive);
 #endif

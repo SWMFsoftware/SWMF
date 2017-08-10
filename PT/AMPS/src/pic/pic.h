@@ -2055,8 +2055,8 @@ namespace PIC {
     extern cDatumWeighted DatumParticleVelocity;
     extern cDatumWeighted DatumParticleVelocity2;
     extern cDatumWeighted DatumParticleSpeed;
-    extern cDatumWeighted DatumParticleParallelVelocity;
-    extern cDatumWeighted DatumParticleParallelVelocity2;
+    extern cDatumWeighted DatumParallelTantentialTemepratureSample_Velocity;
+    extern cDatumWeighted DatumParallelTantentialTemepratureSample_Velocity2;
     extern cDatumDerived  DatumTranslationalTemperature;
     extern cDatumDerived  DatumParallelTranslationalTemperature;
     extern cDatumDerived  DatumTangentialTranslationalTemperature;
@@ -2292,11 +2292,10 @@ namespace PIC {
 
         for (idim=0;idim<3;idim++) res+=v2[idim]-v[idim]*v[idim];
 
-	// res may be negative due to rounding error, e.g.
-	// there's only 1 particle in the cell
-	if(res < 0.0) res = 1.0E-15;
-
-	T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
+        // res may be negative due to rounding error, e.g.
+        // there's only 1 particle in the cell
+        if (res < 0.0) res = 1.0E-15;
+        T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
 
       inline double GetTranslationalTemperature(int s) {
@@ -2311,17 +2310,17 @@ namespace PIC {
         //return 
 	      GetTranslationalTemperature(T, s);
         #else
-        double v=0.0,v2=0.0,res=0.0;
+        double v[3],v2[3],res=0.0;
 
-        v = GetDatumAverage(DatumParticleParallelVelocity, s);
-	v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
-	res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
+        GetDatumAverage(DatumParallelTantentialTemepratureSample_Velocity,v,s);
+        GetDatumAverage(DatumParallelTantentialTemepratureSample_Velocity2,v2,s);
+        res=PIC::MolecularData::GetMass(s)*(v2[2]-v[2]*v[2])/Kbol;
 
-	// res may be negative due to rounding error, e.g.
-	// there's only 1 particle in the cell
-	if(res < 0.0) res = 1.0E-15;
+        // res may be negative due to rounding error, e.g.
+        // there's only 1 particle in the cell
+        if (res < 0.0) res = 1.0E-15;
 
-	T[0]=res;
+        T[0]=res;
         #endif
       }
 
@@ -2329,12 +2328,17 @@ namespace PIC {
         #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
 	      GetTranslationalTemperature(T,s);
         #else
-	      double t,tp;
+        double v[3],v2[3],res=0.0;
 
+        GetDatumAverage(DatumParallelTantentialTemepratureSample_Velocity,v,s);
+        GetDatumAverage(DatumParallelTantentialTemepratureSample_Velocity2,v2,s);
+        res=PIC::MolecularData::GetMass(s)*(v2[0]+v2[1]-v[0]*v[0]-v[1]*v[1])/(2.0*Kbol);
 
-	      GetTranslationalTemperature(&t,s);
-	      GetParallelTranslationalTemperature(&tp,s);
-	      T[0]=0.5*(3.0*t-tp);
+        // res may be negative due to rounding error, e.g.
+        // there's only 1 particle in the cell
+        if (res < 0.0) res = 1.0E-15;
+
+        T[0]=res;
         #endif
       }
       //-----------------------------------------------------------------------
