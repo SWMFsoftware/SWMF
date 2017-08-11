@@ -1782,7 +1782,7 @@ pro get_pict_hdf, filename, npict, error, getdata
      regionname = strmid(filename, ibegin  + strlen('settings'))
   endif
 
-  Param = H5_PARSE(filename) ; It seems IDL 8.5 version of H5_PARSE does not work. -Yuxi
+  Param = H5_PARSE(filename) 
 
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
