@@ -53,8 +53,9 @@ subroutine MH_set_parameters(TypeAction)
        read_boundary_geometry_param
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
-       DoChangeRestartVariables, nVarRestart, UseRestartWithFullB, &
-       NameRestartInDir, NameRestartOutDir
+       DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
+       NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
+       nVarRestartMapping, NameVarRestartFrom_V, NameVarRestartTo_V
   use ModHallResist,    ONLY: &
        UseHallResist, read_hall_param
   use ModParticleFieldLine, ONLY: read_particle_line_param
@@ -141,7 +142,10 @@ subroutine MH_set_parameters(TypeAction)
   integer :: nVarRead=0, nVarEquationRead = 0
   character (len=lStringLine) :: NameEquationRead="?"
   logical :: IsReadNameVarRestart = .false.
-  character(len=lStringLine) :: NameVarRestartRead=''
+  character(len=lStringLine) :: NameVarRestartRead  =''
+  character(len=lStringLine) :: NameVarsRestartFrom =''
+  character(len=lStringLine) :: NameVarsRestartTo   =''
+  integer :: nVarRestartMappingFrom, nVarRestartMappingTo
 
   character (len=50) :: plot_string,log_string
   character (len=3)  :: plot_area, plot_var
@@ -1610,6 +1614,33 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#CHANGEVARIABLES")
         call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
+
+     case("#SPECIFYRESTARTVARMAPPING")
+        call read_var('DoSpecifyRestartVarMapping',DoSpecifyRestartVarMapping)
+        if (DoSpecifyRestartVarMapping) then
+           if (allocated(NameVarRestartFrom_V))  &
+                deallocate(NameVarRestartFrom_V)
+           if (allocated(NameVarRestartTo_V))    &
+                deallocate(NameVarRestartTo_V)
+           allocate(NameVarRestartFrom_V(max(nVar,nVarEquationRead)))
+           allocate(NameVarRestartTo_V(max(nVar,nVarEquationRead)))
+           call read_var('NameVarsRestartFrom', NameVarsRestartFrom, &
+                IsLowerCase=.true.)
+           call read_var('NameVarsRestartTo',   NameVarsRestartTo,   &
+                IsLowerCase=.true.)
+           call split_string(NameVarsRestartFrom, NameVarRestartFrom_V, &
+                nVarRestartMappingFrom)
+           call split_string(NameVarsRestartTo,   NameVarRestartTo_V,   &
+                nVarRestartMappingTo)
+           nVarRestartMapping = nVarRestartMappingFrom
+           if (nVarRestartMappingFrom /= nVarRestartMappingTo) then
+              if (iProc == 0) write(*,*) NameSub,                     &
+                   ' nVarRestartMappingFrom, nVarRestartMappingTo =', &
+                   nVarRestartMappingFrom, nVarRestartMappingTo
+              call stop_mpi(NameSub //  &
+                ' Error: inconsistent nVar in SPECIFYRESTARTVARMAPPING')
+           end if
+        end if
 
      case("#EQUATION")
         if(.not.is_first_session())CYCLE READPARAM

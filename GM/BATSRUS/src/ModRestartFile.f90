@@ -60,6 +60,11 @@ module ModRestartFile
   ! so that accidental matches are avoided.
   character(len(NameVar_V)+1), allocatable, public:: NameVarRestart_V(:)
 
+  logical, public :: DoSpecifyRestartVarMapping = .false.
+  integer, public :: nVarRestartMapping = nVar
+  character(len(NameVar_V)+1), allocatable, public:: NameVarRestartFrom_V(:)
+  character(len(NameVar_V)+1), allocatable, public:: NameVarRestartTo_V(:)
+
   ! Local variables
   character(len=*), parameter :: StringRestartExt = ".rst"
   character(len=*), parameter :: NameBlkFile      = "blk"
@@ -1202,18 +1207,23 @@ contains
     !    of the current equation module, they will be ignored, unless a
     !    a specific rule is implemented here.
     ! 2. If the current equation module includes variables not present
-    !    in the restart file, they will be assigned values according to specific
-    !    rules implemented here. If no rule is defined, the default state
-    !    will be used for these variables (unless UseStrict=T, in which case
-    !    the code will stop excution).
+    !    in the restart file, they will be assigned values according to 
+    !    specific rules implemented here. If no rule is defined, the default 
+    !    state will be used for these variables (unless UseStrict=T, in which
+    !    case the code will stop excution).
   
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict
+    use ModUtilities,  ONLY: lower_case
 
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
     logical :: UseElectronPressureRestart = .false.
+
+    character(len=20)    :: NameVarRestart, NameVar, NameVarFrom, NameVarTo
+    integer              :: iVarMapping
+    integer, allocatable :: iVarFrom_I(:), iVarTo_I(:)
 
     character(len=*),parameter :: NameSub='match_copy_restart_variables'
     ! -----------------------------------------------------------------
@@ -1233,20 +1243,71 @@ contains
     if(iProc==0) then
        write(*,*) 'Changing state variables from restart file'
        write(*,*) 'Restart file variables: ', NameVarRestart_V
-       write(*,*) 'Current variables: ',NameVar_V
+       write(*,*) 'Current variables:      ', NameVar_V
+       write(*,*) 'DoSpecifyRestartVarMapping =', DoSpecifyRestartVarMapping
+       if (DoSpecifyRestartVarMapping) &
+            write(*,*) 'nVarRestartMapping         =', nVarRestartMapping
     end if
 
     ! Loop over the current state variables, and locate the index of 
     ! the corresponding variable in the restart file
     MATCHLOOP: do iVar = 1,nVar 
        do iVarRead = 1, nVarRestart
-          if (NameVar_V(iVar) == NameVarRestart_V(iVarRead)) then
+          NameVar        = NameVar_V(iVar)
+          NameVarRestart = NameVarRestart_V(iVarRead)
+          call lower_case(NameVar)
+          call lower_case(NameVarRestart)
+          if (NameVar == NameVarRestart) then
              iVarMatch_V(iVar) = iVarRead
              CYCLE MATCHLOOP
           end if
        end do
     end do MATCHLOOP
-        
+    
+    if (DoSpecifyRestartVarMapping) then
+       if (allocated(iVarFrom_I)) deallocate(iVarFrom_I)
+       if (allocated(iVarTo_I))   deallocate(iVarTo_I)
+       allocate(iVarFrom_I(nVarRestartMapping))
+       allocate(iVarTo_I(nVarRestartMapping))
+
+       do iVarMapping = 1, nVarRestartMapping
+          NameVarFrom = NameVarRestartFrom_V(iVarMapping)
+          NameVarTo   = NameVarRestartTo_V(iVarMapping)
+
+          do iVar = 1, nVar
+             NameVar = NameVar_V(iVar)
+             call lower_case(NameVar)
+             if (NameVarTo == NameVar) then
+                iVarTo_I(iVarMapping) = iVar
+                CYCLE
+             end if
+          end do
+
+          do iVarRead = 1, nVarRestart
+             NameVarRestart = NameVarRestart_V(iVarRead)
+             call lower_case(NameVarRestart)
+             if (NameVarFrom == NameVarRestart) then
+                iVarFrom_I(iVarMapping) = iVarRead
+                CYCLE
+             end if
+          end do
+
+          iVarMatch_V(iVarTo_I(iVarMapping)) = iVarFrom_I(iVarMapping)
+       end do
+    end if
+
+    if (iProc == 0) then
+       write(*,*) 'Mapping information:'
+       do iVar = 1, nVar
+          if (iVarMatch_V(iVar) <=0) CYCLE
+          NameVar        = NameVar_V(iVar)
+          NameVarRestart = NameVarRestart_V(iVarMatch_V(iVar))
+          write(*,'(1x, A, A1, I2, A1, 3x, A, 3x, A, A1, I2, A1)')       &
+               trim(NameVarRestart), '(', iVarMatch_V(iVar), ')', '==>', &
+               trim(NameVar),        '(', iVar, ')'
+       end do
+    end if
+
     ! Copy restart data into State_VGB as needed
     do iVar = 1,nVar
        if (iVarMatch_V(iVar) > 0) then
@@ -1265,7 +1326,8 @@ contains
 
           case('Pe')
              ! When electron pressure is used but is not present in the restart
-             ! file, divide pressure from restart state between ions and electrons
+             ! file, divide pressure from restart state between ions and 
+             ! electrons
              do iBlock = 1,nBlock
                 do i =1,nI ; do j=1,nJ; do k=1,nK
                    State_VGB(Pe_,i,j,k,iBlock) = &
@@ -1276,7 +1338,8 @@ contains
              end do                
           case default
              if(iProc==0) &
-                write(*,*) 'WARNING!!!: the state variable ', NameVar_V(iVar) //&
+                write(*,*) 'WARNING!!!: the state variable ', &
+                NameVar_V(iVar) //                            &
                      'is not present in the restart file and no rule is'//&
                      ' implemented to define its value.'
              if(UseStrict) then
