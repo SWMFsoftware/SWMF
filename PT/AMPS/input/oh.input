@@ -83,7 +83,7 @@ UserDefinedParticleInitialization=OH::InitializeParticleWithEnaOriginTag(newPart
 
 #block ../input/oh.input.pl !process the settings of the Outer Heliosphere model
 
-  SourceRegionNumber=10
+  SourceRegionNumber=4
   
   ! user defined global time step
   UserGlobalTimeStep=-1.0   ! default = -1.0 (i.e. use time step defined by AMPS)
@@ -98,6 +98,11 @@ UserDefinedParticleInitialization=OH::InitializeParticleWithEnaOriginTag(newPart
   DomainXMax=( 2.25E14, 2.25E14, 2.25E14);!default=( 2.25E14, 2.25E14, 2.25E14)
   DomainDXmin = 1.8E13;			  !default=1.8E13
   DomainDXMax = 1.8E13;			  !default=1.8E13
+
+  VelocityDistributionSampling=on \\ !on, off
+    x=(4.0E+13,0.0,-2.0E+13), (0.0,2.0E+6,0.0), (-2.0E+6,0.0,0.0) \\ 
+    nSampleIntervals=500 \\
+    vmin=-40e3, vmax=40e3
 
 #endblock
 
