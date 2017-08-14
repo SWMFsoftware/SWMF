@@ -85,7 +85,7 @@ void OH::Sampling::DistributionFunctionSample::Init() {
 //====================================================
 //flush the sampling buffer
 void OH::Sampling::DistributionFunctionSample::flushSamplingBuffers() {
-  long int i,TotalDataLength=nSampleLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1);
+  long int i,TotalDataLength=nSampleLocations*(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::nPhysSpec*SampleDataLength*(nSampledFunctionPoints-1);
   double *ptr=SamplingBuffer[0];
 
   for (i=0;i<TotalDataLength;i++,ptr++) *ptr=0.0;
