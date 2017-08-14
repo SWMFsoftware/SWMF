@@ -651,7 +651,7 @@ void OH::InitPhysicalSpecies(){
     }
 
     // printing species list and the corresponding physical species tag
-    if (PIC::Mesh::mesh.ThisThread==0){
+    if (PIC::ThisThread==0){
       cout << "Species Index: " << s0 << " -> Physical Species Index: " << OH::PhysSpec[s0] << " DoPrintSpec: " << DoPrintSpec[s0] << endl;
     }
   }
