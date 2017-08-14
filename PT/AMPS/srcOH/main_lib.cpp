@@ -221,7 +221,7 @@ void amps_init_mesh(){
   PIC::Mesh::initCellSamplingDataBuffer();
   
   //init the mesh
-  if (PIC::Mesh::mesh.ThisThread==0){
+  if (PIC::ThisThread==0){
     cout << "Init the mesh" << endl;}
   
   int maxBlockCellsnumber,minBlockCellsnumber,idim;
@@ -334,6 +334,13 @@ void amps_init() {
      for(int spec=0; spec < PIC::nTotalSpecies; spec++)
        PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] = OH::UserGlobalTimeStep;
    }
+
+   //set up sampling of velocity distribution functions
+   if(OH::Sampling::DistributionFunctionSample::Use){
+     OH::Sampling::DistributionFunctionSample::Init();
+     PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(OH::Sampling::DistributionFunctionSample::SampleDistributionFnction,OH::Sampling::DistributionFunctionSample::printDistributionFunction);
+   }
+
 }
 
 //time step
