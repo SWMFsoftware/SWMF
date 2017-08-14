@@ -171,6 +171,8 @@ class InterfaceFluid
   // 'CFL' condition.
   bool useSWMFDt, useFixedDt;
   double fixedDt; // In SI unit
+
+  bool isPeriodicX, isPeriodicY, isPeriodicZ; // Use periodic BC in one direction?
   
  public:
   // These variables are also used in PSKOutput.h

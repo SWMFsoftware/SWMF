@@ -152,7 +152,7 @@ Default is nSmooth=0, so no smoothing is done.
 </command>
 
 
-<command name="SUBCYCLING" alias="LOCALTIMESTEP">
+<command name="SUBCYCLING">
   <parameter name="doSubCycling" type="logical" default="F" />
   
 #SUBCYCLING
@@ -161,6 +161,23 @@ T               doSubCycling
 If doSubCycling is true, the time step for the update of each particle will
 be reset to make sure: dt <= T/8, where T is the gyroperiod with local magnetic
 field strength. 
+
+</command>
+
+<command name="PERIODICITY">
+  <parameter name="isPeriodicX" type="logical" default="F" />
+  <parameter name="isPeriodicY" type="logical" default="F" />
+  <parameter name="isPeriodicZ" type="logical" default="F" />
+  
+#PERIODICITY
+F                 isPeriodicX
+F                 isPeriodicY
+F                 isPeriodicZ
+
+We may want to use periodic boundary conditions in some directions even in
+a coupled simulation, and the command above can be used. Note that if there
+is only one cell in one direction, periodic boundary conditions will be used
+in this direction and the parameter above will be ignored. 
 
 </command>
 

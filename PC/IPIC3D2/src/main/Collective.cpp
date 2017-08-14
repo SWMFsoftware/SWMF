@@ -1594,6 +1594,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   doSubCycling = false;
 
   nPartGhost = 1; 
+
+  isPeriodicX = false;
+  isPeriodicY = false;
+  isPeriodicZ = false;
+
   while(*param){
     get_next_command(param,&Command);
     if( Command == "#NSYNC" && Case == "BATSRUS"){
@@ -1894,7 +1899,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	if(doSaveThisRegion) nPlotFile++;	
       } // iPlot  			        
     } // Command
-
+    else if( Command == "#PERIODICITY"){
+      read_var(param,"isPeriodicX", &isPeriodicX);
+      read_var(param,"isPeriodicY", &isPeriodicY);
+      read_var(param,"isPeriodicZ", &isPeriodicZ);
+    }
     else if( Command == "#BCIPIC"){
       read_var(param,"bcPHIfaceXright", &bcPHIfaceXright);
       read_var(param,"bcPHIfaceXleft",  &bcPHIfaceXleft);
@@ -2027,17 +2036,17 @@ void Collective::PostProcParam() {
   nyc = getFluidNyc();
   nzc = getFluidNzc();
 
-  if(nxc == 1) {
+  if(nxc == 1 || isPeriodicX) {
     PERIODICX = true; PERIODICX_P = PERIODICX;
   }else{
     PERIODICX = false; PERIODICX_P = PERIODICX;
   }
-  if(nyc == 1) {
+  if(nyc == 1 || isPeriodicY) {
     PERIODICY = true; PERIODICY_P = PERIODICY;
   }else{
     PERIODICY = false; PERIODICY_P = PERIODICY;
   }
-  if(nzc == 1){
+  if(nzc == 1 || isPeriodicZ){
     PERIODICZ = true; PERIODICZ_P = PERIODICZ;
   }else{
     PERIODICZ = false; PERIODICZ_P = PERIODICZ;
