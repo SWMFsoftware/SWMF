@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = OH.o  main_lib.o OH_Coupler.o
+MAINLIBOBJ = OH.o  main_lib.o OH_Coupler.o OH_sample_distribution_function.o
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
