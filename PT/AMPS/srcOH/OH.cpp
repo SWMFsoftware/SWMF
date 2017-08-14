@@ -33,13 +33,20 @@ void OH::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
   fprintf(fout,",\"ohSourceDensity\",\"ohSourceMomentumX\",\"ohSourceMomentumY\",\"ohSourceMomentumZ\",\"ohSourceEnergy\"");
 
   //if DataSetNumber is 0, and  OH::Sampling::OriginLocation::nSampledOriginLocations!=-1 -> output density of particles produced in each source region
-  if (OH::DoPrintSpec[DataSetNumber]) for (int i=0;i<OH::Sampling::OriginLocation::nSampledOriginLocations;i++){
+  if (OH::DoPrintSpec[DataSetNumber]) {
+    for (int i=0;i<OH::Sampling::OriginLocation::nSampledOriginLocations;i++){
       fprintf(fout,", \"ENA Density (Source Region ID=%i)\"",i);
       fprintf(fout,", \"ENA Vx (Source Region ID=%i)\"",i);
       fprintf(fout,", \"ENA Vy (Source Region ID=%i)\"",i);
       fprintf(fout,", \"ENA Vz (Source Region ID=%i)\"",i);
       fprintf(fout,", \"ENA Temperature (Source Region ID=%i)\"",i);
     }
+    fprintf(fout,", \"ENA Density (Total Solution)\"");
+    fprintf(fout,", \"ENA Vx (Total Solution)\"");
+    fprintf(fout,", \"ENA Vy (Total Solution)\"");
+    fprintf(fout,", \"ENA Vz (Total Solution)\"");
+    fprintf(fout,", \"ENA Temperature (Total Solution)\"");
+  }
 }
 
 void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode){
@@ -72,37 +79,37 @@ void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,doub
 
   //evaluate density and velocity of ENAs produced in each source region
   for (int physpec=0;physpec<OH::nPhysSpec;physpec++){
-    for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations;iSource++) {
+    for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations+1;iSource++) {
       double t=0.0,  Sv[3]={0.0,0.0,0.0}, Sv2[3]={0.0,0.0,0.0};
 
       for (i=0;i<nInterpolationCoeficients;i++) {
 	offset=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
 	
-	t+=(*(iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample)))*InterpolationCoeficients[i]/InterpolationList[i]->Measure;
+	t+=(*(iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample)))*InterpolationCoeficients[i]/InterpolationList[i]->Measure;
 	
 	// grab particle weith from offset+ofsettfor particle weight
-	TotalParticleWeight=(*(iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample)));
+	TotalParticleWeight=(*(iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample)));
 	
 	// have to divide by particle weight to interpolate velocity, if no particles in cell it will be zero
 	if (TotalParticleWeight > 0.0){
 	  for (j=0; j<3; j++){
-	    Sv[j]+=(*(j+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetVelocitySample)))*InterpolationCoeficients[i]/TotalParticleWeight;
+	    Sv[j]+=(*(j+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetVelocitySample)))*InterpolationCoeficients[i]/TotalParticleWeight;
 	  }
 	}
 	
 	// treating V2 the same as the velocity components
 	if (TotalParticleWeight > 0.0){
 	  for (int h=0; h<3; h++){
-	    Sv2[h]+=(*(h+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetV2Sample)))*InterpolationCoeficients[i]/TotalParticleWeight;
+	    Sv2[h]+=(*(h+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetV2Sample)))*InterpolationCoeficients[i]/TotalParticleWeight;
 	  }
 	}
       }
       
       offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
       
-      *(iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample))=t;
-      for (k=0; k<3; k++) *(k+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetVelocitySample))=Sv[k];
-      for (int l=0; l<3; l++) *(l+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetV2Sample))=Sv2[l];
+      *(iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetDensitySample))=t;
+      for (k=0; k<3; k++) *(k+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetVelocitySample))=Sv[k];
+      for (int l=0; l<3; l++) *(l+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[physpec]+(double*)(offset+OH::Sampling::OriginLocation::OffsetV2Sample))=Sv2[l];
     }
   }
 
@@ -150,10 +157,10 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
   else pipe->send(t);
 
   // ENA origin sampling output
-  if (DoPrintSpec[DataSetNumber]) for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations;iSource++) {
+  if (DoPrintSpec[DataSetNumber]) for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations+1;iSource++) {
       //density of the ENAs produced in specific origin regions
       if (pipe->ThisThread==CenterNodeThread) {
-	t= *(iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetDensitySample));
+	t= *(iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetDensitySample));
       }
 
       if (pipe->ThisThread==0) {
@@ -166,7 +173,7 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
       // velocity of the ENAs produced in specific origin regions
       for (int idim=0; idim<3; idim++){
 	if (pipe->ThisThread==CenterNodeThread) {
-	  t= *(idim+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetVelocitySample));
+	  t= *(idim+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetVelocitySample));
 	}
 	
 	if (pipe->ThisThread==0) {
@@ -180,8 +187,8 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
       // Temp of the ENAs produced in specific origin regions calculated using the average sqruared velocity and the square of the average velocity components
       if (pipe->ThisThread==CenterNodeThread) {
 	for (int idim=0; idim<3; idim++){
-	  v[idim]= *(idim+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetVelocitySample));
-	  v2[idim]= *(idim+3*iSource+OH::Sampling::OriginLocation::nSampledOriginLocations*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetV2Sample));
+	  v[idim]= *(idim+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetVelocitySample));
+	  v2[idim]= *(idim+3*iSource+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*OH::PhysSpec[DataSetNumber]+(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+OH::Sampling::OriginLocation::OffsetV2Sample));
 
 	  t+=v2[idim]-v[idim]*v[idim];
 	  
@@ -571,9 +578,9 @@ int OH::Sampling::OriginLocation::RequestSamplingData(int offset) {
 
   if (nSampledOriginLocations!=-1) {
     OffsetDensitySample=offset;
-    OffsetVelocitySample=offset+nSampledOriginLocations*sizeof(double);
-    OffsetV2Sample=offset+4.0*nSampledOriginLocations*sizeof(double);
-    res=(3+1+3)*nSampledOriginLocations*sizeof(double);
+    OffsetVelocitySample=offset+(nSampledOriginLocations+1)*sizeof(double);
+    OffsetV2Sample=offset+4.0*(nSampledOriginLocations+1)*sizeof(double);
+    res=(3+1+3)*(nSampledOriginLocations+1)*sizeof(double);
   }
 
   return res;
@@ -599,9 +606,15 @@ void OH::Sampling::OriginLocation::SampleParticleData(char *ParticleData,double 
       exit(__LINE__,__FILE__,msg);
     }
 
-    *(OriginID+nSampledOriginLocations*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetDensitySample))+=LocalParticleWeight;
-    for (int i=0; i<3; i++) *(i+3*OriginID+nSampledOriginLocations*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetVelocitySample))+=v[i]*LocalParticleWeight;
-    for (int j=0; j<3; j++) *(j+3*OriginID+nSampledOriginLocations*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetV2Sample))+=v2[j]*LocalParticleWeight;
+    // sampling based on origin location
+    *(OriginID+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetDensitySample))+=LocalParticleWeight;
+    for (int i=0; i<3; i++) *(i+3*OriginID+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetVelocitySample))+=v[i]*LocalParticleWeight;
+    for (int j=0; j<3; j++) *(j+3*OriginID+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetV2Sample))+=v2[j]*LocalParticleWeight;
+
+    // sampling based on total solution
+    *(nSampledOriginLocations+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetDensitySample))+=LocalParticleWeight;
+    for (int i=0; i<3; i++) *(i+3*nSampledOriginLocations+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetVelocitySample))+=v[i]*LocalParticleWeight;
+    for (int j=0; j<3; j++) *(j+3*nSampledOriginLocations+(nSampledOriginLocations+1)*OH::PhysSpec[spec]+(double*)(SamplingBuffer+OffsetV2Sample))+=v2[j]*LocalParticleWeight;
   }
 }
 
