@@ -82,11 +82,35 @@ namespace OH {
       int RequestSamplingData(int offset);
       void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);
 
-
-
     }
+
+    namespace DistributionFunctionSample{
+      extern const int _LINEAR_SAMPLING_SCALE_,_LOGARITHMIC_SAMPLING_SCALE_;
+      extern const bool Use;
+      extern int v2SamplingMode,speedSamplingMode;
+      extern double vMin;
+      extern double vMax;
+      extern long int nSampledFunctionPoints;
+      extern double** SamplingBuffer;
+      extern double SamplingLocations[][3];
+      extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
+      extern double dV,dV2,dSpeed;
+      extern long int *SampleLocalCellNumber;
+      extern int nSampleLocations;
+      extern bool SamplingInitializedFlag;
+      extern int Sample_Velocity_Offset,Sample_Speed_Offset;
+      extern int Sample_V2_Offset,SampleDataLength;
+      
+      void Init();
+      void flushSamplingBuffers();
+      long int GetSampleDataOffset(int spec,int OriginID,int SampleVariableOffset);    
+      void SampleDistributionFnction();
+      void printDistributionFunction(int DataOutputFileNumber);
+    }  
+
   }
 
+  //---------------------------------------------------------------------------
   namespace Coupling {
     extern double TimeAfterCoupling[PIC::nTotalSpecies];
     void Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI);
