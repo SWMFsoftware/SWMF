@@ -1301,7 +1301,7 @@ Check=
 >>>@${TESTSphere-drag-coefficientDIR}/../utility/ReduceFile.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat 10
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10 ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/pic.H2O.s=0.out=2--DiffuseReflection.dat.Reduced.Step=10$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-VolumeData$(TESTSphere-drag-coefficient-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SurfaceData.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/amps.cut-cell.surface-data.out=2--DiffuseReflection.dat$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SurfaceData$(TESTSphere-drag-coefficient-REF).diff
 
 
 
@@ -1340,7 +1340,7 @@ Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTSphere-drag-coefficientDIR}/PT/plots/test_Orbiter_Drag_Coefficient--SpecularReflection.dat ${PTDIR}/../../../AMPS_DATA_TEST/DRAG-COEFFICIENT/SPHERE/test_Orbiter_Drag_Coefficient--SpecularReflection$(TESTSphere-drag-coefficient-REF).ref_np`ls $(TESTSphere-drag-coefficientDIR)/PT/thread* |wc -l |tr -d ' '` > test_Sphere-drag-coefficient-SpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff
 
 
->>>@cat test_Sphere-drag-coefficient-VolumeData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-SurfaceData.diff > test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
+>>>@cat test_Sphere-drag-coefficient-VolumeData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-SurfaceData$(TESTSphere-drag-coefficient-REF).diff > test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
 >>>@cat test_Sphere-drag-coefficient-Adsorption-ParticleData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-Adsorption-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
 >>>@cat test_Sphere-drag-coefficient-CLL-ParticleData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-CLL-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
 >>>@cat test_Sphere-drag-coefficient-DiffuseReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-DiffuseReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
@@ -1349,7 +1349,7 @@ Check=
 >>>@cat test_Sphere-drag-coefficient-SpecularReflection-ParticleData$(TESTSphere-drag-coefficient-REF).diff test_Sphere-drag-coefficient-SpecularReflection-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
 
 >>>@ls -l test_Sphere-drag-coefficient-VolumeData$(TESTSphere-drag-coefficient-REF).diff 
->>>@ls -l test_Sphere-drag-coefficient-SurfaceData.diff 
+>>>@ls -l test_Sphere-drag-coefficient-SurfaceData$(TESTSphere-drag-coefficient-REF).diff 
 >>>@ls -l test_Sphere-drag-coefficient-Adsorption-ParticleData$(TESTSphere-drag-coefficient-REF).diff 
 >>>@ls -l test_Sphere-drag-coefficient-Adsorption-DragCoefficient$(TESTSphere-drag-coefficient-REF).diff 
 >>>@ls -l test_Sphere-drag-coefficient-CLL-ParticleData$(TESTSphere-drag-coefficient-REF).diff 
