@@ -6,7 +6,6 @@ module EEE_ModTD99
   use ModHyperGeometric
   implicit none
   save
-
   private
 
   public :: set_parameters_TD99,get_transformed_TD99fluxrope
@@ -24,14 +23,14 @@ module EEE_ModTD99
 
   !----------------------------------------------------------------------
   ! Variables related to the position of the flux rope::
-  real, parameter :: Li_TD99=0.5
+  real, parameter :: Li=0.5
 
   !----------------------------------------------------------------------
   ! Variables related to the flux rope properties::
-  real :: Itube_TD99=0.0, Rtube_TD99=0.0, atube_TD99=0.0
-  real :: d_TD99=0.0, aratio_TD99=0.0
-  real :: Mass_TD99=0.0
-  real :: InvH0_TD99=0.0, Rho0_TD99=0.0
+  real :: ITube = 0.0, RTube  = 0.0, aTubal = 0.0
+  real :: Depth = 0.0, aRatio = 0.0
+  real :: Mass = 0.0
+  real :: InvH0=0.0, Rho0=0.0
   real :: ItubeSaved=0.0
 
   !----------------------------------------------------------------------
@@ -43,14 +42,15 @@ module EEE_ModTD99
   real, parameter :: UVorCMax0=2.5                 !in units of 100 km/s
   real, parameter :: BqZMax0=3.768210E+01          !in [Gauss]
   real :: BqZMax=0.0, BqZMaxSaved=0.0, UVorCMax=0.0
-  real :: q_TD99=0.0, L_TD99=0.0
+  real :: q=0.0, L=0.0
 
   !----------------------------------------------------------------------
   ! Declare the rotational matrix of coordinate transformation::
-  real, dimension(3,3) :: RotateTD99_DD
-
+  real, dimension(3,3) :: Rotate_DD
+  !\
+  ! direction of the magnetic moment of the configuration
+  real :: UnitX_D(3) 
 contains
-
   !============================================================================
 
   subroutine set_parameters_TD99(NameCommand)
@@ -69,24 +69,24 @@ contains
        call read_var('DoAddFluxRope'      , DoAddFluxRope)
        call read_var('DoEquilItube'       , DoEquilItube)
        call read_var('DoRevCurrent'       , DoRevCurrent)
-       call read_var('aratio_TD99'        , aratio_TD99)
-       call read_var('Itube_TD99'         , Itube_TD99)
-       call read_var('Rtube_TD99'         , Rtube_TD99)
-       call read_var('atube_TD99'         , atube_TD99)
-       call read_var('d_TD99'             , d_TD99)
-       call read_var('Mass_TD99'          , Mass_TD99)
+       call read_var('aratio'        , aratio)
+       call read_var('Itube'         , Itube)
+       call read_var('Rtube'         , Rtube)
+       call read_var('aTubal'         , aTubal)
+       call read_var('Depth'             , Depth)
+       call read_var('Mass'          , Mass)
        call read_var('LongitudeCme'       , LongitudeCme)
        call read_var('LatitudeCme'        , LatitudeCme)
        call read_var('OrientationCme'     , OrientationCme)
        call read_var('DoBqField'          , DoBqField)
-       call read_var('q_TD99'             , q_TD99)
-       call read_var('L_TD99'             , L_TD99)
+       call read_var('q'             , q)
+       call read_var('L'             , L)
     case("#CME")
-       call read_var('Current',     Itube_TD99)
-       call read_var('RadiusMajor', Rtube_TD99)
-       call read_var('RadiusMinor', atube_TD99)
-       call read_var('Depth',       d_TD99)
-       call read_var('Mass',        Mass_TD99)
+       call read_var('Current',     Itube)
+       call read_var('RadiusMajor', Rtube)
+       call read_var('RadiusMinor', aTubal)
+       call read_var('Depth',       Depth)
+       call read_var('Mass',        Mass)
     case default
        call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -123,7 +123,7 @@ contains
     real, intent(out), optional :: RhoFRope
     real, intent(in), optional :: Time
 
-    logical:: DoFirstCallTD99=.true.
+    logical:: DoFirstCall=.true.
     real:: atemp,Itemp
     real:: UVorR
     real, dimension(3):: B1FRopeTemp_D
@@ -132,12 +132,12 @@ contains
     !--------------------------------------------------------------------------
     ! Initialize the TD99 model parameters once::
 
-    if (DoFirstCallTD99) then
+    if (DoFirstCall) then
        call init_TD99_parameters
-       DoFirstCallTD99=.false.
+       DoFirstCall=.false.
     endif
     if (present(Time).and.UseVariedCurrent) &
-         Itube_TD99 = varied_current(Time)
+         Itube = varied_current(Time)
 
     ! Check if the potential electric field needs to be applied.
     ! Maintain Epot for (CurrentStartTime < Time < CurrentRiseTime)::
@@ -153,16 +153,16 @@ contains
     ! Compute the flux rope, and transform coordinates and vectors to
     ! position the flux rope in the desired way::
 
-    R1Face_D = matmul(RotateTD99_DD,RFace_D)
+    R1Face_D = matmul(Rotate_DD,RFace_D)
     if (DoAddFluxRope) then
        call compute_TD99_FluxRope(R1Face_D,B1FRope_D,RhoFRope)
        if (DoRevCurrent) then
-          Itemp = Itube_TD99; Itube_TD99 = -Itemp
-          atemp = atube_TD99; atube_TD99 = aratio_TD99*atemp
+          Itemp = Itube; Itube = -Itemp
+          atemp = aTubal; aTubal = aratio*atemp
           call compute_TD99_FluxRope(R1Face_D,B1FRopeTemp_D)
           B1FRope_D = B1FRope_D+B1FRopeTemp_D
-          Itube_TD99 = Itemp
-          atube_TD99 = atemp
+          Itube = Itemp
+          aTubal = atemp
        endif
     else
        B1FRope_D = 0.0
@@ -179,8 +179,8 @@ contains
        endif
        B1FRope_D = B1FRope_D+B1qField_D
     endif
-    BFRope_D = matmul(B1FRope_D,RotateTD99_DD)
-    UVorC_D  = matmul(U1VorC_D,RotateTD99_DD)
+    BFRope_D = matmul(B1FRope_D,Rotate_DD)
+    UVorC_D  = matmul(U1VorC_D,Rotate_DD)
 
     ! Compute the tangential component of the velocity field, UVorT_D,
     ! associated with the potential electric field, Epot::
@@ -206,48 +206,49 @@ contains
     ! Compute the magnetic energy, WFRope, associated with the portion
     ! of the flux rope current that is above the solar surface::
 
-    InvH0_TD99 = cGravitation*Msun/Rsun*Si2No_V(UnitU_)**2   ! in [-]
-    AlphaRope  = 2.0*acos(d_TD99/Rtube_TD99)                 ! in [rad]
-    FootSepar  = Rtube_TD99*sin(0.5*AlphaRope)/1.0e6         ! in [Mm]
-    LInduct    = cMu*(0.5*AlphaRope/cPi)*Rtube_TD99*(log(8.0 &
-         *(Rtube_TD99-d_TD99)/atube_TD99) - 1.75)            ! in [H]
-    WFRope     = 0.5*LInduct*Itube_TD99**2*1.0e7             ! in [ergs]
+    InvH0 = cGravitation*Msun/Rsun*Si2No_V(UnitU_)**2   ! in [-]
+    AlphaRope  = 2.0*acos(Depth/Rtube)                 ! in [rad]
+    FootSepar  = Rtube*sin(0.5*AlphaRope)/1.0e6         ! in [Mm]
+    LInduct    = cMu*(0.5*AlphaRope/cPi)*Rtube*(log(8.0 &
+         *(Rtube-Depth)/aTubal) - 1.75)            ! in [H]
+    WFRope     = 0.5*LInduct*Itube**2*1.0e7             ! in [ergs]
 
     ! Compute the average density inside the flux rope assuming that the
-    ! total amount of prominence mass is Mass_TD99 (=10^16g=10^13kg)::
+    ! total amount of prominence mass is Mass (=10^16g=10^13kg)::
 
-    Rho0_TD99  = Mass_TD99/(AlphaRope*Rtube_TD99*cPi*atube_TD99**2)
+    Rho0  = Mass/(AlphaRope*Rtube*cPi*aTubal**2)
     ! in [kg/m^3]
 
     ! Define the normalized model parameters here::
 
     ! Flux rope::
-    Rtube_TD99 = Rtube_TD99*Si2No_V(UnitX_)
-    atube_TD99 = atube_TD99*Si2No_V(UnitX_)
-    ItubeDim   = Itube_TD99
-    Itube_TD99 = ItubeDim*Si2No_V(UnitJ_)*Si2No_V(UnitX_)**2 ! in [A]
-    Rho0_TD99  = Rho0_TD99*Si2No_V(UnitRho_)
+    Rtube = Rtube*Si2No_V(UnitX_)
+    aTubal = aTubal*Si2No_V(UnitX_)
+    ItubeDim   = Itube
+    Itube = ItubeDim*Si2No_V(UnitJ_)*Si2No_V(UnitX_)**2 ! in [A]
+    Rho0  = Rho0*Si2No_V(UnitRho_)
 
     ! Save the maximum value of the current for possible use in
     ! varied_current case::
 
-    ItubeSaved = Itube_TD99 
+    ItubeSaved = Itube 
 
     ! Strapping field::
 
-    d_TD99     = d_TD99*Si2No_V(UnitX_)
-    L_TD99     = L_TD99*Si2No_V(UnitX_)
-    q_TD99     = q_TD99*Si2No_V(UnitB_)*Si2No_V(UnitX_)**2
+    Depth     = Depth*Si2No_V(UnitX_)
+    L     = L*Si2No_V(UnitX_)
+    q     = q*Si2No_V(UnitB_)*Si2No_V(UnitX_)**2
 
-    ! Construct the rotational matrix, RotateTD99_DD, to position the
+    ! Construct the rotational matrix, Rotate_DD, to position the
     ! flux rope in the desired way on the solar surface::
 
-    RotateTD99_DD = matmul(rot_matrix_y(-0.5*cPi),&
+    Rotate_DD = matmul(rot_matrix_y(-0.5*cPi),&
          rot_matrix_x(-OrientationCme*cDegToRad))
-    RotateTD99_DD = matmul(RotateTD99_DD,          &
+    Rotate_DD = matmul(Rotate_DD,          &
          rot_matrix_y(LatitudeCme*cDegToRad))
-    RotateTD99_DD = matmul(RotateTD99_DD,          &
+    Rotate_DD = matmul(Rotate_DD,          &
          rot_matrix_z(-LongitudeCme*cDegToRad))
+    UnitX_D = (/1.0, 0.0, 0.0/)
 
     if (iProc==0) then
        write(*,*) prefix
@@ -257,20 +258,20 @@ contains
        write(*,*) prefix
        write(*,*) prefix,'>>>>>>>>>>>>>>>>>>>                   <<<<<<<<<<<<<<<<<<<<<'
        write(*,*) prefix
-       write(*,*) prefix,'d_TD99      = ',d_TD99*No2Si_V(UnitX_)/1.0E6,'[Mm]'
-       write(*,*) prefix,'Rtube_TD99  = ', &
-            Rtube_TD99*No2Si_V(UnitX_)/1.0E6,'[Mm]'
-       write(*,*) prefix,'atube_TD99  = ', &
-            atube_TD99*No2Si_V(UnitX_)/1.0E6,'[Mm]'
-       write(*,*) prefix,'atube/Rtube = ',atube_TD99/Rtube_TD99,'[-]'
-       write(*,*) prefix,'Itube_TD99  = ',ItubeDim,'[A]'
-       write(*,*) prefix,'aratio_TD99 = ',aratio_TD99,'[-]'
-       write(*,*) prefix,'Mass_TD99   = ',Mass_TD99*1.0e3,'[g] '
-       write(*,*) prefix,'Rho0_TD99   = ',Rho0_TD99*No2Io_V(UnitRho_),'[g/cm^3]'
+       write(*,*) prefix,'Depth      = ',Depth*No2Si_V(UnitX_)/1.0E6,'[Mm]'
+       write(*,*) prefix,'Rtube  = ', &
+            Rtube*No2Si_V(UnitX_)/1.0E6,'[Mm]'
+       write(*,*) prefix,'aTubal  = ', &
+            aTubal*No2Si_V(UnitX_)/1.0E6,'[Mm]'
+       write(*,*) prefix,'atube/Rtube = ',aTubal/Rtube,'[-]'
+       write(*,*) prefix,'Itube  = ',ItubeDim,'[A]'
+       write(*,*) prefix,'aratio = ',aratio,'[-]'
+       write(*,*) prefix,'Mass   = ',Mass*1.0e3,'[g] '
+       write(*,*) prefix,'Rho0   = ',Rho0*No2Io_V(UnitRho_),'[g/cm^3]'
        write(*,*) prefix
-       write(*,*) prefix,'q_TD99      = ', &
-            q_TD99*No2Si_V(UnitB_)*No2Si_V(UnitX_)**2,'[T m^2]'
-       write(*,*) prefix,'L_TD99      = ',L_TD99*No2Si_V(UnitX_)/1.0e6,'[Mm]'
+       write(*,*) prefix,'q      = ', &
+            q*No2Si_V(UnitB_)*No2Si_V(UnitX_)**2,'[T m^2]'
+       write(*,*) prefix,'L      = ',L*No2Si_V(UnitX_)/1.0e6,'[Mm]'
        write(*,*) prefix
        write(*,*) prefix,'Free energy of flux rope is ',WFRope,'Ergs.'
        write(*,*) prefix,'Separation of flux rope ends is ',FootSepar,'Mm,'
@@ -285,21 +286,21 @@ contains
     endif
     if (DoEquilItube) then
 
-       ! Compute the equilibrium toroidal current, Itube_TD99, based
+       ! Compute the equilibrium toroidal current, Itube, based
        ! on the force balance in direction normal to the surface of
        ! the flux tube.
 
-       Itube_TD99 = 8.0*cPi*q_TD99*L_TD99*Rtube_TD99 &
-            *(L_TD99**2+Rtube_TD99**2)**(-1.5) &
-            /(alog(8.0*Rtube_TD99/atube_TD99) &
-            -1.5+Li_TD99/2.0)                           ! in [-]
+       Itube = 8.0*cPi*q*L*Rtube &
+            *(L**2+Rtube**2)**(-1.5) &
+            /(alog(8.0*Rtube/aTubal) &
+            -1.5+Li/2.0)                           ! in [-]
        WFRope    = 0.5*LInduct*(ItubeDim)**2*1.0e7      ! in [ergs]
     endif
     if (DoEquilItube.and.iProc==0) then
        write(*,*) prefix,'The strapping field, Bq, is added and the EQUILIBRIUM value'
-       write(*,*) prefix,'of Itube_TD99 is computed!!!'
+       write(*,*) prefix,'of Itube is computed!!!'
        write(*,*) prefix
-       write(*,*) prefix,'The value of Itube_TD99 is reset to :: ',Itube_TD99
+       write(*,*) prefix,'The value of Itube is reset to :: ',Itube
        write(*,*) prefix,'The free energy of the flux rope is :: ',WFRope,'Ergs.'
        write(*,*) prefix
     endif
@@ -331,28 +332,28 @@ contains
     ! charges, -/+q::
 
     if (present(TimeNow)) then
-       RPlus_D(x_) = RFace_D(x_)-L_TD99 &
+       RPlus_D(x_) = RFace_D(x_)-L &
             - VTransX*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
-       RMins_D(x_) = RFace_D(x_)+L_TD99 &
+       RMins_D(x_) = RFace_D(x_)+L &
             + VTransX*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
        RPlus_D(y_) = RFace_D(y_) &
             - VTransY*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
        RMins_D(y_) = RFace_D(y_) &
             + VTransY*(TimeNow-CurrentStartTime)*Si2No_V(UnitX_)
     else
-       RPlus_D(x_) = RFace_D(x_)-L_TD99
-       RMins_D(x_) = RFace_D(x_)+L_TD99
+       RPlus_D(x_) = RFace_D(x_)-L
+       RMins_D(x_) = RFace_D(x_)+L
        RPlus_D(y_) = RFace_D(y_)
        RMins_D(y_) = RPlus_D(y_)
     endif
-    RPlus_D(z_) = RFace_D(z_)+d_TD99-1.0
+    RPlus_D(z_) = RFace_D(z_) + Depth -1.0
     RMins_D(z_) = RPlus_D(z_)
     R2Plus = sqrt(dot_product(RPlus_D,RPlus_D))
     R2Mins = sqrt(dot_product(RMins_D,RMins_D))
 
     ! Compute the field of the strapping magnetic field, BqField_D::
 
-    BqField_D = q_TD99*(RPlus_D/R2Plus**3 - RMins_D/R2Mins**3)
+    BqField_D = q*(RPlus_D/R2Plus**3 - RMins_D/R2Mins**3)
 
     ! Update the values of BqZMax and BqZMaxSaved once at each iteration::
 
@@ -372,7 +373,7 @@ contains
        ! Compute the gradient of the z-component of the Bq field on the
        ! solar surface in Cartesian geometry -- GradBqZ_D(x_:z_)::
 
-       GradBqZ_D = 3.0*q_TD99*RMins_D(z_)*&
+       GradBqZ_D = 3.0*q*RMins_D(z_)*&
             (RMins_D/R2Mins**5 - RPlus_D/R2Plus**5)
        GradBqZ_D(z_)    = 0.0
        !    GradBqZ_D(x_:z_) = GradBqZ_D(x_:z_)  - &
@@ -451,185 +452,169 @@ contains
     real, intent(out), optional:: RhoFRope
 
     real:: xxx,yyy,zzz,R2Face
-    real:: RhoTB_TD99,Rperp_TD99
-    real:: CHIin_TD99,CHIex_TD99
-    real:: xUVx_TD99,xUVy_TD99,xUVz_TD99
-    real:: ThetaUVy_TD99,ThetaUVz_TD99
-    real:: RperpUVx_TD99,RperpUVy_TD99,RperpUVz_TD99
-    real:: Kappa_TD99,dKappadx_TD99,dKappadr_TD99
-    real:: KappaA_TD99,dKappaAdx_TD99,dKappaAdr_TD99
+    real:: RMinus, RPlus2, Rperp
+    real:: ThetaUVy,ThetaUVz
+    real:: RperpUVx,RperpUVy,RperpUVz
+    real:: Kappa,dKappadx,dKappadr
+    real:: KappaA,dKappaAdr
 
-    ! Complete elliptic integrals related variables::
-    real:: K_elliptic, E_elliptic
-    real:: K_ellipticA, E_ellipticA
-
+    ! Complete elliptic integrals of related variables::
+    real:: KElliptic, EElliptic
     ! Vector potential related variables::
-    real:: Ak_TD99,dAkdk_TD99
-    real:: AkA_TD99,dAkdkA_TD99,d2Akdk2A_TD99
-    real:: AI_TD99,dAIdx_TD99,dAIdr_TD99
-    real:: AIin_TD99,dAIindx_TD99,dAIindr_TD99
-    real:: AIex_TD99,dAIexdx_TD99,dAIexdr_TD99
+    real:: Ak,dAkdk
+    real:: AkA,dAkdkA,d2Akdk2A
+    real:: AI,dAIdx,dAIdr
     ! Flux-rope related variables::
-    real:: BIphix_TD99,BIphiy_TD99,BIphiz_TD99
+    real:: BIphix,BIphiy,BIphiz
     !--------------------------------------------------------------------
     ! Assign X,Y,Z coordinates at which to compute the magnetic field::
-
+    !\
+    ! xxx - coordinate along the axis of symmetry, equal to 0 at the 
+    ! plane of symmetry.
+    ! zzz - is the heliocetric coordinate along the line passing through 
+    ! the center of configuration, which is at the depth d below the 
+    ! photosphere level.
+    ! yyy coordinate is equal to zero at the axis of symmetry. 
     xxx = RFace_D(x_)
     yyy = RFace_D(y_)
-    zzz = RFace_D(z_)
+    zzz = RFace_D(z_) - (1 - Depth)
     R2Face = sqrt(dot_product(RFace_D,RFace_D))
 
-    ! Compute Rperp_TD99 and RhoTB_TD99::
+    ! Compute Rperp and TubalDist::
 
-    Rperp_TD99 = sqrt(yyy**2+(zzz+d_TD99-1.0)**2)
-    RhoTB_TD99 = sqrt(xxx**2+(Rperp_TD99-Rtube_TD99)**2)
+    Rperp = sqrt(yyy**2 + zzz**2)
+    RMinus = sqrt(xxx**2+(Rperp-Rtube)**2)
+    RPlus2 = (Rperp+Rtube)**2+xxx**2
 
-    ! Define the Heaviside step function in the internal region 
-    ! (RhoTB_TD99<atube_TD99), CHIin_TD99, and the external one
-    ! (RhoTB_TD99>atube_TD99), CHIex_TD99::
 
-    if (RhoTB_TD99.lt.atube_TD99) then
-       CHIin_TD99 = 1.0
-       CHIex_TD99 = 0.0
+    ! Define the model input, Kappa
+
+    Kappa = 2.0*sqrt(Rperp*Rtube/RPlus2)
+    dKappadx  = -xxx*Kappa/RPlus2
+    dKappadr  = Kappa*(Rtube**2-Rperp**2+xxx**2) &
+         /(2.0*Rperp*RPlus2)
+    if (RMinus.ge.aTubal) then
+       
+       if (present(RhoFRope))RhoFRope=0.0    
+       ! Truncate the value of Kappa::
+       
+       if (abs(1.0-Kappa).lt.cTiny/10.0) &
+            Kappa = 1.0-cTiny/10.0
+       
+       ! Compute the vector potential in the internal, AIin, and
+       ! external (outside the current torus), AIex, regions::   
+       
+       call calc_elliptic_int_1kind(Kappa,KElliptic)
+       call calc_elliptic_int_2kind(Kappa,EElliptic)
+       Ak       = ((2.0-Kappa**2)*KElliptic &
+            - 2.0*EElliptic)/Kappa
+       !\
+       ! Calculate derivative over k using formulae:
+       ! dK/dk = E/(k*(1-k^2)) - K/k, dE/dk = (E - K)/k
+       dAkdk    = (2.0-Kappa**2)*EElliptic &
+            /(Kappa**2*(1.0-Kappa**2)) &
+            - 2.0*KElliptic/Kappa**2
+       ! Compute the vector potential, AI, of the magnetic field 
+       ! produced by the ring current Itube
+       
+       AI     = Itube/(2.0*cPi)*sqrt(Rtube &
+            /Rperp)*Ak
+
+       ! Derivative of AI with respect to `x` and `rperp`::
+
+       dAIdx   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
+            *(dAkdk*dKappadx)
+       dAIdr   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
+            *(dAkdk*dKappadr)-AI/(2.0*Rperp)
+       !No toroidal field outside the filament
+       BIphix = 0.0; BIphiy = 0.0; BIphiz = 0.0
     else
-       CHIin_TD99 = 0.0
-       CHIex_TD99 = 1.0
-    endif
+       ! Add the prominence material inside the flux rope, assuming that the
+       ! total amount mass is 10^13kg, and that the desnity scale-height is
+       ! the same as the pressure scale-height, 1/InvH0 (i.e., iso-thermal
+       ! atmoshpere)::
+       
+       if (present(RhoFRope))&
+            RhoFRope = Rho0*exp(-10.0*(RMinus/aTubal)**6) &
+            *exp(-InvH0*abs(R2Face-1.0))    
+       ! Define the model input, KappaA. A given point is charakterized by
+       ! two coordinates, say, RPepr and RMinus. In this case,
+       ! if we denote Kappa=known_function(RPerp,RMinus), then 
+       ! KappaA=known_function(RPepr,ATube)
+       KappaA = 2.0*sqrt(Rperp*Rtube &
+            /(4.0*Rperp*Rtube+aTubal**2))
+       call calc_elliptic_int_1kind(KappaA,KElliptic)
+       call calc_elliptic_int_2kind(KappaA,EElliptic)
+       !\
+       ! This is the vector potential and its k derivative at the boundary
+       !/
+       Ak      = ((2.0-KappaA**2)*KElliptic &
+            - 2.0*EElliptic)/KappaA
+       dAkdk   = (2.0-KappaA**2)*EElliptic &
+            /(KappaA**2*(1.0-KappaA**2)) &
+            - 2.0*KElliptic/KappaA**2
+       ! Compute the vector potential, AI by smpoothly continuing the 
+       ! value from the boundary
+       AI = Itube/(2.0*cPi)*sqrt(Rtube &
+            /Rperp)*(Ak + dAkdk*(Kappa &
+            - KappaA))
+       d2Akdk2A = ((7.0*KappaA**2-4.0 &
+            - KappaA**4)*EElliptic/(1.0-KappaA**2) &
+            + (4.0-5.0*KappaA**2)*KElliptic) &
+            /(KappaA**3*(1.0-KappaA**2))
+     
+       ! Derive the BI field from the corresponding vector potential,
+       ! AI (this involves the comp. of some nasty derivatives)::
 
-    ! Add the prominence material inside the flux rope, assuming that the
-    ! total amount mass is 10^13kg, and that the desnity scale-height is
-    ! the same as the pressure scale-height, 1/InvH0 (i.e., iso-thermal
-    ! atmoshpere)::
 
-    if (present(RhoFRope)) &
-         RhoFRope = Rho0_TD99*exp(-10.0*(RhoTB_TD99/atube_TD99)**6) &
-         *exp(-InvH0_TD99*abs(R2Face-1.0))    
+       dKappaAdr = KappaA*aTubal**2/(2.0*Rperp &
+            *(4.0*Rperp*Rtube+aTubal**2))
 
-    ! Compute the field produced by the ring current, Itube_TD99, both
-    ! inside and outside the torus, BI_TD99 = BFRope_D(x_:z_)::
+       ! Derivative of AI with respect to `x` and `rperp`:: 
 
-    ThetaUVy_TD99 = -(zzz+d_TD99-1.0)/Rperp_TD99
-    ThetaUVz_TD99 = yyy/Rperp_TD99
-
-    ! Compute the toroidal field (BIphix_TD99, BIphiy_TD99, BIphiz_TD99)
-    ! produced by the azimuthal current Iphi. This is needed to ensure
-    ! that the flux rope configuration is force free. 
-
-    BIphix_TD99 = 0.0
-    BIphiy_TD99 = abs(Itube_TD99)/(2.0*cPi*atube_TD99**2) &
-         *sqrt(CHIin_TD99*2.0*(atube_TD99**2-RhoTB_TD99**2)) &
-         *ThetaUVy_TD99
-    BIphiz_TD99 = abs(Itube_TD99)/(2.0*cPi*atube_TD99**2) &
-         *sqrt(CHIin_TD99*2.0*(atube_TD99**2-RhoTB_TD99**2)) &
-         *ThetaUVz_TD99
-
+       dAIdx   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
+            *(dAkdk*dKappadx)
+       dAIdr   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
+            *(dAkdk*dKappadr+d2Akdk2A*dKappaAdr &
+            *(Kappa-KappaA))-AI/(2.0*Rperp)
+       ! Compute the toroidal field (BIphix, BIphiy, BIphiz)
+       ! produced by the azimuthal current Iphi. This is needed to ensure
+       ! that the flux rope configuration is force free. 
+       ThetaUVy = -zzz/Rperp
+       ThetaUVz = yyy/Rperp 
+      
+       BIphix = 0.0
+       BIphiy = abs(Itube)/(2.0*cPi*aTubal**2) &
+            *sqrt(2.0*(aTubal**2-RMinus**2)) &
+            *ThetaUVy
+       BIphiz = abs(Itube)/(2.0*cPi*aTubal**2) &
+         *sqrt(2.0*(aTubal**2-RMinus**2)) &
+         *ThetaUVz
+    end if
     ! Compute the components of the unit vector in the plane of symmetry
-    ! x=0::
+    ! x=0
+    RperpUVx = 0.0
+    RperpUVy = yyy/Rperp
+    RperpUVz = zzz/Rperp
 
-    RperpUVx_TD99 = 0.0
-    RperpUVy_TD99 = yyy/Rperp_TD99
-    RperpUVz_TD99 = (zzz+d_TD99-1.0)/Rperp_TD99
-
-    ! Compute the components of the unit vector pointing in the positive 
-    ! x-direction::
-
-    xUVx_TD99 = 1.0
-    xUVy_TD99 = 0.0
-    xUVz_TD99 = 0.0
-
-    ! Define two model parameters, Kappa_TD99 and KappaA_TD99::
-
-    Kappa_TD99 = 2.0*sqrt(Rperp_TD99*Rtube_TD99 &
-         /((Rperp_TD99+Rtube_TD99)**2+xxx**2))
-    KappaA_TD99 = 2.0*sqrt(Rperp_TD99*Rtube_TD99 &
-         /(4.0*Rperp_TD99*Rtube_TD99+atube_TD99**2))
-
-    ! Truncate the value of Kappa_TD99::
-
-    if (abs(1.0-Kappa_TD99).lt.cTiny/10.0) &
-         Kappa_TD99 = 1.0-cTiny/10.0
-
-    ! Compute the vector potential in the internal, AIin_TD99, and
-    ! external (outside the current torus), AIex_TD99, regions::   
-
-    call calc_elliptic_int_1kind(Kappa_TD99,K_elliptic)
-    call calc_elliptic_int_2kind(Kappa_TD99,E_elliptic)
-    Ak_TD99       = ((2.0-Kappa_TD99**2)*K_elliptic &
-         - 2.0*E_elliptic)/Kappa_TD99
-    dAkdk_TD99    = (2.0-Kappa_TD99**2)*E_elliptic &
-         /(Kappa_TD99**2*(1.0-Kappa_TD99**2)) &
-         - 2.0*K_elliptic/Kappa_TD99**2
-    call calc_elliptic_int_1kind(KappaA_TD99,K_ellipticA)
-    call calc_elliptic_int_2kind(KappaA_TD99,E_ellipticA)
-    AkA_TD99      = ((2.0-KappaA_TD99**2)*K_ellipticA &
-         - 2.0*E_ellipticA)/KappaA_TD99
-    dAkdkA_TD99   = (2.0-KappaA_TD99**2)*E_ellipticA &
-         /(KappaA_TD99**2*(1.0-KappaA_TD99**2)) &
-         - 2.0*K_ellipticA/KappaA_TD99**2
-    d2Akdk2A_TD99 = ((7.0*KappaA_TD99**2-4.0 &
-         - KappaA_TD99**4)*E_ellipticA/(1.0-KappaA_TD99**2) &
-         + (4.0-5.0*KappaA_TD99**2)*K_ellipticA) &
-         /(KappaA_TD99**3*(1.0-KappaA_TD99**2))
-
-    ! Define AIin_TD99 and AIex_TD99::
-
-    AIex_TD99     = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99 &
-         /Rperp_TD99)*Ak_TD99
-    AIin_TD99     = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99 &
-         /Rperp_TD99)*(AkA_TD99+dAkdkA_TD99*(Kappa_TD99 &
-         - KappaA_TD99))
-
-    ! Compute the vector potential, AI_TD99, of the magnetic field 
-    ! produced by the ring current Itube_TD99 in the whole space::
-
-    AI_TD99 = CHIin_TD99*AIin_TD99+CHIex_TD99*AIex_TD99
-
-    ! Derive the BI_TD99 field from the corresponding vector potential,
-    ! AI_TD99 (this involves the comp. of some nasty derivatives)::
-
-    dKappadx_TD99  = -xxx*Kappa_TD99/(xxx**2+(Rperp_TD99+Rtube_TD99)**2)
-    dKappadr_TD99  = Kappa_TD99*(Rtube_TD99**2-Rperp_TD99**2+xxx**2) &
-         /(2.0*Rperp_TD99*((Rtube_TD99+Rperp_TD99)**2+xxx**2))
-    dKappaAdx_TD99 = 0.0 
-    dKappaAdr_TD99 = KappaA_TD99*atube_TD99**2/(2.0*Rperp_TD99 &
-         *(4.0*Rperp_TD99*Rtube_TD99+atube_TD99**2))
-
-    ! Derivative of AIin_TD99 with respect to `x` and `rperp`:: 
-
-    dAIindx_TD99   = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99/Rperp_TD99) &
-         *(dAkdkA_TD99*dKappadx_TD99)
-    dAIindr_TD99   = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99/Rperp_TD99) &
-         *(dAkdkA_TD99*dKappadr_TD99+d2Akdk2A_TD99*dKappaAdr_TD99 &
-         *(Kappa_TD99-KappaA_TD99))-AIin_TD99/(2.0*Rperp_TD99)
-
-    ! Derivative of AIex_TD99 with respect to `x` and `rperp`::
-
-    dAIexdx_TD99   = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99/Rperp_TD99) &
-         *(dAkdk_TD99*dKappadx_TD99)
-    dAIexdr_TD99   = Itube_TD99/(2.0*cPi)*sqrt(Rtube_TD99/Rperp_TD99) &
-         *(dAkdk_TD99*dKappadr_TD99)-AIex_TD99/(2.0*Rperp_TD99)
-
-    ! Derivatives of AI with respect to `x` and `rperp`::
-
-    dAIdx_TD99 = CHIin_TD99*dAIindx_TD99+CHIex_TD99*dAIexdx_TD99
-    dAIdr_TD99 = CHIin_TD99*dAIindr_TD99+CHIex_TD99*dAIexdr_TD99
-
-    ! Obtain the BI_TD99 field in the whole space from the corresponding
-    ! vector potential, AI_TD99 -->
-    ! BI_TD99 = curl(AI_TD99*ThetaUV_TD99) = BFRope_D(x_:z_)::
-
-    BFRope_D(x_) = -dAIdx_TD99*RperpUVx_TD99 &
-         + (dAIdr_TD99+AI_TD99/Rperp_TD99)*xUVx_TD99
-    BFRope_D(y_) = -dAIdx_TD99*RperpUVy_TD99 &
-         + (dAIdr_TD99+AI_TD99/Rperp_TD99)*xUVy_TD99
-    BFRope_D(z_) = -dAIdx_TD99*RperpUVz_TD99 &
-         + (dAIdr_TD99+AI_TD99/Rperp_TD99)*xUVz_TD99
+    ! Obtain the BI field in the whole space from the corresponding
+    ! vector potential, AI -->
+    ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
+    
+    BFRope_D(x_) = -dAIdx*RperpUVx &
+         + (dAIdr+AI/Rperp)*UnitX_D(x_)
+    BFRope_D(y_) = -dAIdx*RperpUVy &
+         + (dAIdr+AI/Rperp)*UnitX_D(y_)
+    BFRope_D(z_) = -dAIdx*RperpUVz &
+         + (dAIdr+AI/Rperp)*UnitX_D(z_)
 
     ! Add the field of the azimuthal current, Iphi::
-
-    BFRope_D(x_) = BFRope_D(x_)+BIphix_TD99
-    BFRope_D(y_) = BFRope_D(y_)+BIphiy_TD99
-    BFRope_D(z_) = BFRope_D(z_)+BIphiz_TD99
+    ! Compute the field produced by the ring current, Itube, both
+    ! inside and outside the torus, BI = BFRope_D(x_:z_)::
+    
+    BFRope_D(x_) = BFRope_D(x_)+BIphix
+    BFRope_D(y_) = BFRope_D(y_)+BIphiy
+    BFRope_D(z_) = BFRope_D(z_)+BIphiz
   end subroutine compute_TD99_FluxRope
 
 end module EEE_ModTD99
