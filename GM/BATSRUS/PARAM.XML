@@ -760,6 +760,36 @@ The default is to use the same variables and equation modules during restart.
 </command>
 
 
+<command name="SPECIFYRESTARTVARMAPPING">
+	 <parameter name="DoSpecifyRestartVarMapping"  type="logical" default="F"/>
+	 <parameter name="NameVarsRestartFrom"         type="string" length="400"/>
+	 <parameter name="NameVarsRestartTo"           type="string" length="400"/>
+
+#SPECIFYRESTARTVARMAPPING
+T			DoSpecifyRestartVarMapping
+H2OpRho H2OpP		NameVarsRestartFrom
+H3OpRho P		NameVarsRestartTo
+
+This command allows specifying the mapping of variables when reading restart 
+files in one equation/user file to another equation/user file. In the above
+example, the code will use the values of H2OpRho/H2OpP in the old equation/user
+file to initialize the variables H3OpRho/P in the new equation/user file.
+
+This mapping applies after the default mapping which maps the variables with
+the same variable names, meaning that it will overwrite the default mapping
+algorithm. For example, if both the original equation/user file and the new
+equation/user file have the variable P, the code will initialize P in the new
+equation/user file with the values of P in the old equation/user file by 
+default. However, in the above example, users choose to map H2OpP in the
+old equation/user file to the varaible P in the new equation/user file. The
+mapping of variables is also shown in the runlog in case the user wants to
+see how the variables are mapped.
+
+The deafult is not to apply user specified mapping even a different 
+equation/user file is used during restart.
+</command>
+
+
 <command name="PRECISION" if="$_IsFirstSession">
 	<parameter name="nByteReal" type="integer" input="select">
 		<option name="single precision" value="4" 
