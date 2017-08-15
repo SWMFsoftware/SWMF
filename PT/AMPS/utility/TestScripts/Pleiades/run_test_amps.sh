@@ -49,6 +49,9 @@ cd $WorkDir
 mkdir -p Tmp_AMPS_test
 cd Tmp_AMPS_test
 
+# Remove previous job scripts
+rm -f *.job
+
 # Remove the previous test directory if necessary
 rm -rf AMPS */AMPS
 
@@ -60,21 +63,21 @@ cd ..
 
 # Update data files for test at supercomputers
 #>Pleiades>Yellowstone>Stampede #########################
+
 rsync -r amps@tower-left.engin.umich.edu:/Volumes/Data01/AMPS_DATA_TEST/ $WorkDir/AMPS_DATA_TEST 
+
+#cp /home3/vtenishe/Table /nobackupp8/vtenishe/Tmp_AMPS_test/AMPS/MakefileTest
 
 # create separate folders for different compilers
 #>GNUAll ############################
+rm -rf GNU
 mkdir -p GNU;   cp -r AMPS GNU/;  
 #>IntelAll ##########################
+rm -rf Intel
 mkdir -p Intel; cp -r AMPS Intel/;
 #>PGIAll ############################
+rm -rf PGI
 mkdir -p PGI;   cp -r AMPS PGI/;  
-
-# copy job files to the AMPS directory on supercomputers
-#>Pleiades ###############################################
-cp AMPS/utility/TestScripts/test_amps.pleiades.*.job . 
-#>Stampede ###############################################
-#cp AMPS/utility/TestScripts/test_amps.stampede.*.job . <#
 
 # install AMPS
 #>GNUAll ###################################################################
@@ -86,6 +89,13 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #>PGIAll ###################################################################
 cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
 ./Config.pl -install -compiler=pgf90,pgccmpicxx -cpp-compiler=pgc++ -link-option=-L/nasa/sgi/mpt/2.14r19/lib,-lmpi++,-lmpi       >& test_amps.log    
+
+# copy job files to the AMPS directory on supercomputers
+#>Pleiades ###############################################
+cp utility/TestScripts/test_amps.pleiades.*.job ../..
+#>Stampede ###############################################
+#cp AMPS/utility/TestScripts/test_amps.stampede.*.job . <#
+
 
 # Exeptions
 echo -n "Set Exeptions....."
@@ -113,9 +123,7 @@ cd $WorkDir/Tmp_AMPS_test
 rm -f AmpsCompilingIntelComplete
 rm -f AmpsCompilingGNUComplete
 rm -f AmpsCompilingPGIComplete
-rm -f AmpsTestGNUComplete
-rm -f AmpsTestIntelComplete
-rm -f AmpsTestPGIComplete
+rm -f AmpsTestComplete
 
 echo " done."
 
@@ -198,6 +206,8 @@ echo Compiling of AMPS is completed
 
 #########################################
 
+rm -f AmpsTestComplete
+
 foreach job (test_amps.pleiades.all.*job)                #
   #execute the next part of the tests
   /PBS/bin/qsub $job
@@ -205,14 +215,12 @@ foreach job (test_amps.pleiades.all.*job)                #
   #waite while the set of test is finished
   #and then proceed with the new part of 
   #the tests 
-  while ((! -f AmpsTestIntelComplete) || (! -f AmpsTestGNUComplete) || (! -f AmpsTestPGIComplete))
+  while (! -f AmpsTestComplete) 
     sleep 60
   end
 
   sleep 300 
-  rm -f AmpsTestIntelComplete
-  rm -f AmpsTestGNUComplete
-  rm -f AmpsTestPGIComplete 
+  rm -f AmpsTestComplete
 end                                         
 
 
