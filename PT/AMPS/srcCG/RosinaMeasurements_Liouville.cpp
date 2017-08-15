@@ -172,8 +172,8 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
           CutCell::BoundaryTriangleFaces[iSurfaceElement].GetCenterPosition(x);
 
-          iIntersectionFaceX=PIC::RayTracing::FindFistIntersectedFace(x,lTestX,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement);
-          iIntersectionFaceY=PIC::RayTracing::FindFistIntersectedFace(x,lTestY,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement);
+          iIntersectionFaceX=PIC::RayTracing::FindFistIntersectedFace(x,lTestX,xIntersection,true,CutCell::BoundaryTriangleFaces+iSurfaceElement);
+          iIntersectionFaceY=PIC::RayTracing::FindFistIntersectedFace(x,lTestY,xIntersection,true,CutCell::BoundaryTriangleFaces+iSurfaceElement);
 
 
           if ((iIntersectionFaceX==-1)&&(iIntersectionFaceY==-1) && (x[1]<700.0)) {
@@ -347,7 +347,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
             CutCell::BoundaryTriangleFaces[iSurfaceElement].GetRandomPosition(x);
             for (idim=0;idim<3;idim++) ll[idim]=xLocation[idim]-x[idim];
 
-            if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,CutCell::BoundaryTriangleFaces+iSurfaceElement)==-1) {
+            if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,false,CutCell::BoundaryTriangleFaces+iSurfaceElement)==-1) {
               //there is the direct access from the point on teh surface to the point of the observation ->  sample the number density and flux
               double ExternalNormal[3];
 
@@ -540,7 +540,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
     while (Vector3D::DotProduct(l,Rosina[iPoint].NudeGauge.LineOfSight)<0.0);
 
     //determine whether an intersection with the nucleus is found
-    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
+    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,false,NULL);
 
     if (iIntersectionFace!=-1) {
       NucleusIntersectionCounter++;
@@ -565,7 +565,7 @@ void RosinaSample::Liouville::GetSolidAngle(double& NudeGaugeNucleusSolidAngle,d
     while (Vector3D::DotProduct(l,Rosina[iPoint].RamGauge.LineOfSight)<0.0);
 
     //determine whether an intersection with the nucleus is found
-    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,NULL);
+    iIntersectionFace=PIC::RayTracing::FindFistIntersectedFace(Rosina[iPoint].x,l,xIntersection,false,NULL);
 
     if (iIntersectionFace!=-1) {
       NucleusIntersectionCounter++;
@@ -1093,8 +1093,13 @@ void RosinaSample::Liouville::Evaluate() {
 
         CutCell::BoundaryTriangleFaces[iface].GetRandomPosition(x);
         for (idim=0;idim<3;idim++) ll[idim]=Rosina[iPoint].x[idim]-x[idim];
+/* 
+if (PIC::ThisThread==0) printf("%i\n",iface);
+ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+*/
 
-        if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,CutCell::BoundaryTriangleFaces+iface)==-1) {
+
+        if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,true,CutCell::BoundaryTriangleFaces+iface)==-1) {
           //the location can be seen from the spacecraft.
           //veryfy whether the location can be seen by the instruments
           if (Vector3D::DotProduct(Rosina[iPoint].RamGauge.LineOfSight,ll)<0.0) FieldOfViewRG=true;
