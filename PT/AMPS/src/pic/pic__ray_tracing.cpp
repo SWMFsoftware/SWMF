@@ -219,9 +219,9 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 	return true;
 }
 
-int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,void* ExeptionFace) {
+int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,bool ParallelCheck,void* ExeptionFace) {
   double c=0.0,l[3],x[3];
-  int idim,IntersectionCounter=0;
+  int cnt=-1,idim,IntersectionCounter=0;
 
 
   //clculate the pointing vector
@@ -256,7 +256,7 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
         TriangleFace=t->TriangleFace;
 
         if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
-          if ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) {
+          if ( ((MeshFileID<0)||(TriangleFace->MeshFileID==MeshFileID)) && ((ParallelCheck==false)||((++cnt)%PIC::nTotalThreads==PIC::ThisThread)) ) {
             code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
             if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
           }
@@ -282,15 +282,29 @@ int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,
     memcpy(x,xNodeExit,3*sizeof(double));
   }
 
+  //combine the counter value
+  if (ParallelCheck==true) {
+    int t=IntersectionCounter;
+    MPI_Reduce(&t,&IntersectionCounter,1,MPI_INT,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+  }
+
   return IntersectionCounter;
 }
 
-int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace) {
+int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,bool ParallelCheck,void* ExeptionFace) {
   double x[3];
+  int cnt=-1;
 
   //determine the initial block
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
 
+  //in case ParallelCheck==true -> broad casr the inital point and the search direction from the root
+  if (ParallelCheck==true) {
+    MPI_Bcast(x0Ray,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(lRay,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+  }
+
+  //find the node
   node=PIC::Mesh::mesh.findTreeNode(x0Ray);
   if (node==NULL) return false;
 
@@ -301,37 +315,33 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
 
   //trace the ray
   PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
+  PIC::Mesh::IrregularSurface::cTriangleFace *minIntersectionTimeTriangleFace=NULL;
+  PIC::Mesh::IrregularSurface::cTriangleFace *TriangleFace;
+  double IntersectionTime,minIntersectionTime=-1.0;
+  double xIntersectionTemp[3],xMinTimeIntersection[3];
 
-  while (node!=NULL) {
-    PIC::Mesh::IrregularSurface::cTriangleFace *TriangleFace;
-    PIC::Mesh::IrregularSurface::cTriangleFace *minIntersectionTimeTriangleFace=NULL;
-    double IntersectionTime,minIntersectionTime=-1.0;
-    double xIntersectionTemp[3],xMinTimeIntersection[3];
-
+  while ((node!=NULL)&&(minIntersectionTimeTriangleFace==NULL)) {
     bool code;
 
     if ((t=node->FirstTriangleCutFace)!=NULL) {
       for (;t!=NULL;t=t->next) {
         TriangleFace=t->TriangleFace;
 
-        if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
-          code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
+        if ((ParallelCheck==false)||((++cnt)%PIC::nTotalThreads==PIC::ThisThread)) {
+          if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) {
+            code=TriangleFace->RayIntersection(x0Ray,lRay,IntersectionTime,xIntersectionTemp,PIC::Mesh::mesh.EPS);
 
-          if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
-            if ((minIntersectionTimeTriangleFace==NULL) || (IntersectionTime>minIntersectionTime)) {
-              minIntersectionTimeTriangleFace=TriangleFace;
-              minIntersectionTime=IntersectionTime;
-              memcpy(xMinTimeIntersection,xIntersectionTemp,3*sizeof(double));
+            if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)) {
+              if ((minIntersectionTimeTriangleFace==NULL) || (IntersectionTime>minIntersectionTime)) {
+                minIntersectionTimeTriangleFace=TriangleFace;
+                minIntersectionTime=IntersectionTime;
+                memcpy(xMinTimeIntersection,xIntersectionTemp,3*sizeof(double));
+              }
             }
           }
         }
-      }
-    }
 
-    if (minIntersectionTimeTriangleFace!=NULL) {
-      //intersection face is found -> return it
-      memcpy(xIntersection,xMinTimeIntersection,3*sizeof(double));
-      return minIntersectionTimeTriangleFace-PIC::Mesh::IrregularSurface::BoundaryTriangleFaces;
+      }
     }
 
     //determine the new node
@@ -350,6 +360,38 @@ int PIC::RayTracing::FindFistIntersectedFace(double *x0Ray,double *lRay,double *
     }
 
     memcpy(x,xNodeExit,3*sizeof(double));
+  }
+
+  //collect min intersection data from all processors
+  if (ParallelCheck==true) {
+    double IntersectionTimeTable[PIC::nTotalThreads];
+    int iIntersectedFace,MinIntersectionThread=0;
+
+    MPI_Gather(&minIntersectionTime,1,MPI_DOUBLE,IntersectionTimeTable,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (PIC::ThisThread==0) {
+      for (int thread=0;thread<PIC::nTotalThreads;thread++) if ((minIntersectionTime<0.0) || ((IntersectionTimeTable[thread]>0.0)&&(IntersectionTimeTable[thread]<minIntersectionTime)) ) {
+        minIntersectionTime=IntersectionTimeTable[thread],MinIntersectionThread=thread;
+      }
+    }
+
+    MPI_Bcast(&MinIntersectionThread,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(&minIntersectionTime,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (minIntersectionTime>0.0) {
+      if (PIC::ThisThread==MinIntersectionThread) iIntersectedFace=minIntersectionTimeTriangleFace-PIC::Mesh::IrregularSurface::BoundaryTriangleFaces;
+
+      MPI_Bcast(&iIntersectedFace,1,MPI_INT,MinIntersectionThread,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Bcast(xMinTimeIntersection,3,MPI_DOUBLE,MinIntersectionThread,MPI_GLOBAL_COMMUNICATOR);
+
+      if (PIC::ThisThread!=MinIntersectionThread) minIntersectionTimeTriangleFace=iIntersectedFace+PIC::Mesh::IrregularSurface::BoundaryTriangleFaces;
+    }
+  }
+
+  if (minIntersectionTimeTriangleFace!=NULL) {
+    //intersection face is found -> return it
+    memcpy(xIntersection,xMinTimeIntersection,3*sizeof(double));
+    return minIntersectionTimeTriangleFace-PIC::Mesh::IrregularSurface::BoundaryTriangleFaces;
   }
 
   //no face of intersection was found -> return the default value

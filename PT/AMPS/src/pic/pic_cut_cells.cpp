@@ -97,7 +97,7 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
     for (idim=0;idim<3;idim++) xFinish[idim]=lDomain*xFinish[idim]/l+xStart[idim];
 
     //count face intersections
-    iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(xStart,xFinish,fcptr->MeshFileID,fcptr);
+    iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(xStart,xFinish,fcptr->MeshFileID,false,fcptr);
 
     if (iIntersections%2!=0) {
       //the norm has to be reversed
@@ -168,7 +168,7 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 
   //xFinish is outside of the domain -> the point outside of the surface
   //calculate the number of the face intersections between 'x' and 'xFinish'
-  iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xFinish,-1);
+  iIntersections=PIC::RayTracing::CountFaceIntersectionNumber(x,xFinish,-1,ParallelCheck,NULL);
 
   return (iIntersections%2==0) ? true : false;
 }
@@ -393,7 +393,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,bool ParallelEx
 }
 
 double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xClosestPoint,int& iClosestTriangularFace,bool ParallelExecutionModeMPI) {
-  double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],xIntersectionLocal[3],IntersectionTime,t;
+  double xFace[3],c,*ExternNormal,Altitude=-1.0,l[3],xIntersection[3],IntersectionTime,t;
   int iFace,idim,iPoint;
   int nThreadsOpenMP=1;
 
@@ -467,7 +467,7 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
     //the closest point to the face is that along the normal check intersecion of the line along the normal with the surface element
     for (idim=0;idim<DIM;idim++) l[idim]=-ExternNormal[idim];
 
-    if (CutCell::BoundaryTriangleFaces[iFace].RayIntersection(x,l,IntersectionTime,xIntersectionLocal,xIntersection,PIC::Mesh::mesh.EPS)==true) {
+    if (CutCell::BoundaryTriangleFaces[iFace].RayIntersection(x,l,IntersectionTime,xIntersection,PIC::Mesh::mesh.EPS)==true) {
       for (c=0.0,idim=0;idim<DIM;idim++) c+=pow(x[idim]-xIntersection[idim],2);
 
       t=sqrt(c);

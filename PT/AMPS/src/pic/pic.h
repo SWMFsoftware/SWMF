@@ -1360,8 +1360,8 @@ namespace PIC {
 
     bool GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace);
     bool TestDirectAccess(double *xStart,double *xTarget);
-    int CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,void* ExeptionFace=NULL);
-    int FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,void* ExeptionFace=NULL);
+    int CountFaceIntersectionNumber(double *xStart,double *xTarget,int MeshFileID,bool ParallelCheck,void* ExeptionFace);
+    int FindFistIntersectedFace(double *x0Ray,double *lRay,double *xIntersection,bool ParallelCheck,void* ExeptionFace);
 
     void SetCutCellShadowAttribute(double *xLightSource, bool ParallelExecution=false);
   }
