@@ -22,6 +22,7 @@ OBJECTS = \
 	ModCoordTransform.o\
 	ModExactRS.o\
 	ModFreq.o\
+	ModHyperGeometric.o\
 	ModInitialState.o\
 	ModInterpolate.o\
 	ModInterpolateAMR.o\
