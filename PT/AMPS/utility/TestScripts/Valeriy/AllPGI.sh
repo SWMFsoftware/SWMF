@@ -20,5 +20,5 @@ make test_CG-PostProcess--Read-Trajectories--off_rundir
 echo " done."
 
 echo -n "Executing tests PGI....."
-make MPIRUN="mpirun -np 4" test_run >>& test_amps.log
+make TESTMPIRUN4="mpirun -np 4" MPIRUN="mpirun -np 4" test_run >>& test_amps.log
 echo " done."
