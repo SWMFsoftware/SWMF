@@ -536,7 +536,7 @@ Keys=-cplr-data-path=${PTDIR}/data/input/SEP/ARMS/Converted2ASCII
 Run=
 >>>@echo "test_SEP3D_run..." >> test_SEP3D${TESTSEP3D-REF}.diff
 >>>@echo Test test_SEP3D has started: `date`
->>>cd ${TESTSEP3DDIR}; ${MPIRUN} ./amps
+>>>cd ${TESTSEP3DDIR}; ${TESTMPIRUN4} ./amps
 >>>@echo "test_SEP3D_run... done" >> test_SEP3D${TESTSEP3D-REF}.diff
 <#
 -------------------------------------------------------------------------------
