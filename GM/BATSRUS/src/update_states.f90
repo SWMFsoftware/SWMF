@@ -40,13 +40,19 @@ subroutine update_states(iBlock)
              'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
      end do
      write(*,*)'Fluxes and sources for ',NameVar_V(VarTest)
-     write(*,*)'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(a,2es15.7)')'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
           Flux_VX(VARtest,Itest+1,Jtest,Ktest)
-     write(*,*)'Y fluxes L,R=',Flux_VY(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(a,2es15.7)')'Y fluxes L,R=',Flux_VY(VARtest,Itest,Jtest,Ktest),&
           Flux_VY(VARtest,Itest,Jtest+1,Ktest)
-     write(*,*)'Z fluxes L,R=',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(a,2es15.7)')'Z fluxes L,R=',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
           Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
-     write(*,*)'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
+     write(*,'(a,es15.7)')'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
+     write(*,'(a,es15.7)')'fluxes=',Flux_VX(VARtest,Itest,Jtest,Ktest) &
+          -Flux_VX(VARtest,Itest+1,Jtest,Ktest)                        &
+          +Flux_VY(VARtest,Itest,Jtest,Ktest)                          &
+          -Flux_VY(VARtest,Itest,Jtest+1,Ktest)                        &
+          +Flux_VZ(VARtest,Itest,Jtest,Ktest)                          &
+          -Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
   end if
 
   if(UseUserUpdateStates)then
