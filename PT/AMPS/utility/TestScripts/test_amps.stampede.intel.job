@@ -13,7 +13,7 @@
 #SBATCH -t 02:00:00       # Run time (hh:mm:ss) - 1.5 hours
 
 #The next line is required if the user has more than one project
-#SBATCH -A TG-AST140002  # Allocation name to charge job against
+#SBATCH -A TG-AST170027  # Allocation name to charge job against
 
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
