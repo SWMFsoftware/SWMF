@@ -338,7 +338,8 @@ void amps_init() {
    //set up sampling of velocity distribution functions
    if(OH::Sampling::DistributionFunctionSample::Use){
      OH::Sampling::DistributionFunctionSample::Init();
-     PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(OH::Sampling::DistributionFunctionSample::SampleDistributionFnction,OH::Sampling::DistributionFunctionSample::printDistributionFunction);
+     PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(OH::Sampling::DistributionFunctionSample::SampleDistributionFunction,OH::Sampling::DistributionFunctionSample::printDistributionFunction);
+     PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(OH::Sampling::DistributionFunctionSample::Sample2dDistributionFunction,OH::Sampling::DistributionFunctionSample::print2dDistributionFunction);
    }
 
 }
