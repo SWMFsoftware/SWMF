@@ -272,7 +272,7 @@ void OH::Sampling::DistributionFunctionSample::printDistributionFunction(int Dat
       // loop over number of points (nSampledLocation) want distribution function at
       for (nProbe=0;nProbe<nSampleLocations;nProbe++) {
 	if (PIC::Mesh::mesh.ThisThread==0) {
-	  sprintf(str,"%s/pic.%s.s=%i.VelocityDistributionFunction.nSamplePoint=%ld.out=%ld.dat",PIC::OutputDataFileDirectory,ChemSymbol,spec,nProbe,DataOutputFileNumber);
+	  sprintf(str,"%s/pic.%s.s=%i.VelocityDistributionFunction.nSamplePoint=%ld.out=%i.dat",PIC::OutputDataFileDirectory,ChemSymbol,spec,nProbe,DataOutputFileNumber);
 	  fout=fopen(str,"w");
 	  
 	  fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
@@ -403,7 +403,7 @@ void OH::Sampling::DistributionFunctionSample::cSampled2DFunction::Print(int Dat
 
 
   if (PIC::Mesh::mesh.ThisThread==0) {
-    sprintf(str,"%s/pic.%s.out=%ld.dat",PIC::OutputDataFileDirectory,
+    sprintf(str,"%s/pic.%s.out=%i.dat",PIC::OutputDataFileDirectory,
 	    this->fname,DataOutputFileNumber);
     fout=fopen(str,printChar);
 	  
