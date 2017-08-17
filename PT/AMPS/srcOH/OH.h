@@ -109,15 +109,23 @@ namespace OH {
 	double VMin1, VMin2;
 	double dV1, dV2;
 	int N1, N2;
-	char name[_MAX_STRING_LENGTH_PIC_];
-	bool DoPrint;
+	char fname[_MAX_STRING_LENGTH_PIC_];
+	char zoneName[_MAX_STRING_LENGTH_PIC_];
+	char Dir1name[_MAX_STRING_LENGTH_PIC_];
+	char Dir2name[_MAX_STRING_LENGTH_PIC_];
+	char printChar[_MAX_STRING_LENGTH_PIC_];
+
       public:
 	inline void Init(int N1In, int N2In, double dV1In, double dV2In,
 			 double VMin1In, double VMin2In, 
-			 double* Dir1In, double* Dir2In, 
-			 char* nameIn, bool DoPrintIn){
-	  DoPrint = DoPrintIn;
-	  sprintf(name, "%s", nameIn);
+			 double* Dir1In, double* Dir2In,
+			 char* Dir1nameIn, char* Dir2nameIn, 
+			 char* fnameIn, char* zoneNameIn ){
+
+	  sprintf(Dir1name, "%s", Dir1nameIn);
+	  sprintf(Dir2name, "%s", Dir2nameIn);
+	  sprintf(fname, "%s", fnameIn);
+	  sprintf(zoneName, "%s", zoneNameIn);
 	  N1 = N1In; N2 = N2In; dV1 = dV1In; dV2 = dV2In;
 	  VMin1 = VMin1In; VMin2 = VMin2In;
 	  memcpy(Dir1, Dir1In, 3*sizeof(double));
@@ -149,10 +157,9 @@ namespace OH {
 	    Buffer[i1][i2] += Weight;
 	}
 	//--------------
-	void Print(int DataOutputFileNumber);
+	void Print(int DataOutputFileNumber, char* printCharIN);
 	//--------------
 	cSampled2DFunction(){
-	  DoPrint = false;
 	  N1=0;N2=0; VMin1=0.0; VMin2 = 0.0; dV1 = 1.0; dV2 = 1.0;
 	  Dir1 = new double [3];
 	  Dir2 = new double [3];
