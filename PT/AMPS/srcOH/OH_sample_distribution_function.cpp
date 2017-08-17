@@ -83,36 +83,65 @@ void OH::Sampling::DistributionFunctionSample::Init() {
   //initializing each object with correct direction of vectors describing plane
   int Sample_2D_Offset;
   char fname[_MAX_STRING_LENGTH_PIC_];
-  char fplane[_MAX_STRING_LENGTH_PIC_];
-
+  char zoneName[_MAX_STRING_LENGTH_PIC_];
+  char vx[_MAX_STRING_LENGTH_PIC_];
+  char vy[_MAX_STRING_LENGTH_PIC_];
+  char vz[_MAX_STRING_LENGTH_PIC_];
+  char vr[_MAX_STRING_LENGTH_PIC_];
+  char vtheta[_MAX_STRING_LENGTH_PIC_];
+  char vphi[_MAX_STRING_LENGTH_PIC_];
+  
   // cartesian coordinates
   double DirX[3]={1.0,0.0,0.0},DirY[3]={0.0,1.0,0.0},DirZ[3]={0.0,0.0,1.0};
+  sprintf(vx,"Vx"); sprintf(vy,"Vy"); sprintf(vz,"Vz");
   
   //spherical coordinate vectors
   double DirR[3]={1.0,0.0,0.0},DirTheta[3]={0.0,1.0,0.0},DirPhi[3]={0.0,0.0,1.0};
-
+  sprintf(vr,"Vr"); sprintf(vtheta,"Vtheta"); sprintf(vphi,"Vphi");
+  double x=0.0,y=0.0,z=0.0,r=0.0,xy=0.0;
+  
   for (nProbe=0;nProbe<nSampleLocations;nProbe++) {
+    x=SamplingLocations[nProbe][0];
+    if(DIM==3){ 
+      y=SamplingLocations[nProbe][1]; 
+      z=SamplingLocations[nProbe][2];
+    }
+    r=sqrt(x*x+y*y+z*z);xy=sqrt(x*x+y*y);
+    //setting directions to calculate the velocities in spherical coords
+    DirR[0]=x/r; DirR[1]=y/r; DirR[2]=x/xy;
+    DirTheta[0]=-y/xy; DirTheta[1]=x/xy; DirTheta[2]=0;
+    DirPhi[0]=z*x/(r*xy); DirPhi[0]=z*y/(r*xy); DirPhi[0]=-xy/r;
+    
     for (int physpec=0;physpec<OH::nPhysSpec; physpec++){
       for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations+1;iSource++) {
 	Sample_2D_Offset=iSource*nSampledPlanes+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*physpec*nSampledPlanes;
-	sprintf(fname,"PhysSpec=%i.OriginID=%i.nSampledPoint=%i",physpec,iSource,nProbe);
-	if (iSource==0 || iSource==1){
+	sprintf(fname,"PhysSpec=%i.2DVelocityDistFunc.nSampledPoint=%i",physpec,nProbe);
+	if (iSource==0){
 	  //rotating cartesian coordinates into spherical coordinates more useful for solar wind
-	  sprintf(fplane,"%s.R-Theta_plane",fname);
-	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirTheta,fplane,1);
-	  sprintf(fplane,"%s.R-Phi_plane",fname);
-	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirPhi,fplane,1);
-	  sprintf(fplane,"%s.Theta-Phi_plane",fname);
-	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirTheta,DirPhi,fplane,1);
+	  sprintf(zoneName,"R-Theta plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirTheta,vr,vtheta,fname,zoneName);
+	  sprintf(zoneName,"R-Theta plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirPhi,vr,vphi,fname,zoneName);
+	  sprintf(zoneName,"Theta-Phi plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirTheta,DirPhi,vtheta,vphi,fname,zoneName);
+	}
+	else if(iSource == OH::Sampling::OriginLocation::nSampledOriginLocations){
+	  // use default cartesian coordinates
+	  sprintf(zoneName,"XY plane (Total Solution)");
+	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirY,vx,vy,fname,zoneName);
+	  sprintf(zoneName,"XZ plane (Total Solution)");
+	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirZ,vx,vz,fname,zoneName);
+	  sprintf(zoneName,"YZ plane (Total Solution)");
+	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirY,DirZ,vy,vz,fname,zoneName);
 	}
 	else{
 	  // use default cartesian coordinates
-	  sprintf(fplane,"%s.XYplane",fname);
-	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirY,fplane,1);
-	  sprintf(fplane,"%s.XZplane",fname);
-	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirZ,fplane,1);
-	  sprintf(fplane,"%s.YZplane",fname);
-	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirY,DirZ,fplane,1);
+	  sprintf(zoneName,"XY plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirY,vx,vy,fname,zoneName);
+	  sprintf(zoneName,"XZ plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirX,DirZ,vx,vz,fname,zoneName);
+	  sprintf(zoneName,"YZ plane (OriginID=%i)",iSource);
+	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirY,DirZ,vy,vz,fname,zoneName);
 	}					   						    
       }
     }
@@ -360,14 +389,14 @@ void OH::Sampling::DistributionFunctionSample::printDistributionFunction(int Dat
 
 //====================================================
 // the print function for the calss used to sample 2D distribution functions
-void OH::Sampling::DistributionFunctionSample::cSampled2DFunction::Print(int DataOutputFileNumber){
- long int idim,nProbe,i,nVariable,thread,offset;
+void OH::Sampling::DistributionFunctionSample::cSampled2DFunction::Print(int DataOutputFileNumber, char* printCharIN){
+  long int idim,thread;
   FILE *fout=NULL;
   CMPI_channel pipe(1000000);
-  double norm=0.0,dInterval=0.0;
-  char str[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+  double norm=0.0;
+  char str[_MAX_STRING_LENGTH_PIC_];
 
-  if(!this->DoPrint) return;
+  sprintf(printChar, "%s", printCharIN);
 
   if (PIC::Mesh::mesh.ThisThread==0) pipe.openRecvAll();
   else pipe.openSend(0);
@@ -375,8 +404,8 @@ void OH::Sampling::DistributionFunctionSample::cSampled2DFunction::Print(int Dat
 
   if (PIC::Mesh::mesh.ThisThread==0) {
     sprintf(str,"%s/pic.%s.out=%ld.dat",PIC::OutputDataFileDirectory,
-	    this->name,DataOutputFileNumber);
-    fout=fopen(str,"w");
+	    this->fname,DataOutputFileNumber);
+    fout=fopen(str,printChar);
 	  
     fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
 	  
@@ -384,8 +413,8 @@ void OH::Sampling::DistributionFunctionSample::cSampled2DFunction::Print(int Dat
     //for (idim=1;idim<DIM;idim++) fprintf(fout,", %E",SamplingLocations[nProbe][idim]);
     //fprintf(fout,", sampled over velocity range %E to %E [m/s]",vMin,vMax);	  
 
-    fprintf(fout,"\"\nVARIABLES=\"V1\",\"V2\", \"f(V1,V2)\"\n");
-    fprintf(fout,"ZONE I=%i, J=%i, DATAPACKING=POINT\n",this->N1-1,this->N2-1);
+    fprintf(fout,"\nVARIABLES=\"%s\",\"%s\", \"f(%s,%s)\"\n", this->Dir1name, this->Dir2name,this->Dir1name, this->Dir2name);
+    fprintf(fout,"ZONE T=\"%s\" I=%i, J=%i, DATAPACKING=POINT\n",this->zoneName,this->N1-1,this->N2-1);
     
     //collect the sampled information from other processors
     for (thread=1;thread<PIC::Mesh::mesh.nTotalThreads;thread++)
@@ -491,11 +520,14 @@ void OH::Sampling::DistributionFunctionSample::print2dDistributionFunction(int D
     for (int physpec=0;physpec<OH::nPhysSpec; physpec++){
       for (int iSource=0;iSource<OH::Sampling::OriginLocation::nSampledOriginLocations+1;iSource++) {
 	offset=iSource*nSampledPlanes+(OH::Sampling::OriginLocation::nSampledOriginLocations+1)*physpec*nSampledPlanes;
-
+	
 	// printing out the three planes per tag per physical species
-	Sampled2DFunction[nProbe][0+offset].Print(DataOutputFileNumber);
-	Sampled2DFunction[nProbe][1+offset].Print(DataOutputFileNumber);
-	Sampled2DFunction[nProbe][2+offset].Print(DataOutputFileNumber);
+	if (iSource ==0){
+	  Sampled2DFunction[nProbe][0+offset].Print(DataOutputFileNumber,"w");
+	}
+	else Sampled2DFunction[nProbe][0+offset].Print(DataOutputFileNumber,"a");
+	Sampled2DFunction[nProbe][1+offset].Print(DataOutputFileNumber,"a");
+	Sampled2DFunction[nProbe][2+offset].Print(DataOutputFileNumber,"a");
       }
     }
   }
