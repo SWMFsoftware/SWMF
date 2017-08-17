@@ -2599,6 +2599,9 @@ namespace PIC {
       extern int nCutFaceInformationCopyAttempts;
       void CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=PIC::Mesh::mesh.rootTree);
 
+      //determine the signature of the cut-face distribution in the mesh
+      unsigned int GetCutFaceDistributionSignature(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,int nline,const char* fname);
+
       //init the vectors of the external normals at the cut-faces
       void InitExternalNormalVector();
       bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);

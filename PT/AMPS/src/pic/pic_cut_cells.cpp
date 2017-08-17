@@ -174,6 +174,60 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 }
 
 
+//get the signature of the cut cell distribution on the mesh
+unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,int nline,const char* fname) {
+  static CRC32 Signature;
+
+  if ((startNode==PIC::Mesh::mesh.rootTree)||(startNode==NULL)) {
+    Signature.clear();
+
+    if (startNode==NULL) {
+      if (PIC::Mesh::mesh.rootTree==NULL) return 0;
+      else startNode=PIC::Mesh::mesh.rootTree;
+    }
+  }
+
+  Signature.add(startNode->Temp_ID);
+
+  if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+    for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) GetCutFaceDistributionSignature(startNode->downNode[i],nline,fname);
+  }
+  else {
+    int i;
+
+    //add the list of the cut-faces accessable throught the block neibours
+    if (startNode->neibCutFaceListDescriptorList!=NULL) {
+      CutCell::cTriangleFaceDescriptor* tr;
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor *t=startNode->neibCutFaceListDescriptorList;
+
+      for (t=startNode->neibCutFaceListDescriptorList;t!=NULL;t=t->next) for (tr=t->FirstTriangleCutFace;tr!=NULL;tr=tr->next) {
+        i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
+        Signature.add(i);
+      }
+    }
+
+    //add the list of the cut faces accessable directely from the block
+    if (startNode->FirstTriangleCutFace!=NULL) {
+      CutCell::cTriangleFaceDescriptor* tr;
+
+      for (tr=startNode->FirstTriangleCutFace;tr!=NULL;tr=tr->next) {
+        i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
+        Signature.add(i);
+      }
+    }
+  }
+
+  //output calculated signatures
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    char msg[300];
+
+    sprintf(msg,"Cut-Face Distribution Signature (line=%i, file=%s)",nline,fname);
+    Signature.PrintChecksum(msg);
+  }
+
+  return Signature.checksum();
+}
+
 //copy information about the triangular cut faces into the nighbouring blocks 
 void PIC::Mesh::IrregularSurface::CopyCutFaceInformation(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
 
