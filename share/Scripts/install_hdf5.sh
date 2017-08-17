@@ -525,12 +525,12 @@ fi
 
 function bv_hdf5_info
 {
-export HDF5_VERSION=${HDF5_VERSION:-"1.8.8"}
+export HDF5_VERSION=${HDF5_VERSION:-"1.8.17"}
 export HDF5_FILE=${HDF5_FILE:-"hdf5-${HDF5_VERSION}.tar.gz"}
 export HDF5_COMPATIBILITY_VERSION=${HDF5_COMPATIBILITY_VERSION:-"1.8"}
 export HDF5_BUILD_DIR=${HDF5_BUILD_DIR:-"hdf5-${HDF5_VERSION}"}
 # Note: Versions of HDF5 1.6.5 and earlier DO NOT have last path component
-export HDF5_URL=${HDF5_URL:-"http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-${HDF5_VERSION}/src"}
+export HDF5_URL=${HDF5_URL:-"http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-${HDF5_VERSION}/src"}
 export HDF5_MD5_CHECKSUM="d4ed6892b17e45a59f998b58ade9987d"
 export HDF5_SHA256_CHECKSUM=""
 export HDF5INSTALLDIR=${START_DIR}/hdf5-${HDF5_VERSION}
