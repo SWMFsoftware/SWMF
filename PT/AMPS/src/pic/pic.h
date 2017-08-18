@@ -2012,6 +2012,9 @@ namespace PIC {
   namespace Mesh {
     class cDataCenterNode;
 
+    //get the AMR tree signature
+    unsigned int GetMeshTreeSignature(void *startNode,int nline,const char* fname);
+
     // aliases
     typedef PIC::Datum::cDatumTimed    cDatumTimed;
     typedef PIC::Datum::cDatumWeighted cDatumWeighted;

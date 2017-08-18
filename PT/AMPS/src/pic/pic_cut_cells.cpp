@@ -187,10 +187,11 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
     }
   }
 
-  Signature.add(startNode->Temp_ID);
-
   if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
-    for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) GetCutFaceDistributionSignature(startNode->downNode[i],nline,fname);
+    for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) {
+      Signature.add(i);
+      GetCutFaceDistributionSignature(startNode->downNode[i],nline,fname);
+    }
   }
   else {
     int i;

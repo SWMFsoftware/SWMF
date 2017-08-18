@@ -787,3 +787,90 @@ void PIC::Mesh::cDataCenterNode::InterpolateDatum(Datum::cDatumSampled Datum, cD
   #endif
 }
 
+
+//-----------------------------------------------------------------------
+//get signature of the AMR tree
+unsigned int PIC::Mesh::GetMeshTreeSignature(void *startNodeIn,int nline,const char* fname) {
+  static CRC32 Signature;
+  static CRC32 CutFaceNumberSignature;
+  static CRC32 NeibCutFaceListDescriptorList;
+  static int BottomNodeCounter=0;
+
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *)startNodeIn;
+
+  if ((startNode==PIC::Mesh::mesh.rootTree)||(startNode==NULL)) {
+    Signature.clear();
+    CutFaceNumberSignature.clear();
+    NeibCutFaceListDescriptorList.clear();
+    BottomNodeCounter=0;
+
+    if (startNode==NULL) {
+      if (PIC::Mesh::mesh.rootTree==NULL) return 0;
+      else startNode=PIC::Mesh::mesh.rootTree;
+    }
+  }
+
+  if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+    for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) {
+      Signature.add(i);
+      GetMeshTreeSignature(startNode->downNode[i],nline,fname);
+    }
+  }
+  else {
+    BottomNodeCounter++;
+
+    //add the list of the cut faces accessable directely from the block
+    if (startNode->FirstTriangleCutFace!=NULL) {
+      int cnt=0;
+
+      for (CutCell::cTriangleFaceDescriptor* tr=startNode->FirstTriangleCutFace;tr!=NULL;tr=tr->next) cnt++;
+
+      CutFaceNumberSignature.add(BottomNodeCounter);
+      CutFaceNumberSignature.add(cnt);
+    }
+
+    //add the list of the cut-faces accessable throught the block neibours
+    if (startNode->neibCutFaceListDescriptorList!=NULL) {
+      int cnt=0;
+
+      for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor *t=startNode->neibCutFaceListDescriptorList;t!=NULL;t=t->next) cnt++;
+
+      NeibCutFaceListDescriptorList.add(BottomNodeCounter);
+      NeibCutFaceListDescriptorList.add(cnt);
+    }
+  }
+
+  //output calculated signatures
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    char msg[300];
+
+    sprintf(msg,"Mesh AMR Tree Signature (line=%i, file=%s)",nline,fname);
+    Signature.PrintChecksum(msg);
+
+    sprintf(msg,"Mesh AMR Tree Cut-Face Signature (line=%i, file=%s)",nline,fname);
+    CutFaceNumberSignature.PrintChecksum(msg);
+
+    sprintf(msg,"Mesh AMR Tree Neib Cut Face Descriptor List Signature (line=%i, file=%s)",nline,fname);
+    NeibCutFaceListDescriptorList.PrintChecksum(msg);
+  }
+
+  return Signature.checksum();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
