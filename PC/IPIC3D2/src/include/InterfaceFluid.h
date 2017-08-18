@@ -2141,7 +2141,7 @@ class InterfaceFluid
       var0 = inVars.substr(pos1+1,pos2-pos1-1);
       inVars.erase(pos1,pos2-pos1+1);
       if(var0=="fluid"){
-  	inVars += "rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
+  	inVars += " rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
       }
       pos1 = inVars.find_first_of("{");
     }
