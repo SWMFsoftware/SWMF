@@ -176,10 +176,13 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 
 //get the signature of the cut cell distribution on the mesh
 unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,int nline,const char* fname) {
-  static CRC32 Signature;
+  static CRC32 Signature,Signature_ListOrderDependent;
+  static list<int> CutFaceList;
+
 
   if ((startNode==PIC::Mesh::mesh.rootTree)||(startNode==NULL)) {
     Signature.clear();
+    Signature_ListOrderDependent.clear();
 
     if (startNode==NULL) {
       if (PIC::Mesh::mesh.rootTree==NULL) return 0;
@@ -190,11 +193,15 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
   if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
     for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) {
       Signature.add(i);
+      Signature_ListOrderDependent.add(i);
+
       GetCutFaceDistributionSignature(startNode->downNode[i],nline,fname);
     }
   }
   else {
     int i;
+
+    CutFaceList.clear();
 
     //add the list of the cut-faces accessable throught the block neibours
     if (startNode->neibCutFaceListDescriptorList!=NULL) {
@@ -203,7 +210,8 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
 
       for (t=startNode->neibCutFaceListDescriptorList;t!=NULL;t=t->next) for (tr=t->FirstTriangleCutFace;tr!=NULL;tr=tr->next) {
         i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
-        Signature.add(i);
+        Signature_ListOrderDependent.add(i);
+        CutFaceList.push_back(i);
       }
     }
 
@@ -213,17 +221,30 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
 
       for (tr=startNode->FirstTriangleCutFace;tr!=NULL;tr=tr->next) {
         i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
-        Signature.add(i);
+        Signature_ListOrderDependent.add(i);
+        CutFaceList.push_back(i);
       }
     }
+
+    //sort the list of cut-faces and add it to 'Signature'
+    CutFaceList.sort(greater<int>());
+
+    for (list<int>::iterator ptr=CutFaceList.begin();ptr!=CutFaceList.end();ptr++) {
+      i=*ptr;
+      Signature.add(i);
+    }
+
   }
 
   //output calculated signatures
   if (startNode==PIC::Mesh::mesh.rootTree) {
     char msg[300];
 
-    sprintf(msg,"Cut-Face Distribution Signature (line=%i, file=%s)",nline,fname);
+    sprintf(msg,"Cut-Face Distribution Signature (order indipendent) (line=%i, file=%s)",nline,fname);
     Signature.PrintChecksum(msg);
+
+    sprintf(msg,"Cut-Face Distribution Signature (order dipendent) (line=%i, file=%s)",nline,fname);
+    Signature_ListOrderDependent.PrintChecksum(msg);
   }
 
   return Signature.checksum();
@@ -485,7 +506,9 @@ double PIC::Mesh::IrregularSurface::GetClosestDistance(double *x,double *xCloses
    xClosestPointTable[0]=new double [3*nThreadsOpenMP];
    for (int i=1;i<nThreadsOpenMP;i++) xClosestPointTable[i]=xClosestPointTable[0]+3*i;
 
-   #pragma omp parallel default(none) private (iPoint,xIntersectionLocal,xIntersection,IntersectionTime,xFace,iFace,ExternNormal,c,idim,t,l) shared (iFaceStart,iFaceFinish,x,PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces,CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
+   #pragma omp parallel default(none) private (iPoint,xIntersection,IntersectionTime,xFace,iFace,ExternNormal,c,idim,t,l) \
+   shared (iFaceStart,iFaceFinish,x,PIC::Mesh::mesh,iClosestTriangularFaceTable,xClosestPointTable,AltitudeTable,CutCell::nBoundaryTriangleFaces, \
+       CutCell::BoundaryTriangleFaces,nThreadsOpenMP)
    {
    int iThreadOpenMP=omp_get_thread_num();
 
