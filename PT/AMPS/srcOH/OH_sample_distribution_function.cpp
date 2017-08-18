@@ -120,7 +120,7 @@ void OH::Sampling::DistributionFunctionSample::Init() {
 	  //rotating cartesian coordinates into spherical coordinates more useful for solar wind
 	  sprintf(zoneName,"R-Theta plane (OriginID=%i)",iSource);
 	  Sampled2DFunction[nProbe][0+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirTheta,vr,vtheta,fname,zoneName);
-	  sprintf(zoneName,"R-Theta plane (OriginID=%i)",iSource);
+	  sprintf(zoneName,"R-Phi plane (OriginID=%i)",iSource);
 	  Sampled2DFunction[nProbe][1+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirR,DirPhi,vr,vphi,fname,zoneName);
 	  sprintf(zoneName,"Theta-Phi plane (OriginID=%i)",iSource);
 	  Sampled2DFunction[nProbe][2+Sample_2D_Offset].Init(nSampledFunctionPoints,nSampledFunctionPoints,dV,dV,vMin,vMin,DirTheta,DirPhi,vtheta,vphi,fname,zoneName);
