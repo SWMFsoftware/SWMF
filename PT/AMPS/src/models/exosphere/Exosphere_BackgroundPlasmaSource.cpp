@@ -321,7 +321,7 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
          #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
          #pragma omp task default (shared) shared (PIC::Mesh::mesh,BoundaryFaceLocalInjectionRate,maxBoundaryFaceLocalInjectionRate,FluxIntegrationIncrement) \
          firstprivate (node,nface,spec,nBoundaryFace) \
-         private (x,x0,e0,e1,ExternalNormal,newParticle,newParticleData,PlasmaNumberDensity,PlasmaTemeprature,PlasmaBulkVelocity,idim,c0,c1,v)
+         private (x,x0,e0,e1,ExternalNormal,newParticle,newParticleData,PlasmaTemeprature,PlasmaBulkVelocity,idim,c0,c1,v)
          {
          #endif
 

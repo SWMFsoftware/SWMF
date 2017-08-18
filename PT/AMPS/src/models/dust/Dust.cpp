@@ -1564,7 +1564,7 @@ void ElectricallyChargedDust::GrainVelocityGroup::AdjustParticleVelocityGroup() 
   //move existing particles
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 //**************************  OpenMP + MPI + block's splitting *********************************
-#pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,StartTime,EndTime)  \
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,StartTime)  \
   shared (PIC::DomainBlockDecomposition::BlockTable,PIC::DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh,ElectricallyChargedDust::GrainVelocityGroup::nGroups)
 #endif
   for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
