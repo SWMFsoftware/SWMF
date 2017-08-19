@@ -240,10 +240,10 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
   if (startNode==PIC::Mesh::mesh.rootTree) {
     char msg[300];
 
-    sprintf(msg,"Cut-Face Distribution Signature (order indipendent) (line=%i, file=%s)",nline,fname);
+    sprintf(msg,"Cut-Face Distribution Signature (cut-face list order independent) (line=%i, file=%s)",nline,fname);
     Signature.PrintChecksum(msg);
 
-    sprintf(msg,"Cut-Face Distribution Signature (order dipendent) (line=%i, file=%s)",nline,fname);
+    sprintf(msg,"Cut-Face Distribution Signature (cur-face list order dependent) (line=%i, file=%s)",nline,fname);
     Signature_ListOrderDependent.PrintChecksum(msg);
   }
 
