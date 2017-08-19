@@ -154,8 +154,64 @@ void PrintLineMark(long int nline ,char* fname ,char* msg) {
   }
 }
 
+//=============================================================
+//print a message into the debugger stream
+void Debugger::SaveDataIntoStream(void* data,int length,const char* msg) {
 
+  struct cStreamBuffer {
+    int CollCounter;
+    unsigned long CheckSum;
+    char CallPoint[200];
+  };
 
+  const int CheckSumBufferLength=500;
+  static cStreamBuffer StreamBuffer[CheckSumBufferLength];
+
+  static int BufferPointer=0;
+  static int CallCounter=0;
+  static CRC32 CheckSum;
+
+  //create a new copy of the dbuffer stream file at the first call of this function
+  if (CallCounter==0) {
+    FILE *fout;
+    char fn[200];
+
+    sprintf(fn,"DebuggerStream.thread=%i.dbg",ThisThread);
+    fout=fopen(fn,"w");
+    fclose(fout);
+  }
+
+  //increment the call counter
+  CallCounter++;
+
+  //update the check sum
+  CheckSum.add((char*)data,length);
+
+  //save the checksum in the buffer
+  StreamBuffer[BufferPointer].CollCounter=CallCounter;
+  StreamBuffer[BufferPointer].CheckSum=CheckSum.checksum();
+  sprintf(StreamBuffer[BufferPointer].CallPoint,"%s",msg);
+  BufferPointer++;
+
+  if (BufferPointer>=CheckSumBufferLength) {
+    //save the accumulated checksums into a file
+    FILE *fout;
+    char fn[200];
+
+    sprintf(fn,"DebuggerStream.thread=%i.dbg",ThisThread);
+    fout=fopen(fn,"a");
+
+    for (int i=0;i<BufferPointer;i++) fprintf(fout,"%i: 0x%lx\t%s\n",StreamBuffer[i].CollCounter,StreamBuffer[i].CheckSum,StreamBuffer[i].CallPoint);
+
+    BufferPointer=0;
+    fclose(fout);
+  }
+}
+
+template <class T>
+void Debugger::SaveDataIntoStream(T data,const char* msg) {
+  Debugger::SaveDataIntoStream(&data,sizeof(T),msg);
+}
 
 
 

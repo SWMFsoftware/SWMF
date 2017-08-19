@@ -172,18 +172,18 @@ public:
 
   void clear() {
     crc_accum=0;
-  };
+  }
 
   unsigned long checksum() { 
     return crc_accum;
-  }; 
+  }
 
   void PrintChecksum(long int nline,const char* fname) {
     char message[1000];
     
     sprintf(message," line=%ld, file=%s",nline,fname);
     PrintChecksum(message);
-  };
+  }
 
   void PrintChecksumThread(long int nline,const char* fname,int ThisThread=-1) {
     char message[1000];
@@ -192,9 +192,9 @@ public:
     if (ThisThread!=-1)  sprintf(message,"%s, thread=%i",message,ThisThread);
 
     printf("$PREFIX:CRC32 checksum=0x%lx, message=%s\n",checksum(),message);
-  };
+  }
 
-  void PrintChecksum(char* message=NULL) {
+  void PrintChecksum(const char* message=NULL) {
     unsigned long int *buffer=new unsigned long int[TotalThreadsNumber];
     long int thread;
 
@@ -218,8 +218,18 @@ public:
     }
 
     delete [] buffer;
-  };
+  }
 
+  void PrintChecksumSingleThread(const char* message=NULL) {
+    int ThisThread=0;
+
+    #ifdef MPI_ON
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    #endif
+
+    if (message!=NULL) printf("$PREFIX:CRC32 checksum=0x%lx, message=%s (thread=%i):\n",checksum(),message,ThisThread);
+    else printf("$PREFIX:CRC32 checksum=0x%lx  (thread=%i):\n",checksum(),ThisThread);
+  }
 };
 
 
@@ -477,6 +487,18 @@ namespace Relativistic {
   }
 
 }
+
+
+//===========================================================================================
+//functions that can be used for the code debugging
+ namespace Debugger {
+   //save data into debugger stream
+   void SaveDataIntoStream(void* data,int length,const char* msg);
+
+   template <class T>
+   void SaveDataIntoStream(T data,const char* msg);
+ }
+
 
 #endif
    
