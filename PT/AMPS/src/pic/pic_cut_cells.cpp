@@ -178,11 +178,13 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
 unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,int nline,const char* fname) {
   static CRC32 Signature,Signature_ListOrderDependent;
   static list<int> CutFaceList;
+  static int BlockCounter;
 
 
   if ((startNode==PIC::Mesh::mesh.rootTree)||(startNode==NULL)) {
     Signature.clear();
     Signature_ListOrderDependent.clear();
+    BlockCounter=0;
 
     if (startNode==NULL) {
       if (PIC::Mesh::mesh.rootTree==NULL) return 0;
@@ -199,9 +201,14 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
     }
   }
   else {
-    int i;
+    int i,cnt=0;
 
     CutFaceList.clear();
+
+    BlockCounter++;
+    Signature_ListOrderDependent.add(BlockCounter);
+    Signature.add(BlockCounter);
+
 
     //add the list of the cut-faces accessable throught the block neibours
     if (startNode->neibCutFaceListDescriptorList!=NULL) {
@@ -212,6 +219,7 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
         i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
         Signature_ListOrderDependent.add(i);
         CutFaceList.push_back(i);
+        cnt++;
       }
     }
 
@@ -223,6 +231,7 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
         i=tr->TriangleFace-CutCell::BoundaryTriangleFaces;
         Signature_ListOrderDependent.add(i);
         CutFaceList.push_back(i);
+        cnt++;
       }
     }
 
@@ -234,6 +243,8 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
       Signature.add(i);
     }
 
+    Signature_ListOrderDependent.add(cnt);
+    Signature.add(cnt);
   }
 
   //output calculated signatures
@@ -243,7 +254,7 @@ unsigned int PIC::Mesh::IrregularSurface::GetCutFaceDistributionSignature(cTreeN
     sprintf(msg,"Cut-Face Distribution Signature (cut-face list order independent) (line=%i, file=%s)",nline,fname);
     Signature.PrintChecksum(msg);
 
-    sprintf(msg,"Cut-Face Distribution Signature (cur-face list order dependent) (line=%i, file=%s)",nline,fname);
+    sprintf(msg,"Cut-Face Distribution Signature (cut-face list order dependent) (line=%i, file=%s)",nline,fname);
     Signature_ListOrderDependent.PrintChecksum(msg);
   }
 
