@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used
+!  with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMultiIon
 
@@ -210,7 +211,7 @@ contains
     ! Alfven Lorentz factor for Boris correction
     real :: Ga2
 
-    integer :: i, j, k
+    integer :: i, j, k, iIonFluid
 
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     logical :: DoTest, DoTestMe, DoTestCell
@@ -223,8 +224,8 @@ contains
     end if
 
     if(DoTestMe)then
-       write(*,*)NameSub,': initial Source_VC=', Source_VC(VarTest,iTest,jTest,kTest)
-       write(*,*)NameSub,':         State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
+       write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
+            Source_VC(VarTest,iTest,jTest,kTest)
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -250,6 +251,10 @@ contains
             (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
        Current_D = vInv*Current_D
 
+       if(DoTestCell) then
+          write(*,'(2a,15es16.8)') NameSub, ': Current_D    = ', Current_D
+      end if
+
        if(UseCurlB0) Current_D = Current_D + CurlB0_DC(:,i,j,k)
 
        FullB_D = State_V(Bx_:Bz_)
@@ -258,7 +263,8 @@ contains
        ! Lorentz force: J x B
        Force_D = cross_product(Current_D, FullB_D)
 
-       if(DoTestCell)write(*,*)NameSub,':Force_D=', Force_D
+       if(DoTestCell) write(*,'(2a,15es16.8)') NameSub,': Force_D      =', &
+            Force_D
 
        ! Subtract electron pressure gradient force
        if(UseMultiIon .and. &
@@ -289,8 +295,8 @@ contains
              endif
 
           end if
-          if(DoTestCell)write(*,*)NameSub,': after grad Pe, Force_D=', Force_D
-
+          if(DoTestCell)write(*,'(2a,15es16.8)') &
+               NameSub,': after grad Pe, Force_D =', Force_D
        end if
 
        ! Subtract wave pressure gradient force
@@ -319,8 +325,8 @@ contains
                      - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
              endif
           end if
-          if(DoTestCell)write(*,*)NameSub,': after grad Pwave, Force_D=', &
-               Force_D
+          if(DoTestCell)write(*,'(2a,15es16.8)') &
+               NameSub,': after grad Pwave, Force_D =', Force_D
        end if
 
        if(UseBoris .or. UseBorisSimple)then
@@ -343,9 +349,13 @@ contains
        ForceZ_I = ChargeDens_I*InvElectronDens*Force_D(z_)
 
        if(DoTestCell)then
-          write(*,*)Namesub,':ForceX_I, ForceY_I, ForceZ_I=', &
-               ForceX_I, ForceY_I, ForceZ_I
-          write(*,*)Namesub,': InvElectronDens, ChargeDens_I=', &
+          do iIonFluid = 1,nIonFluid
+             write(*,'(2a,i1,a,15es16.8)') &
+                  Namesub,': iIonFluid =', iIonFluid, ', Force_D  =', &
+                  ForceX_I(iIonFluid), ForceY_I(iIonFluid), ForceZ_I(iIonFluid)
+          end do
+          write(*,'(2a,15es16.8)')                          &
+               Namesub,': InvElectronDens, ChargeDens_I =', &
                InvElectronDens, ChargeDens_I
        end if
 
@@ -364,7 +374,7 @@ contains
 
     end do; end do; end do
 
-    if(DoTestMe)write(*,*)NameSub,': final Source_VC=',&
+    if(DoTestMe)write(*,'(2a,15es16.8)')NameSub,': final Source_VC =',&
          Source_VC(VarTest,iTest,jTest,kTest)
 
   end subroutine multi_ion_source_expl
@@ -470,7 +480,7 @@ contains
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
-       if(DoTestCell)write(*,*)NameSub, ' initial source = ',&
+       if(DoTestCell)write(*,'(2a,15es16.8)') NameSub, ' initial source = ',&
             Source_VC(VarTest,i,j,k)
 
        ! Extract conservative variables
@@ -540,9 +550,9 @@ contains
           InvuCutOff2  = 1.0/(Io2No_V(UnitU_)*uCutOffDim)**2
        end if
        if(DoTestCell)then
-          if(UseBoris)write(*,*) NameSub,'Ga2=',Ga2
-          write(*,*) NameSub,' FullB_D  =', FullB_D
-          write(*,*) NameSub,' uPlus_D  =', uPlus_D
+          if(UseBoris)write(*,'(2a,15es16.8)') NameSub,'Ga2=',Ga2
+          write(*,'(2a,15es16.8)') NameSub,' FullB_D  =', FullB_D
+          write(*,'(2a,15es16.8)') NameSub,' uPlus_D  =', uPlus_D
        end if
 
        ! Calculate the source term for all the ion fluids
@@ -553,13 +563,12 @@ contains
           Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
 
           if(DoTestCell)then
-             write(*,*) NameSub,' iIon            =', iIon
-             write(*,*) NameSub,' uIon_D          =', uIon_D
-             write(*,*) NameSub,' u_D             =', u_D
-             write(*,*) NameSub,' ForceCoeff      =', ForceCoeff
-             write(*,*) NameSub,' ElectronCharge  =', ElectronCharge
-             write(*,*) NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
-             write(*,*) NameSub,' Force_D         =', Force_D
+             write(*,'(2a,i2)') NameSub,' iIon            =', iIon
+             write(*,'(2a,15es16.8)') NameSub,' uIon_D          =', uIon_D
+             write(*,'(2a,15es16.8)') NameSub,' u_D             =', u_D
+             write(*,'(2a,15es16.8)') NameSub,' ForceCoeff      =', ForceCoeff
+             write(*,'(2a,15es16.8)') NameSub,' ChargeDensBoris =', ChargeDensBoris_I(iIon)
+             write(*,'(2a,15es16.8)') NameSub,' Force_D         =', Force_D
           end if
 
           ! Set corresponding matrix element
@@ -645,6 +654,18 @@ contains
 
                 Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
+
+                if(DoTestCell)then
+                   write(*,'(2a,15es16.8)') NameSub,' CollisionCoef=',CollisionCoef
+                   write(*,'(2a,15es16.8)') NameSub,' AverageTemp  =',AverageTemp
+                   write(*,'(2a,15es16.8)') NameSub,' AverageTempDim=', &
+                        AverageTemp*No2Si_V(UnitTemperature_)
+                   write(*,'(2a,i2)') &
+                        NameSub,' after collision, iIon            =', iIon
+                   write(*,'(2a,15es16.8)') &
+                        NameSub,' after collision, Force_D         =', Force_D
+                end if
+
 !!! No heating for now
 ! If heating is added as below, adjust update_states_MHD to make sure that 
 ! the execution passes through here even if UseUniformIonVelocity is true 
@@ -718,17 +739,10 @@ contains
 
        end do
 
-       if(DoTestCell)write(*,*)NameSub, ' final source = ',&
+       if(DoTestCell)write(*,'(2a,15es16.8)')NameSub, ' final source = ',&
             Source_VC(VarTest,i,j,k)
 
     end do; end do; end do
-
-    if(DoTestMe)then
-       write(*,*)NameSub,' CollisionCoef=',CollisionCoef
-       write(*,*)NameSub,' AverageTemp  =',AverageTemp
-       write(*,*)NameSub,' AverageTempDim=', &
-            AverageTemp*No2Si_V(UnitTemperature_)
-    end if
 
   end subroutine multi_ion_source_impl
   !===========================================================================
