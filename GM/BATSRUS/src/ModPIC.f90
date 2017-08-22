@@ -173,7 +173,7 @@ contains
     use ModHallResist,ONLY: HallFactorMax
     use ModPhysics,   ONLY: IonMassPerCharge
     use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
-
+    use ModVarIndexes,ONLY: IsMhd
     ! PIC grid indexes
     integer:: nPic_D(MaxDim), iRegion
 
@@ -193,7 +193,21 @@ contains
 
     character(len=*), parameter:: NameSub = 'pic_init_region'
     !-------------------------------------------------------------------------
-
+    
+    if(nIonFluid > 1 .and. IsMhd) then
+       if(iProc == 0) then
+          write(*,*) ' ' 
+          write(*,*) "Error!!!!!"
+          write(*,*) 'Multi-fluid MHD with total density and total ',& 
+               'momentum variables is used for  the current simulation ', &
+               '(see ModEquation.f90). ', &
+               'MHD-EPIC does not support this case now. Please eliminate ', &
+               'the total density and total momentum variables and try again.'
+          write(*,*) ' ' 
+       endif
+       call stop_mpi(NameSub)
+    endif
+    
     ! Normalizing the system so q/(mc) == 1 in IPIC3D.
     ! 
     ! In CGS units the Hall speed is uH_CGS = j/(nq) = c/4pi curlB m/(q rho)
