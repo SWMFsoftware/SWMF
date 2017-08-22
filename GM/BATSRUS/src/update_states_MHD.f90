@@ -68,8 +68,9 @@ subroutine update_states_MHD(iBlock)
        .not.UseResistiveFlux)) then
 
      call calc_resistivity_source(iBlock)   
-     if(DoTestMe)write(*,*) NameSub, ' after add_resistive_source=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+     if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+          NameSub, ' after add_resistive_source          =', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
@@ -157,8 +158,9 @@ subroutine update_states_MHD(iBlock)
 
   if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)
 
-  if(DoTestMe)write(*,*) NameSub, ' original testvar and energy=', &
-       State_VGB(VarTest, iTest, jTest, kTest, iBlock), &
+  if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       NameSub, ' original testvar and energy         =', &
+       State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
        Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   call update_explicit
@@ -169,8 +171,9 @@ subroutine update_states_MHD(iBlock)
      call fix_multi_ion_update(iBlock)
      call calc_energy_cell(iBlock)
 
-     if(DoTestMe)write(*,*) NameSub, ' after fix multiion update=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+     if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+          NameSub, ' after fix multiion update           =', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end if
@@ -178,8 +181,9 @@ subroutine update_states_MHD(iBlock)
   if(UseMultiIon .and. IsMhd)then
      call multi_ion_update(iBlock, IsFinal = .false.)
 
-     if(DoTestMe)write(*,*) NameSub, ' after multiion update1=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+     if(DoTestMe)write(*,'(2x,2a,15es20.12)')  &
+          NameSub, ' after multiion update1              =', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end if
@@ -206,15 +210,17 @@ subroutine update_states_MHD(iBlock)
              user_init_point_implicit)
      end if
 
-     if(DoTestMe)write(*,*) NameSub, ' after point impl state=', &
-          State_VGB(VarTest, iTest,jTest,kTest,iBlock), &
+     if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+          NameSub, ' after point impl state              =', &
+          State_VGB(VarTest, iTest,jTest,kTest,iBlock),      &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
   if(UseMultiIon .and. IsMhd)then
      call multi_ion_update(iBlock, IsFinal = .true.)
-     if(DoTestMe)write(*,*) NameSub,' after multiion update2=', &
-          State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+     if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+          NameSub, ' after multiion update2              =', &
+          State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
           Energy_GBI(iTest,jTest,kTest,iBlock,:)
   end if
 
@@ -231,8 +237,9 @@ subroutine update_states_MHD(iBlock)
 
   if(UseBufferGrid) call fix_buffer_grid(iBlock)
 
-  if(DoTestMe)write(*,*) NameSub, ' final state=', &
-       State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+  if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       NameSub, ' final state                         =', &
+       State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
        Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
 contains
@@ -273,8 +280,9 @@ contains
           end if
        end do; end do; end do
           
-       if(DoTestMe)write(*,*) NameSub, ' after mhd_to_boris=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after mhd_to_boris                  =', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
@@ -302,8 +310,9 @@ contains
           end if
        end do; end do; end do
           
-       if(DoTestMe)write(*,*) NameSub, ' after mhd_to_boris_simple=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after mhd_to_boris_simple           =', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
@@ -435,8 +444,9 @@ contains
 
     endif
 
-    if(DoTestMe)write(*,*) NameSub, ' after flux/source=', &
-         State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+    if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         NameSub, ' after flux/source                   =', &
+         State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     if(boris_correction) then
@@ -458,8 +468,9 @@ contains
           end if
        end do; end do; end do
           
-       if(DoTestMe)write(*,*) NameSub, ' after boris_to_mhd=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after boris_to_mhd                  =', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
@@ -480,8 +491,9 @@ contains
           end if
        end do; end do; end do
           
-       if(DoTestMe)write(*,*) NameSub, ' after boris_to_mhd=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after boris_to_mhd                  =', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     endif
 
@@ -511,7 +523,8 @@ contains
           end do; end do; end do
        end if
 
-       if(DoTestMe)write(*,*) NameSub, ' after multispecies correct=', &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after multispecies correct          =', &
             State_VGB(VarTest,iTest,jTest,kTest,iBlock)
 
     end if
@@ -526,8 +539,8 @@ contains
           end do; end do; end do
        end do
 
-       if(DoTestMe)write(*,*) NameSub, &
-            ' after min density correct densities=', &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after min density correct densities =', &
             State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
     end if
 
@@ -546,8 +559,9 @@ contains
                Source_VC(Bz_,i,j,k)**2)
        end do; end do; end do
 
-       if(DoTestMe)write(*,*) NameSub, ' after energy dB correct=', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+            NameSub, ' after energy dB correct             =', &
+            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end if
@@ -573,8 +587,9 @@ contains
     ! Update energy or pressure based on UseConservative and IsConserv_CB
     call calc_energy_or_pressure(iBlock)
 
-    if(DoTestMe)write(*,*) NameSub, ' after pressure/energy update=', &
-         State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
+    if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         NameSub, ' after pressure/energy update        =', &
+         State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end subroutine update_explicit

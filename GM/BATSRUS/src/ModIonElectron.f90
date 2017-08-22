@@ -102,7 +102,7 @@ contains
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
        if (DoTestCell) then
-          write(*,*) NameSub,' initial Source(testvar) =', &
+          write(*,'(1x,2a,es20.12)') NameSub,' initial Source(testvar) =', &
                Source_VC(VarTest,i,j,k)
        end if
 
@@ -127,15 +127,15 @@ contains
 
        if (DoTestCell) then
           do iIon = 1, nIonFluid
-          write(*,*) NameSub,' iIon   =', iIon
-          write(*,*) NameSub,' uIon_D =', &
-               State_V(iRhoUxIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
-               State_V(iRhoUyIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
-               State_V(iRhoUzIon_I(iIOn))/State_V(iRhoIon_I(iIon))
-          write(*,*) NameSub,' E_D    =', State_V(Ex_:Ez_)
-          write(*,*) NameSub,' b_D    =', b_D
-       end do
-    end if
+             write(*,'(1x,2a,10es20.12)') NameSub,' iIon   =', iIon
+             write(*,'(1x,2a,10es20.12)') NameSub,' uIon_D =', &
+                  State_V(iRhoUxIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
+                  State_V(iRhoUyIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
+                  State_V(iRhoUzIon_I(iIOn))/State_V(iRhoIon_I(iIon))
+             write(*,'(1x,2a,10es20.12)') NameSub,' E_D    =', State_V(Ex_:Ez_)
+             write(*,'(1x,2a,10es20.12)') NameSub,' b_D    =', b_D
+          end do
+       end if
 
        ! dE/dt += -c^2*J = -c^2*sum(q/m*rho*u)
        Source_VC(Ex_,i,j,k) = &
@@ -183,11 +183,12 @@ contains
        end if
 
        if (DoTestCell) then
-          write(*,*) NameSub, ' ChargePerMass_I, net charge =',&
+          write(*,'(1x,2a,10es20.12)') &
+               NameSub, ' ChargePerMass_I, net charge =',&
                ChargePerMass_I, sum(ChargePerMass_I*State_V(iRhoIon_I))
           write(*,*) NameSub, ' Source_VC='
           do iVar = 1, nVar
-             write(*,'(a,100es15.6)') &
+             write(*,'(2x,a,100es20.12)') &
                   NameVar_V(iVar), Source_VC(iVar,iTest,jTest,kTest)
           end do
        end if

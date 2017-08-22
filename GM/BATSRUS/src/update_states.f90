@@ -32,22 +32,25 @@ subroutine update_states(iBlock)
           IsConserv_CB(iTest,jTest,kTest,iBlock)
      write(*,*)
      do iVar=1,nVar
-        write(*,*)NameVar_V(iVar), '(TestCell)  =',&
+        write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
      do iFluid = 1, nFluid
-        write(*,'(a,i2,a,g19.12)') &
+        write(*,'(2x,a,i2,a,es23.15)') &
              'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
      end do
      write(*,*)'Fluxes and sources for ',NameVar_V(VarTest)
-     write(*,'(a,2es15.7)')'X fluxes L,R=',Flux_VX(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(2x,a,2es23.15)') &
+          'X fluxes L,R =',Flux_VX(VARtest,Itest,Jtest,Ktest),&
           Flux_VX(VARtest,Itest+1,Jtest,Ktest)
-     write(*,'(a,2es15.7)')'Y fluxes L,R=',Flux_VY(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(2x,a,2es23.15)') &
+          'Y fluxes L,R =',Flux_VY(VARtest,Itest,Jtest,Ktest),&
           Flux_VY(VARtest,Itest,Jtest+1,Ktest)
-     write(*,'(a,2es15.7)')'Z fluxes L,R=',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
+     write(*,'(2x,a,2es23.15)') &
+          'Z fluxes L,R =',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
           Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
-     write(*,'(a,es15.7)')'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
-     write(*,'(a,es15.7)')'fluxes=',Flux_VX(VARtest,Itest,Jtest,Ktest) &
+     write(*,'(2x,a,es23.15)')'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
+     write(*,'(2x,a,es23.15)')'fluxes=',Flux_VX(VARtest,Itest,Jtest,Ktest) &
           -Flux_VX(VARtest,Itest+1,Jtest,Ktest)                        &
           +Flux_VY(VARtest,Itest,Jtest,Ktest)                          &
           -Flux_VY(VARtest,Itest,Jtest+1,Ktest)                        &
@@ -106,11 +109,11 @@ subroutine update_states(iBlock)
   if(oktest_me)then
      write(*,*)NameSub,' final:'
      do iVar=1,nVar
-        write(*,*)NameVar_V(iVar),'(TestCell)  =',&
+        write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
      do iFluid = 1, nFluid
-        write(*,'(a,i2,a,g19.12)') &
+        write(*,'(2x,a,i2,a,es23.15)') &
              'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
      end do
   end if
