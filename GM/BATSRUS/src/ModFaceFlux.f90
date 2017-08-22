@@ -3586,7 +3586,7 @@ contains
               (FullBx**2 + FullBy**2 + FullBz**2) - FullBn**2))
 
          ! Calculate Ln = d ln(Rho)/dx = (dRho/dx) / Rho
-         Rho1 = State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
+         Rho1 = sum(State_VGB(iRhoIon_I,iLeft,jLeft,kLeft,iBlockFace))
 
          ! Calculate drift speed and whistler speed
          cDrift    = abs(FullBt)*2.0*abs(Rho1 - Rho)/(Rho1 + Rho)
