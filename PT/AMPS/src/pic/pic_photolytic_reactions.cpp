@@ -135,25 +135,53 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
   int i,j,k;
   long int oldFirstCellParticle,newFirstCellParticle,p,pnext;
 
+
+
+  //simulate particle's collisions
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    //reset the balancing counters
+    for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) for (int thread=0;thread<PIC::nTotalThreadsOpenMP;thread++) {
+      node=DomainBlockDecomposition::BlockTable[nLocalNode];
+      if (node->block!=NULL) *(thread+(double*)(node->block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))=0.0;
+    }
+#endif //_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
 
-  exit(__LINE__,__FILE__,"Error: extend the module for the case of the block and cell load splitting");
+#if _PIC__OPENMP_THREAD_SPLIT_MODE_ == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_
+#pragma omp parallel for schedule(dynamic,_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_) default (none)  \
+    private (k,j,i,node,oldFirstCellParticle,newFirstCellParticle,p,pnext) \
+    shared (DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable)
+#else
+#pragma omp parallel for schedule(dynamic,1) default (none) \
+private (k,j,i,node,oldFirstCellParticle,newFirstCellParticle,p,pnext) \
+shared (DomainBlockDecomposition::nLocalBlocks,PIC::DomainBlockDecomposition::BlockTable)
+#endif  // _PIC__OPENMP_THREAD_SPLIT_MODE_
 
+#endif  //_COMPILATION_MODE_
+  for (int CellCounter=0;CellCounter<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;CellCounter++) {
+    int nLocalNode,ii=CellCounter;
 
-#pragma omp parallel for schedule(dynamic,1) default (none) private (node,i,j,k,oldFirstCellParticle,newFirstCellParticle,p,pnext)  \
-  shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks)
-#endif
-  for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
-    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    nLocalNode=ii/(_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=nLocalNode*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    k=ii/(_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_);
+    ii-=k*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+
+    j=ii/_BLOCK_CELLS_X_;
+    ii-=j*_BLOCK_CELLS_X_;
+
+    i=ii;
+
     double StartTime=MPI_Wtime();
-    #endif
 
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
     if (node->block!=NULL) {
 
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+/*      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-            for (i=0;i<_BLOCK_CELLS_X_;i++) {
+            for (i=0;i<_BLOCK_CELLS_X_;i++) {*/
+
+      {{{
               oldFirstCellParticle=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               newFirstCellParticle=-1;
 
@@ -172,9 +200,9 @@ void PIC::ChemicalReactions::PhotolyticReactions::ExecutePhotochemicalModel() {
          }
       }
 
-    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
-    #endif
+    if (_PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_) {
+      node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+    }
 
     }
   }
