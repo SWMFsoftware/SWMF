@@ -567,7 +567,11 @@ contains
          call set_cell_values_x
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_XI(iFace,jFace,kFace,:) = 0.0
+            VdtFace_X(iFace,jFace,kFace) = 0.0
+            CYCLE
+         endif
 
          if(UseB0)then
             B0x = B0_DX(x_,iFace,jFace,kFace)
@@ -652,8 +656,12 @@ contains
          call set_cell_values_y
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
-
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_YI(iFace,jFace,kFace,:) = 0.0
+            VdtFace_Y(iFace,jFace,kFace) = 0.0
+            CYCLE
+         endif
+         
          if(UseB0)then
             B0x = B0_DY(x_,iFace, jFace, kFace)
             B0y = B0_DY(y_,iFace, jFace, kFace)
@@ -703,7 +711,6 @@ contains
 
       end do; end do; end do
 
-
       !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       !is 6th order. 
       if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
@@ -740,8 +747,12 @@ contains
          call set_cell_values_z
 
          if(  .not. true_cell(iLeft,jLeft,kLeft,iBlock) .and. &
-              .not. true_cell(iRight,jRight,kRight,iBlock)) CYCLE
-
+              .not. true_cell(iRight,jRight,kRight,iBlock)) then
+            uDotArea_ZI(iFace,jFace,kFace,:) = 0.0
+            VdtFace_Z(iFace,jFace,kFace) = 0.0
+            CYCLE
+         endif
+         
          if(UseB0)then
             B0x = B0_DZ(x_,iFace, jFace, kFace)
             B0y = B0_DZ(y_,iFace, jFace, kFace)
