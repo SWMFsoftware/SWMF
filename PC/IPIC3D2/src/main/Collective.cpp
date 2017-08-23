@@ -1630,7 +1630,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       innerSmoothFactor = Smooth;
       boundarySmoothFactor = Smooth;
     }
-    else if( Command == "#SMOOTHE"){
+    else if( Command == "#SMOOTH"){
       read_var(param,"doSmoothAll",          &doSmoothAll);
       read_var(param,"nSmooth",              &SmoothNiter);
       read_var(param,"innerSmoothFactor",    &innerSmoothFactor);
