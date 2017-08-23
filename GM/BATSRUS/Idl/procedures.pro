@@ -6175,8 +6175,11 @@ for i=0,9 do array(i,*) = findgen(256)/(256-1)*(maxi-mini) + mini
 
 levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
 
+; The !5 in the title makes sure that the fonts produced later
+; will look the same every time when saved into eps/ps file.
+
 contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
-  levels = levels, pos=pos, title=' '
+  levels = levels, pos=pos, title='!5 '
 
 plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
   xtickname = [' ',' '], xticks = 1, xminor=1  , $
