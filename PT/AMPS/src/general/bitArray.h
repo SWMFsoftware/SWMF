@@ -8,10 +8,10 @@
 class cBitArray {
 
 public:
-  int size;
+  int size; //size of the bit array
   
 private:
-  int * data;
+  int * data; //the ptr to the integeter array
 
 public:
   cBitArray(){
@@ -28,11 +28,11 @@ public:
     }
   }
 
-  ~cBitArray(){
+  ~cBitArray(){  // destructor
     if (data!=NULL) delete [] data;
   }
 
-  bool SetTrue(int k){
+  bool SetTrue(int k){  // set the k-th element in the bit array to true
     if (k<0 || k>=size) return false;
     
     int i = k/(8*sizeof(int));
@@ -46,7 +46,7 @@ public:
     return true;
   }
 
-  bool SetFalse(int k){
+  bool SetFalse(int k){ //set the k-th element in the bit array to false
     if (k<0 || k>=size) return false;
     
     int i = k/(8*sizeof(int));
@@ -60,10 +60,14 @@ public:
     tmp &=  flag;
     return true;
   }
- 
+  
+  // get the value (true or false) of the k-th element of the bit array
   bool Get(int k){
-    if (k<0 || k>=size) return false;
-    
+    if (k<0 || k>=size) {
+      printf("error: %d is out of the range of the bit array", k);
+      exit(0);
+    }
+
     int i = k/(8*sizeof(int));
     int j = k%(8*sizeof(int));
     
