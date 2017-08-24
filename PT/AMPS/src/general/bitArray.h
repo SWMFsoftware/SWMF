@@ -81,9 +81,11 @@ public:
   
   // get the value (true or false) of the k-th element of the bit array
   bool Get(int k) {
-    if (k<0 || k>=size) {
-      printf("error: %d is out of the range of the bit array", k);
-      exit(0);
+    if ((k<0) || (k>=size)) {
+      char msg[200];
+
+      sprintf(msg,"Error: %d is out of the range of the bit array", k);
+      exit(__LINE__,__FILE__,msg);
     }
 
     int i = k/(8*sizeof(int));
