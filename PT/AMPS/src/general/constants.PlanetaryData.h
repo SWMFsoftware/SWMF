@@ -97,6 +97,6 @@
 //this target is used when no astronomical body is inside the domain. the definition is needed to satisfy the compiler
 #define _TARGET_NONE__ID_ 10
 #define _TARGET_NONE__MASS_   0.0
-#define _TARGET_NONE__RADIUS_ 0.0
+#define _TARGET_NONE__RADIUS_ 1.0
 
 #endif /* CONSTANTS_PLANETARYDATA_H_ */
