@@ -89,7 +89,7 @@ void Earth::CutoffRigidity::OutputDataFile::PrintDataStateVector(FILE* fout,long
   int nInterpolationElement,nSurfaceElement,iZenith,iAzimuth;
   double InterpolationNormalization=0.0,InterpolationCoefficient;
 
-  double t,CutoffRigidity=0.0,SurfaceElementCutoffRigidity;
+  double CutoffRigidity=0.0,SurfaceElementCutoffRigidity;
 
   for (nInterpolationElement=0;nInterpolationElement<SurfaceElementsInterpolationListLength;nInterpolationElement++) {
     nSurfaceElement=SurfaceElementsInterpolationList[nInterpolationElement];
@@ -126,13 +126,12 @@ double Earth::CutoffRigidity::ParticleInjector::GetTotalProductionRate(int spec,
 
 //generate a new particle
 bool Earth::CutoffRigidity::ParticleInjector::GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
-                                       double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
-                                       double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,
-                                       int BoundaryElementType,void *BoundaryElement) {
+    double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
+    double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,
+    int BoundaryElementType,void *BoundaryElement) {
 
   int idim;
   double ExternalNormal[3];
-
 
   //Generate new particle position
   Vector3D::Distribution::Uniform(ExternalNormal);
