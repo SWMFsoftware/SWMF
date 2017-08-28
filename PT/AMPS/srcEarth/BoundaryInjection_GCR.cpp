@@ -29,7 +29,7 @@ double Earth::BoundingBoxInjection::GCR::InjectionRate(int spec,int nface,cTreeN
 
   //init the injection rate tables if needed
   if (InjectionRateTable==NULL) {
-    int s,iCompositionGroup,iInterval,i;
+    int s,iCompositionGroup,i;
     double minEnergy,maxEnergy,minVelocity,maxVelocity,mass,de,f0,f1;
 
     const int nTotalIntegrationIntervals=1000;
