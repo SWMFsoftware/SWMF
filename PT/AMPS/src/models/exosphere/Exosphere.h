@@ -319,7 +319,7 @@ namespace Exosphere {
     if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 
     //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-    double c=0.0,rVel=0.0,lVel[3];
+    double lVel[3];
 #if _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__NUMERIC_
     double Speed=sqrt(EnergyDistribution->DistributeVariable()*2.0/PIC::MolecularData::GetMass(spec));
 #elif _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_
@@ -335,6 +335,8 @@ namespace Exosphere {
 #endif
 
 #if _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ == _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__UNIFORM_
+    double c=0.0,rVel=0.0;
+
     for (idim=0;idim<3;idim++) {
       lVel[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
       rVel+=pow(lVel[idim],2);
