@@ -720,6 +720,10 @@ int PIC::CCMC::TraceParticles() {
     //update the time counter
     PIC::SimulationTime::Update();
 
+    if ((_PIC_DATAFILE__TIME_INTERPOLATION_MODE_==_PIC_MODE_ON_)&&PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()==true)) {
+      PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
+    }
+
     //compare the TimeCounter with the requested max trajectory integraion time and quit if the time is up
     for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
       if ((MaxTrajectoryIntegrationTime>0.0) && (MaxTrajectoryIntegrationTime<TimeCounter[spec])) {
