@@ -278,12 +278,14 @@ void PIC::CPLR::DATAFILE::Init() {
 
   //initialize offset to the current datafile storage
   MULTIFILE::CurrDataFileOffset = 0;
-  // put a dummy item in the schedule
+
+
+/*  // put a dummy item in the schedule
   MULTIFILE::nFile = 1; MULTIFILE::iFileLoadNext=0;
   MULTIFILE::cScheduleItem ItemDummy;
   ItemDummy.Time=NAN;
   sprintf(ItemDummy.FileName,"%s","dummy_name");
-  MULTIFILE::Schedule.push_back(ItemDummy);
+  MULTIFILE::Schedule.push_back(ItemDummy);*/
 
   //set the initialization flag and call the init procedures of the particular file reader
   Offset::InitFlag=true;
