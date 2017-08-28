@@ -18,8 +18,7 @@
 # run AMPS tests compiled with GNU
 cd GNU/AMPS
 module purge
-module load gcc/4.9.1
-module load mvapich2/2.1
+module load gcc/7.1.0
 make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
 cd ../..
 cat test_gnu.out >> GNU/AMPS/test_amps.log

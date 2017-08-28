@@ -18,8 +18,7 @@
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
 module purge
-module load intel/15.0.2
-module load mvapich2/2.1
+module load intel/17.0.4
 make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
 cd ../..
 cat test_intel.out >> Intel/AMPS/test_amps.log
