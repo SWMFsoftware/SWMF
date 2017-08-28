@@ -250,9 +250,13 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
     BATSRUS::LoadDataFile(fname);
     break;
+
+  #ifndef _NO_KAMELEON_CALLS_
   case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
     KAMELEON::LoadDataFile(fname);
     break;
+  #endif
+
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
@@ -312,12 +316,11 @@ void PIC::CPLR::DATAFILE::Init() {
     case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
       KAMELEON::Init();
       break;
-
-#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
+    #if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
     case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
       BATSRUS::Init();
       break;
-#endif //  _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
+    #endif //  _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
 
     default:
       exit(__LINE__,__FILE__,"Error: the option is unknown");
