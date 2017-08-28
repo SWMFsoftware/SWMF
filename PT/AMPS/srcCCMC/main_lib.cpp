@@ -23,6 +23,7 @@
 #include "constants.h"
 
 #include "Exosphere.h"
+#include "ccmc.h"
 
 //default definition of the functions for the exosphere module
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble et) {return 0.0;}
@@ -296,29 +297,29 @@ void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,doub
 
 void amps_init() {
 
-        PIC::InitMPI();
-	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  PIC::InitMPI();
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
-	//init the particle solver
-	CCMC::Init_BeforeParser();
-	PIC::Init_BeforeParser();
+  //init the particle solver
+  CCMC::Init_BeforeParser();
+  PIC::Init_BeforeParser();
 
 //        PIC::Init_AfterParser();
-	CCMC::Init_AfterParser();
+  CCMC::Init_AfterParser();
 
-	//load the control file
-	PIC::CCMC::Parser::LoadControlFile();
+  //load the control file
+  PIC::CCMC::Parser::LoadControlFile();
 
   //init the internal sphere boundary
   if (PIC::CCMC::InternalBoundary::ParticleProcessingMode==PIC::CCMC::InternalBoundary::ParticleBoundaryInteractionCode::Sphere) {
     InitInternalSphere();
   }
 
-	//init the solver
-	PIC::Mesh::initCellSamplingDataBuffer();
+  //init the solver
+  PIC::Mesh::initCellSamplingDataBuffer();
 
-	//init the mesh
-	int idim;
+  //init the mesh
+  int idim;
 
 /*	for (idim=0;idim<DIM;idim++) {
 		xmax[idim]=DomainCenterOffset[idim]+DomainLength[idim]/2.0;
@@ -328,10 +329,30 @@ void amps_init() {
 	//read the domain size from the data file
 #ifndef _NO_KAMELEON_CALLS_
   #ifndef _NO_KAMELEON_CALLS__DOMAIN_LIMITS_
-	double xminKAMELEON[3],xmaxKAMELEON[3];
-	bool DomainSizeChangeFlag=false;
+  double xminKAMELEON[3],xmaxKAMELEON[3];
+  bool DomainSizeChangeFlag=false;
 
-	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xminKAMELEON,xmaxKAMELEON,PIC::CCMC::BackgroundDataFileName);
+
+  //determine the limits of the domain
+  //use the firs file from 'Schedule' if it exists
+  char fullname[_MAX_STRING_LENGTH_PIC_];
+  FILE *fin=NULL;
+
+  sprintf(fullname,"%s/%s", PIC::CPLR::DATAFILE::path,PIC::CPLR::DATAFILE::MULTIFILE::FileTable);
+  fin=fopen(fullname,"r");
+
+  if (fin!=NULL) {
+    //the 'Schedule' exists
+    PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule();
+    fclose(fin);
+
+    PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xminKAMELEON,xmaxKAMELEON,PIC::CPLR::DATAFILE::MULTIFILE::Schedule[0].FileName);
+  }
+  else {
+    PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xminKAMELEON,xmaxKAMELEON,PIC::CCMC::BackgroundDataFileName);
+  }
+
+
 	for (idim=0;idim<3;idim++) {
 	  if (PIC::CCMC::Domain::xmin[idim]<xminKAMELEON[idim]) PIC::CCMC::Domain::xmin[idim]=xminKAMELEON[idim],DomainSizeChangeFlag=true;
 	  if (PIC::CCMC::Domain::xmax[idim]>xmaxKAMELEON[idim]) PIC::CCMC::Domain::xmax[idim]=xmaxKAMELEON[idim],DomainSizeChangeFlag=true;
@@ -414,19 +435,37 @@ void amps_init() {
     PIC::CPLR::DATAFILE::LoadBinaryFile("KAMELEON-TEST");
   }
   else {
+    switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
+    case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+      PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+      break;
 
-    #ifndef _NO_KAMELEON_CALLS_
-	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CCMC::BackgroundDataFileName);
+    case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
+      #ifndef _NO_KAMELEON_CALLS_
+      if (PIC::CPLR::DATAFILE::MULTIFILE::Schedule.size()==0) {
+        PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CCMC::BackgroundDataFileName);
+      }
+      else {
+        PIC::CPLR::DATAFILE::MULTIFILE::Init(false,0);
+//        PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CPLR::DATAFILE::MULTIFILE::Schedule[0].FileName);
+      }
+      #else
+      exit(__LINE__,__FILE__,"Error: the background data file is not found");
+      #endif //_NO_KAMELEON_CALLS_
+      break;
 
-	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
-   #else
-	  exit(__LINE__,__FILE__,"Error: the background data file is not found");
-   #endif //_NO_KAMELEON_CALLS_
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is unknown");
+    }
+
+    if (_CCMC_SAVE_BINARY_BACKGROUND_DATAFILE_==_PIC_MODE_ON_) {
+      PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
+    }
   }
 
 	//init the PIC solver
-PIC::Init_AfterParser();
-PIC::Mover::Init();
+  PIC::Init_AfterParser();
+  PIC::Mover::Init();
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
@@ -438,18 +477,17 @@ PIC::Mover::Init();
 
 
 	//set up the time step
-	PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
-	PIC::ParticleWeightTimeStep::initTimeStep();
+  PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
+  PIC::ParticleWeightTimeStep::initTimeStep();
 
   //init particle weight
-	for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 
-	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-	if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
-	//init the particle buffer
-	PIC::ParticleBuffer::Init(10000000);
-
+  //init the particle buffer
+  PIC::ParticleBuffer::Init(10000000);
   PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 }
 
@@ -458,5 +496,5 @@ PIC::Mover::Init();
 
 
 void amps_time_step () {
- 		PIC::TimeStep();
+  PIC::TimeStep();
 }
