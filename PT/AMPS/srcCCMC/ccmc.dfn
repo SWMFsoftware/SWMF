@@ -11,3 +11,7 @@
 #define _CCMC_CALCULATION_MODE__INDIVIDUAL_PARTICLES_ONLY_  1
 
 #define _CCMC_CALCULATION_MODE_ _CCMC_CALCULATION_MODE__ENTIRE_FLOW_
+
+//save the cell center interpolated binary file for further use
+#define _CCMC_SAVE_BINARY_BACKGROUND_DATAFILE_  _PIC_MODE_OFF_
+
