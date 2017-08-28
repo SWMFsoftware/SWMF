@@ -256,7 +256,7 @@ void SEP3D::GlobalEnergyDistribution::print(char *fname,int spec) {
   
   
   if (MS::mesh.ThisThread==0) {
-    sprintf(str,"%s.dat",fname,nProbe);
+    sprintf(str,"%s.dat",fname);
     fout=fopen(str,"w");
     
     fprintf(fout,"TITLE=\"Global energy distribution function\"\n");
