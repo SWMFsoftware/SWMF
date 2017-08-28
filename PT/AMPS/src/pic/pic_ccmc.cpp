@@ -720,7 +720,7 @@ int PIC::CCMC::TraceParticles() {
     //update the time counter
     PIC::SimulationTime::Update();
 
-    if ((_PIC_DATAFILE__TIME_INTERPOLATION_MODE_==_PIC_MODE_ON_)&&PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()==true)) {
+    if ((_PIC_DATAFILE__TIME_INTERPOLATION_MODE_==_PIC_MODE_ON_)&&(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()==true)) {
       PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
     }
 
