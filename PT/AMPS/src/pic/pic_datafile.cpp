@@ -250,6 +250,9 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
     BATSRUS::LoadDataFile(fname);
     break;
+  case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
+    KAMELEON::LoadDataFile(fname);
+    break;
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
