@@ -23,7 +23,7 @@ long int Earth::ImpulseSource::InjectParticles() {
   int nTotalInjectedParticles=0;
   int idim,spec,iSource;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
-  double mass,ElectricCharge,a,v[3];
+  double mass,ElectricCharge,a;
   long int newParticle;
   PIC::ParticleBuffer::byte *newParticleData;
 
@@ -157,6 +157,8 @@ long int Earth::ImpulseSource::InjectParticles() {
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
      }}
 #endif
+
+  return nTotalInjectedParticles;
 }
 
 //set weights of the model particles
