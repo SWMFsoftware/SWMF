@@ -261,6 +261,16 @@ namespace Earth {
       void Init();
     }
 
+    //injection of the electrons into the magnetosphere
+    namespace Electrons {
+      //source rate and generation of the electrons
+      double InjectionRate(int spec,int nface,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+      void GetNewParticle(PIC::ParticleBuffer::byte *ParticleData,double *x,int spec,int nface,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,double *ExternalNormal);
+
+      //init the model
+      void Init();
+    }
+
     //general injection functions
     bool InjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
     long int InjectionProcessor(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
