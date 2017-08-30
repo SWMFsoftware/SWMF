@@ -143,22 +143,22 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
       if (startNode->block==NULL) continue;
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
-      offset=CenterNode->GetAssociatedDataBufferPointer();
+      offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 
       //save the interpolated values
       for (idim=0;idim<3;idim++) {
-        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))=ConversionBField*interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset))=ConversionEField*interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))=ConversionVelocity*interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset))=ConversionBField*interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset))=ConversionEField*interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset))=ConversionVelocity*interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
       }
 
       p=ConversionPressure*interpolator->interpolate("p",x[0],x[1],x[2]);
       n=ConversionDensity *interpolator->interpolate("rho",x[0],x[1],x[2])/PlasmaSpeciesAtomicMass;
       T=(n>0.0) ? p/(n*Kbol) : 0.0;
 
-      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=p;
-      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=n;
-      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=T;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.RelativeOffset))=p;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.RelativeOffset))=n;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.RelativeOffset))=T;
     }
   }
   else {

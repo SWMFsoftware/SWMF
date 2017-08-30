@@ -85,7 +85,7 @@ void PIC::CPLR::DATAFILE::ICES::retriveSWMFdata(const char *DataFile) {
   char cCurrentPath[_MAX_STRING_LENGTH_PIC_],command[_MAX_STRING_LENGTH_PIC_],initDirectory[_MAX_STRING_LENGTH_PIC_];
 
   //check if the model is initialied
-  if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
+  if (PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
 
   //create the directory for the trajectory file
   sprintf(command,"rm -f -r temp.ICES.thread=%i",PIC::Mesh::mesh.ThisThread);
@@ -253,7 +253,7 @@ void PIC::CPLR::DATAFILE::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeA
   char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_],*endptr;
 
   //check if the model is initialied
-  if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
+  if (PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset==-1) exit(__LINE__,__FILE__,"Error: the model is not initialied");
 
 
 #if DIM == 3
@@ -339,7 +339,7 @@ void PIC::CPLR::DATAFILE::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeA
         if (SWMFdataPreProcessor!=NULL) SWMFdataPreProcessor(CenterNode->GetX(),dataSWMF);
 
         //save the data on the mesh
-        offset=CenterNode->GetAssociatedDataBufferPointer();
+        offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 
 /*
         if (status!=0) { //check the status of the reading
@@ -349,14 +349,14 @@ void PIC::CPLR::DATAFILE::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeA
 */
 
         for (idim=0;idim<3;idim++) {
-          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset))=dataSWMF.E[idim];
-          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))=dataSWMF.B[idim];
-          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))=dataSWMF.swVel[idim];
+          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset))=dataSWMF.E[idim];
+          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset))=dataSWMF.B[idim];
+          *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset))=dataSWMF.swVel[idim];
         }
 
-        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset)=dataSWMF.swPressure;
-        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset)=dataSWMF.swNumberDensity;
-        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset)=dataSWMF.swTemperature;
+        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.RelativeOffset)=dataSWMF.swPressure;
+        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.RelativeOffset)=dataSWMF.swNumberDensity;
+        *(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.RelativeOffset)=dataSWMF.swTemperature;
 
 //        *(int*)(offset+DataStatusOffsetSWMF)=dataSWMF.status;
       }

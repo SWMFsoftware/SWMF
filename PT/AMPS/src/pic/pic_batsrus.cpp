@@ -262,7 +262,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
     }
     
        
-    std::cout << PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset<< "  " << PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset << "  " << PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset <<  "   "  <<  PIC::CPLR::DATAFILE::Offset::MagneticField.offset <<  "   " << PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset << std::endl;
+    std::cout << PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.RelativeOffset<< "  " << PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.RelativeOffset << "  " << PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.RelativeOffset <<  "   "  <<  PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset <<  "   " << PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset << std::endl;
   } //end of the initialization
 
 
@@ -311,7 +311,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
-      offset=CenterNode->GetAssociatedDataBufferPointer();
+      offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 
       //save the interpolated values
       if (IsFound==true) {
@@ -323,21 +323,21 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
         }
 
         //the order of the state vector: number density, temperature
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=(State[rhoBATSRUS2AMPS]>0.0)? State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS] : 0.0;
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=(State[rhoBATSRUS2AMPS]>0.0) ? PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]*State[pBATSRUS2AMPS]/(Kbol*State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]) : 0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.RelativeOffset))=(State[rhoBATSRUS2AMPS]>0.0) ? State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS] : 0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.RelativeOffset))=(State[rhoBATSRUS2AMPS]>0.0) ? PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]*State[pBATSRUS2AMPS]/(Kbol*State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]) : 0.0;
 
         //get pressure
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=State[pBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[pBATSRUS2AMPS];
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.RelativeOffset))=State[pBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[pBATSRUS2AMPS];
 
         //bulk velocity and magnetic field
         for (idim=0;idim<3;idim++) {
           if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
-            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
+            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
            }
-           else if (PIC::CPLR::DATAFILE::Offset::MagneticField.offset!=-1) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+           else if (PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset!=-1) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+idim*sizeof(double)))=0.0;
 
           if (uxBATSRUS2AMPS>=0) {
-            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=State[uxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS];
+            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset+idim*sizeof(double)))=State[uxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS];
           }
           else {
             exit(__LINE__,__FILE__,"Error: saving of the velocity derived from the momentum is not implemented");
@@ -350,9 +350,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
           if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
             double *E,*B,*v;
 
-            v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
-            B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
-            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+            v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset);
+            B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset);
+            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset);
       
             E[0]=-(v[1]*B[2]-B[1]*v[2]);
             E[1]=+(v[0]*B[2]-B[0]*v[2]);
@@ -362,10 +362,10 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
 
           break;
         case _PIC_MODE_OFF_:
-          if (PIC::CPLR::DATAFILE::Offset::ElectricField.offset!=-1) {
+          if (PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset!=-1) {
             double *E;
 
-            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
+            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset);
             E[0]=0.0;
             E[1]=0.0;
             E[2]=0.0;
@@ -377,15 +377,15 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
         }
       }
       else {
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
-        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.RelativeOffset))=0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.RelativeOffset))=0.0;
+        *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.RelativeOffset))=0.0;
 
         for (idim=0;idim<3;idim++) {
-          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
+          *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.RelativeOffset+idim*sizeof(double)))=0.0;
 
           if (_PIC_COUPLER_DATAFILE_READ_B_FIELD_==_PIC_MODE_ON_) {
-            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+            *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+idim*sizeof(double)))=0.0;
           }
         }
       }
