@@ -75,6 +75,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::Init(bool BreakAtLastFileIn,int  FileNumber
   PIC::SimulationTime::SetInitialValue(Schedule[iFileLoadNext].Time);
   // load the first file
   UpdateDataFile();
+  CopyCurrDataFile2NextDataFile();
 
   #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   // load the second file
@@ -142,7 +143,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule() {
   bool IsSchedule;
 
   //find the beginning of the table
-  while(fin.eof()==false) {
+  while (fin.eof()==false) {
     // get a line from the file
     fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
     // check if found keyword "#NFILE"
@@ -157,7 +158,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule() {
   //read file names
   cScheduleItem Item;
 
-  for(int iFile=0;iFile<nFile;iFile++) {
+  for (int iFile=0;iFile<nFile;iFile++) {
     fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_, false);
 
     if (IsSchedule) {
@@ -213,7 +214,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
 
   #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   //swap data offsets
-  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
+//  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
 
   if (CurrDataFileOffset == 0) {
     CurrDataFileOffset = NextDataFileOffset;
@@ -334,84 +335,94 @@ void PIC::CPLR::DATAFILE::Init() {
   else exit(__LINE__,__FILE__,"Error: wrong option");
 
   //init the offset table and request memory
+  int RelativeOffset=0;
   CenterNodeAssociatedDataOffsetBegin=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
 
   //init the data offsets
   if (Offset::PlasmaNumberDensity.allocate==true) {
     Offset::PlasmaNumberDensity.active=true;
-    Offset::PlasmaNumberDensity.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::PlasmaNumberDensity.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::PlasmaNumberDensity.nVars*sizeof(double);
+    RelativeOffset+=Offset::PlasmaNumberDensity.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::PlasmaNumberDensity.nVars;
   }
 
 
   if (Offset::PlasmaBulkVelocity.allocate==true) {
     Offset::PlasmaBulkVelocity.active=true;
-    Offset::PlasmaBulkVelocity.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::PlasmaBulkVelocity.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::PlasmaBulkVelocity.nVars*sizeof(double);
+    RelativeOffset+=Offset::PlasmaBulkVelocity.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::PlasmaBulkVelocity.nVars;
   }
 
 
   if (Offset::PlasmaTemperature.allocate==true) {
     Offset::PlasmaTemperature.active=true;
-    Offset::PlasmaTemperature.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::PlasmaTemperature.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::PlasmaTemperature.nVars*sizeof(double);
+    RelativeOffset+=Offset::PlasmaTemperature.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::PlasmaTemperature.nVars;
   }
 
 
   if (Offset::PlasmaIonPressure.allocate==true) {
     Offset::PlasmaIonPressure.active=true;
-    Offset::PlasmaIonPressure.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::PlasmaIonPressure.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::PlasmaIonPressure.nVars*sizeof(double);
+    RelativeOffset+=Offset::PlasmaIonPressure.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::PlasmaIonPressure.nVars;
   }
 
 
   if (Offset::PlasmaElectronPressure.allocate==true) {
     Offset::PlasmaElectronPressure.active=true;
-    Offset::PlasmaElectronPressure.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::PlasmaElectronPressure.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::PlasmaElectronPressure.nVars*sizeof(double);
+    RelativeOffset+=Offset::PlasmaElectronPressure.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::PlasmaElectronPressure.nVars;
   }
 
 
   if (Offset::MagneticField.allocate==true) {
     Offset::MagneticField.active=true;
-    Offset::MagneticField.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::MagneticField.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticField.nVars*sizeof(double);
+    RelativeOffset+=Offset::MagneticField.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::MagneticField.nVars;
   }
 
   if (Offset::ElectricField.allocate==true) {
     Offset::ElectricField.active=true;
-    Offset::ElectricField.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::ElectricField.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::ElectricField.nVars*sizeof(double);
+    RelativeOffset+=Offset::ElectricField.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::ElectricField.nVars;
   }
 
 
   if (Offset::MagneticFieldGradient.allocate==true) {
     Offset::MagneticFieldGradient.active=true;
-    Offset::MagneticFieldGradient.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::MagneticFieldGradient.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldGradient.nVars*sizeof(double);
+    RelativeOffset+=Offset::MagneticFieldGradient.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::MagneticFieldGradient.nVars;
   }
 
   if (Offset::MagneticFluxFunction.allocate==true) {
     Offset::MagneticFluxFunction.active=true;
-    Offset::MagneticFluxFunction.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+    Offset::MagneticFluxFunction.RelativeOffset=RelativeOffset;
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFluxFunction.nVars*sizeof(double);
+    RelativeOffset+=Offset::MagneticFluxFunction.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::MagneticFluxFunction.nVars;
   }
 
@@ -507,14 +518,14 @@ void PIC::CPLR::DATAFILE::SaveBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
       if (SendCellFlag==true) {
         if (startNode->Thread==PIC::ThisThread) {
           if (startNode->Thread==0) {
-            fwrite(offset+CenterNodeAssociatedDataOffsetBegin,nTotalBackgroundVariables*sizeof(double),1,fout);
+            fwrite(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset,nTotalBackgroundVariables*sizeof(double),1,fout);
 
             #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-            PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables,__LINE__,__FILE__);
+            PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset),nTotalBackgroundVariables,__LINE__,__FILE__);
             #endif
           }
           else {
-            pipe.send((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables);
+            pipe.send((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset),nTotalBackgroundVariables);
           }
         }
         else {
@@ -596,10 +607,10 @@ void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
           offset=CenterNode->GetAssociatedDataBufferPointer();
 
           //read the data
-          fread(offset+CenterNodeAssociatedDataOffsetBegin,nTotalBackgroundVariables*sizeof(double),1,fData);
+          fread(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset,nTotalBackgroundVariables*sizeof(double),1,fData);
 
           #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-          PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables,__LINE__,__FILE__);
+          PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset),nTotalBackgroundVariables,__LINE__,__FILE__);
           #endif
         }
         else {
@@ -659,13 +670,13 @@ void PIC::CPLR::DATAFILE::Interpolate(PIC::Mesh::cDataCenterNode** Interpolation
   //interpolation loop
   for (iCoefficient=0;iCoefficient<nInterpolationCoeficients;iCoefficient++) {
     c=InterpolationCoeficients[iCoefficient];
-    offset=(double*)(CenterNodeAssociatedDataOffsetBegin+InterpolationList[iCoefficient]->GetAssociatedDataBufferPointer());
+    offset=(double*)(MULTIFILE::CurrDataFileOffset+CenterNodeAssociatedDataOffsetBegin+InterpolationList[iCoefficient]->GetAssociatedDataBufferPointer());
 
     for (iData=0;iData<nTotalBackgroundVariables;iData++) data[iData]+=c*offset[iData];
   }
 
   //copy the interpolated data
-  memcpy(CenterNodeAssociatedDataOffsetBegin+CenterNode->GetAssociatedDataBufferPointer(),data,nTotalBackgroundVariables*sizeof(double));
+  memcpy(MULTIFILE::CurrDataFileOffset+CenterNodeAssociatedDataOffsetBegin+CenterNode->GetAssociatedDataBufferPointer(),data,nTotalBackgroundVariables*sizeof(double));
 }
 
 void PIC::CPLR::DATAFILE::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
@@ -674,7 +685,7 @@ void PIC::CPLR::DATAFILE::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *p
 
   //get the interpolated data
   if (pipe->ThisThread==CenterNodeThread) {
-    memcpy(data,CenterNodeAssociatedDataOffsetBegin+CenterNode->GetAssociatedDataBufferPointer(),nTotalBackgroundVariables*sizeof(double));
+    memcpy(data,MULTIFILE::CurrDataFileOffset+CenterNodeAssociatedDataOffsetBegin+CenterNode->GetAssociatedDataBufferPointer(),nTotalBackgroundVariables*sizeof(double));
   }
 
   //send the data to the root processor if needed and print them into a file
@@ -876,15 +887,15 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
       if (SendCellFlag==true) {
         if (startNode->Thread==PIC::ThisThread) {
           if (startNode->Thread==0) {
-            for (int iVar=0;iVar<nTotalBackgroundVariables;iVar++) fprintf(fout,"%e ",((double*)(offset+CenterNodeAssociatedDataOffsetBegin))[iVar]);
+            for (int iVar=0;iVar<nTotalBackgroundVariables;iVar++) fprintf(fout,"%e ",((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset))[iVar]);
             fprintf(fout,"\n");
 
             #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-            PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables,__LINE__,__FILE__);
+            PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset),nTotalBackgroundVariables,__LINE__,__FILE__);
             #endif
           }
           else {
-            pipe.send((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables);
+            pipe.send((double*)(offset+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset),nTotalBackgroundVariables);
           }
         }
         else {
@@ -959,7 +970,7 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
     nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
     if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
 
-    offset=CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
+    offset=CenterNode->GetAssociatedDataBufferPointer()+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 
     // compute components of the gradient
     for (int idim=0; idim < DIM; idim++) {
@@ -976,13 +987,13 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
       PIC::CPLR::GetBackgroundMagneticField(Bplus);
 
       //compute and write gradient's components
-      *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[idim];
-      *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[idim];
-      *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[idim];
+      *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.RelativeOffset))=(Bplus[0]-Bminus[0]) / dXCell[idim];
+      *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.RelativeOffset))=(Bplus[1]-Bminus[1]) / dXCell[idim];
+      *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.RelativeOffset))=(Bplus[2]-Bminus[2]) / dXCell[idim];
     }
 
     #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-    PIC::Debugger::CatchOutLimitValue((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset),9,__LINE__,__FILE__);
+    PIC::Debugger::CatchOutLimitValue((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.RelativeOffset),9,__LINE__,__FILE__);
     #endif
   }
 }
@@ -1028,7 +1039,7 @@ void PIC::CPLR::GetDriftVelocity(double *vDrift,double *ParticleVelocity,double 
       break;
     case _PIC_COUPLER_MODE__T96_: case _PIC_COUPLER_MODE__KMAG_: 
       for (int i=0;i<3;i++) cellE[i]=0.0;
-      DATAFILE::GetBackgroundData(cellB,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
+      DATAFILE::GetBackgroundData(cellB,3,DATAFILE::Offset::MagneticField.RelativeOffset,Stencil.cell[iStencil]);
 
       break;
     case _PIC_COUPLER_MODE__DATAFILE_:
@@ -1084,6 +1095,35 @@ void PIC::CPLR::GetDriftVelocity(double *vDrift,double *ParticleVelocity,double 
   }
 
 }
+
+//=========================================================================================================================
+//COPY dataset 'CurrDataFileOffset' to the 'NextDataFileOffset
+void PIC::CPLR::DATAFILE::MULTIFILE::CopyCurrDataFile2NextDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  if (startNode==NULL) startNode=PIC::Mesh::mesh.rootTree;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+  if ((CurrDataFileOffset!=-1)&&(CurrDataFileOffset!=NextDataFileOffset)) {
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      int i,j,k,nd;
+      char *offset;
+      PIC::Mesh::cDataCenterNode *cell;
+
+      if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+        offset=(startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k)))->GetAssociatedDataBufferPointer();
+
+        if (offset!=NULL) {
+          memcpy(offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+NextDataFileOffset,offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+CurrDataFileOffset,nTotalBackgroundVariables*sizeof(double));
+        }
+      }
+
+    }
+    else for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) CopyCurrDataFile2NextDataFile(startNode->downNode[nDownNode]);
+  }
+}
+
 
 
 
