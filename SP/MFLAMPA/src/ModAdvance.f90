@@ -52,6 +52,7 @@ module SP_ModAdvance
   !-----------------------------
   ! Injection and max energy in the simulation
   real:: EnergyInj=10.0, EnergyMax=1.0E+07
+  real:: TotalEnergyInj
   !-----------------------------
   ! Injection and max momentum in the simulation
   real:: MomentumInj, MomentumMax
@@ -113,6 +114,8 @@ contains
     ! convert energies to momenta
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
+    ! also compute total injection energy
+    TotalEnergyInj = momentum_to_energy(MomentumInj, NameParticle)
     DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
     do iMomentumBin = 1, nMomentumBin
        LogMomentumScale_I(iMomentumBin) = &
@@ -269,21 +272,22 @@ contains
        DInnerInj_I(iBegin:iEnd) = &
             BOverDeltaB2*&
             cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-            (B_I(iBegin:iEnd)**2*EnergyInj)
+            (B_I(iBegin:iEnd)**2*TotalEnergyInj) / RSun**2
     else
        ! diffusion is different up- and down-stream
        ! Sokolov et al. 2004, paragraphs before and after eq (4)
        where(Radius_I(iBegin:iEnd) > 1.1 * Radius_I(iShock))
           ! upstream:
           DInnerInj_I(iBegin:iEnd) = &
-               2.0/3.0 * Radius_I(iBegin:iEnd) *RSun * &
-               (MomentumInj*cLightSpeed**2)/(B_I(iBegin:iEnd)*EnergyInj)*&
+               0.2/3.0 * Radius_I(iBegin:iEnd) / RSun * &
+               (MomentumInj*cLightSpeed**2)/(B_I(iBegin:iEnd)*TotalEnergyInj)*&
                (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
        elsewhere
           ! downstream
           DInnerInj_I(iBegin:iEnd)=&
-               cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-               (B_I(iBegin:iEnd)**2*EnergyInj)/(10.0*CInj*MachAlfven) / &
+               cGyroRadius*(MomentumInj*cLightSpeed)**2 / RSun**2/&
+               (B_I(iBegin:iEnd)**2 * TotalEnergyInj)/&
+               (10.0*CInj*MachAlfven) / &
                min(1.0, 1.0/0.9 * Radius_I(iBegin:iEnd)/Radius_I(iShock))
        end where
     end if
@@ -313,7 +317,7 @@ contains
     integer:: iStep, nStep
     integer:: iParticle
     real   :: Alpha
-    real:: Momentum, DiffCoeffMin =1.0
+    real:: Momentum, DiffCoeffMin =1.0E+04 /RSun
     real:: DtFull, DtProgress, Dt
     logical, save:: IsFirstCall = .true.
 
@@ -405,7 +409,7 @@ contains
                 Momentum = exp((iMomentumBin-1) * DLogMomentum)
                 DInner_I(iBegin:iEnd) =&
                      DInnerInj_I(iBegin:iEnd) * Momentum**2 * &
-                     momentum_to_energy(         MomentumInj,NameParticle)/&
+                     TotalEnergyInj/&
                      momentum_to_energy(Momentum*MomentumInj,NameParticle)
                 if(UseRealDiffusionUpstream)then
                    where(Radius_I(iBegin:iEnd) > Radius_I(iShock)*1.1)
