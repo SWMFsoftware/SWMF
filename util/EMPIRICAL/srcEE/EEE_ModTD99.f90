@@ -376,9 +376,7 @@ contains
        GradBqZ_D = 3.0*q*RMins_D(z_)*&
             (RMins_D/R2Mins**5 - RPlus_D/R2Plus**5)
        GradBqZ_D(z_)    = 0.0
-       !    GradBqZ_D(x_:z_) = GradBqZ_D(x_:z_)  - &
-       !         RFace_D(x_:z_)*dot_product(RFace_D,GradBqZ_D)
-
+ 
        ! Compute the gradient of the scalar potential in Cartesian
        ! geometry -- GradPsiC_D::
 
@@ -465,6 +463,9 @@ contains
     real:: ThetaUVy,ThetaUVz
     real:: Kappa,dKappadx,dKappadr
     real:: KappaA,dKappaAdr
+    !Values of the hypergeometric functions, 
+    !2F1(3/2, 3/2 ; 3; Kappa**2) and 2F1(1/2, 1/2; 1; Kappa**3)
+    real:: F32323, F12121
 
     ! Complete elliptic integrals of related variables::
     real:: KElliptic, EElliptic
@@ -473,7 +474,7 @@ contains
     real:: AkA,dAkdkA,d2Akdk2A
     real:: AI,dAIdx,dAIdr
     ! Flux-rope related variables::
-    real:: BIPhi_D(3)
+    real:: BIPhi_D(3), B0_D(3), B0
     !--------------------------------------------------------------------
     ! Assign X,Y,Z coordinates at which to compute the magnetic field::
     !\
@@ -487,53 +488,68 @@ contains
     R2 = sum(XyzRel_D**2); xxx = sum(XyzRel_D*UnitX_D)
     R2Face = sqrt(dot_product(RFace_D,RFace_D))
 
+    !\
+    ! Field in the center of configuration
+    !/
+    B0 = 0.5*ITube/RTube; B0_D = B0*UnitX_D
     ! Compute Rperp and TubalDist::
 
     Rperp = sqrt(R2 - xxx**2)
-    RMinus = sqrt(xxx**2 + (Rperp-Rtube)**2)
+    RMinus = sqrt(xxx**2 + (Rperp - Rtube)**2)
     RPlus2 = (Rperp + Rtube)**2 + xxx**2
 
 
     ! Define the model input, Kappa
 
     Kappa = 2.0*sqrt(Rperp*Rtube/RPlus2)
-    dKappadx  = -xxx*Kappa/(RPerp*RPlus2)
-    dKappadr  = Kappa*(Rtube**2 - R2) &
-         /(2.0*Rperp*RPlus2)
     if (RMinus.ge.aTube) then
-       
-       if (present(RhoFRope))RhoFRope=0.0    
-       ! Truncate the value of Kappa::
-       
-       if (abs(1.0-Kappa).lt.cTiny/10.0) &
-            Kappa = 1.0-cTiny/10.0
-       
-       ! Compute the vector potential in the internal, AIin, and
-       ! external (outside the current torus), AIex, regions::   
-       
-       call calc_elliptic_int_1kind(Kappa,KElliptic)
-       call calc_elliptic_int_2kind(Kappa,EElliptic)
-       Ak  = ((2.0-Kappa**2)*KElliptic - 2.0*EElliptic)/Kappa
+       ! Compute the field and density outside the current torus   
        !\
-       ! Calculate derivative over k using formulae:
-       ! dK/dk = E/(k*(1-k^2)) - K/k, dE/dk = (E - K)/k
-       dAkdk    = (2.0-Kappa**2)*EElliptic &
-            /(Kappa**2*(1.0-Kappa**2)) &
-            - 2.0*KElliptic/Kappa**2
-       ! Compute the vector potential, AI, of the magnetic field 
-       ! produced by the ring current Itube
+       !Initialize redundant output
+       !/
+       if (present(RhoFRope))RhoFRope=0.0    
+ 
+       ! Compute the vector potential, Ak, of the magnetic field 
+       ! produced by the ring current Itube and its derivatives
+       if(Kappa < 0.7)then       
+          F32323 = hypergeom(1.50, 1.50, 3.0, Kappa**2)
+          Ak     = 0.250*F32323
+          F12121 = hypergeom(0.50, 0.50, 1.0, Kappa**2)
+          dAkDk  = (F12121 - 0.1250*(2.0 - Kappa**2)*F32323)/&
+               (1.0 - Kappa**2)
+       else
+          ! Truncate the value of Kappa:: 
+          if (abs(1.0-Kappa).lt.cTiny/10.0) &
+               Kappa = 1.0-cTiny/10.0
+
+          ! Compute the vector potential in the internal, AIin, and
+          ! external (outside the current torus), AIex, regions::   
+          
+          call calc_elliptic_int_1kind(Kappa,KElliptic)
+          call calc_elliptic_int_2kind(Kappa,EElliptic)
+          Ak  =(4.0/cPi)*((2.0-Kappa**2)*KElliptic - 2.0*EElliptic)/Kappa**4
+          !\
+          ! Calculate derivative of (Ak*k*3) over k using formulae:
+          ! dK/dk = E/(k*(1-k^2)) - K/k, dE/dk = (E - K)/k
+          ! Then, divide by k^2.
+          !/
+          dAkdk    = (4.0/cPi)*((2.0-Kappa**2)*EElliptic/(1.0-Kappa**2) &
+               - 2.0*KElliptic)/Kappa**4
+       end if        
+          ! Obtain the BI field in the whole space from the corresponding
+          ! vector potential, AI -->
+          ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
        
-       AI     = Itube/(2.0*cPi)*sqrt(Rtube/Rperp)*Ak
-
-       ! Derivative of AI with respect to `x` and `rperp`::
-
-       dAIdx   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
-            *(dAkdk*dKappadx)
-       dAIdr   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
-            *(dAkdk*dKappadr)
+       BFRope_D =B0*(Rtube/sqrt(RPlus2))**3*&
+            (dAkDk*(2*xxx*XyzRel_D + (RTube**2 - R2)*UnitX_D)/RPlus2 &
+            +Ak*UnitX_D)
        !No toroidal field outside the filament
        BIPhi_D = 0.0
     else
+       !\
+       ! Compute the field and density inside the current torus
+       !/
+       ! 1.
        ! Add the prominence material inside the flux rope, assuming that the
        ! total amount mass is 10^13kg, and that the desnity scale-height is
        ! the same as the pressure scale-height, 1/InvH0 (i.e., iso-thermal
@@ -541,7 +557,8 @@ contains
        
        if (present(RhoFRope))&
             RhoFRope = Rho0*exp(-10.0*(RMinus/aTube)**6) &
-            *exp(-InvH0*abs(R2Face-1.0))    
+            *exp(-InvH0*abs(R2Face-1.0))
+       !2.    
        ! Define the model input, KappaA. A given point is charakterized by
        ! two coordinates, say, RPepr and RMinus. In this case,
        ! if we denote Kappa=known_function(RPerp,RMinus), then 
@@ -566,13 +583,15 @@ contains
             - KappaA**4)*EElliptic/(1.0-KappaA**2) &
             + (4.0-5.0*KappaA**2)*KElliptic) &
             /(KappaA**3*(1.0-KappaA**2))
-     
        ! Derive the BI field from the corresponding vector potential,
        ! AI (this involves the comp. of some nasty derivatives)::
 
 
        dKappaAdr = KappaA*aTube**2/(2.0*Rperp &
             *(4.0*Rperp*Rtube+aTube**2))
+       dKappadx  = -xxx*Kappa/(RPerp*RPlus2)
+       dKappadr  = Kappa*(Rtube**2 - R2) &
+            /(2.0*Rperp*RPlus2)
 
        ! Derivative of AI with respect to `x` and `rperp`:: 
 
@@ -580,37 +599,22 @@ contains
             *(dAkdk*dKappadx)
        dAIdr   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
             *(dAkdk*dKappadr+d2Akdk2A*dKappaAdr &
-            *(Kappa-KappaA))!-AI/(2.0*Rperp)
+            *(Kappa-KappaA))
+       ! Obtain the BI field in the whole space from the corresponding
+       ! vector potential, AI -->
+       ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
+
+       BFRope_D = -dAIdx*XyzRel_D + (dAIdr+AI/(2.0*Rperp))*UnitX_D
        ! Compute the toroidal field (BIphix, BIphiy, BIphiz)
        ! produced by the azimuthal current Iphi. This is needed to ensure
        ! that the flux rope configuration is force free. 
-       !ThetaUVy = -XyzRel_D(z_)/Rperp
-       !ThetaUVz = XyzRel_D(y_)/Rperp 
-       !
-       !BIPhix = 0.0
-       !BIphiy = abs(Itube)/(2.0*cPi*aTube**2) &
-       !     *sqrt(2.0*(aTube**2-RMinus**2)) &
-       !     *ThetaUVy
-       !BIphiz = abs(Itube)/(2.0*cPi*aTube**2) &
-       !  *sqrt(2.0*(aTube**2-RMinus**2)) &
-       !  *ThetaUVz
        BIPhi_D = abs(Itube)/(2.0*cPi*RPerp*aTube**2) &
             *sqrt(2.0*(aTube**2-RMinus**2))*&
             cross_product(UnitX_D,XyzRel_D)
     end if
-    ! Obtain the BI field in the whole space from the corresponding
-    ! vector potential, AI -->
-    ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
-
-    BFRope_D = -dAIdx*XyzRel_D + (dAIdr+AI/(2.0*Rperp))*UnitX_D
-
     ! Add the field of the azimuthal current, Iphi::
     ! Compute the field produced by the ring current, Itube, both
     ! inside and outside the torus, BI = BFRope_D(x_:z_)::
-    
-    !BFRope_D(x_) = BFRope_D(x_)+BIphix
-    !BFRope_D(y_) = BFRope_D(y_)+BIphiy
-    !BFRope_D(z_) = BFRope_D(z_)+BIphiz
     BFRope_D = BFRope_D + BIPhi_D
   end subroutine compute_TD99_FluxRope
 
