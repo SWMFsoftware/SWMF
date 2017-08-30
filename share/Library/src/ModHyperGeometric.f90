@@ -10,8 +10,60 @@ module ModHyperGeometric
   use ModNumConst, ONLY: cSqrtTwo, cPi
   implicit none
   real, parameter:: cTolerance_I(0:1) = (/1.0e-7, 1.0e-15/)
-  real,parameter:: pK_LIMIT1 = 0.5*cSqrtTwo
+  real, parameter:: pK_LIMIT1 = 0.5*cSqrtTwo
+  real, parameter:: cEiler    = 0.57721566490
 contains
+  real function psi_semi(n)
+    integer, intent(in) :: n
+    !\
+    ! Definition of psi function: psi(z) = d\log(\Gamma(z))/dz
+    ! For semiinteger z:
+    ! psi(0.5 + n) = -C - log 4 +\sum_{k=1}^n{1/(k - 0.5)}
+    integer :: k
+    !--------
+    psi_semi = -cEiler -log(4.0)
+    do k=1, abs(n) 
+       psi_semi = psi_semi +1.0/(real(k) - 0.50) 
+    end do
+  end function psi_semi
+  !=================
+  real function psi_int(n)
+    integer, intent(in) :: n
+    !\
+    ! Definition of psi function: psi(z) = d\log(\Gamma(z))/dz
+    ! For integer z:
+    ! psi(1 + n) = -C +\sum_{k=1}^{n-1}{1.0/k}
+    integer :: k
+    !--------
+    psi_int = -cEiler
+    do k = 1, n -1 
+       psi_int = psi_int +1.0/real(k) 
+    end do
+  end function psi_int
+  !=================
+  real function factorial(n)
+    integer, intent(in) :: n
+    ! n! = \Gamma(n+1)
+    integer :: k
+    !----------
+    factorial = 1.0
+    do k=2, n
+       factorial = factorial*real(k)
+    end do
+  end function factorial
+  !=================
+  real function gamma_semi(n)
+    integer, intent(in) :: n
+    ! \Gamma(0.5 + n)
+    integer :: k
+    !------------
+    gamma_semi = sqrt(cPi)
+    do k = 1, n
+       gamma_semi = gamma_semi * (real(k) - 0.50)
+    end do
+  end function gamma_semi
+  !=================  
+    
   !\
   ! Hypergeometric series
   real function hypergeom(a, b, c, z)
@@ -45,6 +97,60 @@ contains
     call CON_stop(&
          'In '//NameSub//' convegence with 1000 terms is not achieved')
   end function hypergeom
+  !=====================
+  real function hyper_semi_semi_int(nA, nB, nC, z)
+    integer, intent(in) :: nA, nB, nC 
+    real,    intent(in) :: z
+    !\
+    ! Calculate hypergeometric series F(a, b, c, z), if
+    ! semiinteger a = 0.5 + nA, nA = 0, 1, 2
+    ! semiinteger b = 0.5 + nB, nB = 0, 1, 2
+    ! integer     c = nC
+    real :: A, B, C
+    integer :: n ! Discriminator= c - a -b
+    !\
+    !Loop variable
+    !/
+    integer :: i
+    !\
+    ! Misc
+    !/
+    real :: aPlusI, bPlusI, rMember, LogFactor, OneMinusZ
+    character(LEN=*), parameter:: NameSub = 'hyper_semi_semi_int'
+    !-----------
+    A =  0.50 + real(nA); B = 0.50 + real(nB); C = nC
+    if (abs(z).lt.0.50) then
+       hyper_semi_semi_int = hypergeom(&
+            a=A,        &
+            b=B,        &
+            c=C,        &
+            z=z)
+       RETURN
+    end if
+    n = nC - (1 + nA + nB)
+    OneMinusZ = 1.0 - z
+    select case(n)
+    case(0)
+       LogFactor    = -log(OneMinusZ) + 2.0*psi_int(1) - &
+            (psi_semi(nA) + psi_semi(nB))
+       rMember      = factorial(nA + nB)/(gamma_semi(nA)*gamma_semi(nB))
+       hyper_semi_semi_int = rMember*LogFactor
+       aPlusI       = A - 1.0
+       bPlusI       = B - 1.0
+       do i = 1, 1000
+          aPlusI = aPlusI + 1.0
+          bPlusI = bPlusI + 1.0
+          rMember = rMember*aPlusI*bPlusI/i**2*OneMinusZ
+          LogFactor = LogFactor + 2.0/real(i) - 1.0/aPlusI - 1.0/bPlusI
+          hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
+          if(abs(rMember) < cTolerance_I(iRealPrec))RETURN
+       end do
+       call CON_stop(&
+            'In '//NameSub//' convegence with 1000 terms is not achieved')
+    case default
+       call CON_stop('In '//NameSub//' only n=0 case is implemented')
+    end select
+  end function hyper_semi_semi_int
   !=====================
   !\
   ! Compute the complete elliptic integral of 1st kind from the series
@@ -137,4 +243,5 @@ contains
          'In '//NameSub//' convegence with 1000 terms is not achieved')
   end subroutine calc_elliptic_int_2kind
   !=================
+  
 end module ModHyperGeometric

@@ -507,38 +507,23 @@ contains
        !\
        !Initialize redundant output
        !/
-       if (present(RhoFRope))RhoFRope=0.0    
- 
-       ! Compute the vector potential, Ak, of the magnetic field 
-       ! produced by the ring current Itube and its derivatives
-       if(Kappa < 0.7)then       
-          F32323 = hypergeom(1.50, 1.50, 3.0, Kappa**2)
-          Ak     = 0.250*F32323
-          F12121 = hypergeom(0.50, 0.50, 1.0, Kappa**2)
-          dAkDk  = (F12121 - 0.1250*(2.0 - Kappa**2)*F32323)/&
-               (1.0 - Kappa**2)
-       else
-          ! Truncate the value of Kappa:: 
-          if (abs(1.0-Kappa).lt.cTiny/10.0) &
+       if (present(RhoFRope))RhoFRope=0.0   
+
+       ! Truncate the value of Kappa::  
+       if (abs(1.0-Kappa).lt.cTiny/10.0) &
                Kappa = 1.0-cTiny/10.0
 
-          ! Compute the vector potential in the internal, AIin, and
-          ! external (outside the current torus), AIex, regions::   
-          
-          call calc_elliptic_int_1kind(Kappa,KElliptic)
-          call calc_elliptic_int_2kind(Kappa,EElliptic)
-          Ak  =(4.0/cPi)*((2.0-Kappa**2)*KElliptic - 2.0*EElliptic)/Kappa**4
-          !\
-          ! Calculate derivative of (Ak*k*3) over k using formulae:
-          ! dK/dk = E/(k*(1-k^2)) - K/k, dE/dk = (E - K)/k
-          ! Then, divide by k^2.
-          !/
-          dAkdk    = (4.0/cPi)*((2.0-Kappa**2)*EElliptic/(1.0-Kappa**2) &
-               - 2.0*KElliptic)/Kappa**4
-       end if        
-          ! Obtain the BI field in the whole space from the corresponding
-          ! vector potential, AI -->
-          ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
+       ! Compute the vector potential, Ak, of the magnetic field 
+       ! produced by the ring current Itube and its derivatives
+             
+       !Calculate F(3/2, 3/2; 3; Kappa**2)
+       F32323 = hyper_semi_semi_int(1, 1, 3, Kappa**2)
+       !Calculate \tilde{P}^{-1}_{-1/2}(\cosh u)
+       Ak     = 0.250*F32323
+       F12121 = hyper_semi_semi_int(0, 0, 1, Kappa**2)
+       !Calculate d\tilde{P}^{-1}_{-1/2}(\cosh u)/du
+       dAkDk  = (F12121 - 0.1250*(2.0 - Kappa**2)*F32323)/&
+               (1.0 - Kappa**2)
        
        BFRope_D =B0*(Rtube/sqrt(RPlus2))**3*&
             (dAkDk*(2*xxx*XyzRel_D + (RTube**2 - R2)*UnitX_D)/RPlus2 &
@@ -577,8 +562,7 @@ contains
             - 2.0*KElliptic/KappaA**2
        ! Compute the vector potential, AI by smpoothly continuing the 
        ! value from the boundary
-       AI = Itube/(2.0*cPi)*sqrt(Rtube/Rperp)*&
-            (Ak + dAkdk*(Kappa - KappaA))
+       AI = Ak + dAkdk*(Kappa - KappaA)
        d2Akdk2A = ((7.0*KappaA**2-4.0 &
             - KappaA**4)*EElliptic/(1.0-KappaA**2) &
             + (4.0-5.0*KappaA**2)*KElliptic) &
@@ -587,24 +571,22 @@ contains
        ! AI (this involves the comp. of some nasty derivatives)::
 
 
-       dKappaAdr = KappaA*aTube**2/(2.0*Rperp &
-            *(4.0*Rperp*Rtube+aTube**2))
-       dKappadx  = -xxx*Kappa/(RPerp*RPlus2)
-       dKappadr  = Kappa*(Rtube**2 - R2) &
-            /(2.0*Rperp*RPlus2)
+       dKappaAdr = KappaA*aTube**2/&
+            (4.0*Rperp*Rtube+aTube**2)
+       dKappadx  = 2.0*xxx*Kappa/RPlus2
+       dKappadr  = Kappa*(Rtube**2 - R2)/RPlus2
 
        ! Derivative of AI with respect to `x` and `rperp`:: 
 
-       dAIdx   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
-            *(dAkdk*dKappadx)
-       dAIdr   = Itube/(2.0*cPi)*sqrt(Rtube/Rperp) &
-            *(dAkdk*dKappadr+d2Akdk2A*dKappaAdr &
-            *(Kappa-KappaA))
+       dAIdx   = dAkdk*dKappadx
+       dAIdr   = dAkdk*dKappadr
        ! Obtain the BI field in the whole space from the corresponding
        ! vector potential, AI -->
        ! BI = curl(AI*ThetaUV) = BFRope_D(x_:z_)::
 
-       BFRope_D = -dAIdx*XyzRel_D + (dAIdr+AI/(2.0*Rperp))*UnitX_D
+       BFRope_D =  B0*(4.0/(Kappa**3*cPi))*(Rtube/sqrt(RPlus2))**3*&
+            (dAIdx*XyzRel_D + (dAIdr+d2Akdk2A*dKappaAdr &
+            *(Kappa-KappaA)+AI)*UnitX_D)
        ! Compute the toroidal field (BIphix, BIphiy, BIphiz)
        ! produced by the azimuthal current Iphi. This is needed to ensure
        ! that the flux rope configuration is force free. 
