@@ -98,7 +98,7 @@ add_line_makefile_local("INTERFACE=off",1);
 
 #read settings from .amps.conf
 if (-e ".amps.conf") {
-    ampsConfigSettings();
+  ampsConfigSettings();
 }
 
 die "ERROR: Application hasn't been set!\n" unless $InputFileName;
@@ -300,10 +300,11 @@ sub add_line_makefile_local{
   foreach (@makefilelines) {
     if ($_ =~ m/\s*$Parameter\s*=.*/) {
       return unless $_[1];
-	    $_ = $_[0]; chomp($_); $_ = "$_\n";
-	    $IsPresent = 1;
+
+      $_ = $_[0]; chomp($_); $_ = "$_\n";
+      $IsPresent = 1;
       #last;
-	  }
+    }
   }
     
   # if the parameter hasn't been defined before, add its definition
@@ -566,33 +567,34 @@ sub ReadMainBlock {
           die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
         }
 
-	      #check if mask for input files is provided is given 
+        #check if mask for input files is provided is given 
         my $Mask='';
       
         if ($line =~ m/\(\s*$s0\s*,\s*mask\s*=\s*(.*)\s*\)/i) {$Mask = $1;}
   
         if ($Mask) {
-	        if (-e "$CPLRDATA\/Schedule") {
-		        print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
-		        system("cp $CPLRDATA/Schedule $CPLRDATA/Schedule.autocopy.".`date "+%Y_%m_%d__%Hh%Mm%Ss"`);
-	        }
+          if (-e "$CPLRDATA\/Schedule") {
+            print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
+            system("cp $CPLRDATA/Schedule $CPLRDATA/Schedule.autocopy.".`date "+%Y_%m_%d__%Hh%Mm%Ss"`);
+          }
+    
+          my @FileList=`ls $CPLRDATA/$Mask | xargs -n 1 basename`;
+          my $nFile = @FileList;
+          my @schedulelines;
+
+          push(@schedulelines,"Schedule file is automatically created using user-defined mask:\n$Mask \non ".`date`);
+          push(@schedulelines, "\#NFILE\n$nFile\n\#FILELIST\n");
 	    
-	        my @FileList=`ls $CPLRDATA/$Mask | xargs -n 1 basename`;
-	        my $nFile = @FileList;
-	        my @schedulelines;
-	        push(@schedulelines,"Schedule file is automatically created using user-defined mask:\n$Mask \non ".`date`);
-	        push(@schedulelines, "\#NFILE\n$nFile\n\#FILELIST\n");
+          foreach (@FileList) {
+            #remove leading and trailing spaces
+            if ($_ =~ m/^\s*(.*)\s*/) {$_ = $1}
+            push(@schedulelines, "$_\n");
+          }
 	    
-	        foreach (@FileList) {
-		        #remove leading and trailing spaces
-		        if ($_ =~ m/^\s*(.*)\s*/) {$_ = $1}
-		        push(@schedulelines, "$_\n");
-	        }
-	    
-	        # write final schedule file
-	        open (SCHEDULEFILE,">","$CPLRDATA/Schedule");   
-	        print SCHEDULEFILE  @schedulelines;
-	        close (SCHEDULEFILE);
+          # write final schedule file
+          open (SCHEDULEFILE,">","$CPLRDATA/Schedule");   
+          print SCHEDULEFILE  @schedulelines;
+          close (SCHEDULEFILE);
         }
       }
       else {
@@ -649,15 +651,16 @@ sub ReadMainBlock {
     }       
     ### USERDEFINEDPARTICLEINITIALIZATION ###
     elsif ($s0 eq "USERDEFINEDPARTICLEINITIALIZATION" ){
-	chomp($line);
-	($InputLine,$InputComment)=split('!',$line,2);
-	$InputLine=~s/ //g;
-	$InputLine=~s/=/ /;
+      chomp($line);
+      ($InputLine,$InputComment)=split('!',$line,2);
+      $InputLine=~s/ //g;
+      $InputLine=~s/=/ /;
 	
-	($InputLine,$UserDefinedParticleInitialization)=split(' ',$InputLine,2);
-	if($UserDefinedParticleInitialization eq "OFF"){
-	    $UserDefinedParticleInitialization = '';
-	}
+      ($InputLine,$UserDefinedParticleInitialization)=split(' ',$InputLine,2);
+
+      if ($UserDefinedParticleInitialization eq "OFF") {
+        $UserDefinedParticleInitialization = '';
+      }
     }
     ### STDOUTERRORLOG ###
     elsif ($s0 eq "STDOUTERRORLOG") {
@@ -834,11 +837,12 @@ sub ReadMainBlock {
   ampsConfigLib::ChangeValueOfVariable("char PIC::InputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputDirectory."\"","pic/pic_init_const.cpp");
 
   #redefine values of the macros controlling particle initialization mode
-  if($UserDefinedParticleInitialization){
-      my $FuncName='';
-      ampsConfigLib::RedefineMacro("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
-      if($UserDefinedParticleInitialization =~  m/(.*)(\(.*\))/){ $FuncName = $1;}
-      ampsConfigLib::RedefineMacroFunction("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_","(t1,t2,t3) ($FuncName(t1,t2,t3))","pic/picGlobal.dfn");  
+  if ($UserDefinedParticleInitialization) {
+    my $FuncName='';
+
+    ampsConfigLib::RedefineMacro("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+    if($UserDefinedParticleInitialization =~  m/(.*)(\(.*\))/){ $FuncName = $1;}
+    ampsConfigLib::RedefineMacroFunction("_PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_","(t1,t2,t3) ($FuncName(t1,t2,t3))","pic/picGlobal.dfn");  
   }
   
   #redefine the value for the macro controlling output error messages into stdout
@@ -859,15 +863,16 @@ sub ReadMainBlock {
     }
   }
 
-  if(defined $MoverIntegratorMode){
-      ampsConfigLib::RedefineMacro('_PIC_MOVER_INTEGRATOR_MODE_',$MoverIntegratorMode,'pic/picGlobal.dfn');
-      if(defined $MoverIntegrator){
-	  my $macroIntegrator='_PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_';
-	  my $IntegratorArgs='(ptr,LocalTimeStep,node)';
-	  ampsConfigLib::AddLine2File("\n#undef $macroIntegrator\n#define $macroIntegrator$IntegratorArgs $MoverIntegrator$IntegratorArgs\n","pic/picGlobal.dfn");
-      }
-  }
+  if (defined $MoverIntegratorMode){
+    ampsConfigLib::RedefineMacro('_PIC_MOVER_INTEGRATOR_MODE_',$MoverIntegratorMode,'pic/picGlobal.dfn');
 
+    if (defined $MoverIntegrator) {
+      my $macroIntegrator='_PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_';
+      my $IntegratorArgs='(ptr,LocalTimeStep,node)';
+
+      ampsConfigLib::AddLine2File("\n#undef $macroIntegrator\n#define $macroIntegrator$IntegratorArgs $MoverIntegrator$IntegratorArgs\n","pic/picGlobal.dfn");
+    }
+  }
 
   #add markers to the code
   my @FileContent;
@@ -1005,8 +1010,8 @@ sub ReadGeneralBlock {
     }
     
     elsif ($InputLine eq "FIRSTPRINTEDOUTPUTFILE") {
-	    ($InputLine,$InputComment)=split(' ',$InputComment,2);
-	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
     }
     
     #set the 'ForceRepatableExecutionPath' in the General section in addition to that in the Main section
@@ -1173,7 +1178,8 @@ sub ReadGeneralBlock {
           if ($_=~/_GLOBAL_VARIABLES_/) {
             if ($found == 0) {
               print GENERALOUT "#define _TOTAL_SPECIES_NUMBER_ $TotalSpeciesNumber\n";
-              $found=1;            }
+              $found=1;            
+            }
           }
         }
          
@@ -1403,23 +1409,23 @@ sub ReadGeneralBlock {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
       if ($InputLine eq "TIMEINTERVAL") {
-	      ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_","pic/picGlobal.dfn");	    
-	      chomp($line);
-	      $line=~s/[();]/ /g;
-	      $line=~s/(=)/ /;
-	      $line=~s/(=)/ /;
+        ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_TIME_INTERVAL_","pic/picGlobal.dfn");	    
+        chomp($line);
+        $line=~s/[();]/ /g;
+        $line=~s/(=)/ /;
+        $line=~s/(=)/ /;
 
-	      my $s0;
-	      ($s0,$line)=split(' ',$line,2);
-	      ($s0,$line)=split(' ',$line,2);
+        my $s0;
+        ($s0,$line)=split(' ',$line,2);
+        ($s0,$line)=split(' ',$line,2);
 
-	      while (defined $line) {
+        while (defined $line) {
           ($s0,$line)=split(' ',$line,2);
           $s0=uc($s0);
          
           if ($s0 eq "SAMPLETIMEINTERVAL") {
             ($s0,$line)=split(' ',$line,2);
-	  	       ampsConfigLib::ChangeValueOfVariable("double PIC::Sampling::SampleTimeInterval",$s0,"pic/pic.cpp");
+            ampsConfigLib::ChangeValueOfVariable("double PIC::Sampling::SampleTimeInterval",$s0,"pic/pic.cpp");
             $line=~s/(=)/ /;
           }
           else {
@@ -1427,9 +1433,9 @@ sub ReadGeneralBlock {
             die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
           }
         }
-	    }
+      }
       elsif ($InputLine eq "ITERATIONNUMBER") {
-	      ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_","pic/picGlobal.dfn");	    
+        ampsConfigLib::RedefineMacro("_PIC_SAMPLE_OUTPUT_MODE_","_PIC_SAMPLE_OUTPUT_MODE_ITERATION_NUMBER_","pic/picGlobal.dfn");	    
       }
       else {
         warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
@@ -1684,7 +1690,6 @@ sub Sampling {
       }
     }
     
-    
     elsif ($InputLine eq "VELOCITYDISTRIBUTIONSAMPLING") {
       my $ReadSampleLocations=0;
       my @SampleLocationTable;
@@ -1894,8 +1899,6 @@ sub Sampling {
       ampsConfigLib::ChangeValueOfArray("double PIC::EnergyDistributionSampleRelativistic::SamplingLocations\\[\\]\\[3\\]",\@Table,"pic/pic_sample_energy_distribution_relativistic.cpp");
       ampsConfigLib::ChangeValueOfVariable("int PIC::EnergyDistributionSampleRelativistic::nSamleLocations",(scalar @Table),"pic/pic_sample_energy_distribution_relativistic.cpp");      
     }
-    
-    
 
     elsif ($InputLine eq "PITCHANGLEDISTRIBUTIONSAMPLING") {
       my $ReadSampleLocations=0;
@@ -2151,10 +2154,7 @@ sub ParticleCollisionModel {
           }       
         }
           
-          
         ampsConfigLib::SubstituteCodeLine("const double ConstantCollisionCrossSectionTable",$newCrossSectionTable,"pic/pic.h");  
-          
-        
       }
       else {
         warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
@@ -2217,14 +2217,14 @@ sub ReadInterfaceBlock {
       # turn interface for AMR interpolation on/off
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-	
-   	  if  (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
+
+      if  (uc($InputLine) eq "AMPS" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_AMPS;}
       elsif (uc($InputLine) eq "SWMF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_SWMF;}
-	    elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
-	    else  {
-	      warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
-	      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-	    }
+      elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=$LinearInterpolationMode_OFF;}
+      else  {
+        warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
     }
     elsif (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_SRC") {
       #set ABSOLUTE path to external source code
@@ -2232,10 +2232,10 @@ sub ReadInterfaceBlock {
       $InputLine=~s/ //g;
       $CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$InputLine;
 
-      if((uc($InputLine)=~m/.*DEFAULT.*/) || (uc($InputLine)=~m/.*SHAREDIR.*/)){
-	      $CELL_CENTERED_LINEAR_INTERPOLATION_SRC="\${SHAREDIR}";
+      if ((uc($InputLine)=~m/.*DEFAULT.*/) || (uc($InputLine)=~m/.*SHAREDIR.*/)) {
+        $CELL_CENTERED_LINEAR_INTERPOLATION_SRC="\${SHAREDIR}";
         print $CELL_CENTERED_LINEAR_INTERPOLATION_SRC;
-	    }
+      }
     }
     
     #geopack
@@ -2293,53 +2293,53 @@ sub ReadInterfaceBlock {
 	
       #AMR interpolation ----------------------------------------------
       if ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_SWMF) {
-        # check if source folder for external files has been defined
-	      die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
+        #check if source folder for external files has been defined
+        die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
 
-  	    #switch macro for AMR interpolation mode
-	      ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
-	      ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+        #switch macro for AMR interpolation mode
+        ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+        ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
         ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__SWMF_",'pic/picGlobal.dfn');
 	
-	      $UseInterface='on';
-	      $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
-	    }
+        $UseInterface='on';
+        $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
+      }
       elsif ($CELL_CENTERED_LINEAR_INTERPOLATION_MODE==$LinearInterpolationMode_AMPS) {
         #switch macro for AMR interpolation mode
         ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
         ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
         ampsConfigLib::RedefineMacro("_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_","_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_",'pic/picGlobal.dfn');
       } 
-	    else{
-	      ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
-	    }
+      else {
+        ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
+      }
 	    
-	    #GEOPACK interface ---------------------------------------------------------
-	    if ($GEOPACK_MODE_==$GEOPACK_MODE__ON) {
-	      ampsConfigLib::RedefineMacro("_INTERFACE__GEOPACK__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+      #GEOPACK interface ---------------------------------------------------------
+      if ($GEOPACK_MODE_==$GEOPACK_MODE__ON) {
+        ampsConfigLib::RedefineMacro("_INTERFACE__GEOPACK__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
 	      
-	      $UseInterface='on';
-	      $Interfaces="$Interfaces "."geopack";
-	    }
+        $UseInterface='on';
+        $Interfaces="$Interfaces "."geopack";
+      }
 	    
-	    #T96 interface ---------------------------------------------------------
-	    if ($T96_MODE_==$T96_MODE__ON) {
-	      ampsConfigLib::RedefineMacro("_INTERFACE__T96__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+      #T96 interface ---------------------------------------------------------
+      if ($T96_MODE_==$T96_MODE__ON) {
+        ampsConfigLib::RedefineMacro("_INTERFACE__T96__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
 	      
-	      $UseInterface='on';
-	      $Interfaces="$Interfaces "."t96";
-	    }
+        $UseInterface='on';
+        $Interfaces="$Interfaces "."t96";
+      }
 	    
-	    #KMAG interface ---------------------------------------------------------
-	    if ($KMAG_MODE_==$KMAG_MODE__ON) {
-	      ampsConfigLib::RedefineMacro("_INTERFACE__KMAG__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+      #KMAG interface ---------------------------------------------------------
+      if ($KMAG_MODE_==$KMAG_MODE__ON) {
+        ampsConfigLib::RedefineMacro("_INTERFACE__KMAG__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
 	      
-	      $UseInterface='on';
-	      $Interfaces="$Interfaces "."KMAG";
-	    }
+        $UseInterface='on';
+        $Interfaces="$Interfaces "."KMAG";
+      }
 
       # read the current content of the corresponding makefile
-	    open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
+      open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
       @MakeFileContent=<MAKEFILE>;
       close(MAKEFILE);
 	
@@ -2378,8 +2378,8 @@ sub ReadInterfaceBlock {
 	
       if (($line ne "") && (substr($line,0,1) ne '!')) {
         warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
-	      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-	    }
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
     }
     
   }
@@ -2408,16 +2408,16 @@ sub ReadDustBlock {
       $InputLine=~s/ //g;
       
       if ($InputLine eq "ON") {
-	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__ON_","pic/picGlobal.dfn");
-	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
-	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__OFF_","pic/picGlobal.dfn");
-	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__OFF_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_","pic/picGlobal.dfn");
       }
       else {
         warn ("Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)");
-	      die "Unknown option\n";
+        die "Unknown option\n";
       }
     }
     elsif ($InputLine eq "INJECTIONMODEL") {
@@ -3741,36 +3741,36 @@ sub ReadSpeciesBlock {
 #=============================== Process AMPS' settings from .ampsConfig
 sub ampsConfigSettings {
   if (-e ".amps.conf") {
-	  my @Settings;
-	
-	  open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
-	  @Settings=<AMPSSETTINGS>;
-	  close (AMPSSETTINGS);
-	
-	  foreach (@Settings) {
-	    chomp($_);
-	    next unless $_;
+    my @Settings;
+
+    open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
+    @Settings=<AMPSSETTINGS>;
+    close (AMPSSETTINGS);
+
+    foreach (@Settings) {
+      chomp($_);
+      next unless $_;
 
       if ($_ =~/APPEND/) {
         next;
       }
 
-	    add_line_makefile_local($_,1);
+      add_line_makefile_local($_,1);
 	    
-	    if (/^InputFileAMPS=(.*)$/i) {
+      if (/^InputFileAMPS=(.*)$/i) {
         $InputFileName = $1;
         next;
-	    }
+      }
 	     
-	    if (/^SPICEKERNELS=(.*)$/i) {
+      if (/^SPICEKERNELS=(.*)$/i) {
         ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); 
-		    next;
-	    }
-	      
-	    if (/^ICESLOCATION=(.*)$/i) {
-	      ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); 
         next;
-	    } 
+      }
+	      
+      if (/^ICESLOCATION=(.*)$/i) {
+        ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); 
+        next;
+      } 
 	    
       if (/^CPLRDATA=(.*)$/i) {
         ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_datafile.cpp"); 
