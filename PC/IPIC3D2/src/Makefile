@@ -73,7 +73,7 @@ IPIC3D:
 	$(MAKE) LIB
 	$(MAKE) ${OBJECTS_EXE}
 	${COMPILE.mpicxx} -o ${EXE} ${MY_LIB} ${OBJECTS_EXE} \
-		-L../libIPIC3D/ -lIPIC3D ${CPPLIB} 
+		${OPENMPFLAG} -L../libIPIC3D/ -lIPIC3D ${CPPLIB} 
 	@echo ' '
 	@echo Program IPIC3D has been brought up to date.
 	@echo ' '       
