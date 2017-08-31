@@ -39,7 +39,9 @@ PIDL:
 serialrun: IPIC3D
 	cd ${RUNDIR}; ${SERIAL} ./IPIC3D.exe IPIC.in
 
-LIB: 
+# Switch to "coupled" mode by copying Makefile.local.default
+LIB:
+	cd src; cp -f Makefile.local.default Makefile.local
 	cd src; $(MAKE) LIB
 	cd srcInterface; $(MAKE) LIB
 
@@ -61,6 +63,7 @@ test_ipic3d:
 	@echo "test_check..." >> test_ipic3d.diff
 	$(MAKE) test_ipic3d_check
 
+# Switch to "standalone" mode by overwriting Makefile.local
 test_ipic3d_compile:
 	cd src; rm -f Makefile.local; \
 	echo "FLAGC_LOCAL=" >Makefile.local
