@@ -37,6 +37,16 @@ int PIC::TimeStep() {
    double UserDefinedParticleProcessingTime=0.0;
    static double summIterationExecutionTime=0.0;
    
+   //print the iteration time stamp
+   if (ThisThread==0) {
+     static int InteractionCouinter=0;
+     time_t TimeValue=time(NULL);
+     tm *ct=localtime(&TimeValue);
+
+     printf("$PREFIX: (%i/%i %i:%i:%i), Iteration: %i  (current sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,InteractionCouinter,RequiredSampleLength,RequiredSampleLength-CollectingSampleCounter);
+     InteractionCouinter++;
+   }
+
    //Set the exit error code
    ExitErrorCode=_PIC__EXIT_CODE__LAST_FUNCTION__PIC_TimeStep_;
    
