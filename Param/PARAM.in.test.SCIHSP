@@ -397,7 +397,8 @@ F			UseDiffusion
 
 #GRID
 2.5			ROrigin
-21			RSc
+19			RBufferMin
+21			RBufferMax
 220			RMax
 0			LonMin
 40			LonMax
