@@ -7,10 +7,9 @@
 module ModHyperGeometric
   use ModMpi, ONLY: &
        iRealPrec !1, if the code is compiled with double precision
-  use ModNumConst, ONLY: cSqrtTwo, cPi
+  use ModNumConst, ONLY: cPi
   implicit none
   real, parameter:: cTolerance_I(0:1) = (/1.0e-7, 1.0e-15/)
-  real, parameter:: pK_LIMIT1 = 0.5*cSqrtTwo
   real, parameter:: cEiler    = 0.57721566490
 contains
   real function psi_semi(n)
@@ -66,11 +65,11 @@ contains
     
   !\
   ! Hypergeometric series
-  real function hypergeom(a, b, c, z)
+  real function hypergeom(A, B, C, Z)
     !\
     ! Input parameters and argument
     !/
-    real, intent(in) :: a, b, c, z
+    real, intent(in) :: A, B, C, Z
     !\
     ! Loop variable
     !/
@@ -86,21 +85,20 @@ contains
     aPlusI = a -1.0
     bPlusI = b -1.0
     cPlusI = c -1.0
-    do i = 1, 1000
+    i = 0
+    do while(abs(rMember).ge.cTolerance_I(iRealPrec))
+       i = i +1
        aPlusI = aPlusI + 1.0
        bPlusI = bPlusI + 1.0
        cPlusI = cPlusI + 1.0
        rMember = rMember*aPlusI*bPlusI*z/(cPlusI*i)
        hypergeom = hypergeom + rMember 
-       if(abs(rMember) < cTolerance_I(iRealPrec))RETURN
     end do
-    call CON_stop(&
-         'In '//NameSub//' convegence with 1000 terms is not achieved')
   end function hypergeom
   !=====================
-  real function hyper_semi_semi_int(nA, nB, nC, z)
+  real function hyper_semi_semi_int(nA, nB, nC, Z)
     integer, intent(in) :: nA, nB, nC 
-    real,    intent(in) :: z
+    real,    intent(in) :: Z
     !\
     ! Calculate hypergeometric series F(a, b, c, z), if
     ! semiinteger a = 0.5 + nA, nA = 0, 1, 2
@@ -118,82 +116,58 @@ contains
     real :: aPlusI, bPlusI, rMember, LogFactor, OneMinusZ
     character(LEN=*), parameter:: NameSub = 'hyper_semi_semi_int'
     !-----------
-    A =  0.50 + real(nA); B = 0.50 + real(nB); C = nC
+    !Real arguments of the hypergeometric function:
+    A =  0.50 + real(nA); B = 0.50 + real(nB); C = real(nC)
     if (abs(z).lt.0.50) then
+       !\
+       !Direct summation of the hypergeometric series, well withing the
+       !convergence radius
+       !/
        hyper_semi_semi_int = hypergeom(&
-            a=A,        &
-            b=B,        &
-            c=C,        &
-            z=z)
+            A=A,        &
+            B=B,        &
+            C=C,        &
+            Z=Z)
        RETURN
     end if
-    n = nC - (1 + nA + nB)
+    !\
+    ! Use the analytic extension to the singular point z=1
     OneMinusZ = 1.0 - z
-    select case(n)
-    case(0)
+    ! The difference C - (A+B) is integer. Calculate this.
+    !/
+    n = nC - (1 + nA + nB)
+    !\
+    !The formulae for the "logarithmic case" (integer n) 
+    !http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/
+    !strongly depend on the sign of n. Consider case-by-case
+    if(n==0)then
        LogFactor    = -log(OneMinusZ) + 2.0*psi_int(1) - &
             (psi_semi(nA) + psi_semi(nB))
        rMember      = factorial(nA + nB)/(gamma_semi(nA)*gamma_semi(nB))
        hyper_semi_semi_int = rMember*LogFactor
        aPlusI       = A - 1.0
        bPlusI       = B - 1.0
-       do i = 1, 1000
+       i = 0
+       do while(abs(rMember) .ge. cTolerance_I(iRealPrec))
+          i = i + 1
           aPlusI = aPlusI + 1.0
           bPlusI = bPlusI + 1.0
           rMember = rMember*aPlusI*bPlusI/i**2*OneMinusZ
           LogFactor = LogFactor + 2.0/real(i) - 1.0/aPlusI - 1.0/bPlusI
           hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
-          if(abs(rMember) < cTolerance_I(iRealPrec))RETURN
        end do
-       call CON_stop(&
-            'In '//NameSub//' convegence with 1000 terms is not achieved')
-    case default
+    else
        call CON_stop('In '//NameSub//' only n=0 case is implemented')
-    end select
+    end if
   end function hyper_semi_semi_int
   !=====================
-  !\
-  ! Compute the complete elliptic integral of 1st kind from the series
-  ! representations given in Grandstein and Ryzhik  see formulae 8.113.1 
-  ! (for 0<k<0.701) and 8.113(3) (for 0.701=<k<1) therein 
-  !/ 
-  subroutine calc_elliptic_int_1kind(ArgK,KElliptic)
-    real, intent(in):: ArgK
+  subroutine calc_elliptic_int_1kind(Z, KElliptic)
+    real, intent(in):: Z
     real, intent(out):: KElliptic
-    !---------------------------
-    !\
-    !Loop variable
-    !/
-    integer:: i
-    !\
-    ! Misc
-    !/
-    real :: aPlusI,  rMember, LogFactor, ArgKPrime2
     character(LEN=*), parameter:: NameSub = 'calc_elliptic_int_1kind'
     !----------------------------
-
-
-    ! Compute the CEI of 1st kind::
-
-    if (abs(ArgK).lt.pK_LIMIT1) then
-       KElliptic = 0.50*cPi*hypergeom( 0.50, 0.50, 1.0, ArgK**2)
-       RETURN
-    end if
-    ! Initialize some variables::
-    ArgKPrime2   = 1.0 -ArgK**2
-    LogFactor    = 0.5*log(16.0/ArgKPrime2)
-    KElliptic    = LogFactor
-    rMember      = 1.0
-    aPlusI       = -0.50
-    do i = 1, 1000
-       aPlusI = aPlusI + 1.0
-       rMember = rMember*(aPlusI/i)**2*ArgKPrime2
-       LogFactor = LogFactor - 0.50/(i*(i - 0.50))
-       KElliptic = KElliptic + rMember*LogFactor 
-       if(abs(rMember) < cTolerance_I(iRealPrec))RETURN
-    end do
-    call CON_stop(&
-         'In '//NameSub//' convegence with 1000 terms is not achieved')
+    ! Calculate 2F1(0.5 +0, 0.5 + 0; 1; Z)
+    KElliptic = 0.50*cPi*hyper_semi_semi_int(0, 0, 1, Z**2)
   end subroutine calc_elliptic_int_1kind
   !====================================================================
     !------------------------------------------------------------------
@@ -217,7 +191,7 @@ contains
     character(LEN=*), parameter:: NameSub = 'calc_elliptic_int_2kind'
     !----------------------------
     ! Compute the CEI of second kind.
-    if (abs(ArgK).lt.pK_LIMIT1) then
+    if (ArgK**2.lt.0.50) then
        EElliptic = 0.50*cPi*hypergeom(-0.50, 0.50, 1.0, ArgK**2)
        RETURN
     end if
@@ -243,5 +217,4 @@ contains
          'In '//NameSub//' convegence with 1000 terms is not achieved')
   end subroutine calc_elliptic_int_2kind
   !=================
-  
 end module ModHyperGeometric
