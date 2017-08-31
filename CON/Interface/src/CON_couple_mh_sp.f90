@@ -37,11 +37,12 @@ module CON_couple_mh_sp
   use CON_axes
 
   use SP_wrapper, ONLY: &
-       SP_put_from_mh, SP_put_input_time, &
-       SP_put_line, SP_n_particle,        &
+       SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
+       SP_put_line, SP_n_particle, &
        SP_get_grid_descriptor_param, &
        SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
+       SP_interface_point_coords_for_ih_extract, &
        SP_copy_old_state
 
   implicit none
@@ -252,7 +253,7 @@ contains
          call global_message_pass(RouterLineScSp, &
               nVar = 3, &
               fill_buffer = SC_get_line_for_sp_and_transform, &
-              apply_buffer= SP_put_line_from_mh)
+              apply_buffer= SP_put_line_from_sc)
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = SC_GridDescriptor, &
@@ -271,7 +272,7 @@ contains
          call global_message_pass(RouterScSp, &
               nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_mh)
+              apply_buffer= SP_put_from_sc)
       case(IH_)
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
@@ -279,7 +280,7 @@ contains
               GridDescriptorTarget  = SP_LocalGD, &
               Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
-              interface_point_coords= SP_interface_point_coords_for_ih, &
+              interface_point_coords= SP_interface_point_coords_for_ih_extract, &
               mapping               = mapping_sp_to_IH, &
               interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIHSp)
@@ -313,7 +314,7 @@ contains
          call global_message_pass(RouterLineIhSp, &
               nVar = 3, &
               fill_buffer = IH_get_line_for_sp_and_transform, &
-              apply_buffer= SP_put_line_from_mh)
+              apply_buffer= SP_put_line_from_ih)
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = IH_GridDescriptor, &
@@ -332,7 +333,7 @@ contains
          call global_message_pass(RouterIhSp, &
               nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_mh)
+              apply_buffer= SP_put_from_ih)
       end select
     end subroutine exchange_lines
 
@@ -478,24 +479,8 @@ contains
     IsInterfacePoint = .true.
     call mapping(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine mapping_ih_to_sp
-  !=================================================================!
-  subroutine SP_put_scatter_from_mh(nData, Coord_DI, iIndex1_I,&
-       iIndex2_I)
-    integer, intent(in):: nData
-    real,    intent(in):: Coord_DI(nDim, nData)
-    integer, intent(in):: iIndex1_I(nData)
-    integer, intent(in):: iIndex2_I(nData)
-
-    integer:: iIndex_II(4, nData)
-    !--------------------------------------------------------
-    iIndex_II(1,:) = iIndex1_I
-    iIndex_II(2,:) = 1
-    iIndex_II(3,:) = 1
-    iIndex_II(4,:) = iIndex2_I
-    call SP_put_line(nData, Coord_DI, iIndex_II)
-  end subroutine SP_put_scatter_from_mh
   !==================================================================!
-  subroutine SP_put_line_from_mh(nPartial,&
+  subroutine SP_put_line_from_sc(nPartial,&
        iPutStart,&
        Put,&
        Weight,&
@@ -512,8 +497,28 @@ contains
     !----------------------------------------
     Buff_II(:,1)   = Buff_I
     iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
-    call SP_put_line(1, Buff_II, iIndex_II)
-  end subroutine SP_put_line_from_mh
+    call SP_put_line(SC_,1, Buff_II, iIndex_II)
+  end subroutine SP_put_line_from_sc
+  !==================================================================!
+  subroutine SP_put_line_from_ih(nPartial,&
+       iPutStart,&
+       Put,&
+       Weight,&
+       DoAdd,&
+       Buff_I,nVar)
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::Weight
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    
+    real:: Buff_II(nVar, 1)
+    integer:: iIndex_II(4,1)
+    !----------------------------------------
+    Buff_II(:,1)   = Buff_I
+    iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
+    call SP_put_line(IH_,1, Buff_II, iIndex_II)
+  end subroutine SP_put_line_from_ih
   !==================================================================!
   !^CMP IF IH BEGIN
   subroutine couple_ih_sp(DataInputTime)     
@@ -554,7 +559,7 @@ contains
     call global_message_pass(RouterLineIhSp, &
          nVar = 3, &
          fill_buffer = IH_get_line_for_sp_and_transform, &
-         apply_buffer= SP_put_line_from_mh)
+         apply_buffer= SP_put_line_from_ih)
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
          GridDescriptorSource  = IH_GridDescriptor, &
@@ -584,7 +589,7 @@ contains
     call global_message_pass(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_mh)
+              apply_buffer= SP_put_from_ih)
     !    if(is_proc(SP_))then
     !       call SP_put_input_time(DataInputTime)
     !    end if
@@ -678,7 +683,7 @@ contains
     call global_message_pass(RouterLineScSp, &
          nVar = 3, &
          fill_buffer = SC_get_line_for_sp_and_transform, &
-         apply_buffer= SP_put_line_from_mh)
+         apply_buffer= SP_put_line_from_sc)
     if(is_proc(SP_))&
          call set_semi_router_from_target(&
          GridDescriptorSource  = SC_GridDescriptor, &
@@ -696,7 +701,7 @@ contains
     call global_message_pass(RouterScSp, &
          nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_mh)
+         apply_buffer= SP_put_from_sc)
     !    if(is_proc(SP_))then
     !       call SP_put_input_time(DataInputTime)  
     !       call transform_to_sp_from(SC_)

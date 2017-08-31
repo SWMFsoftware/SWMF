@@ -15,8 +15,9 @@ module SP_ModMain
        nVar, &
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, Begin_, End_,&
-       LatMin, LatMax, LonMin, LonMax, RMin, RSc, RMax, ROrigin, &
+       Proc_, Block_, Begin_, End_, &
+       LatMin, LatMax, LonMin, LonMax, &
+       RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        CoordMin_DI, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
@@ -48,7 +49,8 @@ module SP_ModMain
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_,&
-       LatMin,LatMax, LonMin,LonMax, RMin, RSc,RMax,ROrigin,&
+       LatMin, LatMax, LonMin, LonMax, &
+       RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        CoordMin_DI, TypeCoordSystem,& 
        get_node_indexes

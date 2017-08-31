@@ -14,7 +14,8 @@ module SP_ModGrid
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
-  public:: LatMin, LatMax, LonMin, LonMax, RMin, RSc, RMax, ROrigin
+  public:: LatMin, LatMax, LonMin, LonMax
+  public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
   public:: CoordMin_DI
   public:: State_VIB, Distribution_IIB
@@ -44,10 +45,11 @@ module SP_ModGrid
   real:: LonMin, LonMax, DLon
   ! Lower boundary of the domain in Rs
   real:: RMin=-1.
-  ! Boundary of the solar corona in Rs
-  real:: RSc =-1.
   ! Upper boundary of the domain in Rs
   real:: RMax=-1.
+  ! Boundaries of the buffer layer between SC and IH Rs
+  real:: RBufferMin=-1.
+  real:: RBufferMax=-1.
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
@@ -173,14 +175,17 @@ contains
     character(len=*), parameter:: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
     call read_var('ROrigin', ROrigin)
-    call read_var('RSc', RSc)
+    call read_var('RBufferMin', RBufferMin)
+    call read_var('RBufferMax', RBufferMax)
     call read_var('RMax',RMax)
-    if(ROrigin < 0.0 .or. RSc < 0.0 .or. RMax < 0.0)&
+    if(ROrigin < 0.0 .or.RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
          call CON_stop(NameSub//&
-         ': all values ROrigin, RSc, RMax msut be set to positive values')
-    if(RMax < RSc .or. RMax < ROrigin)&
+         ': all values ROrigin, RBufferMin, RBufferMax, RMax must be set to positive values')
+    if(RMax < RBufferMax .or. RMax < RBufferMin .or. RMax < ROrigin .or. &
+         RBufferMax < RBufferMin .or. RBufferMax < ROrigin .or. &
+         RBufferMin < ROrigin)&
          call CON_stop(NameSub//&
-         ': value of RMax is inconsistent with ROrigin or RSc')
+         ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
     call read_var('LonMin', LonMin)
     call read_var('LonMax', LonMax)
     if(LonMax <= LonMin)&

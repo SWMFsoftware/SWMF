@@ -13,7 +13,7 @@ module SP_wrapper
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
-       RMin, RSc, RMax, LatMin, LatMax, LonMin, LonMax, &
+       RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem, &
        CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, &
@@ -44,8 +44,10 @@ module SP_wrapper
 
   ! coupling with MHD components
   public:: SP_put_input_time
-  public:: SP_put_from_mh
+  public:: SP_put_from_sc
+  public:: SP_put_from_ih
   public:: SP_interface_point_coords_for_ih
+  public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
   public:: SP_get_grid_descriptor_param
@@ -142,8 +144,8 @@ contains
 
   !===================================================================
 
-  subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-
+  subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+    integer, intent(in):: iComp
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
@@ -153,10 +155,12 @@ contains
     integer:: i, j, k, iBlock
     integer:: iPartial
     real:: Weight
+    real:: R
     real:: Aux
 
     real, external:: energy_in
 
+    character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_put_from_mh'
     !------------------------------------------------------------
     ! check consistency: momentum and pressure are needed together with density
@@ -184,6 +188,22 @@ contains
        iBlock = Put%iCB_II(4, iPutStart + iPartial)
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
+       if(is_in_buffer(State_VIB(X_:Z_,i,iBlock)))then
+          R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
+          select case(iComp)
+          case(SC_)
+             Weight = Weight * (0.50 - 0.50 * &
+                  tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
+          case(IH_)
+             Aux    = 1.0
+             Weight = Weight * (0.50 + 0.50 * &
+                  tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
+          case default
+             write(StringError,'(a,i2)') &
+                  ": isn't implemented for interface with component ", iComp
+             call CON_stop(NameSub//StringError)
+          end select
+       end if
        ! put the data
        ! NOTE: State_VIB must be reset to zero before putting coupled data
        if(DoCoupleVar_V(Density_))&
@@ -200,9 +220,27 @@ contains
             Buff_I(iBx:iBz) * Weight
     end do
   end subroutine SP_put_from_mh
-
   !===================================================================
-
+  subroutine SP_put_from_sc(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::W
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    !------------------------------------------------------------
+    call SP_put_from_mh(SC_,nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  end subroutine SP_put_from_sc
+  !===================================================================
+  subroutine SP_put_from_ih(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::W
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::Buff_I
+    !------------------------------------------------------------
+    call SP_put_from_mh(IH_,nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  end subroutine SP_put_from_ih
+  !===================================================================
   subroutine SP_set_grid
 
     ! Initialize 3D grid with NON-TREE structure
@@ -235,12 +273,12 @@ contains
 
   !===================================================================
 
-  subroutine SP_get_domain_boundary(RScOut, RMaxOut)
+  subroutine SP_get_domain_boundary(RScOut, RIhOut)
     ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut, RMaxOut
+    real, intent(out):: RScOut, RIhOut
     !-----------------------------------------------------------------
-    RScOut  = RSc
-    RMaxOut = RMax
+    RScOut = RBufferMax
+    RIhOut = RMax
   end subroutine SP_get_domain_boundary
 
   !===================================================================
@@ -286,14 +324,15 @@ contains
 
   !===================================================================
 
-  subroutine SP_interface_point_coords(iComp,&
+  subroutine SP_interface_point_coords(iComp, SendBuffer, &
        nDim, Xyz_D, nIndex, iIndex_I, IsInterfacePoint)
     ! interface points (request), which needed to be communicated
     ! to other components to perform field line extraction and
     ! perform further coupling with SP:
     ! the framework tries to determine Xyz_D of such points,
     ! SP changes them to the correct values
-    integer, intent(in)  :: iComp
+    integer,intent(in)   :: iComp
+    logical,intent(in)   :: SendBuffer
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
@@ -326,7 +365,8 @@ contains
     ! second, check whether the particle is within the appropriate domain
     if(IsInterfacePoint)&
          IsInterfacePoint = &
-         .not.(IsSc.eqv.sum(State_VIB(X_:Z_, iParticle, iBlock)**2)>Rsc**2)
+         is_in_buffer(State_VIB(X_:Z_, iParticle, iBlock)) .and. SendBuffer .or.&
+         .not.(IsSc.eqv.sum(State_VIB(X_:Z_,iParticle,iBlock)**2)>RBufferMax**2)
     ! lastly, fix coordinates
     if(IsInterfacePoint)&
          Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
@@ -345,7 +385,7 @@ contains
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
     !---------------------------------------------------------------
-    call SP_interface_point_coords(SC_,&
+    call SP_interface_point_coords(SC_, .true., &
          nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
   end subroutine SP_interface_point_coords_for_sc
   !===================================================================
@@ -361,16 +401,32 @@ contains
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
     !---------------------------------------------------------------
-    call SP_interface_point_coords(IH_,&
+    call SP_interface_point_coords(IH_, .true., &
          nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
   end subroutine SP_interface_point_coords_for_ih
+  !===================================================================
+  subroutine SP_interface_point_coords_for_ih_extract(&
+       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
+       IsInterfacePoint)
+    use CON_grid_descriptor
+    type(LocalGDType),intent(in)::GridDescriptor
+    integer,intent(in)   :: iBlockUsed
+    integer,intent(in)   :: nDim
+    real,   intent(inout):: Xyz_D(nDim)
+    integer,intent(in)   :: nIndex
+    integer,intent(inout):: iIndex_I(nIndex)
+    logical,intent(out)  :: IsInterfacePoint
+    !---------------------------------------------------------------
+    call SP_interface_point_coords(IH_, .false., &
+         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
+  end subroutine SP_interface_point_coords_for_ih_extract
 
   !===================================================================
 
-  subroutine SP_put_line(nPut, Coord_DI, iIndex_II)
-    use ModMpi
+  subroutine SP_put_line(iComp, nPut, Coord_DI, iIndex_II)
     ! store particle coordinates extracted elsewhere
     !---------------------------------------------------------------
+    integer, intent(in):: iComp
     integer, intent(in):: nPut
     real,    intent(in):: Coord_DI( nDim,   nPut)
     integer, intent(in):: iIndex_II(nDim+1, nPut)
@@ -383,11 +439,11 @@ contains
     integer:: iPut, iBlock, iNode
     ! indices of the particle
     integer:: iLine, iParticle
-    integer:: iMin_A(nNode),iMax_A(nNode)
-    integer:: iError
+    logical:: PutInBuffer
 
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
+    PutInBuffer = iComp == SC_
     ! store passed particles
     do iPut = 1, nPut
        iBlock = iIndex_II(4, iPut)
@@ -398,17 +454,18 @@ contains
             call CON_stop(NameSub//': particle index is below limit')
        if(iParticle > iParticleMax)&
             call CON_stop(NameSub//': particle index is above limit')
-
-       iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
-       iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
-       
+
+       if(.not.PutInBuffer .and. is_in_buffer(Coord_DI(X_:Z_, iPut)) )&
+            CYCLE
+
        ! put coordinates
        State_VIB(X_:Z_, iParticle, iBlock) = Coord_DI(X_:Z_, iPut)
+       iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
+       iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
     end do
   end subroutine SP_put_line
-
   !===================================================================
 
   subroutine SP_get_grid_descriptor_param(&
@@ -439,5 +496,16 @@ contains
        State_VIB(VarReset_I,iBegin:iEnd, iBlock) = 0.0
     end do
   end subroutine SP_copy_old_state
+
+  !========================================================================
+
+  function is_in_buffer(Xyz_D) Result(IsInBuffer)
+    real,   intent(in) :: Xyz_D(nDim)
+    logical:: IsInBuffer
+    real:: R2
+    !---------------------------------------------
+    R2 = sum(Xyz_D**2)
+    IsInBuffer = R2 >= RBufferMin**2 .and. R2 < RBufferMax**2
+  end function is_in_buffer
 
 end module SP_wrapper
