@@ -60,6 +60,7 @@ my @FinalApps;
 #parameters of tests
 my $Name;
 my $Keys;
+my $CustomRefSolutionPaths;
 my $Outs;
 my $Refs;
 my $Time;
@@ -76,7 +77,7 @@ my $PathName;
 while(@Table){
     my $refTable;
     my $refTars;
-    ($refTable,$Name,$Time,$Keys,$Outs,$refTars,$Refs) = get_next_test(@Table);
+    ($refTable,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,$refTars,$Refs) = get_next_test(@Table);
     @Table   = @$refTable;
     @Tars = @$refTars;
     $PathName=$Name;
@@ -87,7 +88,8 @@ while(@Table){
     &check_overtime;
 
     $Keys=~s/\s+$//; #remove spaces from the end of the line
-
+    $CustomRefSolutionPaths=~s/\s+$//;
+    
     for (my $i = 0; $i<=@Base-1; $i++){
 	# general part with all tests
 	if($Base[$i]=~m/<APP.*?>/){
@@ -95,6 +97,7 @@ while(@Table){
 	    $Final[$i]=~s/<APP>/$Name/g;
 	    $Final[$i]=~s/<APPPATH>/$PathName/g;
 	    $Final[$i]=~s/<APPKEYS>/$Keys/g;
+	    $Final[$i]=~s/<APPCUSTOMREFSOLUTIONPATHS>/$CustomRefSolutionPaths/g;
 	    $Final[$i]=~s/<APPOUTS>/$Outs/g;
             $Final[$i]=~s/<APPREF>/$Refs/g;
 	}
@@ -111,6 +114,7 @@ while(@Table){
 	$lines[$i]=~s/<APP>/$Name/g;
 	$lines[$i]=~s/<APPPATH>/$PathName/g;
 	$lines[$i]=~s/<APPKEYS>/$Keys/g;
+	$lines[$i]=~s/<APPCUSTOMREFSOLUTIONPATHS>/$CustomRefSolutionPaths/g;
 	$lines[$i]=~s/<APPOUTS>/$Outs/g;
 	#check if inside a target block
 	$iTar='' unless($lines[$i]=~m/^\t(.*)/);
@@ -161,7 +165,7 @@ sub get_next_test{
     #number of lines to remove
     my $nRemove=0;
     #test description
-    my $Name=''; my $Keys=''; my $Outs=''; my $Time=0;
+    my $Name=''; my $Keys=''; my $CustomRefSolutionPaths=''; my $Outs=''; my $Time=0;
     my $Refs='';
     #target block flag
     my $iTar='';
@@ -189,6 +193,7 @@ sub get_next_test{
 	    }
 	    elsif($line =~ m/Time=([0-9]+)/){$Time+=$1;}
 	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1,," if($1);}
+	    elsif($line =~ m/CustomRefSolutionPaths=(.*)/){$CustomRefSolutionPaths="$CustomRefSolutionPaths$1,," if($1);}
 	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1,," if($1);}
             elsif($line =~ m/Ref=(.*)/){$Refs="$Refs$1,," if($1);}  
 
@@ -215,6 +220,7 @@ sub get_next_test{
 
     unless($ErrorRead){
 	my @Keys    = split(/,,/,$Keys)   if($Keys);   $Keys   ='';
+	my @CustomRefSolutionPaths = split(/,,/,$CustomRefSolutionPaths)   if($CustomRefSolutionPaths);   $CustomRefSolutionPaths   ='';
 	my @Outs    = split(/,,/,$Outs)   if($Outs);   $Outs   ='';
 	my @Compile = split(/,,/,$Tars[0])if($Tars[0]);$Tars[0]='';
 	my @Rundir  = split(/,,/,$Tars[1])if($Tars[1]);$Tars[1]='';
@@ -230,6 +236,12 @@ sub get_next_test{
 		$Key = process_option($Key);
 		$Keys="$Keys$Key " if($Key);
 	    }
+	    #process CustomRefSolutionPaths
+	    foreach my $CustomRefSolutionPath (@CustomRefSolutionPaths){
+		$CustomRefSolutionPath = process_option($CustomRefSolutionPath);
+		$CustomRefSolutionPaths="$CustomRefSolutionPaths$CustomRefSolutionPath " if($CustomRefSolutionPath);
+	    }
+	 
 	    #process Outs
 	    foreach my $Out (@Outs){
 		$Out = process_option($Out);
@@ -272,7 +284,7 @@ sub get_next_test{
 	    }
 
 	}
-	(\@_,$Name,$Time,$Keys,$Outs,\@Tars,$Refs);
+	(\@_,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,\@Tars,$Refs);
     }
     else{
 	@Tars=('',0,'','','');
