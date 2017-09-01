@@ -799,6 +799,29 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
+Name=CCMC-Individual_Trajectories--KAMELEON-multifile@@(0+valeriy)
+Time=4
+
+Compile=
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON-multifile_compile..." > test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
+>>>./Config.pl -application=test/CCMC-Individual_Trajectories--kameleon-multifile -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC/MULTI-FILE -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC/MULTI-FILE  -boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -link-option=-lc++  -amps-test=on 
+>>>rm -rf srcTemp
+>>>@($(MAKE) -j8 amps)
+>>>@echo "test_CCMC-Individual_Trajectories--KAMELEON-multifile_compile... done" >> test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
+
+Check=
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
+>>>output/test_CCMC-Individual_Trajectories--KAMELEON-multifile/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON-multifile--output.diff
+>>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON-multifile--output.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
+>>>output/test_CCMC-Individual_Trajectories--KAMELEON-multifile/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
+>>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
+>>>@echo Test test_CCMC-Individual_Trajectories--KAMELEON-multifile has finished: `date`
+<#
+
+-------------------------------------------------------------------------------
+#>
 Name=test/Mover-guiding-center@@(0+valeriy) 
 Time=3
 
