@@ -68,7 +68,7 @@ module ModMultiIon
   logical, parameter:: IsAnalyticJacobian = .true.
 
   ! how to reconcile ions with total fluid
-  logical :: DoAddRho  = .false.
+  logical :: DoAddRho  = .true.
   logical :: DoAddRhoU = .true.
 
   ! Minimum pressure ratio for a minor fluid (so it remains positive)

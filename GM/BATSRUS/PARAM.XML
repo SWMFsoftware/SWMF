@@ -6104,10 +6104,10 @@ DoRestrictMultiIon=false.
 </command>
 
 <command name="MHDIONS">
-	<parameter name="DoAddRho"  type="logical" default="F"/>
+	<parameter name="DoAddRho"  type="logical" default="T"/>
 	<parameter name="DoAddRhoU" type="logical" default="T"/>
 #MHDIONS
-F			DoAddRho
+T			DoAddRho
 T			DoAddRhoU
 
 This command determines how the total MHD fluid and the individual ion fluids
@@ -6115,7 +6115,7 @@ are reconciled after each time step. If both DoAddRho and DoAddRhoU are true,
 then the density and momentum of individual ion fluids are added up
 and the MHD solution is overwritten. This is mostly useful for testing 
 purposes, because in this case it is better not to solve for the total fluid
-at all. 
+at all. This is the default, because it is BETTER not to solve for the total fluid.
 
 If DoAddRho is false then the density obtained by  the MHD scheme is used
 to adjust the densities of the ion fluids.
@@ -6125,7 +6125,9 @@ If DoAddRhoU is false, the same scaling is done for the three components
 of the ion momenta as long as all ion velocities have the same signs! 
 If the signs are mixed, the total momentum is replaced by the sum of the 
 ion momenta. The procedure is done separately for the X, Y and Z components 
-of the momenta.
+of the momenta. In real problems this algorithm does not seem to work very well.
+
+In short, do NOT use the total fluid.
 
 Default values are shown.
 </command>
