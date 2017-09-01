@@ -641,7 +641,7 @@ test_swpc_run:
 test_swpc_restart:
 	cd ${TESTDIR}; cp PARAM.in_rbe_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl
+	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
@@ -675,6 +675,75 @@ test_swpc_check:
 		${TESTDIR}/RB/plots/20140410_000300_e.fls.ref \
 		> test_swpc_rb.diff)
 	ls -l test_swpc_*.diff
+
+### test_swpc_build and test_swpc_multiion: GM+IE+IM ###
+
+test_swpc_multiion:
+	@echo "test_swpc_multiion_compile..." > test_swpc_multiion_gm.diff
+	@echo "test_swpc_multiion_compile..." > test_swpc_multiion_ie.diff
+	${MAKE} test_swpc_multiion_compile
+	@echo "test_swpc_multiion_rundir..." >> test_swpc_multiion_gm.diff
+	@echo "test_swpc_multiion_rundir..." >> test_swpc_multiion_ie.diff
+	${MAKE} test_swpc_multiion_rundir
+	@echo "test_swpc_multiion_run..." >> test_swpc_multiion_gm.diff
+	@echo "test_swpc_multiion_run..." >> test_swpc_multiion_ie.diff
+	${MAKE} test_swpc_multiion_run
+	@echo "test_swpc_multiion_check..." >> test_swpc_multiion_gm.diff
+	@echo "test_swpc_multiion_check..." >> test_swpc_multiion_ie.diff
+	${MAKE} test_swpc_multiion_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_swpc_multiion_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,1 -o=GM:u=Default,e=MhdIons
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_multiion_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cp ${TESTDIR}/LAYOUT.in_test_multiion ${TESTDIR}/LAYOUT.in
+	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_multiion_init
+	cp ${TESTDIR}/PARAM.in_multiion_init ${TESTDIR}/PARAM.in
+
+test_swpc_multiion_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_multiion_restart:
+	cd ${TESTDIR}; cp PARAM.in_multiion_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+
+test_swpc_multiion_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000000.log \
+		Param/SWPC/TestOutputMultiIon/log_e20140410-000000.log \
+		> test_swpc_multiion_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000000.mag \
+		Param/SWPC/TestOutputMultiIon/magnetometers_e20140410-000000.mag \
+		>> test_swpc_multiion_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000200.out \
+		Param/SWPC/TestOutputMultiIon/mag_grid_e20140410-000200.out \
+		>> test_swpc_multiion_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000000.log \
+		Param/SWPC/TestOutputMultiIon/geoindex_e20140410-000000.log \
+		>> test_swpc_multiion_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
+		Param/SWPC/TestOutputMultiIon/IE_t140410_000000.log \
+		> test_swpc_multiion_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000200_000.idl \
+		Param/SWPC/TestOutputMultiIon/it140410_000200_000.idl \
+		>> test_swpc_multiion_ie.diff)
+	ls -l test_swpc_multiion_*.diff
+
 
 ### Test4: GM+IE+HEIDI ###############
 
