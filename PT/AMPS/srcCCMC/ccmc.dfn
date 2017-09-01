@@ -15,3 +15,5 @@
 //save the cell center interpolated binary file for further use
 #define _CCMC_SAVE_BINARY_BACKGROUND_DATAFILE_  _PIC_MODE_OFF_
 
+//save the output file with the loaded background data
+#define _CCMC_OUTPUT_LOADED_BACKGROUND_DATA_TECPLOT_  _PIC_MODE_OFF_
