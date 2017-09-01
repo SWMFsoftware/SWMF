@@ -444,10 +444,10 @@ void amps_init() {
       #ifndef _NO_KAMELEON_CALLS_
       if (PIC::CPLR::DATAFILE::MULTIFILE::Schedule.size()==0) {
         PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CCMC::BackgroundDataFileName);
+        PIC::CPLR::DATAFILE::MULTIFILE::CopyCurrDataFile2NextDataFile();
       }
       else {
         PIC::CPLR::DATAFILE::MULTIFILE::Init(false,0);
-//        PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(PIC::CPLR::DATAFILE::MULTIFILE::Schedule[0].FileName);
       }
       #else
       exit(__LINE__,__FILE__,"Error: the background data file is not found");
@@ -488,7 +488,8 @@ void amps_init() {
 
   //init the particle buffer
   PIC::ParticleBuffer::Init(10000000);
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
+
+  if (_CCMC_OUTPUT_LOADED_BACKGROUND_DATA_TECPLOT_==_PIC_MODE_ON_) PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 }
 
 
