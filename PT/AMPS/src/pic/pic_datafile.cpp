@@ -210,28 +210,30 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
   // compose a name for the next file to load
   //  char fullname[_MAX_STRING_LENGTH_PIC_];
   //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
-  if (iFileLoadNext<nFile) PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
+//  if (iFileLoadNext<nFile) PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
 
-  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  //swap data offsets
-//  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
+  if ((MULTIFILE::ReachedLastFile==false)&&(_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_)) {
+    //swap data offsets
+    //  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
 
-  if (CurrDataFileOffset == 0) {
-    CurrDataFileOffset = NextDataFileOffset;
-    NextDataFileOffset = 0;
+    if (CurrDataFileOffset == 0) {
+      CurrDataFileOffset = NextDataFileOffset;
+      NextDataFileOffset = 0;
+    }
+    else {
+      NextDataFileOffset = CurrDataFileOffset;
+      CurrDataFileOffset = 0;
+    }
+
+    //load the new data file
+    if (iFileLoadNext<nFile) {
+      PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
+
+      if (PIC::ThisThread==0) std::cout << "Data file " << Schedule[iFileLoadNext].FileName << " has been loaded" << std::endl;
+      iFileLoadNext++;
+    }
+    else ReachedLastFile=true;  //the last file has been reached
   }
-  else {
-    NextDataFileOffset = CurrDataFileOffset;
-    CurrDataFileOffset = 0;
-  }
-  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  
-  if (PIC::ThisThread==0) std::cout << "Data file " << Schedule[iFileLoadNext].FileName << " has been loaded" << std::endl;
-
-  iFileLoadNext++;
-
-  //check whether the last file has been reached
-  ReachedLastFile = (iFileLoadNext >= nFile) ? true : false;
 }
 
 
@@ -427,10 +429,10 @@ void PIC::CPLR::DATAFILE::Init() {
   }
 
 
-  #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  // double the reserved memory for time inteprolation mode
-  PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
-  #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  if (_PIC_DATAFILE__TIME_INTERPOLATION_MODE_==_PIC_MODE_ON_) {
+    // double the reserved memory for time inteprolation mode
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
+  }
   
   if (nTotalBackgroundVariables==0) {
     exit(__LINE__,__FILE__,"Error: no background variables will be loaded. The background variables to load has to be indicated before call of the PIC::Init_BeforeParser()");
@@ -1112,13 +1114,17 @@ void PIC::CPLR::DATAFILE::MULTIFILE::CopyCurrDataFile2NextDataFile(cTreeNodeAMR<
       PIC::Mesh::cDataCenterNode *cell;
 
       if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-        offset=(startNode->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k)))->GetAssociatedDataBufferPointer();
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        cell=startNode->block->GetCenterNode(nd);
 
-        if (offset!=NULL) {
-          memcpy(offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+NextDataFileOffset,offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+CurrDataFileOffset,nTotalBackgroundVariables*sizeof(double));
+        if (cell!=NULL) {
+          offset=cell->GetAssociatedDataBufferPointer();
+
+          if (offset!=NULL) {
+            memcpy(offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+NextDataFileOffset,offset+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+CurrDataFileOffset,nTotalBackgroundVariables*sizeof(double));
+          }
         }
       }
-
     }
     else for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) CopyCurrDataFile2NextDataFile(startNode->downNode[nDownNode]);
   }
