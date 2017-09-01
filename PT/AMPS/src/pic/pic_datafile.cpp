@@ -1107,7 +1107,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::CopyCurrDataFile2NextDataFile(cTreeNodeAMR<
   const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
   const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
 
-  if ((CurrDataFileOffset!=-1)&&(CurrDataFileOffset!=NextDataFileOffset)) {
+  if ((CurrDataFileOffset!=-1)&&(NextDataFileOffset!=-1)&&(CurrDataFileOffset!=NextDataFileOffset)) {
     if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
       int i,j,k,nd;
       char *offset;
