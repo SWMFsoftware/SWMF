@@ -15,8 +15,9 @@ my $nThread       = ($n or 4);
 my $Rsync         = ($rsync or $sync);
 my $AllParam      = ($param or $allparam);
 my $Pattern       = $p;
-my $Format        = ($f or $format);
-    
+my $Format        = ($f or $format); $Format = "-f=$Format" if $Format;
+my $NoPtec        = $noptec;
+
 use strict;
 use File::Find;
 
@@ -127,10 +128,12 @@ REPEAT:{
 	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern $Format");
 	}elsif( $Dir =~ /^SC|IH|OH|GM|EE$/ ){
 	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern $Format");
-	    if($Gzip){
-		&shell("./pTEC A g");
-	    }else{
-		&shell("./pTEC A p r");
+	    unless($NoPtec){
+		if($Gzip){
+		    &shell("./pTEC A g");
+		}else{
+		    &shell("./pTEC A p r");
+		}
 	    }
             &concat_sat_log if $Concat;
 	}elsif( $Dir =~ /^IM/ ){
@@ -376,8 +379,8 @@ sub print_help{
 
 Usage:
 
-   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-r=REPEAT [-s=STOP] | DIR] 
-               [-n=NTHREAD] [-p=PATTERN] [-param|-allparam]
+   PostProc.pl [-h] [-v] [-c] [-g] [-m | -M] [-noptec]
+               [-r=REPEAT [-s=STOP] | DIR] [-n=NTHREAD] [-p=PATTERN] [-param|-allparam]
 
    -h -help    Print help message and exit.
 
@@ -391,9 +394,11 @@ Usage:
 
    -g -gzip    Gzip the big ASCII files.
 
-   -m -movie   Create movies from series of IDL files and keep IDL files.
+   -m -movie   Create movies (.outs) from series of IDL files (.out) and keep IDL files.
 
    -M -MOVIE   Create movies from series of IDL files and remove IDL files.
+
+   -noptec     Do not process Tecplot files with the pTEC script. 
 
    -n=NTHREAD  Run pIDL in parallel using NTHREAD threads. The default is 4.
 
@@ -428,6 +433,11 @@ Examples:
    Post-process the plot files:
 
 PostProc.pl
+
+   Post-process the .idl output files into Tecplot format
+   and do not process the .tec Tecplot files with pTEC:
+
+PostProc.pl -noptec -f=tec
 
    Post-process the plot files, create movies from IDL output,
    concatenate satellite, log, and magnetometer files, move output into a 
