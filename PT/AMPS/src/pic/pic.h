@@ -3893,28 +3893,33 @@ namespace PIC {
 
       //calculate the values of the located parameters
       inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell, double Time) {
-        double *offset = (double*)(DataOffsetBegin + MULTIFILE::CurrDataFileOffset + CenterNodeAssociatedDataOffsetBegin + cell->GetAssociatedDataBufferPointer());
+        double alpha,*offset = (double*)(DataOffsetBegin + MULTIFILE::CurrDataFileOffset + CenterNodeAssociatedDataOffsetBegin + cell->GetAssociatedDataBufferPointer());
 
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
 
-#if  _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+        #if  _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
         if (std::isnan(Time)) Time = PIC::SimulationTime::Get();
 
-        offset = (double*)(DataOffsetBegin+MULTIFILE::NextDataFileOffset+cell->GetAssociatedDataBufferPointer());
+        offset = (double*)(DataOffsetBegin+MULTIFILE::NextDataFileOffset+CenterNodeAssociatedDataOffsetBegin+cell->GetAssociatedDataBufferPointer());
 
-         //interpolation weight
-        double alpha = (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - Time) /
-        (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
+        if (MULTIFILE::ReachedLastFile==false) {
+           //interpolation weight
+           alpha=(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
+           for (int i=0;i<DataVectorLength;i++)  DataVector[i]=DataVector[i]*alpha+offset[i]*(1-alpha);
+        }
+        else {
+          alpha=(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-MULTIFILE::Schedule[MULTIFILE::nFile-2].Time);
 
-        for (int i=0;i<DataVectorLength;i++)  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
-#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+          if (alpha<1.0) for (int i=0;i<DataVectorLength;i++)  DataVector[i]=DataVector[i]*alpha+offset[i]*(1-alpha);
+          else for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
+        }
+        #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
 
-      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-      #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+        #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+        #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
         PIC::Debugger::CatchOutLimitValue(DataVector,DataVectorLength,__LINE__,__FILE__);
-      #endif
-      #endif
-
+        #endif
+        #endif
       }
 
       inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell, double Time) {
