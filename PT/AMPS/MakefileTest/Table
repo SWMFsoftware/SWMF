@@ -810,10 +810,6 @@ Compile=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON-multifile_compile... done" >> test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
 
 Check=
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/plots/amps.TrajectoryTracking.out=4.s=0.O2_PLUS.dat         \
->>>output/test_CCMC-Individual_Trajectories--KAMELEON-multifile/test_CCMC-Individual_Trajectories--output.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON-multifile--output.diff
->>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON-multifile--output.diff
-
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
 >>>output/test_CCMC-Individual_Trajectories--KAMELEON-multifile/test_CCMC-Individual_Trajectories.ref_np`ls ${TESTCCMC-Individual_Trajectories--KAMELEON-multifileDIR}/PT/thread* |wc -l |tr -d ' '` > test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
 >>>@ls -l test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
