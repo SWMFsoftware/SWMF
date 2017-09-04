@@ -523,7 +523,7 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 -------------------------------------------------------------------------------
 
 #>
-Name=SEP3D@@(0+) 
+Name=SEP3D
 Time=2
 
 Ref=2{icc}@@(0+valeriy)
