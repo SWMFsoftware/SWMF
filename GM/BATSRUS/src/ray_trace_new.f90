@@ -555,7 +555,6 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
        rMin_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
-  use ModMain,    ONLY: DoAnisoPressureIMCoupling
   use ModMultiFLuid
   use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord, Xyz_DGB, CellSize_DB
   implicit none
@@ -1244,7 +1243,7 @@ contains
   subroutine ray_extract(x_D,Xyz_D)
 
     use CON_line_extract, ONLY: line_put
-    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_, UnitP_, UnitB_
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, iUnitPrim_V
     use ModAdvance, ONLY: State_VGB, nVar, &
          Bx_, Bz_, Ppar_
     use ModMain, ONLY: UseB0
@@ -1300,17 +1299,7 @@ contains
        end if
 
        ! Convert to SI units if required
-       if(DoExtractUnitSi)then
-          State_V(iRho_I)  = State_V(iRho_I)  * No2Si_V(UnitRho_)
-          State_V(iUx_I)   = State_V(iUx_I)   * No2Si_V(UnitU_)
-          State_V(iUy_I)   = State_V(iUy_I)   * No2Si_V(UnitU_)
-          State_V(iUz_I)   = State_V(iUz_I)   * No2Si_V(UnitU_)
-          State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * No2Si_V(UnitB_)
-          State_V(iP_I)    = State_V(iP_I)    * No2Si_V(UnitP_)
-
-          if(DoAnisoPressureIMCoupling) &
-               State_V(Ppar_) = State_V(Ppar_) * No2Si_V(UnitP_)
-       end if
+       if(DoExtractUnitSi) State_V = State_V*No2Si_V(iUnitPrim_V)
 
        PlotVar_V(5:4+nVar) = State_V
 
@@ -1483,7 +1472,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
-       UseB0, DoAnisoPressureIMCoupling
+       UseB0
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
   use ModB0,      ONLY: B0_DGB
@@ -1579,11 +1568,6 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
               Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
            end do
         end do; end do; end do
-        if(DoAnisoPressureIMCoupling)then
-           do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-              Extra_VGB(3,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock)
-           end do; end do; end do
-        end if
      end do
 
      allocate(&
@@ -1687,7 +1671,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
-       UseB0, Unused_B, DoAnisoPressureIMCoupling
+       UseB0, Unused_B
   use ModPhysics,        ONLY: rBody
   use ModAdvance,        ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
   use ModB0,             ONLY: B0_DGB
@@ -1767,11 +1751,6 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
               Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
            end do
         end do; end do; end do
-        if(DoAnisoPressureIMCoupling)then
-           do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-              Extra_VGB(3,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock)
-           end do; end do; end do
-        end if
      end do
 
      allocate(&
@@ -2374,7 +2353,7 @@ subroutine test_ray_integral
   use ModIoUnit,   ONLY: UNITTMP_
   use ModUtilities,ONLY: open_file, close_file
   use ModNumConst, ONLY: cTiny
-  use ModMain,     ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+  use ModMain,     ONLY: DoMultiFluidIMCoupling
   implicit none
 
   integer, parameter :: nLat=50, nLon=50
@@ -2423,9 +2402,6 @@ subroutine test_ray_integral
               if(DoMultiFluidIMCoupling)then
                  write(*,'(a,a)')'iLon iLat Lon Lat ',&
                       'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length HpRho OpRho HpP OpP'
-              else if(DoAnisoPressureIMCoupling)then
-                 write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                      'Bvol Z0x Z0y Z0b Rho P Ppar LatEnd LonEnd Zend Length'               
               else
                  write(*,'(a,a)')'iLon iLat Lon Lat ',&
                       'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'               
