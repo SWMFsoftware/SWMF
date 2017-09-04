@@ -3761,11 +3761,20 @@ namespace PIC {
 
         //check whether it is time to load the next file
         inline bool IsTimeToUpdate() {
-          #if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext-1].Time;
-          #else
-          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].  Time;
-          #endif
+          bool res=false;
+
+          if (ReachedLastFile==false) switch (_PIC_DATAFILE__TIME_INTERPOLATION_MODE_) {
+          case _PIC_MODE_ON_:
+            res=(PIC::SimulationTime::Get() >= Schedule[iFileLoadNext-1].Time) ? true : false;
+            break;
+          case _PIC_MODE_OFF_ :
+            res=(PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].Time) ? true : false;
+            break;
+          default:
+            exit(__LINE__,__FILE__,"Error: the option is unknown");
+          }
+
+          return res;
         }
 
         //initialize
