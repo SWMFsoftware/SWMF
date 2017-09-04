@@ -207,22 +207,17 @@ double PIC::CPLR::DATAFILE::MULTIFILE::GetFileTime(const char* FileName) {
 
 //=============================================================================
 void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
-  // compose a name for the next file to load
-  //  char fullname[_MAX_STRING_LENGTH_PIC_];
-  //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
-//  if (iFileLoadNext<nFile) PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
-
-  if ((MULTIFILE::ReachedLastFile==false)&&(_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_)) {
-    //swap data offsets
-    //  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= NextDataFileOffset - CurrDataFileOffset;
-
-    if (CurrDataFileOffset == 0) {
-      CurrDataFileOffset = NextDataFileOffset;
-      NextDataFileOffset = 0;
-    }
-    else {
-      NextDataFileOffset = CurrDataFileOffset;
-      CurrDataFileOffset = 0;
+  if (MULTIFILE::ReachedLastFile==false) {
+    if (_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_) {
+      //swap data offsets
+      if (CurrDataFileOffset==0) {
+        CurrDataFileOffset=NextDataFileOffset;
+        NextDataFileOffset=0;
+      }
+      else {
+        NextDataFileOffset=CurrDataFileOffset;
+        CurrDataFileOffset=0;
+      }
     }
 
     //load the new data file
@@ -232,7 +227,8 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile() {
       if (PIC::ThisThread==0) std::cout << "Data file " << Schedule[iFileLoadNext].FileName << " has been loaded" << std::endl;
       iFileLoadNext++;
     }
-    else ReachedLastFile=true;  //the last file has been reached
+
+    if (iFileLoadNext>=nFile) ReachedLastFile=true;  //the last file has been reached
   }
 }
 
