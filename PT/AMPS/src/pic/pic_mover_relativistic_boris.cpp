@@ -32,7 +32,11 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
   ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
   mass=PIC::MolecularData::GetMass(spec);
 
-  while (dtTotalIn>0.0) {
+  if (dtTotalIn==0.0) {
+    memcpy(xFinal,xInit,3*sizeof(double));
+    memcpy(vFinal,vInit,3*sizeof(double));
+  }
+  else while (dtTotalIn>0.0) {
     gamma=1.0/sqrt(1.0-(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2])/(SpeedOfLight*SpeedOfLight));
 
     memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
