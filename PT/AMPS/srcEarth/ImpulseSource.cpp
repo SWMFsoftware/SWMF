@@ -48,6 +48,8 @@ long int Earth::ImpulseSource::InjectParticles() {
   int *SampleCounter=new int [nThreadsOpenMP];
   double SourceLocationB[3];
 
+  TimeCounter+=PIC::ParticleWeightTimeStep::GetGlobalTimeStep(0);
+
   for (iSource=0;iSource<nTotalSourceLocations;iSource++) {
     if ((TimeCounter>=ImpulseSourceData[iSource].time)&&(ImpulseSourceData[iSource].ProcessedFlag==false)) {
       ImpulseSourceData[iSource].ProcessedFlag=true;
