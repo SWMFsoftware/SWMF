@@ -3902,7 +3902,7 @@ namespace PIC {
 
       //calculate the values of the located parameters
       inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell, double Time) {
-        double alpha,*offset = (double*)(DataOffsetBegin + MULTIFILE::CurrDataFileOffset + CenterNodeAssociatedDataOffsetBegin + cell->GetAssociatedDataBufferPointer());
+        double *offset = (double*)(DataOffsetBegin + MULTIFILE::CurrDataFileOffset + CenterNodeAssociatedDataOffsetBegin + cell->GetAssociatedDataBufferPointer());
 
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
 
@@ -3913,11 +3913,12 @@ namespace PIC {
 
         if (MULTIFILE::ReachedLastFile==false) {
            //interpolation weight
-           alpha=(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
+           double alpha=(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time-MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
+
            for (int i=0;i<DataVectorLength;i++)  DataVector[i]=DataVector[i]*alpha+offset[i]*(1-alpha);
         }
         else {
-          alpha=(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-MULTIFILE::Schedule[MULTIFILE::nFile-2].Time);
+          double alpha=(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-Time)/(MULTIFILE::Schedule[MULTIFILE::nFile-1].Time-MULTIFILE::Schedule[MULTIFILE::nFile-2].Time);
 
           if (alpha<1.0) for (int i=0;i<DataVectorLength;i++)  DataVector[i]=DataVector[i]*alpha+offset[i]*(1-alpha);
           else for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
@@ -4238,7 +4239,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundMagneticField(t,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__T96_ || _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__KMAG_ 
-         DATAFILE::GetBackgroundData(t,3,DATAFILE::Offset::MagneticField.offset,Stencil.cell[iStencil]);
+         DATAFILE::GetBackgroundData(t,3,DATAFILE::Offset::MagneticField.RelativeOffset,Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticField(t,Stencil.cell[iStencil], Time);
          #else
