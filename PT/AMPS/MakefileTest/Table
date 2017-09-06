@@ -508,14 +508,6 @@ Time=6
 
 Outs=test_Earth
 
-Ref=2{icc}@@(0+valeriy)
-Ref=1{gcc}@@(0+valeriy)
-Ref=2{pgcc}@@(0+valeriy)
-
-Ref=5{gcc}@@(0+pleiades)
-Ref=6{icc}@@(0+pleiades)
-Ref=7{pgcc}@@(0+pleiades)
-
 Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2@@(0+valeriy)
 Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
 <#
