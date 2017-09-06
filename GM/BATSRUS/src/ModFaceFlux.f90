@@ -175,7 +175,7 @@ module ModFaceFlux
        DoIonHeatConduction = .false., DoHallInduction = .false.
 
   logical :: DoClightWarning     = .true.
-  real    :: factorClightWarning = 2.0
+  real    :: FactorClightWarning = 2.0
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
@@ -197,6 +197,10 @@ contains
           ! Make sure Climit is negative (if it was set in a previous session)
           Climit = -1.0
        end if
+    case('#CLIGHTWARNING')
+       call read_var('DoClightWarning', DoClightWarning)
+        if (DoClightWarning) &
+             call read_var('FactorClightWarning', FactorClightWarning)
     end select
 
   end subroutine face_flux_set_parameters
@@ -1360,20 +1364,11 @@ contains
             0.5*(FluxLeft_V(Ex_:Ez_) + FluxRight_V(Ex_:Ez_) &
             - CLight*(StateRightCons_V(Ex_:Ez_) &
             -       StateLeftCons_V(Ex_:Ez_)))
-!       Flux_V(Bx_:Bz_) = &
-!            0.5*(FluxLeft_V(Bx_:Bz_) + FluxRight_V(Bx_:Bz_) &
-!            - CLight*(StateRightCons_V(Bx_:Bz_) &
-!            -       StateLeftCons_V(Bx_:Bz_)))
 
        Flux_V(HypE_) = &
             0.5*(FluxLeft_V(HypE_) + FluxRight_V(HypE_) &
             - CLight*(StateRightCons_V(HypE_) &
             -       StateLeftCons_V(HypE_)))
-
-       if (UseHyperbolicDivb)  Flux_V(Hyp_) =   &
-            0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
-            - CLight*(StateRightCons_V(Hyp_) &
-            -       StateLeftCons_V(Hyp_)))
     end if
 
     ! Calculate neutral fluxes one-by-one
@@ -3246,6 +3241,7 @@ contains
 
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
+    integer :: iError = -1
     !--------------------------------------------------------------------------
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
@@ -3291,7 +3287,6 @@ contains
        ! all the fluid wave speeds. Only Lax-Friedrichs scheme can be
        ! used because the left/right/max wave speeds are the same = Clight.
        if(present(Cmax_I)) then
-          ! Cmax_I(1:nIonFluid)   = max(cLight, Cmax_I(1:nIonFluid))
           CmaxDt_I(iFluidMin:iFluidMax) = &
                max(cLight, Cmax_I(iFluidMin:iFluidMax))
           CmaxDt                        = maxval(CmaxDt_I(iFluidMin:iFluidMax))
@@ -3326,6 +3321,12 @@ contains
              write(*,*)'cLight         =',cLight
              write(*,*)'maxval(Cmax_I) =',maxval(Cmax_I(iFluidMin:iFluidMax))
              write(*,*)'Cmax_I         =',Cmax_I(iFluidMin:iFluidMax)
+          end if
+
+          if (maxval(Cmax_I(iFluidMin:iFluidMax)) > Clight) then
+             call error_report( &
+                  'get_speed_max: Clihgt is smaller than maxval(Cmax_I)', &
+                  maxval(Cmax_I(iFluidMin:iFluidMax)), iError, .true.)
              if(time_accurate) call stop_mpi &
                   ('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
           end if
@@ -3510,6 +3511,7 @@ contains
            NameSub,' Initial Sound2              =', Sound2
 
       do jFluid = 2, TrueIonLast_
+         ! TrueIonLast_ is the last index for the ions in nIonFluid
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
          ! The (approximate) fast speed fromula for multi-ion MHD
@@ -3533,6 +3535,7 @@ contains
       if(UseMultiIon)then
          ! The Alfven velocity and the electron pressure are multiplied
          ! with a Factor >= 1 in multi-ion MHD.
+         ! UseMultiIon = .false. for the five moment case.
          ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
          MultiIonFactor = &
               Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
@@ -3548,6 +3551,7 @@ contains
       end if
 
       if(UseElectronPressure)then
+         ! UseElectronPressure = .false. for the five moment case
          GammaPe = GammaElectron*State_V(Pe_)
          if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
          Sound2 = Sound2 + GammaPe*InvRho
@@ -3628,12 +3632,7 @@ contains
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
       Alfven2Normal = InvRho*FullBn**2
 
-      if(UseMultiIon)then
-         Alfven2 = Alfven2*MultiIonFactor
-         Alfven2Normal = Alfven2Normal*MultiIonFactor
-      end if
-
-      if(UseEfield)then
+      if(UseMultiIon .or. UseEfield)then
          Alfven2 = Alfven2*MultiIonFactor
          Alfven2Normal = Alfven2Normal*MultiIonFactor
       end if
