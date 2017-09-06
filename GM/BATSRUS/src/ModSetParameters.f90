@@ -77,8 +77,7 @@ subroutine MH_set_parameters(TypeAction)
        read_satellite_parameters, read_satellite_input_files
   use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
-       UseClimit, UsePoleDiffusion, DoBurgers, DoClightWarning,     &
-       factorClightWarning
+       UseClimit, UsePoleDiffusion, DoBurgers
   use ModLookupTable,     ONLY: read_lookup_table_param
   use ModIeCoupling,      ONLY: read_ie_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
@@ -1373,16 +1372,11 @@ subroutine MH_set_parameters(TypeAction)
      case("#MESSAGEPASS","#OPTIMIZE")               
         call read_var('TypeMessagePass', optimize_message_pass)
 
-     case('#CLIMIT')
+     case('#CLIMIT', '#CLIGHTWARNING')
         call face_flux_set_parameters(NameCommand)
 
      case('#LIGHTSPEED')
         call read_var('ClightDim', ClightDim)
-
-     case('#CLIGHTWARNING')
-        call read_var('DoClightWarning', DoClightWarning)
-        if (DoClightWarning) &
-             call read_var('factorClightWarning', factorClightWarning)
 
      case("#BORIS")
         if(.not.UseB)CYCLE READPARAM
