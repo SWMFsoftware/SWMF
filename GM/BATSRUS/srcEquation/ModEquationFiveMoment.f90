@@ -6,7 +6,7 @@ module ModVarIndexes
   use ModExtraVariables, &
        Redefine1 => iPparIon_I, &
        Redefine2 => Ex_,  Redefine3 => Ey_, Redefine4 => Ez_, &
-       Redefine5 => HypE_
+       Redefine5 => HypE_,Redefine6 => nElectronFluid
 
   implicit none
 
@@ -18,10 +18,11 @@ module ModVarIndexes
   integer, parameter :: nVar = 17
 
   ! There are two ion fluids but no total ion fluid
-  integer, parameter :: nFluid    = 2
-  integer, parameter :: IonFirst_ = 1
-  integer, parameter :: IonLast_  = 2
-  logical, parameter :: IsMhd     = .false.
+  integer, parameter :: nFluid         = 2
+  integer, parameter :: nElectronFluid = 1
+  integer, parameter :: IonFirst_      = 1
+  integer, parameter :: IonLast_       = 2
+  logical, parameter :: IsMhd          = .false.
   real               :: MassFluid_I(nFluid) = (/ 1.0, 1.0/1836.0 /)
 
   character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Ion', 'El ' /)
