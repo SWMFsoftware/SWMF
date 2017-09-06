@@ -50,6 +50,7 @@ test:
 	-@($(MAKE) test_magnetometer)
 	-@($(MAKE) test_anisotropic)
 	-@($(MAKE) test_region2d)
+	-@($(MAKE) test_fivemoment)
 	-@($(MAKE) test_func)
 	@ls -l *.diff
 
@@ -1601,6 +1602,38 @@ test_region2d_check:
 		${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out \
 		>> test_region2d.diff)
 	ls -l test_region2d.diff
+
+### TEST FOR FIVEMOMENT ###
+
+test_fivemoment:
+	@echo "test_fivemoment_compile..." > test_fivemoment.diff
+	$(MAKE) test_fivemoment_compile
+	@echo "test_fivemoment_rundir..." >> test_fivemoment.diff
+	$(MAKE) test_fivemoment_rundir
+	@echo "test_fivemoment_run..." >> test_fivemoment.diff
+	$(MAKE) test_fivemoment_run
+	@echo "test_fivemoment_check..." >> test_fivemoment.diff
+	$(MAKE) test_fivemoment_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_fivemoment_compile:
+	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,10,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_fivemoment_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.alfven PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_fivemoment_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+
+test_fivemoment_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+		Param/FIVEMOMENT/TestOutput/alfven_ref.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment.diff)
+	ls -l test_fivemoment.diff
 
 ### TEST FOR L1 to BC PROPAGATION ############################################
 
