@@ -50,6 +50,7 @@ NONE			TypeNormalization
 0.0			Ex
 0.0			Ey
 0.0			Ez
+0.0			HypE_
 0.01			P
 0.01			eRho
 0.0			eUx
@@ -159,7 +160,7 @@ F			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLog
-1			DnSaveLogfile
+50			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
