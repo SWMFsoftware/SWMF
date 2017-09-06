@@ -174,6 +174,9 @@ module ModFaceFlux
   logical :: DoRadDiffusion = .false., DoHeatConduction = .false., &
        DoIonHeatConduction = .false., DoHallInduction = .false.
 
+  logical :: DoClightWarning     = .true.
+  real    :: factorClightWarning = 2.0
+
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
@@ -1081,7 +1084,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
-    use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
+    use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V, cLight
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_material_properties
 
@@ -1352,6 +1355,27 @@ contains
        end if
     end if
 
+    if (UseEfield) then
+       Flux_V(Ex_:Ez_) = &
+            0.5*(FluxLeft_V(Ex_:Ez_) + FluxRight_V(Ex_:Ez_) &
+            - CLight*(StateRightCons_V(Ex_:Ez_) &
+            -       StateLeftCons_V(Ex_:Ez_)))
+!       Flux_V(Bx_:Bz_) = &
+!            0.5*(FluxLeft_V(Bx_:Bz_) + FluxRight_V(Bx_:Bz_) &
+!            - CLight*(StateRightCons_V(Bx_:Bz_) &
+!            -       StateLeftCons_V(Bx_:Bz_)))
+
+       Flux_V(HypE_) = &
+            0.5*(FluxLeft_V(HypE_) + FluxRight_V(HypE_) &
+            - CLight*(StateRightCons_V(HypE_) &
+            -       StateLeftCons_V(HypE_)))
+
+       if (UseHyperbolicDivb)  Flux_V(Hyp_) =   &
+            0.5*(FluxLeft_V(Hyp_) + FluxRight_V(Hyp_) &
+            - CLight*(StateRightCons_V(Hyp_) &
+            -       StateLeftCons_V(Hyp_)))
+    end if
+
     ! Calculate neutral fluxes one-by-one
     do iFluidMin = NeutralFirst_, nFluid
        iFluidMax = iFluidMin
@@ -1454,6 +1478,10 @@ contains
             Pe = 0.5*(PeLeft + PeRight)
             if(UseWavePressure) Pwave = 0.5*(PwaveLeft + PwaveRight)
          end if
+      end if
+
+      if (DoTestCell) then 
+         write(*,*) 'iFluidMin, iFluidMax, Cmax =', iFluidMin, iFluidMax, Cmax
       end if
 
     end subroutine lax_friedrichs_flux
@@ -2807,6 +2835,16 @@ contains
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
       end if
 
+      if(DoTestCell)then
+         write(*,*)'ChargeDens_I,InvRho         =', &
+              ChargeDens_I, InvRho
+         write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
+         write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
+         write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
+         write(*,*)'B0x,y,z   =',B0x,B0y,B0z
+         write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
+      end if
+
     end subroutine get_mhd_flux
 
     !==========================================================================
@@ -2854,8 +2892,8 @@ contains
       end if
 
       if(DoTestCell)then
-         write(*,*)'ChargeDens_I,InvElectronDens=', &
-              ChargeDens_I, InvElectronDens
+         write(*,*)'ChargeDens_I,InvElectronDens,InvRho=', &
+              ChargeDens_I, InvElectronDens,InvRho
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
          write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
@@ -3215,7 +3253,7 @@ contains
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
 
-       if(iFluid == 1 .and. UseB .and. .not.UseEfield)then
+       if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
              ! For AW flux UnLeft_I,UnRight_I 
              ! are already set by get_physical_flux
@@ -3229,7 +3267,7 @@ contains
              call get_mhd_speed
           endif
 
-       elseif(iFluid > 1 .and. iFluid <= IonLast_ .and. .not.UseEfield)then
+       elseif(iFluid > 1 .and. iFluid <= IonLast_)then
           if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
           if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
           if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
@@ -3252,21 +3290,46 @@ contains
        ! The light speed in the five-moment equations should exceed
        ! all the fluid wave speeds. Only Lax-Friedrichs scheme can be
        ! used because the left/right/max wave speeds are the same = Clight.
-       if(time_accurate .and. maxval(Cmax_I(1:nIonFluid)) > Clight)then
-          write(*,'(a,10es15.6)')'Xyz_DGB =', &
-               Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
-          write(*,'(a,10es15.6)')'Rho     =', &
-               State_VGB(iRho_I,iFace,jFace,kFace,iBLockFace)
-          write(*,'(a,10es15.6)')'P       =', &
-               State_VGB(iP_I,iFace,jFace,kFace,iBLockFace)
-          write(*,*)'cLight                      =',cLight
-          write(*,*)'maxval(Cmax_I(1:nIonFluid)) =',maxval(Cmax_I(1:nIonFluid))
-          write(*,*)'Cmax_I(1:nIonFluid)         =',Cmax_I(1:nIonFluid)
-          call stop_mpi('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
+       if(present(Cmax_I)) then
+          ! Cmax_I(1:nIonFluid)   = max(cLight, Cmax_I(1:nIonFluid))
+          CmaxDt_I(iFluidMin:iFluidMax) = &
+               max(cLight, Cmax_I(iFluidMin:iFluidMax))
+          CmaxDt                        = maxval(CmaxDt_I(iFluidMin:iFluidMax))
+
+          if(maxval(Cmax_I(iFluidMin:iFluidMax)) > Clight*factorClightWarning &
+               .and. DoClightWarning) then
+             write(*,'(a,i3)')      'dir     =', iDimFace
+             write(*,'(a,10es15.6)')'Xyz_DGB =', &
+                  Xyz_DGB(:,iFace,jFace,kFace,iBlockFace)
+             write(*,'(a,10es15.6)')'Rho     =', &
+                  State_VGB(iRho_I,iFace,jFace,kFace,iBLockFace)
+             write(*,'(a,10es15.6)')'P       =', &
+                  State_VGB(iP_I,iFace,jFace,kFace,iBLockFace)
+             write(*,*) 'neighbor point: '
+             select case(iDimFace)
+             case(x_)
+                write(*,'(a,10es15.6)')'Rho     =', &
+                     State_VGB(iRho_I,iFace+1,jFace,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'P       =', &
+                     State_VGB(iP_I,iFace+1,jFace,kFace,iBLockFace)
+             case(y_)
+                write(*,'(a,10es15.6)')'Rho     =', &
+                     State_VGB(iRho_I,iFace,jFace+1,kFace,iBLockFace)
+                write(*,'(a,10es15.6)')'P       =', &
+                     State_VGB(iP_I,iFace,jFace+1,kFace,iBLockFace)
+             case(z_)
+                write(*,'(a,10es15.6)')'Rho     =', &
+                     State_VGB(iRho_I,iFace,jFace,kFace+1,iBLockFace)
+                write(*,'(a,10es15.6)')'P       =', &
+                     State_VGB(iP_I,iFace,jFace,kFace+1,iBLockFace)
+             end select
+             write(*,*)'cLight         =',cLight
+             write(*,*)'maxval(Cmax_I) =',maxval(Cmax_I(iFluidMin:iFluidMax))
+             write(*,*)'Cmax_I         =',Cmax_I(iFluidMin:iFluidMax)
+             if(time_accurate) call stop_mpi &
+                  ('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
+          end if
        end if
-       Cmax_I(1:nIonFluid)   = max(cLight, Cmax_I(1:nIonFluid))
-       CmaxDt_I(1:nIonFluid) = max(cLight, Cmax_I(1:nIonFluid))
-       CmaxDt                = maxval(CmaxDt_I(1:nIonFluid))
 
        RETURN
     end if
@@ -3419,19 +3482,34 @@ contains
 
       real :: MultiIonFactor, ChargeDens_I(nIonFluid)
 
-      integer:: jFluid
+      integer:: jFluid, iVar
+
+      integer :: TrueIonLast_ = nIonFluid-nElectronFluid
 
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
-      if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
+      if(DoTestCell) then
+         write(*,*) NameSub,' TrueIonLast_ =', TrueIonLast_
+         write(*,*) NameSub,' State_V, B0  ='
+         do ivar=1,nVar
+            write(*,'(a8,a1,es13.5)') NameVar_V(iVar),'=',State_V(iVar)
+         end do
+         write(*,'(a9,es13.5)') 'B0x  =', B0x
+         write(*,'(a9,es13.5)') 'B0y  =', B0y
+         write(*,'(a9,es13.5)') 'B0z  =', B0z
+      end if
 
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       UnMin = Un
       UnMax = Un
-      do jFluid = 2, nIonFluid
+
+      if(DoTestCell) write(*,*) & 
+           NameSub,' Initial Sound2              =', Sound2
+
+      do jFluid = 2, TrueIonLast_
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
          ! The (approximate) fast speed fromula for multi-ion MHD
@@ -3443,6 +3521,11 @@ contains
          UnMin = min(Un, UnMin)
          UnMax = max(Un, UnMax)
       end do
+
+      if(DoTestCell) then
+         write(*,*) NameSub,' UnMin, UnMax                =', UnMin, UnMax
+         write(*,*) NameSub,' After multi-fluid, Sound2   =', Sound2
+      end if
 
       ! InvRho = 1/Sum(RhoIon_I)
       InvRho = 1.0/Rho
@@ -3457,15 +3540,49 @@ contains
          ! Add contribution of electron pressure=fraction of ion pressure
          if(.not.UseElectronPressure) Sound2 = Sound2 + MultiIonFactor &
               *GammaElectron*sum(State_V(iPIon_I))*ElectronPressureRatio*InvRho
+
+         if(DoTestCell) then
+            write(*,*) NameSub,' UseMultiIon, ChargeDens_I   =', ChargeDens_I
+            write(*,*) NameSub,' UseMultiIon, MultiIonFactor =', MultiIonFactor
+         end if
       end if
 
       if(UseElectronPressure)then
          GammaPe = GammaElectron*State_V(Pe_)
          if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
          Sound2 = Sound2 + GammaPe*InvRho
+         if(DoTestCell) then
+            write(*,*) NameSub,' GammaPe                     =', GammaPe
+            write(*,*) NameSub,' after Pe correction, Sound2 =', Sound2
+         end if
       else
          GammaPe = 0.0 ! possibly needed for aniso pressure
       endif
+
+      if(UseEfield) then
+         ! total electron pressure
+         GammaPe = sum(Gamma_I(TrueIonLast_+1:nIonFluid) &
+              *State_V(iPIon_I(TrueIonLast_+1:nIonFluid)) )
+
+         if(nIonFluid-nElectronFluid > 1) then
+            ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
+            MultiIonFactor = Rho*sum(  &
+                 ChargeDens_I(1:TrueIonLast_)**2       &
+                 /State_V(iRhoIon_I(1:TrueIonLast_)) ) &
+                 /sum(ChargeDens_I(1:TrueIonLast_))**2
+         else
+            MultiIonFactor = 1
+         end if
+
+         GammaPe = GammaPe*MultiIonFactor
+         Sound2  = Sound2 + GammaPe*InvRho
+
+         if(DoTestCell) then
+            write(*,*) NameSub,' UseEfield, MultiIonFactor   =', MultiIonFactor
+            write(*,*) NameSub,' UseEfield, GammaPe          =', GammaPe
+            write(*,*) NameSub,' after Pe correction, Sound2 =', Sound2
+         end if
+      end if
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
 
@@ -3516,6 +3633,15 @@ contains
          Alfven2Normal = Alfven2Normal*MultiIonFactor
       end if
 
+      if(UseEfield)then
+         Alfven2 = Alfven2*MultiIonFactor
+         Alfven2Normal = Alfven2Normal*MultiIonFactor
+      end if
+
+      if(DoTestCell) &
+           write(*,*) NameSub,' Alfven2, Alfven2Normal      =', &
+           Alfven2, Alfven2Normal
+
       ! Calculate fast speed for anisotropic ion pressure.
       ! Formulas refer to V. B. Baranov, 1970 and MAPLE calculation
       if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
@@ -3544,6 +3670,9 @@ contains
          Fast2  = Sound2 + Alfven2
          Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
       endif
+
+      if(DoTestCell) &
+           write(*,*) NameSub,' Fast2, Discr                =', Fast2, Discr
 
       if(Fast2 + Discr < 0.0)then
          write(*,*)NameSub, &
@@ -3590,6 +3719,9 @@ contains
       end if
       FastDt = Fast
 
+      if(DoTestCell) &
+           write(*,*) NameSub,' multipled face area, Fast   =', Fast
+
       ! Add whistler wave speed for the shortest wavelength 2 dx
       if(HallCoeff > 0.0 .and. DoHallInduction) then
          ! Tangential component of B
@@ -3609,6 +3741,11 @@ contains
          !cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
+         if(DoTestCell) then
+            write(*,*) NameSub,' HallCoeff,HallCmaxFactor    =', &
+                 HallCoeff,HallCmaxFactor
+            write(*,*) NameSub,' after whistler wave, Fast   =', Fast
+         end if
       end if
 
       HallUnLeft  = UnLeft_I(eFluid_)
@@ -3632,6 +3769,9 @@ contains
          FullBz = StateRight_V(Bz_) + B0z
          FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
          Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(iRhoIon_I(1)) ))
+
+         if(DoTestCell) &
+              write(*,*) NameSub,' after Alfven waves, Fast    =', Fast
       end if
 
       if(UseAwSpeed)then
@@ -3666,25 +3806,25 @@ contains
 
       if(DoTestCell)then
          if(.not.IsCartesian)then
-            write(*,*)NameSub,' AreaX,Y,Z =',AreaX, AreaY, AreaZ
-            write(*,*)NameSub,' Area,Area2=',Area, Area2
+            write(*,*)NameSub,' AreaX,Y,Z      =', AreaX, AreaY, AreaZ
+            write(*,*)NameSub,' Area,Area2     =', Area, Area2
          end if
          if(UseAwSpeed)then
-            write(*,*)NameSub,' UnLeft=',  UnLeft
-            write(*,*)NameSub,' UnRight=', UnRight
+            write(*,*)NameSub,' UnLeft         =', UnLeft
+            write(*,*)NameSub,' UnRight        =', UnRight
          end if
          if(HallCoeff > 0.0) then
-            write(*,*)NameSub,' HallCoeff=',   HallCoeff
-            write(*,*)NameSub,' HallUnLeft=',  HallUnLeft
-            write(*,*)NameSub,' HallUnRight=', HallUnRight
+            write(*,*)NameSub,' HallCoeff      =', HallCoeff
+            write(*,*)NameSub,' HallUnLeft     =', HallUnLeft
+            write(*,*)NameSub,' HallUnRight    =', HallUnRight
          end if
-         write(*,*)NameSub,' Un=',Un
-         write(*,*)NameSub,' Csound2=',Sound2
-         write(*,*)NameSub,' Cfast2=', Fast2
-         write(*,*)NameSub,' Discr2=', Discr**2
-         write(*,*)NameSub,' Calfven=',sqrt(Alfven2)
-         write(*,*)NameSub,' Calfven_normal=',sqrt(Alfven2Normal)
-         write(*,*)NameSub,' Cfast=',Fast
+         write(*,*)NameSub,' Un             =', Un
+         write(*,*)NameSub,' Csound2        =', Sound2
+         write(*,*)NameSub,' Cfast2         =', Fast2
+         write(*,*)NameSub,' Discr2         =', Discr**2
+         write(*,*)NameSub,' Calfven        =', sqrt(Alfven2)
+         write(*,*)NameSub,' Calfven_normal =', sqrt(Alfven2Normal)
+         write(*,*)NameSub,' Cfast          =', Fast
          if(present(Cmax_I)) write(*,*)NameSub,' Cmax_I(1)=',Cmax_I(1)
       end if
 

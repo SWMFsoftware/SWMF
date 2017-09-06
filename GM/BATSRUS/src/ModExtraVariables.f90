@@ -17,6 +17,9 @@ module ModExtraVariables
   integer, parameter :: Ex_ = 1, Ey_ = 2, Ez_ = 3
   integer, parameter :: HypE_ = 1
 
+  ! Number of electron fluids
+  integer, parameter :: nElectronFluid = 0
+
   ! The named index range for frequency bins in multi-group
   integer, parameter :: nWave = 1
   integer, parameter :: WaveFirst_ = 1, WaveLast_ = 1
