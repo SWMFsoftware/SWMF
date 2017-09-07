@@ -1606,34 +1606,93 @@ test_region2d_check:
 ### TEST FOR FIVEMOMENT ###
 
 test_fivemoment:
-	@echo "test_fivemoment_compile..." > test_fivemoment.diff
-	$(MAKE) test_fivemoment_compile
-	@echo "test_fivemoment_rundir..." >> test_fivemoment.diff
-	$(MAKE) test_fivemoment_rundir
-	@echo "test_fivemoment_run..." >> test_fivemoment.diff
-	$(MAKE) test_fivemoment_run
-	@echo "test_fivemoment_check..." >> test_fivemoment.diff
-	$(MAKE) test_fivemoment_check
+	-@($(MAKE) test_fivemoment_alfven)
+	-@($(MAKE) test_fivemoment_shock)
+	-@($(MAKE) test_fivemoment_langmuir)
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test_fivemoment_compile:
+test_fivemoment_alfven:
+	@echo "test_fivemoment_alfven_compile..." > test_fivemoment_alfven.diff
+	$(MAKE) test_fivemoment_alfven_compile
+	@echo "test_fivemoment_alfven_rundir..." >> test_fivemoment_alfven.diff
+	$(MAKE) test_fivemoment_alfven_rundir
+	@echo "test_fivemoment_alfven_run..." >> test_fivemoment_alfven.diff
+	$(MAKE) test_fivemoment_alfven_run
+	@echo "test_fivemoment_alfven_check..." >> test_fivemoment_alfven.diff
+	$(MAKE) test_fivemoment_alfven_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_fivemoment_alfven_compile:
 	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
-test_fivemoment_rundir: test_rundir
+test_fivemoment_alfven_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.alfven PARAM.in
 	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
 
-test_fivemoment_run:
+test_fivemoment_alfven_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
 
-test_fivemoment_check:
+test_fivemoment_alfven_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
 		Param/FIVEMOMENT/TestOutput/alfven_ref.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment.diff)
-	ls -l test_fivemoment.diff
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_alfven.diff)
+	ls -l test_fivemoment_alfven.diff
+
+test_fivemoment_shock:
+	@echo "test_fivemoment_shock_rundir..." >> test_fivemoment_shock.diff
+	$(MAKE) test_fivemoment_shock_rundir
+	@echo "test_fivemoment_shock_run..." >> test_fivemoment_shock.diff
+	$(MAKE) test_fivemoment_shock_run
+	@echo "test_fivemoment_shock_check..." >> test_fivemoment_shock.diff
+	$(MAKE) test_fivemoment_shock_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_fivemoment_shock_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.shock PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_fivemoment_shock_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+
+test_fivemoment_shock_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+		Param/FIVEMOMENT/TestOutput/shock_ref.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_shock.diff)
+	ls -l test_fivemoment_shock.diff
+
+test_fivemoment_langmuir:
+	@echo "test_fivemoment_langmuir_compile..." > test_fivemoment_langmuir.diff
+	$(MAKE) test_fivemoment_langmuir_compile
+	@echo "test_fivemoment_langmuir_rundir..." >> test_fivemoment_langmuir.diff
+	$(MAKE) test_fivemoment_langmuir_rundir
+	@echo "test_fivemoment_langmuir_run..." >> test_fivemoment_langmuir.diff
+	$(MAKE) test_fivemoment_langmuir_run
+	@echo "test_fivemoment_langmuir_check..." >> test_fivemoment_langmuir.diff
+	$(MAKE) test_fivemoment_langmuir_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_fivemoment_langmuir_compile:
+	./Config.pl -u=Waves -e=FiveMoment -g=50,50,1,10,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_fivemoment_langmuir_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.langmuir PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_fivemoment_langmuir_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+
+test_fivemoment_langmuir_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+		Param/FIVEMOMENT/TestOutput/langmuir_ref.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_langmuir.diff)
+	ls -l test_fivemoment_langmuir.diff
 
 ### TEST FOR L1 to BC PROPAGATION ############################################
 
