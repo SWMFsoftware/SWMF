@@ -38,7 +38,7 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #LIGHTSPEED
-10.0			cLightDim
+50.0			cLightDim
 
 #PLASMA
 0.1			IonMass
@@ -58,6 +58,7 @@ NONE			TypeNormalization
 0.0			Ex
 0.0			Ey
 0.0			Ez
+0.0			HypE
 1.0			P
 1.0/100.0		eRho
 0.0			eUx
@@ -74,6 +75,7 @@ NONE			TypeNormalization
 0.0			Ex
 0.0			Ey
 0.0			Ez
+0.0			HypE
 0.1			P
 0.125/100.0		eRho
 0.0			eUx
@@ -119,7 +121,7 @@ F			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLog
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
@@ -129,9 +131,9 @@ T			DoSaveInitial
 1
 1d mhd idl              StringPlot
 -1			DnOutput
-0.001			DtOutput
+0.0005			DtOutput
 0.			DxOutput
 
 #STOP
 -1			MaxIteration
-0.1			tSimulationMax
+0.02			tSimulationMax

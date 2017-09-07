@@ -118,7 +118,7 @@ F			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 raw			StringLog
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
@@ -137,6 +137,6 @@ z=0 MHD idl             StringPlot
 
 #STOP
 -1			MaxIteration
-0.1			tSimulationMax
+0.5			tSimulationMax
 
 1.2566			tSimulationMax
