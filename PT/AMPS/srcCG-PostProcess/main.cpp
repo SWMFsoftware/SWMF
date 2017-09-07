@@ -11,13 +11,15 @@
 #include <iostream>     // std::cout
 #include <sstream>
 #include <vector>
-
+#include <map>
 #include "PostProcess3D.h"
 #include "VIRTIS-M.h"
 #include "SpiceUsr.h"
 #include "DustScatteringEfficientcy.h"
 #include "pic.h"
-
+#include <omp.h>
+#include <bitArray.h>
+#include <ctime>
 
 #define _ON_  0
 #define _OFF_ 1
@@ -30,11 +32,11 @@
 
 //define wether particle trajectory files will be loaded
 #ifndef _LOAD_TRAJECTORY_FILES_
-#define _LOAD_TRAJECTORY_FILES_ _OFF_
+#define _LOAD_TRAJECTORY_FILES_ _ON_
 #endif
 
 #ifndef _SURFACE_EXPOSURE_TIME_CALCULATION_
-#define _SURFACE_EXPOSURE_TIME_CALCULATION_ _OFF_
+#define _SURFACE_EXPOSURE_TIME_CALCULATION_ _ON_
 #endif
 
 #ifndef _FLUX_CORRECTION_TABLE_
@@ -49,8 +51,9 @@ cPostProcess3D amps;
 double xSun[3];
 
 //acceptance probability of a particle trajectory when printed into a file
-double AcceptParticleTrajectory(int nTrajectory) { 
+double AcceptParticleTrajectory(int nTrajectory) {
   return amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][8]/amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][4]; 
+  
 }
 
 
@@ -71,6 +74,7 @@ namespace TRAJECTORY_FILTER {
   bool *SelectedTrajectoriesTable=NULL;
   bool *AcceptedTrajectoryFootprint=NULL;
 
+  
   //the trajectory acceptance corridor
   struct cCorridor {
     double x0,y0;
@@ -110,7 +114,8 @@ namespace TRAJECTORY_FILTER {
     double x[3],c0,c1,l,lCorridor[2];
     cVirtisM Virtis;
 
-
+  
+   
     cCorridor Include1={80,170.0,90,160.0,true,20,1.0};
     cCorridor Exclude1={177,100,190,88,false,15,0.00005};
     cCorridor Exclude2={115,155,119,146, false,7,0.5};
@@ -197,8 +202,8 @@ namespace TRAJECTORY_FILTER {
 
     //set orientation of the axis of VIRTIS
     Virtis.SetFrameAxis(et);
-
-
+    
+  
     ProcessTrajectoriesInitFlag=true;
 
     SelectedTrajectoriesTable=new bool [amps.ParticleTrajectory.nTotalTrajectories];
@@ -210,93 +215,171 @@ namespace TRAJECTORY_FILTER {
     AcceptedTrajectoryFootprint=new bool [amps.SurfaceData.nCells];
     for (i=0;i<amps.SurfaceData.nCells;i++) AcceptedTrajectoryFootprint[i]=false;
 
-    //go therough all corridor settings
-    for (int npass=0;npass<2;npass++) {
-      //during the first pass add all wanted trajectories
-      //during the second pass remove all unwanted trajectories
-
-      for (int nCor=0;nCor<CorridorTable.size();nCor++) {
-        if (npass==0) {
-          if (CorridorTable[nCor].IncludeFlag==false) continue;
-        }
-        else {
-          if (CorridorTable[nCor].IncludeFlag==true) continue;
-        }
+    int nBuff = ceil((double)amps.ParticleTrajectory.nTotalTrajectories/amps.ParticleTrajectory.BufferFileSize);
+ 
+    std::vector<cBitArray *>  FaceInjectionRateModifiedFlagVec;
+    int firstLoopFinished = 0;
+    for (int iBuffer = 0; iBuffer< nBuff; iBuffer++){
+      amps.ParticleTrajectory.LoadBufferData(iBuffer);
+      int bufferSize = amps.ParticleTrajectory.BufferFileSize;
+      if (iBuffer==nBuff-1 && amps.ParticleTrajectory.nTotalTrajectories%amps.ParticleTrajectory.BufferFileSize!=0)   bufferSize = amps.ParticleTrajectory.nTotalTrajectories%amps.ParticleTrajectory.BufferFileSize;
 
 
-        time_t TimeValue=time(NULL);
-        tm *ct=localtime(&TimeValue);
 
-        printf(": (%i/%i %i:%i:%i), Pass=%i,Corridor Table Element=%i\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,npass,nCor);
+#pragma omp parallel  default(none) shared(Virtis, amps, FaceFluxCorrectionTable,SelectedTrajectoriesTable,  AcceptedTrajectoryFootprint, FaceInjectionRateModifiedFlagVec) private(i, n, x, c0, c1, l, iPixel, jPixel, nTrajectory) firstprivate(CorridorTable,lCorridor,iBuffer, bufferSize,firstLoopFinished)
+      {
+	for (int jTraj=0; jTraj<bufferSize;jTraj++) {
+	  if (omp_get_thread_num()!=jTraj%omp_get_num_threads()) continue;
+	  int iCor =0; // the id of the Corrdior being processed
+      
+	  /*     if (!firstLoopFinished && omp_get_thread_num()!=0 && iBuffer==0 ) while (!firstLoopFinished){
+		 int tempInt;
+		 #pragma omp critical (firstloop)
+		 tempInt = firstLoopFinished;
+		 if (tempInt) break;
+		 }
+	  */
+	  //all thread proceed after the master thread completes the first loop
+	  if ((iBuffer==0 && firstLoopFinished==0 && omp_get_thread_num()!=0) || (iBuffer==0 && firstLoopFinished==1 && omp_get_thread_num()==0) ){
+	    printf("barrier: firstLoopFinished:%d, omp_get_thread_num():%d\n",firstLoopFinished,omp_get_thread_num());
+	    if (omp_get_thread_num()==0) firstLoopFinished++;// make sure master thread only get into barrier once
+#pragma omp barrier	
+	  }
 
-
-        //in a pass process a face only ones
-        int nface;
-        bool FaceInjectionRateModifiedFlag[amps.SurfaceData.nCells];
-
-        for (nface=0;nface<amps.SurfaceData.nCells;nface++) FaceInjectionRateModifiedFlag[nface]=false;
-
-        //add surface faces into the allowed list
-        lCorridor[0]=CorridorTable[nCor].x1-CorridorTable[nCor].x0;
-        lCorridor[1]=CorridorTable[nCor].y1-CorridorTable[nCor].y0;
-
-        for (nTrajectory=0;nTrajectory<amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
-          for (n=0;n<amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].nDataPoints;n++) {
-            for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[n][i];
-
-            //determine projection of 'x' as would be seen by VIRTIS-M
-            for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
-              c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
-              c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
-              l+=pow(x[i]-Virtis.xRosetta[i],2);
-            }
-
-            l=sqrt(l);
-
-            iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
-            jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
-
-            //Trajectory is accepted is it has a point that falls into the corridor
-            double r=(iPixel-CorridorTable[nCor].x0)/lCorridor[0]*lCorridor[1]+CorridorTable[nCor].y0;
-
-            if ((fabs(jPixel-r)<CorridorTable[nCor].PixelWidth) && (iPixel>=CorridorTable[nCor].x0)  && (iPixel<=CorridorTable[nCor].x1)) {
-              //trajectory falls within the corridor
-              //add the face into the list of the faces from which the dust ejection is allowed
-              if (true) { //(rnd()<CorridorTable[nCor].AcceptanceProbability) {
-                if (CorridorTable[nCor].IncludeFlag==true) {
-                  SelectedTrajectoriesTable[nTrajectory]=true;
-
-                  nface=(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7];
-                  if (FaceInjectionRateModifiedFlag[nface]==false) {
-                    FaceInjectionRateModifiedFlag[nface]=true;
-                    FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
-                  }
-
-                  //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
-                }
-                else {
-                  SelectedTrajectoriesTable[nTrajectory]=false;
-
-                  nface=(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7];
-                  if (FaceInjectionRateModifiedFlag[nface]==false) {
-                    FaceInjectionRateModifiedFlag[nface]=true;
-                    FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
-                  }
-
-                  //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]*=CorridorTable[nCor].AcceptanceProbability;
-                }
-              }
-
-            }
-          }
+	  nTrajectory = iBuffer*amps.ParticleTrajectory.BufferFileSize + jTraj;
+	  //go therough all corridor settings
+	  for (int npass=0;npass<2;npass++) {
+	    //during the first pass add all wanted trajectories
+	    //during the second pass remove all unwanted trajectories
+	
+	    for (int nCor=0;nCor<CorridorTable.size();nCor++) {
+	      //  for (int nCor=0;nCor<3;nCor++) {   
+	      if (npass==0) {
+		if (CorridorTable[nCor].IncludeFlag==false) continue;
+	      }
+	      else {
+		if (CorridorTable[nCor].IncludeFlag==true) continue;
+	      }
 
 
-          if (SelectedTrajectoriesTable[nTrajectory]==true) AcceptedTrajectoryFootprint[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=true;
-        }
-      }
+	      // time_t TimeValue=time(NULL);
+	      //tm *ct=localtime(&TimeValue);
+
+	      //  printf(": (%i/%i %i:%i:%i), Pass=%i,Corridor Table Element=%i\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,npass,nCor);
+
+
+	      //in a pass process a face only ones
+	      int nface;
+
+	      if (iCor>=FaceInjectionRateModifiedFlagVec.size()){
+		printf("one bit array created\n");
+		cBitArray * FaceInjectionRateModifiedFlag = new cBitArray(amps.SurfaceData.nCells);
+		FaceInjectionRateModifiedFlagVec.push_back(FaceInjectionRateModifiedFlag);
+
+	      }
+	
+
+	      //   bool FaceInjectionRateModifiedFlag[amps.SurfaceData.nCells];
+
+	      //        for (nface=0;nface<amps.SurfaceData.nCells;nface++) FaceInjectionRateModifiedFlag[nface]=false;
+
+	      //add surface faces into the allowed list
+	      lCorridor[0]=CorridorTable[nCor].x1-CorridorTable[nCor].x0;
+	      lCorridor[1]=CorridorTable[nCor].y1-CorridorTable[nCor].y0;
+
+	      //    for (nTrajectory=0;nTrajectory<amps.ParticleTrajectory.nTotalTrajectories;nTrajectory++) {
+	
+	      int DataPoints = amps.ParticleTrajectory.IndividualTrajectories[jTraj].nDataPoints;
+	      //#pragma omp parallel for default (none) shared(DataPoints,nTrajectory,Virtis,amps,CorridorTable,lCorridor, nCor,jTraj,FaceInjectionRateModifiedFlag,FaceFluxCorrectionTable,SelectedTrajectoriesTable) private(i,x,c0,c1,l,iPixel,jPixel,nface) 
+	      for (n=0;n<DataPoints;n++) {
+	    
+		for (i=0;i<3;i++) x[i]=amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[n][i];
+	    
+		//determine projection of 'x' as would be seen by VIRTIS-M
+		for (c0=0.0,c1=0.0,l=0.0,i=0;i<3;i++) {
+		  c0+=(x[i]-Virtis.xRosetta[i])*Virtis.e0[i];
+		  c1+=(x[i]-Virtis.xRosetta[i])*Virtis.e1[i];
+		  l+=pow(x[i]-Virtis.xRosetta[i],2);
+		}
+	    
+		l=sqrt(l);
+	    
+	     
+		iPixel=(Pi/2.0-acos(c0/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+		jPixel=(Pi/2.0-acos(c1/l))/Virtis.dAnglePixel+Virtis.nFieldOfViewPixels/2;
+	    
+		//Trajectory is accepted is it has a point that falls into the corridor
+		double r=(iPixel-CorridorTable[nCor].x0)/lCorridor[0]*lCorridor[1]+CorridorTable[nCor].y0;
+	     
+		if ((fabs(jPixel-r)<CorridorTable[nCor].PixelWidth) && (iPixel>=CorridorTable[nCor].x0)  && (iPixel<=CorridorTable[nCor].x1)) {
+		  //trajectory falls within the corridor
+		  //add the face into the list of the faces from which the dust ejection is allowed
+		  if (true) { //(rnd()<CorridorTable[nCor].AcceptanceProbability) {
+		    if (CorridorTable[nCor].IncludeFlag==true) {
+		    
+		      SelectedTrajectoriesTable[nTrajectory]=true;
+	
+
+		      nface=(int)amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[0][7];
+	
+		      //   if (FaceInjectionRateModifiedFlag[nface]==false) {
+		      //  FaceInjectionRateModifiedFlag[nface]=true;
+		      // cBitArray * bitArrayTmpPtr = FaceInjectionRateModifiedFlagVec[iCor];
+#pragma omp critical(ifstmt)
+		      {		   
+			if (FaceInjectionRateModifiedFlagVec[iCor]->Get(nface)==false) {
+			  //      #pragma omp critical(bitArraySetTrue)
+			  FaceInjectionRateModifiedFlagVec[iCor]->SetTrue(nface);
+			  //#pragma omp critical(FaceFluxCorrTble)
+			  FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
+	
+			}
+		      }
+		      //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]=CorridorTable[nCor].AcceptanceProbability;
+		    }
+		    else {
+		      SelectedTrajectoriesTable[nTrajectory]=false;
+		      nface=(int)amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[0][7];
+		      
+		      //  cBitArray * bitArrayTmpPtr = FaceInjectionRateModifiedFlagVec[iCor];
+#pragma omp critical(ifstmt)
+		      {
+			if (FaceInjectionRateModifiedFlagVec[iCor]->Get(nface)==false) {
+			  //  #pragma omp critical(bitArraySetTrue)
+			  FaceInjectionRateModifiedFlagVec[iCor]->SetTrue(nface);
+			  //   if (FaceInjectionRateModifiedFlag[nface]==false) {
+			  //   FaceInjectionRateModifiedFlag[nface]=true;
+			  //#pragma omp critical(FaceFluxCorrTble)
+			  FaceFluxCorrectionTable[nface]*=CorridorTable[nCor].AcceptanceProbability;
+			}
+		      }
+		      //FaceFluxCorrectionTable[(int)amps.ParticleTrajectory.IndividualTrajectories[nTrajectory].Data[0][7]]*=CorridorTable[nCor].AcceptanceProbability;
+		    }
+		  }
+		
+		}
+	      }//n<nDataPoints
+	       
+	      if (SelectedTrajectoriesTable[nTrajectory]==true){
+		int iFaceTmp = (int)amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[0][7];
+#pragma omp critical(AcceptedTrajFpt)	      
+		AcceptedTrajectoryFootprint[iFaceTmp]=true;
+	      }
+	       	      	  
+	      iCor++;
+	    }//nCor
+	  }
+	
+	  if (firstLoopFinished==0) firstLoopFinished++;
+	
+
+
+	} //jTraj
+      }// omp parallel
+	printf(" FaceInjectionRateModifiedFlagVec.size():%d\n",FaceInjectionRateModifiedFlagVec.size() );
     }
-
-
+    
+    
   }
 
   //output selected trajectories
@@ -318,7 +401,13 @@ namespace TRAJECTORY_FILTER {
       UnprocessedTrajectoryList.erase (UnprocessedTrajectoryList.begin()+i);
 
       PrintedTrajectoriesTable.push_back(nt);
-      amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[nt],nt,fname);
+      if (amps.ParticleTrajectory.BufferFileSize==0){
+	amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[nt],nt,fname);
+      }else{
+	cPostProcess3D::cParticleTrajectory::cIndividualTrajectoryData t;
+	amps.ParticleTrajectory.LoadIndividualTrajData(t,nt);
+	amps.ParticleTrajectory.AddTrajectoryDataFile(&t,nt,fname);
+      }
     }
   }
 }
@@ -382,6 +471,7 @@ namespace SURFACE {
        for (int i=0;i<3;i++) xSunLocation[i]=1.0E3*StateSun[i];
 
        //init the solar zenith angle and illumination map tables
+       /*
 #pragma omp parallel
    {
 #pragma omp single
@@ -399,7 +489,17 @@ namespace SURFACE {
        }
      }
    }
-
+       */
+#pragma omp parallel for  default(none)  shared(xSunLocation,cosSolarZenithAngle,IlluminationMap,CutCell::nBoundaryTriangleFaces)
+       for (int nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) { 
+           double cosSZA;
+           int IlluminationFlag;
+	   
+           GetIlliminationMapElement(nface,cosSZA,IlluminationFlag,xSunLocation);
+           cosSolarZenithAngle[nface]=cosSZA;
+           IlluminationMap[nface]=IlluminationFlag;
+     }
+   
        //exchange the table between all processors
        if (amps.rank==0) {
          int thread;
@@ -511,7 +611,7 @@ namespace SURFACE {
 
          //determine the new faces that was not in a shadow in time 'et-AccumulatedSearchTime'
          int cnt=0;
-
+	 /*
 #pragma omp parallel
    {
 #pragma omp single
@@ -542,6 +642,31 @@ namespace SURFACE {
          }
      }
    }
+	 */
+#pragma omp parallel for default(none)  shared(FaceChangedStateList,ExposureTime,AccumulatedSearchTime,nFaceChangedState,CutCell::nBoundaryTriangleFaces,localFaceIlluminationMap) firstprivate(xLight)
+         for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+          
+	 if (localFaceIlluminationMap[nface]==true){
+	 
+	 double cosSZA;
+	 int IlluminationFlag;
+	 
+	 GetIlliminationMapElement(nface,cosSZA,IlluminationFlag,xLight);
+	 
+	 if (IlluminationFlag==false) {
+	 //the face was in shadow at time 'et-AccumulatedSearchTime'
+#pragma omp critical (FaceChange)
+	 FaceChangedStateList[nFaceChangedState++]=nface;
+	 
+	 ExposureTime[nface]=AccumulatedSearchTime;
+	 localFaceIlluminationMap[nface]=false;
+       }
+       }
+	 
+       }
+	 
+   
+
 
          //collect the time information from all processors
          int nFaceChangedStateGlobalList[amps.size];
@@ -859,8 +984,14 @@ namespace DUST {
     //get the number of the trajectories
     cPostProcess3D::cCell*  cl=amps.GetCell(x);
     cPostProcess3D::cBlock* bl=amps.GetBlock(x);
-    data[2]=cl->TrajectoryPoints.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
-    data[3]=cl->IndividualTrajectories.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    int iCell = amps.CellId(x);
+    // data[2]=cl->TrajectoryPoints.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    //data[3]=cl->IndividualTrajectories.size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    
+    data[2]= amps.sumTrajPoints(iCell)/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    data[3]=amps.CellTrajMap[iCell].size()/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+    
+    
 
     for (iRadius=0;iRadius<nRadii;iRadius++) {
       GrainRadius=VariablePair[iRadius].GrainRadius;
@@ -892,9 +1023,19 @@ namespace DUST {
     int np,nt,nStatingFace;
     double CorrectionFactor;
 
-    for (np=0;np<cl->TrajectoryPoints.size();np++) {
-      nt=cl->TrajectoryPoints[np];
-      nStatingFace=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][7];
+    //  for (np=0;np<cl->TrajectoryPoints.size();np++) {
+    //  nt=cl->TrajectoryPoints[np];
+    for (std::map<int, int>::iterator it=amps.CellTrajMap[iCell].begin();it!=amps.CellTrajMap[iCell].end();it++){
+      nt = it->first;
+      
+      //  cPostProcess3D::cParticleTrajectory::cIndividualTrajectoryData tmpTraj;
+      //  amps.ParticleTrajectory.LoadIndividualTrajDataOneLine(tmpTraj, nt);
+    
+      cPostProcess3D::cParticleTrajectory::cIndividualTrajectoryData * tmpTrajPtr;
+      tmpTrajPtr = &amps.ParticleTrajectory.IndividualTrajectories[nt];
+      //nStatingFace=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][7];
+       //  nStatingFace=tmpTraj.Data[0][7];
+      nStatingFace = tmpTrajPtr->Data[0][7];
 
       double FaceSourceRate_H2O=0.0,c;
       int i,nnode;
@@ -908,18 +1049,30 @@ namespace DUST {
 //      if (TRAJECTORY_FILTER::SelectedTrajectoriesTable[nt]==false) CorrectionFactor=0.0;
 
       if (CorrectionFactor<0.0) CorrectionFactor=0.0;
+      
+      // c=CorrectionFactor*amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][8]/
+      //	(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
+      
+      c=CorrectionFactor*tmpTrajPtr->Data[0][8]/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]); 
 
-      c=CorrectionFactor*amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][8]/
-          (bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]);
-
-      data[5]+=c;
+      
+      //  c=CorrectionFactor*tmpTraj.Data[0][8]/(bl->xmax[0]-bl->xmin[0])/(bl->xmax[1]-bl->xmin[1])/(bl->xmax[2]-bl->xmin[2]); 
+	
+      // data[5]+=c;
+      //data[5]+=c*amps.CellTrajMap[iCell][nt]; //times nTrajpnt of traj no. nt
+      data[5]+=c*it->second; 
 
       //particle size
-      GrainRadius=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][6];
+      //      GrainRadius=amps.ParticleTrajectory.IndividualTrajectories[nt].Data[0][6];
+      GrainRadius = tmpTrajPtr->Data[0][6];
+      //  GrainRadius=tmpTraj.Data[0][6];
       ScatteringEfficentcy=
               LK::GetScatteringEfficeintcy(GrainRadius,LK::Ice2Dust0_0500000007__Porosity0_828326166::Data,LK::Ice2Dust0_0500000007__Porosity0_828326166::nDataPoints,1.0);
 
-      data[6]+=c*ScatteringEfficentcy;
+      // data[6]+=c*ScatteringEfficentcy;
+      //data[6]+=c*ScatteringEfficentcy*amps.CellTrajMap[iCell][nt];
+      data[6]+=c*ScatteringEfficentcy*it->second; 
+
     }
   }
 
@@ -961,13 +1114,21 @@ namespace INTEGRAL_TEST {
 
 int main(int argc,char **argv) {
 
+  double computeTime;
+
+  time_t start = std::time(NULL);
+  
+  bool UseBuffer=true;
+  int BufferSize = 30000;
+  omp_set_num_threads(16);
   amps.InitMPI();
   amps.SetBlockSize(5,5,5);
-
+  
+  
   MPI_GLOBAL_COMMUNICATOR=MPI_COMM_WORLD;
   rnd_seed(100);
-
-
+  
+  printf("Total number of threads used:%d\n",omp_get_num_threads());
 /*
 //    amps.ParticleTrajectory.LoadDataFile("amps.TrajectoryTracking.out=1.s=0.H2O.dat",".");
 
@@ -1025,7 +1186,7 @@ return 1;
 
 
   std::cout << "Heliocentric Distance " << sqrt(StateSun[0]*StateSun[0]+StateSun[1]*StateSun[1]+StateSun[2]*StateSun[2])*1.0E3/_AU_ << std::endl;
-
+  printf("spice done\n");
   if (_MODE_==_GAS_MODE_) {
     std::string out,DataFileName;
     std::stringstream t;
@@ -1058,10 +1219,11 @@ return 1;
     amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.gas.flux.dat");
   }
   else if (_MODE_==_DUST_MODE_) {
+    printf("in dust mode\n");
     std::string TrajectoryFileName[_DUST_SPEC_NUMBER_];
     std::string s,out;
     std::stringstream t;
-
+    printf("dust mode init\n");
     t << _OUTPUT_FILE_NUMBER_;
     out=t.str();
   
@@ -1078,7 +1240,7 @@ return 1;
 
       TrajectoryFileName[i]="amps.TrajectoryTracking.out="+out+".s="+s+".DUST%"+s1+".dat";
     }
-  
+    printf("dust mode done\n");
     //load the trajectory data file
     std::string fDataFile="pic.DUST%0.s=2.out="+out+".dat";
     amps.LoadDataFile(fDataFile.c_str(),PIC::UserModelInputDataPath);
@@ -1093,14 +1255,32 @@ return 1;
     };*/
 
     if (_LOAD_TRAJECTORY_FILES_==_ON_) {
-      for (int i=0;i<_DUST_SPEC_NUMBER_;i++) amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath);
-      amps.ParticleTrajectory.PrintVariableList();
-      amps.AssignParticleTrajectoriesToCells();
-    }
+         int nTrajInFile[4]={276277,0,0,0};
+      for (int i=0;i<_DUST_SPEC_NUMBER_;i++) {
+	if (UseBuffer){
+	  printf("main: begin traj file %d loaded\n",i);
+	  //  	  amps.ParticleTrajectory.InitLoadBufferFile(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath, BufferSize,nTrajInFile[i]);
+	   amps.ParticleTrajectory.InitLoadBufferFile_boost(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath, BufferSize);
+	  //  amps.ParticleTrajectory.InitLoadBufferFile_boost(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath, BufferSize,nTrajInFile[i]);
+	  
+	  printf("main: traj file %d loaded\n",i);
+	}else{
+	  amps.ParticleTrajectory.LoadDataFile(TrajectoryFileName[i].c_str(),PIC::UserModelInputDataPath);
+	}
 
+      }
+     
+      amps.ParticleTrajectory.PrintVariableList();
+     
+      //  amps.AssignParticleTrajectoriesToCells();
+      // amps.AssignParticleTrajectoriesToCellsOptimize();
+    }
+    printf("trajectory done \n");
     //load the surface data
     std::string SurfaceDataFileName="amps.cut-cell.surface-data.out="+out+".dat";
+    printf("start load surface data \n");
     amps.SurfaceData.LoadDataFile(SurfaceDataFileName.c_str(),PIC::UserModelInputDataPath);
+    printf("load surface data done \n");
     amps.SurfaceData.PrintVariableList();
 
     //get the list of the faces that production rate above 65%
@@ -1133,25 +1313,54 @@ return 1;
     for (int i=0;i<FaceList.size();i++) printf("%i ",FaceList[i]);
     printf("Face List end:\n");
 
+    
     //output the set of the trajectories emerged from the maximum source rate faces
-    if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+  
+         if (_LOAD_TRAJECTORY_FILES_==_ON_) {
       int cnt=0;
       amps.ParticleTrajectory.PrintDataFileHeader("maxSourceRateTrajectories.dat");
-
+      printf("main: after ParticleTrajectory.PrintDataFileHeader\n");
       for (int n=0;n<amps.ParticleTrajectory.nTotalTrajectories;n++) {
-        int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
-
-        for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
-          amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
-          cnt++;
-
-          break;
-        }
-
+	if (UseBuffer){
+    
+	  /*  int iBuffer = n/amps.ParticleTrajectory.BufferFileSize;// i-th Buffer
+	  int jTraj = n%amps.ParticleTrajectory.BufferFileSize;// j-th trajectory
+	  
+	  if (jTraj==0)  amps.ParticleTrajectory.LoadBufferData(iBuffer);
+	
+	  int nface=amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[0][7];
+	  */
+    	  if (n==0) amps.ParticleTrajectory.LoadAllBufferOneLine();
+	
+	  //  int nface=amps.ParticleTrajectory.IndividualTrajectories[jTraj].Data[0][7];
+	  int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
+	  
+	  for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
+	      //	      amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[jTraj],cnt,"maxSourceRateTrajectories.dat");
+	      amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
+	      
+	      cnt++;
+	      
+	      break;
+	    }
+	  
+	}else{
+	  int nface=amps.ParticleTrajectory.IndividualTrajectories[n].Data[0][7];
+	  
+	  for (int iface=0;iface<FaceList.size();iface++) if (FaceList[iface]==nface) {
+	      amps.ParticleTrajectory.AddTrajectoryDataFile(&amps.ParticleTrajectory.IndividualTrajectories[n],cnt,"maxSourceRateTrajectories.dat");
+	      cnt++;
+	      
+	      break;
+	    }
+	}
       }
-    }
-
-
+      
+      
+    } //if load traj on
+        
+    
+    printf("main: after AddTrajectoryDataFile\n");
     //==================================================================
     //====== CORRECT VELOCITY OF THE DUST TRAJECTORIES: BEGING
 /*    if (_MODE_==_DUST_MODE_) {
@@ -1191,14 +1400,20 @@ return 1;
     //====== CORRECT VELOCITY OF THE DUST TRAJECTORIES: END
     //==================================================================
 
-
+    printf("main:before PrintParticleTrajectory\n");
     //print out the limitab trajectories number 
+       
     if (_LOAD_TRAJECTORY_FILES_==_ON_) {
       amps.PrintParticleTrajectory(300,_OUTPUT_MODE__UNIFORM_,NULL,"limited-trajectories.uniform.dat");
+      printf("main: PrintParticleTrajectory uniform done\n");
       amps.PrintParticleTrajectory(300,_OUTPUT_MODE__FLUX_,AcceptParticleTrajectory,"limited-trajectories.flux.dat");
+      printf("main: PrintParticleTrajectory flux done\n");
     }
-//    return 1;
+    
 
+
+//    return 1;
+    printf("main:after PrintParticleTrajectory\n");
 
     //output location of the spacecraft
     if (amps.rank==0) {
@@ -1215,19 +1430,27 @@ return 1;
   }
 
 
-
+  printf("main:before load nucleus mesh\n");
 
   //load the nucleus mesh
   CutCell::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
   amps.ParticleTrajectory.PrintSurfaceData("surface.dat",NULL,NULL,NULL);
 
-
+  printf("main:print surface data done\n");
 //  for (int n=0;n<amps.data.nNodes;n++) amps.data.data[n][38]=sqrt(pow(amps.data.data[n][0],2)+pow(amps.data.data[n][1],2)+pow(amps.data.data[n][2],2));
+
+
+
+   amps.ParticleTrajectory.SaveAllTrajsCellInfo();
+ 
+   amps.GetCellTrajInfo();
 
 
   //output surface data
   SURFACE::ILLUMINATION::SetSurfaceExposureTime(et,6.0*3600.0,10.0*60);
+  printf("main:set surface exposure time done\n");
   SURFACE::ILLUMINATION::SetIlliminationMap(et);
+  printf("main:set illuminationmap done\n");
 //  amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
 
 //  MPI_Finalize();
@@ -1250,16 +1473,26 @@ return 1;
   }
 
 
-
+ 
   //process all trajectories: select those that falls into the jet corridor
   if (_LOAD_TRAJECTORY_FILES_==_ON_) {
+    printf("main:load trajectory files before processttraj data\n");
     TRAJECTORY_FILTER::ProcessTrajectories(et);
+    printf("main:load trajectory files  processttraj data done\n");
     TRAJECTORY_FILTER::PrintSelectedTrajectories(500,"selected-trajectories.dat");
-
+    printf("main:PrintSelectedTrajectories done");
+    
     //output surface data
-    amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
-  }
 
+    amps.ParticleTrajectory.PrintSurfaceData("surface-data.dat",SURFACE::GetVariableNumber,SURFACE::PrintVariableList,SURFACE::GetFaceDataVector);
+    
+    printf("main:after print surface data\n");
+    
+    amps.ParticleTrajectory.LoadAllBufferOneLine(); // prepared for Line 998 in integrantVector
+  }
+ 
+ 
+ 
   //calculate the column integrals as seen by VIRTIS-M
   cVirtisM VirtisM;
 
@@ -1315,6 +1548,10 @@ return 1;
   MPI_Barrier(MPI_COMM_WORLD);
   amps.FinalizeMPI();
   printf("done.\n");
+  
+  computeTime = std::time(NULL)-start;
+  printf("it takes %f s\n", computeTime);
+
   return EXIT_SUCCESS;
 }
 
