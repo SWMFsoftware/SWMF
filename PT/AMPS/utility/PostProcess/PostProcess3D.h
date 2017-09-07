@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <map>
 #include <string.h>
 #include <list>
 #include <math.h>
@@ -17,6 +18,7 @@
 #include <fstream>
 #include <signal.h>
 #include <algorithm>
+#include <boost/iostreams/device/mapped_file.hpp> // for mmap 
 
 #include "meshAMRcutcell.h"
 #include "specfunc.h"
@@ -104,6 +106,20 @@ public:
 
   cSurfaceData SurfaceData;
 
+  
+  map<int, int> *CellTrajMap;  //<iTrajecotry,nTrajPnt>
+  map<int, int> *TrajCellMap;  //<CellId, nTrajPnts>
+ 
+  void ComputeDtIntegration(double & dtIntegration);
+  // for CellTrajMap
+  void ReadTrajCellData(int iBuffer);
+  void GetCellTrajInfo();
+  int  sumTrajPoints(int iCell);
+  void AddOneCellTrajPointToTraj(std::map<int, int>  &TrajCellMap, double* x);
+
+
+
+  bool initTrajCellMapFlag;
   //trajectories of the infividual particles
   class cParticleTrajectory {
   public:
@@ -111,6 +127,14 @@ public:
 
     //data for all trajectories
     std::vector<std::string> VariableList;
+    std::vector<std::string> BufferNameArray;
+    bool LastBufferFull;
+    int AvailBufferSize;
+   
+    bool initBufferFileSizeFlag;
+    int  BufferFileSize;
+    std::vector<long int *> TrajOffsetInBuffer;
+    
     int TrajectoryStartingFaceOffset;
     static int nTrajectoryVariables;
     static int ParticleWeightOverTimeStepOffset;
@@ -124,7 +148,15 @@ public:
 
       cIndividualTrajectoryData() {
         Data=NULL,nDataPoints=0;
-      }
+      };
+      
+      ~cIndividualTrajectoryData(){
+
+	if (Data!=NULL){
+	  delete [] Data[0];
+	  delete [] Data;
+	};
+      };
 
       void AllocateDataBuffer(int n);
     };
@@ -143,9 +175,49 @@ public:
 
     //print the variable list
     void PrintVariableList();
+    
+    //functions for using boost and buffer files
+    void GetTrajectoryLocation_boost(int & traj_num, std::vector<const char *> & ZoneCharLoc,  boost::iostreams::mapped_file & mmap);
+    void WriteBinaryBuffer_boost(const char * bufferName, int head_traj_num, int buffer_traj_size, const char ** ZoneCharLocArr, boost::iostreams::mapped_file & mmap);
+    void AppendBinaryBuffer_boost(const char * bufferName, int head_traj_num, int add_buffer_traj_size, const char ** ZoneCharLocArr, boost::iostreams::mapped_file & mmap);
+    void WriteIndividualTrajectory_boost(const char * ZoneBegin, const char * ZoneEnd,  boost::iostreams::mapped_file & mmap, FILE* fBinaryOut);
+    void InitLoadBufferFile_boost(const char *fname,const char* path, int buffer_traj_num);
+    void InitLoadBufferFile_boost(const char *fname,const char* path, int buffer_traj_num, int inputnTraj);
+    void LoadBufferHeader(int iBuffer, FILE * & fBinaryIn); 
+    void ReadSequentialTrajFromBuffer(int nTraj, FILE * & fBinaryIn);
+    
+      // functions for using buffer files
+    void InitLoadBufferFile(const char *fname,const char* path, int buffer_traj_num, int nTrajInFile);
+    void InitLoadBufferFile(const char *fname,const char* path, int buffer_traj_num);
+    void ReadBinaryBuffer(const char * bufferName);
+    void LoadBufferData(int iBuffer);
+    
+    void LoadAllBufferOneLine();
+    void LoadBufferDataOneLine(int iBuffer, int head_traj_num);
 
+
+    void ReadIndividualTrajFromBuffer(cIndividualTrajectoryData &traj, const char * bufferName, long int offset);
+    void ReadIndividualTrajOneLineFromBuffer(cIndividualTrajectoryData &traj, const char * bufferName, long int offset);
+    void LoadIndividualTrajData(cIndividualTrajectoryData &traj, int iTraj);
+    void LoadIndividualTrajDataOneLine(cIndividualTrajectoryData &traj, int iTraj);
+    void WriteIndividualTrajectory(int LineBegin, int LineEnd, std::ifstream &infile, int& cnt, FILE* fBinaryOut);
+    void WriteBinaryBuffer(const char * bufferName, int head_traj_num, int buffer_traj_size, int* ZoneLineNum, std::ifstream &infile, int & currentLineNum);
+    void GetIndividualTrajOffset(int iTraj, long int & offset);
+    void GetTrajectoryLineNumber(int & traj_num, std::vector<int> & ZoneLineNum, const char* filename);
+    void InitTrajectoryVarList(const char* filename);
+    void AppendBinaryBuffer(const char * bufferName, int head_traj_num, int add_buffer_traj_size, int* ZoneLineNum, std::ifstream &infile, int & currentLineNum);
+
+    //functions for TrajCellMap
+    void ComputeOneTrajsCellInfo(int nTraj, double dtIntegration, std::map<int, int> & TrajCellMap);
+    void WriteTrajsCellInfoBuffer(int iBuffer);    
+    void WriteTrajsCellInfoTraj(int jTraj, FILE * fBinaryOut, FILE * fBinaryOutOffset);
+    void WriteTrajsCellInfoTraj(int jTraj, FILE * fBinaryOut, FILE * fBinaryOutOffset, std::map<int,int> & TrajCellMap);
+    void SaveAllTrajsCellInfo();
+    void ReadIndividualTrajCellInfo(int nTraj);
+ 
     cParticleTrajectory() {
       nTotalTrajectories=0,TrajectoryStartingFaceOffset=-1;
+      LastBufferFull = true;
     }
 
   };
@@ -160,7 +232,7 @@ public:
   #define _OUTPUT_MODE__FLUX_    1
   void PrintParticleTrajectory(int nTrajectories,int OutputMode,double (*TrajectoryAcceptableProbability)(int),const char* fname);
   void AssignParticleTrajectoriesToCells();
-
+  void AssignParticleTrajectoriesToCellsOptimize();
   //column integration
   class cColumnIntegral {
   public:
@@ -223,6 +295,8 @@ public:
   //mesh operations
   cBlock* GetBlock(double *x);
   cCell* GetCell(double *x);
+  int CellId(double *x);
+  void ConvertCellIdToLocalID(int CellId, int & iBlock, int & i, int & j, int & k);
   double CharacteristicCellSize(double *x);
   bool IsInsideDomain(double *x);
 
@@ -274,7 +348,8 @@ public:
 
     ParticleTrajectory.PostProcess3D=this;
     SurfaceData.PostProcess3D=this;
-
+   
+    initTrajCellMapFlag=false;
   }
 };
 
