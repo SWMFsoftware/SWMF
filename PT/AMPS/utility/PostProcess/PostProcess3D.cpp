@@ -406,6 +406,41 @@ ExitSearchLoop:
   return res;
 }
 
+
+int cPostProcess3D::CellId(double *x) {
+  cBlock* bl;
+  int iCell[3],i, iBlock, nCell;
+
+  //get block
+  bl=GetBlock(x);
+  iBlock = bl->id;
+  
+  //get cell
+  for (i=0;i<3;i++) iCell[i]=(x[i]-bl->xmin[i])/bl->dx[i];
+
+  if (x[0]==bl->xmax[0]) iCell[0]=bl->nCellX-1;
+  if (x[1]==bl->xmax[1]) iCell[1]=bl->nCellY-1;
+  if (x[2]==bl->xmax[2]) iCell[2]=bl->nCellZ-1;
+
+  nCell = iBlock*(nBlockCellX*nBlockCellY*nBlockCellZ)+iCell[2]*nBlockCellX*nBlockCellY+
+    +iCell[1]*nBlockCellX+iCell[0];
+  return nCell;
+
+}
+
+void cPostProcess3D::ConvertCellIdToLocalID(int CellId, int & iBlock, int & i, int & j, int & k){
+  iBlock = CellId/(nBlockCellX*nBlockCellY*nBlockCellZ); // Block number
+  int r = CellId%(nBlockCellX*nBlockCellY*nBlockCellZ);
+  
+  k = r/(nBlockCellX*nBlockCellY);  //k index along z direction
+  
+  r = r%(nBlockCellX*nBlockCellY);
+  j = r / nBlockCellX; // j index along y direction
+  i = r % nBlockCellX; // i index along x direction
+
+}
+
+
 cPostProcess3D::cCell* cPostProcess3D::GetCell(double *x) {
   cBlock* bl;
   int iCell[3],i;
