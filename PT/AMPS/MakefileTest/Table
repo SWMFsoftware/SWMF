@@ -533,62 +533,32 @@ Run=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy) 
+Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy)
 Time=26
 
+Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
+CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile..." >> test_CG-PostProcess--Read-Trajectories--on.diff
->>>mkdir -p 111016
->>>@cd 111016; cvs co -D "11/10/2016 6 pm" AMPS
->>>@cd 111016/AMPS/srcCG-PostProcess; cvs update -r1.34 main.cpp 
->>>@cd 111016/AMPS; ./Config.pl -install
->>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -mode=dust
->>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -out=7
->>>@cd 111016/AMPS/srcCG-PostProcess; ./Config.pl -ngas=2 -ndust=4 -ngroup=10
->>>@cp /Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/libiomp5.a ${PTDIR}/111016/AMPS 
-
->>>@touch 111016/AMPS/.amps.conf
->>>@touch 111016/AMPS/.general.conf
->>>@touch 111016/AMPS/Makefile.local
-
->>>-@cp 111016/AMPS/.amps.conf 111016/AMPS/.amps.conf.tmp
->>>-@cp 111016/AMPS/.general.conf 111016/AMPS/.general.conf.tmp
->>>-@cp 111016/AMPS/Makefile.local 111016/AMPS/Makefile.local.tmp
-
->>>@cd 111016/AMPS; ./Config.pl -openmp=on
->>>@cd 111016/AMPS/srcCG-PostProcess; make EXTERNALFLAGS="-D_LOAD_TRAJECTORY_FILES_=_ON_ -D_SURFACE_EXPOSURE_TIME_CALCULATION_=_ON_"  
->>>@cd 111016/AMPS; ./Config.pl -openmp=off
-
->>>@echo "test_CG_CG-PostProcess--Read-Trajectories--on_compile... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
+>>>./Config.pl -application=test/cg-pproc-test-on -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--onKEYS} 
+>>>@cd utility/PostProcess; make
+>>>@rm -rf srcTemp
+>>>@($(MAKE) -j8 amps)
+>>>./Config.pl -openmp=off
+>>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Rundir=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--onDIR)
->>>@mv 111016/AMPS/srcCG-PostProcess/a.out $(TESTCG-PostProcess--Read-Trajectories--onDIR)
->>>@rm -rf 111016
+>>>@mv amps  $(TESTCG-PostProcess--Read-Trajectories--onDIR)
+>>>@mv srcTemp/main/kernels.tm $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Run=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--on has started: `date`
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/Comet.InjectedDustSizeDistribution.out=7.dat  ${TESTCG-PostProcess--Read-Trajectories--onDIR}/Comet.InjectedDustSizeDistribution.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=0.H2O.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=0.H2O.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=1.CO2.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=1.CO2.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=2.DUST%0.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=3.DUST%1.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=4.DUST%2.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.TrajectoryTracking.out=7.s=5.DUST%3.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.cut-cell.surface-data.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.cut-cell.surface-data.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/amps.dust.flux-map.nSampleLocation=0.out=7.dat.2d.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.CO2.s=1.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/pic.CO2.s=1.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST%0.s=2.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/pic.DUST%0.s=2.out=7.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/pic.DUST.SizeDistribution.out=7.nSamplePoint=0.dat
->>>@ln /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/pic.H2O.s=0.out=7.dat ${TESTCG-PostProcess--Read-Trajectories--onDIR}/pic.H2O.s=0.out=7.dat
-
->>>@cp /Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/kernels.tm ${TESTCG-PostProcess--Read-Trajectories--onDIR}
->>>-@cd ${TESTCG-PostProcess--Read-Trajectories--onDIR}; mpirun -np 1 ./a.out 
+>>>-@cd ${TESTCG-PostProcess--Read-Trajectories--onDIR};${TESTMPIRUN1} ./amps
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Check=
@@ -604,15 +574,15 @@ Check=
 >>>@mv ${TESTCG-PostProcess--Read-Trajectories--onDIR}/surface-data.dat.Reduced.Step=5 ${TESTCG-PostProcess--Read-Trajectories--onDIR}/surface-data.dat.Reduced.Step=5.dat
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--onDIR}/Virtis.map.dat.Reduced.Step=10.dat         \
->>>/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/output/test_CG_PostProcess_ReadTrajectories=on/Virtis.map.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--on--VIRTIS-MAP.diff
+>>>${TESTCG-PostProcess--Read-Trajectories--onCUSTOMREFSOLUTIONPATHS}/output/test_CG_PostProcess_ReadTrajectories=on/Virtis.map.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--on--VIRTIS-MAP.diff
 >>>@ls -l test_CG-PostProcess--Read-Trajectories--on--VIRTIS-MAP.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--onDIR}/selected-trajectories.dat.Reduced.Step=10.dat         \
->>>/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/output/test_CG_PostProcess_ReadTrajectories=on/selected-trajectories.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--on--TRAJECTORIES.diff
+>>>${TESTCG-PostProcess--Read-Trajectories--onCUSTOMREFSOLUTIONPATHS}/output/test_CG_PostProcess_ReadTrajectories=on/selected-trajectories.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--on--TRAJECTORIES.diff
 >>>@ls -l test_CG-PostProcess--Read-Trajectories--on--TRAJECTORIES.diff 
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--onDIR}/surface-data.dat.Reduced.Step=5.dat         \
->>>/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/output/test_CG_PostProcess_ReadTrajectories=on/surface-data.dat.Reduced.Step=5.ref  > test_CG-PostProcess--Read-Trajectories--on--SURFACE-DATA.diff
+>>>${TESTCG-PostProcess--Read-Trajectories--onCUSTOMREFSOLUTIONPATHS}/output/test_CG_PostProcess_ReadTrajectories=on/surface-data.dat.Reduced.Step=5.ref  > test_CG-PostProcess--Read-Trajectories--on--SURFACE-DATA.diff
 >>>@ls -l test_CG-PostProcess--Read-Trajectories--on--SURFACE-DATA.diff
 
 >>>@cat test_CG-PostProcess--Read-Trajectories--on--VIRTIS-MAP.diff test_CG-PostProcess--Read-Trajectories--on--TRAJECTORIES.diff test_CG-PostProcess--Read-Trajectories--on--SURFACE-DATA.diff > test_CG-PostProcess--Read-Trajectories--on.diff 
@@ -625,9 +595,11 @@ Check=
 Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
 Time=2
 
+Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
+CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
->>> ./Config.pl -application=test/cg-pproc-test -model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -amps-test=on  -link-option=./utility/PostProcess/pproc.a -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels 
+>>> ./Config.pl -application=test/cg-pproc-test -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--offKEYS}
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
 >>>@($(MAKE) -j8 amps)
@@ -645,7 +617,7 @@ Rundir=
 Run=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--off has started: `date`
->>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR}; mpirun -np 1 ./amps 
+>>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR};${TESTMPIRUN1} ./amps 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Check=
@@ -655,7 +627,7 @@ Check=
 >>>@mv ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat.Reduced.Step=10.dat         \
->>>/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS/output/test_CG_PostProcess_ReadTrajectories=off/Virtis.map.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--off--VIRTIS-MAP.diff
+>>>${TESTCG-PostProcess--Read-Trajectories--offCUSTOMREFSOLUTIONPATHS}/output/test_CG_PostProcess_ReadTrajectories=off/Virtis.map.dat.Reduced.Step=10.ref  > test_CG-PostProcess--Read-Trajectories--off--VIRTIS-MAP.diff
 >>>ls -l test_CG-PostProcess--Read-Trajectories--off--VIRTIS-MAP.diff
 
 >>>@cat test_CG-PostProcess--Read-Trajectories--off--VIRTIS-MAP.diff > test_CG-PostProcess--Read-Trajectories--off.diff 
@@ -663,7 +635,6 @@ Check=
 >>>ls -l test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--off has finished: `date`
 <#
-
 -------------------------------------------------------------------------------
 #>
 Name=CG@@(0+valeriy+pleiades+stampede)
