@@ -191,17 +191,17 @@ while ($line=<InputFile>) {
       
   }
 
-  elsif ($InputLine eq "SPICEKERNELSPATH") {
-      ($InputLine,$InputComment)=split('!',$line,2);
-      chomp($InputLine);
-      $InputLine=~s/=/ /g;
+#   elsif ($InputLine eq "SPICEKERNELSPATH") {
+#       ($InputLine,$InputComment)=split('!',$line,2);
+#       chomp($InputLine);
+#       $InputLine=~s/=/ /g;
       
-      ($InputLine,$InputComment)=split(' ',$InputLine,2);
-      chomp($InputComment);
+#       ($InputLine,$InputComment)=split(' ',$InputLine,2);
+#       chomp($InputComment);
       
-      $InputComment="('".$InputComment."')";
-      ampsConfigLib::ChangeValueOfVariableNoSemiColon("PATH_VALUES",$InputComment,"main/kernels.tm");  
-  }
+#       $InputComment="('".$InputComment."')";
+#       ampsConfigLib::ChangeValueOfVariableNoSemiColon("PATH_VALUES",$InputComment,"main/kernels.tm");  
+#   }
  
    
   elsif ($InputLine eq "#ENDBLOCK") {
@@ -212,8 +212,38 @@ while ($line=<InputFile>) {
   }
   
 }  
+ 
+
+my $file = '.amps.conf'; 
+open my $info,$file || die "Cannot find file \".amps.conf\"\n";
+
+while ($line=<$info>) {
+
+  $LineOriginal=$line;
+  chomp($line);
   
+  
+  ($InputLine,$InputComment)=split('!',$line,2);
+  $InputLine=uc($InputLine);
+  chomp($InputLine);
+ 
+  $InputLine=~s/[=()]/ /g;
+  ($InputLine,$InputComment)=split(' ',$InputLine,2);
+  $InputLine=~s/ //g;
+
+  if ($InputLine eq "SPICEKERNELS") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/=/ /g;
+      
+      ($InputLine,$InputComment)=split(' ',$InputLine,2);
+      chomp($InputComment);
+      
+      $InputComment="('".$InputComment."')";
+      ampsConfigLib::ChangeValueOfVariableNoSemiColon("PATH_VALUES",$InputComment,"main/kernels.tm");  
+  }
 
 
+}
 
 
