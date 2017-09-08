@@ -2054,19 +2054,17 @@ if (nLoopCycle>100) {
     middleNode=PIC::Mesh::mesh.findTreeNode(xMiddle,startNode);
 
     if (middleNode==NULL) {
-      int idim,nface,nIntersectionFace=-1;
-      double cx,cv,r0[3],dt,dtIntersection=-1.0;
-
       //the particle left the computational domain
       int code=_PARTICLE_DELETED_ON_THE_FACE_;
+        double dtIntersection=-1.0;
 
 #if _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE_
       //particle deletion code is already set -> do nothing
 #else
-//      //call the function that process particles that leaved the coputational domain
-//      if (ProcessOutsideDomainParticles!=NULL) {
-        //determine through which face the particle left the domain
-
+       
+        int idim,nface,nIntersectionFace=-1;
+        double cx,cv,r0[3],dt;
+        
         for (nface=0;nface<6;nface++) {
           for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
             r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
@@ -2120,13 +2118,12 @@ if (nLoopCycle>100) {
         }
 
         //call the function that process particles that leaved the coputational domain
-#if _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_
-//        if (ProcessOutsideDomainParticles!=NULL) {
-          code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
-//        }
-#elif _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__PERIODIC_CONDITION_
+        #if _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_
+        code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
+
+        #elif _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__PERIODIC_CONDITION_
         exit(_LINE__,__FILE__,"Error: not implemented");
-#elif _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__SPECULAR_REFLECTION_
+        #elif _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__SPECULAR_REFLECTION_
         //reflect the particle back into the domain
         {
           double c=0.0;
@@ -2135,29 +2132,29 @@ if (nLoopCycle>100) {
         }
 
         code=_PARTICLE_REJECTED_ON_THE_FACE_;
-#else
+        #else  //_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_
         exit(__LINE__,__FILE__,"Error: the option is unknown");
-#endif
+        #endif //_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_
 
 
         memcpy(vFinal,vInit,3*sizeof(double));
         memcpy(xFinal,xInit,3*sizeof(double));
- //     }
 #endif  // _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE_
 
-      if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-        PIC::ParticleBuffer::DeleteParticle(ptr);
-        return _PARTICLE_LEFT_THE_DOMAIN_;
-      }
-      else if (code==_PARTICLE_REJECTED_ON_THE_FACE_) {
-        dtMin=dtIntersection;
-        dtTotal-=dtMin;
-        newNode=startNode;
-        MovingTimeFinished=false;
+        switch (code) {
+        case _PARTICLE_DELETED_ON_THE_FACE_:
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        case _PARTICLE_REJECTED_ON_THE_FACE_:
+          dtMin=dtIntersection;
+          dtTotal-=dtMin;
+          newNode=startNode;
+          MovingTimeFinished=false;
 
-        goto ProcessPhotoChemistry;
-      }
-      else  exit(__LINE__,__FILE__,"Error: not implemented");
+          goto ProcessPhotoChemistry;
+        default:
+          exit(__LINE__,__FILE__,"Error: not implemented");
+        }
     }
 
     _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
@@ -2907,8 +2904,7 @@ exit(__LINE__,__FILE__,"not implemented");
     }
 
     if (newNode==NULL) {
-       int idim,nface,nIntersectionFace=-1;
-       double cx,cv,r0[3],dt,dtIntersection=-1.0;
+        double dtIntersection=-1.0;
 
        //the particle left the computational domain
        int code=_PARTICLE_DELETED_ON_THE_FACE_;
@@ -2919,6 +2915,9 @@ exit(__LINE__,__FILE__,"not implemented");
        //call the function that process particles that leaved the coputational domain
 //       if (ProcessOutsideDomainParticles!=NULL) {
          //determine through which face the particle left the domain
+        
+        int idim,nface,nIntersectionFace=-1;
+        double cx,cv,r0[3],dt;
 
          for (nface=0;nface<6;nface++) {
            for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
@@ -2997,16 +2996,18 @@ exit(__LINE__,__FILE__,"not implemented");
 //       }
 #endif //_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE
 
-       if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-         PIC::ParticleBuffer::DeleteParticle(ptr);
-         return _PARTICLE_LEFT_THE_DOMAIN_;
-       }
-       else if (code==_PARTICLE_REJECTED_ON_THE_FACE_) {
-         dtTotal+=dtMin-dtIntersection;
-         dtMin=dtIntersection;
-         MovingTimeFinished=false;
-       }
-       else  exit(__LINE__,__FILE__,"Error: not implemented");
+        switch (code) {
+        case _PARTICLE_DELETED_ON_THE_FACE_:
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        case _PARTICLE_REJECTED_ON_THE_FACE_:
+          dtTotal+=dtMin-dtIntersection;
+          dtMin=dtIntersection;
+          MovingTimeFinished=false;
+          break;
+        default:
+          exit(__LINE__,__FILE__,"Error: not implemented");
+        }
      }
 
 
