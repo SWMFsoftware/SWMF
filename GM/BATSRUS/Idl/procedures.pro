@@ -3324,7 +3324,7 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
      typeunit = 'OUTERHELIO' $
   else if strpos(headline, 'kg/m3') ge 0 or strpos(headline,' m/s') ge 0 then $
      typeunit = 'SI' $
-  else if strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
+  else if strpos(headline,'PLANETARY') ge 0 or strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
      typeunit = 'PLANETARY' $
   else if strpos(headline,' dyne') ge 0 or strpos(headline,' G') ge 0 then $
      typeunit = 'SOLAR' $
