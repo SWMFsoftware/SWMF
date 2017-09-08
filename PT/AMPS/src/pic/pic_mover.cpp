@@ -99,11 +99,6 @@ void PIC::Mover::MoveParticles() {
 
   long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
-  //sample the processor load
-//#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-  double EndTime,StartTime=MPI_Wtime();
-//#endif
-
   //move existing particles
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_  == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_  //OpenMP + job splitting over blocks
@@ -114,7 +109,7 @@ void PIC::Mover::MoveParticles() {
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      StartTime=MPI_Wtime();
+      dobule StartTime=MPI_Wtime();
 #endif
 
     block=node->block;
@@ -140,8 +135,7 @@ void PIC::Mover::MoveParticles() {
     }
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    EndTime=MPI_Wtime();
-    node->ParallelLoadMeasure+=EndTime-StartTime;
+    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
 #endif
 }
 
@@ -1763,7 +1757,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   PIC::Mesh::cDataCenterNode *cell;
   bool MovingTimeFinished=false;
 
-  double xInitOriginal[3];
+//  double xInitOriginal[3];
 
   CutCell::cTriangleFace *lastIntersectedTriangleFace_LastCycle=NULL;
 
@@ -1862,7 +1856,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
 
   if (cell->Measure<=0.0) {
-    double  vol=-1,xmin[3],xmax[3],xmiddle[3];
+    double  xmin[3],xmax[3];
 
     xmin[0]=startNode->xmin[0]+i*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
     xmin[1]=startNode->xmin[1]+j*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
@@ -3172,8 +3166,8 @@ ProcessPhotoChemistry:
     if ((startNode->FirstTriangleCutFace!=NULL)||(startNode->neibCutFaceListDescriptorList!=NULL)) {
       CutCell::cTriangleFaceDescriptor *t;
       CutCell::cTriangleFace *TriangleFace;
-      double TimeOfFlight;
-      double xLocalIntersection[2],xIntersection[3];
+//      double TimeOfFlight;
+//      double xLocalIntersection[2],xIntersection[3];
 
       //reset the counter
       PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter(); 
@@ -3198,9 +3192,7 @@ ProcessPhotoChemistry:
 
         for (;D!=NULL;D=D->next) for (t=D->FirstTriangleCutFace;t!=NULL;t=t->next) if ((TriangleFace=t->TriangleFace)!=lastIntersectedTriangleFace) {
           if (PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IsFirstAccecssWithAccessCounterUpdate(TriangleFace)==true) if (TriangleFace!=lastIntersectedTriangleFace_LastCycle)  {
-            bool BeforeMotionFlag,AfterMotionFlag;
-            double xLocalIntersection[3],xIntersection[3];
-            double TimeOfFlight_Before,TimeOfFlight_After;
+            double xIntersection[3];
             double c=0.0,*xFace=TriangleFace->x0Face;
 
             for (int idim=0;idim<3;idim++ ) c+=(xFinal[idim]-xFace[idim])*(xInit[idim]-xFace[idim]);
@@ -3466,7 +3458,7 @@ ProcessPhotoChemistry:
      }
 
 
-     double  vol=-1,xmin[3],xmax[3];
+     double  vol=-1.0,xmin[3],xmax[3];
 
      if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
 
@@ -3481,7 +3473,8 @@ ProcessPhotoChemistry:
      vol=CutCell::GetRemainedBlockVolume(xmin,xmax,PIC::Mesh::mesh.EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
 
      if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
-         exit(__LINE__,__FILE__,"The point is outside of the domain");
+       cout << "xmin=" << xmin[0] << "  " << xmin[1] << "  " << xmin[2] << ",  xmax=" << xmax[0] << "  " << xmax[1] << "  " << xmax[2] << ", vol=" << vol << endl;
+       exit(__LINE__,__FILE__,"The point is outside of the domain");
      }
 
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
