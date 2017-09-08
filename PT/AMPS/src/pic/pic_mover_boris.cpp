@@ -104,7 +104,7 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
 }
 
 
-int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode){
+int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   double dtTemp;
   PIC::ParticleBuffer::byte *ParticleData;
@@ -262,8 +262,8 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
 //       if (ProcessOutsideDomainParticles!=NULL) {
          //determine through which face the particle left the domain
 
-      int nface;
-      double cx,cv,r0[3]; 
+      int nface,nIntersectionFace;
+      double tVelocityIncrement,cx,cv,r0[3],dt,vMiddle[3]={0.5*(vInit[0]+vFinal[0]),0.5*(vInit[1]+vFinal[1]),0.5*(vInit[2]+vFinal[2])},c,dtIntersection=-1.0;
 
          for (nface=0;nface<6;nface++) {
            for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
@@ -275,7 +275,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
            if (cv>0.0) {
              dt=-cx/cv;
 
-             if ((dtIntersection<0.0)||(dt<dtIntersection)) {
+             if ((dtIntersection<0.0)||(dt<dtIntersection)&&(dt>0.0)) {
                double cE0=0.0,cE1=0.0;
 
                for (idim=0;idim<3;idim++) {
@@ -293,12 +293,12 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
 
          if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
 
-         for (idim=0;idim<3;idim++) {
+         for (idim=0,tVelocityIncrement=((dtIntersection/dtTotal<1) ? dtIntersection/dtTotal : 1);idim<3;idim++) {
            xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
-           vInit[idim]+=dtIntersection*acclMiddle[idim];
+           vInit[idim]+=tVelocityIncrement*(vFinal[idim]-vInit[idim]);
          }
 
-         newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);
+         newNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
 
          if (newNode==NULL) {
            //the partcle is outside of the domain -> correct particle location and determine the newNode;
@@ -313,7 +313,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
              if (xmax[ii]<=xInit[ii]) xInit[ii]=xmax[ii]-PIC::Mesh::mesh.EPS;
            }
 
-           newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);
+           newNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
 
            if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
          }
