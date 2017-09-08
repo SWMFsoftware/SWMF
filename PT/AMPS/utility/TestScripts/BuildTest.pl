@@ -73,7 +73,12 @@ my @Tars=('','','','');
 my $PathName;
 
 
+
+#hostName only print once
+my $HostNameFlag=0;
+
 #process table with test description
+
 while(@Table){
     my $refTable;
     my $refTars;
@@ -86,6 +91,7 @@ while(@Table){
     next unless($Name);
     $TimeTotal+=$Time;
     &check_overtime;
+   
 
     $Keys=~s/\s+$//; #remove spaces from the end of the line
     $CustomRefSolutionPaths=~s/\s+$//;
@@ -102,7 +108,18 @@ while(@Table){
             $Final[$i]=~s/<APPREF>/$Refs/g;
 	}
 	else{
-	    $Final[$i]=$Base[$i];
+	    if($Base[$i]=~m/<HOST.*?>/ ){
+		if ($HostNameFlag==0){
+		#hostname only prints once
+		$Final[$i]=$Final[$i].$Base[$i];
+		$Final[$i]=~s/<HOSTNAME>/$hostname/g;
+		$HostNameFlag=1;
+		}
+	    }
+	    else{
+		$Final[$i]=$Base[$i];
+	    }
+	 
 	}
     }
     # application specific blocks
@@ -208,6 +225,7 @@ sub get_next_test{
 		$iTar = 4; $Tars[3].=',,' if $Tars[3];}
 	    #extract target description
 	    elsif($line =~ m/^>>>(.*)/){$Tars[$iTar-1].="\t$1\n"if($1);}
+	    elsif($line =~ m/^<<<(.*)/){$Tars[$iTar-1].="$1\n"if($1);}
 	    else{$ErrorRead='1';}
 	}
 	if($line =~ m/^#>/){
