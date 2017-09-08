@@ -65,6 +65,95 @@ The possible arguments are:
 \subsection {Debugging}
 
 
+\subsection{Execution of AMPS in hybrid (MPI+OpenMP) mode as a component of the SWMF}
+
+\subsubsection{Running of AMPS on the same nodes with BATSRUS}
+
+{\bf The SWMF LAYOUT.in}
+\\
+{\it This is the layout for running OH and PT on ivy nodes.\\
+\\
+Name First Last Stride\\
+======================\\
+\#COMPONENTMAP\\
+PT       0 9999    20   ! PT runs on all PE-s\\
+OH       0 9999    1   ! OH runs on all PE-s\\
+\#END\\
+}
+
+
+
+{\bf The job script on Pleiades:}
+\\
+{\it \#PBS -S /bin/csh\\
+\#PBS -N SWMF\\
+\#PBS -l select=4:ncpus=20:model=ivy\\
+\#PBS -l walltime=01:00:00\\
+\#PBS -q devel\\
+\#PBS -j oe\\
+\#PBS -W group\_list=s0799\\
+\#PBS -m e\\
+module load comp-intel/2015.3.187\\
+module load mpi-sgi/mpt\\
+cd \$PBS\_O\_WORKDIR\\
+\\
+setenv OMP\_NUM\_THREADS 20\\
+\\
+setenv MPI\_MSGS\_PER\_HOST 100000\\
+setenv MPI\_MSGS\_PER\_PROC 100000\\
+setenv MPI\_MSGS\_MAX 100000\\
+mpiexec ./SWMF.exe > runlog\_\'date +%y%m%d%H%M\'\\
+\\
+exit\\
+\\
+if(! -f SWMF.SUCCESS)exit\\
+}
+
+
+
+
+
+
+\subsubsection{Running of AMPS on nodes separate from those used by BATSRUS}
+
+
+{\bf The layout for running OH and PT:}
+\\
+{\it Name First Last Stride\\
+======================\\
+\#COMPONENTMAP\\
+PT       0 1    1   ! PT runs on all PE-s\\
+OH       2 9999    1   ! OH runs on all PE-s\\
+\#END }
+
+
+{\bf The job script for Pleiades:}
+\\
+{\it 
+\#PBS -S /bin/csh\\
+\#PBS -N SWMF\\
+\#PBS -l select=2:mpiprocs=1:ompthreads=40:model=ivy+2:mpiprocs=20:model=ivy\\
+\#PBS -l walltime=01:00:00\\
+\#PBS -q devel\\
+\#PBS -j oe\\
+\#PBS -W group\_list=s0799\\
+\#PBS -m e\\
+module load comp-intel/2015.3.187\\
+module load mpi-sgi/mpt\\
+cd \\\$PBS\_O\_WORKDIR\\
+\\
+setenv MPI\_DSM\_DISTRIBUTE 0\\
+\\
+setenv MPI\_MSGS\_PER\_HOST 100000\\
+setenv MPI\_MSGS\_PER\_PROC 100000\\
+setenv MPI\_MSGS\_MAX 100000\\
+mpiexec ./SWMF.exe > runlog\_\'date +%y%m%d%H%M\' \\
+\\
+exit\\
+\\
+if(! -f SWMF.SUCCESS)exit\\
+}
+
 \section {Restart Files}
 AMPS allows users to save particle data at a customed frequency and also to restart from saved particle data. One can also choose overwrite existing restart files (``overwrite'') or create new files (``newfile'') when saving the restart files. \\
 \begin{verbatim}
@@ -109,6 +198,10 @@ int main(){
 
 ...
   }
+
+
+
+
 
 
 
