@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModRaytrace
 
@@ -119,16 +118,17 @@ module ModRaytrace
   ! ----------- Variables for integrals along the ray -------------------
   ! Named indexes  
   integer, parameter :: &
-       InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, & 
-       pparinvB_ = 7, &
-       HpRhoInvB_ = 7, HppInvB_ = 8, OpRhoInvB_ = 9, OppInvB_=10, &
-       xEnd_=11, yEnd_=12, zEnd_=13, Length_=14
+       InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, &
+       RhoInvB_=5, pInvB_=6,  &
+       HpRhoInvB_=5, HpPInvB_=6, OpRhoInvB_=7, OpPInvB_=8
 
-  ! Number of integrals
-  integer, parameter :: nRayIntegral = 14
+  ! These indexes depend on multi-ion
+  integer:: PeInvB_, xEnd_, yEnd_, zEnd_, Length_
 
-  ! Number of flow variables to be integrated
-  ! and number of variables for a local segment
+  ! Number of integrals depends on UseMultiIon and UseAnisPressure
+  integer:: nRayIntegral
+
+  ! Number of state variables to be integrated and number of variables for a local segment
   integer :: nExtraIntegral, nLocalIntegral
 
   ! Flow variables to be integrated (rho and P) other than the magnetic field
@@ -296,8 +296,8 @@ contains
 
   subroutine init_mod_raytrace
 
-    use ModMain,       ONLY: DoAnisoPressureIMCoupling   
-    use ModVarIndexes, ONLY: nFluid
+    use ModAdvance, ONLY: UseElectronPressure
+    use ModMultiFluid, ONLY: nIonFluid
 
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
@@ -307,25 +307,34 @@ contains
     if(allocated(ray)) RETURN
 
     ! Determine number of flow variable integrals
-    if(DoAnisoPressureIMCoupling)then
-       nExtraIntegral = 3         ! density, pressure and parallel p
-    else
-       nExtraIntegral = 2*nFluid  ! density and pressure per fluid
+    nExtraIntegral = 2*nIonFluid  ! rho, p for each ion fluid
+
+    if(UseElectronPressure)then
+       nExtraIntegral = nExtraIntegral + 1
+       PeInvB_ = nExtraIntegral
     end if
 
-    ! Number of integrals for a local ray segment
+    ! Number of integrals for a local ray segment:
+    !    InvB_, Z0x_, Z0y_, Z0b_ and extras
     nLocalIntegral = nExtraIntegral + 4
 
+    ! Indexes for the final position of the ray
+    xEnd_ = nLocalIntegral + 1; yEnd_ = xEnd_ + 1; zEnd_ = yEnd_ + 1
+    Length_ = zEnd_ + 1
+
+    ! Number of reals stored in the RayIntegral_VII and RayResult_VII arrays
+    nRayIntegral = Length_
+
     ! Initialize ray array (write_logfile may use it before first ray tracing)
-    allocate(ray(3,2,nI+1,nJ+1,nK+1,nBLK))
-    allocate(rayface(3,2,nI+1,nJ+1,nK+1,nBLK))
-    allocate(rayend_ind(3,2,nI+1,nJ+1,nK+1,nBLK))
-    allocate(rayend_pos(4,2,nI+1,nJ+1,nK+1,nBLK))
-    allocate(bb_x(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,nBLK))
-    allocate(Bxyz_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))  
+    allocate(ray(3,2,nI+1,nJ+1,nK+1,MaxBlock))
+    allocate(rayface(3,2,nI+1,nJ+1,nK+1,MaxBlock))
+    allocate(rayend_ind(3,2,nI+1,nJ+1,nK+1,MaxBlock))
+    allocate(rayend_pos(4,2,nI+1,nJ+1,nK+1,MaxBlock))
+    allocate(bb_x(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(bb_y(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(bb_z(1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+    allocate(Bxyz_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Extra_VGB(nExtraIntegral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))  
     allocate(RayIntegral_V(1:nLocalIntegral))
 
     if(DoInitRay)then

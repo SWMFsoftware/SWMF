@@ -971,7 +971,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
                     ! Reduce density and pressure integrals
                     RayIntegral_V(RhoInvB_:nLocalIntegral) = &
-                         RayIntegral_V(RhoInvB_:nLocalIntegral) - InvBDl * RhoP_V
+                         RayIntegral_V(RhoInvB_:nLocalIntegral) - InvBDl*RhoP_V
                  
                     if(oktest_ray)then
                        write(*,'(a,4es12.4)')&
@@ -1563,9 +1563,9 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
      do iBlock = 1, nBlock
         if(Unused_B(iBlock)) CYCLE
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-           do iFluid = 1, nFluid
-              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
-              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
+           do iFluid = 1, nIonFluid
+              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
+              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iPIon_I(iFluid), i,j,k,iBlock)
            end do
         end do; end do; end do
      end do
@@ -1746,7 +1746,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
      do iBlock = 1, nBlock
         if(Unused_B(iBlock)) CYCLE
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-           do iFluid = 1, nFluid
+           do iFluid = 1, nIonFluid
               Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
               Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
            end do
@@ -2401,7 +2401,7 @@ subroutine test_ray_integral
            if(iLat == iLatTest .and. iLon == iLonTest)then
               if(DoMultiFluidIMCoupling)then
                  write(*,'(a,a)')'iLon iLat Lon Lat ',&
-                      'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length HpRho OpRho HpP OpP'
+                      'Bvol Z0x Z0y Z0b HpRho OpRho HpP OpP LatEnd LonEnd Zend Length'
               else
                  write(*,'(a,a)')'iLon iLat Lon Lat ',&
                       'Bvol Z0x Z0y Z0b Rho P LatEnd LonEnd Zend Length'               

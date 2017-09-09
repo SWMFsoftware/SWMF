@@ -518,12 +518,13 @@ contains
           MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
           MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
        else
-          MHD_SUM_rho = RayResult_VII(RhoInvB_,:,:)
-          MHD_SUM_p   = RayResult_VII(pInvB_  ,:,:)
           MHD_HpRho= RayResult_VII(HpRhoInvB_,:,:)
           MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
           MHD_HpP= RayResult_VII(HpPInvB_,:,:)
           MHD_OpP= RayResult_VII(OpPInvB_,:,:)
+
+          MHD_SUM_rho = MHD_HpRho + MHD_OpRho
+          MHD_SUM_p   = MHD_HpP + MHD_OpP
 
        end if
        ! Put impossible values if the ray is not closed
@@ -580,10 +581,10 @@ contains
           ! the index is not continuous as in ModRayTrace                
           Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
           Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
-          Buffer_IIV(:,:,HpRhoInvB_) = MHD_HpRho
-          Buffer_IIV(:,:,OpRhoInvB_) = MHD_Oprho
-          Buffer_IIV(:,:,HpPInvB_)   = MHD_HpP
-          Buffer_IIV(:,:,OpPInvB_)   = MHD_OpP
+          Buffer_IIV(:,:,HpRhoInvB_+2) = MHD_HpRho
+          Buffer_IIV(:,:,OpRhoInvB_+2) = MHD_Oprho
+          Buffer_IIV(:,:,HpPInvB_+2)   = MHD_HpP
+          Buffer_IIV(:,:,OpPInvB_+2)   = MHD_OpP
        end if
 
     end if
@@ -696,7 +697,6 @@ contains
     use ModRaytrace, ONLY: UseAccurateTrace, DoMapEquatorRay
 
     character(len=80):: filename
-    character(len=*), parameter :: NameSub='GM_put_from_im'
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVar
     real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVar)
@@ -705,7 +705,9 @@ contains
     integer :: nCells_D(2), iError, i,j
     integer, parameter :: pres_=1, dens_=2, parpres_=3, bmin_=4, &
          Hpres_=3,Opres_=4,Hdens_=5,Odens_=6
+
     logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='GM_put_from_im'
     !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
