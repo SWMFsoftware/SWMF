@@ -672,6 +672,9 @@ void PIC::CCMC::LoadParticles() {
       newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
       memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
+      //init the magnetic moment is needed
+      if (_PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_!=-1) PIC::Mover::GuidingCenter::InitiateMagneticMoment(spec,x,v,newParticle,(void*)node);
+
       //apply condition of tracking the particle
       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
       PIC::ParticleTracker::InitParticleID(newParticleData);
