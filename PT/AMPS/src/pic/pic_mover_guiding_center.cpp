@@ -16,7 +16,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   double KinEnergy=0;
   double m0=PIC::MolecularData::GetMass(spec); 
   //guiding center motion
-  double Vguide[3]={0};
+  double Vguide[3]={0.0,0.0,0.0};
   PIC::ParticleBuffer::GetV(Vguide,(PIC::ParticleBuffer::byte*)ParticleData);
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"ERROR:not implemented");
@@ -29,7 +29,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   //magnetic moment
   double mu= PIC::ParticleBuffer::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // also get the magnetic field at particle location
-  double AbsB=0,x[3]={0},B[3]={0};
+  double AbsB=0,x[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
   static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
 
   PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
@@ -70,7 +70,7 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
   //---------------------------------------------------------------
   
   // get the magnetic field
-  double B[3], AbsB;
+    double B[3]={0.0,0.0,0.0}, AbsB=0.0;
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
   exit(__LINE__,__FILE__,"not implemented");
 #else 
@@ -123,16 +123,19 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
    *
    * \gamma = 1/\sqrt{1-v^2/c^2}
    **********************************************************************/
-  double Vguide_perp_LOC[3]      ={0.0},ForceParal_LOC   =0.0;
-  double BAbsoluteValue_LOC = 0.0, BDirection_LOC[3]={0.0};
+  double Vguide_perp_LOC[3]={0.0,0.0,0.0},ForceParal_LOC =0.0;
+  double BAbsoluteValue_LOC = 0.0, BDirection_LOC[3]={0.0,0.0,0.0};
   
 //#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
   // find electro-magnetic field
-  double E[3],B[3],gradB[9], gradAbsB[3], AbsB;
-  double b[3];
+    double E[3]={0.0,0.0,0.0},gradB[9]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}, gradAbsB[3]={0.0,0.0,0.0}, AbsB=0.0;
+    double b[3]={0.0,0.0,0.0};
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
   exit(__LINE__,__FILE__,"not implemented");
 #else 
+    double B[3]={0.0,0.0,0.0};
+    
+    
   // if coupler is used -> get values from it
   PIC::CPLR::InitInterpolationStencil(x,startNode);
   
@@ -157,7 +160,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   // misc paramteres
   double q      = PIC::MolecularData::GetElectricCharge(spec);
   double m0     = PIC::MolecularData::GetMass(  spec);
-  double c2     = SpeedOfLight*SpeedOfLight;
+//  double c2     = SpeedOfLight*SpeedOfLight;
   double mu     = PIC::ParticleBuffer::GetMagneticMoment(ptr);
 
   // square of velocity of gyrations
@@ -170,8 +173,8 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   // V^2 = Vguide_paral^2 + (Vguide_perp+Vgyr)^2
   //     = Vguide_paral^2 + Vguide_perp^2 + Vgyr^2 + 2 Vguide_perp * Vgyr
   // <Vguide_perp * Vgyr> = 0
-  double v2     = v[0]*v[0]+v[1]*v[1]+v[2]*v[2] + v_perp2;
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+  double v2     = v[0]*v[0]+v[1]*v[1]+v[2]*v[2] + v_perp2;
   double gamma  = pow(1-v2/c2,-0.5);
 #else
   double gamma  = 1.0;
@@ -179,7 +182,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   double p_par;
   p_par = (PParal==NULL)?gamma * m0 * (v[0]*b[0]+v[1]*b[1]+v[2]*b[2]):*PParal;
 
-  double msc,vec[3]={0.0};
+  double msc,vec[3]={0.0,0.0,0.0};
   // guiding center velocity
   // 1st term
   Vguide_perp_LOC[0] += (E[1]*b[2]-E[2]*b[1])/AbsB;
@@ -228,22 +231,22 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   double dtTemp;
   PIC::ParticleBuffer::byte *ParticleData;
-  double AbsBInit=0.0, bInit[3]={0.0};
-  double vInit[  3]={0.0}, pInit  =0.0, xInit[  3]={0.0}, gammaInit;
+  double AbsBInit=0.0, bInit[3]={0.0,0.0,0.0};
+  double vInit[  3]={0.0,0.0,0.0}, pInit  =0.0, xInit[  3]={0.0,0.0,0.0};
   double AbsBMiddle=0.0, bMiddle[3]={0.0};
-  double vMiddle[3]={0.0}, pMiddle=0.0, xMiddle[3]={0.0}, gammaMiddle;
-  double vFinal[ 3]={0.0}, pFinal =0.0, xFinal[ 3]={0.0}, gammaFinal;
-  double c2 = SpeedOfLight*SpeedOfLight;
+  double vMiddle[3]={0.0,0.0,0.0}, pMiddle=0.0, xMiddle[3]={0.0,0.0,0.0};
+  double vFinal[ 3]={0.0,0.0,0.0}, pFinal =0.0, xFinal[ 3]={0.0,0.0,0.0};
+//  double c2 = SpeedOfLight*SpeedOfLight;
   double xminBlock[3],xmaxBlock[3];
-  int idim;
+//  int idim;
 
-  long int LocalCellNumber;
+//  long int LocalCellNumber;
   int i,j,k,spec;
 
-  PIC::Mesh::cDataCenterNode *cell;
-  bool MovingTimeFinished=false;
+//  PIC::Mesh::cDataCenterNode *cell;
+//  bool MovingTimeFinished=false;
 
-  double xmin,xmax;
+//  double xmin,xmax;
 
   double misc;
 
@@ -261,9 +264,9 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   memcpy(xminBlock,startNode->xmin,DIM*sizeof(double));
   memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
   
-  MovingTimeFinished=true;
+//  MovingTimeFinished=true;
 
-  double Vguide_perpInit[3]={0.0}, ForceParalInit=0.0;
+  double Vguide_perpInit[3]={0.0,0.0,0.0}, ForceParalInit=0.0;
 
   // Integrate the equations of motion
   // use predictor-corrector scheme
@@ -333,7 +336,6 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
     case _PARTICLE_DELETED_ON_THE_FACE_:
       PIC::ParticleBuffer::DeleteParticle(ptr);
       return _PARTICLE_LEFT_THE_DOMAIN_;
-      break;
     default:
       exit(__LINE__,__FILE__,"Error: not implemented");
     }
@@ -342,7 +344,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
 
 
   // corrector step
-  double Vguide_perpMiddle[3]={0.0}, ForceParalMiddle=0.0;
+  double Vguide_perpMiddle[3]={0.0,0.0,0.0}, ForceParalMiddle=0.0;
   
 #if _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ == _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
   
@@ -431,7 +433,6 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
     case _PARTICLE_DELETED_ON_THE_FACE_:
       PIC::ParticleBuffer::DeleteParticle(ptr);
       return _PARTICLE_LEFT_THE_DOMAIN_;
-      break;
     default:
       exit(__LINE__,__FILE__,"Error: not implemented");
     }
@@ -465,7 +466,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   PIC::Mesh::cDataBlockAMR *block;
   long int tempFirstCellParticle,*tempFirstCellParticlePtr;
 
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+  if (PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
 
   if ((block=newNode->block)==NULL) {
     exit(__LINE__,__FILE__,"Error: the block is empty. Most probably hte tiime step is too long");
