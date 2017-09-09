@@ -16,13 +16,16 @@
 int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   PIC::ParticleBuffer::byte *ParticleData;
-  double gamma,vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3],dtTotalInit;
+  double gamma,vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3];
   double mass,uMinus[3],ElectricCharge,E[3],B[3],QdT_over_twoM;
   int idim,i,j,k,spec;
 
   static long int nCall=0;
   nCall++;
-  dtTotalInit=dtTotalIn;
+
+  #if _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+  double dtTotalInit=dtTotalIn;
+  #endif
 
   ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
   PIC::ParticleBuffer::GetV(vInit,ParticleData);
